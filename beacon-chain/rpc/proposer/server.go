@@ -172,8 +172,11 @@ func (ps *Server) deposits(ctx context.Context, currentVote *ethpb.Eth1Data) ([]
 	}
 	// Need to fetch if the deposits up to the state's latest eth 1 data matches
 	// the number of all deposits in this RPC call. If not, then we return nil.
-	beaconState := ps.HeadFetcher.HeadState()
-	canonicalEth1Data, latestEth1DataHeight, err := ps.canonicalEth1Data(ctx, beaconState, currentVote)
+	headState, err := ps.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
+	canonicalEth1Data, latestEth1DataHeight, err := ps.canonicalEth1Data(ctx, headState, currentVote)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +207,7 @@ func (ps *Server) deposits(ctx context.Context, currentVote *ethpb.Eth1Data) ([]
 	// deposits are sorted from lowest to highest.
 	var pendingDeps []*depositcache.DepositContainer
 	for _, dep := range allPendingContainers {
-		if uint64(dep.Index) >= beaconState.Eth1DepositIndex && uint64(dep.Index) < canonicalEth1Data.DepositCount {
+		if uint64(dep.Index) >= headState.Eth1DepositIndex && uint64(dep.Index) < canonicalEth1Data.DepositCount {
 			pendingDeps = append(pendingDeps, dep)
 		}
 	}

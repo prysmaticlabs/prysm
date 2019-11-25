@@ -12,7 +12,6 @@ import (
 
 // Test that Prysm copied protobufs have the same wire type and tag number.
 func TestProtoCompatability(t *testing.T) {
-	t.Skip("Skip until 3960 merges")
 	tests := []struct {
 		a proto.Message
 		b proto.Message
@@ -93,16 +92,16 @@ func TestProtoCompatability(t *testing.T) {
 			b: &upstreampb.ChainHead{},
 		},
 		{
-			a: &pb.GetValidatorBalancesRequest{},
-			b: &upstreampb.GetValidatorBalancesRequest{},
+			a: &pb.ListValidatorBalancesRequest{},
+			b: &upstreampb.ListValidatorBalancesRequest{},
 		},
 		{
 			a: &pb.ValidatorBalances{},
 			b: &upstreampb.ValidatorBalances{},
 		},
 		{
-			a: &pb.GetValidatorsRequest{},
-			b: &upstreampb.GetValidatorsRequest{},
+			a: &pb.ListValidatorsRequest{},
+			b: &upstreampb.ListValidatorsRequest{},
 		},
 		{
 			a: &pb.Validators{},

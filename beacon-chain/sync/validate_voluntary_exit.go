@@ -43,7 +43,11 @@ func (r *RegularSync) validateVoluntaryExit(ctx context.Context, msg proto.Messa
 	}
 
 	// Retrieve head state, advance state to the epoch slot used specified in exit message.
-	s := r.chain.HeadState()
+	s, err := r.chain.HeadState(ctx)
+	if err != nil {
+		return false, err
+	}
+
 	exitedEpochSlot := exit.Epoch * params.BeaconConfig().SlotsPerEpoch
 	if s.Slot < exitedEpochSlot {
 		var err error

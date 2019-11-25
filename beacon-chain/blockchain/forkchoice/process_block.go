@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -89,16 +90,8 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	}
 
 	// Update justified check point.
-	s.updateJustifiedCheckpoint()
 	if postState.CurrentJustifiedCheckpoint.Epoch > s.JustifiedCheckpt().Epoch {
-		s.bestJustifiedCheckpt = s.justifiedCheckpt
-		canUpdate, err := s.shouldUpdateJustified(ctx, postState.CurrentJustifiedCheckpoint)
-		if err != nil {
-			return err
-		}
-		if canUpdate {
-			s.justifiedCheckpt = postState.CurrentJustifiedCheckpoint
-		}
+		s.justifiedCheckpt = postState.CurrentJustifiedCheckpoint
 		if err := s.db.SaveJustifiedCheckpoint(ctx, postState.CurrentJustifiedCheckpoint); err != nil {
 			return errors.Wrap(err, "could not save justified checkpoint")
 		}
@@ -417,10 +410,6 @@ func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot ui
 	ctx, span := trace.StartSpan(ctx, "forkchoice.rmStatesBySlots")
 	defer span.End()
 
-	if !featureconfig.Get().PruneFinalizedStates {
-		return nil
-	}
-
 	// Make sure finalized slot is not a skipped slot.
 	for i := endSlot; i > 0; i-- {
 		filter := filters.NewFilter().SetStartSlot(i).SetEndSlot(i)
@@ -489,7 +478,8 @@ func (s *Store) currentSlot() uint64 {
 
 // updates justified check point in store if a better check point is known
 func (s *Store) updateJustifiedCheckpoint() {
-	if helpers.SlotsSinceEpochStarts(s.currentSlot()) == 0 {
+	// Update at epoch boundary slot only
+	if !helpers.IsEpochStart(s.currentSlot()) {
 		return
 	}
 	if s.bestJustifiedCheckpt.Epoch > s.justifiedCheckpt.Epoch {

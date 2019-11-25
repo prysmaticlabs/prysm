@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -20,11 +21,32 @@ type ChainService struct {
 	Root                []byte
 	Block               *ethpb.BeaconBlock
 	FinalizedCheckPoint *ethpb.Checkpoint
-	StateFeed           *event.Feed
 	BlocksReceived      []*ethpb.BeaconBlock
 	Genesis             time.Time
 	Fork                *pb.Fork
 	DB                  db.Database
+	stateNotifier       statefeed.Notifier
+}
+
+// StateNotifier mocks the same method in the chain service.
+func (ms *ChainService) StateNotifier() statefeed.Notifier {
+	if ms.stateNotifier == nil {
+		ms.stateNotifier = &MockStateNotifier{}
+	}
+	return ms.stateNotifier
+}
+
+// MockStateNotifier mocks the state notifier.
+type MockStateNotifier struct {
+	feed *event.Feed
+}
+
+// StateFeed returns a state feed.
+func (msn *MockStateNotifier) StateFeed() *event.Feed {
+	if msn.feed == nil {
+		msn.feed = new(event.Feed)
+	}
+	return msn.feed
 }
 
 // ReceiveBlock mocks ReceiveBlock method in chain service.
@@ -85,8 +107,8 @@ func (ms *ChainService) HeadBlock() *ethpb.BeaconBlock {
 }
 
 // HeadState mocks HeadState method in chain service.
-func (ms *ChainService) HeadState() *pb.BeaconState {
-	return ms.State
+func (ms *ChainService) HeadState(context.Context) (*pb.BeaconState, error) {
+	return ms.State, nil
 }
 
 // CurrentFork mocks HeadState method in chain service.
@@ -107,20 +129,6 @@ func (ms *ChainService) ReceiveAttestation(context.Context, *ethpb.Attestation) 
 // ReceiveAttestationNoPubsub mocks ReceiveAttestationNoPubsub method in chain service.
 func (ms *ChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attestation) error {
 	return nil
-}
-
-// StateInitializedFeed mocks the same method in the chain service.
-func (ms *ChainService) StateInitializedFeed() *event.Feed {
-	if ms.StateFeed != nil {
-		return ms.StateFeed
-	}
-	ms.StateFeed = new(event.Feed)
-	return ms.StateFeed
-}
-
-// HeadUpdatedFeed mocks the same method in the chain service.
-func (ms *ChainService) HeadUpdatedFeed() *event.Feed {
-	return new(event.Feed)
 }
 
 // GenesisTime mocks the same method in the chain service.

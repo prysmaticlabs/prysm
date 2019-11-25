@@ -26,9 +26,9 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_docker",
-    sha256 = "9ff889216e28c918811b77999257d4ac001c26c1f7c7fb17a79bc28abf74182e",
-    strip_prefix = "rules_docker-0.10.1",
-    url = "https://github.com/bazelbuild/rules_docker/archive/v0.10.1.tar.gz",
+    #    sha256 = "9ff889216e28c918811b77999257d4ac001c26c1f7c7fb17a79bc28abf74182e",
+    strip_prefix = "rules_docker-0.12.1",
+    url = "https://github.com/bazelbuild/rules_docker/archive/v0.12.1.tar.gz",
 )
 
 http_archive(
@@ -126,8 +126,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "5c5b65a961b5e7251435efc9548648b45142a07993ad3e100850c240cb76e9af",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.9.0/general.tar.gz",
+    sha256 = "c17778598c83809285e94be91216341e5aedfee2af951c3b7044e605d77c3fb9",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.9.1/general.tar.gz",
 )
 
 http_archive(
@@ -142,8 +142,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "3b5f0168af4331d09da52bebc26609def9d11be3e6c784ce7c3df3596617808d",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.9.0/minimal.tar.gz",
+    sha256 = "7b884bd20e58f4a6b49f2925ba821705f3800a26850884ce198724b43b5cacee",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.9.1/minimal.tar.gz",
 )
 
 http_archive(
@@ -158,8 +158,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "f3ff68508dfe9696f23506daf0ca895cda955e30398741e00cffa33a01b0565c",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.9.0/mainnet.tar.gz",
+    sha256 = "2608d9085ca98d2b7b51a31ff368fb8c17a094ee02bb0e93884b953290d3fb4b",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.9.1/mainnet.tar.gz",
 )
 
 http_archive(
@@ -181,7 +181,7 @@ go_repository(
 
 git_repository(
     name = "com_google_protobuf",
-    commit = "09745575a923640154bcf307fba8aedff47f240a",
+    commit = "d09d649aea36f02c03f8396ba39a8d4db8a607e4",
     remote = "https://github.com/protocolbuffers/protobuf",
     shallow_since = "1558721209 -0700",
 )
@@ -1199,7 +1199,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_ethereumapis",
-    commit = "9747dd9834b24a8affe4e3b23b0d10efcb32f6a9",
+    commit = "ce8b6831c20e75f6ef01a2f3a20723ac6478fd10",
     importpath = "github.com/prysmaticlabs/ethereumapis",
 )
 

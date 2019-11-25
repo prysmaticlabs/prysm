@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
@@ -348,9 +349,11 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 			depositsReqForChainStart,
 		)
 	}
-	genesisTimeChan := make(chan time.Time, 1)
-	sub := web3Service.chainStartFeed.Subscribe(genesisTimeChan)
-	defer sub.Unsubscribe()
+
+	// Set up our subscriber now to listen for the chain started event.
+	stateChannel := make(chan *statefeed.Event, 1)
+	stateSub := web3Service.stateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
 
 	for _, log := range logs {
 		web3Service.ProcessLog(context.Background(), log)
@@ -370,7 +373,16 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 		)
 	}
 
-	<-genesisTimeChan
+	// Receive the chain started event.
+	for started := false; !started; {
+		select {
+		case event := <-stateChannel:
+			if event.Type == statefeed.ChainStarted {
+				started = true
+			}
+		}
+	}
+
 	testutil.AssertLogsDoNotContain(t, hook, "Unable to unpack ChainStart log data")
 	testutil.AssertLogsDoNotContain(t, hook, "Receipt root from log doesn't match the root saved in memory")
 	testutil.AssertLogsDoNotContain(t, hook, "Invalid timestamp from log")
@@ -433,9 +445,10 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 		}
 	}
 
-	genesisTimeChan := make(chan time.Time, 1)
-	sub := web3Service.chainStartFeed.Subscribe(genesisTimeChan)
-	defer sub.Unsubscribe()
+	// Set up our subscriber now to listen for the chain started event.
+	stateChannel := make(chan *statefeed.Event, 1)
+	stateSub := web3Service.stateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
 
 	err = web3Service.processPastLogs(context.Background())
 	if err != nil {
@@ -452,7 +465,16 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 		)
 	}
 
-	<-genesisTimeChan
+	// Receive the chain started event.
+	for started := false; !started; {
+		select {
+		case event := <-stateChannel:
+			if event.Type == statefeed.ChainStarted {
+				started = true
+			}
+		}
+	}
+
 	testutil.AssertLogsDoNotContain(t, hook, "Unable to unpack ChainStart log data")
 	testutil.AssertLogsDoNotContain(t, hook, "Receipt root from log doesn't match the root saved in memory")
 	testutil.AssertLogsDoNotContain(t, hook, "Invalid timestamp from log")
@@ -532,6 +554,22 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 
 	if web3Service.lastReceivedMerkleIndex != int64(depositsWanted-1) {
 		t.Errorf("missing logs were not re-requested. Wanted Index %d but got %d", depositsWanted-1, web3Service.lastReceivedMerkleIndex)
+	}
+
+	web3Service.lastReceivedMerkleIndex = 0
+	web3Service.lastRequestedBlock = new(big.Int)
+
+	logsToBeProcessed = append(logs[:depositsWanted-8], logs[depositsWanted-2:]...)
+	// We purposely miss processing the middle 7 logs so that the service, re-requests them.
+	for _, log := range logsToBeProcessed {
+		if err := web3Service.ProcessLog(context.Background(), log); err != nil {
+			t.Fatal(err)
+		}
+		web3Service.lastRequestedBlock.Set(big.NewInt(int64(log.BlockNumber)))
+	}
+
+	if web3Service.lastReceivedMerkleIndex != int64(depositsWanted-1) {
+		t.Errorf("Missing logs were not re-requested want = %d but got = %d", depositsWanted-1, web3Service.lastReceivedMerkleIndex)
 	}
 
 	hook.Reset()

@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"strconv"
@@ -9,10 +10,60 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+func TestServer_ListBlocks_NoResults(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	bs := &Server{
+		BeaconDB: db,
+	}
+	wanted := &ethpb.ListBlocksResponse{
+		BlockContainers: make([]*ethpb.BeaconBlockContainer, 0),
+		TotalSize:       int32(0),
+		NextPageToken:   strconv.Itoa(0),
+	}
+	res, err := bs.ListBlocks(ctx, &ethpb.ListBlocksRequest{
+		QueryFilter: &ethpb.ListBlocksRequest_Epoch{
+			Epoch: 0,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(wanted, res) {
+		t.Errorf("Wanted %v, received %v", wanted, res)
+	}
+	res, err = bs.ListBlocks(ctx, &ethpb.ListBlocksRequest{
+		QueryFilter: &ethpb.ListBlocksRequest_Slot{
+			Slot: 0,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(wanted, res) {
+		t.Errorf("Wanted %v, received %v", wanted, res)
+	}
+	res, err = bs.ListBlocks(ctx, &ethpb.ListBlocksRequest{
+		QueryFilter: &ethpb.ListBlocksRequest_Root{
+			Root: make([]byte, 32),
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(wanted, res) {
+		t.Errorf("Wanted %v, received %v", wanted, res)
+	}
+}
 
 func TestServer_ListBlocks_Pagination(t *testing.T) {
 	db := dbTest.SetupDB(t)
@@ -128,7 +179,7 @@ func TestServer_ListBlocks_Errors(t *testing.T) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
 	}
 
-	wanted = "Must satisfy one of the filter requirement"
+	wanted = "Must specify a filter criteria for fetching"
 	req = &ethpb.ListBlocksRequest{}
 	if _, err := bs.ListBlocks(ctx, req); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
@@ -183,5 +234,93 @@ func TestServer_ListBlocks_Errors(t *testing.T) {
 	if res.TotalSize != 0 {
 		t.Errorf("wanted total size 0, got size %d", res.TotalSize)
 
+	}
+}
+
+func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	s := &pbp2p.BeaconState{
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 3, Root: []byte{'A'}},
+		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Epoch: 2, Root: []byte{'B'}},
+		FinalizedCheckpoint:         &ethpb.Checkpoint{Epoch: 1, Root: []byte{'C'}},
+	}
+
+	bs := &Server{
+		BeaconDB:    db,
+		HeadFetcher: &mock.ChainService{Block: &ethpb.BeaconBlock{}, State: s},
+	}
+
+	if _, err := bs.GetChainHead(context.Background(), nil); !strings.Contains(err.Error(), "Could not get finalized block") {
+		t.Fatal("Did not get wanted error")
+	}
+}
+
+func TestServer_GetChainHead(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	finalizedBlock := &ethpb.BeaconBlock{Slot: 1, ParentRoot: []byte{'A'}}
+	db.SaveBlock(context.Background(), finalizedBlock)
+	fRoot, _ := ssz.SigningRoot(finalizedBlock)
+	justifiedBlock := &ethpb.BeaconBlock{Slot: 2, ParentRoot: []byte{'B'}}
+	db.SaveBlock(context.Background(), justifiedBlock)
+	jRoot, _ := ssz.SigningRoot(justifiedBlock)
+	prevJustifiedBlock := &ethpb.BeaconBlock{Slot: 3, ParentRoot: []byte{'C'}}
+	db.SaveBlock(context.Background(), prevJustifiedBlock)
+	pjRoot, _ := ssz.SigningRoot(prevJustifiedBlock)
+
+	s := &pbp2p.BeaconState{
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 3, Root: pjRoot[:]},
+		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Epoch: 2, Root: jRoot[:]},
+		FinalizedCheckpoint:         &ethpb.Checkpoint{Epoch: 1, Root: fRoot[:]},
+	}
+
+	b := &ethpb.BeaconBlock{Slot: s.PreviousJustifiedCheckpoint.Epoch*params.BeaconConfig().SlotsPerEpoch + 1}
+	bs := &Server{
+		BeaconDB:    db,
+		HeadFetcher: &mock.ChainService{Block: b, State: s},
+	}
+
+	head, err := bs.GetChainHead(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if head.PreviousJustifiedEpoch != 3 {
+		t.Errorf("Wanted PreviousJustifiedEpoch: %d, got: %d",
+			3*params.BeaconConfig().SlotsPerEpoch, head.PreviousJustifiedEpoch)
+	}
+	if head.JustifiedEpoch != 2 {
+		t.Errorf("Wanted JustifiedEpoch: %d, got: %d",
+			2*params.BeaconConfig().SlotsPerEpoch, head.JustifiedEpoch)
+	}
+	if head.FinalizedEpoch != 1 {
+		t.Errorf("Wanted FinalizedEpoch: %d, got: %d",
+			1*params.BeaconConfig().SlotsPerEpoch, head.FinalizedEpoch)
+	}
+	if head.PreviousJustifiedSlot != 3 {
+		t.Errorf("Wanted PreviousJustifiedSlot: %d, got: %d",
+			3, head.PreviousJustifiedSlot)
+	}
+	if head.JustifiedBlockSlot != 2 {
+		t.Errorf("Wanted JustifiedSlot: %d, got: %d",
+			2, head.JustifiedBlockSlot)
+	}
+	if head.FinalizedBlockSlot != 1 {
+		t.Errorf("Wanted FinalizedSlot: %d, got: %d",
+			1, head.FinalizedBlockSlot)
+	}
+	if !bytes.Equal(pjRoot[:], head.PreviousJustifiedBlockRoot) {
+		t.Errorf("Wanted PreviousJustifiedBlockRoot: %v, got: %v",
+			pjRoot[:], head.PreviousJustifiedBlockRoot)
+	}
+	if !bytes.Equal(jRoot[:], head.JustifiedBlockRoot) {
+		t.Errorf("Wanted JustifiedBlockRoot: %v, got: %v",
+			jRoot[:], head.JustifiedBlockRoot)
+	}
+	if !bytes.Equal(fRoot[:], head.FinalizedBlockRoot) {
+		t.Errorf("Wanted FinalizedBlockRoot: %v, got: %v",
+			fRoot[:], head.FinalizedBlockRoot)
 	}
 }

@@ -1,7 +1,6 @@
 package beacon
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"reflect"
@@ -27,6 +26,164 @@ func init() {
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 }
 
+func TestServer_ListValidatorBalances_CannotRequestFutureEpoch(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	bs := &Server{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: &pbp2p.BeaconState{Slot: 0},
+		},
+	}
+
+	wanted := "Cannot retrieve information about an epoch in the future"
+	if _, err := bs.ListValidatorBalances(
+		ctx,
+		&ethpb.ListValidatorBalancesRequest{
+			QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{
+				Epoch: 1,
+			},
+		},
+	); err != nil && !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+}
+
+func TestServer_ListValidatorBalances_NoResults(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	bs := &Server{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: &pbp2p.BeaconState{Slot: 0},
+		},
+	}
+	wanted := &ethpb.ValidatorBalances{
+		Balances:      make([]*ethpb.ValidatorBalances_Balance, 0),
+		TotalSize:     int32(0),
+		NextPageToken: strconv.Itoa(0),
+	}
+	res, err := bs.ListValidatorBalances(
+		ctx,
+		&ethpb.ListValidatorBalancesRequest{
+			QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{
+				Epoch: 0,
+			},
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(wanted, res) {
+		t.Errorf("Wanted %v, received %v", wanted, res)
+	}
+}
+
+func TestServer_ListValidatorBalances_DefaultResponse_NoArchive(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	numItems := 100
+	validators := make([]*ethpb.Validator, numItems)
+	balances := make([]uint64, numItems)
+	balancesResponse := make([]*ethpb.ValidatorBalances_Balance, numItems)
+	for i := 0; i < numItems; i++ {
+		validators[i] = &ethpb.Validator{
+			PublicKey: []byte(strconv.Itoa(i)),
+		}
+		balances[i] = params.BeaconConfig().MaxEffectiveBalance
+		balancesResponse[i] = &ethpb.ValidatorBalances_Balance{
+			PublicKey: []byte(strconv.Itoa(i)),
+			Index:     uint64(i),
+			Balance:   params.BeaconConfig().MaxEffectiveBalance,
+		}
+	}
+	bs := &Server{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: &pbp2p.BeaconState{
+				Slot:       0,
+				Validators: validators,
+				Balances:   balances,
+			},
+		},
+	}
+	res, err := bs.ListValidatorBalances(
+		ctx,
+		&ethpb.ListValidatorBalancesRequest{
+			QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{
+				Epoch: 0,
+			},
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(balancesResponse, res.Balances) {
+		t.Errorf("Wanted %v, received %v", balancesResponse, res.Balances)
+	}
+}
+
+func TestServer_ListValidatorBalances_DefaultResponse_FromArchive(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	currentNumValidators := 100
+	numOldBalances := 50
+	validators := make([]*ethpb.Validator, currentNumValidators)
+	balances := make([]uint64, currentNumValidators)
+	oldBalances := make([]uint64, numOldBalances)
+	balancesResponse := make([]*ethpb.ValidatorBalances_Balance, numOldBalances)
+	for i := 0; i < currentNumValidators; i++ {
+		validators[i] = &ethpb.Validator{
+			PublicKey: []byte(strconv.Itoa(i)),
+		}
+		balances[i] = params.BeaconConfig().MaxEffectiveBalance
+	}
+	for i := 0; i < numOldBalances; i++ {
+		oldBalances[i] = params.BeaconConfig().MaxEffectiveBalance
+		balancesResponse[i] = &ethpb.ValidatorBalances_Balance{
+			PublicKey: []byte(strconv.Itoa(i)),
+			Index:     uint64(i),
+			Balance:   params.BeaconConfig().MaxEffectiveBalance,
+		}
+	}
+	// We archive old balances for epoch 50.
+	if err := db.SaveArchivedBalances(ctx, 50, oldBalances); err != nil {
+		t.Fatal(err)
+	}
+	bs := &Server{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: &pbp2p.BeaconState{
+				Slot:       helpers.StartSlot(100 /* epoch 100 */),
+				Validators: validators,
+				Balances:   balances,
+			},
+		},
+	}
+	res, err := bs.ListValidatorBalances(
+		ctx,
+		&ethpb.ListValidatorBalancesRequest{
+			QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{
+				Epoch: 50,
+			},
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(balancesResponse, res.Balances) {
+		t.Errorf("Wanted %v, received %v", balancesResponse, res.Balances)
+	}
+}
+
 func TestServer_ListValidatorBalances_PaginationOutOfRange(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
@@ -44,7 +201,7 @@ func TestServer_ListValidatorBalances_PaginationOutOfRange(t *testing.T) {
 		},
 	}
 
-	req := &ethpb.GetValidatorBalancesRequest{PageToken: strconv.Itoa(1), PageSize: 100}
+	req := &ethpb.ListValidatorBalancesRequest{PageToken: strconv.Itoa(1), PageSize: 100}
 	wanted := fmt.Sprintf("page start %d >= list %d", req.PageSize, len(headState.Balances))
 	if _, err := bs.ListValidatorBalances(context.Background(), req); err != nil && !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
@@ -60,7 +217,7 @@ func TestServer_ListValidatorBalances_ExceedsMaxPageSize(t *testing.T) {
 		exceedsMax,
 		params.BeaconConfig().MaxPageSize,
 	)
-	req := &ethpb.GetValidatorBalancesRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
+	req := &ethpb.ListValidatorBalancesRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
 	if _, err := bs.ListValidatorBalances(context.Background(), req); err != nil && !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
 	}
@@ -83,10 +240,10 @@ func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 	}
 
 	tests := []struct {
-		req *ethpb.GetValidatorBalancesRequest
+		req *ethpb.ListValidatorBalancesRequest
 		res *ethpb.ValidatorBalances
 	}{
-		{req: &ethpb.GetValidatorBalancesRequest{PublicKeys: [][]byte{{99}}},
+		{req: &ethpb.ListValidatorBalancesRequest{PublicKeys: [][]byte{{99}}},
 			res: &ethpb.ValidatorBalances{
 				Balances: []*ethpb.ValidatorBalances_Balance{
 					{Index: 99, PublicKey: []byte{99}, Balance: 99},
@@ -95,7 +252,7 @@ func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 				TotalSize:     1,
 			},
 		},
-		{req: &ethpb.GetValidatorBalancesRequest{Indices: []uint64{1, 2, 3}},
+		{req: &ethpb.ListValidatorBalancesRequest{Indices: []uint64{1, 2, 3}},
 			res: &ethpb.ValidatorBalances{
 				Balances: []*ethpb.ValidatorBalances_Balance{
 					{Index: 1, PublicKey: []byte{1}, Balance: 1},
@@ -106,7 +263,7 @@ func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 				TotalSize:     3,
 			},
 		},
-		{req: &ethpb.GetValidatorBalancesRequest{PublicKeys: [][]byte{{10}, {11}, {12}}},
+		{req: &ethpb.ListValidatorBalancesRequest{PublicKeys: [][]byte{{10}, {11}, {12}}},
 			res: &ethpb.ValidatorBalances{
 				Balances: []*ethpb.ValidatorBalances_Balance{
 					{Index: 10, PublicKey: []byte{10}, Balance: 10},
@@ -116,7 +273,7 @@ func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 				NextPageToken: strconv.Itoa(1),
 				TotalSize:     3,
 			}},
-		{req: &ethpb.GetValidatorBalancesRequest{PublicKeys: [][]byte{{2}, {3}}, Indices: []uint64{3, 4}}, // Duplication
+		{req: &ethpb.ListValidatorBalancesRequest{PublicKeys: [][]byte{{2}, {3}}, Indices: []uint64{3, 4}}, // Duplication
 			res: &ethpb.ValidatorBalances{
 				Balances: []*ethpb.ValidatorBalances_Balance{
 					{Index: 2, PublicKey: []byte{2}, Balance: 2},
@@ -126,7 +283,7 @@ func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 				NextPageToken: strconv.Itoa(1),
 				TotalSize:     3,
 			}},
-		{req: &ethpb.GetValidatorBalancesRequest{PublicKeys: [][]byte{{}}, Indices: []uint64{3, 4}}, // Public key has a blank value
+		{req: &ethpb.ListValidatorBalancesRequest{PublicKeys: [][]byte{{}}, Indices: []uint64{3, 4}}, // Public key has a blank value
 			res: &ethpb.ValidatorBalances{
 				Balances: []*ethpb.ValidatorBalances_Balance{
 					{Index: 3, PublicKey: []byte{3}, Balance: 3},
@@ -166,10 +323,10 @@ func TestServer_ListValidatorBalances_Pagination_CustomPageSizes(t *testing.T) {
 	}
 
 	tests := []struct {
-		req *ethpb.GetValidatorBalancesRequest
+		req *ethpb.ListValidatorBalancesRequest
 		res *ethpb.ValidatorBalances
 	}{
-		{req: &ethpb.GetValidatorBalancesRequest{PageToken: strconv.Itoa(1), PageSize: 3},
+		{req: &ethpb.ListValidatorBalancesRequest{PageToken: strconv.Itoa(1), PageSize: 3},
 			res: &ethpb.ValidatorBalances{
 				Balances: []*ethpb.ValidatorBalances_Balance{
 					{PublicKey: []byte{3}, Index: 3, Balance: uint64(3)},
@@ -177,7 +334,7 @@ func TestServer_ListValidatorBalances_Pagination_CustomPageSizes(t *testing.T) {
 					{PublicKey: []byte{5}, Index: 5, Balance: uint64(5)}},
 				NextPageToken: strconv.Itoa(2),
 				TotalSize:     int32(count)}},
-		{req: &ethpb.GetValidatorBalancesRequest{PageToken: strconv.Itoa(10), PageSize: 5},
+		{req: &ethpb.ListValidatorBalancesRequest{PageToken: strconv.Itoa(10), PageSize: 5},
 			res: &ethpb.ValidatorBalances{
 				Balances: []*ethpb.ValidatorBalances_Balance{
 					{PublicKey: []byte{50}, Index: 50, Balance: uint64(50)},
@@ -187,7 +344,7 @@ func TestServer_ListValidatorBalances_Pagination_CustomPageSizes(t *testing.T) {
 					{PublicKey: []byte{54}, Index: 54, Balance: uint64(54)}},
 				NextPageToken: strconv.Itoa(11),
 				TotalSize:     int32(count)}},
-		{req: &ethpb.GetValidatorBalancesRequest{PageToken: strconv.Itoa(33), PageSize: 3},
+		{req: &ethpb.ListValidatorBalancesRequest{PageToken: strconv.Itoa(33), PageSize: 3},
 			res: &ethpb.ValidatorBalances{
 				Balances: []*ethpb.ValidatorBalances_Balance{
 					{PublicKey: []byte{99}, Index: 99, Balance: uint64(99)},
@@ -196,7 +353,7 @@ func TestServer_ListValidatorBalances_Pagination_CustomPageSizes(t *testing.T) {
 				},
 				NextPageToken: strconv.Itoa(34),
 				TotalSize:     int32(count)}},
-		{req: &ethpb.GetValidatorBalancesRequest{PageSize: 2},
+		{req: &ethpb.ListValidatorBalancesRequest{PageSize: 2},
 			res: &ethpb.ValidatorBalances{
 				Balances: []*ethpb.ValidatorBalances_Balance{
 					{PublicKey: []byte{0}, Index: 0, Balance: uint64(0)},
@@ -230,7 +387,7 @@ func TestServer_ListValidatorBalances_OutOfRange(t *testing.T) {
 		HeadFetcher: &mock.ChainService{State: headState},
 	}
 
-	req := &ethpb.GetValidatorBalancesRequest{Indices: []uint64{uint64(1)}}
+	req := &ethpb.ListValidatorBalancesRequest{Indices: []uint64{uint64(1)}}
 	wanted := "does not exist"
 	if _, err := bs.ListValidatorBalances(context.Background(), req); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
@@ -263,8 +420,8 @@ func TestServer_ListValidatorBalances_FromArchive(t *testing.T) {
 		},
 	}
 
-	req := &ethpb.GetValidatorBalancesRequest{
-		QueryFilter: &ethpb.GetValidatorBalancesRequest_Epoch{Epoch: 0},
+	req := &ethpb.ListValidatorBalancesRequest{
+		QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0},
 		Indices:     []uint64{uint64(1)},
 	}
 	res, err := bs.ListValidatorBalances(context.Background(), req)
@@ -308,8 +465,8 @@ func TestServer_ListValidatorBalances_FromArchive_NewValidatorNotFound(t *testin
 		},
 	}
 
-	req := &ethpb.GetValidatorBalancesRequest{
-		QueryFilter: &ethpb.GetValidatorBalancesRequest_Epoch{Epoch: 0},
+	req := &ethpb.ListValidatorBalancesRequest{
+		QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0},
 		Indices:     []uint64{1, 150, 161},
 	}
 	if _, err := bs.ListValidatorBalances(context.Background(), req); !strings.Contains(err.Error(), "does not exist") {
@@ -317,7 +474,116 @@ func TestServer_ListValidatorBalances_FromArchive_NewValidatorNotFound(t *testin
 	}
 }
 
-func TestServer_GetValidators_NoPagination(t *testing.T) {
+func TestServer_ListValidators_CannotRequestFutureEpoch(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	bs := &Server{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: &pbp2p.BeaconState{Slot: 0},
+		},
+	}
+
+	wanted := "Cannot retrieve information about an epoch in the future"
+	if _, err := bs.ListValidators(
+		ctx,
+		&ethpb.ListValidatorsRequest{
+			QueryFilter: &ethpb.ListValidatorsRequest_Epoch{
+				Epoch: 1,
+			},
+		},
+	); err != nil && !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+}
+
+func TestServer_ListValidators_NoResults(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	bs := &Server{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: &pbp2p.BeaconState{Slot: 0},
+		},
+	}
+	wanted := &ethpb.Validators{
+		Validators:    make([]*ethpb.Validator, 0),
+		TotalSize:     int32(0),
+		NextPageToken: strconv.Itoa(0),
+	}
+	res, err := bs.ListValidators(
+		ctx,
+		&ethpb.ListValidatorsRequest{
+			QueryFilter: &ethpb.ListValidatorsRequest_Epoch{
+				Epoch: 0,
+			},
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(wanted, res) {
+		t.Errorf("Wanted %v, received %v", wanted, res)
+	}
+}
+
+func TestServer_ListValidators_OnlyActiveValidators(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	count := 100
+	balances := make([]uint64, count)
+	validators := make([]*ethpb.Validator, count)
+	activeValidators := make([]*ethpb.Validator, 0)
+	for i := 0; i < count; i++ {
+		if err := db.SaveValidatorIndex(ctx, [48]byte{byte(i)}, uint64(i)); err != nil {
+			t.Fatal(err)
+		}
+		balances[i] = params.BeaconConfig().MaxEffectiveBalance
+
+		// We mark even validators as active, and odd validators as inactive.
+		if i%2 == 0 {
+			val := &ethpb.Validator{
+				PublicKey:       []byte{byte(i)},
+				ActivationEpoch: 0,
+				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+			}
+			validators[i] = val
+			activeValidators = append(activeValidators, val)
+		} else {
+			validators[i] = &ethpb.Validator{
+				PublicKey:       []byte{byte(i)},
+				ActivationEpoch: 0,
+				ExitEpoch:       0,
+			}
+		}
+	}
+	headState := &pbp2p.BeaconState{Validators: validators, Balances: balances}
+
+	bs := &Server{
+		HeadFetcher: &mock.ChainService{
+			State: headState,
+		},
+	}
+
+	received, err := bs.ListValidators(context.Background(), &ethpb.ListValidatorsRequest{
+		Active: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(activeValidators, received.Validators) {
+		t.Errorf("Wanted %v, received %v", activeValidators, received.Validators)
+	}
+}
+
+func TestServer_ListValidators_NoPagination(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -338,7 +604,7 @@ func TestServer_GetValidators_NoPagination(t *testing.T) {
 		},
 	}
 
-	received, err := bs.GetValidators(context.Background(), &ethpb.GetValidatorsRequest{})
+	received, err := bs.ListValidators(context.Background(), &ethpb.ListValidatorsRequest{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -348,7 +614,7 @@ func TestServer_GetValidators_NoPagination(t *testing.T) {
 	}
 }
 
-func TestServer_GetValidators_Pagination(t *testing.T) {
+func TestServer_ListValidators_Pagination(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -372,10 +638,10 @@ func TestServer_GetValidators_Pagination(t *testing.T) {
 	}
 
 	tests := []struct {
-		req *ethpb.GetValidatorsRequest
+		req *ethpb.ListValidatorsRequest
 		res *ethpb.Validators
 	}{
-		{req: &ethpb.GetValidatorsRequest{PageToken: strconv.Itoa(1), PageSize: 3},
+		{req: &ethpb.ListValidatorsRequest{PageToken: strconv.Itoa(1), PageSize: 3},
 			res: &ethpb.Validators{
 				Validators: []*ethpb.Validator{
 					{PublicKey: []byte{3}},
@@ -383,7 +649,7 @@ func TestServer_GetValidators_Pagination(t *testing.T) {
 					{PublicKey: []byte{5}}},
 				NextPageToken: strconv.Itoa(2),
 				TotalSize:     int32(count)}},
-		{req: &ethpb.GetValidatorsRequest{PageToken: strconv.Itoa(10), PageSize: 5},
+		{req: &ethpb.ListValidatorsRequest{PageToken: strconv.Itoa(10), PageSize: 5},
 			res: &ethpb.Validators{
 				Validators: []*ethpb.Validator{
 					{PublicKey: []byte{50}},
@@ -393,13 +659,13 @@ func TestServer_GetValidators_Pagination(t *testing.T) {
 					{PublicKey: []byte{54}}},
 				NextPageToken: strconv.Itoa(11),
 				TotalSize:     int32(count)}},
-		{req: &ethpb.GetValidatorsRequest{PageToken: strconv.Itoa(33), PageSize: 3},
+		{req: &ethpb.ListValidatorsRequest{PageToken: strconv.Itoa(33), PageSize: 3},
 			res: &ethpb.Validators{
 				Validators: []*ethpb.Validator{
 					{PublicKey: []byte{99}}},
 				NextPageToken: strconv.Itoa(34),
 				TotalSize:     int32(count)}},
-		{req: &ethpb.GetValidatorsRequest{PageSize: 2},
+		{req: &ethpb.ListValidatorsRequest{PageSize: 2},
 			res: &ethpb.Validators{
 				Validators: []*ethpb.Validator{
 					{PublicKey: []byte{0}},
@@ -408,7 +674,7 @@ func TestServer_GetValidators_Pagination(t *testing.T) {
 				TotalSize:     int32(count)}},
 	}
 	for _, test := range tests {
-		res, err := bs.GetValidators(context.Background(), test.req)
+		res, err := bs.ListValidators(context.Background(), test.req)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -418,7 +684,7 @@ func TestServer_GetValidators_Pagination(t *testing.T) {
 	}
 }
 
-func TestServer_GetValidators_PaginationOutOfRange(t *testing.T) {
+func TestServer_ListValidators_PaginationOutOfRange(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -440,25 +706,25 @@ func TestServer_GetValidators_PaginationOutOfRange(t *testing.T) {
 		},
 	}
 
-	req := &ethpb.GetValidatorsRequest{PageToken: strconv.Itoa(1), PageSize: 100}
+	req := &ethpb.ListValidatorsRequest{PageToken: strconv.Itoa(1), PageSize: 100}
 	wanted := fmt.Sprintf("page start %d >= list %d", req.PageSize, len(validators))
-	if _, err := bs.GetValidators(context.Background(), req); !strings.Contains(err.Error(), wanted) {
+	if _, err := bs.ListValidators(context.Background(), req); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
 	}
 }
 
-func TestServer_GetValidators_ExceedsMaxPageSize(t *testing.T) {
+func TestServer_ListValidators_ExceedsMaxPageSize(t *testing.T) {
 	bs := &Server{}
 	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
 
 	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, params.BeaconConfig().MaxPageSize)
-	req := &ethpb.GetValidatorsRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
-	if _, err := bs.GetValidators(context.Background(), req); !strings.Contains(err.Error(), wanted) {
+	req := &ethpb.ListValidatorsRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
+	if _, err := bs.ListValidators(context.Background(), req); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
 	}
 }
 
-func TestServer_GetValidators_DefaultPageSize(t *testing.T) {
+func TestServer_ListValidators_DefaultPageSize(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -479,8 +745,8 @@ func TestServer_GetValidators_DefaultPageSize(t *testing.T) {
 		},
 	}
 
-	req := &ethpb.GetValidatorsRequest{}
-	res, err := bs.GetValidators(context.Background(), req)
+	req := &ethpb.ListValidatorsRequest{}
+	res, err := bs.ListValidators(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -492,7 +758,7 @@ func TestServer_GetValidators_DefaultPageSize(t *testing.T) {
 	}
 }
 
-func TestServer_GetValidators_FromOldEpoch(t *testing.T) {
+func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -507,22 +773,18 @@ func TestServer_GetValidators_FromOldEpoch(t *testing.T) {
 	bs := &Server{
 		HeadFetcher: &mock.ChainService{
 			State: &pbp2p.BeaconState{
+				Slot:       helpers.StartSlot(30),
 				Validators: validators,
-			},
-		},
-		FinalizationFetcher: &mock.ChainService{
-			FinalizedCheckPoint: &ethpb.Checkpoint{
-				Epoch: 200,
 			},
 		},
 	}
 
-	req := &ethpb.GetValidatorsRequest{
-		QueryFilter: &ethpb.GetValidatorsRequest_Genesis{
+	req := &ethpb.ListValidatorsRequest{
+		QueryFilter: &ethpb.ListValidatorsRequest_Genesis{
 			Genesis: true,
 		},
 	}
-	res, err := bs.GetValidators(context.Background(), req)
+	res, err := bs.ListValidators(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -530,17 +792,42 @@ func TestServer_GetValidators_FromOldEpoch(t *testing.T) {
 		t.Errorf("Wanted 1 validator at genesis, received %d", len(res.Validators))
 	}
 
-	req = &ethpb.GetValidatorsRequest{
-		QueryFilter: &ethpb.GetValidatorsRequest_Epoch{
+	req = &ethpb.ListValidatorsRequest{
+		QueryFilter: &ethpb.ListValidatorsRequest_Epoch{
 			Epoch: 20,
 		},
 	}
-	res, err = bs.GetValidators(context.Background(), req)
+	res, err = bs.ListValidators(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(res.Validators, validators[:21]) {
-		t.Errorf("Incorrect number of validators, wanted %d received %d", 20, len(res.Validators))
+		t.Errorf("Incorrect number of validators, wanted %d received %d", len(validators[:21]), len(res.Validators))
+	}
+}
+
+func TestServer_GetValidatorActiveSetChanges_CannotRequestFutureEpoch(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	bs := &Server{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: &pbp2p.BeaconState{Slot: 0},
+		},
+	}
+
+	wanted := "Cannot retrieve information about an epoch in the future"
+	if _, err := bs.GetValidatorActiveSetChanges(
+		ctx,
+		&ethpb.GetValidatorActiveSetChangesRequest{
+			QueryFilter: &ethpb.GetValidatorActiveSetChangesRequest_Epoch{
+				Epoch: 1,
+			},
+		},
+	); err != nil && !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
 	}
 }
 
@@ -616,7 +903,7 @@ func TestServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
 	ctx := context.Background()
 	validators := make([]*ethpb.Validator, 6)
 	headState := &pbp2p.BeaconState{
-		Slot:       0,
+		Slot:       helpers.StartSlot(100),
 		Validators: validators,
 	}
 	activatedIndices := make([]uint64, 0)
@@ -654,10 +941,6 @@ func TestServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
 		BeaconDB: db,
 		HeadFetcher: &mock.ChainService{
 			State: headState,
-		},
-		FinalizationFetcher: &mock.ChainService{
-			// Pick an epoch far in the future so that we trigger fetching from the archive.
-			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 100},
 		},
 	}
 	res, err := bs.GetValidatorActiveSetChanges(ctx, &ethpb.GetValidatorActiveSetChangesRequest{
@@ -809,7 +1092,32 @@ func TestServer_GetValidatorQueue_PendingExit(t *testing.T) {
 	}
 }
 
-func TestServer_GetValidatorsParticipation_FromArchive(t *testing.T) {
+func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	bs := &Server{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: &pbp2p.BeaconState{Slot: 0},
+		},
+	}
+
+	wanted := "Cannot retrieve information about an epoch in the future"
+	if _, err := bs.GetValidatorParticipation(
+		ctx,
+		&ethpb.GetValidatorParticipationRequest{
+			QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
+				Epoch: 1,
+			},
+		},
+	); err != nil && !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+}
+
+func TestServer_GetValidatorParticipation_FromArchive(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
@@ -868,7 +1176,7 @@ func TestServer_GetValidatorsParticipation_FromArchive(t *testing.T) {
 	}
 }
 
-func TestServer_GetValidatorsParticipation_CurrentEpoch(t *testing.T) {
+func TestServer_GetValidatorParticipation_CurrentEpoch(t *testing.T) {
 	helpers.ClearAllCaches()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
@@ -925,45 +1233,6 @@ func TestServer_GetValidatorsParticipation_CurrentEpoch(t *testing.T) {
 
 	if !reflect.DeepEqual(res.Participation, wanted) {
 		t.Error("Incorrect validator participation respond")
-	}
-}
-
-func TestServer_GetChainHead(t *testing.T) {
-	s := &pbp2p.BeaconState{
-		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 3, Root: []byte{'A'}},
-		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Epoch: 2, Root: []byte{'B'}},
-		FinalizedCheckpoint:         &ethpb.Checkpoint{Epoch: 1, Root: []byte{'C'}},
-	}
-
-	bs := &Server{HeadFetcher: &mock.ChainService{State: s}}
-
-	head, err := bs.GetChainHead(context.Background(), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if head.PreviousJustifiedSlot != 3*params.BeaconConfig().SlotsPerEpoch {
-		t.Errorf("Wanted PreviousJustifiedSlot: %d, got: %d",
-			3*params.BeaconConfig().SlotsPerEpoch, head.PreviousJustifiedSlot)
-	}
-	if head.JustifiedSlot != 2*params.BeaconConfig().SlotsPerEpoch {
-		t.Errorf("Wanted JustifiedSlot: %d, got: %d",
-			2*params.BeaconConfig().SlotsPerEpoch, head.JustifiedSlot)
-	}
-	if head.FinalizedSlot != 1*params.BeaconConfig().SlotsPerEpoch {
-		t.Errorf("Wanted FinalizedSlot: %d, got: %d",
-			1*params.BeaconConfig().SlotsPerEpoch, head.FinalizedSlot)
-	}
-	if !bytes.Equal([]byte{'A'}, head.PreviousJustifiedBlockRoot) {
-		t.Errorf("Wanted PreviousJustifiedBlockRoot: %v, got: %v",
-			[]byte{'A'}, head.PreviousJustifiedBlockRoot)
-	}
-	if !bytes.Equal([]byte{'B'}, head.JustifiedBlockRoot) {
-		t.Errorf("Wanted JustifiedBlockRoot: %v, got: %v",
-			[]byte{'B'}, head.JustifiedBlockRoot)
-	}
-	if !bytes.Equal([]byte{'C'}, head.FinalizedBlockRoot) {
-		t.Errorf("Wanted FinalizedBlockRoot: %v, got: %v",
-			[]byte{'C'}, head.FinalizedBlockRoot)
 	}
 }
 

@@ -3,6 +3,7 @@ package forkchoice
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
@@ -15,6 +16,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -72,7 +74,7 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 
 	// Verify attestation is from current epoch or previous epoch.
 	if err := s.verifyAttTargetEpoch(ctx, baseState.GenesisTime, uint64(time.Now().Unix()), tgt); err != nil {
-		return 0, err
+		return err
 	}
 
 	// Verify Attestations cannot be from future epochs.
@@ -94,7 +96,7 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 	// Use the target state to to validate attestation and calculate the committees.
 	indexedAtt, err := s.verifyAttestation(ctx, baseState, a)
 	if err != nil {
-		log.WithError(err).Warn("Removing attestation from queue.")
+		return err
 	}
 
 	// Update every validator's latest vote.

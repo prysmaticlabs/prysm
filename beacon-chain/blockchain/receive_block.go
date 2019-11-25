@@ -8,6 +8,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -97,6 +98,15 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconB
 		return errors.Wrap(err, "could not clean up block deposits, attestations, and other operations")
 	}
 
+	// Send notification of the processed block to the state feed.
+	s.stateNotifier.StateFeed().Send(&statefeed.Event{
+		Type: statefeed.BlockProcessed,
+		Data: &statefeed.BlockProcessedData{
+			BlockRoot: root,
+			Verified:  true,
+		},
+	})
+
 	// Reports on block and fork choice metrics.
 	s.reportSlotMetrics(blockCopy.Slot)
 
@@ -108,8 +118,6 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconB
 
 	processedBlkNoPubsub.Inc()
 
-	// We write the latest saved head root to a feed for consumption by other services.
-	s.headUpdatedFeed.Send(bytesutil.ToBytes32(headRoot))
 	return nil
 }
 
@@ -144,14 +152,21 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 		return errors.Wrap(err, "could not clean up block deposits, attestations, and other operations")
 	}
 
+	// Send notification of the processed block to the state feed.
+	s.stateNotifier.StateFeed().Send(&statefeed.Event{
+		Type: statefeed.BlockProcessed,
+		Data: &statefeed.BlockProcessedData{
+			BlockRoot: root,
+			Verified:  true,
+		},
+	})
+
 	// Reports on block and fork choice metrics.
 	s.reportSlotMetrics(blockCopy.Slot)
 
 	// Log state transition data.
 	logStateTransitionData(blockCopy, root[:])
 
-	// We write the latest saved head root to a feed for consumption by other services.
-	s.headUpdatedFeed.Send(root)
 	processedBlkNoPubsubForkchoice.Inc()
 	return nil
 }
@@ -181,6 +196,15 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.BeaconB
 		}
 	}
 
+	// Send notification of the processed block to the state feed.
+	s.stateNotifier.StateFeed().Send(&statefeed.Event{
+		Type: statefeed.BlockProcessed,
+		Data: &statefeed.BlockProcessedData{
+			BlockRoot: root,
+			Verified:  false,
+		},
+	})
+
 	// Reports on blockCopy and fork choice metrics.
 	s.reportSlotMetrics(blockCopy.Slot)
 
@@ -191,8 +215,6 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.BeaconB
 		"deposits":     len(blockCopy.Body.Deposits),
 	}).Debug("Finished applying state transition")
 
-	// We write the latest saved head root to a feed for consumption by other services.
-	s.headUpdatedFeed.Send(root)
 	return nil
 }
 

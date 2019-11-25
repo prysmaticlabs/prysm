@@ -104,6 +104,7 @@ func TestDeleteHistoryIdxAtt(t *testing.T) {
 		if err != nil {
 			t.Fatalf("delete index attestation failed: %v", err)
 		}
+
 		iAarray, err = db.IndexedAttestation(tt.iA.Data.Target.Epoch, tt.iA.AttestingIndices[0])
 		hasA := db.HasIndexedAttestation(tt.iA.Data.Target.Epoch, tt.iA.AttestingIndices[0])
 		if err != nil {
@@ -125,7 +126,6 @@ func TestHasIdxAtt(t *testing.T) {
 	defer TeardownSlasherDB(t, db)
 
 	for _, tt := range tests {
-
 		found := db.HasIndexedAttestation(tt.iA.Data.Target.Epoch, tt.iA.AttestingIndices[0])
 		if found {
 			t.Fatal("has indexed attestation should return false for indexed attestations that are not in db")
@@ -136,9 +136,7 @@ func TestHasIdxAtt(t *testing.T) {
 		}
 	}
 	for _, tt := range tests {
-
 		found := db.HasIndexedAttestation(tt.iA.Data.Target.Epoch, tt.iA.AttestingIndices[0])
-
 		if !found {
 			t.Fatal("has indexed attestation should return true")
 		}
@@ -190,6 +188,5 @@ func TestPruneHistoryIdxAtt(t *testing.T) {
 				t.Fatalf("indexed attestation should have been pruned: %v has attestation: %v", iAarray, hasIa)
 			}
 		}
-
 	}
 }

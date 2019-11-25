@@ -26,7 +26,7 @@ func (r *RegularSync) beaconBlocksByRangeRPCHandler(ctx context.Context, msg int
 	m := msg.(*pb.BeaconBlocksByRangeRequest)
 
 	startSlot := m.StartSlot
-	endSlot := startSlot + (m.Step * m.Count)
+	endSlot := startSlot + (m.Step * (m.Count - 1))
 
 	span.AddAttributes(
 		trace.Int64Attribute("start", int64(startSlot)),

@@ -1,10 +1,12 @@
 package forkchoice
 
 import (
+	"bytes"
 	"context"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
@@ -15,17 +17,10 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
-
-func init() {
-	fc := featureconfig.Get()
-	fc.PruneFinalizedStates = true
-	featureconfig.Init(fc)
-}
 
 func TestStore_OnBlock(t *testing.T) {
 	ctx := context.Background()
@@ -332,5 +327,117 @@ func TestRemoveStateSinceLastFinalized(t *testing.T) {
 		if s != nil && s.Slot != newFinalizedSlot && s.Slot != finalizedSlot && s.Slot != 0 && s.Slot < endSlot {
 			t.Errorf("State with slot %d should not be in DB", s.Slot)
 		}
+	}
+}
+
+func TestShouldUpdateJustified_ReturnTrue(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	params.UseMinimalConfig()
+	defer params.UseMainnetConfig()
+
+	store := NewForkChoiceService(ctx, db)
+	store.genesisTime = uint64(time.Now().Unix())
+
+	update, err := store.shouldUpdateJustified(ctx, &ethpb.Checkpoint{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !update {
+		t.Error("Should be able to update justified, received false")
+	}
+
+	lastJustifiedBlk := &ethpb.BeaconBlock{ParentRoot: []byte{'G'}}
+	lastJustifiedRoot, _ := ssz.SigningRoot(lastJustifiedBlk)
+	newJustifiedBlk := &ethpb.BeaconBlock{Slot: 1, ParentRoot: lastJustifiedRoot[:]}
+	newJustifiedRoot, _ := ssz.SigningRoot(newJustifiedBlk)
+	if err := store.db.SaveBlock(ctx, newJustifiedBlk); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveBlock(ctx, lastJustifiedBlk); err != nil {
+		t.Fatal(err)
+	}
+
+	diff := (params.BeaconConfig().SlotsPerEpoch - 1) * params.BeaconConfig().SecondsPerSlot
+	store.genesisTime = uint64(time.Now().Unix()) - diff
+	store.justifiedCheckpt = &ethpb.Checkpoint{Root: lastJustifiedRoot[:]}
+	update, err = store.shouldUpdateJustified(ctx, &ethpb.Checkpoint{Root: newJustifiedRoot[:]})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !update {
+		t.Error("Should be able to update justified, received false")
+	}
+}
+
+func TestShouldUpdateJustified_ReturnFalse(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	params.UseMinimalConfig()
+	defer params.UseMainnetConfig()
+
+	store := NewForkChoiceService(ctx, db)
+
+	lastJustifiedBlk := &ethpb.BeaconBlock{ParentRoot: []byte{'G'}}
+	lastJustifiedRoot, _ := ssz.SigningRoot(lastJustifiedBlk)
+	newJustifiedBlk := &ethpb.BeaconBlock{ParentRoot: lastJustifiedRoot[:]}
+	newJustifiedRoot, _ := ssz.SigningRoot(newJustifiedBlk)
+	if err := store.db.SaveBlock(ctx, newJustifiedBlk); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveBlock(ctx, lastJustifiedBlk); err != nil {
+		t.Fatal(err)
+	}
+
+	diff := (params.BeaconConfig().SlotsPerEpoch - 1) * params.BeaconConfig().SecondsPerSlot
+	store.genesisTime = uint64(time.Now().Unix()) - diff
+	store.justifiedCheckpt = &ethpb.Checkpoint{Root: lastJustifiedRoot[:]}
+
+	update, err := store.shouldUpdateJustified(ctx, &ethpb.Checkpoint{Root: newJustifiedRoot[:]})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if update {
+		t.Error("Should not be able to update justified, received true")
+	}
+}
+
+func TestUpdateJustifiedCheckpoint_Update(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	params.UseMinimalConfig()
+	defer params.UseMainnetConfig()
+
+	store := NewForkChoiceService(ctx, db)
+	store.genesisTime = uint64(time.Now().Unix())
+
+	store.justifiedCheckpt = &ethpb.Checkpoint{Root: []byte{'A'}}
+	store.bestJustifiedCheckpt = &ethpb.Checkpoint{Epoch: 1, Root: []byte{'B'}}
+	store.updateJustifiedCheckpoint()
+
+	if !bytes.Equal(store.justifiedCheckpt.Root, []byte{'B'}) {
+		t.Error("Justified check point root did not update")
+	}
+}
+
+func TestUpdateJustifiedCheckpoint_NoUpdate(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	params.UseMinimalConfig()
+	defer params.UseMainnetConfig()
+
+	store := NewForkChoiceService(ctx, db)
+	store.genesisTime = uint64(time.Now().Unix()) - params.BeaconConfig().SecondsPerSlot
+
+	store.justifiedCheckpt = &ethpb.Checkpoint{Root: []byte{'A'}}
+	store.bestJustifiedCheckpt = &ethpb.Checkpoint{Epoch: 1, Root: []byte{'B'}}
+	store.updateJustifiedCheckpoint()
+
+	if bytes.Equal(store.justifiedCheckpt.Root, []byte{'B'}) {
+		t.Error("Justified check point root was not suppose to update")
 	}
 }
