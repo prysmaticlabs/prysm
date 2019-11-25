@@ -4,6 +4,7 @@ import (
 	"context"
 	"io/ioutil"
 	"log"
+	"os"
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
@@ -19,6 +20,7 @@ import (
 
 func main() {
 	log.Println("generating genesis state")
+	// Generating this for the 2 following states.
 	if err := generateGenesisBeaconState(); err != nil {
 		log.Fatal(err)
 	}
@@ -28,6 +30,10 @@ func main() {
 	}
 	log.Println("generating state after 2 fully attested epochs")
 	if err := generate2FullEpochState(); err != nil {
+		log.Fatal(err)
+	}
+	// Removing this since its 10MB large and no longer needed.
+	if err := os.Remove(bench.FilePath(bench.GenesisFileName)); err != nil {
 		log.Fatal(err)
 	}
 }
