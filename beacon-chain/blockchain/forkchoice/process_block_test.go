@@ -159,10 +159,7 @@ func TestStore_UpdateBlockAttestationVote(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, i := range attestedIndices {
-		v, err := store.db.ValidatorLatestVote(ctx, i)
-		if err != nil {
-			t.Fatal(err)
-		}
+		v := store.latestVoteMap[i]
 		if !reflect.DeepEqual(v.Root, r[:]) {
 			t.Error("Attested roots don't match")
 		}
