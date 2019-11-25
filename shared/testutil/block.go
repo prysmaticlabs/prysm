@@ -297,18 +297,19 @@ func GenerateAttestations(
 	maxAttestations := conf.MaxAttestations
 	currentEpoch := helpers.SlotToEpoch(slot)
 	attestations := []*ethpb.Attestation{}
-
+	generateHeadState := false
 	if slot > bState.Slot {
-		t.Fatalf("slot %d greater than state slot %d", slot, bState.Slot)
+		generateHeadState = true
 	}
 
 	var err error
 	targetRoot := make([]byte, 32)
 	headRoot := make([]byte, 32)
 	epochStartSlot := helpers.StartSlot(currentEpoch)
-	if slot == bState.Slot { // Only calculate head state if its an attestation for the current slot.
+	// Only calculate head state if its an attestation for the current slot or future slot.
+	if generateHeadState || slot == bState.Slot {
 		headState := proto.Clone(bState).(*pb.BeaconState)
-		headState, err := state.ProcessSlots(context.Background(), headState, bState.Slot+1)
+		headState, err := state.ProcessSlots(context.Background(), headState, slot+1)
 		if err != nil {
 			t.Fatal(err)
 		}
