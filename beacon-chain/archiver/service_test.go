@@ -376,11 +376,12 @@ func setupState(t *testing.T, validatorCount uint64) *pb.BeaconState {
 func setupService(t *testing.T) (*Service, db.Database) {
 	beaconDB := dbutil.SetupDB(t)
 	ctx, cancel := context.WithCancel(context.Background())
+	mockChainService := &mock.ChainService{}
 	return &Service{
 		beaconDB:      beaconDB,
 		ctx:           ctx,
 		cancel:        cancel,
-		stateNotifier: &mock.ChainService{},
+		stateNotifier: mockChainService.StateNotifier(),
 	}, beaconDB
 }
 
@@ -391,7 +392,7 @@ func triggerStateEvent(t *testing.T, svc *Service, event *statefeed.Event) {
 		<-exitRoutine
 	}()
 
-	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed)
+	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
 	for sent := 0; sent == 0; {
 		sent = svc.stateNotifier.StateFeed().Send(event)
 	}

@@ -7,7 +7,6 @@ import (
 	"math/rand"
 	"net"
 	"os"
-	"time"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
@@ -16,10 +15,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/aggregator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/attester"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beacon"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/node"
@@ -50,7 +51,6 @@ type Service struct {
 	ctx                   context.Context
 	cancel                context.CancelFunc
 	beaconDB              db.Database
-	stateFeedListener     blockchain.ChainFeeds
 	headFetcher           blockchain.HeadFetcher
 	forkFetcher           blockchain.ForkFetcher
 	finalizationFetcher   blockchain.FinalizationFetcher
@@ -74,6 +74,7 @@ type Service struct {
 	p2p                   p2p.Broadcaster
 	depositFetcher        depositcache.DepositFetcher
 	pendingDepositFetcher depositcache.PendingDepositsFetcher
+	stateNotifier         statefeed.Notifier
 }
 
 // Config options for the beacon node RPC server.
@@ -82,7 +83,6 @@ type Config struct {
 	CertFlag              string
 	KeyFlag               string
 	BeaconDB              db.Database
-	StateFeedListener     blockchain.ChainFeeds
 	HeadFetcher           blockchain.HeadFetcher
 	ForkFetcher           blockchain.ForkFetcher
 	FinalizationFetcher   blockchain.FinalizationFetcher
@@ -98,6 +98,7 @@ type Config struct {
 	Broadcaster           p2p.Broadcaster
 	DepositFetcher        depositcache.DepositFetcher
 	PendingDepositFetcher depositcache.PendingDepositsFetcher
+	StateNotifier         statefeed.Notifier
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -108,7 +109,6 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		ctx:                   ctx,
 		cancel:                cancel,
 		beaconDB:              cfg.BeaconDB,
-		stateFeedListener:     cfg.StateFeedListener,
 		headFetcher:           cfg.HeadFetcher,
 		forkFetcher:           cfg.ForkFetcher,
 		finalizationFetcher:   cfg.FinalizationFetcher,
@@ -129,6 +129,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		pendingDepositFetcher: cfg.PendingDepositFetcher,
 		canonicalStateChan:    make(chan *pbp2p.BeaconState, params.BeaconConfig().DefaultBufferSize),
 		incomingAttestation:   make(chan *ethpb.Attestation, params.BeaconConfig().DefaultBufferSize),
+		stateNotifier:         cfg.StateNotifier,
 	}
 }
 
@@ -206,8 +207,7 @@ func (s *Service) Start() {
 		Eth1InfoFetcher:    s.powChainService,
 		DepositFetcher:     s.depositFetcher,
 		SyncChecker:        s.syncService,
-		StateFeedListener:  s.stateFeedListener,
-		ChainStartChan:     make(chan time.Time),
+		StateNotifier:      s.stateNotifier,
 	}
 	nodeServer := &node.Server{
 		BeaconDB:           s.beaconDB,
@@ -223,9 +223,15 @@ func (s *Service) Start() {
 		ChainStartFetcher:   s.chainStartFetcher,
 		CanonicalStateChan:  s.canonicalStateChan,
 	}
+	aggregatorServer := &aggregator.Server{
+		BeaconDB:    s.beaconDB,
+		HeadFetcher: s.headFetcher,
+		SyncChecker: s.syncService,
+	}
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)
 	pb.RegisterAttesterServiceServer(s.grpcServer, attesterServer)
 	pb.RegisterValidatorServiceServer(s.grpcServer, validatorServer)
+	pb.RegisterAggregatorServiceServer(s.grpcServer, aggregatorServer)
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 

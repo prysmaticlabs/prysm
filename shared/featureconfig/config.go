@@ -31,8 +31,6 @@ type Flags struct {
 	InitSyncNoVerify         bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
 	SkipBLSVerify            bool // Skips BLS verification across the runtime.
 	EnableBackupWebhook      bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
-	OptimizeProcessEpoch     bool // OptimizeProcessEpoch to process epoch with optimizations by pre computing records.
-	Scatter                  bool // Scatter sequential processing by scattering it to multiple cores.
 	PruneFinalizedStates     bool // PruneFinalizedStates from the database.
 
 	// Cache toggles.
@@ -106,18 +104,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(enableBLSPubkeyCacheFlag.Name) {
 		log.Warn("Enabled BLS pubkey cache.")
 		cfg.EnableBLSPubkeyCache = true
-	}
-	if ctx.GlobalBool(OptimizeProcessEpoch.Name) {
-		log.Warn("Processing epoch with optimizations")
-		cfg.OptimizeProcessEpoch = true
-	}
-	if ctx.GlobalBool(Scatter.Name) {
-		log.Warn("Scattering sequential proceses to multiple cores")
-		cfg.Scatter = true
-	}
-	if ctx.GlobalBool(pruneFinalizedStatesFlag.Name) {
-		log.Warn("Enabled pruning old finalized states from database.")
-		cfg.PruneFinalizedStates = true
 	}
 	if ctx.GlobalBool(enableShuffledIndexCache.Name) {
 		log.Warn("Enabled shuffled index cache.")

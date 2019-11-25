@@ -288,18 +288,10 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 			return nil, errors.Wrap(err, "could not process slot")
 		}
 		if CanProcessEpoch(state) {
-			if featureconfig.Get().OptimizeProcessEpoch {
-				state, err = ProcessEpochPrecompute(ctx, state)
-				if err != nil {
-					traceutil.AnnotateError(span, err)
-					return nil, errors.Wrap(err, "could not process epoch with optimizations")
-				}
-			} else {
-				state, err = ProcessEpoch(ctx, state)
-				if err != nil {
-					traceutil.AnnotateError(span, err)
-					return nil, errors.Wrap(err, "could not process epoch")
-				}
+			state, err = ProcessEpochPrecompute(ctx, state)
+			if err != nil {
+				traceutil.AnnotateError(span, err)
+				return nil, errors.Wrap(err, "could not process epoch with optimizations")
 			}
 		}
 		state.Slot++

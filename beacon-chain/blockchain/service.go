@@ -25,40 +25,30 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
-// ChainFeeds interface defines the methods of the Service which provide state related
-// information feeds to consumers.
-type ChainFeeds interface {
-	StateInitializedFeed() *event.Feed
-}
-
 // Service represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type Service struct {
-	ctx                  context.Context
-	cancel               context.CancelFunc
-	beaconDB             db.Database
-	depositCache         *depositcache.DepositCache
-	chainStartFetcher    powchain.ChainStartFetcher
-	opsPoolService       operations.OperationFeeds
-	forkChoiceStore      forkchoice.ForkChoicer
-	chainStartChan       chan time.Time
-	genesisTime          time.Time
-	stateInitializedFeed *event.Feed
-	p2p                  p2p.Broadcaster
-	maxRoutines          int64
-	headSlot             uint64
-	headBlock            *ethpb.BeaconBlock
-	headState            *pb.BeaconState
-	canonicalRoots       map[uint64][]byte
-	headLock             sync.RWMutex
-
-	stateNotifier statefeed.Notifier
+	ctx               context.Context
+	cancel            context.CancelFunc
+	beaconDB          db.Database
+	depositCache      *depositcache.DepositCache
+	chainStartFetcher powchain.ChainStartFetcher
+	opsPoolService    operations.OperationFeeds
+	forkChoiceStore   forkchoice.ForkChoicer
+	genesisTime       time.Time
+	p2p               p2p.Broadcaster
+	maxRoutines       int64
+	headSlot          uint64
+	headBlock         *ethpb.BeaconBlock
+	headState         *pb.BeaconState
+	canonicalRoots    map[uint64][]byte
+	headLock          sync.RWMutex
+	stateNotifier     statefeed.Notifier
 }
 
 // Config options for the service.
@@ -79,19 +69,17 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	store := forkchoice.NewForkChoiceService(ctx, cfg.BeaconDB)
 	return &Service{
-		ctx:                  ctx,
-		cancel:               cancel,
-		beaconDB:             cfg.BeaconDB,
-		depositCache:         cfg.DepositCache,
-		chainStartFetcher:    cfg.ChainStartFetcher,
-		opsPoolService:       cfg.OpsPoolService,
-		forkChoiceStore:      store,
-		chainStartChan:       make(chan time.Time),
-		stateInitializedFeed: new(event.Feed),
-		p2p:                  cfg.P2p,
-		canonicalRoots:       make(map[uint64][]byte),
-		maxRoutines:          cfg.MaxRoutines,
-		stateNotifier:        cfg.StateNotifier,
+		ctx:               ctx,
+		cancel:            cancel,
+		beaconDB:          cfg.BeaconDB,
+		depositCache:      cfg.DepositCache,
+		chainStartFetcher: cfg.ChainStartFetcher,
+		opsPoolService:    cfg.OpsPoolService,
+		forkChoiceStore:   store,
+		p2p:               cfg.P2p,
+		canonicalRoots:    make(map[uint64][]byte),
+		maxRoutines:       cfg.MaxRoutines,
+		stateNotifier:     cfg.StateNotifier,
 	}, nil
 }
 
@@ -120,18 +108,39 @@ func (s *Service) Start() {
 		if err := s.forkChoiceStore.GenesisStore(ctx, justifiedCheckpoint, finalizedCheckpoint); err != nil {
 			log.Fatalf("Could not start fork choice service: %v", err)
 		}
-		s.stateInitializedFeed.Send(s.genesisTime)
+		s.stateNotifier.StateFeed().Send(&statefeed.Event{
+			Type: statefeed.StateInitialized,
+			Data: &statefeed.StateInitializedData{
+				StartTime: s.genesisTime,
+			},
+		})
 	} else {
 		log.Info("Waiting to reach the validator deposit threshold to start the beacon chain...")
 		if s.chainStartFetcher == nil {
 			log.Fatal("Not configured web3Service for POW chain")
 			return // return need for TestStartUninitializedChainWithoutConfigPOWChain.
 		}
-		subChainStart := s.chainStartFetcher.ChainStartFeed().Subscribe(s.chainStartChan)
 		go func() {
-			genesisTime := <-s.chainStartChan
-			s.processChainStartTime(ctx, genesisTime, subChainStart)
-			return
+			stateChannel := make(chan *statefeed.Event, 1)
+			stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
+			defer stateSub.Unsubscribe()
+			for {
+				select {
+				case event := <-stateChannel:
+					if event.Type == statefeed.ChainStarted {
+						data := event.Data.(*statefeed.ChainStartedData)
+						log.WithField("starttime", data.StartTime).Debug("Received chain start event")
+						s.processChainStartTime(ctx, data.StartTime)
+						return
+					}
+				case <-s.ctx.Done():
+					log.Debug("Context closed, exiting goroutine")
+					return
+				case err := <-stateSub.Err():
+					log.WithError(err).Error("Subscription to state notifier failed")
+					return
+				}
+			}
 		}()
 	}
 
@@ -140,13 +149,17 @@ func (s *Service) Start() {
 
 // processChainStartTime initializes a series of deposits from the ChainStart deposits in the eth1
 // deposit contract, initializes the beacon chain's state, and kicks off the beacon chain.
-func (s *Service) processChainStartTime(ctx context.Context, genesisTime time.Time, chainStartSub event.Subscription) {
+func (s *Service) processChainStartTime(ctx context.Context, genesisTime time.Time) {
 	initialDeposits := s.chainStartFetcher.ChainStartDeposits()
 	if err := s.initializeBeaconChain(ctx, genesisTime, initialDeposits, s.chainStartFetcher.ChainStartEth1Data()); err != nil {
 		log.Fatalf("Could not initialize beacon chain: %v", err)
 	}
-	s.stateInitializedFeed.Send(genesisTime)
-	chainStartSub.Unsubscribe()
+	s.stateNotifier.StateFeed().Send(&statefeed.Event{
+		Type: statefeed.StateInitialized,
+		Data: &statefeed.StateInitializedData{
+			StartTime: genesisTime,
+		},
+	})
 }
 
 // initializes the state and genesis block of the beacon chain to persistent storage
@@ -195,12 +208,6 @@ func (s *Service) Status() error {
 		return fmt.Errorf("too many goroutines %d", runtime.NumGoroutine())
 	}
 	return nil
-}
-
-// StateInitializedFeed returns a feed that is written to
-// when the beacon state is first initialized.
-func (s *Service) StateInitializedFeed() *event.Feed {
-	return s.stateInitializedFeed
 }
 
 // This gets called to update canonical root mapping.

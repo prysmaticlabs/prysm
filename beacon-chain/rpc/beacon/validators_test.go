@@ -83,6 +83,107 @@ func TestServer_ListValidatorBalances_NoResults(t *testing.T) {
 	}
 }
 
+func TestServer_ListValidatorBalances_DefaultResponse_NoArchive(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	numItems := 100
+	validators := make([]*ethpb.Validator, numItems)
+	balances := make([]uint64, numItems)
+	balancesResponse := make([]*ethpb.ValidatorBalances_Balance, numItems)
+	for i := 0; i < numItems; i++ {
+		validators[i] = &ethpb.Validator{
+			PublicKey: []byte(strconv.Itoa(i)),
+		}
+		balances[i] = params.BeaconConfig().MaxEffectiveBalance
+		balancesResponse[i] = &ethpb.ValidatorBalances_Balance{
+			PublicKey: []byte(strconv.Itoa(i)),
+			Index:     uint64(i),
+			Balance:   params.BeaconConfig().MaxEffectiveBalance,
+		}
+	}
+	bs := &Server{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: &pbp2p.BeaconState{
+				Slot:       0,
+				Validators: validators,
+				Balances:   balances,
+			},
+		},
+	}
+	res, err := bs.ListValidatorBalances(
+		ctx,
+		&ethpb.ListValidatorBalancesRequest{
+			QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{
+				Epoch: 0,
+			},
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(balancesResponse, res.Balances) {
+		t.Errorf("Wanted %v, received %v", balancesResponse, res.Balances)
+	}
+}
+
+func TestServer_ListValidatorBalances_DefaultResponse_FromArchive(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	currentNumValidators := 100
+	numOldBalances := 50
+	validators := make([]*ethpb.Validator, currentNumValidators)
+	balances := make([]uint64, currentNumValidators)
+	oldBalances := make([]uint64, numOldBalances)
+	balancesResponse := make([]*ethpb.ValidatorBalances_Balance, numOldBalances)
+	for i := 0; i < currentNumValidators; i++ {
+		validators[i] = &ethpb.Validator{
+			PublicKey: []byte(strconv.Itoa(i)),
+		}
+		balances[i] = params.BeaconConfig().MaxEffectiveBalance
+	}
+	for i := 0; i < numOldBalances; i++ {
+		oldBalances[i] = params.BeaconConfig().MaxEffectiveBalance
+		balancesResponse[i] = &ethpb.ValidatorBalances_Balance{
+			PublicKey: []byte(strconv.Itoa(i)),
+			Index:     uint64(i),
+			Balance:   params.BeaconConfig().MaxEffectiveBalance,
+		}
+	}
+	// We archive old balances for epoch 50.
+	if err := db.SaveArchivedBalances(ctx, 50, oldBalances); err != nil {
+		t.Fatal(err)
+	}
+	bs := &Server{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: &pbp2p.BeaconState{
+				Slot:       helpers.StartSlot(100 /* epoch 100 */),
+				Validators: validators,
+				Balances:   balances,
+			},
+		},
+	}
+	res, err := bs.ListValidatorBalances(
+		ctx,
+		&ethpb.ListValidatorBalancesRequest{
+			QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{
+				Epoch: 50,
+			},
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(balancesResponse, res.Balances) {
+		t.Errorf("Wanted %v, received %v", balancesResponse, res.Balances)
+	}
+}
+
 func TestServer_ListValidatorBalances_PaginationOutOfRange(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
@@ -427,6 +528,58 @@ func TestServer_ListValidators_NoResults(t *testing.T) {
 	}
 	if !proto.Equal(wanted, res) {
 		t.Errorf("Wanted %v, received %v", wanted, res)
+	}
+}
+
+func TestServer_ListValidators_OnlyActiveValidators(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	count := 100
+	balances := make([]uint64, count)
+	validators := make([]*ethpb.Validator, count)
+	activeValidators := make([]*ethpb.Validator, 0)
+	for i := 0; i < count; i++ {
+		if err := db.SaveValidatorIndex(ctx, [48]byte{byte(i)}, uint64(i)); err != nil {
+			t.Fatal(err)
+		}
+		balances[i] = params.BeaconConfig().MaxEffectiveBalance
+
+		// We mark even validators as active, and odd validators as inactive.
+		if i%2 == 0 {
+			val := &ethpb.Validator{
+				PublicKey:       []byte{byte(i)},
+				ActivationEpoch: 0,
+				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+			}
+			validators[i] = val
+			activeValidators = append(activeValidators, val)
+		} else {
+			validators[i] = &ethpb.Validator{
+				PublicKey:       []byte{byte(i)},
+				ActivationEpoch: 0,
+				ExitEpoch:       0,
+			}
+		}
+	}
+	headState := &pbp2p.BeaconState{Validators: validators, Balances: balances}
+
+	bs := &Server{
+		HeadFetcher: &mock.ChainService{
+			State: headState,
+		},
+	}
+
+	received, err := bs.ListValidators(context.Background(), &ethpb.ListValidatorsRequest{
+		Active: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(activeValidators, received.Validators) {
+		t.Errorf("Wanted %v, received %v", activeValidators, received.Validators)
 	}
 }
 
@@ -981,11 +1134,11 @@ func TestServer_GetValidatorParticipation_FromArchive(t *testing.T) {
 	bs := &Server{
 		BeaconDB: db,
 		HeadFetcher: &mock.ChainService{
-			State: &pbp2p.BeaconState{Slot: helpers.StartSlot(epoch + 1)},
-		},
-		FinalizationFetcher: &mock.ChainService{
-			FinalizedCheckPoint: &ethpb.Checkpoint{
-				Epoch: epoch + 1,
+			State: &pbp2p.BeaconState{
+				Slot: helpers.StartSlot(epoch + 1),
+				FinalizedCheckpoint: &ethpb.Checkpoint{
+					Epoch: epoch + 1,
+				},
 			},
 		},
 	}
@@ -1013,6 +1166,53 @@ func TestServer_GetValidatorParticipation_FromArchive(t *testing.T) {
 	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{
 		QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
 			Epoch: epoch - 2,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(want, res) {
+		t.Errorf("Wanted %v, received %v", want, res)
+	}
+}
+
+func TestServer_GetValidatorParticipation_FromArchive_FinalizedEpoch(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+	ctx := context.Background()
+	part := &ethpb.ValidatorParticipation{
+		GlobalParticipationRate: 1.0,
+		VotedEther:              20,
+		EligibleEther:           20,
+	}
+	epoch := uint64(1)
+	// We archive data for epoch 1.
+	if err := db.SaveArchivedValidatorParticipation(ctx, epoch, part); err != nil {
+		t.Fatal(err)
+	}
+
+	bs := &Server{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			// 10 epochs into the future.
+			State: &pbp2p.BeaconState{
+				Slot: helpers.StartSlot(epoch + 10),
+				FinalizedCheckpoint: &ethpb.Checkpoint{
+					// We say there have been 5 epochs since finality.
+					Epoch: epoch + 5,
+				},
+			},
+		},
+	}
+	want := &ethpb.ValidatorParticipationResponse{
+		Epoch:         epoch,
+		Finalized:     true,
+		Participation: part,
+	}
+	// We request epoch 1.
+	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{
+		QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
+			Epoch: epoch,
 		},
 	})
 	if err != nil {
