@@ -41,7 +41,7 @@ func generateGenesisBeaconState() error {
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(bench.GenesisFileName, beaconBytes, 0644); err != nil {
+	if err := ioutil.WriteFile(bench.FilePath(bench.GenesisFileName), beaconBytes, 0644); err != nil {
 		return err
 	}
 	return nil
@@ -111,7 +111,7 @@ func generateMarshalledFullStateAndBlock() error {
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(bench.BState1EpochFileName, beaconBytes, 0644); err != nil {
+	if err := ioutil.WriteFile(bench.FilePath(bench.BState1EpochFileName), beaconBytes, 0644); err != nil {
 		return err
 	}
 
@@ -125,7 +125,7 @@ func generateMarshalledFullStateAndBlock() error {
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(bench.FullBlockFileName, blockBytes, 0644); err != nil {
+	if err := ioutil.WriteFile(bench.FilePath(bench.FullBlockFileName), blockBytes, 0644); err != nil {
 		return err
 	}
 	return nil
@@ -161,16 +161,14 @@ func generate2FullEpochState() error {
 	if err != nil {
 		return err
 	}
-	// 16 for the length of "benchmark_files/".
-	if err := ioutil.WriteFile(bench.BState2EpochFileName, beaconBytes, 0644); err != nil {
+	if err := ioutil.WriteFile(bench.FilePath(bench.BState2EpochFileName), beaconBytes, 0644); err != nil {
 		return err
 	}
 	return nil
 }
 
 func genesisBeaconState() (*pb.BeaconState, error) {
-	// 16 for the length of "benchmark_files/".
-	beaconBytes, err := ioutil.ReadFile(bench.GenesisFileName)
+	beaconBytes, err := ioutil.ReadFile(bench.FilePath(bench.GenesisFileName))
 	if err != nil {
 		return nil, err
 	}

@@ -2,11 +2,11 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 
 go_library(
     name = "go_default_library",
-    data = glob(["*.ssz"]),
-    srcs = ["generate_bench_files.go"],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks/benchmarks/benchmark_files",
     testonly = True,
-    visibility = ["//visibility:private"],
+    srcs = ["generate_bench_files.go"],
+    data = glob(["*.ssz"]),
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks/benchmarks/benchmark_files",
+    visibility = ["//beacon-chain/core/blocks/benchmarks:__subpackages__"],
     deps = [
         "//beacon-chain/core/blocks/benchmarks:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
@@ -18,6 +18,15 @@ go_library(
         "//shared/testutil:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
     ],
+)
+
+
+filegroup(
+    name = "benchmark_data",
+    srcs = glob([
+        "*.ssz",
+    ]),
+    visibility = ["//beacon-chain/core/blocks/benchmarks:__subpackages__"],
 )
 
 go_binary(

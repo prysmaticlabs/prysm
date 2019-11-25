@@ -2,6 +2,7 @@ package benchmarks
 
 import (
 	"context"
+	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"io/ioutil"
 	"testing"
 
@@ -175,7 +176,11 @@ func clonedStates(beaconState *pb.BeaconState) []*pb.BeaconState {
 }
 
 func beaconState1Epoch() (*pb.BeaconState, error) {
-	beaconBytes, err := ioutil.ReadFile(FilePath(BState1EpochFileName))
+	path, err := bazel.Runfile(BState1EpochFileName)
+	if err != nil {
+		return nil, err
+	}
+	beaconBytes, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +192,11 @@ func beaconState1Epoch() (*pb.BeaconState, error) {
 }
 
 func beaconState2FullEpochs() (*pb.BeaconState, error) {
-	beaconBytes, err := ioutil.ReadFile(FilePath(BState2EpochFileName))
+	path, err := bazel.Runfile(BState2EpochFileName)
+	if err != nil {
+		return nil, err
+	}
+	beaconBytes, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +208,11 @@ func beaconState2FullEpochs() (*pb.BeaconState, error) {
 }
 
 func fullBlock() (*ethpb.BeaconBlock, error) {
-	blockBytes, err := ioutil.ReadFile(FilePath(FullBlockFileName))
+	path, err := bazel.Runfile(FullBlockFileName)
+	if err != nil {
+		return nil, err
+	}
+	blockBytes, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}

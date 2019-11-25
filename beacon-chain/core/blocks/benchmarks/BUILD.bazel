@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_test(
     name = "go_default_test",
     srcs = ["benchmarks_test.go"],
-    data = glob(["benchmark_files/*.ssz"]),
+    data =["//beacon-chain/core/blocks/benchmarks/benchmark_files:benchmark_data"],
     embed = [":go_default_library"],
     tags = [
         "manual",
@@ -17,14 +17,15 @@ go_test(
         "//shared/params:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
+        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
 )
 
 go_library(
     name = "go_default_library",
+    testonly = True,
     srcs = ["config.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks/benchmarks",
-    testonly = True,
     visibility = ["//beacon-chain/core/blocks/benchmarks:__subpackages__"],
     deps = ["//shared/params:go_default_library"],
 )
