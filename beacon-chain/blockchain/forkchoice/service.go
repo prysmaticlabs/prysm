@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -41,6 +42,8 @@ type Store struct {
 	checkpointStateLock  sync.Mutex
 	seenAtts             map[[32]byte]bool
 	seenAttsLock         sync.Mutex
+	latestVoteMap        map[uint64]*pb.ValidatorLatestVote
+	voteLock             sync.Mutex
 }
 
 // NewForkChoiceService instantiates a new service instance that will
@@ -52,6 +55,7 @@ func NewForkChoiceService(ctx context.Context, db db.Database) *Store {
 		cancel:          cancel,
 		db:              db,
 		checkpointState: cache.NewCheckpointStateCache(),
+		latestVoteMap:   make(map[uint64]*pb.ValidatorLatestVote),
 		seenAtts:        make(map[[32]byte]bool),
 	}
 }
@@ -165,12 +169,11 @@ func (s *Store) latestAttestingBalance(ctx context.Context, root []byte) (uint64
 	}
 
 	balances := uint64(0)
+	s.voteLock.Lock()
+	defer s.voteLock.Unlock()
 	for _, i := range activeIndices {
-		vote, err := s.db.ValidatorLatestVote(ctx, i)
-		if err != nil {
-			return 0, errors.Wrapf(err, "could not get validator %d's latest vote", i)
-		}
-		if vote == nil {
+		vote, ok := s.latestVoteMap[i]
+		if !ok {
 			continue
 		}
 
