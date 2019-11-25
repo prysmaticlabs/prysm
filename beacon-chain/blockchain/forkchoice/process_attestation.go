@@ -99,11 +99,6 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 		return errors.Wrap(err, "could not verify attestation target slot")
 	}
 
-	// Verify beacon node has seen the head block before.
-	if !s.db.HasBlock(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot)) {
-		return fmt.Errorf("target root %#x does not exist in db", bytesutil.Trunc(tgt.Root))
-	}
-
 	// Verify attestation beacon block is known and not from the future.
 	if err := s.verifyBeaconBlock(ctx, a.Data); err != nil {
 		return errors.Wrap(err, "could not verify attestation beacon block")
