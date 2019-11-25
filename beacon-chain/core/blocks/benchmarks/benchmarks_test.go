@@ -2,9 +2,10 @@ package benchmarks
 
 import (
 	"context"
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"io/ioutil"
 	"testing"
+
+	"github.com/bazelbuild/rules_go/go/tools/bazel"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
