@@ -55,7 +55,7 @@ func (ps *Server) getEth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data
 
 	// Determine the eth1 block for that timestamp.
 	blockNumber, err := ps.Eth1BlockFetcher.BlockNumberByTimestamp(ctx, uint64(timestamp.Unix()))
-	if err != nil {
+	if blockNumber == nil || err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not get block number from timestamp")
 	}
