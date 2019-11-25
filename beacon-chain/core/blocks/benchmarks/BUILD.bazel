@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_test(
     name = "go_default_test",
     srcs = ["benchmarks_test.go"],
-    data =["//beacon-chain/core/blocks/benchmarks/benchmark_files:benchmark_data"],
+    data = ["//beacon-chain/core/blocks/benchmarks/benchmark_files:benchmark_data"],
     embed = [":go_default_library"],
     tags = [
         "manual",
