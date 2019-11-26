@@ -94,3 +94,12 @@ func NewKVStore(dirPath string) (*Store, error) {
 
 	return kv, err
 }
+
+func (db *Store) Size() (error, int64) {
+	var size int64
+	err := db.db.View(func(tx *bolt.Tx) error {
+		size = tx.Size()
+		return nil
+	})
+	return err, size
+}
