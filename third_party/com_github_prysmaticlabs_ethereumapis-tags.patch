@@ -1,6 +1,6 @@
 diff -ur --exclude=.git a/eth/v1alpha1/BUILD.bazel b/eth/v1alpha1/BUILD.bazel
 --- a/eth/v1alpha1/BUILD.bazel	2019-11-25 22:56:20.000000000 -0600
-+++ b/eth/v1alpha1/BUILD.bazel	2019-11-26 11:27:58.000000000 -0600
++++ b/eth/v1alpha1/BUILD.bazel	2019-11-26 12:25:58.000000000 -0600
 @@ -20,6 +20,7 @@
          "@com_google_protobuf//:empty_proto",
          "@com_google_protobuf//:timestamp_proto",
@@ -28,11 +28,11 @@ diff -ur --exclude=.git a/eth/v1alpha1/BUILD.bazel b/eth/v1alpha1/BUILD.bazel
 +go_proto_library(
 +    name = "go_grpc_gateway_library",
 +    compilers = [
-+        "//:grpc_nogogo_proto_compiler",
++        "@prysm//:grpc_nogogo_proto_compiler",
 +        "@grpc_ecosystem_grpc_gateway//protoc-gen-grpc-gateway:go_gen_grpc_gateway",
 +    ],
 +    importpath = "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1_gateway",
-+    proto = ":v1alpha1_proto",
++    proto = ":proto",
 +    visibility = ["//visibility:public"],
 +    deps = [
 +        "@com_github_gogo_protobuf//gogoproto:go_default_library",
