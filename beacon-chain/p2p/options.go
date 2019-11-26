@@ -4,8 +4,10 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p-connmgr"
 	filter "github.com/libp2p/go-maddr-filter"
 	"github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
@@ -22,6 +24,7 @@ func buildOptions(cfg *Config, ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 		libp2p.EnableRelay(),
 		libp2p.ListenAddrs(listen),
 		whitelistSubnet(cfg.WhitelistCIDR),
+		libp2p.ConnectionManager(connmgr.NewConnManager(int(cfg.MaxPeers), int(cfg.MaxPeers), 1 * time.Second)),
 	}
 	if cfg.EnableUPnP {
 		options = append(options, libp2p.NATPortMap()) //Allow to use UPnP
