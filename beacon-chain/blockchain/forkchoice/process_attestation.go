@@ -180,22 +180,18 @@ func (s *Store) updateAttVotes(
 	tgtEpoch uint64) error {
 
 	indices := append(indexedAtt.CustodyBit_0Indices, indexedAtt.CustodyBit_1Indices...)
-	newVoteIndices := make([]uint64, 0, len(indices))
-	newVotes := make([]*pb.ValidatorLatestVote, 0, len(indices))
+	s.voteLock.Lock()
+	defer s.voteLock.Unlock()
 	for _, i := range indices {
-		vote, err := s.db.ValidatorLatestVote(ctx, i)
-		if err != nil {
-			return errors.Wrapf(err, "could not get latest vote for validator %d", i)
-		}
-		if vote == nil || tgtEpoch > vote.Epoch {
-			newVotes = append(newVotes, &pb.ValidatorLatestVote{
+		vote, ok := s.latestVoteMap[i]
+		if !ok || tgtEpoch > vote.Epoch {
+			s.latestVoteMap[i] = &pb.ValidatorLatestVote{
 				Epoch: tgtEpoch,
 				Root:  tgtRoot,
-			})
-			newVoteIndices = append(newVoteIndices, i)
+			}
 		}
 	}
-	return s.db.SaveValidatorLatestVotes(ctx, newVoteIndices, newVotes)
+	return nil
 }
 
 // setSeenAtt sets the attestation hash in seen attestation map to true.

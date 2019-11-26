@@ -17,6 +17,14 @@ var (
 		Name: "beacon_finalized_root",
 		Help: "Last finalized root of the processed state",
 	})
+	cacheFinalizedEpoch = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "cache_finalized_epoch",
+		Help: "Last cached finalized epoch",
+	})
+	cacheFinalizedRoot = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "cache_finalized_root",
+		Help: "Last cached finalized root",
+	})
 	beaconCurrentJustifiedEpoch = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "beacon_current_justified_epoch",
 		Help: "Current justified epoch of the processed state",
