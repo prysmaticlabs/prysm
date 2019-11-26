@@ -269,74 +269,35 @@ func TestStore_DuplicatedAttestations_FiltersCorrectly(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	someRoot := [32]byte{1, 2, 3}
-	atts := []*ethpb.Attestation{
-		{
-			Data: &ethpb.AttestationData{
-				BeaconBlockRoot: someRoot[:],
-				Source: &ethpb.Checkpoint{
-					Root:  someRoot[:],
-					Epoch: 5,
-				},
-				Target: &ethpb.Checkpoint{
-					Root:  someRoot[:],
-					Epoch: 7,
-				},
+	att := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			BeaconBlockRoot: someRoot[:],
+			Source: &ethpb.Checkpoint{
+				Root:  someRoot[:],
+				Epoch: 5,
 			},
-			AggregationBits: bitfield.Bitlist{0b11},
-		},
-		{
-			Data: &ethpb.AttestationData{
-				BeaconBlockRoot: someRoot[:],
-				Source: &ethpb.Checkpoint{
-					Root:  someRoot[:],
-					Epoch: 5,
-				},
-				Target: &ethpb.Checkpoint{
-					Root:  someRoot[:],
-					Epoch: 7,
-				},
+			Target: &ethpb.Checkpoint{
+				Root:  someRoot[:],
+				Epoch: 7,
 			},
-			AggregationBits: bitfield.Bitlist{0b11},
 		},
-		{
-			Data: &ethpb.AttestationData{
-				BeaconBlockRoot: someRoot[:],
-				Source: &ethpb.Checkpoint{
-					Root:  someRoot[:],
-					Epoch: 7,
-				},
-				Target: &ethpb.Checkpoint{
-					Root:  someRoot[:],
-					Epoch: 5,
-				},
-			},
-			AggregationBits: bitfield.Bitlist{0b11},
-		},
+		AggregationBits: bitfield.Bitlist{0b11},
 	}
+	atts := []*ethpb.Attestation{att, att, att}
 	ctx := context.Background()
 	if err := db.SaveAttestations(ctx, atts); err != nil {
 		t.Fatal(err)
 	}
 
-	tests := []struct {
-		filter         *filters.QueryFilter
-		expectedNumAtt int
-	}{
-		{
-			filter: filters.NewFilter().
-				SetHeadBlockRoot(someRoot[:]),
-			expectedNumAtt: 1,
-		},
+	retrievedAtts, err := db.Attestations(ctx, filters.NewFilter().
+		SetHeadBlockRoot(someRoot[:]))
+	if err != nil {
+		t.Fatal(err)
 	}
-	for _, tt := range tests {
-		retrievedAtts, err := db.Attestations(ctx, tt.filter)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(retrievedAtts) != tt.expectedNumAtt {
-			t.Errorf("Expected %d attestations, received %d", tt.expectedNumAtt, len(retrievedAtts))
-		}
+	if len(retrievedAtts) != 1 {
+		t.Errorf("Expected %d attestations, received %d", 1, len(retrievedAtts))
 	}
+
 }
 
 func TestStore_Attestations_BitfieldLogic(t *testing.T) {
