@@ -221,7 +221,7 @@ func TestArchiverService_SavesCommitteeInfo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wanted := &ethpb.ArchivedCommitteeInfo{
+	wanted := &pb.ArchivedCommitteeInfo{
 		ProposerSeed: proposerSeed[:],
 		AttesterSeed: attesterSeed[:],
 	}

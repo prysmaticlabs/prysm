@@ -27,6 +27,7 @@ ssz_proto_files(
     srcs = [
         "messages.proto",
         "types.proto",
+        "archive.proto",
     ],
     config = select({
         "//conditions:default": "mainnet",

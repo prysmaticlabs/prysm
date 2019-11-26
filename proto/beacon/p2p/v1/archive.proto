@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package ethereum.eth.v1alpha1;
+package ethereum.beacon.p2p.v1;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 import "eth/v1alpha1/beacon_block.proto";
@@ -21,15 +21,15 @@ message ArchivedActiveSetChanges {
 
     // Voluntary exit objects corresponding 1-to-1 to the exited indices
     // list in this same data structure.
-    repeated VoluntaryExit voluntary_exits = 6;
+    repeated ethereum.eth.v1alpha1.VoluntaryExit voluntary_exits = 6;
 
     // Proposer slashing objects corresponding 1-to-1 to the slashed proposer indices
     // list in this same data structure.
-    repeated ProposerSlashing proposer_slashings = 7;
+    repeated ethereum.eth.v1alpha1.ProposerSlashing proposer_slashings = 7;
 
     // Attester slashing objects corresponding 1-to-1 to the slashed attester indices
     // list in this same data structure.
-    repeated AttesterSlashing attester_slashings = 8;
+    repeated ethereum.eth.v1alpha1.AttesterSlashing attester_slashings = 8;
 }
 
 // ArchivedCommitteeInfo representing the minimal data required to reconstruct

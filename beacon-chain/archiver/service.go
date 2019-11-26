@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	epochProcessing "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -77,7 +76,7 @@ func (s *Service) archiveCommitteeInfo(ctx context.Context, headState *pb.Beacon
 		return errors.Wrap(err, "could not generate seed")
 	}
 
-	info := &ethpb.ArchivedCommitteeInfo{
+	info := &pb.ArchivedCommitteeInfo{
 		ProposerSeed: proposerSeed[:],
 		AttesterSeed: attesterSeed[:],
 	}
@@ -100,7 +99,7 @@ func (s *Service) archiveActiveSetChanges(ctx context.Context, headState *pb.Bea
 	if err != nil {
 		return errors.Wrap(err, "could not determine exited validator indices")
 	}
-	activeSetChanges := &ethpb.ArchivedActiveSetChanges{
+	activeSetChanges := &pb.ArchivedActiveSetChanges{
 		Activated: activations,
 		Exited:    exited,
 		Slashed:   slashings,
