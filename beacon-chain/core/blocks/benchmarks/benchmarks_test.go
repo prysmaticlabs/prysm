@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
