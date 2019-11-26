@@ -74,6 +74,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 	featureconfig.ConfigureBeaconChain(ctx)
+	flags.ConfigureGlobalFlags(ctx)
 	registry := shared.NewServiceRegistry()
 
 	beacon := &BeaconNode{
@@ -518,8 +519,7 @@ func (b *BeaconNode) registerInteropServices(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerArchiverService(ctx *cli.Context) error {
-	shouldArchive := ctx.GlobalBool(flags.ArchiveEnableFlag.Name)
-	if !shouldArchive {
+	if !flags.Get().EnableArchive {
 		return nil
 	}
 	var chainService *blockchain.Service
