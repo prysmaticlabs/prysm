@@ -1,6 +1,50 @@
-diff -ur '--exclude=.git' a/eth/v1alpha1/attestation.proto b/eth/v1alpha1/attestation.proto
---- a/eth/v1alpha1/attestation.proto	2019-11-25 20:28:55.540359856 -0800
-+++ b/eth/v1alpha1/attestation.proto	2019-11-25 21:58:03.007981273 -0800
+diff -ur --exclude=.git a/eth/v1alpha1/BUILD.bazel b/eth/v1alpha1/BUILD.bazel
+--- a/eth/v1alpha1/BUILD.bazel	2019-11-25 22:56:20.000000000 -0600
++++ b/eth/v1alpha1/BUILD.bazel	2019-11-26 11:27:58.000000000 -0600
+@@ -20,6 +20,7 @@
+         "@com_google_protobuf//:empty_proto",
+         "@com_google_protobuf//:timestamp_proto",
+         "@go_googleapis//google/api:annotations_proto",
++        "@gogo_special_proto//github.com/gogo/protobuf/gogoproto",
+     ],
+ )
+ 
+@@ -46,12 +47,31 @@
+ 
+ go_proto_library(
+     name = "go_proto",
+-    compilers = ["@io_bazel_rules_go//proto:go_grpc"],
++    compilers = ["@prysm//:grpc_proto_compiler"],
+     importpath = "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1",
+     proto = ":proto",
+     visibility = ["//visibility:public"],
+     deps = [
+         "@grpc_ecosystem_grpc_gateway//protoc-gen-swagger/options:options_go_proto",
++        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
++        "@go_googleapis//google/api:annotations_go_proto",
++    ],
++)
++
++go_proto_library(
++    name = "go_grpc_gateway_library",
++    compilers = [
++        "//:grpc_nogogo_proto_compiler",
++        "@grpc_ecosystem_grpc_gateway//protoc-gen-grpc-gateway:go_gen_grpc_gateway",
++    ],
++    importpath = "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1_gateway",
++    proto = ":v1alpha1_proto",
++    visibility = ["//visibility:public"],
++    deps = [
++        "@com_github_gogo_protobuf//gogoproto:go_default_library",
++        "@com_github_golang_protobuf//descriptor:go_default_library",
++        "@com_github_golang_protobuf//ptypes/empty:go_default_library",
++        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+         "@go_googleapis//google/api:annotations_go_proto",
+     ],
+ )
+diff -ur --exclude=.git a/eth/v1alpha1/attestation.proto b/eth/v1alpha1/attestation.proto
+--- a/eth/v1alpha1/attestation.proto	2019-11-26 11:48:31.000000000 -0600
++++ b/eth/v1alpha1/attestation.proto	2019-11-26 11:47:09.000000000 -0600
 @@ -15,6 +15,8 @@
  
  package ethereum.eth.v1alpha1;
@@ -32,7 +76,7 @@ diff -ur '--exclude=.git' a/eth/v1alpha1/attestation.proto b/eth/v1alpha1/attest
  
  message AttestationData {
 @@ -49,7 +51,7 @@
-   uint64 committee_index = 2;
+   uint64 index = 2;
  
    // 32 byte root of the LMD GHOST block vote.
 -  bytes beacon_block_root = 3;
@@ -47,9 +91,9 @@ diff -ur '--exclude=.git' a/eth/v1alpha1/attestation.proto b/eth/v1alpha1/attest
 -  bytes root = 2;
 +  bytes root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
  }
-diff -ur '--exclude=.git' a/eth/v1alpha1/beacon_block.proto b/eth/v1alpha1/beacon_block.proto
---- a/eth/v1alpha1/beacon_block.proto	2019-11-25 20:28:55.540359856 -0800
-+++ b/eth/v1alpha1/beacon_block.proto	2019-11-25 21:58:03.007981273 -0800
+diff -ur --exclude=.git a/eth/v1alpha1/beacon_block.proto b/eth/v1alpha1/beacon_block.proto
+--- a/eth/v1alpha1/beacon_block.proto	2019-11-25 22:56:20.000000000 -0600
++++ b/eth/v1alpha1/beacon_block.proto	2019-11-25 23:03:10.000000000 -0600
 @@ -15,6 +15,7 @@
  
  package ethereum.eth.v1alpha1;
@@ -199,9 +243,9 @@ diff -ur '--exclude=.git' a/eth/v1alpha1/beacon_block.proto b/eth/v1alpha1/beaco
 -    bytes signature = 4;
 +    bytes signature = 4 [(gogoproto.moretags) = "ssz-size:\"96\""];
  }
-diff -ur '--exclude=.git' a/eth/v1alpha1/beacon_chain.proto b/eth/v1alpha1/beacon_chain.proto
---- a/eth/v1alpha1/beacon_chain.proto	2019-11-25 20:28:55.544359882 -0800
-+++ b/eth/v1alpha1/beacon_chain.proto	2019-11-25 21:58:03.011980999 -0800
+diff -ur --exclude=.git a/eth/v1alpha1/beacon_chain.proto b/eth/v1alpha1/beacon_chain.proto
+--- a/eth/v1alpha1/beacon_chain.proto	2019-11-25 22:56:20.000000000 -0600
++++ b/eth/v1alpha1/beacon_chain.proto	2019-11-25 22:09:52.000000000 -0600
 @@ -15,6 +15,7 @@
  
  package ethereum.eth.v1alpha1;
@@ -318,10 +362,18 @@ diff -ur '--exclude=.git' a/eth/v1alpha1/beacon_chain.proto b/eth/v1alpha1/beaco
      }
  
      // The epoch for which this set of validator assignments is valid.
-diff -ur '--exclude=.git' a/eth/v1alpha1/validator.proto b/eth/v1alpha1/validator.proto
---- a/eth/v1alpha1/validator.proto	2019-11-25 20:28:55.544359882 -0800
-+++ b/eth/v1alpha1/validator.proto	2019-11-25 21:58:03.011980999 -0800
-@@ -96,14 +96,14 @@
+diff -ur --exclude=.git a/eth/v1alpha1/validator.proto b/eth/v1alpha1/validator.proto
+--- a/eth/v1alpha1/validator.proto	2019-11-25 22:56:20.000000000 -0600
++++ b/eth/v1alpha1/validator.proto	2019-11-26 11:39:16.000000000 -0600
+@@ -15,6 +15,7 @@
+ 
+ package ethereum.eth.v1alpha1;
+ 
++import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+ import "google/api/annotations.proto";
+ import "google/protobuf/empty.proto";
+ import "eth/v1alpha1/beacon_block.proto";
+@@ -96,14 +97,14 @@
      // Epoch at which validators should perform their duties.
      uint64 epoch = 1;
      // Array of byte encoded BLS public keys.
@@ -338,7 +390,7 @@ diff -ur '--exclude=.git' a/eth/v1alpha1/validator.proto b/eth/v1alpha1/validato
          // Slot at which a validator must attest.
          uint64 attestation_slot = 2;
          // Shard at which a validator must attest.
-@@ -120,7 +120,7 @@
+@@ -120,7 +121,7 @@
      // Slot for which the block should be proposed.
      uint64 slot = 1;
      // Validator's 32 byte randao reveal secret of the current epoch.
@@ -347,7 +399,7 @@ diff -ur '--exclude=.git' a/eth/v1alpha1/validator.proto b/eth/v1alpha1/validato
  }
  
  message AttestationDataRequest {
-@@ -137,10 +137,10 @@
+@@ -137,10 +138,10 @@
  // An Ethereum 2.0 validator.
  message Validator {
      // 48 byte BLS public key used for the validator's activities.

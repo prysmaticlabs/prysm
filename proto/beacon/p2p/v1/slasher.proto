@@ -3,9 +3,7 @@ syntax = "proto3";
 package ethereum.eth.v1alpha1;
 
 import "google/protobuf/empty.proto";
-import "proto/eth/v1alpha1/beacon_block.proto";
-
-option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1;eth";
+import "eth/v1alpha1/beacon_block.proto";
 
 // Slasher service API
 // 

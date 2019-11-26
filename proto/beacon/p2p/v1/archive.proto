@@ -3,9 +3,7 @@ syntax = "proto3";
 package ethereum.eth.v1alpha1;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
-import "proto/eth/v1alpha1/beacon_block.proto";
-
-option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1;eth";
+import "eth/v1alpha1/beacon_block.proto";
 
 // ArchivedActiveSetChanges represents the changes to the active validator registry
 // between epoch N and N-1. In particular, it keeps track of validator indices

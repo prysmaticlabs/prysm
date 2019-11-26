@@ -31,9 +31,7 @@ alias(
 alias(
     name = "grpc_proto_compiler",
     actual = "@io_bazel_rules_go//proto:gogofast_grpc",
-    visibility = [
-        "//proto:__subpackages__",
-    ],
+    visibility = ["//visibility:public"],
 )
 
 # Protobuf gRPC compiler without gogoproto. Required for gRPC gateway.

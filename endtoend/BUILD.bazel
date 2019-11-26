@@ -24,7 +24,7 @@ go_test(
     ],
     deps = [
         "//endtoend/evaluators:go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
