@@ -265,6 +265,74 @@ func TestStore_Attestations_FiltersCorrectly(t *testing.T) {
 	}
 }
 
+func TestStore_DuplicatedAttestations_FiltersCorrectly(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	someRoot := [32]byte{1, 2, 3}
+	att := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			BeaconBlockRoot: someRoot[:],
+			Source: &ethpb.Checkpoint{
+				Root:  someRoot[:],
+				Epoch: 5,
+			},
+			Target: &ethpb.Checkpoint{
+				Root:  someRoot[:],
+				Epoch: 7,
+			},
+		},
+		AggregationBits: bitfield.Bitlist{0b11},
+	}
+	atts := []*ethpb.Attestation{att, att, att}
+	ctx := context.Background()
+	if err := db.SaveAttestations(ctx, atts); err != nil {
+		t.Fatal(err)
+	}
+
+	retrievedAtts, err := db.Attestations(ctx, filters.NewFilter().
+		SetHeadBlockRoot(someRoot[:]))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(retrievedAtts) != 1 {
+		t.Errorf("Expected %d attestations, received %d", 1, len(retrievedAtts))
+	}
+
+	att1 := proto.Clone(att).(*ethpb.Attestation)
+	att1.Data.Source.Epoch = 6
+	atts = []*ethpb.Attestation{att, att, att, att1, att1, att1}
+	if err := db.SaveAttestations(ctx, atts); err != nil {
+		t.Fatal(err)
+	}
+
+	retrievedAtts, err = db.Attestations(ctx, filters.NewFilter().
+		SetHeadBlockRoot(someRoot[:]))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(retrievedAtts) != 2 {
+		t.Errorf("Expected %d attestations, received %d", 1, len(retrievedAtts))
+	}
+
+	retrievedAtts, err = db.Attestations(ctx, filters.NewFilter().
+		SetHeadBlockRoot(someRoot[:]).SetSourceEpoch(5))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(retrievedAtts) != 1 {
+		t.Errorf("Expected %d attestations, received %d", 1, len(retrievedAtts))
+	}
+
+	retrievedAtts, err = db.Attestations(ctx, filters.NewFilter().
+		SetHeadBlockRoot(someRoot[:]).SetSourceEpoch(6))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(retrievedAtts) != 1 {
+		t.Errorf("Expected %d attestations, received %d", 1, len(retrievedAtts))
+	}
+}
+
 func TestStore_Attestations_BitfieldLogic(t *testing.T) {
 	commonData := &ethpb.AttestationData{Slot: 10}
 
