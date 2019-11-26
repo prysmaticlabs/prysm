@@ -19,6 +19,7 @@ import (
 var runAmount = 25
 
 func TestBenchmarkExecuteStateTransition(t *testing.T) {
+	SetConfig()
 	beaconState, err := beaconState1Epoch()
 	if err != nil {
 		t.Fatal(err)
