@@ -153,7 +153,7 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 		return err
 	}
 
-	err := k.db.Batch(func(tx *bolt.Tx) error {
+	err := k.db.Update(func(tx *bolt.Tx) error {
 		attDataRoot, err := ssz.HashTreeRoot(att.Data)
 		if err != nil {
 			return err
@@ -193,24 +193,48 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestations")
 	defer span.End()
-	var wg sync.WaitGroup
-	errs := make([]string, 0)
-	wg.Add(len(atts))
-	for _, a := range atts {
-		go func(w *sync.WaitGroup, att *ethpb.Attestation) {
-			defer wg.Done()
-			if err := k.SaveAttestation(ctx, att); err != nil {
-				errs = append(errs, err.Error())
-				return
+
+	err := k.db.Update(func(tx *bolt.Tx) error {
+		for _, att := range atts {
+			attDataRoot, err := ssz.HashTreeRoot(att.Data)
+			if err != nil {
+				return err
 			}
-			return
-		}(&wg, a)
+
+			bkt := tx.Bucket(attestationsBucket)
+			ac := &dbpb.AttestationContainer{
+				Data: att.Data,
+			}
+			existingEnc := bkt.Get(attDataRoot[:])
+			if existingEnc != nil {
+				if err := proto.Unmarshal(existingEnc, ac); err != nil {
+					return err
+				}
+			}
+
+			ac.InsertAttestation(att)
+
+			enc, err := proto.Marshal(ac)
+			if err != nil {
+				return err
+			}
+
+			indicesByBucket := createAttestationIndicesFromData(att.Data, tx)
+			if err := updateValueForIndices(indicesByBucket, attDataRoot[:], tx); err != nil {
+				return errors.Wrap(err, "could not update DB indices")
+			}
+
+			if err := bkt.Put(attDataRoot[:], enc); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		traceutil.AnnotateError(span, err)
 	}
-	wg.Wait()
-	if len(errs) > 0 {
-		return fmt.Errorf("deleting attestations failed with %d errors: %s", len(errs), strings.Join(errs, ", "))
-	}
-	return nil
+
+	return err
 }
 
 // createAttestationIndicesFromData takes in attestation data and returns
