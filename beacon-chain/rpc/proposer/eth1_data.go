@@ -50,7 +50,7 @@ func (ps *Server) getEth1Data(ctx context.Context, slot uint64) (*ethpb.Eth1Data
 	if err != nil {
 		return nil, err
 	}
-	votingPeriodStartSlot := slot % params.BeaconConfig().SlotsPerEth1VotingPeriod
+	votingPeriodStartSlot := slot - (slot % params.BeaconConfig().SlotsPerEth1VotingPeriod)
 	timestamp := time.Unix(int64(headState.GenesisTime), 0 /*ns*/).Add(time.Duration(votingPeriodStartSlot*params.BeaconConfig().SecondsPerSlot) * time.Second)
 
 	// Determine the eth1 block for that timestamp.

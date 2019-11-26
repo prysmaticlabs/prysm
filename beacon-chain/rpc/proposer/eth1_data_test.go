@@ -3,8 +3,8 @@ package proposer
 import (
 	"context"
 	"math/big"
-	"strings"
 	"testing"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
@@ -19,41 +19,41 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
-	beaconState := &pbp2p.BeaconState{
-		Eth1Data: &ethpb.Eth1Data{
-			BlockHash: []byte{'a'},
+func TestServer_getEth1Data_returnsChainStartData_atBeginningOfTime(t *testing.T) {
+	ctx := context.Background()
+
+	chainStartEth1Data := &ethpb.Eth1Data{
+		DepositCount: 55,
+	}
+	ps := &Server{
+		ChainStartFetcher: &mockPOW.POWChain{
+			Eth1Data: chainStartEth1Data,
 		},
-		Eth1DataVotes: []*ethpb.Eth1Data{},
 	}
-	p := &mockPOW.FaultyMockPOWChain{
-		HashesByHeight: make(map[int][]byte),
+
+	res, err := ps.getEth1Data(ctx, params.BeaconConfig().SlotsPerEth1VotingPeriod-1)
+	if err != nil {
+		t.Fatal(err)
 	}
-	proposerServer := &Server{
-		ChainStartFetcher: p,
-		Eth1InfoFetcher:   p,
-		Eth1BlockFetcher:  p,
-		BlockReceiver:     &mock.ChainService{State: beaconState},
-		HeadFetcher:       &mock.ChainService{State: beaconState},
-	}
-	want := "could not fetch ETH1_FOLLOW_DISTANCE ancestor"
-	if _, err := proposerServer.getEth1Data(context.Background(), beaconState.Slot+1); err == nil || !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected error %v, received %v", want, err)
+	if !proto.Equal(res, chainStartEth1Data) {
+		t.Errorf("Received %v wanted %v", res, chainStartEth1Data)
 	}
 }
 
 func TestEth1Data(t *testing.T) {
-	slot := uint64(10000)
+	slot := uint64(10005)
+	genesisTime, _ := time.Parse(time.RFC3339, "2006-01-02T15:04:05+07:00")
 	beaconState := &pbp2p.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			BlockHash: []byte{'a'},
 		},
 		Eth1DataVotes: []*ethpb.Eth1Data{},
+		GenesisTime: uint64(genesisTime.Unix()),
 	}
 
 	p := &mockPOW.POWChain{
 		BlockNumberByHeight: map[uint64]*big.Int{
-			slot * params.BeaconConfig().SecondsPerSlot: big.NewInt(4096),
+			uint64(genesisTime.Unix())+(10000 * params.BeaconConfig().SecondsPerSlot): big.NewInt(4096),
 		},
 		HashesByHeight: map[int][]byte{
 			3072: []byte("3072"),
