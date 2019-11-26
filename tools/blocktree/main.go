@@ -62,6 +62,17 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+
+		atts, err := db.Attestations(context.Background(), filters.NewFilter().SetHeadBlockRoot(r[:]))
+		fmt.Println(b.Slot, len(atts))
+		if b.Slot == 74145 {
+			//m := make(map[[32]byte]bool)
+			for i, a := range atts {
+				fmt.Println(i, a)
+			}
+		}
+
+
 		// Construct label of each node.
 		rStr := hex.EncodeToString(r[:2])
 		label := "slot: " + strconv.Itoa(int(b.Slot)) + "\n root: " + rStr
