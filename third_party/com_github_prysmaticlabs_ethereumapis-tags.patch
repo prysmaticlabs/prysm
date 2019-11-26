@@ -1,6 +1,6 @@
 diff -ur --exclude=.git a/eth/v1alpha1/attestation.proto b/eth/v1alpha1/attestation.proto
 --- a/eth/v1alpha1/attestation.proto	2019-11-25 22:56:20.000000000 -0600
-+++ b/eth/v1alpha1/attestation.proto	2019-11-25 21:52:56.000000000 -0600
++++ b/eth/v1alpha1/attestation.proto	2019-11-25 23:03:01.000000000 -0600
 @@ -15,6 +15,8 @@
 
  package ethereum.eth.v1alpha1;
@@ -15,7 +15,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/attestation.proto b/eth/v1alpha1/attestat
    // A bitfield representation of validator indices that have voted exactly
    // the same vote and have been aggregated into this attestation.
 -  bytes aggregation_bits = 1;
-+  bytes aggregation_bits = 1 [(gogoproto.moretags) = "ssz-max:\"2048\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];;
++  bytes aggregation_bits = 1 [(gogoproto.moretags) = "ssz-max:\"2048\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
 
    AttestationData data = 2;
 
@@ -23,7 +23,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/attestation.proto b/eth/v1alpha1/attestat
    // legitimately downloaded and verified shard data.
    // Not used in phase 0.
 -  bytes custody_bits = 3;
-+  bytes custody_bits = 3 [(gogoproto.moretags) = "ssz-max:\"2048\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];;
++  bytes custody_bits = 3 [(gogoproto.moretags) = "ssz-max:\"2048\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
 
    // 96 byte BLS aggregate signature.
 -  bytes signature = 4;
@@ -49,7 +49,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/attestation.proto b/eth/v1alpha1/attestat
  }
 diff -ur --exclude=.git a/eth/v1alpha1/beacon_block.proto b/eth/v1alpha1/beacon_block.proto
 --- a/eth/v1alpha1/beacon_block.proto	2019-11-25 22:56:20.000000000 -0600
-+++ b/eth/v1alpha1/beacon_block.proto	2019-11-25 22:01:52.000000000 -0600
++++ b/eth/v1alpha1/beacon_block.proto	2019-11-25 23:03:10.000000000 -0600
 @@ -15,6 +15,7 @@
 
  package ethereum.eth.v1alpha1;
@@ -89,7 +89,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/beacon_block.proto b/eth/v1alpha1/beacon_
      // 32 byte field of arbitrary data. This field may contain any data and
      // is not used for anything other than a fun message.
 -    bytes graffiti = 3;
-+    bytes graffiti = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];;
++    bytes graffiti = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
 
      // Block operations
      // Refer to spec constants at https://github.com/ethereum/eth2.0-specs/blob/dev/specs/core/0_beacon-chain.md#max-operations-per-block
@@ -176,7 +176,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/beacon_block.proto b/eth/v1alpha1/beacon_
 
      // 32 byte merkle tree root of the resulting ssz encoded state after processing this block.
 -    bytes state_root = 3;
-+    bytes state_root = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];;
++    bytes state_root = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
 
      // 32 byte merkle tree root of the ssz encoded block body.
 -    bytes body_root = 4;
@@ -184,7 +184,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/beacon_block.proto b/eth/v1alpha1/beacon_
 
      // 96 byte BLS signature from the validator that produced this block.
 -    bytes signature = 5;
-+    bytes signature = 5 [(gogoproto.moretags) = "ssz-size:\"96\""];;
++    bytes signature = 5 [(gogoproto.moretags) = "ssz-size:\"96\""];
  }
 
  message IndexedAttestation {
@@ -320,13 +320,13 @@ diff -ur --exclude=.git a/eth/v1alpha1/beacon_chain.proto b/eth/v1alpha1/beacon_
      // The epoch for which this set of validator assignments is valid.
 diff -ur --exclude=.git a/eth/v1alpha1/validator.proto b/eth/v1alpha1/validator.proto
 --- a/eth/v1alpha1/validator.proto	2019-11-25 22:56:20.000000000 -0600
-+++ b/eth/v1alpha1/validator.proto	2019-11-25 22:06:00.000000000 -0600
++++ b/eth/v1alpha1/validator.proto	2019-11-25 23:03:22.000000000 -0600
 @@ -96,14 +96,14 @@
      // Epoch at which validators should perform their duties.
      uint64 epoch = 1;
      // Array of byte encoded BLS public keys.
 -    repeated bytes public_keys = 2;
-+    repeated bytes public_keys = 2 [(gogoproto.moretags) = "ssz-size:\"?,48\""];;
++    repeated bytes public_keys = 2 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
  }
 
  message DutiesResponse {
