@@ -924,7 +924,7 @@ func TestServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
 			PublicKey: []byte(strconv.Itoa(i)),
 		}
 	}
-	archivedChanges := &ethpb.ArchivedActiveSetChanges{
+	archivedChanges := &pbp2p.ArchivedActiveSetChanges{
 		Activated: activatedIndices,
 		Exited:    exitedIndices,
 		Slashed:   slashedIndices,

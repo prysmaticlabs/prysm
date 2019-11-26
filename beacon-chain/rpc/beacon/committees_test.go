@@ -190,7 +190,7 @@ func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveArchivedCommitteeInfo(ctx, 0, &ethpb.ArchivedCommitteeInfo{
+	if err := db.SaveArchivedCommitteeInfo(ctx, 0, &pbp2p.ArchivedCommitteeInfo{
 		AttesterSeed: seed[:],
 	}); err != nil {
 		t.Fatal(err)
