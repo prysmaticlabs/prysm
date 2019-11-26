@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
-	bench "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks/benchmarks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	bench "github.com/prysmaticlabs/prysm/beacon-chain/core/state/benchmarks"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/interop"
@@ -19,16 +19,16 @@ import (
 )
 
 func main() {
-	log.Println("generating genesis state")
+	log.Println("Generating genesis state")
 	// Generating this for the 2 following states.
 	if err := generateGenesisBeaconState(); err != nil {
 		log.Fatal(err)
 	}
-	log.Println("generating full block and state after 1 skipped epoch")
+	log.Println("Generating full block and state after 1 skipped epoch")
 	if err := generateMarshalledFullStateAndBlock(); err != nil {
 		log.Fatal(err)
 	}
-	log.Println("generating state after 2 fully attested epochs")
+	log.Println("Generating state after 2 fully attested epochs")
 	if err := generate2FullEpochState(); err != nil {
 		log.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func generateMarshalledFullStateAndBlock() error {
 		Signatures:      true,
 	}
 
-	// Small offset for the beacon state so we dont process a block on an epoch
+	// Small offset for the beacon state so we dont process a block on an epoch.
 	slotOffset := uint64(2)
 	block := testutil.GenerateFullBlock(t, beaconState, privs, conf, params.BeaconConfig().SlotsPerEpoch+slotOffset)
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)

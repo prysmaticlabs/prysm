@@ -30,7 +30,7 @@ var FullBlockFileName = fmt.Sprintf("benchmark_files/fullBlock-%dAtts-%dVals.ssz
 
 // FilePath prefixes the file path to the file names.
 func FilePath(fileName string) string {
-	return fmt.Sprintf("beacon-chain/core/blocks/benchmarks/%s", fileName)
+	return fmt.Sprintf("beacon-chain/core/state/benchmarks/%s", fileName)
 }
 
 // SetConfig changes the beacon config to match the requested amount of
