@@ -15,6 +15,7 @@ go_library(
     visibility = ["//slasher:__subpackages__"],
     deps = [
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_boltdb_bolt//:go_default_library",

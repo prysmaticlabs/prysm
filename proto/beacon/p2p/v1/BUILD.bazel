@@ -28,6 +28,7 @@ ssz_proto_files(
         "messages.proto",
         "types.proto",
         "archive.proto",
+        "slasher.proto",
     ],
     config = select({
         "//conditions:default": "mainnet",
@@ -41,8 +42,9 @@ proto_library(
     srcs = [":ssz_proto_files"],
     visibility = ["//visibility:public"],
     deps = [
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:proto",
+        "@com_google_protobuf//:empty_proto",
         "@com_google_protobuf//:timestamp_proto",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:proto",
         "@gogo_special_proto//github.com/gogo/protobuf/gogoproto",
     ],
 )
