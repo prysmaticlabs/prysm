@@ -5,9 +5,6 @@ go_test(
     srcs = ["benchmarks_test.go"],
     data = ["//beacon-chain/core/blocks/benchmarks/benchmark_files:benchmark_data"],
     embed = [":go_default_library"],
-    tags = [
-        "manual",
-    ],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
