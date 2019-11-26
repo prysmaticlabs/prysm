@@ -1,16 +1,7 @@
 diff -ur --exclude=.git a/eth/v1alpha1/BUILD.bazel b/eth/v1alpha1/BUILD.bazel
 --- a/eth/v1alpha1/BUILD.bazel	2019-11-25 22:56:20.000000000 -0600
-+++ b/eth/v1alpha1/BUILD.bazel	2019-11-26 12:36:30.000000000 -0600
-@@ -11,15 +11,14 @@
-         "beacon_block.proto",
-         "beacon_chain.proto",
-         "node.proto",
--        "swagger.proto",
-         "validator.proto",
-     ],
-     visibility = ["//visibility:public"],
-     deps = [
--        "@grpc_ecosystem_grpc_gateway//protoc-gen-swagger/options:options_proto",
++++ b/eth/v1alpha1/BUILD.bazel	2019-11-26 16:50:00.000000000 -0600
+@@ -20,6 +20,7 @@
          "@com_google_protobuf//:empty_proto",
          "@com_google_protobuf//:timestamp_proto",
          "@go_googleapis//google/api:annotations_proto",
@@ -18,7 +9,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/BUILD.bazel b/eth/v1alpha1/BUILD.bazel
      ],
  )
  
-@@ -46,12 +45,30 @@
+@@ -46,12 +47,32 @@
  
  go_proto_library(
      name = "go_proto",
@@ -28,7 +19,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/BUILD.bazel b/eth/v1alpha1/BUILD.bazel
      proto = ":proto",
      visibility = ["//visibility:public"],
      deps = [
--        "@grpc_ecosystem_grpc_gateway//protoc-gen-swagger/options:options_go_proto",
+         "@grpc_ecosystem_grpc_gateway//protoc-gen-swagger/options:options_go_proto",
 +        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
 +        "@go_googleapis//google/api:annotations_go_proto",
 +    ],
@@ -44,6 +35,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/BUILD.bazel b/eth/v1alpha1/BUILD.bazel
 +    proto = ":proto",
 +    visibility = ["//visibility:public"],
 +    deps = [
++        "@grpc_ecosystem_grpc_gateway//protoc-gen-swagger/options:options_go_proto",
 +        "@com_github_gogo_protobuf//gogoproto:go_default_library",
 +        "@com_github_golang_protobuf//descriptor:go_default_library",
 +        "@com_github_golang_protobuf//ptypes/empty:go_default_library",
@@ -51,22 +43,13 @@ diff -ur --exclude=.git a/eth/v1alpha1/BUILD.bazel b/eth/v1alpha1/BUILD.bazel
          "@go_googleapis//google/api:annotations_go_proto",
      ],
  )
-@@ -63,15 +80,3 @@
+@@ -74,4 +95,4 @@
      visibility = ["//visibility:public"],
- )
- 
--##############################################################################
--# OpenAPI (Swagger) V2
--##############################################################################
--load("@grpc_ecosystem_grpc_gateway//protoc-gen-swagger:defs.bzl", "protoc_gen_swagger")
--
--protoc_gen_swagger(
--    name = "swagger",
--    proto = ":proto",
--    visibility = ["//visibility:public"],
--    single_output = True,
--    json_names_for_fields = True,
+     single_output = True,
+     json_names_for_fields = True,
 -)
++)
+\ No newline at end of file
 diff -ur --exclude=.git a/eth/v1alpha1/attestation.proto b/eth/v1alpha1/attestation.proto
 --- a/eth/v1alpha1/attestation.proto	2019-11-26 11:48:31.000000000 -0600
 +++ b/eth/v1alpha1/attestation.proto	2019-11-26 11:47:09.000000000 -0600
