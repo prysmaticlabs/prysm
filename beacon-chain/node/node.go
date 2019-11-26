@@ -338,7 +338,7 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 	}
 	if len(knownContract) == 0 {
 		if err := b.db.SaveDepositContractAddress(ctx, cfg.DepositContract); err != nil {
-			return errors.Wrap(err, "deposit contract was unable to be saved")
+			return errors.Wrap(err, "could not save deposit contract")
 		}
 	}
 	if len(knownContract) > 0 && !bytes.Equal(cfg.DepositContract.Bytes(), knownContract) {
