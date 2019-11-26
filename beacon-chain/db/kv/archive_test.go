@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
 func TestStore_ArchivedActiveValidatorChanges(t *testing.T) {
