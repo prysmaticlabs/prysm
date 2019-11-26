@@ -265,6 +265,80 @@ func TestStore_Attestations_FiltersCorrectly(t *testing.T) {
 	}
 }
 
+func TestStore_DuplicatedAttestations_FiltersCorrectly(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	someRoot := [32]byte{1, 2, 3}
+	atts := []*ethpb.Attestation{
+		{
+			Data: &ethpb.AttestationData{
+				BeaconBlockRoot: someRoot[:],
+				Source: &ethpb.Checkpoint{
+					Root:  someRoot[:],
+					Epoch: 5,
+				},
+				Target: &ethpb.Checkpoint{
+					Root:  someRoot[:],
+					Epoch: 7,
+				},
+			},
+			AggregationBits: bitfield.Bitlist{0b11},
+		},
+		{
+			Data: &ethpb.AttestationData{
+				BeaconBlockRoot: someRoot[:],
+				Source: &ethpb.Checkpoint{
+					Root:  someRoot[:],
+					Epoch: 5,
+				},
+				Target: &ethpb.Checkpoint{
+					Root:  someRoot[:],
+					Epoch: 7,
+				},
+			},
+			AggregationBits: bitfield.Bitlist{0b11},
+		},
+		{
+			Data: &ethpb.AttestationData{
+				BeaconBlockRoot: someRoot[:],
+				Source: &ethpb.Checkpoint{
+					Root:  someRoot[:],
+					Epoch: 7,
+				},
+				Target: &ethpb.Checkpoint{
+					Root:  someRoot[:],
+					Epoch: 5,
+				},
+			},
+			AggregationBits: bitfield.Bitlist{0b11},
+		},
+	}
+	ctx := context.Background()
+	if err := db.SaveAttestations(ctx, atts); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		filter         *filters.QueryFilter
+		expectedNumAtt int
+	}{
+		{
+			filter: filters.NewFilter().
+				SetHeadBlockRoot(someRoot[:]),
+			expectedNumAtt: 1,
+		},
+	}
+	for _, tt := range tests {
+		retrievedAtts, err := db.Attestations(ctx, tt.filter)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(retrievedAtts) != tt.expectedNumAtt {
+			t.Errorf("Expected %d attestations, received %d", tt.expectedNumAtt, len(retrievedAtts))
+		}
+	}
+}
+
 func TestStore_Attestations_BitfieldLogic(t *testing.T) {
 	commonData := &ethpb.AttestationData{Slot: 10}
 
