@@ -11,7 +11,7 @@ Due to the sheer size of the benchmarking configurations (65536 validators), the
 
 To generate new files to use for benchmarking, run the below command in the root of Prysm.
 ```
-go run beacon-chain/core/blocks/benchmarks/benchmark_files/generate_bench_files.go
+go run beacon-chain/core/state/benchmarks/benchmark_files/generate_bench_files.go
 ```
 
 Bazel does not allow writing to the project directory, so running with `go run` is needed.
