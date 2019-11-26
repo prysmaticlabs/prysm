@@ -10,13 +10,13 @@ go_library(
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
+        "//beacon-chain/core/state/benchmarks:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/eth/v1alpha1:go_default_library",
         "//shared/interop:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
-        "@com_github_prysmaticlabs_prysm//beacon-chain/core/state/benchmarks:go_default_library",
     ],
 )
 
