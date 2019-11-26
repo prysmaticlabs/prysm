@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package ethereum.beacon.p2p.v1;
+package ethereum.beacon.rpc.v1;
 
 import "google/protobuf/empty.proto";
 import "eth/v1alpha1/beacon_block.proto";
@@ -33,6 +33,7 @@ message ValidatorIDToIdxAtt {
     // 96 bytes aggregate signature.
     bytes signature = 3;
 }
+
 message ValidatorIDToIdxAttList {
     repeated ValidatorIDToIdxAtt indicesList = 1 ;
 }
@@ -41,12 +42,15 @@ message ProposerSlashingRequest {
     ethereum.eth.v1alpha1.BeaconBlockHeader block_header = 1;
     uint64 validator_index = 2;
 }
+
 message ProposerSlashingResponse {
     repeated ethereum.eth.v1alpha1.ProposerSlashing proposer_slashing = 1;
 }
+
 message AttesterSlashingResponse {
     repeated ethereum.eth.v1alpha1.AttesterSlashing attester_slashing = 1;
 }
+
 // In order to detect surrounded attestation we need to compare
 // each attestation source to those spans
 // see https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
@@ -55,6 +59,7 @@ message MinMaxEpochSpan {
     uint32 min_epoch_span = 1;
     uint32 max_epoch_span = 2;
 }
+
 // Every validator will have their own spans map containing min distance from each epoch
 // to the closest target epoch of another attestation (surrounded) and max distance to
 // a target attestation (surrounding), in order to detect slashable attestation as quickly

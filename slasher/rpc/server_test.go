@@ -6,6 +6,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	slashpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 )
@@ -17,14 +18,14 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 	slasherServer := &Server{
 		SlasherDB: dbs,
 	}
-	psr := &ethpb.ProposerSlashingRequest{
+	psr := &slashpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.BeaconBlockHeader{
 			Slot:      1,
 			StateRoot: []byte("A"),
 		},
 		ValidatorIndex: 1,
 	}
-	psr2 := &ethpb.ProposerSlashingRequest{
+	psr2 := &slashpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.BeaconBlockHeader{
 			Slot:      1,
 			StateRoot: []byte("B"),
@@ -62,14 +63,14 @@ func TestServer_IsNotSlashableBlock(t *testing.T) {
 	slasherServer := &Server{
 		SlasherDB: dbs,
 	}
-	psr := &ethpb.ProposerSlashingRequest{
+	psr := &slashpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.BeaconBlockHeader{
 			Slot:      1,
 			StateRoot: []byte("A"),
 		},
 		ValidatorIndex: 1,
 	}
-	psr2 := &ethpb.ProposerSlashingRequest{
+	psr2 := &slashpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.BeaconBlockHeader{
 			Slot:      65,
 			StateRoot: []byte("B"),
@@ -100,7 +101,7 @@ func TestServer_DoubleBlock(t *testing.T) {
 		ctx:       ctx,
 		SlasherDB: dbs,
 	}
-	psr := &ethpb.ProposerSlashingRequest{
+	psr := &slashpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.BeaconBlockHeader{
 			Slot:      1,
 			StateRoot: []byte("A"),
@@ -130,14 +131,14 @@ func TestServer_SameSlotSlashable(t *testing.T) {
 		ctx:       ctx,
 		SlasherDB: dbs,
 	}
-	psr := &ethpb.ProposerSlashingRequest{
+	psr := &slashpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.BeaconBlockHeader{
 			Slot:      1,
 			StateRoot: []byte("A"),
 		},
 		ValidatorIndex: 1,
 	}
-	psr2 := &ethpb.ProposerSlashingRequest{
+	psr2 := &slashpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.BeaconBlockHeader{
 			Slot:      1,
 			StateRoot: []byte("B"),
