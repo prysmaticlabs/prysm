@@ -253,6 +253,35 @@ func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 	if v := k.blockCache.Get(string(blockRoot[:])); v != nil {
 		return nil
 	}
+	return k.db.Update(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blocksBucket)
+		if existingBlock := bkt.Get(blockRoot[:]); existingBlock != nil {
+			return nil
+		}
+		enc, err := proto.Marshal(block)
+		if err != nil {
+			return err
+		}
+		indicesByBucket := createBlockIndicesFromBlock(block)
+		if err := updateValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
+			return errors.Wrap(err, "could not update DB indices")
+		}
+		k.blockCache.Set(string(blockRoot[:]), block, time.Hour)
+		return bkt.Put(blockRoot[:], enc)
+	})
+}
+
+// saveBatchedBlock to the db.
+func (k *Store) saveBatchedBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlock")
+	defer span.End()
+	blockRoot, err := ssz.SigningRoot(block)
+	if err != nil {
+		return err
+	}
+	if v := k.blockCache.Get(string(blockRoot[:])); v != nil {
+		return nil
+	}
 	return k.db.Batch(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		if existingBlock := bkt.Get(blockRoot[:]); existingBlock != nil {
@@ -281,7 +310,7 @@ func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) err
 	for _, blk := range blocks {
 		go func(w *sync.WaitGroup, b *ethpb.BeaconBlock) {
 			defer w.Done()
-			if err := k.SaveBlock(ctx, b); err != nil {
+			if err := k.saveBatchedBlock(ctx, b); err != nil {
 				errs = append(errs, err.Error())
 				return
 			}
@@ -298,7 +327,7 @@ func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) err
 func (k *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveHeadBlockRoot")
 	defer span.End()
-	return k.db.Batch(func(tx *bolt.Tx) error {
+	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blocksBucket)
 		return bucket.Put(headBlockRootKey, blockRoot[:])
 	})

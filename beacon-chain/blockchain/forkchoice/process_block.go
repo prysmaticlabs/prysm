@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -142,10 +143,11 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	return nil
 }
 
-// OnBlockNoVerifyStateTransition is called when an initial sync block is received.
+// OnBlockInitialSyncStateTransition is called when an initial sync block is received.
 // It runs state transition on the block and without any BLS verification. The BLS verification
-// includes proposer signature, randao and attestation's aggregated signature.
-func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.BeaconBlock) error {
+// includes proposer signature, randao and attestation's aggregated signature. It also does not save
+// attestations.
+func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "forkchoice.onBlock")
 	defer span.End()
 
@@ -209,9 +211,12 @@ func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.Bea
 	if err := s.saveNewValidators(ctx, preStateValidatorCount, postState); err != nil {
 		return errors.Wrap(err, "could not save finalized checkpoint")
 	}
-	// Save the unseen attestations from block to db.
-	if err := s.saveNewBlockAttestations(ctx, b.Body.Attestations); err != nil {
-		return errors.Wrap(err, "could not save attestations")
+
+	if flags.Get().EnableArchive {
+		// Save the unseen attestations from block to db.
+		if err := s.saveNewBlockAttestations(ctx, b.Body.Attestations); err != nil {
+			return errors.Wrap(err, "could not save attestations")
+		}
 	}
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.
