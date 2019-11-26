@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p"
-	"github.com/libp2p/go-libp2p-connmgr"
+	connmgr "github.com/libp2p/go-libp2p-connmgr"
 	filter "github.com/libp2p/go-maddr-filter"
 	"github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
