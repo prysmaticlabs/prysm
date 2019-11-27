@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
+	"github.com/golang/snappy"
 )
 
 // AttestationsByDataRoot returns any (aggregated) attestations matching this data root.
@@ -30,6 +31,10 @@ func (k *Store) AttestationsByDataRoot(ctx context.Context, attDataRoot [32]byte
 			return nil
 		}
 		ac := &dbpb.AttestationContainer{}
+		enc, err := snappy.Decode(nil, enc)
+		if err != nil {
+			return err
+		}
 		if err := proto.Unmarshal(enc, ac); err != nil {
 			return err
 		}
@@ -47,7 +52,7 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.Attestations")
 	defer span.End()
 	atts := make([]*ethpb.Attestation, 0)
-	err := k.db.Batch(func(tx *bolt.Tx) error {
+	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 
 		// If no filter criteria are specified, return an error.
@@ -69,6 +74,10 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 		keys := sliceutil.IntersectionByteSlices(lookupValuesForIndices(indicesByBucket, tx)...)
 		for i := 0; i < len(keys); i++ {
 			encoded := bkt.Get(keys[i])
+			encoded, err := snappy.Decode(nil, encoded)
+			if err != nil {
+				return err
+			}
 			ac := &dbpb.AttestationContainer{}
 			if err := proto.Unmarshal(encoded, ac); err != nil {
 				return err
@@ -165,7 +174,11 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 		}
 		existingEnc := bkt.Get(attDataRoot[:])
 		if existingEnc != nil {
-			if err := proto.Unmarshal(existingEnc, ac); err != nil {
+			enc, err := snappy.Decode(nil, existingEnc)
+			if err != nil {
+				return err
+			}
+			if err := proto.Unmarshal(enc, ac); err != nil {
 				return err
 			}
 		}
@@ -176,6 +189,7 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 		if err != nil {
 			return err
 		}
+		enc = snappy.Encode(nil, enc)
 
 		indicesByBucket := createAttestationIndicesFromData(att.Data, tx)
 		if err := updateValueForIndices(indicesByBucket, attDataRoot[:], tx); err != nil {
@@ -207,7 +221,11 @@ func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation)
 			}
 			existingEnc := bkt.Get(attDataRoot[:])
 			if existingEnc != nil {
-				if err := proto.Unmarshal(existingEnc, ac); err != nil {
+				enc, err := snappy.Decode(nil, existingEnc)
+				if err != nil {
+					return err
+				}
+				if err := proto.Unmarshal(enc, ac); err != nil {
 					return err
 				}
 			}
@@ -218,6 +236,8 @@ func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation)
 			if err != nil {
 				return err
 			}
+
+			enc = snappy.Encode(nil, enc)
 
 			indicesByBucket := createAttestationIndicesFromData(att.Data, tx)
 			if err := updateValueForIndices(indicesByBucket, attDataRoot[:], tx); err != nil {
