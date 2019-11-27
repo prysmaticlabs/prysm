@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -87,8 +88,34 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 		return errors.Wrap(err, "could not save state")
 	}
 
-	if err := s.updateCheckpoints(ctx, postState); err != nil {
-		return errors.Wrap(err, "could not update checkpoint")
+	// Update justified check point.
+	if postState.CurrentJustifiedCheckpoint.Epoch > s.JustifiedCheckpt().Epoch {
+		s.justifiedCheckpt = postState.CurrentJustifiedCheckpoint
+		if err := s.db.SaveJustifiedCheckpoint(ctx, postState.CurrentJustifiedCheckpoint); err != nil {
+			return errors.Wrap(err, "could not save justified checkpoint")
+		}
+	}
+
+	// Update finalized check point.
+	// Prune the block cache and helper caches on every new finalized epoch.
+	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
+		s.clearSeenAtts()
+		helpers.ClearAllCaches()
+		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint); err != nil {
+			return errors.Wrap(err, "could not save finalized checkpoint")
+		}
+
+		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch) + 1
+		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
+		if endSlot > startSlot {
+			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
+				return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
+					startSlot, endSlot)
+			}
+		}
+
+		s.prevFinalizedCheckpt = s.finalizedCheckpt
+		s.finalizedCheckpt = postState.FinalizedCheckpoint
 	}
 
 	// Update validator indices in database as needed.
@@ -116,10 +143,11 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	return nil
 }
 
-// OnBlockNoVerifyStateTransition is called when an initial sync block is received.
+// OnBlockInitialSyncStateTransition is called when an initial sync block is received.
 // It runs state transition on the block and without any BLS verification. The BLS verification
-// includes proposer signature, randao and attestation's aggregated signature.
-func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.BeaconBlock) error {
+// includes proposer signature, randao and attestation's aggregated signature. It also does not save
+// attestations.
+func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "forkchoice.onBlock")
 	defer span.End()
 
@@ -148,17 +176,47 @@ func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.Bea
 		return errors.Wrap(err, "could not save state")
 	}
 
-	if err := s.updateCheckpoints(ctx, postState); err != nil {
-		return errors.Wrap(err, "could not update checkpoint")
+	// Update justified check point.
+	if postState.CurrentJustifiedCheckpoint.Epoch > s.JustifiedCheckpt().Epoch {
+		s.justifiedCheckpt = postState.CurrentJustifiedCheckpoint
+		if err := s.db.SaveJustifiedCheckpoint(ctx, postState.CurrentJustifiedCheckpoint); err != nil {
+			return errors.Wrap(err, "could not save justified checkpoint")
+		}
+	}
+
+	// Update finalized check point.
+	// Prune the block cache and helper caches on every new finalized epoch.
+	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
+		s.clearSeenAtts()
+		helpers.ClearAllCaches()
+
+		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch) + 1
+		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
+		if endSlot > startSlot {
+			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
+				return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
+					startSlot, endSlot)
+			}
+		}
+
+		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint); err != nil {
+			return errors.Wrap(err, "could not save finalized checkpoint")
+		}
+
+		s.prevFinalizedCheckpt = s.finalizedCheckpt
+		s.finalizedCheckpt = postState.FinalizedCheckpoint
 	}
 
 	// Update validator indices in database as needed.
 	if err := s.saveNewValidators(ctx, preStateValidatorCount, postState); err != nil {
 		return errors.Wrap(err, "could not save finalized checkpoint")
 	}
-	// Save the unseen attestations from block to db.
-	if err := s.saveNewBlockAttestations(ctx, b.Body.Attestations); err != nil {
-		return errors.Wrap(err, "could not save attestations")
+
+	if flags.Get().EnableArchive {
+		// Save the unseen attestations from block to db.
+		if err := s.saveNewBlockAttestations(ctx, b.Body.Attestations); err != nil {
+			return errors.Wrap(err, "could not save attestations")
+		}
 	}
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.
@@ -244,54 +302,16 @@ func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attes
 	if err != nil {
 		return errors.Wrap(err, "could not convert attestation to indexed attestation")
 	}
+	s.voteLock.Lock()
+	defer s.voteLock.Unlock()
 	for _, i := range append(indexedAtt.CustodyBit_0Indices, indexedAtt.CustodyBit_1Indices...) {
-		vote, err := s.db.ValidatorLatestVote(ctx, i)
-		if err != nil {
-			return errors.Wrapf(err, "could not get latest vote for validator %d", i)
-		}
-		if vote == nil || tgt.Epoch > vote.Epoch {
-			if err := s.db.SaveValidatorLatestVote(ctx, i, &pb.ValidatorLatestVote{
+		vote, ok := s.latestVoteMap[i]
+		if !ok || tgt.Epoch > vote.Epoch {
+			s.latestVoteMap[i] = &pb.ValidatorLatestVote{
 				Epoch: tgt.Epoch,
 				Root:  tgt.Root,
-			}); err != nil {
-				return errors.Wrapf(err, "could not save latest vote for validator %d", i)
 			}
 		}
-	}
-	return nil
-}
-
-func (s *Store) updateCheckpoints(ctx context.Context, postState *pb.BeaconState) error {
-	s.checkPointLock.Lock()
-	defer s.checkPointLock.Unlock()
-	// Update justified check point.
-	if postState.CurrentJustifiedCheckpoint.Epoch > s.justifiedCheckpt.Epoch {
-		s.justifiedCheckpt = postState.CurrentJustifiedCheckpoint
-		if err := s.db.SaveJustifiedCheckpoint(ctx, postState.CurrentJustifiedCheckpoint); err != nil {
-			return errors.Wrap(err, "could not save justified checkpoint")
-		}
-	}
-
-	// Update finalized check point.
-	// Prune the block cache and helper caches on every new finalized epoch.
-	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
-		s.clearSeenAtts()
-		helpers.ClearAllCaches()
-		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint); err != nil {
-			return errors.Wrap(err, "could not save finalized checkpoint")
-		}
-
-		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch) + 1
-		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
-		if endSlot > startSlot {
-			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
-				return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
-					startSlot, endSlot)
-			}
-		}
-
-		s.prevFinalizedCheckpt = s.finalizedCheckpt
-		s.finalizedCheckpt = postState.FinalizedCheckpoint
 	}
 	return nil
 }

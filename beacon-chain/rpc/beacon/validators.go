@@ -371,9 +371,17 @@ func (bs *Server) GetValidatorParticipation(
 		}
 		return &ethpb.ValidatorParticipationResponse{
 			Epoch:         requestedEpoch,
-			Finalized:     true,
+			Finalized:     requestedEpoch <= headState.FinalizedCheckpoint.Epoch,
 			Participation: participation,
 		}, nil
+	} else if requestedEpoch == currentEpoch {
+		// We cannot retrieve participation for an epoch currently in progress.
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"Cannot retrieve information about an epoch currently in progress, current epoch %d, requesting %d",
+			currentEpoch,
+			requestedEpoch,
+		)
 	} else if requestedEpoch > currentEpoch {
 		// We are requesting data from the future and we return an error.
 		return nil, status.Errorf(
