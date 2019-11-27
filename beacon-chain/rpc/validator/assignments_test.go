@@ -26,7 +26,7 @@ func TestCommitteeAssignment_NextEpoch_WrongPubkeyLength(t *testing.T) {
 	ctx := context.Background()
 	helpers.ClearAllCaches()
 
-	beaconState, privKeys, err := testutil.DeterministicGenesisState(8)
+	beaconState, _, err := testutil.DeterministicGenesisState(8)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,7 +58,7 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
-	beaconState, privKeys, err := testutil.DeterministicGenesisState(10)
+	beaconState, _, err := testutil.DeterministicGenesisState(10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -211,7 +211,7 @@ func TestCommitteeAssignment_CurrentEpoch_ShouldNotFail(t *testing.T) {
 
 	vs := &Server{
 		BeaconDB:    db,
-		HeadFetcher: &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		HeadFetcher: &mockChain.ChainService{State: bState, Root: genesisRoot[:]},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}
 
@@ -254,7 +254,6 @@ func TestCommitteeAssignment_MultipleKeys_OK(t *testing.T) {
 	}
 
 	var wg sync.WaitGroup
-	numOfValidators := int(depChainStart)
 	numOfValidators := int(depChainStart)
 	errs := make(chan error, numOfValidators)
 	for i := 0; i < numOfValidators; i++ {

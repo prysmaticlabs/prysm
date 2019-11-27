@@ -97,6 +97,7 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	deposits[0].Proof = [][]byte{}
 	deposits[0].Data.PublicKey = []byte("junk")
 
 	leaf, err := ssz.HashTreeRoot(deposits[0].Data)
@@ -123,7 +124,6 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	if !strings.Contains(err.Error(), pubKeyErr) {
 		t.Errorf("Did not get expected error. Wanted: '%s' but got '%s'", pubKeyErr, err.Error())
 	}
-
 }
 
 func TestProcessDeposit_InvalidSignature(t *testing.T) {

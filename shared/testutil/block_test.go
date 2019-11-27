@@ -17,7 +17,7 @@ func TestGenerateFullBlock_PassesStateTransition(t *testing.T) {
 		t.Fatal(err)
 	}
 	conf := &BlockGenConfig{
-		NumAttestations: 4,
+		NumAttestations: 1,
 	}
 	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot)
 	if err != nil {
@@ -38,7 +38,7 @@ func TestGenerateFullBlock_ThousandValidators(t *testing.T) {
 		t.Fatal(err)
 	}
 	conf := &BlockGenConfig{
-		NumAttestations: 16,
+		NumAttestations: 4,
 	}
 	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot)
 	if err != nil {
@@ -61,7 +61,7 @@ func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
 	}
 
 	conf := &BlockGenConfig{
-		NumAttestations: 2,
+		NumAttestations: 4,
 	}
 	finalSlot := params.BeaconConfig().SlotsPerEpoch*4 + 3
 	for i := 0; i < int(finalSlot); i++ {

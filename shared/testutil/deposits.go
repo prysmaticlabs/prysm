@@ -84,17 +84,22 @@ func DeterministicDepositsAndKeys(numDeposits uint64) ([]*ethpb.Deposit, []*bls.
 				return nil, nil, errors.Wrap(err, "could not tree hash deposit data")
 			}
 		}
-
-		for i := range deposits {
-			proof, err := trie.MerkleProof(int(i))
-			if err != nil {
-				return nil, nil, errors.Wrap(err, "could not create merkle proof")
-			}
-			deposits[i].Proof = proof
-		}
 	}
 
-	return deposits, privKeys[0:numDeposits], nil
+	depositTrie, _, err := DeterministicDepositTrie(int(numDeposits))
+	if err != nil {
+		return nil, nil, err
+	}
+	requestedDeposits := deposits[:numDeposits]
+	for i := range requestedDeposits {
+		proof, err := depositTrie.MerkleProof(int(i))
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not create merkle proof")
+		}
+		requestedDeposits[i].Proof = proof
+	}
+
+	return requestedDeposits, privKeys[0:numDeposits], nil
 }
 
 // DeterministicDepositTrie returns a merkle trie of the requested size from the
@@ -158,8 +163,6 @@ func DeterministicGenesisState(numValidators uint64) (*pb.BeaconState, []*bls.Se
 
 // DepositTrieFromDeposits takes an array of deposits and returns the deposit trie.
 func DepositTrieFromDeposits(deposits []*ethpb.Deposit) (*trieutil.MerkleTrie, [][32]byte, error) {
-	lock.Lock()
-	defer lock.Unlock()
 	encodedDeposits := make([][]byte, len(deposits))
 	for i := 0; i < len(encodedDeposits); i++ {
 		hashedDeposit, err := ssz.HashTreeRoot(deposits[i].Data)
