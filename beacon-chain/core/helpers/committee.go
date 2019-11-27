@@ -140,7 +140,7 @@ func ComputeCommittee(
 //    committee = get_beacon_committee(state, data.slot, data.index)
 //    return set(index for i, index in enumerate(committee) if bits[i])
 func AttestingIndices(state *pb.BeaconState, data *ethpb.AttestationData, bf bitfield.Bitfield) ([]uint64, error) {
-	committee, err := BeaconCommittee(state, data.Slot, data.Index)
+	committee, err := BeaconCommittee(state, data.Slot, data.CommitteeIndex)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get committee")
 	}
@@ -243,7 +243,7 @@ func VerifyBitfieldLength(bf bitfield.Bitfield, committeeSize uint64) error {
 // VerifyAttestationBitfieldLengths verifies that an attestations aggregation and custody bitfields are
 // a valid length matching the size of the committee.
 func VerifyAttestationBitfieldLengths(bState *pb.BeaconState, att *ethpb.Attestation) error {
-	committee, err := BeaconCommittee(bState, att.Data.Slot, att.Data.Index)
+	committee, err := BeaconCommittee(bState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve beacon committees")
 	}

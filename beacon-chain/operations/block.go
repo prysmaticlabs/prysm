@@ -42,7 +42,7 @@ func (s *Service) handleProcessedBlock(ctx context.Context, message proto.Messag
 			"index":            i,
 			"root":             fmt.Sprintf("%#x", root),
 			"aggregation_bits": fmt.Sprintf("%08b", att.AggregationBits.Bytes()),
-			"committeeIndex":   att.Data.Index,
+			"committeeIndex":   att.Data.CommitteeIndex,
 		}).Debug("block attestation")
 	}
 	return nil

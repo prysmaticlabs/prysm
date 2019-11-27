@@ -1,6 +1,6 @@
 diff -ur --exclude=.git a/eth/v1alpha1/BUILD.bazel b/eth/v1alpha1/BUILD.bazel
 --- a/eth/v1alpha1/BUILD.bazel	2019-11-25 22:56:20.000000000 -0600
-+++ b/eth/v1alpha1/BUILD.bazel	2019-11-26 16:50:00.000000000 -0600
++++ b/eth/v1alpha1/BUILD.bazel	2019-11-26 21:14:05.000000000 -0600
 @@ -20,6 +20,7 @@
          "@com_google_protobuf//:empty_proto",
          "@com_google_protobuf//:timestamp_proto",
@@ -52,7 +52,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/BUILD.bazel b/eth/v1alpha1/BUILD.bazel
 \ No newline at end of file
 diff -ur --exclude=.git a/eth/v1alpha1/attestation.proto b/eth/v1alpha1/attestation.proto
 --- a/eth/v1alpha1/attestation.proto	2019-11-26 11:48:31.000000000 -0600
-+++ b/eth/v1alpha1/attestation.proto	2019-11-26 11:47:09.000000000 -0600
++++ b/eth/v1alpha1/attestation.proto	2019-11-26 21:31:42.000000000 -0600
 @@ -15,6 +15,8 @@
  
  package ethereum.eth.v1alpha1;
@@ -83,8 +83,12 @@ diff -ur --exclude=.git a/eth/v1alpha1/attestation.proto b/eth/v1alpha1/attestat
  }
  
  message AttestationData {
-@@ -49,7 +51,7 @@
-   uint64 index = 2;
+@@ -46,10 +48,10 @@
+   uint64 slot = 1;
+ 
+   // The committee index that submitted this attestation.
+-  uint64 index = 2;
++  uint64 committee_index = 2;
  
    // 32 byte root of the LMD GHOST block vote.
 -  bytes beacon_block_root = 3;

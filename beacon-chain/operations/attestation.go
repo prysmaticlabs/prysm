@@ -150,7 +150,7 @@ func (s *Service) AttestationsBySlotCommittee(ctx context.Context, slot uint64, 
 	atts := make([]*ethpb.Attestation, 0, len(s.attestationPool))
 
 	for _, ac := range s.attestationPool {
-		if ac.Data.Slot == slot && ac.Data.Index == index {
+		if ac.Data.Slot == slot && ac.Data.CommitteeIndex == index {
 			atts = append(atts, ac.ToAttestations()...)
 		}
 	}

@@ -130,7 +130,7 @@ func (as *Server) RequestAttestation(ctx context.Context, req *pb.AttestationReq
 
 	res = &ethpb.AttestationData{
 		Slot:            req.Slot,
-		Index:           req.CommitteeIndex,
+		CommitteeIndex:  req.CommitteeIndex,
 		BeaconBlockRoot: headRoot[:],
 		Source:          headState.CurrentJustifiedCheckpoint,
 		Target: &ethpb.Checkpoint{

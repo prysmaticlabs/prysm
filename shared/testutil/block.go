@@ -215,8 +215,8 @@ func generateAttesterSlashings(
 		aggregationBits.SetBitAt(randIndex, true)
 		att1 := &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
-				Slot:  bState.Slot,
-				Index: committeeIndex,
+				Slot:           bState.Slot,
+				CommitteeIndex: committeeIndex,
 				Target: &ethpb.Checkpoint{
 					Epoch: currentEpoch,
 					Root:  params.BeaconConfig().ZeroHash[:],
@@ -241,8 +241,8 @@ func generateAttesterSlashings(
 
 		att2 := &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
-				Slot:  bState.Slot,
-				Index: committeeIndex,
+				Slot:           bState.Slot,
+				CommitteeIndex: committeeIndex,
 				Target: &ethpb.Checkpoint{
 					Epoch: currentEpoch,
 					Root:  params.BeaconConfig().ZeroHash[:],
@@ -368,7 +368,7 @@ func GenerateAttestations(
 
 		attData := &ethpb.AttestationData{
 			Slot:            slot,
-			Index:           c,
+			CommitteeIndex:  c,
 			BeaconBlockRoot: headRoot,
 			Source:          bState.CurrentJustifiedCheckpoint,
 			Target: &ethpb.Checkpoint{

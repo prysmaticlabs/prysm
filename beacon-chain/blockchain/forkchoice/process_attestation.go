@@ -108,7 +108,7 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 
 	log := log.WithFields(logrus.Fields{
 		"Slot":               a.Data.Slot,
-		"Index":              a.Data.Index,
+		"Index":              a.Data.CommitteeIndex,
 		"AggregatedBitfield": fmt.Sprintf("%08b", a.AggregationBits),
 		"BeaconBlockRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(a.Data.BeaconBlockRoot)),
 	})
