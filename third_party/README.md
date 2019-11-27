@@ -105,12 +105,19 @@ for SSZ (the serialization library used by Prysm).
 Say a new change was pushed out to a dependency you're patching in Prysm. In order to update your
 patch or any other modifications, you would need to:
 
-
-1. First, clone the repo of the dependency you're patching and the specific commit Prysm is currently using for the dependency.
-For example, 
+1. First, clone the repo of the dependency you're patching and the specific commit Prysm is 
+currently using for the dependency in the WORKSPACE file. For example, Ethereum APIs could have
+the following definition in the WORKSPACE:
 ```
-git clone https://github.com/someteam/someproject && cd someproject
-git checkout <SOME_COMMIT_HASH>
+go_repository(
+    name = "com_github_prysmaticlabs_ethereumapis",
+    commit = "367ca574419a062ae26818f60bdeb5751a6f538",
+    ...
+```
+Then, checkout that commit
+```
+git clone https://github.com/prysmaticlabs/ethereumapis && cd ethereumapis
+git checkout 367ca574419a062ae26818f60bdeb5751a6f538
 ```
 2. Apply the patch currently in Prysm
 ```
@@ -118,8 +125,17 @@ git apply $GOPATH/src/github.com/prysmaticlabs/prysm/third_party/somepatch.patch
 ```
 3. Resolve any conflicts, commit the changes you want to make
 
-4. Generate a new diff
 ```
-git diff <SOME_COMMIT_HASH> > $GOPATH/src/github.com/prysmaticlabs/prysm/third_party/somepatch.patch
+git commit -m 'added more changes since patch'
 ```
 
+4. Generate a new diff by comparing your latest changes to the original commit
+the patch was for and output it directly into Prysm's third_party directory
+```
+git diff 367ca574419a062ae26818f60bdeb5751a6f538 > $GOPATH/src/github.com/prysmaticlabs/prysm/third_party/somepatch.patch
+```
+
+5. Build Prysm and ensure tests pass
+```
+bazel test //... --test_timeout=1000
+```
