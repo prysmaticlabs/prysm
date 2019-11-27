@@ -329,8 +329,8 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0x06},
 				CustodyBits:     bitfield.Bitlist{0x10},
 				Data: &ethpb.AttestationData{
-					Index:  20,
-					Target: &ethpb.Checkpoint{},
+					CommitteeIndex: 20,
+					Target:         &ethpb.Checkpoint{},
 				},
 			},
 			stateSlot:           20,
