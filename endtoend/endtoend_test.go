@@ -15,7 +15,7 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	ptypes "github.com/gogo/protobuf/types"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc"
 )
