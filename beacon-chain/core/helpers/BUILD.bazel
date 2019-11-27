@@ -19,6 +19,7 @@ go_library(
         "//shared/testutil:__pkg__",
         "//slasher:__subpackages__",
         "//validator:__subpackages__",
+        "//tools:__subpackages__",
     ],
     deps = [
         "//beacon-chain/cache:go_default_library",
