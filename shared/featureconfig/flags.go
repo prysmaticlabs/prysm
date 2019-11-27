@@ -74,7 +74,7 @@ var (
 		Usage: "Enables the skip slot cache to be used in the event of skipped slots.",
 	}
 	enableSnappyDBCompressionFlag = cli.BoolFlag{
-		Name: "snappy",
+		Name:  "snappy",
 		Usage: "Enables snappy compression in the database.",
 	}
 )

@@ -118,8 +118,8 @@ func TestStore_BoltDontPanic(t *testing.T) {
 
 	for i := 0; i <= 100; i++ {
 		att := &ethpb.Attestation{
-			Data:            &ethpb.AttestationData{
-				Slot: uint64(i),
+			Data: &ethpb.AttestationData{
+				Slot:   uint64(i),
 				Source: &ethpb.Checkpoint{},
 				Target: &ethpb.Checkpoint{},
 			},

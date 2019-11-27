@@ -62,7 +62,6 @@ func (kv *Store) ensureSnappy() error {
 	})
 }
 
-
 func migrateBucketToSnappy(bkt *bolt.Bucket) error {
 	c := bkt.Cursor()
 	for key, val := c.First(); key != nil; key, val = c.Next() {
@@ -72,4 +71,3 @@ func migrateBucketToSnappy(bkt *bolt.Bucket) error {
 	}
 	return nil
 }
-

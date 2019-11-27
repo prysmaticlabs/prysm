@@ -30,6 +30,5 @@ func encode(msg proto.Message) ([]byte, error) {
 		return enc, nil
 	}
 
-
 	return snappy.Encode(nil, enc), nil
 }
