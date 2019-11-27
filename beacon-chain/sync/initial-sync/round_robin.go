@@ -161,7 +161,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 		startBlock := s.chain.HeadSlot() + 1
 		skippedBlocks := blockBatchSize * uint64(lastEmptyRequests*len(peers))
 		if startBlock+skippedBlocks > helpers.StartSlot(finalizedEpoch+1) {
-			log.Debug("requested block range is greater than the finalized epoch")
+			log.WithField("finalizedEpoch", finalizedEpoch).Debug("Requested block range is greater than the finalized epoch")
 			break
 		}
 
