@@ -23,7 +23,7 @@ import (
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	slashpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -150,7 +150,7 @@ func (s *Service) startSlasher() {
 		SlasherDB: s.slasherDb,
 	}
 
-	ethpb.RegisterSlasherServer(s.grpcServer, &slasherServer)
+	slashpb.RegisterSlasherServer(s.grpcServer, &slasherServer)
 
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)

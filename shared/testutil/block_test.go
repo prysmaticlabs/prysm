@@ -19,13 +19,10 @@ func TestGenerateFullBlock_PassesStateTransition(t *testing.T) {
 		t.Fatal(err)
 	}
 	conf := &BlockGenConfig{
-		MaxProposerSlashings: 0,
-		MaxAttesterSlashings: 0,
-		MaxAttestations:      0,
-		MaxDeposits:          0,
-		MaxVoluntaryExits:    0,
+		MaxAttestations: 4,
+		Signatures:      true,
 	}
-	block := GenerateFullBlock(t, beaconState, privs, conf, beaconState.Slot+1)
+	block := GenerateFullBlock(t, beaconState, privs, conf, beaconState.Slot)
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
 	if err != nil {
 		t.Fatal(err)
@@ -43,13 +40,10 @@ func TestGenerateFullBlock_ThousandValidators(t *testing.T) {
 		t.Fatal(err)
 	}
 	conf := &BlockGenConfig{
-		MaxProposerSlashings: 0,
-		MaxAttesterSlashings: 0,
-		MaxAttestations:      16,
-		MaxDeposits:          0,
-		MaxVoluntaryExits:    0,
+		MaxAttestations: 16,
+		Signatures:      true,
 	}
-	block := GenerateFullBlock(t, beaconState, privs, conf, beaconState.Slot+1)
+	block := GenerateFullBlock(t, beaconState, privs, conf, beaconState.Slot)
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
 	if err != nil {
 		t.Fatal(err)
@@ -61,7 +55,7 @@ func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
 	// Changing to minimal config as this will process 4 epochs of blocks.
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	defer params.OverrideBeaconConfig(params.MainnetConfig())
-	deposits, _, privs := SetupInitialDeposits(t, 32)
+	deposits, _, privs := SetupInitialDeposits(t, 64)
 	eth1Data := GenerateEth1Data(t, deposits)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
@@ -69,16 +63,13 @@ func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
 	}
 
 	conf := &BlockGenConfig{
-		MaxProposerSlashings: 0,
-		MaxAttesterSlashings: 0,
-		MaxAttestations:      1,
-		MaxDeposits:          0,
-		MaxVoluntaryExits:    0,
+		MaxAttestations: 2,
+		Signatures:      true,
 	}
 	finalSlot := params.BeaconConfig().SlotsPerEpoch*4 + 3
 	for i := 0; i < int(finalSlot); i++ {
-		block := GenerateFullBlock(t, beaconState, privs, conf, beaconState.Slot+1)
-		beaconState, err = state.ExecuteStateTransitionNoVerify(context.Background(), beaconState, block)
+		block := GenerateFullBlock(t, beaconState, privs, conf, beaconState.Slot)
+		beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -97,7 +88,9 @@ func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
 }
 
 func TestGenerateFullBlock_ValidProposerSlashings(t *testing.T) {
-	deposits, _, privs := SetupInitialDeposits(t, 257)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	defer params.OverrideBeaconConfig(params.MainnetConfig())
+	deposits, _, privs := SetupInitialDeposits(t, 32)
 
 	eth1Data := GenerateEth1Data(t, deposits)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
@@ -106,10 +99,7 @@ func TestGenerateFullBlock_ValidProposerSlashings(t *testing.T) {
 	}
 	conf := &BlockGenConfig{
 		MaxProposerSlashings: 1,
-		MaxAttesterSlashings: 0,
-		MaxAttestations:      0,
-		MaxDeposits:          0,
-		MaxVoluntaryExits:    0,
+		Signatures:           true,
 	}
 	block := GenerateFullBlock(t, beaconState, privs, conf, beaconState.Slot+1)
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
@@ -124,20 +114,19 @@ func TestGenerateFullBlock_ValidProposerSlashings(t *testing.T) {
 }
 
 func TestGenerateFullBlock_ValidAttesterSlashings(t *testing.T) {
-	deposits, _, privs := SetupInitialDeposits(t, 256)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	defer params.OverrideBeaconConfig(params.MainnetConfig())
+	deposits, _, privs := SetupInitialDeposits(t, 32)
 	eth1Data := GenerateEth1Data(t, deposits)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
 		t.Fatal(err)
 	}
 	conf := &BlockGenConfig{
-		MaxProposerSlashings: 0,
 		MaxAttesterSlashings: 1,
-		MaxAttestations:      0,
-		MaxDeposits:          0,
-		MaxVoluntaryExits:    0,
+		Signatures:           true,
 	}
-	block := GenerateFullBlock(t, beaconState, privs, conf, beaconState.Slot+1)
+	block := GenerateFullBlock(t, beaconState, privs, conf, beaconState.Slot)
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
 	if err != nil {
 		t.Fatal(err)
@@ -150,6 +139,8 @@ func TestGenerateFullBlock_ValidAttesterSlashings(t *testing.T) {
 }
 
 func TestGenerateFullBlock_ValidAttestations(t *testing.T) {
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	defer params.OverrideBeaconConfig(params.MainnetConfig())
 	helpers.ClearAllCaches()
 	deposits, _, privs := SetupInitialDeposits(t, 256)
 
@@ -158,22 +149,17 @@ func TestGenerateFullBlock_ValidAttestations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Moving the slot forward one due to ATTESTATION_INCLUSION_DELAY.
-	beaconState.Slot++
 	conf := &BlockGenConfig{
-		MaxProposerSlashings: 0,
-		MaxAttesterSlashings: 0,
-		MaxAttestations:      2,
-		MaxDeposits:          0,
-		MaxVoluntaryExits:    0,
+		MaxAttestations: 4,
+		Signatures:      true,
 	}
-	block := GenerateFullBlock(t, beaconState, privs, conf, beaconState.Slot+1)
+	block := GenerateFullBlock(t, beaconState, privs, conf, beaconState.Slot)
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(beaconState.CurrentEpochAttestations) != 2 {
-		t.Fatal("expected 2 attestations to be saved to the beacon state")
+	if len(beaconState.CurrentEpochAttestations) != 4 {
+		t.Fatal("expected 4 attestations to be saved to the beacon state")
 	}
 }
 
@@ -188,13 +174,10 @@ func TestGenerateFullBlock_ValidDeposits(t *testing.T) {
 	eth1Data = GenerateEth1Data(t, deposits)
 	beaconState.Eth1Data = eth1Data
 	conf := &BlockGenConfig{
-		MaxProposerSlashings: 0,
-		MaxAttesterSlashings: 0,
-		MaxAttestations:      0,
-		MaxDeposits:          1,
-		MaxVoluntaryExits:    0,
+		MaxDeposits: 1,
+		Signatures:  true,
 	}
-	block := GenerateFullBlock(t, beaconState, privs, conf, beaconState.Slot+1)
+	block := GenerateFullBlock(t, beaconState, privs, conf, beaconState.Slot)
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
 	if err != nil {
 		t.Fatal(err)
@@ -221,13 +204,10 @@ func TestGenerateFullBlock_ValidVoluntaryExits(t *testing.T) {
 	// Moving the state 2048 epochs forward due to PERSISTENT_COMMITTEE_PERIOD.
 	beaconState.Slot = 3 + params.BeaconConfig().PersistentCommitteePeriod*params.BeaconConfig().SlotsPerEpoch
 	conf := &BlockGenConfig{
-		MaxProposerSlashings: 0,
-		MaxAttesterSlashings: 0,
-		MaxAttestations:      0,
-		MaxDeposits:          0,
-		MaxVoluntaryExits:    1,
+		MaxVoluntaryExits: 1,
+		Signatures:        true,
 	}
-	block := GenerateFullBlock(t, beaconState, privs, conf, beaconState.Slot+1)
+	block := GenerateFullBlock(t, beaconState, privs, conf, beaconState.Slot)
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
 	if err != nil {
 		t.Fatal(err)
