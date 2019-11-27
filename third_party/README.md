@@ -106,15 +106,20 @@ Say a new change was pushed out to a dependency you're patching in Prysm. In ord
 patch or any other modifications, you would need to:
 
 
-1. First, clone the repo of the dependency you're patching and a specific commit
+1. First, clone the repo of the dependency you're patching and the specific commit Prysm is currently using for the dependency.
+For example, 
 ```
 git clone https://github.com/someteam/someproject && cd someproject
 git checkout <SOME_COMMIT_HASH>
 ```
 2. Apply the patch currently in Prysm
 ```
-git apply --check $GOPATH/src/github.com/prysmaticlabs/prysm/third_party/somepatch.patch
+git apply $GOPATH/src/github.com/prysmaticlabs/prysm/third_party/somepatch.patch
 ```
-3. Fast forward any changes, resolve any conflicts, apply the changes you want to make
+3. Resolve any conflicts, commit the changes you want to make
+
 4. Generate a new diff
+```
+git diff <SOME_COMMIT_HASH> > $GOPATH/src/github.com/prysmaticlabs/prysm/third_party/somepatch.patch
+```
 
