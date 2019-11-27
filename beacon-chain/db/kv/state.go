@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"github.com/boltdb/bolt"
-	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
@@ -91,7 +90,7 @@ func (k *Store) GenesisState(ctx context.Context) (*pb.BeaconState, error) {
 func (k *Store) SaveState(ctx context.Context, state *pb.BeaconState, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveState")
 	defer span.End()
-	enc, err := proto.Marshal(state)
+	enc, err := encode(state)
 	if err != nil {
 		return err
 	}
@@ -117,7 +116,7 @@ func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 		if enc == nil {
 			checkpoint = &ethpb.Checkpoint{Root: genesisBlockRoot}
 		} else {
-			proto.Unmarshal(enc, checkpoint)
+			decode(enc, checkpoint)
 		}
 
 		// Safe guard against deleting genesis or finalized state.
@@ -156,7 +155,7 @@ func (k *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 // creates state from marshaled proto state bytes.
 func createState(enc []byte) (*pb.BeaconState, error) {
 	protoState := &pb.BeaconState{}
-	err := proto.Unmarshal(enc, protoState)
+	err := decode(enc, protoState)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal encoding")
 	}

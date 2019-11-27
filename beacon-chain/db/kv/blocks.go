@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/boltdb/bolt"
-	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
@@ -35,7 +34,7 @@ func (k *Store) Block(ctx context.Context, blockRoot [32]byte) (*ethpb.BeaconBlo
 			return nil
 		}
 		block = &ethpb.BeaconBlock{}
-		return proto.Unmarshal(enc, block)
+		return decode(enc, block)
 	})
 	return block, err
 }
@@ -56,7 +55,7 @@ func (k *Store) HeadBlock(ctx context.Context) (*ethpb.BeaconBlock, error) {
 			return nil
 		}
 		headBlock = &ethpb.BeaconBlock{}
-		return proto.Unmarshal(enc, headBlock)
+		return decode(enc, headBlock)
 	})
 	return headBlock, err
 }
@@ -113,7 +112,7 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 		for i := 0; i < len(keys); i++ {
 			encoded := bkt.Get(keys[i])
 			block := &ethpb.BeaconBlock{}
-			if err := proto.Unmarshal(encoded, block); err != nil {
+			if err := decode(encoded, block); err != nil {
 				return err
 			}
 			blocks = append(blocks, block)
@@ -207,7 +206,7 @@ func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 			return nil
 		}
 		block := &ethpb.BeaconBlock{}
-		if err := proto.Unmarshal(enc, block); err != nil {
+		if err := decode(enc, block); err != nil {
 			return err
 		}
 		indicesByBucket := createBlockIndicesFromBlock(block)
@@ -258,7 +257,7 @@ func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 		if existingBlock := bkt.Get(blockRoot[:]); existingBlock != nil {
 			return nil
 		}
-		enc, err := proto.Marshal(block)
+		enc, err := encode(block)
 		if err != nil {
 			return err
 		}
@@ -287,7 +286,7 @@ func (k *Store) saveBatchedBlock(ctx context.Context, block *ethpb.BeaconBlock) 
 		if existingBlock := bkt.Get(blockRoot[:]); existingBlock != nil {
 			return nil
 		}
-		enc, err := proto.Marshal(block)
+		enc, err := encode(block)
 		if err != nil {
 			return err
 		}
