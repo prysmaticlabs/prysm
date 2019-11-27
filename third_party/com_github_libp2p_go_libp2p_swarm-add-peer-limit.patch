@@ -1,0 +1,202 @@
+From 7c19fa47683f9bdddd436f22f3bc03fc2979cc66 Mon Sep 17 00:00:00 2001
+From: nisdas <nishdas93@gmail.com>
+Date: Thu, 28 Nov 2019 01:12:12 +0800
+Subject: [PATCH] add peer limit
+
+---
+ BUILD.bazel        | 78 ++++++++++++++++++++++++++++++++++++++++++++++
+ WORKSPACE          | 29 +++++++++++++++++
+ swarm.go           | 18 ++++++++---
+ testing/testing.go |  4 ++-
+ 4 files changed, 123 insertions(+), 6 deletions(-)
+ create mode 100644 BUILD.bazel
+ create mode 100644 WORKSPACE
+
+diff --git a/BUILD.bazel b/BUILD.bazel
+new file mode 100644
+index 0000000..9543b10
+--- /dev/null
++++ b/BUILD.bazel
+@@ -0,0 +1,78 @@
++load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
++load("@bazel_gazelle//:def.bzl", "gazelle")
++
++prefix = "github.com/libp2p/go-libp2p-swarm"
++
++# gazelle:prefix github.com/libp2p/go-libp2p-swarm
++gazelle(
++    name = "gazelle",
++    prefix = prefix,
++)
++
++go_library(
++    name = "go_default_library",
++    srcs = [
++        "addrs.go",
++        "dial_error.go",
++        "dial_sync.go",
++        "limiter.go",
++        "swarm.go",
++        "swarm_addr.go",
++        "swarm_conn.go",
++        "swarm_dial.go",
++        "swarm_listen.go",
++        "swarm_stream.go",
++        "swarm_transport.go",
++    ],
++    importpath = "github.com/libp2p/go-libp2p-swarm",
++    visibility = ["//visibility:public"],
++    deps = [
++        "@com_github_ipfs_go_log//:go_default_library",
++        "@com_github_jbenet_goprocess//:go_default_library",
++        "@com_github_jbenet_goprocess//context:go_default_library",
++        "@com_github_libp2p_go_addr_util//:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//crypto:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//metrics:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//mux:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//network:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//peerstore:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//protocol:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//transport:go_default_library",
++        "@com_github_libp2p_go_libp2p_loggables//:go_default_library",
++        "@com_github_libp2p_go_maddr_filter//:go_default_library",
++        "@com_github_multiformats_go_multiaddr//:go_default_library",
++        "@com_github_whyrusleeping_multiaddr_filter//:go_default_library",
++    ],
++)
++
++go_test(
++    name = "go_default_test",
++    srcs = [
++        "dial_sync_test.go",
++        "dial_test.go",
++        "limiter_test.go",
++        "peers_test.go",
++        "simul_test.go",
++        "swarm_addr_test.go",
++        "swarm_net_test.go",
++        "swarm_notif_test.go",
++        "swarm_test.go",
++        "transport_test.go",
++    ],
++    embed = [":go_default_library"],
++    deps = [
++        "//testing:go_default_library",
++        "@com_github_ipfs_go_log//:go_default_library",
++        "@com_github_libp2p_go_addr_util//:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//network:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//peerstore:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//test:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//transport:go_default_library",
++        "@com_github_libp2p_go_libp2p_testing//ci:go_default_library",
++        "@com_github_multiformats_go_multiaddr//:go_default_library",
++        "@com_github_multiformats_go_multiaddr_fmt//:go_default_library",
++        "@com_github_multiformats_go_multiaddr_net//:go_default_library",
++    ],
++)
+diff --git a/WORKSPACE b/WORKSPACE
+new file mode 100644
+index 0000000..94f5fc1
+--- /dev/null
++++ b/WORKSPACE
+@@ -0,0 +1,29 @@
++load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
++
++http_archive(
++    name = "io_bazel_rules_go",
++    sha256 = "513c12397db1bc9aa46dd62f02dd94b49a9b5d17444d49b5a04c5a89f3053c1c",
++    urls = [
++        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/rules_go/releases/download/v0.19.5/rules_go-v0.19.5.tar.gz",
++        "https://github.com/bazelbuild/rules_go/releases/download/v0.19.5/rules_go-v0.19.5.tar.gz",
++    ],
++)
++
++http_archive(
++    name = "bazel_gazelle",
++    sha256 = "7fc87f4170011201b1690326e8c16c5d802836e3a0d617d8f75c3af2b23180c4",
++    urls = [
++        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/bazel-gazelle/releases/download/0.18.2/bazel-gazelle-0.18.2.tar.gz",
++        "https://github.com/bazelbuild/bazel-gazelle/releases/download/0.18.2/bazel-gazelle-0.18.2.tar.gz",
++    ],
++)
++
++load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
++
++go_rules_dependencies()
++
++go_register_toolchains()
++
++load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
++
++gazelle_dependencies()
+diff --git a/swarm.go b/swarm.go
+index 5366bdc..bb20015 100644
+--- a/swarm.go
++++ b/swarm.go
+@@ -80,6 +80,9 @@ type Swarm struct {
+ 	connh   atomic.Value
+ 	streamh atomic.Value
+ 
++	//peerLimiter
++	peerLimit int
++
+ 	// dialing helpers
+ 	dsync   *DialSync
+ 	backf   DialBackoff
+@@ -94,12 +97,13 @@ type Swarm struct {
+ }
+ 
+ // NewSwarm constructs a Swarm
+-func NewSwarm(ctx context.Context, local peer.ID, peers peerstore.Peerstore, bwc metrics.Reporter) *Swarm {
++func NewSwarm(ctx context.Context, local peer.ID, peers peerstore.Peerstore, bwc metrics.Reporter, peerLimit int) *Swarm {
+ 	s := &Swarm{
+-		local:   local,
+-		peers:   peers,
+-		bwc:     bwc,
+-		Filters: filter.NewFilters(),
++		local:     local,
++		peers:     peers,
++		bwc:       bwc,
++		Filters:   filter.NewFilters(),
++		peerLimit: peerLimit,
+ 	}
+ 
+ 	s.conns.m = make(map[peer.ID][]*Conn)
+@@ -178,6 +182,10 @@ func (s *Swarm) Process() goprocess.Process {
+ }
+ 
+ func (s *Swarm) addConn(tc transport.CapableConn, dir network.Direction) (*Conn, error) {
++	numOfPeers := len(s.conns.m)
++	if numOfPeers >= int(s.peerLimit) && s.Connectedness(tc.RemotePeer()) != network.Connected && s.peerLimit != 0 {
++		return nil, errors.New("number of peers over the peer limit, so rejecting connection")
++	}
+ 	// The underlying transport (or the dialer) *should* filter it's own
+ 	// connections but we should double check anyways.
+ 	raddr := tc.RemoteMultiaddr()
+diff --git a/testing/testing.go b/testing/testing.go
+index 5e39602..75fbb86 100644
+--- a/testing/testing.go
++++ b/testing/testing.go
+@@ -26,6 +26,8 @@ type config struct {
+ 	dialOnly         bool
+ }
+ 
++const defaultPeerLimit = 10
++
+ // Option is an option that can be passed when constructing a test swarm.
+ type Option func(*testing.T, *config)
+ 
+@@ -72,7 +74,7 @@ func GenSwarm(t *testing.T, ctx context.Context, opts ...Option) *swarm.Swarm {
+ 	ps := pstoremem.NewPeerstore()
+ 	ps.AddPubKey(p.ID, p.PubKey)
+ 	ps.AddPrivKey(p.ID, p.PrivKey)
+-	s := swarm.NewSwarm(ctx, p.ID, ps, metrics.NewBandwidthCounter())
++	s := swarm.NewSwarm(ctx, p.ID, ps, metrics.NewBandwidthCounter(), defaultPeerLimit)
+ 	s.Process().AddChild(goprocess.WithTeardown(ps.Close))
+ 
+ 	tcpTransport := tcp.NewTCPTransport(GenUpgrader(s))
+-- 
+2.17.1
+

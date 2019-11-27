@@ -1,0 +1,651 @@
+From 5f1136548865820efe1f7ca1a640a56da6482b51 Mon Sep 17 00:00:00 2001
+From: nisdas <nishdas93@gmail.com>
+Date: Thu, 28 Nov 2019 01:18:01 +0800
+Subject: [PATCH] add peer limiter
+
+---
+ BUILD.bazel                          | 53 ++++++++++++++++++++++++
+ WORKSPACE                            | 29 ++++++++++++++
+ config/BUILD.bazel                   | 60 ++++++++++++++++++++++++++++
+ config/config.go                     |  4 +-
+ options.go                           |  8 ++++
+ p2p/discovery/BUILD.bazel            | 28 +++++++++++++
+ p2p/host/basic/BUILD.bazel           | 50 +++++++++++++++++++++++
+ p2p/host/relay/BUILD.bazel           | 50 +++++++++++++++++++++++
+ p2p/host/routed/BUILD.bazel          | 21 ++++++++++
+ p2p/net/mock/BUILD.bazel             | 52 ++++++++++++++++++++++++
+ p2p/protocol/identify/BUILD.bazel    | 55 +++++++++++++++++++++++++
+ p2p/protocol/identify/pb/BUILD.bazel | 22 ++++++++++
+ p2p/protocol/ping/BUILD.bazel        | 26 ++++++++++++
+ p2p/test/backpressure/BUILD.bazel    | 24 +++++++++++
+ p2p/test/reconnects/BUILD.bazel      | 23 +++++++++++
+ 15 files changed, 504 insertions(+), 1 deletion(-)
+ create mode 100644 BUILD.bazel
+ create mode 100644 WORKSPACE
+ create mode 100644 config/BUILD.bazel
+ create mode 100644 p2p/discovery/BUILD.bazel
+ create mode 100644 p2p/host/basic/BUILD.bazel
+ create mode 100644 p2p/host/relay/BUILD.bazel
+ create mode 100644 p2p/host/routed/BUILD.bazel
+ create mode 100644 p2p/net/mock/BUILD.bazel
+ create mode 100644 p2p/protocol/identify/BUILD.bazel
+ create mode 100644 p2p/protocol/identify/pb/BUILD.bazel
+ create mode 100644 p2p/protocol/ping/BUILD.bazel
+ create mode 100644 p2p/test/backpressure/BUILD.bazel
+ create mode 100644 p2p/test/reconnects/BUILD.bazel
+
+diff --git a/BUILD.bazel b/BUILD.bazel
+new file mode 100644
+index 0000000..0f138bc
+--- /dev/null
++++ b/BUILD.bazel
+@@ -0,0 +1,53 @@
++load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
++load("@bazel_gazelle//:def.bzl", "gazelle")
++
++prefix = "github.com/libp2p/go-libp2p"
++
++# gazelle:prefix github.com/libp2p/go-libp2p
++gazelle(
++    name = "gazelle",
++    prefix = prefix,
++)
++
++go_library(
++    name = "go_default_library",
++    srcs = [
++        "defaults.go",
++        "error_util.go",
++        "libp2p.go",
++        "options.go",
++    ],
++    importpath = "github.com/libp2p/go-libp2p",
++    visibility = ["//visibility:public"],
++    deps = [
++        "//config:go_default_library",
++        "//p2p/host/basic:go_default_library",
++        "@com_github_libp2p_go_libp2p_circuit//:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//connmgr:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//crypto:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//host:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//metrics:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//peerstore:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//pnet:go_default_library",
++        "@com_github_libp2p_go_libp2p_mplex//:go_default_library",
++        "@com_github_libp2p_go_libp2p_peerstore//pstoremem:go_default_library",
++        "@com_github_libp2p_go_libp2p_secio//:go_default_library",
++        "@com_github_libp2p_go_libp2p_yamux//:go_default_library",
++        "@com_github_libp2p_go_maddr_filter//:go_default_library",
++        "@com_github_libp2p_go_tcp_transport//:go_default_library",
++        "@com_github_libp2p_go_ws_transport//:go_default_library",
++        "@com_github_multiformats_go_multiaddr//:go_default_library",
++    ],
++)
++
++go_test(
++    name = "go_default_test",
++    srcs = ["libp2p_test.go"],
++    embed = [":go_default_library"],
++    deps = [
++        "@com_github_libp2p_go_libp2p_core//crypto:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//host:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
++        "@com_github_libp2p_go_tcp_transport//:go_default_library",
++    ],
++)
+diff --git a/WORKSPACE b/WORKSPACE
+new file mode 100644
+index 0000000..94f5fc1
+--- /dev/null
++++ b/WORKSPACE
+@@ -0,0 +1,29 @@
++load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
++
++http_archive(
++    name = "io_bazel_rules_go",
++    sha256 = "513c12397db1bc9aa46dd62f02dd94b49a9b5d17444d49b5a04c5a89f3053c1c",
++    urls = [
++        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/rules_go/releases/download/v0.19.5/rules_go-v0.19.5.tar.gz",
++        "https://github.com/bazelbuild/rules_go/releases/download/v0.19.5/rules_go-v0.19.5.tar.gz",
++    ],
++)
++
++http_archive(
++    name = "bazel_gazelle",
++    sha256 = "7fc87f4170011201b1690326e8c16c5d802836e3a0d617d8f75c3af2b23180c4",
++    urls = [
++        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/bazel-gazelle/releases/download/0.18.2/bazel-gazelle-0.18.2.tar.gz",
++        "https://github.com/bazelbuild/bazel-gazelle/releases/download/0.18.2/bazel-gazelle-0.18.2.tar.gz",
++    ],
++)
++
++load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
++
++go_rules_dependencies()
++
++go_register_toolchains()
++
++load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
++
++gazelle_dependencies()
+diff --git a/config/BUILD.bazel b/config/BUILD.bazel
+new file mode 100644
+index 0000000..de3861a
+--- /dev/null
++++ b/config/BUILD.bazel
+@@ -0,0 +1,60 @@
++load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
++
++go_library(
++    name = "go_default_library",
++    srcs = [
++        "config.go",
++        "constructor_types.go",
++        "muxer.go",
++        "reflection_magic.go",
++        "security.go",
++        "transport.go",
++    ],
++    importpath = "github.com/libp2p/go-libp2p/config",
++    visibility = ["//visibility:public"],
++    deps = [
++        "//p2p/host/basic:go_default_library",
++        "//p2p/host/relay:go_default_library",
++        "//p2p/host/routed:go_default_library",
++        "@com_github_ipfs_go_log//:go_default_library",
++        "@com_github_libp2p_go_conn_security_multistream//:go_default_library",
++        "@com_github_libp2p_go_libp2p_circuit//:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//connmgr:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//crypto:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//host:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//metrics:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//mux:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//network:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//peerstore:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//pnet:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//routing:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//sec:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//sec/insecure:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//transport:go_default_library",
++        "@com_github_libp2p_go_libp2p_discovery//:go_default_library",
++        "@com_github_libp2p_go_libp2p_swarm//:go_default_library",
++        "@com_github_libp2p_go_libp2p_transport_upgrader//:go_default_library",
++        "@com_github_libp2p_go_maddr_filter//:go_default_library",
++        "@com_github_libp2p_go_stream_muxer_multistream//:go_default_library",
++        "@com_github_multiformats_go_multiaddr//:go_default_library",
++    ],
++)
++
++go_test(
++    name = "go_default_test",
++    srcs = [
++        "config_test.go",
++        "muxer_test.go",
++        "reflection_magic_test.go",
++    ],
++    embed = [":go_default_library"],
++    deps = [
++        "//p2p/host/basic:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//host:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//mux:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
++        "@com_github_libp2p_go_libp2p_swarm//testing:go_default_library",
++        "@com_github_libp2p_go_libp2p_yamux//:go_default_library",
++    ],
++)
+diff --git a/config/config.go b/config/config.go
+index 24fc1fa..431d6fd 100644
+--- a/config/config.go
++++ b/config/config.go
+@@ -75,6 +75,8 @@ type Config struct {
+ 
+ 	Routing RoutingC
+ 
++	PeerLimit int
++
+ 	EnableAutoRelay bool
+ }
+ 
+@@ -114,7 +116,7 @@ func (cfg *Config) NewNode(ctx context.Context) (host.Host, error) {
+ 	}
+ 
+ 	// TODO: Make the swarm implementation configurable.
+-	swrm := swarm.NewSwarm(ctx, pid, cfg.Peerstore, cfg.Reporter)
++	swrm := swarm.NewSwarm(ctx, pid, cfg.Peerstore, cfg.Reporter, cfg.PeerLimit)
+ 	if cfg.Filters != nil {
+ 		swrm.Filters = cfg.Filters
+ 	}
+diff --git a/options.go b/options.go
+index 6463ea7..8116a83 100644
+--- a/options.go
++++ b/options.go
+@@ -105,6 +105,14 @@ func Muxer(name string, tpt interface{}) Option {
+ 	}
+ }
+ 
++// PeerLimit sets the maximum number of peers that can be connected to at once.
++func PeerLimit(limit int) Option {
++	return func(cfg *Config) error {
++		cfg.PeerLimit = limit
++		return nil
++	}
++}
++
+ // Transport configures libp2p to use the given transport (or transport
+ // constructor).
+ //
+diff --git a/p2p/discovery/BUILD.bazel b/p2p/discovery/BUILD.bazel
+new file mode 100644
+index 0000000..afe78d9
+--- /dev/null
++++ b/p2p/discovery/BUILD.bazel
+@@ -0,0 +1,28 @@
++load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
++
++go_library(
++    name = "go_default_library",
++    srcs = ["mdns.go"],
++    importpath = "github.com/libp2p/go-libp2p/p2p/discovery",
++    visibility = ["//visibility:public"],
++    deps = [
++        "@com_github_ipfs_go_log//:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//host:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
++        "@com_github_multiformats_go_multiaddr//:go_default_library",
++        "@com_github_multiformats_go_multiaddr_net//:go_default_library",
++        "@com_github_whyrusleeping_mdns//:go_default_library",
++    ],
++)
++
++go_test(
++    name = "go_default_test",
++    srcs = ["mdns_test.go"],
++    embed = [":go_default_library"],
++    deps = [
++        "//p2p/host/basic:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//host:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
++        "@com_github_libp2p_go_libp2p_swarm//testing:go_default_library",
++    ],
++)
+diff --git a/p2p/host/basic/BUILD.bazel b/p2p/host/basic/BUILD.bazel
+new file mode 100644
+index 0000000..1a5e4f1
+--- /dev/null
++++ b/p2p/host/basic/BUILD.bazel
+@@ -0,0 +1,50 @@
++load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
++
++go_library(
++    name = "go_default_library",
++    srcs = [
++        "basic_host.go",
++        "natmgr.go",
++    ],
++    importpath = "github.com/libp2p/go-libp2p/p2p/host/basic",
++    visibility = ["//visibility:public"],
++    deps = [
++        "//p2p/protocol/identify:go_default_library",
++        "//p2p/protocol/ping:go_default_library",
++        "@com_github_ipfs_go_log//:go_default_library",
++        "@com_github_jbenet_goprocess//:go_default_library",
++        "@com_github_jbenet_goprocess//context:go_default_library",
++        "@com_github_libp2p_go_eventbus//:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//connmgr:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//event:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//host:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//network:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//peerstore:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//protocol:go_default_library",
++        "@com_github_libp2p_go_libp2p_nat//:go_default_library",
++        "@com_github_multiformats_go_multiaddr//:go_default_library",
++        "@com_github_multiformats_go_multiaddr_dns//:go_default_library",
++        "@com_github_multiformats_go_multiaddr_net//:go_default_library",
++        "@com_github_multiformats_go_multistream//:go_default_library",
++    ],
++)
++
++go_test(
++    name = "go_default_test",
++    srcs = ["basic_host_test.go"],
++    embed = [":go_default_library"],
++    deps = [
++        "@com_github_libp2p_go_eventbus//:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//event:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//helpers:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//host:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//network:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//protocol:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//test:go_default_library",
++        "@com_github_libp2p_go_libp2p_swarm//testing:go_default_library",
++        "@com_github_multiformats_go_multiaddr//:go_default_library",
++        "@com_github_multiformats_go_multiaddr_dns//:go_default_library",
++    ],
++)
+diff --git a/p2p/host/relay/BUILD.bazel b/p2p/host/relay/BUILD.bazel
+new file mode 100644
+index 0000000..4e974e1
+--- /dev/null
++++ b/p2p/host/relay/BUILD.bazel
+@@ -0,0 +1,50 @@
++load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
++
++go_library(
++    name = "go_default_library",
++    srcs = [
++        "addrsplosion.go",
++        "autorelay.go",
++        "doc.go",
++        "log.go",
++        "relay.go",
++    ],
++    importpath = "github.com/libp2p/go-libp2p/p2p/host/relay",
++    visibility = ["//visibility:public"],
++    deps = [
++        "//p2p/host/basic:go_default_library",
++        "@com_github_ipfs_go_log//:go_default_library",
++        "@com_github_libp2p_go_libp2p_autonat//:go_default_library",
++        "@com_github_libp2p_go_libp2p_circuit//:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//network:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//routing:go_default_library",
++        "@com_github_libp2p_go_libp2p_discovery//:go_default_library",
++        "@com_github_multiformats_go_multiaddr//:go_default_library",
++        "@com_github_multiformats_go_multiaddr_net//:go_default_library",
++    ],
++)
++
++go_test(
++    name = "go_default_test",
++    srcs = [
++        "addrsplosion_test.go",
++        "autorelay_test.go",
++    ],
++    embed = [":go_default_library"],
++    deps = [
++        "//:go_default_library",
++        "@com_github_gogo_protobuf//io:go_default_library",
++        "@com_github_ipfs_go_cid//:go_default_library",
++        "@com_github_jbenet_go_cienv//:go_default_library",
++        "@com_github_libp2p_go_libp2p_autonat//:go_default_library",
++        "@com_github_libp2p_go_libp2p_autonat//pb:go_default_library",
++        "@com_github_libp2p_go_libp2p_circuit//:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//host:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//network:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//routing:go_default_library",
++        "@com_github_multiformats_go_multiaddr//:go_default_library",
++        "@com_github_multiformats_go_multiaddr_net//:go_default_library",
++    ],
++)
+diff --git a/p2p/host/routed/BUILD.bazel b/p2p/host/routed/BUILD.bazel
+new file mode 100644
+index 0000000..0340679
+--- /dev/null
++++ b/p2p/host/routed/BUILD.bazel
+@@ -0,0 +1,21 @@
++load("@io_bazel_rules_go//go:def.bzl", "go_library")
++
++go_library(
++    name = "go_default_library",
++    srcs = ["routed.go"],
++    importpath = "github.com/libp2p/go-libp2p/p2p/host/routed",
++    visibility = ["//visibility:public"],
++    deps = [
++        "@com_github_ipfs_go_log//:go_default_library",
++        "@com_github_libp2p_go_libp2p_circuit//:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//connmgr:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//event:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//host:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//network:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//peerstore:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//protocol:go_default_library",
++        "@com_github_libp2p_go_libp2p_loggables//:go_default_library",
++        "@com_github_multiformats_go_multiaddr//:go_default_library",
++    ],
++)
+diff --git a/p2p/net/mock/BUILD.bazel b/p2p/net/mock/BUILD.bazel
+new file mode 100644
+index 0000000..8d9b04a
+--- /dev/null
++++ b/p2p/net/mock/BUILD.bazel
+@@ -0,0 +1,52 @@
++load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
++
++go_library(
++    name = "go_default_library",
++    srcs = [
++        "interface.go",
++        "mock.go",
++        "mock_conn.go",
++        "mock_link.go",
++        "mock_net.go",
++        "mock_peernet.go",
++        "mock_printer.go",
++        "mock_stream.go",
++        "ratelimiter.go",
++    ],
++    importpath = "github.com/libp2p/go-libp2p/p2p/net/mock",
++    visibility = ["//visibility:public"],
++    deps = [
++        "//p2p/host/basic:go_default_library",
++        "@com_github_ipfs_go_log//:go_default_library",
++        "@com_github_jbenet_goprocess//:go_default_library",
++        "@com_github_jbenet_goprocess//context:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//crypto:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//host:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//network:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//peerstore:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//protocol:go_default_library",
++        "@com_github_libp2p_go_libp2p_netutil//:go_default_library",
++        "@com_github_libp2p_go_libp2p_peerstore//pstoremem:go_default_library",
++        "@com_github_multiformats_go_multiaddr//:go_default_library",
++    ],
++)
++
++go_test(
++    name = "go_default_test",
++    srcs = [
++        "mock_notif_test.go",
++        "mock_test.go",
++    ],
++    embed = [":go_default_library"],
++    deps = [
++        "@com_github_ipfs_go_detect_race//:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//helpers:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//network:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//protocol:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//test:go_default_library",
++        "@com_github_libp2p_go_libp2p_testing//net:go_default_library",
++        "@com_github_multiformats_go_multiaddr//:go_default_library",
++    ],
++)
+diff --git a/p2p/protocol/identify/BUILD.bazel b/p2p/protocol/identify/BUILD.bazel
+new file mode 100644
+index 0000000..849cf98
+--- /dev/null
++++ b/p2p/protocol/identify/BUILD.bazel
+@@ -0,0 +1,55 @@
++load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
++
++go_library(
++    name = "go_default_library",
++    srcs = [
++        "id.go",
++        "id_delta.go",
++        "id_push.go",
++        "obsaddr.go",
++        "opts.go",
++    ],
++    importpath = "github.com/libp2p/go-libp2p/p2p/protocol/identify",
++    visibility = ["//visibility:public"],
++    deps = [
++        "//p2p/protocol/identify/pb:go_default_library",
++        "@com_github_gogo_protobuf//io:go_default_library",
++        "@com_github_ipfs_go_log//:go_default_library",
++        "@com_github_libp2p_go_eventbus//:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//crypto:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//event:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//helpers:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//host:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//network:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//peerstore:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//protocol:go_default_library",
++        "@com_github_multiformats_go_multiaddr//:go_default_library",
++        "@com_github_multiformats_go_multistream//:go_default_library",
++    ],
++)
++
++go_test(
++    name = "go_default_test",
++    srcs = [
++        "id_test.go",
++        "obsaddr_test.go",
++    ],
++    embed = [":go_default_library"],
++    deps = [
++        "//:go_default_library",
++        "@com_github_ipfs_go_detect_race//:go_default_library",
++        "@com_github_libp2p_go_eventbus//:go_default_library",
++        "@com_github_libp2p_go_libp2p_blankhost//:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//crypto:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//event:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//helpers:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//host:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//network:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//peerstore:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//protocol:go_default_library",
++        "@com_github_libp2p_go_libp2p_swarm//testing:go_default_library",
++        "@com_github_multiformats_go_multiaddr//:go_default_library",
++    ],
++)
+diff --git a/p2p/protocol/identify/pb/BUILD.bazel b/p2p/protocol/identify/pb/BUILD.bazel
+new file mode 100644
+index 0000000..db237d5
+--- /dev/null
++++ b/p2p/protocol/identify/pb/BUILD.bazel
+@@ -0,0 +1,22 @@
++load("@io_bazel_rules_go//go:def.bzl", "go_library")
++load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
++
++proto_library(
++    name = "identify_pb_proto",
++    srcs = ["identify.proto"],
++    visibility = ["//visibility:public"],
++)
++
++go_proto_library(
++    name = "identify_pb_go_proto",
++    importpath = "github.com/libp2p/go-libp2p/p2p/protocol/identify/pb",
++    proto = ":identify_pb_proto",
++    visibility = ["//visibility:public"],
++)
++
++go_library(
++    name = "go_default_library",
++    embed = [":identify_pb_go_proto"],
++    importpath = "github.com/libp2p/go-libp2p/p2p/protocol/identify/pb",
++    visibility = ["//visibility:public"],
++)
+diff --git a/p2p/protocol/ping/BUILD.bazel b/p2p/protocol/ping/BUILD.bazel
+new file mode 100644
+index 0000000..20c8801
+--- /dev/null
++++ b/p2p/protocol/ping/BUILD.bazel
+@@ -0,0 +1,26 @@
++load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
++
++go_library(
++    name = "go_default_library",
++    srcs = ["ping.go"],
++    importpath = "github.com/libp2p/go-libp2p/p2p/protocol/ping",
++    visibility = ["//visibility:public"],
++    deps = [
++        "@com_github_ipfs_go_ipfs_util//:go_default_library",
++        "@com_github_ipfs_go_log//:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//host:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//network:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
++    ],
++)
++
++go_test(
++    name = "go_default_test",
++    srcs = ["ping_test.go"],
++    embed = [":go_default_library"],
++    deps = [
++        "//p2p/host/basic:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
++        "@com_github_libp2p_go_libp2p_swarm//testing:go_default_library",
++    ],
++)
+diff --git a/p2p/test/backpressure/BUILD.bazel b/p2p/test/backpressure/BUILD.bazel
+new file mode 100644
+index 0000000..72a0c5e
+--- /dev/null
++++ b/p2p/test/backpressure/BUILD.bazel
+@@ -0,0 +1,24 @@
++load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
++
++go_library(
++    name = "go_default_library",
++    srcs = ["backpressure.go"],
++    importpath = "github.com/libp2p/go-libp2p/p2p/test/backpressure",
++    visibility = ["//visibility:public"],
++)
++
++go_test(
++    name = "go_default_test",
++    srcs = ["backpressure_test.go"],
++    embed = [":go_default_library"],
++    deps = [
++        "//p2p/host/basic:go_default_library",
++        "@com_github_ipfs_go_ipfs_util//:go_default_library",
++        "@com_github_ipfs_go_log//:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//host:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//network:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//protocol:go_default_library",
++        "@com_github_libp2p_go_libp2p_swarm//testing:go_default_library",
++    ],
++)
+diff --git a/p2p/test/reconnects/BUILD.bazel b/p2p/test/reconnects/BUILD.bazel
+new file mode 100644
+index 0000000..3aadc15
+--- /dev/null
++++ b/p2p/test/reconnects/BUILD.bazel
+@@ -0,0 +1,23 @@
++load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
++
++go_library(
++    name = "go_default_library",
++    srcs = ["reconnect.go"],
++    importpath = "github.com/libp2p/go-libp2p/p2p/test/reconnects",
++    visibility = ["//visibility:public"],
++)
++
++go_test(
++    name = "go_default_test",
++    srcs = ["reconnect_test.go"],
++    embed = [":go_default_library"],
++    deps = [
++        "//p2p/host/basic:go_default_library",
++        "@com_github_ipfs_go_ipfs_util//:go_default_library",
++        "@com_github_ipfs_go_log//:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//host:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//network:go_default_library",
++        "@com_github_libp2p_go_libp2p_core//protocol:go_default_library",
++        "@com_github_libp2p_go_libp2p_swarm//testing:go_default_library",
++    ],
++)
+-- 
+2.17.1
+

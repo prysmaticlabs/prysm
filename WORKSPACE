@@ -245,6 +245,10 @@ go_repository(
     name = "com_github_libp2p_go_libp2p",
     commit = "c1687281a5c19b61ee5e0dc07fad15697c3bde94",  # v0.4.0
     importpath = "github.com/libp2p/go-libp2p",
+    patch_args = ["-p1"],
+    patches = [
+        "//third_party:com_github_libp2p_go_libp2p-add-peer-limiter.patch",
+    ],
 )
 
 go_repository(
@@ -282,6 +286,10 @@ go_repository(
     name = "com_github_libp2p_go_libp2p_swarm",
     commit = "4f59859086ea4bfd750cf40ff2598fe8e6256f78",  # v0.2.2
     importpath = "github.com/libp2p/go-libp2p-swarm",
+    patch_args = ["-p1"],
+    patches = [
+        "//third_party:com_github_libp2p_go_libp2p_swarm-add-peer-limit.patch",
+    ],
 )
 
 go_repository(
