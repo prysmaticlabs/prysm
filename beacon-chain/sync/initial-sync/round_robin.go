@@ -48,6 +48,11 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	// Step 1 - Sync to end of finalized epoch.
 	for s.chain.HeadSlot() < helpers.StartSlot(highestFinalizedEpoch()+1) {
 		root, finalizedEpoch, peers := bestFinalized()
+		if len(peers) == 0 {
+			log.Warn("No peers; waiting for reconnect")
+			time.Sleep(refreshTime)
+			continue
+		}
 
 		// shuffle peers to prevent a bad peer from
 		// stalling sync with invalid blocks
@@ -318,6 +323,9 @@ func bestFinalized() ([]byte, uint64, []peer.ID) {
 	var pids []peer.ID
 	for _, k := range peerstatus.Keys() {
 		s := peerstatus.Get(k)
+		if s == nil {
+			continue
+		}
 		if s.FinalizedEpoch >= rootToEpoch[mostVotedFinalizedRoot] {
 			pids = append(pids, k)
 			if len(pids) >= maxPeersToSync {
