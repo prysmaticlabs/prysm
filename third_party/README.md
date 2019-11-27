@@ -34,3 +34,5 @@ Prysm can be installed either with Docker **(recommended method)** or using our 
   - A modern UNIX operating system (MacOS included)
 
 ## Updating Patches
+
+## Common Errors
