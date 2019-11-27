@@ -74,6 +74,23 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+		slot := b.Slot
+		for state == nil {
+			slot--
+			filter := filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot)
+			bs, err := db.Blocks(context.Background(), filter)
+			if err != nil {
+				panic(err)
+			}
+			rs, err := ssz.SigningRoot(bs[0])
+			if err != nil {
+				panic(err)
+			}
+			state, err = db.State(context.Background(), rs)
+			if err != nil {
+				panic(err)
+			}
+		}
 
 		for _, att := range atts {
 			indices, err := helpers.AttestingIndices(state, att.Data, att.AggregationBits)
@@ -88,6 +105,7 @@ func main() {
 		// Construct label of each node.
 		rStr := hex.EncodeToString(r[:2])
 		label := "slot: " + strconv.Itoa(int(b.Slot)) + "\n root: " + rStr + "\n votes: " + strconv.Itoa(len(m[r].score))
+
 		dotN := graph.Node(rStr).Box().Attr("label", label)
 		n := &node{
 			parentRoot: bytesutil.ToBytes32(b.ParentRoot),
