@@ -19,7 +19,7 @@ import (
 var lock sync.Mutex
 
 // Caches
-var deposits []*ethpb.Deposit
+var cachedDeposits []*ethpb.Deposit
 var privKeys []*bls.SecretKey
 var trie *trieutil.MerkleTrie
 
@@ -41,10 +41,10 @@ func DeterministicDepositsAndKeys(numDeposits uint64) ([]*ethpb.Deposit, []*bls.
 		}
 	}
 
-	if numDeposits > uint64(len(deposits)) {
-		// More deposits requested than cached.
-		numExisting := uint64(len(deposits))
-		numRequired := numDeposits - uint64(len(deposits))
+	// If more deposits requested than cached, generate more.
+	if numDeposits > uint64(len(cachedDeposits)) {
+		numExisting := uint64(len(cachedDeposits))
+		numRequired := numDeposits - uint64(len(cachedDeposits))
 		// Fetch the required number of keys.
 		secretKeys, publicKeys, err := interop.DeterministicallyGenerateKeys(numExisting, numRequired+1)
 		if err != nil {
@@ -73,7 +73,7 @@ func DeterministicDepositsAndKeys(numDeposits uint64) ([]*ethpb.Deposit, []*bls.
 			deposit := &ethpb.Deposit{
 				Data: depositData,
 			}
-			deposits = append(deposits, deposit)
+			cachedDeposits = append(cachedDeposits, deposit)
 
 			hashedDeposit, err := ssz.HashTreeRoot(deposit.Data)
 			if err != nil {
@@ -90,7 +90,7 @@ func DeterministicDepositsAndKeys(numDeposits uint64) ([]*ethpb.Deposit, []*bls.
 	if err != nil {
 		return nil, nil, err
 	}
-	requestedDeposits := deposits[:numDeposits]
+	requestedDeposits := cachedDeposits[:numDeposits]
 	for i := range requestedDeposits {
 		proof, err := depositTrie.MerkleProof(int(i))
 		if err != nil {
@@ -105,9 +105,8 @@ func DeterministicDepositsAndKeys(numDeposits uint64) ([]*ethpb.Deposit, []*bls.
 // DeterministicDepositTrie returns a merkle trie of the requested size from the
 // deterministic deposits.
 func DeterministicDepositTrie(size int) (*trieutil.MerkleTrie, [][32]byte, error) {
-	lock.Lock()
-	defer lock.Unlock()
-	if size > len(deposits) {
+	items := trie.Items()
+	if size > len(items) {
 		return nil, [][32]byte{}, errors.New("requested a larger tree than amount of deposits")
 	}
 
@@ -115,7 +114,7 @@ func DeterministicDepositTrie(size int) (*trieutil.MerkleTrie, [][32]byte, error
 		return nil, [][32]byte{}, errors.New("trie cache is empty, generate deposits at an earlier point")
 	}
 
-	items := trie.Items()[:size]
+	items = items[:size]
 	depositTrie, err := trieutil.GenerateTrieFromItems(items, int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		return nil, [][32]byte{}, errors.Wrapf(err, "could not generate trie of %d length", size)
@@ -139,7 +138,7 @@ func DeterministicEth1Data(size int) (*ethpb.Eth1Data, error) {
 	eth1Data := &ethpb.Eth1Data{
 		BlockHash:    root[:],
 		DepositRoot:  root[:],
-		DepositCount: uint64(len(deposits)),
+		DepositCount: uint64(size),
 	}
 	return eth1Data, nil
 }
@@ -189,5 +188,5 @@ func DepositTrieFromDeposits(deposits []*ethpb.Deposit) (*trieutil.MerkleTrie, [
 func ResetCache() {
 	trie = nil
 	privKeys = []*bls.SecretKey{}
-	deposits = []*ethpb.Deposit{}
+	cachedDeposits = []*ethpb.Deposit{}
 }

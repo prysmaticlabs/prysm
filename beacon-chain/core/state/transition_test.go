@@ -121,7 +121,8 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 		ParentRoot: genesisBlock.ParentRoot,
 		BodyRoot:   bodyRoot[:],
 	}
-	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
+
+	block, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,26 +130,7 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 		Header_1: &ethpb.BeaconBlockHeader{Slot: params.BeaconConfig().SlotsPerEpoch},
 		Header_2: &ethpb.BeaconBlockHeader{Slot: params.BeaconConfig().SlotsPerEpoch * 2},
 	}
-
-	epoch := helpers.CurrentEpoch(beaconState)
-	randaoReveal, err := testutil.RandaoReveal(beaconState, epoch, privKeys)
-	if err != nil {
-		t.Fatal(err)
-	}
-	blkDeposits := make([]*ethpb.Deposit, 0)
-	block := &ethpb.BeaconBlock{
-		ParentRoot: parentRoot[:],
-		Slot:       0,
-		Body: &ethpb.BeaconBlockBody{
-			RandaoReveal:      randaoReveal,
-			ProposerSlashings: []*ethpb.ProposerSlashing{slashing},
-			Eth1Data: &ethpb.Eth1Data{
-				DepositRoot: []byte{2},
-				BlockHash:   []byte{3},
-			},
-			Deposits: blkDeposits,
-		},
-	}
+	block.Body.ProposerSlashings = []*ethpb.ProposerSlashing{slashing}
 	sig, err := testutil.BlockSignature(beaconState, block, privKeys)
 	if err != nil {
 		t.Error(err)
@@ -166,7 +148,6 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.Slashings = make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
 
 	proposerSlashIdx := uint64(3)
 
@@ -253,6 +234,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Target: &ethpb.Checkpoint{Epoch: 0},
+			Source: &ethpb.Checkpoint{Epoch: 0},
 		},
 		AggregationBits: bitfield.NewBitlist(0),
 		CustodyBits:     bitfield.NewBitlist(0),
@@ -279,7 +261,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	}
 	block := &ethpb.BeaconBlock{
 		ParentRoot: parentRoot[:],
-		Slot:       0,
+		Slot:       1,
 		Body: &ethpb.BeaconBlockBody{
 			RandaoReveal:      randaoReveal,
 			ProposerSlashings: proposerSlashings,

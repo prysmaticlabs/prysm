@@ -222,44 +222,10 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 	}
 
 	slot := beaconState.Slot + 1
-	epoch := helpers.SlotToEpoch(slot)
-	beaconState.Slot++
-	randaoReveal, err := testutil.RandaoReveal(beaconState, epoch, privKeys)
+	block, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, slot)
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.Slot--
-
-	block := &ethpb.BeaconBlock{
-		Slot:       slot,
-		ParentRoot: parentRoot[:],
-		Body: &ethpb.BeaconBlockBody{
-			Eth1Data: &ethpb.Eth1Data{
-				DepositCount: uint64(len(beaconState.Validators)),
-				DepositRoot:  []byte("a"),
-				BlockHash:    []byte("b"),
-			},
-			RandaoReveal: randaoReveal[:],
-			Attestations: nil,
-		},
-	}
-
-	stateRootCandidate, err := state.ExecuteStateTransitionNoVerify(context.Background(), beaconState, block)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	stateRoot, err = ssz.HashTreeRoot(stateRootCandidate)
-	if err != nil {
-		t.Fatal(err)
-	}
-	block.StateRoot = stateRoot[:]
-
-	sig, err := testutil.BlockSignature(beaconState, block, privKeys)
-	if err != nil {
-		t.Error(err)
-	}
-	block.Signature = sig.Marshal()
 
 	if err := chainService.beaconDB.SaveBlock(ctx, block); err != nil {
 		t.Fatal(err)

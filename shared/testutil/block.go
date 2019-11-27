@@ -55,6 +55,10 @@ func GenerateFullBlock(
 		return nil, fmt.Errorf("Current slot in state is larger than given slot. %d > %d", currentSlot, slot)
 	}
 
+	if conf == nil {
+		conf = &BlockGenConfig{}
+	}
+
 	var err error
 	pSlashings := []*ethpb.ProposerSlashing{}
 	numToGen := conf.NumProposerSlashings

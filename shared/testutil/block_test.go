@@ -61,7 +61,7 @@ func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
 	}
 
 	conf := &BlockGenConfig{
-		NumAttestations: 4,
+		NumAttestations: 2,
 	}
 	finalSlot := params.BeaconConfig().SlotsPerEpoch*4 + 3
 	for i := 0; i < int(finalSlot); i++ {

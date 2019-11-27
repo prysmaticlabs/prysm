@@ -15,36 +15,21 @@ import (
 func TestBlockSignature(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	deposits, privKeys, err := DeterministicDepositsAndKeys(100)
+	beaconState, privKeys, err := DeterministicGenesisState(100)
 	if err != nil {
 		t.Fatal(err)
 	}
-	validators := make([]*ethpb.Validator, len(deposits))
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &ethpb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-			PublicKey: privKeys[i].PublicKey().Marshal()[:],
-		}
+	block, err := GenerateFullBlock(beaconState, privKeys, nil, 0)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	beaconState := &pb.BeaconState{
-		Slot: 0,
-		Fork: &pb.Fork{
-			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
-			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-		},
-		Validators:  validators,
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}
-
-	block := &ethpb.BeaconBlock{
-		Slot:       0,
-		ParentRoot: []byte{0xC0},
-	}
+	beaconState.Slot++
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
 		t.Error(err)
 	}
+	beaconState.Slot--
 	signingRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		t.Error(err)
