@@ -25,6 +25,7 @@ import (
 const blockBatchSize = 64
 const maxPeersToSync = 15
 const counterSeconds = 20
+const refreshTime = 6 * time.Second
 
 // Round Robin sync looks at the latest peer statuses and syncs with the highest
 // finalized peer.
@@ -215,6 +216,13 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	// fork choice resolution / block processing.
 	best := bestPeer()
 	root, _, _ := bestFinalized()
+
+	// if no best peer exists, retry until a new best peer is found.
+	for len(best) == 0 {
+		time.Sleep(refreshTime)
+		best = bestPeer()
+		root, _, _ = bestFinalized()
+	}
 	for head := slotsSinceGenesis(genesis); s.chain.HeadSlot() < head; {
 		req := &p2ppb.BeaconBlocksByRangeRequest{
 			HeadBlockRoot: root,
