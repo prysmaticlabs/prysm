@@ -38,10 +38,12 @@ func (op *Operations) AttestationsBySlotCommittee(ctx context.Context, slot uint
 	return nil, nil
 }
 
+// IncomingProcessedBlockFeed --
 func (op *Operations) IncomingProcessedBlockFeed() *event.Feed {
 	return new(event.Feed)
 }
 
-func (op *Operations)IncomingAttFeed() *event.Feed {
+// IncomingAttFeed --
+func (op *Operations) IncomingAttFeed() *event.Feed {
 	return nil
 }
