@@ -25,6 +25,7 @@ import (
 const blockBatchSize = 64
 const maxPeersToSync = 15
 const counterSeconds = 20
+const noPeersWaitTime = 5 * time.Second
 
 // Round Robin sync looks at the latest peer statuses and syncs with the highest
 // finalized peer.
@@ -47,6 +48,11 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	// Step 1 - Sync to end of finalized epoch.
 	for s.chain.HeadSlot() < helpers.StartSlot(highestFinalizedEpoch()+1) {
 		root, finalizedEpoch, peers := bestFinalized()
+		if len(peers) == 0 {
+			log.Warn("No peers; waiting for reconnect")
+			time.Sleep(noPeersWaitTime)
+			continue
+		}
 
 		// shuffle peers to prevent a bad peer from
 		// stalling sync with invalid blocks
@@ -287,9 +293,6 @@ func bestFinalized() ([]byte, uint64, []peer.ID) {
 	rootToEpoch := make(map[[32]byte]uint64)
 	for _, k := range peerstatus.Keys() {
 		s := peerstatus.Get(k)
-		if s == nil {
-			continue
-		}
 		r := bytesutil.ToBytes32(s.FinalizedRoot)
 		finalized[r]++
 		rootToEpoch[r] = s.FinalizedEpoch
@@ -307,6 +310,9 @@ func bestFinalized() ([]byte, uint64, []peer.ID) {
 	var pids []peer.ID
 	for _, k := range peerstatus.Keys() {
 		s := peerstatus.Get(k)
+		if s == nil {
+			continue
+		}
 		if s.FinalizedEpoch >= rootToEpoch[mostVotedFinalizedRoot] {
 			pids = append(pids, k)
 			if len(pids) >= maxPeersToSync {
