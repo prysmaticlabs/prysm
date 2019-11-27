@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 func TestHeadSlot_DataRace(t *testing.T) {
