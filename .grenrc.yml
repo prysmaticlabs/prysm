@@ -1,4 +1,0 @@
----
-  dataSource: "prs"
-  onlyMilestones: false
-  groupBy: false
