@@ -84,9 +84,9 @@ message HistoricalBatch {
 
 message AggregateAndProof {
   // index is the aggregator's index
-  uint64 index = 1;
-  // selection_proof is the signature of the slot aggregator signed to
-  bytes selection_proof = 2 [(gogoproto.moretags) = "ssz-size:\"96\""];
+  uint64 aggregator_index = 1;
   // aggregate is the constructed aggregated attestation
-  ethereum.eth.v1alpha1.Attestation aggregate = 3;
+  ethereum.eth.v1alpha1.Attestation aggregate = 2;
+  // selection_proof is the signature of the slot aggregator signed to
+  bytes selection_proof = 3 [(gogoproto.moretags) = "ssz-size:\"96\""];
 }
