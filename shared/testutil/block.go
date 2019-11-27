@@ -7,13 +7,13 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/proto"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -215,8 +215,8 @@ func generateAttesterSlashings(
 		aggregationBits.SetBitAt(randIndex, true)
 		att1 := &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
-				Slot:  bState.Slot,
-				Index: committeeIndex,
+				Slot:           bState.Slot,
+				CommitteeIndex: committeeIndex,
 				Target: &ethpb.Checkpoint{
 					Epoch: currentEpoch,
 					Root:  params.BeaconConfig().ZeroHash[:],
@@ -241,8 +241,8 @@ func generateAttesterSlashings(
 
 		att2 := &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
-				Slot:  bState.Slot,
-				Index: committeeIndex,
+				Slot:           bState.Slot,
+				CommitteeIndex: committeeIndex,
 				Target: &ethpb.Checkpoint{
 					Epoch: currentEpoch,
 					Root:  params.BeaconConfig().ZeroHash[:],
@@ -368,7 +368,7 @@ func GenerateAttestations(
 
 		attData := &ethpb.AttestationData{
 			Slot:            slot,
-			Index:           c,
+			CommitteeIndex:  c,
 			BeaconBlockRoot: headRoot,
 			Source:          bState.CurrentJustifiedCheckpoint,
 			Target: &ethpb.Checkpoint{

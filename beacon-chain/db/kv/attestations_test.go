@@ -9,10 +9,10 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 func TestStore_AttestationCRUD(t *testing.T) {
@@ -118,7 +118,11 @@ func TestStore_BoltDontPanic(t *testing.T) {
 
 	for i := 0; i <= 100; i++ {
 		att := &ethpb.Attestation{
-			Data:            &ethpb.AttestationData{Slot: uint64(i)},
+			Data: &ethpb.AttestationData{
+				Slot:   uint64(i),
+				Source: &ethpb.Checkpoint{},
+				Target: &ethpb.Checkpoint{},
+			},
 			AggregationBits: bitfield.Bitlist{0b11},
 		}
 		ctx := context.Background()

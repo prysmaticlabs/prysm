@@ -16,7 +16,6 @@ go_library(
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/beacon/rpc/v1:go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
@@ -24,6 +23,7 @@ go_library(
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
         "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@io_k8s_client_go//tools/cache:go_default_library",
     ],
 )
@@ -46,10 +46,10 @@ go_test(
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/beacon/rpc/v1:go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
     ],
 )
