@@ -25,10 +25,16 @@ func runSSZStaticTests(t *testing.T, config string) {
 		t.Fatal(err)
 	}
 
-	testFolders, _ := testutil.TestFolders(t, config, "ssz_static")
+	testFolders, _, err := testutil.TestFolders(config, "ssz_static")
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, folder := range testFolders {
 		innerPath := path.Join("ssz_static", folder.Name(), "ssz_random")
-		innerTestFolders, innerTestsFolderPath := testutil.TestFolders(t, config, innerPath)
+		innerTestFolders, innerTestsFolderPath, err := testutil.TestFolders(config, innerPath)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		for _, innerFolder := range innerTestFolders {
 			t.Run(path.Join(folder.Name(), innerFolder.Name()), func(t *testing.T) {

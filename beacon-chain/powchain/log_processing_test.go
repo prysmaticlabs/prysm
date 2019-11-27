@@ -50,7 +50,14 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	}
 
 	testAcc.Backend.Commit()
-	deposits, depositRoots, _ := testutil.SetupInitialDeposits(t, 1)
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
+	if err != nil {
+		t.Fatal(err)
+	}
 	data := deposits[0].Data
 
 	testAcc.TxOpts.Value = contracts.Amount32Eth()
@@ -113,7 +120,14 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 
 	testAcc.Backend.Commit()
 
-	deposits, depositRoots, _ := testutil.SetupInitialDeposits(t, 1)
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
+	if err != nil {
+		t.Fatal(err)
+	}
 	data := deposits[0].Data
 
 	testAcc.TxOpts.Value = contracts.Amount32Eth()
@@ -175,7 +189,14 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 		t.Fatalf("Could not init from contract: %v", err)
 	}
 
-	deposits, depositRoots, _ := testutil.SetupInitialDeposits(t, 1)
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
+	if err != nil {
+		t.Fatal(err)
+	}
 	data := deposits[0].Data
 
 	testAcc.TxOpts.Value = contracts.Amount32Eth()
@@ -247,7 +268,14 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	testAcc.Backend.Commit()
 	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
 
-	deposits, depositRoots, _ := testutil.SetupInitialDeposits(t, 1)
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
+	if err != nil {
+		t.Fatal(err)
+	}
 	data := deposits[0].Data
 
 	testAcc.TxOpts.Value = contracts.Amount32Eth()
@@ -315,7 +343,15 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	testAcc.Backend.Commit()
 	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
 
-	deposits, depositRoots, _ := testutil.SetupInitialDeposits(t, uint64(depositsReqForChainStart))
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(uint64(depositsReqForChainStart))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, roots, err := testutil.DeterministicDepositTrie(len(deposits))
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// 64 Validators are used as size required for beacon-chain to start. This number
 	// is defined in the deposit contract as the number required for the testnet. The actual number
@@ -324,7 +360,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 		data := deposits[i].Data
 		testAcc.TxOpts.Value = contracts.Amount32Eth()
 		testAcc.TxOpts.GasLimit = 1000000
-		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, depositRoots[i]); err != nil {
+		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, roots[i]); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 
@@ -425,7 +461,14 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 
 	totalNumOfDeposits := depositsReqForChainStart + 30
 
-	deposits, depositRoots, _ := testutil.SetupInitialDeposits(t, uint64(totalNumOfDeposits))
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(uint64(totalNumOfDeposits))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
+	if err != nil {
+		t.Fatal(err)
+	}
 	depositOffset := 5
 
 	// 64 Validators are used as size required for beacon-chain to start. This number
@@ -511,7 +554,14 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 	testAcc.Backend.Commit()
 	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
 	depositsWanted := 10
-	deposits, depositRoots, _ := testutil.SetupInitialDeposits(t, uint64(depositsWanted))
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(uint64(depositsWanted))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	for i := 0; i < depositsWanted; i++ {
 		data := deposits[i].Data

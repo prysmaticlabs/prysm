@@ -8,7 +8,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -74,11 +73,11 @@ func TestUpdateBalance(t *testing.T) {
 
 func TestSameHead(t *testing.T) {
 	helpers.ClearAllCaches()
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	beaconState, _, err := testutil.DeterministicGenesisState(100)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	beaconState.Slot = 1
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
 		Target: &ethpb.Checkpoint{Epoch: 0}}}
@@ -103,8 +102,7 @@ func TestSameHead(t *testing.T) {
 }
 
 func TestSameTarget(t *testing.T) {
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	beaconState, _, err := testutil.DeterministicGenesisState(100)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,8 +130,7 @@ func TestSameTarget(t *testing.T) {
 }
 
 func TestAttestedPrevEpoch(t *testing.T) {
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	beaconState, _, err := testutil.DeterministicGenesisState(100)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -160,8 +157,7 @@ func TestAttestedPrevEpoch(t *testing.T) {
 }
 
 func TestAttestedCurrentEpoch(t *testing.T) {
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	beaconState, _, err := testutil.DeterministicGenesisState(100)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,8 +187,7 @@ func TestProcessAttestations(t *testing.T) {
 	defer params.UseMainnetConfig()
 
 	validators := uint64(64)
-	deposits, _, _ := testutil.SetupInitialDeposits(t, validators)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	beaconState, _, err := testutil.DeterministicGenesisState(validators)
 	if err != nil {
 		t.Fatal(err)
 	}

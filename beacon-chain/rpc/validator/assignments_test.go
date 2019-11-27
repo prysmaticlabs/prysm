@@ -27,8 +27,7 @@ func TestCommitteeAssignment_NextEpoch_WrongPubkeyLength(t *testing.T) {
 	ctx := context.Background()
 	helpers.ClearAllCaches()
 
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 8)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	beaconState, privKeys, err := testutil.DeterministicGenesisState(8)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,10 +59,9 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 10)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	beaconState, privKeys, err := testutil.DeterministicGenesisState(10)
 	if err != nil {
-		t.Fatalf("Could not setup genesis state: %v", err)
+		t.Fatal(err)
 	}
 	genesis := blk.NewGenesisBlock([]byte{})
 	genesisRoot, err := ssz.SigningRoot(genesis)
@@ -96,9 +94,15 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := uint64(64)
-
-	deposits, _, _ := testutil.SetupInitialDeposits(t, depChainStart)
-	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
+	if err != nil {
+		t.Fatal(err)
+	}
+	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}
@@ -169,11 +173,9 @@ func TestCommitteeAssignment_CurrentEpoch_ShouldNotFail(t *testing.T) {
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := uint64(64)
-
-	deposits, _, _ := testutil.SetupInitialDeposits(t, depChainStart)
-	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	beaconState, privKeys, err := testutil.DeterministicGenesisState(depChainStart)
 	if err != nil {
-		t.Fatalf("Could not setup genesis state: %v", err)
+		t.Fatal(err)
 	}
 	state.Slot = 5 // Set state to non-epoch start slot.
 
@@ -227,8 +229,15 @@ func TestCommitteeAssignment_MultipleKeys_OK(t *testing.T) {
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := uint64(64)
-	deposits, _, _ := testutil.SetupInitialDeposits(t, depChainStart)
-	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
+	if err != nil {
+		t.Fatal(err)
+	}
+	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}

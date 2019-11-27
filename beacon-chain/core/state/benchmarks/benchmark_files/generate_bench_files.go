@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -54,7 +53,6 @@ func generateGenesisBeaconState() error {
 }
 
 func generateMarshalledFullStateAndBlock() error {
-	t := &testing.T{}
 	bench.SetConfig()
 	beaconState, err := genesisBeaconState()
 	if err != nil {
@@ -66,31 +64,36 @@ func generateMarshalledFullStateAndBlock() error {
 		return err
 	}
 
-	conf := &testutil.BlockGenConfig{
-		MaxAttestations: 0,
-		Signatures:      true,
-	}
-
+	conf := &testutil.BlockGenConfig{}
+	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	// Small offset for the beacon state so we dont process a block on an epoch.
 	slotOffset := uint64(2)
-	block := testutil.GenerateFullBlock(t, beaconState, privs, conf, params.BeaconConfig().SlotsPerEpoch+slotOffset)
+	block, err := testutil.GenerateFullBlock(beaconState, privs, conf, slotsPerEpoch+slotOffset)
+	if err != nil {
+		return err
+	}
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
 	if err != nil {
 		return err
 	}
 
 	attConfig := &testutil.BlockGenConfig{
-		MaxAttestations: bench.AttestationsPerEpoch / params.BeaconConfig().SlotsPerEpoch,
-		Signatures:      true,
+		NumAttestations: bench.AttestationsPerEpoch / slotsPerEpoch,
 	}
 
 	atts := []*ethpb.Attestation{}
-	for i := slotOffset + 1; i < params.BeaconConfig().SlotsPerEpoch+slotOffset; i++ {
-		attsForSlot := testutil.GenerateAttestations(t, beaconState, privs, attConfig, i)
+	for i := slotOffset + 1; i < slotsPerEpoch+slotOffset; i++ {
+		attsForSlot, err := testutil.GenerateAttestations(beaconState, privs, attConfig.NumAttestations, i)
+		if err != nil {
+			return err
+		}
 		atts = append(atts, attsForSlot...)
 	}
 
-	block = testutil.GenerateFullBlock(t, beaconState, privs, attConfig, beaconState.Slot)
+	block, err = testutil.GenerateFullBlock(beaconState, privs, attConfig, beaconState.Slot)
+	if err != nil {
+		return err
+	}
 	block.Body.Attestations = append(atts, block.Body.Attestations...)
 
 	s, err := state.CalculateStateRoot(context.Background(), beaconState, block)
@@ -138,7 +141,6 @@ func generateMarshalledFullStateAndBlock() error {
 }
 
 func generate2FullEpochState() error {
-	t := &testing.T{}
 	bench.SetConfig()
 	beaconState, err := genesisBeaconState()
 	if err != nil {
@@ -151,12 +153,14 @@ func generate2FullEpochState() error {
 	}
 
 	attConfig := &testutil.BlockGenConfig{
-		MaxAttestations: bench.AttestationsPerEpoch / params.BeaconConfig().SlotsPerEpoch,
-		Signatures:      true,
+		NumAttestations: bench.AttestationsPerEpoch / params.BeaconConfig().SlotsPerEpoch,
 	}
 
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch*2-1; i++ {
-		block := testutil.GenerateFullBlock(t, beaconState, privs, attConfig, beaconState.Slot)
+		block, err := testutil.GenerateFullBlock(beaconState, privs, attConfig, beaconState.Slot)
+		if err != nil {
+			return err
+		}
 		beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
 		if err != nil {
 			return err

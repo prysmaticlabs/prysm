@@ -23,18 +23,18 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db)
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+
+	beaconState, privKeys, err := testutil.DeterministicGenesisState(100)
 	if err != nil {
 		t.Fatal(err)
 	}
 	beaconState.Eth1Data.BlockHash = nil
 	beaconState.Eth1DepositIndex = 100
-	stateRoot, err := ssz.HashTreeRoot(beaconState)
+	genesisRoot, err := ssz.HashTreeRoot(beaconState)
 	if err != nil {
 		t.Fatal(err)
 	}
-	genesis := b.NewGenesisBlock(stateRoot[:])
+	genesis := b.NewGenesisBlock(genesisRoot[:])
 	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
 	if err != nil {
 		t.Fatal(err)
@@ -70,7 +70,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	slot := beaconState.Slot + 1
 	epoch := helpers.SlotToEpoch(slot)
 	beaconState.Slot++
-	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
+	randaoReveal, err := testutil.RandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,7 +81,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		ParentRoot: parentRoot[:],
 		Body: &ethpb.BeaconBlockBody{
 			Eth1Data: &ethpb.Eth1Data{
-				DepositCount: uint64(len(deposits)),
+				DepositCount: uint64(len(beaconState.Validators)),
 				DepositRoot:  []byte("a"),
 				BlockHash:    []byte("b"),
 			},
@@ -90,21 +90,18 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		},
 	}
 
-	stateRootCandidate, err := state.ExecuteStateTransitionNoVerify(context.Background(), beaconState, block)
+	stateRoot, err := state.CalculateStateRoot(context.Background(), beaconState, block)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	stateRoot, err = ssz.HashTreeRoot(stateRootCandidate)
-	if err != nil {
-		t.Fatal(err)
-	}
 	block.StateRoot = stateRoot[:]
 
-	block, err = testutil.SignBlock(beaconState, block, privKeys)
+	sig, err := testutil.BlockSignature(beaconState, block, privKeys)
 	if err != nil {
 		t.Error(err)
 	}
+	block.Signature = sig.Marshal()
 
 	if err := chainService.beaconDB.SaveBlock(ctx, block); err != nil {
 		t.Fatal(err)
@@ -187,8 +184,7 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db)
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	beaconState, privKeys, err := testutil.DeterministicGenesisState(100)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -228,7 +224,7 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 	slot := beaconState.Slot + 1
 	epoch := helpers.SlotToEpoch(slot)
 	beaconState.Slot++
-	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
+	randaoReveal, err := testutil.RandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -239,7 +235,7 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 		ParentRoot: parentRoot[:],
 		Body: &ethpb.BeaconBlockBody{
 			Eth1Data: &ethpb.Eth1Data{
-				DepositCount: uint64(len(deposits)),
+				DepositCount: uint64(len(beaconState.Validators)),
 				DepositRoot:  []byte("a"),
 				BlockHash:    []byte("b"),
 			},
@@ -259,10 +255,11 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 	}
 	block.StateRoot = stateRoot[:]
 
-	block, err = testutil.SignBlock(beaconState, block, privKeys)
+	sig, err := testutil.BlockSignature(beaconState, block, privKeys)
 	if err != nil {
 		t.Error(err)
 	}
+	block.Signature = sig.Marshal()
 
 	if err := chainService.beaconDB.SaveBlock(ctx, block); err != nil {
 		t.Fatal(err)

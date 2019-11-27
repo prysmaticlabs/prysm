@@ -40,10 +40,9 @@ func TestProposeBlock_OK(t *testing.T) {
 	}
 
 	numDeposits := params.BeaconConfig().MinGenesisActiveValidatorCount
-	deposits, _, _ := testutil.SetupInitialDeposits(t, numDeposits)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	beaconState, _, err := testutil.DeterministicGenesisState(numDeposits)
 	if err != nil {
-		t.Fatalf("Could not instantiate genesis state: %v", err)
+		t.Fatal(err)
 	}
 
 	genesisRoot, err := ssz.SigningRoot(genesis)
@@ -84,10 +83,9 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	ctx := context.Background()
 	helpers.ClearAllCaches()
 
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	beaconState, privKeys, err := testutil.DeterministicGenesisState(100)
 	if err != nil {
-		t.Fatalf("Could not instantiate genesis state: %v", err)
+		t.Fatal(err)
 	}
 
 	stateRoot, err := ssz.HashTreeRoot(beaconState)
@@ -131,7 +129,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		},
 	}
 	beaconState.Slot++
-	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, 0, privKeys)
+	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
 	if err != nil {
 		t.Error(err)
 	}

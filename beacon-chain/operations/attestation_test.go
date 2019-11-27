@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -29,8 +28,7 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 		BeaconDB: beaconDB,
 	})
 
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	beaconState, privKeys, err := testutil.DeterministicGenesisState(100)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,8 +117,7 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 	}
 
 	// We setup the genesis state with 256 validators.
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 256)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	beaconState, privKeys, err := testutil.DeterministicGenesisState(256)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -208,14 +205,12 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 	})
 	service.attestationPool = make(map[[32]byte]*dbpb.AttestationContainer)
 
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 200)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	beaconState, privKeys, err := testutil.DeterministicGenesisState(200)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
-	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	att1 := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -353,8 +348,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})
 	service.attestationPool = make(map[[32]byte]*dbpb.AttestationContainer)
 
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 32)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	beaconState, privKeys, err := testutil.DeterministicGenesisState(32)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -3,7 +3,6 @@ package state_test
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
@@ -15,20 +14,19 @@ import (
 )
 
 func TestSkipSlotCache_OK(t *testing.T) {
-	deps, _, privs := testutil.SetupInitialDeposits(t, params.MinimalSpecConfig().MinGenesisActiveValidatorCount)
-	bState, err := state.GenesisBeaconState(deps, uint64(time.Now().Unix()), testutil.GenerateEth1Data(t, deps))
+	bState, privs, err := testutil.DeterministicGenesisState(params.MinimalSpecConfig().MinGenesisActiveValidatorCount)
 	if err != nil {
-		t.Fatalf("Could not generate genesis state: %v", err)
+		t.Fatal(err)
 	}
 
 	originalState := proto.Clone(bState).(*pb.BeaconState)
 
 	blkCfg := testutil.DefaultBlockGenConfig()
-	blkCfg.MaxAttestations = 1
-	blkCfg.MaxDeposits = 0
-	blkCfg.MaxVoluntaryExits = 0
-	blkCfg.MaxProposerSlashings = 0
-	blkCfg.MaxAttesterSlashings = 0
+	blkCfg.NumAttestations = 1
+	blkCfg.NumDeposits = 0
+	blkCfg.NumVoluntaryExits = 0
+	blkCfg.NumProposerSlashings = 0
+	blkCfg.NumAttesterSlashings = 0
 
 	cfg := featureconfig.Get()
 	cfg.EnableSkipSlotsCache = true
@@ -36,7 +34,10 @@ func TestSkipSlotCache_OK(t *testing.T) {
 
 	// First transition will be with an empty cache, so the cache becomes populated
 	// with the state
-	blk := testutil.GenerateFullBlock(t, bState, privs, blkCfg, originalState.Slot+10)
+	blk, err := testutil.GenerateFullBlock(bState, privs, blkCfg, originalState.Slot+10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	originalState, err = state.ExecuteStateTransition(context.Background(), originalState, blk)
 	if err != nil {
 		t.Fatalf("Could not run state transition: %v", err)

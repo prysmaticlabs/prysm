@@ -18,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -35,10 +34,9 @@ func init() {
 }
 
 func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	beaconState, privKeys, err := testutil.DeterministicGenesisState(100)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{Slot: 9}
 
@@ -294,8 +292,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	beaconState, privKeys, err := testutil.DeterministicGenesisState(100)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -327,14 +324,13 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 }
 
 func TestProcessRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T) {
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	beaconState, privKeys, err := testutil.DeterministicGenesisState(100)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	epoch := helpers.CurrentEpoch(beaconState)
-	epochSignature, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
+	epochSignature, err := testutil.RandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -712,8 +708,10 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 }
 
 func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	beaconState, privKeys, err := testutil.DeterministicGenesisState(100)
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, vv := range beaconState.Validators {
 		vv.WithdrawableEpoch = 1 * params.BeaconConfig().SlotsPerEpoch
 	}
@@ -809,8 +807,7 @@ func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 			Attestations: attestations,
 		},
 	}
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	beaconState, _, err := testutil.DeterministicGenesisState(100)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -840,8 +837,7 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 			Attestations: []*ethpb.Attestation{att},
 		},
 	}
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	beaconState, _, err := testutil.DeterministicGenesisState(100)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -881,8 +877,7 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 			Attestations: attestations,
 		},
 	}
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	beaconState, _, err := testutil.DeterministicGenesisState(100)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -915,8 +910,7 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	beaconState, _, err := testutil.DeterministicGenesisState(100)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -972,8 +966,8 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 
 func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 	helpers.ClearAllCaches()
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+
+	beaconState, _, err := testutil.DeterministicGenesisState(100)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1008,8 +1002,8 @@ func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 
 func TestProcessAttestations_OK(t *testing.T) {
 	helpers.ClearAllCaches()
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+
+	beaconState, privKeys, err := testutil.DeterministicGenesisState(100)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1064,8 +1058,8 @@ func TestProcessAttestations_OK(t *testing.T) {
 
 func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	helpers.ClearAllCaches()
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 300)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+
+	beaconState, privKeys, err := testutil.DeterministicGenesisState(100)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1145,8 +1139,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 
 func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	helpers.ClearAllCaches()
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 300)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	beaconState, privKeys, err := testutil.DeterministicGenesisState(300)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1237,8 +1230,8 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 	// Attestation with an empty signature
 	helpers.ClearAllCaches()
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+
+	beaconState, _, err := testutil.DeterministicGenesisState(100)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1343,7 +1336,10 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 
 	numOfValidators := 4 * params.BeaconConfig().SlotsPerEpoch
 	validators := make([]*ethpb.Validator, numOfValidators)
-	_, _, keys := testutil.SetupInitialDeposits(t, numOfValidators)
+	_, keys, err := testutil.DeterministicDepositsAndKeys(numOfValidators)
+	if err != nil {
+		t.Fatal(err)
+	}
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -1487,8 +1483,14 @@ func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 }
 
 func TestProcessDeposits_AddsNewValidatorDeposit(t *testing.T) {
-	dep, _, _ := testutil.SetupInitialDeposits(t, 1)
-	eth1Data := testutil.GenerateEth1Data(t, dep)
+	dep, _, err := testutil.DeterministicDepositsAndKeys(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	eth1Data, err := testutil.DeterministicEth1Data(len(dep))
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
@@ -1592,8 +1594,14 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 
 func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
 	//Similar to TestProcessDeposits_AddsNewValidatorDeposit except that this test directly calls ProcessDeposit
-	dep, _, _ := testutil.SetupInitialDeposits(t, 1)
-	eth1Data := testutil.GenerateEth1Data(t, dep)
+	dep, _, err := testutil.DeterministicDepositsAndKeys(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	eth1Data, err := testutil.DeterministicEth1Data(len(dep))
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	registry := []*ethpb.Validator{
 		{
@@ -1636,9 +1644,15 @@ func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
 
 func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 	// Same test settings as in TestProcessDeposit_AddsNewValidatorDeposit, except that we use an invalid signature
-	dep, _, _ := testutil.SetupInitialDeposits(t, 1)
+	dep, _, err := testutil.DeterministicDepositsAndKeys(1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	dep[0].Data.Signature = make([]byte, 96)
-	eth1Data := testutil.GenerateEth1Data(t, dep)
+	eth1Data, err := testutil.DeterministicEth1Data(len(dep))
+	if err != nil {
+		t.Fatal(err)
+	}
 	testutil.ResetCache() // Can't have an invalid signature in the cache.
 
 	registry := []*ethpb.Validator{
@@ -1685,11 +1699,17 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 
 func TestProcessDeposit_SkipsDepositWithUncompressedSignature(t *testing.T) {
 	// Same test settings as in TestProcessDeposit_AddsNewValidatorDeposit, except that we use an uncompressed signature
-	dep, _, _ := testutil.SetupInitialDeposits(t, 1)
+	dep, _, err := testutil.DeterministicDepositsAndKeys(1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	a, _ := blsintern.DecompressG2(bytesutil.ToBytes96(dep[0].Data.Signature))
 	uncompressedSignature := a.SerializeBytes()
 	dep[0].Data.Signature = uncompressedSignature[:]
-	eth1Data := testutil.GenerateEth1Data(t, dep)
+	eth1Data, err := testutil.DeterministicEth1Data(len(dep))
+	if err != nil {
+		t.Fatal(err)
+	}
 	testutil.ResetCache() // Can't have an uncompressed signature in the cache.
 
 	registry := []*ethpb.Validator{

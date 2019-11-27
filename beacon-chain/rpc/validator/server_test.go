@@ -346,7 +346,7 @@ func BenchmarkAssignment(b *testing.B) {
 		b.Fatalf("Could not save genesis block: %v", err)
 	}
 	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount * 4
-	state, err := genesisState(validatorCount)
+	state, _, err := testutil.DeterministicGenesisState(validatorCount)
 	if err != nil {
 		b.Fatalf("Could not setup genesis state: %v", err)
 	}
@@ -397,20 +397,4 @@ func BenchmarkAssignment(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
-}
-
-func genesisState(validators uint64) (*pbp2p.BeaconState, error) {
-	genesisTime := time.Unix(0, 0).Unix()
-	deposits := make([]*ethpb.Deposit, validators)
-	for i := 0; i < len(deposits); i++ {
-		var pubKey [96]byte
-		copy(pubKey[:], []byte(strconv.Itoa(i)))
-		depositData := &ethpb.Deposit_Data{
-			PublicKey: pubKey[:],
-			Amount:    params.BeaconConfig().MaxEffectiveBalance,
-		}
-
-		deposits[i] = &ethpb.Deposit{Data: depositData}
-	}
-	return state.GenesisBeaconState(deposits, uint64(genesisTime), &ethpb.Eth1Data{})
 }
