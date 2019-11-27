@@ -69,12 +69,14 @@ func main() {
 		}
 		m[r] = &node{score: make(map[uint64]bool)}
 
+		// Gather votes from the attestations voted for this block
 		atts, err := db.Attestations(context.Background(), filters.NewFilter().SetHeadBlockRoot(r[:]))
 		state, err := db.State(context.Background(), r)
 		if err != nil {
 			panic(err)
 		}
 		slot := b.Slot
+		// If the state is not available, roll back
 		for state == nil {
 			slot--
 			filter := filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot)
@@ -91,7 +93,7 @@ func main() {
 				panic(err)
 			}
 		}
-
+		// Retrieve attestation indices
 		for _, att := range atts {
 			indices, err := helpers.AttestingIndices(state, att.Data, att.AggregationBits)
 			if err != nil {
