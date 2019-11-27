@@ -118,7 +118,11 @@ func TestStore_BoltDontPanic(t *testing.T) {
 
 	for i := 0; i <= 100; i++ {
 		att := &ethpb.Attestation{
-			Data:            &ethpb.AttestationData{Slot: uint64(i)},
+			Data:            &ethpb.AttestationData{
+				Slot: uint64(i),
+				Source: &ethpb.Checkpoint{},
+				Target: &ethpb.Checkpoint{},
+			},
 			AggregationBits: bitfield.Bitlist{0b11},
 		}
 		ctx := context.Background()
@@ -445,62 +449,3 @@ func TestStore_Attestations_BitfieldLogic(t *testing.T) {
 		})
 	}
 }
-
-func BenchmarkStore_Attestations1(b *testing.B) {
-	db := setupDB(b)
-	defer teardownDB(b, db)
-	ctx := context.Background()
-
-	att := &ethpb.Attestation{AggregationBits:[]byte{0b10000010}, Data: &ethpb.AttestationData{Slot: 55}}
-
-	for i := 0; i < b.N; i++ {
-		//var wg sync.WaitGroup
-		for i := 0; i < 16; i++ {
-			//go func() {
-				if err := db.SaveAttestation(ctx, att); err != nil {
-					b.Fatal(err)
-				}
-				//wg.Done()
-			//}()
-			//wg.Add(1)
-		}
-		//wg.Wait()
-	}
-}
-
-
-//func BenchmarkStore_Attestations(b *testing.B) {
-//	atts := make([]*ethpb.Attestation, 1000)
-//	for i := range atts {
-//		atts[i] = &ethpb.Attestation{
-//			Data: &ethpb.AttestationData{Slot:uint64(i)},
-//		}
-//	}
-//	db := setupDB(b)
-//	defer teardownDB(b, db)
-//	ctx := context.Background()
-//
-//	b.Log("Starting...")
-//
-//	for i := 0; i < b.N; i++ {
-//		var wg sync.WaitGroup
-//
-//		for _, att := range atts {
-//			delay := i % 100
-//			wg.Add(1)
-//
-//			att := att
-//
-//			go func(a *ethpb.Attestation, d int) {
-//				time.Sleep(time.Duration(d) * time.Millisecond)
-//
-//				if err := db.SaveAttestation(ctx, att); err != nil {
-//					b.Fatal(err)
-//				}
-//				wg.Done()
-//			}(att, delay)
-//		}
-//
-//		wg.Wait()
-//	}
-//}

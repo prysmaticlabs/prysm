@@ -3,9 +3,6 @@ package kv
 import (
 	"bytes"
 	"context"
-	"fmt"
-	"strings"
-	"sync"
 
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
@@ -133,23 +130,33 @@ func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 func (k *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteStates")
 	defer span.End()
-	var wg sync.WaitGroup
-	errs := make([]string, 0)
-	wg.Add(len(blockRoots))
-	for _, r := range blockRoots {
-		go func(w *sync.WaitGroup, root [32]byte) {
-			defer w.Done()
-			if err := k.DeleteState(ctx, root); err != nil {
-				errs = append(errs, err.Error())
-				return
+
+	return k.db.Batch(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blocksBucket)
+		genesisBlockRoot := bkt.Get(genesisBlockRootKey)
+
+		bkt = tx.Bucket(checkpointBucket)
+		enc := bkt.Get(finalizedCheckpointKey)
+		checkpoint := &ethpb.Checkpoint{}
+		if enc == nil {
+			checkpoint = &ethpb.Checkpoint{Root: genesisBlockRoot}
+		} else if err := decode(enc, checkpoint); err != nil {
+			return err
+		}
+
+		for _, blockRoot := range blockRoots {
+			// Safe guard against deleting genesis or finalized state.
+			if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) {
+				return errors.New("could not delete genesis or finalized state")
 			}
-		}(&wg, r)
-	}
-	wg.Wait()
-	if len(errs) > 0 {
-		return fmt.Errorf("deleting states failed with %d errors: %s", len(errs), strings.Join(errs, ", "))
-	}
-	return nil
+
+			bkt = tx.Bucket(stateBucket)
+			if err := bkt.Delete(blockRoot[:]); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 // creates state from marshaled proto state bytes.

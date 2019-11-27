@@ -3,8 +3,6 @@ package kv
 import (
 	"context"
 	"fmt"
-	"strings"
-	"sync"
 
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
@@ -100,6 +98,9 @@ func (k *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) err
 	return k.db.Batch(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		enc := bkt.Get(attDataRoot[:])
+		if enc == nil {
+			return nil
+		}
 		ac := &dbpb.AttestationContainer{}
 		if err := decode(enc, ac); err != nil {
 			return err
@@ -116,24 +117,25 @@ func (k *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) err
 func (k *Store) DeleteAttestations(ctx context.Context, attDataRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteAttestations")
 	defer span.End()
-	var wg sync.WaitGroup
-	errs := make([]string, 0)
-	wg.Add(len(attDataRoots))
-	for _, r := range attDataRoots {
-		go func(w *sync.WaitGroup, root [32]byte) {
-			defer wg.Done()
-			if err := k.DeleteAttestation(ctx, root); err != nil {
-				errs = append(errs, err.Error())
-				return
+
+	return k.db.Update(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(attestationsBucket)
+		for _, attDataRoot := range attDataRoots {
+			enc := bkt.Get(attDataRoot[:])
+			ac := &dbpb.AttestationContainer{}
+			if err := decode(enc, ac); err != nil {
+				return err
 			}
-			return
-		}(&wg, r)
-	}
-	wg.Wait()
-	if len(errs) > 0 {
-		return fmt.Errorf("deleting attestations failed with %d errors: %s", len(errs), strings.Join(errs, ", "))
-	}
-	return nil
+			indicesByBucket := createAttestationIndicesFromData(ac.Data, tx)
+			if err := deleteValueForIndices(indicesByBucket, attDataRoot[:], tx); err != nil {
+				return errors.Wrap(err, "could not delete root for DB indices")
+			}
+			if err := bkt.Delete(attDataRoot[:]); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 // SaveAttestation to the db.

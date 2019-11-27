@@ -2,7 +2,6 @@ package kv
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/boltdb/bolt"
 	"github.com/golang/snappy"
@@ -18,7 +17,6 @@ func (kv *Store) ensureSnappy() error {
 	kv.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(migrationBucket)
 		v := bkt.Get(snappyKey)
-		fmt.Printf("v = %#x\n", v)
 		isMigrated = len(v) == 1 && v[0] == 0x01
 		return nil
 	})
