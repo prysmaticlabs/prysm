@@ -137,5 +137,5 @@ git diff 367ca574419a062ae26818f60bdeb5751a6f538 > $GOPATH/src/github.com/prysma
 
 5. Build Prysm and ensure tests pass
 ```
-bazel test //... --test_timeout=1000
+bazel test //...
 ```
