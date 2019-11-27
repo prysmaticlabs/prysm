@@ -7,7 +7,6 @@ import (
 	"sync"
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -173,11 +172,19 @@ func TestCommitteeAssignment_CurrentEpoch_ShouldNotFail(t *testing.T) {
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := uint64(64)
-	beaconState, privKeys, err := testutil.DeterministicGenesisState(depChainStart)
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
 	if err != nil {
 		t.Fatal(err)
 	}
-	state.Slot = 5 // Set state to non-epoch start slot.
+	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	if err != nil {
+		t.Fatal(err)
+	}
+	bState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	if err != nil {
+		t.Fatalf("Could not setup genesis state: %v", err)
+	}
+	bState.Slot = 5 // Set state to non-epoch start slot.
 
 	genesisRoot, err := ssz.SigningRoot(genesis)
 	if err != nil {
@@ -247,6 +254,7 @@ func TestCommitteeAssignment_MultipleKeys_OK(t *testing.T) {
 	}
 
 	var wg sync.WaitGroup
+	numOfValidators := int(depChainStart)
 	numOfValidators := int(depChainStart)
 	errs := make(chan error, numOfValidators)
 	for i := 0; i < numOfValidators; i++ {

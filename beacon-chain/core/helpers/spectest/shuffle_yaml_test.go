@@ -28,7 +28,7 @@ func runShuffleTests(t *testing.T, config string) {
 		t.Fatal(err)
 	}
 
-	testFolders, testsFolderPath, err := testutil.TestFolders(config, "shuffling/core/shuffle")
+	testFolders, testsFolderPath := testutil.TestFolders(t, config, "shuffling/core/shuffle")
 	if err != nil {
 		t.Fatal(err)
 	}

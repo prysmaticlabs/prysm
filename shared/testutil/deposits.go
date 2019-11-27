@@ -1,14 +1,13 @@
 package testutil
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -18,7 +17,6 @@ import (
 )
 
 var lock sync.Mutex
-var stateLock sync.Mutex
 
 // Caches
 var deposits []*ethpb.Deposit
@@ -143,13 +141,10 @@ func DeterministicEth1Data(size int) (*ethpb.Eth1Data, error) {
 
 // DeterministicGenesisState returns a genesis state made using the deterministic deposits.
 func DeterministicGenesisState(numValidators uint64) (*pb.BeaconState, []*bls.SecretKey, error) {
-	stateLock.Lock()
-	defer stateLock.Unlock()
 	deposits, privKeys, err := DeterministicDepositsAndKeys(numValidators)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to get %d deposits", numValidators)
 	}
-	fmt.Println(deposits)
 	eth1Data, err := DeterministicEth1Data(len(deposits))
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to get eth1data for %d deposits", numValidators)
