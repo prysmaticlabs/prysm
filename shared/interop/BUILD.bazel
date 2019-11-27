@@ -11,7 +11,6 @@ go_library(
     deps = [
         "//beacon-chain/core/state:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/mputil:go_default_library",
@@ -19,6 +18,7 @@ go_library(
         "//shared/roughtime:go_default_library",
         "//shared/trieutil:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
     ],
 )
@@ -35,11 +35,11 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/core/state:go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
         "//shared/params:go_default_library",
         "//shared/trieutil:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@com_github_go_yaml_yaml//:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
 )
