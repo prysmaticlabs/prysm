@@ -103,7 +103,7 @@ for SSZ (the serialization library used by Prysm).
 ## Updating Patches
 
 Say a new change was pushed out to a dependency you're patching in Prysm. In order to update your
-patch or any other modifications, you would need to:
+patch or add any other modifications, you would need to:
 
 1. First, clone the repo of the dependency you're patching and the specific commit Prysm is 
 currently using for the dependency in the WORKSPACE file. For example, Ethereum APIs could have
