@@ -79,7 +79,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 
 			// Short circuit start far exceeding the highest finalized epoch in some infinite loop.
 			if start > helpers.StartSlot(highestFinalizedEpoch()+1) {
-				return nil, errors.New("attempted to ask for a start slot greater than the next highest epoch")
+				return nil, errors.Errorf("attempted to ask for a start slot of %d which is greater than the next highest epoch of %d", start, helpers.StartSlot(highestFinalizedEpoch()+1))
 			}
 
 			atomic.AddInt32(&p2pRequestCount, int32(len(peers)))
@@ -157,6 +157,12 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 					}
 				}
 			}
+		}
+		startBlock := s.chain.HeadSlot() + 1
+		skippedBlocks := blockBatchSize * uint64(lastEmptyRequests*len(peers))
+		if startBlock+skippedBlocks > helpers.StartSlot(finalizedEpoch+1) {
+			log.Debug("requested block range is greater than the finalized epoch")
+			break
 		}
 
 		blocks, err := request(
