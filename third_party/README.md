@@ -18,7 +18,6 @@ unless really needed**
 - [Creating a Patch](#creating-a-patch)
 - [Ethereum APIs Patch](#ethereum-apis-patch)
 - [Updating Patches](#updating-patches)
-- [Common Errors](#common-errors)
 
 ## Prerequisites
 
@@ -106,13 +105,16 @@ for SSZ (the serialization library used by Prysm).
 Say a new change was pushed out to a dependency you're patching in Prysm. In order to update your
 patch or any other modifications, you would need to:
 
-git apply --check fix_empty_poster.patch
-```
-- checkout repo and commit X
-- apply that patch
-- fast forward
-- resolve conflicts, change things
-- generate new diff
-```
 
-## Common Errors
+1. First, clone the repo of the dependency you're patching and a specific commit
+```
+git clone https://github.com/someteam/someproject && cd someproject
+git checkout <SOME_COMMIT_HASH>
+```
+2. Apply the patch currently in Prysm
+```
+git apply --check $GOPATH/src/github.com/prysmaticlabs/prysm/third_party/somepatch.patch
+```
+3. Fast forward any changes, resolve any conflicts, apply the changes you want to make
+4. Generate a new diff
+
