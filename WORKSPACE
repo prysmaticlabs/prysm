@@ -243,12 +243,10 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p",
-    commit = "c1687281a5c19b61ee5e0dc07fad15697c3bde94",  # v0.4.0
+    commit = "5f1136548865820efe1f7ca1a640a56da6482b51",  # v0.4.0
     importpath = "github.com/libp2p/go-libp2p",
-    patch_args = ["-p1"],
-    patches = [
-        "//third_party:com_github_libp2p_go_libp2p-add-peer-limiter.patch",
-    ],
+    remote = "https://github.com/nisdas/go-libp2p",
+    vcs = "git",
 )
 
 go_repository(
@@ -284,12 +282,10 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_swarm",
-    commit = "4f59859086ea4bfd750cf40ff2598fe8e6256f78",  # v0.2.2
+    commit = "7c19fa47683f9bdddd436f22f3bc03fc2979cc66",  # v0.2.2
     importpath = "github.com/libp2p/go-libp2p-swarm",
-    patch_args = ["-p1"],
-    patches = [
-        "//third_party:com_github_libp2p_go_libp2p_swarm-add-peer-limit.patch",
-    ],
+    remote = "https://github.com/nisdas/go-libp2p-swarm",
+    vcs = "git",
 )
 
 go_repository(
