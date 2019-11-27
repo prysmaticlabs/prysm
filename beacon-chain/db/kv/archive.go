@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/boltdb/bolt"
-	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -25,7 +24,7 @@ func (k *Store) ArchivedActiveValidatorChanges(ctx context.Context, epoch uint64
 			return nil
 		}
 		target = &pb.ArchivedActiveSetChanges{}
-		return proto.Unmarshal(enc, target)
+		return decode(enc, target)
 	})
 	return target, err
 }
@@ -35,7 +34,7 @@ func (k *Store) SaveArchivedActiveValidatorChanges(ctx context.Context, epoch ui
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivedActiveValidatorChanges")
 	defer span.End()
 	buf := uint64ToBytes(epoch)
-	enc, err := proto.Marshal(changes)
+	enc, err := encode(changes)
 	if err != nil {
 		return err
 	}
@@ -59,7 +58,7 @@ func (k *Store) ArchivedCommitteeInfo(ctx context.Context, epoch uint64) (*pb.Ar
 			return nil
 		}
 		target = &pb.ArchivedCommitteeInfo{}
-		return proto.Unmarshal(enc, target)
+		return decode(enc, target)
 	})
 	return target, err
 }
@@ -69,7 +68,7 @@ func (k *Store) SaveArchivedCommitteeInfo(ctx context.Context, epoch uint64, inf
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivedCommitteeInfo")
 	defer span.End()
 	buf := uint64ToBytes(epoch)
-	enc, err := proto.Marshal(info)
+	enc, err := encode(info)
 	if err != nil {
 		return err
 	}
@@ -127,7 +126,7 @@ func (k *Store) ArchivedValidatorParticipation(ctx context.Context, epoch uint64
 			return nil
 		}
 		target = &ethpb.ValidatorParticipation{}
-		return proto.Unmarshal(enc, target)
+		return decode(enc, target)
 	})
 	return target, err
 }
@@ -137,7 +136,7 @@ func (k *Store) SaveArchivedValidatorParticipation(ctx context.Context, epoch ui
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivedValidatorParticipation")
 	defer span.End()
 	buf := uint64ToBytes(epoch)
-	enc, err := proto.Marshal(part)
+	enc, err := encode(part)
 	if err != nil {
 		return err
 	}
