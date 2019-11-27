@@ -25,7 +25,6 @@ import (
 const blockBatchSize = 64
 const maxPeersToSync = 15
 const counterSeconds = 20
-const noPeersWaitTime = 5 * time.Second
 const refreshTime = 6 * time.Second
 
 // Round Robin sync looks at the latest peer statuses and syncs with the highest
@@ -51,7 +50,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 		root, finalizedEpoch, peers := bestFinalized()
 		if len(peers) == 0 {
 			log.Warn("No peers; waiting for reconnect")
-			time.Sleep(noPeersWaitTime)
+			time.Sleep(refreshTime)
 			continue
 		}
 
