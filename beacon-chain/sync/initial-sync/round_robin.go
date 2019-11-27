@@ -12,11 +12,11 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/paulbellamy/ratecounter"
 	"github.com/pkg/errors"
+	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
@@ -25,6 +25,7 @@ import (
 const blockBatchSize = 64
 const maxPeersToSync = 15
 const counterSeconds = 20
+const refreshTime = 6 * time.Second
 
 // Round Robin sync looks at the latest peer statuses and syncs with the highest
 // finalized peer.
@@ -47,6 +48,11 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	// Step 1 - Sync to end of finalized epoch.
 	for s.chain.HeadSlot() < helpers.StartSlot(highestFinalizedEpoch()+1) {
 		root, finalizedEpoch, peers := bestFinalized()
+		if len(peers) == 0 {
+			log.Warn("No peers; waiting for reconnect")
+			time.Sleep(refreshTime)
+			continue
+		}
 
 		// shuffle peers to prevent a bad peer from
 		// stalling sync with invalid blocks
@@ -78,7 +84,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 
 			// Short circuit start far exceeding the highest finalized epoch in some infinite loop.
 			if start > helpers.StartSlot(highestFinalizedEpoch()+1) {
-				return nil, errors.New("attempted to ask for a start slot greater than the next highest epoch")
+				return nil, errors.Errorf("attempted to ask for a start slot of %d which is greater than the next highest epoch of %d", start, helpers.StartSlot(highestFinalizedEpoch()+1))
 			}
 
 			atomic.AddInt32(&p2pRequestCount, int32(len(peers)))
@@ -157,6 +163,12 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 				}
 			}
 		}
+		startBlock := s.chain.HeadSlot() + 1
+		skippedBlocks := blockBatchSize * uint64(lastEmptyRequests*len(peers))
+		if startBlock+skippedBlocks > helpers.StartSlot(finalizedEpoch+1) {
+			log.WithField("finalizedEpoch", finalizedEpoch).Debug("Requested block range is greater than the finalized epoch")
+			break
+		}
 
 		blocks, err := request(
 			s.chain.HeadSlot()+1, // start
@@ -215,6 +227,13 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 	// fork choice resolution / block processing.
 	best := bestPeer()
 	root, _, _ := bestFinalized()
+
+	// if no best peer exists, retry until a new best peer is found.
+	for len(best) == 0 {
+		time.Sleep(refreshTime)
+		best = bestPeer()
+		root, _, _ = bestFinalized()
+	}
 	for head := slotsSinceGenesis(genesis); s.chain.HeadSlot() < head; {
 		req := &p2ppb.BeaconBlocksByRangeRequest{
 			HeadBlockRoot: root,
@@ -304,6 +323,9 @@ func bestFinalized() ([]byte, uint64, []peer.ID) {
 	var pids []peer.ID
 	for _, k := range peerstatus.Keys() {
 		s := peerstatus.Get(k)
+		if s == nil {
+			continue
+		}
 		if s.FinalizedEpoch >= rootToEpoch[mostVotedFinalizedRoot] {
 			pids = append(pids, k)
 			if len(pids) >= maxPeersToSync {
