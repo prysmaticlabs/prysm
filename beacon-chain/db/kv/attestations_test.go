@@ -9,10 +9,10 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 func TestStore_AttestationCRUD(t *testing.T) {
@@ -118,7 +118,11 @@ func TestStore_BoltDontPanic(t *testing.T) {
 
 	for i := 0; i <= 100; i++ {
 		att := &ethpb.Attestation{
-			Data:            &ethpb.AttestationData{Slot: uint64(i)},
+			Data: &ethpb.AttestationData{
+				Slot:   uint64(i),
+				Source: &ethpb.Checkpoint{},
+				Target: &ethpb.Checkpoint{},
+			},
 			AggregationBits: bitfield.Bitlist{0b11},
 		}
 		ctx := context.Background()
@@ -262,6 +266,74 @@ func TestStore_Attestations_FiltersCorrectly(t *testing.T) {
 		if len(retrievedAtts) != tt.expectedNumAtt {
 			t.Errorf("Expected %d attestations, received %d", tt.expectedNumAtt, len(retrievedAtts))
 		}
+	}
+}
+
+func TestStore_DuplicatedAttestations_FiltersCorrectly(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	someRoot := [32]byte{1, 2, 3}
+	att := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			BeaconBlockRoot: someRoot[:],
+			Source: &ethpb.Checkpoint{
+				Root:  someRoot[:],
+				Epoch: 5,
+			},
+			Target: &ethpb.Checkpoint{
+				Root:  someRoot[:],
+				Epoch: 7,
+			},
+		},
+		AggregationBits: bitfield.Bitlist{0b11},
+	}
+	atts := []*ethpb.Attestation{att, att, att}
+	ctx := context.Background()
+	if err := db.SaveAttestations(ctx, atts); err != nil {
+		t.Fatal(err)
+	}
+
+	retrievedAtts, err := db.Attestations(ctx, filters.NewFilter().
+		SetHeadBlockRoot(someRoot[:]))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(retrievedAtts) != 1 {
+		t.Errorf("Expected %d attestations, received %d", 1, len(retrievedAtts))
+	}
+
+	att1 := proto.Clone(att).(*ethpb.Attestation)
+	att1.Data.Source.Epoch = 6
+	atts = []*ethpb.Attestation{att, att, att, att1, att1, att1}
+	if err := db.SaveAttestations(ctx, atts); err != nil {
+		t.Fatal(err)
+	}
+
+	retrievedAtts, err = db.Attestations(ctx, filters.NewFilter().
+		SetHeadBlockRoot(someRoot[:]))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(retrievedAtts) != 2 {
+		t.Errorf("Expected %d attestations, received %d", 1, len(retrievedAtts))
+	}
+
+	retrievedAtts, err = db.Attestations(ctx, filters.NewFilter().
+		SetHeadBlockRoot(someRoot[:]).SetSourceEpoch(5))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(retrievedAtts) != 1 {
+		t.Errorf("Expected %d attestations, received %d", 1, len(retrievedAtts))
+	}
+
+	retrievedAtts, err = db.Attestations(ctx, filters.NewFilter().
+		SetHeadBlockRoot(someRoot[:]).SetSourceEpoch(6))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(retrievedAtts) != 1 {
+		t.Errorf("Expected %d attestations, received %d", 1, len(retrievedAtts))
 	}
 }
 
