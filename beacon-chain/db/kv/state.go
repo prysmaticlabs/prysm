@@ -115,8 +115,8 @@ func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 		checkpoint := &ethpb.Checkpoint{}
 		if enc == nil {
 			checkpoint = &ethpb.Checkpoint{Root: genesisBlockRoot}
-		} else {
-			decode(enc, checkpoint)
+		} else if err := decode(enc, checkpoint); err != nil {
+			return err
 		}
 
 		// Safe guard against deleting genesis or finalized state.
