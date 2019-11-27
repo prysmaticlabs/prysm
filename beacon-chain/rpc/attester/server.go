@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/gogo/protobuf/proto"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -14,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -130,7 +130,7 @@ func (as *Server) RequestAttestation(ctx context.Context, req *pb.AttestationReq
 
 	res = &ethpb.AttestationData{
 		Slot:            req.Slot,
-		Index:           req.CommitteeIndex,
+		CommitteeIndex:  req.CommitteeIndex,
 		BeaconBlockRoot: headRoot[:],
 		Source:          headState.CurrentJustifiedCheckpoint,
 		Target: &ethpb.Checkpoint{

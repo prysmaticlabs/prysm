@@ -7,12 +7,12 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -150,7 +150,7 @@ func (s *Service) AttestationsBySlotCommittee(ctx context.Context, slot uint64, 
 	atts := make([]*ethpb.Attestation, 0, len(s.attestationPool))
 
 	for _, ac := range s.attestationPool {
-		if ac.Data.Slot == slot && ac.Data.Index == index {
+		if ac.Data.Slot == slot && ac.Data.CommitteeIndex == index {
 			atts = append(atts, ac.ToAttestations()...)
 		}
 	}

@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	pb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"

@@ -9,12 +9,12 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -286,7 +286,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveArchivedCommitteeInfo(context.Background(), 0, &ethpb.ArchivedCommitteeInfo{
+	if err := db.SaveArchivedCommitteeInfo(context.Background(), 0, &pbp2p.ArchivedCommitteeInfo{
 		ProposerSeed: proposerSeed[:],
 		AttesterSeed: attesterSeed[:],
 	}); err != nil {
