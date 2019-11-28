@@ -440,6 +440,10 @@ func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot ui
 	if startSlot == 0 {
 		startSlot++
 	}
+	// If end slot comes less than start slot
+	if endSlot < startSlot {
+		endSlot = startSlot
+	}
 
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
 	roots, err := s.db.BlockRoots(ctx, filter)
