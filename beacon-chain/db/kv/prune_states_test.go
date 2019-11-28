@@ -40,7 +40,7 @@ func TestStore_PruneStates(t *testing.T) {
 	db.Close()
 
 	c := featureconfig.Get()
-	c.PruneStatesLastFinalized = true
+	c.PruneEpochBoundaryStates = true
 	featureconfig.Init(c)
 
 	db2, err := NewKVStore(path)

@@ -24,7 +24,7 @@ func (kv *Store) pruneStates(ctx context.Context) error {
 		return nil
 	})
 
-	if !featureconfig.Get().PruneStatesLastFinalized {
+	if !featureconfig.Get().PruneEpochBoundaryStates {
 		if pruned {
 			return errors.New("beaconDB has been pruned for states before last finalized checkpoint, run with flag --prune-states")
 		}

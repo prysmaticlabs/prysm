@@ -31,7 +31,7 @@ type Flags struct {
 	InitSyncNoVerify          bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
 	SkipBLSVerify             bool // Skips BLS verification across the runtime.
 	EnableBackupWebhook       bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
-	PruneStatesLastFinalized  bool // PruneStatesLastFinalized prunes the states before last finalized check point in DB.
+	PruneEpochBoundaryStates  bool // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
 	EnableSnappyDBCompression bool // EnableSnappyDBCompression in the database.
 
 	// Cache toggles.
@@ -130,9 +130,9 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabled snappy compression in the database.")
 		cfg.EnableSnappyDBCompression = true
 	}
-	if ctx.GlobalBool(enablePruneStatesLastFinalized.Name) {
-		log.Warn("Enabled pruning states before last finalized check point.")
-		cfg.PruneStatesLastFinalized = true
+	if ctx.GlobalBool(enablePruneBoundaryStateFlag.Name) {
+		log.Warn("Enabled pruning epoch boundary states before last finalized check point.")
+		cfg.PruneEpochBoundaryStates = true
 	}
 	Init(cfg)
 }

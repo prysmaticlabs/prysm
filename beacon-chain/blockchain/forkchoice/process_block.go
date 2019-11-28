@@ -106,7 +106,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 		}
 
 		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch) + 1
-		if featureconfig.Get().PruneStatesLastFinalized {
+		if featureconfig.Get().PruneEpochBoundaryStates {
 			startSlot = helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
 		}
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
@@ -194,7 +194,7 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.
 		helpers.ClearAllCaches()
 
 		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch) + 1
-		if featureconfig.Get().PruneStatesLastFinalized {
+		if featureconfig.Get().PruneEpochBoundaryStates {
 			startSlot = helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
 		}
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
@@ -417,7 +417,7 @@ func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot ui
 	defer span.End()
 
 	// Make sure start slot is not a skipped slot
-	if featureconfig.Get().PruneStatesLastFinalized {
+	if featureconfig.Get().PruneEpochBoundaryStates {
 		for i := startSlot; i > 0; i-- {
 			filter := filters.NewFilter().SetStartSlot(i).SetEndSlot(i)
 			b, err := s.db.Blocks(ctx, filter)
