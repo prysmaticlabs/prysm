@@ -97,7 +97,6 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deposits[0].Proof = [][]byte{}
 	deposits[0].Data.PublicKey = []byte("junk")
 
 	leaf, err := ssz.HashTreeRoot(deposits[0].Data)
@@ -107,6 +106,10 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	trie, err := trieutil.GenerateTrieFromItems([][]byte{leaf[:]}, int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		log.Error(err)
+	}
+	deposits[0].Proof, err = trie.MerkleProof((0))
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	root := trie.Root()
@@ -190,11 +193,21 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	}
 	sig := keys[0].Sign([]byte{'F', 'A', 'K', 'E'}, bls.ComputeDomain(params.BeaconConfig().DomainDeposit))
 	deposits[0].Data.Signature = sig.Marshal()[:]
-	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+
+	trie, _, err := testutil.DepositTrieFromDeposits(deposits)
 	if err != nil {
 		t.Fatal(err)
 	}
-
+	root := trie.Root()
+	eth1Data := &ethpb.Eth1Data{
+		DepositCount: 1,
+		DepositRoot:  root[:],
+	}
+	proof, err := trie.MerkleProof(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deposits[0].Proof = proof
 	err = web3Service.processDeposit(eth1Data, deposits[0])
 	if err == nil {
 		t.Fatal("No errors, when an error was expected")
@@ -244,11 +257,15 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 		t.Fatal(err)
 	}
 	root := trie.Root()
-
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 1,
 		DepositRoot:  root[:],
 	}
+	proof, err := trie.MerkleProof(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deposit.Proof = proof
 
 	factor := params.BeaconConfig().MaxEffectiveBalance / params.BeaconConfig().EffectiveBalanceIncrement
 	// deposit till 31e9

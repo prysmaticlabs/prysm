@@ -3,6 +3,7 @@ package blockchain
 import (
 	"bytes"
 	"context"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"reflect"
 	"testing"
 
@@ -188,42 +189,25 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.Eth1DepositIndex = 100
-	stateRoot, err := ssz.HashTreeRoot(beaconState)
+
+	block, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, beaconState.Slot)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	genesis := b.NewGenesisBlock(stateRoot[:])
-	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
 	if err := chainService.forkChoiceStore.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
 		t.Fatal(err)
 	}
 
-	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
-		Slot:       genesis.Slot,
-		ParentRoot: genesis.ParentRoot,
-		BodyRoot:   bodyRoot[:],
-		StateRoot:  genesis.StateRoot,
-	}
-	if err := chainService.beaconDB.SaveBlock(ctx, genesis); err != nil {
+	if err := chainService.beaconDB.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save block to db: %v", err)
 	}
-	parentRoot, err := ssz.SigningRoot(genesis)
+
+	block, err = testutil.GenerateFullBlock(beaconState, privKeys, nil, beaconState.Slot)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	if err := db.SaveState(ctx, beaconState, parentRoot); err != nil {
-		t.Fatal(err)
-	}
-
-	slot := beaconState.Slot + 1
-	block, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, slot)
-	if err != nil {
+	if err := db.SaveState(ctx, beaconState, bytesutil.ToBytes32(block.ParentRoot)); err != nil {
 		t.Fatal(err)
 	}
 

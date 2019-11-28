@@ -37,7 +37,7 @@ func DeterministicDepositsAndKeys(numDeposits uint64) ([]*ethpb.Deposit, []*bls.
 	if trie == nil {
 		trie, err = trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, errors.Wrap(err, "failed to create new trie")
 		}
 	}
 
@@ -88,7 +88,7 @@ func DeterministicDepositsAndKeys(numDeposits uint64) ([]*ethpb.Deposit, []*bls.
 
 	depositTrie, _, err := DeterministicDepositTrie(int(numDeposits))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrap(err, "failed to create deposit trie")
 	}
 	requestedDeposits := cachedDeposits[:numDeposits]
 	for i := range requestedDeposits {
@@ -132,7 +132,7 @@ func DeterministicDepositTrie(size int) (*trieutil.MerkleTrie, [][32]byte, error
 func DeterministicEth1Data(size int) (*ethpb.Eth1Data, error) {
 	depositTrie, _, err := DeterministicDepositTrie(size)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to create trie")
 	}
 	root := depositTrie.Root()
 	eth1Data := &ethpb.Eth1Data{

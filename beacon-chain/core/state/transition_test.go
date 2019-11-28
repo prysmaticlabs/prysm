@@ -111,17 +111,6 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	genesisBlock := blocks.NewGenesisBlock([]byte{})
-	bodyRoot, err := ssz.HashTreeRoot(genesisBlock)
-	if err != nil {
-		t.Fatal(err)
-	}
-	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
-		Slot:       genesisBlock.Slot,
-		ParentRoot: genesisBlock.ParentRoot,
-		BodyRoot:   bodyRoot[:],
-	}
-
 	block, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, 1)
 	if err != nil {
 		t.Fatal(err)
@@ -131,12 +120,25 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 		Header_2: &ethpb.BeaconBlockHeader{Slot: params.BeaconConfig().SlotsPerEpoch * 2},
 	}
 	block.Body.ProposerSlashings = []*ethpb.ProposerSlashing{slashing}
-	sig, err := testutil.BlockSignature(beaconState, block, privKeys)
+
+	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+	beaconState.Slot++
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.Slot--
+	domain := helpers.Domain(beaconState.Fork, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainBeaconProposer)
+	sig := privKeys[proposerIdx].Sign(blockRoot[:], domain)
 	block.Signature = sig.Marshal()
 
+	beaconState, err = state.ProcessSlots(context.Background(), beaconState, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	want := "could not process block proposer slashing"
 	if _, err := state.ProcessBlock(context.Background(), beaconState, block); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
@@ -149,136 +151,39 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	proposerSlashIdx := uint64(3)
-
-	currentEpoch := helpers.CurrentEpoch(beaconState)
-	domain := helpers.Domain(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
-
-	header1 := &ethpb.BeaconBlockHeader{
-		Slot:      1,
-		StateRoot: []byte("A"),
-	}
-	signingRoot, err := ssz.SigningRoot(header1)
-	if err != nil {
-		t.Errorf("Could not get signing root of beacon block header: %v", err)
-	}
-	header1.Signature = privKeys[proposerSlashIdx].Sign(signingRoot[:], domain).Marshal()[:]
-
-	header2 := &ethpb.BeaconBlockHeader{
-		Slot:      1,
-		StateRoot: []byte("B"),
-	}
-	signingRoot, err = ssz.SigningRoot(header2)
-	if err != nil {
-		t.Errorf("Could not get signing root of beacon block header: %v", err)
-	}
-	header2.Signature = privKeys[proposerSlashIdx].Sign(signingRoot[:], domain).Marshal()[:]
-
-	proposerSlashings := []*ethpb.ProposerSlashing{
-		{
-			ProposerIndex: proposerSlashIdx,
-			Header_1:      header1,
-			Header_2:      header2,
-		},
-	}
-	beaconState.Validators[proposerSlashIdx].PublicKey = privKeys[proposerSlashIdx].PublicKey().Marshal()[:]
-
-	att1 := &ethpb.IndexedAttestation{
-		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0},
-			Target: &ethpb.Checkpoint{Epoch: 0},
-		},
-		CustodyBit_0Indices: []uint64{0, 1},
-	}
-	dataAndCustodyBit := &pb.AttestationDataAndCustodyBit{
-		Data:       att1.Data,
-		CustodyBit: false,
-	}
-	hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
-	if err != nil {
-		t.Error(err)
-	}
-	domain = helpers.Domain(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
-	sig0 := privKeys[0].Sign(hashTreeRoot[:], domain)
-	sig1 := privKeys[1].Sign(hashTreeRoot[:], domain)
-	aggregateSig := bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
-	att1.Signature = aggregateSig.Marshal()[:]
-
-	att2 := &ethpb.IndexedAttestation{
-		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 1},
-			Target: &ethpb.Checkpoint{Epoch: 0},
-		},
-		CustodyBit_0Indices: []uint64{0, 1},
-	}
-	dataAndCustodyBit = &pb.AttestationDataAndCustodyBit{
-		Data:       att2.Data,
-		CustodyBit: false,
-	}
-	hashTreeRoot, err = ssz.HashTreeRoot(dataAndCustodyBit)
-	if err != nil {
-		t.Error(err)
-	}
-	sig0 = privKeys[0].Sign(hashTreeRoot[:], domain)
-	sig1 = privKeys[1].Sign(hashTreeRoot[:], domain)
-	aggregateSig = bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
-	att2.Signature = aggregateSig.Marshal()[:]
-
-	slashings := []*ethpb.AttesterSlashing{
-		{
-			Attestation_1: att1,
-			Attestation_2: att2,
-		},
-	}
-
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Target: &ethpb.Checkpoint{Epoch: 0},
 			Source: &ethpb.Checkpoint{Epoch: 0},
 		},
-		AggregationBits: bitfield.NewBitlist(0),
-		CustodyBits:     bitfield.NewBitlist(0),
+		AggregationBits: bitfield.NewBitlist(3),
+		CustodyBits:     bitfield.NewBitlist(3),
 	}
 
-	epoch := helpers.CurrentEpoch(beaconState)
-	randaoReveal, err := testutil.RandaoReveal(beaconState, epoch, privKeys)
+	block, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	genesisBlock := blocks.NewGenesisBlock([]byte{})
-	bodyRoot, err := ssz.HashTreeRoot(genesisBlock)
+	block.Body.Attestations = []*ethpb.Attestation{att}
+	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
-		Slot:       genesisBlock.Slot,
-		ParentRoot: genesisBlock.ParentRoot,
-		BodyRoot:   bodyRoot[:],
-	}
-	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
+	beaconState.Slot++
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
 		t.Fatal(err)
 	}
-	block := &ethpb.BeaconBlock{
-		ParentRoot: parentRoot[:],
-		Slot:       1,
-		Body: &ethpb.BeaconBlockBody{
-			RandaoReveal:      randaoReveal,
-			ProposerSlashings: proposerSlashings,
-			AttesterSlashings: slashings,
-			Attestations:      []*ethpb.Attestation{att},
-			Eth1Data: &ethpb.Eth1Data{
-				DepositRoot: []byte{2},
-				BlockHash:   []byte{3},
-			},
-			Deposits: make([]*ethpb.Deposit, 0),
-		},
-	}
-	sig, err := testutil.BlockSignature(beaconState, block, privKeys)
-	if err != nil {
-		t.Error(err)
-	}
+	beaconState.Slot--
+	domain := helpers.Domain(beaconState.Fork, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainBeaconProposer)
+	sig := privKeys[proposerIdx].Sign(blockRoot[:], domain)
 	block.Signature = sig.Marshal()
+
+	beaconState, err = state.ProcessSlots(context.Background(), beaconState, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	want := "could not process block attestations"
 	if _, err := state.ProcessBlock(context.Background(), beaconState, block); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)

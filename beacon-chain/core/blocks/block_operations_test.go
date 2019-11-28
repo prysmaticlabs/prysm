@@ -1649,12 +1649,15 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 		t.Fatal(err)
 	}
 	dep[0].Data.Signature = make([]byte, 96)
-	eth1Data, err := testutil.DeterministicEth1Data(len(dep))
+	trie, _, err := testutil.DepositTrieFromDeposits(dep)
 	if err != nil {
 		t.Fatal(err)
 	}
-	testutil.ResetCache() // Can't have an invalid signature in the cache.
-
+	root := trie.Root()
+	eth1Data := &ethpb.Eth1Data{
+		DepositRoot:  root[:],
+		DepositCount: 1,
+	}
 	registry := []*ethpb.Validator{
 		{
 			PublicKey:             []byte{1},
@@ -1703,14 +1706,21 @@ func TestProcessDeposit_SkipsDepositWithUncompressedSignature(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a, _ := blsintern.DecompressG2(bytesutil.ToBytes96(dep[0].Data.Signature))
-	uncompressedSignature := a.SerializeBytes()
-	dep[0].Data.Signature = uncompressedSignature[:]
-	eth1Data, err := testutil.DeterministicEth1Data(len(dep))
+	a, err := blsintern.DecompressG2(bytesutil.ToBytes96(dep[0].Data.Signature))
 	if err != nil {
 		t.Fatal(err)
 	}
-	testutil.ResetCache() // Can't have an uncompressed signature in the cache.
+	uncompressedSignature := a.SerializeBytes()
+	dep[0].Data.Signature = uncompressedSignature[:]
+	trie, _, err := testutil.DepositTrieFromDeposits(dep)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := trie.Root()
+	eth1Data := &ethpb.Eth1Data{
+		DepositRoot:  root[:],
+		DepositCount: 1,
+	}
 
 	registry := []*ethpb.Validator{
 		{
