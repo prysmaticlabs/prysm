@@ -23,10 +23,6 @@ func TestSkipSlotCache_OK(t *testing.T) {
 
 	blkCfg := testutil.DefaultBlockGenConfig()
 	blkCfg.NumAttestations = 1
-	blkCfg.NumDeposits = 0
-	blkCfg.NumVoluntaryExits = 0
-	blkCfg.NumProposerSlashings = 0
-	blkCfg.NumAttesterSlashings = 0
 
 	cfg := featureconfig.Get()
 	cfg.EnableSkipSlotsCache = true

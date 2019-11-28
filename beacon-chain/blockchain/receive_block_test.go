@@ -3,16 +3,14 @@ package blockchain
 import (
 	"bytes"
 	"context"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"reflect"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -25,22 +23,12 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 
 	chainService := setupBeaconChain(t, db)
 
-	beaconState, privKeys, err := testutil.DeterministicGenesisState(100)
+	beaconState, privKeys, _ := testutil.DeterministicGenesisState(100)
+	genesis, _ := testutil.GenerateFullBlock(beaconState, privKeys, nil, beaconState.Slot+1)
+	beaconState, err := state.ExecuteStateTransition(ctx, beaconState, genesis)
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.Eth1Data.BlockHash = nil
-	beaconState.Eth1DepositIndex = 100
-	genesisRoot, err := ssz.HashTreeRoot(beaconState)
-	if err != nil {
-		t.Fatal(err)
-	}
-	genesis := b.NewGenesisBlock(genesisRoot[:])
-	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	genesisBlkRoot, err := ssz.SigningRoot(genesis)
 	if err != nil {
 		t.Fatal(err)
@@ -50,59 +38,19 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
-		Slot:       genesis.Slot,
-		ParentRoot: genesis.ParentRoot,
-		BodyRoot:   bodyRoot[:],
-		StateRoot:  genesis.StateRoot,
-	}
 	if err := chainService.beaconDB.SaveBlock(ctx, genesis); err != nil {
 		t.Fatalf("Could not save block to db: %v", err)
 	}
-	parentRoot, err := ssz.SigningRoot(genesis)
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	if err := db.SaveState(ctx, beaconState, parentRoot); err != nil {
+	if err := db.SaveState(ctx, beaconState, genesisBlkRoot); err != nil {
 		t.Fatal(err)
 	}
 
 	slot := beaconState.Slot + 1
-	epoch := helpers.SlotToEpoch(slot)
-	beaconState.Slot++
-	randaoReveal, err := testutil.RandaoReveal(beaconState, epoch, privKeys)
+	block, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, slot)
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.Slot--
-
-	block := &ethpb.BeaconBlock{
-		Slot:       slot,
-		ParentRoot: parentRoot[:],
-		Body: &ethpb.BeaconBlockBody{
-			Eth1Data: &ethpb.Eth1Data{
-				DepositCount: uint64(len(beaconState.Validators)),
-				DepositRoot:  []byte("a"),
-				BlockHash:    []byte("b"),
-			},
-			RandaoReveal: randaoReveal[:],
-			Attestations: nil,
-		},
-	}
-
-	stateRoot, err := state.CalculateStateRoot(context.Background(), beaconState, block)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	block.StateRoot = stateRoot[:]
-
-	sig, err := testutil.BlockSignature(beaconState, block, privKeys)
-	if err != nil {
-		t.Error(err)
-	}
-	block.Signature = sig.Marshal()
 
 	if err := chainService.beaconDB.SaveBlock(ctx, block); err != nil {
 		t.Fatal(err)
