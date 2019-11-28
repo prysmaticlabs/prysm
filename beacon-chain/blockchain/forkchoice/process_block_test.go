@@ -15,6 +15,7 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -329,5 +330,51 @@ func TestRemoveStateSinceLastFinalized(t *testing.T) {
 		if s != nil && s.Slot != newFinalizedSlot && s.Slot != finalizedSlot && s.Slot != 0 && s.Slot < endSlot {
 			t.Errorf("State with slot %d should not be in DB", s.Slot)
 		}
+	}
+}
+
+func TestRemoveStateSinceLastFinalized_EmptyStartSlot(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	params.UseMinimalConfig()
+	defer params.UseMainnetConfig()
+
+	c := featureconfig.Get()
+	c.PruneEpochBoundaryStates = true
+	featureconfig.Init(c)
+
+	store := NewForkChoiceService(ctx, db)
+
+	// Save 5 blocks in DB, each has a state.
+	numBlocks := 5
+	totalBlocks := make([]*ethpb.BeaconBlock, numBlocks)
+	blockRoots := make([][32]byte, 0)
+	for i := 0; i < len(totalBlocks); i++ {
+		totalBlocks[i] = &ethpb.BeaconBlock{
+			Slot: uint64(i),
+		}
+		r, err := ssz.SigningRoot(totalBlocks[i])
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := store.db.SaveState(ctx, &pb.BeaconState{Slot: uint64(i)}, r); err != nil {
+			t.Fatal(err)
+		}
+		if err := store.db.SaveBlock(ctx, totalBlocks[i]); err != nil {
+			t.Fatal(err)
+		}
+		blockRoots = append(blockRoots, r)
+	}
+	if err := store.rmStatesOlderThanLastFinalized(ctx, 10, 11); err != nil {
+		t.Fatal(err)
+	}
+	// Since 5-10 are skip slots, block with slot 4 should be deleted
+	s, err := store.db.State(ctx, blockRoots[4])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s != nil {
+		t.Error("Did not delete state for start slot")
 	}
 }
