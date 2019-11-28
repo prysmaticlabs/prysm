@@ -11,9 +11,9 @@ import (
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -26,7 +26,6 @@ func init() {
 	logrus.SetOutput(ioutil.Discard)
 }
 
-// sendDeposits sends deposits to deposit contract
 func sendDeposits(t *testing.T, testAcc *contracts.TestAccount,
 	numberOfDeposits, numberOfValidators uint64) []*ethpb.Deposit {
 
@@ -62,7 +61,6 @@ func sendDeposits(t *testing.T, testAcc *contracts.TestAccount,
 
 			testAcc.Backend.Commit()
 
-			//lgos do not show up in console
 			log.WithFields(logrus.Fields{
 				"Transaction Hash": fmt.Sprintf("%#x", tx.Hash()),
 			}).Infof("Deposit %d sent to contract address %v for validator with a public key %#x", j, depositContractAddrStr, pubKey.Marshal())
@@ -137,8 +135,7 @@ func TestEndtoEndDeposits(t *testing.T) {
 
 	encodedDeposits := make([][]byte, numberOfValidators*numberOfDeposits)
 	for i := 0; i < int(numberOfValidators); i++ {
-
-		hashedDeposit, err := ssz.HashTreeRoot(deposits[i].Data)
+		hashedDeposit, err := ssz.SigningRoot(deposits[i].Data)
 		if err != nil {
 			t.Fatalf("could not tree hash deposit data: %v", err)
 		}
