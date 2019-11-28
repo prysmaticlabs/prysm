@@ -133,10 +133,7 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db)
-	beaconState, privKeys, err := testutil.DeterministicGenesisState(100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, privKeys, _ := testutil.DeterministicGenesisState(100)
 
 	block, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, beaconState.Slot)
 	if err != nil {

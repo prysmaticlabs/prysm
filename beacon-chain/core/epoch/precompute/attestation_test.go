@@ -73,11 +73,7 @@ func TestUpdateBalance(t *testing.T) {
 
 func TestSameHead(t *testing.T) {
 	helpers.ClearAllCaches()
-	beaconState, _, err := testutil.DeterministicGenesisState(100)
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	beaconState, _, _ := testutil.DeterministicGenesisState(100)
 	beaconState.Slot = 1
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
 		Target: &ethpb.Checkpoint{Epoch: 0}}}
@@ -102,10 +98,7 @@ func TestSameHead(t *testing.T) {
 }
 
 func TestSameTarget(t *testing.T) {
-	beaconState, _, err := testutil.DeterministicGenesisState(100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, _, _ := testutil.DeterministicGenesisState(100)
 	beaconState.Slot = 1
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
 		Target: &ethpb.Checkpoint{Epoch: 0}}}
@@ -130,10 +123,7 @@ func TestSameTarget(t *testing.T) {
 }
 
 func TestAttestedPrevEpoch(t *testing.T) {
-	beaconState, _, err := testutil.DeterministicGenesisState(100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, _, _ := testutil.DeterministicGenesisState(100)
 	beaconState.Slot = params.BeaconConfig().SlotsPerEpoch
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
 		Target: &ethpb.Checkpoint{Epoch: 0}}}
@@ -157,10 +147,7 @@ func TestAttestedPrevEpoch(t *testing.T) {
 }
 
 func TestAttestedCurrentEpoch(t *testing.T) {
-	beaconState, _, err := testutil.DeterministicGenesisState(100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, _, _ := testutil.DeterministicGenesisState(100)
 	beaconState.Slot = params.BeaconConfig().SlotsPerEpoch + 1
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
 		Target: &ethpb.Checkpoint{Epoch: 1}}}
@@ -187,10 +174,7 @@ func TestProcessAttestations(t *testing.T) {
 	defer params.UseMainnetConfig()
 
 	validators := uint64(64)
-	beaconState, _, err := testutil.DeterministicGenesisState(validators)
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, _, _ := testutil.DeterministicGenesisState(validators)
 	beaconState.Slot = params.BeaconConfig().SlotsPerEpoch
 
 	bf := []byte{0xff}
@@ -214,7 +198,7 @@ func TestProcessAttestations(t *testing.T) {
 		vp[i] = &precompute.Validator{CurrentEpochEffectiveBalance: 100}
 	}
 	bp := &precompute.Balance{}
-	vp, bp, err = precompute.ProcessAttestations(context.Background(), beaconState, vp, bp)
+	vp, bp, err := precompute.ProcessAttestations(context.Background(), beaconState, vp, bp)
 	if err != nil {
 		t.Fatal(err)
 	}

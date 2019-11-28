@@ -230,10 +230,7 @@ func TestSlotSignature_Verify(t *testing.T) {
 }
 
 func TestIsAggregator_True(t *testing.T) {
-	beaconState, privKeys, err := testutil.DeterministicGenesisState(100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, privKeys, _ := testutil.DeterministicGenesisState(100)
 	sig := privKeys[0].Sign([]byte{}, 0)
 	agg, err := helpers.IsAggregator(beaconState, 0, 0, sig)
 	if err != nil {
@@ -247,10 +244,7 @@ func TestIsAggregator_True(t *testing.T) {
 func TestIsAggregator_False(t *testing.T) {
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
-	beaconState, privKeys, err := testutil.DeterministicGenesisState(2048)
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, privKeys, _ := testutil.DeterministicGenesisState(2048)
 
 	sig := privKeys[0].Sign([]byte{}, 0)
 	agg, err := helpers.IsAggregator(beaconState, 0, 0, sig)

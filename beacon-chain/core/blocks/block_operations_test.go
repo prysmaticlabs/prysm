@@ -34,10 +34,7 @@ func init() {
 }
 
 func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
-	beaconState, privKeys, err := testutil.DeterministicGenesisState(100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, privKeys, _ := testutil.DeterministicGenesisState(100)
 	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{Slot: 9}
 
 	lbhsr, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
@@ -292,10 +289,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	beaconState, privKeys, err := testutil.DeterministicGenesisState(100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, privKeys, _ := testutil.DeterministicGenesisState(100)
 	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
@@ -324,10 +318,7 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 }
 
 func TestProcessRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T) {
-	beaconState, privKeys, err := testutil.DeterministicGenesisState(100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, privKeys, _ := testutil.DeterministicGenesisState(100)
 
 	epoch := helpers.CurrentEpoch(beaconState)
 	epochSignature, err := testutil.RandaoReveal(beaconState, epoch, privKeys)
@@ -708,10 +699,7 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 }
 
 func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
-	beaconState, privKeys, err := testutil.DeterministicGenesisState(100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, privKeys, _ := testutil.DeterministicGenesisState(100)
 	for _, vv := range beaconState.Validators {
 		vv.WithdrawableEpoch = 1 * params.BeaconConfig().SlotsPerEpoch
 	}
@@ -807,10 +795,7 @@ func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 			Attestations: attestations,
 		},
 	}
-	beaconState, _, err := testutil.DeterministicGenesisState(100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, _, _ := testutil.DeterministicGenesisState(100)
 
 	want := fmt.Sprintf(
 		"attestation slot %d + inclusion delay %d > state slot %d",
@@ -837,10 +822,7 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 			Attestations: []*ethpb.Attestation{att},
 		},
 	}
-	beaconState, _, err := testutil.DeterministicGenesisState(100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, _, _ := testutil.DeterministicGenesisState(100)
 	helpers.ClearAllCaches()
 	beaconState.Slot += params.BeaconConfig().SlotsPerEpoch*4 + params.BeaconConfig().MinAttestationInclusionDelay
 	beaconState.PreviousJustifiedCheckpoint.Root = []byte("hello-world")
@@ -877,10 +859,7 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 			Attestations: attestations,
 		},
 	}
-	beaconState, _, err := testutil.DeterministicGenesisState(100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, _, _ := testutil.DeterministicGenesisState(100)
 	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
@@ -909,11 +888,7 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 
 func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	helpers.ClearAllCaches()
-
-	beaconState, _, err := testutil.DeterministicGenesisState(100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, _, _ := testutil.DeterministicGenesisState(100)
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(0, true)
@@ -967,10 +942,7 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	beaconState, _, err := testutil.DeterministicGenesisState(100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, _, _ := testutil.DeterministicGenesisState(100)
 
 	aggBits := bitfield.NewBitlist(4)
 	custodyBits := bitfield.NewBitlist(4)
@@ -994,7 +966,7 @@ func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	expected := "failed to verify aggregation bitfield: wanted participants bitfield length 3, got: 4"
-	_, err = blocks.ProcessAttestations(context.Background(), beaconState, block.Body)
+	_, err := blocks.ProcessAttestations(context.Background(), beaconState, block.Body)
 	if !strings.Contains(err.Error(), expected) {
 		t.Errorf("Did not receive wanted error")
 	}
@@ -1003,10 +975,7 @@ func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 func TestProcessAttestations_OK(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	beaconState, privKeys, err := testutil.DeterministicGenesisState(100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, privKeys, _ := testutil.DeterministicGenesisState(100)
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(0, true)
@@ -1059,10 +1028,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	beaconState, privKeys, err := testutil.DeterministicGenesisState(100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, privKeys, _ := testutil.DeterministicGenesisState(100)
 
 	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 	data := &ethpb.AttestationData{
@@ -1139,10 +1105,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 
 func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	helpers.ClearAllCaches()
-	beaconState, privKeys, err := testutil.DeterministicGenesisState(300)
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, privKeys, _ := testutil.DeterministicGenesisState(300)
 
 	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 	data := &ethpb.AttestationData{
@@ -1231,10 +1194,7 @@ func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 	// Attestation with an empty signature
 	helpers.ClearAllCaches()
 
-	beaconState, _, err := testutil.DeterministicGenesisState(100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, _, _ := testutil.DeterministicGenesisState(100)
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(1, true)
