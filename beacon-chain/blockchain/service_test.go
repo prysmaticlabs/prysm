@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	ops "github.com/prysmaticlabs/prysm/beacon-chain/operations/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -28,7 +29,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	ops "github.com/prysmaticlabs/prysm/beacon-chain/operations/testing"
 )
 
 func init() {

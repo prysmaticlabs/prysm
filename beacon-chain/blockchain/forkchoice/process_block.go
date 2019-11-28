@@ -410,6 +410,19 @@ func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot ui
 	ctx, span := trace.StartSpan(ctx, "forkchoice.rmStatesBySlots")
 	defer span.End()
 
+	// Make sure start slot is not a skipped slot
+	for i := startSlot; i > 0; i-- {
+		filter := filters.NewFilter().SetStartSlot(i).SetEndSlot(i)
+		b, err := s.db.Blocks(ctx, filter)
+		if err != nil {
+			return err
+		}
+		if len(b) > 0 {
+			startSlot = i
+			break
+		}
+	}
+
 	// Make sure finalized slot is not a skipped slot.
 	for i := endSlot; i > 0; i-- {
 		filter := filters.NewFilter().SetStartSlot(i).SetEndSlot(i)
