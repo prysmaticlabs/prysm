@@ -105,12 +105,14 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 			return errors.Wrap(err, "could not save finalized checkpoint")
 		}
 
-		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
-		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
-		if endSlot > startSlot {
-			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
-				return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
-					startSlot, endSlot)
+		if featureconfig.Get().PruneStatesLastFinalized {
+			startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
+			endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
+			if endSlot > startSlot {
+				if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
+					return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
+						startSlot, endSlot)
+				}
 			}
 		}
 
@@ -190,12 +192,14 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.
 		s.clearSeenAtts()
 		helpers.ClearAllCaches()
 
-		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
-		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
-		if endSlot > startSlot {
-			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
-				return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
-					startSlot, endSlot)
+		if featureconfig.Get().PruneStatesLastFinalized {
+			startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
+			endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
+			if endSlot > startSlot {
+				if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
+					return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
+						startSlot, endSlot)
+				}
 			}
 		}
 
