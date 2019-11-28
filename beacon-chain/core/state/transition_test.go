@@ -274,7 +274,6 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 
 func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	beaconState, privKeys, _ := testutil.DeterministicGenesisState(32)
-
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
 	bodyRoot, err := ssz.HashTreeRoot(genesisBlock)
 	if err != nil {

@@ -340,7 +340,6 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	service.attestationPool = make(map[[32]byte]*dbpb.AttestationContainer)
 
 	beaconState, privKeys, _ := testutil.DeterministicGenesisState(32)
-
 	aggBits := bitfield.NewBitlist(1)
 	aggBits.SetBitAt(1, true)
 	custodyBits := bitfield.NewBitlist(1)
