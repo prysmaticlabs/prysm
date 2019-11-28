@@ -105,17 +105,15 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 			return errors.Wrap(err, "could not save finalized checkpoint")
 		}
 
+		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch) + 1
 		if featureconfig.Get().PruneStatesLastFinalized {
-			startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch) + 1
-			if featureconfig.Get().PruneStatesLastFinalized {
-				startSlot = helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
-			}
-			endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
-			if endSlot > startSlot {
-				if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
-					return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
-						startSlot, endSlot)
-				}
+			startSlot = helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
+		}
+		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
+		if endSlot > startSlot {
+			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
+				return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
+					startSlot, endSlot)
 			}
 		}
 
