@@ -149,6 +149,9 @@ func (bs *Server) ListBlocks(
 				NextPageToken:   strconv.Itoa(0),
 			}, nil
 		}
+		if numBlks > 1 {
+			return nil, status.Error(codes.Internal, "Found more than 1 genesis block")
+		}
 		root, err := ssz.SigningRoot(blks[0])
 		if err != nil {
 			return nil, err
