@@ -1,7 +1,8 @@
-diff -ur --exclude=.git a/eth/v1alpha1/BUILD.bazel b/eth/v1alpha1/BUILD.bazel
---- a/eth/v1alpha1/BUILD.bazel	2019-11-25 22:56:20.000000000 -0600
-+++ b/eth/v1alpha1/BUILD.bazel	2019-11-26 21:14:05.000000000 -0600
-@@ -20,6 +20,7 @@
+diff --git a/eth/v1alpha1/BUILD.bazel b/eth/v1alpha1/BUILD.bazel
+index a52dbad..33de299 100644
+--- a/eth/v1alpha1/BUILD.bazel
++++ b/eth/v1alpha1/BUILD.bazel
+@@ -20,6 +20,7 @@ proto_library(
          "@com_google_protobuf//:empty_proto",
          "@com_google_protobuf//:timestamp_proto",
          "@go_googleapis//google/api:annotations_proto",
@@ -9,7 +10,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/BUILD.bazel b/eth/v1alpha1/BUILD.bazel
      ],
  )
  
-@@ -46,12 +47,32 @@
+@@ -46,12 +47,32 @@ load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
  
  go_proto_library(
      name = "go_proto",
@@ -43,17 +44,18 @@ diff -ur --exclude=.git a/eth/v1alpha1/BUILD.bazel b/eth/v1alpha1/BUILD.bazel
          "@go_googleapis//google/api:annotations_go_proto",
      ],
  )
-@@ -74,4 +95,4 @@
+@@ -74,4 +95,4 @@ protoc_gen_swagger(
      visibility = ["//visibility:public"],
      single_output = True,
      json_names_for_fields = True,
 -)
 +)
 \ No newline at end of file
-diff -ur --exclude=.git a/eth/v1alpha1/attestation.proto b/eth/v1alpha1/attestation.proto
---- a/eth/v1alpha1/attestation.proto	2019-11-26 11:48:31.000000000 -0600
-+++ b/eth/v1alpha1/attestation.proto	2019-11-26 21:31:42.000000000 -0600
-@@ -15,6 +15,8 @@
+diff --git a/eth/v1alpha1/attestation.proto b/eth/v1alpha1/attestation.proto
+index 8453ef9..9a637ac 100644
+--- a/eth/v1alpha1/attestation.proto
++++ b/eth/v1alpha1/attestation.proto
+@@ -15,6 +15,8 @@ syntax = "proto3";
  
  package ethereum.eth.v1alpha1;
  
@@ -62,7 +64,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/attestation.proto b/eth/v1alpha1/attestat
  option csharp_namespace = "Ethereum.Eth.v1alpha1";
  option go_package = "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1;eth";
  option java_multiple_files = true;
-@@ -25,17 +27,17 @@
+@@ -25,17 +27,17 @@ option php_namespace = "Ethereum\\Eth\\v1alpha1";
  message Attestation {
    // A bitfield representation of validator indices that have voted exactly
    // the same vote and have been aggregated into this attestation.
@@ -83,12 +85,8 @@ diff -ur --exclude=.git a/eth/v1alpha1/attestation.proto b/eth/v1alpha1/attestat
  }
  
  message AttestationData {
-@@ -46,10 +48,10 @@
-   uint64 slot = 1;
- 
-   // The committee index that submitted this attestation.
--  uint64 index = 2;
-+  uint64 committee_index = 2;
+@@ -49,7 +51,7 @@ message AttestationData {
+   uint64 committee_index = 2;
  
    // 32 byte root of the LMD GHOST block vote.
 -  bytes beacon_block_root = 3;
@@ -96,17 +94,18 @@ diff -ur --exclude=.git a/eth/v1alpha1/attestation.proto b/eth/v1alpha1/attestat
  
    // the most recent justified checkpoint in the beacon state
    Checkpoint source = 4;
-@@ -84,5 +86,5 @@
+@@ -84,5 +86,5 @@ message Checkpoint {
    // epoch of the check point reference to.
    uint64 epoch = 1;
    // block root of the check point reference to.
 -  bytes root = 2;
 +  bytes root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
  }
-diff -ur --exclude=.git a/eth/v1alpha1/beacon_block.proto b/eth/v1alpha1/beacon_block.proto
---- a/eth/v1alpha1/beacon_block.proto	2019-11-25 22:56:20.000000000 -0600
-+++ b/eth/v1alpha1/beacon_block.proto	2019-11-25 23:03:10.000000000 -0600
-@@ -15,6 +15,7 @@
+diff --git a/eth/v1alpha1/beacon_block.proto b/eth/v1alpha1/beacon_block.proto
+index 69a148a..1b6ac18 100644
+--- a/eth/v1alpha1/beacon_block.proto
++++ b/eth/v1alpha1/beacon_block.proto
+@@ -15,6 +15,7 @@ syntax = "proto3";
  
  package ethereum.eth.v1alpha1;
  
@@ -114,7 +113,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/beacon_block.proto b/eth/v1alpha1/beacon_
  import "eth/v1alpha1/attestation.proto";
  
  option csharp_namespace = "Ethereum.Eth.v1alpha1";
-@@ -30,47 +31,47 @@
+@@ -30,47 +31,47 @@ message BeaconBlock {
      uint64 slot = 1; 
  
      // 32 byte root of the parent block.
@@ -172,7 +171,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/beacon_block.proto b/eth/v1alpha1/beacon_
  }
  
  // Proposer slashings are proofs that a slashable offense has been committed by
-@@ -101,20 +102,20 @@
+@@ -101,20 +102,20 @@ message AttesterSlashing {
  message Deposit {
      message Data {
          // 48 byte BLS public key of the validator.
@@ -197,7 +196,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/beacon_block.proto b/eth/v1alpha1/beacon_
  
      Data data = 2;
  }
-@@ -129,14 +130,14 @@
+@@ -129,14 +130,14 @@ message VoluntaryExit {
      uint64 validator_index = 2;
  
      // Validator's 96 byte signature
@@ -214,7 +213,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/beacon_block.proto b/eth/v1alpha1/beacon_
  
      // The total number of deposits included in the beacon chain since genesis
      // including the deposits in this block.
-@@ -144,7 +145,7 @@
+@@ -144,7 +145,7 @@ message Eth1Data {
  
      // The 32 byte block hash of the Ethereum 1.x block considered for deposit
      // inclusion.
@@ -223,7 +222,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/beacon_block.proto b/eth/v1alpha1/beacon_
  }
  
  // A beacon block header is essentially a beacon block with only a reference to
-@@ -155,24 +156,24 @@
+@@ -155,24 +156,24 @@ message BeaconBlockHeader {
      uint64 slot = 1; 
  
      // 32 byte merkle tree root of the parent ssz encoded block.
@@ -255,10 +254,11 @@ diff -ur --exclude=.git a/eth/v1alpha1/beacon_block.proto b/eth/v1alpha1/beacon_
 -    bytes signature = 4;
 +    bytes signature = 4 [(gogoproto.moretags) = "ssz-size:\"96\""];
  }
-diff -ur --exclude=.git a/eth/v1alpha1/beacon_chain.proto b/eth/v1alpha1/beacon_chain.proto
---- a/eth/v1alpha1/beacon_chain.proto	2019-11-25 22:56:20.000000000 -0600
-+++ b/eth/v1alpha1/beacon_chain.proto	2019-11-26 12:33:36.000000000 -0600
-@@ -15,6 +15,7 @@
+diff --git a/eth/v1alpha1/beacon_chain.proto b/eth/v1alpha1/beacon_chain.proto
+index 00db5f3..8c4c74d 100644
+--- a/eth/v1alpha1/beacon_chain.proto
++++ b/eth/v1alpha1/beacon_chain.proto
+@@ -15,6 +15,7 @@ syntax = "proto3";
  
  package ethereum.eth.v1alpha1;
  
@@ -266,16 +266,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/beacon_chain.proto b/eth/v1alpha1/beacon_
  import "google/api/annotations.proto";
  import "google/protobuf/empty.proto";
  
-@@ -144,7 +145,7 @@
-     //
-     // This method returns information about the global participation of 
-     // validator attestations.
--    rpc GetValidatorParticipation(GetValidatorParticipationRequest) returns (ValidatorParticipation) {
-+    rpc GetValidatorParticipation(GetValidatorParticipationRequest) returns (ValidatorParticipationResponse) {
-         option (google.api.http) = {
-             get: "/eth/v1alpha1/validators/participation"
-         };
-@@ -247,7 +248,7 @@
+@@ -247,7 +248,7 @@ message BeaconBlockContainer {
  // Information about the head of the beacon chain.
  message ChainHead {
      // 32 byte merkle tree root of the canonical head block in the beacon node.
@@ -284,7 +275,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/beacon_chain.proto b/eth/v1alpha1/beacon_
  
      // Slot of the head block.
      uint64 head_block_slot = 2;
-@@ -262,7 +263,7 @@
+@@ -262,7 +263,7 @@ message ChainHead {
      uint64 finalized_epoch = 5;
      
      // Most recent 32 byte finalized block root.
@@ -293,7 +284,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/beacon_chain.proto b/eth/v1alpha1/beacon_
  
      // Most recent slot that contains the justified block.
      uint64 justified_block_slot = 7;
-@@ -271,7 +272,7 @@
+@@ -271,7 +272,7 @@ message ChainHead {
      uint64 justified_epoch = 8;
      
      // Most recent 32 byte justified block root.
@@ -302,7 +293,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/beacon_chain.proto b/eth/v1alpha1/beacon_
  
      // Most recent slot that contains the previous justified block.
      uint64 previous_justified_slot = 10;
-@@ -280,7 +281,7 @@
+@@ -280,7 +281,7 @@ message ChainHead {
      uint64 previous_justified_epoch = 11;
  
      // Previous 32 byte justified block root.
@@ -311,7 +302,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/beacon_chain.proto b/eth/v1alpha1/beacon_
  }
  
  message ListCommitteesRequest {
-@@ -338,7 +339,7 @@
+@@ -338,7 +339,7 @@ message ListValidatorBalancesRequest {
  
      // Validator 48 byte BLS public keys to filter validators for the given
      // epoch.
@@ -320,7 +311,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/beacon_chain.proto b/eth/v1alpha1/beacon_
          
      // Validator indices to filter validators for the given epoch.
      repeated uint64 indices = 4;
-@@ -359,7 +360,7 @@
+@@ -359,7 +360,7 @@ message ValidatorBalances {
  
      message Balance {
          // Validator's 48 byte BLS public key.
@@ -329,7 +320,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/beacon_chain.proto b/eth/v1alpha1/beacon_
  
          // Validator's index in the validator set.
          uint64 index = 2;
-@@ -435,17 +436,17 @@
+@@ -435,17 +436,17 @@ message ActiveSetChanges {
      uint64 epoch = 1;
  
      // 48 byte validator public keys that have been activated in this epoch.
@@ -351,7 +342,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/beacon_chain.proto b/eth/v1alpha1/beacon_
  }
  
  message ValidatorQueue {
-@@ -455,11 +456,11 @@
+@@ -455,11 +456,11 @@ message ValidatorQueue {
  
      // Ordered list of 48 byte public keys awaiting activation. 0th index is the
      // next key to be processed.
@@ -365,7 +356,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/beacon_chain.proto b/eth/v1alpha1/beacon_
  }
  
  message ListValidatorAssignmentsRequest {
-@@ -471,7 +472,7 @@
+@@ -471,7 +472,7 @@ message ListValidatorAssignmentsRequest {
          bool genesis = 2;
      }
      // 48 byte validator public keys to filter assignments for the given epoch.
@@ -374,7 +365,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/beacon_chain.proto b/eth/v1alpha1/beacon_
          
      // Validator indicies to filter assignments for the given epoch.
      repeated uint64 indices = 4;
-@@ -506,7 +507,7 @@
+@@ -506,7 +507,7 @@ message ValidatorAssignments {
          uint64 proposer_slot = 4;
  
          // 48 byte BLS public key.
@@ -383,10 +374,11 @@ diff -ur --exclude=.git a/eth/v1alpha1/beacon_chain.proto b/eth/v1alpha1/beacon_
      }
  
      // The epoch for which this set of validator assignments is valid.
-diff -ur --exclude=.git a/eth/v1alpha1/validator.proto b/eth/v1alpha1/validator.proto
---- a/eth/v1alpha1/validator.proto	2019-11-25 22:56:20.000000000 -0600
-+++ b/eth/v1alpha1/validator.proto	2019-11-26 11:39:16.000000000 -0600
-@@ -15,6 +15,7 @@
+diff --git a/eth/v1alpha1/validator.proto b/eth/v1alpha1/validator.proto
+index a8c18fb..ca67c10 100644
+--- a/eth/v1alpha1/validator.proto
++++ b/eth/v1alpha1/validator.proto
+@@ -15,6 +15,7 @@ syntax = "proto3";
  
  package ethereum.eth.v1alpha1;
  
@@ -394,7 +386,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/validator.proto b/eth/v1alpha1/validator.
  import "google/api/annotations.proto";
  import "google/protobuf/empty.proto";
  import "eth/v1alpha1/beacon_block.proto";
-@@ -96,14 +97,14 @@
+@@ -96,14 +97,14 @@ message DutiesRequest {
      // Epoch at which validators should perform their duties.
      uint64 epoch = 1;
      // Array of byte encoded BLS public keys.
@@ -411,7 +403,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/validator.proto b/eth/v1alpha1/validator.
          // Slot at which a validator must attest.
          uint64 attestation_slot = 2;
          // Shard at which a validator must attest.
-@@ -120,7 +121,7 @@
+@@ -120,7 +121,7 @@ message BlockRequest {
      // Slot for which the block should be proposed.
      uint64 slot = 1;
      // Validator's 32 byte randao reveal secret of the current epoch.
@@ -420,7 +412,7 @@ diff -ur --exclude=.git a/eth/v1alpha1/validator.proto b/eth/v1alpha1/validator.
  }
  
  message AttestationDataRequest {
-@@ -137,10 +138,10 @@
+@@ -137,10 +138,10 @@ message AttestationDataRequest {
  // An Ethereum 2.0 validator.
  message Validator {
      // 48 byte BLS public key used for the validator's activities.
