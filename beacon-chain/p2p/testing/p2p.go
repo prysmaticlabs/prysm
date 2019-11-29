@@ -215,6 +215,7 @@ func (p *TestP2P) Started() bool {
 	return true
 }
 
+// Peers returns a mocked list of peers.
 func (p *TestP2P) Peers() []*peers.Info {
 	provider := &MockPeersProvider{}
 	return provider.Peers()
