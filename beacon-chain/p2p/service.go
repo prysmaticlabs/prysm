@@ -22,6 +22,7 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/shared"
 )
 
@@ -242,6 +243,25 @@ func (s *Service) PeerID() peer.ID {
 // Disconnect from a peer.
 func (s *Service) Disconnect(pid peer.ID) error {
 	return s.host.Network().ClosePeer(pid)
+}
+
+// Peers provides a list of peers that are known to this node.
+// Note this includes peers to which we are not currently actively connected; to find active
+// peers the info returned here should be filtered against that in `peerstatus`, which contains
+// information about active peers.
+func (s *Service) Peers() []*peers.Info {
+	res := make([]*peers.Info, 0)
+	for _, conn := range s.host.Network().Conns() {
+		addrInfo := &peer.AddrInfo{
+			ID:    conn.RemotePeer(),
+			Addrs: []ma.Multiaddr{conn.RemoteMultiaddr()},
+		}
+		res = append(res, &peers.Info{
+			AddrInfo:  addrInfo,
+			Direction: conn.Stat().Direction,
+		})
+	}
+	return res
 }
 
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.
