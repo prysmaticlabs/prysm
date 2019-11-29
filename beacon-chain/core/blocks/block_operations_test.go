@@ -489,45 +489,10 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
-	validators := make([]*ethpb.Validator, 100)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &ethpb.Validator{
-			EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
-			Slashed:           false,
-			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
-			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
-			ActivationEpoch:   0,
-		}
-	}
-	validatorBalances := make([]uint64, len(validators))
-	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = params.BeaconConfig().MaxEffectiveBalance
-	}
+	beaconState, privKeys, _ := testutil.DeterministicGenesisState(100)
+	proposerIdx := uint64(1)
 
-	currentSlot := uint64(0)
-	beaconState := &pb.BeaconState{
-		Validators: validators,
-		Slot:       currentSlot,
-		Balances:   validatorBalances,
-		Fork: &pb.Fork{
-			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
-			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-			Epoch:           0,
-		},
-		Slashings:   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}
-
-	domain := helpers.Domain(
-		beaconState.Fork,
-		helpers.CurrentEpoch(beaconState),
-		params.BeaconConfig().DomainBeaconProposer,
-	)
-	privKey, err := bls.RandKey(rand.Reader)
-	if err != nil {
-		t.Errorf("Could not generate random private key: %v", err)
-	}
-
+	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconProposer)
 	header1 := &ethpb.BeaconBlockHeader{
 		Slot:      0,
 		StateRoot: []byte("A"),
@@ -536,7 +501,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not get signing root of beacon block header: %v", err)
 	}
-	header1.Signature = privKey.Sign(signingRoot[:], domain).Marshal()[:]
+	header1.Signature = privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()[:]
 
 	header2 := &ethpb.BeaconBlockHeader{
 		Slot:      0,
@@ -546,17 +511,15 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not get signing root of beacon block header: %v", err)
 	}
-	header2.Signature = privKey.Sign(signingRoot[:], domain).Marshal()[:]
+	header2.Signature = privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()[:]
 
 	slashings := []*ethpb.ProposerSlashing{
 		{
-			ProposerIndex: 1,
+			ProposerIndex: proposerIdx,
 			Header_1:      header1,
 			Header_2:      header2,
 		},
 	}
-
-	beaconState.Validators[1].PublicKey = privKey.PublicKey().Marshal()[:]
 
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
@@ -570,9 +533,9 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 
 	newStateVals := newState.Validators
-	if newStateVals[1].ExitEpoch != validators[1].ExitEpoch {
+	if newStateVals[1].ExitEpoch != beaconState.Validators[1].ExitEpoch {
 		t.Errorf("Proposer with index 1 did not correctly exit,"+"wanted slot:%d, got:%d",
-			newStateVals[1].ExitEpoch, validators[1].ExitEpoch)
+			newStateVals[1].ExitEpoch, beaconState.Validators[1].ExitEpoch)
 	}
 }
 
@@ -1703,10 +1666,10 @@ func TestProcessDeposit_SkipsDepositWithUncompressedSignature(t *testing.T) {
 		dep[0],
 		stateutils.ValidatorIndexMap(beaconState),
 	)
-
 	if err != nil {
 		t.Fatalf("Expected invalid block deposit to be ignored without error, received: %v", err)
 	}
+
 	if newState.Eth1DepositIndex != 1 {
 		t.Errorf(
 			"Expected Eth1DepositIndex to be increased by 1 after processing an invalid deposit, received change: %v",

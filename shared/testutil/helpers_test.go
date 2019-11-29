@@ -5,10 +5,8 @@ import (
 	"encoding/binary"
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -47,26 +45,9 @@ func TestBlockSignature(t *testing.T) {
 }
 
 func TestRandaoReveal(t *testing.T) {
-	deposits, privKeys, err := DeterministicDepositsAndKeys(100)
+	beaconState, privKeys, err := DeterministicGenesisState(100)
 	if err != nil {
 		t.Fatal(err)
-	}
-	validators := make([]*ethpb.Validator, len(deposits))
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &ethpb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-			PublicKey: privKeys[i].PublicKey().Marshal()[:],
-		}
-	}
-
-	beaconState := &pb.BeaconState{
-		Slot: 0,
-		Fork: &pb.Fork{
-			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
-			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-		},
-		Validators:  validators,
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	epoch := helpers.CurrentEpoch(beaconState)
