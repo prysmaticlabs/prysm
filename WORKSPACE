@@ -1209,7 +1209,7 @@ go_repository(
     ],
 )
 
-go_repository(<<<<<<< HEAD
+go_repository(
     name = "com_github_cloudflare_roughtime",
     commit = "d41fdcee702eb3e5c3296288a453b9340184d37e",
     importpath = "github.com/cloudflare/roughtime",
