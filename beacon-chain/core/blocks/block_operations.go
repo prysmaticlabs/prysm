@@ -713,7 +713,6 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *pb.BeaconState, 
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
 
-
 	voted := len(indices) > 0
 	if voted && !sig.Verify(messageHash[:], pubkey, domain) {
 		return fmt.Errorf("attestation aggregation signature did not verify")

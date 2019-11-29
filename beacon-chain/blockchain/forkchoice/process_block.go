@@ -313,7 +313,7 @@ func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attes
 
 	s.voteLock.Lock()
 	defer s.voteLock.Unlock()
-	for _, i := range append(indexedAtt.CustodyBit_0Indices, indexedAtt.CustodyBit_1Indices...) {
+	for _, i := range indexedAtt.AttestingIndices {
 		vote, ok := s.latestVoteMap[i]
 		if !ok || tgt.Epoch > vote.Epoch {
 			s.latestVoteMap[i] = &pb.ValidatorLatestVote{
