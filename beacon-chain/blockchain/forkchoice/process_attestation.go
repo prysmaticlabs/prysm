@@ -7,13 +7,13 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -137,7 +137,7 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 
 	log := log.WithFields(logrus.Fields{
 		"Slot":               a.Data.Slot,
-		"Index":              a.Data.Index,
+		"Index":              a.Data.CommitteeIndex,
 		"AggregatedBitfield": fmt.Sprintf("%08b", a.AggregationBits),
 		"BeaconBlockRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(a.Data.BeaconBlockRoot)),
 	})
@@ -239,22 +239,18 @@ func (s *Store) updateAttVotes(
 	tgtEpoch uint64) error {
 
 	indices := indexedAtt.AttestingIndices
-	newVoteIndices := make([]uint64, 0, len(indices))
-	newVotes := make([]*pb.ValidatorLatestVote, 0, len(indices))
+	s.voteLock.Lock()
+	defer s.voteLock.Unlock()
 	for _, i := range indices {
-		vote, err := s.db.ValidatorLatestVote(ctx, i)
-		if err != nil {
-			return errors.Wrapf(err, "could not get latest vote for validator %d", i)
-		}
-		if vote == nil || tgtEpoch > vote.Epoch {
-			newVotes = append(newVotes, &pb.ValidatorLatestVote{
+		vote, ok := s.latestVoteMap[i]
+		if !ok || tgtEpoch > vote.Epoch {
+			s.latestVoteMap[i] = &pb.ValidatorLatestVote{
 				Epoch: tgtEpoch,
 				Root:  tgtRoot,
-			})
-			newVoteIndices = append(newVoteIndices, i)
+			}
 		}
 	}
-	return s.db.SaveValidatorLatestVotes(ctx, newVoteIndices, newVotes)
+	return nil
 }
 
 // setSeenAtt sets the attestation hash in seen attestation map to true.

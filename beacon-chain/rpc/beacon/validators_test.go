@@ -10,6 +10,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -17,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -924,7 +924,7 @@ func TestServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
 			PublicKey: []byte(strconv.Itoa(i)),
 		}
 	}
-	archivedChanges := &ethpb.ArchivedActiveSetChanges{
+	archivedChanges := &pbp2p.ArchivedActiveSetChanges{
 		Activated: activatedIndices,
 		Exited:    exitedIndices,
 		Slashed:   slashedIndices,
@@ -1092,6 +1092,31 @@ func TestServer_GetValidatorQueue_PendingExit(t *testing.T) {
 	}
 }
 
+func TestServer_GetValidatorParticipation_CannotRequestCurrentEpoch(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	bs := &Server{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: &pbp2p.BeaconState{Slot: helpers.StartSlot(2)},
+		},
+	}
+
+	wanted := "Cannot retrieve information about an epoch currently in progress"
+	if _, err := bs.GetValidatorParticipation(
+		ctx,
+		&ethpb.GetValidatorParticipationRequest{
+			QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
+				Epoch: 2,
+			},
+		},
+	); err != nil && !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+}
+
 func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
@@ -1134,11 +1159,11 @@ func TestServer_GetValidatorParticipation_FromArchive(t *testing.T) {
 	bs := &Server{
 		BeaconDB: db,
 		HeadFetcher: &mock.ChainService{
-			State: &pbp2p.BeaconState{Slot: helpers.StartSlot(epoch + 1)},
-		},
-		FinalizationFetcher: &mock.ChainService{
-			FinalizedCheckPoint: &ethpb.Checkpoint{
-				Epoch: epoch + 1,
+			State: &pbp2p.BeaconState{
+				Slot: helpers.StartSlot(epoch + 1),
+				FinalizedCheckpoint: &ethpb.Checkpoint{
+					Epoch: epoch + 1,
+				},
 			},
 		},
 	}
@@ -1176,7 +1201,54 @@ func TestServer_GetValidatorParticipation_FromArchive(t *testing.T) {
 	}
 }
 
-func TestServer_GetValidatorParticipation_CurrentEpoch(t *testing.T) {
+func TestServer_GetValidatorParticipation_FromArchive_FinalizedEpoch(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+	ctx := context.Background()
+	part := &ethpb.ValidatorParticipation{
+		GlobalParticipationRate: 1.0,
+		VotedEther:              20,
+		EligibleEther:           20,
+	}
+	epoch := uint64(1)
+	// We archive data for epoch 1.
+	if err := db.SaveArchivedValidatorParticipation(ctx, epoch, part); err != nil {
+		t.Fatal(err)
+	}
+
+	bs := &Server{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			// 10 epochs into the future.
+			State: &pbp2p.BeaconState{
+				Slot: helpers.StartSlot(epoch + 10),
+				FinalizedCheckpoint: &ethpb.Checkpoint{
+					// We say there have been 5 epochs since finality.
+					Epoch: epoch + 5,
+				},
+			},
+		},
+	}
+	want := &ethpb.ValidatorParticipationResponse{
+		Epoch:         epoch,
+		Finalized:     true,
+		Participation: part,
+	}
+	// We request epoch 1.
+	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{
+		QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
+			Epoch: epoch,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(want, res) {
+		t.Errorf("Wanted %v, received %v", want, res)
+	}
+}
+
+func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 	helpers.ClearAllCaches()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
@@ -1216,11 +1288,7 @@ func TestServer_GetValidatorParticipation_CurrentEpoch(t *testing.T) {
 		HeadFetcher: &mock.ChainService{State: s},
 	}
 
-	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{
-		QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
-			Epoch: epoch,
-		},
-	})
+	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{})
 	if err != nil {
 		t.Fatal(err)
 	}

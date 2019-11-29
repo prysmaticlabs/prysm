@@ -1,8 +1,8 @@
 package db
 
 import (
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 // NewContainerFromAttestations creates a new attestation contain with signature pairs from the

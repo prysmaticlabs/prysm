@@ -8,8 +8,8 @@ import (
 
 	"github.com/prysmaticlabs/go-bitfield"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -293,8 +293,8 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 			attestation: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0x05},
 				Data: &ethpb.AttestationData{
-					Index:  5,
-					Target: &ethpb.Checkpoint{},
+					CommitteeIndex: 5,
+					Target:         &ethpb.Checkpoint{},
 				},
 			},
 			stateSlot: 5,
@@ -304,8 +304,8 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 			attestation: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0x06},
 				Data: &ethpb.AttestationData{
-					Index:  10,
-					Target: &ethpb.Checkpoint{},
+					CommitteeIndex: 10,
+					Target:         &ethpb.Checkpoint{},
 				},
 			},
 			stateSlot: 10,
@@ -314,8 +314,8 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 			attestation: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0x06},
 				Data: &ethpb.AttestationData{
-					Index:  20,
-					Target: &ethpb.Checkpoint{},
+					CommitteeIndex: 20,
+					Target:         &ethpb.Checkpoint{},
 				},
 			},
 			stateSlot: 20,
@@ -324,8 +324,8 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 			attestation: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0x06},
 				Data: &ethpb.AttestationData{
-					Index:  20,
-					Target: &ethpb.Checkpoint{},
+					CommitteeIndex: 20,
+					Target:         &ethpb.Checkpoint{},
 				},
 			},
 			stateSlot: 20,
@@ -334,8 +334,8 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 			attestation: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0xFF, 0xC0, 0x01},
 				Data: &ethpb.AttestationData{
-					Index:  5,
-					Target: &ethpb.Checkpoint{},
+					CommitteeIndex: 5,
+					Target:         &ethpb.Checkpoint{},
 				},
 			},
 			stateSlot:           5,
@@ -345,8 +345,8 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 			attestation: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0xFF, 0x01},
 				Data: &ethpb.AttestationData{
-					Index:  20,
-					Target: &ethpb.Checkpoint{},
+					CommitteeIndex: 20,
+					Target:         &ethpb.Checkpoint{},
 				},
 			},
 			stateSlot:           20,

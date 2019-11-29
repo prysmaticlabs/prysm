@@ -1,3 +1,5 @@
+workspace(name = "prysm")
+
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
@@ -1199,8 +1201,12 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_ethereumapis",
-    commit = "ce8b6831c20e75f6ef01a2f3a20723ac6478fd10",
+    commit = "12081efa4a35f9e8b5c44faf3215a4ef64e21516",
     importpath = "github.com/prysmaticlabs/ethereumapis",
+    patch_args = ["-p1"],
+    patches = [
+        "//third_party:com_github_prysmaticlabs_ethereumapis-tags.patch",
+    ],
 )
 
 go_repository(
@@ -1346,4 +1352,10 @@ go_repository(
     importpath = "github.com/fatih/color",
     sum = "h1:DkWD4oS2D8LGGgTQ6IvwJJXSL5Vp2ffcQg58nFV38Ys=",
     version = "v1.7.0",
+)
+
+go_repository(
+    name = "com_github_emicklei_dot",
+    commit = "f4a04130244d60cef56086d2f649b4b55e9624aa",
+    importpath = "github.com/emicklei/dot",
 )

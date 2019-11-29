@@ -6,7 +6,8 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 func TestStore_ArchivedActiveValidatorChanges(t *testing.T) {
@@ -17,7 +18,7 @@ func TestStore_ArchivedActiveValidatorChanges(t *testing.T) {
 	exited := []uint64{6, 7, 8}
 	slashed := []uint64{1212}
 	someRoot := [32]byte{1, 2, 3}
-	changes := &ethpb.ArchivedActiveSetChanges{
+	changes := &pbp2p.ArchivedActiveSetChanges{
 		Activated: activated,
 		Exited:    exited,
 		Slashed:   slashed,
@@ -103,7 +104,7 @@ func TestStore_ArchivedCommitteeInfo(t *testing.T) {
 	defer teardownDB(t, db)
 	ctx := context.Background()
 	someSeed := [32]byte{1, 2, 3}
-	info := &ethpb.ArchivedCommitteeInfo{
+	info := &pbp2p.ArchivedCommitteeInfo{
 		ProposerSeed: someSeed[:],
 		AttesterSeed: someSeed[:],
 	}

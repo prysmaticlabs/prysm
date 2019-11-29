@@ -1,9 +1,9 @@
 syntax = "proto3";
 package ethereum.beacon.p2p.v1;
 
-import "proto/eth/v1alpha1/attestation.proto";
-import "proto/eth/v1alpha1/beacon_block.proto";
-import "proto/eth/v1alpha1/validator.proto";
+import "eth/v1alpha1/attestation.proto";
+import "eth/v1alpha1/beacon_block.proto";
+import "eth/v1alpha1/validator.proto";
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
 message BeaconState {

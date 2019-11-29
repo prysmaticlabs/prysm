@@ -7,9 +7,9 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
@@ -180,7 +180,7 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.BeaconB
 	blockCopy := proto.Clone(block).(*ethpb.BeaconBlock)
 
 	// Apply state transition on the incoming newly received blockCopy without verifying its BLS contents.
-	if err := s.forkChoiceStore.OnBlockNoVerifyStateTransition(ctx, blockCopy); err != nil {
+	if err := s.forkChoiceStore.OnBlockInitialSyncStateTransition(ctx, blockCopy); err != nil {
 		return errors.Wrap(err, "could not process blockCopy from fork choice service")
 	}
 	root, err := ssz.SigningRoot(blockCopy)

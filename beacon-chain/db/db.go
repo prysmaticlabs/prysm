@@ -5,10 +5,10 @@ import (
 	"io"
 
 	"github.com/ethereum/go-ethereum/common"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 // Database defines the necessary methods for Prysm's eth2 backend which may
@@ -41,11 +41,6 @@ type Database interface {
 	SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool
 	// Validator related methods.
-	ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*pb.ValidatorLatestVote, error)
-	HasValidatorLatestVote(ctx context.Context, validatorIdx uint64) bool
-	DeleteValidatorLatestVote(ctx context.Context, validatorIdx uint64) error
-	SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64, vote *pb.ValidatorLatestVote) error
-	SaveValidatorLatestVotes(ctx context.Context, validatorIndices []uint64, votes []*pb.ValidatorLatestVote) error
 	ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, bool, error)
 	HasValidatorIndex(ctx context.Context, publicKey [48]byte) bool
 	DeleteValidatorIndex(ctx context.Context, publicKey [48]byte) error
@@ -77,10 +72,10 @@ type Database interface {
 	SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error
 	SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.Checkpoint) error
 	// Archival data handlers for storing/retrieving historical beacon node information.
-	ArchivedActiveValidatorChanges(ctx context.Context, epoch uint64) (*ethpb.ArchivedActiveSetChanges, error)
-	SaveArchivedActiveValidatorChanges(ctx context.Context, epoch uint64, changes *ethpb.ArchivedActiveSetChanges) error
-	ArchivedCommitteeInfo(ctx context.Context, epoch uint64) (*ethpb.ArchivedCommitteeInfo, error)
-	SaveArchivedCommitteeInfo(ctx context.Context, epoch uint64, info *ethpb.ArchivedCommitteeInfo) error
+	ArchivedActiveValidatorChanges(ctx context.Context, epoch uint64) (*pb.ArchivedActiveSetChanges, error)
+	SaveArchivedActiveValidatorChanges(ctx context.Context, epoch uint64, changes *pb.ArchivedActiveSetChanges) error
+	ArchivedCommitteeInfo(ctx context.Context, epoch uint64) (*pb.ArchivedCommitteeInfo, error)
+	SaveArchivedCommitteeInfo(ctx context.Context, epoch uint64, info *pb.ArchivedCommitteeInfo) error
 	ArchivedBalances(ctx context.Context, epoch uint64) ([]uint64, error)
 	SaveArchivedBalances(ctx context.Context, epoch uint64, balances []uint64) error
 	ArchivedValidatorParticipation(ctx context.Context, epoch uint64) (*ethpb.ValidatorParticipation, error)

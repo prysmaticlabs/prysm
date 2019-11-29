@@ -8,12 +8,12 @@ import (
 	"strconv"
 	"testing"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"gopkg.in/yaml.v2"
 )
@@ -78,6 +78,8 @@ func TestGetHeadFromYaml(t *testing.T) {
 			}
 		}
 
+		store := NewForkChoiceService(ctx, db)
+
 		// Assign validator votes to the blocks as weights.
 		count := 0
 		for blk, votes := range test.Weights {
@@ -87,14 +89,11 @@ func TestGetHeadFromYaml(t *testing.T) {
 			}
 			max := count + votes
 			for i := count; i < max; i++ {
-				if err := db.SaveValidatorLatestVote(ctx, uint64(i), &pb.ValidatorLatestVote{Root: blksRoot[slot]}); err != nil {
-					t.Fatal(err)
-				}
+				store.latestVoteMap[uint64(i)] = &pb.ValidatorLatestVote{Root: blksRoot[slot]}
 				count++
 			}
 		}
 
-		store := NewForkChoiceService(ctx, db)
 		validators := make([]*ethpb.Validator, count)
 		for i := 0; i < len(validators); i++ {
 			validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}

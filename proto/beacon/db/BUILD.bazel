@@ -10,7 +10,7 @@ proto_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
-        "//proto/eth/v1alpha1:v1alpha1_proto",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:proto",
         "@gogo_special_proto//github.com/gogo/protobuf/gogoproto",
     ],
 )
@@ -22,7 +22,7 @@ go_proto_library(
     proto = ":db_proto",
     visibility = ["//visibility:public"],
     deps = [
-        "//proto/eth/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
 )
@@ -33,6 +33,9 @@ go_library(
     embed = [":db_go_proto"],
     importpath = "github.com/prysmaticlabs/prysm/proto/beacon/db",
     visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+    ],
 )
 
 go_test(
@@ -41,7 +44,7 @@ go_test(
     srcs = ["attestation_container_helper_test.go"],
     deps = [
         ":go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "//shared/bls:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
