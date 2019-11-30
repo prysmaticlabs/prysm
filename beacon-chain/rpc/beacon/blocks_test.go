@@ -75,9 +75,13 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 	}
 
 	// Should throw an error if no genesis block is found.
-
-	// Should throw an error if there is more than 1 block
-	// for the genesis slot.
+	if _, err := bs.ListBlocks(ctx, &ethpb.ListBlocksRequest{
+		QueryFilter: &ethpb.ListBlocksRequest_Genesis{
+			Genesis: true,
+		},
+	}); err != nil && !strings.Contains(err.Error(), "Could not find genesis") {
+		t.Fatal(err)
+	}
 
 	// Should return the proper genesis block if it exists.
 	parentRoot := [32]byte{1, 2, 3}
@@ -90,9 +94,6 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := db.SaveBlock(ctx, blk); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveGenesisBlockRoot(ctx, root); err != nil {
 		t.Fatal(err)
 	}
 	wanted := &ethpb.ListBlocksResponse{
@@ -115,6 +116,19 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 	}
 	if !proto.Equal(wanted, res) {
 		t.Errorf("Wanted %v, received %v", wanted, res)
+	}
+
+	// Should throw an error if there is more than 1 block
+	// for the genesis slot.
+	if err := db.SaveBlock(ctx, blk); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := bs.ListBlocks(ctx, &ethpb.ListBlocksRequest{
+		QueryFilter: &ethpb.ListBlocksRequest_Genesis{
+			Genesis: true,
+		},
+	}); err != nil && !strings.Contains(err.Error(), "Found more than 1") {
+		t.Fatal(err)
 	}
 }
 
