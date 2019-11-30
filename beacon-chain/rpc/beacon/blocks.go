@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -143,13 +144,9 @@ func (bs *Server) ListBlocks(
 		}
 		numBlks := len(blks)
 		if numBlks == 0 {
-			return &ethpb.ListBlocksResponse{
-				BlockContainers: make([]*ethpb.BeaconBlockContainer, 0),
-				TotalSize:       0,
-				NextPageToken:   strconv.Itoa(0),
-			}, nil
+			return nil, status.Error(codes.Internal, "Could not find genesis block")
 		}
-		if numBlks > 1 {
+		if numBlks != 1 {
 			return nil, status.Error(codes.Internal, "Found more than 1 genesis block")
 		}
 		root, err := ssz.SigningRoot(blks[0])
