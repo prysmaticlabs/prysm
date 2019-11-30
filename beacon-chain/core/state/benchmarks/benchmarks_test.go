@@ -19,6 +19,7 @@ import (
 var runAmount = 25
 
 func TestBenchmarkExecuteStateTransition(t *testing.T) {
+	t.Skip("TODO(4098): Regenerate test data with v0.9.2 spec")
 	SetConfig()
 	beaconState, err := beaconState1Epoch()
 	if err != nil {
