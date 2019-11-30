@@ -88,10 +88,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := uint64(64)
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
-	if err != nil {
-		t.Fatal(err)
-	}
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(depChainStart)
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	if err != nil {
 		t.Fatal(err)
@@ -167,10 +164,7 @@ func TestCommitteeAssignment_CurrentEpoch_ShouldNotFail(t *testing.T) {
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := uint64(64)
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
-	if err != nil {
-		t.Fatal(err)
-	}
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(depChainStart)
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	if err != nil {
 		t.Fatal(err)
@@ -231,10 +225,7 @@ func TestCommitteeAssignment_MultipleKeys_OK(t *testing.T) {
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := uint64(64)
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
-	if err != nil {
-		t.Fatal(err)
-	}
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(depChainStart)
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	if err != nil {
 		t.Fatal(err)

@@ -1259,10 +1259,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 
 	numOfValidators := 4 * params.BeaconConfig().SlotsPerEpoch
 	validators := make([]*ethpb.Validator, numOfValidators)
-	_, keys, err := testutil.DeterministicDepositsAndKeys(numOfValidators)
-	if err != nil {
-		t.Fatal(err)
-	}
+	_, keys, _ := testutil.DeterministicDepositsAndKeys(numOfValidators)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -1406,10 +1403,7 @@ func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 }
 
 func TestProcessDeposits_AddsNewValidatorDeposit(t *testing.T) {
-	dep, _, err := testutil.DeterministicDepositsAndKeys(1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	dep, _, _ := testutil.DeterministicDepositsAndKeys(1)
 	eth1Data, err := testutil.DeterministicEth1Data(len(dep))
 	if err != nil {
 		t.Fatal(err)
@@ -1517,10 +1511,7 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 
 func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
 	//Similar to TestProcessDeposits_AddsNewValidatorDeposit except that this test directly calls ProcessDeposit
-	dep, _, err := testutil.DeterministicDepositsAndKeys(1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	dep, _, _ := testutil.DeterministicDepositsAndKeys(1)
 	eth1Data, err := testutil.DeterministicEth1Data(len(dep))
 	if err != nil {
 		t.Fatal(err)
@@ -1567,10 +1558,7 @@ func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
 
 func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 	// Same test settings as in TestProcessDeposit_AddsNewValidatorDeposit, except that we use an invalid signature
-	dep, _, err := testutil.DeterministicDepositsAndKeys(1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	dep, _, _ := testutil.DeterministicDepositsAndKeys(1)
 	dep[0].Data.Signature = make([]byte, 96)
 	trie, _, err := testutil.DepositTrieFromDeposits(dep)
 	if err != nil {
@@ -1625,10 +1613,7 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 
 func TestProcessDeposit_SkipsDepositWithUncompressedSignature(t *testing.T) {
 	// Same test settings as in TestProcessDeposit_AddsNewValidatorDeposit, except that we use an uncompressed signature
-	dep, _, err := testutil.DeterministicDepositsAndKeys(1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	dep, _, _ := testutil.DeterministicDepositsAndKeys(1)
 	a, err := blsintern.DecompressG2(bytesutil.ToBytes96(dep[0].Data.Signature))
 	if err != nil {
 		t.Fatal(err)

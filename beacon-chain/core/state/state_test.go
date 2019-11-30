@@ -42,10 +42,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	genesisTime := uint64(99999)
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(uint64(depositsForChainStart))
-	if err != nil {
-		t.Fatal(err)
-	}
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(uint64(depositsForChainStart))
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	if err != nil {
 		t.Fatal(err)
@@ -134,10 +131,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 
 func TestGenesisState_HashEquality(t *testing.T) {
 	helpers.ClearAllCaches()
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(100)
 	state1, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Error(err)

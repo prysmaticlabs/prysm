@@ -50,10 +50,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	}
 
 	testAcc.Backend.Commit()
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(1)
 	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
 	if err != nil {
 		t.Fatal(err)
@@ -120,10 +117,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 
 	testAcc.Backend.Commit()
 
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(1)
 	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
 	if err != nil {
 		t.Fatal(err)
@@ -189,10 +183,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 		t.Fatalf("Could not init from contract: %v", err)
 	}
 
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(1)
 	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
 	if err != nil {
 		t.Fatal(err)
@@ -268,10 +259,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	testAcc.Backend.Commit()
 	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
 
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(1)
 	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
 	if err != nil {
 		t.Fatal(err)
@@ -343,10 +331,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	testAcc.Backend.Commit()
 	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
 
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(uint64(depositsReqForChainStart))
-	if err != nil {
-		t.Fatal(err)
-	}
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(uint64(depositsReqForChainStart))
 
 	_, roots, err := testutil.DeterministicDepositTrie(len(deposits))
 	if err != nil {
@@ -461,10 +446,7 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 
 	totalNumOfDeposits := depositsReqForChainStart + 30
 
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(uint64(totalNumOfDeposits))
-	if err != nil {
-		t.Fatal(err)
-	}
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(uint64(totalNumOfDeposits))
 	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
 	if err != nil {
 		t.Fatal(err)
@@ -554,10 +536,7 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 	testAcc.Backend.Commit()
 	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
 	depositsWanted := 10
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(uint64(depositsWanted))
-	if err != nil {
-		t.Fatal(err)
-	}
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(uint64(depositsWanted))
 	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
 	if err != nil {
 		t.Fatal(err)

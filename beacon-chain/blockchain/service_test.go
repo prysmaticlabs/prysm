@@ -356,10 +356,7 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 
 	// Set up 10 deposits pre chain start for validators to register
 	count := uint64(10)
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(count)
-	if err != nil {
-		t.Fatal(err)
-	}
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(count)
 	if err := bc.initializeBeaconChain(ctx, time.Unix(0, 0), deposits, &ethpb.Eth1Data{}); err != nil {
 		t.Fatal(err)
 	}
