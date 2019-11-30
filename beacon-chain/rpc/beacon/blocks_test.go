@@ -86,7 +86,7 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 	// Should return the proper genesis block if it exists.
 	parentRoot := [32]byte{1, 2, 3}
 	blk := &ethpb.BeaconBlock{
-		Slot: 0,
+		Slot:       0,
 		ParentRoot: parentRoot[:],
 	}
 	root, err := ssz.SigningRoot(blk)
@@ -97,14 +97,14 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 		t.Fatal(err)
 	}
 	wanted := &ethpb.ListBlocksResponse{
-		BlockContainers:      []*ethpb.BeaconBlockContainer{
+		BlockContainers: []*ethpb.BeaconBlockContainer{
 			{
-				Block: blk,
+				Block:     blk,
 				BlockRoot: root[:],
 			},
 		},
-		NextPageToken:        "0",
-		TotalSize:            1,
+		NextPageToken: "0",
+		TotalSize:     1,
 	}
 	res, err := bs.ListBlocks(ctx, &ethpb.ListBlocksRequest{
 		QueryFilter: &ethpb.ListBlocksRequest_Genesis{
@@ -131,7 +131,6 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 		t.Fatal(err)
 	}
 }
-
 
 func TestServer_ListBlocks_Pagination(t *testing.T) {
 	db := dbTest.SetupDB(t)

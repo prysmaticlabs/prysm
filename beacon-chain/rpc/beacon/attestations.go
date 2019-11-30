@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"strconv"
 
@@ -46,8 +47,11 @@ func (bs *Server) ListAttestations(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not genesis block: %v", err)
 		}
+		if len(blks) == 0 {
+			return nil, status.Error(codes.Internal, "Could not find genesis block")
+		}
 		if len(blks) != 1 {
-			return nil, status.Errorf(codes.Internal, "Could not find genesis block: %v", err)
+			return nil, status.Error(codes.Internal, "Found more than 1 genesis block")
 		}
 		genesisRoot, err := ssz.SigningRoot(blks[0])
 		if err != nil {
@@ -57,6 +61,7 @@ func (bs *Server) ListAttestations(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not fetch genesis attestations: %v", err)
 		}
+		fmt.Printf("Retrieved atts: %v\n", atts)
 	case *ethpb.ListAttestationsRequest_HeadBlockRoot:
 		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetHeadBlockRoot(q.HeadBlockRoot))
 		if err != nil {
