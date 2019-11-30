@@ -72,6 +72,7 @@ type Service struct {
 	incomingAttestation   chan *ethpb.Attestation
 	credentialError       error
 	p2p                   p2p.Broadcaster
+	peersFetcher          p2p.PeersProvider
 	depositFetcher        depositcache.DepositFetcher
 	pendingDepositFetcher depositcache.PendingDepositsFetcher
 	stateNotifier         statefeed.Notifier
@@ -96,6 +97,7 @@ type Config struct {
 	AttestationsPool      operations.Pool
 	SyncService           sync.Checker
 	Broadcaster           p2p.Broadcaster
+	PeersFetcher          p2p.PeersProvider
 	DepositFetcher        depositcache.DepositFetcher
 	PendingDepositFetcher depositcache.PendingDepositsFetcher
 	StateNotifier         statefeed.Notifier
@@ -116,6 +118,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		attestationReceiver:   cfg.AttestationReceiver,
 		blockReceiver:         cfg.BlockReceiver,
 		p2p:                   cfg.Broadcaster,
+		peersFetcher:          cfg.PeersFetcher,
 		powChainService:       cfg.POWChainService,
 		chainStartFetcher:     cfg.ChainStartFetcher,
 		mockEth1Votes:         cfg.MockEth1Votes,
@@ -214,6 +217,7 @@ func (s *Service) Start() {
 		Server:             s.grpcServer,
 		SyncChecker:        s.syncService,
 		GenesisTimeFetcher: s.genesisTimeFetcher,
+		PeersFetcher:       s.peersFetcher,
 	}
 	beaconChainServer := &beacon.Server{
 		BeaconDB:            s.beaconDB,
