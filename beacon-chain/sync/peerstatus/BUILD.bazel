@@ -6,6 +6,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus",
     visibility = [
         "//beacon-chain/p2p:__subpackages__",
+        "//beacon-chain/rpc:__subpackages__",
         "//beacon-chain/sync:__subpackages__",
     ],
     deps = [
