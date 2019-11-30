@@ -2,7 +2,6 @@ package beacon
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 
 	ptypes "github.com/gogo/protobuf/types"
