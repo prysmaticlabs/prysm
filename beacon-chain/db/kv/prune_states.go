@@ -3,7 +3,6 @@ package kv
 import (
 	"bytes"
 	"context"
-	"errors"
 
 	"github.com/boltdb/bolt"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -17,19 +16,19 @@ var pruneStatesKey = []byte("prune-states")
 func (kv *Store) pruneStates(ctx context.Context) error {
 	var pruned bool
 
+	if !featureconfig.Get().PruneEpochBoundaryStates {
+		return kv.db.Update(func(tx *bolt.Tx) error {
+			bkt := tx.Bucket(migrationBucket)
+			return bkt.Put(pruneStatesKey, []byte{0x00})
+		})
+	}
+
 	kv.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(migrationBucket)
 		v := bkt.Get(pruneStatesKey)
 		pruned = len(v) == 1 && v[0] == 0x01
 		return nil
 	})
-
-	if !featureconfig.Get().PruneEpochBoundaryStates {
-		if pruned {
-			return errors.New("beaconDB has been pruned for states before last finalized checkpoint, run with flag --prune-states")
-		}
-		return nil
-	}
 
 	if pruned {
 		return nil
