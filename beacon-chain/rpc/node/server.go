@@ -72,3 +72,9 @@ func (ns *Server) ListImplementedServices(ctx context.Context, _ *ptypes.Empty) 
 		Services: serviceNames,
 	}, nil
 }
+
+// ListPeers -- Not implemented yet.
+func (ns *Server) ListPeers(ctx context.Context, _ *ptypes.Empty) (*ethpb.Peers, error) {
+	// TODO(#4141): Implement.
+	return nil, status.Error(codes.Unimplemented, "unimplemented")
+}
