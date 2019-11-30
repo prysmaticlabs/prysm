@@ -3,12 +3,10 @@ package kv
 import (
 	"bytes"
 	"context"
-	"errors"
 
 	"github.com/boltdb/bolt"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/sirupsen/logrus"
 )
 
@@ -23,13 +21,6 @@ func (kv *Store) pruneStates(ctx context.Context) error {
 		pruned = len(v) == 1 && v[0] == 0x01
 		return nil
 	})
-
-	if !featureconfig.Get().PruneEpochBoundaryStates {
-		if pruned {
-			return errors.New("beaconDB has been pruned for states before last finalized checkpoint, run with flag --prune-states")
-		}
-		return nil
-	}
 
 	if pruned {
 		return nil
