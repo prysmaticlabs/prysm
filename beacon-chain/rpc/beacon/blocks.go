@@ -162,7 +162,7 @@ func (bs *Server) ListBlocks(
 		return &ethpb.ListBlocksResponse{
 			BlockContainers: containers,
 			TotalSize:       int32(1),
-			NextPageToken:   strconv.Itoa(0),
+			NextPageToken:   strconv.Itoa(1),
 		}, nil
 	}
 

@@ -28,7 +28,7 @@ func TestServer_ListBlocks_NoResults(t *testing.T) {
 	wanted := &ethpb.ListBlocksResponse{
 		BlockContainers: make([]*ethpb.BeaconBlockContainer, 0),
 		TotalSize:       int32(0),
-		NextPageToken:   strconv.Itoa(0),
+		NextPageToken:   strconv.Itoa(1),
 	}
 	res, err := bs.ListBlocks(ctx, &ethpb.ListBlocksRequest{
 		QueryFilter: &ethpb.ListBlocksRequest_Epoch{

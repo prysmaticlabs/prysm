@@ -86,13 +86,14 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 			Slot:            0,
 			BeaconBlockRoot: root[:],
 		},
+		CustodyBits: bitfield.Bitlist{0b10},
 	}
 	if err := db.SaveAttestation(ctx, att); err != nil {
 		t.Fatal(err)
 	}
 	wanted := &ethpb.ListAttestationsResponse{
 		Attestations:  []*ethpb.Attestation{att},
-		NextPageToken: "0",
+		NextPageToken: "1",
 		TotalSize:     1,
 	}
 

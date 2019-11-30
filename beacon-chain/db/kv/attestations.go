@@ -59,14 +59,11 @@ func (k *Store) Attestations(ctx context.Context, f *filters.QueryFilter) ([]*et
 		if err != nil {
 			return errors.Wrap(err, "could not determine lookup indices")
 		}
-		fmt.Println("Getting indices by bucket")
-		fmt.Println(indicesByBucket)
 		// Once we have a list of attestation data roots that correspond to each
 		// lookup index, we find the intersection across all of them and use
 		// that list of roots to lookup the attestations. These attestations will
 		// meet the filter criteria.
 		keys := sliceutil.IntersectionByteSlices(lookupValuesForIndices(indicesByBucket, tx)...)
-		fmt.Println(keys)
 		for i := 0; i < len(keys); i++ {
 			encoded := bkt.Get(keys[i])
 			ac := &dbpb.AttestationContainer{}
@@ -182,7 +179,6 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 		if err := updateValueForIndices(indicesByBucket, attDataRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not update DB indices")
 		}
-		fmt.Printf("Putting att data root %v\n", attDataRoot)
 		return bkt.Put(attDataRoot[:], enc)
 	})
 	if err != nil {
