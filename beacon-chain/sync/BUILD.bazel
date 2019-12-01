@@ -19,6 +19,7 @@ go_library(
         "subscriber.go",
         "subscriber_beacon_attestation.go",
         "subscriber_beacon_blocks.go",
+        "subscriber_committee_index_beacon_attestation.go",
         "subscriber_handlers.go",
         "validate_attester_slashing.go",
         "validate_beacon_attestation.go",

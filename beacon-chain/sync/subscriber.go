@@ -89,6 +89,12 @@ func (r *RegularSync) registerSubscribers() {
 		r.validateAttesterSlashing,
 		r.attesterSlashingSubscriber,
 	)
+	r.subscribeDynamic(
+		"/eth2/committee_index/%d_beacon_attestation",
+		r.currentCommitteeIndex,
+		noopValidator,
+		r.committeeIndexBeaconAttestationSubscriber,
+	)
 }
 
 // subscribe to a given topic with a given validator and subscription handler.
@@ -189,4 +195,30 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 	}
 
 	go messageLoop()
+}
+
+func (r *RegularSync) subscribeDynamic(topicFormat string, maxID func() int, validate validator, handle subHandler) {
+	base := p2p.GossipTopicMappings[topicFormat]
+	if base == nil {
+		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topicFormat))
+	}
+	topicFormat += r.p2p.Encoding().ProtocolSuffix()
+
+	stateChannel := make(chan *statefeed.Event, 1)
+	r.stateNotifier.StateFeed().Subscribe(stateChannel)
+	go func() {
+		for {
+			select {
+				case <-r.ctx.Done():
+					return
+				case <-stateChannel:
+					// Update topic count
+					ID := maxID()
+					_ = ID
+					// Resize as appropriate.
+			}
+		}
+	}()
+
+	
 }
