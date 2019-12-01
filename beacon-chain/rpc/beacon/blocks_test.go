@@ -391,3 +391,31 @@ func TestServer_GetChainHead(t *testing.T) {
 			fRoot[:], head.FinalizedBlockRoot)
 	}
 }
+
+func TestServer_StreamChainHead(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	finalizedBlock := &ethpb.BeaconBlock{Slot: 1, ParentRoot: []byte{'A'}}
+	db.SaveBlock(context.Background(), finalizedBlock)
+	fRoot, _ := ssz.SigningRoot(finalizedBlock)
+	justifiedBlock := &ethpb.BeaconBlock{Slot: 2, ParentRoot: []byte{'B'}}
+	db.SaveBlock(context.Background(), justifiedBlock)
+	jRoot, _ := ssz.SigningRoot(justifiedBlock)
+	prevJustifiedBlock := &ethpb.BeaconBlock{Slot: 3, ParentRoot: []byte{'C'}}
+	db.SaveBlock(context.Background(), prevJustifiedBlock)
+	pjRoot, _ := ssz.SigningRoot(prevJustifiedBlock)
+
+	s := &pbp2p.BeaconState{
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 3, Root: pjRoot[:]},
+		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Epoch: 2, Root: jRoot[:]},
+		FinalizedCheckpoint:         &ethpb.Checkpoint{Epoch: 1, Root: fRoot[:]},
+	}
+
+	b := &ethpb.BeaconBlock{Slot: s.PreviousJustifiedCheckpoint.Epoch*params.BeaconConfig().SlotsPerEpoch + 1}
+	bs := &Server{
+		BeaconDB:    db,
+		HeadFetcher: &mock.ChainService{Block: b, State: s},
+	}
+	_ = bs
+}
