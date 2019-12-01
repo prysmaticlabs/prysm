@@ -73,7 +73,7 @@ func (r *RegularSync) validateAggregateAndProof(ctx context.Context, msg proto.M
 	return true, nil
 }
 
-// This verifies selection proof by validating it a correct validator index of the slot and the selection
+// This verifies selection proof by validating it's from the correct validator index of the slot and selection
 // proof is a valid signature.
 func verifySelection(s *pb.BeaconState, data *ethpb.AttestationData, validatorIndex uint64, proof []byte) error {
 	slotSig, err := bls.SignatureFromBytes(proof)
