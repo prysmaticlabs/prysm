@@ -14,13 +14,13 @@ import (
 )
 
 const (
-	// VotesCacheSize with 1M validators will only be around 50Mb.
-	VotesCacheSize   = 1000000
+	// VotesCacheSize with 1M validators will be 33MB.
+	VotesCacheSize   = 1 << 20
 	databaseFileName = "beaconchain.db"
 )
 
-// BlockCacheSize specifies 4 epochs worth of blocks cached.
-var BlockCacheSize = int64(256)
+// BlockCacheSize specifies 1000 slots worth of blocks cached.
+var BlockCacheSize = int64(1000)
 
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
@@ -48,27 +48,18 @@ func NewKVStore(dirPath string) (*Store, error) {
 		return nil, err
 	}
 	blockCache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: BlockCacheSize, // number of keys to track frequency of (1M).
-		MaxCost:     1 << 23,        // maximum cost of cache (10MB).
-		BufferItems: 64,             // number of keys per Get buffer.
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	votesCache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: VotesCacheSize, // number of keys to track frequency of (1M).
-		MaxCost:     1 << 25,        // maximum cost of cache (32MB).
-		BufferItems: 64,             // number of keys per Get buffer.
+		NumCounters: 10 * BlockCacheSize, // number of keys to track frequency of (10000).
+		MaxCost:     BlockCacheSize,      // maximum cost of cache (1000 Blocks).
+		BufferItems: 64,                  // number of keys per Get buffer.
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	validatorCache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: VotesCacheSize, // number of keys to track frequency of (1M).
-		MaxCost:     1 << 25,        // maximum cost of cache (32MB).
-		BufferItems: 64,             // number of keys per Get buffer.
+		NumCounters: 10 * VotesCacheSize, // number of keys to track frequency of (10M).
+		MaxCost:     VotesCacheSize,      // maximum cost of cache (1048576 validators).
+		BufferItems: 64,                  // number of keys per Get buffer.
 	})
 	if err != nil {
 		return nil, err
@@ -78,7 +69,6 @@ func NewKVStore(dirPath string) (*Store, error) {
 		db:                  boltDB,
 		databasePath:        dirPath,
 		blockCache:          blockCache,
-		votesCache:          votesCache,
 		validatorIndexCache: validatorCache,
 	}
 
