@@ -12,6 +12,7 @@ go_library(
         "encoding.go",
         "finalized_block_roots.go",
         "kv.go",
+        "migrate_snappy.go",
         "operations.go",
         "prune_states.go",
         "schema.go",
