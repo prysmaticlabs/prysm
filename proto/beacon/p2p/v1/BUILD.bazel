@@ -10,7 +10,7 @@ go_proto_library(
     proto = ":v1_proto",
     visibility = ["//visibility:public"],
     deps = [
-        "//proto/eth/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
 )
@@ -27,6 +27,7 @@ ssz_proto_files(
     srcs = [
         "messages.proto",
         "types.proto",
+        "archive.proto",
     ],
     config = select({
         "//conditions:default": "mainnet",
@@ -40,8 +41,8 @@ proto_library(
     srcs = [":ssz_proto_files"],
     visibility = ["//visibility:public"],
     deps = [
-        "//proto/eth/v1alpha1:v1alpha1_proto",
         "@com_google_protobuf//:timestamp_proto",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:proto",
         "@gogo_special_proto//github.com/gogo/protobuf/gogoproto",
     ],
 )

@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package ethereum.beacon.rpc.v1;
+
+import "google/protobuf/empty.proto";
+import "eth/v1alpha1/beacon_block.proto";
+
+// Slasher service API
+// 
+// Slasher service provides an interface for validators and beacon chain server to query
+// and subscribe for slashable events on the network as well as to make sure that the 
+// attestation or proposal they are going to submit to the network are not going to 
+// produce a slashable event.
+service Slasher {
+    // Gets AttesterSlashing container if the attestation that 
+    // was received produces a slashable event.
+    rpc IsSlashableAttestation(ethereum.eth.v1alpha1.IndexedAttestation) returns (AttesterSlashingResponse);
+
+    // Gets ProposerSlashing container if the block header that 
+    // was received produces a slashable event.
+    rpc IsSlashableBlock(ProposerSlashingRequest) returns (ProposerSlashingResponse);
+
+    // Subscription to receive all slashable proposer slashing events found by the watchtower.
+    rpc SlashableProposals(google.protobuf.Empty) returns (stream ethereum.eth.v1alpha1.ProposerSlashing);
+    
+    // Subscription to receive all slashable attester slashing events found by the watchtower.
+    rpc SlashableAttestations(google.protobuf.Empty) returns (stream ethereum.eth.v1alpha1.AttesterSlashing);
+}
+
+message ValidatorIDToIdxAtt {
+    repeated uint64 indices = 1 ;
+    bytes data_root = 2;
+    // 96 bytes aggregate signature.
+    bytes signature = 3;
+}
+
+message ValidatorIDToIdxAttList {
+    repeated ValidatorIDToIdxAtt indicesList = 1 ;
+}
+
+message ProposerSlashingRequest {
+    ethereum.eth.v1alpha1.BeaconBlockHeader block_header = 1;
+    uint64 validator_index = 2;
+}
+
+message ProposerSlashingResponse {
+    repeated ethereum.eth.v1alpha1.ProposerSlashing proposer_slashing = 1;
+}
+
+message AttesterSlashingResponse {
+    repeated ethereum.eth.v1alpha1.AttesterSlashing attester_slashing = 1;
+}
+
+// In order to detect surrounded attestation we need to compare
+// each attestation source to those spans
+// see https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
+// for further details.
+message MinMaxEpochSpan {
+    uint32 min_epoch_span = 1;
+    uint32 max_epoch_span = 2;
+}
+
+// Every validator will have their own spans map containing min distance from each epoch
+// to the closest target epoch of another attestation (surrounded) and max distance to
+// a target attestation (surrounding), in order to detect slashable attestation as quickly
+// as possible.
+message EpochSpanMap {
+    // uint64 is for storing the epoch
+    map<uint64, MinMaxEpochSpan> epoch_span_map = 1;
+}

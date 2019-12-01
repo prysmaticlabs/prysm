@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
@@ -34,7 +35,7 @@ func (k *Store) Block(ctx context.Context, blockRoot [32]byte) (*ethpb.BeaconBlo
 			return nil
 		}
 		block = &ethpb.BeaconBlock{}
-		return proto.Unmarshal(enc, block)
+		return decode(enc, block)
 	})
 	return block, err
 }
@@ -55,7 +56,7 @@ func (k *Store) HeadBlock(ctx context.Context) (*ethpb.BeaconBlock, error) {
 			return nil
 		}
 		headBlock = &ethpb.BeaconBlock{}
-		return proto.Unmarshal(enc, headBlock)
+		return decode(enc, headBlock)
 	})
 	return headBlock, err
 }
@@ -112,7 +113,7 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 		for i := 0; i < len(keys); i++ {
 			encoded := bkt.Get(keys[i])
 			block := &ethpb.BeaconBlock{}
-			if err := proto.Unmarshal(encoded, block); err != nil {
+			if err := decode(encoded, block); err != nil {
 				return err
 			}
 			blocks = append(blocks, block)
@@ -206,7 +207,7 @@ func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 			return nil
 		}
 		block := &ethpb.BeaconBlock{}
-		if err := proto.Unmarshal(enc, block); err != nil {
+		if err := decode(enc, block); err != nil {
 			return err
 		}
 		indicesByBucket := createBlockIndicesFromBlock(block)
@@ -222,23 +223,29 @@ func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 func (k *Store) DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlocks")
 	defer span.End()
-	var wg sync.WaitGroup
-	errs := make([]string, 0)
-	wg.Add(len(blockRoots))
-	for _, r := range blockRoots {
-		go func(w *sync.WaitGroup, root [32]byte) {
-			defer w.Done()
-			if err := k.DeleteBlock(ctx, root); err != nil {
-				errs = append(errs, err.Error())
-				return
+
+	return k.db.Update(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blocksBucket)
+		for _, blockRoot := range blockRoots {
+			enc := bkt.Get(blockRoot[:])
+			if enc == nil {
+				return nil
 			}
-		}(&wg, r)
-	}
-	wg.Wait()
-	if len(errs) > 0 {
-		return fmt.Errorf("deleting blocks failed with %d errors: %s", len(errs), strings.Join(errs, ", "))
-	}
-	return nil
+			block := &ethpb.BeaconBlock{}
+			if err := decode(enc, block); err != nil {
+				return err
+			}
+			indicesByBucket := createBlockIndicesFromBlock(block)
+			if err := deleteValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
+				return errors.Wrap(err, "could not delete root for DB indices")
+			}
+			k.blockCache.Delete(string(blockRoot[:]))
+			if err := bkt.Delete(blockRoot[:]); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 // SaveBlock to the db.
@@ -252,12 +259,12 @@ func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 	if v, ok := k.blockCache.Get(string(blockRoot[:])); v != nil && ok {
 		return nil
 	}
-	return k.db.Batch(func(tx *bolt.Tx) error {
+	return k.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		if existingBlock := bkt.Get(blockRoot[:]); existingBlock != nil {
 			return nil
 		}
-		enc, err := proto.Marshal(block)
+		enc, err := encode(block)
 		if err != nil {
 			return err
 		}
@@ -270,34 +277,43 @@ func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 	})
 }
 
-// SaveBlocks via batch updates to the db.
+// SaveBlocks via bulk updates to the db.
 func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlocks")
 	defer span.End()
-	var wg sync.WaitGroup
-	errs := make([]string, 0)
-	wg.Add(len(blocks))
-	for _, blk := range blocks {
-		go func(w *sync.WaitGroup, b *ethpb.BeaconBlock) {
-			defer w.Done()
-			if err := k.SaveBlock(ctx, b); err != nil {
-				errs = append(errs, err.Error())
-				return
+
+	return k.db.Update(func(tx *bolt.Tx) error {
+		for _, block := range blocks {
+			blockRoot, err := ssz.SigningRoot(block)
+			if err != nil {
+				return err
 			}
-		}(&wg, blk)
-	}
-	wg.Wait()
-	if len(errs) > 0 {
-		return fmt.Errorf("saving blocks failed with %d errors: %s", len(errs), strings.Join(errs, ", "))
-	}
-	return nil
+			bkt := tx.Bucket(blocksBucket)
+			if existingBlock := bkt.Get(blockRoot[:]); existingBlock != nil {
+				return nil
+			}
+			enc, err := encode(block)
+			if err != nil {
+				return err
+			}
+			indicesByBucket := createBlockIndicesFromBlock(block)
+			if err := updateValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
+				return errors.Wrap(err, "could not update DB indices")
+			}
+			k.blockCache.Set(string(blockRoot[:]), block, time.Hour)
+			if err := bkt.Put(blockRoot[:], enc); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 // SaveHeadBlockRoot to the db.
 func (k *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveHeadBlockRoot")
 	defer span.End()
-	return k.db.Batch(func(tx *bolt.Tx) error {
+	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blocksBucket)
 		return bucket.Put(headBlockRootKey, blockRoot[:])
 	})
@@ -324,9 +340,6 @@ func fetchBlockRootsBySlotRange(bkt *bolt.Bucket, startSlotEncoded, endSlotEncod
 	}
 	if endSlot, ok = endSlotEncoded.(uint64); !ok {
 		endSlot = 0
-	}
-	if startSlot == endSlot && startSlot == 0 {
-		return nil
 	}
 	min := []byte(fmt.Sprintf("%07d", startSlot))
 	max := []byte(fmt.Sprintf("%07d", endSlot))

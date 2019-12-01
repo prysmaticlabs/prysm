@@ -18,6 +18,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
+	peers "github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/sirupsen/logrus"
 )
@@ -212,4 +213,10 @@ func (p *TestP2P) Send(ctx context.Context, msg interface{}, pid peer.ID) (netwo
 // Started always returns true.
 func (p *TestP2P) Started() bool {
 	return true
+}
+
+// Peers returns a mocked list of peers.
+func (p *TestP2P) Peers() []*peers.Info {
+	provider := &MockPeersProvider{}
+	return provider.Peers()
 }

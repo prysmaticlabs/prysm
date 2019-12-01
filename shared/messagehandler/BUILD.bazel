@@ -18,9 +18,9 @@ go_test(
     srcs = ["messagehandler_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//proto/eth/v1alpha1:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
     ],
 )

@@ -1,3 +1,5 @@
+workspace(name = "prysm")
+
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
@@ -587,22 +589,23 @@ go_repository(
 
 go_repository(
     name = "io_opencensus_go",
-    commit = "7bbec1755a8162b5923fc214a494773a701d506a",  # v0.22.0
     importpath = "go.opencensus.io",
+    sum = "h1:75k/FF0Q2YM8QYo07VPddOLBslDt1MZOdEslOHvmzAs=",
+    version = "v0.22.2",
 )
 
 go_repository(
     name = "io_opencensus_go_contrib_exporter_jaeger",
-    commit = "5b8293c22f362562285c2acbc52f4a1870a47a33",
     importpath = "contrib.go.opencensus.io/exporter/jaeger",
-    remote = "http://github.com/census-ecosystem/opencensus-go-exporter-jaeger",
-    vcs = "git",
+    sum = "h1:nhTv/Ry3lGmqbJ/JGvCjWxBl5ozRfqo86Ngz59UAlfk=",
+    version = "v0.2.0",
 )
 
 go_repository(
     name = "org_golang_google_api",
-    commit = "aac82e61c0c8fe133c297b4b59316b9f481e1f0a",  # v0.6.0
     importpath = "google.golang.org/api",
+    sum = "h1:uMf5uLi4eQMRrMKhCplNik4U4H8Z6C1br3zOtAa/aDE=",
+    version = "v0.14.0",
 )
 
 go_repository(
@@ -1199,8 +1202,12 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_ethereumapis",
-    commit = "367ca574419a062ae26818f60bdeb5751a6f5380",
+    commit = "8a69b37df2264eb58b0b0cef5ba25ae9af2d8732",
     importpath = "github.com/prysmaticlabs/ethereumapis",
+    patch_args = ["-p1"],
+    patches = [
+        "//third_party:com_github_prysmaticlabs_ethereumapis-tags.patch",
+    ],
 )
 
 go_repository(
@@ -1346,6 +1353,33 @@ go_repository(
     importpath = "github.com/fatih/color",
     sum = "h1:DkWD4oS2D8LGGgTQ6IvwJJXSL5Vp2ffcQg58nFV38Ys=",
     version = "v1.7.0",
+)
+
+go_repository(
+    name = "com_github_emicklei_dot",
+    commit = "f4a04130244d60cef56086d2f649b4b55e9624aa",
+    importpath = "github.com/emicklei/dot",
+)
+
+go_repository(
+    name = "com_github_googleapis_gax_go_v2",
+    importpath = "github.com/googleapis/gax-go/v2",
+    sum = "h1:sjZBwGj9Jlw33ImPtvFviGYvseOtDM7hkSKB7+Tv3SM=",
+    version = "v2.0.5",
+)
+
+go_repository(
+    name = "com_github_golang_groupcache",
+    importpath = "github.com/golang/groupcache",
+    sum = "h1:uHTyIjqVhYRhLbJ8nIiOJHkEZZ+5YoOsAbD3sk82NiE=",
+    version = "v0.0.0-20191027212112-611e8accdfc9",
+)
+
+go_repository(
+    name = "com_github_uber_jaeger_client_go",
+    importpath = "github.com/uber/jaeger-client-go",
+    sum = "h1:HgqpYBng0n7tLJIlyT4kPCIv5XgCsF+kai1NnnrJzEU=",
+    version = "v2.20.1+incompatible",
 )
 
 go_repository(

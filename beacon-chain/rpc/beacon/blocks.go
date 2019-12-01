@@ -5,10 +5,10 @@ import (
 	"strconv"
 
 	ptypes "github.com/gogo/protobuf/types"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -135,6 +135,34 @@ func (bs *Server) ListBlocks(
 			BlockContainers: containers,
 			TotalSize:       int32(numBlks),
 			NextPageToken:   nextPageToken,
+		}, nil
+	case *ethpb.ListBlocksRequest_Genesis:
+		blks, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(0).SetEndSlot(0))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for genesis slot: %v", err)
+		}
+		numBlks := len(blks)
+		if numBlks == 0 {
+			return nil, status.Error(codes.Internal, "Could not find genesis block")
+		}
+		if numBlks != 1 {
+			return nil, status.Error(codes.Internal, "Found more than 1 genesis block")
+		}
+		root, err := ssz.SigningRoot(blks[0])
+		if err != nil {
+			return nil, err
+		}
+		containers := []*ethpb.BeaconBlockContainer{
+			{
+				Block:     blks[0],
+				BlockRoot: root[:],
+			},
+		}
+
+		return &ethpb.ListBlocksResponse{
+			BlockContainers: containers,
+			TotalSize:       int32(1),
+			NextPageToken:   strconv.Itoa(0),
 		}, nil
 	}
 

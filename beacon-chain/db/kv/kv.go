@@ -1,6 +1,7 @@
 package kv
 
 import (
+	"context"
 	"os"
 	"path"
 	"time"
@@ -106,10 +107,21 @@ func NewKVStore(dirPath string) (*Store, error) {
 			blockSlotIndicesBucket,
 			blockParentRootIndicesBucket,
 			finalizedBlockRootsIndexBucket,
+			// Migration bucket.
+			migrationBucket,
 		)
 	}); err != nil {
 		return nil, err
 	}
+
+	if err := kv.ensureSnappy(); err != nil {
+		return nil, err
+	}
+
+	if err := kv.pruneStates(context.TODO()); err != nil {
+		return nil, err
+	}
+
 	err = prometheus.Register(createBoltCollector(kv.db))
 
 	return kv, err
