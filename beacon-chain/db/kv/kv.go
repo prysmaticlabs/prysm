@@ -87,7 +87,7 @@ func NewKVStore(dirPath string) (*Store, error) {
 	}); err != nil {
 		return nil, err
 	}
-	
+
 	if err := kv.pruneStates(context.TODO()); err != nil {
 		return nil, err
 	}

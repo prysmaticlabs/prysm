@@ -121,6 +121,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedScatterFlag,
 	deprecatedPruneFinalizedStatesFlag,
 	deprecatedOptimizeProcessEpoch,
+	deprecatedEnableSnappyDBCompressionFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -145,6 +146,5 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableActiveIndicesCacheFlag,
 	enableActiveCountCacheFlag,
 	enableSkipSlotsCache,
-	enableSnappyDBCompressionFlag,
 	enablePruneBoundaryStateFlag,
 }...)
