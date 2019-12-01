@@ -73,10 +73,6 @@ var (
 		Name:  "enable-skip-slots-cache",
 		Usage: "Enables the skip slot cache to be used in the event of skipped slots.",
 	}
-	enableSnappyDBCompressionFlag = cli.BoolFlag{
-		Name:  "snappy",
-		Usage: "Enables snappy compression in the database.",
-	}
 	enablePruneBoundaryStateFlag = cli.BoolFlag{
 		Name:  "prune-states",
 		Usage: "Prune epoch boundary states before last finalized check point",
@@ -109,6 +105,11 @@ var (
 	}
 	deprecatedScatterFlag = cli.BoolFlag{
 		Name:   "scatter",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnableSnappyDBCompressionFlag = cli.BoolFlag{
+		Name:  "snappy",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
