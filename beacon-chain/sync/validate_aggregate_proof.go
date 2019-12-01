@@ -7,15 +7,16 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 // validateAggregateAndProof validates the aggregated signature and its proof are valid before forwarding to the
@@ -33,73 +34,93 @@ func (r *RegularSync) validateAggregateAndProof(ctx context.Context, msg proto.M
 	// Verify aggregate attestation has not already been seen via aggregate gossip, within a block, or through the creation locally.
 	// TODO(3835): Blocked by operation pool redesign
 
-
 	// Verify the block being voted for passes validation. The block should have passed validation if it's in the DB.
 	if !r.db.HasBlock(ctx, bytesutil.ToBytes32(m.Aggregate.Data.BeaconBlockRoot)) {
 		return false, errPointsToBlockNotInDatabase
 	}
 
-	// Verify attestation slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots.
-	headState, err := r.chain.HeadState(ctx)
+	s, err := r.chain.HeadState(ctx)
 	if err != nil {
 		return false, err
 	}
-	currentSlot := (uint64(time.Now().Unix()) - headState.GenesisTime) / params.BeaconConfig().SecondsPerSlot
-	if attSlot > currentSlot || currentSlot > attSlot + params.BeaconConfig().AttestationPropagationSlotRange {
+	s, err = state.ProcessSlots(ctx, s, attSlot)
+	if err != nil {
+		return false, err
+	}
+
+	// Verify attestation slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots.
+	currentSlot := (uint64(time.Now().Unix()) - s.GenesisTime) / params.BeaconConfig().SecondsPerSlot
+	if attSlot > currentSlot || currentSlot > attSlot+params.BeaconConfig().AttestationPropagationSlotRange {
 		return false, fmt.Errorf("attestation slot out of range %d < %d < %d",
-			attSlot, currentSlot, attSlot + params.BeaconConfig().AttestationPropagationSlotRange)
+			attSlot, currentSlot, attSlot+params.BeaconConfig().AttestationPropagationSlotRange)
 	}
 
 	// Verify validator index is within the aggregate's committee.
-	currentState, err := state.ProcessSlots(ctx, headState, attSlot)
-	if err != nil {
+	if err := verifyIndexInCommittee(ctx, s, m.Aggregate, m.AggregatorIndex); err != nil {
+		return false, errors.Wrapf(err, "Could not verify index in committee")
+	}
+
+	// Verify selection proof reflects to the right validator and signature is valid.
+	if err := verifySelection(s, m.Aggregate.Data, m.AggregatorIndex, m.SelectionProof); err != nil {
+		return false, errors.Wrapf(err, "Could not verify selection for validator %d", m.AggregatorIndex)
+	}
+
+	// Verify aggregated attestation has a valid signature.
+	if err := blocks.VerifyAttestation(ctx, s, m.Aggregate); err != nil {
 		return false, err
 	}
-	attestingIndices, err := helpers.AttestingIndices(currentState, m.Aggregate.Data, m.Aggregate.AggregationBits)
+
+	return true, nil
+}
+
+// This verifies selection proof by validating it a correct validator index of the slot and the selection
+// proof is a valid signature.
+func verifySelection(s *pb.BeaconState, data *ethpb.AttestationData, validatorIndex uint64, proof []byte) error {
+	slotSig, err := bls.SignatureFromBytes(proof)
+	if err != nil {
+		return err
+	}
+	aggregator, err := helpers.IsAggregator(s, data.Slot, data.CommitteeIndex, slotSig)
+	if err != nil {
+		return err
+	}
+	if !aggregator {
+		return fmt.Errorf("validator is not an aggregator for slot %d", data.Slot)
+	}
+
+	domain := helpers.Domain(s.Fork, helpers.SlotToEpoch(data.Slot), params.BeaconConfig().DomainBeaconAttester)
+	slotMsg, err := ssz.HashTreeRoot(data.Slot)
+	if err != nil {
+		return err
+	}
+	pubKey, err := bls.PublicKeyFromBytes(s.Validators[validatorIndex].PublicKey)
+	if err != nil {
+		return err
+	}
+	if !slotSig.Verify(slotMsg[:], pubKey, domain) {
+		return err
+	}
+
+	return nil
+}
+
+// This verifies the aggregator's index in state is within the attesting indices of the attestation.
+func verifyIndexInCommittee(ctx context.Context, s *pb.BeaconState, a *ethpb.Attestation, validatorIndex uint64) error {
+	currentState, err := state.ProcessSlots(ctx, s, a.Data.Slot)
+	if err != nil {
+		return err
+	}
+	attestingIndices, err := helpers.AttestingIndices(currentState, a.Data, a.AggregationBits)
 	var withinCommittee bool
 	for _, i := range attestingIndices {
-		if m.AggregatorIndex == i {
+		if validatorIndex == i {
 			withinCommittee = true
 			break
 		}
 	}
 	if !withinCommittee {
-		return false, fmt.Errorf("validator index %d is not within the committee %v",
-			m.AggregatorIndex, attestingIndices)
+		return fmt.Errorf("validator index %d is not within the committee %v",
+			validatorIndex, attestingIndices)
 	}
-
-	// Verify selection proof selects the validator as an aggregator for the slot.
-	slotSig, err := bls.SignatureFromBytes(m.SelectionProof)
-	if err != nil {
-		return false, err
-	}
-	aggregator, err := helpers.IsAggregator(currentState, attSlot, m.Aggregate.Data.CommitteeIndex, slotSig)
-	if err != nil {
-		return false, err
-	}
-	if !aggregator {
-		return false, fmt.Errorf("validator index %d is not an aggregator for slot %d",
-			m.AggregatorIndex, attSlot)
-	}
-
-	// Verify selection proof is a valid signature
-	domain := helpers.Domain(currentState.Fork, helpers.SlotToEpoch(attSlot), params.BeaconConfig().DomainBeaconAttester)
-	slotMsg, err := ssz.HashTreeRoot(attSlot)
-	if err != nil {
-		return false, err
-	}
-	pubKey, err := bls.PublicKeyFromBytes(currentState.Validators[m.AggregatorIndex].PublicKey)
-	if err != nil {
-		return false, err
-	}
-	if !slotSig.Verify(slotMsg[:], pubKey, domain) {
-		return false, err
-	}
-
-	// Verify aggregated attestation has a valid signature
-	if err := blocks.VerifyAttestation(ctx, currentState, m.Aggregate); err != nil {
-		return false, err
-	}
-
-	return true, nil
+	return nil
 }
