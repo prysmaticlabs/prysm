@@ -43,9 +43,11 @@ func (r *RegularSync) validateAggregateAndProof(ctx context.Context, msg proto.M
 	if err != nil {
 		return false, err
 	}
-	s, err = state.ProcessSlots(ctx, s, attSlot)
-	if err != nil {
-		return false, err
+	if attSlot > s.Slot {
+		s, err = state.ProcessSlots(ctx, s, attSlot)
+		if err != nil {
+			return false, err
+		}
 	}
 
 	// Verify attestation slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots.
@@ -56,13 +58,13 @@ func (r *RegularSync) validateAggregateAndProof(ctx context.Context, msg proto.M
 	}
 
 	// Verify validator index is within the aggregate's committee.
-	if err := verifyIndexInCommittee(ctx, s, m.Aggregate, m.AggregatorIndex); err != nil {
-		return false, errors.Wrapf(err, "Could not verify index in committee")
+	if err := validateIndexInCommittee(s, m.Aggregate, m.AggregatorIndex); err != nil {
+		return false, errors.Wrapf(err, "Could not validate index in committee")
 	}
 
 	// Verify selection proof reflects to the right validator and signature is valid.
-	if err := verifySelection(s, m.Aggregate.Data, m.AggregatorIndex, m.SelectionProof); err != nil {
-		return false, errors.Wrapf(err, "Could not verify selection for validator %d", m.AggregatorIndex)
+	if err := validateSelection(s, m.Aggregate.Data, m.AggregatorIndex, m.SelectionProof); err != nil {
+		return false, errors.Wrapf(err, "Could not validate selection for validator %d", m.AggregatorIndex)
 	}
 
 	// Verify aggregated attestation has a valid signature.
@@ -73,9 +75,29 @@ func (r *RegularSync) validateAggregateAndProof(ctx context.Context, msg proto.M
 	return true, nil
 }
 
-// This verifies selection proof by validating it's from the correct validator index of the slot and selection
+// This validates the aggregator's index in state is within the attesting indices of the attestation.
+func validateIndexInCommittee(s *pb.BeaconState, a *ethpb.Attestation, validatorIndex uint64) error {
+	attestingIndices, err := helpers.AttestingIndices(s, a.Data, a.AggregationBits)
+	if err != nil {
+		return err
+	}
+	var withinCommittee bool
+	for _, i := range attestingIndices {
+		if validatorIndex == i {
+			withinCommittee = true
+			break
+		}
+	}
+	if !withinCommittee {
+		return fmt.Errorf("validator index %d is not within the committee: %v",
+			validatorIndex, attestingIndices)
+	}
+	return nil
+}
+
+// This validates selection proof by validating it's from the correct validator index of the slot and selection
 // proof is a valid signature.
-func verifySelection(s *pb.BeaconState, data *ethpb.AttestationData, validatorIndex uint64, proof []byte) error {
+func validateSelection(s *pb.BeaconState, data *ethpb.AttestationData, validatorIndex uint64, proof []byte) error {
 	slotSig, err := bls.SignatureFromBytes(proof)
 	if err != nil {
 		return err
@@ -98,29 +120,8 @@ func verifySelection(s *pb.BeaconState, data *ethpb.AttestationData, validatorIn
 		return err
 	}
 	if !slotSig.Verify(slotMsg[:], pubKey, domain) {
-		return err
+		return errors.New("could not validate slot signature")
 	}
 
-	return nil
-}
-
-// This verifies the aggregator's index in state is within the attesting indices of the attestation.
-func verifyIndexInCommittee(ctx context.Context, s *pb.BeaconState, a *ethpb.Attestation, validatorIndex uint64) error {
-	currentState, err := state.ProcessSlots(ctx, s, a.Data.Slot)
-	if err != nil {
-		return err
-	}
-	attestingIndices, err := helpers.AttestingIndices(currentState, a.Data, a.AggregationBits)
-	var withinCommittee bool
-	for _, i := range attestingIndices {
-		if validatorIndex == i {
-			withinCommittee = true
-			break
-		}
-	}
-	if !withinCommittee {
-		return fmt.Errorf("validator index %d is not within the committee %v",
-			validatorIndex, attestingIndices)
-	}
 	return nil
 }
