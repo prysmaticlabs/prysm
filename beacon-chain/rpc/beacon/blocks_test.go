@@ -9,11 +9,16 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	ptypes "github.com/gogo/protobuf/types"
+	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
+	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -392,30 +397,32 @@ func TestServer_GetChainHead(t *testing.T) {
 	}
 }
 
-func TestServer_StreamChainHead(t *testing.T) {
+func TestServer_StreamChainHead_ContextCanceled(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
+	ctx := context.Background()
 
-	finalizedBlock := &ethpb.BeaconBlock{Slot: 1, ParentRoot: []byte{'A'}}
-	db.SaveBlock(context.Background(), finalizedBlock)
-	fRoot, _ := ssz.SigningRoot(finalizedBlock)
-	justifiedBlock := &ethpb.BeaconBlock{Slot: 2, ParentRoot: []byte{'B'}}
-	db.SaveBlock(context.Background(), justifiedBlock)
-	jRoot, _ := ssz.SigningRoot(justifiedBlock)
-	prevJustifiedBlock := &ethpb.BeaconBlock{Slot: 3, ParentRoot: []byte{'C'}}
-	db.SaveBlock(context.Background(), prevJustifiedBlock)
-	pjRoot, _ := ssz.SigningRoot(prevJustifiedBlock)
-
-	s := &pbp2p.BeaconState{
-		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 3, Root: pjRoot[:]},
-		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Epoch: 2, Root: jRoot[:]},
-		FinalizedCheckpoint:         &ethpb.Checkpoint{Epoch: 1, Root: fRoot[:]},
+	ctx, cancel := context.WithCancel(context.Background())
+	chainService := &mock.ChainService{}
+	Server := &Server{
+		Ctx: ctx,
+		ChainStartFetcher: &mockPOW.FaultyMockPOWChain{
+			ChainFeed: new(event.Feed),
+		},
+		StateNotifier: chainService.StateNotifier(),
+		BeaconDB:      db,
 	}
 
-	b := &ethpb.BeaconBlock{Slot: s.PreviousJustifiedCheckpoint.Epoch*params.BeaconConfig().SlotsPerEpoch + 1}
-	bs := &Server{
-		BeaconDB:    db,
-		HeadFetcher: &mock.ChainService{Block: b, State: s},
-	}
-	_ = bs
+	exitRoutine := make(chan bool)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := mockRPC.NewMockBeaconChain_StreamChainHeadServer(ctrl)
+	go func(tt *testing.T) {
+		if err := Server.StreamChainHead(&ptypes.Empty{}, mockStream); !strings.Contains(err.Error(), "Context canceled") {
+			tt.Errorf("Could not call RPC method: %v", err)
+		}
+		<-exitRoutine
+	}(t)
+	cancel()
+	exitRoutine <- true
 }
