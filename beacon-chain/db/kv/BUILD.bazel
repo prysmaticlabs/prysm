@@ -58,7 +58,6 @@ go_test(
         "deposit_contract_test.go",
         "finalized_block_roots_test.go",
         "kv_test.go",
-        "migrate_snappy_test.go",
         "operations_test.go",
         "prune_states_test.go",
         "slashings_test.go",
