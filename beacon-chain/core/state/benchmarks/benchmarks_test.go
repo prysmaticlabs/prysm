@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-var runAmount = 25
+var runAmount = 20
 
 func TestBenchmarkExecuteStateTransition(t *testing.T) {
 	SetConfig()
@@ -93,8 +93,18 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 	if err := helpers.UpdateCommitteeCache(beaconState); err != nil {
 		b.Fatal(err)
 	}
-
+	if _, err := helpers.ActiveValidatorIndices(beaconState, 0); err != nil {
+		b.Fatal(err)
+	}
 	beaconState.Slot = currentSlot
+	if _, err := helpers.ActiveValidatorIndices(beaconState, 1); err != nil {
+		b.Fatal(err)
+	}
+	// Run the state transition once to populate the cache.
+	if _, err := state.ExecuteStateTransition(context.Background(), beaconState, block); err != nil {
+		b.Fatalf("failed to process block, benchmarks will fail: %v", err)
+	}
+
 	b.N = runAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
