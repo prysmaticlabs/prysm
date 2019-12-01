@@ -8,10 +8,13 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -175,6 +178,36 @@ func (bs *Server) ListBlocks(
 // This includes the head block slot and root as well as information about
 // the most recent finalized and justified slots.
 func (bs *Server) GetChainHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.ChainHead, error) {
+	return bs.chainHeadRetrieval(ctx)
+}
+
+// StreamChainHead to clients every single time the head block and state of the chain change.
+func (bs *Server) StreamChainHead(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamChainHeadServer) error {
+	stateChannel := make(chan *statefeed.Event, 1)
+	stateSub := bs.StateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
+	for {
+		select {
+		case event := <-stateChannel:
+			if event.Type == statefeed.ChainStarted {
+				res, err := bs.chainHeadRetrieval(stream.Context())
+				if err != nil {
+					return status.Errorf(codes.Internal, "Could not retrieve chain head: %v", err)
+				}
+				return stream.Send(res)
+			}
+		case <-stateSub.Err():
+			return status.Error(codes.Aborted, "Subscriber closed, exiting goroutine")
+		case <-stream.Context().Done():
+			return status.Error(codes.Canceled, "Stream context canceled")
+		case <-bs.Ctx.Done():
+			return status.Error(codes.Canceled, "Context canceled")
+		}
+	}
+}
+
+// Retrieve chain head information from the DB and the current beacon state.
+func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, error) {
 	headState, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
@@ -221,9 +254,4 @@ func (bs *Server) GetChainHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.Cha
 		PreviousJustifiedEpoch:     prevJustifiedCheckpoint.Epoch,
 		PreviousJustifiedBlockRoot: prevJustifiedCheckpoint.Root,
 	}, nil
-}
-
-// StreamChainHead --
-func (bs *Server) StreamChainHead(req *ptypes.Empty, stream ethpb.BeaconChain_StreamChainHeadServer) error {
-	return nil
 }
