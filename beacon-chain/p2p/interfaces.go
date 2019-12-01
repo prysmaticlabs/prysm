@@ -8,6 +8,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 )
 
 // P2P represents the full p2p interface composed of all of the sub-interfaces.
@@ -19,6 +20,7 @@ type P2P interface {
 	PeerManager
 	Sender
 	ConnectionHandler
+	PeersProvider
 }
 
 // Broadcaster broadcasts messages to peers over the p2p pubsub protocol.
@@ -56,4 +58,9 @@ type PeerManager interface {
 // Sender abstracts the sending functionality from libp2p.
 type Sender interface {
 	Send(context.Context, interface{}, peer.ID) (network.Stream, error)
+}
+
+// PeersProvider abstracts obtaining our current list of known peers.
+type PeersProvider interface {
+	Peers() []*peers.Info
 }
