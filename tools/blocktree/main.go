@@ -35,7 +35,7 @@ var (
 type node struct {
 	parentRoot [32]byte
 	dothNode   *dot.Node
-	score map[uint64]bool
+	score      map[uint64]bool
 }
 
 func main() {

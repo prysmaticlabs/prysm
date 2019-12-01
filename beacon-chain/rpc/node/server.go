@@ -2,13 +2,17 @@ package node
 
 import (
 	"context"
+	"fmt"
 	"sort"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/libp2p/go-libp2p-core/network"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -22,6 +26,7 @@ type Server struct {
 	SyncChecker        sync.Checker
 	Server             *grpc.Server
 	BeaconDB           db.Database
+	PeersFetcher       p2p.PeersProvider
 	GenesisTimeFetcher blockchain.GenesisTimeFetcher
 }
 
@@ -70,5 +75,31 @@ func (ns *Server) ListImplementedServices(ctx context.Context, _ *ptypes.Empty) 
 	sort.Strings(serviceNames)
 	return &ethpb.ImplementedServices{
 		Services: serviceNames,
+	}, nil
+}
+
+// ListPeers lists the peers connected to this node.
+func (ns *Server) ListPeers(ctx context.Context, _ *ptypes.Empty) (*ethpb.Peers, error) {
+	peers := make([]*ethpb.Peer, 0)
+	for _, peer := range ns.PeersFetcher.Peers() {
+		peerStatus := peerstatus.Get(peer.AddrInfo.ID)
+		if peerStatus != nil {
+			address := fmt.Sprintf("%s/p2p/%s", peer.AddrInfo.Addrs[0].String(), peer.AddrInfo.ID.Pretty())
+			direction := ethpb.PeerDirection_UNKNOWN
+			switch peer.Direction {
+			case network.DirInbound:
+				direction = ethpb.PeerDirection_INBOUND
+			case network.DirOutbound:
+				direction = ethpb.PeerDirection_OUTBOUND
+			}
+			peers = append(peers, &ethpb.Peer{
+				Address:   address,
+				Direction: direction,
+			})
+		}
+	}
+
+	return &ethpb.Peers{
+		Peers: peers,
 	}, nil
 }
