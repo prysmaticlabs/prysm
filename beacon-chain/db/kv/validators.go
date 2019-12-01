@@ -3,14 +3,9 @@ package kv
 import (
 	"context"
 	"encoding/binary"
-	"sync"
-	"time"
 
 	"github.com/boltdb/bolt"
-	"github.com/gogo/protobuf/proto"
 	"go.opencensus.io/trace"
-
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 // ValidatorIndex by public key.

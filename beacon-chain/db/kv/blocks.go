@@ -4,16 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"strings"
-	"sync"
-	"time"
 
 	"github.com/boltdb/bolt"
-	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"go.opencensus.io/trace"
@@ -239,7 +235,7 @@ func (k *Store) DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
 			if err := deleteValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
 				return errors.Wrap(err, "could not delete root for DB indices")
 			}
-			k.blockCache.Delete(string(blockRoot[:]))
+			k.blockCache.Del(string(blockRoot[:]))
 			if err := bkt.Delete(blockRoot[:]); err != nil {
 				return err
 			}
@@ -300,7 +296,7 @@ func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) err
 			if err := updateValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
 				return errors.Wrap(err, "could not update DB indices")
 			}
-			k.blockCache.Set(string(blockRoot[:]), block, time.Hour)
+			k.blockCache.Set(string(blockRoot[:]), block, 0)
 			if err := bkt.Put(blockRoot[:], enc); err != nil {
 				return err
 			}
