@@ -198,6 +198,8 @@ func (bs *Server) StreamChainHead(_ *ptypes.Empty, stream ethpb.BeaconChain_Stre
 			return status.Error(codes.Aborted, "Subscriber closed, exiting goroutine")
 		case <-bs.Ctx.Done():
 			return status.Error(codes.Canceled, "Context canceled")
+		case <-stream.Context().Done():
+			return status.Error(codes.Canceled, "Context canceled")
 		}
 	}
 }
