@@ -14,6 +14,8 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
@@ -424,5 +426,71 @@ func TestServer_StreamChainHead_ContextCanceled(t *testing.T) {
 		<-exitRoutine
 	}(t)
 	cancel()
+	exitRoutine <- true
+}
+
+func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	finalizedBlock := &ethpb.BeaconBlock{Slot: 1, ParentRoot: []byte{'A'}}
+	db.SaveBlock(context.Background(), finalizedBlock)
+	fRoot, _ := ssz.SigningRoot(finalizedBlock)
+	justifiedBlock := &ethpb.BeaconBlock{Slot: 2, ParentRoot: []byte{'B'}}
+	db.SaveBlock(context.Background(), justifiedBlock)
+	jRoot, _ := ssz.SigningRoot(justifiedBlock)
+	prevJustifiedBlock := &ethpb.BeaconBlock{Slot: 3, ParentRoot: []byte{'C'}}
+	db.SaveBlock(context.Background(), prevJustifiedBlock)
+	pjRoot, _ := ssz.SigningRoot(prevJustifiedBlock)
+
+	s := &pbp2p.BeaconState{
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 3, Root: pjRoot[:]},
+		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Epoch: 2, Root: jRoot[:]},
+		FinalizedCheckpoint:         &ethpb.Checkpoint{Epoch: 1, Root: fRoot[:]},
+	}
+	b := &ethpb.BeaconBlock{Slot: s.PreviousJustifiedCheckpoint.Epoch*params.BeaconConfig().SlotsPerEpoch + 1}
+	hRoot, _ := ssz.SigningRoot(b)
+
+	chainService := &mock.ChainService{}
+	server := &Server{
+		Ctx:           context.Background(),
+		HeadFetcher:   &mock.ChainService{Block: b, State: s},
+		BeaconDB:      db,
+		StateNotifier: chainService.StateNotifier(),
+	}
+	exitRoutine := make(chan bool)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := mockRPC.NewMockBeaconChain_StreamChainHeadServer(ctrl)
+	mockStream.EXPECT().Send(
+		&ethpb.ChainHead{
+			HeadSlot:                   b.Slot,
+			HeadEpoch:                  helpers.SlotToEpoch(b.Slot),
+			HeadBlockRoot:              hRoot[:],
+			FinalizedSlot:              1,
+			FinalizedEpoch:             1,
+			FinalizedBlockRoot:         fRoot[:],
+			JustifiedSlot:              2,
+			JustifiedEpoch:             2,
+			JustifiedBlockRoot:         jRoot[:],
+			PreviousJustifiedSlot:      3,
+			PreviousJustifiedEpoch:     3,
+			PreviousJustifiedBlockRoot: pjRoot[:],
+		},
+	).Return(nil)
+	go func(tt *testing.T) {
+		if err := server.StreamChainHead(&ptypes.Empty{}, mockStream); err != nil {
+			tt.Errorf("Could not call RPC method: %v", err)
+		}
+		<-exitRoutine
+	}(t)
+
+	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
+	for sent := 0; sent == 0; {
+		sent = server.StateNotifier.StateFeed().Send(&statefeed.Event{
+			Type: statefeed.BlockProcessed,
+			Data: &statefeed.BlockProcessedData{},
+		})
+	}
 	exitRoutine <- true
 }
