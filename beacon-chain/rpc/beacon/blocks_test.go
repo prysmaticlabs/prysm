@@ -404,7 +404,7 @@ func TestServer_StreamChainHead_ContextCanceled(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	chainService := &mock.ChainService{}
-	Server := &Server{
+	server := &Server{
 		Ctx: ctx,
 		ChainStartFetcher: &mockPOW.FaultyMockPOWChain{
 			ChainFeed: new(event.Feed),
@@ -418,7 +418,7 @@ func TestServer_StreamChainHead_ContextCanceled(t *testing.T) {
 	defer ctrl.Finish()
 	mockStream := mockRPC.NewMockBeaconChain_StreamChainHeadServer(ctrl)
 	go func(tt *testing.T) {
-		if err := Server.StreamChainHead(&ptypes.Empty{}, mockStream); !strings.Contains(err.Error(), "Context canceled") {
+		if err := server.StreamChainHead(&ptypes.Empty{}, mockStream); !strings.Contains(err.Error(), "Context canceled") {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
 		<-exitRoutine
