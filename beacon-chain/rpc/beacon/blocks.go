@@ -7,7 +7,6 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
@@ -175,50 +174,55 @@ func (bs *Server) ListBlocks(
 // This includes the head block slot and root as well as information about
 // the most recent finalized and justified slots.
 func (bs *Server) GetChainHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.ChainHead, error) {
-	headState, err := bs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
-	}
-
-	headBlock := bs.HeadFetcher.HeadBlock()
-	headBlockRoot, err := ssz.SigningRoot(headBlock)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head block root: %v", err)
-	}
-
-	finalizedCheckpoint := headState.FinalizedCheckpoint
-	b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(finalizedCheckpoint.Root))
-	if err != nil || b == nil {
-		return nil, status.Error(codes.Internal, "Could not get finalized block")
-	}
-	finalizedBlockSlot := b.Slot
-
-	justifiedCheckpoint := headState.CurrentJustifiedCheckpoint
-	b, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(justifiedCheckpoint.Root))
-	if err != nil || b == nil {
-		return nil, status.Error(codes.Internal, "Could not get justified block")
-	}
-	justifiedBlockSlot := b.Slot
-
-	prevJustifiedCheckpoint := headState.PreviousJustifiedCheckpoint
-	b, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(prevJustifiedCheckpoint.Root))
-	if err != nil || b == nil {
-		return nil, status.Error(codes.Internal, "Could not get prev justified block")
-	}
-	prevJustifiedBlockSlot := b.Slot
+	//headState, err := bs.HeadFetcher.HeadState(ctx)
+	//if err != nil {
+	//	return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	//}
+	//
+	//headBlock := bs.HeadFetcher.HeadBlock()
+	//headBlockRoot, err := ssz.SigningRoot(headBlock)
+	//if err != nil {
+	//	return nil, status.Errorf(codes.Internal, "Could not get head block root: %v", err)
+	//}
+	//
+	//finalizedCheckpoint := headState.FinalizedCheckpoint
+	//b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(finalizedCheckpoint.Root))
+	//if err != nil || b == nil {
+	//	return nil, status.Error(codes.Internal, "Could not get finalized block")
+	//}
+	//finalizedBlockSlot := b.Slot
+	//
+	//justifiedCheckpoint := headState.CurrentJustifiedCheckpoint
+	//b, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(justifiedCheckpoint.Root))
+	//if err != nil || b == nil {
+	//	return nil, status.Error(codes.Internal, "Could not get justified block")
+	//}
+	//justifiedBlockSlot := b.Slot
+	//
+	//prevJustifiedCheckpoint := headState.PreviousJustifiedCheckpoint
+	//b, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(prevJustifiedCheckpoint.Root))
+	//if err != nil || b == nil {
+	//	return nil, status.Error(codes.Internal, "Could not get prev justified block")
+	//}
+	//prevJustifiedBlockSlot := b.Slot
 
 	return &ethpb.ChainHead{
-		HeadBlockSlot:              headBlock.Slot,
-		HeadBlockEpoch:             helpers.SlotToEpoch(headBlock.Slot),
-		HeadBlockRoot:              headBlockRoot[:],
-		FinalizedBlockRoot:         finalizedCheckpoint.Root,
-		FinalizedBlockSlot:         finalizedBlockSlot,
-		FinalizedEpoch:             finalizedCheckpoint.Epoch,
-		JustifiedBlockRoot:         justifiedCheckpoint.Root,
-		JustifiedBlockSlot:         justifiedBlockSlot,
-		JustifiedEpoch:             justifiedCheckpoint.Epoch,
-		PreviousJustifiedBlockRoot: prevJustifiedCheckpoint.Root,
-		PreviousJustifiedSlot:      prevJustifiedBlockSlot,
-		PreviousJustifiedEpoch:     prevJustifiedCheckpoint.Epoch,
+		//HeadSlot:                   headBlock.Slot,
+		//HeadEpoch:                  helpers.SlotToEpoch(headBlock.Slot),
+		//HeadBlockRoot:              headBlockRoot[:],
+		//FinalizedSlot:              finalizedBlockSlot,
+		//FinalizedEpoch:             finalizedCheckpoint.Epoch,
+		//FinalizedBlockRoot:         finalizedCheckpoint.Root,
+		//JusitifiedSlot:             justifiedBlockSlot,
+		//JustifiedEpoch:             justifiedCheckpoint.Epoch,
+		//JustifiedBlockRoot:         justifiedCheckpoint.Root,
+		//PreviousJustifiedSlot:      prevJustifiedBlockSlot,
+		//PreviousJustifiedEpoch:     prevJustifiedCheckpoint.Epoch,
+		//PreviousJustifiedBlockRoot: prevJustifiedCheckpoint.Root,
 	}, nil
+}
+
+// StreamChainHead --
+func (bs *Server) StreamChainHead(req *ptypes.Empty, stream ethpb.BeaconChain_StreamChainHeadServer) error {
+	return nil
 }
