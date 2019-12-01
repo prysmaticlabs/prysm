@@ -19,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// validateAggregateAndProof validates the aggregated signature and its proof are valid before forwarding to the
+// validateAggregateAndProof validates the aggregated signature and the selection proof is valid before forwarding to the
 // network and downstream services.
 func (r *RegularSync) validateAggregateAndProof(ctx context.Context, msg proto.Message, p p2p.Broadcaster, fromSelf bool) (bool, error) {
 	// To process the following it requires the recent blocks to be present in the database, so we'll skip
