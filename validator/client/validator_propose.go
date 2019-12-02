@@ -44,6 +44,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	b, err := v.proposerClient.RequestBlock(ctx, &pb.BlockRequest{
 		Slot:         slot,
 		RandaoReveal: randaoReveal,
+		Graffiti:     v.graffiti,
 	})
 	if err != nil {
 		log.WithError(err).Error("Failed to request block from beacon node")

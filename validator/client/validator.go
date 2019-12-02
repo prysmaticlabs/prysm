@@ -29,6 +29,7 @@ type validator struct {
 	proposerClient       pb.ProposerServiceClient
 	validatorClient      pb.ValidatorServiceClient
 	attesterClient       pb.AttesterServiceClient
+	graffiti             []byte
 	aggregatorClient     pb.AggregatorServiceClient
 	node                 ethpb.NodeClient
 	keys                 map[[48]byte]*keystore.Key

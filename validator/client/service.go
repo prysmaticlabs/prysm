@@ -26,6 +26,7 @@ type ValidatorService struct {
 	ctx                  context.Context
 	cancel               context.CancelFunc
 	validator            Validator
+	graffiti             []byte
 	conn                 *grpc.ClientConn
 	endpoint             string
 	withCert             string
@@ -37,6 +38,7 @@ type ValidatorService struct {
 type Config struct {
 	Endpoint             string
 	CertFlag             string
+	GraffitiFlag         string
 	Keys                 map[string]*keystore.Key
 	LogValidatorBalances bool
 }
@@ -51,11 +53,13 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		copy(pubKey[:], v.PublicKey.Marshal())
 		pubKeys[pubKey] = v
 	}
+	graffiti := bytesutil.ToBytes32([]byte(cfg.GraffitiFlag))
 	return &ValidatorService{
 		ctx:                  ctx,
 		cancel:               cancel,
 		endpoint:             cfg.Endpoint,
 		withCert:             cfg.CertFlag,
+		graffiti:             graffiti[:],
 		keys:                 pubKeys,
 		logValidatorBalances: cfg.LogValidatorBalances,
 	}, nil
@@ -104,6 +108,7 @@ func (v *ValidatorService) Start() {
 		aggregatorClient:     pb.NewAggregatorServiceClient(v.conn),
 		node:                 ethpb.NewNodeClient(v.conn),
 		keys:                 v.keys,
+		graffiti:             v.graffiti,
 		pubkeys:              pubKeys,
 		logValidatorBalances: v.logValidatorBalances,
 		prevBalance:          make(map[[48]byte]uint64),

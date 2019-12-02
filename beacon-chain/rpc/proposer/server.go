@@ -109,7 +109,7 @@ func (ps *Server) RequestBlock(ctx context.Context, req *pb.BlockRequest) (*ethp
 			ProposerSlashings: []*ethpb.ProposerSlashing{},
 			AttesterSlashings: []*ethpb.AttesterSlashing{},
 			VoluntaryExits:    []*ethpb.VoluntaryExit{},
-			Graffiti:          []byte{},
+			Graffiti:          req.Graffiti[:],
 		},
 		Signature: emptySig,
 	}
