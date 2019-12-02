@@ -52,7 +52,7 @@ func GenerateFullBlock(
 ) (*ethpb.BeaconBlock, error) {
 	currentSlot := bState.Slot
 	if currentSlot > slot {
-		return nil, fmt.Errorf("Current slot in state is larger than given slot. %d > %d", currentSlot, slot)
+		return nil, fmt.Errorf("current slot in state is larger than given slot. %d > %d", currentSlot, slot)
 	}
 
 	if conf == nil {

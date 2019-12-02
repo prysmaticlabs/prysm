@@ -114,7 +114,7 @@ func TestSlashValidator_OK(t *testing.T) {
 		Validators:  registry,
 		Slashings:   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		Balances: balances,
+		Balances:    balances,
 	}
 
 	slashedIdx := uint64(2)
