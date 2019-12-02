@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
+	"google.golang.org/genproto/googleapis/pubsub/v1"
 )
 
 const oneYear = 365 * 24 * time.Hour
@@ -197,12 +198,19 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 	go messageLoop()
 }
 
+// subscribe to a dynamically increasing index of topics. This method expects a fmt compatible
+// string for the topic name and a maxID to represent the number of subscribed topics that should be
+// maintained. As the state feed emits a newly updated state, the maxID function will be called to
+// determine the appropriate number of topics. This method supports only sequential number ranges
+// for topics.
 func (r *RegularSync) subscribeDynamic(topicFormat string, maxID func() int, validate validator, handle subHandler) {
 	base := p2p.GossipTopicMappings[topicFormat]
 	if base == nil {
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topicFormat))
 	}
 	topicFormat += r.p2p.Encoding().ProtocolSuffix()
+
+	var subscriptions []*pubsub.Subscription
 
 	stateChannel := make(chan *statefeed.Event, 1)
 	r.stateNotifier.StateFeed().Subscribe(stateChannel)
@@ -216,9 +224,8 @@ func (r *RegularSync) subscribeDynamic(topicFormat string, maxID func() int, val
 					ID := maxID()
 					_ = ID
 					// Resize as appropriate.
+
 			}
 		}
 	}()
-
-	
 }
