@@ -34,7 +34,7 @@ func (r *RegularSync) validateAttesterSlashing(ctx context.Context, msg proto.Me
 		return false, nil
 	}
 
-	ctx, span := trace.StartSpan(ctx, "sync.validateBeaconAttestation")
+	ctx, span := trace.StartSpan(ctx, "sync.validateAttesterSlashing")
 	defer span.End()
 
 	slashing := msg.(*ethpb.AttesterSlashing)
