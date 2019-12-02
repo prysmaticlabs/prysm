@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestHasVoted_OK(t *testing.T) {
@@ -99,7 +98,24 @@ func TestInitiateValidatorExit_ChurnOverflow(t *testing.T) {
 }
 
 func TestSlashValidator_OK(t *testing.T) {
-	beaconState, _, _ := testutil.DeterministicGenesisState(100)
+	validatorCount := 100
+	registry := make([]*ethpb.Validator, 0, validatorCount)
+	balances := make([]uint64, 0, validatorCount)
+	for i := 0; i < validatorCount; i++ {
+		registry = append(registry, &ethpb.Validator{
+			ActivationEpoch:  0,
+			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+		})
+		balances = append(balances, params.BeaconConfig().MaxEffectiveBalance)
+	}
+
+	beaconState := &pb.BeaconState{
+		Validators:  registry,
+		Slashings:   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		Balances: balances,
+	}
 
 	slashedIdx := uint64(2)
 	whistleIdx := uint64(10)
@@ -134,11 +150,9 @@ func TestSlashValidator_OK(t *testing.T) {
 	if state.Balances[proposer] != maxBalance+proposerReward {
 		t.Errorf("Did not get expected balance for proposer %d", state.Balances[proposer])
 	}
-
 	if state.Balances[whistleIdx] != maxBalance+whistleblowerReward-proposerReward {
 		t.Errorf("Did not get expected balance for whistleblower %d", state.Balances[whistleIdx])
 	}
-
 	if state.Balances[slashedIdx] != maxBalance-(state.Validators[slashedIdx].EffectiveBalance/params.BeaconConfig().MinSlashingPenaltyQuotient) {
 		t.Errorf("Did not get expected balance for slashed validator, wanted %d but got %d",
 			state.Validators[slashedIdx].EffectiveBalance/params.BeaconConfig().MinSlashingPenaltyQuotient, state.Balances[slashedIdx])

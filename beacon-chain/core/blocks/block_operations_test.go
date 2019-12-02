@@ -1590,10 +1590,10 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 		dep[0],
 		stateutils.ValidatorIndexMap(beaconState),
 	)
-
 	if err != nil {
 		t.Fatalf("Expected invalid block deposit to be ignored without error, received: %v", err)
 	}
+
 	if newState.Eth1DepositIndex != 1 {
 		t.Errorf(
 			"Expected Eth1DepositIndex to be increased by 1 after processing an invalid deposit, received change: %v",
