@@ -55,7 +55,7 @@ func (r *RegularSync) validateAggregateAndProof(ctx context.Context, msg proto.M
 	// Verify attestation slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots.
 	currentSlot := (uint64(roughtime.Now().Unix()) - s.GenesisTime) / params.BeaconConfig().SecondsPerSlot
 	if attSlot > currentSlot || currentSlot > attSlot+params.BeaconConfig().AttestationPropagationSlotRange {
-		return false, fmt.Errorf("attestation slot out of range %d < %d < %d",
+		return false, fmt.Errorf("attestation slot out of range %d <= %d <= %d",
 			attSlot, currentSlot, attSlot+params.BeaconConfig().AttestationPropagationSlotRange)
 	}
 
