@@ -3,6 +3,8 @@ package testutil
 import (
 	"bytes"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 )
 
 func TestSetupInitialDeposits_1024Entries(t *testing.T) {
@@ -82,5 +84,46 @@ func TestSetupInitialDeposits_1024Entries(t *testing.T) {
 	expectedSignatureAt1023 := []byte{0xa2, 0xad, 0x23, 0x3b, 0x6d, 0xa0, 0xd9, 0xf8, 0xb4, 0xac, 0xe0, 0xc9, 0xae, 0x25, 0x81, 0xfb, 0xca, 0x2d, 0x0a, 0xed, 0x6a, 0xdc, 0xd6, 0xda, 0x49, 0x0a, 0x75, 0xab, 0x3a, 0x3c, 0xc6, 0x37, 0xec, 0x65, 0xe3, 0x3d, 0xbc, 0x00, 0xad, 0xd8, 0x5f, 0x1e, 0x7b, 0x93, 0xcd, 0x63, 0x74, 0x8e, 0x0c, 0x28, 0x60, 0x4f, 0x99, 0x33, 0x6a, 0x29, 0x21, 0x57, 0xb6, 0xe0, 0x45, 0x9f, 0xaa, 0x10, 0xe9, 0x78, 0x02, 0x01, 0x68, 0x65, 0xcf, 0x6a, 0x4c, 0x2a, 0xd5, 0x5f, 0x37, 0xa1, 0x66, 0x05, 0x2b, 0x55, 0x86, 0xe7, 0x68, 0xb7, 0xfd, 0x76, 0xd5, 0x91, 0x3e, 0xeb, 0x6e, 0x46, 0x3f, 0x6d}
 	if !bytes.Equal(deposits[1023].Data.Signature, expectedSignatureAt1023) {
 		t.Fatalf("incorrect signature, wanted %x but received %x", expectedSignatureAt1023, deposits[1023].Data.Signature)
+	}
+}
+
+func TestDeterministicGenesisState_100Validators(t *testing.T) {
+	validatorCount := uint64(100)
+	beaconState, privKeys, err := DeterministicGenesisState(validatorCount)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	activeValidators, err := helpers.ActiveValidatorCount(beaconState, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(privKeys) != int(validatorCount) {
+		t.Fatalf("expected amount of private keys %d to match requested amount of validators %d", len(privKeys), validatorCount)
+	}
+	if activeValidators != validatorCount {
+		t.Fatalf("expected validators in state %d to match requested amount %d", activeValidators, validatorCount)
+	}
+}
+
+func TestDepositTrieFromDeposits(t *testing.T) {
+	deposits, _, err := DeterministicDepositsAndKeys(100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	eth1Data, err := DeterministicEth1Data(len(deposits))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	depositTrie, _, err := DepositTrieFromDeposits(deposits)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	root := depositTrie.Root()
+	if !bytes.Equal(root[:], eth1Data.DepositRoot) {
+		t.Fatal("expected deposit trie root to equal eth1data deposit root")
 	}
 }

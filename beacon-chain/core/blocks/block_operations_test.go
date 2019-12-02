@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	blsintern "github.com/phoreproject/bls"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
@@ -21,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -1569,67 +1567,6 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 		DepositRoot:  root[:],
 		DepositCount: 1,
 	}
-	registry := []*ethpb.Validator{
-		{
-			PublicKey:             []byte{1},
-			WithdrawalCredentials: []byte{1, 2, 3},
-		},
-	}
-	balances := []uint64{0}
-	beaconState := &pb.BeaconState{
-		Validators: registry,
-		Balances:   balances,
-		Eth1Data:   eth1Data,
-		Fork: &pb.Fork{
-			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
-		},
-	}
-	newState, err := blocks.ProcessDeposit(
-		beaconState,
-		dep[0],
-		stateutils.ValidatorIndexMap(beaconState),
-	)
-	if err != nil {
-		t.Fatalf("Expected invalid block deposit to be ignored without error, received: %v", err)
-	}
-
-	if newState.Eth1DepositIndex != 1 {
-		t.Errorf(
-			"Expected Eth1DepositIndex to be increased by 1 after processing an invalid deposit, received change: %v",
-			newState.Eth1DepositIndex,
-		)
-	}
-	if len(newState.Validators) != 1 {
-		t.Errorf("Expected validator list to have length 1, received: %v", len(newState.Validators))
-	}
-	if len(newState.Balances) != 1 {
-		t.Errorf("Expected validator balances list to have length 1, received: %v", len(newState.Balances))
-	}
-	if newState.Balances[0] != 0 {
-		t.Errorf("Expected validator balance at index 0 to stay 0, received: %v", newState.Balances[0])
-	}
-}
-
-func TestProcessDeposit_SkipsDepositWithUncompressedSignature(t *testing.T) {
-	// Same test settings as in TestProcessDeposit_AddsNewValidatorDeposit, except that we use an uncompressed signature
-	dep, _, _ := testutil.DeterministicDepositsAndKeys(1)
-	a, err := blsintern.DecompressG2(bytesutil.ToBytes96(dep[0].Data.Signature))
-	if err != nil {
-		t.Fatal(err)
-	}
-	uncompressedSignature := a.SerializeBytes()
-	dep[0].Data.Signature = uncompressedSignature[:]
-	trie, _, err := testutil.DepositTrieFromDeposits(dep)
-	if err != nil {
-		t.Fatal(err)
-	}
-	root := trie.Root()
-	eth1Data := &ethpb.Eth1Data{
-		DepositRoot:  root[:],
-		DepositCount: 1,
-	}
-
 	registry := []*ethpb.Validator{
 		{
 			PublicKey:             []byte{1},
