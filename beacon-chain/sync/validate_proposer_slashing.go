@@ -33,7 +33,7 @@ func (r *RegularSync) validateProposerSlashing(ctx context.Context, msg proto.Me
 		return false, nil
 	}
 
-	ctx, span := trace.StartSpan(ctx, "sync.validateBeaconBlockPubSub")
+	ctx, span := trace.StartSpan(ctx, "sync.validateProposerSlashing")
 	defer span.End()
 
 	slashing, ok := msg.(*ethpb.ProposerSlashing)

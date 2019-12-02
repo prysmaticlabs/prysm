@@ -30,7 +30,7 @@ func (r *RegularSync) validateVoluntaryExit(ctx context.Context, msg proto.Messa
 		return false, nil
 	}
 
-	ctx, span := trace.StartSpan(ctx, "sync.validateBeaconBlockPubSub")
+	ctx, span := trace.StartSpan(ctx, "sync.validateVoluntaryExit")
 	defer span.End()
 
 	exit, ok := msg.(*ethpb.VoluntaryExit)
