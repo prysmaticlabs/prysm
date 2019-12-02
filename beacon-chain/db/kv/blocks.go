@@ -268,7 +268,7 @@ func (k *Store) SaveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 		if err := updateValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not update DB indices")
 		}
-		k.blockCache.Set(string(blockRoot[:]), block, 1)
+		k.blockCache.Set(string(blockRoot[:]), block, int64(len(enc)))
 		return bkt.Put(blockRoot[:], enc)
 	})
 }
@@ -296,7 +296,7 @@ func (k *Store) SaveBlocks(ctx context.Context, blocks []*ethpb.BeaconBlock) err
 			if err := updateValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
 				return errors.Wrap(err, "could not update DB indices")
 			}
-			k.blockCache.Set(string(blockRoot[:]), block, 1)
+			k.blockCache.Set(string(blockRoot[:]), block, int64(len(enc)))
 			if err := bkt.Put(blockRoot[:], enc); err != nil {
 				return err
 			}

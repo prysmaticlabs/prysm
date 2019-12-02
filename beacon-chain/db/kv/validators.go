@@ -68,7 +68,7 @@ func (k *Store) SaveValidatorIndex(ctx context.Context, publicKey [48]byte, vali
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsBucket)
 		buf := uint64ToBytes(validatorIdx)
-		k.validatorIndexCache.Set(string(publicKey[:]), validatorIdx, 1)
+		k.validatorIndexCache.Set(string(publicKey[:]), validatorIdx, int64(len(buf)))
 		return bucket.Put(publicKey[:], buf)
 	})
 }

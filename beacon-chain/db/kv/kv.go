@@ -14,13 +14,15 @@ import (
 )
 
 const (
-	// VotesCacheSize with 1M validators will be 33MB.
-	VotesCacheSize   = 1 << 20
+	// VotesCacheSize with 1M validators will be 8MB.
+	VotesCacheSize   = 1 << 23
+	NumOfVotes       = 1 << 20
 	databaseFileName = "beaconchain.db"
 )
 
-// BlockCacheSize specifies 1000 slots worth of blocks cached.
-var BlockCacheSize = int64(1000)
+// BlockCacheSize specifies 1000 slots worth of blocks cached, which
+// would be approximately 2MB
+const BlockCacheSize = int64(1 << 21)
 
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
@@ -28,7 +30,6 @@ type Store struct {
 	db                  *bolt.DB
 	databasePath        string
 	blockCache          *ristretto.Cache
-	votesCache          *ristretto.Cache
 	validatorIndexCache *ristretto.Cache
 }
 
@@ -48,18 +49,18 @@ func NewKVStore(dirPath string) (*Store, error) {
 		return nil, err
 	}
 	blockCache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: 10 * BlockCacheSize, // number of keys to track frequency of (10000).
-		MaxCost:     BlockCacheSize,      // maximum cost of cache (1000 Blocks).
-		BufferItems: 64,                  // number of keys per Get buffer.
+		NumCounters: 1000,           // number of keys to track frequency of (1000).
+		MaxCost:     BlockCacheSize, // maximum cost of cache (1000 Blocks).
+		BufferItems: 64,             // number of keys per Get buffer.
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	validatorCache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: 10 * VotesCacheSize, // number of keys to track frequency of (10M).
-		MaxCost:     VotesCacheSize,      // maximum cost of cache (1048576 validators).
-		BufferItems: 64,                  // number of keys per Get buffer.
+		NumCounters: NumOfVotes,     // number of keys to track frequency of (1M).
+		MaxCost:     VotesCacheSize, // maximum cost of cache (8MB).
+		BufferItems: 64,             // number of keys per Get buffer.
 	})
 	if err != nil {
 		return nil, err
