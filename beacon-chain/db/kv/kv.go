@@ -15,7 +15,8 @@ import (
 
 const (
 	// VotesCacheSize with 1M validators will be 8MB.
-	VotesCacheSize   = 1 << 23
+	VotesCacheSize = 1 << 23
+	// NumOfVotes specifies the vote cache size.
 	NumOfVotes       = 1 << 20
 	databaseFileName = "beaconchain.db"
 )
