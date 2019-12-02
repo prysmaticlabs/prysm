@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-var runAmount = 20
+var runAmount = 25
 
 func TestBenchmarkExecuteStateTransition(t *testing.T) {
 	SetConfig()
@@ -29,19 +29,7 @@ func TestBenchmarkExecuteStateTransition(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := state.ExecuteStateTransition(context.Background(), beaconState, block); err != nil {
-		t.Fatalf("failed to process block, benchmarks will fail: %v", err)
-	}
-}
-
-func TestBenchmarkProcessEpoch(t *testing.T) {
-	SetConfig()
-	beaconState, err := beaconState2FullEpochs()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err := state.ProcessEpoch(context.Background(), beaconState); err != nil {
+	if _, err := state.ExecuteStateTransitionNoVerify(context.Background(), beaconState, block); err != nil {
 		t.Fatalf("failed to process block, benchmarks will fail: %v", err)
 	}
 }
@@ -93,13 +81,7 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 	if err := helpers.UpdateCommitteeCache(beaconState); err != nil {
 		b.Fatal(err)
 	}
-	if _, err := helpers.ActiveValidatorIndices(beaconState, 0); err != nil {
-		b.Fatal(err)
-	}
 	beaconState.Slot = currentSlot
-	if _, err := helpers.ActiveValidatorIndices(beaconState, 1); err != nil {
-		b.Fatal(err)
-	}
 	// Run the state transition once to populate the cache.
 	if _, err := state.ExecuteStateTransition(context.Background(), beaconState, block); err != nil {
 		b.Fatalf("failed to process block, benchmarks will fail: %v", err)
@@ -115,12 +97,27 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 }
 
 func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
+	config := &featureconfig.Flags{
+		EnableNewCache:           true,
+		EnableShuffledIndexCache: true,
+		EnableBLSPubkeyCache:     true,
+	}
+	featureconfig.Init(config)
 	SetConfig()
 	beaconState, err := beaconState2FullEpochs()
 	if err != nil {
 		b.Fatal(err)
 	}
 	cleanStates := clonedStates(beaconState)
+
+	// We have to reset slot back to last epoch to hydrate cache. Since
+	// some attestations in block are from previous epoch
+	currentSlot := beaconState.Slot
+	beaconState.Slot -= params.BeaconConfig().SlotsPerEpoch
+	if err := helpers.UpdateCommitteeCache(beaconState); err != nil {
+		b.Fatal(err)
+	}
+	beaconState.Slot = currentSlot
 
 	b.N = 5
 	b.ResetTimer()
