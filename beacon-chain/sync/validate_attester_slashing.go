@@ -34,13 +34,11 @@ func (r *RegularSync) validateAttesterSlashing(ctx context.Context, msg proto.Me
 		return false, nil
 	}
 
-	ctx, span := trace.StartSpan(ctx, "sync.validateAttesterSlashing")
+	ctx, span := trace.StartSpan(ctx, "sync.validateBeaconAttestation")
 	defer span.End()
 
-	slashing, ok := msg.(*ethpb.AttesterSlashing)
-	if !ok {
-		return false, nil
-	}
+	slashing := msg.(*ethpb.AttesterSlashing)
+
 	cacheKey, err := attSlashingCacheKey(slashing)
 	if err != nil {
 		return false, errors.Wrapf(err, "could not hash attestation slashing")

@@ -33,10 +33,7 @@ func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.M
 	// TODO(1332): Add blocks.VerifyAttestation before processing further.
 	// Discussion: https://github.com/ethereum/eth2.0-specs/issues/1332
 
-	att, ok := msg.(*ethpb.Attestation)
-	if !ok {
-		return false, nil
-	}
+	att := msg.(*ethpb.Attestation)
 
 	attRoot, err := ssz.HashTreeRoot(att)
 	if err != nil {

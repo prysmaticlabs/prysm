@@ -33,10 +33,8 @@ func (r *RegularSync) validateVoluntaryExit(ctx context.Context, msg proto.Messa
 	ctx, span := trace.StartSpan(ctx, "sync.validateVoluntaryExit")
 	defer span.End()
 
-	exit, ok := msg.(*ethpb.VoluntaryExit)
-	if !ok {
-		return false, nil
-	}
+	exit := msg.(*ethpb.VoluntaryExit)
+
 	cacheKey := exitCacheKey(exit)
 	invalidKey := invalid + cacheKey
 	if seenExits.Get(invalidKey) != nil {

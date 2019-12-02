@@ -36,10 +36,8 @@ func (r *RegularSync) validateProposerSlashing(ctx context.Context, msg proto.Me
 	ctx, span := trace.StartSpan(ctx, "sync.validateProposerSlashing")
 	defer span.End()
 
-	slashing, ok := msg.(*ethpb.ProposerSlashing)
-	if !ok {
-		return false, nil
-	}
+	slashing := msg.(*ethpb.ProposerSlashing)
+
 	cacheKey, err := propSlashingCacheKey(slashing)
 	if err != nil {
 		return false, errors.Wrapf(err, "could not hash proposer slashing")
