@@ -183,6 +183,13 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 	if _, err := r.validateAggregateAndProof(context.Background(), aggregateAndProof, &p2ptest.MockBroadcaster{}, false); !strings.Contains(err.Error(), wanted) {
 		t.Error("Did not receive wanted error")
 	}
+
+	att.Data.Slot = 1<<64 - 1
+	wanted = fmt.Sprintf("attestation slot out of range %d <= %d <= %d",
+		att.Data.Slot, beaconState.Slot, att.Data.Slot+params.BeaconConfig().AttestationPropagationSlotRange)
+	if _, err := r.validateAggregateAndProof(context.Background(), aggregateAndProof, &p2ptest.MockBroadcaster{}, false); !strings.Contains(err.Error(), wanted) {
+		t.Error("Did not receive wanted error")
+	}
 }
 
 func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
