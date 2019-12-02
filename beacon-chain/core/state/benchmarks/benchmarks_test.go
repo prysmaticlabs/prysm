@@ -29,7 +29,7 @@ func TestBenchmarkExecuteStateTransition(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := state.ExecuteStateTransitionNoVerify(context.Background(), beaconState, block); err != nil {
+	if _, err := state.ExecuteStateTransition(context.Background(), beaconState, block); err != nil {
 		t.Fatalf("failed to process block, benchmarks will fail: %v", err)
 	}
 }
