@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"context"
+	"fmt"
 	"io"
 
 	"github.com/libp2p/go-libp2p-core/network"
@@ -15,6 +16,8 @@ import (
 func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer.ID) error) {
 	s.host.Network().Notify(&network.NotifyBundle{
 		ConnectedF: func(net network.Network, conn network.Conn) {
+			multiAddr := fmt.Sprintf("%s/p2p/%s", conn.RemoteMultiaddr().String(), conn.RemotePeer().String())
+			log.WithField("multiAddr", multiAddr).Debug("Connection")
 			if peerstatus.IsBadPeer(conn.RemotePeer()) {
 				// Add Peer to gossipsub blacklist
 				s.pubsub.BlacklistPeer(conn.RemotePeer())

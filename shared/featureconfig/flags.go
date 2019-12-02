@@ -77,6 +77,10 @@ var (
 		Name:  "snappy",
 		Usage: "Enables snappy compression in the database.",
 	}
+	enablePruneBoundaryStateFlag = cli.BoolFlag{
+		Name:  "prune-states",
+		Usage: "Prune epoch boundary states before last finalized check point",
+	}
 )
 
 // Deprecated flags list.
@@ -141,4 +145,5 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableActiveCountCacheFlag,
 	enableSkipSlotsCache,
 	enableSnappyDBCompressionFlag,
+	enablePruneBoundaryStateFlag,
 }...)
