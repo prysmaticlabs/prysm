@@ -21,7 +21,7 @@ SOFTWARE.
 */
 
 // This file is forked from github.com/libp2p/go-libp2p-core/connmgr/connmgr.go
-package p2p
+package connmgr
 
 import (
 	"context"
@@ -33,6 +33,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/connmgr"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/prysmaticlabs/bazel-go-ethereum/log"
 
 	ma "github.com/multiformats/go-multiaddr"
 )

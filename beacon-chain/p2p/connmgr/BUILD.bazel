@@ -1,0 +1,28 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["connmgr.go"],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/p2p/connmgr",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_libp2p_go_libp2p_core//connmgr:go_default_library",
+        "@com_github_libp2p_go_libp2p_core//network:go_default_library",
+        "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
+        "@com_github_multiformats_go_multiaddr//:go_default_library",
+        "@com_github_prysmaticlabs_bazel_go_ethereum//log:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["connmgr_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "@com_github_ipfs_go_detect_race//:go_default_library",
+        "@com_github_libp2p_go_libp2p_core//network:go_default_library",
+        "@com_github_libp2p_go_libp2p_core//peer:go_default_library",
+        "@com_github_libp2p_go_libp2p_core//test:go_default_library",
+        "@com_github_multiformats_go_multiaddr//:go_default_library",
+    ],
+)
