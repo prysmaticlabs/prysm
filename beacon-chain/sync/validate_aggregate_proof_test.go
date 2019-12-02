@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -134,6 +135,51 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 	}
 
 	wanted := "attestation points to a block which is not in the database"
+	if _, err := r.validateAggregateAndProof(context.Background(), aggregateAndProof, &p2ptest.MockBroadcaster{}, false); !strings.Contains(err.Error(), wanted) {
+		t.Error("Did not receive wanted error")
+	}
+}
+
+func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
+	db := dbtest.SetupDB(t)
+	defer dbtest.TeardownDB(t, db)
+
+	deposits, _, _ := testutil.SetupInitialDeposits(t, 256)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	b := &ethpb.BeaconBlock{}
+	db.SaveBlock(context.Background(), b)
+	root, _ := ssz.SigningRoot(b)
+
+	aggBits := bitfield.NewBitlist(3)
+	aggBits.SetBitAt(0, true)
+	att := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			Slot:            1,
+			BeaconBlockRoot: root[:],
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+			Target:          &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+		},
+		AggregationBits: aggBits,
+	}
+
+	aggregateAndProof := &pb.AggregateAndProof{
+		Aggregate: att,
+	}
+
+	beaconState.GenesisTime = uint64(time.Now().Unix())
+	r := &RegularSync{
+		db:          db,
+		initialSync: &mockSync.Sync{IsSyncing: false},
+		chain: &mock.ChainService{Genesis: time.Now(),
+			State: beaconState},
+	}
+
+	wanted := fmt.Sprintf("attestation slot out of range %d <= %d <= %d",
+		att.Data.Slot, beaconState.Slot, att.Data.Slot+params.BeaconConfig().AttestationPropagationSlotRange)
 	if _, err := r.validateAggregateAndProof(context.Background(), aggregateAndProof, &p2ptest.MockBroadcaster{}, false); !strings.Contains(err.Error(), wanted) {
 		t.Error("Did not receive wanted error")
 	}
