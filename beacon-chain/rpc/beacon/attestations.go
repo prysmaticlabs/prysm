@@ -6,8 +6,9 @@ import (
 	"strconv"
 
 	ptypes "github.com/gogo/protobuf/types"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
@@ -40,6 +41,25 @@ func (bs *Server) ListAttestations(
 	var atts []*ethpb.Attestation
 	var err error
 	switch q := req.QueryFilter.(type) {
+	case *ethpb.ListAttestationsRequest_Genesis:
+		blks, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(0).SetEndSlot(0))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not genesis block: %v", err)
+		}
+		if len(blks) == 0 {
+			return nil, status.Error(codes.Internal, "Could not find genesis block")
+		}
+		if len(blks) != 1 {
+			return nil, status.Error(codes.Internal, "Found more than 1 genesis block")
+		}
+		genesisRoot, err := ssz.SigningRoot(blks[0])
+		if err != nil {
+			return nil, err
+		}
+		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetHeadBlockRoot(genesisRoot[:]))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not fetch genesis attestations: %v", err)
+		}
 	case *ethpb.ListAttestationsRequest_HeadBlockRoot:
 		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetHeadBlockRoot(q.HeadBlockRoot))
 		if err != nil {

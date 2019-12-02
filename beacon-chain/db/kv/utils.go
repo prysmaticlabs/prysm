@@ -39,6 +39,12 @@ func updateValueForIndices(indicesByBucket map[string][]byte, root []byte, tx *b
 				return err
 			}
 		} else {
+			// Do not save duplication in indices bucket
+			for i := 0; i < len(valuesAtIndex); i += 32 {
+				if bytes.Equal(valuesAtIndex[i:i+32], root) {
+					return nil
+				}
+			}
 			if err := bkt.Put(idx, append(valuesAtIndex, root...)); err != nil {
 				return err
 			}

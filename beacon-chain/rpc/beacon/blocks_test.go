@@ -9,11 +9,11 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -62,6 +62,73 @@ func TestServer_ListBlocks_NoResults(t *testing.T) {
 	}
 	if !proto.Equal(wanted, res) {
 		t.Errorf("Wanted %v, received %v", wanted, res)
+	}
+}
+
+func TestServer_ListBlocks_Genesis(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	bs := &Server{
+		BeaconDB: db,
+	}
+
+	// Should throw an error if no genesis block is found.
+	if _, err := bs.ListBlocks(ctx, &ethpb.ListBlocksRequest{
+		QueryFilter: &ethpb.ListBlocksRequest_Genesis{
+			Genesis: true,
+		},
+	}); err != nil && !strings.Contains(err.Error(), "Could not find genesis") {
+		t.Fatal(err)
+	}
+
+	// Should return the proper genesis block if it exists.
+	parentRoot := [32]byte{1, 2, 3}
+	blk := &ethpb.BeaconBlock{
+		Slot:       0,
+		ParentRoot: parentRoot[:],
+	}
+	root, err := ssz.SigningRoot(blk)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveBlock(ctx, blk); err != nil {
+		t.Fatal(err)
+	}
+	wanted := &ethpb.ListBlocksResponse{
+		BlockContainers: []*ethpb.BeaconBlockContainer{
+			{
+				Block:     blk,
+				BlockRoot: root[:],
+			},
+		},
+		NextPageToken: "0",
+		TotalSize:     1,
+	}
+	res, err := bs.ListBlocks(ctx, &ethpb.ListBlocksRequest{
+		QueryFilter: &ethpb.ListBlocksRequest_Genesis{
+			Genesis: true,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(wanted, res) {
+		t.Errorf("Wanted %v, received %v", wanted, res)
+	}
+
+	// Should throw an error if there is more than 1 block
+	// for the genesis slot.
+	if err := db.SaveBlock(ctx, blk); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := bs.ListBlocks(ctx, &ethpb.ListBlocksRequest{
+		QueryFilter: &ethpb.ListBlocksRequest_Genesis{
+			Genesis: true,
+		},
+	}); err != nil && !strings.Contains(err.Error(), "Found more than 1") {
+		t.Fatal(err)
 	}
 }
 
