@@ -30,16 +30,17 @@ import (
 	"sync/atomic"
 	"time"
 
+	logging "github.com/ipfs/go-log"
 	"github.com/libp2p/go-libp2p-core/connmgr"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/prysmaticlabs/bazel-go-ethereum/log"
-
 	ma "github.com/multiformats/go-multiaddr"
 )
 
 var SilencePeriod = 5 * time.Second
 var TickerPeriod = 5 * time.Second
+
+var log = logging.Logger("connmgr")
 
 // BasicConnMgr is a ConnManager that trims connections whenever the count exceeds the
 // high watermark. New connections are given a grace period before they're subject
