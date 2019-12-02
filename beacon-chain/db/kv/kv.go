@@ -23,7 +23,7 @@ const (
 
 // BlockCacheSize specifies 1000 slots worth of blocks cached, which
 // would be approximately 2MB
-const BlockCacheSize = int64(1 << 21)
+var BlockCacheSize = int64(1 << 21)
 
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
