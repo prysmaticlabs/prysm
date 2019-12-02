@@ -22,6 +22,7 @@ import (
 )
 
 func TestVerifyIndexInCommittee_CanVerify(t *testing.T) {
+	ctx := context.Background()
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
 
@@ -43,17 +44,18 @@ func TestVerifyIndexInCommittee_CanVerify(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := validateIndexInCommittee(s, att, indices[0]); err != nil {
+	if err := validateIndexInCommittee(ctx, s, att, indices[0]); err != nil {
 		t.Fatal(err)
 	}
 
 	wanted := "validator index 1000 is not within the committee"
-	if err := validateIndexInCommittee(s, att, 1000); !strings.Contains(err.Error(), wanted) {
+	if err := validateIndexInCommittee(ctx, s, att, 1000); !strings.Contains(err.Error(), wanted) {
 		t.Error("Did not receive wanted error")
 	}
 }
 
 func TestVerifySelection_NotAnAggregator(t *testing.T) {
+	ctx := context.Background()
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
 	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 2048)
@@ -66,12 +68,13 @@ func TestVerifySelection_NotAnAggregator(t *testing.T) {
 	data := &ethpb.AttestationData{}
 
 	wanted := "validator is not an aggregator for slot"
-	if err := validateSelection(beaconState, data, 0, sig.Marshal()); !strings.Contains(err.Error(), wanted) {
+	if err := validateSelection(ctx, beaconState, data, 0, sig.Marshal()); !strings.Contains(err.Error(), wanted) {
 		t.Error("Did not receive wanted error")
 	}
 }
 
 func TestVerifySelection_BadSignature(t *testing.T) {
+	ctx := context.Background()
 	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 256)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
@@ -81,13 +84,14 @@ func TestVerifySelection_BadSignature(t *testing.T) {
 	sig := privKeys[0].Sign([]byte{}, 0)
 	data := &ethpb.AttestationData{}
 
-	wanted := "could not validate slot signaturet"
-	if err := validateSelection(beaconState, data, 0, sig.Marshal()); !strings.Contains(err.Error(), wanted) {
+	wanted := "could not validate slot signature"
+	if err := validateSelection(ctx, beaconState, data, 0, sig.Marshal()); !strings.Contains(err.Error(), wanted) {
 		t.Error("Did not receive wanted error")
 	}
 }
 
 func TestVerifySelection_CanVerify(t *testing.T) {
+	ctx := context.Background()
 	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 256)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
@@ -102,7 +106,7 @@ func TestVerifySelection_CanVerify(t *testing.T) {
 	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 	sig := privKeys[0].Sign(slotRoot[:], domain)
 
-	if err := validateSelection(beaconState, data, 0, sig.Marshal()); err != nil {
+	if err := validateSelection(ctx, beaconState, data, 0, sig.Marshal()); err != nil {
 		t.Fatal(err)
 	}
 }
