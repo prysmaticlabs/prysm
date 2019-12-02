@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
 )
 
 // seenAttesterSlashings represents a cache of all the seen slashings
@@ -32,6 +33,9 @@ func (r *RegularSync) validateAttesterSlashing(ctx context.Context, msg proto.Me
 	if r.initialSync.Syncing() {
 		return false, nil
 	}
+
+	ctx, span := trace.StartSpan(ctx, "sync.validateAttesterSlashing")
+	defer span.End()
 
 	slashing, ok := msg.(*ethpb.AttesterSlashing)
 	if !ok {

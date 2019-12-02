@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
 )
 
 // seenExits tracks exits we've already seen to prevent feedback loop.
@@ -28,6 +29,9 @@ func (r *RegularSync) validateVoluntaryExit(ctx context.Context, msg proto.Messa
 	if r.initialSync.Syncing() {
 		return false, nil
 	}
+
+	ctx, span := trace.StartSpan(ctx, "sync.validateBeaconBlockPubSub")
+	defer span.End()
 
 	exit, ok := msg.(*ethpb.VoluntaryExit)
 	if !ok {

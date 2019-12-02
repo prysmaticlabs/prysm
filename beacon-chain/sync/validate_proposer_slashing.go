@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"go.opencensus.io/trace"
 )
 
 // seenProposerSlashings represents a cache of all the seen slashings
@@ -31,6 +32,9 @@ func (r *RegularSync) validateProposerSlashing(ctx context.Context, msg proto.Me
 	if r.initialSync.Syncing() {
 		return false, nil
 	}
+
+	ctx, span := trace.StartSpan(ctx, "sync.validateBeaconBlockPubSub")
+	defer span.End()
 
 	slashing, ok := msg.(*ethpb.ProposerSlashing)
 	if !ok {
