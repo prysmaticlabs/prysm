@@ -607,7 +607,7 @@ func TestServer_Store_1000_Attestations(t *testing.T) {
 		}
 	}
 
-	err, s := dbs.Size()
+	s, err := dbs.Size()
 	if err != nil {
 		t.Error(err)
 	}
