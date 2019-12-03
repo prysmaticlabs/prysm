@@ -95,7 +95,7 @@ func (s *Service) archiveActiveSetChanges(ctx context.Context, headState *pb.Bea
 	if err != nil {
 		return errors.Wrap(err, "could not get active validator count")
 	}
-	exited, err := validators.ExitedValidatorIndices(headState.Validators, activeValidatorCount)
+	exited, err := validators.ExitedValidatorIndices(prevEpoch, headState.Validators, activeValidatorCount)
 	if err != nil {
 		return errors.Wrap(err, "could not determine exited validator indices")
 	}

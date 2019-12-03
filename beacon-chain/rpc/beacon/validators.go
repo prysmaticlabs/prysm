@@ -289,13 +289,13 @@ func (bs *Server) GetValidatorActiveSetChanges(
 		slashedIndices = archivedChanges.Slashed
 		exitedIndices = archivedChanges.Exited
 	} else if requestedEpoch == currentEpoch {
-		activeValidatorCount, err := helpers.ActiveValidatorCount(headState, helpers.CurrentEpoch(headState))
+		activeValidatorCount, err := helpers.ActiveValidatorCount(headState, helpers.PrevEpoch(headState))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
 		}
-		activatedIndices = validators.ActivatedValidatorIndices(helpers.CurrentEpoch(headState), headState.Validators)
+		activatedIndices = validators.ActivatedValidatorIndices(helpers.PrevEpoch(headState), headState.Validators)
 		slashedIndices = validators.SlashedValidatorIndices(helpers.PrevEpoch(headState), headState.Validators)
-		exitedIndices, err = validators.ExitedValidatorIndices(headState.Validators, activeValidatorCount)
+		exitedIndices, err = validators.ExitedValidatorIndices(helpers.PrevEpoch(headState), headState.Validators, activeValidatorCount)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not determine exited validator indices: %v", err)
 		}

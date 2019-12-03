@@ -320,8 +320,8 @@ func TestArchiverService_SavesExitedValidatorChanges(t *testing.T) {
 		State: headState,
 	}
 	prevEpoch := helpers.PrevEpoch(headState)
-	headState.Validators[95].ExitEpoch = prevEpoch + 1
-	headState.Validators[95].WithdrawableEpoch = prevEpoch + 1 + params.BeaconConfig().MinValidatorWithdrawabilityDelay
+	headState.Validators[95].ExitEpoch = prevEpoch
+	headState.Validators[95].WithdrawableEpoch = prevEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
 	event := &statefeed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
