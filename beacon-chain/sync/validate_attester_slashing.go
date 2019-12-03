@@ -37,7 +37,10 @@ func (r *RegularSync) validateAttesterSlashing(ctx context.Context, msg proto.Me
 	ctx, span := trace.StartSpan(ctx, "sync.validateAttesterSlashing")
 	defer span.End()
 
-	slashing := msg.(*ethpb.AttesterSlashing)
+	slashing, ok := msg.(*ethpb.AttesterSlashing)
+	if !ok {
+		return false, nil
+	}
 
 	cacheKey, err := attSlashingCacheKey(slashing)
 	if err != nil {

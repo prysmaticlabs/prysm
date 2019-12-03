@@ -28,7 +28,10 @@ func (r *RegularSync) validateBeaconBlockPubSub(ctx context.Context, msg proto.M
 	r.validateBlockLock.Lock()
 	defer r.validateBlockLock.Unlock()
 
-	m := msg.(*ethpb.BeaconBlock)
+	m, ok := msg.(*ethpb.BeaconBlock)
+	if !ok {
+		return false, nil
+	}
 
 	blockRoot, err := ssz.SigningRoot(m)
 	if err != nil {
