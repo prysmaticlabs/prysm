@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = ["connmgr.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/p2p/connmgr",
-    visibility = ["//visibility:public"],
+    visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "@com_github_ipfs_go_log//:go_default_library",
         "@com_github_libp2p_go_libp2p_core//connmgr:go_default_library",
