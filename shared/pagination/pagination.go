@@ -23,7 +23,7 @@ func StartAndEndPage(pageToken string, pageSize int, totalSize int) (int, int, s
 		return 0, 0, "", errors.Wrap(err, "could not convert page token")
 	}
 
-	// Start page can not be greater than validator size.
+	// Start page can not be greater than set size.
 	start := token * pageSize
 	if start >= totalSize {
 		return 0, 0, "", fmt.Errorf("page start %d >= list %d", start, totalSize)
@@ -31,10 +31,12 @@ func StartAndEndPage(pageToken string, pageSize int, totalSize int) (int, int, s
 
 	// End page can not go out of bound.
 	end := start + pageSize
+	nextPageToken := strconv.Itoa(token + 1)
+
 	if end > totalSize {
 		end = totalSize
+		nextPageToken = ""
 	}
 
-	nextPageToken := strconv.Itoa(token + 1)
 	return start, end, nextPageToken, nil
 }
