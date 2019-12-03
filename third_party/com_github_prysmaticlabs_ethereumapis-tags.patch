@@ -255,7 +255,7 @@ index 69a148a..1b6ac18 100644
 +    bytes signature = 4 [(gogoproto.moretags) = "ssz-size:\"96\""];
  }
 diff --git a/eth/v1alpha1/beacon_chain.proto b/eth/v1alpha1/beacon_chain.proto
-index c31fe0f..ee2e2ec 100644
+index 140fc2f..0638f87 100644
 --- a/eth/v1alpha1/beacon_chain.proto
 +++ b/eth/v1alpha1/beacon_chain.proto
 @@ -15,6 +15,7 @@ syntax = "proto3";
@@ -266,7 +266,7 @@ index c31fe0f..ee2e2ec 100644
  import "google/api/annotations.proto";
  import "google/protobuf/empty.proto";
  
-@@ -76,9 +77,9 @@ service BeaconChain {
+@@ -84,9 +85,9 @@ service BeaconChain {
          };
      }
  
@@ -279,7 +279,7 @@ index c31fe0f..ee2e2ec 100644
      // This includes the head block slot and root as well as information about
      // the most recent finalized and justified slots.
      rpc StreamChainHead(google.protobuf.Empty) returns (stream ChainHead) {
-@@ -278,7 +279,7 @@ message ChainHead {
+@@ -290,7 +291,7 @@ message ChainHead {
      uint64 head_epoch = 2;
  
      // 32 byte merkle tree root of the canonical head block in the beacon node.
@@ -288,7 +288,7 @@ index c31fe0f..ee2e2ec 100644
  
      // Most recent slot that contains the finalized block.
      uint64 finalized_slot = 4;
-@@ -287,7 +288,7 @@ message ChainHead {
+@@ -299,7 +300,7 @@ message ChainHead {
      uint64 finalized_epoch = 5;
      
      // Most recent 32 byte finalized block root.
@@ -297,7 +297,7 @@ index c31fe0f..ee2e2ec 100644
  
      // Most recent slot that contains the justified block.
      uint64 justified_slot = 7;
-@@ -296,7 +297,7 @@ message ChainHead {
+@@ -308,7 +309,7 @@ message ChainHead {
      uint64 justified_epoch = 8;
      
      // Most recent 32 byte justified block root.
@@ -306,7 +306,7 @@ index c31fe0f..ee2e2ec 100644
  
      // Most recent slot that contains the previous justified block.
      uint64 previous_justified_slot = 10;
-@@ -305,7 +306,7 @@ message ChainHead {
+@@ -317,7 +318,7 @@ message ChainHead {
      uint64 previous_justified_epoch = 11;
  
      // Previous 32 byte justified block root.
@@ -315,7 +315,7 @@ index c31fe0f..ee2e2ec 100644
  }
  
  message ListCommitteesRequest {
-@@ -363,7 +364,7 @@ message ListValidatorBalancesRequest {
+@@ -378,7 +379,7 @@ message ListValidatorBalancesRequest {
  
      // Validator 48 byte BLS public keys to filter validators for the given
      // epoch.
@@ -324,7 +324,7 @@ index c31fe0f..ee2e2ec 100644
          
      // Validator indices to filter validators for the given epoch.
      repeated uint64 indices = 4;
-@@ -384,7 +385,7 @@ message ValidatorBalances {
+@@ -399,7 +400,7 @@ message ValidatorBalances {
  
      message Balance {
          // Validator's 48 byte BLS public key.
@@ -333,7 +333,16 @@ index c31fe0f..ee2e2ec 100644
  
          // Validator's index in the validator set.
          uint64 index = 2;
-@@ -460,17 +461,17 @@ message ActiveSetChanges {
+@@ -448,7 +449,7 @@ message GetValidatorRequest {
+         uint64 index = 1;
+ 
+         // 48 byte validator public key.
+-        bytes public_key = 2;
++        bytes public_key = 2 [(gogoproto.moretags) = "ssz-size:\"48\""];
+     }
+ }
+ 
+@@ -485,17 +486,17 @@ message ActiveSetChanges {
      uint64 epoch = 1;
  
      // 48 byte validator public keys that have been activated in this epoch.
@@ -355,7 +364,7 @@ index c31fe0f..ee2e2ec 100644
  }
  
  message ValidatorQueue {
-@@ -480,11 +481,11 @@ message ValidatorQueue {
+@@ -505,11 +506,11 @@ message ValidatorQueue {
  
      // Ordered list of 48 byte public keys awaiting activation. 0th index is the
      // next key to be processed.
@@ -369,7 +378,7 @@ index c31fe0f..ee2e2ec 100644
  }
  
  message ListValidatorAssignmentsRequest {
-@@ -496,7 +497,7 @@ message ListValidatorAssignmentsRequest {
+@@ -521,7 +522,7 @@ message ListValidatorAssignmentsRequest {
          bool genesis = 2;
      }
      // 48 byte validator public keys to filter assignments for the given epoch.
@@ -378,7 +387,7 @@ index c31fe0f..ee2e2ec 100644
          
      // Validator indicies to filter assignments for the given epoch.
      repeated uint64 indices = 4;
-@@ -531,7 +532,7 @@ message ValidatorAssignments {
+@@ -556,7 +557,7 @@ message ValidatorAssignments {
          uint64 proposer_slot = 4;
  
          // 48 byte BLS public key.
@@ -388,7 +397,7 @@ index c31fe0f..ee2e2ec 100644
  
      // The epoch for which this set of validator assignments is valid.
 diff --git a/eth/v1alpha1/validator.proto b/eth/v1alpha1/validator.proto
-index a8c18fb..ca67c10 100644
+index 13bea5f..84d832d 100644
 --- a/eth/v1alpha1/validator.proto
 +++ b/eth/v1alpha1/validator.proto
 @@ -15,6 +15,7 @@ syntax = "proto3";
