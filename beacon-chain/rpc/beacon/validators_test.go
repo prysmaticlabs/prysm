@@ -837,9 +837,23 @@ func TestServer_GetValidator(t *testing.T) {
 					Index: 0,
 				},
 			},
-			res: &ethpb.Validator{
-				ActivationEligibilityEpoch: 0,
+			res: validators[0],
+		},
+		{
+			req: &ethpb.GetValidatorRequest{
+				QueryFilter: &ethpb.GetValidatorRequest_Index{
+					Index: uint64(count - 1),
+				},
 			},
+			res: validators[count-1],
+		},
+		{
+			req: &ethpb.GetValidatorRequest{
+				QueryFilter: &ethpb.GetValidatorRequest_PublicKey{
+					PublicKey: []byte(strconv.Itoa(5)),
+				},
+			},
+			res: validators[5],
 		},
 	}
 
