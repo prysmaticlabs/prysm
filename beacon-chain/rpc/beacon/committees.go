@@ -2,12 +2,10 @@ package beacon
 
 import (
 	"context"
-	"strconv"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -108,7 +106,7 @@ func (bs *Server) ListBeaconCommittees(
 		)
 	}
 
-	committees := make([]*ethpb.BeaconCommittees_CommitteeItem, 0)
+	//committees := make([]*ethpb.BeaconCommittees_CommitteeItem, 0)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		var countAtSlot = uint64(len(activeIndices)) / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
 		if countAtSlot > params.BeaconConfig().MaxCommitteesPerSlot {
@@ -129,39 +127,42 @@ func (bs *Server) ListBeaconCommittees(
 					err,
 				)
 			}
-			committees = append(committees, &ethpb.BeaconCommittees_CommitteeItem{
-				Committee: committee,
-				Slot:      slot,
-			})
+			//committees = append(committees, &ethpb.BeaconCommittees_CommitteeItem{
+			//	Committee: committee,
+			//	Slot:      slot,
+			//})
+			_ = committee
 		}
 	}
 
-	numCommittees := len(committees)
+	numCommittees := 5
 	// If there are no committees, we simply return a response specifying this.
 	// Otherwise, attempting to paginate 0 committees below would result in an error.
 	if numCommittees == 0 {
-		return &ethpb.BeaconCommittees{
-			Epoch:                helpers.SlotToEpoch(startSlot),
-			ActiveValidatorCount: uint64(len(activeIndices)),
-			Committees:           make([]*ethpb.BeaconCommittees_CommitteeItem, 0),
-			TotalSize:            int32(0),
-			NextPageToken:        strconv.Itoa(0),
-		}, nil
+		return nil, nil
+		//return &ethpb.BeaconCommittees{
+		//	Epoch:                helpers.SlotToEpoch(startSlot),
+		//	ActiveValidatorCount: uint64(len(activeIndices)),
+		//	Committees:           make([]*ethpb.BeaconCommittees_CommitteeItem, 0),
+		//	TotalSize:            int32(0),
+		//	NextPageToken:        strconv.Itoa(0),
+		//}, nil
 	}
 
-	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numCommittees)
-	if err != nil {
-		return nil, status.Errorf(
-			codes.Internal,
-			"Could not paginate results: %v",
-			err,
-		)
-	}
-	return &ethpb.BeaconCommittees{
-		Epoch:                helpers.SlotToEpoch(startSlot),
-		ActiveValidatorCount: uint64(len(activeIndices)),
-		Committees:           committees[start:end],
-		TotalSize:            int32(numCommittees),
-		NextPageToken:        nextPageToken,
-	}, nil
+	//start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numCommittees)
+	//if err != nil {
+	//	return nil, status.Errorf(
+	//		codes.Internal,
+	//		"Could not paginate results: %v",
+	//		err,
+	//	)
+	//}
+	//return &ethpb.BeaconCommittees{
+	//	Epoch:                helpers.SlotToEpoch(startSlot),
+	//	ActiveValidatorCount: uint64(len(activeIndices)),
+	//	Committees:           committees[start:end],
+	//	TotalSize:            int32(numCommittees),
+	//	NextPageToken:        nextPageToken,
+	//}, nil
+	return nil, nil
 }

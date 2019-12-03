@@ -113,6 +113,13 @@ func (bs *Server) ListAttestations(
 	}, nil
 }
 
+// StreamAttestations to clients every single time a new attestation is received.
+func (bs *Server) StreamAttestations(
+	_ *ethpb.ListAttestationsRequest, _ ethpb.BeaconChain_StreamAttestationsServer,
+) error {
+	return status.Error(codes.Unimplemented, "Not yet implemented")
+}
+
 // AttestationPool retrieves pending attestations.
 //
 // The server returns a list of attestations that have been seen but not

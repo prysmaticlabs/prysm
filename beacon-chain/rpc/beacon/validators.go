@@ -247,6 +247,13 @@ func (bs *Server) ListValidators(
 	}, nil
 }
 
+// GetValidator information from any validator in the registry by index or public key.
+func (bs *Server) GetValidator(
+	_ context.Context, _ *ethpb.GetValidatorRequest,
+) (*ethpb.Validator, error) {
+	return nil, status.Error(codes.Unimplemented, "Not yet implemented")
+}
+
 // GetValidatorActiveSetChanges retrieves the active set changes for a given epoch.
 //
 // This data includes any activations, voluntary exits, and involuntary

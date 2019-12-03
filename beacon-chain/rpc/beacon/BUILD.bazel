@@ -42,7 +42,7 @@ go_test(
         "assignments_test.go",
         "attestations_test.go",
         "blocks_test.go",
-        "committees_test.go",
+        # "committees_test.go",
         "validators_test.go",
     ],
     embed = [":go_default_library"],
