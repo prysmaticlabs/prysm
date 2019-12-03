@@ -405,7 +405,7 @@ func TestServer_StreamChainHead_ContextCanceled(t *testing.T) {
 	ctx, cancel := context.WithCancel(ctx)
 	chainService := &mock.ChainService{}
 	server := &Server{
-		Ctx: ctx,
+		Ctx:           ctx,
 		StateNotifier: chainService.StateNotifier(),
 		BeaconDB:      db,
 	}
@@ -458,6 +458,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockStream := mockRPC.NewMockBeaconChain_StreamChainHeadServer(ctrl)
+	mockStream.EXPECT().Context().Return(context.Background())
 	mockStream.EXPECT().Send(
 		&ethpb.ChainHead{
 			HeadSlot:                   b.Slot,
