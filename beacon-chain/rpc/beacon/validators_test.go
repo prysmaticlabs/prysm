@@ -810,9 +810,9 @@ func TestServer_GetValidator(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
-	numEpochs := 30
-	validators := make([]*ethpb.Validator, numEpochs)
-	for i := 0; i < numEpochs; i++ {
+	count := 30
+	validators := make([]*ethpb.Validator, count)
+	for i := 0; i < count; i++ {
 		validators[i] = &ethpb.Validator{
 			ActivationEpoch: uint64(i),
 			PublicKey:       []byte(strconv.Itoa(i)),
@@ -836,6 +836,9 @@ func TestServer_GetValidator(t *testing.T) {
 				QueryFilter: &ethpb.GetValidatorRequest_Index{
 					Index: 0,
 				},
+			},
+			res: &ethpb.Validator{
+				ActivationEligibilityEpoch: 0,
 			},
 		},
 	}
