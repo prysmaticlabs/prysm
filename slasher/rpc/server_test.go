@@ -146,7 +146,7 @@ func TestServer_SameSlotSlashable(t *testing.T) {
 		},
 		ValidatorIndex: 1,
 	}
-	want := &slashpb.ProposerSlashing{
+	want := &ethpb.ProposerSlashing{
 		ProposerIndex: psr.ValidatorIndex,
 		Header_1:      psr2.BlockHeader,
 		Header_2:      psr.BlockHeader,
