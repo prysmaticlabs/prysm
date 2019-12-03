@@ -18,8 +18,8 @@ Bazel does not allow writing to the project directory, so running with `go run` 
 
 ## Current Results as of November 2019
 ```
-BenchmarkExecuteStateTransition-4   	         25	35901941409 ns/op	7465058127 B/op	111046635 allocs/op
-BenchmarkExecuteStateTransition_WithCache-4    25	24352836461 ns/op	716078697 B/op	22348530 allocs/op
-BenchmarkProcessEpoch_2FullEpochs-4   	       5	177559078808 ns/op	12754314974 B/op	176571470 allocs/op
-BenchmarkHashTreeRoot_FullState-4   	         50	1321382095 ns/op	253959577 B/op	 9645648 allocs/op
+BenchmarkExecuteStateTransition-4             	      20	33020593584 ns/op
+BenchmarkExecuteStateTransition_WithCache-4   	      20	21272276477 ns/op
+BenchmarkProcessEpoch_2FullEpochs-4           	       5	158161708836 ns/op
+BenchmarkHashTreeRoot_FullState-4   	              50	1509721280 ns/op
 ```
