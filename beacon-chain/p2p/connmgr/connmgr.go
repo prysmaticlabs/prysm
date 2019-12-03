@@ -187,7 +187,6 @@ type peerInfo struct {
 // pruning those peers with the lowest scores first, as long as they are not within their
 // grace period.
 //
-// TODO: error return value so we can cleanly signal we are aborting because:
 // (a) there's another trim in progress, or (b) the silence period is in effect.
 func (cm *BasicConnMgr) TrimOpenConns(ctx context.Context) {
 	select {
