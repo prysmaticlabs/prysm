@@ -96,6 +96,24 @@ load(
 
 _go_image_repos()
 
+# Golang images
+# This is using gcr.io/distroless/base
+load(
+    "@io_bazel_rules_docker//go:image.bzl",
+    _go_image_repos = "repositories",
+)
+
+_go_image_repos()
+
+# CC images
+# This is using gcr.io/distroless/base
+load(
+    "@io_bazel_rules_docker//cc:image.bzl",
+    _cc_image_repos = "repositories",
+)
+
+_cc_image_repos()
+
 http_archive(
     name = "prysm_testnet_site",
     build_file_content = """
@@ -169,6 +187,13 @@ http_archive(
     sha256 = "b5d7dbc6832f11b6468328a376de05959a1a9e4e9f5622499d3bab509c26b46a",
     strip_prefix = "buildtools-bf564b4925ab5876a3f64d8b90fab7f769013d42",
     url = "https://github.com/bazelbuild/buildtools/archive/bf564b4925ab5876a3f64d8b90fab7f769013d42.zip",
+)
+
+http_archive(
+    name = "com_github_herumi_bls_eth_go_binary",
+    sha256 = "15a41ddb0bf7d142ebffae68337f19c16e747676cb56794c5d80dbe388ce004c",
+    strip_prefix = "bls-go-binary-ac038c7cb6d3185c4a46f3bca0c99ebf7b191e16",
+    url = "https://github.com/nisdas/bls-go-binary/archive/ac038c7cb6d3185c4a46f3bca0c99ebf7b191e16.zip",
 )
 
 load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_dependencies")
@@ -1202,7 +1227,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_ethereumapis",
-    commit = "8a69b37df2264eb58b0b0cef5ba25ae9af2d8732",
+    commit = "23585b69a8b4113742948e3e266ceece844518a6",
     importpath = "github.com/prysmaticlabs/ethereumapis",
     patch_args = ["-p1"],
     patches = [
@@ -1241,13 +1266,6 @@ go_repository(
     importpath = "github.com/mdlayher/prombolt",
     sum = "h1:N257g6TTx0LxYoskSDFxvkSJ3NOZpy9IF1xQ7Gu+K8I=",
     version = "v0.0.0-20161005185022-dfcf01d20ee9",
-)
-
-go_repository(
-    name = "com_github_kilic_bls12-381",
-    importpath = "github.com/kilic/bls12-381",
-    sum = "h1:hCD4IWWYsETkACK7U+isYppKfB/6d54sBkCDk3k+w2U=",
-    version = "v0.0.0-20191005202515-c798d6202457",
 )
 
 go_repository(
