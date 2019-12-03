@@ -35,7 +35,7 @@ func StartAndEndPage(pageToken string, pageSize int, totalSize int) (int, int, s
 
 	if end > totalSize {
 		end = totalSize
-		nextPageToken = ""
+		nextPageToken = "" // Return an empty next page token for the last page of a set
 	}
 
 	return start, end, nextPageToken, nil
