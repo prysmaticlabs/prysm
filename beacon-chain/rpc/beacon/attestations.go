@@ -114,6 +114,7 @@ func (bs *Server) ListAttestations(
 }
 
 // StreamAttestations to clients every single time a new attestation is received.
+// TODO(#4184): Implement.
 func (bs *Server) StreamAttestations(
 	_ *ethpb.ListAttestationsRequest, _ ethpb.BeaconChain_StreamAttestationsServer,
 ) error {

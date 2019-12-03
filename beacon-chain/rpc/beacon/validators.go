@@ -248,6 +248,7 @@ func (bs *Server) ListValidators(
 }
 
 // GetValidator information from any validator in the registry by index or public key.
+// TODO(#4177): Implement.
 func (bs *Server) GetValidator(
 	_ context.Context, _ *ethpb.GetValidatorRequest,
 ) (*ethpb.Validator, error) {
