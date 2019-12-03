@@ -827,17 +827,27 @@ func TestServer_GetValidator(t *testing.T) {
 		},
 	}
 
-	req := &ethpb.GetValidatorRequest{
-		QueryFilter: &ethpb.GetValidatorRequest_Index{
-			Index: 0,
+	tests := []struct {
+		req *ethpb.GetValidatorRequest
+		res *ethpb.Validator
+	}{
+		{
+			req: &ethpb.GetValidatorRequest{
+				QueryFilter: &ethpb.GetValidatorRequest_Index{
+					Index: 0,
+				},
+			},
 		},
 	}
-	res, err := bs.GetValidator(context.Background(), req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(validators[0], res) {
-		t.Errorf("Wanted %v, got %v", validators[0], res)
+
+	for _, test := range tests {
+		res, err := bs.GetValidator(context.Background(), test.req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(test.res, res) {
+			t.Errorf("Wanted %v, got %v", test.res, res)
+		}
 	}
 }
 
