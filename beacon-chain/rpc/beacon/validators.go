@@ -340,7 +340,7 @@ func (bs *Server) GetValidatorParticipation(
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
-	currentEpoch := helpers.SlotToEpoch(headState.Slot)
+	currentEpoch := helpers.CurrentEpoch(headState)
 	prevEpoch := helpers.PrevEpoch(headState)
 
 	var requestedEpoch uint64
@@ -399,8 +399,8 @@ func (bs *Server) GetValidatorParticipation(
 		return nil, status.Errorf(codes.Internal, "Could not compute participation: %v", err)
 	}
 	return &ethpb.ValidatorParticipationResponse{
-		Epoch:         currentEpoch,
-		Finalized:     false, // The current epoch can never be finalized.
+		Epoch:         requestedEpoch,
+		Finalized:     requestedEpoch <= headState.FinalizedCheckpoint.Epoch,
 		Participation: participation,
 	}, nil
 }
