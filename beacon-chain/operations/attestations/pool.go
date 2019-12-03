@@ -1,15 +1,15 @@
-package attestation
+package attestations
 
 import (
 	"github.com/karlseguin/ccache"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// The max amount of unaggregated attestation a node can receive in one epoch.
+// The max amount of unaggregated attestations a node can receive in one epoch.
 // Bounded by the validators can participate in eth2.
 var unaggregatedCacheSize = int64(params.BeaconConfig().ValidatorRegistryLimit)
 
-// The max amount of aggregated attestation a node can receive in one epoch.
+// The max amount of aggregated attestations a node can receive in one epoch.
 // Bounded by the max committee count in one epoch.
 var aggregatedCacheSize = int64(params.BeaconConfig().MaxCommitteesPerSlot * params.BeaconConfig().SlotsPerEpoch)
 
