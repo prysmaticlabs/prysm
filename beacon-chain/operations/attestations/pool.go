@@ -1,34 +1,33 @@
 package attestations
 
 import (
-	"github.com/karlseguin/ccache"
+	"time"
+
+	"github.com/patrickmn/go-cache"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
-
-// The max amount of unaggregated attestations a node can receive in one epoch.
-// Bounded by the validators can participate in eth2.
-var unaggregatedCacheSize = int64(params.BeaconConfig().ValidatorRegistryLimit)
-
-// The max amount of aggregated attestations a node can receive in one epoch.
-// Bounded by the max committee count in one epoch.
-var aggregatedCacheSize = int64(params.BeaconConfig().MaxCommitteesPerSlot * params.BeaconConfig().SlotsPerEpoch)
 
 // Pool defines an implementation of the attestation pool interface
 // using cache as underlying kv store for various incoming attestations
 // such are unaggregated, aggregated or within a block.
 type Pool struct {
-	aggregatedAtt   *ccache.Cache
-	unAggregatedAtt *ccache.Cache
-	attInBlock      *ccache.Cache
+	aggregatedAtt   *cache.Cache
+	unAggregatedAtt *cache.Cache
+	attInBlock      *cache.Cache
 }
 
 // NewPool initializes a new attestation pool consists of multiple KV store in cache for
 // various kind of aggregations.
 func NewPool() *Pool {
+
+	secsInEpoch := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
+
+	// Create caches with default expiration time of one epoch and which
+	// purges expired items every other epoch.
 	pool := &Pool{
-		unAggregatedAtt: ccache.New(ccache.Configure().MaxSize(unaggregatedCacheSize)),
-		aggregatedAtt:   ccache.New(ccache.Configure().MaxSize(aggregatedCacheSize)),
-		attInBlock:      ccache.New(ccache.Configure().MaxSize(aggregatedCacheSize)),
+		unAggregatedAtt: cache.New(secsInEpoch/time.Minute, 2*secsInEpoch/time.Minute),
+		aggregatedAtt:   cache.New(secsInEpoch/time.Minute, 2*secsInEpoch/time.Minute),
+		attInBlock:      cache.New(secsInEpoch/time.Minute, 2*secsInEpoch/time.Minute),
 	}
 
 	return pool
