@@ -45,11 +45,6 @@ var (
 		Name:  "enable-active-count-cache",
 		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
 	}
-	// InitSyncNoVerifyFlag enables the initial sync no verify configuration.
-	InitSyncNoVerifyFlag = cli.BoolFlag{
-		Name:  "init-sync-no-verify",
-		Usage: "Initial sync to finalized check point w/o verifying block's signature, RANDAO and attestation's aggregated signatures",
-	}
 	// NewCacheFlag enables the node to use the new caching scheme.
 	NewCacheFlag = cli.BoolFlag{
 		Name:  "new-cache",
@@ -80,6 +75,10 @@ var (
 	enablePruneBoundaryStateFlag = cli.BoolFlag{
 		Name:  "prune-states",
 		Usage: "Prune epoch boundary states before last finalized check point",
+	}
+	initSyncVerifyEverythingFlag = cli.BoolFlag{
+		Name:  "initial-sync-verify-all-signatures",
+		Usage: "Initial sync to finalized checkpoint with verifying block's signature, RANDAO and attestation's aggregated signatures",
 	}
 )
 
@@ -112,6 +111,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedInitSyncNoVerifyFlag = cli.BoolFlag{
+		Name:  "init-sync-no-verify",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -120,6 +124,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedScatterFlag,
 	deprecatedPruneFinalizedStatesFlag,
 	deprecatedOptimizeProcessEpoch,
+	deprecatedInitSyncNoVerifyFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -134,7 +139,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	writeSSZStateTransitionsFlag,
 	EnableAttestationCacheFlag,
 	EnableEth1DataVoteCacheFlag,
-	InitSyncNoVerifyFlag,
+	initSyncVerifyEverythingFlag,
 	NewCacheFlag,
 	SkipBLSVerifyFlag,
 	enableBackupWebhookFlag,
