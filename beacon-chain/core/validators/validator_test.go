@@ -328,11 +328,11 @@ func TestExitedValidatorIndices(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		activeCount, err := helpers.ActiveValidatorCount(tt.state, helpers.CurrentEpoch(tt.state))
+		activeCount, err := helpers.ActiveValidatorCount(tt.state, helpers.PrevEpoch(tt.state))
 		if err != nil {
 			t.Fatal(err)
 		}
-		exitedIndices, err := ExitedValidatorIndices(1, tt.state.Validators, activeCount)
+		exitedIndices, err := ExitedValidatorIndices(0, tt.state.Validators, activeCount)
 		if err != nil {
 			t.Fatal(err)
 		}
