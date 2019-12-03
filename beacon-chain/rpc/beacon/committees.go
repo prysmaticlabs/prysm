@@ -106,7 +106,7 @@ func (bs *Server) ListBeaconCommittees(
 		)
 	}
 
-	//committees := make([]*ethpb.BeaconCommittees_CommitteeItem, 0)
+	committeesList := make(map[uint64]*ethpb.BeaconCommittees_CommitteesList)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		var countAtSlot = uint64(len(activeIndices)) / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
 		if countAtSlot > params.BeaconConfig().MaxCommitteesPerSlot {
@@ -115,6 +115,7 @@ func (bs *Server) ListBeaconCommittees(
 		if countAtSlot == 0 {
 			countAtSlot = 1
 		}
+		committeeItems := make([]*ethpb.BeaconCommittees_CommitteeItem, countAtSlot)
 		for i := uint64(0); i < countAtSlot; i++ {
 			epochOffset := i + (slot%params.BeaconConfig().SlotsPerEpoch)*countAtSlot
 			totalCount := countAtSlot * params.BeaconConfig().SlotsPerEpoch
@@ -127,42 +128,20 @@ func (bs *Server) ListBeaconCommittees(
 					err,
 				)
 			}
-			//committees = append(committees, &ethpb.BeaconCommittees_CommitteeItem{
-			//	Committee: committee,
-			//	Slot:      slot,
-			//})
-			_ = committee
+			committeeItems[i] = &ethpb.BeaconCommittees_CommitteeItem{
+				ValidatorIndices: committee,
+			}
+		}
+		committeesList[slot] = &ethpb.BeaconCommittees_CommitteesList{
+			Committees: committeeItems,
 		}
 	}
 
-	numCommittees := 5
-	// If there are no committees, we simply return a response specifying this.
-	// Otherwise, attempting to paginate 0 committees below would result in an error.
-	if numCommittees == 0 {
-		return nil, nil
-		//return &ethpb.BeaconCommittees{
-		//	Epoch:                helpers.SlotToEpoch(startSlot),
-		//	ActiveValidatorCount: uint64(len(activeIndices)),
-		//	Committees:           make([]*ethpb.BeaconCommittees_CommitteeItem, 0),
-		//	TotalSize:            int32(0),
-		//	NextPageToken:        strconv.Itoa(0),
-		//}, nil
-	}
-
-	//start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numCommittees)
-	//if err != nil {
-	//	return nil, status.Errorf(
-	//		codes.Internal,
-	//		"Could not paginate results: %v",
-	//		err,
-	//	)
-	//}
-	//return &ethpb.BeaconCommittees{
-	//	Epoch:                helpers.SlotToEpoch(startSlot),
-	//	ActiveValidatorCount: uint64(len(activeIndices)),
-	//	Committees:           committees[start:end],
-	//	TotalSize:            int32(numCommittees),
-	//	NextPageToken:        nextPageToken,
-	//}, nil
-	return nil, nil
+	return &ethpb.BeaconCommittees{
+		Epoch:                helpers.SlotToEpoch(startSlot),
+		Committees:           committeesList,
+		ActiveValidatorCount: uint64(len(activeIndices)),
+		TotalSize:            int32(len(committeesList)),
+		NextPageToken:        "",
+	}, nil
 }
