@@ -8,6 +8,7 @@ import (
 // The max amount of unaggregated attestation a node can receive in one epoch.
 // Bounded by the validators can participate in eth2.
 var unaggregatedCacheSize = int64(params.BeaconConfig().ValidatorRegistryLimit)
+
 // The max amount of aggregated attestation a node can receive in one epoch.
 // Bounded by the max committee count in one epoch.
 var aggregatedCacheSize = int64(params.BeaconConfig().MaxCommitteesPerSlot * params.BeaconConfig().SlotsPerEpoch)
@@ -26,9 +27,9 @@ type Pool struct {
 func NewPool() *Pool {
 
 	pool := &Pool{
-		unAggregatedAtt:          ccache.New(ccache.Configure().MaxSize(unaggregatedCacheSize)),
-		aggregatedAtt:          ccache.New(ccache.Configure().MaxSize(aggregatedCacheSize)),
-		attInBlock: ccache.New(ccache.Configure().MaxSize(aggregatedCacheSize)),
+		unAggregatedAtt: ccache.New(ccache.Configure().MaxSize(unaggregatedCacheSize)),
+		aggregatedAtt:   ccache.New(ccache.Configure().MaxSize(aggregatedCacheSize)),
+		attInBlock:      ccache.New(ccache.Configure().MaxSize(aggregatedCacheSize)),
 	}
 
 	return pool
