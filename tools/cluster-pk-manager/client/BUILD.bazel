@@ -27,6 +27,7 @@ go_binary(
 go_image(
     name = "image",
     srcs = ["main.go"],
+    base = "@cc_image_base//image",
     goarch = "amd64",
     goos = "linux",
     importpath = "github.com/prysmaticlabs/prysm/tools/cluster-pk-manager/client",

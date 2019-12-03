@@ -96,6 +96,24 @@ load(
 
 _go_image_repos()
 
+# Golang images
+# This is using gcr.io/distroless/base
+load(
+    "@io_bazel_rules_docker//go:image.bzl",
+    _go_image_repos = "repositories",
+)
+
+_go_image_repos()
+
+# CC images
+# This is using gcr.io/distroless/base
+load(
+    "@io_bazel_rules_docker//cc:image.bzl",
+    _cc_image_repos = "repositories",
+)
+
+_cc_image_repos()
+
 http_archive(
     name = "prysm_testnet_site",
     build_file_content = """
@@ -172,15 +190,10 @@ http_archive(
 )
 
 http_archive(
-    name = "zzzzcom_github_herumi_bls_eth_go_binary",
-    sha256 = "7e00d57869645a6e6ed90004bef0717627597ed8d93ab3e3426240c0122c4d54",
-    strip_prefix = "bls-go-binary-ae02584f5db9279fb0b2d95214d2179c65c74544",
-    url = "https://github.com/nisdas/bls-go-binary/archive/ae02584f5db9279fb0b2d95214d2179c65c74544.zip",
-)
-
-local_repository(
     name = "com_github_herumi_bls_eth_go_binary",
-    path = "/home/nishant/Projects/GoProjects/src/github.com/nisdas/bls-go-binary",
+    sha256 = "15a41ddb0bf7d142ebffae68337f19c16e747676cb56794c5d80dbe388ce004c",
+    strip_prefix = "bls-go-binary-ac038c7cb6d3185c4a46f3bca0c99ebf7b191e16",
+    url = "https://github.com/nisdas/bls-go-binary/archive/ac038c7cb6d3185c4a46f3bca0c99ebf7b191e16.zip",
 )
 
 load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_dependencies")
