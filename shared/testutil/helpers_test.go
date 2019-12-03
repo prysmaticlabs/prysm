@@ -13,8 +13,10 @@ import (
 func TestBlockSignature(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	beaconState, privKeys, _ := DeterministicGenesisState(100)
-
+	beaconState, privKeys, err := DeterministicGenesisState(100)
+	if err != nil {
+		t.Fatal(err)
+	}
 	block, err := GenerateFullBlock(beaconState, privKeys, nil, 0)
 	if err != nil {
 		t.Fatal(err)

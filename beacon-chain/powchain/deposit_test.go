@@ -28,7 +28,10 @@ func TestProcessDeposit_OK(t *testing.T) {
 	}
 	web3Service = setDefaultMocks(web3Service)
 
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(1)
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	if err != nil {
@@ -54,7 +57,10 @@ func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 	}
 	web3Service = setDefaultMocks(web3Service)
 
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(1)
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	if err != nil {
@@ -86,7 +92,10 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	}
 	web3Service = setDefaultMocks(web3Service)
 
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(1)
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	deposits[0].Data.PublicKey = []byte("junk")
 
 	leaf, err := ssz.HashTreeRoot(deposits[0].Data)
@@ -129,7 +138,10 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 	}
 	web3Service = setDefaultMocks(web3Service)
 
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(1)
+	deposits, _, err := testutil.DeterministicDepositsAndKeys(1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	var fakeSig [96]byte
 	copy(fakeSig[:], []byte{'F', 'A', 'K', 'E'})
 	deposits[0].Data.Signature = fakeSig[:]
@@ -174,7 +186,10 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	web3Service = setDefaultMocks(web3Service)
 	testutil.ResetCache()
 
-	deposits, keys, _ := testutil.DeterministicDepositsAndKeys(1)
+	deposits, keys, err := testutil.DeterministicDepositsAndKeys(1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	sig := keys[0].Sign([]byte{'F', 'A', 'K', 'E'}, bls.ComputeDomain(params.BeaconConfig().DomainDeposit))
 	deposits[0].Data.Signature = sig.Marshal()[:]
 
@@ -271,7 +286,10 @@ func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 	web3Service = setDefaultMocks(web3Service)
 	testutil.ResetCache()
 
-	deposits, keys, _ := testutil.DeterministicDepositsAndKeys(10)
+	deposits, keys, err := testutil.DeterministicDepositsAndKeys(10)
+	if err != nil {
+		t.Fatal(err)
+	}
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	if err != nil {
 		t.Fatal(err)

@@ -12,7 +12,10 @@ import (
 )
 
 func TestGenerateFullBlock_PassesStateTransition(t *testing.T) {
-	beaconState, privs, _ := DeterministicGenesisState(128)
+	beaconState, privs, err := DeterministicGenesisState(128)
+	if err != nil {
+		t.Fatal(err)
+	}
 	conf := &BlockGenConfig{
 		NumAttestations: 1,
 	}
@@ -30,7 +33,10 @@ func TestGenerateFullBlock_ThousandValidators(t *testing.T) {
 	helpers.ClearAllCaches()
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	defer params.OverrideBeaconConfig(params.MainnetConfig())
-	beaconState, privs, _ := DeterministicGenesisState(1024)
+	beaconState, privs, err := DeterministicGenesisState(1024)
+	if err != nil {
+		t.Fatal(err)
+	}
 	conf := &BlockGenConfig{
 		NumAttestations: 4,
 	}
@@ -49,7 +55,10 @@ func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
 	// Changing to minimal config as this will process 4 epochs of blocks.
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	defer params.OverrideBeaconConfig(params.MainnetConfig())
-	beaconState, privs, _ := DeterministicGenesisState(64)
+	beaconState, privs, err := DeterministicGenesisState(64)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	conf := &BlockGenConfig{
 		NumAttestations: 2,
@@ -81,7 +90,10 @@ func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
 func TestGenerateFullBlock_ValidProposerSlashings(t *testing.T) {
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	defer params.OverrideBeaconConfig(params.MainnetConfig())
-	beaconState, privs, _ := DeterministicGenesisState(32)
+	beaconState, privs, err := DeterministicGenesisState(32)
+	if err != nil {
+		t.Fatal(err)
+	}
 	conf := &BlockGenConfig{
 		NumProposerSlashings: 1,
 	}
@@ -103,7 +115,10 @@ func TestGenerateFullBlock_ValidProposerSlashings(t *testing.T) {
 func TestGenerateFullBlock_ValidAttesterSlashings(t *testing.T) {
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	defer params.OverrideBeaconConfig(params.MainnetConfig())
-	beaconState, privs, _ := DeterministicGenesisState(32)
+	beaconState, privs, err := DeterministicGenesisState(32)
+	if err != nil {
+		t.Fatal(err)
+	}
 	conf := &BlockGenConfig{
 		NumAttesterSlashings: 1,
 	}
@@ -127,7 +142,10 @@ func TestGenerateFullBlock_ValidAttestations(t *testing.T) {
 	defer params.OverrideBeaconConfig(params.MainnetConfig())
 	helpers.ClearAllCaches()
 
-	beaconState, privs, _ := DeterministicGenesisState(256)
+	beaconState, privs, err := DeterministicGenesisState(256)
+	if err != nil {
+		t.Fatal(err)
+	}
 	conf := &BlockGenConfig{
 		NumAttestations: 4,
 	}
@@ -145,7 +163,10 @@ func TestGenerateFullBlock_ValidAttestations(t *testing.T) {
 }
 
 func TestGenerateFullBlock_ValidDeposits(t *testing.T) {
-	beaconState, privs, _ := DeterministicGenesisState(256)
+	beaconState, privs, err := DeterministicGenesisState(256)
+	if err != nil {
+		t.Fatal(err)
+	}
 	deposits, _, err := DeterministicDepositsAndKeys(257)
 	if err != nil {
 		t.Fatal(err)
@@ -179,7 +200,10 @@ func TestGenerateFullBlock_ValidDeposits(t *testing.T) {
 }
 
 func TestGenerateFullBlock_ValidVoluntaryExits(t *testing.T) {
-	beaconState, privs, _ := DeterministicGenesisState(256)
+	beaconState, privs, err := DeterministicGenesisState(256)
+	if err != nil {
+		t.Fatal(err)
+	}
 	// Moving the state 2048 epochs forward due to PERSISTENT_COMMITTEE_PERIOD.
 	beaconState.Slot = 3 + params.BeaconConfig().PersistentCommitteePeriod*params.BeaconConfig().SlotsPerEpoch
 	conf := &BlockGenConfig{

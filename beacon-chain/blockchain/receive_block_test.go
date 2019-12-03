@@ -20,10 +20,12 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
-
 	chainService := setupBeaconChain(t, db)
 
-	beaconState, privKeys, _ := testutil.DeterministicGenesisState(100)
+	beaconState, privKeys, err := testutil.DeterministicGenesisState(100)
+	if err != nil {
+		t.Fatal(err)
+	}
 	genesis, _ := testutil.GenerateFullBlock(beaconState, privKeys, nil, beaconState.Slot+1)
 	beaconState, err := state.ExecuteStateTransition(ctx, beaconState, genesis)
 	if err != nil {
@@ -133,7 +135,10 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db)
-	beaconState, privKeys, _ := testutil.DeterministicGenesisState(100)
+	beaconState, privKeys, err := testutil.DeterministicGenesisState(100)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	block, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, beaconState.Slot)
 	if err != nil {

@@ -39,7 +39,10 @@ func TestProposeBlock_OK(t *testing.T) {
 	}
 
 	numDeposits := params.BeaconConfig().MinGenesisActiveValidatorCount
-	beaconState, _, _ := testutil.DeterministicGenesisState(numDeposits)
+	beaconState, _, err := testutil.DeterministicGenesisState(numDeposits)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	genesisRoot, err := ssz.SigningRoot(genesis)
 	if err != nil {
@@ -79,7 +82,10 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	ctx := context.Background()
 	helpers.ClearAllCaches()
 
-	beaconState, privKeys, _ := testutil.DeterministicGenesisState(100)
+	beaconState, privKeys, err := testutil.DeterministicGenesisState(100)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	stateRoot, err := ssz.HashTreeRoot(beaconState)
 	if err != nil {

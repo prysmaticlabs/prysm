@@ -39,7 +39,10 @@ func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	beaconState, privKeys, _ := testutil.DeterministicGenesisState(100)
+	beaconState, privKeys, err := testutil.DeterministicGenesisState(100)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 100,
@@ -102,7 +105,10 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	beaconState, privKeys, _ := testutil.DeterministicGenesisState(100)
+	beaconState, privKeys, err := testutil.DeterministicGenesisState(100)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	block, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, 1)
 	if err != nil {
@@ -139,7 +145,10 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
-	beaconState, privKeys, _ := testutil.DeterministicGenesisState(100)
+	beaconState, privKeys, err := testutil.DeterministicGenesisState(100)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -183,7 +192,10 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	beaconState, _, _ := testutil.DeterministicGenesisState(100)
+	beaconState, _, err := testutil.DeterministicGenesisState(100)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	proposerSlashings := []*ethpb.ProposerSlashing{
 		{
@@ -272,7 +284,10 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 }
 
 func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
-	beaconState, privKeys, _ := testutil.DeterministicGenesisState(32)
+	beaconState, privKeys, err := testutil.DeterministicGenesisState(32)
+	if err != nil {
+		t.Fatal(err)
+	}
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
 	bodyRoot, err := ssz.HashTreeRoot(genesisBlock)
 	if err != nil {
@@ -774,7 +789,10 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 
 	// Default at 256 validators, can raise this number with faster BLS.
 	validatorCount := uint64(256)
-	s, privKeys, _ := testutil.DeterministicGenesisState(validatorCount)
+	s, privKeys, err := testutil.DeterministicGenesisState(validatorCount)
+	if err != nil {
+		t.Fatal(err)
+	}
 	s.Slot = params.BeaconConfig().SlotsPerEpoch
 
 	bitCount := validatorCount / params.BeaconConfig().SlotsPerEpoch
@@ -834,7 +852,8 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 	config.MinAttestationInclusionDelay = 0
 	params.OverrideBeaconConfig(config)
 
-	if _, err := state.ProcessBlock(context.Background(), s, blk); err != nil {
+	_, err = state.ProcessBlock(context.Background(), s, blk)
+	if err != nil {
 		t.Fatal(err)
 	}
 }
