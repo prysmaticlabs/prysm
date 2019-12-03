@@ -284,7 +284,7 @@ func TestExitedValidatorIndices(t *testing.T) {
 	}{
 		{
 			state: &pb.BeaconState{
-				Slot: 0,
+				Slot: helpers.SlotToEpoch(1),
 				Validators: []*ethpb.Validator{
 					{
 						ExitEpoch:         0,
@@ -304,7 +304,7 @@ func TestExitedValidatorIndices(t *testing.T) {
 		},
 		{
 			state: &pb.BeaconState{
-				Slot: 0,
+				Slot: helpers.SlotToEpoch(1),
 				Validators: []*ethpb.Validator{
 					{
 						ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
@@ -316,7 +316,7 @@ func TestExitedValidatorIndices(t *testing.T) {
 		},
 		{
 			state: &pb.BeaconState{
-				Slot: 0,
+				Slot: helpers.SlotToEpoch(1),
 				Validators: []*ethpb.Validator{
 					{
 						ExitEpoch:         0,
@@ -328,11 +328,11 @@ func TestExitedValidatorIndices(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		activeCount, err := helpers.ActiveValidatorCount(tt.state, helpers.CurrentEpoch(tt.state))
+		activeCount, err := helpers.ActiveValidatorCount(tt.state, helpers.PrevEpoch(tt.state))
 		if err != nil {
 			t.Fatal(err)
 		}
-		exitedIndices, err := ExitedValidatorIndices(tt.state.Validators, activeCount)
+		exitedIndices, err := ExitedValidatorIndices(0, tt.state.Validators, activeCount)
 		if err != nil {
 			t.Fatal(err)
 		}
