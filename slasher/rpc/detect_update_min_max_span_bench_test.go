@@ -20,7 +20,11 @@ func BenchmarkMinSpan(b *testing.B) {
 	for _, diff := range diffs {
 		b.Run(fmt.Sprintf("MinSpan_diff_%d", diff), func(ib *testing.B) {
 			for i := uint64(0); i < uint64(ib.N); i++ {
-				_, err := slasherServer.DetectAndUpdateMinEpochSpan(ctx, i, i+diff, i%10)
+				spanMap, err := slasherServer.SlasherDB.ValidatorSpansMap(i % 10)
+				if err != nil {
+					b.Fatal(err)
+				}
+				_, _, err = slasherServer.DetectAndUpdateMinEpochSpan(ctx, i, i+diff, i%10, spanMap)
 				if err != nil {
 					b.Fatal(err)
 				}
@@ -41,7 +45,11 @@ func BenchmarkMaxSpan(b *testing.B) {
 	for _, diff := range diffs {
 		b.Run(fmt.Sprintf("MaxSpan_diff_%d", diff), func(ib *testing.B) {
 			for i := uint64(0); i < uint64(ib.N); i++ {
-				_, err := slasherServer.DetectAndUpdateMaxEpochSpan(ctx, diff, diff+i, i%10)
+				spanMap, err := slasherServer.SlasherDB.ValidatorSpansMap(i % 10)
+				if err != nil {
+					b.Fatal(err)
+				}
+				_, _, err = slasherServer.DetectAndUpdateMaxEpochSpan(ctx, diff, diff+i, i%10, spanMap)
 				if err != nil {
 					b.Fatal(err)
 				}
@@ -61,7 +69,11 @@ func BenchmarkDetectSpan(b *testing.B) {
 	for _, diff := range diffs {
 		b.Run(fmt.Sprintf("Detect_MaxSpan_diff_%d", diff), func(ib *testing.B) {
 			for i := uint64(0); i < uint64(ib.N); i++ {
-				_, _, _, err := slasherServer.detectSlashingByEpochSpan(i, i+diff, i%10, detectMax)
+				spanMap, err := slasherServer.SlasherDB.ValidatorSpansMap(i % 10)
+				if err != nil {
+					b.Fatal(err)
+				}
+				_, _, _, err = slasherServer.detectSlashingByEpochSpan(i, i+diff, spanMap, detectMax)
 				if err != nil {
 					b.Fatal(err)
 				}
@@ -71,7 +83,11 @@ func BenchmarkDetectSpan(b *testing.B) {
 	for _, diff := range diffs {
 		b.Run(fmt.Sprintf("Detect_MinSpan_diff_%d", diff), func(ib *testing.B) {
 			for i := uint64(0); i < uint64(ib.N); i++ {
-				_, _, _, err := slasherServer.detectSlashingByEpochSpan(i, i+diff, i%10, detectMin)
+				spanMap, err := slasherServer.SlasherDB.ValidatorSpansMap(i % 10)
+				if err != nil {
+					b.Fatal(err)
+				}
+				_, _, _, err = slasherServer.detectSlashingByEpochSpan(i, i+diff, spanMap, detectMin)
 				if err != nil {
 					b.Fatal(err)
 				}
