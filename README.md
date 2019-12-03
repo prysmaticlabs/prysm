@@ -1,7 +1,7 @@
 # Prysm: An Ethereum 2.0 Client Written in Go
 
 [![Build status](https://badge.buildkite.com/b555891daf3614bae4284dcf365b2340cefc0089839526f096.svg?branch=master)](https://buildkite.com/prysmatic-labs/prysm)
-[![ETH2.0_Spec_Version 0.8.1](https://img.shields.io/badge/ETH2.0%20Spec%20Version-v0.8.1-blue.svg)](https://github.com/ethereum/eth2.0-specs/commit/452ecf8e27c7852c7854597f2b1bb4a62b80c7ec)
+[![ETH2.0_Spec_Version 0.9.0](https://img.shields.io/badge/ETH2.0%20Spec%20Version-v0.9.0-blue.svg)](https://github.com/ethereum/eth2.0-specs/tree/v0.9.0)
 [![Discord](https://user-images.githubusercontent.com/7288322/34471967-1df7808a-efbb-11e7-9088-ed0b04151291.png)](https://discord.gg/KSA7rPr)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/prysmaticlabs/geth-sharding?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 

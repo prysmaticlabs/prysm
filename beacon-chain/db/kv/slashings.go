@@ -4,9 +4,8 @@ import (
 	"context"
 
 	"github.com/boltdb/bolt"
-	"github.com/gogo/protobuf/proto"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"go.opencensus.io/trace"
 )
 
@@ -22,7 +21,7 @@ func (k *Store) ProposerSlashing(ctx context.Context, slashingRoot [32]byte) (*e
 			return nil
 		}
 		slashing = &ethpb.ProposerSlashing{}
-		return proto.Unmarshal(enc, slashing)
+		return decode(enc, slashing)
 	})
 	return slashing, err
 }
@@ -49,7 +48,7 @@ func (k *Store) SaveProposerSlashing(ctx context.Context, slashing *ethpb.Propos
 	if err != nil {
 		return err
 	}
-	enc, err := proto.Marshal(slashing)
+	enc, err := encode(slashing)
 	if err != nil {
 		return err
 	}
@@ -81,7 +80,7 @@ func (k *Store) AttesterSlashing(ctx context.Context, slashingRoot [32]byte) (*e
 			return nil
 		}
 		slashing = &ethpb.AttesterSlashing{}
-		return proto.Unmarshal(enc, slashing)
+		return decode(enc, slashing)
 	})
 	return slashing, err
 }
@@ -108,7 +107,7 @@ func (k *Store) SaveAttesterSlashing(ctx context.Context, slashing *ethpb.Attest
 	if err != nil {
 		return err
 	}
-	enc, err := proto.Marshal(slashing)
+	enc, err := encode(slashing)
 	if err != nil {
 		return err
 	}

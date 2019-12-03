@@ -73,6 +73,14 @@ var (
 		Name:  "enable-skip-slots-cache",
 		Usage: "Enables the skip slot cache to be used in the event of skipped slots.",
 	}
+	enableSnappyDBCompressionFlag = cli.BoolFlag{
+		Name:  "snappy",
+		Usage: "Enables snappy compression in the database.",
+	}
+	enablePruneBoundaryStateFlag = cli.BoolFlag{
+		Name:  "prune-states",
+		Usage: "Prune epoch boundary states before last finalized check point",
+	}
 )
 
 // Deprecated flags list.
@@ -136,4 +144,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableActiveIndicesCacheFlag,
 	enableActiveCountCacheFlag,
 	enableSkipSlotsCache,
+	enableSnappyDBCompressionFlag,
+	enablePruneBoundaryStateFlag,
 }...)

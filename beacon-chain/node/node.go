@@ -336,10 +336,14 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	if len(knownContract) == 0 {
+		if err := b.db.SaveDepositContractAddress(ctx, cfg.DepositContract); err != nil {
+			return errors.Wrap(err, "could not save deposit contract")
+		}
+	}
 	if len(knownContract) > 0 && !bytes.Equal(cfg.DepositContract.Bytes(), knownContract) {
 		return fmt.Errorf("database contract is %#x but tried to run with %#x", knownContract, cfg.DepositContract.Bytes())
 	}
-
 	return b.services.RegisterService(web3Service)
 }
 
@@ -441,6 +445,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		KeyFlag:               key,
 		BeaconDB:              b.db,
 		Broadcaster:           b.fetchP2P(ctx),
+		PeersFetcher:          b.fetchP2P(ctx),
 		HeadFetcher:           chainService,
 		ForkFetcher:           chainService,
 		FinalizationFetcher:   chainService,

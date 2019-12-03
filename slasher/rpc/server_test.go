@@ -6,7 +6,8 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	slashpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 )
@@ -18,14 +19,14 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 	slasherServer := &Server{
 		SlasherDB: dbs,
 	}
-	psr := &ethpb.ProposerSlashingRequest{
+	psr := &slashpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.BeaconBlockHeader{
 			Slot:      1,
 			StateRoot: []byte("A"),
 		},
 		ValidatorIndex: 1,
 	}
-	psr2 := &ethpb.ProposerSlashingRequest{
+	psr2 := &slashpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.BeaconBlockHeader{
 			Slot:      1,
 			StateRoot: []byte("B"),
@@ -63,14 +64,14 @@ func TestServer_IsNotSlashableBlock(t *testing.T) {
 	slasherServer := &Server{
 		SlasherDB: dbs,
 	}
-	psr := &ethpb.ProposerSlashingRequest{
+	psr := &slashpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.BeaconBlockHeader{
 			Slot:      1,
 			StateRoot: []byte("A"),
 		},
 		ValidatorIndex: 1,
 	}
-	psr2 := &ethpb.ProposerSlashingRequest{
+	psr2 := &slashpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.BeaconBlockHeader{
 			Slot:      65,
 			StateRoot: []byte("B"),
@@ -101,7 +102,7 @@ func TestServer_DoubleBlock(t *testing.T) {
 		ctx:       ctx,
 		SlasherDB: dbs,
 	}
-	psr := &ethpb.ProposerSlashingRequest{
+	psr := &slashpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.BeaconBlockHeader{
 			Slot:      1,
 			StateRoot: []byte("A"),
@@ -131,14 +132,14 @@ func TestServer_SameSlotSlashable(t *testing.T) {
 		ctx:       ctx,
 		SlasherDB: dbs,
 	}
-	psr := &ethpb.ProposerSlashingRequest{
+	psr := &slashpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.BeaconBlockHeader{
 			Slot:      1,
 			StateRoot: []byte("A"),
 		},
 		ValidatorIndex: 1,
 	}
-	psr2 := &ethpb.ProposerSlashingRequest{
+	psr2 := &slashpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.BeaconBlockHeader{
 			Slot:      1,
 			StateRoot: []byte("B"),
@@ -182,7 +183,7 @@ func TestServer_SlashDoubleAttestation(t *testing.T) {
 		Signature:           []byte("sig2"),
 		Data: &ethpb.AttestationData{
 			Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
-			Index:           0,
+			CommitteeIndex:  0,
 			BeaconBlockRoot: []byte("block1"),
 			Source:          &ethpb.Checkpoint{Epoch: 2},
 			Target:          &ethpb.Checkpoint{Epoch: 3},
@@ -194,7 +195,7 @@ func TestServer_SlashDoubleAttestation(t *testing.T) {
 		Signature:           []byte("sig1"),
 		Data: &ethpb.AttestationData{
 			Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
-			Index:           0,
+			CommitteeIndex:  0,
 			BeaconBlockRoot: []byte("block2"),
 			Source:          &ethpb.Checkpoint{Epoch: 2},
 			Target:          &ethpb.Checkpoint{Epoch: 3},
@@ -236,7 +237,7 @@ func TestServer_SlashTripleAttestation(t *testing.T) {
 		Signature:           []byte("sig1"),
 		Data: &ethpb.AttestationData{
 			Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
-			Index:           0,
+			CommitteeIndex:  0,
 			BeaconBlockRoot: []byte("block1"),
 			Source:          &ethpb.Checkpoint{Epoch: 2},
 			Target:          &ethpb.Checkpoint{Epoch: 3},
@@ -248,7 +249,7 @@ func TestServer_SlashTripleAttestation(t *testing.T) {
 		Signature:           []byte("sig2"),
 		Data: &ethpb.AttestationData{
 			Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
-			Index:           0,
+			CommitteeIndex:  0,
 			BeaconBlockRoot: []byte("block2"),
 			Source:          &ethpb.Checkpoint{Epoch: 2},
 			Target:          &ethpb.Checkpoint{Epoch: 3},
@@ -260,7 +261,7 @@ func TestServer_SlashTripleAttestation(t *testing.T) {
 		Signature:           []byte("sig3"),
 		Data: &ethpb.AttestationData{
 			Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
-			Index:           0,
+			CommitteeIndex:  0,
 			BeaconBlockRoot: []byte("block3"),
 			Source:          &ethpb.Checkpoint{Epoch: 2},
 			Target:          &ethpb.Checkpoint{Epoch: 3},
@@ -313,7 +314,7 @@ func TestServer_DontSlashSameAttestation(t *testing.T) {
 		Signature:           []byte("sig1"),
 		Data: &ethpb.AttestationData{
 			Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
-			Index:           0,
+			CommitteeIndex:  0,
 			BeaconBlockRoot: []byte("block1"),
 			Source:          &ethpb.Checkpoint{Epoch: 2},
 			Target:          &ethpb.Checkpoint{Epoch: 3},
@@ -347,7 +348,7 @@ func TestServer_DontSlashDifferentTargetAttestation(t *testing.T) {
 		Signature:           []byte("sig2"),
 		Data: &ethpb.AttestationData{
 			Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
-			Index:           0,
+			CommitteeIndex:  0,
 			BeaconBlockRoot: []byte("block1"),
 			Source:          &ethpb.Checkpoint{Epoch: 2},
 			Target:          &ethpb.Checkpoint{Epoch: 3},
@@ -359,7 +360,7 @@ func TestServer_DontSlashDifferentTargetAttestation(t *testing.T) {
 		Signature:           []byte("sig1"),
 		Data: &ethpb.AttestationData{
 			Slot:            4*params.BeaconConfig().SlotsPerEpoch + 1,
-			Index:           0,
+			CommitteeIndex:  0,
 			BeaconBlockRoot: []byte("block2"),
 			Source:          &ethpb.Checkpoint{Epoch: 3},
 			Target:          &ethpb.Checkpoint{Epoch: 4},
@@ -389,7 +390,7 @@ func TestServer_DontSlashSameAttestationData(t *testing.T) {
 	}
 	ad := &ethpb.AttestationData{
 		Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
-		Index:           0,
+		CommitteeIndex:  0,
 		BeaconBlockRoot: []byte("block1"),
 		Source:          &ethpb.Checkpoint{Epoch: 2},
 		Target:          &ethpb.Checkpoint{Epoch: 3},
@@ -434,7 +435,7 @@ func TestServer_SlashSurroundedAttestation(t *testing.T) {
 		Signature:           []byte("sig2"),
 		Data: &ethpb.AttestationData{
 			Slot:            4*params.BeaconConfig().SlotsPerEpoch + 1,
-			Index:           0,
+			CommitteeIndex:  0,
 			BeaconBlockRoot: []byte("block1"),
 			Source:          &ethpb.Checkpoint{Epoch: 1},
 			Target:          &ethpb.Checkpoint{Epoch: 4},
@@ -446,7 +447,7 @@ func TestServer_SlashSurroundedAttestation(t *testing.T) {
 		Signature:           []byte("sig1"),
 		Data: &ethpb.AttestationData{
 			Slot:            4*params.BeaconConfig().SlotsPerEpoch + 1,
-			Index:           0,
+			CommitteeIndex:  0,
 			BeaconBlockRoot: []byte("block2"),
 			Source:          &ethpb.Checkpoint{Epoch: 2},
 			Target:          &ethpb.Checkpoint{Epoch: 3},
@@ -487,7 +488,7 @@ func TestServer_SlashSurroundAttestation(t *testing.T) {
 		Signature:           []byte("sig2"),
 		Data: &ethpb.AttestationData{
 			Slot:            4*params.BeaconConfig().SlotsPerEpoch + 1,
-			Index:           0,
+			CommitteeIndex:  0,
 			BeaconBlockRoot: []byte("block1"),
 			Source:          &ethpb.Checkpoint{Epoch: 2},
 			Target:          &ethpb.Checkpoint{Epoch: 3},
@@ -499,7 +500,7 @@ func TestServer_SlashSurroundAttestation(t *testing.T) {
 		Signature:           []byte("sig1"),
 		Data: &ethpb.AttestationData{
 			Slot:            4*params.BeaconConfig().SlotsPerEpoch + 1,
-			Index:           0,
+			CommitteeIndex:  0,
 			BeaconBlockRoot: []byte("block2"),
 			Source:          &ethpb.Checkpoint{Epoch: 1},
 			Target:          &ethpb.Checkpoint{Epoch: 4},
@@ -540,7 +541,7 @@ func TestServer_DontSlashValidAttestations(t *testing.T) {
 		Signature:           []byte("sig2"),
 		Data: &ethpb.AttestationData{
 			Slot:            5*params.BeaconConfig().SlotsPerEpoch + 1,
-			Index:           0,
+			CommitteeIndex:  0,
 			BeaconBlockRoot: []byte("block1"),
 			Source:          &ethpb.Checkpoint{Epoch: 2},
 			Target:          &ethpb.Checkpoint{Epoch: 4},
@@ -552,7 +553,7 @@ func TestServer_DontSlashValidAttestations(t *testing.T) {
 		Signature:           []byte("sig1"),
 		Data: &ethpb.AttestationData{
 			Slot:            5*params.BeaconConfig().SlotsPerEpoch + 1,
-			Index:           0,
+			CommitteeIndex:  0,
 			BeaconBlockRoot: []byte("block2"),
 			Source:          &ethpb.Checkpoint{Epoch: 3},
 			Target:          &ethpb.Checkpoint{Epoch: 5},

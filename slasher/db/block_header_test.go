@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
 func TestNilDBHistoryBlkHdr(t *testing.T) {

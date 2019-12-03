@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -14,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -106,6 +106,9 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 		}
 
 		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch) + 1
+		if featureconfig.Get().PruneEpochBoundaryStates {
+			startSlot = helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
+		}
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 		if endSlot > startSlot {
 			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
@@ -191,6 +194,9 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.
 		helpers.ClearAllCaches()
 
 		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch) + 1
+		if featureconfig.Get().PruneEpochBoundaryStates {
+			startSlot = helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
+		}
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 		if endSlot > startSlot {
 			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
@@ -410,6 +416,21 @@ func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot ui
 	ctx, span := trace.StartSpan(ctx, "forkchoice.rmStatesBySlots")
 	defer span.End()
 
+	// Make sure start slot is not a skipped slot
+	if featureconfig.Get().PruneEpochBoundaryStates {
+		for i := startSlot; i > 0; i-- {
+			filter := filters.NewFilter().SetStartSlot(i).SetEndSlot(i)
+			b, err := s.db.Blocks(ctx, filter)
+			if err != nil {
+				return err
+			}
+			if len(b) > 0 {
+				startSlot = i
+				break
+			}
+		}
+	}
+
 	// Make sure finalized slot is not a skipped slot.
 	for i := endSlot; i > 0; i-- {
 		filter := filters.NewFilter().SetStartSlot(i).SetEndSlot(i)
@@ -427,8 +448,11 @@ func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot ui
 	if startSlot == 0 {
 		startSlot++
 	}
+	// If end slot comes less than start slot
+	if endSlot < startSlot {
+		endSlot = startSlot
+	}
 
-	// Do not remove finalized state that's in the middle of slot ranges.
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
 	roots, err := s.db.BlockRoots(ctx, filter)
 	if err != nil {

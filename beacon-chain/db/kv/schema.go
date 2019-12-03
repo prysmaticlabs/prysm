@@ -37,4 +37,7 @@ var (
 	depositContractAddressKey = []byte("deposit-contract")
 	justifiedCheckpointKey    = []byte("justified-checkpoint")
 	finalizedCheckpointKey    = []byte("finalized-checkpoint")
+
+	// Migration bucket.
+	migrationBucket = []byte("migrations")
 )

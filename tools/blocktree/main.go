@@ -17,9 +17,11 @@ import (
 
 	"github.com/emicklei/dot"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 var (
@@ -33,9 +35,12 @@ var (
 type node struct {
 	parentRoot [32]byte
 	dothNode   *dot.Node
+	score      map[uint64]bool
 }
 
 func main() {
+	params.UseDemoBeaconConfig()
+
 	flag.Parse()
 	db, err := db.NewDB(*datadir)
 	if err != nil {
@@ -62,9 +67,47 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+		m[r] = &node{score: make(map[uint64]bool)}
+
+		// Gather votes from the attestations voted for this block
+		atts, err := db.Attestations(context.Background(), filters.NewFilter().SetHeadBlockRoot(r[:]))
+		state, err := db.State(context.Background(), r)
+		if err != nil {
+			panic(err)
+		}
+		slot := b.Slot
+		// If the state is not available, roll back
+		for state == nil {
+			slot--
+			filter := filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot)
+			bs, err := db.Blocks(context.Background(), filter)
+			if err != nil {
+				panic(err)
+			}
+			rs, err := ssz.SigningRoot(bs[0])
+			if err != nil {
+				panic(err)
+			}
+			state, err = db.State(context.Background(), rs)
+			if err != nil {
+				panic(err)
+			}
+		}
+		// Retrieve attestation indices
+		for _, att := range atts {
+			indices, err := helpers.AttestingIndices(state, att.Data, att.AggregationBits)
+			if err != nil {
+				panic(err)
+			}
+			for _, i := range indices {
+				m[r].score[i] = true
+			}
+		}
+
 		// Construct label of each node.
 		rStr := hex.EncodeToString(r[:2])
-		label := "slot: " + strconv.Itoa(int(b.Slot)) + "\n root: " + rStr
+		label := "slot: " + strconv.Itoa(int(b.Slot)) + "\n root: " + rStr + "\n votes: " + strconv.Itoa(len(m[r].score))
+
 		dotN := graph.Node(rStr).Box().Attr("label", label)
 		n := &node{
 			parentRoot: bytesutil.ToBytes32(b.ParentRoot),
