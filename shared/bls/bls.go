@@ -75,7 +75,10 @@ func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 		return nil, errors.Wrap(err, "could not unmarshal bytes into public key")
 	}
 	pubkey := &PublicKey{p: p}
-	pubkeyCache.Set(string(pub), pubkey.Copy(), 48*time.Hour)
+	if featureconfig.Get().EnableBLSPubkeyCache {
+		pubkeyCache.Set(string(pub), pubkey.Copy(), 48*time.Hour)
+	}
+
 	return pubkey, nil
 }
 
