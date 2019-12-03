@@ -806,6 +806,41 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 	}
 }
 
+func TestServer_GetValidator(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	numEpochs := 30
+	validators := make([]*ethpb.Validator, numEpochs)
+	for i := 0; i < numEpochs; i++ {
+		validators[i] = &ethpb.Validator{
+			ActivationEpoch: uint64(i),
+			PublicKey:       []byte(strconv.Itoa(i)),
+		}
+	}
+
+	bs := &Server{
+		HeadFetcher: &mock.ChainService{
+			State: &pbp2p.BeaconState{
+				Validators: validators,
+			},
+		},
+	}
+
+	req := &ethpb.GetValidatorRequest{
+		QueryFilter: &ethpb.GetValidatorRequest_Index{
+			Index: 0,
+		},
+	}
+	res, err := bs.GetValidator(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(validators[0], res) {
+		t.Errorf("Wanted %v, got %v", validators[0], res)
+	}
+}
+
 func TestServer_GetValidatorActiveSetChanges_CannotRequestFutureEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
