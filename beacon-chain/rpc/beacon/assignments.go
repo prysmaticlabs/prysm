@@ -3,10 +3,12 @@ package beacon
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
@@ -21,12 +23,19 @@ func (bs *Server) ListValidatorAssignments(
 	ctx context.Context, req *ethpb.ListValidatorAssignmentsRequest,
 ) (*ethpb.ValidatorAssignments, error) {
 	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
-		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
-			req.PageSize, params.BeaconConfig().MaxPageSize)
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"Requested page size %d can not be greater than max size %d",
+			req.PageSize,
+			params.BeaconConfig().MaxPageSize,
+		)
 	}
 
 	var res []*ethpb.ValidatorAssignments_CommitteeAssignment
-	headState := bs.HeadFetcher.HeadState()
+	headState, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
 	filtered := map[uint64]bool{} // track filtered validators to prevent duplication in the response.
 	filteredIndices := make([]uint64, 0)
 	requestedEpoch := helpers.CurrentEpoch(headState)
@@ -38,6 +47,15 @@ func (bs *Server) ListValidatorAssignments(
 		}
 	case *ethpb.ListValidatorAssignmentsRequest_Epoch:
 		requestedEpoch = q.Epoch
+	}
+
+	if requestedEpoch > helpers.CurrentEpoch(headState) {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
+			helpers.CurrentEpoch(headState),
+			requestedEpoch,
+		)
 	}
 
 	// Filter out assignments by public keys.
@@ -65,6 +83,13 @@ func (bs *Server) ListValidatorAssignments(
 		return nil, status.Errorf(codes.Internal, "Could not retrieve active validator indices: %v", err)
 	}
 	if len(filteredIndices) == 0 {
+		if len(activeIndices) == 0 {
+			return &ethpb.ValidatorAssignments{
+				Assignments:   make([]*ethpb.ValidatorAssignments_CommitteeAssignment, 0),
+				TotalSize:     int32(0),
+				NextPageToken: strconv.Itoa(0),
+			}, nil
+		}
 		// If no filter was specified, return assignments from active validator indices with pagination.
 		filteredIndices = activeIndices
 	}
@@ -159,7 +184,7 @@ func (bs *Server) ListValidatorAssignments(
 func archivedValidatorCommittee(
 	epoch uint64,
 	validatorIndex uint64,
-	archivedInfo *ethpb.ArchivedCommitteeInfo,
+	archivedInfo *pb.ArchivedCommitteeInfo,
 	activeIndices []uint64,
 	archivedBalances []uint64,
 ) ([]uint64, uint64, uint64, uint64, error) {

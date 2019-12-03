@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/gogo/protobuf/proto"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -14,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -44,16 +44,17 @@ type Server struct {
 func (as *Server) SubmitAttestation(ctx context.Context, att *ethpb.Attestation) (*pb.AttestResponse, error) {
 	root, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Failed to tree hash attestation: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not tree hash attestation: %v", err)
+	}
+
+	// Broadcast the new attestation to the network.
+	if err := as.P2p.Broadcast(ctx, att); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not broadcast attestation: %v", err)
 	}
 
 	go func() {
 		ctx = trace.NewContext(context.Background(), trace.FromContext(ctx))
 		attCopy := proto.Clone(att).(*ethpb.Attestation)
-		if err := as.AttReceiver.ReceiveAttestation(ctx, att); err != nil {
-			log.WithError(err).Error("Could not receive attestation in chain service")
-			return
-		}
 		if err := as.OperationsHandler.HandleAttestation(ctx, attCopy); err != nil {
 			log.WithError(err).Error("Could not handle attestation in operations service")
 			return
@@ -104,16 +105,11 @@ func (as *Server) RequestAttestation(ctx context.Context, req *pb.AttestationReq
 		}
 	}()
 
-	headState := as.HeadFetcher.HeadState()
-	headRoot := as.HeadFetcher.HeadRoot()
-
-	// Safe guard against head state is nil in chain service. This should not happen.
-	if headState == nil {
-		headState, err = as.BeaconDB.HeadState(ctx)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
-		}
+	headState, err := as.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
 	}
+	headRoot := as.HeadFetcher.HeadRoot()
 
 	headState, err = state.ProcessSlots(ctx, headState, req.Slot)
 	if err != nil {
@@ -134,7 +130,7 @@ func (as *Server) RequestAttestation(ctx context.Context, req *pb.AttestationReq
 
 	res = &ethpb.AttestationData{
 		Slot:            req.Slot,
-		Index:           req.CommitteeIndex,
+		CommitteeIndex:  req.CommitteeIndex,
 		BeaconBlockRoot: headRoot[:],
 		Source:          headState.CurrentJustifiedCheckpoint,
 		Target: &ethpb.Checkpoint{

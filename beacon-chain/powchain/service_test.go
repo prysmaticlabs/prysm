@@ -57,6 +57,17 @@ func (g *goodLogger) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]
 	return logs, nil
 }
 
+type goodNotifier struct {
+	MockStateFeed *event.Feed
+}
+
+func (g *goodNotifier) StateFeed() *event.Feed {
+	if g.MockStateFeed == nil {
+		g.MockStateFeed = new(event.Feed)
+	}
+	return g.MockStateFeed
+}
+
 type goodFetcher struct{}
 
 func (g *goodFetcher) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {

@@ -1,3 +1,5 @@
+workspace(name = "prysm")
+
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
@@ -6,15 +8,6 @@ http_archive(
     sha256 = "2ea8a5ed2b448baf4a6855d3ce049c4c452a6470b1efd1504fdb7c1c134d220a",
     strip_prefix = "bazel-skylib-0.8.0",
     url = "https://github.com/bazelbuild/bazel-skylib/archive/0.8.0.tar.gz",
-)
-
-http_archive(
-    name = "io_bazel_rules_go",
-    sha256 = "513c12397db1bc9aa46dd62f02dd94b49a9b5d17444d49b5a04c5a89f3053c1c",
-    urls = [
-        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/rules_go/releases/download/v0.19.5/rules_go-v0.19.5.tar.gz",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.19.5/rules_go-v0.19.5.tar.gz",
-    ],
 )
 
 http_archive(
@@ -35,9 +28,16 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_docker",
-    sha256 = "9ff889216e28c918811b77999257d4ac001c26c1f7c7fb17a79bc28abf74182e",
-    strip_prefix = "rules_docker-0.10.1",
-    url = "https://github.com/bazelbuild/rules_docker/archive/v0.10.1.tar.gz",
+    #    sha256 = "9ff889216e28c918811b77999257d4ac001c26c1f7c7fb17a79bc28abf74182e",
+    strip_prefix = "rules_docker-0.12.1",
+    url = "https://github.com/bazelbuild/rules_docker/archive/v0.12.1.tar.gz",
+)
+
+http_archive(
+    name = "io_bazel_rules_go",
+    sha256 = "886db2f8d620fcb5791c8e2a402a575bc70728e17ec116841d78f3837a09f69e",
+    strip_prefix = "rules_go-9bb1562710f7077cd109b66cd4b45900e6d7ae73",
+    urls = ["https://github.com/bazelbuild/rules_go/archive/9bb1562710f7077cd109b66cd4b45900e6d7ae73.tar.gz"],
 )
 
 http_archive(
@@ -190,7 +190,7 @@ go_repository(
 
 git_repository(
     name = "com_google_protobuf",
-    commit = "09745575a923640154bcf307fba8aedff47f240a",
+    commit = "d09d649aea36f02c03f8396ba39a8d4db8a607e4",
     remote = "https://github.com/protocolbuffers/protobuf",
     shallow_since = "1558721209 -0700",
 )
@@ -596,22 +596,23 @@ go_repository(
 
 go_repository(
     name = "io_opencensus_go",
-    commit = "7bbec1755a8162b5923fc214a494773a701d506a",  # v0.22.0
     importpath = "go.opencensus.io",
+    sum = "h1:75k/FF0Q2YM8QYo07VPddOLBslDt1MZOdEslOHvmzAs=",
+    version = "v0.22.2",
 )
 
 go_repository(
     name = "io_opencensus_go_contrib_exporter_jaeger",
-    commit = "5b8293c22f362562285c2acbc52f4a1870a47a33",
     importpath = "contrib.go.opencensus.io/exporter/jaeger",
-    remote = "http://github.com/census-ecosystem/opencensus-go-exporter-jaeger",
-    vcs = "git",
+    sum = "h1:nhTv/Ry3lGmqbJ/JGvCjWxBl5ozRfqo86Ngz59UAlfk=",
+    version = "v0.2.0",
 )
 
 go_repository(
     name = "org_golang_google_api",
-    commit = "aac82e61c0c8fe133c297b4b59316b9f481e1f0a",  # v0.6.0
     importpath = "google.golang.org/api",
+    sum = "h1:uMf5uLi4eQMRrMKhCplNik4U4H8Z6C1br3zOtAa/aDE=",
+    version = "v0.14.0",
 )
 
 go_repository(
@@ -1208,8 +1209,12 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_ethereumapis",
-    commit = "c7f1fd03716c94dcc287a0d35905ed35b8a0afe1",
+    commit = "8a69b37df2264eb58b0b0cef5ba25ae9af2d8732",
     importpath = "github.com/prysmaticlabs/ethereumapis",
+    patch_args = ["-p1"],
+    patches = [
+        "//third_party:com_github_prysmaticlabs_ethereumapis-tags.patch",
+    ],
 )
 
 go_repository(
@@ -1348,4 +1353,31 @@ go_repository(
     importpath = "github.com/fatih/color",
     sum = "h1:DkWD4oS2D8LGGgTQ6IvwJJXSL5Vp2ffcQg58nFV38Ys=",
     version = "v1.7.0",
+)
+
+go_repository(
+    name = "com_github_emicklei_dot",
+    commit = "f4a04130244d60cef56086d2f649b4b55e9624aa",
+    importpath = "github.com/emicklei/dot",
+)
+
+go_repository(
+    name = "com_github_googleapis_gax_go_v2",
+    importpath = "github.com/googleapis/gax-go/v2",
+    sum = "h1:sjZBwGj9Jlw33ImPtvFviGYvseOtDM7hkSKB7+Tv3SM=",
+    version = "v2.0.5",
+)
+
+go_repository(
+    name = "com_github_golang_groupcache",
+    importpath = "github.com/golang/groupcache",
+    sum = "h1:uHTyIjqVhYRhLbJ8nIiOJHkEZZ+5YoOsAbD3sk82NiE=",
+    version = "v0.0.0-20191027212112-611e8accdfc9",
+)
+
+go_repository(
+    name = "com_github_uber_jaeger_client_go",
+    importpath = "github.com/uber/jaeger-client-go",
+    sum = "h1:HgqpYBng0n7tLJIlyT4kPCIv5XgCsF+kai1NnnrJzEU=",
+    version = "v2.20.1+incompatible",
 )

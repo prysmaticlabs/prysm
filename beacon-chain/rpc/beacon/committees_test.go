@@ -9,12 +9,12 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -190,7 +190,7 @@ func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveArchivedCommitteeInfo(ctx, 0, &ethpb.ArchivedCommitteeInfo{
+	if err := db.SaveArchivedCommitteeInfo(ctx, 0, &pbp2p.ArchivedCommitteeInfo{
 		AttesterSeed: seed[:],
 	}); err != nil {
 		t.Fatal(err)

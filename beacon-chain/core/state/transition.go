@@ -10,6 +10,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
@@ -17,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -288,18 +288,10 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 			return nil, errors.Wrap(err, "could not process slot")
 		}
 		if CanProcessEpoch(state) {
-			if featureconfig.Get().OptimizeProcessEpoch {
-				state, err = ProcessEpochPrecompute(ctx, state)
-				if err != nil {
-					traceutil.AnnotateError(span, err)
-					return nil, errors.Wrap(err, "could not process epoch with optimizations")
-				}
-			} else {
-				state, err = ProcessEpoch(ctx, state)
-				if err != nil {
-					traceutil.AnnotateError(span, err)
-					return nil, errors.Wrap(err, "could not process epoch")
-				}
+			state, err = ProcessEpochPrecompute(ctx, state)
+			if err != nil {
+				traceutil.AnnotateError(span, err)
+				return nil, errors.Wrap(err, "could not process epoch with optimizations")
 			}
 		}
 		state.Slot++

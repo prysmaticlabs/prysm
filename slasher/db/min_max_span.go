@@ -4,7 +4,7 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -33,7 +33,7 @@ func (db *Store) ValidatorSpansMap(validatorIdx uint64) (*ethpb.EpochSpanMap, er
 		return nil
 	})
 	if sm.EpochSpanMap == nil {
-		sm.EpochSpanMap = make(map[uint64]*ethpb.MinMaxSpan)
+		sm.EpochSpanMap = make(map[uint64]*ethpb.MinMaxEpochSpan)
 	}
 	return sm, err
 }

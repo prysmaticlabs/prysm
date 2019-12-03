@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"time"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -42,7 +42,10 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
-	v.waitToSlotMidpoint(ctx, slot)
+	// As specified in the spec, an attester should wait until one-third of the way through the slot,
+	// then create and broadcast the attestation.
+	// https://github.com/ethereum/eth2.0-specs/blob/v0.9.0/specs/validator/0_beacon-chain-validator.md#attesting
+	v.waitToOneThird(ctx, slot)
 
 	req := &pb.AttestationRequest{
 		Slot:           slot,
@@ -54,7 +57,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 	log = log.WithField("slot", data.Slot)
-	log = log.WithField("committeeIndex", data.Index)
+	log = log.WithField("committeeIndex", data.CommitteeIndex)
 
 	sig, err := v.signAtt(ctx, pubKey, data)
 	if err != nil {
@@ -84,7 +87,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	span.AddAttributes(
 		trace.Int64Attribute("slot", int64(slot)),
 		trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attResp.Root)),
-		trace.Int64Attribute("committeeIndex", int64(data.Index)),
+		trace.Int64Attribute("committeeIndex", int64(data.CommitteeIndex)),
 		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", data.BeaconBlockRoot)),
 		trace.Int64Attribute("justifiedEpoch", int64(data.Source.Epoch)),
 		trace.Int64Attribute("targetEpoch", int64(data.Target.Epoch)),
@@ -92,16 +95,16 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	)
 }
 
-// waitToSlotMidpoint waits until halfway through the current slot period
+// waitToOneThird waits until one-third of the way through the slot
 // such that any blocks from this slot have time to reach the beacon node
 // before creating the attestation.
-func (v *validator) waitToSlotMidpoint(ctx context.Context, slot uint64) {
-	_, span := trace.StartSpan(ctx, "validator.waitToSlotMidpoint")
+func (v *validator) waitToOneThird(ctx context.Context, slot uint64) {
+	_, span := trace.StartSpan(ctx, "validator.waitToOneThird")
 	defer span.End()
 
-	half := params.BeaconConfig().SecondsPerSlot / 2
-	delay := time.Duration(half) * time.Second
-	if half == 0 {
+	oneThird := params.BeaconConfig().SecondsPerSlot / 3
+	delay := time.Duration(oneThird) * time.Second
+	if oneThird == 0 {
 		delay = 500 * time.Millisecond
 	}
 	startTime := slotutil.SlotStartTime(v.genesisTime, slot)

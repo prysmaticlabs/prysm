@@ -7,10 +7,10 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/karlseguin/ccache"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -43,7 +43,11 @@ func (r *RegularSync) validateVoluntaryExit(ctx context.Context, msg proto.Messa
 	}
 
 	// Retrieve head state, advance state to the epoch slot used specified in exit message.
-	s := r.chain.HeadState()
+	s, err := r.chain.HeadState(ctx)
+	if err != nil {
+		return false, err
+	}
+
 	exitedEpochSlot := exit.Epoch * params.BeaconConfig().SlotsPerEpoch
 	if s.Slot < exitedEpochSlot {
 		var err error

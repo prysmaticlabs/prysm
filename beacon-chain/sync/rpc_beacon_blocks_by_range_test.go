@@ -8,10 +8,10 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -27,8 +27,8 @@ func TestBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 
 	req := &pb.BeaconBlocksByRangeRequest{
 		StartSlot: 100,
-		Step:      4,
-		Count:     100,
+		Step:      64,
+		Count:     16,
 	}
 
 	// Populate the database with blocks that would match the request.

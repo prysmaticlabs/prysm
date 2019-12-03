@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -38,16 +39,30 @@ func noopValidator(_ context.Context, _ proto.Message, _ p2p.Broadcaster, _ bool
 // Register PubSub subscribers
 func (r *RegularSync) registerSubscribers() {
 	go func() {
-		ch := make(chan time.Time)
-		sub := r.chain.StateInitializedFeed().Subscribe(ch)
-		defer sub.Unsubscribe()
-
 		// Wait until chain start.
-		genesis := <-ch
-		if genesis.After(roughtime.Now()) {
-			time.Sleep(roughtime.Until(genesis))
+		stateChannel := make(chan *statefeed.Event, 1)
+		stateSub := r.stateNotifier.StateFeed().Subscribe(stateChannel)
+		defer stateSub.Unsubscribe()
+		for r.chainStarted == false {
+			select {
+			case event := <-stateChannel:
+				if event.Type == statefeed.StateInitialized {
+					data := event.Data.(*statefeed.StateInitializedData)
+					log.WithField("starttime", data.StartTime).Debug("Received state initialized event")
+					if data.StartTime.After(roughtime.Now()) {
+						stateSub.Unsubscribe()
+						time.Sleep(roughtime.Until(data.StartTime))
+					}
+					r.chainStarted = true
+				}
+			case <-r.ctx.Done():
+				log.Debug("Context closed, exiting goroutine")
+				return
+			case err := <-stateSub.Err():
+				log.WithError(err).Error("Subscription to state notifier failed")
+				return
+			}
 		}
-		r.chainStarted = true
 	}()
 	r.subscribe(
 		"/eth2/beacon_block",

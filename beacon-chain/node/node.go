@@ -32,6 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
@@ -57,6 +58,7 @@ type BeaconNode struct {
 	stop         chan struct{} // Channel to wait for termination notifications.
 	db           db.Database
 	depositCache *depositcache.DepositCache
+	stateFeed    *event.Feed
 }
 
 // NewBeaconNode creates a new node instance, sets up configuration options, and registers
@@ -72,15 +74,17 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 	featureconfig.ConfigureBeaconChain(ctx)
+	flags.ConfigureGlobalFlags(ctx)
 	registry := shared.NewServiceRegistry()
 
 	beacon := &BeaconNode{
-		ctx:      ctx,
-		services: registry,
-		stop:     make(chan struct{}),
+		ctx:       ctx,
+		services:  registry,
+		stop:      make(chan struct{}),
+		stateFeed: new(event.Feed),
 	}
 
-	// Use custom config values if the --no-custom-config flag is set.
+	// Use custom config values if the --no-custom-config flag is not set.
 	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
 		if featureconfig.Get().MinimalConfig {
 			log.WithField(
@@ -146,6 +150,11 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	}
 
 	return beacon, nil
+}
+
+// StateFeed implements statefeed.Notifier.
+func (b *BeaconNode) StateFeed() *event.Feed {
+	return b.stateFeed
 }
 
 // Start the BeaconNode and kicks off every registered service.
@@ -277,6 +286,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		OpsPoolService:    opsService,
 		P2p:               b.fetchP2P(ctx),
 		MaxRoutines:       maxRoutines,
+		StateNotifier:     b,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
@@ -316,6 +326,7 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 		DepositContract: common.HexToAddress(depAddress),
 		BeaconDB:        b.db,
 		DepositCache:    b.depositCache,
+		StateNotifier:   b,
 	}
 	web3Service, err := powchain.NewService(ctx, cfg)
 	if err != nil {
@@ -325,10 +336,14 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	if len(knownContract) == 0 {
+		if err := b.db.SaveDepositContractAddress(ctx, cfg.DepositContract); err != nil {
+			return errors.Wrap(err, "could not save deposit contract")
+		}
+	}
 	if len(knownContract) > 0 && !bytes.Equal(cfg.DepositContract.Bytes(), knownContract) {
 		return fmt.Errorf("database contract is %#x but tried to run with %#x", knownContract, cfg.DepositContract.Bytes())
 	}
-
 	return b.services.RegisterService(web3Service)
 }
 
@@ -354,11 +369,12 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 	}
 
 	rs := prysmsync.NewRegularSync(&prysmsync.Config{
-		DB:          b.db,
-		P2P:         b.fetchP2P(ctx),
-		Operations:  operationService,
-		Chain:       chainService,
-		InitialSync: initSync,
+		DB:            b.db,
+		P2P:           b.fetchP2P(ctx),
+		Operations:    operationService,
+		Chain:         chainService,
+		InitialSync:   initSync,
+		StateNotifier: b,
 	})
 
 	return b.services.RegisterService(rs)
@@ -372,9 +388,10 @@ func (b *BeaconNode) registerInitialSyncService(ctx *cli.Context) error {
 	}
 
 	is := initialsync.NewInitialSync(&initialsync.Config{
-		DB:    b.db,
-		Chain: chainService,
-		P2P:   b.fetchP2P(ctx),
+		DB:            b.db,
+		Chain:         chainService,
+		P2P:           b.fetchP2P(ctx),
+		StateNotifier: b,
 	})
 
 	return b.services.RegisterService(is)
@@ -428,12 +445,12 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		KeyFlag:               key,
 		BeaconDB:              b.db,
 		Broadcaster:           b.fetchP2P(ctx),
+		PeersFetcher:          b.fetchP2P(ctx),
 		HeadFetcher:           chainService,
 		ForkFetcher:           chainService,
 		FinalizationFetcher:   chainService,
 		BlockReceiver:         chainService,
 		AttestationReceiver:   chainService,
-		StateFeedListener:     chainService,
 		GenesisTimeFetcher:    chainService,
 		AttestationsPool:      operationService,
 		OperationsHandler:     operationService,
@@ -443,6 +460,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		SyncService:           syncService,
 		DepositFetcher:        depositFetcher,
 		PendingDepositFetcher: b.depositCache,
+		StateNotifier:         b,
 	})
 
 	return b.services.RegisterService(rpcService)
@@ -506,8 +524,7 @@ func (b *BeaconNode) registerInteropServices(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerArchiverService(ctx *cli.Context) error {
-	shouldArchive := ctx.GlobalBool(flags.ArchiveEnableFlag.Name)
-	if !shouldArchive {
+	if !flags.Get().EnableArchive {
 		return nil
 	}
 	var chainService *blockchain.Service
@@ -515,9 +532,9 @@ func (b *BeaconNode) registerArchiverService(ctx *cli.Context) error {
 		return err
 	}
 	svc := archiver.NewArchiverService(context.Background(), &archiver.Config{
-		BeaconDB:        b.db,
-		HeadFetcher:     chainService,
-		NewHeadNotifier: chainService,
+		BeaconDB:      b.db,
+		HeadFetcher:   chainService,
+		StateNotifier: b,
 	})
 	return b.services.RegisterService(svc)
 }

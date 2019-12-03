@@ -7,6 +7,7 @@ mocks=(
       "./beacon-chain/internal/validator_service_mock.go ValidatorServiceServer,ValidatorService_WaitForActivationServer,ValidatorService_WaitForChainStartServer"
       "./validator/internal/attester_service_mock.go AttesterServiceClient"
        "./validator/internal/proposer_service_mock.go ProposerServiceClient"
+       "./validator/internal/aggregator_service_mock.go AggregatorServiceClient"
        "./validator/internal/validator_service_mock.go ValidatorServiceClient,ValidatorService_WaitForActivationClient,ValidatorService_WaitForChainStartClient")
 
 for ((i = 0; i < ${#mocks[@]}; i++)); do

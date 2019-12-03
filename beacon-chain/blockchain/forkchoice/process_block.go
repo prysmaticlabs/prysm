@@ -7,17 +7,17 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -106,10 +106,15 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 		}
 
 		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch) + 1
+		if featureconfig.Get().PruneEpochBoundaryStates {
+			startSlot = helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
+		}
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
-		if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
-			return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
-				startSlot, endSlot+params.BeaconConfig().SlotsPerEpoch)
+		if endSlot > startSlot {
+			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
+				return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
+					startSlot, endSlot)
+			}
 		}
 
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
@@ -141,10 +146,11 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	return nil
 }
 
-// OnBlockNoVerifyStateTransition is called when an initial sync block is received.
+// OnBlockInitialSyncStateTransition is called when an initial sync block is received.
 // It runs state transition on the block and without any BLS verification. The BLS verification
-// includes proposer signature, randao and attestation's aggregated signature.
-func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.BeaconBlock) error {
+// includes proposer signature, randao and attestation's aggregated signature. It also does not save
+// attestations.
+func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "forkchoice.onBlock")
 	defer span.End()
 
@@ -188,10 +194,15 @@ func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.Bea
 		helpers.ClearAllCaches()
 
 		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch) + 1
+		if featureconfig.Get().PruneEpochBoundaryStates {
+			startSlot = helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
+		}
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
-		if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
-			return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
-				startSlot, endSlot+params.BeaconConfig().SlotsPerEpoch)
+		if endSlot > startSlot {
+			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
+				return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
+					startSlot, endSlot)
+			}
 		}
 
 		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint); err != nil {
@@ -206,9 +217,12 @@ func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.Bea
 	if err := s.saveNewValidators(ctx, preStateValidatorCount, postState); err != nil {
 		return errors.Wrap(err, "could not save finalized checkpoint")
 	}
-	// Save the unseen attestations from block to db.
-	if err := s.saveNewBlockAttestations(ctx, b.Body.Attestations); err != nil {
-		return errors.Wrap(err, "could not save attestations")
+
+	if flags.Get().EnableArchive {
+		// Save the unseen attestations from block to db.
+		if err := s.saveNewBlockAttestations(ctx, b.Body.Attestations); err != nil {
+			return errors.Wrap(err, "could not save attestations")
+		}
 	}
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.
@@ -294,17 +308,14 @@ func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attes
 	if err != nil {
 		return errors.Wrap(err, "could not convert attestation to indexed attestation")
 	}
+	s.voteLock.Lock()
+	defer s.voteLock.Unlock()
 	for _, i := range append(indexedAtt.CustodyBit_0Indices, indexedAtt.CustodyBit_1Indices...) {
-		vote, err := s.db.ValidatorLatestVote(ctx, i)
-		if err != nil {
-			return errors.Wrapf(err, "could not get latest vote for validator %d", i)
-		}
-		if vote == nil || tgt.Epoch > vote.Epoch {
-			if err := s.db.SaveValidatorLatestVote(ctx, i, &pb.ValidatorLatestVote{
+		vote, ok := s.latestVoteMap[i]
+		if !ok || tgt.Epoch > vote.Epoch {
+			s.latestVoteMap[i] = &pb.ValidatorLatestVote{
 				Epoch: tgt.Epoch,
 				Root:  tgt.Root,
-			}); err != nil {
-				return errors.Wrapf(err, "could not save latest vote for validator %d", i)
 			}
 		}
 	}
@@ -405,8 +416,19 @@ func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot ui
 	ctx, span := trace.StartSpan(ctx, "forkchoice.rmStatesBySlots")
 	defer span.End()
 
-	if !featureconfig.Get().PruneFinalizedStates {
-		return nil
+	// Make sure start slot is not a skipped slot
+	if featureconfig.Get().PruneEpochBoundaryStates {
+		for i := startSlot; i > 0; i-- {
+			filter := filters.NewFilter().SetStartSlot(i).SetEndSlot(i)
+			b, err := s.db.Blocks(ctx, filter)
+			if err != nil {
+				return err
+			}
+			if len(b) > 0 {
+				startSlot = i
+				break
+			}
+		}
 	}
 
 	// Make sure finalized slot is not a skipped slot.
@@ -426,8 +448,11 @@ func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot ui
 	if startSlot == 0 {
 		startSlot++
 	}
+	// If end slot comes less than start slot
+	if endSlot < startSlot {
+		endSlot = startSlot
+	}
 
-	// Do not remove finalized state that's in the middle of slot ranges.
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
 	roots, err := s.db.BlockRoots(ctx, filter)
 	if err != nil {
