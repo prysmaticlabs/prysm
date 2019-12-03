@@ -37,8 +37,13 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 )
 
-var silencePeriod = 5 * time.Second
-var tickerPeriod = 5 * time.Second
+// SilencePeriod refers to the period in which a connection is given leeway by the connection
+// manager before it is handled normally.
+var SilencePeriod = 5 * time.Second
+
+// TickerPeriod represents the frequency in which we check the number of
+// open connections.
+var TickerPeriod = 5 * time.Second
 
 var log = logging.Logger("connmgr")
 
@@ -121,7 +126,7 @@ func NewConnManager(low, hi int, grace time.Duration) *BasicConnMgr {
 		gracePeriod:   grace,
 		trimRunningCh: make(chan struct{}, 1),
 		protected:     make(map[peer.ID]map[string]struct{}, 16),
-		silencePeriod: silencePeriod,
+		silencePeriod: SilencePeriod,
 		ctx:           ctx,
 		cancel:        cancel,
 		segments: func() (ret segments) {
@@ -216,7 +221,7 @@ func (cm *BasicConnMgr) TrimOpenConns(ctx context.Context) {
 }
 
 func (cm *BasicConnMgr) background() {
-	ticker := time.NewTicker(tickerPeriod)
+	ticker := time.NewTicker(TickerPeriod)
 	defer ticker.Stop()
 
 	for {
