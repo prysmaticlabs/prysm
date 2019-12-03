@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"go.opencensus.io/trace"
 )
 
 // recentlySeenBlockRoots cache with max size of ~3Mib
@@ -21,9 +22,16 @@ var recentlySeenRoots = ccache.New(ccache.Configure().MaxSize(100000))
 // Blocks that have already been seen are ignored. If the BLS signature is any valid signature,
 // this method rebroadcasts the message.
 func (r *RegularSync) validateBeaconBlockPubSub(ctx context.Context, msg proto.Message, p p2p.Broadcaster, fromSelf bool) (bool, error) {
+	ctx, span := trace.StartSpan(ctx, "sync.validateBeaconBlockPubSub")
+	defer span.End()
+
 	r.validateBlockLock.Lock()
 	defer r.validateBlockLock.Unlock()
-	m := msg.(*ethpb.BeaconBlock)
+
+	m, ok := msg.(*ethpb.BeaconBlock)
+	if !ok {
+		return false, nil
+	}
 
 	blockRoot, err := ssz.SigningRoot(m)
 	if err != nil {
