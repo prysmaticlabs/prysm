@@ -20,7 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-// This file is forked from github.com/libp2p/go-libp2p-core/connmgr/connmgr.go
+//Package connmgr: This file is forked from github.com/libp2p/go-libp2p-core/connmgr/connmgr.go
 package connmgr
 
 import (
@@ -37,8 +37,8 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 )
 
-var SilencePeriod = 5 * time.Second
-var TickerPeriod = 5 * time.Second
+var silencePeriod = 5 * time.Second
+var tickerPeriod = 5 * time.Second
 
 var log = logging.Logger("connmgr")
 
@@ -121,7 +121,7 @@ func NewConnManager(low, hi int, grace time.Duration) *BasicConnMgr {
 		gracePeriod:   grace,
 		trimRunningCh: make(chan struct{}, 1),
 		protected:     make(map[peer.ID]map[string]struct{}, 16),
-		silencePeriod: SilencePeriod,
+		silencePeriod: silencePeriod,
 		ctx:           ctx,
 		cancel:        cancel,
 		segments: func() (ret segments) {
@@ -138,11 +138,14 @@ func NewConnManager(low, hi int, grace time.Duration) *BasicConnMgr {
 	return cm
 }
 
+// Close shutsdown the connection manager.
 func (cm *BasicConnMgr) Close() error {
 	cm.cancel()
 	return nil
 }
 
+// Protect is used to protect a peer from being pruned by the
+// connection manager.
 func (cm *BasicConnMgr) Protect(id peer.ID, tag string) {
 	cm.plk.Lock()
 	defer cm.plk.Unlock()
@@ -155,6 +158,8 @@ func (cm *BasicConnMgr) Protect(id peer.ID, tag string) {
 	tags[tag] = struct{}{}
 }
 
+// Unprotect is used to remove the protection a previously protected peer
+// so that it can be normally pruned by the connection manager.
 func (cm *BasicConnMgr) Unprotect(id peer.ID, tag string) (protected bool) {
 	cm.plk.Lock()
 	defer cm.plk.Unlock()
@@ -211,7 +216,7 @@ func (cm *BasicConnMgr) TrimOpenConns(ctx context.Context) {
 }
 
 func (cm *BasicConnMgr) background() {
-	ticker := time.NewTicker(TickerPeriod)
+	ticker := time.NewTicker(tickerPeriod)
 	defer ticker.Stop()
 
 	for {
