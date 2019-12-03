@@ -1226,6 +1226,12 @@ go_repository(
 )
 
 go_repository(
+    name = "com_github_patrickmn_go_cache",
+    commit = "46f407853014144407b6c2ec7ccc76bf67958d93",
+    importpath = "github.com/patrickmn/go-cache",
+)
+
+go_repository(
     name = "com_github_prysmaticlabs_ethereumapis",
     commit = "23585b69a8b4113742948e3e266ceece844518a6",
     importpath = "github.com/prysmaticlabs/ethereumapis",
