@@ -17,6 +17,9 @@ func (r *RegularSync) currentCommitteeIndex() int {
 	if err != nil {
 		panic(err)
 	}
+	if state == nil {
+		return 0
+	}
 	count, err := helpers.CommitteeCountAtSlot(state, helpers.StartSlot(helpers.CurrentEpoch(state)))
 	if err != nil {
 		panic(err)
