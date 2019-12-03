@@ -77,7 +77,7 @@ var (
 		Usage: "Prune epoch boundary states before last finalized check point",
 	}
 	initSyncVerifyEverythingFlag = cli.BoolFlag{
-		Name:  "initial-sync-verify-all-signatures",
+		Name: "initial-sync-verify-all-signatures",
 		Usage: "Initial sync to finalized checkpoint with verifying block's signature, RANDAO " +
 			"and attestation's aggregated signatures. Without this flag, only the proposer " +
 			"signature is verified until the node reaches the end of the finalized chain.",
@@ -114,7 +114,7 @@ var (
 		Hidden: true,
 	}
 	deprecatedInitSyncNoVerifyFlag = cli.BoolFlag{
-		Name:  "init-sync-no-verify",
+		Name:   "init-sync-no-verify",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
