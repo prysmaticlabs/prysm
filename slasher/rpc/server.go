@@ -8,6 +8,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -25,7 +26,7 @@ type Server struct {
 
 // IsSlashableAttestation returns an attester slashing if the attestation submitted
 // is a slashable vote.
-func (ss *Server) IsSlashableAttestation(ctx context.Context, req *slashpb.IndexedAttestation) (*slashpb.AttesterSlashingResponse, error) {
+func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.IndexedAttestation) (*slashpb.AttesterSlashingResponse, error) {
 	//TODO(#3133): add signature validation
 	if err := ss.SlasherDB.SaveIndexedAttestation(req); err != nil {
 		return nil, err
