@@ -252,7 +252,7 @@ func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
 		Epoch:                0,
 		Committees:           wanted,
 		ActiveValidatorCount: uint64(numValidators),
-		NextPageToken:        strconv.Itoa(1),
+		NextPageToken:        "",
 		TotalSize:            int32(len(wanted)),
 	}
 	if !reflect.DeepEqual(wantedRes, res1) {
