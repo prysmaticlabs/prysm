@@ -226,6 +226,7 @@ func (s *Service) Start() {
 		FinalizationFetcher: s.finalizationFetcher,
 		ChainStartFetcher:   s.chainStartFetcher,
 		CanonicalStateChan:  s.canonicalStateChan,
+		StateNotifier:       s.stateNotifier,
 	}
 	aggregatorServer := &aggregator.Server{
 		BeaconDB:    s.beaconDB,

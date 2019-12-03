@@ -8,6 +8,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
@@ -175,6 +176,36 @@ func (bs *Server) ListBlocks(
 // This includes the head block slot and root as well as information about
 // the most recent finalized and justified slots.
 func (bs *Server) GetChainHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.ChainHead, error) {
+	return bs.chainHeadRetrieval(ctx)
+}
+
+// StreamChainHead to clients every single time the head block and state of the chain change.
+func (bs *Server) StreamChainHead(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamChainHeadServer) error {
+	stateChannel := make(chan *statefeed.Event, 1)
+	stateSub := bs.StateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
+	for {
+		select {
+		case event := <-stateChannel:
+			if event.Type == statefeed.BlockProcessed {
+				res, err := bs.chainHeadRetrieval(bs.Ctx)
+				if err != nil {
+					return status.Errorf(codes.Internal, "Could not retrieve chain head: %v", err)
+				}
+				return stream.Send(res)
+			}
+		case <-stateSub.Err():
+			return status.Error(codes.Aborted, "Subscriber closed, exiting goroutine")
+		case <-bs.Ctx.Done():
+			return status.Error(codes.Canceled, "Context canceled")
+		case <-stream.Context().Done():
+			return status.Error(codes.Canceled, "Context canceled")
+		}
+	}
+}
+
+// Retrieve chain head information from the DB and the current beacon state.
+func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, error) {
 	headState, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
@@ -191,34 +222,34 @@ func (bs *Server) GetChainHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.Cha
 	if err != nil || b == nil {
 		return nil, status.Error(codes.Internal, "Could not get finalized block")
 	}
-	finalizedBlockSlot := b.Slot
+	finalizedSlot := b.Slot
 
 	justifiedCheckpoint := headState.CurrentJustifiedCheckpoint
 	b, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(justifiedCheckpoint.Root))
 	if err != nil || b == nil {
 		return nil, status.Error(codes.Internal, "Could not get justified block")
 	}
-	justifiedBlockSlot := b.Slot
+	justifiedSlot := b.Slot
 
 	prevJustifiedCheckpoint := headState.PreviousJustifiedCheckpoint
 	b, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(prevJustifiedCheckpoint.Root))
 	if err != nil || b == nil {
 		return nil, status.Error(codes.Internal, "Could not get prev justified block")
 	}
-	prevJustifiedBlockSlot := b.Slot
+	prevJustifiedSlot := b.Slot
 
 	return &ethpb.ChainHead{
-		HeadBlockSlot:              headBlock.Slot,
-		HeadBlockEpoch:             helpers.SlotToEpoch(headBlock.Slot),
+		HeadSlot:                   headBlock.Slot,
+		HeadEpoch:                  helpers.SlotToEpoch(headBlock.Slot),
 		HeadBlockRoot:              headBlockRoot[:],
-		FinalizedBlockRoot:         finalizedCheckpoint.Root,
-		FinalizedBlockSlot:         finalizedBlockSlot,
+		FinalizedSlot:              finalizedSlot,
 		FinalizedEpoch:             finalizedCheckpoint.Epoch,
-		JustifiedBlockRoot:         justifiedCheckpoint.Root,
-		JustifiedBlockSlot:         justifiedBlockSlot,
+		FinalizedBlockRoot:         finalizedCheckpoint.Root,
+		JustifiedSlot:              justifiedSlot,
 		JustifiedEpoch:             justifiedCheckpoint.Epoch,
-		PreviousJustifiedBlockRoot: prevJustifiedCheckpoint.Root,
-		PreviousJustifiedSlot:      prevJustifiedBlockSlot,
+		JustifiedBlockRoot:         justifiedCheckpoint.Root,
+		PreviousJustifiedSlot:      prevJustifiedSlot,
 		PreviousJustifiedEpoch:     prevJustifiedCheckpoint.Epoch,
+		PreviousJustifiedBlockRoot: prevJustifiedCheckpoint.Root,
 	}, nil
 }
