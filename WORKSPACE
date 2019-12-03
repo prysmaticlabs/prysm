@@ -1381,3 +1381,10 @@ go_repository(
     sum = "h1:HgqpYBng0n7tLJIlyT4kPCIv5XgCsF+kai1NnnrJzEU=",
     version = "v2.20.1+incompatible",
 )
+
+go_repository(
+    name = "com_github_ipfs_go_detect_race",
+    importpath = "github.com/ipfs/go-detect-race",
+    sum = "h1:qX/xay2W3E4Q1U7d9lNs1sU9nvguX0a7319XbyQ6cOk=",
+    version = "v0.0.1",
+)
