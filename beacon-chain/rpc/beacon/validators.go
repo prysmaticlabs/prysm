@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	"bytes"
 	"context"
 	"sort"
 	"strconv"
@@ -248,11 +249,37 @@ func (bs *Server) ListValidators(
 }
 
 // GetValidator information from any validator in the registry by index or public key.
-// TODO(#4177): Implement.
 func (bs *Server) GetValidator(
-	_ context.Context, _ *ethpb.GetValidatorRequest,
+	ctx context.Context, req *ethpb.GetValidatorRequest,
 ) (*ethpb.Validator, error) {
-	return nil, status.Error(codes.Unimplemented, "Not yet implemented")
+	var requestingIndex bool
+	var index uint64
+	var pubKey []byte
+	switch q := req.QueryFilter.(type) {
+	case *ethpb.GetValidatorRequest_Index:
+		index = q.Index
+		requestingIndex = true
+	case *ethpb.GetValidatorRequest_PublicKey:
+		pubKey = q.PublicKey
+	default:
+		return nil, status.Error(
+			codes.InvalidArgument,
+			"Need to specify either validator index or public key in request",
+		)
+	}
+	headState, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
+	if requestingIndex {
+		return headState.Validators[index], nil
+	}
+	for i := 0; i < len(headState.Validators); i++ {
+		if bytes.Equal(headState.Validators[i].PublicKey, pubKey) {
+			return headState.Validators[i], nil
+		}
+	}
+	return nil, status.Error(codes.NotFound, "No validator matched filter criteria")
 }
 
 // GetValidatorActiveSetChanges retrieves the active set changes for a given epoch.
