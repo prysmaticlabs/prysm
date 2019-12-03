@@ -25,7 +25,7 @@ type Server struct {
 
 // IsSlashableAttestation returns an attester slashing if the attestation submitted
 // is a slashable vote.
-func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.IndexedAttestation) (*slashpb.AttesterSlashingResponse, error) {
+func (ss *Server) IsSlashableAttestation(ctx context.Context, req *slashpb.IndexedAttestation) (*slashpb.AttesterSlashingResponse, error) {
 	//TODO(#3133): add signature validation
 	if err := ss.SlasherDB.SaveIndexedAttestation(req); err != nil {
 		return nil, err
@@ -36,8 +36,8 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 	if err != nil {
 		return nil, err
 	}
-	atsSlashinngRes := &ethpb.AttesterSlashingResponse{}
-	at := make(chan []*ethpb.AttesterSlashing)
+	atsSlashinngRes := &slashpb.AttesterSlashingResponse{}
+	at := make(chan []*slashpb.AttesterSlashing)
 	er := make(chan error)
 	var wg sync.WaitGroup
 	lastIdx := int64(-1)
@@ -96,7 +96,7 @@ func (ss *Server) IsSlashableBlock(ctx context.Context, psr *slashpb.ProposerSla
 			presentInDb = true
 			continue
 		}
-		pSlashingsResponse.ProposerSlashing = append(pSlashingsResponse.ProposerSlashing, &ethpb.ProposerSlashing{ProposerIndex: psr.ValidatorIndex, Header_1: psr.BlockHeader, Header_2: bh})
+		pSlashingsResponse.ProposerSlashing = append(pSlashingsResponse.ProposerSlashing, &slashpb.ProposerSlashing{ProposerIndex: psr.ValidatorIndex, Header_1: psr.BlockHeader, Header_2: bh})
 	}
 	if len(pSlashingsResponse.ProposerSlashing) == 0 && !presentInDb {
 		err = ss.SlasherDB.SaveBlockHeader(epoch, psr.ValidatorIndex, psr.BlockHeader)
@@ -121,7 +121,7 @@ func (ss *Server) SlashableAttestations(req *types.Empty, server slashpb.Slasher
 
 // DetectSurroundVotes is a method used to return the attestation that were detected
 // by min max surround detection method.
-func (ss *Server) DetectSurroundVotes(ctx context.Context, validatorIdx uint64, req *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error) {
+func (ss *Server) DetectSurroundVotes(ctx context.Context, validatorIdx uint64, req *slashpb.IndexedAttestation) ([]*slashpb.AttesterSlashing, error) {
 	spanMap, err := ss.SlasherDB.ValidatorSpansMap(validatorIdx)
 	if err != nil {
 		return nil, err
@@ -137,7 +137,7 @@ func (ss *Server) DetectSurroundVotes(ctx context.Context, validatorIdx uint64, 
 	if err := ss.SlasherDB.SaveValidatorSpansMap(validatorIdx, spanMap); err != nil {
 		return nil, err
 	}
-	var as []*ethpb.AttesterSlashing
+	var as []*slashpb.AttesterSlashing
 	if minTargetEpoch > 0 {
 		attestations, err := ss.SlasherDB.IndexedAttestation(minTargetEpoch, validatorIdx)
 		if err != nil {
@@ -145,7 +145,7 @@ func (ss *Server) DetectSurroundVotes(ctx context.Context, validatorIdx uint64, 
 		}
 		for _, ia := range attestations {
 			if ia.Data.Source.Epoch > req.Data.Source.Epoch && ia.Data.Target.Epoch < req.Data.Target.Epoch {
-				as = append(as, &ethpb.AttesterSlashing{
+				as = append(as, &slashpb.AttesterSlashing{
 					Attestation_1: req,
 					Attestation_2: ia,
 				})
@@ -159,7 +159,7 @@ func (ss *Server) DetectSurroundVotes(ctx context.Context, validatorIdx uint64, 
 		}
 		for _, ia := range attestations {
 			if ia.Data.Source.Epoch < req.Data.Source.Epoch && ia.Data.Target.Epoch > req.Data.Target.Epoch {
-				as = append(as, &ethpb.AttesterSlashing{
+				as = append(as, &slashpb.AttesterSlashing{
 					Attestation_1: req,
 					Attestation_2: ia,
 				})

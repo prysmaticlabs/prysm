@@ -146,7 +146,7 @@ func TestServer_SameSlotSlashable(t *testing.T) {
 		},
 		ValidatorIndex: 1,
 	}
-	want := &ethpb.ProposerSlashing{
+	want := &slashpb.ProposerSlashing{
 		ProposerIndex: psr.ValidatorIndex,
 		Header_1:      psr2.BlockHeader,
 		Header_2:      psr.BlockHeader,
@@ -589,7 +589,7 @@ func TestServer_Store_1000_Attestations(t *testing.T) {
 		CustodyBit_1Indices: []uint64{},
 		Signature:           make([]byte, 96),
 		Data: &ethpb.AttestationData{
-			Index:           0,
+			CommitteeIndex:  0,
 			BeaconBlockRoot: make([]byte, 32),
 			Source:          &ethpb.Checkpoint{Epoch: 2},
 			Target:          &ethpb.Checkpoint{Epoch: 4},
