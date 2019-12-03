@@ -5,13 +5,12 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/host"
 	peerstore "github.com/libp2p/go-libp2p-peerstore"
-	"github.com/multiformats/go-multiaddr"
 	"go.opencensus.io/trace"
 )
 
 // MakePeer from multiaddress string.
 func MakePeer(addr string) (*peerstore.PeerInfo, error) {
-	maddr, err := multiaddr.NewMultiaddr(addr)
+	maddr, err := multiAddrFromString(addr)
 	if err != nil {
 		return nil, err
 	}
