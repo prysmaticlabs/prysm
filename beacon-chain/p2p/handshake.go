@@ -41,6 +41,7 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 						log.WithError(err).Debug("Could not send successful hello rpc request")
 						if err.Error() == "protocol not supported" {
 							log.Debug("Not disconnecting peer with unsupported protocol. This may be the DHT node or relay.")
+						  s.host.ConnManager().Protect(conn.RemotePeer(), "relay/bootnode")
 							return
 						}
 						if err := s.Disconnect(conn.RemotePeer()); err != nil {
