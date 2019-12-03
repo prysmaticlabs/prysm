@@ -30,8 +30,12 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 	defer dbtest.TeardownDB(t, db)
 
 	r := &RegularSync{
-		db:                  db,
-		chain:               &mock.ChainService{},
+		db: db,
+		chain: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+			},
+		},
 		slotToPendingBlocks: make(map[uint64]*ethpb.BeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
@@ -114,11 +118,14 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 	})
 
 	r := &RegularSync{
-		p2p:                 p1,
-		db:                  db,
-		chain:               &mock.ChainService{},
-		slotToPendingBlocks: make(map[uint64]*ethpb.BeaconBlock),
-		seenPendingBlocks:   make(map[[32]byte]bool),
+		p2p: p1,
+		db:  db,
+		chain: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 0,
+			},
+		}, slotToPendingBlocks: make(map[uint64]*ethpb.BeaconBlock),
+		seenPendingBlocks: make(map[[32]byte]bool),
 	}
 	peerstatus.Set(p2.PeerID(), &pb.Status{})
 
@@ -188,6 +195,69 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 		t.Errorf("Incorrect size for slot to pending blocks cache: got %d", len(r.slotToPendingBlocks))
 	}
 	t.Log(r.seenPendingBlocks)
+	if len(r.seenPendingBlocks) != 0 {
+		t.Errorf("Incorrect size for seen pending block: got %d", len(r.seenPendingBlocks))
+	}
+}
+
+func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
+	db := dbtest.SetupDB(t)
+	defer dbtest.TeardownDB(t, db)
+	p1 := p2ptest.NewTestP2P(t)
+	p2 := p2ptest.NewTestP2P(t)
+	p1.Connect(p2)
+	if len(p1.Host.Network().Peers()) != 1 {
+		t.Error("Expected peers to be connected")
+	}
+
+	r := &RegularSync{
+		p2p: p1,
+		db:  db,
+		chain: &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 1,
+			},
+		}, slotToPendingBlocks: make(map[uint64]*ethpb.BeaconBlock),
+		seenPendingBlocks: make(map[[32]byte]bool),
+	}
+	peerstatus.Set(p2.PeerID(), &pb.Status{})
+
+	b0 := &ethpb.BeaconBlock{}
+	if err := r.db.SaveBlock(context.Background(), b0); err != nil {
+		t.Fatal(err)
+	}
+	b0Root, _ := ssz.SigningRoot(b0)
+	b1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: b0Root[:]}
+	if err := r.db.SaveBlock(context.Background(), b1); err != nil {
+		t.Fatal(err)
+	}
+	b1Root, _ := ssz.SigningRoot(b1)
+
+	// Incomplete block links
+	b2 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: b1Root[:]}
+	b2Root, _ := ssz.SigningRoot(b2)
+	b5 := &ethpb.BeaconBlock{Slot: 5, ParentRoot: b2Root[:]}
+	b5Root, _ := ssz.SigningRoot(b5)
+	b3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: b0Root[:]}
+	b3Root, _ := ssz.SigningRoot(b3)
+	b4 := &ethpb.BeaconBlock{Slot: 4, ParentRoot: b3Root[:]}
+	b4Root, _ := ssz.SigningRoot(b4)
+
+	r.slotToPendingBlocks[b2.Slot] = b2
+	r.seenPendingBlocks[b2Root] = true
+	r.slotToPendingBlocks[b3.Slot] = b3
+	r.seenPendingBlocks[b3Root] = true
+	r.slotToPendingBlocks[b4.Slot] = b4
+	r.seenPendingBlocks[b4Root] = true
+	r.slotToPendingBlocks[b5.Slot] = b5
+	r.seenPendingBlocks[b5Root] = true
+
+	if err := r.processPendingBlocks(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if len(r.slotToPendingBlocks) != 0 {
+		t.Errorf("Incorrect size for slot to pending blocks cache: got %d", len(r.slotToPendingBlocks))
+	}
 	if len(r.seenPendingBlocks) != 0 {
 		t.Errorf("Incorrect size for seen pending block: got %d", len(r.seenPendingBlocks))
 	}
