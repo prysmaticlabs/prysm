@@ -19,15 +19,6 @@ func (bs *Server) ListBeaconCommittees(
 	ctx context.Context,
 	req *ethpb.ListCommitteesRequest,
 ) (*ethpb.BeaconCommittees, error) {
-	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			"Requested page size %d can not be greater than max size %d",
-			req.PageSize,
-			params.BeaconConfig().MaxPageSize,
-		)
-	}
-
 	headState, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
@@ -141,7 +132,5 @@ func (bs *Server) ListBeaconCommittees(
 		Epoch:                helpers.SlotToEpoch(startSlot),
 		Committees:           committeesList,
 		ActiveValidatorCount: uint64(len(activeIndices)),
-		TotalSize:            int32(len(committeesList)),
-		NextPageToken:        "",
 	}, nil
 }

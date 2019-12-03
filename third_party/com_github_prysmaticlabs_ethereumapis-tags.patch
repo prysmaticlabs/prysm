@@ -255,7 +255,7 @@ index 69a148a..1b6ac18 100644
 +    bytes signature = 4 [(gogoproto.moretags) = "ssz-size:\"96\""];
  }
 diff --git a/eth/v1alpha1/beacon_chain.proto b/eth/v1alpha1/beacon_chain.proto
-index 140fc2f..0638f87 100644
+index 5389a4e..2029f0e 100644
 --- a/eth/v1alpha1/beacon_chain.proto
 +++ b/eth/v1alpha1/beacon_chain.proto
 @@ -15,6 +15,7 @@ syntax = "proto3";
@@ -315,7 +315,7 @@ index 140fc2f..0638f87 100644
  }
  
  message ListCommitteesRequest {
-@@ -378,7 +379,7 @@ message ListValidatorBalancesRequest {
+@@ -362,7 +363,7 @@ message ListValidatorBalancesRequest {
  
      // Validator 48 byte BLS public keys to filter validators for the given
      // epoch.
@@ -324,7 +324,7 @@ index 140fc2f..0638f87 100644
          
      // Validator indices to filter validators for the given epoch.
      repeated uint64 indices = 4;
-@@ -399,7 +400,7 @@ message ValidatorBalances {
+@@ -383,7 +384,7 @@ message ValidatorBalances {
  
      message Balance {
          // Validator's 48 byte BLS public key.
@@ -333,7 +333,7 @@ index 140fc2f..0638f87 100644
  
          // Validator's index in the validator set.
          uint64 index = 2;
-@@ -448,7 +449,7 @@ message GetValidatorRequest {
+@@ -432,7 +433,7 @@ message GetValidatorRequest {
          uint64 index = 1;
  
          // 48 byte validator public key.
@@ -342,7 +342,7 @@ index 140fc2f..0638f87 100644
      }
  }
  
-@@ -485,17 +486,17 @@ message ActiveSetChanges {
+@@ -469,17 +470,17 @@ message ActiveSetChanges {
      uint64 epoch = 1;
  
      // 48 byte validator public keys that have been activated in this epoch.
@@ -364,7 +364,7 @@ index 140fc2f..0638f87 100644
  }
  
  message ValidatorQueue {
-@@ -505,11 +506,11 @@ message ValidatorQueue {
+@@ -489,11 +490,11 @@ message ValidatorQueue {
  
      // Ordered list of 48 byte public keys awaiting activation. 0th index is the
      // next key to be processed.
@@ -378,7 +378,7 @@ index 140fc2f..0638f87 100644
  }
  
  message ListValidatorAssignmentsRequest {
-@@ -521,7 +522,7 @@ message ListValidatorAssignmentsRequest {
+@@ -505,7 +506,7 @@ message ListValidatorAssignmentsRequest {
          bool genesis = 2;
      }
      // 48 byte validator public keys to filter assignments for the given epoch.
@@ -387,7 +387,7 @@ index 140fc2f..0638f87 100644
          
      // Validator indicies to filter assignments for the given epoch.
      repeated uint64 indices = 4;
-@@ -556,7 +557,7 @@ message ValidatorAssignments {
+@@ -540,7 +541,7 @@ message ValidatorAssignments {
          uint64 proposer_slot = 4;
  
          // 48 byte BLS public key.
@@ -397,7 +397,7 @@ index 140fc2f..0638f87 100644
  
      // The epoch for which this set of validator assignments is valid.
 diff --git a/eth/v1alpha1/validator.proto b/eth/v1alpha1/validator.proto
-index 13bea5f..84d832d 100644
+index 9f07458..e30cd3f 100644
 --- a/eth/v1alpha1/validator.proto
 +++ b/eth/v1alpha1/validator.proto
 @@ -15,6 +15,7 @@ syntax = "proto3";
@@ -408,7 +408,7 @@ index 13bea5f..84d832d 100644
  import "google/api/annotations.proto";
  import "google/protobuf/empty.proto";
  import "eth/v1alpha1/beacon_block.proto";
-@@ -96,14 +97,14 @@ message DutiesRequest {
+@@ -106,14 +107,14 @@ message DutiesRequest {
      // Epoch at which validators should perform their duties.
      uint64 epoch = 1;
      // Array of byte encoded BLS public keys.
@@ -425,7 +425,7 @@ index 13bea5f..84d832d 100644
          // Slot at which a validator must attest.
          uint64 attestation_slot = 2;
          // Shard at which a validator must attest.
-@@ -120,7 +121,7 @@ message BlockRequest {
+@@ -130,7 +131,7 @@ message BlockRequest {
      // Slot for which the block should be proposed.
      uint64 slot = 1;
      // Validator's 32 byte randao reveal secret of the current epoch.
@@ -434,7 +434,7 @@ index 13bea5f..84d832d 100644
  }
  
  message AttestationDataRequest {
-@@ -137,10 +138,10 @@ message AttestationDataRequest {
+@@ -147,10 +148,10 @@ message AttestationDataRequest {
  // An Ethereum 2.0 validator.
  message Validator {
      // 48 byte BLS public key used for the validator's activities.

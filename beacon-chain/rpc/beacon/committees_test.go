@@ -2,10 +2,7 @@ package beacon
 
 import (
 	"context"
-	"fmt"
 	"reflect"
-	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -18,58 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestServer_ListBeaconCommittees_Pagination_OutOfRange(t *testing.T) {
-	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
-
-	numValidators := 1
-	headState := setupActiveValidators(t, db, numValidators)
-	headState.RandaoMixes = make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
-	for i := 0; i < len(headState.RandaoMixes); i++ {
-		headState.RandaoMixes[i] = make([]byte, 32)
-	}
-
-	bs := &Server{
-		HeadFetcher: &mock.ChainService{
-			State: headState,
-		},
-	}
-
-	numCommittees := uint64(0)
-	for slot := uint64(0); slot < params.BeaconConfig().SlotsPerEpoch; slot++ {
-		var countAtSlot = uint64(numValidators) / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
-		if countAtSlot > params.BeaconConfig().MaxCommitteesPerSlot {
-			countAtSlot = params.BeaconConfig().MaxCommitteesPerSlot
-		}
-		if countAtSlot == 0 {
-			countAtSlot = 1
-		}
-		numCommittees += countAtSlot
-	}
-
-	req := &ethpb.ListCommitteesRequest{PageToken: strconv.Itoa(1), PageSize: 100}
-	wanted := fmt.Sprintf("page start %d >= list %d", req.PageSize, numCommittees)
-	if _, err := bs.ListBeaconCommittees(context.Background(), req); err != nil && !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected error %v, received %v", wanted, err)
-	}
-}
-
-func TestServer_ListBeaconCommittees_Pagination_ExceedsMaxPageSize(t *testing.T) {
-	bs := &Server{}
-	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
-
-	wanted := fmt.Sprintf(
-		"Requested page size %d can not be greater than max size %d",
-		exceedsMax,
-		params.BeaconConfig().MaxPageSize,
-	)
-	req := &ethpb.ListCommitteesRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
-	if _, err := bs.ListBeaconCommittees(context.Background(), req); err != nil && !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected error %v, received %v", wanted, err)
-	}
-}
-
-func TestServer_ListBeaconCommittees_Pagination_CustomPageSize(t *testing.T) {
+func TestServer_ListBeaconCommittees(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -95,7 +41,7 @@ func TestServer_ListBeaconCommittees_Pagination_CustomPageSize(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wanted := make([]*ethpb.BeaconCommittees_CommitteeItem, 0)
+	wanted := make(map[uint64]*ethpb.BeaconCommittees_CommitteesList)
 	for slot := uint64(0); slot < params.BeaconConfig().SlotsPerEpoch; slot++ {
 		var countAtSlot = uint64(numValidators) / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
 		if countAtSlot > params.BeaconConfig().MaxCommitteesPerSlot {
@@ -104,6 +50,7 @@ func TestServer_ListBeaconCommittees_Pagination_CustomPageSize(t *testing.T) {
 		if countAtSlot == 0 {
 			countAtSlot = 1
 		}
+		committeeItems := make([]*ethpb.BeaconCommittees_CommitteeItem, countAtSlot)
 		for i := uint64(0); i < countAtSlot; i++ {
 			epochOffset := i + (slot%params.BeaconConfig().SlotsPerEpoch)*countAtSlot
 			totalCount := countAtSlot * params.BeaconConfig().SlotsPerEpoch
@@ -111,10 +58,12 @@ func TestServer_ListBeaconCommittees_Pagination_CustomPageSize(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			wanted = append(wanted, &ethpb.BeaconCommittees_CommitteeItem{
-				Committee: committee,
-				Slot:      slot,
-			})
+			committeeItems[i] = &ethpb.BeaconCommittees_CommitteeItem{
+				ValidatorIndices: committee,
+			}
+		}
+		wanted[slot] = &ethpb.BeaconCommittees_CommitteesList{
+			Committees: committeeItems,
 		}
 	}
 
@@ -123,39 +72,11 @@ func TestServer_ListBeaconCommittees_Pagination_CustomPageSize(t *testing.T) {
 		res *ethpb.BeaconCommittees
 	}{
 		{
-			req: &ethpb.ListCommitteesRequest{
-				PageSize: 2,
-			},
+			req: &ethpb.ListCommitteesRequest{},
 			res: &ethpb.BeaconCommittees{
 				Epoch:                0,
-				Committees:           wanted[0:2],
+				Committees:           wanted,
 				ActiveValidatorCount: uint64(numValidators),
-				NextPageToken:        strconv.Itoa(1),
-				TotalSize:            int32(len(wanted)),
-			},
-		},
-		{
-			req: &ethpb.ListCommitteesRequest{
-				PageToken: strconv.Itoa(1), PageSize: 3,
-			},
-			res: &ethpb.BeaconCommittees{
-				Epoch:                0,
-				Committees:           wanted[3:6],
-				ActiveValidatorCount: uint64(numValidators),
-				NextPageToken:        strconv.Itoa(2),
-				TotalSize:            int32(len(wanted)),
-			},
-		},
-		{
-			req: &ethpb.ListCommitteesRequest{
-				PageToken: strconv.Itoa(3), PageSize: 5,
-			},
-			res: &ethpb.BeaconCommittees{
-				Epoch:                0,
-				Committees:           wanted[15:20],
-				ActiveValidatorCount: uint64(numValidators),
-				NextPageToken:        strconv.Itoa(4),
-				TotalSize:            int32(len(wanted)),
 			},
 		},
 	}
@@ -207,7 +128,7 @@ func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wanted := make([]*ethpb.BeaconCommittees_CommitteeItem, 0)
+	wanted := make(map[uint64]*ethpb.BeaconCommittees_CommitteesList)
 	for slot := uint64(0); slot < params.BeaconConfig().SlotsPerEpoch; slot++ {
 		var countAtSlot = uint64(numValidators) / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
 		if countAtSlot > params.BeaconConfig().MaxCommitteesPerSlot {
@@ -216,6 +137,7 @@ func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
 		if countAtSlot == 0 {
 			countAtSlot = 1
 		}
+		committeeItems := make([]*ethpb.BeaconCommittees_CommitteeItem, countAtSlot)
 		for i := uint64(0); i < countAtSlot; i++ {
 			epochOffset := i + (slot%params.BeaconConfig().SlotsPerEpoch)*countAtSlot
 			totalCount := countAtSlot * params.BeaconConfig().SlotsPerEpoch
@@ -223,10 +145,12 @@ func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			wanted = append(wanted, &ethpb.BeaconCommittees_CommitteeItem{
-				Committee: committee,
-				Slot:      slot,
-			})
+			committeeItems[i] = &ethpb.BeaconCommittees_CommitteeItem{
+				ValidatorIndices: committee,
+			}
+		}
+		wanted[slot] = &ethpb.BeaconCommittees_CommitteesList{
+			Committees: committeeItems,
 		}
 	}
 	res1, err := bs.ListBeaconCommittees(context.Background(), &ethpb.ListCommitteesRequest{
@@ -252,8 +176,6 @@ func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
 		Epoch:                0,
 		Committees:           wanted,
 		ActiveValidatorCount: uint64(numValidators),
-		NextPageToken:        "",
-		TotalSize:            int32(len(wanted)),
 	}
 	if !reflect.DeepEqual(wantedRes, res1) {
 		t.Errorf("Wanted %v, received %v", wantedRes, res1)
