@@ -9,10 +9,15 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	ptypes "github.com/gogo/protobuf/types"
+	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -174,7 +179,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			PageSize:    3},
 			res: &ethpb.ListBlocksResponse{
 				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.BeaconBlock{Slot: 5}, BlockRoot: blkContainers[5].BlockRoot}},
-				NextPageToken:   strconv.Itoa(1),
+				NextPageToken:   "",
 				TotalSize:       1}},
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(0),
@@ -193,7 +198,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			PageSize:    100},
 			res: &ethpb.ListBlocksResponse{
 				BlockContainers: blkContainers[0:params.BeaconConfig().SlotsPerEpoch],
-				NextPageToken:   strconv.Itoa(1),
+				NextPageToken:   "",
 				TotalSize:       int32(params.BeaconConfig().SlotsPerEpoch)}},
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(1),
@@ -201,7 +206,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			PageSize:    3},
 			res: &ethpb.ListBlocksResponse{
 				BlockContainers: blkContainers[43:46],
-				NextPageToken:   strconv.Itoa(2),
+				NextPageToken:   "2",
 				TotalSize:       int32(params.BeaconConfig().SlotsPerEpoch)}},
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(1),
@@ -209,7 +214,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			PageSize:    7},
 			res: &ethpb.ListBlocksResponse{
 				BlockContainers: blkContainers[95:96],
-				NextPageToken:   strconv.Itoa(2),
+				NextPageToken:   "",
 				TotalSize:       int32(params.BeaconConfig().SlotsPerEpoch)}},
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(0),
@@ -217,7 +222,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			PageSize:    4},
 			res: &ethpb.ListBlocksResponse{
 				BlockContainers: blkContainers[96:100],
-				NextPageToken:   strconv.Itoa(1),
+				NextPageToken:   "1",
 				TotalSize:       int32(params.BeaconConfig().SlotsPerEpoch / 2)}},
 	}
 
@@ -227,7 +232,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !proto.Equal(res, test.res) {
-			t.Errorf("Incorrect blocks response, wanted %d, received %d", len(test.res.BlockContainers), len(res.BlockContainers))
+			t.Errorf("Incorrect blocks response, wanted %v, received %v", test.res, res)
 		}
 	}
 }
@@ -370,13 +375,13 @@ func TestServer_GetChainHead(t *testing.T) {
 		t.Errorf("Wanted PreviousJustifiedSlot: %d, got: %d",
 			3, head.PreviousJustifiedSlot)
 	}
-	if head.JustifiedBlockSlot != 2 {
+	if head.JustifiedSlot != 2 {
 		t.Errorf("Wanted JustifiedSlot: %d, got: %d",
-			2, head.JustifiedBlockSlot)
+			2, head.JustifiedSlot)
 	}
-	if head.FinalizedBlockSlot != 1 {
+	if head.FinalizedSlot != 1 {
 		t.Errorf("Wanted FinalizedSlot: %d, got: %d",
-			1, head.FinalizedBlockSlot)
+			1, head.FinalizedSlot)
 	}
 	if !bytes.Equal(pjRoot[:], head.PreviousJustifiedBlockRoot) {
 		t.Errorf("Wanted PreviousJustifiedBlockRoot: %v, got: %v",
@@ -390,4 +395,99 @@ func TestServer_GetChainHead(t *testing.T) {
 		t.Errorf("Wanted FinalizedBlockRoot: %v, got: %v",
 			fRoot[:], head.FinalizedBlockRoot)
 	}
+}
+
+func TestServer_StreamChainHead_ContextCanceled(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+	ctx := context.Background()
+
+	ctx, cancel := context.WithCancel(ctx)
+	chainService := &mock.ChainService{}
+	server := &Server{
+		Ctx:           ctx,
+		StateNotifier: chainService.StateNotifier(),
+		BeaconDB:      db,
+	}
+
+	exitRoutine := make(chan bool)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := mockRPC.NewMockBeaconChain_StreamChainHeadServer(ctrl)
+	mockStream.EXPECT().Context().Return(ctx)
+	go func(tt *testing.T) {
+		if err := server.StreamChainHead(&ptypes.Empty{}, mockStream); !strings.Contains(err.Error(), "Context canceled") {
+			tt.Errorf("Could not call RPC method: %v", err)
+		}
+		<-exitRoutine
+	}(t)
+	cancel()
+	exitRoutine <- true
+}
+
+func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	finalizedBlock := &ethpb.BeaconBlock{Slot: 1, ParentRoot: []byte{'A'}}
+	db.SaveBlock(context.Background(), finalizedBlock)
+	fRoot, _ := ssz.SigningRoot(finalizedBlock)
+	justifiedBlock := &ethpb.BeaconBlock{Slot: 2, ParentRoot: []byte{'B'}}
+	db.SaveBlock(context.Background(), justifiedBlock)
+	jRoot, _ := ssz.SigningRoot(justifiedBlock)
+	prevJustifiedBlock := &ethpb.BeaconBlock{Slot: 3, ParentRoot: []byte{'C'}}
+	db.SaveBlock(context.Background(), prevJustifiedBlock)
+	pjRoot, _ := ssz.SigningRoot(prevJustifiedBlock)
+
+	s := &pbp2p.BeaconState{
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 3, Root: pjRoot[:]},
+		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Epoch: 2, Root: jRoot[:]},
+		FinalizedCheckpoint:         &ethpb.Checkpoint{Epoch: 1, Root: fRoot[:]},
+	}
+	b := &ethpb.BeaconBlock{Slot: s.PreviousJustifiedCheckpoint.Epoch*params.BeaconConfig().SlotsPerEpoch + 1}
+	hRoot, _ := ssz.SigningRoot(b)
+
+	chainService := &mock.ChainService{}
+	server := &Server{
+		Ctx:           context.Background(),
+		HeadFetcher:   &mock.ChainService{Block: b, State: s},
+		BeaconDB:      db,
+		StateNotifier: chainService.StateNotifier(),
+	}
+	exitRoutine := make(chan bool)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := mockRPC.NewMockBeaconChain_StreamChainHeadServer(ctrl)
+	mockStream.EXPECT().Context().Return(context.Background())
+	mockStream.EXPECT().Send(
+		&ethpb.ChainHead{
+			HeadSlot:                   b.Slot,
+			HeadEpoch:                  helpers.SlotToEpoch(b.Slot),
+			HeadBlockRoot:              hRoot[:],
+			FinalizedSlot:              1,
+			FinalizedEpoch:             1,
+			FinalizedBlockRoot:         fRoot[:],
+			JustifiedSlot:              2,
+			JustifiedEpoch:             2,
+			JustifiedBlockRoot:         jRoot[:],
+			PreviousJustifiedSlot:      3,
+			PreviousJustifiedEpoch:     3,
+			PreviousJustifiedBlockRoot: pjRoot[:],
+		},
+	).Return(nil)
+	go func(tt *testing.T) {
+		if err := server.StreamChainHead(&ptypes.Empty{}, mockStream); err != nil {
+			tt.Errorf("Could not call RPC method: %v", err)
+		}
+		<-exitRoutine
+	}(t)
+
+	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
+	for sent := 0; sent == 0; {
+		sent = server.StateNotifier.StateFeed().Send(&statefeed.Event{
+			Type: statefeed.BlockProcessed,
+			Data: &statefeed.BlockProcessedData{},
+		})
+	}
+	exitRoutine <- true
 }

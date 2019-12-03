@@ -2,7 +2,6 @@ package validator
 
 import (
 	"context"
-	"crypto/rand"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -123,14 +122,9 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	ctx := context.Background()
 
-	priv1, err := bls.RandKey(rand.Reader)
-	if err != nil {
-		t.Error(err)
-	}
-	priv2, err := bls.RandKey(rand.Reader)
-	if err != nil {
-		t.Error(err)
-	}
+	priv1 := bls.RandKey()
+	priv2 := bls.RandKey()
+
 	pubKey1 := priv1.PublicKey().Marshal()[:]
 	pubKey2 := priv2.PublicKey().Marshal()[:]
 

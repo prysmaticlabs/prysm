@@ -513,7 +513,7 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 	wantedRes = &ethpb.ValidatorAssignments{
 		Assignments:   assignments,
 		TotalSize:     int32(len(req.Indices)),
-		NextPageToken: "2",
+		NextPageToken: "",
 	}
 
 	if !reflect.DeepEqual(res, wantedRes) {

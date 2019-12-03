@@ -2,7 +2,6 @@ package helpers_test
 
 import (
 	"bytes"
-	"crypto/rand"
 	"sort"
 	"testing"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -171,10 +171,7 @@ func TestAggregateAttestations(t *testing.T) {
 	var makeAttestationsFromBitlists = func(bl []bitfield.Bitlist) []*ethpb.Attestation {
 		atts := make([]*ethpb.Attestation, len(bl))
 		for i, b := range bl {
-			sk, err := bls.RandKey(rand.Reader)
-			if err != nil {
-				panic(err)
-			}
+			sk := bls.RandKey()
 			sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
 			atts[i] = &ethpb.Attestation{
 				AggregationBits: b,
@@ -212,7 +209,7 @@ func TestAggregateAttestations(t *testing.T) {
 }
 
 func TestSlotSignature_Verify(t *testing.T) {
-	priv, _ := bls.RandKey(rand.Reader)
+	priv := bls.RandKey()
 	pub := priv.PublicKey()
 	state := &pb.BeaconState{Fork: &pb.Fork{CurrentVersion: params.BeaconConfig().GenesisForkVersion}, Slot: 100}
 	slot := uint64(101)
@@ -261,10 +258,7 @@ func TestAggregateSignature_True(t *testing.T) {
 	atts := make([]*ethpb.Attestation, 0, 100)
 	msg := []byte("hello")
 	for i := 0; i < 100; i++ {
-		priv, err := bls.RandKey(rand.Reader)
-		if err != nil {
-			t.Fatal(err)
-		}
+		priv := bls.RandKey()
 		pub := priv.PublicKey()
 		sig := priv.Sign(msg[:], 0)
 		pubkeys = append(pubkeys, pub)
@@ -275,7 +269,7 @@ func TestAggregateSignature_True(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !aggSig.VerifyAggregateCommon(pubkeys, msg, 0) {
+	if !aggSig.VerifyAggregateCommon(pubkeys, bytesutil.ToBytes32(msg), 0) {
 		t.Error("Signature did not verify")
 	}
 }
@@ -285,10 +279,7 @@ func TestAggregateSignature_False(t *testing.T) {
 	atts := make([]*ethpb.Attestation, 0, 100)
 	msg := []byte("hello")
 	for i := 0; i < 100; i++ {
-		priv, err := bls.RandKey(rand.Reader)
-		if err != nil {
-			t.Fatal(err)
-		}
+		priv := bls.RandKey()
 		pub := priv.PublicKey()
 		sig := priv.Sign(msg[:], 0)
 		pubkeys = append(pubkeys, pub)
@@ -299,7 +290,7 @@ func TestAggregateSignature_False(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if aggSig.VerifyAggregateCommon(pubkeys, msg, 0) {
+	if aggSig.VerifyAggregateCommon(pubkeys, bytesutil.ToBytes32(msg), 0) {
 		t.Error("Signature not suppose to verify")
 	}
 }

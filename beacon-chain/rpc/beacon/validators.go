@@ -289,13 +289,13 @@ func (bs *Server) GetValidatorActiveSetChanges(
 		slashedIndices = archivedChanges.Slashed
 		exitedIndices = archivedChanges.Exited
 	} else if requestedEpoch == currentEpoch {
-		activeValidatorCount, err := helpers.ActiveValidatorCount(headState, helpers.CurrentEpoch(headState))
+		activeValidatorCount, err := helpers.ActiveValidatorCount(headState, helpers.PrevEpoch(headState))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
 		}
-		activatedIndices = validators.ActivatedValidatorIndices(helpers.CurrentEpoch(headState), headState.Validators)
+		activatedIndices = validators.ActivatedValidatorIndices(helpers.PrevEpoch(headState), headState.Validators)
 		slashedIndices = validators.SlashedValidatorIndices(helpers.PrevEpoch(headState), headState.Validators)
-		exitedIndices, err = validators.ExitedValidatorIndices(headState.Validators, activeValidatorCount)
+		exitedIndices, err = validators.ExitedValidatorIndices(helpers.PrevEpoch(headState), headState.Validators, activeValidatorCount)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not determine exited validator indices: %v", err)
 		}
@@ -340,7 +340,7 @@ func (bs *Server) GetValidatorParticipation(
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
-	currentEpoch := helpers.SlotToEpoch(headState.Slot)
+	currentEpoch := helpers.CurrentEpoch(headState)
 	prevEpoch := helpers.PrevEpoch(headState)
 
 	var requestedEpoch uint64
@@ -399,8 +399,8 @@ func (bs *Server) GetValidatorParticipation(
 		return nil, status.Errorf(codes.Internal, "Could not compute participation: %v", err)
 	}
 	return &ethpb.ValidatorParticipationResponse{
-		Epoch:         currentEpoch,
-		Finalized:     false, // The current epoch can never be finalized.
+		Epoch:         requestedEpoch,
+		Finalized:     requestedEpoch <= headState.FinalizedCheckpoint.Epoch,
 		Participation: participation,
 	}, nil
 }
