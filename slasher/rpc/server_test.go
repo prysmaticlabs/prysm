@@ -572,7 +572,7 @@ func TestServer_DontSlashValidAttestations(t *testing.T) {
 	}
 }
 
-func TestServer_Store_1000_Attestations(t *testing.T) {
+func TestServer_Store_100_Attestations(t *testing.T) {
 	dbs := db.SetupSlasherDB(t)
 	defer db.TeardownSlasherDB(t, dbs)
 	ctx := context.Background()
@@ -595,7 +595,7 @@ func TestServer_Store_1000_Attestations(t *testing.T) {
 			Target:          &ethpb.Checkpoint{Epoch: 4},
 		},
 	}
-	for i := uint64(0); i < 1000; i++ {
+	for i := uint64(0); i < 100; i++ {
 		ia1.Data.Target.Epoch = i + 1
 		ia1.Data.Source.Epoch = i
 		t.Logf("In Loop: %d", i)

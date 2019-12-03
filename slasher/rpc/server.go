@@ -38,8 +38,8 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 		return nil, err
 	}
 	atsSlashinngRes := &slashpb.AttesterSlashingResponse{}
-	at := make(chan []*ethpb.AttesterSlashing)
-	er := make(chan error)
+	at := make(chan []*ethpb.AttesterSlashing, len(indices))
+	er := make(chan error, len(indices))
 	var wg sync.WaitGroup
 	lastIdx := int64(-1)
 	for _, idx := range indices {
@@ -67,6 +67,7 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 				at <- atts
 			}
 			wg.Done()
+			return
 		}(idx)
 	}
 	wg.Wait()
