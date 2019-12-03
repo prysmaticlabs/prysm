@@ -179,7 +179,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			PageSize:    3},
 			res: &ethpb.ListBlocksResponse{
 				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.BeaconBlock{Slot: 5}, BlockRoot: blkContainers[5].BlockRoot}},
-				NextPageToken:   strconv.Itoa(1),
+				NextPageToken:   "",
 				TotalSize:       1}},
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(0),
@@ -198,7 +198,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			PageSize:    100},
 			res: &ethpb.ListBlocksResponse{
 				BlockContainers: blkContainers[0:params.BeaconConfig().SlotsPerEpoch],
-				NextPageToken:   strconv.Itoa(1),
+				NextPageToken:   "",
 				TotalSize:       int32(params.BeaconConfig().SlotsPerEpoch)}},
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(1),
@@ -206,7 +206,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			PageSize:    3},
 			res: &ethpb.ListBlocksResponse{
 				BlockContainers: blkContainers[43:46],
-				NextPageToken:   strconv.Itoa(2),
+				NextPageToken:   "2",
 				TotalSize:       int32(params.BeaconConfig().SlotsPerEpoch)}},
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(1),
@@ -214,7 +214,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			PageSize:    7},
 			res: &ethpb.ListBlocksResponse{
 				BlockContainers: blkContainers[95:96],
-				NextPageToken:   strconv.Itoa(2),
+				NextPageToken:   "",
 				TotalSize:       int32(params.BeaconConfig().SlotsPerEpoch)}},
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(0),
@@ -222,7 +222,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			PageSize:    4},
 			res: &ethpb.ListBlocksResponse{
 				BlockContainers: blkContainers[96:100],
-				NextPageToken:   strconv.Itoa(1),
+				NextPageToken:   "1",
 				TotalSize:       int32(params.BeaconConfig().SlotsPerEpoch / 2)}},
 	}
 
@@ -232,7 +232,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !proto.Equal(res, test.res) {
-			t.Errorf("Incorrect blocks response, wanted %d, received %d", len(test.res.BlockContainers), len(res.BlockContainers))
+			t.Errorf("Incorrect blocks response, wanted %v, received %v", test.res, res)
 		}
 	}
 }
