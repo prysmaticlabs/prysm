@@ -25,7 +25,6 @@ type Pool struct {
 // NewPool initializes a new attestation pool consists of multiple KV store in cache for
 // various kind of aggregations.
 func NewPool() *Pool {
-
 	pool := &Pool{
 		unAggregatedAtt: ccache.New(ccache.Configure().MaxSize(unaggregatedCacheSize)),
 		aggregatedAtt:   ccache.New(ccache.Configure().MaxSize(aggregatedCacheSize)),
