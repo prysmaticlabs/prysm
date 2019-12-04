@@ -1,11 +1,9 @@
 package stateutil_test
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
