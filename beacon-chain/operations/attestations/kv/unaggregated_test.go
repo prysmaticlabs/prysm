@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestKV_Unaggregated_AlreadyAaggregated(t *testing.T) {
+func TestKV_Unaggregated_AlreadyAggregated(t *testing.T) {
 	cache := NewAttCaches()
 
 	att := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b111}}
