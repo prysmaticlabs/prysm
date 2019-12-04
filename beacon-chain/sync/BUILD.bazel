@@ -75,6 +75,7 @@ go_test(
     srcs = [
         "error_test.go",
         "pending_blocks_queue_test.go",
+        "pipeline_test.go",
         "rpc_beacon_blocks_by_range_test.go",
         "rpc_beacon_blocks_by_root_test.go",
         "rpc_goodbye_test.go",
@@ -97,6 +98,7 @@ go_test(
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/core/statefeed:go_default_library",
         "//beacon-chain/db/testing:go_default_library",
+        "//beacon-chain/p2p:go_default_library",
         "//beacon-chain/p2p/encoder:go_default_library",
         "//beacon-chain/p2p/testing:go_default_library",
         "//beacon-chain/sync/initial-sync/testing:go_default_library",

@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"fmt"
 	"runtime/debug"
 
 	"github.com/gogo/protobuf/proto"
@@ -89,8 +90,10 @@ func (p *pipeline) messageLoop() {
 
 	for {
 		msg, err := p.sub.Next(p.ctx)
-		if err != nil && err.Error() != "subscription cancelled by calling sub.Cancel()" {
-			log.WithError(err).Error("Subscription next failed")
+		if err != nil {
+			if err.Error() != "subscription cancelled by calling sub.Cancel()" {
+				log.WithError(err).Error("Subscription next failed")
+			}
 			return
 		}
 		// Special validation occurs on messages received from ourselves.
