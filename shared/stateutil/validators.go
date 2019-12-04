@@ -124,9 +124,5 @@ func validatorRoot(validator *ethpb.Validator) ([32]byte, error) {
 	withdrawalBufRoot := bytesutil.ToBytes32(withdrawalBuf)
 	fieldRoots[7] = withdrawalBufRoot[:]
 
-	root, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
-	if err != nil {
-		return [32]byte{}, nil
-	}
-	return root, nil
+	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }

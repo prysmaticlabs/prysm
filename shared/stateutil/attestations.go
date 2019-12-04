@@ -95,7 +95,7 @@ func epochAttestationsRoot(atts []*pb.PendingAttestation) ([32]byte, error) {
 		}
 		attsRoots = append(attsRoots, pendingRoot[:])
 	}
-	attsRootsRoot, err := bitwiseMerkleize(attsRoots, uint64(len(attsRoots)), params.BeaconConfig().MaxAttestations*32)
+	attsRootsRoot, err := bitwiseMerkleize(attsRoots, uint64(len(attsRoots)), params.BeaconConfig().MaxAttestations*params.BeaconConfig().SlotsPerEpoch)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute epoch attestations merkleization")
 	}

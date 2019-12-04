@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func blockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
@@ -20,18 +21,14 @@ func blockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
 	fieldRoots[3] = header.BodyRoot
 	signatureChunks, err := pack([][]byte{header.Signature})
 	if err != nil {
-		return [32]byte{}, nil
+		return [32]byte{}, err
 	}
 	sigRoot, err := bitwiseMerkleize(signatureChunks, uint64(len(signatureChunks)), uint64(len(signatureChunks)))
 	if err != nil {
-		return [32]byte{}, nil
+		return [32]byte{}, err
 	}
 	fieldRoots[4] = sigRoot[:]
-	root, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
-	if err != nil {
-		return [32]byte{}, nil
-	}
-	return root, nil
+	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 func eth1Root(eth1Data *ethpb.Eth1Data) ([32]byte, error) {
@@ -51,11 +48,7 @@ func eth1Root(eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 			fieldRoots[2] = eth1Data.BlockHash
 		}
 	}
-	root, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
-	if err != nil {
-		return [32]byte{}, nil
-	}
-	return root, nil
+	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 func eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
@@ -71,7 +64,7 @@ func eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not chunk eth1 votes roots")
 	}
-	eth1VotesRootsRoot, err := bitwiseMerkleize(eth1Chunks, uint64(len(eth1Chunks)), uint64(1024))
+	eth1VotesRootsRoot, err := bitwiseMerkleize(eth1Chunks, uint64(len(eth1Chunks)), params.BeaconConfig().SlotsPerEth1VotingPeriod)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute eth1data votes merkleization")
 	}

@@ -183,11 +183,7 @@ func forkRoot(fork *pb.Fork) ([32]byte, error) {
 	binary.LittleEndian.PutUint64(forkEpochBuf, fork.Epoch)
 	epochRoot := bytesutil.ToBytes32(forkEpochBuf)
 	fieldRoots[2] = epochRoot[:]
-	root, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
-	if err != nil {
-		return [32]byte{}, err
-	}
-	return root, nil
+	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 func checkpointRoot(checkpoint *ethpb.Checkpoint) ([32]byte, error) {
@@ -199,11 +195,7 @@ func checkpointRoot(checkpoint *ethpb.Checkpoint) ([32]byte, error) {
 		fieldRoots[0] = epochRoot[:]
 		fieldRoots[1] = checkpoint.Root
 	}
-	root, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
-	if err != nil {
-		return [32]byte{}, nil
-	}
-	return root, nil
+	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 func historicalRootsRoot(historicalRoots [][]byte) ([32]byte, error) {
