@@ -122,10 +122,10 @@ func BenchmarkCheckAttestations(b *testing.B) {
 			Target:          &ethpb.Checkpoint{Epoch: 4},
 		},
 	}
+	b.ResetTimer()
 	for i := uint64(0); i < uint64(b.N); i++ {
 		ia1.Data.Target.Epoch = i + 1
 		ia1.Data.Source.Epoch = i
-		b.Logf("In Loop: %d", i)
 		ia1.Data.Slot = (i + 1) * params.BeaconConfig().SlotsPerEpoch
 		root := []byte(strconv.Itoa(int(i)))
 		ia1.Data.BeaconBlockRoot = append(root, ia1.Data.BeaconBlockRoot[len(root):]...)
@@ -133,11 +133,5 @@ func BenchmarkCheckAttestations(b *testing.B) {
 			b.Errorf("Could not call RPC method: %v", err)
 		}
 	}
-
-	s, err := dbs.Size()
-	if err != nil {
-		b.Error(err)
-	}
-	b.Logf("DB size is: %d", s)
 
 }
