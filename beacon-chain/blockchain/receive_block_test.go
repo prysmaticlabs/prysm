@@ -30,7 +30,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState, err := state.ExecuteStateTransition(ctx, beaconState, genesis)
+	beaconState, err = state.ExecuteStateTransition(ctx, beaconState, genesis)
 	if err != nil {
 		t.Fatal(err)
 	}
