@@ -74,6 +74,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 	featureconfig.ConfigureBeaconChain(ctx)
+	flags.ConfigureGlobalFlags(ctx)
 	registry := shared.NewServiceRegistry()
 
 	beacon := &BeaconNode{
@@ -325,6 +326,7 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 		DepositContract: common.HexToAddress(depAddress),
 		BeaconDB:        b.db,
 		DepositCache:    b.depositCache,
+		StateNotifier:   b,
 	}
 	web3Service, err := powchain.NewService(ctx, cfg)
 	if err != nil {
@@ -334,10 +336,14 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	if len(knownContract) == 0 {
+		if err := b.db.SaveDepositContractAddress(ctx, cfg.DepositContract); err != nil {
+			return errors.Wrap(err, "could not save deposit contract")
+		}
+	}
 	if len(knownContract) > 0 && !bytes.Equal(cfg.DepositContract.Bytes(), knownContract) {
 		return fmt.Errorf("database contract is %#x but tried to run with %#x", knownContract, cfg.DepositContract.Bytes())
 	}
-
 	return b.services.RegisterService(web3Service)
 }
 
@@ -363,11 +369,12 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 	}
 
 	rs := prysmsync.NewRegularSync(&prysmsync.Config{
-		DB:          b.db,
-		P2P:         b.fetchP2P(ctx),
-		Operations:  operationService,
-		Chain:       chainService,
-		InitialSync: initSync,
+		DB:            b.db,
+		P2P:           b.fetchP2P(ctx),
+		Operations:    operationService,
+		Chain:         chainService,
+		InitialSync:   initSync,
+		StateNotifier: b,
 	})
 
 	return b.services.RegisterService(rs)
@@ -381,9 +388,10 @@ func (b *BeaconNode) registerInitialSyncService(ctx *cli.Context) error {
 	}
 
 	is := initialsync.NewInitialSync(&initialsync.Config{
-		DB:    b.db,
-		Chain: chainService,
-		P2P:   b.fetchP2P(ctx),
+		DB:            b.db,
+		Chain:         chainService,
+		P2P:           b.fetchP2P(ctx),
+		StateNotifier: b,
 	})
 
 	return b.services.RegisterService(is)
@@ -437,12 +445,12 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		KeyFlag:               key,
 		BeaconDB:              b.db,
 		Broadcaster:           b.fetchP2P(ctx),
+		PeersFetcher:          b.fetchP2P(ctx),
 		HeadFetcher:           chainService,
 		ForkFetcher:           chainService,
 		FinalizationFetcher:   chainService,
 		BlockReceiver:         chainService,
 		AttestationReceiver:   chainService,
-		StateFeedListener:     chainService,
 		GenesisTimeFetcher:    chainService,
 		AttestationsPool:      operationService,
 		OperationsHandler:     operationService,
@@ -452,6 +460,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		SyncService:           syncService,
 		DepositFetcher:        depositFetcher,
 		PendingDepositFetcher: b.depositCache,
+		StateNotifier:         b,
 	})
 
 	return b.services.RegisterService(rpcService)
@@ -515,8 +524,7 @@ func (b *BeaconNode) registerInteropServices(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerArchiverService(ctx *cli.Context) error {
-	shouldArchive := ctx.GlobalBool(flags.ArchiveEnableFlag.Name)
-	if !shouldArchive {
+	if !flags.Get().EnableArchive {
 		return nil
 	}
 	var chainService *blockchain.Service

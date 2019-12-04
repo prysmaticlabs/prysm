@@ -6,9 +6,9 @@ import (
 	"sync"
 
 	"github.com/karlseguin/ccache"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/params"

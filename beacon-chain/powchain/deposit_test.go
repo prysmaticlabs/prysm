@@ -2,14 +2,13 @@ package powchain
 
 import (
 	"context"
-	"crypto/rand"
 	"strings"
 	"testing"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -221,11 +220,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 		},
 	}
 
-	sk, err := bls.RandKey(rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	sk := bls.RandKey()
 	deposit.Data.PublicKey = sk.PublicKey().Marshal()
 	signedRoot, err := ssz.SigningRoot(deposit.Data)
 	if err != nil {

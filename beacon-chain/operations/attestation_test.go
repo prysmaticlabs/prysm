@@ -7,6 +7,7 @@ import (
 	"sync"
 	"testing"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -15,7 +16,6 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -41,7 +41,7 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 			Source:          &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 			Target:          &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 		},
-		AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+		AggregationBits: bitfield.Bitlist{0xCF, 0xC0, 0xC0, 0xC0, 0x01},
 		CustodyBits:     bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
 	}
 
@@ -144,7 +144,7 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 	}
 
 	// Next up, we compute the committee for the attestation we're testing.
-	committee, err := helpers.BeaconCommittee(beaconState, att.Data.Slot, att.Data.Index)
+	committee, err := helpers.BeaconCommittee(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		t.Error(err)
 	}
@@ -224,7 +224,7 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 		CustodyBits: bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
 	}
 
-	committee, err := helpers.BeaconCommittee(beaconState, att1.Data.Slot, att1.Data.Index)
+	committee, err := helpers.BeaconCommittee(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
 	if err != nil {
 		t.Error(err)
 	}
@@ -360,7 +360,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	}
 
 	aggBits := bitfield.NewBitlist(1)
-	aggBits.SetBitAt(1, true)
+	aggBits.SetBitAt(0, true)
 	custodyBits := bitfield.NewBitlist(1)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -379,10 +379,12 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		CustodyBit: false,
 	}
 	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
+
 	sigs := make([]*bls.Signature, len(attestingIndices))
 
 	zeroSig := [96]byte{}
 	att.Signature = zeroSig[:]
+
 	for i, indice := range attestingIndices {
 		hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
 		if err != nil {
@@ -393,9 +395,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	}
 
 	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
-
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
-
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	r, _ := ssz.HashTreeRoot(att.Data)

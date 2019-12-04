@@ -7,11 +7,12 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -22,7 +23,7 @@ import (
 type ForkChoicer interface {
 	Head(ctx context.Context) ([]byte, error)
 	OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error
-	OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.BeaconBlock) error
+	OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.BeaconBlock) error
 	OnAttestation(ctx context.Context, a *ethpb.Attestation) error
 	GenesisStore(ctx context.Context, justifiedCheckpoint *ethpb.Checkpoint, finalizedCheckpoint *ethpb.Checkpoint) error
 	FinalizedCheckpt() *ethpb.Checkpoint
@@ -36,12 +37,13 @@ type Store struct {
 	db                   db.Database
 	justifiedCheckpt     *ethpb.Checkpoint
 	finalizedCheckpt     *ethpb.Checkpoint
-	checkPointLock       sync.RWMutex
 	prevFinalizedCheckpt *ethpb.Checkpoint
 	checkpointState      *cache.CheckpointStateCache
 	checkpointStateLock  sync.Mutex
 	seenAtts             map[[32]byte]bool
 	seenAttsLock         sync.Mutex
+	latestVoteMap        map[uint64]*pb.ValidatorLatestVote
+	voteLock             sync.RWMutex
 }
 
 // NewForkChoiceService instantiates a new service instance that will
@@ -53,6 +55,7 @@ func NewForkChoiceService(ctx context.Context, db db.Database) *Store {
 		cancel:          cancel,
 		db:              db,
 		checkpointState: cache.NewCheckpointStateCache(),
+		latestVoteMap:   make(map[uint64]*pb.ValidatorLatestVote),
 		seenAtts:        make(map[[32]byte]bool),
 	}
 }
@@ -79,11 +82,9 @@ func (s *Store) GenesisStore(
 	justifiedCheckpoint *ethpb.Checkpoint,
 	finalizedCheckpoint *ethpb.Checkpoint) error {
 
-	s.checkPointLock.Lock()
 	s.justifiedCheckpt = proto.Clone(justifiedCheckpoint).(*ethpb.Checkpoint)
 	s.finalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
 	s.prevFinalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
-	s.checkPointLock.Unlock()
 
 	justifiedState, err := s.db.State(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root))
 	if err != nil {
@@ -91,7 +92,7 @@ func (s *Store) GenesisStore(
 	}
 
 	if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
-		Checkpoint: s.JustifiedCheckpt(),
+		Checkpoint: s.justifiedCheckpt,
 		State:      justifiedState,
 	}); err != nil {
 		return errors.Wrap(err, "could not save genesis state in check point cache")
@@ -168,12 +169,11 @@ func (s *Store) latestAttestingBalance(ctx context.Context, root []byte) (uint64
 	}
 
 	balances := uint64(0)
+	s.voteLock.RLock()
+	defer s.voteLock.RUnlock()
 	for _, i := range activeIndices {
-		vote, err := s.db.ValidatorLatestVote(ctx, i)
-		if err != nil {
-			return 0, errors.Wrapf(err, "could not get validator %d's latest vote", i)
-		}
-		if vote == nil {
+		vote, ok := s.latestVoteMap[i]
+		if !ok {
 			continue
 		}
 
@@ -248,14 +248,10 @@ func (s *Store) Head(ctx context.Context) ([]byte, error) {
 
 // JustifiedCheckpt returns the latest justified check point from fork choice store.
 func (s *Store) JustifiedCheckpt() *ethpb.Checkpoint {
-	s.checkPointLock.RLock()
-	defer s.checkPointLock.RUnlock()
 	return proto.Clone(s.justifiedCheckpt).(*ethpb.Checkpoint)
 }
 
 // FinalizedCheckpt returns the latest finalized check point from fork choice store.
 func (s *Store) FinalizedCheckpt() *ethpb.Checkpoint {
-	s.checkPointLock.RLock()
-	defer s.checkPointLock.RUnlock()
 	return proto.Clone(s.finalizedCheckpt).(*ethpb.Checkpoint)
 }

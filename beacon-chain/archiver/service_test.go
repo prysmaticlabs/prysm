@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -15,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -221,7 +221,7 @@ func TestArchiverService_SavesCommitteeInfo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wanted := &ethpb.ArchivedCommitteeInfo{
+	wanted := &pb.ArchivedCommitteeInfo{
 		ProposerSeed: proposerSeed[:],
 		AttesterSeed: attesterSeed[:],
 	}
@@ -320,8 +320,8 @@ func TestArchiverService_SavesExitedValidatorChanges(t *testing.T) {
 		State: headState,
 	}
 	prevEpoch := helpers.PrevEpoch(headState)
-	headState.Validators[95].ExitEpoch = prevEpoch + 1
-	headState.Validators[95].WithdrawableEpoch = prevEpoch + 1 + params.BeaconConfig().MinValidatorWithdrawabilityDelay
+	headState.Validators[95].ExitEpoch = prevEpoch
+	headState.Validators[95].WithdrawableEpoch = prevEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
 	event := &statefeed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
@@ -376,11 +376,12 @@ func setupState(t *testing.T, validatorCount uint64) *pb.BeaconState {
 func setupService(t *testing.T) (*Service, db.Database) {
 	beaconDB := dbutil.SetupDB(t)
 	ctx, cancel := context.WithCancel(context.Background())
+	mockChainService := &mock.ChainService{}
 	return &Service{
 		beaconDB:      beaconDB,
 		ctx:           ctx,
 		cancel:        cancel,
-		stateNotifier: &mock.ChainService{},
+		stateNotifier: mockChainService.StateNotifier(),
 	}, beaconDB
 }
 
@@ -391,7 +392,7 @@ func triggerStateEvent(t *testing.T, svc *Service, event *statefeed.Event) {
 		<-exitRoutine
 	}()
 
-	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed)
+	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
 	for sent := 0; sent == 0; {
 		sent = svc.stateNotifier.StateFeed().Send(event)
 	}

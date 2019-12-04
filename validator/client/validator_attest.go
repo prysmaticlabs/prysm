@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"time"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -57,7 +57,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 	log = log.WithField("slot", data.Slot)
-	log = log.WithField("committeeIndex", data.Index)
+	log = log.WithField("committeeIndex", data.CommitteeIndex)
 
 	sig, err := v.signAtt(ctx, pubKey, data)
 	if err != nil {
@@ -87,7 +87,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	span.AddAttributes(
 		trace.Int64Attribute("slot", int64(slot)),
 		trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attResp.Root)),
-		trace.Int64Attribute("committeeIndex", int64(data.Index)),
+		trace.Int64Attribute("committeeIndex", int64(data.CommitteeIndex)),
 		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", data.BeaconBlockRoot)),
 		trace.Int64Attribute("justifiedEpoch", int64(data.Source.Epoch)),
 		trace.Int64Attribute("targetEpoch", int64(data.Target.Epoch)),

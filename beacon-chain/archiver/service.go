@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -77,7 +76,7 @@ func (s *Service) archiveCommitteeInfo(ctx context.Context, headState *pb.Beacon
 		return errors.Wrap(err, "could not generate seed")
 	}
 
-	info := &ethpb.ArchivedCommitteeInfo{
+	info := &pb.ArchivedCommitteeInfo{
 		ProposerSeed: proposerSeed[:],
 		AttesterSeed: attesterSeed[:],
 	}
@@ -96,11 +95,11 @@ func (s *Service) archiveActiveSetChanges(ctx context.Context, headState *pb.Bea
 	if err != nil {
 		return errors.Wrap(err, "could not get active validator count")
 	}
-	exited, err := validators.ExitedValidatorIndices(headState.Validators, activeValidatorCount)
+	exited, err := validators.ExitedValidatorIndices(prevEpoch, headState.Validators, activeValidatorCount)
 	if err != nil {
 		return errors.Wrap(err, "could not determine exited validator indices")
 	}
-	activeSetChanges := &ethpb.ArchivedActiveSetChanges{
+	activeSetChanges := &pb.ArchivedActiveSetChanges{
 		Activated: activations,
 		Exited:    exited,
 		Slashed:   slashings,
@@ -131,14 +130,13 @@ func (s *Service) archiveBalances(ctx context.Context, headState *pb.BeaconState
 }
 
 func (s *Service) run(ctx context.Context) {
-	subChannel := make(chan *statefeed.Event, 1)
-	sub := s.stateNotifier.StateFeed().Subscribe(subChannel)
-	defer sub.Unsubscribe()
+	stateChannel := make(chan *statefeed.Event, 1)
+	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
 	for {
 		select {
-		case event := <-subChannel:
-			switch event.Type {
-			case statefeed.BlockProcessed:
+		case event := <-stateChannel:
+			if event.Type == statefeed.BlockProcessed {
 				data := event.Data.(*statefeed.BlockProcessedData)
 				log.WithField("headRoot", fmt.Sprintf("%#x", data.BlockRoot)).Debug("Received block processed event")
 				headState, err := s.headFetcher.HeadState(ctx)
@@ -179,8 +177,8 @@ func (s *Service) run(ctx context.Context) {
 		case <-s.ctx.Done():
 			log.Debug("Context closed, exiting goroutine")
 			return
-		case err := <-sub.Err():
-			log.WithError(err).Error("Subscription to new chain head notifier failed")
+		case err := <-stateSub.Err():
+			log.WithError(err).Error("Subscription to state feed notifier failed")
 			return
 		}
 	}

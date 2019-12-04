@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -13,7 +14,6 @@ import (
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -157,7 +157,7 @@ func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
-	valid, _ := r.validateProposerSlashing(ctx, slashing, p2p, false /*fromSelf*/)
+	valid, _ := r.validateAttesterSlashing(ctx, slashing, p2p, false /*fromSelf*/)
 	if valid {
 		t.Error("slashing from the far distant future should have timed out and returned false")
 	}

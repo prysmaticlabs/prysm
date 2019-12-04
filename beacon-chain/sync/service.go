@@ -6,12 +6,13 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared"
 )
 
@@ -19,11 +20,12 @@ var _ = shared.Service(&RegularSync{})
 
 // Config to set up the regular sync service.
 type Config struct {
-	P2P         p2p.P2P
-	DB          db.Database
-	Operations  *operations.Service
-	Chain       blockchainService
-	InitialSync Checker
+	P2P           p2p.P2P
+	DB            db.Database
+	Operations    *operations.Service
+	Chain         blockchainService
+	InitialSync   Checker
+	StateNotifier statefeed.Notifier
 }
 
 // This defines the interface for interacting with block chain service
@@ -33,7 +35,6 @@ type blockchainService interface {
 	blockchain.FinalizationFetcher
 	blockchain.ForkFetcher
 	blockchain.AttestationReceiver
-	blockchain.ChainFeeds
 	blockchain.GenesisTimeFetcher
 }
 
@@ -48,6 +49,7 @@ func NewRegularSync(cfg *Config) *RegularSync {
 		initialSync:         cfg.InitialSync,
 		slotToPendingBlocks: make(map[uint64]*ethpb.BeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
+		stateNotifier:       cfg.StateNotifier,
 	}
 
 	r.registerRPCHandlers()
@@ -70,6 +72,7 @@ type RegularSync struct {
 	chainStarted        bool
 	initialSync         Checker
 	validateBlockLock   sync.RWMutex
+	stateNotifier       statefeed.Notifier
 }
 
 // Start the regular sync service.

@@ -6,8 +6,9 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
@@ -183,7 +184,7 @@ func (bs *Server) ListValidatorAssignments(
 func archivedValidatorCommittee(
 	epoch uint64,
 	validatorIndex uint64,
-	archivedInfo *ethpb.ArchivedCommitteeInfo,
+	archivedInfo *pb.ArchivedCommitteeInfo,
 	activeIndices []uint64,
 	archivedBalances []uint64,
 ) ([]uint64, uint64, uint64, uint64, error) {

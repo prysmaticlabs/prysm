@@ -3,19 +3,18 @@ package state_test
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
 	"encoding/binary"
 	"fmt"
 	"strings"
 	"testing"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -507,7 +506,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	beaconState.BlockRoots = blockRoots
 
 	aggBits := bitfield.NewBitlist(1)
-	aggBits.SetBitAt(1, true)
+	aggBits.SetBitAt(0, true)
 	custodyBits := bitfield.NewBitlist(1)
 	blockAtt := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -836,10 +835,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	priv, err := bls.RandKey(rand.Reader)
-	if err != nil {
-		b.Fatal(err)
-	}
+	priv := bls.RandKey()
 	s.Validators[proposerIdx].PublicKey = priv.PublicKey().Marshal()
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, 0)

@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"context"
+	"fmt"
 	"io"
 
 	"github.com/libp2p/go-libp2p-core/network"
@@ -15,6 +16,8 @@ import (
 func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer.ID) error) {
 	s.host.Network().Notify(&network.NotifyBundle{
 		ConnectedF: func(net network.Network, conn network.Conn) {
+			multiAddr := fmt.Sprintf("%s/p2p/%s", conn.RemoteMultiaddr().String(), conn.RemotePeer().String())
+			log.WithField("multiAddr", multiAddr).Debug("Connection")
 			if peerstatus.IsBadPeer(conn.RemotePeer()) {
 				// Add Peer to gossipsub blacklist
 				s.pubsub.BlacklistPeer(conn.RemotePeer())
@@ -32,20 +35,23 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 				log := log.WithField("peer", conn.RemotePeer())
 				if conn.Stat().Direction == network.DirInbound {
 					log.Debug("Not sending hello for inbound connection")
-					return
-				}
-				log.Debug("Performing handshake with peer")
-				if err := reqFunc(ctx, conn.RemotePeer()); err != nil && err != io.EOF {
-					log.WithError(err).Debug("Could not send successful hello rpc request")
-					if err.Error() == "protocol not supported" {
-						log.Debug("Not disconnecting peer with unsupported protocol. This may be the DHT node or relay.")
+				} else {
+					log.Debug("Performing handshake with peer")
+					if err := reqFunc(ctx, conn.RemotePeer()); err != nil && err != io.EOF {
+						log.WithError(err).Debug("Could not send successful hello rpc request")
+						if err.Error() == "protocol not supported" {
+							// This is only to ensure the smooth running of our testnets. This will not be
+							// used in production.
+							log.Debug("Not disconnecting peer with unsupported protocol. This may be the DHT node or relay.")
+						        s.host.ConnManager().Protect(conn.RemotePeer(), "relay/bootnode")
+							return
+						}
+						if err := s.Disconnect(conn.RemotePeer()); err != nil {
+							log.WithError(err).Errorf("Unable to close peer %s", conn.RemotePeer())
+							return
+						}
 						return
 					}
-					if err := s.Disconnect(conn.RemotePeer()); err != nil {
-						log.WithError(err).Errorf("Unable to close peer %s", conn.RemotePeer())
-						return
-					}
-					return
 				}
 				log.WithField("peer", conn.RemotePeer().Pretty()).Info("New peer connected")
 			}()
