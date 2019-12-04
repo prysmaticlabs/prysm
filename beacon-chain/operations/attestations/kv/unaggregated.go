@@ -9,7 +9,7 @@ import (
 
 // SaveUnaggregatedAttestation saves an unaggregated attestation in cache.
 func (p *AttCaches) SaveUnaggregatedAttestation(att *ethpb.Attestation) error {
-	if att.AggregationBits.Count() > 1 {
+	if aggregated(att.AggregationBits) {
 		return errors.New("attestation is aggregated")
 	}
 
@@ -43,4 +43,20 @@ func (p *AttCaches) UnaggregatedAttestation(slot uint64, committeeIndex uint64) 
 	}
 
 	return atts
+}
+
+// DeleteUnaggregatedAttestation deletes the unaggregated attestations in cache.
+func (p *AttCaches) DeleteUnaggregatedAttestation(att *ethpb.Attestation) error {
+	if aggregated(att.AggregationBits) {
+		return errors.New("attestation is not aggregated")
+	}
+
+	r, err := ssz.HashTreeRoot(att)
+	if err != nil {
+		return errors.Wrap(err, "could not tree hash attestation")
+	}
+
+	p.unAggregatedAtt.Delete(string(r[:]))
+
+	return nil
 }
