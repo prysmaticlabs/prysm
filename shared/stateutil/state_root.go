@@ -90,61 +90,18 @@ func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	fieldRoots[9] = eth1DepositBuf[:]
 
 	// Validators slice root.
-	validatorsRoots := make([][]byte, 0)
-	for i := 0; i < len(state.Validators); i++ {
-		val, err := validatorRoot(state.Validators[i])
-		if err != nil {
-			return [32]byte{}, errors.Wrap(err, "could not compute validators merkleization")
-		}
-		validatorsRoots = append(validatorsRoots, val[:])
-	}
-	validatorsRootsRoot, err := bitwiseMerkleize(validatorsRoots, uint64(len(validatorsRoots)), params.BeaconConfig().ValidatorRegistryLimit)
+	validatorsRoot, err := validatorRegistryRoot(state.Validators)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute validator registry merkleization")
 	}
-	validatorsRootsBuf := new(bytes.Buffer)
-	if err := binary.Write(validatorsRootsBuf, binary.LittleEndian, uint64(len(state.Validators))); err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not marshal validator registry length")
-	}
-	// We need to mix in the length of the slice.
-	validatorsRootsBufRoot := make([]byte, 32)
-	copy(validatorsRootsBufRoot, validatorsRootsBuf.Bytes())
-	mixedValLen := mixInLength(validatorsRootsRoot, validatorsRootsBufRoot)
-	fieldRoots[10] = mixedValLen[:]
+	fieldRoots[10] = validatorsRoot[:]
 
 	// Balances slice root.
-	balancesMarshaling := make([][]byte, 0)
-	for i := 0; i < len(state.Balances); i++ {
-		balanceBuf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(balanceBuf, state.Balances[i])
-		balancesMarshaling = append(balancesMarshaling, balanceBuf)
-	}
-	balancesChunks, err := pack(balancesMarshaling)
+	balancesRoot, err := validatorBalancesRoot(state.Balances)
 	if err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not pack balances into chunks")
+		return [32]byte{}, errors.Wrap(err, "could not compute validator balances merkleization")
 	}
-	maxBalCap := params.BeaconConfig().ValidatorRegistryLimit
-	elemSize := uint64(8)
-	balLimit := (maxBalCap*elemSize + 31) / 32
-	if balLimit == 0 {
-		if len(state.Balances) == 0 {
-			balLimit = 1
-		} else {
-			balLimit = uint64(len(state.Balances))
-		}
-	}
-	balancesRootsRoot, err := bitwiseMerkleize(balancesChunks, uint64(len(balancesChunks)), balLimit)
-	if err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not compute balances merkleization")
-	}
-	balancesRootsBuf := new(bytes.Buffer)
-	if err := binary.Write(balancesRootsBuf, binary.LittleEndian, uint64(len(state.Balances))); err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not marshal balances length")
-	}
-	balancesRootsBufRoot := make([]byte, 32)
-	copy(balancesRootsBufRoot, balancesRootsBuf.Bytes())
-	mixedBalLen := mixInLength(balancesRootsRoot, balancesRootsBufRoot)
-	fieldRoots[11] = mixedBalLen[:]
+	fieldRoots[11] = balancesRoot[:]
 
 	// RandaoMixes array root.
 	randaoRootsRoot, err := bitwiseMerkleize(state.RandaoMixes, uint64(len(state.RandaoMixes)), uint64(len(state.RandaoMixes)))
@@ -171,50 +128,18 @@ func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	fieldRoots[13] = slashingRootsRoot[:]
 
 	// PreviousEpochAttestations slice root.
-	prevAttsRoots := make([][]byte, 0)
-	for i := 0; i < len(state.PreviousEpochAttestations); i++ {
-		pendingPrevRoot, err := pendingAttestationRoot(state.PreviousEpochAttestations[i])
-		if err != nil {
-			return [32]byte{}, errors.Wrap(err, "could not attestation merkleization")
-		}
-		prevAttsRoots = append(prevAttsRoots, pendingPrevRoot[:])
-	}
-	prevAttsRootsRoot, err := bitwiseMerkleize(prevAttsRoots, uint64(len(prevAttsRoots)), params.BeaconConfig().MaxAttestations*32)
+	prevAttsRoot, err := epochAttestationsRoot(state.PreviousEpochAttestations)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute previous epoch attestations merkleization")
 	}
-	prevAttsLenBuf := new(bytes.Buffer)
-	if err := binary.Write(prevAttsLenBuf, binary.LittleEndian, uint64(len(state.PreviousEpochAttestations))); err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not marshal previous epoch attestations length")
-	}
-	// We need to mix in the length of the slice.
-	prevAttsLenRoot := make([]byte, 32)
-	copy(prevAttsLenRoot, prevAttsLenBuf.Bytes())
-	prevRoot := mixInLength(prevAttsRootsRoot, prevAttsLenRoot)
-	fieldRoots[14] = prevRoot[:]
+	fieldRoots[14] = prevAttsRoot[:]
 
 	// CurrentEpochAttestations slice root.
-	currAttsRoots := make([][]byte, 0)
-	for i := 0; i < len(state.CurrentEpochAttestations); i++ {
-		pendingRoot, err := pendingAttestationRoot(state.CurrentEpochAttestations[i])
-		if err != nil {
-			return [32]byte{}, errors.Wrap(err, "could not attestation merkleization")
-		}
-		currAttsRoots = append(currAttsRoots, pendingRoot[:])
-	}
-	currAttsRootsRoot, err := bitwiseMerkleize(currAttsRoots, uint64(len(currAttsRoots)), params.BeaconConfig().MaxAttestations*32)
+	currAttsRoot, err := epochAttestationsRoot(state.CurrentEpochAttestations)
 	if err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not compute current epoch attestations merkleization")
+		return [32]byte{}, errors.Wrap(err, "could not compute previous epoch attestations merkleization")
 	}
-	// We need to mix in the length of the slice.
-	currAttsLenBuf := new(bytes.Buffer)
-	if err := binary.Write(currAttsLenBuf, binary.LittleEndian, uint64(len(state.CurrentEpochAttestations))); err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not marshal current epoch attestations length")
-	}
-	currAttsLenRoot := make([]byte, 32)
-	copy(currAttsLenRoot, currAttsLenBuf.Bytes())
-	currRoot := mixInLength(currAttsRootsRoot, currAttsLenRoot)
-	fieldRoots[15] = currRoot[:]
+	fieldRoots[15] = currAttsRoot[:]
 
 	// JustificationBits root.
 	justifiedBitsRoot := bytesutil.ToBytes32(state.JustificationBits)

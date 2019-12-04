@@ -1,12 +1,14 @@
 package stateutil
 
 import (
+	"bytes"
 	"encoding/binary"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func attestationDataRoot(data *ethpb.AttestationData) ([32]byte, error) {
@@ -82,4 +84,27 @@ func pendingAttestationRoot(att *pb.PendingAttestation) ([32]byte, error) {
 		return [32]byte{}, nil
 	}
 	return root, nil
+}
+
+func epochAttestationsRoot(atts []*pb.PendingAttestation) ([32]byte, error) {
+	attsRoots := make([][]byte, 0)
+	for i := 0; i < len(atts); i++ {
+		pendingRoot, err := pendingAttestationRoot(atts[i])
+		if err != nil {
+			return [32]byte{}, errors.Wrap(err, "could not attestation merkleization")
+		}
+		attsRoots = append(attsRoots, pendingRoot[:])
+	}
+	attsRootsRoot, err := bitwiseMerkleize(attsRoots, uint64(len(attsRoots)), params.BeaconConfig().MaxAttestations*32)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute epoch attestations merkleization")
+	}
+	attsLenBuf := new(bytes.Buffer)
+	if err := binary.Write(attsLenBuf, binary.LittleEndian, uint64(len(atts))); err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not marshal epoch attestations length")
+	}
+	// We need to mix in the length of the slice.
+	attsLenRoot := make([]byte, 32)
+	copy(attsLenRoot, attsLenBuf.Bytes())
+	return mixInLength(attsRootsRoot, attsLenRoot), nil
 }

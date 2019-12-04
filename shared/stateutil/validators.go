@@ -1,11 +1,71 @@
 package stateutil
 
 import (
+	"bytes"
 	"encoding/binary"
 
+	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+func validatorBalancesRoot(balances []uint64) ([32]byte, error) {
+	balancesMarshaling := make([][]byte, 0)
+	for i := 0; i < len(balances); i++ {
+		balanceBuf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(balanceBuf, balances[i])
+		balancesMarshaling = append(balancesMarshaling, balanceBuf)
+	}
+	balancesChunks, err := pack(balancesMarshaling)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not pack balances into chunks")
+	}
+	maxBalCap := params.BeaconConfig().ValidatorRegistryLimit
+	elemSize := uint64(8)
+	balLimit := (maxBalCap*elemSize + 31) / 32
+	if balLimit == 0 {
+		if len(balances) == 0 {
+			balLimit = 1
+		} else {
+			balLimit = uint64(len(balances))
+		}
+	}
+	balancesRootsRoot, err := bitwiseMerkleize(balancesChunks, uint64(len(balancesChunks)), balLimit)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute balances merkleization")
+	}
+	balancesRootsBuf := new(bytes.Buffer)
+	if err := binary.Write(balancesRootsBuf, binary.LittleEndian, uint64(len(balances))); err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not marshal balances length")
+	}
+	balancesRootsBufRoot := make([]byte, 32)
+	copy(balancesRootsBufRoot, balancesRootsBuf.Bytes())
+	return mixInLength(balancesRootsRoot, balancesRootsBufRoot), nil
+}
+
+func validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
+	validatorsRoots := make([][]byte, 0)
+	for i := 0; i < len(validators); i++ {
+		val, err := validatorRoot(validators[i])
+		if err != nil {
+			return [32]byte{}, errors.Wrap(err, "could not compute validators merkleization")
+		}
+		validatorsRoots = append(validatorsRoots, val[:])
+	}
+	validatorsRootsRoot, err := bitwiseMerkleize(validatorsRoots, uint64(len(validatorsRoots)), params.BeaconConfig().ValidatorRegistryLimit)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not compute validator registry merkleization")
+	}
+	validatorsRootsBuf := new(bytes.Buffer)
+	if err := binary.Write(validatorsRootsBuf, binary.LittleEndian, uint64(len(validators))); err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not marshal validator registry length")
+	}
+	// We need to mix in the length of the slice.
+	validatorsRootsBufRoot := make([]byte, 32)
+	copy(validatorsRootsBufRoot, validatorsRootsBuf.Bytes())
+	return mixInLength(validatorsRootsRoot, validatorsRootsBufRoot), nil
+}
 
 func validatorRoot(validator *ethpb.Validator) ([32]byte, error) {
 	fieldRoots := make([][]byte, 8)
