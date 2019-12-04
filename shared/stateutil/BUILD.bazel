@@ -1,0 +1,37 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "attestations.go",
+        "blocks.go",
+        "helpers.go",
+        "state_root.go",
+        "validators.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/shared/stateutil",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/bytesutil:go_default_library",
+        "//shared/hashutil:go_default_library",
+        "//shared/params:go_default_library",
+        "@com_github_minio_sha256_simd//:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
+        "@com_github_protolambda_zssz//htr:go_default_library",
+        "@com_github_protolambda_zssz//merkle:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["state_root_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/interop:go_default_library",
+        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
+    ],
+)
