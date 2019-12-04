@@ -217,60 +217,6 @@ func historicalRootsRoot(historicalRoots [][]byte) ([32]byte, error) {
 	return mixedLen, nil
 }
 
-func blockRoots(roots [][]byte) ([32]byte, error) {
-	key := make([]byte, len(roots)*32)
-	bytesProcessed := 0
-	for i := 0; i < len(roots); i++ {
-		copy(key[bytesProcessed:bytesProcessed+32], roots[i])
-	}
-	found, ok := cache.Get(key)
-	if found != nil && ok {
-		return found.([32]byte), nil
-	}
-	res, err := bitwiseMerkleize(roots, uint64(len(roots)), uint64(len(roots)))
-	if err != nil {
-		return [32]byte{}, err
-	}
-	cache.Set(key, res, 32)
-	return res, nil
-}
-
-func stateRoots(roots [][]byte) ([32]byte, error) {
-	key := make([]byte, len(roots)*32)
-	bytesProcessed := 0
-	for i := 0; i < len(roots); i++ {
-		copy(key[bytesProcessed:bytesProcessed+32], roots[i])
-	}
-	found, ok := cache.Get(key)
-	if found != nil && ok {
-		return found.([32]byte), nil
-	}
-	res, err := bitwiseMerkleize(roots, uint64(len(roots)), uint64(len(roots)))
-	if err != nil {
-		return [32]byte{}, err
-	}
-	cache.Set(key, res, 32)
-	return res, nil
-}
-
-func randaoRoots(roots [][]byte) ([32]byte, error) {
-	key := make([]byte, len(roots)*32)
-	bytesProcessed := 0
-	for i := 0; i < len(roots); i++ {
-		copy(key[bytesProcessed:bytesProcessed+32], roots[i])
-	}
-	found, ok := cache.Get(key)
-	if found != nil && ok {
-		return found.([32]byte), nil
-	}
-	res, err := bitwiseMerkleize(roots, uint64(len(roots)), uint64(len(roots)))
-	if err != nil {
-		return [32]byte{}, err
-	}
-	cache.Set(key, res, 32)
-	return res, nil
-}
-
 func slashingsRoot(slashings []uint64) ([32]byte, error) {
 	slashingMarshaling := make([][]byte, params.BeaconConfig().EpochsPerSlashingsVector)
 	for i := 0; i < len(slashingMarshaling); i++ {
