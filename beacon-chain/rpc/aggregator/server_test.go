@@ -2,7 +2,6 @@ package aggregator
 
 import (
 	"context"
-	"crypto/rand"
 	"strings"
 	"testing"
 
@@ -55,10 +54,7 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 		BeaconDB:    db,
 	}
 
-	priv, err := bls.RandKey(rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
+	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'A'}, 0)
 	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal()}
 	wanted := "Could not locate validator index in DB"
@@ -82,10 +78,7 @@ func TestSubmitAggregateAndProof_IsAggregator(t *testing.T) {
 		BeaconDB:    db,
 	}
 
-	priv, err := bls.RandKey(rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
+	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'A'}, 0)
 	pubKey := [48]byte{'A'}
 	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey[:]}
@@ -93,7 +86,7 @@ func TestSubmitAggregateAndProof_IsAggregator(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err = aggregatorServer.SubmitAggregateAndProof(ctx, req); err != nil {
+	if _, err := aggregatorServer.SubmitAggregateAndProof(ctx, req); err != nil {
 		t.Fatal(err)
 	}
 }

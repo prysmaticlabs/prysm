@@ -35,10 +35,11 @@ go_image(
         "main.go",
         "usage.go",
     ],
+    base = "@cc_image_base//image",
     goarch = "amd64",
     goos = "linux",
     importpath = "github.com/prysmaticlabs/prysm/validator",
-    pure = "on",
+    pure = "off",
     race = "off",
     tags = ["manual"],
     visibility = ["//visibility:private"],
@@ -77,10 +78,10 @@ docker_push(
 go_binary(
     name = "validator",
     embed = [":go_default_library"],
-    pure = "on",  # Enabled unless there is a valid reason to include cgo dep.
+    pure = "off",  # Enabled unless there is a valid reason to include cgo dep.
     visibility = [
-        "//validator:__subpackages__",
         "//endtoend:__pkg__",
+        "//validator:__subpackages__",
     ],
 )
 
