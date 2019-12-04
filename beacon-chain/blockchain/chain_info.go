@@ -96,12 +96,7 @@ func (s *Service) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 	defer s.headLock.RUnlock()
 
 	if s.headState == nil {
-		h, err := s.beaconDB.HeadState(ctx)
-		if err != nil {
-			return nil, err
-		}
-
-		return h, nil
+		return s.beaconDB.HeadState(ctx)
 	}
 
 	return proto.Clone(s.headState).(*pb.BeaconState), nil
