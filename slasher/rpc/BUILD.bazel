@@ -28,6 +28,7 @@ go_test(
     srcs = [
         "detect_update_min_max_span_test.go",
         "server_test.go",
+        "slashing_bench_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
@@ -43,7 +44,7 @@ go_test(
 go_test(
     name = "go_benchmark_test",
     size = "medium",
-    srcs = ["detect_update_min_max_span_bench_test.go"],
+    srcs = ["slashing_bench_test.go"],
     args = [
         "-test.bench=.",
         "-test.benchmem",
