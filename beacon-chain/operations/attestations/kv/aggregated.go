@@ -34,7 +34,6 @@ func (p *AttCaches) AggregatedAttestation() []*ethpb.Attestation {
 		if !ok {
 			p.aggregatedAtt.Delete(s)
 		}
-
 		atts = append(atts, att)
 	}
 
