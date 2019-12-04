@@ -20,7 +20,7 @@ func TestPipelineProcessing(t *testing.T) {
 	var handleCalled bool
 
 	topic := "/foo/bar"
-	sub, err := p.PubSub().Subscribe(topic)
+	sub, err := p.PubSub().Subscribe(topic+p.Encoding().ProtocolSuffix())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,8 +49,6 @@ func TestPipelineProcessing(t *testing.T) {
 	}
 
 	go pipe.messageLoop()
-
-	time.Sleep(300 * time.Millisecond)
 
 	p.ReceivePubSub(topic, &testpb.TestSimpleMessage{Foo: []byte("foo")})
 
