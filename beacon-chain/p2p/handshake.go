@@ -43,7 +43,7 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 							// This is only to ensure the smooth running of our testnets. This will not be
 							// used in production.
 							log.Debug("Not disconnecting peer with unsupported protocol. This may be the DHT node or relay.")
-						        s.host.ConnManager().Protect(conn.RemotePeer(), "relay/bootnode")
+							s.host.ConnManager().Protect(conn.RemotePeer(), "relay/bootnode")
 							return
 						}
 						if err := s.Disconnect(conn.RemotePeer()); err != nil {
