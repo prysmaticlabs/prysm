@@ -26,7 +26,10 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	genesis, _ := testutil.GenerateFullBlock(beaconState, privKeys, nil, beaconState.Slot+1)
+	genesis, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, beaconState.Slot+1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	beaconState, err := state.ExecuteStateTransition(ctx, beaconState, genesis)
 	if err != nil {
 		t.Fatal(err)

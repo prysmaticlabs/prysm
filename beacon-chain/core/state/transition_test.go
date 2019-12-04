@@ -834,7 +834,11 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 		atts[i] = att
 	}
 
-	epochSignature, _ := testutil.RandaoReveal(s, helpers.CurrentEpoch(s), privKeys)
+	epochSignature, err := testutil.RandaoReveal(s, helpers.CurrentEpoch(s), privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	parentRoot, _ := ssz.SigningRoot(s.LatestBlockHeader)
 	blk := &ethpb.BeaconBlock{
 		Slot:       s.Slot,
@@ -845,7 +849,10 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 			Attestations: atts,
 		},
 	}
-	sig, _ := testutil.BlockSignature(s, blk, privKeys)
+	sig, err := testutil.BlockSignature(s, blk, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
 	blk.Signature = sig.Marshal()
 
 	config := params.BeaconConfig()
