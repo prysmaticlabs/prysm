@@ -14,6 +14,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// Pipeline decodes the incoming subscription data, runs the validation, and handles the
+// message.
 type pipeline struct {
 	ctx         context.Context
 	topic       string

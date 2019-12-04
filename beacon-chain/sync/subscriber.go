@@ -3,19 +3,13 @@ package sync
 import (
 	"context"
 	"fmt"
-	"runtime/debug"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-pubsub"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
-	"go.opencensus.io/trace"
 )
 
 const oneYear = 365 * 24 * time.Hour
@@ -140,7 +134,7 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 // maintained. As the state feed emits a newly updated state, the maxID function will be called to
 // determine the appropriate number of topics. This method supports only sequential number ranges
 // for topics.
-func (r *RegularSync) subscribeDynamic(topicFormat string, maxID func() int, validate validator, handle subHandler) {
+func (r *RegularSync) subscribeDynamic(topicFormat string, determineSubsLen func() int, validate validator, handle subHandler) {
 	base := p2p.GossipTopicMappings[topicFormat]
 	if base == nil {
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topicFormat))
@@ -159,19 +153,21 @@ func (r *RegularSync) subscribeDynamic(topicFormat string, maxID func() int, val
 				return
 			case <-stateChannel:
 				// Update topic count
-				ID := maxID()
+				wantedSubs := determineSubsLen()
 				// Resize as appropriate.
-				if len(subscriptions) > ID { // Reduce topics
+				if len(subscriptions) > wantedSubs { // Reduce topics
 					var cancelSubs []*pubsub.Subscription
-					subscriptions, cancelSubs = subscriptions[:ID-1], subscriptions[ID:]
+					subscriptions, cancelSubs = subscriptions[:wantedSubs-1], subscriptions[wantedSubs:]
 					for _, sub := range cancelSubs {
 						sub.Cancel()
 					}
-				} else if len(subscriptions) < ID { // Increase topics
-					for i := len(subscriptions) - 1; i < ID; i++ {
+				} else if len(subscriptions) < wantedSubs { // Increase topics
+					for i := len(subscriptions) - 1; i < wantedSubs; i++ {
 						sub, err := r.p2p.PubSub().Subscribe(fmt.Sprintf(topicFormat, i))
 						if err != nil {
-							panic(err) // TODO: Can we avoid panic?
+							// Panic is appropriate here since subscriptions should only fail if
+							// pubsub was misconfigured.
+							panic(err)
 						}
 						pipe := &pipeline{
 							ctx:      r.ctx,
