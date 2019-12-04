@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"strconv"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -553,4 +554,47 @@ func TestServer_DontSlashValidAttestations(t *testing.T) {
 	if len(sr.AttesterSlashing) != 0 {
 		t.Errorf("Should not return slashaing proof for same data: %v", sr)
 	}
+}
+
+func TestServer_Store_100_Attestations(t *testing.T) {
+	dbs := db.SetupSlasherDB(t)
+	defer db.TeardownSlasherDB(t, dbs)
+	ctx := context.Background()
+	slasherServer := &Server{
+		ctx:       ctx,
+		SlasherDB: dbs,
+	}
+	var cb []uint64
+	for i := uint64(0); i < 100; i++ {
+		cb = append(cb, i)
+	}
+	ia1 := &ethpb.IndexedAttestation{
+		CustodyBit_0Indices: cb,
+		CustodyBit_1Indices: []uint64{},
+		Signature:           make([]byte, 96),
+		Data: &ethpb.AttestationData{
+			CommitteeIndex:  0,
+			BeaconBlockRoot: make([]byte, 32),
+			Source:          &ethpb.Checkpoint{Epoch: 2},
+			Target:          &ethpb.Checkpoint{Epoch: 4},
+		},
+	}
+	for i := uint64(0); i < 100; i++ {
+		ia1.Data.Target.Epoch = i + 1
+		ia1.Data.Source.Epoch = i
+		t.Logf("In Loop: %d", i)
+		ia1.Data.Slot = (i + 1) * params.BeaconConfig().SlotsPerEpoch
+		root := []byte(strconv.Itoa(int(i)))
+		ia1.Data.BeaconBlockRoot = append(root, ia1.Data.BeaconBlockRoot[len(root):]...)
+		if _, err := slasherServer.IsSlashableAttestation(ctx, ia1); err != nil {
+			t.Errorf("Could not call RPC method: %v", err)
+		}
+	}
+
+	s, err := dbs.Size()
+	if err != nil {
+		t.Error(err)
+	}
+	t.Logf("DB size is: %d", s)
+
 }

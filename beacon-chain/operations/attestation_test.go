@@ -41,7 +41,8 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 			Source:          &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 			Target:          &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 		},
-		AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+		AggregationBits: bitfield.Bitlist{0xCF, 0xC0, 0xC0, 0xC0, 0x01},
+		CustodyBits:     bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
 	}
 
 	attestingIndices, err := helpers.AttestingIndices(beaconState, att.Data, att.AggregationBits)
@@ -343,8 +344,9 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	aggBits := bitfield.NewBitlist(4)
-	aggBits.SetBitAt(1, true)
+	aggBits := bitfield.NewBitlist(1)
+	aggBits.SetBitAt(0, true)
+	custodyBits := bitfield.NewBitlist(1)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
@@ -357,9 +359,11 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		t.Error(err)
 	}
 	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
+
 	sigs := make([]*bls.Signature, len(attestingIndices))
 	zeroSig := [96]byte{}
 	att.Signature = zeroSig[:]
+
 	for i, indice := range attestingIndices {
 		hashTreeRoot, err := ssz.HashTreeRoot(att.Data)
 		if err != nil {
@@ -370,9 +374,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	}
 
 	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
-
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
-
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	r, _ := ssz.HashTreeRoot(att.Data)

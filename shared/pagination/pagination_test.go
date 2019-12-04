@@ -44,7 +44,7 @@ func TestStartAndEndPage(t *testing.T) {
 			token:     "3",
 			pageSize:  33,
 			totalSize: 100,
-			nextToken: "4",
+			nextToken: "",
 			start:     99,
 			end:       100,
 		},

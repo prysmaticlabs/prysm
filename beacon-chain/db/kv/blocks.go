@@ -338,9 +338,6 @@ func fetchBlockRootsBySlotRange(bkt *bolt.Bucket, startSlotEncoded, endSlotEncod
 	if endSlot, ok = endSlotEncoded.(uint64); !ok {
 		endSlot = 0
 	}
-	if startSlot == endSlot && startSlot == 0 {
-		return nil
-	}
 	min := []byte(fmt.Sprintf("%07d", startSlot))
 	max := []byte(fmt.Sprintf("%07d", endSlot))
 	var conditional func(key, max []byte) bool
