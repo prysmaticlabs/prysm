@@ -130,6 +130,11 @@ func (s *Service) Start() {
 		if err := dialRelayNode(s.ctx, s.host, s.cfg.RelayNodeAddr); err != nil {
 			log.WithError(err).Errorf("Could not dial relay node")
 		}
+		peer, err := MakePeer(s.cfg.RelayNodeAddr)
+		if err != nil {
+			log.WithError(err).Errorf("Could not create peer")
+		}
+		s.host.ConnManager().Protect(peer.ID, "relay")
 	}
 
 	if len(s.cfg.Discv5BootStrapAddr) != 0 && !s.cfg.NoDiscovery {
@@ -164,6 +169,11 @@ func (s *Service) Start() {
 				s.startupErr = err
 				return
 			}
+			peer, err := MakePeer(addr)
+			if err != nil {
+				log.WithError(err).Errorf("Could not create peer")
+			}
+			s.host.ConnManager().Protect(peer.ID, "bootnode")
 		}
 		bcfg := kaddht.DefaultBootstrapConfig
 		bcfg.Period = time.Duration(30 * time.Second)

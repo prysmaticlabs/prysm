@@ -96,6 +96,24 @@ load(
 
 _go_image_repos()
 
+# Golang images
+# This is using gcr.io/distroless/base
+load(
+    "@io_bazel_rules_docker//go:image.bzl",
+    _go_image_repos = "repositories",
+)
+
+_go_image_repos()
+
+# CC images
+# This is using gcr.io/distroless/base
+load(
+    "@io_bazel_rules_docker//cc:image.bzl",
+    _cc_image_repos = "repositories",
+)
+
+_cc_image_repos()
+
 http_archive(
     name = "prysm_testnet_site",
     build_file_content = """
@@ -169,6 +187,13 @@ http_archive(
     sha256 = "b5d7dbc6832f11b6468328a376de05959a1a9e4e9f5622499d3bab509c26b46a",
     strip_prefix = "buildtools-bf564b4925ab5876a3f64d8b90fab7f769013d42",
     url = "https://github.com/bazelbuild/buildtools/archive/bf564b4925ab5876a3f64d8b90fab7f769013d42.zip",
+)
+
+http_archive(
+    name = "com_github_herumi_bls_eth_go_binary",
+    sha256 = "15a41ddb0bf7d142ebffae68337f19c16e747676cb56794c5d80dbe388ce004c",
+    strip_prefix = "bls-go-binary-ac038c7cb6d3185c4a46f3bca0c99ebf7b191e16",
+    url = "https://github.com/nisdas/bls-go-binary/archive/ac038c7cb6d3185c4a46f3bca0c99ebf7b191e16.zip",
 )
 
 load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_dependencies")
@@ -1201,8 +1226,14 @@ go_repository(
 )
 
 go_repository(
+    name = "com_github_patrickmn_go_cache",
+    commit = "46f407853014144407b6c2ec7ccc76bf67958d93",
+    importpath = "github.com/patrickmn/go-cache",
+)
+
+go_repository(
     name = "com_github_prysmaticlabs_ethereumapis",
-    commit = "8a69b37df2264eb58b0b0cef5ba25ae9af2d8732",
+    commit = "5f21afe48ab14bd0d5311cf5d33853a3e23d2fda",
     importpath = "github.com/prysmaticlabs/ethereumapis",
     patch_args = ["-p1"],
     patches = [
@@ -1241,13 +1272,6 @@ go_repository(
     importpath = "github.com/mdlayher/prombolt",
     sum = "h1:N257g6TTx0LxYoskSDFxvkSJ3NOZpy9IF1xQ7Gu+K8I=",
     version = "v0.0.0-20161005185022-dfcf01d20ee9",
-)
-
-go_repository(
-    name = "com_github_kilic_bls12-381",
-    importpath = "github.com/kilic/bls12-381",
-    sum = "h1:hCD4IWWYsETkACK7U+isYppKfB/6d54sBkCDk3k+w2U=",
-    version = "v0.0.0-20191005202515-c798d6202457",
 )
 
 go_repository(
@@ -1380,4 +1404,11 @@ go_repository(
     importpath = "github.com/uber/jaeger-client-go",
     sum = "h1:HgqpYBng0n7tLJIlyT4kPCIv5XgCsF+kai1NnnrJzEU=",
     version = "v2.20.1+incompatible",
+)
+
+go_repository(
+    name = "com_github_ipfs_go_detect_race",
+    importpath = "github.com/ipfs/go-detect-race",
+    sum = "h1:qX/xay2W3E4Q1U7d9lNs1sU9nvguX0a7319XbyQ6cOk=",
+    version = "v0.0.1",
 )
