@@ -8,10 +8,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/protolambda/zssz/htr"
 	"github.com/protolambda/zssz/merkle"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -333,9 +332,9 @@ func attestationDataRoot(data *ethpb.AttestationData) ([32]byte, error) {
 	slotRoot := bytesutil.ToBytes32(slotBuf)
 	fieldRoots[0] = slotRoot[:]
 
-	// Index.
+	// CommitteeIndex.
 	indexBuf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(indexBuf, data.Index)
+	binary.LittleEndian.PutUint64(indexBuf, data.CommitteeIndex)
 	interRoot := bytesutil.ToBytes32(indexBuf)
 	fieldRoots[1] = interRoot[:]
 
