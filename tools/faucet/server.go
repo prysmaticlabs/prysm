@@ -120,7 +120,7 @@ func (s *faucetServer) RequestFunds(ctx context.Context, req *faucetpb.FundingRe
 	if err != nil {
 		return &faucetpb.FundingResponse{Error: fmt.Sprintf("Failed to send transaction %v", err)}, nil
 	}
-	fmt.Printf("Funded with TX %s", txHash)
+	fmt.Printf("Funded with TX %s\n", txHash)
 
 	return &faucetpb.FundingResponse{
 		Amount:          fundingAmount.String(),
