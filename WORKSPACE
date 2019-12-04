@@ -234,7 +234,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_ssz",
-    commit = "58b2f86b0f02f06e634db06dee0c838ad41849f8",
+    commit = "0052baf3405a32ca4aeaf6a3d609860ad0655f3a",
     importpath = "github.com/prysmaticlabs/go-ssz",
 )
 
@@ -1377,6 +1377,12 @@ go_repository(
     importpath = "github.com/fatih/color",
     sum = "h1:DkWD4oS2D8LGGgTQ6IvwJJXSL5Vp2ffcQg58nFV38Ys=",
     version = "v1.7.0",
+)
+
+go_repository(
+    name = "com_github_protolambda_zssz",
+    commit = "632f11e5e281660402bd0ac58f76090f3503def0",
+    importpath = "github.com/protolambda/zssz",
 )
 
 go_repository(
