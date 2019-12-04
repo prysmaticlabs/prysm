@@ -13,7 +13,7 @@ type AttestationPool interface {
 	SaveAggregatedAttestation(att *ethpb.Attestation) error
 	AggregatedAttestation() []*ethpb.Attestation
 	SaveUnaggregatedAttestation(att *ethpb.Attestation) error
-	UnaggregatedAttestation() []*ethpb.Attestation
+	UnaggregatedAttestation(slot uint64, committeeIndex uint64)
 }
 
 // NewAttestationPool initializes a new attestation pool.
