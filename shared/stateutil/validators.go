@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 
+	"github.com/minio/highwayhash"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -45,15 +46,28 @@ func validatorBalancesRoot(balances []uint64) ([32]byte, error) {
 }
 
 func validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
-	validatorsRoots := make([][]byte, 0)
+	hashKeyElements := make([]byte, len(validators)*32)
+	roots := make([][]byte, len(validators))
+	emptyKey := highwayhash.Sum(hashKeyElements, fastSumHashKey[:])
+	bytesProcessed := 0
 	for i := 0; i < len(validators); i++ {
 		val, err := validatorRoot(validators[i])
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not compute validators merkleization")
 		}
-		validatorsRoots = append(validatorsRoots, val[:])
+		copy(hashKeyElements[bytesProcessed:bytesProcessed+32], val[:])
+		roots[i] = val[:]
+		bytesProcessed += 32
 	}
-	validatorsRootsRoot, err := bitwiseMerkleize(validatorsRoots, uint64(len(validatorsRoots)), params.BeaconConfig().ValidatorRegistryLimit)
+
+	hashKey := highwayhash.Sum(hashKeyElements, fastSumHashKey[:])
+	if hashKey != emptyKey {
+		if found, ok := rootsCache.Get(string(hashKey[:])); found != nil && ok {
+			return found.([32]byte), nil
+		}
+	}
+
+	validatorsRootsRoot, err := bitwiseMerkleize(roots, uint64(len(roots)), params.BeaconConfig().ValidatorRegistryLimit)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute validator registry merkleization")
 	}
@@ -64,7 +78,11 @@ func validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
 	// We need to mix in the length of the slice.
 	validatorsRootsBufRoot := make([]byte, 32)
 	copy(validatorsRootsBufRoot, validatorsRootsBuf.Bytes())
-	return mixInLength(validatorsRootsRoot, validatorsRootsBufRoot), nil
+	res := mixInLength(validatorsRootsRoot, validatorsRootsBufRoot)
+	if hashKey != emptyKey {
+		rootsCache.Set(string(hashKey[:]), res, 32)
+	}
+	return res, nil
 }
 
 func validatorRoot(validator *ethpb.Validator) ([32]byte, error) {
