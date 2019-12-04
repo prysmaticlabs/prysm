@@ -2,11 +2,16 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["state_root.go", "blocks.go", "helpers.go", "attestations.go", "validators.go"],
+    srcs = [
+        "attestations.go",
+        "blocks.go",
+        "helpers.go",
+        "state_root.go",
+        "validators.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/shared/stateutil",
     visibility = ["//visibility:public"],
     deps = [
-        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/hashutil:go_default_library",
@@ -15,6 +20,7 @@ go_library(
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_protolambda_zssz//htr:go_default_library",
         "@com_github_protolambda_zssz//merkle:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
 )
