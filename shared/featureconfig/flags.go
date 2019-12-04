@@ -68,10 +68,6 @@ var (
 		Name:  "enable-skip-slots-cache",
 		Usage: "Enables the skip slot cache to be used in the event of skipped slots.",
 	}
-	enableSnappyDBCompressionFlag = cli.BoolFlag{
-		Name:  "snappy",
-		Usage: "Enables snappy compression in the database.",
-	}
 	enablePruneBoundaryStateFlag = cli.BoolFlag{
 		Name:  "prune-states",
 		Usage: "Prune epoch boundary states before last finalized check point",
@@ -113,8 +109,8 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedInitSyncNoVerifyFlag = cli.BoolFlag{
-		Name:   "init-sync-no-verify",
+	deprecatedEnableSnappyDBCompressionFlag = cli.BoolFlag{
+		Name:  "snappy",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
@@ -126,7 +122,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedScatterFlag,
 	deprecatedPruneFinalizedStatesFlag,
 	deprecatedOptimizeProcessEpoch,
-	deprecatedInitSyncNoVerifyFlag,
+	deprecatedEnableSnappyDBCompressionFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -151,6 +147,5 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableActiveIndicesCacheFlag,
 	enableActiveCountCacheFlag,
 	enableSkipSlotsCache,
-	enableSnappyDBCompressionFlag,
 	enablePruneBoundaryStateFlag,
 }...)

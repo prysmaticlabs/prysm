@@ -88,10 +88,6 @@ func NewKVStore(dirPath string) (*Store, error) {
 		return nil, err
 	}
 
-	if err := kv.ensureSnappy(); err != nil {
-		return nil, err
-	}
-
 	if err := kv.pruneStates(context.TODO()); err != nil {
 		return nil, err
 	}

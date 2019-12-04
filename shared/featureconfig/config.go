@@ -32,7 +32,6 @@ type Flags struct {
 	SkipBLSVerify             bool // Skips BLS verification across the runtime.
 	EnableBackupWebhook       bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
 	PruneEpochBoundaryStates  bool // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
-	EnableSnappyDBCompression bool // EnableSnappyDBCompression in the database.
 
 	// Cache toggles.
 	EnableAttestationCache   bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
@@ -127,10 +126,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(enableActiveCountCacheFlag.Name) {
 		log.Warn("Enabled active count cache.")
 		cfg.EnableActiveCountCache = true
-	}
-	if ctx.GlobalBool(enableSnappyDBCompressionFlag.Name) {
-		log.Warn("Enabled snappy compression in the database.")
-		cfg.EnableSnappyDBCompression = true
 	}
 	if ctx.GlobalBool(enablePruneBoundaryStateFlag.Name) {
 		log.Warn("Enabled pruning epoch boundary states before last finalized check point.")

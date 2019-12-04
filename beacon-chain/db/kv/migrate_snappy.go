@@ -1,11 +1,8 @@
 package kv
 
 import (
-	"errors"
-
 	"github.com/boltdb/bolt"
 	"github.com/golang/snappy"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/sirupsen/logrus"
 )
 
@@ -20,14 +17,7 @@ func (kv *Store) ensureSnappy() error {
 		isMigrated = len(v) == 1 && v[0] == 0x01
 		return nil
 	})
-
-	if !featureconfig.Get().EnableSnappyDBCompression {
-		if isMigrated {
-			return errors.New("beaconDB has been migrated to snappy compression, run with flag --snappy")
-		}
-		return nil
-	}
-
+	
 	if isMigrated {
 		return nil
 	}
