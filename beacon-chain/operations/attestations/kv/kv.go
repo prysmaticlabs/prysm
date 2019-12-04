@@ -20,7 +20,6 @@ type AttCaches struct {
 // NewAttCaches initializes a new attestation pool consists of multiple KV store in cache for
 // various kind of attestations.
 func NewAttCaches() *AttCaches {
-
 	secsInEpoch := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
 
 	// Create caches with default expiration time of one epoch and which
