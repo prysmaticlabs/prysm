@@ -828,8 +828,10 @@ func TestServer_GetValidator(t *testing.T) {
 	}
 
 	tests := []struct {
-		req *ethpb.GetValidatorRequest
-		res *ethpb.Validator
+		req     *ethpb.GetValidatorRequest
+		res     *ethpb.Validator
+		wantErr bool
+		err     string
 	}{
 		{
 			req: &ethpb.GetValidatorRequest{
@@ -837,7 +839,8 @@ func TestServer_GetValidator(t *testing.T) {
 					Index: 0,
 				},
 			},
-			res: validators[0],
+			res:     validators[0],
+			wantErr: false,
 		},
 		{
 			req: &ethpb.GetValidatorRequest{
@@ -845,7 +848,8 @@ func TestServer_GetValidator(t *testing.T) {
 					Index: uint64(count - 1),
 				},
 			},
-			res: validators[count-1],
+			res:     validators[count-1],
+			wantErr: false,
 		},
 		{
 			req: &ethpb.GetValidatorRequest{
@@ -853,13 +857,38 @@ func TestServer_GetValidator(t *testing.T) {
 					PublicKey: []byte(strconv.Itoa(5)),
 				},
 			},
-			res: validators[5],
+			res:     validators[5],
+			wantErr: false,
+		},
+		{
+			req: &ethpb.GetValidatorRequest{
+				QueryFilter: &ethpb.GetValidatorRequest_PublicKey{
+					PublicKey: []byte("bad-key"),
+				},
+			},
+			res:     nil,
+			wantErr: true,
+			err:     "No validator matched filter criteria",
+		},
+		{
+			req: &ethpb.GetValidatorRequest{
+				QueryFilter: &ethpb.GetValidatorRequest_Index{
+					Index: uint64(len(validators)),
+				},
+			},
+			res:     nil,
+			wantErr: true,
+			err:     fmt.Sprintf("there are only %d validators", len(validators)),
 		},
 	}
 
 	for _, test := range tests {
 		res, err := bs.GetValidator(context.Background(), test.req)
-		if err != nil {
+		if test.wantErr && err != nil {
+			if !strings.Contains(err.Error(), test.err) {
+				t.Fatalf("Wanted %v, received %v", test.err, err)
+			}
+		} else if err != nil {
 			t.Fatal(err)
 		}
 		if !reflect.DeepEqual(test.res, res) {

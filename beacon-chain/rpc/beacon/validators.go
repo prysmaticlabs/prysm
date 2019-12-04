@@ -272,6 +272,14 @@ func (bs *Server) GetValidator(
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
 	if requestingIndex {
+		if index >= uint64(len(headState.Validators)) {
+			return nil, status.Errorf(
+				codes.OutOfRange,
+				"Requesting index %d, but there are only %d validators",
+				index,
+				len(headState.Validators),
+			)
+		}
 		return headState.Validators[index], nil
 	}
 	for i := 0; i < len(headState.Validators); i++ {
