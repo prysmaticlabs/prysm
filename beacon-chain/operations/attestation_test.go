@@ -28,7 +28,7 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 		BeaconDB: beaconDB,
 	})
 
-	beaconState, privKeys, _ := testutil.DeterministicGenesisState(100)
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -114,7 +114,7 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 	}
 
 	// We setup the genesis state with 256 validators.
-	beaconState, privKeys, _ := testutil.DeterministicGenesisState(256)
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 256)
 	stateRoot, err := ssz.HashTreeRoot(beaconState)
 	if err != nil {
 		t.Fatal(err)
@@ -199,7 +199,7 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 	})
 	service.attestationPool = make(map[[32]byte]*dbpb.AttestationContainer)
 
-	beaconState, privKeys, _ := testutil.DeterministicGenesisState(200)
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 200)
 
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 
@@ -339,7 +339,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})
 	service.attestationPool = make(map[[32]byte]*dbpb.AttestationContainer)
 
-	beaconState, privKeys, _ := testutil.DeterministicGenesisState(32)
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
 	aggBits := bitfield.NewBitlist(1)
 	aggBits.SetBitAt(0, true)
 	custodyBits := bitfield.NewBitlist(1)

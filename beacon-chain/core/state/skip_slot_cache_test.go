@@ -14,7 +14,7 @@ import (
 )
 
 func TestSkipSlotCache_OK(t *testing.T) {
-	bState, privs, _ := testutil.DeterministicGenesisState(params.MinimalSpecConfig().MinGenesisActiveValidatorCount)
+	bState, privs := testutil.DeterministicGenesisState(t, params.MinimalSpecConfig().MinGenesisActiveValidatorCount)
 	originalState := proto.Clone(bState).(*pb.BeaconState)
 
 	blkCfg := testutil.DefaultBlockGenConfig()

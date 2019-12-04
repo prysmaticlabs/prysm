@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"sync"
+	"testing"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -144,20 +145,20 @@ func DeterministicEth1Data(size int) (*ethpb.Eth1Data, error) {
 }
 
 // DeterministicGenesisState returns a genesis state made using the deterministic deposits.
-func DeterministicGenesisState(numValidators uint64) (*pb.BeaconState, []*bls.SecretKey, error) {
+func DeterministicGenesisState(t testing.TB, numValidators uint64) (*pb.BeaconState, []*bls.SecretKey) {
 	deposits, privKeys, err := DeterministicDepositsAndKeys(numValidators)
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to get %d deposits", numValidators)
+		t.Fatal(errors.Wrapf(err, "failed to get %d deposits", numValidators))
 	}
 	eth1Data, err := DeterministicEth1Data(len(deposits))
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to get eth1data for %d deposits", numValidators)
+		t.Fatal(errors.Wrapf(err, "failed to get eth1data for %d deposits", numValidators))
 	}
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), eth1Data)
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to get genesis beacon state of %d validators", numValidators)
+		t.Fatal(errors.Wrapf(err, "failed to get genesis beacon state of %d validators", numValidators))
 	}
-	return beaconState, privKeys, nil
+	return beaconState, privKeys
 }
 
 // DepositTrieFromDeposits takes an array of deposits and returns the deposit trie.

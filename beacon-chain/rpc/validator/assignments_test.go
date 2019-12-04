@@ -26,7 +26,7 @@ func TestCommitteeAssignment_NextEpoch_WrongPubkeyLength(t *testing.T) {
 	ctx := context.Background()
 	helpers.ClearAllCaches()
 
-	beaconState, _, _ := testutil.DeterministicGenesisState(8)
+	beaconState, _ := testutil.DeterministicGenesisState(t, 8)
 	block := blk.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
@@ -55,7 +55,7 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
-	beaconState, _, _ := testutil.DeterministicGenesisState(10)
+	beaconState, _ := testutil.DeterministicGenesisState(t, 10)
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	genesisRoot, err := ssz.SigningRoot(genesis)

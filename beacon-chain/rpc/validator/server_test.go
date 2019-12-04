@@ -339,7 +339,7 @@ func BenchmarkAssignment(b *testing.B) {
 		b.Fatalf("Could not save genesis block: %v", err)
 	}
 	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount * 4
-	state, _, _ := testutil.DeterministicGenesisState(validatorCount)
+	state, _ := testutil.DeterministicGenesisState(b, validatorCount)
 	genesisRoot, err := ssz.SigningRoot(genesis)
 	if err != nil {
 		b.Fatalf("Could not get signing root %v", err)

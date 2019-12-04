@@ -89,11 +89,7 @@ func TestSetupInitialDeposits_1024Entries(t *testing.T) {
 
 func TestDeterministicGenesisState_100Validators(t *testing.T) {
 	validatorCount := uint64(100)
-	beaconState, privKeys, err := DeterministicGenesisState(validatorCount)
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	beaconState, privKeys := DeterministicGenesisState(t, validatorCount)
 	activeValidators, err := helpers.ActiveValidatorCount(beaconState, 0)
 	if err != nil {
 		t.Fatal(err)
