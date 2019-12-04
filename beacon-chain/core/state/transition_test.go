@@ -489,7 +489,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	beaconState.BlockRoots = blockRoots
 
-	aggBits := bitfield.NewBitlist(1)
+	aggBits := bitfield.NewBitlist(4)
 	aggBits.SetBitAt(0, true)
 	blockAtt := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{

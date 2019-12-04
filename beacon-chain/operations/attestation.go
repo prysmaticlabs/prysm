@@ -2,6 +2,7 @@ package operations
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -107,6 +108,7 @@ func (s *Service) AttestationPool(ctx context.Context, requestedSlot uint64) ([]
 				continue
 			}
 			if _, err = blocks.ProcessAttestation(ctx, bState, att); err != nil {
+				fmt.Println(err)
 				delete(s.attestationPool, root)
 				continue
 			}
