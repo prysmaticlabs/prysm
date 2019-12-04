@@ -73,11 +73,11 @@ func validatorRoot(validator *ethpb.Validator) ([32]byte, error) {
 	// Public key.
 	pubKeyChunks, err := pack([][]byte{validator.PublicKey})
 	if err != nil {
-		return [32]byte{}, nil
+		return [32]byte{}, err
 	}
 	pubKeyRoot, err := bitwiseMerkleize(pubKeyChunks, uint64(len(pubKeyChunks)), uint64(len(pubKeyChunks)))
 	if err != nil {
-		return [32]byte{}, nil
+		return [32]byte{}, err
 	}
 	fieldRoots[0] = pubKeyRoot[:]
 

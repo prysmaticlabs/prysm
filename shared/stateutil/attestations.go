@@ -43,11 +43,7 @@ func attestationDataRoot(data *ethpb.AttestationData) ([32]byte, error) {
 	}
 	fieldRoots[4] = targetRoot[:]
 
-	root, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
-	if err != nil {
-		return [32]byte{}, nil
-	}
-	return root, nil
+	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 func pendingAttestationRoot(att *pb.PendingAttestation) ([32]byte, error) {
@@ -56,14 +52,14 @@ func pendingAttestationRoot(att *pb.PendingAttestation) ([32]byte, error) {
 	// Bitfield.
 	aggregationRoot, err := bitlistRoot(att.AggregationBits, 2048)
 	if err != nil {
-		panic(err)
+		return [32]byte{}, err
 	}
 	fieldRoots[0] = aggregationRoot[:]
 
 	// Attestation data.
 	attDataRoot, err := attestationDataRoot(att.Data)
 	if err != nil {
-		return [32]byte{}, nil
+		return [32]byte{}, err
 	}
 	fieldRoots[1] = attDataRoot[:]
 
@@ -79,11 +75,7 @@ func pendingAttestationRoot(att *pb.PendingAttestation) ([32]byte, error) {
 	proposerRoot := bytesutil.ToBytes32(proposerBuf)
 	fieldRoots[3] = proposerRoot[:]
 
-	root, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
-	if err != nil {
-		return [32]byte{}, nil
-	}
-	return root, nil
+	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
 func epochAttestationsRoot(atts []*pb.PendingAttestation) ([32]byte, error) {
