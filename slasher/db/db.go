@@ -95,7 +95,7 @@ func NewKVStore(dirPath string) (*Store, error) {
 	return kv, err
 }
 
-// Size returns the db size in
+// Size returns the db size in bytes.
 func (db *Store) Size() (int64, error) {
 	var size int64
 	err := db.db.View(func(tx *bolt.Tx) error {
