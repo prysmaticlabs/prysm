@@ -9,6 +9,7 @@ go_library(
         "log.go",
         "metrics.go",
         "pending_blocks_queue.go",
+        "pipeline.go",
         "rpc.go",
         "rpc_beacon_blocks_by_range.go",
         "rpc_beacon_blocks_by_root.go",
