@@ -3,6 +3,7 @@ package kv
 import (
 	"math"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -28,9 +29,9 @@ func TestKV_Aggregated_NotAggregated(t *testing.T) {
 func TestKV_Aggregated_CanSaveRetrieve(t *testing.T) {
 	cache := NewAttCaches()
 
-	att1 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1101}}
-	att2 := &ethpb.Attestation{Signature: []byte{'A'}, AggregationBits: bitfield.Bitlist{0b1101}}
-	att3 := &ethpb.Attestation{Signature: []byte{'B'}, AggregationBits: bitfield.Bitlist{0b1101}}
+	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}}
+	att2 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1101}}
+	att3 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b1101}}
 	atts := []*ethpb.Attestation{att1, att2, att3}
 
 	for _, att := range atts {
@@ -39,7 +40,12 @@ func TestKV_Aggregated_CanSaveRetrieve(t *testing.T) {
 		}
 	}
 
+	sort.Slice(atts, func(i, j int) bool {
+		return atts[i].Data.Slot < atts[i].Data.Slot
+	})
+
 	returned := cache.AggregatedAttestation()
+	t.Log(returned)
 
 	if !reflect.DeepEqual(atts, returned) {
 		t.Error("Did not receive correct aggregated atts")
