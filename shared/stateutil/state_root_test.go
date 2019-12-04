@@ -1,6 +1,8 @@
 package stateutil_test
 
 import (
+	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
@@ -8,6 +10,21 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/stateutil"
 )
+
+func TestState_FieldCount(t *testing.T) {
+	count := 20
+	typ := reflect.TypeOf(pb.BeaconState{})
+	numFields := 0
+	for i := 0; i < typ.NumField(); i++ {
+		if strings.HasPrefix(typ.Field(i).Name, "XXX_") {
+			continue
+		}
+		numFields++
+	}
+	if numFields != count {
+		t.Errorf("Expected state to have %d fields, received %d", count, numFields)
+	}
+}
 
 func TestHashTreeRootEquality(t *testing.T) {
 	genesisState := setupGenesisState(t, 512)
