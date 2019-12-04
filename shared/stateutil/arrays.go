@@ -5,9 +5,6 @@ import (
 
 	"github.com/minio/highwayhash"
 	"github.com/protolambda/zssz/merkle"
-
-	//"github.com/protolambda/zssz/merkle"
-
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
@@ -28,10 +25,11 @@ func arraysRoot(roots [][]byte, fieldName string) ([32]byte, error) {
 	emptyKey := highwayhash.Sum(hashKeyElements, fastSumHashKey[:])
 	bytesProcessed := 0
 	changedIndices := make([]int, 0)
+	prevLeaves := cachedLeaves[fieldName]
 	for i := 0; i < len(roots); i++ {
 		copy(hashKeyElements[bytesProcessed:bytesProcessed+32], roots[i])
 		// We check if any items changed since the roots were last recomputed.
-		if !bytes.Equal(roots[i], cachedLeaves[fieldName][i]) {
+		if prevLeaves != nil && !bytes.Equal(roots[i], prevLeaves[i]) {
 			changedIndices = append(changedIndices, i)
 		}
 	}
@@ -48,73 +46,16 @@ func arraysRoot(roots [][]byte, fieldName string) ([32]byte, error) {
 
 	hashKey := highwayhash.Sum(hashKeyElements, fastSumHashKey[:])
 	if hashKey != emptyKey {
-		if found, ok := cache.Get(hashKey); found != nil && ok {
+		if found, ok := cache.Get(string(hashKey[:])); found != nil && ok {
 			return found.([32]byte), nil
 		}
 	}
 
-	// TODO: Update cached leaves and use custom Merkleize.
-	res, err := bitwiseMerkleize(roots, uint64(len(roots)), uint64(len(roots)))
-	if err != nil {
-		return [32]byte{}, err
-	}
+	res := merkleizeWithCache(roots, fieldName)
+	cachedLeaves[fieldName] = roots
 	if hashKey != emptyKey {
-		cache.Set(hashKey, res, 32)
+		cache.Set(string(hashKey[:]), res, 32)
 	}
-	return res, nil
-}
-
-func blockRoots(roots [][]byte) ([32]byte, error) {
-	key := make([]byte, len(roots)*32)
-	bytesProcessed := 0
-	for i := 0; i < len(roots); i++ {
-		copy(key[bytesProcessed:bytesProcessed+32], roots[i])
-	}
-	found, ok := cache.Get(key)
-	if found != nil && ok {
-		return found.([32]byte), nil
-	}
-	res, err := bitwiseMerkleize(roots, uint64(len(roots)), uint64(len(roots)))
-	if err != nil {
-		return [32]byte{}, err
-	}
-	cache.Set(key, res, 32)
-	return res, nil
-}
-
-func stateRoots(roots [][]byte) ([32]byte, error) {
-	key := make([]byte, len(roots)*32)
-	bytesProcessed := 0
-	for i := 0; i < len(roots); i++ {
-		copy(key[bytesProcessed:bytesProcessed+32], roots[i])
-	}
-	found, ok := cache.Get(key)
-	if found != nil && ok {
-		return found.([32]byte), nil
-	}
-	res, err := bitwiseMerkleize(roots, uint64(len(roots)), uint64(len(roots)))
-	if err != nil {
-		return [32]byte{}, err
-	}
-	cache.Set(key, res, 32)
-	return res, nil
-}
-
-func randaoRoots(roots [][]byte) ([32]byte, error) {
-	key := make([]byte, len(roots)*32)
-	bytesProcessed := 0
-	for i := 0; i < len(roots); i++ {
-		copy(key[bytesProcessed:bytesProcessed+32], roots[i])
-	}
-	found, ok := cache.Get(key)
-	if found != nil && ok {
-		return found.([32]byte), nil
-	}
-	res, err := bitwiseMerkleize(roots, uint64(len(roots)), uint64(len(roots)))
-	if err != nil {
-		return [32]byte{}, err
-	}
-	cache.Set(key, res, 32)
 	return res, nil
 }
 
@@ -136,4 +77,40 @@ func recomputeRoot(idx int, chunks [][]byte, fieldName string) [32]byte {
 		cachedLayers[fieldName][i+1][parentIdx] = root
 	}
 	return bytesutil.ToBytes32(root)
+}
+
+func merkleizeWithCache(leaves [][]byte, fieldName string) [32]byte {
+	if len(leaves) == 1 {
+		var root [32]byte
+		copy(root[:], leaves[0])
+		return root
+	}
+	for !isPowerOf2(len(leaves)) {
+		leaves = append(leaves, make([]byte, 32))
+	}
+	hashLayer := leaves
+	cachedLayers[fieldName][0] = hashLayer
+	// We keep track of the hash layers of a Merkle trie until we reach
+	// the top layer of length 1, which contains the single root element.
+	//        [Root]      -> Top layer has length 1.
+	//    [E]       [F]   -> This layer has length 2.
+	// [A]  [B]  [C]  [D] -> The bottom layer has length 4 (needs to be a power of two).
+	i := 1
+	for len(hashLayer) > 1 {
+		layer := make([][]byte, 0)
+		for i := 0; i < len(hashLayer); i += 2 {
+			hashedChunk := hashutil.Hash(append(hashLayer[i], hashLayer[i+1]...))
+			layer = append(layer, hashedChunk[:])
+		}
+		hashLayer = layer
+		cachedLayers[fieldName][i] = hashLayer
+		i++
+	}
+	var root [32]byte
+	copy(root[:], hashLayer[0])
+	return root
+}
+
+func isPowerOf2(n int) bool {
+	return n != 0 && (n&(n-1)) == 0
 }
