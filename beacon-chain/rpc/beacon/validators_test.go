@@ -806,6 +806,97 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 	}
 }
 
+func TestServer_GetValidator(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	count := 30
+	validators := make([]*ethpb.Validator, count)
+	for i := 0; i < count; i++ {
+		validators[i] = &ethpb.Validator{
+			ActivationEpoch: uint64(i),
+			PublicKey:       []byte(strconv.Itoa(i)),
+		}
+	}
+
+	bs := &Server{
+		HeadFetcher: &mock.ChainService{
+			State: &pbp2p.BeaconState{
+				Validators: validators,
+			},
+		},
+	}
+
+	tests := []struct {
+		req     *ethpb.GetValidatorRequest
+		res     *ethpb.Validator
+		wantErr bool
+		err     string
+	}{
+		{
+			req: &ethpb.GetValidatorRequest{
+				QueryFilter: &ethpb.GetValidatorRequest_Index{
+					Index: 0,
+				},
+			},
+			res:     validators[0],
+			wantErr: false,
+		},
+		{
+			req: &ethpb.GetValidatorRequest{
+				QueryFilter: &ethpb.GetValidatorRequest_Index{
+					Index: uint64(count - 1),
+				},
+			},
+			res:     validators[count-1],
+			wantErr: false,
+		},
+		{
+			req: &ethpb.GetValidatorRequest{
+				QueryFilter: &ethpb.GetValidatorRequest_PublicKey{
+					PublicKey: []byte(strconv.Itoa(5)),
+				},
+			},
+			res:     validators[5],
+			wantErr: false,
+		},
+		{
+			req: &ethpb.GetValidatorRequest{
+				QueryFilter: &ethpb.GetValidatorRequest_PublicKey{
+					PublicKey: []byte("bad-key"),
+				},
+			},
+			res:     nil,
+			wantErr: true,
+			err:     "No validator matched filter criteria",
+		},
+		{
+			req: &ethpb.GetValidatorRequest{
+				QueryFilter: &ethpb.GetValidatorRequest_Index{
+					Index: uint64(len(validators)),
+				},
+			},
+			res:     nil,
+			wantErr: true,
+			err:     fmt.Sprintf("there are only %d validators", len(validators)),
+		},
+	}
+
+	for _, test := range tests {
+		res, err := bs.GetValidator(context.Background(), test.req)
+		if test.wantErr && err != nil {
+			if !strings.Contains(err.Error(), test.err) {
+				t.Fatalf("Wanted %v, received %v", test.err, err)
+			}
+		} else if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(test.res, res) {
+			t.Errorf("Wanted %v, got %v", test.res, res)
+		}
+	}
+}
+
 func TestServer_GetValidatorActiveSetChanges_CannotRequestFutureEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)

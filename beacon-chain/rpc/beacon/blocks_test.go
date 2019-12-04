@@ -36,8 +36,8 @@ func TestServer_ListBlocks_NoResults(t *testing.T) {
 		NextPageToken:   strconv.Itoa(0),
 	}
 	res, err := bs.ListBlocks(ctx, &ethpb.ListBlocksRequest{
-		QueryFilter: &ethpb.ListBlocksRequest_Epoch{
-			Epoch: 0,
+		QueryFilter: &ethpb.ListBlocksRequest_Slot{
+			Slot: 0,
 		},
 	})
 	if err != nil {
@@ -142,7 +142,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
 
-	count := uint64(100)
+	count := uint64(6)
 	blks := make([]*ethpb.BeaconBlock, count)
 	blkContainers := make([]*ethpb.BeaconBlockContainer, count)
 	for i := uint64(0); i < count; i++ {
@@ -160,80 +160,29 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	root6, err := ssz.SigningRoot(&ethpb.BeaconBlock{Slot: 6})
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	bs := &Server{
 		BeaconDB: db,
 	}
 
-	tests := []struct {
-		req *ethpb.ListBlocksRequest
-		res *ethpb.ListBlocksResponse
-	}{
-		{req: &ethpb.ListBlocksRequest{
-			PageToken:   strconv.Itoa(0),
-			QueryFilter: &ethpb.ListBlocksRequest_Slot{Slot: 5},
-			PageSize:    3},
-			res: &ethpb.ListBlocksResponse{
-				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.BeaconBlock{Slot: 5}, BlockRoot: blkContainers[5].BlockRoot}},
-				NextPageToken:   "",
-				TotalSize:       1}},
-		{req: &ethpb.ListBlocksRequest{
-			PageToken:   strconv.Itoa(0),
-			QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]},
-			PageSize:    3},
-			res: &ethpb.ListBlocksResponse{
-				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.BeaconBlock{Slot: 6}, BlockRoot: blkContainers[6].BlockRoot}},
-				TotalSize:       1}},
-		{req: &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]}},
-			res: &ethpb.ListBlocksResponse{
-				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.BeaconBlock{Slot: 6}, BlockRoot: blkContainers[6].BlockRoot}},
-				TotalSize:       1}},
-		{req: &ethpb.ListBlocksRequest{
-			PageToken:   strconv.Itoa(0),
-			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 0},
-			PageSize:    100},
-			res: &ethpb.ListBlocksResponse{
-				BlockContainers: blkContainers[0:params.BeaconConfig().SlotsPerEpoch],
-				NextPageToken:   "",
-				TotalSize:       int32(params.BeaconConfig().SlotsPerEpoch)}},
-		{req: &ethpb.ListBlocksRequest{
-			PageToken:   strconv.Itoa(1),
-			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 5},
-			PageSize:    3},
-			res: &ethpb.ListBlocksResponse{
-				BlockContainers: blkContainers[43:46],
-				NextPageToken:   "2",
-				TotalSize:       int32(params.BeaconConfig().SlotsPerEpoch)}},
-		{req: &ethpb.ListBlocksRequest{
-			PageToken:   strconv.Itoa(1),
-			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 11},
-			PageSize:    7},
-			res: &ethpb.ListBlocksResponse{
-				BlockContainers: blkContainers[95:96],
-				NextPageToken:   "",
-				TotalSize:       int32(params.BeaconConfig().SlotsPerEpoch)}},
-		{req: &ethpb.ListBlocksRequest{
-			PageToken:   strconv.Itoa(0),
-			QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: 12},
-			PageSize:    4},
-			res: &ethpb.ListBlocksResponse{
-				BlockContainers: blkContainers[96:100],
-				NextPageToken:   "1",
-				TotalSize:       int32(params.BeaconConfig().SlotsPerEpoch / 2)}},
+	req := &ethpb.ListBlocksRequest{
+		PageToken:   strconv.Itoa(0),
+		QueryFilter: &ethpb.ListBlocksRequest_Slot{Slot: 5},
+		PageSize:    3,
 	}
-
-	for _, test := range tests {
-		res, err := bs.ListBlocks(ctx, test.req)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !proto.Equal(res, test.res) {
-			t.Errorf("Incorrect blocks response, wanted %v, received %v", test.res, res)
-		}
+	want := &ethpb.ListBlocksResponse{
+		BlockContainers: []*ethpb.BeaconBlockContainer{{
+			Block:     &ethpb.BeaconBlock{Slot: 5},
+			BlockRoot: blkContainers[5].BlockRoot,
+		}},
+		NextPageToken: "",
+		TotalSize:     1,
+	}
+	res, err := bs.ListBlocks(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(res, want) {
+		t.Errorf("Incorrect blocks response, wanted %v, received %v", want, res)
 	}
 }
 
@@ -257,7 +206,7 @@ func TestServer_ListBlocks_Errors(t *testing.T) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
 	}
 
-	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Epoch{}}
+	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Slot{Slot: 0}}
 	res, err := bs.ListBlocks(ctx, req)
 	if err != nil {
 		t.Fatal(err)
