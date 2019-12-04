@@ -25,9 +25,9 @@ func NewAttCaches() *AttCaches {
 	// Create caches with default expiration time of one epoch and which
 	// purges expired items every other epoch.
 	pool := &AttCaches{
-		unAggregatedAtt: cache.New(secsInEpoch/time.Minute, 2*secsInEpoch/time.Minute),
-		aggregatedAtt:   cache.New(secsInEpoch/time.Minute, 2*secsInEpoch/time.Minute),
-		attInBlock:      cache.New(secsInEpoch/time.Minute, 2*secsInEpoch/time.Minute),
+		unAggregatedAtt: cache.New(secsInEpoch*time.Second, 2*secsInEpoch*time.Second),
+		aggregatedAtt:   cache.New(secsInEpoch*time.Second, 2*secsInEpoch*time.Second),
+		attInBlock:      cache.New(secsInEpoch*time.Second, 2*secsInEpoch*time.Second),
 	}
 
 	return pool
