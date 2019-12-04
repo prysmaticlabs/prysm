@@ -25,13 +25,13 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
-	GenesisDelay              bool // GenesisDelay when processing a chain start genesis event.
-	MinimalConfig             bool // MinimalConfig as defined in the spec.
-	WriteSSZStateTransitions  bool // WriteSSZStateTransitions to tmp directory.
-	InitSyncNoVerify          bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
-	SkipBLSVerify             bool // Skips BLS verification across the runtime.
-	EnableBackupWebhook       bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
-	PruneEpochBoundaryStates  bool // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
+	GenesisDelay             bool // GenesisDelay when processing a chain start genesis event.
+	MinimalConfig            bool // MinimalConfig as defined in the spec.
+	WriteSSZStateTransitions bool // WriteSSZStateTransitions to tmp directory.
+	InitSyncNoVerify         bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
+	SkipBLSVerify            bool // Skips BLS verification across the runtime.
+	EnableBackupWebhook      bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
+	PruneEpochBoundaryStates bool // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
 
 	// Cache toggles.
 	EnableAttestationCache   bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.

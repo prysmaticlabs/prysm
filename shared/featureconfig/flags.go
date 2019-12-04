@@ -110,7 +110,7 @@ var (
 		Hidden: true,
 	}
 	deprecatedEnableSnappyDBCompressionFlag = cli.BoolFlag{
-		Name:  "snappy",
+		Name:   "snappy",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
