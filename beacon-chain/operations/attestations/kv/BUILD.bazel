@@ -20,7 +20,10 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["aggregated_test.go"],
+    srcs = [
+        "aggregated_test.go",
+        "unaggregated_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//shared/params:go_default_library",
