@@ -125,10 +125,7 @@ func TestStore_UpdateBlockAttestationVote(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	params.UseMinimalConfig()
 
-	beaconState, _, err := testutil.DeterministicGenesisState(100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, _, _ := testutil.DeterministicGenesisState(100)
 
 	store := NewForkChoiceService(ctx, db)
 	r := [32]byte{'A'}
@@ -171,10 +168,7 @@ func TestStore_UpdateBlockAttestationsVote(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	params.UseMinimalConfig()
 
-	beaconState, _, err := testutil.DeterministicGenesisState(100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, _, _ := testutil.DeterministicGenesisState(100)
 
 	store := NewForkChoiceService(ctx, db)
 	r := [32]byte{'A'}

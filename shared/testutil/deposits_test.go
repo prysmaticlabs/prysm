@@ -107,7 +107,7 @@ func TestDeterministicGenesisState_100Validators(t *testing.T) {
 	}
 }
 
-func TestDepositTrieFromDeposits_MatchesEth1Data(t *testing.T) {
+func TestDepositTrieFromDeposits(t *testing.T) {
 	deposits, _, err := DeterministicDepositsAndKeys(100)
 	if err != nil {
 		t.Fatal(err)

@@ -26,10 +26,7 @@ func TestCommitteeAssignment_NextEpoch_WrongPubkeyLength(t *testing.T) {
 	ctx := context.Background()
 	helpers.ClearAllCaches()
 
-	beaconState, _, err := testutil.DeterministicGenesisState(8)
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, _, _ := testutil.DeterministicGenesisState(8)
 	block := blk.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
@@ -58,10 +55,8 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
-	beaconState, _, err := testutil.DeterministicGenesisState(10)
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, _, _ := testutil.DeterministicGenesisState(10)
+
 	genesis := blk.NewGenesisBlock([]byte{})
 	genesisRoot, err := ssz.SigningRoot(genesis)
 	if err != nil {
@@ -93,10 +88,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := uint64(64)
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
-	if err != nil {
-		t.Fatal(err)
-	}
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(depChainStart)
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	if err != nil {
 		t.Fatal(err)
@@ -172,10 +164,7 @@ func TestCommitteeAssignment_CurrentEpoch_ShouldNotFail(t *testing.T) {
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := uint64(64)
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
-	if err != nil {
-		t.Fatal(err)
-	}
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(depChainStart)
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	if err != nil {
 		t.Fatal(err)
@@ -236,10 +225,7 @@ func TestCommitteeAssignment_MultipleKeys_OK(t *testing.T) {
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := uint64(64)
-	deposits, _, err := testutil.DeterministicDepositsAndKeys(depChainStart)
-	if err != nil {
-		t.Fatal(err)
-	}
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(depChainStart)
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	if err != nil {
 		t.Fatal(err)

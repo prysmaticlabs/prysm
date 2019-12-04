@@ -10,13 +10,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestBlockSignature_CorrectSignature(t *testing.T) {
+func TestBlockSignature(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	beaconState, privKeys, err := DeterministicGenesisState(100)
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, privKeys, _ := DeterministicGenesisState(100)
+
 	block, err := GenerateFullBlock(beaconState, privKeys, nil, 0)
 	if err != nil {
 		t.Fatal(err)
@@ -46,7 +44,7 @@ func TestBlockSignature_CorrectSignature(t *testing.T) {
 	}
 }
 
-func TestRandaoReveal_CorrectReveal(t *testing.T) {
+func TestRandaoReveal(t *testing.T) {
 	beaconState, privKeys, err := DeterministicGenesisState(100)
 	if err != nil {
 		t.Fatal(err)
