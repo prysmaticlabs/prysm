@@ -17,7 +17,7 @@ func (kv *Store) ensureSnappy() error {
 		isMigrated = len(v) == 1 && v[0] == 0x01
 		return nil
 	})
-	
+
 	if isMigrated {
 		return nil
 	}

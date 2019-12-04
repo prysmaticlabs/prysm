@@ -35,18 +35,6 @@ func TestBenchmarkExecuteStateTransition(t *testing.T) {
 	}
 }
 
-func TestBenchmarkProcessEpoch(t *testing.T) {
-	SetConfig()
-	beaconState, err := beaconState2FullEpochs()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err := state.ProcessEpoch(context.Background(), beaconState); err != nil {
-		t.Fatalf("failed to process block, benchmarks will fail: %v", err)
-	}
-}
-
 func BenchmarkExecuteStateTransition(b *testing.B) {
 	SetConfig()
 	beaconState, err := beaconState1Epoch()
@@ -94,8 +82,12 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 	if err := helpers.UpdateCommitteeCache(beaconState); err != nil {
 		b.Fatal(err)
 	}
-
 	beaconState.Slot = currentSlot
+	// Run the state transition once to populate the cache.
+	if _, err := state.ExecuteStateTransition(context.Background(), beaconState, block); err != nil {
+		b.Fatalf("failed to process block, benchmarks will fail: %v", err)
+	}
+
 	b.N = runAmount
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -106,12 +98,27 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 }
 
 func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
+	config := &featureconfig.Flags{
+		EnableNewCache:           true,
+		EnableShuffledIndexCache: true,
+		EnableBLSPubkeyCache:     true,
+	}
+	featureconfig.Init(config)
 	SetConfig()
 	beaconState, err := beaconState2FullEpochs()
 	if err != nil {
 		b.Fatal(err)
 	}
 	cleanStates := clonedStates(beaconState)
+
+	// We have to reset slot back to last epoch to hydrate cache. Since
+	// some attestations in block are from previous epoch
+	currentSlot := beaconState.Slot
+	beaconState.Slot -= params.BeaconConfig().SlotsPerEpoch
+	if err := helpers.UpdateCommitteeCache(beaconState); err != nil {
+		b.Fatal(err)
+	}
+	beaconState.Slot = currentSlot
 
 	b.N = 5
 	b.ResetTimer()
