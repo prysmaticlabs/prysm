@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 
+	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -12,6 +13,18 @@ import (
 )
 
 const bytesPerChunk = 32
+const cacheSize = 100000
+
+var cache *ristretto.Cache
+
+func init() {
+	cache, _ = ristretto.NewCache(&ristretto.Config{
+		NumCounters: cacheSize, // number of keys to track frequency of (1M).
+		MaxCost:     1 << 22,   // maximum cost of cache (3MB).
+		// 100,000 roots will take up approximately 3 MB in memory.
+		BufferItems: 64, // number of keys per Get buffer.
+	})
+}
 
 // HashTreeRootState provides a fully-customized version of ssz.HashTreeRoot
 // for the BeaconState type of the official Ethereum Serenity specification.
@@ -205,15 +218,57 @@ func historicalRootsRoot(historicalRoots [][]byte) ([32]byte, error) {
 }
 
 func blockRoots(roots [][]byte) ([32]byte, error) {
-	return bitwiseMerkleize(roots, uint64(len(roots)), uint64(len(roots)))
+	key := make([]byte, len(roots)*32)
+	bytesProcessed := 0
+	for i := 0; i < len(roots); i++ {
+		copy(key[bytesProcessed:bytesProcessed+32], roots[i])
+	}
+	found, ok := cache.Get(key)
+	if found != nil && ok {
+		return found.([32]byte), nil
+	}
+	res, err := bitwiseMerkleize(roots, uint64(len(roots)), uint64(len(roots)))
+	if err != nil {
+		return [32]byte{}, err
+	}
+	cache.Set(key, res, 32)
+	return res, nil
 }
 
 func stateRoots(roots [][]byte) ([32]byte, error) {
-	return bitwiseMerkleize(roots, uint64(len(roots)), uint64(len(roots)))
+	key := make([]byte, len(roots)*32)
+	bytesProcessed := 0
+	for i := 0; i < len(roots); i++ {
+		copy(key[bytesProcessed:bytesProcessed+32], roots[i])
+	}
+	found, ok := cache.Get(key)
+	if found != nil && ok {
+		return found.([32]byte), nil
+	}
+	res, err := bitwiseMerkleize(roots, uint64(len(roots)), uint64(len(roots)))
+	if err != nil {
+		return [32]byte{}, err
+	}
+	cache.Set(key, res, 32)
+	return res, nil
 }
 
 func randaoRoots(roots [][]byte) ([32]byte, error) {
-	return bitwiseMerkleize(roots, uint64(len(roots)), uint64(len(roots)))
+	key := make([]byte, len(roots)*32)
+	bytesProcessed := 0
+	for i := 0; i < len(roots); i++ {
+		copy(key[bytesProcessed:bytesProcessed+32], roots[i])
+	}
+	found, ok := cache.Get(key)
+	if found != nil && ok {
+		return found.([32]byte), nil
+	}
+	res, err := bitwiseMerkleize(roots, uint64(len(roots)), uint64(len(roots)))
+	if err != nil {
+		return [32]byte{}, err
+	}
+	cache.Set(key, res, 32)
+	return res, nil
 }
 
 func slashingsRoot(slashings []uint64) ([32]byte, error) {
