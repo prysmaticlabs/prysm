@@ -491,7 +491,6 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 
 	aggBits := bitfield.NewBitlist(1)
 	aggBits.SetBitAt(0, true)
-	custodyBits := bitfield.NewBitlist(1)
 	blockAtt := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Slot:   beaconState.Slot - 1,
