@@ -55,7 +55,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 		t.Fatal(err)
 	}
 	if err := waitForTextInFile(beaconLogFile, "Sending genesis time notification"); err != nil {
-		t.Fatalf("failed to find genesis in logs: %v", err)
+		t.Fatalf("failed to find genesis in logs, this means the chain did not start: %v", err)
 	}
 	conn, err := grpc.Dial("127.0.0.1:4000", grpc.WithInsecure())
 	if err != nil {
