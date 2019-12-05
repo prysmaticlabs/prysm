@@ -156,6 +156,9 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.
 	ctx, span := trace.StartSpan(ctx, "forkchoice.onBlock")
 	defer span.End()
 
+	s.initSyncStateLock.Lock()
+	defer s.initSyncStateLock.Unlock()
+
 	// Retrieve incoming block's pre state.
 	preState, err := s.getBlockPreState(ctx, b)
 	if err != nil {

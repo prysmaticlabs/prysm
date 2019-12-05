@@ -48,6 +48,7 @@ type Store struct {
 	latestVoteMap        map[uint64]*pb.ValidatorLatestVote
 	voteLock             sync.RWMutex
 	initSyncState        map[[32]byte]*pb.BeaconState
+	initSyncStateLock    sync.Mutex
 }
 
 // NewForkChoiceService instantiates a new service instance that will
