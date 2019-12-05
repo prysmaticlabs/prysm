@@ -91,6 +91,9 @@ func (s *Service) Start() {
 		log.Fatalf("Could not fetch beacon state: %v", err)
 	}
 
+	// For running initial sync with state cache, in an event of restart, we use
+	// last finalized check point as start point to sync instead of head
+	// state. This is because we no longer saves state every slot.
 	if featureconfig.Get().InitSyncCacheState {
 		cp, err := s.beaconDB.FinalizedCheckpoint(ctx)
 		if err != nil {
