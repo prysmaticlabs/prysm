@@ -83,7 +83,9 @@ func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not copy pubkey")
 	}
-	pubkeyCache.Set(string(pub), copiedKey, 48*time.Hour)
+	if featureconfig.Get().EnableBLSPubkeyCache {
+	  pubkeyCache.Set(string(pub), copiedKey, 48*time.Hour)
+	}
 	return pubkeyObj, nil
 }
 
