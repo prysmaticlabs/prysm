@@ -88,7 +88,12 @@ func validatorsParticipating(client eth.BeaconChainClient) error {
 	partRate := participation.Participation.GlobalParticipationRate
 	expected := float32(1)
 	if partRate < expected {
-		return fmt.Errorf("validator participation was below expected %f, received: %f", expected, partRate)
+		return fmt.Errorf(
+			"validator participation was below for epoch %d, expected %f, received: %f",
+			participation.Epoch,
+			expected,
+			partRate,
+		)
 	}
 	return nil
 }
