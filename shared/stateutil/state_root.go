@@ -16,9 +16,7 @@ const bytesPerChunk = 32
 const cacheSize = 100000
 
 var (
-	rootsCache  *ristretto.Cache
-	leavesCache = make(map[string][][]byte)
-	layersCache = make(map[string][][][]byte)
+	rootsCache *ristretto.Cache
 )
 
 func init() {

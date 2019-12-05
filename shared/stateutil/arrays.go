@@ -3,6 +3,7 @@ package stateutil
 import (
 	"bytes"
 	"errors"
+	"sync"
 
 	"github.com/minio/highwayhash"
 	"github.com/protolambda/zssz/merkle"
@@ -12,20 +13,27 @@ import (
 
 var (
 	fastSumHashKey = bytesutil.ToBytes32([]byte("hash_fast_sum64_key"))
+	leavesCache    = make(map[string][][]byte)
+	layersCache    = make(map[string][][][]byte)
+	lock           sync.Mutex
 )
 
 func arraysRoot(roots [][]byte, fieldName string) ([32]byte, error) {
+	lock.Lock()
 	if _, ok := layersCache[fieldName]; !ok {
 		depth := merkle.GetDepth(uint64(len(roots)))
 		layersCache[fieldName] = make([][][]byte, depth+1)
 	}
+	lock.Unlock()
 
 	hashKeyElements := make([]byte, len(roots)*32)
 	leaves := make([][]byte, len(roots))
 	emptyKey := highwayhash.Sum(hashKeyElements, fastSumHashKey[:])
 	bytesProcessed := 0
 	changedIndices := make([]int, 0)
+	lock.Lock()
 	prevLeaves, ok := leavesCache[fieldName]
+	lock.Unlock()
 	for i := 0; i < len(roots); i++ {
 		copy(hashKeyElements[bytesProcessed:bytesProcessed+32], roots[i])
 		leaves[i] = roots[i]
@@ -59,7 +67,9 @@ func arraysRoot(roots [][]byte, fieldName string) ([32]byte, error) {
 	}
 
 	res := merkleizeWithCache(leaves, fieldName)
+	lock.Lock()
 	leavesCache[fieldName] = leaves
+	lock.Unlock()
 	if hashKey != emptyKey {
 		rootsCache.Set(fieldName+string(hashKey[:]), res, 32)
 	}
@@ -67,6 +77,8 @@ func arraysRoot(roots [][]byte, fieldName string) ([32]byte, error) {
 }
 
 func recomputeRoot(idx int, chunks [][]byte, fieldName string) ([32]byte, error) {
+	lock.Lock()
+	defer lock.Unlock()
 	items, ok := layersCache[fieldName]
 	if !ok {
 		return [32]byte{}, errors.New("could not recompute root as there was no cache found")
@@ -103,6 +115,8 @@ func recomputeRoot(idx int, chunks [][]byte, fieldName string) ([32]byte, error)
 }
 
 func merkleizeWithCache(leaves [][]byte, fieldName string) [32]byte {
+	lock.Lock()
+	defer lock.Unlock()
 	if len(leaves) == 1 {
 		var root [32]byte
 		copy(root[:], leaves[0])
