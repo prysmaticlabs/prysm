@@ -113,7 +113,7 @@ func initializeValidators(
 	// Picked 20 for this as a "safe" number of blocks to mine so the deposits
 	// are detected.
 	if err := mineBlocks(web3, keystore, 20); err != nil {
-		t.Fatal(err)
+		t.Fatalf("failed to mine blocks %v", err)
 	}
 
 	return valClients

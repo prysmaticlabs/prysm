@@ -15,6 +15,7 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc"
@@ -54,7 +55,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 		t.Fatal(err)
 	}
 	if err := waitForTextInFile(beaconLogFile, "Sending genesis time notification"); err != nil {
-		t.Fatal(err)
+		t.Fatalf("failed to find genesis in logs, this means the chain did not start: %v", err)
 	}
 	conn, err := grpc.Dial("127.0.0.1:4000", grpc.WithInsecure())
 	if err != nil {
@@ -77,6 +78,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 			ticker.Done()
 			break
 		}
+
 		for _, evaluator := range config.evaluators {
 			// Only run if the policy says so.
 			if !evaluator.Policy(currentEpoch) {
@@ -84,7 +86,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 			}
 			t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
 				if err := evaluator.Evaluation(beaconClient); err != nil {
-					t.Fatal(err)
+					t.Fatalf("evaluation failed for epoch %d: %v", currentEpoch, err)
 				}
 			})
 		}
@@ -99,7 +101,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 func peersConnect(port uint64, expectedPeers uint64) error {
 	response, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/p2p", port))
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to reach p2p metrics page")
 	}
 	dataInBytes, err := ioutil.ReadAll(response.Body)
 	if err != nil {
@@ -145,9 +147,11 @@ func logOutput(t *testing.T, tmpPath string) {
 			t.Fatal(err)
 		}
 		scanner := bufio.NewScanner(beacon1LogFile)
+		t.Log("Beacon chain node output:")
 		for scanner.Scan() {
 			currentLine := scanner.Text()
 			t.Log(currentLine)
 		}
+		t.Log("End of beacon chain node output")
 	}
 }
