@@ -94,6 +94,9 @@ func SignatureFromBytes(sig []byte) (*Signature, error) {
 	if featureconfig.Get().SkipBLSVerify {
 		return &Signature{}, nil
 	}
+	if len(sig) != 96 {
+		return nil, errors.New("signature must be 96 bytes")
+	}
 	signature := &bls12.Sign{}
 	err := signature.Deserialize(sig)
 	if err != nil {
