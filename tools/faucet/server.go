@@ -74,7 +74,7 @@ func (s *faucetServer) verifyRecaptcha(ctx context.Context, req *faucetpb.Fundin
 	if !ok || len(md.Get("x-forwarded-for")) < 1 {
 		return errors.New("metadata not ok")
 	}
-
+	
 	peer := md.Get("x-forwarded-for")[0]
 	fmt.Printf("Sending captcha request for peer %s\n", peer)
 
