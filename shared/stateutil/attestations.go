@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"encoding/binary"
 
-	"github.com/minio/highwayhash"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -33,7 +33,7 @@ func marshalAttestationData(data *ethpb.AttestationData) []byte {
 	copy(enc[48:56], sourceEpochBuf)
 	copy(enc[56:88], data.Source.Root)
 
-	// Target..
+	// Target.
 	targetEpochBuf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(targetEpochBuf, data.Target.Epoch)
 	copy(enc[88:96], targetEpochBuf)
@@ -133,7 +133,7 @@ func pendingAttestationRoot(att *pb.PendingAttestation) ([32]byte, error) {
 func epochAttestationsRoot(atts []*pb.PendingAttestation) ([32]byte, error) {
 	hashKeyElements := make([]byte, len(atts)*32)
 	roots := make([][]byte, len(atts))
-	emptyKey := highwayhash.Sum(hashKeyElements, fastSumHashKey[:])
+	emptyKey := hashutil.FastSum256(hashKeyElements)
 	bytesProcessed := 0
 	for i := 0; i < len(atts); i++ {
 		pendingRoot, err := pendingAttestationRoot(atts[i])
@@ -145,7 +145,7 @@ func epochAttestationsRoot(atts []*pb.PendingAttestation) ([32]byte, error) {
 		bytesProcessed += 32
 	}
 
-	hashKey := highwayhash.Sum(hashKeyElements, fastSumHashKey[:])
+	hashKey := hashutil.FastSum256(hashKeyElements)
 	if hashKey != emptyKey {
 		if found, ok := rootsCache.Get(string(hashKey[:])); found != nil && ok {
 			return found.([32]byte), nil

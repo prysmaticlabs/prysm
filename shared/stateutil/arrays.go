@@ -5,17 +5,16 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/minio/highwayhash"
 	"github.com/protolambda/zssz/merkle"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 var (
-	fastSumHashKey = bytesutil.ToBytes32([]byte("hash_fast_sum64_key"))
-	leavesCache    = make(map[string][][]byte)
-	layersCache    = make(map[string][][][]byte)
-	lock           sync.Mutex
+	leavesCache = make(map[string][][]byte)
+	layersCache = make(map[string][][][]byte)
+	lock        sync.Mutex
+	readLock    sync.RWMutex
 )
 
 func arraysRoot(roots [][]byte, fieldName string) ([32]byte, error) {
@@ -28,12 +27,12 @@ func arraysRoot(roots [][]byte, fieldName string) ([32]byte, error) {
 
 	hashKeyElements := make([]byte, len(roots)*32)
 	leaves := make([][]byte, len(roots))
-	emptyKey := highwayhash.Sum(hashKeyElements, fastSumHashKey[:])
+	emptyKey := hashutil.FastSum256(hashKeyElements)
 	bytesProcessed := 0
 	changedIndices := make([]int, 0)
-	lock.Lock()
+	readLock.RLock()
 	prevLeaves, ok := leavesCache[fieldName]
-	lock.Unlock()
+	readLock.RUnlock()
 	for i := 0; i < len(roots); i++ {
 		copy(hashKeyElements[bytesProcessed:bytesProcessed+32], roots[i])
 		leaves[i] = roots[i]
@@ -59,7 +58,7 @@ func arraysRoot(roots [][]byte, fieldName string) ([32]byte, error) {
 		return rt, nil
 	}
 
-	hashKey := highwayhash.Sum(hashKeyElements, fastSumHashKey[:])
+	hashKey := hashutil.FastSum256(hashKeyElements)
 	if hashKey != emptyKey {
 		if found, ok := rootsCache.Get(fieldName + string(hashKey[:])); found != nil && ok {
 			return found.([32]byte), nil

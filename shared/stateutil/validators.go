@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"encoding/binary"
 
-	"github.com/minio/highwayhash"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -48,7 +48,7 @@ func validatorBalancesRoot(balances []uint64) ([32]byte, error) {
 func validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
 	hashKeyElements := make([]byte, len(validators)*32)
 	roots := make([][]byte, len(validators))
-	emptyKey := highwayhash.Sum(hashKeyElements, fastSumHashKey[:])
+	emptyKey := hashutil.FastSum256(hashKeyElements)
 	bytesProcessed := 0
 	for i := 0; i < len(validators); i++ {
 		val, err := validatorRoot(validators[i])
@@ -60,7 +60,7 @@ func validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
 		bytesProcessed += 32
 	}
 
-	hashKey := highwayhash.Sum(hashKeyElements, fastSumHashKey[:])
+	hashKey := hashutil.FastSum256(hashKeyElements)
 	if hashKey != emptyKey {
 		if found, ok := rootsCache.Get(string(hashKey[:])); found != nil && ok {
 			return found.([32]byte), nil
