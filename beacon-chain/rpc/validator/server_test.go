@@ -17,7 +17,6 @@ import (
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
@@ -340,10 +339,7 @@ func BenchmarkAssignment(b *testing.B) {
 		b.Fatalf("Could not save genesis block: %v", err)
 	}
 	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount * 4
-	state, err := genesisState(validatorCount)
-	if err != nil {
-		b.Fatalf("Could not setup genesis state: %v", err)
-	}
+	state, _ := testutil.DeterministicGenesisState(b, validatorCount)
 	genesisRoot, err := ssz.SigningRoot(genesis)
 	if err != nil {
 		b.Fatalf("Could not get signing root %v", err)
@@ -391,20 +387,4 @@ func BenchmarkAssignment(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
-}
-
-func genesisState(validators uint64) (*pbp2p.BeaconState, error) {
-	genesisTime := time.Unix(0, 0).Unix()
-	deposits := make([]*ethpb.Deposit, validators)
-	for i := 0; i < len(deposits); i++ {
-		var pubKey [96]byte
-		copy(pubKey[:], []byte(strconv.Itoa(i)))
-		depositData := &ethpb.Deposit_Data{
-			PublicKey: pubKey[:],
-			Amount:    params.BeaconConfig().MaxEffectiveBalance,
-		}
-
-		deposits[i] = &ethpb.Deposit{Data: depositData}
-	}
-	return state.GenesisBeaconState(deposits, uint64(genesisTime), &ethpb.Eth1Data{})
 }

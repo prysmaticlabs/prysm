@@ -94,7 +94,11 @@ func initializeValidators(
 		t.Fatal(err)
 	}
 
-	deposits, roots, _ := testutil.SetupInitialDeposits(t, validatorNum)
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(validatorNum)
+	_, roots, err := testutil.DeterministicDepositTrie(len(deposits))
+	if err != nil {
+		t.Fatal(err)
+	}
 	for index, dd := range deposits {
 		_, err = contract.Deposit(txOps, dd.Data.PublicKey, dd.Data.WithdrawalCredentials, dd.Data.Signature, roots[index])
 		if err != nil {

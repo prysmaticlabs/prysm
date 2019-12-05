@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -126,11 +125,7 @@ func TestStore_UpdateBlockAttestationVote(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	params.UseMinimalConfig()
 
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
 
 	store := NewForkChoiceService(ctx, db)
 	r := [32]byte{'A'}
@@ -173,11 +168,7 @@ func TestStore_UpdateBlockAttestationsVote(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	params.UseMinimalConfig()
 
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
 
 	store := NewForkChoiceService(ctx, db)
 	r := [32]byte{'A'}
