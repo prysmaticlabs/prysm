@@ -4,12 +4,43 @@ import (
 	"bytes"
 	"encoding/binary"
 
+	"github.com/minio/highwayhash"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+func marshalAttestationData(data *ethpb.AttestationData) []byte {
+	enc := make([]byte, 128)
+
+	// Slot.
+	slotBuf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(slotBuf, data.Slot)
+	copy(enc[0:8], slotBuf)
+
+	// Committee index.
+	indexBuf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(indexBuf, data.CommitteeIndex)
+	copy(enc[8:16], indexBuf)
+
+	copy(enc[16:48], data.BeaconBlockRoot)
+
+	// Source epoch and root.
+	sourceEpochBuf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(sourceEpochBuf, data.Source.Epoch)
+	copy(enc[48:56], sourceEpochBuf)
+	copy(enc[56:88], data.Source.Root)
+
+	// Target..
+	targetEpochBuf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(targetEpochBuf, data.Target.Epoch)
+	copy(enc[88:96], targetEpochBuf)
+	copy(enc[96:128], data.Target.Root)
+
+	return enc
+}
 
 func attestationDataRoot(data *ethpb.AttestationData) ([32]byte, error) {
 	fieldRoots := make([][]byte, 5)
@@ -47,6 +78,26 @@ func attestationDataRoot(data *ethpb.AttestationData) ([32]byte, error) {
 }
 
 func pendingAttestationRoot(att *pb.PendingAttestation) ([32]byte, error) {
+	// Marshal attestation to determine if it exists in the cache.
+	enc := make([]byte, 2192)
+	copy(enc[0:2048], att.AggregationBits)
+
+	inclusionBuf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(inclusionBuf, att.InclusionDelay)
+	copy(enc[2048:2056], inclusionBuf)
+
+	attDataBuf := marshalAttestationData(att.Data)
+	copy(enc[2056:2184], attDataBuf)
+
+	proposerBuf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(proposerBuf, att.ProposerIndex)
+	copy(enc[2184:2192], proposerBuf)
+
+	// Check if it exists in cache:
+	if found, ok := rootsCache.Get(string(enc)); found != nil && ok {
+		return found.([32]byte), nil
+	}
+
 	fieldRoots := make([][]byte, 4)
 
 	// Bitfield.
@@ -64,30 +115,48 @@ func pendingAttestationRoot(att *pb.PendingAttestation) ([32]byte, error) {
 	fieldRoots[1] = attDataRoot[:]
 
 	// Inclusion delay.
-	inclusionBuf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(inclusionBuf, att.InclusionDelay)
 	inclusionRoot := bytesutil.ToBytes32(inclusionBuf)
 	fieldRoots[2] = inclusionRoot[:]
 
 	// Proposer index.
-	proposerBuf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(proposerBuf, att.ProposerIndex)
 	proposerRoot := bytesutil.ToBytes32(proposerBuf)
 	fieldRoots[3] = proposerRoot[:]
 
-	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	res, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+	if err != nil {
+		return [32]byte{}, err
+	}
+	rootsCache.Set(string(enc), res, 32)
+	return res, nil
 }
 
 func epochAttestationsRoot(atts []*pb.PendingAttestation) ([32]byte, error) {
-	attsRoots := make([][]byte, 0)
+	hashKeyElements := make([]byte, len(atts)*32)
+	roots := make([][]byte, len(atts))
+	emptyKey := highwayhash.Sum(hashKeyElements, fastSumHashKey[:])
+	bytesProcessed := 0
 	for i := 0; i < len(atts); i++ {
 		pendingRoot, err := pendingAttestationRoot(atts[i])
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not attestation merkleization")
 		}
-		attsRoots = append(attsRoots, pendingRoot[:])
+		roots[i] = pendingRoot[:]
+		copy(hashKeyElements[bytesProcessed:bytesProcessed+32], pendingRoot[:])
+		bytesProcessed += 32
 	}
-	attsRootsRoot, err := bitwiseMerkleize(attsRoots, uint64(len(attsRoots)), params.BeaconConfig().MaxAttestations*params.BeaconConfig().SlotsPerEpoch)
+
+	hashKey := highwayhash.Sum(hashKeyElements, fastSumHashKey[:])
+	if hashKey != emptyKey {
+		if found, ok := rootsCache.Get(string(hashKey[:])); found != nil && ok {
+			return found.([32]byte), nil
+		}
+	}
+
+	attsRootsRoot, err := bitwiseMerkleize(
+		roots,
+		uint64(len(roots)),
+		params.BeaconConfig().MaxAttestations*params.BeaconConfig().SlotsPerEpoch,
+	)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute epoch attestations merkleization")
 	}
@@ -98,5 +167,9 @@ func epochAttestationsRoot(atts []*pb.PendingAttestation) ([32]byte, error) {
 	// We need to mix in the length of the slice.
 	attsLenRoot := make([]byte, 32)
 	copy(attsLenRoot, attsLenBuf.Bytes())
-	return mixInLength(attsRootsRoot, attsLenRoot), nil
+	res := mixInLength(attsRootsRoot, attsLenRoot)
+	if hashKey != emptyKey {
+		rootsCache.Set(string(hashKey[:]), res, 32)
+	}
+	return res, nil
 }
