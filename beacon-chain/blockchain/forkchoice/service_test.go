@@ -342,9 +342,9 @@ func TestCacheGenesisState_Correct(t *testing.T) {
 	}
 	featureconfig.Init(config)
 
-	b := &ethpb.BeaconBlock{Slot:1}
+	b := &ethpb.BeaconBlock{Slot: 1}
 	r, _ := ssz.SigningRoot(b)
-	s := &pb.BeaconState{GenesisTime:99}
+	s := &pb.BeaconState{GenesisTime: 99}
 
 	store.db.SaveState(ctx, s, r)
 	store.db.SaveGenesisBlockRoot(ctx, r)
@@ -353,5 +353,9 @@ func TestCacheGenesisState_Correct(t *testing.T) {
 		t.Fatal(err)
 	}
 
-
+	for _, state := range store.initSyncState {
+		if reflect.DeepEqual(s, state) {
+			t.Error("Did not get wanted state")
+		}
+	}
 }
