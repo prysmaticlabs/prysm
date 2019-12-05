@@ -88,9 +88,9 @@ func (r *RegularSync) registerSubscribers() {
 	)
 	r.subscribeDynamic(
 		"/eth2/committee_index/%d_beacon_attestation",
-		r.currentCommitteeIndex,
-		noopValidator,
-		r.committeeIndexBeaconAttestationSubscriber,
+		r.currentCommitteeIndex,                     /* determineSubsLen */
+		noopValidator,                               /* validator */
+		r.committeeIndexBeaconAttestationSubscriber, /* message handler */
 	)
 }
 
@@ -115,15 +115,15 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 	// Pipeline decodes the incoming subscription data, runs the validation, and handles the
 	// message.
 	pipe := &pipeline{
-		ctx:         r.ctx,
-		topic:       topic,
-		base:        base,
-		validate:    validate,
-		handle:      handle,
-		encoding:    r.p2p.Encoding(),
-		self:        r.p2p.PeerID(),
-		sub:         sub,
-		broadcaster: r.p2p,
+		ctx:          r.ctx,
+		topic:        topic,
+		base:         base,
+		validate:     validate,
+		handle:       handle,
+		encoding:     r.p2p.Encoding(),
+		self:         r.p2p.PeerID(),
+		sub:          sub,
+		broadcaster:  r.p2p,
 		chainStarted: func() bool { return r.chainStarted },
 	}
 
@@ -171,14 +171,14 @@ func (r *RegularSync) subscribeDynamic(topicFormat string, determineSubsLen func
 							panic(err)
 						}
 						pipe := &pipeline{
-							ctx:      r.ctx,
-							topic:    fmt.Sprintf(topicFormat, i),
-							base:     base,
-							validate: validate,
-							handle:   handle,
-							encoding: r.p2p.Encoding(),
-							self:     r.p2p.PeerID(),
-							sub:      sub,
+							ctx:         r.ctx,
+							topic:       fmt.Sprintf(topicFormat, i),
+							base:        base,
+							validate:    validate,
+							handle:      handle,
+							encoding:    r.p2p.Encoding(),
+							self:        r.p2p.PeerID(),
+							sub:         sub,
 							broadcaster: r.p2p,
 						}
 						subscriptions = append(subscriptions, sub)
