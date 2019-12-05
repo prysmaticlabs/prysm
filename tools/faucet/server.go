@@ -87,7 +87,7 @@ func (s *faucetServer) verifyRecaptcha(ctx context.Context, req *faucetpb.Fundin
 		return errors.New("failed")
 	}
 	if rr.Score < s.minScore {
-		return errors.New("recaptcha score too low")
+		return fmt.Errorf("recaptcha score too low (%f)", rr.Score)
 	}
 	if roughtime.Now().After(rr.ChallengeTS.Add(2 * time.Minute)) {
 		return errors.New("captcha challenge too old")
