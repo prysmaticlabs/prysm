@@ -90,7 +90,7 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 	cmd.Stderr = file
 	cmd.Stdout = file
 	if err := cmd.Start(); err != nil {
-		t.Fatalf("failed to start beacon node: %v", err)
+		t.Fatalf("Failed to start beacon node: %v", err)
 	}
 
 	if err = waitForTextInFile(file, "Node started p2p server"); err != nil {

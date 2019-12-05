@@ -43,7 +43,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 		t.Run("all_peers_connect", func(t *testing.T) {
 			for _, bNode := range beaconNodes {
 				if err := peersConnect(bNode.monitorPort, config.numBeaconNodes-1); err != nil {
-					t.Fatalf("failed to connect to peers: %v", err)
+					t.Fatalf("Failed to connect to peers: %v", err)
 				}
 			}
 		})
@@ -58,7 +58,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	}
 	conn, err := grpc.Dial("127.0.0.1:4000", grpc.WithInsecure())
 	if err != nil {
-		t.Fatalf("fail to dial: %v", err)
+		t.Fatalf("Failed to dial: %v", err)
 	}
 	beaconClient := eth.NewBeaconChainClient(conn)
 	nodeClient := eth.NewNodeClient(conn)
@@ -92,7 +92,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	}
 
 	if currentEpoch < config.epochsToRun {
-		t.Fatalf("test ended prematurely, only reached epoch %d", currentEpoch)
+		t.Fatalf("Test ended prematurely, only reached epoch %d", currentEpoch)
 	}
 }
 
@@ -130,7 +130,7 @@ func killProcesses(t *testing.T, pIDs []int) {
 	for _, id := range pIDs {
 		process, err := os.FindProcess(id)
 		if err != nil {
-			t.Fatalf("could not find process %d: %v", id, err)
+			t.Fatalf("Could not find process %d: %v", id, err)
 		}
 		if err := process.Kill(); err != nil {
 			t.Fatal(err)
