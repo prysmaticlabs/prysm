@@ -18,15 +18,16 @@ import (
 // Pipeline decodes the incoming subscription data, runs the validation, and handles the
 // message.
 type pipeline struct {
-	ctx         context.Context
-	topic       string
-	base        proto.Message
-	validate    validator
-	handle      subHandler
-	encoding    encoder.NetworkEncoding
-	self        peer.ID
-	sub         *pubsub.Subscription
-	broadcaster p2p.Broadcaster
+	ctx          context.Context
+	topic        string
+	base         proto.Message
+	validate     validator
+	handle       subHandler
+	encoding     encoder.NetworkEncoding
+	self         peer.ID
+	sub          *pubsub.Subscription
+	broadcaster  p2p.Broadcaster
+	chainStarted func() bool
 }
 
 func (p *pipeline) process(data []byte, fromSelf bool) {
@@ -96,11 +97,16 @@ func (p *pipeline) messageLoop() {
 			}
 			return
 		}
+
+		if !p.chainStarted() {
+			continue
+		}
+
 		// Special validation occurs on messages received from ourselves.
 		fromSelf := msg.GetFrom() == p.self
 
 		messageReceivedCounter.WithLabelValues(p.topic + p.encoding.ProtocolSuffix()).Inc()
 
-		go p.process(msg.Data, fromSelf)
+		p.process(msg.Data, fromSelf)
 	}
 }

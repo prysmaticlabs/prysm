@@ -124,6 +124,7 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 		self:        r.p2p.PeerID(),
 		sub:         sub,
 		broadcaster: r.p2p,
+		chainStarted: func() bool { return r.chainStarted },
 	}
 
 	go pipe.messageLoop()
