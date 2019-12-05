@@ -18,7 +18,7 @@
   },
   "nilness": {
     "exclude_files": {
-      "external/.*": "Third party code",
+      "external.*": "Third party code",
       "rules_go_work-.*": "Third party code"
     }
   },
