@@ -216,6 +216,9 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 			traceutil.AnnotateError(span, err)
 			return nil, errors.Wrap(err, "could not tree hash prev state root")
 		}
+		if _, err := ssz.HashTreeRoot(state); err != nil {
+			return nil, errors.Wrap(err, "could not tree hash processed state")
+		}
 	} else {
 		prevStateRoot, err = ssz.HashTreeRoot(state)
 		if err != nil {

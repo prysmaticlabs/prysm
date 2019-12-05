@@ -15,9 +15,9 @@ var (
 )
 
 func ArraysRoot(roots [][]byte, fieldName string) ([32]byte, error) {
-	if _, ok := layersCache.Get(fieldName); !ok {
+	if _, ok := layersCache[fieldName]; !ok {
 		depth := merkle.GetDepth(uint64(len(roots)))
-		layersCache.Set(fieldName, make([][][]byte, depth+1), int64(depth+1))
+		layersCache[fieldName] = make([][][]byte, depth+1)
 	}
 
 	hashKeyElements := make([]byte, len(roots)*32)
@@ -25,23 +25,25 @@ func ArraysRoot(roots [][]byte, fieldName string) ([32]byte, error) {
 	emptyKey := highwayhash.Sum(hashKeyElements, fastSumHashKey[:])
 	bytesProcessed := 0
 	changedIndices := make([]int, 0)
-	prevLeaves, _ := leavesCache.Get(fieldName)
+	prevLeaves, ok := leavesCache[fieldName]
 	for i := 0; i < len(roots); i++ {
 		copy(hashKeyElements[bytesProcessed:bytesProcessed+32], roots[i])
 		leaves[i] = roots[i]
 		// We check if any items changed since the roots were last recomputed.
-		if prevLeaves != nil && !bytes.Equal(leaves[i], prevLeaves.([][]byte)[i]) {
+		if ok && prevLeaves != nil && !bytes.Equal(leaves[i], prevLeaves[i]) {
 			changedIndices = append(changedIndices, i)
 		}
 		bytesProcessed += 32
 	}
+
 	if len(changedIndices) > 0 {
 		var rt [32]byte
 		var err error
 		// If indices did change since last computation, we only recompute
 		// the modified branches in the cached Merkle tree for this state field.
+		chunks := leaves
 		for i := 0; i < len(changedIndices); i++ {
-			rt, err = recomputeRoot(changedIndices[i], leaves, fieldName)
+			rt, err = recomputeRoot(changedIndices[i], chunks, fieldName)
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -57,7 +59,7 @@ func ArraysRoot(roots [][]byte, fieldName string) ([32]byte, error) {
 	}
 
 	res := merkleizeWithCache(leaves, fieldName)
-	leavesCache.Set(fieldName, leaves, int64(len(leaves)))
+	leavesCache[fieldName] = leaves
 	if hashKey != emptyKey {
 		rootsCache.Set(fieldName+string(hashKey[:]), res, 32)
 	}
@@ -65,28 +67,35 @@ func ArraysRoot(roots [][]byte, fieldName string) ([32]byte, error) {
 }
 
 func recomputeRoot(idx int, chunks [][]byte, fieldName string) ([32]byte, error) {
-	items, ok := layersCache.Get(fieldName)
+	items, ok := layersCache[fieldName]
 	if !ok {
 		return [32]byte{}, errors.New("could not recompute root as there was no cache found")
 	}
-	layers := items.([][][]byte)
+	if items == nil {
+		return [32]byte{}, errors.New("could not recompute root as there were no items found in the layers cache")
+	}
+	layers := items
 	root := chunks[idx]
+	layers[0][idx] = root
+	// [[r1, r2, r3, r4], [parent1, parent2], [root]]
+	currentIndex := idx
 	for i := 0; i < len(layers)-1; i++ {
-		subIndex := (uint64(idx) / (1 << uint64(i))) ^ 1
-		isLeft := uint64(idx) / (1 << uint64(i))
-		parentIdx := uint64(idx) / (1 << uint64(i+1))
-		item := layers[i][subIndex]
-		if isLeft%2 != 0 {
-			parentHash := hashutil.Hash(append(item, root...))
+		isLeft := currentIndex%2 == 0
+		neighborIdx := currentIndex ^ 1
+		neighbor := layers[i][neighborIdx]
+		if isLeft {
+			parentHash := hashutil.Hash(append(root, neighbor...))
 			root = parentHash[:]
 		} else {
-			parentHash := hashutil.Hash(append(root, item...))
+			parentHash := hashutil.Hash(append(neighbor, root...))
 			root = parentHash[:]
 		}
+		parentIdx := currentIndex / 2
 		// Update the cached layers at the parent index.
 		layers[i+1][parentIdx] = root
+		currentIndex = parentIdx
 	}
-	layersCache.Set(fieldName, layers, int64(len(layers)))
+	layersCache[fieldName] = layers
 	return bytesutil.ToBytes32(root), nil
 }
 
@@ -100,14 +109,11 @@ func merkleizeWithCache(leaves [][]byte, fieldName string) [32]byte {
 		leaves = append(leaves, make([]byte, 32))
 	}
 	hashLayer := leaves
-
-	var layers [][][]byte
-	if items, ok := layersCache.Get(fieldName); ok && items != nil {
-		layers = items.([][][]byte)
+	layers := make([][][]byte, merkle.GetDepth(uint64(len(leaves)))+1)
+	if items, ok := layersCache[fieldName]; ok {
+		layers = items
 	}
-	if layers != nil {
-		layers[0] = hashLayer
-	}
+	layers[0] = hashLayer
 	// We keep track of the hash layers of a Merkle trie until we reach
 	// the top layer of length 1, which contains the single root element.
 	//        [Root]      -> Top layer has length 1.
@@ -121,16 +127,12 @@ func merkleizeWithCache(leaves [][]byte, fieldName string) [32]byte {
 			layer = append(layer, hashedChunk[:])
 		}
 		hashLayer = layer
-		if layers != nil {
-			layers[i] = hashLayer
-		}
+		layers[i] = hashLayer
 		i++
 	}
 	var root [32]byte
 	copy(root[:], hashLayer[0])
-	if layers != nil {
-		layersCache.Set(fieldName, layers, int64(len(layers)))
-	}
+	layersCache[fieldName] = layers
 	return root
 }
 
