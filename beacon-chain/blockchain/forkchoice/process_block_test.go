@@ -381,6 +381,27 @@ func TestCachedPreState_CanGetFromCache(t *testing.T) {
 	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r[:]}
 	store.initSyncState[r] = s
 
+	wanted := "pre state of slot 1 does not exist"
+	if _, err := store.cachedPreState(ctx, b); !strings.Contains(err.Error(), wanted) {
+		t.Fatal("Not expected error")
+	}
+}
+
+func TestCachedPreState_CanGetFromCacheWithFeature(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	config := &featureconfig.Flags{
+		InitSyncCacheState: true,
+	}
+	featureconfig.Init(config)
+
+	store := NewForkChoiceService(ctx, db)
+	s := &pb.BeaconState{Slot: 1}
+	r := [32]byte{'A'}
+	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r[:]}
+	store.initSyncState[r] = s
+
 	received, err := store.cachedPreState(ctx, b)
 	if err != nil {
 		t.Fatal(err)
