@@ -28,28 +28,30 @@ func TestPipelineProcessing(t *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(2)
-	pipe := &pipeline{
-		ctx:         context.Background(),
-		topic:       topic,
-		base:        &testpb.TestSimpleMessage{},
-		validate: func(_ context.Context, _ proto.Message, _ p2p.Broadcaster, _ bool) (bool, error) {
-			validateCalled = true
-			wg.Done()
-			return true, nil
-		},
-		handle: func(_ context.Context, _ proto.Message) (error) {
-			handleCalled = true
-			wg.Done()
-			return nil
-		},
-		encoding:    p.Encoding(),
-		self:        p.PeerID(),
-		sub:         sub,
-		broadcaster: p,
-		chainStarted: func() bool { return true	},
-	}
+	go func () {
+		pipe := &pipeline{
+			ctx:   context.Background(),
+			topic: topic,
+			base:  &testpb.TestSimpleMessage{},
+			validate: func(_ context.Context, _ proto.Message, _ p2p.Broadcaster, _ bool) (bool, error) {
+				validateCalled = true
+				wg.Done()
+				return true, nil
+			},
+			handle: func(_ context.Context, _ proto.Message) (error) {
+				handleCalled = true
+				wg.Done()
+				return nil
+			},
+			encoding:     p.Encoding(),
+			self:         p.PeerID(),
+			sub:          sub,
+			broadcaster:  p,
+			chainStarted: func() bool { return true },
+		}
 
-	go pipe.messageLoop()
+		go pipe.messageLoop()
+	}()
 
 	p.ReceivePubSub(topic, &testpb.TestSimpleMessage{Foo: []byte("foo")})
 
