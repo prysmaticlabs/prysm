@@ -46,6 +46,7 @@ func TestPipelineProcessing(t *testing.T) {
 		self:        p.PeerID(),
 		sub:         sub,
 		broadcaster: p,
+		chainStarted: func() bool { return true	},
 	}
 
 	go pipe.messageLoop()
