@@ -42,7 +42,6 @@ go_test(
         "//beacon-chain/cache/depositcache:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
-        "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/db/testing:go_default_library",
         "//beacon-chain/powchain/testing:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",

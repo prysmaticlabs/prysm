@@ -8,8 +8,6 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -24,23 +22,13 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db)
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
-	beaconState.Eth1Data.BlockHash = nil
-	beaconState.Eth1DepositIndex = 100
-	stateRoot, err := ssz.HashTreeRoot(beaconState)
-	if err != nil {
-		t.Fatal(err)
-	}
-	genesis := b.NewGenesisBlock(stateRoot[:])
-	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
 
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
+	genesis, _ := testutil.GenerateFullBlock(beaconState, privKeys, nil, beaconState.Slot+1)
+	beaconState, err := state.ExecuteStateTransition(ctx, beaconState, genesis)
+	if err != nil {
+		t.Fatal(err)
+	}
 	genesisBlkRoot, err := ssz.SigningRoot(genesis)
 	if err != nil {
 		t.Fatal(err)
@@ -50,67 +38,19 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
-		Slot:       genesis.Slot,
-		ParentRoot: genesis.ParentRoot,
-		BodyRoot:   bodyRoot[:],
-		StateRoot:  genesis.StateRoot,
-	}
 	if err := chainService.beaconDB.SaveBlock(ctx, genesis); err != nil {
 		t.Fatalf("Could not save block to db: %v", err)
 	}
-	parentRoot, err := ssz.SigningRoot(genesis)
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	if err := db.SaveState(ctx, beaconState, parentRoot); err != nil {
+	if err := db.SaveState(ctx, beaconState, genesisBlkRoot); err != nil {
 		t.Fatal(err)
 	}
 
 	slot := beaconState.Slot + 1
-	epoch := helpers.SlotToEpoch(slot)
-	beaconState.Slot++
-	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
+	block, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, slot)
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.Slot--
-
-	depRoot := []byte("a")
-	depRoot32 := bytesutil.ToBytes32(depRoot)
-	blockHash := []byte("b")
-	blockHash32 := bytesutil.ToBytes32(blockHash)
-	block := &ethpb.BeaconBlock{
-		Slot:       slot,
-		ParentRoot: parentRoot[:],
-		Body: &ethpb.BeaconBlockBody{
-			Eth1Data: &ethpb.Eth1Data{
-				DepositCount: uint64(len(deposits)),
-				DepositRoot:  depRoot32[:],
-				BlockHash:    blockHash32[:],
-			},
-			RandaoReveal: randaoReveal[:],
-			Attestations: nil,
-		},
-	}
-
-	stateRootCandidate, err := state.ExecuteStateTransitionNoVerify(context.Background(), beaconState, block)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	stateRoot, err = ssz.HashTreeRoot(stateRootCandidate)
-	if err != nil {
-		t.Fatal(err)
-	}
-	block.StateRoot = stateRoot[:]
-
-	block, err = testutil.SignBlock(beaconState, block, privKeys)
-	if err != nil {
-		t.Error(err)
-	}
-
 	if err := chainService.beaconDB.SaveBlock(ctx, block); err != nil {
 		t.Fatal(err)
 	}
@@ -192,85 +132,27 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db)
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
-	beaconState.Eth1DepositIndex = 100
-	stateRoot, err := ssz.HashTreeRoot(beaconState)
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
+
+	block, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, beaconState.Slot)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	genesis := b.NewGenesisBlock(stateRoot[:])
-	bodyRoot, err := ssz.HashTreeRoot(genesis.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
 	if err := chainService.forkChoiceStore.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
 		t.Fatal(err)
 	}
 
-	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
-		Slot:       genesis.Slot,
-		ParentRoot: genesis.ParentRoot,
-		BodyRoot:   bodyRoot[:],
-		StateRoot:  genesis.StateRoot,
-	}
-	if err := chainService.beaconDB.SaveBlock(ctx, genesis); err != nil {
+	if err := chainService.beaconDB.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save block to db: %v", err)
 	}
-	parentRoot, err := ssz.SigningRoot(genesis)
+
+	block, err = testutil.GenerateFullBlock(beaconState, privKeys, nil, beaconState.Slot)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	if err := db.SaveState(ctx, beaconState, parentRoot); err != nil {
+	if err := db.SaveState(ctx, beaconState, bytesutil.ToBytes32(block.ParentRoot)); err != nil {
 		t.Fatal(err)
-	}
-
-	slot := beaconState.Slot + 1
-	epoch := helpers.SlotToEpoch(slot)
-	beaconState.Slot++
-	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
-	if err != nil {
-		t.Fatal(err)
-	}
-	beaconState.Slot--
-
-	depRoot := []byte("a")
-	depRoot32 := bytesutil.ToBytes32(depRoot)
-	blockHash := []byte("b")
-	blockHash32 := bytesutil.ToBytes32(blockHash)
-	block := &ethpb.BeaconBlock{
-		Slot:       slot,
-		ParentRoot: parentRoot[:],
-		Body: &ethpb.BeaconBlockBody{
-			Eth1Data: &ethpb.Eth1Data{
-				DepositCount: uint64(len(deposits)),
-				DepositRoot:  depRoot32[:],
-				BlockHash:    blockHash32[:],
-			},
-			RandaoReveal: randaoReveal[:],
-			Attestations: nil,
-		},
-	}
-
-	stateRootCandidate, err := state.ExecuteStateTransitionNoVerify(context.Background(), beaconState, block)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	stateRoot, err = ssz.HashTreeRoot(stateRootCandidate)
-	if err != nil {
-		t.Fatal(err)
-	}
-	block.StateRoot = stateRoot[:]
-
-	block, err = testutil.SignBlock(beaconState, block, privKeys)
-	if err != nil {
-		t.Error(err)
 	}
 
 	if err := chainService.beaconDB.SaveBlock(ctx, block); err != nil {
