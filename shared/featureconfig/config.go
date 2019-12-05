@@ -142,6 +142,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabled pruning epoch boundary states before last finalized check point.")
 		cfg.PruneEpochBoundaryStates = true
 	}
+	if ctx.GlobalBool(initSyncCacheState.Name) {
+		log.Warn("Enabled initial sync cache state mode.")
+		cfg.InitSyncCacheState = true
+	}
 	Init(cfg)
 }
 
@@ -153,10 +157,6 @@ func ConfigureValidator(ctx *cli.Context) {
 	if ctx.GlobalBool(MinimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
-	}
-	if ctx.GlobalBool(initSyncCacheState.Name) {
-		log.Warn("Enabled initial sync cache state mode.")
-		cfg.InitSyncCacheState = true
 	}
 	Init(cfg)
 }
