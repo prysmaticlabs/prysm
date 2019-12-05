@@ -378,3 +378,92 @@ func TestRemoveStateSinceLastFinalized_EmptyStartSlot(t *testing.T) {
 		t.Error("Did not delete state for start slot")
 	}
 }
+
+func TestCachedPreState_CanGetFromCache(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	store := NewForkChoiceService(ctx, db)
+	s := &pb.BeaconState{Slot: 1}
+	r := [32]byte{'A'}
+	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r[:]}
+	store.initSyncState[r] = s
+
+	received, err := store.cachedPreState(ctx, b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(s, received) {
+		t.Error("cached state not the same")
+	}
+}
+
+func TestCachedPreState_CanGetFromDB(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	store := NewForkChoiceService(ctx, db)
+	r := [32]byte{'A'}
+	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r[:]}
+
+	_, err := store.cachedPreState(ctx, b)
+	wanted := "pre state of slot 1 does not exist"
+	if err.Error() != wanted {
+		t.Error("Did not get wanted error")
+	}
+
+	s := &pb.BeaconState{Slot: 1}
+	store.db.SaveState(ctx, s, r)
+
+	received, err := store.cachedPreState(ctx, b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(s, received) {
+		t.Error("cached state not the same")
+	}
+}
+
+func TestSaveInitState_CanSaveDelete(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	store := NewForkChoiceService(ctx, db)
+
+	config := &featureconfig.Flags{
+		InitSyncCacheState: true,
+	}
+	featureconfig.Init(config)
+
+	for i := uint64(0); i < 64; i++ {
+		b := &ethpb.BeaconBlock{Slot: i}
+		s := &pb.BeaconState{Slot: i}
+		r, _ := ssz.SigningRoot(b)
+		store.initSyncState[r] = s
+	}
+
+	// Set finalized root as slot 32
+	finalizedRoot, _ := ssz.SigningRoot(&ethpb.BeaconBlock{Slot: 32})
+
+	if err := store.saveInitState(ctx, &pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{
+		Epoch: 1, Root: finalizedRoot[:]}}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify finalized state is saved in DB
+	finalizedState, err := store.db.State(ctx, finalizedRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if finalizedState == nil {
+		t.Error("finalized state can't be nil")
+	}
+
+	// Verify cached state is properly pruned
+	if len(store.initSyncState) != int(params.BeaconConfig().SlotsPerEpoch) {
+		t.Errorf("wanted: %d, got: %d", len(store.initSyncState), params.BeaconConfig().SlotsPerEpoch)
+	}
+}

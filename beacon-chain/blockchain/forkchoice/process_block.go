@@ -148,7 +148,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	return nil
 }
 
-// `OnBlockInitialSyncStateTransition is called when an initial sync block is received.
+// OnBlockInitialSyncStateTransition is called when an initial sync block is received.
 // It runs state transition on the block and without any BLS verification. The BLS verification
 // includes proposer signature, randao and attestation's aggregated signature. It also does not save
 // attestations.
