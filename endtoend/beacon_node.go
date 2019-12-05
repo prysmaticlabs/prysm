@@ -95,7 +95,7 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 	}
 
 	if err = waitForTextInFile(file, "Node started p2p server"); err != nil {
-		t.Fatalf("could not find multiaddr for node %d, this means the chain has not started: %v", index, err)
+		t.Fatalf("could not find multiaddr for node %d, this means the node had issues starting: %v", index, err)
 	}
 
 	multiAddr, err := getMultiAddrFromLogFile(file.Name())
