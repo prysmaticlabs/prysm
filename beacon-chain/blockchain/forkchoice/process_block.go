@@ -148,7 +148,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	return nil
 }
 
-// OnBlockInitialSyncStateTransition is called when an initial sync block is received.
+// `OnBlockInitialSyncStateTransition is called when an initial sync block is received.
 // It runs state transition on the block and without any BLS verification. The BLS verification
 // includes proposer signature, randao and attestation's aggregated signature. It also does not save
 // attestations.
@@ -212,18 +212,8 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.
 			}
 		}
 
-		if featureconfig.Get().InitSyncCacheState {
-			finalizedRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint.Root)
-			fs := s.initSyncState[finalizedRoot]
-
-			if err := s.db.SaveState(ctx, fs, finalizedRoot); err != nil {
-				return errors.Wrap(err, "could not save state")
-			}
-			for r, oldState := range s.initSyncState {
-				if oldState.Slot < postState.FinalizedCheckpoint.Epoch*params.BeaconConfig().SlotsPerEpoch {
-					delete(s.initSyncState, r)
-				}
-			}
+		if err := s.saveInitState(ctx, postState); err != nil {
+			return errors.Wrap(err, "could not save init sync finalized state")
 		}
 
 		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint); err != nil {
@@ -346,18 +336,7 @@ func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attes
 // verifyBlkPreState validates input block has a valid pre-state.
 func (s *Store) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (*pb.BeaconState, error) {
 	if featureconfig.Get().InitSyncCacheState {
-		preState := s.initSyncState[bytesutil.ToBytes32(b.ParentRoot)]
-		var err error
-		if preState == nil {
-			preState, err = s.db.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
-			}
-			if preState == nil {
-				return nil, fmt.Errorf("pre state of slot %d does not exist", b.Slot)
-			}
-		}
-		return proto.Clone(preState).(*pb.BeaconState), nil
+		return s.cachedPreState(ctx, b)
 	}
 
 	preState, err := s.db.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
@@ -368,6 +347,21 @@ func (s *Store) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (*p
 		return nil, fmt.Errorf("pre state of slot %d does not exist", b.Slot)
 	}
 	return preState, nil
+}
+
+func (s *Store) cachedPreState(ctx context.Context, b *ethpb.BeaconBlock) (*pb.BeaconState, error) {
+	preState := s.initSyncState[bytesutil.ToBytes32(b.ParentRoot)]
+	var err error
+	if preState == nil {
+		preState, err = s.db.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
+		}
+		if preState == nil {
+			return nil, fmt.Errorf("pre state of slot %d does not exist", b.Slot)
+		}
+	}
+	return proto.Clone(preState).(*pb.BeaconState), nil
 }
 
 // verifyBlkDescendant validates input block root is a descendant of the
@@ -499,5 +493,25 @@ func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot ui
 		return err
 	}
 
+	return nil
+}
+
+// This saves finalized state during initial sync, needed as part of optimization to
+// use cache state during initial sync.
+func (s *Store) saveInitState(ctx context.Context, state *pb.BeaconState) error {
+	if !featureconfig.Get().InitSyncCacheState {
+		return nil
+	}
+	finalizedRoot := bytesutil.ToBytes32(state.FinalizedCheckpoint.Root)
+	fs := s.initSyncState[finalizedRoot]
+
+	if err := s.db.SaveState(ctx, fs, finalizedRoot); err != nil {
+		return errors.Wrap(err, "could not save state")
+	}
+	for r, oldState := range s.initSyncState {
+		if oldState.Slot < state.FinalizedCheckpoint.Epoch*params.BeaconConfig().SlotsPerEpoch {
+			delete(s.initSyncState, r)
+		}
+	}
 	return nil
 }

@@ -103,22 +103,33 @@ func (s *Store) GenesisStore(
 		return errors.Wrap(err, "could not save genesis state in check point cache")
 	}
 
-	if featureconfig.Get().InitSyncCacheState {
-		genesisState, err := s.db.GenesisState(ctx)
-		if err != nil {
-			return err
-		}
-		stateRoot, err := ssz.HashTreeRoot(genesisState)
-		if err != nil {
-			return errors.Wrap(err, "could not tree hash genesis state")
-		}
-		genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
-		genesisBlkRoot, err := ssz.SigningRoot(genesisBlk)
-		if err != nil {
-			return errors.Wrap(err, "could not get genesis block root")
-		}
-		s.initSyncState[genesisBlkRoot] = genesisState
+	if err := s.cacheGenesisState(ctx); err != nil {
+		return errors.Wrap(err, "could not cache initial sync state")
 	}
+
+	return nil
+}
+
+// This sets up gensis for initial sync state cache
+func (s *Store) cacheGenesisState(ctx context.Context) error {
+	if featureconfig.Get().InitSyncCacheState {
+		return nil
+	}
+
+	genesisState, err := s.db.GenesisState(ctx)
+	if err != nil {
+		return err
+	}
+	stateRoot, err := ssz.HashTreeRoot(genesisState)
+	if err != nil {
+		return errors.Wrap(err, "could not tree hash genesis state")
+	}
+	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
+	genesisBlkRoot, err := ssz.SigningRoot(genesisBlk)
+	if err != nil {
+		return errors.Wrap(err, "could not get genesis block root")
+	}
+	s.initSyncState[genesisBlkRoot] = genesisState
 
 	return nil
 }
