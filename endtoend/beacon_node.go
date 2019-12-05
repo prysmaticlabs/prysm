@@ -100,7 +100,7 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 
 	multiAddr, err := getMultiAddrFromLogFile(file.Name())
 	if err != nil {
-		t.Fatal("could not get multiaddr in node %d: %v", index, err)
+		t.Fatalf("could not get multiaddr in node %d: %v", index, err)
 	}
 
 	return &beaconNodeInfo{
