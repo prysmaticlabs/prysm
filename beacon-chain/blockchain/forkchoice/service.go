@@ -18,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/stateutil"
 	"go.opencensus.io/trace"
 )
 
@@ -122,7 +121,7 @@ func (s *Store) cacheGenesisState(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	stateRoot, err := stateutil.HashTreeRootState(genesisState)
+	stateRoot, err := ssz.HashTreeRoot(genesisState)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash genesis state")
 	}
