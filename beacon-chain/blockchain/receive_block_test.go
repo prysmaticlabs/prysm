@@ -151,32 +151,7 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-<<<<<<< HEAD
 	if err := db.SaveState(ctx, beaconState, bytesutil.ToBytes32(block.ParentRoot)); err != nil {
-=======
-	beaconState.Slot--
-
-	depRoot := []byte("a")
-	depRoot32 := bytesutil.ToBytes32(depRoot)
-	blockHash := []byte("b")
-	blockHash32 := bytesutil.ToBytes32(blockHash)
-	block := &ethpb.BeaconBlock{
-		Slot:       slot,
-		ParentRoot: parentRoot[:],
-		Body: &ethpb.BeaconBlockBody{
-			Eth1Data: &ethpb.Eth1Data{
-				DepositCount: uint64(len(deposits)),
-				DepositRoot:  depRoot32[:],
-				BlockHash:    blockHash32[:],
-			},
-			RandaoReveal: randaoReveal[:],
-			Attestations: nil,
-		},
-	}
-
-	stateRootCandidate, err := state.ExecuteStateTransitionNoVerify(context.Background(), beaconState, block)
-	if err != nil {
->>>>>>> 9e5cc81340aee77a7aa0cfe4ad42ad3e9328a31b
 		t.Fatal(err)
 	}
 
