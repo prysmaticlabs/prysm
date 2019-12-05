@@ -151,5 +151,6 @@ func logOutput(t *testing.T, tmpPath string) {
 			currentLine := scanner.Text()
 			t.Log(currentLine)
 		}
+		t.Log("End of beacon chain node output")
 	}
 }
