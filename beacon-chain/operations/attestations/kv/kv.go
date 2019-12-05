@@ -3,7 +3,6 @@ package kv
 import (
 	"time"
 
-	"github.com/patrickmn/go-cache"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
