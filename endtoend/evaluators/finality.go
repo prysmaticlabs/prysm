@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	ptypes "github.com/gogo/protobuf/types"
-	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
@@ -20,7 +19,7 @@ var FinalizationOccurs = Evaluator{
 func finalizationOccurs(client eth.BeaconChainClient) error {
 	chainHead, err := client.GetChainHead(context.Background(), &ptypes.Empty{})
 	if err != nil {
-		return errors.Wrap(err, "failed to get chain head")
+		return fmt.Errorf("failed to get chain head: %v", err)
 	}
 	currentEpoch := chainHead.HeadBlockEpoch
 	finalizedEpoch := chainHead.FinalizedEpoch

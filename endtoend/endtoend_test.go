@@ -54,7 +54,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 		t.Fatal(err)
 	}
 	if err := waitForTextInFile(beaconLogFile, "Sending genesis time notification"); err != nil {
-		t.Fatal(err)
+		t.Fatalf("failed to find genesis in logs: %v", err)
 	}
 	conn, err := grpc.Dial("127.0.0.1:4000", grpc.WithInsecure())
 	if err != nil {
@@ -77,6 +77,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 			ticker.Done()
 			break
 		}
+
 		for _, evaluator := range config.evaluators {
 			// Only run if the policy says so.
 			if !evaluator.Policy(currentEpoch) {
@@ -84,7 +85,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 			}
 			t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
 				if err := evaluator.Evaluation(beaconClient); err != nil {
-					t.Fatal(err)
+					t.Fatalf("evaluation failed for epoch %d: %v", currentEpoch, err)
 				}
 			})
 		}
@@ -145,6 +146,7 @@ func logOutput(t *testing.T, tmpPath string) {
 			t.Fatal(err)
 		}
 		scanner := bufio.NewScanner(beacon1LogFile)
+		t.Log("Beacon chain node output:")
 		for scanner.Scan() {
 			currentLine := scanner.Text()
 			t.Log(currentLine)
