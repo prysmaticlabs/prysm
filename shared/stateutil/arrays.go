@@ -8,6 +8,7 @@ import (
 	"github.com/protolambda/zssz/merkle"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 )
 
 var (
@@ -121,7 +122,7 @@ func merkleizeWithCache(leaves [][]byte, fieldName string) [32]byte {
 		copy(root[:], leaves[0])
 		return root
 	}
-	for !isPowerOf2(len(leaves)) {
+	for !mathutil.IsPowerOf2(uint64(len(leaves))) {
 		leaves = append(leaves, make([]byte, 32))
 	}
 	hashLayer := leaves
@@ -150,8 +151,4 @@ func merkleizeWithCache(leaves [][]byte, fieldName string) [32]byte {
 	copy(root[:], hashLayer[0])
 	layersCache[fieldName] = layers
 	return root
-}
-
-func isPowerOf2(n int) bool {
-	return n != 0 && (n&(n-1)) == 0
 }
