@@ -39,10 +39,6 @@ func TestStore_PruneStates(t *testing.T) {
 	path := db.databasePath
 	db.Close()
 
-	c := featureconfig.Get()
-	c.PruneEpochBoundaryStates = true
-	featureconfig.Init(c)
-
 	db2, err := NewKVStore(path)
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
