@@ -41,25 +41,6 @@ func TestHashTreeRootEquality(t *testing.T) {
 	}
 }
 
-func TestHashTreeRootState_ElementChanged(t *testing.T) {
-	roots := make([][]byte, 4)
-	for i := 0; i < len(roots); i++ {
-		rt := [32]byte{1, 2, 3}
-		roots[i] = rt[:]
-	}
-
-	if _, err := stateutil.ArraysRoot(roots, "BlockRoots"); err != nil {
-		t.Fatal(err)
-	}
-
-	newRt := [32]byte{4, 5, 6}
-	roots[0] = newRt[:]
-
-	if _, err := stateutil.ArraysRoot(roots, "BlockRoots"); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func BenchmarkHashTreeRootState_Custom(b *testing.B) {
 	b.StopTimer()
 	genesisState := setupGenesisState(b, 512)

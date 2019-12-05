@@ -14,7 +14,7 @@ var (
 	fastSumHashKey = bytesutil.ToBytes32([]byte("hash_fast_sum64_key"))
 )
 
-func ArraysRoot(roots [][]byte, fieldName string) ([32]byte, error) {
+func arraysRoot(roots [][]byte, fieldName string) ([32]byte, error) {
 	if _, ok := layersCache[fieldName]; !ok {
 		depth := merkle.GetDepth(uint64(len(roots)))
 		layersCache[fieldName] = make([][][]byte, depth+1)
@@ -77,7 +77,10 @@ func recomputeRoot(idx int, chunks [][]byte, fieldName string) ([32]byte, error)
 	layers := items
 	root := chunks[idx]
 	layers[0][idx] = root
+	// The merkle tree structure looks as follows:
 	// [[r1, r2, r3, r4], [parent1, parent2], [root]]
+	// Using information about the index which changed, idx, we recompute
+	// only its branch up the tree.
 	currentIndex := idx
 	for i := 0; i < len(layers)-1; i++ {
 		isLeft := currentIndex%2 == 0

@@ -66,14 +66,14 @@ func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	fieldRoots[3] = headerHashTreeRoot[:]
 
 	// BlockRoots array root.
-	blockRootsRoot, err := ArraysRoot(state.BlockRoots, "BlockRoots")
+	blockRootsRoot, err := arraysRoot(state.BlockRoots, "BlockRoots")
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute block roots merkleization")
 	}
 	fieldRoots[4] = blockRootsRoot[:]
 
 	// StateRoots array root.
-	stateRootsRoot, err := ArraysRoot(state.StateRoots, "StateRoots")
+	stateRootsRoot, err := arraysRoot(state.StateRoots, "StateRoots")
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute state roots merkleization")
 	}
@@ -121,7 +121,7 @@ func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	fieldRoots[11] = balancesRoot[:]
 
 	// RandaoMixes array root.
-	randaoRootsRoot, err := ArraysRoot(state.RandaoMixes, "RandaoMixes")
+	randaoRootsRoot, err := arraysRoot(state.RandaoMixes, "RandaoMixes")
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute randao roots merkleization")
 	}
@@ -172,10 +172,6 @@ func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 		return [32]byte{}, errors.Wrap(err, "could not compute finalized checkpoint merkleization")
 	}
 	fieldRoots[19] = finalRoot[:]
-	//
-	//for i := 0; i < len(fieldRoots); i++ {
-	//	fmt.Printf("%#x and index %d\n", fieldRoots[i], i)
-	//}
 
 	root, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {
