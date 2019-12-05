@@ -55,7 +55,6 @@ go_test(
     embed = [":go_default_library"],
     shard_count = 2,
     deps = [
-        "//beacon-chain/core/state:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
