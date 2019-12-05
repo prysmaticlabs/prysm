@@ -93,7 +93,7 @@ func (s *Service) Start() {
 
 	// For running initial sync with state cache, in an event of restart, we use
 	// last finalized check point as start point to sync instead of head
-	// state. This is because we no longer saves state every slot.
+	// state. This is because we no longer save state every slot during sync.
 	if featureconfig.Get().InitSyncCacheState {
 		cp, err := s.beaconDB.FinalizedCheckpoint(ctx)
 		if err != nil {
