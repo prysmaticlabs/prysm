@@ -87,6 +87,12 @@ var (
 			"and attestation's aggregated signatures. Without this flag, only the proposer " +
 			"signature is verified until the node reaches the end of the finalized chain.",
 	}
+	initSyncCacheState = cli.BoolFlag{
+		Name: "initial-sync-cache-state",
+		Usage: "Save state in cache during initial sync. We currently save state in the DB during " +
+			"initial sync and disk-IO is one of the biggest bottleneck. This still saves finalized state in DB " +
+			"and start syncing from there",
+	}
 )
 
 // Deprecated flags list.
@@ -148,6 +154,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	EnableEth1DataVoteCacheFlag,
 	EnableCustomStateSSZ,
 	initSyncVerifyEverythingFlag,
+	initSyncCacheState,
 	NewCacheFlag,
 	SkipBLSVerifyFlag,
 	enableBackupWebhookFlag,

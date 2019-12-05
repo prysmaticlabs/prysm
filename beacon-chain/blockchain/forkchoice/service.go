@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -44,6 +45,7 @@ type Store struct {
 	seenAttsLock         sync.Mutex
 	latestVoteMap        map[uint64]*pb.ValidatorLatestVote
 	voteLock             sync.RWMutex
+	initSyncState        map[[32]byte]*pb.BeaconState
 }
 
 // NewForkChoiceService instantiates a new service instance that will
@@ -57,6 +59,7 @@ func NewForkChoiceService(ctx context.Context, db db.Database) *Store {
 		checkpointState: cache.NewCheckpointStateCache(),
 		latestVoteMap:   make(map[uint64]*pb.ValidatorLatestVote),
 		seenAtts:        make(map[[32]byte]bool),
+		initSyncState:   make(map[[32]byte]*pb.BeaconState),
 	}
 }
 
@@ -96,6 +99,23 @@ func (s *Store) GenesisStore(
 		State:      justifiedState,
 	}); err != nil {
 		return errors.Wrap(err, "could not save genesis state in check point cache")
+	}
+
+	if featureconfig.Get().InitSyncCacheState {
+		genesisState, err := s.db.GenesisState(ctx)
+		if err != nil {
+			return err
+		}
+		stateRoot, err := ssz.HashTreeRoot(genesisState)
+		if err != nil {
+			return errors.Wrap(err, "could not tree hash genesis state")
+		}
+		genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
+		genesisBlkRoot, err := ssz.SigningRoot(genesisBlk)
+		if err != nil {
+			return errors.Wrap(err, "could not get genesis block root")
+		}
+		s.initSyncState[genesisBlkRoot] = genesisState
 	}
 
 	return nil
