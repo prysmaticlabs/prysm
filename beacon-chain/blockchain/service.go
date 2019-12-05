@@ -233,9 +233,9 @@ func (s *Service) saveHead(ctx context.Context, b *ethpb.BeaconBlock, r [32]byte
 
 	s.canonicalRoots[b.Slot] = r[:]
 
-	if err := s.beaconDB.SaveHeadBlockRoot(ctx, r); err != nil {
-		return errors.Wrap(err, "could not save head root in DB")
-	}
+	//if err := s.beaconDB.SaveHeadBlockRoot(ctx, r); err != nil {
+	//	return errors.Wrap(err, "could not save head root in DB")
+	//}
 	s.headBlock = b
 
 	headState, err := s.beaconDB.State(ctx, r)
