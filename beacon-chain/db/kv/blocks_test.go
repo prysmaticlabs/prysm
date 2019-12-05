@@ -161,7 +161,7 @@ func TestStore_BlocksCRUD_NoCache(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatal(err)
 	}
-	db.blockCache.Delete(string(blockRoot[:]))
+	db.blockCache.Del(string(blockRoot[:]))
 	if !db.HasBlock(ctx, blockRoot) {
 		t.Error("Expected block to exist in the db")
 	}
