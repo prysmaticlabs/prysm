@@ -56,7 +56,7 @@ func startEth1(t *testing.T, tmpPath string) (common.Address, string, int) {
 	}
 
 	if err = waitForTextInFile(file, "Commit new mining work"); err != nil {
-		t.Fatal(err)
+		t.Fatalf("mining log not found, this means the eth1 chain had issues starting: %v", err)
 	}
 
 	// Connect to the started geth dev chain.
