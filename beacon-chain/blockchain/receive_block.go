@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -142,7 +141,7 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 		return errors.Wrap(err, "could not get signing root on received block")
 	}
 
-	if featureconfig.Get().InitSyncCacheState && !bytes.Equal(root[:], s.HeadRoot()) {
+	if !bytes.Equal(root[:], s.HeadRoot()) {
 		if err := s.saveHead(ctx, blockCopy, root); err != nil {
 			return errors.Wrap(err, "could not save head")
 		}
