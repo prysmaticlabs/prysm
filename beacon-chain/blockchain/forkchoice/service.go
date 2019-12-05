@@ -113,7 +113,7 @@ func (s *Store) GenesisStore(
 
 // This sets up gensis for initial sync state cache.
 func (s *Store) cacheGenesisState(ctx context.Context) error {
-	if featureconfig.Get().InitSyncCacheState {
+	if !featureconfig.Get().InitSyncCacheState {
 		return nil
 	}
 
