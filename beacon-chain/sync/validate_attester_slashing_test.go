@@ -157,7 +157,7 @@ func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
-	valid, _ := r.validateProposerSlashing(ctx, slashing, p2p, false /*fromSelf*/)
+	valid, _ := r.validateAttesterSlashing(ctx, slashing, p2p, false /*fromSelf*/)
 	if valid {
 		t.Error("slashing from the far distant future should have timed out and returned false")
 	}

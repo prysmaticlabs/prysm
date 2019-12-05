@@ -33,6 +33,7 @@ type Flags struct {
 	EnableBackupWebhook       bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
 	PruneEpochBoundaryStates  bool // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
 	EnableSnappyDBCompression bool // EnableSnappyDBCompression in the database.
+	EnableCustomStateSSZ      bool // EnableCustomStateSSZ in the the state transition function.
 
 	// Cache toggles.
 	EnableAttestationCache   bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
@@ -86,8 +87,14 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabled unsafe eth1 data vote cache")
 		cfg.EnableEth1DataVoteCache = true
 	}
-	if ctx.GlobalBool(InitSyncNoVerifyFlag.Name) {
-		log.Warn("Initial syncing without verifying block's contents")
+	if ctx.GlobalBool(EnableCustomStateSSZ.Name) {
+		log.Warn("Enabled custom state ssz for the state transition function")
+		cfg.EnableCustomStateSSZ = true
+	}
+	if ctx.GlobalBool(initSyncVerifyEverythingFlag.Name) {
+		log.Warn("Initial syncing with verifying all block's content signatures.")
+		cfg.InitSyncNoVerify = false
+	} else {
 		cfg.InitSyncNoVerify = true
 	}
 	if ctx.GlobalBool(NewCacheFlag.Name) {

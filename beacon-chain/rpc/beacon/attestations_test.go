@@ -93,7 +93,7 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 	}
 	wanted := &ethpb.ListAttestationsResponse{
 		Attestations:  []*ethpb.Attestation{att},
-		NextPageToken: "1",
+		NextPageToken: "",
 		TotalSize:     1,
 	}
 
@@ -398,7 +398,7 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 						AggregationBits: bitfield.Bitlist{0b11},
 						CustodyBits:     bitfield.NewBitlist(1)},
 				},
-				NextPageToken: strconv.Itoa(34),
+				NextPageToken: "",
 				TotalSize:     int32(count)}},
 		{
 			req: &ethpb.ListAttestationsRequest{

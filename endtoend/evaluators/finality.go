@@ -21,7 +21,7 @@ func finalizationOccurs(client eth.BeaconChainClient) error {
 	if err != nil {
 		return fmt.Errorf("failed to get chain head: %v", err)
 	}
-	currentEpoch := chainHead.HeadBlockEpoch
+	currentEpoch := chainHead.HeadEpoch
 	finalizedEpoch := chainHead.FinalizedEpoch
 
 	expectedFinalizedEpoch := currentEpoch - 2

@@ -248,7 +248,7 @@ func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 				Balances: []*ethpb.ValidatorBalances_Balance{
 					{Index: 99, PublicKey: []byte{99}, Balance: 99},
 				},
-				NextPageToken: strconv.Itoa(1),
+				NextPageToken: "",
 				TotalSize:     1,
 			},
 		},
@@ -259,7 +259,7 @@ func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 					{Index: 2, PublicKey: []byte{2}, Balance: 2},
 					{Index: 3, PublicKey: []byte{3}, Balance: 3},
 				},
-				NextPageToken: strconv.Itoa(1),
+				NextPageToken: "",
 				TotalSize:     3,
 			},
 		},
@@ -270,7 +270,7 @@ func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 					{Index: 11, PublicKey: []byte{11}, Balance: 11},
 					{Index: 12, PublicKey: []byte{12}, Balance: 12},
 				},
-				NextPageToken: strconv.Itoa(1),
+				NextPageToken: "",
 				TotalSize:     3,
 			}},
 		{req: &ethpb.ListValidatorBalancesRequest{PublicKeys: [][]byte{{2}, {3}}, Indices: []uint64{3, 4}}, // Duplication
@@ -280,7 +280,7 @@ func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 					{Index: 3, PublicKey: []byte{3}, Balance: 3},
 					{Index: 4, PublicKey: []byte{4}, Balance: 4},
 				},
-				NextPageToken: strconv.Itoa(1),
+				NextPageToken: "",
 				TotalSize:     3,
 			}},
 		{req: &ethpb.ListValidatorBalancesRequest{PublicKeys: [][]byte{{}}, Indices: []uint64{3, 4}}, // Public key has a blank value
@@ -289,7 +289,7 @@ func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 					{Index: 3, PublicKey: []byte{3}, Balance: 3},
 					{Index: 4, PublicKey: []byte{4}, Balance: 4},
 				},
-				NextPageToken: strconv.Itoa(1),
+				NextPageToken: "",
 				TotalSize:     2,
 			}},
 	}
@@ -351,7 +351,7 @@ func TestServer_ListValidatorBalances_Pagination_CustomPageSizes(t *testing.T) {
 					{PublicKey: []byte{100}, Index: 100, Balance: uint64(100)},
 					{PublicKey: []byte{101}, Index: 101, Balance: uint64(101)},
 				},
-				NextPageToken: strconv.Itoa(34),
+				NextPageToken: "34",
 				TotalSize:     int32(count)}},
 		{req: &ethpb.ListValidatorBalancesRequest{PageSize: 2},
 			res: &ethpb.ValidatorBalances{
@@ -663,7 +663,7 @@ func TestServer_ListValidators_Pagination(t *testing.T) {
 			res: &ethpb.Validators{
 				Validators: []*ethpb.Validator{
 					{PublicKey: []byte{99}}},
-				NextPageToken: strconv.Itoa(34),
+				NextPageToken: "",
 				TotalSize:     int32(count)}},
 		{req: &ethpb.ListValidatorsRequest{PageSize: 2},
 			res: &ethpb.Validators{
@@ -679,7 +679,7 @@ func TestServer_ListValidators_Pagination(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !proto.Equal(res, test.res) {
-			t.Error("Incorrect respond of validators")
+			t.Errorf("Incorrect validator response, wanted %v, received %v", test.res, res)
 		}
 	}
 }
@@ -803,6 +803,97 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 	}
 	if !reflect.DeepEqual(res.Validators, validators[:21]) {
 		t.Errorf("Incorrect number of validators, wanted %d received %d", len(validators[:21]), len(res.Validators))
+	}
+}
+
+func TestServer_GetValidator(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	count := 30
+	validators := make([]*ethpb.Validator, count)
+	for i := 0; i < count; i++ {
+		validators[i] = &ethpb.Validator{
+			ActivationEpoch: uint64(i),
+			PublicKey:       []byte(strconv.Itoa(i)),
+		}
+	}
+
+	bs := &Server{
+		HeadFetcher: &mock.ChainService{
+			State: &pbp2p.BeaconState{
+				Validators: validators,
+			},
+		},
+	}
+
+	tests := []struct {
+		req     *ethpb.GetValidatorRequest
+		res     *ethpb.Validator
+		wantErr bool
+		err     string
+	}{
+		{
+			req: &ethpb.GetValidatorRequest{
+				QueryFilter: &ethpb.GetValidatorRequest_Index{
+					Index: 0,
+				},
+			},
+			res:     validators[0],
+			wantErr: false,
+		},
+		{
+			req: &ethpb.GetValidatorRequest{
+				QueryFilter: &ethpb.GetValidatorRequest_Index{
+					Index: uint64(count - 1),
+				},
+			},
+			res:     validators[count-1],
+			wantErr: false,
+		},
+		{
+			req: &ethpb.GetValidatorRequest{
+				QueryFilter: &ethpb.GetValidatorRequest_PublicKey{
+					PublicKey: []byte(strconv.Itoa(5)),
+				},
+			},
+			res:     validators[5],
+			wantErr: false,
+		},
+		{
+			req: &ethpb.GetValidatorRequest{
+				QueryFilter: &ethpb.GetValidatorRequest_PublicKey{
+					PublicKey: []byte("bad-key"),
+				},
+			},
+			res:     nil,
+			wantErr: true,
+			err:     "No validator matched filter criteria",
+		},
+		{
+			req: &ethpb.GetValidatorRequest{
+				QueryFilter: &ethpb.GetValidatorRequest_Index{
+					Index: uint64(len(validators)),
+				},
+			},
+			res:     nil,
+			wantErr: true,
+			err:     fmt.Sprintf("there are only %d validators", len(validators)),
+		},
+	}
+
+	for _, test := range tests {
+		res, err := bs.GetValidator(context.Background(), test.req)
+		if test.wantErr && err != nil {
+			if !strings.Contains(err.Error(), test.err) {
+				t.Fatalf("Wanted %v, received %v", test.err, err)
+			}
+		} else if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(test.res, res) {
+			t.Errorf("Wanted %v, got %v", test.res, res)
+		}
 	}
 }
 

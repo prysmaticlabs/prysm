@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"crypto/rand"
 	"errors"
 	"io/ioutil"
 	"strings"
@@ -581,7 +580,7 @@ func TestRolesAt_OK(t *testing.T) {
 		},
 	}
 
-	priv, _ := bls.RandKey(rand.Reader)
+	priv := bls.RandKey()
 	keyStore, _ := keystore.NewKeyFromBLS(priv)
 	v.keys[[48]byte{0x01}] = keyStore
 	v.keys[[48]byte{0x04}] = keyStore
