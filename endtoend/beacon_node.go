@@ -14,6 +14,7 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
 	ev "github.com/prysmaticlabs/prysm/endtoend/evaluators"
 )
 
@@ -141,7 +142,7 @@ func waitForTextInFile(file *os.File, text string) error {
 		// Rewind the file pointer to the start of the file so we can read it again.
 		_, err := file.Seek(0, io.SeekStart)
 		if err != nil {
-			return fmt.Errorf("could not rewind file to start: %v", err)
+			return errors.Wrap(err, "could not rewind file to start")
 		}
 
 		scanner := bufio.NewScanner(file)

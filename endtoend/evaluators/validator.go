@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -46,7 +47,7 @@ func validatorsAreActive(client eth.BeaconChainClient) error {
 	validatorRequest := &eth.ListValidatorsRequest{}
 	validators, err := client.ListValidators(context.Background(), validatorRequest)
 	if err != nil {
-		return fmt.Errorf("failed to get validators: %v", err)
+		return errors.Wrap(err, "failed to get validators")
 	}
 
 	expectedCount := params.BeaconConfig().MinGenesisActiveValidatorCount
@@ -81,7 +82,7 @@ func validatorsParticipating(client eth.BeaconChainClient) error {
 	validatorRequest := &eth.GetValidatorParticipationRequest{}
 	participation, err := client.GetValidatorParticipation(context.Background(), validatorRequest)
 	if err != nil {
-		return fmt.Errorf("failed to get validator participation: %v", err)
+		return errors.Wrap(err, "failed to get validator participation")
 	}
 
 	partRate := participation.Participation.GlobalParticipationRate
