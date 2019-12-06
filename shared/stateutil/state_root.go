@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 
+	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -12,6 +13,20 @@ import (
 )
 
 const bytesPerChunk = 32
+const cacheSize = 100000
+
+var (
+	rootsCache *ristretto.Cache
+)
+
+func init() {
+	rootsCache, _ = ristretto.NewCache(&ristretto.Config{
+		NumCounters: cacheSize, // number of keys to track frequency of (1M).
+		MaxCost:     1 << 22,   // maximum cost of cache (3MB).
+		// 100,000 roots will take up approximately 3 MB in memory.
+		BufferItems: 64, // number of keys per Get buffer.
+	})
+}
 
 // HashTreeRootState provides a fully-customized version of ssz.HashTreeRoot
 // for the BeaconState type of the official Ethereum Serenity specification.
@@ -49,14 +64,14 @@ func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	fieldRoots[3] = headerHashTreeRoot[:]
 
 	// BlockRoots array root.
-	blockRootsRoot, err := bitwiseMerkleize(state.BlockRoots, uint64(len(state.BlockRoots)), uint64(len(state.BlockRoots)))
+	blockRootsRoot, err := arraysRoot(state.BlockRoots, "BlockRoots")
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute block roots merkleization")
 	}
 	fieldRoots[4] = blockRootsRoot[:]
 
 	// StateRoots array root.
-	stateRootsRoot, err := bitwiseMerkleize(state.StateRoots, uint64(len(state.StateRoots)), uint64(len(state.StateRoots)))
+	stateRootsRoot, err := arraysRoot(state.StateRoots, "StateRoots")
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute state roots merkleization")
 	}
@@ -104,28 +119,18 @@ func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	fieldRoots[11] = balancesRoot[:]
 
 	// RandaoMixes array root.
-	randaoRootsRoot, err := bitwiseMerkleize(state.RandaoMixes, uint64(len(state.RandaoMixes)), uint64(len(state.RandaoMixes)))
+	randaoRootsRoot, err := arraysRoot(state.RandaoMixes, "RandaoMixes")
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute randao roots merkleization")
 	}
 	fieldRoots[12] = randaoRootsRoot[:]
 
 	// Slashings array root.
-	slashingMarshaling := make([][]byte, params.BeaconConfig().EpochsPerSlashingsVector)
-	for i := 0; i < len(slashingMarshaling); i++ {
-		slashBuf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(slashBuf, state.Slashings[i])
-		slashingMarshaling[i] = slashBuf
-	}
-	slashingChunks, err := pack(slashingMarshaling)
-	if err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not pack slashings into chunks")
-	}
-	slashingRootsRoot, err := bitwiseMerkleize(slashingChunks, uint64(len(slashingChunks)), uint64(len(slashingChunks)))
+	slashingsRootsRoot, err := slashingsRoot(state.Slashings)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute slashings merkleization")
 	}
-	fieldRoots[13] = slashingRootsRoot[:]
+	fieldRoots[13] = slashingsRootsRoot[:]
 
 	// PreviousEpochAttestations slice root.
 	prevAttsRoot, err := epochAttestationsRoot(state.PreviousEpochAttestations)
@@ -212,4 +217,18 @@ func historicalRootsRoot(historicalRoots [][]byte) ([32]byte, error) {
 	copy(historicalRootsOutput, historicalRootsBuf.Bytes())
 	mixedLen := mixInLength(result, historicalRootsOutput)
 	return mixedLen, nil
+}
+
+func slashingsRoot(slashings []uint64) ([32]byte, error) {
+	slashingMarshaling := make([][]byte, params.BeaconConfig().EpochsPerSlashingsVector)
+	for i := 0; i < len(slashingMarshaling); i++ {
+		slashBuf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(slashBuf, slashings[i])
+		slashingMarshaling[i] = slashBuf
+	}
+	slashingChunks, err := pack(slashingMarshaling)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not pack slashings into chunks")
+	}
+	return bitwiseMerkleize(slashingChunks, uint64(len(slashingChunks)), uint64(len(slashingChunks)))
 }
