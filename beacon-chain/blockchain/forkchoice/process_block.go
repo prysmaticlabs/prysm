@@ -107,10 +107,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 			return errors.Wrap(err, "could not save finalized checkpoint")
 		}
 
-		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch) + 1
-		if featureconfig.Get().PruneEpochBoundaryStates {
-			startSlot = helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
-		}
+		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 		if endSlot > startSlot {
 			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
@@ -195,10 +192,7 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.
 		s.clearSeenAtts()
 		helpers.ClearAllCaches()
 
-		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch) + 1
-		if featureconfig.Get().PruneEpochBoundaryStates {
-			startSlot = helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
-		}
+		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 		if endSlot > startSlot {
 			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
@@ -420,17 +414,15 @@ func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot ui
 	defer span.End()
 
 	// Make sure start slot is not a skipped slot
-	if featureconfig.Get().PruneEpochBoundaryStates {
-		for i := startSlot; i > 0; i-- {
-			filter := filters.NewFilter().SetStartSlot(i).SetEndSlot(i)
-			b, err := s.db.Blocks(ctx, filter)
-			if err != nil {
-				return err
-			}
-			if len(b) > 0 {
-				startSlot = i
-				break
-			}
+	for i := startSlot; i > 0; i-- {
+		filter := filters.NewFilter().SetStartSlot(i).SetEndSlot(i)
+		b, err := s.db.Blocks(ctx, filter)
+		if err != nil {
+			return err
+		}
+		if len(b) > 0 {
+			startSlot = i
+			break
 		}
 	}
 

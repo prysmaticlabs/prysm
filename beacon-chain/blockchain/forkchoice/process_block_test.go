@@ -16,7 +16,6 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -429,10 +428,6 @@ func TestUpdateJustifiedCheckpoint_NoUpdate(t *testing.T) {
 
 	if bytes.Equal(store.justifiedCheckpt.Root, []byte{'B'}) {
 		t.Error("Justified check point root was not suppose to update")
-
-		c := featureconfig.Get()
-		c.PruneEpochBoundaryStates = true
-		featureconfig.Init(c)
 
 		store := NewForkChoiceService(ctx, db)
 
