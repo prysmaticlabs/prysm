@@ -16,9 +16,14 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// seenExits tracks exits we've already seen to prevent feedback loop.
-var seenExits *ristretto.Cache
 var seenExitsCacheSize = int64(1 << 10)
+
+// seenExits tracks exits we've already seen to prevent feedback loop.
+var seenExits, _ = ristretto.NewCache(&ristretto.Config{
+	NumCounters: seenExitsCacheSize,
+	MaxCost:     seenExitsCacheSize,
+	BufferItems: 64,
+})
 
 func exitCacheKey(exit *ethpb.VoluntaryExit) string {
 	return fmt.Sprintf("%d-%d", exit.Epoch, exit.ValidatorIndex)
@@ -42,10 +47,10 @@ func (r *RegularSync) validateVoluntaryExit(ctx context.Context, msg proto.Messa
 
 	cacheKey := exitCacheKey(exit)
 	invalidKey := invalid + cacheKey
-	if seenExits.Get(invalidKey) != nil {
+	if _, ok := seenExits.Get(invalidKey); ok {
 		return false, errors.New("previously seen invalid validator exit received")
 	}
-	if seenExits.Get(cacheKey) != nil {
+	if _, ok := seenExits.Get(cacheKey); ok {
 		return false, nil
 	}
 
@@ -65,10 +70,10 @@ func (r *RegularSync) validateVoluntaryExit(ctx context.Context, msg proto.Messa
 	}
 
 	if err := blocks.VerifyExit(s, exit); err != nil {
-		seenExits.Set(invalidKey, true /*value*/, oneYear /*TTL*/)
+		seenExits.Set(invalidKey, true /*value*/, 1 /*cost*/)
 		return false, errors.Wrap(err, "Received invalid validator exit")
 	}
-	seenExits.Set(cacheKey, true /*value*/, oneYear /*TTL*/)
+	seenExits.Set(cacheKey, true /*value*/, 1 /*cost*/)
 
 	if fromSelf {
 		return false, nil

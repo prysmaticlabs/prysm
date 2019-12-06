@@ -15,9 +15,14 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// seenProposerSlashings represents a cache of all the seen slashings
-var seenProposerSlashings *ristretto.Cache
 var seenProposerSlashingCacheSize = int64(1 << 10)
+
+// seenProposerSlashings represents a cache of all the seen slashings
+var seenProposerSlashings, _ = ristretto.NewCache(&ristretto.Config{
+	NumCounters: seenProposerSlashingCacheSize,
+	MaxCost:     seenProposerSlashingCacheSize,
+	BufferItems: 64,
+})
 
 func propSlashingCacheKey(slashing *ethpb.ProposerSlashing) (string, error) {
 	hash, err := hashutil.HashProto(slashing)
@@ -49,10 +54,10 @@ func (r *RegularSync) validateProposerSlashing(ctx context.Context, msg proto.Me
 	}
 
 	invalidKey := invalid + cacheKey
-	if seenProposerSlashings.Get(invalidKey) != nil {
+	if _, ok := seenProposerSlashings.Get(invalidKey); ok {
 		return false, errors.New("previously seen invalid proposer slashing received")
 	}
-	if seenProposerSlashings.Get(cacheKey) != nil {
+	if _, ok := seenProposerSlashings.Get(cacheKey); ok {
 		return false, nil
 	}
 
@@ -75,10 +80,10 @@ func (r *RegularSync) validateProposerSlashing(ctx context.Context, msg proto.Me
 	}
 
 	if err := blocks.VerifyProposerSlashing(s, slashing); err != nil {
-		seenProposerSlashings.Set(invalidKey, true /*value*/, oneYear /*TTL*/)
+		seenProposerSlashings.Set(invalidKey, true /*value*/, 1 /*cost*/)
 		return false, errors.Wrap(err, "Received invalid proposer slashing")
 	}
-	seenProposerSlashings.Set(cacheKey, true /*value*/, oneYear /*TTL*/)
+	seenProposerSlashings.Set(cacheKey, true /*value*/, 1 /*cost*/)
 
 	if fromSelf {
 		return false, nil

@@ -105,6 +105,7 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 		t.Error("Broadcast was not called")
 	}
 
+	time.Sleep(100 * time.Millisecond)
 	// A second message with the same information should not be valid for processing or
 	// propagation.
 	p2p.BroadcastCalled = false
