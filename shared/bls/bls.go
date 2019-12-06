@@ -6,9 +6,9 @@ package bls
 import (
 	"encoding/binary"
 	"math/big"
-	"time"
 
-	"github.com/karlseguin/ccache"
+	"github.com/dgraph-io/ristretto"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -25,7 +25,12 @@ func init() {
 	bls12.SetETHserialization(true)
 }
 
-var pubkeyCache = ccache.New(ccache.Configure())
+var maxKeys = int64(10000)
+var pubkeyCache, _ = ristretto.NewCache(&ristretto.Config{
+	NumCounters: maxKeys,
+	MaxCost:     1 << 19, // 500 kb is cache max size
+	BufferItems: 64,
+})
 
 // CurveOrder for the BLS12-381 curve.
 const CurveOrder = "52435875175126190479447740508185965837690552500527637822603658699938581184513"
@@ -69,9 +74,9 @@ func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 	if featureconfig.Get().SkipBLSVerify {
 		return &PublicKey{}, nil
 	}
-	cv := pubkeyCache.Get(string(pub))
-	if cv != nil && cv.Value() != nil && featureconfig.Get().EnableBLSPubkeyCache {
-		return cv.Value().(*PublicKey).Copy()
+	cv, ok := pubkeyCache.Get(string(pub))
+	if ok && featureconfig.Get().EnableBLSPubkeyCache {
+		return cv.(*PublicKey).Copy()
 	}
 	pubKey := &bls12.PublicKey{}
 	err := pubKey.Deserialize(pub)
@@ -84,7 +89,7 @@ func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 		return nil, errors.Wrap(err, "could not copy pubkey")
 	}
 	if featureconfig.Get().EnableBLSPubkeyCache {
-		pubkeyCache.Set(string(pub), copiedKey, 48*time.Hour)
+		pubkeyCache.Set(string(pub), copiedKey, 48)
 	}
 	return pubkeyObj, nil
 }
