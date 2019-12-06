@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/dgraph-io/ristretto"
+
 	"github.com/gogo/protobuf/proto"
-	"github.com/karlseguin/ccache"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -16,7 +17,8 @@ import (
 )
 
 // seenExits tracks exits we've already seen to prevent feedback loop.
-var seenExits = ccache.New(ccache.Configure())
+var seenExits *ristretto.Cache
+var seenExitsCacheSize = int64(1 << 10)
 
 func exitCacheKey(exit *ethpb.VoluntaryExit) string {
 	return fmt.Sprintf("%d-%d", exit.Epoch, exit.ValidatorIndex)

@@ -3,8 +3,9 @@ package sync
 import (
 	"context"
 
+	"github.com/dgraph-io/ristretto"
+
 	"github.com/gogo/protobuf/proto"
-	"github.com/karlseguin/ccache"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -15,7 +16,8 @@ import (
 )
 
 // seenProposerSlashings represents a cache of all the seen slashings
-var seenProposerSlashings = ccache.New(ccache.Configure())
+var seenProposerSlashings *ristretto.Cache
+var seenProposerSlashingCacheSize = int64(1 << 10)
 
 func propSlashingCacheKey(slashing *ethpb.ProposerSlashing) (string, error) {
 	hash, err := hashutil.HashProto(slashing)

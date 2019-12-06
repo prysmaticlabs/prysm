@@ -4,6 +4,8 @@ import (
 	"context"
 	"sync"
 
+	"github.com/dgraph-io/ristretto"
+
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -52,6 +54,10 @@ func NewRegularSync(cfg *Config) *RegularSync {
 		stateNotifier:       cfg.StateNotifier,
 	}
 
+	if err := r.initializeCaches(); err != nil {
+		log.Fatal(err)
+	}
+
 	r.registerRPCHandlers()
 	r.registerSubscribers()
 
@@ -92,6 +98,43 @@ func (r *RegularSync) Stop() error {
 func (r *RegularSync) Status() error {
 	if r.chainStarted && r.initialSync.Syncing() {
 		return errors.New("waiting for initial sync")
+	}
+	return nil
+}
+
+func (r *RegularSync) initializeCaches() error {
+	var err error
+	seenAttesterSlashings, err = ristretto.NewCache(&ristretto.Config{
+		NumCounters: attCacheSize,
+		MaxCost:     attCacheSize,
+		BufferItems: 64,
+	})
+	if err != nil {
+		return errors.Wrap(err, "could not initialize seen att slashing cache")
+	}
+	recentlySeenRoots, err = ristretto.NewCache(&ristretto.Config{
+		NumCounters: recentlySeenRootsSize,
+		MaxCost:     recentlySeenRootsSize,
+		BufferItems: 64,
+	})
+	if err != nil {
+		return errors.Wrap(err, "could not initialize seen roots cache")
+	}
+	seenProposerSlashings, err = ristretto.NewCache(&ristretto.Config{
+		NumCounters: seenProposerSlashingCacheSize,
+		MaxCost:     seenProposerSlashingCacheSize,
+		BufferItems: 64,
+	})
+	if err != nil {
+		return errors.Wrap(err, "could not initialize seen proposer slashings cache")
+	}
+	seenExits, err = ristretto.NewCache(&ristretto.Config{
+		NumCounters: seenExitsCacheSize,
+		MaxCost:     seenExitsCacheSize,
+		BufferItems: 64,
+	})
+	if err != nil {
+		return errors.Wrap(err, "could not initialize seen exits cache")
 	}
 	return nil
 }

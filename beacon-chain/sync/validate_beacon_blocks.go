@@ -4,8 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/dgraph-io/ristretto"
+
 	"github.com/gogo/protobuf/proto"
-	"github.com/karlseguin/ccache"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -15,8 +16,9 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// recentlySeenBlockRoots cache with max size of ~3Mib
-var recentlySeenRoots = ccache.New(ccache.Configure().MaxSize(100000))
+// recentlySeenBlockRoots cache with max size of ~2Mib ( including keys)
+var recentlySeenRoots *ristretto.Cache
+var recentlySeenRootsSize = int64(1 << 16)
 
 // validateBeaconBlockPubSub checks that the incoming block has a valid BLS signature.
 // Blocks that have already been seen are ignored. If the BLS signature is any valid signature,
