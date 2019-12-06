@@ -28,6 +28,9 @@ func NewContainerFromAttestations(atts []*ethpb.Attestation) *AttestationContain
 func (ac *AttestationContainer) Contains(att *ethpb.Attestation) bool {
 	all := bitfield.NewBitlist(att.AggregationBits.Len())
 	for _, sp := range ac.SignaturePairs {
+		if all.Len() != sp.AggregationBits.Len() {
+			continue
+		}
 		all = all.Or(sp.AggregationBits)
 	}
 	return all.Contains(att.AggregationBits)
