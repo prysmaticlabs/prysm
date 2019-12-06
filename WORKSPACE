@@ -234,7 +234,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_ssz",
-    commit = "58b2f86b0f02f06e634db06dee0c838ad41849f8",
+    commit = "0052baf3405a32ca4aeaf6a3d609860ad0655f3a",
     importpath = "github.com/prysmaticlabs/go-ssz",
 )
 
@@ -1380,6 +1380,12 @@ go_repository(
 )
 
 go_repository(
+    name = "com_github_protolambda_zssz",
+    commit = "632f11e5e281660402bd0ac58f76090f3503def0",
+    importpath = "github.com/protolambda/zssz",
+)
+
+go_repository(
     name = "com_github_emicklei_dot",
     commit = "f4a04130244d60cef56086d2f649b4b55e9624aa",
     importpath = "github.com/emicklei/dot",
@@ -1407,8 +1413,32 @@ go_repository(
 )
 
 go_repository(
+    name = "com_github_dgraph_io_ristretto",
+    commit = "99d1bbbf28e64530eb246be0568fc7709a35ebdd",
+    importpath = "github.com/dgraph-io/ristretto",
+)
+
+go_repository(
+    name = "com_github_cespare_xxhash",
+    commit = "d7df74196a9e781ede915320c11c378c1b2f3a1f",
+    importpath = "github.com/cespare/xxhash",
+)
+
+go_repository(
     name = "com_github_ipfs_go_detect_race",
     importpath = "github.com/ipfs/go-detect-race",
     sum = "h1:qX/xay2W3E4Q1U7d9lNs1sU9nvguX0a7319XbyQ6cOk=",
     version = "v0.0.1",
+)
+
+go_repository(
+    name = "com_github_dgraph_io_ristretto",
+    commit = "99d1bbbf28e64530eb246be0568fc7709a35ebdd",
+    importpath = "github.com/dgraph-io/ristretto",
+)
+
+go_repository(
+    name = "com_github_cespare_xxhash",
+    commit = "d7df74196a9e781ede915320c11c378c1b2f3a1f",
+    importpath = "github.com/cespare/xxhash",
 )

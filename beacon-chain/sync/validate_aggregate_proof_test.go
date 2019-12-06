@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
@@ -28,11 +27,7 @@ func TestVerifyIndexInCommittee_CanVerify(t *testing.T) {
 	defer params.UseMainnetConfig()
 
 	validators := uint64(64)
-	deposits, _, _ := testutil.SetupInitialDeposits(t, validators)
-	s, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	s, _ := testutil.DeterministicGenesisState(t, validators)
 	s.Slot = params.BeaconConfig().SlotsPerEpoch
 
 	bf := []byte{0xff}
@@ -59,11 +54,8 @@ func TestVerifySelection_NotAnAggregator(t *testing.T) {
 	ctx := context.Background()
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 2048)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	validators := uint64(2048)
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
 	sig := privKeys[0].Sign([]byte{}, 0)
 	data := &ethpb.AttestationData{}
@@ -76,11 +68,8 @@ func TestVerifySelection_NotAnAggregator(t *testing.T) {
 
 func TestVerifySelection_BadSignature(t *testing.T) {
 	ctx := context.Background()
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 256)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	validators := uint64(256)
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
 	sig := privKeys[0].Sign([]byte{}, 0)
 	data := &ethpb.AttestationData{}
@@ -93,11 +82,8 @@ func TestVerifySelection_BadSignature(t *testing.T) {
 
 func TestVerifySelection_CanVerify(t *testing.T) {
 	ctx := context.Background()
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 256)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	validators := uint64(256)
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
 	data := &ethpb.AttestationData{}
 	slotRoot, err := ssz.HashTreeRoot(data.Slot)
@@ -144,11 +130,8 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	defer dbtest.TeardownDB(t, db)
 
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 256)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	validators := uint64(256)
+	beaconState, _ := testutil.DeterministicGenesisState(t, validators)
 
 	b := &ethpb.BeaconBlock{}
 	db.SaveBlock(context.Background(), b)
@@ -196,11 +179,8 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	defer dbtest.TeardownDB(t, db)
 
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 256)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	validators := uint64(256)
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
 	b := &ethpb.BeaconBlock{}
 	db.SaveBlock(context.Background(), b)
@@ -238,11 +218,11 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sig := privKeys[2].Sign(slotRoot[:], domain)
+	sig := privKeys[154].Sign(slotRoot[:], domain)
 	aggregateAndProof := &pb.AggregateAndProof{
 		SelectionProof:  sig.Marshal(),
 		Aggregate:       att,
-		AggregatorIndex: 2,
+		AggregatorIndex: 154,
 	}
 
 	beaconState.GenesisTime = uint64(time.Now().Unix())

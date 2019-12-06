@@ -48,7 +48,7 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 	}
 
 	if len(sr.ProposerSlashing) != 1 {
-		t.Errorf("Should return 1 slashaing proof: %v", sr)
+		t.Errorf("Should return 1 slashing proof: %v", sr)
 	}
 	if !proto.Equal(sr.ProposerSlashing[0], want) {
 		t.Errorf("wanted slashing proof: %v got: %v", want, sr.ProposerSlashing[0])
@@ -89,7 +89,7 @@ func TestServer_IsNotSlashableBlock(t *testing.T) {
 	}
 
 	if len(sr.ProposerSlashing) != 0 {
-		t.Errorf("Should return 0 slashaing proof: %v", sr)
+		t.Errorf("Should return 0 slashing proof: %v", sr)
 	}
 
 }
@@ -119,7 +119,7 @@ func TestServer_DoubleBlock(t *testing.T) {
 	}
 
 	if len(sr.ProposerSlashing) != 0 {
-		t.Errorf("Should return 0 slashaing proof: %v", sr)
+		t.Errorf("Should return 0 slashing proof: %v", sr)
 	}
 
 }
@@ -161,7 +161,7 @@ func TestServer_SameSlotSlashable(t *testing.T) {
 	}
 
 	if len(sr.ProposerSlashing) != 1 {
-		t.Errorf("Should return 1 slashaing proof: %v", sr)
+		t.Errorf("Should return 1 slashing proof: %v", sr)
 	}
 	if !proto.Equal(sr.ProposerSlashing[0], want) {
 		t.Errorf("wanted slashing proof: %v got: %v", want, sr.ProposerSlashing[0])
@@ -213,7 +213,7 @@ func TestServer_SlashDoubleAttestation(t *testing.T) {
 	}
 
 	if len(sr.AttesterSlashing) != 1 {
-		t.Errorf("Should return 1 slashaing proof: %v", sr)
+		t.Errorf("Should return 1 slashing proof: %v", sr)
 	}
 	if !proto.Equal(sr.AttesterSlashing[0], want) {
 		t.Errorf("Wanted slashing proof: %v got: %v", want, sr.AttesterSlashing[0])
@@ -283,7 +283,7 @@ func TestServer_SlashTripleAttestation(t *testing.T) {
 		t.Errorf("Could not call RPC method: %v", err)
 	}
 	if len(sr.AttesterSlashing) != 2 {
-		t.Errorf("Should return 1 slashaing proof: %v", sr)
+		t.Errorf("Should return 1 slashing proof: %v", sr)
 	}
 	if !proto.Equal(sr.AttesterSlashing[0], want1) {
 		t.Errorf("Wanted slashing proof: %v got: %v", want1, sr.AttesterSlashing[0])
@@ -324,7 +324,7 @@ func TestServer_DontSlashSameAttestation(t *testing.T) {
 	}
 
 	if len(sr.AttesterSlashing) != 0 {
-		t.Errorf("Should not return slashaing proof for same attestation: %v", sr)
+		t.Errorf("Should not return slashing proof for same attestation: %v", sr)
 	}
 }
 
@@ -368,7 +368,7 @@ func TestServer_DontSlashDifferentTargetAttestation(t *testing.T) {
 	}
 
 	if len(sr.AttesterSlashing) != 0 {
-		t.Errorf("Should not return slashaing proof for different epoch attestation: %v", sr)
+		t.Errorf("Should not return slashing proof for different epoch attestation: %v", sr)
 	}
 }
 
@@ -407,7 +407,7 @@ func TestServer_DontSlashSameAttestationData(t *testing.T) {
 	}
 
 	if len(sr.AttesterSlashing) != 0 {
-		t.Errorf("Should not return slashaing proof for same data: %v", sr)
+		t.Errorf("Should not return slashing proof for same data: %v", sr)
 	}
 }
 
@@ -454,7 +454,7 @@ func TestServer_SlashSurroundedAttestation(t *testing.T) {
 		t.Errorf("Could not call RPC method: %v", err)
 	}
 	if len(sr.AttesterSlashing) != 1 {
-		t.Fatalf("Should return 1 slashaing proof: %v", sr.AttesterSlashing)
+		t.Fatalf("Should return 1 slashing proof: %v", sr.AttesterSlashing)
 	}
 	if !proto.Equal(sr.AttesterSlashing[0], want) {
 		t.Errorf("Wanted slashing proof: %v got: %v", want, sr.AttesterSlashing[0])
@@ -505,7 +505,7 @@ func TestServer_SlashSurroundAttestation(t *testing.T) {
 		t.Errorf("Could not call RPC method: %v", err)
 	}
 	if len(sr.AttesterSlashing) != 1 {
-		t.Fatalf("Should return 1 slashaing proof: %v", sr.AttesterSlashing)
+		t.Fatalf("Should return 1 slashing proof: %v", sr.AttesterSlashing)
 	}
 	if !proto.Equal(sr.AttesterSlashing[0], want) {
 		t.Errorf("Wanted slashing proof: %v got: %v", want, sr.AttesterSlashing[0])
@@ -552,7 +552,7 @@ func TestServer_DontSlashValidAttestations(t *testing.T) {
 		t.Errorf("Could not call RPC method: %v", err)
 	}
 	if len(sr.AttesterSlashing) != 0 {
-		t.Errorf("Should not return slashaing proof for same data: %v", sr)
+		t.Errorf("Should not return slashing proof for same data: %v", sr)
 	}
 }
 

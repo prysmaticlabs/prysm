@@ -11,17 +11,14 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	blsintern "github.com/phoreproject/bls"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -34,11 +31,7 @@ func init() {
 }
 
 func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Error(err)
-	}
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{Slot: 9}
 
 	lbhsr, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
@@ -281,11 +274,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	helpers.ClearAllCaches()
 
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
@@ -314,14 +303,10 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 }
 
 func TestProcessRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T) {
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
 	epoch := helpers.CurrentEpoch(beaconState)
-	epochSignature, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
+	epochSignature, err := testutil.RandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -489,42 +474,10 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
-	validators := make([]*ethpb.Validator, 100)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &ethpb.Validator{
-			EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
-			Slashed:           false,
-			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
-			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
-			ActivationEpoch:   0,
-		}
-	}
-	validatorBalances := make([]uint64, len(validators))
-	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = params.BeaconConfig().MaxEffectiveBalance
-	}
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
+	proposerIdx := uint64(1)
 
-	currentSlot := uint64(0)
-	beaconState := &pb.BeaconState{
-		Validators: validators,
-		Slot:       currentSlot,
-		Balances:   validatorBalances,
-		Fork: &pb.Fork{
-			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
-			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-			Epoch:           0,
-		},
-		Slashings:   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}
-
-	domain := helpers.Domain(
-		beaconState.Fork,
-		helpers.CurrentEpoch(beaconState),
-		params.BeaconConfig().DomainBeaconProposer,
-	)
-	privKey := bls.RandKey()
-
+	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconProposer)
 	header1 := &ethpb.BeaconBlockHeader{
 		Slot:      0,
 		StateRoot: []byte("A"),
@@ -533,7 +486,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not get signing root of beacon block header: %v", err)
 	}
-	header1.Signature = privKey.Sign(signingRoot[:], domain).Marshal()[:]
+	header1.Signature = privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()[:]
 
 	header2 := &ethpb.BeaconBlockHeader{
 		Slot:      0,
@@ -543,17 +496,15 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not get signing root of beacon block header: %v", err)
 	}
-	header2.Signature = privKey.Sign(signingRoot[:], domain).Marshal()[:]
+	header2.Signature = privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()[:]
 
 	slashings := []*ethpb.ProposerSlashing{
 		{
-			ProposerIndex: 1,
+			ProposerIndex: proposerIdx,
 			Header_1:      header1,
 			Header_2:      header2,
 		},
 	}
-
-	beaconState.Validators[1].PublicKey = privKey.PublicKey().Marshal()[:]
 
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
@@ -567,9 +518,9 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 
 	newStateVals := newState.Validators
-	if newStateVals[1].ExitEpoch != validators[1].ExitEpoch {
+	if newStateVals[1].ExitEpoch != beaconState.Validators[1].ExitEpoch {
 		t.Errorf("Proposer with index 1 did not correctly exit,"+"wanted slot:%d, got:%d",
-			newStateVals[1].ExitEpoch, validators[1].ExitEpoch)
+			newStateVals[1].ExitEpoch, beaconState.Validators[1].ExitEpoch)
 	}
 }
 
@@ -670,8 +621,7 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 }
 
 func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 	for _, vv := range beaconState.Validators {
 		vv.WithdrawableEpoch = 1 * params.BeaconConfig().SlotsPerEpoch
 	}
@@ -759,11 +709,7 @@ func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 			Attestations: attestations,
 		},
 	}
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
 
 	want := fmt.Sprintf(
 		"attestation slot %d + inclusion delay %d > state slot %d",
@@ -790,11 +736,7 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 			Attestations: []*ethpb.Attestation{att},
 		},
 	}
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
 	helpers.ClearAllCaches()
 	beaconState.Slot += params.BeaconConfig().SlotsPerEpoch*4 + params.BeaconConfig().MinAttestationInclusionDelay
 	beaconState.PreviousJustifiedCheckpoint.Root = []byte("hello-world")
@@ -829,11 +771,7 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 			Attestations: attestations,
 		},
 	}
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
 	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
@@ -862,12 +800,7 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 
 func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	helpers.ClearAllCaches()
-
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(0, true)
@@ -918,11 +851,8 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 
 func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 	helpers.ClearAllCaches()
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+
+	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
 
 	aggBits := bitfield.NewBitlist(4)
 	att := &ethpb.Attestation{
@@ -944,7 +874,7 @@ func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	expected := "failed to verify aggregation bitfield: wanted participants bitfield length 3, got: 4"
-	_, err = blocks.ProcessAttestations(context.Background(), beaconState, block.Body)
+	_, err := blocks.ProcessAttestations(context.Background(), beaconState, block.Body)
 	if !strings.Contains(err.Error(), expected) {
 		t.Errorf("Did not receive wanted error")
 	}
@@ -952,11 +882,8 @@ func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 
 func TestProcessAttestations_OK(t *testing.T) {
 	helpers.ClearAllCaches()
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(0, true)
@@ -1002,11 +929,8 @@ func TestProcessAttestations_OK(t *testing.T) {
 
 func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	helpers.ClearAllCaches()
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 300)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
 	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 	data := &ethpb.AttestationData{
@@ -1071,11 +995,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 
 func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	helpers.ClearAllCaches()
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 300)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 300)
 
 	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 	data := &ethpb.AttestationData{
@@ -1151,11 +1071,8 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 	// Attestation with an empty signature
 	helpers.ClearAllCaches()
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+
+	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(1, true)
@@ -1245,7 +1162,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 
 	numOfValidators := 4 * params.BeaconConfig().SlotsPerEpoch
 	validators := make([]*ethpb.Validator, numOfValidators)
-	_, _, keys := testutil.SetupInitialDeposits(t, numOfValidators)
+	_, keys, _ := testutil.DeterministicDepositsAndKeys(numOfValidators)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -1383,8 +1300,11 @@ func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 }
 
 func TestProcessDeposits_AddsNewValidatorDeposit(t *testing.T) {
-	dep, _, _ := testutil.SetupInitialDeposits(t, 1)
-	eth1Data := testutil.GenerateEth1Data(t, dep)
+	dep, _, _ := testutil.DeterministicDepositsAndKeys(1)
+	eth1Data, err := testutil.DeterministicEth1Data(len(dep))
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
@@ -1485,8 +1405,11 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 
 func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
 	//Similar to TestProcessDeposits_AddsNewValidatorDeposit except that this test directly calls ProcessDeposit
-	dep, _, _ := testutil.SetupInitialDeposits(t, 1)
-	eth1Data := testutil.GenerateEth1Data(t, dep)
+	dep, _, _ := testutil.DeterministicDepositsAndKeys(1)
+	eth1Data, err := testutil.DeterministicEth1Data(len(dep))
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	registry := []*ethpb.Validator{
 		{
@@ -1529,11 +1452,17 @@ func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
 
 func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 	// Same test settings as in TestProcessDeposit_AddsNewValidatorDeposit, except that we use an invalid signature
-	dep, _, _ := testutil.SetupInitialDeposits(t, 1)
+	dep, _, _ := testutil.DeterministicDepositsAndKeys(1)
 	dep[0].Data.Signature = make([]byte, 96)
-	eth1Data := testutil.GenerateEth1Data(t, dep)
-	testutil.ResetCache() // Can't have an invalid signature in the cache.
-
+	trie, _, err := testutil.DepositTrieFromDeposits(dep)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := trie.Root()
+	eth1Data := &ethpb.Eth1Data{
+		DepositRoot:  root[:],
+		DepositCount: 1,
+	}
 	registry := []*ethpb.Validator{
 		{
 			PublicKey:             []byte{1},
@@ -1555,61 +1484,10 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 		dep[0],
 		stateutils.ValidatorIndexMap(beaconState),
 	)
-
 	if err != nil {
 		t.Fatalf("Expected invalid block deposit to be ignored without error, received: %v", err)
 	}
-	if newState.Eth1DepositIndex != 1 {
-		t.Errorf(
-			"Expected Eth1DepositIndex to be increased by 1 after processing an invalid deposit, received change: %v",
-			newState.Eth1DepositIndex,
-		)
-	}
-	if len(newState.Validators) != 1 {
-		t.Errorf("Expected validator list to have length 1, received: %v", len(newState.Validators))
-	}
-	if len(newState.Balances) != 1 {
-		t.Errorf("Expected validator balances list to have length 1, received: %v", len(newState.Balances))
-	}
-	if newState.Balances[0] != 0 {
-		t.Errorf("Expected validator balance at index 0 to stay 0, received: %v", newState.Balances[0])
-	}
-}
 
-func TestProcessDeposit_SkipsDepositWithUncompressedSignature(t *testing.T) {
-	// Same test settings as in TestProcessDeposit_AddsNewValidatorDeposit, except that we use an uncompressed signature
-	dep, _, _ := testutil.SetupInitialDeposits(t, 1)
-	a, _ := blsintern.DecompressG2(bytesutil.ToBytes96(dep[0].Data.Signature))
-	uncompressedSignature := a.SerializeBytes()
-	dep[0].Data.Signature = uncompressedSignature[:]
-	eth1Data := testutil.GenerateEth1Data(t, dep)
-	testutil.ResetCache() // Can't have an uncompressed signature in the cache.
-
-	registry := []*ethpb.Validator{
-		{
-			PublicKey:             []byte{1},
-			WithdrawalCredentials: []byte{1, 2, 3},
-		},
-	}
-	balances := []uint64{0}
-	beaconState := &pb.BeaconState{
-		Validators: registry,
-		Balances:   balances,
-		Eth1Data:   eth1Data,
-		Fork: &pb.Fork{
-			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
-		},
-	}
-	newState, err := blocks.ProcessDeposit(
-		beaconState,
-		dep[0],
-		stateutils.ValidatorIndexMap(beaconState),
-	)
-
-	if err != nil {
-		t.Fatalf("Expected invalid block deposit to be ignored without error, received: %v", err)
-	}
 	if newState.Eth1DepositIndex != 1 {
 		t.Errorf(
 			"Expected Eth1DepositIndex to be increased by 1 after processing an invalid deposit, received change: %v",

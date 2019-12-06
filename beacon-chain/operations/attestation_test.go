@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -29,11 +28,7 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 		BeaconDB: beaconDB,
 	})
 
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -109,11 +104,7 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 	}
 
 	// We setup the genesis state with 256 validators.
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 256)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 256)
 	stateRoot, err := ssz.HashTreeRoot(beaconState)
 	if err != nil {
 		t.Fatal(err)
@@ -198,14 +189,9 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 	})
 	service.attestationPool = make(map[[32]byte]*dbpb.AttestationContainer)
 
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 200)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 200)
 
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
-	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	att1 := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -337,12 +323,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
 
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 32)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
 	aggBits := bitfield.NewBitlist(4)
 	aggBits.SetBitAt(0, true)
 	att := &ethpb.Attestation{

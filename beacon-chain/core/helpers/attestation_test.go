@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -227,12 +226,7 @@ func TestSlotSignature_Verify(t *testing.T) {
 }
 
 func TestIsAggregator_True(t *testing.T) {
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 256)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 	sig := privKeys[0].Sign([]byte{}, 0)
 	agg, err := helpers.IsAggregator(beaconState, 0, 0, sig)
 	if err != nil {
@@ -246,11 +240,7 @@ func TestIsAggregator_True(t *testing.T) {
 func TestIsAggregator_False(t *testing.T) {
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 2048)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 2048)
 
 	sig := privKeys[0].Sign([]byte{}, 0)
 	agg, err := helpers.IsAggregator(beaconState, 0, 0, sig)
