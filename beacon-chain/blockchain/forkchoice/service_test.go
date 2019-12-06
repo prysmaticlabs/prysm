@@ -354,7 +354,7 @@ func TestCacheGenesisState_Correct(t *testing.T) {
 	}
 
 	for _, state := range store.initSyncState {
-		if reflect.DeepEqual(s, state) {
+		if !reflect.DeepEqual(s, state) {
 			t.Error("Did not get wanted state")
 		}
 	}
