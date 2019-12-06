@@ -1,6 +1,10 @@
 package statefeed
 
-import "time"
+import (
+	"time"
+
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+)
 
 // How to add a new event to the feed:
 //   1. Add a constant describing the event to the list below.
@@ -18,6 +22,9 @@ const (
 	ChainStarted
 	// StateInitialized is sent when the internal beacon node's state is ready to be accessed.
 	StateInitialized
+	// VoluntaryExitReceived is sent when a voluntary exit transaction is received, either directly by RPC or gossipped to us
+	// by P2P.
+	VoluntaryExitReceived
 )
 
 // Event is the event that is sent with state feed updates.
@@ -46,4 +53,10 @@ type ChainStartedData struct {
 type StateInitializedData struct {
 	// StartTime is the time at which the chain started.
 	StartTime time.Time
+}
+
+// VoluntaryExitReceivedData is the data sent with VoluntaryExitReceived events.
+type VoluntaryExitReceivedData struct {
+	// VoluntaryExit is the received data structure.
+	VoluntaryExit *ethpb.VoluntaryExit
 }

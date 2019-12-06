@@ -179,6 +179,26 @@ func (mr *MockValidatorServiceClientMockRecorder) ValidatorStatus(arg0, arg1 int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatorStatus", reflect.TypeOf((*MockValidatorServiceClient)(nil).ValidatorStatus), varargs...)
 }
 
+// RequestExit mocks base method
+func (m *MockValidatorServiceClient) RequestExit(arg0 context.Context, arg1 *v1alpha1.VoluntaryExit, arg2 ...grpc.CallOption) (*types.Empty, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "RequestExit", varargs)
+	ret0, _ := ret[0].(*types.Empty)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RequestExit indicates an expected call of RequestExit
+func (mr *MockValidatorServiceClientMockRecorder) RequestExit(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestExit", reflect.TypeOf((*MockValidatorServiceClient)(nil).RequestExit), varargs...)
+}
+
 // WaitForActivation mocks base method
 func (m *MockValidatorServiceClient) WaitForActivation(arg0 context.Context, arg1 *v1.ValidatorActivationRequest, arg2 ...grpc.CallOption) (v1.ValidatorService_WaitForActivationClient, error) {
 	m.ctrl.T.Helper()

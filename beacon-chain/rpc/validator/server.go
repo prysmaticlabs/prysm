@@ -44,6 +44,7 @@ type Server struct {
 	Eth1InfoFetcher    powchain.ChainInfoFetcher
 	SyncChecker        sync.Checker
 	StateNotifier      statefeed.Notifier
+	GenesisTimeFetcher blockchain.GenesisTimeFetcher
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current

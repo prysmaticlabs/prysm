@@ -211,6 +211,7 @@ func (s *Service) Start() {
 		DepositFetcher:     s.depositFetcher,
 		SyncChecker:        s.syncService,
 		StateNotifier:      s.stateNotifier,
+		GenesisTimeFetcher: s.genesisTimeFetcher,
 	}
 	nodeServer := &node.Server{
 		BeaconDB:           s.beaconDB,
@@ -239,6 +240,7 @@ func (s *Service) Start() {
 	pb.RegisterAggregatorServiceServer(s.grpcServer, aggregatorServer)
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
+	ethpb.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
 
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)
