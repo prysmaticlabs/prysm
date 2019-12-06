@@ -3,7 +3,6 @@ package sync
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
@@ -48,11 +47,11 @@ func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.M
 		trace.StringAttribute("attRoot", fmt.Sprintf("%#x", attRoot)),
 	)
 
-	if recentlySeenRoots.Get(string(attRoot[:])) != nil {
+	if _, ok := recentlySeenRoots.Get(string(attRoot[:])); ok {
 		return false, nil
 	}
 
-	recentlySeenRoots.Set(string(attRoot[:]), true /*value*/, 365*24*time.Hour /*TTL*/)
+	recentlySeenRoots.Set(string(attRoot[:]), true /*value*/, 1 /*cost*/)
 
 	// Only valid blocks are saved in the database.
 	if !r.db.HasBlock(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot)) {

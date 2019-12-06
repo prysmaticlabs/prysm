@@ -67,7 +67,7 @@ func (s *Service) AddDisconnectionHandler(handler func(ctx context.Context, id p
 		DisconnectedF: func(net network.Network, conn network.Conn) {
 			// Must be handled in a goroutine as this callback cannot be blocking.
 			go func() {
-				s.exclusionList.Set(conn.RemotePeer().String(), true, ttl)
+				s.exclusionList.Set(conn.RemotePeer().String(), true, 1)
 				log := log.WithField("peer", conn.RemotePeer())
 				log.Debug("Peer is added to exclusion list")
 				ctx := context.Background()

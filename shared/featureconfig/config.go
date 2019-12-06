@@ -32,10 +32,10 @@ type Flags struct {
 	SkipBLSVerify             bool   // Skips BLS verification across the runtime.
 	EnableBackupWebhook       bool   // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
 	PruneEpochBoundaryStates  bool   // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
-	EnableSnappyDBCompression bool // EnableSnappyDBCompression in the database.
+	EnableSnappyDBCompression bool   // EnableSnappyDBCompression in the database.
 	EnableCustomStateSSZ      bool   // EnableCustomStateSSZ in the the state transition function.
-	InitSyncCacheState        bool // InitSyncCacheState caches state during initial sync.
-	KafkaBootstrapServers    string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
+	InitSyncCacheState        bool   // InitSyncCacheState caches state during initial sync.
+	KafkaBootstrapServers     string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
 
 	// Cache toggles.
 	EnableAttestationCache   bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.

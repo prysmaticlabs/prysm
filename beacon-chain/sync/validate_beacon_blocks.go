@@ -2,10 +2,9 @@ package sync
 
 import (
 	"context"
-	"time"
 
+	"github.com/dgraph-io/ristretto"
 	"github.com/gogo/protobuf/proto"
-	"github.com/karlseguin/ccache"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -15,8 +14,14 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// recentlySeenBlockRoots cache with max size of ~3Mib
-var recentlySeenRoots = ccache.New(ccache.Configure().MaxSize(100000))
+var recentlySeenRootsSize = int64(1 << 16)
+
+// recentlySeenBlockRoots cache with max size of ~2Mib ( including keys)
+var recentlySeenRoots, _ = ristretto.NewCache(&ristretto.Config{
+	NumCounters: recentlySeenRootsSize,
+	MaxCost:     recentlySeenRootsSize,
+	BufferItems: 64,
+})
 
 // validateBeaconBlockPubSub checks that the incoming block has a valid BLS signature.
 // Blocks that have already been seen are ignored. If the BLS signature is any valid signature,
@@ -45,10 +50,10 @@ func (r *RegularSync) validateBeaconBlockPubSub(ctx context.Context, msg proto.M
 	}
 	r.pendingQueueLock.RUnlock()
 
-	if recentlySeenRoots.Get(string(blockRoot[:])) != nil || r.db.HasBlock(ctx, blockRoot) {
+	if _, ok := recentlySeenRoots.Get(string(blockRoot[:])); ok || r.db.HasBlock(ctx, blockRoot) {
 		return false, nil
 	}
-	recentlySeenRoots.Set(string(blockRoot[:]), true /*value*/, 365*24*time.Hour /*TTL*/)
+	recentlySeenRoots.Set(string(blockRoot[:]), true /*value*/, 1 /*cost*/)
 
 	if fromSelf {
 		return false, nil
