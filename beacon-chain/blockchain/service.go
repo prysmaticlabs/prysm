@@ -90,6 +90,23 @@ func (s *Service) Start() {
 	if err != nil {
 		log.Fatalf("Could not fetch beacon state: %v", err)
 	}
+
+	// For running initial sync with state cache, in an event of restart, we use
+	// last finalized check point as start point to sync instead of head
+	// state. This is because we no longer save state every slot during sync.
+	if featureconfig.Get().InitSyncCacheState {
+		cp, err := s.beaconDB.FinalizedCheckpoint(ctx)
+		if err != nil {
+			log.Fatalf("Could not fetch finalized cp: %v", err)
+		}
+		if beaconState == nil {
+			beaconState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(cp.Root))
+			if err != nil {
+				log.Fatalf("Could not fetch beacon state: %v", err)
+			}
+		}
+	}
+
 	// If the chain has already been initialized, simply start the block processing routine.
 	if beaconState != nil {
 		log.Info("Blockchain data already exists in DB, initializing...")
@@ -313,7 +330,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		return errors.Wrap(err, "could not get finalized block from db")
 	}
 
-	s.headSlot = s.headState.Slot
+	s.headSlot = s.headBlock.Slot
 	s.canonicalRoots[s.headSlot] = finalized.Root
 
 	return nil

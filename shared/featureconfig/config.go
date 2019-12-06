@@ -34,6 +34,7 @@ type Flags struct {
 	PruneEpochBoundaryStates  bool // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
 	EnableSnappyDBCompression bool // EnableSnappyDBCompression in the database.
 	EnableCustomStateSSZ      bool // EnableCustomStateSSZ in the the state transition function.
+	InitSyncCacheState        bool // InitSyncCacheState caches state during initial sync.
 
 	// Cache toggles.
 	EnableAttestationCache   bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
@@ -140,6 +141,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(enablePruneBoundaryStateFlag.Name) {
 		log.Warn("Enabled pruning epoch boundary states before last finalized check point.")
 		cfg.PruneEpochBoundaryStates = true
+	}
+	if ctx.GlobalBool(initSyncCacheState.Name) {
+		log.Warn("Enabled initial sync cache state mode.")
+		cfg.InitSyncCacheState = true
 	}
 	Init(cfg)
 }

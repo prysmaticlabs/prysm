@@ -16,6 +16,7 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
 func TestStore_GenesisStoreOk(t *testing.T) {
@@ -327,5 +328,34 @@ func TestStore_GetHead(t *testing.T) {
 	if !bytes.Equal(head, roots[1]) {
 		t.Log(head)
 		t.Error("Incorrect head")
+	}
+}
+
+func TestCacheGenesisState_Correct(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	store := NewForkChoiceService(ctx, db)
+	config := &featureconfig.Flags{
+		InitSyncCacheState: true,
+	}
+	featureconfig.Init(config)
+
+	b := &ethpb.BeaconBlock{Slot: 1}
+	r, _ := ssz.SigningRoot(b)
+	s := &pb.BeaconState{GenesisTime: 99}
+
+	store.db.SaveState(ctx, s, r)
+	store.db.SaveGenesisBlockRoot(ctx, r)
+
+	if err := store.cacheGenesisState(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, state := range store.initSyncState {
+		if !reflect.DeepEqual(s, state) {
+			t.Error("Did not get wanted state")
+		}
 	}
 }
