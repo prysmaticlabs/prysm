@@ -63,6 +63,16 @@ func TestAttestationContainer_Contains(t *testing.T) {
 			contains: bitfield.Bitlist{0b01000000, 0b1},
 			want:     false,
 		},
+		{
+			input: []bitfield.Bitlist{
+				{0b10000001, 0b1},
+				{0b10000010, 0b1},
+				{0b10000100, 0b1},
+				{0b10010001, 0b1},
+			},
+			contains: bitfield.Bitlist{0b01000000, 0b10}, // Different length.
+			want:     false,
+		},
 	}
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("case_%d", i), func(t *testing.T) {
