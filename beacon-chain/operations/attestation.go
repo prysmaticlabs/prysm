@@ -3,7 +3,6 @@ package operations
 import (
 	"context"
 	"sync"
-	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
@@ -37,17 +36,12 @@ type Handler interface {
 func (s *Service) retrieveLock(key [32]byte) *sync.Mutex {
 	keyString := string(key[:])
 	mutex := &sync.Mutex{}
-	item := s.attestationLockCache.Get(keyString)
-	if item == nil {
-		s.attestationLockCache.Set(keyString, mutex, 5*time.Minute)
+	item, ok := s.attestationLockCache.Get(keyString)
+	if !ok {
+		s.attestationLockCache.Set(keyString, mutex, 1)
 		return mutex
 	}
-	if item.Expired() {
-		s.attestationLockCache.Set(keyString, mutex, 5*time.Minute)
-		item.Release()
-		return mutex
-	}
-	return item.Value().(*sync.Mutex)
+	return item.(*sync.Mutex)
 }
 
 // AttestationPoolForForkchoice returns the attestations that have not been processed by the

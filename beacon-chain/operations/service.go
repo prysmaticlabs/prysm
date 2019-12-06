@@ -5,7 +5,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/karlseguin/ccache"
+	"github.com/dgraph-io/ristretto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
@@ -33,7 +33,7 @@ type Service struct {
 	attestationPool            map[[32]byte]*dbpb.AttestationContainer
 	recentAttestationBitlist   *recentAttestationMultiMap
 	attestationPoolLock        sync.RWMutex
-	attestationLockCache       *ccache.Cache
+	attestationLockCache       *ristretto.Cache
 }
 
 // Config options for the service.
@@ -45,6 +45,11 @@ type Config struct {
 // be registered into a running beacon node.
 func NewService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
+	attLockCache, _ := ristretto.NewCache(&ristretto.Config{
+		NumCounters: 500,
+		MaxCost:     500,
+		BufferItems: 64,
+	})
 	return &Service{
 		ctx:                        ctx,
 		cancel:                     cancel,
@@ -53,7 +58,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		incomingProcessedBlock:     make(chan *ethpb.BeaconBlock, params.BeaconConfig().DefaultBufferSize),
 		attestationPool:            make(map[[32]byte]*dbpb.AttestationContainer),
 		recentAttestationBitlist:   newRecentAttestationMultiMap(),
-		attestationLockCache:       ccache.New(ccache.Configure()),
+		attestationLockCache:       attLockCache,
 	}
 }
 
