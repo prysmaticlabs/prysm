@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -44,8 +44,8 @@ func afterNthEpoch(afterEpoch uint64) func(uint64) bool {
 
 func validatorsAreActive(client eth.BeaconChainClient) error {
 	// Balances actually fluctuate but we just want to check initial balance.
-	validatorRequest := &eth.GetValidatorsRequest{}
-	validators, err := client.GetValidators(context.Background(), validatorRequest)
+	validatorRequest := &eth.ListValidatorsRequest{}
+	validators, err := client.ListValidators(context.Background(), validatorRequest)
 	if err != nil {
 		return errors.Wrap(err, "failed to get validators")
 	}
@@ -88,7 +88,12 @@ func validatorsParticipating(client eth.BeaconChainClient) error {
 	partRate := participation.Participation.GlobalParticipationRate
 	expected := float32(1)
 	if partRate < expected {
-		return fmt.Errorf("validator participation was below expected %f, received: %f", expected, partRate)
+		return fmt.Errorf(
+			"validator participation was below for epoch %d, expected %f, received: %f",
+			participation.Epoch,
+			expected,
+			partRate,
+		)
 	}
 	return nil
 }

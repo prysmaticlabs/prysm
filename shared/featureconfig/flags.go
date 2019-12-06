@@ -29,6 +29,11 @@ var (
 		Name:  "enable-eth1-data-vote-cache",
 		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
 	}
+	// EnableCustomStateSSZ see https://github.com/prysmaticlabs/prysm/pull/4077.
+	EnableCustomStateSSZ = cli.BoolFlag{
+		Name:  "enable-custom-state-ssz",
+		Usage: "Enable custom hash_tree_root(state) for Prysm. See https://github.com/prysmaticlabs/prysm/issues/4077",
+	}
 	enableShuffledIndexCache = cli.BoolFlag{
 		Name:  "enable-shuffled-index-cache",
 		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
@@ -44,11 +49,6 @@ var (
 	enableActiveCountCacheFlag = cli.BoolFlag{
 		Name:  "enable-active-count-cache",
 		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
-	}
-	// InitSyncNoVerifyFlag enables the initial sync no verify configuration.
-	InitSyncNoVerifyFlag = cli.BoolFlag{
-		Name:  "init-sync-no-verify",
-		Usage: "Initial sync to finalized check point w/o verifying block's signature, RANDAO and attestation's aggregated signatures",
 	}
 	// NewCacheFlag enables the node to use the new caching scheme.
 	NewCacheFlag = cli.BoolFlag{
@@ -68,20 +68,6 @@ var (
 		Name:  "enable-bls-pubkey-cache",
 		Usage: "Enable BLS pubkey cache to improve wall time of PubkeyFromBytes",
 	}
-	// OptimizeProcessEpoch optimizes process epoch.
-	OptimizeProcessEpoch = cli.BoolFlag{
-		Name:  "optimize-process-epoch",
-		Usage: "Process epoch with optimizations",
-	}
-	// Scatter scatters sequential processes to  multiple cores
-	Scatter = cli.BoolFlag{
-		Name:  "scatter",
-		Usage: "Scatter sequential processes to multiple cores",
-	}
-	pruneFinalizedStatesFlag = cli.BoolFlag{
-		Name:  "prune-finalized-states",
-		Usage: "Delete old states from the database after reaching new finalized checkpoint",
-	}
 	// enableSkipSlotsCache enables the skips slots lru cache to be used in runtime.
 	enableSkipSlotsCache = cli.BoolFlag{
 		Name:  "enable-skip-slots-cache",
@@ -90,6 +76,26 @@ var (
 	kafkaBootstrapServersFlag = cli.StringFlag{
 		Name:  "kafka-url",
 		Usage: "Stream attestations and blocks to specified kafka servers. This field is used for bootstrap.servers kafka config field.",
+	}
+	enableSnappyDBCompressionFlag = cli.BoolFlag{
+		Name:  "snappy",
+		Usage: "Enables snappy compression in the database.",
+	}
+	enablePruneBoundaryStateFlag = cli.BoolFlag{
+		Name:  "prune-states",
+		Usage: "Prune epoch boundary states before last finalized check point",
+	}
+	initSyncVerifyEverythingFlag = cli.BoolFlag{
+		Name: "initial-sync-verify-all-signatures",
+		Usage: "Initial sync to finalized checkpoint with verifying block's signature, RANDAO " +
+			"and attestation's aggregated signatures. Without this flag, only the proposer " +
+			"signature is verified until the node reaches the end of the finalized chain.",
+	}
+	initSyncCacheState = cli.BoolFlag{
+		Name: "initial-sync-cache-state",
+		Usage: "Save state in cache during initial sync. We currently save state in the DB during " +
+			"initial sync and disk-IO is one of the biggest bottleneck. This still saves finalized state in DB " +
+			"and start syncing from there",
 	}
 )
 
@@ -107,11 +113,35 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedOptimizeProcessEpoch = cli.BoolFlag{
+		Name:   "optimize-process-epoch",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedPruneFinalizedStatesFlag = cli.BoolFlag{
+		Name:   "prune-finalized-states",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedScatterFlag = cli.BoolFlag{
+		Name:   "scatter",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedInitSyncNoVerifyFlag = cli.BoolFlag{
+		Name:   "init-sync-no-verify",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
 	deprecatedNoGenesisDelayFlag,
 	deprecatedEnableFinalizedBlockRootIndexFlag,
+	deprecatedScatterFlag,
+	deprecatedPruneFinalizedStatesFlag,
+	deprecatedOptimizeProcessEpoch,
+	deprecatedInitSyncNoVerifyFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -126,11 +156,11 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	writeSSZStateTransitionsFlag,
 	EnableAttestationCacheFlag,
 	EnableEth1DataVoteCacheFlag,
-	InitSyncNoVerifyFlag,
+	EnableCustomStateSSZ,
+	initSyncVerifyEverythingFlag,
+	initSyncCacheState,
 	NewCacheFlag,
 	SkipBLSVerifyFlag,
-	OptimizeProcessEpoch,
-	Scatter,
 	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,
 	enableBLSPubkeyCacheFlag,
@@ -138,6 +168,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableCommitteeCacheFlag,
 	enableActiveIndicesCacheFlag,
 	enableActiveCountCacheFlag,
-	pruneFinalizedStatesFlag,
 	enableSkipSlotsCache,
+	enableSnappyDBCompressionFlag,
+	enablePruneBoundaryStateFlag,
 }...)

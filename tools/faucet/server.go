@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,26 +18,27 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	recaptcha "github.com/prestonvanloon/go-recaptcha"
 	faucetpb "github.com/prysmaticlabs/prysm/proto/faucet"
-	"google.golang.org/grpc/peer"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"google.golang.org/grpc/metadata"
 )
-
-const minScore = 0.8
 
 var fundingAmount = big.NewInt(3.5 * params.Ether)
 var funded = make(map[string]bool)
 var fundingLock sync.Mutex
 
 type faucetServer struct {
-	r      recaptcha.Recaptcha
-	client *ethclient.Client
-	funder common.Address
-	pk     *ecdsa.PrivateKey
+	r        recaptcha.Recaptcha
+	client   *ethclient.Client
+	funder   common.Address
+	pk       *ecdsa.PrivateKey
+	minScore float64
 }
 
 func newFaucetServer(
 	r recaptcha.Recaptcha,
 	rpcPath string,
 	funderPrivateKey string,
+	minScore float64,
 ) *faucetServer {
 	client, err := ethclient.DialContext(context.Background(), rpcPath)
 	if err != nil {
@@ -59,21 +61,24 @@ func newFaucetServer(
 	fmt.Printf("Funder has %d\n", bal)
 
 	return &faucetServer{
-		r:      r,
-		client: client,
-		funder: funder,
-		pk:     pk,
+		r:        r,
+		client:   client,
+		funder:   funder,
+		pk:       pk,
+		minScore: minScore,
 	}
 }
 
 func (s *faucetServer) verifyRecaptcha(ctx context.Context, req *faucetpb.FundingRequest) error {
-	p, ok := peer.FromContext(ctx)
-	if !ok {
-		return errors.New("peer from ctx not ok")
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok || len(md.Get("x-forwarded-for")) < 1 {
+		return errors.New("metadata not ok")
 	}
-	fmt.Printf("Sending captcha request for peer %s\n", p.Addr.String())
 
-	rr, err := s.r.Check(p.Addr.String(), req.RecaptchaResponse)
+	peer := md.Get("x-forwarded-for")[0]
+	fmt.Printf("Sending captcha request for peer %s\n", peer)
+
+	rr, err := s.r.Check(peer, req.RecaptchaResponse)
 	if err != nil {
 		return err
 	}
@@ -81,8 +86,17 @@ func (s *faucetServer) verifyRecaptcha(ctx context.Context, req *faucetpb.Fundin
 		fmt.Printf("Unsuccessful recaptcha request. Error codes: %+v\n", rr.ErrorCodes)
 		return errors.New("failed")
 	}
-	if rr.Score < minScore {
-		return errors.New("recaptcha score too low")
+	if rr.Score < s.minScore {
+		return fmt.Errorf("recaptcha score too low (%f)", rr.Score)
+	}
+	if roughtime.Now().After(rr.ChallengeTS.Add(2 * time.Minute)) {
+		return errors.New("captcha challenge too old")
+	}
+	if rr.Action != req.WalletAddress {
+		return fmt.Errorf("action was %s, wanted %s", rr.Action, req.WalletAddress)
+	}
+	if !strings.HasSuffix(rr.Hostname, "prylabs.net") {
+		return fmt.Errorf("expected hostname (%s) to end in prylabs.net", rr.Hostname)
 	}
 
 	return nil
@@ -91,9 +105,9 @@ func (s *faucetServer) verifyRecaptcha(ctx context.Context, req *faucetpb.Fundin
 // RequestFunds from the ethereum 1.x faucet. Requires a valid captcha
 // response.
 func (s *faucetServer) RequestFunds(ctx context.Context, req *faucetpb.FundingRequest) (*faucetpb.FundingResponse, error) {
-
 	if err := s.verifyRecaptcha(ctx, req); err != nil {
-		return &faucetpb.FundingResponse{Error: fmt.Sprintf("Recaptcha failure: %v", err)}, nil
+		fmt.Printf("Recaptcha failure %v\n", err)
+		return &faucetpb.FundingResponse{Error: "recaptcha error"}, nil
 	}
 
 	fundingLock.Lock()
@@ -108,6 +122,7 @@ func (s *faucetServer) RequestFunds(ctx context.Context, req *faucetpb.FundingRe
 	if err != nil {
 		return &faucetpb.FundingResponse{Error: fmt.Sprintf("Failed to send transaction %v", err)}, nil
 	}
+	fmt.Printf("Funded with TX %s\n", txHash)
 
 	return &faucetpb.FundingResponse{
 		Amount:          fundingAmount.String(),

@@ -11,10 +11,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -26,6 +27,8 @@ import (
 var (
 	depositEventSignature = hashutil.HashKeccak256([]byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)"))
 )
+
+const eth1LookBackPeriod = 100
 
 // Eth2GenesisPowchainInfo retrieves the genesis time and eth1 block number of the beacon chain
 // from the deposit contract.
@@ -94,9 +97,13 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 
 	if int64(index) != s.lastReceivedMerkleIndex+1 {
 		missedDepositLogsCount.Inc()
-		if err := s.requestMissingLogs(ctx, depositLog.BlockNumber, int64(index-1)); err != nil {
-			return errors.Wrap(err, "Could not get correct merkle index")
+		if s.requestingOldLogs {
+			return errors.New("received incorrect merkle index")
 		}
+		if err := s.requestMissingLogs(ctx, depositLog.BlockNumber, int64(index-1)); err != nil {
+			return errors.Wrap(err, "could not get correct merkle index")
+		}
+
 	}
 	s.lastReceivedMerkleIndex = int64(index)
 
@@ -216,7 +223,12 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 	log.WithFields(logrus.Fields{
 		"ChainStartTime": chainStartTime,
 	}).Info("Minimum number of validators reached for beacon-chain to start")
-	s.chainStartFeed.Send(chainStartTime)
+	s.stateNotifier.StateFeed().Send(&statefeed.Event{
+		Type: statefeed.ChainStarted,
+		Data: &statefeed.ChainStartedData{
+			StartTime: chainStartTime,
+		},
+	})
 }
 
 func (s *Service) setGenesisTime(timeStamp uint64) {
@@ -294,19 +306,43 @@ func (s *Service) requestBatchedLogs(ctx context.Context) error {
 // requestMissingLogs requests any logs that were missed by requesting from previous blocks
 // until the current block(exclusive).
 func (s *Service) requestMissingLogs(ctx context.Context, blkNumber uint64, wantedIndex int64) error {
+	// Prevent this method from being called recursively
+	s.requestingOldLogs = true
+	defer func() {
+		s.requestingOldLogs = false
+	}()
 	// We request from the last requested block till the current block(exclusive)
 	beforeCurrentBlk := big.NewInt(int64(blkNumber) - 1)
+	startBlock := s.lastRequestedBlock.Uint64() + 1
+	for {
+		err := s.processBlksInRange(ctx, startBlock, beforeCurrentBlk.Uint64())
+		if err != nil {
+			return err
+		}
 
-	for i := s.lastRequestedBlock.Uint64() + 1; i <= beforeCurrentBlk.Uint64(); i++ {
+		if s.lastReceivedMerkleIndex == wantedIndex {
+			break
+		}
+
+		// If the required logs still do not exist after the lookback period, then we return an error.
+		if startBlock < s.lastRequestedBlock.Uint64()-eth1LookBackPeriod {
+			return fmt.Errorf(
+				"latest index observed is not accurate, wanted %d, but received  %d",
+				wantedIndex,
+				s.lastReceivedMerkleIndex,
+			)
+		}
+		startBlock--
+	}
+	return nil
+}
+
+func (s *Service) processBlksInRange(ctx context.Context, startBlk uint64, endBlk uint64) error {
+	for i := startBlk; i <= endBlk; i++ {
 		err := s.ProcessETH1Block(ctx, big.NewInt(int64(i)))
 		if err != nil {
 			return err
 		}
-	}
-
-	if s.lastReceivedMerkleIndex != wantedIndex {
-		return fmt.Errorf("despite requesting missing logs, latest index observed is not accurate. "+
-			"Wanted %d but got %d", wantedIndex, s.lastReceivedMerkleIndex)
 	}
 	return nil
 }

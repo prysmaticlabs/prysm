@@ -10,13 +10,118 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockOps "github.com/prysmaticlabs/prysm/beacon-chain/operations/testing"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+func TestServer_ListAttestations_NoResults(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	bs := &Server{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: &pbp2p.BeaconState{Slot: 0},
+		},
+	}
+	wanted := &ethpb.ListAttestationsResponse{
+		Attestations:  make([]*ethpb.Attestation, 0),
+		TotalSize:     int32(0),
+		NextPageToken: strconv.Itoa(0),
+	}
+	res, err := bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
+		QueryFilter: &ethpb.ListAttestationsRequest_SourceEpoch{SourceEpoch: 0},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(wanted, res) {
+		t.Errorf("Wanted %v, received %v", wanted, res)
+	}
+}
+
+func TestServer_ListAttestations_Genesis(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	bs := &Server{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: &pbp2p.BeaconState{Slot: 0},
+		},
+	}
+
+	// Should throw an error if no genesis data is found.
+	if _, err := bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
+		QueryFilter: &ethpb.ListAttestationsRequest_Genesis{
+			Genesis: true,
+		},
+	}); err != nil && !strings.Contains(err.Error(), "Could not find genesis") {
+		t.Fatal(err)
+	}
+
+	parentRoot := [32]byte{1, 2, 3}
+	blk := &ethpb.BeaconBlock{
+		Slot:       0,
+		ParentRoot: parentRoot[:],
+	}
+	root, err := ssz.SigningRoot(blk)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveBlock(ctx, blk); err != nil {
+		t.Fatal(err)
+	}
+	att := &ethpb.Attestation{
+		AggregationBits: bitfield.Bitlist{0b11},
+		Data: &ethpb.AttestationData{
+			Slot:            0,
+			BeaconBlockRoot: root[:],
+		},
+		CustodyBits: bitfield.Bitlist{0b10},
+	}
+	if err := db.SaveAttestation(ctx, att); err != nil {
+		t.Fatal(err)
+	}
+	wanted := &ethpb.ListAttestationsResponse{
+		Attestations:  []*ethpb.Attestation{att},
+		NextPageToken: "",
+		TotalSize:     1,
+	}
+
+	res, err := bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
+		QueryFilter: &ethpb.ListAttestationsRequest_Genesis{
+			Genesis: true,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(wanted, res) {
+		t.Errorf("Wanted %v, received %v", wanted, res)
+	}
+
+	// Should throw an error if there is more than 1 block
+	// for the genesis slot.
+	if err := db.SaveBlock(ctx, blk); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := bs.ListAttestations(ctx, &ethpb.ListAttestationsRequest{
+		QueryFilter: &ethpb.ListAttestationsRequest_Genesis{
+			Genesis: true,
+		},
+	}); err != nil && !strings.Contains(err.Error(), "Found more than 1") {
+		t.Fatal(err)
+	}
+}
 
 func TestServer_ListAttestations_NoPagination(t *testing.T) {
 	db := dbTest.SetupDB(t)
@@ -293,7 +398,7 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 						AggregationBits: bitfield.Bitlist{0b11},
 						CustodyBits:     bitfield.NewBitlist(1)},
 				},
-				NextPageToken: strconv.Itoa(34),
+				NextPageToken: "",
 				TotalSize:     int32(count)}},
 		{
 			req: &ethpb.ListAttestationsRequest{

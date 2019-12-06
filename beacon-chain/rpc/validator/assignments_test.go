@@ -15,7 +15,6 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -27,11 +26,7 @@ func TestCommitteeAssignment_NextEpoch_WrongPubkeyLength(t *testing.T) {
 	ctx := context.Background()
 	helpers.ClearAllCaches()
 
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 8)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, _ := testutil.DeterministicGenesisState(t, 8)
 	block := blk.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
@@ -60,11 +55,8 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 10)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatalf("Could not setup genesis state: %v", err)
-	}
+	beaconState, _ := testutil.DeterministicGenesisState(t, 10)
+
 	genesis := blk.NewGenesisBlock([]byte{})
 	genesisRoot, err := ssz.SigningRoot(genesis)
 	if err != nil {
@@ -96,9 +88,12 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := uint64(64)
-
-	deposits, _, _ := testutil.SetupInitialDeposits(t, depChainStart)
-	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(depChainStart)
+	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}
@@ -169,13 +164,16 @@ func TestCommitteeAssignment_CurrentEpoch_ShouldNotFail(t *testing.T) {
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := uint64(64)
-
-	deposits, _, _ := testutil.SetupInitialDeposits(t, depChainStart)
-	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(depChainStart)
+	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	if err != nil {
+		t.Fatal(err)
+	}
+	bState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}
-	state.Slot = 5 // Set state to non-epoch start slot.
+	bState.Slot = 5 // Set state to non-epoch start slot.
 
 	genesisRoot, err := ssz.SigningRoot(genesis)
 	if err != nil {
@@ -202,7 +200,7 @@ func TestCommitteeAssignment_CurrentEpoch_ShouldNotFail(t *testing.T) {
 
 	vs := &Server{
 		BeaconDB:    db,
-		HeadFetcher: &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		HeadFetcher: &mockChain.ChainService{State: bState, Root: genesisRoot[:]},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}
 
@@ -227,8 +225,12 @@ func TestCommitteeAssignment_MultipleKeys_OK(t *testing.T) {
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := uint64(64)
-	deposits, _, _ := testutil.SetupInitialDeposits(t, depChainStart)
-	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(depChainStart)
+	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}

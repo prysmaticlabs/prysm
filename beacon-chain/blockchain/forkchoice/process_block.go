@@ -6,17 +6,20 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -105,6 +108,9 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 		}
 
 		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch) + 1
+		if featureconfig.Get().PruneEpochBoundaryStates {
+			startSlot = helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
+		}
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 		if endSlot > startSlot {
 			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
@@ -142,15 +148,19 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	return nil
 }
 
-// OnBlockNoVerifyStateTransition is called when an initial sync block is received.
+// OnBlockInitialSyncStateTransition is called when an initial sync block is received.
 // It runs state transition on the block and without any BLS verification. The BLS verification
-// includes proposer signature, randao and attestation's aggregated signature.
-func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.BeaconBlock) error {
+// includes proposer signature, randao and attestation's aggregated signature. It also does not save
+// attestations.
+func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "forkchoice.onBlock")
 	defer span.End()
 
+	s.initSyncStateLock.Lock()
+	defer s.initSyncStateLock.Unlock()
+
 	// Retrieve incoming block's pre state.
-	preState, err := s.getBlockPreState(ctx, b)
+	preState, err := s.cachedPreState(ctx, b)
 	if err != nil {
 		return err
 	}
@@ -170,8 +180,13 @@ func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.Bea
 	if err != nil {
 		return errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
 	}
-	if err := s.db.SaveState(ctx, postState, root); err != nil {
-		return errors.Wrap(err, "could not save state")
+
+	if featureconfig.Get().InitSyncCacheState {
+		s.initSyncState[root] = postState
+	} else {
+		if err := s.db.SaveState(ctx, postState, root); err != nil {
+			return errors.Wrap(err, "could not save state")
+		}
 	}
 
 	// Update justified check point.
@@ -189,12 +204,19 @@ func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.Bea
 		helpers.ClearAllCaches()
 
 		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch) + 1
+		if featureconfig.Get().PruneEpochBoundaryStates {
+			startSlot = helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
+		}
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 		if endSlot > startSlot {
 			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
 				return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
 					startSlot, endSlot)
 			}
+		}
+
+		if err := s.saveInitState(ctx, postState); err != nil {
+			return errors.Wrap(err, "could not save init sync finalized state")
 		}
 
 		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint); err != nil {
@@ -209,9 +231,12 @@ func (s *Store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.Bea
 	if err := s.saveNewValidators(ctx, preStateValidatorCount, postState); err != nil {
 		return errors.Wrap(err, "could not save finalized checkpoint")
 	}
-	// Save the unseen attestations from block to db.
-	if err := s.saveNewBlockAttestations(ctx, b.Body.Attestations); err != nil {
-		return errors.Wrap(err, "could not save attestations")
+
+	if flags.Get().EnableArchive {
+		// Save the unseen attestations from block to db.
+		if err := s.saveNewBlockAttestations(ctx, b.Body.Attestations); err != nil {
+			return errors.Wrap(err, "could not save attestations")
+		}
 	}
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.
@@ -297,17 +322,14 @@ func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attes
 	if err != nil {
 		return errors.Wrap(err, "could not convert attestation to indexed attestation")
 	}
+	s.voteLock.Lock()
+	defer s.voteLock.Unlock()
 	for _, i := range append(indexedAtt.CustodyBit_0Indices, indexedAtt.CustodyBit_1Indices...) {
-		vote, err := s.db.ValidatorLatestVote(ctx, i)
-		if err != nil {
-			return errors.Wrapf(err, "could not get latest vote for validator %d", i)
-		}
-		if vote == nil || tgt.Epoch > vote.Epoch {
-			if err := s.db.SaveValidatorLatestVote(ctx, i, &pb.ValidatorLatestVote{
+		vote, ok := s.latestVoteMap[i]
+		if !ok || tgt.Epoch > vote.Epoch {
+			s.latestVoteMap[i] = &pb.ValidatorLatestVote{
 				Epoch: tgt.Epoch,
 				Root:  tgt.Root,
-			}); err != nil {
-				return errors.Wrapf(err, "could not save latest vote for validator %d", i)
 			}
 		}
 	}
@@ -408,8 +430,19 @@ func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot ui
 	ctx, span := trace.StartSpan(ctx, "forkchoice.rmStatesBySlots")
 	defer span.End()
 
-	if !featureconfig.Get().PruneFinalizedStates {
-		return nil
+	// Make sure start slot is not a skipped slot
+	if featureconfig.Get().PruneEpochBoundaryStates {
+		for i := startSlot; i > 0; i-- {
+			filter := filters.NewFilter().SetStartSlot(i).SetEndSlot(i)
+			b, err := s.db.Blocks(ctx, filter)
+			if err != nil {
+				return err
+			}
+			if len(b) > 0 {
+				startSlot = i
+				break
+			}
+		}
 	}
 
 	// Make sure finalized slot is not a skipped slot.
@@ -429,8 +462,11 @@ func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot ui
 	if startSlot == 0 {
 		startSlot++
 	}
+	// If end slot comes less than start slot
+	if endSlot < startSlot {
+		endSlot = startSlot
+	}
 
-	// Do not remove finalized state that's in the middle of slot ranges.
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
 	roots, err := s.db.BlockRoots(ctx, filter)
 	if err != nil {
@@ -441,5 +477,53 @@ func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot ui
 		return err
 	}
 
+	return nil
+}
+
+// This receives cached state in memory for initial sync only during initial sync.
+func (s *Store) cachedPreState(ctx context.Context, b *ethpb.BeaconBlock) (*pb.BeaconState, error) {
+	if featureconfig.Get().InitSyncCacheState {
+		preState := s.initSyncState[bytesutil.ToBytes32(b.ParentRoot)]
+		var err error
+		if preState == nil {
+			preState, err = s.db.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
+			}
+			if preState == nil {
+				return nil, fmt.Errorf("pre state of slot %d does not exist", b.Slot)
+			}
+		}
+		return proto.Clone(preState).(*pb.BeaconState), nil
+	}
+
+	preState, err := s.db.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
+	}
+	if preState == nil {
+		return nil, fmt.Errorf("pre state of slot %d does not exist", b.Slot)
+	}
+
+	return preState, nil
+}
+
+// This saves every finalized state in DB during initial sync, needed as part of optimization to
+// use cache state during initial sync in case of restart.
+func (s *Store) saveInitState(ctx context.Context, state *pb.BeaconState) error {
+	if !featureconfig.Get().InitSyncCacheState {
+		return nil
+	}
+	finalizedRoot := bytesutil.ToBytes32(state.FinalizedCheckpoint.Root)
+	fs := s.initSyncState[finalizedRoot]
+
+	if err := s.db.SaveState(ctx, fs, finalizedRoot); err != nil {
+		return errors.Wrap(err, "could not save state")
+	}
+	for r, oldState := range s.initSyncState {
+		if oldState.Slot < state.FinalizedCheckpoint.Epoch*params.BeaconConfig().SlotsPerEpoch {
+			delete(s.initSyncState, r)
+		}
+	}
 	return nil
 }

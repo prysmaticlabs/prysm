@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
 // Database defines the necessary methods for Prysm's eth2 backend which may
@@ -41,11 +41,6 @@ type Database interface {
 	SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool
 	// Validator related methods.
-	ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*ethereum_beacon_p2p_v1.ValidatorLatestVote, error)
-	HasValidatorLatestVote(ctx context.Context, validatorIdx uint64) bool
-	DeleteValidatorLatestVote(ctx context.Context, validatorIdx uint64) error
-	SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64, vote *ethereum_beacon_p2p_v1.ValidatorLatestVote) error
-	SaveValidatorLatestVotes(ctx context.Context, validatorIndices []uint64, votes []*ethereum_beacon_p2p_v1.ValidatorLatestVote) error
 	ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, bool, error)
 	HasValidatorIndex(ctx context.Context, publicKey [48]byte) bool
 	DeleteValidatorIndex(ctx context.Context, publicKey [48]byte) error
@@ -77,10 +72,10 @@ type Database interface {
 	SaveJustifiedCheckpoint(ctx context.Context, checkpoint *eth.Checkpoint) error
 	SaveFinalizedCheckpoint(ctx context.Context, checkpoint *eth.Checkpoint) error
 	// Archival data handlers for storing/retrieving historical beacon node information.
-	ArchivedActiveValidatorChanges(ctx context.Context, epoch uint64) (*eth.ArchivedActiveSetChanges, error)
-	SaveArchivedActiveValidatorChanges(ctx context.Context, epoch uint64, changes *eth.ArchivedActiveSetChanges) error
-	ArchivedCommitteeInfo(ctx context.Context, epoch uint64) (*eth.ArchivedCommitteeInfo, error)
-	SaveArchivedCommitteeInfo(ctx context.Context, epoch uint64, info *eth.ArchivedCommitteeInfo) error
+	ArchivedActiveValidatorChanges(ctx context.Context, epoch uint64) (*ethereum_beacon_p2p_v1.ArchivedActiveSetChanges, error)
+	SaveArchivedActiveValidatorChanges(ctx context.Context, epoch uint64, changes *ethereum_beacon_p2p_v1.ArchivedActiveSetChanges) error
+	ArchivedCommitteeInfo(ctx context.Context, epoch uint64) (*ethereum_beacon_p2p_v1.ArchivedCommitteeInfo, error)
+	SaveArchivedCommitteeInfo(ctx context.Context, epoch uint64, info *ethereum_beacon_p2p_v1.ArchivedCommitteeInfo) error
 	ArchivedBalances(ctx context.Context, epoch uint64) ([]uint64, error)
 	SaveArchivedBalances(ctx context.Context, epoch uint64, balances []uint64) error
 	ArchivedValidatorParticipation(ctx context.Context, epoch uint64) (*eth.ValidatorParticipation, error)

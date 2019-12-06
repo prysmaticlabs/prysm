@@ -6,7 +6,9 @@ import (
 	"sort"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -28,7 +30,7 @@ func (r *RegularSync) processPendingBlocksQueue() {
 			r.processPendingBlocks(ctx)
 		case <-r.ctx.Done():
 			log.Debug("Context closed, exiting routine")
-			break
+			return
 		}
 	}
 }
@@ -39,6 +41,9 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 	defer span.End()
 
 	pids := peerstatus.Keys()
+	if err := r.validatePendingSlots(); err != nil {
+		return errors.Wrap(err, "could not validate pending slots")
+	}
 	slots := r.sortedPendingSlots()
 
 	span.AddAttributes(
@@ -109,6 +114,42 @@ func (r *RegularSync) sortedPendingSlots() []int {
 		slots = append(slots, int(s))
 	}
 	sort.Ints(slots)
-
 	return slots
+}
+
+// validatePendingSlots validates the pending blocks
+// by their slot. If they are before the current finalized
+// checkpoint, these blocks are removed from the queue.
+func (r *RegularSync) validatePendingSlots() error {
+	r.pendingQueueLock.RLock()
+	defer r.pendingQueueLock.RUnlock()
+	oldBlockRoots := make(map[[32]byte]bool)
+
+	finalizedEpoch := r.chain.FinalizedCheckpt().Epoch
+	for s, b := range r.slotToPendingBlocks {
+		epoch := helpers.SlotToEpoch(s)
+		// remove all descendant blocks of old blocks
+		if oldBlockRoots[bytesutil.ToBytes32(b.ParentRoot)] {
+			root, err := ssz.SigningRoot(b)
+			if err != nil {
+				return err
+			}
+			oldBlockRoots[root] = true
+			delete(r.slotToPendingBlocks, s)
+			delete(r.seenPendingBlocks, root)
+			continue
+		}
+		// don't process old blocks
+		if finalizedEpoch > 0 && epoch <= finalizedEpoch {
+			blkRoot, err := ssz.SigningRoot(b)
+			if err != nil {
+				return err
+			}
+			oldBlockRoots[blkRoot] = true
+			delete(r.slotToPendingBlocks, s)
+			delete(r.seenPendingBlocks, blkRoot)
+		}
+	}
+	oldBlockRoots = nil
+	return nil
 }

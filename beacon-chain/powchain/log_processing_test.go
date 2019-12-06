@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
@@ -49,7 +50,11 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	}
 
 	testAcc.Backend.Commit()
-	deposits, depositRoots, _ := testutil.SetupInitialDeposits(t, 1)
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(1)
+	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
+	if err != nil {
+		t.Fatal(err)
+	}
 	data := deposits[0].Data
 
 	testAcc.TxOpts.Value = contracts.Amount32Eth()
@@ -112,7 +117,11 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 
 	testAcc.Backend.Commit()
 
-	deposits, depositRoots, _ := testutil.SetupInitialDeposits(t, 1)
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(1)
+	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
+	if err != nil {
+		t.Fatal(err)
+	}
 	data := deposits[0].Data
 
 	testAcc.TxOpts.Value = contracts.Amount32Eth()
@@ -174,7 +183,11 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 		t.Fatalf("Could not init from contract: %v", err)
 	}
 
-	deposits, depositRoots, _ := testutil.SetupInitialDeposits(t, 1)
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(1)
+	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
+	if err != nil {
+		t.Fatal(err)
+	}
 	data := deposits[0].Data
 
 	testAcc.TxOpts.Value = contracts.Amount32Eth()
@@ -246,7 +259,11 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	testAcc.Backend.Commit()
 	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
 
-	deposits, depositRoots, _ := testutil.SetupInitialDeposits(t, 1)
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(1)
+	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
+	if err != nil {
+		t.Fatal(err)
+	}
 	data := deposits[0].Data
 
 	testAcc.TxOpts.Value = contracts.Amount32Eth()
@@ -314,7 +331,12 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	testAcc.Backend.Commit()
 	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
 
-	deposits, depositRoots, _ := testutil.SetupInitialDeposits(t, uint64(depositsReqForChainStart))
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(uint64(depositsReqForChainStart))
+
+	_, roots, err := testutil.DeterministicDepositTrie(len(deposits))
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// 64 Validators are used as size required for beacon-chain to start. This number
 	// is defined in the deposit contract as the number required for the testnet. The actual number
@@ -323,7 +345,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 		data := deposits[i].Data
 		testAcc.TxOpts.Value = contracts.Amount32Eth()
 		testAcc.TxOpts.GasLimit = 1000000
-		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, depositRoots[i]); err != nil {
+		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, roots[i]); err != nil {
 			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 
@@ -348,9 +370,11 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 			depositsReqForChainStart,
 		)
 	}
-	genesisTimeChan := make(chan time.Time, 1)
-	sub := web3Service.chainStartFeed.Subscribe(genesisTimeChan)
-	defer sub.Unsubscribe()
+
+	// Set up our subscriber now to listen for the chain started event.
+	stateChannel := make(chan *statefeed.Event, 1)
+	stateSub := web3Service.stateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
 
 	for _, log := range logs {
 		web3Service.ProcessLog(context.Background(), log)
@@ -370,7 +394,16 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 		)
 	}
 
-	<-genesisTimeChan
+	// Receive the chain started event.
+	for started := false; !started; {
+		select {
+		case event := <-stateChannel:
+			if event.Type == statefeed.ChainStarted {
+				started = true
+			}
+		}
+	}
+
 	testutil.AssertLogsDoNotContain(t, hook, "Unable to unpack ChainStart log data")
 	testutil.AssertLogsDoNotContain(t, hook, "Receipt root from log doesn't match the root saved in memory")
 	testutil.AssertLogsDoNotContain(t, hook, "Invalid timestamp from log")
@@ -413,7 +446,11 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 
 	totalNumOfDeposits := depositsReqForChainStart + 30
 
-	deposits, depositRoots, _ := testutil.SetupInitialDeposits(t, uint64(totalNumOfDeposits))
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(uint64(totalNumOfDeposits))
+	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
+	if err != nil {
+		t.Fatal(err)
+	}
 	depositOffset := 5
 
 	// 64 Validators are used as size required for beacon-chain to start. This number
@@ -433,9 +470,10 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 		}
 	}
 
-	genesisTimeChan := make(chan time.Time, 1)
-	sub := web3Service.chainStartFeed.Subscribe(genesisTimeChan)
-	defer sub.Unsubscribe()
+	// Set up our subscriber now to listen for the chain started event.
+	stateChannel := make(chan *statefeed.Event, 1)
+	stateSub := web3Service.stateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
 
 	err = web3Service.processPastLogs(context.Background())
 	if err != nil {
@@ -452,7 +490,16 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 		)
 	}
 
-	<-genesisTimeChan
+	// Receive the chain started event.
+	for started := false; !started; {
+		select {
+		case event := <-stateChannel:
+			if event.Type == statefeed.ChainStarted {
+				started = true
+			}
+		}
+	}
+
 	testutil.AssertLogsDoNotContain(t, hook, "Unable to unpack ChainStart log data")
 	testutil.AssertLogsDoNotContain(t, hook, "Receipt root from log doesn't match the root saved in memory")
 	testutil.AssertLogsDoNotContain(t, hook, "Invalid timestamp from log")
@@ -489,7 +536,11 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 	testAcc.Backend.Commit()
 	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
 	depositsWanted := 10
-	deposits, depositRoots, _ := testutil.SetupInitialDeposits(t, uint64(depositsWanted))
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(uint64(depositsWanted))
+	_, depositRoots, err := testutil.DeterministicDepositTrie(len(deposits))
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	for i := 0; i < depositsWanted; i++ {
 		data := deposits[i].Data
@@ -532,6 +583,22 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 
 	if web3Service.lastReceivedMerkleIndex != int64(depositsWanted-1) {
 		t.Errorf("missing logs were not re-requested. Wanted Index %d but got %d", depositsWanted-1, web3Service.lastReceivedMerkleIndex)
+	}
+
+	web3Service.lastReceivedMerkleIndex = 0
+	web3Service.lastRequestedBlock = new(big.Int)
+
+	logsToBeProcessed = append(logs[:depositsWanted-8], logs[depositsWanted-2:]...)
+	// We purposely miss processing the middle 7 logs so that the service, re-requests them.
+	for _, log := range logsToBeProcessed {
+		if err := web3Service.ProcessLog(context.Background(), log); err != nil {
+			t.Fatal(err)
+		}
+		web3Service.lastRequestedBlock.Set(big.NewInt(int64(log.BlockNumber)))
+	}
+
+	if web3Service.lastReceivedMerkleIndex != int64(depositsWanted-1) {
+		t.Errorf("Missing logs were not re-requested want = %d but got = %d", depositsWanted-1, web3Service.lastReceivedMerkleIndex)
 	}
 
 	hook.Reset()

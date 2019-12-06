@@ -6,31 +6,34 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/internal"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 type mocks struct {
-	proposerClient  *internal.MockProposerServiceClient
-	validatorClient *internal.MockValidatorServiceClient
-	attesterClient  *internal.MockAttesterServiceClient
+	proposerClient   *internal.MockProposerServiceClient
+	validatorClient  *internal.MockValidatorServiceClient
+	attesterClient   *internal.MockAttesterServiceClient
+	aggregatorClient *internal.MockAggregatorServiceClient
 }
 
 func setup(t *testing.T) (*validator, *mocks, func()) {
 	ctrl := gomock.NewController(t)
 	m := &mocks{
-		proposerClient:  internal.NewMockProposerServiceClient(ctrl),
-		validatorClient: internal.NewMockValidatorServiceClient(ctrl),
-		attesterClient:  internal.NewMockAttesterServiceClient(ctrl),
+		proposerClient:   internal.NewMockProposerServiceClient(ctrl),
+		validatorClient:  internal.NewMockValidatorServiceClient(ctrl),
+		attesterClient:   internal.NewMockAttesterServiceClient(ctrl),
+		aggregatorClient: internal.NewMockAggregatorServiceClient(ctrl),
 	}
 	validator := &validator{
-		proposerClient:  m.proposerClient,
-		attesterClient:  m.attesterClient,
-		validatorClient: m.validatorClient,
-		keys:            keyMap,
+		proposerClient:   m.proposerClient,
+		attesterClient:   m.attesterClient,
+		validatorClient:  m.validatorClient,
+		aggregatorClient: m.aggregatorClient,
+		keys:             keyMap,
 	}
 
 	return validator, m, ctrl.Finish

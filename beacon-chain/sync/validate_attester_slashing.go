@@ -6,12 +6,13 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/karlseguin/ccache"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
 )
 
 // seenAttesterSlashings represents a cache of all the seen slashings
@@ -33,10 +34,14 @@ func (r *RegularSync) validateAttesterSlashing(ctx context.Context, msg proto.Me
 		return false, nil
 	}
 
+	ctx, span := trace.StartSpan(ctx, "sync.validateAttesterSlashing")
+	defer span.End()
+
 	slashing, ok := msg.(*ethpb.AttesterSlashing)
 	if !ok {
 		return false, nil
 	}
+
 	cacheKey, err := attSlashingCacheKey(slashing)
 	if err != nil {
 		return false, errors.Wrapf(err, "could not hash attestation slashing")
@@ -51,7 +56,10 @@ func (r *RegularSync) validateAttesterSlashing(ctx context.Context, msg proto.Me
 	}
 
 	// Retrieve head state, advance state to the epoch slot used specified in slashing message.
-	s := r.chain.HeadState()
+	s, err := r.chain.HeadState(ctx)
+	if err != nil {
+		return false, err
+	}
 	slashSlot := slashing.Attestation_1.Data.Target.Epoch * params.BeaconConfig().SlotsPerEpoch
 	if s.Slot < slashSlot {
 		if ctx.Err() != nil {

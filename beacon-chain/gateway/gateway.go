@@ -8,7 +8,7 @@ import (
 	"time"
 
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1_gateway"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1_gateway"
 	"github.com/prysmaticlabs/prysm/shared"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
@@ -47,7 +47,7 @@ func (g *Gateway) Start() {
 
 	g.conn = conn
 
-	gwmux := gwruntime.NewServeMux(gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.JSONPb{OrigName: false}))
+	gwmux := gwruntime.NewServeMux(gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.JSONPb{OrigName: false, EmitDefaults: true}))
 	for _, f := range []func(context.Context, *gwruntime.ServeMux, *grpc.ClientConn) error{
 		ethpb.RegisterNodeHandler,
 		ethpb.RegisterBeaconChainHandler,

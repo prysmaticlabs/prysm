@@ -1,12 +1,13 @@
 package kv
 
 import (
+	"context"
 	"os"
 	"path"
 	"time"
 
 	"github.com/boltdb/bolt"
-	"github.com/karlseguin/ccache"
+	"github.com/dgraph-io/ristretto"
 	"github.com/mdlayher/prombolt"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -16,22 +17,24 @@ import (
 var _ = iface.Database(&Store{})
 
 const (
-	// VotesCacheSize with 1M validators will only be around 50Mb.
-	VotesCacheSize   = 1000000
+	// VotesCacheSize with 1M validators will be 8MB.
+	VotesCacheSize = 1 << 23
+	// NumOfVotes specifies the vote cache size.
+	NumOfVotes       = 1 << 20
 	databaseFileName = "beaconchain.db"
 )
 
-// BlockCacheSize specifies 4 epochs worth of blocks cached.
-var BlockCacheSize = int64(256)
+// BlockCacheSize specifies 1000 slots worth of blocks cached, which
+// would be approximately 2MB
+var BlockCacheSize = int64(1 << 21)
 
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
 type Store struct {
 	db                  *bolt.DB
 	databasePath        string
-	blockCache          *ccache.Cache
-	votesCache          *ccache.Cache
-	validatorIndexCache *ccache.Cache
+	blockCache          *ristretto.Cache
+	validatorIndexCache *ristretto.Cache
 }
 
 // NewKVStore initializes a new boltDB key-value store at the directory
@@ -49,13 +52,29 @@ func NewKVStore(dirPath string) (*Store, error) {
 		}
 		return nil, err
 	}
+	blockCache, err := ristretto.NewCache(&ristretto.Config{
+		NumCounters: 1000,           // number of keys to track frequency of (1000).
+		MaxCost:     BlockCacheSize, // maximum cost of cache (1000 Blocks).
+		BufferItems: 64,             // number of keys per Get buffer.
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	validatorCache, err := ristretto.NewCache(&ristretto.Config{
+		NumCounters: NumOfVotes,     // number of keys to track frequency of (1M).
+		MaxCost:     VotesCacheSize, // maximum cost of cache (8MB).
+		BufferItems: 64,             // number of keys per Get buffer.
+	})
+	if err != nil {
+		return nil, err
+	}
 
 	kv := &Store{
 		db:                  boltDB,
 		databasePath:        dirPath,
-		blockCache:          ccache.New(ccache.Configure().MaxSize(BlockCacheSize)),
-		votesCache:          ccache.New(ccache.Configure().MaxSize(VotesCacheSize)),
-		validatorIndexCache: ccache.New(ccache.Configure().MaxSize(VotesCacheSize)),
+		blockCache:          blockCache,
+		validatorIndexCache: validatorCache,
 	}
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
@@ -83,10 +102,21 @@ func NewKVStore(dirPath string) (*Store, error) {
 			blockSlotIndicesBucket,
 			blockParentRootIndicesBucket,
 			finalizedBlockRootsIndexBucket,
+			// Migration bucket.
+			migrationBucket,
 		)
 	}); err != nil {
 		return nil, err
 	}
+
+	if err := kv.ensureSnappy(); err != nil {
+		return nil, err
+	}
+
+	if err := kv.pruneStates(context.TODO()); err != nil {
+		return nil, err
+	}
+
 	err = prometheus.Register(createBoltCollector(kv.db))
 
 	return kv, err

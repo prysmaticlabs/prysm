@@ -8,16 +8,74 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestServer_ListAssignments_InputOutOfRange(t *testing.T) {
+func TestServer_ListAssignments_CannotRequestFutureEpoch(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	bs := &Server{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: &pbp2p.BeaconState{Slot: 0},
+		},
+	}
+
+	wanted := "Cannot retrieve information about an epoch in the future"
+	if _, err := bs.ListValidatorAssignments(
+		ctx,
+		&ethpb.ListValidatorAssignmentsRequest{
+			QueryFilter: &ethpb.ListValidatorAssignmentsRequest_Epoch{
+				Epoch: 1,
+			},
+		},
+	); err != nil && !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+}
+
+func TestServer_ListAssignments_NoResults(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	bs := &Server{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: &pbp2p.BeaconState{Slot: 0},
+		},
+	}
+	wanted := &ethpb.ValidatorAssignments{
+		Assignments:   make([]*ethpb.ValidatorAssignments_CommitteeAssignment, 0),
+		TotalSize:     int32(0),
+		NextPageToken: strconv.Itoa(0),
+	}
+	res, err := bs.ListValidatorAssignments(
+		ctx,
+		&ethpb.ListValidatorAssignmentsRequest{
+			QueryFilter: &ethpb.ListValidatorAssignmentsRequest_Genesis{
+				Genesis: true,
+			},
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(wanted, res) {
+		t.Errorf("Wanted %v, received %v", wanted, res)
+	}
+}
+
+func TestServer_ListAssignments_Pagination_InputOutOfRange(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -228,7 +286,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveArchivedCommitteeInfo(context.Background(), 0, &ethpb.ArchivedCommitteeInfo{
+	if err := db.SaveArchivedCommitteeInfo(context.Background(), 0, &pbp2p.ArchivedCommitteeInfo{
 		ProposerSeed: proposerSeed[:],
 		AttesterSeed: attesterSeed[:],
 	}); err != nil {
@@ -455,7 +513,7 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 	wantedRes = &ethpb.ValidatorAssignments{
 		Assignments:   assignments,
 		TotalSize:     int32(len(req.Indices)),
-		NextPageToken: "2",
+		NextPageToken: "",
 	}
 
 	if !reflect.DeepEqual(res, wantedRes) {

@@ -6,8 +6,7 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/params"
+	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
 // FinalizationOccurs is an evaluator to make sure finalization is performing as it should.
@@ -23,8 +22,8 @@ func finalizationOccurs(client eth.BeaconChainClient) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")
 	}
-	currentEpoch := chainHead.BlockSlot / params.BeaconConfig().SlotsPerEpoch
-	finalizedEpoch := chainHead.FinalizedSlot / params.BeaconConfig().SlotsPerEpoch
+	currentEpoch := chainHead.HeadEpoch
+	finalizedEpoch := chainHead.FinalizedEpoch
 
 	expectedFinalizedEpoch := currentEpoch - 2
 	if expectedFinalizedEpoch != finalizedEpoch {
@@ -34,8 +33,8 @@ func finalizationOccurs(client eth.BeaconChainClient) error {
 			finalizedEpoch,
 		)
 	}
-	previousJustifiedEpoch := chainHead.PreviousJustifiedSlot / params.BeaconConfig().SlotsPerEpoch
-	currentJustifiedEpoch := chainHead.JustifiedSlot / params.BeaconConfig().SlotsPerEpoch
+	previousJustifiedEpoch := chainHead.PreviousJustifiedEpoch
+	currentJustifiedEpoch := chainHead.JustifiedEpoch
 	if previousJustifiedEpoch+1 != currentJustifiedEpoch {
 		return fmt.Errorf(
 			"there should be no gaps between current and previous justified epochs, received current %d and previous %d",

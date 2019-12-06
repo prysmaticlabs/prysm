@@ -7,12 +7,12 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -25,6 +25,7 @@ type Pool interface {
 	AttestationPool(ctx context.Context, requestedSlot uint64) ([]*ethpb.Attestation, error)
 	AttestationPoolNoVerify(ctx context.Context) ([]*ethpb.Attestation, error)
 	AttestationPoolForForkchoice(ctx context.Context) ([]*ethpb.Attestation, error)
+	AttestationsBySlotCommittee(ctx context.Context, slot uint64, index uint64) ([]*ethpb.Attestation, error)
 }
 
 // Handler defines an interface for a struct equipped for receiving block operations.
@@ -132,6 +133,26 @@ func (s *Service) AttestationPoolNoVerify(ctx context.Context) ([]*ethpb.Attesta
 
 	for _, ac := range s.attestationPool {
 		atts = append(atts, ac.ToAttestations()...)
+	}
+
+	return atts, nil
+}
+
+// AttestationsBySlotCommittee returns the attestations from the attestations pool filtered
+// by slot and committee index.
+func (s *Service) AttestationsBySlotCommittee(ctx context.Context, slot uint64, index uint64) ([]*ethpb.Attestation, error) {
+	ctx, span := trace.StartSpan(ctx, "operations.AttestationsBySlotCommittee")
+	defer span.End()
+
+	s.attestationPoolLock.RLock()
+	defer s.attestationPoolLock.RUnlock()
+
+	atts := make([]*ethpb.Attestation, 0, len(s.attestationPool))
+
+	for _, ac := range s.attestationPool {
+		if ac.Data.Slot == slot && ac.Data.CommitteeIndex == index {
+			atts = append(atts, ac.ToAttestations()...)
+		}
 	}
 
 	return atts, nil

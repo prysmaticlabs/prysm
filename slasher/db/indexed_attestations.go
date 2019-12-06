@@ -8,8 +8,9 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -23,8 +24,8 @@ func createIndexedAttestation(enc []byte) (*ethpb.IndexedAttestation, error) {
 	return protoIdxAtt, nil
 }
 
-func createValidatorIDsToIndexedAttestationList(enc []byte) (*ethpb.ValidatorIDToIdxAttList, error) {
-	protoIdxAtt := &ethpb.ValidatorIDToIdxAttList{}
+func createValidatorIDsToIndexedAttestationList(enc []byte) (*pb.ValidatorIDToIdxAttList, error) {
+	protoIdxAtt := &pb.ValidatorIDToIdxAttList{}
 	err := proto.Unmarshal(enc, protoIdxAtt)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal encoding")
@@ -65,6 +66,32 @@ func (db *Store) IndexedAttestation(targetEpoch uint64, validatorID uint64) ([]*
 	})
 
 	return iAtt, err
+}
+
+// DoubleVotes looks up db for slashable attesting data that were preformed by the same validator.
+func (db *Store) DoubleVotes(targetEpoch uint64, validatorIdx uint64, dataRoot []byte, origAtt *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error) {
+	idxAttestations, err := db.IndexedAttestation(targetEpoch, validatorIdx)
+	if err != nil {
+		return nil, err
+	}
+	var slashIdxAtt []*ethpb.IndexedAttestation
+	for _, at := range idxAttestations {
+		root, err := ssz.HashTreeRoot(at.Data)
+		if err != nil {
+			return nil, err
+		}
+		if !bytes.Equal(root[:], dataRoot) {
+			slashIdxAtt = append(slashIdxAtt, at)
+		}
+	}
+	var as []*ethpb.AttesterSlashing
+	for _, ia := range slashIdxAtt {
+		as = append(as, &ethpb.AttesterSlashing{
+			Attestation_1: origAtt,
+			Attestation_2: ia,
+		})
+	}
+	return as, nil
 }
 
 // HasIndexedAttestation accepts an epoch and validator id and returns true if the indexed attestation exists.
@@ -131,7 +158,7 @@ func createIndexedAttestationIndicesFromData(idxAttestation *ethpb.IndexedAttest
 	if err != nil {
 		return errors.Wrap(err, "failed to hash indexed attestation data.")
 	}
-	protoIdxAtt := &ethpb.ValidatorIDToIdxAtt{
+	protoIdxAtt := &pb.ValidatorIDToIdxAtt{
 		Signature: idxAttestation.Signature,
 		Indices:   indices,
 		DataRoot:  dataRoot[:],
@@ -176,7 +203,7 @@ func (db *Store) DeleteIndexedAttestation(idxAttestation *ethpb.IndexedAttestati
 func removeIndexedAttestationIndicesFromData(idxAttestation *ethpb.IndexedAttestation, tx *bolt.Tx) error {
 	indices := append(idxAttestation.CustodyBit_0Indices, idxAttestation.CustodyBit_1Indices...)
 	dataRoot, err := ssz.HashTreeRoot(idxAttestation.Data)
-	protoIdxAtt := &ethpb.ValidatorIDToIdxAtt{
+	protoIdxAtt := &pb.ValidatorIDToIdxAtt{
 		Signature: idxAttestation.Signature,
 		Indices:   indices,
 		DataRoot:  dataRoot[:],

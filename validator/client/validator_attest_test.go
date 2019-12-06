@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -288,18 +288,18 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 	}
 }
 
-func TestWaitForSlotMidPoint_WaitCorrectly(t *testing.T) {
+func TestWaitForSlotOneThird_WaitCorrectly(t *testing.T) {
 	validator, _, finish := setup(t)
 	defer finish()
 	currentTime := uint64(time.Now().Unix())
 	numOfSlots := uint64(4)
 	validator.genesisTime = currentTime - (numOfSlots * params.BeaconConfig().SecondsPerSlot)
-	timeToSleep := params.BeaconConfig().SecondsPerSlot / 2
-	midpointTime := currentTime + timeToSleep
-	validator.waitToSlotMidpoint(context.Background(), numOfSlots)
+	timeToSleep := params.BeaconConfig().SecondsPerSlot / 3
+	oneThird := currentTime + timeToSleep
+	validator.waitToOneThird(context.Background(), numOfSlots)
 
 	currentTime = uint64(time.Now().Unix())
-	if currentTime != midpointTime {
-		t.Errorf("Wanted %d time for slot midpoint but got %d", midpointTime, currentTime)
+	if currentTime != oneThird {
+		t.Errorf("Wanted %d time for slot one-third but got %d", oneThird, currentTime)
 	}
 }

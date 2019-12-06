@@ -31,27 +31,21 @@ alias(
 alias(
     name = "grpc_proto_compiler",
     actual = "@io_bazel_rules_go//proto:gogofast_grpc",
-    visibility = [
-        "//proto:__subpackages__",
-    ],
+    visibility = ["//visibility:public"],
 )
 
 # Protobuf gRPC compiler without gogoproto. Required for gRPC gateway.
 alias(
     name = "grpc_nogogo_proto_compiler",
     actual = "@io_bazel_rules_go//proto:go_grpc",
-    visibility = [
-        "//proto:__subpackages__",
-    ],
+    visibility = ["//visibility:public"],
 )
 
 # Protobuf gRPC gateway compiler
 alias(
     name = "grpc_gateway_proto_compiler",
     actual = "@grpc_ecosystem_grpc_gateway//protoc-gen-grpc-gateway:go_gen_grpc_gateway",
-    visibility = [
-        "//proto:__subpackages__",
-    ],
+    visibility = ["//visibility:public"],
 )
 
 gometalinter(

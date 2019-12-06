@@ -39,7 +39,7 @@ func TestPrivToPubYaml(t *testing.T) {
 				t.Fatalf("Cannot decode string to bytes: %v", err)
 			}
 			if !bytes.Equal(outputBytes, sk.PublicKey().Marshal()) {
-				t.Fatal("Output does not marshaled public key bytes")
+				t.Fatalf("Output does not marshaled public key bytes wanted %#x but got %#x", outputBytes, sk.PublicKey().Marshal())
 			}
 		})
 	}

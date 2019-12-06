@@ -7,9 +7,9 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
@@ -33,7 +33,10 @@ func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.M
 	// TODO(1332): Add blocks.VerifyAttestation before processing further.
 	// Discussion: https://github.com/ethereum/eth2.0-specs/issues/1332
 
-	att := msg.(*ethpb.Attestation)
+	att, ok := msg.(*ethpb.Attestation)
+	if !ok {
+		return false, nil
+	}
 
 	attRoot, err := ssz.HashTreeRoot(att)
 	if err != nil {

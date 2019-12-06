@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "archive.go",
         "base.go",
+        "config.go",
         "interop.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/flags",

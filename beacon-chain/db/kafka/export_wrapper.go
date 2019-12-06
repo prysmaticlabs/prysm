@@ -8,7 +8,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
@@ -79,7 +79,7 @@ func (e Exporter) Close() error {
 // SaveAttestation publishes to the kafka topic for attestations.
 func (e Exporter) SaveAttestation(ctx context.Context, att *eth.Attestation) error {
 	go func() {
-		if err := e.publish(ctx, "attestation", att); err != nil {
+		if err := e.publish(ctx, "beacon_attestation", att); err != nil {
 			log.WithError(err).Error("Failed to publish attestation")
 		}
 	}()
@@ -114,7 +114,7 @@ func (e Exporter) SaveBlock(ctx context.Context, block *eth.BeaconBlock) error {
 func (e Exporter) SaveBlocks(ctx context.Context, blocks []*eth.BeaconBlock) error {
 	go func() {
 		for _, block := range blocks {
-			if err := e.publish(ctx, "block", block); err != nil {
+			if err := e.publish(ctx, "beacon_block", block); err != nil {
 				log.WithError(err).Error("Failed to publish block")
 			}
 		}

@@ -26,6 +26,7 @@ go_library(
         "//shared:go_default_library",
         "//shared/cmd:go_default_library",
         "//shared/debug:go_default_library",
+        "//shared/event:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/params:go_default_library",
         "//shared/prometheus:go_default_library",
@@ -45,6 +46,7 @@ go_test(
     srcs = ["node_test.go"],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/core/statefeed:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
         "@com_github_urfave_cli//:go_default_library",

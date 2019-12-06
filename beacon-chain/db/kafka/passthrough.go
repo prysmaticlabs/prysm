@@ -6,7 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
 // DatabasePath -- passthrough.
@@ -82,21 +82,6 @@ func (e Exporter) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 // DeleteBlocks -- passthrough.
 func (e Exporter) DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
 	return e.db.DeleteBlocks(ctx, blockRoots)
-}
-
-// ValidatorLatestVote -- passthrough.
-func (e Exporter) ValidatorLatestVote(ctx context.Context, validatorIdx uint64) (*ethereum_beacon_p2p_v1.ValidatorLatestVote, error) {
-	return e.db.ValidatorLatestVote(ctx, validatorIdx)
-}
-
-// HasValidatorLatestVote -- passthrough.
-func (e Exporter) HasValidatorLatestVote(ctx context.Context, validatorIdx uint64) bool {
-	return e.db.HasValidatorLatestVote(ctx, validatorIdx)
-}
-
-// DeleteValidatorLatestVote -- passthrough.
-func (e Exporter) DeleteValidatorLatestVote(ctx context.Context, validatorIdx uint64) error {
-	return e.db.DeleteValidatorLatestVote(ctx, validatorIdx)
 }
 
 // ValidatorIndex -- passthrough.
@@ -185,12 +170,12 @@ func (e Exporter) FinalizedCheckpoint(ctx context.Context) (*eth.Checkpoint, err
 }
 
 // ArchivedActiveValidatorChanges -- passthrough.
-func (e Exporter) ArchivedActiveValidatorChanges(ctx context.Context, epoch uint64) (*eth.ArchivedActiveSetChanges, error) {
+func (e Exporter) ArchivedActiveValidatorChanges(ctx context.Context, epoch uint64) (*ethereum_beacon_p2p_v1.ArchivedActiveSetChanges, error) {
 	return e.db.ArchivedActiveValidatorChanges(ctx, epoch)
 }
 
 // ArchivedCommitteeInfo -- passthrough.
-func (e Exporter) ArchivedCommitteeInfo(ctx context.Context, epoch uint64) (*eth.ArchivedCommitteeInfo, error) {
+func (e Exporter) ArchivedCommitteeInfo(ctx context.Context, epoch uint64) (*ethereum_beacon_p2p_v1.ArchivedCommitteeInfo, error) {
 	return e.db.ArchivedCommitteeInfo(ctx, epoch)
 }
 
@@ -217,16 +202,6 @@ func (e Exporter) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) err
 // SaveGenesisBlockRoot -- passthrough.
 func (e Exporter) SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error {
 	return e.db.SaveGenesisBlockRoot(ctx, blockRoot)
-}
-
-// SaveValidatorLatestVote -- passthrough.
-func (e Exporter) SaveValidatorLatestVote(ctx context.Context, validatorIdx uint64, vote *ethereum_beacon_p2p_v1.ValidatorLatestVote) error {
-	return e.db.SaveValidatorLatestVote(ctx, validatorIdx, vote)
-}
-
-// SaveValidatorLatestVotes -- passthrough.
-func (e Exporter) SaveValidatorLatestVotes(ctx context.Context, validatorIndices []uint64, votes []*ethereum_beacon_p2p_v1.ValidatorLatestVote) error {
-	return e.db.SaveValidatorLatestVotes(ctx, validatorIndices, votes)
 }
 
 // SaveValidatorIndex -- passthrough.
@@ -265,12 +240,12 @@ func (e Exporter) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *eth.C
 }
 
 // SaveArchivedActiveValidatorChanges -- passthrough.
-func (e Exporter) SaveArchivedActiveValidatorChanges(ctx context.Context, epoch uint64, changes *eth.ArchivedActiveSetChanges) error {
+func (e Exporter) SaveArchivedActiveValidatorChanges(ctx context.Context, epoch uint64, changes *ethereum_beacon_p2p_v1.ArchivedActiveSetChanges) error {
 	return e.db.SaveArchivedActiveValidatorChanges(ctx, epoch, changes)
 }
 
 // SaveArchivedCommitteeInfo -- passthrough.
-func (e Exporter) SaveArchivedCommitteeInfo(ctx context.Context, epoch uint64, info *eth.ArchivedCommitteeInfo) error {
+func (e Exporter) SaveArchivedCommitteeInfo(ctx context.Context, epoch uint64, info *ethereum_beacon_p2p_v1.ArchivedCommitteeInfo) error {
 	return e.db.SaveArchivedCommitteeInfo(ctx, epoch, info)
 }
 

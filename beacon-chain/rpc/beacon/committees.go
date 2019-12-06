@@ -3,10 +3,9 @@ package beacon
 import (
 	"context"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -20,16 +19,11 @@ func (bs *Server) ListBeaconCommittees(
 	ctx context.Context,
 	req *ethpb.ListCommitteesRequest,
 ) (*ethpb.BeaconCommittees, error) {
-	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			"Requested page size %d can not be greater than max size %d",
-			req.PageSize,
-			params.BeaconConfig().MaxPageSize,
-		)
+	headState, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
 
-	headState := bs.HeadFetcher.HeadState()
 	var requestingGenesis bool
 	var startSlot uint64
 	switch q := req.QueryFilter.(type) {
@@ -43,7 +37,6 @@ func (bs *Server) ListBeaconCommittees(
 
 	var attesterSeed [32]byte
 	var activeIndices []uint64
-	var err error
 	// This is the archival condition, if the requested epoch is < current epoch or if we are
 	// requesting data from the genesis epoch.
 	if requestingGenesis || helpers.SlotToEpoch(startSlot) < helpers.SlotToEpoch(headState.Slot) {
@@ -99,12 +92,12 @@ func (bs *Server) ListBeaconCommittees(
 		return nil, status.Errorf(
 			codes.InvalidArgument,
 			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
-			helpers.SlotToEpoch(headState.Slot),
-			helpers.StartSlot(startSlot),
+			helpers.CurrentEpoch(headState),
+			helpers.SlotToEpoch(startSlot),
 		)
 	}
 
-	committees := make([]*ethpb.BeaconCommittees_CommitteeItem, 0)
+	committeesList := make(map[uint64]*ethpb.BeaconCommittees_CommitteesList)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		var countAtSlot = uint64(len(activeIndices)) / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
 		if countAtSlot > params.BeaconConfig().MaxCommitteesPerSlot {
@@ -113,6 +106,7 @@ func (bs *Server) ListBeaconCommittees(
 		if countAtSlot == 0 {
 			countAtSlot = 1
 		}
+		committeeItems := make([]*ethpb.BeaconCommittees_CommitteeItem, countAtSlot)
 		for i := uint64(0); i < countAtSlot; i++ {
 			epochOffset := i + (slot%params.BeaconConfig().SlotsPerEpoch)*countAtSlot
 			totalCount := countAtSlot * params.BeaconConfig().SlotsPerEpoch
@@ -125,27 +119,18 @@ func (bs *Server) ListBeaconCommittees(
 					err,
 				)
 			}
-			committees = append(committees, &ethpb.BeaconCommittees_CommitteeItem{
-				Committee: committee,
-				Slot:      slot,
-			})
+			committeeItems[i] = &ethpb.BeaconCommittees_CommitteeItem{
+				ValidatorIndices: committee,
+			}
+		}
+		committeesList[slot] = &ethpb.BeaconCommittees_CommitteesList{
+			Committees: committeeItems,
 		}
 	}
 
-	numCommittees := len(committees)
-	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numCommittees)
-	if err != nil {
-		return nil, status.Errorf(
-			codes.Internal,
-			"Could not paginate results: %v",
-			err,
-		)
-	}
 	return &ethpb.BeaconCommittees{
 		Epoch:                helpers.SlotToEpoch(startSlot),
+		Committees:           committeesList,
 		ActiveValidatorCount: uint64(len(activeIndices)),
-		Committees:           committees[start:end],
-		TotalSize:            int32(numCommittees),
-		NextPageToken:        nextPageToken,
 	}, nil
 }

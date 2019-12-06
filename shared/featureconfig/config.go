@@ -9,7 +9,7 @@ The process for implementing new features using this package is as follows:
 	4. Place any "previous" behavior in the `else` statement.
 	5. Ensure any tests using the new feature fail if the flag isn't enabled.
 	5a. Use the following to enable your flag for tests:
-	cfg := &featureconfig.Flag{
+	cfg := &featureconfig.Flags{
 		VerifyAttestationSigs: true,
 	}
 	featureconfig.Init(cfg)
@@ -23,17 +23,18 @@ import (
 
 var log = logrus.WithField("prefix", "flags")
 
-// Flag is a struct to represent what features the client will perform on runtime.
-type Flag struct {
-	GenesisDelay             bool   // GenesisDelay when processing a chain start genesis event.
-	MinimalConfig            bool   // MinimalConfig as defined in the spec.
-	WriteSSZStateTransitions bool   // WriteSSZStateTransitions to tmp directory.
-	InitSyncNoVerify         bool   // InitSyncNoVerify when initial syncing w/o verifying block's contents.
-	SkipBLSVerify            bool   // Skips BLS verification across the runtime.
-	EnableBackupWebhook      bool   // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
-	OptimizeProcessEpoch     bool   // OptimizeProcessEpoch to process epoch with optimizations by pre computing records.
-	Scatter                  bool // Scatter sequential processing by scattering it to multiple cores.
-	PruneFinalizedStates     bool   // PruneFinalizedStates from the database.
+// Flags is a struct to represent which features the client will perform on runtime.
+type Flags struct {
+	GenesisDelay              bool   // GenesisDelay when processing a chain start genesis event.
+	MinimalConfig             bool   // MinimalConfig as defined in the spec.
+	WriteSSZStateTransitions  bool   // WriteSSZStateTransitions to tmp directory.
+	InitSyncNoVerify          bool   // InitSyncNoVerify when initial syncing w/o verifying block's contents.
+	SkipBLSVerify             bool   // Skips BLS verification across the runtime.
+	EnableBackupWebhook       bool   // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
+	PruneEpochBoundaryStates  bool   // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
+	EnableSnappyDBCompression bool // EnableSnappyDBCompression in the database.
+	EnableCustomStateSSZ      bool   // EnableCustomStateSSZ in the the state transition function.
+	InitSyncCacheState        bool // InitSyncCacheState caches state during initial sync.
 	KafkaBootstrapServers    string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
 
 	// Cache toggles.
@@ -48,18 +49,18 @@ type Flag struct {
 	EnableActiveCountCache   bool // EnableActiveCountCache.
 }
 
-var featureConfig *Flag
+var featureConfig *Flags
 
 // Get retrieves feature config.
-func Get() *Flag {
+func Get() *Flags {
 	if featureConfig == nil {
-		return &Flag{}
+		return &Flags{}
 	}
 	return featureConfig
 }
 
 // Init sets the global config equal to the config that is passed in.
-func Init(c *Flag) {
+func Init(c *Flags) {
 	featureConfig = c
 }
 
@@ -67,7 +68,7 @@ func Init(c *Flag) {
 // on what flags are enabled for the beacon-chain client.
 func ConfigureBeaconChain(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
-	cfg := &Flag{}
+	cfg := &Flags{}
 	if ctx.GlobalBool(MinimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
@@ -88,8 +89,14 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabled unsafe eth1 data vote cache")
 		cfg.EnableEth1DataVoteCache = true
 	}
-	if ctx.GlobalBool(InitSyncNoVerifyFlag.Name) {
-		log.Warn("Initial syncing without verifying block's contents")
+	if ctx.GlobalBool(EnableCustomStateSSZ.Name) {
+		log.Warn("Enabled custom state ssz for the state transition function")
+		cfg.EnableCustomStateSSZ = true
+	}
+	if ctx.GlobalBool(initSyncVerifyEverythingFlag.Name) {
+		log.Warn("Initial syncing with verifying all block's content signatures.")
+		cfg.InitSyncNoVerify = false
+	} else {
 		cfg.InitSyncNoVerify = true
 	}
 	if ctx.GlobalBool(NewCacheFlag.Name) {
@@ -107,18 +114,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(enableBLSPubkeyCacheFlag.Name) {
 		log.Warn("Enabled BLS pubkey cache.")
 		cfg.EnableBLSPubkeyCache = true
-	}
-	if ctx.GlobalBool(OptimizeProcessEpoch.Name) {
-		log.Warn("Processing epoch with optimizations")
-		cfg.OptimizeProcessEpoch = true
-	}
-	if ctx.GlobalBool(Scatter.Name) {
-		log.Warn("Scattering sequential proceses to multiple cores")
-		cfg.Scatter = true
-	}
-	if ctx.GlobalBool(pruneFinalizedStatesFlag.Name) {
-		log.Warn("Enabled pruning old finalized states from database.")
-		cfg.PruneFinalizedStates = true
 	}
 	if ctx.GlobalBool(enableShuffledIndexCache.Name) {
 		log.Warn("Enabled shuffled index cache.")
@@ -144,6 +139,18 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabled active count cache.")
 		cfg.EnableActiveCountCache = true
 	}
+	if ctx.GlobalBool(enableSnappyDBCompressionFlag.Name) {
+		log.Warn("Enabled snappy compression in the database.")
+		cfg.EnableSnappyDBCompression = true
+	}
+	if ctx.GlobalBool(enablePruneBoundaryStateFlag.Name) {
+		log.Warn("Enabled pruning epoch boundary states before last finalized check point.")
+		cfg.PruneEpochBoundaryStates = true
+	}
+	if ctx.GlobalBool(initSyncCacheState.Name) {
+		log.Warn("Enabled initial sync cache state mode.")
+		cfg.InitSyncCacheState = true
+	}
 	Init(cfg)
 }
 
@@ -151,7 +158,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 // on what flags are enabled for the validator client.
 func ConfigureValidator(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
-	cfg := &Flag{}
+	cfg := &Flags{}
 	if ctx.GlobalBool(MinimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
