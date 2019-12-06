@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/dgraph-io/ristretto"
-
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	ds "github.com/ipfs/go-datastore"
 	dsync "github.com/ipfs/go-datastore/sync"
