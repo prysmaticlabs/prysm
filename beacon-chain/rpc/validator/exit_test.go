@@ -42,7 +42,7 @@ func TestExit(t *testing.T) {
 			name:           "NoSignature",
 			epoch:          2048,
 			validatorIndex: 0,
-			err:            "rpc error: code = InvalidArgument desc = Malformed signature: must be 96 bytes",
+			err:            "rpc error: code = InvalidArgument desc = Malformed signature: signature must be 96 bytes",
 		},
 		{
 			name:           "InvalidSignature",
@@ -70,7 +70,7 @@ func TestExit(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 	helpers.ClearAllCaches()
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 8)
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(8)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatal(err)
