@@ -70,7 +70,7 @@ func TestAttestationContainer_Contains(t *testing.T) {
 				{0b10000100, 0b1},
 				{0b10010001, 0b1},
 			},
-			contains: bitfield.Bitlist{0b01000000, 0b10}, // Different length.
+			contains: bitfield.Bitlist{0b10000000, 0b10}, // Different length.
 			want:     false,
 		},
 	}
