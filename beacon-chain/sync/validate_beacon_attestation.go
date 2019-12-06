@@ -48,6 +48,10 @@ func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.M
 		trace.StringAttribute("attRoot", fmt.Sprintf("%#x", attRoot)),
 	)
 
+	if recentlySeenRoots.Get(string(attRoot[:])) != nil {
+		return false, nil
+	}
+
 	// Only valid blocks are saved in the database.
 	if !r.db.HasBlock(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot)) {
 		log.WithField(
@@ -55,10 +59,6 @@ func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.M
 			fmt.Sprintf("%#x", att.Data.BeaconBlockRoot),
 		).WithError(errPointsToBlockNotInDatabase).Debug("Ignored incoming attestation that points to a block which is not in the database")
 		traceutil.AnnotateError(span, errPointsToBlockNotInDatabase)
-		return false, nil
-	}
-
-	if recentlySeenRoots.Get(string(attRoot[:])) != nil {
 		return false, nil
 	}
 
