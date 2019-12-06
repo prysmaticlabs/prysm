@@ -20,7 +20,7 @@ func TestPipelineProcessing(t *testing.T) {
 	var handleCalled bool
 
 	topic := "/foo/bar"
-	sub, err := p.PubSub().Subscribe(topic+p.Encoding().ProtocolSuffix())
+	sub, err := p.PubSub().Subscribe(topic + p.Encoding().ProtocolSuffix())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,7 +28,7 @@ func TestPipelineProcessing(t *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(2)
-	go func () {
+	go func() {
 		pipe := &pipeline{
 			ctx:   context.Background(),
 			topic: topic,
@@ -38,7 +38,7 @@ func TestPipelineProcessing(t *testing.T) {
 				wg.Done()
 				return true, nil
 			},
-			handle: func(_ context.Context, _ proto.Message) (error) {
+			handle: func(_ context.Context, _ proto.Message) error {
 				handleCalled = true
 				wg.Done()
 				return nil
