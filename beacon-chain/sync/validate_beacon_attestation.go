@@ -52,6 +52,8 @@ func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.M
 		return false, nil
 	}
 
+	recentlySeenRoots.Set(string(attRoot[:]), true /*value*/, 365*24*time.Hour /*TTL*/)
+
 	// Only valid blocks are saved in the database.
 	if !r.db.HasBlock(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot)) {
 		log.WithField(
@@ -61,8 +63,6 @@ func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.M
 		traceutil.AnnotateError(span, errPointsToBlockNotInDatabase)
 		return false, nil
 	}
-
-	recentlySeenRoots.Set(string(attRoot[:]), true /*value*/, 365*24*time.Hour /*TTL*/)
 
 	if fromSelf {
 		return false, nil
