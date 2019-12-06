@@ -19,6 +19,11 @@ import (
 	"go.opencensus.io/trace"
 )
 
+
+// ErrTargetRootNotInDB returns when the target block root of an attestation cannot be found in the
+// beacon database.
+var ErrTargetRootNotInDB = errors.New("target root does not exist in db")
+
 // OnAttestation is called whenever an attestation is received, it updates validators latest vote,
 // as well as the fork choice store struct.
 //
@@ -61,7 +66,7 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 
 	// Verify beacon node has seen the target block before.
 	if !s.db.HasBlock(ctx, bytesutil.ToBytes32(tgt.Root)) {
-		return fmt.Errorf("target root %#x does not exist in db", bytesutil.Trunc(tgt.Root))
+		return ErrTargetRootNotInDB
 	}
 
 	// Verify attestation target has had a valid pre state produced by the target block.
