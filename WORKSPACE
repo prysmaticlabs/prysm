@@ -217,6 +217,28 @@ load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
 
 protobuf_deps()
 
+# Group the sources of the library so that CMake rule have access to it
+all_content = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//visibility:public"])"""
+
+http_archive(
+    name = "rules_foreign_cc",
+    strip_prefix = "rules_foreign_cc-master",
+    url = "https://github.com/bazelbuild/rules_foreign_cc/archive/master.zip",
+)
+
+load("@rules_foreign_cc//:workspace_definitions.bzl", "rules_foreign_cc_dependencies")
+
+rules_foreign_cc_dependencies([
+    "@prysm//:built_cmake_toolchain",
+])
+
+http_archive(
+    name = "librdkafka",
+    build_file_content = all_content,
+    strip_prefix = "librdkafka-1.2.1",
+    urls = ["https://github.com/edenhill/librdkafka/archive/v1.2.1.tar.gz"],
+)
+
 # External dependencies
 
 go_repository(
@@ -1286,6 +1308,15 @@ go_repository(
     importpath = "golang.org/x/exp",
     sum = "h1:n9HxLrNxWWtEb1cA950nuEEj3QnKbtsCJ6KjcgisNUs=",
     version = "v0.0.0-20191002040644-a1355ae1e2c3",
+)
+
+go_repository(
+    name = "in_gopkg_confluentinc_confluent_kafka_go_v1",
+    importpath = "gopkg.in/confluentinc/confluent-kafka-go.v1",
+    patch_args = ["-p1"],
+    patches = ["//third_party:in_gopkg_confluentinc_confluent_kafka_go_v1.patch"],
+    sum = "h1:roy97m/3wj9/o8OuU3sZ5wildk30ep38k2x8nhNbKrI=",
+    version = "v1.1.0",
 )
 
 go_repository(

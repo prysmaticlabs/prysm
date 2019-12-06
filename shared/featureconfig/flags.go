@@ -73,6 +73,10 @@ var (
 		Name:  "enable-skip-slots-cache",
 		Usage: "Enables the skip slot cache to be used in the event of skipped slots.",
 	}
+	kafkaBootstrapServersFlag = cli.StringFlag{
+		Name:  "kafka-url",
+		Usage: "Stream attestations and blocks to specified kafka servers. This field is used for bootstrap.servers kafka config field.",
+	}
 	enableSnappyDBCompressionFlag = cli.BoolFlag{
 		Name:  "snappy",
 		Usage: "Enables snappy compression in the database.",
@@ -157,6 +161,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	initSyncCacheState,
 	NewCacheFlag,
 	SkipBLSVerifyFlag,
+	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,
 	enableBLSPubkeyCacheFlag,
 	enableShuffledIndexCache,
