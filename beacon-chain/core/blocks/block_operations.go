@@ -34,7 +34,7 @@ var eth1DataCache = cache.NewEth1DataVoteCache()
 
 // ErrSigFailedToVerify returns when a signature of a block object(ie attestation, slashing, exit... etc)
 // failed to verify.
-var ErrSigFailedToVerify = errors.New("target root does not exist in db")
+var ErrSigFailedToVerify = errors.New("signature did not verify")
 
 func verifySigningRoot(obj interface{}, pub []byte, signature []byte, domain uint64) error {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
