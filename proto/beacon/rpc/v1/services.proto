@@ -35,6 +35,7 @@ service ValidatorService {
 message BlockRequest {
   uint64 slot = 1;
   bytes randao_reveal = 2;
+  bytes graffiti = 3;
 }
 
 message ProposeResponse {
