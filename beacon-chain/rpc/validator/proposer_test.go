@@ -1,4 +1,4 @@
-package proposer
+package validator
 
 import (
 	"context"

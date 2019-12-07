@@ -37,20 +37,25 @@ func init() {
 // and committees in which particular validators need to perform their responsibilities,
 // and more.
 type Server struct {
-	Ctx                context.Context
-	BeaconDB           db.Database
-	AttestationCache   *cache.AttestationCache
-	HeadFetcher        blockchain.HeadFetcher
-	ForkFetcher        blockchain.ForkFetcher
-	CanonicalStateChan chan *pbp2p.BeaconState
-	BlockFetcher       powchain.POWBlockFetcher
-	DepositFetcher     depositcache.DepositFetcher
-	ChainStartFetcher  powchain.ChainStartFetcher
-	Eth1InfoFetcher    powchain.ChainInfoFetcher
-	SyncChecker        sync.Checker
-	StateNotifier      statefeed.Notifier
-	OperationsHandler  operations.Handler
-	P2P                p2p.Broadcaster
+	Ctx                    context.Context
+	BeaconDB               db.Database
+	AttestationCache       *cache.AttestationCache
+	HeadFetcher            blockchain.HeadFetcher
+	ForkFetcher            blockchain.ForkFetcher
+	CanonicalStateChan     chan *pbp2p.BeaconState
+	BlockFetcher           powchain.POWBlockFetcher
+	DepositFetcher         depositcache.DepositFetcher
+	ChainStartFetcher      powchain.ChainStartFetcher
+	Eth1InfoFetcher        powchain.ChainInfoFetcher
+	SyncChecker            sync.Checker
+	StateNotifier          statefeed.Notifier
+	OperationsHandler      operations.Handler
+	P2P                    p2p.Broadcaster
+	Pool                   operations.Pool
+	BlockReceiver          blockchain.BlockReceiver
+	MockEth1Votes          bool
+	Eth1BlockFetcher       powchain.POWBlockFetcher
+	PendingDepositsFetcher depositcache.PendingDepositsFetcher
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current

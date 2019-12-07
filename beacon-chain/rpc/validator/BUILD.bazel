@@ -40,6 +40,7 @@ go_test(
     srcs = [
         "assignments_test.go",
         "attester_test.go",
+        "proposer_test.go",
         "server_test.go",
         "status_test.go",
     ],
