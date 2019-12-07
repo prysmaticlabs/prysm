@@ -1,7 +1,7 @@
 package feed
 
 // How to add a new event to the feed:
-//   1. Add a folder for the new type of feed.
+//   1. Add a file for the new type of feed.
 //   2. Add a constant describing the list of events.
 //   3. Add a structure with the name `<event>Data` containing any data fields that should be supplied with the event.
 //
