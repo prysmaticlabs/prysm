@@ -1,4 +1,4 @@
-package attester
+package validator
 
 import (
 	"context"
@@ -17,7 +17,6 @@ import (
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -27,16 +26,15 @@ func init() {
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 }
 
-func TestSubmitAttestation_OK(t *testing.T) {
+func TestProposeAttestation_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	attesterServer := &Server{
 		HeadFetcher:       &mock.ChainService{},
-		AttReceiver:       &mock.ChainService{},
 		OperationsHandler: &mockOps.Operations{},
-		P2p:               &mockp2p.MockBroadcaster{},
+		P2P:               &mockp2p.MockBroadcaster{},
 		BeaconDB:          db,
 		AttestationCache:  cache.NewAttestationCache(),
 	}
@@ -80,12 +78,12 @@ func TestSubmitAttestation_OK(t *testing.T) {
 			Target:          &ethpb.Checkpoint{},
 		},
 	}
-	if _, err := attesterServer.SubmitAttestation(context.Background(), req); err != nil {
+	if _, err := attesterServer.ProposeAttestation(context.Background(), req); err != nil {
 		t.Errorf("Could not attest head correctly: %v", err)
 	}
 }
 
-func TestRequestAttestation_OK(t *testing.T) {
+func TestGetAttestationData_OK(t *testing.T) {
 	block := &ethpb.BeaconBlock{
 		Slot: 3*params.BeaconConfig().SlotsPerEpoch + 1,
 	}
@@ -120,18 +118,17 @@ func TestRequestAttestation_OK(t *testing.T) {
 	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
 	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
 	attesterServer := &Server{
-		P2p:              &mockp2p.MockBroadcaster{},
+		P2P:              &mockp2p.MockBroadcaster{},
 		SyncChecker:      &mockSync.Sync{IsSyncing: false},
 		AttestationCache: cache.NewAttestationCache(),
 		HeadFetcher:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
-		AttReceiver:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
 	}
 
-	req := &pb.AttestationRequest{
+	req := &ethpb.AttestationDataRequest{
 		CommitteeIndex: 0,
 		Slot:           3*params.BeaconConfig().SlotsPerEpoch + 1,
 	}
-	res, err := attesterServer.RequestAttestation(context.Background(), req)
+	res, err := attesterServer.GetAttestationData(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Could not get attestation info at slot: %v", err)
 	}
@@ -153,11 +150,11 @@ func TestRequestAttestation_OK(t *testing.T) {
 	}
 }
 
-func TestRequestAttestation_SyncNotReady(t *testing.T) {
+func TestGetAttestationData_SyncNotReady(t *testing.T) {
 	as := &Server{
 		SyncChecker: &mockSync.Sync{IsSyncing: true},
 	}
-	_, err := as.RequestAttestation(context.Background(), &pb.AttestationRequest{})
+	_, err := as.GetAttestationData(context.Background(), &ethpb.AttestationDataRequest{})
 	if strings.Contains(err.Error(), "syncing to latest head") {
 		t.Error("Did not get wanted error")
 	}
@@ -213,18 +210,17 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot[:]
 	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
 	attesterServer := &Server{
-		P2p:              &mockp2p.MockBroadcaster{},
+		P2P:              &mockp2p.MockBroadcaster{},
 		AttestationCache: cache.NewAttestationCache(),
 		HeadFetcher:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
-		AttReceiver:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
 		SyncChecker:      &mockSync.Sync{IsSyncing: false},
 	}
 
-	req := &pb.AttestationRequest{
+	req := &ethpb.AttestationDataRequest{
 		CommitteeIndex: 0,
 		Slot:           10000,
 	}
-	res, err := attesterServer.RequestAttestation(context.Background(), req)
+	res, err := attesterServer.GetAttestationData(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Could not get attestation info at slot: %v", err)
 	}
@@ -246,7 +242,7 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	}
 }
 
-func TestAttestationDataAtSlot_handlesInProgressRequest(t *testing.T) {
+func TestAttestationDataSlot_handlesInProgressRequest(t *testing.T) {
 	// Cache toggled by feature flag for now. See https://github.com/prysmaticlabs/prysm/issues/3106.
 	featureconfig.Init(&featureconfig.Flags{
 		EnableAttestationCache: true,
@@ -261,7 +257,7 @@ func TestAttestationDataAtSlot_handlesInProgressRequest(t *testing.T) {
 		SyncChecker:      &mockSync.Sync{IsSyncing: false},
 	}
 
-	req := &pb.AttestationRequest{
+	req := &ethpb.AttestationDataRequest{
 		CommitteeIndex: 1,
 		Slot:           2,
 	}
@@ -279,7 +275,7 @@ func TestAttestationDataAtSlot_handlesInProgressRequest(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		response, err := server.RequestAttestation(ctx, req)
+		response, err := server.GetAttestationData(ctx, req)
 		if err != nil {
 			t.Error(err)
 		}

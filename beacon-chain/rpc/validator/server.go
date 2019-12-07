@@ -7,12 +7,15 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -36,6 +39,7 @@ func init() {
 type Server struct {
 	Ctx                context.Context
 	BeaconDB           db.Database
+	AttestationCache   *cache.AttestationCache
 	HeadFetcher        blockchain.HeadFetcher
 	ForkFetcher        blockchain.ForkFetcher
 	CanonicalStateChan chan *pbp2p.BeaconState
@@ -45,6 +49,8 @@ type Server struct {
 	Eth1InfoFetcher    powchain.ChainInfoFetcher
 	SyncChecker        sync.Checker
 	StateNotifier      statefeed.Notifier
+	OperationsHandler  operations.Handler
+	P2P                p2p.Broadcaster
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current

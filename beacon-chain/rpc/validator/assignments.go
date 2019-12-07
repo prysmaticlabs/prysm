@@ -3,6 +3,7 @@ package validator
 import (
 	"context"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -11,6 +12,11 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+// GetDuties is a skeleton for the GetDuties GRPC call.
+func (vs *Server) GetDuties(context.Context, *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "Not implemented")
+}
 
 // CommitteeAssignment returns the committee assignment response from a given validator public key.
 // The committee assignment response contains the following fields for the current and previous epoch:
