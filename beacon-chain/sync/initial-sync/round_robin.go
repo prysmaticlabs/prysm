@@ -254,7 +254,8 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 		for _, blk := range resp {
 			logSyncStatus(genesis, blk, []peer.ID{best}, counter)
 			if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk); err != nil {
-				return err
+				log.WithError(err).Error("Failed to process block after finality. Exiting init sync.")
+				return nil
 			}
 		}
 		if len(resp) == 0 {
