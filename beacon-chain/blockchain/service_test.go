@@ -15,8 +15,9 @@ import (
 	ssz "github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	ops "github.com/prysmaticlabs/prysm/beacon-chain/operations/testing"
@@ -140,13 +141,13 @@ func TestChainStartStop_Uninitialized(t *testing.T) {
 	chainService := setupBeaconChain(t, db)
 
 	// Listen for state events.
-	stateSubChannel := make(chan *statefeed.Event, 1)
+	stateSubChannel := make(chan *feed.Event, 1)
 	stateSub := chainService.stateNotifier.StateFeed().Subscribe(stateSubChannel)
 
 	// Test the chain start state notifier.
 	genesisTime := time.Unix(0, 0)
 	chainService.Start()
-	event := &statefeed.Event{
+	event := &feed.Event{
 		Type: statefeed.ChainStarted,
 		Data: &statefeed.ChainStartedData{
 			StartTime: genesisTime,

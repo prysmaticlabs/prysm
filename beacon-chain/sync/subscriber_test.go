@@ -9,7 +9,8 @@ import (
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -55,7 +56,7 @@ func TestSubscribe_WaitToSync(t *testing.T) {
 
 	topic := "/eth2/beacon_block"
 	r.registerSubscribers()
-	i := r.stateNotifier.StateFeed().Send(&statefeed.Event{
+	i := r.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.StateInitialized,
 		Data: &statefeed.StateInitializedData{
 			StartTime: time.Now(),

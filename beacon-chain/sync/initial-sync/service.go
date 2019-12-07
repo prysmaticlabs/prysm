@@ -7,8 +7,9 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
@@ -67,7 +68,7 @@ func (s *InitialSync) Start() {
 	headState, err := s.chain.HeadState(s.ctx)
 	if headState == nil || err != nil {
 		// Wait for state to be initialized.
-		stateChannel := make(chan *statefeed.Event, 1)
+		stateChannel := make(chan *feed.Event, 1)
 		stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
 		defer stateSub.Unsubscribe()
 		genesisSet := false

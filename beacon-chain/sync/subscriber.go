@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -40,7 +41,7 @@ func noopValidator(_ context.Context, _ proto.Message, _ p2p.Broadcaster, _ bool
 func (r *RegularSync) registerSubscribers() {
 	go func() {
 		// Wait until chain start.
-		stateChannel := make(chan *statefeed.Event, 1)
+		stateChannel := make(chan *feed.Event, 1)
 		stateSub := r.stateNotifier.StateFeed().Subscribe(stateChannel)
 		defer stateSub.Unsubscribe()
 		for r.chainStarted == false {
