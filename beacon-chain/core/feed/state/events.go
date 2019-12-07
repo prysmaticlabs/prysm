@@ -7,8 +7,8 @@ const (
 	BlockProcessed = iota + 1
 	// ChainStarted is sent when enough validators are active to start proposing blocks.
 	ChainStarted
-	// StateInitialized is sent when the internal beacon node's state is ready to be accessed.
-	StateInitialized
+	// Initialized is sent when the internal beacon node's state is ready to be accessed.
+	Initialized
 )
 
 // BlockProcessedData is the data sent with BlockProcessed events.
@@ -25,8 +25,8 @@ type ChainStartedData struct {
 	StartTime time.Time
 }
 
-// StateInitializedData is the data sent with StateInitialized events.
-type StateInitializedData struct {
+// Initialized is the data sent with Initialized events.
+type InitializedData struct {
 	// StartTime is the time at which the chain started.
 	StartTime time.Time
 }

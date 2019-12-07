@@ -47,8 +47,8 @@ func (r *RegularSync) registerSubscribers() {
 		for r.chainStarted == false {
 			select {
 			case event := <-stateChannel:
-				if event.Type == statefeed.StateInitialized {
-					data := event.Data.(*statefeed.StateInitializedData)
+				if event.Type == statefeed.Initialized {
+					data := event.Data.(*statefeed.Initialized)
 					log.WithField("starttime", data.StartTime).Debug("Received state initialized event")
 					if data.StartTime.After(roughtime.Now()) {
 						stateSub.Unsubscribe()

@@ -127,8 +127,8 @@ func (s *Service) Start() {
 			log.Fatalf("Could not start fork choice service: %v", err)
 		}
 		s.stateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.StateInitialized,
-			Data: &statefeed.StateInitializedData{
+			Type: statefeed.Initialized,
+			Data: &statefeed.Initialized{
 				StartTime: s.genesisTime,
 			},
 		})
@@ -173,8 +173,8 @@ func (s *Service) processChainStartTime(ctx context.Context, genesisTime time.Ti
 		log.Fatalf("Could not initialize beacon chain: %v", err)
 	}
 	s.stateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.StateInitialized,
-		Data: &statefeed.StateInitializedData{
+		Type: statefeed.Initialized,
+		Data: &statefeed.Initialized{
 			StartTime: genesisTime,
 		},
 	})

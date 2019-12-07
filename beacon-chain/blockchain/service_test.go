@@ -165,7 +165,7 @@ func TestChainStartStop_Uninitialized(t *testing.T) {
 	// Now wait for notification the state is ready.
 	for stateInitialized := false; stateInitialized == false; {
 		recv := <-stateSubChannel
-		if recv.Type == statefeed.StateInitialized {
+		if recv.Type == statefeed.Initialized {
 			stateInitialized = true
 		}
 	}
