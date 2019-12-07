@@ -128,7 +128,7 @@ func (s *Service) Start() {
 		}
 		s.stateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Initialized,
-			Data: &statefeed.Initialized{
+			Data: &statefeed.InitializedData{
 				StartTime: s.genesisTime,
 			},
 		})
@@ -174,7 +174,7 @@ func (s *Service) processChainStartTime(ctx context.Context, genesisTime time.Ti
 	}
 	s.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Initialized,
-		Data: &statefeed.Initialized{
+		Data: &statefeed.InitializedData{
 			StartTime: genesisTime,
 		},
 	})
