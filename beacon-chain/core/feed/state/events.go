@@ -25,7 +25,7 @@ type ChainStartedData struct {
 	StartTime time.Time
 }
 
-// Initialized is the data sent with Initialized events.
+// InitializedData is the data sent with Initialized events.
 type InitializedData struct {
 	// StartTime is the time at which the chain started.
 	StartTime time.Time
