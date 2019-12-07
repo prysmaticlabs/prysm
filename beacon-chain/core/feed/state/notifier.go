@@ -1,4 +1,4 @@
-package statefeed
+package state
 
 import "github.com/prysmaticlabs/prysm/shared/event"
 
