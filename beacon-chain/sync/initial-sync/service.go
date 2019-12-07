@@ -76,7 +76,7 @@ func (s *InitialSync) Start() {
 			select {
 			case event := <-stateChannel:
 				if event.Type == statefeed.Initialized {
-					data := event.Data.(*statefeed.Initialized)
+					data := event.Data.(*statefeed.InitializedData)
 					log.WithField("starttime", data.StartTime).Debug("Received state initialized event")
 					genesis = data.StartTime
 					genesisSet = true

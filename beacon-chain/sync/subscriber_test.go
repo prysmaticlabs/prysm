@@ -58,7 +58,7 @@ func TestSubscribe_WaitToSync(t *testing.T) {
 	r.registerSubscribers()
 	i := r.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Initialized,
-		Data: &statefeed.Initialized{
+		Data: &statefeed.InitializedData{
 			StartTime: time.Now(),
 		},
 	})
