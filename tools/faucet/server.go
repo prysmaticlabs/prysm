@@ -19,7 +19,7 @@ import (
 	recaptcha "github.com/prestonvanloon/go-recaptcha"
 	faucetpb "github.com/prysmaticlabs/prysm/proto/faucet"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
-	"google.golang.org/grpc/peer"
+	"google.golang.org/grpc/metadata"
 )
 
 var fundingAmount = big.NewInt(3.5 * params.Ether)
@@ -70,13 +70,15 @@ func newFaucetServer(
 }
 
 func (s *faucetServer) verifyRecaptcha(ctx context.Context, req *faucetpb.FundingRequest) error {
-	p, ok := peer.FromContext(ctx)
-	if !ok {
-		return errors.New("peer from ctx not ok")
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok || len(md.Get("x-forwarded-for")) < 1 {
+		return errors.New("metadata not ok")
 	}
-	fmt.Printf("Sending captcha request for peer %s\n", p.Addr.String())
 
-	rr, err := s.r.Check(p.Addr.String(), req.RecaptchaResponse)
+	peer := md.Get("x-forwarded-for")[0]
+	fmt.Printf("Sending captcha request for peer %s\n", peer)
+
+	rr, err := s.r.Check(peer, req.RecaptchaResponse)
 	if err != nil {
 		return err
 	}
@@ -85,7 +87,7 @@ func (s *faucetServer) verifyRecaptcha(ctx context.Context, req *faucetpb.Fundin
 		return errors.New("failed")
 	}
 	if rr.Score < s.minScore {
-		return errors.New("recaptcha score too low")
+		return fmt.Errorf("recaptcha score too low (%f)", rr.Score)
 	}
 	if roughtime.Now().After(rr.ChallengeTS.Add(2 * time.Minute)) {
 		return errors.New("captcha challenge too old")

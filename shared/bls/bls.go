@@ -83,7 +83,9 @@ func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not copy pubkey")
 	}
-	pubkeyCache.Set(string(pub), copiedKey, 48*time.Hour)
+	if featureconfig.Get().EnableBLSPubkeyCache {
+		pubkeyCache.Set(string(pub), copiedKey, 48*time.Hour)
+	}
 	return pubkeyObj, nil
 }
 
@@ -91,6 +93,9 @@ func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 func SignatureFromBytes(sig []byte) (*Signature, error) {
 	if featureconfig.Get().SkipBLSVerify {
 		return &Signature{}, nil
+	}
+	if len(sig) != 96 {
+		return nil, errors.New("signature must be 96 bytes")
 	}
 	signature := &bls12.Sign{}
 	err := signature.Deserialize(sig)

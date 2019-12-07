@@ -133,10 +133,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabled active count cache.")
 		cfg.EnableActiveCountCache = true
 	}
-	if ctx.GlobalBool(enablePruneBoundaryStateFlag.Name) {
-		log.Warn("Enabled pruning epoch boundary states before last finalized check point.")
-		cfg.PruneEpochBoundaryStates = true
-	}
 	Init(cfg)
 }
 

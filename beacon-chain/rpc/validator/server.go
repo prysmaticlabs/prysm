@@ -106,7 +106,6 @@ func (vs *Server) ValidatorIndex(ctx context.Context, req *pb.ValidatorIndexRequ
 func (vs *Server) ValidatorPerformance(
 	ctx context.Context, req *pb.ValidatorPerformanceRequest,
 ) (*pb.ValidatorPerformanceResponse, error) {
-	var err error
 	headState, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
