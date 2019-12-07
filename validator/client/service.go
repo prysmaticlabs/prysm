@@ -26,7 +26,7 @@ type ValidatorService struct {
 	ctx                  context.Context
 	cancel               context.CancelFunc
 	validator            Validator
-	graffiti             string
+	graffiti             []byte
 	conn                 *grpc.ClientConn
 	endpoint             string
 	withCert             string
@@ -58,7 +58,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		cancel:               cancel,
 		endpoint:             cfg.Endpoint,
 		withCert:             cfg.CertFlag,
-		graffiti:             cfg.GraffitiFlag,
+		graffiti:             []byte(cfg.GraffitiFlag),
 		keys:                 pubKeys,
 		logValidatorBalances: cfg.LogValidatorBalances,
 	}, nil
