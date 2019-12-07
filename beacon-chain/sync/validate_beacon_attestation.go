@@ -35,7 +35,7 @@ func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.M
 
 	att, ok := msg.(*ethpb.Attestation)
 	if !ok {
-		return false, nil
+		return false, fmt.Errorf("message was not type *eth.Attestation, type=%T", msg)
 	}
 
 	attRoot, err := ssz.HashTreeRoot(att)
