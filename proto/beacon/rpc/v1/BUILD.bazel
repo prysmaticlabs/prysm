@@ -11,7 +11,7 @@ go_proto_library(
     visibility = ["//visibility:public"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "//proto/sharding/p2p/v1:go_default_library",
         "@go_googleapis//google/api:annotations_go_proto",
         "@grpc_ecosystem_grpc_gateway//protoc-gen-swagger/options:options_go_proto",
@@ -29,7 +29,7 @@ go_proto_library(
     visibility = ["//visibility:public"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "//proto/sharding/p2p/v1:go_default_library",
         "@go_googleapis//google/api:annotations_go_proto",
         "@grpc_ecosystem_grpc_gateway//protoc-gen-swagger/options:options_go_proto",
@@ -47,11 +47,12 @@ proto_library(
     name = "v1_proto",
     srcs = [
         "services.proto",
+        "slasher.proto",
     ],
     visibility = ["//visibility:public"],
     deps = [
         "//proto/beacon/p2p/v1:v1_proto",
-        "//proto/eth/v1alpha1:v1alpha1_proto",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:proto",
         "//proto/sharding/p2p/v1:v1_proto",
         "@com_google_protobuf//:empty_proto",
         "@com_google_protobuf//:timestamp_proto",

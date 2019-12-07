@@ -6,11 +6,10 @@ import (
 	"fmt"
 
 	"github.com/boltdb/bolt"
-	"github.com/gogo/protobuf/proto"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -52,7 +51,7 @@ func (kv *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 	// De-index recent finalized block roots, to be re-indexed.
 	prevousFinalizedCheckpoint := &ethpb.Checkpoint{}
 	if b := bkt.Get(previousFinalizedCheckpointKey); b != nil {
-		if err := proto.Unmarshal(b, prevousFinalizedCheckpoint); err != nil {
+		if err := decode(b, prevousFinalizedCheckpoint); err != nil {
 			traceutil.AnnotateError(span, err)
 			return err
 		}
@@ -94,7 +93,7 @@ func (kv *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 			ChildRoot:  previousRoot,
 		}
 
-		enc, err := proto.Marshal(container)
+		enc, err := encode(container)
 		if err != nil {
 			traceutil.AnnotateError(span, err)
 			return err
@@ -107,12 +106,12 @@ func (kv *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 		// Found parent, loop exit condition.
 		if parentBytes := bkt.Get(block.ParentRoot); parentBytes != nil {
 			parent := &dbpb.FinalizedBlockRootContainer{}
-			if err := proto.Unmarshal(parentBytes, parent); err != nil {
+			if err := decode(parentBytes, parent); err != nil {
 				traceutil.AnnotateError(span, err)
 				return err
 			}
 			parent.ChildRoot = root
-			enc, err := proto.Marshal(parent)
+			enc, err := encode(parent)
 			if err != nil {
 				traceutil.AnnotateError(span, err)
 				return err
@@ -145,7 +144,7 @@ func (kv *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 	}
 
 	// Update previous checkpoint
-	enc, err := proto.Marshal(checkpoint)
+	enc, err := encode(checkpoint)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return err

@@ -77,7 +77,7 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 		"slot":           req.Slot,
 		"validatorIndex": validatorIndex,
 		"committeeIndex": req.CommitteeIndex,
-	}).Info("Broadcasting aggregated attestation and proof")
+	}).Debug("Broadcasting aggregated attestation and proof")
 
 	return &pb.AggregationResponse{}, nil
 }

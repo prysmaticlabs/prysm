@@ -10,12 +10,13 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
-        "//proto/eth/v1alpha1:go_default_library",
+        "//proto/beacon/rpc/v1:go_default_library",
         "//shared/params:go_default_library",
         "//slasher/db:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
         "@org_golang_google_grpc//codes:go_default_library",
         "@org_golang_google_grpc//status:go_default_library",
@@ -27,13 +28,15 @@ go_test(
     srcs = [
         "detect_update_min_max_span_test.go",
         "server_test.go",
+        "slashing_bench_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
-        "//proto/eth/v1alpha1:go_default_library",
+        "//proto/beacon/rpc/v1:go_default_library",
         "//shared/params:go_default_library",
         "//slasher/db:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
     ],
 )
 
@@ -41,7 +44,7 @@ go_test(
 go_test(
     name = "go_benchmark_test",
     size = "medium",
-    srcs = ["detect_update_min_max_span_bench_test.go"],
+    srcs = ["slashing_bench_test.go"],
     args = [
         "-test.bench=.",
         "-test.benchmem",

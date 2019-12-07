@@ -35,15 +35,11 @@ func Get(pid peer.ID) *pb.Status {
 func Set(pid peer.ID, status *pb.Status) {
 	lock.Lock()
 	defer lock.Unlock()
-	if pStatus, ok := peerStatuses[pid]; ok {
-		pStatus.status = status
-		peerStatuses[pid] = pStatus
-		return
+	if _, ok := peerStatuses[pid]; !ok {
+		peerStatuses[pid] = &peerStatus{}
 	}
-	peerStatuses[pid] = &peerStatus{
-		status:      status,
-		lastUpdated: roughtime.Now(),
-	}
+	peerStatuses[pid].status = status
+	peerStatuses[pid].lastUpdated = roughtime.Now()
 }
 
 // Delete peer status from cache. Threadsafe.

@@ -6,13 +6,13 @@ import (
 	"testing"
 	"time"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -56,10 +56,7 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *pb.Beac
 		helpers.CurrentEpoch(state),
 		params.BeaconConfig().DomainBeaconProposer,
 	)
-	privKey, err := bls.RandKey(rand.Reader)
-	if err != nil {
-		t.Errorf("Could not generate random private key: %v", err)
-	}
+	privKey := bls.RandKey()
 
 	header1 := &ethpb.BeaconBlockHeader{
 		Slot:      0,
@@ -121,6 +118,7 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 		t.Error("Broadcast was not called")
 	}
 
+	time.Sleep(100 * time.Millisecond)
 	// A second message with the same information should not be valid for processing or
 	// propagation.
 	p2p.BroadcastCalled = false

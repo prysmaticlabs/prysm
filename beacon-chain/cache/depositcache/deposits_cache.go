@@ -10,7 +10,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )

@@ -7,9 +7,9 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
@@ -161,7 +161,7 @@ func TestStore_BlocksCRUD_NoCache(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatal(err)
 	}
-	db.blockCache.Delete(string(blockRoot[:]))
+	db.blockCache.Del(string(blockRoot[:]))
 	if !db.HasBlock(ctx, blockRoot) {
 		t.Error("Expected block to exist in the db")
 	}

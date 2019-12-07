@@ -7,8 +7,9 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
@@ -25,7 +26,7 @@ type blockchainService interface {
 }
 
 const (
-	minStatusCount           = 1               // TODO(3147): Set this to more than 1, maybe configure from flag?
+	minStatusCount           = 3               // TODO(3147): Set this to more than 3, maybe configure from flag?
 	handshakePollingInterval = 5 * time.Second // Polling interval for checking the number of received handshakes.
 )
 
@@ -67,15 +68,15 @@ func (s *InitialSync) Start() {
 	headState, err := s.chain.HeadState(s.ctx)
 	if headState == nil || err != nil {
 		// Wait for state to be initialized.
-		stateChannel := make(chan *statefeed.Event, 1)
+		stateChannel := make(chan *feed.Event, 1)
 		stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
 		defer stateSub.Unsubscribe()
 		genesisSet := false
 		for !genesisSet {
 			select {
 			case event := <-stateChannel:
-				if event.Type == statefeed.StateInitialized {
-					data := event.Data.(*statefeed.StateInitializedData)
+				if event.Type == statefeed.Initialized {
+					data := event.Data.(*statefeed.InitializedData)
 					log.WithField("starttime", data.StartTime).Debug("Received state initialized event")
 					genesis = data.StartTime
 					genesisSet = true

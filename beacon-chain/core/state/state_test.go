@@ -5,10 +5,10 @@ import (
 	"reflect"
 	"testing"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -42,8 +42,11 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	genesisTime := uint64(99999)
-	deposits, _, _ := testutil.SetupInitialDeposits(t, uint64(depositsForChainStart))
-	eth1Data := testutil.GenerateEth1Data(t, deposits)
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(uint64(depositsForChainStart))
+	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	if err != nil {
+		t.Fatal(err)
+	}
 	newState, err := state.GenesisBeaconState(deposits, genesisTime, eth1Data)
 	if err != nil {
 		t.Fatalf("could not execute GenesisBeaconState: %v", err)
@@ -128,7 +131,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 
 func TestGenesisState_HashEquality(t *testing.T) {
 	helpers.ClearAllCaches()
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(100)
 	state1, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Error(err)

@@ -4,28 +4,26 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
-	"errors"
 	"io/ioutil"
-	"math/big"
 	"reflect"
 	"testing"
 	"time"
 
-	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
-	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/gogo/protobuf/proto"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	ssz "github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	ops "github.com/prysmaticlabs/prysm/beacon-chain/operations/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -47,7 +45,7 @@ func (s *store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	return nil
 }
 
-func (s *store) OnBlockNoVerifyStateTransition(ctx context.Context, b *ethpb.BeaconBlock) error {
+func (s *store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.BeaconBlock) error {
 	return nil
 }
 
@@ -77,119 +75,6 @@ func (mbn *mockBeaconNode) StateFeed() *event.Feed {
 		mbn.stateFeed = new(event.Feed)
 	}
 	return mbn.stateFeed
-}
-
-type mockOperationService struct{}
-
-func (ms *mockOperationService) IncomingProcessedBlockFeed() *event.Feed {
-	return new(event.Feed)
-}
-
-func (ms *mockOperationService) IncomingAttFeed() *event.Feed {
-	return nil
-}
-
-func (ms *mockOperationService) AttestationPool(ctx context.Context, requestedSlot uint64) ([]*ethpb.Attestation, error) {
-	return nil, nil
-}
-
-func (ms *mockOperationService) AttestationPoolNoVerify(ctx context.Context) ([]*ethpb.Attestation, error) {
-	return nil, nil
-}
-
-func (ms *mockOperationService) AttestationPoolForForkchoice(ctx context.Context) ([]*ethpb.Attestation, error) {
-	return nil, nil
-}
-
-func (ms *mockOperationService) AttestationsBySlotCommittee(ctx context.Context, slot uint64, index uint64) ([]*ethpb.Attestation, error) {
-	return nil, nil
-}
-
-type mockClient struct{}
-
-func (m *mockClient) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
-	return new(event.Feed).Subscribe(ch), nil
-}
-
-func (m *mockClient) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
-	head := &gethTypes.Header{Number: big.NewInt(0), Difficulty: big.NewInt(100)}
-	return gethTypes.NewBlockWithHeader(head), nil
-}
-
-func (m *mockClient) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
-	head := &gethTypes.Header{Number: big.NewInt(0), Difficulty: big.NewInt(100)}
-	return gethTypes.NewBlockWithHeader(head), nil
-}
-
-func (m *mockClient) HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error) {
-	return &gethTypes.Header{Number: big.NewInt(0), Difficulty: big.NewInt(100)}, nil
-}
-
-func (m *mockClient) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error) {
-	return new(event.Feed).Subscribe(ch), nil
-}
-
-func (m *mockClient) CallContract(ctx context.Context, call ethereum.CallMsg, blockNumber *big.Int) ([]byte, error) {
-	return []byte{'t', 'e', 's', 't'}, nil
-}
-
-func (m *mockClient) CodeAt(ctx context.Context, account common.Address, blockNumber *big.Int) ([]byte, error) {
-	return []byte{'t', 'e', 's', 't'}, nil
-}
-
-func (m *mockClient) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]gethTypes.Log, error) {
-	logs := make([]gethTypes.Log, 3)
-	for i := 0; i < len(logs); i++ {
-		logs[i].Address = common.Address{}
-		logs[i].Topics = make([]common.Hash, 5)
-		logs[i].Topics[0] = common.Hash{'a'}
-		logs[i].Topics[1] = common.Hash{'b'}
-		logs[i].Topics[2] = common.Hash{'c'}
-
-	}
-	return logs, nil
-}
-
-func (m *mockClient) LatestBlockHash() common.Hash {
-	return common.BytesToHash([]byte{'A'})
-}
-
-type faultyClient struct{}
-
-func (f *faultyClient) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
-	return new(event.Feed).Subscribe(ch), nil
-}
-
-func (f *faultyClient) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
-	return nil, errors.New("failed")
-}
-
-func (f *faultyClient) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
-	return nil, errors.New("failed")
-}
-
-func (f *faultyClient) HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error) {
-	return nil, errors.New("failed")
-}
-
-func (f *faultyClient) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error) {
-	return new(event.Feed).Subscribe(ch), nil
-}
-
-func (f *faultyClient) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]gethTypes.Log, error) {
-	return nil, errors.New("unable to retrieve logs")
-}
-
-func (f *faultyClient) CallContract(ctx context.Context, call ethereum.CallMsg, blockNumber *big.Int) ([]byte, error) {
-	return []byte{}, errors.New("unable to retrieve contract code")
-}
-
-func (f *faultyClient) CodeAt(ctx context.Context, account common.Address, blockNumber *big.Int) ([]byte, error) {
-	return []byte{}, errors.New("unable to retrieve contract code")
-}
-
-func (f *faultyClient) LatestBlockHash() common.Hash {
-	return common.BytesToHash([]byte{'A'})
 }
 
 type mockBroadcaster struct {
@@ -233,7 +118,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		BeaconDB:          beaconDB,
 		DepositCache:      depositcache.NewDepositCache(),
 		ChainStartFetcher: web3Service,
-		OpsPoolService:    &mockOperationService{},
+		OpsPoolService:    &ops.Operations{},
 		P2p:               &mockBroadcaster{},
 		StateNotifier:     &mockBeaconNode{},
 	}
@@ -256,13 +141,13 @@ func TestChainStartStop_Uninitialized(t *testing.T) {
 	chainService := setupBeaconChain(t, db)
 
 	// Listen for state events.
-	stateSubChannel := make(chan *statefeed.Event, 1)
+	stateSubChannel := make(chan *feed.Event, 1)
 	stateSub := chainService.stateNotifier.StateFeed().Subscribe(stateSubChannel)
 
 	// Test the chain start state notifier.
 	genesisTime := time.Unix(0, 0)
 	chainService.Start()
-	event := &statefeed.Event{
+	event := &feed.Event{
 		Type: statefeed.ChainStarted,
 		Data: &statefeed.ChainStartedData{
 			StartTime: genesisTime,
@@ -280,7 +165,7 @@ func TestChainStartStop_Uninitialized(t *testing.T) {
 	// Now wait for notification the state is ready.
 	for stateInitialized := false; stateInitialized == false; {
 		recv := <-stateSubChannel
-		if recv.Type == statefeed.StateInitialized {
+		if recv.Type == statefeed.Initialized {
 			stateInitialized = true
 		}
 	}
@@ -356,7 +241,7 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 
 	// Set up 10 deposits pre chain start for validators to register
 	count := uint64(10)
-	deposits, _, _ := testutil.SetupInitialDeposits(t, count)
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(count)
 	if err := bc.initializeBeaconChain(ctx, time.Unix(0, 0), deposits, &ethpb.Eth1Data{}); err != nil {
 		t.Fatal(err)
 	}

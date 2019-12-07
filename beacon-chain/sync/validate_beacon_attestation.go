@@ -3,13 +3,12 @@ package sync
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
@@ -33,7 +32,10 @@ func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.M
 	// TODO(1332): Add blocks.VerifyAttestation before processing further.
 	// Discussion: https://github.com/ethereum/eth2.0-specs/issues/1332
 
-	att := msg.(*ethpb.Attestation)
+	att, ok := msg.(*ethpb.Attestation)
+	if !ok {
+		return false, nil
+	}
 
 	attRoot, err := ssz.HashTreeRoot(att)
 	if err != nil {
@@ -45,6 +47,12 @@ func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.M
 		trace.StringAttribute("attRoot", fmt.Sprintf("%#x", attRoot)),
 	)
 
+	if _, ok := recentlySeenRoots.Get(string(attRoot[:])); ok {
+		return false, nil
+	}
+
+	recentlySeenRoots.Set(string(attRoot[:]), true /*value*/, 1 /*cost*/)
+
 	// Only valid blocks are saved in the database.
 	if !r.db.HasBlock(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot)) {
 		log.WithField(
@@ -54,12 +62,6 @@ func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.M
 		traceutil.AnnotateError(span, errPointsToBlockNotInDatabase)
 		return false, nil
 	}
-
-	if recentlySeenRoots.Get(string(attRoot[:])) != nil {
-		return false, nil
-	}
-
-	recentlySeenRoots.Set(string(attRoot[:]), true /*value*/, 365*24*time.Hour /*TTL*/)
 
 	if fromSelf {
 		return false, nil

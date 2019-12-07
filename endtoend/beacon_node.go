@@ -14,6 +14,7 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
 	ev "github.com/prysmaticlabs/prysm/endtoend/evaluators"
 )
 
@@ -90,16 +91,16 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 	cmd.Stderr = file
 	cmd.Stdout = file
 	if err := cmd.Start(); err != nil {
-		t.Fatalf("failed to start beacon node: %v", err)
+		t.Fatalf("Failed to start beacon node: %v", err)
 	}
 
 	if err = waitForTextInFile(file, "Node started p2p server"); err != nil {
-		t.Fatal(err)
+		t.Fatalf("could not find multiaddr for node %d, this means the node had issues starting: %v", index, err)
 	}
 
 	multiAddr, err := getMultiAddrFromLogFile(file.Name())
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("could not get multiaddr fpr node %d: %v", index, err)
 	}
 
 	return &beaconNodeInfo{
@@ -141,7 +142,7 @@ func waitForTextInFile(file *os.File, text string) error {
 		// Rewind the file pointer to the start of the file so we can read it again.
 		_, err := file.Seek(0, io.SeekStart)
 		if err != nil {
-			return fmt.Errorf("could not rewind file to start: %v", err)
+			return errors.Wrap(err, "could not rewind file to start")
 		}
 
 		scanner := bufio.NewScanner(file)

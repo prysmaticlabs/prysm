@@ -5,8 +5,7 @@ import (
 	"errors"
 
 	"github.com/boltdb/bolt"
-	"github.com/gogo/protobuf/proto"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -28,7 +27,7 @@ func (k *Store) JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, err
 			return nil
 		}
 		checkpoint = &ethpb.Checkpoint{}
-		return proto.Unmarshal(enc, checkpoint)
+		return decode(enc, checkpoint)
 	})
 	return checkpoint, err
 }
@@ -48,7 +47,7 @@ func (k *Store) FinalizedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, err
 			return nil
 		}
 		checkpoint = &ethpb.Checkpoint{}
-		return proto.Unmarshal(enc, checkpoint)
+		return decode(enc, checkpoint)
 	})
 	return checkpoint, err
 }
@@ -58,7 +57,7 @@ func (k *Store) SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveJustifiedCheckpoint")
 	defer span.End()
 
-	enc, err := proto.Marshal(checkpoint)
+	enc, err := encode(checkpoint)
 	if err != nil {
 		return err
 	}
@@ -73,7 +72,7 @@ func (k *Store) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveFinalizedCheckpoint")
 	defer span.End()
 
-	enc, err := proto.Marshal(checkpoint)
+	enc, err := encode(checkpoint)
 	if err != nil {
 		return err
 	}

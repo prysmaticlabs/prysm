@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dgraph-io/ristretto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	ds "github.com/ipfs/go-datastore"
 	dsync "github.com/ipfs/go-datastore/sync"
-	"github.com/karlseguin/ccache"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -22,6 +22,7 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/shared"
 )
 
@@ -42,7 +43,7 @@ type Service struct {
 	dv5Listener   Listener
 	host          host.Host
 	pubsub        *pubsub.PubSub
-	exclusionList *ccache.Cache
+	exclusionList *ristretto.Cache
 	privKey       *ecdsa.PrivateKey
 	dht           *kaddht.IpfsDHT
 }
@@ -52,12 +53,17 @@ type Service struct {
 func NewService(cfg *Config) (*Service, error) {
 	var err error
 	ctx, cancel := context.WithCancel(context.Background())
+	cache, _ := ristretto.NewCache(&ristretto.Config{
+		NumCounters: 1000,
+		MaxCost:     1000,
+		BufferItems: 64,
+	})
 
 	s := &Service{
 		ctx:           ctx,
 		cancel:        cancel,
 		cfg:           cfg,
-		exclusionList: ccache.New(ccache.Configure()),
+		exclusionList: cache,
 	}
 
 	dv5Nodes, kadDHTNodes := parseBootStrapAddrs(s.cfg.BootstrapNodeAddr)
@@ -129,6 +135,11 @@ func (s *Service) Start() {
 		if err := dialRelayNode(s.ctx, s.host, s.cfg.RelayNodeAddr); err != nil {
 			log.WithError(err).Errorf("Could not dial relay node")
 		}
+		peer, err := MakePeer(s.cfg.RelayNodeAddr)
+		if err != nil {
+			log.WithError(err).Errorf("Could not create peer")
+		}
+		s.host.ConnManager().Protect(peer.ID, "relay")
 	}
 
 	if len(s.cfg.Discv5BootStrapAddr) != 0 && !s.cfg.NoDiscovery {
@@ -163,6 +174,11 @@ func (s *Service) Start() {
 				s.startupErr = err
 				return
 			}
+			peer, err := MakePeer(addr)
+			if err != nil {
+				log.WithError(err).Errorf("Could not create peer")
+			}
+			s.host.ConnManager().Protect(peer.ID, "bootnode")
 		}
 		bcfg := kaddht.DefaultBootstrapConfig
 		bcfg.Period = time.Duration(30 * time.Second)
@@ -244,6 +260,25 @@ func (s *Service) Disconnect(pid peer.ID) error {
 	return s.host.Network().ClosePeer(pid)
 }
 
+// Peers provides a list of peers that are known to this node.
+// Note this includes peers to which we are not currently actively connected; to find active
+// peers the info returned here should be filtered against that in `peerstatus`, which contains
+// information about active peers.
+func (s *Service) Peers() []*peers.Info {
+	res := make([]*peers.Info, 0)
+	for _, conn := range s.host.Network().Conns() {
+		addrInfo := &peer.AddrInfo{
+			ID:    conn.RemotePeer(),
+			Addrs: []ma.Multiaddr{conn.RemoteMultiaddr()},
+		}
+		res = append(res, &peers.Info{
+			AddrInfo:  addrInfo,
+			Direction: conn.Stat().Direction,
+		})
+	}
+	return res
+}
+
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.
 func (s *Service) listenForNewNodes() {
 	ticker := time.NewTicker(pollingPeriod)
@@ -274,12 +309,12 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 		if info.ID == s.host.ID() {
 			continue
 		}
-		if s.exclusionList.Get(info.ID.String()) != nil {
+		if _, ok := s.exclusionList.Get(info.ID.String()); ok {
 			continue
 		}
 		if err := s.host.Connect(s.ctx, info); err != nil {
 			log.Errorf("Could not connect with peer %s: %v", info.String(), err)
-			s.exclusionList.Set(info.ID.String(), true, ttl)
+			s.exclusionList.Set(info.ID.String(), true, 1)
 		}
 	}
 }
@@ -299,7 +334,7 @@ func (s *Service) addBootNodesToExclusionList() error {
 			return err
 		}
 		// bootnode is never dialled, so ttl is tentatively 1 year
-		s.exclusionList.Set(addrInfo.ID.String(), true, 365*24*time.Hour)
+		s.exclusionList.Set(addrInfo.ID.String(), true, 1)
 	}
 
 	return nil
@@ -315,7 +350,7 @@ func (s *Service) addKadDHTNodesToExclusionList(addr string) error {
 		return err
 	}
 	// bootnode is never dialled, so ttl is tentatively 1 year
-	s.exclusionList.Set(addrInfo.ID.String(), true, 365*24*time.Hour)
+	s.exclusionList.Set(addrInfo.ID.String(), true, 1)
 	return nil
 }
 

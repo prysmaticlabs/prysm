@@ -6,11 +6,11 @@ import (
 	"strings"
 	"testing"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -69,7 +69,7 @@ func TestStore_OnAttestation(t *testing.T) {
 			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: []byte{'A'}}}},
 			s:             &pb.BeaconState{},
 			wantErr:       true,
-			wantErrString: "target root 0x41 does not exist in db",
+			wantErrString: "target root does not exist in db",
 		},
 		{
 			name:          "no pre state for attestations's target block",

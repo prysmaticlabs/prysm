@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 )
@@ -199,9 +199,16 @@ func TestServer_UpdateMaxEpochSpan(t *testing.T) {
 		SlasherDB: dbs,
 	}
 	for _, tt := range spanTestsMax {
-		st, err := slasherServer.DetectAndUpdateMaxEpochSpan(ctx, tt.sourceEpoch, tt.targetEpoch, tt.validatorIdx)
+		spanMap, err := slasherServer.SlasherDB.ValidatorSpansMap(tt.validatorIdx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		st, spanMap, err := slasherServer.DetectAndUpdateMaxEpochSpan(ctx, tt.sourceEpoch, tt.targetEpoch, tt.validatorIdx, spanMap)
 		if err != nil {
 			t.Fatalf("Failed to update span: %v", err)
+		}
+		if err := slasherServer.SlasherDB.SaveValidatorSpansMap(tt.validatorIdx, spanMap); err != nil {
+			t.Fatalf("Couldnt save span map for validator id: %d", tt.validatorIdx)
 		}
 		if st != tt.slashingTargetEpoch {
 			t.Fatalf("Expected slashing target: %d got: %v", tt.slashingTargetEpoch, st)
@@ -224,9 +231,16 @@ func TestServer_UpdateMinEpochSpan(t *testing.T) {
 		SlasherDB: dbs,
 	}
 	for _, tt := range spanTestsMin {
-		st, err := slasherServer.DetectAndUpdateMinEpochSpan(ctx, tt.sourceEpoch, tt.targetEpoch, tt.validatorIdx)
+		spanMap, err := slasherServer.SlasherDB.ValidatorSpansMap(tt.validatorIdx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		st, spanMap, err := slasherServer.DetectAndUpdateMinEpochSpan(ctx, tt.sourceEpoch, tt.targetEpoch, tt.validatorIdx, spanMap)
 		if err != nil {
 			t.Fatalf("Failed to update span: %v", err)
+		}
+		if err := slasherServer.SlasherDB.SaveValidatorSpansMap(tt.validatorIdx, spanMap); err != nil {
+			t.Fatalf("Couldnt save span map for validator id: %d", tt.validatorIdx)
 		}
 		if st != tt.slashingTargetEpoch {
 			t.Fatalf("Expected slashing target: %v got: %v", tt.slashingTargetEpoch, st)
@@ -260,10 +274,14 @@ func TestServer_FailToUpdate(t *testing.T) {
 			},
 		},
 	}
-	if _, err := slasherServer.DetectAndUpdateMinEpochSpan(ctx, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch, spanTestsFail.validatorIdx); err == nil {
+	spanMap, err := slasherServer.SlasherDB.ValidatorSpansMap(spanTestsFail.validatorIdx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := slasherServer.DetectAndUpdateMinEpochSpan(ctx, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch, spanTestsFail.validatorIdx, spanMap); err == nil {
 		t.Fatalf("Update should not support diff greater then weak subjectivity period: %v ", params.BeaconConfig().WeakSubjectivityPeriod)
 	}
-	if _, err := slasherServer.DetectAndUpdateMaxEpochSpan(ctx, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch, spanTestsFail.validatorIdx); err == nil {
+	if _, _, err := slasherServer.DetectAndUpdateMaxEpochSpan(ctx, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch, spanTestsFail.validatorIdx, spanMap); err == nil {
 		t.Fatalf("Update should not support diff greater then weak subjectivity period: %v ", params.BeaconConfig().WeakSubjectivityPeriod)
 	}
 

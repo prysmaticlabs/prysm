@@ -4,14 +4,15 @@ import (
 	"context"
 	"crypto/rand"
 	"testing"
+	"time"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -41,10 +42,8 @@ func setupValidExit(t *testing.T) (*ethpb.VoluntaryExit, *pb.BeaconState) {
 		t.Error(err)
 	}
 	domain := helpers.Domain(state.Fork, helpers.CurrentEpoch(state), params.BeaconConfig().DomainVoluntaryExit)
-	priv, err := bls.RandKey(rand.Reader)
-	if err != nil {
-		t.Error(err)
-	}
+	priv := bls.RandKey()
+
 	sig := priv.Sign(signingRoot[:], domain)
 	exit.Signature = sig.Marshal()
 	state.Validators[0].PublicKey = priv.PublicKey().Marshal()[:]
@@ -83,6 +82,7 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 		t.Error("Broadcast was not called")
 	}
 
+	time.Sleep(100 * time.Millisecond)
 	// A second message with the same information should not be valid for processing or
 	// propagation.
 	p2p.BroadcastCalled = false
