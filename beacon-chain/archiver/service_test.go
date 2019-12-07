@@ -11,8 +11,9 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -35,7 +36,7 @@ func TestArchiverService_ReceivesBlockProcessedEvent(t *testing.T) {
 	svc.headFetcher = &mock.ChainService{
 		State: &pb.BeaconState{Slot: 1},
 	}
-	event := &statefeed.Event{
+	event := &feed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
 			BlockRoot: [32]byte{1, 2, 3},
@@ -55,7 +56,7 @@ func TestArchiverService_OnlyArchiveAtEpochEnd(t *testing.T) {
 	svc.headFetcher = &mock.ChainService{
 		State: &pb.BeaconState{Slot: params.BeaconConfig().SlotsPerEpoch - 2},
 	}
-	event := &statefeed.Event{
+	event := &feed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
 			BlockRoot: [32]byte{1, 2, 3},
@@ -80,7 +81,7 @@ func TestArchiverService_ArchivesEvenThroughSkipSlot(t *testing.T) {
 	validatorCount := uint64(100)
 	headState := setupState(t, validatorCount)
 	defer dbutil.TeardownDB(t, beaconDB)
-	event := &statefeed.Event{
+	event := &feed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
 			BlockRoot: [32]byte{1, 2, 3},
@@ -133,7 +134,7 @@ func TestArchiverService_ComputesAndSavesParticipation(t *testing.T) {
 	svc.headFetcher = &mock.ChainService{
 		State: headState,
 	}
-	event := &statefeed.Event{
+	event := &feed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
 			BlockRoot: [32]byte{1, 2, 3},
@@ -170,7 +171,7 @@ func TestArchiverService_SavesIndicesAndBalances(t *testing.T) {
 	svc.headFetcher = &mock.ChainService{
 		State: headState,
 	}
-	event := &statefeed.Event{
+	event := &feed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
 			BlockRoot: [32]byte{1, 2, 3},
@@ -203,7 +204,7 @@ func TestArchiverService_SavesCommitteeInfo(t *testing.T) {
 	svc.headFetcher = &mock.ChainService{
 		State: headState,
 	}
-	event := &statefeed.Event{
+	event := &feed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
 			BlockRoot: [32]byte{1, 2, 3},
@@ -254,7 +255,7 @@ func TestArchiverService_SavesActivatedValidatorChanges(t *testing.T) {
 	delayedActEpoch := helpers.DelayedActivationExitEpoch(prevEpoch)
 	headState.Validators[4].ActivationEpoch = delayedActEpoch
 	headState.Validators[5].ActivationEpoch = delayedActEpoch
-	event := &statefeed.Event{
+	event := &feed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
 			BlockRoot: [32]byte{1, 2, 3},
@@ -288,7 +289,7 @@ func TestArchiverService_SavesSlashedValidatorChanges(t *testing.T) {
 	prevEpoch := helpers.PrevEpoch(headState)
 	headState.Validators[95].Slashed = true
 	headState.Validators[96].Slashed = true
-	event := &statefeed.Event{
+	event := &feed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
 			BlockRoot: [32]byte{1, 2, 3},
@@ -322,7 +323,7 @@ func TestArchiverService_SavesExitedValidatorChanges(t *testing.T) {
 	prevEpoch := helpers.PrevEpoch(headState)
 	headState.Validators[95].ExitEpoch = prevEpoch
 	headState.Validators[95].WithdrawableEpoch = prevEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
-	event := &statefeed.Event{
+	event := &feed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
 			BlockRoot: [32]byte{1, 2, 3},
@@ -385,7 +386,7 @@ func setupService(t *testing.T) (*Service, db.Database) {
 	}, beaconDB
 }
 
-func triggerStateEvent(t *testing.T, svc *Service, event *statefeed.Event) {
+func triggerStateEvent(t *testing.T, svc *Service, event *feed.Event) {
 	exitRoutine := make(chan bool)
 	go func() {
 		svc.run(svc.ctx)
