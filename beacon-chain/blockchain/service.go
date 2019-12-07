@@ -16,9 +16,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -125,9 +126,9 @@ func (s *Service) Start() {
 		if err := s.forkChoiceStore.GenesisStore(ctx, justifiedCheckpoint, finalizedCheckpoint); err != nil {
 			log.Fatalf("Could not start fork choice service: %v", err)
 		}
-		s.stateNotifier.StateFeed().Send(&statefeed.Event{
-			Type: statefeed.StateInitialized,
-			Data: &statefeed.StateInitializedData{
+		s.stateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.Initialized,
+			Data: &statefeed.InitializedData{
 				StartTime: s.genesisTime,
 			},
 		})
@@ -138,7 +139,7 @@ func (s *Service) Start() {
 			return // return need for TestStartUninitializedChainWithoutConfigPOWChain.
 		}
 		go func() {
-			stateChannel := make(chan *statefeed.Event, 1)
+			stateChannel := make(chan *feed.Event, 1)
 			stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
 			defer stateSub.Unsubscribe()
 			for {
@@ -171,9 +172,9 @@ func (s *Service) processChainStartTime(ctx context.Context, genesisTime time.Ti
 	if err := s.initializeBeaconChain(ctx, genesisTime, initialDeposits, s.chainStartFetcher.ChainStartEth1Data()); err != nil {
 		log.Fatalf("Could not initialize beacon chain: %v", err)
 	}
-	s.stateNotifier.StateFeed().Send(&statefeed.Event{
-		Type: statefeed.StateInitialized,
-		Data: &statefeed.StateInitializedData{
+	s.stateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.Initialized,
+		Data: &statefeed.InitializedData{
 			StartTime: genesisTime,
 		},
 	})
