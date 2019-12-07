@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -189,11 +190,15 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.BeaconB
 		return errors.Wrap(err, "could not get signing root on received blockCopy")
 	}
 
-	if !bytes.Equal(root[:], s.HeadRoot()) {
-		if err := s.saveHead(ctx, blockCopy, root); err != nil {
-			err := errors.Wrap(err, "could not save head")
-			traceutil.AnnotateError(span, err)
-			return err
+	// With the inital-sync-cache-state flag, it relies finalized check point as anchors to resume sync
+	// therefore head is no longer needed to be saved on per slot basis.
+	if !featureconfig.Get().InitSyncCacheState {
+		if !bytes.Equal(root[:], s.HeadRoot()) {
+			if err := s.saveHead(ctx, blockCopy, root); err != nil {
+				err := errors.Wrap(err, "could not save head")
+				traceutil.AnnotateError(span, err)
+				return err
+			}
 		}
 	}
 
