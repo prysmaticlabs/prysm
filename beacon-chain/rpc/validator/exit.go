@@ -11,8 +11,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// RequestExit requests an exit for a validator.
-func (vs *Server) RequestExit(ctx context.Context, req *ethpb.VoluntaryExit) (*ptypes.Empty, error) {
+// ProposeExit proposes an exit for a validator.
+func (vs *Server) ProposeExit(ctx context.Context, req *ethpb.VoluntaryExit) (*ptypes.Empty, error) {
 	s, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)

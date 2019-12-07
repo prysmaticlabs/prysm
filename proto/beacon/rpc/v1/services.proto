@@ -30,7 +30,7 @@ service ValidatorService {
   rpc ExitedValidators(ExitedValidatorsRequest) returns (ExitedValidatorsResponse);
   rpc WaitForChainStart(google.protobuf.Empty) returns (stream ChainStartResponse);
   rpc CanonicalHead(google.protobuf.Empty) returns (ethereum.eth.v1alpha1.BeaconBlock);
-  rpc RequestExit(ethereum.eth.v1alpha1.VoluntaryExit) returns (google.protobuf.Empty);
+  rpc ProposeExit(ethereum.eth.v1alpha1.VoluntaryExit) returns (google.protobuf.Empty);
 }
 
 message BlockRequest {
