@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/go-ssz"
 )
 
@@ -23,6 +24,9 @@ func TestStore_Backup(t *testing.T) {
 	}
 	root, err := ssz.SigningRoot(head)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, &pb.BeaconState{}, root); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.SaveHeadBlockRoot(ctx, root); err != nil {

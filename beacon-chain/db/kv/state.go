@@ -116,9 +116,12 @@ func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 			return err
 		}
 
-		// Safe guard against deleting genesis or finalized state.
-		if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) {
-			return errors.New("could not delete genesis or finalized state")
+		bkt = tx.Bucket(blocksBucket)
+		headBlkRoot := bkt.Get(headBlockRootKey)
+
+		// Safe guard against deleting genesis, finalized, head state.
+		if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], headBlkRoot) {
+			return errors.New("could not delete genesis, finalized, or head state")
 		}
 
 		bkt = tx.Bucket(stateBucket)
@@ -144,10 +147,13 @@ func (k *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 			return err
 		}
 
+		bkt = tx.Bucket(blocksBucket)
+		headBlkRoot := bkt.Get(headBlockRootKey)
+
 		for _, blockRoot := range blockRoots {
-			// Safe guard against deleting genesis or finalized state.
-			if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) {
-				return errors.New("could not delete genesis or finalized state")
+			// Safe guard against deleting genesis, finalized, or head state.
+			if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], headBlkRoot) {
+				return errors.New("could not delete genesis, finalized, or head state")
 			}
 
 			bkt = tx.Bucket(stateBucket)
