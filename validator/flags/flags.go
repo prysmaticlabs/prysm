@@ -50,6 +50,11 @@ var (
 		Name:  "disable-rewards-penalties-logging",
 		Usage: "Disable reward/penalty logging during cluster deployment",
 	}
+	// GraffitiFlag defines the graffiti value included in proposed blocks
+	GraffitiFlag = cli.StringFlag{
+		Name: "graffiti",
+		Usage: "String to include in proposed blocks",
+	}
 )
 
 func homeDir() string {
