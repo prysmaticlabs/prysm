@@ -36,6 +36,7 @@ var appFlags = []cli.Flag{
 	flags.NoCustomConfigFlag,
 	flags.BeaconRPCProviderFlag,
 	flags.CertFlag,
+	flags.GraffitiFlag,
 	flags.KeystorePathFlag,
 	flags.PasswordFlag,
 	flags.DisablePenaltyRewardLogFlag,
