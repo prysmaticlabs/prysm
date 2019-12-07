@@ -86,12 +86,13 @@ func (r *RegularSync) registerSubscribers() {
 		r.validateAttesterSlashing,
 		r.attesterSlashingSubscriber,
 	)
-	r.subscribeDynamic(
-		"/eth2/committee_index/%d_beacon_attestation",
-		r.currentCommitteeIndex,                     /* determineSubsLen */
-		noopValidator,                               /* validator */
-		r.committeeIndexBeaconAttestationSubscriber, /* message handler */
-	)
+	// TODO(4154): Uncomment.
+	//r.subscribeDynamic(
+	//	"/eth2/committee_index/%d_beacon_attestation",
+	//	r.currentCommitteeIndex,                     /* determineSubsLen */
+	//	noopValidator,                               /* validator */
+	//	r.committeeIndexBeaconAttestationSubscriber, /* message handler */
+	//)
 }
 
 // subscribe to a given topic with a given validator and subscription handler.
