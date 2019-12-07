@@ -190,9 +190,15 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.BeaconB
 		return errors.Wrap(err, "could not get signing root on received blockCopy")
 	}
 
-	// With the inital-sync-cache-state flag, it relies finalized check point as anchors to resume sync
-	// therefore head is no longer needed to be saved on per slot basis.
-	if !featureconfig.Get().InitSyncCacheState {
+	if featureconfig.Get().InitSyncCacheState {
+		if !bytes.Equal(root[:], s.HeadRoot()) {
+			if err := s.saveHeadNoDB(ctx, blockCopy, root); err != nil {
+				err := errors.Wrap(err, "could not save head")
+				traceutil.AnnotateError(span, err)
+				return err
+			}
+		}
+	} else {
 		if !bytes.Equal(root[:], s.HeadRoot()) {
 			if err := s.saveHead(ctx, blockCopy, root); err != nil {
 				err := errors.Wrap(err, "could not save head")
