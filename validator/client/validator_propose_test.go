@@ -34,7 +34,7 @@ func setup(t *testing.T) (*validator, *mocks, func()) {
 		validatorClient:  m.validatorClient,
 		aggregatorClient: m.aggregatorClient,
 		keys:             keyMap,
-		graffiti:         "",
+		graffiti:         []byte{},
 	}
 
 	return validator, m, ctrl.Finish
@@ -142,19 +142,17 @@ func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
 	validator, m, finish := setup(t)
 	defer finish()
 
-	validator.graffiti = "12345678901234567890123456789012"
+	validator.graffiti = []byte("12345678901234567890123456789012")
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
 	).Return(&pb.DomainResponse{}, nil /*err*/)
 
-	graffiti := []byte(validator.graffiti)
-
 	m.proposerClient.EXPECT().RequestBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
-	).Return(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{ Graffiti: graffiti[:], }}, nil /*err*/)
+	).Return(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{ Graffiti: validator.graffiti, }}, nil /*err*/)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -173,7 +171,7 @@ func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
 
 	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
 
-	if string(sentBlock.Body.Graffiti) != validator.graffiti {
-		t.Errorf("Block was broadcast with the wrong graffiti field, wanted \"%v\", got \"%v\"", validator.graffiti, string(sentBlock.Body.Graffiti))
+	if string(sentBlock.Body.Graffiti) != string(validator.graffiti) {
+		t.Errorf("Block was broadcast with the wrong graffiti field, wanted \"%v\", got \"%v\"", string(validator.graffiti), string(sentBlock.Body.Graffiti))
 	}
 }
