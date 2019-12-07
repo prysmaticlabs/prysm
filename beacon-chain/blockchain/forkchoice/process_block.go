@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
@@ -107,10 +108,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 			return errors.Wrap(err, "could not save finalized checkpoint")
 		}
 
-		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch) + 1
-		if featureconfig.Get().PruneEpochBoundaryStates {
-			startSlot = helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
-		}
+		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 		if endSlot > startSlot {
 			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
@@ -203,10 +201,7 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.
 		s.clearSeenAtts()
 		helpers.ClearAllCaches()
 
-		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch) + 1
-		if featureconfig.Get().PruneEpochBoundaryStates {
-			startSlot = helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
-		}
+		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 		if endSlot > startSlot {
 			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
@@ -322,9 +317,10 @@ func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attes
 	if err != nil {
 		return errors.Wrap(err, "could not convert attestation to indexed attestation")
 	}
+
 	s.voteLock.Lock()
 	defer s.voteLock.Unlock()
-	for _, i := range append(indexedAtt.CustodyBit_0Indices, indexedAtt.CustodyBit_1Indices...) {
+	for _, i := range indexedAtt.AttestingIndices {
 		vote, ok := s.latestVoteMap[i]
 		if !ok || tgt.Epoch > vote.Epoch {
 			s.latestVoteMap[i] = &pb.ValidatorLatestVote{
@@ -431,17 +427,15 @@ func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot ui
 	defer span.End()
 
 	// Make sure start slot is not a skipped slot
-	if featureconfig.Get().PruneEpochBoundaryStates {
-		for i := startSlot; i > 0; i-- {
-			filter := filters.NewFilter().SetStartSlot(i).SetEndSlot(i)
-			b, err := s.db.Blocks(ctx, filter)
-			if err != nil {
-				return err
-			}
-			if len(b) > 0 {
-				startSlot = i
-				break
-			}
+	for i := startSlot; i > 0; i-- {
+		filter := filters.NewFilter().SetStartSlot(i).SetEndSlot(i)
+		b, err := s.db.Blocks(ctx, filter)
+		if err != nil {
+			return err
+		}
+		if len(b) > 0 {
+			startSlot = i
+			break
 		}
 	}
 
@@ -480,50 +474,47 @@ func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot ui
 	return nil
 }
 
-// This receives cached state in memory for initial sync only during initial sync.
-func (s *Store) cachedPreState(ctx context.Context, b *ethpb.BeaconBlock) (*pb.BeaconState, error) {
-	if featureconfig.Get().InitSyncCacheState {
-		preState := s.initSyncState[bytesutil.ToBytes32(b.ParentRoot)]
-		var err error
-		if preState == nil {
-			preState, err = s.db.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
-			}
-			if preState == nil {
-				return nil, fmt.Errorf("pre state of slot %d does not exist", b.Slot)
-			}
-		}
-		return proto.Clone(preState).(*pb.BeaconState), nil
+// shouldUpdateJustified prevents bouncing attack, by only update conflicting justified
+// checkpoints in the fork choice if in the early slots of the epoch.
+// Otherwise, delay incorporation of new justified checkpoint until next epoch boundary.
+// See https://ethresear.ch/t/prevention-of-bouncing-attack-on-ffg/6114 for more detailed analysis and discussion.
+func (s *Store) shouldUpdateJustified(ctx context.Context, newJustifiedCheckpt *ethpb.Checkpoint) (bool, error) {
+	if helpers.SlotsSinceEpochStarts(s.currentSlot()) < params.BeaconConfig().SafeSlotsToUpdateJustified {
+		return true, nil
 	}
-
-	preState, err := s.db.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
+	newJustifiedBlock, err := s.db.Block(ctx, bytesutil.ToBytes32(newJustifiedCheckpt.Root))
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
+		return false, err
 	}
-	if preState == nil {
-		return nil, fmt.Errorf("pre state of slot %d does not exist", b.Slot)
+	if newJustifiedBlock.Slot <= helpers.StartSlot(s.justifiedCheckpt.Epoch) {
+		return false, nil
 	}
-
-	return preState, nil
+	justifiedBlock, err := s.db.Block(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root))
+	if err != nil {
+		return false, err
+	}
+	b, err := s.ancestor(ctx, newJustifiedCheckpt.Root, justifiedBlock.Slot)
+	if err != nil {
+		return false, err
+	}
+	if !bytes.Equal(b, s.justifiedCheckpt.Root) {
+		return false, nil
+	}
+	return true, nil
 }
 
-// This saves every finalized state in DB during initial sync, needed as part of optimization to
-// use cache state during initial sync in case of restart.
-func (s *Store) saveInitState(ctx context.Context, state *pb.BeaconState) error {
-	if !featureconfig.Get().InitSyncCacheState {
-		return nil
-	}
-	finalizedRoot := bytesutil.ToBytes32(state.FinalizedCheckpoint.Root)
-	fs := s.initSyncState[finalizedRoot]
+// currentSlot returns the current slot based on time.
+func (s *Store) currentSlot() uint64 {
+	return (uint64(time.Now().Unix()) - s.genesisTime) / params.BeaconConfig().SecondsPerSlot
+}
 
-	if err := s.db.SaveState(ctx, fs, finalizedRoot); err != nil {
-		return errors.Wrap(err, "could not save state")
+// updates justified check point in store if a better check point is known
+func (s *Store) updateJustifiedCheckpoint() {
+	// Update at epoch boundary slot only
+	if !helpers.IsEpochStart(s.currentSlot()) {
+		return
 	}
-	for r, oldState := range s.initSyncState {
-		if oldState.Slot < state.FinalizedCheckpoint.Epoch*params.BeaconConfig().SlotsPerEpoch {
-			delete(s.initSyncState, r)
-		}
+	if s.bestJustifiedCheckpt.Epoch > s.justifiedCheckpt.Epoch {
+		s.justifiedCheckpt = s.bestJustifiedCheckpt
 	}
-	return nil
 }

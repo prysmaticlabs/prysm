@@ -45,6 +45,8 @@ type Store struct {
 	checkpointStateLock  sync.Mutex
 	seenAtts             map[[32]byte]bool
 	seenAttsLock         sync.Mutex
+	genesisTime          uint64
+	bestJustifiedCheckpt *ethpb.Checkpoint
 	latestVoteMap        map[uint64]*pb.ValidatorLatestVote
 	voteLock             sync.RWMutex
 	initSyncState        map[[32]byte]*pb.BeaconState
@@ -89,6 +91,7 @@ func (s *Store) GenesisStore(
 	finalizedCheckpoint *ethpb.Checkpoint) error {
 
 	s.justifiedCheckpt = proto.Clone(justifiedCheckpoint).(*ethpb.Checkpoint)
+	s.bestJustifiedCheckpt = proto.Clone(justifiedCheckpoint).(*ethpb.Checkpoint)
 	s.finalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
 	s.prevFinalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
 
@@ -104,33 +107,7 @@ func (s *Store) GenesisStore(
 		return errors.Wrap(err, "could not save genesis state in check point cache")
 	}
 
-	if err := s.cacheGenesisState(ctx); err != nil {
-		return errors.Wrap(err, "could not cache initial sync state")
-	}
-
-	return nil
-}
-
-// This sets up gensis for initial sync state cache.
-func (s *Store) cacheGenesisState(ctx context.Context) error {
-	if !featureconfig.Get().InitSyncCacheState {
-		return nil
-	}
-
-	genesisState, err := s.db.GenesisState(ctx)
-	if err != nil {
-		return err
-	}
-	stateRoot, err := ssz.HashTreeRoot(genesisState)
-	if err != nil {
-		return errors.Wrap(err, "could not tree hash genesis state")
-	}
-	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
-	genesisBlkRoot, err := ssz.SigningRoot(genesisBlk)
-	if err != nil {
-		return errors.Wrap(err, "could not get genesis block root")
-	}
-	s.initSyncState[genesisBlkRoot] = genesisState
+	s.genesisTime = justifiedState.GenesisTime
 
 	return nil
 }

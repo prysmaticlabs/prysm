@@ -265,6 +265,9 @@ func TestStore_GetHead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if err := store.db.SaveState(ctx, s, blkRoot); err != nil {
+		t.Fatal(err)
+	}
 
 	checkPoint := &ethpb.Checkpoint{Root: blkRoot[:]}
 

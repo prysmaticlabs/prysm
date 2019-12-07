@@ -37,21 +37,16 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 			Target:          &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 		},
 		AggregationBits: bitfield.Bitlist{0xCF, 0xC0, 0xC0, 0xC0, 0x01},
-		CustodyBits:     bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
 	}
 
 	attestingIndices, err := helpers.AttestingIndices(beaconState, att.Data, att.AggregationBits)
 	if err != nil {
 		t.Error(err)
 	}
-	dataAndCustodyBit := &pb.AttestationDataAndCustodyBit{
-		Data:       att.Data,
-		CustodyBit: false,
-	}
 	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 	sigs := make([]*bls.Signature, len(attestingIndices))
 	for i, indice := range attestingIndices {
-		hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
+		hashTreeRoot, err := ssz.HashTreeRoot(att.Data)
 		if err != nil {
 			t.Error(err)
 		}
@@ -100,17 +95,12 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 		Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 		Target: &ethpb.Checkpoint{Epoch: 0},
 	}
-	dataAndCustodyBit := &pb.AttestationDataAndCustodyBit{
-		Data:       data,
-		CustodyBit: false,
-	}
-	root, err := ssz.HashTreeRoot(dataAndCustodyBit)
+	root, err := ssz.HashTreeRoot(data)
 	if err != nil {
 		t.Error(err)
 	}
 	att := &ethpb.Attestation{
-		Data:        data,
-		CustodyBits: bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
+		Data: data,
 	}
 
 	// We setup the genesis state with 256 validators.
@@ -160,8 +150,8 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 			newAtt := &ethpb.Attestation{
 				AggregationBits: bitfield.NewBitlist(uint64(len(committee))),
 				Data:            data,
-				CustodyBits:     bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
-				Signature:       privKeys[committee[j]].Sign(root[:], domain).Marshal(),
+
+				Signature: privKeys[committee[j]].Sign(root[:], domain).Marshal(),
 			}
 			newAtt.AggregationBits.SetBitAt(uint64(j), true)
 			if err := opsSrv.HandleAttestation(ctx, newAtt); err != nil {
@@ -207,7 +197,6 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 		},
-		CustodyBits: bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
 	}
 
 	committee, err := helpers.BeaconCommittee(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
@@ -217,12 +206,7 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 	aggregationBits := bitfield.NewBitlist(uint64(len(committee)))
 	aggregationBits.SetBitAt(0, true)
 	att1.AggregationBits = aggregationBits
-
-	dataAndCustodyBit := &pb.AttestationDataAndCustodyBit{
-		Data:       att1.Data,
-		CustodyBit: false,
-	}
-	hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
+	hashTreeRoot, err := ssz.HashTreeRoot(att1.Data)
 	if err != nil {
 		t.Error(err)
 	}
@@ -234,7 +218,6 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 			Target: &ethpb.Checkpoint{Epoch: 0},
 		},
-		CustodyBits: bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
 	}
 	aggregationBits = bitfield.NewBitlist(uint64(len(committee)))
 	aggregationBits.SetBitAt(1, true)
@@ -247,7 +230,6 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 			Target: &ethpb.Checkpoint{Epoch: 0},
 		},
-		CustodyBits: bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
 	}
 	aggregationBits = bitfield.NewBitlist(uint64(len(committee)))
 	aggregationBits.SetBitAt(0, true)
@@ -338,36 +320,31 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	defer dbutil.TeardownDB(t, beaconDB)
 	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})
 	service.attestationPool = make(map[[32]byte]*dbpb.AttestationContainer)
+	params.UseMinimalConfig()
+	defer params.UseMainnetConfig()
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
-	aggBits := bitfield.NewBitlist(1)
+	aggBits := bitfield.NewBitlist(4)
 	aggBits.SetBitAt(0, true)
-	custodyBits := bitfield.NewBitlist(1)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
 			Target: &ethpb.Checkpoint{Epoch: 0},
 		},
 		AggregationBits: aggBits,
-		CustodyBits:     custodyBits,
 	}
 	attestingIndices, err := helpers.AttestingIndices(beaconState, att.Data, att.AggregationBits)
 	if err != nil {
 		t.Error(err)
 	}
-	dataAndCustodyBit := &pb.AttestationDataAndCustodyBit{
-		Data:       att.Data,
-		CustodyBit: false,
-	}
 	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 
 	sigs := make([]*bls.Signature, len(attestingIndices))
-
 	zeroSig := [96]byte{}
 	att.Signature = zeroSig[:]
 
 	for i, indice := range attestingIndices {
-		hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
+		hashTreeRoot, err := ssz.HashTreeRoot(att.Data)
 		if err != nil {
 			t.Error(err)
 		}
@@ -497,14 +474,12 @@ func TestForkchoiceRetrieveAttestations_NotVoted(t *testing.T) {
 
 	aggBits := bitfield.NewBitlist(8)
 	aggBits.SetBitAt(1, true)
-	custodyBits := bitfield.NewBitlist(8)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{},
 			Target: &ethpb.Checkpoint{},
 		},
 		AggregationBits: aggBits,
-		CustodyBits:     custodyBits,
 	}
 
 	r, _ := ssz.HashTreeRoot(att.Data)
@@ -529,14 +504,12 @@ func TestForkchoiceRetrieveAttestations_AlreadyVoted(t *testing.T) {
 
 	aggBits := bitfield.NewBitlist(8)
 	aggBits.SetBitAt(1, true)
-	custodyBits := bitfield.NewBitlist(8)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{},
 			Target: &ethpb.Checkpoint{},
 		},
 		AggregationBits: aggBits,
-		CustodyBits:     custodyBits,
 	}
 
 	r, _ := ssz.HashTreeRoot(att.Data)

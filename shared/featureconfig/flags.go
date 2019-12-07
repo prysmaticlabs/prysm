@@ -73,18 +73,6 @@ var (
 		Name:  "enable-skip-slots-cache",
 		Usage: "Enables the skip slot cache to be used in the event of skipped slots.",
 	}
-	kafkaBootstrapServersFlag = cli.StringFlag{
-		Name:  "kafka-url",
-		Usage: "Stream attestations and blocks to specified kafka servers. This field is used for bootstrap.servers kafka config field.",
-	}
-	enableSnappyDBCompressionFlag = cli.BoolFlag{
-		Name:  "snappy",
-		Usage: "Enables snappy compression in the database.",
-	}
-	enablePruneBoundaryStateFlag = cli.BoolFlag{
-		Name:  "prune-states",
-		Usage: "Prune epoch boundary states before last finalized check point",
-	}
 	initSyncVerifyEverythingFlag = cli.BoolFlag{
 		Name: "initial-sync-verify-all-signatures",
 		Usage: "Initial sync to finalized checkpoint with verifying block's signature, RANDAO " +
@@ -128,8 +116,13 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedInitSyncNoVerifyFlag = cli.BoolFlag{
-		Name:   "init-sync-no-verify",
+	deprecatedEnableSnappyDBCompressionFlag = cli.BoolFlag{
+		Name:   "snappy",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnablePruneBoundaryStateFlag = cli.BoolFlag{
+		Name:   "prune-states",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
@@ -141,7 +134,8 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedScatterFlag,
 	deprecatedPruneFinalizedStatesFlag,
 	deprecatedOptimizeProcessEpoch,
-	deprecatedInitSyncNoVerifyFlag,
+	deprecatedEnableSnappyDBCompressionFlag,
+	deprecatedEnablePruneBoundaryStateFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -169,6 +163,4 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableActiveIndicesCacheFlag,
 	enableActiveCountCacheFlag,
 	enableSkipSlotsCache,
-	enableSnappyDBCompressionFlag,
-	enablePruneBoundaryStateFlag,
 }...)

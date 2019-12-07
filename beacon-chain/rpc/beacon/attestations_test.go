@@ -86,7 +86,6 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 			Slot:            0,
 			BeaconBlockRoot: root[:],
 		},
-		CustodyBits: bitfield.Bitlist{0b10},
 	}
 	if err := db.SaveAttestation(ctx, att); err != nil {
 		t.Fatal(err)
@@ -137,7 +136,6 @@ func TestServer_ListAttestations_NoPagination(t *testing.T) {
 				Slot:            i,
 			},
 			AggregationBits: bitfield.Bitlist{0b11},
-			CustodyBits:     bitfield.NewBitlist(1),
 		}
 		if err := db.SaveAttestation(ctx, attExample); err != nil {
 			t.Fatal(err)
@@ -292,7 +290,6 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 				Slot:            i,
 			},
 			AggregationBits: bitfield.Bitlist{0b11},
-			CustodyBits:     bitfield.NewBitlist(1),
 		}
 		if err := db.SaveAttestation(ctx, attExample); err != nil {
 			t.Fatal(err)
@@ -322,20 +319,17 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 						BeaconBlockRoot: []byte("root"),
 						Slot:            3,
 					},
-						AggregationBits: bitfield.Bitlist{0b11},
-						CustodyBits:     bitfield.NewBitlist(1)},
+						AggregationBits: bitfield.Bitlist{0b11}},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Slot:            4,
 					},
-						AggregationBits: bitfield.Bitlist{0b11},
-						CustodyBits:     bitfield.NewBitlist(1)},
+						AggregationBits: bitfield.Bitlist{0b11}},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Slot:            5,
 					},
-						AggregationBits: bitfield.Bitlist{0b11},
-						CustodyBits:     bitfield.NewBitlist(1)},
+						AggregationBits: bitfield.Bitlist{0b11}},
 				},
 				NextPageToken: strconv.Itoa(2),
 				TotalSize:     int32(count)}},
@@ -353,31 +347,26 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 						BeaconBlockRoot: []byte("root"),
 						Slot:            50,
 					},
-						AggregationBits: bitfield.Bitlist{0b11},
-						CustodyBits:     bitfield.NewBitlist(1)},
+						AggregationBits: bitfield.Bitlist{0b11}},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Slot:            51,
 					},
-						AggregationBits: bitfield.Bitlist{0b11},
-						CustodyBits:     bitfield.NewBitlist(1)},
+						AggregationBits: bitfield.Bitlist{0b11}},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Slot:            52,
 					},
-						AggregationBits: bitfield.Bitlist{0b11},
-						CustodyBits:     bitfield.NewBitlist(1)},
+						AggregationBits: bitfield.Bitlist{0b11}},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Slot:            53,
 					},
-						AggregationBits: bitfield.Bitlist{0b11},
-						CustodyBits:     bitfield.NewBitlist(1)},
+						AggregationBits: bitfield.Bitlist{0b11}},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Slot:            54,
-					}, AggregationBits: bitfield.Bitlist{0b11},
-						CustodyBits: bitfield.NewBitlist(1)},
+					}, AggregationBits: bitfield.Bitlist{0b11}},
 				},
 				NextPageToken: strconv.Itoa(11),
 				TotalSize:     int32(count)}},
@@ -395,8 +384,7 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 						BeaconBlockRoot: []byte("root"),
 						Slot:            99,
 					},
-						AggregationBits: bitfield.Bitlist{0b11},
-						CustodyBits:     bitfield.NewBitlist(1)},
+						AggregationBits: bitfield.Bitlist{0b11}},
 				},
 				NextPageToken: "",
 				TotalSize:     int32(count)}},
@@ -412,14 +400,12 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 					},
-						AggregationBits: bitfield.Bitlist{0b11},
-						CustodyBits:     bitfield.NewBitlist(1)},
+						AggregationBits: bitfield.Bitlist{0b11}},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Slot:            1,
 					},
 						AggregationBits: bitfield.Bitlist{0b11},
-						CustodyBits:     bitfield.NewBitlist(1),
 					},
 				},
 				NextPageToken: strconv.Itoa(1),
@@ -500,7 +486,6 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 				Slot:            i,
 			},
 			AggregationBits: bitfield.Bitlist{0b11},
-			CustodyBits:     bitfield.NewBitlist(1),
 		}
 		if err := db.SaveAttestation(ctx, attExample); err != nil {
 			t.Fatal(err)

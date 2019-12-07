@@ -156,3 +156,21 @@ func TestIsEpochEnd(t *testing.T) {
 		}
 	}
 }
+
+func TestSlotsSinceEpochStarts(t *testing.T) {
+	tests := []struct {
+		slots       uint64
+		wantedSlots uint64
+	}{
+		{slots: 0, wantedSlots: 0},
+		{slots: 1, wantedSlots: 1},
+		{slots: params.BeaconConfig().SlotsPerEpoch - 1, wantedSlots: params.BeaconConfig().SlotsPerEpoch - 1},
+		{slots: params.BeaconConfig().SlotsPerEpoch + 1, wantedSlots: 1},
+		{slots: 10*params.BeaconConfig().SlotsPerEpoch + 2, wantedSlots: 2},
+	}
+	for _, tt := range tests {
+		if got := SlotsSinceEpochStarts(tt.slots); got != tt.wantedSlots {
+			t.Errorf("SlotsSinceEpochStarts() = %v, want %v", got, tt.wantedSlots)
+		}
+	}
+}

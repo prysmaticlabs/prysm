@@ -52,7 +52,7 @@ index a52dbad..33de299 100644
 +)
 \ No newline at end of file
 diff --git a/eth/v1alpha1/attestation.proto b/eth/v1alpha1/attestation.proto
-index 8453ef9..9a637ac 100644
+index f0e3a37..3ace401 100644
 --- a/eth/v1alpha1/attestation.proto
 +++ b/eth/v1alpha1/attestation.proto
 @@ -15,6 +15,8 @@ syntax = "proto3";
@@ -64,7 +64,7 @@ index 8453ef9..9a637ac 100644
  option csharp_namespace = "Ethereum.Eth.v1alpha1";
  option go_package = "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1;eth";
  option java_multiple_files = true;
-@@ -25,17 +27,17 @@ option php_namespace = "Ethereum\\Eth\\v1alpha1";
+@@ -25,12 +27,12 @@ option php_namespace = "Ethereum\\Eth\\v1alpha1";
  message Attestation {
    // A bitfield representation of validator indices that have voted exactly
    // the same vote and have been aggregated into this attestation.
@@ -73,19 +73,13 @@ index 8453ef9..9a637ac 100644
  
    AttestationData data = 2;
  
-   // Custody bits is used for proof of custody game to ensure validator has
-   // legitimately downloaded and verified shard data.
-   // Not used in phase 0.
--  bytes custody_bits = 3;
-+  bytes custody_bits = 3 [(gogoproto.moretags) = "ssz-max:\"2048\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
- 
    // 96 byte BLS aggregate signature.
--  bytes signature = 4;
-+  bytes signature = 4 [(gogoproto.moretags) = "ssz-size:\"96\""];
+-  bytes signature = 3;
++  bytes signature = 3 [(gogoproto.moretags) = "ssz-size:\"96\""];
  }
  
  message AttestationData {
-@@ -49,7 +51,7 @@ message AttestationData {
+@@ -44,7 +46,7 @@ message AttestationData {
    uint64 committee_index = 2;
  
    // 32 byte root of the LMD GHOST block vote.
@@ -94,7 +88,7 @@ index 8453ef9..9a637ac 100644
  
    // the most recent justified checkpoint in the beacon state
    Checkpoint source = 4;
-@@ -84,5 +86,5 @@ message Checkpoint {
+@@ -79,5 +81,5 @@ message Checkpoint {
    // epoch of the check point reference to.
    uint64 epoch = 1;
    // block root of the check point reference to.
@@ -102,7 +96,7 @@ index 8453ef9..9a637ac 100644
 +  bytes root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
  }
 diff --git a/eth/v1alpha1/beacon_block.proto b/eth/v1alpha1/beacon_block.proto
-index 69a148a..1b6ac18 100644
+index 7cc5f04..f23a750 100644
 --- a/eth/v1alpha1/beacon_block.proto
 +++ b/eth/v1alpha1/beacon_block.proto
 @@ -15,6 +15,7 @@ syntax = "proto3";
@@ -222,7 +216,7 @@ index 69a148a..1b6ac18 100644
  }
  
  // A beacon block header is essentially a beacon block with only a reference to
-@@ -155,24 +156,24 @@ message BeaconBlockHeader {
+@@ -155,23 +156,23 @@ message BeaconBlockHeader {
      uint64 slot = 1; 
  
      // 32 byte merkle tree root of the parent ssz encoded block.
@@ -243,16 +237,14 @@ index 69a148a..1b6ac18 100644
  }
  
  message IndexedAttestation {
--    repeated uint64 custody_bit_0_indices = 1;
--    repeated uint64 custody_bit_1_indices = 2;
-+    repeated uint64 custody_bit_0_indices = 1 [(gogoproto.moretags) = "ssz-max:\"2048\""];
-+    repeated uint64 custody_bit_1_indices = 2 [(gogoproto.moretags) = "ssz-max:\"2048\""];
+-    repeated uint64 attesting_indices = 1;
++    repeated uint64 attesting_indices = 1 [(gogoproto.moretags) = "ssz-max:\"2048\""];
  
-     AttestationData data = 3;
+     AttestationData data = 2;
  
      // 96 bytes aggregate signature.
--    bytes signature = 4;
-+    bytes signature = 4 [(gogoproto.moretags) = "ssz-size:\"96\""];
+-    bytes signature = 3;
++    bytes signature = 3 [(gogoproto.moretags) = "ssz-size:\"96\""];
  }
 diff --git a/eth/v1alpha1/beacon_chain.proto b/eth/v1alpha1/beacon_chain.proto
 index 5389a4e..2029f0e 100644

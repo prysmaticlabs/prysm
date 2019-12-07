@@ -78,6 +78,7 @@ go_test(
         "broadcaster_test.go",
         "dial_relay_node_test.go",
         "discovery_test.go",
+        "gossip_topic_mappings_test.go",
         "options_test.go",
         "parameter_test.go",
         "sender_test.go",

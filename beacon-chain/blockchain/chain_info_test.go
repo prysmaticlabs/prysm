@@ -38,8 +38,11 @@ func TestFinalizedCheckpt_CanRetrieve(t *testing.T) {
 	ctx := context.Background()
 
 	c := setupBeaconChain(t, db)
-
-	if err := c.forkChoiceStore.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
+	r := [32]byte{'g'}
+	if err := db.SaveState(ctx, &pb.BeaconState{}, r); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.forkChoiceStore.GenesisStore(ctx, &ethpb.Checkpoint{Root: r[:]}, &ethpb.Checkpoint{Root: r[:]}); err != nil {
 		t.Fatal(err)
 	}
 
