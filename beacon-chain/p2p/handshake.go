@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -40,25 +41,29 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 				return
 			}
 
-			ctx := context.Background()
-			log := log.WithField("peer", conn.RemotePeer())
-			log.Debug("Performing handshake with peer")
-			if err := reqFunc(ctx, conn.RemotePeer()); err != nil && err != io.EOF {
-				log.WithError(err).Debug("Could not send successful hello rpc request")
-				if err.Error() == "protocol not supported" {
-					// This is only to ensure the smooth running of our testnets. This will not be
-					// used in production.
-					log.Debug("Not disconnecting peer with unsupported protocol. This may be the DHT node or relay.")
-					s.host.ConnManager().Protect(conn.RemotePeer(), "relay/bootnode")
+			// ConnectedF must be non-blocking as part of libp2p design.
+			func() {
+				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
+				log := log.WithField("peer", conn.RemotePeer().Pretty())
+				log.Debug("Performing handshake with peer")
+				if err := reqFunc(ctx, conn.RemotePeer()); err != nil && err != io.EOF {
+					log.WithError(err).Debug("Could not send successful hello rpc request")
+					if err.Error() == "protocol not supported" {
+						// This is only to ensure the smooth running of our testnets. This will not be
+						// used in production.
+						log.Debug("Not disconnecting peer with unsupported protocol. This may be the DHT node or relay.")
+						s.host.ConnManager().Protect(conn.RemotePeer(), "relay/bootnode")
+						return
+					}
+					if err := s.Disconnect(conn.RemotePeer()); err != nil {
+						log.WithError(err).Errorf("Unable to close peer %s", conn.RemotePeer())
+						return
+					}
 					return
 				}
-				if err := s.Disconnect(conn.RemotePeer()); err != nil {
-					log.WithError(err).Errorf("Unable to close peer %s", conn.RemotePeer())
-					return
-				}
-				return
-			}
-			log.WithField("peer", conn.RemotePeer().Pretty()).Info("New peer connected")
+				log.WithField("peer", conn.RemotePeer().Pretty()).Info("New peer connected")
+			}()
 		},
 	})
 }
