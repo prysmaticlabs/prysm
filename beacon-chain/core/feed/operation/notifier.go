@@ -1,4 +1,4 @@
-package operationFeed
+package operation
 
 import "github.com/prysmaticlabs/prysm/shared/event"
 

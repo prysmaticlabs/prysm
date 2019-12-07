@@ -1,15 +1,6 @@
-package statefeed
+package state
 
 import "time"
-
-// How to add a new event to the feed:
-//   1. Add a constant describing the event to the list below.
-//   2. Add a structure with the name `<event>Data` containing any data fields that should be supplied with the event.
-//
-// Note that the same event is supplied to all subscribers, so the event received by subscribers should be considered read-only.
-
-// EventType is the type that defines the type of event.
-type EventType int
 
 const (
 	// BlockProcessed is sent after a block has been processed and updated the state database.
@@ -19,14 +10,6 @@ const (
 	// StateInitialized is sent when the internal beacon node's state is ready to be accessed.
 	StateInitialized
 )
-
-// Event is the event that is sent with state feed updates.
-type Event struct {
-	// Type is the type of event.
-	Type EventType
-	// Data is event-specific data.
-	Data interface{}
-}
 
 // BlockProcessedData is the data sent with BlockProcessed events.
 type BlockProcessedData struct {
