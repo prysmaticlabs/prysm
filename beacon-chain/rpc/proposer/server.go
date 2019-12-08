@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -48,7 +48,7 @@ type Server struct {
 	ChainStartFetcher      powchain.ChainStartFetcher
 	Eth1InfoFetcher        powchain.ChainInfoFetcher
 	Eth1BlockFetcher       powchain.POWBlockFetcher
-	Pool                   operations.Pool
+	AttPool          attestations.Pool
 	CanonicalStateChan     chan *pbp2p.BeaconState
 	DepositFetcher         depositcache.DepositFetcher
 	PendingDepositsFetcher depositcache.PendingDepositsFetcher
@@ -86,9 +86,10 @@ func (ps *Server) RequestBlock(ctx context.Context, req *pb.BlockRequest) (*ethp
 	}
 
 	// Pack aggregated attestations which have not been included in the beacon chain.
-	atts, err := ps.Pool.AttestationPool(ctx, req.Slot)
+	atts := ps.AttPool.AggregatedAttestation()
+	atts, err = ps.filterAtts(ctx, req.Slot, atts)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get pending attestations: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not filter attestations: %v", err)
 	}
 
 	// Use zero hash as stub for state root to compute later.
@@ -354,6 +355,39 @@ func (ps *Server) defaultEth1DataResponse(ctx context.Context, currentHeight *bi
 		BlockHash:    blockHash[:],
 		DepositCount: depositsTillHeight,
 	}, nil
+}
+
+// This filters attestations to be package inside a beacon block.
+func (ps *Server) filterAtts(ctx context.Context, slot uint64, atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.filterAtts")
+	defer span.End()
+
+	validAtts := make([]*ethpb.Attestation, 0, len(atts))
+
+	bState, err := ps.BeaconDB.HeadState(ctx)
+	if err != nil {
+		return nil, errors.New("could not head state from DB")
+	}
+
+	if bState.Slot < slot {
+		bState, err = state.ProcessSlots(ctx, bState, slot)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not process slots up to %d", slot)
+		}
+	}
+
+	// TODO(3916): Insert optimizations to sort out the most profitable attestations
+	for i, att := range atts {
+		if err := blocks.VerifyAttestation(ctx, bState, att); err != nil {
+			continue
+		}
+		if i == int(params.BeaconConfig().MaxAttestations) {
+			break
+		}
+		validAtts = append(validAtts, att)
+	}
+
+	return validAtts, nil
 }
 
 func constructMerkleProof(trie *trieutil.MerkleTrie, index int, deposit *ethpb.Deposit) (*ethpb.Deposit, error) {
