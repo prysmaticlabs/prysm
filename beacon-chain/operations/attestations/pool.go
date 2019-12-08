@@ -22,6 +22,6 @@ type Pool interface {
 }
 
 // NewPool initializes a new attestation pool.
-func NewPool(dirPath string) *kv.AttCaches {
+func NewPool() *kv.AttCaches {
 	return kv.NewAttCaches()
 }
