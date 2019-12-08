@@ -236,7 +236,7 @@ func TestStore_DeleteHeadState(t *testing.T) {
 	if err := db.SaveHeadBlockRoot(ctx, headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
-	wantedErr := "could not delete genesis, finalized, or head state"
+	wantedErr := "cannot delete genesis, finalized, or head state"
 	if err := db.DeleteState(ctx, headBlockRoot); err.Error() != wantedErr {
 		t.Error("Did not receive wanted error")
 	}
