@@ -48,7 +48,7 @@ type Server struct {
 	ChainStartFetcher      powchain.ChainStartFetcher
 	Eth1InfoFetcher        powchain.ChainInfoFetcher
 	Eth1BlockFetcher       powchain.POWBlockFetcher
-	AttPool          attestations.Pool
+	AttPool                attestations.Pool
 	CanonicalStateChan     chan *pbp2p.BeaconState
 	DepositFetcher         depositcache.DepositFetcher
 	PendingDepositsFetcher depositcache.PendingDepositsFetcher

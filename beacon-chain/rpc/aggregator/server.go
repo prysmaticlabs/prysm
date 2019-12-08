@@ -96,7 +96,10 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 	}
 	for _, att := range aggregatedAtts {
 		if err := as.P2p.Broadcast(ctx, att); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not broadcast attestation: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not broadcast aggregated attestation: %v", err)
+		}
+		if err := as.AttPool.SaveAggregatedAttestation(att); err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not save aggregated attestation: %v", err)
 		}
 	}
 
