@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"testing"
+	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -65,6 +66,7 @@ func TestValidateBeaconAttestation_ValidBlock(t *testing.T) {
 		t.Error("No message was broadcast")
 	}
 
+	time.Sleep(100 * time.Millisecond)
 	// It should ignore duplicate identical attestations.
 	p.BroadcastCalled = false
 	valid, _ = rs.validateBeaconAttestation(ctx, msg, p, false /*fromSelf*/)

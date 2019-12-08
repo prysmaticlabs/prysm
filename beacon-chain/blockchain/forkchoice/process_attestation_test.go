@@ -69,7 +69,7 @@ func TestStore_OnAttestation(t *testing.T) {
 			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: []byte{'A'}}}},
 			s:             &pb.BeaconState{},
 			wantErr:       true,
-			wantErrString: "target root 0x41 does not exist in db",
+			wantErrString: "target root does not exist in db",
 		},
 		{
 			name:          "no pre state for attestations's target block",

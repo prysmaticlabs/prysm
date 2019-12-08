@@ -15,8 +15,9 @@ import (
 	ssz "github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	ops "github.com/prysmaticlabs/prysm/beacon-chain/operations/testing"
@@ -140,13 +141,13 @@ func TestChainStartStop_Uninitialized(t *testing.T) {
 	chainService := setupBeaconChain(t, db)
 
 	// Listen for state events.
-	stateSubChannel := make(chan *statefeed.Event, 1)
+	stateSubChannel := make(chan *feed.Event, 1)
 	stateSub := chainService.stateNotifier.StateFeed().Subscribe(stateSubChannel)
 
 	// Test the chain start state notifier.
 	genesisTime := time.Unix(0, 0)
 	chainService.Start()
-	event := &statefeed.Event{
+	event := &feed.Event{
 		Type: statefeed.ChainStarted,
 		Data: &statefeed.ChainStartedData{
 			StartTime: genesisTime,
@@ -164,7 +165,7 @@ func TestChainStartStop_Uninitialized(t *testing.T) {
 	// Now wait for notification the state is ready.
 	for stateInitialized := false; stateInitialized == false; {
 		recv := <-stateSubChannel
-		if recv.Type == statefeed.StateInitialized {
+		if recv.Type == statefeed.Initialized {
 			stateInitialized = true
 		}
 	}
@@ -322,5 +323,28 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	}
 	if !bytes.Equal(headRoot[:], c.HeadRoot()) {
 		t.Error("head slot incorrect")
+	}
+}
+
+func TestChainService_SaveHeadNoDB(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	ctx := context.Background()
+	s := &Service{
+		beaconDB:       db,
+		canonicalRoots: make(map[uint64][]byte),
+	}
+	b := &ethpb.BeaconBlock{Slot: 1}
+	r, _ := ssz.SigningRoot(b)
+	if err := s.saveHeadNoDB(ctx, b, r); err != nil {
+		t.Fatal(err)
+	}
+
+	newB, err := s.beaconDB.HeadBlock(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reflect.DeepEqual(newB, b) {
+		t.Error("head block should not be equal")
 	}
 }
