@@ -135,6 +135,9 @@ func (s *Store) verifyAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*pb
 
 // saveCheckpointState saves and returns the processed state with the associated check point.
 func (s *Store) saveCheckpointState(ctx context.Context, baseState *pb.BeaconState, c *ethpb.Checkpoint) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "forkchoice.saveCheckpointState")
+	defer span.End()
+
 	s.checkpointStateLock.Lock()
 	defer s.checkpointStateLock.Unlock()
 	cachedState, err := s.checkpointState.StateByCheckpoint(c)
