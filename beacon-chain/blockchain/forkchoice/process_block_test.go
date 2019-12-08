@@ -430,10 +430,6 @@ func TestUpdateJustifiedCheckpoint_NoUpdate(t *testing.T) {
 	if bytes.Equal(store.justifiedCheckpt.Root, []byte{'B'}) {
 		t.Error("Justified check point root was not suppose to update")
 
-		c := featureconfig.Get()
-		c.PruneEpochBoundaryStates = true
-		featureconfig.Init(c)
-
 		store := NewForkChoiceService(ctx, db)
 
 		// Save 5 blocks in DB, each has a state.

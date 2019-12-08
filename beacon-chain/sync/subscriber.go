@@ -3,17 +3,14 @@ package sync
 import (
 	"context"
 	"fmt"
-	"runtime/debug"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/libp2p/go-libp2p-pubsub"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
-	"github.com/prysmaticlabs/prysm/shared/traceutil"
-	"go.opencensus.io/trace"
 )
 
 const oneYear = 365 * 24 * time.Hour
@@ -90,6 +87,13 @@ func (r *RegularSync) registerSubscribers() {
 		r.validateAttesterSlashing,
 		r.attesterSlashingSubscriber,
 	)
+	// TODO(4154): Uncomment.
+	//r.subscribeDynamic(
+	//	"/eth2/committee_index/%d_beacon_attestation",
+	//	r.currentCommitteeIndex,                     /* determineSubsLen */
+	//	noopValidator,                               /* validator */
+	//	r.committeeIndexBeaconAttestationSubscriber, /* message handler */
+	//)
 }
 
 // subscribe to a given topic with a given validator and subscription handler.
@@ -101,7 +105,6 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 	}
 
 	topic += r.p2p.Encoding().ProtocolSuffix()
-	log := log.WithField("topic", topic)
 
 	sub, err := r.p2p.PubSub().Subscribe(topic)
 	if err != nil {
@@ -113,81 +116,78 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 
 	// Pipeline decodes the incoming subscription data, runs the validation, and handles the
 	// message.
-	pipeline := func(data []byte, fromSelf bool) {
-		ctx, _ := context.WithTimeout(context.Background(), pubsubMessageTimeout)
-		ctx, span := trace.StartSpan(ctx, "sync.pubsub")
-		defer span.End()
-
-		defer func() {
-			if r := recover(); r != nil {
-				traceutil.AnnotateError(span, fmt.Errorf("panic occurred: %v", r))
-				log.WithField("error", r).Error("Panic occurred")
-				debug.PrintStack()
-			}
-		}()
-
-		span.AddAttributes(trace.StringAttribute("topic", topic))
-		span.AddAttributes(trace.BoolAttribute("fromSelf", fromSelf))
-
-		if data == nil {
-			log.Warn("Received nil message on pubsub")
-			return
-		}
-
-		if span.IsRecordingEvents() {
-			id := hashutil.FastSum64(data)
-			messageLen := int64(len(data))
-			span.AddMessageReceiveEvent(int64(id), messageLen /*uncompressed*/, messageLen /*compressed*/)
-		}
-
-		msg := proto.Clone(base)
-		if err := r.p2p.Encoding().Decode(data, msg); err != nil {
-			traceutil.AnnotateError(span, err)
-			log.WithError(err).Warn("Failed to decode pubsub message")
-			return
-		}
-
-		valid, err := validate(ctx, msg, r.p2p, fromSelf)
-		if err != nil {
-			if !fromSelf {
-				log.WithError(err).Error("Message failed to verify")
-				messageFailedValidationCounter.WithLabelValues(topic).Inc()
-			}
-			return
-		}
-		if !valid {
-			return
-		}
-
-		if err := handle(ctx, msg); err != nil {
-			traceutil.AnnotateError(span, err)
-			log.WithError(err).Error("Failed to handle p2p pubsub")
-			messageFailedProcessingCounter.WithLabelValues(topic).Inc()
-			return
-		}
+	pipe := &pipeline{
+		ctx:          r.ctx,
+		topic:        topic,
+		base:         base,
+		validate:     validate,
+		handle:       handle,
+		encoding:     r.p2p.Encoding(),
+		self:         r.p2p.PeerID(),
+		sub:          sub,
+		broadcaster:  r.p2p,
+		chainStarted: func() bool { return r.chainStarted },
 	}
 
-	// The main message loop for receiving incoming messages from this subscription.
-	messageLoop := func() {
+	go pipe.messageLoop()
+}
+
+// subscribe to a dynamically increasing index of topics. This method expects a fmt compatible
+// string for the topic name and a maxID to represent the number of subscribed topics that should be
+// maintained. As the state feed emits a newly updated state, the maxID function will be called to
+// determine the appropriate number of topics. This method supports only sequential number ranges
+// for topics.
+func (r *RegularSync) subscribeDynamic(topicFormat string, determineSubsLen func() int, validate validator, handle subHandler) {
+	base := p2p.GossipTopicMappings[topicFormat]
+	if base == nil {
+		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topicFormat))
+	}
+	topicFormat += r.p2p.Encoding().ProtocolSuffix()
+
+	var subscriptions []*pubsub.Subscription
+
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := r.stateNotifier.StateFeed().Subscribe(stateChannel)
+	go func() {
 		for {
-			msg, err := sub.Next(r.ctx)
-			if err != nil {
-				log.WithError(err).Error("Subscription next failed")
-				// TODO(3147): Mark status unhealthy.
+			select {
+			case <-r.ctx.Done():
+				stateSub.Unsubscribe()
 				return
+			case <-stateChannel:
+				// Update topic count
+				wantedSubs := determineSubsLen()
+				// Resize as appropriate.
+				if len(subscriptions) > wantedSubs { // Reduce topics
+					var cancelSubs []*pubsub.Subscription
+					subscriptions, cancelSubs = subscriptions[:wantedSubs-1], subscriptions[wantedSubs:]
+					for _, sub := range cancelSubs {
+						sub.Cancel()
+					}
+				} else if len(subscriptions) < wantedSubs { // Increase topics
+					for i := len(subscriptions) - 1; i < wantedSubs; i++ {
+						sub, err := r.p2p.PubSub().Subscribe(fmt.Sprintf(topicFormat, i))
+						if err != nil {
+							// Panic is appropriate here since subscriptions should only fail if
+							// pubsub was misconfigured.
+							panic(err)
+						}
+						pipe := &pipeline{
+							ctx:         r.ctx,
+							topic:       fmt.Sprintf(topicFormat, i),
+							base:        base,
+							validate:    validate,
+							handle:      handle,
+							encoding:    r.p2p.Encoding(),
+							self:        r.p2p.PeerID(),
+							sub:         sub,
+							broadcaster: r.p2p,
+						}
+						subscriptions = append(subscriptions, sub)
+						go pipe.messageLoop()
+					}
+				}
 			}
-			if !r.chainStarted {
-				messageReceivedBeforeChainStartCounter.WithLabelValues(topic + r.p2p.Encoding().ProtocolSuffix()).Inc()
-				continue
-			}
-			// Special validation occurs on messages received from ourselves.
-			fromSelf := msg.GetFrom() == r.p2p.PeerID()
-
-			messageReceivedCounter.WithLabelValues(topic + r.p2p.Encoding().ProtocolSuffix()).Inc()
-
-			go pipeline(msg.Data, fromSelf)
 		}
-	}
-
-	go messageLoop()
+	}()
 }

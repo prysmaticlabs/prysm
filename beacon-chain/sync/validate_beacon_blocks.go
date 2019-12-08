@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/gogo/protobuf/proto"
@@ -35,7 +36,7 @@ func (r *RegularSync) validateBeaconBlockPubSub(ctx context.Context, msg proto.M
 
 	m, ok := msg.(*ethpb.BeaconBlock)
 	if !ok {
-		return false, nil
+		return false, fmt.Errorf("message was not type *eth.BeaconBlock, type=%T", msg)
 	}
 
 	blockRoot, err := ssz.SigningRoot(m)

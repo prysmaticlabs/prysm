@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/dgraph-io/ristretto"
 
@@ -46,7 +47,7 @@ func (r *RegularSync) validateAttesterSlashing(ctx context.Context, msg proto.Me
 
 	slashing, ok := msg.(*ethpb.AttesterSlashing)
 	if !ok {
-		return false, nil
+		return false, fmt.Errorf("message was not type *eth.AttesterSlashing, type=%T", msg)
 	}
 
 	cacheKey, err := attSlashingCacheKey(slashing)

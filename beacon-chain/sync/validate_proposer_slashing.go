@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/gogo/protobuf/proto"
@@ -44,7 +45,7 @@ func (r *RegularSync) validateProposerSlashing(ctx context.Context, msg proto.Me
 
 	slashing, ok := msg.(*ethpb.ProposerSlashing)
 	if !ok {
-		return false, nil
+		return false, fmt.Errorf("message was not type *eth.ProposerSlashing, type=%T", msg)
 	}
 
 	cacheKey, err := propSlashingCacheKey(slashing)
