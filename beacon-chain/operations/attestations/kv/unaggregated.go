@@ -25,9 +25,9 @@ func (p *AttCaches) SaveUnaggregatedAttestation(att *ethpb.Attestation) error {
 	return nil
 }
 
-// UnaggregatedAttestation returns the aggregated attestations in cache,
+// UnaggregatedAttestations returns the aggregated attestations in cache,
 // filtered by committee index and slot.
-func (p *AttCaches) UnaggregatedAttestation(slot uint64, committeeIndex uint64) []*ethpb.Attestation {
+func (p *AttCaches) UnaggregatedAttestations(slot uint64, committeeIndex uint64) []*ethpb.Attestation {
 	atts := make([]*ethpb.Attestation, 0, p.unAggregatedAtt.ItemCount())
 	for s, i := range p.unAggregatedAtt.Items() {
 
