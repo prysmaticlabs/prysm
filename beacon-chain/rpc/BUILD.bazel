@@ -9,7 +9,7 @@ go_library(
         "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/cache/depositcache:go_default_library",
-        "//beacon-chain/core/statefeed:go_default_library",
+        "//beacon-chain/core/feed/state:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/operations:go_default_library",
         "//beacon-chain/p2p:go_default_library",
