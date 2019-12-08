@@ -306,6 +306,9 @@ func bestFinalized() ([]byte, uint64, []peer.ID) {
 	rootToEpoch := make(map[[32]byte]uint64)
 	for _, k := range peerstatus.Keys() {
 		s := peerstatus.Get(k)
+		if s == nil {
+			continue
+		}
 		r := bytesutil.ToBytes32(s.FinalizedRoot)
 		finalized[r]++
 		rootToEpoch[r] = s.FinalizedEpoch
