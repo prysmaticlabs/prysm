@@ -121,7 +121,7 @@ func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 
 		// Safe guard against deleting genesis, finalized, head state.
 		if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], headBlkRoot) {
-			return errors.New("could not delete genesis, finalized, or head state")
+			return errors.New("cannot delete genesis, finalized, or head state")
 		}
 
 		bkt = tx.Bucket(stateBucket)
