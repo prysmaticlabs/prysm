@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -32,7 +32,7 @@ func init() {
 type Server struct {
 	P2p               p2p.Broadcaster
 	BeaconDB          db.Database
-	OperationsHandler operations.Handler
+	OperationsHandler attestations.Pool
 	AttReceiver       blockchain.AttestationReceiver
 	HeadFetcher       blockchain.HeadFetcher
 	AttestationCache  *cache.AttestationCache
