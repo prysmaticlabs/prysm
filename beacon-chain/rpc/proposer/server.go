@@ -357,7 +357,7 @@ func (ps *Server) defaultEth1DataResponse(ctx context.Context, currentHeight *bi
 	}, nil
 }
 
-// This filters attestations to be package inside a beacon block.
+// This filters the input attestations to return a list of valid attestations to be packaged inside a beacon block.
 func (ps *Server) filterAtts(ctx context.Context, slot uint64, atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.filterAtts")
 	defer span.End()
