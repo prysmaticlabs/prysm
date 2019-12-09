@@ -1054,7 +1054,7 @@ func TestFilterAttestation_OK(t *testing.T) {
 			Target:         &ethpb.Checkpoint{}},
 		}
 	}
-	received, err := proposerServer.filterAtts(context.Background(), 1, atts)
+	received, err := proposerServer.filterAttestationsForBlockInclusion(context.Background(), 1, atts)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1085,7 +1085,7 @@ func TestFilterAttestation_OK(t *testing.T) {
 		atts[i].Signature = bls.AggregateSignatures(sigs).Marshal()[:]
 	}
 
-	received, err = proposerServer.filterAtts(context.Background(), 1, atts)
+	received, err = proposerServer.filterAttestationsForBlockInclusion(context.Background(), 1, atts)
 	if err != nil {
 		t.Fatal(err)
 	}

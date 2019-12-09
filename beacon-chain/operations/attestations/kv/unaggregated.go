@@ -5,11 +5,12 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 )
 
 // SaveUnaggregatedAttestation saves an unaggregated attestation in cache.
 func (p *AttCaches) SaveUnaggregatedAttestation(att *ethpb.Attestation) error {
-	if aggregated(att.AggregationBits) {
+	if helpers.IsAggregated(att) {
 		return errors.New("attestation is aggregated")
 	}
 
@@ -47,8 +48,8 @@ func (p *AttCaches) UnaggregatedAttestations(slot uint64, committeeIndex uint64)
 
 // DeleteUnaggregatedAttestation deletes the unaggregated attestations in cache.
 func (p *AttCaches) DeleteUnaggregatedAttestation(att *ethpb.Attestation) error {
-	if aggregated(att.AggregationBits) {
-		return errors.New("attestation is not aggregated")
+	if helpers.IsAggregated(att) {
+		return errors.New("attestation is aggregated")
 	}
 
 	r, err := ssz.HashTreeRoot(att)

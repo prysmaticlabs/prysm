@@ -112,8 +112,8 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 	ctx := context.Background()
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
-	att0 := GenerateAtt(beaconState, 0, privKeys)
-	att1 := GenerateAtt(beaconState, 1, privKeys)
+	att0 := generateAtt(beaconState, 0, privKeys)
+	att1 := generateAtt(beaconState, 1, privKeys)
 
 	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
 
@@ -166,7 +166,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	ctx := context.Background()
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
-	att0 := GenerateAtt(beaconState, 0, privKeys)
+	att0 := generateAtt(beaconState, 0, privKeys)
 
 	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
 
@@ -200,7 +200,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	}
 }
 
-func GenerateAtt(state *pbp2p.BeaconState, index uint64, privKeys []*bls.SecretKey) *ethpb.Attestation {
+func generateAtt(state *pbp2p.BeaconState, index uint64, privKeys []*bls.SecretKey) *ethpb.Attestation {
 	aggBits := bitfield.NewBitlist(4)
 	aggBits.SetBitAt(index, true)
 	att := &ethpb.Attestation{

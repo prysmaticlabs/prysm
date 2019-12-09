@@ -79,7 +79,7 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 		return nil, status.Errorf(codes.InvalidArgument, "Validator is not an aggregator")
 	}
 
-	// Retrieve the aggregated attestation from pool
+	// Retrieve the unaggregated attestation from pool
 	atts := as.AttPool.UnaggregatedAttestations(req.Slot, req.CommitteeIndex)
 
 	// Verify attestations are valid before aggregating and broadcasting them out
@@ -100,7 +100,7 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 		return nil, status.Errorf(codes.Internal, "Could not aggregate attestations: %v", err)
 	}
 	for _, att := range aggregatedAtts {
-		if att.AggregationBits.Count() > 1 {
+		if helpers.IsAggregated(att) {
 			if err := as.P2p.Broadcast(ctx, att); err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not broadcast aggregated attestation: %v", err)
 			}

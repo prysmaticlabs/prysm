@@ -87,7 +87,7 @@ func (ps *Server) RequestBlock(ctx context.Context, req *pb.BlockRequest) (*ethp
 
 	// Pack aggregated attestations which have not been included in the beacon chain.
 	atts := ps.AttPool.AggregatedAttestation()
-	atts, err = ps.filterAtts(ctx, req.Slot, atts)
+	atts, err = ps.filterAttestationsForBlockInclusion(ctx, req.Slot, atts)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not filter attestations: %v", err)
 	}
@@ -358,8 +358,8 @@ func (ps *Server) defaultEth1DataResponse(ctx context.Context, currentHeight *bi
 }
 
 // This filters the input attestations to return a list of valid attestations to be packaged inside a beacon block.
-func (ps *Server) filterAtts(ctx context.Context, slot uint64, atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.filterAtts")
+func (ps *Server) filterAttestationsForBlockInclusion(ctx context.Context, slot uint64, atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.filterAttestationsForBlockInclusion")
 	defer span.End()
 
 	validAtts := make([]*ethpb.Attestation, 0, len(atts))
@@ -383,7 +383,7 @@ func (ps *Server) filterAtts(ctx context.Context, slot uint64, atts []*ethpb.Att
 		}
 
 		if err := blocks.VerifyAttestation(ctx, bState, att); err != nil {
-			if att.AggregationBits.Count() > 1 {
+			if helpers.IsAggregated(att) {
 				if err := ps.AttPool.DeleteAggregatedAttestation(att); err != nil {
 					return nil, err
 				}
