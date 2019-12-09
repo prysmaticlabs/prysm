@@ -7,6 +7,7 @@ import (
 
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -76,6 +77,7 @@ func TestSubmitAggregateAndProof_IsAggregator(t *testing.T) {
 		HeadFetcher: &mock.ChainService{State: s},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		BeaconDB:    db,
+		AttPool:     attestations.NewPool(),
 	}
 
 	priv := bls.RandKey()
