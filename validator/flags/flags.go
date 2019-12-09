@@ -52,7 +52,7 @@ var (
 	}
 	// GraffitiFlag defines the graffiti value included in proposed blocks
 	GraffitiFlag = cli.StringFlag{
-		Name: "graffiti",
+		Name:  "graffiti",
 		Usage: "String to include in proposed blocks",
 	}
 )

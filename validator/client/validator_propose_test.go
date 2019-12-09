@@ -152,7 +152,7 @@ func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
 	m.proposerClient.EXPECT().RequestBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
-	).Return(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{ Graffiti: validator.graffiti, }}, nil /*err*/)
+	).Return(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{Graffiti: validator.graffiti}}, nil /*err*/)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -164,7 +164,7 @@ func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
 	m.proposerClient.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.BeaconBlock{}),
-	).DoAndReturn(func(ctx context.Context, block *ethpb.BeaconBlock) (*pb.ProposeResponse, error){
+	).DoAndReturn(func(ctx context.Context, block *ethpb.BeaconBlock) (*pb.ProposeResponse, error) {
 		sentBlock = block
 		return &pb.ProposeResponse{}, nil
 	})
