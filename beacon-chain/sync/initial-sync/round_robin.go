@@ -305,7 +305,7 @@ func (s *InitialSync) bestFinalized() ([]byte, uint64, []peer.ID) {
 	rootToEpoch := make(map[[32]byte]uint64)
 	for _, pid := range s.p2p.Peers().Connected() {
 		peerChainState, err := s.p2p.Peers().ChainState(pid)
-		if err == nil {
+		if err == nil && peerChainState != nil {
 			r := bytesutil.ToBytes32(peerChainState.FinalizedRoot)
 			finalized[r]++
 			rootToEpoch[r] = peerChainState.FinalizedEpoch
@@ -324,7 +324,7 @@ func (s *InitialSync) bestFinalized() ([]byte, uint64, []peer.ID) {
 	var pids []peer.ID
 	for _, pid := range s.p2p.Peers().Connected() {
 		peerChainState, err := s.p2p.Peers().ChainState(pid)
-		if err == nil && peerChainState.FinalizedEpoch >= rootToEpoch[mostVotedFinalizedRoot] {
+		if err == nil && peerChainState != nil && peerChainState.FinalizedEpoch >= rootToEpoch[mostVotedFinalizedRoot] {
 			pids = append(pids, pid)
 			if len(pids) >= maxPeersToSync {
 				break
@@ -341,7 +341,7 @@ func (s *InitialSync) bestPeer() peer.ID {
 	var bestSlot uint64
 	for _, k := range s.p2p.Peers().Connected() {
 		peerChainState, err := s.p2p.Peers().ChainState(k)
-		if err == nil && peerChainState.HeadSlot >= bestSlot {
+		if err == nil && peerChainState != nil && peerChainState.HeadSlot >= bestSlot {
 			bestSlot = peerChainState.HeadSlot
 			best = k
 		}

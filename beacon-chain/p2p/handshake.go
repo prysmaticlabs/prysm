@@ -19,7 +19,6 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 	s.host.Network().Notify(&network.NotifyBundle{
 		ConnectedF: func(net network.Network, conn network.Conn) {
 			log := log.WithField("peer", conn.RemotePeer().Pretty())
-			// Add the peer if we don't already have it (ignore error as it means this already exists)
 			s.peers.Add(conn.RemotePeer(), conn.RemoteMultiaddr(), conn.Stat().Direction)
 			if len(s.peers.Active()) >= int(s.cfg.MaxPeers) {
 				log.Debug("We have enough peers; disconnecting")

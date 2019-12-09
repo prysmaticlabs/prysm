@@ -5,10 +5,10 @@
 //
 // A peer can have one of a number of states:
 //
-// - disconnected if we are not able to talk to the remote peer
-// - connecting if we are attempting to be able to talk to the remote peer
 // - connected if we are able to talk to the remote peer
+// - connecting if we are attempting to be able to talk to the remote peer
 // - disconnecting if we are attempting to stop being able to talk to the remote peer
+// - disconnected if we are not able to talk to the remote peer
 //
 // For convenience, there are two aggregate states expressed in functions:
 //
@@ -20,7 +20,7 @@
 package peers
 
 import (
-	"fmt"
+	"errors"
 	"sync"
 	"time"
 
@@ -43,6 +43,11 @@ const (
 	PeerConnected
 	// PeerDisconnecting means there is an on-going attempt to disconnect from the peer.
 	PeerDisconnecting
+)
+
+var (
+	// ErrPeerUnknown is returned when there is an attempt to obtain data from a peer that is not known.
+	ErrPeerUnknown = errors.New("peer unknown")
 )
 
 // Status is the structure holding the peer status information.
@@ -75,23 +80,25 @@ func (p *Status) MaxBadResponses() int {
 	return p.maxBadResponses
 }
 
-// Add adds a peer.  This will error if the peer already exists.
-func (p *Status) Add(pid peer.ID, address ma.Multiaddr, direction network.Direction) error {
+// Add adds a peer.
+// If a peer already exists with this ID its address and direction are updated with the supplied data.
+func (p *Status) Add(pid peer.ID, address ma.Multiaddr, direction network.Direction) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	if _, ok := p.status[pid]; ok {
-		return fmt.Errorf("peer %v already exists", pid)
+	if status, ok := p.status[pid]; ok {
+		// Peer already exists, just update its address info.
+		status.address = address
+		status.direction = direction
+		return
 	}
 
-	status := &peerStatus{
+	p.status[pid] = &peerStatus{
 		address:   address,
 		direction: direction,
+		// Peers start disconnected; state will be updated when the handshake process begins.
 		peerState: PeerDisconnected,
 	}
-
-	p.status[pid] = status
-	return nil
 }
 
 // Address returns the multiaddress of the given remote peer.
@@ -103,7 +110,7 @@ func (p *Status) Address(pid peer.ID) (ma.Multiaddr, error) {
 	if status, ok := p.status[pid]; ok {
 		return status.address, nil
 	}
-	return nil, fmt.Errorf("peer %v unknown", pid)
+	return nil, ErrPeerUnknown
 }
 
 // Direction returns the direction of the given remote peer.
@@ -115,49 +122,39 @@ func (p *Status) Direction(pid peer.ID) (network.Direction, error) {
 	if status, ok := p.status[pid]; ok {
 		return status.direction, nil
 	}
-	return network.DirUnknown, fmt.Errorf("peer %v unknown", pid)
+	return network.DirUnknown, ErrPeerUnknown
 }
 
 // SetChainState sets the chain state of the given remote peer.
-// This will error if the peer does not exist.
-func (p *Status) SetChainState(pid peer.ID, chainState *pb.Status) error {
+func (p *Status) SetChainState(pid peer.ID, chainState *pb.Status) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	if status, ok := p.status[pid]; ok {
-		status.chainState = chainState
-		return nil
-	}
-	return fmt.Errorf("peer %v unknown", pid)
+	status := p.fetch(pid)
+	status.chainState = chainState
+	status.chainStateLastUpdated = roughtime.Now()
 }
 
 // ChainState gets the chain state of the given remote peer.
+// This can return nil if there is no known chain state for the peer.
 // This will error if the peer does not exist.
 func (p *Status) ChainState(pid peer.ID) (*pb.Status, error) {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
 	if status, ok := p.status[pid]; ok {
-		if status.chainState == nil {
-			return nil, fmt.Errorf("peer %v has no known chain state", pid)
-		}
 		return status.chainState, nil
 	}
-	return nil, fmt.Errorf("peer %v unknown", pid)
+	return nil, ErrPeerUnknown
 }
 
 // SetConnectionState sets the connection state of the given remote peer.
-// This will error if the peer does not exist.
-func (p *Status) SetConnectionState(pid peer.ID, state PeerConnectionState) error {
+func (p *Status) SetConnectionState(pid peer.ID, state PeerConnectionState) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	if status, ok := p.status[pid]; ok {
-		status.peerState = state
-		status.chainStateLastUpdated = roughtime.Now()
-		return nil
-	}
-	return fmt.Errorf("peer %v unknown", pid)
+	status := p.fetch(pid)
+	status.peerState = state
 }
 
 // ConnectionState gets the connection state of the given remote peer.
@@ -169,7 +166,7 @@ func (p *Status) ConnectionState(pid peer.ID) (PeerConnectionState, error) {
 	if status, ok := p.status[pid]; ok {
 		return status.peerState, nil
 	}
-	return PeerDisconnected, fmt.Errorf("peer %v unknown", pid)
+	return PeerDisconnected, ErrPeerUnknown
 }
 
 // ChainStateLastUpdated gets the last time the chain state of the given remote peer was updated.
@@ -181,20 +178,16 @@ func (p *Status) ChainStateLastUpdated(pid peer.ID) (time.Time, error) {
 	if status, ok := p.status[pid]; ok {
 		return status.chainStateLastUpdated, nil
 	}
-	return time.Now(), fmt.Errorf("peer %v unknown", pid)
+	return time.Now(), ErrPeerUnknown
 }
 
 // IncrementBadResponses increments the number of bad responses we have received from the given remote peer.
-// This will error if the peer does not exist.
-func (p *Status) IncrementBadResponses(pid peer.ID) error {
+func (p *Status) IncrementBadResponses(pid peer.ID) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	if status, ok := p.status[pid]; ok {
-		status.badResponses++
-		return nil
-	}
-	return fmt.Errorf("peer %v unknown", pid)
+	status := p.fetch(pid)
+	status.badResponses++
 }
 
 // BadResponses obtains the number of bad responses we have received from the given remote peer.
@@ -206,7 +199,7 @@ func (p *Status) BadResponses(pid peer.ID) (int, error) {
 	if status, ok := p.status[pid]; ok {
 		return status.badResponses, nil
 	}
-	return -1, fmt.Errorf("peer %v unknown", pid)
+	return -1, ErrPeerUnknown
 }
 
 // IsBad states if the peer is to be considered bad.
@@ -308,4 +301,12 @@ func (p *Status) All() []peer.ID {
 		pids = append(pids, pid)
 	}
 	return pids
+}
+
+// fetch is a helper function that fetches a peer status, possibly creating it.
+func (p *Status) fetch(pid peer.ID) *peerStatus {
+	if _, ok := p.status[pid]; !ok {
+		p.status[pid] = &peerStatus{}
+	}
+	return p.status[pid]
 }
