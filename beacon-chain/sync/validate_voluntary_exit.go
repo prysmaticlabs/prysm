@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/dgraph-io/ristretto"
 	"github.com/gogo/protobuf/proto"
-	"github.com/karlseguin/ccache"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -15,8 +15,14 @@ import (
 	"go.opencensus.io/trace"
 )
 
+var seenExitsCacheSize = int64(1 << 10)
+
 // seenExits tracks exits we've already seen to prevent feedback loop.
-var seenExits = ccache.New(ccache.Configure())
+var seenExits, _ = ristretto.NewCache(&ristretto.Config{
+	NumCounters: seenExitsCacheSize,
+	MaxCost:     seenExitsCacheSize,
+	BufferItems: 64,
+})
 
 func exitCacheKey(exit *ethpb.VoluntaryExit) string {
 	return fmt.Sprintf("%d-%d", exit.Epoch, exit.ValidatorIndex)
@@ -40,10 +46,10 @@ func (r *RegularSync) validateVoluntaryExit(ctx context.Context, msg proto.Messa
 
 	cacheKey := exitCacheKey(exit)
 	invalidKey := invalid + cacheKey
-	if seenExits.Get(invalidKey) != nil {
+	if _, ok := seenExits.Get(invalidKey); ok {
 		return false, errors.New("previously seen invalid validator exit received")
 	}
-	if seenExits.Get(cacheKey) != nil {
+	if _, ok := seenExits.Get(cacheKey); ok {
 		return false, nil
 	}
 
@@ -63,10 +69,10 @@ func (r *RegularSync) validateVoluntaryExit(ctx context.Context, msg proto.Messa
 	}
 
 	if err := blocks.VerifyExit(s, exit); err != nil {
-		seenExits.Set(invalidKey, true /*value*/, oneYear /*TTL*/)
+		seenExits.Set(invalidKey, true /*value*/, 1 /*cost*/)
 		return false, errors.Wrap(err, "Received invalid validator exit")
 	}
-	seenExits.Set(cacheKey, true /*value*/, oneYear /*TTL*/)
+	seenExits.Set(cacheKey, true /*value*/, 1 /*cost*/)
 
 	if fromSelf {
 		return false, nil

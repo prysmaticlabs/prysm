@@ -16,9 +16,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -90,6 +91,23 @@ func (s *Service) Start() {
 	if err != nil {
 		log.Fatalf("Could not fetch beacon state: %v", err)
 	}
+
+	// For running initial sync with state cache, in an event of restart, we use
+	// last finalized check point as start point to sync instead of head
+	// state. This is because we no longer save state every slot during sync.
+	if featureconfig.Get().InitSyncCacheState {
+		cp, err := s.beaconDB.FinalizedCheckpoint(ctx)
+		if err != nil {
+			log.Fatalf("Could not fetch finalized cp: %v", err)
+		}
+		if beaconState == nil {
+			beaconState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(cp.Root))
+			if err != nil {
+				log.Fatalf("Could not fetch beacon state: %v", err)
+			}
+		}
+	}
+
 	// If the chain has already been initialized, simply start the block processing routine.
 	if beaconState != nil {
 		log.Info("Blockchain data already exists in DB, initializing...")
@@ -108,9 +126,9 @@ func (s *Service) Start() {
 		if err := s.forkChoiceStore.GenesisStore(ctx, justifiedCheckpoint, finalizedCheckpoint); err != nil {
 			log.Fatalf("Could not start fork choice service: %v", err)
 		}
-		s.stateNotifier.StateFeed().Send(&statefeed.Event{
-			Type: statefeed.StateInitialized,
-			Data: &statefeed.StateInitializedData{
+		s.stateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.Initialized,
+			Data: &statefeed.InitializedData{
 				StartTime: s.genesisTime,
 			},
 		})
@@ -121,7 +139,7 @@ func (s *Service) Start() {
 			return // return need for TestStartUninitializedChainWithoutConfigPOWChain.
 		}
 		go func() {
-			stateChannel := make(chan *statefeed.Event, 1)
+			stateChannel := make(chan *feed.Event, 1)
 			stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
 			defer stateSub.Unsubscribe()
 			for {
@@ -154,9 +172,9 @@ func (s *Service) processChainStartTime(ctx context.Context, genesisTime time.Ti
 	if err := s.initializeBeaconChain(ctx, genesisTime, initialDeposits, s.chainStartFetcher.ChainStartEth1Data()); err != nil {
 		log.Fatalf("Could not initialize beacon chain: %v", err)
 	}
-	s.stateNotifier.StateFeed().Send(&statefeed.Event{
-		Type: statefeed.StateInitialized,
-		Data: &statefeed.StateInitializedData{
+	s.stateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.Initialized,
+		Data: &statefeed.InitializedData{
 			StartTime: genesisTime,
 		},
 	})
@@ -222,6 +240,32 @@ func (s *Service) saveHead(ctx context.Context, b *ethpb.BeaconBlock, r [32]byte
 	if err := s.beaconDB.SaveHeadBlockRoot(ctx, r); err != nil {
 		return errors.Wrap(err, "could not save head root in DB")
 	}
+	s.headBlock = b
+
+	headState, err := s.beaconDB.State(ctx, r)
+	if err != nil {
+		return errors.Wrap(err, "could not retrieve head state in DB")
+	}
+	s.headState = headState
+
+	log.WithFields(logrus.Fields{
+		"slot":     b.Slot,
+		"headRoot": fmt.Sprintf("%#x", r),
+	}).Debug("Saved new head info")
+	return nil
+}
+
+// This gets called to update canonical root mapping. It does not save head block
+// root in DB. With the inception of inital-sync-cache-state flag, it uses finalized
+// check point as anchors to resume sync therefore head is no longer needed to be saved on per slot basis.
+func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.BeaconBlock, r [32]byte) error {
+	s.headLock.Lock()
+	defer s.headLock.Unlock()
+
+	s.headSlot = b.Slot
+
+	s.canonicalRoots[b.Slot] = r[:]
+
 	s.headBlock = b
 
 	headState, err := s.beaconDB.State(ctx, r)
@@ -313,7 +357,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		return errors.Wrap(err, "could not get finalized block from db")
 	}
 
-	s.headSlot = s.headState.Slot
+	s.headSlot = s.headBlock.Slot
 	s.canonicalRoots[s.headSlot] = finalized.Root
 
 	return nil

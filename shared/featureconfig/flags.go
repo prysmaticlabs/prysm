@@ -73,11 +73,21 @@ var (
 		Name:  "enable-skip-slots-cache",
 		Usage: "Enables the skip slot cache to be used in the event of skipped slots.",
 	}
+	kafkaBootstrapServersFlag = cli.StringFlag{
+		Name:  "kafka-url",
+		Usage: "Stream attestations and blocks to specified kafka servers. This field is used for bootstrap.servers kafka config field.",
+	}
 	initSyncVerifyEverythingFlag = cli.BoolFlag{
 		Name: "initial-sync-verify-all-signatures",
 		Usage: "Initial sync to finalized checkpoint with verifying block's signature, RANDAO " +
 			"and attestation's aggregated signatures. Without this flag, only the proposer " +
 			"signature is verified until the node reaches the end of the finalized chain.",
+	}
+	initSyncCacheState = cli.BoolFlag{
+		Name: "initial-sync-cache-state",
+		Usage: "Save state in cache during initial sync. We currently save state in the DB during " +
+			"initial sync and disk-IO is one of the biggest bottleneck. This still saves finalized state in DB " +
+			"and start syncing from there",
 	}
 )
 
@@ -146,8 +156,10 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	EnableEth1DataVoteCacheFlag,
 	EnableCustomStateSSZ,
 	initSyncVerifyEverythingFlag,
+	initSyncCacheState,
 	NewCacheFlag,
 	SkipBLSVerifyFlag,
+	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,
 	enableBLSPubkeyCacheFlag,
 	enableShuffledIndexCache,

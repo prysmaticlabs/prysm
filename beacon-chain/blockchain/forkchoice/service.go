@@ -8,12 +8,15 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -46,6 +49,8 @@ type Store struct {
 	bestJustifiedCheckpt *ethpb.Checkpoint
 	latestVoteMap        map[uint64]*pb.ValidatorLatestVote
 	voteLock             sync.RWMutex
+	initSyncState        map[[32]byte]*pb.BeaconState
+	initSyncStateLock    sync.RWMutex
 }
 
 // NewForkChoiceService instantiates a new service instance that will
@@ -59,6 +64,7 @@ func NewForkChoiceService(ctx context.Context, db db.Database) *Store {
 		checkpointState: cache.NewCheckpointStateCache(),
 		latestVoteMap:   make(map[uint64]*pb.ValidatorLatestVote),
 		seenAtts:        make(map[[32]byte]bool),
+		initSyncState:   make(map[[32]byte]*pb.BeaconState),
 	}
 }
 
@@ -102,6 +108,33 @@ func (s *Store) GenesisStore(
 	}
 
 	s.genesisTime = justifiedState.GenesisTime
+	if err := s.cacheGenesisState(ctx); err != nil {
+		return errors.Wrap(err, "could not cache initial sync state")
+	}
+
+	return nil
+}
+
+// This sets up gensis for initial sync state cache.
+func (s *Store) cacheGenesisState(ctx context.Context) error {
+	if !featureconfig.Get().InitSyncCacheState {
+		return nil
+	}
+
+	genesisState, err := s.db.GenesisState(ctx)
+	if err != nil {
+		return err
+	}
+	stateRoot, err := ssz.HashTreeRoot(genesisState)
+	if err != nil {
+		return errors.Wrap(err, "could not tree hash genesis state")
+	}
+	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
+	genesisBlkRoot, err := ssz.SigningRoot(genesisBlk)
+	if err != nil {
+		return errors.Wrap(err, "could not get genesis block root")
+	}
+	s.initSyncState[genesisBlkRoot] = genesisState
 
 	return nil
 }

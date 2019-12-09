@@ -17,7 +17,8 @@ import (
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	internal "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
@@ -316,7 +317,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 
 	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
 	for sent := 0; sent == 0; {
-		sent = Server.StateNotifier.StateFeed().Send(&statefeed.Event{
+		sent = Server.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.ChainStarted,
 			Data: &statefeed.ChainStartedData{
 				StartTime: time.Unix(0, 0),

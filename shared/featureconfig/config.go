@@ -25,15 +25,17 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
-	GenesisDelay              bool // GenesisDelay when processing a chain start genesis event.
-	MinimalConfig             bool // MinimalConfig as defined in the spec.
-	WriteSSZStateTransitions  bool // WriteSSZStateTransitions to tmp directory.
-	InitSyncNoVerify          bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
-	SkipBLSVerify             bool // Skips BLS verification across the runtime.
-	EnableBackupWebhook       bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
-	PruneEpochBoundaryStates  bool // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
-	EnableSnappyDBCompression bool // EnableSnappyDBCompression in the database.
-	EnableCustomStateSSZ      bool // EnableCustomStateSSZ in the the state transition function.
+	GenesisDelay              bool   // GenesisDelay when processing a chain start genesis event.
+	MinimalConfig             bool   // MinimalConfig as defined in the spec.
+	WriteSSZStateTransitions  bool   // WriteSSZStateTransitions to tmp directory.
+	InitSyncNoVerify          bool   // InitSyncNoVerify when initial syncing w/o verifying block's contents.
+	SkipBLSVerify             bool   // Skips BLS verification across the runtime.
+	EnableBackupWebhook       bool   // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
+	PruneEpochBoundaryStates  bool   // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
+	EnableSnappyDBCompression bool   // EnableSnappyDBCompression in the database.
+	EnableCustomStateSSZ      bool   // EnableCustomStateSSZ in the the state transition function.
+	InitSyncCacheState        bool   // InitSyncCacheState caches state during initial sync.
+	KafkaBootstrapServers     string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
 
 	// Cache toggles.
 	EnableAttestationCache   bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
@@ -121,6 +123,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabled skip slots cache.")
 		cfg.EnableSkipSlotsCache = true
 	}
+	if ctx.GlobalString(kafkaBootstrapServersFlag.Name) != "" {
+		log.Warn("Enabling experimental kafka streaming.")
+		cfg.KafkaBootstrapServers = ctx.GlobalString(kafkaBootstrapServersFlag.Name)
+	}
 	if ctx.GlobalBool(enableCommitteeCacheFlag.Name) {
 		log.Warn("Enabled committee cache.")
 		cfg.EnableCommitteeCache = true
@@ -133,6 +139,11 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabled active count cache.")
 		cfg.EnableActiveCountCache = true
 	}
+	if ctx.GlobalBool(initSyncCacheState.Name) {
+		log.Warn("Enabled initial sync cache state mode.")
+		cfg.InitSyncCacheState = true
+	}
+
 	Init(cfg)
 }
 

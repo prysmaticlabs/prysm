@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/dgraph-io/ristretto"
+
 	"github.com/gogo/protobuf/proto"
-	"github.com/karlseguin/ccache"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -16,8 +17,14 @@ import (
 	"go.opencensus.io/trace"
 )
 
+var seenAttSlashingCacheSize = int64(1 << 10)
+
 // seenAttesterSlashings represents a cache of all the seen slashings
-var seenAttesterSlashings = ccache.New(ccache.Configure())
+var seenAttesterSlashings, _ = ristretto.NewCache(&ristretto.Config{
+	NumCounters: seenAttSlashingCacheSize,
+	MaxCost:     seenAttSlashingCacheSize,
+	BufferItems: 64,
+})
 
 func attSlashingCacheKey(slashing *ethpb.AttesterSlashing) (string, error) {
 	hash, err := hashutil.HashProto(slashing)
@@ -49,10 +56,10 @@ func (r *RegularSync) validateAttesterSlashing(ctx context.Context, msg proto.Me
 	}
 
 	invalidKey := invalid + cacheKey
-	if seenAttesterSlashings.Get(invalidKey) != nil {
+	if _, ok := seenAttesterSlashings.Get(invalidKey); ok {
 		return false, errors.New("previously seen invalid attester slashing received")
 	}
-	if seenAttesterSlashings.Get(cacheKey) != nil {
+	if _, ok := seenAttesterSlashings.Get(cacheKey); ok {
 		return false, nil
 	}
 
@@ -76,10 +83,10 @@ func (r *RegularSync) validateAttesterSlashing(ctx context.Context, msg proto.Me
 	}
 
 	if err := blocks.VerifyAttesterSlashing(ctx, s, slashing); err != nil {
-		seenAttesterSlashings.Set(invalidKey, true /*value*/, oneYear /*TTL*/)
+		seenAttesterSlashings.Set(invalidKey, true /*value*/, 1 /*cost*/)
 		return false, errors.Wrap(err, "Received invalid attester slashing")
 	}
-	seenAttesterSlashings.Set(cacheKey, true /*value*/, oneYear /*TTL*/)
+	seenAttesterSlashings.Set(cacheKey, true /*value*/, 1 /*cost*/)
 
 	if fromSelf {
 		return false, nil

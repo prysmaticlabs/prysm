@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -153,8 +154,11 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.
 	ctx, span := trace.StartSpan(ctx, "forkchoice.onBlock")
 	defer span.End()
 
+	s.initSyncStateLock.Lock()
+	defer s.initSyncStateLock.Unlock()
+
 	// Retrieve incoming block's pre state.
-	preState, err := s.getBlockPreState(ctx, b)
+	preState, err := s.cachedPreState(ctx, b)
 	if err != nil {
 		return err
 	}
@@ -174,8 +178,13 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.
 	if err != nil {
 		return errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
 	}
-	if err := s.db.SaveState(ctx, postState, root); err != nil {
-		return errors.Wrap(err, "could not save state")
+
+	if featureconfig.Get().InitSyncCacheState {
+		s.initSyncState[root] = postState
+	} else {
+		if err := s.db.SaveState(ctx, postState, root); err != nil {
+			return errors.Wrap(err, "could not save state")
+		}
 	}
 
 	// Update justified check point.
@@ -199,6 +208,10 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.
 				return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
 					startSlot, endSlot)
 			}
+		}
+
+		if err := s.saveInitState(ctx, postState); err != nil {
+			return errors.Wrap(err, "could not save init sync finalized state")
 		}
 
 		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint); err != nil {
@@ -504,4 +517,52 @@ func (s *Store) updateJustifiedCheckpoint() {
 	if s.bestJustifiedCheckpt.Epoch > s.justifiedCheckpt.Epoch {
 		s.justifiedCheckpt = s.bestJustifiedCheckpt
 	}
+}
+
+// This receives cached state in memory for initial sync only during initial sync.
+func (s *Store) cachedPreState(ctx context.Context, b *ethpb.BeaconBlock) (*pb.BeaconState, error) {
+	if featureconfig.Get().InitSyncCacheState {
+		preState := s.initSyncState[bytesutil.ToBytes32(b.ParentRoot)]
+		var err error
+		if preState == nil {
+			preState, err = s.db.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
+			}
+			if preState == nil {
+				return nil, fmt.Errorf("pre state of slot %d does not exist", b.Slot)
+			}
+		}
+		return proto.Clone(preState).(*pb.BeaconState), nil
+	}
+
+	preState, err := s.db.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
+	}
+	if preState == nil {
+		return nil, fmt.Errorf("pre state of slot %d does not exist", b.Slot)
+	}
+
+	return preState, nil
+}
+
+// This saves every finalized state in DB during initial sync, needed as part of optimization to
+// use cache state during initial sync in case of restart.
+func (s *Store) saveInitState(ctx context.Context, state *pb.BeaconState) error {
+	if !featureconfig.Get().InitSyncCacheState {
+		return nil
+	}
+	finalizedRoot := bytesutil.ToBytes32(state.FinalizedCheckpoint.Root)
+	fs := s.initSyncState[finalizedRoot]
+
+	if err := s.db.SaveState(ctx, fs, finalizedRoot); err != nil {
+		return errors.Wrap(err, "could not save state")
+	}
+	for r, oldState := range s.initSyncState {
+		if oldState.Slot < state.FinalizedCheckpoint.Epoch*params.BeaconConfig().SlotsPerEpoch {
+			delete(s.initSyncState, r)
+		}
+	}
+	return nil
 }

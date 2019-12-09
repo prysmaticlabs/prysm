@@ -12,7 +12,8 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
@@ -372,7 +373,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	}
 
 	// Set up our subscriber now to listen for the chain started event.
-	stateChannel := make(chan *statefeed.Event, 1)
+	stateChannel := make(chan *feed.Event, 1)
 	stateSub := web3Service.stateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
 
@@ -471,7 +472,7 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	}
 
 	// Set up our subscriber now to listen for the chain started event.
-	stateChannel := make(chan *statefeed.Event, 1)
+	stateChannel := make(chan *feed.Event, 1)
 	stateSub := web3Service.stateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
 

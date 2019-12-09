@@ -7,7 +7,8 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-pubsub"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
@@ -37,14 +38,14 @@ func noopValidator(_ context.Context, _ proto.Message, _ p2p.Broadcaster, _ bool
 func (r *RegularSync) registerSubscribers() {
 	go func() {
 		// Wait until chain start.
-		stateChannel := make(chan *statefeed.Event, 1)
+		stateChannel := make(chan *feed.Event, 1)
 		stateSub := r.stateNotifier.StateFeed().Subscribe(stateChannel)
 		defer stateSub.Unsubscribe()
 		for r.chainStarted == false {
 			select {
 			case event := <-stateChannel:
-				if event.Type == statefeed.StateInitialized {
-					data := event.Data.(*statefeed.StateInitializedData)
+				if event.Type == statefeed.Initialized {
+					data := event.Data.(*statefeed.InitializedData)
 					log.WithField("starttime", data.StartTime).Debug("Received state initialized event")
 					if data.StartTime.After(roughtime.Now()) {
 						stateSub.Unsubscribe()
@@ -145,7 +146,7 @@ func (r *RegularSync) subscribeDynamic(topicFormat string, determineSubsLen func
 
 	var subscriptions []*pubsub.Subscription
 
-	stateChannel := make(chan *statefeed.Event, 1)
+	stateChannel := make(chan *feed.Event, 1)
 	stateSub := r.stateNotifier.StateFeed().Subscribe(stateChannel)
 	go func() {
 		for {

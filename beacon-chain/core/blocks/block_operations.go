@@ -32,6 +32,10 @@ var log = logrus.WithField("prefix", "blocks")
 
 var eth1DataCache = cache.NewEth1DataVoteCache()
 
+// ErrSigFailedToVerify returns when a signature of a block object(ie attestation, slashing, exit... etc)
+// failed to verify.
+var ErrSigFailedToVerify = errors.New("signature did not verify")
+
 func verifySigningRoot(obj interface{}, pub []byte, signature []byte, domain uint64) error {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
@@ -46,7 +50,7 @@ func verifySigningRoot(obj interface{}, pub []byte, signature []byte, domain uin
 		return errors.Wrap(err, "could not get signing root")
 	}
 	if !sig.Verify(root[:], publicKey, domain) {
-		return fmt.Errorf("signature did not verify")
+		return ErrSigFailedToVerify
 	}
 	return nil
 }
@@ -61,7 +65,7 @@ func verifySignature(signedData []byte, pub []byte, signature []byte, domain uin
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
 	if !sig.Verify(signedData, publicKey, domain) {
-		return fmt.Errorf("signature did not verify: %v", fmt.Sprintf("%#x", bytesutil.Trunc(signature)))
+		return ErrSigFailedToVerify
 	}
 	return nil
 }
@@ -177,8 +181,7 @@ func ProcessBlockHeader(
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	domain := helpers.Domain(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	if err := verifySigningRoot(block, proposer.PublicKey, block.Signature, domain); err != nil {
-		sig := fmt.Sprintf("%#x", bytesutil.Trunc(block.Signature))
-		return nil, errors.Wrapf(err, "could not verify block signature %v", sig)
+		return nil, ErrSigFailedToVerify
 	}
 
 	return beaconState, nil
@@ -715,7 +718,7 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *pb.BeaconState, 
 
 	voted := len(indices) > 0
 	if voted && !sig.Verify(messageHash[:], pubkey, domain) {
-		return fmt.Errorf("attestation aggregation signature did not verify")
+		return ErrSigFailedToVerify
 	}
 	return nil
 }
@@ -958,8 +961,7 @@ func VerifyExit(beaconState *pb.BeaconState, exit *ethpb.VoluntaryExit) error {
 	}
 	domain := helpers.Domain(beaconState.Fork, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit)
 	if err := verifySigningRoot(exit, validator.PublicKey, exit.Signature, domain); err != nil {
-		sig := fmt.Sprintf("%#x", bytesutil.Trunc(exit.Signature))
-		return errors.Wrapf(err, "could not verify voluntary exit signature %v", sig)
+		return ErrSigFailedToVerify
 	}
 	return nil
 }

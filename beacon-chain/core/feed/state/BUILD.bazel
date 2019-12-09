@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "events.go",
+        "notifier.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state",
+    visibility = ["//beacon-chain:__subpackages__"],
+    deps = ["//shared/event:go_default_library"],
+)

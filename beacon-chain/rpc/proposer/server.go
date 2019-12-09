@@ -96,6 +96,8 @@ func (ps *Server) RequestBlock(ctx context.Context, req *pb.BlockRequest) (*ethp
 
 	emptySig := make([]byte, 96)
 
+	graffiti := bytesutil.ToBytes32([]byte(req.Graffiti))
+
 	blk := &ethpb.BeaconBlock{
 		Slot:       req.Slot,
 		ParentRoot: parentRoot[:],
@@ -109,7 +111,7 @@ func (ps *Server) RequestBlock(ctx context.Context, req *pb.BlockRequest) (*ethp
 			ProposerSlashings: []*ethpb.ProposerSlashing{},
 			AttesterSlashings: []*ethpb.AttesterSlashing{},
 			VoluntaryExits:    []*ethpb.VoluntaryExit{},
-			Graffiti:          []byte{},
+			Graffiti:          graffiti[:],
 		},
 		Signature: emptySig,
 	}
