@@ -62,5 +62,5 @@ type Sender interface {
 
 // PeersProvider abstracts obtaining our current list of known peers.
 type PeersProvider interface {
-	Peers() []*peers.Info
+	Peers() *peers.Status
 }

@@ -8,7 +8,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/sirupsen/logrus"
 )
 
@@ -18,34 +18,37 @@ import (
 func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer.ID) error) {
 	s.host.Network().Notify(&network.NotifyBundle{
 		ConnectedF: func(net network.Network, conn network.Conn) {
-			if peerCount(s.host) > int(s.cfg.MaxPeers) {
+			log := log.WithField("peer", conn.RemotePeer().Pretty())
+			// Add the peer if we don't already have it (ignore error as it means this already exists)
+			s.peers.Add(conn.RemotePeer(), conn.RemoteMultiaddr(), conn.Stat().Direction)
+			if len(s.peers.Active()) >= int(s.cfg.MaxPeers) {
+				log.Debug("We have enough peers; disconnecting")
 				if err := s.Disconnect(conn.RemotePeer()); err != nil {
 					log.WithError(err).Errorf("Unable to close peer %s", conn.RemotePeer())
-					return
 				}
+				return
 			}
 			multiAddr := fmt.Sprintf("%s/p2p/%s", conn.RemoteMultiaddr().String(), conn.RemotePeer().String())
 			log.WithFields(logrus.Fields{
-				"direction": conn.Stat().Direction,
-				"multiAddr": multiAddr,
-				"peerCount": peerCount(s.host),
-			}).Debug("Connection")
-			if peerstatus.IsBadPeer(conn.RemotePeer()) {
-				// Add Peer to gossipsub blacklist
+				"direction":   conn.Stat().Direction,
+				"multiAddr":   multiAddr,
+				"activePeers": len(s.peers.Active()),
+			}).Debug("Connection attempt")
+			if s.peers.IsBad(conn.RemotePeer()) {
+				// Add peer to gossipsub blacklist.
 				s.pubsub.BlacklistPeer(conn.RemotePeer())
-				log.WithField("peerID", conn.RemotePeer().Pretty()).Trace("Disconnecting with bad peer")
+				log.Trace("Disconnecting from bad peer")
 				if err := s.Disconnect(conn.RemotePeer()); err != nil {
-					log.WithError(err).Errorf("Unable to close peer %s", conn.RemotePeer())
-					return
+					log.WithError(err).Error("Unable to disconnect from peer")
 				}
 				return
 			}
 
 			// ConnectedF must be non-blocking as part of libp2p design.
 			go func() {
+				s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerConnecting)
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
-				log := log.WithField("peer", conn.RemotePeer().Pretty())
 				log.Debug("Performing handshake with peer")
 				if err := reqFunc(ctx, conn.RemotePeer()); err != nil && err != io.EOF {
 					log.WithError(err).Debug("Could not send successful hello rpc request")
@@ -54,37 +57,47 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 						// used in production.
 						log.Debug("Not disconnecting peer with unsupported protocol. This may be the DHT node or relay.")
 						s.host.ConnManager().Protect(conn.RemotePeer(), "relay/bootnode")
+						s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnected)
 						return
 					}
+					s.peers.IncrementBadResponses(conn.RemotePeer())
+					badResponses, err := s.peers.BadResponses(conn.RemotePeer())
+					if err == nil && badResponses == s.peers.MaxBadResponses() {
+						log.Info("Peer has given too many bad responses; will ignore in future")
+					}
+					s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnecting)
 					if err := s.Disconnect(conn.RemotePeer()); err != nil {
-						log.WithError(err).Errorf("Unable to close peer %s", conn.RemotePeer())
-						return
+						log.WithError(err).Error("Unable to disconnect from peer")
 					}
+					s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnected)
 					return
 				}
-				log.WithField("peer", conn.RemotePeer().Pretty()).Info("New peer connected")
+				s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerConnected)
+				log.WithField("active", len(s.peers.Active())).Info("Peer connected")
 			}()
 		},
 	})
 }
 
-// AddDisconnectionHandler ensures that previously disconnected peers aren't dialed again. Due
-// to either their ports being closed, nodes are no longer active,etc. This also calls the handler
-// responsible for maintaining other parts of the sync or p2p system.
+// AddDisconnectionHandler disconnects from peers.  It handles updating the peer status.
+// This also calls the handler responsible for maintaining other parts of the sync or p2p system.
 func (s *Service) AddDisconnectionHandler(handler func(ctx context.Context, id peer.ID) error) {
 	s.host.Network().Notify(&network.NotifyBundle{
 		DisconnectedF: func(net network.Network, conn network.Conn) {
+			log := log.WithField("peer", conn.RemotePeer().Pretty())
 			// Must be handled in a goroutine as this callback cannot be blocking.
 			go func() {
-				s.exclusionList.Set(conn.RemotePeer().String(), true, 1)
-				log := log.WithField("peer", conn.RemotePeer())
-				log.Debug("Peer is added to exclusion list")
+				s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnecting)
 				ctx := context.Background()
 				if err := handler(ctx, conn.RemotePeer()); err != nil {
 					log.WithError(err).Error("Failed to handle disconnecting peer")
 				}
+				s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnected)
+				// Log good peer disconnects; bad peers can visit here frequently so do not log them.
+				if !s.peers.IsBad(conn.RemotePeer()) {
+					log.WithField("active", len(s.peers.Active())).Info("Peer disconnected")
+				}
 			}()
-
 		},
 	})
 }

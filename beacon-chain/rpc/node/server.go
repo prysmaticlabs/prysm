@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -80,26 +79,32 @@ func (ns *Server) ListImplementedServices(ctx context.Context, _ *ptypes.Empty) 
 
 // ListPeers lists the peers connected to this node.
 func (ns *Server) ListPeers(ctx context.Context, _ *ptypes.Empty) (*ethpb.Peers, error) {
-	peers := make([]*ethpb.Peer, 0)
-	for _, peer := range ns.PeersFetcher.Peers() {
-		peerStatus := peerstatus.Get(peer.AddrInfo.ID)
-		if peerStatus != nil {
-			address := fmt.Sprintf("%s/p2p/%s", peer.AddrInfo.Addrs[0].String(), peer.AddrInfo.ID.Pretty())
-			direction := ethpb.PeerDirection_UNKNOWN
-			switch peer.Direction {
-			case network.DirInbound:
-				direction = ethpb.PeerDirection_INBOUND
-			case network.DirOutbound:
-				direction = ethpb.PeerDirection_OUTBOUND
-			}
-			peers = append(peers, &ethpb.Peer{
-				Address:   address,
-				Direction: direction,
-			})
+	res := make([]*ethpb.Peer, 0)
+	for _, pid := range ns.PeersFetcher.Peers().Connected() {
+		multiaddr, err := ns.PeersFetcher.Peers().Address(pid)
+		if err != nil {
+			continue
 		}
+		direction, err := ns.PeersFetcher.Peers().Direction(pid)
+		if err != nil {
+			continue
+		}
+
+		address := fmt.Sprintf("%s/p2p/%s", multiaddr.String(), pid.Pretty())
+		pbDirection := ethpb.PeerDirection_UNKNOWN
+		switch direction {
+		case network.DirInbound:
+			pbDirection = ethpb.PeerDirection_INBOUND
+		case network.DirOutbound:
+			pbDirection = ethpb.PeerDirection_OUTBOUND
+		}
+		res = append(res, &ethpb.Peer{
+			Address:   address,
+			Direction: pbDirection,
+		})
 	}
 
 	return &ethpb.Peers{
-		Peers: peers,
+		Peers: res,
 	}, nil
 }
