@@ -19,12 +19,12 @@ import (
 	"github.com/wasmerio/go-ext-wasm/wasmer"
 )
 
-//TODO determine eth2_blockDataCopy
-//TODO determine eth2_pushNewDeposit
+//TODO(#0): determine eth2_blockDataCopy
+//TODO(#0): determine eth2_pushNewDeposit
 
 //export eth2_loadPreStateRoot
 func eth2_loadPreStateRoot(context unsafe.Pointer, arg int32) {
-	//TODO Get "memory := instance.Memory.Data()".  Use context for this? Multithreading?
+	//TODO(#0): Get "memory := instance.Memory.Data()".  Use context for this? Multithreading?
 	uint32conversion := uint32(arg) // 1048544. This value realy exist in wasm
 	log.WithField("arg", uint32conversion).Debug("eth2_loadPreStateRoot")
 	return
@@ -44,7 +44,7 @@ func eth2_savePostStateRoot(context unsafe.Pointer, arg int32) {
 
 func getImports() (*wasmer.Imports, error) {
 	imports := wasmer.NewImports().Namespace("env")
-	//TODO append memory
+	//TODO(#0): append memory
 	imports, err := imports.Append("eth2_loadPreStateRoot", eth2_loadPreStateRoot, C.eth2_loadPreStateRoot)
 	if err != nil {
 		return nil, err

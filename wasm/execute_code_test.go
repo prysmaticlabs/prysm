@@ -3,7 +3,6 @@ package wasm
 import (
 	"bytes"
 	"encoding/hex"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -12,7 +11,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
@@ -42,13 +40,6 @@ type YamlFile []struct {
 	PostState   string        `yaml:"post_state"`
 	Deposits    []YamlDeposit `yaml:"deposits,omitempty"`
 	Error       int           `yaml:"error,omitempty"`
-}
-
-func init() {
-	//TODO remove set of logLevel (or not include the _test to prod build)
-	if flag.Lookup("test.v") != nil {
-		logrus.SetLevel(logrus.TraceLevel)
-	}
 }
 
 func readHex(t *testing.T, hexString string) []byte {
