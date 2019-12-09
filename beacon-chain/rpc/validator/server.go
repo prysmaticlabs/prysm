@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -45,6 +46,7 @@ type Server struct {
 	Eth1InfoFetcher    powchain.ChainInfoFetcher
 	SyncChecker        sync.Checker
 	StateNotifier      statefeed.Notifier
+	OperationNotifier  opfeed.Notifier
 	GenesisTimeFetcher blockchain.GenesisTimeFetcher
 }
 

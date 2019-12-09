@@ -59,6 +59,7 @@ type BeaconNode struct {
 	db           db.Database
 	depositCache *depositcache.DepositCache
 	stateFeed    *event.Feed
+	opFeed       *event.Feed
 }
 
 // NewBeaconNode creates a new node instance, sets up configuration options, and registers
@@ -82,6 +83,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		services:  registry,
 		stop:      make(chan struct{}),
 		stateFeed: new(event.Feed),
+		opFeed:    new(event.Feed),
 	}
 
 	// Use custom config values if the --no-custom-config flag is not set.
@@ -155,6 +157,11 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 // StateFeed implements statefeed.Notifier.
 func (b *BeaconNode) StateFeed() *event.Feed {
 	return b.stateFeed
+}
+
+// OperationFeed implements opfeed.Notifier.
+func (b *BeaconNode) OperationFeed() *event.Feed {
+	return b.opFeed
 }
 
 // Start the BeaconNode and kicks off every registered service.
@@ -461,6 +468,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		DepositFetcher:        depositFetcher,
 		PendingDepositFetcher: b.depositCache,
 		StateNotifier:         b,
+		OperationNotifier:     b,
 	})
 
 	return b.services.RegisterService(rpcService)

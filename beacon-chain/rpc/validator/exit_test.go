@@ -9,9 +9,10 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -47,12 +48,13 @@ func TestSub(t *testing.T) {
 		SyncChecker:        &mockSync.Sync{IsSyncing: false},
 		GenesisTimeFetcher: mockChainService,
 		StateNotifier:      mockChainService.StateNotifier(),
+		OperationNotifier:  mockChainService.OperationNotifier(),
 	}
 
-	// Subscribe to state notifications
-	stateChannel := make(chan *statefeed.Event, 1024)
-	stateSub := server.StateNotifier.StateFeed().Subscribe(stateChannel)
-	defer stateSub.Unsubscribe()
+	// Subscribe to operation notifications
+	opChannel := make(chan *feed.Event, 1024)
+	opSub := server.OperationNotifier.OperationFeed().Subscribe(opChannel)
+	defer opSub.Unsubscribe()
 
 	// Send the request, expect a result on the state feed
 	epoch := uint64(2048)
@@ -72,18 +74,18 @@ func TestSub(t *testing.T) {
 	notificationFound := false
 	for !notificationFound {
 		select {
-		case event := <-stateChannel:
-			if event.Type == statefeed.VoluntaryExitReceived {
+		case event := <-opChannel:
+			if event.Type == opfeed.ExitReceived {
 				notificationFound = true
-				data := event.Data.(*statefeed.VoluntaryExitReceivedData)
-				if epoch != data.VoluntaryExit.Epoch {
-					t.Errorf("Unexpected state feed epoch: expected %v, found %v", epoch, data.VoluntaryExit.Epoch)
+				data := event.Data.(*opfeed.ExitReceivedData)
+				if epoch != data.Exit.Epoch {
+					t.Errorf("Unexpected state feed epoch: expected %v, found %v", epoch, data.Exit.Epoch)
 				}
-				if validatorIndex != data.VoluntaryExit.ValidatorIndex {
-					t.Errorf("Unexpected state feed validator index: expected %v, found %v", validatorIndex, data.VoluntaryExit.ValidatorIndex)
+				if validatorIndex != data.Exit.ValidatorIndex {
+					t.Errorf("Unexpected state feed validator index: expected %v, found %v", validatorIndex, data.Exit.ValidatorIndex)
 				}
 			}
-		case <-stateSub.Err():
+		case <-opSub.Err():
 			t.Error("Subscription to state notifier failed")
 			return
 		}

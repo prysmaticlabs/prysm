@@ -6,7 +6,8 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/exit"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -24,11 +25,11 @@ func (vs *Server) ProposeExit(ctx context.Context, req *ethpb.VoluntaryExit) (*p
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	// Send the voluntary exit to the state feed.
-	vs.StateNotifier.StateFeed().Send(&statefeed.Event{
-		Type: statefeed.VoluntaryExitReceived,
-		Data: &statefeed.VoluntaryExitReceivedData{
-			VoluntaryExit: req,
+	// Send the voluntary exit to the operation feed.
+	vs.OperationNotifier.OperationFeed().Send(&feed.Event{
+		Type: opfeed.ExitReceived,
+		Data: &opfeed.ExitReceivedData{
+			Exit: req,
 		},
 	})
 
