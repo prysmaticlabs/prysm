@@ -185,6 +185,7 @@ func (s *Service) startSlasher() {
 
 func (s *Service) startBeaconClient() {
 	var dialOpt grpc.DialOption
+
 	if s.beaconCert != "" {
 		creds, err := credentials.NewClientTLSFromFile(s.beaconCert, "")
 		if err != nil {
@@ -292,7 +293,11 @@ func (s *Service) retrieveChainHead() {
 				log.Error(err)
 				break
 			}
-			log.Infof("GetChainHead %v", ch)
+			if ch != nil {
+				log.Infof("GetChainHead %v", ch)
+				continue
+			}
+			break
 		}
 
 	}

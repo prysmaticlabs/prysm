@@ -28,7 +28,7 @@ var (
 	BeaconProvider = cli.StringFlag{
 		Name:  "beacon-provider",
 		Usage: "A beacon provider string endpoint. Can either be an grpc server endpoint.",
-		Value: "127.0.0.1",
+		Value: "",
 	}
 	BeaconPort = cli.IntFlag{
 		Name:  "beacon-port",
