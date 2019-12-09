@@ -112,8 +112,8 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 	ctx := context.Background()
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
-	att0 := generateAtt(beaconState, 0, privKeys)
-	att1 := generateAtt(beaconState, 1, privKeys)
+	att0 := GenerateAtt(beaconState, 0, privKeys)
+	att1 := GenerateAtt(beaconState, 1, privKeys)
 
 	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
 
@@ -122,7 +122,7 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		BeaconDB:    db,
 		AttPool:     attestations.NewPool(),
-		P2p: &mockp2p.MockBroadcaster{},
+		P2p:         &mockp2p.MockBroadcaster{},
 	}
 
 	priv := bls.RandKey()
@@ -154,14 +154,60 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 	}
 }
 
-func generateAtt(state *pbp2p.BeaconState, index uint64, privKeys []*bls.SecretKey) *ethpb.Attestation {
+func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
+	params.UseMinimalConfig()
+	c := params.MinimalSpecConfig()
+	c.TargetAggregatorsPerCommittee = 16
+	params.OverrideBeaconConfig(c)
+	defer params.UseMainnetConfig()
+
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
+	ctx := context.Background()
+
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
+	att0 := GenerateAtt(beaconState, 0, privKeys)
+
+	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
+
+	aggregatorServer := &Server{
+		HeadFetcher: &mock.ChainService{State: beaconState},
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		BeaconDB:    db,
+		AttPool:     attestations.NewPool(),
+		P2p:         &mockp2p.MockBroadcaster{},
+	}
+
+	priv := bls.RandKey()
+	sig := priv.Sign([]byte{'B'}, 0)
+	pubKey := [48]byte{'B'}
+	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey[:]}
+	if err := aggregatorServer.BeaconDB.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := aggregatorServer.AttPool.SaveUnaggregatedAttestation(att0); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := aggregatorServer.SubmitAggregateAndProof(ctx, req); err != nil {
+		t.Fatal(err)
+	}
+
+	aggregatedAtts := aggregatorServer.AttPool.AggregatedAttestation()
+	if len(aggregatedAtts) != 0 {
+		t.Errorf("Wanted aggregated attestation 0, got %d", len(aggregatedAtts))
+	}
+}
+
+func GenerateAtt(state *pbp2p.BeaconState, index uint64, privKeys []*bls.SecretKey) *ethpb.Attestation {
 	aggBits := bitfield.NewBitlist(4)
 	aggBits.SetBitAt(index, true)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			CommitteeIndex: 1,
-			Source: &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
-			Target: &ethpb.Checkpoint{Epoch: 0},
+			Source:         &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
+			Target:         &ethpb.Checkpoint{Epoch: 0},
 		},
 		AggregationBits: aggBits,
 	}

@@ -378,11 +378,21 @@ func (ps *Server) filterAtts(ctx context.Context, slot uint64, atts []*ethpb.Att
 
 	// TODO(3916): Insert optimizations to sort out the most profitable attestations
 	for i, att := range atts {
-		if err := blocks.VerifyAttestation(ctx, bState, att); err != nil {
-			continue
-		}
 		if i == int(params.BeaconConfig().MaxAttestations) {
 			break
+		}
+
+		if err := blocks.VerifyAttestation(ctx, bState, att); err != nil {
+			if att.AggregationBits.Count() > 1 {
+				if err := ps.AttPool.DeleteAggregatedAttestation(att); err != nil {
+					return nil, err
+				}
+			} else {
+				if err := ps.AttPool.DeleteUnaggregatedAttestation(att); err != nil {
+					return nil, err
+				}
+			}
+			continue
 		}
 		validAtts = append(validAtts, att)
 	}

@@ -8,14 +8,17 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -1011,6 +1014,83 @@ func TestEth1Data_MockEnabled(t *testing.T) {
 	}
 	if !proto.Equal(eth1Data, want) {
 		t.Errorf("Wanted %v, received %v", want, eth1Data)
+	}
+}
+
+func TestFilterAttestation_OK(t *testing.T) {
+	helpers.ClearAllCaches()
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
+	ctx := context.Background()
+
+	genesis := b.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(context.Background(), genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+
+	numDeposits := params.BeaconConfig().MinGenesisActiveValidatorCount
+	state, privKeys := testutil.DeterministicGenesisState(t, numDeposits)
+
+	genesisRoot, err := ssz.SigningRoot(genesis)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+	if err := db.SaveState(ctx, state, genesisRoot); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+
+	proposerServer := &Server{
+		BeaconDB: db,
+		AttPool:  attestations.NewPool(),
+	}
+
+	atts := make([]*ethpb.Attestation, 10)
+	for i := 0; i < len(atts); i++ {
+		atts[i] = &ethpb.Attestation{Data: &ethpb.AttestationData{
+			CommitteeIndex: uint64(i),
+			Target:         &ethpb.Checkpoint{}},
+		}
+	}
+	received, err := proposerServer.filterAtts(context.Background(), 1, atts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(received) > 0 {
+		t.Error("Invalid attestations were filtered")
+	}
+
+	for i := 0; i < len(atts); i++ {
+		aggBits := bitfield.NewBitlist(4)
+		aggBits.SetBitAt(0, true)
+		atts[i] = &ethpb.Attestation{Data: &ethpb.AttestationData{
+			CommitteeIndex: uint64(i),
+			Target:         &ethpb.Checkpoint{}},
+			AggregationBits: aggBits,
+		}
+		attestingIndices, _ := helpers.AttestingIndices(state, atts[i].Data, atts[i].AggregationBits)
+		domain := helpers.Domain(state.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
+
+		sigs := make([]*bls.Signature, len(attestingIndices))
+		zeroSig := [96]byte{}
+		atts[i].Signature = zeroSig[:]
+
+		for i, indice := range attestingIndices {
+			hashTreeRoot, _ := ssz.HashTreeRoot(atts[i].Data)
+			sig := privKeys[indice].Sign(hashTreeRoot[:], domain)
+			sigs[i] = sig
+		}
+		atts[i].Signature = bls.AggregateSignatures(sigs).Marshal()[:]
+	}
+
+	received, err = proposerServer.filterAtts(context.Background(), 1, atts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(received) != 1 {
+		t.Errorf("Did not filter correctly, wanted: 1, received: %d", len(received))
 	}
 }
 
