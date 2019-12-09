@@ -169,8 +169,5 @@ func AggregateSignature(attestations []*ethpb.Attestation) (*bls.Signature, erro
 // IsAggregated returns true if the attestation is an aggregated attestation,
 // false otherwise.
 func IsAggregated(attestation *ethpb.Attestation) bool {
-	if attestation.AggregationBits.Count() > 1 {
-		return true
-	}
-	return false
+	return attestation.AggregationBits.Count() > 1
 }
