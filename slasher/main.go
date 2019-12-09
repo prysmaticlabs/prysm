@@ -26,13 +26,25 @@ func startSlasher(ctx *cli.Context) error {
 		return err
 	}
 	logrus.SetLevel(level)
-	port := ctx.GlobalString(flags.RPCPort.Name)
+	port := ctx.GlobalInt(flags.RPCPort.Name)
 	cert := ctx.GlobalString(flags.CertFlag.Name)
 	key := ctx.GlobalString(flags.KeyFlag.Name)
+	beaconCert := ctx.GlobalString(flags.BeaconCert.Name)
+	beaconPort := ctx.GlobalInt(flags.BeaconPort.Name)
+	beaconProvider := ctx.GlobalString(flags.BeaconProvider.Name)
+	if beaconProvider == "" {
+		beaconProvider = flags.BeaconProvider.Value
+	}
+	if beaconPort == 0 {
+		beaconPort = flags.BeaconPort.Value
+	}
 	cfg := service.Config{
-		Port:     port,
-		CertFlag: cert,
-		KeyFlag:  key,
+		Port:       port,
+		CertFlag:   cert,
+		KeyFlag:    key,
+		BeaconCert: beaconCert,
+		BeaconPort: beaconPort,
+		BeaconHost: beaconProvider,
 	}
 	slasher, err := service.NewRPCService(&cfg, ctx)
 	if err != nil {
@@ -43,9 +55,6 @@ func startSlasher(ctx *cli.Context) error {
 }
 
 var appFlags = []cli.Flag{
-	cmd.VerbosityFlag,
-	cmd.LogFormat,
-	cmd.DataDirFlag,
 	cmd.VerbosityFlag,
 	cmd.DataDirFlag,
 	cmd.EnableTracingFlag,
@@ -76,9 +85,8 @@ func main() {
 	app.Name = "hash slinging slasher"
 	app.Usage = `launches an Ethereum Serenity slasher server that interacts with a beacon chain.`
 	app.Version = version.GetVersion()
-	app.Action = startSlasher
 	app.Flags = appFlags
-
+	app.Action = startSlasher
 	app.Before = func(ctx *cli.Context) error {
 		format := ctx.GlobalString(cmd.LogFormat.Name)
 		switch format {
