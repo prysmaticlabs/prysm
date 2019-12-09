@@ -34,11 +34,15 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 	readLock.RLock()
 	prevLeaves, ok := leavesCache[fieldName]
 	readLock.RUnlock()
+	if len(prevLeaves) == 0 {
+		prevLeaves = leaves
+	}
 	for i := 0; i < len(roots) && i < len(leaves) && i < len(prevLeaves); i++ {
-		copy(hashKeyElements[bytesProcessed:bytesProcessed+32], roots[i])
-		leaves[i] = roots[i]
+		padded := bytesutil.ToBytes32(roots[i])
+		copy(hashKeyElements[bytesProcessed:bytesProcessed+32], padded[:])
+		leaves[i] = padded[:]
 		// We check if any items changed since the roots were last recomputed.
-		if ok && prevLeaves != nil && !bytes.Equal(leaves[i], prevLeaves[i]) {
+		if ok && !bytes.Equal(leaves[i], prevLeaves[i]) {
 			changedIndices = append(changedIndices, i)
 		}
 		bytesProcessed += 32

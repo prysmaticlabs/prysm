@@ -24,14 +24,12 @@ func init() {
 		// 100,000 roots will take up approximately 3 MB in memory.
 		BufferItems: 64, // number of keys per Get buffer.
 	})
-	globalHasher = &stateRootHasher{rootsCache:rootsCache}
+	globalHasher = &stateRootHasher{rootsCache: rootsCache}
 }
-
 
 type stateRootHasher struct {
 	rootsCache *ristretto.Cache
 }
-
 
 func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	return globalHasher.hashTreeRootState(state)
@@ -179,6 +177,12 @@ func (h *stateRootHasher) hashTreeRootState(state *pb.BeaconState) ([32]byte, er
 		return [32]byte{}, errors.Wrap(err, "could not compute finalized checkpoint merkleization")
 	}
 	fieldRoots[19] = finalRoot[:]
+
+	//fmt.Println(" ")
+	//typ := reflect.TypeOf(state).Elem()
+	//for i := 0; i < len(fieldRoots); i++ {
+	//	fmt.Printf("%#x and index %d and name %s\n", bytesutil.Trunc(fieldRoots[i]), i, typ.Field(i).Name)
+	//}
 
 	root, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {
