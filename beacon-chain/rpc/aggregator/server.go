@@ -51,9 +51,11 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
 	}
-	headState, err = state.ProcessSlots(ctx, headState, req.Slot)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
+	if req.Slot > headState.Slot {
+		headState, err = state.ProcessSlots(ctx, headState, req.Slot)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
+		}
 	}
 
 	validatorIndex, exists, err := as.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(req.PublicKey))
@@ -84,6 +86,9 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 	validAtts := make([]*ethpb.Attestation, 0, len(atts))
 	for _, att := range atts {
 		if err := blocks.VerifyAttestation(ctx, headState, att); err != nil {
+			if err := as.AttPool.DeleteUnaggregatedAttestation(att); err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not delete invalid attestation: %v", err)
+			}
 			continue
 		}
 		validAtts = append(validAtts, att)
@@ -95,11 +100,13 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 		return nil, status.Errorf(codes.Internal, "Could not aggregate attestations: %v", err)
 	}
 	for _, att := range aggregatedAtts {
-		if err := as.P2p.Broadcast(ctx, att); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not broadcast aggregated attestation: %v", err)
-		}
-		if err := as.AttPool.SaveAggregatedAttestation(att); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not save aggregated attestation: %v", err)
+		if att.AggregationBits.Count() > 1 {
+			if err := as.P2p.Broadcast(ctx, att); err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not broadcast aggregated attestation: %v", err)
+			}
+			if err := as.AttPool.SaveAggregatedAttestation(att); err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not save aggregated attestation: %v", err)
+			}
 		}
 	}
 
