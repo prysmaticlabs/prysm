@@ -66,10 +66,10 @@ func TestSubmitAttestation_OK(t *testing.T) {
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
-	if err := db.SaveHeadBlockRoot(ctx, root); err != nil {
+	if err := db.SaveState(ctx, state, root); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveState(ctx, state, root); err != nil {
+	if err := db.SaveHeadBlockRoot(ctx, root); err != nil {
 		t.Fatal(err)
 	}
 

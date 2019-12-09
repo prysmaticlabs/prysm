@@ -73,10 +73,10 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 	if err := beaconDB.SaveBlock(context.Background(), newBlock); err != nil {
 		t.Fatal(err)
 	}
-	if err := beaconDB.SaveHeadBlockRoot(context.Background(), newBlockRoot); err != nil {
+	if err := beaconDB.SaveState(context.Background(), beaconState, newBlockRoot); err != nil {
 		t.Fatal(err)
 	}
-	if err := beaconDB.SaveState(context.Background(), beaconState, newBlockRoot); err != nil {
+	if err := beaconDB.SaveHeadBlockRoot(context.Background(), newBlockRoot); err != nil {
 		t.Fatal(err)
 	}
 	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
@@ -127,10 +127,10 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 	if err := beaconDB.SaveBlock(ctx, block); err != nil {
 		t.Fatal(err)
 	}
-	if err := beaconDB.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
+	if err := beaconDB.SaveState(ctx, beaconState, blockRoot); err != nil {
 		t.Fatal(err)
 	}
-	if err := beaconDB.SaveState(ctx, beaconState, blockRoot); err != nil {
+	if err := beaconDB.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -269,10 +269,10 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 	if err := beaconDB.SaveBlock(context.Background(), newBlock); err != nil {
 		t.Fatal(err)
 	}
-	if err := beaconDB.SaveHeadBlockRoot(context.Background(), newBlockRoot); err != nil {
+	if err := beaconDB.SaveState(context.Background(), beaconState, newBlockRoot); err != nil {
 		t.Fatal(err)
 	}
-	if err := beaconDB.SaveState(context.Background(), beaconState, newBlockRoot); err != nil {
+	if err := beaconDB.SaveHeadBlockRoot(context.Background(), newBlockRoot); err != nil {
 		t.Fatal(err)
 	}
 	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
@@ -383,12 +383,13 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	service.attestationPool[r] = dbpb.NewContainerFromAttestations([]*ethpb.Attestation{att})
 
 	headBlockRoot := [32]byte{1, 2, 3}
-	if err := beaconDB.SaveHeadBlockRoot(context.Background(), headBlockRoot); err != nil {
-		t.Fatal(err)
-	}
 	if err := beaconDB.SaveState(context.Background(), beaconState, headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
+	if err := beaconDB.SaveHeadBlockRoot(context.Background(), headBlockRoot); err != nil {
+		t.Fatal(err)
+	}
+
 	// Test we can retrieve attestations from slot1 - slot61.
 	attestations, err := service.AttestationPool(context.Background(), 1)
 	if err != nil {
@@ -422,13 +423,14 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 	}
 
 	headBlockRoot := [32]byte{1, 2, 3}
-	if err := beaconDB.SaveHeadBlockRoot(context.Background(), headBlockRoot); err != nil {
-		t.Fatal(err)
-	}
 	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{
 		Slot: 200}, headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
+	if err := beaconDB.SaveHeadBlockRoot(context.Background(), headBlockRoot); err != nil {
+		t.Fatal(err)
+	}
+
 	attestations, err := service.AttestationPool(context.Background(), 200)
 	if err != nil {
 		t.Fatalf("Could not retrieve attestations: %v", err)
@@ -468,10 +470,10 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 		}
 	}
 	headBlockRoot := [32]byte{1, 2, 3}
-	if err := beaconDB.SaveHeadBlockRoot(context.Background(), headBlockRoot); err != nil {
+	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{Slot: 15}, headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
-	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{Slot: 15}, headBlockRoot); err != nil {
+	if err := beaconDB.SaveHeadBlockRoot(context.Background(), headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
 
