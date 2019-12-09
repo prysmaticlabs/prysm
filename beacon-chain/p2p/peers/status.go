@@ -178,7 +178,7 @@ func (p *Status) ChainStateLastUpdated(pid peer.ID) (time.Time, error) {
 	if status, ok := p.status[pid]; ok {
 		return status.chainStateLastUpdated, nil
 	}
-	return time.Now(), ErrPeerUnknown
+	return roughtime.Now(), ErrPeerUnknown
 }
 
 // IncrementBadResponses increments the number of bad responses we have received from the given remote peer.
