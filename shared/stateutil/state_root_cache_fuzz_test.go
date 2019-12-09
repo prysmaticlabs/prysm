@@ -1,6 +1,7 @@
 package stateutil
 
 import (
+	"fmt"
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
@@ -9,6 +10,10 @@ import (
 
 func TestStateRootCacheFuzz_1(t *testing.T) {
 	fuzzStateRootCache(t, 0, 1)
+}
+
+func TestStateRootCacheFuzz_2(t *testing.T) {
+	fuzzStateRootCache(t, 0, 2)
 }
 
 func TestStateRootCacheFuzz_10(t *testing.T) {
@@ -46,6 +51,7 @@ func fuzzStateRootCache(t *testing.T, seed int64, iterations uint64) {
 				}
 			}()
 			var err error
+			fmt.Println("Hashing without cache")
 			a, err = hasher.hashTreeRootState(state)
 			if err != nil {
 				t.Fatal(err)
@@ -60,6 +66,7 @@ func fuzzStateRootCache(t *testing.T, seed int64, iterations uint64) {
 				}
 			}()
 			var err error
+			fmt.Println("Hashing with cache")
 			b, err = hasherWithCache.hashTreeRootState(state)
 			if err != nil {
 				t.Fatal(err)

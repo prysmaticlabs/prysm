@@ -3,6 +3,7 @@ package stateutil
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/protolambda/zssz/merkle"
@@ -20,7 +21,7 @@ var (
 
 func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte, error) {
 	lock.Lock()
-	if _, ok := layersCache[fieldName]; !ok {
+	if _, ok := layersCache[fieldName]; !ok && h.rootsCache != nil {
 		depth := merkle.GetDepth(uint64(len(roots)))
 		layersCache[fieldName] = make([][][]byte, depth+1)
 	}
@@ -34,7 +35,7 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 	readLock.RLock()
 	prevLeaves, ok := leavesCache[fieldName]
 	readLock.RUnlock()
-	if len(prevLeaves) == 0 {
+	if len(prevLeaves) == 0 || h.rootsCache == nil {
 		prevLeaves = leaves
 	}
 	for i := 0; i < len(roots) && i < len(leaves) && i < len(prevLeaves); i++ {
@@ -42,13 +43,16 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 		copy(hashKeyElements[bytesProcessed:bytesProcessed+32], padded[:])
 		leaves[i] = padded[:]
 		// We check if any items changed since the roots were last recomputed.
-		if ok && !bytes.Equal(leaves[i], prevLeaves[i]) {
+		if ok && h.rootsCache != nil && !bytes.Equal(leaves[i], prevLeaves[i]) {
 			changedIndices = append(changedIndices, i)
 		}
 		bytesProcessed += 32
 	}
+	fmt.Printf("Running for %s\n", fieldName)
+	fmt.Printf("Leaves after padding: %v\n", leaves)
+	fmt.Printf("Changed indices: %d\n", changedIndices)
 
-	if len(changedIndices) > 0 {
+	if len(changedIndices) > 0 && h.rootsCache != nil {
 		var rt [32]byte
 		var err error
 		// If indices did change since last computation, we only recompute
@@ -70,14 +74,65 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 		}
 	}
 
-	res := merkleizeWithCache(leaves, fieldName)
-	lock.Lock()
-	leavesCache[fieldName] = leaves
-	lock.Unlock()
+	var res [32]byte
+	res = h.merkleizeWithCache(leaves, fieldName)
+	//if h.rootsCache != nil {
+	//} else {
+	//	res, err = bitwiseMerkleize(leaves, uint64(len(leaves)), uint64(len(leaves)))
+	//	if err != nil {
+	//		return res, err
+	//	}
+	//}
+	if h.rootsCache != nil {
+		lock.Lock()
+		leavesCache[fieldName] = leaves
+		lock.Unlock()
+	}
 	if hashKey != emptyKey && h.rootsCache != nil {
 		h.rootsCache.Set(fieldName+string(hashKey[:]), res, 32)
 	}
 	return res, nil
+}
+
+func (h *stateRootHasher) merkleizeWithCache(leaves [][]byte, fieldName string) [32]byte {
+	lock.Lock()
+	defer lock.Unlock()
+	if len(leaves) == 1 {
+		var root [32]byte
+		copy(root[:], leaves[0])
+		return root
+	}
+	for !mathutil.IsPowerOf2(uint64(len(leaves))) {
+		leaves = append(leaves, make([]byte, 32))
+	}
+	hashLayer := leaves
+	layers := make([][][]byte, merkle.GetDepth(uint64(len(leaves)))+1)
+	if items, ok := layersCache[fieldName]; ok && h.rootsCache != nil {
+		layers = items
+	}
+	layers[0] = hashLayer
+	// We keep track of the hash layers of a Merkle trie until we reach
+	// the top layer of length 1, which contains the single root element.
+	//        [Root]      -> Top layer has length 1.
+	//    [E]       [F]   -> This layer has length 2.
+	// [A]  [B]  [C]  [D] -> The bottom layer has length 4 (needs to be a power of two).
+	i := 1
+	for len(hashLayer) > 1 && i < len(layers) {
+		layer := make([][]byte, 0)
+		for i := 0; i < len(hashLayer); i += 2 {
+			hashedChunk := hashutil.Hash(append(hashLayer[i], hashLayer[i+1]...))
+			layer = append(layer, hashedChunk[:])
+		}
+		hashLayer = layer
+		layers[i] = hashLayer
+		i++
+	}
+	var root [32]byte
+	copy(root[:], hashLayer[0])
+	if h.rootsCache != nil {
+		layersCache[fieldName] = layers
+	}
+	return root
 }
 
 func recomputeRoot(idx int, chunks [][]byte, fieldName string) ([32]byte, error) {
@@ -120,43 +175,4 @@ func recomputeRoot(idx int, chunks [][]byte, fieldName string) ([32]byte, error)
 	}
 	layersCache[fieldName] = layers
 	return bytesutil.ToBytes32(root), nil
-}
-
-func merkleizeWithCache(leaves [][]byte, fieldName string) [32]byte {
-	lock.Lock()
-	defer lock.Unlock()
-	if len(leaves) == 1 {
-		var root [32]byte
-		copy(root[:], leaves[0])
-		return root
-	}
-	for !mathutil.IsPowerOf2(uint64(len(leaves))) {
-		leaves = append(leaves, make([]byte, 32))
-	}
-	hashLayer := leaves
-	layers := make([][][]byte, merkle.GetDepth(uint64(len(leaves)))+1)
-	if items, ok := layersCache[fieldName]; ok {
-		layers = items
-	}
-	layers[0] = hashLayer
-	// We keep track of the hash layers of a Merkle trie until we reach
-	// the top layer of length 1, which contains the single root element.
-	//        [Root]      -> Top layer has length 1.
-	//    [E]       [F]   -> This layer has length 2.
-	// [A]  [B]  [C]  [D] -> The bottom layer has length 4 (needs to be a power of two).
-	i := 1
-	for len(hashLayer) > 1 && i < len(layers) {
-		layer := make([][]byte, 0)
-		for i := 0; i < len(hashLayer); i += 2 {
-			hashedChunk := hashutil.Hash(append(hashLayer[i], hashLayer[i+1]...))
-			layer = append(layer, hashedChunk[:])
-		}
-		hashLayer = layer
-		layers[i] = hashLayer
-		i++
-	}
-	var root [32]byte
-	copy(root[:], hashLayer[0])
-	layersCache[fieldName] = layers
-	return root
 }
