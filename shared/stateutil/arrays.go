@@ -18,7 +18,7 @@ var (
 	readLock    sync.RWMutex
 )
 
-func arraysRoot(roots [][]byte, fieldName string) ([32]byte, error) {
+func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte, error) {
 	lock.Lock()
 	if _, ok := layersCache[fieldName]; !ok {
 		depth := merkle.GetDepth(uint64(len(roots)))
@@ -34,7 +34,7 @@ func arraysRoot(roots [][]byte, fieldName string) ([32]byte, error) {
 	readLock.RLock()
 	prevLeaves, ok := leavesCache[fieldName]
 	readLock.RUnlock()
-	for i := 0; i < len(roots); i++ {
+	for i := 0; i < len(roots) && i < len(leaves) && i < len(prevLeaves); i++ {
 		copy(hashKeyElements[bytesProcessed:bytesProcessed+32], roots[i])
 		leaves[i] = roots[i]
 		// We check if any items changed since the roots were last recomputed.
@@ -60,8 +60,8 @@ func arraysRoot(roots [][]byte, fieldName string) ([32]byte, error) {
 	}
 
 	hashKey := hashutil.FastSum256(hashKeyElements)
-	if hashKey != emptyKey {
-		if found, ok := rootsCache.Get(fieldName + string(hashKey[:])); found != nil && ok {
+	if hashKey != emptyKey && h.rootsCache != nil {
+		if found, ok := h.rootsCache.Get(fieldName + string(hashKey[:])); found != nil && ok {
 			return found.([32]byte), nil
 		}
 	}
@@ -70,8 +70,8 @@ func arraysRoot(roots [][]byte, fieldName string) ([32]byte, error) {
 	lock.Lock()
 	leavesCache[fieldName] = leaves
 	lock.Unlock()
-	if hashKey != emptyKey {
-		rootsCache.Set(fieldName+string(hashKey[:]), res, 32)
+	if hashKey != emptyKey && h.rootsCache != nil {
+		h.rootsCache.Set(fieldName+string(hashKey[:]), res, 32)
 	}
 	return res, nil
 }
@@ -97,7 +97,11 @@ func recomputeRoot(idx int, chunks [][]byte, fieldName string) ([32]byte, error)
 	for i := 0; i < len(layers)-1; i++ {
 		isLeft := currentIndex%2 == 0
 		neighborIdx := currentIndex ^ 1
-		neighbor := layers[i][neighborIdx]
+
+		neighbor := make([]byte, 32)
+		if layers[i] != nil && len(layers[i]) < neighborIdx {
+			neighbor = layers[i][neighborIdx]
+		}
 		if isLeft {
 			parentHash := hashutil.Hash(append(root, neighbor...))
 			root = parentHash[:]
@@ -137,7 +141,7 @@ func merkleizeWithCache(leaves [][]byte, fieldName string) [32]byte {
 	//    [E]       [F]   -> This layer has length 2.
 	// [A]  [B]  [C]  [D] -> The bottom layer has length 4 (needs to be a power of two).
 	i := 1
-	for len(hashLayer) > 1 {
+	for len(hashLayer) > 1 && i < len(layers) {
 		layer := make([][]byte, 0)
 		for i := 0; i < len(hashLayer); i += 2 {
 			hashedChunk := hashutil.Hash(append(hashLayer[i], hashLayer[i+1]...))
