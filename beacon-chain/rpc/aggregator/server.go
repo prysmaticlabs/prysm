@@ -94,7 +94,7 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 		validAtts = append(validAtts, att)
 	}
 
-	// Aggregate the attestations and broadcast them
+	// Aggregate the attestations and broadcast them.
 	aggregatedAtts, err := helpers.AggregateAttestations(validAtts)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not aggregate attestations: %v", err)
