@@ -7,8 +7,12 @@ import (
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-type Hasher interface {
-	HashTreeRootState(state *ethereum_beacon_p2p_v1.BeaconState) ([32]byte, error)
+func TestStateRootCacheFuzz_1(t *testing.T) {
+	fuzzStateRootCache(t, 0, 1)
+}
+
+func TestStateRootCacheFuzz_10(t *testing.T) {
+	fuzzStateRootCache(t, 0, 10)
 }
 
 func TestStateRootCacheFuzz_100(t *testing.T) {
@@ -70,4 +74,3 @@ func fuzzStateRootCache(t *testing.T, seed int64, iterations uint64) {
 		t.Fatalf("%d of %d random states had different roots", mismatch, iterations)
 	}
 }
-
