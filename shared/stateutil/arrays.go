@@ -38,6 +38,14 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 	if len(prevLeaves) == 0 || h.rootsCache == nil {
 		prevLeaves = leaves
 	}
+	if h.rootsCache != nil && len(leaves) > len(prevLeaves) {
+		// We invalidate the cache completely in this case.
+		prevLeaves = make([][]byte, len(roots))
+	}
+	for h.rootsCache != nil && len(leaves) < len(prevLeaves) {
+		// We pad the leaves if the input is less than the previously received number of leaves.
+		leaves = append(leaves, make([]byte, 32))
+	}
 	for i := 0; i < len(roots) && i < len(leaves) && i < len(prevLeaves); i++ {
 		padded := bytesutil.ToBytes32(roots[i])
 		copy(hashKeyElements[bytesProcessed:bytesProcessed+32], padded[:])
@@ -47,10 +55,6 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 			changedIndices = append(changedIndices, i)
 		}
 		bytesProcessed += 32
-	}
-	if fieldName == "RandaoMixes" {
-		fmt.Printf("Running for %s\n", fieldName)
-		fmt.Printf("Changed indices: %d\n", changedIndices)
 	}
 	if len(changedIndices) > 0 && h.rootsCache != nil {
 		var rt [32]byte
@@ -64,8 +68,9 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 				return [32]byte{}, err
 			}
 		}
-		if fieldName == "RandaoMixes" {
+		if fieldName == "StateRoots" {
 			fmt.Println("Branch Recompute Merkle")
+			fmt.Printf("Changed indices: %v\n", changedIndices)
 			prettyPrintTree(layersCache[fieldName])
 		}
 		return rt, nil
@@ -99,6 +104,9 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][]byte, fieldName string) 
 		copy(root[:], leaves[0])
 		return root
 	}
+	if fieldName == "StateRoots" {
+		fmt.Printf("Is power two for num leaves %d: %v\n", len(leaves), mathutil.IsPowerOf2(uint64(len(leaves))))
+	}
 	for !mathutil.IsPowerOf2(uint64(len(leaves))) {
 		leaves = append(leaves, make([]byte, 32))
 	}
@@ -128,12 +136,12 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][]byte, fieldName string) 
 	copy(root[:], hashLayer[0])
 	if h.rootsCache != nil {
 		layersCache[fieldName] = layers
-		if fieldName == "RandaoMixes" {
+		if fieldName == "StateRoots" {
 			fmt.Println("Regular Merkle With Cache")
 			prettyPrintTree(layersCache[fieldName])
 		}
 	} else {
-		if fieldName == "RandaoMixes" {
+		if fieldName == "StateRoots" {
 			fmt.Println("Regular Merkle No Cache")
 			prettyPrintTree(layers)
 		}
@@ -153,7 +161,9 @@ func recomputeRoot(idx int, chunks [][]byte, fieldName string) ([32]byte, error)
 	}
 	layers := items
 	root := chunks[idx]
+	//fmt.Printf("Recomputing index %d\n", idx)
 	layers[0][idx] = root
+	//fmt.Printf("Set index %d to %#x\n", idx, bytesutil.Trunc(root))
 	// The merkle tree structure looks as follows:
 	// [[r1, r2, r3, r4], [parent1, parent2], [root]]
 	// Using information about the index which changed, idx, we recompute
@@ -161,12 +171,15 @@ func recomputeRoot(idx int, chunks [][]byte, fieldName string) ([32]byte, error)
 	currentIndex := idx
 	for i := 0; i < len(layers)-1; i++ {
 		isLeft := currentIndex%2 == 0
+		//fmt.Printf("At layer %d, current index %d is left: %v\n", i, currentIndex, isLeft)
 		neighborIdx := currentIndex ^ 1
+		// fmt.Printf("Neighbor index: %d\n", neighborIdx)
 
 		neighbor := make([]byte, 32)
-		if layers[i] != nil && len(layers[i]) < neighborIdx {
+		if layers[i] != nil && neighborIdx < len(layers[i]) {
 			neighbor = layers[i][neighborIdx]
 		}
+		// fmt.Printf("Neighbor: %#x\n", bytesutil.Trunc(neighbor))
 		if isLeft {
 			parentHash := hashutil.Hash(append(root, neighbor...))
 			root = parentHash[:]

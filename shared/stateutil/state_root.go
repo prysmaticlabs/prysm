@@ -79,6 +79,8 @@ func (h *stateRootHasher) hashTreeRootState(state *pb.BeaconState) ([32]byte, er
 	fieldRoots[4] = blockRootsRoot[:]
 
 	// StateRoots array root.
+	fmt.Println("State roots:")
+	fmt.Println(state.StateRoots)
 	stateRootsRoot, err := h.arraysRoot(state.StateRoots, "StateRoots")
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute state roots merkleization")

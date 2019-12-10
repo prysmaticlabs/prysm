@@ -87,7 +87,7 @@ func TestHashTreeRootState_ElementsChanged_RecomputeBranch(t *testing.T) {
 	hasher := &stateRootHasher{}
 	hasherWithCache := globalHasher
 	state := &ethereum_beacon_p2p_v1.BeaconState{}
-	initialRoots := make([][]byte, 4)
+	initialRoots := make([][]byte, 2)
 	for i := 0; i < len(initialRoots); i++ {
 		var someRt [32]byte
 		copy(someRt[:], "hello")
@@ -98,7 +98,7 @@ func TestHashTreeRootState_ElementsChanged_RecomputeBranch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	badRoots := make([][]byte, 4)
+	badRoots := make([][]byte, 2)
 	for i := 0; i < len(badRoots); i++ {
 		var someRt [32]byte
 		copy(someRt[:], strconv.Itoa(i))
