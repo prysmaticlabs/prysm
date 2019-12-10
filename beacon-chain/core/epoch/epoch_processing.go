@@ -516,11 +516,7 @@ func unslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestat
 //      total_balance = get_total_active_balance(state)
 //	    effective_balance = state.validator_registry[index].effective_balance
 //	    return effective_balance * BASE_REWARD_FACTOR // integer_squareroot(total_balance) // BASE_REWARDS_PER_EPOCH
-func BaseReward(state *pb.BeaconState, index uint64) (uint64, error) {
-	totalBalance, err := helpers.TotalActiveBalance(state)
-	if err != nil {
-		return 0, errors.Wrap(err, "could not calculate active balance")
-	}
+func BaseReward(state *pb.BeaconState, index uint64, totalBalance uint64) (uint64, error) {
 	effectiveBalance := state.Validators[index].EffectiveBalance
 	baseReward := effectiveBalance * params.BeaconConfig().BaseRewardFactor /
 		mathutil.IntegerSquareRoot(totalBalance) / params.BeaconConfig().BaseRewardsPerEpoch
@@ -639,7 +635,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 
 		// Update rewards and penalties to each eligible validator index.
 		for _, index := range eligible {
-			base, err := BaseReward(state, index)
+			base, err := BaseReward(state, index, totalBalance)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not get base reward")
 			}
@@ -668,7 +664,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 	}
 
 	for i, a := range attestersVotedSource {
-		baseReward, err := BaseReward(state, i)
+		baseReward, err := BaseReward(state, i, totalBalance)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not get proposer reward")
 		}
@@ -692,7 +688,7 @@ func attestationDelta(state *pb.BeaconState) ([]uint64, []uint64, error) {
 			attestedTarget[index] = true
 		}
 		for _, index := range eligible {
-			base, err := BaseReward(state, index)
+			base, err := BaseReward(state, index, totalBalance)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not get base reward")
 			}
