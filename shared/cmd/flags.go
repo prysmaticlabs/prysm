@@ -32,7 +32,7 @@ var (
 	TracingEndpointFlag = cli.StringFlag{
 		Name:  "tracing-endpoint",
 		Usage: "Tracing endpoint defines where beacon chain traces are exposed to Jaeger.",
-		Value: "http://127.0.0.1:14268",
+		Value: "http://127.0.0.1:14268/api/traces",
 	}
 	// TraceSampleFractionFlag defines a flag to indicate what fraction of p2p
 	// messages are sampled for tracing.
