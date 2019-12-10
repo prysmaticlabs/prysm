@@ -24,7 +24,7 @@ type Config struct {
 	P2P           p2p.P2P
 	DB            db.Database
 	Operations    *operations.Service
-	AttPool       attestations.AttestationPool
+	AttPool       attestations.Pool
 	Chain         blockchainService
 	InitialSync   Checker
 	StateNotifier statefeed.Notifier
@@ -68,7 +68,7 @@ type RegularSync struct {
 	p2p                 p2p.P2P
 	db                  db.Database
 	operations          *operations.Service
-	attPool             attestations.AttestationPool
+	attPool             attestations.Pool
 	chain               blockchainService
 	slotToPendingBlocks map[uint64]*ethpb.BeaconBlock
 	seenPendingBlocks   map[[32]byte]bool
