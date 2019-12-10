@@ -19,20 +19,21 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 	s.host.Network().Notify(&network.NotifyBundle{
 		ConnectedF: func(net network.Network, conn network.Conn) {
 			log := log.WithField("peer", conn.RemotePeer().Pretty())
+
+			// Handle the various pre-existing conditions that will result in us not handshaking.
+			peerConnectionState, err := s.peers.ConnectionState(conn.RemotePeer())
+			if err == nil && peerConnectionState == peers.PeerConnected {
+				log.Debug("Peer already connected; not handshaking again")
+				return
+			}
 			s.peers.Add(conn.RemotePeer(), conn.RemoteMultiaddr(), conn.Stat().Direction)
 			if len(s.peers.Active()) >= int(s.cfg.MaxPeers) {
 				log.Debug("We have enough peers; disconnecting")
 				if err := s.Disconnect(conn.RemotePeer()); err != nil {
-					log.WithError(err).Errorf("Unable to close peer %s", conn.RemotePeer())
+					log.WithError(err).Error("Unable to disconnect from peer")
 				}
 				return
 			}
-			multiAddr := fmt.Sprintf("%s/p2p/%s", conn.RemoteMultiaddr().String(), conn.RemotePeer().String())
-			log.WithFields(logrus.Fields{
-				"direction":   conn.Stat().Direction,
-				"multiAddr":   multiAddr,
-				"activePeers": len(s.peers.Active()),
-			}).Debug("Connection attempt")
 			if s.peers.IsBad(conn.RemotePeer()) {
 				// Add peer to gossipsub blacklist.
 				s.pubsub.BlacklistPeer(conn.RemotePeer())
@@ -45,12 +46,18 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 
 			// Connection handler must be non-blocking as part of libp2p design.
 			go func() {
+				// Go through the handshake process.
+				multiAddr := fmt.Sprintf("%s/p2p/%s", conn.RemoteMultiaddr().String(), conn.RemotePeer().String())
+				log.WithFields(logrus.Fields{
+					"direction":   conn.Stat().Direction,
+					"multiAddr":   multiAddr,
+					"activePeers": len(s.peers.Active()),
+				}).Debug("Peer handshaking")
 				s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerConnecting)
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
-				log.Debug("Performing handshake with peer")
 				if err := reqFunc(ctx, conn.RemotePeer()); err != nil && err != io.EOF {
-					log.WithError(err).Debug("Could not send successful hello rpc request")
+					log.WithError(err).Debug("Handshake failed")
 					if err.Error() == "protocol not supported" {
 						// This is only to ensure the smooth running of our testnets. This will not be
 						// used in production.
@@ -89,7 +96,7 @@ func (s *Service) AddDisconnectionHandler(handler func(ctx context.Context, id p
 				s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnecting)
 				ctx := context.Background()
 				if err := handler(ctx, conn.RemotePeer()); err != nil {
-					log.WithError(err).Error("Failed to handle disconnecting peer")
+					log.WithError(err).Error("Disconnect handler failed")
 				}
 				s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnected)
 				// Log good peer disconnects; bad peers can visit here frequently so do not log them.
