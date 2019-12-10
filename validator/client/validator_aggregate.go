@@ -27,7 +27,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
 
-	assignment, err := v.assignment(pubKey)
+	duty, err := v.duty(pubKey)
 	if err != nil {
 		log.Errorf("Could not fetch validator assignment: %v", err)
 		return
@@ -46,7 +46,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 
 	res, err := v.aggregatorClient.SubmitAggregateAndProof(ctx, &pb.AggregationRequest{
 		Slot:           slot,
-		CommitteeIndex: assignment.CommitteeIndex,
+		CommitteeIndex: duty.CommitteeIndex,
 		PublicKey:      pubKey[:],
 		SlotSignature:  slotSig,
 	})
@@ -57,7 +57,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 
 	log.WithFields(logrus.Fields{
 		"slot":            slot,
-		"committeeIndex":  assignment.CommitteeIndex,
+		"committeeIndex":  duty.CommitteeIndex,
 		"pubKey":          fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])),
 		"aggregationRoot": fmt.Sprintf("%#x", bytesutil.Trunc(res.Root[:])),
 	}).Debug("Assigned and submitted aggregation and proof request")

@@ -81,6 +81,11 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	}).Info("Submitted new block")
 }
 
+// ProposeExit --
+func (v *validator) ProposeExit(ctx context.Context, exit *ethpb.VoluntaryExit) error {
+	return errors.New("unimplemented")
+}
+
 // Sign randao reveal with randao domain and private key.
 func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch uint64) ([]byte, error) {
 	domain, err := v.validatorClient.DomainData(ctx, &ethpb.DomainRequest{

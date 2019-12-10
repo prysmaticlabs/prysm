@@ -28,11 +28,13 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
 	defer finish()
-	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
-		{
-			PublicKey: validatorKey.PublicKey.Marshal(),
+	validator.duties = &ethpb.DutiesResponse{
+		Duties: []*ethpb.DutiesResponse_Duty{
+			{
+				PublicKey: validatorKey.PublicKey.Marshal(),
+			},
 		},
-	}}
+	}
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx

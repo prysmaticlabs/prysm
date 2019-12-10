@@ -66,9 +66,9 @@ func TestAttestToBlockHead_SubmitAttestationRequestFailure(t *testing.T) {
 	).Return(&pb.ValidatorIndexResponse{
 		Index: 0,
 	}, nil)
-	m.attesterClient.EXPECT().RequestAttestation(
+	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.AttestationRequest{}),
+		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 	).Return(&ethpb.AttestationData{
 		BeaconBlockRoot: []byte{},
 		Target:          &ethpb.Checkpoint{},
@@ -78,7 +78,7 @@ func TestAttestToBlockHead_SubmitAttestationRequestFailure(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch2
 	).Return(&pb.DomainResponse{}, nil /*err*/)
-	m.attesterClient.EXPECT().SubmitAttestation(
+	m.validatorClient.EXPECT().ProposeAttestation(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
 	).Return(nil, errors.New("something went wrong"))
@@ -106,9 +106,9 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	).Return(&pb.ValidatorIndexResponse{
 		Index: uint64(validatorIndex),
 	}, nil)
-	m.attesterClient.EXPECT().RequestAttestation(
+	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.AttestationRequest{}),
+		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 	).Return(&ethpb.AttestationData{
 		BeaconBlockRoot: []byte("A"),
 		Target:          &ethpb.Checkpoint{Root: []byte("B")},
@@ -121,7 +121,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	).Return(&pb.DomainResponse{}, nil /*err*/)
 
 	var generatedAttestation *ethpb.Attestation
-	m.attesterClient.EXPECT().SubmitAttestation(
+	m.validatorClient.EXPECT().ProposeAttestation(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
 	).Do(func(_ context.Context, att *ethpb.Attestation) {
@@ -159,13 +159,13 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 	defer finish()
 
 	validator.genesisTime = uint64(roughtime.Now().Unix())
-	m.validatorClient.EXPECT().CommitteeAssignment(
+	m.validatorClient.EXPECT().GetDuties(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.AssignmentRequest{}),
+		gomock.AssignableToTypeOf(&ethpb.DutiesRequest{}),
 		gomock.Any(),
 	).Times(0)
 
-	m.attesterClient.EXPECT().SubmitAttestation(
+	m.validatorClient.EXPECT().ProposeAttestation(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.AttestationRequest{}),
 	).Times(0)
@@ -175,7 +175,7 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
 	).Times(0)
 
-	m.attesterClient.EXPECT().SubmitAttestation(
+	m.validatorClient.EXPECT().ProposeAttestation(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
 	).Return(&pb.AttestResponse{}, nil /* error */).Times(0)
@@ -203,7 +203,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 			Committee:      committee,
 		}}}
 
-	m.attesterClient.EXPECT().RequestAttestation(
+	m.validatorClient.EXPECT().ProposeAttestation(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.AttestationRequest{}),
 	).Return(&ethpb.AttestationData{
@@ -228,7 +228,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 		gomock.Any(), // epoch
 	).Return(&pb.DomainResponse{}, nil /*err*/)
 
-	m.attesterClient.EXPECT().SubmitAttestation(
+	m.validatorClient.EXPECT().ProposeAttestation(
 		gomock.Any(), // ctx
 		gomock.Any(),
 	).Return(&pb.AttestResponse{}, nil).Times(1)
@@ -253,7 +253,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 	).Return(&pb.ValidatorIndexResponse{
 		Index: uint64(validatorIndex),
 	}, nil)
-	m.attesterClient.EXPECT().RequestAttestation(
+	m.validatorClient.EXPECT().ProposeAttestation(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.AttestationRequest{}),
 	).Return(&ethpb.AttestationData{
@@ -267,7 +267,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 	).Return(&pb.DomainResponse{}, nil /*err*/)
 
 	var generatedAttestation *ethpb.Attestation
-	m.attesterClient.EXPECT().SubmitAttestation(
+	m.validatorClient.EXPECT().ProposeAttestation(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
 	).Do(func(_ context.Context, att *ethpb.Attestation) {

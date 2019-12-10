@@ -5,10 +5,8 @@ go_library(
     testonly = True,
     srcs = [
         "aggregator_service_mock.go",
-        "attester_service_mock.go",
+        "beacon_node_validator_service_mock.go",
         "node_mock.go",
-        "proposer_service_mock.go",
-        "validator_service_mock.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/internal",
     visibility = ["//validator:__subpackages__"],
