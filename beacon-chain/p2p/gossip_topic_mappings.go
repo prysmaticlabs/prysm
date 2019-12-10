@@ -5,6 +5,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 // GossipTopicMappings represent the protocol ID to protobuf message type map for easy
@@ -15,6 +16,7 @@ var GossipTopicMappings = map[string]proto.Message{
 	"/eth2/voluntary_exit":     &pb.VoluntaryExit{},
 	"/eth2/proposer_slashing":  &pb.ProposerSlashing{},
 	"/eth2/attester_slashing":  &pb.AttesterSlashing{},
+	"/eth2/beacon_aggregate_and_proof": &pbp2p.AggregateAndProof{},
 }
 
 // GossipTypeMapping is the inverse of GossipTopicMappings so that an arbitrary protobuf message
