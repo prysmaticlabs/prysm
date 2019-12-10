@@ -43,8 +43,9 @@ Extra flags needed to benchmark properly:
 
 ## Current Results as of November 2019
 ```
-BenchmarkExecuteStateTransition-4             	      20	33020593584 ns/op
-BenchmarkExecuteStateTransition_WithCache-4   	      20	21272276477 ns/op
+BenchmarkExecuteStateTransition-4             	      20	 33020593584 ns/op
+BenchmarkExecuteStateTransition_WithCache-4   	      20	 21272276477 ns/op
 BenchmarkProcessEpoch_2FullEpochs-4           	       5	158161708836 ns/op
-BenchmarkHashTreeRoot_FullState-4   	              50	1509721280 ns/op
+BenchmarkHashTreeRoot_FullState-4   	              50	  1509721280 ns/op
+BenchmarkHashTreeRootState_FullState-4                50        67622586 ns/op
 ```
