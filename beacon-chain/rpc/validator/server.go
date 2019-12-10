@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -63,12 +62,12 @@ type Server struct {
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
 // beacon state, if not, then it creates a stream which listens for canonical states which contain
 // the validator with the public key as an active validator record.
-func (vs *Server) WaitForActivation(req *pb.ValidatorActivationRequest, stream pb.ValidatorService_WaitForActivationServer) error {
+func (vs *Server) WaitForActivation(req *ethpb.ValidatorActivationRequest, stream ethpb.BeaconNodeValidator_WaitForActivationServer) error {
 	activeValidatorExists, validatorStatuses, err := vs.multipleValidatorStatus(stream.Context(), req.PublicKeys)
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not fetch validator status: %v", err)
 	}
-	res := &pb.ValidatorActivationResponse{
+	res := &ethpb.ValidatorActivationResponse{
 		Statuses: validatorStatuses,
 	}
 	if activeValidatorExists {
@@ -85,7 +84,7 @@ func (vs *Server) WaitForActivation(req *pb.ValidatorActivationRequest, stream p
 			if err != nil {
 				return status.Errorf(codes.Internal, "Could not fetch validator status: %v", err)
 			}
-			res := &pb.ValidatorActivationResponse{
+			res := &ethpb.ValidatorActivationResponse{
 				Statuses: validatorStatuses,
 			}
 			if activeValidatorExists {
@@ -103,7 +102,7 @@ func (vs *Server) WaitForActivation(req *pb.ValidatorActivationRequest, stream p
 }
 
 // ValidatorIndex is called by a validator to get its index location in the beacon state.
-func (vs *Server) ValidatorIndex(ctx context.Context, req *pb.ValidatorIndexRequest) (*pb.ValidatorIndexResponse, error) {
+func (vs *Server) ValidatorIndex(ctx context.Context, req *ethpb.ValidatorIndexRequest) (*ethpb.ValidatorIndexResponse, error) {
 	index, ok, err := vs.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(req.PublicKey))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not fetch validator index: %v", err)
@@ -112,7 +111,7 @@ func (vs *Server) ValidatorIndex(ctx context.Context, req *pb.ValidatorIndexRequ
 		return nil, status.Errorf(codes.Internal, "Could not find validator index for public key %#x not found", req.PublicKey)
 	}
 
-	return &pb.ValidatorIndexResponse{Index: index}, nil
+	return &ethpb.ValidatorIndexResponse{Index: index}, nil
 }
 
 // ExitedValidators queries validator statuses for a give list of validators
@@ -129,9 +128,9 @@ func (vs *Server) ExitedValidators(
 	exitedKeys := make([][]byte, 0)
 	for _, st := range statuses {
 		s := st.Status.Status
-		if s == pb.ValidatorStatus_EXITED ||
-			s == pb.ValidatorStatus_EXITED_SLASHED ||
-			s == pb.ValidatorStatus_INITIATED_EXIT {
+		if s == ethpb.ValidatorStatus_EXITED ||
+			s == ethpb.ValidatorStatus_EXITED_SLASHED ||
+			s == ethpb.ValidatorStatus_INITIATED_EXIT {
 			exitedKeys = append(exitedKeys, st.PublicKey)
 		}
 	}
@@ -162,13 +161,13 @@ func (vs *Server) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*ethpb.
 // has started its runtime and validators begin their responsibilities. If it has not, it then
 // subscribes to an event stream triggered by the powchain service whenever the ChainStart log does
 // occur in the Deposit Contract on ETH 1.0.
-func (vs *Server) WaitForChainStart(req *ptypes.Empty, stream pb.ValidatorService_WaitForChainStartServer) error {
+func (vs *Server) WaitForChainStart(req *ptypes.Empty, stream ethpb.BeaconNodeValidator_WaitForChainStartServer) error {
 	head, err := vs.BeaconDB.HeadState(context.Background())
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
 	}
 	if head != nil {
-		res := &pb.ChainStartResponse{
+		res := &ethpb.ChainStartResponse{
 			Started:     true,
 			GenesisTime: head.GenesisTime,
 		}
@@ -185,7 +184,7 @@ func (vs *Server) WaitForChainStart(req *ptypes.Empty, stream pb.ValidatorServic
 				data := event.Data.(*statefeed.ChainStartedData)
 				log.WithField("starttime", data.StartTime).Debug("Received chain started event")
 				log.Info("Sending genesis time notification to connected validator clients")
-				res := &pb.ChainStartResponse{
+				res := &ethpb.ChainStartResponse{
 					Started:     true,
 					GenesisTime: uint64(data.StartTime.Unix()),
 				}
