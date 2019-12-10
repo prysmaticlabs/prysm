@@ -12,7 +12,9 @@ type beaconState struct {
 	ExecutionScripts [][]byte
 }
 
-type shardState struct {
+//ShardState describes struct for the state transition function
+//TODO(#0): Have other describes from buterin: https://notes.ethereum.org/@vbuterin/Bkoaj4xpN?type=view#Shard-processing
+type ShardState struct {
 	Slot              uint64
 	ExecEnvStateRoots [][32]byte
 }
@@ -46,7 +48,7 @@ func main() {
 		Slot:             0,
 		ExecutionScripts: [][]byte{rawWasmCode},
 	}
-	sState := &shardState{
+	sState := &ShardState{
 		Slot:              0,
 		ExecEnvStateRoots: make([][32]byte, 1),
 	}
@@ -78,7 +80,8 @@ func main() {
 	}
 }
 
-func ProcessShardBlock(bState *beaconState, sState *shardState, block *shardBlock) (*shardState, error) {
+//ProcessShardBlock is the state transition function
+func ProcessShardBlock(bState *beaconState, sState *ShardState, block *shardBlock) (*ShardState, error) {
 	for i := 0; i < len(block.Transactions); i++ {
 		tx := block.Transactions[i]
 		code := bState.ExecutionScripts[tx.EnvironmentIndex]
