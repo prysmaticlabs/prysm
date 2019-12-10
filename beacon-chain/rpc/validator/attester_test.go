@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	mockOps "github.com/prysmaticlabs/prysm/beacon-chain/operations/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"

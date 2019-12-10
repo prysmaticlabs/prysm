@@ -3,7 +3,6 @@ package sync
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/gogo/protobuf/proto"

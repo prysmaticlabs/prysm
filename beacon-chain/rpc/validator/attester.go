@@ -6,9 +6,11 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -98,19 +100,24 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 // ProposeAttestation is a function called by an attester to vote
 // on a block via an attestation object as defined in the Ethereum Serenity specification.
 func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation) (*ptypes.Empty, error) {
+	root, err := ssz.HashTreeRoot(att.Data)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not tree hash attestation: %v", err)
+	}
+
 	// Broadcast the new attestation to the network.
-	if err := vs.P2P.Broadcast(ctx, att); err != nil {
+	if err := as.P2p.Broadcast(ctx, att); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not broadcast attestation: %v", err)
 	}
 
 	go func() {
 		ctx = trace.NewContext(context.Background(), trace.FromContext(ctx))
 		attCopy := proto.Clone(att).(*ethpb.Attestation)
-		if err := vs.OperationsHandler.HandleAttestation(ctx, attCopy); err != nil {
+		if err := as.AttPool.SaveUnaggregatedAttestation(attCopy); err != nil {
 			log.WithError(err).Error("Could not handle attestation in operations service")
 			return
 		}
 	}()
 
-	return &ptypes.Empty{}, nil
+	return &pb.AttestResponse{Root: root[:]}, nil
 }

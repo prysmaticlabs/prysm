@@ -95,7 +95,7 @@ func (s *faucetServer) verifyRecaptcha(ctx context.Context, req *faucetpb.Fundin
 	if rr.Action != req.WalletAddress {
 		return fmt.Errorf("action was %s, wanted %s", rr.Action, req.WalletAddress)
 	}
-	if !strings.HasSuffix(rr.Hostname, "prylabs.net") {
+	if !strings.HasSuffix(rr.Hostname, "prylabs.net") && !strings.HasSuffix(rr.Hostname, "prylabs.network") {
 		return fmt.Errorf("expected hostname (%s) to end in prylabs.net", rr.Hostname)
 	}
 
