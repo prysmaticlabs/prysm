@@ -38,13 +38,13 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 	if len(prevLeaves) == 0 || h.rootsCache == nil {
 		prevLeaves = leaves
 	}
-	if h.rootsCache != nil && len(leaves) > len(prevLeaves) {
+	if h.rootsCache != nil && len(leaves) != len(prevLeaves) {
 		// We invalidate the cache completely in this case.
 		prevLeaves = leaves
-	}
-	for h.rootsCache != nil && len(leaves) < len(prevLeaves) {
-		// We pad the leaves if the input is less than the previously received number of leaves.
-		leaves = append(leaves, make([]byte, 32))
+		depth := merkle.GetDepth(uint64(len(leaves)))
+		lock.Lock()
+		layersCache[fieldName] = make([][][]byte, depth+1)
+		lock.Unlock()
 	}
 	for i := 0; i < len(roots) && i < len(leaves) && i < len(prevLeaves); i++ {
 		padded := bytesutil.ToBytes32(roots[i])
@@ -68,7 +68,7 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 				return [32]byte{}, err
 			}
 		}
-		if fieldName == "StateRoots" {
+		if fieldName == "RandaoMixes" {
 			fmt.Println("Branch Recompute Merkle")
 			fmt.Printf("Changed indices: %v\n", changedIndices)
 			prettyPrintTree(layersCache[fieldName])
@@ -104,9 +104,6 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][]byte, fieldName string) 
 		copy(root[:], leaves[0])
 		return root
 	}
-	if fieldName == "StateRoots" {
-		fmt.Printf("Is power two for num leaves %d: %v\n", len(leaves), mathutil.IsPowerOf2(uint64(len(leaves))))
-	}
 	for !mathutil.IsPowerOf2(uint64(len(leaves))) {
 		leaves = append(leaves, make([]byte, 32))
 	}
@@ -136,12 +133,12 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][]byte, fieldName string) 
 	copy(root[:], hashLayer[0])
 	if h.rootsCache != nil {
 		layersCache[fieldName] = layers
-		if fieldName == "StateRoots" {
+		if fieldName == "RandaoMixes" {
 			fmt.Println("Regular Merkle With Cache")
 			prettyPrintTree(layersCache[fieldName])
 		}
 	} else {
-		if fieldName == "StateRoots" {
+		if fieldName == "RandaoMixes" {
 			fmt.Println("Regular Merkle No Cache")
 			prettyPrintTree(layers)
 		}
@@ -198,7 +195,9 @@ func recomputeRoot(idx int, chunks [][]byte, fieldName string) ([32]byte, error)
 
 func prettyPrintTree(layers [][][]byte) {
 	fmt.Println("***ROOT")
-	fmt.Printf("%#x\n", bytesutil.Trunc(layers[len(layers)-1][0]))
+	if len(layers[len(layers)-1]) != 0 {
+		fmt.Printf("%#x\n", bytesutil.Trunc(layers[len(layers)-1][0]))
+	}
 	for i := len(layers) - 1; i >= 0; i-- {
 		fmt.Printf("***LAYER %d\n", i)
 		fmt.Print("Nodes: ")
