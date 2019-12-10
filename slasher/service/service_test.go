@@ -25,7 +25,7 @@ func TestLifecycle_OK(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	context := cli.NewContext(app, set, nil)
 	rpcService, err := NewRPCService(&Config{
-		Port:     "7348",
+		Port:     7348,
 		CertFlag: "alice.crt",
 		KeyFlag:  "alice.key",
 	}, context)
@@ -48,7 +48,7 @@ func TestRPC_BadEndpoint(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	context := cli.NewContext(app, set, nil)
 	rpcService, err := NewRPCService(&Config{
-		Port: "ralph merkle!!!",
+		Port: 99999999,
 	}, context)
 	if err != nil {
 		t.Error("gRPC Service fail to initialize:", err)
@@ -80,7 +80,7 @@ func TestRPC_InsecureEndpoint(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	context := cli.NewContext(app, set, nil)
 	rpcService, err := NewRPCService(&Config{
-		Port: "7777",
+		Port: 5555,
 	}, context)
 	if err != nil {
 		t.Error("gRPC Service fail to initialize:", err)

@@ -101,7 +101,7 @@ func (s *Service) Start() {
 	s.context = context.Background()
 	s.startSlasher()
 	s.startBeaconClient()
-	s.validatorUpdater()
+	go s.validatorUpdater()
 	stop := s.stop
 	s.lock.Unlock()
 
