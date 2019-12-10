@@ -139,6 +139,11 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabled active count cache.")
 		cfg.EnableActiveCountCache = true
 	}
+	if ctx.GlobalBool(initSyncCacheState.Name) {
+		log.Warn("Enabled initial sync cache state mode.")
+		cfg.InitSyncCacheState = true
+	}
+
 	Init(cfg)
 }
 

@@ -255,6 +255,32 @@ func (s *Service) saveHead(ctx context.Context, b *ethpb.BeaconBlock, r [32]byte
 	return nil
 }
 
+// This gets called to update canonical root mapping. It does not save head block
+// root in DB. With the inception of inital-sync-cache-state flag, it uses finalized
+// check point as anchors to resume sync therefore head is no longer needed to be saved on per slot basis.
+func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.BeaconBlock, r [32]byte) error {
+	s.headLock.Lock()
+	defer s.headLock.Unlock()
+
+	s.headSlot = b.Slot
+
+	s.canonicalRoots[b.Slot] = r[:]
+
+	s.headBlock = b
+
+	headState, err := s.beaconDB.State(ctx, r)
+	if err != nil {
+		return errors.Wrap(err, "could not retrieve head state in DB")
+	}
+	s.headState = headState
+
+	log.WithFields(logrus.Fields{
+		"slot":     b.Slot,
+		"headRoot": fmt.Sprintf("%#x", r),
+	}).Debug("Saved new head info")
+	return nil
+}
+
 // This gets called when beacon chain is first initialized to save validator indices and pubkeys in db
 func (s *Service) saveGenesisValidators(ctx context.Context, state *pb.BeaconState) error {
 	for i, v := range state.Validators {

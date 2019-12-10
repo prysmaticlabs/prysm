@@ -518,3 +518,51 @@ func (s *Store) updateJustifiedCheckpoint() {
 		s.justifiedCheckpt = s.bestJustifiedCheckpt
 	}
 }
+
+// This receives cached state in memory for initial sync only during initial sync.
+func (s *Store) cachedPreState(ctx context.Context, b *ethpb.BeaconBlock) (*pb.BeaconState, error) {
+	if featureconfig.Get().InitSyncCacheState {
+		preState := s.initSyncState[bytesutil.ToBytes32(b.ParentRoot)]
+		var err error
+		if preState == nil {
+			preState, err = s.db.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
+			}
+			if preState == nil {
+				return nil, fmt.Errorf("pre state of slot %d does not exist", b.Slot)
+			}
+		}
+		return proto.Clone(preState).(*pb.BeaconState), nil
+	}
+
+	preState, err := s.db.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
+	}
+	if preState == nil {
+		return nil, fmt.Errorf("pre state of slot %d does not exist", b.Slot)
+	}
+
+	return preState, nil
+}
+
+// This saves every finalized state in DB during initial sync, needed as part of optimization to
+// use cache state during initial sync in case of restart.
+func (s *Store) saveInitState(ctx context.Context, state *pb.BeaconState) error {
+	if !featureconfig.Get().InitSyncCacheState {
+		return nil
+	}
+	finalizedRoot := bytesutil.ToBytes32(state.FinalizedCheckpoint.Root)
+	fs := s.initSyncState[finalizedRoot]
+
+	if err := s.db.SaveState(ctx, fs, finalizedRoot); err != nil {
+		return errors.Wrap(err, "could not save state")
+	}
+	for r, oldState := range s.initSyncState {
+		if oldState.Slot < state.FinalizedCheckpoint.Epoch*params.BeaconConfig().SlotsPerEpoch {
+			delete(s.initSyncState, r)
+		}
+	}
+	return nil
+}

@@ -325,3 +325,26 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 		t.Error("head slot incorrect")
 	}
 }
+
+func TestChainService_SaveHeadNoDB(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	ctx := context.Background()
+	s := &Service{
+		beaconDB:       db,
+		canonicalRoots: make(map[uint64][]byte),
+	}
+	b := &ethpb.BeaconBlock{Slot: 1}
+	r, _ := ssz.SigningRoot(b)
+	if err := s.saveHeadNoDB(ctx, b, r); err != nil {
+		t.Fatal(err)
+	}
+
+	newB, err := s.beaconDB.HeadBlock(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reflect.DeepEqual(newB, b) {
+		t.Error("head block should not be equal")
+	}
+}

@@ -78,6 +78,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.PasswordFlag,
 			flags.DisablePenaltyRewardLogFlag,
 			flags.UnencryptedKeysFlag,
+			flags.GraffitiFlag,
 		},
 	},
 	{

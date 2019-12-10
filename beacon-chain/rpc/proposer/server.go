@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -48,7 +48,7 @@ type Server struct {
 	ChainStartFetcher      powchain.ChainStartFetcher
 	Eth1InfoFetcher        powchain.ChainInfoFetcher
 	Eth1BlockFetcher       powchain.POWBlockFetcher
-	Pool                   operations.Pool
+	AttPool                attestations.Pool
 	CanonicalStateChan     chan *pbp2p.BeaconState
 	DepositFetcher         depositcache.DepositFetcher
 	PendingDepositsFetcher depositcache.PendingDepositsFetcher
@@ -86,15 +86,18 @@ func (ps *Server) RequestBlock(ctx context.Context, req *pb.BlockRequest) (*ethp
 	}
 
 	// Pack aggregated attestations which have not been included in the beacon chain.
-	atts, err := ps.Pool.AttestationPool(ctx, req.Slot)
+	atts := ps.AttPool.AggregatedAttestation()
+	atts, err = ps.filterAttestationsForBlockInclusion(ctx, req.Slot, atts)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get pending attestations: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not filter attestations: %v", err)
 	}
 
 	// Use zero hash as stub for state root to compute later.
 	stateRoot := params.BeaconConfig().ZeroHash[:]
 
 	emptySig := make([]byte, 96)
+
+	graffiti := bytesutil.ToBytes32([]byte(req.Graffiti))
 
 	blk := &ethpb.BeaconBlock{
 		Slot:       req.Slot,
@@ -109,7 +112,7 @@ func (ps *Server) RequestBlock(ctx context.Context, req *pb.BlockRequest) (*ethp
 			ProposerSlashings: []*ethpb.ProposerSlashing{},
 			AttesterSlashings: []*ethpb.AttesterSlashing{},
 			VoluntaryExits:    []*ethpb.VoluntaryExit{},
-			Graffiti:          []byte{},
+			Graffiti:          graffiti[:],
 		},
 		Signature: emptySig,
 	}
@@ -352,6 +355,49 @@ func (ps *Server) defaultEth1DataResponse(ctx context.Context, currentHeight *bi
 		BlockHash:    blockHash[:],
 		DepositCount: depositsTillHeight,
 	}, nil
+}
+
+// This filters the input attestations to return a list of valid attestations to be packaged inside a beacon block.
+func (ps *Server) filterAttestationsForBlockInclusion(ctx context.Context, slot uint64, atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.filterAttestationsForBlockInclusion")
+	defer span.End()
+
+	validAtts := make([]*ethpb.Attestation, 0, len(atts))
+
+	bState, err := ps.BeaconDB.HeadState(ctx)
+	if err != nil {
+		return nil, errors.New("could not head state from DB")
+	}
+
+	if bState.Slot < slot {
+		bState, err = state.ProcessSlots(ctx, bState, slot)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not process slots up to %d", slot)
+		}
+	}
+
+	// TODO(3916): Insert optimizations to sort out the most profitable attestations
+	for i, att := range atts {
+		if i == int(params.BeaconConfig().MaxAttestations) {
+			break
+		}
+
+		if err := blocks.VerifyAttestation(ctx, bState, att); err != nil {
+			if helpers.IsAggregated(att) {
+				if err := ps.AttPool.DeleteAggregatedAttestation(att); err != nil {
+					return nil, err
+				}
+			} else {
+				if err := ps.AttPool.DeleteUnaggregatedAttestation(att); err != nil {
+					return nil, err
+				}
+			}
+			continue
+		}
+		validAtts = append(validAtts, att)
+	}
+
+	return validAtts, nil
 }
 
 func constructMerkleProof(trie *trieutil.MerkleTrie, index int, deposit *ethpb.Deposit) (*ethpb.Deposit, error) {

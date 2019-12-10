@@ -718,7 +718,7 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *pb.BeaconState, 
 
 	voted := len(indices) > 0
 	if voted && !sig.Verify(messageHash[:], pubkey, domain) {
-		return fmt.Errorf("attestation aggregation signature did not verify")
+		return ErrSigFailedToVerify
 	}
 	return nil
 }

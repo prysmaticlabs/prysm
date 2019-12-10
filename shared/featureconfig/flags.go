@@ -73,6 +73,10 @@ var (
 		Name:  "enable-skip-slots-cache",
 		Usage: "Enables the skip slot cache to be used in the event of skipped slots.",
 	}
+	kafkaBootstrapServersFlag = cli.StringFlag{
+		Name:  "kafka-url",
+		Usage: "Stream attestations and blocks to specified kafka servers. This field is used for bootstrap.servers kafka config field.",
+	}
 	initSyncVerifyEverythingFlag = cli.BoolFlag{
 		Name: "initial-sync-verify-all-signatures",
 		Usage: "Initial sync to finalized checkpoint with verifying block's signature, RANDAO " +
