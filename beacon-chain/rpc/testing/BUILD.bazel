@@ -5,6 +5,7 @@ go_library(
     testonly = True,
     srcs = [
         "beacon_chain_service_mock.go",
+        "beacon_node_validator_service_mock.go",
         "validator_service_mock.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing",
