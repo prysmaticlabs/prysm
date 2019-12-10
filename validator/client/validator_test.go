@@ -298,6 +298,24 @@ func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
 }
 
 func TestCanonicalHeadSlot_OK(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := internal.NewMockBeaconChainClient(ctrl)
+	v := validator{
+		keys:         keyMap,
+		beaconClient: client,
+	}
+	client.EXPECT().GetChainHead(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&ethpb.ChainHead{HeadSlot: 0}, nil)
+	headSlot, err := v.CanonicalHeadSlot(context.Background())
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if headSlot != 0 {
+		t.Errorf("Mismatch slots, wanted: %v, received: %v", 0, headSlot)
+	}
 }
 
 func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
