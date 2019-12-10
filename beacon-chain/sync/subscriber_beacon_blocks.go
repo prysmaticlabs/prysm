@@ -45,5 +45,30 @@ func (r *RegularSync) beaconBlockSubscriber(ctx context.Context, msg proto.Messa
 	if err != nil {
 		interop.WriteBlockToDisk(block, true /*failed*/)
 	}
+
+	// Delete the same attestations from the block in the pool to avoid inclusion in future block.
+	if err := r.deleteAttsInPool(block.Body.Attestations); err != nil {
+		log.Errorf("Could not delete attestations in pool: %v", err)
+		return nil
+	}
+
 	return err
+}
+
+// The input attestations are seen by the network, this deletes them from pool
+// so proposers don't include them in a block for the future.
+func (r *RegularSync) deleteAttsInPool(atts []*ethpb.Attestation) error {
+	for _, att := range atts {
+		if helpers.IsAggregated(att) {
+			if err := r.attPool.DeleteAggregatedAttestation(att); err != nil {
+				return err
+			}
+		} else {
+			// Ideally there's shouldn't be any unaggregated attestation in the block.
+			if err := r.attPool.DeleteUnaggregatedAttestation(att); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

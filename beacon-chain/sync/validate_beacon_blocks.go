@@ -51,11 +51,6 @@ func (r *RegularSync) validateBeaconBlockPubSub(ctx context.Context, msg proto.M
 	}
 	r.pendingQueueLock.RUnlock()
 
-	// Delete the same attestations from the block in the pool to avoid inclusion in future block.
-	if err := r.deleteAttsInPool(m.Body.Attestations); err != nil {
-		return false, err
-	}
-
 	if _, ok := recentlySeenRoots.Get(string(blockRoot[:])); ok || r.db.HasBlock(ctx, blockRoot) {
 		return false, nil
 	}
@@ -86,22 +81,4 @@ func (r *RegularSync) validateBeaconBlockPubSub(ctx context.Context, msg proto.M
 	}
 
 	return err == nil, err
-}
-
-// The input attestations are seen by the network, this deletes them from pool
-// so proposers don't include them in a block for the future.
-func (r *RegularSync) deleteAttsInPool(atts []*ethpb.Attestation) error {
-	for _, att := range atts {
-		if helpers.IsAggregated(att) {
-			if err := r.attPool.DeleteAggregatedAttestation(att); err != nil {
-				return err
-			}
-		} else {
-			// Ideally there's shouldn't be any unaggregated attestation in the block.
-			if err := r.attPool.DeleteUnaggregatedAttestation(att); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }
