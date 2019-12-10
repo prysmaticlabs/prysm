@@ -283,12 +283,12 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
+	client := internal.NewMockBeaconChainClient(ctrl)
 	v := validator{
-		keys:            keyMap,
-		validatorClient: client,
+		keys:         keyMap,
+		beaconClient: client,
 	}
-	client.EXPECT().CanonicalHead(
+	client.EXPECT().GetChainHead(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(nil, errors.New("failed"))

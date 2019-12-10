@@ -102,6 +102,7 @@ func (v *ValidatorService) Start() {
 	v.conn = conn
 	v.validator = &validator{
 		validatorClient:      ethpb.NewBeaconNodeValidatorClient(v.conn),
+		beaconClient:         ethpb.NewBeaconChainClient(v.conn),
 		aggregatorClient:     pb.NewAggregatorServiceClient(v.conn),
 		node:                 ethpb.NewNodeClient(v.conn),
 		keys:                 v.keys,

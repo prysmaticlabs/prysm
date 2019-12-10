@@ -27,6 +27,7 @@ type validator struct {
 	ticker               *slotutil.SlotTicker
 	duties               *ethpb.DutiesResponse
 	validatorClient      ethpb.BeaconNodeValidatorClient
+	beaconClient         ethpb.BeaconChainClient
 	graffiti             []byte
 	aggregatorClient     pb.AggregatorServiceClient
 	node                 ethpb.NodeClient
@@ -192,12 +193,11 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 func (v *validator) CanonicalHeadSlot(ctx context.Context) (uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.CanonicalHeadSlot")
 	defer span.End()
-	//head, err := v..CanonicalHead(ctx, &ptypes.Empty{})
-	//if err != nil {
-	//	return 0, err
-	//}
-	// TODO: FIX
-	return 0, nil
+	head, err := v.beaconClient.GetChainHead(ctx, &ptypes.Empty{})
+	if err != nil {
+		return 0, err
+	}
+	return head.HeadSlot, nil
 }
 
 // NextSlot emits the next slot number at the start time of that slot.
