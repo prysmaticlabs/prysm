@@ -15,10 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -60,8 +56,8 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	}
 
 	// Pack aggregated attestations which have not been included in the beacon chain.
-	atts := ps.AttPool.AggregatedAttestation()
-	atts, err = ps.filterAttestationsForBlockInclusion(ctx, req.Slot, atts)
+	atts := vs.AttPool.AggregatedAttestation()
+	atts, err = vs.filterAttestationsForBlockInclusion(ctx, req.Slot, atts)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not filter attestations: %v", err)
 	}
