@@ -54,7 +54,7 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 			st := vs.assignmentStatus(idx, s)
 			assignment.Status = st
 			if st == ethpb.ValidatorStatus_ACTIVE {
-				assignment, err = vs.assignment(idx, s, req.EpochStart)
+				assignment, err = vs.assignment(idx, s, req.Epoch)
 				if err != nil {
 					return nil, status.Errorf(codes.Internal, "Could not fetch assignment for public key %#x: %v", pubKey, err)
 				}

@@ -400,7 +400,7 @@ index 6fdf75f..37ffd69 100644
  
      // The epoch for which this set of validator assignments is valid.
 diff --git a/eth/v1alpha1/validator.proto b/eth/v1alpha1/validator.proto
-index 8dcc314..1443b1e 100644
+index 70a70bc..2727d84 100644
 --- a/eth/v1alpha1/validator.proto
 +++ b/eth/v1alpha1/validator.proto
 @@ -15,6 +15,7 @@ syntax = "proto3";
@@ -438,7 +438,7 @@ index 8dcc314..1443b1e 100644
  }
  
  enum ValidatorStatus {
-@@ -247,14 +248,14 @@ message DutiesRequest {
+@@ -247,7 +248,7 @@ message DutiesRequest {
      // Epoch at which validators should perform their duties.
      uint64 epoch = 1;
      // Array of byte encoded BLS public keys.
@@ -447,15 +447,16 @@ index 8dcc314..1443b1e 100644
  }
  
  message DutiesResponse {
-     repeated Duty duties = 1;
-     message Duty {
-         // 48 byte BLS public key for the validator who's assigned to perform the following duty.
--        bytes public_key = 1;
-+        bytes public_key = 1 [(gogoproto.moretags) = "ssz-size:\"48\""];
-         // Slot at which a validator must attest.
-         uint64 attestation_slot = 2;
-         // Shard at which a validator must attest.
-@@ -270,15 +271,18 @@ message DutiesResponse {
+@@ -262,7 +263,7 @@ message DutiesResponse {
+         // Slot at which a validator must propose a beacon chain block.
+         uint64 proposer_slot = 4;
+         // 48 byte BLS public key for the validator who's assigned to perform a duty.
+-        bytes public_key = 5;
++        bytes public_key = 5 [(gogoproto.moretags) = "ssz-size:\"48\""];
+         // The current status of the validator assigned to perform the duty.
+         ValidatorStatus status = 6;
+     }
+@@ -271,15 +272,18 @@ message DutiesResponse {
  message BlockRequest {
      // Slot for which the block should be proposed.
      uint64 slot = 1;
@@ -477,7 +478,7 @@ index 8dcc314..1443b1e 100644
  }
  
  message AttestationDataRequest {
-@@ -291,16 +295,16 @@ message AttestationDataRequest {
+@@ -292,16 +296,16 @@ message AttestationDataRequest {
  
  message AttestResponse {
      // The root of the attestation data successfully submitted to the beacon node.

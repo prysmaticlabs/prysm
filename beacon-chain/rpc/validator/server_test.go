@@ -24,7 +24,6 @@ import (
 	internal "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -377,14 +376,14 @@ func BenchmarkAssignment(b *testing.B) {
 		pubKeys[i] = buf
 	}
 
-	req := &pb.AssignmentRequest{
+	req := &ethpb.DutiesRequest{
 		PublicKeys: pubKeys,
-		EpochStart: 0,
+		Epoch:      0,
 	}
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		if _, err := vs.CommitteeAssignment(context.Background(), req); err != nil {
+		if _, err := vs.GetDuties(context.Background(), req); err != nil {
 			b.Fatal(err)
 		}
 	}
