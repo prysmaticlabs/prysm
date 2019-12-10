@@ -48,10 +48,10 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 		}
 		bytesProcessed += 32
 	}
-	fmt.Printf("Running for %s\n", fieldName)
-	fmt.Printf("Leaves after padding: %v\n", leaves)
-	fmt.Printf("Changed indices: %d\n", changedIndices)
-
+	if fieldName == "RandaoMixes" {
+		fmt.Printf("Running for %s\n", fieldName)
+		fmt.Printf("Changed indices: %d\n", changedIndices)
+	}
 	if len(changedIndices) > 0 && h.rootsCache != nil {
 		var rt [32]byte
 		var err error
@@ -63,6 +63,10 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 			if err != nil {
 				return [32]byte{}, err
 			}
+		}
+		if fieldName == "RandaoMixes" {
+			fmt.Println("Branch Recompute Merkle")
+			prettyPrintTree(layersCache[fieldName])
 		}
 		return rt, nil
 	}
@@ -76,13 +80,6 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 
 	var res [32]byte
 	res = h.merkleizeWithCache(leaves, fieldName)
-	//if h.rootsCache != nil {
-	//} else {
-	//	res, err = bitwiseMerkleize(leaves, uint64(len(leaves)), uint64(len(leaves)))
-	//	if err != nil {
-	//		return res, err
-	//	}
-	//}
 	if h.rootsCache != nil {
 		lock.Lock()
 		leavesCache[fieldName] = leaves
@@ -131,6 +128,15 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][]byte, fieldName string) 
 	copy(root[:], hashLayer[0])
 	if h.rootsCache != nil {
 		layersCache[fieldName] = layers
+		if fieldName == "RandaoMixes" {
+			fmt.Println("Regular Merkle With Cache")
+			prettyPrintTree(layersCache[fieldName])
+		}
+	} else {
+		if fieldName == "RandaoMixes" {
+			fmt.Println("Regular Merkle No Cache")
+			prettyPrintTree(layers)
+		}
 	}
 	return root
 }
@@ -175,4 +181,21 @@ func recomputeRoot(idx int, chunks [][]byte, fieldName string) ([32]byte, error)
 	}
 	layersCache[fieldName] = layers
 	return bytesutil.ToBytes32(root), nil
+}
+
+func prettyPrintTree(layers [][][]byte) {
+	fmt.Println("***ROOT")
+	fmt.Printf("%#x\n", bytesutil.Trunc(layers[len(layers)-1][0]))
+	for i := len(layers) - 1; i >= 0; i-- {
+		fmt.Printf("***LAYER %d\n", i)
+		fmt.Print("Nodes: ")
+		for j := 0; j < len(layers[i]); j++ {
+			if j == len(layers[i])-1 {
+				fmt.Printf("%#x", bytesutil.Trunc(layers[i][j]))
+			} else {
+				fmt.Printf("%#x, ", bytesutil.Trunc(layers[i][j]))
+			}
+		}
+		fmt.Println("")
+	}
 }

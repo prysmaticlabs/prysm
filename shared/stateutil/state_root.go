@@ -127,7 +127,6 @@ func (h *stateRootHasher) hashTreeRootState(state *pb.BeaconState) ([32]byte, er
 	fieldRoots[11] = balancesRoot[:]
 
 	// RandaoMixes array root.
-	fmt.Printf("Randao mixes %v\n", state.RandaoMixes)
 	randaoRootsRoot, err := h.arraysRoot(state.RandaoMixes, "RandaoMixes")
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute randao roots merkleization")

@@ -2,6 +2,7 @@ package stateutil
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
@@ -79,5 +80,41 @@ func fuzzStateRootCache(t *testing.T, seed int64, iterations uint64) {
 	}
 	if mismatch > 0 {
 		t.Fatalf("%d of %d random states had different roots", mismatch, iterations)
+	}
+}
+
+func TestHashTreeRootState_ElementsChanged_RecomputeBranch(t *testing.T) {
+	hasher := &stateRootHasher{}
+	hasherWithCache := globalHasher
+	state := &ethereum_beacon_p2p_v1.BeaconState{}
+	initialRoots := make([][]byte, 4)
+	for i := 0; i < len(initialRoots); i++ {
+		var someRt [32]byte
+		copy(someRt[:], "hello")
+		initialRoots[i] = someRt[:]
+	}
+	state.RandaoMixes = initialRoots
+	if _, err := hasherWithCache.hashTreeRootState(state); err != nil {
+		t.Fatal(err)
+	}
+
+	badRoots := make([][]byte, 4)
+	for i := 0; i < len(badRoots); i++ {
+		var someRt [32]byte
+		copy(someRt[:], strconv.Itoa(i))
+		badRoots[i] = someRt[:]
+	}
+
+	state.RandaoMixes = badRoots
+	r1, err := hasher.hashTreeRootState(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r2, err := hasherWithCache.hashTreeRootState(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r1 != r2 {
+		t.Errorf("Wanted %#x (nocache), received %#x (withcache)", r1, r2)
 	}
 }
