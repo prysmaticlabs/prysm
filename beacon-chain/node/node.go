@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	interopcoldstart "github.com/prysmaticlabs/prysm/beacon-chain/interop-cold-start"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
@@ -57,6 +58,7 @@ type BeaconNode struct {
 	lock         sync.RWMutex
 	stop         chan struct{} // Channel to wait for termination notifications.
 	db           db.Database
+	attPool      attestations.AttestationPool
 	depositCache *depositcache.DepositCache
 	stateFeed    *event.Feed
 }
