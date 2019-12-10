@@ -22,7 +22,7 @@ type Validator interface {
 	NextSlot() <-chan uint64
 	SlotDeadline(slot uint64) time.Time
 	LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error
-	UpdateAssignments(ctx context.Context, slot uint64) error
+	UpdateDuties(ctx context.Context, slot uint64) error
 	RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]pb.ValidatorRole, error) // validator pubKey -> roles
 	SubmitAttestation(ctx context.Context, slot uint64, pubKey [48]byte)
 	ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte)
@@ -54,7 +54,7 @@ func run(ctx context.Context, v Validator) {
 	if err != nil {
 		log.Fatalf("Could not get current canonical head slot: %v", err)
 	}
-	if err := v.UpdateAssignments(ctx, headSlot); err != nil {
+	if err := v.UpdateDuties(ctx, headSlot); err != nil {
 		handleAssignmentError(err, headSlot)
 	}
 	for {
@@ -75,7 +75,7 @@ func run(ctx context.Context, v Validator) {
 
 			// Keep trying to update assignments if they are nil or if we are past an
 			// epoch transition in the beacon node's state.
-			if err := v.UpdateAssignments(ctx, slot); err != nil {
+			if err := v.UpdateDuties(ctx, slot); err != nil {
 				handleAssignmentError(err, slot)
 				cancel()
 				span.End()

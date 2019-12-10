@@ -19,10 +19,10 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-func TestRequestAttestation_ValidatorAssignmentRequestFailure(t *testing.T) {
+func TestRequestAttestation_ValidatorDutiesRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, _, finish := setup(t)
-	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{}}
+	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{}}
 	defer finish()
 
 	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
@@ -34,7 +34,7 @@ func TestAttestToBlockHead_RequestAttestationFailure(t *testing.T) {
 
 	validator, m, finish := setup(t)
 	defer finish()
-	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
+	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey.Marshal(),
 			CommitteeIndex: 5,
@@ -54,7 +54,7 @@ func TestAttestToBlockHead_SubmitAttestationRequestFailure(t *testing.T) {
 
 	validator, m, finish := setup(t)
 	defer finish()
-	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
+	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey.Marshal(),
 			CommitteeIndex: 5,
@@ -94,7 +94,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	defer finish()
 	validatorIndex := uint64(7)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
+	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey.Marshal(),
 			CommitteeIndex: 5,
@@ -196,7 +196,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	validator.genesisTime = uint64(roughtime.Now().Unix())
 	validatorIndex := uint64(5)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
+	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey.Marshal(),
 			CommitteeIndex: 5,
@@ -241,7 +241,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 	defer finish()
 	validatorIndex := uint64(2)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
+	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey.Marshal(),
 			CommitteeIndex: 5,

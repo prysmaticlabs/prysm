@@ -6,16 +6,17 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-func TestSubmitAggregateAndProof_AssignmentRequestFailure(t *testing.T) {
+func TestSubmitAggregateAndProof_GetDutiesRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, _, finish := setup(t)
-	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{}}
+	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{}}
 	defer finish()
 
 	validator.SubmitAggregateAndProof(context.Background(), 0, validatorPubKey)
@@ -27,7 +28,7 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
 	defer finish()
-	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
+	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey: validatorKey.PublicKey.Marshal(),
 		},
