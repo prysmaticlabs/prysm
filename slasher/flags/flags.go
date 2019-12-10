@@ -21,15 +21,18 @@ var (
 		Name:  "tls-key",
 		Usage: "Key for secure gRPC. Pass this and the tls-cert flag in order to use gRPC securely.",
 	}
+	// BeaconCert defines a flag for the beacon api certificate.
 	BeaconCert = cli.StringFlag{
 		Name:  "beacon-tls-cert",
 		Usage: "Certificate for secure beacon gRPC connection. Pass this in order to use becon gRPC securely.",
 	}
+	// BeaconProvider defines a flag for the beacon host ip or address.
 	BeaconProvider = cli.StringFlag{
 		Name:  "beacon-provider",
 		Usage: "A beacon provider string endpoint. Can either be an grpc server endpoint.",
 		Value: "",
 	}
+	// BeaconPort defines a flag for the beacon connection port.
 	BeaconPort = cli.IntFlag{
 		Name:  "beacon-port",
 		Usage: "A beacon provider grpc port.",
