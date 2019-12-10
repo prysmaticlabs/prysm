@@ -9,13 +9,11 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	mockOps "github.com/prysmaticlabs/prysm/beacon-chain/operations/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -512,39 +510,5 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 	if !reflect.DeepEqual(res.Attestations, atts[i:j]) {
 		t.Log(res.Attestations, atts[i:j])
 		t.Error("Incorrect attestations response")
-	}
-}
-
-func TestServer_AttestationPool(t *testing.T) {
-	ctx := context.Background()
-	block := &ethpb.BeaconBlock{
-		Slot: 10,
-	}
-	bs := &Server{
-		Pool: &mockOps.Operations{
-			Attestations: []*ethpb.Attestation{
-				{
-					Data: &ethpb.AttestationData{
-						BeaconBlockRoot: []byte("1"),
-					},
-				},
-				{
-					Data: &ethpb.AttestationData{
-						BeaconBlockRoot: []byte("2"),
-					},
-				},
-			},
-		},
-		HeadFetcher: &mock.ChainService{
-			Block: block,
-		},
-	}
-	res, err := bs.AttestationPool(ctx, &ptypes.Empty{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	want, _ := bs.Pool.AttestationPoolNoVerify(ctx)
-	if !reflect.DeepEqual(res.Attestations, want) {
-		t.Errorf("Wanted AttestationPool() = %v, received %v", want, res.Attestations)
 	}
 }
