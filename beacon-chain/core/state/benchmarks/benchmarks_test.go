@@ -122,7 +122,9 @@ func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
 	b.N = 5
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := state.ProcessEpoch(context.Background(), cleanStates[i]); err != nil {
+		// ProcessEpochPrecompute is the optimized version of process epoch. It's enabled by default
+		// at run time.
+		if _, err := state.ProcessEpochPrecompute(context.Background(), cleanStates[i]); err != nil {
 			b.Fatal(err)
 		}
 	}
