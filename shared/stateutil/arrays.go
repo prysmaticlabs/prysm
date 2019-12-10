@@ -40,7 +40,7 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 	}
 	if h.rootsCache != nil && len(leaves) > len(prevLeaves) {
 		// We invalidate the cache completely in this case.
-		prevLeaves = make([][]byte, len(roots))
+		prevLeaves = leaves
 	}
 	for h.rootsCache != nil && len(leaves) < len(prevLeaves) {
 		// We pad the leaves if the input is less than the previously received number of leaves.
