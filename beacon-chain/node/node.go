@@ -53,14 +53,14 @@ const testSkipPowFlag = "test-skip-pow"
 // full PoS node. It handles the lifecycle of the entire system and registers
 // services to a service registry.
 type BeaconNode struct {
-	ctx          *cli.Context
-	services     *shared.ServiceRegistry
-	lock         sync.RWMutex
-	stop         chan struct{} // Channel to wait for termination notifications.
-	db           db.Database
-	attPool      attestations.AttestationPool
-	depositCache *depositcache.DepositCache
-	stateFeed    *event.Feed
+	ctx             *cli.Context
+	services        *shared.ServiceRegistry
+	lock            sync.RWMutex
+	stop            chan struct{} // Channel to wait for termination notifications.
+	db              db.Database
+	attestationPool attestations.Pool
+	depositCache    *depositcache.DepositCache
+	stateFeed       *event.Feed
 }
 
 // NewBeaconNode creates a new node instance, sets up configuration options, and registers
@@ -80,10 +80,11 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	registry := shared.NewServiceRegistry()
 
 	beacon := &BeaconNode{
-		ctx:       ctx,
-		services:  registry,
-		stop:      make(chan struct{}),
-		stateFeed: new(event.Feed),
+		ctx:             ctx,
+		services:        registry,
+		stop:            make(chan struct{}),
+		stateFeed:       new(event.Feed),
+		attestationPool: attestations.NewPool(),
 	}
 
 	// Use custom config values if the --no-custom-config flag is not set.
@@ -377,6 +378,7 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 		Chain:         chainService,
 		InitialSync:   initSync,
 		StateNotifier: b,
+		AttPool:       b.attestationPool,
 	})
 
 	return b.services.RegisterService(rs)
@@ -454,8 +456,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		BlockReceiver:         chainService,
 		AttestationReceiver:   chainService,
 		GenesisTimeFetcher:    chainService,
-		AttestationsPool:      operationService,
-		OperationsHandler:     operationService,
+		AttestationsPool:      b.attestationPool,
 		POWChainService:       web3Service,
 		ChainStartFetcher:     chainStartFetcher,
 		MockEth1Votes:         mockEth1DataVotes,
