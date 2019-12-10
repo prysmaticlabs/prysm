@@ -157,7 +157,7 @@ func main() {
 
 			txOps = bind.NewKeyedTransactor(privKey.PrivateKey)
 			txOps.Value = new(big.Int).Mul(big.NewInt(depositAmount), big.NewInt(1e9))
-			txOps.GasLimit = 100000
+			txOps.GasLimit = 500000
 		}
 
 		depositContract, err := contracts.NewDepositContract(common.HexToAddress(depositContractAddr), client)
