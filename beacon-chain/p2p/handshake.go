@@ -43,7 +43,7 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 				return
 			}
 
-			// ConnectedF must be non-blocking as part of libp2p design.
+			// Connection handler must be non-blocking as part of libp2p design.
 			go func() {
 				s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerConnecting)
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
