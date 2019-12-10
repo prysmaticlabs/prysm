@@ -62,7 +62,7 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 					s.peers.IncrementBadResponses(conn.RemotePeer())
 					badResponses, err := s.peers.BadResponses(conn.RemotePeer())
 					if err == nil && badResponses == s.peers.MaxBadResponses() {
-						log.Info("Peer has given too many bad responses; will ignore in future")
+						log.Debug("Peer has given too many bad responses; will ignore in future")
 					}
 					s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnecting)
 					if err := s.Disconnect(conn.RemotePeer()); err != nil {
