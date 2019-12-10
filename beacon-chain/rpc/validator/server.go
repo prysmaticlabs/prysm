@@ -115,56 +115,6 @@ func (vs *Server) ValidatorIndex(ctx context.Context, req *pb.ValidatorIndexRequ
 	return &pb.ValidatorIndexResponse{Index: index}, nil
 }
 
-// ValidatorPerformance reports the validator's latest balance along with other important metrics on
-// rewards and penalties throughout its lifecycle in the beacon chain.
-func (vs *Server) ValidatorPerformance(
-	ctx context.Context, req *pb.ValidatorPerformanceRequest,
-) (*pb.ValidatorPerformanceResponse, error) {
-	headState, err := vs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get head state")
-	}
-
-	// Advance state with empty transitions up to the requested epoch start slot.
-	if req.Slot > headState.Slot {
-		headState, err = state.ProcessSlots(ctx, headState, req.Slot)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
-		}
-	}
-
-	balances := make([]uint64, len(req.PublicKeys))
-	missingValidators := make([][]byte, 0)
-	for i, key := range req.PublicKeys {
-		index, ok, err := vs.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(key))
-		if err != nil || !ok {
-			missingValidators = append(missingValidators, key)
-			balances[i] = 0
-			continue
-		}
-		balances[i] = headState.Balances[index]
-	}
-
-	activeCount, err := helpers.ActiveValidatorCount(headState, helpers.SlotToEpoch(req.Slot))
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not retrieve active validator count: %v", err)
-	}
-
-	totalActiveBalance, err := helpers.TotalActiveBalance(headState)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not retrieve total active balance: %v", err)
-	}
-
-	avgBalance := float32(totalActiveBalance / activeCount)
-	return &pb.ValidatorPerformanceResponse{
-		Balances:                      balances,
-		AverageActiveValidatorBalance: avgBalance,
-		MissingValidators:             missingValidators,
-		TotalValidators:               uint64(len(headState.Validators)),
-		TotalActiveValidators:         uint64(activeCount),
-	}, nil
-}
-
 // ExitedValidators queries validator statuses for a give list of validators
 // and returns a filtered list of validator keys that are exited.
 func (vs *Server) ExitedValidators(
@@ -194,10 +144,10 @@ func (vs *Server) ExitedValidators(
 }
 
 // DomainData fetches the current domain version information from the beacon state.
-func (vs *Server) DomainData(ctx context.Context, request *pb.DomainRequest) (*pb.DomainResponse, error) {
+func (vs *Server) DomainData(ctx context.Context, request *ethpb.DomainRequest) (*ethpb.DomainResponse, error) {
 	fork := vs.ForkFetcher.CurrentFork()
 	dv := helpers.Domain(fork, request.Epoch, request.Domain)
-	return &pb.DomainResponse{
+	return &ethpb.DomainResponse{
 		SignatureDomain: dv,
 	}, nil
 }

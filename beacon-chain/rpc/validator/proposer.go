@@ -100,7 +100,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
 // to get it processed by the beacon node as the canonical head.
-func (vs *Server) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlock) (*ptypes.Empty, error) {
+func (vs *Server) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlock) (*ethpb.ProposeResponse, error) {
 	root, err := ssz.SigningRoot(blk)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not tree hash block: %v", err)
@@ -111,7 +111,14 @@ func (vs *Server) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlock) (*pt
 		return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
 	}
 
-	return &ptypes.Empty{}, nil
+	return &ethpb.ProposeResponse{
+		BlockRoot: root[:],
+	}, nil
+}
+
+// ProposeExit --
+func (vs *Server) ProposeExit(context.Context, *ethpb.VoluntaryExit) (*ptypes.Empty, error) {
+	return &ptypes.Empty{}, status.Error(codes.Unimplemented, "Not yet implemented")
 }
 
 // eth1Data determines the appropriate eth1data for a block proposal. The algorithm for this method
