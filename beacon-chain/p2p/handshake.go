@@ -101,7 +101,7 @@ func (s *Service) AddDisconnectionHandler(handler func(ctx context.Context, id p
 				s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnected)
 				// Log good peer disconnects; bad peers can visit here frequently so do not log them.
 				if !s.peers.IsBad(conn.RemotePeer()) {
-					log.WithField("active", len(s.peers.Active())).Info("Peer disconnected")
+					log.WithField("active", len(s.peers.Active())).Debug("Peer disconnected")
 				}
 			}()
 		},
