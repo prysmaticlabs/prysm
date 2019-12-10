@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"sync"
 	"syscall"
-	"time"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
@@ -102,7 +101,7 @@ func (s *Service) Start() {
 	s.context = context.Background()
 	s.startSlasher()
 	s.startBeaconClient()
-	s.retrieveChainHead()
+	s.validatorUpdater()
 	stop := s.stop
 	s.lock.Unlock()
 
@@ -276,30 +275,4 @@ func (s *Service) startDB(ctx *cli.Context) error {
 	log.WithField("path", dbPath).Info("Checking db")
 	s.slasherDb = d
 	return nil
-}
-
-func (s *Service) retrieveChainHead() {
-	timeout := time.After(500 * time.Second)
-	tick := time.Tick(1000 * time.Millisecond)
-	for {
-		select {
-		// Got a timeout! fail with a timeout error
-		case <-timeout:
-			break
-		// Got a tick, we should check on doSomething()
-		case <-tick:
-			ch, err := s.beaconClient.GetChainHead(s.context, nil)
-			if err != nil {
-				log.Error(err)
-				break
-			}
-			if ch != nil {
-				log.Infof("GetChainHead %v", ch)
-				continue
-			}
-			break
-		}
-
-	}
-
 }

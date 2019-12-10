@@ -2,7 +2,10 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["service.go"],
+    srcs = [
+        "data_update.go",
+        "service.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/slasher/service",
     visibility = ["//visibility:public"],
     deps = [
@@ -12,6 +15,7 @@ go_library(
         "//shared/version:go_default_library",
         "//slasher/db:go_default_library",
         "//slasher/rpc:go_default_library",
+        "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//recovery:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//tracing/opentracing:go_default_library",
