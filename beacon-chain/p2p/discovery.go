@@ -81,6 +81,8 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, udpPort int, tcpP
 	localNode.Set(ipEntry)
 	localNode.Set(udpEntry)
 	localNode.Set(tcpEntry)
+	localNode.SetFallbackIP(ipAddr)
+	localNode.SetFallbackUDP(udpPort)
 
 	return localNode, nil
 }
