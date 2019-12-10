@@ -10,6 +10,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
@@ -555,12 +556,12 @@ func (bs *Server) GetValidatorPerformance(
 	}
 
 	// Advance state with empty transitions up to the requested epoch start slot.
-	//if req.Slot > headState.Slot {
-	//	headState, err = state.ProcessSlots(ctx, headState, req.Slot)
-	//	if err != nil {
-	//		return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
-	//	}
-	//}
+	if req.Slot > headState.Slot {
+		headState, err = state.ProcessSlots(ctx, headState, req.Slot)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
+		}
+	}
 
 	balances := make([]uint64, len(req.PublicKeys))
 	missingValidators := make([][]byte, 0)
@@ -574,7 +575,7 @@ func (bs *Server) GetValidatorPerformance(
 		balances[i] = headState.Balances[index]
 	}
 
-	activeCount, err := helpers.ActiveValidatorCount(headState, helpers.SlotToEpoch(0 /* TODO: Change */))
+	activeCount, err := helpers.ActiveValidatorCount(headState, helpers.SlotToEpoch(req.Slot))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve active validator count: %v", err)
 	}
