@@ -157,6 +157,7 @@ func main() {
 
 			txOps = bind.NewKeyedTransactor(privKey.PrivateKey)
 			txOps.Value = new(big.Int).Mul(big.NewInt(depositAmount), big.NewInt(1e9))
+			txOps.GasLimit = 100000
 		}
 
 		depositContract, err := contracts.NewDepositContract(common.HexToAddress(depositContractAddr), client)
@@ -182,24 +183,27 @@ func main() {
 			}
 		}
 
+		keyCounter := int64(0)
 		for _, validatorKey := range validatorKeys {
 			data, depositRoot, err := prysmKeyStore.DepositInput(validatorKey, validatorKey, depositAmountInGwei)
 			if err != nil {
 				log.Errorf("Could not generate deposit input data: %v", err)
 				continue
 			}
-			for i := int64(0); i < numberOfDeposits; i++ {
+			for j := int64(0); j < numberOfDeposits; j++ {
 				tx, err := depositContract.Deposit(txOps, data.PublicKey, data.WithdrawalCredentials, data.Signature, depositRoot)
 				if err != nil {
-					log.Error("unable to send transaction to contract")
+					log.Errorf("unable to send transaction to contract: %v", err)
+					continue
 				}
 
 				log.WithFields(logrus.Fields{
 					"Transaction Hash": fmt.Sprintf("%#x", tx.Hash()),
-				}).Infof("Deposit %d sent to contract address %v for validator with a public key %#x", i, depositContractAddr, validatorKey.PublicKey.Marshal())
+				}).Infof("Deposit %d sent to contract address %v for validator with a public key %#x", (keyCounter*numberOfDeposits)+j, depositContractAddr, validatorKey.PublicKey.Marshal())
 
 				time.Sleep(time.Duration(depositDelay) * time.Second)
 			}
+			keyCounter++
 		}
 	}
 
