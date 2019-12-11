@@ -38,17 +38,17 @@ func publicKeys(keys map[[48]byte]*keystore.Key) [][]byte {
 	return pks
 }
 
-func generateMockStatusResponse(pubkeys [][]byte) *pb.ValidatorActivationResponse {
-	multipleStatus := make([]*pb.ValidatorActivationResponse_Status, len(pubkeys))
+func generateMockStatusResponse(pubkeys [][]byte) *ethpb.ValidatorActivationResponse {
+	multipleStatus := make([]*ethpb.ValidatorActivationResponse_Status, len(pubkeys))
 	for i, key := range pubkeys {
-		multipleStatus[i] = &pb.ValidatorActivationResponse_Status{
+		multipleStatus[i] = &ethpb.ValidatorActivationResponse_Status{
 			PublicKey: key,
-			Status: &pb.ValidatorStatusResponse{
-				Status: pb.ValidatorStatus_UNKNOWN_STATUS,
+			Status: &ethpb.ValidatorStatusResponse{
+				Status: ethpb.ValidatorStatus_UNKNOWN_STATUS,
 			},
 		}
 	}
-	return &pb.ValidatorActivationResponse{Statuses: multipleStatus}
+	return &ethpb.ValidatorActivationResponse{Statuses: multipleStatus}
 }
 
 func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
@@ -260,7 +260,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	}
 	v.pubkeys = publicKeys(v.keys)
 	resp := generateMockStatusResponse(v.pubkeys)
-	resp.Statuses[0].Status.Status = pb.ValidatorStatus_ACTIVE
+	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream := internal.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
@@ -329,8 +329,8 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	}
 	v.pubkeys = publicKeys(v.keys)
 	resp := generateMockStatusResponse(v.pubkeys)
-	resp.Statuses[0].Status.Status = pb.ValidatorStatus_ACTIVE
-	resp.Statuses[1].Status.Status = pb.ValidatorStatus_ACTIVE
+	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
+	resp.Statuses[1].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream := internal.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
@@ -358,7 +358,7 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 		pubkeys:         publicKeys(keyMapThreeValidators),
 	}
 	resp := generateMockStatusResponse(v.pubkeys)
-	resp.Statuses[0].Status.Status = pb.ValidatorStatus_ACTIVE
+	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream := internal.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
