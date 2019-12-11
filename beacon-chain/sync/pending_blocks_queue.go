@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -40,7 +39,7 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "processPendingBlocks")
 	defer span.End()
 
-	pids := peerstatus.Keys()
+	pids := r.p2p.Peers().Connected()
 	if err := r.validatePendingSlots(); err != nil {
 		return errors.Wrap(err, "could not validate pending slots")
 	}
