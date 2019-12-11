@@ -210,7 +210,9 @@ func CommitteeAssignment(
 	validatorIndex uint64,
 ) ([]uint64, uint64, uint64, uint64, error) {
 	ea, err := epochCommitteesAssignments(state, epoch)
-	return []uint64{}, 0, 0, 0, errors.Wrapf(err, "could not retrieve assignments for epoch %d", epoch)
+	if err != nil {
+		return []uint64{}, 0, 0, 0, err
+	}
 	pi, _ := ea.proposerIDxToSlot[validatorIndex]
 	vc, ok := ea.validatorsIDxToSlot[validatorIndex]
 	if ok {
