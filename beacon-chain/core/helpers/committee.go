@@ -231,6 +231,9 @@ func epochCommitteesAssignments(
 			"epoch %d can't be greater than next epoch %d",
 			epoch, NextEpoch(state))
 	}
+	latestEpochAssignments.lock.Lock()
+	defer latestEpochAssignments.lock.Unlock()
+
 	mix := RandaoMix(state, epoch)
 	if len(mix) > 0 && bytes.Equal(mix, latestEpochAssignments.mix) {
 		return latestEpochAssignments, nil
@@ -273,9 +276,6 @@ func epochCommitteesAssignments(
 	lea.committees = committees
 	lea.validatorsIDxToSlot = validatorIndexToSlot
 	lea.proposerIDxToSlot = proposerIndexToSlot
-
-	latestEpochAssignments.lock.Lock()
-	defer latestEpochAssignments.lock.Unlock()
 	latestEpochAssignments = lea
 	return lea, nil
 }
