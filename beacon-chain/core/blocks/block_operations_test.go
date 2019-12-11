@@ -723,7 +723,6 @@ func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 }
 
 func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
-	helpers.ClearActiveIndicesCache()
 	helpers.ClearActiveCountCache()
 
 	att := &ethpb.Attestation{

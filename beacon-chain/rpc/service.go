@@ -220,6 +220,7 @@ func (s *Service) Start() {
 		PeersFetcher:       s.peersFetcher,
 	}
 	beaconChainServer := &beacon.Server{
+		Ctx:                 s.ctx,
 		BeaconDB:            s.beaconDB,
 		Pool:                s.attestationsPool,
 		HeadFetcher:         s.headFetcher,
