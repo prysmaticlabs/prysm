@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -118,7 +117,7 @@ func (s *InitialSync) Start() {
 
 	// Every 5 sec, report handshake count.
 	for {
-		count := peerstatus.Count()
+		count := len(s.p2p.Peers().Connected())
 		if count >= minStatusCount {
 			break
 		}
