@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/patrickmn/go-cache"
-	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -31,11 +30,4 @@ func NewAttCaches() *AttCaches {
 	}
 
 	return pool
-}
-
-func aggregated(bits bitfield.Bitlist) bool {
-	if bits.Count() > 1 {
-		return true
-	}
-	return false
 }
