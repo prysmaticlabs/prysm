@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-var activeIndicesCache = cache.NewActiveIndicesCache()
 var activeCountCache = cache.NewActiveCountCache()
 
 // IsActiveValidator returns the boolean value on whether the validator
@@ -71,25 +70,11 @@ func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) ([]uint64, erro
 		}
 	}
 
-	indices, err := activeIndicesCache.ActiveIndicesInEpoch(epoch)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not retrieve active indices from cache")
-	}
-	if indices != nil {
-		return indices, nil
-	}
-
+	var indices []uint64
 	for i, v := range state.Validators {
 		if IsActiveValidator(v, epoch) {
 			indices = append(indices, uint64(i))
 		}
-	}
-
-	if err := activeIndicesCache.AddActiveIndicesList(&cache.ActiveIndicesByEpoch{
-		Epoch:         epoch,
-		ActiveIndices: indices,
-	}); err != nil {
-		return nil, errors.Wrap(err, "could not save active indices for cache")
 	}
 
 	return indices, nil
