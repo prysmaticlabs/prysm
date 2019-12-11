@@ -1,10 +1,10 @@
 package exit
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -41,15 +41,15 @@ func ValidateVoluntaryExit(state *pb.BeaconState, genesisTime time.Time, ve *eth
 	// Confirm signature is valid
 	root, err := ssz.SigningRoot(ve)
 	if err != nil {
-		return errors.New("cannot confirm signature")
+		return errors.Wrap(err, "cannot confirm signature")
 	}
 	sig, err := bls.SignatureFromBytes(ve.Signature)
 	if err != nil {
-		return errors.New("malformed signature")
+		return errors.Wrap(err, "malformed signature")
 	}
 	validatorPubKey, err := bls.PublicKeyFromBytes(validator.PublicKey)
 	if err != nil {
-		return errors.New("invalid validator public key")
+		return errors.Wrap(err, "invalid validator public key")
 	}
 	domain := bls.ComputeDomain(params.BeaconConfig().DomainVoluntaryExit)
 	verified := sig.Verify(root[:], validatorPubKey, domain)
