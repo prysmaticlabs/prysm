@@ -34,7 +34,7 @@ type assignments struct {
 	validatorsIDxToSlot map[uint64]committeeSlot
 }
 
-var latestEpochAssignments epochAssignments
+var latestEpochAssignments = &epochAssignments{}
 
 // CommitteeCountAtSlot returns the number of crosslink committees of a slot.
 //
@@ -232,10 +232,10 @@ func epochCommitteesAssignments(
 			epoch, NextEpoch(state))
 	}
 	mix := RandaoMix(state, epoch)
-	if bytes.Equal(mix, latestEpochAssignments.mix) {
-		return &latestEpochAssignments, nil
+	if len(mix) > 0 && bytes.Equal(mix, latestEpochAssignments.mix) {
+		return latestEpochAssignments, nil
 	}
-
+	lea := &epochAssignments{}
 	// Track which slot has which proposer.
 	startSlot := StartSlot(epoch)
 	proposerIndexToSlot := make(map[uint64]uint64)
@@ -262,7 +262,7 @@ func epochCommitteesAssignments(
 			if err != nil {
 				return nil, errors.Wrapf(err, "could not get crosslink committee at slot %d", slot)
 			}
-			latestEpochAssignments.committees = append(latestEpochAssignments.committees, committee)
+			lea.committees = append(lea.committees, committee)
 			for _, v := range committee {
 				validatorIndexToSlot[v] = committeeSlot{int(i), slot}
 			}
@@ -270,10 +270,11 @@ func epochCommitteesAssignments(
 		}
 	}
 
-	latestEpochAssignments.mix = mix
-	latestEpochAssignments.validatorsIDxToSlot = validatorIndexToSlot
-	latestEpochAssignments.proposerIDxToSlot = proposerIndexToSlot
-	return &latestEpochAssignments, nil
+	lea.mix = mix
+	lea.validatorsIDxToSlot = validatorIndexToSlot
+	lea.proposerIDxToSlot = proposerIndexToSlot
+	latestEpochAssignments = lea
+	return lea, nil
 }
 
 // VerifyBitfieldLength verifies that a bitfield length matches the given committee size.
