@@ -25,7 +25,6 @@ go_library(
         "//beacon-chain/operations:go_default_library",
         "//beacon-chain/powchain:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
-        "//proto/beacon/rpc/v1:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/pagination:go_default_library",
