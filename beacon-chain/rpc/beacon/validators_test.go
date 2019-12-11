@@ -619,7 +619,7 @@ func TestServer_ListValidators_NoPagination(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(validators, received.ValidatorList) {
+	if !reflect.DeepEqual(want, received.ValidatorList) {
 		t.Fatal("Incorrect respond of validators")
 	}
 }
@@ -840,16 +840,16 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 
 	numEpochs := 30
 	validators := make([]*ethpb.Validator, numEpochs)
+	for i := 0; i < numEpochs; i++ {
+		validators[i] = &ethpb.Validator{
+			ActivationEpoch: uint64(i),
+		}
+	}
 	want := make([]*ethpb.Validators_ValidatorContainer, len(validators))
 	for i := 0; i < len(validators); i++ {
 		want[i] = &ethpb.Validators_ValidatorContainer{
 			Index:     uint64(i),
 			Validator: validators[i],
-		}
-	}
-	for i := 0; i < numEpochs; i++ {
-		validators[i] = &ethpb.Validator{
-			ActivationEpoch: uint64(i),
 		}
 	}
 
