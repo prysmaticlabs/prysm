@@ -428,6 +428,7 @@ func TestComputeProposerIndex(t *testing.T) {
 						&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
 						&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
 						&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+						&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
 					},
 				},
 				indices: []uint64{0, 1, 2, 3, 4},
@@ -440,6 +441,7 @@ func TestComputeProposerIndex(t *testing.T) {
 			args: args{
 				state: &pb.BeaconState{
 					Validators: []*ethpb.Validator{
+						&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
 						&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
 						&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
 						&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
