@@ -1498,14 +1498,14 @@ func setupValidators(t *testing.T, db db.Database, count int) ([]*ethpb.Validato
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
-		t.Fatal(err)
-	}
 	if err := db.SaveState(
 		context.Background(),
 		&pbp2p.BeaconState{Validators: validators, Balances: balances},
 		blockRoot,
 	); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
 		t.Fatal(err)
 	}
 	return validators, balances

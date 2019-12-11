@@ -11,6 +11,7 @@ import (
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -78,6 +79,10 @@ func TestReceiveReceiveBlockNoPubsub_CanSaveHeadInfo(t *testing.T) {
 	}
 	r, err := ssz.SigningRoot(headBlk)
 	if err != nil {
+		t.Fatal(err)
+	}
+	head := &pb.BeaconState{Slot: 100, FinalizedCheckpoint: &ethpb.Checkpoint{Root: r[:]}}
+	if err := db.SaveState(ctx, head, r); err != nil {
 		t.Fatal(err)
 	}
 	chainService.forkChoiceStore = &store{headRoot: r[:]}

@@ -11,8 +11,8 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/sirupsen/logrus"
 )
@@ -29,8 +29,10 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	defer dbtest.TeardownDB(t, db)
 
+	p1 := p2ptest.NewTestP2P(t)
 	r := &RegularSync{
-		db: db,
+		p2p: p1,
+		db:  db,
 		chain: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
@@ -127,7 +129,9 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 		}, slotToPendingBlocks: make(map[uint64]*ethpb.BeaconBlock),
 		seenPendingBlocks: make(map[[32]byte]bool),
 	}
-	peerstatus.Set(p2.PeerID(), &pb.Status{})
+	p1.Peers().Add(p2.PeerID(), nil, network.DirOutbound)
+	p1.Peers().SetConnectionState(p2.PeerID(), peers.PeerConnected)
+	p1.Peers().SetChainState(p2.PeerID(), &pb.Status{})
 
 	b0 := &ethpb.BeaconBlock{}
 	if err := r.db.SaveBlock(context.Background(), b0); err != nil {
@@ -220,7 +224,9 @@ func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
 		}, slotToPendingBlocks: make(map[uint64]*ethpb.BeaconBlock),
 		seenPendingBlocks: make(map[[32]byte]bool),
 	}
-	peerstatus.Set(p2.PeerID(), &pb.Status{})
+	p1.Peers().Add(p1.PeerID(), nil, network.DirOutbound)
+	p1.Peers().SetConnectionState(p1.PeerID(), peers.PeerConnected)
+	p1.Peers().SetChainState(p1.PeerID(), &pb.Status{})
 
 	b0 := &ethpb.BeaconBlock{}
 	if err := r.db.SaveBlock(context.Background(), b0); err != nil {
