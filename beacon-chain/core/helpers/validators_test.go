@@ -7,6 +7,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -250,6 +251,8 @@ func TestDomain_OK(t *testing.T) {
 	}
 }
 
+// Test basic functionality of ActiveValidatorIndices without caching. This test will need to be
+// rewritten when releasing some cache flag.
 func TestActiveValidatorIndices(t *testing.T) {
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 	type args struct {
@@ -333,7 +336,61 @@ func TestActiveValidatorIndices(t *testing.T) {
 				},
 				epoch: 10,
 			},
-			want: []uint64{0, 1, 2},
+			want: []uint64{0, 1, 3},
+		},
+		{
+			name: "some_active_with_recent_new_epoch_10",
+			args: args{
+				state: &pb.BeaconState{
+					Validators: []*ethpb.Validator{
+						&ethpb.Validator{
+							ActivationEpoch: 0,
+							ExitEpoch:       farFutureEpoch,
+						},
+						&ethpb.Validator{
+							ActivationEpoch: 0,
+							ExitEpoch:       farFutureEpoch,
+						},
+						&ethpb.Validator{
+							ActivationEpoch: 0,
+							ExitEpoch:       1,
+						},
+						&ethpb.Validator{
+							ActivationEpoch: 0,
+							ExitEpoch:       farFutureEpoch,
+						},
+					},
+				},
+				epoch: 10,
+			},
+			want: []uint64{0, 1, 3},
+		},
+		{
+			name: "some_active_with_recent_new_epoch_10",
+			args: args{
+				state: &pb.BeaconState{
+					Validators: []*ethpb.Validator{
+						&ethpb.Validator{
+							ActivationEpoch: 0,
+							ExitEpoch:       farFutureEpoch,
+						},
+						&ethpb.Validator{
+							ActivationEpoch: 0,
+							ExitEpoch:       1,
+						},
+						&ethpb.Validator{
+							ActivationEpoch: 0,
+							ExitEpoch:       farFutureEpoch,
+						},
+						&ethpb.Validator{
+							ActivationEpoch: 0,
+							ExitEpoch:       farFutureEpoch,
+						},
+					},
+				},
+				epoch: 10,
+			},
+			want: []uint64{0, 2, 3},
 		},
 	}
 	for _, tt := range tests {
