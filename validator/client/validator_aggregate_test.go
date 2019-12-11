@@ -39,7 +39,7 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&pb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{}, nil /*err*/)
 
 	m.aggregatorClient.EXPECT().SubmitAggregateAndProof(
 		gomock.Any(), // ctx

@@ -67,7 +67,7 @@ func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
 		&ptypes.Empty{},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
-		&pb.ChainStartResponse{
+		&ethpb.ChainStartResponse{
 			Started:     true,
 			GenesisTime: genesis,
 		},
@@ -100,7 +100,7 @@ func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 		&ptypes.Empty{},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
-		&pb.ChainStartResponse{
+		&ethpb.ChainStartResponse{
 			Started:     true,
 			GenesisTime: genesis,
 		},
@@ -176,14 +176,12 @@ func TestWaitActivation_ContextCanceled(t *testing.T) {
 
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
-		&pb.ValidatorActivationRequest{
+		&ethpb.ValidatorActivationRequest{
 			PublicKeys: publicKeys(v.keys),
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
-		&pb.ValidatorActivationResponse{
-			ActivatedPublicKeys: publicKeys(v.keys),
-		},
+		&ethpb.ValidatorActivationResponse{},
 		nil,
 	)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -209,7 +207,7 @@ func TestWaitActivation_StreamSetupFails(t *testing.T) {
 	clientStream := internal.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
-		&pb.ValidatorActivationRequest{
+		&ethpb.ValidatorActivationRequest{
 			PublicKeys: publicKeys(v.keys),
 		},
 	).Return(clientStream, errors.New("failed stream"))
@@ -234,7 +232,7 @@ func TestWaitActivation_ReceiveErrorFromStream(t *testing.T) {
 	clientStream := internal.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
-		&pb.ValidatorActivationRequest{
+		&ethpb.ValidatorActivationRequest{
 			PublicKeys: publicKeys(v.keys),
 		},
 	).Return(clientStream, nil)
@@ -266,7 +264,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	clientStream := internal.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
-		&pb.ValidatorActivationRequest{
+		&ethpb.ValidatorActivationRequest{
 			PublicKeys: publicKeys(v.keys),
 		},
 	).Return(clientStream, nil)
@@ -336,7 +334,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	clientStream := internal.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
-		&pb.ValidatorActivationRequest{
+		&ethpb.ValidatorActivationRequest{
 			PublicKeys: v.pubkeys,
 		},
 	).Return(clientStream, nil)
@@ -367,9 +365,7 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 		gomock.Any(),
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
-		&pb.ValidatorActivationResponse{
-			ActivatedPublicKeys: make([][]byte, 0),
-		},
+		&ethpb.ValidatorActivationResponse{},
 		nil,
 	)
 	clientStream.EXPECT().Recv().Return(
@@ -517,8 +513,8 @@ func TestUpdateAssignments_OK(t *testing.T) {
 	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
 
 	slot := params.BeaconConfig().SlotsPerEpoch
-	resp := &pb.AssignmentResponse{
-		ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
+	resp := &ethpb.DutiesResponse{
+		Duties: []*ethpb.DutiesResponse_Duty{
 			{
 				AttesterSlot:   params.BeaconConfig().SlotsPerEpoch,
 				CommitteeIndex: 100,
@@ -554,10 +550,10 @@ func TestUpdateAssignments_OK(t *testing.T) {
 			v.duties.Duties[0].AttesterSlot,
 		)
 	}
-	if v.duties.Duties[0].CommitteeIndex != resp.ValidatorAssignment[0].CommitteeIndex {
+	if v.duties.Duties[0].CommitteeIndex != resp.Duties[0].CommitteeIndex {
 		t.Errorf(
 			"Unexpected validator assignments. want=%v got=%v",
-			resp.ValidatorAssignment[0].CommitteeIndex,
+			resp.Duties[0].CommitteeIndex,
 			v.duties.Duties[0].CommitteeIndex,
 		)
 	}
@@ -601,11 +597,11 @@ func TestRolesAt_OK(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&pb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{}, nil /*err*/)
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&pb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{}, nil /*err*/)
 
 	roleMap, err := v.RolesAt(context.Background(), 1)
 	if err != nil {
