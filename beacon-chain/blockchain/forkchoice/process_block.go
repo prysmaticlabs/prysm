@@ -102,7 +102,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	// Prune the block cache and helper caches on every new finalized epoch.
 	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
 		s.clearSeenAtts()
-		helpers.ClearAllCaches()
+		Caches()
 		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint); err != nil {
 			return errors.Wrap(err, "could not save finalized checkpoint")
 		}
@@ -201,7 +201,7 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.
 	// Prune the block cache and helper caches on every new finalized epoch.
 	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
 		s.clearSeenAtts()
-		helpers.ClearAllCaches()
+		Caches()
 
 		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch) + 1
 		if featureconfig.Get().PruneEpochBoundaryStates {

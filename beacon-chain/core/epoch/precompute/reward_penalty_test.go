@@ -13,7 +13,7 @@ import (
 )
 
 func TestProcessRewardsAndPenaltiesPrecompute(t *testing.T) {
-	helpers.ClearAllCaches()
+	Caches()
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(2048)
 	state := buildState(e+3, validatorCount)
@@ -57,7 +57,7 @@ func TestProcessRewardsAndPenaltiesPrecompute(t *testing.T) {
 }
 
 func TestAttestationDeltaPrecompute(t *testing.T) {
-	helpers.ClearAllCaches()
+	Caches()
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(2048)
 	state := buildState(e+2, validatorCount)

@@ -23,7 +23,7 @@ func TestShufflingMainnet(t *testing.T) {
 }
 
 func runShuffleTests(t *testing.T, config string) {
-	helpers.ClearAllCaches()
+	Caches()
 	if err := spectest.SetConfig(config); err != nil {
 		t.Fatal(err)
 	}

@@ -76,7 +76,7 @@ func RunBlockOperationTest(
 	body *ethpb.BeaconBlockBody,
 	operationFn blockOperation,
 ) {
-	helpers.ClearAllCaches()
+	Caches()
 
 	preBeaconStateFile, err := BazelFileBytes(path.Join(folderPath, "pre.ssz"))
 	if err != nil {
@@ -135,7 +135,7 @@ func RunEpochOperationTest(
 	testFolderPath string,
 	operationFn epochOperation,
 ) {
-	helpers.ClearAllCaches()
+	Caches()
 
 	preBeaconStateFile, err := BazelFileBytes(path.Join(testFolderPath, "pre.ssz"))
 	if err != nil {

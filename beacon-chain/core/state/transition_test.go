@@ -37,7 +37,7 @@ func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 }
 
 func TestExecuteStateTransition_FullProcess(t *testing.T) {
-	helpers.ClearAllCaches()
+	Caches()
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
@@ -100,7 +100,7 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
-	helpers.ClearAllCaches()
+	Caches()
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
@@ -181,7 +181,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
-	helpers.ClearAllCaches()
+	Caches()
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
 
@@ -475,7 +475,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 }
 
 func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
-	helpers.ClearAllCaches()
+	Caches()
 	epoch := uint64(1)
 
 	atts := []*pb.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}}}
@@ -501,7 +501,7 @@ func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
 }
 func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	logrus.SetLevel(logrus.PanicLevel)
-	helpers.ClearAllCaches()
+	Caches()
 
 	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount * 4
 	committeeCount := validatorCount / params.BeaconConfig().TargetCommitteeSize
@@ -657,7 +657,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 
 func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 	logrus.SetLevel(logrus.PanicLevel)
-	helpers.ClearAllCaches()
+	Caches()
 
 	// Default at 256 validators, can raise this number with faster BLS.
 	validatorCount := uint64(256)

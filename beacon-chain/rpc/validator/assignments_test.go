@@ -24,7 +24,7 @@ func TestCommitteeAssignment_NextEpoch_WrongPubkeyLength(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
-	helpers.ClearAllCaches()
+	Caches()
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 8)
 	block := blk.NewGenesisBlock([]byte{})
@@ -81,7 +81,7 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 }
 
 func TestCommitteeAssignment_OK(t *testing.T) {
-	helpers.ClearAllCaches()
+	Caches()
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
@@ -157,7 +157,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 }
 
 func TestCommitteeAssignment_CurrentEpoch_ShouldNotFail(t *testing.T) {
-	helpers.ClearAllCaches()
+	Caches()
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()

@@ -163,7 +163,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 }
 
 func TestProcessDeposit_UnableToVerify(t *testing.T) {
-	helpers.ClearAllCaches()
+	Caches()
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint: endpoint,
 		BeaconDB:     &kv.Store{},

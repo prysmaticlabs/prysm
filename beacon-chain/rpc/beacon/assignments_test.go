@@ -329,7 +329,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 }
 
 func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) {
-	helpers.ClearAllCaches()
+	Caches()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -405,7 +405,7 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 }
 
 func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testing.T) {
-	helpers.ClearAllCaches()
+	Caches()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 

@@ -107,7 +107,7 @@ func TestUnslashedAttestingIndices_DuplicatedAttestations(t *testing.T) {
 }
 
 func TestAttestingBalance_CorrectBalance(t *testing.T) {
-	helpers.ClearAllCaches()
+	Caches()
 
 	// Generate 2 attestations.
 	atts := make([]*pb.PendingAttestation, 2)
@@ -152,7 +152,7 @@ func TestAttestingBalance_CorrectBalance(t *testing.T) {
 }
 
 func TestMatchAttestations_PrevEpoch(t *testing.T) {
-	helpers.ClearAllCaches()
+	Caches()
 	e := params.BeaconConfig().SlotsPerEpoch
 	s := uint64(0) // slot
 
@@ -230,7 +230,7 @@ func TestMatchAttestations_PrevEpoch(t *testing.T) {
 }
 
 func TestMatchAttestations_CurrentEpoch(t *testing.T) {
-	helpers.ClearAllCaches()
+	Caches()
 	e := params.BeaconConfig().SlotsPerEpoch
 	s := uint64(0) // slot
 
@@ -302,7 +302,7 @@ func TestMatchAttestations_EpochOutOfBound(t *testing.T) {
 }
 
 func TestBaseReward_AccurateRewards(t *testing.T) {
-	helpers.ClearAllCaches()
+	Caches()
 
 	tests := []struct {
 		a uint64
@@ -315,7 +315,7 @@ func TestBaseReward_AccurateRewards(t *testing.T) {
 		{40 * 1e9, params.BeaconConfig().MaxEffectiveBalance, 2862174},
 	}
 	for _, tt := range tests {
-		helpers.ClearAllCaches()
+		Caches()
 		state := &pb.BeaconState{
 			Validators: []*ethpb.Validator{
 				{ExitEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: tt.b}},
@@ -419,7 +419,7 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 
 	for i, tt := range tests {
 		t.Run(string(i), func(t *testing.T) {
-			helpers.ClearAllCaches()
+			Caches()
 
 			original := proto.Clone(tt.state)
 			newState, err := ProcessSlashings(tt.state)

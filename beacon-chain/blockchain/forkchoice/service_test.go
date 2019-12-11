@@ -206,7 +206,7 @@ func TestStore_LatestAttestingBalance(t *testing.T) {
 }
 
 func TestStore_ChildrenBlocksFromParentRoot(t *testing.T) {
-	helpers.ClearAllCaches()
+	Caches()
 
 	ctx := context.Background()
 	db := testDB.SetupDB(t)

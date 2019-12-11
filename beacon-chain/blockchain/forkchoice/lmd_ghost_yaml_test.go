@@ -132,7 +132,7 @@ func TestGetHeadFromYaml(t *testing.T) {
 			t.Errorf("wanted root %#x, got root %#x", wantedHead, head)
 		}
 
-		helpers.ClearAllCaches()
+		Caches()
 		testDB.TeardownDB(t, db)
 
 	}
