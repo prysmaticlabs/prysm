@@ -18,23 +18,23 @@ import (
 
 var committeeCache = cache.NewCommitteeCache()
 
-type EpochAssignments struct {
-	Epoch uint64
+type epochAssignments struct {
+	epoch uint64
 	mix   []byte
-	Assignments
+	assignments
 	lock sync.RWMutex
 }
-type CommitteeSlot struct {
-	CommitteeID int
-	Slot        uint64
+type committeeSlot struct {
+	committeeID int
+	slot        uint64
 }
-type Assignments struct {
-	Committees          [][]uint64
-	ProposerIDxToSlot   map[uint64]uint64
-	ValidatorsIDxToSlot map[uint64]CommitteeSlot
+type assignments struct {
+	committees          [][]uint64
+	proposerIDxToSlot   map[uint64]uint64
+	validatorsIDxToSlot map[uint64]committeeSlot
 }
 
-var latestEpochAssignments EpochAssignments
+var latestEpochAssignments epochAssignments
 
 // CommitteeCountAtSlot returns the number of crosslink committees of a slot.
 //
@@ -211,10 +211,10 @@ func CommitteeAssignment(
 ) ([]uint64, uint64, uint64, uint64, error) {
 	ea, err := EpochCommitteesAssignments(state, epoch)
 	return []uint64{}, 0, 0, 0, errors.Wrapf(err, "could not retrieve assignments for epoch %d", epoch)
-	pi, _ := ea.ProposerIDxToSlot[validatorIndex]
-	vc, ok := ea.ValidatorsIDxToSlot[validatorIndex]
+	pi, _ := ea.proposerIDxToSlot[validatorIndex]
+	vc, ok := ea.validatorsIDxToSlot[validatorIndex]
 	if ok {
-		return ea.Committees[vc.CommitteeID], uint64(vc.CommitteeID), vc.Slot, pi, nil
+		return ea.committees[vc.committeeID], uint64(vc.committeeID), vc.slot, pi, nil
 	}
 	return []uint64{}, 0, 0, 0, fmt.Errorf("validator with index %d not found in assignments", validatorIndex)
 }
@@ -223,7 +223,7 @@ func CommitteeAssignment(
 func EpochCommitteesAssignments(
 	state *pb.BeaconState,
 	epoch uint64,
-) (*EpochAssignments, error) {
+) (*epochAssignments, error) {
 	if epoch > NextEpoch(state) {
 		return nil, fmt.Errorf(
 			"epoch %d can't be greater than next epoch %d",
@@ -245,7 +245,7 @@ func EpochCommitteesAssignments(
 		}
 		proposerIndexToSlot[i] = slot
 	}
-	validatorIndexToSlot := make(map[uint64]CommitteeSlot)
+	validatorIndexToSlot := make(map[uint64]committeeSlot)
 
 	latestEpochAssignments.lock.Lock()
 	defer latestEpochAssignments.lock.Unlock()
@@ -260,17 +260,17 @@ func EpochCommitteesAssignments(
 			if err != nil {
 				return nil, errors.Wrapf(err, "could not get crosslink committee at slot %d", slot)
 			}
-			latestEpochAssignments.Committees = append(latestEpochAssignments.Committees, committee)
+			latestEpochAssignments.committees = append(latestEpochAssignments.committees, committee)
 			for _, v := range committee {
-				validatorIndexToSlot[v] = CommitteeSlot{int(i), slot}
+				validatorIndexToSlot[v] = committeeSlot{int(i), slot}
 			}
 
 		}
 	}
 
 	latestEpochAssignments.mix = mix
-	latestEpochAssignments.ValidatorsIDxToSlot = validatorIndexToSlot
-	latestEpochAssignments.ProposerIDxToSlot = proposerIndexToSlot
+	latestEpochAssignments.validatorsIDxToSlot = validatorIndexToSlot
+	latestEpochAssignments.proposerIDxToSlot = proposerIndexToSlot
 	return &latestEpochAssignments, fmt.Errorf("validator with index %d not found in assignments")
 }
 
