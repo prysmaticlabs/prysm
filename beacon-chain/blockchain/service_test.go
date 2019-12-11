@@ -205,13 +205,13 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	if err := db.SaveBlock(ctx, genesisBlk); err != nil {
 		t.Fatal(err)
 	}
+	if err := db.SaveState(ctx, &pb.BeaconState{Slot: 1}, blkRoot); err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveHeadBlockRoot(ctx, blkRoot); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.SaveGenesisBlockRoot(ctx, blkRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.SaveState(ctx, &pb.BeaconState{Slot: 1}, blkRoot); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.SaveJustifiedCheckpoint(ctx, &ethpb.Checkpoint{Root: blkRoot[:]}); err != nil {

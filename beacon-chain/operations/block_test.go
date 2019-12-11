@@ -29,10 +29,10 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 	}
 
 	headBlockRoot := [32]byte{1, 2, 3}
-	if err := beaconDB.SaveHeadBlockRoot(context.Background(), headBlockRoot); err != nil {
+	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{Slot: 15}, headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
-	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{Slot: 15}, headBlockRoot); err != nil {
+	if err := beaconDB.SaveHeadBlockRoot(context.Background(), headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
 
