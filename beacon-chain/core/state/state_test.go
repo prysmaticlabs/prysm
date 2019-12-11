@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -130,7 +129,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 }
 
 func TestGenesisState_HashEquality(t *testing.T) {
-	Caches()
+
 	deposits, _, _ := testutil.DeterministicDepositsAndKeys(100)
 	state1, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
@@ -154,7 +153,7 @@ func TestGenesisState_HashEquality(t *testing.T) {
 }
 
 func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
-	Caches()
+
 	s, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Error(err)
@@ -177,7 +176,7 @@ func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
 }
 
 func TestGenesisState_FailsWithoutEth1data(t *testing.T) {
-	Caches()
+
 	_, err := state.GenesisBeaconState(nil, 0, nil)
 	if err == nil || err.Error() != "no eth1data provided for genesis state" {
 		t.Errorf("Did not receive eth1data error with nil eth1data, got %v", err)

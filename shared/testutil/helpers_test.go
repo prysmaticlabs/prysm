@@ -11,7 +11,6 @@ import (
 )
 
 func TestBlockSignature(t *testing.T) {
-	Caches()
 
 	beaconState, privKeys := DeterministicGenesisState(t, 100)
 

@@ -130,7 +130,7 @@ var (
 		Hidden: true,
 	}
 	deprecatedEnableActiveIndicesCacheFlag = cli.BoolFlag{
-		Name:  "enable-active-indices-cache",
+		Name:   "enable-active-indices-cache",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}

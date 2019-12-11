@@ -6,7 +6,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -97,7 +96,6 @@ func TestProcessSlashingsPrecompute_SlashedLess(t *testing.T) {
 
 	for i, tt := range tests {
 		t.Run(string(i), func(t *testing.T) {
-			Caches()
 
 			ab := uint64(0)
 			for i, b := range tt.state.Balances {

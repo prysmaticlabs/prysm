@@ -193,7 +193,7 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
-	Caches()
+
 	service := NewService(context.Background(), &Config{
 		BeaconDB: beaconDB,
 	})
@@ -333,7 +333,7 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 }
 
 func TestRetrieveAttestations_OK(t *testing.T) {
-	Caches()
+
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})
@@ -402,7 +402,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 }
 
 func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
-	Caches()
+
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})
@@ -491,7 +491,7 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 }
 
 func TestForkchoiceRetrieveAttestations_NotVoted(t *testing.T) {
-	Caches()
+
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})
@@ -523,7 +523,7 @@ func TestForkchoiceRetrieveAttestations_NotVoted(t *testing.T) {
 }
 
 func TestForkchoiceRetrieveAttestations_AlreadyVoted(t *testing.T) {
-	Caches()
+
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})

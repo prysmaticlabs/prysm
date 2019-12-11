@@ -72,7 +72,6 @@ func TestUpdateBalance(t *testing.T) {
 }
 
 func TestSameHead(t *testing.T) {
-	Caches()
 	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
 	beaconState.Slot = 1
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
@@ -168,8 +167,6 @@ func TestAttestedCurrentEpoch(t *testing.T) {
 }
 
 func TestProcessAttestations(t *testing.T) {
-	Caches()
-
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
 

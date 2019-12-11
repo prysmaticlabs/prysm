@@ -7,7 +7,6 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -163,7 +162,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 }
 
 func TestProcessDeposit_UnableToVerify(t *testing.T) {
-	Caches()
+
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint: endpoint,
 		BeaconDB:     &kv.Store{},
