@@ -9,7 +9,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -24,9 +23,14 @@ func (r *RegularSync) maintainPeerStatuses() {
 		ctx := context.Background()
 		select {
 		case <-ticker.C:
-			for _, pid := range peerstatus.Keys() {
+			for _, pid := range r.p2p.Peers().Connected() {
 				// If the status hasn't been updated in the recent interval time.
-				if roughtime.Now().After(peerstatus.LastUpdated(pid).Add(statusInterval)) {
+				lastUpdated, err := r.p2p.Peers().ChainStateLastUpdated(pid)
+				if err != nil {
+					// Peer has vanished; nothing to do
+					continue
+				}
+				if roughtime.Now().After(lastUpdated.Add(statusInterval)) {
 					if err := r.sendRPCStatusRequest(ctx, pid); err != nil {
 						log.WithError(err).Error("Failed to request peer status")
 					}
@@ -62,7 +66,7 @@ func (r *RegularSync) sendRPCStatusRequest(ctx context.Context, id peer.ID) erro
 	}
 
 	if code != 0 {
-		peerstatus.IncreaseFailureCount(stream.Conn().RemotePeer())
+		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
 		return errors.New(errMsg)
 	}
 
@@ -70,17 +74,16 @@ func (r *RegularSync) sendRPCStatusRequest(ctx context.Context, id peer.ID) erro
 	if err := r.p2p.Encoding().DecodeWithLength(stream, msg); err != nil {
 		return err
 	}
-	peerstatus.Set(stream.Conn().RemotePeer(), msg)
+	r.p2p.Peers().SetChainState(stream.Conn().RemotePeer(), msg)
 
 	err = r.validateStatusMessage(msg, stream)
 	if err != nil {
-		peerstatus.IncreaseFailureCount(stream.Conn().RemotePeer())
+		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
 	}
 	return err
 }
 
 func (r *RegularSync) removeDisconnectedPeerStatus(ctx context.Context, pid peer.ID) error {
-	peerstatus.Delete(pid)
 	return nil
 }
 
@@ -94,10 +97,9 @@ func (r *RegularSync) statusRPCHandler(ctx context.Context, msg interface{}, str
 	log := log.WithField("handler", "status")
 	m := msg.(*pb.Status)
 
-	peerstatus.Set(stream.Conn().RemotePeer(), m)
-
 	if err := r.validateStatusMessage(m, stream); err != nil {
-		peerstatus.IncreaseFailureCount(stream.Conn().RemotePeer())
+		log.WithField("peer", stream.Conn().RemotePeer()).Warn("Invalid fork version from peer")
+		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
 		originalErr := err
 		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, err.Error())
 		if err != nil {
@@ -116,6 +118,7 @@ func (r *RegularSync) statusRPCHandler(ctx context.Context, msg interface{}, str
 		}
 		return originalErr
 	}
+	r.p2p.Peers().SetChainState(stream.Conn().RemotePeer(), m)
 
 	resp := &pb.Status{
 		HeadForkVersion: r.chain.CurrentFork().CurrentVersion,
