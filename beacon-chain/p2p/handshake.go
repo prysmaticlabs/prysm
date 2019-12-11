@@ -78,6 +78,7 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 					s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnected)
 					return
 				}
+				s.host.ConnManager().Protect(conn.RemotePeer(), "protocol")
 				s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerConnected)
 				log.WithField("active", len(s.peers.Active())).Info("Peer connected")
 			}()
@@ -99,6 +100,7 @@ func (s *Service) AddDisconnectionHandler(handler func(ctx context.Context, id p
 					log.WithError(err).Error("Disconnect handler failed")
 				}
 				s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnected)
+				s.host.ConnManager().Unprotect(conn.RemotePeer(), "protocol")
 				// Log good peer disconnects; bad peers can visit here frequently so do not log them.
 				if !s.peers.IsBad(conn.RemotePeer()) {
 					log.WithField("active", len(s.peers.Active())).Debug("Peer disconnected")
