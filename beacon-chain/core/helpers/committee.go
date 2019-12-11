@@ -254,19 +254,19 @@ func epochCommitteesAssignments(
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get committee count at slot %d", slot)
 		}
-		var c [][]uint64
+		var slotCommittees [][]uint64
 		for i := uint64(0); i < countAtSlot; i++ {
 			committee, err := BeaconCommittee(state, slot, i)
 			if err != nil {
 				return nil, errors.Wrapf(err, "could not get crosslink committee at slot %d", slot)
 			}
-			c = append(c, committee)
+			slotCommittees = append(slotCommittees, committee)
 			for _, v := range committee {
 				validatorIndexToSlot[v] = committeeSlot{int(i), slot}
 			}
 
 		}
-		committees[slot] = c
+		committees[slot] = slotCommittees
 	}
 
 	lea.mix = mix
