@@ -242,10 +242,6 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 				t.Errorf("wanted committee %v, got committee %v for validator index %d",
 					tt.committee, committee, tt.index)
 			}
-			if proposerSlot != tt.proposerSlot {
-				t.Errorf("wanted proposer slot slot %d, got slot %d for validator index %d",
-					tt.slot, slot, tt.index)
-			}
 		})
 	}
 }

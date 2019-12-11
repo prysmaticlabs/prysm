@@ -29,7 +29,7 @@ type committeeSlot struct {
 	slot        uint64
 }
 type assignments struct {
-	committees          [][]uint64
+	committees          map[uint64][][]uint64
 	proposerIDxToSlot   map[uint64]uint64
 	validatorsIDxToSlot map[uint64]committeeSlot
 }
@@ -216,7 +216,7 @@ func CommitteeAssignment(
 	pi, _ := ea.proposerIDxToSlot[validatorIndex]
 	vc, ok := ea.validatorsIDxToSlot[validatorIndex]
 	if ok {
-		return ea.committees[vc.committeeID], uint64(vc.committeeID), vc.slot, pi, nil
+		return ea.committees[vc.slot][vc.committeeID], uint64(vc.committeeID), vc.slot, pi, nil
 	}
 	return []uint64{}, 0, 0, 0, fmt.Errorf("validator with index %d not found in assignments", validatorIndex)
 }
@@ -248,26 +248,29 @@ func epochCommitteesAssignments(
 		proposerIndexToSlot[i] = slot
 	}
 	validatorIndexToSlot := make(map[uint64]committeeSlot)
-
+	committees := make(map[uint64][][]uint64)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		countAtSlot, err := CommitteeCountAtSlot(state, slot)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get committee count at slot %d", slot)
 		}
+		var c [][]uint64
 		for i := uint64(0); i < countAtSlot; i++ {
 			committee, err := BeaconCommittee(state, slot, i)
 			if err != nil {
 				return nil, errors.Wrapf(err, "could not get crosslink committee at slot %d", slot)
 			}
-			lea.committees = append(lea.committees, committee)
+			c = append(c, committee)
 			for _, v := range committee {
 				validatorIndexToSlot[v] = committeeSlot{int(i), slot}
 			}
 
 		}
+		committees[slot] = c
 	}
 
 	lea.mix = mix
+	lea.committees = committees
 	lea.validatorsIDxToSlot = validatorIndexToSlot
 	lea.proposerIDxToSlot = proposerIndexToSlot
 
