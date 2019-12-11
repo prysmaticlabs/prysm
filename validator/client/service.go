@@ -101,9 +101,8 @@ func (v *ValidatorService) Start() {
 	log.Info("Successfully started gRPC connection")
 	v.conn = conn
 	v.validator = &validator{
-		validatorClient:      pb.NewValidatorServiceClient(v.conn),
-		attesterClient:       pb.NewAttesterServiceClient(v.conn),
-		proposerClient:       pb.NewProposerServiceClient(v.conn),
+		validatorClient:      ethpb.NewBeaconNodeValidatorClient(v.conn),
+		beaconClient:         ethpb.NewBeaconChainClient(v.conn),
 		aggregatorClient:     pb.NewAggregatorServiceClient(v.conn),
 		node:                 ethpb.NewNodeClient(v.conn),
 		keys:                 v.keys,
