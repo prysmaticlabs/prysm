@@ -19,7 +19,7 @@ import (
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/aggregator"
@@ -61,8 +61,7 @@ type Service struct {
 	powChainService       powchain.Chain
 	chainStartFetcher     powchain.ChainStartFetcher
 	mockEth1Votes         bool
-	attestationsPool      operations.Pool
-	operationsHandler     operations.Handler
+	attestationsPool      attestations.Pool
 	syncService           sync.Checker
 	port                  string
 	listener              net.Listener
@@ -95,8 +94,7 @@ type Config struct {
 	ChainStartFetcher     powchain.ChainStartFetcher
 	GenesisTimeFetcher    blockchain.GenesisTimeFetcher
 	MockEth1Votes         bool
-	OperationsHandler     operations.Handler
-	AttestationsPool      operations.Pool
+	AttestationsPool      attestations.Pool
 	SyncService           sync.Checker
 	Broadcaster           p2p.Broadcaster
 	PeersFetcher          p2p.PeersProvider
@@ -126,7 +124,6 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		chainStartFetcher:     cfg.ChainStartFetcher,
 		mockEth1Votes:         cfg.MockEth1Votes,
 		attestationsPool:      cfg.AttestationsPool,
-		operationsHandler:     cfg.OperationsHandler,
 		syncService:           cfg.SyncService,
 		port:                  cfg.Port,
 		withCert:              cfg.CertFlag,
@@ -188,20 +185,19 @@ func (s *Service) Start() {
 		Eth1InfoFetcher:        s.powChainService,
 		Eth1BlockFetcher:       s.powChainService,
 		MockEth1Votes:          s.mockEth1Votes,
-		Pool:                   s.attestationsPool,
+		AttPool:                s.attestationsPool,
 		CanonicalStateChan:     s.canonicalStateChan,
 		DepositFetcher:         s.depositFetcher,
 		PendingDepositsFetcher: s.pendingDepositFetcher,
 		SyncChecker:            s.syncService,
 	}
 	attesterServer := &attester.Server{
-		P2p:               s.p2p,
-		BeaconDB:          s.beaconDB,
-		OperationsHandler: s.operationsHandler,
-		AttReceiver:       s.attestationReceiver,
-		HeadFetcher:       s.headFetcher,
-		AttestationCache:  cache.NewAttestationCache(),
-		SyncChecker:       s.syncService,
+		P2p:              s.p2p,
+		BeaconDB:         s.beaconDB,
+		AttReceiver:      s.attestationReceiver,
+		HeadFetcher:      s.headFetcher,
+		AttestationCache: cache.NewAttestationCache(),
+		SyncChecker:      s.syncService,
 	}
 	validatorServer := &validator.Server{
 		Ctx:                s.ctx,

@@ -12,7 +12,7 @@ go_library(
         "//beacon-chain/core/feed/operation:go_default_library",
         "//beacon-chain/core/feed/state:go_default_library",
         "//beacon-chain/db:go_default_library",
-        "//beacon-chain/operations:go_default_library",
+        "//beacon-chain/operations/attestations:go_default_library",
         "//beacon-chain/p2p:go_default_library",
         "//beacon-chain/powchain:go_default_library",
         "//beacon-chain/rpc/aggregator:go_default_library",
