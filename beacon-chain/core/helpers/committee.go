@@ -2,7 +2,9 @@
 package helpers
 
 import (
+	"bytes"
 	"fmt"
+	"sync"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -15,6 +17,24 @@ import (
 )
 
 var committeeCache = cache.NewCommitteeCache()
+
+type EpochAssignments struct {
+	Epoch uint64
+	mix   []byte
+	Assignments
+	lock sync.RWMutex
+}
+type CommitteeSlot struct {
+	CommitteeID int
+	Slot        uint64
+}
+type Assignments struct {
+	Committees          [][]uint64
+	ProposerIDxToSlot   map[uint64]uint64
+	ValidatorsIDxToSlot map[uint64]CommitteeSlot
+}
+
+var latestEpochAssignments EpochAssignments
 
 // CommitteeCountAtSlot returns the number of crosslink committees of a slot.
 //
@@ -189,11 +209,29 @@ func CommitteeAssignment(
 	epoch uint64,
 	validatorIndex uint64,
 ) ([]uint64, uint64, uint64, uint64, error) {
+	ea, err := EpochCommitteesAssignments(state, epoch)
+	return []uint64{}, 0, 0, 0, errors.Wrapf(err, "could not retrieve assignments for epoch %d", epoch)
+	pi, _ := ea.ProposerIDxToSlot[validatorIndex]
+	vc, ok := ea.ValidatorsIDxToSlot[validatorIndex]
+	if ok {
+		return ea.Committees[vc.CommitteeID], uint64(vc.CommitteeID), vc.Slot, pi, nil
+	}
+	return []uint64{}, 0, 0, 0, fmt.Errorf("validator with index %d not found in assignments", validatorIndex)
+}
 
+// EpochCommitteesAssignments returns assignments for all active validators in a given epoch.
+func EpochCommitteesAssignments(
+	state *pb.BeaconState,
+	epoch uint64,
+) (*EpochAssignments, error) {
 	if epoch > NextEpoch(state) {
-		return nil, 0, 0, 0, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"epoch %d can't be greater than next epoch %d",
 			epoch, NextEpoch(state))
+	}
+	mix := RandaoMix(state, epoch)
+	if bytes.Equal(mix, latestEpochAssignments.mix) {
+		return &latestEpochAssignments, nil
 	}
 
 	// Track which slot has which proposer.
@@ -203,30 +241,37 @@ func CommitteeAssignment(
 		state.Slot = slot
 		i, err := BeaconProposerIndex(state)
 		if err != nil {
-			return nil, 0, 0, 0, errors.Wrapf(err, "could not check proposer at slot %d", state.Slot)
+			return nil, errors.Wrapf(err, "could not check proposer at slot %d", state.Slot)
 		}
 		proposerIndexToSlot[i] = slot
 	}
+	validatorIndexToSlot := make(map[uint64]CommitteeSlot)
+
+	latestEpochAssignments.lock.Lock()
+	defer latestEpochAssignments.lock.Unlock()
 
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		countAtSlot, err := CommitteeCountAtSlot(state, slot)
 		if err != nil {
-			return nil, 0, 0, 0, errors.Wrapf(err, "could not get committee count at slot %d", slot)
+			return nil, errors.Wrapf(err, "could not get committee count at slot %d", slot)
 		}
 		for i := uint64(0); i < countAtSlot; i++ {
 			committee, err := BeaconCommittee(state, slot, i)
 			if err != nil {
-				return nil, 0, 0, 0, errors.Wrapf(err, "could not get crosslink committee at slot %d", slot)
+				return nil, errors.Wrapf(err, "could not get crosslink committee at slot %d", slot)
 			}
+			latestEpochAssignments.Committees = append(latestEpochAssignments.Committees, committee)
 			for _, v := range committee {
-				if validatorIndex == v {
-					proposerSlot, _ := proposerIndexToSlot[v]
-					return committee, i, slot, proposerSlot, nil
-				}
+				validatorIndexToSlot[v] = CommitteeSlot{int(i), slot}
 			}
+
 		}
 	}
-	return []uint64{}, 0, 0, 0, fmt.Errorf("validator with index %d not found in assignments", validatorIndex)
+
+	latestEpochAssignments.mix = mix
+	latestEpochAssignments.ValidatorsIDxToSlot = validatorIndexToSlot
+	latestEpochAssignments.ProposerIDxToSlot = proposerIndexToSlot
+	return &latestEpochAssignments, fmt.Errorf("validator with index %d not found in assignments")
 }
 
 // VerifyBitfieldLength verifies that a bitfield length matches the given committee size.
