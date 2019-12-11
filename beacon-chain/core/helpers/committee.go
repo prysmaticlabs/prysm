@@ -249,9 +249,6 @@ func epochCommitteesAssignments(
 	}
 	validatorIndexToSlot := make(map[uint64]committeeSlot)
 
-	latestEpochAssignments.lock.Lock()
-	defer latestEpochAssignments.lock.Unlock()
-
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		countAtSlot, err := CommitteeCountAtSlot(state, slot)
 		if err != nil {
@@ -273,6 +270,9 @@ func epochCommitteesAssignments(
 	lea.mix = mix
 	lea.validatorsIDxToSlot = validatorIndexToSlot
 	lea.proposerIDxToSlot = proposerIndexToSlot
+
+	latestEpochAssignments.lock.Lock()
+	defer latestEpochAssignments.lock.Unlock()
 	latestEpochAssignments = lea
 	return lea, nil
 }
