@@ -209,7 +209,7 @@ func CommitteeAssignment(
 	epoch uint64,
 	validatorIndex uint64,
 ) ([]uint64, uint64, uint64, uint64, error) {
-	ea, err := EpochCommitteesAssignments(state, epoch)
+	ea, err := epochCommitteesAssignments(state, epoch)
 	return []uint64{}, 0, 0, 0, errors.Wrapf(err, "could not retrieve assignments for epoch %d", epoch)
 	pi, _ := ea.proposerIDxToSlot[validatorIndex]
 	vc, ok := ea.validatorsIDxToSlot[validatorIndex]
@@ -219,8 +219,8 @@ func CommitteeAssignment(
 	return []uint64{}, 0, 0, 0, fmt.Errorf("validator with index %d not found in assignments", validatorIndex)
 }
 
-// EpochCommitteesAssignments returns assignments for all active validators in a given epoch.
-func EpochCommitteesAssignments(
+// epochCommitteesAssignments returns assignments for all active validators in a given epoch.
+func epochCommitteesAssignments(
 	state *pb.BeaconState,
 	epoch uint64,
 ) (*epochAssignments, error) {
