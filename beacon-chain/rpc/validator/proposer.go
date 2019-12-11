@@ -25,7 +25,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// RequestBlock is called by a proposer during its assigned slot to request a block to sign
+// GetBlock is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot.
 func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.RequestBlock")
@@ -335,13 +335,13 @@ func (vs *Server) defaultEth1DataResponse(ctx context.Context, currentHeight *bi
 }
 
 // This filters the input attestations to return a list of valid attestations to be packaged inside a beacon block.
-func (ps *Server) filterAttestationsForBlockInclusion(ctx context.Context, slot uint64, atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
+func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, slot uint64, atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.filterAttestationsForBlockInclusion")
 	defer span.End()
 
 	validAtts := make([]*ethpb.Attestation, 0, len(atts))
 
-	bState, err := ps.BeaconDB.HeadState(ctx)
+	bState, err := vs.BeaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, errors.New("could not head state from DB")
 	}
@@ -361,11 +361,11 @@ func (ps *Server) filterAttestationsForBlockInclusion(ctx context.Context, slot 
 
 		if err := blocks.VerifyAttestation(ctx, bState, att); err != nil {
 			if helpers.IsAggregated(att) {
-				if err := ps.AttPool.DeleteAggregatedAttestation(att); err != nil {
+				if err := vs.AttPool.DeleteAggregatedAttestation(att); err != nil {
 					return nil, err
 				}
 			} else {
-				if err := ps.AttPool.DeleteUnaggregatedAttestation(att); err != nil {
+				if err := vs.AttPool.DeleteUnaggregatedAttestation(att); err != nil {
 					return nil, err
 				}
 			}
