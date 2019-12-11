@@ -167,7 +167,7 @@ func (bs *Server) ListValidatorBalances(
 func (bs *Server) GetValidatorPerformance(
 	ctx context.Context, req *ethpb.ValidatorPerformanceRequest,
 ) (*ethpb.ValidatorPerformanceResponse, error) {
-	headState, err := vs.HeadFetcher.HeadState(ctx)
+	headState, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
@@ -183,7 +183,7 @@ func (bs *Server) GetValidatorPerformance(
 	balances := make([]uint64, len(req.PublicKeys))
 	missingValidators := make([][]byte, 0)
 	for i, key := range req.PublicKeys {
-		index, ok, err := vs.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(key))
+		index, ok, err := bs.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(key))
 		if err != nil || !ok {
 			missingValidators = append(missingValidators, key)
 			balances[i] = 0
