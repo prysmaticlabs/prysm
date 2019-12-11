@@ -264,6 +264,7 @@ func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
 	defer dbTest.TeardownDB(t, db)
 
 	s := &pbp2p.BeaconState{
+		Slot:                        1,
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 3, Root: []byte{'A'}},
 		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Epoch: 2, Root: []byte{'B'}},
 		FinalizedCheckpoint:         &ethpb.Checkpoint{Epoch: 1, Root: []byte{'C'}},
