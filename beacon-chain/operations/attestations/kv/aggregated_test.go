@@ -43,7 +43,7 @@ func TestKV_Aggregated_CanSaveRetrieve(t *testing.T) {
 	returned := cache.AggregatedAttestation()
 
 	sort.Slice(returned, func(i, j int) bool {
-		return returned[i].Data.Slot < returned[i].Data.Slot
+		return returned[i].Data.Slot < returned[j].Data.Slot
 	})
 
 	if !reflect.DeepEqual(atts, returned) {
