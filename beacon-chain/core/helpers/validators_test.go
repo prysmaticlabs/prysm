@@ -453,6 +453,46 @@ func TestComputeProposerIndex(t *testing.T) {
 			},
 			want: 3,
 		},
+		{
+			name: "empty_active_indices",
+			args: args{
+				state: &pb.BeaconState{
+					Validators: []*ethpb.Validator{
+						&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+						&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+						&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+						&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+						&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					},
+				},
+				indices: []uint64{},
+				seed:    seed,
+			},
+			wantErr: true,
+		},
+
+		{
+			name: "all_active_indices",
+			args: args{
+				state: &pb.BeaconState{
+					Validators: []*ethpb.Validator{
+						&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+						&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+						&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+						&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+						&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+						&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+						&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+						&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+						&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+						&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					},
+				},
+				indices: []uint64{5, 6, 7, 8, 9},
+				seed:    seed,
+			},
+			want: 7,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
