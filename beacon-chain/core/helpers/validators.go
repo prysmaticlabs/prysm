@@ -213,6 +213,7 @@ func ComputeProposerIndex(state *pb.BeaconState, indices []uint64, seed [32]byte
 		if err != nil {
 			return 0, err
 		}
+		candidateIndex = indices[candidateIndex]
 		b := append(seed[:], bytesutil.Bytes8(i/32)...)
 		randomByte := hashutil.Hash(b)[i%32]
 		effectiveBal := state.Validators[candidateIndex].EffectiveBalance
