@@ -161,56 +161,6 @@ func (bs *Server) ListValidatorBalances(
 	}, nil
 }
 
-// GetValidatorPerformance reports the validator's latest balance along with other important metrics on
-// rewards and penalties throughout its lifecycle in the beacon chain.
-func (bs *Server) GetValidatorPerformance(
-	ctx context.Context, req *ethpb.ValidatorPerformanceRequest,
-) (*ethpb.ValidatorPerformanceResponse, error) {
-	headState, err := bs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get head state")
-	}
-
-	// Advance state with empty transitions up to the requested epoch start slot.
-	if req.Slot > headState.Slot {
-		headState, err = state.ProcessSlots(ctx, headState, req.Slot)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
-		}
-	}
-
-	balances := make([]uint64, len(req.PublicKeys))
-	missingValidators := make([][]byte, 0)
-	for i, key := range req.PublicKeys {
-		index, ok, err := bs.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(key))
-		if err != nil || !ok {
-			missingValidators = append(missingValidators, key)
-			balances[i] = 0
-			continue
-		}
-		balances[i] = headState.Balances[index]
-	}
-
-	activeCount, err := helpers.ActiveValidatorCount(headState, helpers.SlotToEpoch(req.Slot))
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not retrieve active validator count: %v", err)
-	}
-
-	totalActiveBalance, err := helpers.TotalActiveBalance(headState)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not retrieve total active balance: %v", err)
-	}
-
-	avgBalance := float32(totalActiveBalance / activeCount)
-	return &ethpb.ValidatorPerformanceResponse{
-		Balances:                      balances,
-		AverageActiveValidatorBalance: avgBalance,
-		MissingValidators:             missingValidators,
-		TotalValidators:               uint64(len(headState.Validators)),
-		TotalActiveValidators:         activeCount,
-	}, nil
-}
-
 // ListValidators retrieves the current list of active validators with an optional historical epoch flag to
 // to retrieve validator set in time.
 func (bs *Server) ListValidators(
