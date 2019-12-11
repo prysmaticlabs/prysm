@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
+	"github.com/sirupsen/logrus"
 )
 
 const blockBatchSize = 64
@@ -266,7 +267,13 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 
 // requestBlocks by range to a specific peer.
 func (s *InitialSync) requestBlocks(ctx context.Context, req *p2ppb.BeaconBlocksByRangeRequest, pid peer.ID) ([]*eth.BeaconBlock, error) {
-	log.WithField("peer", pid.Pretty()).WithField("req", req).Debug("Requesting blocks...")
+	log.WithFields(logrus.Fields{
+		"peer":  pid,
+		"start": req.StartSlot,
+		"count": req.Count,
+		"step":  req.Step,
+		"head":  fmt.Sprintf("%#x", req.HeadBlockRoot),
+	}).Debug("Requesting blocks")
 	stream, err := s.p2p.Send(ctx, req, pid)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send request to peer")
