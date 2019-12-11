@@ -80,10 +80,11 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	registry := shared.NewServiceRegistry()
 
 	beacon := &BeaconNode{
-		ctx:       ctx,
-		services:  registry,
-		stop:      make(chan struct{}),
-		stateFeed: new(event.Feed),
+		ctx:             ctx,
+		services:        registry,
+		stop:            make(chan struct{}),
+		stateFeed:       new(event.Feed),
+		attestationPool: attestations.NewPool(),
 	}
 
 	// Use custom config values if the --no-custom-config flag is not set.
@@ -377,6 +378,7 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 		Chain:         chainService,
 		InitialSync:   initSync,
 		StateNotifier: b,
+		AttPool:       b.attestationPool,
 	})
 
 	return b.services.RegisterService(rs)

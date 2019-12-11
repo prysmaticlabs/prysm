@@ -73,6 +73,11 @@ func (r *RegularSync) registerSubscribers() {
 		r.beaconAttestationSubscriber,
 	)
 	r.subscribe(
+		"/eth2/beacon_aggregate_and_proof",
+		r.validateAggregateAndProof,
+		r.beaconAggregateProofSubscriber,
+	)
+	r.subscribe(
 		"/eth2/voluntary_exit",
 		r.validateVoluntaryExit,
 		r.voluntaryExitSubscriber,
