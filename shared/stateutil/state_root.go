@@ -32,15 +32,15 @@ type stateRootHasher struct {
 	rootsCache *ristretto.Cache
 }
 
-func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
-	return globalHasher.hashTreeRootState(state)
-}
-
 // HashTreeRootState provides a fully-customized version of ssz.HashTreeRoot
 // for the BeaconState type of the official Ethereum Serenity specification.
 // The reason for this particular function is to optimize for speed and memory allocation
 // at the expense of complete specificity (that is, this function can only be used
 // on the Prysm BeaconState data structure).
+func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
+	return globalHasher.hashTreeRootState(state)
+}
+
 func (h *stateRootHasher) hashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	// There are 20 fields in the beacon state.
 	fieldRoots := make([][]byte, 20)
