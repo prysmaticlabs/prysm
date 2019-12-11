@@ -273,7 +273,7 @@ func epochCommitteesAssignments(
 	latestEpochAssignments.mix = mix
 	latestEpochAssignments.validatorsIDxToSlot = validatorIndexToSlot
 	latestEpochAssignments.proposerIDxToSlot = proposerIndexToSlot
-	return &latestEpochAssignments, fmt.Errorf("validator with index %d not found in assignments")
+	return &latestEpochAssignments, nil
 }
 
 // VerifyBitfieldLength verifies that a bitfield length matches the given committee size.
