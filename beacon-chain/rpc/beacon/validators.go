@@ -10,10 +10,12 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -157,6 +159,56 @@ func (bs *Server) ListValidatorBalances(
 		Balances:      res[start:end],
 		TotalSize:     int32(balancesCount),
 		NextPageToken: nextPageToken,
+	}, nil
+}
+
+// GetValidatorPerformance reports the validator's latest balance along with other important metrics on
+// rewards and penalties throughout its lifecycle in the beacon chain.
+func (vs *Server) GetValidatorPerformance(
+	ctx context.Context, req *ethpb.ValidatorPerformanceRequest,
+) (*ethpb.ValidatorPerformanceResponse, error) {
+	headState, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
+
+	// Advance state with empty transitions up to the requested epoch start slot.
+	if req.Slot > headState.Slot {
+		headState, err = state.ProcessSlots(ctx, headState, req.Slot)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
+		}
+	}
+
+	balances := make([]uint64, len(req.PublicKeys))
+	missingValidators := make([][]byte, 0)
+	for i, key := range req.PublicKeys {
+		index, ok, err := vs.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(key))
+		if err != nil || !ok {
+			missingValidators = append(missingValidators, key)
+			balances[i] = 0
+			continue
+		}
+		balances[i] = headState.Balances[index]
+	}
+
+	activeCount, err := helpers.ActiveValidatorCount(headState, helpers.SlotToEpoch(req.Slot))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not retrieve active validator count: %v", err)
+	}
+
+	totalActiveBalance, err := helpers.TotalActiveBalance(headState)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not retrieve total active balance: %v", err)
+	}
+
+	avgBalance := float32(totalActiveBalance / activeCount)
+	return &ethpb.ValidatorPerformanceResponse{
+		Balances:                      balances,
+		AverageActiveValidatorBalance: avgBalance,
+		MissingValidators:             missingValidators,
+		TotalValidators:               uint64(len(headState.Validators)),
+		TotalActiveValidators:         activeCount,
 	}, nil
 }
 
