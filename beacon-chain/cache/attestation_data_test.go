@@ -7,14 +7,13 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 )
 
 func TestAttestationCache_RoundTrip(t *testing.T) {
 	ctx := context.Background()
 	c := cache.NewAttestationCache()
 
-	req := &pb.AttestationRequest{
+	req := &ethpb.AttestationDataRequest{
 		CommitteeIndex: 0,
 		Slot:           1,
 	}
