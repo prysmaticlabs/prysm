@@ -2,6 +2,7 @@ package cache
 
 import (
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -95,10 +96,31 @@ func TestCommitteeCache_ActiveIndices(t *testing.T) {
 	}
 }
 
-func sum(values []uint64) uint64 {
-	sum := uint64(0)
-	for _, v := range values {
-		sum = v + sum
+func TestCommitteeCache_CanRotate(t *testing.T) {
+	cache := NewCommitteeCache()
+	seed := [32]byte{'A'}
+
+	// Should rotate out all the epochs except 190 to 199
+	for i := 100; i < 200; i++ {
+		item := &Committee{Epoch: uint64(i), Seed: seed}
+		if err := cache.AddCommitteeShuffledList(item); err != nil {
+			t.Fatal(err)
+		}
 	}
-	return sum
+
+	k := cache.CommitteeCache.ListKeys()
+	if len(k) != maxCommitteeSize {
+		t.Errorf("wanted: %d, got: %d", maxCommitteeSize, len(k))
+	}
+
+	sort.Slice(k, func(i, j int) bool {
+		return k[i] < k[j]
+	})
+
+	if k[0] != key(190, seed) {
+		t.Error("incorrect key received for slot 190")
+	}
+	if k[len(k)-1] != key(199, seed) {
+		t.Error("incorrect key received for slot 199")
+	}
 }
