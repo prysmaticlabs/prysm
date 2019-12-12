@@ -1033,10 +1033,10 @@ func TestFilterAttestation_OK(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
+	if err := db.SaveState(ctx, state, genesisRoot); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
-	if err := db.SaveState(ctx, state, genesisRoot); err != nil {
+	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
