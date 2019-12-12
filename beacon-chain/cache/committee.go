@@ -19,8 +19,8 @@ var (
 	ErrNotCommittee = errors.New("object is not a committee struct")
 
 	// maxShuffledIndicesSize defines the max number of shuffled indices list can cache.
-	// 3 for previous, current epoch and next epoch.
-	maxShuffledIndicesSize = 3
+	// Due to reorg, good to keep the old cache around for quickly switch over.
+	maxShuffledIndicesSize = 10
 
 	// CommitteeCacheMiss tracks the number of committee requests that aren't present in the cache.
 	CommitteeCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
@@ -38,6 +38,7 @@ var (
 type Committee struct {
 	CommitteeCount uint64
 	Epoch          uint64
+	Seed           [32]byte
 	Committee      []uint64
 }
 
@@ -54,7 +55,7 @@ func committeeKeyFn(obj interface{}) (string, error) {
 		return "", ErrNotCommittee
 	}
 
-	return strconv.Itoa(int(info.Epoch)), nil
+	return key(info.Epoch, info.Seed), nil
 }
 
 // NewCommitteeCache creates a new committee cache for storing/accessing shuffled indices of a committee.
@@ -66,15 +67,15 @@ func NewCommitteeCache() *CommitteeCache {
 
 // ShuffledIndices fetches the shuffled indices by slot and committee index. Every list of indices
 // represent one committee. Returns true if the list exists with slot and committee index. Otherwise returns false, nil.
-func (c *CommitteeCache) ShuffledIndices(slot uint64, index uint64) ([]uint64, error) {
+func (c *CommitteeCache) ShuffledIndices(slot uint64, seed [32]byte, index uint64) ([]uint64, error) {
 	if !featureconfig.Get().EnableShuffledIndexCache && !featureconfig.Get().EnableNewCache {
 		return nil, nil
 	}
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
-	epoch := int(slot / params.BeaconConfig().SlotsPerEpoch)
-	obj, exists, err := c.CommitteeCache.GetByKey(strconv.Itoa(epoch))
+	epoch := slot / params.BeaconConfig().SlotsPerEpoch
+	obj, exists, err := c.CommitteeCache.GetByKey(key(epoch, seed))
 	if err != nil {
 		return nil, err
 	}
@@ -116,54 +117,15 @@ func (c *CommitteeCache) AddCommitteeShuffledList(committee *Committee) error {
 	return nil
 }
 
-// Epochs returns the epochs stored in the committee cache. These are the keys to the cache.
-func (c *CommitteeCache) Epochs() ([]uint64, error) {
-	if !featureconfig.Get().EnableShuffledIndexCache {
-		return nil, nil
-	}
-	c.lock.RLock()
-	defer c.lock.RUnlock()
-
-	epochs := make([]uint64, len(c.CommitteeCache.ListKeys()))
-	for i, s := range c.CommitteeCache.ListKeys() {
-		epoch, err := strconv.Atoi(s)
-		if err != nil {
-			return nil, err
-		}
-		epochs[i] = uint64(epoch)
-	}
-	return epochs, nil
-}
-
-// EpochInCache returns true if an input epoch is part of keys in cache.
-func (c *CommitteeCache) EpochInCache(wantedEpoch uint64) (bool, error) {
-	if !featureconfig.Get().EnableShuffledIndexCache && !featureconfig.Get().EnableNewCache {
-		return false, nil
-	}
-	c.lock.RLock()
-	defer c.lock.RUnlock()
-
-	for _, s := range c.CommitteeCache.ListKeys() {
-		epoch, err := strconv.Atoi(s)
-		if err != nil {
-			return false, err
-		}
-		if wantedEpoch == uint64(epoch) {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
 // CommitteeCountPerSlot returns the number of committees in a given slot as stored in cache.
-func (c *CommitteeCache) CommitteeCountPerSlot(slot uint64) (uint64, bool, error) {
+func (c *CommitteeCache) CommitteeCountPerSlot(slot uint64, seed [32]byte) (uint64, bool, error) {
 	if !featureconfig.Get().EnableShuffledIndexCache && !featureconfig.Get().EnableNewCache {
 		return 0, false, nil
 	}
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	epoch := int(slot / params.BeaconConfig().SlotsPerEpoch)
-	obj, exists, err := c.CommitteeCache.GetByKey(strconv.Itoa(int(epoch)))
+	epoch := slot / params.BeaconConfig().SlotsPerEpoch
+	obj, exists, err := c.CommitteeCache.GetByKey(key(epoch, seed))
 	if err != nil {
 		return 0, false, err
 	}
@@ -184,14 +146,14 @@ func (c *CommitteeCache) CommitteeCountPerSlot(slot uint64) (uint64, bool, error
 }
 
 // ActiveIndices returns the active indices of a given epoch stored in cache.
-func (c *CommitteeCache) ActiveIndices(epoch uint64) ([]uint64, error) {
+func (c *CommitteeCache) ActiveIndices(epoch uint64, seed [32]byte) ([]uint64, error) {
 	if !featureconfig.Get().EnableShuffledIndexCache && !featureconfig.Get().EnableNewCache {
 		return nil, nil
 	}
 
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	obj, exists, err := c.CommitteeCache.GetByKey(strconv.Itoa(int(epoch)))
+	obj, exists, err := c.CommitteeCache.GetByKey(key(epoch, seed))
 	if err != nil {
 		return nil, err
 	}
@@ -217,4 +179,8 @@ func startEndIndices(c *Committee, index uint64) (uint64, uint64) {
 	end := sliceutil.SplitOffset(validatorCount, c.CommitteeCount, index+1)
 
 	return start, end
+}
+
+func key(slot uint64, seed [32]byte) string {
+	return strconv.Itoa(int(slot)) + string(seed[:])
 }

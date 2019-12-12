@@ -25,7 +25,7 @@ type blockchainService interface {
 }
 
 const (
-	minStatusCount           = 3               // TODO(3147): Set this to more than 3, maybe configure from flag?
+	minStatusCount           = 1               // TODO(3147): Set this to more than 3, maybe configure from flag?
 	handshakePollingInterval = 5 * time.Second // Polling interval for checking the number of received handshakes.
 )
 
