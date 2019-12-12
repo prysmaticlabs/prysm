@@ -146,8 +146,6 @@ func (k *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]b
 	defer span.End()
 	blockRoots := make([][32]byte, 0)
 	err := k.db.View(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(blocksBucket)
-
 		// If no filter criteria are specified, return an error.
 		if f == nil {
 			return errors.New("must specify a filter criteria for retrieving block roots")
@@ -161,9 +159,7 @@ func (k *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]b
 			return errors.Wrap(err, "could not determine lookup indices")
 		}
 
-		// We retrieve block roots that match a filter criteria of slot ranges, if specified.
 		filtersMap := f.Filters()
-
 		var startSlot, endSlot uint64
 		var ok bool
 		if startSlot, ok = filtersMap[filters.StartSlot].(uint64); !ok {
@@ -173,12 +169,7 @@ func (k *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]b
 			endSlot = 0
 		}
 
-		if startSlot == 0 && endSlot == 0 {
-			root := bkt.Get(genesisBlockRootKey)
-			blockRoots = append(blockRoots, bytesutil.ToBytes32(root))
-			return nil
-		}
-
+		// We retrieve block roots that match a filter criteria of slot ranges, if specified.
 		rootsBySlotRange := fetchBlockRootsBySlotRange(
 			tx.Bucket(blockSlotIndicesBucket),
 			startSlot,
@@ -203,6 +194,7 @@ func (k *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]b
 				keys = sliceutil.IntersectionByteSlices(indices...)
 			}
 		}
+
 		for i := 0; i < len(keys); i++ {
 			blockRoots = append(blockRoots, bytesutil.ToBytes32(keys[i]))
 		}

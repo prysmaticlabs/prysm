@@ -49,6 +49,43 @@ func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
 	BlockCacheSize = 256
 }
 
+func TestStore_Blocks_CanFetchGenesisBlock(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+	b1 := &ethpb.BeaconBlock{
+		Slot:      0,
+		StateRoot: []byte{1, 2, 3},
+	}
+	b2 := &ethpb.BeaconBlock{
+		Slot:      1,
+		StateRoot: []byte{1, 2, 3},
+	}
+	genesisRoot, err := ssz.SigningRoot(b1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveGenesisBlockRoot(ctx, genesisRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveBlock(ctx, b1); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveBlock(ctx, b2); err != nil {
+		t.Fatal(err)
+	}
+	blocks, err := db.Blocks(ctx, filters.NewFilter().SetStartSlot(0).SetEndSlot(0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(blocks) != 1 {
+		t.Errorf("Wanted 1 block, received %d", len(blocks))
+	}
+	if !proto.Equal(b1, blocks[0]) {
+		t.Errorf("Wanted %v, received %v", b1, blocks[0])
+	}
+}
+
 func TestStore_BlocksCRUD(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
