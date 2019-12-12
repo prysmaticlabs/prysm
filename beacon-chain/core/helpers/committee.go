@@ -308,6 +308,7 @@ func UpdateCommitteeCache(state *pb.BeaconState) error {
 		if err != nil {
 			return err
 		}
+
 		if err := committeeCache.AddCommitteeShuffledList(&cache.Committee{
 			Epoch:          epoch,
 			Committee:      committees,

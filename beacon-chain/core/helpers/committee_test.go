@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -423,7 +422,7 @@ func TestShuffledIndices_ShuffleRightLength(t *testing.T) {
 
 func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 	c := featureconfig.Get()
-	c.EnableShuffledIndexCache = true
+	c.EnableNewCache = true
 	featureconfig.Init(c)
 	defer featureconfig.Init(nil)
 
@@ -444,16 +443,15 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 	if err := UpdateCommitteeCache(state); err != nil {
 		t.Fatal(err)
 	}
-	savedEpochs, err := committeeCache.epochs()
+
+	epoch := uint64(1)
+	idx := uint64(1)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(savedEpochs) != 2 {
-		t.Error("Did not save correct epoch lengths")
-	}
-	epoch := uint64(1)
-	idx := uint64(1)
-	indices, err = committeeCache.ShuffledIndices(epoch, idx)
+
+	indices, err = committeeCache.ShuffledIndices(StartSlot(epoch), seed, idx)
 	if err != nil {
 		t.Fatal(err)
 	}
