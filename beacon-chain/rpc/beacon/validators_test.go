@@ -1340,7 +1340,6 @@ func TestServer_GetValidatorParticipation_FromArchive_FinalizedEpoch(t *testing.
 }
 
 func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
-
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 

@@ -151,7 +151,6 @@ func TestAttestingBalance_CorrectBalance(t *testing.T) {
 }
 
 func TestMatchAttestations_PrevEpoch(t *testing.T) {
-
 	e := params.BeaconConfig().SlotsPerEpoch
 	s := uint64(0) // slot
 
@@ -229,7 +228,6 @@ func TestMatchAttestations_PrevEpoch(t *testing.T) {
 }
 
 func TestMatchAttestations_CurrentEpoch(t *testing.T) {
-
 	e := params.BeaconConfig().SlotsPerEpoch
 	s := uint64(0) // slot
 
@@ -301,7 +299,6 @@ func TestMatchAttestations_EpochOutOfBound(t *testing.T) {
 }
 
 func TestBaseReward_AccurateRewards(t *testing.T) {
-
 	tests := []struct {
 		a uint64
 		b uint64
@@ -348,7 +345,6 @@ func TestProcessSlashings_NotSlashed(t *testing.T) {
 }
 
 func TestProcessSlashings_SlashedLess(t *testing.T) {
-
 	tests := []struct {
 		state *pb.BeaconState
 		want  uint64

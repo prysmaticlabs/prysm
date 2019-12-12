@@ -23,7 +23,6 @@ func runSlotProcessingTests(t *testing.T, config string) {
 
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-
 			preBeaconStateFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "pre.ssz")
 			if err != nil {
 				t.Fatal(err)

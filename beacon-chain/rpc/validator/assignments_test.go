@@ -79,7 +79,6 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 }
 
 func TestCommitteeAssignment_OK(t *testing.T) {
-
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
@@ -155,7 +154,6 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 }
 
 func TestCommitteeAssignment_CurrentEpoch_ShouldNotFail(t *testing.T) {
-
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()

@@ -27,7 +27,6 @@ func runBlockProcessingTest(t *testing.T, config string) {
 	testFolders, testsFolderPath := testutil.TestFolders(t, config, "sanity/blocks/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-
 			preBeaconStateFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "pre.ssz")
 			if err != nil {
 				t.Fatal(err)

@@ -472,7 +472,6 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 }
 
 func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
-
 	epoch := uint64(1)
 
 	atts := []*pb.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}}}
