@@ -476,61 +476,6 @@ func (m *ValidatorLatestVote) GetRoot() []byte {
 	return nil
 }
 
-type AttestationDataAndCustodyBit struct {
-	Data                 *v1alpha1.AttestationData `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
-	CustodyBit           bool                      `protobuf:"varint,2,opt,name=custody_bit,json=custodyBit,proto3" json:"custody_bit,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}                  `json:"-"`
-	XXX_unrecognized     []byte                    `json:"-"`
-	XXX_sizecache        int32                     `json:"-"`
-}
-
-func (m *AttestationDataAndCustodyBit) Reset()         { *m = AttestationDataAndCustodyBit{} }
-func (m *AttestationDataAndCustodyBit) String() string { return proto.CompactTextString(m) }
-func (*AttestationDataAndCustodyBit) ProtoMessage()    {}
-func (*AttestationDataAndCustodyBit) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e719e7d82cfa7b0d, []int{5}
-}
-func (m *AttestationDataAndCustodyBit) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *AttestationDataAndCustodyBit) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_AttestationDataAndCustodyBit.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *AttestationDataAndCustodyBit) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_AttestationDataAndCustodyBit.Merge(m, src)
-}
-func (m *AttestationDataAndCustodyBit) XXX_Size() int {
-	return m.Size()
-}
-func (m *AttestationDataAndCustodyBit) XXX_DiscardUnknown() {
-	xxx_messageInfo_AttestationDataAndCustodyBit.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_AttestationDataAndCustodyBit proto.InternalMessageInfo
-
-func (m *AttestationDataAndCustodyBit) GetData() *v1alpha1.AttestationData {
-	if m != nil {
-		return m.Data
-	}
-	return nil
-}
-
-func (m *AttestationDataAndCustodyBit) GetCustodyBit() bool {
-	if m != nil {
-		return m.CustodyBit
-	}
-	return false
-}
-
 type HistoricalBatch struct {
 	BlockRoots           [][]byte `protobuf:"bytes,1,rep,name=block_roots,json=blockRoots,proto3" json:"block_roots,omitempty" ssz-size:"64,32"`
 	StateRoots           [][]byte `protobuf:"bytes,2,rep,name=state_roots,json=stateRoots,proto3" json:"state_roots,omitempty" ssz-size:"64,32"`
@@ -543,7 +488,7 @@ func (m *HistoricalBatch) Reset()         { *m = HistoricalBatch{} }
 func (m *HistoricalBatch) String() string { return proto.CompactTextString(m) }
 func (*HistoricalBatch) ProtoMessage()    {}
 func (*HistoricalBatch) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e719e7d82cfa7b0d, []int{6}
+	return fileDescriptor_e719e7d82cfa7b0d, []int{5}
 }
 func (m *HistoricalBatch) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -587,9 +532,9 @@ func (m *HistoricalBatch) GetStateRoots() [][]byte {
 }
 
 type AggregateAndProof struct {
-	Index                uint64                `protobuf:"varint,1,opt,name=index,proto3" json:"index,omitempty"`
-	SelectionProof       []byte                `protobuf:"bytes,2,opt,name=selection_proof,json=selectionProof,proto3" json:"selection_proof,omitempty" ssz-size:"96"`
-	Aggregate            *v1alpha1.Attestation `protobuf:"bytes,3,opt,name=aggregate,proto3" json:"aggregate,omitempty"`
+	AggregatorIndex      uint64                `protobuf:"varint,1,opt,name=aggregator_index,json=aggregatorIndex,proto3" json:"aggregator_index,omitempty"`
+	Aggregate            *v1alpha1.Attestation `protobuf:"bytes,2,opt,name=aggregate,proto3" json:"aggregate,omitempty"`
+	SelectionProof       []byte                `protobuf:"bytes,3,opt,name=selection_proof,json=selectionProof,proto3" json:"selection_proof,omitempty" ssz-size:"96"`
 	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
 	XXX_unrecognized     []byte                `json:"-"`
 	XXX_sizecache        int32                 `json:"-"`
@@ -599,7 +544,7 @@ func (m *AggregateAndProof) Reset()         { *m = AggregateAndProof{} }
 func (m *AggregateAndProof) String() string { return proto.CompactTextString(m) }
 func (*AggregateAndProof) ProtoMessage()    {}
 func (*AggregateAndProof) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e719e7d82cfa7b0d, []int{7}
+	return fileDescriptor_e719e7d82cfa7b0d, []int{6}
 }
 func (m *AggregateAndProof) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -628,23 +573,23 @@ func (m *AggregateAndProof) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_AggregateAndProof proto.InternalMessageInfo
 
-func (m *AggregateAndProof) GetIndex() uint64 {
+func (m *AggregateAndProof) GetAggregatorIndex() uint64 {
 	if m != nil {
-		return m.Index
+		return m.AggregatorIndex
 	}
 	return 0
-}
-
-func (m *AggregateAndProof) GetSelectionProof() []byte {
-	if m != nil {
-		return m.SelectionProof
-	}
-	return nil
 }
 
 func (m *AggregateAndProof) GetAggregate() *v1alpha1.Attestation {
 	if m != nil {
 		return m.Aggregate
+	}
+	return nil
+}
+
+func (m *AggregateAndProof) GetSelectionProof() []byte {
+	if m != nil {
+		return m.SelectionProof
 	}
 	return nil
 }
@@ -655,7 +600,6 @@ func init() {
 	proto.RegisterType((*PendingAttestation)(nil), "ethereum.beacon.p2p.v1.PendingAttestation")
 	proto.RegisterType((*AttestationTarget)(nil), "ethereum.beacon.p2p.v1.AttestationTarget")
 	proto.RegisterType((*ValidatorLatestVote)(nil), "ethereum.beacon.p2p.v1.ValidatorLatestVote")
-	proto.RegisterType((*AttestationDataAndCustodyBit)(nil), "ethereum.beacon.p2p.v1.AttestationDataAndCustodyBit")
 	proto.RegisterType((*HistoricalBatch)(nil), "ethereum.beacon.p2p.v1.HistoricalBatch")
 	proto.RegisterType((*AggregateAndProof)(nil), "ethereum.beacon.p2p.v1.AggregateAndProof")
 }
@@ -1178,47 +1122,6 @@ func (m *ValidatorLatestVote) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *AttestationDataAndCustodyBit) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *AttestationDataAndCustodyBit) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	if m.Data != nil {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintTypes(dAtA, i, uint64(m.Data.Size()))
-		n12, err := m.Data.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n12
-	}
-	if m.CustodyBit {
-		dAtA[i] = 0x10
-		i++
-		if m.CustodyBit {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
-		i++
-	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	return i, nil
-}
-
 func (m *HistoricalBatch) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -1271,26 +1174,26 @@ func (m *AggregateAndProof) MarshalTo(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if m.Index != 0 {
+	if m.AggregatorIndex != 0 {
 		dAtA[i] = 0x8
 		i++
-		i = encodeVarintTypes(dAtA, i, uint64(m.Index))
-	}
-	if len(m.SelectionProof) > 0 {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintTypes(dAtA, i, uint64(len(m.SelectionProof)))
-		i += copy(dAtA[i:], m.SelectionProof)
+		i = encodeVarintTypes(dAtA, i, uint64(m.AggregatorIndex))
 	}
 	if m.Aggregate != nil {
-		dAtA[i] = 0x1a
+		dAtA[i] = 0x12
 		i++
 		i = encodeVarintTypes(dAtA, i, uint64(m.Aggregate.Size()))
-		n13, err := m.Aggregate.MarshalTo(dAtA[i:])
+		n12, err := m.Aggregate.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n13
+		i += n12
+	}
+	if len(m.SelectionProof) > 0 {
+		dAtA[i] = 0x1a
+		i++
+		i = encodeVarintTypes(dAtA, i, uint64(len(m.SelectionProof)))
+		i += copy(dAtA[i:], m.SelectionProof)
 	}
 	if m.XXX_unrecognized != nil {
 		i += copy(dAtA[i:], m.XXX_unrecognized)
@@ -1509,25 +1412,6 @@ func (m *ValidatorLatestVote) Size() (n int) {
 	return n
 }
 
-func (m *AttestationDataAndCustodyBit) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Data != nil {
-		l = m.Data.Size()
-		n += 1 + l + sovTypes(uint64(l))
-	}
-	if m.CustodyBit {
-		n += 2
-	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
 func (m *HistoricalBatch) Size() (n int) {
 	if m == nil {
 		return 0
@@ -1558,15 +1442,15 @@ func (m *AggregateAndProof) Size() (n int) {
 	}
 	var l int
 	_ = l
-	if m.Index != 0 {
-		n += 1 + sovTypes(uint64(m.Index))
-	}
-	l = len(m.SelectionProof)
-	if l > 0 {
-		n += 1 + l + sovTypes(uint64(l))
+	if m.AggregatorIndex != 0 {
+		n += 1 + sovTypes(uint64(m.AggregatorIndex))
 	}
 	if m.Aggregate != nil {
 		l = m.Aggregate.Size()
+		n += 1 + l + sovTypes(uint64(l))
+	}
+	l = len(m.SelectionProof)
+	if l > 0 {
 		n += 1 + l + sovTypes(uint64(l))
 	}
 	if m.XXX_unrecognized != nil {
@@ -2916,116 +2800,6 @@ func (m *ValidatorLatestVote) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *AttestationDataAndCustodyBit) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowTypes
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: AttestationDataAndCustodyBit: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: AttestationDataAndCustodyBit: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Data", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowTypes
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthTypes
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthTypes
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Data == nil {
-				m.Data = &v1alpha1.AttestationData{}
-			}
-			if err := m.Data.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field CustodyBit", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowTypes
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.CustodyBit = bool(v != 0)
-		default:
-			iNdEx = preIndex
-			skippy, err := skipTypes(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthTypes
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthTypes
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
 func (m *HistoricalBatch) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -3175,9 +2949,9 @@ func (m *AggregateAndProof) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Index", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field AggregatorIndex", wireType)
 			}
-			m.Index = 0
+			m.AggregatorIndex = 0
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowTypes
@@ -3187,46 +2961,12 @@ func (m *AggregateAndProof) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Index |= uint64(b&0x7F) << shift
+				m.AggregatorIndex |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
 		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field SelectionProof", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowTypes
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthTypes
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthTypes
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.SelectionProof = append(m.SelectionProof[:0], dAtA[iNdEx:postIndex]...)
-			if m.SelectionProof == nil {
-				m.SelectionProof = []byte{}
-			}
-			iNdEx = postIndex
-		case 3:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Aggregate", wireType)
 			}
@@ -3260,6 +3000,40 @@ func (m *AggregateAndProof) Unmarshal(dAtA []byte) error {
 			}
 			if err := m.Aggregate.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SelectionProof", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowTypes
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthTypes
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthTypes
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SelectionProof = append(m.SelectionProof[:0], dAtA[iNdEx:postIndex]...)
+			if m.SelectionProof == nil {
+				m.SelectionProof = []byte{}
 			}
 			iNdEx = postIndex
 		default:

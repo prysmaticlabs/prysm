@@ -41,7 +41,7 @@ func (r *RegularSync) validateVoluntaryExit(ctx context.Context, msg proto.Messa
 
 	exit, ok := msg.(*ethpb.VoluntaryExit)
 	if !ok {
-		return false, nil
+		return false, fmt.Errorf("message was not type *eth.VoluntaryExit, type=%T", msg)
 	}
 
 	cacheKey := exitCacheKey(exit)

@@ -115,7 +115,7 @@ func AggregateAttestation(a1 *ethpb.Attestation, a2 *ethpb.Attestation) (*ethpb.
 // SlotSignature returns the signed signature of the hash tree root of input slot.
 //
 // Spec pseudocode definition:
-//   def slot_signature(state: BeaconState, slot: Slot, privkey: int) -> BLSSignature:
+//   def get_slot_signature(state: BeaconState, slot: Slot, privkey: int) -> BLSSignature:
 //    domain = get_domain(state, DOMAIN_BEACON_ATTESTER, compute_epoch_at_slot(slot))
 //    return bls_sign(privkey, hash_tree_root(slot), domain)
 func SlotSignature(state *pb.BeaconState, slot uint64, privKey *bls.SecretKey) (*bls.Signature, error) {
@@ -164,4 +164,10 @@ func AggregateSignature(attestations []*ethpb.Attestation) (*bls.Signature, erro
 		}
 	}
 	return aggregateSignatures(sigs), nil
+}
+
+// IsAggregated returns true if the attestation is an aggregated attestation,
+// false otherwise.
+func IsAggregated(attestation *ethpb.Attestation) bool {
+	return attestation.AggregationBits.Count() > 1
 }

@@ -18,14 +18,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/aggregator"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/attester"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beacon"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/node"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/proposer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -60,8 +58,7 @@ type Service struct {
 	powChainService       powchain.Chain
 	chainStartFetcher     powchain.ChainStartFetcher
 	mockEth1Votes         bool
-	attestationsPool      operations.Pool
-	operationsHandler     operations.Handler
+	attestationsPool      attestations.Pool
 	syncService           sync.Checker
 	port                  string
 	listener              net.Listener
@@ -93,8 +90,7 @@ type Config struct {
 	ChainStartFetcher     powchain.ChainStartFetcher
 	GenesisTimeFetcher    blockchain.GenesisTimeFetcher
 	MockEth1Votes         bool
-	OperationsHandler     operations.Handler
-	AttestationsPool      operations.Pool
+	AttestationsPool      attestations.Pool
 	SyncService           sync.Checker
 	Broadcaster           p2p.Broadcaster
 	PeersFetcher          p2p.PeersProvider
@@ -123,7 +119,6 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		chainStartFetcher:     cfg.ChainStartFetcher,
 		mockEth1Votes:         cfg.MockEth1Votes,
 		attestationsPool:      cfg.AttestationsPool,
-		operationsHandler:     cfg.OperationsHandler,
 		syncService:           cfg.SyncService,
 		port:                  cfg.Port,
 		withCert:              cfg.CertFlag,
@@ -175,42 +170,25 @@ func (s *Service) Start() {
 		log.Warn("You are using an insecure gRPC connection! Provide a certificate and key to connect securely")
 	}
 	s.grpcServer = grpc.NewServer(opts...)
-
-	proposerServer := &proposer.Server{
+	validatorServer := &validator.Server{
+		Ctx:                    s.ctx,
 		BeaconDB:               s.beaconDB,
+		AttestationCache:       cache.NewAttestationCache(),
+		AttPool:                s.attestationsPool,
 		HeadFetcher:            s.headFetcher,
-		BlockReceiver:          s.blockReceiver,
+		ForkFetcher:            s.forkFetcher,
+		CanonicalStateChan:     s.canonicalStateChan,
+		BlockFetcher:           s.powChainService,
+		DepositFetcher:         s.depositFetcher,
 		ChainStartFetcher:      s.chainStartFetcher,
 		Eth1InfoFetcher:        s.powChainService,
-		Eth1BlockFetcher:       s.powChainService,
-		MockEth1Votes:          s.mockEth1Votes,
-		Pool:                   s.attestationsPool,
-		CanonicalStateChan:     s.canonicalStateChan,
-		DepositFetcher:         s.depositFetcher,
-		PendingDepositsFetcher: s.pendingDepositFetcher,
 		SyncChecker:            s.syncService,
-	}
-	attesterServer := &attester.Server{
-		P2p:               s.p2p,
-		BeaconDB:          s.beaconDB,
-		OperationsHandler: s.operationsHandler,
-		AttReceiver:       s.attestationReceiver,
-		HeadFetcher:       s.headFetcher,
-		AttestationCache:  cache.NewAttestationCache(),
-		SyncChecker:       s.syncService,
-	}
-	validatorServer := &validator.Server{
-		Ctx:                s.ctx,
-		BeaconDB:           s.beaconDB,
-		HeadFetcher:        s.headFetcher,
-		ForkFetcher:        s.forkFetcher,
-		CanonicalStateChan: s.canonicalStateChan,
-		BlockFetcher:       s.powChainService,
-		ChainStartFetcher:  s.chainStartFetcher,
-		Eth1InfoFetcher:    s.powChainService,
-		DepositFetcher:     s.depositFetcher,
-		SyncChecker:        s.syncService,
-		StateNotifier:      s.stateNotifier,
+		StateNotifier:          s.stateNotifier,
+		P2P:                    s.p2p,
+		BlockReceiver:          s.blockReceiver,
+		MockEth1Votes:          s.mockEth1Votes,
+		Eth1BlockFetcher:       s.powChainService,
+		PendingDepositsFetcher: s.pendingDepositFetcher,
 	}
 	nodeServer := &node.Server{
 		BeaconDB:           s.beaconDB,
@@ -234,12 +212,10 @@ func (s *Service) Start() {
 		HeadFetcher: s.headFetcher,
 		SyncChecker: s.syncService,
 	}
-	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)
-	pb.RegisterAttesterServiceServer(s.grpcServer, attesterServer)
-	pb.RegisterValidatorServiceServer(s.grpcServer, validatorServer)
 	pb.RegisterAggregatorServiceServer(s.grpcServer, aggregatorServer)
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
+	ethpb.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
 
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)

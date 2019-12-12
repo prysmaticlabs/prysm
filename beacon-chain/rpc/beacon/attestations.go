@@ -116,7 +116,7 @@ func (bs *Server) ListAttestations(
 // StreamAttestations to clients every single time a new attestation is received.
 // TODO(#4184): Implement.
 func (bs *Server) StreamAttestations(
-	_ *ethpb.ListAttestationsRequest, _ ethpb.BeaconChain_StreamAttestationsServer,
+	_ *ptypes.Empty, _ ethpb.BeaconChain_StreamAttestationsServer,
 ) error {
 	return status.Error(codes.Unimplemented, "Not yet implemented")
 }
@@ -133,10 +133,7 @@ func (bs *Server) StreamAttestations(
 func (bs *Server) AttestationPool(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.AttestationPoolResponse, error) {
-	atts, err := bs.Pool.AttestationPoolNoVerify(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
-	}
+	atts := bs.Pool.AggregatedAttestation()
 	return &ethpb.AttestationPoolResponse{
 		Attestations: atts,
 	}, nil

@@ -8,6 +8,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -32,6 +33,9 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	}
 	genesisBlkRoot, err := ssz.SigningRoot(genesis)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, beaconState, genesisBlkRoot); err != nil {
 		t.Fatal(err)
 	}
 	cp := &ethpb.Checkpoint{Root: genesisBlkRoot[:]}
@@ -144,7 +148,20 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := chainService.forkChoiceStore.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
+	stateRoot, err := ssz.HashTreeRoot(beaconState)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	genesis := b.NewGenesisBlock(stateRoot[:])
+	parentRoot, err := ssz.SigningRoot(genesis)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, beaconState, parentRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainService.forkChoiceStore.GenesisStore(ctx, &ethpb.Checkpoint{Root: parentRoot[:]}, &ethpb.Checkpoint{Root: parentRoot[:]}); err != nil {
 		t.Fatal(err)
 	}
 

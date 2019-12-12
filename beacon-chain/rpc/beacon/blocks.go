@@ -175,15 +175,32 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head block root: %v", err)
 	}
-
 	finalizedCheckpoint := headState.FinalizedCheckpoint
+	justifiedCheckpoint := headState.CurrentJustifiedCheckpoint
+
+	if headState.Slot == 0 {
+		return &ethpb.ChainHead{
+			HeadSlot:                   0,
+			HeadEpoch:                  0,
+			HeadBlockRoot:              headBlockRoot[:],
+			FinalizedSlot:              0,
+			FinalizedEpoch:             0,
+			FinalizedBlockRoot:         finalizedCheckpoint.Root,
+			JustifiedSlot:              0,
+			JustifiedEpoch:             0,
+			JustifiedBlockRoot:         justifiedCheckpoint.Root,
+			PreviousJustifiedSlot:      0,
+			PreviousJustifiedEpoch:     0,
+			PreviousJustifiedBlockRoot: justifiedCheckpoint.Root,
+		}, nil
+	}
+
 	b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(finalizedCheckpoint.Root))
 	if err != nil || b == nil {
 		return nil, status.Error(codes.Internal, "Could not get finalized block")
 	}
 	finalizedSlot := b.Slot
 
-	justifiedCheckpoint := headState.CurrentJustifiedCheckpoint
 	b, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(justifiedCheckpoint.Root))
 	if err != nil || b == nil {
 		return nil, status.Error(codes.Internal, "Could not get justified block")

@@ -45,6 +45,8 @@ type Store struct {
 	checkpointStateLock  sync.Mutex
 	seenAtts             map[[32]byte]bool
 	seenAttsLock         sync.Mutex
+	genesisTime          uint64
+	bestJustifiedCheckpt *ethpb.Checkpoint
 	latestVoteMap        map[uint64]*pb.ValidatorLatestVote
 	voteLock             sync.RWMutex
 	initSyncState        map[[32]byte]*pb.BeaconState
@@ -89,6 +91,7 @@ func (s *Store) GenesisStore(
 	finalizedCheckpoint *ethpb.Checkpoint) error {
 
 	s.justifiedCheckpt = proto.Clone(justifiedCheckpoint).(*ethpb.Checkpoint)
+	s.bestJustifiedCheckpt = proto.Clone(justifiedCheckpoint).(*ethpb.Checkpoint)
 	s.finalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
 	s.prevFinalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
 
@@ -104,6 +107,7 @@ func (s *Store) GenesisStore(
 		return errors.Wrap(err, "could not save genesis state in check point cache")
 	}
 
+	s.genesisTime = justifiedState.GenesisTime
 	if err := s.cacheGenesisState(ctx); err != nil {
 		return errors.Wrap(err, "could not cache initial sync state")
 	}

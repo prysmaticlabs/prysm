@@ -147,7 +147,6 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 			Source: &ethpb.Checkpoint{Epoch: 0},
 		},
 		AggregationBits: bitfield.NewBitlist(3),
-		CustodyBits:     bitfield.NewBitlist(3),
 	}
 
 	block, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, 1)
@@ -205,14 +204,14 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 					Source: &ethpb.Checkpoint{Epoch: 0},
 					Target: &ethpb.Checkpoint{Epoch: 0},
 				},
-				CustodyBit_0Indices: []uint64{0, 1},
+				AttestingIndices: []uint64{0, 1},
 			},
 			Attestation_2: &ethpb.IndexedAttestation{
 				Data: &ethpb.AttestationData{
 					Source: &ethpb.Checkpoint{Epoch: 1},
 					Target: &ethpb.Checkpoint{Epoch: 0},
 				},
-				CustodyBit_0Indices: []uint64{0, 1},
+				AttestingIndices: []uint64{0, 1},
 			},
 		},
 	}
@@ -227,7 +226,6 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			Target: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 		},
 		AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
-		CustodyBits:     bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
 	}
 	attestations := []*ethpb.Attestation{blockAtt}
 	var exits []*ethpb.VoluntaryExit
@@ -331,13 +329,9 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte{'A'}},
 			Target: &ethpb.Checkpoint{Epoch: 0}},
-		CustodyBit_0Indices: []uint64{0, 1},
+		AttestingIndices: []uint64{0, 1},
 	}
-	dataAndCustodyBit := &pb.AttestationDataAndCustodyBit{
-		Data:       att1.Data,
-		CustodyBit: false,
-	}
-	hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
+	hashTreeRoot, err := ssz.HashTreeRoot(att1.Data)
 	if err != nil {
 		t.Error(err)
 	}
@@ -351,13 +345,9 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte{'B'}},
 			Target: &ethpb.Checkpoint{Epoch: 0}},
-		CustodyBit_0Indices: []uint64{0, 1},
+		AttestingIndices: []uint64{0, 1},
 	}
-	dataAndCustodyBit = &pb.AttestationDataAndCustodyBit{
-		Data:       att2.Data,
-		CustodyBit: false,
-	}
-	hashTreeRoot, err = ssz.HashTreeRoot(dataAndCustodyBit)
+	hashTreeRoot, err = ssz.HashTreeRoot(att2.Data)
 	if err != nil {
 		t.Error(err)
 	}
@@ -381,7 +371,6 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 
 	aggBits := bitfield.NewBitlist(1)
 	aggBits.SetBitAt(0, true)
-	custodyBits := bitfield.NewBitlist(1)
 	blockAtt := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Slot:   beaconState.Slot - 1,
@@ -391,17 +380,12 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 				Root:  []byte("hello-world"),
 			}},
 		AggregationBits: aggBits,
-		CustodyBits:     custodyBits,
 	}
 	attestingIndices, err := helpers.AttestingIndices(beaconState, blockAtt.Data, blockAtt.AggregationBits)
 	if err != nil {
 		t.Error(err)
 	}
-	dataAndCustodyBit = &pb.AttestationDataAndCustodyBit{
-		Data:       blockAtt.Data,
-		CustodyBit: false,
-	}
-	hashTreeRoot, err = ssz.HashTreeRoot(dataAndCustodyBit)
+	hashTreeRoot, err = ssz.HashTreeRoot(blockAtt.Data)
 	if err != nil {
 		t.Error(err)
 	}
@@ -560,12 +544,12 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	attesterSlashings := []*ethpb.AttesterSlashing{
 		{
 			Attestation_1: &ethpb.IndexedAttestation{
-				Data:                &ethpb.AttestationData{},
-				CustodyBit_0Indices: []uint64{2, 3},
+				Data:             &ethpb.AttestationData{},
+				AttestingIndices: []uint64{2, 3},
 			},
 			Attestation_2: &ethpb.IndexedAttestation{
-				Data:                &ethpb.AttestationData{},
-				CustodyBit_0Indices: []uint64{2, 3},
+				Data:             &ethpb.AttestationData{},
+				AttestingIndices: []uint64{2, 3},
 			},
 		},
 	}
@@ -617,7 +601,6 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 				Source: &ethpb.Checkpoint{Root: []byte("hello-world")}},
 			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0,
 				0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0xC0, 0x01},
-			CustodyBits: bitfield.NewBitlist(0),
 		}
 	}
 
@@ -666,7 +649,6 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 
 	bitCount := validatorCount / params.BeaconConfig().SlotsPerEpoch
 	aggBits := bitfield.NewBitlist(bitCount)
-	custodyBits := bitfield.NewBitlist(bitCount)
 	for i := uint64(1); i < bitCount; i++ {
 		aggBits.SetBitAt(i, true)
 	}
@@ -678,21 +660,15 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 				Source: &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
 				Target: &ethpb.Checkpoint{Epoch: 0}},
 			AggregationBits: aggBits,
-			CustodyBits:     custodyBits,
 		}
 		attestingIndices, err := helpers.AttestingIndices(s, att.Data, att.AggregationBits)
 		if err != nil {
 			t.Error(err)
 		}
-		dataAndCustodyBit := &pb.AttestationDataAndCustodyBit{
-			Data:       att.Data,
-			CustodyBit: false,
-		}
-
 		domain := helpers.Domain(s.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 		sigs := make([]*bls.Signature, len(attestingIndices))
 		for i, indice := range attestingIndices {
-			hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
+			hashTreeRoot, err := ssz.HashTreeRoot(att.Data)
 			if err != nil {
 				t.Error(err)
 			}

@@ -146,8 +146,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "5c5b65a961b5e7251435efc9548648b45142a07993ad3e100850c240cb76e9af",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.9.0/general.tar.gz",
+    sha256 = "069880d4864e303ad8fca0ecbe61a1e0f2174a7935bbd22bfdfdd7cad34ae9cd",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.9.2/general.tar.gz",
 )
 
 http_archive(
@@ -162,8 +162,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "3b5f0168af4331d09da52bebc26609def9d11be3e6c784ce7c3df3596617808d",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.9.0/minimal.tar.gz",
+    sha256 = "e71a8b5bef94bba04b8897101a3eb76f2c6de14295eb8b23261b570b3ba1e485",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.9.2/minimal.tar.gz",
 )
 
 http_archive(
@@ -178,8 +178,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "f3ff68508dfe9696f23506daf0ca895cda955e30398741e00cffa33a01b0565c",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.9.0/mainnet.tar.gz",
+    sha256 = "32c8921bdd469b7de99b8f4d3128e8fbb7da7212fd4aaecec69be42f7ed5493a",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.9.2/mainnet.tar.gz",
 )
 
 http_archive(
@@ -1249,7 +1249,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_ethereumapis",
-    commit = "5f21afe48ab14bd0d5311cf5d33853a3e23d2fda",
+    commit = "75e46ab40e0a88c3d8238e8746a95ef20d726c34",
     importpath = "github.com/prysmaticlabs/ethereumapis",
     patch_args = ["-p1"],
     patches = [
