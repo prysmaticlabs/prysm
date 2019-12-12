@@ -26,7 +26,7 @@ var (
 		Name:  "beacon-tls-cert",
 		Usage: "Certificate for secure beacon gRPC connection. Pass this in order to use beacon gRPC securely.",
 	}
-	// BeaconProvider defines a flag for the beacon host ip or address.
+	// BeaconRPCProviderFlag defines a flag for the beacon host ip or address.
 	BeaconRPCProviderFlag = cli.StringFlag{
 		Name:  "beacon-rpc-provider",
 		Usage: "Beacon node RPC provider endpoint",
