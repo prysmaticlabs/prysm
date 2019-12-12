@@ -12,6 +12,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -51,6 +52,19 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		return
 	}
 
+	history, err := v.db.ProposalHistory(pubKey[:])
+	if err != nil {
+		log.WithError(err).Error("Failed to get proposal history")
+		return
+	}
+
+	if db.HasProposedForEpoch(history, epoch) {
+		log.Info("Tried to sign a double proposal, rejected")
+		return
+	}
+
+	log.WithField("epoch", epoch).Info("Validator has not proposed for this epoch")
+
 	// Sign returned block from beacon node
 	sig, err := v.signBlock(ctx, pubKey, epoch, b)
 	if err != nil {
@@ -58,6 +72,12 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		return
 	}
 	b.Signature = sig
+
+	db.SetProposedForEpoch(history, epoch)
+	if err := v.db.SaveProposalHistory(pubKey[:], history); err != nil {
+		log.WithError(err).Error("Failed to save updated proposal history")
+		return
+	}
 
 	// Propose and broadcast block via beacon node
 	blkResp, err := v.proposerClient.ProposeBlock(ctx, b)

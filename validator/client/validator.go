@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -26,6 +27,7 @@ import (
 type validator struct {
 	genesisTime          uint64
 	ticker               *slotutil.SlotTicker
+	db                   *db.Store
 	assignments          *pb.AssignmentResponse
 	proposerClient       pb.ProposerServiceClient
 	validatorClient      pb.ValidatorServiceClient

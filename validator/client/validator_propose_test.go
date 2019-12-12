@@ -7,8 +7,12 @@ import (
 
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-bitfield"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/internal"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -21,6 +25,7 @@ type mocks struct {
 }
 
 func setup(t *testing.T) (*validator, *mocks, func()) {
+	db := db.SetupDB(t, pubKeysFromMap(keyMap))
 	ctrl := gomock.NewController(t)
 	m := &mocks{
 		proposerClient:   internal.NewMockProposerServiceClient(ctrl),
@@ -29,6 +34,7 @@ func setup(t *testing.T) (*validator, *mocks, func()) {
 		aggregatorClient: internal.NewMockAggregatorServiceClient(ctrl),
 	}
 	validator := &validator{
+		db:               db,
 		proposerClient:   m.proposerClient,
 		attesterClient:   m.attesterClient,
 		validatorClient:  m.validatorClient,
@@ -110,6 +116,46 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 
 	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
 	testutil.AssertLogsContain(t, hook, "Failed to propose block")
+}
+
+func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
+	hook := logTest.NewGlobal()
+	validator, m, finish := setup(t)
+	defer finish()
+
+	history := &slashpb.ProposalHistory{
+		EpochBits:          bitfield.NewBitlist(params.BeaconConfig().WeakSubjectivityPeriod),
+		LatestEpochWritten: 0,
+	}
+	if err := validator.db.SaveProposalHistory(validatorPubKey[:], history); err != nil {
+		t.Fatal(err)
+	}
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), //epoch
+	).Times(2).Return(&ethpb.DomainResponse{}, nil /*err*/)
+
+	m.proposerClient.EXPECT().RequestBlock(
+		gomock.Any(), // ctx
+		gomock.Any(),
+	).Times(2).Return(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}, nil /*err*/)
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), //epoch
+	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+
+	m.proposerClient.EXPECT().ProposeBlock(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&ethpb.BeaconBlock{}),
+	).Return(&pb.ProposeResponse{}, nil /*error*/)
+
+	validator.ProposeBlock(context.Background(), params.BeaconConfig().SlotsPerEpoch*5+2, validatorPubKey)
+	testutil.AssertLogsDoNotContain(t, hook, "Tried to sign a double proposal")
+
+	validator.ProposeBlock(context.Background(), params.BeaconConfig().SlotsPerEpoch*5+2, validatorPubKey)
+	testutil.AssertLogsContain(t, hook, "Tried to sign a double proposal")
 }
 
 func TestProposeBlock_BroadcastsBlock(t *testing.T) {
