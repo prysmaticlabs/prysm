@@ -37,7 +37,6 @@ func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 }
 
 func TestExecuteStateTransition_FullProcess(t *testing.T) {
-
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
 	eth1Data := &ethpb.Eth1Data{
@@ -178,7 +177,6 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
-
 	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
 
 	proposerSlashings := []*ethpb.ProposerSlashing{

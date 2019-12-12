@@ -411,7 +411,6 @@ func TestProcessSlashings_SlashedLess(t *testing.T) {
 
 	for i, tt := range tests {
 		t.Run(string(i), func(t *testing.T) {
-
 			original := proto.Clone(tt.state)
 			newState, err := ProcessSlashings(tt.state)
 			if err != nil {
