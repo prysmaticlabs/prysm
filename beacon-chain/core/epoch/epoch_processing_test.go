@@ -309,7 +309,6 @@ func TestBaseReward_AccurateRewards(t *testing.T) {
 		{40 * 1e9, params.BeaconConfig().MaxEffectiveBalance, 2862174},
 	}
 	for _, tt := range tests {
-
 		state := &pb.BeaconState{
 			Validators: []*ethpb.Validator{
 				{ExitEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: tt.b}},

@@ -1194,7 +1194,6 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-
 		attestation.AggregationBits = tt.aggregationBitfield
 		attestation.CustodyBits = tt.custodyBitfield
 		wanted := &ethpb.IndexedAttestation{
