@@ -29,22 +29,17 @@ func startSlasher(ctx *cli.Context) error {
 	port := ctx.GlobalInt(flags.RPCPort.Name)
 	cert := ctx.GlobalString(flags.CertFlag.Name)
 	key := ctx.GlobalString(flags.KeyFlag.Name)
-	beaconCert := ctx.GlobalString(flags.BeaconCert.Name)
-	beaconPort := ctx.GlobalInt(flags.BeaconPort.Name)
-	beaconProvider := ctx.GlobalString(flags.BeaconProvider.Name)
+	beaconCert := ctx.GlobalString(flags.BeaconCertFlag.Name)
+	beaconProvider := ctx.GlobalString(flags.BeaconRPCProviderFlag.Name)
 	if beaconProvider == "" {
-		beaconProvider = flags.BeaconProvider.Value
-	}
-	if beaconPort == 0 {
-		beaconPort = flags.BeaconPort.Value
+		beaconProvider = flags.BeaconRPCProviderFlag.Value
 	}
 	cfg := service.Config{
-		Port:       port,
-		CertFlag:   cert,
-		KeyFlag:    key,
-		BeaconCert: beaconCert,
-		BeaconPort: beaconPort,
-		BeaconHost: beaconProvider,
+		Port:           port,
+		CertFlag:       cert,
+		KeyFlag:        key,
+		BeaconCert:     beaconCert,
+		BeaconProvider: beaconProvider,
 	}
 	slasher, err := service.NewRPCService(&cfg, ctx)
 	if err != nil {
