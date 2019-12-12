@@ -239,6 +239,7 @@ func archivedProposerIndex(activeIndices []uint64, activeBalances []uint64, seed
 		if err != nil {
 			return 0, err
 		}
+		candidateIndex = activeIndices[candidateIndex]
 		b := append(seed[:], bytesutil.Bytes8(i/32)...)
 		randomByte := hashutil.Hash(b)[i%32]
 		effectiveBalance := activeBalances[candidateIndex]
