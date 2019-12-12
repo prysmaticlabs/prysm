@@ -107,7 +107,6 @@ func TestUnslashedAttestingIndices_DuplicatedAttestations(t *testing.T) {
 }
 
 func TestAttestingBalance_CorrectBalance(t *testing.T) {
-
 	// Generate 2 attestations.
 	atts := make([]*pb.PendingAttestation, 2)
 	for i := 0; i < len(atts); i++ {

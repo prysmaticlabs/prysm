@@ -1274,7 +1274,6 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-
 		attDataAndCustodyBit := &pb.AttestationDataAndCustodyBit{
 			Data:       tt.attestation.Data,
 			CustodyBit: false,
