@@ -3,7 +3,6 @@ package helpers
 import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -11,8 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
-
-var activeCountCache = cache.NewActiveCountCache()
 
 // IsActiveValidator returns the boolean value on whether the validator
 // is active or not.
@@ -83,26 +80,11 @@ func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) ([]uint64, erro
 // ActiveValidatorCount returns the number of active validators in the state
 // at the given epoch.
 func ActiveValidatorCount(state *pb.BeaconState, epoch uint64) (uint64, error) {
-	count, err := activeCountCache.ActiveCountInEpoch(epoch)
-	if err != nil {
-		return 0, errors.Wrap(err, "could not retrieve active count from cache")
-	}
-	if count != params.BeaconConfig().FarFutureEpoch {
-		return count, nil
-	}
-
-	count = 0
+	count := uint64(0)
 	for _, v := range state.Validators {
 		if IsActiveValidator(v, epoch) {
 			count++
 		}
-	}
-
-	if err := activeCountCache.AddActiveCount(&cache.ActiveCountByEpoch{
-		Epoch:       epoch,
-		ActiveCount: count,
-	}); err != nil {
-		return 0, errors.Wrap(err, "could not save active count for cache")
 	}
 
 	return count, nil
