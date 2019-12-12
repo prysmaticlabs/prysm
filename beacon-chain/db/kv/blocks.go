@@ -318,6 +318,24 @@ func (k *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	})
 }
 
+// GenesisBlock retrieves the genesis block of the beacon chain.
+func (k *Store) GenesisBlock(ctx context.Context) (*ethpb.BeaconBlock, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.GenesisBlock")
+	defer span.End()
+	var block *ethpb.BeaconBlock
+	err := k.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blocksBucket)
+		root := bkt.Get(genesisBlockRootKey)
+		enc := bkt.Get(root)
+		if enc == nil {
+			return nil
+		}
+		block = &ethpb.BeaconBlock{}
+		return decode(enc, block)
+	})
+	return block, err
+}
+
 // SaveGenesisBlockRoot to the db.
 func (k *Store) SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveGenesisBlockRoot")
