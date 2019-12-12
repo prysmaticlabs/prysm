@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"github.com/terencechain/prysm-phase2/beacon-chain/core/helpers"
 )
 
 var committeeCache = cache.NewCommitteeCache()
@@ -64,7 +63,7 @@ func CommitteeCountAtSlot(state *pb.BeaconState, slot uint64) (uint64, error) {
 func BeaconCommittee(state *pb.BeaconState, slot uint64, index uint64) ([]uint64, error) {
 	epoch := SlotToEpoch(slot)
 	if featureconfig.Get().EnableNewCache {
-		seed, err := Seed(state, helpers.SlotToEpoch(slot), params.BeaconConfig().DomainBeaconAttester)
+		seed, err := Seed(state, SlotToEpoch(slot), params.BeaconConfig().DomainBeaconAttester)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get seed")
 		}
@@ -305,7 +304,7 @@ func UpdateCommitteeCache(state *pb.BeaconState) error {
 		if err != nil {
 			return err
 		}
-		seed, err := Seed(state, helpers.SlotToEpoch(state.Slot), params.BeaconConfig().DomainBeaconAttester)
+		seed, err := Seed(state, SlotToEpoch(state.Slot), params.BeaconConfig().DomainBeaconAttester)
 		if err != nil {
 			return err
 		}
