@@ -18,8 +18,9 @@ var (
 	// a Committee struct.
 	ErrNotCommittee = errors.New("object is not a committee struct")
 
-	// maxCommitteeSize defines the max number of shuffled indices list can cache.
-	// Due to reorg, good to keep the old cache around for quickly switch over.
+	// maxCommitteeSize defines the max number of shuffled committees one can cache
+	// on per epoch basis.
+	// Due to reorgs, it's good to keep the old cache around for quickly switch over.
 	maxCommitteeSize = 10
 
 	// CommitteeCacheMiss tracks the number of committee requests that aren't present in the cache.
