@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/signal"
 	"path"
-	"strconv"
 	"sync"
 	"syscall"
 
@@ -42,48 +41,46 @@ func init() {
 
 // Service defining an RPC server for the slasher service.
 type Service struct {
-	slasherDb             *db.Store
-	grpcServer            *grpc.Server
-	port                  int
-	withCert              string
-	withKey               string
-	listener              net.Listener
-	credentialError       error
-	failStatus            error
-	ctx                   *cli.Context
-	lock                  sync.RWMutex
-	stop                  chan struct{} // Channel to wait for termination notifications.
-	context               context.Context
-	beaconConn            *grpc.ClientConn
-	beaconAddress         string
-	beaconCert            string
-	beaconCredentialError error
-	beaconClient          eth.BeaconChainClient
+	slasherDb       *db.Store
+	grpcServer      *grpc.Server
+	port            int
+	withCert        string
+	withKey         string
+	listener        net.Listener
+	credentialError error
+	failStatus      error
+	ctx             *cli.Context
+	lock            sync.RWMutex
+	stop            chan struct{} // Channel to wait for termination notifications.
+	context         context.Context
+	beaconConn      *grpc.ClientConn
+	beaconProvider  string
+	beaconCert      string
+	beaconClient    eth.BeaconChainClient
 }
 
 // Config options for the slasher server.
 type Config struct {
-	Port       int
-	CertFlag   string
-	KeyFlag    string
-	SlasherDb  *db.Store
-	BeaconPort int
-	BeaconHost string
-	BeaconCert string
+	Port           int
+	CertFlag       string
+	KeyFlag        string
+	SlasherDb      *db.Store
+	BeaconProvider string
+	BeaconCert     string
 }
 
 // NewRPCService creates a new instance of a struct implementing the SlasherService
 // interface.
 func NewRPCService(cfg *Config, ctx *cli.Context) (*Service, error) {
 	s := &Service{
-		slasherDb:     cfg.SlasherDb,
-		port:          cfg.Port,
-		withCert:      cfg.CertFlag,
-		withKey:       cfg.KeyFlag,
-		ctx:           ctx,
-		stop:          make(chan struct{}),
-		beaconAddress: cfg.BeaconHost + ":" + strconv.Itoa(cfg.BeaconPort),
-		beaconCert:    cfg.BeaconCert,
+		slasherDb:      cfg.SlasherDb,
+		port:           cfg.Port,
+		withCert:       cfg.CertFlag,
+		withKey:        cfg.KeyFlag,
+		ctx:            ctx,
+		stop:           make(chan struct{}),
+		beaconProvider: cfg.BeaconProvider,
+		beaconCert:     cfg.BeaconCert,
 	}
 	if err := s.startDB(s.ctx); err != nil {
 		return nil, err
@@ -189,7 +186,6 @@ func (s *Service) startBeaconClient() {
 		creds, err := credentials.NewClientTLSFromFile(s.beaconCert, "")
 		if err != nil {
 			log.Errorf("Could not get valid credentials: %v", err)
-			s.beaconCredentialError = err
 		}
 		dialOpt = grpc.WithTransportCredentials(creds)
 	} else {
@@ -208,9 +204,9 @@ func (s *Service) startBeaconClient() {
 			grpc_prometheus.UnaryClientInterceptor,
 		)),
 	}
-	conn, err := grpc.DialContext(s.context, s.beaconAddress, beaconOpts...)
+	conn, err := grpc.DialContext(s.context, s.beaconProvider, beaconOpts...)
 	if err != nil {
-		log.Errorf("Could not dial endpoint: %s, %v", s.beaconAddress, err)
+		log.Errorf("Could not dial endpoint: %s, %v", s.beaconProvider, err)
 		return
 	}
 	log.Info("Successfully started gRPC connection")
