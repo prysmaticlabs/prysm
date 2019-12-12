@@ -11,9 +11,7 @@ import (
 )
 
 func TestBlockSignature(t *testing.T) {
-
 	beaconState, privKeys := DeterministicGenesisState(t, 100)
-
 	block, err := GenerateFullBlock(beaconState, privKeys, nil, 0)
 	if err != nil {
 		t.Fatal(err)

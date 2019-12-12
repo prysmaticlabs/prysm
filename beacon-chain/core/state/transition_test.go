@@ -99,7 +99,6 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
-
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
 	block, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, 1)
