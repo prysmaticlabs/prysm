@@ -14,9 +14,9 @@ import (
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -236,12 +236,11 @@ func TestRoundRobinSync(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			initializeRootCache(tt.expectedBlockSlots, t)
-			peerstatus.Clear()
 
 			p := p2pt.NewTestP2P(t)
 			beaconDB := dbtest.SetupDB(t)
 
-			connectPeers(t, p, tt.peers)
+			connectPeers(t, p, tt.peers, p.Peers())
 			genesisRoot := rootCache[0]
 
 			err := beaconDB.SaveBlock(context.Background(), &eth.BeaconBlock{
@@ -286,7 +285,7 @@ func TestRoundRobinSync(t *testing.T) {
 
 // Connect peers with local host. This method sets up peer statuses and the appropriate handlers
 // for each test peer.
-func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData) {
+func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData, peerStatus *peers.Status) {
 	const topic = "/eth2/beacon_chain/req/beacon_blocks_by_range/1/ssz"
 
 	for _, d := range data {
@@ -352,7 +351,9 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData) {
 
 		peer.Connect(host)
 
-		peerstatus.Set(peer.PeerID(), &p2ppb.Status{
+		peerStatus.Add(peer.PeerID(), nil, network.DirOutbound)
+		peerStatus.SetConnectionState(peer.PeerID(), peers.PeerConnected)
+		peerStatus.SetChainState(peer.PeerID(), &p2ppb.Status{
 			HeadForkVersion: params.BeaconConfig().GenesisForkVersion,
 			FinalizedRoot:   []byte(fmt.Sprintf("finalized_root %d", datum.finalizedEpoch)),
 			FinalizedEpoch:  datum.finalizedEpoch,
@@ -426,15 +427,20 @@ func TestMakeSequence(t *testing.T) {
 }
 
 func TestBestFinalized_returnsMaxValue(t *testing.T) {
-	defer peerstatus.Clear()
+	p := p2pt.NewTestP2P(t)
+	s := &InitialSync{
+		p2p: p,
+	}
 
 	for i := 0; i <= maxPeersToSync+100; i++ {
-		peerstatus.Set(peer.ID(i), &pb.Status{
+		s.p2p.Peers().Add(peer.ID(i), nil, network.DirOutbound)
+		s.p2p.Peers().SetConnectionState(peer.ID(i), peers.PeerConnected)
+		s.p2p.Peers().SetChainState(peer.ID(i), &pb.Status{
 			FinalizedEpoch: 10,
 		})
 	}
 
-	_, _, pids := bestFinalized()
+	_, _, pids := s.bestFinalized()
 	if len(pids) != maxPeersToSync {
 		t.Fatalf("returned wrong number of peers, wanted %d, got %d", maxPeersToSync, len(pids))
 	}
