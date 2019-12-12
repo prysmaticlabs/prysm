@@ -18,9 +18,9 @@ var (
 	// a Committee struct.
 	ErrNotCommittee = errors.New("object is not a committee struct")
 
-	// maxShuffledIndicesSize defines the max number of shuffled indices list can cache.
+	// maxCommitteeSize defines the max number of shuffled indices list can cache.
 	// Due to reorg, good to keep the old cache around for quickly switch over.
-	maxShuffledIndicesSize = 10
+	maxCommitteeSize = 10
 
 	// CommitteeCacheMiss tracks the number of committee requests that aren't present in the cache.
 	CommitteeCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
@@ -99,6 +99,7 @@ func (c *CommitteeCache) ShuffledIndices(slot uint64, seed [32]byte, index uint6
 
 	indexOffSet := index + (slot%params.BeaconConfig().SlotsPerEpoch)*committeeCountPerSlot
 	start, end := startEndIndices(item, indexOffSet)
+
 	return item.Committee[start:end], nil
 }
 
@@ -110,39 +111,13 @@ func (c *CommitteeCache) AddCommitteeShuffledList(committee *Committee) error {
 	}
 	c.lock.Lock()
 	defer c.lock.Unlock()
+
 	if err := c.CommitteeCache.AddIfNotPresent(committee); err != nil {
 		return err
 	}
-	trim(c.CommitteeCache, maxShuffledIndicesSize)
+
+	trim(c.CommitteeCache, maxCommitteeSize)
 	return nil
-}
-
-// CommitteeCountPerSlot returns the number of committees in a given slot as stored in cache.
-func (c *CommitteeCache) CommitteeCountPerSlot(slot uint64, seed [32]byte) (uint64, bool, error) {
-	if !featureconfig.Get().EnableShuffledIndexCache && !featureconfig.Get().EnableNewCache {
-		return 0, false, nil
-	}
-	c.lock.RLock()
-	defer c.lock.RUnlock()
-	epoch := slot / params.BeaconConfig().SlotsPerEpoch
-	obj, exists, err := c.CommitteeCache.GetByKey(key(epoch, seed))
-	if err != nil {
-		return 0, false, err
-	}
-
-	if exists {
-		CommitteeCacheHit.Inc()
-	} else {
-		CommitteeCacheMiss.Inc()
-		return 0, false, nil
-	}
-
-	item, ok := obj.(*Committee)
-	if !ok {
-		return 0, false, ErrNotCommittee
-	}
-
-	return item.CommitteeCount / params.BeaconConfig().SlotsPerEpoch, true, nil
 }
 
 // ActiveIndices returns the active indices of a given epoch stored in cache.

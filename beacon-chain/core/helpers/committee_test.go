@@ -444,7 +444,7 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 	if err := UpdateCommitteeCache(state); err != nil {
 		t.Fatal(err)
 	}
-	savedEpochs, err := committeeCache.Epochs()
+	savedEpochs, err := committeeCache.epochs()
 	if err != nil {
 		t.Fatal(err)
 	}

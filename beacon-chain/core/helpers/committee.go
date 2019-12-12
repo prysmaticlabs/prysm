@@ -304,7 +304,7 @@ func UpdateCommitteeCache(state *pb.BeaconState) error {
 		if err != nil {
 			return err
 		}
-		seed, err := Seed(state, SlotToEpoch(state.Slot), params.BeaconConfig().DomainBeaconAttester)
+		seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 		if err != nil {
 			return err
 		}
