@@ -28,7 +28,6 @@ func init() {
 }
 
 func TestProposeBlock_OK(t *testing.T) {
-	helpers.ClearAllCaches()
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
@@ -77,7 +76,6 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
-	helpers.ClearAllCaches()
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 

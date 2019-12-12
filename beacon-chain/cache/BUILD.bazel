@@ -3,7 +3,6 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "active_count.go",
         "attestation_data.go",
         "checkpoint_state.go",
         "committee.go",
@@ -31,7 +30,6 @@ go_test(
     name = "go_default_test",
     size = "small",
     srcs = [
-        "active_count_test.go",
         "attestation_data_test.go",
         "checkpoint_state_test.go",
         "committee_test.go",
