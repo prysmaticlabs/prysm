@@ -204,6 +204,7 @@ func (s *Service) Start() {
 	}
 
 	startPeerWatcher(s.ctx, s.host, peersToWatch...)
+	startPeerDecay(s.ctx, s.peers)
 	registerMetrics(s)
 	multiAddrs := s.host.Network().ListenAddresses()
 	logIP4Addr(s.host.ID(), multiAddrs...)

@@ -16,6 +16,7 @@ go_library(
         "log.go",
         "monitoring.go",
         "options.go",
+        "peer_decay.go",
         "rpc_topic_mappings.go",
         "sender.go",
         "service.go",

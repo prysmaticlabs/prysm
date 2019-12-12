@@ -303,6 +303,19 @@ func (p *Status) All() []peer.ID {
 	return pids
 }
 
+// Decay reduces the bad responses of all peers, giving reformed peers a chance to join the network.
+// This can be run periodically, although note that each time it runs it does give all bad peers another chance as well to clog up
+// the network with bad responses, so should not be run too frequently; once an hour would be reasonable.
+func (p *Status) Decay() {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	for _, status := range p.status {
+		if status.badResponses > 0 {
+			status.badResponses--
+		}
+	}
+}
+
 // fetch is a helper function that fetches a peer status, possibly creating it.
 func (p *Status) fetch(pid peer.ID) *peerStatus {
 	if _, ok := p.status[pid]; !ok {
