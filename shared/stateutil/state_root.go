@@ -3,7 +3,6 @@ package stateutil
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
@@ -127,7 +126,6 @@ func (h *stateRootHasher) hashTreeRootState(state *pb.BeaconState) ([32]byte, er
 	fieldRoots[11] = balancesRoot[:]
 
 	// RandaoMixes array root.
-	fmt.Println("Randao Mixes")
 	randaoRootsRoot, err := h.arraysRoot(state.RandaoMixes, "RandaoMixes")
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute randao roots merkleization")
@@ -184,7 +182,6 @@ func (h *stateRootHasher) hashTreeRootState(state *pb.BeaconState) ([32]byte, er
 	//for i := 0; i < len(fieldRoots); i++ {
 	//	fmt.Printf("%#x and index %d and name %s\n", bytesutil.Trunc(fieldRoots[i]), i, typ.Field(i).Name)
 	//}
-	fmt.Println(" ")
 
 	root, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {

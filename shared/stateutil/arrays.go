@@ -69,9 +69,9 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 			}
 		}
 		if fieldName == "RandaoMixes" {
-			fmt.Println("Branch Recompute Merkle With Cache")
-			fmt.Printf("Changed indices: %v\n", changedIndices)
-			prettyPrintTree(layersCache[fieldName])
+			//fmt.Println("Branch Recompute Merkle With Cache")
+			//fmt.Printf("Changed indices: %v\n", changedIndices)
+			//prettyPrintTree(layersCache[fieldName])
 		}
 		return rt, nil
 	}
@@ -110,19 +110,19 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][]byte, fieldName string) 
 	hashLayer := leaves
 	layers := make([][][]byte, merkle.GetDepth(uint64(len(leaves)))+1)
 	if fieldName == "RandaoMixes" {
-		fmt.Println("Setting layers to empty")
+		//fmt.Println("Setting layers to empty")
 	}
 	if items, ok := layersCache[fieldName]; ok && h.rootsCache != nil {
 		if len(items[0]) == len(leaves) {
 			layers = items
 			if fieldName == "RandaoMixes" {
-				fmt.Printf("Setting layers to items: %v\n", items)
+				//fmt.Printf("Setting layers to items: %v\n", items)
 			}
 		}
 	}
 	layers[0] = hashLayer
 	if fieldName == "RandaoMixes" {
-		fmt.Printf("Updated first layer: %v\n", layers[0])
+		//fmt.Printf("Updated first layer: %v\n", layers[0])
 	}
 	// We keep track of the hash layers of a Merkle trie until we reach
 	// the top layer of length 1, which contains the single root element.
@@ -145,13 +145,13 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][]byte, fieldName string) 
 	if h.rootsCache != nil {
 		layersCache[fieldName] = layers
 		if fieldName == "RandaoMixes" {
-			fmt.Println("Regular Merkle With Cache")
-			prettyPrintTree(layersCache[fieldName])
+			//fmt.Println("Regular Merkle With Cache")
+			//prettyPrintTree(layersCache[fieldName])
 		}
 	} else {
 		if fieldName == "RandaoMixes" {
-			fmt.Println("Regular Merkle No Cache")
-			prettyPrintTree(layers)
+			//fmt.Println("Regular Merkle No Cache")
+			//prettyPrintTree(layers)
 		}
 	}
 	return root
@@ -197,14 +197,17 @@ func recomputeRoot(idx int, chunks [][]byte, fieldName string) ([32]byte, error)
 		}
 		parentIdx := currentIndex / 2
 		// Update the cached layers at the parent index.
-		fmt.Printf("i+1=%d, numlayers=%d, len(layers+1)=%d, parentidx=%d\n", i+1, len(layers), len(layers[i+1]), parentIdx)
 		if len(layers[i+1]) == 0 {
 			layers[i+1] = append(layers[i+1], root)
+		} else {
+			layers[i+1][parentIdx] = root
 		}
-		layers[i+1][parentIdx] = root
 		currentIndex = parentIdx
 	}
 	layersCache[fieldName] = layers
+	if len(layers[0]) == 1 {
+		return bytesutil.ToBytes32(layers[0][0]), nil
+	}
 	return bytesutil.ToBytes32(root), nil
 }
 
