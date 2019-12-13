@@ -14,3 +14,8 @@ func (s *Sync) Syncing() bool {
 func (s *Sync) Status() error {
 	return nil
 }
+
+// Resync --
+func (s *Sync) Resync() error {
+	return nil
+}

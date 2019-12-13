@@ -142,6 +142,8 @@ func (s *InitialSync) Syncing() bool {
 	return !s.synced
 }
 
+// Resync allows a node to start syncing again if it has fallen
+// behind the current network head.
 func (s *InitialSync) Resync() error {
 	// set it to false since we are syncing again
 	s.synced = false
