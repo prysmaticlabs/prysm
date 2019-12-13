@@ -9,8 +9,8 @@ import (
 	"testing"
 )
 
-// SetupProtectorDB instantiates and returns a ProtectorDB instance.
-func SetupProtectorDB(t testing.TB) *Store {
+// SetupDB instantiates and returns a DB instance for the validator client.
+func SetupDB(t testing.TB) *Store {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	if err != nil {
 		t.Fatalf("Could not generate random file path: %v", err)
@@ -38,8 +38,8 @@ func TempDir() string {
 	return d
 }
 
-// TeardownProtectorDB cleans up a test BeaconDB instance.
-func TeardownProtectorDB(t testing.TB, db *Store) {
+// TeardownDB cleans up a test DB instance.
+func TeardownDB(t testing.TB, db *Store) {
 	if err := db.Close(); err != nil {
 		t.Fatalf("Failed to close database: %v", err)
 	}
