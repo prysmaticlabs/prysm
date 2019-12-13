@@ -3,13 +3,16 @@ package service
 import (
 	"time"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // finalisedChangeUpdater this is a stub for the comming PRs #3133
 // Store validator index to public key map Validate attestation signature.
-func (s *Service) finalisedChangeUpdater() {
+func (s *Service) finalisedChangeUpdater() error {
 	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
 	d := time.Duration(secondsPerSlot) * time.Second
 	tick := time.Tick(d)
@@ -20,7 +23,7 @@ func (s *Service) finalisedChangeUpdater() {
 			ch, err := s.beaconClient.GetChainHead(s.context, &ptypes.Empty{})
 			if err != nil {
 				log.Error(err)
-				break
+				continue
 			}
 			if ch != nil {
 				if ch.FinalizedEpoch > finalizedEpoch {
@@ -29,8 +32,9 @@ func (s *Service) finalisedChangeUpdater() {
 				continue
 			}
 			log.Error("No chain head was returned by beacon chain.")
+		case <-s.context.Done():
+			return status.Error(codes.Canceled, "Stream context canceled")
+
 		}
-
 	}
-
 }
