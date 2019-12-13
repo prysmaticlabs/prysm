@@ -3,25 +3,26 @@ package cache
 import (
 	"reflect"
 	"sort"
+	"strconv"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestCommitteeKeyFn_OK(t *testing.T) {
-	item := &Committee{
-		Epoch:          999,
-		CommitteeCount: 1,
-		Seed:           [32]byte{'A'},
-		Committee:      []uint64{1, 2, 3, 4, 5},
+	item := &Committees{
+		CommitteeCount:  1,
+		Seed:            [32]byte{'A'},
+		ShuffledIndices: []uint64{1, 2, 3, 4, 5},
 	}
 
 	k, err := committeeKeyFn(item)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if k != key(item.Epoch, item.Seed) {
-		t.Errorf("Incorrect hash k: %s, expected %s", k, key(item.Epoch, item.Seed))
+	if k != key(item.Seed) {
+		t.Errorf("Incorrect hash k: %s, expected %s", k, key(item.Seed))
 	}
 }
 
@@ -33,18 +34,17 @@ func TestCommitteeKeyFn_InvalidObj(t *testing.T) {
 }
 
 func TestCommitteeCache_CommitteesByEpoch(t *testing.T) {
-	cache := NewCommitteeCache()
+	cache := NewCommitteesCache()
 
-	item := &Committee{
-		Epoch:          1,
-		Committee:      []uint64{1, 2, 3, 4, 5, 6},
-		Seed:           [32]byte{'A'},
-		CommitteeCount: 3,
+	item := &Committees{
+		ShuffledIndices: []uint64{1, 2, 3, 4, 5, 6},
+		Seed:            [32]byte{'A'},
+		CommitteeCount:  3,
 	}
 
-	slot := uint64(item.Epoch * params.BeaconConfig().SlotsPerEpoch)
+	slot := params.BeaconConfig().SlotsPerEpoch
 	committeeIndex := uint64(1)
-	indices, err := cache.ShuffledIndices(slot, item.Seed, committeeIndex)
+	indices, err := cache.Committee(slot, item.Seed, committeeIndex)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,26 +56,26 @@ func TestCommitteeCache_CommitteesByEpoch(t *testing.T) {
 		t.Fatal(err)
 	}
 	wantedIndex := uint64(0)
-	indices, err = cache.ShuffledIndices(slot, item.Seed, wantedIndex)
+	indices, err = cache.Committee(slot, item.Seed, wantedIndex)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	start, end := startEndIndices(item, wantedIndex)
-	if !reflect.DeepEqual(indices, item.Committee[start:end]) {
+	if !reflect.DeepEqual(indices, item.ShuffledIndices[start:end]) {
 		t.Errorf(
 			"Expected fetched active indices to be %v, got %v",
 			indices,
-			item.Committee[start:end],
+			item.ShuffledIndices[start:end],
 		)
 	}
 }
 
 func TestCommitteeCache_ActiveIndices(t *testing.T) {
-	cache := NewCommitteeCache()
+	cache := NewCommitteesCache()
 
-	item := &Committee{Epoch: 1, Seed: [32]byte{'A'}, Committee: []uint64{1, 2, 3, 4, 5, 6}}
-	indices, err := cache.ActiveIndices(1, item.Seed)
+	item := &Committees{Seed: [32]byte{'A'}, SortedIndices: []uint64{1, 2, 3, 4, 5, 6}}
+	indices, err := cache.ActiveIndices(item.Seed)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,40 +87,41 @@ func TestCommitteeCache_ActiveIndices(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	indices, err = cache.ActiveIndices(1, item.Seed)
+	indices, err = cache.ActiveIndices(item.Seed)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(indices, item.Committee) {
+	if !reflect.DeepEqual(indices, item.SortedIndices) {
 		t.Error("Did not receive correct active indices from cache")
 	}
 }
 
 func TestCommitteeCache_CanRotate(t *testing.T) {
-	cache := NewCommitteeCache()
-	seed := [32]byte{'A'}
+	cache := NewCommitteesCache()
 
 	// Should rotate out all the epochs except 190 to 199
 	for i := 100; i < 200; i++ {
-		item := &Committee{Epoch: uint64(i), Seed: seed}
+		s := []byte(strconv.Itoa(i))
+		item := &Committees{Seed: bytesutil.ToBytes32(s)}
 		if err := cache.AddCommitteeShuffledList(item); err != nil {
 			t.Fatal(err)
 		}
 	}
 
 	k := cache.CommitteeCache.ListKeys()
-	if len(k) != maxCommitteeSize {
-		t.Errorf("wanted: %d, got: %d", maxCommitteeSize, len(k))
+	if len(k) != maxCommitteesSize {
+		t.Errorf("wanted: %d, got: %d", maxCommitteesSize, len(k))
 	}
 
 	sort.Slice(k, func(i, j int) bool {
 		return k[i] < k[j]
 	})
-
-	if k[0] != key(190, seed) {
+	s := bytesutil.ToBytes32([]byte(strconv.Itoa(190)))
+	if k[0] != key(s) {
 		t.Error("incorrect key received for slot 190")
 	}
-	if k[len(k)-1] != key(199, seed) {
+	s = bytesutil.ToBytes32([]byte(strconv.Itoa(199)))
+	if k[len(k)-1] != key(s) {
 		t.Error("incorrect key received for slot 199")
 	}
 }

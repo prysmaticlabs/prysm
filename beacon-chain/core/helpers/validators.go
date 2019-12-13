@@ -62,7 +62,7 @@ func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) ([]uint64, erro
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get seed")
 		}
-		activeIndices, err := committeeCache.ActiveIndices(epoch, seed)
+		activeIndices, err := committeeCache.ActiveIndices(seed)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not interface with committee cache")
 		}

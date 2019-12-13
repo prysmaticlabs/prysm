@@ -3,6 +3,7 @@ package helpers
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -14,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
-var committeeCache = cache.NewCommitteeCache()
+var committeeCache = cache.NewCommitteesCache()
 
 // CommitteeCountAtSlot returns the number of crosslink committees of a slot.
 //
@@ -63,11 +64,12 @@ func CommitteeCountAtSlot(state *pb.BeaconState, slot uint64) (uint64, error) {
 func BeaconCommittee(state *pb.BeaconState, slot uint64, index uint64) ([]uint64, error) {
 	epoch := SlotToEpoch(slot)
 	if featureconfig.Get().EnableNewCache {
-		seed, err := Seed(state, SlotToEpoch(slot), params.BeaconConfig().DomainBeaconAttester)
+		seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get seed")
 		}
-		indices, err := committeeCache.ShuffledIndices(slot, seed, index)
+
+		indices, err := committeeCache.Committee(slot, seed, index)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not interface with committee cache")
 		}
@@ -92,6 +94,11 @@ func BeaconCommittee(state *pb.BeaconState, slot uint64, index uint64) ([]uint64
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get active indices")
 	}
+
+	if err := UpdateCommitteeCache(state); err != nil {
+		return nil, errors.Wrap(err, "could not update committee cache")
+	}
+
 	return ComputeCommittee(indices, seed, epochOffset, count)
 }
 
@@ -127,6 +134,15 @@ func ComputeCommittee(
 			return []uint64{}, errors.Wrapf(err, "could not get shuffled index at index %d", i)
 		}
 		shuffledIndices[i-start] = indices[permutedIndex]
+	}
+
+	shuffledIndices1 := make([]uint64, validatorCount)
+	for i := 0; i < len(shuffledIndices1); i++ {
+		permutedIndex, err := ShuffledIndex(uint64(i), validatorCount, seed)
+		if err != nil {
+			return []uint64{}, errors.Wrapf(err, "could not get shuffled index at index %d", i)
+		}
+		shuffledIndices1[i] = indices[permutedIndex]
 	}
 
 	return shuffledIndices, nil
@@ -265,7 +281,7 @@ func VerifyAttestationBitfieldLengths(bState *pb.BeaconState, att *ethpb.Attesta
 	return nil
 }
 
-// ShuffledIndices uses input beacon state and returns the shuffled indices of the input epoch,
+// Committee uses input beacon state and returns the shuffled indices of the input epoch,
 // the shuffled indices then can be used to break up into committees.
 func ShuffledIndices(state *pb.BeaconState, epoch uint64) ([]uint64, error) {
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
@@ -296,7 +312,7 @@ func ShuffledIndices(state *pb.BeaconState, epoch uint64) ([]uint64, error) {
 func UpdateCommitteeCache(state *pb.BeaconState) error {
 	currentEpoch := CurrentEpoch(state)
 	for _, epoch := range []uint64{currentEpoch, currentEpoch + 1} {
-		committees, err := ShuffledIndices(state, epoch)
+		shuffledIndices, err := ShuffledIndices(state, epoch)
 		if err != nil {
 			return err
 		}
@@ -309,14 +325,24 @@ func UpdateCommitteeCache(state *pb.BeaconState) error {
 			return err
 		}
 
-		if err := committeeCache.AddCommitteeShuffledList(&cache.Committee{
-			Epoch:          epoch,
-			Committee:      committees,
-			CommitteeCount: count * params.BeaconConfig().SlotsPerEpoch,
-			Seed:           seed,
+		// Store the sorted indices as well as shuffled indices. In current spec,
+		// sorted indices is required to retrieve proposer index. This is also
+		// used for failing verify signature fallback.
+		sortedIndices := make([]uint64, len(shuffledIndices))
+		copy(sortedIndices, shuffledIndices)
+		sort.Slice(sortedIndices, func(i, j int) bool {
+			return sortedIndices[i] < sortedIndices[j]
+		})
+
+		if err := committeeCache.AddCommitteeShuffledList(&cache.Committees{
+			ShuffledIndices: shuffledIndices,
+			CommitteeCount:  count * params.BeaconConfig().SlotsPerEpoch,
+			Seed:            seed,
+			SortedIndices:   sortedIndices,
 		}); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }

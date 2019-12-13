@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/prysmaticlabs/go-bitfield"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-bitfield"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -451,7 +451,7 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	indices, err = committeeCache.ShuffledIndices(StartSlot(epoch), seed, idx)
+	indices, err = committeeCache.Committee(StartSlot(epoch), seed, idx)
 	if err != nil {
 		t.Fatal(err)
 	}

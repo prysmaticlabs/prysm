@@ -173,7 +173,24 @@ func (s *Store) verifyAttestation(ctx context.Context, baseState *pb.BeaconState
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert attestation to indexed attestation")
 	}
+
 	if err := blocks.VerifyIndexedAttestation(ctx, baseState, indexedAtt); err != nil {
+
+		// TODO(3603): Delete the following signature verify fallback when issue 3603 closes.
+		// When signature fails to verify with committee cache enabled at run time,
+		// the following re-runs the same signature verify routine without cache in play.
+		// This provides extra assurance that committee cache can't break run time.
+		if err == blocks.ErrSigFailedToVerify {
+			indexedAtt, err = convertToIndexed(ctx, baseState, a)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not convert attestation to indexed attestation without cache")
+			}
+			if err := blocks.VerifyIndexedAttestation(ctx, baseState, indexedAtt); err != nil {
+				return nil, errors.Wrap(err, "could not verify indexed attestation without cache")
+			}
+			return indexedAtt, nil
+		}
+
 		return nil, errors.Wrap(err, "could not verify indexed attestation")
 	}
 	return indexedAtt, nil

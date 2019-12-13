@@ -812,6 +812,7 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *pb.BeaconState, 
 	hasVotes := len(custodyBit0Indices) > 0 || len(custodyBit1Indices) > 0
 
 	if hasVotes && !sig.VerifyAggregate(pubkeys, msgs, domain) {
+		fmt.Println()
 		return ErrSigFailedToVerify
 	}
 	return nil
