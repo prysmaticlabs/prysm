@@ -281,7 +281,7 @@ func VerifyAttestationBitfieldLengths(bState *pb.BeaconState, att *ethpb.Attesta
 	return nil
 }
 
-// Committee uses input beacon state and returns the shuffled indices of the input epoch,
+// ShuffledIndices uses input beacon state and returns the shuffled indices of the input epoch,
 // the shuffled indices then can be used to break up into committees.
 func ShuffledIndices(state *pb.BeaconState, epoch uint64) ([]uint64, error) {
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
