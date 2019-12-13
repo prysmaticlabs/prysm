@@ -185,8 +185,6 @@ func recomputeRoot(idx int, chunks [][]byte, fieldName string) ([32]byte, error)
 	layers := items
 	root := chunks[idx]
 	//fmt.Printf("Recomputing index %d\n", idx)
-	// TODO: Even though we set the 0th layer to chunks, the 1st layer might not change yet.
-	// We have an off-by-one in changed indices that we need to amend.
 	layers[0] = chunks
 	//fmt.Printf("Set index %d to %#x\n", idx, bytesutil.Trunc(root))
 	// The merkle tree structure looks as follows:
