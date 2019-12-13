@@ -37,9 +37,10 @@ func TestRegularSyncBeaconBlockSubscriber_FilterByFinalizedEpoch(t *testing.T) {
 	r := &RegularSync{
 		db:    db,
 		chain: &mock.ChainService{State: s},
+		attPool: attestations.NewPool(),
 	}
 
-	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: parentRoot[:]}
+	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: parentRoot[:], Body: &ethpb.BeaconBlockBody{}}
 	if err := r.beaconBlockSubscriber(context.Background(), b); err != nil {
 		t.Fatal(err)
 	}
