@@ -3,11 +3,17 @@ package service
 import (
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	ptypes "github.com/gogo/protobuf/types"
 )
 
+// finalisedChangeUpdater this is a stub for the comming PRs #3133
+// Store validator index to public key map Validate attestation signature.
 func (s *Service) finalisedChangeUpdater() {
-	tick := time.Tick(2000 * time.Millisecond)
+	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
+	d := time.Duration(secondsPerSlot) * time.Second
+	tick := time.Tick(d)
 	var finalizedEpoch uint64
 	for {
 		select {
@@ -19,11 +25,11 @@ func (s *Service) finalisedChangeUpdater() {
 			}
 			if ch != nil {
 				if ch.FinalizedEpoch > finalizedEpoch {
-					log.Infof("Finalized epoch %v", ch.FinalizedEpoch)
+					log.Infof("Finalized epoch %d", ch.FinalizedEpoch)
 				}
 				continue
 			}
-			log.Info("No chain head was returned by beacon chain.")
+			log.Error("No chain head was returned by beacon chain.")
 		}
 
 	}
