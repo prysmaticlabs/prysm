@@ -19,6 +19,14 @@ type Store struct {
 	databasePath string
 }
 
+// ValidatorProposalHistory defines the structure for recording a validators historical proposals.
+// Using a bitlist and an uint64 to mark the "starting epoch" of the bitlist, we can easily store
+// which epochs a validator has proposed a block for.
+type ValidatorProposalHistory struct {
+	ProposalHistory []byte
+	EpochAtFirstBit uint64
+}
+
 // Close closes the underlying boltdb database.
 func (db *Store) Close() error {
 	return db.db.Close()
