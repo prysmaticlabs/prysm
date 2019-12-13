@@ -6,6 +6,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/shared/runutil"
 )
 
 var (
@@ -30,20 +31,14 @@ func registerMetrics(s *Service) {
 	}
 
 	// Metrics with labels, polled every 10s.
-	go func() {
-		for {
-			updateP2PTopicPeerCount(s)
-
-			time.Sleep(10 * time.Second)
-		}
-	}()
+	runutil.RunEvery(s.ctx, time.Duration(10*time.Second), s.updateP2PTopicPeerCount)
 }
 
 func peerCount(h host.Host) int {
 	return len(h.Network().Peers())
 }
 
-func updateP2PTopicPeerCount(s *Service) {
+func (s *Service) updateP2PTopicPeerCount() {
 	for topic := range GossipTopicMappings {
 		topic += s.Encoding().ProtocolSuffix()
 		p2pTopicPeerCount.WithLabelValues(topic).Set(float64(len(s.pubsub.ListPeers(topic))))
