@@ -22,7 +22,7 @@ func (p *AttCaches) SaveForkchoiceAttestation(att *ethpb.Attestation) error {
 }
 
 // ForkchoiceAttestation returns the forkchoice attestations in cache.
-func (p *AttCaches) ForkchoiceAttestation() []*ethpb.Attestation {
+func (p *AttCaches) ForkchoiceAttestations() []*ethpb.Attestation {
 	atts := make([]*ethpb.Attestation, 0, p.forkchoiceAtt.ItemCount())
 	for s, i := range p.forkchoiceAtt.Items() {
 		// Type assertion for the worst case. This shouldn't happen.
