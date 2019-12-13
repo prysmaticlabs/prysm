@@ -622,6 +622,10 @@ func ProcessAttestationNoVerify(ctx context.Context, beaconState *pb.BeaconState
 
 // ConvertToIndexed converts attestation to (almost) indexed-verifiable form.
 //
+// Note about spec pseudocode definition. The state was used by get_attesting_indices to determine
+// the attestation committee. Now that we provide this as an argument, we no longer need to provide
+// a state.
+//
 // Spec pseudocode definition:
 //   def get_indexed_attestation(state: BeaconState, attestation: Attestation) -> IndexedAttestation:
 //    """
@@ -638,7 +642,7 @@ func ProcessAttestationNoVerify(ctx context.Context, beaconState *pb.BeaconState
 //        data=attestation.data,
 //        signature=attestation.signature,
 //    )
-func ConvertToIndexed(ctx context.Context, state *pb.BeaconState, attestation *ethpb.Attestation, committee []uint64) (*ethpb.IndexedAttestation, error) {
+func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, committee []uint64) (*ethpb.IndexedAttestation, error) {
 	ctx, span := trace.StartSpan(ctx, "core.ConvertToIndexed")
 	defer span.End()
 
@@ -824,7 +828,7 @@ func VerifyAttestation(ctx context.Context, beaconState *pb.BeaconState, att *et
 	if err != nil {
 		return err
 	}
-	indexedAtt, err := ConvertToIndexed(ctx, beaconState, att, committee)
+	indexedAtt, err := ConvertToIndexed(ctx, att, committee)
 	if err != nil {
 		return errors.Wrap(err, "could not convert to indexed attestation")
 	}

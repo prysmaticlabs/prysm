@@ -1227,7 +1227,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		ia, err := blocks.ConvertToIndexed(context.Background(), state, attestation, committee)
+		ia, err := blocks.ConvertToIndexed(context.Background(), attestation, committee)
 		if err != nil {
 			t.Errorf("failed to convert attestation to indexed attestation: %v", err)
 		}

@@ -320,7 +320,7 @@ func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attes
 	if err != nil {
 		return err
 	}
-	indexedAtt, err := blocks.ConvertToIndexed(ctx, baseState, att, committee)
+	indexedAtt, err := blocks.ConvertToIndexed(ctx, att, committee)
 	if err != nil {
 		return errors.Wrap(err, "could not convert attestation to indexed attestation")
 	}
