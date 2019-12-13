@@ -3,9 +3,8 @@ package service
 import (
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
-
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // finalisedChangeUpdater this is a stub for the comming PRs #3133
