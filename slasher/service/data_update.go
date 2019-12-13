@@ -23,7 +23,7 @@ func (s *Service) validatorUpdater() {
 				}
 				continue
 			}
-			break
+			log.Info("No chain head was returned by beacon chain.")
 		}
 
 	}
