@@ -103,14 +103,14 @@ func (c *CommitteeCache) Committee(slot uint64, seed [32]byte, index uint64) ([]
 
 // AddCommitteeShuffledList adds Committee shuffled list object to the cache. T
 // his method also trims the least recently list if the cache size has ready the max cache size limit.
-func (c *CommitteeCache) AddCommitteeShuffledList(committee *Committees) error {
+func (c *CommitteeCache) AddCommitteeShuffledList(committees *Committees) error {
 	if !featureconfig.Get().EnableShuffledIndexCache && !featureconfig.Get().EnableNewCache {
 		return nil
 	}
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	if err := c.CommitteeCache.AddIfNotPresent(committee); err != nil {
+	if err := c.CommitteeCache.AddIfNotPresent(committees); err != nil {
 		return err
 	}
 

@@ -59,7 +59,7 @@ var (
 	})
 	sigFailsToVerify = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "att_signature_failed_to_verify",
-		Help: "Number of attestation signature failed to verify",
+		Help: "Number of attestation signatures that failed to verify",
 	})
 )
 
