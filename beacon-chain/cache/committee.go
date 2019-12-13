@@ -19,7 +19,7 @@ var (
 
 	// maxCommitteesSize defines the max number of shuffled committees on per randao basis can cache.
 	// Due to reorgs, it's good to keep the old cache around for quickly switch over.
-	maxCommitteesSize = 10
+	maxCommitteesCacheSize = 10
 
 	// CommitteeCacheMiss tracks the number of committee requests that aren't present in the cache.
 	CommitteeCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
