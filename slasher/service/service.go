@@ -57,6 +57,7 @@ type Service struct {
 	beaconProvider  string
 	beaconCert      string
 	beaconClient    eth.BeaconChainClient
+	started         bool
 }
 
 // Config options for the slasher server.
@@ -118,7 +119,7 @@ func (s *Service) Start() {
 		}
 		panic("Panic closing the hash slinging slasher node")
 	}()
-
+	s.started = true
 	// Wait for stop channel to be closed.
 	<-stop
 
@@ -227,24 +228,28 @@ func (s *Service) Stop() error {
 func (s *Service) Close() {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-
 	log.Info("Stopping hash slinging slasher")
-	s.Stop()
+	err := s.Stop()
+	if err != nil {
+		log.Panicf("Could not stop the slasher service: %v", err)
+	}
 	if err := s.slasherDb.Close(); err != nil {
 		log.Errorf("Failed to close slasher database: %v", err)
 	}
+	s.context.Done()
 	close(s.stop)
 }
 
 // Status returns nil, credentialError or fail status.
-func (s *Service) Status() error {
+func (s *Service) Status() (bool, error) {
 	if s.credentialError != nil {
-		return s.credentialError
+		return false, s.credentialError
 	}
 	if s.failStatus != nil {
-		return s.failStatus
+		return false, s.failStatus
 	}
-	return nil
+	return s.started, nil
+
 }
 
 func (s *Service) startDB(ctx *cli.Context) error {

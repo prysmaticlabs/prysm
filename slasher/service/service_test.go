@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"testing"
+	"time"
 
 	"github.com/urfave/cli"
 
@@ -25,19 +26,15 @@ func TestLifecycle_OK(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	context := cli.NewContext(app, set, nil)
 	rpcService, err := NewRPCService(&Config{
-		Port:     7348,
-		CertFlag: "alice.crt",
-		KeyFlag:  "alice.key",
+		Port: 7348,
 	}, context)
 	if err != nil {
 		t.Error("gRPC Service fail to initialize:", err)
 	}
-	rpcService.Start()
-
+	waitForStarted(rpcService, t)
+	rpcService.Close()
 	testutil.AssertLogsContain(t, hook, "Starting service")
 	testutil.AssertLogsContain(t, hook, "Listening on port")
-
-	rpcService.Close()
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 
 }
@@ -57,7 +54,7 @@ func TestRPC_BadEndpoint(t *testing.T) {
 	testutil.AssertLogsDoNotContain(t, hook, "Could not load TLS keys")
 	testutil.AssertLogsDoNotContain(t, hook, "Could not serve gRPC")
 
-	rpcService.Start()
+	waitForStarted(rpcService, t)
 
 	testutil.AssertLogsContain(t, hook, "Starting service")
 	testutil.AssertLogsContain(t, hook, "Could not listen to port in Start()")
@@ -69,8 +66,8 @@ func TestStatus_CredentialError(t *testing.T) {
 	credentialErr := errors.New("credentialError")
 	s := &Service{credentialError: credentialErr}
 
-	if err := s.Status(); err != s.credentialError {
-		t.Errorf("Wanted: %v, got: %v", s.credentialError, s.Status())
+	if _, err := s.Status(); err != s.credentialError {
+		t.Errorf("Wanted: %v, got: %v", s.credentialError, err)
 	}
 }
 
@@ -85,7 +82,7 @@ func TestRPC_InsecureEndpoint(t *testing.T) {
 	if err != nil {
 		t.Error("gRPC Service fail to initialize:", err)
 	}
-	rpcService.Start()
+	waitForStarted(rpcService, t)
 
 	testutil.AssertLogsContain(t, hook, "Starting service")
 	testutil.AssertLogsContain(t, hook, fmt.Sprint("Listening on port"))
@@ -93,4 +90,20 @@ func TestRPC_InsecureEndpoint(t *testing.T) {
 
 	rpcService.Close()
 	testutil.AssertLogsContain(t, hook, "Stopping service")
+}
+
+func waitForStarted(rpcService *Service, t *testing.T) {
+	go rpcService.Start()
+	tick := time.Tick(100 * time.Millisecond)
+	for {
+		<-tick
+		s, err := rpcService.Status()
+		if err != nil {
+			t.Fatal(err)
+			break
+		}
+		if s {
+			break
+		}
+	}
 }
