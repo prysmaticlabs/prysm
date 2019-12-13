@@ -120,11 +120,7 @@ func (s *Service) Start() {
 	}()
 
 	// Wait for stop channel to be closed.
-	select {
-	case <-stop:
-		return
-	default:
-	}
+	<-stop
 
 }
 
@@ -190,7 +186,7 @@ func (s *Service) startBeaconClient() {
 		dialOpt = grpc.WithTransportCredentials(creds)
 	} else {
 		dialOpt = grpc.WithInsecure()
-		log.Warn("You are using an insecure gRPC connection! Please provide a certificate and key to use a secure connection.")
+		log.Warn("You are using an insecure gRPC connection to beacon chain! Please provide a certificate and key to use a secure connection.")
 	}
 	beaconOpts := []grpc.DialOption{
 		dialOpt,
