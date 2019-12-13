@@ -8,6 +8,7 @@ go_library(
         "beacon_chain_service_mock.go",
         "beacon_node_validator_service_mock.go",
         "node_mock.go",
+        "validator_service_mock.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/internal",
     visibility = ["//validator:__subpackages__"],
