@@ -69,7 +69,7 @@ type Config struct {
 // be registered into a running beacon node.
 func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	store := forkchoice.NewForkChoiceService(ctx, cfg.BeaconDB, cfg.SlasherClient)
+	store := forkchoice.NewForkChoiceService(ctx, cfg.BeaconDB)
 	return &Service{
 		ctx:               ctx,
 		cancel:            cancel,
