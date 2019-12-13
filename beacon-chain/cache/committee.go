@@ -17,7 +17,7 @@ var (
 	// a Committee struct.
 	ErrNotCommittee = errors.New("object is not a committee struct")
 
-	// maxCommitteesSize defines the max number of shuffled committees on per randao basis can cache.
+	// maxCommitteesCacheSize defines the max number of shuffled committees on per randao basis can cache.
 	// Due to reorgs, it's good to keep the old cache around for quickly switch over.
 	maxCommitteesCacheSize = 10
 
@@ -114,7 +114,7 @@ func (c *CommitteeCache) AddCommitteeShuffledList(committee *Committees) error {
 		return err
 	}
 
-	trim(c.CommitteeCache, maxCommitteesSize)
+	trim(c.CommitteeCache, maxCommitteesCacheSize)
 	return nil
 }
 

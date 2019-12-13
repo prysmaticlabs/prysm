@@ -109,8 +109,8 @@ func TestCommitteeCache_CanRotate(t *testing.T) {
 	}
 
 	k := cache.CommitteeCache.ListKeys()
-	if len(k) != maxCommitteesSize {
-		t.Errorf("wanted: %d, got: %d", maxCommitteesSize, len(k))
+	if len(k) != maxCommitteesCacheSize {
+		t.Errorf("wanted: %d, got: %d", maxCommitteesCacheSize, len(k))
 	}
 
 	sort.Slice(k, func(i, j int) bool {
