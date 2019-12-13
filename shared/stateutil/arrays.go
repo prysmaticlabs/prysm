@@ -198,6 +198,9 @@ func recomputeRoot(idx int, chunks [][]byte, fieldName string) ([32]byte, error)
 		parentIdx := currentIndex / 2
 		// Update the cached layers at the parent index.
 		fmt.Printf("i+1=%d, numlayers=%d, len(layers+1)=%d, parentidx=%d\n", i+1, len(layers), len(layers[i+1]), parentIdx)
+		if len(layers[i+1]) == 0 {
+			layers[i+1] = append(layers[i+1], root)
+		}
 		layers[i+1][parentIdx] = root
 		currentIndex = parentIdx
 	}
