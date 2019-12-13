@@ -99,4 +99,5 @@ func (r *RegularSync) Status() error {
 type Checker interface {
 	Syncing() bool
 	Status() error
+	Resync() error
 }

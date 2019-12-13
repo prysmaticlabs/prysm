@@ -2,10 +2,10 @@ package initialsync
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -114,19 +114,7 @@ func (s *InitialSync) Start() {
 		s.synced = true
 		return
 	}
-
-	// Every 5 sec, report handshake count.
-	for {
-		count := len(s.p2p.Peers().Connected())
-		if count >= minStatusCount {
-			break
-		}
-		log.WithField(
-			"handshakes",
-			fmt.Sprintf("%d/%d", count, minStatusCount),
-		).Info("Waiting for enough peer handshakes before syncing")
-		time.Sleep(handshakePollingInterval)
-	}
+	s.waitForMinimumPeers()
 
 	if err := s.roundRobinSync(genesis); err != nil {
 		panic(err)
@@ -152,6 +140,40 @@ func (s *InitialSync) Status() error {
 // Syncing returns true if initial sync is still running.
 func (s *InitialSync) Syncing() bool {
 	return !s.synced
+}
+
+func (s *InitialSync) Resync() error {
+	// set it to false since we are syncing again
+	s.synced = false
+	headState, err := s.chain.HeadState(context.Background())
+	if err != nil {
+		return errors.Wrap(err, "could not retrieve head state")
+	}
+	genesis := time.Unix(int64(headState.GenesisTime), 0)
+
+	s.waitForMinimumPeers()
+	if err := s.roundRobinSync(genesis); err != nil {
+		return errors.Wrap(err, "could not retrieve head state")
+	}
+	log.Infof("Synced up to slot %d", s.chain.HeadSlot())
+
+	s.synced = true
+	return nil
+}
+
+func (s *InitialSync) waitForMinimumPeers() {
+	// Every 5 sec, report handshake count.
+	for {
+		count := len(s.p2p.Peers().Connected())
+		if count >= minStatusCount {
+			break
+		}
+		log.WithField(
+			"handshakes",
+			fmt.Sprintf("%d/%d", count, minStatusCount),
+		).Info("Waiting for enough peer handshakes before syncing")
+		time.Sleep(handshakePollingInterval)
+	}
 }
 
 func slotsSinceGenesis(genesisTime time.Time) uint64 {

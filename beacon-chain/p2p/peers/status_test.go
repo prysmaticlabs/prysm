@@ -334,6 +334,35 @@ func TestDecay(t *testing.T) {
 	}
 }
 
+func TestBestPeer(t *testing.T) {
+	maxBadResponses := 2
+	expectedFinEpoch := uint64(4)
+	p := peers.NewStatus(maxBadResponses)
+
+	// Peer 1
+	pid1 := addPeer(t, p, peers.PeerConnected)
+	p.SetChainState(pid1, &pb.Status{
+		FinalizedEpoch: 0,
+	})
+	// Peer 2
+	pid2 := addPeer(t, p, peers.PeerConnected)
+	p.SetChainState(pid2, &pb.Status{
+		FinalizedEpoch: expectedFinEpoch,
+	})
+	// Peer 3
+	pid3 := addPeer(t, p, peers.PeerConnected)
+	p.SetChainState(pid3, &pb.Status{
+		FinalizedEpoch: 3,
+	})
+	retPeer, retEpoch := p.HighestFinalizedPeer()
+	if retPeer != pid2 {
+		t.Errorf("Incorrect Peer retrieved; wanted %v but got %v", pid2, retPeer)
+	}
+	if retEpoch != expectedFinEpoch {
+		t.Errorf("Incorrect Finalized epoch retrieved; wanted %v but got %v", expectedFinEpoch, retEpoch)
+	}
+}
+
 // addPeer is a helper to add a peer with a given connection state)
 func addPeer(t *testing.T, p *peers.Status, state peers.PeerConnectionState) peer.ID {
 	// Set up some peers with different states

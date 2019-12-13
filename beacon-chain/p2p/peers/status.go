@@ -316,6 +316,21 @@ func (p *Status) Decay() {
 	}
 }
 
+// HighestFinalizedPeer returns the connected peer and its associated finalized epoch for a peer
+// which has the highest finalized epoch.
+func (p *Status) HighestFinalizedPeer() (peer.ID, uint64) {
+	var best peer.ID
+	var bestEpoch uint64
+	for _, k := range p.Connected() {
+		peerChainState, err := p.ChainState(k)
+		if err == nil && peerChainState != nil && peerChainState.FinalizedEpoch >= bestEpoch {
+			bestEpoch = peerChainState.FinalizedEpoch
+			best = k
+		}
+	}
+	return best, bestEpoch
+}
+
 // fetch is a helper function that fetches a peer status, possibly creating it.
 func (p *Status) fetch(pid peer.ID) *peerStatus {
 	if _, ok := p.status[pid]; !ok {

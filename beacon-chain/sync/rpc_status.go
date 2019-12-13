@@ -36,7 +36,14 @@ func (r *RegularSync) maintainPeerStatuses() {
 					}
 				}
 			}
-
+			_, highestEpoch := r.p2p.Peers().HighestFinalizedPeer()
+			if highestEpoch > r.chain.FinalizedCheckpt().Epoch {
+				r.clearPendingSlots()
+				// block until we can resync the node
+				if err := r.initialSync.Resync(); err != nil {
+					log.Errorf("Could not Resync Chain: %v", err)
+				}
+			}
 		case <-r.ctx.Done():
 			return
 		}
