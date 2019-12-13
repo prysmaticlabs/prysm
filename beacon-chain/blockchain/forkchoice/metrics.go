@@ -58,8 +58,8 @@ var (
 		Help: "Number of status=pending|active|exited|withdrawable validators in current epoch",
 	})
 	sigFailsToVerify = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "att_signature_failed_to_verify",
-		Help: "Number of attestation signatures that failed to verify",
+		Name: "att_signature_failed_to_verify_with_cache",
+		Help: "Number of attestation signatures that failed to verify with cache on, but succeeded without cache",
 	})
 )
 
