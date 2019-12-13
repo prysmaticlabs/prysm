@@ -47,7 +47,7 @@ func fuzzStateRootCache(t *testing.T, seed int64, iterations uint64) {
 	mismatch := 0
 	mismatchedIndices := make([]uint64, 0)
 	for i := uint64(0); i < iterations; i++ {
-		if i == 15 {
+		if i == 501 {
 			break
 		}
 		fuzzer.Fuzz(state)
