@@ -465,7 +465,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		PendingDepositFetcher: b.depositCache,
 		StateNotifier:         b,
 		SlasherCert:           slasherCert,
-		SlasherHost:           slasherProvider,
+		SlasherProvider:       slasherProvider,
 	})
 
 	return b.services.RegisterService(rpcService)

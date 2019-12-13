@@ -7,14 +7,13 @@ import (
 	"math/rand"
 	"net"
 	"os"
-	"strconv"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -79,10 +78,10 @@ type Service struct {
 	pendingDepositFetcher  depositcache.PendingDepositsFetcher
 	stateNotifier          statefeed.Notifier
 	slasherConn            *grpc.ClientConn
-	slasherAddress         string
+	slasherProvider        string
 	slasherCert            string
 	slasherCredentialError error
-	slasherClient          ethpb.SlasherClient
+	slasherClient          pb.SlasherClient
 }
 
 // Config options for the beacon node RPC server.
@@ -107,8 +106,7 @@ type Config struct {
 	PeersFetcher          p2p.PeersProvider
 	DepositFetcher        depositcache.DepositFetcher
 	PendingDepositFetcher depositcache.PendingDepositsFetcher
-	SlasherPort           int
-	SlasherHost           string
+	SlasherProvider       string
 	SlasherCert           string
 	StateNotifier         statefeed.Notifier
 }
@@ -143,7 +141,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		canonicalStateChan:    make(chan *pbp2p.BeaconState, params.BeaconConfig().DefaultBufferSize),
 		incomingAttestation:   make(chan *ethpb.Attestation, params.BeaconConfig().DefaultBufferSize),
 		stateNotifier:         cfg.StateNotifier,
-		slasherAddress:        cfg.SlasherHost + ":" + strconv.Itoa(cfg.SlasherPort),
+		slasherProvider:       cfg.SlasherProvider,
 		slasherCert:           cfg.SlasherCert,
 	}
 }
@@ -287,14 +285,14 @@ func (s *Service) Start() {
 			grpc_prometheus.UnaryClientInterceptor,
 		)),
 	}
-	conn, err := grpc.DialContext(s.ctx, s.slasherAddress, slasherOpts...)
+	conn, err := grpc.DialContext(s.ctx, s.slasherProvider, slasherOpts...)
 	if err != nil {
-		log.Errorf("Could not dial endpoint: %s, %v", s.slasherAddress, err)
+		log.Errorf("Could not dial endpoint: %s, %v", s.slasherProvider, err)
 		return
 	}
 	log.Info("Successfully started gRPC connection")
 	s.slasherConn = conn
-	s.slasherClient = ethpb.NewSlasherClient(s.slasherConn)
+	s.slasherClient = pb.NewSlasherClient(s.slasherConn)
 }
 
 // Stop the service.
