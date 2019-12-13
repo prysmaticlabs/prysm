@@ -3,12 +3,15 @@ package sync
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -34,9 +37,10 @@ func TestRegularSyncBeaconBlockSubscriber_FilterByFinalizedEpoch(t *testing.T) {
 	r := &RegularSync{
 		db:    db,
 		chain: &mock.ChainService{State: s},
+		attPool: attestations.NewPool(),
 	}
 
-	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: parentRoot[:]}
+	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: parentRoot[:], Body: &ethpb.BeaconBlockBody{}}
 	if err := r.beaconBlockSubscriber(context.Background(), b); err != nil {
 		t.Fatal(err)
 	}
@@ -48,4 +52,36 @@ func TestRegularSyncBeaconBlockSubscriber_FilterByFinalizedEpoch(t *testing.T) {
 		t.Fatal(err)
 	}
 	testutil.AssertLogsDoNotContain(t, hook, "Received a block older than finalized checkpoint")
+}
+
+func TestDeleteAttsInPool(t *testing.T) {
+	r := &RegularSync{
+		attPool: attestations.NewPool(),
+	}
+	att1 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1101}}
+	att2 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1110}}
+	att3 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1011}}
+	att4 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1001}}
+	if err := r.attPool.SaveAggregatedAttestation(att1); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.attPool.SaveAggregatedAttestation(att2); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.attPool.SaveAggregatedAttestation(att3); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.attPool.SaveUnaggregatedAttestation(att4); err != nil {
+		t.Fatal(err)
+	}
+
+	// Seen 1, 3 and 4 in block
+	if err := r.deleteAttsInPool([]*ethpb.Attestation{att1, att3, att4}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Only 2 should remain
+	if !reflect.DeepEqual(r.attPool.AggregatedAttestation(), []*ethpb.Attestation{att2}) {
+		t.Error("Did not get wanted attestation from pool")
+	}
 }
