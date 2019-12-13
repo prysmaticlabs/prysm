@@ -99,7 +99,7 @@ func TestCommitteeCache_ActiveIndices(t *testing.T) {
 func TestCommitteeCache_CanRotate(t *testing.T) {
 	cache := NewCommitteesCache()
 
-	// Should rotate out all the epochs except 190 to 199
+	// Should rotate out all the epochs except 190 through 199.
 	for i := 100; i < 200; i++ {
 		s := []byte(strconv.Itoa(i))
 		item := &Committees{Seed: bytesutil.ToBytes32(s)}
