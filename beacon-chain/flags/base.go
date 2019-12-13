@@ -49,7 +49,7 @@ var (
 		Usage: "Enable gRPC gateway for JSON requests",
 	}
 
-	// MinSyncPeers specifies the required number of succesful peer handshakes in order
+	// MinSyncPeers specifies the required number of successful peer handshakes in order
 	// to start syncing with external peers.
 	MinSyncPeers = cli.IntFlag{
 		Name:  "min-sync-peers",
