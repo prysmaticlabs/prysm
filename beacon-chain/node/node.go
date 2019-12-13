@@ -118,6 +118,10 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
+	if err := beacon.registerAttestationPool(ctx); err != nil {
+		return nil, err
+	}
+
 	if err := beacon.registerInteropServices(ctx); err != nil {
 		return nil, err
 	}
@@ -303,6 +307,13 @@ func (b *BeaconNode) registerOperationService(ctx *cli.Context) error {
 	})
 
 	return b.services.RegisterService(operationService)
+}
+
+func (b *BeaconNode) registerAttestationPool(ctx *cli.Context) error {
+	attPoolService := attestations.NewService(context.Background(), &attestations.Config{
+		Pool: b.attestationPool,
+	})
+	return b.services.RegisterService(attPoolService)
 }
 
 func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
