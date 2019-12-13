@@ -387,7 +387,11 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		AggregationBits: aggBits,
 		CustodyBits:     custodyBits,
 	}
-	attestingIndices, err := helpers.AttestingIndices(beaconState, blockAtt.Data, blockAtt.AggregationBits)
+	committee, err := helpers.BeaconCommittee(beaconState, blockAtt.Data.Slot, blockAtt.Data.CommitteeIndex)
+	if err != nil {
+		t.Error(err)
+	}
+	attestingIndices, err := helpers.AttestingIndices(blockAtt.AggregationBits, committee)
 	if err != nil {
 		t.Error(err)
 	}
@@ -671,7 +675,12 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 			AggregationBits: aggBits,
 			CustodyBits:     custodyBits,
 		}
-		attestingIndices, err := helpers.AttestingIndices(s, att.Data, att.AggregationBits)
+
+		committee, err := helpers.BeaconCommittee(s, att.Data.Slot, att.Data.CommitteeIndex)
+		if err != nil {
+			t.Error(err)
+		}
+		attestingIndices, err := helpers.AttestingIndices(att.AggregationBits, committee)
 		if err != nil {
 			t.Error(err)
 		}

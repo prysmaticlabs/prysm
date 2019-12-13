@@ -923,7 +923,11 @@ func TestProcessAttestations_OK(t *testing.T) {
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
-	attestingIndices, err := helpers.AttestingIndices(beaconState, att.Data, att.AggregationBits)
+	committee, err := helpers.BeaconCommittee(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	if err != nil {
+		t.Error(err)
+	}
+	attestingIndices, err := helpers.AttestingIndices(att.AggregationBits, committee)
 	if err != nil {
 		t.Error(err)
 	}
@@ -978,7 +982,11 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
-	attestingIndices1, err := helpers.AttestingIndices(beaconState, att1.Data, att1.AggregationBits)
+	committee, err := helpers.BeaconCommittee(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
+	if err != nil {
+		t.Error(err)
+	}
+	attestingIndices1, err := helpers.AttestingIndices(att1.AggregationBits, committee)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1008,7 +1016,11 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 		CustodyBits:     custodyBits2,
 	}
 
-	attestingIndices2, err := helpers.AttestingIndices(beaconState, att2.Data, att2.AggregationBits)
+	committee, err = helpers.BeaconCommittee(beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
+	if err != nil {
+		t.Error(err)
+	}
+	attestingIndices2, err := helpers.AttestingIndices(att2.AggregationBits, committee)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1053,7 +1065,11 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
-	attestingIndices1, err := helpers.AttestingIndices(beaconState, att1.Data, att1.AggregationBits)
+	committee, err := helpers.BeaconCommittee(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
+	if err != nil {
+		t.Error(err)
+	}
+	attestingIndices1, err := helpers.AttestingIndices(att1.AggregationBits, committee)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1082,7 +1098,11 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 		CustodyBits:     custodyBits2,
 	}
 
-	attestingIndices2, err := helpers.AttestingIndices(beaconState, att2.Data, att2.AggregationBits)
+	committee, err = helpers.BeaconCommittee(beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
+	if err != nil {
+		t.Error(err)
+	}
+	attestingIndices2, err := helpers.AttestingIndices(att2.AggregationBits, committee)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1202,7 +1222,12 @@ func TestConvertToIndexed_OK(t *testing.T) {
 			Data:                attestation.Data,
 			Signature:           attestation.Signature,
 		}
-		ia, err := blocks.ConvertToIndexed(context.Background(), state, attestation)
+
+		committee, err := helpers.BeaconCommittee(state, attestation.Data.Slot, attestation.Data.CommitteeIndex)
+		if err != nil {
+			t.Error(err)
+		}
+		ia, err := blocks.ConvertToIndexed(context.Background(), state, attestation, committee)
 		if err != nil {
 			t.Errorf("failed to convert attestation to indexed attestation: %v", err)
 		}

@@ -638,16 +638,16 @@ func ProcessAttestationNoVerify(ctx context.Context, beaconState *pb.BeaconState
 //        data=attestation.data,
 //        signature=attestation.signature,
 //    )
-func ConvertToIndexed(ctx context.Context, state *pb.BeaconState, attestation *ethpb.Attestation) (*ethpb.IndexedAttestation, error) {
+func ConvertToIndexed(ctx context.Context, state *pb.BeaconState, attestation *ethpb.Attestation, committee []uint64) (*ethpb.IndexedAttestation, error) {
 	ctx, span := trace.StartSpan(ctx, "core.ConvertToIndexed")
 	defer span.End()
 
-	attIndices, err := helpers.AttestingIndices(state, attestation.Data, attestation.AggregationBits)
+	attIndices, err := helpers.AttestingIndices(attestation.AggregationBits, committee)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get attesting indices")
 	}
 
-	cb1i, err := helpers.AttestingIndices(state, attestation.Data, attestation.CustodyBits)
+	cb1i, err := helpers.AttestingIndices(attestation.CustodyBits, committee)
 	if err != nil {
 		return nil, err
 	}
@@ -820,7 +820,11 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *pb.BeaconState, 
 // VerifyAttestation converts and attestation into an indexed attestation and verifies
 // the signature in that attestation.
 func VerifyAttestation(ctx context.Context, beaconState *pb.BeaconState, att *ethpb.Attestation) error {
-	indexedAtt, err := ConvertToIndexed(ctx, beaconState, att)
+	committee, err := helpers.BeaconCommittee(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	if err != nil {
+		return err
+	}
+	indexedAtt, err := ConvertToIndexed(ctx, beaconState, att, committee)
 	if err != nil {
 		return errors.Wrap(err, "could not convert to indexed attestation")
 	}
