@@ -188,6 +188,7 @@ func (s *Store) verifyAttestation(ctx context.Context, baseState *pb.BeaconState
 			if err := blocks.VerifyIndexedAttestation(ctx, baseState, indexedAtt); err != nil {
 				return nil, errors.Wrap(err, "could not verify indexed attestation without cache")
 			}
+			sigFailsToVerify.Inc()
 			return indexedAtt, nil
 		}
 

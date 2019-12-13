@@ -57,6 +57,10 @@ var (
 		Name: "beacon_current_validators",
 		Help: "Number of status=pending|active|exited|withdrawable validators in current epoch",
 	})
+	sigFailsToVerify = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "att_signature_failed_to_verify",
+		Help: "Number of attestation signature failed to verify",
+	})
 )
 
 func reportEpochMetrics(state *pb.BeaconState) {
