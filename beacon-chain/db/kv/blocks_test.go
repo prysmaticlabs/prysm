@@ -139,6 +139,33 @@ func TestStore_BlocksBatchDelete(t *testing.T) {
 	}
 }
 
+func TestStore_GenesisBlock(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+	genesisBlock := &ethpb.BeaconBlock{
+		Slot:       0,
+		ParentRoot: []byte{1, 2, 3},
+	}
+	blockRoot, err := ssz.SigningRoot(genesisBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveGenesisBlockRoot(ctx, blockRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveBlock(ctx, genesisBlock); err != nil {
+		t.Fatal(err)
+	}
+	retrievedBlock, err := db.GenesisBlock(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(genesisBlock, retrievedBlock) {
+		t.Errorf("Wanted %v, received %v", genesisBlock, retrievedBlock)
+	}
+}
+
 func TestStore_BlocksCRUD_NoCache(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)

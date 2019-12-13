@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -38,6 +39,7 @@ type Database interface {
 	SaveBlock(ctx context.Context, block *eth.BeaconBlock) error
 	SaveBlocks(ctx context.Context, blocks []*eth.BeaconBlock) error
 	SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
+	GenesisBlock(ctx context.Context) (*ethpb.BeaconBlock, error)
 	SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool
 	// Validator related methods.
