@@ -5,6 +5,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -146,6 +148,12 @@ func (r *RegularSync) statusRPCHandler(ctx context.Context, msg interface{}, str
 func (r *RegularSync) validateStatusMessage(msg *pb.Status, stream network.Stream) error {
 	if !bytes.Equal(params.BeaconConfig().GenesisForkVersion, msg.HeadForkVersion) {
 		return errWrongForkVersion
+	}
+	genesis := r.chain.GenesisTime()
+	slotsSinceGenesis := uint64(roughtime.Since(genesis).Seconds()) / params.BeaconConfig().SecondsPerSlot
+	expectedEpoch := helpers.SlotToEpoch(slotsSinceGenesis)
+	if msg.FinalizedEpoch > expectedEpoch {
+		return errInvalidEpoch
 	}
 	return nil
 }
