@@ -32,6 +32,7 @@ var appFlags = []cli.Flag{
 	flags.CertFlag,
 	flags.KeyFlag,
 	flags.GRPCGatewayPort,
+	flags.MinSyncPeers,
 	flags.InteropMockEth1DataVotesFlag,
 	flags.InteropGenesisStateFlag,
 	flags.InteropNumValidatorsFlag,
