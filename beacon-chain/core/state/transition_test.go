@@ -37,8 +37,6 @@ func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 }
 
 func TestExecuteStateTransition_FullProcess(t *testing.T) {
-	helpers.ClearAllCaches()
-
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
 	eth1Data := &ethpb.Eth1Data{
@@ -100,8 +98,6 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
-	helpers.ClearAllCaches()
-
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
 	block, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, 1)
@@ -181,8 +177,6 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
-	helpers.ClearAllCaches()
-
 	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
 
 	proposerSlashings := []*ethpb.ProposerSlashing{
@@ -474,55 +468,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 }
 
-func TestProcessEpoch_CantGetTgtAttsPrevEpoch(t *testing.T) {
-	atts := []*pb.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 1}}}}
-	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{CurrentEpochAttestations: atts})
-	if !strings.Contains(err.Error(), "could not get target atts prev epoch") {
-		t.Fatal("Did not receive wanted error")
-	}
-}
-
-func TestProcessEpoch_CantGetTgtAttsCurrEpoch(t *testing.T) {
-	epoch := uint64(1)
-
-	atts := []*pb.PendingAttestation{{Data: &ethpb.AttestationData{}}}
-	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
-		Slot:                     epoch * params.BeaconConfig().SlotsPerEpoch,
-		BlockRoots:               make([][]byte, 128),
-		RandaoMixes:              make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		CurrentEpochAttestations: atts})
-	if !strings.Contains(err.Error(), "could not get target atts current epoch") {
-		t.Fatal("Did not receive wanted error")
-	}
-}
-
-func TestProcessEpoch_CanProcess(t *testing.T) {
-	helpers.ClearAllCaches()
-	epoch := uint64(1)
-
-	atts := []*pb.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}}}
-	newState, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
-		Slot:                       epoch*params.BeaconConfig().SlotsPerEpoch + 1,
-		BlockRoots:                 make([][]byte, 128),
-		Slashings:                  []uint64{0, 1e9, 1e9},
-		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		CurrentEpochAttestations:   atts,
-		FinalizedCheckpoint:        &ethpb.Checkpoint{},
-		JustificationBits:          bitfield.Bitvector4{0x00},
-		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	wanted := uint64(0)
-	if newState.Slashings[2] != wanted {
-		t.Errorf("Wanted slashed balance: %d, got: %d", wanted, newState.Slashings[2])
-	}
-}
-
 func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
-	helpers.ClearAllCaches()
 	epoch := uint64(1)
 
 	atts := []*pb.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}}}
@@ -546,75 +492,8 @@ func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
 		t.Errorf("Wanted slashed balance: %d, got: %d", wanted, newState.Slashings[2])
 	}
 }
-
-func TestProcessEpoch_NotPanicOnEmptyActiveValidatorIndices(t *testing.T) {
-	newState := &pb.BeaconState{
-		Slashings:   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		RandaoMixes: make([][]byte, params.BeaconConfig().SlotsPerEpoch),
-	}
-
-	state.ProcessEpoch(context.Background(), newState)
-}
-
-func BenchmarkProcessEpoch65536Validators(b *testing.B) {
-	logrus.SetLevel(logrus.PanicLevel)
-
-	helpers.ClearAllCaches()
-	epoch := uint64(1)
-
-	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount * 4
-	comitteeCount := validatorCount / params.BeaconConfig().TargetCommitteeSize
-	validators := make([]*ethpb.Validator, validatorCount)
-	balances := make([]uint64, validatorCount)
-
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &ethpb.Validator{
-			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
-			EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
-		}
-		balances[i] = params.BeaconConfig().MaxEffectiveBalance
-	}
-
-	var atts []*pb.PendingAttestation
-	for i := uint64(0); i < comitteeCount; i++ {
-		atts = append(atts, &pb.PendingAttestation{
-			Data: &ethpb.AttestationData{},
-			AggregationBits: []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-				0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
-			InclusionDelay: 1,
-		})
-	}
-
-	s := &pb.BeaconState{
-		Slot:                      epoch*params.BeaconConfig().SlotsPerEpoch + 1,
-		Validators:                validators,
-		Balances:                  balances,
-		FinalizedCheckpoint:       &ethpb.Checkpoint{},
-		BlockRoots:                make([][]byte, 254),
-		Slashings:                 []uint64{0, 1e9, 0},
-		RandaoMixes:               make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		PreviousEpochAttestations: atts,
-	}
-
-	// Precache the shuffled indices
-	for i := uint64(0); i < comitteeCount; i++ {
-		if _, err := helpers.BeaconCommittee(s, 0, i); err != nil {
-			b.Fatal(err)
-		}
-	}
-
-	b.ResetTimer()
-	for n := 0; n < b.N; n++ {
-		_, err := state.ProcessEpoch(context.Background(), s)
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
 func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	logrus.SetLevel(logrus.PanicLevel)
-	helpers.ClearAllCaches()
 
 	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount * 4
 	committeeCount := validatorCount / params.BeaconConfig().TargetCommitteeSize
@@ -770,7 +649,6 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 
 func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 	logrus.SetLevel(logrus.PanicLevel)
-	helpers.ClearAllCaches()
 
 	// Default at 256 validators, can raise this number with faster BLS.
 	validatorCount := uint64(256)

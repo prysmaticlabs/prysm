@@ -11,8 +11,8 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -26,7 +26,6 @@ type blockchainService interface {
 }
 
 const (
-	minStatusCount           = 3               // TODO(3147): Set this to more than 3, maybe configure from flag?
 	handshakePollingInterval = 5 * time.Second // Polling interval for checking the number of received handshakes.
 )
 
@@ -118,13 +117,13 @@ func (s *InitialSync) Start() {
 
 	// Every 5 sec, report handshake count.
 	for {
-		count := peerstatus.Count()
-		if count >= minStatusCount {
+		count := len(s.p2p.Peers().Connected())
+		if count >= flags.Get().MinimumSyncPeers {
 			break
 		}
 		log.WithField(
 			"handshakes",
-			fmt.Sprintf("%d/%d", count, minStatusCount),
+			fmt.Sprintf("%d/%d", count, flags.Get().MinimumSyncPeers),
 		).Info("Waiting for enough peer handshakes before syncing")
 		time.Sleep(handshakePollingInterval)
 	}

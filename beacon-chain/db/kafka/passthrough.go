@@ -5,6 +5,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
@@ -197,6 +198,11 @@ func (e Exporter) DepositContractAddress(ctx context.Context) ([]byte, error) {
 // SaveHeadBlockRoot -- passthrough.
 func (e Exporter) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error {
 	return e.db.SaveHeadBlockRoot(ctx, blockRoot)
+}
+
+// GenesisBlock -- passthrough.
+func (e Exporter) GenesisBlock(ctx context.Context) (*ethpb.BeaconBlock, error) {
+	return e.db.GenesisBlock(ctx)
 }
 
 // SaveGenesisBlockRoot -- passthrough.

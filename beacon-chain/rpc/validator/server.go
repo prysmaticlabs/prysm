@@ -102,6 +102,49 @@ func (vs *Server) ValidatorIndex(ctx context.Context, req *pb.ValidatorIndexRequ
 	return &pb.ValidatorIndexResponse{Index: index}, nil
 }
 
+// ExitedValidators queries validator statuses for a give list of validators
+// and returns a filtered list of validator keys that are exited.
+func (vs *Server) ExitedValidators(
+	ctx context.Context,
+	req *pb.ExitedValidatorsRequest) (*pb.ExitedValidatorsResponse, error) {
+
+	_, statuses, err := vs.multipleValidatorStatus(ctx, req.PublicKeys)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not retrieve validator statuses: %v", err)
+	}
+
+	exitedKeys := make([][]byte, 0)
+	for _, st := range statuses {
+		s := st.Status.Status
+		if s == pb.ValidatorStatus_EXITED ||
+			s == pb.ValidatorStatus_EXITED_SLASHED ||
+			s == pb.ValidatorStatus_INITIATED_EXIT {
+			exitedKeys = append(exitedKeys, st.PublicKey)
+		}
+	}
+
+	resp := &pb.ExitedValidatorsResponse{
+		PublicKeys: exitedKeys,
+	}
+
+	return resp, nil
+}
+
+// DomainData fetches the current domain version information from the beacon state.
+func (vs *Server) DomainData(ctx context.Context, request *pb.DomainRequest) (*pb.DomainResponse, error) {
+	fork := vs.ForkFetcher.CurrentFork()
+	dv := helpers.Domain(fork, request.Epoch, request.Domain)
+	return &pb.DomainResponse{
+		SignatureDomain: dv,
+	}, nil
+}
+
+// CanonicalHead of the current beacon chain. This method is requested on-demand
+// by a validator when it is their time to propose or attest.
+func (vs *Server) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*ethpb.BeaconBlock, error) {
+	return vs.HeadFetcher.HeadBlock(), nil
+}
+
 // ValidatorPerformance reports the validator's latest balance along with other important metrics on
 // rewards and penalties throughout its lifecycle in the beacon chain.
 func (vs *Server) ValidatorPerformance(
@@ -148,51 +191,8 @@ func (vs *Server) ValidatorPerformance(
 		AverageActiveValidatorBalance: avgBalance,
 		MissingValidators:             missingValidators,
 		TotalValidators:               uint64(len(headState.Validators)),
-		TotalActiveValidators:         uint64(activeCount),
+		TotalActiveValidators:         activeCount,
 	}, nil
-}
-
-// ExitedValidators queries validator statuses for a give list of validators
-// and returns a filtered list of validator keys that are exited.
-func (vs *Server) ExitedValidators(
-	ctx context.Context,
-	req *pb.ExitedValidatorsRequest) (*pb.ExitedValidatorsResponse, error) {
-
-	_, statuses, err := vs.multipleValidatorStatus(ctx, req.PublicKeys)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not retrieve validator statuses: %v", err)
-	}
-
-	exitedKeys := make([][]byte, 0)
-	for _, st := range statuses {
-		s := st.Status.Status
-		if s == pb.ValidatorStatus_EXITED ||
-			s == pb.ValidatorStatus_EXITED_SLASHED ||
-			s == pb.ValidatorStatus_INITIATED_EXIT {
-			exitedKeys = append(exitedKeys, st.PublicKey)
-		}
-	}
-
-	resp := &pb.ExitedValidatorsResponse{
-		PublicKeys: exitedKeys,
-	}
-
-	return resp, nil
-}
-
-// DomainData fetches the current domain version information from the beacon state.
-func (vs *Server) DomainData(ctx context.Context, request *pb.DomainRequest) (*pb.DomainResponse, error) {
-	fork := vs.ForkFetcher.CurrentFork()
-	dv := helpers.Domain(fork, request.Epoch, request.Domain)
-	return &pb.DomainResponse{
-		SignatureDomain: dv,
-	}, nil
-}
-
-// CanonicalHead of the current beacon chain. This method is requested on-demand
-// by a validator when it is their time to propose or attest.
-func (vs *Server) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*ethpb.BeaconBlock, error) {
-	return vs.HeadFetcher.HeadBlock(), nil
 }
 
 // WaitForChainStart queries the logs of the Deposit Contract in order to verify the beacon chain

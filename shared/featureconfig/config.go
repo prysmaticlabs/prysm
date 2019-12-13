@@ -44,9 +44,6 @@ type Flags struct {
 	EnableBLSPubkeyCache     bool // EnableBLSPubkeyCache to improve wall time of PubkeyFromBytes.
 	EnableShuffledIndexCache bool // EnableShuffledIndexCache to cache expensive shuffled index computation.
 	EnableSkipSlotsCache     bool // EnableSkipSlotsCache caches the state in skipped slots.
-	EnableCommitteeCache     bool // EnableCommitteeCache to cache committee computation.
-	EnableActiveIndicesCache bool // EnableActiveIndicesCache.
-	EnableActiveCountCache   bool // EnableActiveCountCache.
 }
 
 var featureConfig *Flags
@@ -126,18 +123,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalString(kafkaBootstrapServersFlag.Name) != "" {
 		log.Warn("Enabling experimental kafka streaming.")
 		cfg.KafkaBootstrapServers = ctx.GlobalString(kafkaBootstrapServersFlag.Name)
-	}
-	if ctx.GlobalBool(enableCommitteeCacheFlag.Name) {
-		log.Warn("Enabled committee cache.")
-		cfg.EnableCommitteeCache = true
-	}
-	if ctx.GlobalBool(enableActiveIndicesCacheFlag.Name) {
-		log.Warn("Enabled active indices cache.")
-		cfg.EnableActiveIndicesCache = true
-	}
-	if ctx.GlobalBool(enableActiveCountCacheFlag.Name) {
-		log.Warn("Enabled active count cache.")
-		cfg.EnableActiveCountCache = true
 	}
 	if ctx.GlobalBool(enableSnappyDBCompressionFlag.Name) {
 		log.Warn("Enabled snappy compression in the database.")
