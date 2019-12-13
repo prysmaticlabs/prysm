@@ -13,7 +13,7 @@ import (
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -261,6 +261,12 @@ func (s *Service) Start() {
 			}
 		}
 	}()
+	if s.slasherProvider != "" {
+		s.startSlasherClient()
+	}
+}
+
+func (s *Service) startSlasherClient() {
 	var dialOpt grpc.DialOption
 	if s.slasherCert != "" {
 		creds, err := credentials.NewClientTLSFromFile(s.slasherCert, "")
