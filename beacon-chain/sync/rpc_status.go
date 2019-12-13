@@ -12,35 +12,29 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/runutil"
 )
 
 const statusInterval = 6 * time.Minute // 60 slots.
 
 // maintainPeerStatuses by infrequently polling peers for their latest status.
 func (r *RegularSync) maintainPeerStatuses() {
-	ticker := time.NewTicker(statusInterval)
-	for {
-		ctx := context.Background()
-		select {
-		case <-ticker.C:
-			for _, pid := range r.p2p.Peers().Connected() {
-				// If the status hasn't been updated in the recent interval time.
-				lastUpdated, err := r.p2p.Peers().ChainStateLastUpdated(pid)
-				if err != nil {
-					// Peer has vanished; nothing to do
-					continue
-				}
-				if roughtime.Now().After(lastUpdated.Add(statusInterval)) {
-					if err := r.sendRPCStatusRequest(ctx, pid); err != nil {
-						log.WithError(err).Error("Failed to request peer status")
-					}
+	ctx := context.Background()
+	runutil.RunEvery(r.ctx, statusInterval, func() {
+		for _, pid := range r.p2p.Peers().Connected() {
+			// If the status hasn't been updated in the recent interval time.
+			lastUpdated, err := r.p2p.Peers().ChainStateLastUpdated(pid)
+			if err != nil {
+				// Peer has vanished; nothing to do
+				continue
+			}
+			if roughtime.Now().After(lastUpdated.Add(statusInterval)) {
+				if err := r.sendRPCStatusRequest(ctx, pid); err != nil {
+					log.WithField("peer", pid).WithError(err).Error("Failed to request peer status")
 				}
 			}
-
-		case <-r.ctx.Done():
-			return
 		}
-	}
+	})
 }
 
 // sendRPCStatusRequest for a given topic with an expected protobuf message type.
