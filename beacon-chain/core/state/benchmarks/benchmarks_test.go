@@ -20,12 +20,6 @@ import (
 var runAmount = 25
 
 func TestBenchmarkExecuteStateTransition(t *testing.T) {
-	config := &featureconfig.Flags{
-		EnableNewCache:           true,
-		EnableBLSPubkeyCache:     true,
-	}
-	featureconfig.Init(config)
-	SetConfig()
 	SetConfig()
 	beaconState, err := beaconState1Epoch()
 	if err != nil {

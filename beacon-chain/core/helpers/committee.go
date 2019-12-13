@@ -138,15 +138,6 @@ func ComputeCommittee(
 		shuffledIndices[i-start] = indices[permutedIndex]
 	}
 
-	shuffledIndices1 := make([]uint64, validatorCount)
-	for i := 0; i < len(shuffledIndices1); i++ {
-		permutedIndex, err := ShuffledIndex(uint64(i), validatorCount, seed)
-		if err != nil {
-			return []uint64{}, errors.Wrapf(err, "could not get shuffled index at index %d", i)
-		}
-		shuffledIndices1[i] = indices[permutedIndex]
-	}
-
 	return shuffledIndices, nil
 }
 
