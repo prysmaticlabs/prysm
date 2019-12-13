@@ -41,10 +41,6 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 	if h.rootsCache != nil && len(leaves) != len(prevLeaves) {
 		// We invalidate the cache completely in this case.
 		prevLeaves = leaves
-		//depth := merkle.GetDepth(uint64(len(leaves)))
-		//lock.Lock()
-		//layersCache[fieldName] = make([][][]byte, depth+1)
-		//lock.Unlock()
 	}
 	for i := 0; i < len(roots) && i < len(leaves) && i < len(prevLeaves); i++ {
 		padded := bytesutil.ToBytes32(roots[i])
@@ -68,10 +64,10 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 				return [32]byte{}, err
 			}
 		}
-		if fieldName == "RandaoMixes" {
-			//fmt.Println("Branch Recompute Merkle With Cache")
-			//fmt.Printf("Changed indices: %v\n", changedIndices)
-			//prettyPrintTree(layersCache[fieldName])
+		if fieldName == "StateRoots" {
+			fmt.Println("Branch Recompute Merkle With Cache")
+			fmt.Printf("Changed indices: %v\n", changedIndices)
+			prettyPrintTree(layersCache[fieldName])
 		}
 		return rt, nil
 	}
@@ -109,20 +105,17 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][]byte, fieldName string) 
 	}
 	hashLayer := leaves
 	layers := make([][][]byte, merkle.GetDepth(uint64(len(leaves)))+1)
-	if fieldName == "RandaoMixes" {
-		//fmt.Println("Setting layers to empty")
-	}
 	if items, ok := layersCache[fieldName]; ok && h.rootsCache != nil {
 		if len(items[0]) == len(leaves) {
 			layers = items
-			if fieldName == "RandaoMixes" {
-				//fmt.Printf("Setting layers to items: %v\n", items)
+			if fieldName == "StateRoots" {
+				fmt.Printf("Setting layers to items: %v\n", items)
 			}
 		}
 	}
 	layers[0] = hashLayer
-	if fieldName == "RandaoMixes" {
-		//fmt.Printf("Updated first layer: %v\n", layers[0])
+	if fieldName == "StateRoots" {
+		fmt.Printf("Updated first layer: %v\n", layers[0])
 	}
 	// We keep track of the hash layers of a Merkle trie until we reach
 	// the top layer of length 1, which contains the single root element.
@@ -144,14 +137,14 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][]byte, fieldName string) 
 	copy(root[:], hashLayer[0])
 	if h.rootsCache != nil {
 		layersCache[fieldName] = layers
-		if fieldName == "RandaoMixes" {
-			//fmt.Println("Regular Merkle With Cache")
-			//prettyPrintTree(layersCache[fieldName])
+		if fieldName == "StateRoots" {
+			fmt.Println("Regular Merkle With Cache")
+			prettyPrintTree(layersCache[fieldName])
 		}
 	} else {
-		if fieldName == "RandaoMixes" {
-			//fmt.Println("Regular Merkle No Cache")
-			//prettyPrintTree(layers)
+		if fieldName == "StateRoots" {
+			fmt.Println("Regular Merkle No Cache")
+			prettyPrintTree(layers)
 		}
 	}
 	return root

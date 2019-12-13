@@ -1,6 +1,7 @@
 package stateutil
 
 import (
+	"fmt"
 	"strconv"
 	"testing"
 
@@ -46,6 +47,9 @@ func fuzzStateRootCache(t *testing.T, seed int64, iterations uint64) {
 	mismatch := 0
 	mismatchedIndices := make([]uint64, 0)
 	for i := uint64(0); i < iterations; i++ {
+		if i == 15 {
+			break
+		}
 		fuzzer.Fuzz(state)
 		var a, b [32]byte
 		func() {
@@ -56,7 +60,7 @@ func fuzzStateRootCache(t *testing.T, seed int64, iterations uint64) {
 				}
 			}()
 			var err error
-			//fmt.Println("Without cache")
+			fmt.Println("Without cache")
 			a, err = hasher.hashTreeRootState(state)
 			if err != nil {
 				t.Fatal(err)
@@ -71,7 +75,7 @@ func fuzzStateRootCache(t *testing.T, seed int64, iterations uint64) {
 				}
 			}()
 			var err error
-			//fmt.Println("With cache")
+			fmt.Println("With cache")
 			b, err = hasherWithCache.hashTreeRootState(state)
 			if err != nil {
 				t.Fatal(err)
