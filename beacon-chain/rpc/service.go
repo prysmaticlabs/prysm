@@ -12,10 +12,11 @@ import (
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/statefeed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -29,7 +30,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
@@ -72,6 +72,7 @@ type Service struct {
 	incomingAttestation   chan *ethpb.Attestation
 	credentialError       error
 	p2p                   p2p.Broadcaster
+	peersFetcher          p2p.PeersProvider
 	depositFetcher        depositcache.DepositFetcher
 	pendingDepositFetcher depositcache.PendingDepositsFetcher
 	stateNotifier         statefeed.Notifier
@@ -96,6 +97,7 @@ type Config struct {
 	AttestationsPool      operations.Pool
 	SyncService           sync.Checker
 	Broadcaster           p2p.Broadcaster
+	PeersFetcher          p2p.PeersProvider
 	DepositFetcher        depositcache.DepositFetcher
 	PendingDepositFetcher depositcache.PendingDepositsFetcher
 	StateNotifier         statefeed.Notifier
@@ -116,6 +118,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		attestationReceiver:   cfg.AttestationReceiver,
 		blockReceiver:         cfg.BlockReceiver,
 		p2p:                   cfg.Broadcaster,
+		peersFetcher:          cfg.PeersFetcher,
 		powChainService:       cfg.POWChainService,
 		chainStartFetcher:     cfg.ChainStartFetcher,
 		mockEth1Votes:         cfg.MockEth1Votes,
@@ -214,14 +217,17 @@ func (s *Service) Start() {
 		Server:             s.grpcServer,
 		SyncChecker:        s.syncService,
 		GenesisTimeFetcher: s.genesisTimeFetcher,
+		PeersFetcher:       s.peersFetcher,
 	}
 	beaconChainServer := &beacon.Server{
+		Ctx:                 s.ctx,
 		BeaconDB:            s.beaconDB,
 		Pool:                s.attestationsPool,
 		HeadFetcher:         s.headFetcher,
 		FinalizationFetcher: s.finalizationFetcher,
 		ChainStartFetcher:   s.chainStartFetcher,
 		CanonicalStateChan:  s.canonicalStateChan,
+		StateNotifier:       s.stateNotifier,
 	}
 	aggregatorServer := &aggregator.Server{
 		BeaconDB:    s.beaconDB,

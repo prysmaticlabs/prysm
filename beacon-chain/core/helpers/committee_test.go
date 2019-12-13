@@ -8,8 +8,8 @@ import (
 
 	"github.com/prysmaticlabs/go-bitfield"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -114,7 +114,6 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		ClearAllCaches()
 		attestationData.Target = &ethpb.Checkpoint{Epoch: 0}
 		attestationData.Slot = tt.attestationSlot
 
@@ -134,8 +133,6 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 }
 
 func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
-	ClearAllCaches()
-
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -221,7 +218,6 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			ClearAllCaches()
 			committee, committeeIndex, slot, proposerSlot, err := CommitteeAssignment(state, tt.slot/params.BeaconConfig().SlotsPerEpoch, tt.index)
 			if err != nil {
 				t.Fatalf("failed to execute NextEpochCommitteeAssignment: %v", err)
@@ -295,8 +291,8 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0x05},
 				CustodyBits:     bitfield.Bitlist{0x05},
 				Data: &ethpb.AttestationData{
-					Index:  5,
-					Target: &ethpb.Checkpoint{},
+					CommitteeIndex: 5,
+					Target:         &ethpb.Checkpoint{},
 				},
 			},
 			stateSlot: 5,
@@ -307,8 +303,8 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0x06},
 				CustodyBits:     bitfield.Bitlist{0x06},
 				Data: &ethpb.AttestationData{
-					Index:  10,
-					Target: &ethpb.Checkpoint{},
+					CommitteeIndex: 10,
+					Target:         &ethpb.Checkpoint{},
 				},
 			},
 			stateSlot: 10,
@@ -318,8 +314,8 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0x06},
 				CustodyBits:     bitfield.Bitlist{0x06},
 				Data: &ethpb.AttestationData{
-					Index:  20,
-					Target: &ethpb.Checkpoint{},
+					CommitteeIndex: 20,
+					Target:         &ethpb.Checkpoint{},
 				},
 			},
 			stateSlot: 20,
@@ -329,8 +325,8 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0x06},
 				CustodyBits:     bitfield.Bitlist{0x10},
 				Data: &ethpb.AttestationData{
-					Index:  20,
-					Target: &ethpb.Checkpoint{},
+					CommitteeIndex: 20,
+					Target:         &ethpb.Checkpoint{},
 				},
 			},
 			stateSlot:           20,
@@ -342,8 +338,8 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0xFF, 0xC0, 0x01},
 				CustodyBits:     bitfield.Bitlist{0xFF, 0xC0, 0x01},
 				Data: &ethpb.AttestationData{
-					Index:  5,
-					Target: &ethpb.Checkpoint{},
+					CommitteeIndex: 5,
+					Target:         &ethpb.Checkpoint{},
 				},
 			},
 			stateSlot:           5,
@@ -354,8 +350,8 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0xFF, 0x01},
 				CustodyBits:     bitfield.Bitlist{0xFF, 0x01},
 				Data: &ethpb.AttestationData{
-					Index:  20,
-					Target: &ethpb.Checkpoint{},
+					CommitteeIndex: 20,
+					Target:         &ethpb.Checkpoint{},
 				},
 			},
 			stateSlot:           20,
@@ -364,7 +360,6 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		ClearAllCaches()
 		state.Slot = tt.stateSlot
 		err := VerifyAttestationBitfieldLengths(state, tt.attestation)
 		if tt.verificationFailure {
@@ -386,8 +381,6 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 }
 
 func TestShuffledIndices_ShuffleRightLength(t *testing.T) {
-	ClearAllCaches()
-
 	valiatorCount := 1000
 	validators := make([]*ethpb.Validator, valiatorCount)
 	indices := make([]uint64, valiatorCount)
@@ -433,8 +426,6 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 	c.EnableShuffledIndexCache = true
 	featureconfig.Init(c)
 	defer featureconfig.Init(nil)
-
-	ClearAllCaches()
 
 	validatorCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	validators := make([]*ethpb.Validator, validatorCount)

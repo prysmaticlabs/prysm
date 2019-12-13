@@ -3,8 +3,8 @@ syntax = "proto3";
 package ethereum.beacon.rpc.v1;
 
 import "google/protobuf/empty.proto";
-import "proto/eth/v1alpha1/beacon_block.proto";
-import "proto/eth/v1alpha1/attestation.proto";
+import "eth/v1alpha1/beacon_block.proto";
+import "eth/v1alpha1/attestation.proto";
 
 service AttesterService {
   rpc RequestAttestation(AttestationRequest) returns (ethereum.eth.v1alpha1.AttestationData);
@@ -35,6 +35,7 @@ service ValidatorService {
 message BlockRequest {
   uint64 slot = 1;
   bytes randao_reveal = 2;
+  bytes graffiti = 3;
 }
 
 message ProposeResponse {

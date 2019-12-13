@@ -4,9 +4,8 @@ import (
 	"context"
 
 	"github.com/boltdb/bolt"
-	"github.com/gogo/protobuf/proto"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"go.opencensus.io/trace"
 )
 
@@ -22,7 +21,7 @@ func (k *Store) VoluntaryExit(ctx context.Context, exitRoot [32]byte) (*ethpb.Vo
 			return nil
 		}
 		exit = &ethpb.VoluntaryExit{}
-		return proto.Unmarshal(enc, exit)
+		return decode(enc, exit)
 	})
 	return exit, err
 }
@@ -49,7 +48,7 @@ func (k *Store) SaveVoluntaryExit(ctx context.Context, exit *ethpb.VoluntaryExit
 	if err != nil {
 		return err
 	}
-	enc, err := proto.Marshal(exit)
+	enc, err := encode(exit)
 	if err != nil {
 		return err
 	}

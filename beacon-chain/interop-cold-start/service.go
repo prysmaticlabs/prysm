@@ -6,13 +6,13 @@ import (
 	"math/big"
 
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -153,14 +153,14 @@ func (s *Service) saveGenesisState(ctx context.Context, genesisState *pb.BeaconS
 	if err := s.beaconDB.SaveBlock(ctx, genesisBlk); err != nil {
 		return errors.Wrap(err, "could not save genesis block")
 	}
-	if err := s.beaconDB.SaveHeadBlockRoot(ctx, genesisBlkRoot); err != nil {
-		return errors.Wrap(err, "could not save head block root")
+	if err := s.beaconDB.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
+		return errors.Wrap(err, "could not save genesis state")
 	}
 	if err := s.beaconDB.SaveGenesisBlockRoot(ctx, genesisBlkRoot); err != nil {
 		return errors.Wrap(err, "could save genesis block root")
 	}
-	if err := s.beaconDB.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
-		return errors.Wrap(err, "could not save genesis state")
+	if err := s.beaconDB.SaveHeadBlockRoot(ctx, genesisBlkRoot); err != nil {
+		return errors.Wrap(err, "could not save head block root")
 	}
 	genesisCheckpoint := &ethpb.Checkpoint{Root: genesisBlkRoot[:]}
 	if err := s.beaconDB.SaveJustifiedCheckpoint(ctx, genesisCheckpoint); err != nil {

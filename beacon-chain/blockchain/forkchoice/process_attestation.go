@@ -6,18 +6,22 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
+
+// ErrTargetRootNotInDB returns when the target block root of an attestation cannot be found in the
+// beacon database.
+var ErrTargetRootNotInDB = errors.New("target root does not exist in db")
 
 // OnAttestation is called whenever an attestation is received, it updates validators latest vote,
 // as well as the fork choice store struct.
@@ -61,7 +65,7 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 
 	// Verify beacon node has seen the target block before.
 	if !s.db.HasBlock(ctx, bytesutil.ToBytes32(tgt.Root)) {
-		return fmt.Errorf("target root %#x does not exist in db", bytesutil.Trunc(tgt.Root))
+		return ErrTargetRootNotInDB
 	}
 
 	// Verify attestation target has had a valid pre state produced by the target block.
@@ -108,7 +112,7 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 
 	log := log.WithFields(logrus.Fields{
 		"Slot":               a.Data.Slot,
-		"Index":              a.Data.Index,
+		"Index":              a.Data.CommitteeIndex,
 		"AggregatedBitfield": fmt.Sprintf("%08b", a.AggregationBits),
 		"BeaconBlockRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(a.Data.BeaconBlockRoot)),
 	})
@@ -131,6 +135,9 @@ func (s *Store) verifyAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*pb
 
 // saveCheckpointState saves and returns the processed state with the associated check point.
 func (s *Store) saveCheckpointState(ctx context.Context, baseState *pb.BeaconState, c *ethpb.Checkpoint) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "forkchoice.saveCheckpointState")
+	defer span.End()
+
 	s.checkpointStateLock.Lock()
 	defer s.checkpointStateLock.Unlock()
 	cachedState, err := s.checkpointState.StateByCheckpoint(c)

@@ -10,11 +10,10 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/gogo/protobuf/proto"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"gopkg.in/d4l3k/messagediff.v1"
@@ -28,7 +27,6 @@ func runBlockProcessingTest(t *testing.T, config string) {
 	testFolders, testsFolderPath := testutil.TestFolders(t, config, "sanity/blocks/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-			helpers.ClearAllCaches()
 			preBeaconStateFile, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "pre.ssz")
 			if err != nil {
 				t.Fatal(err)

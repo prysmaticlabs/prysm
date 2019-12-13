@@ -8,8 +8,9 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -23,8 +24,8 @@ func createIndexedAttestation(enc []byte) (*ethpb.IndexedAttestation, error) {
 	return protoIdxAtt, nil
 }
 
-func createValidatorIDsToIndexedAttestationList(enc []byte) (*ethpb.ValidatorIDToIdxAttList, error) {
-	protoIdxAtt := &ethpb.ValidatorIDToIdxAttList{}
+func createValidatorIDsToIndexedAttestationList(enc []byte) (*pb.ValidatorIDToIdxAttList, error) {
+	protoIdxAtt := &pb.ValidatorIDToIdxAttList{}
 	err := proto.Unmarshal(enc, protoIdxAtt)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal encoding")
@@ -157,7 +158,7 @@ func createIndexedAttestationIndicesFromData(idxAttestation *ethpb.IndexedAttest
 	if err != nil {
 		return errors.Wrap(err, "failed to hash indexed attestation data.")
 	}
-	protoIdxAtt := &ethpb.ValidatorIDToIdxAtt{
+	protoIdxAtt := &pb.ValidatorIDToIdxAtt{
 		Signature: idxAttestation.Signature,
 		Indices:   indices,
 		DataRoot:  dataRoot[:],
@@ -202,7 +203,7 @@ func (db *Store) DeleteIndexedAttestation(idxAttestation *ethpb.IndexedAttestati
 func removeIndexedAttestationIndicesFromData(idxAttestation *ethpb.IndexedAttestation, tx *bolt.Tx) error {
 	indices := append(idxAttestation.CustodyBit_0Indices, idxAttestation.CustodyBit_1Indices...)
 	dataRoot, err := ssz.HashTreeRoot(idxAttestation.Data)
-	protoIdxAtt := &ethpb.ValidatorIDToIdxAtt{
+	protoIdxAtt := &pb.ValidatorIDToIdxAtt{
 		Signature: idxAttestation.Signature,
 		Indices:   indices,
 		DataRoot:  dataRoot[:],

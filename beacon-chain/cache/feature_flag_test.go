@@ -7,8 +7,5 @@ func init() {
 		EnableAttestationCache:   true,
 		EnableEth1DataVoteCache:  true,
 		EnableShuffledIndexCache: true,
-		EnableCommitteeCache:     true,
-		EnableActiveCountCache:   true,
-		EnableActiveIndicesCache: true,
 	})
 }

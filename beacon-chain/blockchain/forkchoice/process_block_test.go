@@ -6,15 +6,15 @@ import (
 	"strings"
 	"testing"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -125,11 +125,7 @@ func TestStore_UpdateBlockAttestationVote(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	params.UseMinimalConfig()
 
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
 
 	store := NewForkChoiceService(ctx, db)
 	r := [32]byte{'A'}
@@ -172,11 +168,7 @@ func TestStore_UpdateBlockAttestationsVote(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	params.UseMinimalConfig()
 
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
 
 	store := NewForkChoiceService(ctx, db)
 	r := [32]byte{'A'}
@@ -329,5 +321,161 @@ func TestRemoveStateSinceLastFinalized(t *testing.T) {
 		if s != nil && s.Slot != newFinalizedSlot && s.Slot != finalizedSlot && s.Slot != 0 && s.Slot < endSlot {
 			t.Errorf("State with slot %d should not be in DB", s.Slot)
 		}
+	}
+}
+
+func TestRemoveStateSinceLastFinalized_EmptyStartSlot(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	params.UseMinimalConfig()
+	defer params.UseMainnetConfig()
+
+	c := featureconfig.Get()
+	c.PruneEpochBoundaryStates = true
+	featureconfig.Init(c)
+
+	store := NewForkChoiceService(ctx, db)
+
+	// Save 5 blocks in DB, each has a state.
+	numBlocks := 5
+	totalBlocks := make([]*ethpb.BeaconBlock, numBlocks)
+	blockRoots := make([][32]byte, 0)
+	for i := 0; i < len(totalBlocks); i++ {
+		totalBlocks[i] = &ethpb.BeaconBlock{
+			Slot: uint64(i),
+		}
+		r, err := ssz.SigningRoot(totalBlocks[i])
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := store.db.SaveState(ctx, &pb.BeaconState{Slot: uint64(i)}, r); err != nil {
+			t.Fatal(err)
+		}
+		if err := store.db.SaveBlock(ctx, totalBlocks[i]); err != nil {
+			t.Fatal(err)
+		}
+		blockRoots = append(blockRoots, r)
+	}
+	if err := store.rmStatesOlderThanLastFinalized(ctx, 10, 11); err != nil {
+		t.Fatal(err)
+	}
+	// Since 5-10 are skip slots, block with slot 4 should be deleted
+	s, err := store.db.State(ctx, blockRoots[4])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s != nil {
+		t.Error("Did not delete state for start slot")
+	}
+}
+
+func TestCachedPreState_CanGetFromCache(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	store := NewForkChoiceService(ctx, db)
+	s := &pb.BeaconState{Slot: 1}
+	r := [32]byte{'A'}
+	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r[:]}
+	store.initSyncState[r] = s
+
+	wanted := "pre state of slot 1 does not exist"
+	if _, err := store.cachedPreState(ctx, b); !strings.Contains(err.Error(), wanted) {
+		t.Fatal("Not expected error")
+	}
+}
+
+func TestCachedPreState_CanGetFromCacheWithFeature(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	config := &featureconfig.Flags{
+		InitSyncCacheState: true,
+	}
+	featureconfig.Init(config)
+
+	store := NewForkChoiceService(ctx, db)
+	s := &pb.BeaconState{Slot: 1}
+	r := [32]byte{'A'}
+	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r[:]}
+	store.initSyncState[r] = s
+
+	received, err := store.cachedPreState(ctx, b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(s, received) {
+		t.Error("cached state not the same")
+	}
+}
+
+func TestCachedPreState_CanGetFromDB(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	store := NewForkChoiceService(ctx, db)
+	r := [32]byte{'A'}
+	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r[:]}
+
+	_, err := store.cachedPreState(ctx, b)
+	wanted := "pre state of slot 1 does not exist"
+	if err.Error() != wanted {
+		t.Error("Did not get wanted error")
+	}
+
+	s := &pb.BeaconState{Slot: 1}
+	store.db.SaveState(ctx, s, r)
+
+	received, err := store.cachedPreState(ctx, b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(s, received) {
+		t.Error("cached state not the same")
+	}
+}
+
+func TestSaveInitState_CanSaveDelete(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	store := NewForkChoiceService(ctx, db)
+
+	config := &featureconfig.Flags{
+		InitSyncCacheState: true,
+	}
+	featureconfig.Init(config)
+
+	for i := uint64(0); i < 64; i++ {
+		b := &ethpb.BeaconBlock{Slot: i}
+		s := &pb.BeaconState{Slot: i}
+		r, _ := ssz.SigningRoot(b)
+		store.initSyncState[r] = s
+	}
+
+	// Set finalized root as slot 32
+	finalizedRoot, _ := ssz.SigningRoot(&ethpb.BeaconBlock{Slot: 32})
+
+	if err := store.saveInitState(ctx, &pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{
+		Epoch: 1, Root: finalizedRoot[:]}}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify finalized state is saved in DB
+	finalizedState, err := store.db.State(ctx, finalizedRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if finalizedState == nil {
+		t.Error("finalized state can't be nil")
+	}
+
+	// Verify cached state is properly pruned
+	if len(store.initSyncState) != int(params.BeaconConfig().SlotsPerEpoch) {
+		t.Errorf("wanted: %d, got: %d", len(store.initSyncState), params.BeaconConfig().SlotsPerEpoch)
 	}
 }

@@ -9,13 +9,13 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync/peerstatus"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -26,8 +26,6 @@ func init() {
 }
 
 func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
-	peerstatus.Clear()
-
 	// TODO(3441): Fix ssz string length issue.
 	t.Skip("3441: SSZ is decoding a string with an unexpected length")
 	p1 := p2ptest.NewTestP2P(t)
@@ -77,8 +75,6 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 }
 
 func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
-	peerstatus.Clear()
-
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
@@ -157,8 +153,6 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 }
 
 func TestHandshakeHandlers_Roundtrip(t *testing.T) {
-	peerstatus.Clear()
-
 	// Scenario is that p1 and p2 connect, exchange handshakes.
 	// p2 disconnects and p1 should forget the handshake status.
 	p1 := p2ptest.NewTestP2P(t)
@@ -189,6 +183,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 		if err := r.p2p.Encoding().DecodeWithLength(stream, out); err != nil {
 			t.Fatal(err)
 		}
+		log.WithField("status", out).Warn("received status")
 
 		resp := &pb.Status{HeadSlot: 100, HeadForkVersion: params.BeaconConfig().GenesisForkVersion}
 
@@ -199,8 +194,12 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		log.WithField("status", out).Warn("sending status")
 		stream.Close()
 	})
+
+	numInactive1 := len(p1.Peers().Inactive())
+	numActive1 := len(p1.Peers().Active())
 
 	p1.Connect(p2)
 
@@ -211,21 +210,32 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	// Wait for stream buffer to be read.
 	time.Sleep(200 * time.Millisecond)
 
-	if peerstatus.Count() != 1 {
-		t.Errorf("Expected 1 status in the cache, got %d", peerstatus.Count())
+	numInactive2 := len(p1.Peers().Inactive())
+	numActive2 := len(p1.Peers().Active())
+
+	if numInactive2 != numInactive1 {
+		t.Errorf("Number of inactive peers changed unexpectedly: was %d, now %d", numInactive1, numInactive2)
+	}
+	if numActive2 != numActive1+1 {
+		t.Errorf("Number of active peers unexpected: wanted %d, found %d", numActive1+1, numActive2)
 	}
 
 	if err := p2.Disconnect(p1.PeerID()); err != nil {
 		t.Fatal(err)
 	}
+	p1.Peers().SetConnectionState(p2.PeerID(), peers.PeerDisconnected)
 
 	// Wait for disconnect event to trigger.
 	time.Sleep(200 * time.Millisecond)
 
-	if peerstatus.Count() != 0 {
-		t.Errorf("Expected 0 status in the tracker, got %d", peerstatus.Count())
+	numInactive3 := len(p1.Peers().Inactive())
+	numActive3 := len(p1.Peers().Active())
+	if numInactive3 != numInactive2+1 {
+		t.Errorf("Number of inactive peers unexpected: wanted %d, found %d", numInactive2+1, numInactive3)
 	}
-
+	if numActive3 != numActive2-1 {
+		t.Errorf("Number of active peers unexpected: wanted %d, found %d", numActive2-1, numActive3)
+	}
 }
 
 func TestStatusRPCRequest_RequestSent(t *testing.T) {
@@ -338,6 +348,8 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 		ctx: context.Background(),
 	}
 
+	r.Start()
+
 	// Setup streams
 	pcl := protocol.ID("/eth2/beacon_chain/req/status/1/ssz")
 	var wg sync.WaitGroup
@@ -364,7 +376,6 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 		}
 	})
 
-	p1.AddConnectionHandler(r.sendRPCStatusRequest)
 	p1.Connect(p2)
 
 	if testutil.WaitTimeout(&wg, time.Second) {
@@ -372,11 +383,19 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	}
 	time.Sleep(100 * time.Millisecond)
 
-	if len(p1.Host.Network().Peers()) != 0 {
+	connectionState, err := p1.Peers().ConnectionState(p2.PeerID())
+	if err != nil {
+		t.Fatal("Failed to obtain peer connection state")
+	}
+	if connectionState != peers.PeerDisconnected {
 		t.Error("Expected peer to be disconnected")
 	}
 
-	if peerstatus.FailureCount(p2.PeerID()) != 1 {
-		t.Errorf("Failure count was not bumped to one, instead it is %d", peerstatus.FailureCount(p2.PeerID()))
+	badResponses, err := p1.Peers().BadResponses(p2.PeerID())
+	if err != nil {
+		t.Fatal("Failed to obtain peer connection state")
+	}
+	if badResponses != 1 {
+		t.Errorf("Bad response was not bumped to one, instead it is %d", badResponses)
 	}
 }

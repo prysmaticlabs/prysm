@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"crypto/rand"
 	"errors"
 	"io/ioutil"
 	"strings"
@@ -11,8 +10,8 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -581,7 +580,7 @@ func TestRolesAt_OK(t *testing.T) {
 		},
 	}
 
-	priv, _ := bls.RandKey(rand.Reader)
+	priv := bls.RandKey()
 	keyStore, _ := keystore.NewKeyFromBLS(priv)
 	v.keys[[48]byte{0x01}] = keyStore
 	v.keys[[48]byte{0x04}] = keyStore

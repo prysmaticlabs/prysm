@@ -3,6 +3,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"os"
@@ -11,22 +12,23 @@ import (
 	"sync"
 	"syscall"
 
+	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
+	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	slashpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/rpc"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	"go.opencensus.io/plugin/ocgrpc"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
-
-	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/slasher/db"
-	"github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
 )
 
 var log logrus.FieldLogger
@@ -41,7 +43,7 @@ func init() {
 type Service struct {
 	slasherDb       *db.Store
 	grpcServer      *grpc.Server
-	port            string
+	port            int
 	withCert        string
 	withKey         string
 	listener        net.Listener
@@ -50,26 +52,36 @@ type Service struct {
 	ctx             *cli.Context
 	lock            sync.RWMutex
 	stop            chan struct{} // Channel to wait for termination notifications.
+	context         context.Context
+	beaconConn      *grpc.ClientConn
+	beaconProvider  string
+	beaconCert      string
+	beaconClient    eth.BeaconChainClient
+	started         bool
 }
 
 // Config options for the slasher server.
 type Config struct {
-	Port      string
-	CertFlag  string
-	KeyFlag   string
-	SlasherDb *db.Store
+	Port           int
+	CertFlag       string
+	KeyFlag        string
+	SlasherDb      *db.Store
+	BeaconProvider string
+	BeaconCert     string
 }
 
 // NewRPCService creates a new instance of a struct implementing the SlasherService
 // interface.
 func NewRPCService(cfg *Config, ctx *cli.Context) (*Service, error) {
 	s := &Service{
-		slasherDb: cfg.SlasherDb,
-		port:      cfg.Port,
-		withCert:  cfg.CertFlag,
-		withKey:   cfg.KeyFlag,
-		ctx:       ctx,
-		stop:      make(chan struct{}),
+		slasherDb:      cfg.SlasherDb,
+		port:           cfg.Port,
+		withCert:       cfg.CertFlag,
+		withKey:        cfg.KeyFlag,
+		ctx:            ctx,
+		stop:           make(chan struct{}),
+		beaconProvider: cfg.BeaconProvider,
+		beaconCert:     cfg.BeaconCert,
 	}
 	if err := s.startDB(s.ctx); err != nil {
 		return nil, err
@@ -84,7 +96,10 @@ func (s *Service) Start() {
 	log.WithFields(logrus.Fields{
 		"version": version.GetVersion(),
 	}).Info("Starting hash slinging slasher node")
+	s.context = context.Background()
 	s.startSlasher()
+	s.startBeaconClient()
+	go s.finalisedChangeUpdater()
 	stop := s.stop
 	s.lock.Unlock()
 
@@ -104,20 +119,17 @@ func (s *Service) Start() {
 		}
 		panic("Panic closing the hash slinging slasher node")
 	}()
-
+	s.started = true
 	// Wait for stop channel to be closed.
-	select {
-	case <-stop:
-		return
-	default:
-	}
+	<-stop
 
 }
+
 func (s *Service) startSlasher() {
 	log.Info("Starting service on port: ", s.port)
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", s.port))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", s.port))
 	if err != nil {
-		log.Errorf("Could not listen to port in Start() :%s: %v", s.port, err)
+		log.Errorf("Could not listen to port in Start() :%d: %v", s.port, err)
 	}
 	s.listener = lis
 	log.WithField("port", s.port).Info("Listening on port")
@@ -150,7 +162,7 @@ func (s *Service) startSlasher() {
 		SlasherDB: s.slasherDb,
 	}
 
-	ethpb.RegisterSlasherServer(s.grpcServer, &slasherServer)
+	slashpb.RegisterSlasherServer(s.grpcServer, &slasherServer)
 
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)
@@ -162,6 +174,41 @@ func (s *Service) startSlasher() {
 			}
 		}
 	}()
+}
+
+func (s *Service) startBeaconClient() {
+	var dialOpt grpc.DialOption
+
+	if s.beaconCert != "" {
+		creds, err := credentials.NewClientTLSFromFile(s.beaconCert, "")
+		if err != nil {
+			log.Errorf("Could not get valid credentials: %v", err)
+		}
+		dialOpt = grpc.WithTransportCredentials(creds)
+	} else {
+		dialOpt = grpc.WithInsecure()
+		log.Warn("You are using an insecure gRPC connection to beacon chain! Please provide a certificate and key to use a secure connection.")
+	}
+	beaconOpts := []grpc.DialOption{
+		dialOpt,
+		grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),
+		grpc.WithStreamInterceptor(middleware.ChainStreamClient(
+			grpc_opentracing.StreamClientInterceptor(),
+			grpc_prometheus.StreamClientInterceptor,
+		)),
+		grpc.WithUnaryInterceptor(middleware.ChainUnaryClient(
+			grpc_opentracing.UnaryClientInterceptor(),
+			grpc_prometheus.UnaryClientInterceptor,
+		)),
+	}
+	conn, err := grpc.DialContext(s.context, s.beaconProvider, beaconOpts...)
+	if err != nil {
+		log.Errorf("Could not dial endpoint: %s, %v", s.beaconProvider, err)
+		return
+	}
+	log.Info("Successfully started gRPC connection")
+	s.beaconConn = conn
+	s.beaconClient = eth.NewBeaconChainClient(s.beaconConn)
 }
 
 // Stop the service.
@@ -181,24 +228,28 @@ func (s *Service) Stop() error {
 func (s *Service) Close() {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-
 	log.Info("Stopping hash slinging slasher")
-	s.Stop()
+	err := s.Stop()
+	if err != nil {
+		log.Panicf("Could not stop the slasher service: %v", err)
+	}
 	if err := s.slasherDb.Close(); err != nil {
 		log.Errorf("Failed to close slasher database: %v", err)
 	}
+	s.context.Done()
 	close(s.stop)
 }
 
 // Status returns nil, credentialError or fail status.
-func (s *Service) Status() error {
+func (s *Service) Status() (bool, error) {
 	if s.credentialError != nil {
-		return s.credentialError
+		return false, s.credentialError
 	}
 	if s.failStatus != nil {
-		return s.failStatus
+		return false, s.failStatus
 	}
-	return nil
+	return s.started, nil
+
 }
 
 func (s *Service) startDB(ctx *cli.Context) error {

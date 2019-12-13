@@ -1,8 +1,8 @@
 package db
 
 import (
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 // NewContainerFromAttestations creates a new attestation contain with signature pairs from the
@@ -28,6 +28,9 @@ func NewContainerFromAttestations(atts []*ethpb.Attestation) *AttestationContain
 func (ac *AttestationContainer) Contains(att *ethpb.Attestation) bool {
 	all := bitfield.NewBitlist(att.AggregationBits.Len())
 	for _, sp := range ac.SignaturePairs {
+		if all.Len() != sp.AggregationBits.Len() {
+			continue
+		}
 		all = all.Or(sp.AggregationBits)
 	}
 	return all.Contains(att.AggregationBits)

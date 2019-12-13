@@ -1,15 +1,16 @@
 package beacon
 
 import (
+	"bytes"
 	"context"
 	"sort"
 	"strconv"
 
 	ptypes "github.com/gogo/protobuf/types"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -247,6 +248,48 @@ func (bs *Server) ListValidators(
 	}, nil
 }
 
+// GetValidator information from any validator in the registry by index or public key.
+func (bs *Server) GetValidator(
+	ctx context.Context, req *ethpb.GetValidatorRequest,
+) (*ethpb.Validator, error) {
+	var requestingIndex bool
+	var index uint64
+	var pubKey []byte
+	switch q := req.QueryFilter.(type) {
+	case *ethpb.GetValidatorRequest_Index:
+		index = q.Index
+		requestingIndex = true
+	case *ethpb.GetValidatorRequest_PublicKey:
+		pubKey = q.PublicKey
+	default:
+		return nil, status.Error(
+			codes.InvalidArgument,
+			"Need to specify either validator index or public key in request",
+		)
+	}
+	headState, err := bs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head state")
+	}
+	if requestingIndex {
+		if index >= uint64(len(headState.Validators)) {
+			return nil, status.Errorf(
+				codes.OutOfRange,
+				"Requesting index %d, but there are only %d validators",
+				index,
+				len(headState.Validators),
+			)
+		}
+		return headState.Validators[index], nil
+	}
+	for i := 0; i < len(headState.Validators); i++ {
+		if bytes.Equal(headState.Validators[i].PublicKey, pubKey) {
+			return headState.Validators[i], nil
+		}
+	}
+	return nil, status.Error(codes.NotFound, "No validator matched filter criteria")
+}
+
 // GetValidatorActiveSetChanges retrieves the active set changes for a given epoch.
 //
 // This data includes any activations, voluntary exits, and involuntary
@@ -289,13 +332,13 @@ func (bs *Server) GetValidatorActiveSetChanges(
 		slashedIndices = archivedChanges.Slashed
 		exitedIndices = archivedChanges.Exited
 	} else if requestedEpoch == currentEpoch {
-		activeValidatorCount, err := helpers.ActiveValidatorCount(headState, helpers.CurrentEpoch(headState))
+		activeValidatorCount, err := helpers.ActiveValidatorCount(headState, helpers.PrevEpoch(headState))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
 		}
-		activatedIndices = validators.ActivatedValidatorIndices(helpers.CurrentEpoch(headState), headState.Validators)
+		activatedIndices = validators.ActivatedValidatorIndices(helpers.PrevEpoch(headState), headState.Validators)
 		slashedIndices = validators.SlashedValidatorIndices(helpers.PrevEpoch(headState), headState.Validators)
-		exitedIndices, err = validators.ExitedValidatorIndices(headState.Validators, activeValidatorCount)
+		exitedIndices, err = validators.ExitedValidatorIndices(helpers.PrevEpoch(headState), headState.Validators, activeValidatorCount)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not determine exited validator indices: %v", err)
 		}
@@ -340,7 +383,7 @@ func (bs *Server) GetValidatorParticipation(
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
-	currentEpoch := helpers.SlotToEpoch(headState.Slot)
+	currentEpoch := helpers.CurrentEpoch(headState)
 	prevEpoch := helpers.PrevEpoch(headState)
 
 	var requestedEpoch uint64
@@ -374,6 +417,14 @@ func (bs *Server) GetValidatorParticipation(
 			Finalized:     requestedEpoch <= headState.FinalizedCheckpoint.Epoch,
 			Participation: participation,
 		}, nil
+	} else if requestedEpoch == currentEpoch {
+		// We cannot retrieve participation for an epoch currently in progress.
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"Cannot retrieve information about an epoch currently in progress, current epoch %d, requesting %d",
+			currentEpoch,
+			requestedEpoch,
+		)
 	} else if requestedEpoch > currentEpoch {
 		// We are requesting data from the future and we return an error.
 		return nil, status.Errorf(
@@ -391,8 +442,8 @@ func (bs *Server) GetValidatorParticipation(
 		return nil, status.Errorf(codes.Internal, "Could not compute participation: %v", err)
 	}
 	return &ethpb.ValidatorParticipationResponse{
-		Epoch:         currentEpoch,
-		Finalized:     false, // The current epoch can never be finalized.
+		Epoch:         requestedEpoch,
+		Finalized:     requestedEpoch <= headState.FinalizedCheckpoint.Epoch,
 		Participation: participation,
 	}, nil
 }

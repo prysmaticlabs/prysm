@@ -10,9 +10,9 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
@@ -29,6 +29,7 @@ type validator struct {
 	proposerClient       pb.ProposerServiceClient
 	validatorClient      pb.ValidatorServiceClient
 	attesterClient       pb.AttesterServiceClient
+	graffiti             []byte
 	aggregatorClient     pb.AggregatorServiceClient
 	node                 ethpb.NodeClient
 	keys                 map[[48]byte]*keystore.Key

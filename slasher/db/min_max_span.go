@@ -4,7 +4,7 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -40,7 +40,7 @@ func (db *Store) ValidatorSpansMap(validatorIdx uint64) (*ethpb.EpochSpanMap, er
 
 // SaveValidatorSpansMap accepts a validator index and span map and writes it to disk.
 func (db *Store) SaveValidatorSpansMap(validatorIdx uint64, spanMap *ethpb.EpochSpanMap) error {
-	err := db.update(func(tx *bolt.Tx) error {
+	err := db.batch(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsMinMaxSpanBucket)
 		key := bytesutil.Bytes4(validatorIdx)
 		val, err := proto.Marshal(spanMap)

@@ -6,9 +6,9 @@ package validators
 
 import (
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -161,7 +161,7 @@ func SlashedValidatorIndices(epoch uint64, validators []*ethpb.Validator) []uint
 }
 
 // ExitedValidatorIndices determines the indices exited during the current epoch.
-func ExitedValidatorIndices(validators []*ethpb.Validator, activeValidatorCount uint64) ([]uint64, error) {
+func ExitedValidatorIndices(epoch uint64, validators []*ethpb.Validator, activeValidatorCount uint64) ([]uint64, error) {
 	exited := make([]uint64, 0)
 	exitEpochs := make([]uint64, 0)
 	for i := 0; i < len(validators); i++ {
@@ -193,7 +193,7 @@ func ExitedValidatorIndices(validators []*ethpb.Validator, activeValidatorCount 
 	}
 	withdrawableEpoch := exitQueueEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
 	for i, val := range validators {
-		if val.ExitEpoch == exitQueueEpoch && val.WithdrawableEpoch == withdrawableEpoch {
+		if val.ExitEpoch == epoch && val.WithdrawableEpoch == withdrawableEpoch {
 			exited = append(exited, uint64(i))
 		}
 	}

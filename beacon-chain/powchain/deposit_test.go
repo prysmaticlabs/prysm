@@ -2,14 +2,12 @@ package powchain
 
 import (
 	"context"
-	"crypto/rand"
 	"strings"
 	"testing"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -29,18 +27,11 @@ func TestProcessDeposit_OK(t *testing.T) {
 	}
 	web3Service = setDefaultMocks(web3Service)
 
-	deposits, depositDataRoots, _ := testutil.SetupInitialDeposits(t, 1)
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(1)
 
-	trie, err := trieutil.GenerateTrieFromItems([][]byte{depositDataRoots[0][:]}, int(params.BeaconConfig().DepositContractTreeDepth))
+	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	if err != nil {
-		log.Error(err)
-	}
-
-	root := trie.Root()
-
-	eth1Data := &ethpb.Eth1Data{
-		DepositCount: 1,
-		DepositRoot:  root[:],
+		t.Fatal(err)
 	}
 
 	if err := web3Service.processDeposit(eth1Data, deposits[0]); err != nil {
@@ -62,18 +53,11 @@ func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 	}
 	web3Service = setDefaultMocks(web3Service)
 
-	deposits, depositDataRoots, _ := testutil.SetupInitialDeposits(t, 1)
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(1)
 
-	trie, err := trieutil.GenerateTrieFromItems([][]byte{depositDataRoots[0][:]}, int(params.BeaconConfig().DepositContractTreeDepth))
+	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	if err != nil {
-		log.Error(err)
-	}
-
-	root := trie.Root()
-
-	eth1Data := &ethpb.Eth1Data{
-		DepositCount: 1,
-		DepositRoot:  root[:],
+		t.Fatal(err)
 	}
 
 	deposits[0].Proof = [][]byte{{'f', 'a', 'k', 'e'}}
@@ -101,7 +85,7 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	}
 	web3Service = setDefaultMocks(web3Service)
 
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 1)
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(1)
 	deposits[0].Data.PublicKey = []byte("junk")
 
 	leaf, err := ssz.HashTreeRoot(deposits[0].Data)
@@ -111,6 +95,10 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	trie, err := trieutil.GenerateTrieFromItems([][]byte{leaf[:]}, int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		log.Error(err)
+	}
+	deposits[0].Proof, err = trie.MerkleProof((0))
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	root := trie.Root()
@@ -128,7 +116,6 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	if !strings.Contains(err.Error(), pubKeyErr) {
 		t.Errorf("Did not get expected error. Wanted: '%s' but got '%s'", pubKeyErr, err.Error())
 	}
-
 }
 
 func TestProcessDeposit_InvalidSignature(t *testing.T) {
@@ -141,7 +128,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 	}
 	web3Service = setDefaultMocks(web3Service)
 
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 1)
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(1)
 	var fakeSig [96]byte
 	copy(fakeSig[:], []byte{'F', 'A', 'K', 'E'})
 	deposits[0].Data.Signature = fakeSig[:]
@@ -175,7 +162,6 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 }
 
 func TestProcessDeposit_UnableToVerify(t *testing.T) {
-	helpers.ClearAllCaches()
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint: endpoint,
 		BeaconDB:     &kv.Store{},
@@ -186,11 +172,24 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	web3Service = setDefaultMocks(web3Service)
 	testutil.ResetCache()
 
-	deposits, _, keys := testutil.SetupInitialDeposits(t, 1)
+	deposits, keys, _ := testutil.DeterministicDepositsAndKeys(1)
 	sig := keys[0].Sign([]byte{'F', 'A', 'K', 'E'}, bls.ComputeDomain(params.BeaconConfig().DomainDeposit))
 	deposits[0].Data.Signature = sig.Marshal()[:]
-	eth1Data := testutil.GenerateEth1Data(t, deposits)
 
+	trie, _, err := testutil.DepositTrieFromDeposits(deposits)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := trie.Root()
+	eth1Data := &ethpb.Eth1Data{
+		DepositCount: 1,
+		DepositRoot:  root[:],
+	}
+	proof, err := trie.MerkleProof(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deposits[0].Proof = proof
 	err = web3Service.processDeposit(eth1Data, deposits[0])
 	if err == nil {
 		t.Fatal("No errors, when an error was expected")
@@ -221,11 +220,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 		},
 	}
 
-	sk, err := bls.RandKey(rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	sk := bls.RandKey()
 	deposit.Data.PublicKey = sk.PublicKey().Marshal()
 	signedRoot, err := ssz.SigningRoot(deposit.Data)
 	if err != nil {
@@ -235,12 +230,20 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 	sig := sk.Sign(signedRoot[:], bls.ComputeDomain(params.BeaconConfig().DomainDeposit))
 	deposit.Data.Signature = sig.Marshal()
 
-	_, root := testutil.GenerateDepositProof(t, []*ethpb.Deposit{deposit})
-
+	trie, _, err := testutil.DepositTrieFromDeposits([]*ethpb.Deposit{deposit})
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := trie.Root()
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 1,
 		DepositRoot:  root[:],
 	}
+	proof, err := trie.MerkleProof(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deposit.Proof = proof
 
 	factor := params.BeaconConfig().MaxEffectiveBalance / params.BeaconConfig().EffectiveBalanceIncrement
 	// deposit till 31e9
@@ -266,12 +269,10 @@ func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 	web3Service = setDefaultMocks(web3Service)
 	testutil.ResetCache()
 
-	deposits, _, keys := testutil.SetupInitialDeposits(t, 10)
-	deposits, root := testutil.GenerateDepositProof(t, deposits)
-
-	eth1Data := &ethpb.Eth1Data{
-		DepositCount: uint64(len(deposits)),
-		DepositRoot:  root[:],
+	deposits, keys, _ := testutil.DeterministicDepositsAndKeys(10)
+	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	for i, k := range keys {

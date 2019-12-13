@@ -6,10 +6,10 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -42,7 +42,7 @@ func (s *Service) handleProcessedBlock(ctx context.Context, message proto.Messag
 			"index":            i,
 			"root":             fmt.Sprintf("%#x", root),
 			"aggregation_bits": fmt.Sprintf("%08b", att.AggregationBits.Bytes()),
-			"committeeIndex":   att.Data.Index,
+			"committeeIndex":   att.Data.CommitteeIndex,
 		}).Debug("block attestation")
 	}
 	return nil

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -17,7 +18,6 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -66,10 +66,10 @@ func TestSubmitAttestation_OK(t *testing.T) {
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
-	if err := db.SaveHeadBlockRoot(ctx, root); err != nil {
+	if err := db.SaveState(ctx, state, root); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveState(ctx, state, root); err != nil {
+	if err := db.SaveHeadBlockRoot(ctx, root); err != nil {
 		t.Fatal(err)
 	}
 

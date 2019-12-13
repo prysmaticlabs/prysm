@@ -4,8 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -45,20 +44,26 @@ func detectMin(attestationEpochSpan uint64,
 // target epoch that has a lower (earlier) source epoch.
 // Logic for this detection method was designed by https://github.com/protolambda
 // Detailed here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
-func (ss *Server) DetectAndUpdateMaxEpochSpan(ctx context.Context, source uint64, target uint64, validatorIdx uint64) (uint64, error) {
+func (ss *Server) DetectAndUpdateMaxEpochSpan(
+	ctx context.Context,
+	source uint64,
+	target uint64,
+	validatorIdx uint64,
+	spanMap *ethpb.EpochSpanMap,
+) (uint64, *ethpb.EpochSpanMap, error) {
 	if target < source {
-		return 0, fmt.Errorf(
+		return 0, nil, fmt.Errorf(
 			"target: %d < source: %d ",
 			target,
 			source,
 		)
 	}
-	targetEpoch, span, spanMap, err := ss.detectSlashingByEpochSpan(source, target, validatorIdx, detectMax)
+	targetEpoch, span, spanMap, err := ss.detectSlashingByEpochSpan(source, target, spanMap, detectMax)
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
 	if targetEpoch > 0 {
-		return targetEpoch, nil
+		return targetEpoch, spanMap, nil
 	}
 	for i := uint64(1); i < target-source; i++ {
 		val := uint32(span - i)
@@ -72,9 +77,9 @@ func (ss *Server) DetectAndUpdateMaxEpochSpan(ctx context.Context, source uint64
 		}
 	}
 	if err := ss.SlasherDB.SaveValidatorSpansMap(validatorIdx, spanMap); err != nil {
-		return 0, err
+		return 0, nil, err
 	}
-	return 0, nil
+	return 0, spanMap, nil
 }
 
 // DetectAndUpdateMinEpochSpan is used to detect surrounded votes and update the min epoch span
@@ -84,23 +89,29 @@ func (ss *Server) DetectAndUpdateMaxEpochSpan(ctx context.Context, source uint64
 //
 // Logic is following the detection method designed by https://github.com/protolambda
 // Detailed here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
-func (ss *Server) DetectAndUpdateMinEpochSpan(ctx context.Context, source uint64, target uint64, validatorIdx uint64) (uint64, error) {
+func (ss *Server) DetectAndUpdateMinEpochSpan(
+	ctx context.Context,
+	source uint64,
+	target uint64,
+	validatorIdx uint64,
+	spanMap *ethpb.EpochSpanMap,
+) (uint64, *ethpb.EpochSpanMap, error) {
 	if target < source {
-		return 0, fmt.Errorf(
+		return 0, nil, fmt.Errorf(
 			"target: %d < source: %d ",
 			target,
 			source,
 		)
 	}
-	targetEpoch, _, spanMap, err := ss.detectSlashingByEpochSpan(source, target, validatorIdx, detectMin)
+	targetEpoch, _, spanMap, err := ss.detectSlashingByEpochSpan(source, target, spanMap, detectMin)
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
 	if targetEpoch > 0 {
-		return targetEpoch, nil
+		return targetEpoch, spanMap, nil
 	}
 	if source == 0 {
-		return 0, nil
+		return 0, spanMap, nil
 	}
 	for i := source - 1; i > 0; i-- {
 		val := uint32(target - (i))
@@ -113,27 +124,25 @@ func (ss *Server) DetectAndUpdateMinEpochSpan(ctx context.Context, source uint64
 			break
 		}
 	}
-	if err := ss.SlasherDB.SaveValidatorSpansMap(validatorIdx, spanMap); err != nil {
-		return 0, errors.Wrap(err, "could not save validator spans")
-	}
-	return 0, nil
+	return 0, spanMap, nil
 }
 
 // detectSlashingByEpochSpan is used to detect if a slashable event is present
 // in the db by checking either the closest attestation target or the furthest
 // attestation target. This method receives a detector function in order to be used
 // for both surrounding and surrounded vote cases.
-func (ss *Server) detectSlashingByEpochSpan(source, target, validatorIdx uint64, detector detectFn) (uint64, uint64, *ethpb.EpochSpanMap, error) {
+func (ss *Server) detectSlashingByEpochSpan(
+	source,
+	target uint64,
+	spanMap *ethpb.EpochSpanMap,
+	detector detectFn,
+) (uint64, uint64, *ethpb.EpochSpanMap, error) {
 	span := target - source
 	if span > params.BeaconConfig().WeakSubjectivityPeriod {
 		return 0, span, nil, fmt.Errorf("target: %d - source: %d > weakSubjectivityPeriod",
 			params.BeaconConfig().WeakSubjectivityPeriod,
 			span,
 		)
-	}
-	spanMap, err := ss.SlasherDB.ValidatorSpansMap(validatorIdx)
-	if err != nil {
-		return 0, span, nil, errors.Wrapf(err, "could not retrieve span map for validator index: %d", validatorIdx)
 	}
 	if _, ok := spanMap.EpochSpanMap[source]; ok {
 		return detector(span, spanMap.EpochSpanMap[source], source), span, spanMap, nil

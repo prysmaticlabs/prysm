@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -19,7 +19,7 @@ func (s *Service) processDeposit(
 	deposit *ethpb.Deposit,
 ) error {
 	if err := verifyDeposit(eth1Data, deposit); err != nil {
-		return errors.Wrapf(err, "could not verify deposit from #%x", bytesutil.Trunc(deposit.Data.PublicKey))
+		return errors.Wrapf(err, "could not verify deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
 	}
 	pubKey := bytesutil.ToBytes48(deposit.Data.PublicKey)
 	amount := deposit.Data.Amount

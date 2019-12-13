@@ -4,7 +4,7 @@ import (
 	"reflect"
 
 	"github.com/gogo/protobuf/proto"
-	pb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
 // GossipTopicMappings represent the protocol ID to protobuf message type map for easy
