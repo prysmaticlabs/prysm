@@ -6,7 +6,7 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 )
 
-func (s *Service) validatorUpdater() {
+func (s *Service) finalisedChangeUpdater() {
 	tick := time.Tick(2000 * time.Millisecond)
 	var finalizedEpoch uint64
 	for {
