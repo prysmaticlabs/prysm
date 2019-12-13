@@ -48,4 +48,11 @@ var (
 		Name:  "grpc-gateway-port",
 		Usage: "Enable gRPC gateway for JSON requests",
 	}
+
+	// MinimumHandshake specifies the required number of handshakes in order
+	// to start syncing with external peers.
+	MinimumHandshake = cli.IntFlag{
+		Name:  "minimum-handshakes",
+		Usage: "The required number of valid peers to connect with before syncing.",
+	}
 )

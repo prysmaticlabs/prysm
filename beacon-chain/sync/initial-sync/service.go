@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -25,9 +27,10 @@ type blockchainService interface {
 }
 
 const (
-	minStatusCount           = 3               // TODO(3147): Set this to more than 3, maybe configure from flag?
 	handshakePollingInterval = 5 * time.Second // Polling interval for checking the number of received handshakes.
 )
+
+var minStatusCount = 3
 
 // Config to set up the initial sync service.
 type Config struct {
@@ -51,6 +54,9 @@ type InitialSync struct {
 // NewInitialSync configures the initial sync service responsible for bringing the node up to the
 // latest head of the blockchain.
 func NewInitialSync(cfg *Config) *InitialSync {
+	if flags.Get().MinimumHandshakes != 0 {
+		minStatusCount = flags.Get().MinimumHandshakes
+	}
 	return &InitialSync{
 		ctx:           context.Background(),
 		chain:         cfg.Chain,
