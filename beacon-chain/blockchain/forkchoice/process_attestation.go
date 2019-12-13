@@ -173,27 +173,10 @@ func (s *Store) verifyAttestation(ctx context.Context, baseState *pb.BeaconState
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert attestation to indexed attestation")
 	}
-	// check slashing
-	go s.checkForSlashing(ctx, indexedAtt)
-
 	if err := blocks.VerifyIndexedAttestation(ctx, baseState, indexedAtt); err != nil {
 		return nil, errors.Wrap(err, "could not verify indexed attestation")
 	}
 	return indexedAtt, nil
-}
-
-func (s *Store) checkForSlashing(ctx context.Context, indexedAtt *ethpb.IndexedAttestation) {
-	asr, err := s.slasherClient.IsSlashableAttestation(ctx, indexedAtt)
-	if err != nil {
-		log.Error(err, "Slasher error response")
-	}
-	if asr.AttesterSlashing != nil && len(asr.AttesterSlashing) != 0 {
-		log := log.WithFields(logrus.Fields{
-			"Number of slashing proofs": len(asr.AttesterSlashing),
-			"Slashing Proofs":           asr.AttesterSlashing,
-		})
-		log.Debug("Found slashing proofs")
-	}
 }
 
 // updateAttVotes updates validator's latest votes based on the incoming attestation.
