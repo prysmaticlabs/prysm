@@ -21,6 +21,10 @@ func TestStateRootCacheFuzz_10(t *testing.T) {
 	fuzzStateRootCache(t, 0, 10)
 }
 
+func TestStateRootCacheFuzz_50(t *testing.T) {
+	fuzzStateRootCache(t, 0, 50)
+}
+
 func TestStateRootCacheFuzz_100(t *testing.T) {
 	fuzzStateRootCache(t, 0, 100)
 }
@@ -87,7 +91,7 @@ func TestHashTreeRootState_ElementsChanged_RecomputeBranch(t *testing.T) {
 	hasher := &stateRootHasher{}
 	hasherWithCache := globalHasher
 	state := &ethereum_beacon_p2p_v1.BeaconState{}
-	initialRoots := make([][]byte, 2)
+	initialRoots := make([][]byte, 5)
 	for i := 0; i < len(initialRoots); i++ {
 		var someRt [32]byte
 		copy(someRt[:], "hello")
@@ -98,7 +102,7 @@ func TestHashTreeRootState_ElementsChanged_RecomputeBranch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	badRoots := make([][]byte, 2)
+	badRoots := make([][]byte, 5)
 	for i := 0; i < len(badRoots); i++ {
 		var someRt [32]byte
 		copy(someRt[:], strconv.Itoa(i))

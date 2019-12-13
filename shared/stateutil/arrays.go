@@ -41,10 +41,10 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 	if h.rootsCache != nil && len(leaves) != len(prevLeaves) {
 		// We invalidate the cache completely in this case.
 		prevLeaves = leaves
-		depth := merkle.GetDepth(uint64(len(leaves)))
-		lock.Lock()
-		layersCache[fieldName] = make([][][]byte, depth+1)
-		lock.Unlock()
+		//depth := merkle.GetDepth(uint64(len(leaves)))
+		//lock.Lock()
+		//layersCache[fieldName] = make([][][]byte, depth+1)
+		//lock.Unlock()
 	}
 	for i := 0; i < len(roots) && i < len(leaves) && i < len(prevLeaves); i++ {
 		padded := bytesutil.ToBytes32(roots[i])
@@ -69,7 +69,7 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 			}
 		}
 		if fieldName == "RandaoMixes" {
-			fmt.Println("Branch Recompute Merkle")
+			fmt.Println("Branch Recompute Merkle With Cache")
 			fmt.Printf("Changed indices: %v\n", changedIndices)
 			prettyPrintTree(layersCache[fieldName])
 		}
@@ -109,10 +109,21 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][]byte, fieldName string) 
 	}
 	hashLayer := leaves
 	layers := make([][][]byte, merkle.GetDepth(uint64(len(leaves)))+1)
+	if fieldName == "RandaoMixes" {
+		fmt.Println("Setting layers to empty")
+	}
 	if items, ok := layersCache[fieldName]; ok && h.rootsCache != nil {
-		layers = items
+		if len(items[0]) == len(leaves) {
+			layers = items
+			if fieldName == "RandaoMixes" {
+				fmt.Printf("Setting layers to items: %v\n", items)
+			}
+		}
 	}
 	layers[0] = hashLayer
+	if fieldName == "RandaoMixes" {
+		fmt.Printf("Updated first layer: %v\n", layers[0])
+	}
 	// We keep track of the hash layers of a Merkle trie until we reach
 	// the top layer of length 1, which contains the single root element.
 	//        [Root]      -> Top layer has length 1.
@@ -173,7 +184,7 @@ func recomputeRoot(idx int, chunks [][]byte, fieldName string) ([32]byte, error)
 		// fmt.Printf("Neighbor index: %d\n", neighborIdx)
 
 		neighbor := make([]byte, 32)
-		if layers[i] != nil && neighborIdx < len(layers[i]) {
+		if layers[i] != nil && len(layers[i]) != 0 && neighborIdx < len(layers[i]) {
 			neighbor = layers[i][neighborIdx]
 		}
 		// fmt.Printf("Neighbor: %#x\n", bytesutil.Trunc(neighbor))
@@ -186,6 +197,7 @@ func recomputeRoot(idx int, chunks [][]byte, fieldName string) ([32]byte, error)
 		}
 		parentIdx := currentIndex / 2
 		// Update the cached layers at the parent index.
+		fmt.Printf("i+1=%d, numlayers=%d, len(layers+1)=%d, parentidx=%d\n", i+1, len(layers), len(layers[i+1]), parentIdx)
 		layers[i+1][parentIdx] = root
 		currentIndex = parentIdx
 	}
