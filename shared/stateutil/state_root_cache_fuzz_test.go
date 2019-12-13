@@ -1,7 +1,6 @@
 package stateutil
 
 import (
-	"fmt"
 	"strconv"
 	"testing"
 
@@ -37,6 +36,18 @@ func TestStateRootCacheFuzz_10000(t *testing.T) {
 	fuzzStateRootCache(t, 2, 10000)
 }
 
+func TestStateRootCacheFuzz_100000(t *testing.T) {
+	fuzzStateRootCache(t, 3, 100000)
+}
+
+func TestStateRootCacheFuzz_1000000(t *testing.T) {
+	fuzzStateRootCache(t, 4, 1000000)
+}
+
+func TestStateRootCacheFuzz_10000000(t *testing.T) {
+	fuzzStateRootCache(t, 5, 10000000)
+}
+
 func fuzzStateRootCache(t *testing.T, seed int64, iterations uint64) {
 	fuzzer := fuzz.NewWithSeed(seed)
 	state := &ethereum_beacon_p2p_v1.BeaconState{}
@@ -60,7 +71,6 @@ func fuzzStateRootCache(t *testing.T, seed int64, iterations uint64) {
 				}
 			}()
 			var err error
-			fmt.Println("Without cache")
 			a, err = hasher.hashTreeRootState(state)
 			if err != nil {
 				t.Fatal(err)
@@ -75,7 +85,6 @@ func fuzzStateRootCache(t *testing.T, seed int64, iterations uint64) {
 				}
 			}()
 			var err error
-			fmt.Println("With cache")
 			b, err = hasherWithCache.hashTreeRootState(state)
 			if err != nil {
 				t.Fatal(err)

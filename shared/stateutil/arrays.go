@@ -42,11 +42,11 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 		// We invalidate the cache completely in this case.
 		prevLeaves = leaves
 	}
-	fmt.Printf("Prev leaves: ")
-	for i := 0; i < len(prevLeaves); i++ {
-		fmt.Printf("%#x, ", bytesutil.Trunc(prevLeaves[i]))
-	}
-	fmt.Println("")
+	//fmt.Printf("Prev leaves: ")
+	//for i := 0; i < len(prevLeaves); i++ {
+	//	fmt.Printf("%#x, ", bytesutil.Trunc(prevLeaves[i]))
+	//}
+	//fmt.Println("")
 	for i := 0; i < len(roots) && i < len(leaves) && i < len(prevLeaves); i++ {
 		padded := bytesutil.ToBytes32(roots[i])
 		copy(hashKeyElements[bytesProcessed:bytesProcessed+32], padded[:])
@@ -63,11 +63,19 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 		// If indices did change since last computation, we only recompute
 		// the modified branches in the cached Merkle tree for this state field.
 		chunks := leaves
-		fmt.Printf("Chunks before recompute: ")
-		for i := 0; i < len(chunks); i++ {
-			fmt.Printf("%#x, ", bytesutil.Trunc(chunks[i]))
+		//fmt.Printf("Chunks before recompute: ")
+		//for i := 0; i < len(chunks); i++ {
+		//	fmt.Printf("%#x, ", bytesutil.Trunc(chunks[i]))
+		//}
+		//fmt.Println("")
+
+		// We add an offset to the changed indices here.
+		// Might need the max of changed indices instead here.
+		maxChangedIndex := changedIndices[len(changedIndices)-1]
+		if maxChangedIndex+2 == len(chunks) && maxChangedIndex%2 != 0 {
+			changedIndices = append(changedIndices, maxChangedIndex+1)
 		}
-		fmt.Println("")
+
 		for i := 0; i < len(changedIndices); i++ {
 			rt, err = recomputeRoot(changedIndices[i], chunks, fieldName)
 			if err != nil {
@@ -75,9 +83,9 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 			}
 		}
 		if fieldName == "StateRoots" {
-			fmt.Println("Branch Recompute Merkle With Cache")
-			fmt.Printf("Changed indices: %v\n", changedIndices)
-			prettyPrintTree(layersCache[fieldName])
+			//fmt.Println("Branch Recompute Merkle With Cache")
+			//fmt.Printf("Changed indices: %v\n", changedIndices)
+			//prettyPrintTree(layersCache[fieldName])
 		}
 		return rt, nil
 	}
@@ -118,22 +126,15 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][]byte, fieldName string) 
 	if items, ok := layersCache[fieldName]; ok && h.rootsCache != nil {
 		if len(items[0]) == len(leaves) {
 			layers = items
-			if fieldName == "StateRoots" {
-				fmt.Printf("Setting layers to items: %v\n", items)
-				for i := 0; i < len(items[0]); i++ {
-					fmt.Printf("%#x, ", bytesutil.Trunc(items[0][i]))
-				}
-				fmt.Println("")
-			}
 		}
 	}
 	layers[0] = hashLayer
 	if fieldName == "StateRoots" {
-		fmt.Print("Updated first layer: ")
-		for i := 0; i < len(layers[0]); i++ {
-			fmt.Printf("%#x, ", bytesutil.Trunc(layers[0][i]))
-		}
-		fmt.Println("")
+		//fmt.Print("Updated first layer: ")
+		//for i := 0; i < len(layers[0]); i++ {
+		//	fmt.Printf("%#x, ", bytesutil.Trunc(layers[0][i]))
+		//}
+		//fmt.Println("")
 	}
 	// We keep track of the hash layers of a Merkle trie until we reach
 	// the top layer of length 1, which contains the single root element.
@@ -155,15 +156,15 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][]byte, fieldName string) 
 	copy(root[:], hashLayer[0])
 	if h.rootsCache != nil {
 		layersCache[fieldName] = layers
-		if fieldName == "StateRoots" {
-			fmt.Println("Regular Merkle With Cache")
-			prettyPrintTree(layersCache[fieldName])
-		}
+		//if fieldName == "StateRoots" {
+		//	fmt.Println("Regular Merkle With Cache")
+		//	prettyPrintTree(layersCache[fieldName])
+		//}
 	} else {
-		if fieldName == "StateRoots" {
-			fmt.Println("Regular Merkle No Cache")
-			prettyPrintTree(layers)
-		}
+		//if fieldName == "StateRoots" {
+		//	fmt.Println("Regular Merkle No Cache")
+		//	prettyPrintTree(layers)
+		//}
 	}
 	return root
 }
@@ -184,6 +185,8 @@ func recomputeRoot(idx int, chunks [][]byte, fieldName string) ([32]byte, error)
 	layers := items
 	root := chunks[idx]
 	//fmt.Printf("Recomputing index %d\n", idx)
+	// TODO: Even though we set the 0th layer to chunks, the 1st layer might not change yet.
+	// We have an off-by-one in changed indices that we need to amend.
 	layers[0] = chunks
 	//fmt.Printf("Set index %d to %#x\n", idx, bytesutil.Trunc(root))
 	// The merkle tree structure looks as follows:
