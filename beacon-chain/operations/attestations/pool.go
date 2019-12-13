@@ -19,6 +19,9 @@ type Pool interface {
 	UnaggregatedAttestations(slot uint64, committeeIndex uint64) []*ethpb.Attestation
 	DeleteUnaggregatedAttestation(att *ethpb.Attestation) error
 	// For forkchoice attestations
+	SaveForkchoiceAttestation(att *ethpb.Attestation) error
+	ForkchoiceAttestations() []*ethpb.Attestation
+	DeleteForkchoiceAttestation(att *ethpb.Attestation) error
 }
 
 // NewPool initializes a new attestation pool.
