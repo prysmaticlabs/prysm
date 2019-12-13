@@ -46,7 +46,7 @@ func (r *RegularSync) beaconBlockSubscriber(ctx context.Context, msg proto.Messa
 		interop.WriteBlockToDisk(block, true /*failed*/)
 	}
 
-	// Delete the same attestations from the block in the pool to avoid inclusion in future block.
+	// Delete attestations from the block in the pool to avoid inclusion in future block.
 	if err := r.deleteAttsInPool(block.Body.Attestations); err != nil {
 		log.Errorf("Could not delete attestations in pool: %v", err)
 		return nil
