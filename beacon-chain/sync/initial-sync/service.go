@@ -2,8 +2,9 @@ package initialsync
 
 import (
 	"context"
-	"fmt"
 	"time"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -170,10 +171,9 @@ func (s *InitialSync) waitForMinimumPeers() {
 		if count >= minStatusCount {
 			break
 		}
-		log.WithField(
-			"handshakes",
-			fmt.Sprintf("%d/%d", count, minStatusCount),
-		).Info("Waiting for enough peer handshakes before syncing")
+		log.WithFields(logrus.Fields{
+			"valid handshakes":    count,
+			"required handshakes": minStatusCount}).Info("Waiting for enough peer handshakes before syncing")
 		time.Sleep(handshakePollingInterval)
 	}
 }
