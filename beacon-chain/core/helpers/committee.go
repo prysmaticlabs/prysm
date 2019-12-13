@@ -95,8 +95,10 @@ func BeaconCommittee(state *pb.BeaconState, slot uint64, index uint64) ([]uint64
 		return nil, errors.Wrap(err, "could not get active indices")
 	}
 
-	if err := UpdateCommitteeCache(state); err != nil {
-		return nil, errors.Wrap(err, "could not update committee cache")
+	if featureconfig.Get().EnableNewCache {
+		if err := UpdateCommitteeCache(state); err != nil {
+			return nil, errors.Wrap(err, "could not update committee cache")
+		}
 	}
 
 	return ComputeCommittee(indices, seed, epochOffset, count)
@@ -289,9 +291,11 @@ func ShuffledIndices(state *pb.BeaconState, epoch uint64) ([]uint64, error) {
 		return nil, errors.Wrapf(err, "could not get seed for epoch %d", epoch)
 	}
 
-	indices, err := ActiveValidatorIndices(state, epoch)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not get active indices %d", epoch)
+	indices := make([]uint64, 0, len(state.Validators))
+	for i, v := range state.Validators {
+		if IsActiveValidator(v, epoch) {
+			indices = append(indices, uint64(i))
+		}
 	}
 
 	validatorCount := uint64(len(indices))
@@ -311,6 +315,7 @@ func ShuffledIndices(state *pb.BeaconState, epoch uint64) ([]uint64, error) {
 // list with committee index and epoch number. It caches the shuffled indices for current epoch and next epoch.
 func UpdateCommitteeCache(state *pb.BeaconState) error {
 	currentEpoch := CurrentEpoch(state)
+	fmt.Println("Calculated ", currentEpoch, currentEpoch + 1)
 	for _, epoch := range []uint64{currentEpoch, currentEpoch + 1} {
 		shuffledIndices, err := ShuffledIndices(state, epoch)
 		if err != nil {
