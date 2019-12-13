@@ -309,14 +309,14 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconSt
 	if err := s.beaconDB.SaveBlock(ctx, genesisBlk); err != nil {
 		return errors.Wrap(err, "could not save genesis block")
 	}
+	if err := s.beaconDB.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
+		return errors.Wrap(err, "could not save genesis state")
+	}
 	if err := s.beaconDB.SaveHeadBlockRoot(ctx, genesisBlkRoot); err != nil {
 		return errors.Wrap(err, "could not save head block root")
 	}
 	if err := s.beaconDB.SaveGenesisBlockRoot(ctx, genesisBlkRoot); err != nil {
 		return errors.Wrap(err, "could save genesis block root")
-	}
-	if err := s.beaconDB.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
-		return errors.Wrap(err, "could not save genesis state")
 	}
 	if err := s.saveGenesisValidators(ctx, genesisState); err != nil {
 		return errors.Wrap(err, "could not save genesis validators")

@@ -108,15 +108,16 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 }
 
 func TestMultiAddrsConversion_InvalidIPAddr(t *testing.T) {
-	hook := logTest.NewGlobal()
-	ipAddr := net.IPv6zero
+	addr := net.ParseIP("invalidIP")
 	_, pkey := createAddrAndPrivKey(t)
-	node, err := createLocalNode(pkey, ipAddr, 0, 0)
+	node, err := createLocalNode(pkey, addr, 0, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_ = convertToMultiAddr([]*enode.Node{node.Node()})
-	testutil.AssertLogsContain(t, hook, "node doesn't have an ip4 address")
+	multiAddr := convertToMultiAddr([]*enode.Node{node.Node()})
+	if len(multiAddr) != 0 {
+		t.Error("Invalid ip address converted successfully")
+	}
 }
 
 func TestMultiAddrConversion_OK(t *testing.T) {

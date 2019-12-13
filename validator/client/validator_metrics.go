@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -23,11 +23,11 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		return nil
 	}
 
-	req := &pb.ValidatorPerformanceRequest{
+	req := &ethpb.ValidatorPerformanceRequest{
 		Slot:       slot,
 		PublicKeys: v.pubkeys,
 	}
-	resp, err := v.validatorClient.ValidatorPerformance(ctx, req)
+	resp, err := v.beaconClient.GetValidatorPerformance(ctx, req)
 	if err != nil {
 		return err
 	}

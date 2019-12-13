@@ -1,4 +1,4 @@
-package proposer
+package validator
 
 import (
 	"context"
@@ -48,10 +48,10 @@ func TestProposeBlock_OK(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
+	if err := db.SaveState(ctx, beaconState, genesisRoot); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
-	if err := db.SaveState(ctx, beaconState, genesisRoot); err != nil {
+	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
@@ -98,12 +98,10 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
-
-	if err := db.SaveHeadBlockRoot(ctx, parentRoot); err != nil {
+	if err := db.SaveState(ctx, beaconState, parentRoot); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
-
-	if err := db.SaveState(ctx, beaconState, parentRoot); err != nil {
+	if err := db.SaveHeadBlockRoot(ctx, parentRoot); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
@@ -989,10 +987,10 @@ func TestEth1Data_MockEnabled(t *testing.T) {
 	headState := &pbp2p.BeaconState{
 		Eth1DepositIndex: 64,
 	}
-	if err := db.SaveHeadBlockRoot(ctx, headBlockRoot); err != nil {
+	if err := db.SaveState(ctx, headState, headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveState(ctx, headState, headBlockRoot); err != nil {
+	if err := db.SaveHeadBlockRoot(ctx, headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1035,10 +1033,10 @@ func TestFilterAttestation_OK(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
+	if err := db.SaveState(ctx, state, genesisRoot); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
-	if err := db.SaveState(ctx, state, genesisRoot); err != nil {
+	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
