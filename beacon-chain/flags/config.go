@@ -11,7 +11,7 @@ type GlobalFlags struct {
 	EnableArchivedValidatorSetChanges bool
 	EnableArchivedBlocks              bool
 	EnableArchivedAttestations        bool
-	MinimumHandshakes                 int
+	MinimumSyncPeers                  int
 }
 
 var globalConfig *GlobalFlags
@@ -45,8 +45,6 @@ func ConfigureGlobalFlags(ctx *cli.Context) {
 	if ctx.GlobalBool(ArchiveAttestationsFlag.Name) {
 		cfg.EnableArchivedAttestations = true
 	}
-	if ctx.GlobalBool(MinimumHandshake.Name) {
-		cfg.MinimumHandshakes = MinimumHandshake.Value
-	}
+	cfg.MinimumSyncPeers = ctx.GlobalInt(MinSyncPeers.Name)
 	Init(cfg)
 }

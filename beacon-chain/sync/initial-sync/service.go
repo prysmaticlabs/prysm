@@ -30,8 +30,6 @@ const (
 	handshakePollingInterval = 5 * time.Second // Polling interval for checking the number of received handshakes.
 )
 
-var minStatusCount = 3
-
 // Config to set up the initial sync service.
 type Config struct {
 	P2P           p2p.P2P
@@ -54,9 +52,6 @@ type InitialSync struct {
 // NewInitialSync configures the initial sync service responsible for bringing the node up to the
 // latest head of the blockchain.
 func NewInitialSync(cfg *Config) *InitialSync {
-	if flags.Get().MinimumHandshakes != 0 {
-		minStatusCount = flags.Get().MinimumHandshakes
-	}
 	return &InitialSync{
 		ctx:           context.Background(),
 		chain:         cfg.Chain,
@@ -124,12 +119,12 @@ func (s *InitialSync) Start() {
 	// Every 5 sec, report handshake count.
 	for {
 		count := len(s.p2p.Peers().Connected())
-		if count >= minStatusCount {
+		if count >= flags.Get().MinimumSyncPeers {
 			break
 		}
 		log.WithField(
 			"handshakes",
-			fmt.Sprintf("%d/%d", count, minStatusCount),
+			fmt.Sprintf("%d/%d", count, flags.Get().MinimumSyncPeers),
 		).Info("Waiting for enough peer handshakes before syncing")
 		time.Sleep(handshakePollingInterval)
 	}
