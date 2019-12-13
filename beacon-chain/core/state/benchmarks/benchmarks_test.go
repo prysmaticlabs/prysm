@@ -14,6 +14,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/stateutil"
 )
 
 var runAmount = 25
@@ -35,7 +36,7 @@ func TestBenchmarkExecuteStateTransition(t *testing.T) {
 	}
 }
 
-func BenchmarkExecuteStateTransition(b *testing.B) {
+func BenchmarkExecuteStateTransition_FullBlock(b *testing.B) {
 	SetConfig()
 	beaconState, err := beaconState1Epoch()
 	if err != nil {
@@ -123,7 +124,9 @@ func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
 	b.N = 5
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := state.ProcessEpoch(context.Background(), cleanStates[i]); err != nil {
+		// ProcessEpochPrecompute is the optimized version of process epoch. It's enabled by default
+		// at run time.
+		if _, err := state.ProcessEpochPrecompute(context.Background(), cleanStates[i]); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -139,6 +142,26 @@ func BenchmarkHashTreeRoot_FullState(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		if _, err := ssz.HashTreeRoot(beaconState); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkHashTreeRootState_FullState(b *testing.B) {
+	beaconState, err := beaconState2FullEpochs()
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	// Hydrate the HashTreeRootState cache.
+	if _, err := stateutil.HashTreeRootState(beaconState); err != nil {
+		b.Fatal(err)
+	}
+
+	b.N = 50
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := stateutil.HashTreeRootState(beaconState); err != nil {
 			b.Fatal(err)
 		}
 	}

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/libp2p/go-libp2p-pubsub"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -71,6 +71,11 @@ func (r *RegularSync) registerSubscribers() {
 		"/eth2/beacon_attestation",
 		r.validateBeaconAttestation,
 		r.beaconAttestationSubscriber,
+	)
+	r.subscribe(
+		"/eth2/beacon_aggregate_and_proof",
+		r.validateAggregateAndProof,
+		r.beaconAggregateProofSubscriber,
 	)
 	r.subscribe(
 		"/eth2/voluntary_exit",

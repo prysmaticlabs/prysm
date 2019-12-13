@@ -4,15 +4,14 @@ import (
 	"context"
 	"sync"
 
-	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 )
 
@@ -23,6 +22,7 @@ type Config struct {
 	P2P           p2p.P2P
 	DB            db.Database
 	Operations    *operations.Service
+	AttPool       attestations.Pool
 	Chain         blockchainService
 	InitialSync   Checker
 	StateNotifier statefeed.Notifier
@@ -45,6 +45,7 @@ func NewRegularSync(cfg *Config) *RegularSync {
 		db:                  cfg.DB,
 		p2p:                 cfg.P2P,
 		operations:          cfg.Operations,
+		attPool:             cfg.AttPool,
 		chain:               cfg.Chain,
 		initialSync:         cfg.InitialSync,
 		slotToPendingBlocks: make(map[uint64]*ethpb.BeaconBlock),
@@ -65,6 +66,7 @@ type RegularSync struct {
 	p2p                 p2p.P2P
 	db                  db.Database
 	operations          *operations.Service
+	attPool             attestations.Pool
 	chain               blockchainService
 	slotToPendingBlocks map[uint64]*ethpb.BeaconBlock
 	seenPendingBlocks   map[[32]byte]bool
@@ -101,9 +103,4 @@ func (r *RegularSync) Status() error {
 type Checker interface {
 	Syncing() bool
 	Status() error
-}
-
-// StatusTracker interface for accessing the status / handshake messages received so far.
-type StatusTracker interface {
-	PeerStatuses() map[peer.ID]*pb.Status
 }

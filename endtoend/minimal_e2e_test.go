@@ -9,6 +9,7 @@ import (
 )
 
 func TestEndToEnd_MinimalConfig(t *testing.T) {
+	t.Skip("Skipping till #4224 is resolved")
 	testutil.ResetCache()
 	params.UseMinimalConfig()
 

@@ -60,7 +60,7 @@ type Sender interface {
 	Send(context.Context, interface{}, peer.ID) (network.Stream, error)
 }
 
-// PeersProvider abstracts obtaining our current list of known peers.
+// PeersProvider abstracts obtaining our current list of known peers status.
 type PeersProvider interface {
-	Peers() []*peers.Info
+	Peers() *peers.Status
 }
