@@ -17,6 +17,7 @@ var (
 	recaptchaSecret = flag.String("recaptcha_secret", "", "Secret to verify recaptcha")
 	rpcPath         = flag.String("rpc", "", "RPC address of a running geth node")
 	privateKey      = flag.String("private-key", "", "The private key of funder")
+	minScore        = flag.Float64("min-score", 0.9, "Minimum captcha score.")
 )
 
 func main() {
@@ -33,6 +34,7 @@ func main() {
 			recaptcha.Recaptcha{RecaptchaPrivateKey: *recaptchaSecret},
 			*rpcPath,
 			*privateKey,
+			*minScore,
 		),
 	)
 

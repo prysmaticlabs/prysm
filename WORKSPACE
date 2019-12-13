@@ -1,3 +1,5 @@
+workspace(name = "prysm")
+
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
@@ -94,6 +96,24 @@ load(
 
 _go_image_repos()
 
+# Golang images
+# This is using gcr.io/distroless/base
+load(
+    "@io_bazel_rules_docker//go:image.bzl",
+    _go_image_repos = "repositories",
+)
+
+_go_image_repos()
+
+# CC images
+# This is using gcr.io/distroless/base
+load(
+    "@io_bazel_rules_docker//cc:image.bzl",
+    _cc_image_repos = "repositories",
+)
+
+_cc_image_repos()
+
 http_archive(
     name = "prysm_testnet_site",
     build_file_content = """
@@ -169,6 +189,13 @@ http_archive(
     url = "https://github.com/bazelbuild/buildtools/archive/bf564b4925ab5876a3f64d8b90fab7f769013d42.zip",
 )
 
+http_archive(
+    name = "com_github_herumi_bls_eth_go_binary",
+    sha256 = "15a41ddb0bf7d142ebffae68337f19c16e747676cb56794c5d80dbe388ce004c",
+    strip_prefix = "bls-go-binary-ac038c7cb6d3185c4a46f3bca0c99ebf7b191e16",
+    url = "https://github.com/nisdas/bls-go-binary/archive/ac038c7cb6d3185c4a46f3bca0c99ebf7b191e16.zip",
+)
+
 load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_dependencies")
 
 buildifier_dependencies()
@@ -190,6 +217,28 @@ load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
 
 protobuf_deps()
 
+# Group the sources of the library so that CMake rule have access to it
+all_content = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//visibility:public"])"""
+
+http_archive(
+    name = "rules_foreign_cc",
+    strip_prefix = "rules_foreign_cc-master",
+    url = "https://github.com/bazelbuild/rules_foreign_cc/archive/master.zip",
+)
+
+load("@rules_foreign_cc//:workspace_definitions.bzl", "rules_foreign_cc_dependencies")
+
+rules_foreign_cc_dependencies([
+    "@prysm//:built_cmake_toolchain",
+])
+
+http_archive(
+    name = "librdkafka",
+    build_file_content = all_content,
+    strip_prefix = "librdkafka-1.2.1",
+    urls = ["https://github.com/edenhill/librdkafka/archive/v1.2.1.tar.gz"],
+)
+
 # External dependencies
 
 go_repository(
@@ -207,7 +256,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_ssz",
-    commit = "58b2f86b0f02f06e634db06dee0c838ad41849f8",
+    commit = "142dfef39d12ed28360b7d2467b056b0578684f5",
     importpath = "github.com/prysmaticlabs/go-ssz",
 )
 
@@ -587,22 +636,23 @@ go_repository(
 
 go_repository(
     name = "io_opencensus_go",
-    commit = "7bbec1755a8162b5923fc214a494773a701d506a",  # v0.22.0
     importpath = "go.opencensus.io",
+    sum = "h1:75k/FF0Q2YM8QYo07VPddOLBslDt1MZOdEslOHvmzAs=",
+    version = "v0.22.2",
 )
 
 go_repository(
     name = "io_opencensus_go_contrib_exporter_jaeger",
-    commit = "5b8293c22f362562285c2acbc52f4a1870a47a33",
     importpath = "contrib.go.opencensus.io/exporter/jaeger",
-    remote = "http://github.com/census-ecosystem/opencensus-go-exporter-jaeger",
-    vcs = "git",
+    sum = "h1:nhTv/Ry3lGmqbJ/JGvCjWxBl5ozRfqo86Ngz59UAlfk=",
+    version = "v0.2.0",
 )
 
 go_repository(
     name = "org_golang_google_api",
-    commit = "aac82e61c0c8fe133c297b4b59316b9f481e1f0a",  # v0.6.0
     importpath = "google.golang.org/api",
+    sum = "h1:uMf5uLi4eQMRrMKhCplNik4U4H8Z6C1br3zOtAa/aDE=",
+    version = "v0.14.0",
 )
 
 go_repository(
@@ -992,12 +1042,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_karlseguin_ccache",
-    commit = "ec06cd93a07565b373789b0078ba88fe697fddd9",  # v2.0.3
-    importpath = "github.com/karlseguin/ccache",
-)
-
-go_repository(
     name = "com_github_libp2p_go_libp2p_connmgr",
     commit = "b46e9bdbcd8436b4fe4b30a53ec913c07e5e09c9",  # v0.1.1
     importpath = "github.com/libp2p/go-libp2p-connmgr",
@@ -1198,9 +1242,19 @@ go_repository(
 )
 
 go_repository(
+    name = "com_github_patrickmn_go_cache",
+    commit = "46f407853014144407b6c2ec7ccc76bf67958d93",
+    importpath = "github.com/patrickmn/go-cache",
+)
+
+go_repository(
     name = "com_github_prysmaticlabs_ethereumapis",
-    commit = "367ca574419a062ae26818f60bdeb5751a6f5380",
+    commit = "2a889fed542ad00e4bd3caf723f871b6a4eff63d",
     importpath = "github.com/prysmaticlabs/ethereumapis",
+    patch_args = ["-p1"],
+    patches = [
+        "//third_party:com_github_prysmaticlabs_ethereumapis-tags.patch",
+    ],
 )
 
 go_repository(
@@ -1237,13 +1291,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_kilic_bls12-381",
-    importpath = "github.com/kilic/bls12-381",
-    sum = "h1:hCD4IWWYsETkACK7U+isYppKfB/6d54sBkCDk3k+w2U=",
-    version = "v0.0.0-20191005202515-c798d6202457",
-)
-
-go_repository(
     name = "com_github_minio_highwayhash",
     importpath = "github.com/minio/highwayhash",
     sum = "h1:iMSDhgUILCr0TNm8LWlSjF8N0ZIj2qbO8WHp6Q/J2BA=",
@@ -1255,6 +1302,15 @@ go_repository(
     importpath = "golang.org/x/exp",
     sum = "h1:n9HxLrNxWWtEb1cA950nuEEj3QnKbtsCJ6KjcgisNUs=",
     version = "v0.0.0-20191002040644-a1355ae1e2c3",
+)
+
+go_repository(
+    name = "in_gopkg_confluentinc_confluent_kafka_go_v1",
+    importpath = "gopkg.in/confluentinc/confluent-kafka-go.v1",
+    patch_args = ["-p1"],
+    patches = ["//third_party:in_gopkg_confluentinc_confluent_kafka_go_v1.patch"],
+    sum = "h1:roy97m/3wj9/o8OuU3sZ5wildk30ep38k2x8nhNbKrI=",
+    version = "v1.1.0",
 )
 
 go_repository(
@@ -1346,4 +1402,68 @@ go_repository(
     importpath = "github.com/fatih/color",
     sum = "h1:DkWD4oS2D8LGGgTQ6IvwJJXSL5Vp2ffcQg58nFV38Ys=",
     version = "v1.7.0",
+)
+
+go_repository(
+    name = "com_github_protolambda_zssz",
+    commit = "632f11e5e281660402bd0ac58f76090f3503def0",
+    importpath = "github.com/protolambda/zssz",
+)
+
+go_repository(
+    name = "com_github_emicklei_dot",
+    commit = "f4a04130244d60cef56086d2f649b4b55e9624aa",
+    importpath = "github.com/emicklei/dot",
+)
+
+go_repository(
+    name = "com_github_googleapis_gax_go_v2",
+    importpath = "github.com/googleapis/gax-go/v2",
+    sum = "h1:sjZBwGj9Jlw33ImPtvFviGYvseOtDM7hkSKB7+Tv3SM=",
+    version = "v2.0.5",
+)
+
+go_repository(
+    name = "com_github_golang_groupcache",
+    importpath = "github.com/golang/groupcache",
+    sum = "h1:uHTyIjqVhYRhLbJ8nIiOJHkEZZ+5YoOsAbD3sk82NiE=",
+    version = "v0.0.0-20191027212112-611e8accdfc9",
+)
+
+go_repository(
+    name = "com_github_uber_jaeger_client_go",
+    importpath = "github.com/uber/jaeger-client-go",
+    sum = "h1:HgqpYBng0n7tLJIlyT4kPCIv5XgCsF+kai1NnnrJzEU=",
+    version = "v2.20.1+incompatible",
+)
+
+go_repository(
+    name = "com_github_dgraph_io_ristretto",
+    commit = "99d1bbbf28e64530eb246be0568fc7709a35ebdd",
+    importpath = "github.com/dgraph-io/ristretto",
+)
+
+go_repository(
+    name = "com_github_cespare_xxhash",
+    commit = "d7df74196a9e781ede915320c11c378c1b2f3a1f",
+    importpath = "github.com/cespare/xxhash",
+)
+
+go_repository(
+    name = "com_github_ipfs_go_detect_race",
+    importpath = "github.com/ipfs/go-detect-race",
+    sum = "h1:qX/xay2W3E4Q1U7d9lNs1sU9nvguX0a7319XbyQ6cOk=",
+    version = "v0.0.1",
+)
+
+go_repository(
+    name = "com_github_dgraph_io_ristretto",
+    commit = "99d1bbbf28e64530eb246be0568fc7709a35ebdd",
+    importpath = "github.com/dgraph-io/ristretto",
+)
+
+go_repository(
+    name = "com_github_cespare_xxhash",
+    commit = "d7df74196a9e781ede915320c11c378c1b2f3a1f",
+    importpath = "github.com/cespare/xxhash",
 )

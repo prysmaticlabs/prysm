@@ -3,8 +3,8 @@ syntax = "proto3";
 package ethereum.beacon.rpc.v1;
 
 import "google/protobuf/empty.proto";
-import "proto/eth/v1alpha1/beacon_block.proto";
-import "proto/eth/v1alpha1/attestation.proto";
+import "eth/v1alpha1/beacon_block.proto";
+import "eth/v1alpha1/attestation.proto";
 
 service AttesterService {
   rpc RequestAttestation(AttestationRequest) returns (ethereum.eth.v1alpha1.AttestationData);
@@ -14,6 +14,10 @@ service AttesterService {
 service ProposerService {
   rpc RequestBlock(BlockRequest) returns (ethereum.eth.v1alpha1.BeaconBlock);
   rpc ProposeBlock(ethereum.eth.v1alpha1.BeaconBlock) returns (ProposeResponse);
+}
+
+service AggregatorService {
+  rpc SubmitAggregateAndProof(AggregationRequest) returns (AggregationResponse);
 }
 
 service ValidatorService {
@@ -31,6 +35,7 @@ service ValidatorService {
 message BlockRequest {
   uint64 slot = 1;
   bytes randao_reveal = 2;
+  bytes graffiti = 3;
 }
 
 message ProposeResponse {
@@ -45,6 +50,17 @@ message AttestationRequest {
 }
 
 message AttestResponse {
+  bytes root = 1;
+}
+
+message AggregationRequest {
+  uint64 slot = 1;
+  uint64 committee_index = 2;
+  bytes public_key = 3;
+  bytes slot_signature = 4;
+}
+
+message AggregationResponse {
   bytes root = 1;
 }
 
@@ -88,11 +104,11 @@ message ChainStartResponse {
   uint64 genesis_time = 2;
 }
 
- enum ValidatorRole {
+enum ValidatorRole {
      UNKNOWN = 0;
      ATTESTER = 1;
      PROPOSER = 2;
-     BOTH = 3;
+     AGGREGATOR = 3;
 }
 
 message ValidatorIndexRequest {

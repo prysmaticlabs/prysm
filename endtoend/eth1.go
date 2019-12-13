@@ -52,17 +52,17 @@ func startEth1(t *testing.T, tmpPath string) (common.Address, string, int) {
 	cmd.Stdout = file
 	cmd.Stderr = file
 	if err := cmd.Start(); err != nil {
-		t.Fatalf("failed to start eth1 chain: %v", err)
+		t.Fatalf("Failed to start eth1 chain: %v", err)
 	}
 
 	if err = waitForTextInFile(file, "Commit new mining work"); err != nil {
-		t.Fatal(err)
+		t.Fatalf("mining log not found, this means the eth1 chain had issues starting: %v", err)
 	}
 
 	// Connect to the started geth dev chain.
 	client, err := rpc.DialHTTP("http://127.0.0.1:8545")
 	if err != nil {
-		t.Fatalf("failed to connect to ipc: %v", err)
+		t.Fatalf("Failed to connect to ipc: %v", err)
 	}
 	web3 := ethclient.NewClient(client)
 
@@ -83,7 +83,7 @@ func startEth1(t *testing.T, tmpPath string) (common.Address, string, int) {
 
 	// Advancing the blocks eth1follow distance to prevent issues reading the chain.
 	if err := mineBlocks(web3, keystore, params.BeaconConfig().Eth1FollowDistance); err != nil {
-		t.Fatalf("unable to advance chain: %v", err)
+		t.Fatalf("Unable to advance chain: %v", err)
 	}
 
 	txOpts, err := bind.NewTransactor(bytes.NewReader(jsonBytes), "" /*password*/)
@@ -97,7 +97,7 @@ func startEth1(t *testing.T, tmpPath string) (common.Address, string, int) {
 	txOpts.Nonce = big.NewInt(int64(nonce))
 	contractAddr, tx, _, err := contracts.DeployDepositContract(txOpts, web3, txOpts.From)
 	if err != nil {
-		t.Fatalf("failed to deploy deposit contract: %v", err)
+		t.Fatalf("Failed to deploy deposit contract: %v", err)
 	}
 
 	// Wait for contract to mine.

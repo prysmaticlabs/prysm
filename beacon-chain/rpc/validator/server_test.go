@@ -2,7 +2,6 @@ package validator
 
 import (
 	"context"
-	"crypto/rand"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -13,18 +12,19 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	internal "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -123,14 +123,9 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	ctx := context.Background()
 
-	priv1, err := bls.RandKey(rand.Reader)
-	if err != nil {
-		t.Error(err)
-	}
-	priv2, err := bls.RandKey(rand.Reader)
-	if err != nil {
-		t.Error(err)
-	}
+	priv1 := bls.RandKey()
+	priv2 := bls.RandKey()
+
 	pubKey1 := priv1.PublicKey().Marshal()[:]
 	pubKey2 := priv2.PublicKey().Marshal()[:]
 
@@ -230,13 +225,14 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	ctx := context.Background()
 
 	ctx, cancel := context.WithCancel(context.Background())
+	chainService := &mockChain.ChainService{}
 	Server := &Server{
 		Ctx: ctx,
 		ChainStartFetcher: &mockPOW.FaultyMockPOWChain{
 			ChainFeed: new(event.Feed),
 		},
-		StateFeedListener: &mockChain.ChainService{},
-		BeaconDB:          db,
+		StateNotifier: chainService.StateNotifier(),
+		BeaconDB:      db,
 	}
 
 	exitRoutine := make(chan bool)
@@ -258,20 +254,21 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 	headBlockRoot := [32]byte{0x01, 0x02}
-	if err := db.SaveHeadBlockRoot(ctx, headBlockRoot); err != nil {
-		t.Fatal(err)
-	}
 	if err := db.SaveState(ctx, &pbp2p.BeaconState{Slot: 3}, headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
+	if err := db.SaveHeadBlockRoot(ctx, headBlockRoot); err != nil {
+		t.Fatal(err)
+	}
 
+	chainService := &mockChain.ChainService{}
 	Server := &Server{
 		Ctx: context.Background(),
 		ChainStartFetcher: &mockPOW.POWChain{
 			ChainFeed: new(event.Feed),
 		},
-		StateFeedListener: &mockChain.ChainService{},
-		BeaconDB:          db,
+		BeaconDB:      db,
+		StateNotifier: chainService.StateNotifier(),
 	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -292,14 +289,14 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 
 	hook := logTest.NewGlobal()
+	chainService := &mockChain.ChainService{}
 	Server := &Server{
-		Ctx:            context.Background(),
-		ChainStartChan: make(chan time.Time, 1),
+		Ctx: context.Background(),
 		ChainStartFetcher: &mockPOW.FaultyMockPOWChain{
 			ChainFeed: new(event.Feed),
 		},
-		StateFeedListener: &mockChain.ChainService{},
-		BeaconDB:          db,
+		BeaconDB:      db,
+		StateNotifier: chainService.StateNotifier(),
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
@@ -317,7 +314,17 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 		}
 		<-exitRoutine
 	}(t)
-	Server.ChainStartChan <- time.Unix(0, 0)
+
+	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
+	for sent := 0; sent == 0; {
+		sent = Server.StateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.ChainStarted,
+			Data: &statefeed.ChainStartedData{
+				StartTime: time.Unix(0, 0),
+			},
+		})
+	}
+
 	exitRoutine <- true
 	testutil.AssertLogsContain(t, hook, "Sending genesis time")
 }
@@ -333,10 +340,7 @@ func BenchmarkAssignment(b *testing.B) {
 		b.Fatalf("Could not save genesis block: %v", err)
 	}
 	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount * 4
-	state, err := genesisState(validatorCount)
-	if err != nil {
-		b.Fatalf("Could not setup genesis state: %v", err)
-	}
+	state, _ := testutil.DeterministicGenesisState(b, validatorCount)
 	genesisRoot, err := ssz.SigningRoot(genesis)
 	if err != nil {
 		b.Fatalf("Could not get signing root %v", err)
@@ -384,20 +388,4 @@ func BenchmarkAssignment(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
-}
-
-func genesisState(validators uint64) (*pbp2p.BeaconState, error) {
-	genesisTime := time.Unix(0, 0).Unix()
-	deposits := make([]*ethpb.Deposit, validators)
-	for i := 0; i < len(deposits); i++ {
-		var pubKey [96]byte
-		copy(pubKey[:], []byte(strconv.Itoa(i)))
-		depositData := &ethpb.Deposit_Data{
-			PublicKey: pubKey[:],
-			Amount:    params.BeaconConfig().MaxEffectiveBalance,
-		}
-
-		deposits[i] = &ethpb.Deposit{Data: depositData}
-	}
-	return state.GenesisBeaconState(deposits, uint64(genesisTime), &ethpb.Eth1Data{})
 }

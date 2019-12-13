@@ -3,19 +3,18 @@ package state_test
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
 	"encoding/binary"
 	"fmt"
 	"strings"
 	"testing"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -38,12 +37,8 @@ func TestExecuteStateTransition_IncorrectSlot(t *testing.T) {
 }
 
 func TestExecuteStateTransition_FullProcess(t *testing.T) {
-	helpers.ClearAllCaches()
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
+
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 100,
 		DepositRoot:  []byte{2},
@@ -61,7 +56,7 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 
 	beaconState.Slot++
 	epoch := helpers.CurrentEpoch(beaconState)
-	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
+	randaoReveal, err := testutil.RandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,10 +77,11 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 
 	block.StateRoot = stateRoot[:]
 
-	block, err = testutil.SignBlock(beaconState, block, privKeys)
+	sig, err := testutil.BlockSignature(beaconState, block, privKeys)
 	if err != nil {
 		t.Error(err)
 	}
+	block.Signature = sig.Marshal()
 
 	beaconState, err = state.ExecuteStateTransition(context.Background(), beaconState, block)
 	if err != nil {
@@ -102,23 +98,9 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
-	helpers.ClearAllCaches()
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 34)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
-	genesisBlock := blocks.NewGenesisBlock([]byte{})
-	bodyRoot, err := ssz.HashTreeRoot(genesisBlock)
-	if err != nil {
-		t.Fatal(err)
-	}
-	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
-		Slot:       genesisBlock.Slot,
-		ParentRoot: genesisBlock.ParentRoot,
-		BodyRoot:   bodyRoot[:],
-	}
-	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
+
+	block, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,31 +108,26 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 		Header_1: &ethpb.BeaconBlockHeader{Slot: params.BeaconConfig().SlotsPerEpoch},
 		Header_2: &ethpb.BeaconBlockHeader{Slot: params.BeaconConfig().SlotsPerEpoch * 2},
 	}
+	block.Body.ProposerSlashings = []*ethpb.ProposerSlashing{slashing}
 
-	epoch := helpers.CurrentEpoch(beaconState)
-	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
+	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		t.Fatal(err)
 	}
-	blkDeposits := make([]*ethpb.Deposit, 0)
-	block := &ethpb.BeaconBlock{
-		ParentRoot: parentRoot[:],
-		Slot:       0,
-		Body: &ethpb.BeaconBlockBody{
-			RandaoReveal:      randaoReveal,
-			ProposerSlashings: []*ethpb.ProposerSlashing{slashing},
-			Eth1Data: &ethpb.Eth1Data{
-				DepositRoot: []byte{2},
-				BlockHash:   []byte{3},
-			},
-			Deposits: blkDeposits,
-		},
-	}
-	block, err = testutil.SignBlock(beaconState, block, privKeys)
+	beaconState.Slot++
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+	beaconState.Slot--
+	domain := helpers.Domain(beaconState.Fork, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainBeaconProposer)
+	sig := privKeys[proposerIdx].Sign(blockRoot[:], domain)
+	block.Signature = sig.Marshal()
 
+	beaconState, err = state.ProcessSlots(context.Background(), beaconState, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	want := "could not process block proposer slashing"
 	if _, err := state.ProcessBlock(context.Background(), beaconState, block); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
@@ -158,141 +135,41 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
-	beaconState.Slashings = make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
-
-	proposerSlashIdx := uint64(3)
-
-	currentEpoch := helpers.CurrentEpoch(beaconState)
-	domain := helpers.Domain(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
-
-	header1 := &ethpb.BeaconBlockHeader{
-		Slot:      1,
-		StateRoot: []byte("A"),
-	}
-	signingRoot, err := ssz.SigningRoot(header1)
-	if err != nil {
-		t.Errorf("Could not get signing root of beacon block header: %v", err)
-	}
-	header1.Signature = privKeys[proposerSlashIdx].Sign(signingRoot[:], domain).Marshal()[:]
-
-	header2 := &ethpb.BeaconBlockHeader{
-		Slot:      1,
-		StateRoot: []byte("B"),
-	}
-	signingRoot, err = ssz.SigningRoot(header2)
-	if err != nil {
-		t.Errorf("Could not get signing root of beacon block header: %v", err)
-	}
-	header2.Signature = privKeys[proposerSlashIdx].Sign(signingRoot[:], domain).Marshal()[:]
-
-	proposerSlashings := []*ethpb.ProposerSlashing{
-		{
-			ProposerIndex: proposerSlashIdx,
-			Header_1:      header1,
-			Header_2:      header2,
-		},
-	}
-	beaconState.Validators[proposerSlashIdx].PublicKey = privKeys[proposerSlashIdx].PublicKey().Marshal()[:]
-
-	att1 := &ethpb.IndexedAttestation{
-		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0},
-			Target: &ethpb.Checkpoint{Epoch: 0},
-		},
-		CustodyBit_0Indices: []uint64{0, 1},
-	}
-	dataAndCustodyBit := &pb.AttestationDataAndCustodyBit{
-		Data:       att1.Data,
-		CustodyBit: false,
-	}
-	hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
-	if err != nil {
-		t.Error(err)
-	}
-	domain = helpers.Domain(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
-	sig0 := privKeys[0].Sign(hashTreeRoot[:], domain)
-	sig1 := privKeys[1].Sign(hashTreeRoot[:], domain)
-	aggregateSig := bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
-	att1.Signature = aggregateSig.Marshal()[:]
-
-	att2 := &ethpb.IndexedAttestation{
-		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 1},
-			Target: &ethpb.Checkpoint{Epoch: 0},
-		},
-		CustodyBit_0Indices: []uint64{0, 1},
-	}
-	dataAndCustodyBit = &pb.AttestationDataAndCustodyBit{
-		Data:       att2.Data,
-		CustodyBit: false,
-	}
-	hashTreeRoot, err = ssz.HashTreeRoot(dataAndCustodyBit)
-	if err != nil {
-		t.Error(err)
-	}
-	sig0 = privKeys[0].Sign(hashTreeRoot[:], domain)
-	sig1 = privKeys[1].Sign(hashTreeRoot[:], domain)
-	aggregateSig = bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
-	att2.Signature = aggregateSig.Marshal()[:]
-
-	slashings := []*ethpb.AttesterSlashing{
-		{
-			Attestation_1: att1,
-			Attestation_2: att2,
-		},
-	}
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Target: &ethpb.Checkpoint{Epoch: 0},
+			Source: &ethpb.Checkpoint{Epoch: 0},
 		},
-		AggregationBits: bitfield.NewBitlist(0),
-		CustodyBits:     bitfield.NewBitlist(0),
+		AggregationBits: bitfield.NewBitlist(3),
+		CustodyBits:     bitfield.NewBitlist(3),
 	}
 
-	epoch := helpers.CurrentEpoch(beaconState)
-	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, epoch, privKeys)
+	block, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	genesisBlock := blocks.NewGenesisBlock([]byte{})
-	bodyRoot, err := ssz.HashTreeRoot(genesisBlock)
+	block.Body.Attestations = []*ethpb.Attestation{att}
+	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
-		Slot:       genesisBlock.Slot,
-		ParentRoot: genesisBlock.ParentRoot,
-		BodyRoot:   bodyRoot[:],
-	}
-	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
+	beaconState.Slot++
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
 		t.Fatal(err)
 	}
-	block := &ethpb.BeaconBlock{
-		ParentRoot: parentRoot[:],
-		Slot:       0,
-		Body: &ethpb.BeaconBlockBody{
-			RandaoReveal:      randaoReveal,
-			ProposerSlashings: proposerSlashings,
-			AttesterSlashings: slashings,
-			Attestations:      []*ethpb.Attestation{att},
-			Eth1Data: &ethpb.Eth1Data{
-				DepositRoot: []byte{2},
-				BlockHash:   []byte{3},
-			},
-			Deposits: make([]*ethpb.Deposit, 0),
-		},
-	}
-	block, err = testutil.SignBlock(beaconState, block, privKeys)
+	beaconState.Slot--
+	domain := helpers.Domain(beaconState.Fork, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainBeaconProposer)
+	sig := privKeys[proposerIdx].Sign(blockRoot[:], domain)
+	block.Signature = sig.Marshal()
+
+	beaconState, err = state.ProcessSlots(context.Background(), beaconState, 1)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+
 	want := "could not process block attestations"
 	if _, err := state.ProcessBlock(context.Background(), beaconState, block); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
@@ -300,14 +177,8 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
-	helpers.ClearAllCaches()
+	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
 
-	deposits, _, _ := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
-	beaconState.Slashings = make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
 	proposerSlashings := []*ethpb.ProposerSlashing{
 		{
 			ProposerIndex: 3,
@@ -395,11 +266,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 }
 
 func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 32)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
 	bodyRoot, err := ssz.HashTreeRoot(genesisBlock)
 	if err != nil {
@@ -507,7 +374,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	beaconState.BlockRoots = blockRoots
 
 	aggBits := bitfield.NewBitlist(1)
-	aggBits.SetBitAt(1, true)
+	aggBits.SetBitAt(0, true)
 	custodyBits := bitfield.NewBitlist(1)
 	blockAtt := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -555,7 +422,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, currentEpoch, privKeys)
+	randaoReveal, err := testutil.RandaoReveal(beaconState, currentEpoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -575,10 +442,11 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		},
 	}
 
-	block, err = testutil.SignBlock(beaconState, block, privKeys)
+	sig, err := testutil.BlockSignature(beaconState, block, privKeys)
 	if err != nil {
 		t.Error(err)
 	}
+	block.Signature = sig.Marshal()
 
 	beaconState, err = state.ProcessBlock(context.Background(), beaconState, block)
 	if err != nil {
@@ -600,55 +468,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 }
 
-func TestProcessEpoch_CantGetTgtAttsPrevEpoch(t *testing.T) {
-	atts := []*pb.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 1}}}}
-	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{CurrentEpochAttestations: atts})
-	if !strings.Contains(err.Error(), "could not get target atts prev epoch") {
-		t.Fatal("Did not receive wanted error")
-	}
-}
-
-func TestProcessEpoch_CantGetTgtAttsCurrEpoch(t *testing.T) {
-	epoch := uint64(1)
-
-	atts := []*pb.PendingAttestation{{Data: &ethpb.AttestationData{}}}
-	_, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
-		Slot:                     epoch * params.BeaconConfig().SlotsPerEpoch,
-		BlockRoots:               make([][]byte, 128),
-		RandaoMixes:              make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		CurrentEpochAttestations: atts})
-	if !strings.Contains(err.Error(), "could not get target atts current epoch") {
-		t.Fatal("Did not receive wanted error")
-	}
-}
-
-func TestProcessEpoch_CanProcess(t *testing.T) {
-	helpers.ClearAllCaches()
-	epoch := uint64(1)
-
-	atts := []*pb.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}}}
-	newState, err := state.ProcessEpoch(context.Background(), &pb.BeaconState{
-		Slot:                       epoch*params.BeaconConfig().SlotsPerEpoch + 1,
-		BlockRoots:                 make([][]byte, 128),
-		Slashings:                  []uint64{0, 1e9, 1e9},
-		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		CurrentEpochAttestations:   atts,
-		FinalizedCheckpoint:        &ethpb.Checkpoint{},
-		JustificationBits:          bitfield.Bitvector4{0x00},
-		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	wanted := uint64(0)
-	if newState.Slashings[2] != wanted {
-		t.Errorf("Wanted slashed balance: %d, got: %d", wanted, newState.Slashings[2])
-	}
-}
-
 func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
-	helpers.ClearAllCaches()
 	epoch := uint64(1)
 
 	atts := []*pb.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}}}
@@ -672,75 +492,8 @@ func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
 		t.Errorf("Wanted slashed balance: %d, got: %d", wanted, newState.Slashings[2])
 	}
 }
-
-func TestProcessEpoch_NotPanicOnEmptyActiveValidatorIndices(t *testing.T) {
-	newState := &pb.BeaconState{
-		Slashings:   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		RandaoMixes: make([][]byte, params.BeaconConfig().SlotsPerEpoch),
-	}
-
-	state.ProcessEpoch(context.Background(), newState)
-}
-
-func BenchmarkProcessEpoch65536Validators(b *testing.B) {
-	logrus.SetLevel(logrus.PanicLevel)
-
-	helpers.ClearAllCaches()
-	epoch := uint64(1)
-
-	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount * 4
-	comitteeCount := validatorCount / params.BeaconConfig().TargetCommitteeSize
-	validators := make([]*ethpb.Validator, validatorCount)
-	balances := make([]uint64, validatorCount)
-
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &ethpb.Validator{
-			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
-			EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
-		}
-		balances[i] = params.BeaconConfig().MaxEffectiveBalance
-	}
-
-	var atts []*pb.PendingAttestation
-	for i := uint64(0); i < comitteeCount; i++ {
-		atts = append(atts, &pb.PendingAttestation{
-			Data: &ethpb.AttestationData{},
-			AggregationBits: []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-				0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
-			InclusionDelay: 1,
-		})
-	}
-
-	s := &pb.BeaconState{
-		Slot:                      epoch*params.BeaconConfig().SlotsPerEpoch + 1,
-		Validators:                validators,
-		Balances:                  balances,
-		FinalizedCheckpoint:       &ethpb.Checkpoint{},
-		BlockRoots:                make([][]byte, 254),
-		Slashings:                 []uint64{0, 1e9, 0},
-		RandaoMixes:               make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		PreviousEpochAttestations: atts,
-	}
-
-	// Precache the shuffled indices
-	for i := uint64(0); i < comitteeCount; i++ {
-		if _, err := helpers.BeaconCommittee(s, 0, i); err != nil {
-			b.Fatal(err)
-		}
-	}
-
-	b.ResetTimer()
-	for n := 0; n < b.N; n++ {
-		_, err := state.ProcessEpoch(context.Background(), s)
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
 func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	logrus.SetLevel(logrus.PanicLevel)
-	helpers.ClearAllCaches()
 
 	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount * 4
 	committeeCount := validatorCount / params.BeaconConfig().TargetCommitteeSize
@@ -836,10 +589,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	priv, err := bls.RandKey(rand.Reader)
-	if err != nil {
-		b.Fatal(err)
-	}
+	priv := bls.RandKey()
 	s.Validators[proposerIdx].PublicKey = priv.PublicKey().Marshal()
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, 0)
@@ -899,12 +649,10 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 
 func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 	logrus.SetLevel(logrus.PanicLevel)
-	helpers.ClearAllCaches()
 
 	// Default at 256 validators, can raise this number with faster BLS.
 	validatorCount := uint64(256)
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, validatorCount)
-	s, _ := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	s, privKeys := testutil.DeterministicGenesisState(t, validatorCount)
 	s.Slot = params.BeaconConfig().SlotsPerEpoch
 
 	bitCount := validatorCount / params.BeaconConfig().SlotsPerEpoch
@@ -946,7 +694,7 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 		atts[i] = att
 	}
 
-	epochSignature, _ := testutil.CreateRandaoReveal(s, helpers.CurrentEpoch(s), privKeys)
+	epochSignature, _ := testutil.RandaoReveal(s, helpers.CurrentEpoch(s), privKeys)
 	parentRoot, _ := ssz.SigningRoot(s.LatestBlockHeader)
 	blk := &ethpb.BeaconBlock{
 		Slot:       s.Slot,
@@ -957,14 +705,14 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 			Attestations: atts,
 		},
 	}
-	blk, _ = testutil.SignBlock(s, blk, privKeys)
+	sig, _ := testutil.BlockSignature(s, blk, privKeys)
+	blk.Signature = sig.Marshal()
 
 	config := params.BeaconConfig()
 	config.MinAttestationInclusionDelay = 0
 	params.OverrideBeaconConfig(config)
 
-	_, err := state.ProcessBlock(context.Background(), s, blk)
-	if err != nil {
+	if _, err := state.ProcessBlock(context.Background(), s, blk); err != nil {
 		t.Fatal(err)
 	}
 }

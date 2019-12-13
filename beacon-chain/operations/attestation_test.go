@@ -7,15 +7,14 @@ import (
 	"sync"
 	"testing"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -29,11 +28,7 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 		BeaconDB: beaconDB,
 	})
 
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -41,7 +36,7 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 			Source:          &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 			Target:          &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 		},
-		AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+		AggregationBits: bitfield.Bitlist{0xCF, 0xC0, 0xC0, 0xC0, 0x01},
 		CustodyBits:     bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
 	}
 
@@ -78,10 +73,10 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 	if err := beaconDB.SaveBlock(context.Background(), newBlock); err != nil {
 		t.Fatal(err)
 	}
-	if err := beaconDB.SaveHeadBlockRoot(context.Background(), newBlockRoot); err != nil {
+	if err := beaconDB.SaveState(context.Background(), beaconState, newBlockRoot); err != nil {
 		t.Fatal(err)
 	}
-	if err := beaconDB.SaveState(context.Background(), beaconState, newBlockRoot); err != nil {
+	if err := beaconDB.SaveHeadBlockRoot(context.Background(), newBlockRoot); err != nil {
 		t.Fatal(err)
 	}
 	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
@@ -119,11 +114,7 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 	}
 
 	// We setup the genesis state with 256 validators.
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 256)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 256)
 	stateRoot, err := ssz.HashTreeRoot(beaconState)
 	if err != nil {
 		t.Fatal(err)
@@ -136,15 +127,15 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 	if err := beaconDB.SaveBlock(ctx, block); err != nil {
 		t.Fatal(err)
 	}
-	if err := beaconDB.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
+	if err := beaconDB.SaveState(ctx, beaconState, blockRoot); err != nil {
 		t.Fatal(err)
 	}
-	if err := beaconDB.SaveState(ctx, beaconState, blockRoot); err != nil {
+	if err := beaconDB.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
 		t.Fatal(err)
 	}
 
 	// Next up, we compute the committee for the attestation we're testing.
-	committee, err := helpers.BeaconCommittee(beaconState, att.Data.Slot, att.Data.Index)
+	committee, err := helpers.BeaconCommittee(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		t.Error(err)
 	}
@@ -202,20 +193,15 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
-	helpers.ClearAllCaches()
+
 	service := NewService(context.Background(), &Config{
 		BeaconDB: beaconDB,
 	})
 	service.attestationPool = make(map[[32]byte]*dbpb.AttestationContainer)
 
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 200)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 200)
 
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
-	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	att1 := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -224,7 +210,7 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 		CustodyBits: bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
 	}
 
-	committee, err := helpers.BeaconCommittee(beaconState, att1.Data.Slot, att1.Data.Index)
+	committee, err := helpers.BeaconCommittee(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
 	if err != nil {
 		t.Error(err)
 	}
@@ -283,10 +269,10 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 	if err := beaconDB.SaveBlock(context.Background(), newBlock); err != nil {
 		t.Fatal(err)
 	}
-	if err := beaconDB.SaveHeadBlockRoot(context.Background(), newBlockRoot); err != nil {
+	if err := beaconDB.SaveState(context.Background(), beaconState, newBlockRoot); err != nil {
 		t.Fatal(err)
 	}
-	if err := beaconDB.SaveState(context.Background(), beaconState, newBlockRoot); err != nil {
+	if err := beaconDB.SaveHeadBlockRoot(context.Background(), newBlockRoot); err != nil {
 		t.Fatal(err)
 	}
 	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
@@ -347,20 +333,14 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 }
 
 func TestRetrieveAttestations_OK(t *testing.T) {
-	helpers.ClearAllCaches()
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})
 	service.attestationPool = make(map[[32]byte]*dbpb.AttestationContainer)
 
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 32)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
 	aggBits := bitfield.NewBitlist(1)
-	aggBits.SetBitAt(1, true)
+	aggBits.SetBitAt(0, true)
 	custodyBits := bitfield.NewBitlist(1)
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -379,10 +359,12 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		CustodyBit: false,
 	}
 	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
+
 	sigs := make([]*bls.Signature, len(attestingIndices))
 
 	zeroSig := [96]byte{}
 	att.Signature = zeroSig[:]
+
 	for i, indice := range attestingIndices {
 		hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
 		if err != nil {
@@ -393,21 +375,20 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 	}
 
 	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
-
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
-
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
 	r, _ := ssz.HashTreeRoot(att.Data)
 	service.attestationPool[r] = dbpb.NewContainerFromAttestations([]*ethpb.Attestation{att})
 
 	headBlockRoot := [32]byte{1, 2, 3}
-	if err := beaconDB.SaveHeadBlockRoot(context.Background(), headBlockRoot); err != nil {
-		t.Fatal(err)
-	}
 	if err := beaconDB.SaveState(context.Background(), beaconState, headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
+	if err := beaconDB.SaveHeadBlockRoot(context.Background(), headBlockRoot); err != nil {
+		t.Fatal(err)
+	}
+
 	// Test we can retrieve attestations from slot1 - slot61.
 	attestations, err := service.AttestationPool(context.Background(), 1)
 	if err != nil {
@@ -420,7 +401,6 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 }
 
 func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
-	helpers.ClearAllCaches()
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})
@@ -441,13 +421,14 @@ func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
 	}
 
 	headBlockRoot := [32]byte{1, 2, 3}
-	if err := beaconDB.SaveHeadBlockRoot(context.Background(), headBlockRoot); err != nil {
-		t.Fatal(err)
-	}
 	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{
 		Slot: 200}, headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
+	if err := beaconDB.SaveHeadBlockRoot(context.Background(), headBlockRoot); err != nil {
+		t.Fatal(err)
+	}
+
 	attestations, err := service.AttestationPool(context.Background(), 200)
 	if err != nil {
 		t.Fatalf("Could not retrieve attestations: %v", err)
@@ -487,10 +468,10 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 		}
 	}
 	headBlockRoot := [32]byte{1, 2, 3}
-	if err := beaconDB.SaveHeadBlockRoot(context.Background(), headBlockRoot); err != nil {
+	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{Slot: 15}, headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
-	if err := beaconDB.SaveState(context.Background(), &pb.BeaconState{Slot: 15}, headBlockRoot); err != nil {
+	if err := beaconDB.SaveHeadBlockRoot(context.Background(), headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -508,7 +489,6 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 }
 
 func TestForkchoiceRetrieveAttestations_NotVoted(t *testing.T) {
-	helpers.ClearAllCaches()
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})
@@ -540,7 +520,6 @@ func TestForkchoiceRetrieveAttestations_NotVoted(t *testing.T) {
 }
 
 func TestForkchoiceRetrieveAttestations_AlreadyVoted(t *testing.T) {
-	helpers.ClearAllCaches()
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})

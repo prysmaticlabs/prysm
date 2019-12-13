@@ -10,6 +10,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
@@ -17,10 +18,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -68,9 +69,17 @@ func ExecuteStateTransition(
 	interop.WriteBlockToDisk(block, false)
 	interop.WriteStateToDisk(state)
 
-	postStateRoot, err := ssz.HashTreeRoot(state)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not tree hash processed state")
+	var postStateRoot [32]byte
+	if featureconfig.Get().EnableCustomStateSSZ {
+		postStateRoot, err = stateutil.HashTreeRootState(state)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not tree hash processed state")
+		}
+	} else {
+		postStateRoot, err = ssz.HashTreeRoot(state)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not tree hash processed state")
+		}
 	}
 	if !bytes.Equal(postStateRoot[:], block.StateRoot) {
 		return state, fmt.Errorf("validate state root failed, wanted: %#x, received: %#x",
@@ -172,12 +181,10 @@ func CalculateStateRoot(
 		}
 	}
 
-	root, err := ssz.HashTreeRoot(stateCopy)
-	if err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not tree hash beacon state")
+	if featureconfig.Get().EnableCustomStateSSZ {
+		return stateutil.HashTreeRootState(stateCopy)
 	}
-
-	return root, nil
+	return ssz.HashTreeRoot(stateCopy)
 }
 
 // ProcessSlot happens every slot and focuses on the slot counter and block roots record updates.
@@ -201,10 +208,20 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(state.Slot)))
 
-	prevStateRoot, err := ssz.HashTreeRoot(state)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, errors.Wrap(err, "could not tree hash prev state root")
+	var prevStateRoot [32]byte
+	var err error
+	if featureconfig.Get().EnableCustomStateSSZ {
+		prevStateRoot, err = stateutil.HashTreeRootState(state)
+		if err != nil {
+			traceutil.AnnotateError(span, err)
+			return nil, errors.Wrap(err, "could not tree hash prev state root")
+		}
+	} else {
+		prevStateRoot, err = ssz.HashTreeRoot(state)
+		if err != nil {
+			traceutil.AnnotateError(span, err)
+			return nil, errors.Wrap(err, "could not tree hash prev state root")
+		}
 	}
 	state.StateRoots[state.Slot%params.BeaconConfig().SlotsPerHistoricalRoot] = prevStateRoot[:]
 
@@ -251,9 +268,16 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 
 	if featureconfig.Get().EnableSkipSlotsCache {
 		// Restart from cached value, if one exists.
-		root, err = ssz.HashTreeRoot(state)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not HashTreeRoot(state)")
+		if featureconfig.Get().EnableCustomStateSSZ {
+			root, err = stateutil.HashTreeRootState(state)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not HashTreeRoot(state)")
+			}
+		} else {
+			root, err = ssz.HashTreeRoot(state)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not HashTreeRoot(state)")
+			}
 		}
 		cached, ok := skipSlotCache.Get(root)
 		// if cache key does not exist, we write it to the cache.
@@ -288,18 +312,10 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 			return nil, errors.Wrap(err, "could not process slot")
 		}
 		if CanProcessEpoch(state) {
-			if featureconfig.Get().OptimizeProcessEpoch {
-				state, err = ProcessEpochPrecompute(ctx, state)
-				if err != nil {
-					traceutil.AnnotateError(span, err)
-					return nil, errors.Wrap(err, "could not process epoch with optimizations")
-				}
-			} else {
-				state, err = ProcessEpoch(ctx, state)
-				if err != nil {
-					traceutil.AnnotateError(span, err)
-					return nil, errors.Wrap(err, "could not process epoch")
-				}
+			state, err = ProcessEpochPrecompute(ctx, state)
+			if err != nil {
+				traceutil.AnnotateError(span, err)
+				return nil, errors.Wrap(err, "could not process epoch with optimizations")
 			}
 		}
 		state.Slot++
@@ -581,72 +597,6 @@ func verifyOperationLengths(state *pb.BeaconState, body *ethpb.BeaconBlockBody) 
 //    If (state.slot + 1) % SLOTS_PER_EPOCH == 0:
 func CanProcessEpoch(state *pb.BeaconState) bool {
 	return (state.Slot+1)%params.BeaconConfig().SlotsPerEpoch == 0
-}
-
-// ProcessEpoch describes the per epoch operations that are performed on the
-// beacon state. It focuses on the validator registry, adjusting balances, and finalizing slots.
-//
-// Spec pseudocode definition:
-//
-//  def process_epoch(state: BeaconState) -> None:
-//    process_justification_and_finalization(state)
-//    process_crosslinks(state)
-//    process_rewards_and_penalties(state)
-//    process_registry_updates(state)
-//    # @process_reveal_deadlines
-//    # @process_challenge_deadlines
-//    process_slashings(state)
-//    process_final_updates(state)
-//    # @after_process_final_updates
-func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch")
-	defer span.End()
-	span.AddAttributes(trace.Int64Attribute("epoch", int64(helpers.SlotToEpoch(state.Slot))))
-
-	prevEpochAtts, err := e.MatchAttestations(state, helpers.PrevEpoch(state))
-	if err != nil {
-		return nil, fmt.Errorf("could not get target atts prev epoch %d: %v",
-			helpers.PrevEpoch(state), err)
-	}
-	currentEpochAtts, err := e.MatchAttestations(state, helpers.CurrentEpoch(state))
-	if err != nil {
-		return nil, fmt.Errorf("could not get target atts current epoch %d: %v",
-			helpers.CurrentEpoch(state), err)
-	}
-	prevEpochAttestedBalance, err := e.AttestingBalance(state, prevEpochAtts.Target)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get attesting balance prev epoch")
-	}
-	currentEpochAttestedBalance, err := e.AttestingBalance(state, currentEpochAtts.Target)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get attesting balance current epoch")
-	}
-
-	state, err = e.ProcessJustificationAndFinalization(state, prevEpochAttestedBalance, currentEpochAttestedBalance)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process justification")
-	}
-
-	state, err = e.ProcessRewardsAndPenalties(state)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process rewards and penalties")
-	}
-
-	state, err = e.ProcessRegistryUpdates(state)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process registry updates")
-	}
-
-	state, err = e.ProcessSlashings(state)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process slashings")
-	}
-
-	state, err = e.ProcessFinalUpdates(state)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process final updates")
-	}
-	return state, nil
 }
 
 // ProcessEpochPrecompute describes the per epoch operations that are performed on the beacon state.

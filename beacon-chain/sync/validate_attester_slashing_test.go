@@ -6,22 +6,20 @@ import (
 	"testing"
 	"time"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *pb.BeaconState) {
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 5)
-	state, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
+	state, privKeys := testutil.DeterministicGenesisState(t, 5)
 	for _, vv := range state.Validators {
 		vv.WithdrawableEpoch = 1 * params.BeaconConfig().SlotsPerEpoch
 	}
@@ -107,6 +105,7 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 		t.Error("Broadcast was not called")
 	}
 
+	time.Sleep(100 * time.Millisecond)
 	// A second message with the same information should not be valid for processing or
 	// propagation.
 	p2p.BroadcastCalled = false
@@ -157,7 +156,7 @@ func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
-	valid, _ := r.validateProposerSlashing(ctx, slashing, p2p, false /*fromSelf*/)
+	valid, _ := r.validateAttesterSlashing(ctx, slashing, p2p, false /*fromSelf*/)
 	if valid {
 		t.Error("slashing from the far distant future should have timed out and returned false")
 	}

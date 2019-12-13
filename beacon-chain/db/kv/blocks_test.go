@@ -7,9 +7,9 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
@@ -139,6 +139,33 @@ func TestStore_BlocksBatchDelete(t *testing.T) {
 	}
 }
 
+func TestStore_GenesisBlock(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+	genesisBlock := &ethpb.BeaconBlock{
+		Slot:       0,
+		ParentRoot: []byte{1, 2, 3},
+	}
+	blockRoot, err := ssz.SigningRoot(genesisBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveGenesisBlockRoot(ctx, blockRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveBlock(ctx, genesisBlock); err != nil {
+		t.Fatal(err)
+	}
+	retrievedBlock, err := db.GenesisBlock(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(genesisBlock, retrievedBlock) {
+		t.Errorf("Wanted %v, received %v", genesisBlock, retrievedBlock)
+	}
+}
+
 func TestStore_BlocksCRUD_NoCache(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
@@ -161,7 +188,7 @@ func TestStore_BlocksCRUD_NoCache(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatal(err)
 	}
-	db.blockCache.Delete(string(blockRoot[:]))
+	db.blockCache.Del(string(blockRoot[:]))
 	if !db.HasBlock(ctx, blockRoot) {
 		t.Error("Expected block to exist in the db")
 	}

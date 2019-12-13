@@ -5,9 +5,9 @@ import (
 	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
+	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
-	eth "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 )
 
 // chunkWriter writes the given message as a chunked response to the given network

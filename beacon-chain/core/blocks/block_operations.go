@@ -10,13 +10,13 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -32,6 +32,10 @@ var log = logrus.WithField("prefix", "blocks")
 
 var eth1DataCache = cache.NewEth1DataVoteCache()
 
+// ErrSigFailedToVerify returns when a signature of a block object(ie attestation, slashing, exit... etc)
+// failed to verify.
+var ErrSigFailedToVerify = errors.New("signature did not verify")
+
 func verifySigningRoot(obj interface{}, pub []byte, signature []byte, domain uint64) error {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
@@ -46,7 +50,7 @@ func verifySigningRoot(obj interface{}, pub []byte, signature []byte, domain uin
 		return errors.Wrap(err, "could not get signing root")
 	}
 	if !sig.Verify(root[:], publicKey, domain) {
-		return fmt.Errorf("signature did not verify")
+		return ErrSigFailedToVerify
 	}
 	return nil
 }
@@ -61,7 +65,7 @@ func verifySignature(signedData []byte, pub []byte, signature []byte, domain uin
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
 	if !sig.Verify(signedData, publicKey, domain) {
-		return fmt.Errorf("signature did not verify")
+		return ErrSigFailedToVerify
 	}
 	return nil
 }
@@ -177,7 +181,7 @@ func ProcessBlockHeader(
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	domain := helpers.Domain(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	if err := verifySigningRoot(block, proposer.PublicKey, block.Signature, domain); err != nil {
-		return nil, errors.Wrap(err, "could not verify block signature")
+		return nil, ErrSigFailedToVerify
 	}
 
 	return beaconState, nil
@@ -808,7 +812,7 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *pb.BeaconState, 
 	hasVotes := len(custodyBit0Indices) > 0 || len(custodyBit1Indices) > 0
 
 	if hasVotes && !sig.VerifyAggregate(pubkeys, msgs, domain) {
-		return fmt.Errorf("attestation aggregation signature did not verify")
+		return ErrSigFailedToVerify
 	}
 	return nil
 }
@@ -1051,7 +1055,7 @@ func VerifyExit(beaconState *pb.BeaconState, exit *ethpb.VoluntaryExit) error {
 	}
 	domain := helpers.Domain(beaconState.Fork, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit)
 	if err := verifySigningRoot(exit, validator.PublicKey, exit.Signature, domain); err != nil {
-		return errors.Wrap(err, "could not verify voluntary exit signature")
+		return ErrSigFailedToVerify
 	}
 	return nil
 }

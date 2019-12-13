@@ -8,8 +8,8 @@ import (
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/sirupsen/logrus"
@@ -26,6 +26,7 @@ type ValidatorService struct {
 	ctx                  context.Context
 	cancel               context.CancelFunc
 	validator            Validator
+	graffiti             []byte
 	conn                 *grpc.ClientConn
 	endpoint             string
 	withCert             string
@@ -37,6 +38,7 @@ type ValidatorService struct {
 type Config struct {
 	Endpoint             string
 	CertFlag             string
+	GraffitiFlag         string
 	Keys                 map[string]*keystore.Key
 	LogValidatorBalances bool
 }
@@ -56,6 +58,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		cancel:               cancel,
 		endpoint:             cfg.Endpoint,
 		withCert:             cfg.CertFlag,
+		graffiti:             []byte(cfg.GraffitiFlag),
 		keys:                 pubKeys,
 		logValidatorBalances: cfg.LogValidatorBalances,
 	}, nil
@@ -101,8 +104,10 @@ func (v *ValidatorService) Start() {
 		validatorClient:      pb.NewValidatorServiceClient(v.conn),
 		attesterClient:       pb.NewAttesterServiceClient(v.conn),
 		proposerClient:       pb.NewProposerServiceClient(v.conn),
+		aggregatorClient:     pb.NewAggregatorServiceClient(v.conn),
 		node:                 ethpb.NewNodeClient(v.conn),
 		keys:                 v.keys,
+		graffiti:             v.graffiti,
 		pubkeys:              pubKeys,
 		logValidatorBalances: v.logValidatorBalances,
 		prevBalance:          make(map[[48]byte]uint64),

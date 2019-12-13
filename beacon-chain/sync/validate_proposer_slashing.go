@@ -3,18 +3,25 @@ package sync
 import (
 	"context"
 
+	"github.com/dgraph-io/ristretto"
 	"github.com/gogo/protobuf/proto"
-	"github.com/karlseguin/ccache"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"go.opencensus.io/trace"
 )
 
+var seenProposerSlashingCacheSize = int64(1 << 10)
+
 // seenProposerSlashings represents a cache of all the seen slashings
-var seenProposerSlashings = ccache.New(ccache.Configure())
+var seenProposerSlashings, _ = ristretto.NewCache(&ristretto.Config{
+	NumCounters: seenProposerSlashingCacheSize,
+	MaxCost:     seenProposerSlashingCacheSize,
+	BufferItems: 64,
+})
 
 func propSlashingCacheKey(slashing *ethpb.ProposerSlashing) (string, error) {
 	hash, err := hashutil.HashProto(slashing)
@@ -32,20 +39,24 @@ func (r *RegularSync) validateProposerSlashing(ctx context.Context, msg proto.Me
 		return false, nil
 	}
 
+	ctx, span := trace.StartSpan(ctx, "sync.validateProposerSlashing")
+	defer span.End()
+
 	slashing, ok := msg.(*ethpb.ProposerSlashing)
 	if !ok {
 		return false, nil
 	}
+
 	cacheKey, err := propSlashingCacheKey(slashing)
 	if err != nil {
 		return false, errors.Wrapf(err, "could not hash proposer slashing")
 	}
 
 	invalidKey := invalid + cacheKey
-	if seenProposerSlashings.Get(invalidKey) != nil {
+	if _, ok := seenProposerSlashings.Get(invalidKey); ok {
 		return false, errors.New("previously seen invalid proposer slashing received")
 	}
-	if seenProposerSlashings.Get(cacheKey) != nil {
+	if _, ok := seenProposerSlashings.Get(cacheKey); ok {
 		return false, nil
 	}
 
@@ -68,10 +79,10 @@ func (r *RegularSync) validateProposerSlashing(ctx context.Context, msg proto.Me
 	}
 
 	if err := blocks.VerifyProposerSlashing(s, slashing); err != nil {
-		seenProposerSlashings.Set(invalidKey, true /*value*/, oneYear /*TTL*/)
+		seenProposerSlashings.Set(invalidKey, true /*value*/, 1 /*cost*/)
 		return false, errors.Wrap(err, "Received invalid proposer slashing")
 	}
-	seenProposerSlashings.Set(cacheKey, true /*value*/, oneYear /*TTL*/)
+	seenProposerSlashings.Set(cacheKey, true /*value*/, 1 /*cost*/)
 
 	if fromSelf {
 		return false, nil

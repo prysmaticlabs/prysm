@@ -6,26 +6,47 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/sirupsen/logrus"
 )
 
 // ChainService defines the mock interface for testing
 type ChainService struct {
-	State                    *pb.BeaconState
-	Root                     []byte
-	Block                    *ethpb.BeaconBlock
-	FinalizedCheckPoint      *ethpb.Checkpoint
-	MockStateInitializedFeed *event.Feed
-	BlocksReceived           []*ethpb.BeaconBlock
-	Genesis                  time.Time
-	Fork                     *pb.Fork
-	DB                       db.Database
-	MockStateFeed            *event.Feed
+	State               *pb.BeaconState
+	Root                []byte
+	Block               *ethpb.BeaconBlock
+	FinalizedCheckPoint *ethpb.Checkpoint
+	BlocksReceived      []*ethpb.BeaconBlock
+	Genesis             time.Time
+	Fork                *pb.Fork
+	DB                  db.Database
+	stateNotifier       statefeed.Notifier
+}
+
+// StateNotifier mocks the same method in the chain service.
+func (ms *ChainService) StateNotifier() statefeed.Notifier {
+	if ms.stateNotifier == nil {
+		ms.stateNotifier = &MockStateNotifier{}
+	}
+	return ms.stateNotifier
+}
+
+// MockStateNotifier mocks the state notifier.
+type MockStateNotifier struct {
+	feed *event.Feed
+}
+
+// StateFeed returns a state feed.
+func (msn *MockStateNotifier) StateFeed() *event.Feed {
+	if msn.feed == nil {
+		msn.feed = new(event.Feed)
+	}
+	return msn.feed
 }
 
 // ReceiveBlock mocks ReceiveBlock method in chain service.
@@ -108,23 +129,6 @@ func (ms *ChainService) ReceiveAttestation(context.Context, *ethpb.Attestation) 
 // ReceiveAttestationNoPubsub mocks ReceiveAttestationNoPubsub method in chain service.
 func (ms *ChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attestation) error {
 	return nil
-}
-
-// StateInitializedFeed mocks the same method in the chain service.
-func (ms *ChainService) StateInitializedFeed() *event.Feed {
-	if ms.MockStateInitializedFeed != nil {
-		return ms.MockStateInitializedFeed
-	}
-	ms.MockStateInitializedFeed = new(event.Feed)
-	return ms.MockStateInitializedFeed
-}
-
-// StateFeed mocks the same method in the chain service.
-func (ms *ChainService) StateFeed() *event.Feed {
-	if ms.MockStateFeed == nil {
-		ms.MockStateFeed = new(event.Feed)
-	}
-	return ms.MockStateFeed
 }
 
 // GenesisTime mocks the same method in the chain service.

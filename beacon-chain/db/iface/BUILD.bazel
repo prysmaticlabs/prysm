@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["interface.go"],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/db/iface",
+    # Other packages must use github.com/prysmaticlabs/prysm/beacon-chain/db.Database alias.
+    visibility = ["//beacon-chain/db:__subpackages__"],
+    deps = [
+        "//beacon-chain/db/filters:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+    ],
+)

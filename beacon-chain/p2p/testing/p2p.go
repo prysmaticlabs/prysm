@@ -18,6 +18,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
+	peers "github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/sirupsen/logrus"
 )
@@ -37,6 +38,7 @@ type TestP2P struct {
 	pubsub          *pubsub.PubSub
 	BroadcastCalled bool
 	DelaySend       bool
+	peers           *peers.Status
 }
 
 // NewTestP2P initializes a new p2p test service.
@@ -55,6 +57,7 @@ func NewTestP2P(t *testing.T) *TestP2P {
 		t:      t,
 		Host:   h,
 		pubsub: ps,
+		peers:  peers.NewStatus(5 /* maxBadResponses */),
 	}
 }
 
@@ -156,15 +159,19 @@ func (p *TestP2P) AddConnectionHandler(f func(ctx context.Context, id peer.ID) e
 		ConnectedF: func(net network.Network, conn network.Conn) {
 			// Must be handled in a goroutine as this callback cannot be blocking.
 			go func() {
+				p.peers.Add(conn.RemotePeer(), conn.RemoteMultiaddr(), conn.Stat().Direction)
 				ctx := context.Background()
 
+				p.peers.SetConnectionState(conn.RemotePeer(), peers.PeerConnecting)
 				if err := f(ctx, conn.RemotePeer()); err != nil {
 					logrus.WithError(err).Error("Could not send succesful hello rpc request")
 					if err := p.Disconnect(conn.RemotePeer()); err != nil {
 						logrus.WithError(err).Errorf("Unable to close peer %s", conn.RemotePeer())
 					}
+					p.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnected)
 					return
 				}
+				p.peers.SetConnectionState(conn.RemotePeer(), peers.PeerConnected)
 			}()
 		},
 	})
@@ -176,7 +183,9 @@ func (p *TestP2P) AddDisconnectionHandler(f func(ctx context.Context, id peer.ID
 		DisconnectedF: func(net network.Network, conn network.Conn) {
 			// Must be handled in a goroutine as this callback cannot be blocking.
 			go func() {
+				p.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnecting)
 				f(context.Background(), conn.RemotePeer())
+				p.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnected)
 			}()
 		},
 	})
@@ -212,4 +221,9 @@ func (p *TestP2P) Send(ctx context.Context, msg interface{}, pid peer.ID) (netwo
 // Started always returns true.
 func (p *TestP2P) Started() bool {
 	return true
+}
+
+// Peers returns the peer status.
+func (p *TestP2P) Peers() *peers.Status {
+	return p.peers
 }

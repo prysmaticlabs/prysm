@@ -20,6 +20,7 @@ func setDefaultMocks(service *Service) *Service {
 	service.blockFetcher = &goodFetcher{}
 	service.logger = &goodLogger{}
 	service.httpLogger = &goodLogger{}
+	service.stateNotifier = &goodNotifier{}
 	return service
 }
 

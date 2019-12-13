@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dgraph-io/ristretto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	ds "github.com/ipfs/go-datastore"
 	dsync "github.com/ipfs/go-datastore/sync"
-	"github.com/karlseguin/ccache"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -22,6 +22,7 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/shared"
 )
 
@@ -31,6 +32,9 @@ var pollingPeriod = 1 * time.Second
 var ttl = 1 * time.Hour
 
 const prysmProtocolPrefix = "/prysm/0.0.0"
+
+// maxBadResponses is the maximum number of bad responses from a peer before we stop talking to it.
+const maxBadResponses = 3
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
@@ -42,9 +46,10 @@ type Service struct {
 	dv5Listener   Listener
 	host          host.Host
 	pubsub        *pubsub.PubSub
-	exclusionList *ccache.Cache
+	exclusionList *ristretto.Cache
 	privKey       *ecdsa.PrivateKey
 	dht           *kaddht.IpfsDHT
+	peers         *peers.Status
 }
 
 // NewService initializes a new p2p service compatible with shared.Service interface. No
@@ -52,12 +57,17 @@ type Service struct {
 func NewService(cfg *Config) (*Service, error) {
 	var err error
 	ctx, cancel := context.WithCancel(context.Background())
+	cache, _ := ristretto.NewCache(&ristretto.Config{
+		NumCounters: 1000,
+		MaxCost:     1000,
+		BufferItems: 64,
+	})
 
 	s := &Service{
 		ctx:           ctx,
 		cancel:        cancel,
 		cfg:           cfg,
-		exclusionList: ccache.New(ccache.Configure()),
+		exclusionList: cache,
 	}
 
 	dv5Nodes, kadDHTNodes := parseBootStrapAddrs(s.cfg.BootstrapNodeAddr)
@@ -113,6 +123,8 @@ func NewService(cfg *Config) (*Service, error) {
 	}
 	s.pubsub = gs
 
+	s.peers = peers.NewStatus(maxBadResponses)
+
 	return s, nil
 }
 
@@ -129,6 +141,11 @@ func (s *Service) Start() {
 		if err := dialRelayNode(s.ctx, s.host, s.cfg.RelayNodeAddr); err != nil {
 			log.WithError(err).Errorf("Could not dial relay node")
 		}
+		peer, err := MakePeer(s.cfg.RelayNodeAddr)
+		if err != nil {
+			log.WithError(err).Errorf("Could not create peer")
+		}
+		s.host.ConnManager().Protect(peer.ID, "relay")
 	}
 
 	if len(s.cfg.Discv5BootStrapAddr) != 0 && !s.cfg.NoDiscovery {
@@ -163,6 +180,11 @@ func (s *Service) Start() {
 				s.startupErr = err
 				return
 			}
+			peer, err := MakePeer(addr)
+			if err != nil {
+				log.WithError(err).Errorf("Could not create peer")
+			}
+			s.host.ConnManager().Protect(peer.ID, "bootnode")
 		}
 		bcfg := kaddht.DefaultBootstrapConfig
 		bcfg.Period = time.Duration(30 * time.Second)
@@ -182,6 +204,7 @@ func (s *Service) Start() {
 	}
 
 	startPeerWatcher(s.ctx, s.host, peersToWatch...)
+	startPeerDecay(s.ctx, s.peers)
 	registerMetrics(s)
 	multiAddrs := s.host.Network().ListenAddresses()
 	logIP4Addr(s.host.ID(), multiAddrs...)
@@ -244,6 +267,11 @@ func (s *Service) Disconnect(pid peer.ID) error {
 	return s.host.Network().ClosePeer(pid)
 }
 
+// Peers returns the peer status interface.
+func (s *Service) Peers() *peers.Status {
+	return s.peers
+}
+
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.
 func (s *Service) listenForNewNodes() {
 	ticker := time.NewTicker(pollingPeriod)
@@ -274,12 +302,15 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 		if info.ID == s.host.ID() {
 			continue
 		}
-		if s.exclusionList.Get(info.ID.String()) != nil {
+		if _, ok := s.exclusionList.Get(info.ID.String()); ok {
+			continue
+		}
+		if s.Peers().IsBad(info.ID) {
 			continue
 		}
 		if err := s.host.Connect(s.ctx, info); err != nil {
 			log.Errorf("Could not connect with peer %s: %v", info.String(), err)
-			s.exclusionList.Set(info.ID.String(), true, ttl)
+			s.exclusionList.Set(info.ID.String(), true, 1)
 		}
 	}
 }
@@ -299,7 +330,7 @@ func (s *Service) addBootNodesToExclusionList() error {
 			return err
 		}
 		// bootnode is never dialled, so ttl is tentatively 1 year
-		s.exclusionList.Set(addrInfo.ID.String(), true, 365*24*time.Hour)
+		s.exclusionList.Set(addrInfo.ID.String(), true, 1)
 	}
 
 	return nil
@@ -315,7 +346,7 @@ func (s *Service) addKadDHTNodesToExclusionList(addr string) error {
 		return err
 	}
 	// bootnode is never dialled, so ttl is tentatively 1 year
-	s.exclusionList.Set(addrInfo.ID.String(), true, 365*24*time.Hour)
+	s.exclusionList.Set(addrInfo.ID.String(), true, 1)
 	return nil
 }
 

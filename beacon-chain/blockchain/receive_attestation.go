@@ -3,12 +3,14 @@ package blockchain
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -66,7 +68,9 @@ func (s *Service) processAttestation() {
 
 			for _, a := range atts {
 				if err := s.ReceiveAttestationNoPubsub(ctx, a); err != nil {
-					log.WithError(err).Error("Could not receive attestation in chain service")
+					log.WithFields(logrus.Fields{
+						"targetRoot": fmt.Sprintf("%#x", a.Data.Target.Root),
+					}).WithError(err).Error("Could not receive attestation in chain service")
 				}
 			}
 		case <-s.ctx.Done():

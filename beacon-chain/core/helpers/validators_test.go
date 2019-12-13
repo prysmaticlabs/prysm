@@ -1,10 +1,11 @@
 package helpers
 
 import (
+	"reflect"
 	"testing"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -115,7 +116,6 @@ func TestIsSlashableValidator_InactiveSlashed(t *testing.T) {
 }
 
 func TestBeaconProposerIndex_OK(t *testing.T) {
-	ClearAllCaches()
 	c := params.BeaconConfig()
 	c.MinGenesisActiveValidatorCount = 16384
 	params.OverrideBeaconConfig(c)
@@ -195,7 +195,6 @@ func TestChurnLimit_OK(t *testing.T) {
 		{validatorCount: 2000000, wantedChurn: 30 /* validatorCount/churnLimitQuotient */},
 	}
 	for _, test := range tests {
-		ClearAllCaches()
 		validators := make([]*ethpb.Validator, test.validatorCount)
 		for i := 0; i < len(validators); i++ {
 			validators[i] = &ethpb.Validator{
@@ -246,5 +245,161 @@ func TestDomain_OK(t *testing.T) {
 		if Domain(state.Fork, tt.epoch, bytesutil.Bytes4(tt.domainType)) != tt.version {
 			t.Errorf("wanted domain version: %d, got: %d", tt.version, Domain(state.Fork, tt.epoch, bytesutil.Bytes4(tt.domainType)))
 		}
+	}
+}
+
+// Test basic functionality of ActiveValidatorIndices without caching. This test will need to be
+// rewritten when releasing some cache flag.
+func TestActiveValidatorIndices(t *testing.T) {
+	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
+	type args struct {
+		state *pb.BeaconState
+		epoch uint64
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    []uint64
+		wantErr bool
+	}{
+		{
+			name: "all_active_epoch_10",
+			args: args{
+				state: &pb.BeaconState{
+					Validators: []*ethpb.Validator{
+						&ethpb.Validator{
+							ActivationEpoch: 0,
+							ExitEpoch:       farFutureEpoch,
+						},
+						&ethpb.Validator{
+							ActivationEpoch: 0,
+							ExitEpoch:       farFutureEpoch,
+						},
+						&ethpb.Validator{
+							ActivationEpoch: 0,
+							ExitEpoch:       farFutureEpoch,
+						},
+					},
+				},
+				epoch: 10,
+			},
+			want: []uint64{0, 1, 2},
+		},
+		{
+			name: "some_active_epoch_10",
+			args: args{
+				state: &pb.BeaconState{
+					Validators: []*ethpb.Validator{
+						&ethpb.Validator{
+							ActivationEpoch: 0,
+							ExitEpoch:       farFutureEpoch,
+						},
+						&ethpb.Validator{
+							ActivationEpoch: 0,
+							ExitEpoch:       farFutureEpoch,
+						},
+						&ethpb.Validator{
+							ActivationEpoch: 0,
+							ExitEpoch:       1,
+						},
+					},
+				},
+				epoch: 10,
+			},
+			want: []uint64{0, 1},
+		},
+		{
+			name: "some_active_with_recent_new_epoch_10",
+			args: args{
+				state: &pb.BeaconState{
+					Validators: []*ethpb.Validator{
+						&ethpb.Validator{
+							ActivationEpoch: 0,
+							ExitEpoch:       farFutureEpoch,
+						},
+						&ethpb.Validator{
+							ActivationEpoch: 0,
+							ExitEpoch:       farFutureEpoch,
+						},
+						&ethpb.Validator{
+							ActivationEpoch: 0,
+							ExitEpoch:       1,
+						},
+						&ethpb.Validator{
+							ActivationEpoch: 0,
+							ExitEpoch:       farFutureEpoch,
+						},
+					},
+				},
+				epoch: 10,
+			},
+			want: []uint64{0, 1, 3},
+		},
+		{
+			name: "some_active_with_recent_new_epoch_10",
+			args: args{
+				state: &pb.BeaconState{
+					Validators: []*ethpb.Validator{
+						&ethpb.Validator{
+							ActivationEpoch: 0,
+							ExitEpoch:       farFutureEpoch,
+						},
+						&ethpb.Validator{
+							ActivationEpoch: 0,
+							ExitEpoch:       farFutureEpoch,
+						},
+						&ethpb.Validator{
+							ActivationEpoch: 0,
+							ExitEpoch:       1,
+						},
+						&ethpb.Validator{
+							ActivationEpoch: 0,
+							ExitEpoch:       farFutureEpoch,
+						},
+					},
+				},
+				epoch: 10,
+			},
+			want: []uint64{0, 1, 3},
+		},
+		{
+			name: "some_active_with_recent_new_epoch_10",
+			args: args{
+				state: &pb.BeaconState{
+					Validators: []*ethpb.Validator{
+						&ethpb.Validator{
+							ActivationEpoch: 0,
+							ExitEpoch:       farFutureEpoch,
+						},
+						&ethpb.Validator{
+							ActivationEpoch: 0,
+							ExitEpoch:       1,
+						},
+						&ethpb.Validator{
+							ActivationEpoch: 0,
+							ExitEpoch:       farFutureEpoch,
+						},
+						&ethpb.Validator{
+							ActivationEpoch: 0,
+							ExitEpoch:       farFutureEpoch,
+						},
+					},
+				},
+				epoch: 10,
+			},
+			want: []uint64{0, 2, 3},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ActiveValidatorIndices(tt.args.state, tt.args.epoch)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ActiveValidatorIndices() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ActiveValidatorIndices() got = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

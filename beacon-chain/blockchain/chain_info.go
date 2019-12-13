@@ -2,12 +2,11 @@ package blockchain
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -97,14 +96,7 @@ func (s *Service) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 	defer s.headLock.RUnlock()
 
 	if s.headState == nil {
-		h, err := s.beaconDB.HeadState(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if h == nil {
-			return nil, errors.New("head state does not exist")
-		}
-		return h, nil
+		return s.beaconDB.HeadState(ctx)
 	}
 
 	return proto.Clone(s.headState).(*pb.BeaconState), nil

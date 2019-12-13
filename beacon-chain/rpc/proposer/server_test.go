@@ -7,16 +7,15 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -29,7 +28,6 @@ func init() {
 }
 
 func TestProposeBlock_OK(t *testing.T) {
-	helpers.ClearAllCaches()
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
@@ -40,20 +38,16 @@ func TestProposeBlock_OK(t *testing.T) {
 	}
 
 	numDeposits := params.BeaconConfig().MinGenesisActiveValidatorCount
-	deposits, _, _ := testutil.SetupInitialDeposits(t, numDeposits)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatalf("Could not instantiate genesis state: %v", err)
-	}
+	beaconState, _ := testutil.DeterministicGenesisState(t, numDeposits)
 
 	genesisRoot, err := ssz.SigningRoot(genesis)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
+	if err := db.SaveState(ctx, beaconState, genesisRoot); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
-	if err := db.SaveState(ctx, beaconState, genesisRoot); err != nil {
+	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
@@ -82,13 +76,8 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
-	helpers.ClearAllCaches()
 
-	deposits, _, privKeys := testutil.SetupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
-	if err != nil {
-		t.Fatalf("Could not instantiate genesis state: %v", err)
-	}
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
 	stateRoot, err := ssz.HashTreeRoot(beaconState)
 	if err != nil {
@@ -104,12 +93,10 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
-
-	if err := db.SaveHeadBlockRoot(ctx, parentRoot); err != nil {
+	if err := db.SaveState(ctx, beaconState, parentRoot); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
-
-	if err := db.SaveState(ctx, beaconState, parentRoot); err != nil {
+	if err := db.SaveHeadBlockRoot(ctx, parentRoot); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
@@ -131,7 +118,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		},
 	}
 	beaconState.Slot++
-	randaoReveal, err := testutil.CreateRandaoReveal(beaconState, 0, privKeys)
+	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
 	if err != nil {
 		t.Error(err)
 	}
@@ -995,10 +982,10 @@ func TestEth1Data_MockEnabled(t *testing.T) {
 	headState := &pbp2p.BeaconState{
 		Eth1DepositIndex: 64,
 	}
-	if err := db.SaveHeadBlockRoot(ctx, headBlockRoot); err != nil {
+	if err := db.SaveState(ctx, headState, headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveState(ctx, headState, headBlockRoot); err != nil {
+	if err := db.SaveHeadBlockRoot(ctx, headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
 

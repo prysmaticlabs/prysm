@@ -7,15 +7,15 @@ import (
 	"testing"
 	"time"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
 func TestStore_GenesisStoreOk(t *testing.T) {
@@ -174,17 +174,11 @@ func TestStore_LatestAttestingBalance(t *testing.T) {
 	for i := 0; i < len(validators); i++ {
 		switch {
 		case i < 33:
-			if err := store.db.SaveValidatorLatestVote(ctx, uint64(i), &pb.ValidatorLatestVote{Root: roots[1]}); err != nil {
-				t.Fatal(err)
-			}
+			store.latestVoteMap[uint64(i)] = &pb.ValidatorLatestVote{Root: roots[1]}
 		case i > 66:
-			if err := store.db.SaveValidatorLatestVote(ctx, uint64(i), &pb.ValidatorLatestVote{Root: roots[7]}); err != nil {
-				t.Fatal(err)
-			}
+			store.latestVoteMap[uint64(i)] = &pb.ValidatorLatestVote{Root: roots[7]}
 		default:
-			if err := store.db.SaveValidatorLatestVote(ctx, uint64(i), &pb.ValidatorLatestVote{Root: roots[8]}); err != nil {
-				t.Fatal(err)
-			}
+			store.latestVoteMap[uint64(i)] = &pb.ValidatorLatestVote{Root: roots[8]}
 		}
 	}
 
@@ -211,8 +205,6 @@ func TestStore_LatestAttestingBalance(t *testing.T) {
 }
 
 func TestStore_ChildrenBlocksFromParentRoot(t *testing.T) {
-	helpers.ClearAllCaches()
-
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
@@ -293,17 +285,11 @@ func TestStore_GetHead(t *testing.T) {
 	for i := 0; i < len(validators); i++ {
 		switch {
 		case i < 33:
-			if err := store.db.SaveValidatorLatestVote(ctx, uint64(i), &pb.ValidatorLatestVote{Root: roots[1]}); err != nil {
-				t.Fatal(err)
-			}
+			store.latestVoteMap[uint64(i)] = &pb.ValidatorLatestVote{Root: roots[1]}
 		case i > 66:
-			if err := store.db.SaveValidatorLatestVote(ctx, uint64(i), &pb.ValidatorLatestVote{Root: roots[7]}); err != nil {
-				t.Fatal(err)
-			}
+			store.latestVoteMap[uint64(i)] = &pb.ValidatorLatestVote{Root: roots[7]}
 		default:
-			if err := store.db.SaveValidatorLatestVote(ctx, uint64(i), &pb.ValidatorLatestVote{Root: roots[8]}); err != nil {
-				t.Fatal(err)
-			}
+			store.latestVoteMap[uint64(i)] = &pb.ValidatorLatestVote{Root: roots[8]}
 		}
 	}
 
@@ -317,9 +303,8 @@ func TestStore_GetHead(t *testing.T) {
 	}
 
 	// 1 validator switches vote to B7 to gain 34%, enough to switch head
-	if err := store.db.SaveValidatorLatestVote(ctx, 50, &pb.ValidatorLatestVote{Root: roots[7]}); err != nil {
-		t.Fatal(err)
-	}
+	store.latestVoteMap[uint64(50)] = &pb.ValidatorLatestVote{Root: roots[7]}
+
 	head, err = store.Head(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -331,9 +316,7 @@ func TestStore_GetHead(t *testing.T) {
 	// 18 validators switches vote to B1 to gain 51%, enough to switch head
 	for i := 0; i < 18; i++ {
 		idx := 50 + uint64(i)
-		if err := store.db.SaveValidatorLatestVote(ctx, idx, &pb.ValidatorLatestVote{Root: roots[1]}); err != nil {
-			t.Fatal(err)
-		}
+		store.latestVoteMap[uint64(idx)] = &pb.ValidatorLatestVote{Root: roots[1]}
 	}
 	head, err = store.Head(ctx)
 	if err != nil {
@@ -342,5 +325,34 @@ func TestStore_GetHead(t *testing.T) {
 	if !bytes.Equal(head, roots[1]) {
 		t.Log(head)
 		t.Error("Incorrect head")
+	}
+}
+
+func TestCacheGenesisState_Correct(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	store := NewForkChoiceService(ctx, db)
+	config := &featureconfig.Flags{
+		InitSyncCacheState: true,
+	}
+	featureconfig.Init(config)
+
+	b := &ethpb.BeaconBlock{Slot: 1}
+	r, _ := ssz.SigningRoot(b)
+	s := &pb.BeaconState{GenesisTime: 99}
+
+	store.db.SaveState(ctx, s, r)
+	store.db.SaveGenesisBlockRoot(ctx, r)
+
+	if err := store.cacheGenesisState(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, state := range store.initSyncState {
+		if !reflect.DeepEqual(s, state) {
+			t.Error("Did not get wanted state")
+		}
 	}
 }

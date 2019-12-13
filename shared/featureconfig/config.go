@@ -25,15 +25,17 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
-	GenesisDelay             bool // GenesisDelay when processing a chain start genesis event.
-	MinimalConfig            bool // MinimalConfig as defined in the spec.
-	WriteSSZStateTransitions bool // WriteSSZStateTransitions to tmp directory.
-	InitSyncNoVerify         bool // InitSyncNoVerify when initial syncing w/o verifying block's contents.
-	SkipBLSVerify            bool // Skips BLS verification across the runtime.
-	EnableBackupWebhook      bool // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
-	OptimizeProcessEpoch     bool // OptimizeProcessEpoch to process epoch with optimizations by pre computing records.
-	Scatter                  bool // Scatter sequential processing by scattering it to multiple cores.
-	PruneFinalizedStates     bool // PruneFinalizedStates from the database.
+	GenesisDelay              bool   // GenesisDelay when processing a chain start genesis event.
+	MinimalConfig             bool   // MinimalConfig as defined in the spec.
+	WriteSSZStateTransitions  bool   // WriteSSZStateTransitions to tmp directory.
+	InitSyncNoVerify          bool   // InitSyncNoVerify when initial syncing w/o verifying block's contents.
+	SkipBLSVerify             bool   // Skips BLS verification across the runtime.
+	EnableBackupWebhook       bool   // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
+	PruneEpochBoundaryStates  bool   // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
+	EnableSnappyDBCompression bool   // EnableSnappyDBCompression in the database.
+	EnableCustomStateSSZ      bool   // EnableCustomStateSSZ in the the state transition function.
+	InitSyncCacheState        bool   // InitSyncCacheState caches state during initial sync.
+	KafkaBootstrapServers     string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
 
 	// Cache toggles.
 	EnableAttestationCache   bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
@@ -43,7 +45,6 @@ type Flags struct {
 	EnableShuffledIndexCache bool // EnableShuffledIndexCache to cache expensive shuffled index computation.
 	EnableSkipSlotsCache     bool // EnableSkipSlotsCache caches the state in skipped slots.
 	EnableCommitteeCache     bool // EnableCommitteeCache to cache committee computation.
-	EnableActiveIndicesCache bool // EnableActiveIndicesCache.
 	EnableActiveCountCache   bool // EnableActiveCountCache.
 }
 
@@ -87,8 +88,14 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabled unsafe eth1 data vote cache")
 		cfg.EnableEth1DataVoteCache = true
 	}
-	if ctx.GlobalBool(InitSyncNoVerifyFlag.Name) {
-		log.Warn("Initial syncing without verifying block's contents")
+	if ctx.GlobalBool(EnableCustomStateSSZ.Name) {
+		log.Warn("Enabled custom state ssz for the state transition function")
+		cfg.EnableCustomStateSSZ = true
+	}
+	if ctx.GlobalBool(initSyncVerifyEverythingFlag.Name) {
+		log.Warn("Initial syncing with verifying all block's content signatures.")
+		cfg.InitSyncNoVerify = false
+	} else {
 		cfg.InitSyncNoVerify = true
 	}
 	if ctx.GlobalBool(NewCacheFlag.Name) {
@@ -107,18 +114,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabled BLS pubkey cache.")
 		cfg.EnableBLSPubkeyCache = true
 	}
-	if ctx.GlobalBool(OptimizeProcessEpoch.Name) {
-		log.Warn("Processing epoch with optimizations")
-		cfg.OptimizeProcessEpoch = true
-	}
-	if ctx.GlobalBool(Scatter.Name) {
-		log.Warn("Scattering sequential proceses to multiple cores")
-		cfg.Scatter = true
-	}
-	if ctx.GlobalBool(pruneFinalizedStatesFlag.Name) {
-		log.Warn("Enabled pruning old finalized states from database.")
-		cfg.PruneFinalizedStates = true
-	}
 	if ctx.GlobalBool(enableShuffledIndexCache.Name) {
 		log.Warn("Enabled shuffled index cache.")
 		cfg.EnableShuffledIndexCache = true
@@ -127,17 +122,29 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabled skip slots cache.")
 		cfg.EnableSkipSlotsCache = true
 	}
+	if ctx.GlobalString(kafkaBootstrapServersFlag.Name) != "" {
+		log.Warn("Enabling experimental kafka streaming.")
+		cfg.KafkaBootstrapServers = ctx.GlobalString(kafkaBootstrapServersFlag.Name)
+	}
 	if ctx.GlobalBool(enableCommitteeCacheFlag.Name) {
 		log.Warn("Enabled committee cache.")
 		cfg.EnableCommitteeCache = true
 	}
-	if ctx.GlobalBool(enableActiveIndicesCacheFlag.Name) {
-		log.Warn("Enabled active indices cache.")
-		cfg.EnableActiveIndicesCache = true
-	}
 	if ctx.GlobalBool(enableActiveCountCacheFlag.Name) {
 		log.Warn("Enabled active count cache.")
 		cfg.EnableActiveCountCache = true
+	}
+	if ctx.GlobalBool(enableSnappyDBCompressionFlag.Name) {
+		log.Warn("Enabled snappy compression in the database.")
+		cfg.EnableSnappyDBCompression = true
+	}
+	if ctx.GlobalBool(enablePruneBoundaryStateFlag.Name) {
+		log.Warn("Enabled pruning epoch boundary states before last finalized check point.")
+		cfg.PruneEpochBoundaryStates = true
+	}
+	if ctx.GlobalBool(initSyncCacheState.Name) {
+		log.Warn("Enabled initial sync cache state mode.")
+		cfg.InitSyncCacheState = true
 	}
 	Init(cfg)
 }

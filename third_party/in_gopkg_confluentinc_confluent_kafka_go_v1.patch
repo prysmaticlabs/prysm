@@ -1,0 +1,10 @@
+--- a/kafka/BUILD.bazel
++++ b/kafka/BUILD.bazel
+@@ -23,6 +23,7 @@
+         "producer.go",
+         "testhelpers.go",
+     ],
++    cdeps = ["@prysm//third_party/kafka:librdkafka"],
+     cgo = True,
+     importpath = "gopkg.in/confluentinc/confluent-kafka-go.v1/kafka",
+     visibility = ["//visibility:public"],
