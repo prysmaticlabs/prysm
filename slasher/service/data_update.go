@@ -3,11 +3,10 @@ package service
 import (
 	"time"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // finalisedChangeUpdater this is a stub for the comming PRs #3133
