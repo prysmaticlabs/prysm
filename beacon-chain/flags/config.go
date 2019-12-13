@@ -1,6 +1,7 @@
 package flags
 
 import (
+	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/urfave/cli"
 )
 
@@ -45,6 +46,15 @@ func ConfigureGlobalFlags(ctx *cli.Context) {
 	if ctx.GlobalBool(ArchiveAttestationsFlag.Name) {
 		cfg.EnableArchivedAttestations = true
 	}
-	cfg.MinimumSyncPeers = ctx.GlobalInt(MinSyncPeers.Name)
+	configureMinimumPeers(ctx, cfg)
+
 	Init(cfg)
+}
+
+func configureMinimumPeers(ctx *cli.Context, cfg *GlobalFlags) {
+	cfg.MinimumSyncPeers = ctx.GlobalInt(MinSyncPeers.Name)
+	maxPeers := int(ctx.GlobalInt64(cmd.P2PMaxPeers.Name))
+	if cfg.MinimumSyncPeers > maxPeers {
+		cfg.MinimumSyncPeers = maxPeers
+	}
 }
