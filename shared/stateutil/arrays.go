@@ -58,8 +58,9 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 		// the modified branches in the cached Merkle tree for this state field.
 		chunks := leaves
 
-		// We add an offset to the changed indices here.
-		// Might need the max of changed indices instead here.
+		// We need to ensure we recompute indices of the Merkle tree which
+		// changed in-between calls to this function. This check adds an offset
+		// to the recomputed indices to ensure we do so evenly.
 		maxChangedIndex := changedIndices[len(changedIndices)-1]
 		if maxChangedIndex+2 == len(chunks) && maxChangedIndex%2 != 0 {
 			changedIndices = append(changedIndices, maxChangedIndex+1)
@@ -184,9 +185,9 @@ func recomputeRoot(idx int, chunks [][]byte, fieldName string) ([32]byte, error)
 		currentIndex = parentIdx
 	}
 	layersCache[fieldName] = layers
+	// If there is only a single leaf, we return it (the identity element).
 	if len(layers[0]) == 1 {
 		return bytesutil.ToBytes32(layers[0][0]), nil
 	}
 	return bytesutil.ToBytes32(root), nil
 }
-
