@@ -16,7 +16,7 @@ import (
 	. "github.com/prysmaticlabs/prysm/shared/slotutil"
 )
 
-const statusInterval = 6 * time.Minute // 60 slots.
+const statusInterval = 6 * time.Minute // 30 slots.
 
 // maintainPeerStatuses by infrequently polling peers for their latest status.
 func (r *RegularSync) maintainPeerStatuses() {
@@ -37,7 +37,6 @@ func (r *RegularSync) maintainPeerStatuses() {
 		}
 		if !r.initialSync.Syncing() {
 			_, highestEpoch, _ := r.p2p.Peers().BestFinalized()
-			log.Errorf("highest epoch %d and finalized epoch %d", highestEpoch, r.chain.FinalizedCheckpt().Epoch)
 			if highestEpoch > r.chain.FinalizedCheckpt().Epoch {
 				r.clearPendingSlots()
 				// block until we can resync the node
