@@ -5,7 +5,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
@@ -35,18 +35,16 @@ func (r *RegularSync) maintainPeerStatuses() {
 					log.WithField("peer", pid).WithError(err).Error("Failed to request peer status")
 				}
 			}
-			_, highestEpoch := r.p2p.Peers().HighestFinalizedPeer()
-			if highestEpoch > r.chain.FinalizedCheckpt().Epoch {
-				r.clearPendingSlots()
-				// block until we can resync the node
-				if err := r.initialSync.Resync(); err != nil {
-					log.Errorf("Could not Resync Chain: %v", err)
-				}
-			}
-		case <-r.ctx.Done():
-			return
 		}
 	})
+	_, highestEpoch := r.p2p.Peers().HighestFinalizedPeer()
+	if highestEpoch > r.chain.FinalizedCheckpt().Epoch {
+		r.clearPendingSlots()
+		// block until we can resync the node
+		if err := r.initialSync.Resync(); err != nil {
+			log.Errorf("Could not Resync Chain: %v", err)
+		}
+	}
 }
 
 // sendRPCStatusRequest for a given topic with an expected protobuf message type.
@@ -147,9 +145,15 @@ func (r *RegularSync) validateStatusMessage(msg *pb.Status, stream network.Strea
 		return errWrongForkVersion
 	}
 	genesis := r.chain.GenesisTime()
-	slotsSinceGenesis := uint64(roughtime.Since(genesis).Seconds()) / params.BeaconConfig().SecondsPerSlot
-	expectedEpoch := helpers.SlotToEpoch(slotsSinceGenesis)
-	if msg.FinalizedEpoch > expectedEpoch {
+	maxSlot := slotutil.SlotsSinceGenesis(genesis)
+	if msg.HeadSlot > maxSlot {
+		return errInvalidSlot
+	}
+	maxEpoch := slotutil.SlotsSinceGenesis(genesis)
+	// It would take a minimum of 2 epochs to finalize a
+	// previous epoch
+	maxFinalizedEpoch := maxEpoch - 2
+	if msg.FinalizedEpoch > maxFinalizedEpoch {
 		return errInvalidEpoch
 	}
 	return nil

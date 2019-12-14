@@ -49,6 +49,7 @@ go_library(
         "//shared/params:go_default_library",
         "//shared/roughtime:go_default_library",
         "//shared/runutil:go_default_library",
+        "//shared/slotutil:go_default_library",
         "//shared/traceutil:go_default_library",
         "@com_github_dgraph_io_ristretto//:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",

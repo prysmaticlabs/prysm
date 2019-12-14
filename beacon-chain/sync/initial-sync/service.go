@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
+
 	"github.com/sirupsen/logrus"
 
 	"github.com/pkg/errors"
@@ -15,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
@@ -102,7 +103,7 @@ func (s *InitialSync) Start() {
 		time.Sleep(roughtime.Until(genesis))
 	}
 	s.chainStarted = true
-	currentSlot := slotsSinceGenesis(genesis)
+	currentSlot := slotutil.SlotsSinceGenesis(genesis)
 	if helpers.SlotToEpoch(currentSlot) == 0 {
 		log.Info("Chain started within the last epoch - not syncing")
 		s.synced = true
@@ -114,19 +115,6 @@ func (s *InitialSync) Start() {
 		log.Info("Already synced to the current chain head")
 		s.synced = true
 		return
-	}
-
-	// Every 5 sec, report handshake count.
-	for {
-		count := len(s.p2p.Peers().Connected())
-		if count >= flags.Get().MinimumSyncPeers {
-			break
-		}
-		log.WithField(
-			"handshakes",
-			fmt.Sprintf("%d/%d", count, flags.Get().MinimumSyncPeers),
-		).Info("Waiting for enough peer handshakes before syncing")
-		time.Sleep(handshakePollingInterval)
 	}
 	s.waitForMinimumPeers()
 
@@ -181,16 +169,12 @@ func (s *InitialSync) waitForMinimumPeers() {
 	// Every 5 sec, report handshake count.
 	for {
 		count := len(s.p2p.Peers().Connected())
-		if count >= minStatusCount {
+		if count >= flags.Get().MinimumSyncPeers {
 			break
 		}
 		log.WithFields(logrus.Fields{
 			"valid handshakes":    count,
-			"required handshakes": minStatusCount}).Info("Waiting for enough peer handshakes before syncing")
+			"required handshakes": flags.Get().MinimumSyncPeers}).Info("Waiting for enough peer handshakes before syncing")
 		time.Sleep(handshakePollingInterval)
 	}
-}
-
-func slotsSinceGenesis(genesisTime time.Time) uint64 {
-	return uint64(roughtime.Since(genesisTime).Seconds()) / params.BeaconConfig().SecondsPerSlot
 }
