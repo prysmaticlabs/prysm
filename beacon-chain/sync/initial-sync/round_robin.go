@@ -25,7 +25,6 @@ import (
 )
 
 const blockBatchSize = 64
-const maxPeersToSync = 15
 const counterSeconds = 20
 const refreshTime = 6 * time.Second
 

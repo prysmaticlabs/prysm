@@ -117,7 +117,6 @@ func (s *InitialSync) Start() {
 		return
 	}
 	s.waitForMinimumPeers()
-
 	if err := s.roundRobinSync(genesis); err != nil {
 		panic(err)
 	}

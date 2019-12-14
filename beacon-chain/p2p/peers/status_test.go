@@ -1,6 +1,7 @@
 package peers_test
 
 import (
+	"bytes"
 	"crypto/rand"
 	"fmt"
 	"testing"
@@ -337,29 +338,70 @@ func TestDecay(t *testing.T) {
 func TestBestPeer(t *testing.T) {
 	maxBadResponses := 2
 	expectedFinEpoch := uint64(4)
+	expectedRoot := [32]byte{'t', 'e', 's', 't'}
+	junkRoot := [32]byte{'j', 'u', 'n', 'k'}
 	p := peers.NewStatus(maxBadResponses)
 
 	// Peer 1
 	pid1 := addPeer(t, p, peers.PeerConnected)
 	p.SetChainState(pid1, &pb.Status{
-		FinalizedEpoch: 0,
+		FinalizedEpoch: expectedFinEpoch,
+		FinalizedRoot:  expectedRoot[:],
 	})
 	// Peer 2
 	pid2 := addPeer(t, p, peers.PeerConnected)
 	p.SetChainState(pid2, &pb.Status{
 		FinalizedEpoch: expectedFinEpoch,
+		FinalizedRoot:  expectedRoot[:],
 	})
 	// Peer 3
 	pid3 := addPeer(t, p, peers.PeerConnected)
 	p.SetChainState(pid3, &pb.Status{
 		FinalizedEpoch: 3,
+		FinalizedRoot:  junkRoot[:],
 	})
-	retPeer, retEpoch := p.HighestFinalizedPeer()
-	if retPeer != pid2 {
-		t.Errorf("Incorrect Peer retrieved; wanted %v but got %v", pid2, retPeer)
+	// Peer 4
+	pid4 := addPeer(t, p, peers.PeerConnected)
+	p.SetChainState(pid4, &pb.Status{
+		FinalizedEpoch: expectedFinEpoch,
+		FinalizedRoot:  expectedRoot[:],
+	})
+	// Peer 5
+	pid5 := addPeer(t, p, peers.PeerConnected)
+	p.SetChainState(pid5, &pb.Status{
+		FinalizedEpoch: expectedFinEpoch,
+		FinalizedRoot:  expectedRoot[:],
+	})
+	// Peer 6
+	pid6 := addPeer(t, p, peers.PeerConnected)
+	p.SetChainState(pid6, &pb.Status{
+		FinalizedEpoch: 3,
+		FinalizedRoot:  junkRoot[:],
+	})
+	retRoot, retEpoch, _ := p.BestFinalized()
+	if !bytes.Equal(retRoot, expectedRoot[:]) {
+		t.Errorf("Incorrect Finalized Root retrieved; wanted %v but got %v", expectedRoot, retRoot)
 	}
 	if retEpoch != expectedFinEpoch {
 		t.Errorf("Incorrect Finalized epoch retrieved; wanted %v but got %v", expectedFinEpoch, retEpoch)
+	}
+}
+
+func TestBestFinalized_returnsMaxValue(t *testing.T) {
+	maxBadResponses := 2
+	p := peers.NewStatus(maxBadResponses)
+
+	for i := 0; i <= peers.MaxPeersToSync+100; i++ {
+		p.Add(peer.ID(i), nil, network.DirOutbound)
+		p.SetConnectionState(peer.ID(i), peers.PeerConnected)
+		p.SetChainState(peer.ID(i), &pb.Status{
+			FinalizedEpoch: 10,
+		})
+	}
+
+	_, _, pids := p.BestFinalized()
+	if len(pids) != peers.MaxPeersToSync {
+		t.Fatalf("returned wrong number of peers, wanted %d, got %d", peers.MaxPeersToSync, len(pids))
 	}
 }
 

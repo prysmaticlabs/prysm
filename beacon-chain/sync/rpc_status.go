@@ -9,6 +9,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -37,7 +38,7 @@ func (r *RegularSync) maintainPeerStatuses() {
 		}
 		if !r.initialSync.Syncing() {
 			_, highestEpoch, _ := r.p2p.Peers().BestFinalized()
-			if highestEpoch > r.chain.FinalizedCheckpt().Epoch {
+			if helpers.StartSlot(highestEpoch) > r.chain.HeadSlot() {
 				r.clearPendingSlots()
 				// block until we can resync the node
 				if err := r.initialSync.Resync(); err != nil {
