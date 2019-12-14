@@ -3,7 +3,6 @@ package stateutil
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"sync"
 
 	"github.com/protolambda/zssz/merkle"
@@ -42,11 +41,6 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 		// We invalidate the cache completely in this case.
 		prevLeaves = leaves
 	}
-	//fmt.Printf("Prev leaves: ")
-	//for i := 0; i < len(prevLeaves); i++ {
-	//	fmt.Printf("%#x, ", bytesutil.Trunc(prevLeaves[i]))
-	//}
-	//fmt.Println("")
 	for i := 0; i < len(roots) && i < len(leaves) && i < len(prevLeaves); i++ {
 		padded := bytesutil.ToBytes32(roots[i])
 		copy(hashKeyElements[bytesProcessed:bytesProcessed+32], padded[:])
@@ -63,11 +57,6 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 		// If indices did change since last computation, we only recompute
 		// the modified branches in the cached Merkle tree for this state field.
 		chunks := leaves
-		//fmt.Printf("Chunks before recompute: ")
-		//for i := 0; i < len(chunks); i++ {
-		//	fmt.Printf("%#x, ", bytesutil.Trunc(chunks[i]))
-		//}
-		//fmt.Println("")
 
 		// We add an offset to the changed indices here.
 		// Might need the max of changed indices instead here.
@@ -81,11 +70,6 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 			if err != nil {
 				return [32]byte{}, err
 			}
-		}
-		if fieldName == "StateRoots" {
-			//fmt.Println("Branch Recompute Merkle With Cache")
-			//fmt.Printf("Changed indices: %v\n", changedIndices)
-			//prettyPrintTree(layersCache[fieldName])
 		}
 		return rt, nil
 	}
@@ -129,13 +113,7 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][]byte, fieldName string) 
 		}
 	}
 	layers[0] = hashLayer
-	if fieldName == "StateRoots" {
-		//fmt.Print("Updated first layer: ")
-		//for i := 0; i < len(layers[0]); i++ {
-		//	fmt.Printf("%#x, ", bytesutil.Trunc(layers[0][i]))
-		//}
-		//fmt.Println("")
-	}
+
 	// We keep track of the hash layers of a Merkle trie until we reach
 	// the top layer of length 1, which contains the single root element.
 	//        [Root]      -> Top layer has length 1.
@@ -156,15 +134,6 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][]byte, fieldName string) 
 	copy(root[:], hashLayer[0])
 	if h.rootsCache != nil {
 		layersCache[fieldName] = layers
-		//if fieldName == "StateRoots" {
-		//	fmt.Println("Regular Merkle With Cache")
-		//	prettyPrintTree(layersCache[fieldName])
-		//}
-	} else {
-		//if fieldName == "StateRoots" {
-		//	fmt.Println("Regular Merkle No Cache")
-		//	prettyPrintTree(layers)
-		//}
 	}
 	return root
 }
@@ -184,9 +153,7 @@ func recomputeRoot(idx int, chunks [][]byte, fieldName string) ([32]byte, error)
 	}
 	layers := items
 	root := chunks[idx]
-	//fmt.Printf("Recomputing index %d\n", idx)
 	layers[0] = chunks
-	//fmt.Printf("Set index %d to %#x\n", idx, bytesutil.Trunc(root))
 	// The merkle tree structure looks as follows:
 	// [[r1, r2, r3, r4], [parent1, parent2], [root]]
 	// Using information about the index which changed, idx, we recompute
@@ -194,15 +161,12 @@ func recomputeRoot(idx int, chunks [][]byte, fieldName string) ([32]byte, error)
 	currentIndex := idx
 	for i := 0; i < len(layers)-1; i++ {
 		isLeft := currentIndex%2 == 0
-		//fmt.Printf("At layer %d, current index %d is left: %v\n", i, currentIndex, isLeft)
 		neighborIdx := currentIndex ^ 1
-		// fmt.Printf("Neighbor index: %d\n", neighborIdx)
 
 		neighbor := make([]byte, 32)
 		if layers[i] != nil && len(layers[i]) != 0 && neighborIdx < len(layers[i]) {
 			neighbor = layers[i][neighborIdx]
 		}
-		// fmt.Printf("Neighbor: %#x\n", bytesutil.Trunc(neighbor))
 		if isLeft {
 			parentHash := hashutil.Hash(append(root, neighbor...))
 			root = parentHash[:]
@@ -226,21 +190,3 @@ func recomputeRoot(idx int, chunks [][]byte, fieldName string) ([32]byte, error)
 	return bytesutil.ToBytes32(root), nil
 }
 
-func prettyPrintTree(layers [][][]byte) {
-	fmt.Println("***ROOT")
-	if len(layers[len(layers)-1]) != 0 {
-		fmt.Printf("%#x\n", bytesutil.Trunc(layers[len(layers)-1][0]))
-	}
-	for i := len(layers) - 1; i >= 0; i-- {
-		fmt.Printf("***LAYER %d\n", i)
-		fmt.Print("Nodes: ")
-		for j := 0; j < len(layers[i]); j++ {
-			if j == len(layers[i])-1 {
-				fmt.Printf("%#x", bytesutil.Trunc(layers[i][j]))
-			} else {
-				fmt.Printf("%#x, ", bytesutil.Trunc(layers[i][j]))
-			}
-		}
-		fmt.Println("")
-	}
-}

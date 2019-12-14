@@ -178,11 +178,6 @@ func (h *stateRootHasher) hashTreeRootState(state *pb.BeaconState) ([32]byte, er
 	}
 	fieldRoots[19] = finalRoot[:]
 
-	//typ := reflect.TypeOf(state).Elem()
-	//for i := 0; i < len(fieldRoots); i++ {
-	//	fmt.Printf("%#x and index %d and name %s\n", bytesutil.Trunc(fieldRoots[i]), i, typ.Field(i).Name)
-	//}
-
 	root, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute full beacon state merkleization")
