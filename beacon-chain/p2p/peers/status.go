@@ -24,6 +24,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
@@ -44,6 +46,8 @@ const (
 	// PeerDisconnecting means there is an on-going attempt to disconnect from the peer.
 	PeerDisconnecting
 )
+
+const maxPeersToSync = 15
 
 var (
 	// ErrPeerUnknown is returned when there is an attempt to obtain data from a peer that is not known.
@@ -329,6 +333,46 @@ func (p *Status) HighestFinalizedPeer() (peer.ID, uint64) {
 		}
 	}
 	return best, bestEpoch
+}
+
+// BestFinalized returns the highest finalized epoch that is agreed upon by the majority of
+// peers. This method may not return the absolute highest finalized, but the finalized epoch in
+// which most peers can serve blocks. Ideally, all peers would be reporting the same finalized
+// epoch.
+// Returns the best finalized root, epoch number, and peers that agree.
+func (p *Status) BestFinalized() ([]byte, uint64, []peer.ID) {
+	finalized := make(map[[32]byte]uint64)
+	rootToEpoch := make(map[[32]byte]uint64)
+	for _, pid := range p.Connected() {
+		peerChainState, err := p.ChainState(pid)
+		if err == nil && peerChainState != nil {
+			r := bytesutil.ToBytes32(peerChainState.FinalizedRoot)
+			finalized[r]++
+			rootToEpoch[r] = peerChainState.FinalizedEpoch
+		}
+	}
+
+	var mostVotedFinalizedRoot [32]byte
+	var mostVotes uint64
+	for root, count := range finalized {
+		if count > mostVotes {
+			mostVotes = count
+			mostVotedFinalizedRoot = root
+		}
+	}
+
+	var pids []peer.ID
+	for _, pid := range p.Connected() {
+		peerChainState, err := p.ChainState(pid)
+		if err == nil && peerChainState != nil && peerChainState.FinalizedEpoch >= rootToEpoch[mostVotedFinalizedRoot] {
+			pids = append(pids, pid)
+			if len(pids) >= maxPeersToSync {
+				break
+			}
+		}
+	}
+
+	return mostVotedFinalizedRoot[:], rootToEpoch[mostVotedFinalizedRoot], pids
 }
 
 // fetch is a helper function that fetches a peer status, possibly creating it.

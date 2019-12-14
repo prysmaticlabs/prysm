@@ -5,8 +5,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
-
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -15,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
+	. "github.com/prysmaticlabs/prysm/shared/slotutil"
 )
 
 const statusInterval = 6 * time.Minute // 60 slots.
@@ -36,15 +35,18 @@ func (r *RegularSync) maintainPeerStatuses() {
 				}
 			}
 		}
-	})
-	_, highestEpoch := r.p2p.Peers().HighestFinalizedPeer()
-	if highestEpoch > r.chain.FinalizedCheckpt().Epoch {
-		r.clearPendingSlots()
-		// block until we can resync the node
-		if err := r.initialSync.Resync(); err != nil {
-			log.Errorf("Could not Resync Chain: %v", err)
+		if !r.initialSync.Syncing() {
+			_, highestEpoch, _ := r.p2p.Peers().BestFinalized()
+			log.Errorf("highest epoch %d and finalized epoch %d", highestEpoch, r.chain.FinalizedCheckpt().Epoch)
+			if highestEpoch > r.chain.FinalizedCheckpt().Epoch {
+				r.clearPendingSlots()
+				// block until we can resync the node
+				if err := r.initialSync.Resync(); err != nil {
+					log.Errorf("Could not Resync Chain: %v", err)
+				}
+			}
 		}
-	}
+	})
 }
 
 // sendRPCStatusRequest for a given topic with an expected protobuf message type.
@@ -145,11 +147,11 @@ func (r *RegularSync) validateStatusMessage(msg *pb.Status, stream network.Strea
 		return errWrongForkVersion
 	}
 	genesis := r.chain.GenesisTime()
-	maxSlot := slotutil.SlotsSinceGenesis(genesis)
+	maxSlot := SlotsSinceGenesis(genesis)
 	if msg.HeadSlot > maxSlot {
 		return errInvalidSlot
 	}
-	maxEpoch := slotutil.SlotsSinceGenesis(genesis)
+	maxEpoch := SlotsSinceGenesis(genesis)
 	// It would take a minimum of 2 epochs to finalize a
 	// previous epoch
 	maxFinalizedEpoch := maxEpoch - 2
