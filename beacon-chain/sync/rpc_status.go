@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
-	. "github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
 
 const statusInterval = 6 * time.Minute // 30 slots.
@@ -37,7 +37,8 @@ func (r *RegularSync) maintainPeerStatuses() {
 			}
 		}
 		if !r.initialSync.Syncing() {
-			_, highestEpoch, _ := r.p2p.Peers().BestFinalized()
+			maxPeersToSync := 15
+			_, highestEpoch, _ := r.p2p.Peers().BestFinalized(maxPeersToSync)
 			if helpers.StartSlot(highestEpoch) > r.chain.HeadSlot() {
 				r.clearPendingSlots()
 				// block until we can resync the node
@@ -147,11 +148,11 @@ func (r *RegularSync) validateStatusMessage(msg *pb.Status, stream network.Strea
 		return errWrongForkVersion
 	}
 	genesis := r.chain.GenesisTime()
-	maxSlot := SlotsSinceGenesis(genesis)
+	maxSlot := slotutil.SlotsSinceGenesis(genesis)
 	if msg.HeadSlot > maxSlot {
 		return errInvalidSlot
 	}
-	maxEpoch := SlotsSinceGenesis(genesis)
+	maxEpoch := slotutil.SlotsSinceGenesis(genesis)
 	// It would take a minimum of 2 epochs to finalize a
 	// previous epoch
 	maxFinalizedEpoch := maxEpoch - 2

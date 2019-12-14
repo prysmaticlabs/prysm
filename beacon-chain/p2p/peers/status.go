@@ -47,8 +47,6 @@ const (
 	PeerDisconnecting
 )
 
-const MaxPeersToSync = 15
-
 var (
 	// ErrPeerUnknown is returned when there is an attempt to obtain data from a peer that is not known.
 	ErrPeerUnknown = errors.New("peer unknown")
@@ -325,7 +323,7 @@ func (p *Status) Decay() {
 // which most peers can serve blocks. Ideally, all peers would be reporting the same finalized
 // epoch.
 // Returns the best finalized root, epoch number, and peers that agree.
-func (p *Status) BestFinalized() ([]byte, uint64, []peer.ID) {
+func (p *Status) BestFinalized(maxPeers int) ([]byte, uint64, []peer.ID) {
 	finalized := make(map[[32]byte]uint64)
 	rootToEpoch := make(map[[32]byte]uint64)
 	for _, pid := range p.Connected() {
@@ -351,7 +349,7 @@ func (p *Status) BestFinalized() ([]byte, uint64, []peer.ID) {
 		peerChainState, err := p.ChainState(pid)
 		if err == nil && peerChainState != nil && peerChainState.FinalizedEpoch >= rootToEpoch[mostVotedFinalizedRoot] {
 			pids = append(pids, pid)
-			if len(pids) >= MaxPeersToSync {
+			if len(pids) >= maxPeers {
 				break
 			}
 		}
