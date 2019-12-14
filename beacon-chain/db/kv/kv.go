@@ -52,7 +52,6 @@ func NewKVStore(dirPath string) (*Store, error) {
 		}
 		return nil, err
 	}
-	boltDB.NoSync = true
 	blockCache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: 1000,           // number of keys to track frequency of (1000).
 		MaxCost:     BlockCacheSize, // maximum cost of cache (1000 Blocks).
