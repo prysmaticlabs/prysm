@@ -4,10 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
-
-	"github.com/sirupsen/logrus"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -18,6 +14,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/sirupsen/logrus"
 )
 
 var _ = shared.Service(&InitialSync{})
