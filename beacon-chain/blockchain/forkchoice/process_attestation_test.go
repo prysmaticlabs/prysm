@@ -14,6 +14,7 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestStore_OnAttestation(t *testing.T) {
@@ -221,7 +222,8 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	store := NewForkChoiceService(ctx, db)
 
 	epoch := uint64(1)
-	baseState := &pb.BeaconState{Slot: epoch * params.BeaconConfig().SlotsPerEpoch}
+	baseState, _ := testutil.DeterministicGenesisState(t, 1)
+	baseState.Slot = epoch * params.BeaconConfig().SlotsPerEpoch
 	checkpoint := &ethpb.Checkpoint{Epoch: epoch}
 	returned, err := store.saveCheckpointState(ctx, baseState, checkpoint)
 	if err != nil {
@@ -253,12 +255,11 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 		t.Error("Incorrectly returned base state")
 	}
 
-	cached, err = store.checkpointState.StateByCheckpoint(checkpoint)
+	cached, err = store.checkpointState.StateByCheckpoint(newCheckpoint)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(baseState, cached) {
+	if !reflect.DeepEqual(returned, cached) {
 		t.Error("Incorrectly cached base state")
 	}
-
 }
