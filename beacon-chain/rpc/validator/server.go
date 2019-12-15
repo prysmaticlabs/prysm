@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -57,6 +58,8 @@ type Server struct {
 	MockEth1Votes          bool
 	Eth1BlockFetcher       powchain.POWBlockFetcher
 	PendingDepositsFetcher depositcache.PendingDepositsFetcher
+	OperationNotifier      opfeed.Notifier
+	GenesisTimeFetcher     blockchain.GenesisTimeFetcher
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current

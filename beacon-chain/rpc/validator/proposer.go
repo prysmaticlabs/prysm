@@ -6,7 +6,6 @@ import (
 	"math/big"
 	"math/rand"
 
-	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -114,11 +113,6 @@ func (vs *Server) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlock) (*et
 	return &ethpb.ProposeResponse{
 		BlockRoot: root[:],
 	}, nil
-}
-
-// ProposeExit --
-func (vs *Server) ProposeExit(context.Context, *ethpb.VoluntaryExit) (*ptypes.Empty, error) {
-	return &ptypes.Empty{}, status.Error(codes.Unimplemented, "Not yet implemented")
 }
 
 // eth1Data determines the appropriate eth1data for a block proposal. The algorithm for this method

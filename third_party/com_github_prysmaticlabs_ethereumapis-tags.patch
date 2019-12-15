@@ -52,7 +52,7 @@ index a52dbad..33de299 100644
 +)
 \ No newline at end of file
 diff --git a/eth/v1alpha1/attestation.proto b/eth/v1alpha1/attestation.proto
-index 6c772a7..dc3a0fd 100644
+index 819ec65..d0a3b68 100644
 --- a/eth/v1alpha1/attestation.proto
 +++ b/eth/v1alpha1/attestation.proto
 @@ -15,6 +15,8 @@ syntax = "proto3";
@@ -78,8 +78,8 @@ index 6c772a7..dc3a0fd 100644
 +    bytes signature = 3 [(gogoproto.moretags) = "ssz-size:\"96\""];
  }
  
- message AttestationData {
-@@ -44,7 +46,7 @@ message AttestationData {
+ message AggregateAttestationAndProof {
+@@ -55,7 +57,7 @@ message AttestationData {
      uint64 committee_index = 2;
  
      // 32 byte root of the LMD GHOST block vote.
@@ -88,7 +88,7 @@ index 6c772a7..dc3a0fd 100644
  
      // The most recent justified checkpoint in the beacon state
      Checkpoint source = 4;
-@@ -80,5 +82,5 @@ message Checkpoint {
+@@ -91,5 +93,5 @@ message Checkpoint {
      uint64 epoch = 1;
  
      // Block root of the checkpoint references.

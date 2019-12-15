@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
+	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -73,6 +74,7 @@ type Service struct {
 	depositFetcher        depositcache.DepositFetcher
 	pendingDepositFetcher depositcache.PendingDepositsFetcher
 	stateNotifier         statefeed.Notifier
+	operationNotifier     opfeed.Notifier
 }
 
 // Config options for the beacon node RPC server.
@@ -97,6 +99,7 @@ type Config struct {
 	DepositFetcher        depositcache.DepositFetcher
 	PendingDepositFetcher depositcache.PendingDepositsFetcher
 	StateNotifier         statefeed.Notifier
+	OperationNotifier     opfeed.Notifier
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -128,6 +131,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		canonicalStateChan:    make(chan *pbp2p.BeaconState, params.BeaconConfig().DefaultBufferSize),
 		incomingAttestation:   make(chan *ethpb.Attestation, params.BeaconConfig().DefaultBufferSize),
 		stateNotifier:         cfg.StateNotifier,
+		operationNotifier:     cfg.OperationNotifier,
 	}
 }
 
@@ -184,11 +188,13 @@ func (s *Service) Start() {
 		Eth1InfoFetcher:        s.powChainService,
 		SyncChecker:            s.syncService,
 		StateNotifier:          s.stateNotifier,
+		OperationNotifier:      s.operationNotifier,
 		P2P:                    s.p2p,
 		BlockReceiver:          s.blockReceiver,
 		MockEth1Votes:          s.mockEth1Votes,
 		Eth1BlockFetcher:       s.powChainService,
 		PendingDepositsFetcher: s.pendingDepositFetcher,
+		GenesisTimeFetcher:     s.genesisTimeFetcher,
 	}
 	nodeServer := &node.Server{
 		BeaconDB:           s.beaconDB,
