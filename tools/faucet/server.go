@@ -114,10 +114,10 @@ func (s *faucetServer) RequestFunds(ctx context.Context, req *faucetpb.FundingRe
 	}
 
 	fundingLock.Lock()
-	exceedPeerLimit := ipCounter[peer] > ipLimit
+	exceedPeerLimit := ipCounter[peer] >= ipLimit
 	if funded[req.WalletAddress] || exceedPeerLimit {
 		if exceedPeerLimit {
-			fmt.Printf("peer %s trying to get funded despite being over peer limit", peer)
+			fmt.Printf("peer %s trying to get funded despite being over peer limit\n", peer)
 		}
 		fundingLock.Unlock()
 		return &faucetpb.FundingResponse{Error: "funded too recently"}, nil
