@@ -499,6 +499,21 @@ func TestComputeProposerIndex(t *testing.T) {
 			},
 			want: 7,
 		},
+		{
+			name: "nil_validator",
+			args: args{
+				validators: []*ethpb.Validator{
+					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					nil, // Should never happen, but would cause a panic when it does happen.
+					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+				},
+				indices: []uint64{0, 1, 2, 3, 4},
+				seed:    seed,
+			},
+			want: 4,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

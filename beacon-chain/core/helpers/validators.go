@@ -197,7 +197,7 @@ func ComputeProposerIndex(validators []*ethpb.Validator, activeIndices []uint64,
 	maxRandomByte := uint64(1<<8 - 1)
 
 	for i := uint64(0); ; i++ {
-		candidateIndex, err := ComputeShuffledIndex(i%length, length, seed, true)
+		candidateIndex, err := ComputeShuffledIndex(i%length, length, seed, true /* shuffle */)
 		if err != nil {
 			return 0, err
 		}
@@ -207,7 +207,11 @@ func ComputeProposerIndex(validators []*ethpb.Validator, activeIndices []uint64,
 		}
 		b := append(seed[:], bytesutil.Bytes8(i/32)...)
 		randomByte := hashutil.Hash(b)[i%32]
-		effectiveBal := validators[candidateIndex].EffectiveBalance
+		v := validators[candidateIndex]
+		var effectiveBal uint64
+		if v != nil {
+			effectiveBal = v.EffectiveBalance
+		}
 		if effectiveBal*maxRandomByte >= params.BeaconConfig().MaxEffectiveBalance*uint64(randomByte) {
 			return candidateIndex, nil
 		}
