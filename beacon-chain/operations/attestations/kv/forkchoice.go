@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 )
 
-// SaveAggregatedAttestation saves an forkchoice attestation in cache.
+// SaveForkchoiceAttestation saves an forkchoice attestation in cache.
 func (p *AttCaches) SaveForkchoiceAttestation(att *ethpb.Attestation) error {
 	r, err := ssz.HashTreeRoot(att)
 	if err != nil {
@@ -21,7 +21,7 @@ func (p *AttCaches) SaveForkchoiceAttestation(att *ethpb.Attestation) error {
 	return nil
 }
 
-// ForkchoiceAttestation returns the forkchoice attestations in cache.
+// ForkchoiceAttestations returns the forkchoice attestations in cache.
 func (p *AttCaches) ForkchoiceAttestations() []*ethpb.Attestation {
 	atts := make([]*ethpb.Attestation, 0, p.forkchoiceAtt.ItemCount())
 	for s, i := range p.forkchoiceAtt.Items() {
