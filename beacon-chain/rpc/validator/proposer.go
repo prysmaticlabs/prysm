@@ -110,6 +110,10 @@ func (vs *Server) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlock) (*et
 		return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
 	}
 
+	if err := vs.deleteAttsInPool(blk.Body.Attestations); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not delete attestations in pool: %v", err)
+	}
+
 	return &ethpb.ProposeResponse{
 		BlockRoot: root[:],
 	}, nil
@@ -353,7 +357,7 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, slot 
 			break
 		}
 
-		if err := blocks.VerifyAttestation(ctx, bState, att); err != nil {
+		if _, err := blocks.ProcessAttestation(ctx, bState, att); err != nil {
 			if helpers.IsAggregated(att) {
 				if err := vs.AttPool.DeleteAggregatedAttestation(att); err != nil {
 					return nil, err
@@ -369,6 +373,23 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, slot 
 	}
 
 	return validAtts, nil
+}
+
+// The input attestations are processed and seen by the node, this deletes them from pool
+// so proposers don't include them in a block for the future.
+func (vs *Server) deleteAttsInPool(atts []*ethpb.Attestation) error {
+	for _, att := range atts {
+		if helpers.IsAggregated(att) {
+			if err := vs.AttPool.DeleteAggregatedAttestation(att); err != nil {
+				return err
+			}
+		} else {
+			if err := vs.AttPool.DeleteUnaggregatedAttestation(att); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func constructMerkleProof(trie *trieutil.MerkleTrie, index int, deposit *ethpb.Deposit) (*ethpb.Deposit, error) {

@@ -217,6 +217,8 @@ func (s *Service) Start() {
 		BeaconDB:    s.beaconDB,
 		HeadFetcher: s.headFetcher,
 		SyncChecker: s.syncService,
+		AttPool:     s.attestationsPool,
+		P2p:         s.p2p,
 	}
 	pb.RegisterAggregatorServiceServer(s.grpcServer, aggregatorServer)
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)

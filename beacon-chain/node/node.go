@@ -298,6 +298,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		DepositCache:      b.depositCache,
 		ChainStartFetcher: web3Service,
 		OpsPoolService:    opsService,
+		AttPool:           b.attestationPool,
 		P2p:               b.fetchP2P(ctx),
 		MaxRoutines:       maxRoutines,
 		StateNotifier:     b,

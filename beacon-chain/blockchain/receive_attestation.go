@@ -61,16 +61,16 @@ func (s *Service) processAttestation() {
 		ctx := context.Background()
 		select {
 		case <-ticker.C:
-			atts, err := s.opsPoolService.AttestationPoolForForkchoice(ctx)
-			if err != nil {
-				log.WithError(err).Error("Could not retrieve attestation from pool")
-			}
+			atts := s.attPool.ForkchoiceAttestations()
 
 			for _, a := range atts {
 				if err := s.ReceiveAttestationNoPubsub(ctx, a); err != nil {
 					log.WithFields(logrus.Fields{
 						"targetRoot": fmt.Sprintf("%#x", a.Data.Target.Root),
 					}).WithError(err).Error("Could not receive attestation in chain service")
+				}
+				if err := s.attPool.DeleteForkchoiceAttestation(a); err != nil {
+					log.WithError(err).Error("Could not delete fork choice attestation in pool")
 				}
 			}
 		case <-s.ctx.Done():
