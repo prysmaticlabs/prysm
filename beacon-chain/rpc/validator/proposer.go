@@ -55,7 +55,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	}
 
 	// Pack aggregated attestations which have not been included in the beacon chain.
-	atts := vs.AttPool.AggregatedAttestation()
+	atts := vs.AttPool.AggregatedAttestations()
 	atts, err = vs.filterAttestationsForBlockInclusion(ctx, req.Slot, atts)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not filter attestations: %v", err)

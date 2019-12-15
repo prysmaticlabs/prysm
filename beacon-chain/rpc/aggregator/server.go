@@ -80,7 +80,7 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 	}
 
 	// Retrieve the unaggregated attestation from pool
-	atts := as.AttPool.UnaggregatedAttestations(req.Slot, req.CommitteeIndex)
+	atts := as.AttPool.UnaggregatedAttestationsBySlotIndex(req.Slot, req.CommitteeIndex)
 
 	// Verify attestations are valid before aggregating and broadcasting them out.
 	validAtts := make([]*ethpb.Attestation, 0, len(atts))

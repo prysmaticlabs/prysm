@@ -26,8 +26,8 @@ func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
 	return nil
 }
 
-// AggregatedAttestation returns the aggregated attestations in cache.
-func (p *AttCaches) AggregatedAttestation() []*ethpb.Attestation {
+// AggregatedAttestations returns the aggregated attestations in cache.
+func (p *AttCaches) AggregatedAttestations() []*ethpb.Attestation {
 	atts := make([]*ethpb.Attestation, 0, p.aggregatedAtt.ItemCount())
 	for s, i := range p.aggregatedAtt.Items() {
 		// Type assertion for the worst case. This shouldn't happen.

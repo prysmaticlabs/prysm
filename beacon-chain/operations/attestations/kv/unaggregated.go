@@ -26,9 +26,9 @@ func (p *AttCaches) SaveUnaggregatedAttestation(att *ethpb.Attestation) error {
 	return nil
 }
 
-// UnaggregatedAttestations returns the aggregated attestations in cache,
+// UnaggregatedAttestationsBySlotIndex returns the unaggregated attestations in cache,
 // filtered by committee index and slot.
-func (p *AttCaches) UnaggregatedAttestations(slot uint64, committeeIndex uint64) []*ethpb.Attestation {
+func (p *AttCaches) UnaggregatedAttestationsBySlotIndex(slot uint64, committeeIndex uint64) []*ethpb.Attestation {
 	atts := make([]*ethpb.Attestation, 0, p.unAggregatedAtt.ItemCount())
 	for s, i := range p.unAggregatedAtt.Items() {
 
@@ -41,6 +41,23 @@ func (p *AttCaches) UnaggregatedAttestations(slot uint64, committeeIndex uint64)
 		if slot == att.Data.Slot && committeeIndex == att.Data.CommitteeIndex {
 			atts = append(atts, att)
 		}
+	}
+
+	return atts
+}
+
+// UnaggregatedAttestations returns all the unaggregated attestations in cache.
+func (p *AttCaches) UnaggregatedAttestations() []*ethpb.Attestation {
+	atts := make([]*ethpb.Attestation, 0, p.unAggregatedAtt.ItemCount())
+	for s, i := range p.unAggregatedAtt.Items() {
+
+		// Type assertion for the worst case. This shouldn't happen.
+		att, ok := i.Object.(*ethpb.Attestation)
+		if !ok {
+			p.unAggregatedAtt.Delete(s)
+		}
+
+		atts = append(atts, att)
 	}
 
 	return atts

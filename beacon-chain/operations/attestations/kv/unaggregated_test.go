@@ -40,7 +40,7 @@ func TestKV_Unaggregated_CanSaveRetrieve(t *testing.T) {
 		}
 	}
 
-	returned := cache.UnaggregatedAttestations(data.Slot, data.CommitteeIndex)
+	returned := cache.UnaggregatedAttestationsBySlotIndex(data.Slot, data.CommitteeIndex)
 	wanted := []*ethpb.Attestation{att2, att3}
 
 	if !reflect.DeepEqual(len(wanted), len(returned)) {
@@ -69,7 +69,7 @@ func TestKV_Unaggregated_CanDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	returned := cache.UnaggregatedAttestations(2, 0)
+	returned := cache.UnaggregatedAttestationsBySlotIndex(2, 0)
 
 	if !reflect.DeepEqual([]*ethpb.Attestation{}, returned) {
 		t.Error("Did not receive correct aggregated atts")

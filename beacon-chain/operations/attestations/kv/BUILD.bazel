@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "aggregated.go",
+        "block.go",
         "forkchoice.go",
         "kv.go",
         "unaggregated.go",
@@ -24,6 +25,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "aggregated_test.go",
+        "block_test.go",
         "forkchoice_test.go",
         "unaggregated_test.go",
     ],

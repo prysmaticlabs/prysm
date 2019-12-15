@@ -28,7 +28,7 @@ func TestKV_Forkchoice_CanSaveRetrieve(t *testing.T) {
 		}
 	}
 
-	returned := cache.ForkchoiceAttestation()
+	returned := cache.ForkchoiceAttestations()
 
 	sort.Slice(returned, func(i, j int) bool {
 		return returned[i].Data.Slot < returned[j].Data.Slot
@@ -60,7 +60,7 @@ func TestKV_Forkchoice_CanDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	returned := cache.ForkchoiceAttestation()
+	returned := cache.ForkchoiceAttestations()
 	wanted := []*ethpb.Attestation{att2}
 
 	if !reflect.DeepEqual(wanted, returned) {
@@ -78,7 +78,7 @@ func TestKV_Forkchoice_CheckExpTime(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	item, exp, exists := cache.aggregatedAtt.GetWithExpiration(string(r[:]))
+	item, exp, exists := cache.forkchoiceAtt.GetWithExpiration(string(r[:]))
 	if !exists {
 		t.Error("Saved att does not exist")
 	}
