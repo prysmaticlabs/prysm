@@ -151,17 +151,19 @@ func (s *Store) saveCheckpointState(ctx context.Context, baseState *pb.BeaconSta
 	// Advance slots only when it's higher than current state slot.
 	if helpers.StartSlot(c.Epoch) > baseState.Slot {
 		stateCopy := proto.Clone(baseState).(*pb.BeaconState)
-		baseState, err = state.ProcessSlots(ctx, stateCopy, helpers.StartSlot(c.Epoch))
+		stateCopy, err = state.ProcessSlots(ctx, stateCopy, helpers.StartSlot(c.Epoch))
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
 		}
-	}
 
-	if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
-		Checkpoint: c,
-		State:      baseState,
-	}); err != nil {
-		return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
+		if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
+			Checkpoint: c,
+			State:      stateCopy,
+		}); err != nil {
+			return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
+		}
+
+		return stateCopy, nil
 	}
 
 	return baseState, nil
