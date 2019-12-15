@@ -878,8 +878,9 @@ go_repository(
 
 go_repository(
     name = "com_github_google_gofuzz",
-    commit = "f140a6486e521aad38f5917de355cbf147cc0496",  # v1.0.0
     importpath = "github.com/google/gofuzz",
+    sum = "h1:A8PeW59pxE9IoFRqBp37U+mSNaQoZ46F1f0f863XSXw=",
+    version = "v1.0.0",
 )
 
 go_repository(
