@@ -61,7 +61,7 @@ func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) (
 	}
 
 	hashKey := hashutil.FastSum256(hashKeyElements)
-	if hashKey != emptyKey && h.rootsCache != nil{
+	if hashKey != emptyKey && h.rootsCache != nil {
 		if found, ok := h.rootsCache.Get(string(hashKey[:])); found != nil && ok {
 			return found.([32]byte), nil
 		}
