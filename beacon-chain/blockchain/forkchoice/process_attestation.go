@@ -171,7 +171,11 @@ func (s *Store) saveCheckpointState(ctx context.Context, baseState *pb.BeaconSta
 
 // verifyAttestation validates input attestation is valid.
 func (s *Store) verifyAttestation(ctx context.Context, baseState *pb.BeaconState, a *ethpb.Attestation) (*ethpb.IndexedAttestation, error) {
-	indexedAtt, err := blocks.ConvertToIndexed(ctx, baseState, a)
+	committee, err := helpers.BeaconCommittee(baseState, a.Data.Slot, a.Data.CommitteeIndex)
+	if err != nil {
+		return nil, err
+	}
+	indexedAtt, err := blocks.ConvertToIndexed(ctx, a, committee)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert attestation to indexed attestation")
 	}

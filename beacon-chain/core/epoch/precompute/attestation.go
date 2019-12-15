@@ -36,7 +36,11 @@ func ProcessAttestations(
 		}
 
 		// Get attested indices and update the pre computed fields for each attested validators.
-		indices, err := helpers.AttestingIndices(state, a.Data, a.AggregationBits)
+		committee, err := helpers.BeaconCommittee(state, a.Data.Slot, a.Data.CommitteeIndex)
+		if err != nil {
+			return nil, nil, err
+		}
+		indices, err := helpers.AttestingIndices(a.AggregationBits, committee)
 		if err != nil {
 			return nil, nil, err
 		}
