@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -21,17 +22,10 @@ var processPendingBlocksPeriod = time.Duration(params.BeaconConfig().SecondsPerS
 
 // processes pending blocks queue on every processPendingBlocksPeriod
 func (r *RegularSync) processPendingBlocksQueue() {
-	ticker := time.NewTicker(processPendingBlocksPeriod)
-	for {
-		ctx := context.TODO()
-		select {
-		case <-ticker.C:
-			r.processPendingBlocks(ctx)
-		case <-r.ctx.Done():
-			log.Debug("Context closed, exiting routine")
-			return
-		}
-	}
+	ctx := context.Background()
+	runutil.RunEvery(r.ctx, processPendingBlocksPeriod, func() {
+		r.processPendingBlocks(ctx)
+	})
 }
 
 // processes the block tree inside the queue
