@@ -70,13 +70,16 @@ func (m *SparseMerkleTrie) Root() [32]byte {
 
 // InsertIntoTrie inserts an item(deposit hash) into the trie.
 func (m *SparseMerkleTrie) InsertIntoTrie(item []byte, index int) {
-	for index >= len(m.originalItems) && index >= len(m.branches[0]) {
+	for index >= len(m.branches[0]) {
 		m.branches[0] = append(m.branches[0], zeroHashes[0])
-		m.originalItems = append(m.originalItems, zeroHashes[0])
 	}
 	someItem := bytesutil.ToBytes32(item)
 	m.branches[0][index] = someItem[:]
-	m.originalItems[index] = someItem[:]
+	if index >= len(m.originalItems) {
+		m.originalItems = append(m.originalItems, someItem[:])
+	} else {
+		m.originalItems[index] = someItem[:]
+	}
 	currentIndex := index
 	root := bytesutil.ToBytes32(item)
 	for i := 0; i < int(m.depth); i++ {
