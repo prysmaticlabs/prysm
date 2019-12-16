@@ -5,7 +5,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"google.golang.org/grpc/codes"
@@ -73,19 +72,5 @@ func (vs *Server) CommitteeAssignment(ctx context.Context, req *pb.AssignmentReq
 
 	return &pb.AssignmentResponse{
 		ValidatorAssignment: validatorAssignments,
-	}, nil
-}
-
-func (vs *Server) assignment(idx uint64, beaconState *pbp2p.BeaconState, epoch uint64) (*pb.AssignmentResponse_ValidatorAssignment, error) {
-	committee, committeeIndex, aSlot, pSlot, err := helpers.CommitteeAssignment(beaconState, epoch, idx)
-	if err != nil {
-		return nil, err
-	}
-	return &pb.AssignmentResponse_ValidatorAssignment{
-		Committee:      committee,
-		CommitteeIndex: committeeIndex,
-		AttesterSlot:   aSlot,
-		ProposerSlot:   pSlot,
-		Status:         vs.assignmentStatus(idx, beaconState),
 	}, nil
 }

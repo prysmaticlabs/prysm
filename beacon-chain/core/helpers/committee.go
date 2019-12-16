@@ -263,6 +263,10 @@ func CommitteeAssignments(state *pb.BeaconState, epoch uint64) (map[uint64]*Comm
 // CommitteeAssignment is used to query committee assignment from
 // current and previous epoch.
 //
+// Deprecated: Consider using CommitteeAssignments, especially when computing more than one
+// validator assignment as this method is O(n^2) in computational complexity. This method exists to
+// ensure spec definition conformance and otherwise should probably not be used.
+//
 // Spec pseudocode definition:
 //   def get_committee_assignment(state: BeaconState,
 //                             epoch: Epoch,
