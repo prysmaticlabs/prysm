@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -65,11 +64,7 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 	}
 
 	// Check if the validator is an aggregator
-	sig, err := bls.SignatureFromBytes(req.SlotSignature)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not convert signature to byte: %v", err)
-	}
-	isAggregator, err := helpers.IsAggregator(headState, req.Slot, req.CommitteeIndex, sig)
+	isAggregator, err := helpers.IsAggregator(headState, req.Slot, req.CommitteeIndex, req.SlotSignature)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get aggregator status: %v", err)
 	}
