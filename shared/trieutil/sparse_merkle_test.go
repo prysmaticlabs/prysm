@@ -163,7 +163,7 @@ func TestMerkleTrie_VerifyMerkleProof_TrieUpdated(t *testing.T) {
 	}
 
 	// Now we update the trie.
-	m.InsertIntoTrie([]byte{5}, 3)
+	m.Insert([]byte{5}, 3)
 	proof, err = m.MerkleProof(3)
 	if err != nil {
 		t.Fatalf("Could not generate Merkle proof: %v", err)
@@ -177,7 +177,7 @@ func TestMerkleTrie_VerifyMerkleProof_TrieUpdated(t *testing.T) {
 	}
 
 	// Now we update the trie at an index larger than the number of items.
-	m.InsertIntoTrie([]byte{6}, 15)
+	m.Insert([]byte{6}, 15)
 }
 
 func BenchmarkGenerateTrieFromItems(b *testing.B) {

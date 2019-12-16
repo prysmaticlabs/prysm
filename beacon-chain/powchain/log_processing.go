@@ -122,7 +122,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 		return errors.Wrap(err, "Unable to determine hashed value of deposit")
 	}
 
-	s.depositTrie.InsertIntoTrie(depositHash[:], int(index))
+	s.depositTrie.Insert(depositHash[:], int(index))
 
 	proof, err := s.depositTrie.MerkleProof(int(index))
 	if err != nil {

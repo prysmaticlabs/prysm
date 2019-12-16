@@ -68,8 +68,8 @@ func (m *SparseMerkleTrie) Root() [32]byte {
 	return hashutil.Hash(append(m.branches[len(m.branches)-1][0], enc[:]...))
 }
 
-// InsertIntoTrie inserts an item(deposit hash) into the trie.
-func (m *SparseMerkleTrie) InsertIntoTrie(item []byte, index int) {
+// Insert an item into the trie.
+func (m *SparseMerkleTrie) Insert(item []byte, index int) {
 	for index >= len(m.branches[0]) {
 		m.branches[0] = append(m.branches[0], zeroHashes[0])
 	}

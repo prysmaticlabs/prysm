@@ -314,7 +314,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 			t.Fatalf("Unable to determine hashed value of deposit %v", err)
 		}
 
-		depositTrie.InsertIntoTrie(depositHash[:], dp.Index)
+		depositTrie.Insert(depositHash[:], dp.Index)
 		depositCache.InsertDeposit(ctx, dp.Deposit, dp.Block, dp.Index, depositTrie.Root())
 	}
 	for _, dp := range recentDeposits {
@@ -464,7 +464,7 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 			t.Fatalf("Unable to determine hashed value of deposit %v", err)
 		}
 
-		depositTrie.InsertIntoTrie(depositHash[:], dp.Index)
+		depositTrie.Insert(depositHash[:], dp.Index)
 		depositCache.InsertDeposit(ctx, dp.Deposit, dp.Block, dp.Index, depositTrie.Root())
 	}
 	for _, dp := range recentDeposits {
@@ -578,7 +578,7 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 			t.Fatalf("Unable to determine hashed value of deposit %v", err)
 		}
 
-		depositTrie.InsertIntoTrie(depositHash[:], dp.Index)
+		depositTrie.Insert(depositHash[:], dp.Index)
 		depositCache.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
 	}
 	for _, dp := range recentDeposits {
@@ -684,7 +684,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 			t.Fatalf("Unable to determine hashed value of deposit %v", err)
 		}
 
-		depositTrie.InsertIntoTrie(depositHash[:], dp.Index)
+		depositTrie.Insert(depositHash[:], dp.Index)
 		depositCache.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
 	}
 	for _, dp := range recentDeposits {
@@ -788,7 +788,7 @@ func TestPendingDeposits_CantReturnMoreDepositCount(t *testing.T) {
 			t.Fatalf("Unable to determine hashed value of deposit %v", err)
 		}
 
-		depositTrie.InsertIntoTrie(depositHash[:], dp.Index)
+		depositTrie.Insert(depositHash[:], dp.Index)
 		depositCache.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
 	}
 	for _, dp := range recentDeposits {
@@ -1151,7 +1151,7 @@ func TestDeposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t *testing
 			t.Fatalf("Unable to determine hashed value of deposit %v", err)
 		}
 
-		depositTrie.InsertIntoTrie(depositHash[:], dp.Index)
+		depositTrie.Insert(depositHash[:], dp.Index)
 		depositCache.InsertDeposit(ctx, dp.Deposit, big.NewInt(int64(dp.Index)), dp.Index, depositTrie.Root())
 	}
 	for _, dp := range recentDeposits {
