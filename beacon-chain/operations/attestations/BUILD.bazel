@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "log.go",
         "pool.go",
+        "prepare_forkchoice.go",
         "service.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations",
@@ -24,7 +25,16 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["pool_test.go"],
+    srcs = [
+        "pool_test.go",
+        "prepare_forkchoice_test.go",
+    ],
     embed = [":go_default_library"],
-    deps = ["//beacon-chain/operations/attestations/kv:go_default_library"],
+    deps = [
+        "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/operations/attestations/kv:go_default_library",
+        "//shared/bls:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+    ],
 )

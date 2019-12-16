@@ -318,9 +318,12 @@ func (b *BeaconNode) registerOperationService(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerAttestationPool(ctx *cli.Context) error {
-	attPoolService := attestations.NewService(context.Background(), &attestations.Config{
+	attPoolService, err := attestations.NewService(context.Background(), &attestations.Config{
 		Pool: b.attestationPool,
 	})
+	if err != nil {
+		return err
+	}
 	return b.services.RegisterService(attPoolService)
 }
 

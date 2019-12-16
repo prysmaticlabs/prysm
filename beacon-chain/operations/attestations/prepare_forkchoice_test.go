@@ -1,0 +1,90 @@
+package attestations
+
+import (
+	"context"
+	"reflect"
+	"testing"
+	"time"
+
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/shared/bls"
+)
+
+func Test_AggregateAndSaveForkChoiceAtts_Single(t *testing.T) {
+	s, err := NewService(context.Background(), &Config{Pool:NewPool()})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sk := bls.RandKey()
+	sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
+
+	atts := []*ethpb.Attestation{
+		{AggregationBits:bitfield.Bitlist{0b101}, Signature: sig.Marshal()},
+		{AggregationBits:bitfield.Bitlist{0b110}, Signature: sig.Marshal()}}
+	if err := s.aggregateAndSaveForkChoiceAtts(atts); err != nil {
+		t.Fatal(err)
+	}
+
+	wanted, err := helpers.AggregateAttestations(atts)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(wanted, s.pool.ForkchoiceAttestations()) {
+		t.Error("Did not aggregation and save")
+	}
+ }
+
+func Test_AggregateAndSaveForkChoiceAtts_Multiple(t *testing.T) {
+	s, err := NewService(context.Background(), &Config{Pool:NewPool()})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sk := bls.RandKey()
+	sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
+
+	atts := []*ethpb.Attestation{
+		{AggregationBits:bitfield.Bitlist{0b101}, Signature: sig.Marshal()},
+		{AggregationBits:bitfield.Bitlist{0b110}, Signature: sig.Marshal()}}
+	if err := s.aggregateAndSaveForkChoiceAtts(atts); err != nil {
+		t.Fatal(err)
+	}
+
+	wanted, err := helpers.AggregateAttestations(atts)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(wanted, s.pool.ForkchoiceAttestations()) {
+		t.Error("Did not aggregation and save")
+	}
+}
+
+func Test_SeenAttestations_PresentInCache(t *testing.T) {
+	s, err := NewService(context.Background(), &Config{Pool:NewPool()})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	att1 := &ethpb.Attestation{Signature: []byte{'A'}}
+	got, err := s.seen(att1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got {
+		t.Error("Wanted false, got true")
+	}
+
+	time.Sleep(100 * time.Millisecond)
+	got, err = s.seen(att1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got {
+		t.Error("Wanted true, got false")
+	}
+}
