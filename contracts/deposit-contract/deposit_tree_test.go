@@ -59,10 +59,7 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		err = localTrie.InsertIntoTrie(item[:], i)
-		if err != nil {
-			t.Error(err)
-		}
+		localTrie.InsertIntoTrie(item[:], i)
 		depRoot, err = testAcc.Contract.GetDepositRoot(&bind.CallOpts{})
 		if err != nil {
 			t.Fatal(err)
@@ -121,10 +118,7 @@ func TestDepositTrieRoot_Fail(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		err = localTrie.InsertIntoTrie(item[:], i)
-		if err != nil {
-			t.Error(err)
-		}
+		localTrie.InsertIntoTrie(item[:], i)
 
 		depRoot, err = testAcc.Contract.GetDepositRoot(&bind.CallOpts{})
 		if err != nil {

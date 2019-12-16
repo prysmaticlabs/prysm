@@ -25,24 +25,57 @@ func NewTrie(depth int) (*SparseMerkleTrie, error) {
 	return GenerateTrieFromItems(items, depth)
 }
 
+// GenerateTrieFromItems constructs a Merkle trie from a sequence of byte slices.
+func GenerateTrieFromItems(items [][]byte, depth int) (*SparseMerkleTrie, error) {
+	if len(items) == 0 {
+		return nil, errors.New("no items provided to generate Merkle trie")
+	}
+	leaves := items
+	layers := make([][][]byte, depth+1)
+	transformedLeaves := make([][]byte, len(leaves))
+	for i := range leaves {
+		arr := bytesutil.ToBytes32(leaves[i])
+		transformedLeaves[i] = arr[:]
+	}
+	layers[0] = transformedLeaves
+	for i := 0; i < depth; i++ {
+		if len(layers[i])%2 == 1 {
+			layers[i] = append(layers[i], zeroHashes[i])
+		}
+		updatedValues := make([][]byte, 0, 0)
+		for j := 0; j < len(layers[i]); j += 2 {
+			concat := hashutil.Hash(append(layers[i][j], layers[i][j+1]...))
+			updatedValues = append(updatedValues, concat[:])
+		}
+		layers[i+1] = updatedValues
+	}
+	return &SparseMerkleTrie{
+		branches:      layers,
+		originalItems: items,
+		depth:         uint(depth),
+	}, nil
+}
+
+// Items returns the original items passed in when creating the Merkle trie.
+func (m *SparseMerkleTrie) Items() [][]byte {
+	return m.originalItems
+}
+
+// Root returns the top-most, Merkle root of the trie.
+func (m *SparseMerkleTrie) Root() [32]byte {
+	enc := [32]byte{}
+	binary.LittleEndian.PutUint64(enc[:], uint64(len(m.originalItems)))
+	return hashutil.Hash(append(m.branches[len(m.branches)-1][0], enc[:]...))
+}
+
 // InsertIntoTrie inserts an item(deposit hash) into the trie.
-func (m *SparseMerkleTrie) InsertIntoTrie(item []byte, index int) error {
+func (m *SparseMerkleTrie) InsertIntoTrie(item []byte, index int) {
 	if index >= len(m.originalItems) {
 		if index == len(m.branches[0]) {
 			m.branches[0] = append(m.branches[0], item)
 		}
 		m.originalItems = append(m.originalItems, item)
 	}
-	m.insertIntoTrie(item, index)
-	return nil
-}
-
-// debugging
-func (m *SparseMerkleTrie) ReturnLayers() [][][]byte {
-	return m.branches
-}
-
-func (m *SparseMerkleTrie) insertIntoTrie(item []byte, index int) {
 	someItem := bytesutil.ToBytes32(item)
 	m.branches[0][index] = someItem[:]
 	m.originalItems[index] = someItem[:]
@@ -75,31 +108,6 @@ func (m *SparseMerkleTrie) insertIntoTrie(item []byte, index int) {
 		}
 		currentIndex = parentIdx
 	}
-}
-
-// GenerateTrieFromItems constructs a Merkle trie from a sequence of byte slices.
-func GenerateTrieFromItems(items [][]byte, depth int) (*SparseMerkleTrie, error) {
-	if len(items) == 0 {
-		return nil, errors.New("no items provided to generate Merkle trie")
-	}
-	layers := calcTreeFromLeaves(items, depth)
-	return &SparseMerkleTrie{
-		branches:      layers,
-		originalItems: items,
-		depth:         uint(depth),
-	}, nil
-}
-
-// Items returns the original items passed in when creating the Merkle trie.
-func (m *SparseMerkleTrie) Items() [][]byte {
-	return m.originalItems
-}
-
-// Root returns the top-most, Merkle root of the trie.
-func (m *SparseMerkleTrie) Root() [32]byte {
-	enc := [32]byte{}
-	binary.LittleEndian.PutUint64(enc[:], uint64(len(m.originalItems)))
-	return hashutil.Hash(append(m.branches[len(m.branches)-1][0], enc[:]...))
 }
 
 // MerkleProof computes a proof from a trie's branches using a Merkle index.
@@ -153,51 +161,4 @@ func VerifyMerkleProof(root []byte, item []byte, merkleIndex int, proof [][]byte
 		currentIndex = currentIndex / 2
 	}
 	return bytes.Equal(root, node[:])
-}
-
-func calcTreeFromLeaves(leaves [][]byte, depth int) [][][]byte {
-	layers := make([][][]byte, depth+1)
-	transformedLeaves := make([][]byte, len(leaves))
-	for i := range leaves {
-		arr := bytesutil.ToBytes32(leaves[i])
-		transformedLeaves[i] = arr[:]
-	}
-	layers[0] = transformedLeaves
-	for i := 0; i < depth; i++ {
-		if len(layers[i])%2 == 1 {
-			layers[i] = append(layers[i], zeroHashes[i])
-		}
-		updatedValues := make([][]byte, 0, 0)
-		for j := 0; j < len(layers[i]); j += 2 {
-			concat := hashutil.Hash(append(layers[i][j], layers[i][j+1]...))
-			updatedValues = append(updatedValues, concat[:])
-		}
-		layers[i+1] = updatedValues
-	}
-	return layers
-}
-
-func prettyPrintTree(layers [][][]byte) {
-	fmt.Println("***ROOT")
-	if len(layers[len(layers)-1]) != 0 {
-		fmt.Printf("%#x\n", bytesutil.Trunc(layers[len(layers)-1][0]))
-	}
-	for i := len(layers) - 1; i >= 0; i-- {
-		fmt.Printf("***LAYER %d\n", i)
-		fmt.Print("Nodes: ")
-		for j := 0; j < len(layers[i]); j++ {
-			if j == len(layers[i])-1 {
-				fmt.Printf("%#x", bytesutil.Trunc(layers[i][j]))
-			} else {
-				fmt.Printf("%#x, ", bytesutil.Trunc(layers[i][j]))
-			}
-		}
-		fmt.Println("")
-	}
-}
-
-func prettyPrintProof(proof [][]byte) {
-	for i := 0; i < len(proof); i++ {
-		fmt.Printf("%#x\n", bytesutil.Trunc(proof[i]))
-	}
 }

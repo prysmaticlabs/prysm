@@ -123,9 +123,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 		return errors.Wrap(err, "Unable to determine hashed value of deposit")
 	}
 
-	if err := s.depositTrie.InsertIntoTrie(depositHash[:], int(index)); err != nil {
-		return errors.Wrap(err, "Unable to insert deposit into trie")
-	}
+	s.depositTrie.InsertIntoTrie(depositHash[:], int(index))
 
 	proof, err := s.depositTrie.MerkleProof(int(index))
 	if err != nil {
@@ -138,7 +136,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	}
 
 	// Make sure duplicates are rejected pre-chainstart.
-	if !s.chainStarted && validData {
+	if !s.chainStarted {
 		var pubkey = fmt.Sprintf("#%x", depositData.PublicKey)
 		if s.depositCache.PubkeyInChainstart(ctx, pubkey) {
 			log.Warnf("Pubkey %#x has already been submitted for chainstart", pubkey)

@@ -81,9 +81,7 @@ func DeterministicDepositsAndKeys(numDeposits uint64) ([]*ethpb.Deposit, []*bls.
 				return nil, nil, errors.Wrap(err, "could not tree hash deposit data")
 			}
 
-			if err := trie.InsertIntoTrie(hashedDeposit[:], int(numExisting+i)); err != nil {
-				return nil, nil, errors.Wrap(err, "could not tree hash deposit data")
-			}
+			trie.InsertIntoTrie(hashedDeposit[:], int(numExisting+i))
 		}
 	}
 
