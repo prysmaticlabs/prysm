@@ -141,7 +141,9 @@ func ComputeCommittee(
 	return shuffledIndices, nil
 }
 
-// AttestingIndices returns the attesting participants indices from the attestation data.
+// AttestingIndices returns the attesting participants indices from the attestation data. The
+// committee is provided as an argument rather than a direct implementation from the spec definition.
+// Having the committee as an argument allows for re-use of beacon committees when possible.
 //
 // Spec pseudocode definition:
 //   def get_attesting_indices(state: BeaconState,
@@ -152,12 +154,7 @@ func ComputeCommittee(
 //    """
 //    committee = get_beacon_committee(state, data.slot, data.index)
 //    return set(index for i, index in enumerate(committee) if bits[i])
-func AttestingIndices(state *pb.BeaconState, data *ethpb.AttestationData, bf bitfield.Bitfield) ([]uint64, error) {
-	committee, err := BeaconCommittee(state, data.Slot, data.CommitteeIndex)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get committee")
-	}
-
+func AttestingIndices(bf bitfield.Bitfield, committee []uint64) ([]uint64, error) {
 	indices := make([]uint64, 0, len(committee))
 	indicesSet := make(map[uint64]bool)
 	for i, idx := range committee {

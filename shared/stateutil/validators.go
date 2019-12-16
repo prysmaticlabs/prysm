@@ -45,13 +45,13 @@ func validatorBalancesRoot(balances []uint64) ([32]byte, error) {
 	return mixInLength(balancesRootsRoot, balancesRootsBufRoot), nil
 }
 
-func validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
+func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
 	hashKeyElements := make([]byte, len(validators)*32)
 	roots := make([][]byte, len(validators))
 	emptyKey := hashutil.FastSum256(hashKeyElements)
 	bytesProcessed := 0
 	for i := 0; i < len(validators); i++ {
-		val, err := validatorRoot(validators[i])
+		val, err := h.validatorRoot(validators[i])
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not compute validators merkleization")
 		}
@@ -61,8 +61,8 @@ func validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
 	}
 
 	hashKey := hashutil.FastSum256(hashKeyElements)
-	if hashKey != emptyKey {
-		if found, ok := rootsCache.Get(string(hashKey[:])); found != nil && ok {
+	if hashKey != emptyKey && h.rootsCache != nil {
+		if found, ok := h.rootsCache.Get(string(hashKey[:])); found != nil && ok {
 			return found.([32]byte), nil
 		}
 	}
@@ -79,96 +79,102 @@ func validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
 	validatorsRootsBufRoot := make([]byte, 32)
 	copy(validatorsRootsBufRoot, validatorsRootsBuf.Bytes())
 	res := mixInLength(validatorsRootsRoot, validatorsRootsBufRoot)
-	if hashKey != emptyKey {
-		rootsCache.Set(string(hashKey[:]), res, 32)
+	if hashKey != emptyKey && h.rootsCache != nil {
+		h.rootsCache.Set(string(hashKey[:]), res, 32)
 	}
 	return res, nil
 }
 
-func validatorRoot(validator *ethpb.Validator) ([32]byte, error) {
+func (h *stateRootHasher) validatorRoot(validator *ethpb.Validator) ([32]byte, error) {
 	// Validator marshaling for caching.
 	enc := make([]byte, 122)
-	copy(enc[0:48], validator.PublicKey)
-	copy(enc[48:80], validator.WithdrawalCredentials)
-	effectiveBalanceBuf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(effectiveBalanceBuf, validator.EffectiveBalance)
-	copy(enc[80:88], effectiveBalanceBuf)
-	if validator.Slashed {
-		enc[88] = uint8(1)
-	} else {
-		enc[88] = uint8(0)
-	}
-	activationEligibilityBuf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(activationEligibilityBuf, validator.ActivationEligibilityEpoch)
-	copy(enc[89:97], activationEligibilityBuf)
-
-	activationBuf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(activationBuf, validator.ActivationEpoch)
-	copy(enc[97:105], activationBuf)
-
-	exitBuf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(exitBuf, validator.ExitEpoch)
-	copy(enc[105:113], exitBuf)
-
-	withdrawalBuf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(withdrawalBuf, validator.WithdrawableEpoch)
-	copy(enc[113:121], exitBuf)
-
-	// Check if it exists in cache:
-	if found, ok := rootsCache.Get(string(enc)); found != nil && ok {
-		return found.([32]byte), nil
-	}
-
 	fieldRoots := make([][]byte, 8)
 
-	// Public key.
-	pubKeyChunks, err := pack([][]byte{validator.PublicKey})
-	if err != nil {
-		return [32]byte{}, err
+	if validator != nil {
+		copy(enc[0:48], validator.PublicKey)
+		copy(enc[48:80], validator.WithdrawalCredentials)
+		effectiveBalanceBuf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(effectiveBalanceBuf, validator.EffectiveBalance)
+		copy(enc[80:88], effectiveBalanceBuf)
+		if validator.Slashed {
+			enc[88] = uint8(1)
+		} else {
+			enc[88] = uint8(0)
+		}
+		activationEligibilityBuf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(activationEligibilityBuf, validator.ActivationEligibilityEpoch)
+		copy(enc[89:97], activationEligibilityBuf)
+
+		activationBuf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(activationBuf, validator.ActivationEpoch)
+		copy(enc[97:105], activationBuf)
+
+		exitBuf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(exitBuf, validator.ExitEpoch)
+		copy(enc[105:113], exitBuf)
+
+		withdrawalBuf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(withdrawalBuf, validator.WithdrawableEpoch)
+		copy(enc[113:121], exitBuf)
+
+		// Check if it exists in cache:
+		if h.rootsCache != nil {
+			if found, ok := h.rootsCache.Get(string(enc)); found != nil && ok {
+				return found.([32]byte), nil
+			}
+		}
+
+		// Public key.
+		pubKeyChunks, err := pack([][]byte{validator.PublicKey})
+		if err != nil {
+			return [32]byte{}, err
+		}
+		pubKeyRoot, err := bitwiseMerkleize(pubKeyChunks, uint64(len(pubKeyChunks)), uint64(len(pubKeyChunks)))
+		if err != nil {
+			return [32]byte{}, err
+		}
+		fieldRoots[0] = pubKeyRoot[:]
+
+		// Withdrawal credentials.
+		fieldRoots[1] = validator.WithdrawalCredentials
+
+		// Effective balance.
+		effBalRoot := bytesutil.ToBytes32(effectiveBalanceBuf)
+		fieldRoots[2] = effBalRoot[:]
+
+		// Slashed.
+		slashBuf := make([]byte, 1)
+		if validator.Slashed {
+			slashBuf[0] = uint8(1)
+		} else {
+			slashBuf[0] = uint8(0)
+		}
+		slashBufRoot := bytesutil.ToBytes32(slashBuf)
+		fieldRoots[3] = slashBufRoot[:]
+
+		// Activation eligibility epoch.
+		activationEligibilityRoot := bytesutil.ToBytes32(activationEligibilityBuf)
+		fieldRoots[4] = activationEligibilityRoot[:]
+
+		// Activation epoch.
+		activationRoot := bytesutil.ToBytes32(activationBuf)
+		fieldRoots[5] = activationRoot[:]
+
+		// Exit epoch.
+		exitBufRoot := bytesutil.ToBytes32(exitBuf)
+		fieldRoots[6] = exitBufRoot[:]
+
+		// Withdrawable epoch.
+		withdrawalBufRoot := bytesutil.ToBytes32(withdrawalBuf)
+		fieldRoots[7] = withdrawalBufRoot[:]
 	}
-	pubKeyRoot, err := bitwiseMerkleize(pubKeyChunks, uint64(len(pubKeyChunks)), uint64(len(pubKeyChunks)))
-	if err != nil {
-		return [32]byte{}, err
-	}
-	fieldRoots[0] = pubKeyRoot[:]
-
-	// Withdrawal credentials.
-	fieldRoots[1] = validator.WithdrawalCredentials
-
-	// Effective balance.
-	effBalRoot := bytesutil.ToBytes32(effectiveBalanceBuf)
-	fieldRoots[2] = effBalRoot[:]
-
-	// Slashed.
-	slashBuf := make([]byte, 1)
-	if validator.Slashed {
-		slashBuf[0] = uint8(1)
-	} else {
-		slashBuf[0] = uint8(0)
-	}
-	slashBufRoot := bytesutil.ToBytes32(slashBuf)
-	fieldRoots[3] = slashBufRoot[:]
-
-	// Activation eligibility epoch.
-	activationEligibilityRoot := bytesutil.ToBytes32(activationEligibilityBuf)
-	fieldRoots[4] = activationEligibilityRoot[:]
-
-	// Activation epoch.
-	activationRoot := bytesutil.ToBytes32(activationBuf)
-	fieldRoots[5] = activationRoot[:]
-
-	// Exit epoch.
-	exitBufRoot := bytesutil.ToBytes32(exitBuf)
-	fieldRoots[6] = exitBufRoot[:]
-
-	// Withdrawable epoch.
-	withdrawalBufRoot := bytesutil.ToBytes32(withdrawalBuf)
-	fieldRoots[7] = withdrawalBufRoot[:]
 
 	valRoot, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {
 		return [32]byte{}, err
 	}
-	rootsCache.Set(string(enc), valRoot, 32)
+	if h.rootsCache != nil {
+		h.rootsCache.Set(string(enc), valRoot, 32)
+	}
 	return valRoot, nil
 }

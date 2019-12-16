@@ -115,8 +115,11 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 	for _, tt := range tests {
 		attestationData.Target = &ethpb.Checkpoint{Epoch: 0}
 		attestationData.Slot = tt.attestationSlot
-
-		result, err := AttestingIndices(state, attestationData, tt.bitfield)
+		committee, err := BeaconCommittee(state, tt.attestationSlot, 0 /* committee index */)
+		if err != nil {
+			t.Error(err)
+		}
+		result, err := AttestingIndices(tt.bitfield, committee)
 		if err != nil {
 			t.Errorf("Failed to get attestation participants: %v", err)
 		}
@@ -145,7 +148,11 @@ func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
 	}
 	attestationData := &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}
 
-	indices, err := AttestingIndices(state, attestationData, bitfield.NewBitlist(128))
+	committee, err := BeaconCommittee(state, attestationData.Slot, attestationData.CommitteeIndex)
+	if err != nil {
+		t.Fatal(err)
+	}
+	indices, err := AttestingIndices(bitfield.NewBitlist(128), committee)
 	if err != nil {
 		t.Fatalf("attesting indices failed: %v", err)
 	}
