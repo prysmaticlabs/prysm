@@ -14,12 +14,6 @@ import (
 )
 
 var (
-	// ErrAttestationDataSlotNilState is returned when a nil state argument
-	// is provided to AttestationDataSlot.
-	ErrAttestationDataSlotNilState = errors.New("nil state provided for AttestationDataSlot")
-	// ErrAttestationDataSlotNilData is returned when a nil attestation data
-	// argument is provided to AttestationDataSlot.
-	ErrAttestationDataSlotNilData = errors.New("nil data provided for AttestationDataSlot")
 	// ErrAttestationAggregationBitsOverlap is returned when two attestations aggregation
 	// bits overlap with each other.
 	ErrAttestationAggregationBitsOverlap = errors.New("overlapping aggregation bits")
