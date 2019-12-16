@@ -45,9 +45,15 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
 	}
-	headState, err = state.ProcessSlots(ctx, headState, req.Slot)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
+
+	// Advance slots if it is behind the epoch start of requested slot.
+	// Ex: head slot is 100, req slot is 150, epoch start of 150 is 128. Advance 100 to 128.
+	reqEpochStartSlot := helpers.StartSlot(helpers.SlotToEpoch(req.Slot))
+	if reqEpochStartSlot > headState.Slot {
+		headState, err = state.ProcessSlots(ctx, headState, reqEpochStartSlot)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
+		}
 	}
 
 	validatorIndex, exists, err := as.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(req.PublicKey))
