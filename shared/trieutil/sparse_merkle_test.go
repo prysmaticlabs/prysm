@@ -7,7 +7,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -61,7 +60,7 @@ func TestMarshalDepositWithProof(t *testing.T) {
 
 func TestMerkleTrie_MerkleProofOutOfRange(t *testing.T) {
 	h := hashutil.Hash([]byte("hi"))
-	m := &MerkleTrie{
+	m := &SparseMerkleTrie{
 		branches: [][][]byte{
 			{
 				h[:],
