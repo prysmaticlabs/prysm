@@ -10,36 +10,39 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
-// MerkleTrie implements a sparse, general purpose Merkle trie to be used
+// SparseMerkleTrie implements a sparse, general purpose Merkle trie to be used
 // across ETH2.0 Phase 0 functionality.
-type MerkleTrie struct {
+type SparseMerkleTrie struct {
 	depth         uint
 	branches      [][][]byte
 	originalItems [][]byte // list of provided items before hashing them into leaves.
 }
 
 // NewTrie returns a new merkle trie filled with zerohashes to use.
-func NewTrie(depth int) (*MerkleTrie, error) {
+func NewTrie(depth int) (*SparseMerkleTrie, error) {
 	var zeroBytes [32]byte
 	items := [][]byte{zeroBytes[:]}
 	return GenerateTrieFromItems(items, depth)
 }
 
 // InsertIntoTrie inserts an item(deposit hash) into the trie.
-func (m *MerkleTrie) InsertIntoTrie(item []byte, index int) error {
+func (m *SparseMerkleTrie) InsertIntoTrie(item []byte, index int) error {
 	if index >= len(m.originalItems) {
-		return errors.New("invalid index to be inserting")
+		if index == len(m.branches[0]) {
+			m.branches[0] = append(m.branches[0], item)
+		}
+		m.originalItems = append(m.originalItems, item)
 	}
 	m.insertIntoTrie(item, index)
 	return nil
 }
 
 // debugging
-func (m *MerkleTrie) ReturnLayers() [][][]byte {
+func (m *SparseMerkleTrie) ReturnLayers() [][][]byte {
 	return m.branches
 }
 
-func (m *MerkleTrie) insertIntoTrie(item []byte, index int) {
+func (m *SparseMerkleTrie) insertIntoTrie(item []byte, index int) {
 	someItem := bytesutil.ToBytes32(item)
 	m.branches[0][index] = someItem[:]
 	m.originalItems[index] = someItem[:]
@@ -48,9 +51,10 @@ func (m *MerkleTrie) insertIntoTrie(item []byte, index int) {
 	for i := 0; i < int(m.depth); i++ {
 		isLeft := currentIndex%2 == 0
 		neighborIdx := currentIndex ^ 1
-
 		neighbor := make([]byte, 32)
-		if m.branches[i] != nil && len(m.branches[i]) != 0 && neighborIdx < len(m.branches[i]) {
+		if neighborIdx >= len(m.branches[i]) {
+			neighbor = zeroHashes[i][:]
+		} else {
 			neighbor = m.branches[i][neighborIdx]
 		}
 		if isLeft {
@@ -62,7 +66,7 @@ func (m *MerkleTrie) insertIntoTrie(item []byte, index int) {
 		}
 		parentIdx := currentIndex / 2
 		// Update the cached layers at the parent index.
-		if len(m.branches[i+1]) == 0 {
+		if len(m.branches[i+1]) == 0 || parentIdx >= len(m.branches[i+1]) {
 			newItem := root
 			m.branches[i+1] = append(m.branches[i+1], newItem[:])
 		} else {
@@ -74,12 +78,12 @@ func (m *MerkleTrie) insertIntoTrie(item []byte, index int) {
 }
 
 // GenerateTrieFromItems constructs a Merkle trie from a sequence of byte slices.
-func GenerateTrieFromItems(items [][]byte, depth int) (*MerkleTrie, error) {
+func GenerateTrieFromItems(items [][]byte, depth int) (*SparseMerkleTrie, error) {
 	if len(items) == 0 {
 		return nil, errors.New("no items provided to generate Merkle trie")
 	}
 	layers := calcTreeFromLeaves(items, depth)
-	return &MerkleTrie{
+	return &SparseMerkleTrie{
 		branches:      layers,
 		originalItems: items,
 		depth:         uint(depth),
@@ -87,19 +91,19 @@ func GenerateTrieFromItems(items [][]byte, depth int) (*MerkleTrie, error) {
 }
 
 // Items returns the original items passed in when creating the Merkle trie.
-func (m *MerkleTrie) Items() [][]byte {
+func (m *SparseMerkleTrie) Items() [][]byte {
 	return m.originalItems
 }
 
 // Root returns the top-most, Merkle root of the trie.
-func (m *MerkleTrie) Root() [32]byte {
+func (m *SparseMerkleTrie) Root() [32]byte {
 	enc := [32]byte{}
 	binary.LittleEndian.PutUint64(enc[:], uint64(len(m.originalItems)))
 	return hashutil.Hash(append(m.branches[len(m.branches)-1][0], enc[:]...))
 }
 
 // MerkleProof computes a proof from a trie's branches using a Merkle index.
-func (m *MerkleTrie) MerkleProof(index int) ([][]byte, error) {
+func (m *SparseMerkleTrie) MerkleProof(index int) ([][]byte, error) {
 	merkleIndex := uint(index)
 	leaves := m.branches[0]
 	if index >= len(leaves) {
@@ -124,7 +128,7 @@ func (m *MerkleTrie) MerkleProof(index int) ([][]byte, error) {
 // HashTreeRoot of the Merkle trie as defined in the deposit contract.
 //  Spec Definition:
 //   sha256(concat(node, self.to_little_endian_64(self.deposit_count), slice(zero_bytes32, start=0, len=24)))
-func (m *MerkleTrie) HashTreeRoot() [32]byte {
+func (m *SparseMerkleTrie) HashTreeRoot() [32]byte {
 	var zeroBytes [32]byte
 	depositCount := uint64(len(m.originalItems))
 	if len(m.originalItems) == 1 && bytes.Equal(m.originalItems[0], zeroBytes[:]) {
@@ -171,15 +175,6 @@ func calcTreeFromLeaves(leaves [][]byte, depth int) [][][]byte {
 		layers[i+1] = updatedValues
 	}
 	return layers
-}
-
-func (m *MerkleTrie) updateTrie() error {
-	trie, err := GenerateTrieFromItems(m.originalItems, int(m.depth))
-	if err != nil {
-		return err
-	}
-	m.branches = trie.branches
-	return nil
 }
 
 func prettyPrintTree(layers [][][]byte) {

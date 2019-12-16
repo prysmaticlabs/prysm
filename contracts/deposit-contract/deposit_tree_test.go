@@ -4,10 +4,9 @@ import (
 	"strconv"
 	"testing"
 
-	"gopkg.in/d4l3k/messagediff.v1"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/prysmaticlabs/go-ssz"
+
 	depositcontract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -64,17 +63,10 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		ta, _ := trieutil.GenerateTrieFromItems(localTrie.Items(), int(params.BeaconConfig().DepositContractTreeDepth))
-		if i == 2 {
-			expected := ta.ReturnLayers()
-			got := localTrie.ReturnLayers()
-			t.Error(messagediff.PrettyDiff(expected[1], got[1]))
-		}
 		depRoot, err = testAcc.Contract.GetDepositRoot(&bind.CallOpts{})
 		if err != nil {
 			t.Fatal(err)
 		}
-
 		if depRoot != localTrie.HashTreeRoot() {
 			t.Errorf("Local deposit trie root and contract deposit trie root are not equal for index %d. Expected %#x , Got %#x", i, depRoot, localTrie.Root())
 		}

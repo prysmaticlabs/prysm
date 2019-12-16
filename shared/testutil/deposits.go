@@ -22,7 +22,7 @@ var lock sync.Mutex
 // Caches
 var cachedDeposits []*ethpb.Deposit
 var privKeys []*bls.SecretKey
-var trie *trieutil.MerkleTrie
+var trie *trieutil.SparseMerkleTrie
 
 // DeterministicDepositsAndKeys returns the entered amount of deposits and secret keys.
 // The deposits are configured such that for deposit n the validator
@@ -105,7 +105,7 @@ func DeterministicDepositsAndKeys(numDeposits uint64) ([]*ethpb.Deposit, []*bls.
 
 // DeterministicDepositTrie returns a merkle trie of the requested size from the
 // deterministic deposits.
-func DeterministicDepositTrie(size int) (*trieutil.MerkleTrie, [][32]byte, error) {
+func DeterministicDepositTrie(size int) (*trieutil.SparseMerkleTrie, [][32]byte, error) {
 	items := trie.Items()
 	if size > len(items) {
 		return nil, [][32]byte{}, errors.New("requested a larger tree than amount of deposits")
@@ -162,7 +162,7 @@ func DeterministicGenesisState(t testing.TB, numValidators uint64) (*pb.BeaconSt
 }
 
 // DepositTrieFromDeposits takes an array of deposits and returns the deposit trie.
-func DepositTrieFromDeposits(deposits []*ethpb.Deposit) (*trieutil.MerkleTrie, [][32]byte, error) {
+func DepositTrieFromDeposits(deposits []*ethpb.Deposit) (*trieutil.SparseMerkleTrie, [][32]byte, error) {
 	encodedDeposits := make([][]byte, len(deposits))
 	for i := 0; i < len(encodedDeposits); i++ {
 		hashedDeposit, err := ssz.HashTreeRoot(deposits[i].Data)
