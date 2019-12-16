@@ -58,7 +58,11 @@ func IsSlashableValidator(validator *ethpb.Validator, epoch uint64) bool {
 //    return [ValidatorIndex(i) for i, v in enumerate(state.validators) if is_active_validator(v, epoch)]
 func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) ([]uint64, error) {
 	if featureconfig.Get().EnableNewCache {
-		activeIndices, err := committeeCache.ActiveIndices(epoch)
+		seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get seed")
+		}
+		activeIndices, err := committeeCache.ActiveIndices(seed)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not interface with committee cache")
 		}
@@ -71,6 +75,12 @@ func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) ([]uint64, erro
 	for i, v := range state.Validators {
 		if IsActiveValidator(v, epoch) {
 			indices = append(indices, uint64(i))
+		}
+	}
+
+	if featureconfig.Get().EnableNewCache {
+		if err := UpdateCommitteeCache(state); err != nil {
+			return nil, errors.Wrap(err, "could not update committee cache")
 		}
 	}
 

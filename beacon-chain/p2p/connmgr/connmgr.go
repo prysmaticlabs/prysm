@@ -35,6 +35,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
+	"github.com/prysmaticlabs/prysm/shared/runutil"
 )
 
 // SilencePeriod refers to the period in which a connection is given leeway by the connection
@@ -139,7 +140,13 @@ func NewConnManager(low, hi int, grace time.Duration) *BasicConnMgr {
 		}(),
 	}
 
-	go cm.background()
+	// Check every TickerPeriod to see if we should trim the number of active connections.
+	runutil.RunEvery(cm.ctx, TickerPeriod, func() {
+		if atomic.LoadInt32(&cm.connCount) > int32(cm.highWater) {
+			cm.TrimOpenConns(cm.ctx)
+		}
+	})
+
 	return cm
 }
 
@@ -218,23 +225,6 @@ func (cm *BasicConnMgr) TrimOpenConns(ctx context.Context) {
 	}
 
 	cm.lastTrim = time.Now()
-}
-
-func (cm *BasicConnMgr) background() {
-	ticker := time.NewTicker(TickerPeriod)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ticker.C:
-			if atomic.LoadInt32(&cm.connCount) > int32(cm.highWater) {
-				cm.TrimOpenConns(cm.ctx)
-			}
-
-		case <-cm.ctx.Done():
-			return
-		}
-	}
 }
 
 // getConnsToClose runs the heuristics described in TrimOpenConns and returns the
