@@ -480,7 +480,7 @@ func TestComputeProposerIndex(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "all_active_indices",
+			name: "second_half_active",
 			args: args{
 				validators: []*ethpb.Validator{
 					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
