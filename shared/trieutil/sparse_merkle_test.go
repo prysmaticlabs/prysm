@@ -175,6 +175,9 @@ func TestMerkleTrie_VerifyMerkleProof_TrieUpdated(t *testing.T) {
 	if ok := VerifyMerkleProof(root[:], []byte{4}, 3, proof); ok {
 		t.Error("Old item should not verify")
 	}
+
+	// Now we update the trie at an index larger than the number of items.
+	m.InsertIntoTrie([]byte{6}, 15)
 }
 
 func BenchmarkGenerateTrieFromItems(b *testing.B) {
