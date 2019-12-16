@@ -142,6 +142,51 @@ func TestMerkleTrie_VerifyMerkleProof(t *testing.T) {
 	}
 }
 
+func TestMerkleTrie_VerifyMerkleProof_TrieUpdated(t *testing.T) {
+	items := [][]byte{
+		[]byte("A"),
+		[]byte("B"),
+		[]byte("C"),
+		[]byte("D"),
+		//[]byte("E"),
+		//[]byte("F"),
+		//[]byte("G"),
+		//[]byte("H"),
+	}
+	m, err := GenerateTrieFromItems(items, 2)
+	if err != nil {
+		t.Fatalf("Could not generate Merkle trie from items: %v", err)
+	}
+	prettyPrintTree(m.branches)
+	proof, err := m.MerkleProof(0)
+	if err != nil {
+		t.Fatalf("Could not generate Merkle proof: %v", err)
+	}
+	//if len(proof) != 33 {
+	//	t.Errorf("Received len %d, wanted 33", len(proof))
+	//}
+	root := m.Root()
+	if ok := VerifyMerkleProof(root[:], items[0], 0, proof); !ok {
+		t.Error("First Merkle proof did not verify")
+	}
+
+	// Now we update the trie.
+	m.InsertIntoTrie([]byte("hello"), 3)
+	prettyPrintTree(m.branches)
+	proof, err = m.MerkleProof(3)
+	if err != nil {
+		t.Fatalf("Could not generate Merkle proof: %v", err)
+	}
+	root = m.Root()
+	if ok := VerifyMerkleProof(root[:], []byte("hello"), 3, proof); !ok {
+		t.Error("Second Merkle proof did not verify")
+	}
+	// The original item should no longer exist in the trie.
+	if ok := VerifyMerkleProof(root[:], []byte("D"), 3, proof); ok {
+		t.Error("Item not in tree should fail to verify")
+	}
+}
+
 func BenchmarkGenerateTrieFromItems(b *testing.B) {
 	items := [][]byte{
 		[]byte("A"),

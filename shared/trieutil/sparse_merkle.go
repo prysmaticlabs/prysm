@@ -59,9 +59,11 @@ func (m *MerkleTrie) insertIntoTrie(item []byte, index int) {
 	m.originalItems[index] = item
 	currentIndex := index
 	root := item
-	for i := 0; i < len(m.branches)-1; i++ {
+	fmt.Printf("Current: %s\n", root)
+	for i := 0; i < int(m.depth); i++ {
 		isLeft := currentIndex%2 == 0
 		neighborIdx := currentIndex ^ 1
+		fmt.Printf("Is left %v, curr %d\n", isLeft, currentIndex)
 
 		neighbor := make([]byte, 32)
 		if m.branches[i] != nil && len(m.branches[i]) != 0 && neighborIdx < len(m.branches[i]) {
@@ -75,6 +77,7 @@ func (m *MerkleTrie) insertIntoTrie(item []byte, index int) {
 			root = parentHash[:]
 		}
 		parentIdx := currentIndex / 2
+		fmt.Printf("Parent index %d\n", parentIdx)
 		// Update the cached layers at the parent index.
 		if len(m.branches[i+1]) == 0 {
 			m.branches[i+1] = append(m.branches[i+1], root)
@@ -193,4 +196,23 @@ func (m *MerkleTrie) updateTrie() error {
 	}
 	m.branches = trie.branches
 	return nil
+}
+
+func prettyPrintTree(layers [][][]byte) {
+	fmt.Println("***ROOT")
+	if len(layers[len(layers)-1]) != 0 {
+		fmt.Printf("%#x\n", bytesutil.Trunc(layers[len(layers)-1][0]))
+	}
+	for i := len(layers) - 1; i >= 0; i-- {
+		fmt.Printf("***LAYER %d\n", i)
+		fmt.Print("Nodes: ")
+		for j := 0; j < len(layers[i]); j++ {
+			if j == len(layers[i])-1 {
+				fmt.Printf("%#x", bytesutil.Trunc(layers[i][j]))
+			} else {
+				fmt.Printf("%#x, ", bytesutil.Trunc(layers[i][j]))
+			}
+		}
+		fmt.Println("")
+	}
 }
