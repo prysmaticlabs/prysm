@@ -5,6 +5,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -12,10 +13,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-
 // slowCommitteeAssignment is uses the spec defined method for determining committeeAssigments.
 // Deprecated: Do not use this method. It will be removed soon after feature is gradually released.
-func (vs *Server) slowCommitteeAssignment(ctx context.Context, req *pb.AssignmentRequest) (*pb.AssignmentResponse, error)  {
+func (vs *Server) slowCommitteeAssignment(ctx context.Context, req *pb.AssignmentRequest) (*pb.AssignmentResponse, error) {
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
@@ -64,6 +64,21 @@ func (vs *Server) slowCommitteeAssignment(ctx context.Context, req *pb.Assignmen
 
 	return &pb.AssignmentResponse{
 		ValidatorAssignment: assignments,
+	}, nil
+}
+
+// Deprecated: do not use.
+func (vs *Server) assignment(idx uint64, beaconState *pbp2p.BeaconState, epoch uint64) (*pb.AssignmentResponse_ValidatorAssignment, error) {
+	committee, committeeIndex, aSlot, pSlot, err := helpers.CommitteeAssignment(beaconState, epoch, idx)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.AssignmentResponse_ValidatorAssignment{
+		Committee:      committee,
+		CommitteeIndex: committeeIndex,
+		AttesterSlot:   aSlot,
+		ProposerSlot:   pSlot,
+		Status:         vs.assignmentStatus(idx, beaconState),
 	}, nil
 }
 
