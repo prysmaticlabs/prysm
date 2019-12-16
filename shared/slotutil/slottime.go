@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
-
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
