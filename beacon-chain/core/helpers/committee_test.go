@@ -272,6 +272,79 @@ func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 	}
 }
 
+func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
+	// Initialize test with 128 validators, each slot and each index gets 2 validators.
+	validators := make([]*ethpb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	state := &pb.BeaconState{
+		Validators:  validators,
+		Slot:        params.BeaconConfig().SlotsPerEpoch,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	}
+
+	tests := []struct {
+		index          uint64
+		slot           uint64
+		committee      []uint64
+		committeeIndex uint64
+		isProposer     bool
+		proposerSlot   uint64
+	}{
+		{
+			index:          0,
+			slot:           92,
+			committee:      []uint64{46, 0},
+			committeeIndex: 0,
+			isProposer:     false,
+		},
+		{
+			index:          1,
+			slot:           70,
+			committee:      []uint64{1, 58},
+			committeeIndex: 0,
+			isProposer:     true,
+			proposerSlot:   91,
+		},
+		{
+			index:          11,
+			slot:           64,
+			committee:      []uint64{30, 11},
+			committeeIndex: 0,
+			isProposer:     false,
+		},
+	}
+
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			validatorIndexToCommittee, proposerIndexToSlot, err := CommitteeAssignments(state, SlotToEpoch(tt.slot))
+			if err != nil {
+				t.Fatalf("failed to execute NextEpochCommitteeAssignment: %v", err)
+			}
+			cac := validatorIndexToCommittee[tt.index]
+			if cac.CommitteeIndex != tt.committeeIndex {
+				t.Errorf("wanted committeeIndex %d, got committeeIndex %d for validator index %d",
+					tt.committeeIndex, cac.CommitteeIndex, tt.index)
+			}
+			if cac.AttesterSlot != tt.slot {
+				t.Errorf("wanted slot %d, got slot %d for validator index %d",
+					tt.slot, cac.AttesterSlot, tt.index)
+			}
+			if proposerIndexToSlot[tt.index] != tt.proposerSlot {
+				t.Errorf("wanted proposer slot %d, got proposer slot %d for validator index %d",
+					tt.proposerSlot, proposerIndexToSlot[tt.index], tt.index)
+			}
+			if !reflect.DeepEqual(cac.Committee, tt.committee) {
+				t.Errorf("wanted committee %v, got committee %v for validator index %d",
+					tt.committee, cac.Committee, tt.index)
+			}
+		})
+	}
+}
+
 func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 	validators := make([]*ethpb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
 	activeRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
