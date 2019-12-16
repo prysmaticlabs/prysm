@@ -147,7 +147,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 
 	// We always store all historical deposits in the DB.
 	s.depositCache.InsertDeposit(ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)), int(index), s.depositTrie.Root())
-
+	validData := true
 	if !s.chainStarted {
 		s.chainStartDeposits = append(s.chainStartDeposits, deposit)
 		root := s.depositTrie.Root()
