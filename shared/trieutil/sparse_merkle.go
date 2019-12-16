@@ -99,7 +99,6 @@ func (m *SparseMerkleTrie) Insert(item []byte, index int) {
 			root = parentHash
 		}
 		parentIdx := currentIndex / 2
-		// Update the cached layers at the parent index.
 		if len(m.branches[i+1]) == 0 || parentIdx >= len(m.branches[i+1]) {
 			newItem := root
 			m.branches[i+1] = append(m.branches[i+1], newItem[:])
