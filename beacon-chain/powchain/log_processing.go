@@ -110,7 +110,6 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 
 	// We then decode the deposit input in order to create a deposit object
 	// we can store in our persistent DB.
-	validData := true
 	depositData := &ethpb.Deposit_Data{
 		Amount:                bytesutil.FromBytes8(amount),
 		PublicKey:             pubkey,
