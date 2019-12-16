@@ -119,8 +119,8 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MinPerEpochChurnLimit:          4,
 	ChurnLimitQuotient:             1 << 16,
 	ShuffleRoundCount:              90,
-	MinGenesisActiveValidatorCount: 65536,
-	MinGenesisTime:                 1578009600,
+	MinGenesisActiveValidatorCount: 16384, //65536,
+	MinGenesisTime:                 0,
 	TargetAggregatorsPerCommittee:  16,
 
 	// Gwei value constants.
