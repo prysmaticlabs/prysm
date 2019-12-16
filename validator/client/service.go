@@ -83,9 +83,6 @@ func (v *ValidatorService) Start() {
 	}
 	opts := []grpc.DialOption{
 		dialOpt,
-		grpc.WithDefaultCallOptions(
-			grpc.MaxCallRecvMsgSize(10 * 1 << 20), // 10Mb
-		),
 		grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),
 		grpc.WithStreamInterceptor(middleware.ChainStreamClient(
 			grpc_opentracing.StreamClientInterceptor(),

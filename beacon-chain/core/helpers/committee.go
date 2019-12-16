@@ -155,6 +155,7 @@ func AttestingIndices(bf bitfield.Bitfield, committee []uint64) ([]uint64, error
 	return indices, nil
 }
 
+// CommitteeAssignmentContainer represents a committee, index, and attester slot for a given epoch.
 type CommitteeAssignmentContainer struct {
 	Committee      []uint64
 	AttesterSlot   uint64
