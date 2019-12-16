@@ -548,6 +548,10 @@ func ProcessAttestationNoVerify(ctx context.Context, beaconState *pb.BeaconState
 	ctx, span := trace.StartSpan(ctx, "core.ProcessAttestationNoVerify")
 	defer span.End()
 
+	if att == nil || att.Data == nil || att.Data.Target == nil {
+		return nil, errors.New("nil attestation data target")
+	}
+
 	data := att.Data
 	if data.Target.Epoch != helpers.PrevEpoch(beaconState) && data.Target.Epoch != helpers.CurrentEpoch(beaconState) {
 		return nil, fmt.Errorf(
