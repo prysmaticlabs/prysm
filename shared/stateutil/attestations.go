@@ -139,7 +139,7 @@ func (h *stateRootHasher) pendingAttestationRoot(att *pb.PendingAttestation) ([3
 		return [32]byte{}, err
 	}
 	if att != nil && h.rootsCache != nil {
-		h. rootsCache.Set(string(enc), res, 32)
+		h.rootsCache.Set(string(enc), res, 32)
 	}
 	return res, nil
 }
