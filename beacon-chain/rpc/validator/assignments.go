@@ -7,9 +7,65 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+
+// slowCommitteeAssignment is uses the spec defined method for determining committeeAssigments.
+// Deprecated: Do not use this method. It will be removed soon after feature is gradually released.
+func (vs *Server) slowCommitteeAssignment(ctx context.Context, req *pb.AssignmentRequest) (*pb.AssignmentResponse, error)  {
+	if vs.SyncChecker.Syncing() {
+		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
+	}
+
+	s, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+
+	// Advance state with empty transitions up to the requested epoch start slot.
+	if epochStartSlot := helpers.StartSlot(req.EpochStart); s.Slot < epochStartSlot {
+		s, err = state.ProcessSlots(ctx, s, epochStartSlot)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", epochStartSlot, err)
+		}
+	}
+
+	var assignments []*pb.AssignmentResponse_ValidatorAssignment
+	for _, pubKey := range req.PublicKeys {
+		if ctx.Err() != nil {
+			return nil, status.Errorf(codes.Aborted, "Could not continue fetching assignments: %v", ctx.Err())
+		}
+		// Default assignment.
+		assignment := &pb.AssignmentResponse_ValidatorAssignment{
+			PublicKey: pubKey,
+			Status:    pb.ValidatorStatus_UNKNOWN_STATUS,
+		}
+
+		idx, ok, err := vs.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not fetch validator idx for public key %#x: %v", pubKey, err)
+		}
+		if ok {
+			st := vs.assignmentStatus(idx, s)
+			assignment.Status = st
+			if st == pb.ValidatorStatus_ACTIVE {
+				assignment, err = vs.assignment(idx, s, req.EpochStart)
+				if err != nil {
+					return nil, status.Errorf(codes.Internal, "Could not fetch assignment for public key %#x: %v", pubKey, err)
+				}
+				assignment.PublicKey = pubKey
+			}
+		}
+		assignments = append(assignments, assignment)
+	}
+
+	return &pb.AssignmentResponse{
+		ValidatorAssignment: assignments,
+	}, nil
+}
 
 // CommitteeAssignment returns the committee assignment response from a given validator public key.
 // The committee assignment response contains the following fields for the current and previous epoch:
@@ -18,6 +74,9 @@ import (
 //	3.) The slot at which the committee is assigned.
 //	4.) The bool signaling if the validator is expected to propose a block at the assigned slot.
 func (vs *Server) CommitteeAssignment(ctx context.Context, req *pb.AssignmentRequest) (*pb.AssignmentResponse, error) {
+	if !featureconfig.Get().NewCommitteeAssignments {
+		return vs.slowCommitteeAssignment(ctx, req)
+	}
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
