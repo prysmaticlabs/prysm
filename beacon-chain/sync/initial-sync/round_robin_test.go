@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
-
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/prysmaticlabs/go-ssz"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
