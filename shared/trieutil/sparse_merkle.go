@@ -32,13 +32,65 @@ func (m *MerkleTrie) InsertIntoTrie(item []byte, index int) error {
 	if index > len(m.originalItems) {
 		return errors.New("invalid index to be inserting")
 	}
+	fmt.Printf("adding in index %d\n", index)
 	if index == len(m.originalItems) {
+		fmt.Printf("appending with before %d \n", len(m.branches[0]))
+		if index == len(m.branches[0]) {
+			m.branches[0] = append(m.branches[0], item)
+		}
 		m.originalItems = append(m.originalItems, item)
-		return m.updateTrie()
+		fmt.Printf("appending with after %d \n", len(m.branches[0]))
+		return m.insertIntoTrie(item, index)
 	}
 
+	fmt.Print("reassigning \n")
 	m.originalItems[index] = item
-	return m.updateTrie()
+	m.branches[0][index] = item
+	return m.insertIntoTrie(item, index)
+}
+
+// debugging
+func (m *MerkleTrie) ReturnLayers() [][][]byte {
+	return m.branches
+}
+
+func (m *MerkleTrie) insertIntoTrie(item []byte, index int) error {
+	m.branches[0][index] = item
+	m.originalItems[index] = item
+	parentNode := [32]byte{}
+
+	for i := 0; i < int(m.depth); i++ {
+		fmt.Printf("depth %d\n", i)
+		fmt.Printf("index %d\n", index)
+		fmt.Printf("lenght of branches %d\n", len(m.branches[i]))
+		fmt.Printf("lenght of base branch %d\n", len(m.branches[0]))
+		fmt.Printf("lenght of original items %d\n", len(m.originalItems))
+		if (index+1)%2 == 1 {
+			if (index + 1) == len(m.branches[i]) {
+				fmt.Printf("adding in new zerohash: at %d\n", i)
+				m.branches[i] = append(m.branches[i], zeroHashes[i])
+			}
+			parentNode = hashutil.Hash(append(m.branches[i][index], m.branches[i][index+1]...))
+		} else {
+			parentNode = hashutil.Hash(append(m.branches[i][index-1], m.branches[i][index]...))
+		}
+
+		index /= 2
+		if i+1 == int(m.depth) {
+			fmt.Print("hit depth")
+			m.branches[i+1][index] = parentNode[:]
+			continue
+		}
+
+		if len(m.branches[i+1]) < index+1 {
+			fmt.Print("appending parent node\n")
+			m.branches[i+1] = append(m.branches[i+1], parentNode[:])
+		} else {
+			fmt.Print("reassigning node\n")
+			m.branches[i+1][index] = parentNode[:]
+		}
+	}
+	return nil
 }
 
 // GenerateTrieFromItems constructs a Merkle trie from a sequence of byte slices.

@@ -34,4 +34,3 @@ func TestFuzzProcessBlockHeader_10000(t *testing.T) {
 		_, _ = blocks.ProcessBlockHeader(state, block)
 	}
 }
-
