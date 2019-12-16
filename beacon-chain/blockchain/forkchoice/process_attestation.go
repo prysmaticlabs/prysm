@@ -187,9 +187,13 @@ func (s *Store) verifyAttestation(ctx context.Context, baseState *pb.BeaconState
 		// the following re-runs the same signature verify routine without cache in play.
 		// This provides extra assurance that committee cache can't break run time.
 		if err == blocks.ErrSigFailedToVerify {
-			indexedAtt, err = convertToIndexed(ctx, baseState, a)
+			committee, err = helpers.BeaconCommitteeWithoutCache(baseState, a.Data.Slot, a.Data.CommitteeIndex)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not convert attestation to indexed attestation without cache")
+			}
+			indexedAtt, err = blocks.ConvertToIndexed(ctx, a, committee)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not convert attestation to indexed attestation")
 			}
 			if err := blocks.VerifyIndexedAttestation(ctx, baseState, indexedAtt); err != nil {
 				return nil, errors.Wrap(err, "could not verify indexed attestation without cache")
