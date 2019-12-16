@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -330,6 +331,49 @@ func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 	_, _, _, _, err := CommitteeAssignment(state, 1, index)
 	if err != nil && !strings.Contains(err.Error(), "not found in assignments") {
 		t.Errorf("Wanted 'not found in assignments', received %v", err)
+	}
+}
+
+// Test helpers.CommitteeAssignments against the results of helpers.CommitteeAssignment by validator
+// index. Warning: this test is a bit slow!
+func TestCommitteeAssignments_AgreesWithSpecDefinitionMethod(t *testing.T) {
+	// Initialize test with 256 validators, each slot and each index gets 4 validators.
+	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	state := &pb.BeaconState{
+		Validators:  validators,
+		Slot:        params.BeaconConfig().SlotsPerEpoch,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	}
+	// Test for 2 epochs.
+	for epoch := uint64(0); epoch < 2; epoch++ {
+		state := proto.Clone(state).(*pb.BeaconState)
+		assignments, proposers, err := CommitteeAssignments(state, epoch)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for i := uint64(0); int(i) < len(validators); i++ {
+			committee, committeeIndex, slot, proposerSlot, err := CommitteeAssignment(state, epoch, i)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(committee, assignments[i].Committee) {
+				t.Errorf("Computed different committees for validator %d", i)
+			}
+			if committeeIndex != assignments[i].CommitteeIndex {
+				t.Errorf("Computed different committee index for validator %d", i)
+			}
+			if slot != assignments[i].AttesterSlot {
+				t.Errorf("Computed different attesting slot for validator %d", i)
+			}
+			if proposerSlot != proposers[i] {
+				t.Errorf("Computed different proposing slot for validator %d", i)
+			}
+		}
 	}
 }
 

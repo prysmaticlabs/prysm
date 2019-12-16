@@ -204,8 +204,8 @@ type CommitteeAssignmentContainer struct {
 // CommitteeAssignments is a map of validator indices pointing to the appropriate committee
 // assignment for the given epoch.
 //
-// 1. Compute all committees.
-// 2. Determine the proposer index and slot for each committee.
+// 1. Determine the proposer validator index for each slot.
+// 2. Compute all committees.
 // 3. Determine the attesting slot for each committee.
 // 4. Construct a map of validator indices pointing to the respective committees.
 func CommitteeAssignments(state *pb.BeaconState, epoch uint64) (map[uint64]*CommitteeAssignmentContainer, map[uint64]uint64, error) {

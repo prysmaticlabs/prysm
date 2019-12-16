@@ -17,8 +17,8 @@ go_library(
         "//beacon-chain:__subpackages__",
         "//shared/testutil:__pkg__",
         "//slasher:__subpackages__",
-        "//validator:__subpackages__",
         "//tools:__subpackages__",
+        "//validator:__subpackages__",
     ],
     deps = [
         "//beacon-chain/cache:go_default_library",
@@ -40,7 +40,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    size = "small",
+    size = "medium",
     srcs = [
         "attestation_test.go",
         "block_test.go",
