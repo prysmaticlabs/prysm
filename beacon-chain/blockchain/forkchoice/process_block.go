@@ -136,7 +136,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 		logEpochData(postState)
 		reportEpochMetrics(postState)
 
-		// Update committee shuffled indices at the end of every epoch
+		// Update committees cache at epoch boundary slot.
 		if featureconfig.Get().EnableNewCache {
 			if err := helpers.UpdateCommitteeCache(postState); err != nil {
 				return err
@@ -240,13 +240,6 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.
 	// Epoch boundary bookkeeping such as logging epoch summaries.
 	if helpers.IsEpochStart(postState.Slot) {
 		reportEpochMetrics(postState)
-
-		// Update committee shuffled indices at the end of every epoch
-		if featureconfig.Get().EnableNewCache {
-			if err := helpers.UpdateCommitteeCache(postState); err != nil {
-				return err
-			}
-		}
 	}
 
 	return nil

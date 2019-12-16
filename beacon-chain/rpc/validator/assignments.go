@@ -36,50 +36,40 @@ func (vs *Server) CommitteeAssignment(ctx context.Context, req *pb.AssignmentReq
 		}
 	}
 
-	// Tentative plan.
-	// 1. Compute all assignments for the epoch.
-	// 2. Filter to the specific request.
-
-	// Other plan.
-	// 1. Create a map of validator index to committee assignment object.
-	// 2. Build response from the map.
-	// map[uint64]*struct{Committee []uint64, CommitteeIndex uint64, ProposerIndex uint64}
-	// This map will share many of the same pointers.
-
-	committeeAssignments, proposerIndexToSlot, err := helpers.CommitteeAssignments(s, helpers.SlotToEpoch(req.EpochStart))
+	committeeAssignments, proposerIndexToSlot, err := helpers.CommitteeAssignments(s, req.EpochStart)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
 
 	var validatorAssignments []*pb.AssignmentResponse_ValidatorAssignment
-		for _, pubKey := range req.PublicKeys {
-			if ctx.Err() != nil {
-				return nil, status.Errorf(codes.Aborted, "Could not continue fetching assignments: %v", ctx.Err())
-			}
-			// Default assignment.
-			assignment := &pb.AssignmentResponse_ValidatorAssignment{
-				PublicKey: pubKey,
-				Status:    pb.ValidatorStatus_UNKNOWN_STATUS,
-			}
-
-			idx, ok, err := vs.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not fetch validator idx for public key %#x: %v", pubKey, err)
-			}
-			if ok {
-				ca, ok := committeeAssignments[idx]
-				if ok {
-					assignment.Committee = ca.Committee
-					assignment.Status = pb.ValidatorStatus_ACTIVE
-					assignment.PublicKey = pubKey
-					assignment.AttesterSlot = ca.AttesterSlot
-					assignment.ProposerSlot = proposerIndexToSlot[idx]
-					assignment.CommitteeIndex = ca.CommitteeIndex
-				}
-			}
-
-			validatorAssignments = append(validatorAssignments, assignment)
+	for _, pubKey := range req.PublicKeys {
+		if ctx.Err() != nil {
+			return nil, status.Errorf(codes.Aborted, "Could not continue fetching assignments: %v", ctx.Err())
 		}
+		// Default assignment.
+		assignment := &pb.AssignmentResponse_ValidatorAssignment{
+			PublicKey: pubKey,
+			Status:    pb.ValidatorStatus_UNKNOWN_STATUS,
+		}
+
+		idx, ok, err := vs.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not fetch validator idx for public key %#x: %v", pubKey, err)
+		}
+		if ok {
+			ca, ok := committeeAssignments[idx]
+			if ok {
+				assignment.Committee = ca.Committee
+				assignment.Status = pb.ValidatorStatus_ACTIVE
+				assignment.PublicKey = pubKey
+				assignment.AttesterSlot = ca.AttesterSlot
+				assignment.ProposerSlot = proposerIndexToSlot[idx]
+				assignment.CommitteeIndex = ca.CommitteeIndex
+			}
+		}
+
+		validatorAssignments = append(validatorAssignments, assignment)
+	}
 
 	return &pb.AssignmentResponse{
 		ValidatorAssignment: validatorAssignments,

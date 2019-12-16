@@ -293,8 +293,6 @@ func TestCommitteeAssignment_SyncNotReady(t *testing.T) {
 	}
 }
 
-// TODO: remove note
-// NOTE: Before this took 249000988076ns or 4.15 minutes at half mainnet, 8192.
 func BenchmarkCommitteeAssignment(b *testing.B) {
 	db := dbutil.SetupDB(b)
 	defer dbutil.TeardownDB(b, db)
