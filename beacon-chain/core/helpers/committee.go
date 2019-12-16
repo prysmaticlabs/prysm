@@ -253,7 +253,6 @@ func CommitteeAssignments(state *pb.BeaconState, epoch uint64) (map[uint64]*Comm
 			for _, vID := range committee {
 				validatorIndexToCommittee[vID] = cac
 			}
-
 		}
 	}
 
