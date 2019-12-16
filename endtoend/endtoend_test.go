@@ -142,11 +142,11 @@ func killProcesses(t *testing.T, pIDs []int) {
 
 func logOutput(t *testing.T, tmpPath string) {
 	if t.Failed() {
-		beacon1LogFile, err := os.Open(path.Join(tmpPath, "beacon-1.log"))
+		beacon0LogFile, err := os.Open(path.Join(tmpPath, "beacon-0.log"))
 		if err != nil {
 			t.Fatal(err)
 		}
-		scanner := bufio.NewScanner(beacon1LogFile)
+		scanner := bufio.NewScanner(beacon0LogFile)
 		t.Log("Beacon chain node output:")
 		for scanner.Scan() {
 			currentLine := scanner.Text()

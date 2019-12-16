@@ -8,14 +8,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func TestEndToEnd_MinimalConfig(t *testing.T) {
+func TestEndToEnd_MainnetConfig(t *testing.T) {
 	testutil.ResetCache()
-	params.UseMinimalConfig()
+	params.UseMainnetConfig()
 
-	minimalConfig := &end2EndConfig{
-		beaconConfig:   "minimal",
+	mainnetConfig := &end2EndConfig{
+		beaconConfig:   "mainnet",
 		epochsToRun:    5,
-		numBeaconNodes: 4,
+		numBeaconNodes: 1,
 		numValidators:  params.BeaconConfig().MinGenesisActiveValidatorCount,
 		evaluators: []ev.Evaluator{
 			ev.ValidatorsAreActive,
@@ -23,5 +23,5 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 			ev.FinalizationOccurs,
 		},
 	}
-	runEndToEndTest(t, minimalConfig)
+	runEndToEndTest(t, mainnetConfig)
 }

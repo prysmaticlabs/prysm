@@ -28,7 +28,7 @@ type beaconNodeInfo struct {
 }
 
 type end2EndConfig struct {
-	minimalConfig  bool
+	beaconConfig   string
 	tmpPath        string
 	epochsToRun    uint64
 	numValidators  uint64
@@ -76,9 +76,12 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 		fmt.Sprintf("--grpc-gateway-port=%d", 3200+index),
 	}
 
-	if config.minimalConfig {
+	if config.beaconConfig == "minimal" {
 		args = append(args, "--minimal-config")
+	} else if config.beaconConfig == "mainnet" {
+		args = append(args, "--no-custom-config")
 	}
+
 	// After the first node is made, have all following nodes connect to all previously made nodes.
 	if index >= 1 {
 		for p := 0; p < index; p++ {

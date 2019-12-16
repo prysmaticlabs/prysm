@@ -6,6 +6,7 @@ go_test(
     srcs = [
         "demo_e2e_test.go",
         "endtoend_test.go",
+        "mainnet_e2e_test.go",
         "minimal_e2e_test.go",
     ],
     data = [

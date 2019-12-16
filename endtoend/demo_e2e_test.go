@@ -13,7 +13,7 @@ func TestEndToEnd_DemoConfig(t *testing.T) {
 	params.UseDemoBeaconConfig()
 
 	demoConfig := &end2EndConfig{
-		minimalConfig:  false,
+		beaconConfig:   "demo",
 		epochsToRun:    5,
 		numBeaconNodes: 4,
 		numValidators:  params.BeaconConfig().MinGenesisActiveValidatorCount,
