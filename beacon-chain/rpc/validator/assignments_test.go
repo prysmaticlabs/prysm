@@ -273,7 +273,13 @@ func TestCommitteeAssignment_MultipleKeys_OK(t *testing.T) {
 	}
 
 	if len(res.ValidatorAssignment) != 2 {
-		t.Fatalf("expected 2 assignments but got %d", len(res.ValidatorAssignment))
+		t.Errorf("expected 2 assignments but got %d", len(res.ValidatorAssignment))
+	}
+	if res.ValidatorAssignment[0].AttesterSlot != 4 {
+		t.Errorf("Expected res.ValidatorAssignment[0].AttesterSlot == 4, got %d", res.ValidatorAssignment[0].AttesterSlot)
+	}
+	if res.ValidatorAssignment[1].AttesterSlot != 3 {
+		t.Errorf("Expected res.ValidatorAssignment[1].AttesterSlot == 3, got %d", res.ValidatorAssignment[0].AttesterSlot)
 	}
 }
 
@@ -284,5 +290,70 @@ func TestCommitteeAssignment_SyncNotReady(t *testing.T) {
 	_, err := vs.CommitteeAssignment(context.Background(), &pb.AssignmentRequest{})
 	if strings.Contains(err.Error(), "syncing to latest head") {
 		t.Error("Did not get wanted error")
+	}
+}
+
+// TODO: remove note
+// NOTE: Before this took 249000988076ns or 4.15 minutes at half mainnet, 8192.
+func BenchmarkCommitteeAssignment(b *testing.B) {
+	db := dbutil.SetupDB(b)
+	defer dbutil.TeardownDB(b, db)
+	ctx := context.Background()
+
+	genesis := blk.NewGenesisBlock([]byte{})
+	depChainStart := uint64(8192*2)
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(depChainStart)
+	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	if err != nil {
+		b.Fatal(err)
+	}
+	state, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	if err != nil {
+		b.Fatalf("Could not setup genesis state: %v", err)
+	}
+	genesisRoot, err := ssz.SigningRoot(genesis)
+	if err != nil {
+		b.Fatalf("Could not get signing root %v", err)
+	}
+
+	var wg sync.WaitGroup
+	numOfValidators := int(depChainStart)
+	errs := make(chan error, numOfValidators)
+	for i := 0; i < numOfValidators; i++ {
+		wg.Add(1)
+		go func(index int) {
+			errs <- db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(deposits[index].Data.PublicKey), uint64(index))
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
+			b.Fatalf("Could not save validator index: %v", err)
+		}
+	}
+
+	vs := &Server{
+		BeaconDB:    db,
+		HeadFetcher: &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
+	}
+
+	// Create request for all validators in the system.
+	pks := make([][]byte, len(deposits))
+	for i, deposit := range deposits {
+		pks[i] = deposit.Data.PublicKey
+	}
+	req := &pb.AssignmentRequest{
+		PublicKeys: pks,
+		EpochStart: 0,
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := vs.CommitteeAssignment(context.Background(), req)
+		if err != nil {
+			b.Error(err)
+		}
 	}
 }
