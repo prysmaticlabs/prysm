@@ -128,7 +128,7 @@ func SlotSignature(state *pb.BeaconState, slot uint64, privKey *bls.SecretKey) (
 //    committee = get_beacon_committee(state, slot, index)
 //    modulo = max(1, len(committee) // TARGET_AGGREGATORS_PER_COMMITTEE)
 //    return bytes_to_int(hash(slot_signature)[0:8]) % modulo == 0
-func IsAggregator(state *pb.BeaconState, slot uint64, index uint64, slotSig *bls.Signature) (bool, error) {
+func IsAggregator(state *pb.BeaconState, slot uint64, index uint64, slotSig []byte) (bool, error) {
 	committee, err := BeaconCommittee(state, slot, index)
 	if err != nil {
 		return false, err
@@ -138,7 +138,7 @@ func IsAggregator(state *pb.BeaconState, slot uint64, index uint64, slotSig *bls
 		modulo = uint64(len(committee)) / params.BeaconConfig().TargetAggregatorsPerCommittee
 	}
 
-	b := hashutil.Hash(slotSig.Marshal())
+	b := hashutil.Hash(slotSig)
 	return binary.LittleEndian.Uint64(b[:8])%modulo == 0, nil
 }
 
