@@ -108,7 +108,7 @@ func initializeValidators(
 	for index, dd := range deposits {
 		_, err = contract.Deposit(txOps, dd.Data.PublicKey, dd.Data.WithdrawalCredentials, dd.Data.Signature, roots[index])
 		if err != nil {
-			t.Fatalf("unable to send transaction to contract: %v", err)
+			t.Errorf("unable to send transaction to contract: %v", err)
 		}
 		txOps.Nonce = txOps.Nonce.Add(txOps.Nonce, big.NewInt(1))
 	}
