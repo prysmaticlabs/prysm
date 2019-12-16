@@ -40,13 +40,13 @@ func (m *MerkleTrie) InsertIntoTrie(item []byte, index int) error {
 		}
 		m.originalItems = append(m.originalItems, item)
 		fmt.Printf("appending with after %d \n", len(m.branches[0]))
-		return m.insertIntoTrie(item, index)
+		m.insertIntoTrie(item, index)
+		return nil
 	}
 
 	fmt.Print("reassigning \n")
-	m.originalItems[index] = item
-	m.branches[0][index] = item
-	return m.insertIntoTrie(item, index)
+	m.insertIntoTrie(item, index)
+	return nil
 }
 
 // debugging
@@ -54,43 +54,35 @@ func (m *MerkleTrie) ReturnLayers() [][][]byte {
 	return m.branches
 }
 
-func (m *MerkleTrie) insertIntoTrie(item []byte, index int) error {
+func (m *MerkleTrie) insertIntoTrie(item []byte, index int) {
 	m.branches[0][index] = item
 	m.originalItems[index] = item
-	parentNode := [32]byte{}
+	currentIndex := index
+	root := item
+	for i := 0; i < len(m.branches)-1; i++ {
+		isLeft := currentIndex%2 == 0
+		neighborIdx := currentIndex ^ 1
 
-	for i := 0; i < int(m.depth); i++ {
-		fmt.Printf("depth %d\n", i)
-		fmt.Printf("index %d\n", index)
-		fmt.Printf("lenght of branches %d\n", len(m.branches[i]))
-		fmt.Printf("lenght of base branch %d\n", len(m.branches[0]))
-		fmt.Printf("lenght of original items %d\n", len(m.originalItems))
-		if (index+1)%2 == 1 {
-			if (index + 1) == len(m.branches[i]) {
-				fmt.Printf("adding in new zerohash: at %d\n", i)
-				m.branches[i] = append(m.branches[i], zeroHashes[i])
-			}
-			parentNode = hashutil.Hash(append(m.branches[i][index], m.branches[i][index+1]...))
+		neighbor := make([]byte, 32)
+		if m.branches[i] != nil && len(m.branches[i]) != 0 && neighborIdx < len(m.branches[i]) {
+			neighbor = m.branches[i][neighborIdx]
+		}
+		if isLeft {
+			parentHash := hashutil.Hash(append(root, neighbor...))
+			root = parentHash[:]
 		} else {
-			parentNode = hashutil.Hash(append(m.branches[i][index-1], m.branches[i][index]...))
+			parentHash := hashutil.Hash(append(neighbor, root...))
+			root = parentHash[:]
 		}
-
-		index /= 2
-		if i+1 == int(m.depth) {
-			fmt.Print("hit depth")
-			m.branches[i+1][index] = parentNode[:]
-			continue
-		}
-
-		if len(m.branches[i+1]) < index+1 {
-			fmt.Print("appending parent node\n")
-			m.branches[i+1] = append(m.branches[i+1], parentNode[:])
+		parentIdx := currentIndex / 2
+		// Update the cached layers at the parent index.
+		if len(m.branches[i+1]) == 0 {
+			m.branches[i+1] = append(m.branches[i+1], root)
 		} else {
-			fmt.Print("reassigning node\n")
-			m.branches[i+1][index] = parentNode[:]
+			m.branches[i+1][parentIdx] = root
 		}
+		currentIndex = parentIdx
 	}
-	return nil
 }
 
 // GenerateTrieFromItems constructs a Merkle trie from a sequence of byte slices.
