@@ -378,16 +378,23 @@ func TestCommitteeAssignments_AgreesWithSpecDefinitionMethod(t *testing.T) {
 }
 
 func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
-	// Initialize test with 128 validators, each slot and each index gets 2 validators.
-	validators := make([]*ethpb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
+	// Initialize test with 256 validators, each slot and each index gets 4 validators.
+	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
+		// First 2 epochs only half validators are activated.
+		var activationEpoch uint64
+		if i >= len(validators)/2 {
+			activationEpoch = 3
+		}
 		validators[i] = &ethpb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			ActivationEpoch: activationEpoch,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 		}
 	}
+
 	state := &pb.BeaconState{
 		Validators:  validators,
-		Slot:        params.BeaconConfig().SlotsPerEpoch,
+		Slot:        2*params.BeaconConfig().SlotsPerEpoch, // epoch 2
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
@@ -420,6 +427,12 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 			committee:      []uint64{30, 11},
 			committeeIndex: 0,
 			isProposer:     false,
+		}, {
+			index:          2,
+			slot:           114, // 3rd epoch has more active validators
+			committee:      []uint64{2, 6, 35, 31},
+			committeeIndex: 0,
+			isProposer:     false,
 		},
 	}
 
@@ -427,7 +440,7 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			validatorIndexToCommittee, proposerIndexToSlot, err := CommitteeAssignments(state, SlotToEpoch(tt.slot))
 			if err != nil {
-				t.Fatalf("failed to execute NextEpochCommitteeAssignment: %v", err)
+				t.Fatalf("failed to determine CommitteeAssignments: %v", err)
 			}
 			cac := validatorIndexToCommittee[tt.index]
 			if cac.CommitteeIndex != tt.committeeIndex {

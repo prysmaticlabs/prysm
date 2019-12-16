@@ -236,8 +236,9 @@ func CommitteeAssignments(state *pb.BeaconState, epoch uint64) (map[uint64]*Comm
 
 	validatorIndexToCommittee := make(map[uint64]*CommitteeAssignmentContainer)
 
-	// Compute all committees.
+	// Compute all committees for all slots.
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+		// Compute committees.
 		for j := uint64(0); j < numCommitteesPerSlot; j++ {
 			slot := startSlot + i
 			committee, err := BeaconCommittee(state, slot, j /*committee index*/)
