@@ -27,24 +27,9 @@ func NewTrie(depth int) (*MerkleTrie, error) {
 
 // InsertIntoTrie inserts an item(deposit hash) into the trie.
 func (m *MerkleTrie) InsertIntoTrie(item []byte, index int) error {
-	// Only insert new items which follow directly after the last
-	// added element
-	if index > len(m.originalItems) {
+	if index >= len(m.originalItems) {
 		return errors.New("invalid index to be inserting")
 	}
-	fmt.Printf("adding in index %d\n", index)
-	if index == len(m.originalItems) {
-		fmt.Printf("appending with before %d \n", len(m.branches[0]))
-		if index == len(m.branches[0]) {
-			m.branches[0] = append(m.branches[0], item)
-		}
-		m.originalItems = append(m.originalItems, item)
-		fmt.Printf("appending with after %d \n", len(m.branches[0]))
-		m.insertIntoTrie(item, index)
-		return nil
-	}
-
-	fmt.Print("reassigning \n")
 	m.insertIntoTrie(item, index)
 	return nil
 }
@@ -55,34 +40,34 @@ func (m *MerkleTrie) ReturnLayers() [][][]byte {
 }
 
 func (m *MerkleTrie) insertIntoTrie(item []byte, index int) {
-	m.branches[0][index] = item
-	m.originalItems[index] = item
+	someItem := bytesutil.ToBytes32(item)
+	m.branches[0][index] = someItem[:]
+	m.originalItems[index] = someItem[:]
 	currentIndex := index
-	root := item
-	fmt.Printf("Current: %s\n", root)
+	root := bytesutil.ToBytes32(item)
 	for i := 0; i < int(m.depth); i++ {
 		isLeft := currentIndex%2 == 0
 		neighborIdx := currentIndex ^ 1
-		fmt.Printf("Is left %v, curr %d\n", isLeft, currentIndex)
 
 		neighbor := make([]byte, 32)
 		if m.branches[i] != nil && len(m.branches[i]) != 0 && neighborIdx < len(m.branches[i]) {
 			neighbor = m.branches[i][neighborIdx]
 		}
 		if isLeft {
-			parentHash := hashutil.Hash(append(root, neighbor...))
-			root = parentHash[:]
+			parentHash := hashutil.Hash(append(root[:], neighbor...))
+			root = parentHash
 		} else {
-			parentHash := hashutil.Hash(append(neighbor, root...))
-			root = parentHash[:]
+			parentHash := hashutil.Hash(append(neighbor, root[:]...))
+			root = parentHash
 		}
 		parentIdx := currentIndex / 2
-		fmt.Printf("Parent index %d\n", parentIdx)
 		// Update the cached layers at the parent index.
 		if len(m.branches[i+1]) == 0 {
-			m.branches[i+1] = append(m.branches[i+1], root)
+			newItem := root
+			m.branches[i+1] = append(m.branches[i+1], newItem[:])
 		} else {
-			m.branches[i+1][parentIdx] = root
+			newItem := root
+			m.branches[i+1][parentIdx] = newItem[:]
 		}
 		currentIndex = parentIdx
 	}
@@ -154,15 +139,14 @@ func (m *MerkleTrie) HashTreeRoot() [32]byte {
 // VerifyMerkleProof verifies a Merkle branch against a root of a trie.
 func VerifyMerkleProof(root []byte, item []byte, merkleIndex int, proof [][]byte) bool {
 	node := bytesutil.ToBytes32(item)
+	currentIndex := merkleIndex
 	for i := 0; i < len(proof); i++ {
-		isLeft := merkleIndex / (1 << uint64(i))
-		if isLeft%2 != 0 {
-			parentHash := hashutil.Hash(append(proof[i], node[:]...))
-			node = parentHash
+		if currentIndex%2 != 0 {
+			node = hashutil.Hash(append(proof[i], node[:]...))
 		} else {
-			parentHash := hashutil.Hash(append(node[:], proof[i]...))
-			node = parentHash
+			node = hashutil.Hash(append(node[:], proof[i]...))
 		}
+		currentIndex = currentIndex / 2
 	}
 	return bytes.Equal(root, node[:])
 }
@@ -214,5 +198,11 @@ func prettyPrintTree(layers [][][]byte) {
 			}
 		}
 		fmt.Println("")
+	}
+}
+
+func prettyPrintProof(proof [][]byte) {
+	for i := 0; i < len(proof); i++ {
+		fmt.Printf("%#x\n", bytesutil.Trunc(proof[i]))
 	}
 }

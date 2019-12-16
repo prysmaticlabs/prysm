@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -144,46 +145,36 @@ func TestMerkleTrie_VerifyMerkleProof(t *testing.T) {
 
 func TestMerkleTrie_VerifyMerkleProof_TrieUpdated(t *testing.T) {
 	items := [][]byte{
-		[]byte("A"),
-		[]byte("B"),
-		[]byte("C"),
-		[]byte("D"),
-		//[]byte("E"),
-		//[]byte("F"),
-		//[]byte("G"),
-		//[]byte("H"),
+		{1},
+		{2},
+		{3},
+		{4},
 	}
-	m, err := GenerateTrieFromItems(items, 2)
+	m, err := GenerateTrieFromItems(items, 33)
 	if err != nil {
 		t.Fatalf("Could not generate Merkle trie from items: %v", err)
 	}
-	prettyPrintTree(m.branches)
 	proof, err := m.MerkleProof(0)
 	if err != nil {
 		t.Fatalf("Could not generate Merkle proof: %v", err)
 	}
-	//if len(proof) != 33 {
-	//	t.Errorf("Received len %d, wanted 33", len(proof))
-	//}
 	root := m.Root()
 	if ok := VerifyMerkleProof(root[:], items[0], 0, proof); !ok {
 		t.Error("First Merkle proof did not verify")
 	}
 
 	// Now we update the trie.
-	m.InsertIntoTrie([]byte("hello"), 3)
-	prettyPrintTree(m.branches)
+	m.InsertIntoTrie([]byte{5}, 3)
 	proof, err = m.MerkleProof(3)
 	if err != nil {
 		t.Fatalf("Could not generate Merkle proof: %v", err)
 	}
 	root = m.Root()
-	if ok := VerifyMerkleProof(root[:], []byte("hello"), 3, proof); !ok {
+	if ok := VerifyMerkleProof(root[:], []byte{5}, 3, proof); !ok {
 		t.Error("Second Merkle proof did not verify")
 	}
-	// The original item should no longer exist in the trie.
-	if ok := VerifyMerkleProof(root[:], []byte("D"), 3, proof); ok {
-		t.Error("Item not in tree should fail to verify")
+	if ok := VerifyMerkleProof(root[:], []byte{4}, 3, proof); ok {
+		t.Error("Old item should not verify")
 	}
 }
 
