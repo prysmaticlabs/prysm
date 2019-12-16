@@ -20,7 +20,7 @@ import (
 var processPendingBlocksPeriod = time.Duration(params.BeaconConfig().SecondsPerSlot/3) * time.Second
 
 // processes pending blocks queue on every processPendingBlocksPeriod
-func (r *RegularSync) processPendingBlocksQueue() {
+func (r *Service) processPendingBlocksQueue() {
 	ticker := time.NewTicker(processPendingBlocksPeriod)
 	for {
 		ctx := context.TODO()
@@ -35,7 +35,7 @@ func (r *RegularSync) processPendingBlocksQueue() {
 }
 
 // processes the block tree inside the queue
-func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
+func (r *Service) processPendingBlocks(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "processPendingBlocks")
 	defer span.End()
 
@@ -104,7 +104,7 @@ func (r *RegularSync) processPendingBlocks(ctx context.Context) error {
 	return nil
 }
 
-func (r *RegularSync) sortedPendingSlots() []int {
+func (r *Service) sortedPendingSlots() []int {
 	r.pendingQueueLock.RLock()
 	defer r.pendingQueueLock.RUnlock()
 
@@ -119,7 +119,7 @@ func (r *RegularSync) sortedPendingSlots() []int {
 // validatePendingSlots validates the pending blocks
 // by their slot. If they are before the current finalized
 // checkpoint, these blocks are removed from the queue.
-func (r *RegularSync) validatePendingSlots() error {
+func (r *Service) validatePendingSlots() error {
 	r.pendingQueueLock.RLock()
 	defer r.pendingQueueLock.RUnlock()
 	oldBlockRoots := make(map[[32]byte]bool)
