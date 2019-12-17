@@ -21,7 +21,7 @@ var goodByes = map[uint64]string{
 }
 
 // goodbyeRPCHandler reads the incoming goodbye rpc message from the peer.
-func (r *RegularSync) goodbyeRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
+func (r *Service) goodbyeRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	defer stream.Close()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
