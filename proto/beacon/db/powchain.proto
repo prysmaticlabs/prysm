@@ -7,13 +7,9 @@ import "eth/v1alpha1/beacon_block.proto";
 option go_package = "github.com/prysmaticlabs/prysm/proto/beacon/db";
 
 message ETH1ChainData {
-    SparseMerkleTrie trie = 1;
-    uint64 block_height = 2;
-    uint64 block_time = 3;
-    repeated bytes block_hash = 4;
-
-    uint64 last_requested_block = 5;
-
+    LatestETH1Data current_eth1_data = 1 ;
+    ChainStartData chainstart_data = 2;
+    SparseMerkleTrie trie = 3;
 }
 
 message LatestETH1Data {
@@ -21,8 +17,14 @@ message LatestETH1Data {
     uint64 block_time = 3;
     repeated bytes block_hash = 4;
     uint64 last_requested_block = 5;
-    ethereum.eth.v1alpha1.Eth1Data eth1_data = 6;
-    repeated ethereum.eth.v1alpha1.Deposit chainstart_deposits = 7;
+}
+
+message ChainStartData {
+    bool chainstarted = 1;
+    uint64 genesis_time = 2;
+    uint64 genesis_block = 3;
+    ethereum.eth.v1alpha1.Eth1Data eth1_data = 4;
+    repeated ethereum.eth.v1alpha1.Deposit chainstart_deposits = 5;
 }
 
 message SparseMerkleTrie {

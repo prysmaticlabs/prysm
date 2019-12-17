@@ -23,11 +23,9 @@ var _ = math.Inf
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
 type ETH1ChainData struct {
-	Trie                 *SparseMerkleTrie `protobuf:"bytes,1,opt,name=trie,proto3" json:"trie,omitempty"`
-	BlockHeight          uint64            `protobuf:"varint,2,opt,name=block_height,json=blockHeight,proto3" json:"block_height,omitempty"`
-	BlockTime            uint64            `protobuf:"varint,3,opt,name=block_time,json=blockTime,proto3" json:"block_time,omitempty"`
-	BlockHash            [][]byte          `protobuf:"bytes,4,rep,name=block_hash,json=blockHash,proto3" json:"block_hash,omitempty"`
-	LastRequestedBlock   uint64            `protobuf:"varint,5,opt,name=last_requested_block,json=lastRequestedBlock,proto3" json:"last_requested_block,omitempty"`
+	CurrentEth1Data      *LatestETH1Data   `protobuf:"bytes,1,opt,name=current_eth1_data,json=currentEth1Data,proto3" json:"current_eth1_data,omitempty"`
+	ChainstartData       *ChainStartData   `protobuf:"bytes,2,opt,name=chainstart_data,json=chainstartData,proto3" json:"chainstart_data,omitempty"`
+	Trie                 *SparseMerkleTrie `protobuf:"bytes,3,opt,name=trie,proto3" json:"trie,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
 	XXX_unrecognized     []byte            `json:"-"`
 	XXX_sizecache        int32             `json:"-"`
@@ -66,6 +64,20 @@ func (m *ETH1ChainData) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ETH1ChainData proto.InternalMessageInfo
 
+func (m *ETH1ChainData) GetCurrentEth1Data() *LatestETH1Data {
+	if m != nil {
+		return m.CurrentEth1Data
+	}
+	return nil
+}
+
+func (m *ETH1ChainData) GetChainstartData() *ChainStartData {
+	if m != nil {
+		return m.ChainstartData
+	}
+	return nil
+}
+
 func (m *ETH1ChainData) GetTrie() *SparseMerkleTrie {
 	if m != nil {
 		return m.Trie
@@ -73,44 +85,14 @@ func (m *ETH1ChainData) GetTrie() *SparseMerkleTrie {
 	return nil
 }
 
-func (m *ETH1ChainData) GetBlockHeight() uint64 {
-	if m != nil {
-		return m.BlockHeight
-	}
-	return 0
-}
-
-func (m *ETH1ChainData) GetBlockTime() uint64 {
-	if m != nil {
-		return m.BlockTime
-	}
-	return 0
-}
-
-func (m *ETH1ChainData) GetBlockHash() [][]byte {
-	if m != nil {
-		return m.BlockHash
-	}
-	return nil
-}
-
-func (m *ETH1ChainData) GetLastRequestedBlock() uint64 {
-	if m != nil {
-		return m.LastRequestedBlock
-	}
-	return 0
-}
-
 type LatestETH1Data struct {
-	BlockHeight          uint64              `protobuf:"varint,2,opt,name=block_height,json=blockHeight,proto3" json:"block_height,omitempty"`
-	BlockTime            uint64              `protobuf:"varint,3,opt,name=block_time,json=blockTime,proto3" json:"block_time,omitempty"`
-	BlockHash            [][]byte            `protobuf:"bytes,4,rep,name=block_hash,json=blockHash,proto3" json:"block_hash,omitempty"`
-	LastRequestedBlock   uint64              `protobuf:"varint,5,opt,name=last_requested_block,json=lastRequestedBlock,proto3" json:"last_requested_block,omitempty"`
-	Eth1Data             *v1alpha1.Eth1Data  `protobuf:"bytes,6,opt,name=eth1_data,json=eth1Data,proto3" json:"eth1_data,omitempty"`
-	ChainstartDeposits   []*v1alpha1.Deposit `protobuf:"bytes,7,rep,name=chainstart_deposits,json=chainstartDeposits,proto3" json:"chainstart_deposits,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}            `json:"-"`
-	XXX_unrecognized     []byte              `json:"-"`
-	XXX_sizecache        int32               `json:"-"`
+	BlockHeight          uint64   `protobuf:"varint,2,opt,name=block_height,json=blockHeight,proto3" json:"block_height,omitempty"`
+	BlockTime            uint64   `protobuf:"varint,3,opt,name=block_time,json=blockTime,proto3" json:"block_time,omitempty"`
+	BlockHash            [][]byte `protobuf:"bytes,4,rep,name=block_hash,json=blockHash,proto3" json:"block_hash,omitempty"`
+	LastRequestedBlock   uint64   `protobuf:"varint,5,opt,name=last_requested_block,json=lastRequestedBlock,proto3" json:"last_requested_block,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
 func (m *LatestETH1Data) Reset()         { *m = LatestETH1Data{} }
@@ -174,14 +156,79 @@ func (m *LatestETH1Data) GetLastRequestedBlock() uint64 {
 	return 0
 }
 
-func (m *LatestETH1Data) GetEth1Data() *v1alpha1.Eth1Data {
+type ChainStartData struct {
+	Chainstarted         bool                `protobuf:"varint,1,opt,name=chainstarted,proto3" json:"chainstarted,omitempty"`
+	GenesisTime          uint64              `protobuf:"varint,2,opt,name=genesis_time,json=genesisTime,proto3" json:"genesis_time,omitempty"`
+	GenesisBlock         uint64              `protobuf:"varint,3,opt,name=genesis_block,json=genesisBlock,proto3" json:"genesis_block,omitempty"`
+	Eth1Data             *v1alpha1.Eth1Data  `protobuf:"bytes,4,opt,name=eth1_data,json=eth1Data,proto3" json:"eth1_data,omitempty"`
+	ChainstartDeposits   []*v1alpha1.Deposit `protobuf:"bytes,5,rep,name=chainstart_deposits,json=chainstartDeposits,proto3" json:"chainstart_deposits,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}            `json:"-"`
+	XXX_unrecognized     []byte              `json:"-"`
+	XXX_sizecache        int32               `json:"-"`
+}
+
+func (m *ChainStartData) Reset()         { *m = ChainStartData{} }
+func (m *ChainStartData) String() string { return proto.CompactTextString(m) }
+func (*ChainStartData) ProtoMessage()    {}
+func (*ChainStartData) Descriptor() ([]byte, []int) {
+	return fileDescriptor_338787f8da2f3d61, []int{2}
+}
+func (m *ChainStartData) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ChainStartData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ChainStartData.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ChainStartData) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ChainStartData.Merge(m, src)
+}
+func (m *ChainStartData) XXX_Size() int {
+	return m.Size()
+}
+func (m *ChainStartData) XXX_DiscardUnknown() {
+	xxx_messageInfo_ChainStartData.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ChainStartData proto.InternalMessageInfo
+
+func (m *ChainStartData) GetChainstarted() bool {
+	if m != nil {
+		return m.Chainstarted
+	}
+	return false
+}
+
+func (m *ChainStartData) GetGenesisTime() uint64 {
+	if m != nil {
+		return m.GenesisTime
+	}
+	return 0
+}
+
+func (m *ChainStartData) GetGenesisBlock() uint64 {
+	if m != nil {
+		return m.GenesisBlock
+	}
+	return 0
+}
+
+func (m *ChainStartData) GetEth1Data() *v1alpha1.Eth1Data {
 	if m != nil {
 		return m.Eth1Data
 	}
 	return nil
 }
 
-func (m *LatestETH1Data) GetChainstartDeposits() []*v1alpha1.Deposit {
+func (m *ChainStartData) GetChainstartDeposits() []*v1alpha1.Deposit {
 	if m != nil {
 		return m.ChainstartDeposits
 	}
@@ -201,7 +248,7 @@ func (m *SparseMerkleTrie) Reset()         { *m = SparseMerkleTrie{} }
 func (m *SparseMerkleTrie) String() string { return proto.CompactTextString(m) }
 func (*SparseMerkleTrie) ProtoMessage()    {}
 func (*SparseMerkleTrie) Descriptor() ([]byte, []int) {
-	return fileDescriptor_338787f8da2f3d61, []int{2}
+	return fileDescriptor_338787f8da2f3d61, []int{3}
 }
 func (m *SparseMerkleTrie) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -262,7 +309,7 @@ func (m *TrieLayer) Reset()         { *m = TrieLayer{} }
 func (m *TrieLayer) String() string { return proto.CompactTextString(m) }
 func (*TrieLayer) ProtoMessage()    {}
 func (*TrieLayer) Descriptor() ([]byte, []int) {
-	return fileDescriptor_338787f8da2f3d61, []int{3}
+	return fileDescriptor_338787f8da2f3d61, []int{4}
 }
 func (m *TrieLayer) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -301,6 +348,7 @@ func (m *TrieLayer) GetLayer() [][]byte {
 func init() {
 	proto.RegisterType((*ETH1ChainData)(nil), "prysm.beacon.db.ETH1ChainData")
 	proto.RegisterType((*LatestETH1Data)(nil), "prysm.beacon.db.LatestETH1Data")
+	proto.RegisterType((*ChainStartData)(nil), "prysm.beacon.db.ChainStartData")
 	proto.RegisterType((*SparseMerkleTrie)(nil), "prysm.beacon.db.SparseMerkleTrie")
 	proto.RegisterType((*TrieLayer)(nil), "prysm.beacon.db.TrieLayer")
 }
@@ -308,35 +356,41 @@ func init() {
 func init() { proto.RegisterFile("proto/beacon/db/powchain.proto", fileDescriptor_338787f8da2f3d61) }
 
 var fileDescriptor_338787f8da2f3d61 = []byte{
-	// 447 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xcc, 0x53, 0x4f, 0x6f, 0xd3, 0x30,
-	0x14, 0x57, 0xda, 0xae, 0x50, 0x77, 0x1b, 0xc8, 0xec, 0x60, 0x4d, 0xa2, 0x6b, 0x2b, 0x21, 0xf5,
-	0xe4, 0xd0, 0x22, 0x6e, 0x3b, 0x8d, 0x4d, 0x2a, 0xd2, 0x10, 0x52, 0xe8, 0x89, 0x4b, 0xf4, 0x92,
-	0x3c, 0xd5, 0xd6, 0x92, 0x26, 0xd8, 0xaf, 0xa0, 0x9d, 0xf9, 0x46, 0x7c, 0x0a, 0x8e, 0x5c, 0xb9,
-	0xa1, 0x7e, 0x12, 0x94, 0x97, 0x94, 0x49, 0x45, 0xdc, 0xb9, 0xf9, 0xfd, 0xfe, 0xd9, 0xcf, 0x7e,
-	0x16, 0xa3, 0xca, 0x95, 0x54, 0x86, 0x09, 0x42, 0x5a, 0x6e, 0xc2, 0x2c, 0x09, 0xab, 0xf2, 0x4b,
-	0x6a, 0xc0, 0x6e, 0x34, 0x13, 0xf2, 0x49, 0xe5, 0xee, 0x7d, 0xa1, 0x1b, 0x5e, 0x67, 0xc9, 0xf9,
-	0x05, 0x92, 0x09, 0x3f, 0xcf, 0x21, 0xaf, 0x0c, 0xcc, 0x5b, 0x5f, 0x9c, 0xe4, 0x65, 0x7a, 0xd7,
-	0x38, 0xa6, 0x3f, 0x03, 0x71, 0x72, 0xb3, 0x5a, 0xce, 0xdf, 0xd4, 0x29, 0xd7, 0x40, 0x20, 0x5f,
-	0x8b, 0x1e, 0x39, 0x8b, 0x2a, 0x18, 0x07, 0xb3, 0xe1, 0x62, 0xa2, 0x0f, 0x22, 0xf5, 0x87, 0x0a,
-	0x9c, 0xc7, 0x77, 0xe8, 0xee, 0x72, 0x5c, 0x39, 0x8b, 0x11, 0xcb, 0xe5, 0x44, 0x1c, 0x73, 0x6e,
-	0x6c, 0xd0, 0xae, 0x0d, 0xa9, 0xce, 0x38, 0x98, 0xf5, 0xa2, 0x21, 0x63, 0x4b, 0x86, 0xe4, 0x73,
-	0x21, 0x1a, 0x09, 0xd9, 0x02, 0x55, 0x97, 0x05, 0x03, 0x46, 0x56, 0xb6, 0xc0, 0x07, 0xda, 0x80,
-	0x37, 0xaa, 0x37, 0xee, 0xce, 0x8e, 0x5b, 0x7a, 0x09, 0xde, 0xc8, 0x97, 0xe2, 0x2c, 0x07, 0x4f,
-	0xb1, 0xc3, 0x4f, 0x5b, 0xf4, 0x84, 0x59, 0xd3, 0x87, 0x3a, 0xe2, 0x1c, 0x59, 0x73, 0xd1, 0x9e,
-	0xba, 0xaa, 0x99, 0xe9, 0xb7, 0x8e, 0x38, 0xbd, 0x05, 0x42, 0x4f, 0x75, 0x87, 0xdc, 0xdc, 0xff,
-	0x77, 0x4a, 0x79, 0x29, 0x06, 0x48, 0x66, 0x1e, 0x67, 0x40, 0xa0, 0xfa, 0x7c, 0xe9, 0x17, 0x1a,
-	0xc9, 0xa0, 0xc3, 0x6d, 0x51, 0x2f, 0xf4, 0xfe, 0xfd, 0xf4, 0x0d, 0x19, 0x6e, 0x23, 0x7a, 0x8c,
-	0xed, 0x4a, 0xbe, 0x17, 0xcf, 0x78, 0x00, 0x3c, 0x81, 0xa3, 0x38, 0xc3, 0xaa, 0xf4, 0x96, 0xbc,
-	0x7a, 0x34, 0xee, 0xce, 0x86, 0x8b, 0xd1, 0x3f, 0x72, 0xae, 0x1b, 0x59, 0x24, 0x1f, 0xac, 0x2d,
-	0xe4, 0xa7, 0x5f, 0x03, 0xf1, 0xf4, 0xf0, 0x89, 0xe5, 0x99, 0x38, 0xca, 0xb0, 0x22, 0xc3, 0x43,
-	0xd1, 0x8b, 0x9a, 0x42, 0x2e, 0x44, 0x3f, 0x87, 0x7b, 0x74, 0x5e, 0x75, 0x78, 0xbb, 0xf3, 0xbf,
-	0x66, 0xa5, 0x36, 0xdf, 0xd6, 0x92, 0xa8, 0x55, 0xca, 0x17, 0xe2, 0xb4, 0x74, 0x76, 0x6d, 0x37,
-	0x90, 0xc7, 0x96, 0xb0, 0xf0, 0xaa, 0xcb, 0x57, 0x78, 0xb2, 0x47, 0xdf, 0xd6, 0xe0, 0x74, 0x22,
-	0x06, 0x7f, 0xbc, 0xf5, 0xee, 0xec, 0x56, 0x01, 0x4b, 0x9b, 0xe2, 0xea, 0xf2, 0xfb, 0x6e, 0x14,
-	0xfc, 0xd8, 0x8d, 0x82, 0x5f, 0xbb, 0x51, 0xf0, 0x51, 0xaf, 0x2d, 0x99, 0x6d, 0xa2, 0xd3, 0xb2,
-	0x08, 0xf9, 0x14, 0x40, 0x36, 0xcd, 0x21, 0xf1, 0x4d, 0x15, 0x1e, 0x7c, 0x9c, 0xa4, 0xcf, 0xc0,
-	0xab, 0xdf, 0x01, 0x00, 0x00, 0xff, 0xff, 0xf2, 0xbd, 0x28, 0x07, 0x52, 0x03, 0x00, 0x00,
+	// 530 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x74, 0x53, 0xcd, 0x6e, 0xd3, 0x4c,
+	0x14, 0x95, 0x1b, 0xa7, 0x6a, 0x26, 0x7f, 0xdf, 0x37, 0x74, 0x61, 0x55, 0x22, 0x4d, 0x8c, 0x90,
+	0xb2, 0xb2, 0x49, 0x10, 0xbb, 0xae, 0x4a, 0x2b, 0x05, 0x51, 0x84, 0xe4, 0x66, 0xc5, 0xc6, 0x1a,
+	0xdb, 0x57, 0x99, 0x51, 0xed, 0xd8, 0xcc, 0x4c, 0x40, 0x5d, 0xb3, 0xe4, 0x31, 0x78, 0x19, 0x96,
+	0xbc, 0x00, 0x12, 0xca, 0x93, 0xa0, 0xb9, 0x63, 0x93, 0x26, 0x55, 0x77, 0x99, 0x73, 0xcf, 0x39,
+	0x73, 0xe6, 0x1e, 0x87, 0x8c, 0x2a, 0x59, 0xea, 0x32, 0x4c, 0x80, 0xa5, 0xe5, 0x3a, 0xcc, 0x92,
+	0xb0, 0x2a, 0xbf, 0xa6, 0x9c, 0x89, 0x75, 0x80, 0x03, 0x3a, 0xac, 0xe4, 0xbd, 0x2a, 0x02, 0x3b,
+	0x0f, 0xb2, 0xe4, 0xec, 0x1c, 0x34, 0x0f, 0xbf, 0xcc, 0x58, 0x5e, 0x71, 0x36, 0xab, 0x75, 0x71,
+	0x92, 0x97, 0xe9, 0x9d, 0x55, 0xf8, 0xbf, 0x1d, 0xd2, 0xbf, 0x5e, 0x2e, 0x66, 0x6f, 0x8d, 0xcb,
+	0x15, 0xd3, 0x8c, 0xbe, 0x27, 0xff, 0xa7, 0x1b, 0x29, 0x61, 0xad, 0x63, 0xd0, 0x7c, 0x16, 0x67,
+	0x4c, 0x33, 0xcf, 0x19, 0x3b, 0xd3, 0xee, 0xfc, 0x3c, 0x38, 0xf0, 0x0f, 0x6e, 0x98, 0x06, 0xa5,
+	0x8d, 0x81, 0xd1, 0x46, 0xc3, 0x5a, 0x79, 0xad, 0x39, 0x02, 0x74, 0x41, 0x86, 0x98, 0x4f, 0x69,
+	0x26, 0xb5, 0xb5, 0x3a, 0x7a, 0xc2, 0x0a, 0x13, 0xdc, 0x1a, 0x1e, 0x5a, 0x0d, 0x76, 0x3a, 0x74,
+	0x7a, 0x43, 0x5c, 0x2d, 0x05, 0x78, 0x2d, 0x94, 0x4f, 0x1e, 0xc9, 0x6f, 0x2b, 0x26, 0x15, 0x7c,
+	0x00, 0x79, 0x97, 0xc3, 0x52, 0x0a, 0x88, 0x90, 0xee, 0xff, 0x70, 0xc8, 0x60, 0x3f, 0x24, 0x9d,
+	0x90, 0x1e, 0x6e, 0x20, 0xe6, 0x20, 0x56, 0x5c, 0x63, 0x20, 0x37, 0xea, 0x22, 0xb6, 0x40, 0x88,
+	0x3e, 0x27, 0xc4, 0x52, 0xb4, 0x28, 0xec, 0x95, 0x6e, 0xd4, 0x41, 0x64, 0x29, 0x0a, 0xd8, 0x8d,
+	0x39, 0x53, 0xdc, 0x73, 0xc7, 0xad, 0x69, 0xaf, 0x1e, 0x2f, 0x98, 0xe2, 0xf4, 0x15, 0x39, 0xcd,
+	0x99, 0xd2, 0xb1, 0x84, 0xcf, 0x1b, 0x50, 0x1a, 0x32, 0xbb, 0x71, 0xaf, 0x8d, 0x3e, 0xd4, 0xcc,
+	0xa2, 0x66, 0x74, 0x69, 0x26, 0xfe, 0xf7, 0x23, 0x32, 0xd8, 0x7f, 0x3f, 0xf5, 0x49, 0x6f, 0xb7,
+	0x01, 0xc8, 0xb0, 0x81, 0x93, 0x68, 0x0f, 0x33, 0x2f, 0x59, 0xc1, 0x1a, 0x94, 0x50, 0x36, 0x68,
+	0xfd, 0x92, 0x1a, 0xc3, 0xa8, 0x2f, 0x48, 0xbf, 0xa1, 0xd8, 0x10, 0xf6, 0x31, 0x8d, 0x0e, 0xaf,
+	0xa7, 0x17, 0xa4, 0xb3, 0xab, 0xda, 0xad, 0xfb, 0x01, 0xcd, 0x41, 0xc2, 0xa6, 0x30, 0x3f, 0x82,
+	0xe6, 0x13, 0x0a, 0x9a, 0x66, 0xa3, 0x13, 0x68, 0x3a, 0xfe, 0x48, 0x9e, 0x3d, 0xec, 0x18, 0xaa,
+	0x52, 0x09, 0xad, 0xbc, 0xf6, 0xb8, 0x35, 0xed, 0xce, 0x47, 0x4f, 0xf8, 0x5c, 0x59, 0x5a, 0x44,
+	0x1f, 0xd4, 0x5c, 0x2b, 0xfd, 0x6f, 0x0e, 0xf9, 0xef, 0xb0, 0x4e, 0x7a, 0x4a, 0xda, 0x19, 0x54,
+	0x9a, 0xe3, 0x22, 0xdc, 0xc8, 0x1e, 0xe8, 0x9c, 0x1c, 0xe7, 0xec, 0x1e, 0xa4, 0xf2, 0x8e, 0xf0,
+	0xba, 0xb3, 0x47, 0xdf, 0x85, 0x11, 0xdf, 0x18, 0x4a, 0x54, 0x33, 0xe9, 0x4b, 0x32, 0x28, 0xa5,
+	0x58, 0x89, 0x35, 0xcb, 0x63, 0xa1, 0xa1, 0x50, 0x5e, 0x0b, 0x1b, 0xec, 0x37, 0xe8, 0x3b, 0x03,
+	0xfa, 0x13, 0xd2, 0xf9, 0xa7, 0x35, 0xb7, 0xa3, 0xda, 0x73, 0x90, 0x6a, 0x0f, 0x97, 0x17, 0x3f,
+	0xb7, 0x23, 0xe7, 0xd7, 0x76, 0xe4, 0xfc, 0xd9, 0x8e, 0x9c, 0x4f, 0xc1, 0x4a, 0x68, 0xbe, 0x49,
+	0x82, 0xb4, 0x2c, 0x42, 0x4c, 0xc1, 0xb4, 0x48, 0x73, 0x96, 0x28, 0x7b, 0x0a, 0x0f, 0xfe, 0xbb,
+	0xc9, 0x31, 0x02, 0xaf, 0xff, 0x06, 0x00, 0x00, 0xff, 0xff, 0x78, 0x0a, 0xa9, 0x34, 0xd5, 0x03,
+	0x00, 0x00,
 }
 
 func (m *ETH1ChainData) Marshal() (dAtA []byte, err error) {
@@ -354,38 +408,35 @@ func (m *ETH1ChainData) MarshalTo(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if m.Trie != nil {
+	if m.CurrentEth1Data != nil {
 		dAtA[i] = 0xa
 		i++
-		i = encodeVarintPowchain(dAtA, i, uint64(m.Trie.Size()))
-		n1, err := m.Trie.MarshalTo(dAtA[i:])
+		i = encodeVarintPowchain(dAtA, i, uint64(m.CurrentEth1Data.Size()))
+		n1, err := m.CurrentEth1Data.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
 		i += n1
 	}
-	if m.BlockHeight != 0 {
-		dAtA[i] = 0x10
+	if m.ChainstartData != nil {
+		dAtA[i] = 0x12
 		i++
-		i = encodeVarintPowchain(dAtA, i, uint64(m.BlockHeight))
-	}
-	if m.BlockTime != 0 {
-		dAtA[i] = 0x18
-		i++
-		i = encodeVarintPowchain(dAtA, i, uint64(m.BlockTime))
-	}
-	if len(m.BlockHash) > 0 {
-		for _, b := range m.BlockHash {
-			dAtA[i] = 0x22
-			i++
-			i = encodeVarintPowchain(dAtA, i, uint64(len(b)))
-			i += copy(dAtA[i:], b)
+		i = encodeVarintPowchain(dAtA, i, uint64(m.ChainstartData.Size()))
+		n2, err := m.ChainstartData.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
+		i += n2
 	}
-	if m.LastRequestedBlock != 0 {
-		dAtA[i] = 0x28
+	if m.Trie != nil {
+		dAtA[i] = 0x1a
 		i++
-		i = encodeVarintPowchain(dAtA, i, uint64(m.LastRequestedBlock))
+		i = encodeVarintPowchain(dAtA, i, uint64(m.Trie.Size()))
+		n3, err := m.Trie.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n3
 	}
 	if m.XXX_unrecognized != nil {
 		i += copy(dAtA[i:], m.XXX_unrecognized)
@@ -431,19 +482,60 @@ func (m *LatestETH1Data) MarshalTo(dAtA []byte) (int, error) {
 		i++
 		i = encodeVarintPowchain(dAtA, i, uint64(m.LastRequestedBlock))
 	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
+}
+
+func (m *ChainStartData) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ChainStartData) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.Chainstarted {
+		dAtA[i] = 0x8
+		i++
+		if m.Chainstarted {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i++
+	}
+	if m.GenesisTime != 0 {
+		dAtA[i] = 0x10
+		i++
+		i = encodeVarintPowchain(dAtA, i, uint64(m.GenesisTime))
+	}
+	if m.GenesisBlock != 0 {
+		dAtA[i] = 0x18
+		i++
+		i = encodeVarintPowchain(dAtA, i, uint64(m.GenesisBlock))
+	}
 	if m.Eth1Data != nil {
-		dAtA[i] = 0x32
+		dAtA[i] = 0x22
 		i++
 		i = encodeVarintPowchain(dAtA, i, uint64(m.Eth1Data.Size()))
-		n2, err := m.Eth1Data.MarshalTo(dAtA[i:])
+		n4, err := m.Eth1Data.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n2
+		i += n4
 	}
 	if len(m.ChainstartDeposits) > 0 {
 		for _, msg := range m.ChainstartDeposits {
-			dAtA[i] = 0x3a
+			dAtA[i] = 0x2a
 			i++
 			i = encodeVarintPowchain(dAtA, i, uint64(msg.Size()))
 			n, err := msg.MarshalTo(dAtA[i:])
@@ -549,24 +641,17 @@ func (m *ETH1ChainData) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.CurrentEth1Data != nil {
+		l = m.CurrentEth1Data.Size()
+		n += 1 + l + sovPowchain(uint64(l))
+	}
+	if m.ChainstartData != nil {
+		l = m.ChainstartData.Size()
+		n += 1 + l + sovPowchain(uint64(l))
+	}
 	if m.Trie != nil {
 		l = m.Trie.Size()
 		n += 1 + l + sovPowchain(uint64(l))
-	}
-	if m.BlockHeight != 0 {
-		n += 1 + sovPowchain(uint64(m.BlockHeight))
-	}
-	if m.BlockTime != 0 {
-		n += 1 + sovPowchain(uint64(m.BlockTime))
-	}
-	if len(m.BlockHash) > 0 {
-		for _, b := range m.BlockHash {
-			l = len(b)
-			n += 1 + l + sovPowchain(uint64(l))
-		}
-	}
-	if m.LastRequestedBlock != 0 {
-		n += 1 + sovPowchain(uint64(m.LastRequestedBlock))
 	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
@@ -594,6 +679,27 @@ func (m *LatestETH1Data) Size() (n int) {
 	}
 	if m.LastRequestedBlock != 0 {
 		n += 1 + sovPowchain(uint64(m.LastRequestedBlock))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *ChainStartData) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Chainstarted {
+		n += 2
+	}
+	if m.GenesisTime != 0 {
+		n += 1 + sovPowchain(uint64(m.GenesisTime))
+	}
+	if m.GenesisBlock != 0 {
+		n += 1 + sovPowchain(uint64(m.GenesisBlock))
 	}
 	if m.Eth1Data != nil {
 		l = m.Eth1Data.Size()
@@ -700,6 +806,78 @@ func (m *ETH1ChainData) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CurrentEth1Data", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPowchain
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthPowchain
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthPowchain
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.CurrentEth1Data == nil {
+				m.CurrentEth1Data = &LatestETH1Data{}
+			}
+			if err := m.CurrentEth1Data.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ChainstartData", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPowchain
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthPowchain
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthPowchain
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.ChainstartData == nil {
+				m.ChainstartData = &ChainStartData{}
+			}
+			if err := m.ChainstartData.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Trie", wireType)
 			}
 			var msglen int
@@ -734,95 +912,6 @@ func (m *ETH1ChainData) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 2:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field BlockHeight", wireType)
-			}
-			m.BlockHeight = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPowchain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.BlockHeight |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 3:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field BlockTime", wireType)
-			}
-			m.BlockTime = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPowchain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.BlockTime |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field BlockHash", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPowchain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthPowchain
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthPowchain
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.BlockHash = append(m.BlockHash, make([]byte, postIndex-iNdEx))
-			copy(m.BlockHash[len(m.BlockHash)-1], dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 5:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field LastRequestedBlock", wireType)
-			}
-			m.LastRequestedBlock = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPowchain
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.LastRequestedBlock |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
 		default:
 			iNdEx = preIndex
 			skippy, err := skipPowchain(dAtA[iNdEx:])
@@ -966,7 +1055,119 @@ func (m *LatestETH1Data) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		case 6:
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPowchain(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPowchain
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPowchain
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ChainStartData) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPowchain
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ChainStartData: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ChainStartData: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Chainstarted", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPowchain
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Chainstarted = bool(v != 0)
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field GenesisTime", wireType)
+			}
+			m.GenesisTime = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPowchain
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.GenesisTime |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field GenesisBlock", wireType)
+			}
+			m.GenesisBlock = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPowchain
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.GenesisBlock |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Eth1Data", wireType)
 			}
@@ -1002,7 +1203,7 @@ func (m *LatestETH1Data) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 7:
+		case 5:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ChainstartDeposits", wireType)
 			}
