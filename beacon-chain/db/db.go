@@ -1,5 +1,3 @@
-// -build kafka_enabled
-
 package db
 
 import "github.com/prysmaticlabs/prysm/beacon-chain/db/kv"

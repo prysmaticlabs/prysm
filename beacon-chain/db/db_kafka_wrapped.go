@@ -1,5 +1,3 @@
-// +build kafka_enabled
-
 package db
 
 import (
