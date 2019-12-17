@@ -56,9 +56,10 @@ func (kv *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 			return err
 		}
 	}
-	previousFinalizedCheckpointStartSlot := helpers.StartSlot(prevousFinalizedCheckpoint.Epoch)
-	recentFinalizedCheckpointEndSlot := helpers.StartSlot(checkpoint.Epoch + 1)
-	blockRoots, err := kv.BlockRoots(ctx, filters.NewFilter().SetStartSlot(previousFinalizedCheckpointStartSlot).SetEndSlot(recentFinalizedCheckpointEndSlot))
+	blockRoots, err := kv.BlockRoots(ctx, filters.NewFilter().
+		SetStartEpoch(prevousFinalizedCheckpoint.Epoch).
+		SetEndEpoch(checkpoint.Epoch+1),
+	)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return err
