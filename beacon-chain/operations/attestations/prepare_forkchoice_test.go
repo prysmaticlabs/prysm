@@ -84,7 +84,8 @@ func TestBatchAttestations_Multiple(t *testing.T) {
 
 	if !reflect.DeepEqual(wanted, received) {
 		t.Error("Did not aggregation and save for batch")
-	}}
+	}
+}
 
 func TestBatchAttestations_Single(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
@@ -128,19 +129,20 @@ func TestBatchAttestations_Single(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wanted, err := helpers.AggregateAttestations(append(unaggregatedAtts,aggregatedAtts...))
+	wanted, err := helpers.AggregateAttestations(append(unaggregatedAtts, aggregatedAtts...))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	wanted, err = helpers.AggregateAttestations(append(wanted,blockAtts...))
+	wanted, err = helpers.AggregateAttestations(append(wanted, blockAtts...))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if !reflect.DeepEqual(wanted, s.pool.ForkchoiceAttestations()) {
 		t.Error("Did not aggregation and save for batch")
-	}}
+	}
+}
 
 func TestAggregateAndSaveForkChoiceAtts_Single(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
