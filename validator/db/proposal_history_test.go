@@ -2,7 +2,7 @@ package db
 
 import (
 	"math/big"
-	// "reflect"
+	"reflect"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -113,72 +113,123 @@ func TestSetProposedForEpoch_54KEpochsPrunes(t *testing.T) {
 	}
 }
 
-// func TestNilDBHistoryBlkHdr(t *testing.T) {
-// 	db := SetupDB(t)
-// 	defer TeardownDB(t, db)
+func TestProposalHistory_NilDB(t *testing.T) {
+	db := SetupDB(t)
+	defer TeardownDB(t, db)
 
-// 	epoch := uint64(1)
-// 	validatorID := uint64(1)
+	epoch := uint64(1)
+	balPubkey := []byte{1, 2, 3}
 
-// 	hasBlockHeader := db.HasBlockHeader(epoch, validatorID)
-// 	if hasBlockHeader {
-// 		t.Fatal("HasBlockHeader should return false")
-// 	}
+	proposalHistory, err := db.ProposalHistory(balPubkey)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-// 	bPrime, err := db.BlockHeader(epoch, validatorID)
-// 	if err != nil {
-// 		t.Fatalf("failed to get block: %v", err)
-// 	}
-// 	if bPrime != nil {
-// 		t.Fatalf("get should return nil for a non existent key")
-// 	}
-// }
+	if proposalHistory.ProposalHistory != nil {
+		t.Fatal("expected proposal history to be nil")
+	}
+}
 
-// func TestSaveHistoryBlkHdr(t *testing.T) {
-// 	db := SetupDB(t)
-// 	defer TeardownDB(t, db)
-// 	tests := []struct {
-// 		epoch uint64
-// 		vID   uint64
-// 		bh    *ethpb.BeaconBlockHeader
-// 	}{
-// 		{
-// 			epoch: uint64(0),
-// 			vID:   uint64(0),
-// 			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in")},
-// 		},
-// 		{
-// 			epoch: uint64(0),
-// 			vID:   uint64(1),
-// 			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 2nd")},
-// 		},
-// 		{
-// 			epoch: uint64(1),
-// 			vID:   uint64(0),
-// 			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 3rd")},
-// 		},
-// 	}
+func TestSaveProposalHistory_OK(t *testing.T) {
+	db := SetupDB(t)
+	defer TeardownDB(t, db)
+	tests := []struct {
+		pubkey  []byte
+		epoch   uint64
+		history *ValidatorProposalHistory
+	}{
+		{
+			pubkey: []byte{0},
+			epoch:  uint64(0),
+			history: &ValidatorProposalHistory{
+				ProposalHistory: big.NewInt(1),
+			},
+		},
+		{
+			pubkey: []byte{1},
+			epoch:  uint64(0),
+			history: &ValidatorProposalHistory{
+				ProposalHistory: big.NewInt(1),
+			},
+		},
+		{
+			pubkey: []byte{0},
+			epoch:  uint64(1),
+			history: &ValidatorProposalHistory{
+				ProposalHistory: big.NewInt(2),
+			},
+		},
+	}
 
-// 	for _, tt := range tests {
-// 		err := db.SaveBlockHeader(tt.epoch, tt.vID, tt.bh)
-// 		if err != nil {
-// 			t.Fatalf("save block failed: %v", err)
-// 		}
+	for _, tt := range tests {
+		if err := db.SaveProposalHistory(tt.pubkey, tt.history); err != nil {
+			t.Fatalf("save block failed: %v", err)
+		}
+		history, err := db.ProposalHistory(tt.pubkey)
+		if err != nil {
+			t.Fatalf("failed to get block: %v", err)
+		}
 
-// 		bha, err := db.BlockHeader(tt.epoch, tt.vID)
-// 		if err != nil {
-// 			t.Fatalf("failed to get block: %v", err)
-// 		}
+		if history == nil || !reflect.DeepEqual(history, tt.history) {
+			t.Fatalf("Expected DB to keep object the same, received: %v", history)
+		}
+		if !history.HasProposedForEpoch(tt.epoch) {
+			t.Fatalf("Expected epoch %d to be marked as proposed for", tt.epoch)
+		}
+		if history.HasProposedForEpoch(tt.epoch + 1) {
+			t.Fatalf("Expected epoch %d to not be marked as proposed", tt.epoch+1)
+		}
+	}
+}
 
-// 		if bha == nil || !reflect.DeepEqual(bha[0], tt.bh) {
-// 			t.Fatalf("get should return bh: %v", bha)
-// 		}
-// 	}
-//}
+func TestDeleteProposalHistory_OK(t *testing.T) {
+	db := SetupDB(t)
+	defer TeardownDB(t, db)
+	tests := []struct {
+		pubkey  []byte
+		epoch   uint64
+		history *ValidatorProposalHistory
+	}{
+		{
+			pubkey: []byte{0},
+			epoch:  uint64(0),
+			history: &ValidatorProposalHistory{
+				ProposalHistory: big.NewInt(1),
+			},
+		},
+		{
+			pubkey: []byte{1},
+			epoch:  uint64(0),
+			history: &ValidatorProposalHistory{
+				ProposalHistory: big.NewInt(1),
+			},
+		},
+		{
+			pubkey: []byte{0},
+			epoch:  uint64(1),
+			history: &ValidatorProposalHistory{
+				ProposalHistory: big.NewInt(2),
+			},
+		},
+	}
 
-// func TestDeleteHistoryBlkHdr(t *testing.T) {
+	for _, tt := range tests {
+		if err := db.SaveProposalHistory(tt.pubkey, tt.history); err != nil {
+			t.Fatalf("save block failed: %v", err)
+		}
+	}
 
-// }
-
-// func TestHasHistoryBlkHdr(t *testing.T) {
-// }
+	for _, tt := range tests {
+		// Making sure everything is saved.
+		history, err := db.ProposalHistory(tt.pubkey)
+		if err != nil {
+			t.Fatalf("failed to get block: %v", err)
+		}
+		if history == nil || !reflect.DeepEqual(history, tt.history) {
+			t.Fatalf("Expected DB to keep object the same, received: %v", history)
+		}
+		if err := db.DeleteProposalHistory(tt.pubkey); err != nil {
+			t.Fatal(err)
+		}
+	}
+}

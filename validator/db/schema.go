@@ -1,8 +1,6 @@
 package db
 
-import (
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-)
+import ()
 
 var (
 	// Protector
@@ -12,11 +10,3 @@ var (
 	// see https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
 	validatorsMinMaxSpanBucket = []byte("validators-min-max-span-bucket")
 )
-
-func encodeEpochValidatorID(epoch uint64, validatorIdx uint64) []byte {
-	return append(bytesutil.Bytes8(epoch), bytesutil.Bytes8(validatorIdx)...)
-}
-
-func encodeEpochSig(targetEpoch uint64, sig []byte) []byte {
-	return append(bytesutil.Bytes8(targetEpoch), sig...)
-}
