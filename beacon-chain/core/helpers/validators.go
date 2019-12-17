@@ -166,10 +166,13 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 		return 0, errors.Wrap(err, "could not get active indices")
 	}
 
-	return ComputeProposerIndex(state, indices, seedWithSlotHash)
+	return ComputeProposerIndex(state.Validators, indices, seedWithSlotHash)
 }
 
 // ComputeProposerIndex returns the index sampled by effective balance, which is used to calculate proposer.
+//
+// Note: This method signature deviates slightly from the spec recommended definition. The full
+// state object is not required to compute the proposer index.
 //
 // Spec pseudocode definition:
 //  def compute_proposer_index(state: BeaconState, indices: Sequence[ValidatorIndex], seed: Hash) -> ValidatorIndex:
@@ -186,21 +189,29 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 //        if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * random_byte:
 //            return ValidatorIndex(candidate_index)
 //        i += 1
-func ComputeProposerIndex(state *pb.BeaconState, indices []uint64, seed [32]byte) (uint64, error) {
-	length := uint64(len(indices))
+func ComputeProposerIndex(validators []*ethpb.Validator, activeIndices []uint64, seed [32]byte) (uint64, error) {
+	length := uint64(len(activeIndices))
 	if length == 0 {
-		return 0, errors.New("empty indices list")
+		return 0, errors.New("empty active indices list")
 	}
 	maxRandomByte := uint64(1<<8 - 1)
 
 	for i := uint64(0); ; i++ {
-		candidateIndex, err := ComputeShuffledIndex(i%length, length, seed, true)
+		candidateIndex, err := ComputeShuffledIndex(i%length, length, seed, true /* shuffle */)
 		if err != nil {
 			return 0, err
 		}
+		candidateIndex = activeIndices[candidateIndex]
+		if int(candidateIndex) >= len(validators) {
+			return 0, errors.New("active index out of range")
+		}
 		b := append(seed[:], bytesutil.Bytes8(i/32)...)
 		randomByte := hashutil.Hash(b)[i%32]
-		effectiveBal := state.Validators[candidateIndex].EffectiveBalance
+		v := validators[candidateIndex]
+		var effectiveBal uint64
+		if v != nil {
+			effectiveBal = v.EffectiveBalance
+		}
 		if effectiveBal*maxRandomByte >= params.BeaconConfig().MaxEffectiveBalance*uint64(randomByte) {
 			return candidateIndex, nil
 		}

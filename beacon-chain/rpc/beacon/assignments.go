@@ -228,27 +228,11 @@ func archivedValidatorCommittee(
 	return nil, 0, 0, 0, fmt.Errorf("could not find committee for validator index %d", validatorIndex)
 }
 
+// helpers.ComputeProposerIndex wrapper.
 func archivedProposerIndex(activeIndices []uint64, activeBalances []uint64, seed [32]byte) (uint64, error) {
-	length := uint64(len(activeIndices))
-	if length == 0 {
-		return 0, errors.New("empty indices list")
+	validators := make([]*ethpb.Validator, len(activeBalances))
+	for i, bal := range activeBalances {
+		validators[i] = &ethpb.Validator{EffectiveBalance: bal}
 	}
-	maxRandomByte := uint64(1<<8 - 1)
-	for i := uint64(0); ; i++ {
-		candidateIndex, err := helpers.ComputeShuffledIndex(i%length, length, seed, true)
-		if err != nil {
-			return 0, err
-		}
-		b := append(seed[:], bytesutil.Bytes8(i/32)...)
-		randomByte := hashutil.Hash(b)[i%32]
-		effectiveBalance := activeBalances[candidateIndex]
-		if effectiveBalance >= params.BeaconConfig().MaxEffectiveBalance {
-			// if the actual balance is greater than or equal to the max effective balance,
-			// we just determine the proposer index using config.MaxEffectiveBalance.
-			effectiveBalance = params.BeaconConfig().MaxEffectiveBalance
-		}
-		if effectiveBalance*maxRandomByte >= params.BeaconConfig().MaxEffectiveBalance*uint64(randomByte) {
-			return candidateIndex, nil
-		}
-	}
+	return helpers.ComputeProposerIndex(validators, activeIndices, seed)
 }
