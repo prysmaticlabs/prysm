@@ -306,7 +306,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	slashedExitLength := params.BeaconConfig().EpochsPerSlashingsVector
 	slashedEpoch := int(nextEpoch % slashedExitLength)
 	if slashedEpoch >= len(state.Slashings) {
-		return nil, fmt.Errorf("slashing epoch exceeds slashing object length in state %d >= %d", slashedEpoch, len(state.Slashings))
+		return nil, fmt.Errorf("slashing epoch exceeds slashing length in state %d >= %d", slashedEpoch, len(state.Slashings))
 	}
 	state.Slashings[slashedEpoch] = 0
 
