@@ -62,7 +62,6 @@ type Config struct {
 	P2p               p2p.Broadcaster
 	MaxRoutines       int64
 	StateNotifier     statefeed.Notifier
-	SlasherClient     ethpb.SlasherClient
 }
 
 // NewService instantiates a new block service instance that will
