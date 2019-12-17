@@ -39,8 +39,8 @@ func (m *POWChain) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 }
 
 // DepositTrie --
-func (m *POWChain) DepositTrie() *trieutil.MerkleTrie {
-	return &trieutil.MerkleTrie{}
+func (m *POWChain) DepositTrie() *trieutil.SparseMerkleTrie {
+	return &trieutil.SparseMerkleTrie{}
 }
 
 // BlockExists --

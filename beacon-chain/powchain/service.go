@@ -125,7 +125,7 @@ type Service struct {
 	blockCache              *blockCache // cache to store block hash/block height.
 	depositContractCaller   *contracts.DepositContractCaller
 	depositRoot             []byte
-	depositTrie             *trieutil.MerkleTrie
+	depositTrie             *trieutil.SparseMerkleTrie
 	chainStartDeposits      []*ethpb.Deposit
 	chainStarted            bool
 	chainStartBlockNumber   *big.Int
@@ -255,7 +255,7 @@ func (s *Service) DepositRoot() [32]byte {
 
 // DepositTrie returns the sparse Merkle trie used for storing
 // deposits from the ETH1.0 deposit contract.
-func (s *Service) DepositTrie() *trieutil.MerkleTrie {
+func (s *Service) DepositTrie() *trieutil.SparseMerkleTrie {
 	return s.depositTrie
 }
 
