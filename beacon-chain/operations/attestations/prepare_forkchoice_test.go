@@ -3,6 +3,7 @@ package attestations
 import (
 	"context"
 	"reflect"
+	"sort"
 	"testing"
 	"time"
 
@@ -12,7 +13,136 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
-func Test_AggregateAndSaveForkChoiceAtts_Single(t *testing.T) {
+func TestBatchAttestations_Multiple(t *testing.T) {
+	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sk := bls.RandKey()
+	sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
+
+	unaggregatedAtts := []*ethpb.Attestation{
+		{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b100100}, Signature: sig.Marshal()},
+		{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b101000}, Signature: sig.Marshal()},
+		{Data: &ethpb.AttestationData{Slot: 0}, AggregationBits: bitfield.Bitlist{0b100010}, Signature: sig.Marshal()},
+	}
+	aggregatedAtts := []*ethpb.Attestation{
+		{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b111000}, Signature: sig.Marshal()},
+		{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b100011}, Signature: sig.Marshal()},
+		{Data: &ethpb.AttestationData{Slot: 0}, AggregationBits: bitfield.Bitlist{0b110010}, Signature: sig.Marshal()},
+	}
+	blockAtts := []*ethpb.Attestation{
+		{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b100001}, Signature: sig.Marshal()},
+		{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b100001}, Signature: sig.Marshal()},
+		{Data: &ethpb.AttestationData{Slot: 0}, AggregationBits: bitfield.Bitlist{0b100101}, Signature: sig.Marshal()},
+		{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b111000}, Signature: sig.Marshal()}, // Duplicated
+		{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b100011}, Signature: sig.Marshal()}, // Duplicated
+	}
+	for _, att := range unaggregatedAtts {
+		if err := s.pool.SaveUnaggregatedAttestation(att); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, att := range aggregatedAtts {
+		if err := s.pool.SaveAggregatedAttestation(att); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, att := range blockAtts {
+		if err := s.pool.SaveBlockAttestation(att); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := s.batchForkChoiceAtts(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	wanted, err := helpers.AggregateAttestations([]*ethpb.Attestation{unaggregatedAtts[0], aggregatedAtts[0], blockAtts[0]})
+	if err != nil {
+		t.Fatal(err)
+	}
+	aggregated, err := helpers.AggregateAttestations([]*ethpb.Attestation{unaggregatedAtts[1], aggregatedAtts[1], blockAtts[1]})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wanted = append(wanted, aggregated...)
+	aggregated, err = helpers.AggregateAttestations([]*ethpb.Attestation{unaggregatedAtts[2], aggregatedAtts[2], blockAtts[2]})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wanted = append(wanted, aggregated...)
+	received := s.pool.ForkchoiceAttestations()
+
+	sort.Slice(received, func(i, j int) bool {
+		return received[i].Data.Slot < received[j].Data.Slot
+	})
+	sort.Slice(wanted, func(i, j int) bool {
+		return wanted[i].Data.Slot < wanted[j].Data.Slot
+	})
+
+	if !reflect.DeepEqual(wanted, received) {
+		t.Error("Did not aggregation and save for batch")
+	}}
+
+func TestBatchAttestations_Single(t *testing.T) {
+	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sk := bls.RandKey()
+	sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
+
+	unaggregatedAtts := []*ethpb.Attestation{
+		{AggregationBits: bitfield.Bitlist{0b101000}, Signature: sig.Marshal()},
+		{AggregationBits: bitfield.Bitlist{0b100100}, Signature: sig.Marshal()},
+	}
+	aggregatedAtts := []*ethpb.Attestation{
+		{AggregationBits: bitfield.Bitlist{0b101100}, Signature: sig.Marshal()},
+		{AggregationBits: bitfield.Bitlist{0b110010}, Signature: sig.Marshal()},
+	}
+	blockAtts := []*ethpb.Attestation{
+		{AggregationBits: bitfield.Bitlist{0b110010}, Signature: sig.Marshal()},
+		{AggregationBits: bitfield.Bitlist{0b100010}, Signature: sig.Marshal()},
+		{AggregationBits: bitfield.Bitlist{0b110010}, Signature: sig.Marshal()}, // Duplicated
+	}
+	for _, att := range unaggregatedAtts {
+		if err := s.pool.SaveUnaggregatedAttestation(att); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, att := range aggregatedAtts {
+		if err := s.pool.SaveAggregatedAttestation(att); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, att := range blockAtts {
+		if err := s.pool.SaveBlockAttestation(att); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := s.batchForkChoiceAtts(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	wanted, err := helpers.AggregateAttestations(append(unaggregatedAtts,aggregatedAtts...))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wanted, err = helpers.AggregateAttestations(append(wanted,blockAtts...))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(wanted, s.pool.ForkchoiceAttestations()) {
+		t.Error("Did not aggregation and save for batch")
+	}}
+
+func TestAggregateAndSaveForkChoiceAtts_Single(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
 	if err != nil {
 		t.Fatal(err)
@@ -38,7 +168,7 @@ func Test_AggregateAndSaveForkChoiceAtts_Single(t *testing.T) {
 	}
 }
 
-func Test_AggregateAndSaveForkChoiceAtts_Multiple(t *testing.T) {
+func TestAggregateAndSaveForkChoiceAtts_Multiple(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
 	if err != nil {
 		t.Fatal(err)
@@ -85,7 +215,7 @@ func Test_AggregateAndSaveForkChoiceAtts_Multiple(t *testing.T) {
 	}
 }
 
-func Test_SeenAttestations_PresentInCache(t *testing.T) {
+func TestSeenAttestations_PresentInCache(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
 	if err != nil {
 		t.Fatal(err)
