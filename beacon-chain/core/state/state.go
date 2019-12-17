@@ -187,6 +187,76 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 	return state, nil
 }
 
+func EmptyGenesisState() (*pb.BeaconState, error) {
+
+	state := &pb.BeaconState{
+		// Misc fields.
+		Slot: 0,
+		Fork: &pb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			Epoch:           0,
+		},
+		// Validator registry fields.
+		Validators: []*ethpb.Validator{},
+		Balances:   []uint64{},
+
+		JustificationBits:         []byte{0},
+		HistoricalRoots:           [][]byte{},
+		CurrentEpochAttestations:  []*pb.PendingAttestation{},
+		PreviousEpochAttestations: []*pb.PendingAttestation{},
+
+		// Eth1 data.
+		Eth1Data:         eth1Data,
+		Eth1DataVotes:    []*ethpb.Eth1Data{},
+		Eth1DepositIndex: 0,
+	}
+
+	// Process initial deposits.
+	validatorMap := make(map[[48]byte]int)
+	leaves := [][]byte{}
+	for _, deposit := range deposits {
+		hash, err := ssz.HashTreeRoot(deposit.Data)
+		if err != nil {
+			return nil, err
+		}
+		leaves = append(leaves, hash[:])
+	}
+	var trie *trieutil.SparseMerkleTrie
+	if len(leaves) > 0 {
+		trie, err = trieutil.GenerateTrieFromItems(leaves, int(params.BeaconConfig().DepositContractTreeDepth))
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		trie, err = trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	depositRoot := trie.Root()
+	state.Eth1Data.DepositRoot = depositRoot[:]
+	for i, deposit := range deposits {
+		state, err = b.ProcessDeposit(state, deposit, validatorMap)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not process validator deposit %d", i)
+		}
+	}
+	// Process genesis activations
+	for i, validator := range state.Validators {
+		balance := state.Balances[i]
+		validator.EffectiveBalance = mathutil.Min(balance-balance%params.BeaconConfig().EffectiveBalanceIncrement, params.BeaconConfig().MaxEffectiveBalance)
+		if state.Validators[i].EffectiveBalance ==
+			params.BeaconConfig().MaxEffectiveBalance {
+			state.Validators[i].ActivationEligibilityEpoch = 0
+			state.Validators[i].ActivationEpoch = 0
+		}
+	}
+
+	return state, nil
+}
+
 // IsValidGenesisState gets called whenever there's a deposit event,
 // it checks whether there's enough effective balance to trigger and
 // if the minimum genesis time arrived already.
