@@ -86,7 +86,8 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 			tx.Bucket(blockSlotIndicesBucket),
 			filtersMap[filters.StartSlot],
 			filtersMap[filters.EndSlot],
-			filtersMap[filters.Epoch],
+			filtersMap[filters.StartEpoch],
+			filtersMap[filters.EndEpoch],
 		)
 
 		// Once we have a list of block roots that correspond to each
@@ -147,7 +148,8 @@ func (k *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]b
 			tx.Bucket(blockSlotIndicesBucket),
 			filtersMap[filters.StartSlot],
 			filtersMap[filters.EndSlot],
-			filtersMap[filters.Epoch],
+			filtersMap[filters.StartEpoch],
+			filtersMap[filters.EndEpoch],
 		)
 
 		// Once we have a list of block roots that correspond to each
@@ -357,7 +359,8 @@ func fetchBlockRootsBySlotRange(
 	bkt *bolt.Bucket,
 	startSlotEncoded interface{},
 	endSlotEncoded interface{},
-	epochEncoded interface{},
+	startEpochEncoded interface{},
+	endEpochEncoded interface{},
 ) [][]byte {
 	var startSlot, endSlot uint64
 	var ok bool
@@ -367,9 +370,11 @@ func fetchBlockRootsBySlotRange(
 	if endSlot, ok = endSlotEncoded.(uint64); !ok {
 		endSlot = 0
 	}
-	if epoch, ok := epochEncoded.(uint64); ok {
-		startSlot = helpers.StartSlot(epoch)
-		endSlot = helpers.StartSlot(epoch) + params.BeaconConfig().SlotsPerEpoch - 1
+	startEpoch, startEpochOk := startEpochEncoded.(uint64)
+	endEpoch, endEpochOk := endEpochEncoded.(uint64)
+	if startEpochOk && endEpochOk {
+		startSlot = helpers.StartSlot(startEpoch)
+		endSlot = helpers.StartSlot(endEpoch) + params.BeaconConfig().SlotsPerEpoch - 1
 	}
 	min := []byte(fmt.Sprintf("%07d", startSlot))
 	max := []byte(fmt.Sprintf("%07d", endSlot))
@@ -434,7 +439,8 @@ func createBlockIndicesFromFilters(f *filters.QueryFilter) (map[string][]byte, e
 			indicesByBucket[string(blockParentRootIndicesBucket)] = parentRoot
 		case filters.StartSlot:
 		case filters.EndSlot:
-		case filters.Epoch:
+		case filters.StartEpoch:
+		case filters.EndEpoch:
 		default:
 			return nil, fmt.Errorf("filter criterion %v not supported for blocks", k)
 		}

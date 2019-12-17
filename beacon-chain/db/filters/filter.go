@@ -39,8 +39,6 @@ const (
 	TargetEpoch FilterType = 8
 	// TargetRoot defines a filter for the target root attribute of objects.
 	TargetRoot FilterType = 9
-	// Epoch defines filtering for objects in total within a given epoch.
-	Epoch FilterType = 10
 )
 
 // QueryFilter defines a generic interface for type-asserting
@@ -121,11 +119,5 @@ func (q *QueryFilter) SetStartEpoch(val uint64) *QueryFilter {
 // SetEndEpoch enables filtering by the EndEpoch attribute of an object (inclusive).
 func (q *QueryFilter) SetEndEpoch(val uint64) *QueryFilter {
 	q.queries[EndEpoch] = val
-	return q
-}
-
-// SetEpoch enables filtering by the Slot attribute of an object converted into an epoch.
-func (q *QueryFilter) SetEpoch(val uint64) *QueryFilter {
-	q.queries[Epoch] = val
 	return q
 }

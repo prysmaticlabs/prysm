@@ -127,7 +127,7 @@ func (kv *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 	}
 
 	// Upsert blocks from the current finalized epoch.
-	roots, err := kv.BlockRoots(ctx, filters.NewFilter().SetEpoch(checkpoint.Epoch))
+	roots, err := kv.BlockRoots(ctx, filters.NewFilter().SetStartEpoch(checkpoint.Epoch).SetEndEpoch(checkpoint.Epoch+1))
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return err

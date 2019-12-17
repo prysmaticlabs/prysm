@@ -342,11 +342,19 @@ func TestStore_Blocks_Retrieve_Epoch(t *testing.T) {
 	if err := db.SaveBlocks(ctx, b); err != nil {
 		t.Fatal(err)
 	}
-	retrieved, err := db.Blocks(ctx, filters.NewFilter().SetEpoch(5))
+	retrieved, err := db.Blocks(ctx, filters.NewFilter().SetStartEpoch(5).SetEndEpoch(6))
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := params.BeaconConfig().SlotsPerEpoch
+	want := params.BeaconConfig().SlotsPerEpoch * 2
+	if uint64(len(retrieved)) != want {
+		t.Errorf("Wanted %d, received %d", want, len(retrieved))
+	}
+	retrieved, err = db.Blocks(ctx, filters.NewFilter().SetStartEpoch(0).SetEndEpoch(0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want = params.BeaconConfig().SlotsPerEpoch
 	if uint64(len(retrieved)) != want {
 		t.Errorf("Wanted %d, received %d", want, len(retrieved))
 	}
