@@ -38,7 +38,7 @@ func (history *ValidatorProposalHistory) SetProposedForEpoch(epoch uint64) {
 		return
 	}
 	if history.ProposalHistory == nil {
-		history.ProposalHistory
+		history.ProposalHistory = big.NewInt(0)
 	}
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	offsetMultiplier := epoch / wsPeriod
