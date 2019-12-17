@@ -178,8 +178,8 @@ func TestAggregateAndSaveForkChoiceAtts_Multiple(t *testing.T) {
 	sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
 
 	atts1 := []*ethpb.Attestation{
-		{AggregationBits: bitfield.Bitlist{0b101}, Signature: sig.Marshal()},
-		{AggregationBits: bitfield.Bitlist{0b110}, Signature: sig.Marshal()},
+		{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b101}, Signature: sig.Marshal()},
+		{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b110}, Signature: sig.Marshal()},
 	}
 	if err := s.aggregateAndSaveForkChoiceAtts(atts1); err != nil {
 		t.Fatal(err)
@@ -199,18 +199,23 @@ func TestAggregateAndSaveForkChoiceAtts_Multiple(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wanted1, err := helpers.AggregateAttestations(atts1)
+	wanted, err := helpers.AggregateAttestations(atts1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	wanted2, err := helpers.AggregateAttestations(atts2)
+	aggregated, err := helpers.AggregateAttestations(atts2)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	wanted1 = append(wanted1, wanted2...)
-	wanted1 = append(wanted1, att3...)
-	if !reflect.DeepEqual(wanted1, s.pool.ForkchoiceAttestations()) {
+	wanted = append(wanted, aggregated...)
+	wanted = append(wanted, att3...)
+
+	received := s.pool.ForkchoiceAttestations()
+	sort.Slice(received, func(i, j int) bool {
+		return received[i].Data.Slot < received[j].Data.Slot
+	})
+	if !reflect.DeepEqual(wanted, received) {
 		t.Error("Did not aggregation and save")
 	}
 }

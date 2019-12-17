@@ -8,7 +8,7 @@ import (
 
 var forkChoiceProcessedRootsSize = int64(1 << 16)
 
-// logic of attestation pool operations
+// Service of attestation pool operations
 type Service struct {
 	ctx                      context.Context
 	cancel                   context.CancelFunc

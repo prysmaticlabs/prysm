@@ -1065,7 +1065,8 @@ func TestFilterAttestation_OK(t *testing.T) {
 		aggBits.SetBitAt(0, true)
 		atts[i] = &ethpb.Attestation{Data: &ethpb.AttestationData{
 			CommitteeIndex: uint64(i),
-			Target:         &ethpb.Checkpoint{}},
+			Target:         &ethpb.Checkpoint{},
+			Source:         &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}},
 			AggregationBits: aggBits,
 		}
 		attestingIndices, _ := helpers.AttestingIndices(state, atts[i].Data, atts[i].AggregationBits)
