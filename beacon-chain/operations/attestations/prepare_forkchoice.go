@@ -77,11 +77,11 @@ func (s *Service) aggregateAndSaveForkChoiceAtts(atts []*ethpb.Attestation) erro
 	if err != nil {
 		return err
 	}
-	for _, att := range aggregatedAtts {
-		if err := s.pool.SaveForkchoiceAttestation(att); err != nil {
-			return err
-		}
+
+	if err := s.pool.SaveForkchoiceAttestations(aggregatedAtts); err != nil {
+		return err
 	}
+
 	return nil
 }
 

@@ -30,29 +30,23 @@ func TestBatchAttestations_Multiple(t *testing.T) {
 	aggregatedAtts := []*ethpb.Attestation{
 		{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b111000}, Signature: sig.Marshal()},
 		{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b100011}, Signature: sig.Marshal()},
-		{Data: &ethpb.AttestationData{Slot: 0}, AggregationBits: bitfield.Bitlist{0b110010}, Signature: sig.Marshal()},
+		{Data: &ethpb.AttestationData{Slot: 0}, AggregationBits: bitfield.Bitlist{0b110001}, Signature: sig.Marshal()},
 	}
 	blockAtts := []*ethpb.Attestation{
 		{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b100001}, Signature: sig.Marshal()},
-		{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b100001}, Signature: sig.Marshal()},
-		{Data: &ethpb.AttestationData{Slot: 0}, AggregationBits: bitfield.Bitlist{0b100101}, Signature: sig.Marshal()},
+		{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b100100}, Signature: sig.Marshal()},
+		{Data: &ethpb.AttestationData{Slot: 0}, AggregationBits: bitfield.Bitlist{0b100100}, Signature: sig.Marshal()},
 		{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b111000}, Signature: sig.Marshal()}, // Duplicated
 		{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b100011}, Signature: sig.Marshal()}, // Duplicated
 	}
-	for _, att := range unaggregatedAtts {
-		if err := s.pool.SaveUnaggregatedAttestation(att); err != nil {
-			t.Fatal(err)
-		}
+	if err := s.pool.SaveUnaggregatedAttestations(unaggregatedAtts); err != nil {
+		t.Fatal(err)
 	}
-	for _, att := range aggregatedAtts {
-		if err := s.pool.SaveAggregatedAttestation(att); err != nil {
-			t.Fatal(err)
-		}
+	if err := s.pool.SaveAggregatedAttestations(aggregatedAtts); err != nil {
+		t.Fatal(err)
 	}
-	for _, att := range blockAtts {
-		if err := s.pool.SaveBlockAttestation(att); err != nil {
-			t.Fatal(err)
-		}
+	if err := s.pool.SaveBlockAttestations(blockAtts); err != nil {
+		t.Fatal(err)
 	}
 
 	if err := s.batchForkChoiceAtts(context.Background()); err != nil {
@@ -72,6 +66,7 @@ func TestBatchAttestations_Multiple(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	wanted = append(wanted, aggregated...)
 	received := s.pool.ForkchoiceAttestations()
 
@@ -109,20 +104,16 @@ func TestBatchAttestations_Single(t *testing.T) {
 		{AggregationBits: bitfield.Bitlist{0b100010}, Signature: sig.Marshal()},
 		{AggregationBits: bitfield.Bitlist{0b110010}, Signature: sig.Marshal()}, // Duplicated
 	}
-	for _, att := range unaggregatedAtts {
-		if err := s.pool.SaveUnaggregatedAttestation(att); err != nil {
-			t.Fatal(err)
-		}
+	if err := s.pool.SaveUnaggregatedAttestations(unaggregatedAtts); err != nil {
+		t.Fatal(err)
 	}
-	for _, att := range aggregatedAtts {
-		if err := s.pool.SaveAggregatedAttestation(att); err != nil {
-			t.Fatal(err)
-		}
+
+	if err := s.pool.SaveAggregatedAttestations(aggregatedAtts); err != nil {
+		t.Fatal(err)
 	}
-	for _, att := range blockAtts {
-		if err := s.pool.SaveBlockAttestation(att); err != nil {
-			t.Fatal(err)
-		}
+
+	if err := s.pool.SaveBlockAttestations(blockAtts); err != nil {
+		t.Fatal(err)
 	}
 
 	if err := s.batchForkChoiceAtts(context.Background()); err != nil {

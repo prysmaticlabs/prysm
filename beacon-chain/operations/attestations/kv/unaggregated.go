@@ -26,6 +26,17 @@ func (p *AttCaches) SaveUnaggregatedAttestation(att *ethpb.Attestation) error {
 	return nil
 }
 
+// SaveUnaggregatedAttestations saves a list of unaggregated attestation in cache.
+func (p *AttCaches) SaveUnaggregatedAttestations(atts []*ethpb.Attestation) error {
+	for _, att := range atts {
+		if err := p.SaveUnaggregatedAttestation(att); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // UnaggregatedAttestationsBySlotIndex returns the unaggregated attestations in cache,
 // filtered by committee index and slot.
 func (p *AttCaches) UnaggregatedAttestationsBySlotIndex(slot uint64, committeeIndex uint64) []*ethpb.Attestation {
