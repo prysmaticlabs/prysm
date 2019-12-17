@@ -44,6 +44,7 @@ type Flags struct {
 	EnableBLSPubkeyCache     bool // EnableBLSPubkeyCache to improve wall time of PubkeyFromBytes.
 	EnableShuffledIndexCache bool // EnableShuffledIndexCache to cache expensive shuffled index computation.
 	EnableSkipSlotsCache     bool // EnableSkipSlotsCache caches the state in skipped slots.
+	EnableSlasherConnection  bool // EnableSlasher enable retrieval of slashing events from a slasher instance.
 }
 
 var featureConfig *Flags
@@ -135,6 +136,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(initSyncCacheState.Name) {
 		log.Warn("Enabled initial sync cache state mode.")
 		cfg.InitSyncCacheState = true
+	}
+	if ctx.GlobalBool(connectToSlasherFlag.Name) {
+		log.Warn("Enabled slasher connection.")
+		cfg.EnableSlasherConnection = true
 	}
 	Init(cfg)
 }

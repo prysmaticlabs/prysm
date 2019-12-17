@@ -439,7 +439,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	cert := ctx.GlobalString(flags.CertFlag.Name)
 	key := ctx.GlobalString(flags.KeyFlag.Name)
 	slasherCert := ctx.GlobalString(flags.SlasherCertFlag.Name)
-	slasherProvider := ctx.GlobalString(flags.SlasherProviderFlag)
+	slasherProvider := ctx.GlobalString(flags.SlasherProviderFlag.Name)
 
 	mockEth1DataVotes := ctx.GlobalBool(flags.InteropMockEth1DataVotesFlag.Name)
 	rpcService := rpc.NewService(context.Background(), &rpc.Config{

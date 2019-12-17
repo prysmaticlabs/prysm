@@ -8,6 +8,8 @@ import (
 	"net"
 	"os"
 
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -262,7 +264,7 @@ func (s *Service) Start() {
 			}
 		}
 	}()
-	if s.slasherProvider != "" {
+	if featureconfig.Get().EnableSlasherConnection {
 		s.startSlasherClient()
 	}
 }

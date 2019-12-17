@@ -85,6 +85,11 @@ var (
 			"initial sync and disk-IO is one of the biggest bottleneck. This still saves finalized state in DB " +
 			"and start syncing from there",
 	}
+	connectToSlasherFlag = cli.BoolFlag{
+		Name: "connect-to-slasher",
+		Usage: "Connect to slasher in order to retrieve slashable events. Should be running slasher on current " +
+			"machine or include slasher-provider flag.",
+	}
 )
 
 // Deprecated flags list.
@@ -174,4 +179,5 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableSkipSlotsCache,
 	enableSnappyDBCompressionFlag,
 	enablePruneBoundaryStateFlag,
+	connectToSlasherFlag,
 }...)
