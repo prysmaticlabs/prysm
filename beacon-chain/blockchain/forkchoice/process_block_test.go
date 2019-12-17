@@ -142,7 +142,11 @@ func TestStore_UpdateBlockAttestationVote(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	indexedAtt, err := blocks.ConvertToIndexed(ctx, beaconState, att)
+	committee, err := helpers.BeaconCommittee(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	if err != nil {
+		t.Error(err)
+	}
+	indexedAtt, err := blocks.ConvertToIndexed(ctx, att, committee)
 	if err != nil {
 		t.Fatal(err)
 	}

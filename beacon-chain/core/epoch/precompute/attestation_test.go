@@ -72,7 +72,6 @@ func TestUpdateBalance(t *testing.T) {
 }
 
 func TestSameHead(t *testing.T) {
-	helpers.ClearAllCaches()
 	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
 	beaconState.Slot = 1
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
@@ -168,8 +167,6 @@ func TestAttestedCurrentEpoch(t *testing.T) {
 }
 
 func TestProcessAttestations(t *testing.T) {
-	helpers.ClearAllCaches()
-
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
 
@@ -202,13 +199,21 @@ func TestProcessAttestations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	indices, _ := helpers.AttestingIndices(beaconState, att1.Data, att1.AggregationBits)
+	committee, err := helpers.BeaconCommittee(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
+	if err != nil {
+		t.Error(err)
+	}
+	indices, _ := helpers.AttestingIndices(att1.AggregationBits, committee)
 	for _, i := range indices {
 		if !vp[i].IsPrevEpochAttester {
 			t.Error("Not a prev epoch attester")
 		}
 	}
-	indices, _ = helpers.AttestingIndices(beaconState, att2.Data, att2.AggregationBits)
+	committee, err = helpers.BeaconCommittee(beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
+	if err != nil {
+		t.Error(err)
+	}
+	indices, _ = helpers.AttestingIndices(att2.AggregationBits, committee)
 	for _, i := range indices {
 		if !vp[i].IsPrevEpochAttester {
 			t.Error("Not a prev epoch attester")

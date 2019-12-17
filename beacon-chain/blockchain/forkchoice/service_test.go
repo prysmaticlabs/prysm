@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -206,8 +205,6 @@ func TestStore_LatestAttestingBalance(t *testing.T) {
 }
 
 func TestStore_ChildrenBlocksFromParentRoot(t *testing.T) {
-	helpers.ClearAllCaches()
-
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)

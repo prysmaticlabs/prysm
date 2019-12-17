@@ -116,7 +116,6 @@ func TestIsSlashableValidator_InactiveSlashed(t *testing.T) {
 }
 
 func TestBeaconProposerIndex_OK(t *testing.T) {
-	ClearAllCaches()
 	c := params.BeaconConfig()
 	c.MinGenesisActiveValidatorCount = 16384
 	params.OverrideBeaconConfig(c)
@@ -196,7 +195,6 @@ func TestChurnLimit_OK(t *testing.T) {
 		{validatorCount: 2000000, wantedChurn: 30 /* validatorCount/churnLimitQuotient */},
 	}
 	for _, test := range tests {
-		ClearAllCaches()
 		validators := make([]*ethpb.Validator, test.validatorCount)
 		for i := 0; i < len(validators); i++ {
 			validators[i] = &ethpb.Validator{

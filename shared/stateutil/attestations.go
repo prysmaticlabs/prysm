@@ -15,29 +15,35 @@ import (
 func marshalAttestationData(data *ethpb.AttestationData) []byte {
 	enc := make([]byte, 128)
 
-	// Slot.
-	slotBuf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(slotBuf, data.Slot)
-	copy(enc[0:8], slotBuf)
+	if data != nil {
+		// Slot.
+		slotBuf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(slotBuf, data.Slot)
+		copy(enc[0:8], slotBuf)
 
-	// Committee index.
-	indexBuf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(indexBuf, data.CommitteeIndex)
-	copy(enc[8:16], indexBuf)
+		// Committee index.
+		indexBuf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(indexBuf, data.CommitteeIndex)
+		copy(enc[8:16], indexBuf)
 
-	copy(enc[16:48], data.BeaconBlockRoot)
+		copy(enc[16:48], data.BeaconBlockRoot)
 
-	// Source epoch and root.
-	sourceEpochBuf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(sourceEpochBuf, data.Source.Epoch)
-	copy(enc[48:56], sourceEpochBuf)
-	copy(enc[56:88], data.Source.Root)
+		// Source epoch and root.
+		if data.Source != nil {
+			sourceEpochBuf := make([]byte, 8)
+			binary.LittleEndian.PutUint64(sourceEpochBuf, data.Source.Epoch)
+			copy(enc[48:56], sourceEpochBuf)
+			copy(enc[56:88], data.Source.Root)
+		}
 
-	// Target.
-	targetEpochBuf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(targetEpochBuf, data.Target.Epoch)
-	copy(enc[88:96], targetEpochBuf)
-	copy(enc[96:128], data.Target.Root)
+		// Target.
+		if data.Target != nil {
+			targetEpochBuf := make([]byte, 8)
+			binary.LittleEndian.PutUint64(targetEpochBuf, data.Target.Epoch)
+			copy(enc[88:96], targetEpochBuf)
+			copy(enc[96:128], data.Target.Root)
+		}
+	}
 
 	return enc
 }
@@ -45,98 +51,106 @@ func marshalAttestationData(data *ethpb.AttestationData) []byte {
 func attestationDataRoot(data *ethpb.AttestationData) ([32]byte, error) {
 	fieldRoots := make([][]byte, 5)
 
-	// Slot.
-	slotBuf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(slotBuf, data.Slot)
-	slotRoot := bytesutil.ToBytes32(slotBuf)
-	fieldRoots[0] = slotRoot[:]
+	if data != nil {
+		// Slot.
+		slotBuf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(slotBuf, data.Slot)
+		slotRoot := bytesutil.ToBytes32(slotBuf)
+		fieldRoots[0] = slotRoot[:]
 
-	// CommitteeIndex.
-	indexBuf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(indexBuf, data.CommitteeIndex)
-	interRoot := bytesutil.ToBytes32(indexBuf)
-	fieldRoots[1] = interRoot[:]
+		// CommitteeIndex.
+		indexBuf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(indexBuf, data.CommitteeIndex)
+		interRoot := bytesutil.ToBytes32(indexBuf)
+		fieldRoots[1] = interRoot[:]
 
-	// Beacon block root.
-	fieldRoots[2] = data.BeaconBlockRoot
+		// Beacon block root.
+		fieldRoots[2] = data.BeaconBlockRoot
 
-	// Source
-	sourceRoot, err := checkpointRoot(data.Source)
-	if err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not compute source checkpoint merkleization")
+		// Source
+		sourceRoot, err := checkpointRoot(data.Source)
+		if err != nil {
+			return [32]byte{}, errors.Wrap(err, "could not compute source checkpoint merkleization")
+		}
+		fieldRoots[3] = sourceRoot[:]
+
+		// Target
+		targetRoot, err := checkpointRoot(data.Target)
+		if err != nil {
+			return [32]byte{}, errors.Wrap(err, "could not compute target checkpoint merkleization")
+		}
+		fieldRoots[4] = targetRoot[:]
 	}
-	fieldRoots[3] = sourceRoot[:]
-
-	// Target
-	targetRoot, err := checkpointRoot(data.Target)
-	if err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not compute target checkpoint merkleization")
-	}
-	fieldRoots[4] = targetRoot[:]
 
 	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
-func pendingAttestationRoot(att *pb.PendingAttestation) ([32]byte, error) {
+func (h *stateRootHasher) pendingAttestationRoot(att *pb.PendingAttestation) ([32]byte, error) {
 	// Marshal attestation to determine if it exists in the cache.
 	enc := make([]byte, 2192)
-	copy(enc[0:2048], att.AggregationBits)
-
-	inclusionBuf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(inclusionBuf, att.InclusionDelay)
-	copy(enc[2048:2056], inclusionBuf)
-
-	attDataBuf := marshalAttestationData(att.Data)
-	copy(enc[2056:2184], attDataBuf)
-
-	proposerBuf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(proposerBuf, att.ProposerIndex)
-	copy(enc[2184:2192], proposerBuf)
-
-	// Check if it exists in cache:
-	if found, ok := rootsCache.Get(string(enc)); found != nil && ok {
-		return found.([32]byte), nil
-	}
-
 	fieldRoots := make([][]byte, 4)
 
-	// Bitfield.
-	aggregationRoot, err := bitlistRoot(att.AggregationBits, 2048)
-	if err != nil {
-		return [32]byte{}, err
+	if att != nil {
+		copy(enc[0:2048], att.AggregationBits)
+
+		inclusionBuf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(inclusionBuf, att.InclusionDelay)
+		copy(enc[2048:2056], inclusionBuf)
+
+		attDataBuf := marshalAttestationData(att.Data)
+		copy(enc[2056:2184], attDataBuf)
+
+		proposerBuf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(proposerBuf, att.ProposerIndex)
+		copy(enc[2184:2192], proposerBuf)
+
+		// Check if it exists in cache:
+		if h.rootsCache != nil {
+			if found, ok := h.rootsCache.Get(string(enc)); found != nil && ok {
+				return found.([32]byte), nil
+			}
+		}
+
+		// Bitfield.
+		aggregationRoot, err := bitlistRoot(att.AggregationBits, 2048)
+		if err != nil {
+			return [32]byte{}, err
+		}
+		fieldRoots[0] = aggregationRoot[:]
+
+		// Attestation data.
+		attDataRoot, err := attestationDataRoot(att.Data)
+		if err != nil {
+			return [32]byte{}, err
+		}
+		fieldRoots[1] = attDataRoot[:]
+
+		// Inclusion delay.
+		inclusionRoot := bytesutil.ToBytes32(inclusionBuf)
+		fieldRoots[2] = inclusionRoot[:]
+
+		// Proposer index.
+		proposerRoot := bytesutil.ToBytes32(proposerBuf)
+		fieldRoots[3] = proposerRoot[:]
 	}
-	fieldRoots[0] = aggregationRoot[:]
-
-	// Attestation data.
-	attDataRoot, err := attestationDataRoot(att.Data)
-	if err != nil {
-		return [32]byte{}, err
-	}
-	fieldRoots[1] = attDataRoot[:]
-
-	// Inclusion delay.
-	inclusionRoot := bytesutil.ToBytes32(inclusionBuf)
-	fieldRoots[2] = inclusionRoot[:]
-
-	// Proposer index.
-	proposerRoot := bytesutil.ToBytes32(proposerBuf)
-	fieldRoots[3] = proposerRoot[:]
 
 	res, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {
 		return [32]byte{}, err
 	}
-	rootsCache.Set(string(enc), res, 32)
+	if att != nil && h.rootsCache != nil {
+		h.rootsCache.Set(string(enc), res, 32)
+	}
 	return res, nil
 }
 
-func epochAttestationsRoot(atts []*pb.PendingAttestation) ([32]byte, error) {
+func (h *stateRootHasher) epochAttestationsRoot(atts []*pb.PendingAttestation) ([32]byte, error) {
 	hashKeyElements := make([]byte, len(atts)*32)
 	roots := make([][]byte, len(atts))
 	emptyKey := hashutil.FastSum256(hashKeyElements)
 	bytesProcessed := 0
 	for i := 0; i < len(atts); i++ {
-		pendingRoot, err := pendingAttestationRoot(atts[i])
+		pendingRoot, err := h.pendingAttestationRoot(atts[i])
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not attestation merkleization")
 		}
@@ -146,8 +160,8 @@ func epochAttestationsRoot(atts []*pb.PendingAttestation) ([32]byte, error) {
 	}
 
 	hashKey := hashutil.FastSum256(hashKeyElements)
-	if hashKey != emptyKey {
-		if found, ok := rootsCache.Get(string(hashKey[:])); found != nil && ok {
+	if hashKey != emptyKey && h.rootsCache != nil {
+		if found, ok := h.rootsCache.Get(string(hashKey[:])); found != nil && ok {
 			return found.([32]byte), nil
 		}
 	}
@@ -168,8 +182,8 @@ func epochAttestationsRoot(atts []*pb.PendingAttestation) ([32]byte, error) {
 	attsLenRoot := make([]byte, 32)
 	copy(attsLenRoot, attsLenBuf.Bytes())
 	res := mixInLength(attsRootsRoot, attsLenRoot)
-	if hashKey != emptyKey {
-		rootsCache.Set(string(hashKey[:]), res, 32)
+	if hashKey != emptyKey && h.rootsCache != nil {
+		h.rootsCache.Set(string(hashKey[:]), res, 32)
 	}
 	return res, nil
 }

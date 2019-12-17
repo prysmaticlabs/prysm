@@ -27,7 +27,7 @@ var recentlySeenRoots, _ = ristretto.NewCache(&ristretto.Config{
 // validateBeaconBlockPubSub checks that the incoming block has a valid BLS signature.
 // Blocks that have already been seen are ignored. If the BLS signature is any valid signature,
 // this method rebroadcasts the message.
-func (r *RegularSync) validateBeaconBlockPubSub(ctx context.Context, msg proto.Message, p p2p.Broadcaster, fromSelf bool) (bool, error) {
+func (r *Service) validateBeaconBlockPubSub(ctx context.Context, msg proto.Message, p p2p.Broadcaster, fromSelf bool) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "sync.validateBeaconBlockPubSub")
 	defer span.End()
 

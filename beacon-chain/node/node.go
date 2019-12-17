@@ -373,7 +373,7 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 		return err
 	}
 
-	var initSync *initialsync.InitialSync
+	var initSync *initialsync.Service
 	if err := b.services.FetchService(&initSync); err != nil {
 		return err
 	}
@@ -425,7 +425,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
-	var syncService *initialsync.InitialSync
+	var syncService *initialsync.Service
 	if err := b.services.FetchService(&syncService); err != nil {
 		return err
 	}

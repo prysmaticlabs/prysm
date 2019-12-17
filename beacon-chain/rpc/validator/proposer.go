@@ -371,7 +371,7 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, slot 
 	return validAtts, nil
 }
 
-func constructMerkleProof(trie *trieutil.MerkleTrie, index int, deposit *ethpb.Deposit) (*ethpb.Deposit, error) {
+func constructMerkleProof(trie *trieutil.SparseMerkleTrie, index int, deposit *ethpb.Deposit) (*ethpb.Deposit, error) {
 	proof, err := trie.MerkleProof(index)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not generate merkle proof for deposit at index %d", index)

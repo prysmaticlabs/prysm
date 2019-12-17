@@ -11,20 +11,25 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
+
+func init() {
+	fc := featureconfig.Get()
+	fc.NewCommitteeAssignments = true
+	featureconfig.Init(fc)
+}
 
 func TestGetDuties_NextEpoch_WrongPubkeyLength(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
-	helpers.ClearAllCaches()
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 8)
 	block := blk.NewGenesisBlock([]byte{})
@@ -81,7 +86,6 @@ func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 }
 
 func TestGetDuties_OK(t *testing.T) {
-	helpers.ClearAllCaches()
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
@@ -157,7 +161,6 @@ func TestGetDuties_OK(t *testing.T) {
 }
 
 func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
-	helpers.ClearAllCaches()
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
@@ -277,7 +280,13 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	}
 
 	if len(res.Duties) != 2 {
-		t.Fatalf("expected 2 assignments but got %d", len(res.Duties))
+		t.Errorf("expected 2 assignments but got %d", len(res.Duties))
+	}
+	if res.ValidatorAssignment[0].AttesterSlot != 4 {
+		t.Errorf("Expected res.ValidatorAssignment[0].AttesterSlot == 4, got %d", res.ValidatorAssignment[0].AttesterSlot)
+	}
+	if res.ValidatorAssignment[1].AttesterSlot != 3 {
+		t.Errorf("Expected res.ValidatorAssignment[1].AttesterSlot == 3, got %d", res.ValidatorAssignment[0].AttesterSlot)
 	}
 }
 
@@ -288,5 +297,68 @@ func TestGetDuties_SyncNotReady(t *testing.T) {
 	_, err := vs.GetDuties(context.Background(), &ethpb.DutiesRequest{})
 	if strings.Contains(err.Error(), "syncing to latest head") {
 		t.Error("Did not get wanted error")
+	}
+}
+
+func BenchmarkCommitteeAssignment(b *testing.B) {
+	db := dbutil.SetupDB(b)
+	defer dbutil.TeardownDB(b, db)
+	ctx := context.Background()
+
+	genesis := blk.NewGenesisBlock([]byte{})
+	depChainStart := uint64(8192*2)
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(depChainStart)
+	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
+	if err != nil {
+		b.Fatal(err)
+	}
+	state, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	if err != nil {
+		b.Fatalf("Could not setup genesis state: %v", err)
+	}
+	genesisRoot, err := ssz.SigningRoot(genesis)
+	if err != nil {
+		b.Fatalf("Could not get signing root %v", err)
+	}
+
+	var wg sync.WaitGroup
+	numOfValidators := int(depChainStart)
+	errs := make(chan error, numOfValidators)
+	for i := 0; i < numOfValidators; i++ {
+		wg.Add(1)
+		go func(index int) {
+			errs <- db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(deposits[index].Data.PublicKey), uint64(index))
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
+			b.Fatalf("Could not save validator index: %v", err)
+		}
+	}
+
+	vs := &Server{
+		BeaconDB:    db,
+		HeadFetcher: &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		SyncChecker: &mockSync.Sync{IsSyncing: false},
+	}
+
+	// Create request for all validators in the system.
+	pks := make([][]byte, len(deposits))
+	for i, deposit := range deposits {
+		pks[i] = deposit.Data.PublicKey
+	}
+	req := &pb.AssignmentRequest{
+		PublicKeys: pks,
+		EpochStart: 0,
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := vs.CommitteeAssignment(context.Background(), req)
+		if err != nil {
+			b.Error(err)
+		}
 	}
 }

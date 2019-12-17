@@ -11,13 +11,14 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
-var _ = shared.Service(&InitialSync{})
+var _ = shared.Service(&Service{})
 
 type blockchainService interface {
 	blockchain.BlockReceiver
@@ -25,7 +26,6 @@ type blockchainService interface {
 }
 
 const (
-	minStatusCount           = 3               // TODO(3147): Set this to more than 3, maybe configure from flag?
 	handshakePollingInterval = 5 * time.Second // Polling interval for checking the number of received handshakes.
 )
 
@@ -37,8 +37,8 @@ type Config struct {
 	StateNotifier statefeed.Notifier
 }
 
-// InitialSync service.
-type InitialSync struct {
+// Service service.
+type Service struct {
 	ctx           context.Context
 	chain         blockchainService
 	p2p           p2p.P2P
@@ -50,8 +50,8 @@ type InitialSync struct {
 
 // NewInitialSync configures the initial sync service responsible for bringing the node up to the
 // latest head of the blockchain.
-func NewInitialSync(cfg *Config) *InitialSync {
-	return &InitialSync{
+func NewInitialSync(cfg *Config) *Service {
+	return &Service{
 		ctx:           context.Background(),
 		chain:         cfg.Chain,
 		p2p:           cfg.P2P,
@@ -61,7 +61,7 @@ func NewInitialSync(cfg *Config) *InitialSync {
 }
 
 // Start the initial sync service.
-func (s *InitialSync) Start() {
+func (s *Service) Start() {
 	var genesis time.Time
 
 	headState, err := s.chain.HeadState(s.ctx)
@@ -118,12 +118,12 @@ func (s *InitialSync) Start() {
 	// Every 5 sec, report handshake count.
 	for {
 		count := len(s.p2p.Peers().Connected())
-		if count >= minStatusCount {
+		if count >= flags.Get().MinimumSyncPeers {
 			break
 		}
 		log.WithField(
 			"handshakes",
-			fmt.Sprintf("%d/%d", count, minStatusCount),
+			fmt.Sprintf("%d/%d", count, flags.Get().MinimumSyncPeers),
 		).Info("Waiting for enough peer handshakes before syncing")
 		time.Sleep(handshakePollingInterval)
 	}
@@ -137,12 +137,12 @@ func (s *InitialSync) Start() {
 }
 
 // Stop initial sync.
-func (s *InitialSync) Stop() error {
+func (s *Service) Stop() error {
 	return nil
 }
 
 // Status of initial sync.
-func (s *InitialSync) Status() error {
+func (s *Service) Status() error {
 	if !s.synced && s.chainStarted {
 		return errors.New("syncing")
 	}
@@ -150,7 +150,7 @@ func (s *InitialSync) Status() error {
 }
 
 // Syncing returns true if initial sync is still running.
-func (s *InitialSync) Syncing() bool {
+func (s *Service) Syncing() bool {
 	return !s.synced
 }
 

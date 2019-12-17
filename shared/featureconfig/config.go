@@ -36,6 +36,7 @@ type Flags struct {
 	EnableCustomStateSSZ      bool   // EnableCustomStateSSZ in the the state transition function.
 	InitSyncCacheState        bool   // InitSyncCacheState caches state during initial sync.
 	KafkaBootstrapServers     string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
+	NewCommitteeAssignments   bool   // NewCommitteeAssignments uses the new committee assignments algorithm.
 
 	// Cache toggles.
 	EnableAttestationCache   bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
@@ -44,8 +45,6 @@ type Flags struct {
 	EnableBLSPubkeyCache     bool // EnableBLSPubkeyCache to improve wall time of PubkeyFromBytes.
 	EnableShuffledIndexCache bool // EnableShuffledIndexCache to cache expensive shuffled index computation.
 	EnableSkipSlotsCache     bool // EnableSkipSlotsCache caches the state in skipped slots.
-	EnableCommitteeCache     bool // EnableCommitteeCache to cache committee computation.
-	EnableActiveCountCache   bool // EnableActiveCountCache.
 }
 
 var featureConfig *Flags
@@ -126,19 +125,14 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling experimental kafka streaming.")
 		cfg.KafkaBootstrapServers = ctx.GlobalString(kafkaBootstrapServersFlag.Name)
 	}
-	if ctx.GlobalBool(enableCommitteeCacheFlag.Name) {
-		log.Warn("Enabled committee cache.")
-		cfg.EnableCommitteeCache = true
-	}
-	if ctx.GlobalBool(enableActiveCountCacheFlag.Name) {
-		log.Warn("Enabled active count cache.")
-		cfg.EnableActiveCountCache = true
-	}
 	if ctx.GlobalBool(initSyncCacheState.Name) {
 		log.Warn("Enabled initial sync cache state mode.")
 		cfg.InitSyncCacheState = true
 	}
-
+	if ctx.GlobalBool(fastCommitteeAssignmentsFlag.Name) {
+		log.Warn("Enabled fast committee assignments algorithm.")
+		cfg.NewCommitteeAssignments = true
+	}
 	Init(cfg)
 }
 
