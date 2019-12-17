@@ -36,6 +36,7 @@ type Flags struct {
 	EnableCustomStateSSZ      bool   // EnableCustomStateSSZ in the the state transition function.
 	InitSyncCacheState        bool   // InitSyncCacheState caches state during initial sync.
 	KafkaBootstrapServers     string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
+	NewCommitteeAssignments   bool   // NewCommitteeAssignments uses the new committee assignments algorithm.
 
 	// Cache toggles.
 	EnableAttestationCache   bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
@@ -136,6 +137,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(initSyncCacheState.Name) {
 		log.Warn("Enabled initial sync cache state mode.")
 		cfg.InitSyncCacheState = true
+	}
+	if ctx.GlobalBool(fastCommitteeAssignmentsFlag.Name) {
+		log.Warn("Enabled fast committee assignments algorithm.")
+		cfg.NewCommitteeAssignments = true
 	}
 	if ctx.GlobalBool(connectToSlasherFlag.Name) {
 		log.Warn("Enabled slasher connection.")

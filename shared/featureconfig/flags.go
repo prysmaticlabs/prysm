@@ -90,6 +90,10 @@ var (
 		Usage: "Connect to slasher in order to retrieve slashable events. Should be running slasher on current " +
 			"machine or include slasher-provider flag.",
 	}
+	fastCommitteeAssignmentsFlag = cli.BoolFlag{
+		Name:  "fast-assignments",
+		Usage: "Use new algorithm for computing committee assignments",
+	}
 )
 
 // Deprecated flags list.
@@ -179,5 +183,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableSkipSlotsCache,
 	enableSnappyDBCompressionFlag,
 	enablePruneBoundaryStateFlag,
+	fastCommitteeAssignmentsFlag,
 	connectToSlasherFlag,
 }...)
