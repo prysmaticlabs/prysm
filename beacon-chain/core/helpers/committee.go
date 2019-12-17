@@ -194,8 +194,80 @@ func AttestingIndices(bf bitfield.Bitfield, committee []uint64) ([]uint64, error
 	return indices, nil
 }
 
+// CommitteeAssignmentContainer represents a committee, index, and attester slot for a given epoch.
+type CommitteeAssignmentContainer struct {
+	Committee      []uint64
+	AttesterSlot   uint64
+	CommitteeIndex uint64
+}
+
+// CommitteeAssignments is a map of validator indices pointing to the appropriate committee
+// assignment for the given epoch.
+//
+// 1. Determine the proposer validator index for each slot.
+// 2. Compute all committees.
+// 3. Determine the attesting slot for each committee.
+// 4. Construct a map of validator indices pointing to the respective committees.
+func CommitteeAssignments(state *pb.BeaconState, epoch uint64) (map[uint64]*CommitteeAssignmentContainer, map[uint64]uint64, error) {
+	if epoch > NextEpoch(state) {
+		return nil, nil, fmt.Errorf(
+			"epoch %d can't be greater than next epoch %d",
+			epoch, 
+			NextEpoch(state),
+		)
+	}
+
+	// Track which slot has which proposer.
+	startSlot := StartSlot(epoch)
+	proposerIndexToSlot := make(map[uint64]uint64)
+	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
+		state.Slot = slot
+		i, err := BeaconProposerIndex(state)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "could not check proposer at slot %d", state.Slot)
+		}
+		proposerIndexToSlot[i] = slot
+	}
+
+	// Each slot in an epoch has a different set of committees. This value is derived from the
+	// active validator set, which does not change.
+	numCommitteesPerSlot, err := CommitteeCountAtSlot(state, StartSlot(epoch))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	validatorIndexToCommittee := make(map[uint64]*CommitteeAssignmentContainer)
+
+	// Compute all committees for all slots.
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+		// Compute committees.
+		for j := uint64(0); j < numCommitteesPerSlot; j++ {
+			slot := startSlot + i
+			committee, err := BeaconCommittee(state, slot, j /*committee index*/)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			cac := &CommitteeAssignmentContainer{
+				Committee:      committee,
+				CommitteeIndex: j,
+				AttesterSlot:   slot,
+			}
+			for _, vID := range committee {
+				validatorIndexToCommittee[vID] = cac
+			}
+		}
+	}
+
+	return validatorIndexToCommittee, proposerIndexToSlot, nil
+}
+
 // CommitteeAssignment is used to query committee assignment from
 // current and previous epoch.
+//
+// Deprecated: Consider using CommitteeAssignments, especially when computing more than one
+// validator assignment as this method is O(n^2) in computational complexity. This method exists to
+// ensure spec definition conformance and otherwise should probably not be used.
 //
 // Spec pseudocode definition:
 //   def get_committee_assignment(state: BeaconState,
