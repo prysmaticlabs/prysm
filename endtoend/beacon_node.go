@@ -67,6 +67,7 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 		"--no-discovery",
 		"--http-web3provider=http://127.0.0.1:8545",
 		"--web3provider=ws://127.0.0.1:8546",
+		"--verbosity=debug",
 		fmt.Sprintf("--datadir=%s/eth2-beacon-node-%d", tmpPath, index),
 		fmt.Sprintf("--deposit-contract=%s", config.contractAddr.Hex()),
 		fmt.Sprintf("--rpc-port=%d", 4000+index),
@@ -139,8 +140,8 @@ func getMultiAddrFromLogFile(name string) (string, error) {
 func waitForTextInFile(file *os.File, text string) error {
 	wait := 0
 	// Putting the wait cap at 24 seconds.
-	totalWait := 24
-	for wait < totalWait {
+	maxWait := 36
+	for wait < maxWait {
 		time.Sleep(2 * time.Second)
 		// Rewind the file pointer to the start of the file so we can read it again.
 		_, err := file.Seek(0, io.SeekStart)

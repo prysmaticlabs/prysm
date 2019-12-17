@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -201,7 +202,7 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 // This method has been modified from the spec to allow whole states not to be saved
 // but instead only cache the relevant information.
 func IsValidGenesisState(chainStartDepositCount uint64, currentTime uint64) bool {
-	if currentTime < params.BeaconConfig().MinGenesisTime {
+	if featureconfig.Get().GenesisDelay && currentTime < params.BeaconConfig().MinGenesisTime {
 		return false
 	}
 	if chainStartDepositCount < params.BeaconConfig().MinGenesisActiveValidatorCount {
