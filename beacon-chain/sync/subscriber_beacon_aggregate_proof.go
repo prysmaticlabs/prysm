@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -10,5 +11,10 @@ import (
 // beaconAggregateProofSubscriber forwards the incoming validated aggregated attestation and proof to the
 // attestation pool for processing.
 func (r *RegularSync) beaconAggregateProofSubscriber(ctx context.Context, msg proto.Message) error {
-	return r.attPool.SaveUnaggregatedAttestation(msg.(*ethpb.Attestation))
+	a, ok := msg.(*ethpb.AggregateAttestationAndProof)
+	if !ok {
+		return fmt.Errorf("message was not type *eth.AggregateAttestationAndProof, type=%T", msg)
+	}
+
+	return r.attPool.SaveAggregatedAttestation(a.Aggregate)
 }

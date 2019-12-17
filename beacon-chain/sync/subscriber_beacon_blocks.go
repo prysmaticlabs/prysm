@@ -54,7 +54,7 @@ func (r *RegularSync) beaconBlockSubscriber(ctx context.Context, msg proto.Messa
 
 	// Add attestations from the block to the fork choice pool.
 	for _, att := range block.Body.Attestations {
-		if err := r.attPool.SaveForkchoiceAttestation(att); err != nil {
+		if err := r.attPool.SaveBlockAttestation(att); err != nil {
 			log.Errorf("Could not save attestation for fork choice: %v", err)
 			return nil
 		}
