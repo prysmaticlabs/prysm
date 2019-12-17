@@ -329,5 +329,5 @@ func (s *Service) Status() error {
 		}
 		return s.slasherCredentialError
 	}
-	return nil
+	return err
 }
