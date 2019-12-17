@@ -60,7 +60,7 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 }
 
 // GenerateDepositsFromData a list of deposit items by creating proofs for each of them from a sparse Merkle trie.
-func GenerateDepositsFromData(depositDataItems []*ethpb.Deposit_Data, trie *trieutil.MerkleTrie) ([]*ethpb.Deposit, error) {
+func GenerateDepositsFromData(depositDataItems []*ethpb.Deposit_Data, trie *trieutil.SparseMerkleTrie) ([]*ethpb.Deposit, error) {
 	deposits := make([]*ethpb.Deposit, len(depositDataItems))
 	results, err := mputil.Scatter(len(depositDataItems), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
 		return generateDepositsFromData(depositDataItems[offset:offset+entries], offset, trie)
@@ -79,7 +79,7 @@ func GenerateDepositsFromData(depositDataItems []*ethpb.Deposit_Data, trie *trie
 }
 
 // generateDepositsFromData a list of deposit items by creating proofs for each of them from a sparse Merkle trie.
-func generateDepositsFromData(depositDataItems []*ethpb.Deposit_Data, offset int, trie *trieutil.MerkleTrie) ([]*ethpb.Deposit, error) {
+func generateDepositsFromData(depositDataItems []*ethpb.Deposit_Data, offset int, trie *trieutil.SparseMerkleTrie) ([]*ethpb.Deposit, error) {
 	deposits := make([]*ethpb.Deposit, len(depositDataItems))
 	for i, item := range depositDataItems {
 		proof, err := trie.MerkleProof(i + offset)
