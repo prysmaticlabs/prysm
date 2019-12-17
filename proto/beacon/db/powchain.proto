@@ -6,12 +6,15 @@ import "eth/v1alpha1/beacon_block.proto";
 
 option go_package = "github.com/prysmaticlabs/prysm/proto/beacon/db";
 
+// ETH1ChainData is a container which holds all the relevant eth1
+// information
 message ETH1ChainData {
     LatestETH1Data current_eth1_data = 1 ;
     ChainStartData chainstart_data = 2;
     SparseMerkleTrie trie = 3;
 }
 
+// LatestETH1Data contains the current state of the eth1 chain.
 message LatestETH1Data {
     uint64 block_height = 2;
     uint64 block_time = 3;
@@ -19,6 +22,7 @@ message LatestETH1Data {
     uint64 last_requested_block = 5;
 }
 
+// ChainStartData contains all the information related to chainstart.
 message ChainStartData {
     bool chainstarted = 1;
     uint64 genesis_time = 2;
@@ -27,12 +31,15 @@ message ChainStartData {
     repeated ethereum.eth.v1alpha1.Deposit chainstart_deposits = 5;
 }
 
+// SparseMerkleTrie is used to describe the model of our deposit trie.
 message SparseMerkleTrie {
     uint64 depth = 1;
     repeated TrieLayer layers = 2;
     repeated bytes original_items = 3;
 }
 
+// TrieLayer is used to represent each layer in the deposit tree due to
+// the lack of protobuf support for multi-dimensional arrays.(Ex: 3d,4d,...)
 message TrieLayer {
     repeated bytes layer = 1;
 }
