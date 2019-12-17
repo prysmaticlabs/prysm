@@ -151,17 +151,19 @@ func (s *Store) saveCheckpointState(ctx context.Context, baseState *pb.BeaconSta
 	// Advance slots only when it's higher than current state slot.
 	if helpers.StartSlot(c.Epoch) > baseState.Slot {
 		stateCopy := proto.Clone(baseState).(*pb.BeaconState)
-		baseState, err = state.ProcessSlots(ctx, stateCopy, helpers.StartSlot(c.Epoch))
+		stateCopy, err = state.ProcessSlots(ctx, stateCopy, helpers.StartSlot(c.Epoch))
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
 		}
-	}
 
-	if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
-		Checkpoint: c,
-		State:      baseState,
-	}); err != nil {
-		return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
+		if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
+			Checkpoint: c,
+			State:      stateCopy,
+		}); err != nil {
+			return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
+		}
+
+		return stateCopy, nil
 	}
 
 	return baseState, nil
@@ -169,11 +171,37 @@ func (s *Store) saveCheckpointState(ctx context.Context, baseState *pb.BeaconSta
 
 // verifyAttestation validates input attestation is valid.
 func (s *Store) verifyAttestation(ctx context.Context, baseState *pb.BeaconState, a *ethpb.Attestation) (*ethpb.IndexedAttestation, error) {
-	indexedAtt, err := blocks.ConvertToIndexed(ctx, baseState, a)
+	committee, err := helpers.BeaconCommittee(baseState, a.Data.Slot, a.Data.CommitteeIndex)
+	if err != nil {
+		return nil, err
+	}
+	indexedAtt, err := blocks.ConvertToIndexed(ctx, a, committee)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert attestation to indexed attestation")
 	}
+
 	if err := blocks.VerifyIndexedAttestation(ctx, baseState, indexedAtt); err != nil {
+
+		// TODO(3603): Delete the following signature verify fallback when issue 3603 closes.
+		// When signature fails to verify with committee cache enabled at run time,
+		// the following re-runs the same signature verify routine without cache in play.
+		// This provides extra assurance that committee cache can't break run time.
+		if err == blocks.ErrSigFailedToVerify {
+			committee, err = helpers.BeaconCommitteeWithoutCache(baseState, a.Data.Slot, a.Data.CommitteeIndex)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not convert attestation to indexed attestation without cache")
+			}
+			indexedAtt, err = blocks.ConvertToIndexed(ctx, a, committee)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not convert attestation to indexed attestation")
+			}
+			if err := blocks.VerifyIndexedAttestation(ctx, baseState, indexedAtt); err != nil {
+				return nil, errors.Wrap(err, "could not verify indexed attestation without cache")
+			}
+			sigFailsToVerify.Inc()
+			return indexedAtt, nil
+		}
+
 		return nil, errors.Wrap(err, "could not verify indexed attestation")
 	}
 	return indexedAtt, nil

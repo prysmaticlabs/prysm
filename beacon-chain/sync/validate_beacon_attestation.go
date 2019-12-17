@@ -19,7 +19,7 @@ var errPointsToBlockNotInDatabase = errors.New("attestation points to a block wh
 
 // validateBeaconAttestation validates that the block being voted for passes validation before forwarding to the
 // network.
-func (r *RegularSync) validateBeaconAttestation(ctx context.Context, msg proto.Message, p p2p.Broadcaster, fromSelf bool) (bool, error) {
+func (r *Service) validateBeaconAttestation(ctx context.Context, msg proto.Message, p p2p.Broadcaster, fromSelf bool) (bool, error) {
 	// Attestation processing requires the target block to be present in the database, so we'll skip
 	// validating or processing attestations until fully synced.
 	if r.initialSync.Syncing() {

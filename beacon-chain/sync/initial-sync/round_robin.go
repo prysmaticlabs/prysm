@@ -37,7 +37,7 @@ const refreshTime = 6 * time.Second
 // Using the finalized root as the head_block_root and the epoch start slot
 // after the finalized epoch, request blocks to head from some subset of peers
 // where step = 1.
-func (s *InitialSync) roundRobinSync(genesis time.Time) error {
+func (s *Service) roundRobinSync(genesis time.Time) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -266,7 +266,7 @@ func (s *InitialSync) roundRobinSync(genesis time.Time) error {
 }
 
 // requestBlocks by range to a specific peer.
-func (s *InitialSync) requestBlocks(ctx context.Context, req *p2ppb.BeaconBlocksByRangeRequest, pid peer.ID) ([]*eth.BeaconBlock, error) {
+func (s *Service) requestBlocks(ctx context.Context, req *p2ppb.BeaconBlocksByRangeRequest, pid peer.ID) ([]*eth.BeaconBlock, error) {
 	log.WithFields(logrus.Fields{
 		"peer":  pid,
 		"start": req.StartSlot,
@@ -297,7 +297,7 @@ func (s *InitialSync) requestBlocks(ctx context.Context, req *p2ppb.BeaconBlocks
 
 // highestFinalizedEpoch as reported by peers. This is the absolute highest finalized epoch as
 // reported by peers.
-func (s *InitialSync) highestFinalizedEpoch() uint64 {
+func (s *Service) highestFinalizedEpoch() uint64 {
 	_, epoch, _ := s.bestFinalized()
 	return epoch
 }
@@ -307,7 +307,7 @@ func (s *InitialSync) highestFinalizedEpoch() uint64 {
 // which most peers can serve blocks. Ideally, all peers would be reporting the same finalized
 // epoch.
 // Returns the best finalized root, epoch number, and peers that agree.
-func (s *InitialSync) bestFinalized() ([]byte, uint64, []peer.ID) {
+func (s *Service) bestFinalized() ([]byte, uint64, []peer.ID) {
 	finalized := make(map[[32]byte]uint64)
 	rootToEpoch := make(map[[32]byte]uint64)
 	for _, pid := range s.p2p.Peers().Connected() {
@@ -343,7 +343,7 @@ func (s *InitialSync) bestFinalized() ([]byte, uint64, []peer.ID) {
 }
 
 // bestPeer returns the peer ID of the peer reporting the highest head slot.
-func (s *InitialSync) bestPeer() peer.ID {
+func (s *Service) bestPeer() peer.ID {
 	var best peer.ID
 	var bestSlot uint64
 	for _, k := range s.p2p.Peers().Connected() {
@@ -357,7 +357,7 @@ func (s *InitialSync) bestPeer() peer.ID {
 }
 
 // logSyncStatus and increment block processing counter.
-func (s *InitialSync) logSyncStatus(genesis time.Time, blk *eth.BeaconBlock, syncingPeers []peer.ID, counter *ratecounter.RateCounter) {
+func (s *Service) logSyncStatus(genesis time.Time, blk *eth.BeaconBlock, syncingPeers []peer.ID, counter *ratecounter.RateCounter) {
 	counter.Incr(1)
 	rate := float64(counter.Rate()) / counterSeconds
 	if rate == 0 {

@@ -45,7 +45,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 		blkRoots = append(blkRoots, root)
 	}
 
-	r := &RegularSync{p2p: p1, db: d}
+	r := &Service{p2p: p1, db: d}
 	pcl := protocol.ID("/testing")
 
 	var wg sync.WaitGroup
@@ -108,7 +108,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 
 	expectedRoots := [][32]byte{blockBRoot, blockARoot}
 
-	r := &RegularSync{
+	r := &Service{
 		p2p: p1,
 		chain: &mock.ChainService{
 			State:               genesisState,

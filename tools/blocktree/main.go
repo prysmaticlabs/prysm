@@ -95,7 +95,11 @@ func main() {
 		}
 		// Retrieve attestation indices
 		for _, att := range atts {
-			indices, err := helpers.AttestingIndices(state, att.Data, att.AggregationBits)
+			committee, err := helpers.BeaconCommittee(state, att.Data.Slot, att.Data.CommitteeIndex)
+			if err != nil {
+				panic(err)
+			}
+			indices, err := helpers.AttestingIndices(att.AggregationBits, committee)
 			if err != nil {
 				panic(err)
 			}
