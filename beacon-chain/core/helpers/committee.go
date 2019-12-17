@@ -212,7 +212,9 @@ func CommitteeAssignments(state *pb.BeaconState, epoch uint64) (map[uint64]*Comm
 	if epoch > NextEpoch(state) {
 		return nil, nil, fmt.Errorf(
 			"epoch %d can't be greater than next epoch %d",
-			epoch, NextEpoch(state))
+			epoch, 
+			NextEpoch(state),
+		)
 	}
 
 	// Track which slot has which proposer.
