@@ -2,12 +2,14 @@ package trieutil
 
 import (
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -194,6 +196,25 @@ func BenchmarkGenerateTrieFromItems(b *testing.B) {
 		if _, err := GenerateTrieFromItems(items, 32); err != nil {
 			b.Fatalf("Could not generate Merkle trie from items: %v", err)
 		}
+	}
+}
+
+func BenchmarkInsertTrie_Optimized(b *testing.B) {
+	b.StopTimer()
+	numDeposits := 16000
+	items := make([][]byte, numDeposits)
+	for i := 0; i < numDeposits; i++ {
+		someRoot := bytesutil.ToBytes32([]byte(strconv.Itoa(i)))
+		items[i] = someRoot[:]
+	}
+	tr, err := GenerateTrieFromItems(items, 32)
+	if err != nil {
+		b.Fatalf("Could not generate Merkle trie from items: %v", err)
+	}
+	someItem := bytesutil.ToBytes32([]byte("hello-world"))
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		tr.Insert(someItem[:], i%numDeposits)
 	}
 }
 
