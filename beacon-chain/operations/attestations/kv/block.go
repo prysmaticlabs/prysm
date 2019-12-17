@@ -21,7 +21,7 @@ func (p *AttCaches) SaveBlockAttestation(att *ethpb.Attestation) error {
 	return nil
 }
 
-// SaveBlockAttestations saves a list of block attestation in cache.
+// SaveBlockAttestations saves a list of block attestations in cache.
 func (p *AttCaches) SaveBlockAttestations(atts []*ethpb.Attestation) error {
 	for _, att := range atts {
 		if err := p.SaveBlockAttestation(att); err != nil {

@@ -21,7 +21,7 @@ func (p *AttCaches) SaveForkchoiceAttestation(att *ethpb.Attestation) error {
 	return nil
 }
 
-// SaveForkchoiceAttestations saves a list of forkchoice attestation in cache.
+// SaveForkchoiceAttestations saves a list of forkchoice attestations in cache.
 func (p *AttCaches) SaveForkchoiceAttestations(atts []*ethpb.Attestation) error {
 	for _, att := range atts {
 		if err := p.SaveForkchoiceAttestation(att); err != nil {

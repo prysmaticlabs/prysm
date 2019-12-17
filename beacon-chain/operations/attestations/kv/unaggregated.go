@@ -26,7 +26,7 @@ func (p *AttCaches) SaveUnaggregatedAttestation(att *ethpb.Attestation) error {
 	return nil
 }
 
-// SaveUnaggregatedAttestations saves a list of unaggregated attestation in cache.
+// SaveUnaggregatedAttestations saves a list of unaggregated attestations in cache.
 func (p *AttCaches) SaveUnaggregatedAttestations(atts []*ethpb.Attestation) error {
 	for _, att := range atts {
 		if err := p.SaveUnaggregatedAttestation(att); err != nil {
