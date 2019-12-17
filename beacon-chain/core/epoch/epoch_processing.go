@@ -286,6 +286,12 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Update effective balances with hysteresis.
 	for i, v := range state.Validators {
+		if v == nil {
+			return nil, fmt.Errorf("validator %d is nil in state", i)
+		}
+		if i >= len(state.Balances) {
+			return nil, fmt.Errorf("validator index exceeds validator length in state %d >= %d", i, len(state.Balances))
+		}
 		balance := state.Balances[i]
 		halfInc := params.BeaconConfig().EffectiveBalanceIncrement / 2
 		if balance < v.EffectiveBalance || v.EffectiveBalance+3*halfInc < balance {
@@ -298,10 +304,17 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Set total slashed balances.
 	slashedExitLength := params.BeaconConfig().EpochsPerSlashingsVector
-	state.Slashings[nextEpoch%slashedExitLength] = 0
+	slashedEpoch := int(nextEpoch % slashedExitLength)
+	if slashedEpoch >= len(state.Slashings) {
+		return nil, fmt.Errorf("slashing epoch exceeds slashing object length in state %d >= %d", slashedEpoch, len(state.Slashings))
+	}
+	state.Slashings[slashedEpoch] = 0
 
 	// Set RANDAO mix.
 	randaoMixLength := params.BeaconConfig().EpochsPerHistoricalVector
+	if int(currentEpoch) >= len(state.RandaoMixes) {
+		return nil, fmt.Errorf("current epoch exceeds randao length in state %d >= %d", currentEpoch, len(state.RandaoMixes))
+	}
 	mix := helpers.RandaoMix(state, currentEpoch)
 	state.RandaoMixes[nextEpoch%randaoMixLength] = mix
 
