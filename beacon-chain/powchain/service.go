@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -136,6 +138,7 @@ type Service struct {
 	runError                error
 	lastRequestedBlock      *big.Int
 	chainStartETH1Data      *ethpb.Eth1Data
+	preGenesisState         *pb.BeaconState
 	activeValidatorCount    uint64
 	depositedPubkeys        map[[48]byte]uint64
 	processingLock          sync.RWMutex

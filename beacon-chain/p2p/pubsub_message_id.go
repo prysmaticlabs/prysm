@@ -3,7 +3,7 @@ package p2p
 import (
 	"encoding/base64"
 
-	"github.com/libp2p/go-libp2p-pubsub/pb"
+	pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
