@@ -24,11 +24,6 @@ type POWChain struct {
 	GenesisEth1Block    *big.Int
 }
 
-// ChainStartFeed --
-func (m *POWChain) ChainStartFeed() *event.Feed {
-	return m.ChainFeed
-}
-
 // Eth2GenesisPowchainInfo --
 func (m *POWChain) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 	blk := m.GenesisEth1Block
