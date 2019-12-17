@@ -31,7 +31,7 @@ func TestRegularSyncBeaconBlockSubscriber_FilterByFinalizedEpoch(t *testing.T) {
 		t.Fatal(err)
 	}
 	parentRoot, _ := ssz.SigningRoot(parent)
-	r := &RegularSync{
+	r := &Service{
 		db:    db,
 		chain: &mock.ChainService{State: s},
 	}

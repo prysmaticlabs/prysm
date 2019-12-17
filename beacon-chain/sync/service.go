@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 )
 
-var _ = shared.Service(&RegularSync{})
+var _ = shared.Service(&Service{})
 
 // Config to set up the regular sync service.
 type Config struct {
@@ -37,9 +37,9 @@ type blockchainService interface {
 }
 
 // NewRegularSync service.
-func NewRegularSync(cfg *Config) *RegularSync {
+func NewRegularSync(cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(context.Background())
-	r := &RegularSync{
+	r := &Service{
 		ctx:                 ctx,
 		cancel:              cancel,
 		db:                  cfg.DB,
@@ -58,9 +58,9 @@ func NewRegularSync(cfg *Config) *RegularSync {
 	return r
 }
 
-// RegularSync service is responsible for handling all run time p2p related operations as the
+// Service is responsible for handling all run time p2p related operations as the
 // main entry point for network messages.
-type RegularSync struct {
+type Service struct {
 	ctx                 context.Context
 	cancel              context.CancelFunc
 	p2p                 p2p.P2P
@@ -77,7 +77,7 @@ type RegularSync struct {
 }
 
 // Start the regular sync service.
-func (r *RegularSync) Start() {
+func (r *Service) Start() {
 	r.p2p.AddConnectionHandler(r.sendRPCStatusRequest)
 	r.p2p.AddDisconnectionHandler(r.removeDisconnectedPeerStatus)
 	r.processPendingBlocksQueue()
@@ -85,13 +85,13 @@ func (r *RegularSync) Start() {
 }
 
 // Stop the regular sync service.
-func (r *RegularSync) Stop() error {
+func (r *Service) Stop() error {
 	defer r.cancel()
 	return nil
 }
 
 // Status of the currently running regular sync service.
-func (r *RegularSync) Status() error {
+func (r *Service) Status() error {
 	if r.chainStarted && r.initialSync.Syncing() {
 		return errors.New("waiting for initial sync")
 	}

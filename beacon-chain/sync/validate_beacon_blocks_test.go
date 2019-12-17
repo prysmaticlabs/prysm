@@ -31,7 +31,7 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 
 	mockBroadcaster := &p2ptest.MockBroadcaster{}
 
-	r := &RegularSync{
+	r := &Service{
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 		chain: &mock.ChainService{Genesis: time.Now(),
@@ -70,7 +70,7 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 	}
 
 	mockBroadcaster := &p2ptest.MockBroadcaster{}
-	r := &RegularSync{
+	r := &Service{
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 		chain:       &mock.ChainService{Genesis: time.Now()},
@@ -107,7 +107,7 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInCache(t *testing.T) {
 
 	mockBroadcaster := &p2ptest.MockBroadcaster{}
 
-	r := &RegularSync{
+	r := &Service{
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 		chain: &mock.ChainService{Genesis: time.Now(),
@@ -165,7 +165,7 @@ func TestValidateBeaconBlockPubSub_ValidSignature(t *testing.T) {
 
 	mockBroadcaster := &p2ptest.MockBroadcaster{}
 
-	r := &RegularSync{
+	r := &Service{
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 		chain: &mock.ChainService{Genesis: time.Now(),
@@ -205,7 +205,7 @@ func TestValidateBeaconBlockPubSub_ValidSignature_FromSelf(t *testing.T) {
 
 	mockBroadcaster := &p2ptest.MockBroadcaster{}
 
-	r := &RegularSync{
+	r := &Service{
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 		chain:       &mock.ChainService{Genesis: time.Now()},
@@ -241,7 +241,7 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 
 	mockBroadcaster := &p2ptest.MockBroadcaster{}
 
-	r := &RegularSync{
+	r := &Service{
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: true},
 		chain: &mock.ChainService{
@@ -282,7 +282,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 
 	mockBroadcaster := &p2ptest.MockBroadcaster{}
 
-	r := &RegularSync{
+	r := &Service{
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 		chain:       &mock.ChainService{Genesis: time.Now()},
@@ -323,7 +323,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 
 	mockBroadcaster := &p2ptest.MockBroadcaster{}
 	genesisTime := time.Now()
-	r := &RegularSync{
+	r := &Service{
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 		chain: &mock.ChainService{

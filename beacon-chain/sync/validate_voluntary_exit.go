@@ -30,7 +30,7 @@ func exitCacheKey(exit *ethpb.VoluntaryExit) string {
 
 // Clients who receive a voluntary exit on this topic MUST validate the conditions within process_voluntary_exit before
 // forwarding it across the network.
-func (r *RegularSync) validateVoluntaryExit(ctx context.Context, msg proto.Message, p p2p.Broadcaster, fromSelf bool) (bool, error) {
+func (r *Service) validateVoluntaryExit(ctx context.Context, msg proto.Message, p p2p.Broadcaster, fromSelf bool) (bool, error) {
 	// The head state will be too far away to validate any voluntary exit.
 	if r.initialSync.Syncing() {
 		return false, nil
