@@ -35,9 +35,11 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_go",
-    sha256 = "886db2f8d620fcb5791c8e2a402a575bc70728e17ec116841d78f3837a09f69e",
-    strip_prefix = "rules_go-9bb1562710f7077cd109b66cd4b45900e6d7ae73",
-    urls = ["https://github.com/bazelbuild/rules_go/archive/9bb1562710f7077cd109b66cd4b45900e6d7ae73.tar.gz"],
+    sha256 = "e88471aea3a3a4f19ec1310a55ba94772d087e9ce46e41ae38ecebe17935de7b",
+    urls = [
+        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/rules_go/releases/download/v0.20.3/rules_go-v0.20.3.tar.gz",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.20.3/rules_go-v0.20.3.tar.gz",
+    ],
 )
 
 http_archive(
@@ -57,14 +59,15 @@ git_repository(
 # https://github.com/gogo/protobuf/pull/582 is merged.
 git_repository(
     name = "com_github_gogo_protobuf",
-    commit = "ba06b47c162d49f2af050fb4c75bcbc86a159d5c",  # v1.2.1, as of 2019-03-03
+    # v1.3.0 (latest) as of 2019-10-05
+    commit = "0ca988a254f991240804bf9821f3450d87ccbb1b",
     patch_args = ["-p1"],
     patches = [
         "@io_bazel_rules_go//third_party:com_github_gogo_protobuf-gazelle.patch",
         "//third_party:com_github_gogo_protobuf-equal.patch",
     ],
     remote = "https://github.com/gogo/protobuf",
-    shallow_since = "1550471403 +0200",
+    shallow_since = "1567336231 +0200",
     # gazelle args: -go_prefix github.com/gogo/protobuf -proto legacy
 )
 
@@ -742,8 +745,9 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_pubsub",
     build_file_proto_mode = "disable_global",
-    commit = "9f04364996b415168f0e0d7e9fc82272fbed4005",  # v0.1.1
     importpath = "github.com/libp2p/go-libp2p-pubsub",
+    sum = "h1:tPKbkjAUI0xLGN3KKTKKy9TQEviVfrP++zJgH5Muke4=",
+    version = "v0.2.5",
 )
 
 go_repository(
@@ -834,8 +838,9 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_discovery",
-    commit = "d248d63b0af8c023307da18ad7000a12020e06f0",  # v0.1.0
     importpath = "github.com/libp2p/go-libp2p-discovery",
+    sum = "h1:1p3YSOq7VsgaL+xVHPi8XAmtGyas6D2J6rWBEfz/aiY=",
+    version = "v0.2.0",
 )
 
 go_repository(
