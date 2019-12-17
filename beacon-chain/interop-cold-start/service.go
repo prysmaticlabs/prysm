@@ -15,7 +15,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 )
 
@@ -121,11 +120,6 @@ func (s *Service) ChainStartDeposits() []*ethpb.Deposit {
 // ChainStartEth1Data mocks out the powchain functionality for interop.
 func (s *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 	return &ethpb.Eth1Data{}
-}
-
-// ChainStartFeed mocks out the powchain functionality for interop.
-func (s *Service) ChainStartFeed() *event.Feed {
-	return new(event.Feed)
 }
 
 // DepositByPubkey mocks out the deposit cache functionality for interop.
