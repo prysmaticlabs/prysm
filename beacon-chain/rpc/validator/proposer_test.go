@@ -1282,3 +1282,29 @@ func TestDeposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t *testing
 		)
 	}
 }
+
+func TestDeleteAttsInPool_Aggregated(t *testing.T) {
+	s := &Server{
+		AttPool: attestations.NewPool(),
+	}
+
+	aggregatedAtts := []*ethpb.Attestation{{AggregationBits: bitfield.Bitlist{0b01101}}, {AggregationBits: bitfield.Bitlist{0b0111}}}
+	unaggregatedAtts := []*ethpb.Attestation{{AggregationBits: bitfield.Bitlist{0b001}}, {AggregationBits: bitfield.Bitlist{0b0001}}}
+
+	if err := s.AttPool.SaveAggregatedAttestations(aggregatedAtts); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.AttPool.SaveUnaggregatedAttestations(unaggregatedAtts); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := s.deleteAttsInPool(append(aggregatedAtts, unaggregatedAtts...)); err != nil {
+		t.Fatal(err)
+	}
+	if len(s.AttPool.AggregatedAttestations()) != 0 {
+		t.Error("Did not delete aggregated attestation")
+	}
+	if len(s.AttPool.UnaggregatedAttestations()) != 0 {
+		t.Error("Did not delete unaggregated attestation")
+	}
+}

@@ -28,6 +28,7 @@ go_test(
     srcs = [
         "pool_test.go",
         "prepare_forkchoice_test.go",
+        "service_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
