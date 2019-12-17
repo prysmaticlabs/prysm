@@ -134,6 +134,67 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 	}
 }
 
+func TestAttestingIndicesWithBeaconCommitteeWithoutCache_Ok(t *testing.T) {
+	committeeSize := uint64(16)
+	validators := make([]*ethpb.Validator, committeeSize*params.BeaconConfig().SlotsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	state := &pb.BeaconState{
+		Slot:        params.BeaconConfig().SlotsPerEpoch,
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	}
+
+	attestationData := &ethpb.AttestationData{}
+
+	tests := []struct {
+		attestationSlot uint64
+		bitfield        bitfield.Bitlist
+		wanted          []uint64
+	}{
+		{
+			attestationSlot: 3,
+			bitfield:        bitfield.Bitlist{0x07},
+			wanted:          []uint64{355, 416},
+		},
+		{
+			attestationSlot: 2,
+			bitfield:        bitfield.Bitlist{0x05},
+			wanted:          []uint64{447},
+		},
+		{
+			attestationSlot: 11,
+			bitfield:        bitfield.Bitlist{0x07},
+			wanted:          []uint64{67, 508},
+		},
+	}
+
+	for _, tt := range tests {
+		attestationData.Target = &ethpb.Checkpoint{Epoch: 0}
+		attestationData.Slot = tt.attestationSlot
+		committee, err := BeaconCommitteeWithoutCache(state, tt.attestationSlot, 0 /* committee index */)
+		if err != nil {
+			t.Error(err)
+		}
+		result, err := AttestingIndices(tt.bitfield, committee)
+		if err != nil {
+			t.Errorf("Failed to get attestation participants: %v", err)
+		}
+
+		if !reflect.DeepEqual(tt.wanted, result) {
+			t.Errorf(
+				"Result indices was an unexpected value. Wanted %d, got %d",
+				tt.wanted,
+				result,
+			)
+		}
+	}
+}
+
 func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := 0; i < len(validators); i++ {
@@ -429,7 +490,7 @@ func TestShuffledIndices_ShuffleRightLength(t *testing.T) {
 
 func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 	c := featureconfig.Get()
-	c.EnableShuffledIndexCache = true
+	c.EnableNewCache = true
 	featureconfig.Init(c)
 	defer featureconfig.Init(nil)
 
@@ -450,16 +511,15 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 	if err := UpdateCommitteeCache(state); err != nil {
 		t.Fatal(err)
 	}
-	savedEpochs, err := committeeCache.Epochs()
+
+	epoch := uint64(1)
+	idx := uint64(1)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(savedEpochs) != 2 {
-		t.Error("Did not save correct epoch lengths")
-	}
-	epoch := uint64(1)
-	idx := uint64(1)
-	indices, err = committeeCache.ShuffledIndices(epoch, idx)
+
+	indices, err = committeeCache.Committee(StartSlot(epoch), seed, idx)
 	if err != nil {
 		t.Fatal(err)
 	}

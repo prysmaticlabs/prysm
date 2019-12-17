@@ -38,8 +38,10 @@ type blockchainService interface {
 
 // NewRegularSync service.
 func NewRegularSync(cfg *Config) *Service {
+	ctx, cancel := context.WithCancel(context.Background())
 	r := &Service{
-		ctx:                 context.Background(),
+		ctx:                 ctx,
+		cancel:              cancel,
 		db:                  cfg.DB,
 		p2p:                 cfg.P2P,
 		operations:          cfg.Operations,
@@ -60,6 +62,7 @@ func NewRegularSync(cfg *Config) *Service {
 // main entry point for network messages.
 type Service struct {
 	ctx                 context.Context
+	cancel              context.CancelFunc
 	p2p                 p2p.P2P
 	db                  db.Database
 	operations          *operations.Service
@@ -77,12 +80,13 @@ type Service struct {
 func (r *Service) Start() {
 	r.p2p.AddConnectionHandler(r.sendRPCStatusRequest)
 	r.p2p.AddDisconnectionHandler(r.removeDisconnectedPeerStatus)
-	go r.processPendingBlocksQueue()
-	go r.maintainPeerStatuses()
+	r.processPendingBlocksQueue()
+	r.maintainPeerStatuses()
 }
 
 // Stop the regular sync service.
 func (r *Service) Stop() error {
+	defer r.cancel()
 	return nil
 }
 
