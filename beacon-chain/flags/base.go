@@ -56,10 +56,12 @@ var (
 		Usage: "The required number of valid peers to connect with before syncing.",
 		Value: 3,
 	}
+	// SlasherCertFlag defines a flag for the slasher TLS certificate.
 	SlasherCertFlag = cli.StringFlag{
 		Name:  "slasher-tls-cert",
 		Usage: "Certificate for secure slasher gRPC connection. Pass this in order to use slasher gRPC securely.",
 	}
+	// SlasherProviderFlag defines a flag for a slasher RPC provider.
 	SlasherProviderFlag = cli.StringFlag{
 		Name:  "slasher-provider",
 		Usage: "A slasher provider string endpoint. Can either be an grpc server endpoint.",
