@@ -19,7 +19,6 @@ go_library(
         "service.go",
         "subscriber.go",
         "subscriber_beacon_aggregate_proof.go",
-        "subscriber_beacon_aggregate_proof.test.go",
         "subscriber_beacon_attestation.go",
         "subscriber_beacon_blocks.go",
         "subscriber_committee_index_beacon_attestation.go",
