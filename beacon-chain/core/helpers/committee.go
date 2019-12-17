@@ -204,15 +204,17 @@ type CommitteeAssignmentContainer struct {
 // CommitteeAssignments is a map of validator indices pointing to the appropriate committee
 // assignment for the given epoch.
 //
-// 1. Compute all committees.
-// 2. Determine the proposer index and slot for each committee.
+// 1. Determine the proposer validator index for each slot.
+// 2. Compute all committees.
 // 3. Determine the attesting slot for each committee.
 // 4. Construct a map of validator indices pointing to the respective committees.
 func CommitteeAssignments(state *pb.BeaconState, epoch uint64) (map[uint64]*CommitteeAssignmentContainer, map[uint64]uint64, error) {
 	if epoch > NextEpoch(state) {
 		return nil, nil, fmt.Errorf(
 			"epoch %d can't be greater than next epoch %d",
-			epoch, NextEpoch(state))
+			epoch,
+			NextEpoch(state),
+		)
 	}
 
 	// Track which slot has which proposer.
@@ -236,8 +238,9 @@ func CommitteeAssignments(state *pb.BeaconState, epoch uint64) (map[uint64]*Comm
 
 	validatorIndexToCommittee := make(map[uint64]*CommitteeAssignmentContainer)
 
-	// Compute all committees.
+	// Compute all committees for all slots in the requested epoch.
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+		// Compute committees.
 		for j := uint64(0); j < numCommitteesPerSlot; j++ {
 			slot := startSlot + i
 			committee, err := BeaconCommittee(state, slot, j /*committee index*/)
@@ -253,7 +256,6 @@ func CommitteeAssignments(state *pb.BeaconState, epoch uint64) (map[uint64]*Comm
 			for _, vID := range committee {
 				validatorIndexToCommittee[vID] = cac
 			}
-
 		}
 	}
 
@@ -262,6 +264,10 @@ func CommitteeAssignments(state *pb.BeaconState, epoch uint64) (map[uint64]*Comm
 
 // CommitteeAssignment is used to query committee assignment from
 // current and previous epoch.
+//
+// Deprecated: Consider using CommitteeAssignments, especially when computing more than one
+// validator assignment as this method is O(n^2) in computational complexity. This method exists to
+// ensure spec definition conformance and otherwise should probably not be used.
 //
 // Spec pseudocode definition:
 //   def get_committee_assignment(state: BeaconState,

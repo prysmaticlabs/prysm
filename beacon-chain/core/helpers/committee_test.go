@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -333,9 +334,11 @@ func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 	}
 }
 
-func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
-	// Initialize test with 128 validators, each slot and each index gets 2 validators.
-	validators := make([]*ethpb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
+// Test helpers.CommitteeAssignments against the results of helpers.CommitteeAssignment by validator
+// index. Warning: this test is a bit slow!
+func TestCommitteeAssignments_AgreesWithSpecDefinitionMethod(t *testing.T) {
+	// Initialize test with 256 validators, each slot and each index gets 4 validators.
+	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -344,6 +347,54 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 	state := &pb.BeaconState{
 		Validators:  validators,
 		Slot:        params.BeaconConfig().SlotsPerEpoch,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	}
+	// Test for 2 epochs.
+	for epoch := uint64(0); epoch < 2; epoch++ {
+		state := proto.Clone(state).(*pb.BeaconState)
+		assignments, proposers, err := CommitteeAssignments(state, epoch)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for i := uint64(0); int(i) < len(validators); i++ {
+			committee, committeeIndex, slot, proposerSlot, err := CommitteeAssignment(state, epoch, i)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(committee, assignments[i].Committee) {
+				t.Errorf("Computed different committees for validator %d", i)
+			}
+			if committeeIndex != assignments[i].CommitteeIndex {
+				t.Errorf("Computed different committee index for validator %d", i)
+			}
+			if slot != assignments[i].AttesterSlot {
+				t.Errorf("Computed different attesting slot for validator %d", i)
+			}
+			if proposerSlot != proposers[i] {
+				t.Errorf("Computed different proposing slot for validator %d", i)
+			}
+		}
+	}
+}
+
+func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
+	// Initialize test with 256 validators, each slot and each index gets 4 validators.
+	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		// First 2 epochs only half validators are activated.
+		var activationEpoch uint64
+		if i >= len(validators)/2 {
+			activationEpoch = 3
+		}
+		validators[i] = &ethpb.Validator{
+			ActivationEpoch: activationEpoch,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	state := &pb.BeaconState{
+		Validators:  validators,
+		Slot:        2 * params.BeaconConfig().SlotsPerEpoch, // epoch 2
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
@@ -376,6 +427,12 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 			committee:      []uint64{30, 11},
 			committeeIndex: 0,
 			isProposer:     false,
+		}, {
+			index:          2,
+			slot:           114, // 3rd epoch has more active validators
+			committee:      []uint64{2, 6, 35, 31},
+			committeeIndex: 0,
+			isProposer:     false,
 		},
 	}
 
@@ -383,7 +440,7 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			validatorIndexToCommittee, proposerIndexToSlot, err := CommitteeAssignments(state, SlotToEpoch(tt.slot))
 			if err != nil {
-				t.Fatalf("failed to execute NextEpochCommitteeAssignment: %v", err)
+				t.Fatalf("failed to determine CommitteeAssignments: %v", err)
 			}
 			cac := validatorIndexToCommittee[tt.index]
 			if cac.CommitteeIndex != tt.committeeIndex {
