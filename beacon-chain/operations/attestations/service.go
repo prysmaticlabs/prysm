@@ -10,10 +10,10 @@ var forkChoiceProcessedRootsSize = int64(1 << 16)
 
 // logic of attestation pool operations
 type Service struct {
-	ctx    context.Context
-	cancel context.CancelFunc
-	pool   Pool
-	error  error
+	ctx                      context.Context
+	cancel                   context.CancelFunc
+	pool                     Pool
+	error                    error
 	forkChoiceProcessedRoots *ristretto.Cache
 }
 
@@ -36,9 +36,9 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:    ctx,
-		cancel: cancel,
-		pool:   cfg.Pool,
+		ctx:                      ctx,
+		cancel:                   cancel,
+		pool:                     cfg.Pool,
 		forkChoiceProcessedRoots: cache,
 	}, nil
 }
