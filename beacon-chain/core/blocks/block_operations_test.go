@@ -1216,11 +1216,6 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		attDataAndCustodyBit := &pb.AttestationDataAndCustodyBit{
-			Data:       tt.attestation.Data,
-			CustodyBit: false,
-		}
-
 		domain := helpers.Domain(state.Fork, tt.attestation.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
 
 		root, err := ssz.HashTreeRoot(tt.attestation.Data)

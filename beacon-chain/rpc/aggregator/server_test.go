@@ -211,7 +211,8 @@ func generateAtt(state *pbp2p.BeaconState, index uint64, privKeys []*bls.SecretK
 		},
 		AggregationBits: aggBits,
 	}
-	attestingIndices, _ := helpers.AttestingIndices(state, att.Data, att.AggregationBits)
+	committee, _ := helpers.BeaconCommittee(state, att.Data.Slot, att.Data.CommitteeIndex)
+	attestingIndices, _ := helpers.AttestingIndices(att.AggregationBits, committee)
 	domain := helpers.Domain(state.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 
 	sigs := make([]*bls.Signature, len(attestingIndices))

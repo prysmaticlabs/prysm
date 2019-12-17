@@ -55,7 +55,7 @@ func TestRegularSyncBeaconBlockSubscriber_FilterByFinalizedEpoch(t *testing.T) {
 }
 
 func TestDeleteAttsInPool(t *testing.T) {
-	r := &RegularSync{
+	r := &Service{
 		attPool: attestations.NewPool(),
 	}
 	att1 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1101}}

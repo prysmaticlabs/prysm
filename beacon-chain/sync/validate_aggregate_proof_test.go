@@ -35,7 +35,11 @@ func TestVerifyIndexInCommittee_CanVerify(t *testing.T) {
 		Target: &ethpb.Checkpoint{Epoch: 0}},
 		AggregationBits: bf}
 
-	indices, err := helpers.AttestingIndices(s, att.Data, att.AggregationBits)
+	committee, err := helpers.BeaconCommittee(s, att.Data.Slot, att.Data.CommitteeIndex)
+	if err != nil {
+		t.Error(err)
+	}
+	indices, err := helpers.AttestingIndices(att.AggregationBits, committee)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,7 +119,7 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 		AggregatorIndex: 0,
 	}
 
-	r := &RegularSync{
+	r := &Service{
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
@@ -154,7 +158,7 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 	}
 
 	beaconState.GenesisTime = uint64(time.Now().Unix())
-	r := &RegularSync{
+	r := &Service{
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 		chain: &mock.ChainService{Genesis: time.Now(),
@@ -197,7 +201,11 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 		AggregationBits: aggBits,
 	}
 
-	attestingIndices, err := helpers.AttestingIndices(beaconState, att.Data, att.AggregationBits)
+	committee, err := helpers.BeaconCommittee(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	if err != nil {
+		t.Error(err)
+	}
+	attestingIndices, err := helpers.AttestingIndices(att.AggregationBits, committee)
 	if err != nil {
 		t.Error(err)
 	}
@@ -226,7 +234,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	}
 
 	beaconState.GenesisTime = uint64(time.Now().Unix())
-	r := &RegularSync{
+	r := &Service{
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 		chain: &mock.ChainService{Genesis: time.Now(),

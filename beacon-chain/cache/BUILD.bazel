@@ -3,7 +3,6 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "active_count.go",
         "attestation_data.go",
         "checkpoint_state.go",
         "committee.go",
@@ -30,7 +29,6 @@ go_test(
     name = "go_default_test",
     size = "small",
     srcs = [
-        "active_count_test.go",
         "attestation_data_test.go",
         "checkpoint_state_test.go",
         "committee_test.go",
@@ -41,6 +39,7 @@ go_test(
     race = "on",
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/bytesutil:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",

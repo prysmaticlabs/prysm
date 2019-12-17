@@ -999,7 +999,6 @@ func TestEth1Data_MockEnabled(t *testing.T) {
 }
 
 func TestFilterAttestation_OK(t *testing.T) {
-	helpers.ClearAllCaches()
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
@@ -1051,7 +1050,14 @@ func TestFilterAttestation_OK(t *testing.T) {
 			Target:         &ethpb.Checkpoint{}},
 			AggregationBits: aggBits,
 		}
-		attestingIndices, _ := helpers.AttestingIndices(state, atts[i].Data, atts[i].AggregationBits)
+		committee, err := helpers.BeaconCommittee(state, atts[i].Data.Slot, atts[i].Data.CommitteeIndex)
+		if err != nil {
+			t.Error(err)
+		}
+		attestingIndices, err := helpers.AttestingIndices(atts[i].AggregationBits, committee)
+		if err != nil {
+			t.Error(err)
+		}
 		domain := helpers.Domain(state.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 
 		sigs := make([]*bls.Signature, len(attestingIndices))

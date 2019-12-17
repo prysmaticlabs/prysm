@@ -282,11 +282,11 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	if len(res.Duties) != 2 {
 		t.Errorf("expected 2 assignments but got %d", len(res.Duties))
 	}
-	if res.ValidatorAssignment[0].AttesterSlot != 4 {
-		t.Errorf("Expected res.ValidatorAssignment[0].AttesterSlot == 4, got %d", res.ValidatorAssignment[0].AttesterSlot)
+	if res.Duties[0].AttesterSlot != 4 {
+		t.Errorf("Expected res.Duties[0].AttesterSlot == 4, got %d", res.Duties[0].AttesterSlot)
 	}
-	if res.ValidatorAssignment[1].AttesterSlot != 3 {
-		t.Errorf("Expected res.ValidatorAssignment[1].AttesterSlot == 3, got %d", res.ValidatorAssignment[0].AttesterSlot)
+	if res.Duties[1].AttesterSlot != 3 {
+		t.Errorf("Expected res.Duties[1].AttesterSlot == 3, got %d", res.Duties[0].AttesterSlot)
 	}
 }
 
@@ -350,13 +350,13 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 	for i, deposit := range deposits {
 		pks[i] = deposit.Data.PublicKey
 	}
-	req := &pb.AssignmentRequest{
+	req := &ethpb.DutiesRequest{
 		PublicKeys: pks,
-		EpochStart: 0,
+		Epoch: 0,
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := vs.CommitteeAssignment(context.Background(), req)
+		_, err := vs.GetDuties(context.Background(), req)
 		if err != nil {
 			b.Error(err)
 		}

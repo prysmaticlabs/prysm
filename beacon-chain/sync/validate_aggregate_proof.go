@@ -22,7 +22,7 @@ import (
 
 // validateAggregateAndProof verifies the aggregated signature and the selection proof is valid before forwarding to the
 // network and downstream services.
-func (r *RegularSync) validateAggregateAndProof(ctx context.Context, msg proto.Message, p p2p.Broadcaster, fromSelf bool) (bool, error) {
+func (r *Service) validateAggregateAndProof(ctx context.Context, msg proto.Message, p p2p.Broadcaster, fromSelf bool) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "sync.validateAggregateAndProof")
 	defer span.End()
 
@@ -86,10 +86,14 @@ func (r *RegularSync) validateAggregateAndProof(ctx context.Context, msg proto.M
 
 // This validates the aggregator's index in state is within the attesting indices of the attestation.
 func validateIndexInCommittee(ctx context.Context, s *pb.BeaconState, a *ethpb.Attestation, validatorIndex uint64) error {
-	_, span := trace.StartSpan(ctx, "sync..validateIndexInCommittee")
+	ctx, span := trace.StartSpan(ctx, "sync..validateIndexInCommittee")
 	defer span.End()
 
-	attestingIndices, err := helpers.AttestingIndices(s, a.Data, a.AggregationBits)
+	committee, err := helpers.BeaconCommittee(s, a.Data.Slot, a.Data.CommitteeIndex)
+	if err != nil {
+		return err
+	}
+	attestingIndices, err := helpers.AttestingIndices(a.AggregationBits, committee)
 	if err != nil {
 		return err
 	}
@@ -113,11 +117,7 @@ func validateSelection(ctx context.Context, s *pb.BeaconState, data *ethpb.Attes
 	_, span := trace.StartSpan(ctx, "sync.validateSelection")
 	defer span.End()
 
-	slotSig, err := bls.SignatureFromBytes(proof)
-	if err != nil {
-		return err
-	}
-	aggregator, err := helpers.IsAggregator(s, data.Slot, data.CommitteeIndex, slotSig)
+	aggregator, err := helpers.IsAggregator(s, data.Slot, data.CommitteeIndex, proof)
 	if err != nil {
 		return err
 	}
@@ -131,6 +131,10 @@ func validateSelection(ctx context.Context, s *pb.BeaconState, data *ethpb.Attes
 		return err
 	}
 	pubKey, err := bls.PublicKeyFromBytes(s.Validators[validatorIndex].PublicKey)
+	if err != nil {
+		return err
+	}
+	slotSig, err := bls.SignatureFromBytes(proof)
 	if err != nil {
 		return err
 	}

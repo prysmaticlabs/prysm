@@ -81,13 +81,13 @@ func (vs *Server) assignment(idx uint64, beaconState *pbp2p.BeaconState, epoch u
 	}, nil
 }
 
-// CommitteeAssignment returns the committee assignment response from a given validator public key.
+// GetDuties returns the committee assignment response from a given validator public key.
 // The committee assignment response contains the following fields for the current and previous epoch:
 //	1.) The list of validators in the committee.
 //	2.) The shard to which the committee is assigned.
 //	3.) The slot at which the committee is assigned.
 //	4.) The bool signaling if the validator is expected to propose a block at the assigned slot.
-func (vs *Server) CommitteeAssignment(ctx context.Context, req *pb.AssignmentRequest) (*pb.AssignmentResponse, error) {
+func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
 	if !featureconfig.Get().NewCommitteeAssignments {
 		return vs.slowCommitteeAssignment(ctx, req)
 	}
@@ -101,27 +101,26 @@ func (vs *Server) CommitteeAssignment(ctx context.Context, req *pb.AssignmentReq
 	}
 
 	// Advance state with empty transitions up to the requested epoch start slot.
-	if epochStartSlot := helpers.StartSlot(req.EpochStart); s.Slot < epochStartSlot {
+	if epochStartSlot := helpers.StartSlot(req.Epoch); s.Slot < epochStartSlot {
 		s, err = state.ProcessSlots(ctx, s, epochStartSlot)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", epochStartSlot, err)
 		}
 	}
 
-	committeeAssignments, proposerIndexToSlot, err := helpers.CommitteeAssignments(s, req.EpochStart)
+	committeeAssignments, proposerIndexToSlot, err := helpers.CommitteeAssignments(s, req.Epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
 
-	var validatorAssignments []*pb.AssignmentResponse_ValidatorAssignment
+	var validatorAssignments []*ethpb.DutiesResponse_Duty
 	for _, pubKey := range req.PublicKeys {
 		if ctx.Err() != nil {
 			return nil, status.Errorf(codes.Aborted, "Could not continue fetching assignments: %v", ctx.Err())
 		}
 		// Default assignment.
-		assignment := &pb.AssignmentResponse_ValidatorAssignment{
+		assignment := &ethpb.DutiesResponse_Duty{
 			PublicKey: pubKey,
-			Status:    pb.ValidatorStatus_UNKNOWN_STATUS,
 		}
 
 		idx, ok, err := vs.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
@@ -132,7 +131,7 @@ func (vs *Server) CommitteeAssignment(ctx context.Context, req *pb.AssignmentReq
 			ca, ok := committeeAssignments[idx]
 			if ok {
 				assignment.Committee = ca.Committee
-				assignment.Status = pb.ValidatorStatus_ACTIVE
+				assignment.Status = ethpb.ValidatorStatus_ACTIVE
 				assignment.PublicKey = pubKey
 				assignment.AttesterSlot = ca.AttesterSlot
 				assignment.ProposerSlot = proposerIndexToSlot[idx]
@@ -143,7 +142,7 @@ func (vs *Server) CommitteeAssignment(ctx context.Context, req *pb.AssignmentReq
 		validatorAssignments = append(validatorAssignments, assignment)
 	}
 
-	return &pb.AssignmentResponse{
-		ValidatorAssignment: validatorAssignments,
+	return &ethpb.DutiesResponse{
+		Duties: validatorAssignments,
 	}, nil
 }

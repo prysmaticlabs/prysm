@@ -142,7 +142,7 @@ func (r *Service) subscribe(topic string, validate validator, handle subHandler)
 // maintained. As the state feed emits a newly updated state, the maxID function will be called to
 // determine the appropriate number of topics. This method supports only sequential number ranges
 // for topics.
-func (r *RegularSync) subscribeDynamic(topicFormat string, determineSubsLen func() int, validate validator, handle subHandler) {
+func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() int, validate validator, handle subHandler) {
 	base := p2p.GossipTopicMappings[topicFormat]
 	if base == nil {
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topicFormat))
