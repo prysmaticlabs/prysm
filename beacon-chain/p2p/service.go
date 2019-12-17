@@ -116,7 +116,7 @@ func NewService(cfg *Config) (*Service, error) {
 	psOpts := []pubsub.Option{
 		pubsub.WithMessageSigning(false),
 		pubsub.WithStrictSignatureVerification(false),
-		pubsub.WithMessageIdFn(msgIdFunction),
+		pubsub.WithMessageIdFn(msgIDFunction),
 	}
 	gs, err := pubsub.NewGossipSub(s.ctx, s.host, psOpts...)
 	if err != nil {
