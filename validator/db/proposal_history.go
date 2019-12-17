@@ -37,6 +37,9 @@ func (history *ValidatorProposalHistory) SetProposedForEpoch(epoch uint64) {
 	if epoch < history.EpochAtFirstBit {
 		return
 	}
+	if history.ProposalHistory == nil {
+		history.ProposalHistory
+	}
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	offsetMultiplier := epoch / wsPeriod
 	bitOffset := epoch % wsPeriod
@@ -61,9 +64,9 @@ func unmarshallProposalHistory(enc []byte) (*ValidatorProposalHistory, error) {
 	return history, nil
 }
 
-// HasProposedAtEpoch accepts an epoch and validator id and returns the corresponding block header array.
-// Returns nil if the block header for those values does not exist.
-func (db *Store) ProposalHistory(pubKey []byte, epoch uint64) (*ValidatorProposalHistory, error) {
+// ProposalHistory accepts a validator public key and returns the corresponding proposal history.
+// Returns nil if there is no proposal history for the validator.
+func (db *Store) ProposalHistory(pubKey []byte) (*ValidatorProposalHistory, error) {
 	var err error
 	var proposalHistory *ValidatorProposalHistory
 	err = db.view(func(tx *bolt.Tx) error {
@@ -78,23 +81,24 @@ func (db *Store) ProposalHistory(pubKey []byte, epoch uint64) (*ValidatorProposa
 	return proposalHistory, err
 }
 
-// MarkProposedForEpoch accepts a block header and writes it to disk.
-// func (db *Store) SetProposalHistory(pubKey []byte, proposalHistory *ValidatorProposalHistory) error {
-// 	enc, err := proto.Marshal(proposalHistory)
-// 	if err != nil {
-// 		return errors.Wrap(err, "failed to encode block")
-// 	}
+// SaveProposalHistory returns the proposal history for the requested validator public key.
+func (db *Store) SaveProposalHistory(pubKey []byte, proposalHistory *ValidatorProposalHistory) error {
+	enc, err := proto.Marshal(proposalHistory)
+	if err != nil {
+		return errors.Wrap(err, "failed to encode block")
+	}
 
-// 	err = db.update(func(tx *bolt.Tx) error {
-// 		bucket := tx.Bucket(historicProposalsBucket)
-// 		if err := bucket.Put(pubKey, enc); err != nil {
-// 			return errors.Wrap(err, "failed to include the block header in the historic block header bucket")
-// 		}
-// 		return nil
-// 	})
-// }
+	err = db.update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(historicProposalsBucket)
+		if err := bucket.Put(pubKey, enc); err != nil {
+			return errors.Wrap(err, "failed to include the block header in the historic block header bucket")
+		}
+		return nil
+	})
+	return err
+}
 
-// DeleteProposalHistory deletes a validators proposal history using the validators public key.
+// DeleteProposalHistory deletes the proposal history for the corresponding validator public key.
 func (db *Store) DeleteProposalHistory(pubkey []byte) error {
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
