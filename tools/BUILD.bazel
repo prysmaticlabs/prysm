@@ -46,7 +46,7 @@ pkg_tar(
 # Include it in our base image as a tar.
 container_image(
     name = "cc_image",
-    base = "//tools:cc_image",
+    base = "@cc_image_base//image",
     tars = [":passwd_tar"],
     user = "nonroot",
     visibility = ["//visibility:public"],
