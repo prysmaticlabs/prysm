@@ -25,6 +25,7 @@ go_binary(
 go_image(
     name = "image",
     srcs = ["main.go"],
+    base = "//tools:go_image",
     goarch = "amd64",
     goos = "linux",
     importpath = "github.com/prysmaticlabs/prysm/tools/eth1exporter",
