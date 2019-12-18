@@ -17,10 +17,10 @@ go_test(
     shard_count = 2,
     tags = [
         "block-network",
+        "e2e",
         "exclusive",
         "manual",
         "minimal",
-        "e2e",
     ],
     deps = [
         "//endtoend/evaluators:go_default_library",
