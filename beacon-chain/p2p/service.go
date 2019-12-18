@@ -116,6 +116,7 @@ func NewService(cfg *Config) (*Service, error) {
 	psOpts := []pubsub.Option{
 		pubsub.WithMessageSigning(false),
 		pubsub.WithStrictSignatureVerification(false),
+		pubsub.WithMessageIdFn(msgIDFunction),
 	}
 	gs, err := pubsub.NewGossipSub(s.ctx, s.host, psOpts...)
 	if err != nil {
@@ -206,7 +207,7 @@ func (s *Service) Start() {
 
 	startPeerWatcher(s.ctx, s.host, peersToWatch...)
 	runutil.RunEvery(s.ctx, time.Hour, s.Peers().Decay)
-	registerMetrics(s)
+	runutil.RunEvery(s.ctx, 10*time.Second, s.updateMetrics)
 	multiAddrs := s.host.Network().ListenAddresses()
 	logIP4Addr(s.host.ID(), multiAddrs...)
 }
