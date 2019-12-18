@@ -45,6 +45,7 @@ go_binary(
 go_image(
     name = "image",
     srcs = SRCS,
+    base = "//tools:go_image",
     goarch = "amd64",
     goos = "linux",
     importpath = IMPORT_PATH,

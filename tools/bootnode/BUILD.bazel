@@ -33,6 +33,7 @@ go_library(
 go_image(
     name = "image",
     srcs = ["bootnode.go"],
+    base = "//tools:go_image",
     goarch = "amd64",
     goos = "linux",
     importpath = "github.com/prysmaticlabs/prysm/tools/bootnode",
