@@ -3,6 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "attester_slashings.go",
         "block_header.go",
         "db.go",
         "indexed_attestations.go",
@@ -30,6 +31,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "attester_slashings_test.go",
         "block_header_test.go",
         "indexed_attestations_test.go",
         "min_max_span_test.go",

@@ -7,248 +7,171 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
-func TestNilDBHistoryBlkHdr(t *testing.T) {
+func TestStore_ProposerSlashingNilBucket(t *testing.T) {
 	db := SetupSlasherDB(t)
 	defer TeardownSlasherDB(t, db)
-
-	epoch := uint64(1)
-	validatorID := uint64(1)
-
-	hasBlockHeader := db.HasBlockHeader(epoch, validatorID)
-	if hasBlockHeader {
-		t.Fatal("HasBlockHeader should return false")
-	}
-
-	bPrime, err := db.BlockHeader(epoch, validatorID)
+	ps := &ethpb.ProposerSlashing{ProposerIndex: 1}
+	has, _, err := db.HasProposerSlashing(ps)
 	if err != nil {
-		t.Fatalf("failed to get block: %v", err)
+		t.Fatalf("HasProposerSlashing should not return error: %v", err)
 	}
-	if bPrime != nil {
+	if has {
+		t.Fatal("HasProposerSlashing should return false")
+	}
+
+	p, err := db.ProposerSlashings(SlashingStatus(Active))
+	if err != nil {
+		t.Fatalf("failed to get proposer slashing: %v", err)
+	}
+	if p != nil {
 		t.Fatalf("get should return nil for a non existent key")
 	}
 }
 
-func TestSaveHistoryBlkHdr(t *testing.T) {
+func TestStore_SaveProposerSlashing(t *testing.T) {
 	db := SetupSlasherDB(t)
 	defer TeardownSlasherDB(t, db)
 	tests := []struct {
-		epoch uint64
-		vID   uint64
-		bh    *ethpb.BeaconBlockHeader
+		ss SlashingStatus
+		ps *ethpb.ProposerSlashing
 	}{
 		{
-			epoch: uint64(0),
-			vID:   uint64(0),
-			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in")},
+			ss: Active,
+			ps: &ethpb.ProposerSlashing{ProposerIndex: 1},
 		},
 		{
-			epoch: uint64(0),
-			vID:   uint64(1),
-			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 2nd")},
+			ss: Included,
+			ps: &ethpb.ProposerSlashing{ProposerIndex: 2},
 		},
 		{
-			epoch: uint64(1),
-			vID:   uint64(0),
-			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 3rd")},
+			ss: Reverted,
+			ps: &ethpb.ProposerSlashing{ProposerIndex: 3},
 		},
 	}
 
 	for _, tt := range tests {
-		err := db.SaveBlockHeader(tt.epoch, tt.vID, tt.bh)
+		err := db.SaveProposerSlashing(tt.ss, tt.ps)
 		if err != nil {
-			t.Fatalf("save block failed: %v", err)
+			t.Fatalf("save proposer slashing failed: %v", err)
 		}
 
-		bha, err := db.BlockHeader(tt.epoch, tt.vID)
+		proposerSlashings, err := db.ProposerSlashings(tt.ss)
 		if err != nil {
-			t.Fatalf("failed to get block: %v", err)
+			t.Fatalf("failed to get proposer slashings: %v", err)
 		}
 
-		if bha == nil || !reflect.DeepEqual(bha[0], tt.bh) {
-			t.Fatalf("get should return bh: %v", bha)
+		if proposerSlashings == nil || !reflect.DeepEqual(proposerSlashings[0], tt.ps) {
+			t.Fatalf("proposer slashing: %v should be part of proposer slashings response: %v", tt.ps, proposerSlashings)
 		}
 	}
 
 }
 
-func TestDeleteHistoryBlkHdr(t *testing.T) {
+func TestStore_DeleteProposerSlashingWithStatus(t *testing.T) {
 	db := SetupSlasherDB(t)
 	defer TeardownSlasherDB(t, db)
 	tests := []struct {
-		epoch uint64
-		vID   uint64
-		bh    *ethpb.BeaconBlockHeader
+		ss SlashingStatus
+		ps *ethpb.ProposerSlashing
 	}{
 		{
-			epoch: uint64(0),
-			vID:   uint64(0),
-			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in")},
+			ss: Active,
+			ps: &ethpb.ProposerSlashing{ProposerIndex: 1},
 		},
 		{
-			epoch: uint64(0),
-			vID:   uint64(1),
-			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 2nd")},
+			ss: Included,
+			ps: &ethpb.ProposerSlashing{ProposerIndex: 2},
 		},
 		{
-			epoch: uint64(1),
-			vID:   uint64(0),
-			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 3rd")},
+			ss: Reverted,
+			ps: &ethpb.ProposerSlashing{ProposerIndex: 3},
 		},
 	}
-	for _, tt := range tests {
 
-		err := db.SaveBlockHeader(tt.epoch, tt.vID, tt.bh)
+	for _, tt := range tests {
+		err := db.SaveProposerSlashing(tt.ss, tt.ps)
 		if err != nil {
-			t.Fatalf("save block failed: %v", err)
+			t.Fatalf("save proposer slashing failed: %v", err)
 		}
 	}
 
 	for _, tt := range tests {
-		bha, err := db.BlockHeader(tt.epoch, tt.vID)
+		has, _, err := db.HasProposerSlashing(tt.ps)
 		if err != nil {
-			t.Fatalf("failed to get block: %v", err)
+			t.Fatalf("failed to get proposer slashing: %v", err)
+		}
+		if !has {
+			t.Fatalf("failed to find proposer slashing: %v", tt.ps)
 		}
 
-		if bha == nil || !reflect.DeepEqual(bha[0], tt.bh) {
-			t.Fatalf("get should return bh: %v", bha)
-		}
-		err = db.DeleteBlockHeader(tt.epoch, tt.vID, tt.bh)
+		err = db.DeleteProposerSlashingWithStatus(tt.ss, tt.ps)
 		if err != nil {
-			t.Fatalf("save block failed: %v", err)
+			t.Fatalf("delete proposer slashings failed: %v", err)
 		}
-		bh, err := db.BlockHeader(tt.epoch, tt.vID)
-
+		has, _, err = db.HasProposerSlashing(tt.ps)
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("error while trying to get non existing proposer slashing: %v", err)
 		}
-		if bh != nil {
-			t.Errorf("Expected block to have been deleted, received: %v", bh)
+		if has {
+			t.Fatalf("proposer slashing: %v should have been deleted", tt.ps)
 		}
 
 	}
 
 }
 
-func TestHasHistoryBlkHdr(t *testing.T) {
+func TestStore_UpdateProposerSlashingStatus(t *testing.T) {
 	db := SetupSlasherDB(t)
 	defer TeardownSlasherDB(t, db)
 	tests := []struct {
-		epoch uint64
-		vID   uint64
-		bh    *ethpb.BeaconBlockHeader
+		ss SlashingStatus
+		ps *ethpb.ProposerSlashing
 	}{
 		{
-			epoch: uint64(0),
-			vID:   uint64(0),
-			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in")},
+			ss: Active,
+			ps: &ethpb.ProposerSlashing{ProposerIndex: 1},
 		},
 		{
-			epoch: uint64(0),
-			vID:   uint64(1),
-			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 2nd")},
+			ss: Active,
+			ps: &ethpb.ProposerSlashing{ProposerIndex: 2},
 		},
 		{
-			epoch: uint64(1),
-			vID:   uint64(0),
-			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 3rd")},
-		},
-	}
-	for _, tt := range tests {
-
-		found := db.HasBlockHeader(tt.epoch, tt.vID)
-		if found {
-			t.Fatal("has block header should return false for block headers that are not in db")
-		}
-		err := db.SaveBlockHeader(tt.epoch, tt.vID, tt.bh)
-		if err != nil {
-			t.Fatalf("save block failed: %v", err)
-		}
-	}
-	for _, tt := range tests {
-		err := db.SaveBlockHeader(tt.epoch, tt.vID, tt.bh)
-		if err != nil {
-			t.Fatalf("save block failed: %v", err)
-		}
-
-		found := db.HasBlockHeader(tt.epoch, tt.vID)
-
-		if !found {
-			t.Fatal("has block header should return true")
-		}
-	}
-}
-
-func TestPruneHistoryBlkHdr(t *testing.T) {
-	db := SetupSlasherDB(t)
-	defer TeardownSlasherDB(t, db)
-	tests := []struct {
-		epoch uint64
-		vID   uint64
-		bh    *ethpb.BeaconBlockHeader
-	}{
-		{
-			epoch: uint64(0),
-			vID:   uint64(0),
-			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in")},
-		},
-		{
-			epoch: uint64(0),
-			vID:   uint64(1),
-			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 2nd")},
-		},
-		{
-			epoch: uint64(1),
-			vID:   uint64(0),
-			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 3rd")},
-		},
-		{
-			epoch: uint64(2),
-			vID:   uint64(0),
-			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 4th")},
-		},
-		{
-			epoch: uint64(3),
-			vID:   uint64(0),
-			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 5th")},
+			ss: Active,
+			ps: &ethpb.ProposerSlashing{ProposerIndex: 3},
 		},
 	}
 
 	for _, tt := range tests {
-		err := db.SaveBlockHeader(tt.epoch, tt.vID, tt.bh)
+		err := db.SaveProposerSlashing(tt.ss, tt.ps)
 		if err != nil {
-			t.Fatalf("save block header failed: %v", err)
+			t.Fatalf("save proposer slashing failed: %v", err)
 		}
-
-		bha, err := db.BlockHeader(tt.epoch, tt.vID)
-		if err != nil {
-			t.Fatalf("failed to get block header: %v", err)
-		}
-
-		if bha == nil || !reflect.DeepEqual(bha[0], tt.bh) {
-			t.Fatalf("get should return bh: %v", bha)
-		}
-	}
-	currentEpoch := uint64(3)
-	historyToKeep := uint64(2)
-	err := db.PruneHistory(currentEpoch, historyToKeep)
-	if err != nil {
-		t.Fatalf("failed to prune: %v", err)
 	}
 
 	for _, tt := range tests {
-		bha, err := db.BlockHeader(tt.epoch, tt.vID)
+		has, st, err := db.HasProposerSlashing(tt.ps)
 		if err != nil {
-			t.Fatalf("failed to get block header: %v", err)
+			t.Fatalf("failed to get proposer slashing: %v", err)
 		}
-		if tt.epoch > currentEpoch-historyToKeep {
-			if bha == nil || !reflect.DeepEqual(bha[0], tt.bh) {
-				t.Fatalf("get should return bh: %v", bha)
-			}
-		} else {
-			if bha != nil {
-				t.Fatalf("block header should have been pruned: %v", bha)
-			}
+		if !has {
+			t.Fatalf("failed to find proposer slashing: %v", tt.ps)
+		}
+		if st != tt.ss {
+			t.Fatalf("failed to find proposer slashing with the correct status: %v", tt.ps)
+		}
+
+		err = db.SaveProposerSlashing(SlashingStatus(Included), tt.ps)
+		has, st, err = db.HasProposerSlashing(tt.ps)
+		if err != nil {
+			t.Fatalf("failed to get proposer slashing: %v", err)
+		}
+		if !has {
+			t.Fatalf("failed to find proposer slashing: %v", tt.ps)
+		}
+		if st != Included {
+			t.Fatalf("failed to find proposer slashing with the correct status: %v", tt.ps)
 		}
 
 	}
+
 }
