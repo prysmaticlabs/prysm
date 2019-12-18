@@ -333,10 +333,10 @@ func TestStore_Blocks_Retrieve_Epoch(t *testing.T) {
 	defer teardownDB(t, db)
 	slots := params.BeaconConfig().SlotsPerEpoch * 7
 	b := make([]*ethpb.BeaconBlock, slots)
-	for i := 0; i < slots; i++ {
+	for i := uint64(0); i < slots; i++ {
 		b[i] = &ethpb.BeaconBlock{
 			ParentRoot: []byte("parent"),
-			Slot:       uint64(i),
+			Slot:       i,
 		}
 	}
 	ctx := context.Background()
