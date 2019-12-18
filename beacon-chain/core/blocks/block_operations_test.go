@@ -1343,6 +1343,45 @@ func TestValidateIndexedAttestation_AboveMaxLength(t *testing.T) {
 	}
 }
 
+func TestProcessDeposits_SameValidatorMultipleDepositsSameBlock(t *testing.T) {
+	// Same validator created 3 valid deposits within the same block
+	dep, _, _ := testutil.DeterministicDepositsAndKeysSameValidator(3)
+	eth1Data, err := testutil.DeterministicEth1Data(len(dep))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	block := &ethpb.BeaconBlock{
+		Body: &ethpb.BeaconBlockBody{
+			Deposits: []*ethpb.Deposit{dep[0], dep[1]},
+		},
+	}
+	registry := []*ethpb.Validator{
+		{
+			PublicKey:             []byte{1},
+			WithdrawalCredentials: []byte{1, 2, 3},
+		},
+	}
+	balances := []uint64{0}
+	beaconState := &pb.BeaconState{
+		Validators: registry,
+		Balances:   balances,
+		Eth1Data:   eth1Data,
+		Fork: &pb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+		},
+	}
+	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, block.Body)
+	if err != nil {
+		t.Fatalf("Expected block deposits to process correctly, received: %v", err)
+	}
+
+	if len(newState.Validators) > 2 {
+		t.Error("Found duplicated validators in state")
+	}
+}
+
 func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	deposit := &ethpb.Deposit{
 		Data: &ethpb.Deposit_Data{
