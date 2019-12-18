@@ -1,6 +1,61 @@
-package(default_visibility = ["//visibility:public"])
+load("@bazel_tools//tools/build_defs/pkg:pkg.bzl", "pkg_tar")
+load("@io_bazel_rules_docker//contrib:passwd.bzl", "passwd_entry", "passwd_file")
+load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 
 alias(
     name = "kubesec",
     actual = "@com_github_shyiko_kubesec//:kubesec",
+    visibility = ["//visibility:public"],
+)
+
+################################################################################
+##                      Docker images as non-root user                        ##
+################################################################################
+
+# Create a passwd file with a root and nonroot user and uid.
+passwd_entry(
+    name = "root_user",
+    gid = 0,
+    uid = 0,
+    username = "root",
+)
+
+passwd_entry(
+    name = "nonroot_user",
+    info = "nonroot",
+    uid = 1001,
+    username = "nonroot",
+)
+
+passwd_file(
+    name = "passwd",
+    entries = [
+        ":root_user",
+        ":nonroot_user",
+    ],
+)
+
+# Create a tar file containing the created passwd file
+pkg_tar(
+    name = "passwd_tar",
+    srcs = [":passwd"],
+    mode = "0o644",
+    package_dir = "etc",
+)
+
+# Include it in our base image as a tar.
+container_image(
+    name = "cc_image",
+    base = "@cc_image_base//image",
+    tars = [":passwd_tar"],
+    user = "nonroot",
+    visibility = ["//visibility:public"],
+)
+
+container_image(
+    name = "go_image",
+    base = "@go_image_base//image",
+    tars = [":passwd_tar"],
+    user = "nonroot",
+    visibility = ["//visibility:public"],
 )
