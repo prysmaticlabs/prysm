@@ -39,6 +39,7 @@ func (r *Service) maintainPeerStatuses() {
 		if !r.initialSync.Syncing() {
 			_, highestEpoch, _ := r.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync)
 			if helpers.StartSlot(highestEpoch) > r.chain.HeadSlot() {
+				numberOfTimesResyncedCounter.Inc()
 				r.clearPendingSlots()
 				// block until we can resync the node
 				if err := r.initialSync.Resync(); err != nil {
@@ -151,7 +152,7 @@ func (r *Service) validateStatusMessage(msg *pb.Status, stream network.Stream) e
 	if msg.HeadSlot > maxSlot {
 		return errInvalidSlot
 	}
-	maxEpoch := slotutil.SlotsSinceGenesis(genesis)
+	maxEpoch := slotutil.EpochsSinceGenesis(genesis)
 	// It would take a minimum of 2 epochs to finalize a
 	// previous epoch
 	maxFinalizedEpoch := maxEpoch - 2
