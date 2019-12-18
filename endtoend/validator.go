@@ -59,6 +59,11 @@ func initializeValidators(
 			fmt.Sprintf("--monitoring-port=%d", 9080+n),
 			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", 4000+n),
 		}
+		if config.beaconConfig == "minimal" {
+			args = append(args, "--minimal-config")
+		} else if config.beaconConfig == "mainnet" {
+			args = append(args, "--no-custom-config")
+		}
 		cmd := exec.Command(binaryPath, args...)
 		cmd.Stdout = file
 		cmd.Stderr = file

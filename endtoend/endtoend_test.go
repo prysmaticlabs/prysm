@@ -57,6 +57,12 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	if err := waitForTextInFile(beaconLogFile, "Sending genesis time notification"); err != nil {
 		t.Fatalf("failed to find genesis in logs, this means the chain did not start: %v", err)
 	}
+
+	// Failing early in case chain doesn't start.
+	if t.Failed() {
+		return
+	}
+
 	conn, err := grpc.Dial("127.0.0.1:4000", grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("Failed to dial: %v", err)
@@ -74,11 +80,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	currentEpoch := uint64(0)
 	ticker := GetEpochTicker(genesisTime, epochSeconds)
 	for c := range ticker.C() {
-		if t.Failed() {
-			t.FailNow()
-		}
-
-		if c >= config.epochsToRun {
+		if c >= config.epochsToRun || t.Failed() {
 			ticker.Done()
 			break
 		}

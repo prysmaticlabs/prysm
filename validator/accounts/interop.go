@@ -45,7 +45,7 @@ func LoadUnencryptedKeys(path string) (map[string]*keystore.Key, error) {
 // InteropValidatorKeys deterministically generate the required amount of validator keys
 // according to thr given index and count.
 func InteropValidatorKeys(idx, count uint64) (map[string]*keystore.Key, error) {
-	log.Warn("Using interop deterministic generated validator keys.")
+	log.Warnf("Using interop deterministic generated validator keys for %d validators.", count)
 	sks, _, err := interop.DeterministicallyGenerateKeys(idx, count)
 	if err != nil {
 		return nil, err

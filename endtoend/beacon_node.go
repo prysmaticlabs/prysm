@@ -65,9 +65,12 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 
 	args := []string{
 		"--no-discovery",
+		"--force-clear-db",
+		"--fast-assignments",
+		"--enable-attestation-cache",
+		"--enable-bls-pubkey-cache",
 		"--http-web3provider=http://127.0.0.1:8545",
 		"--web3provider=ws://127.0.0.1:8546",
-		"--verbosity=debug",
 		fmt.Sprintf("--datadir=%s/eth2-beacon-node-%d", tmpPath, index),
 		fmt.Sprintf("--deposit-contract=%s", config.contractAddr.Hex()),
 		fmt.Sprintf("--rpc-port=%d", 4000+index),
@@ -104,7 +107,7 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 
 	multiAddr, err := getMultiAddrFromLogFile(file.Name())
 	if err != nil {
-		t.Fatalf("could not get multiaddr fpr node %d: %v", index, err)
+		t.Fatalf("could not get multiaddr for node %d: %v", index, err)
 	}
 
 	return &beaconNodeInfo{
@@ -164,5 +167,5 @@ func waitForTextInFile(file *os.File, text string) error {
 	if err != nil {
 		return err
 	}
-	return fmt.Errorf("could not find requested text %s in logs:\n%s", text, string(contents))
+	return fmt.Errorf("could not find requested text \"%s\" in logs:\n%s", text, string(contents))
 }

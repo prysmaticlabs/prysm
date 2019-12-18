@@ -3,7 +3,6 @@
 package params
 
 import (
-	"math/big"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -94,15 +93,8 @@ type BeaconChainConfig struct {
 	MaxPageSize               int           // MaxPageSize defines the max page size for RPC server respond.
 
 	// Slasher constants.
-	WeakSubjectivityPeriod    uint64 // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
-	PruneSlasherStoragePeriod uint64 // PruneSlasherStoragePeriod defines the time period expressed in number of epochs were proof of stake network should prune attestation and block header store.
-}
-
-// DepositContractConfig contains the deposits for
-type DepositContractConfig struct {
-	MinGenesisActiveValidatorCount *big.Int // MinGenesisActiveValidatorCount defines how many validator deposits needed to kick off beacon chain.
-	MinDepositAmount               *big.Int // MinDepositAmount defines the minimum deposit amount in gwei that is required in the deposit contract.
-	MaxEffectiveBalance            *big.Int // MaxEffectiveBalance defines the maximum deposit amount in gwei that is required in the deposit contract.
+	WeakSubjectivityPeriod    uint64 // WeakSubjectivityPeriod defines the time period in epochs where the slasher should validate block headers and attestations for slashable events.
+	PruneSlasherStoragePeriod uint64 // PruneSlasherStoragePeriod defines the time period in epochs where the slasher should prune its attestation and block header store.
 }
 
 var defaultBeaconConfig = &BeaconChainConfig{
@@ -119,7 +111,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MinPerEpochChurnLimit:          4,
 	ChurnLimitQuotient:             1 << 16,
 	ShuffleRoundCount:              90,
-	MinGenesisActiveValidatorCount: 65536,
+	MinGenesisActiveValidatorCount: 16384,
 	MinGenesisTime:                 1578009600,
 	TargetAggregatorsPerCommittee:  16,
 
@@ -195,14 +187,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	TestnetContractEndpoint: "https://prylabs.net/contract", // defines an http endpoint to fetch the testnet contract addr.
 }
 
-var defaultDepositContractConfig = &DepositContractConfig{
-	MinGenesisActiveValidatorCount: big.NewInt(16384),
-	MinDepositAmount:               big.NewInt(1e9),
-	MaxEffectiveBalance:            big.NewInt(32e9),
-}
-
 var beaconConfig = defaultBeaconConfig
-var contractConfig = defaultDepositContractConfig
 
 // BeaconConfig retrieves beacon chain config.
 func BeaconConfig() *BeaconChainConfig {
@@ -299,11 +284,6 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.DepositContractTreeDepth = 32
 	minimalConfig.FarFutureEpoch = 1<<64 - 1
 	return &minimalConfig
-}
-
-// ContractConfig retrieves the deposit contract config
-func ContractConfig() *DepositContractConfig {
-	return contractConfig
 }
 
 // UseDemoBeaconConfig for beacon chain services.

@@ -15,7 +15,7 @@ func TestEndToEnd_MainnetConfig(t *testing.T) {
 	mainnetConfig := &end2EndConfig{
 		beaconConfig:   "mainnet",
 		epochsToRun:    1,
-		numBeaconNodes: 1,
+		numBeaconNodes: 4,
 		numValidators:  params.BeaconConfig().MinGenesisActiveValidatorCount,
 		evaluators: []ev.Evaluator{
 			ev.ValidatorsAreActive,
