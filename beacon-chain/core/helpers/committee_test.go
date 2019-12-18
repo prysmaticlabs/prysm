@@ -394,7 +394,7 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 
 	state := &pb.BeaconState{
 		Validators:  validators,
-		Slot:        2*params.BeaconConfig().SlotsPerEpoch, // epoch 2
+		Slot:        2 * params.BeaconConfig().SlotsPerEpoch, // epoch 2
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 

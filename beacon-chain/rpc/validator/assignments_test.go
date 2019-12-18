@@ -306,7 +306,7 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 	ctx := context.Background()
 
 	genesis := blk.NewGenesisBlock([]byte{})
-	depChainStart := uint64(8192*2)
+	depChainStart := uint64(8192 * 2)
 	deposits, _, _ := testutil.DeterministicDepositsAndKeys(depChainStart)
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	if err != nil {
