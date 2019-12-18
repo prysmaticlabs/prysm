@@ -103,8 +103,8 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 		if helpers.IsAggregated(aggregatedAtt) {
 			if err := as.P2p.Broadcast(ctx, &ethpb.AggregateAttestationAndProof{
 				AggregatorIndex: validatorIndex,
-				SelectionProof: req.SlotSignature,
-				Aggregate: aggregatedAtt,
+				SelectionProof:  req.SlotSignature,
+				Aggregate:       aggregatedAtt,
 			}); err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not broadcast aggregated attestation: %v", err)
 			}
