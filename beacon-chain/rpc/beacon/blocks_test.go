@@ -450,7 +450,6 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 
 	chainService := &mock.ChainService{}
 	ctx := context.Background()
-	ctx, cancel := context.WithCancel(context.Background())
 	server := &Server{
 		Ctx:           ctx,
 		HeadFetcher:   &mock.ChainService{Block: b, State: s},
@@ -477,10 +476,9 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 			PreviousJustifiedBlockRoot: pjRoot[:],
 		},
 	).Do(func(arg0 interface{}) {
-		cancel()
 		exitRoutine <- true
 	})
-	mockStream.EXPECT().Context().Return(ctx)
+	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 
 	go func(tt *testing.T) {
 		if err := server.StreamChainHead(&ptypes.Empty{}, mockStream); err != nil {
