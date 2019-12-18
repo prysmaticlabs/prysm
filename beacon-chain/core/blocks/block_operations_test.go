@@ -1353,7 +1353,8 @@ func TestProcessDeposits_SameValidatorMultipleDepositsSameBlock(t *testing.T) {
 
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
-			Deposits: []*ethpb.Deposit{dep[0], dep[1]},
+			// 3 deposits from the same validator
+			Deposits: []*ethpb.Deposit{dep[0], dep[1], dep[2]},
 		},
 	}
 	registry := []*ethpb.Validator{
