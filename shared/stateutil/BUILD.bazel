@@ -30,11 +30,17 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["state_root_test.go"],
+    srcs = [
+        "state_root_cache_fuzz_test.go",
+        "state_root_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/interop:go_default_library",
+        "//shared/params:go_default_library",
+        "@com_github_google_gofuzz//:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
     ],
 )

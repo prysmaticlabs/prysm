@@ -62,8 +62,8 @@ func (f *FaultyMockPOWChain) DepositRoot() [32]byte {
 }
 
 // DepositTrie --
-func (f *FaultyMockPOWChain) DepositTrie() *trieutil.MerkleTrie {
-	return &trieutil.MerkleTrie{}
+func (f *FaultyMockPOWChain) DepositTrie() *trieutil.SparseMerkleTrie {
+	return &trieutil.SparseMerkleTrie{}
 }
 
 // ChainStartDeposits --
