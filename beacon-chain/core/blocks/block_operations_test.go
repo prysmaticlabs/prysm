@@ -1345,12 +1345,13 @@ func TestValidateIndexedAttestation_AboveMaxLength(t *testing.T) {
 
 func TestProcessDeposits_SameValidatorMultipleDepositsSameBlock(t *testing.T) {
 	// Same validator created 3 valid deposits within the same block
+	testutil.ResetCache()
 	dep, _, _ := testutil.DeterministicDepositsAndKeysSameValidator(3)
 	eth1Data, err := testutil.DeterministicEth1Data(len(dep))
 	if err != nil {
 		t.Fatal(err)
 	}
-
+	t.Log(dep)
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			// 3 deposits from the same validator
@@ -1378,8 +1379,8 @@ func TestProcessDeposits_SameValidatorMultipleDepositsSameBlock(t *testing.T) {
 		t.Fatalf("Expected block deposits to process correctly, received: %v", err)
 	}
 
-	if len(newState.Validators) > 2 {
-		t.Error("Found duplicated validators in state")
+	if len(newState.Validators) != 2 {
+		t.Errorf("Incorrect validator count. Wanted %d, got %d", 2, len(newState.Validators))
 	}
 }
 
