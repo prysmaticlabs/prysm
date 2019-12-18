@@ -13,7 +13,7 @@ import (
 )
 
 // prepare attestations for fork choice at every half of the slot.
-var prepareForkChoiceAttsPeriod = time.Duration(params.BeaconConfig().SecondsPerSlot/2) * time.Second
+var prepareForkChoiceAttsPeriod = time.Duration(params.BeaconConfig().SecondsPerSlot/3) * time.Second
 
 // This prepares fork choice attestations by running batchForkChoiceAtts
 // every prepareForkChoiceAttsPeriod.
