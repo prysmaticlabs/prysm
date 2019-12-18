@@ -99,12 +99,16 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not aggregate attestations: %v", err)
 	}
-	for _, att := range aggregatedAtts {
-		if helpers.IsAggregated(att) {
-			if err := as.P2p.Broadcast(ctx, att); err != nil {
+	for _, aggregatedAtt := range aggregatedAtts {
+		if helpers.IsAggregated(aggregatedAtt) {
+			if err := as.P2p.Broadcast(ctx, &ethpb.AggregateAttestationAndProof{
+				AggregatorIndex: validatorIndex,
+				SelectionProof: req.SlotSignature,
+				Aggregate: aggregatedAtt,
+			}); err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not broadcast aggregated attestation: %v", err)
 			}
-			if err := as.AttPool.SaveAggregatedAttestation(att); err != nil {
+			if err := as.AttPool.SaveAggregatedAttestation(aggregatedAtt); err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not save aggregated attestation: %v", err)
 			}
 		}
