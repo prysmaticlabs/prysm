@@ -20,19 +20,19 @@ const (
 	Reverted //relevant again
 )
 
-func (day SlashingStatus) String() string {
+func (status SlashingStatus) String() string {
 	names := [...]string{
 		"Active",
 		"Included",
 		"Reverted"}
 
-	if day < Active || day > Reverted {
+	if status < Active || status > Reverted {
 		return "Unknown"
 	}
 	// return the name of a Weekday
 	// constant from the names array
 	// above.
-	return names[day]
+	return names[status]
 }
 
 func createProposerSlashing(enc []byte) (*ethpb.ProposerSlashing, error) {
