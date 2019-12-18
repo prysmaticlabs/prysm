@@ -189,3 +189,79 @@ func ResetCache() {
 	privKeys = []*bls.SecretKey{}
 	cachedDeposits = []*ethpb.Deposit{}
 }
+
+// DeterministicDepositsAndKeysSameValidator returns the entered amount of deposits and secret keys.
+// of the same validator. This is for negative test cases such as same deposits from same validators in a block don't
+// result in duplicated validator indices.
+func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*ethpb.Deposit, []*bls.SecretKey, error) {
+	lock.Lock()
+	defer lock.Unlock()
+	var err error
+
+	// Populate trie cache, if not initialized yet.
+	if trie == nil {
+		trie, err = trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "failed to create new trie")
+		}
+	}
+
+	// If more deposits requested than cached, generate more.
+	if numDeposits > uint64(len(cachedDeposits)) {
+		numExisting := uint64(len(cachedDeposits))
+		numRequired := numDeposits - uint64(len(cachedDeposits))
+		// Fetch the required number of keys.
+		secretKeys, publicKeys, err := interop.DeterministicallyGenerateKeys(numExisting, numRequired+1)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not create deterministic keys: ")
+		}
+		privKeys = append(privKeys, secretKeys[:len(secretKeys)-1]...)
+
+		// Create the new deposits and add them to the trie. Always use the first validator to create deposit
+		for i := uint64(0); i < numRequired; i++ {
+			withdrawalCreds := hashutil.Hash(publicKeys[1].Marshal())
+			withdrawalCreds[0] = params.BeaconConfig().BLSWithdrawalPrefixByte
+
+			depositData := &ethpb.Deposit_Data{
+				PublicKey:             publicKeys[1].Marshal(),
+				Amount:                params.BeaconConfig().MaxEffectiveBalance,
+				WithdrawalCredentials: withdrawalCreds[:],
+			}
+
+			domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
+			root, err := ssz.SigningRoot(depositData)
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "could not get signing root of deposit data")
+			}
+			// Always use the same validator to sign
+			depositData.Signature = secretKeys[1].Sign(root[:], domain).Marshal()
+
+			deposit := &ethpb.Deposit{
+				Data: depositData,
+			}
+			cachedDeposits = append(cachedDeposits, deposit)
+
+			hashedDeposit, err := ssz.HashTreeRoot(deposit.Data)
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "could not tree hash deposit data")
+			}
+
+			trie.Insert(hashedDeposit[:], int(numExisting+i))
+		}
+	}
+
+	depositTrie, _, err := DeterministicDepositTrie(int(numDeposits))
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to create deposit trie")
+	}
+	requestedDeposits := cachedDeposits[:numDeposits]
+	for i := range requestedDeposits {
+		proof, err := depositTrie.MerkleProof(int(i))
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not create merkle proof")
+		}
+		requestedDeposits[i].Proof = proof
+	}
+
+	return requestedDeposits, privKeys[0:numDeposits], nil
+}
