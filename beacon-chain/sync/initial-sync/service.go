@@ -143,7 +143,7 @@ func (s *Service) Syncing() bool {
 
 // Resync allows a node to start syncing again if it has fallen
 // behind the current network head.
-func (s *InitialSync) Resync() error {
+func (s *Service) Resync() error {
 	// set it to false since we are syncing again
 	s.synced = false
 	headState, err := s.chain.HeadState(context.Background())
@@ -162,7 +162,7 @@ func (s *InitialSync) Resync() error {
 	return nil
 }
 
-func (s *InitialSync) waitForMinimumPeers() {
+func (s *Service) waitForMinimumPeers() {
 	// Every 5 sec, report handshake count.
 	for {
 		count := len(s.p2p.Peers().Connected())

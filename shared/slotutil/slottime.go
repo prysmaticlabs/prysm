@@ -3,8 +3,8 @@ package slotutil
 import (
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
 // SlotStartTime returns the start time in terms of its unix epoch

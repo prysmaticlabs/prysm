@@ -148,9 +148,9 @@ func (r *Service) validatePendingSlots() error {
 	return nil
 }
 
-func (r *RegularSync) clearPendingSlots() {
-	r.pendingQueueLock.RLock()
-	defer r.pendingQueueLock.RUnlock()
-	r.slotToPendingBlocks = make(map[uint64]*ethpb.BeaconBlock)
-	r.seenPendingBlocks = make(map[[32]byte]bool)
+func (s *Service) clearPendingSlots() {
+	s.pendingQueueLock.RLock()
+	defer s.pendingQueueLock.RUnlock()
+	s.slotToPendingBlocks = make(map[uint64]*ethpb.BeaconBlock)
+	s.seenPendingBlocks = make(map[[32]byte]bool)
 }
