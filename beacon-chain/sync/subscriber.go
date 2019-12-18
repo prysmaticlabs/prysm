@@ -68,11 +68,6 @@ func (r *Service) registerSubscribers() {
 		r.beaconBlockSubscriber,
 	)
 	r.subscribe(
-		"/eth2/beacon_attestation",
-		r.validateBeaconAttestation,
-		r.beaconAttestationSubscriber,
-	)
-	r.subscribe(
 		"/eth2/beacon_aggregate_and_proof",
 		r.validateAggregateAndProof,
 		r.beaconAggregateProofSubscriber,
@@ -92,13 +87,12 @@ func (r *Service) registerSubscribers() {
 		r.validateAttesterSlashing,
 		r.attesterSlashingSubscriber,
 	)
-	// TODO(4154): Uncomment.
-	//r.subscribeDynamic(
-	//	"/eth2/committee_index/%d_beacon_attestation",
-	//	r.currentCommitteeIndex,                     /* determineSubsLen */
-	//	noopValidator,                               /* validator */
-	//	r.committeeIndexBeaconAttestationSubscriber, /* message handler */
-	//)
+	r.subscribeDynamic(
+		"/eth2/committee_index%d_beacon_attestation",
+		r.currentCommitteeIndex,                     /* determineSubsLen */
+		noopValidator,                               /* validator */
+		r.committeeIndexBeaconAttestationSubscriber, /* message handler */
+	)
 }
 
 // subscribe to a given topic with a given validator and subscription handler.

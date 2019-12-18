@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -80,5 +81,53 @@ func TestService_Broadcast_ReturnsErr_TopicNotMapped(t *testing.T) {
 	p := Service{}
 	if err := p.Broadcast(context.Background(), &testpb.AddressBook{}); err != ErrMessageNotMapped {
 		t.Fatalf("Expected error %v, got %v", ErrMessageNotMapped, err)
+	}
+}
+
+func TestService_Attestation_Subnet(t *testing.T) {
+	if gtm := GossipTypeMapping[reflect.TypeOf(&eth.Attestation{})]; gtm != attestationSubnetTopicFormat {
+		t.Errorf("Constant is out of date. Wanted %s, got %s", attestationSubnetTopicFormat, gtm)
+	}
+
+	tests := []struct {
+		att   *eth.Attestation
+		topic string
+	}{
+		{
+			att: &eth.Attestation{
+				Data: &eth.AttestationData{
+					CommitteeIndex: 0,
+				},
+			},
+			topic: "/eth2/committee_index0_beacon_attestation",
+		},
+		{
+			att: &eth.Attestation{
+				Data: &eth.AttestationData{
+					CommitteeIndex: 11,
+				},
+			},
+			topic: "/eth2/committee_index11_beacon_attestation",
+		},
+		{
+			att: &eth.Attestation{
+				Data: &eth.AttestationData{
+					CommitteeIndex: 55,
+				},
+			},
+			topic: "/eth2/committee_index55_beacon_attestation",
+		},
+		{
+			att:   &eth.Attestation{},
+			topic: "",
+		},
+		{
+			topic: "",
+		},
+	}
+	for _, tt := range tests {
+		if res := attestationToTopic(tt.att); res != tt.topic {
+			t.Errorf("Wrong topic, got %s wanted %s", res, tt.topic)
+		}
 	}
 }
