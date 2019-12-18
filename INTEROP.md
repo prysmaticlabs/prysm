@@ -45,10 +45,9 @@ Open up two terminal windows, run:
 
 ```
 bazel run //beacon-chain -- \
---no-genesis-delay \
 --bootstrap-node= \
---deposit-contract $(curl https://prylabs.net/contract) \
---clear-db \
+--deposit-contract $(curl -s https://prylabs.net/contract) \
+--force-clear-db \
 --interop-num-validators 64 \
 --interop-eth1data-votes
 ```
@@ -62,7 +61,6 @@ bazel run //validator -- --interop-num-validators 64
 ```
 
 This will launch and kickstart the system with your 64 validators performing their duties accordingly.
-specify which keys 
 
 ### Launching from `genesis.ssz`
 
@@ -70,10 +68,9 @@ Assuming you generated a `genesis.ssz` file with 64 validators, open up two term
 
 ```
  bazel run //beacon-chain -- \
---no-genesis-delay \
 --bootstrap-node= \
---deposit-contract $(curl https://prylabs.net/contract) \
---clear-db \
+--deposit-contract $(curl -s https://prylabs.net/contract) \
+--force-clear-db \
 --interop-genesis-state /path/to/genesis.ssz \
 --interop-eth1data-votes
 ```
