@@ -331,7 +331,8 @@ func TestStore_Blocks_Retrieve_SlotRange(t *testing.T) {
 func TestStore_Blocks_Retrieve_Epoch(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
-	b := make([]*ethpb.BeaconBlock, 500)
+        slots := params.BeaconConfig().SlotsPerEpoch * 7
+	b := make([]*ethpb.BeaconBlock, slots)
 	for i := 0; i < 500; i++ {
 		b[i] = &ethpb.BeaconBlock{
 			ParentRoot: []byte("parent"),
