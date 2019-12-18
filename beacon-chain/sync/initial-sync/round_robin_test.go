@@ -10,6 +10,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -372,8 +373,8 @@ func makeGenesisTime(currentSlot uint64) time.Time {
 func TestMakeGenesisTime(t *testing.T) {
 	currentSlot := uint64(64)
 	gt := makeGenesisTime(currentSlot)
-	if slotsSinceGenesis(gt) != currentSlot {
-		t.Fatalf("Wanted %d, got %d", currentSlot, slotsSinceGenesis(gt))
+	if helpers.SlotsSinceGenesis(gt) != currentSlot {
+		t.Fatalf("Wanted %d, got %d", currentSlot, helpers.SlotsSinceGenesis(gt))
 	}
 }
 

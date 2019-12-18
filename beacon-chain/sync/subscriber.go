@@ -115,8 +115,9 @@ func (r *Service) subscribe(topic string, validate validator, handle subHandler)
 
 	// Pipeline decodes the incoming subscription data, runs the validation, and handles the
 	// message.
+	ctx := context.WithValue(r.ctx, "topic", topic)
 	pipe := &pipeline{
-		ctx:          r.ctx,
+		ctx:          ctx,
 		topic:        topic,
 		base:         base,
 		validate:     validate,
@@ -165,14 +166,16 @@ func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() i
 					}
 				} else if len(subscriptions) < wantedSubs { // Increase topics
 					for i := len(subscriptions) - 1; i < wantedSubs; i++ {
-						sub, err := r.p2p.PubSub().Subscribe(fmt.Sprintf(topicFormat, i))
+						topic := fmt.Sprintf(topicFormat, i)
+						sub, err := r.p2p.PubSub().Subscribe(topic)
 						if err != nil {
 							// Panic is appropriate here since subscriptions should only fail if
 							// pubsub was misconfigured.
 							panic(err)
 						}
+						ctx := context.WithValue(r.ctx, "topic", topic)
 						pipe := &pipeline{
-							ctx:         r.ctx,
+							ctx:         ctx,
 							topic:       fmt.Sprintf(topicFormat, i),
 							base:        base,
 							validate:    validate,

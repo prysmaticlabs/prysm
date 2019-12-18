@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"fmt"
+	"time"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -99,4 +100,10 @@ func VerifySlotTime(genesisTime uint64, slot uint64) error {
 		return fmt.Errorf("could not process slot from the future, slot time %d > current time %d", slotTime, currentTime)
 	}
 	return nil
+}
+
+// SlotSinceGenesis computes the number of time slots that have occurred since the given genesis
+// timestamp.
+func SlotsSinceGenesis(genesisTime time.Time) uint64 {
+	return uint64(roughtime.Since(genesisTime).Seconds()) / params.BeaconConfig().SecondsPerSlot
 }
