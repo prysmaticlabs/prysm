@@ -45,7 +45,9 @@ func (status SlashingStatus) String() string {
 type SlashingType uint8
 
 const (
+	// Proposal enun value.
 	Proposal = iota
+	// Attestation enum value.
 	Attestation
 )
 
