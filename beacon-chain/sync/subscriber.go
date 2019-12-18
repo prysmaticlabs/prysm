@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/libp2p/go-libp2p-core/peer"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -92,6 +94,12 @@ func (r *Service) registerSubscribers() {
 	)
 }
 
+// Reject all automatic re-propagation from libp2p. This prevents deserializing the message more
+// than once for any given message.
+func rejectAll(_ context.Context, _ peer.ID, _ *pubsub.Message) bool {
+	return false
+}
+
 // subscribe to a given topic with a given validator and subscription handler.
 // The base protobuf message is used to initialize new messages for decoding.
 func (r *Service) subscribe(topic string, validate validator, handle subHandler) {
@@ -102,6 +110,12 @@ func (r *Service) subscribe(topic string, validate validator, handle subHandler)
 
 	topic += r.p2p.Encoding().ProtocolSuffix()
 	log := log.WithField("topic", topic)
+
+	if err := r.p2p.PubSub().RegisterTopicValidator(topic, rejectAll); err != nil {
+		// Configuring a topic validator would only return an error as a result of misconfiguration
+		// and is not a runtime concern.
+		panic(err)
+	}
 
 	sub, err := r.p2p.PubSub().Subscribe(topic)
 	if err != nil {
