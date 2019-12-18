@@ -39,8 +39,11 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 		AggregationBits: bitfield.Bitlist{0xCF, 0xC0, 0xC0, 0xC0, 0x01},
 		CustodyBits:     bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
 	}
-
-	attestingIndices, err := helpers.AttestingIndices(beaconState, att.Data, att.AggregationBits)
+	committee, err := helpers.BeaconCommittee(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	if err != nil {
+		t.Fatal(err)
+	}
+	attestingIndices, err := helpers.AttestingIndices(att.AggregationBits, committee)
 	if err != nil {
 		t.Error(err)
 	}
@@ -350,7 +353,11 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		AggregationBits: aggBits,
 		CustodyBits:     custodyBits,
 	}
-	attestingIndices, err := helpers.AttestingIndices(beaconState, att.Data, att.AggregationBits)
+	committee, err := helpers.BeaconCommittee(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	if err != nil {
+		t.Error(err)
+	}
+	attestingIndices, err := helpers.AttestingIndices(att.AggregationBits, committee)
 	if err != nil {
 		t.Error(err)
 	}

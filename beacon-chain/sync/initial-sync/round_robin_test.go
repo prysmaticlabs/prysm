@@ -18,6 +18,7 @@ import (
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -254,7 +255,7 @@ func TestRoundRobinSync(t *testing.T) {
 				Root:  genesisRoot[:],
 				DB:    beaconDB,
 			} // no-op mock
-			s := &InitialSync{
+			s := &Service{
 				chain:        mc,
 				p2p:          p,
 				db:           beaconDB,

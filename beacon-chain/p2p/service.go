@@ -116,6 +116,7 @@ func NewService(cfg *Config) (*Service, error) {
 	psOpts := []pubsub.Option{
 		pubsub.WithMessageSigning(false),
 		pubsub.WithStrictSignatureVerification(false),
+		pubsub.WithMessageIdFn(msgIDFunction),
 	}
 	gs, err := pubsub.NewGossipSub(s.ctx, s.host, psOpts...)
 	if err != nil {
@@ -213,6 +214,7 @@ func (s *Service) Start() {
 
 // Stop the p2p service and terminate all peer connections.
 func (s *Service) Stop() error {
+	defer s.cancel()
 	s.started = false
 	if s.dv5Listener != nil {
 		s.dv5Listener.Close()
