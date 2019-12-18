@@ -29,7 +29,7 @@ func (status SlashingStatus) String() string {
 	if status < Active || status > Reverted {
 		return "Unknown"
 	}
-	// return the name of a Weekday
+	// return the name of a SlashingStatus
 	// constant from the names array
 	// above.
 	return names[status]
