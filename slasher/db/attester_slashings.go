@@ -26,8 +26,8 @@ func createAttesterSlashing(enc []byte) (*ethpb.AttesterSlashing, error) {
 func (db *Store) AttesterSlashings(status SlashingStatus) ([]*ethpb.AttesterSlashing, error) {
 	var attesterSlashings []*ethpb.AttesterSlashing
 	err := db.view(func(tx *bolt.Tx) error {
-		c := tx.Bucket(attesterSlashingBucket).Cursor()
-		prefix := []byte{byte(status)}
+		c := tx.Bucket(slashingBucket).Cursor()
+		prefix := encodeStatusType(status, SlashingType(Attestation))
 		for k, v := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, v = c.Next() {
 			ps, err := createAttesterSlashing(v)
 			if err != nil {
@@ -43,8 +43,8 @@ func (db *Store) AttesterSlashings(status SlashingStatus) ([]*ethpb.AttesterSlas
 func (db *Store) AttestingSlashingsByStatus(status SlashingStatus) ([]*ethpb.AttesterSlashing, error) {
 	var attesterSlashings []*ethpb.AttesterSlashing
 	err := db.view(func(tx *bolt.Tx) error {
-		c := tx.Bucket(attesterSlashingBucket).Cursor()
-		prefix := []byte{byte(status)}
+		c := tx.Bucket(slashingBucket).Cursor()
+		prefix := encodeStatusType(status, SlashingType(Attestation))
 		for k, v := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, v = c.Next() {
 			ps, err := createAttesterSlashing(v)
 			if err != nil {
@@ -77,8 +77,8 @@ func (db *Store) DeleteAttesterSlashingWithStatus(status SlashingStatus, atteste
 		return errors.Wrap(err, "failed to get hash root of attesterSlashing")
 	}
 	return db.update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(attesterSlashingBucket)
-		k := encodeStatusRoot(status, root)
+		bucket := tx.Bucket(slashingBucket)
+		k := encodeStatusTypeRoot(status, SlashingType(Attestation), root)
 		if err != nil {
 			return errors.Wrap(err, "failed to get key for for attester slashing.")
 		}
@@ -96,7 +96,7 @@ func (db *Store) DeleteAttesterSlashing(slashing *ethpb.AttesterSlashing) error 
 		return errors.Wrap(err, "failed to get hash root of attesterSlashing")
 	}
 	err = db.update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(attesterSlashingBucket)
+		b := tx.Bucket(slashingBucket)
 		b.ForEach(func(k, v []byte) error {
 			if bytes.HasSuffix(k, root[:]) {
 				b.Delete(k)
@@ -117,7 +117,7 @@ func (db *Store) HasAttesterSlashing(slashing *ethpb.AttesterSlashing) (bool, Sl
 		return found, status, errors.Wrap(err, "failed to get hash root of attesterSlashing")
 	}
 	err = db.view(func(tx *bolt.Tx) error {
-		b := tx.Bucket(attesterSlashingBucket)
+		b := tx.Bucket(slashingBucket)
 		c := b.Cursor()
 		for k, _ := c.First(); k != nil; k, _ = c.Next() {
 			if bytes.HasSuffix(k, root[:]) {
@@ -139,7 +139,7 @@ func (db *Store) updateAttesterSlashingStatus(slashing *ethpb.AttesterSlashing, 
 		return errors.Wrap(err, "failed to get hash root of attesterSlashing")
 	}
 	err = db.update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(attesterSlashingBucket)
+		b := tx.Bucket(slashingBucket)
 		var keysToDelete [][]byte
 		c := b.Cursor()
 		for k, _ := c.First(); k != nil; k, _ = c.Next() {
@@ -158,7 +158,7 @@ func (db *Store) updateAttesterSlashingStatus(slashing *ethpb.AttesterSlashing, 
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal")
 		}
-		err = b.Put(encodeStatusRoot(status, root), enc)
+		err = b.Put(encodeStatusTypeRoot(status, SlashingType(Attestation), root), enc)
 		return err
 	})
 	if err != nil {

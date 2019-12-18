@@ -22,6 +22,7 @@ const (
 
 func (status SlashingStatus) String() string {
 	names := [...]string{
+		"Unknown",
 		"Active",
 		"Included",
 		"Reverted"}
@@ -30,6 +31,27 @@ func (status SlashingStatus) String() string {
 		return "Unknown"
 	}
 	// return the name of a SlashingStatus
+	// constant from the names array
+	// above.
+	return names[status]
+}
+
+type SlashingType uint8
+
+const (
+	Proposal = iota
+	Attestation
+)
+
+func (status SlashingType) String() string {
+	names := [...]string{
+		"Proposal",
+		"Attestation"}
+
+	if status < Active || status > Reverted {
+		return "Unknown"
+	}
+	// return the name of a SlashingType
 	// constant from the names array
 	// above.
 	return names[status]
@@ -50,8 +72,8 @@ func createProposerSlashing(enc []byte) (*ethpb.ProposerSlashing, error) {
 func (db *Store) ProposerSlashings(status SlashingStatus) ([]*ethpb.ProposerSlashing, error) {
 	var proposerSlashings []*ethpb.ProposerSlashing
 	err := db.view(func(tx *bolt.Tx) error {
-		c := tx.Bucket(proposerSlashingBucket).Cursor()
-		prefix := []byte{byte(status)}
+		c := tx.Bucket(slashingBucket).Cursor()
+		prefix := encodeStatusType(status, SlashingType(Proposal))
 		for k, v := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, v = c.Next() {
 			ps, err := createProposerSlashing(v)
 			if err != nil {
@@ -64,11 +86,11 @@ func (db *Store) ProposerSlashings(status SlashingStatus) ([]*ethpb.ProposerSlas
 	return proposerSlashings, err
 }
 
-func (db *Store) SlashingsByStatus(status SlashingStatus) ([]*ethpb.ProposerSlashing, error) {
+func (db *Store) ProposalSlashingsByStatus(status SlashingStatus) ([]*ethpb.ProposerSlashing, error) {
 	var proposerSlashings []*ethpb.ProposerSlashing
 	err := db.view(func(tx *bolt.Tx) error {
-		c := tx.Bucket(proposerSlashingBucket).Cursor()
-		prefix := []byte{byte(status)}
+		c := tx.Bucket(slashingBucket).Cursor()
+		prefix := encodeStatusType(status, SlashingType(Proposal))
 		for k, v := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, v = c.Next() {
 			ps, err := createProposerSlashing(v)
 			if err != nil {
@@ -101,8 +123,8 @@ func (db *Store) DeleteProposerSlashingWithStatus(status SlashingStatus, propose
 		return errors.Wrap(err, "failed to get hash root of proposerSlashing")
 	}
 	return db.update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(proposerSlashingBucket)
-		k := encodeStatusRoot(status, root)
+		bucket := tx.Bucket(slashingBucket)
+		k := encodeStatusTypeRoot(status, SlashingType(Proposal), root)
 		if err != nil {
 			return errors.Wrap(err, "failed to get key for for proposer slashing.")
 		}
@@ -120,7 +142,7 @@ func (db *Store) DeleteProposerSlashing(slashing *ethpb.ProposerSlashing) error 
 		return errors.Wrap(err, "failed to get hash root of proposerSlashing")
 	}
 	err = db.update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(proposerSlashingBucket)
+		b := tx.Bucket(slashingBucket)
 		b.ForEach(func(k, v []byte) error {
 			if bytes.HasSuffix(k, root[:]) {
 				b.Delete(k)
@@ -141,7 +163,7 @@ func (db *Store) HasProposerSlashing(slashing *ethpb.ProposerSlashing) (bool, Sl
 		return found, status, errors.Wrap(err, "failed to get hash root of proposerSlashing")
 	}
 	err = db.view(func(tx *bolt.Tx) error {
-		b := tx.Bucket(proposerSlashingBucket)
+		b := tx.Bucket(slashingBucket)
 		c := b.Cursor()
 		for k, _ := c.First(); k != nil; k, _ = c.Next() {
 			if bytes.HasSuffix(k, root[:]) {
@@ -163,7 +185,7 @@ func (db *Store) updateProposerSlashingStatus(slashing *ethpb.ProposerSlashing, 
 		return errors.Wrap(err, "failed to get hash root of proposerSlashing")
 	}
 	err = db.update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(proposerSlashingBucket)
+		b := tx.Bucket(slashingBucket)
 		var keysToDelete [][]byte
 		c := b.Cursor()
 		for k, _ := c.First(); k != nil; k, _ = c.Next() {
@@ -182,7 +204,7 @@ func (db *Store) updateProposerSlashingStatus(slashing *ethpb.ProposerSlashing, 
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal")
 		}
-		err = b.Put(encodeStatusRoot(status, root), enc)
+		err = b.Put(encodeStatusTypeRoot(status, SlashingType(Proposal), root), enc)
 		return err
 	})
 	if err != nil {
