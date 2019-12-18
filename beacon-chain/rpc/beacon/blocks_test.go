@@ -452,8 +452,9 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	hRoot, _ := ssz.SigningRoot(b)
 
 	chainService := &mock.ChainService{}
+	ctx := context.Background()
 	server := &Server{
-		Ctx:           context.Background(),
+		Ctx:           ctx,
 		HeadFetcher:   &mock.ChainService{Block: b, State: s},
 		BeaconDB:      db,
 		StateNotifier: chainService.StateNotifier(),
@@ -462,7 +463,6 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockStream := mockRPC.NewMockBeaconChain_StreamChainHeadServer(ctrl)
-	mockStream.EXPECT().Context().Return(context.Background())
 	mockStream.EXPECT().Send(
 		&ethpb.ChainHead{
 			HeadSlot:                   b.Slot,
@@ -478,12 +478,15 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 			PreviousJustifiedEpoch:     3,
 			PreviousJustifiedBlockRoot: pjRoot[:],
 		},
-	).Return(nil)
+	).Do(func(arg0 interface{}) {
+		exitRoutine <- true
+	})
+	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
+
 	go func(tt *testing.T) {
 		if err := server.StreamChainHead(&ptypes.Empty{}, mockStream); err != nil {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
-		<-exitRoutine
 	}(t)
 
 	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
@@ -493,5 +496,5 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 			Data: &statefeed.BlockProcessedData{},
 		})
 	}
-	exitRoutine <- true
+	<-exitRoutine
 }
