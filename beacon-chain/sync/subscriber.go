@@ -90,7 +90,7 @@ func (r *Service) registerSubscribers() {
 	r.subscribeDynamic(
 		"/eth2/committee_index%d_beacon_attestation",
 		r.currentCommitteeIndex,                     /* determineSubsLen */
-		noopValidator,                               /* validator */
+		r.validateCommitteeIndexBeaconAttestation,   /* validator */
 		r.committeeIndexBeaconAttestationSubscriber, /* message handler */
 	)
 }

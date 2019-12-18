@@ -26,6 +26,7 @@ go_library(
         "validate_attester_slashing.go",
         "validate_beacon_attestation.go",
         "validate_beacon_blocks.go",
+        "validate_committee_index_beacon_attestation.go",
         "validate_proposer_slashing.go",
         "validate_voluntary_exit.go",
     ],
