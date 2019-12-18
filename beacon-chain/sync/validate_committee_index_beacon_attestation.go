@@ -22,7 +22,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, m
 	}
 
 	// Attestation must be unaggregated.
-	if att.Data.AggregationBits.Count() != 1 {
+	if att.AggregationBits.Count() != 1 {
 		return false, nil
 	}
 
