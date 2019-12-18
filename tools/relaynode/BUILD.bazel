@@ -22,6 +22,7 @@ go_library(
 go_image(
     name = "image",
     srcs = ["relaynode.go"],
+    base = "//tools:go_image",
     goarch = "amd64",
     goos = "linux",
     importpath = "github.com/prysmaticlabs/prysm/tools/relaynode",
