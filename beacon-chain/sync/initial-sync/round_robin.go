@@ -3,12 +3,13 @@ package initialsync
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"io"
 	"math/rand"
 	"sort"
 	"sync/atomic"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/paulbellamy/ratecounter"
