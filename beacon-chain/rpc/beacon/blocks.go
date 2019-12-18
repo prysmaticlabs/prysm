@@ -192,7 +192,9 @@ func (bs *Server) StreamChainHead(_ *ptypes.Empty, stream ethpb.BeaconChain_Stre
 				if err != nil {
 					return status.Errorf(codes.Internal, "Could not retrieve chain head: %v", err)
 				}
-				return stream.Send(res)
+				if err := stream.Send(res); err != nil {
+					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+				}
 			}
 		case <-stateSub.Err():
 			return status.Error(codes.Aborted, "Subscriber closed, exiting goroutine")
