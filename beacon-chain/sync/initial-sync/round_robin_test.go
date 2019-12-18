@@ -40,7 +40,7 @@ func init() {
 }
 
 func TestConstants(t *testing.T) {
-	if maxPeersToSync*blockBatchSize > 1000 {
+	if params.BeaconConfig().MaxPeersToSync*blockBatchSize > 1000 {
 		t.Fatal("rpc rejects requests over 1000 range slots")
 	}
 }

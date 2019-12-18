@@ -37,8 +37,7 @@ func (r *Service) maintainPeerStatuses() {
 			}
 		}
 		if !r.initialSync.Syncing() {
-			maxPeersToSync := 15
-			_, highestEpoch, _ := r.p2p.Peers().BestFinalized(maxPeersToSync)
+			_, highestEpoch, _ := r.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync)
 			if helpers.StartSlot(highestEpoch) > r.chain.HeadSlot() {
 				r.clearPendingSlots()
 				// block until we can resync the node
