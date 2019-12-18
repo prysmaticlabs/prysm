@@ -40,6 +40,7 @@ func (db *Store) AttesterSlashings(status SlashingStatus) ([]*ethpb.AttesterSlas
 	return attesterSlashings, err
 }
 
+// AttestingSlashingsByStatus return all attestation slashing proofs with certain status.
 func (db *Store) AttestingSlashingsByStatus(status SlashingStatus) ([]*ethpb.AttesterSlashing, error) {
 	var attesterSlashings []*ethpb.AttesterSlashing
 	err := db.view(func(tx *bolt.Tx) error {
@@ -57,7 +58,7 @@ func (db *Store) AttestingSlashingsByStatus(status SlashingStatus) ([]*ethpb.Att
 	return attesterSlashings, err
 }
 
-// SaveAttesterSlashing accepts a block header and writes it to disk.
+// SaveAttesterSlashing accepts a slashing proof and its status and writes it to disk.
 func (db *Store) SaveAttesterSlashing(status SlashingStatus, attesterSlashing *ethpb.AttesterSlashing) error {
 	found, st, err := db.HasAttesterSlashing(attesterSlashing)
 	if err != nil {
@@ -70,7 +71,7 @@ func (db *Store) SaveAttesterSlashing(status SlashingStatus, attesterSlashing *e
 
 }
 
-// DeleteAttesterSlashing deletes a block header using the epoch and validator id.
+// DeleteAttesterSlashingWithStatus deletes a slashing proof using the slashing status and slashing proof.
 func (db *Store) DeleteAttesterSlashingWithStatus(status SlashingStatus, attesterSlashing *ethpb.AttesterSlashing) error {
 	root, err := ssz.HashTreeRoot(attesterSlashing)
 	if err != nil {
@@ -83,17 +84,17 @@ func (db *Store) DeleteAttesterSlashingWithStatus(status SlashingStatus, atteste
 			return errors.Wrap(err, "failed to get key for for attester slashing.")
 		}
 		if err := bucket.Delete(k); err != nil {
-			return errors.Wrap(err, "failed to delete the block header from historic block header bucket")
+			return errors.Wrap(err, "failed to delete the slashing proof from slashing bucket")
 		}
 		return nil
 	})
 }
 
-// DeleteValidatorAttesterSlashings deletes a block header using the epoch and validator id.
+// DeleteAttesterSlashing deletes attester slashing proof.
 func (db *Store) DeleteAttesterSlashing(slashing *ethpb.AttesterSlashing) error {
 	root, err := ssz.HashTreeRoot(slashing)
 	if err != nil {
-		return errors.Wrap(err, "failed to get hash root of attesterSlashing")
+		return errors.Wrap(err, "failed to get hash root of attester slashing")
 	}
 	err = db.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)

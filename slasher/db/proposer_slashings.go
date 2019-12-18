@@ -11,12 +11,17 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
+// SlashingStatus enum like structure.
 type SlashingStatus uint8
 
 const (
+	// Unknown default status in case it is not set
 	Unknown = iota
+	// Active slashing proof hasn't been included yet.
 	Active
+	// Included slashing proof that has been included in a block.
 	Included
+	// Reverted slashing proof that has been reverted and therefore is relevant again.
 	Reverted //relevant again
 )
 
@@ -36,6 +41,7 @@ func (status SlashingStatus) String() string {
 	return names[status]
 }
 
+// SlashingType enum like type of slashing proof.
 type SlashingType uint8
 
 const (
@@ -86,6 +92,7 @@ func (db *Store) ProposerSlashings(status SlashingStatus) ([]*ethpb.ProposerSlas
 	return proposerSlashings, err
 }
 
+// ProposalSlashingsByStatus returns all the proposal slashing proofs with a certain status.
 func (db *Store) ProposalSlashingsByStatus(status SlashingStatus) ([]*ethpb.ProposerSlashing, error) {
 	var proposerSlashings []*ethpb.ProposerSlashing
 	err := db.view(func(tx *bolt.Tx) error {
@@ -103,7 +110,7 @@ func (db *Store) ProposalSlashingsByStatus(status SlashingStatus) ([]*ethpb.Prop
 	return proposerSlashings, err
 }
 
-// SaveProposerSlashing accepts a block header and writes it to disk.
+// SaveProposerSlashing accepts a proposer slashing and its status header and writes it to disk.
 func (db *Store) SaveProposerSlashing(status SlashingStatus, proposerSlashing *ethpb.ProposerSlashing) error {
 	found, st, err := db.HasProposerSlashing(proposerSlashing)
 	if err != nil {
@@ -116,7 +123,7 @@ func (db *Store) SaveProposerSlashing(status SlashingStatus, proposerSlashing *e
 
 }
 
-// DeleteProposerSlashing deletes a block header using the epoch and validator id.
+// DeleteProposerSlashingWithStatus deletes a proposal slashing proof given its status.
 func (db *Store) DeleteProposerSlashingWithStatus(status SlashingStatus, proposerSlashing *ethpb.ProposerSlashing) error {
 	root, err := ssz.HashTreeRoot(proposerSlashing)
 	if err != nil {
@@ -129,13 +136,13 @@ func (db *Store) DeleteProposerSlashingWithStatus(status SlashingStatus, propose
 			return errors.Wrap(err, "failed to get key for for proposer slashing.")
 		}
 		if err := bucket.Delete(k); err != nil {
-			return errors.Wrap(err, "failed to delete the block header from historic block header bucket")
+			return errors.Wrap(err, "failed to delete the slashing proof header from slashing bucket")
 		}
 		return nil
 	})
 }
 
-// DeleteValidatorProposerSlashings deletes a block header using the epoch and validator id.
+// DeleteProposerSlashing deletes a proposer slashing proof.
 func (db *Store) DeleteProposerSlashing(slashing *ethpb.ProposerSlashing) error {
 	root, err := ssz.HashTreeRoot(slashing)
 	if err != nil {
