@@ -23,7 +23,7 @@ passwd_entry(
 passwd_entry(
     name = "nonroot_user",
     info = "nonroot",
-    uid = 1002,
+    uid = 1001,
     username = "nonroot",
 )
 
