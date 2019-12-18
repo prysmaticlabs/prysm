@@ -100,6 +100,7 @@ func (s *Service) processDeposit(eth1Data *ethpb.Eth1Data, deposit *ethpb.Deposi
 	s.preGenesisState.Validators[index].EffectiveBalance = mathutil.Min(balance-balance%params.BeaconConfig().EffectiveBalanceIncrement, params.BeaconConfig().MaxEffectiveBalance)
 	if s.preGenesisState.Validators[index].EffectiveBalance ==
 		params.BeaconConfig().MaxEffectiveBalance {
+		log.Errorf("adding in val %d", index)
 		s.preGenesisState.Validators[index].ActivationEligibilityEpoch = 0
 		s.preGenesisState.Validators[index].ActivationEpoch = 0
 	}

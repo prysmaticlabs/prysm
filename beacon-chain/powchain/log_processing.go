@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"math/big"
 	"time"
 
@@ -358,7 +359,9 @@ func (s *Service) checkForChainStart(ctx context.Context, blkNum *big.Int) error
 		return errors.New("got empty blockhash from powchain service")
 	}
 	timeStamp := blk.Time()
-	triggered := state.IsValidGenesisState(s.activeValidatorCount, timeStamp)
+	valCount, _ := helpers.ActiveValidatorCount(s.preGenesisState, 0)
+	log.Errorf("Val count %d", valCount)
+	triggered := state.IsValidGenesisState(valCount, timeStamp)
 	if triggered {
 		s.setGenesisTime(timeStamp)
 		s.ProcessChainStart(uint64(s.eth2GenesisTime), blk.Hash(), blk.Number())

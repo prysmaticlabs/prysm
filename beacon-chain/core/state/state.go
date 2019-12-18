@@ -187,7 +187,7 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 	return state, nil
 }
 
-func OptimizedGenesisBeaconState(bState *pb.BeaconState, genesisTime uint64, eth1Data *ethpb.Eth1Data) (*pb.BeaconState, error) {
+func OptimizedGenesisBeaconState(genesisTime uint64, bState *pb.BeaconState, eth1Data *ethpb.Eth1Data) (*pb.BeaconState, error) {
 	if eth1Data == nil {
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
@@ -279,7 +279,7 @@ func OptimizedGenesisBeaconState(bState *pb.BeaconState, genesisTime uint64, eth
 	return state, nil
 }
 
-func EmptyGenesisState() (*pb.BeaconState, error) {
+func EmptyGenesisState() *pb.BeaconState {
 	state := &pb.BeaconState{
 		// Misc fields.
 		Slot: 0,
@@ -301,7 +301,7 @@ func EmptyGenesisState() (*pb.BeaconState, error) {
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: 0,
 	}
-	return state, nil
+	return state
 }
 
 // IsValidGenesisState gets called whenever there's a deposit event,

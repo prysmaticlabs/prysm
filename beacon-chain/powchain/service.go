@@ -4,6 +4,7 @@ package powchain
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"math/big"
 	"runtime/debug"
 	"strings"
@@ -62,6 +63,7 @@ type Reader interface {
 type ChainStartFetcher interface {
 	ChainStartDeposits() []*ethpb.Deposit
 	ChainStartEth1Data() *ethpb.Eth1Data
+	PreGenesisState() *pb.BeaconState
 }
 
 // ChainInfoFetcher retrieves information about eth1 metadata at the eth2 genesis time.
@@ -192,6 +194,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		lastRequestedBlock:      big.NewInt(0),
 		chainStartETH1Data:      &ethpb.Eth1Data{},
 		depositedPubkeys:        make(map[[48]byte]uint64),
+		preGenesisState:         state.EmptyGenesisState(),
 	}, nil
 }
 
@@ -223,6 +226,10 @@ func (s *Service) ChainStartDeposits() []*ethpb.Deposit {
 // ChainStartEth1Data returns the eth1 data at chainstart.
 func (s *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 	return s.chainStartETH1Data
+}
+
+func (s *Service) PreGenesisState() *pb.BeaconState {
+	return s.preGenesisState
 }
 
 // Status is service health checks. Return nil or error.
