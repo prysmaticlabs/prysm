@@ -338,6 +338,7 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, slot 
 	defer span.End()
 
 	validAtts := make([]*ethpb.Attestation, 0, len(atts))
+	inValidAtts := make([]*ethpb.Attestation, 0, len(atts))
 
 	bState, err := vs.BeaconDB.HeadState(ctx)
 	if err != nil {
@@ -358,18 +359,15 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, slot 
 		}
 
 		if _, err := blocks.ProcessAttestation(ctx, bState, att); err != nil {
-			if helpers.IsAggregated(att) {
-				if err := vs.AttPool.DeleteAggregatedAttestation(att); err != nil {
-					return nil, err
-				}
-			} else {
-				if err := vs.AttPool.DeleteUnaggregatedAttestation(att); err != nil {
-					return nil, err
-				}
-			}
+			inValidAtts = append(inValidAtts, att)
 			continue
+
 		}
 		validAtts = append(validAtts, att)
+	}
+
+	if err := vs.deleteAttsInPool(inValidAtts); err != nil {
+		return nil, err
 	}
 
 	return validAtts, nil

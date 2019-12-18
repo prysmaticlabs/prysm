@@ -80,15 +80,6 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	flags.ConfigureGlobalFlags(ctx)
 	registry := shared.NewServiceRegistry()
 
-	beacon := &BeaconNode{
-		ctx:             ctx,
-		services:        registry,
-		stop:            make(chan struct{}),
-		stateFeed:       new(event.Feed),
-		opFeed:          new(event.Feed),
-		attestationPool: attestations.NewPool(),
-	}
-
 	// Use custom config values if the --no-custom-config flag is not set.
 	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
 		if featureconfig.Get().MinimalConfig {
@@ -102,6 +93,15 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 			).Info("Using custom chain parameters")
 			params.UseDemoBeaconConfig()
 		}
+	}
+
+	beacon := &BeaconNode{
+		ctx:             ctx,
+		services:        registry,
+		stop:            make(chan struct{}),
+		stateFeed:       new(event.Feed),
+		opFeed:          new(event.Feed),
+		attestationPool: attestations.NewPool(),
 	}
 
 	if err := beacon.startDB(ctx); err != nil {

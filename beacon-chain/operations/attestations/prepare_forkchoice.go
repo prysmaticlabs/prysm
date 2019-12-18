@@ -67,6 +67,12 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 		}
 	}
 
+	for _, a := range s.pool.BlockAttestations() {
+		if err := s.pool.DeleteBlockAttestation(a); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

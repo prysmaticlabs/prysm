@@ -64,13 +64,14 @@ func (s *Service) processAttestation() {
 			atts := s.attPool.ForkchoiceAttestations()
 
 			for _, a := range atts {
+				if err := s.attPool.DeleteForkchoiceAttestation(a); err != nil {
+					log.WithError(err).Error("Could not delete fork choice attestation in pool")
+				}
+
 				if err := s.ReceiveAttestationNoPubsub(ctx, a); err != nil {
 					log.WithFields(logrus.Fields{
 						"targetRoot": fmt.Sprintf("%#x", a.Data.Target.Root),
 					}).WithError(err).Error("Could not receive attestation in chain service")
-				}
-				if err := s.attPool.DeleteForkchoiceAttestation(a); err != nil {
-					log.WithError(err).Error("Could not delete fork choice attestation in pool")
 				}
 			}
 		case <-s.ctx.Done():
