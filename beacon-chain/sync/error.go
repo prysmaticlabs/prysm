@@ -12,7 +12,6 @@ const genericError = "internal service error"
 
 var errWrongForkVersion = errors.New("wrong fork version")
 var errInvalidEpoch = errors.New("invalid epoch")
-var errInvalidSlot = errors.New("invalid head slot")
 
 var responseCodeSuccess = byte(0x00)
 var responseCodeInvalidRequest = byte(0x01)

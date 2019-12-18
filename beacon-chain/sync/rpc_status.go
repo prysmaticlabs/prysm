@@ -148,10 +148,6 @@ func (r *Service) validateStatusMessage(msg *pb.Status, stream network.Stream) e
 		return errWrongForkVersion
 	}
 	genesis := r.chain.GenesisTime()
-	maxSlot := slotutil.SlotsSinceGenesis(genesis)
-	if msg.HeadSlot > maxSlot {
-		return errInvalidSlot
-	}
 	maxEpoch := slotutil.EpochsSinceGenesis(genesis)
 	// It would take a minimum of 2 epochs to finalize a
 	// previous epoch
