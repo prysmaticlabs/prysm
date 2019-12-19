@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -64,9 +65,13 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *pb.Beac
 	)
 	privKey := bls.RandKey()
 
+	someRoot := [32]byte{1, 2, 3}
+	someRoot2 := [32]byte{4, 5, 6}
 	header1 := &ethpb.BeaconBlockHeader{
-		Slot:      0,
-		StateRoot: []byte("A"),
+		Slot:       0,
+		ParentRoot: someRoot[:],
+		StateRoot:  someRoot[:],
+		BodyRoot:   someRoot[:],
 	}
 	signingRoot, err := ssz.SigningRoot(header1)
 	if err != nil {
@@ -75,8 +80,10 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *pb.Beac
 	header1.Signature = privKey.Sign(signingRoot[:], domain).Marshal()[:]
 
 	header2 := &ethpb.BeaconBlockHeader{
-		Slot:      0,
-		StateRoot: []byte("B"),
+		Slot:       0,
+		ParentRoot: someRoot2[:],
+		StateRoot:  someRoot2[:],
+		BodyRoot:   someRoot2[:],
 	}
 	signingRoot, err = ssz.SigningRoot(header2)
 	if err != nil {
@@ -98,6 +105,21 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *pb.Beac
 	}
 
 	return slashing, state
+}
+
+func TestValidateProposerSlashing_EncodeDecode(t *testing.T) {
+	slashing, _ := setupValidProposerSlashing(t)
+	enc, err := ssz.Marshal(slashing)
+	if err != nil {
+		t.Fatal(err)
+	}
+	target := &ethpb.ProposerSlashing{}
+	if err := ssz.Unmarshal(enc, target); err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(slashing, target) {
+		t.Errorf("Wanted %v, got %v", slashing, target)
+	}
 }
 
 func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
