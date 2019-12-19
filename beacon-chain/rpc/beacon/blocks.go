@@ -34,10 +34,7 @@ func (bs *Server) ListBlocks(
 
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListBlocksRequest_Epoch:
-		startSlot := q.Epoch * params.BeaconConfig().SlotsPerEpoch
-		endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch - 1
-
-		blks, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot))
+		blks, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartEpoch(q.Epoch).SetEndEpoch(q.Epoch))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Failed to get blocks: %v", err)
 		}
