@@ -47,7 +47,7 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 	}
 
 	epoch := helpers.SlotToEpoch(req.Slot)
-	activeValidatorIndices, err := as.HeadFetcher.HeadValidators(epoch)
+	activeValidatorIndices, err := as.HeadFetcher.HeadValidatorsIndices(epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get validators: %v", err)
 	}

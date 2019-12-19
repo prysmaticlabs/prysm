@@ -133,8 +133,8 @@ func (ms *ChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attes
 	return nil
 }
 
-// HeadValidators mocks the same method in the chain service.
-func (ms *ChainService) HeadValidators(epoch uint64) ([]uint64, error) {
+// HeadValidatorsIndices mocks the same method in the chain service.
+func (ms *ChainService) HeadValidatorsIndices(epoch uint64) ([]uint64, error) {
 	return helpers.ActiveValidatorIndices(ms.State, epoch)
 }
 

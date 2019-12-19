@@ -31,7 +31,7 @@ type HeadFetcher interface {
 	HeadRoot() []byte
 	HeadBlock() *ethpb.BeaconBlock
 	HeadState(ctx context.Context) (*pb.BeaconState, error)
-	HeadValidators(epoch uint64) ([]uint64, error)
+	HeadValidatorsIndices(epoch uint64) ([]uint64, error)
 	HeadSeed(epoch uint64) ([32]byte, error)
 }
 
@@ -105,8 +105,8 @@ func (s *Service) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 	return proto.Clone(s.headState).(*pb.BeaconState), nil
 }
 
-// HeadValidators returns a list of active validator indices from the head view of a given epoch.
-func (s *Service) HeadValidators(epoch uint64) ([]uint64, error) {
+// HeadValidatorsIndices returns a list of active validator indices from the head view of a given epoch.
+func (s *Service) HeadValidatorsIndices(epoch uint64) ([]uint64, error) {
 	return helpers.ActiveValidatorIndices(s.headState, epoch)
 }
 
