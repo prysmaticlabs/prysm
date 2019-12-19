@@ -116,7 +116,7 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 	for _, tt := range tests {
 		attestationData.Target = &ethpb.Checkpoint{Epoch: 0}
 		attestationData.Slot = tt.attestationSlot
-		epoch := CurrentEpoch(state)
+		epoch := SlotToEpoch(tt.attestationSlot)
 		activeValidatorIndices, err := ActiveValidatorIndices(state, epoch)
 		if err != nil {
 			t.Fatal(err)
@@ -186,7 +186,7 @@ func TestAttestingIndicesWithBeaconCommitteeWithoutCache_Ok(t *testing.T) {
 	for _, tt := range tests {
 		attestationData.Target = &ethpb.Checkpoint{Epoch: 0}
 		attestationData.Slot = tt.attestationSlot
-		epoch := CurrentEpoch(state)
+		epoch := SlotToEpoch(tt.attestationSlot)
 		activeValidatorIndices, err := ActiveValidatorIndices(state, epoch)
 		if err != nil {
 			t.Fatal(err)

@@ -3,7 +3,6 @@ package precompute
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/pkg/errors"
@@ -52,7 +51,7 @@ func ProcessAttestations(
 		if err != nil {
 			return nil, nil, err
 		}
-		fmt.Println(committee)
+
 		indices, err := helpers.AttestingIndices(a.AggregationBits, committee)
 		if err != nil {
 			return nil, nil, err

@@ -693,7 +693,7 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 			AggregationBits: aggBits,
 			CustodyBits:     custodyBits,
 		}
-		epoch := helpers.CurrentEpoch(s)
+		epoch := helpers.SlotToEpoch(att.Data.Slot)
 		activeValidatorIndices, err := helpers.ActiveValidatorIndices(s, epoch)
 		if err != nil {
 			t.Fatal(err)

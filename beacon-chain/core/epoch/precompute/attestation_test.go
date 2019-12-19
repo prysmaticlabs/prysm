@@ -199,7 +199,7 @@ func TestProcessAttestations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	epoch := helpers.CurrentEpoch(beaconState)
+	epoch := helpers.SlotToEpoch(att1.Data.Slot)
 	activeValidatorIndices, err := helpers.ActiveValidatorIndices(beaconState, epoch)
 	if err != nil {
 		t.Fatal(err)
