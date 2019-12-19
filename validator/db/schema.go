@@ -1,7 +1,5 @@
 package db
 
-import ()
-
 var (
 	// Protector
 	historicProposalsBucket = []byte("historic-proposals-bucket")
