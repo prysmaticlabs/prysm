@@ -23,7 +23,7 @@ const pubsubMessageTimeout = 10 * time.Second
 // subHandler represents handler for a given subscription.
 type subHandler func(context.Context, proto.Message) error
 
-// noopValidator is a no-op that always returns true.
+// noopValidator is a no-op that only decodes the message, but does not check its contents.
 func (r *Service) noopValidator(ctx context.Context, _ peer.ID, msg *pubsub.Message) bool {
 	if msg == nil || len(msg.TopicIDs) == 0 {
 		return false
@@ -33,7 +33,8 @@ func (r *Service) noopValidator(ctx context.Context, _ peer.ID, msg *pubsub.Mess
 	base := p2p.GossipTopicMappings[topic]
 	m := proto.Clone(base)
 	if err := r.p2p.Encoding().Decode(msg.Data, m); err != nil {
-		panic(err)
+		log.WithError(err).Error("Failed to decode message")
+		return false
 	}
 	msg.VaidatorData = m
 	return true
