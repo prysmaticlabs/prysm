@@ -171,7 +171,7 @@ func (s *Store) saveCheckpointState(ctx context.Context, baseState *pb.BeaconSta
 
 // verifyAttestation validates input attestation is valid.
 func (s *Store) verifyAttestation(ctx context.Context, baseState *pb.BeaconState, a *ethpb.Attestation) (*ethpb.IndexedAttestation, error) {
-	committee, err := helpers.BeaconCommittee(baseState, a.Data.Slot, a.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(baseState, a.Data.Slot, a.Data.CommitteeIndex)
 	if err != nil {
 		return nil, err
 	}

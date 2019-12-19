@@ -10,6 +10,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
@@ -303,7 +304,7 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 	}
 }
 
-func TestStore_Blocks_RetrieveRange(t *testing.T) {
+func TestStore_Blocks_Retrieve_SlotRange(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	b := make([]*ethpb.BeaconBlock, 500)
@@ -323,6 +324,39 @@ func TestStore_Blocks_RetrieveRange(t *testing.T) {
 	}
 	want := 300
 	if len(retrieved) != want {
+		t.Errorf("Wanted %d, received %d", want, len(retrieved))
+	}
+}
+
+func TestStore_Blocks_Retrieve_Epoch(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	slots := params.BeaconConfig().SlotsPerEpoch * 7
+	b := make([]*ethpb.BeaconBlock, slots)
+	for i := uint64(0); i < slots; i++ {
+		b[i] = &ethpb.BeaconBlock{
+			ParentRoot: []byte("parent"),
+			Slot:       i,
+		}
+	}
+	ctx := context.Background()
+	if err := db.SaveBlocks(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+	retrieved, err := db.Blocks(ctx, filters.NewFilter().SetStartEpoch(5).SetEndEpoch(6))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := params.BeaconConfig().SlotsPerEpoch * 2
+	if uint64(len(retrieved)) != want {
+		t.Errorf("Wanted %d, received %d", want, len(retrieved))
+	}
+	retrieved, err = db.Blocks(ctx, filters.NewFilter().SetStartEpoch(0).SetEndEpoch(0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want = params.BeaconConfig().SlotsPerEpoch
+	if uint64(len(retrieved)) != want {
 		t.Errorf("Wanted %d, received %d", want, len(retrieved))
 	}
 }

@@ -73,7 +73,7 @@ go_image(
         "server.go",
         "watchtower.go",
     ],
-    base = "@cc_image_base//image",
+    base = "//tools:cc_image",
     goarch = "amd64",
     goos = "linux",
     importpath = "github.com/prysmaticlabs/prysm/tools/cluster-pk-manager/server",
