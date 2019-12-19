@@ -610,7 +610,7 @@ func CanProcessEpoch(state *pb.BeaconState) bool {
 func ProcessEpochPrecompute(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch")
 	defer span.End()
-	span.AddAttributes(trace.Int64Attribute("epoch", int64(helpers.SlotToEpoch(state.Slot))))
+	span.AddAttributes(trace.Int64Attribute("epoch", int64(helpers.CurrentEpoch(state))))
 
 	vp, bp := precompute.New(ctx, state)
 	vp, bp, err := precompute.ProcessAttestations(ctx, state, vp, bp)
