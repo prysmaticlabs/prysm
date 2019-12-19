@@ -39,7 +39,16 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 		AggregationBits: bitfield.Bitlist{0xCF, 0xC0, 0xC0, 0xC0, 0x01},
 		CustodyBits:     bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
 	}
-	committee, err := helpers.BeaconCommittee(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	epoch := helpers.CurrentEpoch(beaconState)
+	activeValidatorIndices, err := helpers.ActiveValidatorIndices(beaconState, epoch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seed, err := helpers.Seed(beaconState, epoch, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		t.Fatal(err)
+	}
+	committee, err := helpers.BeaconCommittee(activeValidatorIndices, seed, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,9 +147,18 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 	}
 
 	// Next up, we compute the committee for the attestation we're testing.
-	committee, err := helpers.BeaconCommittee(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	epoch := helpers.CurrentEpoch(beaconState)
+	activeValidatorIndices, err := helpers.ActiveValidatorIndices(beaconState, epoch)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
+	}
+	seed, err := helpers.Seed(beaconState, epoch, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		t.Fatal(err)
+	}
+	committee, err := helpers.BeaconCommittee(activeValidatorIndices, seed, att.Data.Slot, att.Data.CommitteeIndex)
+	if err != nil {
+		t.Fatal(err)
 	}
 	attDataRoot, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
@@ -213,9 +231,18 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 		CustodyBits: bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
 	}
 
-	committee, err := helpers.BeaconCommittee(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
+	epoch := helpers.CurrentEpoch(beaconState)
+	activeValidatorIndices, err := helpers.ActiveValidatorIndices(beaconState, epoch)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
+	}
+	seed, err := helpers.Seed(beaconState, epoch, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		t.Fatal(err)
+	}
+	committee, err := helpers.BeaconCommittee(activeValidatorIndices, seed, att1.Data.Slot, att1.Data.CommitteeIndex)
+	if err != nil {
+		t.Fatal(err)
 	}
 	aggregationBits := bitfield.NewBitlist(uint64(len(committee)))
 	aggregationBits.SetBitAt(0, true)
@@ -353,9 +380,18 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		AggregationBits: aggBits,
 		CustodyBits:     custodyBits,
 	}
-	committee, err := helpers.BeaconCommittee(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	epoch := helpers.CurrentEpoch(beaconState)
+	activeValidatorIndices, err := helpers.ActiveValidatorIndices(beaconState, epoch)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
+	}
+	seed, err := helpers.Seed(beaconState, epoch, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		t.Fatal(err)
+	}
+	committee, err := helpers.BeaconCommittee(activeValidatorIndices, seed, att.Data.Slot, att.Data.CommitteeIndex)
+	if err != nil {
+		t.Fatal(err)
 	}
 	attestingIndices, err := helpers.AttestingIndices(att.AggregationBits, committee)
 	if err != nil {

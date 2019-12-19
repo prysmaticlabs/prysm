@@ -387,7 +387,16 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		AggregationBits: aggBits,
 		CustodyBits:     custodyBits,
 	}
-	committee, err := helpers.BeaconCommittee(beaconState, blockAtt.Data.Slot, blockAtt.Data.CommitteeIndex)
+	epoch := helpers.CurrentEpoch(beaconState)
+	activeValidatorIndices, err := helpers.ActiveValidatorIndices(beaconState, epoch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seed, err := helpers.Seed(beaconState, epoch, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		t.Fatal(err)
+	}
+	committee, err := helpers.BeaconCommittee(activeValidatorIndices, seed, blockAtt.Data.Slot, blockAtt.Data.CommitteeIndex)
 	if err != nil {
 		t.Error(err)
 	}
@@ -633,7 +642,16 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 
 	// Precache the shuffled indices
 	for i := uint64(0); i < committeeCount; i++ {
-		if _, err := helpers.BeaconCommittee(s, 0, i); err != nil {
+		epoch := helpers.CurrentEpoch(s)
+		activeValidatorIndices, err := helpers.ActiveValidatorIndices(s, epoch)
+		if err != nil {
+			b.Fatal(err)
+		}
+		seed, err := helpers.Seed(s, epoch, params.BeaconConfig().DomainBeaconAttester)
+		if err != nil {
+			b.Fatal(err)
+		}
+		if _, err := helpers.BeaconCommittee(activeValidatorIndices, seed, 0, i); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -675,8 +693,16 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 			AggregationBits: aggBits,
 			CustodyBits:     custodyBits,
 		}
-
-		committee, err := helpers.BeaconCommittee(s, att.Data.Slot, att.Data.CommitteeIndex)
+		epoch := helpers.CurrentEpoch(s)
+		activeValidatorIndices, err := helpers.ActiveValidatorIndices(s, epoch)
+		if err != nil {
+			t.Fatal(err)
+		}
+		seed, err := helpers.Seed(s, epoch, params.BeaconConfig().DomainBeaconAttester)
+		if err != nil {
+			t.Fatal(err)
+		}
+		committee, err := helpers.BeaconCommittee(activeValidatorIndices, seed, att.Data.Slot, att.Data.CommitteeIndex)
 		if err != nil {
 			t.Error(err)
 		}

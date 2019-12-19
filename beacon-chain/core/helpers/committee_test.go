@@ -116,7 +116,16 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 	for _, tt := range tests {
 		attestationData.Target = &ethpb.Checkpoint{Epoch: 0}
 		attestationData.Slot = tt.attestationSlot
-		committee, err := BeaconCommittee(state, tt.attestationSlot, 0 /* committee index */)
+		epoch := CurrentEpoch(state)
+		activeValidatorIndices, err := ActiveValidatorIndices(state, epoch)
+		if err != nil {
+			t.Fatal(err)
+		}
+		seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
+		if err != nil {
+			t.Fatal(err)
+		}
+		committee, err := BeaconCommittee(activeValidatorIndices, seed, tt.attestationSlot, 0 /* committee index */)
 		if err != nil {
 			t.Error(err)
 		}
@@ -177,7 +186,16 @@ func TestAttestingIndicesWithBeaconCommitteeWithoutCache_Ok(t *testing.T) {
 	for _, tt := range tests {
 		attestationData.Target = &ethpb.Checkpoint{Epoch: 0}
 		attestationData.Slot = tt.attestationSlot
-		committee, err := BeaconCommitteeWithoutCache(state, tt.attestationSlot, 0 /* committee index */)
+		epoch := CurrentEpoch(state)
+		activeValidatorIndices, err := ActiveValidatorIndices(state, epoch)
+		if err != nil {
+			t.Fatal(err)
+		}
+		seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
+		if err != nil {
+			t.Fatal(err)
+		}
+		committee, err := BeaconCommitteeWithoutCache(activeValidatorIndices, seed, tt.attestationSlot, 0 /* committee index */)
 		if err != nil {
 			t.Error(err)
 		}
@@ -210,7 +228,16 @@ func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
 	}
 	attestationData := &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}
 
-	committee, err := BeaconCommittee(state, attestationData.Slot, attestationData.CommitteeIndex)
+	epoch := CurrentEpoch(state)
+	activeValidatorIndices, err := ActiveValidatorIndices(state, epoch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		t.Fatal(err)
+	}
+	committee, err := BeaconCommittee(activeValidatorIndices, seed, attestationData.Slot, attestationData.CommitteeIndex)
 	if err != nil {
 		t.Fatal(err)
 	}

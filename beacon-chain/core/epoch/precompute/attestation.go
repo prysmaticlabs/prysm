@@ -3,6 +3,7 @@ package precompute
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/pkg/errors"
@@ -25,14 +26,6 @@ func ProcessAttestations(
 	v := &Validator{}
 	var err error
 
-	activeValidatorIndices, err := helpers.ActiveValidatorIndices(state, helpers.CurrentEpoch(state))
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not check validator attested previous epoch")
-	}
-	seed, err := helpers.Seed(state, helpers.CurrentEpoch(state), params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not check validator attested previous epoch")
-	}
 	for _, a := range append(state.PreviousEpochAttestations, state.CurrentEpochAttestations...) {
 		v.IsCurrentEpochAttester, v.IsCurrentEpochTargetAttester, err = AttestedCurrentEpoch(state, a)
 		if err != nil {
@@ -45,11 +38,21 @@ func ProcessAttestations(
 			return nil, nil, errors.Wrap(err, "could not check validator attested previous epoch")
 		}
 
+		epoch := helpers.SlotToEpoch(a.Data.Slot)
+		activeValidatorIndices, err := helpers.ActiveValidatorIndices(state, epoch)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not check validator attested previous epoch")
+		}
+		seed, err := helpers.Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not check validator attested previous epoch")
+		}
 		// Get attested indices and update the pre computed fields for each attested validators.
 		committee, err := helpers.BeaconCommittee(activeValidatorIndices, seed, a.Data.Slot, a.Data.CommitteeIndex)
 		if err != nil {
 			return nil, nil, err
 		}
+		fmt.Println(committee)
 		indices, err := helpers.AttestingIndices(a.AggregationBits, committee)
 		if err != nil {
 			return nil, nil, err

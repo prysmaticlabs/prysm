@@ -51,7 +51,7 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get validators: %v", err)
 	}
-	seed , err:= as.HeadFetcher.HeadSeed(epoch)
+	seed, err := as.HeadFetcher.HeadSeed(epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get seed: %v", err)
 	}
