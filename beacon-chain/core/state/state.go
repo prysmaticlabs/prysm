@@ -187,6 +187,8 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 	return state, nil
 }
 
+// OptimizedGenesisBeaconState is used to create a state that has already processed deposits. This is to efficiently
+// create a mainnet state at chainstart.
 func OptimizedGenesisBeaconState(genesisTime uint64, bState *pb.BeaconState, eth1Data *ethpb.Eth1Data) (*pb.BeaconState, error) {
 	if eth1Data == nil {
 		return nil, errors.New("no eth1data provided for genesis state")
@@ -279,6 +281,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, bState *pb.BeaconState, eth
 	return state, nil
 }
 
+// EmptyGenesisState returns an empty beacon state object.
 func EmptyGenesisState() *pb.BeaconState {
 	state := &pb.BeaconState{
 		// Misc fields.
@@ -298,6 +301,7 @@ func EmptyGenesisState() *pb.BeaconState {
 		PreviousEpochAttestations: []*pb.PendingAttestation{},
 
 		// Eth1 data.
+		Eth1Data:         &ethpb.Eth1Data{},
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: 0,
 	}

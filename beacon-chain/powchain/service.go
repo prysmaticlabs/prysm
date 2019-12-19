@@ -229,6 +229,8 @@ func (s *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 	return s.chainStartETH1Data
 }
 
+// PreGenesisState returns a state that contains
+// pre-chainstart deposits.
 func (s *Service) PreGenesisState() *pb.BeaconState {
 	return s.preGenesisState
 }
