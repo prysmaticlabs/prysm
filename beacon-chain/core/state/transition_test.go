@@ -379,7 +379,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	blockAtt := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Slot:   beaconState.Slot - 1,
-			Target: &ethpb.Checkpoint{Epoch: helpers.SlotToEpoch(beaconState.Slot)},
+			Target: &ethpb.Checkpoint{Epoch: helpers.CurrentEpoch(beaconState)},
 			Source: &ethpb.Checkpoint{
 				Epoch: 0,
 				Root:  []byte("hello-world"),

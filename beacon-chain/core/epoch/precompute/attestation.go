@@ -3,6 +3,7 @@ package precompute
 import (
 	"bytes"
 	"context"
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -23,6 +24,15 @@ func ProcessAttestations(
 
 	v := &Validator{}
 	var err error
+
+	activeValidatorIndices, err := helpers.ActiveValidatorIndices(state, helpers.CurrentEpoch(state))
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "could not check validator attested previous epoch")
+	}
+	seed, err := helpers.Seed(state, helpers.CurrentEpoch(state), params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "could not check validator attested previous epoch")
+	}
 	for _, a := range append(state.PreviousEpochAttestations, state.CurrentEpochAttestations...) {
 		v.IsCurrentEpochAttester, v.IsCurrentEpochTargetAttester, err = AttestedCurrentEpoch(state, a)
 		if err != nil {
@@ -36,7 +46,7 @@ func ProcessAttestations(
 		}
 
 		// Get attested indices and update the pre computed fields for each attested validators.
-		committee, err := helpers.BeaconCommittee(state, a.Data.Slot, a.Data.CommitteeIndex)
+		committee, err := helpers.BeaconCommittee(activeValidatorIndices, seed, a.Data.Slot, a.Data.CommitteeIndex)
 		if err != nil {
 			return nil, nil, err
 		}

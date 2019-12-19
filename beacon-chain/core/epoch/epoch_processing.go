@@ -339,8 +339,17 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 func unslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestation) ([]uint64, error) {
 	var setIndices []uint64
 	seen := make(map[uint64]bool)
+	epoch := helpers.CurrentEpoch(state)
+	activeValidatorIndices, err := helpers.ActiveValidatorIndices(state, epoch)
+	if err != nil {
+		return nil, err
+	}
+	seed, err := helpers.Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return nil, err
+	}
 	for _, att := range atts {
-		committee, err := helpers.BeaconCommittee(state, att.Data.Slot, att.Data.CommitteeIndex)
+		committee, err := helpers.BeaconCommittee(activeValidatorIndices, seed, att.Data.Slot, att.Data.CommitteeIndex)
 		if err != nil {
 			return nil, err
 		}
