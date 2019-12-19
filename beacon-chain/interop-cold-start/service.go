@@ -122,6 +122,7 @@ func (s *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 	return &ethpb.Eth1Data{}
 }
 
+// PreGenesisState returns an empty beacon state.
 func (s *Service) PreGenesisState() *pb.BeaconState {
 	return &pb.BeaconState{}
 }

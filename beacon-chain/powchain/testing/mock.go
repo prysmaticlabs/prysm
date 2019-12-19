@@ -97,7 +97,7 @@ func (m *POWChain) ChainStartEth1Data() *ethpb.Eth1Data {
 	return m.Eth1Data
 }
 
-// ChainStartEth1Data --
+// PreGenesisState --
 func (m *POWChain) PreGenesisState() *pb.BeaconState {
 	return &pb.BeaconState{}
 }

@@ -78,7 +78,7 @@ func (f *FaultyMockPOWChain) ChainStartEth1Data() *ethpb.Eth1Data {
 	return &ethpb.Eth1Data{}
 }
 
-// ChainStartEth1Data --
+// PreGenesisState --
 func (f *FaultyMockPOWChain) PreGenesisState() *pb.BeaconState {
 	return &pb.BeaconState{}
 }
