@@ -3,6 +3,8 @@ package testing
 import (
 	"bytes"
 	"context"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"time"
 
 	"github.com/pkg/errors"
@@ -129,6 +131,16 @@ func (ms *ChainService) ReceiveAttestation(context.Context, *ethpb.Attestation) 
 // ReceiveAttestationNoPubsub mocks ReceiveAttestationNoPubsub method in chain service.
 func (ms *ChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attestation) error {
 	return nil
+}
+
+// HeadValidators mocks the same method in the chain service.
+func (ms *ChainService) HeadValidators(epoch uint64) ([]uint64, error) {
+	return helpers.ActiveValidatorIndices(ms.State, epoch)
+}
+
+// HeadSeed mocks the same method in the chain service.
+func (ms *ChainService) HeadSeed(epoch uint64) ([32]byte, error) {
+	return helpers.Seed(ms.State, epoch, params.BeaconConfig().DomainBeaconAttester)
 }
 
 // GenesisTime mocks the same method in the chain service.

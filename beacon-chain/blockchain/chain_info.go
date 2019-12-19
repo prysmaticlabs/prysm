@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -30,6 +31,8 @@ type HeadFetcher interface {
 	HeadRoot() []byte
 	HeadBlock() *ethpb.BeaconBlock
 	HeadState(ctx context.Context) (*pb.BeaconState, error)
+	HeadValidators(epoch uint64) ([]uint64, error)
+	HeadSeed(epoch uint64) ([32]byte, error)
 }
 
 // CanonicalRootFetcher defines a common interface for methods in blockchain service which
@@ -100,6 +103,16 @@ func (s *Service) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 	}
 
 	return proto.Clone(s.headState).(*pb.BeaconState), nil
+}
+
+// HeadValidators returns the head validator of a given epoch.
+func (s *Service) HeadValidators(epoch uint64) ([]uint64, error) {
+	return helpers.ActiveValidatorIndices(s.headState, epoch)
+}
+
+// HeadSeed returns the head seed of a given epoch.
+func (s *Service) HeadSeed(epoch uint64) ([32]byte, error) {
+	return helpers.Seed(s.headState, epoch, params.BeaconConfig().DomainBeaconAttester)
 }
 
 // CanonicalRoot returns the canonical root of a given slot.

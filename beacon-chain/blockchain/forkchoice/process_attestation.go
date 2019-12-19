@@ -3,6 +3,7 @@ package forkchoice
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
@@ -171,7 +172,16 @@ func (s *Store) saveCheckpointState(ctx context.Context, baseState *pb.BeaconSta
 
 // verifyAttestation validates input attestation is valid.
 func (s *Store) verifyAttestation(ctx context.Context, baseState *pb.BeaconState, a *ethpb.Attestation) (*ethpb.IndexedAttestation, error) {
-	committee, err := helpers.BeaconCommittee(baseState, a.Data.Slot, a.Data.CommitteeIndex)
+	epoch := helpers.CurrentEpoch(baseState)
+	activeValidatorIndices, err := helpers.ActiveValidatorIndices(baseState, epoch)
+	if err != nil {
+		return nil, err
+	}
+	seed, err := helpers.Seed(baseState, epoch, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return nil, err
+	}
+	committee, err := helpers.BeaconCommittee(activeValidatorIndices, seed, a.Data.Slot, a.Data.CommitteeIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +197,7 @@ func (s *Store) verifyAttestation(ctx context.Context, baseState *pb.BeaconState
 		// the following re-runs the same signature verify routine without cache in play.
 		// This provides extra assurance that committee cache can't break run time.
 		if err == blocks.ErrSigFailedToVerify {
-			committee, err = helpers.BeaconCommitteeWithoutCache(baseState, a.Data.Slot, a.Data.CommitteeIndex)
+			committee, err = helpers.BeaconCommitteeWithoutCache(activeValidatorIndices, seed, a.Data.Slot, a.Data.CommitteeIndex)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not convert attestation to indexed attestation without cache")
 			}
