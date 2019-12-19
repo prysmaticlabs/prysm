@@ -8,18 +8,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -105,21 +105,6 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *pb.Beac
 	}
 
 	return slashing, state
-}
-
-func TestValidateProposerSlashing_EncodeDecode(t *testing.T) {
-	slashing, _ := setupValidProposerSlashing(t)
-	enc, err := ssz.Marshal(slashing)
-	if err != nil {
-		t.Fatal(err)
-	}
-	target := &ethpb.ProposerSlashing{}
-	if err := ssz.Unmarshal(enc, target); err != nil {
-		t.Fatal(err)
-	}
-	if !proto.Equal(slashing, target) {
-		t.Errorf("Wanted %v, got %v", slashing, target)
-	}
 }
 
 func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
