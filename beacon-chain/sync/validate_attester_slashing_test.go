@@ -1,15 +1,21 @@
 package sync
 
 import (
+	"bytes"
 	"context"
 	"math/rand"
+	"reflect"
 	"testing"
 	"time"
 
+	"github.com/libp2p/go-libp2p-core/peer"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -82,68 +88,75 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *pb.Beac
 }
 
 func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
-	p2p := p2ptest.NewTestP2P(t)
+	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 
 	slashing, s := setupValidAttesterSlashing(t)
 
 	r := &Service{
-		p2p:         p2p,
+		p2p:         p,
 		chain:       &mock.ChainService{State: s},
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
-	valid, err := r.validateAttesterSlashing(ctx, slashing, p2p, false /*fromSelf*/)
-	if err != nil {
-		t.Errorf("Failed validation: %v", err)
+	buf := new(bytes.Buffer)
+	if _, err := p.Encoding().Encode(buf, slashing); err != nil {
+		t.Fatal(err)
 	}
+
+	msg := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data: buf.Bytes(),
+			TopicIDs: []string{
+				p2p.GossipTypeMapping[reflect.TypeOf(slashing)],
+			},
+		},
+	}
+	valid := r.validateAttesterSlashing(ctx, peer.ID("foobar"), msg)
+
 	if !valid {
 		t.Error("Failed Validation")
 	}
 
-	if !p2p.BroadcastCalled {
-		t.Error("Broadcast was not called")
-	}
-
-	time.Sleep(100 * time.Millisecond)
-	// A second message with the same information should not be valid for processing or
-	// propagation.
-	p2p.BroadcastCalled = false
-	valid, _ = r.validateAttesterSlashing(ctx, slashing, p2p, false /*fromSelf*/)
-
-	if valid {
-		t.Error("Passed validation when should have failed")
-	}
-
-	if p2p.BroadcastCalled {
-		t.Error("broadcast was called when it should not have been called")
+	if msg.VaidatorData == nil {
+		t.Error("Decoded message was not set on the message validator data")
 	}
 }
 
 func TestValidateAttesterSlashing_ValidSlashing_FromSelf(t *testing.T) {
-	p2p := p2ptest.NewTestP2P(t)
+	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 
 	slashing, s := setupValidAttesterSlashing(t)
 
 	r := &Service{
-		p2p:         p2p,
+		p2p:         p,
 		chain:       &mock.ChainService{State: s},
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
-	valid, _ := r.validateAttesterSlashing(ctx, slashing, p2p, true /*fromSelf*/)
-	if valid {
-		t.Error("Passed validation")
+	buf := new(bytes.Buffer)
+	if _, err := p.Encoding().Encode(buf, slashing); err != nil {
+		t.Fatal(err)
 	}
 
-	if p2p.BroadcastCalled {
-		t.Error("Broadcast was called")
+	msg := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data: buf.Bytes(),
+			TopicIDs: []string{
+				p2p.GossipTypeMapping[reflect.TypeOf(slashing)],
+			},
+		},
+	}
+	valid := r.validateAttesterSlashing(ctx, p.PeerID(), msg)
+
+	if valid {
+		t.Error("Passed validation")
 	}
 }
 
 func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
-	p2p := p2ptest.NewTestP2P(t)
+	p := p2ptest.NewTestP2P(t)
 
 	slashing, state := setupValidAttesterSlashing(t)
 	slashing.Attestation_1.Data.Target.Epoch = 100000000
@@ -151,35 +164,57 @@ func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 	ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
 
 	r := &Service{
-		p2p:         p2p,
+		p2p:         p,
 		chain:       &mock.ChainService{State: state},
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
-	valid, _ := r.validateAttesterSlashing(ctx, slashing, p2p, false /*fromSelf*/)
+	buf := new(bytes.Buffer)
+	if _, err := p.Encoding().Encode(buf, slashing); err != nil {
+		t.Fatal(err)
+	}
+
+	msg := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data: buf.Bytes(),
+			TopicIDs: []string{
+				p2p.GossipTypeMapping[reflect.TypeOf(slashing)],
+			},
+		},
+	}
+	valid := r.validateAttesterSlashing(ctx, "", msg)
+
 	if valid {
 		t.Error("slashing from the far distant future should have timed out and returned false")
 	}
 }
 
 func TestValidateAttesterSlashing_Syncing(t *testing.T) {
-	p2p := p2ptest.NewTestP2P(t)
+	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 
 	slashing, s := setupValidAttesterSlashing(t)
 
 	r := &Service{
-		p2p:         p2p,
+		p2p:         p,
 		chain:       &mock.ChainService{State: s},
 		initialSync: &mockSync.Sync{IsSyncing: true},
 	}
 
-	valid, _ := r.validateAttesterSlashing(ctx, slashing, p2p, false /*fromSelf*/)
+	buf := new(bytes.Buffer)
+	if _, err := p.Encoding().Encode(buf, slashing); err != nil {
+		t.Fatal(err)
+	}
+	msg := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data: buf.Bytes(),
+			TopicIDs: []string{
+				p2p.GossipTypeMapping[reflect.TypeOf(slashing)],
+			},
+		},
+	}
+	valid := r.validateAttesterSlashing(ctx, "", msg)
 	if valid {
 		t.Error("Passed validation")
-	}
-
-	if p2p.BroadcastCalled {
-		t.Error("Broadcast was called")
 	}
 }
