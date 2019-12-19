@@ -20,7 +20,7 @@ message ETH1ChainData {
 message LatestETH1Data {
     uint64 block_height = 2;
     uint64 block_time = 3;
-    repeated bytes block_hash = 4;
+    bytes block_hash = 4;
     uint64 last_requested_block = 5;
 }
 

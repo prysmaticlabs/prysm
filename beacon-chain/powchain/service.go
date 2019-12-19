@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -128,6 +130,7 @@ type Service struct {
 	blockHash               common.Hash // the latest ETH1.0 chain blockHash.
 	blockTime               time.Time   // the latest ETH1.0 chain blockTime.
 	blockCache              *blockCache // cache to store block hash/block height.
+	latestEth1Data          *protodb.LatestETH1Data
 	depositContractCaller   *contracts.DepositContractCaller
 	depositRoot             []byte
 	depositTrie             *trieutil.SparseMerkleTrie
