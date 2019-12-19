@@ -379,7 +379,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	blockAtt := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Slot:   beaconState.Slot - 1,
-			Target: &ethpb.Checkpoint{Epoch: helpers.SlotToEpoch(beaconState.Slot)},
+			Target: &ethpb.Checkpoint{Epoch: helpers.CurrentEpoch(beaconState)},
 			Source: &ethpb.Checkpoint{
 				Epoch: 0,
 				Root:  []byte("hello-world"),
@@ -387,7 +387,8 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		AggregationBits: aggBits,
 		CustodyBits:     custodyBits,
 	}
-	committee, err := helpers.BeaconCommittee(beaconState, blockAtt.Data.Slot, blockAtt.Data.CommitteeIndex)
+
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, blockAtt.Data.Slot, blockAtt.Data.CommitteeIndex)
 	if err != nil {
 		t.Error(err)
 	}
@@ -633,7 +634,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 
 	// Precache the shuffled indices
 	for i := uint64(0); i < committeeCount; i++ {
-		if _, err := helpers.BeaconCommittee(s, 0, i); err != nil {
+		if _, err := helpers.BeaconCommitteeFromState(s, 0, i); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -676,7 +677,7 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 			CustodyBits:     custodyBits,
 		}
 
-		committee, err := helpers.BeaconCommittee(s, att.Data.Slot, att.Data.CommitteeIndex)
+		committee, err := helpers.BeaconCommitteeFromState(s, att.Data.Slot, att.Data.CommitteeIndex)
 		if err != nil {
 			t.Error(err)
 		}

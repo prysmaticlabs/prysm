@@ -116,7 +116,8 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 	for _, tt := range tests {
 		attestationData.Target = &ethpb.Checkpoint{Epoch: 0}
 		attestationData.Slot = tt.attestationSlot
-		committee, err := BeaconCommittee(state, tt.attestationSlot, 0 /* committee index */)
+
+		committee, err := BeaconCommitteeFromState(state, tt.attestationSlot, 0 /* committee index */)
 		if err != nil {
 			t.Error(err)
 		}
@@ -210,7 +211,7 @@ func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
 	}
 	attestationData := &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}
 
-	committee, err := BeaconCommittee(state, attestationData.Slot, attestationData.CommitteeIndex)
+	committee, err := BeaconCommitteeFromState(state, attestationData.Slot, attestationData.CommitteeIndex)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -394,7 +395,7 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 
 	state := &pb.BeaconState{
 		Validators:  validators,
-		Slot:        2*params.BeaconConfig().SlotsPerEpoch, // epoch 2
+		Slot:        2 * params.BeaconConfig().SlotsPerEpoch, // epoch 2
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
