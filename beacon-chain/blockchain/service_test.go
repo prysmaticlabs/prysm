@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -237,11 +239,17 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 	ctx := context.Background()
 
 	bc := setupBeaconChain(t, db)
+	var err error
 
 	// Set up 10 deposits pre chain start for validators to register
 	count := uint64(10)
 	deposits, _, _ := testutil.DeterministicDepositsAndKeys(count)
-	if err := bc.initializeBeaconChain(ctx, time.Unix(0, 0), deposits, &ethpb.Eth1Data{}); err != nil {
+	genState := state.EmptyGenesisState()
+	genState, err = b.ProcessDeposits(ctx, genState, &ethpb.BeaconBlockBody{Deposits: deposits})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := bc.initializeBeaconChain(ctx, time.Unix(0, 0), state.EmptyGenesisState(), &ethpb.Eth1Data{}); err != nil {
 		t.Fatal(err)
 	}
 
