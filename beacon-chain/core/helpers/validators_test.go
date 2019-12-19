@@ -267,15 +267,15 @@ func TestActiveValidatorIndices(t *testing.T) {
 			args: args{
 				state: &pb.BeaconState{
 					Validators: []*ethpb.Validator{
-						&ethpb.Validator{
+						{
 							ActivationEpoch: 0,
 							ExitEpoch:       farFutureEpoch,
 						},
-						&ethpb.Validator{
+						{
 							ActivationEpoch: 0,
 							ExitEpoch:       farFutureEpoch,
 						},
-						&ethpb.Validator{
+						{
 							ActivationEpoch: 0,
 							ExitEpoch:       farFutureEpoch,
 						},
@@ -290,15 +290,15 @@ func TestActiveValidatorIndices(t *testing.T) {
 			args: args{
 				state: &pb.BeaconState{
 					Validators: []*ethpb.Validator{
-						&ethpb.Validator{
+						{
 							ActivationEpoch: 0,
 							ExitEpoch:       farFutureEpoch,
 						},
-						&ethpb.Validator{
+						{
 							ActivationEpoch: 0,
 							ExitEpoch:       farFutureEpoch,
 						},
-						&ethpb.Validator{
+						{
 							ActivationEpoch: 0,
 							ExitEpoch:       1,
 						},
@@ -313,19 +313,19 @@ func TestActiveValidatorIndices(t *testing.T) {
 			args: args{
 				state: &pb.BeaconState{
 					Validators: []*ethpb.Validator{
-						&ethpb.Validator{
+						{
 							ActivationEpoch: 0,
 							ExitEpoch:       farFutureEpoch,
 						},
-						&ethpb.Validator{
+						{
 							ActivationEpoch: 0,
 							ExitEpoch:       farFutureEpoch,
 						},
-						&ethpb.Validator{
+						{
 							ActivationEpoch: 0,
 							ExitEpoch:       1,
 						},
-						&ethpb.Validator{
+						{
 							ActivationEpoch: 0,
 							ExitEpoch:       farFutureEpoch,
 						},
@@ -340,19 +340,19 @@ func TestActiveValidatorIndices(t *testing.T) {
 			args: args{
 				state: &pb.BeaconState{
 					Validators: []*ethpb.Validator{
-						&ethpb.Validator{
+						{
 							ActivationEpoch: 0,
 							ExitEpoch:       farFutureEpoch,
 						},
-						&ethpb.Validator{
+						{
 							ActivationEpoch: 0,
 							ExitEpoch:       farFutureEpoch,
 						},
-						&ethpb.Validator{
+						{
 							ActivationEpoch: 0,
 							ExitEpoch:       1,
 						},
-						&ethpb.Validator{
+						{
 							ActivationEpoch: 0,
 							ExitEpoch:       farFutureEpoch,
 						},
@@ -367,19 +367,19 @@ func TestActiveValidatorIndices(t *testing.T) {
 			args: args{
 				state: &pb.BeaconState{
 					Validators: []*ethpb.Validator{
-						&ethpb.Validator{
+						{
 							ActivationEpoch: 0,
 							ExitEpoch:       farFutureEpoch,
 						},
-						&ethpb.Validator{
+						{
 							ActivationEpoch: 0,
 							ExitEpoch:       1,
 						},
-						&ethpb.Validator{
+						{
 							ActivationEpoch: 0,
 							ExitEpoch:       farFutureEpoch,
 						},
-						&ethpb.Validator{
+						{
 							ActivationEpoch: 0,
 							ExitEpoch:       farFutureEpoch,
 						},

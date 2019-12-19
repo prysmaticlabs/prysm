@@ -840,7 +840,6 @@ func ProcessDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit, valInde
 			EffectiveBalance:           effectiveBalance,
 		})
 		beaconState.Balances = append(beaconState.Balances, amount)
-		valIndexMap[bytesutil.ToBytes48(pubKey)] = len(beaconState.Validators) - 1
 	} else {
 		beaconState = helpers.IncreaseBalance(beaconState, uint64(index), amount)
 	}
