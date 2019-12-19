@@ -923,7 +923,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
-	committee, err := helpers.BeaconCommittee(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		t.Error(err)
 	}
@@ -982,7 +982,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
-	committee, err := helpers.BeaconCommittee(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1016,7 +1016,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 		CustodyBits:     custodyBits2,
 	}
 
-	committee, err = helpers.BeaconCommittee(beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
+	committee, err = helpers.BeaconCommitteeFromState(beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1065,7 +1065,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
-	committee, err := helpers.BeaconCommittee(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1098,7 +1098,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 		CustodyBits:     custodyBits2,
 	}
 
-	committee, err = helpers.BeaconCommittee(beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
+	committee, err = helpers.BeaconCommitteeFromState(beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1223,7 +1223,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 			Signature:           attestation.Signature,
 		}
 
-		committee, err := helpers.BeaconCommittee(state, attestation.Data.Slot, attestation.Data.CommitteeIndex)
+		committee, err := helpers.BeaconCommitteeFromState(state, attestation.Data.Slot, attestation.Data.CommitteeIndex)
 		if err != nil {
 			t.Error(err)
 		}
