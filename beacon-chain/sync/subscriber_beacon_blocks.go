@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
-func (r *RegularSync) beaconBlockSubscriber(ctx context.Context, msg proto.Message) error {
+func (r *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) error {
 	block := msg.(*ethpb.BeaconBlock)
 
 	headState, err := r.chain.HeadState(ctx)

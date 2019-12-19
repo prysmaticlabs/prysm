@@ -19,7 +19,7 @@ import (
 
 func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
-	r := RegularSync{
+	r := Service{
 		ctx: context.Background(),
 		p2p: p2p,
 	}
@@ -47,7 +47,7 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 func TestSubscribe_WaitToSync(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
 	chainService := &mockChain.ChainService{}
-	r := RegularSync{
+	r := Service{
 		ctx:           context.Background(),
 		p2p:           p2p,
 		chain:         chainService,
@@ -87,7 +87,7 @@ func TestSubscribe_WaitToSync(t *testing.T) {
 
 func TestSubscribe_HandlesPanic(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
-	r := RegularSync{
+	r := Service{
 		ctx: context.Background(),
 		p2p: p2p,
 	}

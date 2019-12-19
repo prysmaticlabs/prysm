@@ -10,13 +10,10 @@ import (
 
 // ValidatorIndex by public key.
 func (k *Store) ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, bool, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.ValidatorIndex")
-	defer span.End()
 	// Return latest validatorIndex from cache if it exists.
 	if v, ok := k.validatorIndexCache.Get(string(publicKey[:])); v != nil && ok {
 		return v.(uint64), true, nil
 	}
-
 	var validatorIdx uint64
 	var ok bool
 	err := k.db.View(func(tx *bolt.Tx) error {

@@ -87,7 +87,7 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 
 	slashing, s := setupValidAttesterSlashing(t)
 
-	r := &RegularSync{
+	r := &Service{
 		p2p:         p2p,
 		chain:       &mock.ChainService{State: s},
 		initialSync: &mockSync.Sync{IsSyncing: false},
@@ -126,7 +126,7 @@ func TestValidateAttesterSlashing_ValidSlashing_FromSelf(t *testing.T) {
 
 	slashing, s := setupValidAttesterSlashing(t)
 
-	r := &RegularSync{
+	r := &Service{
 		p2p:         p2p,
 		chain:       &mock.ChainService{State: s},
 		initialSync: &mockSync.Sync{IsSyncing: false},
@@ -150,7 +150,7 @@ func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 
 	ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
 
-	r := &RegularSync{
+	r := &Service{
 		p2p:         p2p,
 		chain:       &mock.ChainService{State: state},
 		initialSync: &mockSync.Sync{IsSyncing: false},
@@ -168,7 +168,7 @@ func TestValidateAttesterSlashing_Syncing(t *testing.T) {
 
 	slashing, s := setupValidAttesterSlashing(t)
 
-	r := &RegularSync{
+	r := &Service{
 		p2p:         p2p,
 		chain:       &mock.ChainService{State: s},
 		initialSync: &mockSync.Sync{IsSyncing: true},

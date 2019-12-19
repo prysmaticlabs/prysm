@@ -85,6 +85,10 @@ var (
 			"initial sync and disk-IO is one of the biggest bottleneck. This still saves finalized state in DB " +
 			"and start syncing from there",
 	}
+	fastCommitteeAssignmentsFlag = cli.BoolFlag{
+		Name:  "fast-assignments",
+		Usage: "Use new algorithm for computing committee assignments",
+	}
 )
 
 // Deprecated flags list.
@@ -174,4 +178,5 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableSkipSlotsCache,
 	enableSnappyDBCompressionFlag,
 	enablePruneBoundaryStateFlag,
+	fastCommitteeAssignmentsFlag,
 }...)

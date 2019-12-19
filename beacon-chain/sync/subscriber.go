@@ -38,7 +38,7 @@ func noopValidator(_ context.Context, _ proto.Message, _ p2p.Broadcaster, _ bool
 }
 
 // Register PubSub subscribers
-func (r *RegularSync) registerSubscribers() {
+func (r *Service) registerSubscribers() {
 	go func() {
 		// Wait until chain start.
 		stateChannel := make(chan *feed.Event, 1)
@@ -94,7 +94,7 @@ func (r *RegularSync) registerSubscribers() {
 
 // subscribe to a given topic with a given validator and subscription handler.
 // The base protobuf message is used to initialize new messages for decoding.
-func (r *RegularSync) subscribe(topic string, validate validator, handle subHandler) {
+func (r *Service) subscribe(topic string, validate validator, handle subHandler) {
 	base := p2p.GossipTopicMappings[topic]
 	if base == nil {
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topic))
