@@ -166,7 +166,7 @@ func TestValidateProposerSlashing_ValidSlashing_FromSelf(t *testing.T) {
 			},
 		},
 	}
-	valid := r.validateProposerSlashing(ctx, "", m)
+	valid := r.validateProposerSlashing(ctx, p.PeerID(), m)
 	if valid {
 		t.Error("Did not fail validation")
 	}
