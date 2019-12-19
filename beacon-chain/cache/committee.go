@@ -18,7 +18,7 @@ var (
 	ErrNotCommittee = errors.New("object is not a committee struct")
 
 	// maxCommitteesCacheSize defines the max number of shuffled committees on a per randao basis that can be cached.
-	// Due to reorgs, it's good to keep the old cache around to qquickly switch over. 10 is a generous
+	// Due to reorgs, it's good to keep the old cache around to quickly switch over. 10 is a generous
 	// cache size as it considers 3 concurrent branches over 3 epochs.
 	maxCommitteesCacheSize = 10
 
