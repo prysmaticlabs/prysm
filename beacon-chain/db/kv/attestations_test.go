@@ -21,7 +21,6 @@ func TestStore_AttestationCRUD(t *testing.T) {
 	att := &ethpb.Attestation{
 		Data:            &ethpb.AttestationData{Slot: 10},
 		AggregationBits: bitfield.Bitlist{0b00000001, 0b1},
-		CustodyBits:     bitfield.NewBitlist(8),
 	}
 	ctx := context.Background()
 	attDataRoot, err := ssz.HashTreeRoot(att.Data)
@@ -72,7 +71,6 @@ func TestStore_AttestationsBatchDelete(t *testing.T) {
 				Slot:            uint64(i),
 			},
 			AggregationBits: bitfield.Bitlist{0b00000001, 0b1},
-			CustodyBits:     bitfield.NewBitlist(8),
 		}
 		if i%2 == 0 {
 			r, err := ssz.HashTreeRoot(totalAtts[i].Data)

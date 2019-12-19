@@ -96,8 +96,6 @@ func UnmarshalledSSZ(serializedBytes []byte, folderName string) (interface{}, er
 		obj = &ethpb.Attestation{}
 	case "AttestationData":
 		obj = &ethpb.AttestationData{}
-	case "AttestationDataAndCustodyBit":
-		obj = &pb.AttestationDataAndCustodyBit{}
 	case "AttesterSlashing":
 		obj = &ethpb.AttesterSlashing{}
 	case "AggregateAndProof":

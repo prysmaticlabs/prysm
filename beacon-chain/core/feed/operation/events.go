@@ -30,8 +30,8 @@ type AggregatedAttReceivedData struct {
 	Attestation *pb.AggregateAndProof
 }
 
-// ExitRecievedData is the data sent with ExitReceived events.
-type ExitRecievedData struct {
+// ExitReceivedData is the data sent with ExitReceived events.
+type ExitReceivedData struct {
 	// Exit is the voluntary exit object.
 	Exit *ethpb.VoluntaryExit
 }

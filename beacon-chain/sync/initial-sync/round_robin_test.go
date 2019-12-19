@@ -205,29 +205,29 @@ func TestRoundRobinSync(t *testing.T) {
 		},
 		{
 			name:               "Multiple peers with missing parent blocks",
-			currentSlot:        320, // 5 epochs
-			expectedBlockSlots: makeSequence(1, 320),
+			currentSlot:        160, // 5 epochs
+			expectedBlockSlots: makeSequence(1, 160),
 			peers: []*peerData{
 				{
-					blocks:         makeSequence(1, 320),
+					blocks:         makeSequence(1, 160),
 					finalizedEpoch: 4,
-					headSlot:       320,
+					headSlot:       160,
 				},
 				{
 					blocks:         append(makeSequence(1, 6), makeSequence(161, 165)...),
 					finalizedEpoch: 4,
-					headSlot:       320,
+					headSlot:       160,
 					forkedPeer:     true,
 				},
 				{
-					blocks:         makeSequence(1, 320),
+					blocks:         makeSequence(1, 160),
 					finalizedEpoch: 4,
-					headSlot:       320,
+					headSlot:       160,
 				},
 				{
-					blocks:         makeSequence(1, 320),
+					blocks:         makeSequence(1, 160),
 					finalizedEpoch: 4,
-					headSlot:       320,
+					headSlot:       160,
 				},
 			},
 		},

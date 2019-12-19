@@ -5,11 +5,12 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 )
 
 // SaveAggregatedAttestation saves an aggregated attestation in cache.
 func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
-	if !aggregated(att.AggregationBits) {
+	if !helpers.IsAggregated(att) {
 		return errors.New("attestation is not aggregated")
 	}
 
@@ -42,7 +43,7 @@ func (p *AttCaches) AggregatedAttestation() []*ethpb.Attestation {
 
 // DeleteAggregatedAttestation deletes the aggregated attestations in cache.
 func (p *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
-	if !aggregated(att.AggregationBits) {
+	if !helpers.IsAggregated(att) {
 		return errors.New("attestation is not aggregated")
 	}
 

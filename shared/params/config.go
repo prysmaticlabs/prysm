@@ -50,6 +50,8 @@ type BeaconChainConfig struct {
 	PersistentCommitteePeriod        uint64 `yaml:"PERSISTENT_COMMITTEE_PERIOD"`         // PersistentCommitteePeriod is the minimum amount of epochs a validator must participate before exitting.
 	MinEpochsToInactivityPenalty     uint64 `yaml:"MIN_EPOCHS_TO_INACTIVITY_PENALTY"`    // MinEpochsToInactivityPenalty defines the minimum amount of epochs since finality to begin penalizing inactivity.
 	Eth1FollowDistance               uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
+	SafeSlotsToUpdateJustified       uint64 // SafeSlotsToUpdateJustified is the minimal slots needed to update justified check point.
+	AttestationPropagationSlotRange  uint64 // AttestationPropagationSlotRange is the maximum number of slots during which an attestation can be propagated.
 
 	// State list lengths
 	EpochsPerHistoricalVector uint64 `yaml:"EPOCHS_PER_HISTORICAL_VECTOR"` // EpochsPerHistoricalVector defines max length in epoch to store old historical stats in beacon state.
@@ -119,7 +121,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MinPerEpochChurnLimit:          4,
 	ChurnLimitQuotient:             1 << 16,
 	ShuffleRoundCount:              90,
-	MinGenesisActiveValidatorCount: 65536,
+	MinGenesisActiveValidatorCount: 16384,
 	MinGenesisTime:                 1578009600,
 	TargetAggregatorsPerCommittee:  16,
 
@@ -145,6 +147,8 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	PersistentCommitteePeriod:        2048,
 	MinEpochsToInactivityPenalty:     4,
 	Eth1FollowDistance:               1024,
+	SafeSlotsToUpdateJustified:       8,
+	AttestationPropagationSlotRange:  32,
 
 	// State list length constants.
 	EpochsPerHistoricalVector: 65536,
@@ -258,7 +262,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.BLSWithdrawalPrefixByte = byte(0)
 
 	// Time parameters
-	minimalConfig.SecondsPerSlot = 12
+	minimalConfig.SecondsPerSlot = 6
 	minimalConfig.MinAttestationInclusionDelay = 1
 	minimalConfig.SlotsPerEpoch = 8
 	minimalConfig.MinSeedLookahead = 1
@@ -268,6 +272,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.MinValidatorWithdrawabilityDelay = 256
 	minimalConfig.PersistentCommitteePeriod = 2048
 	minimalConfig.MinEpochsToInactivityPenalty = 4
+	minimalConfig.SafeSlotsToUpdateJustified = 2
 
 	// State vector lengths
 	minimalConfig.EpochsPerHistoricalVector = 64

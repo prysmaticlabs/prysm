@@ -9,13 +9,11 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	mockOps "github.com/prysmaticlabs/prysm/beacon-chain/operations/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -86,7 +84,6 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 			Slot:            0,
 			BeaconBlockRoot: root[:],
 		},
-		CustodyBits: bitfield.Bitlist{0b10},
 	}
 	if err := db.SaveAttestation(ctx, att); err != nil {
 		t.Fatal(err)
@@ -137,7 +134,6 @@ func TestServer_ListAttestations_NoPagination(t *testing.T) {
 				Slot:            i,
 			},
 			AggregationBits: bitfield.Bitlist{0b11},
-			CustodyBits:     bitfield.NewBitlist(1),
 		}
 		if err := db.SaveAttestation(ctx, attExample); err != nil {
 			t.Fatal(err)
@@ -292,7 +288,6 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 				Slot:            i,
 			},
 			AggregationBits: bitfield.Bitlist{0b11},
-			CustodyBits:     bitfield.NewBitlist(1),
 		}
 		if err := db.SaveAttestation(ctx, attExample); err != nil {
 			t.Fatal(err)
@@ -322,20 +317,17 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 						BeaconBlockRoot: []byte("root"),
 						Slot:            3,
 					},
-						AggregationBits: bitfield.Bitlist{0b11},
-						CustodyBits:     bitfield.NewBitlist(1)},
+						AggregationBits: bitfield.Bitlist{0b11}},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Slot:            4,
 					},
-						AggregationBits: bitfield.Bitlist{0b11},
-						CustodyBits:     bitfield.NewBitlist(1)},
+						AggregationBits: bitfield.Bitlist{0b11}},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Slot:            5,
 					},
-						AggregationBits: bitfield.Bitlist{0b11},
-						CustodyBits:     bitfield.NewBitlist(1)},
+						AggregationBits: bitfield.Bitlist{0b11}},
 				},
 				NextPageToken: strconv.Itoa(2),
 				TotalSize:     int32(count)}},
@@ -353,31 +345,26 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 						BeaconBlockRoot: []byte("root"),
 						Slot:            50,
 					},
-						AggregationBits: bitfield.Bitlist{0b11},
-						CustodyBits:     bitfield.NewBitlist(1)},
+						AggregationBits: bitfield.Bitlist{0b11}},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Slot:            51,
 					},
-						AggregationBits: bitfield.Bitlist{0b11},
-						CustodyBits:     bitfield.NewBitlist(1)},
+						AggregationBits: bitfield.Bitlist{0b11}},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Slot:            52,
 					},
-						AggregationBits: bitfield.Bitlist{0b11},
-						CustodyBits:     bitfield.NewBitlist(1)},
+						AggregationBits: bitfield.Bitlist{0b11}},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Slot:            53,
 					},
-						AggregationBits: bitfield.Bitlist{0b11},
-						CustodyBits:     bitfield.NewBitlist(1)},
+						AggregationBits: bitfield.Bitlist{0b11}},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Slot:            54,
-					}, AggregationBits: bitfield.Bitlist{0b11},
-						CustodyBits: bitfield.NewBitlist(1)},
+					}, AggregationBits: bitfield.Bitlist{0b11}},
 				},
 				NextPageToken: strconv.Itoa(11),
 				TotalSize:     int32(count)}},
@@ -395,8 +382,7 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 						BeaconBlockRoot: []byte("root"),
 						Slot:            99,
 					},
-						AggregationBits: bitfield.Bitlist{0b11},
-						CustodyBits:     bitfield.NewBitlist(1)},
+						AggregationBits: bitfield.Bitlist{0b11}},
 				},
 				NextPageToken: "",
 				TotalSize:     int32(count)}},
@@ -412,14 +398,12 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 					},
-						AggregationBits: bitfield.Bitlist{0b11},
-						CustodyBits:     bitfield.NewBitlist(1)},
+						AggregationBits: bitfield.Bitlist{0b11}},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Slot:            1,
 					},
 						AggregationBits: bitfield.Bitlist{0b11},
-						CustodyBits:     bitfield.NewBitlist(1),
 					},
 				},
 				NextPageToken: strconv.Itoa(1),
@@ -500,7 +484,6 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 				Slot:            i,
 			},
 			AggregationBits: bitfield.Bitlist{0b11},
-			CustodyBits:     bitfield.NewBitlist(1),
 		}
 		if err := db.SaveAttestation(ctx, attExample); err != nil {
 			t.Fatal(err)
@@ -527,39 +510,5 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 	if !reflect.DeepEqual(res.Attestations, atts[i:j]) {
 		t.Log(res.Attestations, atts[i:j])
 		t.Error("Incorrect attestations response")
-	}
-}
-
-func TestServer_AttestationPool(t *testing.T) {
-	ctx := context.Background()
-	block := &ethpb.BeaconBlock{
-		Slot: 10,
-	}
-	bs := &Server{
-		Pool: &mockOps.Operations{
-			Attestations: []*ethpb.Attestation{
-				{
-					Data: &ethpb.AttestationData{
-						BeaconBlockRoot: []byte("1"),
-					},
-				},
-				{
-					Data: &ethpb.AttestationData{
-						BeaconBlockRoot: []byte("2"),
-					},
-				},
-			},
-		},
-		HeadFetcher: &mock.ChainService{
-			Block: block,
-		},
-	}
-	res, err := bs.AttestationPool(ctx, &ptypes.Empty{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	want, _ := bs.Pool.AttestationPoolNoVerify(ctx)
-	if !reflect.DeepEqual(res.Attestations, want) {
-		t.Errorf("Wanted AttestationPool() = %v, received %v", want, res.Attestations)
 	}
 }

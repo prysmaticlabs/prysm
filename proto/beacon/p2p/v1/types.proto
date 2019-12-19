@@ -77,12 +77,6 @@ message ValidatorLatestVote {
   bytes root = 2;
 }
 
-message AttestationDataAndCustodyBit {
-  ethereum.eth.v1alpha1.AttestationData data = 1;
-  // Challengeable bit (SSZ-bool, 1 byte) for the custody of beacon data
-  bool custody_bit = 2;
-}
-
 message HistoricalBatch {
   repeated bytes block_roots = 1 [(gogoproto.moretags) = "ssz-size:\"block_roots.size\""];
   repeated bytes state_roots = 2 [(gogoproto.moretags) = "ssz-size:\"state_roots.size\""];
@@ -90,9 +84,9 @@ message HistoricalBatch {
 
 message AggregateAndProof {
   // index is the aggregator's index
-  uint64 index = 1;
-  // selection_proof is the signature of the slot aggregator signed to
-  bytes selection_proof = 2 [(gogoproto.moretags) = "ssz-size:\"96\""];
+  uint64 aggregator_index = 1;
   // aggregate is the constructed aggregated attestation
-  ethereum.eth.v1alpha1.Attestation aggregate = 3;
+  ethereum.eth.v1alpha1.Attestation aggregate = 2;
+  // selection_proof is the signature of the slot aggregator signed to
+  bytes selection_proof = 3 [(gogoproto.moretags) = "ssz-size:\"96\""];
 }

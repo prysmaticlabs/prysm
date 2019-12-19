@@ -133,10 +133,7 @@ func (bs *Server) StreamAttestations(
 func (bs *Server) AttestationPool(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.AttestationPoolResponse, error) {
-	atts, err := bs.Pool.AttestationPoolNoVerify(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
-	}
+	atts := bs.Pool.AggregatedAttestation()
 	return &ethpb.AttestationPoolResponse{
 		Attestations: atts,
 	}, nil
