@@ -47,7 +47,7 @@ func SlotCommitteeCount(activeValidatorCount uint64) uint64 {
 	return committeePerSlot
 }
 
-// BeaconCommittee returns the crosslink committee of a given slot and committee index. This
+// BeaconCommitteeFromState returns the crosslink committee of a given slot and committee index. This
 // is a spec implementation where state is used as an argument. In case of state retrieval
 // becomes expensive, consider using BeaconCommittee below.
 //
