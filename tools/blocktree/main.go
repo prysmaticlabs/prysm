@@ -95,7 +95,7 @@ func main() {
 		}
 		// Retrieve attestation indices
 		for _, att := range atts {
-			committee, err := helpers.BeaconCommittee(state, att.Data.Slot, att.Data.CommitteeIndex)
+			committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
 			if err != nil {
 				panic(err)
 			}

@@ -34,10 +34,7 @@ func (bs *Server) ListBlocks(
 
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListBlocksRequest_Epoch:
-		startSlot := q.Epoch * params.BeaconConfig().SlotsPerEpoch
-		endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch - 1
-
-		blks, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot))
+		blks, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartEpoch(q.Epoch).SetEndEpoch(q.Epoch))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Failed to get blocks: %v", err)
 		}
@@ -192,7 +189,9 @@ func (bs *Server) StreamChainHead(_ *ptypes.Empty, stream ethpb.BeaconChain_Stre
 				if err != nil {
 					return status.Errorf(codes.Internal, "Could not retrieve chain head: %v", err)
 				}
-				return stream.Send(res)
+				if err := stream.Send(res); err != nil {
+					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+				}
 			}
 		case <-stateSub.Err():
 			return status.Error(codes.Aborted, "Subscriber closed, exiting goroutine")
