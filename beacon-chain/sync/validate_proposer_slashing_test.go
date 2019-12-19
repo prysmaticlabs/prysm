@@ -13,6 +13,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -104,6 +105,10 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 	ctx := context.Background()
 
 	slashing, s := setupValidProposerSlashing(t)
+	// TODO: Sanity check, remove this.
+	if err := blocks.VerifyProposerSlashing(s, slashing); err != nil {
+		t.Fatal(err)
+	}
 
 	r := &Service{
 		p2p:         p,
