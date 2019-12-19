@@ -137,8 +137,8 @@ func (r *Service) subscribe(topic string, validator pubsub.Validator, handle sub
 		span.AddAttributes(trace.StringAttribute("topic", topic))
 
 		if msg.VaidatorData == nil {
-			log.Warn("Received nil message on pubsub")
-			// TODO: Increment counter!
+			log.Error("Received nil message on pubsub")
+			messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 			return
 		}
 
