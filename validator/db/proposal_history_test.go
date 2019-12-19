@@ -1,12 +1,13 @@
 package db
 
 import (
-	"math/big"
-	"reflect"
+	// "math/big"
+	// "reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/go-bitfield"
+	ethpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	// ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
 func TestSetProposedForEpoch_SetsBit(t *testing.T) {
@@ -14,18 +15,19 @@ func TestSetProposedForEpoch_SetsBit(t *testing.T) {
 	c.WeakSubjectivityPeriod = 128
 	params.OverrideBeaconConfig(c)
 
-	proposals := &ValidatorProposalHistory{
-		ProposalHistory: big.NewInt(0),
-		EpochAtFirstBit: 0,
+	proposals := &ethpb.ValidatorProposalHistory{
+		ProposalHistory:  bitfield.NewBitlist(c.WeakSubjectivityPeriod),
+		LastEpochWritten: 0,
 	}
-	proposals.SetProposedForEpoch(4)
-	proposed := proposals.HasProposedForEpoch(4)
+	epoch := uint64(4)
+	proposals.SetProposedForEpoch(epoch)
+	proposed := proposals.HasProposedForEpoch(epoch)
 	if !proposed {
 		t.Fatal("fuck")
 	}
 	// Make sure no other bits are changed.
 	for i := uint64(0); i < c.WeakSubjectivityPeriod; i++ {
-		if i == 4 {
+		if i == epoch {
 			continue
 		}
 		proposed = proposals.HasProposedForEpoch(i)
@@ -40,75 +42,90 @@ func TestSetProposedForEpoch_PrunesOverWSPeriod(t *testing.T) {
 	c.WeakSubjectivityPeriod = 128
 	params.OverrideBeaconConfig(c)
 
+	proposals := &ethpb.ValidatorProposalHistory{
+		ProposalHistory:  bitfield.NewBitlist(c.WeakSubjectivityPeriod),
+		LastEpochWritten: 0,
+	}
+	prunedEpoch := uint64(3)
+	proposals.SetProposedForEpoch(prunedEpoch)
+
+	if proposals.LastEpochWritten != prunedEpoch {
+		t.Fatal(proposals.LastEpochWritten)
+	}
+
 	epoch := uint64(132)
-	proposals := &ValidatorProposalHistory{
-		ProposalHistory: big.NewInt(0),
-		EpochAtFirstBit: 0,
-	}
 	proposals.SetProposedForEpoch(epoch)
-
-	if proposals.EpochAtFirstBit != 4 {
-		t.Fatal(proposals.EpochAtFirstBit)
-	}
-
 	proposed := proposals.HasProposedForEpoch(epoch)
 	if !proposed {
 		t.Fatal("fuck")
 	}
+	if proposals.LastEpochWritten != epoch {
+		t.Fatal(proposals.LastEpochWritten)
+	}
 	// Make sure no other bits are changed.
-	for i := uint64(proposals.EpochAtFirstBit); i < c.WeakSubjectivityPeriod+proposals.EpochAtFirstBit; i++ {
+	for i := uint64(epoch - c.WeakSubjectivityPeriod); i < epoch; i++ {
 		if i == epoch {
 			continue
 		}
 		proposed = proposals.HasProposedForEpoch(i)
 		if proposed {
-			t.Fatal("fuck")
+			t.Fatal(i)
 		}
 	}
 }
 
-func TestSetProposedForEpoch_54KEpochsPrunes(t *testing.T) {
+func TestSetProposedForEpoch_54KEpochsKeepsHistory(t *testing.T) {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-	proposals := &ValidatorProposalHistory{
-		ProposalHistory: big.NewInt(0),
-		EpochAtFirstBit: 0,
+	proposals := &ethpb.ValidatorProposalHistory{
+		ProposalHistory:  bitfield.NewBitlist(wsPeriod),
+		LastEpochWritten: 0,
 	}
 	randomIndexes := []uint64{23, 423, 8900, 11347, 25033, 52225, 53999}
 	for i := 0; i < len(randomIndexes); i++ {
 		proposals.SetProposedForEpoch(randomIndexes[i])
 	}
-	if proposals.EpochAtFirstBit != 0 {
-		t.Fatal(proposals.EpochAtFirstBit)
+	if proposals.LastEpochWritten != 53999 {
+		t.Fatal(proposals.LastEpochWritten)
 	}
 
 	// Make sure no other bits are changed.
-	for i := uint64(0); i < params.BeaconConfig().WeakSubjectivityPeriod; i++ {
+	for i := uint64(0); i < wsPeriod; i++ {
 		setIndex := false
 		for r := 0; r < len(randomIndexes); r++ {
 			if i == randomIndexes[r] {
 				setIndex = true
+				break
 			}
 		}
-		if !setIndex {
-			proposed := proposals.HasProposedForEpoch(i)
-			if proposed {
-				t.Fatal("fuck")
-			}
-		} else {
-			proposed := proposals.HasProposedForEpoch(i)
-			if !proposed {
-				t.Fatal("fuck")
-			}
+
+		if setIndex != proposals.HasProposedForEpoch(i) {
+			t.Fatal(i)
 		}
 	}
 
-	// Set proposed after 54K epochs to prune.
-	proposals.SetProposedForEpoch(wsPeriod + randomIndexes[1])
-	if proposals.EpochAtFirstBit != randomIndexes[1] {
+	// Set a past epoch as proposed, and make sure the recent data isn't changed.
+	proposals.SetProposedForEpoch(randomIndexes[1] + 5)
+	if proposals.LastEpochWritten != randomIndexes[len(randomIndexes)-1] {
 		t.Fatal("fuck")
 	}
-	// Should be able to access epoch at first bit.
+	// Proposal just marked should be true.
+	if !proposals.HasProposedForEpoch(randomIndexes[1] + 5) {
+		t.Fatal(proposals.LastEpochWritten)
+	}
+	// Previously marked proposal should stay true.
 	if !proposals.HasProposedForEpoch(randomIndexes[1]) {
+		t.Fatal(proposals.LastEpochWritten)
+	}
+}
+
+func TestSetProposedForEpoch_PreventsProposingFutureEpochs(t *testing.T) {
+	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
+	proposals := &ethpb.ValidatorProposalHistory{
+		ProposalHistory:  bitfield.NewBitlist(wsPeriod),
+		LastEpochWritten: 0,
+	}
+	proposals.SetProposedForEpoch(200)
+	if proposals.HasProposedForEpoch(wsPeriod + 200) {
 		t.Fatal("fuck")
 	}
 }
@@ -117,7 +134,6 @@ func TestProposalHistory_NilDB(t *testing.T) {
 	db := SetupDB(t)
 	defer TeardownDB(t, db)
 
-	epoch := uint64(1)
 	balPubkey := []byte{1, 2, 3}
 
 	proposalHistory, err := db.ProposalHistory(balPubkey)
@@ -136,26 +152,26 @@ func TestSaveProposalHistory_OK(t *testing.T) {
 	tests := []struct {
 		pubkey  []byte
 		epoch   uint64
-		history *ValidatorProposalHistory
+		history *ethpb.ValidatorProposalHistory
 	}{
 		{
 			pubkey: []byte{0},
 			epoch:  uint64(0),
-			history: &ValidatorProposalHistory{
-				ProposalHistory: big.NewInt(1),
+			history: &ethpb.ValidatorProposalHistory{
+				ProposalHistory: bitfield.NewBitlist,
 			},
 		},
 		{
 			pubkey: []byte{1},
 			epoch:  uint64(0),
-			history: &ValidatorProposalHistory{
+			history: &ethpb.ValidatorProposalHistory{
 				ProposalHistory: big.NewInt(1),
 			},
 		},
 		{
 			pubkey: []byte{0},
 			epoch:  uint64(1),
-			history: &ValidatorProposalHistory{
+			history: &ethpb.ValidatorProposalHistory{
 				ProposalHistory: big.NewInt(2),
 			},
 		},
@@ -188,26 +204,26 @@ func TestDeleteProposalHistory_OK(t *testing.T) {
 	tests := []struct {
 		pubkey  []byte
 		epoch   uint64
-		history *ValidatorProposalHistory
+		history *ethpb.ValidatorProposalHistory
 	}{
 		{
 			pubkey: []byte{0},
 			epoch:  uint64(0),
-			history: &ValidatorProposalHistory{
+			history: &ethpb.ValidatorProposalHistory{
 				ProposalHistory: big.NewInt(1),
 			},
 		},
 		{
 			pubkey: []byte{1},
 			epoch:  uint64(0),
-			history: &ValidatorProposalHistory{
+			history: &ethpb.ValidatorProposalHistory{
 				ProposalHistory: big.NewInt(1),
 			},
 		},
 		{
 			pubkey: []byte{0},
 			epoch:  uint64(1),
-			history: &ValidatorProposalHistory{
+			history: &ethpb.ValidatorProposalHistory{
 				ProposalHistory: big.NewInt(2),
 			},
 		},

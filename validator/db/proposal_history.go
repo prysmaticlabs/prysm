@@ -1,72 +1,62 @@
 package db
 
 import (
-	"math/big"
-
 	"github.com/boltdb/bolt"
 	// "github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
-
-// ValidatorProposalHistory defines the structure for recording a validators historical proposals.
-// Using a bitlist and an uint64 to mark the "starting epoch" of the bitlist, we can easily store
-// which epochs a validator has proposed a block for.
-type ValidatorProposalHistory struct {
-	ProposalHistory *big.Int
-	EpochAtFirstBit uint64
-}
 
 // HasProposedForEpoch returns whether a validators proposal history has been marked for the entered epoch.
 // If the request is more in the future than what the history contains, it will return false.
 // If the request is from the past, and likely previously pruned it will return true to avoid slashing.
-func (history *ValidatorProposalHistory) HasProposedForEpoch(epoch uint64) bool {
+func HasProposedForEpoch(history *ethpb.ValidatorProposalHistory, epoch uint64) bool {
+	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	// Previously pruned, but to be safe we should return true.
-	if epoch < history.EpochAtFirstBit {
+	if int(epoch) <= int(history.LastEpochWritten)-int(wsPeriod) {
 		return true
 	}
-	// Out of bounds, must be false.
-	if epoch > params.BeaconConfig().WeakSubjectivityPeriod+history.EpochAtFirstBit {
+	// Accessing future proposals that haven't been marked yet. Needs to return false.
+	if epoch > history.LastEpochWritten {
 		return false
 	}
-	return history.ProposalHistory.Bit(int(epoch)-int(history.EpochAtFirstBit)) == 1
+	return history.ProposalHistory.BitAt(epoch % wsPeriod)
 }
 
 // SetProposedForEpoch
-func (history *ValidatorProposalHistory) SetProposedForEpoch(epoch uint64) {
-	if epoch < history.EpochAtFirstBit {
-		return
-	}
-	if history.ProposalHistory == nil {
-		history.ProposalHistory = big.NewInt(0)
-	}
+func SetProposedForEpoch(history *ethpb.ValidatorProposalHistory, epoch uint64) {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-	offsetMultiplier := epoch / wsPeriod
-	bitOffset := epoch % wsPeriod
-	if offsetMultiplier > 0 {
-		offsetMultiplier = offsetMultiplier - 1
+
+	// If the last written epoch is unset, we can trust that the rest of the bitfield is empty, so just mark what is needed.
+	if history.LastEpochWritten == 0 {
+		history.ProposalHistory.SetBitAt(epoch%wsPeriod, true)
+		history.LastEpochWritten = epoch
+	} else if epoch > history.LastEpochWritten {
+		// If epoch to mark is ahead of last written epoch, override the old votes and mark the requested epoch.
+		for i := history.LastEpochWritten + 1; i <= epoch; i++ {
+			history.ProposalHistory.SetBitAt(i%wsPeriod, false)
+		}
+		history.ProposalHistory.SetBitAt(epoch%wsPeriod, true)
+		history.LastEpochWritten = epoch
+	} else if epoch <= history.LastEpochWritten && !history.ProposalHistory.BitAt(epoch%wsPeriod) {
+		// If epoch to mark is in the past and is unset, mark it.
+		history.ProposalHistory.SetBitAt(epoch%wsPeriod, true)
 	}
-	newEpochAtFirstBit := wsPeriod*offsetMultiplier + bitOffset
-	//This condition needs to be changed, won't work before 54k.
-	if epoch > wsPeriod && newEpochAtFirstBit > history.EpochAtFirstBit {
-		history.ProposalHistory = history.ProposalHistory.Rsh(history.ProposalHistory, uint(bitOffset))
-		history.EpochAtFirstBit = newEpochAtFirstBit
-	}
-	history.ProposalHistory = history.ProposalHistory.SetBit(history.ProposalHistory, int(epoch-history.EpochAtFirstBit), 1)
 }
 
-func unmarshallProposalHistory(enc []byte) (*ValidatorProposalHistory, error) {
-	history := &ValidatorProposalHistory{}
-	// err := proto.Unmarshal(enc, history)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "failed to unmarshal encoding")
-	// }
+func unmarshallProposalHistory(enc []byte) (*ethpb.ValidatorProposalHistory, error) {
+	history := &ethpb.ValidatorProposalHistory{}
+	err := proto.Unmarshal(enc, history)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal encoding")
+	}
 	return history, nil
 }
 
 // ProposalHistory accepts a validator public key and returns the corresponding proposal history.
 // Returns nil if there is no proposal history for the validator.
-func (db *Store) ProposalHistory(pubKey []byte) (*ValidatorProposalHistory, error) {
+func (db *Store) ProposalHistory(pubKey []byte) (*ethpb.ValidatorProposalHistory, error) {
 	var err error
 	var proposalHistory *ValidatorProposalHistory
 	err = db.view(func(tx *bolt.Tx) error {
@@ -82,7 +72,7 @@ func (db *Store) ProposalHistory(pubKey []byte) (*ValidatorProposalHistory, erro
 }
 
 // SaveProposalHistory returns the proposal history for the requested validator public key.
-func (db *Store) SaveProposalHistory(pubKey []byte, proposalHistory *ValidatorProposalHistory) error {
+func (db *Store) SaveProposalHistory(pubKey []byte, proposalHistory *ethpb.ValidatorProposalHistory) error {
 	enc, err := proto.Marshal(proposalHistory)
 	if err != nil {
 		return errors.Wrap(err, "failed to encode block")
