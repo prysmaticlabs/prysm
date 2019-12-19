@@ -205,7 +205,7 @@ func generateAttesterSlashings(
 	attesterSlashings := make([]*ethpb.AttesterSlashing, numSlashings)
 	for i := uint64(0); i < numSlashings; i++ {
 		committeeIndex := rand.Uint64() % params.BeaconConfig().MaxCommitteesPerSlot
-		committee, err := helpers.BeaconCommittee(bState, bState.Slot, committeeIndex)
+		committee, err := helpers.BeaconCommitteeFromState(bState, bState.Slot, committeeIndex)
 		if err != nil {
 			return nil, err
 		}
@@ -324,10 +324,11 @@ func GenerateAttestations(
 		}
 	}
 
-	committeesPerSlot, err := helpers.CommitteeCountAtSlot(bState, slot)
+	activeValidatorCount, err := helpers.ActiveValidatorCount(bState, currentEpoch)
 	if err != nil {
 		return nil, err
 	}
+	committeesPerSlot := helpers.SlotCommitteeCount(activeValidatorCount)
 
 	if numToGen < committeesPerSlot {
 		log.Printf(
@@ -355,7 +356,7 @@ func GenerateAttestations(
 
 	domain := helpers.Domain(bState.Fork, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
 	for c := uint64(0); c < committeesPerSlot && c < numToGen; c++ {
-		committee, err := helpers.BeaconCommittee(bState, slot, c)
+		committee, err := helpers.BeaconCommitteeFromState(bState, slot, c)
 		if err != nil {
 			return nil, err
 		}
