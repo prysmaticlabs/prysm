@@ -103,7 +103,7 @@ contract in order to activate the validator client`,
 						}
 
 						if keystoreDir, _, err := node.CreateValidatorAccount(ctx); err != nil {
-							log.Fatalf("Could not create validator at path: %s", keystoreDir)
+							log.WithError(err).Fatalf("Could not create validator at path: %s", keystoreDir)
 						}
 					},
 				},
