@@ -4,12 +4,13 @@ package powchain
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"math/big"
 	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 

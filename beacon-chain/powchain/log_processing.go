@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"math/big"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
