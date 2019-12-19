@@ -22,11 +22,6 @@ func (f *FaultyMockPOWChain) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 	return 0, big.NewInt(0)
 }
 
-// ChainStartFeed --
-func (f *FaultyMockPOWChain) ChainStartFeed() *event.Feed {
-	return f.ChainFeed
-}
-
 // LatestBlockHeight --
 func (f *FaultyMockPOWChain) LatestBlockHeight() *big.Int {
 	return big.NewInt(0)
