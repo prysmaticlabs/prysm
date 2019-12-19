@@ -11,7 +11,7 @@ file_list=()
 while IFS= read -d $'\0' -r file ; do
     file_list=("${file_list[@]}" "$file")
 done < <(find -L $(bazel info bazel-bin)/proto -type f -name "*pb.go" -print0)
- 
+
 arraylength=${#file_list[@]}
 searchstring="prysm/"
 
@@ -23,7 +23,8 @@ do
   cp -R -L "${file_list[i]}" "$destination"
 done
 
-# Run goimports on newly generated protos until gogo protobuf's proto-gen-go 
+# Run goimports on newly generated protos until gogo protobuf's proto-gen-go
 # formats imports properly.
 # https://github.com/gogo/protobuf/issues/554
 goimports -w proto/**/*.pb.go
+gofmt -s -w proto/**/*.pb.go
