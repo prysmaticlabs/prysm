@@ -76,7 +76,7 @@ func attestationDelta(state *pb.BeaconState, bp *Balance, v *Validator) (uint64,
 		p += br
 	}
 
-	// Process heard reward / penalty
+	// Process head reward / penalty
 	if v.IsPrevEpochHeadAttester && !v.IsSlashed {
 		r += br * bp.PrevEpochHeadAttesters / bp.CurrentEpoch
 	} else {

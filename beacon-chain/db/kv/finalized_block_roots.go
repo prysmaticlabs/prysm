@@ -7,7 +7,6 @@ import (
 
 	"github.com/boltdb/bolt"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -56,9 +55,10 @@ func (kv *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 			return err
 		}
 	}
-	previousFinalizedCheckpointStartSlot := helpers.StartSlot(prevousFinalizedCheckpoint.Epoch)
-	recentFinalizedCheckpointEndSlot := helpers.StartSlot(checkpoint.Epoch + 1)
-	blockRoots, err := kv.BlockRoots(ctx, filters.NewFilter().SetStartSlot(previousFinalizedCheckpointStartSlot).SetEndSlot(recentFinalizedCheckpointEndSlot))
+	blockRoots, err := kv.BlockRoots(ctx, filters.NewFilter().
+		SetStartEpoch(prevousFinalizedCheckpoint.Epoch).
+		SetEndEpoch(checkpoint.Epoch+1),
+	)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return err
@@ -127,7 +127,7 @@ func (kv *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 	}
 
 	// Upsert blocks from the current finalized epoch.
-	roots, err := kv.BlockRoots(ctx, filters.NewFilter().SetStartSlot(helpers.StartSlot(checkpoint.Epoch)).SetEndSlot(helpers.StartSlot(checkpoint.Epoch+1)))
+	roots, err := kv.BlockRoots(ctx, filters.NewFilter().SetStartEpoch(checkpoint.Epoch).SetEndEpoch(checkpoint.Epoch+1))
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return err
