@@ -95,7 +95,16 @@ func main() {
 		}
 		// Retrieve attestation indices
 		for _, att := range atts {
-			committee, err := helpers.BeaconCommittee(state, att.Data.Slot, att.Data.CommitteeIndex)
+			epoch := helpers.SlotToEpoch(att.Data.Slot)
+			activeValidatorIndices, err := helpers.ActiveValidatorIndices(state, epoch)
+			if err != nil {
+				panic(err)
+			}
+			seed, err := helpers.Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
+			if err != nil {
+				panic(err)
+			}
+			committee, err := helpers.BeaconCommittee(activeValidatorIndices, seed, att.Data.Slot, att.Data.CommitteeIndex)
 			if err != nil {
 				panic(err)
 			}
