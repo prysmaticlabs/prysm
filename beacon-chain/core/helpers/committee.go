@@ -353,7 +353,7 @@ func VerifyBitfieldLength(bf bitfield.Bitfield, committeeSize uint64) error {
 			committeeSize,
 			bf.Len())
 	}
-	return nil1
+	return nil
 }
 
 // VerifyAttestationBitfieldLengths verifies that an attestations aggregation and custody bitfields are

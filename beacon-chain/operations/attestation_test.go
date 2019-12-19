@@ -39,7 +39,6 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 		AggregationBits: bitfield.Bitlist{0xCF, 0xC0, 0xC0, 0xC0, 0x01},
 		CustodyBits:     bitfield.Bitlist{0x00, 0x00, 0x00, 0x00, 0x01},
 	}
-
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		t.Fatal(err)
