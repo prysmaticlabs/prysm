@@ -77,6 +77,10 @@ func TestValidateBeaconAttestation_ValidBlock(t *testing.T) {
 	if !valid {
 		t.Error("Beacon attestation failed validation")
 	}
+
+	if m.VaidatorData == nil {
+		t.Error("Decoded message was not set on the message validator data")
+	}
 }
 
 func TestValidateBeaconAttestation_InvalidBlock(t *testing.T) {

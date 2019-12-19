@@ -148,6 +148,10 @@ func TestValidateBeaconBlockPubSub_ValidSignature(t *testing.T) {
 	if !result {
 		t.Error("Expected true result, got false")
 	}
+
+	if m.VaidatorData == nil {
+		t.Error("Decoded message was not set on the message validator data")
+	}
 }
 
 func TestValidateBeaconBlockPubSub_ValidSignature_FromSelf(t *testing.T) {

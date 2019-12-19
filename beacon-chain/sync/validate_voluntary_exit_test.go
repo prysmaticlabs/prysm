@@ -90,6 +90,10 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 	if !valid {
 		t.Error("Failed validation")
 	}
+
+	if m.VaidatorData == nil {
+		t.Error("Decoded message was not set on the message validator data")
+	}
 }
 
 func TestValidateVoluntaryExit_ValidExit_FromSelf(t *testing.T) {

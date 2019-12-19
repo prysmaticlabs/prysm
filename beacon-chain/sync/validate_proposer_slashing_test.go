@@ -13,9 +13,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -112,10 +110,6 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 	ctx := context.Background()
 
 	slashing, s := setupValidProposerSlashing(t)
-	// TODO: Sanity check, remove this.
-	if err := blocks.VerifyProposerSlashing(s, slashing); err != nil {
-		t.Fatal(err)
-	}
 
 	r := &Service{
 		p2p:         p,
@@ -139,6 +133,10 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 	valid := r.validateProposerSlashing(ctx, "", m)
 	if !valid {
 		t.Error("Failed validation")
+	}
+
+	if m.VaidatorData == nil {
+		t.Error("Decoded message was not set on the message validator data")
 	}
 }
 
