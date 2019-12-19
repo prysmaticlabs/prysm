@@ -231,12 +231,16 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 }
 
 func (s *Service) setGenesisTime(timeStamp uint64) {
+	s.eth2GenesisTime = s.createGenesisTime(timeStamp)
+}
+
+func (s *Service) createGenesisTime(timeStamp uint64) uint64 {
 	if !featureconfig.Get().GenesisDelay {
-		s.eth2GenesisTime = uint64(time.Unix(int64(timeStamp), 0).Add(30 * time.Second).Unix())
+		return uint64(time.Unix(int64(timeStamp), 0).Add(30 * time.Second).Unix())
 	} else {
 		timeStampRdDown := timeStamp - timeStamp%params.BeaconConfig().SecondsPerDay
 		// genesisTime will be set to the first second of the day, two days after it was triggered.
-		s.eth2GenesisTime = timeStampRdDown + 2*params.BeaconConfig().SecondsPerDay
+		return timeStampRdDown + 2*params.BeaconConfig().SecondsPerDay
 	}
 }
 
@@ -360,8 +364,7 @@ func (s *Service) checkForChainStart(ctx context.Context, blkNum *big.Int) error
 	}
 	timeStamp := blk.Time()
 	valCount, _ := helpers.ActiveValidatorCount(s.preGenesisState, 0)
-	log.Errorf("Val count %d", valCount)
-	triggered := state.IsValidGenesisState(valCount, timeStamp)
+	triggered := state.IsValidGenesisState(valCount, s.createGenesisTime(timeStamp))
 	if triggered {
 		s.setGenesisTime(timeStamp)
 		s.ProcessChainStart(uint64(s.eth2GenesisTime), blk.Hash(), blk.Number())
