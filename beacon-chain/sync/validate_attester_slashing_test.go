@@ -118,7 +118,7 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 		t.Error("Failed Validation")
 	}
 
-	if msg.VaidatorData == nil {
+	if msg.ValidatorData == nil {
 		t.Error("Decoded message was not set on the message validator data")
 	}
 }

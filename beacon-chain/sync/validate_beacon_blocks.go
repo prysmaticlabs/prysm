@@ -76,6 +76,6 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 
-	msg.VaidatorData = blk // Used in downstream subscriber
+	msg.ValidatorData = blk // Used in downstream subscriber
 	return true
 }

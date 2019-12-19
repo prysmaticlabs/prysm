@@ -36,7 +36,7 @@ func (r *Service) noopValidator(ctx context.Context, _ peer.ID, msg *pubsub.Mess
 		log.WithError(err).Error("Failed to decode message")
 		return false
 	}
-	msg.VaidatorData = m
+	msg.ValidatorData = m
 	return true
 }
 
@@ -137,13 +137,13 @@ func (r *Service) subscribe(topic string, validator pubsub.Validator, handle sub
 
 		span.AddAttributes(trace.StringAttribute("topic", topic))
 
-		if msg.VaidatorData == nil {
+		if msg.ValidatorData == nil {
 			log.Error("Received nil message on pubsub")
 			messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 			return
 		}
 
-		if err := handle(ctx, msg.VaidatorData.(proto.Message)); err != nil {
+		if err := handle(ctx, msg.ValidatorData.(proto.Message)); err != nil {
 			traceutil.AnnotateError(span, err)
 			log.WithError(err).Error("Failed to handle p2p pubsub")
 			messageFailedProcessingCounter.WithLabelValues(topic).Inc()

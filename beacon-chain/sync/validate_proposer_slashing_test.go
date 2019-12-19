@@ -135,7 +135,7 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 		t.Error("Failed validation")
 	}
 
-	if m.VaidatorData == nil {
+	if m.ValidatorData == nil {
 		t.Error("Decoded message was not set on the message validator data")
 	}
 }

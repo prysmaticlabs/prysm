@@ -65,6 +65,6 @@ func (r *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg
 		return false
 	}
 
-	msg.VaidatorData = slashing // Used in downstream subscriber
+	msg.ValidatorData = slashing // Used in downstream subscriber
 	return true
 }

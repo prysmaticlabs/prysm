@@ -64,7 +64,7 @@ func (r *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 		return false
 	}
 
-	msg.VaidatorData = exit // Used in downstream subscriber
+	msg.ValidatorData = exit // Used in downstream subscriber
 
 	return true
 }

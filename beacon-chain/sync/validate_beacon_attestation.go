@@ -82,7 +82,7 @@ func (r *Service) validateBeaconAttestation(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 
-	msg.VaidatorData = att // Used in downstream subscriber
+	msg.ValidatorData = att // Used in downstream subscriber
 
 	return true
 }
