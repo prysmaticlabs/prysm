@@ -121,7 +121,9 @@ func SlotSignature(state *pb.BeaconState, slot uint64, privKey *bls.SecretKey) (
 	return privKey.Sign(s[:], d), nil
 }
 
-// IsAggregator returns true if the signature is from the input validator.
+// IsAggregator returns true if the signature is from the input validator. The committee
+// count is provided as an argument rather than direct implementation from spec. Having
+// committee count as an argument allows cheaper computation at run time.
 //
 // Spec pseudocode definition:
 //   def is_aggregator(state: BeaconState, slot: Slot, index: CommitteeIndex, slot_signature: BLSSignature) -> bool:

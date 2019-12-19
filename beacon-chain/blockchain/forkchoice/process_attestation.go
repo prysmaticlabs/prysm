@@ -3,7 +3,6 @@ package forkchoice
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
@@ -16,6 +15,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -172,7 +172,7 @@ func (s *Store) saveCheckpointState(ctx context.Context, baseState *pb.BeaconSta
 
 // verifyAttestation validates input attestation is valid.
 func (s *Store) verifyAttestation(ctx context.Context, baseState *pb.BeaconState, a *ethpb.Attestation) (*ethpb.IndexedAttestation, error) {
-	epoch := helpers.CurrentEpoch(baseState)
+	epoch := helpers.SlotToEpoch(a.Data.Slot)
 	activeValidatorIndices, err := helpers.ActiveValidatorIndices(baseState, epoch)
 	if err != nil {
 		return nil, err

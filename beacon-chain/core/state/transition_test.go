@@ -387,7 +387,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		AggregationBits: aggBits,
 		CustodyBits:     custodyBits,
 	}
-	epoch := helpers.CurrentEpoch(beaconState)
+	epoch := helpers.SlotToEpoch(blockAtt.Data.Slot)
 	activeValidatorIndices, err := helpers.ActiveValidatorIndices(beaconState, epoch)
 	if err != nil {
 		t.Fatal(err)

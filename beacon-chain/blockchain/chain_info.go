@@ -2,11 +2,11 @@ package blockchain
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -105,12 +105,12 @@ func (s *Service) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 	return proto.Clone(s.headState).(*pb.BeaconState), nil
 }
 
-// HeadValidators returns the head validator of a given epoch.
+// HeadValidators returns a list of active validator indices from the head view of a given epoch.
 func (s *Service) HeadValidators(epoch uint64) ([]uint64, error) {
 	return helpers.ActiveValidatorIndices(s.headState, epoch)
 }
 
-// HeadSeed returns the head seed of a given epoch.
+// HeadSeed returns the seed from the head view of a given epoch.
 func (s *Service) HeadSeed(epoch uint64) ([32]byte, error) {
 	return helpers.Seed(s.headState, epoch, params.BeaconConfig().DomainBeaconAttester)
 }

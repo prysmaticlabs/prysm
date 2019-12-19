@@ -68,6 +68,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 // client.
 func (v *ValidatorService) Start() {
 	pubKeys := pubKeysFromMap(v.keys)
+
 	var dialOpt grpc.DialOption
 	if v.withCert != "" {
 		creds, err := credentials.NewClientTLSFromFile(v.withCert, "")
@@ -82,9 +83,6 @@ func (v *ValidatorService) Start() {
 	}
 	opts := []grpc.DialOption{
 		dialOpt,
-		grpc.WithDefaultCallOptions(
-			grpc.MaxCallRecvMsgSize(10 * 1 << 20), // 10Mb
-		),
 		grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),
 		grpc.WithStreamInterceptor(middleware.ChainStreamClient(
 			grpc_opentracing.StreamClientInterceptor(),

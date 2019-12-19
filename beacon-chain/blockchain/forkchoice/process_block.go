@@ -310,7 +310,7 @@ func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attes
 		return errors.New("no state found in db with attestation tgt root")
 	}
 
-	epoch := helpers.CurrentEpoch(baseState)
+	epoch := helpers.SlotToEpoch(att.Data.Slot)
 	activeValidatorIndices, err := helpers.ActiveValidatorIndices(baseState, epoch)
 	if err != nil {
 		return err

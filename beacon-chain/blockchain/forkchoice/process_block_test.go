@@ -140,7 +140,7 @@ func TestStore_UpdateBlockAttestationVote(t *testing.T) {
 	if err := store.db.SaveState(ctx, beaconState, r); err != nil {
 		t.Fatal(err)
 	}
-	epoch := helpers.CurrentEpoch(beaconState)
+	epoch := helpers.SlotToEpoch(att.Data.Slot)
 	activeValidatorIndices, err := helpers.ActiveValidatorIndices(beaconState, epoch)
 	if err != nil {
 		t.Fatal(err)

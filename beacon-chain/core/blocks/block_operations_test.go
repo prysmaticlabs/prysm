@@ -923,7 +923,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
-	epoch := helpers.CurrentEpoch(beaconState)
+	epoch := helpers.SlotToEpoch(att.Data.Slot)
 	activeValidatorIndices, err := helpers.ActiveValidatorIndices(beaconState, epoch)
 	if err != nil {
 		t.Fatal(err)
@@ -991,7 +991,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
-	epoch := helpers.CurrentEpoch(beaconState)
+	epoch := helpers.SlotToEpoch(att1.Data.Slot)
 	activeValidatorIndices, err := helpers.ActiveValidatorIndices(beaconState, epoch)
 	if err != nil {
 		t.Fatal(err)
@@ -1083,7 +1083,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
-	epoch := helpers.CurrentEpoch(beaconState)
+	epoch := helpers.SlotToEpoch(att1.Data.Slot)
 	activeValidatorIndices, err := helpers.ActiveValidatorIndices(beaconState, epoch)
 	if err != nil {
 		t.Fatal(err)
