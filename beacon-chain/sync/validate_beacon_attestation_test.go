@@ -1,14 +1,18 @@
 package sync
 
 import (
+	"bytes"
 	"context"
+	"reflect"
 	"testing"
-	"time"
 
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -21,7 +25,8 @@ func TestValidateBeaconAttestation_ValidBlock(t *testing.T) {
 	ctx := context.Background()
 
 	rs := &Service{
-		db: db,
+		p2p: p,
+		db:  db,
 		chain: &mockChain.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
@@ -54,27 +59,23 @@ func TestValidateBeaconAttestation_ValidBlock(t *testing.T) {
 		},
 	}
 
-	valid, err := rs.validateBeaconAttestation(ctx, msg, p, false /*fromSelf*/)
-	if err != nil {
-		t.Errorf("Beacon attestation failed validation: %v", err)
+	buf := new(bytes.Buffer)
+	if _, err := p.Encoding().Encode(buf, msg); err != nil {
+		t.Fatal(err)
 	}
+
+	m := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data: buf.Bytes(),
+			TopicIDs: []string{
+				p2p.GossipTypeMapping[reflect.TypeOf(msg)],
+			},
+		},
+	}
+	valid := rs.validateBeaconAttestation(ctx, "", m)
+
 	if !valid {
 		t.Error("Beacon attestation failed validation")
-	}
-
-	if !p.BroadcastCalled {
-		t.Error("No message was broadcast")
-	}
-
-	time.Sleep(100 * time.Millisecond)
-	// It should ignore duplicate identical attestations.
-	p.BroadcastCalled = false
-	valid, _ = rs.validateBeaconAttestation(ctx, msg, p, false /*fromSelf*/)
-	if valid {
-		t.Error("Second identical beacon attestation passed validation when it should not have")
-	}
-	if p.BroadcastCalled {
-		t.Error("Second identcial beacon attestation was re-broadcast")
 	}
 }
 
@@ -85,6 +86,7 @@ func TestValidateBeaconAttestation_InvalidBlock(t *testing.T) {
 	ctx := context.Background()
 
 	rs := &Service{
+		p2p:         p,
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
@@ -95,12 +97,21 @@ func TestValidateBeaconAttestation_InvalidBlock(t *testing.T) {
 		},
 	}
 
-	valid, _ := rs.validateBeaconAttestation(ctx, msg, p, false /*fromSelf*/)
+	buf := new(bytes.Buffer)
+	if _, err := p.Encoding().Encode(buf, msg); err != nil {
+		t.Fatal(err)
+	}
+	m := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data: buf.Bytes(),
+			TopicIDs: []string{
+				p2p.GossipTypeMapping[reflect.TypeOf(msg)],
+			},
+		},
+	}
+	valid := rs.validateBeaconAttestation(ctx, "", m)
 	if valid {
 		t.Error("Invalid beacon attestation passed validation when it should not have")
-	}
-	if p.BroadcastCalled {
-		t.Error("Invalid beacon attestation was broadcast")
 	}
 }
 
@@ -111,6 +122,7 @@ func TestValidateBeaconAttestation_ValidBlock_FromSelf(t *testing.T) {
 	ctx := context.Background()
 
 	rs := &Service{
+		p2p:         p,
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
@@ -133,13 +145,21 @@ func TestValidateBeaconAttestation_ValidBlock_FromSelf(t *testing.T) {
 		},
 	}
 
-	valid, _ := rs.validateBeaconAttestation(ctx, msg, p, true /*fromSelf*/)
+	buf := new(bytes.Buffer)
+	if _, err := p.Encoding().Encode(buf, msg); err != nil {
+		t.Fatal(err)
+	}
+	m := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data: buf.Bytes(),
+			TopicIDs: []string{
+				p2p.GossipTypeMapping[reflect.TypeOf(msg)],
+			},
+		},
+	}
+	valid := rs.validateBeaconAttestation(ctx, p.PeerID(), m)
 	if valid {
 		t.Error("Beacon attestation passed validation")
-	}
-
-	if p.BroadcastCalled {
-		t.Error("Message was broadcast")
 	}
 }
 
@@ -150,6 +170,7 @@ func TestValidateBeaconAttestation_Syncing(t *testing.T) {
 	ctx := context.Background()
 
 	rs := &Service{
+		p2p:         p,
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: true},
 	}
@@ -172,7 +193,19 @@ func TestValidateBeaconAttestation_Syncing(t *testing.T) {
 		},
 	}
 
-	valid, err := rs.validateBeaconAttestation(ctx, msg, p, false /*fromSelf*/)
+	buf := new(bytes.Buffer)
+	if _, err := p.Encoding().Encode(buf, msg); err != nil {
+		t.Fatal(err)
+	}
+	m := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data: buf.Bytes(),
+			TopicIDs: []string{
+				p2p.GossipTypeMapping[reflect.TypeOf(msg)],
+			},
+		},
+	}
+	valid := rs.validateBeaconAttestation(ctx, "", m)
 	if valid {
 		t.Error("Beacon attestation passed validation")
 	}
@@ -185,7 +218,8 @@ func TestValidateBeaconAttestation_OldAttestation(t *testing.T) {
 	ctx := context.Background()
 
 	rs := &Service{
-		db: db,
+		p2p: p,
+		db:  db,
 		chain: &mockChain.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 10,
@@ -218,17 +252,23 @@ func TestValidateBeaconAttestation_OldAttestation(t *testing.T) {
 		},
 	}
 
-	valid, err := rs.validateBeaconAttestation(ctx, msg, p, false /*fromSelf*/)
-	if err != nil {
-		t.Errorf("Beacon attestation failed validation: %v", err)
+	buf := new(bytes.Buffer)
+	if _, err := p.Encoding().Encode(buf, msg); err != nil {
+		t.Fatal(err)
 	}
+	m := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data: buf.Bytes(),
+			TopicIDs: []string{
+				p2p.GossipTypeMapping[reflect.TypeOf(msg)],
+			},
+		},
+	}
+	valid := rs.validateBeaconAttestation(ctx, "", m)
 	if valid {
 		t.Error("Beacon attestation passed validation when it should have failed")
 	}
 
-	if p.BroadcastCalled {
-		t.Error("Message was broadcasted")
-	}
 	// source and target epoch same as finalized checkpoint
 	msg = &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -242,16 +282,21 @@ func TestValidateBeaconAttestation_OldAttestation(t *testing.T) {
 		},
 	}
 
-	valid, err = rs.validateBeaconAttestation(ctx, msg, p, false /*fromSelf*/)
-	if err != nil {
-		t.Errorf("Beacon attestation failed validation: %v", err)
+	buf = new(bytes.Buffer)
+	if _, err := p.Encoding().Encode(buf, msg); err != nil {
+		t.Fatal(err)
 	}
+	m = &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data: buf.Bytes(),
+			TopicIDs: []string{
+				p2p.GossipTypeMapping[reflect.TypeOf(msg)],
+			},
+		},
+	}
+	valid = rs.validateBeaconAttestation(ctx, "", m)
 	if valid {
 		t.Error("Beacon attestation passed validation when it should have failed")
-	}
-
-	if p.BroadcastCalled {
-		t.Error("Message was broadcasted")
 	}
 }
 
@@ -262,7 +307,8 @@ func TestValidateBeaconAttestation_FirstEpoch(t *testing.T) {
 	ctx := context.Background()
 
 	rs := &Service{
-		db: db,
+		db:  db,
+		p2p: p,
 		chain: &mockChain.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
@@ -296,15 +342,20 @@ func TestValidateBeaconAttestation_FirstEpoch(t *testing.T) {
 		},
 	}
 
-	valid, err := rs.validateBeaconAttestation(ctx, msg, p, false /*fromSelf*/)
-	if err != nil {
-		t.Errorf("Beacon attestation failed validation: %v", err)
+	buf := new(bytes.Buffer)
+	if _, err := p.Encoding().Encode(buf, msg); err != nil {
+		t.Fatal(err)
 	}
+	m := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data: buf.Bytes(),
+			TopicIDs: []string{
+				p2p.GossipTypeMapping[reflect.TypeOf(msg)],
+			},
+		},
+	}
+	valid := rs.validateBeaconAttestation(ctx, "", m)
 	if !valid {
 		t.Error("Beacon attestation did not pass validation")
-	}
-
-	if !p.BroadcastCalled {
-		t.Error("Message was not broadcasted")
 	}
 }

@@ -2,15 +2,18 @@ package sync
 
 import (
 	"context"
+	"strings"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/gogo/protobuf/proto"
-	"github.com/pkg/errors"
+	"github.com/libp2p/go-libp2p-core/peer"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
 
@@ -26,58 +29,67 @@ var recentlySeenRoots, _ = ristretto.NewCache(&ristretto.Config{
 // validateBeaconBlockPubSub checks that the incoming block has a valid BLS signature.
 // Blocks that have already been seen are ignored. If the BLS signature is any valid signature,
 // this method rebroadcasts the message.
-func (r *Service) validateBeaconBlockPubSub(ctx context.Context, msg proto.Message, p p2p.Broadcaster, fromSelf bool) (bool, error) {
+func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, msg *pubsub.Message) bool {
+	// We should not attempt to process blocks until fully synced, but propagation is OK.
+	if r.initialSync.Syncing() {
+		return false
+	}
+
 	ctx, span := trace.StartSpan(ctx, "sync.validateBeaconBlockPubSub")
 	defer span.End()
+
+	topic := msg.TopicIDs[0]
+	topic = strings.TrimSuffix(topic, r.p2p.Encoding().ProtocolSuffix())
+	base, ok := p2p.GossipTopicMappings[topic]
+	if !ok {
+		return false
+	}
+	m := proto.Clone(base)
+	if err := r.p2p.Encoding().Decode(msg.Data, m); err != nil {
+		traceutil.AnnotateError(span, err)
+		log.WithError(err).Warn("Failed to decode pubsub message")
+		return false
+	}
 
 	r.validateBlockLock.Lock()
 	defer r.validateBlockLock.Unlock()
 
-	m, ok := msg.(*ethpb.BeaconBlock)
+	blk, ok := m.(*ethpb.BeaconBlock)
 	if !ok {
-		return false, nil
+		return false
 	}
 
-	blockRoot, err := ssz.SigningRoot(m)
+	blockRoot, err := ssz.SigningRoot(blk)
 	if err != nil {
-		return false, errors.Wrap(err, "could not get signing root of beacon block")
+		return false
 	}
 
 	r.pendingQueueLock.RLock()
 	if r.seenPendingBlocks[blockRoot] {
 		r.pendingQueueLock.RUnlock()
-		return false, nil
+		return false
 	}
 	r.pendingQueueLock.RUnlock()
 
-	if _, ok := recentlySeenRoots.Get(string(blockRoot[:])); ok || r.db.HasBlock(ctx, blockRoot) {
-		return false, nil
-	}
-	recentlySeenRoots.Set(string(blockRoot[:]), true /*value*/, 1 /*cost*/)
-
-	if fromSelf {
-		return false, nil
+	// Reject messages from self.
+	if pid == r.p2p.PeerID() {
+		return false
 	}
 
-	if err := helpers.VerifySlotTime(uint64(r.chain.GenesisTime().Unix()), m.Slot); err != nil {
-		log.WithError(err).WithField("blockSlot", m.Slot).Warn("Rejecting incoming block.")
-		return false, err
+	if err := helpers.VerifySlotTime(uint64(r.chain.GenesisTime().Unix()), blk.Slot); err != nil {
+		log.WithError(err).WithField("blockSlot", blk.Slot).Warn("Rejecting incoming block.")
+		return false
 	}
 
-	if r.chain.FinalizedCheckpt().Epoch > helpers.SlotToEpoch(m.Slot) {
+	if r.chain.FinalizedCheckpt().Epoch > helpers.SlotToEpoch(blk.Slot) {
 		log.Debug("Block older than finalized checkpoint received,rejecting it")
-		return false, nil
+		return false
 	}
 
-	_, err = bls.SignatureFromBytes(m.Signature)
-	if err == nil {
-		p.Broadcast(ctx, m)
+	if _, err = bls.SignatureFromBytes(blk.Signature); err != nil {
+		return false
 	}
 
-	// We should not attempt to process blocks until fully synced, but propagation is OK.
-	if r.initialSync.Syncing() {
-		return false, nil
-	}
-
-	return err == nil, err
+	msg.VaidatorData = blk // Used in downstream subscriber
+	return true
 }
