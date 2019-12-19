@@ -10,6 +10,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//proto/beacon/rpc/v1:go_default_library",
+        "//proto/slashing:go_default_library",
         "//shared/cmd:go_default_library",
         "//shared/debug:go_default_library",
         "//shared/params:go_default_library",
