@@ -244,12 +244,23 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 	// Set up 10 deposits pre chain start for validators to register
 	count := uint64(10)
 	deposits, _, _ := testutil.DeterministicDepositsAndKeys(count)
+	trie, _, err := testutil.DepositTrieFromDeposits(deposits)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hashTreeRoot := trie.HashTreeRoot()
 	genState := state.EmptyGenesisState()
+	genState.Eth1Data = &ethpb.Eth1Data{
+		DepositRoot:  hashTreeRoot[:],
+		DepositCount: uint64(len(deposits)),
+	}
 	genState, err = b.ProcessDeposits(ctx, genState, &ethpb.BeaconBlockBody{Deposits: deposits})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := bc.initializeBeaconChain(ctx, time.Unix(0, 0), state.EmptyGenesisState(), &ethpb.Eth1Data{}); err != nil {
+	if err := bc.initializeBeaconChain(ctx, time.Unix(0, 0), genState, &ethpb.Eth1Data{
+		DepositRoot: hashTreeRoot[:],
+	}); err != nil {
 		t.Fatal(err)
 	}
 
