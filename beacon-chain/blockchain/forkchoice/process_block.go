@@ -310,17 +310,7 @@ func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attes
 		return errors.New("no state found in db with attestation tgt root")
 	}
 
-	epoch := helpers.SlotToEpoch(att.Data.Slot)
-	activeValidatorIndices, err := helpers.ActiveValidatorIndices(baseState, epoch)
-	if err != nil {
-		return err
-	}
-	seed, err := helpers.Seed(baseState, epoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		return err
-	}
-
-	committee, err := helpers.BeaconCommittee(activeValidatorIndices, seed, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(baseState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return err
 	}

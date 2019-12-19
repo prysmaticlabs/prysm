@@ -828,16 +828,7 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *pb.BeaconState, 
 // VerifyAttestation converts and attestation into an indexed attestation and verifies
 // the signature in that attestation.
 func VerifyAttestation(ctx context.Context, beaconState *pb.BeaconState, att *ethpb.Attestation) error {
-	epoch := helpers.SlotToEpoch(att.Data.Slot)
-	activeValidatorIndices, err := helpers.ActiveValidatorIndices(beaconState, epoch)
-	if err != nil {
-		return err
-	}
-	seed, err := helpers.Seed(beaconState, epoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		return err
-	}
-	committee, err := helpers.BeaconCommittee(activeValidatorIndices, seed, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return err
 	}

@@ -116,16 +116,8 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 	for _, tt := range tests {
 		attestationData.Target = &ethpb.Checkpoint{Epoch: 0}
 		attestationData.Slot = tt.attestationSlot
-		epoch := SlotToEpoch(tt.attestationSlot)
-		activeValidatorIndices, err := ActiveValidatorIndices(state, epoch)
-		if err != nil {
-			t.Fatal(err)
-		}
-		seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
-		if err != nil {
-			t.Fatal(err)
-		}
-		committee, err := BeaconCommittee(activeValidatorIndices, seed, tt.attestationSlot, 0 /* committee index */)
+
+		committee, err := BeaconCommitteeFromState(state, tt.attestationSlot, 0 /* committee index */)
 		if err != nil {
 			t.Error(err)
 		}
@@ -186,16 +178,7 @@ func TestAttestingIndicesWithBeaconCommitteeWithoutCache_Ok(t *testing.T) {
 	for _, tt := range tests {
 		attestationData.Target = &ethpb.Checkpoint{Epoch: 0}
 		attestationData.Slot = tt.attestationSlot
-		epoch := SlotToEpoch(tt.attestationSlot)
-		activeValidatorIndices, err := ActiveValidatorIndices(state, epoch)
-		if err != nil {
-			t.Fatal(err)
-		}
-		seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
-		if err != nil {
-			t.Fatal(err)
-		}
-		committee, err := BeaconCommitteeWithoutCache(activeValidatorIndices, seed, tt.attestationSlot, 0 /* committee index */)
+		committee, err := BeaconCommitteeWithoutCache(state, tt.attestationSlot, 0 /* committee index */)
 		if err != nil {
 			t.Error(err)
 		}
@@ -228,16 +211,7 @@ func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
 	}
 	attestationData := &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}
 
-	epoch := CurrentEpoch(state)
-	activeValidatorIndices, err := ActiveValidatorIndices(state, epoch)
-	if err != nil {
-		t.Fatal(err)
-	}
-	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		t.Fatal(err)
-	}
-	committee, err := BeaconCommittee(activeValidatorIndices, seed, attestationData.Slot, attestationData.CommitteeIndex)
+	committee, err := BeaconCommitteeFromState(state, attestationData.Slot, attestationData.CommitteeIndex)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -421,7 +395,7 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 
 	state := &pb.BeaconState{
 		Validators:  validators,
-		Slot:        2*params.BeaconConfig().SlotsPerEpoch, // epoch 2
+		Slot:        2 * params.BeaconConfig().SlotsPerEpoch, // epoch 2
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 

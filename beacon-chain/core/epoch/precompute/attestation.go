@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -37,21 +36,10 @@ func ProcessAttestations(
 			return nil, nil, errors.Wrap(err, "could not check validator attested previous epoch")
 		}
 
-		epoch := helpers.SlotToEpoch(a.Data.Slot)
-		activeValidatorIndices, err := helpers.ActiveValidatorIndices(state, epoch)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "could not check validator attested previous epoch")
-		}
-		seed, err := helpers.Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "could not check validator attested previous epoch")
-		}
-		// Get attested indices and update the pre computed fields for each attested validators.
-		committee, err := helpers.BeaconCommittee(activeValidatorIndices, seed, a.Data.Slot, a.Data.CommitteeIndex)
+		committee, err := helpers.BeaconCommitteeFromState(state, a.Data.Slot, a.Data.CommitteeIndex)
 		if err != nil {
 			return nil, nil, err
 		}
-
 		indices, err := helpers.AttestingIndices(a.AggregationBits, committee)
 		if err != nil {
 			return nil, nil, err

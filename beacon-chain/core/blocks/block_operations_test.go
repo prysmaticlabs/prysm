@@ -923,16 +923,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
-	epoch := helpers.SlotToEpoch(att.Data.Slot)
-	activeValidatorIndices, err := helpers.ActiveValidatorIndices(beaconState, epoch)
-	if err != nil {
-		t.Fatal(err)
-	}
-	seed, err := helpers.Seed(beaconState, epoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		t.Fatal(err)
-	}
-	committee, err := helpers.BeaconCommittee(activeValidatorIndices, seed, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		t.Error(err)
 	}
@@ -991,16 +982,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
-	epoch := helpers.SlotToEpoch(att1.Data.Slot)
-	activeValidatorIndices, err := helpers.ActiveValidatorIndices(beaconState, epoch)
-	if err != nil {
-		t.Fatal(err)
-	}
-	seed, err := helpers.Seed(beaconState, epoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		t.Fatal(err)
-	}
-	committee, err := helpers.BeaconCommittee(activeValidatorIndices, seed, att1.Data.Slot, att1.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1034,7 +1016,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 		CustodyBits:     custodyBits2,
 	}
 
-	committee, err = helpers.BeaconCommittee(activeValidatorIndices, seed, att2.Data.Slot, att2.Data.CommitteeIndex)
+	committee, err = helpers.BeaconCommitteeFromState(beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1083,16 +1065,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
-	epoch := helpers.SlotToEpoch(att1.Data.Slot)
-	activeValidatorIndices, err := helpers.ActiveValidatorIndices(beaconState, epoch)
-	if err != nil {
-		t.Fatal(err)
-	}
-	seed, err := helpers.Seed(beaconState, epoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		t.Fatal(err)
-	}
-	committee, err := helpers.BeaconCommittee(activeValidatorIndices, seed, att1.Data.Slot, att1.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1125,7 +1098,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 		CustodyBits:     custodyBits2,
 	}
 
-	committee, err = helpers.BeaconCommittee(activeValidatorIndices, seed, att2.Data.Slot, att2.Data.CommitteeIndex)
+	committee, err = helpers.BeaconCommitteeFromState(beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1250,16 +1223,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 			Signature:           attestation.Signature,
 		}
 
-		epoch := helpers.CurrentEpoch(state)
-		activeValidatorIndices, err := helpers.ActiveValidatorIndices(state, epoch)
-		if err != nil {
-			t.Fatal(err)
-		}
-		seed, err := helpers.Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
-		if err != nil {
-			t.Fatal(err)
-		}
-		committee, err := helpers.BeaconCommittee(activeValidatorIndices, seed, attestation.Data.Slot, attestation.Data.CommitteeIndex)
+		committee, err := helpers.BeaconCommitteeFromState(state, attestation.Data.Slot, attestation.Data.CommitteeIndex)
 		if err != nil {
 			t.Error(err)
 		}

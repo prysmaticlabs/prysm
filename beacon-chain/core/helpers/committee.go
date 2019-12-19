@@ -17,7 +17,7 @@ import (
 
 var committeeCache = cache.NewCommitteesCache()
 
-// CommitteeCountAtSlot returns the number of crosslink committees of a slot. The
+// SlotCommitteeCount returns the number of crosslink committees of a slot. The
 // active validator count is provided as an argument rather than a direct implementation
 // from the spec definition. Having the active validator count as an argument allows for
 // cheaper computation, instead of retrieving head state, one can retrieve the validator
@@ -34,7 +34,7 @@ var committeeCache = cache.NewCommitteesCache()
 //        MAX_COMMITTEES_PER_SLOT,
 //        len(get_active_validator_indices(state, epoch)) // SLOTS_PER_EPOCH // TARGET_COMMITTEE_SIZE,
 //    ))
-func CommitteeCountAtSlot(activeValidatorCount uint64) uint64 {
+func SlotCommitteeCount(activeValidatorCount uint64) uint64 {
 	var committeePerSlot = activeValidatorCount / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
 
 	if committeePerSlot > params.BeaconConfig().MaxCommitteesPerSlot {
@@ -47,9 +47,9 @@ func CommitteeCountAtSlot(activeValidatorCount uint64) uint64 {
 	return committeePerSlot
 }
 
-// BeaconCommittee returns the crosslink committee of a given slot and committee index. The
-// validator indices and seed are provided as an argument rather than a direct implementation
-// from the spec definition. Having them as an argument allows for cheaper computation run time.
+// BeaconCommittee returns the crosslink committee of a given slot and committee index. This
+// is a spec implementation where state is used as an argument. In case of state retrieval
+// becomes expensive, consider using BeaconCommittee below.
 //
 // Spec pseudocode definition:
 //   def get_beacon_committee(state: BeaconState, slot: Slot, index: CommitteeIndex) -> Sequence[ValidatorIndex]:
@@ -65,6 +65,34 @@ func CommitteeCountAtSlot(activeValidatorCount uint64) uint64 {
 //        index=epoch_offset,
 //        count=committees_per_slot * SLOTS_PER_EPOCH,
 //    )
+func BeaconCommitteeFromState(state *pb.BeaconState, slot uint64, committeeIndex uint64) ([]uint64, error) {
+	epoch := SlotToEpoch(slot)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get seed")
+	}
+
+	if featureconfig.Get().EnableNewCache {
+		indices, err := committeeCache.Committee(slot, seed, committeeIndex)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not interface with committee cache")
+		}
+		if indices != nil {
+			return indices, nil
+		}
+	}
+
+	indices, err := ActiveValidatorIndices(state, epoch)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get active indices")
+	}
+
+	return BeaconCommittee(indices, seed, slot, committeeIndex)
+}
+
+// BeaconCommittee returns the crosslink committee of a given slot and committee index. The
+// validator indices and seed are provided as an argument rather than a direct implementation
+// from the spec definition. Having them as an argument allows for cheaper computation run time.
 func BeaconCommittee(validatorIndices []uint64, seed [32]byte, slot uint64, committeeIndex uint64) ([]uint64, error) {
 	if featureconfig.Get().EnableNewCache {
 		indices, err := committeeCache.Committee(slot, seed, committeeIndex)
@@ -76,7 +104,7 @@ func BeaconCommittee(validatorIndices []uint64, seed [32]byte, slot uint64, comm
 		}
 	}
 
-	committeesPerSlot := CommitteeCountAtSlot(uint64(len(validatorIndices)))
+	committeesPerSlot := SlotCommitteeCount(uint64(len(validatorIndices)))
 
 	epochOffset := committeeIndex + (slot%params.BeaconConfig().SlotsPerEpoch)*committeesPerSlot
 	count := committeesPerSlot * params.BeaconConfig().SlotsPerEpoch
@@ -87,13 +115,26 @@ func BeaconCommittee(validatorIndices []uint64, seed [32]byte, slot uint64, comm
 // BeaconCommitteeWithoutCache returns the crosslink committee of a given slot and committee index without the
 // usage of committee cache.
 // TODO(3603): Delete this function when issue 3603 closes.
-func BeaconCommitteeWithoutCache(validatorIndices []uint64, seed [32]byte, slot uint64, committeeIndex uint64) ([]uint64, error) {
-	committeesPerSlot := CommitteeCountAtSlot(uint64(len(validatorIndices)))
-
-	epochOffset := committeeIndex + (slot%params.BeaconConfig().SlotsPerEpoch)*committeesPerSlot
+func BeaconCommitteeWithoutCache(state *pb.BeaconState, slot uint64, index uint64) ([]uint64, error) {
+	epoch := SlotToEpoch(slot)
+	activeValidatorCount, err := ActiveValidatorCount(state, epoch)
+	if err != nil {
+		return nil, err
+	}
+	committeesPerSlot := SlotCommitteeCount(activeValidatorCount)
+	epochOffset := index + (slot%params.BeaconConfig().SlotsPerEpoch)*committeesPerSlot
 	count := committeesPerSlot * params.BeaconConfig().SlotsPerEpoch
 
-	return ComputeCommittee(validatorIndices, seed, epochOffset, count)
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get seed")
+	}
+	indices, err := ActiveValidatorIndices(state, epoch)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get active indices")
+	}
+
+	return ComputeCommittee(indices, seed, epochOffset, count)
 }
 
 // ComputeCommittee returns the requested shuffled committee out of the total committees using
@@ -178,7 +219,7 @@ func CommitteeAssignments(state *pb.BeaconState, epoch uint64) (map[uint64]*Comm
 	if epoch > NextEpoch(state) {
 		return nil, nil, fmt.Errorf(
 			"epoch %d can't be greater than next epoch %d",
-			epoch, 
+			epoch,
 			NextEpoch(state),
 		)
 	}
@@ -201,20 +242,15 @@ func CommitteeAssignments(state *pb.BeaconState, epoch uint64) (map[uint64]*Comm
 	}
 	// Each slot in an epoch has a different set of committees. This value is derived from the
 	// active validator set, which does not change.
-	numCommitteesPerSlot := CommitteeCountAtSlot(uint64(len(activeValidatorIndices)))
-
+	numCommitteesPerSlot := SlotCommitteeCount(uint64(len(activeValidatorIndices)))
 	validatorIndexToCommittee := make(map[uint64]*CommitteeAssignmentContainer)
 
-	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		return nil, nil, err
-	}
 	// Compute all committees for all slots.
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
 		// Compute committees.
 		for j := uint64(0); j < numCommitteesPerSlot; j++ {
 			slot := startSlot + i
-			committee, err := BeaconCommittee(activeValidatorIndices, seed, slot, j /*committee index*/)
+			committee, err := BeaconCommitteeFromState(state, slot, j /*committee index*/)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -292,14 +328,9 @@ func CommitteeAssignment(
 		return nil, 0, 0, 0, err
 	}
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
-		countAtSlot := CommitteeCountAtSlot(uint64(len(activeValidatorIndices)))
-		seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
-		if err != nil {
-			return nil, 0, 0, 0, err
-		}
-
+		countAtSlot := SlotCommitteeCount(uint64(len(activeValidatorIndices)))
 		for i := uint64(0); i < countAtSlot; i++ {
-			committee, err := BeaconCommittee(activeValidatorIndices, seed, slot, i)
+			committee, err := BeaconCommitteeFromState(state, slot, i)
 			if err != nil {
 				return nil, 0, 0, 0, errors.Wrapf(err, "could not get crosslink committee at slot %d", slot)
 			}
@@ -328,17 +359,7 @@ func VerifyBitfieldLength(bf bitfield.Bitfield, committeeSize uint64) error {
 // VerifyAttestationBitfieldLengths verifies that an attestations aggregation and custody bitfields are
 // a valid length matching the size of the committee.
 func VerifyAttestationBitfieldLengths(state *pb.BeaconState, att *ethpb.Attestation) error {
-	epoch := SlotToEpoch(att.Data.Slot)
-	activeValidatorIndices, err := ActiveValidatorIndices(state, epoch)
-	if err != nil {
-		return err
-	}
-	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		return err
-	}
-
-	committee, err := BeaconCommittee(activeValidatorIndices, seed, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, err := BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve beacon committees")
 	}
@@ -394,7 +415,7 @@ func UpdateCommitteeCache(state *pb.BeaconState) error {
 			return err
 		}
 
-		count := CommitteeCountAtSlot(uint64(len(shuffledIndices)))
+		count := SlotCommitteeCount(uint64(len(shuffledIndices)))
 
 		seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 		if err != nil {

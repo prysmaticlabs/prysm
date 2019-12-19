@@ -228,20 +228,12 @@ func TestSlotSignature_Verify(t *testing.T) {
 
 func TestIsAggregator_True(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
+
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, 0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
 	sig := privKeys[0].Sign([]byte{}, 0)
-	epoch := helpers.CurrentEpoch(beaconState)
-	activeValidatorIndices, err := helpers.ActiveValidatorIndices(beaconState, epoch)
-	if err != nil {
-		t.Fatal(err)
-	}
-	seed, err := helpers.Seed(beaconState, epoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		t.Fatal(err)
-	}
-	committee, err := helpers.BeaconCommittee(activeValidatorIndices, seed, 0, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
 	agg, err := helpers.IsAggregator(uint64(len(committee)), 0, 0, sig.Marshal())
 	if err != nil {
 		t.Fatal(err)
@@ -255,16 +247,8 @@ func TestIsAggregator_False(t *testing.T) {
 	params.UseMinimalConfig()
 	defer params.UseMainnetConfig()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 2048)
-	epoch := helpers.CurrentEpoch(beaconState)
-	activeValidatorIndices, err := helpers.ActiveValidatorIndices(beaconState, epoch)
-	if err != nil {
-		t.Fatal(err)
-	}
-	seed, err := helpers.Seed(beaconState, epoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		t.Fatal(err)
-	}
-	committee, err := helpers.BeaconCommittee(activeValidatorIndices, seed, 0, 0)
+
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, 0, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -140,16 +140,8 @@ func TestStore_UpdateBlockAttestationVote(t *testing.T) {
 	if err := store.db.SaveState(ctx, beaconState, r); err != nil {
 		t.Fatal(err)
 	}
-	epoch := helpers.SlotToEpoch(att.Data.Slot)
-	activeValidatorIndices, err := helpers.ActiveValidatorIndices(beaconState, epoch)
-	if err != nil {
-		t.Fatal(err)
-	}
-	seed, err := helpers.Seed(beaconState, epoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		t.Fatal(err)
-	}
-	committee, err := helpers.BeaconCommittee(activeValidatorIndices, seed, att.Data.Slot, att.Data.CommitteeIndex)
+
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		t.Error(err)
 	}

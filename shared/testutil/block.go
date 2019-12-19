@@ -203,17 +203,9 @@ func generateAttesterSlashings(
 ) ([]*ethpb.AttesterSlashing, error) {
 	currentEpoch := helpers.CurrentEpoch(bState)
 	attesterSlashings := make([]*ethpb.AttesterSlashing, numSlashings)
-	activeValidatorIndices, err := helpers.ActiveValidatorIndices(bState, currentEpoch)
-	if err != nil {
-		return nil, err
-	}
-	seed, err := helpers.Seed(bState, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		return nil, err
-	}
 	for i := uint64(0); i < numSlashings; i++ {
 		committeeIndex := rand.Uint64() % params.BeaconConfig().MaxCommitteesPerSlot
-		committee, err := helpers.BeaconCommittee(activeValidatorIndices, seed, bState.Slot, committeeIndex)
+		committee, err := helpers.BeaconCommitteeFromState(bState, bState.Slot, committeeIndex)
 		if err != nil {
 			return nil, err
 		}
@@ -342,7 +334,7 @@ func GenerateAttestations(
 	if err != nil {
 		return nil, err
 	}
-	committeesPerSlot := helpers.CommitteeCountAtSlot(activeValidatorCount)
+	committeesPerSlot := helpers.SlotCommitteeCount(activeValidatorCount)
 
 	if numToGen < committeesPerSlot {
 		log.Printf(
@@ -368,18 +360,9 @@ func GenerateAttestations(
 		)
 	}
 
-	activeValidatorIndices, err := helpers.ActiveValidatorIndices(bState, currentEpoch)
-	if err != nil {
-		return nil, err
-	}
-	seed, err := helpers.Seed(bState, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		return nil, err
-	}
-
 	domain := helpers.Domain(bState.Fork, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
 	for c := uint64(0); c < committeesPerSlot && c < numToGen; c++ {
-		committee, err := helpers.BeaconCommittee(activeValidatorIndices, seed, slot, c)
+		committee, err := helpers.BeaconCommitteeFromState(bState, slot, c)
 		if err != nil {
 			return nil, err
 		}
