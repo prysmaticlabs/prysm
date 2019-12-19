@@ -123,38 +123,6 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 	}
 }
 
-func TestValidateAttesterSlashing_ValidSlashing_FromSelf(t *testing.T) {
-	p := p2ptest.NewTestP2P(t)
-	ctx := context.Background()
-
-	slashing, s := setupValidAttesterSlashing(t)
-
-	r := &Service{
-		p2p:         p,
-		chain:       &mock.ChainService{State: s},
-		initialSync: &mockSync.Sync{IsSyncing: false},
-	}
-
-	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, slashing); err != nil {
-		t.Fatal(err)
-	}
-
-	msg := &pubsub.Message{
-		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(slashing)],
-			},
-		},
-	}
-	valid := r.validateAttesterSlashing(ctx, p.PeerID(), msg)
-
-	if valid {
-		t.Error("Passed validation")
-	}
-}
-
 func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 

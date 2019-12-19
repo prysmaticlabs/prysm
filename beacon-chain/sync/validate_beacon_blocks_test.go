@@ -154,53 +154,6 @@ func TestValidateBeaconBlockPubSub_ValidSignature(t *testing.T) {
 	}
 }
 
-func TestValidateBeaconBlockPubSub_ValidSignature_FromSelf(t *testing.T) {
-	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
-	p := p2ptest.NewTestP2P(t)
-	ctx := context.Background()
-	b := []byte("sk")
-	b32 := bytesutil.ToBytes32(b)
-	sk, err := bls.SecretKeyFromBytes(b32[:])
-	if err != nil {
-		t.Fatal(err)
-	}
-	msg := &ethpb.BeaconBlock{
-		Slot:       1,
-		ParentRoot: testutil.Random32Bytes(t),
-		Signature:  sk.Sign([]byte("data"), 0).Marshal(),
-	}
-
-	mockBroadcaster := &p2ptest.MockBroadcaster{}
-
-	r := &Service{
-		p2p:         p,
-		db:          db,
-		initialSync: &mockSync.Sync{IsSyncing: false},
-		chain:       &mock.ChainService{Genesis: time.Now()},
-	}
-
-	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, msg); err != nil {
-		t.Fatal(err)
-	}
-	m := &pubsub.Message{
-		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(msg)],
-			},
-		},
-	}
-	result := r.validateBeaconBlockPubSub(ctx, "", m)
-
-	if result {
-		t.Error("Expected false result, got true")
-	}
-	if mockBroadcaster.BroadcastCalled {
-		t.Error("Broadcast was called when it should not have been called")
-	}
-}
 
 func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 	db := dbtest.SetupDB(t)

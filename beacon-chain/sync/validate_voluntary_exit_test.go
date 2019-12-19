@@ -96,37 +96,6 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 	}
 }
 
-func TestValidateVoluntaryExit_ValidExit_FromSelf(t *testing.T) {
-	p := p2ptest.NewTestP2P(t)
-	ctx := context.Background()
-
-	exit, s := setupValidExit(t)
-
-	r := &Service{
-		p2p: p,
-		chain: &mock.ChainService{
-			State: s,
-		},
-		initialSync: &mockSync.Sync{IsSyncing: false},
-	}
-	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, exit); err != nil {
-		t.Fatal(err)
-	}
-	m := &pubsub.Message{
-		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(exit)],
-			},
-		},
-	}
-	valid := r.validateVoluntaryExit(ctx, p.PeerID(), m)
-	if valid {
-		t.Error("Validation should have failed")
-	}
-}
-
 func TestValidateVoluntaryExit_ValidExit_Syncing(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()

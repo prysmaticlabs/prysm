@@ -52,6 +52,8 @@ func (r *Service) validateBeaconAttestation(ctx context.Context, pid peer.ID, ms
 
 	att, ok := m.(*ethpb.Attestation)
 	if !ok {
+		traceutil.AnnotateError(span, errors.New("wrong proto message type"))
+		log.Error("wrong proto message type")
 		return false
 	}
 
@@ -69,13 +71,10 @@ func (r *Service) validateBeaconAttestation(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 
-	if pid == r.p2p.PeerID() {
-		return false
-	}
-
 	finalizedEpoch := r.chain.FinalizedCheckpt().Epoch
 	attestationDataEpochOld := finalizedEpoch >= att.Data.Source.Epoch || finalizedEpoch >= att.Data.Target.Epoch
 	if finalizedEpoch != 0 && attestationDataEpochOld {
+		traceutil.AnnotateError(span, errors.New("wrong proto message type"))
 		log.WithFields(logrus.Fields{
 			"TargetEpoch": att.Data.Target.Epoch,
 			"SourceEpoch": att.Data.Source.Epoch,

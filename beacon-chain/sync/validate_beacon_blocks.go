@@ -4,7 +4,6 @@ import (
 	"context"
 	"strings"
 
-	"github.com/dgraph-io/ristretto"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -17,14 +16,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var recentlySeenRootsSize = int64(1 << 16)
-
-// recentlySeenBlockRoots cache with max size of ~2Mib ( including keys)
-var recentlySeenRoots, _ = ristretto.NewCache(&ristretto.Config{
-	NumCounters: recentlySeenRootsSize,
-	MaxCost:     recentlySeenRootsSize,
-	BufferItems: 64,
-})
 
 // validateBeaconBlockPubSub checks that the incoming block has a valid BLS signature.
 // Blocks that have already been seen are ignored. If the BLS signature is any valid signature,
@@ -70,11 +61,6 @@ func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 	r.pendingQueueLock.RUnlock()
-
-	// Reject messages from self.
-	if pid == r.p2p.PeerID() {
-		return false
-	}
 
 	if err := helpers.VerifySlotTime(uint64(r.chain.GenesisTime().Unix()), blk.Slot); err != nil {
 		log.WithError(err).WithField("blockSlot", blk.Slot).Warn("Rejecting incoming block.")

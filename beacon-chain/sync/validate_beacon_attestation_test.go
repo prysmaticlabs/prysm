@@ -119,54 +119,6 @@ func TestValidateBeaconAttestation_InvalidBlock(t *testing.T) {
 	}
 }
 
-func TestValidateBeaconAttestation_ValidBlock_FromSelf(t *testing.T) {
-	db := dbtest.SetupDB(t)
-	defer dbtest.TeardownDB(t, db)
-	p := p2ptest.NewTestP2P(t)
-	ctx := context.Background()
-
-	rs := &Service{
-		p2p:         p,
-		db:          db,
-		initialSync: &mockSync.Sync{IsSyncing: false},
-	}
-
-	blk := &ethpb.BeaconBlock{
-		Slot: 55,
-	}
-	if err := db.SaveBlock(ctx, blk); err != nil {
-		t.Fatal(err)
-	}
-
-	blockRoot, err := ssz.SigningRoot(blk)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	msg := &ethpb.Attestation{
-		Data: &ethpb.AttestationData{
-			BeaconBlockRoot: blockRoot[:],
-		},
-	}
-
-	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, msg); err != nil {
-		t.Fatal(err)
-	}
-	m := &pubsub.Message{
-		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(msg)],
-			},
-		},
-	}
-	valid := rs.validateBeaconAttestation(ctx, p.PeerID(), m)
-	if valid {
-		t.Error("Beacon attestation passed validation")
-	}
-}
-
 func TestValidateBeaconAttestation_Syncing(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	defer dbtest.TeardownDB(t, db)

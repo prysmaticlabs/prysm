@@ -65,10 +65,6 @@ func (r *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg
 		return false
 	}
 
-	if pid == r.p2p.PeerID() {
-		return false
-	}
-
 	msg.VaidatorData = slashing // Used in downstream subscriber
 	return true
 }

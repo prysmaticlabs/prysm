@@ -140,39 +140,6 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 	}
 }
 
-func TestValidateProposerSlashing_ValidSlashing_FromSelf(t *testing.T) {
-	p := p2ptest.NewTestP2P(t)
-	ctx := context.Background()
-
-	slashing, s := setupValidProposerSlashing(t)
-
-	r := &Service{
-		p2p:         p,
-		chain:       &mock.ChainService{State: s},
-		initialSync: &mockSync.Sync{IsSyncing: false},
-	}
-
-	buf := new(bytes.Buffer)
-	if _, err := p.Encoding().Encode(buf, slashing); err != nil {
-		t.Fatal(err)
-	}
-	m := &pubsub.Message{
-		Message: &pubsubpb.Message{
-			Data: buf.Bytes(),
-			TopicIDs: []string{
-				p2p.GossipTypeMapping[reflect.TypeOf(slashing)],
-			},
-		},
-	}
-	valid := r.validateProposerSlashing(ctx, p.PeerID(), m)
-	if valid {
-		t.Error("Did not fail validation")
-	}
-
-	if p.BroadcastCalled {
-		t.Error("Broadcast was called")
-	}
-}
 
 func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)

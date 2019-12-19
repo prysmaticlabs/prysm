@@ -64,10 +64,6 @@ func (r *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 		return false
 	}
 
-	if pid == r.p2p.PeerID() {
-		return false
-	}
-
 	msg.VaidatorData = exit // Used in downstream subscriber
 
 	return true
