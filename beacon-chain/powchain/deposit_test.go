@@ -46,7 +46,7 @@ func TestProcessDeposit_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 	if valcount != 1 {
-		t.Errorf("Did not get correct active validator count received %d, but wanted %d", web3Service.activeValidatorCount, 1)
+		t.Errorf("Did not get correct active validator count received %d, but wanted %d", valcount, 1)
 	}
 }
 
@@ -265,7 +265,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 		}
 
 		if valcount == 1 {
-			t.Errorf("Did not get correct active validator count received %d, but wanted %d", web3Service.activeValidatorCount, 0)
+			t.Errorf("Did not get correct active validator count received %d, but wanted %d", valcount, 0)
 		}
 	}
 }

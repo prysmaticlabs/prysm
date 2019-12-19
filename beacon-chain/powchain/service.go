@@ -142,8 +142,6 @@ type Service struct {
 	lastRequestedBlock      *big.Int
 	chainStartETH1Data      *ethpb.Eth1Data
 	preGenesisState         *pb.BeaconState
-	activeValidatorCount    uint64
-	depositedPubkeys        map[[48]byte]uint64
 	processingLock          sync.RWMutex
 	eth2GenesisTime         uint64
 	requestingOldLogs       bool
@@ -194,7 +192,6 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		lastReceivedMerkleIndex: -1,
 		lastRequestedBlock:      big.NewInt(0),
 		chainStartETH1Data:      &ethpb.Eth1Data{},
-		depositedPubkeys:        make(map[[48]byte]uint64),
 		preGenesisState:         state.EmptyGenesisState(),
 	}, nil
 }
