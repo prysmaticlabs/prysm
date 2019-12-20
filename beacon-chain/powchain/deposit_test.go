@@ -285,7 +285,7 @@ func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for i, _ := range keys {
+	for i := range keys {
 		eth1Data.DepositCount = uint64(i + 1)
 		if err := web3Service.processDeposit(eth1Data, deposits[i]); err != nil {
 			t.Fatalf("Could not process deposit %v", err)
