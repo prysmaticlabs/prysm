@@ -23,6 +23,8 @@ type ChainService struct {
 	Root                []byte
 	Block               *ethpb.BeaconBlock
 	FinalizedCheckPoint *ethpb.Checkpoint
+	CurrentJustifiedCheckPoint *ethpb.Checkpoint
+	PreviousJustifiedCheckPoint  *ethpb.Checkpoint
 	BlocksReceived      []*ethpb.BeaconBlock
 	Genesis             time.Time
 	Fork                *pb.Fork
@@ -120,7 +122,17 @@ func (ms *ChainService) CurrentFork() *pb.Fork {
 
 // FinalizedCheckpt mocks FinalizedCheckpt method in chain service.
 func (ms *ChainService) FinalizedCheckpt() *ethpb.Checkpoint {
-	return ms.FinalizedCheckPoint
+	return ms.FinalizedCheckpt()
+}
+
+// CurrentJustifiedCheckpt mocks CurrentJustifiedCheckpt method in chain service.
+func (ms *ChainService) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
+	return ms.CurrentJustifiedCheckPoint
+}
+
+// PreviousJustifiedCheckpt mocks PreviousJustifiedCheckpt method in chain service.
+func (ms *ChainService) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
+	return ms.PreviousJustifiedCheckPoint
 }
 
 // ReceiveAttestation mocks ReceiveAttestation method in chain service.
