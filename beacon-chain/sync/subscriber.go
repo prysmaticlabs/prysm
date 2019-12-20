@@ -148,7 +148,7 @@ func (r *Service) subscribeWithBase(base proto.Message, topic string, validator 
 		if err := handle(ctx, msg.ValidatorData.(proto.Message)); err != nil {
 			traceutil.AnnotateError(span, err)
 			log.WithError(err).Error("Failed to handle p2p pubsub")
-			messageFailedProcessingCounter.WithLabelValues(topic + r.p2p.Encoding().ProtocolSuffix()).Inc()
+			messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 			return
 		}
 	}
@@ -167,7 +167,7 @@ func (r *Service) subscribeWithBase(base proto.Message, topic string, validator 
 				continue
 			}
 
-			messageReceivedCounter.WithLabelValues(topic + r.p2p.Encoding().ProtocolSuffix()).Inc()
+			messageReceivedCounter.WithLabelValues(topic).Inc()
 
 			go pipeline(msg)
 		}
