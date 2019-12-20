@@ -160,14 +160,14 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 			config.ETH1Endpoint,
 		)
 	}
-
 	ctx, cancel := context.WithCancel(ctx)
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		cancel()
 		return nil, errors.Wrap(err, "could not setup deposit trie")
 	}
-	return &Service{
+
+	s := &Service{
 		ctx:          ctx,
 		cancel:       cancel,
 		headerChan:   make(chan *gethTypes.Header),
@@ -191,7 +191,20 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		depositCache:            config.DepositCache,
 		lastReceivedMerkleIndex: -1,
 		preGenesisState:         state.EmptyGenesisState(),
-	}, nil
+	}
+
+	eth1Data, err := config.BeaconDB.PowchainData(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to retrieve eth1 data")
+	}
+	if eth1Data != nil {
+		s.depositTrie = trieutil.CreateTrieFromProto(eth1Data.Trie)
+		s.chainStartData = eth1Data.ChainstartData
+		s.preGenesisState = eth1Data.BeaconState
+		s.latestEth1Data = eth1Data.CurrentEth1Data
+		s.lastReceivedMerkleIndex = int64(len(s.depositTrie.Items()) - 1)
+	}
+	return s, nil
 }
 
 // Start a web3 service's main event loop.

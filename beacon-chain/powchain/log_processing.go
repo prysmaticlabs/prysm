@@ -7,6 +7,8 @@ import (
 	"math/big"
 	"time"
 
+	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 
 	"github.com/ethereum/go-ethereum"
@@ -75,6 +77,15 @@ func (s *Service) ProcessLog(ctx context.Context, depositLog gethTypes.Log) erro
 		if err := s.ProcessDepositLog(ctx, depositLog); err != nil {
 			return errors.Wrap(err, "Could not process deposit log")
 		}
+		if s.lastReceivedMerkleIndex%100 == 0 {
+			eth1Data := &protodb.ETH1ChainData{
+				CurrentEth1Data: s.latestEth1Data,
+				ChainstartData:  s.chainStartData,
+				BeaconState:     s.preGenesisState,
+				Trie:            s.depositTrie.ToProto(),
+			}
+			return s.beaconDB.SavePowchainData(ctx, eth1Data)
+		}
 		return nil
 	}
 	log.WithField("signature", fmt.Sprintf("%#x", depositLog.Topics[0])).Debug("Not a valid event signature")
@@ -94,6 +105,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	// ETH1.0 network, and prevents us from updating our trie
 	// with the same log twice, causing an inconsistent state root.
 	index := binary.LittleEndian.Uint64(merkleTreeIndex)
+	log.Infof("processing index %d", index)
 	if int64(index) <= s.lastReceivedMerkleIndex {
 		return nil
 	}
@@ -247,17 +259,29 @@ func (s *Service) createGenesisTime(timeStamp uint64) uint64 {
 // processPastLogs processes all the past logs from the deposit contract and
 // updates the deposit trie with the data from each individual log.
 func (s *Service) processPastLogs(ctx context.Context) error {
+	currentBlockNum := uint64(0)
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
 			s.depositContractAddress,
 		},
 	}
+
+	// if we are not starting from the first deposit log, we use
+	// the current saved last requested block number.
+	if s.lastReceivedMerkleIndex != -1 {
+		currentBlockNum = s.latestEth1Data.LastRequestedBlock
+		query = ethereum.FilterQuery{
+			Addresses: []common.Address{
+				s.depositContractAddress,
+			},
+			FromBlock: big.NewInt(int64(currentBlockNum)),
+		}
+	}
+
 	logs, err := s.httpLogger.FilterLogs(ctx, query)
 	if err != nil {
 		return err
 	}
-
-	currentBlockNum := uint64(0)
 
 	for _, log := range logs {
 		if log.BlockNumber > currentBlockNum {

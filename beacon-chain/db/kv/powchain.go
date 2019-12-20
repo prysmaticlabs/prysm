@@ -33,6 +33,9 @@ func (k *Store) PowchainData(ctx context.Context) (*db.ETH1ChainData, error) {
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(powchainBucket)
 		enc := bkt.Get(powchainDataKey)
+		if len(enc) == 0 {
+			return nil
+		}
 		data = &db.ETH1ChainData{}
 		return proto.Unmarshal(enc, data)
 	})
