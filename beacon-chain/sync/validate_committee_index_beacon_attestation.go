@@ -74,7 +74,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	}
 
 	// Attestation's slot is within ATTESTATION_PROPAGATION_SLOT_RANGE.
-	currentSlot := helpers.SlotsSinceGenesis(s.chain.GenesisTime())
+	currentSlot := helpers.SlotsSince(s.chain.GenesisTime())
 	upper := att.Data.Slot + params.BeaconConfig().AttestationPropagationSlotRange
 	lower := att.Data.Slot
 	if currentSlot > upper || currentSlot < lower {

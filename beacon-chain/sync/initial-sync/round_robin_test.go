@@ -373,8 +373,8 @@ func makeGenesisTime(currentSlot uint64) time.Time {
 func TestMakeGenesisTime(t *testing.T) {
 	currentSlot := uint64(64)
 	gt := makeGenesisTime(currentSlot)
-	if helpers.SlotsSinceGenesis(gt) != currentSlot {
-		t.Fatalf("Wanted %d, got %d", currentSlot, helpers.SlotsSinceGenesis(gt))
+	if helpers.SlotsSince(gt) != currentSlot {
+		t.Fatalf("Wanted %d, got %d", currentSlot, helpers.SlotsSince(gt))
 	}
 }
 

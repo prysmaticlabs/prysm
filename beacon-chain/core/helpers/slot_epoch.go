@@ -102,8 +102,7 @@ func VerifySlotTime(genesisTime uint64, slot uint64) error {
 	return nil
 }
 
-// SlotSinceGenesis computes the number of time slots that have occurred since the given genesis
-// timestamp.
-func SlotsSinceGenesis(genesisTime time.Time) uint64 {
-	return uint64(roughtime.Since(genesisTime).Seconds()) / params.BeaconConfig().SecondsPerSlot
+// SlotsSince computes the number of time slots that have occurred since the given timestamp.
+func SlotsSince(time time.Time) uint64 {
+	return uint64(roughtime.Since(time).Seconds()) / params.BeaconConfig().SecondsPerSlot
 }

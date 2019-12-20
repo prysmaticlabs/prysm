@@ -100,7 +100,7 @@ func (s *Service) Start() {
 		time.Sleep(roughtime.Until(genesis))
 	}
 	s.chainStarted = true
-	currentSlot := helpers.SlotsSinceGenesis(genesis)
+	currentSlot := helpers.SlotsSince(genesis)
 	if helpers.SlotToEpoch(currentSlot) == 0 {
 		log.Info("Chain started within the last epoch - not syncing")
 		s.synced = true
