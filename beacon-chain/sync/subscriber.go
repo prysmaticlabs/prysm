@@ -166,6 +166,10 @@ func (r *Service) subscribe(topic string, validator pubsub.Validator, handle sub
 				return
 			}
 
+			if msg.ReceivedFrom == r.p2p.PeerID() {
+				continue
+			}
+
 			messageReceivedCounter.WithLabelValues(topic + r.p2p.Encoding().ProtocolSuffix()).Inc()
 
 			go pipeline(msg)
