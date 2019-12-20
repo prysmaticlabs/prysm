@@ -7,7 +7,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -46,21 +45,6 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
-	headState, err := as.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
-	}
-
-	// Advance slots if it is behind the epoch start of requested slot.
-	// Ex: head slot is 100, req slot is 150, epoch start of 150 is 128. Advance 100 to 128.
-	reqEpochStartSlot := helpers.StartSlot(helpers.SlotToEpoch(req.Slot))
-	if reqEpochStartSlot > headState.Slot {
-		headState, err = state.ProcessSlots(ctx, headState, reqEpochStartSlot)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
-		}
-	}
-
 	validatorIndex, exists, err := as.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(req.PublicKey))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get validator index from DB: %v", err)
@@ -69,8 +53,22 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 		return nil, status.Error(codes.Internal, "Could not locate validator index in DB")
 	}
 
+	epoch := helpers.SlotToEpoch(req.Slot)
+	activeValidatorIndices, err := as.HeadFetcher.HeadValidatorsIndices(epoch)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get validators: %v", err)
+	}
+	seed, err := as.HeadFetcher.HeadSeed(epoch)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get seed: %v", err)
+	}
+	committee, err := helpers.BeaconCommittee(activeValidatorIndices, seed, req.Slot, req.CommitteeIndex)
+	if err != nil {
+		return nil, err
+	}
+
 	// Check if the validator is an aggregator
-	isAggregator, err := helpers.IsAggregator(headState, req.Slot, req.CommitteeIndex, req.SlotSignature)
+	isAggregator, err := helpers.IsAggregator(uint64(len(committee)), req.Slot, req.CommitteeIndex, req.SlotSignature)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get aggregator status: %v", err)
 	}
@@ -81,6 +79,10 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 	// Retrieve the unaggregated attestation from pool
 	atts := as.AttPool.UnaggregatedAttestations(req.Slot, req.CommitteeIndex)
 
+	headState, err := as.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, err
+	}
 	// Verify attestations are valid before aggregating and broadcasting them out.
 	validAtts := make([]*ethpb.Attestation, 0, len(atts))
 	for _, att := range atts {
