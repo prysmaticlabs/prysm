@@ -35,8 +35,8 @@ func TestRegularSyncBeaconBlockSubscriber_FilterByFinalizedEpoch(t *testing.T) {
 	}
 	parentRoot, _ := ssz.SigningRoot(parent)
 	r := &Service{
-		db:    db,
-		chain: &mock.ChainService{State: s},
+		db:      db,
+		chain:   &mock.ChainService{State: s},
 		attPool: attestations.NewPool(),
 	}
 
@@ -81,7 +81,7 @@ func TestDeleteAttsInPool(t *testing.T) {
 	}
 
 	// Only 2 should remain
-	if !reflect.DeepEqual(r.attPool.AggregatedAttestation(), []*ethpb.Attestation{att2}) {
+	if !reflect.DeepEqual(r.attPool.AggregatedAttestations(), []*ethpb.Attestation{att2}) {
 		t.Error("Did not get wanted attestation from pool")
 	}
 }

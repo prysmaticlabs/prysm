@@ -59,13 +59,13 @@ func (s *Service) processAttestation() {
 	period := time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
 	ctx := context.Background()
 	runutil.RunEvery(s.ctx, period, func() {
-		atts, err := s.opsPoolService.AttestationPoolForForkchoice(ctx)
-		if err != nil {
-			log.WithError(err).Error("Could not retrieve attestation from pool")
-			return
-		}
+		atts := s.attPool.ForkchoiceAttestations()
 
 		for _, a := range atts {
+			if err := s.attPool.DeleteForkchoiceAttestation(a); err != nil {
+				log.WithError(err).Error("Could not delete fork choice attestation in pool")
+			}
+
 			if err := s.ReceiveAttestationNoPubsub(ctx, a); err != nil {
 				log.WithFields(logrus.Fields{
 					"targetRoot": fmt.Sprintf("%#x", a.Data.Target.Root),
