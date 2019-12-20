@@ -99,7 +99,7 @@ func (r *Service) subscribe(topic string, validator pubsub.Validator, handle sub
 	topic += r.p2p.Encoding().ProtocolSuffix()
 	log := log.WithField("topic", topic)
 
-	if err := r.p2p.PubSub().RegisterTopicValidator(topic, validator); err != nil {
+	if err := r.p2p.PubSub().RegisterTopicValidator(wrapAndReportValidation(topic, validator)); err != nil {
 		// Configuring a topic validator would only return an error as a result of misconfiguration
 		// and is not a runtime concern.
 		panic(err)
@@ -165,4 +165,16 @@ func (r *Service) subscribe(topic string, validator pubsub.Validator, handle sub
 	}
 
 	go messageLoop()
+}
+
+// Wrap the pubsub validator with a metric monitoring function. This function increments the
+// appropriate counter if the particular message fails to validate.
+func wrapAndReportValidation(topic string, v pubsub.Validator) (string, pubsub.Validator) {
+	return topic, func(ctx context.Context, pid peer.ID, msg *pubsub.Message) bool {
+		b := v(ctx, pid, msg)
+		if !b {
+			messageFailedValidationCounter.WithLabelValues(topic).Inc()
+		}
+		return b
+	}
 }

@@ -15,6 +15,12 @@ import (
 // Clients who receive a proposer slashing on this topic MUST validate the conditions within VerifyProposerSlashing before
 // forwarding it across the network.
 func (r *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg *pubsub.Message) bool {
+	// Validation runs on publish (not just subscriptions), so we should approve any message from
+	// ourselves.
+	if pid == r.p2p.PeerID() {
+		return true
+	}
+
 	// The head state will be too far away to validate any slashing.
 	if r.initialSync.Syncing() {
 		return false

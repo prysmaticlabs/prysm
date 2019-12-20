@@ -17,6 +17,12 @@ import (
 // Blocks that have already been seen are ignored. If the BLS signature is any valid signature,
 // this method rebroadcasts the message.
 func (r *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, msg *pubsub.Message) bool {
+	// Validation runs on publish (not just subscriptions), so we should approve any message from
+	// ourselves.
+	if pid == r.p2p.PeerID() {
+		return true
+	}
+
 	// We should not attempt to process blocks until fully synced, but propagation is OK.
 	if r.initialSync.Syncing() {
 		return false

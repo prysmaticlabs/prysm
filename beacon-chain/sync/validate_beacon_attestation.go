@@ -19,6 +19,12 @@ var errPointsToBlockNotInDatabase = errors.New("attestation points to a block wh
 // validateBeaconAttestation validates that the block being voted for passes validation before forwarding to the
 // network.
 func (r *Service) validateBeaconAttestation(ctx context.Context, pid peer.ID, msg *pubsub.Message) bool {
+	// Validation runs on publish (not just subscriptions), so we should approve any message from
+	// ourselves.
+	if pid == r.p2p.PeerID() {
+		return true
+	}
+
 	// Attestation processing requires the target block to be present in the database, so we'll skip
 	// validating or processing attestations until fully synced.
 	if r.initialSync.Syncing() {
