@@ -52,7 +52,7 @@ index a52dbad..33de299 100644
 +)
 \ No newline at end of file
 diff --git a/eth/v1alpha1/attestation.proto b/eth/v1alpha1/attestation.proto
-index b177b76..ef11cd5 100644
+index b177b76..28b4b46 100644
 --- a/eth/v1alpha1/attestation.proto
 +++ b/eth/v1alpha1/attestation.proto
 @@ -15,6 +15,8 @@ syntax = "proto3";
@@ -79,6 +79,15 @@ index b177b76..ef11cd5 100644
  }
  
  message AggregateAttestationAndProof {
+@@ -41,7 +43,7 @@ message AggregateAttestationAndProof {
+     Attestation aggregate = 3;
+ 
+     // 96 byte selection proof signed by the aggregator, which is the signature of the slot to aggregate.
+-    bytes selection_proof = 2;
++    bytes selection_proof = 2 [(gogoproto.moretags) = "ssz-size:\"96\""];
+ }
+ 
+ message AttestationData {
 @@ -55,7 +57,7 @@ message AttestationData {
      uint64 committee_index = 2;
  
