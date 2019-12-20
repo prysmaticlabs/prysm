@@ -15,7 +15,6 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -113,7 +112,7 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 		},
 	}
 
-	aggregateAndProof := &pb.AggregateAndProof{
+	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
 		SelectionProof:  []byte{'A'},
 		Aggregate:       att,
 		AggregatorIndex: 0,
@@ -153,7 +152,7 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 		AggregationBits: aggBits,
 	}
 
-	aggregateAndProof := &pb.AggregateAndProof{
+	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
 		Aggregate: att,
 	}
 
@@ -227,7 +226,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	}
 
 	sig := privKeys[154].Sign(slotRoot[:], domain)
-	aggregateAndProof := &pb.AggregateAndProof{
+	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
 		SelectionProof:  sig.Marshal(),
 		Aggregate:       att,
 		AggregatorIndex: 154,

@@ -32,7 +32,7 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, msg proto.Messa
 		return false, nil
 	}
 
-	m, ok := msg.(*pb.AggregateAndProof)
+	m, ok := msg.(*ethpb.AggregateAttestationAndProof)
 	if !ok {
 		return false, fmt.Errorf("message was not type *eth.AggregateAndProof, type=%T", msg)
 	}
