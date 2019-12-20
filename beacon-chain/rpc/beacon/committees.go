@@ -19,28 +19,26 @@ func (bs *Server) ListBeaconCommittees(
 	ctx context.Context,
 	req *ethpb.ListCommitteesRequest,
 ) (*ethpb.BeaconCommittees, error) {
-	headState, err := bs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get head state")
-	}
 
 	var requestingGenesis bool
 	var startSlot uint64
+	headSlot := bs.HeadFetcher.HeadSlot()
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListCommitteesRequest_Epoch:
 		startSlot = helpers.StartSlot(q.Epoch)
 	case *ethpb.ListCommitteesRequest_Genesis:
 		requestingGenesis = q.Genesis
 	default:
-		startSlot = headState.Slot
+		startSlot = headSlot
 	}
 
 	var attesterSeed [32]byte
 	var activeIndices []uint64
+	var err error
 	// This is the archival condition, if the requested epoch is < current epoch or if we are
 	// requesting data from the genesis epoch.
-	if requestingGenesis || helpers.SlotToEpoch(startSlot) < helpers.SlotToEpoch(headState.Slot) {
-		activeIndices, err = helpers.ActiveValidatorIndices(headState, helpers.SlotToEpoch(startSlot))
+	if requestingGenesis || helpers.SlotToEpoch(startSlot) < helpers.SlotToEpoch(headSlot) {
+		activeIndices, err = bs.HeadFetcher.HeadValidatorsIndices(helpers.SlotToEpoch(startSlot))
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
@@ -66,10 +64,10 @@ func (bs *Server) ListBeaconCommittees(
 			)
 		}
 		attesterSeed = bytesutil.ToBytes32(archivedCommitteeInfo.AttesterSeed)
-	} else if !requestingGenesis && helpers.SlotToEpoch(startSlot) == helpers.SlotToEpoch(headState.Slot) {
+	} else if !requestingGenesis && helpers.SlotToEpoch(startSlot) == helpers.SlotToEpoch(headSlot) {
 		// Otherwise, we use data from the current epoch.
-		currentEpoch := helpers.SlotToEpoch(headState.Slot)
-		activeIndices, err = helpers.ActiveValidatorIndices(headState, currentEpoch)
+		currentEpoch := helpers.SlotToEpoch(headSlot)
+		activeIndices, err = bs.HeadFetcher.HeadValidatorsIndices(currentEpoch)
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
@@ -78,7 +76,7 @@ func (bs *Server) ListBeaconCommittees(
 				err,
 			)
 		}
-		attesterSeed, err = helpers.Seed(headState, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
+		attesterSeed, err = bs.HeadFetcher.HeadSeed(currentEpoch)
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
@@ -92,7 +90,7 @@ func (bs *Server) ListBeaconCommittees(
 		return nil, status.Errorf(
 			codes.InvalidArgument,
 			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
-			helpers.CurrentEpoch(headState),
+			helpers.SlotToEpoch(headSlot),
 			helpers.SlotToEpoch(startSlot),
 		)
 	}
