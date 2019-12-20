@@ -86,5 +86,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return false
 	}
 
+	msg.ValidatorData = att
+
 	return true
 }
