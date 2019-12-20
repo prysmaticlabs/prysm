@@ -47,14 +47,36 @@ type ForkFetcher interface {
 }
 
 // FinalizationFetcher defines a common interface for methods in blockchain service which
-// directly retrieves finalization related data.
+// directly retrieves finalization and justification related data.
 type FinalizationFetcher interface {
 	FinalizedCheckpt() *ethpb.Checkpoint
+	CurrentJustifiedCheckpt() *ethpb.Checkpoint
+	PreviousJustifiedCheckpt() *ethpb.Checkpoint
 }
 
-// FinalizedCheckpt returns the latest finalized checkpoint tracked in fork choice service.
+// FinalizedCheckpt returns the latest finalized checkpoint from head state.
 func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
-	cp := s.forkChoiceStore.FinalizedCheckpt()
+	cp := s.headState.FinalizedCheckpoint
+	if cp != nil {
+		return cp
+	}
+
+	return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+}
+
+// CurrentJustifiedCheckpt returns the current justified checkpoint from head state.
+func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
+	cp := s.headState.CurrentJustifiedCheckpoint
+	if cp != nil {
+		return cp
+	}
+
+	return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+}
+
+// PreviousJustifiedCheckpt returns the previous justified checkpoint from head state.
+func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
+	cp := s.headState.PreviousJustifiedCheckpoint
 	if cp != nil {
 		return cp
 	}
