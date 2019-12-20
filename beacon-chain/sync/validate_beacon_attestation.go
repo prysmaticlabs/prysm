@@ -46,7 +46,7 @@ func (r *Service) validateBeaconAttestation(ctx context.Context, pid peer.ID, ms
 	att, ok := m.(*ethpb.Attestation)
 	if !ok {
 		traceutil.AnnotateError(span, errors.New("wrong proto message type"))
-		log.Error("wrong proto message type")
+		log.Error("Wrong proto message type")
 		return false
 	}
 
