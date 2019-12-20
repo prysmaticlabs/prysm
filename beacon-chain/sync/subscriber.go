@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"runtime/debug"
-	"strings"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -25,14 +24,8 @@ type subHandler func(context.Context, proto.Message) error
 
 // noopValidator is a no-op that only decodes the message, but does not check its contents.
 func (r *Service) noopValidator(ctx context.Context, _ peer.ID, msg *pubsub.Message) bool {
-	if msg == nil || len(msg.TopicIDs) == 0 {
-		return false
-	}
-	topic := msg.TopicIDs[0]
-	topic = strings.TrimSuffix(topic, r.p2p.Encoding().ProtocolSuffix())
-	base := p2p.GossipTopicMappings[topic]
-	m := proto.Clone(base)
-	if err := r.p2p.Encoding().Decode(msg.Data, m); err != nil {
+	m, err := r.decodePubsubMessage(msg)
+	if err != nil {
 		log.WithError(err).Error("Failed to decode message")
 		return false
 	}
