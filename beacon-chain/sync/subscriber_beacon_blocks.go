@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
-func (r *RegularSync) beaconBlockSubscriber(ctx context.Context, msg proto.Message) error {
+func (r *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) error {
 	block := msg.(*ethpb.BeaconBlock)
 
 	headState, err := r.chain.HeadState(ctx)
@@ -57,7 +57,7 @@ func (r *RegularSync) beaconBlockSubscriber(ctx context.Context, msg proto.Messa
 
 // The input attestations are seen by the network, this deletes them from pool
 // so proposers don't include them in a block for the future.
-func (r *RegularSync) deleteAttsInPool(atts []*ethpb.Attestation) error {
+func (r *Service) deleteAttsInPool(atts []*ethpb.Attestation) error {
 	for _, att := range atts {
 		if helpers.IsAggregated(att) {
 			if err := r.attPool.DeleteAggregatedAttestation(att); err != nil {

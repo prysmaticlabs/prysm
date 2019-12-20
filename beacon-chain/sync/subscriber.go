@@ -35,7 +35,7 @@ func noopValidator(_ context.Context, _ proto.Message, _ p2p.Broadcaster, _ bool
 }
 
 // Register PubSub subscribers
-func (r *RegularSync) registerSubscribers() {
+func (r *Service) registerSubscribers() {
 	go func() {
 		// Wait until chain start.
 		stateChannel := make(chan *feed.Event, 1)
@@ -103,7 +103,7 @@ func (r *RegularSync) registerSubscribers() {
 
 // subscribe to a given topic with a given validator and subscription handler.
 // The base protobuf message is used to initialize new messages for decoding.
-func (r *RegularSync) subscribe(topic string, validate validator, handle subHandler) {
+func (r *Service) subscribe(topic string, validate validator, handle subHandler) {
 	base := p2p.GossipTopicMappings[topic]
 	if base == nil {
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topic))
@@ -142,7 +142,7 @@ func (r *RegularSync) subscribe(topic string, validate validator, handle subHand
 // maintained. As the state feed emits a newly updated state, the maxID function will be called to
 // determine the appropriate number of topics. This method supports only sequential number ranges
 // for topics.
-func (r *RegularSync) subscribeDynamic(topicFormat string, determineSubsLen func() int, validate validator, handle subHandler) {
+func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() int, validate validator, handle subHandler) {
 	base := p2p.GossipTopicMappings[topicFormat]
 	if base == nil {
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topicFormat))

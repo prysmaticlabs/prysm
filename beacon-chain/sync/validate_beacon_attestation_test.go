@@ -20,7 +20,7 @@ func TestValidateBeaconAttestation_ValidBlock(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 
-	rs := &RegularSync{
+	rs := &Service{
 		db: db,
 		chain: &mockChain.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -84,7 +84,7 @@ func TestValidateBeaconAttestation_InvalidBlock(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 
-	rs := &RegularSync{
+	rs := &Service{
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
@@ -110,7 +110,7 @@ func TestValidateBeaconAttestation_ValidBlock_FromSelf(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 
-	rs := &RegularSync{
+	rs := &Service{
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
@@ -149,7 +149,7 @@ func TestValidateBeaconAttestation_Syncing(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 
-	rs := &RegularSync{
+	rs := &Service{
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: true},
 	}
@@ -184,7 +184,7 @@ func TestValidateBeaconAttestation_OldAttestation(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 
-	rs := &RegularSync{
+	rs := &Service{
 		db: db,
 		chain: &mockChain.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -261,7 +261,7 @@ func TestValidateBeaconAttestation_FirstEpoch(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 
-	rs := &RegularSync{
+	rs := &Service{
 		db: db,
 		chain: &mockChain.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{

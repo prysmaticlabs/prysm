@@ -12,39 +12,33 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/runutil"
 )
 
 const statusInterval = 6 * time.Minute // 60 slots.
 
 // maintainPeerStatuses by infrequently polling peers for their latest status.
-func (r *RegularSync) maintainPeerStatuses() {
-	ticker := time.NewTicker(statusInterval)
-	for {
-		ctx := context.Background()
-		select {
-		case <-ticker.C:
-			for _, pid := range r.p2p.Peers().Connected() {
-				// If the status hasn't been updated in the recent interval time.
-				lastUpdated, err := r.p2p.Peers().ChainStateLastUpdated(pid)
-				if err != nil {
-					// Peer has vanished; nothing to do
-					continue
-				}
-				if roughtime.Now().After(lastUpdated.Add(statusInterval)) {
-					if err := r.sendRPCStatusRequest(ctx, pid); err != nil {
-						log.WithError(err).Error("Failed to request peer status")
-					}
+func (r *Service) maintainPeerStatuses() {
+	ctx := context.Background()
+	runutil.RunEvery(r.ctx, statusInterval, func() {
+		for _, pid := range r.p2p.Peers().Connected() {
+			// If the status hasn't been updated in the recent interval time.
+			lastUpdated, err := r.p2p.Peers().ChainStateLastUpdated(pid)
+			if err != nil {
+				// Peer has vanished; nothing to do
+				continue
+			}
+			if roughtime.Now().After(lastUpdated.Add(statusInterval)) {
+				if err := r.sendRPCStatusRequest(ctx, pid); err != nil {
+					log.WithField("peer", pid).WithError(err).Error("Failed to request peer status")
 				}
 			}
-
-		case <-r.ctx.Done():
-			return
 		}
-	}
+	})
 }
 
 // sendRPCStatusRequest for a given topic with an expected protobuf message type.
-func (r *RegularSync) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
+func (r *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
@@ -83,13 +77,13 @@ func (r *RegularSync) sendRPCStatusRequest(ctx context.Context, id peer.ID) erro
 	return err
 }
 
-func (r *RegularSync) removeDisconnectedPeerStatus(ctx context.Context, pid peer.ID) error {
+func (r *Service) removeDisconnectedPeerStatus(ctx context.Context, pid peer.ID) error {
 	return nil
 }
 
 // statusRPCHandler reads the incoming Status RPC from the peer and responds with our version of a status message.
 // This handler will disconnect any peer that does not match our fork version.
-func (r *RegularSync) statusRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
+func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	defer stream.Close()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -136,7 +130,7 @@ func (r *RegularSync) statusRPCHandler(ctx context.Context, msg interface{}, str
 	return err
 }
 
-func (r *RegularSync) validateStatusMessage(msg *pb.Status, stream network.Stream) error {
+func (r *Service) validateStatusMessage(msg *pb.Status, stream network.Stream) error {
 	if !bytes.Equal(params.BeaconConfig().GenesisForkVersion, msg.HeadForkVersion) {
 		return errWrongForkVersion
 	}

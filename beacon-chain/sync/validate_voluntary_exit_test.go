@@ -62,7 +62,7 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 
 	exit, s := setupValidExit(t)
 
-	r := &RegularSync{
+	r := &Service{
 		p2p: p2p,
 		chain: &mock.ChainService{
 			State: s,
@@ -102,7 +102,7 @@ func TestValidateVoluntaryExit_ValidExit_FromSelf(t *testing.T) {
 
 	exit, s := setupValidExit(t)
 
-	r := &RegularSync{
+	r := &Service{
 		p2p: p2p,
 		chain: &mock.ChainService{
 			State: s,
@@ -126,7 +126,7 @@ func TestValidateVoluntaryExit_ValidExit_Syncing(t *testing.T) {
 
 	exit, s := setupValidExit(t)
 
-	r := &RegularSync{
+	r := &Service{
 		p2p: p2p,
 		chain: &mock.ChainService{
 			State: s,

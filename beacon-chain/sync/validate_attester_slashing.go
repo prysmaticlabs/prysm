@@ -36,7 +36,7 @@ func attSlashingCacheKey(slashing *ethpb.AttesterSlashing) (string, error) {
 
 // Clients who receive an attester slashing on this topic MUST validate the conditions within VerifyAttesterSlashing before
 // forwarding it across the network.
-func (r *RegularSync) validateAttesterSlashing(ctx context.Context, msg proto.Message, p p2p.Broadcaster, fromSelf bool) (bool, error) {
+func (r *Service) validateAttesterSlashing(ctx context.Context, msg proto.Message, p p2p.Broadcaster, fromSelf bool) (bool, error) {
 	// The head state will be too far away to validate any slashing.
 	if r.initialSync.Syncing() {
 		return false, nil

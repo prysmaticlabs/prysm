@@ -38,14 +38,6 @@ var (
 		Name:  "enable-shuffled-index-cache",
 		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
 	}
-	enableCommitteeCacheFlag = cli.BoolFlag{
-		Name:  "enable-committee-cache",
-		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
-	}
-	enableActiveCountCacheFlag = cli.BoolFlag{
-		Name:  "enable-active-count-cache",
-		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
-	}
 	// NewCacheFlag enables the node to use the new caching scheme.
 	NewCacheFlag = cli.BoolFlag{
 		Name:  "new-cache",
@@ -84,6 +76,10 @@ var (
 		Usage: "Save state in cache during initial sync. We currently save state in the DB during " +
 			"initial sync and disk-IO is one of the biggest bottleneck. This still saves finalized state in DB " +
 			"and start syncing from there",
+	}
+	fastCommitteeAssignmentsFlag = cli.BoolFlag{
+		Name:  "fast-assignments",
+		Usage: "Use new algorithm for computing committee assignments",
 	}
 )
 
@@ -131,6 +127,16 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableActiveCountCacheFlag = cli.BoolFlag{
+		Name:   "enable-active-count-cache",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnableCommitteeCacheFlag = cli.BoolFlag{
+		Name:   "enable-committee-cache",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -142,6 +148,8 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableSnappyDBCompressionFlag,
 	deprecatedEnablePruneBoundaryStateFlag,
 	deprecatedEnableActiveIndicesCacheFlag,
+	deprecatedEnableActiveCountCacheFlag,
+	deprecatedEnableCommitteeCacheFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -165,7 +173,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableBackupWebhookFlag,
 	enableBLSPubkeyCacheFlag,
 	enableShuffledIndexCache,
-	enableCommitteeCacheFlag,
-	enableActiveCountCacheFlag,
 	enableSkipSlotsCache,
+	fastCommitteeAssignmentsFlag,
 }...)

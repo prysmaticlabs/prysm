@@ -27,5 +27,5 @@ func GetVersion() string {
 		now := time.Now().Format(time.RFC3339)
 		buildDate = now
 	}
-	return fmt.Sprintf("Git commit: %s. Built at: %s", gitCommit, buildDate)
+	return fmt.Sprintf("Prysm/Git commit: %s. Built at: %s", gitCommit, buildDate)
 }

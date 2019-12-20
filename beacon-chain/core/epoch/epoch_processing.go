@@ -339,8 +339,13 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 func unslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestation) ([]uint64, error) {
 	var setIndices []uint64
 	seen := make(map[uint64]bool)
+
 	for _, att := range atts {
-		attestingIndices, err := helpers.AttestingIndices(state, att.Data, att.AggregationBits)
+		committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
+		if err != nil {
+			return nil, err
+		}
+		attestingIndices, err := helpers.AttestingIndices(att.AggregationBits, committee)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get attester indices")
 		}

@@ -152,7 +152,7 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 		}
 		leaves = append(leaves, hash[:])
 	}
-	var trie *trieutil.MerkleTrie
+	var trie *trieutil.SparseMerkleTrie
 	if len(leaves) > 0 {
 		trie, err = trieutil.GenerateTrieFromItems(leaves, int(params.BeaconConfig().DepositContractTreeDepth))
 		if err != nil {

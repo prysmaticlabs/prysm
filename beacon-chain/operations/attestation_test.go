@@ -38,8 +38,11 @@ func TestHandleAttestation_Saves_NewAttestation(t *testing.T) {
 		},
 		AggregationBits: bitfield.Bitlist{0xCF, 0xC0, 0xC0, 0xC0, 0x01},
 	}
-
-	attestingIndices, err := helpers.AttestingIndices(beaconState, att.Data, att.AggregationBits)
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	if err != nil {
+		t.Fatal(err)
+	}
+	attestingIndices, err := helpers.AttestingIndices(att.AggregationBits, committee)
 	if err != nil {
 		t.Error(err)
 	}
@@ -125,9 +128,9 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 	}
 
 	// Next up, we compute the committee for the attestation we're testing.
-	committee, err := helpers.BeaconCommittee(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	attDataRoot, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
@@ -183,7 +186,7 @@ func TestHandleAttestation_Aggregates_LargeNumValidators(t *testing.T) {
 func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) {
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
-	helpers.ClearAllCaches()
+
 	service := NewService(context.Background(), &Config{
 		BeaconDB: beaconDB,
 	})
@@ -199,9 +202,9 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 		},
 	}
 
-	committee, err := helpers.BeaconCommittee(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	aggregationBits := bitfield.NewBitlist(uint64(len(committee)))
 	aggregationBits.SetBitAt(0, true)
@@ -315,7 +318,6 @@ func TestHandleAttestation_Skips_PreviouslyAggregatedAttestations(t *testing.T) 
 }
 
 func TestRetrieveAttestations_OK(t *testing.T) {
-	helpers.ClearAllCaches()
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})
@@ -333,7 +335,11 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		},
 		AggregationBits: aggBits,
 	}
-	attestingIndices, err := helpers.AttestingIndices(beaconState, att.Data, att.AggregationBits)
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	if err != nil {
+		t.Fatal(err)
+	}
+	attestingIndices, err := helpers.AttestingIndices(att.AggregationBits, committee)
 	if err != nil {
 		t.Error(err)
 	}
@@ -379,7 +385,6 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 }
 
 func TestRetrieveAttestations_PruneInvalidAtts(t *testing.T) {
-	helpers.ClearAllCaches()
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})
@@ -468,7 +473,6 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 }
 
 func TestForkchoiceRetrieveAttestations_NotVoted(t *testing.T) {
-	helpers.ClearAllCaches()
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})
@@ -498,7 +502,6 @@ func TestForkchoiceRetrieveAttestations_NotVoted(t *testing.T) {
 }
 
 func TestForkchoiceRetrieveAttestations_AlreadyVoted(t *testing.T) {
-	helpers.ClearAllCaches()
 	beaconDB := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	service := NewService(context.Background(), &Config{BeaconDB: beaconDB})

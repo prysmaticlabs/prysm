@@ -302,8 +302,40 @@ func TestPeerConnectionStatuses(t *testing.T) {
 	}
 }
 
+func TestDecay(t *testing.T) {
+	maxBadResponses := 2
+	p := peers.NewStatus(maxBadResponses)
+
+	// Peer 1 has 0 bad responses.
+	pid1 := addPeer(t, p, peers.PeerConnected)
+	// Peer 2 has 1 bad response.
+	pid2 := addPeer(t, p, peers.PeerConnected)
+	p.IncrementBadResponses(pid2)
+	// Peer 3 has 2 bad response.
+	pid3 := addPeer(t, p, peers.PeerConnected)
+	p.IncrementBadResponses(pid3)
+	p.IncrementBadResponses(pid3)
+
+	// Decay the values
+	p.Decay()
+
+	// Ensure the new values are as expected
+	badResponses1, _ := p.BadResponses(pid1)
+	if badResponses1 != 0 {
+		t.Errorf("Unexpected bad responses for peer 0: expected 0, received %v", badResponses1)
+	}
+	badResponses2, _ := p.BadResponses(pid2)
+	if badResponses2 != 0 {
+		t.Errorf("Unexpected bad responses for peer 0: expected 0, received %v", badResponses2)
+	}
+	badResponses3, _ := p.BadResponses(pid3)
+	if badResponses3 != 1 {
+		t.Errorf("Unexpected bad responses for peer 0: expected 0, received %v", badResponses3)
+	}
+}
+
 // addPeer is a helper to add a peer with a given connection state)
-func addPeer(t *testing.T, p *peers.Status, state peers.PeerConnectionState) {
+func addPeer(t *testing.T, p *peers.Status, state peers.PeerConnectionState) peer.ID {
 	// Set up some peers with different states
 	mhBytes := []byte{0x11, 0x04}
 	idBytes := make([]byte, 4)
@@ -315,4 +347,5 @@ func addPeer(t *testing.T, p *peers.Status, state peers.PeerConnectionState) {
 	}
 	p.Add(id, nil, network.DirUnknown)
 	p.SetConnectionState(id, state)
+	return id
 }

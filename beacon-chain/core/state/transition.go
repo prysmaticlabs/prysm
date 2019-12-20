@@ -256,11 +256,17 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ProcessSlots")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slots", int64(slot)-int64(state.Slot)))
+
 	if state.Slot > slot {
 		err := fmt.Errorf("expected state.slot %d < slot %d", state.Slot, slot)
 		traceutil.AnnotateError(span, err)
 		return nil, err
 	}
+
+	if state.Slot == slot {
+		return state, nil
+	}
+
 	highestSlot := state.Slot
 	var root [32]byte
 	var writeToCache bool
@@ -604,7 +610,7 @@ func CanProcessEpoch(state *pb.BeaconState) bool {
 func ProcessEpochPrecompute(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch")
 	defer span.End()
-	span.AddAttributes(trace.Int64Attribute("epoch", int64(helpers.SlotToEpoch(state.Slot))))
+	span.AddAttributes(trace.Int64Attribute("epoch", int64(helpers.CurrentEpoch(state))))
 
 	vp, bp := precompute.New(ctx, state)
 	vp, bp, err := precompute.ProcessAttestations(ctx, state, vp, bp)

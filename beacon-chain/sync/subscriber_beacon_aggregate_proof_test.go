@@ -10,7 +10,7 @@ import (
 )
 
 func TestBeaconAggregateProofSubscriber_CanSave(t *testing.T) {
-	r := &RegularSync{
+	r := &Service{
 		attPool: attestations.NewPool(),
 	}
 

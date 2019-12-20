@@ -44,7 +44,13 @@ func detectMin(attestationEpochSpan uint64,
 // target epoch that has a lower (earlier) source epoch.
 // Logic for this detection method was designed by https://github.com/protolambda
 // Detailed here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
-func (ss *Server) DetectAndUpdateMaxEpochSpan(ctx context.Context, source uint64, target uint64, validatorIdx uint64, spanMap *ethpb.EpochSpanMap) (uint64, *ethpb.EpochSpanMap, error) {
+func (ss *Server) DetectAndUpdateMaxEpochSpan(
+	ctx context.Context,
+	source uint64,
+	target uint64,
+	validatorIdx uint64,
+	spanMap *ethpb.EpochSpanMap,
+) (uint64, *ethpb.EpochSpanMap, error) {
 	if target < source {
 		return 0, nil, fmt.Errorf(
 			"target: %d < source: %d ",
@@ -83,7 +89,13 @@ func (ss *Server) DetectAndUpdateMaxEpochSpan(ctx context.Context, source uint64
 //
 // Logic is following the detection method designed by https://github.com/protolambda
 // Detailed here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
-func (ss *Server) DetectAndUpdateMinEpochSpan(ctx context.Context, source uint64, target uint64, validatorIdx uint64, spanMap *ethpb.EpochSpanMap) (uint64, *ethpb.EpochSpanMap, error) {
+func (ss *Server) DetectAndUpdateMinEpochSpan(
+	ctx context.Context,
+	source uint64,
+	target uint64,
+	validatorIdx uint64,
+	spanMap *ethpb.EpochSpanMap,
+) (uint64, *ethpb.EpochSpanMap, error) {
 	if target < source {
 		return 0, nil, fmt.Errorf(
 			"target: %d < source: %d ",
@@ -119,7 +131,12 @@ func (ss *Server) DetectAndUpdateMinEpochSpan(ctx context.Context, source uint64
 // in the db by checking either the closest attestation target or the furthest
 // attestation target. This method receives a detector function in order to be used
 // for both surrounding and surrounded vote cases.
-func (ss *Server) detectSlashingByEpochSpan(source, target uint64, spanMap *ethpb.EpochSpanMap, detector detectFn) (uint64, uint64, *ethpb.EpochSpanMap, error) {
+func (ss *Server) detectSlashingByEpochSpan(
+	source,
+	target uint64,
+	spanMap *ethpb.EpochSpanMap,
+	detector detectFn,
+) (uint64, uint64, *ethpb.EpochSpanMap, error) {
 	span := target - source
 	if span > params.BeaconConfig().WeakSubjectivityPeriod {
 		return 0, span, nil, fmt.Errorf("target: %d - source: %d > weakSubjectivityPeriod",

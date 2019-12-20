@@ -34,7 +34,7 @@ func TestRegularSyncBeaconBlockSubscriber_FilterByFinalizedEpoch(t *testing.T) {
 		t.Fatal(err)
 	}
 	parentRoot, _ := ssz.SigningRoot(parent)
-	r := &RegularSync{
+	r := &Service{
 		db:      db,
 		chain:   &mock.ChainService{State: s},
 		attPool: attestations.NewPool(),
@@ -55,7 +55,7 @@ func TestRegularSyncBeaconBlockSubscriber_FilterByFinalizedEpoch(t *testing.T) {
 }
 
 func TestDeleteAttsInPool(t *testing.T) {
-	r := &RegularSync{
+	r := &Service{
 		attPool: attestations.NewPool(),
 	}
 	att1 := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1101}}

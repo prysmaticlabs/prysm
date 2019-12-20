@@ -3,7 +3,6 @@ package helpers
 import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -11,8 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
-
-var activeCountCache = cache.NewActiveCountCache()
 
 // IsActiveValidator returns the boolean value on whether the validator
 // is active or not.
@@ -61,7 +58,11 @@ func IsSlashableValidator(validator *ethpb.Validator, epoch uint64) bool {
 //    return [ValidatorIndex(i) for i, v in enumerate(state.validators) if is_active_validator(v, epoch)]
 func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) ([]uint64, error) {
 	if featureconfig.Get().EnableNewCache {
-		activeIndices, err := committeeCache.ActiveIndices(epoch)
+		seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get seed")
+		}
+		activeIndices, err := committeeCache.ActiveIndices(seed)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not interface with committee cache")
 		}
@@ -77,32 +78,23 @@ func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) ([]uint64, erro
 		}
 	}
 
+	if featureconfig.Get().EnableNewCache {
+		if err := UpdateCommitteeCache(state); err != nil {
+			return nil, errors.Wrap(err, "could not update committee cache")
+		}
+	}
+
 	return indices, nil
 }
 
 // ActiveValidatorCount returns the number of active validators in the state
 // at the given epoch.
 func ActiveValidatorCount(state *pb.BeaconState, epoch uint64) (uint64, error) {
-	count, err := activeCountCache.ActiveCountInEpoch(epoch)
-	if err != nil {
-		return 0, errors.Wrap(err, "could not retrieve active count from cache")
-	}
-	if count != params.BeaconConfig().FarFutureEpoch {
-		return count, nil
-	}
-
-	count = 0
+	count := uint64(0)
 	for _, v := range state.Validators {
 		if IsActiveValidator(v, epoch) {
 			count++
 		}
-	}
-
-	if err := activeCountCache.AddActiveCount(&cache.ActiveCountByEpoch{
-		Epoch:       epoch,
-		ActiveCount: count,
-	}); err != nil {
-		return 0, errors.Wrap(err, "could not save active count for cache")
 	}
 
 	return count, nil
@@ -166,10 +158,13 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 		return 0, errors.Wrap(err, "could not get active indices")
 	}
 
-	return ComputeProposerIndex(state, indices, seedWithSlotHash)
+	return ComputeProposerIndex(state.Validators, indices, seedWithSlotHash)
 }
 
 // ComputeProposerIndex returns the index sampled by effective balance, which is used to calculate proposer.
+//
+// Note: This method signature deviates slightly from the spec recommended definition. The full
+// state object is not required to compute the proposer index.
 //
 // Spec pseudocode definition:
 //  def compute_proposer_index(state: BeaconState, indices: Sequence[ValidatorIndex], seed: Hash) -> ValidatorIndex:
@@ -186,21 +181,29 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 //        if effective_balance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * random_byte:
 //            return ValidatorIndex(candidate_index)
 //        i += 1
-func ComputeProposerIndex(state *pb.BeaconState, indices []uint64, seed [32]byte) (uint64, error) {
-	length := uint64(len(indices))
+func ComputeProposerIndex(validators []*ethpb.Validator, activeIndices []uint64, seed [32]byte) (uint64, error) {
+	length := uint64(len(activeIndices))
 	if length == 0 {
-		return 0, errors.New("empty indices list")
+		return 0, errors.New("empty active indices list")
 	}
 	maxRandomByte := uint64(1<<8 - 1)
 
 	for i := uint64(0); ; i++ {
-		candidateIndex, err := ComputeShuffledIndex(i%length, length, seed, true)
+		candidateIndex, err := ComputeShuffledIndex(i%length, length, seed, true /* shuffle */)
 		if err != nil {
 			return 0, err
 		}
+		candidateIndex = activeIndices[candidateIndex]
+		if int(candidateIndex) >= len(validators) {
+			return 0, errors.New("active index out of range")
+		}
 		b := append(seed[:], bytesutil.Bytes8(i/32)...)
 		randomByte := hashutil.Hash(b)[i%32]
-		effectiveBal := state.Validators[candidateIndex].EffectiveBalance
+		v := validators[candidateIndex]
+		var effectiveBal uint64
+		if v != nil {
+			effectiveBal = v.EffectiveBalance
+		}
 		if effectiveBal*maxRandomByte >= params.BeaconConfig().MaxEffectiveBalance*uint64(randomByte) {
 			return candidateIndex, nil
 		}

@@ -35,7 +35,7 @@ func TestHelloRPCHandler_Disconnects_OnForkVersionMismatch(t *testing.T) {
 		t.Error("Expected peers to be connected")
 	}
 
-	r := &RegularSync{p2p: p1}
+	r := &Service{p2p: p1}
 	pcl := protocol.ID("/testing")
 
 	var wg sync.WaitGroup
@@ -102,7 +102,7 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 		Root:  finalizedRoot[:],
 	}
 
-	r := &RegularSync{
+	r := &Service{
 		p2p: p1,
 		chain: &mock.ChainService{
 			State:               genesisState,
@@ -158,7 +158,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 
-	r := &RegularSync{
+	r := &Service{
 		p2p: p1,
 		chain: &mock.ChainService{
 			State:               &pb.BeaconState{Slot: 5},
@@ -262,7 +262,7 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 		Root:  finalizedRoot[:],
 	}
 
-	r := &RegularSync{
+	r := &Service{
 		p2p: p1,
 		chain: &mock.ChainService{
 			State:               genesisState,
@@ -334,7 +334,7 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 		Root:  finalizedRoot[:],
 	}
 
-	r := &RegularSync{
+	r := &Service{
 		p2p: p1,
 		chain: &mock.ChainService{
 			State:               genesisState,

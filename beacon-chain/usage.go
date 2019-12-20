@@ -98,6 +98,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.StaticPeers,
 			cmd.EnableUPnPFlag,
 			cmd.P2PEncoding,
+			flags.MinSyncPeers,
 		},
 	},
 	{

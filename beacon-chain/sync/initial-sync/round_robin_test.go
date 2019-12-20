@@ -255,7 +255,7 @@ func TestRoundRobinSync(t *testing.T) {
 				Root:  genesisRoot[:],
 				DB:    beaconDB,
 			} // no-op mock
-			s := &InitialSync{
+			s := &Service{
 				chain:        mc,
 				p2p:          p,
 				db:           beaconDB,
@@ -428,7 +428,7 @@ func TestMakeSequence(t *testing.T) {
 
 func TestBestFinalized_returnsMaxValue(t *testing.T) {
 	p := p2pt.NewTestP2P(t)
-	s := &InitialSync{
+	s := &Service{
 		p2p: p,
 	}
 

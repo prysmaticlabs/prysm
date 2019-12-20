@@ -23,6 +23,7 @@ func ProcessAttestations(
 
 	v := &Validator{}
 	var err error
+
 	for _, a := range append(state.PreviousEpochAttestations, state.CurrentEpochAttestations...) {
 		v.IsCurrentEpochAttester, v.IsCurrentEpochTargetAttester, err = AttestedCurrentEpoch(state, a)
 		if err != nil {
@@ -35,8 +36,11 @@ func ProcessAttestations(
 			return nil, nil, errors.Wrap(err, "could not check validator attested previous epoch")
 		}
 
-		// Get attested indices and update the pre computed fields for each attested validators.
-		indices, err := helpers.AttestingIndices(state, a.Data, a.AggregationBits)
+		committee, err := helpers.BeaconCommitteeFromState(state, a.Data.Slot, a.Data.CommitteeIndex)
+		if err != nil {
+			return nil, nil, err
+		}
+		indices, err := helpers.AttestingIndices(a.AggregationBits, committee)
 		if err != nil {
 			return nil, nil, err
 		}

@@ -211,7 +211,7 @@ func TestServer_UpdateMaxEpochSpan(t *testing.T) {
 			t.Fatalf("Couldnt save span map for validator id: %d", tt.validatorIdx)
 		}
 		if st != tt.slashingTargetEpoch {
-			t.Fatalf("Expected slashing target: %d got: %v", tt.slashingTargetEpoch, st)
+			t.Fatalf("Expected slashing target: %d got: %d", tt.slashingTargetEpoch, st)
 		}
 		sm, err := slasherServer.SlasherDB.ValidatorSpansMap(tt.validatorIdx)
 		if err != nil {
@@ -243,7 +243,7 @@ func TestServer_UpdateMinEpochSpan(t *testing.T) {
 			t.Fatalf("Couldnt save span map for validator id: %d", tt.validatorIdx)
 		}
 		if st != tt.slashingTargetEpoch {
-			t.Fatalf("Expected slashing target: %v got: %v", tt.slashingTargetEpoch, st)
+			t.Fatalf("Expected slashing target: %d got: %d", tt.slashingTargetEpoch, st)
 		}
 		sm, err := slasherServer.SlasherDB.ValidatorSpansMap(tt.validatorIdx)
 		if err != nil {

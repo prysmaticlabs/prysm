@@ -29,7 +29,7 @@ const maxChunkSize = 1 << 20
 type rpcHandler func(context.Context, interface{}, libp2pcore.Stream) error
 
 // registerRPCHandlers for p2p RPC.
-func (r *RegularSync) registerRPCHandlers() {
+func (r *Service) registerRPCHandlers() {
 	r.registerRPC(
 		"/eth2/beacon_chain/req/status/1",
 		&pb.Status{},
@@ -53,7 +53,7 @@ func (r *RegularSync) registerRPCHandlers() {
 }
 
 // registerRPC for a given topic with an expected protobuf message type.
-func (r *RegularSync) registerRPC(topic string, base interface{}, handle rpcHandler) {
+func (r *Service) registerRPC(topic string, base interface{}, handle rpcHandler) {
 	topic += r.p2p.Encoding().ProtocolSuffix()
 	log := log.WithField("topic", topic)
 	r.p2p.SetStreamHandler(topic, func(stream network.Stream) {
