@@ -89,7 +89,7 @@ func validateIndexInCommittee(ctx context.Context, s *pb.BeaconState, a *ethpb.A
 	ctx, span := trace.StartSpan(ctx, "sync..validateIndexInCommittee")
 	defer span.End()
 
-	committee, err := helpers.BeaconCommittee(s, a.Data.Slot, a.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(s, a.Data.Slot, a.Data.CommitteeIndex)
 	if err != nil {
 		return err
 	}
@@ -117,7 +117,11 @@ func validateSelection(ctx context.Context, s *pb.BeaconState, data *ethpb.Attes
 	_, span := trace.StartSpan(ctx, "sync.validateSelection")
 	defer span.End()
 
-	aggregator, err := helpers.IsAggregator(s, data.Slot, data.CommitteeIndex, proof)
+	committee, err := helpers.BeaconCommitteeFromState(s, data.Slot, data.CommitteeIndex)
+	if err != nil {
+		return err
+	}
+	aggregator, err := helpers.IsAggregator(uint64(len(committee)), data.Slot, data.CommitteeIndex, proof)
 	if err != nil {
 		return err
 	}

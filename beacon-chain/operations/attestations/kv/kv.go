@@ -13,7 +13,8 @@ import (
 type AttCaches struct {
 	aggregatedAtt   *cache.Cache
 	unAggregatedAtt *cache.Cache
-	attInBlock      *cache.Cache
+	forkchoiceAtt   *cache.Cache
+	blockAtt        *cache.Cache
 }
 
 // NewAttCaches initializes a new attestation pool consists of multiple KV store in cache for
@@ -26,7 +27,8 @@ func NewAttCaches() *AttCaches {
 	pool := &AttCaches{
 		unAggregatedAtt: cache.New(secsInEpoch*time.Second, 2*secsInEpoch*time.Second),
 		aggregatedAtt:   cache.New(secsInEpoch*time.Second, 2*secsInEpoch*time.Second),
-		attInBlock:      cache.New(secsInEpoch*time.Second, 2*secsInEpoch*time.Second),
+		forkchoiceAtt:   cache.New(secsInEpoch*time.Second, 2*secsInEpoch*time.Second),
+		blockAtt:        cache.New(secsInEpoch*time.Second, 2*secsInEpoch*time.Second),
 	}
 
 	return pool

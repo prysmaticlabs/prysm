@@ -304,7 +304,7 @@ func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attes
 	if baseState == nil {
 		return errors.New("no state found in db with attestation tgt root")
 	}
-	committee, err := helpers.BeaconCommittee(baseState, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(baseState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return err
 	}

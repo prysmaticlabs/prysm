@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"io/ioutil"
 	"reflect"
 	"testing"
@@ -124,6 +125,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		OpsPoolService:    &ops.Operations{},
 		P2p:               &mockBroadcaster{},
 		StateNotifier:     &mockBeaconNode{},
+		AttPool:           attestations.NewPool(),
 	}
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
