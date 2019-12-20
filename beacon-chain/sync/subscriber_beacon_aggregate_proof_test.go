@@ -2,11 +2,12 @@ package sync
 
 import (
 	"context"
+	"reflect"
+	"testing"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
-	"reflect"
-	"testing"
 )
 
 func TestBeaconAggregateProofSubscriber_CanSave(t *testing.T) {

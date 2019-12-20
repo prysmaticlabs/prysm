@@ -67,11 +67,6 @@ func (r *Service) registerSubscribers() {
 		r.beaconBlockSubscriber,
 	)
 	r.subscribe(
-		"/eth2/beacon_attestation",
-		r.validateBeaconAttestation,
-		r.beaconAttestationSubscriber,
-	)
-	r.subscribe(
 		"/eth2/beacon_aggregate_and_proof",
 		r.validateAggregateAndProof,
 		r.beaconAggregateProofSubscriber,
