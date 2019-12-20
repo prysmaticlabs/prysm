@@ -133,7 +133,7 @@ func (bs *Server) StreamAttestations(
 func (bs *Server) AttestationPool(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.AttestationPoolResponse, error) {
-	atts := bs.Pool.AggregatedAttestation()
+	atts := bs.Pool.AggregatedAttestations()
 	return &ethpb.AttestationPoolResponse{
 		Attestations: atts,
 	}, nil
