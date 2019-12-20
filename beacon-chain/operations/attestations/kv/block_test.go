@@ -4,7 +4,6 @@ import (
 	"math"
 	"reflect"
 	"sort"
-	"strings"
 	"testing"
 	"time"
 
@@ -15,18 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestKV_Aggregated_NotAggregated(t *testing.T) {
-	cache := NewAttCaches()
-
-	att := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b11}}
-
-	wanted := "attestation is not aggregated"
-	if err := cache.SaveAggregatedAttestation(att); !strings.Contains(err.Error(), wanted) {
-		t.Error("Did not received wanted error")
-	}
-}
-
-func TestKV_Aggregated_CanSaveRetrieve(t *testing.T) {
+func TestKV_BlockAttestation_CanSaveRetrieve(t *testing.T) {
 	cache := NewAttCaches()
 
 	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}}
@@ -35,12 +23,12 @@ func TestKV_Aggregated_CanSaveRetrieve(t *testing.T) {
 	atts := []*ethpb.Attestation{att1, att2, att3}
 
 	for _, att := range atts {
-		if err := cache.SaveAggregatedAttestation(att); err != nil {
+		if err := cache.SaveBlockAttestation(att); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	returned := cache.AggregatedAttestations()
+	returned := cache.BlockAttestations()
 
 	sort.Slice(returned, func(i, j int) bool {
 		return returned[i].Data.Slot < returned[j].Data.Slot
@@ -51,7 +39,7 @@ func TestKV_Aggregated_CanSaveRetrieve(t *testing.T) {
 	}
 }
 
-func TestKV_Aggregated_CanDelete(t *testing.T) {
+func TestKV_BlockAttestation_CanDelete(t *testing.T) {
 	cache := NewAttCaches()
 
 	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}}
@@ -60,19 +48,19 @@ func TestKV_Aggregated_CanDelete(t *testing.T) {
 	atts := []*ethpb.Attestation{att1, att2, att3}
 
 	for _, att := range atts {
-		if err := cache.SaveAggregatedAttestation(att); err != nil {
+		if err := cache.SaveBlockAttestation(att); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	if err := cache.DeleteAggregatedAttestation(att1); err != nil {
+	if err := cache.DeleteBlockAttestation(att1); err != nil {
 		t.Fatal(err)
 	}
-	if err := cache.DeleteAggregatedAttestation(att3); err != nil {
+	if err := cache.DeleteBlockAttestation(att3); err != nil {
 		t.Fatal(err)
 	}
 
-	returned := cache.AggregatedAttestations()
+	returned := cache.BlockAttestations()
 	wanted := []*ethpb.Attestation{att2}
 
 	if !reflect.DeepEqual(wanted, returned) {
@@ -80,17 +68,17 @@ func TestKV_Aggregated_CanDelete(t *testing.T) {
 	}
 }
 
-func TestKV_Aggregated_CheckExpTime(t *testing.T) {
+func TestKV_BlockAttestation_CheckExpTime(t *testing.T) {
 	cache := NewAttCaches()
 
 	att := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b111}}
 	r, _ := ssz.HashTreeRoot(att)
 
-	if err := cache.SaveAggregatedAttestation(att); err != nil {
+	if err := cache.SaveBlockAttestation(att); err != nil {
 		t.Fatal(err)
 	}
 
-	item, exp, exists := cache.aggregatedAtt.GetWithExpiration(string(r[:]))
+	item, exp, exists := cache.blockAtt.GetWithExpiration(string(r[:]))
 	if !exists {
 		t.Error("Saved att does not exist")
 	}
