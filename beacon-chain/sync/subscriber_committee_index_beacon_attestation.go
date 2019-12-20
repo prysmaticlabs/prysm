@@ -13,16 +13,9 @@ func (r *Service) committeeIndexBeaconAttestationSubscriber(ctx context.Context,
 }
 
 func (r *Service) currentCommitteeIndex() int {
-	state, err := r.chain.HeadState(context.Background())
+	activeValidatorIndices, err := r.chain.HeadValidatorsIndices(helpers.SlotToEpoch(r.chain.HeadSlot()))
 	if err != nil {
 		panic(err)
 	}
-	if state == nil {
-		return 0
-	}
-	count, err := helpers.CommitteeCountAtSlot(state, helpers.StartSlot(helpers.CurrentEpoch(state)))
-	if err != nil {
-		panic(err)
-	}
-	return int(count)
+	return int(helpers.SlotCommitteeCount(uint64(len(activeValidatorIndices))))
 }
