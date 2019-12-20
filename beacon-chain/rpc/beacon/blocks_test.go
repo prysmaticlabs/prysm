@@ -463,6 +463,10 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 		HeadFetcher:   &mock.ChainService{Block: b, State: s},
 		BeaconDB:      db,
 		StateNotifier: chainService.StateNotifier(),
+		FinalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint:         s.FinalizedCheckpoint,
+			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint,
+			PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint},
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
