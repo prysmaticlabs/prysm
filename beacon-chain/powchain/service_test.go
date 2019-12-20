@@ -114,9 +114,12 @@ func TestNewWeb3Service_OK(t *testing.T) {
 	endpoint := "http://127.0.0.1"
 	ctx := context.Background()
 	var err error
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	if _, err = NewService(ctx, &Web3ServiceConfig{
 		ETH1Endpoint:    endpoint,
 		DepositContract: common.Address{},
+		BeaconDB:        beaconDB,
 	}); err == nil {
 		t.Errorf("passing in an HTTP endpoint should throw an error, received nil")
 	}
@@ -124,6 +127,7 @@ func TestNewWeb3Service_OK(t *testing.T) {
 	if _, err = NewService(ctx, &Web3ServiceConfig{
 		ETH1Endpoint:    endpoint,
 		DepositContract: common.Address{},
+		BeaconDB:        beaconDB,
 	}); err == nil {
 		t.Errorf("passing in a non-ws, wss, or ipc endpoint should throw an error, received nil")
 	}
@@ -131,6 +135,7 @@ func TestNewWeb3Service_OK(t *testing.T) {
 	if _, err = NewService(ctx, &Web3ServiceConfig{
 		ETH1Endpoint:    endpoint,
 		DepositContract: common.Address{},
+		BeaconDB:        beaconDB,
 	}); err != nil {
 		t.Errorf("passing in as ws endpoint should not throw error, received %v", err)
 	}
@@ -138,6 +143,7 @@ func TestNewWeb3Service_OK(t *testing.T) {
 	if _, err = NewService(ctx, &Web3ServiceConfig{
 		ETH1Endpoint:    endpoint,
 		DepositContract: common.Address{},
+		BeaconDB:        beaconDB,
 	}); err != nil {
 		t.Errorf("passing in an ipc endpoint should not throw error, received %v", err)
 	}
@@ -180,14 +186,16 @@ func TestStart_OK(t *testing.T) {
 
 func TestStop_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-
 	testAcc, err := contracts.Setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
+		BeaconDB:        beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -212,14 +220,16 @@ func TestStop_OK(t *testing.T) {
 }
 
 func TestInitDataFromContract_OK(t *testing.T) {
-
 	testAcc, err := contracts.Setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
+		BeaconDB:        beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -243,9 +253,12 @@ func TestWeb3Service_BadReader(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
+		BeaconDB:        beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -301,9 +314,11 @@ func TestStatus(t *testing.T) {
 
 func TestHandlePanic_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint: endpoint,
+		BeaconDB:     beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)

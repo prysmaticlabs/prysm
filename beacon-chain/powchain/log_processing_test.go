@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -38,10 +37,12 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
+	beaconDB := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
-		BeaconDB:        &kv.Store{},
+		BeaconDB:        beaconDB,
 		DepositCache:    depositcache.NewDepositCache(),
 	})
 	if err != nil {
@@ -104,10 +105,12 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
+	beaconDB := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
-		BeaconDB:        &kv.Store{},
+		BeaconDB:        beaconDB,
 		DepositCache:    depositcache.NewDepositCache(),
 	})
 	if err != nil {
@@ -168,8 +171,11 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
+	beaconDB := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint:    endpoint,
+		BeaconDB:        beaconDB,
 		DepositContract: testAcc.ContractAddr,
 	})
 	if err != nil {
@@ -241,10 +247,12 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
+	beaconDB := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
-		BeaconDB:        &kv.Store{},
+		BeaconDB:        beaconDB,
 		DepositCache:    depositcache.NewDepositCache(),
 	})
 	if err != nil {
@@ -314,10 +322,12 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
+	beaconDB := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
-		BeaconDB:        &kv.Store{},
+		BeaconDB:        beaconDB,
 		DepositCache:    depositcache.NewDepositCache(),
 	})
 	if err != nil {
@@ -518,10 +528,12 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
+	beaconDB := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
-		BeaconDB:        &kv.Store{},
+		BeaconDB:        beaconDB,
 		DepositCache:    depositcache.NewDepositCache(),
 	})
 	if err != nil {
