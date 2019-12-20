@@ -13,7 +13,7 @@ type Service struct {
 	ctx                      context.Context
 	cancel                   context.CancelFunc
 	pool                     Pool
-	error                    error
+	err                      error
 	forkChoiceProcessedRoots *ristretto.Cache
 }
 
@@ -55,10 +55,10 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// Status returns the current service error if there's any.
+// Status returns the current service err if there's any.
 func (s *Service) Status() error {
-	if s.error != nil {
-		return s.error
+	if s.err != nil {
+		return s.err
 	}
 	return nil
 }

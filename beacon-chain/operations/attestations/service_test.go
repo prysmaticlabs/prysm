@@ -23,9 +23,9 @@ func TestStop_OK(t *testing.T) {
 
 func TestStatus_Error(t *testing.T) {
 	err := errors.New("bad bad bad")
-	s := &Service{error: err}
+	s := &Service{err: err}
 
-	if err := s.Status(); err != s.error {
-		t.Errorf("Wanted: %v, got: %v", s.error, s.Status())
+	if err := s.Status(); err != s.err {
+		t.Errorf("Wanted: %v, got: %v", s.err, s.Status())
 	}
 }
