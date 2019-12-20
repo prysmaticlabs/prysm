@@ -164,6 +164,10 @@ func (v *validator) signAtt(ctx context.Context, pubKey [48]byte, data *ethpb.At
 		return nil, err
 	}
 
-	sig := v.keys[pubKey].SecretKey.Sign(root[:], domain.SignatureDomain)
+	sig, err := v.keyManager.Sign(pubKey, root, domain.SignatureDomain)
+	if err != nil {
+		return nil, err
+	}
+
 	return sig.Marshal(), nil
 }
