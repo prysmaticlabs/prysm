@@ -54,12 +54,12 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	}
 
 	// The attestation's committee index (attestation.data.index) is for the correct subnet.
-	if strings.HasPrefix(originalTopic, fmt.Sprintf(format, att.Data.CommitteeIndex)) {
+	if !strings.HasPrefix(originalTopic, fmt.Sprintf(format, att.Data.CommitteeIndex)) {
 		return false
 	}
 
 	// Attestation must be unaggregated.
-	if att.AggregationBits.Count() != 1 {
+	if att.AggregationBits == nil || att.AggregationBits.Count() != 1 {
 		return false
 	}
 
@@ -82,7 +82,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	}
 
 	// Attestation's signature is a valid BLS signature.
-	if _, err := bls.SignatureFromBytes(att.Signature); err == nil {
+	if _, err := bls.SignatureFromBytes(att.Signature); err != nil {
 		return false
 	}
 

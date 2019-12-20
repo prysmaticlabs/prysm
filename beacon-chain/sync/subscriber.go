@@ -86,13 +86,12 @@ func (r *Service) registerSubscribers() {
 		r.validateAttesterSlashing,
 		r.attesterSlashingSubscriber,
 	)
-	// TODO(4154): Uncomment.
-	//r.subscribeDynamic(
-	//	"/eth2/committee_index/%d_beacon_attestation",
-	//	r.currentCommitteeIndex,                     /* determineSubsLen */
-	//	noopValidator,                               /* validator */
-	//	r.committeeIndexBeaconAttestationSubscriber, /* message handler */
-	//)
+	r.subscribeDynamic(
+		"/eth2/committee_index%d_beacon_attestation",
+		r.currentCommitteeIndex,                     /* determineSubsLen */
+		r.validateCommitteeIndexBeaconAttestation,   /* validator */
+		r.committeeIndexBeaconAttestationSubscriber, /* message handler */
+	)
 }
 
 // subscribe to a given topic with a given validator and subscription handler.
@@ -102,7 +101,10 @@ func (r *Service) subscribe(topic string, validator pubsub.Validator, handle sub
 	if base == nil {
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topic))
 	}
+	return r.subscribeWithBase(base, topic, validator, handle)
+}
 
+func (r *Service) subscribeWithBase(base proto.Message, topic string, validator pubsub.Validator, handle subHandler) *pubsub.Subscription {
 	topic += r.p2p.Encoding().ProtocolSuffix()
 	log := log.WithField("topic", topic)
 
@@ -197,7 +199,6 @@ func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() i
 	if base == nil {
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topicFormat))
 	}
-	topicFormat += r.p2p.Encoding().ProtocolSuffix()
 
 	var subscriptions []*pubsub.Subscription
 
@@ -220,8 +221,8 @@ func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() i
 						sub.Cancel()
 					}
 				} else if len(subscriptions) < wantedSubs { // Increase topics
-					for i := len(subscriptions) - 1; i < wantedSubs; i++ {
-						sub := r.subscribe(fmt.Sprintf(topicFormat, i), validate, handle)
+					for i := len(subscriptions); i < wantedSubs; i++ {
+						sub := r.subscribeWithBase(base, fmt.Sprintf(topicFormat, i), validate, handle)
 						subscriptions = append(subscriptions, sub)
 					}
 				}
