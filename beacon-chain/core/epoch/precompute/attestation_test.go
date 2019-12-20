@@ -199,7 +199,8 @@ func TestProcessAttestations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	committee, err := helpers.BeaconCommittee(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
+
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
 	if err != nil {
 		t.Error(err)
 	}
@@ -209,7 +210,7 @@ func TestProcessAttestations(t *testing.T) {
 			t.Error("Not a prev epoch attester")
 		}
 	}
-	committee, err = helpers.BeaconCommittee(beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
+	committee, err = helpers.BeaconCommitteeFromState(beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
 	if err != nil {
 		t.Error(err)
 	}
