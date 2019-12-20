@@ -1,17 +1,21 @@
 package accounts
 
 import (
+	"bufio"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
+	"strings"
+	"syscall"
 
 	"github.com/pkg/errors"
 	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 var log = logrus.WithField("prefix", "accounts")
@@ -125,4 +129,33 @@ func Exists(keystorePath string) (bool, error) {
 		return false, nil
 	}
 	return true, err
+}
+
+// CreateValidatorAccount creates a validator account from the given cli context.
+func CreateValidatorAccount(path string, passphrase string) (string, string, error) {
+	if passphrase == "" {
+		reader := bufio.NewReader(os.Stdin)
+		logrus.Info("Create a new validator account for eth2")
+		log.Info("Enter a password:")
+		bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
+		if err != nil {
+			log.Fatalf("Could not read account password: %v", err)
+		}
+		text := string(bytePassword)
+		passphrase = strings.Replace(text, "\n", "", -1)
+		log.Infof("Keystore path to save your private keys (leave blank for default %s):", path)
+		text, err = reader.ReadString('\n')
+		if err != nil {
+			log.Fatal(err)
+		}
+		text = strings.Replace(text, "\n", "", -1)
+		if text != "" {
+			path = text
+		}
+	}
+
+	if err := NewValidatorAccount(path, passphrase); err != nil {
+		return "", "", errors.Wrapf(err, "could not initialize validator account")
+	}
+	return path, passphrase, nil
 }
