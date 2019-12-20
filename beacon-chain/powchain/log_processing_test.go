@@ -9,22 +9,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
-
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -155,7 +152,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 		t.Fatalf("Unable to retrieve logs %v", err)
 	}
 
-	web3Service.chainStarted = true
+	web3Service.chainStartData.Chainstarted = true
 
 	web3Service.ProcessDepositLog(context.Background(), logs[0])
 	web3Service.ProcessDepositLog(context.Background(), logs[1])
@@ -303,7 +300,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 		web3Service.ProcessLog(context.Background(), log)
 	}
 
-	if web3Service.chainStarted {
+	if web3Service.chainStartData.Chainstarted {
 		t.Error("Genesis has been triggered despite being 8 duplicate keys")
 	}
 
@@ -596,7 +593,7 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 	web3Service.latestEth1Data.LastRequestedBlock = 0
 	web3Service.preGenesisState = state.EmptyGenesisState()
 	web3Service.preGenesisState.Eth1Data = &ethpb.Eth1Data{}
-	web3Service.chainStartDeposits = []*ethpb.Deposit{}
+	web3Service.chainStartData.ChainstartDeposits = []*ethpb.Deposit{}
 	web3Service.depositTrie, err = trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		t.Fatal(err)

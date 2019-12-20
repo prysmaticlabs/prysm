@@ -129,18 +129,14 @@ type Service struct {
 	depositContractCaller   *contracts.DepositContractCaller
 	depositRoot             []byte
 	depositTrie             *trieutil.SparseMerkleTrie
-	chainStartDeposits      []*ethpb.Deposit
-	chainStarted            bool
-	chainStartBlockNumber   *big.Int
+	chainStartData          *protodb.ChainStartData
 	beaconDB                db.Database
 	depositCache            *depositcache.DepositCache
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	isRunning               bool
 	runError                error
-	chainStartETH1Data      *ethpb.Eth1Data
 	preGenesisState         *pb.BeaconState
 	processingLock          sync.RWMutex
-	eth2GenesisTime         uint64
 	requestingOldLogs       bool
 	connectedETH1           bool
 }
@@ -183,15 +179,17 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 			BlockHash:          []byte{},
 			LastRequestedBlock: 0,
 		},
-		blockCache:              newBlockCache(),
-		depositContractAddress:  config.DepositContract,
-		stateNotifier:           config.StateNotifier,
-		depositTrie:             depositTrie,
-		chainStartDeposits:      make([]*ethpb.Deposit, 0),
+		blockCache:             newBlockCache(),
+		depositContractAddress: config.DepositContract,
+		stateNotifier:          config.StateNotifier,
+		depositTrie:            depositTrie,
+		chainStartData: &protodb.ChainStartData{
+			Eth1Data:           &ethpb.Eth1Data{},
+			ChainstartDeposits: make([]*ethpb.Deposit, 0),
+		},
 		beaconDB:                config.BeaconDB,
 		depositCache:            config.DepositCache,
 		lastReceivedMerkleIndex: -1,
-		chainStartETH1Data:      &ethpb.Eth1Data{},
 		preGenesisState:         state.EmptyGenesisState(),
 	}, nil
 }
@@ -218,12 +216,12 @@ func (s *Service) Stop() error {
 // ChainStartDeposits returns a slice of validator deposit data processed
 // by the deposit contract and cached in the powchain service.
 func (s *Service) ChainStartDeposits() []*ethpb.Deposit {
-	return s.chainStartDeposits
+	return s.chainStartData.ChainstartDeposits
 }
 
 // ChainStartEth1Data returns the eth1 data at chainstart.
 func (s *Service) ChainStartEth1Data() *ethpb.Eth1Data {
-	return s.chainStartETH1Data
+	return s.chainStartData.Eth1Data
 }
 
 // PreGenesisState returns a state that contains

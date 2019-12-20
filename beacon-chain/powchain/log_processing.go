@@ -36,7 +36,7 @@ const eth1LookBackPeriod = 100
 // Eth2GenesisPowchainInfo retrieves the genesis time and eth1 block number of the beacon chain
 // from the deposit contract.
 func (s *Service) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
-	return s.eth2GenesisTime, s.chainStartBlockNumber
+	return s.chainStartData.GenesisTime, big.NewInt(int64(s.chainStartData.GenesisBlock))
 }
 
 // ProcessETH1Block processes the logs from the provided eth1Block.
@@ -57,7 +57,7 @@ func (s *Service) ProcessETH1Block(ctx context.Context, blkNum *big.Int) error {
 			return errors.Wrap(err, "could not process log")
 		}
 	}
-	if !s.chainStarted {
+	if !s.chainStartData.Chainstarted {
 		if err := s.checkForChainStart(ctx, blkNum); err != nil {
 			return err
 		}
@@ -137,7 +137,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	}
 
 	// Make sure duplicates are rejected pre-chainstart.
-	if !s.chainStarted {
+	if !s.chainStartData.Chainstarted {
 		var pubkey = fmt.Sprintf("#%x", depositData.PublicKey)
 		if s.depositCache.PubkeyInChainstart(ctx, pubkey) {
 			log.Warnf("Pubkey %#x has already been submitted for chainstart", pubkey)
@@ -150,12 +150,12 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	// We always store all historical deposits in the DB.
 	s.depositCache.InsertDeposit(ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)), int(index), s.depositTrie.Root())
 	validData := true
-	if !s.chainStarted {
-		s.chainStartDeposits = append(s.chainStartDeposits, deposit)
+	if !s.chainStartData.Chainstarted {
+		s.chainStartData.ChainstartDeposits = append(s.chainStartData.ChainstartDeposits, deposit)
 		root := s.depositTrie.Root()
 		eth1Data := &ethpb.Eth1Data{
 			DepositRoot:  root[:],
-			DepositCount: uint64(len(s.chainStartDeposits)),
+			DepositCount: uint64(len(s.chainStartData.ChainstartDeposits)),
 		}
 		if err := s.processDeposit(eth1Data, deposit); err != nil {
 			log.Errorf("Invalid deposit processed: %v", err)
@@ -183,8 +183,8 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 // ProcessChainStart processes the log which had been received from
 // the ETH1.0 chain by trying to determine when to start the beacon chain.
 func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, blockNumber *big.Int) {
-	s.chainStarted = true
-	s.chainStartBlockNumber = blockNumber
+	s.chainStartData.Chainstarted = true
+	s.chainStartData.GenesisBlock = blockNumber.Uint64()
 
 	chainStartTime := time.Unix(int64(genesisTime), 0)
 	depHashes, err := s.ChainStartDepositHashes()
@@ -204,18 +204,18 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 		log.Fatalf("Unable to generate deposit trie from ChainStart deposits: %v", err)
 	}
 
-	for i := range s.chainStartDeposits {
+	for i := range s.chainStartData.ChainstartDeposits {
 		proof, err := sparseMerkleTrie.MerkleProof(i)
 		if err != nil {
 			log.Errorf("Unable to generate deposit proof %v", err)
 		}
-		s.chainStartDeposits[i].Proof = proof
+		s.chainStartData.ChainstartDeposits[i].Proof = proof
 	}
 
 	s.depositTrie = sparseMerkleTrie
 	root := sparseMerkleTrie.Root()
-	s.chainStartETH1Data = &ethpb.Eth1Data{
-		DepositCount: uint64(len(s.chainStartDeposits)),
+	s.chainStartData.Eth1Data = &ethpb.Eth1Data{
+		DepositCount: uint64(len(s.chainStartData.ChainstartDeposits)),
 		DepositRoot:  root[:],
 		BlockHash:    eth1BlockHash[:],
 	}
@@ -232,7 +232,7 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 }
 
 func (s *Service) setGenesisTime(timeStamp uint64) {
-	s.eth2GenesisTime = s.createGenesisTime(timeStamp)
+	s.chainStartData.GenesisTime = s.createGenesisTime(timeStamp)
 }
 
 func (s *Service) createGenesisTime(timeStamp uint64) uint64 {
@@ -261,7 +261,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 
 	for _, log := range logs {
 		if log.BlockNumber > currentBlockNum {
-			if !s.chainStarted {
+			if !s.chainStartData.Chainstarted {
 				if err := s.checkForChainStart(ctx, big.NewInt(int64(currentBlockNum))); err != nil {
 					return err
 				}
@@ -368,7 +368,7 @@ func (s *Service) checkForChainStart(ctx context.Context, blkNum *big.Int) error
 	triggered := state.IsValidGenesisState(valCount, s.createGenesisTime(timeStamp))
 	if triggered {
 		s.setGenesisTime(timeStamp)
-		s.ProcessChainStart(uint64(s.eth2GenesisTime), blk.Hash(), blk.Number())
+		s.ProcessChainStart(s.chainStartData.GenesisTime, blk.Hash(), blk.Number())
 	}
 	return nil
 }
@@ -376,8 +376,8 @@ func (s *Service) checkForChainStart(ctx context.Context, blkNum *big.Int) error
 // ChainStartDepositHashes returns the hashes of all the chainstart deposits
 // stored in memory.
 func (s *Service) ChainStartDepositHashes() ([][]byte, error) {
-	hashes := make([][]byte, len(s.chainStartDeposits))
-	for i, dep := range s.chainStartDeposits {
+	hashes := make([][]byte, len(s.chainStartData.ChainstartDeposits))
+	for i, dep := range s.chainStartData.ChainstartDeposits {
 		hash, err := ssz.HashTreeRoot(dep.Data)
 		if err != nil {
 			return nil, err

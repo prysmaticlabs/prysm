@@ -5,17 +5,15 @@ import (
 	"strings"
 	"testing"
 
-	logTest "github.com/sirupsen/logrus/hooks/test"
-
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 const pubKeyErr = "could not convert bytes to public key"
