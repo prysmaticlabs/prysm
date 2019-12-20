@@ -3,35 +3,34 @@ package sync
 import (
 	"context"
 	"fmt"
+	"runtime/debug"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"go.opencensus.io/trace"
 )
 
-const oneYear = 365 * 24 * time.Hour
 const pubsubMessageTimeout = 10 * time.Second
-
-// prefix to add to keys, so that we can represent invalid objects
-const invalid = "invalidObject"
 
 // subHandler represents handler for a given subscription.
 type subHandler func(context.Context, proto.Message) error
 
-// validator should verify the contents of the message, propagate the message
-// as expected, and return true or false to continue the message processing
-// pipeline. FromSelf indicates whether or not this is a message received from our
-// node in pubsub.
-type validator func(ctx context.Context, msg proto.Message, broadcaster p2p.Broadcaster, fromSelf bool) (bool, error)
-
-// noopValidator is a no-op that always returns true and does not propagate any
-// message.
-func noopValidator(_ context.Context, _ proto.Message, _ p2p.Broadcaster, _ bool) (bool, error) {
-	return true, nil
+// noopValidator is a no-op that only decodes the message, but does not check its contents.
+func (r *Service) noopValidator(ctx context.Context, _ peer.ID, msg *pubsub.Message) bool {
+	m, err := r.decodePubsubMessage(msg)
+	if err != nil {
+		log.WithError(err).Error("Failed to decode message")
+		return false
+	}
+	msg.ValidatorData = m
+	return true
 }
 
 // Register PubSub subscribers
@@ -103,13 +102,20 @@ func (r *Service) registerSubscribers() {
 
 // subscribe to a given topic with a given validator and subscription handler.
 // The base protobuf message is used to initialize new messages for decoding.
-func (r *Service) subscribe(topic string, validate validator, handle subHandler) {
+func (r *Service) subscribe(topic string, validator pubsub.Validator, handle subHandler) *pubsub.Subscription {
 	base := p2p.GossipTopicMappings[topic]
 	if base == nil {
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topic))
 	}
 
 	topic += r.p2p.Encoding().ProtocolSuffix()
+	log := log.WithField("topic", topic)
+
+	if err := r.p2p.PubSub().RegisterTopicValidator(wrapAndReportValidation(topic, validator)); err != nil {
+		// Configuring a topic validator would only return an error as a result of misconfiguration
+		// and is not a runtime concern.
+		panic(err)
+	}
 
 	sub, err := r.p2p.PubSub().Subscribe(topic)
 	if err != nil {
@@ -121,20 +127,65 @@ func (r *Service) subscribe(topic string, validate validator, handle subHandler)
 
 	// Pipeline decodes the incoming subscription data, runs the validation, and handles the
 	// message.
-	pipe := &pipeline{
-		ctx:          r.ctx,
-		topic:        topic,
-		base:         base,
-		validate:     validate,
-		handle:       handle,
-		encoding:     r.p2p.Encoding(),
-		self:         r.p2p.PeerID(),
-		sub:          sub,
-		broadcaster:  r.p2p,
-		chainStarted: func() bool { return r.chainStarted },
+	pipeline := func(msg *pubsub.Message) {
+		ctx, _ := context.WithTimeout(context.Background(), pubsubMessageTimeout)
+		ctx, span := trace.StartSpan(ctx, "sync.pubsub")
+		defer span.End()
+
+		defer func() {
+			if r := recover(); r != nil {
+				traceutil.AnnotateError(span, fmt.Errorf("panic occurred: %v", r))
+				log.WithField("error", r).Error("Panic occurred")
+				debug.PrintStack()
+			}
+		}()
+
+		span.AddAttributes(trace.StringAttribute("topic", topic))
+
+		if msg.ValidatorData == nil {
+			log.Error("Received nil message on pubsub")
+			messageFailedProcessingCounter.WithLabelValues(topic).Inc()
+			return
+		}
+
+		if err := handle(ctx, msg.ValidatorData.(proto.Message)); err != nil {
+			traceutil.AnnotateError(span, err)
+			log.WithError(err).Error("Failed to handle p2p pubsub")
+			messageFailedProcessingCounter.WithLabelValues(topic + r.p2p.Encoding().ProtocolSuffix()).Inc()
+			return
+		}
 	}
 
-	go pipe.messageLoop()
+	// The main message loop for receiving incoming messages from this subscription.
+	messageLoop := func() {
+		for {
+			msg, err := sub.Next(r.ctx)
+			if err != nil {
+				// This should only happen when the context is cancelled or subscription is cancelled?.
+				log.WithError(err).Error("Subscription next failed")
+				return
+			}
+
+			messageReceivedCounter.WithLabelValues(topic + r.p2p.Encoding().ProtocolSuffix()).Inc()
+
+			go pipeline(msg)
+		}
+	}
+
+	go messageLoop()
+	return sub
+}
+
+// Wrap the pubsub validator with a metric monitoring function. This function increments the
+// appropriate counter if the particular message fails to validate.
+func wrapAndReportValidation(topic string, v pubsub.Validator) (string, pubsub.Validator) {
+	return topic, func(ctx context.Context, pid peer.ID, msg *pubsub.Message) bool {
+		b := v(ctx, pid, msg)
+		if !b {
+			messageFailedValidationCounter.WithLabelValues(topic).Inc()
+		}
+		return b
+	}
 }
 
 // subscribe to a dynamically increasing index of topics. This method expects a fmt compatible
@@ -142,7 +193,7 @@ func (r *Service) subscribe(topic string, validate validator, handle subHandler)
 // maintained. As the state feed emits a newly updated state, the maxID function will be called to
 // determine the appropriate number of topics. This method supports only sequential number ranges
 // for topics.
-func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() int, validate validator, handle subHandler) {
+func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() int, validate pubsub.Validator, handle subHandler) {
 	base := p2p.GossipTopicMappings[topicFormat]
 	if base == nil {
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topicFormat))
@@ -171,25 +222,8 @@ func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() i
 					}
 				} else if len(subscriptions) < wantedSubs { // Increase topics
 					for i := len(subscriptions) - 1; i < wantedSubs; i++ {
-						sub, err := r.p2p.PubSub().Subscribe(fmt.Sprintf(topicFormat, i))
-						if err != nil {
-							// Panic is appropriate here since subscriptions should only fail if
-							// pubsub was misconfigured.
-							panic(err)
-						}
-						pipe := &pipeline{
-							ctx:         r.ctx,
-							topic:       fmt.Sprintf(topicFormat, i),
-							base:        base,
-							validate:    validate,
-							handle:      handle,
-							encoding:    r.p2p.Encoding(),
-							self:        r.p2p.PeerID(),
-							sub:         sub,
-							broadcaster: r.p2p,
-						}
+						sub := r.subscribe(fmt.Sprintf(topicFormat, i), validate, handle)
 						subscriptions = append(subscriptions, sub)
-						go pipe.messageLoop()
 					}
 				}
 			}

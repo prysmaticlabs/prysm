@@ -12,10 +12,10 @@ http_archive(
 
 http_archive(
     name = "bazel_gazelle",
-    sha256 = "7fc87f4170011201b1690326e8c16c5d802836e3a0d617d8f75c3af2b23180c4",
+    sha256 = "86c6d481b3f7aedc1d60c1c211c6f76da282ae197c3b3160f54bd3a8f847896f",
     urls = [
-        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/bazel-gazelle/releases/download/0.18.2/bazel-gazelle-0.18.2.tar.gz",
-        "https://github.com/bazelbuild/bazel-gazelle/releases/download/0.18.2/bazel-gazelle-0.18.2.tar.gz",
+        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/bazel-gazelle/releases/download/v0.19.1/bazel-gazelle-v0.19.1.tar.gz",
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.19.1/bazel-gazelle-v0.19.1.tar.gz",
     ],
 )
 
@@ -746,8 +746,8 @@ go_repository(
     name = "com_github_libp2p_go_libp2p_pubsub",
     build_file_proto_mode = "disable_global",
     importpath = "github.com/libp2p/go-libp2p-pubsub",
-    sum = "h1:tPKbkjAUI0xLGN3KKTKKy9TQEviVfrP++zJgH5Muke4=",
-    version = "v0.2.5",
+    sum = "h1:+Iz8zeI1KO6HX8cexU9g98cCGjae52Vujeg087SkuME=",
+    version = "v0.2.6-0.20191219233527-97846b574895",
 )
 
 go_repository(
