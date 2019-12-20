@@ -3,14 +3,11 @@ package sync
 import (
 	"context"
 	"fmt"
-	"strings"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
@@ -34,22 +31,12 @@ func (r *Service) validateBeaconAttestation(ctx context.Context, pid peer.ID, ms
 	// TODO(1332): Add blocks.VerifyAttestation before processing further.
 	// Discussion: https://github.com/ethereum/eth2.0-specs/issues/1332
 
-	if msg == nil || msg.TopicIDs == nil || len(msg.TopicIDs) == 0 {
-		return false
-	}
-	topic := msg.TopicIDs[0]
-	topic = strings.TrimSuffix(topic, r.p2p.Encoding().ProtocolSuffix())
-	base, ok := p2p.GossipTopicMappings[topic]
-	if !ok {
-		return false
-	}
-	m := proto.Clone(base)
-	if err := r.p2p.Encoding().Decode(msg.Data, m); err != nil {
+	m, err := r.decodePubsubMessage(msg)
+	if err != nil {
+		log.WithError(err).Error("Failed to decode message")
 		traceutil.AnnotateError(span, err)
-		log.WithError(err).Warn("Failed to decode pubsub message")
 		return false
 	}
-
 	att, ok := m.(*ethpb.Attestation)
 	if !ok {
 		traceutil.AnnotateError(span, errors.New("wrong proto message type"))

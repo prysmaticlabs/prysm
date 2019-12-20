@@ -2,15 +2,12 @@ package sync
 
 import (
 	"context"
-	"strings"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -26,16 +23,10 @@ func (r *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg
 	ctx, span := trace.StartSpan(ctx, "sync.validateProposerSlashing")
 	defer span.End()
 
-	topic := msg.TopicIDs[0]
-	topic = strings.TrimSuffix(topic, r.p2p.Encoding().ProtocolSuffix())
-	base, ok := p2p.GossipTopicMappings[topic]
-	if !ok {
-		return false
-	}
-	m := proto.Clone(base)
-	if err := r.p2p.Encoding().Decode(msg.Data, m); err != nil {
+	m, err := r.decodePubsubMessage(msg)
+	if err != nil {
+		log.WithError(err).Error("Failed to decode message")
 		traceutil.AnnotateError(span, err)
-		log.WithError(err).Warn("Failed to decode pubsub message")
 		return false
 	}
 
