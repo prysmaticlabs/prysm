@@ -35,7 +35,7 @@ func TestVerifyIndexInCommittee_CanVerify(t *testing.T) {
 		Target: &ethpb.Checkpoint{Epoch: 0}},
 		AggregationBits: bf}
 
-	committee, err := helpers.BeaconCommittee(s, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(s, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		t.Error(err)
 	}
@@ -201,7 +201,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 		AggregationBits: aggBits,
 	}
 
-	committee, err := helpers.BeaconCommittee(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		t.Error(err)
 	}

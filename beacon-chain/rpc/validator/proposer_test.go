@@ -1050,7 +1050,7 @@ func TestFilterAttestation_OK(t *testing.T) {
 			Target:         &ethpb.Checkpoint{}},
 			AggregationBits: aggBits,
 		}
-		committee, err := helpers.BeaconCommittee(state, atts[i].Data.Slot, atts[i].Data.CommitteeIndex)
+		committee, err := helpers.BeaconCommitteeFromState(state, atts[i].Data.Slot, atts[i].Data.CommitteeIndex)
 		if err != nil {
 			t.Error(err)
 		}
