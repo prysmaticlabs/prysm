@@ -93,8 +93,11 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 }
 
 func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint: endpoint,
+		BeaconDB:     beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -132,8 +135,11 @@ func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 }
 
 func TestBlockExists_ValidHash(t *testing.T) {
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint: endpoint,
+		BeaconDB:     beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -171,8 +177,11 @@ func TestBlockExists_ValidHash(t *testing.T) {
 }
 
 func TestBlockExists_InvalidHash(t *testing.T) {
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint: endpoint,
+		BeaconDB:     beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)

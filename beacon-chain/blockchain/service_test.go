@@ -108,6 +108,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	var web3Service *powchain.Service
 	var err error
 	web3Service, err = powchain.NewService(ctx, &powchain.Web3ServiceConfig{
+		BeaconDB:        beaconDB,
 		ETH1Endpoint:    endpoint,
 		DepositContract: common.Address{},
 	})

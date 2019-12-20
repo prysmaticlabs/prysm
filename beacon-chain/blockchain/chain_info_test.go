@@ -19,14 +19,18 @@ var _ = GenesisTimeFetcher(&Service{})
 var _ = ForkFetcher(&Service{})
 
 func TestFinalizedCheckpt_Nil(t *testing.T) {
-	c := setupBeaconChain(t, nil)
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	c := setupBeaconChain(t, db)
 	if !bytes.Equal(c.FinalizedCheckpt().Root, params.BeaconConfig().ZeroHash[:]) {
 		t.Error("Incorrect pre chain start value")
 	}
 }
 
 func TestHeadRoot_Nil(t *testing.T) {
-	c := setupBeaconChain(t, nil)
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	c := setupBeaconChain(t, db)
 	if !bytes.Equal(c.HeadRoot(), params.BeaconConfig().ZeroHash[:]) {
 		t.Error("Incorrect pre chain start value")
 	}
