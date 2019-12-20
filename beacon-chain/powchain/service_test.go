@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -270,17 +272,17 @@ func TestWeb3Service_BadReader(t *testing.T) {
 func TestStatus(t *testing.T) {
 	now := time.Now()
 
-	beforeFiveMinutesAgo := now.Add(-5*time.Minute - 30*time.Second)
-	afterFiveMinutesAgo := now.Add(-5*time.Minute + 30*time.Second)
+	beforeFiveMinutesAgo := uint64(now.Add(-5*time.Minute - 30*time.Second).Unix())
+	afterFiveMinutesAgo := uint64(now.Add(-5*time.Minute + 30*time.Second).Unix())
 
 	testCases := map[*Service]string{
 		// "status is ok" cases
 		{}: "",
-		{isRunning: true, blockTime: afterFiveMinutesAgo}:         "",
-		{isRunning: false, blockTime: beforeFiveMinutesAgo}:       "",
-		{isRunning: false, runError: errors.New("test runError")}: "",
+		{isRunning: true, latestEth1Data: &protodb.LatestETH1Data{BlockTime: afterFiveMinutesAgo}}:   "",
+		{isRunning: false, latestEth1Data: &protodb.LatestETH1Data{BlockTime: beforeFiveMinutesAgo}}: "",
+		{isRunning: false, runError: errors.New("test runError")}:                                    "",
 		// "status is error" cases
-		{isRunning: true, blockTime: beforeFiveMinutesAgo}: "eth1 client is not syncing",
+		{isRunning: true, latestEth1Data: &protodb.LatestETH1Data{BlockTime: beforeFiveMinutesAgo}}: "eth1 client is not syncing",
 		{isRunning: true}: "eth1 client is not syncing",
 		{isRunning: true, runError: errors.New("test runError")}: "test runError",
 	}

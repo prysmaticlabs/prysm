@@ -442,8 +442,8 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 		t.Fatal(err)
 	}
 	web3Service.httpLogger = testAcc.Backend
-	web3Service.lastRequestedBlock = new(big.Int)
-	web3Service.blockHeight = new(big.Int)
+	web3Service.latestEth1Data.LastRequestedBlock = 0
+	web3Service.latestEth1Data.BlockHeight = 0
 	bConfig := params.MinimalSpecConfig()
 	bConfig.MinGenesisTime = 0
 	params.OverrideBeaconConfig(bConfig)
@@ -585,7 +585,7 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 		if err := web3Service.ProcessLog(context.Background(), log); err != nil {
 			t.Fatal(err)
 		}
-		web3Service.lastRequestedBlock.Set(big.NewInt(int64(log.BlockNumber)))
+		web3Service.latestEth1Data.LastRequestedBlock = log.BlockNumber
 	}
 
 	if web3Service.lastReceivedMerkleIndex != int64(depositsWanted-1) {
@@ -593,7 +593,7 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 	}
 
 	web3Service.lastReceivedMerkleIndex = -1
-	web3Service.lastRequestedBlock = new(big.Int)
+	web3Service.latestEth1Data.LastRequestedBlock = 0
 	web3Service.preGenesisState = state.EmptyGenesisState()
 	web3Service.preGenesisState.Eth1Data = &ethpb.Eth1Data{}
 	web3Service.chainStartDeposits = []*ethpb.Deposit{}
@@ -608,7 +608,7 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 		if err := web3Service.ProcessLog(context.Background(), log); err != nil {
 			t.Fatal(err)
 		}
-		web3Service.lastRequestedBlock.Set(big.NewInt(int64(log.BlockNumber)))
+		web3Service.latestEth1Data.LastRequestedBlock = log.BlockNumber
 	}
 
 	if web3Service.lastReceivedMerkleIndex != int64(depositsWanted-1) {

@@ -10,15 +10,10 @@ import (
 	"sync"
 	"time"
 
-	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
-
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
@@ -28,8 +23,11 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -126,9 +124,6 @@ type Service struct {
 	logger                  bind.ContractFilterer
 	httpLogger              bind.ContractFilterer
 	blockFetcher            RPCBlockFetcher
-	blockHeight             *big.Int    // the latest ETH1.0 chain blockHeight.
-	blockHash               common.Hash // the latest ETH1.0 chain blockHash.
-	blockTime               time.Time   // the latest ETH1.0 chain blockTime.
 	blockCache              *blockCache // cache to store block hash/block height.
 	latestEth1Data          *protodb.LatestETH1Data
 	depositContractCaller   *contracts.DepositContractCaller
@@ -142,7 +137,6 @@ type Service struct {
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	isRunning               bool
 	runError                error
-	lastRequestedBlock      *big.Int
 	chainStartETH1Data      *ethpb.Eth1Data
 	preGenesisState         *pb.BeaconState
 	processingLock          sync.RWMutex
@@ -178,13 +172,17 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		return nil, errors.Wrap(err, "could not setup deposit trie")
 	}
 	return &Service{
-		ctx:                     ctx,
-		cancel:                  cancel,
-		headerChan:              make(chan *gethTypes.Header),
-		eth1Endpoint:            config.ETH1Endpoint,
-		httpEndpoint:            config.HTTPEndPoint,
-		blockHeight:             nil,
-		blockHash:               common.BytesToHash([]byte{}),
+		ctx:          ctx,
+		cancel:       cancel,
+		headerChan:   make(chan *gethTypes.Header),
+		eth1Endpoint: config.ETH1Endpoint,
+		httpEndpoint: config.HTTPEndPoint,
+		latestEth1Data: &protodb.LatestETH1Data{
+			BlockHeight:        0,
+			BlockTime:          0,
+			BlockHash:          []byte{},
+			LastRequestedBlock: 0,
+		},
 		blockCache:              newBlockCache(),
 		depositContractAddress:  config.DepositContract,
 		stateNotifier:           config.StateNotifier,
@@ -193,7 +191,6 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		beaconDB:                config.BeaconDB,
 		depositCache:            config.DepositCache,
 		lastReceivedMerkleIndex: -1,
-		lastRequestedBlock:      big.NewInt(0),
 		chainStartETH1Data:      &ethpb.Eth1Data{},
 		preGenesisState:         state.EmptyGenesisState(),
 	}, nil
@@ -249,7 +246,7 @@ func (s *Service) Status() error {
 	// (analyzed the time of the block from 2018-09-01 to 2019-02-13)
 	fiveMinutesTimeout := time.Now().Add(-5 * time.Minute)
 	// check that web3 client is syncing
-	if s.blockTime.Before(fiveMinutesTimeout) {
+	if time.Unix(int64(s.latestEth1Data.BlockTime), 0).Before(fiveMinutesTimeout) {
 		return errors.New("eth1 client is not syncing")
 	}
 	return nil
@@ -274,12 +271,12 @@ func (s *Service) DepositTrie() *trieutil.SparseMerkleTrie {
 
 // LatestBlockHeight in the ETH1.0 chain.
 func (s *Service) LatestBlockHeight() *big.Int {
-	return s.blockHeight
+	return big.NewInt(int64(s.latestEth1Data.BlockHeight))
 }
 
 // LatestBlockHash in the ETH1.0 chain.
 func (s *Service) LatestBlockHash() common.Hash {
-	return s.blockHash
+	return bytesutil.ToBytes32(s.latestEth1Data.BlockHash)
 }
 
 // Client for interacting with the ETH1.0 chain.
@@ -395,12 +392,12 @@ func (s *Service) initDataFromContract() error {
 func (s *Service) processSubscribedHeaders(header *gethTypes.Header) {
 	defer safelyHandlePanic()
 	blockNumberGauge.Set(float64(header.Number.Int64()))
-	s.blockHeight = header.Number
-	s.blockHash = header.Hash()
-	s.blockTime = time.Unix(int64(header.Time), 0)
+	s.latestEth1Data.BlockHeight = header.Number.Uint64()
+	s.latestEth1Data.BlockHash = header.Hash().Bytes()
+	s.latestEth1Data.BlockTime = header.Time
 	log.WithFields(logrus.Fields{
-		"blockNumber": s.blockHeight,
-		"blockHash":   s.blockHash.Hex(),
+		"blockNumber": s.latestEth1Data.BlockHeight,
+		"blockHash":   hexutil.Encode(s.latestEth1Data.BlockHash),
 	}).Debug("Latest eth1 chain event")
 
 	if err := s.blockCache.AddBlock(gethTypes.NewBlockWithHeader(header)); err != nil {
@@ -426,7 +423,7 @@ func (s *Service) handleDelayTicker() {
 	// If the last requested block has not changed,
 	// we do not request batched logs as this means there are no new
 	// logs for the powchain service to process.
-	if s.lastRequestedBlock.Cmp(s.blockHeight) == 0 {
+	if s.latestEth1Data.LastRequestedBlock == s.latestEth1Data.BlockHeight {
 		return
 	}
 	if err := s.requestBatchedLogs(context.Background()); err != nil {
@@ -458,8 +455,8 @@ func (s *Service) run(done <-chan struct{}) {
 		return
 	}
 
-	s.blockHeight = header.Number
-	s.blockHash = header.Hash()
+	s.latestEth1Data.BlockHeight = header.Number.Uint64()
+	s.latestEth1Data.BlockHash = header.Hash().Bytes()
 
 	if err := s.processPastLogs(context.Background()); err != nil {
 		log.Errorf("Unable to process past logs %v", err)

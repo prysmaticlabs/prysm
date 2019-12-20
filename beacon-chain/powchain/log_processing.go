@@ -267,7 +267,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 				}
 			}
 			// set new block number after checking for chainstart for previous block.
-			s.lastRequestedBlock.Set(big.NewInt(int64(currentBlockNum)))
+			s.latestEth1Data.LastRequestedBlock = currentBlockNum
 			currentBlockNum = log.BlockNumber
 		}
 		if err := s.ProcessLog(ctx, log); err != nil {
@@ -275,7 +275,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		}
 	}
 
-	s.lastRequestedBlock.Set(s.blockHeight)
+	s.latestEth1Data.LastRequestedBlock = s.latestEth1Data.BlockHeight
 
 	currentState, err := s.beaconDB.HeadState(ctx)
 	if err != nil {
@@ -294,15 +294,16 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 func (s *Service) requestBatchedLogs(ctx context.Context) error {
 	// We request for the nth block behind the current head, in order to have
 	// stabilized logs when we retrieve it from the 1.0 chain.
-	requestedBlock := big.NewInt(0).Sub(s.blockHeight, big.NewInt(params.BeaconConfig().LogBlockDelay))
-	for i := s.lastRequestedBlock.Uint64() + 1; i <= requestedBlock.Uint64(); i++ {
+
+	requestedBlock := s.latestEth1Data.BlockHeight - uint64(params.BeaconConfig().LogBlockDelay)
+	for i := s.latestEth1Data.LastRequestedBlock + 1; i <= requestedBlock; i++ {
 		err := s.ProcessETH1Block(ctx, big.NewInt(int64(i)))
 		if err != nil {
 			return err
 		}
 	}
 
-	s.lastRequestedBlock.Set(requestedBlock)
+	s.latestEth1Data.LastRequestedBlock = requestedBlock
 	return nil
 }
 
@@ -316,7 +317,7 @@ func (s *Service) requestMissingLogs(ctx context.Context, blkNumber uint64, want
 	}()
 	// We request from the last requested block till the current block(exclusive)
 	beforeCurrentBlk := big.NewInt(int64(blkNumber) - 1)
-	startBlock := s.lastRequestedBlock.Uint64() + 1
+	startBlock := s.latestEth1Data.LastRequestedBlock + 1
 	for {
 		err := s.processBlksInRange(ctx, startBlock, beforeCurrentBlk.Uint64())
 		if err != nil {
@@ -328,7 +329,7 @@ func (s *Service) requestMissingLogs(ctx context.Context, blkNumber uint64, want
 		}
 
 		// If the required logs still do not exist after the lookback period, then we return an error.
-		if startBlock < s.lastRequestedBlock.Uint64()-eth1LookBackPeriod {
+		if startBlock < s.latestEth1Data.LastRequestedBlock-eth1LookBackPeriod {
 			return fmt.Errorf(
 				"latest index observed is not accurate, wanted %d, but received  %d",
 				wantedIndex,
