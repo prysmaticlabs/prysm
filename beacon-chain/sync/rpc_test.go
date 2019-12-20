@@ -16,7 +16,7 @@ import (
 )
 
 // expectSuccess status code from a stream in regular sync.
-func expectSuccess(t *testing.T, r *RegularSync, stream network.Stream) {
+func expectSuccess(t *testing.T, r *Service, stream network.Stream) {
 	code, errMsg, err := ReadStatusCode(stream, &encoder.SszNetworkEncoder{})
 	if err != nil {
 		t.Fatal(err)
@@ -30,7 +30,7 @@ func expectSuccess(t *testing.T, r *RegularSync, stream network.Stream) {
 }
 
 // expectResetStream status code from a stream in regular sync.
-func expectResetStream(t *testing.T, r *RegularSync, stream network.Stream) {
+func expectResetStream(t *testing.T, r *Service, stream network.Stream) {
 	expectedErr := "stream reset"
 	_, _, err := ReadStatusCode(stream, &encoder.SszNetworkEncoder{})
 	if err.Error() != expectedErr {
@@ -40,7 +40,7 @@ func expectResetStream(t *testing.T, r *RegularSync, stream network.Stream) {
 
 func TestRegisterRPC_ReceivesValidMessage(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
-	r := &RegularSync{
+	r := &Service{
 		ctx: context.Background(),
 		p2p: p2p,
 	}

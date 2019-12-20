@@ -20,8 +20,8 @@ Participation is now open to the public for our Ethereum 2.0 phase 0 testnet rel
     - [Build via Docker](#build-via-docker)
     - [Build via Bazel](#build-via-bazel)
 - [Connecting to the public testnet: running a beacon node](#connecting-to-the-testnet-running-a-beacon-node)
-    - [Running via Docker](#build-via-docker)
-    - [Running via Bazel](#build-via-bazel)
+    - [Running via Docker](#running-via-docker)
+    - [Running via Bazel](#running-via-bazel)
 - [Staking ETH: running a validator client](#staking-eth-running-a-validator-client)
     - [Activating your validator: depositing 3.2 Goerli ETH](#activating-your-validator-depositing-32-goerli-eth)
     - [Starting the validator with Bazel](#starting-the-validator-with-bazel)
@@ -212,7 +212,7 @@ The example below will deterministically generate a beacon genesis state, initia
 bazel run //beacon-chain -- \
 --no-genesis-delay \
 --bootstrap-node= \
---deposit-contract 0xD775140349E6A5D12524C6ccc3d6A1d4519D4029 \
+--deposit-contract $(curl https://prylabs.net/contract) \
 --clear-db \
 --interop-num-validators 64 \
 --interop-eth1data-votes

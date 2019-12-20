@@ -41,50 +41,86 @@ var (
 		Name: "beacon_previous_justified_root",
 		Help: "Previous justified root of the processed state",
 	})
-	activeValidatorsGauge = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "state_active_validators",
-		Help: "Total number of active validators",
-	})
-	slashedValidatorsGauge = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "state_slashed_validators",
-		Help: "Total slashed validators",
-	})
-	withdrawnValidatorsGauge = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "state_withdrawn_validators",
-		Help: "Total withdrawn validators",
-	})
-	totalValidatorsGauge = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "beacon_current_validators",
-		Help: "Number of status=pending|active|exited|withdrawable validators in current epoch",
-	})
 	sigFailsToVerify = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "att_signature_failed_to_verify_with_cache",
 		Help: "Number of attestation signatures that failed to verify with cache on, but succeeded without cache",
 	})
+	validatorsCount = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "validator_count",
+		Help: "The total number of validators, in GWei",
+	}, []string{"state"})
+	validatorsBalance = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "validators_total_balance",
+		Help: "The total balance of validators, in GWei",
+	}, []string{"state"})
+	validatorsEffectiveBalance = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "validators_total_effective_balance",
+		Help: "The total effective balance of validators, in GWei",
+	}, []string{"state"})
 )
 
 func reportEpochMetrics(state *pb.BeaconState) {
 	currentEpoch := state.Slot / params.BeaconConfig().SlotsPerEpoch
 
-	// Validator counts
-	var active float64
-	var slashed float64
-	var withdrawn float64
-	for _, v := range state.Validators {
-		if v.ActivationEpoch <= currentEpoch && currentEpoch < v.ExitEpoch {
-			active++
+	// Validator instances
+	pendingInstances := 0
+	activeInstances := 0
+	slashingInstances := 0
+	slashedInstances := 0
+	exitingInstances := 0
+	exitedInstances := 0
+	// Validator balances
+	pendingBalance := uint64(0)
+	activeBalance := uint64(0)
+	activeEffectiveBalance := uint64(0)
+	exitingBalance := uint64(0)
+	exitingEffectiveBalance := uint64(0)
+	slashingBalance := uint64(0)
+	slashingEffectiveBalance := uint64(0)
+
+	for i, validator := range state.Validators {
+		if validator.Slashed {
+			if currentEpoch < validator.ExitEpoch {
+				slashingInstances++
+				slashingBalance += state.Balances[i]
+				slashingEffectiveBalance += validator.EffectiveBalance
+			} else {
+				slashedInstances++
+			}
+			continue
 		}
-		if v.Slashed {
-			slashed++
+		if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+			if currentEpoch < validator.ExitEpoch {
+				exitingInstances++
+				exitingBalance += state.Balances[i]
+				exitingEffectiveBalance += validator.EffectiveBalance
+			} else {
+				exitedInstances++
+			}
+			continue
 		}
-		if currentEpoch >= v.ExitEpoch {
-			withdrawn++
+		if currentEpoch < validator.ActivationEpoch {
+			pendingInstances++
+			pendingBalance += state.Balances[i]
+			continue
 		}
+		activeInstances++
+		activeBalance += state.Balances[i]
+		activeEffectiveBalance += validator.EffectiveBalance
 	}
-	activeValidatorsGauge.Set(active)
-	slashedValidatorsGauge.Set(slashed)
-	withdrawnValidatorsGauge.Set(withdrawn)
-	totalValidatorsGauge.Set(float64(len(state.Validators)))
+	validatorsCount.WithLabelValues("Pending").Set(float64(pendingInstances))
+	validatorsCount.WithLabelValues("Active").Set(float64(activeInstances))
+	validatorsCount.WithLabelValues("Exiting").Set(float64(exitingInstances))
+	validatorsCount.WithLabelValues("Exited").Set(float64(exitedInstances))
+	validatorsCount.WithLabelValues("Slashing").Set(float64(slashingInstances))
+	validatorsCount.WithLabelValues("Slashed").Set(float64(slashedInstances))
+	validatorsBalance.WithLabelValues("Pending").Set(float64(pendingBalance))
+	validatorsBalance.WithLabelValues("Active").Set(float64(activeBalance))
+	validatorsBalance.WithLabelValues("Exiting").Set(float64(exitingBalance))
+	validatorsBalance.WithLabelValues("Slashing").Set(float64(slashingBalance))
+	validatorsEffectiveBalance.WithLabelValues("Active").Set(float64(activeEffectiveBalance))
+	validatorsEffectiveBalance.WithLabelValues("Exiting").Set(float64(exitingEffectiveBalance))
+	validatorsEffectiveBalance.WithLabelValues("Slashing").Set(float64(slashingEffectiveBalance))
 
 	// Last justified slot
 	if state.CurrentJustifiedCheckpoint != nil {

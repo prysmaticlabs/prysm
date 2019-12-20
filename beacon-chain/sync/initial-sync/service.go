@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
-var _ = shared.Service(&InitialSync{})
+var _ = shared.Service(&Service{})
 
 type blockchainService interface {
 	blockchain.BlockReceiver
@@ -37,8 +37,8 @@ type Config struct {
 	StateNotifier statefeed.Notifier
 }
 
-// InitialSync service.
-type InitialSync struct {
+// Service service.
+type Service struct {
 	ctx           context.Context
 	chain         blockchainService
 	p2p           p2p.P2P
@@ -50,8 +50,8 @@ type InitialSync struct {
 
 // NewInitialSync configures the initial sync service responsible for bringing the node up to the
 // latest head of the blockchain.
-func NewInitialSync(cfg *Config) *InitialSync {
-	return &InitialSync{
+func NewInitialSync(cfg *Config) *Service {
+	return &Service{
 		ctx:           context.Background(),
 		chain:         cfg.Chain,
 		p2p:           cfg.P2P,
@@ -61,7 +61,7 @@ func NewInitialSync(cfg *Config) *InitialSync {
 }
 
 // Start the initial sync service.
-func (s *InitialSync) Start() {
+func (s *Service) Start() {
 	var genesis time.Time
 
 	headState, err := s.chain.HeadState(s.ctx)
@@ -137,12 +137,12 @@ func (s *InitialSync) Start() {
 }
 
 // Stop initial sync.
-func (s *InitialSync) Stop() error {
+func (s *Service) Stop() error {
 	return nil
 }
 
 // Status of initial sync.
-func (s *InitialSync) Status() error {
+func (s *Service) Status() error {
 	if !s.synced && s.chainStarted {
 		return errors.New("syncing")
 	}
@@ -150,7 +150,7 @@ func (s *InitialSync) Status() error {
 }
 
 // Syncing returns true if initial sync is still running.
-func (s *InitialSync) Syncing() bool {
+func (s *Service) Syncing() bool {
 	return !s.synced
 }
 

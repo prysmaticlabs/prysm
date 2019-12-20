@@ -598,7 +598,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 	dep = &ethpb.Deposit{
 		Data: depData,
 	}
-	depositTrie.InsertIntoTrie(dep.Data.Signature, 15)
+	depositTrie.Insert(dep.Data.Signature, 15)
 	depositCache.InsertDeposit(context.Background(), dep, big.NewInt(15), 0, depositTrie.Root())
 
 	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKeys[0]), 0); err != nil {

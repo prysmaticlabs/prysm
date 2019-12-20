@@ -4,9 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"strconv"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -327,65 +325,4 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 
 	exitRoutine <- true
 	testutil.AssertLogsContain(t, hook, "Sending genesis time")
-}
-
-func BenchmarkAssignment(b *testing.B) {
-	b.StopTimer()
-	db := dbutil.SetupDB(b)
-	defer dbutil.TeardownDB(b, db)
-	ctx := context.Background()
-
-	genesis := blk.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(ctx, genesis); err != nil {
-		b.Fatalf("Could not save genesis block: %v", err)
-	}
-	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount * 4
-	state, _ := testutil.DeterministicGenesisState(b, validatorCount)
-	genesisRoot, err := ssz.SigningRoot(genesis)
-	if err != nil {
-		b.Fatalf("Could not get signing root %v", err)
-	}
-	var wg sync.WaitGroup
-	errs := make(chan error, validatorCount)
-	for i := 0; i < int(validatorCount); i++ {
-		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
-		copy(pubKeyBuf[:], []byte(strconv.Itoa(i)))
-		wg.Add(1)
-		go func(index int) {
-			errs <- db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKeyBuf), uint64(index))
-			wg.Done()
-		}(i)
-	}
-	wg.Wait()
-	close(errs)
-	for err := range errs {
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-
-	vs := &Server{
-		BeaconDB:    db,
-		HeadFetcher: &mockChain.ChainService{State: state, Root: genesisRoot[:]},
-	}
-
-	// Set up request for 100 public keys at a time
-	pubKeys := make([][]byte, 100)
-	for i := 0; i < len(pubKeys); i++ {
-		buf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
-		copy(buf, []byte(strconv.Itoa(i)))
-		pubKeys[i] = buf
-	}
-
-	req := &pb.AssignmentRequest{
-		PublicKeys: pubKeys,
-		EpochStart: 0,
-	}
-
-	b.ResetTimer()
-	for n := 0; n < b.N; n++ {
-		if _, err := vs.CommitteeAssignment(context.Background(), req); err != nil {
-			b.Fatal(err)
-		}
-	}
 }

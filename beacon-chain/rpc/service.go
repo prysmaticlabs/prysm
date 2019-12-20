@@ -162,6 +162,7 @@ func (s *Service) Start() {
 			grpc_opentracing.UnaryServerInterceptor(),
 		)),
 	}
+	grpc_prometheus.EnableHandlingTimeHistogram()
 	// TODO(#791): Utilize a certificate for secure connections
 	// between beacon nodes and validator clients.
 	if s.withCert != "" && s.withKey != "" {
