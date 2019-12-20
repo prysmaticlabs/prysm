@@ -305,15 +305,15 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	// Set total slashed balances.
 	slashedExitLength := params.BeaconConfig().EpochsPerSlashingsVector
 	slashedEpoch := int(nextEpoch % slashedExitLength)
-	if slashedEpoch >= len(state.Slashings) {
-		return nil, fmt.Errorf("slashing epoch exceeds slashing object length in state %d >= %d", slashedEpoch, len(state.Slashings))
+	if len(state.Slashings) != int(slashedExitLength) {
+		return nil, fmt.Errorf("state slashing length %d different than EpochsPerHistoricalVector %d", len(state.Slashings), slashedExitLength)
 	}
 	state.Slashings[slashedEpoch] = 0
 
 	// Set RANDAO mix.
 	randaoMixLength := params.BeaconConfig().EpochsPerHistoricalVector
-	if int(currentEpoch) >= len(state.RandaoMixes) {
-		return nil, fmt.Errorf("current epoch exceeds randao length in state %d >= %d", currentEpoch, len(state.RandaoMixes))
+	if len(state.RandaoMixes) != int(randaoMixLength) {
+		return nil, fmt.Errorf("state randao length %d different than EpochsPerHistoricalVector %d", len(state.RandaoMixes), randaoMixLength)
 	}
 	mix := helpers.RandaoMix(state, currentEpoch)
 	state.RandaoMixes[nextEpoch%randaoMixLength] = mix
