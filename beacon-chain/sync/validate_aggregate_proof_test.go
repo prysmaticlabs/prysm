@@ -1,18 +1,22 @@
 package sync
 
 import (
+	"bytes"
 	"context"
-	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -104,6 +108,7 @@ func TestVerifySelection_CanVerify(t *testing.T) {
 func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	defer dbtest.TeardownDB(t, db)
+	p := p2ptest.NewTestP2P(t)
 
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
@@ -119,19 +124,34 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 	}
 
 	r := &Service{
+		p2p:         p,
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
-	wanted := "attestation points to a block which is not in the database"
-	if _, err := r.validateAggregateAndProof(context.Background(), aggregateAndProof, &p2ptest.MockBroadcaster{}, false); !strings.Contains(err.Error(), wanted) {
-		t.Error("Did not receive wanted error")
+	buf := new(bytes.Buffer)
+	if _, err := p.Encoding().Encode(buf, aggregateAndProof); err != nil {
+		t.Fatal(err)
+	}
+
+	msg := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data: buf.Bytes(),
+			TopicIDs: []string{
+				p2p.GossipTypeMapping[reflect.TypeOf(aggregateAndProof)],
+			},
+		},
+	}
+
+	if r.validateAggregateAndProof(context.Background(), "", msg) {
+		t.Error("Expected validate to fail")
 	}
 }
 
 func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	defer dbtest.TeardownDB(t, db)
+	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
 	beaconState, _ := testutil.DeterministicGenesisState(t, validators)
@@ -158,29 +178,55 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 
 	beaconState.GenesisTime = uint64(time.Now().Unix())
 	r := &Service{
+		p2p:         p,
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 		chain: &mock.ChainService{Genesis: time.Now(),
 			State: beaconState},
 	}
 
-	wanted := fmt.Sprintf("attestation slot out of range %d <= %d <= %d",
-		att.Data.Slot, beaconState.Slot, att.Data.Slot+params.BeaconConfig().AttestationPropagationSlotRange)
-	if _, err := r.validateAggregateAndProof(context.Background(), aggregateAndProof, &p2ptest.MockBroadcaster{}, false); !strings.Contains(err.Error(), wanted) {
-		t.Error("Did not receive wanted error")
+	buf := new(bytes.Buffer)
+	if _, err := p.Encoding().Encode(buf, aggregateAndProof); err != nil {
+		t.Fatal(err)
+	}
+
+	msg := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data: buf.Bytes(),
+			TopicIDs: []string{
+				p2p.GossipTypeMapping[reflect.TypeOf(aggregateAndProof)],
+			},
+		},
+	}
+
+	if r.validateAggregateAndProof(context.Background(), "", msg) {
+		t.Error("Expected validate to fail")
 	}
 
 	att.Data.Slot = 1<<64 - 1
-	wanted = fmt.Sprintf("attestation slot out of range %d <= %d <= %d",
-		att.Data.Slot, beaconState.Slot, att.Data.Slot+params.BeaconConfig().AttestationPropagationSlotRange)
-	if _, err := r.validateAggregateAndProof(context.Background(), aggregateAndProof, &p2ptest.MockBroadcaster{}, false); !strings.Contains(err.Error(), wanted) {
-		t.Error("Did not receive wanted error")
+
+	buf = new(bytes.Buffer)
+	if _, err := p.Encoding().Encode(buf, aggregateAndProof); err != nil {
+		t.Fatal(err)
+	}
+
+	msg = &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data: buf.Bytes(),
+			TopicIDs: []string{
+				p2p.GossipTypeMapping[reflect.TypeOf(aggregateAndProof)],
+			},
+		},
+	}
+	if r.validateAggregateAndProof(context.Background(), "", msg) {
+		t.Error("Expected validate to fail")
 	}
 }
 
 func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	defer dbtest.TeardownDB(t, db)
+	p := p2ptest.NewTestP2P(t)
 
 	validators := uint64(256)
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
@@ -234,6 +280,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 
 	beaconState.GenesisTime = uint64(time.Now().Unix())
 	r := &Service{
+		p2p:         p,
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
 		chain: &mock.ChainService{Genesis: time.Now(),
@@ -243,11 +290,21 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 			}},
 	}
 
-	validated, err := r.validateAggregateAndProof(context.Background(), aggregateAndProof, &p2ptest.MockBroadcaster{}, false)
-	if err != nil {
+	buf := new(bytes.Buffer)
+	if _, err := p.Encoding().Encode(buf, aggregateAndProof); err != nil {
 		t.Fatal(err)
 	}
-	if !validated {
+
+	msg := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data: buf.Bytes(),
+			TopicIDs: []string{
+				p2p.GossipTypeMapping[reflect.TypeOf(aggregateAndProof)],
+			},
+		},
+	}
+
+	if !r.validateAggregateAndProof(context.Background(), "", msg) {
 		t.Fatal("Validated status is false")
 	}
 }
