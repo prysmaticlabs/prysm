@@ -56,32 +56,29 @@ type FinalizationFetcher interface {
 
 // FinalizedCheckpt returns the latest finalized checkpoint from head state.
 func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
-	cp := s.headState.FinalizedCheckpoint
-	if cp != nil {
-		return cp
+	if s.headState == nil ||  s.headState.FinalizedCheckpoint == nil {
+		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
-	return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	return s.headState.FinalizedCheckpoint
 }
 
 // CurrentJustifiedCheckpt returns the current justified checkpoint from head state.
 func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
-	cp := s.headState.CurrentJustifiedCheckpoint
-	if cp != nil {
-		return cp
+	if s.headState == nil ||  s.headState.CurrentJustifiedCheckpoint == nil {
+		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
-	return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	return s.headState.CurrentJustifiedCheckpoint
 }
 
 // PreviousJustifiedCheckpt returns the previous justified checkpoint from head state.
 func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
-	cp := s.headState.PreviousJustifiedCheckpoint
-	if cp != nil {
-		return cp
+	if s.headState == nil ||  s.headState.PreviousJustifiedCheckpoint == nil {
+		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
-	return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	return s.headState.PreviousJustifiedCheckpoint
 }
 
 // HeadSlot returns the slot of the head of the chain.
