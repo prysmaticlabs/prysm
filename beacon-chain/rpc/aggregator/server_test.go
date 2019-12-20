@@ -144,7 +144,7 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	aggregatedAtts := aggregatorServer.AttPool.AggregatedAttestation()
+	aggregatedAtts := aggregatorServer.AttPool.AggregatedAttestations()
 	wanted, err := helpers.AggregateAttestation(att0, att1)
 	if err != nil {
 		t.Fatal(err)
@@ -194,7 +194,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	aggregatedAtts := aggregatorServer.AttPool.AggregatedAttestation()
+	aggregatedAtts := aggregatorServer.AttPool.AggregatedAttestations()
 	if len(aggregatedAtts) != 0 {
 		t.Errorf("Wanted aggregated attestation 0, got %d", len(aggregatedAtts))
 	}

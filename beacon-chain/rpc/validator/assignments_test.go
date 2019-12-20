@@ -352,7 +352,7 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 	}
 	req := &ethpb.DutiesRequest{
 		PublicKeys: pks,
-		Epoch: 0,
+		Epoch:      0,
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

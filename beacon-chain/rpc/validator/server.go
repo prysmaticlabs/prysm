@@ -41,7 +41,6 @@ type Server struct {
 	Ctx                    context.Context
 	BeaconDB               db.Database
 	AttestationCache       *cache.AttestationCache
-	AttPool                attestations.Pool
 	HeadFetcher            blockchain.HeadFetcher
 	ForkFetcher            blockchain.ForkFetcher
 	CanonicalStateChan     chan *pbp2p.BeaconState
@@ -54,6 +53,7 @@ type Server struct {
 	OperationsHandler      operations.Handler
 	P2P                    p2p.Broadcaster
 	Pool                   operations.Pool
+	AttPool                attestations.Pool
 	BlockReceiver          blockchain.BlockReceiver
 	MockEth1Votes          bool
 	Eth1BlockFetcher       powchain.POWBlockFetcher
