@@ -43,8 +43,7 @@ var ErrTargetRootNotInDB = errors.New("target root does not exist in db")
 //    # Use GENESIS_EPOCH for previous when genesis to avoid underflow
 //    previous_epoch = current_epoch - 1 if current_epoch > GENESIS_EPOCH else GENESIS_EPOCH
 //    assert target.epoch in [current_epoch, previous_epoch]
-//    # Cannot calculate the current shuffling if have not seen the target
-//    assert target.root in store.blocks
+//    assert target.epoch == compute_epoch_at_slot(attestation.data.slot)
 //
 //    # Attestations target be for a known block. If target block is unknown, delay consideration until the block is found
 //    assert target.root in store.blocks
@@ -81,6 +80,10 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 
 	tgt := proto.Clone(a.Data.Target).(*ethpb.Checkpoint)
 	tgtSlot := helpers.StartSlot(tgt.Epoch)
+
+	if helpers.SlotToEpoch(a.Data.Slot) != a.Data.Target.Epoch {
+		return fmt.Errorf("data slot is not in the same epoch as target %d != %d", helpers.SlotToEpoch(a.Data.Slot), a.Data.Target.Epoch)
+	}
 
 	// Verify beacon node has seen the target block before.
 	if !s.db.HasBlock(ctx, bytesutil.ToBytes32(tgt.Root)) {

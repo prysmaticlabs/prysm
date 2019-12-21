@@ -68,6 +68,13 @@ func TestStore_OnAttestation(t *testing.T) {
 		wantErrString string
 	}{
 		{
+			name:          "attestation's data slot not align with target vote",
+			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: params.BeaconConfig().SlotsPerEpoch, Target: &ethpb.Checkpoint{}}},
+			s:             &pb.BeaconState{},
+			wantErr:       true,
+			wantErrString: "data slot is not in the same epoch as target 1 != 0",
+		},
+		{
 			name:          "attestation's target root not in db",
 			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: []byte{'A'}}}},
 			s:             &pb.BeaconState{},
@@ -83,7 +90,7 @@ func TestStore_OnAttestation(t *testing.T) {
 		},
 		{
 			name: "process attestation doesn't match current epoch",
-			a: &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: params.BeaconConfig().FarFutureEpoch,
+			a: &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 100 * params.BeaconConfig().SlotsPerEpoch, Target: &ethpb.Checkpoint{Epoch: 100,
 				Root: BlkWithStateBadAttRoot[:]}}},
 			s:             &pb.BeaconState{},
 			wantErr:       true,
