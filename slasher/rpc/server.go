@@ -3,7 +3,9 @@ package rpc
 import (
 	"context"
 	"fmt"
+	"log"
 	"sync"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/gogo/protobuf/types"
@@ -28,15 +30,20 @@ type Server struct {
 // is a slashable vote.
 func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.IndexedAttestation) (*slashpb.AttesterSlashingResponse, error) {
 	//TODO(#3133): add signature validation
+	start := time.Now()
 	if err := ss.SlasherDB.SaveIndexedAttestation(req); err != nil {
 		return nil, err
 	}
+	elapsed := time.Since(start)
+	log.Printf("SaveIndexedAttestation took %s", elapsed)
 	tEpoch := req.Data.Target.Epoch
 	indices := append(req.CustodyBit_0Indices, req.CustodyBit_1Indices...)
 	root, err := ssz.HashTreeRoot(req.Data)
 	if err != nil {
 		return nil, err
 	}
+	elapsed = time.Since(start)
+	log.Printf("SaveIndexedAttestation and HashTreeRoot took %s", elapsed)
 	atsSlashinngRes := &slashpb.AttesterSlashingResponse{}
 	at := make(chan []*ethpb.AttesterSlashing, len(indices))
 	er := make(chan error, len(indices))
