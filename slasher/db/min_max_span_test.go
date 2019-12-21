@@ -5,12 +5,12 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	ethpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 )
 
 type spanMapTestStruct struct {
 	validatorIdx uint64
-	spanMap      *ethpb.EpochSpanMap
+	spanMap      *slashpb.EpochSpanMap
 }
 
 var spanTests []spanMapTestStruct
@@ -19,8 +19,8 @@ func init() {
 	spanTests = []spanMapTestStruct{
 		{
 			validatorIdx: 1,
-			spanMap: &ethpb.EpochSpanMap{
-				EpochSpanMap: map[uint64]*ethpb.MinMaxEpochSpan{
+			spanMap: &slashpb.EpochSpanMap{
+				EpochSpanMap: map[uint64]*slashpb.MinMaxEpochSpan{
 					1: {MinEpochSpan: 10, MaxEpochSpan: 20},
 					2: {MinEpochSpan: 11, MaxEpochSpan: 21},
 					3: {MinEpochSpan: 12, MaxEpochSpan: 22},
@@ -29,8 +29,8 @@ func init() {
 		},
 		{
 			validatorIdx: 2,
-			spanMap: &ethpb.EpochSpanMap{
-				EpochSpanMap: map[uint64]*ethpb.MinMaxEpochSpan{
+			spanMap: &slashpb.EpochSpanMap{
+				EpochSpanMap: map[uint64]*slashpb.MinMaxEpochSpan{
 					1: {MinEpochSpan: 10, MaxEpochSpan: 20},
 					2: {MinEpochSpan: 11, MaxEpochSpan: 21},
 					3: {MinEpochSpan: 12, MaxEpochSpan: 22},
@@ -39,8 +39,8 @@ func init() {
 		},
 		{
 			validatorIdx: 3,
-			spanMap: &ethpb.EpochSpanMap{
-				EpochSpanMap: map[uint64]*ethpb.MinMaxEpochSpan{
+			spanMap: &slashpb.EpochSpanMap{
+				EpochSpanMap: map[uint64]*slashpb.MinMaxEpochSpan{
 					1: {MinEpochSpan: 10, MaxEpochSpan: 20},
 					2: {MinEpochSpan: 11, MaxEpochSpan: 21},
 					3: {MinEpochSpan: 12, MaxEpochSpan: 22},
@@ -59,7 +59,7 @@ func TestValidatorSpanMap_NilDB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Nil ValidatorSpansMap should not return error: %v", err)
 	}
-	if !reflect.DeepEqual(vsm.EpochSpanMap, map[uint64]*ethpb.MinMaxEpochSpan{}) {
+	if !reflect.DeepEqual(vsm.EpochSpanMap, map[uint64]*slashpb.MinMaxEpochSpan{}) {
 		t.Fatal("ValidatorSpansMap should return nil")
 	}
 }
@@ -111,7 +111,7 @@ func TestValidatorSpanMap_Delete(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !reflect.DeepEqual(sm.EpochSpanMap, map[uint64]*ethpb.MinMaxEpochSpan{}) {
+		if !reflect.DeepEqual(sm.EpochSpanMap, map[uint64]*slashpb.MinMaxEpochSpan{}) {
 			t.Errorf("Expected validator span map to be deleted, received: %v", sm)
 		}
 	}
