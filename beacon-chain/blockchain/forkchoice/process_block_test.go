@@ -334,7 +334,7 @@ func TestRemoveStateSinceLastFinalized_EmptyStartSlot(t *testing.T) {
 	store := NewForkChoiceService(ctx, db)
 	store.genesisTime = uint64(time.Now().Unix())
 
-	update, err := store.shouldUpdateJustified(ctx, &ethpb.Checkpoint{})
+	update, err := store.shouldUpdateCurrentJustified(ctx, &ethpb.Checkpoint{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -356,7 +356,7 @@ func TestRemoveStateSinceLastFinalized_EmptyStartSlot(t *testing.T) {
 	diff := (params.BeaconConfig().SlotsPerEpoch - 1) * params.BeaconConfig().SecondsPerSlot
 	store.genesisTime = uint64(time.Now().Unix()) - diff
 	store.justifiedCheckpt = &ethpb.Checkpoint{Root: lastJustifiedRoot[:]}
-	update, err = store.shouldUpdateJustified(ctx, &ethpb.Checkpoint{Root: newJustifiedRoot[:]})
+	update, err = store.shouldUpdateCurrentJustified(ctx, &ethpb.Checkpoint{Root: newJustifiedRoot[:]})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -389,7 +389,7 @@ func TestShouldUpdateJustified_ReturnFalse(t *testing.T) {
 	store.genesisTime = uint64(time.Now().Unix()) - diff
 	store.justifiedCheckpt = &ethpb.Checkpoint{Root: lastJustifiedRoot[:]}
 
-	update, err := store.shouldUpdateJustified(ctx, &ethpb.Checkpoint{Root: newJustifiedRoot[:]})
+	update, err := store.shouldUpdateCurrentJustified(ctx, &ethpb.Checkpoint{Root: newJustifiedRoot[:]})
 	if err != nil {
 		t.Fatal(err)
 	}
