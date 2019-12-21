@@ -478,7 +478,7 @@ func (s *Store) shouldUpdateCurrentJustified(ctx context.Context, newJustifiedCh
 		return true, nil
 	}
 	newJustifiedBlock, err := s.db.Block(ctx, bytesutil.ToBytes32(newJustifiedCheckpt.Root))
-	if err != nil {
+	if err != nil || newJustifiedBlock == nil {
 		return false, err
 	}
 	if newJustifiedBlock.Slot <= helpers.StartSlot(s.justifiedCheckpt.Epoch) {
@@ -512,6 +512,8 @@ func (s *Store) updateJustified(ctx context.Context, state *pb.BeaconState) erro
 	if err := s.db.SaveJustifiedCheckpoint(ctx, state.CurrentJustifiedCheckpoint); err != nil {
 		return errors.Wrap(err, "could not save justified checkpoint")
 	}
+
+	return nil
 }
 
 // currentSlot returns the current slot based on time.

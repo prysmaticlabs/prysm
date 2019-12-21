@@ -579,3 +579,33 @@ func TestSaveInitState_CanSaveDelete(t *testing.T) {
 		t.Errorf("wanted: %d, got: %d", len(store.initSyncState), params.BeaconConfig().SlotsPerEpoch)
 	}
 }
+
+func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	store := NewForkChoiceService(ctx, db)
+	store.justifiedCheckpt = &ethpb.Checkpoint{Root: []byte{'A'}}
+	store.bestJustifiedCheckpt = &ethpb.Checkpoint{ Root: []byte{'A'}}
+
+	// Could update
+	s := &pb.BeaconState{CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 1}}
+	if err := store.updateJustified(context.Background(), s); err != nil {
+		t.Fatal(err)
+	}
+
+	if store.bestJustifiedCheckpt.Epoch != s.CurrentJustifiedCheckpoint.Epoch {
+		t.Error("Incorrect justified epoch in store")
+	}
+
+	// Could not update
+	store.bestJustifiedCheckpt.Epoch = 2
+	if err := store.updateJustified(context.Background(), s); err != nil {
+		t.Fatal(err)
+	}
+
+	if store.bestJustifiedCheckpt.Epoch != 2 {
+		t.Error("Incorrect justified epoch in store")
+	}
+}
