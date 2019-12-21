@@ -10,7 +10,6 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/validator/db"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -19,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -26,7 +26,7 @@ import (
 type validator struct {
 	genesisTime          uint64
 	ticker               *slotutil.SlotTicker
-	db					 db.
+	db                   *db.Store
 	duties               *ethpb.DutiesResponse
 	validatorClient      ethpb.BeaconNodeValidatorClient
 	beaconClient         ethpb.BeaconChainClient

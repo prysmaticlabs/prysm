@@ -15,12 +15,12 @@ func TestSetProposedForEpoch_SetsBit(t *testing.T) {
 	params.OverrideBeaconConfig(c)
 
 	proposals := &slashpb.ValidatorProposalHistory{
-		ProposalHistory:  bitfield.NewBitlist(c.WeakSubjectivityPeriod),
-		LastEpochWritten: 0,
+		ProposalHistory:    bitfield.NewBitlist(c.WeakSubjectivityPeriod),
+		LatestEpochWritten: 0,
 	}
 	epoch := uint64(4)
-	proposals.SetProposedForEpoch(epoch)
-	proposed := proposals.HasProposedForEpoch(epoch)
+	SetProposedForEpoch(proposals, epoch)
+	proposed := HasProposedForEpoch(proposals, epoch)
 	if !proposed {
 		t.Fatal("fuck")
 	}
@@ -29,7 +29,7 @@ func TestSetProposedForEpoch_SetsBit(t *testing.T) {
 		if i == epoch {
 			continue
 		}
-		proposed = proposals.HasProposedForEpoch(i)
+		proposed = HasProposedForEpoch(proposals, i)
 		if proposed {
 			t.Fatal("fuck")
 		}
@@ -42,31 +42,31 @@ func TestSetProposedForEpoch_PrunesOverWSPeriod(t *testing.T) {
 	params.OverrideBeaconConfig(c)
 
 	proposals := &slashpb.ValidatorProposalHistory{
-		ProposalHistory:  bitfield.NewBitlist(c.WeakSubjectivityPeriod),
-		LastEpochWritten: 0,
+		ProposalHistory:    bitfield.NewBitlist(c.WeakSubjectivityPeriod),
+		LatestEpochWritten: 0,
 	}
 	prunedEpoch := uint64(3)
-	proposals.SetProposedForEpoch(prunedEpoch)
+	SetProposedForEpoch(proposals, prunedEpoch)
 
-	if proposals.LastEpochWritten != prunedEpoch {
-		t.Fatal(proposals.LastEpochWritten)
+	if proposals.LatestEpochWritten != prunedEpoch {
+		t.Fatal(proposals.LatestEpochWritten)
 	}
 
 	epoch := uint64(132)
-	proposals.SetProposedForEpoch(epoch)
-	proposed := proposals.HasProposedForEpoch(epoch)
+	SetProposedForEpoch(proposals, epoch)
+	proposed := HasProposedForEpoch(proposals, epoch)
 	if !proposed {
 		t.Fatal("fuck")
 	}
-	if proposals.LastEpochWritten != epoch {
-		t.Fatal(proposals.LastEpochWritten)
+	if proposals.LatestEpochWritten != epoch {
+		t.Fatal(proposals.LatestEpochWritten)
 	}
 	// Make sure no other bits are changed.
 	for i := uint64(epoch - c.WeakSubjectivityPeriod); i < epoch; i++ {
 		if i == epoch {
 			continue
 		}
-		proposed = proposals.HasProposedForEpoch(i)
+		proposed = HasProposedForEpoch(proposals, i)
 		if proposed {
 			t.Fatal(i)
 		}
@@ -76,15 +76,15 @@ func TestSetProposedForEpoch_PrunesOverWSPeriod(t *testing.T) {
 func TestSetProposedForEpoch_54KEpochsKeepsHistory(t *testing.T) {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	proposals := &slashpb.ValidatorProposalHistory{
-		ProposalHistory:  bitfield.NewBitlist(wsPeriod),
-		LastEpochWritten: 0,
+		ProposalHistory:    bitfield.NewBitlist(wsPeriod),
+		LatestEpochWritten: 0,
 	}
 	randomIndexes := []uint64{23, 423, 8900, 11347, 25033, 52225, 53999}
 	for i := 0; i < len(randomIndexes); i++ {
-		proposals.SetProposedForEpoch(randomIndexes[i])
+		SetProposedForEpoch(proposals, randomIndexes[i])
 	}
-	if proposals.LastEpochWritten != 53999 {
-		t.Fatal(proposals.LastEpochWritten)
+	if proposals.LatestEpochWritten != 53999 {
+		t.Fatal(proposals.LatestEpochWritten)
 	}
 
 	// Make sure no other bits are changed.
@@ -97,34 +97,34 @@ func TestSetProposedForEpoch_54KEpochsKeepsHistory(t *testing.T) {
 			}
 		}
 
-		if setIndex != proposals.HasProposedForEpoch(i) {
+		if setIndex != HasProposedForEpoch(proposals, i) {
 			t.Fatal(i)
 		}
 	}
 
 	// Set a past epoch as proposed, and make sure the recent data isn't changed.
-	proposals.SetProposedForEpoch(randomIndexes[1] + 5)
-	if proposals.LastEpochWritten != randomIndexes[len(randomIndexes)-1] {
+	SetProposedForEpoch(proposals, randomIndexes[1]+5)
+	if proposals.LatestEpochWritten != randomIndexes[len(randomIndexes)-1] {
 		t.Fatal("fuck")
 	}
 	// Proposal just marked should be true.
-	if !proposals.HasProposedForEpoch(randomIndexes[1] + 5) {
-		t.Fatal(proposals.LastEpochWritten)
+	if !HasProposedForEpoch(proposals, randomIndexes[1]+5) {
+		t.Fatal(proposals.LatestEpochWritten)
 	}
 	// Previously marked proposal should stay true.
-	if !proposals.HasProposedForEpoch(randomIndexes[1]) {
-		t.Fatal(proposals.LastEpochWritten)
+	if !HasProposedForEpoch(proposals, randomIndexes[1]) {
+		t.Fatal(proposals.LatestEpochWritten)
 	}
 }
 
 func TestSetProposedForEpoch_PreventsProposingFutureEpochs(t *testing.T) {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	proposals := &slashpb.ValidatorProposalHistory{
-		ProposalHistory:  bitfield.NewBitlist(wsPeriod),
-		LastEpochWritten: 0,
+		ProposalHistory:    bitfield.NewBitlist(wsPeriod),
+		LatestEpochWritten: 0,
 	}
-	proposals.SetProposedForEpoch(200)
-	if proposals.HasProposedForEpoch(wsPeriod + 200) {
+	SetProposedForEpoch(proposals, 200)
+	if HasProposedForEpoch(proposals, wsPeriod+200) {
 		t.Fatal("fuck")
 	}
 }
@@ -157,21 +157,21 @@ func TestSaveProposalHistory_OK(t *testing.T) {
 			pubkey: []byte{0},
 			epoch:  uint64(0),
 			history: &slashpb.ValidatorProposalHistory{
-				ProposalHistory: bitfield.NewBitlist,
+				ProposalHistory: bitfield.Bitlist{0x01, 0x01},
 			},
 		},
 		{
 			pubkey: []byte{1},
 			epoch:  uint64(0),
 			history: &slashpb.ValidatorProposalHistory{
-				ProposalHistory: big.NewInt(1),
+				ProposalHistory: bitfield.Bitlist{0x01, 0x01},
 			},
 		},
 		{
 			pubkey: []byte{0},
 			epoch:  uint64(1),
 			history: &slashpb.ValidatorProposalHistory{
-				ProposalHistory: big.NewInt(2),
+				ProposalHistory: bitfield.Bitlist{0x01, 0x02},
 			},
 		},
 	}
