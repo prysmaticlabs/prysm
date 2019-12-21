@@ -47,6 +47,8 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		traceutil.AnnotateError(span, err)
 		return false
 	}
+	// Restore topic.
+	msg.TopicIDs[0] = originalTopic
 
 	att, ok := m.(*eth.Attestation)
 	if !ok {
