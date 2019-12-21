@@ -24,25 +24,21 @@ func HasProposedForEpoch(history *ethpb.ValidatorProposalHistory, epoch uint64) 
 	return history.ProposalHistory.BitAt(epoch % wsPeriod)
 }
 
-// SetProposedForEpoch
+// SetProposedForEpoch updates the proposal history to mark the indicated epoch in the bitlist
+// and updates the last epoch written if needed.
 func SetProposedForEpoch(history *ethpb.ValidatorProposalHistory, epoch uint64) {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 
-	// If the last written epoch is unset, we can trust that the rest of the bitfield is empty, so just mark what is needed.
-	if history.LastEpochWritten == 0 {
-		history.ProposalHistory.SetBitAt(epoch%wsPeriod, true)
-		history.LastEpochWritten = epoch
-	} else if epoch > history.LastEpochWritten {
+	if epoch > history.LastEpochWritten {
 		// If epoch to mark is ahead of last written epoch, override the old votes and mark the requested epoch.
 		for i := history.LastEpochWritten + 1; i <= epoch; i++ {
-			history.ProposalHistory.SetBitAt(i%wsPeriod, false)
+			if !history.ProposalHistory.BitAt(i % wsPeriod) {
+				history.ProposalHistory.SetBitAt(i%wsPeriod, false)
+			}
 		}
-		history.ProposalHistory.SetBitAt(epoch%wsPeriod, true)
 		history.LastEpochWritten = epoch
-	} else if epoch <= history.LastEpochWritten && !history.ProposalHistory.BitAt(epoch%wsPeriod) {
-		// If epoch to mark is in the past and is unset, mark it.
-		history.ProposalHistory.SetBitAt(epoch%wsPeriod, true)
 	}
+	history.ProposalHistory.SetBitAt(epoch%wsPeriod, true)
 }
 
 func unmarshallProposalHistory(enc []byte) (*ethpb.ValidatorProposalHistory, error) {
