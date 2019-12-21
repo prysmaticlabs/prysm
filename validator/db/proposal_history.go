@@ -14,11 +14,11 @@ import (
 func HasProposedForEpoch(history *slashpb.ValidatorProposalHistory, epoch uint64) bool {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	// Previously pruned, but to be safe we should return true.
-	if int(epoch) <= int(history.LastEpochWritten)-int(wsPeriod) {
+	if int(epoch) <= int(history.LatestEpochWritten)-int(wsPeriod) {
 		return true
 	}
 	// Accessing future proposals that haven't been marked yet. Needs to return false.
-	if epoch > history.LastEpochWritten {
+	if epoch > history.LatestEpochWritten {
 		return false
 	}
 	return history.ProposalHistory.BitAt(epoch % wsPeriod)
@@ -29,14 +29,14 @@ func HasProposedForEpoch(history *slashpb.ValidatorProposalHistory, epoch uint64
 func SetProposedForEpoch(history *slashpb.ValidatorProposalHistory, epoch uint64) {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 
-	if epoch > history.LastEpochWritten {
+	if epoch > history.LatestEpochWritten {
 		// If epoch to mark is ahead of last written epoch, override the old votes and mark the requested epoch.
-		for i := history.LastEpochWritten + 1; i <= epoch; i++ {
+		for i := history.LatestEpochWritten + 1; i <= epoch; i++ {
 			if !history.ProposalHistory.BitAt(i % wsPeriod) {
 				history.ProposalHistory.SetBitAt(i%wsPeriod, false)
 			}
 		}
-		history.LastEpochWritten = epoch
+		history.LatestEpochWritten = epoch
 	}
 	history.ProposalHistory.SetBitAt(epoch%wsPeriod, true)
 }
@@ -54,7 +54,7 @@ func unmarshallProposalHistory(enc []byte) (*slashpb.ValidatorProposalHistory, e
 // Returns nil if there is no proposal history for the validator.
 func (db *Store) ProposalHistory(pubKey []byte) (*slashpb.ValidatorProposalHistory, error) {
 	var err error
-	var proposalHistory *ValidatorProposalHistory
+	var proposalHistory *slashpb.ValidatorProposalHistory
 	err = db.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
 		enc := bucket.Get(pubKey)
