@@ -1,12 +1,11 @@
 package db
 
 import (
-	// "math/big"
-	// "reflect"
+	"reflect"
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	ethpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -15,7 +14,7 @@ func TestSetProposedForEpoch_SetsBit(t *testing.T) {
 	c.WeakSubjectivityPeriod = 128
 	params.OverrideBeaconConfig(c)
 
-	proposals := &ethpb.ValidatorProposalHistory{
+	proposals := &slashpb.ValidatorProposalHistory{
 		ProposalHistory:  bitfield.NewBitlist(c.WeakSubjectivityPeriod),
 		LastEpochWritten: 0,
 	}
@@ -42,7 +41,7 @@ func TestSetProposedForEpoch_PrunesOverWSPeriod(t *testing.T) {
 	c.WeakSubjectivityPeriod = 128
 	params.OverrideBeaconConfig(c)
 
-	proposals := &ethpb.ValidatorProposalHistory{
+	proposals := &slashpb.ValidatorProposalHistory{
 		ProposalHistory:  bitfield.NewBitlist(c.WeakSubjectivityPeriod),
 		LastEpochWritten: 0,
 	}
@@ -76,7 +75,7 @@ func TestSetProposedForEpoch_PrunesOverWSPeriod(t *testing.T) {
 
 func TestSetProposedForEpoch_54KEpochsKeepsHistory(t *testing.T) {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-	proposals := &ethpb.ValidatorProposalHistory{
+	proposals := &slashpb.ValidatorProposalHistory{
 		ProposalHistory:  bitfield.NewBitlist(wsPeriod),
 		LastEpochWritten: 0,
 	}
@@ -120,7 +119,7 @@ func TestSetProposedForEpoch_54KEpochsKeepsHistory(t *testing.T) {
 
 func TestSetProposedForEpoch_PreventsProposingFutureEpochs(t *testing.T) {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-	proposals := &ethpb.ValidatorProposalHistory{
+	proposals := &slashpb.ValidatorProposalHistory{
 		ProposalHistory:  bitfield.NewBitlist(wsPeriod),
 		LastEpochWritten: 0,
 	}
@@ -152,26 +151,26 @@ func TestSaveProposalHistory_OK(t *testing.T) {
 	tests := []struct {
 		pubkey  []byte
 		epoch   uint64
-		history *ethpb.ValidatorProposalHistory
+		history *slashpb.ValidatorProposalHistory
 	}{
 		{
 			pubkey: []byte{0},
 			epoch:  uint64(0),
-			history: &ethpb.ValidatorProposalHistory{
+			history: &slashpb.ValidatorProposalHistory{
 				ProposalHistory: bitfield.NewBitlist,
 			},
 		},
 		{
 			pubkey: []byte{1},
 			epoch:  uint64(0),
-			history: &ethpb.ValidatorProposalHistory{
+			history: &slashpb.ValidatorProposalHistory{
 				ProposalHistory: big.NewInt(1),
 			},
 		},
 		{
 			pubkey: []byte{0},
 			epoch:  uint64(1),
-			history: &ethpb.ValidatorProposalHistory{
+			history: &slashpb.ValidatorProposalHistory{
 				ProposalHistory: big.NewInt(2),
 			},
 		},
@@ -204,26 +203,26 @@ func TestDeleteProposalHistory_OK(t *testing.T) {
 	tests := []struct {
 		pubkey  []byte
 		epoch   uint64
-		history *ethpb.ValidatorProposalHistory
+		history *slashpb.ValidatorProposalHistory
 	}{
 		{
 			pubkey: []byte{0},
 			epoch:  uint64(0),
-			history: &ethpb.ValidatorProposalHistory{
+			history: &slashpb.ValidatorProposalHistory{
 				ProposalHistory: big.NewInt(1),
 			},
 		},
 		{
 			pubkey: []byte{1},
 			epoch:  uint64(0),
-			history: &ethpb.ValidatorProposalHistory{
+			history: &slashpb.ValidatorProposalHistory{
 				ProposalHistory: big.NewInt(1),
 			},
 		},
 		{
 			pubkey: []byte{0},
 			epoch:  uint64(1),
-			history: &ethpb.ValidatorProposalHistory{
+			history: &slashpb.ValidatorProposalHistory{
 				ProposalHistory: big.NewInt(2),
 			},
 		},
