@@ -1068,6 +1068,21 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	}
 }
 
+func TestProcessAttestationsNoVerify_IncorrectSlotTargetEpoch(t *testing.T) {
+	beaconState, _ := testutil.DeterministicGenesisState(t, 1)
+
+	att := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			Slot:   params.BeaconConfig().SlotsPerEpoch,
+			Target: &ethpb.Checkpoint{},
+		},
+	}
+	wanted := fmt.Sprintf("data slot is not in the same epoch as target %d != %d", helpers.SlotToEpoch(att.Data.Slot), att.Data.Target.Epoch)
+	if _, err := blocks.ProcessAttestationNoVerify(context.TODO(), beaconState, att); err.Error() != wanted {
+		t.Error("Did not get wanted error")
+	}
+}
+
 func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 	// Attestation with an empty signature
 

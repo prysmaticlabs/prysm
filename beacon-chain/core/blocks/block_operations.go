@@ -507,6 +507,7 @@ func ProcessAttestationsNoVerify(ctx context.Context, beaconState *pb.BeaconStat
 //    data = attestation.data
 //    assert data.index < get_committee_count_at_slot(state, data.slot)
 //    assert data.target.epoch in (get_previous_epoch(state), get_current_epoch(state))
+//    assert data.target.epoch == compute_epoch_at_slot(data.slot)
 //    assert data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= data.slot + SLOTS_PER_EPOCH
 //
 //    committee = get_beacon_committee(state, data.slot, data.index)
@@ -554,6 +555,9 @@ func ProcessAttestationNoVerify(ctx context.Context, beaconState *pb.BeaconState
 			helpers.PrevEpoch(beaconState),
 			helpers.CurrentEpoch(beaconState),
 		)
+	}
+	if helpers.SlotToEpoch(data.Slot) != data.Target.Epoch {
+		return nil, fmt.Errorf("data slot is not in the same epoch as target %d != %d", helpers.SlotToEpoch(data.Slot), data.Target.Epoch)
 	}
 
 	s := att.Data.Slot
