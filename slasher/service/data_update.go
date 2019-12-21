@@ -78,7 +78,7 @@ func (s *Service) slasherFeeder() error {
 			scs, ok := bcs.Committees[attestation.Data.Slot]
 			if !ok {
 				var keys []uint64
-				for k, _ := range bcs.Committees {
+				for k := range bcs.Committees {
 					keys = append(keys, k)
 				}
 				log.Errorf("committees doesnt contain the attestation slot: %d, actual first slot: %v", attestation.Data.Slot, keys)
