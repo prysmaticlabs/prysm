@@ -14,12 +14,6 @@ import (
 )
 
 var (
-	// ErrAttestationDataSlotNilState is returned when a nil state argument
-	// is provided to AttestationDataSlot.
-	ErrAttestationDataSlotNilState = errors.New("nil state provided for AttestationDataSlot")
-	// ErrAttestationDataSlotNilData is returned when a nil attestation data
-	// argument is provided to AttestationDataSlot.
-	ErrAttestationDataSlotNilData = errors.New("nil data provided for AttestationDataSlot")
 	// ErrAttestationAggregationBitsOverlap is returned when two attestations aggregation
 	// bits overlap with each other.
 	ErrAttestationAggregationBitsOverlap = errors.New("overlapping aggregation bits")
@@ -127,24 +121,22 @@ func SlotSignature(state *pb.BeaconState, slot uint64, privKey *bls.SecretKey) (
 	return privKey.Sign(s[:], d), nil
 }
 
-// IsAggregator returns true if the signature is from the input validator.
+// IsAggregator returns true if the signature is from the input validator. The committee
+// count is provided as an argument rather than direct implementation from spec. Having
+// committee count as an argument allows cheaper computation at run time.
 //
 // Spec pseudocode definition:
 //   def is_aggregator(state: BeaconState, slot: Slot, index: CommitteeIndex, slot_signature: BLSSignature) -> bool:
 //    committee = get_beacon_committee(state, slot, index)
 //    modulo = max(1, len(committee) // TARGET_AGGREGATORS_PER_COMMITTEE)
 //    return bytes_to_int(hash(slot_signature)[0:8]) % modulo == 0
-func IsAggregator(state *pb.BeaconState, slot uint64, index uint64, slotSig *bls.Signature) (bool, error) {
-	committee, err := BeaconCommittee(state, slot, index)
-	if err != nil {
-		return false, err
-	}
+func IsAggregator(committeeCount uint64, slot uint64, index uint64, slotSig []byte) (bool, error) {
 	modulo := uint64(1)
-	if len(committee)/int(params.BeaconConfig().TargetAggregatorsPerCommittee) > 1 {
-		modulo = uint64(len(committee)) / params.BeaconConfig().TargetAggregatorsPerCommittee
+	if committeeCount/params.BeaconConfig().TargetAggregatorsPerCommittee > 1 {
+		modulo = committeeCount / params.BeaconConfig().TargetAggregatorsPerCommittee
 	}
 
-	b := hashutil.Hash(slotSig.Marshal())
+	b := hashutil.Hash(slotSig)
 	return binary.LittleEndian.Uint64(b[:8])%modulo == 0, nil
 }
 

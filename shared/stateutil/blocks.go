@@ -12,22 +12,24 @@ import (
 
 func blockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
 	fieldRoots := make([][]byte, 5)
-	headerSlotBuf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(headerSlotBuf, header.Slot)
-	headerSlotRoot := bytesutil.ToBytes32(headerSlotBuf)
-	fieldRoots[0] = headerSlotRoot[:]
-	fieldRoots[1] = header.ParentRoot
-	fieldRoots[2] = header.StateRoot
-	fieldRoots[3] = header.BodyRoot
-	signatureChunks, err := pack([][]byte{header.Signature})
-	if err != nil {
-		return [32]byte{}, err
+	if header != nil {
+		headerSlotBuf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(headerSlotBuf, header.Slot)
+		headerSlotRoot := bytesutil.ToBytes32(headerSlotBuf)
+		fieldRoots[0] = headerSlotRoot[:]
+		fieldRoots[1] = header.ParentRoot
+		fieldRoots[2] = header.StateRoot
+		fieldRoots[3] = header.BodyRoot
+		signatureChunks, err := pack([][]byte{header.Signature})
+		if err != nil {
+			return [32]byte{}, err
+		}
+		sigRoot, err := bitwiseMerkleize(signatureChunks, uint64(len(signatureChunks)), uint64(len(signatureChunks)))
+		if err != nil {
+			return [32]byte{}, err
+		}
+		fieldRoots[4] = sigRoot[:]
 	}
-	sigRoot, err := bitwiseMerkleize(signatureChunks, uint64(len(signatureChunks)), uint64(len(signatureChunks)))
-	if err != nil {
-		return [32]byte{}, err
-	}
-	fieldRoots[4] = sigRoot[:]
 	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 

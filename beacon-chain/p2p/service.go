@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/runutil"
 )
 
 var _ = shared.Service(&Service{})
@@ -32,6 +33,9 @@ var pollingPeriod = 1 * time.Second
 var ttl = 1 * time.Hour
 
 const prysmProtocolPrefix = "/prysm/0.0.0"
+
+// maxBadResponses is the maximum number of bad responses from a peer before we stop talking to it.
+const maxBadResponses = 3
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
@@ -46,6 +50,7 @@ type Service struct {
 	exclusionList *ristretto.Cache
 	privKey       *ecdsa.PrivateKey
 	dht           *kaddht.IpfsDHT
+	peers         *peers.Status
 }
 
 // NewService initializes a new p2p service compatible with shared.Service interface. No
@@ -111,6 +116,7 @@ func NewService(cfg *Config) (*Service, error) {
 	psOpts := []pubsub.Option{
 		pubsub.WithMessageSigning(false),
 		pubsub.WithStrictSignatureVerification(false),
+		pubsub.WithMessageIdFn(msgIDFunction),
 	}
 	gs, err := pubsub.NewGossipSub(s.ctx, s.host, psOpts...)
 	if err != nil {
@@ -118,6 +124,8 @@ func NewService(cfg *Config) (*Service, error) {
 		return nil, err
 	}
 	s.pubsub = gs
+
+	s.peers = peers.NewStatus(maxBadResponses)
 
 	return s, nil
 }
@@ -197,14 +205,20 @@ func (s *Service) Start() {
 		s.connectWithAllPeers(addrs)
 	}
 
-	startPeerWatcher(s.ctx, s.host, peersToWatch...)
-	registerMetrics(s)
+	// Periodic functions.
+	runutil.RunEvery(s.ctx, 5*time.Second, func() {
+		ensurePeerConnections(s.ctx, s.host, peersToWatch...)
+	})
+	runutil.RunEvery(s.ctx, time.Hour, s.Peers().Decay)
+	runutil.RunEvery(s.ctx, 10*time.Second, s.updateMetrics)
+
 	multiAddrs := s.host.Network().ListenAddresses()
 	logIP4Addr(s.host.ID(), multiAddrs...)
 }
 
 // Stop the p2p service and terminate all peer connections.
 func (s *Service) Stop() error {
+	defer s.cancel()
 	s.started = false
 	if s.dv5Listener != nil {
 		s.dv5Listener.Close()
@@ -260,43 +274,22 @@ func (s *Service) Disconnect(pid peer.ID) error {
 	return s.host.Network().ClosePeer(pid)
 }
 
-// Peers provides a list of peers that are known to this node.
-// Note this includes peers to which we are not currently actively connected; to find active
-// peers the info returned here should be filtered against that in `peerstatus`, which contains
-// information about active peers.
-func (s *Service) Peers() []*peers.Info {
-	res := make([]*peers.Info, 0)
-	for _, conn := range s.host.Network().Conns() {
-		addrInfo := &peer.AddrInfo{
-			ID:    conn.RemotePeer(),
-			Addrs: []ma.Multiaddr{conn.RemoteMultiaddr()},
-		}
-		res = append(res, &peers.Info{
-			AddrInfo:  addrInfo,
-			Direction: conn.Stat().Direction,
-		})
-	}
-	return res
+// Peers returns the peer status interface.
+func (s *Service) Peers() *peers.Status {
+	return s.peers
 }
 
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.
 func (s *Service) listenForNewNodes() {
-	ticker := time.NewTicker(pollingPeriod)
 	bootNode, err := enode.Parse(enode.ValidSchemes, s.cfg.Discv5BootStrapAddr[0])
 	if err != nil {
 		log.Fatal(err)
 	}
-	for {
-		select {
-		case <-ticker.C:
-			nodes := s.dv5Listener.Lookup(bootNode.ID())
-			multiAddresses := convertToMultiAddr(nodes)
-			s.connectWithAllPeers(multiAddresses)
-		case <-s.ctx.Done():
-			log.Debug("p2p context is closed, exiting routine")
-			return
-		}
-	}
+	runutil.RunEvery(s.ctx, pollingPeriod, func() {
+		nodes := s.dv5Listener.Lookup(bootNode.ID())
+		multiAddresses := convertToMultiAddr(nodes)
+		s.connectWithAllPeers(multiAddresses)
+	})
 }
 
 func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
@@ -310,6 +303,9 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 			continue
 		}
 		if _, ok := s.exclusionList.Get(info.ID.String()); ok {
+			continue
+		}
+		if s.Peers().IsBad(info.ID) {
 			continue
 		}
 		if err := s.host.Connect(s.ctx, info); err != nil {

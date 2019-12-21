@@ -256,11 +256,17 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ProcessSlots")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slots", int64(slot)-int64(state.Slot)))
+
 	if state.Slot > slot {
 		err := fmt.Errorf("expected state.slot %d < slot %d", state.Slot, slot)
 		traceutil.AnnotateError(span, err)
 		return nil, err
 	}
+
+	if state.Slot == slot {
+		return state, nil
+	}
+
 	highestSlot := state.Slot
 	var root [32]byte
 	var writeToCache bool
@@ -599,78 +605,12 @@ func CanProcessEpoch(state *pb.BeaconState) bool {
 	return (state.Slot+1)%params.BeaconConfig().SlotsPerEpoch == 0
 }
 
-// ProcessEpoch describes the per epoch operations that are performed on the
-// beacon state. It focuses on the validator registry, adjusting balances, and finalizing slots.
-//
-// Spec pseudocode definition:
-//
-//  def process_epoch(state: BeaconState) -> None:
-//    process_justification_and_finalization(state)
-//    process_crosslinks(state)
-//    process_rewards_and_penalties(state)
-//    process_registry_updates(state)
-//    # @process_reveal_deadlines
-//    # @process_challenge_deadlines
-//    process_slashings(state)
-//    process_final_updates(state)
-//    # @after_process_final_updates
-func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch")
-	defer span.End()
-	span.AddAttributes(trace.Int64Attribute("epoch", int64(helpers.SlotToEpoch(state.Slot))))
-
-	prevEpochAtts, err := e.MatchAttestations(state, helpers.PrevEpoch(state))
-	if err != nil {
-		return nil, fmt.Errorf("could not get target atts prev epoch %d: %v",
-			helpers.PrevEpoch(state), err)
-	}
-	currentEpochAtts, err := e.MatchAttestations(state, helpers.CurrentEpoch(state))
-	if err != nil {
-		return nil, fmt.Errorf("could not get target atts current epoch %d: %v",
-			helpers.CurrentEpoch(state), err)
-	}
-	prevEpochAttestedBalance, err := e.AttestingBalance(state, prevEpochAtts.Target)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get attesting balance prev epoch")
-	}
-	currentEpochAttestedBalance, err := e.AttestingBalance(state, currentEpochAtts.Target)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get attesting balance current epoch")
-	}
-
-	state, err = e.ProcessJustificationAndFinalization(state, prevEpochAttestedBalance, currentEpochAttestedBalance)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process justification")
-	}
-
-	state, err = e.ProcessRewardsAndPenalties(state)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process rewards and penalties")
-	}
-
-	state, err = e.ProcessRegistryUpdates(state)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process registry updates")
-	}
-
-	state, err = e.ProcessSlashings(state)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process slashings")
-	}
-
-	state, err = e.ProcessFinalUpdates(state)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process final updates")
-	}
-	return state, nil
-}
-
 // ProcessEpochPrecompute describes the per epoch operations that are performed on the beacon state.
 // It's optimized by pre computing validator attested info and epoch total/attested balances upfront.
 func ProcessEpochPrecompute(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch")
 	defer span.End()
-	span.AddAttributes(trace.Int64Attribute("epoch", int64(helpers.SlotToEpoch(state.Slot))))
+	span.AddAttributes(trace.Int64Attribute("epoch", int64(helpers.CurrentEpoch(state))))
 
 	vp, bp := precompute.New(ctx, state)
 	vp, bp, err := precompute.ProcessAttestations(ctx, state, vp, bp)

@@ -22,8 +22,11 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+const ipLimit = 3
+
 var fundingAmount = big.NewInt(3.5 * params.Ether)
 var funded = make(map[string]bool)
+var ipCounter = make(map[string]int)
 var fundingLock sync.Mutex
 
 type faucetServer struct {
@@ -69,13 +72,7 @@ func newFaucetServer(
 	}
 }
 
-func (s *faucetServer) verifyRecaptcha(ctx context.Context, req *faucetpb.FundingRequest) error {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok || len(md.Get("x-forwarded-for")) < 1 {
-		return errors.New("metadata not ok")
-	}
-
-	peer := md.Get("x-forwarded-for")[0]
+func (s *faucetServer) verifyRecaptcha(peer string, req *faucetpb.FundingRequest) error {
 	fmt.Printf("Sending captcha request for peer %s\n", peer)
 
 	rr, err := s.r.Check(peer, req.RecaptchaResponse)
@@ -105,13 +102,23 @@ func (s *faucetServer) verifyRecaptcha(ctx context.Context, req *faucetpb.Fundin
 // RequestFunds from the ethereum 1.x faucet. Requires a valid captcha
 // response.
 func (s *faucetServer) RequestFunds(ctx context.Context, req *faucetpb.FundingRequest) (*faucetpb.FundingResponse, error) {
-	if err := s.verifyRecaptcha(ctx, req); err != nil {
+	peer, err := s.getPeer(ctx)
+	if err != nil {
+		fmt.Printf("peer failure %v\n", err)
+		return &faucetpb.FundingResponse{Error: "peer error"}, nil
+	}
+
+	if err := s.verifyRecaptcha(peer, req); err != nil {
 		fmt.Printf("Recaptcha failure %v\n", err)
 		return &faucetpb.FundingResponse{Error: "recaptcha error"}, nil
 	}
 
 	fundingLock.Lock()
-	if funded[req.WalletAddress] {
+	exceedPeerLimit := ipCounter[peer] >= ipLimit
+	if funded[req.WalletAddress] || exceedPeerLimit {
+		if exceedPeerLimit {
+			fmt.Printf("peer %s trying to get funded despite being over peer limit\n", peer)
+		}
 		fundingLock.Unlock()
 		return &faucetpb.FundingResponse{Error: "funded too recently"}, nil
 	}
@@ -122,6 +129,10 @@ func (s *faucetServer) RequestFunds(ctx context.Context, req *faucetpb.FundingRe
 	if err != nil {
 		return &faucetpb.FundingResponse{Error: fmt.Sprintf("Failed to send transaction %v", err)}, nil
 	}
+	fundingLock.Lock()
+	ipCounter[peer]++
+	fundingLock.Unlock()
+
 	fmt.Printf("Funded with TX %s\n", txHash)
 
 	return &faucetpb.FundingResponse{
@@ -157,4 +168,13 @@ func (s *faucetServer) fundAndWait(to common.Address) (string, error) {
 	}
 
 	return tx.Hash().Hex(), nil
+}
+
+func (s *faucetServer) getPeer(ctx context.Context) (string, error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok || len(md.Get("x-forwarded-for")) < 1 {
+		return "", errors.New("metadata not ok")
+	}
+	peer := md.Get("x-forwarded-for")[0]
+	return peer, nil
 }

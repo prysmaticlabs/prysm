@@ -33,6 +33,44 @@ func (bs *Server) ListBlocks(
 	}
 
 	switch q := req.QueryFilter.(type) {
+	case *ethpb.ListBlocksRequest_Epoch:
+		blks, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartEpoch(q.Epoch).SetEndEpoch(q.Epoch))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Failed to get blocks: %v", err)
+		}
+
+		numBlks := len(blks)
+		if numBlks == 0 {
+			return &ethpb.ListBlocksResponse{
+				BlockContainers: make([]*ethpb.BeaconBlockContainer, 0),
+				TotalSize:       0,
+				NextPageToken:   strconv.Itoa(0),
+			}, nil
+		}
+
+		start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numBlks)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not paginate blocks: %v", err)
+		}
+
+		returnedBlks := blks[start:end]
+		containers := make([]*ethpb.BeaconBlockContainer, len(returnedBlks))
+		for i, b := range returnedBlks {
+			root, err := ssz.SigningRoot(b)
+			if err != nil {
+				return nil, err
+			}
+			containers[i] = &ethpb.BeaconBlockContainer{
+				Block:     b,
+				BlockRoot: root[:],
+			}
+		}
+
+		return &ethpb.ListBlocksResponse{
+			BlockContainers: containers,
+			TotalSize:       int32(numBlks),
+			NextPageToken:   nextPageToken,
+		}, nil
 	case *ethpb.ListBlocksRequest_Root:
 		blk, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(q.Root))
 		if err != nil {
@@ -151,7 +189,9 @@ func (bs *Server) StreamChainHead(_ *ptypes.Empty, stream ethpb.BeaconChain_Stre
 				if err != nil {
 					return status.Errorf(codes.Internal, "Could not retrieve chain head: %v", err)
 				}
-				return stream.Send(res)
+				if err := stream.Send(res); err != nil {
+					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+				}
 			}
 		case <-stateSub.Err():
 			return status.Error(codes.Aborted, "Subscriber closed, exiting goroutine")

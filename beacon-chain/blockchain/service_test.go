@@ -134,7 +134,6 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 }
 
 func TestChainStartStop_Uninitialized(t *testing.T) {
-	helpers.ClearAllCaches()
 	hook := logTest.NewGlobal()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)

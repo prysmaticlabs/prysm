@@ -59,7 +59,6 @@ go_test(
         "//beacon-chain/cache/depositcache:go_default_library",
         "//beacon-chain/core/feed:go_default_library",
         "//beacon-chain/core/feed/state:go_default_library",
-        "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/db/kv:go_default_library",
         "//beacon-chain/db/testing:go_default_library",
         "//contracts/deposit-contract:go_default_library",

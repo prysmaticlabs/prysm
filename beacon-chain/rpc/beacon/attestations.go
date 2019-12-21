@@ -116,7 +116,7 @@ func (bs *Server) ListAttestations(
 // StreamAttestations to clients every single time a new attestation is received.
 // TODO(#4184): Implement.
 func (bs *Server) StreamAttestations(
-	_ *ethpb.ListAttestationsRequest, _ ethpb.BeaconChain_StreamAttestationsServer,
+	_ *ptypes.Empty, _ ethpb.BeaconChain_StreamAttestationsServer,
 ) error {
 	return status.Error(codes.Unimplemented, "Not yet implemented")
 }

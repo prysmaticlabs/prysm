@@ -4,7 +4,6 @@ import (
 	"context"
 	"sync"
 
-	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -12,11 +11,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 )
 
-var _ = shared.Service(&RegularSync{})
+var _ = shared.Service(&Service{})
 
 // Config to set up the regular sync service.
 type Config struct {
@@ -39,9 +37,11 @@ type blockchainService interface {
 }
 
 // NewRegularSync service.
-func NewRegularSync(cfg *Config) *RegularSync {
-	r := &RegularSync{
-		ctx:                 context.Background(),
+func NewRegularSync(cfg *Config) *Service {
+	ctx, cancel := context.WithCancel(context.Background())
+	r := &Service{
+		ctx:                 ctx,
+		cancel:              cancel,
 		db:                  cfg.DB,
 		p2p:                 cfg.P2P,
 		operations:          cfg.Operations,
@@ -58,10 +58,11 @@ func NewRegularSync(cfg *Config) *RegularSync {
 	return r
 }
 
-// RegularSync service is responsible for handling all run time p2p related operations as the
+// Service is responsible for handling all run time p2p related operations as the
 // main entry point for network messages.
-type RegularSync struct {
+type Service struct {
 	ctx                 context.Context
+	cancel              context.CancelFunc
 	p2p                 p2p.P2P
 	db                  db.Database
 	operations          *operations.Service
@@ -76,20 +77,21 @@ type RegularSync struct {
 }
 
 // Start the regular sync service.
-func (r *RegularSync) Start() {
+func (r *Service) Start() {
 	r.p2p.AddConnectionHandler(r.sendRPCStatusRequest)
 	r.p2p.AddDisconnectionHandler(r.removeDisconnectedPeerStatus)
-	go r.processPendingBlocksQueue()
-	go r.maintainPeerStatuses()
+	r.processPendingBlocksQueue()
+	r.maintainPeerStatuses()
 }
 
 // Stop the regular sync service.
-func (r *RegularSync) Stop() error {
+func (r *Service) Stop() error {
+	defer r.cancel()
 	return nil
 }
 
 // Status of the currently running regular sync service.
-func (r *RegularSync) Status() error {
+func (r *Service) Status() error {
 	if r.chainStarted && r.initialSync.Syncing() {
 		return errors.New("waiting for initial sync")
 	}
@@ -101,9 +103,4 @@ func (r *RegularSync) Status() error {
 type Checker interface {
 	Syncing() bool
 	Status() error
-}
-
-// StatusTracker interface for accessing the status / handshake messages received so far.
-type StatusTracker interface {
-	PeerStatuses() map[peer.ID]*pb.Status
 }

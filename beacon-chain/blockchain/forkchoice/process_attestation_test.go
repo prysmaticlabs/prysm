@@ -9,9 +9,12 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestStore_OnAttestation(t *testing.T) {
@@ -208,5 +211,55 @@ func TestStore_ReturnAggregatedAttestation(t *testing.T) {
 
 	if !reflect.DeepEqual([]*ethpb.Attestation{a2}, saved) {
 		t.Error("did not retrieve saved attestation")
+	}
+}
+
+func TestStore_UpdateCheckpointState(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	store := NewForkChoiceService(ctx, db)
+
+	epoch := uint64(1)
+	baseState, _ := testutil.DeterministicGenesisState(t, 1)
+	baseState.Slot = epoch * params.BeaconConfig().SlotsPerEpoch
+	checkpoint := &ethpb.Checkpoint{Epoch: epoch}
+	returned, err := store.saveCheckpointState(ctx, baseState, checkpoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(baseState, returned) {
+		t.Error("Incorrectly returned base state")
+	}
+
+	cached, err := store.checkpointState.StateByCheckpoint(checkpoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cached != nil {
+		t.Error("State shouldn't have been cached")
+	}
+
+	epoch = uint64(2)
+	newCheckpoint := &ethpb.Checkpoint{Epoch: epoch}
+	returned, err = store.saveCheckpointState(ctx, baseState, newCheckpoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	baseState, err = state.ProcessSlots(ctx, baseState, helpers.StartSlot(newCheckpoint.Epoch))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(baseState, returned) {
+		t.Error("Incorrectly returned base state")
+	}
+
+	cached, err = store.checkpointState.StateByCheckpoint(newCheckpoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(returned, cached) {
+		t.Error("Incorrectly cached base state")
 	}
 }

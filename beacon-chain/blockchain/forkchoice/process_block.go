@@ -102,7 +102,6 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	// Prune the block cache and helper caches on every new finalized epoch.
 	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
 		s.clearSeenAtts()
-		helpers.ClearAllCaches()
 		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint); err != nil {
 			return errors.Wrap(err, "could not save finalized checkpoint")
 		}
@@ -137,7 +136,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 		logEpochData(postState)
 		reportEpochMetrics(postState)
 
-		// Update committee shuffled indices at the end of every epoch
+		// Update committees cache at epoch boundary slot.
 		if featureconfig.Get().EnableNewCache {
 			if err := helpers.UpdateCommitteeCache(postState); err != nil {
 				return err
@@ -201,7 +200,6 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.
 	// Prune the block cache and helper caches on every new finalized epoch.
 	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
 		s.clearSeenAtts()
-		helpers.ClearAllCaches()
 
 		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch) + 1
 		if featureconfig.Get().PruneEpochBoundaryStates {
@@ -242,13 +240,6 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.
 	// Epoch boundary bookkeeping such as logging epoch summaries.
 	if helpers.IsEpochStart(postState.Slot) {
 		reportEpochMetrics(postState)
-
-		// Update committee shuffled indices at the end of every epoch
-		if featureconfig.Get().EnableNewCache {
-			if err := helpers.UpdateCommitteeCache(postState); err != nil {
-				return err
-			}
-		}
 	}
 
 	return nil
@@ -318,7 +309,11 @@ func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attes
 	if baseState == nil {
 		return errors.New("no state found in db with attestation tgt root")
 	}
-	indexedAtt, err := blocks.ConvertToIndexed(ctx, baseState, att)
+	committee, err := helpers.BeaconCommitteeFromState(baseState, att.Data.Slot, att.Data.CommitteeIndex)
+	if err != nil {
+		return err
+	}
+	indexedAtt, err := blocks.ConvertToIndexed(ctx, att, committee)
 	if err != nil {
 		return errors.Wrap(err, "could not convert attestation to indexed attestation")
 	}

@@ -38,7 +38,7 @@ func TestBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 		}
 	}
 
-	r := &RegularSync{p2p: p1, db: d}
+	r := &Service{p2p: p1, db: d}
 	pcl := protocol.ID("/testing")
 
 	var wg sync.WaitGroup

@@ -5,11 +5,9 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -41,15 +39,6 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
-	headState, err := as.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
-	}
-	headState, err = state.ProcessSlots(ctx, headState, req.Slot)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
-	}
-
 	validatorIndex, exists, err := as.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(req.PublicKey))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get validator index from DB: %v", err)
@@ -58,12 +47,22 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 		return nil, status.Error(codes.Internal, "Could not locate validator index in DB")
 	}
 
-	// Check if the validator is an aggregator
-	sig, err := bls.SignatureFromBytes(req.SlotSignature)
+	epoch := helpers.SlotToEpoch(req.Slot)
+	activeValidatorIndices, err := as.HeadFetcher.HeadValidatorsIndices(epoch)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not convert signature to byte: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get validators: %v", err)
 	}
-	isAggregator, err := helpers.IsAggregator(headState, req.Slot, req.CommitteeIndex, sig)
+	seed, err := as.HeadFetcher.HeadSeed(epoch)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get seed: %v", err)
+	}
+	committee, err := helpers.BeaconCommittee(activeValidatorIndices, seed, req.Slot, req.CommitteeIndex)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if the validator is an aggregator
+	isAggregator, err := helpers.IsAggregator(uint64(len(committee)), req.Slot, req.CommitteeIndex, req.SlotSignature)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get aggregator status: %v", err)
 	}

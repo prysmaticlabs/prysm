@@ -199,8 +199,6 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 }
 
 func TestProcessBlockHeader_OK(t *testing.T) {
-	helpers.ClearAllCaches()
-
 	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -272,8 +270,6 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 }
 
 func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
-	helpers.ClearAllCaches()
-
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
@@ -757,9 +753,6 @@ func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 }
 
 func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
-	helpers.ClearActiveIndicesCache()
-	helpers.ClearActiveCountCache()
-
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
@@ -771,7 +764,6 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 		},
 	}
 	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
-	helpers.ClearAllCaches()
 	beaconState.Slot += params.BeaconConfig().SlotsPerEpoch*4 + params.BeaconConfig().MinAttestationInclusionDelay
 	beaconState.PreviousJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.PreviousEpochAttestations = []*pb.PendingAttestation{}
@@ -788,8 +780,6 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 }
 
 func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
-	helpers.ClearAllCaches()
-
 	aggBits := bitfield.NewBitlist(3)
 	custodyBits := bitfield.NewBitlist(3)
 	attestations := []*ethpb.Attestation{
@@ -835,7 +825,6 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 }
 
 func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
-	helpers.ClearAllCaches()
 	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
 
 	aggBits := bitfield.NewBitlist(3)
@@ -857,7 +846,6 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 			Attestations: attestations,
 		},
 	}
-	helpers.ClearAllCaches()
 
 	beaconState.Slot += params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().MinAttestationInclusionDelay
 	beaconState.PreviousJustifiedCheckpoint.Root = []byte("hello-world")
@@ -871,7 +859,6 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	if _, err := blocks.ProcessAttestations(context.Background(), beaconState, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
-	helpers.ClearAllCaches()
 
 	block.Body.Attestations[0].Data.Source.Epoch = helpers.PrevEpoch(beaconState)
 	block.Body.Attestations[0].Data.Target.Epoch = helpers.CurrentEpoch(beaconState)
@@ -888,8 +875,6 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 }
 
 func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
-	helpers.ClearAllCaches()
-
 	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
 
 	aggBits := bitfield.NewBitlist(4)
@@ -921,8 +906,6 @@ func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 }
 
 func TestProcessAttestations_OK(t *testing.T) {
-	helpers.ClearAllCaches()
-
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
 	aggBits := bitfield.NewBitlist(3)
@@ -940,7 +923,11 @@ func TestProcessAttestations_OK(t *testing.T) {
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
-	attestingIndices, err := helpers.AttestingIndices(beaconState, att.Data, att.AggregationBits)
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	if err != nil {
+		t.Error(err)
+	}
+	attestingIndices, err := helpers.AttestingIndices(att.AggregationBits, committee)
 	if err != nil {
 		t.Error(err)
 	}
@@ -974,8 +961,6 @@ func TestProcessAttestations_OK(t *testing.T) {
 }
 
 func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
-	helpers.ClearAllCaches()
-
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
 	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
@@ -997,7 +982,11 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
-	attestingIndices1, err := helpers.AttestingIndices(beaconState, att1.Data, att1.AggregationBits)
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
+	if err != nil {
+		t.Error(err)
+	}
+	attestingIndices1, err := helpers.AttestingIndices(att1.AggregationBits, committee)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1027,7 +1016,11 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 		CustodyBits:     custodyBits2,
 	}
 
-	attestingIndices2, err := helpers.AttestingIndices(beaconState, att2.Data, att2.AggregationBits)
+	committee, err = helpers.BeaconCommitteeFromState(beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
+	if err != nil {
+		t.Error(err)
+	}
+	attestingIndices2, err := helpers.AttestingIndices(att2.AggregationBits, committee)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1052,7 +1045,6 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 }
 
 func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
-	helpers.ClearAllCaches()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 300)
 
 	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
@@ -1073,7 +1065,11 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
-	attestingIndices1, err := helpers.AttestingIndices(beaconState, att1.Data, att1.AggregationBits)
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
+	if err != nil {
+		t.Error(err)
+	}
+	attestingIndices1, err := helpers.AttestingIndices(att1.AggregationBits, committee)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1102,7 +1098,11 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 		CustodyBits:     custodyBits2,
 	}
 
-	attestingIndices2, err := helpers.AttestingIndices(beaconState, att2.Data, att2.AggregationBits)
+	committee, err = helpers.BeaconCommitteeFromState(beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
+	if err != nil {
+		t.Error(err)
+	}
+	attestingIndices2, err := helpers.AttestingIndices(att2.AggregationBits, committee)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1140,7 +1140,6 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 
 func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 	// Attestation with an empty signature
-	helpers.ClearAllCaches()
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
 
@@ -1169,8 +1168,6 @@ func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 }
 
 func TestConvertToIndexed_OK(t *testing.T) {
-	helpers.ClearAllCaches()
-
 	validators := make([]*ethpb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -1217,8 +1214,6 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		helpers.ClearAllCaches()
-
 		attestation.AggregationBits = tt.aggregationBitfield
 		attestation.CustodyBits = tt.custodyBitfield
 		wanted := &ethpb.IndexedAttestation{
@@ -1227,7 +1222,12 @@ func TestConvertToIndexed_OK(t *testing.T) {
 			Data:                attestation.Data,
 			Signature:           attestation.Signature,
 		}
-		ia, err := blocks.ConvertToIndexed(context.Background(), state, attestation)
+
+		committee, err := helpers.BeaconCommitteeFromState(state, attestation.Data.Slot, attestation.Data.CommitteeIndex)
+		if err != nil {
+			t.Error(err)
+		}
+		ia, err := blocks.ConvertToIndexed(context.Background(), attestation, committee)
 		if err != nil {
 			t.Errorf("failed to convert attestation to indexed attestation: %v", err)
 		}
@@ -1240,8 +1240,6 @@ func TestConvertToIndexed_OK(t *testing.T) {
 }
 
 func TestVerifyIndexedAttestation_OK(t *testing.T) {
-	helpers.ClearAllCaches()
-
 	numOfValidators := 4 * params.BeaconConfig().SlotsPerEpoch
 	validators := make([]*ethpb.Validator, numOfValidators)
 	_, keys, _ := testutil.DeterministicDepositsAndKeys(numOfValidators)
@@ -1300,8 +1298,6 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		helpers.ClearAllCaches()
-
 		attDataAndCustodyBit := &pb.AttestationDataAndCustodyBit{
 			Data:       tt.attestation.Data,
 			CustodyBit: false,

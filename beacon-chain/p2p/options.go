@@ -24,7 +24,9 @@ func buildOptions(cfg *Config, ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 		libp2p.EnableRelay(),
 		libp2p.ListenAddrs(listen),
 		whitelistSubnet(cfg.WhitelistCIDR),
-		libp2p.ConnectionManager(connmgr.NewConnManager(int(cfg.MaxPeers), int(cfg.MaxPeers), 1*time.Second)),
+		// Add one for the boot node and another for the relay, otherwise when we are close to maxPeers we will be above the high
+		// water mark and continually trigger pruning.
+		libp2p.ConnectionManager(connmgr.NewConnManager(int(cfg.MaxPeers+2), int(cfg.MaxPeers+2), 1*time.Second)),
 	}
 	if cfg.EnableUPnP {
 		options = append(options, libp2p.NATPortMap()) //Allow to use UPnP

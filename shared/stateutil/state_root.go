@@ -15,17 +15,20 @@ import (
 const bytesPerChunk = 32
 const cacheSize = 100000
 
-var (
-	rootsCache *ristretto.Cache
-)
+var globalHasher *stateRootHasher
 
 func init() {
-	rootsCache, _ = ristretto.NewCache(&ristretto.Config{
+	rootsCache, _ := ristretto.NewCache(&ristretto.Config{
 		NumCounters: cacheSize, // number of keys to track frequency of (1M).
 		MaxCost:     1 << 22,   // maximum cost of cache (3MB).
 		// 100,000 roots will take up approximately 3 MB in memory.
 		BufferItems: 64, // number of keys per Get buffer.
 	})
+	globalHasher = &stateRootHasher{rootsCache: rootsCache}
+}
+
+type stateRootHasher struct {
+	rootsCache *ristretto.Cache
 }
 
 // HashTreeRootState provides a fully-customized version of ssz.HashTreeRoot
@@ -34,6 +37,10 @@ func init() {
 // at the expense of complete specificity (that is, this function can only be used
 // on the Prysm BeaconState data structure).
 func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
+	return globalHasher.hashTreeRootState(state)
+}
+
+func (h *stateRootHasher) hashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	// There are 20 fields in the beacon state.
 	fieldRoots := make([][]byte, 20)
 
@@ -64,14 +71,14 @@ func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	fieldRoots[3] = headerHashTreeRoot[:]
 
 	// BlockRoots array root.
-	blockRootsRoot, err := arraysRoot(state.BlockRoots, "BlockRoots")
+	blockRootsRoot, err := h.arraysRoot(state.BlockRoots, "BlockRoots")
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute block roots merkleization")
 	}
 	fieldRoots[4] = blockRootsRoot[:]
 
 	// StateRoots array root.
-	stateRootsRoot, err := arraysRoot(state.StateRoots, "StateRoots")
+	stateRootsRoot, err := h.arraysRoot(state.StateRoots, "StateRoots")
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute state roots merkleization")
 	}
@@ -105,7 +112,7 @@ func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	fieldRoots[9] = eth1DepositBuf[:]
 
 	// Validators slice root.
-	validatorsRoot, err := validatorRegistryRoot(state.Validators)
+	validatorsRoot, err := h.validatorRegistryRoot(state.Validators)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute validator registry merkleization")
 	}
@@ -119,7 +126,7 @@ func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	fieldRoots[11] = balancesRoot[:]
 
 	// RandaoMixes array root.
-	randaoRootsRoot, err := arraysRoot(state.RandaoMixes, "RandaoMixes")
+	randaoRootsRoot, err := h.arraysRoot(state.RandaoMixes, "RandaoMixes")
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute randao roots merkleization")
 	}
@@ -133,14 +140,14 @@ func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	fieldRoots[13] = slashingsRootsRoot[:]
 
 	// PreviousEpochAttestations slice root.
-	prevAttsRoot, err := epochAttestationsRoot(state.PreviousEpochAttestations)
+	prevAttsRoot, err := h.epochAttestationsRoot(state.PreviousEpochAttestations)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute previous epoch attestations merkleization")
 	}
 	fieldRoots[14] = prevAttsRoot[:]
 
 	// CurrentEpochAttestations slice root.
-	currAttsRoot, err := epochAttestationsRoot(state.CurrentEpochAttestations)
+	currAttsRoot, err := h.epochAttestationsRoot(state.CurrentEpochAttestations)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute previous epoch attestations merkleization")
 	}
@@ -180,14 +187,16 @@ func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 
 func forkRoot(fork *pb.Fork) ([32]byte, error) {
 	fieldRoots := make([][]byte, 3)
-	prevRoot := bytesutil.ToBytes32(fork.PreviousVersion)
-	fieldRoots[0] = prevRoot[:]
-	currRoot := bytesutil.ToBytes32(fork.CurrentVersion)
-	fieldRoots[1] = currRoot[:]
-	forkEpochBuf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(forkEpochBuf, fork.Epoch)
-	epochRoot := bytesutil.ToBytes32(forkEpochBuf)
-	fieldRoots[2] = epochRoot[:]
+	if fork != nil {
+		prevRoot := bytesutil.ToBytes32(fork.PreviousVersion)
+		fieldRoots[0] = prevRoot[:]
+		currRoot := bytesutil.ToBytes32(fork.CurrentVersion)
+		fieldRoots[1] = currRoot[:]
+		forkEpochBuf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(forkEpochBuf, fork.Epoch)
+		epochRoot := bytesutil.ToBytes32(forkEpochBuf)
+		fieldRoots[2] = epochRoot[:]
+	}
 	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
@@ -221,7 +230,7 @@ func historicalRootsRoot(historicalRoots [][]byte) ([32]byte, error) {
 
 func slashingsRoot(slashings []uint64) ([32]byte, error) {
 	slashingMarshaling := make([][]byte, params.BeaconConfig().EpochsPerSlashingsVector)
-	for i := 0; i < len(slashingMarshaling); i++ {
+	for i := 0; i < len(slashings) && i < len(slashingMarshaling); i++ {
 		slashBuf := make([]byte, 8)
 		binary.LittleEndian.PutUint64(slashBuf, slashings[i])
 		slashingMarshaling[i] = slashBuf
