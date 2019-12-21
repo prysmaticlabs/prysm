@@ -11,7 +11,7 @@ go_library(
         "log.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/keymanager",
-    visibility = ["//visibility:public"],
+    visibility = ["//validator:__subpackages__"],
     deps = [
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
