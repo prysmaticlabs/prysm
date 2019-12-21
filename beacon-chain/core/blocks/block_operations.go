@@ -668,9 +668,8 @@ func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, commi
 //    # Verify max number of indices
 //    if not len(indices) <= MAX_VALIDATORS_PER_COMMITTEE:
 //        return False
-//    # Verify indices are sorted
-//    if not indices == sorted(indices):
-//        return False
+//    # Verify indices are sorted and unique
+//        if not indices == sorted(set(indices)):
 //    # Verify aggregate signature
 //    if not bls_verify(
 //        pubkey=bls_aggregate_pubkeys([state.validators[i].pubkey for i in indices]),
@@ -690,8 +689,17 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *pb.BeaconState, 
 		return fmt.Errorf("validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE, %d > %d", len(indices), params.BeaconConfig().MaxValidatorsPerCommittee)
 	}
 
-	sorted := sort.SliceIsSorted(indices, func(i, j int) bool {
-		return indices[i] < indices[j]
+	set := make(map[uint64]bool)
+	setIndices := make([]uint64, 0, len(indices))
+	for _, i := range indices {
+		if ok := set[i]; ok {
+			continue
+		}
+		setIndices = append(setIndices, i)
+		set[i] = true
+	}
+	sorted := sort.SliceIsSorted(setIndices, func(i, j int) bool {
+		return setIndices[i] < setIndices[j]
 	})
 	if !sorted {
 		return fmt.Errorf("attesting indices are not sorted, got %v", sorted)
