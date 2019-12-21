@@ -798,7 +798,7 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 			Data: &ethpb.AttestationData{
 				Source: &ethpb.Checkpoint{Epoch: 1},
 				Target: &ethpb.Checkpoint{Epoch: 1},
-				Slot:   1,
+				Slot:   params.BeaconConfig().SlotsPerEpoch,
 			},
 			AggregationBits: aggBits,
 		},
