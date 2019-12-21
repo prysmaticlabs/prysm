@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	ethpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 )
@@ -15,7 +15,7 @@ type spanMapTestStruct struct {
 	sourceEpoch         uint64
 	targetEpoch         uint64
 	slashingTargetEpoch uint64
-	resultSpanMap       *ethpb.EpochSpanMap
+	resultSpanMap       *slashpb.EpochSpanMap
 }
 
 var spanTestsMax []spanMapTestStruct
@@ -30,8 +30,8 @@ func init() {
 			sourceEpoch:         3,
 			targetEpoch:         6,
 			slashingTargetEpoch: 0,
-			resultSpanMap: &ethpb.EpochSpanMap{
-				EpochSpanMap: map[uint64]*ethpb.MinMaxEpochSpan{
+			resultSpanMap: &slashpb.EpochSpanMap{
+				EpochSpanMap: map[uint64]*slashpb.MinMaxEpochSpan{
 					4: {MinEpochSpan: 0, MaxEpochSpan: 2},
 					5: {MinEpochSpan: 0, MaxEpochSpan: 1},
 				},
@@ -42,8 +42,8 @@ func init() {
 			sourceEpoch:         8,
 			targetEpoch:         18,
 			slashingTargetEpoch: 0,
-			resultSpanMap: &ethpb.EpochSpanMap{
-				EpochSpanMap: map[uint64]*ethpb.MinMaxEpochSpan{
+			resultSpanMap: &slashpb.EpochSpanMap{
+				EpochSpanMap: map[uint64]*slashpb.MinMaxEpochSpan{
 					4:  {MinEpochSpan: 0, MaxEpochSpan: 2},
 					5:  {MinEpochSpan: 0, MaxEpochSpan: 1},
 					9:  {MinEpochSpan: 0, MaxEpochSpan: 9},
@@ -63,8 +63,8 @@ func init() {
 			sourceEpoch:         4,
 			targetEpoch:         12,
 			slashingTargetEpoch: 0,
-			resultSpanMap: &ethpb.EpochSpanMap{
-				EpochSpanMap: map[uint64]*ethpb.MinMaxEpochSpan{
+			resultSpanMap: &slashpb.EpochSpanMap{
+				EpochSpanMap: map[uint64]*slashpb.MinMaxEpochSpan{
 					4:  {MinEpochSpan: 0, MaxEpochSpan: 2},
 					5:  {MinEpochSpan: 0, MaxEpochSpan: 7},
 					6:  {MinEpochSpan: 0, MaxEpochSpan: 6},
@@ -87,8 +87,8 @@ func init() {
 			sourceEpoch:         10,
 			targetEpoch:         15,
 			slashingTargetEpoch: 18,
-			resultSpanMap: &ethpb.EpochSpanMap{
-				EpochSpanMap: map[uint64]*ethpb.MinMaxEpochSpan{
+			resultSpanMap: &slashpb.EpochSpanMap{
+				EpochSpanMap: map[uint64]*slashpb.MinMaxEpochSpan{
 					4:  {MinEpochSpan: 0, MaxEpochSpan: 2},
 					5:  {MinEpochSpan: 0, MaxEpochSpan: 7},
 					6:  {MinEpochSpan: 0, MaxEpochSpan: 6},
@@ -114,8 +114,8 @@ func init() {
 			sourceEpoch:         4,
 			targetEpoch:         6,
 			slashingTargetEpoch: 0,
-			resultSpanMap: &ethpb.EpochSpanMap{
-				EpochSpanMap: map[uint64]*ethpb.MinMaxEpochSpan{
+			resultSpanMap: &slashpb.EpochSpanMap{
+				EpochSpanMap: map[uint64]*slashpb.MinMaxEpochSpan{
 					1: {MinEpochSpan: 5, MaxEpochSpan: 0},
 					2: {MinEpochSpan: 4, MaxEpochSpan: 0},
 					3: {MinEpochSpan: 3, MaxEpochSpan: 0},
@@ -127,8 +127,8 @@ func init() {
 			sourceEpoch:         13,
 			targetEpoch:         18,
 			slashingTargetEpoch: 0,
-			resultSpanMap: &ethpb.EpochSpanMap{
-				EpochSpanMap: map[uint64]*ethpb.MinMaxEpochSpan{
+			resultSpanMap: &slashpb.EpochSpanMap{
+				EpochSpanMap: map[uint64]*slashpb.MinMaxEpochSpan{
 					1:  {MinEpochSpan: 5, MaxEpochSpan: 0},
 					2:  {MinEpochSpan: 4, MaxEpochSpan: 0},
 					3:  {MinEpochSpan: 3, MaxEpochSpan: 0},
@@ -149,8 +149,8 @@ func init() {
 			sourceEpoch:         11,
 			targetEpoch:         15,
 			slashingTargetEpoch: 0,
-			resultSpanMap: &ethpb.EpochSpanMap{
-				EpochSpanMap: map[uint64]*ethpb.MinMaxEpochSpan{
+			resultSpanMap: &slashpb.EpochSpanMap{
+				EpochSpanMap: map[uint64]*slashpb.MinMaxEpochSpan{
 					1:  {MinEpochSpan: 5, MaxEpochSpan: 0},
 					2:  {MinEpochSpan: 4, MaxEpochSpan: 0},
 					3:  {MinEpochSpan: 3, MaxEpochSpan: 0},
@@ -171,8 +171,8 @@ func init() {
 			sourceEpoch:         10,
 			targetEpoch:         20,
 			slashingTargetEpoch: 15,
-			resultSpanMap: &ethpb.EpochSpanMap{
-				EpochSpanMap: map[uint64]*ethpb.MinMaxEpochSpan{
+			resultSpanMap: &slashpb.EpochSpanMap{
+				EpochSpanMap: map[uint64]*slashpb.MinMaxEpochSpan{
 					1:  {MinEpochSpan: 5, MaxEpochSpan: 0},
 					2:  {MinEpochSpan: 4, MaxEpochSpan: 0},
 					3:  {MinEpochSpan: 3, MaxEpochSpan: 0},
@@ -267,8 +267,8 @@ func TestServer_FailToUpdate(t *testing.T) {
 		sourceEpoch:         0,
 		slashingTargetEpoch: 0,
 		targetEpoch:         params.BeaconConfig().WeakSubjectivityPeriod + 1,
-		resultSpanMap: &ethpb.EpochSpanMap{
-			EpochSpanMap: map[uint64]*ethpb.MinMaxEpochSpan{
+		resultSpanMap: &slashpb.EpochSpanMap{
+			EpochSpanMap: map[uint64]*slashpb.MinMaxEpochSpan{
 				4: {MinEpochSpan: 0, MaxEpochSpan: 2},
 				5: {MinEpochSpan: 0, MaxEpochSpan: 1},
 			},
