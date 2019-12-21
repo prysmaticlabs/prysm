@@ -6,12 +6,12 @@ import (
 	"sync"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/gogo/protobuf/types"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	slashpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -110,13 +110,13 @@ func (ss *Server) IsSlashableBlock(ctx context.Context, psr *slashpb.ProposerSla
 }
 
 // SlashableProposals is a subscription to receive all slashable proposer slashing events found by the watchtower.
-func (ss *Server) SlashableProposals(req *types.Empty, server slashpb.Slasher_SlashableProposalsServer) error {
+func (ss *Server) SlashableProposals(req *empty.Empty, server slashpb.Slasher_SlashableProposalsServer) error {
 	//TODO(3133): implement stream provider for newly discovered listening to slashable proposals.
 	return status.Error(codes.Unimplemented, "not implemented")
 }
 
 // SlashableAttestations is a subscription to receive all slashable attester slashing events found by the watchtower.
-func (ss *Server) SlashableAttestations(req *types.Empty, server slashpb.Slasher_SlashableAttestationsServer) error {
+func (ss *Server) SlashableAttestations(req *empty.Empty, server slashpb.Slasher_SlashableAttestationsServer) error {
 	//TODO(3133): implement stream provider for newly discovered listening to slashable attestation.
 	return status.Error(codes.Unimplemented, "not implemented")
 }
