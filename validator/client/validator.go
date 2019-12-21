@@ -10,6 +10,7 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/validator/db"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -25,6 +26,7 @@ import (
 type validator struct {
 	genesisTime          uint64
 	ticker               *slotutil.SlotTicker
+	db					 db.
 	duties               *ethpb.DutiesResponse
 	validatorClient      ethpb.BeaconNodeValidatorClient
 	beaconClient         ethpb.BeaconChainClient
