@@ -5,10 +5,11 @@ package db
 
 import (
 	fmt "fmt"
-	proto "github.com/gogo/protobuf/proto"
-	v1alpha1 "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	io "io"
 	math "math"
+
+	proto "github.com/gogo/protobuf/proto"
+	v1alpha1 "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
