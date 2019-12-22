@@ -11,6 +11,7 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 // Ensure Service implements chain info interface.
@@ -20,6 +21,7 @@ var _ = ForkFetcher(&Service{})
 
 func TestFinalizedCheckpt_Nil(t *testing.T) {
 	c := setupBeaconChain(t, nil)
+	c.headState, _ = testutil.DeterministicGenesisState(t, 1)
 	if !bytes.Equal(c.FinalizedCheckpt().Root, params.BeaconConfig().ZeroHash[:]) {
 		t.Error("Incorrect pre chain start value")
 	}
@@ -35,16 +37,39 @@ func TestHeadRoot_Nil(t *testing.T) {
 func TestFinalizedCheckpt_CanRetrieve(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
-	ctx := context.Background()
 
+	cp := &ethpb.Checkpoint{Epoch: 5}
 	c := setupBeaconChain(t, db)
+	c.headState = &pb.BeaconState{FinalizedCheckpoint: cp}
 
-	if err := c.forkChoiceStore.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
-		t.Fatal(err)
+	if c.FinalizedCheckpt().Epoch != cp.Epoch {
+		t.Errorf("Finalized epoch at genesis should be %d, got: %d", cp.Epoch, c.FinalizedCheckpt().Epoch)
 	}
+}
 
-	if c.FinalizedCheckpt().Epoch != 0 {
-		t.Errorf("Finalized epoch at genesis should be 0, got: %d", c.FinalizedCheckpt().Epoch)
+func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	cp := &ethpb.Checkpoint{Epoch: 6}
+	c := setupBeaconChain(t, db)
+	c.headState = &pb.BeaconState{CurrentJustifiedCheckpoint: cp}
+
+	if c.CurrentJustifiedCheckpt().Epoch != cp.Epoch {
+		t.Errorf("Current Justifiied epoch at genesis should be %d, got: %d", cp.Epoch, c.CurrentJustifiedCheckpt().Epoch)
+	}
+}
+
+func TestPreviousJustifiedCheckpt_CanRetrieve(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	cp := &ethpb.Checkpoint{Epoch: 7}
+	c := setupBeaconChain(t, db)
+	c.headState = &pb.BeaconState{PreviousJustifiedCheckpoint: cp}
+
+	if c.PreviousJustifiedCheckpt().Epoch != cp.Epoch {
+		t.Errorf("Previous Justifiied epoch at genesis should be %d, got: %d", cp.Epoch, c.PreviousJustifiedCheckpt().Epoch)
 	}
 }
 
