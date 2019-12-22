@@ -9,7 +9,6 @@ import (
 )
 
 func TestEndToEnd_DemoConfig(t *testing.T) {
-	t.Skip("Skipping till #4224 is resolved")
 	testutil.ResetCache()
 	params.UseDemoBeaconConfig()
 

@@ -107,6 +107,9 @@ func (s *Service) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 
 // HeadValidatorsIndices returns a list of active validator indices from the head view of a given epoch.
 func (s *Service) HeadValidatorsIndices(epoch uint64) ([]uint64, error) {
+	if s.headState == nil {
+		return []uint64{}, nil
+	}
 	return helpers.ActiveValidatorIndices(s.headState, epoch)
 }
 
