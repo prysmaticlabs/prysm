@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -769,6 +770,29 @@ func ProcessDeposits(ctx context.Context, beaconState *pb.BeaconState, body *eth
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
 		}
+	}
+	return beaconState, nil
+}
+
+// ProcessPreGenesisDeposit processes a deposit for the beacon state before chainstart.
+func ProcessPreGenesisDeposit(ctx context.Context, beaconState *pb.BeaconState,
+	deposit *ethpb.Deposit, valIndexMap map[[48]byte]int) (*pb.BeaconState, error) {
+	var err error
+	beaconState, err = ProcessDeposit(beaconState, deposit, valIndexMap)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process deposit")
+	}
+	pubkey := deposit.Data.PublicKey
+	index, ok := valIndexMap[bytesutil.ToBytes48(pubkey)]
+	if !ok {
+		return beaconState, nil
+	}
+	balance := beaconState.Balances[index]
+	beaconState.Validators[index].EffectiveBalance = mathutil.Min(balance-balance%params.BeaconConfig().EffectiveBalanceIncrement, params.BeaconConfig().MaxEffectiveBalance)
+	if beaconState.Validators[index].EffectiveBalance ==
+		params.BeaconConfig().MaxEffectiveBalance {
+		beaconState.Validators[index].ActivationEligibilityEpoch = 0
+		beaconState.Validators[index].ActivationEpoch = 0
 	}
 	return beaconState, nil
 }

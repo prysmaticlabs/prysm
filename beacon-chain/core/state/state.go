@@ -4,12 +4,13 @@
 package state
 
 import (
+	"context"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
@@ -52,96 +53,8 @@ import (
 //	    state.compact_committees_roots[index] = committee_root
 //	  return state
 func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (*pb.BeaconState, error) {
-	if eth1Data == nil {
-		return nil, errors.New("no eth1data provided for genesis state")
-	}
-
-	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
-	for i := 0; i < len(randaoMixes); i++ {
-		h := make([]byte, 32)
-		copy(h, eth1Data.BlockHash)
-		randaoMixes[i] = h
-	}
-
-	zeroHash := params.BeaconConfig().ZeroHash[:]
-
-	activeIndexRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
-	for i := 0; i < len(activeIndexRoots); i++ {
-		activeIndexRoots[i] = zeroHash
-	}
-
-	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
-	for i := 0; i < len(blockRoots); i++ {
-		blockRoots[i] = zeroHash
-	}
-
-	stateRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
-	for i := 0; i < len(stateRoots); i++ {
-		stateRoots[i] = zeroHash
-	}
-
-	slashings := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
-
-	eth1Data.DepositCount = uint64(len(deposits))
-
-	state := &pb.BeaconState{
-		// Misc fields.
-		Slot:        0,
-		GenesisTime: genesisTime,
-
-		Fork: &pb.Fork{
-			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
-			Epoch:           0,
-		},
-
-		// Validator registry fields.
-		Validators: []*ethpb.Validator{},
-		Balances:   []uint64{},
-
-		// Randomness and committees.
-		RandaoMixes: randaoMixes,
-
-		// Finality.
-		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{
-			Epoch: 0,
-			Root:  params.BeaconConfig().ZeroHash[:],
-		},
-		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{
-			Epoch: 0,
-			Root:  params.BeaconConfig().ZeroHash[:],
-		},
-		JustificationBits: []byte{0},
-		FinalizedCheckpoint: &ethpb.Checkpoint{
-			Epoch: 0,
-			Root:  params.BeaconConfig().ZeroHash[:],
-		},
-
-		HistoricalRoots:           [][]byte{},
-		BlockRoots:                blockRoots,
-		StateRoots:                stateRoots,
-		Slashings:                 slashings,
-		CurrentEpochAttestations:  []*pb.PendingAttestation{},
-		PreviousEpochAttestations: []*pb.PendingAttestation{},
-
-		// Eth1 data.
-		Eth1Data:         eth1Data,
-		Eth1DataVotes:    []*ethpb.Eth1Data{},
-		Eth1DepositIndex: 0,
-	}
-
-	bodyRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlockBody{})
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not hash tree root %v", bodyRoot)
-	}
-
-	state.LatestBlockHeader = &ethpb.BeaconBlockHeader{
-		ParentRoot: zeroHash,
-		StateRoot:  zeroHash,
-		BodyRoot:   bodyRoot[:],
-		Signature:  params.BeaconConfig().EmptySignature[:],
-	}
-
+	state := EmptyGenesisState()
+	var err error
 	// Process initial deposits.
 	validatorMap := make(map[[48]byte]int)
 	leaves := [][]byte{}
@@ -167,24 +80,14 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 
 	depositRoot := trie.Root()
 	state.Eth1Data.DepositRoot = depositRoot[:]
+	eth1Data.DepositRoot = depositRoot[:]
 	for i, deposit := range deposits {
-		state, err = b.ProcessDeposit(state, deposit, validatorMap)
+		state, err = b.ProcessPreGenesisDeposit(context.Background(), state, deposit, validatorMap)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process validator deposit %d", i)
 		}
 	}
-	// Process genesis activations
-	for i, validator := range state.Validators {
-		balance := state.Balances[i]
-		validator.EffectiveBalance = mathutil.Min(balance-balance%params.BeaconConfig().EffectiveBalanceIncrement, params.BeaconConfig().MaxEffectiveBalance)
-		if state.Validators[i].EffectiveBalance ==
-			params.BeaconConfig().MaxEffectiveBalance {
-			state.Validators[i].ActivationEligibilityEpoch = 0
-			state.Validators[i].ActivationEpoch = 0
-		}
-	}
-
-	return state, nil
+	return OptimizedGenesisBeaconState(genesisTime, state, eth1Data)
 }
 
 // OptimizedGenesisBeaconState is used to create a state that has already processed deposits. This is to efficiently
