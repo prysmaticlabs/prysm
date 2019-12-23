@@ -86,6 +86,9 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 	// Verify attestations are valid before aggregating and broadcasting them out.
 	validAtts := make([]*ethpb.Attestation, 0, len(atts))
 	for _, att := range atts {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		if err := blocks.VerifyAttestation(ctx, headState, att); err != nil {
 			if err := as.AttPool.DeleteUnaggregatedAttestation(att); err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not delete invalid attestation: %v", err)
@@ -101,6 +104,9 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 		return nil, status.Errorf(codes.Internal, "Could not aggregate attestations: %v", err)
 	}
 	for _, aggregatedAtt := range aggregatedAtts {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		if helpers.IsAggregated(aggregatedAtt) {
 			if err := as.P2p.Broadcast(ctx, &ethpb.AggregateAttestationAndProof{
 				AggregatorIndex: validatorIndex,
