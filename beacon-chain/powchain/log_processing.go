@@ -7,8 +7,6 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -17,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -231,10 +230,6 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 	})
 }
 
-func (s *Service) setGenesisTime(timeStamp uint64) {
-	s.eth2GenesisTime = s.createGenesisTime(timeStamp)
-}
-
 func (s *Service) createGenesisTime(timeStamp uint64) uint64 {
 	if !featureconfig.Get().GenesisDelay {
 		return uint64(time.Unix(int64(timeStamp), 0).Add(30 * time.Second).Unix())
@@ -366,7 +361,7 @@ func (s *Service) checkForChainStart(ctx context.Context, blkNum *big.Int) error
 	valCount, _ := helpers.ActiveValidatorCount(s.preGenesisState, 0)
 	triggered := state.IsValidGenesisState(valCount, s.createGenesisTime(timeStamp))
 	if triggered {
-		s.setGenesisTime(timeStamp)
+		s.eth2GenesisTime = s.createGenesisTime(timeStamp)
 		s.ProcessChainStart(uint64(s.eth2GenesisTime), blk.Hash(), blk.Number())
 	}
 	return nil
