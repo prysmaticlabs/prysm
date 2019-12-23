@@ -776,14 +776,14 @@ func ProcessDeposits(ctx context.Context, beaconState *pb.BeaconState, body *eth
 
 // ProcessPreGenesisDeposit processes a deposit for the beacon state before chainstart.
 func ProcessPreGenesisDeposit(ctx context.Context, beaconState *pb.BeaconState,
-	deposit *ethpb.Deposit, valIndexMap map[[48]byte]int) (*pb.BeaconState, error) {
+	deposit *ethpb.Deposit, validatorIndices map[[48]byte]int) (*pb.BeaconState, error) {
 	var err error
-	beaconState, err = ProcessDeposit(beaconState, deposit, valIndexMap)
+	beaconState, err = ProcessDeposit(beaconState, deposit, validatorIndices)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process deposit")
 	}
 	pubkey := deposit.Data.PublicKey
-	index, ok := valIndexMap[bytesutil.ToBytes48(pubkey)]
+	index, ok := validatorIndices[bytesutil.ToBytes48(pubkey)]
 	if !ok {
 		return beaconState, nil
 	}
