@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
@@ -21,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -505,7 +505,7 @@ func (s *Store) currentSlot() uint64 {
 
 // slotsSinceGenesis returns how many slots has passed since genesis time.
 func (s *Store) slotsSinceGenesis() uint64 {
-	return (uint64(time.Now().Unix()) - s.genesisTime) / params.BeaconConfig().SecondsPerSlot
+	return (uint64(roughtime.Now().Unix()) - s.genesisTime) / params.BeaconConfig().SecondsPerSlot
 }
 
 // updates justified check point in store if a better check point is known
