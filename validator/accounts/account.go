@@ -135,7 +135,7 @@ func Exists(keystorePath string) (bool, error) {
 func CreateValidatorAccount(path string, passphrase string) (string, string, error) {
 	if passphrase == "" {
 		reader := bufio.NewReader(os.Stdin)
-		logrus.Info("Create a new validator account for eth2")
+		log.Info("Create a new validator account for eth2")
 		log.Info("Enter a password:")
 		bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
 		if err != nil {
