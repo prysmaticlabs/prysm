@@ -52,8 +52,13 @@ import (
 //	    state.active_index_roots[index] = active_index_root
 //	    state.compact_committees_roots[index] = committee_root
 //	  return state
+// This method differs from the spec so as to process deposits beforehand instead of the end of the function.
 func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (*pb.BeaconState, error) {
+	if eth1Data == nil {
+		return nil, errors.New("no eth1data provided for genesis state")
+	}
 	state := EmptyGenesisState()
+	state.Eth1Data = eth1Data
 	var err error
 	// Process initial deposits.
 	validatorMap := make(map[[48]byte]int)
@@ -80,14 +85,13 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 
 	depositRoot := trie.Root()
 	state.Eth1Data.DepositRoot = depositRoot[:]
-	eth1Data.DepositRoot = depositRoot[:]
 	for i, deposit := range deposits {
 		state, err = b.ProcessPreGenesisDeposit(context.Background(), state, deposit, validatorMap)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process validator deposit %d", i)
 		}
 	}
-	return OptimizedGenesisBeaconState(genesisTime, state, eth1Data)
+	return OptimizedGenesisBeaconState(genesisTime, state, state.Eth1Data)
 }
 
 // OptimizedGenesisBeaconState is used to create a state that has already processed deposits. This is to efficiently
