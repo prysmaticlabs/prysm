@@ -17,6 +17,7 @@ import (
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -71,7 +72,10 @@ func TestProposeAttestation_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	sk := bls.RandKey()
+	sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
 	req := &ethpb.Attestation{
+		Signature: sig.Marshal(),
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: root[:],
 			Source:          &ethpb.Checkpoint{},
@@ -80,6 +84,30 @@ func TestProposeAttestation_OK(t *testing.T) {
 	}
 	if _, err := attesterServer.ProposeAttestation(context.Background(), req); err != nil {
 		t.Errorf("Could not attest head correctly: %v", err)
+	}
+}
+
+func TestProposeAttestation_IncorrectSignature(t *testing.T) {
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
+
+	attesterServer := &Server{
+		HeadFetcher:      &mock.ChainService{},
+		P2P:              &mockp2p.MockBroadcaster{},
+		BeaconDB:         db,
+		AttestationCache: cache.NewAttestationCache(),
+		AttPool:          attestations.NewPool(),
+	}
+
+	req := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			Source:          &ethpb.Checkpoint{},
+			Target:          &ethpb.Checkpoint{},
+		},
+	}
+	wanted := "Incorrect attestation signature"
+	if _, err := attesterServer.ProposeAttestation(context.Background(), req); !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Did not get wanted error")
 	}
 }
 
