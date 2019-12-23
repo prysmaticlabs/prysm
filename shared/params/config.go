@@ -252,7 +252,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.ShuffleRoundCount = 10
 	minimalConfig.MinGenesisActiveValidatorCount = 64
 	minimalConfig.MinGenesisTime = 0
-	minimalConfig.TargetAggregatorsPerCommittee = 2
+	minimalConfig.TargetAggregatorsPerCommittee = 3
 
 	// Gwei values
 	minimalConfig.MinDepositAmount = 1e9
