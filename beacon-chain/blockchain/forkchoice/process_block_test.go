@@ -64,7 +64,7 @@ func TestStore_OnBlock(t *testing.T) {
 			name:          "block is from the feature",
 			blk:           &ethpb.BeaconBlock{ParentRoot: randomParentRoot[:], Slot: params.BeaconConfig().FarFutureEpoch},
 			s:             &pb.BeaconState{},
-			wantErrString: "could not process slot from the future",
+			wantErrString: "could not process future block",
 		},
 		{
 			name:          "could not get finalized block",
