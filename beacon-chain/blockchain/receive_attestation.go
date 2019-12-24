@@ -4,13 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/runutil"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -56,21 +55,25 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 
 // This processes attestations from the attestation pool to account for validator votes and fork choice.
 func (s *Service) processAttestation() {
-	period := time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
-	ctx := context.Background()
-	runutil.RunEvery(s.ctx, period, func() {
-		atts := s.attPool.ForkchoiceAttestations()
+	st := slotutil.GetSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
+	for {
+		select {
+			case <-s.ctx.Done():
+				return
+			case <-st.C():
+				ctx := context.Background()
+				atts := s.attPool.ForkchoiceAttestations()
+				for _, a := range atts {
+					if err := s.attPool.DeleteForkchoiceAttestation(a); err != nil {
+						log.WithError(err).Error("Could not delete fork choice attestation in pool")
+					}
 
-		for _, a := range atts {
-			if err := s.attPool.DeleteForkchoiceAttestation(a); err != nil {
-				log.WithError(err).Error("Could not delete fork choice attestation in pool")
-			}
-
-			if err := s.ReceiveAttestationNoPubsub(ctx, a); err != nil {
-				log.WithFields(logrus.Fields{
-					"targetRoot": fmt.Sprintf("%#x", a.Data.Target.Root),
-				}).WithError(err).Error("Could not receive attestation in chain service")
-			}
+					if err := s.ReceiveAttestationNoPubsub(ctx, a); err != nil {
+						log.WithFields(logrus.Fields{
+							"targetRoot": fmt.Sprintf("%#x", a.Data.Target.Root),
+						}).WithError(err).Error("Could not receive attestation in chain service")
+					}
+				}
 		}
-	})
+	}
 }
