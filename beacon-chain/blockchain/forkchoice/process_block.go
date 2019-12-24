@@ -505,7 +505,9 @@ func (s *Store) currentSlot() uint64 {
 
 // slotsSinceGenesis returns how many slots has passed since genesis time.
 func (s *Store) slotsSinceGenesis() uint64 {
-	return (uint64(time.Now().Unix()) - s.genesisTime) / params.BeaconConfig().SecondsPerSlot
+	// allows for slots "from the future" within a certain tolerance.
+	timeShiftTolerance := uint64(10) // ms
+	return (uint64(time.Now().Unix()) - s.genesisTime + timeShiftTolerance) / params.BeaconConfig().SecondsPerSlot
 }
 
 // updates justified check point in store if a better check point is known
