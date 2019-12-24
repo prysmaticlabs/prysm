@@ -84,6 +84,9 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 		return nil, status.Errorf(codes.Internal, "Could not aggregate attestations: %v", err)
 	}
 	for _, aggregatedAtt := range aggregatedAtts {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		if helpers.IsAggregated(aggregatedAtt) {
 			if err := as.P2p.Broadcast(ctx, &ethpb.AggregateAttestationAndProof{
 				AggregatorIndex: validatorIndex,
