@@ -15,7 +15,7 @@ func HasProposedForEpoch(history *slashpb.ValidatorProposalHistory, epoch uint64
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 	// Previously pruned, but to be safe we should return true.
 	if int(epoch) <= int(history.LatestEpochWritten)-int(wsPeriod) {
-		return true
+		return false
 	}
 	// Accessing future proposals that haven't been marked yet. Needs to return false.
 	if epoch > history.LatestEpochWritten {
@@ -30,11 +30,16 @@ func SetProposedForEpoch(history *slashpb.ValidatorProposalHistory, epoch uint64
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 
 	if epoch > history.LatestEpochWritten {
-		// If epoch to mark is ahead of last written epoch, override the old votes and mark the requested epoch.
-		for i := history.LatestEpochWritten + 1; i <= epoch; i++ {
-			if !history.ProposalHistory.BitAt(i % wsPeriod) {
-				history.ProposalHistory.SetBitAt(i%wsPeriod, false)
-			}
+		// If the history is empty, just update the latest written and mark the epoch.
+		// This is for the first run of a validator.
+		if history.ProposalHistory.Count() < 1 {
+			history.LatestEpochWritten = epoch
+			history.ProposalHistory.SetBitAt(epoch%wsPeriod, true)
+			return
+		}
+		// If the epoch to mark is ahead of latest written epoch, override the old votes and mark the requested epoch.
+		for i := history.LatestEpochWritten + 1; i < epoch; i++ {
+			history.ProposalHistory.SetBitAt(i%wsPeriod, false)
 		}
 		history.LatestEpochWritten = epoch
 	}
