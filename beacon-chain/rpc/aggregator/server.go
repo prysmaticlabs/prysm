@@ -5,7 +5,6 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -79,28 +78,15 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 	// Retrieve the unaggregated attestation from pool
 	atts := as.AttPool.UnaggregatedAttestationsBySlotIndex(req.Slot, req.CommitteeIndex)
 
-	headState, err := as.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, err
-	}
-	// Verify attestations are valid before aggregating and broadcasting them out.
-	validAtts := make([]*ethpb.Attestation, 0, len(atts))
-	for _, att := range atts {
-		if err := blocks.VerifyAttestation(ctx, headState, att); err != nil {
-			if err := as.AttPool.DeleteUnaggregatedAttestation(att); err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not delete invalid attestation: %v", err)
-			}
-			continue
-		}
-		validAtts = append(validAtts, att)
-	}
-
 	// Aggregate the attestations and broadcast them.
-	aggregatedAtts, err := helpers.AggregateAttestations(validAtts)
+	aggregatedAtts, err := helpers.AggregateAttestations(atts)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not aggregate attestations: %v", err)
 	}
 	for _, aggregatedAtt := range aggregatedAtts {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		if helpers.IsAggregated(aggregatedAtt) {
 			if err := as.P2p.Broadcast(ctx, &ethpb.AggregateAttestationAndProof{
 				AggregatorIndex: validatorIndex,
