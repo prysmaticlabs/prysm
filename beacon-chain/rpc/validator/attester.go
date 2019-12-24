@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -98,6 +99,10 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 // ProposeAttestation is a function called by an attester to vote
 // on a block via an attestation object as defined in the Ethereum Serenity specification.
 func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation) (*ethpb.AttestResponse, error) {
+	if _, err := bls.SignatureFromBytes(att.Signature); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "Incorrect attestation signature")
+	}
+
 	root, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not tree hash attestation: %v", err)
