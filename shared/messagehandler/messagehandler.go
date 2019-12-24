@@ -31,6 +31,8 @@ func SafelyHandleMessage(ctx context.Context, fn func(ctx context.Context, messa
 	}
 }
 
+// HandlePanic returns a panic handler function that is used to
+// capture a panic.
 func HandlePanic(ctx context.Context, msg proto.Message) func() {
 	return func() {
 		if r := recover(); r != nil {
