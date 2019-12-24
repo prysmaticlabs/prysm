@@ -176,7 +176,7 @@ func (r *Service) subscribe(topic string, validator pubsub.Validator, handle sub
 // appropriate counter if the particular message fails to validate.
 func wrapAndReportValidation(topic string, v pubsub.Validator) (string, pubsub.Validator) {
 	return topic, func(ctx context.Context, pid peer.ID, msg *pubsub.Message) bool {
-		defer messagehandler.HandlePanic(ctx, msg)()
+		defer messagehandler.HandlePanic(ctx, msg)
 		b := v(ctx, pid, msg)
 		if !b {
 			messageFailedValidationCounter.WithLabelValues(topic).Inc()
