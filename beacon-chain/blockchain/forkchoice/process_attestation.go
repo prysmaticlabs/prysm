@@ -49,7 +49,7 @@ var ErrTargetRootNotInDB = errors.New("target root does not exist in db")
 //    assert target.root in store.blocks
 //    # Attestations cannot be from future epochs. If they are, delay consideration until the epoch arrives
 //    base_state = store.block_states[target.root].copy()
-//    assert get_current_slot(store) >= compute_start_slot_at_epoch(target.epoch)
+//    assert store.time >= base_state.genesis_time + compute_start_slot_at_epoch(target.epoch) * SECONDS_PER_SLOT
 //
 //    # Attestations must be for a known block. If block is unknown, delay consideration until the block is found
 //    assert attestation.data.beacon_block_root in store.blocks
@@ -64,7 +64,7 @@ var ErrTargetRootNotInDB = errors.New("target root does not exist in db")
 //
 //    # Attestations can only affect the fork choice of subsequent slots.
 //    # Delay consideration in the fork choice until their slot is in the past.
-//    assert get_current_slot(store) >= attestation.data.slot + 1
+//    assert store.time >= (attestation.data.slot + 1) * SECONDS_PER_SLOT
 //
 //    # Get state at the `target` to validate attestation and calculate the committees
 //    indexed_attestation = get_indexed_attestation(target_state, attestation)
@@ -79,6 +79,7 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 	defer span.End()
 
 	tgt := proto.Clone(a.Data.Target).(*ethpb.Checkpoint)
+	tgtSlot := helpers.StartSlot(tgt.Epoch)
 
 	if helpers.SlotToEpoch(a.Data.Slot) != a.Data.Target.Epoch {
 		return fmt.Errorf("data slot is not in the same epoch as target %d != %d", helpers.SlotToEpoch(a.Data.Slot), a.Data.Target.Epoch)
@@ -101,8 +102,8 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 	}
 
 	// Verify Attestations cannot be from future epochs.
-	if helpers.StartSlot(tgt.Epoch) > s.currentSlot() {
-		return fmt.Errorf("could not process future attestation %d, current slot %d", helpers.StartSlot(tgt.Epoch), s.currentSlot())
+	if err := helpers.VerifySlotTime(baseState.GenesisTime, tgtSlot); err != nil {
+		return errors.Wrap(err, "could not verify attestation target slot")
 	}
 
 	// Verify attestation beacon block is known and not from the future.
@@ -117,8 +118,8 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 	}
 
 	// Verify attestations can only affect the fork choice of subsequent slots.
-	if a.Data.Slot+1 > s.currentSlot() {
-		return fmt.Errorf("could not process attesatin until subsequent slots %d, current slot %d", a.Data.Slot+1, s.currentSlot())
+	if err := helpers.VerifySlotTime(baseState.GenesisTime, a.Data.Slot+1); err != nil {
+		return err
 	}
 
 	// Use the target state to to validate attestation and calculate the committees.
