@@ -26,6 +26,9 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// allows for slots "from the future" within a certain tolerance.
+var timeShiftTolerance = uint64(10) // ms
+
 // OnBlock is called when a gossip block is received. It runs regular state transition on the block and
 // update fork choice store.
 //
@@ -505,8 +508,6 @@ func (s *Store) currentSlot() uint64 {
 
 // slotsSinceGenesis returns how many slots has passed since genesis time.
 func (s *Store) slotsSinceGenesis() uint64 {
-	// allows for slots "from the future" within a certain tolerance.
-	timeShiftTolerance := uint64(10) // ms
 	return (uint64(time.Now().Unix()) - s.genesisTime + timeShiftTolerance) / params.BeaconConfig().SecondsPerSlot
 }
 

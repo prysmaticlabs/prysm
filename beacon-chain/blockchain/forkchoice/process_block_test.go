@@ -386,7 +386,7 @@ func TestShouldUpdateJustified_ReturnFalse(t *testing.T) {
 	}
 
 	diff := (params.BeaconConfig().SlotsPerEpoch - 1) * params.BeaconConfig().SecondsPerSlot
-	store.genesisTime = uint64(time.Now().Unix()) - diff
+	store.genesisTime = uint64(time.Now().Unix()) - diff - timeShiftTolerance
 	store.justifiedCheckpt = &ethpb.Checkpoint{Root: lastJustifiedRoot[:]}
 
 	update, err := store.shouldUpdateJustified(ctx, &ethpb.Checkpoint{Root: newJustifiedRoot[:]})
@@ -406,7 +406,7 @@ func TestUpdateJustifiedCheckpoint_Update(t *testing.T) {
 	defer params.UseMainnetConfig()
 
 	store := NewForkChoiceService(ctx, db)
-	store.genesisTime = uint64(time.Now().Unix())
+	store.genesisTime = uint64(time.Now().Unix()) + timeShiftTolerance
 
 	store.justifiedCheckpt = &ethpb.Checkpoint{Root: []byte{'A'}}
 	store.bestJustifiedCheckpt = &ethpb.Checkpoint{Epoch: 1, Root: []byte{'B'}}
