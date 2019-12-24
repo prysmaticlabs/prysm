@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
@@ -20,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -35,7 +35,7 @@ import (
 //    assert block.parent_root in store.block_states
 //    pre_state = store.block_states[block.parent_root].copy()
 //    # Blocks cannot be in the future. If they are, their consideration must be delayed until the are in the past.
-//    assert get_current_slot(store) >= block.slot
+//    assert store.time >= pre_state.genesis_time + block.slot * SECONDS_PER_SLOT
 //    # Add new block to the store
 //    store.blocks[signing_root(block)] = block
 //    # Check block is a descendant of the finalized block
@@ -254,8 +254,8 @@ func (s *Store) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*pb
 	}
 
 	// Verify block slot time is not from the feature.
-	if b.Slot > s.currentSlot() {
-		return nil, fmt.Errorf("could not process future block %d, current slot %d", b.Slot, s.currentSlot())
+	if err := helpers.VerifySlotTime(preState.GenesisTime, b.Slot); err != nil {
+		return nil, err
 	}
 
 	// Verify block is a descendent of a finalized block.
@@ -498,14 +498,9 @@ func (s *Store) shouldUpdateJustified(ctx context.Context, newJustifiedCheckpt *
 	return true, nil
 }
 
-// currentSlot returns the current slot number.
+// currentSlot returns the current slot based on time.
 func (s *Store) currentSlot() uint64 {
-	return params.BeaconConfig().GenesisSlot + s.slotsSinceGenesis()
-}
-
-// slotsSinceGenesis returns how many slots has passed since genesis time.
-func (s *Store) slotsSinceGenesis() uint64 {
-	return (uint64(roughtime.Now().Unix()) - s.genesisTime) / params.BeaconConfig().SecondsPerSlot
+	return (uint64(time.Now().Unix()) - s.genesisTime) / params.BeaconConfig().SecondsPerSlot
 }
 
 // updates justified check point in store if a better check point is known
