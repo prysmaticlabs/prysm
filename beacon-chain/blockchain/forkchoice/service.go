@@ -367,12 +367,18 @@ func (s *Store) filterBlockTree(ctx context.Context, blockRoot [32]byte, filtere
 		return false, err
 	}
 
-	for _, childRoot := range childrenRoots {
-		filterBlockTreeResult, err := s.filterBlockTree(ctx, childRoot, filteredBlocks)
-		if err != nil {
-			return false, err
+	if len(childrenRoots) != 0 {
+		var filtered bool
+		for _, childRoot := range childrenRoots {
+			didFilter, err := s.filterBlockTree(ctx, childRoot, filteredBlocks)
+			if err != nil {
+				return false, err
+			}
+			if didFilter {
+				filtered = true
+			}
 		}
-		if filterBlockTreeResult {
+		if filtered {
 			filteredBlocks[blockRoot] = block
 			return true, nil
 		}
