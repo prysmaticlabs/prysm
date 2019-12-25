@@ -394,7 +394,6 @@ func (s *Store) filterBlockTree(ctx context.Context, blockRoot [32]byte, filtere
 		reflect.DeepEqual(s.justifiedCheckpt, headState.CurrentJustifiedCheckpoint)
 	correctFinalized := s.finalizedCheckpt.Epoch == params.BeaconConfig().GenesisEpoch ||
 		reflect.DeepEqual(s.finalizedCheckpt, headState.FinalizedCheckpoint)
-
 	if correctJustified && correctFinalized {
 		filteredBlocks[blockRoot] = block
 		return true, nil
