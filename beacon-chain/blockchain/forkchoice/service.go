@@ -3,6 +3,7 @@ package forkchoice
 import (
 	"bytes"
 	"context"
+	"reflect"
 	"sync"
 
 	"github.com/gogo/protobuf/proto"
@@ -17,7 +18,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
 
@@ -229,14 +229,16 @@ func (s *Store) latestAttestingBalance(ctx context.Context, root []byte) (uint64
 // Head returns the head of the beacon chain.
 //
 // Spec pseudocode definition:
-//   def get_head(store: Store) -> Hash:
+//   def get_head(store: Store) -> Root:
+//    # Get filtered block tree that only includes viable branches
+//    blocks = get_filtered_block_tree(store)
 //    # Execute the LMD-GHOST fork choice
 //    head = store.justified_checkpoint.root
-//    justified_slot = compute_start_slot_of_epoch(store.justified_checkpoint.epoch)
+//    justified_slot = compute_start_slot_at_epoch(store.justified_checkpoint.epoch)
 //    while True:
 //        children = [
-//            root for root in store.blocks.keys()
-//            if store.blocks[root].parent_root == head and store.blocks[root].slot > justified_slot
+//            root for root in blocks.keys()
+//            if blocks[root].parent_root == head and blocks[root].slot > justified_slot
 //        ]
 //        if len(children) == 0:
 //            return head
@@ -247,13 +249,18 @@ func (s *Store) Head(ctx context.Context) ([]byte, error) {
 	defer span.End()
 
 	head := s.JustifiedCheckpt().Root
+	filteredBlocks, err := s.getFilterBlockTree(ctx)
+	if err != nil {
+		return nil, err
+	}
 
+	justifiedSlot := helpers.StartSlot(s.justifiedCheckpt.Epoch)
 	for {
-		startSlot := s.JustifiedCheckpt().Epoch * params.BeaconConfig().SlotsPerEpoch
-		filter := filters.NewFilter().SetParentRoot(head).SetStartSlot(startSlot)
-		children, err := s.db.BlockRoots(ctx, filter)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not retrieve children info")
+		children := make([][32]byte, 0, len(filteredBlocks))
+		for root, block := range filteredBlocks {
+			if bytes.Equal(block.ParentRoot, head) && block.Slot > justifiedSlot {
+				children = append(children, root)
+			}
 		}
 
 		if len(children) == 0 {
@@ -282,6 +289,116 @@ func (s *Store) Head(ctx context.Context) ([]byte, error) {
 			}
 		}
 	}
+}
+
+// getFilterBlockTree retrieves a filtered block tree from store, it only returns branches
+// whose leaf state's justified and finalized info agrees with what's in the store.
+// Rationale: https://notes.ethereum.org/Fj-gVkOSTpOyUx-zkWjuwg?view
+//
+// Spec pseudocode definition:
+//   def get_filtered_block_tree(store: Store) -> Dict[Root, BeaconBlock]:
+//    """
+//    Retrieve a filtered block true from ``store``, only returning branches
+//    whose leaf state's justified/finalized info agrees with that in ``store``.
+//    """
+//    base = store.justified_checkpoint.root
+//    blocks: Dict[Root, BeaconBlock] = {}
+//    filter_block_tree(store, base, blocks)
+//    return blocks
+func (s *Store) getFilterBlockTree(ctx context.Context) (map[[32]byte]*ethpb.BeaconBlock, error) {
+	ctx, span := trace.StartSpan(ctx, "forkchoice.getFilterBlockTree")
+	defer span.End()
+
+	baseRoot := bytesutil.ToBytes32(s.justifiedCheckpt.Root)
+	filteredBlocks := make(map[[32]byte]*ethpb.BeaconBlock)
+	if _, err := s.filterBlockTree(ctx, baseRoot, filteredBlocks); err != nil {
+		return nil, err
+	}
+
+	return filteredBlocks, nil
+}
+
+// filterBlockTree filters for branches that see latest finalized and justified info as correct on-chain
+// before running Head.
+//
+// Spec pseudocode definition:
+//   def filter_block_tree(store: Store, block_root: Root, blocks: Dict[Root, BeaconBlock]) -> bool:
+//    block = store.blocks[block_root]
+//    children = [
+//        root for root in store.blocks.keys()
+//        if store.blocks[root].parent_root == block_root
+//    ]
+//    # If any children branches contain expected finalized/justified checkpoints,
+//    # add to filtered block-tree and signal viability to parent.
+//    if any(children):
+//        filter_block_tree_result = [filter_block_tree(store, child, blocks) for child in children]
+//        if any(filter_block_tree_result):
+//            blocks[block_root] = block
+//            return True
+//        return False
+//    # If leaf block, check finalized/justified checkpoints as matching latest.
+//    head_state = store.block_states[block_root]
+//    correct_justified = (
+//        store.justified_checkpoint.epoch == GENESIS_EPOCH
+//        or head_state.current_justified_checkpoint == store.justified_checkpoint
+//    )
+//    correct_finalized = (
+//        store.finalized_checkpoint.epoch == GENESIS_EPOCH
+//        or head_state.finalized_checkpoint == store.finalized_checkpoint
+//    )
+//    # If expected finalized/justified, add to viable block-tree and signal viability to parent.
+//    if correct_justified and correct_finalized:
+//        blocks[block_root] = block
+//        return True
+//    # Otherwise, branch not viable
+//    return False
+func (s *Store) filterBlockTree(ctx context.Context, blockRoot [32]byte, filteredBlocks map[[32]byte]*ethpb.BeaconBlock) (bool, error) {
+	ctx, span := trace.StartSpan(ctx, "forkchoice.filterBlockTree")
+	defer span.End()
+	block, err := s.db.Block(ctx, blockRoot)
+	if err != nil {
+		return false, err
+	}
+
+	filter := filters.NewFilter().SetParentRoot(blockRoot[:])
+	childrenRoots, err := s.db.BlockRoots(ctx, filter)
+	if err != nil {
+		return false, err
+	}
+
+	if len(childrenRoots) != 0 {
+		var filtered bool
+		for _, childRoot := range childrenRoots {
+			didFilter, err := s.filterBlockTree(ctx, childRoot, filteredBlocks)
+			if err != nil {
+				return false, err
+			}
+			if didFilter {
+				filtered = true
+			}
+		}
+		if filtered {
+			filteredBlocks[blockRoot] = block
+			return true, nil
+		}
+		return false, nil
+	}
+
+	headState, err := s.db.State(ctx, blockRoot)
+	if err != nil {
+		return false, err
+	}
+
+	correctJustified := s.justifiedCheckpt.Epoch == 0 ||
+		reflect.DeepEqual(s.justifiedCheckpt, headState.CurrentJustifiedCheckpoint)
+	correctFinalized := s.finalizedCheckpt.Epoch == 0 ||
+		reflect.DeepEqual(s.finalizedCheckpt, headState.FinalizedCheckpoint)
+	if correctJustified && correctFinalized {
+		filteredBlocks[blockRoot] = block
+		return true, nil
+	}
+
+	return false, nil
 }
 
 // JustifiedCheckpt returns the latest justified check point from fork choice store.

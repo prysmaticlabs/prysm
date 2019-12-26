@@ -359,3 +359,143 @@ func TestCacheGenesisState_Correct(t *testing.T) {
 		}
 	}
 }
+
+func TestStore_GetFilterBlockTree_CorrectLeaf(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	store := NewForkChoiceService(ctx, db)
+
+	roots, err := blockTree1(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s := &pb.BeaconState{}
+	stateRoot, err := ssz.HashTreeRoot(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := blocks.NewGenesisBlock(stateRoot[:])
+	blkRoot, err := ssz.SigningRoot(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveState(ctx, s, blkRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	checkPoint := &ethpb.Checkpoint{Root: blkRoot[:]}
+
+	if err := store.GenesisStore(ctx, checkPoint, checkPoint); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveState(ctx, s, bytesutil.ToBytes32(roots[0])); err != nil {
+		t.Fatal(err)
+	}
+	store.justifiedCheckpt.Root = roots[0]
+	if err := store.checkpointState.AddCheckpointState(&cache.CheckpointState{
+		Checkpoint: store.justifiedCheckpt,
+		State:      s,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	tree, err := store.getFilterBlockTree(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wanted := make(map[[32]byte]*ethpb.BeaconBlock)
+	for _, root := range roots {
+		root32 := bytesutil.ToBytes32(root)
+		b, _ := store.db.Block(ctx, root32)
+		if b != nil {
+			wanted[root32] = b
+		}
+	}
+	if !reflect.DeepEqual(tree, wanted) {
+		t.Error("Did not filter tree correctly")
+	}
+}
+
+func TestStore_GetFilterBlockTree_IncorrectLeaf(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	store := NewForkChoiceService(ctx, db)
+
+	roots, err := blockTree1(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s := &pb.BeaconState{}
+	stateRoot, err := ssz.HashTreeRoot(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := blocks.NewGenesisBlock(stateRoot[:])
+	blkRoot, err := ssz.SigningRoot(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveState(ctx, s, blkRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	checkPoint := &ethpb.Checkpoint{Root: blkRoot[:]}
+
+	if err := store.GenesisStore(ctx, checkPoint, checkPoint); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveState(ctx, s, bytesutil.ToBytes32(roots[0])); err != nil {
+		t.Fatal(err)
+	}
+	store.justifiedCheckpt.Root = roots[0]
+	if err := store.checkpointState.AddCheckpointState(&cache.CheckpointState{
+		Checkpoint: store.justifiedCheckpt,
+		State:      s,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	// Filter for incorrect leaves for 1, 7 and 8
+	store.db.SaveState(ctx, &pb.BeaconState{CurrentJustifiedCheckpoint: &ethpb.Checkpoint{}}, bytesutil.ToBytes32(roots[1]))
+	store.db.SaveState(ctx, &pb.BeaconState{CurrentJustifiedCheckpoint: &ethpb.Checkpoint{}}, bytesutil.ToBytes32(roots[7]))
+	store.db.SaveState(ctx, &pb.BeaconState{CurrentJustifiedCheckpoint: &ethpb.Checkpoint{}}, bytesutil.ToBytes32(roots[8]))
+	store.justifiedCheckpt.Epoch = 1
+	tree, err := store.getFilterBlockTree(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(tree) != 0 {
+		t.Error("filtered tree should be 0 length")
+	}
+
+	// Set leave 1 as correct
+	store.db.SaveState(ctx, &pb.BeaconState{CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 1, Root: store.justifiedCheckpt.Root}}, bytesutil.ToBytes32(roots[1]))
+	tree, err = store.getFilterBlockTree(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wanted := make(map[[32]byte]*ethpb.BeaconBlock)
+	root32 := bytesutil.ToBytes32(roots[0])
+	b, err = store.db.Block(ctx, root32)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wanted[root32] = b
+	root32 = bytesutil.ToBytes32(roots[1])
+	b, err = store.db.Block(ctx, root32)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wanted[root32] = b
+
+	if !reflect.DeepEqual(tree, wanted) {
+		t.Error("Did not filter tree correctly")
+	}
+}
