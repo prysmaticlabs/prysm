@@ -798,7 +798,7 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 			Data: &ethpb.AttestationData{
 				Source: &ethpb.Checkpoint{Epoch: 1},
 				Target: &ethpb.Checkpoint{Epoch: 1},
-				Slot:   1,
+				Slot:   params.BeaconConfig().SlotsPerEpoch,
 			},
 			AggregationBits: aggBits,
 		},
@@ -1065,6 +1065,21 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 
 	if _, err := blocks.ProcessAttestations(context.Background(), beaconState, block.Body); err != nil {
 		t.Error(err)
+	}
+}
+
+func TestProcessAttestationsNoVerify_IncorrectSlotTargetEpoch(t *testing.T) {
+	beaconState, _ := testutil.DeterministicGenesisState(t, 1)
+
+	att := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			Slot:   params.BeaconConfig().SlotsPerEpoch,
+			Target: &ethpb.Checkpoint{},
+		},
+	}
+	wanted := fmt.Sprintf("data slot is not in the same epoch as target %d != %d", helpers.SlotToEpoch(att.Data.Slot), att.Data.Target.Epoch)
+	if _, err := blocks.ProcessAttestationNoVerify(context.TODO(), beaconState, att); err.Error() != wanted {
+		t.Error("Did not get wanted error")
 	}
 }
 
