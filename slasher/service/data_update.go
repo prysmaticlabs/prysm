@@ -46,7 +46,7 @@ func (s *Service) finalisedChangeUpdater() error {
 	}
 }
 
-func (s *Service) slasherFeeder() error {
+func (s *Service) slasherOldAtetstationFeeder() error {
 	ch, err := s.beaconClient.GetChainHead(s.context, &ptypes.Empty{})
 	if err != nil {
 		log.Error(err)
