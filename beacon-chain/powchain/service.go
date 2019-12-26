@@ -22,8 +22,10 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -60,6 +62,7 @@ type Reader interface {
 type ChainStartFetcher interface {
 	ChainStartDeposits() []*ethpb.Deposit
 	ChainStartEth1Data() *ethpb.Eth1Data
+	PreGenesisState() *pb.BeaconState
 }
 
 // ChainInfoFetcher retrieves information about eth1 metadata at the eth2 genesis time.
@@ -136,6 +139,7 @@ type Service struct {
 	runError                error
 	lastRequestedBlock      *big.Int
 	chainStartETH1Data      *ethpb.Eth1Data
+	preGenesisState         *pb.BeaconState
 	activeValidatorCount    uint64
 	depositedPubkeys        map[[48]byte]uint64
 	processingLock          sync.RWMutex
@@ -189,6 +193,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		lastRequestedBlock:      big.NewInt(0),
 		chainStartETH1Data:      &ethpb.Eth1Data{},
 		depositedPubkeys:        make(map[[48]byte]uint64),
+		preGenesisState:         state.EmptyGenesisState(),
 	}, nil
 }
 
@@ -220,6 +225,12 @@ func (s *Service) ChainStartDeposits() []*ethpb.Deposit {
 // ChainStartEth1Data returns the eth1 data at chainstart.
 func (s *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 	return s.chainStartETH1Data
+}
+
+// PreGenesisState returns a state that contains
+// pre-chainstart deposits.
+func (s *Service) PreGenesisState() *pb.BeaconState {
+	return s.preGenesisState
 }
 
 // Status is service health checks. Return nil or error.
