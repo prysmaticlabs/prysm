@@ -68,7 +68,7 @@ func TestStore_OnAttestation(t *testing.T) {
 		wantErrString string
 	}{
 		{
-			name:          "attestation's data slot not align with target vote",
+			name:          "attestation's data slot not aligned with target vote",
 			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: params.BeaconConfig().SlotsPerEpoch, Target: &ethpb.Checkpoint{}}},
 			s:             &pb.BeaconState{},
 			wantErr:       true,
