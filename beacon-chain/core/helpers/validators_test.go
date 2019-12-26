@@ -536,7 +536,7 @@ func TestIsEligibleForActivationQueue(t *testing.T) {
 		{"Eligible",
 			&ethpb.Validator{ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
 			true},
-		{"Ineligible activation epoch",
+		{"Incorrect activation eligibility epoch",
 			&ethpb.Validator{ActivationEligibilityEpoch: 1, EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
 			false},
 		{"Not enough balance",
