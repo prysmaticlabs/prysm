@@ -122,6 +122,11 @@ func (s *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 	return &ethpb.Eth1Data{}
 }
 
+// PreGenesisState returns an empty beacon state.
+func (s *Service) PreGenesisState() *pb.BeaconState {
+	return &pb.BeaconState{}
+}
+
 // DepositByPubkey mocks out the deposit cache functionality for interop.
 func (s *Service) DepositByPubkey(ctx context.Context, pubKey []byte) (*ethpb.Deposit, *big.Int) {
 	return &ethpb.Deposit{}, big.NewInt(1)

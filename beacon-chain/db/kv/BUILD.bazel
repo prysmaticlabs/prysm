@@ -13,6 +13,7 @@ go_library(
         "finalized_block_roots.go",
         "kv.go",
         "operations.go",
+        "powchain.go",
         "prune_states.go",
         "schema.go",
         "slashings.go",
