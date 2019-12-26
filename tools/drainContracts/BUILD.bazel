@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["drainContracts.go"],
-    importpath = "github.com/prysmaticlabs/prysm/contracts/deposit-contract/drainContracts",
+    importpath = "github.com/prysmaticlabs/prysm/tools/drainContracts",
     visibility = ["//visibility:private"],
     deps = [
         "//contracts/deposit-contract:go_default_library",
