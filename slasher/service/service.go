@@ -104,7 +104,7 @@ func (s *Service) Start() {
 	s.startSlasher()
 	s.startBeaconClient()
 	go s.finalisedChangeUpdater()
-	go s.slasherOldAtetstationFeeder()
+	//go s.slasherOldAtetstationFeeder()
 	stop := s.stop
 	s.lock.Unlock()
 

@@ -56,25 +56,29 @@ func (s *Service) slasherOldAtetstationFeeder() error {
 	}
 	for i := uint64(0); i < ch.FinalizedEpoch; i++ {
 		ats, err := s.beaconClient.ListAttestations(s.context, &ethpb.ListAttestationsRequest{
-			QueryFilter: &ethpb.ListAttestationsRequest_SourceEpoch{SourceEpoch: i},
+			QueryFilter: &ethpb.ListAttestationsRequest_TargetEpoch{TargetEpoch: i},
 		})
 		if err != nil {
 			log.Error(err)
 		}
-
-		if err != nil {
-			log.Error(err)
-		}
+		//bcs, err := s.beaconClient.ListBeaconCommittees(s.context, &ethpb.ListCommitteesRequest{
+		//	QueryFilter: &ethpb.ListCommitteesRequest_Epoch{
+		//		Epoch: i,
+		//	},
+		//})
+		//if err != nil {
+		//	log.Error(err)
+		//}
 		log.Infof("detecting slashable events on: %v attestations from epoch: %v", len(ats.Attestations), i)
 		for _, attestation := range ats.Attestations {
 			//e := helpers.SlotToEpoch(attestation.Data.Slot)
 			e := attestation.Data.Slot / 8
+
 			bcs, err := s.beaconClient.ListBeaconCommittees(s.context, &ethpb.ListCommitteesRequest{
 				QueryFilter: &ethpb.ListCommitteesRequest_Epoch{
 					Epoch: e,
 				},
 			})
-
 			scs, ok := bcs.Committees[attestation.Data.Slot]
 			if !ok {
 				var keys []uint64
