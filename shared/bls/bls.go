@@ -8,13 +8,11 @@ import (
 	"math/big"
 
 	"github.com/dgraph-io/ristretto"
-
+	bls12 "github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
-	bls12 "github.com/herumi/bls-eth-go-binary/bls"
 )
 
 func init() {

@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -93,6 +94,11 @@ func (m *POWChain) ChainStartDepositHashes() ([][]byte, error) {
 // ChainStartEth1Data --
 func (m *POWChain) ChainStartEth1Data() *ethpb.Eth1Data {
 	return m.Eth1Data
+}
+
+// PreGenesisState --
+func (m *POWChain) PreGenesisState() *pb.BeaconState {
+	return &pb.BeaconState{}
 }
 
 // IsConnectedToETH1 --
