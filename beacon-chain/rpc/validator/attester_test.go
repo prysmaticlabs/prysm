@@ -101,8 +101,8 @@ func TestProposeAttestation_IncorrectSignature(t *testing.T) {
 
 	req := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			Source:          &ethpb.Checkpoint{},
-			Target:          &ethpb.Checkpoint{},
+			Source: &ethpb.Checkpoint{},
+			Target: &ethpb.Checkpoint{},
 		},
 	}
 	wanted := "Incorrect attestation signature"
