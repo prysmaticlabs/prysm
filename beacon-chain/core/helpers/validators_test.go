@@ -526,3 +526,57 @@ func TestComputeProposerIndex(t *testing.T) {
 		})
 	}
 }
+
+func TestIsEligibleForActivationQueue(t *testing.T) {
+	tests := []struct {
+		name      string
+		validator *ethpb.Validator
+		want      bool
+	}{
+		{"Eligible",
+			&ethpb.Validator{ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+			true},
+		{"Incorrect activation eligibility epoch",
+			&ethpb.Validator{ActivationEligibilityEpoch: 1, EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+			false},
+		{"Not enough balance",
+			&ethpb.Validator{ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch, EffectiveBalance: 1},
+			false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsEligibleForActivationQueue(tt.validator); got != tt.want {
+				t.Errorf("IsEligibleForActivationQueue() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsIsEligibleForActivation(t *testing.T) {
+	tests := []struct {
+		name      string
+		validator *ethpb.Validator
+		state     *pb.BeaconState
+		want      bool
+	}{
+		{"Eligible",
+			&ethpb.Validator{ActivationEligibilityEpoch: 1, ActivationEpoch: params.BeaconConfig().FarFutureEpoch},
+			&pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 2}},
+			true},
+		{"Not yet finalized",
+			&ethpb.Validator{ActivationEligibilityEpoch: 1, ActivationEpoch: params.BeaconConfig().FarFutureEpoch},
+			&pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{}},
+			false},
+		{"Incorrect activation epoch",
+			&ethpb.Validator{ActivationEligibilityEpoch: 1},
+			&pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 2}},
+			false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsEligibleForActivation(tt.state, tt.validator); got != tt.want {
+				t.Errorf("IsEligibleForActivation() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
