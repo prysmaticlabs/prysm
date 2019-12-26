@@ -231,3 +231,38 @@ func Domain(fork *pb.Fork, epoch uint64, domainType []byte) uint64 {
 	}
 	return bls.Domain(domainType, forkVersion)
 }
+
+// IsEligibleForActivationQueue checks if the validator is eligible to
+// be places into the activation queue.
+//
+// Spec pseudocode definition:
+//  def is_eligible_for_activation_queue(validator: Validator) -> bool:
+//    """
+//    Check if ``validator`` is eligible to be placed into the activation queue.
+//    """
+//    return (
+//        validator.activation_eligibility_epoch == FAR_FUTURE_EPOCH
+//        and validator.effective_balance == MAX_EFFECTIVE_BALANCE
+//    )
+func IsEligibleForActivationQueue(validator *ethpb.Validator) bool {
+	return validator.ActivationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch &&
+		validator.EffectiveBalance == params.BeaconConfig().MaxEffectiveBalance
+}
+
+// IsEligibleForActivation checks if the validator is eligible for activation.
+//
+// Spec pseudocode definition:
+//  def is_eligible_for_activation(state: BeaconState, validator: Validator) -> bool:
+//    """
+//    Check if ``validator`` is eligible for activation.
+//    """
+//    return (
+//        # Placement in queue is finalized
+//        validator.activation_eligibility_epoch <= state.finalized_checkpoint.epoch
+//        # Has not yet been activated
+//        and validator.activation_epoch == FAR_FUTURE_EPOCH
+//    )
+func IsEligibleForActivation(state *pb.BeaconState, validator *ethpb.Validator) bool {
+	return validator.ActivationEligibilityEpoch <= state.FinalizedCheckpoint.Epoch &&
+		validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch
+}
