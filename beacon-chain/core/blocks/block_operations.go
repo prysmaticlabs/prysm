@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
-
 	"fmt"
 	"sort"
 
@@ -21,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -507,6 +507,7 @@ func ProcessAttestationsNoVerify(ctx context.Context, beaconState *pb.BeaconStat
 //    data = attestation.data
 //    assert data.index < get_committee_count_at_slot(state, data.slot)
 //    assert data.target.epoch in (get_previous_epoch(state), get_current_epoch(state))
+//    assert data.target.epoch == compute_epoch_at_slot(data.slot)
 //    assert data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= data.slot + SLOTS_PER_EPOCH
 //
 //    committee = get_beacon_committee(state, data.slot, data.index)
@@ -554,6 +555,9 @@ func ProcessAttestationNoVerify(ctx context.Context, beaconState *pb.BeaconState
 			helpers.PrevEpoch(beaconState),
 			helpers.CurrentEpoch(beaconState),
 		)
+	}
+	if helpers.SlotToEpoch(data.Slot) != data.Target.Epoch {
+		return nil, fmt.Errorf("data slot is not in the same epoch as target %d != %d", helpers.SlotToEpoch(data.Slot), data.Target.Epoch)
 	}
 
 	s := att.Data.Slot
@@ -770,6 +774,29 @@ func ProcessDeposits(ctx context.Context, beaconState *pb.BeaconState, body *eth
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
 		}
+	}
+	return beaconState, nil
+}
+
+// ProcessPreGenesisDeposit processes a deposit for the beacon state before chainstart.
+func ProcessPreGenesisDeposit(ctx context.Context, beaconState *pb.BeaconState,
+	deposit *ethpb.Deposit, validatorIndices map[[48]byte]int) (*pb.BeaconState, error) {
+	var err error
+	beaconState, err = ProcessDeposit(beaconState, deposit, validatorIndices)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process deposit")
+	}
+	pubkey := deposit.Data.PublicKey
+	index, ok := validatorIndices[bytesutil.ToBytes48(pubkey)]
+	if !ok {
+		return beaconState, nil
+	}
+	balance := beaconState.Balances[index]
+	beaconState.Validators[index].EffectiveBalance = mathutil.Min(balance-balance%params.BeaconConfig().EffectiveBalanceIncrement, params.BeaconConfig().MaxEffectiveBalance)
+	if beaconState.Validators[index].EffectiveBalance ==
+		params.BeaconConfig().MaxEffectiveBalance {
+		beaconState.Validators[index].ActivationEligibilityEpoch = 0
+		beaconState.Validators[index].ActivationEpoch = 0
 	}
 	return beaconState, nil
 }

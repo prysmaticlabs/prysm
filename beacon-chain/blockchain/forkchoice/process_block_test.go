@@ -334,7 +334,7 @@ func TestRemoveStateSinceLastFinalized_EmptyStartSlot(t *testing.T) {
 	store := NewForkChoiceService(ctx, db)
 	store.genesisTime = uint64(time.Now().Unix())
 
-	update, err := store.shouldUpdateJustified(ctx, &ethpb.Checkpoint{})
+	update, err := store.shouldUpdateCurrentJustified(ctx, &ethpb.Checkpoint{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -356,7 +356,7 @@ func TestRemoveStateSinceLastFinalized_EmptyStartSlot(t *testing.T) {
 	diff := (params.BeaconConfig().SlotsPerEpoch - 1) * params.BeaconConfig().SecondsPerSlot
 	store.genesisTime = uint64(time.Now().Unix()) - diff
 	store.justifiedCheckpt = &ethpb.Checkpoint{Root: lastJustifiedRoot[:]}
-	update, err = store.shouldUpdateJustified(ctx, &ethpb.Checkpoint{Root: newJustifiedRoot[:]})
+	update, err = store.shouldUpdateCurrentJustified(ctx, &ethpb.Checkpoint{Root: newJustifiedRoot[:]})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -389,7 +389,7 @@ func TestShouldUpdateJustified_ReturnFalse(t *testing.T) {
 	store.genesisTime = uint64(time.Now().Unix()) - diff
 	store.justifiedCheckpt = &ethpb.Checkpoint{Root: lastJustifiedRoot[:]}
 
-	update, err := store.shouldUpdateJustified(ctx, &ethpb.Checkpoint{Root: newJustifiedRoot[:]})
+	update, err := store.shouldUpdateCurrentJustified(ctx, &ethpb.Checkpoint{Root: newJustifiedRoot[:]})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -577,5 +577,35 @@ func TestSaveInitState_CanSaveDelete(t *testing.T) {
 	// Verify cached state is properly pruned
 	if len(store.initSyncState) != int(params.BeaconConfig().SlotsPerEpoch) {
 		t.Errorf("wanted: %d, got: %d", len(store.initSyncState), params.BeaconConfig().SlotsPerEpoch)
+	}
+}
+
+func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	store := NewForkChoiceService(ctx, db)
+	store.justifiedCheckpt = &ethpb.Checkpoint{Root: []byte{'A'}}
+	store.bestJustifiedCheckpt = &ethpb.Checkpoint{ Root: []byte{'A'}}
+
+	// Could update
+	s := &pb.BeaconState{CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 1}}
+	if err := store.updateJustified(context.Background(), s); err != nil {
+		t.Fatal(err)
+	}
+
+	if store.bestJustifiedCheckpt.Epoch != s.CurrentJustifiedCheckpoint.Epoch {
+		t.Error("Incorrect justified epoch in store")
+	}
+
+	// Could not update
+	store.bestJustifiedCheckpt.Epoch = 2
+	if err := store.updateJustified(context.Background(), s); err != nil {
+		t.Fatal(err)
+	}
+
+	if store.bestJustifiedCheckpt.Epoch != 2 {
+		t.Error("Incorrect justified epoch in store")
 	}
 }
