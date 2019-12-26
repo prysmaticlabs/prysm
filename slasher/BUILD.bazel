@@ -39,7 +39,7 @@ go_image(
         "main.go",
         "usage.go",
     ],
-    base = "//tools:go_image",
+    base = "//tools:cc_image",
     goarch = "amd64",
     goos = "linux",
     importpath = "github.com/prysmaticlabs/prysm/slasher",
