@@ -18,7 +18,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
 
@@ -390,9 +389,9 @@ func (s *Store) filterBlockTree(ctx context.Context, blockRoot [32]byte, filtere
 		return false, err
 	}
 
-	correctJustified := s.justifiedCheckpt.Epoch == params.BeaconConfig().GenesisEpoch ||
+	correctJustified := s.justifiedCheckpt.Epoch == 0 ||
 		reflect.DeepEqual(s.justifiedCheckpt, headState.CurrentJustifiedCheckpoint)
-	correctFinalized := s.finalizedCheckpt.Epoch == params.BeaconConfig().GenesisEpoch ||
+	correctFinalized := s.finalizedCheckpt.Epoch == 0 ||
 		reflect.DeepEqual(s.finalizedCheckpt, headState.FinalizedCheckpoint)
 	if correctJustified && correctFinalized {
 		filteredBlocks[blockRoot] = block
