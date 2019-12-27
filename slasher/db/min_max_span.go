@@ -22,16 +22,13 @@ func createEpochSpanMap(enc []byte) (*ethpb.EpochSpanMap, error) {
 // Returns nil if the span map for this validator index does not exist.
 func (db *Store) ValidatorSpansMap(validatorIdx uint64) (*ethpb.EpochSpanMap, error) {
 	var sm *ethpb.EpochSpanMap
+	var enc []byte
 	err := db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(validatorsMinMaxSpanBucket)
-		enc := b.Get(bytesutil.Bytes4(validatorIdx))
-		var err error
-		sm, err = createEpochSpanMap(enc)
-		if err != nil {
-			return err
-		}
+		enc = b.Get(bytesutil.Bytes4(validatorIdx))
 		return nil
 	})
+	sm, err = createEpochSpanMap(enc)
 	if sm.EpochSpanMap == nil {
 		sm.EpochSpanMap = make(map[uint64]*ethpb.MinMaxEpochSpan)
 	}
@@ -40,13 +37,13 @@ func (db *Store) ValidatorSpansMap(validatorIdx uint64) (*ethpb.EpochSpanMap, er
 
 // SaveValidatorSpansMap accepts a validator index and span map and writes it to disk.
 func (db *Store) SaveValidatorSpansMap(validatorIdx uint64, spanMap *ethpb.EpochSpanMap) error {
-	err := db.batch(func(tx *bolt.Tx) error {
+	val, err := proto.Marshal(spanMap)
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal span map")
+	}
+	key := bytesutil.Bytes4(validatorIdx)
+	err = db.batch(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsMinMaxSpanBucket)
-		key := bytesutil.Bytes4(validatorIdx)
-		val, err := proto.Marshal(spanMap)
-		if err != nil {
-			return errors.Wrap(err, "failed to marshal span map")
-		}
 		if err := bucket.Put(key, val); err != nil {
 			return errors.Wrapf(err, "failed to delete validator id: %d from validators min max span bucket", validatorIdx)
 		}

@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"sort"
-	"time"
 
 	"github.com/pkg/errors"
 
@@ -63,7 +62,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	for e := uint64(1000); e < cp.Epoch; e++ {
+	for e := uint64(0); e < cp.Epoch; e++ {
 		atts, err := d.Attestations(ctx, filters.NewFilter().SetTargetEpoch(e))
 		bcs, err := ListBeaconCommittees(ctx, d, &ethpb.ListCommitteesRequest{
 			QueryFilter: &ethpb.ListCommitteesRequest_Epoch{
@@ -97,10 +96,10 @@ func main() {
 				log.Error(err)
 				continue
 			}
-			start := time.Now()
+			//start := time.Now()
 			sar, err := slasherClient.IsSlashableAttestation(ctx, ia)
-			elapsed := time.Since(start)
-			log.Printf("IsSlashableAttestation took %s", elapsed)
+			//elapsed := time.Since(start)
+			//log.Printf("IsSlashableAttestation took %s", elapsed)
 			if err != nil {
 				log.Error(err)
 				continue

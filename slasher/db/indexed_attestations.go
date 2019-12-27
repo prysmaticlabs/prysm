@@ -39,32 +39,36 @@ func createValidatorIDsToIndexedAttestationList(enc []byte) (*pb.ValidatorIDToId
 func (db *Store) IndexedAttestation(targetEpoch uint64, validatorID uint64) ([]*ethpb.IndexedAttestation, error) {
 	var iAtt []*ethpb.IndexedAttestation
 	key := bytesutil.Bytes8(targetEpoch)
+	var enc []byte
 	err := db.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(indexedAttestationsIndicesBucket)
-		enc := bucket.Get(key)
-		iList, err := createValidatorIDsToIndexedAttestationList(enc)
-		if err != nil {
-			return err
-		}
-		for _, a := range iList.IndicesList {
-			i := sort.Search(len(a.Indices), func(i int) bool { return a.Indices[i] >= validatorID })
-			if i < len(a.Indices) && a.Indices[i] == validatorID {
-				iaBucket := tx.Bucket(historicIndexedAttestationsBucket)
-				key := encodeEpochSig(targetEpoch, a.Signature)
-				enc = iaBucket.Get(key)
-				if len(enc) == 0 {
-					continue
-				}
-				iA, err := createIndexedAttestation(enc)
-				if err != nil {
-					return err
-				}
-				iAtt = append(iAtt, iA)
-			}
-		}
+		enc = bucket.Get(key)
+
 		return nil
 	})
-
+	iList, err := createValidatorIDsToIndexedAttestationList(enc)
+	if err != nil {
+		return nil, err
+	}
+	for _, a := range iList.IndicesList {
+		i := sort.Search(len(a.Indices), func(i int) bool { return a.Indices[i] >= validatorID })
+		if i < len(a.Indices) && a.Indices[i] == validatorID {
+			key := encodeEpochSig(targetEpoch, a.Signature)
+			err := db.view(func(tx *bolt.Tx) error {
+				iaBucket := tx.Bucket(historicIndexedAttestationsBucket)
+				enc = iaBucket.Get(key)
+				return nil
+			})
+			if len(enc) == 0 {
+				continue
+			}
+			iA, err := createIndexedAttestation(enc)
+			if err != nil {
+				return nil, err
+			}
+			iAtt = append(iAtt, iA)
+		}
+	}
 	return iAtt, err
 }
 

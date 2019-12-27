@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"sync"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -47,37 +46,34 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 	atsSlashinngRes := &slashpb.AttesterSlashingResponse{}
 	at := make(chan []*ethpb.AttesterSlashing, len(indices))
 	er := make(chan error, len(indices))
-	var wg sync.WaitGroup
 	lastIdx := int64(-1)
 	for _, idx := range indices {
 		if int64(idx) <= lastIdx {
 			return nil, fmt.Errorf("indexed attestation contains repeated or non sorted ids")
 		}
-		wg.Add(1)
 		go func(idx uint64) {
 			atts, err := ss.SlasherDB.DoubleVotes(tEpoch, idx, root[:], req)
 			if err != nil {
 				er <- err
-				wg.Done()
 				return
 			}
 			if atts != nil && len(atts) > 0 {
 				at <- atts
 			}
-			atts, err = ss.DetectSurroundVotes(ctx, idx, req)
+			return
+		}(idx)
+		go func(idx uint64) {
+			atts, err := ss.DetectSurroundVotes(ctx, idx, req)
 			if err != nil {
 				er <- err
-				wg.Done()
 				return
 			}
 			if atts != nil && len(atts) > 0 {
 				at <- atts
 			}
-			wg.Done()
 			return
 		}(idx)
 	}
-	wg.Wait()
 	close(er)
 	close(at)
 	for e := range er {
