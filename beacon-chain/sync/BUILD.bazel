@@ -42,7 +42,6 @@ go_library(
         "//beacon-chain/core/state/interop:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/filters:go_default_library",
-        "//beacon-chain/operations:go_default_library",
         "//beacon-chain/operations/attestations:go_default_library",
         "//beacon-chain/p2p:go_default_library",
         "//beacon-chain/p2p/encoder:go_default_library",
