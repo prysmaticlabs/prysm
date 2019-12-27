@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"sort"
 
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+
 	"github.com/pkg/errors"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -15,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -113,7 +114,7 @@ func main() {
 	fmt.Println("done")
 }
 
-func startSlasherClient(ctx context.Context, slasherProvider string) (*grpc.ClientConn, pb.SlasherClient, error) {
+func startSlasherClient(ctx context.Context, slasherProvider string) (*grpc.ClientConn, slashpb.SlasherClient, error) {
 	var dialOpt grpc.DialOption
 
 	dialOpt = grpc.WithInsecure()
@@ -137,7 +138,7 @@ func startSlasherClient(ctx context.Context, slasherProvider string) (*grpc.Clie
 		return nil, nil, err
 	}
 	log.Info("Successfully started gRPC connection")
-	slasherClient := pb.NewSlasherClient(conn)
+	slasherClient := slashpb.NewSlasherClient(conn)
 	return conn, slasherClient, nil
 
 }
