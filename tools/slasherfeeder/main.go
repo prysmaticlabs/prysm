@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"sort"
+	"time"
 
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 
@@ -73,10 +74,9 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		log.Infof("detecting slashable events on: %v attestations from epoch: %v", len(atts), e)
-		for _, attestation := range atts {
-			//e := attestation.Data.Slot / 8
+		start := time.Now()
 
+		for _, attestation := range atts {
 			scs, ok := bcs.Committees[attestation.Data.Slot]
 			if !ok {
 				var keys []uint64
@@ -97,10 +97,7 @@ func main() {
 				log.Error(err)
 				continue
 			}
-			//start := time.Now()
 			sar, err := slasherClient.IsSlashableAttestation(ctx, ia)
-			//elapsed := time.Since(start)
-			//log.Printf("IsSlashableAttestation took %s", elapsed)
 			if err != nil {
 				log.Error(err)
 				continue
@@ -109,8 +106,11 @@ func main() {
 				log.Infof("slashing response: %v", sar.AttesterSlashing)
 			}
 		}
+		elapsed := time.Since(start)
+		log.Infof("detecting slashable events on: %d attestations from epoch: %d took: %d on average: %d per attestation", len(atts), e, elapsed.Milliseconds(), elapsed.Milliseconds()/int64(len(atts)))
 
 	}
+
 	fmt.Println("done")
 }
 

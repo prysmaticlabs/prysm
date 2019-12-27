@@ -43,7 +43,7 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 		return nil, err
 	}
 	elapsed = time.Since(start)
-	log.Printf("SaveIndexedAttestation and HashTreeRoot took %s", elapsed)
+	log.Printf("SaveIndexedAttestation and HashTreeRoot took %s has: %d attesting indices", elapsed, len(indices))
 	atsSlashinngRes := &slashpb.AttesterSlashingResponse{}
 	at := make(chan []*ethpb.AttesterSlashing, len(indices))
 	er := make(chan error, len(indices))
@@ -54,8 +54,8 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 			return nil, fmt.Errorf("indexed attestation contains repeated or non sorted ids")
 		}
 		wg.Add(2)
-		go func(idx uint64) {
-			atts, err := ss.SlasherDB.DoubleVotes(tEpoch, idx, root[:], req)
+		go func(id uint64) {
+			atts, err := ss.SlasherDB.DoubleVotes(tEpoch, id, root[:], req)
 			if err != nil {
 				er <- err
 				wg.Done()
