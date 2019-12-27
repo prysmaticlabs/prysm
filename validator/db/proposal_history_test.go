@@ -151,45 +151,50 @@ func TestSaveProposalHistory_OK(t *testing.T) {
 	}{
 		{
 			pubkey: []byte{0},
-			epoch:  uint64(0),
+			epoch:  uint64(1),
 			history: &slashpb.ValidatorProposalHistory{
-				ProposalHistory: bitfield.Bitlist{0x01, 0x01},
+				ProposalHistory:    bitfield.Bitlist{0x02, 0x02},
+				LatestEpochWritten: 1,
 			},
 		},
 		{
 			pubkey: []byte{1},
-			epoch:  uint64(0),
+			epoch:  uint64(1),
 			history: &slashpb.ValidatorProposalHistory{
-				ProposalHistory: bitfield.Bitlist{0x01, 0x01},
+				ProposalHistory:    bitfield.Bitlist{0x02, 0x02},
+				LatestEpochWritten: 1,
 			},
 		},
 		{
-			pubkey: []byte{3},
-			epoch:  uint64(1),
+			pubkey: []byte{2},
+			epoch:  uint64(2),
 			history: &slashpb.ValidatorProposalHistory{
-				ProposalHistory:    bitfield.Bitlist{0x01, 0x02},
-				LatestEpochWritten: 1,
+				ProposalHistory:    bitfield.Bitlist{0x04, 0x04},
+				LatestEpochWritten: 2,
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		if err := db.SaveProposalHistory(tt.pubkey, tt.history); err != nil {
-			t.Fatalf("save block failed: %v", err)
+			t.Fatalf("Saving proposal history failed: %v", err)
 		}
 		history, err := db.ProposalHistory(tt.pubkey)
 		if err != nil {
-			t.Fatalf("failed to get block: %v", err)
+			t.Fatalf("Failed to get proposal history: %v", err)
 		}
 
 		if history == nil || !reflect.DeepEqual(history, tt.history) {
 			t.Fatalf("Expected DB to keep object the same, received: %v", history)
 		}
 		if !HasProposedForEpoch(history, tt.epoch) {
-			t.Fatalf("Expected epoch %d to be marked as proposed", tt.epoch)
+			t.Fatalf("Expected epoch %d to be marked as proposed", history.ProposalHistory.Count())
 		}
 		if HasProposedForEpoch(history, tt.epoch+1) {
 			t.Fatalf("Expected epoch %d to not be marked as proposed", tt.epoch+1)
+		}
+		if HasProposedForEpoch(history, tt.epoch-1) {
+			t.Fatalf("Expected epoch %d to not be marked as proposed", tt.epoch-1)
 		}
 	}
 }
@@ -243,6 +248,15 @@ func TestDeleteProposalHistory_OK(t *testing.T) {
 		}
 		if err := db.DeleteProposalHistory(tt.pubkey); err != nil {
 			t.Fatal(err)
+		}
+
+		// Check after deleting from DB.
+		history, err = db.ProposalHistory(tt.pubkey)
+		if err != nil {
+			t.Fatalf("failed to get block: %v", err)
+		}
+		if reflect.DeepEqual(history, tt.history) {
+			t.Fatalf("Expected proposal history to be nil, received %v", history)
 		}
 	}
 }
