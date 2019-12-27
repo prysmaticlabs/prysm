@@ -7,24 +7,6 @@ import (
 	host "github.com/libp2p/go-libp2p-host"
 )
 
-// starPeerWatcher  calls to reconnect any VIP peers such as the bootnode peer, the relay node peer
-// or the static peers.
-func startPeerWatcher(ctx context.Context, h host.Host, reconnectPeers ...string) {
-	go (func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				ensurePeerConnections(ctx, h, reconnectPeers...)
-
-				// Wait 5 second to update again
-				time.Sleep(5 * time.Second)
-			}
-		}
-	})()
-}
-
 // ensurePeerConnections will attempt to reestablish connection to the peers
 // if there are currently no connections to that peer.
 func ensurePeerConnections(ctx context.Context, h host.Host, peers ...string) {

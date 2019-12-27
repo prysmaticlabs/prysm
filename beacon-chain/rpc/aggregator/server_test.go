@@ -144,7 +144,7 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	aggregatedAtts := aggregatorServer.AttPool.AggregatedAttestation()
+	aggregatedAtts := aggregatorServer.AttPool.AggregatedAttestations()
 	wanted, err := helpers.AggregateAttestation(att0, att1)
 	if err != nil {
 		t.Fatal(err)
@@ -194,7 +194,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	aggregatedAtts := aggregatorServer.AttPool.AggregatedAttestation()
+	aggregatedAtts := aggregatorServer.AttPool.AggregatedAttestations()
 	if len(aggregatedAtts) != 0 {
 		t.Errorf("Wanted aggregated attestation 0, got %d", len(aggregatedAtts))
 	}
@@ -211,7 +211,7 @@ func generateAtt(state *pbp2p.BeaconState, index uint64, privKeys []*bls.SecretK
 		},
 		AggregationBits: aggBits,
 	}
-	committee, _ := helpers.BeaconCommittee(state, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, _ := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
 	attestingIndices, _ := helpers.AttestingIndices(att.AggregationBits, committee)
 	domain := helpers.Domain(state.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 

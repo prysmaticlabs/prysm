@@ -5,9 +5,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -46,21 +44,6 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
-	headState, err := as.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
-	}
-
-	// Advance slots if it is behind the epoch start of requested slot.
-	// Ex: head slot is 100, req slot is 150, epoch start of 150 is 128. Advance 100 to 128.
-	reqEpochStartSlot := helpers.StartSlot(helpers.SlotToEpoch(req.Slot))
-	if reqEpochStartSlot > headState.Slot {
-		headState, err = state.ProcessSlots(ctx, headState, reqEpochStartSlot)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
-		}
-	}
-
 	validatorIndex, exists, err := as.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(req.PublicKey))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get validator index from DB: %v", err)
@@ -69,8 +52,22 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 		return nil, status.Error(codes.Internal, "Could not locate validator index in DB")
 	}
 
+	epoch := helpers.SlotToEpoch(req.Slot)
+	activeValidatorIndices, err := as.HeadFetcher.HeadValidatorsIndices(epoch)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get validators: %v", err)
+	}
+	seed, err := as.HeadFetcher.HeadSeed(epoch)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get seed: %v", err)
+	}
+	committee, err := helpers.BeaconCommittee(activeValidatorIndices, seed, req.Slot, req.CommitteeIndex)
+	if err != nil {
+		return nil, err
+	}
+
 	// Check if the validator is an aggregator
-	isAggregator, err := helpers.IsAggregator(headState, req.Slot, req.CommitteeIndex, req.SlotSignature)
+	isAggregator, err := helpers.IsAggregator(uint64(len(committee)), req.Slot, req.CommitteeIndex, req.SlotSignature)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get aggregator status: %v", err)
 	}
@@ -79,31 +76,26 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 	}
 
 	// Retrieve the unaggregated attestation from pool
-	atts := as.AttPool.UnaggregatedAttestations(req.Slot, req.CommitteeIndex)
-
-	// Verify attestations are valid before aggregating and broadcasting them out.
-	validAtts := make([]*ethpb.Attestation, 0, len(atts))
-	for _, att := range atts {
-		if err := blocks.VerifyAttestation(ctx, headState, att); err != nil {
-			if err := as.AttPool.DeleteUnaggregatedAttestation(att); err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not delete invalid attestation: %v", err)
-			}
-			continue
-		}
-		validAtts = append(validAtts, att)
-	}
+	atts := as.AttPool.UnaggregatedAttestationsBySlotIndex(req.Slot, req.CommitteeIndex)
 
 	// Aggregate the attestations and broadcast them.
-	aggregatedAtts, err := helpers.AggregateAttestations(validAtts)
+	aggregatedAtts, err := helpers.AggregateAttestations(atts)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not aggregate attestations: %v", err)
 	}
-	for _, att := range aggregatedAtts {
-		if helpers.IsAggregated(att) {
-			if err := as.P2p.Broadcast(ctx, att); err != nil {
+	for _, aggregatedAtt := range aggregatedAtts {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		if helpers.IsAggregated(aggregatedAtt) {
+			if err := as.P2p.Broadcast(ctx, &ethpb.AggregateAttestationAndProof{
+				AggregatorIndex: validatorIndex,
+				SelectionProof:  req.SlotSignature,
+				Aggregate:       aggregatedAtt,
+			}); err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not broadcast aggregated attestation: %v", err)
 			}
-			if err := as.AttPool.SaveAggregatedAttestation(att); err != nil {
+			if err := as.AttPool.SaveAggregatedAttestation(aggregatedAtt); err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not save aggregated attestation: %v", err)
 			}
 		}

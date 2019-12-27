@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
-
 	"fmt"
 	"sort"
 
@@ -21,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -507,6 +507,7 @@ func ProcessAttestationsNoVerify(ctx context.Context, beaconState *pb.BeaconStat
 //    data = attestation.data
 //    assert data.index < get_committee_count_at_slot(state, data.slot)
 //    assert data.target.epoch in (get_previous_epoch(state), get_current_epoch(state))
+//    assert data.target.epoch == compute_epoch_at_slot(data.slot)
 //    assert data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= data.slot + SLOTS_PER_EPOCH
 //
 //    committee = get_beacon_committee(state, data.slot, data.index)
@@ -554,6 +555,9 @@ func ProcessAttestationNoVerify(ctx context.Context, beaconState *pb.BeaconState
 			helpers.PrevEpoch(beaconState),
 			helpers.CurrentEpoch(beaconState),
 		)
+	}
+	if helpers.SlotToEpoch(data.Slot) != data.Target.Epoch {
+		return nil, fmt.Errorf("data slot is not in the same epoch as target %d != %d", helpers.SlotToEpoch(data.Slot), data.Target.Epoch)
 	}
 
 	s := att.Data.Slot
@@ -668,9 +672,8 @@ func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, commi
 //    # Verify max number of indices
 //    if not len(indices) <= MAX_VALIDATORS_PER_COMMITTEE:
 //        return False
-//    # Verify indices are sorted
-//    if not indices == sorted(indices):
-//        return False
+//    # Verify indices are sorted and unique
+//        if not indices == sorted(set(indices)):
 //    # Verify aggregate signature
 //    if not bls_verify(
 //        pubkey=bls_aggregate_pubkeys([state.validators[i].pubkey for i in indices]),
@@ -690,8 +693,17 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *pb.BeaconState, 
 		return fmt.Errorf("validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE, %d > %d", len(indices), params.BeaconConfig().MaxValidatorsPerCommittee)
 	}
 
-	sorted := sort.SliceIsSorted(indices, func(i, j int) bool {
-		return indices[i] < indices[j]
+	set := make(map[uint64]bool)
+	setIndices := make([]uint64, 0, len(indices))
+	for _, i := range indices {
+		if ok := set[i]; ok {
+			continue
+		}
+		setIndices = append(setIndices, i)
+		set[i] = true
+	}
+	sorted := sort.SliceIsSorted(setIndices, func(i, j int) bool {
+		return setIndices[i] < setIndices[j]
 	})
 	if !sorted {
 		return fmt.Errorf("attesting indices are not sorted, got %v", sorted)
@@ -734,7 +746,7 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *pb.BeaconState, 
 // VerifyAttestation converts and attestation into an indexed attestation and verifies
 // the signature in that attestation.
 func VerifyAttestation(ctx context.Context, beaconState *pb.BeaconState, att *ethpb.Attestation) error {
-	committee, err := helpers.BeaconCommittee(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return err
 	}
@@ -762,6 +774,29 @@ func ProcessDeposits(ctx context.Context, beaconState *pb.BeaconState, body *eth
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
 		}
+	}
+	return beaconState, nil
+}
+
+// ProcessPreGenesisDeposit processes a deposit for the beacon state before chainstart.
+func ProcessPreGenesisDeposit(ctx context.Context, beaconState *pb.BeaconState,
+	deposit *ethpb.Deposit, validatorIndices map[[48]byte]int) (*pb.BeaconState, error) {
+	var err error
+	beaconState, err = ProcessDeposit(beaconState, deposit, validatorIndices)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process deposit")
+	}
+	pubkey := deposit.Data.PublicKey
+	index, ok := validatorIndices[bytesutil.ToBytes48(pubkey)]
+	if !ok {
+		return beaconState, nil
+	}
+	balance := beaconState.Balances[index]
+	beaconState.Validators[index].EffectiveBalance = mathutil.Min(balance-balance%params.BeaconConfig().EffectiveBalanceIncrement, params.BeaconConfig().MaxEffectiveBalance)
+	if beaconState.Validators[index].EffectiveBalance ==
+		params.BeaconConfig().MaxEffectiveBalance {
+		beaconState.Validators[index].ActivationEligibilityEpoch = 0
+		beaconState.Validators[index].ActivationEpoch = 0
 	}
 	return beaconState, nil
 }

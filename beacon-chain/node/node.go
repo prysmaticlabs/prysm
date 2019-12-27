@@ -80,15 +80,6 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	flags.ConfigureGlobalFlags(ctx)
 	registry := shared.NewServiceRegistry()
 
-	beacon := &BeaconNode{
-		ctx:             ctx,
-		services:        registry,
-		stop:            make(chan struct{}),
-		stateFeed:       new(event.Feed),
-		opFeed:          new(event.Feed),
-		attestationPool: attestations.NewPool(),
-	}
-
 	// Use custom config values if the --no-custom-config flag is not set.
 	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
 		if featureconfig.Get().MinimalConfig {
@@ -104,6 +95,15 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		}
 	}
 
+	beacon := &BeaconNode{
+		ctx:             ctx,
+		services:        registry,
+		stop:            make(chan struct{}),
+		stateFeed:       new(event.Feed),
+		opFeed:          new(event.Feed),
+		attestationPool: attestations.NewPool(),
+	}
+
 	if err := beacon.startDB(ctx); err != nil {
 		return nil, err
 	}
@@ -117,6 +117,10 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	}
 
 	if err := beacon.registerOperationService(ctx); err != nil {
+		return nil, err
+	}
+
+	if err := beacon.registerAttestationPool(ctx); err != nil {
 		return nil, err
 	}
 
@@ -294,6 +298,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		DepositCache:      b.depositCache,
 		ChainStartFetcher: web3Service,
 		OpsPoolService:    opsService,
+		AttPool:           b.attestationPool,
 		P2p:               b.fetchP2P(ctx),
 		MaxRoutines:       maxRoutines,
 		StateNotifier:     b,
@@ -310,6 +315,16 @@ func (b *BeaconNode) registerOperationService(ctx *cli.Context) error {
 	})
 
 	return b.services.RegisterService(operationService)
+}
+
+func (b *BeaconNode) registerAttestationPool(ctx *cli.Context) error {
+	attPoolService, err := attestations.NewService(context.Background(), &attestations.Config{
+		Pool: b.attestationPool,
+	})
+	if err != nil {
+		return err
+	}
+	return b.services.RegisterService(attPoolService)
 }
 
 func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {

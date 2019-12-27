@@ -798,7 +798,7 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 			Data: &ethpb.AttestationData{
 				Source: &ethpb.Checkpoint{Epoch: 1},
 				Target: &ethpb.Checkpoint{Epoch: 1},
-				Slot:   1,
+				Slot:   params.BeaconConfig().SlotsPerEpoch,
 			},
 			AggregationBits: aggBits,
 		},
@@ -881,7 +881,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
-	committee, err := helpers.BeaconCommittee(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		t.Error(err)
 	}
@@ -934,7 +934,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
-	committee, err := helpers.BeaconCommittee(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
 	if err != nil {
 		t.Error(err)
 	}
@@ -962,7 +962,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 		AggregationBits: aggBits2,
 	}
 
-	committee, err = helpers.BeaconCommittee(beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
+	committee, err = helpers.BeaconCommitteeFromState(beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1005,7 +1005,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
 	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
 
-	committee, err := helpers.BeaconCommittee(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1032,7 +1032,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 		AggregationBits: aggBits2,
 	}
 
-	committee, err = helpers.BeaconCommittee(beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
+	committee, err = helpers.BeaconCommitteeFromState(beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1065,6 +1065,21 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 
 	if _, err := blocks.ProcessAttestations(context.Background(), beaconState, block.Body); err != nil {
 		t.Error(err)
+	}
+}
+
+func TestProcessAttestationsNoVerify_IncorrectSlotTargetEpoch(t *testing.T) {
+	beaconState, _ := testutil.DeterministicGenesisState(t, 1)
+
+	att := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			Slot:   params.BeaconConfig().SlotsPerEpoch,
+			Target: &ethpb.Checkpoint{},
+		},
+	}
+	wanted := fmt.Sprintf("data slot is not in the same epoch as target %d != %d", helpers.SlotToEpoch(att.Data.Slot), att.Data.Target.Epoch)
+	if _, err := blocks.ProcessAttestationNoVerify(context.TODO(), beaconState, att); err.Error() != wanted {
+		t.Error("Did not get wanted error")
 	}
 }
 
@@ -1141,7 +1156,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 			Signature:        attestation.Signature,
 		}
 
-		committee, err := helpers.BeaconCommittee(state, attestation.Data.Slot, attestation.Data.CommitteeIndex)
+		committee, err := helpers.BeaconCommitteeFromState(state, attestation.Data.Slot, attestation.Data.CommitteeIndex)
 		if err != nil {
 			t.Error(err)
 		}
@@ -1195,7 +1210,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 					Epoch: 1,
 				},
 			},
-			AttestingIndices: []uint64{47, 99},
+			AttestingIndices: []uint64{47, 99, 99},
 		}},
 		{attestation: &ethpb.IndexedAttestation{
 			Data: &ethpb.AttestationData{
@@ -1203,7 +1218,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 					Epoch: 4,
 				},
 			},
-			AttestingIndices: []uint64{21, 72},
+			AttestingIndices: []uint64{21, 72, 21},
 		}},
 		{attestation: &ethpb.IndexedAttestation{
 			Data: &ethpb.AttestationData{
@@ -1211,7 +1226,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 					Epoch: 7,
 				},
 			},
-			AttestingIndices: []uint64{100, 121},
+			AttestingIndices: []uint64{100, 121, 100, 121},
 		}},
 	}
 

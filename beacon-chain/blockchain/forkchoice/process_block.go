@@ -52,7 +52,8 @@ import (
 //
 //    # Update justified checkpoint
 //    if state.current_justified_checkpoint.epoch > store.justified_checkpoint.epoch:
-//        store.justified_checkpoint = state.current_justified_checkpoint
+//        if state.current_justified_checkpoint.epoch > store.best_justified_checkpoint.epoch:
+//            store.best_justified_checkpoint = state.current_justified_checkpoint
 //
 //    # Update finalized checkpoint
 //    if state.finalized_checkpoint.epoch > store.finalized_checkpoint.epoch:
@@ -92,10 +93,9 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	}
 
 	// Update justified check point.
-	if postState.CurrentJustifiedCheckpoint.Epoch > s.JustifiedCheckpt().Epoch {
-		s.justifiedCheckpt = postState.CurrentJustifiedCheckpoint
-		if err := s.db.SaveJustifiedCheckpoint(ctx, postState.CurrentJustifiedCheckpoint); err != nil {
-			return errors.Wrap(err, "could not save justified checkpoint")
+	if postState.CurrentJustifiedCheckpoint.Epoch > s.justifiedCheckpt.Epoch {
+		if err := s.updateJustified(ctx, postState); err != nil {
+			return err
 		}
 	}
 
@@ -304,7 +304,7 @@ func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attes
 	if baseState == nil {
 		return errors.New("no state found in db with attestation tgt root")
 	}
-	committee, err := helpers.BeaconCommittee(baseState, att.Data.Slot, att.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(baseState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return err
 	}
@@ -469,16 +469,16 @@ func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot ui
 	return nil
 }
 
-// shouldUpdateJustified prevents bouncing attack, by only update conflicting justified
+// shouldUpdateCurrentJustified prevents bouncing attack, by only update conflicting justified
 // checkpoints in the fork choice if in the early slots of the epoch.
 // Otherwise, delay incorporation of new justified checkpoint until next epoch boundary.
 // See https://ethresear.ch/t/prevention-of-bouncing-attack-on-ffg/6114 for more detailed analysis and discussion.
-func (s *Store) shouldUpdateJustified(ctx context.Context, newJustifiedCheckpt *ethpb.Checkpoint) (bool, error) {
+func (s *Store) shouldUpdateCurrentJustified(ctx context.Context, newJustifiedCheckpt *ethpb.Checkpoint) (bool, error) {
 	if helpers.SlotsSinceEpochStarts(s.currentSlot()) < params.BeaconConfig().SafeSlotsToUpdateJustified {
 		return true, nil
 	}
 	newJustifiedBlock, err := s.db.Block(ctx, bytesutil.ToBytes32(newJustifiedCheckpt.Root))
-	if err != nil {
+	if err != nil || newJustifiedBlock == nil {
 		return false, err
 	}
 	if newJustifiedBlock.Slot <= helpers.StartSlot(s.justifiedCheckpt.Epoch) {
@@ -496,6 +496,24 @@ func (s *Store) shouldUpdateJustified(ctx context.Context, newJustifiedCheckpt *
 		return false, nil
 	}
 	return true, nil
+}
+
+func (s *Store) updateJustified(ctx context.Context, state *pb.BeaconState) error {
+	if state.CurrentJustifiedCheckpoint.Epoch > s.bestJustifiedCheckpt.Epoch {
+		s.bestJustifiedCheckpt = state.CurrentJustifiedCheckpoint
+	}
+	canUpdate, err := s.shouldUpdateCurrentJustified(ctx, state.CurrentJustifiedCheckpoint)
+	if err != nil {
+		return err
+	}
+	if canUpdate {
+		s.justifiedCheckpt = state.CurrentJustifiedCheckpoint
+	}
+	if err := s.db.SaveJustifiedCheckpoint(ctx, state.CurrentJustifiedCheckpoint); err != nil {
+		return errors.Wrap(err, "could not save justified checkpoint")
+	}
+
+	return nil
 }
 
 // currentSlot returns the current slot based on time.

@@ -62,14 +62,6 @@ message PendingAttestation {
   uint64 proposer_index = 4;
 }
 
-message AttestationTarget {
-  // Used internally to track LMD GHOST block votes and to find
-  // the head of the chain.
-  uint64 slot = 1;
-  bytes beacon_block_root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
-  bytes parent_root = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
-}
-
 message ValidatorLatestVote {
   // The epoch of when the latest message was voted.
   uint64 epoch = 1;
@@ -80,13 +72,4 @@ message ValidatorLatestVote {
 message HistoricalBatch {
   repeated bytes block_roots = 1 [(gogoproto.moretags) = "ssz-size:\"block_roots.size\""];
   repeated bytes state_roots = 2 [(gogoproto.moretags) = "ssz-size:\"state_roots.size\""];
-}
-
-message AggregateAndProof {
-  // index is the aggregator's index
-  uint64 aggregator_index = 1;
-  // aggregate is the constructed aggregated attestation
-  ethereum.eth.v1alpha1.Attestation aggregate = 2;
-  // selection_proof is the signature of the slot aggregator signed to
-  bytes selection_proof = 3 [(gogoproto.moretags) = "ssz-size:\"96\""];
 }

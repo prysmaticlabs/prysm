@@ -8,9 +8,7 @@ import (
 	"time"
 
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -19,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -105,7 +104,6 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	// ETH1.0 network, and prevents us from updating our trie
 	// with the same log twice, causing an inconsistent state root.
 	index := binary.LittleEndian.Uint64(merkleTreeIndex)
-	log.Infof("processing index %d", index)
 	if int64(index) <= s.lastReceivedMerkleIndex {
 		return nil
 	}
@@ -241,10 +239,6 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 			StartTime: chainStartTime,
 		},
 	})
-}
-
-func (s *Service) setGenesisTime(timeStamp uint64) {
-	s.chainStartData.GenesisTime = s.createGenesisTime(timeStamp)
 }
 
 func (s *Service) createGenesisTime(timeStamp uint64) uint64 {
@@ -391,7 +385,7 @@ func (s *Service) checkForChainStart(ctx context.Context, blkNum *big.Int) error
 	valCount, _ := helpers.ActiveValidatorCount(s.preGenesisState, 0)
 	triggered := state.IsValidGenesisState(valCount, s.createGenesisTime(timeStamp))
 	if triggered {
-		s.setGenesisTime(timeStamp)
+		s.eth2GenesisTime = s.createGenesisTime(timeStamp)
 		s.ProcessChainStart(s.chainStartData.GenesisTime, blk.Hash(), blk.Number())
 	}
 	return nil

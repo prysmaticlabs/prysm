@@ -55,7 +55,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	}
 
 	// Pack aggregated attestations which have not been included in the beacon chain.
-	atts := vs.AttPool.AggregatedAttestation()
+	atts := vs.AttPool.AggregatedAttestations()
 	atts, err = vs.filterAttestationsForBlockInclusion(ctx, req.Slot, atts)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not filter attestations: %v", err)
@@ -108,6 +108,10 @@ func (vs *Server) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlock) (*et
 		"Block proposal received via RPC")
 	if err := vs.BlockReceiver.ReceiveBlock(ctx, blk); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
+	}
+
+	if err := vs.deleteAttsInPool(blk.Body.Attestations); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not delete attestations in pool: %v", err)
 	}
 
 	return &ethpb.ProposeResponse{
@@ -334,6 +338,7 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, slot 
 	defer span.End()
 
 	validAtts := make([]*ethpb.Attestation, 0, len(atts))
+	inValidAtts := make([]*ethpb.Attestation, 0, len(atts))
 
 	bState, err := vs.BeaconDB.HeadState(ctx)
 	if err != nil {
@@ -353,22 +358,36 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, slot 
 			break
 		}
 
-		if err := blocks.VerifyAttestation(ctx, bState, att); err != nil {
-			if helpers.IsAggregated(att) {
-				if err := vs.AttPool.DeleteAggregatedAttestation(att); err != nil {
-					return nil, err
-				}
-			} else {
-				if err := vs.AttPool.DeleteUnaggregatedAttestation(att); err != nil {
-					return nil, err
-				}
-			}
+		if _, err := blocks.ProcessAttestation(ctx, bState, att); err != nil {
+			inValidAtts = append(inValidAtts, att)
 			continue
+
 		}
 		validAtts = append(validAtts, att)
 	}
 
+	if err := vs.deleteAttsInPool(inValidAtts); err != nil {
+		return nil, err
+	}
+
 	return validAtts, nil
+}
+
+// The input attestations are processed and seen by the node, this deletes them from pool
+// so proposers don't include them in a block for the future.
+func (vs *Server) deleteAttsInPool(atts []*ethpb.Attestation) error {
+	for _, att := range atts {
+		if helpers.IsAggregated(att) {
+			if err := vs.AttPool.DeleteAggregatedAttestation(att); err != nil {
+				return err
+			}
+		} else {
+			if err := vs.AttPool.DeleteUnaggregatedAttestation(att); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func constructMerkleProof(trie *trieutil.SparseMerkleTrie, index int, deposit *ethpb.Deposit) (*ethpb.Deposit, error) {

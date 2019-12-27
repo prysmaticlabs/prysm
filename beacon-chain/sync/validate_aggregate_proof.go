@@ -4,37 +4,48 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/libp2p/go-libp2p-core/peer"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
 
 // validateAggregateAndProof verifies the aggregated signature and the selection proof is valid before forwarding to the
 // network and downstream services.
-func (r *Service) validateAggregateAndProof(ctx context.Context, msg proto.Message, p p2p.Broadcaster, fromSelf bool) (bool, error) {
+func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, msg *pubsub.Message) bool {
+	if pid == r.p2p.PeerID() {
+		return true
+	}
+
 	ctx, span := trace.StartSpan(ctx, "sync.validateAggregateAndProof")
 	defer span.End()
 
 	// To process the following it requires the recent blocks to be present in the database, so we'll skip
 	// validating or processing aggregated attestations until fully synced.
 	if r.initialSync.Syncing() {
-		return false, nil
+		return false
 	}
 
-	m, ok := msg.(*pb.AggregateAndProof)
+	raw, err := r.decodePubsubMessage(msg)
+	if err != nil {
+		log.WithError(err).Error("Failed to decode message")
+		traceutil.AnnotateError(span, err)
+		return false
+	}
+	m, ok := raw.(*ethpb.AggregateAttestationAndProof)
 	if !ok {
-		return false, fmt.Errorf("message was not type *eth.AggregateAndProof, type=%T", msg)
+		return false
 	}
 
 	attSlot := m.Aggregate.Data.Slot
@@ -44,44 +55,50 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, msg proto.Messa
 
 	// Verify the block being voted for passes validation. The block should have passed validation if it's in the DB.
 	if !r.db.HasBlock(ctx, bytesutil.ToBytes32(m.Aggregate.Data.BeaconBlockRoot)) {
-		return false, errPointsToBlockNotInDatabase
+		return false
+	}
+
+	// Verify attestation slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots.
+	currentSlot := uint64(roughtime.Now().Unix()-r.chain.GenesisTime().Unix()) / params.BeaconConfig().SecondsPerSlot
+	if attSlot > currentSlot || currentSlot > attSlot+params.BeaconConfig().AttestationPropagationSlotRange {
+		traceutil.AnnotateError(span, fmt.Errorf("attestation slot out of range %d <= %d <= %d", attSlot, currentSlot, attSlot+params.BeaconConfig().AttestationPropagationSlotRange))
+		return false
+
 	}
 
 	s, err := r.chain.HeadState(ctx)
 	if err != nil {
-		return false, err
-	}
-
-	// Verify attestation slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots.
-	currentSlot := (uint64(roughtime.Now().Unix()) - s.GenesisTime) / params.BeaconConfig().SecondsPerSlot
-	if attSlot > currentSlot || currentSlot > attSlot+params.BeaconConfig().AttestationPropagationSlotRange {
-		return false, fmt.Errorf("attestation slot out of range %d <= %d <= %d",
-			attSlot, currentSlot, attSlot+params.BeaconConfig().AttestationPropagationSlotRange)
+		traceutil.AnnotateError(span, err)
+		return false
 	}
 
 	if attSlot > s.Slot {
 		s, err = state.ProcessSlots(ctx, s, attSlot)
 		if err != nil {
-			return false, err
+			traceutil.AnnotateError(span, err)
+			return false
 		}
 	}
 
 	// Verify validator index is within the aggregate's committee.
 	if err := validateIndexInCommittee(ctx, s, m.Aggregate, m.AggregatorIndex); err != nil {
-		return false, errors.Wrapf(err, "Could not validate index in committee")
+		traceutil.AnnotateError(span, errors.Wrapf(err, "Could not validate index in committee"))
+		return false
 	}
 
 	// Verify selection proof reflects to the right validator and signature is valid.
 	if err := validateSelection(ctx, s, m.Aggregate.Data, m.AggregatorIndex, m.SelectionProof); err != nil {
-		return false, errors.Wrapf(err, "Could not validate selection for validator %d", m.AggregatorIndex)
+		traceutil.AnnotateError(span, errors.Wrapf(err, "Could not validate selection for validator %d", m.AggregatorIndex))
+		return false
 	}
 
 	// Verify aggregated attestation has a valid signature.
 	if err := blocks.VerifyAttestation(ctx, s, m.Aggregate); err != nil {
-		return false, err
+		traceutil.AnnotateError(span, err)
+		return false
 	}
 
-	return true, nil
+	return true
 }
 
 // This validates the aggregator's index in state is within the attesting indices of the attestation.
@@ -89,7 +106,7 @@ func validateIndexInCommittee(ctx context.Context, s *pb.BeaconState, a *ethpb.A
 	ctx, span := trace.StartSpan(ctx, "sync..validateIndexInCommittee")
 	defer span.End()
 
-	committee, err := helpers.BeaconCommittee(s, a.Data.Slot, a.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(s, a.Data.Slot, a.Data.CommitteeIndex)
 	if err != nil {
 		return err
 	}
@@ -117,7 +134,11 @@ func validateSelection(ctx context.Context, s *pb.BeaconState, data *ethpb.Attes
 	_, span := trace.StartSpan(ctx, "sync.validateSelection")
 	defer span.End()
 
-	aggregator, err := helpers.IsAggregator(s, data.Slot, data.CommitteeIndex, proof)
+	committee, err := helpers.BeaconCommitteeFromState(s, data.Slot, data.CommitteeIndex)
+	if err != nil {
+		return err
+	}
+	aggregator, err := helpers.IsAggregator(uint64(len(committee)), data.Slot, data.CommitteeIndex, proof)
 	if err != nil {
 		return err
 	}

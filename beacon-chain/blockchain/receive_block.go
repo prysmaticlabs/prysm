@@ -109,6 +109,12 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconB
 		},
 	})
 
+	// Add attestations from the block to the pool for fork choice.
+	if err := s.attPool.SaveBlockAttestations(block.Body.Attestations); err != nil {
+		log.Errorf("Could not save attestation for fork choice: %v", err)
+		return nil
+	}
+
 	// Reports on block and fork choice metrics.
 	s.reportSlotMetrics(blockCopy.Slot)
 
