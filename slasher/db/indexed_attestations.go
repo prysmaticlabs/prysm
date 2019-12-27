@@ -43,7 +43,6 @@ func (db *Store) IndexedAttestation(targetEpoch uint64, validatorID uint64) ([]*
 	err := db.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(indexedAttestationsIndicesBucket)
 		enc = bucket.Get(key)
-
 		return nil
 	})
 	iList, err := createValidatorIDsToIndexedAttestationList(enc)
@@ -132,7 +131,7 @@ func (db *Store) SaveIndexedAttestation(idxAttestation *ethpb.IndexedAttestation
 		return errors.Wrap(err, "failed to marshal")
 	}
 
-	err = db.batch(func(tx *bolt.Tx) error {
+	err = db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicIndexedAttestationsBucket)
 		//if data is in db skip put and index functions
 		val := bucket.Get(key)

@@ -3,9 +3,7 @@ package rpc
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
-	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -30,20 +28,15 @@ type Server struct {
 // is a slashable vote.
 func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.IndexedAttestation) (*slashpb.AttesterSlashingResponse, error) {
 	//TODO(#3133): add signature validation
-	start := time.Now()
 	if err := ss.SlasherDB.SaveIndexedAttestation(req); err != nil {
 		return nil, err
 	}
-	elapsed := time.Since(start)
-	log.Printf("SaveIndexedAttestation took %s", elapsed)
 	tEpoch := req.Data.Target.Epoch
 	indices := append(req.CustodyBit_0Indices, req.CustodyBit_1Indices...)
 	root, err := ssz.HashTreeRoot(req.Data)
 	if err != nil {
 		return nil, err
 	}
-	elapsed = time.Since(start)
-	log.Printf("SaveIndexedAttestation and HashTreeRoot took %s has: %d attesting indices", elapsed, len(indices))
 	atsSlashinngRes := &slashpb.AttesterSlashingResponse{}
 	at := make(chan []*ethpb.AttesterSlashing, len(indices))
 	er := make(chan error, len(indices))
@@ -53,22 +46,16 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 		if int64(idx) <= lastIdx {
 			return nil, fmt.Errorf("indexed attestation contains repeated or non sorted ids")
 		}
-		wg.Add(2)
-		go func(id uint64) {
-			atts, err := ss.SlasherDB.DoubleVotes(tEpoch, id, root[:], req)
-			if err != nil {
-				er <- err
-				wg.Done()
-				return
-			}
-			if atts != nil && len(atts) > 0 {
-				at <- atts
-			}
-			wg.Done()
-			return
-		}(idx)
+		atts, err := ss.SlasherDB.DoubleVotes(tEpoch, idx, root[:], req)
+		if err != nil {
+			er <- err
+		}
+		if atts != nil && len(atts) > 0 {
+			at <- atts
+		}
+		wg.Add(1)
 		go func(idx uint64) {
-			atts, err := ss.DetectSurroundVotes(ctx, idx, req)
+			atts, err = ss.DetectSurroundVotes(ctx, idx, req)
 			if err != nil {
 				er <- err
 				wg.Done()
