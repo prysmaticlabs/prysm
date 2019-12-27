@@ -132,7 +132,7 @@ func (db *Store) SaveIndexedAttestation(idxAttestation *ethpb.IndexedAttestation
 		return errors.Wrap(err, "failed to marshal")
 	}
 
-	err = db.update(func(tx *bolt.Tx) error {
+	err = db.batch(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicIndexedAttestationsBucket)
 		//if data is in db skip put and index functions
 		val := bucket.Get(key)
