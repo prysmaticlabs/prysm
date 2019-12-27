@@ -12,6 +12,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
+	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -30,6 +31,7 @@ type ValidatorService struct {
 	conn                 *grpc.ClientConn
 	endpoint             string
 	withCert             string
+	dataDir              string
 	keys                 map[[48]byte]*keystore.Key
 	logValidatorBalances bool
 }
@@ -37,6 +39,7 @@ type ValidatorService struct {
 // Config for the validator service.
 type Config struct {
 	Endpoint             string
+	DataDir              string
 	CertFlag             string
 	GraffitiFlag         string
 	Keys                 map[string]*keystore.Key
@@ -58,6 +61,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		cancel:               cancel,
 		endpoint:             cfg.Endpoint,
 		withCert:             cfg.CertFlag,
+		dataDir:              cfg.DataDir,
 		graffiti:             []byte(cfg.GraffitiFlag),
 		keys:                 pubKeys,
 		logValidatorBalances: cfg.LogValidatorBalances,
@@ -101,6 +105,7 @@ func (v *ValidatorService) Start() {
 	log.Info("Successfully started gRPC connection")
 	v.conn = conn
 	v.validator = &validator{
+		db:                   db.NewDB(v.dataDir),
 		validatorClient:      ethpb.NewBeaconNodeValidatorClient(v.conn),
 		beaconClient:         ethpb.NewBeaconChainClient(v.conn),
 		aggregatorClient:     pb.NewAggregatorServiceClient(v.conn),

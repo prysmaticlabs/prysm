@@ -50,6 +50,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		return
 	}
 
+
 	// Sign returned block from beacon node
 	sig, err := v.signBlock(ctx, pubKey, epoch, b)
 	if err != nil {
