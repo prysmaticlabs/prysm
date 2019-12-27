@@ -4,12 +4,12 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
-func createEpochSpanMap(enc []byte) (*ethpb.EpochSpanMap, error) {
-	epochSpanMap := &ethpb.EpochSpanMap{}
+func createEpochSpanMap(enc []byte) (*slashpb.EpochSpanMap, error) {
+	epochSpanMap := &slashpb.EpochSpanMap{}
 	err := proto.Unmarshal(enc, epochSpanMap)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal encoding")
@@ -20,8 +20,8 @@ func createEpochSpanMap(enc []byte) (*ethpb.EpochSpanMap, error) {
 // ValidatorSpansMap accepts validator index and returns the corresponding spans
 // map for slashing detection.
 // Returns nil if the span map for this validator index does not exist.
-func (db *Store) ValidatorSpansMap(validatorIdx uint64) (*ethpb.EpochSpanMap, error) {
-	var sm *ethpb.EpochSpanMap
+func (db *Store) ValidatorSpansMap(validatorIdx uint64) (*slashpb.EpochSpanMap, error) {
+	var sm *slashpb.EpochSpanMap
 	var enc []byte
 	err := db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(validatorsMinMaxSpanBucket)
@@ -30,13 +30,13 @@ func (db *Store) ValidatorSpansMap(validatorIdx uint64) (*ethpb.EpochSpanMap, er
 	})
 	sm, err = createEpochSpanMap(enc)
 	if sm.EpochSpanMap == nil {
-		sm.EpochSpanMap = make(map[uint64]*ethpb.MinMaxEpochSpan)
+		sm.EpochSpanMap = make(map[uint64]*slashpb.MinMaxEpochSpan)
 	}
 	return sm, err
 }
 
 // SaveValidatorSpansMap accepts a validator index and span map and writes it to disk.
-func (db *Store) SaveValidatorSpansMap(validatorIdx uint64, spanMap *ethpb.EpochSpanMap) error {
+func (db *Store) SaveValidatorSpansMap(validatorIdx uint64, spanMap *slashpb.EpochSpanMap) error {
 	val, err := proto.Marshal(spanMap)
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal span map")
