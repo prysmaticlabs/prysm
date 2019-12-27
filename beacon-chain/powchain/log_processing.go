@@ -7,8 +7,6 @@ import (
 	"math/big"
 	"time"
 
-	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -20,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -385,7 +384,7 @@ func (s *Service) checkForChainStart(ctx context.Context, blkNum *big.Int) error
 	valCount, _ := helpers.ActiveValidatorCount(s.preGenesisState, 0)
 	triggered := state.IsValidGenesisState(valCount, s.createGenesisTime(timeStamp))
 	if triggered {
-		s.eth2GenesisTime = s.createGenesisTime(timeStamp)
+		s.chainStartData.GenesisTime = s.createGenesisTime(timeStamp)
 		s.ProcessChainStart(s.chainStartData.GenesisTime, blk.Hash(), blk.Number())
 	}
 	return nil
