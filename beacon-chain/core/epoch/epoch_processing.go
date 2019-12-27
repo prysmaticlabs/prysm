@@ -167,7 +167,7 @@ func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 		return state.Validators[i].ActivationEligibilityEpoch < state.Validators[j].ActivationEligibilityEpoch
 	})
 	sort.Slice(activationQ, func(i, j int) bool {
-		return i < j
+		return activationQ[i] < activationQ[j]
 	})
 
 	// Only activate just enough validators according to the activation churn limit.
