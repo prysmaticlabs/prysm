@@ -74,6 +74,9 @@ func TestGetHeadFromYaml(t *testing.T) {
 					t.Fatal(err)
 				}
 				blksRoot[slot] = root[:]
+				if err := db.SaveState(ctx, &pb.BeaconState{}, root); err != nil {
+					t.Fatal(err)
+				}
 			}
 		}
 
