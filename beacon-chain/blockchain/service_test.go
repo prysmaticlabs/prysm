@@ -343,6 +343,9 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	if !bytes.Equal(headRoot[:], c.HeadRoot()) {
 		t.Error("head slot incorrect")
 	}
+	if c.genesisRoot != genesisRoot {
+		t.Error("genesis block root incorrect")
+	}
 }
 
 func TestChainService_SaveHeadNoDB(t *testing.T) {
