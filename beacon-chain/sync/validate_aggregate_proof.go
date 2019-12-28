@@ -98,7 +98,7 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 
-	msg.ValidatorData = m // TODO(this PR): write regression test.
+	msg.ValidatorData = m
 
 	return true
 }

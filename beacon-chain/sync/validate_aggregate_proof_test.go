@@ -307,4 +307,8 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	if !r.validateAggregateAndProof(context.Background(), "", msg) {
 		t.Fatal("Validated status is false")
 	}
+
+	if msg.ValidatorData == nil {
+		t.Error("Did not set validator data")
+	}
 }
