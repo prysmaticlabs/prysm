@@ -205,49 +205,27 @@ func (bs *Server) StreamChainHead(_ *ptypes.Empty, stream ethpb.BeaconChain_Stre
 
 // Retrieve chain head information from the DB and the current beacon state.
 func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, error) {
-	headState, err := bs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
-	}
-
 	headBlock := bs.HeadFetcher.HeadBlock()
 	headBlockRoot, err := ssz.SigningRoot(headBlock)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head block root: %v", err)
 	}
-	finalizedCheckpoint := headState.FinalizedCheckpoint
-	justifiedCheckpoint := headState.CurrentJustifiedCheckpoint
 
-	if headState.Slot == 0 {
-		return &ethpb.ChainHead{
-			HeadSlot:                   0,
-			HeadEpoch:                  0,
-			HeadBlockRoot:              headBlockRoot[:],
-			FinalizedSlot:              0,
-			FinalizedEpoch:             0,
-			FinalizedBlockRoot:         finalizedCheckpoint.Root,
-			JustifiedSlot:              0,
-			JustifiedEpoch:             0,
-			JustifiedBlockRoot:         justifiedCheckpoint.Root,
-			PreviousJustifiedSlot:      0,
-			PreviousJustifiedEpoch:     0,
-			PreviousJustifiedBlockRoot: justifiedCheckpoint.Root,
-		}, nil
-	}
-
+	finalizedCheckpoint := bs.FinalizationFetcher.FinalizedCheckpt()
 	b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(finalizedCheckpoint.Root))
 	if err != nil || b == nil {
 		return nil, status.Error(codes.Internal, "Could not get finalized block")
 	}
 	finalizedSlot := b.Slot
 
+	justifiedCheckpoint := bs.FinalizationFetcher.CurrentJustifiedCheckpt()
 	b, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(justifiedCheckpoint.Root))
 	if err != nil || b == nil {
 		return nil, status.Error(codes.Internal, "Could not get justified block")
 	}
 	justifiedSlot := b.Slot
 
-	prevJustifiedCheckpoint := headState.PreviousJustifiedCheckpoint
+	prevJustifiedCheckpoint := bs.FinalizationFetcher.PreviousJustifiedCheckpt()
 	b, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(prevJustifiedCheckpoint.Root))
 	if err != nil || b == nil {
 		return nil, status.Error(codes.Internal, "Could not get prev justified block")

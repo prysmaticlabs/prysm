@@ -47,19 +47,38 @@ type ForkFetcher interface {
 }
 
 // FinalizationFetcher defines a common interface for methods in blockchain service which
-// directly retrieves finalization related data.
+// directly retrieves finalization and justification related data.
 type FinalizationFetcher interface {
 	FinalizedCheckpt() *ethpb.Checkpoint
+	CurrentJustifiedCheckpt() *ethpb.Checkpoint
+	PreviousJustifiedCheckpt() *ethpb.Checkpoint
 }
 
-// FinalizedCheckpt returns the latest finalized checkpoint tracked in fork choice service.
+// FinalizedCheckpt returns the latest finalized checkpoint from head state.
 func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
-	cp := s.forkChoiceStore.FinalizedCheckpt()
-	if cp != nil {
-		return cp
+	if s.headState == nil || s.headState.FinalizedCheckpoint == nil {
+		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
-	return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	return s.headState.FinalizedCheckpoint
+}
+
+// CurrentJustifiedCheckpt returns the current justified checkpoint from head state.
+func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
+	if s.headState == nil || s.headState.CurrentJustifiedCheckpoint == nil {
+		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	}
+
+	return s.headState.CurrentJustifiedCheckpoint
+}
+
+// PreviousJustifiedCheckpt returns the previous justified checkpoint from head state.
+func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
+	if s.headState == nil || s.headState.PreviousJustifiedCheckpoint == nil {
+		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	}
+
+	return s.headState.PreviousJustifiedCheckpoint
 }
 
 // HeadSlot returns the slot of the head of the chain.
