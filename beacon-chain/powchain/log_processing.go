@@ -223,6 +223,7 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 
 	s.depositTrie = sparseMerkleTrie
 	root := sparseMerkleTrie.Root()
+	log.Errorf("blockhash %#x and number %d and time %d", eth1BlockHash, blockNumber.Uint64(), chainStartTime.Unix())
 	s.chainStartData.Eth1Data = &ethpb.Eth1Data{
 		DepositCount: uint64(len(s.chainStartData.ChainstartDeposits)),
 		DepositRoot:  root[:],
@@ -370,6 +371,7 @@ func (s *Service) processBlksInRange(ctx context.Context, startBlk uint64, endBl
 
 // checkForChainStart checks the given  block number for if chainstart has occurred.
 func (s *Service) checkForChainStart(ctx context.Context, blkNum *big.Int) error {
+	log.Errorf("blocknumber %d", blkNum.Uint64())
 	blk, err := s.blockFetcher.BlockByNumber(ctx, blkNum)
 	if err != nil {
 		return errors.Wrap(err, "could not get eth1 block")

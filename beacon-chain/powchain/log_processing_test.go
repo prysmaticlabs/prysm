@@ -11,11 +11,13 @@ import (
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -23,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func init() {
@@ -625,4 +628,92 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 	}
 
 	hook.Reset()
+}
+
+func TestConsistentGenesisState(t *testing.T) {
+	hook := logTest.NewGlobal()
+	testAcc, err := contracts.Setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
+	beaconDB := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, beaconDB)
+	web3Service := newPowchainService(t, testAcc, beaconDB)
+
+	testAcc.Backend.Commit()
+	testAcc.Backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
+
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(uint64(depositsReqForChainStart))
+
+	_, roots, err := testutil.DeterministicDepositTrie(len(deposits))
+	if err != nil {
+		t.Fatal(err)
+	}
+	channel := make(<-chan struct{})
+	go web3Service.run(channel)
+
+	// 64 Validators are used as size required for beacon-chain to start. This number
+	// is defined in the deposit contract as the number required for the testnet. The actual number
+	// is 2**14
+	for i := 0; i < depositsReqForChainStart; i++ {
+		data := deposits[i].Data
+		testAcc.TxOpts.Value = contracts.Amount32Eth()
+		testAcc.TxOpts.GasLimit = 1000000
+		if _, err := testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, roots[i]); err != nil {
+			t.Fatalf("Could not deposit to deposit contract %v", err)
+		}
+
+		testAcc.Backend.Commit()
+	}
+	time.Sleep(4 * time.Second)
+	if !web3Service.chainStartData.Chainstarted {
+		t.Fatalf("Service hasn't chainstarted yet with a block height of %d", web3Service.latestEth1Data.BlockHeight)
+	}
+
+	for i := 0; i < 10; i++ {
+		testAcc.Backend.Commit()
+	}
+
+	newBeaconDB := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, newBeaconDB)
+
+	newWeb3Service := newPowchainService(t, testAcc, newBeaconDB)
+	channel = make(<-chan struct{})
+	go newWeb3Service.run(channel)
+
+	time.Sleep(2 * time.Second)
+	if !newWeb3Service.chainStartData.Chainstarted {
+		t.Fatal("Service hasn't chainstarted yet")
+	}
+
+	diff, exists := messagediff.PrettyDiff(web3Service.chainStartData.Eth1Data, newWeb3Service.chainStartData.Eth1Data)
+	if exists {
+		t.Errorf("Two services have different eth1data: %s", diff)
+	}
+
+	hook.Reset()
+}
+
+func newPowchainService(t *testing.T, eth1Backend *contracts.TestAccount, beaconDB db.Database) *Service {
+	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
+		ETH1Endpoint:    endpoint,
+		DepositContract: eth1Backend.ContractAddr,
+		BeaconDB:        beaconDB,
+		DepositCache:    depositcache.NewDepositCache(),
+	})
+	if err != nil {
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+	web3Service = setDefaultMocks(web3Service)
+	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(eth1Backend.ContractAddr, eth1Backend.Backend)
+	if err != nil {
+		t.Fatal(err)
+	}
+	web3Service.reader = &goodReader{backend: eth1Backend.Backend}
+	web3Service.blockFetcher = &goodFetcher{backend: eth1Backend.Backend}
+	bConfig := params.MinimalSpecConfig()
+	bConfig.MinGenesisTime = 0
+	params.OverrideBeaconConfig(bConfig)
+	web3Service.headerChan = make(chan *gethTypes.Header)
+	return web3Service
 }

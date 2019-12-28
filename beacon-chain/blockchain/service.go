@@ -309,6 +309,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconSt
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}
+	log.Errorf("blockhash %#x and time %d", genesisState.Eth1Data.BlockHash, genesisState.GenesisTime)
 
 	if err := s.beaconDB.SaveBlock(ctx, genesisBlk); err != nil {
 		return errors.Wrap(err, "could not save genesis block")

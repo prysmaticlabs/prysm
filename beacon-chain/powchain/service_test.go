@@ -11,7 +11,9 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
@@ -33,10 +35,30 @@ func (b *badReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.H
 	return nil, errors.New("subscription has failed")
 }
 
-type goodReader struct{}
+type goodReader struct {
+	backend *backends.SimulatedBackend
+}
 
 func (g *goodReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
-	return new(event.Feed).Subscribe(ch), nil
+	if g.backend == nil {
+		return new(event.Feed).Subscribe(ch), nil
+	}
+	headChan := make(chan core.ChainHeadEvent)
+	eventSub := g.backend.Blockchain().SubscribeChainHeadEvent(headChan)
+	feed := new(event.Feed)
+	sub := feed.Subscribe(ch)
+	go func() {
+		for {
+			select {
+			case blk := <-headChan:
+				feed.Send(blk.Block.Header())
+			case <-ctx.Done():
+				eventSub.Unsubscribe()
+				return
+			}
+		}
+	}()
+	return sub, nil
 }
 
 type goodLogger struct{}
@@ -69,43 +91,54 @@ func (g *goodNotifier) StateFeed() *event.Feed {
 	return g.MockStateFeed
 }
 
-type goodFetcher struct{}
+type goodFetcher struct {
+	backend *backends.SimulatedBackend
+}
 
 func (g *goodFetcher) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
 	if bytes.Equal(hash.Bytes(), common.BytesToHash([]byte{0}).Bytes()) {
 		return nil, fmt.Errorf("expected block hash to be nonzero %v", hash)
 	}
+	if g.backend == nil {
+		return gethTypes.NewBlock(
+			&gethTypes.Header{
+				Number: big.NewInt(0),
+			},
+			[]*gethTypes.Transaction{},
+			[]*gethTypes.Header{},
+			[]*gethTypes.Receipt{},
+		), nil
+	}
+	return g.backend.Blockchain().GetBlockByHash(hash), nil
 
-	block := gethTypes.NewBlock(
-		&gethTypes.Header{
-			Number: big.NewInt(0),
-		},
-		[]*gethTypes.Transaction{},
-		[]*gethTypes.Header{},
-		[]*gethTypes.Receipt{},
-	)
-
-	return block, nil
 }
 
 func (g *goodFetcher) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
-	block := gethTypes.NewBlock(
-		&gethTypes.Header{
-			Number: big.NewInt(15),
-			Time:   150,
-		},
-		[]*gethTypes.Transaction{},
-		[]*gethTypes.Header{},
-		[]*gethTypes.Receipt{},
-	)
+	if g.backend == nil {
+		return gethTypes.NewBlock(
+			&gethTypes.Header{
+				Number: big.NewInt(15),
+				Time:   150,
+			},
+			[]*gethTypes.Transaction{},
+			[]*gethTypes.Header{},
+			[]*gethTypes.Receipt{},
+		), nil
+	}
 
-	return block, nil
+	return g.backend.Blockchain().GetBlockByNumber(number.Uint64()), nil
 }
 
 func (g *goodFetcher) HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error) {
-	return &gethTypes.Header{
-		Number: big.NewInt(0),
-	}, nil
+	if g.backend == nil {
+		return &gethTypes.Header{
+			Number: big.NewInt(0),
+		}, nil
+	}
+	if number == nil {
+		return g.backend.Blockchain().CurrentHeader(), nil
+	}
+	return g.backend.Blockchain().GetHeaderByNumber(number.Uint64()), nil
 }
 
 var depositsReqForChainStart = 64
