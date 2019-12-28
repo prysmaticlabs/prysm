@@ -112,6 +112,10 @@ func (s *Service) HeadValidatorsIndices(epoch uint64) ([]uint64, error) {
 
 // HeadSeed returns the seed from the head view of a given epoch.
 func (s *Service) HeadSeed(epoch uint64) ([32]byte, error) {
+	if s.headState == nil {
+		return [32]byte{}, nil
+	}
+
 	return helpers.Seed(s.headState, epoch, params.BeaconConfig().DomainBeaconAttester)
 }
 
