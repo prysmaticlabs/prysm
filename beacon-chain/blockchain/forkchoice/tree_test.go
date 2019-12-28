@@ -40,6 +40,15 @@ func blockTree1(db db.Database) ([][]byte, error) {
 			return nil, err
 		}
 	}
+	if err := db.SaveState(context.Background(), &pb.BeaconState{}, r1); err != nil {
+		return nil, err
+	}
+	if err := db.SaveState(context.Background(), &pb.BeaconState{}, r7); err != nil {
+		return nil, err
+	}
+	if err := db.SaveState(context.Background(), &pb.BeaconState{}, r8); err != nil {
+		return nil, err
+	}
 	return [][]byte{r0[:], r1[:], nil, r3[:], r4[:], r5[:], r6[:], r7[:], r8[:]}, nil
 }
 
