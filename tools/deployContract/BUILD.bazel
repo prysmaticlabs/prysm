@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["deployContract.go"],
-    importpath = "github.com/prysmaticlabs/prysm/contracts/deposit-contract/deployContract",
+    importpath = "github.com/prysmaticlabs/prysm/tools/deployContract",
     visibility = ["//visibility:private"],
     deps = [
         "//contracts/deposit-contract:go_default_library",

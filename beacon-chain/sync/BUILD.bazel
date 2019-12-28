@@ -50,6 +50,7 @@ go_library(
         "//shared:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
+        "//shared/messagehandler:go_default_library",
         "//shared/params:go_default_library",
         "//shared/roughtime:go_default_library",
         "//shared/runutil:go_default_library",
