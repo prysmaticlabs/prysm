@@ -631,7 +631,6 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 }
 
 func TestConsistentGenesisState(t *testing.T) {
-	hook := logTest.NewGlobal()
 	testAcc, err := contracts.Setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
@@ -649,8 +648,8 @@ func TestConsistentGenesisState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	channel := make(<-chan struct{})
-	go web3Service.run(channel)
+	ctx, cancel := context.WithCancel(context.Background())
+	go web3Service.run(ctx.Done())
 
 	// 64 Validators are used as size required for beacon-chain to start. This number
 	// is defined in the deposit contract as the number required for the testnet. The actual number
@@ -665,33 +664,39 @@ func TestConsistentGenesisState(t *testing.T) {
 
 		testAcc.Backend.Commit()
 	}
-	time.Sleep(4 * time.Second)
+	for i := int64(0); i < params.BeaconConfig().LogBlockDelay; i++ {
+		testAcc.Backend.Commit()
+	}
+
+	time.Sleep(2 * time.Second)
 	if !web3Service.chainStartData.Chainstarted {
 		t.Fatalf("Service hasn't chainstarted yet with a block height of %d", web3Service.latestEth1Data.BlockHeight)
 	}
 
+	// Advance 10 blocks
 	for i := 0; i < 10; i++ {
 		testAcc.Backend.Commit()
 	}
+
+	// tearing down to prevent registration error
+	testDB.TeardownDB(t, beaconDB)
 
 	newBeaconDB := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, newBeaconDB)
 
 	newWeb3Service := newPowchainService(t, testAcc, newBeaconDB)
-	channel = make(<-chan struct{})
-	go newWeb3Service.run(channel)
+	go newWeb3Service.run(ctx.Done())
 
 	time.Sleep(2 * time.Second)
 	if !newWeb3Service.chainStartData.Chainstarted {
 		t.Fatal("Service hasn't chainstarted yet")
 	}
 
-	diff, exists := messagediff.PrettyDiff(web3Service.chainStartData.Eth1Data, newWeb3Service.chainStartData.Eth1Data)
-	if exists {
+	diff, _ := messagediff.PrettyDiff(web3Service.chainStartData.Eth1Data, newWeb3Service.chainStartData.Eth1Data)
+	if diff != "" {
 		t.Errorf("Two services have different eth1data: %s", diff)
 	}
-
-	hook.Reset()
+	cancel()
 }
 
 func newPowchainService(t *testing.T, eth1Backend *contracts.TestAccount, beaconDB db.Database) *Service {
@@ -711,6 +716,8 @@ func newPowchainService(t *testing.T, eth1Backend *contracts.TestAccount, beacon
 	}
 	web3Service.reader = &goodReader{backend: eth1Backend.Backend}
 	web3Service.blockFetcher = &goodFetcher{backend: eth1Backend.Backend}
+	web3Service.httpLogger = &goodLogger{backend: eth1Backend.Backend}
+	web3Service.logger = &goodLogger{backend: eth1Backend.Backend}
 	bConfig := params.MinimalSpecConfig()
 	bConfig.MinGenesisTime = 0
 	params.OverrideBeaconConfig(bConfig)

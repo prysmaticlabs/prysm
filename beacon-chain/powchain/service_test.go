@@ -61,23 +61,31 @@ func (g *goodReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.
 	return sub, nil
 }
 
-type goodLogger struct{}
+type goodLogger struct {
+	backend *backends.SimulatedBackend
+}
 
 func (g *goodLogger) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error) {
-	return new(event.Feed).Subscribe(ch), nil
+	if g.backend == nil {
+		return new(event.Feed).Subscribe(ch), nil
+	}
+	return g.backend.SubscribeFilterLogs(ctx, q, ch)
 }
 
 func (g *goodLogger) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]gethTypes.Log, error) {
-	logs := make([]gethTypes.Log, 3)
-	for i := 0; i < len(logs); i++ {
-		logs[i].Address = common.Address{}
-		logs[i].Topics = make([]common.Hash, 5)
-		logs[i].Topics[0] = common.Hash{'a'}
-		logs[i].Topics[1] = common.Hash{'b'}
-		logs[i].Topics[2] = common.Hash{'c'}
+	if g.backend == nil {
+		logs := make([]gethTypes.Log, 3)
+		for i := 0; i < len(logs); i++ {
+			logs[i].Address = common.Address{}
+			logs[i].Topics = make([]common.Hash, 5)
+			logs[i].Topics[0] = common.Hash{'a'}
+			logs[i].Topics[1] = common.Hash{'b'}
+			logs[i].Topics[2] = common.Hash{'c'}
 
+		}
+		return logs, nil
 	}
-	return logs, nil
+	return g.backend.FilterLogs(ctx, q)
 }
 
 type goodNotifier struct {

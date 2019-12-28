@@ -431,18 +431,18 @@ func safelyHandlePanic() {
 
 func (s *Service) handleDelayTicker() {
 	defer safelyHandlePanic()
-	// If the last requested block has not changed,
-	// we do not request batched logs as this means there are no new
-	// logs for the powchain service to process.
-	if s.latestEth1Data.LastRequestedBlock == s.latestEth1Data.BlockHeight {
-		return
-	}
 	if !s.chainStartData.Chainstarted {
 		if err := s.checkForChainStart(context.Background(), big.NewInt(int64(s.latestEth1Data.LastRequestedBlock))); err != nil {
 			s.runError = err
 			log.Error(err)
 			return
 		}
+	}
+	// If the last requested block has not changed,
+	// we do not request batched logs as this means there are no new
+	// logs for the powchain service to process.
+	if s.latestEth1Data.LastRequestedBlock == s.latestEth1Data.BlockHeight {
+		return
 	}
 	if err := s.requestBatchedLogs(context.Background()); err != nil {
 		s.runError = err
