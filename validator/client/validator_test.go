@@ -60,7 +60,7 @@ func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
 		keys:            keyMap,
 		validatorClient: client,
 	}
-	genesis := uint64(time.Unix(0, 0).Unix())
+	genesis := uint64(time.Unix(1, 0).Unix())
 	clientStream := internal.NewMockValidatorService_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
