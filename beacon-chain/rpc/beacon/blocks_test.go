@@ -324,6 +324,10 @@ func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
 	bs := &Server{
 		BeaconDB:    db,
 		HeadFetcher: &mock.ChainService{Block: &ethpb.BeaconBlock{}, State: s},
+		FinalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint:         s.FinalizedCheckpoint,
+			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint,
+			PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint},
 	}
 
 	if _, err := bs.GetChainHead(context.Background(), nil); !strings.Contains(err.Error(), "Could not get finalized block") {
@@ -356,6 +360,10 @@ func TestServer_GetChainHead(t *testing.T) {
 	bs := &Server{
 		BeaconDB:    db,
 		HeadFetcher: &mock.ChainService{Block: b, State: s},
+		FinalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint:         s.FinalizedCheckpoint,
+			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint,
+			PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint},
 	}
 
 	head, err := bs.GetChainHead(context.Background(), nil)
@@ -458,6 +466,10 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 		HeadFetcher:   &mock.ChainService{Block: b, State: s},
 		BeaconDB:      db,
 		StateNotifier: chainService.StateNotifier(),
+		FinalizationFetcher: &mock.ChainService{
+			FinalizedCheckPoint:         s.FinalizedCheckpoint,
+			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint,
+			PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint},
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)

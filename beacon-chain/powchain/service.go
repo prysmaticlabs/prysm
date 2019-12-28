@@ -427,6 +427,13 @@ func (s *Service) handleDelayTicker() {
 	if s.lastRequestedBlock.Cmp(s.blockHeight) == 0 {
 		return
 	}
+	if !s.chainStarted {
+		if err := s.checkForChainStart(context.Background(), s.lastRequestedBlock); err != nil {
+			s.runError = err
+			log.Error(err)
+			return
+		}
+	}
 	if err := s.requestBatchedLogs(context.Background()); err != nil {
 		s.runError = err
 		log.Error(err)
