@@ -132,7 +132,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	}
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.
-	if helpers.IsEpochStart(postState.Slot) {
+	if postState.Slot >= s.epochMetricsSlot {
 		logEpochData(postState)
 		reportEpochMetrics(postState)
 
@@ -142,6 +142,8 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 				return err
 			}
 		}
+
+		s.epochMetricsSlot = helpers.StartSlot(helpers.NextEpoch(postState))
 	}
 
 	return nil
@@ -238,8 +240,10 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.
 	}
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.
-	if helpers.IsEpochStart(postState.Slot) {
+	if postState.Slot >= s.epochMetricsSlot {
 		reportEpochMetrics(postState)
+
+		s.epochMetricsSlot = helpers.StartSlot(helpers.NextEpoch(postState))
 	}
 
 	return nil
