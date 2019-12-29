@@ -233,6 +233,9 @@ func TestCommitteeAssignment_MultipleKeys_OK(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	p := params.BeaconConfig()
+	p.MinGenesisActiveValidatorCount = depChainStart
+	params.OverrideBeaconConfig(p)
 	state, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
