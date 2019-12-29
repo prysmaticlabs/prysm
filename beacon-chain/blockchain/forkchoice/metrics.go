@@ -142,6 +142,6 @@ func reportEpochMetrics(state *pb.BeaconState) {
 		beaconFinalizedRoot.Set(float64(bytesutil.ToLowInt64(state.FinalizedCheckpoint.Root)))
 	}
 	if state.Eth1Data != nil {
-		currentEth1DataDepositCount.Set(state.Eth1Data.DepositCount)
+		currentEth1DataDepositCount.Set(float64(state.Eth1Data.DepositCount))
 	}
 }
