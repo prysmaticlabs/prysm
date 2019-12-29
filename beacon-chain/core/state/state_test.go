@@ -34,7 +34,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		t.Error("HistoricalRootsLimit should be 16777216 for these tests to pass")
 	}
 
-	depositsForChainStart := 100
+	depositsForChainStart := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 
 	if params.BeaconConfig().EpochsPerSlashingsVector != 8192 {
 		t.Error("EpochsPerSlashingsVector should be 8192 for these tests to pass")
@@ -129,7 +129,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 }
 
 func TestGenesisState_HashEquality(t *testing.T) {
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(100)
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	state1, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Error(err)
@@ -152,7 +152,8 @@ func TestGenesisState_HashEquality(t *testing.T) {
 }
 
 func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
-	s, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	s, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Error(err)
 	}
