@@ -13,6 +13,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
+// Set genesis to a small set for faster test processing.
+func init() {
+	p := params.BeaconConfig()
+	p.MinGenesisActiveValidatorCount = 8
+	params.OverrideBeaconConfig(p)
+}
+
 func TestGenesisBeaconState_OK(t *testing.T) {
 	genesisEpochNumber := uint64(0)
 
@@ -180,3 +187,12 @@ func TestGenesisState_FailsWithoutEth1data(t *testing.T) {
 		t.Errorf("Did not receive eth1data error with nil eth1data, got %v", err)
 	}
 }
+
+func TestGenesisState_FailsWrongDeposits(t *testing.T) {
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount+1)
+	_, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
+	if err == nil || err.Error() != "incorrect number of genesis deposits" {
+		t.Errorf("Did not receive deposits error when wrong number of deposits used, got %v", err)
+	}
+}
+
