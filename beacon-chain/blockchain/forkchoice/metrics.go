@@ -59,7 +59,7 @@ var (
 	}, []string{"state"})
 	currentEth1DataDepositCount = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "current_eth1_data_deposit_count",
-		Help: "The current eth1 deposit count in the head state eth1data field.",
+		Help: "The current eth1 deposit count in the last processed state eth1data field.",
 	})
 )
 
