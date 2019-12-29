@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/validator/db"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -50,6 +51,18 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		return
 	}
 
+	history, err := v.db.ProposalHistory(pubKey[:])
+	if err != nil {
+		log.WithError(err).Error("Failed to get proposal history")
+		return
+	}
+
+	if db.HasProposedForEpoch(history, epoch) {
+		log.Info("Tried to sign a double proposal, rejected")
+		return
+	}
+
+	log.Info("Validator has not proposed for this epoch")
 
 	// Sign returned block from beacon node
 	sig, err := v.signBlock(ctx, pubKey, epoch, b)
@@ -58,6 +71,12 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		return
 	}
 	b.Signature = sig
+
+	db.SetProposedForEpoch(history, epoch)
+	if err := v.db.SaveProposalHistory(pubKey[:], history); err != nil {
+		log.WithError(err).Error("Failed to save updated proposal history")
+		return
+	}
 
 	// Propose and broadcast block via beacon node
 	blkResp, err := v.validatorClient.ProposeBlock(ctx, b)

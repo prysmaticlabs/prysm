@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"errors"
+	"github.com/prysmaticlabs/prysm/validator/db"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -18,12 +19,14 @@ type mocks struct {
 }
 
 func setup(t *testing.T) (*validator, *mocks, func()) {
+	db := db.SetupDB(t)
 	ctrl := gomock.NewController(t)
 	m := &mocks{
 		validatorClient:  internal.NewMockBeaconNodeValidatorClient(ctrl),
 		aggregatorClient: internal.NewMockAggregatorServiceClient(ctrl),
 	}
 	validator := &validator{
+		db:               db,
 		validatorClient:  m.validatorClient,
 		aggregatorClient: m.aggregatorClient,
 		keys:             keyMap,
