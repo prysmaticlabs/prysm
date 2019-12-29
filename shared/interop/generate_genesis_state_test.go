@@ -12,6 +12,10 @@ import (
 
 func TestGenerateGenesisState(t *testing.T) {
 	numValidators := uint64(64)
+	p := params.BeaconConfig()
+	p.MinGenesisActiveValidatorCount = numValidators
+	params.OverrideBeaconConfig(p)
+
 	privKeys, pubKeys, err := interop.DeterministicallyGenerateKeys(0 /*startIndex*/, numValidators)
 	if err != nil {
 		t.Fatal(err)
