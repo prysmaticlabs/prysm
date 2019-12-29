@@ -103,9 +103,14 @@ func (v *ValidatorService) Start() {
 		return
 	}
 	log.Info("Successfully started gRPC connection")
+	db, err := db.NewKVStore(v.dataDir, pubKeys)
+	if err != nil {
+		log.Errorf("Could not create DB in dir %s: %v", v.dataDir, err)
+		return
+	}
 	v.conn = conn
 	v.validator = &validator{
-		db:                   db.NewDB(v.dataDir),
+		db:                   db,
 		validatorClient:      ethpb.NewBeaconNodeValidatorClient(v.conn),
 		beaconClient:         ethpb.NewBeaconChainClient(v.conn),
 		aggregatorClient:     pb.NewAggregatorServiceClient(v.conn),
