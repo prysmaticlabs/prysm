@@ -1,12 +1,16 @@
 package db
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"time"
 
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-bitfield"
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -34,11 +38,6 @@ func (db *Store) view(fn func(*bolt.Tx) error) error {
 	return db.db.View(fn)
 }
 
-// NewDB initializes a new DB.
-func NewDB(dirPath string) (*Store, error) {
-	return NewKVStore(dirPath)
-}
-
 // ClearDB removes the previously stored directory at the data directory.
 func (db *Store) ClearDB() error {
 	if _, err := os.Stat(db.databasePath); os.IsNotExist(err) {
@@ -64,11 +63,11 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 // NewKVStore initializes a new boltDB key-value store at the directory
 // path specified, creates the kv-buckets based on the schema, and stores
 // an open connection db object as a property of the Store struct.
-func NewKVStore(dirPath string) (*Store, error) {
+func NewKVStore(dirPath string, pubkeys [][]byte) (*Store, error) {
 	if err := os.MkdirAll(dirPath, 0700); err != nil {
 		return nil, err
 	}
-	datafile := path.Join(dirPath, "protector.db")
+	datafile := path.Join(dirPath, "validator.db")
 	boltDB, err := bolt.Open(datafile, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		if err == bolt.ErrTimeout {
@@ -87,6 +86,22 @@ func NewKVStore(dirPath string) (*Store, error) {
 		)
 	}); err != nil {
 		return nil, err
+	}
+
+	for _, pubkey := range pubkeys {
+		history, err := kv.ProposalHistory(pubkey)
+		if err != nil {
+			return nil, err
+		}
+		fmt.Println(history)
+		if history == nil {
+			cleanHistory := &slashpb.ValidatorProposalHistory{
+				ProposalHistory: bitfield.NewBitlist(params.BeaconConfig().WeakSubjectivityPeriod),
+			}
+			if err := kv.SaveProposalHistory(pubkey, cleanHistory); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	return kv, err
