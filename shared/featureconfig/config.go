@@ -125,14 +125,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling experimental kafka streaming.")
 		cfg.KafkaBootstrapServers = ctx.GlobalString(kafkaBootstrapServersFlag.Name)
 	}
-	if ctx.GlobalBool(enableSnappyDBCompressionFlag.Name) {
-		log.Warn("Enabled snappy compression in the database.")
-		cfg.EnableSnappyDBCompression = true
-	}
-	if ctx.GlobalBool(enablePruneBoundaryStateFlag.Name) {
-		log.Warn("Enabled pruning epoch boundary states before last finalized check point.")
-		cfg.PruneEpochBoundaryStates = true
-	}
 	if ctx.GlobalBool(initSyncCacheState.Name) {
 		log.Warn("Enabled initial sync cache state mode.")
 		cfg.InitSyncCacheState = true

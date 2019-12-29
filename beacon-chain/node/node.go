@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	interopcoldstart "github.com/prysmaticlabs/prysm/beacon-chain/interop-cold-start"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
@@ -52,13 +53,15 @@ const testSkipPowFlag = "test-skip-pow"
 // full PoS node. It handles the lifecycle of the entire system and registers
 // services to a service registry.
 type BeaconNode struct {
-	ctx          *cli.Context
-	services     *shared.ServiceRegistry
-	lock         sync.RWMutex
-	stop         chan struct{} // Channel to wait for termination notifications.
-	db           db.Database
-	depositCache *depositcache.DepositCache
-	stateFeed    *event.Feed
+	ctx             *cli.Context
+	services        *shared.ServiceRegistry
+	lock            sync.RWMutex
+	stop            chan struct{} // Channel to wait for termination notifications.
+	db              db.Database
+	attestationPool attestations.Pool
+	depositCache    *depositcache.DepositCache
+	stateFeed       *event.Feed
+	opFeed          *event.Feed
 }
 
 // NewBeaconNode creates a new node instance, sets up configuration options, and registers
@@ -77,13 +80,6 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	flags.ConfigureGlobalFlags(ctx)
 	registry := shared.NewServiceRegistry()
 
-	beacon := &BeaconNode{
-		ctx:       ctx,
-		services:  registry,
-		stop:      make(chan struct{}),
-		stateFeed: new(event.Feed),
-	}
-
 	// Use custom config values if the --no-custom-config flag is not set.
 	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
 		if featureconfig.Get().MinimalConfig {
@@ -99,6 +95,15 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		}
 	}
 
+	beacon := &BeaconNode{
+		ctx:             ctx,
+		services:        registry,
+		stop:            make(chan struct{}),
+		stateFeed:       new(event.Feed),
+		opFeed:          new(event.Feed),
+		attestationPool: attestations.NewPool(),
+	}
+
 	if err := beacon.startDB(ctx); err != nil {
 		return nil, err
 	}
@@ -112,6 +117,10 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	}
 
 	if err := beacon.registerOperationService(ctx); err != nil {
+		return nil, err
+	}
+
+	if err := beacon.registerAttestationPool(ctx); err != nil {
 		return nil, err
 	}
 
@@ -155,6 +164,11 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 // StateFeed implements statefeed.Notifier.
 func (b *BeaconNode) StateFeed() *event.Feed {
 	return b.stateFeed
+}
+
+// OperationFeed implements opfeed.Notifier.
+func (b *BeaconNode) OperationFeed() *event.Feed {
+	return b.opFeed
 }
 
 // Start the BeaconNode and kicks off every registered service.
@@ -284,6 +298,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		DepositCache:      b.depositCache,
 		ChainStartFetcher: web3Service,
 		OpsPoolService:    opsService,
+		AttPool:           b.attestationPool,
 		P2p:               b.fetchP2P(ctx),
 		MaxRoutines:       maxRoutines,
 		StateNotifier:     b,
@@ -300,6 +315,16 @@ func (b *BeaconNode) registerOperationService(ctx *cli.Context) error {
 	})
 
 	return b.services.RegisterService(operationService)
+}
+
+func (b *BeaconNode) registerAttestationPool(ctx *cli.Context) error {
+	attPoolService, err := attestations.NewService(context.Background(), &attestations.Config{
+		Pool: b.attestationPool,
+	})
+	if err != nil {
+		return err
+	}
+	return b.services.RegisterService(attPoolService)
 }
 
 func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
@@ -375,6 +400,7 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 		Chain:         chainService,
 		InitialSync:   initSync,
 		StateNotifier: b,
+		AttPool:       b.attestationPool,
 	})
 
 	return b.services.RegisterService(rs)
@@ -452,8 +478,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		BlockReceiver:         chainService,
 		AttestationReceiver:   chainService,
 		GenesisTimeFetcher:    chainService,
-		AttestationsPool:      operationService,
-		OperationsHandler:     operationService,
+		AttestationsPool:      b.attestationPool,
 		POWChainService:       web3Service,
 		ChainStartFetcher:     chainStartFetcher,
 		MockEth1Votes:         mockEth1DataVotes,
@@ -461,6 +486,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		DepositFetcher:        depositFetcher,
 		PendingDepositFetcher: b.depositCache,
 		StateNotifier:         b,
+		OperationNotifier:     b,
 	})
 
 	return b.services.RegisterService(rpcService)

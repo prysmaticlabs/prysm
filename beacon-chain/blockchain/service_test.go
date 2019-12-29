@@ -18,8 +18,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	ops "github.com/prysmaticlabs/prysm/beacon-chain/operations/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -121,6 +123,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		OpsPoolService:    &ops.Operations{},
 		P2p:               &mockBroadcaster{},
 		StateNotifier:     &mockBeaconNode{},
+		AttPool:           attestations.NewPool(),
 	}
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
@@ -237,11 +240,28 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 	ctx := context.Background()
 
 	bc := setupBeaconChain(t, db)
+	var err error
 
 	// Set up 10 deposits pre chain start for validators to register
 	count := uint64(10)
 	deposits, _, _ := testutil.DeterministicDepositsAndKeys(count)
-	if err := bc.initializeBeaconChain(ctx, time.Unix(0, 0), deposits, &ethpb.Eth1Data{}); err != nil {
+	trie, _, err := testutil.DepositTrieFromDeposits(deposits)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hashTreeRoot := trie.HashTreeRoot()
+	genState := state.EmptyGenesisState()
+	genState.Eth1Data = &ethpb.Eth1Data{
+		DepositRoot:  hashTreeRoot[:],
+		DepositCount: uint64(len(deposits)),
+	}
+	genState, err = b.ProcessDeposits(ctx, genState, &ethpb.BeaconBlockBody{Deposits: deposits})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := bc.initializeBeaconChain(ctx, time.Unix(0, 0), genState, &ethpb.Eth1Data{
+		DepositRoot: hashTreeRoot[:],
+	}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -322,6 +342,9 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	}
 	if !bytes.Equal(headRoot[:], c.HeadRoot()) {
 		t.Error("head slot incorrect")
+	}
+	if c.genesisRoot != genesisRoot {
+		t.Error("genesis block root incorrect")
 	}
 }
 

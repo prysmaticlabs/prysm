@@ -11,14 +11,17 @@ import (
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -586,8 +589,15 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 		t.Errorf("missing logs were not re-requested. Wanted Index %d but got %d", depositsWanted-1, web3Service.lastReceivedMerkleIndex)
 	}
 
-	web3Service.lastReceivedMerkleIndex = 0
+	web3Service.lastReceivedMerkleIndex = -1
 	web3Service.lastRequestedBlock = new(big.Int)
+	web3Service.preGenesisState = state.EmptyGenesisState()
+	web3Service.preGenesisState.Eth1Data = &ethpb.Eth1Data{}
+	web3Service.chainStartDeposits = []*ethpb.Deposit{}
+	web3Service.depositTrie, err = trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	logsToBeProcessed = append(logs[:depositsWanted-8], logs[depositsWanted-2:]...)
 	// We purposely miss processing the middle 7 logs so that the service, re-requests them.

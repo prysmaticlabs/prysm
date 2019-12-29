@@ -83,6 +83,11 @@ func IsEpochEnd(slot uint64) bool {
 	return IsEpochStart(slot + 1)
 }
 
+// SlotsSinceEpochStarts returns number of slots since the start of the epoch.
+func SlotsSinceEpochStarts(slot uint64) uint64 {
+	return slot - StartSlot(SlotToEpoch(slot))
+}
+
 // Allow for slots "from the future" within a certain tolerance.
 const timeShiftTolerance = 10 // ms
 

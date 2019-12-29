@@ -178,9 +178,8 @@ func TestServer_SlashDoubleAttestation(t *testing.T) {
 		SlasherDB: dbs,
 	}
 	ia1 := &ethpb.IndexedAttestation{
-		CustodyBit_0Indices: []uint64{0},
-		CustodyBit_1Indices: []uint64{},
-		Signature:           []byte("sig2"),
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig2"),
 		Data: &ethpb.AttestationData{
 			Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex:  0,
@@ -190,9 +189,8 @@ func TestServer_SlashDoubleAttestation(t *testing.T) {
 		},
 	}
 	ia2 := &ethpb.IndexedAttestation{
-		CustodyBit_0Indices: []uint64{0},
-		CustodyBit_1Indices: []uint64{},
-		Signature:           []byte("sig1"),
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig1"),
 		Data: &ethpb.AttestationData{
 			Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex:  0,
@@ -232,9 +230,8 @@ func TestServer_SlashTripleAttestation(t *testing.T) {
 		SlasherDB: dbs,
 	}
 	ia1 := &ethpb.IndexedAttestation{
-		CustodyBit_0Indices: []uint64{0},
-		CustodyBit_1Indices: []uint64{},
-		Signature:           []byte("sig1"),
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig1"),
 		Data: &ethpb.AttestationData{
 			Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex:  0,
@@ -244,9 +241,8 @@ func TestServer_SlashTripleAttestation(t *testing.T) {
 		},
 	}
 	ia2 := &ethpb.IndexedAttestation{
-		CustodyBit_0Indices: []uint64{0},
-		CustodyBit_1Indices: []uint64{},
-		Signature:           []byte("sig2"),
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig2"),
 		Data: &ethpb.AttestationData{
 			Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex:  0,
@@ -256,9 +252,8 @@ func TestServer_SlashTripleAttestation(t *testing.T) {
 		},
 	}
 	ia3 := &ethpb.IndexedAttestation{
-		CustodyBit_0Indices: []uint64{0},
-		CustodyBit_1Indices: []uint64{},
-		Signature:           []byte("sig3"),
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig3"),
 		Data: &ethpb.AttestationData{
 			Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex:  0,
@@ -309,9 +304,8 @@ func TestServer_DontSlashSameAttestation(t *testing.T) {
 		SlasherDB: dbs,
 	}
 	ia1 := &ethpb.IndexedAttestation{
-		CustodyBit_0Indices: []uint64{0},
-		CustodyBit_1Indices: []uint64{},
-		Signature:           []byte("sig1"),
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig1"),
 		Data: &ethpb.AttestationData{
 			Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex:  0,
@@ -343,9 +337,8 @@ func TestServer_DontSlashDifferentTargetAttestation(t *testing.T) {
 		SlasherDB: dbs,
 	}
 	ia1 := &ethpb.IndexedAttestation{
-		CustodyBit_0Indices: []uint64{0},
-		CustodyBit_1Indices: []uint64{},
-		Signature:           []byte("sig2"),
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig2"),
 		Data: &ethpb.AttestationData{
 			Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex:  0,
@@ -355,9 +348,8 @@ func TestServer_DontSlashDifferentTargetAttestation(t *testing.T) {
 		},
 	}
 	ia2 := &ethpb.IndexedAttestation{
-		CustodyBit_0Indices: []uint64{0},
-		CustodyBit_1Indices: []uint64{},
-		Signature:           []byte("sig1"),
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig1"),
 		Data: &ethpb.AttestationData{
 			Slot:            4*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex:  0,
@@ -396,16 +388,14 @@ func TestServer_DontSlashSameAttestationData(t *testing.T) {
 		Target:          &ethpb.Checkpoint{Epoch: 3},
 	}
 	ia1 := &ethpb.IndexedAttestation{
-		CustodyBit_0Indices: []uint64{0},
-		CustodyBit_1Indices: []uint64{},
-		Signature:           []byte("sig2"),
-		Data:                ad,
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig2"),
+		Data:             ad,
 	}
 	ia2 := &ethpb.IndexedAttestation{
-		CustodyBit_0Indices: []uint64{0},
-		CustodyBit_1Indices: []uint64{},
-		Signature:           []byte("sig1"),
-		Data:                ad,
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig1"),
+		Data:             ad,
 	}
 
 	if _, err := slasherServer.IsSlashableAttestation(ctx, ia1); err != nil {
@@ -430,9 +420,8 @@ func TestServer_SlashSurroundedAttestation(t *testing.T) {
 		SlasherDB: dbs,
 	}
 	ia1 := &ethpb.IndexedAttestation{
-		CustodyBit_0Indices: []uint64{0},
-		CustodyBit_1Indices: []uint64{},
-		Signature:           []byte("sig2"),
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig2"),
 		Data: &ethpb.AttestationData{
 			Slot:            4*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex:  0,
@@ -442,9 +431,8 @@ func TestServer_SlashSurroundedAttestation(t *testing.T) {
 		},
 	}
 	ia2 := &ethpb.IndexedAttestation{
-		CustodyBit_0Indices: []uint64{0},
-		CustodyBit_1Indices: []uint64{},
-		Signature:           []byte("sig1"),
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig1"),
 		Data: &ethpb.AttestationData{
 			Slot:            4*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex:  0,
@@ -483,9 +471,8 @@ func TestServer_SlashSurroundAttestation(t *testing.T) {
 		SlasherDB: dbs,
 	}
 	ia1 := &ethpb.IndexedAttestation{
-		CustodyBit_0Indices: []uint64{0},
-		CustodyBit_1Indices: []uint64{},
-		Signature:           []byte("sig2"),
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig2"),
 		Data: &ethpb.AttestationData{
 			Slot:            4*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex:  0,
@@ -495,9 +482,8 @@ func TestServer_SlashSurroundAttestation(t *testing.T) {
 		},
 	}
 	ia2 := &ethpb.IndexedAttestation{
-		CustodyBit_0Indices: []uint64{0},
-		CustodyBit_1Indices: []uint64{},
-		Signature:           []byte("sig1"),
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig1"),
 		Data: &ethpb.AttestationData{
 			Slot:            4*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex:  0,
@@ -536,9 +522,8 @@ func TestServer_DontSlashValidAttestations(t *testing.T) {
 		SlasherDB: dbs,
 	}
 	ia1 := &ethpb.IndexedAttestation{
-		CustodyBit_0Indices: []uint64{0},
-		CustodyBit_1Indices: []uint64{},
-		Signature:           []byte("sig2"),
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig2"),
 		Data: &ethpb.AttestationData{
 			Slot:            5*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex:  0,
@@ -548,9 +533,8 @@ func TestServer_DontSlashValidAttestations(t *testing.T) {
 		},
 	}
 	ia2 := &ethpb.IndexedAttestation{
-		CustodyBit_0Indices: []uint64{0},
-		CustodyBit_1Indices: []uint64{},
-		Signature:           []byte("sig1"),
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig1"),
 		Data: &ethpb.AttestationData{
 			Slot:            5*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex:  0,
@@ -585,9 +569,7 @@ func TestServer_Store_100_Attestations(t *testing.T) {
 		cb = append(cb, i)
 	}
 	ia1 := &ethpb.IndexedAttestation{
-		CustodyBit_0Indices: cb,
-		CustodyBit_1Indices: []uint64{},
-		Signature:           make([]byte, 96),
+		AttestingIndices: cb,
 		Data: &ethpb.AttestationData{
 			CommitteeIndex:  0,
 			BeaconBlockRoot: make([]byte, 32),

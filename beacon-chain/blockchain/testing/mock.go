@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -30,6 +31,7 @@ type ChainService struct {
 	Fork                        *pb.Fork
 	DB                          db.Database
 	stateNotifier               statefeed.Notifier
+	opNotifier                  opfeed.Notifier
 }
 
 // StateNotifier mocks the same method in the chain service.
@@ -51,6 +53,27 @@ func (msn *MockStateNotifier) StateFeed() *event.Feed {
 		msn.feed = new(event.Feed)
 	}
 	return msn.feed
+}
+
+// OperationNotifier mocks the same method in the chain service.
+func (ms *ChainService) OperationNotifier() opfeed.Notifier {
+	if ms.opNotifier == nil {
+		ms.opNotifier = &MockOperationNotifier{}
+	}
+	return ms.opNotifier
+}
+
+// MockOperationNotifier mocks the operation notifier.
+type MockOperationNotifier struct {
+	feed *event.Feed
+}
+
+// OperationFeed returns an operation feed.
+func (mon *MockOperationNotifier) OperationFeed() *event.Feed {
+	if mon.feed == nil {
+		mon.feed = new(event.Feed)
+	}
+	return mon.feed
 }
 
 // ReceiveBlock mocks ReceiveBlock method in chain service.

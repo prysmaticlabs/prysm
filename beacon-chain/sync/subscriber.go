@@ -73,6 +73,11 @@ func (r *Service) registerSubscribers() {
 		r.beaconAttestationSubscriber,
 	)
 	r.subscribe(
+		"/eth2/beacon_aggregate_and_proof",
+		r.validateAggregateAndProof,
+		r.beaconAggregateProofSubscriber,
+	)
+	r.subscribe(
 		"/eth2/voluntary_exit",
 		r.validateVoluntaryExit,
 		r.voluntaryExitSubscriber,
@@ -87,11 +92,18 @@ func (r *Service) registerSubscribers() {
 		r.validateAttesterSlashing,
 		r.attesterSlashingSubscriber,
 	)
+	// TODO(4154): Uncomment.
+	//r.subscribeDynamic(
+	//	"/eth2/committee_index/%d_beacon_attestation",
+	//	r.currentCommitteeIndex,                     /* determineSubsLen */
+	//	noopValidator,                               /* validator */
+	//	r.committeeIndexBeaconAttestationSubscriber, /* message handler */
+	//)
 }
 
 // subscribe to a given topic with a given validator and subscription handler.
 // The base protobuf message is used to initialize new messages for decoding.
-func (r *Service) subscribe(topic string, validator pubsub.Validator, handle subHandler) {
+func (r *Service) subscribe(topic string, validator pubsub.Validator, handle subHandler) *pubsub.Subscription {
 	base := p2p.GossipTopicMappings[topic]
 	if base == nil {
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topic))
@@ -140,7 +152,7 @@ func (r *Service) subscribe(topic string, validator pubsub.Validator, handle sub
 		if err := handle(ctx, msg.ValidatorData.(proto.Message)); err != nil {
 			traceutil.AnnotateError(span, err)
 			log.WithError(err).Error("Failed to handle p2p pubsub")
-			messageFailedProcessingCounter.WithLabelValues(topic).Inc()
+			messageFailedProcessingCounter.WithLabelValues(topic + r.p2p.Encoding().ProtocolSuffix()).Inc()
 			return
 		}
 	}
@@ -150,13 +162,9 @@ func (r *Service) subscribe(topic string, validator pubsub.Validator, handle sub
 		for {
 			msg, err := sub.Next(r.ctx)
 			if err != nil {
+				// This should only happen when the context is cancelled or subscription is cancelled?.
 				log.WithError(err).Error("Subscription next failed")
-				// TODO(3147): Mark status unhealthy.
 				return
-			}
-			if !r.chainStarted {
-				messageReceivedBeforeChainStartCounter.WithLabelValues(topic + r.p2p.Encoding().ProtocolSuffix()).Inc()
-				continue
 			}
 
 			if msg.ReceivedFrom == r.p2p.PeerID() {
@@ -170,6 +178,7 @@ func (r *Service) subscribe(topic string, validator pubsub.Validator, handle sub
 	}
 
 	go messageLoop()
+	return sub
 }
 
 // Wrap the pubsub validator with a metric monitoring function. This function increments the
@@ -183,4 +192,47 @@ func wrapAndReportValidation(topic string, v pubsub.Validator) (string, pubsub.V
 		}
 		return b
 	}
+}
+
+// subscribe to a dynamically increasing index of topics. This method expects a fmt compatible
+// string for the topic name and a maxID to represent the number of subscribed topics that should be
+// maintained. As the state feed emits a newly updated state, the maxID function will be called to
+// determine the appropriate number of topics. This method supports only sequential number ranges
+// for topics.
+func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() int, validate pubsub.Validator, handle subHandler) {
+	base := p2p.GossipTopicMappings[topicFormat]
+	if base == nil {
+		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topicFormat))
+	}
+	topicFormat += r.p2p.Encoding().ProtocolSuffix()
+
+	var subscriptions []*pubsub.Subscription
+
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := r.stateNotifier.StateFeed().Subscribe(stateChannel)
+	go func() {
+		for {
+			select {
+			case <-r.ctx.Done():
+				stateSub.Unsubscribe()
+				return
+			case <-stateChannel:
+				// Update topic count
+				wantedSubs := determineSubsLen()
+				// Resize as appropriate.
+				if len(subscriptions) > wantedSubs { // Reduce topics
+					var cancelSubs []*pubsub.Subscription
+					subscriptions, cancelSubs = subscriptions[:wantedSubs-1], subscriptions[wantedSubs:]
+					for _, sub := range cancelSubs {
+						sub.Cancel()
+					}
+				} else if len(subscriptions) < wantedSubs { // Increase topics
+					for i := len(subscriptions) - 1; i < wantedSubs; i++ {
+						sub := r.subscribe(fmt.Sprintf(topicFormat, i), validate, handle)
+						subscriptions = append(subscriptions, sub)
+					}
+				}
+			}
+		}
+	}()
 }

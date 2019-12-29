@@ -2,7 +2,6 @@ package operation
 
 import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 const (
@@ -27,11 +26,11 @@ type UnAggregatedAttReceivedData struct {
 // AggregatedAttReceivedData is the data sent with AggregatedAttReceived events.
 type AggregatedAttReceivedData struct {
 	// Attestation is the aggregated attestation object.
-	Attestation *pb.AggregateAndProof
+	Attestation *ethpb.AggregateAttestationAndProof
 }
 
-// ExitRecievedData is the data sent with ExitReceived events.
-type ExitRecievedData struct {
+// ExitReceivedData is the data sent with ExitReceived events.
+type ExitReceivedData struct {
 	// Exit is the voluntary exit object.
 	Exit *ethpb.VoluntaryExit
 }

@@ -74,6 +74,9 @@ func TestGetHeadFromYaml(t *testing.T) {
 					t.Fatal(err)
 				}
 				blksRoot[slot] = root[:]
+				if err := db.SaveState(ctx, &pb.BeaconState{}, root); err != nil {
+					t.Fatal(err)
+				}
 			}
 		}
 
@@ -100,12 +103,10 @@ func TestGetHeadFromYaml(t *testing.T) {
 
 		s := &pb.BeaconState{Validators: validators}
 
-		if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
+		if err := store.db.SaveState(ctx, s, bytesutil.ToBytes32(blksRoot[0])); err != nil {
 			t.Fatal(err)
 		}
-
-		store.justifiedCheckpt.Root = blksRoot[0]
-		if err := store.db.SaveState(ctx, s, bytesutil.ToBytes32(blksRoot[0])); err != nil {
+		if err := store.GenesisStore(ctx, &ethpb.Checkpoint{Root: blksRoot[0]}, &ethpb.Checkpoint{Root: blksRoot[0]}); err != nil {
 			t.Fatal(err)
 		}
 

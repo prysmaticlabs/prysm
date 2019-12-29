@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
@@ -51,7 +52,8 @@ import (
 //
 //    # Update justified checkpoint
 //    if state.current_justified_checkpoint.epoch > store.justified_checkpoint.epoch:
-//        store.justified_checkpoint = state.current_justified_checkpoint
+//        if state.current_justified_checkpoint.epoch > store.best_justified_checkpoint.epoch:
+//            store.best_justified_checkpoint = state.current_justified_checkpoint
 //
 //    # Update finalized checkpoint
 //    if state.finalized_checkpoint.epoch > store.finalized_checkpoint.epoch:
@@ -91,10 +93,9 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	}
 
 	// Update justified check point.
-	if postState.CurrentJustifiedCheckpoint.Epoch > s.JustifiedCheckpt().Epoch {
-		s.justifiedCheckpt = postState.CurrentJustifiedCheckpoint
-		if err := s.db.SaveJustifiedCheckpoint(ctx, postState.CurrentJustifiedCheckpoint); err != nil {
-			return errors.Wrap(err, "could not save justified checkpoint")
+	if postState.CurrentJustifiedCheckpoint.Epoch > s.justifiedCheckpt.Epoch {
+		if err := s.updateJustified(ctx, postState); err != nil {
+			return err
 		}
 	}
 
@@ -106,10 +107,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 			return errors.Wrap(err, "could not save finalized checkpoint")
 		}
 
-		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch) + 1
-		if featureconfig.Get().PruneEpochBoundaryStates {
-			startSlot = helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
-		}
+		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 		if endSlot > startSlot {
 			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
@@ -203,10 +201,7 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.
 	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
 		s.clearSeenAtts()
 
-		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch) + 1
-		if featureconfig.Get().PruneEpochBoundaryStates {
-			startSlot = helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
-		}
+		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 		if endSlot > startSlot {
 			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
@@ -321,9 +316,10 @@ func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attes
 	if err != nil {
 		return errors.Wrap(err, "could not convert attestation to indexed attestation")
 	}
+
 	s.voteLock.Lock()
 	defer s.voteLock.Unlock()
-	for _, i := range append(indexedAtt.CustodyBit_0Indices, indexedAtt.CustodyBit_1Indices...) {
+	for _, i := range indexedAtt.AttestingIndices {
 		vote, ok := s.latestVoteMap[i]
 		if !ok || tgt.Epoch > vote.Epoch {
 			s.latestVoteMap[i] = &pb.ValidatorLatestVote{
@@ -430,17 +426,15 @@ func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot ui
 	defer span.End()
 
 	// Make sure start slot is not a skipped slot
-	if featureconfig.Get().PruneEpochBoundaryStates {
-		for i := startSlot; i > 0; i-- {
-			filter := filters.NewFilter().SetStartSlot(i).SetEndSlot(i)
-			b, err := s.db.Blocks(ctx, filter)
-			if err != nil {
-				return err
-			}
-			if len(b) > 0 {
-				startSlot = i
-				break
-			}
+	for i := startSlot; i > 0; i-- {
+		filter := filters.NewFilter().SetStartSlot(i).SetEndSlot(i)
+		b, err := s.db.Blocks(ctx, filter)
+		if err != nil {
+			return err
+		}
+		if len(b) > 0 {
+			startSlot = i
+			break
 		}
 	}
 
@@ -477,6 +471,69 @@ func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot ui
 	}
 
 	return nil
+}
+
+// shouldUpdateCurrentJustified prevents bouncing attack, by only update conflicting justified
+// checkpoints in the fork choice if in the early slots of the epoch.
+// Otherwise, delay incorporation of new justified checkpoint until next epoch boundary.
+// See https://ethresear.ch/t/prevention-of-bouncing-attack-on-ffg/6114 for more detailed analysis and discussion.
+func (s *Store) shouldUpdateCurrentJustified(ctx context.Context, newJustifiedCheckpt *ethpb.Checkpoint) (bool, error) {
+	if helpers.SlotsSinceEpochStarts(s.currentSlot()) < params.BeaconConfig().SafeSlotsToUpdateJustified {
+		return true, nil
+	}
+	newJustifiedBlock, err := s.db.Block(ctx, bytesutil.ToBytes32(newJustifiedCheckpt.Root))
+	if err != nil || newJustifiedBlock == nil {
+		return false, err
+	}
+	if newJustifiedBlock.Slot <= helpers.StartSlot(s.justifiedCheckpt.Epoch) {
+		return false, nil
+	}
+	justifiedBlock, err := s.db.Block(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root))
+	if err != nil {
+		return false, err
+	}
+	b, err := s.ancestor(ctx, newJustifiedCheckpt.Root, justifiedBlock.Slot)
+	if err != nil {
+		return false, err
+	}
+	if !bytes.Equal(b, s.justifiedCheckpt.Root) {
+		return false, nil
+	}
+	return true, nil
+}
+
+func (s *Store) updateJustified(ctx context.Context, state *pb.BeaconState) error {
+	if state.CurrentJustifiedCheckpoint.Epoch > s.bestJustifiedCheckpt.Epoch {
+		s.bestJustifiedCheckpt = state.CurrentJustifiedCheckpoint
+	}
+	canUpdate, err := s.shouldUpdateCurrentJustified(ctx, state.CurrentJustifiedCheckpoint)
+	if err != nil {
+		return err
+	}
+	if canUpdate {
+		s.justifiedCheckpt = state.CurrentJustifiedCheckpoint
+	}
+	if err := s.db.SaveJustifiedCheckpoint(ctx, state.CurrentJustifiedCheckpoint); err != nil {
+		return errors.Wrap(err, "could not save justified checkpoint")
+	}
+
+	return nil
+}
+
+// currentSlot returns the current slot based on time.
+func (s *Store) currentSlot() uint64 {
+	return (uint64(time.Now().Unix()) - s.genesisTime) / params.BeaconConfig().SecondsPerSlot
+}
+
+// updates justified check point in store if a better check point is known
+func (s *Store) updateJustifiedCheckpoint() {
+	// Update at epoch boundary slot only
+	if !helpers.IsEpochStart(s.currentSlot()) {
+		return
+	}
+	if s.bestJustifiedCheckpt.Epoch > s.justifiedCheckpt.Epoch {
+		s.justifiedCheckpt = s.bestJustifiedCheckpt
+	}
 }
 
 // This receives cached state in memory for initial sync only during initial sync.

@@ -5,11 +5,12 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 )
 
 // SaveUnaggregatedAttestation saves an unaggregated attestation in cache.
 func (p *AttCaches) SaveUnaggregatedAttestation(att *ethpb.Attestation) error {
-	if aggregated(att.AggregationBits) {
+	if helpers.IsAggregated(att) {
 		return errors.New("attestation is aggregated")
 	}
 
@@ -25,9 +26,20 @@ func (p *AttCaches) SaveUnaggregatedAttestation(att *ethpb.Attestation) error {
 	return nil
 }
 
-// UnaggregatedAttestation returns the aggregated attestations in cache,
+// SaveUnaggregatedAttestations saves a list of unaggregated attestations in cache.
+func (p *AttCaches) SaveUnaggregatedAttestations(atts []*ethpb.Attestation) error {
+	for _, att := range atts {
+		if err := p.SaveUnaggregatedAttestation(att); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// UnaggregatedAttestationsBySlotIndex returns the unaggregated attestations in cache,
 // filtered by committee index and slot.
-func (p *AttCaches) UnaggregatedAttestation(slot uint64, committeeIndex uint64) []*ethpb.Attestation {
+func (p *AttCaches) UnaggregatedAttestationsBySlotIndex(slot uint64, committeeIndex uint64) []*ethpb.Attestation {
 	atts := make([]*ethpb.Attestation, 0, p.unAggregatedAtt.ItemCount())
 	for s, i := range p.unAggregatedAtt.Items() {
 
@@ -45,10 +57,27 @@ func (p *AttCaches) UnaggregatedAttestation(slot uint64, committeeIndex uint64) 
 	return atts
 }
 
+// UnaggregatedAttestations returns all the unaggregated attestations in cache.
+func (p *AttCaches) UnaggregatedAttestations() []*ethpb.Attestation {
+	atts := make([]*ethpb.Attestation, 0, p.unAggregatedAtt.ItemCount())
+	for s, i := range p.unAggregatedAtt.Items() {
+
+		// Type assertion for the worst case. This shouldn't happen.
+		att, ok := i.Object.(*ethpb.Attestation)
+		if !ok {
+			p.unAggregatedAtt.Delete(s)
+		}
+
+		atts = append(atts, att)
+	}
+
+	return atts
+}
+
 // DeleteUnaggregatedAttestation deletes the unaggregated attestations in cache.
 func (p *AttCaches) DeleteUnaggregatedAttestation(att *ethpb.Attestation) error {
-	if aggregated(att.AggregationBits) {
-		return errors.New("attestation is not aggregated")
+	if helpers.IsAggregated(att) {
+		return errors.New("attestation is aggregated")
 	}
 
 	r, err := ssz.HashTreeRoot(att)

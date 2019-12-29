@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -40,6 +41,7 @@ type Service struct {
 	depositCache      *depositcache.DepositCache
 	chainStartFetcher powchain.ChainStartFetcher
 	opsPoolService    operations.OperationFeeds
+	attPool           attestations.Pool
 	forkChoiceStore   forkchoice.ForkChoicer
 	genesisTime       time.Time
 	p2p               p2p.Broadcaster
@@ -50,6 +52,7 @@ type Service struct {
 	canonicalRoots    map[uint64][]byte
 	headLock          sync.RWMutex
 	stateNotifier     statefeed.Notifier
+	genesisRoot       [32]byte
 }
 
 // Config options for the service.
@@ -59,6 +62,7 @@ type Config struct {
 	BeaconDB          db.Database
 	DepositCache      *depositcache.DepositCache
 	OpsPoolService    operations.OperationFeeds
+	AttPool           attestations.Pool
 	P2p               p2p.Broadcaster
 	MaxRoutines       int64
 	StateNotifier     statefeed.Notifier
@@ -76,6 +80,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		depositCache:      cfg.DepositCache,
 		chainStartFetcher: cfg.ChainStartFetcher,
 		opsPoolService:    cfg.OpsPoolService,
+		attPool:           cfg.AttPool,
 		forkChoiceStore:   store,
 		p2p:               cfg.P2p,
 		canonicalRoots:    make(map[uint64][]byte),
@@ -168,8 +173,8 @@ func (s *Service) Start() {
 // processChainStartTime initializes a series of deposits from the ChainStart deposits in the eth1
 // deposit contract, initializes the beacon chain's state, and kicks off the beacon chain.
 func (s *Service) processChainStartTime(ctx context.Context, genesisTime time.Time) {
-	initialDeposits := s.chainStartFetcher.ChainStartDeposits()
-	if err := s.initializeBeaconChain(ctx, genesisTime, initialDeposits, s.chainStartFetcher.ChainStartEth1Data()); err != nil {
+	preGenesisState := s.chainStartFetcher.PreGenesisState()
+	if err := s.initializeBeaconChain(ctx, genesisTime, preGenesisState, s.chainStartFetcher.ChainStartEth1Data()); err != nil {
 		log.Fatalf("Could not initialize beacon chain: %v", err)
 	}
 	s.stateNotifier.StateFeed().Send(&feed.Event{
@@ -186,7 +191,7 @@ func (s *Service) processChainStartTime(ctx context.Context, genesisTime time.Ti
 func (s *Service) initializeBeaconChain(
 	ctx context.Context,
 	genesisTime time.Time,
-	deposits []*ethpb.Deposit,
+	preGenesisState *pb.BeaconState,
 	eth1data *ethpb.Eth1Data) error {
 	_, span := trace.StartSpan(context.Background(), "beacon-chain.Service.initializeBeaconChain")
 	defer span.End()
@@ -194,7 +199,7 @@ func (s *Service) initializeBeaconChain(
 	s.genesisTime = genesisTime
 	unixTime := uint64(genesisTime.Unix())
 
-	genesisState, err := state.GenesisBeaconState(deposits, unixTime, eth1data)
+	genesisState, err := state.OptimizedGenesisBeaconState(unixTime, preGenesisState, eth1data)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize genesis state")
 	}
@@ -327,6 +332,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconSt
 		return errors.Wrap(err, "Could not start fork choice service: %v")
 	}
 
+	s.genesisRoot = genesisBlkRoot
 	s.headBlock = genesisBlk
 	s.headState = genesisState
 	s.canonicalRoots[genesisState.Slot] = genesisBlkRoot[:]
@@ -338,6 +344,16 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconSt
 func (s *Service) initializeChainInfo(ctx context.Context) error {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
+
+	genesisBlock, err := s.beaconDB.GenesisBlock(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get genesis block from db")
+	}
+	genesisBlkRoot, err := ssz.SigningRoot(genesisBlock)
+	if err != nil {
+		return errors.Wrap(err, "could not get signing root of genesis block")
+	}
+	s.genesisRoot = genesisBlkRoot
 
 	finalized, err := s.beaconDB.FinalizedCheckpoint(ctx)
 	if err != nil {
