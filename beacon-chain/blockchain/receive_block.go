@@ -95,11 +95,6 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconB
 		}
 	}
 
-	// Remove block's contained deposits, attestations, and other operations from persistent storage.
-	if err := s.cleanupBlockOperations(ctx, blockCopy); err != nil {
-		return errors.Wrap(err, "could not clean up block deposits, attestations, and other operations")
-	}
-
 	// Send notification of the processed block to the state feed.
 	s.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.BlockProcessed,
@@ -153,11 +148,6 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 		if err := s.saveHead(ctx, blockCopy, root); err != nil {
 			return errors.Wrap(err, "could not save head")
 		}
-	}
-
-	// Remove block's contained deposits, attestations, and other operations from persistent storage.
-	if err := s.cleanupBlockOperations(ctx, blockCopy); err != nil {
-		return errors.Wrap(err, "could not clean up block deposits, attestations, and other operations")
 	}
 
 	// Send notification of the processed block to the state feed.
@@ -233,23 +223,6 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.BeaconB
 		"deposits":     len(blockCopy.Body.Deposits),
 	}).Debug("Finished applying state transition")
 
-	return nil
-}
-
-// cleanupBlockOperations processes and cleans up any block operations relevant to the beacon node
-// such as attestations, exits, and deposits. We update the latest seen attestation by validator
-// in the local node's runtime, cleanup and remove pending deposits which have been included in the block
-// from our node's local cache, and process validator exits and more.
-func (s *Service) cleanupBlockOperations(ctx context.Context, block *ethpb.BeaconBlock) error {
-	// Forward processed block to operation pool to remove individual operation from DB.
-	if s.opsPoolService.IncomingProcessedBlockFeed().Send(block) == 0 {
-		log.Error("Sent processed block to no subscribers")
-	}
-
-	// Remove pending deposits from the deposit queue.
-	for _, dep := range block.Body.Deposits {
-		s.depositCache.RemovePendingDeposit(ctx, dep)
-	}
 	return nil
 }
 
