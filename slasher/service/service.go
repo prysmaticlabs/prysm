@@ -255,7 +255,7 @@ func (s *Service) Status() (bool, error) {
 func (s *Service) startDB(ctx *cli.Context) error {
 	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
 	dbPath := path.Join(baseDir, slasherDBName)
-	d, err := db.NewDB(dbPath)
+	d, err := db.NewDB(dbPath, ctx)
 	if err != nil {
 		return err
 	}
