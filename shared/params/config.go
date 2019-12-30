@@ -82,7 +82,6 @@ type BeaconChainConfig struct {
 
 	// Prysm constants.
 	GweiPerEth                uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
-	LogBlockDelay             int64         // Number of blocks to wait from the current head before processing logs from the deposit contract.
 	BLSPubkeyLength           int           // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
 	DefaultBufferSize         int           // DefaultBufferSize for channels across the Prysm repository.
 	ValidatorPrivkeyFileName  string        // ValidatorPrivKeyFileName specifies the string name of a validator private key file.
@@ -126,10 +125,10 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	TargetAggregatorsPerCommittee:  16,
 
 	// Gwei value constants.
-	MinDepositAmount:          1 * 1e9,
-	MaxEffectiveBalance:       32 * 1e9,
-	EjectionBalance:           16 * 1e9,
-	EffectiveBalanceIncrement: 1 * 1e9,
+	MinDepositAmount:          0.1 * 1e9,
+	MaxEffectiveBalance:       3.2 * 1e9,
+	EjectionBalance:           1.6 * 1e9,
+	EffectiveBalanceIncrement: 0.1 * 1e9,
 
 	// Initial value constants.
 	BLSWithdrawalPrefixByte: byte(0),
@@ -179,7 +178,6 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// Prysm constants.
 	GweiPerEth:                1000000000,
-	LogBlockDelay:             2,
 	BLSPubkeyLength:           48,
 	DefaultBufferSize:         10000,
 	WithdrawalPrivkeyFileName: "/shardwithdrawalkey",
