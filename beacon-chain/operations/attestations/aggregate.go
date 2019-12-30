@@ -2,7 +2,6 @@ package attestations
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -63,12 +62,10 @@ func (s *Service) aggregateAttestations(ctx context.Context, unaggregatedAtts []
 			// unaggregated att in pool. Not every attestations will
 			// be aggregated.
 			if helpers.IsAggregated(att) {
-				fmt.Println(att)
 				if err := s.pool.SaveAggregatedAttestation(att); err != nil {
 					return err
 				}
 			} else {
-				fmt.Println(att)
 				if err := s.pool.SaveUnaggregatedAttestation(att); err != nil {
 					return err
 				}
