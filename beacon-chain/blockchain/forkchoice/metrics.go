@@ -57,6 +57,10 @@ var (
 		Name: "validators_total_effective_balance",
 		Help: "The total effective balance of validators, in GWei",
 	}, []string{"state"})
+	currentEth1DataDepositCount = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "current_eth1_data_deposit_count",
+		Help: "The current eth1 deposit count in the last processed state eth1data field.",
+	})
 )
 
 func reportEpochMetrics(state *pb.BeaconState) {
@@ -136,5 +140,8 @@ func reportEpochMetrics(state *pb.BeaconState) {
 	if state.FinalizedCheckpoint != nil {
 		beaconFinalizedEpoch.Set(float64(state.FinalizedCheckpoint.Epoch))
 		beaconFinalizedRoot.Set(float64(bytesutil.ToLowInt64(state.FinalizedCheckpoint.Root)))
+	}
+	if state.Eth1Data != nil {
+		currentEth1DataDepositCount.Set(float64(state.Eth1Data.DepositCount))
 	}
 }
