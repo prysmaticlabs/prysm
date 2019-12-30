@@ -76,13 +76,8 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 	}
 
 	// Retrieve the unaggregated attestation from pool
-	atts := as.AttPool.UnaggregatedAttestationsBySlotIndex(req.Slot, req.CommitteeIndex)
+	aggregatedAtts := as.AttPool.AggregatedAttestationsBySlotIndex(req.Slot, req.CommitteeIndex)
 
-	// Aggregate the attestations and broadcast them.
-	aggregatedAtts, err := helpers.AggregateAttestations(atts)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not aggregate attestations: %v", err)
-	}
 	for _, aggregatedAtt := range aggregatedAtts {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -95,17 +90,15 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 			}); err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not broadcast aggregated attestation: %v", err)
 			}
-			if err := as.AttPool.SaveAggregatedAttestation(aggregatedAtt); err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not save aggregated attestation: %v", err)
-			}
+
+			log.WithFields(logrus.Fields{
+				"slot":            req.Slot,
+				"committeeIndex":  req.CommitteeIndex,
+				"validatorIndex":  validatorIndex,
+				"aggregatedCount": aggregatedAtt.AggregationBits.Count(),
+			}).Debug("Broadcasting aggregated attestation and proof")
 		}
 	}
-
-	log.WithFields(logrus.Fields{
-		"slot":           req.Slot,
-		"validatorIndex": validatorIndex,
-		"committeeIndex": req.CommitteeIndex,
-	}).Debug("Broadcasting aggregated attestation and proof")
 
 	return &pb.AggregationResponse{}, nil
 }
