@@ -95,7 +95,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 	dt := helpers.Domain(state.Fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	priv := bls.RandKey()
 	blockSig := priv.Sign([]byte("hello"), dt)
-	validators[0].PublicKey = priv.PublicKey().Marshal()
+	validators[5896].PublicKey = priv.PublicKey().Marshal()
 	block := &ethpb.BeaconBlock{
 		Slot: 1,
 		Body: &ethpb.BeaconBlockBody{
@@ -136,7 +136,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 	dt := helpers.Domain(state.Fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	priv := bls.RandKey()
 	blockSig := priv.Sign([]byte("hello"), dt)
-	validators[0].PublicKey = priv.PublicKey().Marshal()
+	validators[5896].PublicKey = priv.PublicKey().Marshal()
 	block := &ethpb.BeaconBlock{
 		Slot: 0,
 		Body: &ethpb.BeaconBlockBody{
@@ -181,7 +181,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 	dt := helpers.Domain(state.Fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	priv := bls.RandKey()
 	blockSig := priv.Sign([]byte("hello"), dt)
-	validators[0].PublicKey = priv.PublicKey().Marshal()
+	validators[12683].PublicKey = priv.PublicKey().Marshal()
 	block := &ethpb.BeaconBlock{
 		Slot: 0,
 		Body: &ethpb.BeaconBlockBody{
