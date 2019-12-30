@@ -1,14 +1,20 @@
 package db
 
 import (
+	"flag"
 	"reflect"
 	"testing"
+
+	"github.com/urfave/cli"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
 func TestNilDBHistoryBlkHdr(t *testing.T) {
-	db := SetupSlasherDB(t)
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	ctx := cli.NewContext(app, set, nil)
+	db := SetupSlasherDB(t, ctx)
 	defer TeardownSlasherDB(t, db)
 
 	epoch := uint64(1)
@@ -29,7 +35,10 @@ func TestNilDBHistoryBlkHdr(t *testing.T) {
 }
 
 func TestSaveHistoryBlkHdr(t *testing.T) {
-	db := SetupSlasherDB(t)
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	ctx := cli.NewContext(app, set, nil)
+	db := SetupSlasherDB(t, ctx)
 	defer TeardownSlasherDB(t, db)
 	tests := []struct {
 		epoch uint64
@@ -72,7 +81,10 @@ func TestSaveHistoryBlkHdr(t *testing.T) {
 }
 
 func TestDeleteHistoryBlkHdr(t *testing.T) {
-	db := SetupSlasherDB(t)
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	ctx := cli.NewContext(app, set, nil)
+	db := SetupSlasherDB(t, ctx)
 	defer TeardownSlasherDB(t, db)
 	tests := []struct {
 		epoch uint64
@@ -130,7 +142,10 @@ func TestDeleteHistoryBlkHdr(t *testing.T) {
 }
 
 func TestHasHistoryBlkHdr(t *testing.T) {
-	db := SetupSlasherDB(t)
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	ctx := cli.NewContext(app, set, nil)
+	db := SetupSlasherDB(t, ctx)
 	defer TeardownSlasherDB(t, db)
 	tests := []struct {
 		epoch uint64
@@ -179,7 +194,10 @@ func TestHasHistoryBlkHdr(t *testing.T) {
 }
 
 func TestPruneHistoryBlkHdr(t *testing.T) {
-	db := SetupSlasherDB(t)
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	ctx := cli.NewContext(app, set, nil)
+	db := SetupSlasherDB(t, ctx)
 	defer TeardownSlasherDB(t, db)
 	tests := []struct {
 		epoch uint64

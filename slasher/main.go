@@ -69,6 +69,7 @@ var appFlags = []cli.Flag{
 	flags.CertFlag,
 	flags.RPCPort,
 	flags.KeyFlag,
+	flags.UseSpanCacheFlag,
 }
 
 func init() {

@@ -5,6 +5,8 @@ import (
 	"path"
 	"time"
 
+	"github.com/urfave/cli"
+
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -17,6 +19,7 @@ var log = logrus.WithField("prefix", "slasherDB")
 type Store struct {
 	db           *bolt.DB
 	databasePath string
+	ctx          *cli.Context
 }
 
 // Close closes the underlying boltdb database.
@@ -35,8 +38,8 @@ func (db *Store) view(fn func(*bolt.Tx) error) error {
 }
 
 // NewDB initializes a new DB.
-func NewDB(dirPath string) (*Store, error) {
-	return NewKVStore(dirPath)
+func NewDB(dirPath string, ctx *cli.Context) (*Store, error) {
+	return NewKVStore(dirPath, ctx)
 }
 
 // ClearDB removes the previously stored directory at the data directory.
@@ -64,7 +67,7 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 // NewKVStore initializes a new boltDB key-value store at the directory
 // path specified, creates the kv-buckets based on the schema, and stores
 // an open connection db object as a property of the Store struct.
-func NewKVStore(dirPath string) (*Store, error) {
+func NewKVStore(dirPath string, ctx *cli.Context) (*Store, error) {
 	if err := os.MkdirAll(dirPath, 0700); err != nil {
 		return nil, err
 	}
@@ -91,7 +94,7 @@ func NewKVStore(dirPath string) (*Store, error) {
 	}); err != nil {
 		return nil, err
 	}
-
+	kv.ctx = ctx
 	return kv, err
 }
 

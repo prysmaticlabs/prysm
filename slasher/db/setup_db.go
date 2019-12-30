@@ -7,10 +7,12 @@ import (
 	"os"
 	"path"
 	"testing"
+
+	"github.com/urfave/cli"
 )
 
 // SetupSlasherDB instantiates and returns a SlasherDB instance.
-func SetupSlasherDB(t testing.TB) *Store {
+func SetupSlasherDB(t testing.TB, ctx *cli.Context) *Store {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	if err != nil {
 		t.Fatalf("Could not generate random file path: %v", err)
@@ -19,8 +21,7 @@ func SetupSlasherDB(t testing.TB) *Store {
 	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
-	db, err := NewDB(p)
-
+	db, err := NewDB(p, ctx)
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
 	}

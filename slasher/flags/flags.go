@@ -32,4 +32,8 @@ var (
 		Usage: "Beacon node RPC provider endpoint",
 		Value: "localhost:4000",
 	}
+	UseSpanCacheFlag = cli.BoolFlag{
+		Name:  "span-map-cache",
+		Usage: "Enable span map cache",
+	}
 )
