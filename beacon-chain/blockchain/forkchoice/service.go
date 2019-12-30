@@ -3,6 +3,8 @@ package forkchoice
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
+	"fmt"
 	"sync"
 
 	"github.com/gogo/protobuf/proto"
@@ -34,22 +36,22 @@ type ForkChoicer interface {
 // Store represents a service struct that handles the forkchoice
 // logic of managing the full PoS beacon chain.
 type Store struct {
-	ctx                  context.Context
-	cancel               context.CancelFunc
-	db                   db.Database
-	justifiedCheckpt     *ethpb.Checkpoint
-	finalizedCheckpt     *ethpb.Checkpoint
-	prevFinalizedCheckpt *ethpb.Checkpoint
-	checkpointState      *cache.CheckpointStateCache
-	checkpointStateLock  sync.Mutex
-	seenAtts             map[[32]byte]bool
-	seenAttsLock         sync.Mutex
-	genesisTime          uint64
-	bestJustifiedCheckpt *ethpb.Checkpoint
-	latestVoteMap        map[uint64]*pb.ValidatorLatestVote
-	voteLock             sync.RWMutex
-	initSyncState        map[[32]byte]*pb.BeaconState
-	initSyncStateLock    sync.RWMutex
+	ctx                   context.Context
+	cancel                context.CancelFunc
+	db                    db.Database
+	justifiedCheckpt      *ethpb.Checkpoint
+	finalizedCheckpt      *ethpb.Checkpoint
+	prevFinalizedCheckpt  *ethpb.Checkpoint
+	checkpointState       *cache.CheckpointStateCache
+	checkpointStateLock   sync.Mutex
+	seenAtts              map[[32]byte]bool
+	seenAttsLock          sync.Mutex
+	genesisTime           uint64
+	bestJustifiedCheckpt  *ethpb.Checkpoint
+	latestVoteMap         map[uint64]*pb.ValidatorLatestVote
+	voteLock              sync.RWMutex
+	initSyncState         map[[32]byte]*pb.BeaconState
+	initSyncStateLock     sync.RWMutex
 	nextEpochBoundarySlot uint64
 }
 
@@ -390,7 +392,7 @@ func (s *Store) filterBlockTree(ctx context.Context, blockRoot [32]byte, filtere
 	}
 
 	if headState == nil {
-		return false, errors.New("no state matching block root")
+		return false, fmt.Errorf("no state matching block root %v", hex.EncodeToString(blockRoot[:]))
 	}
 
 	correctJustified := s.justifiedCheckpt.Epoch == 0 ||
