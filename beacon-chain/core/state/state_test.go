@@ -189,10 +189,9 @@ func TestGenesisState_FailsWithoutEth1data(t *testing.T) {
 }
 
 func TestGenesisState_FailsWrongDeposits(t *testing.T) {
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount+1)
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount + 1)
 	_, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err == nil || err.Error() != "incorrect number of genesis deposits" {
 		t.Errorf("Did not receive deposits error when wrong number of deposits used, got %v", err)
 	}
 }
-

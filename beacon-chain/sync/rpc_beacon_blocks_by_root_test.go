@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-
 // Set genesis to a small set for faster test processing.
 func init() {
 	p := params.BeaconConfig()
