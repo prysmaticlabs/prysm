@@ -182,7 +182,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		depositContractAddress:  config.DepositContract,
 		stateNotifier:           config.StateNotifier,
 		depositTrie:             depositTrie,
-		chainStartDeposits:      make([]*ethpb.Deposit, 0),
+		chainStartDeposits:      make([]*ethpb.Deposit, 0, params.BeaconConfig().MinGenesisActiveValidatorCount),
 		beaconDB:                config.BeaconDB,
 		depositCache:            config.DepositCache,
 		lastReceivedMerkleIndex: -1,
