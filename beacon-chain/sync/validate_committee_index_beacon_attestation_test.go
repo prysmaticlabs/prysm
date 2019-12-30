@@ -134,7 +134,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 			}
 			m := &pubsub.Message{
 				Message: &pubsubpb.Message{
-					Data: buf.Bytes(),
+					Data:     buf.Bytes(),
 					TopicIDs: []string{tt.topic},
 				},
 			}
