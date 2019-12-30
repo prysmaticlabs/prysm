@@ -455,6 +455,7 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	depositOffset := 5
 
 	// 64 Validators are used as size required for beacon-chain to start. This number
@@ -485,13 +486,17 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	}
 
 	cachedDeposits := web3Service.ChainStartDeposits()
-	requiredDepsForChainstart := depositsReqForChainStart + depositOffset
-	if len(cachedDeposits) != requiredDepsForChainstart {
-		t.Fatalf(
+	if len(cachedDeposits) != depositsReqForChainStart {
+		t.Errorf(
 			"Did not cache the chain start deposits correctly, received %d, wanted %d",
 			len(cachedDeposits),
-			requiredDepsForChainstart,
+			depositsReqForChainStart,
 		)
+	}
+
+	pendingDeposits := web3Service.depositCache.PendingDeposits(context.Background(), testAcc.Backend.Blockchain().CurrentBlock().Number())
+	if len(pendingDeposits) != totalNumOfDeposits-depositsReqForChainStart-1 {
+		t.Errorf("Did not receive correct number of cached deposits. Got %d, wanted %d", len(pendingDeposits), totalNumOfDeposits-depositsReqForChainStart)
 	}
 
 	// Receive the chain started event.
