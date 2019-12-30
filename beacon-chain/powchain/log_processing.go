@@ -149,7 +149,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	// We always store all historical deposits in the DB.
 	s.depositCache.InsertDeposit(ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)), int(index), s.depositTrie.Root())
 	validData := true
-	if !s.chainStarted {
+	if !s.chainStarted && uint64(len(s.chainStartDeposits)) < params.BeaconConfig().MinGenesisActiveValidatorCount {
 		s.chainStartDeposits = append(s.chainStartDeposits, deposit)
 		root := s.depositTrie.Root()
 		eth1Data := &ethpb.Eth1Data{
@@ -269,8 +269,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 			return err
 		}
 	}
-
-	s.lastRequestedBlock.Set(s.blockHeight)
+	s.lastRequestedBlock.Set(big.NewInt(int64(currentBlockNum)))
 
 	currentState, err := s.beaconDB.HeadState(ctx)
 	if err != nil {
@@ -295,9 +294,8 @@ func (s *Service) requestBatchedLogs(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		s.lastRequestedBlock.Set(big.NewInt(int64(i)))
 	}
-
-	s.lastRequestedBlock.Set(requestedBlock)
 	return nil
 }
 

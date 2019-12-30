@@ -186,7 +186,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		depositContractAddress:  config.DepositContract,
 		stateNotifier:           config.StateNotifier,
 		depositTrie:             depositTrie,
-		chainStartDeposits:      make([]*ethpb.Deposit, 0),
+		chainStartDeposits:      make([]*ethpb.Deposit, 0, params.BeaconConfig().MinGenesisActiveValidatorCount),
 		beaconDB:                config.BeaconDB,
 		depositCache:            config.DepositCache,
 		lastReceivedMerkleIndex: -1,
@@ -426,6 +426,13 @@ func (s *Service) handleDelayTicker() {
 	// logs for the powchain service to process.
 	if s.lastRequestedBlock.Cmp(s.blockHeight) == 0 {
 		return
+	}
+	if !s.chainStarted {
+		if err := s.checkForChainStart(context.Background(), s.lastRequestedBlock); err != nil {
+			s.runError = err
+			log.Error(err)
+			return
+		}
 	}
 	if err := s.requestBatchedLogs(context.Background()); err != nil {
 		s.runError = err

@@ -20,16 +20,18 @@ import (
 
 // ChainService defines the mock interface for testing
 type ChainService struct {
-	State               *pb.BeaconState
-	Root                []byte
-	Block               *ethpb.BeaconBlock
-	FinalizedCheckPoint *ethpb.Checkpoint
-	BlocksReceived      []*ethpb.BeaconBlock
-	Genesis             time.Time
-	Fork                *pb.Fork
-	DB                  db.Database
-	stateNotifier       statefeed.Notifier
-	opNotifier          opfeed.Notifier
+	State                       *pb.BeaconState
+	Root                        []byte
+	Block                       *ethpb.BeaconBlock
+	FinalizedCheckPoint         *ethpb.Checkpoint
+	CurrentJustifiedCheckPoint  *ethpb.Checkpoint
+	PreviousJustifiedCheckPoint *ethpb.Checkpoint
+	BlocksReceived              []*ethpb.BeaconBlock
+	Genesis                     time.Time
+	Fork                        *pb.Fork
+	DB                          db.Database
+	stateNotifier               statefeed.Notifier
+	opNotifier                  opfeed.Notifier
 }
 
 // StateNotifier mocks the same method in the chain service.
@@ -116,6 +118,9 @@ func (ms *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, bloc
 
 // HeadSlot mocks HeadSlot method in chain service.
 func (ms *ChainService) HeadSlot() uint64 {
+	if ms.State == nil {
+		return 0
+	}
 	return ms.State.Slot
 
 }
@@ -146,6 +151,16 @@ func (ms *ChainService) FinalizedCheckpt() *ethpb.Checkpoint {
 	return ms.FinalizedCheckPoint
 }
 
+// CurrentJustifiedCheckpt mocks CurrentJustifiedCheckpt method in chain service.
+func (ms *ChainService) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
+	return ms.CurrentJustifiedCheckPoint
+}
+
+// PreviousJustifiedCheckpt mocks PreviousJustifiedCheckpt method in chain service.
+func (ms *ChainService) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
+	return ms.PreviousJustifiedCheckPoint
+}
+
 // ReceiveAttestation mocks ReceiveAttestation method in chain service.
 func (ms *ChainService) ReceiveAttestation(context.Context, *ethpb.Attestation) error {
 	return nil
@@ -158,6 +173,9 @@ func (ms *ChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attes
 
 // HeadValidatorsIndices mocks the same method in the chain service.
 func (ms *ChainService) HeadValidatorsIndices(epoch uint64) ([]uint64, error) {
+	if ms.State == nil {
+		return []uint64{}, nil
+	}
 	return helpers.ActiveValidatorIndices(ms.State, epoch)
 }
 

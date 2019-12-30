@@ -91,7 +91,8 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	genesisState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -251,7 +252,8 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	genesisState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -323,7 +325,8 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	genesisState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}

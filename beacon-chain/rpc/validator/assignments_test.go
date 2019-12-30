@@ -91,7 +91,7 @@ func TestGetDuties_OK(t *testing.T) {
 	ctx := context.Background()
 
 	genesis := blk.NewGenesisBlock([]byte{})
-	depChainStart := uint64(64)
+	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
 	deposits, _, _ := testutil.DeterministicDepositsAndKeys(depChainStart)
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	if err != nil {
@@ -166,7 +166,7 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	ctx := context.Background()
 
 	genesis := blk.NewGenesisBlock([]byte{})
-	depChainStart := uint64(64)
+	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
 	deposits, _, _ := testutil.DeterministicDepositsAndKeys(depChainStart)
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	if err != nil {
@@ -233,6 +233,9 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	p := params.BeaconConfig()
+	p.MinGenesisActiveValidatorCount = depChainStart
+	params.OverrideBeaconConfig(p)
 	state, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)

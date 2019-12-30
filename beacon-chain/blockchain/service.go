@@ -50,6 +50,7 @@ type Service struct {
 	canonicalRoots    map[uint64][]byte
 	headLock          sync.RWMutex
 	stateNotifier     statefeed.Notifier
+	genesisRoot       [32]byte
 }
 
 // Config options for the service.
@@ -327,6 +328,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconSt
 		return errors.Wrap(err, "Could not start fork choice service: %v")
 	}
 
+	s.genesisRoot = genesisBlkRoot
 	s.headBlock = genesisBlk
 	s.headState = genesisState
 	s.canonicalRoots[genesisState.Slot] = genesisBlkRoot[:]
@@ -338,6 +340,16 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconSt
 func (s *Service) initializeChainInfo(ctx context.Context) error {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
+
+	genesisBlock, err := s.beaconDB.GenesisBlock(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get genesis block from db")
+	}
+	genesisBlkRoot, err := ssz.SigningRoot(genesisBlock)
+	if err != nil {
+		return errors.Wrap(err, "could not get signing root of genesis block")
+	}
+	s.genesisRoot = genesisBlkRoot
 
 	finalized, err := s.beaconDB.FinalizedCheckpoint(ctx)
 	if err != nil {
