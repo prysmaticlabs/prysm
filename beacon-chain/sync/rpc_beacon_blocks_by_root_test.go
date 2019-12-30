@@ -19,14 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-
-// Set genesis to a small set for faster test processing.
-func init() {
-	p := params.BeaconConfig()
-	p.MinGenesisActiveValidatorCount = 8
-	params.OverrideBeaconConfig(p)
-}
-
 func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
@@ -103,8 +95,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
-	genesisState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
+	genesisState, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
