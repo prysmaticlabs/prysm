@@ -144,10 +144,6 @@ func DeterministicEth1Data(size int) (*ethpb.Eth1Data, error) {
 
 // DeterministicGenesisState returns a genesis state made using the deterministic deposits.
 func DeterministicGenesisState(t testing.TB, numValidators uint64) (*pb.BeaconState, []*bls.SecretKey) {
-	p := params.BeaconConfig()
-	p.MinGenesisActiveValidatorCount = numValidators
-	params.OverrideBeaconConfig(p)
-
 	deposits, privKeys, err := DeterministicDepositsAndKeys(numValidators)
 	if err != nil {
 		t.Fatal(errors.Wrapf(err, "failed to get %d deposits", numValidators))
