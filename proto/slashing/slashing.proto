@@ -76,5 +76,5 @@ message EpochSpanMap {
 // which epochs a validator has proposed a block for while pruning the older data.
 message ValidatorProposalHistory {
     bytes proposal_history = 1 [(gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
-	uint64 latest_epoch_written = 2;
+    uint64 latest_epoch_written = 2;
 }
