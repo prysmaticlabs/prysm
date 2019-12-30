@@ -3,11 +3,13 @@ package client
 import (
 	"context"
 	"errors"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-bitfield"
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/internal"
@@ -113,20 +115,12 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 	validator, m, finish := setup(t)
 	defer finish()
 
-	history, err := validator.db.ProposalHistory(validatorPubKey[:])
-	if err != nil {
-		t.Fatal(err)
+	history := &slashpb.ValidatorProposalHistory{
+		ProposalHistory:    bitfield.NewBitlist(params.BeaconConfig().WeakSubjectivityPeriod),
+		LatestEpochWritten: 0,
 	}
-	db.SetProposedForEpoch(history, 5)
 	if err := validator.db.SaveProposalHistory(validatorPubKey[:], history); err != nil {
 		t.Fatal(err)
-	}
-	history, err = validator.db.ProposalHistory(validatorPubKey[:])
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !db.HasProposedForEpoch(history, 5) {
-		t.Fatal("History should have epoch 5 marked as proposed.")
 	}
 
 	m.validatorClient.EXPECT().DomainData(
@@ -142,16 +136,18 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
-	).Times(2).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{}, nil /*err*/)
 
 	m.validatorClient.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.BeaconBlock{}),
-	).Times(2).Return(&ethpb.ProposeResponse{}, nil /*error*/)
+	).Return(&ethpb.ProposeResponse{}, nil /*error*/)
 
 	validator.ProposeBlock(context.Background(), params.BeaconConfig().SlotsPerEpoch*5+2, validatorPubKey)
+	testutil.AssertLogsDoNotContain(t, hook, "Tried to sign a double proposal")
+
 	validator.ProposeBlock(context.Background(), params.BeaconConfig().SlotsPerEpoch*5+2, validatorPubKey)
-	testutil.AssertLogsContain(t, hook, "Failed to propose block")
+	testutil.AssertLogsContain(t, hook, "Tried to sign a double proposal")
 }
 
 func TestProposeBlock_BroadcastsBlock(t *testing.T) {

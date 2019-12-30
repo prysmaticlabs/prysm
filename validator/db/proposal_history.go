@@ -76,13 +76,13 @@ func (db *Store) ProposalHistory(pubKey []byte) (*slashpb.ValidatorProposalHisto
 func (db *Store) SaveProposalHistory(pubKey []byte, proposalHistory *slashpb.ValidatorProposalHistory) error {
 	enc, err := proto.Marshal(proposalHistory)
 	if err != nil {
-		return errors.Wrap(err, "failed to encode block")
+		return errors.Wrap(err, "failed to encode proposal history")
 	}
 
 	err = db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
 		if err := bucket.Put(pubKey, enc); err != nil {
-			return errors.Wrap(err, "failed to include the block header in the historic block header bucket")
+			return errors.Wrap(err, "failed to save the proposal history")
 		}
 		return nil
 	})
@@ -94,8 +94,8 @@ func (db *Store) DeleteProposalHistory(pubkey []byte) error {
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
 		if err := bucket.Delete(pubkey); err != nil {
-			return errors.Wrap(err, "failed to delete the block header from historic block header bucket")
+			return errors.Wrap(err, "failed to delete the proposal history")
 		}
-		return bucket.Delete(pubkey)
+		return nil
 	})
 }

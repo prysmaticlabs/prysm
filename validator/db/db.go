@@ -1,7 +1,6 @@
 package db
 
 import (
-	"fmt"
 	"os"
 	"path"
 	"time"
@@ -93,7 +92,6 @@ func NewKVStore(dirPath string, pubkeys [][]byte) (*Store, error) {
 		if err != nil {
 			return nil, err
 		}
-		fmt.Println(history)
 		if history == nil {
 			cleanHistory := &slashpb.ValidatorProposalHistory{
 				ProposalHistory: bitfield.NewBitlist(params.BeaconConfig().WeakSubjectivityPeriod),

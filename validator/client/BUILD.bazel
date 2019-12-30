@@ -56,6 +56,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//proto/beacon/rpc/v1:go_default_library",
+        "//proto/slashing:go_default_library",
         "//shared:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/keystore:go_default_library",
@@ -63,6 +64,7 @@ go_test(
         "//shared/roughtime:go_default_library",
         "//shared/testutil:go_default_library",
         "//validator/accounts:go_default_library",
+        "//validator/db:go_default_library",
         "//validator/internal:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
