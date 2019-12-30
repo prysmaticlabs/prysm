@@ -90,6 +90,7 @@ go_test(
         "validate_attester_slashing_test.go",
         "validate_beacon_attestation_test.go",
         "validate_beacon_blocks_test.go",
+        "validate_committee_index_beacon_attestation_test.go",
         "validate_proposer_slashing_test.go",
         "validate_voluntary_exit_test.go",
     ],
