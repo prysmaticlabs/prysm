@@ -215,7 +215,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 
 	log.Debug("Synced to finalized epoch - now syncing blocks up to current head")
 
-	if s.chain.HeadSlot() == slotsSinceGenesis(genesis) {
+	if s.chain.HeadSlot() == helpers.SlotsSince(genesis) {
 		return nil
 	}
 
@@ -234,11 +234,11 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		best = s.bestPeer()
 		root, _, _ = s.bestFinalized()
 	}
-	for head := slotsSinceGenesis(genesis); s.chain.HeadSlot() < head; {
+	for head := helpers.SlotsSince(genesis); s.chain.HeadSlot() < head; {
 		req := &p2ppb.BeaconBlocksByRangeRequest{
 			HeadBlockRoot: root,
 			StartSlot:     s.chain.HeadSlot() + 1,
-			Count:         mathutil.Min(slotsSinceGenesis(genesis)-s.chain.HeadSlot()+1, 256),
+			Count:         mathutil.Min(helpers.SlotsSince(genesis)-s.chain.HeadSlot()+1, 256),
 			Step:          1,
 		}
 
@@ -363,7 +363,7 @@ func (s *Service) logSyncStatus(genesis time.Time, blk *eth.BeaconBlock, syncing
 	if rate == 0 {
 		rate = 1
 	}
-	timeRemaining := time.Duration(float64(slotsSinceGenesis(genesis)-blk.Slot)/rate) * time.Second
+	timeRemaining := time.Duration(float64(helpers.SlotsSince(genesis)-blk.Slot)/rate) * time.Second
 	log.WithField(
 		"peers",
 		fmt.Sprintf("%d/%d", len(syncingPeers), len(s.p2p.Peers().Connected())),
@@ -373,7 +373,7 @@ func (s *Service) logSyncStatus(genesis time.Time, blk *eth.BeaconBlock, syncing
 	).Infof(
 		"Processing block %d/%d - estimated time remaining %s",
 		blk.Slot,
-		slotsSinceGenesis(genesis),
+		helpers.SlotsSince(genesis),
 		timeRemaining,
 	)
 }

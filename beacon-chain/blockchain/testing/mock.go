@@ -118,6 +118,9 @@ func (ms *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, bloc
 
 // HeadSlot mocks HeadSlot method in chain service.
 func (ms *ChainService) HeadSlot() uint64 {
+	if ms.State == nil {
+		return 0
+	}
 	return ms.State.Slot
 
 }
@@ -170,6 +173,9 @@ func (ms *ChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attes
 
 // HeadValidatorsIndices mocks the same method in the chain service.
 func (ms *ChainService) HeadValidatorsIndices(epoch uint64) ([]uint64, error) {
+	if ms.State == nil {
+		return []uint64{}, nil
+	}
 	return helpers.ActiveValidatorIndices(ms.State, epoch)
 }
 
