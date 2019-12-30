@@ -51,7 +51,7 @@ func (p *AttCaches) AggregatedAttestations() []*ethpb.Attestation {
 	return atts
 }
 
-// AggregatedAttestationsBySlotIndex returns the unaggregated attestations in cache,
+// AggregatedAttestationsBySlotIndex returns the aggregated attestations in cache,
 // filtered by committee index and slot.
 func (p *AttCaches) AggregatedAttestationsBySlotIndex(slot uint64, committeeIndex uint64) []*ethpb.Attestation {
 	atts := make([]*ethpb.Attestation, 0, p.aggregatedAtt.ItemCount())
