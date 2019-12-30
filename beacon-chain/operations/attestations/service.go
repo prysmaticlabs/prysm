@@ -46,7 +46,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 // Start an attestation pool service's main event loop.
 func (s *Service) Start() {
 	go s.prepareForkChoiceAtts()
-	go s.aggregateAttestations()
+	go s.aggregateRoutine()
 }
 
 // Stop the beacon block attestation pool service's main event loop

@@ -9,44 +9,51 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// Define time to aggregate the unaggregated attestations at 3 times per slot, this gives
+// enough confidence all the unaggregated attestations will be aggregated as aggregator requests.
 var timeToAggregate = time.Duration(params.BeaconConfig().SecondsPerSlot/3) * time.Second
 
-func (s *Service) aggregateAttestations() {
+// This kicks off a routine to aggregate the unaggregated attestations from pool.
+func (s *Service) aggregateRoutine() {
 	ticker := time.NewTicker(timeToAggregate)
 	for {
 		select {
 		case <-s.ctx.Done():
 			return
 		case <-ticker.C:
-			if err := s.aggregateAttestation(); err != nil {
-				log.Error(err)
+			unaggregatedAtts := s.pool.UnaggregatedAttestations()
+			if err := s.aggregateAttestations(unaggregatedAtts); err != nil {
+				log.Errorf("Could not aggregate attestation: %v", err)
 			}
 		}
 	}
 }
 
-func (s *Service) aggregateAttestation() error {
-	unaggregatedAtts := s.pool.UnaggregatedAttestations()
-	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation)
+// This aggregates the input attestations via AggregateAttestations helper
+// function.
+func (s *Service) aggregateAttestations(unaggregatedAtts []*ethpb.Attestation) error {
+	unaggregatedAttsByRoot := make(map[[32]byte][]*ethpb.Attestation)
 
 	for _, att := range unaggregatedAtts {
 		attDataRoot, err := ssz.HashTreeRoot(att.Data)
 		if err != nil {
 			return err
 		}
-		attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
+		unaggregatedAttsByRoot[attDataRoot] = append(unaggregatedAttsByRoot[attDataRoot], att)
 
 		if err := s.pool.DeleteUnaggregatedAttestation(att); err != nil {
 			return err
 		}
 	}
 
-	for _, atts := range attsByDataRoot {
+	for _, atts := range unaggregatedAttsByRoot {
 		aggregatedAtts, err := helpers.AggregateAttestations(atts)
 		if err != nil {
 			return err
 		}
 		for _, att := range aggregatedAtts {
+			// In case of aggregation bit overlaps, not every attestations will
+			// be aggregated.
 			if helpers.IsAggregated(att) {
 				if err := s.pool.SaveAggregatedAttestation(att); err != nil {
 					return err
