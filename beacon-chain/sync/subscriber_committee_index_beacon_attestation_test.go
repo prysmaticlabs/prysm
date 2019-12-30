@@ -40,7 +40,7 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 	r := &Service{
 		attPool: attestations.NewPool(),
 		chain: &mock.ChainService{
-			State: s,
+			State:   s,
 			Genesis: time.Now(),
 		},
 		chainStarted:  true,
@@ -60,11 +60,11 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 
 	att := &eth.Attestation{
 		Data: &eth.AttestationData{
-			Slot: 0,
+			Slot:            0,
 			BeaconBlockRoot: root[:],
 		},
 		AggregationBits: bitfield.Bitlist{0b0101},
-		Signature: sKeys[0].Sign([]byte("foo"), 0).Marshal(),
+		Signature:       sKeys[0].Sign([]byte("foo"), 0).Marshal(),
 	}
 
 	p.ReceivePubSub("/eth2/committee_index0_beacon_attestation", att)

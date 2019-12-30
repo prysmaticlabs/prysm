@@ -179,4 +179,3 @@ func TestGenesisState_FailsWithoutEth1data(t *testing.T) {
 		t.Errorf("Did not receive eth1data error with nil eth1data, got %v", err)
 	}
 }
-
