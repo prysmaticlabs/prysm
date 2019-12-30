@@ -664,9 +664,6 @@ func TestConsistentGenesisState(t *testing.T) {
 
 		testAcc.Backend.Commit()
 	}
-	for i := int64(0); i < params.BeaconConfig().LogBlockDelay; i++ {
-		testAcc.Backend.Commit()
-	}
 
 	time.Sleep(2 * time.Second)
 	if !web3Service.chainStartData.Chainstarted {

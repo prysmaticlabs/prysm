@@ -54,6 +54,10 @@ func (s *Service) ProcessETH1Block(ctx context.Context, blkNum *big.Int) error {
 		return err
 	}
 	for _, log := range logs {
+		// ignore logs that are not of the required block number
+		if log.BlockNumber != blkNum.Uint64() {
+			continue
+		}
 		if err := s.ProcessLog(ctx, log); err != nil {
 			return errors.Wrap(err, "could not process log")
 		}
