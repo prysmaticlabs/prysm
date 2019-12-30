@@ -51,6 +51,26 @@ func (p *AttCaches) AggregatedAttestations() []*ethpb.Attestation {
 	return atts
 }
 
+// AggregatedAttestationsBySlotIndex returns the unaggregated attestations in cache,
+// filtered by committee index and slot.
+func (p *AttCaches) AggregatedAttestationsBySlotIndex(slot uint64, committeeIndex uint64) []*ethpb.Attestation {
+	atts := make([]*ethpb.Attestation, 0, p.aggregatedAtt.ItemCount())
+	for s, i := range p.aggregatedAtt.Items() {
+
+		// Type assertion for the worst case. This shouldn't happen.
+		att, ok := i.Object.(*ethpb.Attestation)
+		if !ok {
+			p.aggregatedAtt.Delete(s)
+		}
+
+		if slot == att.Data.Slot && committeeIndex == att.Data.CommitteeIndex {
+			atts = append(atts, att)
+		}
+	}
+
+	return atts
+}
+
 // DeleteAggregatedAttestation deletes the aggregated attestations in cache.
 func (p *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
 	if !helpers.IsAggregated(att) {
