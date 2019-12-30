@@ -253,7 +253,7 @@ func (s *Service) createGenesisTime(timeStamp uint64) uint64 {
 // processPastLogs processes all the past logs from the deposit contract and
 // updates the deposit trie with the data from each individual log.
 func (s *Service) processPastLogs(ctx context.Context) error {
-	currentBlockNum := uint64(0)
+	currentBlockNum := s.latestEth1Data.LastRequestedBlock
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
 			s.depositContractAddress,
@@ -263,7 +263,6 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	// if we are not starting from the first deposit log, we use
 	// the current saved last requested block number.
 	if s.lastReceivedMerkleIndex != -1 {
-		currentBlockNum = s.latestEth1Data.LastRequestedBlock
 		query = ethereum.FilterQuery{
 			Addresses: []common.Address{
 				s.depositContractAddress,
