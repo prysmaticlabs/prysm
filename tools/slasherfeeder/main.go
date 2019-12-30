@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"sort"
+	"sync"
 	"time"
 
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
@@ -105,12 +106,17 @@ func main() {
 			if len(sar.AttesterSlashing) > 0 {
 				log.Infof("slashing response: %v", sar.AttesterSlashing)
 			}
+
 		}
 		elapsed := time.Since(start)
 		log.Infof("detecting slashable events on: %d attestations from epoch: %d took: %d on average: %d per attestation", len(atts), e, elapsed.Milliseconds(), elapsed.Milliseconds()/int64(len(atts)))
 
 	}
-
+	errorWg.Wait()
+	close(errOut)
+	for err := range errOut {
+		log.Error(errors.Wrap(err, "error while writing to db in background"))
+	}
 	fmt.Println("done")
 }
 
@@ -327,4 +333,18 @@ func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, commi
 		CustodyBit_1Indices: cb1i,
 	}
 	return inAtt, nil
+}
+
+func mergeChannels(cs []chan error, out chan error, wg sync.WaitGroup) {
+	wg.Add(len(cs))
+	for _, c := range cs {
+		go func(c <-chan error) {
+			for v := range c {
+				out <- v
+			}
+			wg.Done()
+		}(c)
+	}
+
+	return
 }

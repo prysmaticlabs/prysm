@@ -5,6 +5,8 @@ import (
 	"github.com/gogo/protobuf/proto"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
@@ -12,7 +14,23 @@ import (
 
 const maxCacheSize = 10000
 
-var spanCache *lru.ARCCache
+var (
+	spanCache *lru.ARCCache
+	// Metrics
+	spanCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "span_cache_miss",
+		Help: "The number of span data requests that aren't present in the cache.",
+	})
+	//SpanCacheHit cache hits.
+	spanCacheHit = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "span_cache_hit",
+		Help: "The number of span data requests that are present in the cache.",
+	})
+	spanCacheSize = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "span_cache_size",
+		Help: "The number of span map data in the span cache",
+	})
+)
 
 func init() {
 	var err error
@@ -39,8 +57,11 @@ func (db *Store) ValidatorSpansMap(validatorIdx uint64) (*slashpb.EpochSpanMap, 
 	if db.ctx.GlobalBool(flags.UseSpanCacheFlag.Name) {
 		sm, ok := spanCache.Get(validatorIdx)
 		if ok {
+
+			spanCacheHit.Inc()
 			return sm.(*slashpb.EpochSpanMap), nil
 		}
+		spanCacheMiss.Inc()
 	}
 	var enc []byte
 	err := db.view(func(tx *bolt.Tx) error {
@@ -56,21 +77,29 @@ func (db *Store) ValidatorSpansMap(validatorIdx uint64) (*slashpb.EpochSpanMap, 
 }
 
 // SaveValidatorSpansMap accepts a validator index and span map and writes it to disk.
-func (db *Store) SaveValidatorSpansMap(validatorIdx uint64, spanMap *slashpb.EpochSpanMap) error {
+func (db *Store) SaveValidatorSpansMap(validatorIdx uint64, spanMap *slashpb.EpochSpanMap) chan error {
 	spanCache.Add(validatorIdx, spanMap)
-	val, err := proto.Marshal(spanMap)
-	if err != nil {
-		return errors.Wrap(err, "failed to marshal span map")
-	}
-	key := bytesutil.Bytes4(validatorIdx)
-	err = db.batch(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(validatorsMinMaxSpanBucket)
-		if err := bucket.Put(key, val); err != nil {
-			return errors.Wrapf(err, "failed to delete validator id: %d from validators min max span bucket", validatorIdx)
+	spanCacheSize.Set(float64(spanCache.Len()))
+	er := make(chan error)
+	go func(validatorIdx uint64, spanMap *slashpb.EpochSpanMap, errChan chan error) {
+		val, err := proto.Marshal(spanMap)
+		if err != nil {
+			errChan <- errors.Wrap(err, "failed to marshal span map")
+			close(errChan)
+			return
 		}
-		return err
-	})
-	return err
+		key := bytesutil.Bytes4(validatorIdx)
+		err = db.batch(func(tx *bolt.Tx) error {
+			bucket := tx.Bucket(validatorsMinMaxSpanBucket)
+			if err := bucket.Put(key, val); err != nil {
+				errChan <- errors.Wrapf(err, "failed to delete validator id: %d from validators min max span bucket", validatorIdx)
+
+			}
+			return err
+		})
+		close(errChan)
+	}(validatorIdx, spanMap, er)
+	return er
 }
 
 // DeleteValidatorSpanMap deletes a validator span map using a validator index as bucket key.

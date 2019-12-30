@@ -157,9 +157,9 @@ func BenchmarkCheckAttestations(b *testing.B) {
 		ia1.Data.Slot = (i + 1) * params.BeaconConfig().SlotsPerEpoch
 		root := []byte(strconv.Itoa(int(i)))
 		ia1.Data.BeaconBlockRoot = append(root, ia1.Data.BeaconBlockRoot[len(root):]...)
-		if _, err := slasherServer.IsSlashableAttestation(context, ia1); err != nil {
+		if _, err, _ := slasherServer.IsSlashableAttestation(context, ia1); err != nil {
 			b.Errorf("Could not call RPC method: %v", err)
 		}
 	}
-
+	b.Logf("cache hits: %s", dbs.SpanCacheHits())
 }

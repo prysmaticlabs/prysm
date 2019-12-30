@@ -14,7 +14,7 @@ import "eth/v1alpha1/beacon_block.proto";
 service Slasher {
     // Gets AttesterSlashing container if the attestation that
     // was received produces a slashable event.
-    rpc IsSlashableAttestation(ethereum.eth.v1alpha1.IndexedAttestation) returns (AttesterSlashingResponse);
+    rpc IsSlashableAttestation(ethereum.eth.v1alpha1.IndexedAttestation ) returns (AttesterSlashingResponse );
 
     // Gets ProposerSlashing container if the block header that
     // was received produces a slashable event.
@@ -67,4 +67,9 @@ message MinMaxEpochSpan {
 message EpochSpanMap {
     // uint64 is for storing the epoch
     map<uint64, MinMaxEpochSpan> epoch_span_map = 1;
+}
+
+message Error {
+    // string contains the error message
+    string error = 1;
 }

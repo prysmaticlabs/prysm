@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"sync"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -54,6 +55,8 @@ func (s *Service) slasherOldAtetstationFeeder() error {
 	if ch.FinalizedEpoch < 2 {
 		return fmt.Errorf("archive node doesnt have historic data for slasher to proccess. finalized epoch: %d", ch.FinalizedEpoch)
 	}
+	errOut := make(chan error)
+	var errorWg sync.WaitGroup
 	for i := uint64(0); i < ch.FinalizedEpoch; i++ {
 		ats, err := s.beaconClient.ListAttestations(s.context, &ethpb.ListAttestationsRequest{
 			QueryFilter: &ethpb.ListAttestationsRequest_TargetEpoch{TargetEpoch: i},
@@ -99,7 +102,7 @@ func (s *Service) slasherOldAtetstationFeeder() error {
 				log.Error(err)
 				continue
 			}
-			sar, err := s.slasher.IsSlashableAttestation(s.context, ia)
+			sar, err, errChArr := s.slasher.IsSlashableAttestation(s.context, ia)
 			if err != nil {
 				log.Error(err)
 				continue
@@ -107,9 +110,28 @@ func (s *Service) slasherOldAtetstationFeeder() error {
 			if len(sar.AttesterSlashing) > 0 {
 				log.Infof("slashing response: %v", sar.AttesterSlashing)
 			}
+			mergeChannels(errChArr, errOut, errorWg)
 		}
 	}
+	errorWg.Wait()
+	close(errOut)
+	for err := range errOut {
+		log.Error(errors.Wrap(err, "error while writing to db in background"))
+	}
 	return nil
+}
+
+func mergeChannels(cs []chan error, out chan error, wg sync.WaitGroup) {
+	wg.Add(len(cs))
+	for _, c := range cs {
+		go func(c <-chan error) {
+			for v := range c {
+				out <- v
+			}
+			wg.Done()
+		}(c)
+	}
+
 }
 
 // ConvertToIndexed converts attestation to (almost) indexed-verifiable form.

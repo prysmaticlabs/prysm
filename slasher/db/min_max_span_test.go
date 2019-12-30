@@ -75,9 +75,9 @@ func TestValidatorSpanMap_Save(t *testing.T) {
 	ctx := cli.NewContext(app, set, nil)
 	db := SetupSlasherDB(t, ctx)
 	defer TeardownSlasherDB(t, db)
-
 	for _, tt := range spanTests {
-		err := db.SaveValidatorSpansMap(tt.validatorIdx, tt.spanMap)
+		er := db.SaveValidatorSpansMap(tt.validatorIdx, tt.spanMap)
+		err := <-er
 		if err != nil {
 			t.Fatalf("Save validator span map failed: %v", err)
 		}
@@ -100,7 +100,8 @@ func TestValidatorSpanMap_Delete(t *testing.T) {
 	defer TeardownSlasherDB(t, db)
 
 	for _, tt := range spanTests {
-		err := db.SaveValidatorSpansMap(tt.validatorIdx, tt.spanMap)
+		er := db.SaveValidatorSpansMap(tt.validatorIdx, tt.spanMap)
+		err := <-er
 		if err != nil {
 			t.Fatalf("Save validator span map failed: %v", err)
 		}

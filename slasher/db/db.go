@@ -5,6 +5,9 @@ import (
 	"path"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
+	dto "github.com/prometheus/client_model/go"
+
 	"github.com/urfave/cli"
 
 	"github.com/boltdb/bolt"
@@ -106,4 +109,11 @@ func (db *Store) Size() (int64, error) {
 		return nil
 	})
 	return size, err
+}
+
+// Size returns the db size in bytes.
+func (db *Store) SpanCacheHits() string {
+	metric := &dto.Metric{}
+	spanCacheHit.Write(metric)
+	return proto.MarshalTextString(metric)
 }
