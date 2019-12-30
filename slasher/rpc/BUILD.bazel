@@ -35,6 +35,7 @@ go_test(
         "//proto/slashing:go_default_library",
         "//shared/params:go_default_library",
         "//slasher/db:go_default_library",
+        "//slasher/flags:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_urfave_cli//:go_default_library",
@@ -59,6 +60,8 @@ go_test(
         "no-cache",
     ],
     deps = [
+        "//slasher/flags:go_default_library",
         "//slasher/db:go_default_library",
+        "@com_github_urfave_cli//:go_default_library",
     ],
 )

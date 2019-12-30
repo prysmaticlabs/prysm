@@ -263,7 +263,7 @@ func (s *Service) startDB(ctx *cli.Context) error {
 		if err := d.ClearDB(); err != nil {
 			return err
 		}
-		d, err = db.NewDB(dbPath)
+		d, err = db.NewDB(dbPath, ctx)
 		if err != nil {
 			return err
 		}
