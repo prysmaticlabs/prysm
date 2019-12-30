@@ -22,7 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
-	ops "github.com/prysmaticlabs/prysm/beacon-chain/operations/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -120,7 +119,6 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		BeaconDB:          beaconDB,
 		DepositCache:      depositcache.NewDepositCache(),
 		ChainStartFetcher: web3Service,
-		OpsPoolService:    &ops.Operations{},
 		P2p:               &mockBroadcaster{},
 		StateNotifier:     &mockBeaconNode{},
 		AttPool:           attestations.NewPool(),
