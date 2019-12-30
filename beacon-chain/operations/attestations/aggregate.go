@@ -35,7 +35,7 @@ func (s *Service) aggregateRoutine() {
 // This aggregates the input attestations via AggregateAttestations helper
 // function.
 func (s *Service) aggregateAttestations(ctx context.Context, unaggregatedAtts []*ethpb.Attestation) error {
-	_, span := trace.StartSpan(ctx, "Operations.attestations.aggregateAttestations")
+	ctx, span := trace.StartSpan(ctx, "Operations.attestations.aggregateAttestations")
 	defer span.End()
 
 	unaggregatedAttsByRoot := make(map[[32]byte][]*ethpb.Attestation)
