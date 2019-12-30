@@ -17,6 +17,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
+// Set genesis to a small set for faster test processing.
+func init() {
+	p := params.BeaconConfig()
+	p.MinGenesisActiveValidatorCount = 8
+	params.OverrideBeaconConfig(p)
+}
+
 func TestValidation(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -68,7 +75,7 @@ func TestValidation(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(8)
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	beaconState, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Fatal(err)

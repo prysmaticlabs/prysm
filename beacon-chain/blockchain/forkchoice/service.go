@@ -3,7 +3,6 @@ package forkchoice
 import (
 	"bytes"
 	"context"
-	"reflect"
 	"sync"
 
 	"github.com/gogo/protobuf/proto"
@@ -51,6 +50,7 @@ type Store struct {
 	voteLock             sync.RWMutex
 	initSyncState        map[[32]byte]*pb.BeaconState
 	initSyncStateLock    sync.RWMutex
+	nextEpochBoundarySlot uint64
 }
 
 // NewForkChoiceService instantiates a new service instance that will
@@ -389,10 +389,14 @@ func (s *Store) filterBlockTree(ctx context.Context, blockRoot [32]byte, filtere
 		return false, err
 	}
 
+	if headState == nil {
+		return false, errors.New("no state matching block root")
+	}
+
 	correctJustified := s.justifiedCheckpt.Epoch == 0 ||
-		reflect.DeepEqual(s.justifiedCheckpt, headState.CurrentJustifiedCheckpoint)
+		proto.Equal(s.justifiedCheckpt, headState.CurrentJustifiedCheckpoint)
 	correctFinalized := s.finalizedCheckpt.Epoch == 0 ||
-		reflect.DeepEqual(s.finalizedCheckpt, headState.FinalizedCheckpoint)
+		proto.Equal(s.finalizedCheckpt, headState.FinalizedCheckpoint)
 	if correctJustified && correctFinalized {
 		filteredBlocks[blockRoot] = block
 		return true, nil

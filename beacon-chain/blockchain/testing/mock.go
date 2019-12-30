@@ -20,16 +20,18 @@ import (
 
 // ChainService defines the mock interface for testing
 type ChainService struct {
-	State               *pb.BeaconState
-	Root                []byte
-	Block               *ethpb.BeaconBlock
-	FinalizedCheckPoint *ethpb.Checkpoint
-	BlocksReceived      []*ethpb.BeaconBlock
-	Genesis             time.Time
-	Fork                *pb.Fork
-	DB                  db.Database
-	stateNotifier       statefeed.Notifier
-	opNotifier          opfeed.Notifier
+	State                       *pb.BeaconState
+	Root                        []byte
+	Block                       *ethpb.BeaconBlock
+	FinalizedCheckPoint         *ethpb.Checkpoint
+	CurrentJustifiedCheckPoint  *ethpb.Checkpoint
+	PreviousJustifiedCheckPoint *ethpb.Checkpoint
+	BlocksReceived              []*ethpb.BeaconBlock
+	Genesis                     time.Time
+	Fork                        *pb.Fork
+	DB                          db.Database
+	stateNotifier               statefeed.Notifier
+	opNotifier                  opfeed.Notifier
 }
 
 // StateNotifier mocks the same method in the chain service.
@@ -144,6 +146,16 @@ func (ms *ChainService) CurrentFork() *pb.Fork {
 // FinalizedCheckpt mocks FinalizedCheckpt method in chain service.
 func (ms *ChainService) FinalizedCheckpt() *ethpb.Checkpoint {
 	return ms.FinalizedCheckPoint
+}
+
+// CurrentJustifiedCheckpt mocks CurrentJustifiedCheckpt method in chain service.
+func (ms *ChainService) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
+	return ms.CurrentJustifiedCheckPoint
+}
+
+// PreviousJustifiedCheckpt mocks PreviousJustifiedCheckpt method in chain service.
+func (ms *ChainService) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
+	return ms.PreviousJustifiedCheckPoint
 }
 
 // ReceiveAttestation mocks ReceiveAttestation method in chain service.
