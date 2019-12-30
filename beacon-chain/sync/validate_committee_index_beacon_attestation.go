@@ -65,6 +65,14 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return false
 	}
 
+	// Attestation's slot is within ATTESTATION_PROPAGATION_SLOT_RANGE.
+	currentSlot := helpers.SlotsSince(s.chain.GenesisTime())
+	upper := att.Data.Slot + params.BeaconConfig().AttestationPropagationSlotRange
+	lower := att.Data.Slot
+	if currentSlot > upper || currentSlot < lower {
+		return false
+	}
+
 	// Attestation's block must exist in database (only valid blocks are stored).
 	if !s.db.HasBlock(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot)) {
 		log.WithField(
@@ -72,14 +80,6 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 			fmt.Sprintf("%#x", att.Data.BeaconBlockRoot),
 		).WithError(errPointsToBlockNotInDatabase).Debug("Ignored incoming attestation that points to a block which is not in the database")
 		traceutil.AnnotateError(span, errPointsToBlockNotInDatabase)
-		return false
-	}
-
-	// Attestation's slot is within ATTESTATION_PROPAGATION_SLOT_RANGE.
-	currentSlot := helpers.SlotsSince(s.chain.GenesisTime())
-	upper := att.Data.Slot + params.BeaconConfig().AttestationPropagationSlotRange
-	lower := att.Data.Slot
-	if currentSlot > upper || currentSlot < lower {
 		return false
 	}
 
