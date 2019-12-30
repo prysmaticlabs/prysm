@@ -19,7 +19,7 @@ func TestSetProposedForEpoch_SetsBit(t *testing.T) {
 	SetProposedForEpoch(proposals, epoch)
 	proposed := HasProposedForEpoch(proposals, epoch)
 	if !proposed {
-		t.Fatal("fuck")
+		t.Fatal("Expected epoch 4 to be marked as proposed")
 	}
 	// Make sure no other bits are changed.
 	for i := uint64(1); i <= wsPeriod; i++ {
@@ -28,7 +28,7 @@ func TestSetProposedForEpoch_SetsBit(t *testing.T) {
 		}
 		proposed = HasProposedForEpoch(proposals, i)
 		if proposed {
-			t.Fatal("fuck")
+			t.Fatalf("Expected epoch %d to not be marked as proposed", i)
 		}
 	}
 }
@@ -64,7 +64,7 @@ func TestSetProposedForEpoch_PrunesOverWSPeriod(t *testing.T) {
 			continue
 		}
 		if HasProposedForEpoch(proposals, i) {
-			t.Fatal(i)
+			t.Fatalf("Expected epoch %d to not be marked as proposed", i)
 		}
 	}
 }
@@ -121,12 +121,12 @@ func TestSetProposedForEpoch_PreventsProposingFutureEpochs(t *testing.T) {
 	}
 	SetProposedForEpoch(proposals, 200)
 	if HasProposedForEpoch(proposals, wsPeriod+200) {
-		t.Fatal("fuck")
+		t.Fatalf("Expected epoch %d to not be marked as proposed", wsPeriod+200)
 	}
 }
 
 func TestProposalHistory_NilDB(t *testing.T) {
-	db := SetupDB(t)
+	db := SetupDB(t, [][]byte{})
 	defer TeardownDB(t, db)
 
 	balPubkey := []byte{1, 2, 3}
@@ -137,12 +137,12 @@ func TestProposalHistory_NilDB(t *testing.T) {
 	}
 
 	if proposalHistory.ProposalHistory != nil {
-		t.Fatal("expected proposal history to be nil")
+		t.Fatal("Expected proposal history to be nil")
 	}
 }
 
 func TestSaveProposalHistory_OK(t *testing.T) {
-	db := SetupDB(t)
+	db := SetupDB(t, [][]byte{})
 	defer TeardownDB(t, db)
 	tests := []struct {
 		pubkey  []byte
@@ -166,7 +166,7 @@ func TestSaveProposalHistory_OK(t *testing.T) {
 			},
 		},
 		{
-			pubkey: []byte{2},
+			pubkey: []byte{0},
 			epoch:  uint64(2),
 			history: &slashpb.ValidatorProposalHistory{
 				ProposalHistory:    bitfield.Bitlist{0x04, 0x04},
@@ -199,8 +199,66 @@ func TestSaveProposalHistory_OK(t *testing.T) {
 	}
 }
 
+func TestSaveProposalHistory_Overwrites(t *testing.T) {
+	db := SetupDB(t, [][]byte{})
+	defer TeardownDB(t, db)
+	tests := []struct {
+		pubkey  []byte
+		epoch   uint64
+		history *slashpb.ValidatorProposalHistory
+	}{
+		{
+			pubkey: []byte{0},
+			epoch:  uint64(1),
+			history: &slashpb.ValidatorProposalHistory{
+				ProposalHistory:    bitfield.Bitlist{0x02, 0x02},
+				LatestEpochWritten: 1,
+			},
+		},
+		{
+			pubkey: []byte{0},
+			epoch:  uint64(2),
+			history: &slashpb.ValidatorProposalHistory{
+				ProposalHistory:    bitfield.Bitlist{0x04, 0x04},
+				LatestEpochWritten: 2,
+			},
+		},
+		{
+			pubkey: []byte{0},
+			epoch:  uint64(3),
+			history: &slashpb.ValidatorProposalHistory{
+				ProposalHistory:    bitfield.Bitlist{0x08, 0x08},
+				LatestEpochWritten: 3,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		if err := db.SaveProposalHistory(tt.pubkey, tt.history); err != nil {
+			t.Fatalf("Saving proposal history failed: %v", err)
+		}
+		history, err := db.ProposalHistory(tt.pubkey)
+		if err != nil {
+			t.Fatalf("Failed to get proposal history: %v", err)
+		}
+
+		if history == nil || !reflect.DeepEqual(history, tt.history) {
+			t.Fatalf("Expected DB to keep object the same, received: %v", history)
+		}
+		if !HasProposedForEpoch(history, tt.epoch) {
+			t.Fatalf("Expected epoch %d to be marked as proposed", history.ProposalHistory.Count())
+		}
+		if HasProposedForEpoch(history, tt.epoch+1) {
+			t.Fatalf("Expected epoch %d to not be marked as proposed", tt.epoch+1)
+		}
+		if HasProposedForEpoch(history, tt.epoch-1) {
+			t.Fatalf("Expected epoch %d to not be marked as proposed", tt.epoch-1)
+		}
+	}
+}
+
 func TestDeleteProposalHistory_OK(t *testing.T) {
-	db := SetupDB(t)
+	db := SetupDB(t, [][]byte{})
 	defer TeardownDB(t, db)
 	tests := []struct {
 		pubkey  []byte
@@ -222,7 +280,7 @@ func TestDeleteProposalHistory_OK(t *testing.T) {
 			},
 		},
 		{
-			pubkey: []byte{3},
+			pubkey: []byte{2},
 			epoch:  uint64(1),
 			history: &slashpb.ValidatorProposalHistory{
 				ProposalHistory:    bitfield.Bitlist{0x01, 0x02},
@@ -233,15 +291,12 @@ func TestDeleteProposalHistory_OK(t *testing.T) {
 
 	for _, tt := range tests {
 		if err := db.SaveProposalHistory(tt.pubkey, tt.history); err != nil {
-			t.Fatalf("save block failed: %v", err)
+			t.Fatalf("Save proposal history failed: %v", err)
 		}
-	}
-
-	for _, tt := range tests {
 		// Making sure everything is saved.
 		history, err := db.ProposalHistory(tt.pubkey)
 		if err != nil {
-			t.Fatalf("failed to get block: %v", err)
+			t.Fatalf("Failed to get proposal history: %v", err)
 		}
 		if history == nil || !reflect.DeepEqual(history, tt.history) {
 			t.Fatalf("Expected DB to keep object the same, received: %v, expected %v", history, tt.history)
@@ -253,7 +308,7 @@ func TestDeleteProposalHistory_OK(t *testing.T) {
 		// Check after deleting from DB.
 		history, err = db.ProposalHistory(tt.pubkey)
 		if err != nil {
-			t.Fatalf("failed to get block: %v", err)
+			t.Fatalf("Failed to get proposal history: %v", err)
 		}
 		if reflect.DeepEqual(history, tt.history) {
 			t.Fatalf("Expected proposal history to be nil, received %v", history)

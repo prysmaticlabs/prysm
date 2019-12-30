@@ -3,12 +3,13 @@ package client
 import (
 	"context"
 	"errors"
-	"github.com/prysmaticlabs/prysm/validator/db"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/internal"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -19,7 +20,7 @@ type mocks struct {
 }
 
 func setup(t *testing.T) (*validator, *mocks, func()) {
-	db := db.SetupDB(t)
+	db := db.SetupDB(t, pubKeysFromMap(keyMap))
 	ctrl := gomock.NewController(t)
 	m := &mocks{
 		validatorClient:  internal.NewMockBeaconNodeValidatorClient(ctrl),
@@ -104,6 +105,52 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 	).Return(nil /*response*/, errors.New("uh oh"))
 
 	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
+	testutil.AssertLogsContain(t, hook, "Failed to propose block")
+}
+
+func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
+	hook := logTest.NewGlobal()
+	validator, m, finish := setup(t)
+	defer finish()
+
+	history, err := validator.db.ProposalHistory(validatorPubKey[:])
+	if err != nil {
+		t.Fatal(err)
+	}
+	db.SetProposedForEpoch(history, 5)
+	if err := validator.db.SaveProposalHistory(validatorPubKey[:], history); err != nil {
+		t.Fatal(err)
+	}
+	history, err = validator.db.ProposalHistory(validatorPubKey[:])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !db.HasProposedForEpoch(history, 5) {
+		t.Fatal("History should have epoch 5 marked as proposed.")
+	}
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), //epoch
+	).Times(2).Return(&ethpb.DomainResponse{}, nil /*err*/)
+
+	m.validatorClient.EXPECT().GetBlock(
+		gomock.Any(), // ctx
+		gomock.Any(),
+	).Times(2).Return(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}, nil /*err*/)
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), //epoch
+	).Times(2).Return(&ethpb.DomainResponse{}, nil /*err*/)
+
+	m.validatorClient.EXPECT().ProposeBlock(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&ethpb.BeaconBlock{}),
+	).Times(2).Return(&ethpb.ProposeResponse{}, nil /*error*/)
+
+	validator.ProposeBlock(context.Background(), params.BeaconConfig().SlotsPerEpoch*5+2, validatorPubKey)
+	validator.ProposeBlock(context.Background(), params.BeaconConfig().SlotsPerEpoch*5+2, validatorPubKey)
 	testutil.AssertLogsContain(t, hook, "Failed to propose block")
 }
 

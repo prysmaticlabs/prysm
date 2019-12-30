@@ -62,7 +62,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		return
 	}
 
-	log.Info("Validator has not proposed for this epoch")
+	log.WithField("epoch", epoch).Info("Validator has not proposed for this epoch")
 
 	// Sign returned block from beacon node
 	sig, err := v.signBlock(ctx, pubKey, epoch, b)

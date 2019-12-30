@@ -10,7 +10,7 @@ import (
 )
 
 // SetupDB instantiates and returns a DB instance for the validator client.
-func SetupDB(t testing.TB) *Store {
+func SetupDB(t testing.TB, pubkeys [][]byte) *Store {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	if err != nil {
 		t.Fatalf("Could not generate random file path: %v", err)
@@ -19,7 +19,7 @@ func SetupDB(t testing.TB) *Store {
 	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
-	db, err := NewKVStore(p, [][]byte{[]byte{1}})
+	db, err := NewKVStore(p, pubkeys)
 
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
