@@ -108,7 +108,7 @@ func BenchmarkCheckAttestations(b *testing.B) {
 		SlasherDB: dbs,
 	}
 	var cb []uint64
-	for i := uint64(0); i < 100; i++ {
+	for i := uint64(0); i < 5; i++ {
 		cb = append(cb, i)
 	}
 	ia1 := &ethpb.IndexedAttestation{
