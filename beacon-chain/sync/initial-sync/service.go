@@ -152,4 +152,3 @@ func (s *Service) Status() error {
 func (s *Service) Syncing() bool {
 	return !s.synced
 }
-
