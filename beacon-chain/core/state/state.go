@@ -55,9 +55,6 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 	if eth1Data == nil {
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
-	if uint64(len(deposits)) != params.BeaconConfig().MinGenesisActiveValidatorCount {
-		return nil, errors.New("incorrect number of genesis deposits")
-	}
 
 	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
