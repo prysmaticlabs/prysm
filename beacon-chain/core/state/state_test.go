@@ -13,13 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-// Set genesis to a small set for faster test processing.
-func init() {
-	p := params.BeaconConfig()
-	p.MinGenesisActiveValidatorCount = 8
-	params.OverrideBeaconConfig(p)
-}
-
 func TestGenesisBeaconState_OK(t *testing.T) {
 	genesisEpochNumber := uint64(0)
 
@@ -41,7 +34,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		t.Error("HistoricalRootsLimit should be 16777216 for these tests to pass")
 	}
 
-	depositsForChainStart := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	depositsForChainStart := 100
 
 	if params.BeaconConfig().EpochsPerSlashingsVector != 8192 {
 		t.Error("EpochsPerSlashingsVector should be 8192 for these tests to pass")
@@ -136,7 +129,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 }
 
 func TestGenesisState_HashEquality(t *testing.T) {
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	deposits, _, _ := testutil.DeterministicDepositsAndKeys(100)
 	state1, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{BlockHash: make([]byte, 32)})
 	if err != nil {
 		t.Error(err)
@@ -159,8 +152,7 @@ func TestGenesisState_HashEquality(t *testing.T) {
 }
 
 func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
-	s, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
+	s, err := state.GenesisBeaconState(nil, 0, &ethpb.Eth1Data{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -187,12 +179,3 @@ func TestGenesisState_FailsWithoutEth1data(t *testing.T) {
 		t.Errorf("Did not receive eth1data error with nil eth1data, got %v", err)
 	}
 }
-
-func TestGenesisState_FailsWrongDeposits(t *testing.T) {
-	deposits, _, _ := testutil.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount+1)
-	_, err := state.GenesisBeaconState(deposits, 0, &ethpb.Eth1Data{})
-	if err == nil || err.Error() != "incorrect number of genesis deposits" {
-		t.Errorf("Did not receive deposits error when wrong number of deposits used, got %v", err)
-	}
-}
-
