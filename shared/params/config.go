@@ -125,10 +125,10 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	TargetAggregatorsPerCommittee:  16,
 
 	// Gwei value constants.
-	MinDepositAmount:          0.1 * 1e9,
-	MaxEffectiveBalance:       3.2 * 1e9,
-	EjectionBalance:           1.6 * 1e9,
-	EffectiveBalanceIncrement: 0.1 * 1e9,
+	MinDepositAmount:          1 * 1e9,
+	MaxEffectiveBalance:       32 * 1e9,
+	EjectionBalance:           16 * 1e9,
+	EffectiveBalanceIncrement: 1 * 1e9,
 
 	// Initial value constants.
 	BLSWithdrawalPrefixByte: byte(0),
