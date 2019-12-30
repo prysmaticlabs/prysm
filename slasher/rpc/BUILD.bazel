@@ -37,6 +37,7 @@ go_test(
         "//slasher/db:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@com_github_urfave_cli//:go_default_library",
     ],
 )
 

@@ -19,7 +19,7 @@ var log = logrus.WithField("prefix", "slasherDB")
 type Store struct {
 	db           *bolt.DB
 	databasePath string
-	ctx          cli.Context
+	ctx          *cli.Context
 }
 
 // Close closes the underlying boltdb database.
@@ -38,7 +38,7 @@ func (db *Store) view(fn func(*bolt.Tx) error) error {
 }
 
 // NewDB initializes a new DB.
-func NewDB(dirPath string, ctx cli.Context) (*Store, error) {
+func NewDB(dirPath string, ctx *cli.Context) (*Store, error) {
 	return NewKVStore(dirPath, ctx)
 }
 
@@ -67,7 +67,7 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 // NewKVStore initializes a new boltDB key-value store at the directory
 // path specified, creates the kv-buckets based on the schema, and stores
 // an open connection db object as a property of the Store struct.
-func NewKVStore(dirPath string, ctx cli.Context) (*Store, error) {
+func NewKVStore(dirPath string, ctx *cli.Context) (*Store, error) {
 	if err := os.MkdirAll(dirPath, 0700); err != nil {
 		return nil, err
 	}

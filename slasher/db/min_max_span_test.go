@@ -1,11 +1,13 @@
 package db
 
 import (
+	"flag"
 	"reflect"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	"github.com/urfave/cli"
 )
 
 type spanMapTestStruct struct {
@@ -51,7 +53,10 @@ func init() {
 }
 
 func TestValidatorSpanMap_NilDB(t *testing.T) {
-	db := SetupSlasherDB(t)
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	ctx := cli.NewContext(app, set, nil)
+	db := SetupSlasherDB(t, ctx)
 	defer TeardownSlasherDB(t, db)
 
 	validatorIdx := uint64(1)
@@ -65,7 +70,10 @@ func TestValidatorSpanMap_NilDB(t *testing.T) {
 }
 
 func TestValidatorSpanMap_Save(t *testing.T) {
-	db := SetupSlasherDB(t)
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	ctx := cli.NewContext(app, set, nil)
+	db := SetupSlasherDB(t, ctx)
 	defer TeardownSlasherDB(t, db)
 
 	for _, tt := range spanTests {
@@ -85,7 +93,10 @@ func TestValidatorSpanMap_Save(t *testing.T) {
 }
 
 func TestValidatorSpanMap_Delete(t *testing.T) {
-	db := SetupSlasherDB(t)
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	ctx := cli.NewContext(app, set, nil)
+	db := SetupSlasherDB(t, ctx)
 	defer TeardownSlasherDB(t, db)
 
 	for _, tt := range spanTests {
