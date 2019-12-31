@@ -3,6 +3,7 @@ package kafka
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/ethereum/go-ethereum/common"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -283,4 +284,14 @@ func (e Exporter) DeleteStates(ctx context.Context, blockRoots [][32]byte) error
 // IsFinalizedBlock -- passthrough.
 func (e Exporter) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool {
 	return e.db.IsFinalizedBlock(ctx, blockRoot)
+}
+
+// PowchainData -- passthrough
+func (e Exporter) PowchainData(ctx context.Context) (*db.ETH1ChainData, error) {
+	return e.db.PowchainData(ctx)
+}
+
+// SavePowchainData -- passthrough
+func (e Exporter) SavePowchainData(ctx context.Context, data *db.ETH1ChainData) error {
+	return e.db.SavePowchainData(ctx, data)
 }
