@@ -27,6 +27,7 @@ type Validator interface {
 	SubmitAttestation(ctx context.Context, slot uint64, pubKey [48]byte)
 	ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte)
 	SubmitAggregateAndProof(ctx context.Context, slot uint64, pubKey [48]byte)
+	LogAttestationsSubmitted()
 }
 
 // Run the main validator routine. This routine exits if the context is
@@ -115,6 +116,7 @@ func run(ctx context.Context, v Validator) {
 				wg.Wait()
 				span.End()
 			}()
+			v.LogAttestationsSubmitted()
 		}
 	}
 }
