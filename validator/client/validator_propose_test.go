@@ -35,6 +35,7 @@ func setup(t *testing.T) (*validator, *mocks, func()) {
 		aggregatorClient: m.aggregatorClient,
 		keys:             keyMap,
 		graffiti:         []byte{},
+		attLogs:          make(map[[32]byte]*attSubmitted),
 	}
 
 	return validator, m, ctrl.Finish
