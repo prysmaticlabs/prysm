@@ -79,7 +79,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
-	if err := v.saveSubmittedIndex(data, validatorIndex); err != nil {
+	if err := v.saveAttesterIndexToData(data, validatorIndex); err != nil {
 		log.Errorf("Could not save validator index for logging: %v", err)
 		return
 	}
@@ -168,9 +168,9 @@ func (v *validator) signAtt(ctx context.Context, pubKey [48]byte, data *ethpb.At
 	return sig.Marshal(), nil
 }
 
-// For logging, this saves the validator index to its attestation data. The purpose of this
+// For logging, this saves the last submitted attester index to its attestation data. The purpose of this
 // is to enhance attesting logs to be readable when multiple validator keys ran in a single client.
-func (v *validator) saveSubmittedIndex(data *ethpb.AttestationData, index uint64) error {
+func (v *validator) saveAttesterIndexToData(data *ethpb.AttestationData, index uint64) error {
 	v.attLogsLock.Lock()
 	defer v.attLogsLock.Unlock()
 
