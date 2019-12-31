@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
-
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )

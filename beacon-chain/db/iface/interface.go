@@ -6,7 +6,6 @@ import (
 	"io"
 
 	"github.com/prysmaticlabs/prysm/proto/beacon/db"
-
 	"github.com/ethereum/go-ethereum/common"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -87,7 +86,6 @@ type Database interface {
 	// Deposit contract related handlers.
 	DepositContractAddress(ctx context.Context) ([]byte, error)
 	SaveDepositContractAddress(ctx context.Context, addr common.Address) error
-
 	//Powchain operations
 	PowchainData(ctx context.Context) (*db.ETH1ChainData, error)
 	SavePowchainData(ctx context.Context, data *db.ETH1ChainData) error
