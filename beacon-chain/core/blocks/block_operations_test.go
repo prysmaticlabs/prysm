@@ -1234,7 +1234,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 					Epoch: 1,
 				},
 			},
-			AttestingIndices: []uint64{47, 99, 99},
+			AttestingIndices: []uint64{47, 99, 101},
 		}},
 		{attestation: &ethpb.IndexedAttestation{
 			Data: &ethpb.AttestationData{
@@ -1242,7 +1242,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 					Epoch: 4,
 				},
 			},
-			AttestingIndices: []uint64{21, 72, 21},
+			AttestingIndices: []uint64{21, 72},
 		}},
 		{attestation: &ethpb.IndexedAttestation{
 			Data: &ethpb.AttestationData{
@@ -1250,7 +1250,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 					Epoch: 7,
 				},
 			},
-			AttestingIndices: []uint64{100, 121, 100, 121},
+			AttestingIndices: []uint64{100, 121, 122},
 		}},
 	}
 

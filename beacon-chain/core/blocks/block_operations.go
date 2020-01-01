@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"reflect"
 	"sort"
 
 	"github.com/gogo/protobuf/proto"
@@ -723,11 +724,11 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *pb.BeaconState, 
 		setIndices = append(setIndices, i)
 		set[i] = true
 	}
-	sorted := sort.SliceIsSorted(setIndices, func(i, j int) bool {
+	sort.SliceStable(setIndices, func(i, j int) bool {
 		return setIndices[i] < setIndices[j]
 	})
-	if !sorted {
-		return fmt.Errorf("attesting indices are not sorted, got %v", sorted)
+	if !reflect.DeepEqual(setIndices, indices) {
+		return errors.New("attesting indices is not uniquely sorted")
 	}
 
 	domain := helpers.Domain(beaconState.Fork, indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
