@@ -194,9 +194,6 @@ func ProcessBlockHeader(
 		return nil, err
 	}
 	proposer := beaconState.Validators[idx]
-	if proposer.Slashed {
-		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
-	}
 
 	// Verify proposer signature.
 	currentEpoch := helpers.CurrentEpoch(beaconState)
@@ -250,6 +247,15 @@ func ProcessBlockHeaderNoVerify(
 		return nil, fmt.Errorf(
 			"parent root %#x does not match the latest block header signing root in state %#x",
 			block.ParentRoot, parentRoot)
+	}
+
+	idx, err := helpers.BeaconProposerIndex(beaconState)
+	if err != nil {
+		return nil, err
+	}
+	proposer := beaconState.Validators[idx]
+	if proposer.Slashed {
+		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
 	}
 
 	bodyRoot, err := ssz.HashTreeRoot(block.Body)

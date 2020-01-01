@@ -108,7 +108,7 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 		panic("bad")
 	})
 	r.chainStarted = true
-	p.ReceivePubSub(topic, &pb.SignedVoluntaryExit{Exit:&pb.VoluntaryExit{Epoch: 55}})
+	p.ReceivePubSub(topic, &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}})
 
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")

@@ -326,7 +326,7 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData, peerStatus
 				}
 				parentRoot := rootCache[parentSlotCache[slot]]
 				blk := &eth.SignedBeaconBlock{
-					Block:&eth.BeaconBlock{
+					Block: &eth.BeaconBlock{
 						Slot:       slot,
 						ParentRoot: parentRoot[:],
 					},
