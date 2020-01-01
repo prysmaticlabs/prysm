@@ -52,7 +52,7 @@ func (bs *Server) ListAttestations(
 		if len(blks) != 1 {
 			return nil, status.Error(codes.Internal, "Found more than 1 genesis block")
 		}
-		genesisRoot, err := ssz.SigningRoot(blks[0])
+		genesisRoot, err := ssz.HashTreeRoot(blks[0].Block)
 		if err != nil {
 			return nil, err
 		}

@@ -29,17 +29,17 @@ type Database interface {
 	SaveAttestation(ctx context.Context, att *eth.Attestation) error
 	SaveAttestations(ctx context.Context, atts []*eth.Attestation) error
 	// Block related methods.
-	Block(ctx context.Context, blockRoot [32]byte) (*eth.BeaconBlock, error)
-	HeadBlock(ctx context.Context) (*eth.BeaconBlock, error)
-	Blocks(ctx context.Context, f *filters.QueryFilter) ([]*eth.BeaconBlock, error)
+	Block(ctx context.Context, blockRoot [32]byte) (*eth.SignedBeaconBlock, error)
+	HeadBlock(ctx context.Context) (*eth.SignedBeaconBlock, error)
+	Blocks(ctx context.Context, f *filters.QueryFilter) ([]*eth.SignedBeaconBlock, error)
 	BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]byte, error)
 	HasBlock(ctx context.Context, blockRoot [32]byte) bool
 	DeleteBlock(ctx context.Context, blockRoot [32]byte) error
 	DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error
-	SaveBlock(ctx context.Context, block *eth.BeaconBlock) error
-	SaveBlocks(ctx context.Context, blocks []*eth.BeaconBlock) error
+	SaveBlock(ctx context.Context, block *eth.SignedBeaconBlock) error
+	SaveBlocks(ctx context.Context, blocks []*eth.SignedBeaconBlock) error
 	SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
-	GenesisBlock(ctx context.Context) (*ethpb.BeaconBlock, error)
+	GenesisBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error)
 	SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool
 	// Validator related methods.

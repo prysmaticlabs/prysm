@@ -30,7 +30,7 @@ type GenesisTimeFetcher interface {
 type HeadFetcher interface {
 	HeadSlot() uint64
 	HeadRoot() []byte
-	HeadBlock() *ethpb.BeaconBlock
+	HeadBlock() *ethpb.SignedBeaconBlock
 	HeadState(ctx context.Context) (*pb.BeaconState, error)
 	HeadValidatorsIndices(epoch uint64) ([]uint64, error)
 	HeadSeed(epoch uint64) ([32]byte, error)
@@ -122,11 +122,11 @@ func (s *Service) HeadRoot() []byte {
 }
 
 // HeadBlock returns the head block of the chain.
-func (s *Service) HeadBlock() *ethpb.BeaconBlock {
+func (s *Service) HeadBlock() *ethpb.SignedBeaconBlock {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
-	return proto.Clone(s.headBlock).(*ethpb.BeaconBlock)
+	return proto.Clone(s.headBlock).(*ethpb.SignedBeaconBlock)
 }
 
 // HeadState returns the head state of the chain.

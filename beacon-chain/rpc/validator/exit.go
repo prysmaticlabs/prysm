@@ -13,7 +13,7 @@ import (
 )
 
 // ProposeExit proposes an exit for a validator.
-func (vs *Server) ProposeExit(ctx context.Context, req *ethpb.VoluntaryExit) (*ptypes.Empty, error) {
+func (vs *Server) ProposeExit(ctx context.Context, req *ethpb.SignedVoluntaryExit) (*ptypes.Empty, error) {
 	s, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)

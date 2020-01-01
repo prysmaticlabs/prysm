@@ -50,20 +50,20 @@ func (r *Service) processPendingBlocks(ctx context.Context) error {
 
 		r.pendingQueueLock.RLock()
 		b := r.slotToPendingBlocks[uint64(s)]
-		inPendingQueue := r.seenPendingBlocks[bytesutil.ToBytes32(b.ParentRoot)]
+		inPendingQueue := r.seenPendingBlocks[bytesutil.ToBytes32(b.Block.ParentRoot)]
 		r.pendingQueueLock.RUnlock()
 
-		inDB := r.db.HasBlock(ctx, bytesutil.ToBytes32(b.ParentRoot))
+		inDB := r.db.HasBlock(ctx, bytesutil.ToBytes32(b.Block.ParentRoot))
 		hasPeer := len(pids) != 0
 
 		// Only request for missing parent block if it's not in DB, not in pending cache
 		// and has peer in the peer list.
 		if !inPendingQueue && !inDB && hasPeer {
 			log.WithFields(logrus.Fields{
-				"currentSlot": b.Slot,
-				"parentRoot":  hex.EncodeToString(b.ParentRoot),
+				"currentSlot": b.Block.Slot,
+				"parentRoot":  hex.EncodeToString(b.Block.ParentRoot),
 			}).Info("Requesting parent block")
-			req := [][32]byte{bytesutil.ToBytes32(b.ParentRoot)}
+			req := [][32]byte{bytesutil.ToBytes32(b.Block.ParentRoot)}
 			if err := r.sendRecentBeaconBlocksRequest(ctx, req, pids[rand.Int()%len(pids)]); err != nil {
 				traceutil.AnnotateError(span, err)
 				log.Errorf("Could not send recent block request: %v", err)
@@ -78,13 +78,13 @@ func (r *Service) processPendingBlocks(ctx context.Context) error {
 		}
 
 		if err := r.chain.ReceiveBlockNoPubsub(ctx, b); err != nil {
-			log.Errorf("Could not process block from slot %d: %v", b.Slot, err)
+			log.Errorf("Could not process block from slot %d: %v", b.Block.Slot, err)
 			traceutil.AnnotateError(span, err)
 		}
 
 		r.pendingQueueLock.Lock()
 		delete(r.slotToPendingBlocks, uint64(s))
-		blkRoot, err := ssz.SigningRoot(b)
+		blkRoot, err := ssz.HashTreeRoot(b.Block)
 		if err != nil {
 			traceutil.AnnotateError(span, err)
 			span.End()
@@ -122,8 +122,8 @@ func (r *Service) validatePendingSlots() error {
 	for s, b := range r.slotToPendingBlocks {
 		epoch := helpers.SlotToEpoch(s)
 		// remove all descendant blocks of old blocks
-		if oldBlockRoots[bytesutil.ToBytes32(b.ParentRoot)] {
-			root, err := ssz.SigningRoot(b)
+		if oldBlockRoots[bytesutil.ToBytes32(b.Block.ParentRoot)] {
+			root, err := ssz.HashTreeRoot(b.Block)
 			if err != nil {
 				return err
 			}
@@ -134,7 +134,7 @@ func (r *Service) validatePendingSlots() error {
 		}
 		// don't process old blocks
 		if finalizedEpoch > 0 && epoch <= finalizedEpoch {
-			blkRoot, err := ssz.SigningRoot(b)
+			blkRoot, err := ssz.HashTreeRoot(b.Block)
 			if err != nil {
 				return err
 			}

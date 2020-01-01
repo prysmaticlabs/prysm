@@ -36,7 +36,7 @@ func TestGetDuties_NextEpoch_WrongPubkeyLength(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	genesisRoot, err := ssz.SigningRoot(block)
+	genesisRoot, err := ssz.HashTreeRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -63,7 +63,7 @@ func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 	beaconState, _ := testutil.DeterministicGenesisState(t, 10)
 
 	genesis := blk.NewGenesisBlock([]byte{})
-	genesisRoot, err := ssz.SigningRoot(genesis)
+	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -101,7 +101,7 @@ func TestGetDuties_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}
-	genesisRoot, err := ssz.SigningRoot(genesis)
+	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -178,7 +178,7 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	}
 	bState.Slot = 5 // Set state to non-epoch start slot.
 
-	genesisRoot, err := ssz.SigningRoot(genesis)
+	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -237,7 +237,7 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}
-	genesisRoot, err := ssz.SigningRoot(genesis)
+	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -316,7 +316,7 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Could not setup genesis state: %v", err)
 	}
-	genesisRoot, err := ssz.SigningRoot(genesis)
+	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
 	if err != nil {
 		b.Fatalf("Could not get signing root %v", err)
 	}

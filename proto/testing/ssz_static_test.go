@@ -36,7 +36,7 @@ func runSSZStaticTests(t *testing.T, config string) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				object, err := UnmarshalledSSZ(serializedBytes, folder.Name())
+				object, err := UnmarshalledSSZ(t, serializedBytes, folder.Name())
 				if err != nil {
 					t.Fatalf("Could not unmarshall serialized SSZ: %v", err)
 				}
@@ -69,7 +69,7 @@ func runSSZStaticTests(t *testing.T, config string) {
 				if rootsYaml.SigningRoot == "" {
 					return
 				}
-				signingRoot, err := ssz.SigningRoot(object)
+				signingRoot, err := ssz.HashTreeRoot(object)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -89,7 +89,7 @@ func runSSZStaticTests(t *testing.T, config string) {
 	}
 }
 
-func UnmarshalledSSZ(serializedBytes []byte, folderName string) (interface{}, error) {
+func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (interface{}, error) {
 	var obj interface{}
 	switch folderName {
 	case "Attestation":
@@ -114,6 +114,9 @@ func UnmarshalledSSZ(serializedBytes []byte, folderName string) (interface{}, er
 		obj = &ethpb.Deposit{}
 	case "DepositData":
 		obj = &ethpb.Deposit_Data{}
+	case "DepositMessage":
+		t.Skip("Unused type")
+		return nil, nil
 	case "Eth1Data":
 		obj = &ethpb.Eth1Data{}
 	case "Fork":
@@ -126,6 +129,12 @@ func UnmarshalledSSZ(serializedBytes []byte, folderName string) (interface{}, er
 		obj = &pb.PendingAttestation{}
 	case "ProposerSlashing":
 		obj = &ethpb.ProposerSlashing{}
+	case "SignedBeaconBlock":
+		obj = &ethpb.SignedBeaconBlock{}
+	case "SignedBeaconBlockHeader":
+		obj = &ethpb.SignedBeaconBlockHeader{}
+	case "SignedVoluntaryExit":
+		obj = &ethpb.SignedVoluntaryExit{}
 	case "Validator":
 		obj = &ethpb.Validator{}
 	case "VoluntaryExit":

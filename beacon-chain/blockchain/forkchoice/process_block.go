@@ -58,9 +58,15 @@ import (
 //    # Update finalized checkpoint
 //    if state.finalized_checkpoint.epoch > store.finalized_checkpoint.epoch:
 //        store.finalized_checkpoint = state.finalized_checkpoint
-func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
+func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "forkchoice.onBlock")
 	defer span.End()
+
+	if signed == nil || signed.Block == nil {
+		return errors.New("nil block")
+	}
+
+	b := signed.Block
 
 	// Retrieve incoming block's pre state.
 	preState, err := s.getBlockPreState(ctx, b)
@@ -69,7 +75,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	}
 	preStateValidatorCount := len(preState.Validators)
 
-	root, err := ssz.SigningRoot(b)
+	root, err := ssz.HashTreeRoot(b)
 	if err != nil {
 		return errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
 	}
@@ -77,7 +83,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 		"slot": b.Slot,
 		"root": fmt.Sprintf("0x%s...", hex.EncodeToString(root[:])[:8]),
 	}).Info("Executing state transition on block")
-	postState, err := state.ExecuteStateTransition(ctx, preState, b)
+	postState, err := state.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")
 	}
@@ -85,7 +91,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 		return errors.Wrap(err, "could not update votes for attestations in block")
 	}
 
-	if err := s.db.SaveBlock(ctx, b); err != nil {
+	if err := s.db.SaveBlock(ctx, signed); err != nil {
 		return errors.Wrapf(err, "could not save block from slot %d", b.Slot)
 	}
 	if err := s.db.SaveState(ctx, postState, root); err != nil {
@@ -151,9 +157,15 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 // It runs state transition on the block and without any BLS verification. The BLS verification
 // includes proposer signature, randao and attestation's aggregated signature. It also does not save
 // attestations.
-func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.BeaconBlock) error {
+func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, signed *ethpb.SignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "forkchoice.onBlock")
 	defer span.End()
+
+	if signed == nil || signed.Block == nil {
+		return errors.New("nil block")
+	}
+
+	b := signed.Block
 
 	s.initSyncStateLock.Lock()
 	defer s.initSyncStateLock.Unlock()
@@ -167,15 +179,15 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.
 
 	log.WithField("slot", b.Slot).Debug("Executing state transition on block")
 
-	postState, err := state.ExecuteStateTransitionNoVerify(ctx, preState, b)
+	postState, err := state.ExecuteStateTransitionNoVerify(ctx, preState, signed)
 	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")
 	}
 
-	if err := s.db.SaveBlock(ctx, b); err != nil {
+	if err := s.db.SaveBlock(ctx, signed); err != nil {
 		return errors.Wrapf(err, "could not save block from slot %d", b.Slot)
 	}
-	root, err := ssz.SigningRoot(b)
+	root, err := ssz.HashTreeRoot(b)
 	if err != nil {
 		return errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
 	}
@@ -349,10 +361,11 @@ func (s *Store) verifyBlkDescendant(ctx context.Context, root [32]byte, slot uin
 	ctx, span := trace.StartSpan(ctx, "forkchoice.verifyBlkDescendant")
 	defer span.End()
 
-	finalizedBlk, err := s.db.Block(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root))
-	if err != nil || finalizedBlk == nil {
+	finalizedBlkSigned, err := s.db.Block(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root))
+	if err != nil || finalizedBlkSigned == nil || finalizedBlkSigned.Block == nil {
 		return errors.Wrap(err, "could not get finalized block")
 	}
+	finalizedBlk := finalizedBlkSigned.Block
 
 	bFinalizedRoot, err := s.ancestor(ctx, root[:], finalizedBlk.Slot)
 	if err != nil {
@@ -481,17 +494,25 @@ func (s *Store) shouldUpdateCurrentJustified(ctx context.Context, newJustifiedCh
 	if helpers.SlotsSinceEpochStarts(s.currentSlot()) < params.BeaconConfig().SafeSlotsToUpdateJustified {
 		return true, nil
 	}
-	newJustifiedBlock, err := s.db.Block(ctx, bytesutil.ToBytes32(newJustifiedCheckpt.Root))
-	if err != nil || newJustifiedBlock == nil {
-		return false, err
-	}
-	if newJustifiedBlock.Slot <= helpers.StartSlot(s.justifiedCheckpt.Epoch) {
-		return false, nil
-	}
-	justifiedBlock, err := s.db.Block(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root))
+	newJustifiedBlockSigned, err := s.db.Block(ctx, bytesutil.ToBytes32(newJustifiedCheckpt.Root))
 	if err != nil {
 		return false, err
 	}
+	if newJustifiedBlockSigned == nil || newJustifiedBlockSigned.Block == nil {
+		return false, errors.New("nil new justified block")
+	}
+	newJustifiedBlock := newJustifiedBlockSigned.Block
+	if newJustifiedBlock.Slot <= helpers.StartSlot(s.justifiedCheckpt.Epoch) {
+		return false, nil
+	}
+	justifiedBlockSigned, err := s.db.Block(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root))
+	if err != nil {
+		return false, err
+	}
+	if justifiedBlockSigned == nil || justifiedBlockSigned.Block == nil {
+		return false, errors.New("nil justified block")
+	}
+	justifiedBlock := justifiedBlockSigned.Block
 	b, err := s.ancestor(ctx, newJustifiedCheckpt.Root, justifiedBlock.Slot)
 	if err != nil {
 		return false, err

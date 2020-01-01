@@ -17,7 +17,11 @@ import (
 
 // ValidateVoluntaryExit validates the voluntary exit.
 // If it is invalid for some reason an error, if valid it will return no error.
-func ValidateVoluntaryExit(state *pb.BeaconState, genesisTime time.Time, ve *ethpb.VoluntaryExit) error {
+func ValidateVoluntaryExit(state *pb.BeaconState, genesisTime time.Time, signed *ethpb.SignedVoluntaryExit) error {
+	if signed == nil || signed.Exit == nil {
+		return errors.New("nil signed voluntary exit")
+	}
+	ve := signed.Exit
 	if ve.ValidatorIndex >= uint64(len(state.Validators)) {
 		return fmt.Errorf("unknown validator index %d", ve.ValidatorIndex)
 	}
@@ -39,11 +43,11 @@ func ValidateVoluntaryExit(state *pb.BeaconState, genesisTime time.Time, ve *eth
 	}
 
 	// Confirm signature is valid
-	root, err := ssz.SigningRoot(ve)
+	root, err := ssz.HashTreeRoot(ve)
 	if err != nil {
 		return errors.Wrap(err, "cannot confirm signature")
 	}
-	sig, err := bls.SignatureFromBytes(ve.Signature)
+	sig, err := bls.SignatureFromBytes(signed.Signature)
 	if err != nil {
 		return errors.Wrap(err, "malformed signature")
 	}

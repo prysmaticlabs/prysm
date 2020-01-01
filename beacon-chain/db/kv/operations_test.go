@@ -16,7 +16,7 @@ func TestStore_VoluntaryExits_CRUD(t *testing.T) {
 	exit := &ethpb.VoluntaryExit{
 		Epoch: 5,
 	}
-	exitRoot, err := ssz.SigningRoot(exit)
+	exitRoot, err := ssz.HashTreeRoot(exit)
 	if err != nil {
 		t.Fatal(err)
 	}

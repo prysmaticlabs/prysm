@@ -182,7 +182,6 @@ func OptimizedGenesisBeaconState(genesisTime uint64, bState *pb.BeaconState, eth
 		ParentRoot: zeroHash,
 		StateRoot:  zeroHash,
 		BodyRoot:   bodyRoot[:],
-		Signature:  params.BeaconConfig().EmptySignature[:],
 	}
 
 	return state, nil

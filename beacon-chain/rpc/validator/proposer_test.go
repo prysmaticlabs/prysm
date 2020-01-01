@@ -43,7 +43,7 @@ func TestProposeBlock_OK(t *testing.T) {
 	numDeposits := params.BeaconConfig().MinGenesisActiveValidatorCount
 	beaconState, _ := testutil.DeterministicGenesisState(t, numDeposits)
 
-	genesisRoot, err := ssz.SigningRoot(genesis)
+	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,10 +62,12 @@ func TestProposeBlock_OK(t *testing.T) {
 		BlockReceiver:     &mock.ChainService{},
 		HeadFetcher:       &mock.ChainService{},
 	}
-	req := &ethpb.BeaconBlock{
-		Slot:       5,
-		ParentRoot: []byte("parent-hash"),
-		Body:       &ethpb.BeaconBlockBody{},
+	req := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Slot:       5,
+			ParentRoot: []byte("parent-hash"),
+			Body:       &ethpb.BeaconBlockBody{},
+		},
 	}
 	if err := proposerServer.BeaconDB.SaveBlock(ctx, req); err != nil {
 		t.Fatal(err)
@@ -92,7 +94,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	parentRoot, err := ssz.SigningRoot(genesis)
+	parentRoot, err := ssz.HashTreeRoot(genesis.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -110,14 +112,16 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		Eth1BlockFetcher:  &mockPOW.POWChain{},
 	}
 
-	req := &ethpb.BeaconBlock{
-		ParentRoot: parentRoot[:],
-		Slot:       1,
-		Body: &ethpb.BeaconBlockBody{
-			RandaoReveal:      nil,
-			ProposerSlashings: nil,
-			AttesterSlashings: nil,
-			Eth1Data:          &ethpb.Eth1Data{},
+	req := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			ParentRoot: parentRoot[:],
+			Slot:       1,
+			Body: &ethpb.BeaconBlockBody{
+				RandaoReveal:      nil,
+				ProposerSlashings: nil,
+				AttesterSlashings: nil,
+				Eth1Data:          &ethpb.Eth1Data{},
+			},
 		},
 	}
 	beaconState.Slot++
@@ -130,8 +134,8 @@ func TestComputeStateRoot_OK(t *testing.T) {
 		t.Error(err)
 	}
 	beaconState.Slot--
-	req.Body.RandaoReveal = randaoReveal[:]
-	signingRoot, err := ssz.SigningRoot(req)
+	req.Block.Body.RandaoReveal = randaoReveal[:]
+	signingRoot, err := ssz.HashTreeRoot(req.Block)
 	if err != nil {
 		t.Error(err)
 	}
@@ -182,7 +186,7 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 		Body: &ethpb.BeaconBlockBody{Eth1Data: &ethpb.Eth1Data{}},
 	}
 
-	blkRoot, err := ssz.SigningRoot(blk)
+	blkRoot, err := ssz.HashTreeRoot(blk)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -328,7 +332,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		Slot: beaconState.Slot,
 	}
 
-	blkRoot, err := ssz.SigningRoot(blk)
+	blkRoot, err := ssz.HashTreeRoot(blk)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -402,7 +406,7 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 		Slot: beaconState.Slot,
 	}
 
-	blkRoot, err := ssz.SigningRoot(blk)
+	blkRoot, err := ssz.HashTreeRoot(blk)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -529,7 +533,7 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 	blk := &ethpb.BeaconBlock{
 		Slot: beaconState.Slot,
 	}
-	blkRoot, err := ssz.SigningRoot(blk)
+	blkRoot, err := ssz.HashTreeRoot(blk)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -636,7 +640,7 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 	blk := &ethpb.BeaconBlock{
 		Slot: beaconState.Slot,
 	}
-	blkRoot, err := ssz.SigningRoot(blk)
+	blkRoot, err := ssz.HashTreeRoot(blk)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -740,7 +744,7 @@ func TestPendingDeposits_CantReturnMoreDepositCount(t *testing.T) {
 	blk := &ethpb.BeaconBlock{
 		Slot: beaconState.Slot,
 	}
-	blkRoot, err := ssz.SigningRoot(blk)
+	blkRoot, err := ssz.HashTreeRoot(blk)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1011,7 +1015,7 @@ func TestFilterAttestation_OK(t *testing.T) {
 	numDeposits := params.BeaconConfig().MinGenesisActiveValidatorCount
 	state, privKeys := testutil.DeterministicGenesisState(t, numDeposits)
 
-	genesisRoot, err := ssz.SigningRoot(genesis)
+	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1137,7 +1141,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 	blk := &ethpb.BeaconBlock{
 		Slot: beaconState.Slot,
 	}
-	blkRoot, err := ssz.SigningRoot(blk)
+	blkRoot, err := ssz.HashTreeRoot(blk)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -1186,7 +1190,7 @@ func TestDeposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t *testing
 	blk := &ethpb.BeaconBlock{
 		Slot: beaconState.Slot,
 	}
-	blkRoot, err := ssz.SigningRoot(blk)
+	blkRoot, err := ssz.HashTreeRoot(blk)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -86,7 +86,7 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 // a slashable proposal.
 func (ss *Server) IsSlashableBlock(ctx context.Context, psr *slashpb.ProposerSlashingRequest) (*slashpb.ProposerSlashingResponse, error) {
 	//TODO(#3133): add signature validation
-	epoch := helpers.SlotToEpoch(psr.BlockHeader.Slot)
+	epoch := helpers.SlotToEpoch(psr.BlockHeader.Header.Slot)
 	blockHeaders, err := ss.SlasherDB.BlockHeader(epoch, psr.ValidatorIndex)
 	if err != nil {
 		return nil, errors.Wrap(err, "slasher service error while trying to retrieve blocks")

@@ -156,9 +156,9 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 	validators := uint64(256)
 	beaconState, _ := testutil.DeterministicGenesisState(t, validators)
 
-	b := &ethpb.BeaconBlock{}
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	db.SaveBlock(context.Background(), b)
-	root, _ := ssz.SigningRoot(b)
+	root, _ := ssz.HashTreeRoot(b.Block)
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(0, true)
@@ -231,9 +231,9 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	validators := uint64(256)
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
-	b := &ethpb.BeaconBlock{}
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	db.SaveBlock(context.Background(), b)
-	root, _ := ssz.SigningRoot(b)
+	root, _ := ssz.HashTreeRoot(b.Block)
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(0, true)

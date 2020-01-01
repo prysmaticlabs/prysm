@@ -67,11 +67,12 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 	}
 
 	parentRoot := [32]byte{1, 2, 3}
-	blk := &ethpb.BeaconBlock{
+	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{
 		Slot:       0,
 		ParentRoot: parentRoot[:],
+	},
 	}
-	root, err := ssz.SigningRoot(blk)
+	root, err := ssz.HashTreeRoot(blk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}

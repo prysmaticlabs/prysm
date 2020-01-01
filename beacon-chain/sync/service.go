@@ -47,7 +47,7 @@ func NewRegularSync(cfg *Config) *Service {
 		attPool:             cfg.AttPool,
 		chain:               cfg.Chain,
 		initialSync:         cfg.InitialSync,
-		slotToPendingBlocks: make(map[uint64]*ethpb.BeaconBlock),
+		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 		stateNotifier:       cfg.StateNotifier,
 	}
@@ -67,7 +67,7 @@ type Service struct {
 	db                  db.Database
 	attPool             attestations.Pool
 	chain               blockchainService
-	slotToPendingBlocks map[uint64]*ethpb.BeaconBlock
+	slotToPendingBlocks map[uint64]*ethpb.SignedBeaconBlock
 	seenPendingBlocks   map[[32]byte]bool
 	pendingQueueLock    sync.RWMutex
 	chainStarted        bool

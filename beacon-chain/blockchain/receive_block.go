@@ -20,10 +20,10 @@ import (
 
 // BlockReceiver interface defines the methods of chain service receive and processing new blocks.
 type BlockReceiver interface {
-	ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) error
-	ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconBlock) error
-	ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.BeaconBlock) error
-	ReceiveBlockNoVerify(ctx context.Context, block *ethpb.BeaconBlock) error
+	ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock) error
+	ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedBeaconBlock) error
+	ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.SignedBeaconBlock) error
+	ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedBeaconBlock) error
 }
 
 // ReceiveBlock is a function that defines the operations that are preformed on
@@ -32,11 +32,11 @@ type BlockReceiver interface {
 //   2. Validate block, apply state transition and update check points
 //   3. Apply fork choice to the processed block
 //   4. Save latest head info
-func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
+func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
 	defer span.End()
 
-	root, err := ssz.SigningRoot(block)
+	root, err := ssz.HashTreeRoot(block.Block)
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root on received block")
 	}
@@ -62,10 +62,10 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) er
 //   1. Validate block, apply state transition and update check points
 //   2. Apply fork choice to the processed block
 //   3. Save latest head info
-func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconBlock) error {
+func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlockNoPubsub")
 	defer span.End()
-	blockCopy := proto.Clone(block).(*ethpb.BeaconBlock)
+	blockCopy := proto.Clone(block).(*ethpb.SignedBeaconBlock)
 
 	// Apply state transition on the new block.
 	if err := s.forkChoiceStore.OnBlock(ctx, blockCopy); err != nil {
@@ -73,7 +73,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconB
 		traceutil.AnnotateError(span, err)
 		return err
 	}
-	root, err := ssz.SigningRoot(blockCopy)
+	root, err := ssz.HashTreeRoot(blockCopy.Block)
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root on received block")
 	}
@@ -83,14 +83,17 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconB
 	if err != nil {
 		return errors.Wrap(err, "could not get head from fork choice service")
 	}
-	headBlk, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
+	signedHeadBlock, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
 	if err != nil {
 		return errors.Wrap(err, "could not compute state from block head")
+	}
+	if signedHeadBlock == nil || signedHeadBlock.Block == nil {
+		return errors.New("nil head block")
 	}
 
 	// Only save head if it's different than the current head.
 	if !bytes.Equal(headRoot, s.HeadRoot()) {
-		if err := s.saveHead(ctx, headBlk, bytesutil.ToBytes32(headRoot)); err != nil {
+		if err := s.saveHead(ctx, signedHeadBlock, bytesutil.ToBytes32(headRoot)); err != nil {
 			return errors.Wrap(err, "could not save head")
 		}
 	}
@@ -105,19 +108,19 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconB
 	})
 
 	// Add attestations from the block to the pool for fork choice.
-	if err := s.attPool.SaveBlockAttestations(block.Body.Attestations); err != nil {
+	if err := s.attPool.SaveBlockAttestations(blockCopy.Block.Body.Attestations); err != nil {
 		log.Errorf("Could not save attestation for fork choice: %v", err)
 		return nil
 	}
 
 	// Reports on block and fork choice metrics.
-	s.reportSlotMetrics(blockCopy.Slot)
+	s.reportSlotMetrics(blockCopy.Block.Slot)
 
 	// Log if block is a competing block.
-	isCompetingBlock(root[:], blockCopy.Slot, headRoot, headBlk.Slot)
+	isCompetingBlock(root[:], blockCopy.Block.Slot, headRoot, signedHeadBlock.Block.Slot)
 
 	// Log state transition data.
-	logStateTransitionData(blockCopy, root[:])
+	logStateTransitionData(blockCopy.Block, root[:])
 
 	processedBlkNoPubsub.Inc()
 
@@ -128,10 +131,10 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconB
 // that are preformed blocks that is received from initial sync service. The operations consists of:
 //   1. Validate block, apply state transition and update check points
 //   2. Save latest head info
-func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.BeaconBlock) error {
+func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.SignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlockNoForkchoice")
 	defer span.End()
-	blockCopy := proto.Clone(block).(*ethpb.BeaconBlock)
+	blockCopy := proto.Clone(block).(*ethpb.SignedBeaconBlock)
 
 	// Apply state transition on the incoming newly received block.
 	if err := s.forkChoiceStore.OnBlock(ctx, blockCopy); err != nil {
@@ -139,7 +142,7 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 		traceutil.AnnotateError(span, err)
 		return err
 	}
-	root, err := ssz.SigningRoot(blockCopy)
+	root, err := ssz.HashTreeRoot(blockCopy.Block)
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root on received block")
 	}
@@ -160,10 +163,10 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 	})
 
 	// Reports on block and fork choice metrics.
-	s.reportSlotMetrics(blockCopy.Slot)
+	s.reportSlotMetrics(blockCopy.Block.Slot)
 
 	// Log state transition data.
-	logStateTransitionData(blockCopy, root[:])
+	logStateTransitionData(blockCopy.Block, root[:])
 
 	processedBlkNoPubsubForkchoice.Inc()
 	return nil
@@ -172,16 +175,16 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 // ReceiveBlockNoVerify runs state transition on a input block without verifying the block's BLS contents.
 // Depends on the security model, this is the "minimal" work a node can do to sync the chain.
 // It simulates light client behavior and assumes 100% trust with the syncing peer.
-func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.BeaconBlock) error {
+func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlockNoVerify")
 	defer span.End()
-	blockCopy := proto.Clone(block).(*ethpb.BeaconBlock)
+	blockCopy := proto.Clone(block).(*ethpb.SignedBeaconBlock)
 
 	// Apply state transition on the incoming newly received blockCopy without verifying its BLS contents.
 	if err := s.forkChoiceStore.OnBlockInitialSyncStateTransition(ctx, blockCopy); err != nil {
 		return errors.Wrap(err, "could not process blockCopy from fork choice service")
 	}
-	root, err := ssz.SigningRoot(blockCopy)
+	root, err := ssz.HashTreeRoot(blockCopy.Block)
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root on received blockCopy")
 	}
@@ -214,13 +217,13 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.BeaconB
 	})
 
 	// Reports on blockCopy and fork choice metrics.
-	s.reportSlotMetrics(blockCopy.Slot)
+	s.reportSlotMetrics(blockCopy.Block.Slot)
 
 	// Log state transition data.
 	log.WithFields(logrus.Fields{
-		"slot":         blockCopy.Slot,
-		"attestations": len(blockCopy.Body.Attestations),
-		"deposits":     len(blockCopy.Body.Deposits),
+		"slot":         blockCopy.Block.Slot,
+		"attestations": len(blockCopy.Block.Body.Attestations),
+		"deposits":     len(blockCopy.Block.Body.Deposits),
 	}).Debug("Finished applying state transition")
 
 	return nil

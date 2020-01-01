@@ -39,14 +39,16 @@ func TestProposeAttestation_OK(t *testing.T) {
 		AttestationCache: cache.NewAttestationCache(),
 		AttPool:          attestations.NewPool(),
 	}
-	head := &ethpb.BeaconBlock{
-		Slot:       999,
-		ParentRoot: []byte{'a'},
+	head := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Slot:       999,
+			ParentRoot: []byte{'a'},
+		},
 	}
 	if err := db.SaveBlock(ctx, head); err != nil {
 		t.Fatal(err)
 	}
-	root, err := ssz.SigningRoot(head)
+	root, err := ssz.HashTreeRoot(head.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,15 +123,15 @@ func TestGetAttestationData_OK(t *testing.T) {
 	justifiedBlock := &ethpb.BeaconBlock{
 		Slot: 2 * params.BeaconConfig().SlotsPerEpoch,
 	}
-	blockRoot, err := ssz.SigningRoot(block)
+	blockRoot, err := ssz.HashTreeRoot(block)
 	if err != nil {
 		t.Fatalf("Could not hash beacon block: %v", err)
 	}
-	justifiedRoot, err := ssz.SigningRoot(justifiedBlock)
+	justifiedRoot, err := ssz.HashTreeRoot(justifiedBlock)
 	if err != nil {
 		t.Fatalf("Could not get signing root for justified block: %v", err)
 	}
-	targetRoot, err := ssz.SigningRoot(targetBlock)
+	targetRoot, err := ssz.HashTreeRoot(targetBlock)
 	if err != nil {
 		t.Fatalf("Could not get signing root for target block: %v", err)
 	}
@@ -214,15 +216,15 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	justifiedBlock := &ethpb.BeaconBlock{
 		Slot: helpers.StartSlot(helpers.SlotToEpoch(1500)) - 2, // Imagine two skip block
 	}
-	blockRoot, err := ssz.SigningRoot(block)
+	blockRoot, err := ssz.HashTreeRoot(block)
 	if err != nil {
 		t.Fatalf("Could not hash beacon block: %v", err)
 	}
-	justifiedBlockRoot, err := ssz.SigningRoot(justifiedBlock)
+	justifiedBlockRoot, err := ssz.HashTreeRoot(justifiedBlock)
 	if err != nil {
 		t.Fatalf("Could not hash justified block: %v", err)
 	}
-	epochBoundaryRoot, err := ssz.SigningRoot(epochBoundaryBlock)
+	epochBoundaryRoot, err := ssz.HashTreeRoot(epochBoundaryBlock)
 	if err != nil {
 		t.Fatalf("Could not hash justified block: %v", err)
 	}

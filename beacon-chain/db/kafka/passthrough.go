@@ -51,17 +51,17 @@ func (e Exporter) DeleteAttestations(ctx context.Context, attDataRoots [][32]byt
 }
 
 // Block -- passthrough.
-func (e Exporter) Block(ctx context.Context, blockRoot [32]byte) (*eth.BeaconBlock, error) {
+func (e Exporter) Block(ctx context.Context, blockRoot [32]byte) (*eth.SignedBeaconBlock, error) {
 	return e.db.Block(ctx, blockRoot)
 }
 
 // HeadBlock -- passthrough.
-func (e Exporter) HeadBlock(ctx context.Context) (*eth.BeaconBlock, error) {
+func (e Exporter) HeadBlock(ctx context.Context) (*eth.SignedBeaconBlock, error) {
 	return e.db.HeadBlock(ctx)
 }
 
 // Blocks -- passthrough.
-func (e Exporter) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*eth.BeaconBlock, error) {
+func (e Exporter) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*eth.SignedBeaconBlock, error) {
 	return e.db.Blocks(ctx, f)
 }
 
@@ -201,7 +201,7 @@ func (e Exporter) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) err
 }
 
 // GenesisBlock -- passthrough.
-func (e Exporter) GenesisBlock(ctx context.Context) (*ethpb.BeaconBlock, error) {
+func (e Exporter) GenesisBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error) {
 	return e.db.GenesisBlock(ctx)
 }
 

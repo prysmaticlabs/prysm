@@ -43,12 +43,14 @@ func TestStore_FinalizedCheckpoint_CanSaveRetrieve(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	blk := &ethpb.BeaconBlock{
-		ParentRoot: genesis[:],
-		Slot:       40,
+	blk := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			ParentRoot: genesis[:],
+			Slot:       40,
+		},
 	}
 
-	root, err := ssz.SigningRoot(blk)
+	root, err := ssz.HashTreeRoot(blk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}

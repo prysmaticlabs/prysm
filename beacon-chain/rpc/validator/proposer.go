@@ -38,7 +38,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	// Retrieve the parent block as the current head of the canonical chain
 	parent := vs.HeadFetcher.HeadBlock()
 
-	parentRoot, err := ssz.SigningRoot(parent)
+	parentRoot, err := ssz.HashTreeRoot(parent.Block)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get parent block signing root: %v", err)
 	}
@@ -64,8 +64,6 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	// Use zero hash as stub for state root to compute later.
 	stateRoot := params.BeaconConfig().ZeroHash[:]
 
-	emptySig := make([]byte, 96)
-
 	graffiti := bytesutil.ToBytes32([]byte(req.Graffiti))
 
 	blk := &ethpb.BeaconBlock{
@@ -80,16 +78,15 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 			// TODO(2766): Implement rest of the retrievals for beacon block operations
 			ProposerSlashings: []*ethpb.ProposerSlashing{},
 			AttesterSlashings: []*ethpb.AttesterSlashing{},
-			VoluntaryExits:    []*ethpb.VoluntaryExit{},
+			VoluntaryExits:    []*ethpb.SignedVoluntaryExit{},
 			Graffiti:          graffiti[:],
 		},
-		Signature: emptySig,
 	}
 
 	// Compute state root with the newly constructed block.
-	stateRoot, err = vs.computeStateRoot(ctx, blk)
+	stateRoot, err = vs.computeStateRoot(ctx, &ethpb.SignedBeaconBlock{Block: blk, Signature: make([]byte, 96)})
 	if err != nil {
-		interop.WriteBlockToDisk(blk, true /*failed*/)
+		interop.WriteBlockToDisk(&ethpb.SignedBeaconBlock{Block: blk}, true /*failed*/)
 		return nil, status.Errorf(codes.Internal, "Could not compute state root: %v", err)
 	}
 	blk.StateRoot = stateRoot
@@ -99,8 +96,8 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
 // to get it processed by the beacon node as the canonical head.
-func (vs *Server) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlock) (*ethpb.ProposeResponse, error) {
-	root, err := ssz.SigningRoot(blk)
+func (vs *Server) ProposeBlock(ctx context.Context, blk *ethpb.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
+	root, err := ssz.HashTreeRoot(blk.Block)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not tree hash block: %v", err)
 	}
@@ -110,7 +107,7 @@ func (vs *Server) ProposeBlock(ctx context.Context, blk *ethpb.BeaconBlock) (*et
 		return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
 	}
 
-	if err := vs.deleteAttsInPool(blk.Body.Attestations); err != nil {
+	if err := vs.deleteAttsInPool(blk.Block.Body.Attestations); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not delete attestations in pool: %v", err)
 	}
 
@@ -196,7 +193,7 @@ func (vs *Server) randomETH1DataVote(ctx context.Context) (*ethpb.Eth1Data, erro
 
 // computeStateRoot computes the state root after a block has been processed through a state transition and
 // returns it to the validator client.
-func (vs *Server) computeStateRoot(ctx context.Context, block *ethpb.BeaconBlock) ([]byte, error) {
+func (vs *Server) computeStateRoot(ctx context.Context, block *ethpb.SignedBeaconBlock) ([]byte, error) {
 	beaconState, err := vs.BeaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve beacon state")

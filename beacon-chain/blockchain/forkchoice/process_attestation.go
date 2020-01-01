@@ -186,11 +186,11 @@ func (s *Store) verifyBeaconBlock(ctx context.Context, data *ethpb.AttestationDa
 	if err != nil {
 		return err
 	}
-	if b == nil {
+	if b == nil || b.Block == nil {
 		return fmt.Errorf("beacon block %#x does not exist", bytesutil.Trunc(data.BeaconBlockRoot))
 	}
-	if b.Slot > data.Slot {
-		return fmt.Errorf("could not process attestation for future block, %d > %d", b.Slot, data.Slot)
+	if b.Block.Slot > data.Slot {
+		return fmt.Errorf("could not process attestation for future block, %d > %d", b.Block.Slot, data.Slot)
 	}
 	return nil
 }

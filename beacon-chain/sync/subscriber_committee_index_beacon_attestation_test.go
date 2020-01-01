@@ -30,7 +30,7 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	root, err := ssz.SigningRoot(blk)
+	root, err := ssz.HashTreeRoot(blk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}

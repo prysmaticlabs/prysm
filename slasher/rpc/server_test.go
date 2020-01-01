@@ -20,16 +20,20 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 		SlasherDB: dbs,
 	}
 	psr := &slashpb.ProposerSlashingRequest{
-		BlockHeader: &ethpb.BeaconBlockHeader{
-			Slot:      1,
-			StateRoot: []byte("A"),
+		BlockHeader: &ethpb.SignedBeaconBlockHeader{
+			Header: &ethpb.BeaconBlockHeader{
+				Slot:      1,
+				StateRoot: []byte("A"),
+			},
 		},
 		ValidatorIndex: 1,
 	}
 	psr2 := &slashpb.ProposerSlashingRequest{
-		BlockHeader: &ethpb.BeaconBlockHeader{
-			Slot:      1,
-			StateRoot: []byte("B"),
+		BlockHeader: &ethpb.SignedBeaconBlockHeader{
+			Header: &ethpb.BeaconBlockHeader{
+				Slot:      1,
+				StateRoot: []byte("B"),
+			},
 		},
 		ValidatorIndex: 1,
 	}
@@ -65,16 +69,20 @@ func TestServer_IsNotSlashableBlock(t *testing.T) {
 		SlasherDB: dbs,
 	}
 	psr := &slashpb.ProposerSlashingRequest{
-		BlockHeader: &ethpb.BeaconBlockHeader{
-			Slot:      1,
-			StateRoot: []byte("A"),
+		BlockHeader: &ethpb.SignedBeaconBlockHeader{
+			Header: &ethpb.BeaconBlockHeader{
+				Slot:      1,
+				StateRoot: []byte("A"),
+			},
 		},
 		ValidatorIndex: 1,
 	}
 	psr2 := &slashpb.ProposerSlashingRequest{
-		BlockHeader: &ethpb.BeaconBlockHeader{
-			Slot:      65,
-			StateRoot: []byte("B"),
+		BlockHeader: &ethpb.SignedBeaconBlockHeader{
+			Header: &ethpb.BeaconBlockHeader{
+				Slot:      65,
+				StateRoot: []byte("B"),
+			},
 		},
 		ValidatorIndex: 1,
 	}
@@ -103,9 +111,11 @@ func TestServer_DoubleBlock(t *testing.T) {
 		SlasherDB: dbs,
 	}
 	psr := &slashpb.ProposerSlashingRequest{
-		BlockHeader: &ethpb.BeaconBlockHeader{
-			Slot:      1,
-			StateRoot: []byte("A"),
+		BlockHeader: &ethpb.SignedBeaconBlockHeader{
+			Header: &ethpb.BeaconBlockHeader{
+				Slot:      1,
+				StateRoot: []byte("A"),
+			},
 		},
 		ValidatorIndex: 1,
 	}
@@ -133,16 +143,20 @@ func TestServer_SameSlotSlashable(t *testing.T) {
 		SlasherDB: dbs,
 	}
 	psr := &slashpb.ProposerSlashingRequest{
-		BlockHeader: &ethpb.BeaconBlockHeader{
-			Slot:      1,
-			StateRoot: []byte("A"),
+		BlockHeader: &ethpb.SignedBeaconBlockHeader{
+			Header: &ethpb.BeaconBlockHeader{
+				Slot:      1,
+				StateRoot: []byte("A"),
+			},
 		},
 		ValidatorIndex: 1,
 	}
 	psr2 := &slashpb.ProposerSlashingRequest{
-		BlockHeader: &ethpb.BeaconBlockHeader{
-			Slot:      1,
-			StateRoot: []byte("B"),
+		BlockHeader: &ethpb.SignedBeaconBlockHeader{
+			Header: &ethpb.BeaconBlockHeader{
+				Slot:      1,
+				StateRoot: []byte("B"),
+			},
 		},
 		ValidatorIndex: 1,
 	}

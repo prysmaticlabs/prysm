@@ -34,7 +34,7 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{Slot: 9}
 
-	lbhsr, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
+	lbhsr, err := ssz.HashTreeRoot(beaconState.LatestBlockHeader)
 	if err != nil {
 		t.Error(err)
 	}
@@ -44,14 +44,16 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 		t.Error(err)
 	}
 
-	block := &ethpb.BeaconBlock{
-		Slot: 0,
-		Body: &ethpb.BeaconBlockBody{
-			RandaoReveal: []byte{'A', 'B', 'C'},
+	block := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Slot: 0,
+			Body: &ethpb.BeaconBlockBody{
+				RandaoReveal: []byte{'A', 'B', 'C'},
+			},
+			ParentRoot: lbhsr[:],
 		},
-		ParentRoot: lbhsr[:],
 	}
-	signingRoot, err := ssz.SigningRoot(block)
+	signingRoot, err := ssz.HashTreeRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Failed to get signing root of block: %v", err)
 	}
@@ -96,13 +98,15 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 	priv := bls.RandKey()
 	blockSig := priv.Sign([]byte("hello"), dt)
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
-	block := &ethpb.BeaconBlock{
-		Slot: 1,
-		Body: &ethpb.BeaconBlockBody{
-			RandaoReveal: []byte{'A', 'B', 'C'},
+	block := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Slot: 1,
+			Body: &ethpb.BeaconBlockBody{
+				RandaoReveal: []byte{'A', 'B', 'C'},
+			},
+			ParentRoot: lbhsr[:],
 		},
-		ParentRoot: lbhsr[:],
-		Signature:  blockSig.Marshal(),
+		Signature: blockSig.Marshal(),
 	}
 
 	_, err = blocks.ProcessBlockHeader(state, block)
@@ -137,13 +141,15 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 	priv := bls.RandKey()
 	blockSig := priv.Sign([]byte("hello"), dt)
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
-	block := &ethpb.BeaconBlock{
-		Slot: 0,
-		Body: &ethpb.BeaconBlockBody{
-			RandaoReveal: []byte{'A', 'B', 'C'},
+	block := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Slot: 0,
+			Body: &ethpb.BeaconBlockBody{
+				RandaoReveal: []byte{'A', 'B', 'C'},
+			},
+			ParentRoot: []byte{'A'},
 		},
-		ParentRoot: []byte{'A'},
-		Signature:  blockSig.Marshal(),
+		Signature: blockSig.Marshal(),
 	}
 
 	_, err := blocks.ProcessBlockHeader(state, block)
@@ -173,7 +179,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
-	parentRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
+	parentRoot, err := ssz.HashTreeRoot(state.LatestBlockHeader)
 	if err != nil {
 		t.Error(err)
 	}
@@ -182,13 +188,15 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 	priv := bls.RandKey()
 	blockSig := priv.Sign([]byte("hello"), dt)
 	validators[12683].PublicKey = priv.PublicKey().Marshal()
-	block := &ethpb.BeaconBlock{
-		Slot: 0,
-		Body: &ethpb.BeaconBlockBody{
-			RandaoReveal: []byte{'A', 'B', 'C'},
+	block := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Slot: 0,
+			Body: &ethpb.BeaconBlockBody{
+				RandaoReveal: []byte{'A', 'B', 'C'},
+			},
+			ParentRoot: parentRoot[:],
 		},
-		ParentRoot: parentRoot[:],
-		Signature:  blockSig.Marshal(),
+		Signature: blockSig.Marshal(),
 	}
 
 	_, err = blocks.ProcessBlockHeader(state, block)
@@ -218,27 +226,29 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
-	latestBlockSignedRoot, err := ssz.SigningRoot(state.LatestBlockHeader)
+	latestBlockSignedRoot, err := ssz.HashTreeRoot(state.LatestBlockHeader)
 	if err != nil {
 		t.Error(err)
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
 	dt := helpers.Domain(state.Fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	priv := bls.RandKey()
-	block := &ethpb.BeaconBlock{
-		Slot: 0,
-		Body: &ethpb.BeaconBlockBody{
-			RandaoReveal: []byte{'A', 'B', 'C'},
+	block := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Slot: 0,
+			Body: &ethpb.BeaconBlockBody{
+				RandaoReveal: []byte{'A', 'B', 'C'},
+			},
+			ParentRoot: latestBlockSignedRoot[:],
 		},
-		ParentRoot: latestBlockSignedRoot[:],
 	}
-	signingRoot, err := ssz.SigningRoot(block)
+	signingRoot, err := ssz.HashTreeRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Failed to get signing root of block: %v", err)
 	}
 	blockSig := priv.Sign(signingRoot[:], dt)
 	block.Signature = blockSig.Marshal()[:]
-	bodyRoot, err := ssz.HashTreeRoot(block.Body)
+	bodyRoot, err := ssz.HashTreeRoot(block.Block.Body)
 	if err != nil {
 		t.Fatalf("Failed to hash block bytes got: %v", err)
 	}
@@ -255,17 +265,15 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		t.Fatalf("Failed to process block header got: %v", err)
 	}
 	var zeroHash [32]byte
-	var zeroSig [96]byte
 	nsh := newState.LatestBlockHeader
 	expected := &ethpb.BeaconBlockHeader{
-		Slot:       block.Slot,
+		Slot:       block.Block.Slot,
 		ParentRoot: latestBlockSignedRoot[:],
 		BodyRoot:   bodyRoot[:],
 		StateRoot:  zeroHash[:],
-		Signature:  zeroSig[:],
 	}
 	if !proto.Equal(nsh, expected) {
-		t.Errorf("Expected %v, received %vk9k", expected, nsh)
+		t.Errorf("Expected %v, received %v", expected, nsh)
 	}
 }
 
@@ -370,11 +378,15 @@ func TestProcessProposerSlashings_UnmatchedHeaderSlots(t *testing.T) {
 	slashings := []*ethpb.ProposerSlashing{
 		{
 			ProposerIndex: 1,
-			Header_1: &ethpb.BeaconBlockHeader{
-				Slot: params.BeaconConfig().SlotsPerEpoch + 1,
+			Header_1: &ethpb.SignedBeaconBlockHeader{
+				Header: &ethpb.BeaconBlockHeader{
+					Slot: params.BeaconConfig().SlotsPerEpoch + 1,
+				},
 			},
-			Header_2: &ethpb.BeaconBlockHeader{
-				Slot: 0,
+			Header_2: &ethpb.SignedBeaconBlockHeader{
+				Header: &ethpb.BeaconBlockHeader{
+					Slot: 0,
+				},
 			},
 		},
 	}
@@ -400,11 +412,15 @@ func TestProcessProposerSlashings_SameHeaders(t *testing.T) {
 	slashings := []*ethpb.ProposerSlashing{
 		{
 			ProposerIndex: 1,
-			Header_1: &ethpb.BeaconBlockHeader{
-				Slot: 0,
+			Header_1: &ethpb.SignedBeaconBlockHeader{
+				Header: &ethpb.BeaconBlockHeader{
+					Slot: 0,
+				},
 			},
-			Header_2: &ethpb.BeaconBlockHeader{
-				Slot: 0,
+			Header_2: &ethpb.SignedBeaconBlockHeader{
+				Header: &ethpb.BeaconBlockHeader{
+					Slot: 0,
+				},
 			},
 		},
 	}
@@ -437,12 +453,16 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 	slashings := []*ethpb.ProposerSlashing{
 		{
 			ProposerIndex: 0,
-			Header_1: &ethpb.BeaconBlockHeader{
-				Slot:      0,
+			Header_1: &ethpb.SignedBeaconBlockHeader{
+				Header: &ethpb.BeaconBlockHeader{
+					Slot: 0,
+				},
 				Signature: []byte("A"),
 			},
-			Header_2: &ethpb.BeaconBlockHeader{
-				Slot:      0,
+			Header_2: &ethpb.SignedBeaconBlockHeader{
+				Header: &ethpb.BeaconBlockHeader{
+					Slot: 0,
+				},
 				Signature: []byte("B"),
 			},
 		},
@@ -474,21 +494,25 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	proposerIdx := uint64(1)
 
 	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconProposer)
-	header1 := &ethpb.BeaconBlockHeader{
-		Slot:      0,
-		StateRoot: []byte("A"),
+	header1 := &ethpb.SignedBeaconBlockHeader{
+		Header: &ethpb.BeaconBlockHeader{
+			Slot:      0,
+			StateRoot: []byte("A"),
+		},
 	}
-	signingRoot, err := ssz.SigningRoot(header1)
+	signingRoot, err := ssz.HashTreeRoot(header1.Header)
 	if err != nil {
 		t.Errorf("Could not get signing root of beacon block header: %v", err)
 	}
 	header1.Signature = privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()[:]
 
-	header2 := &ethpb.BeaconBlockHeader{
-		Slot:      0,
-		StateRoot: []byte("B"),
+	header2 := &ethpb.SignedBeaconBlockHeader{
+		Header: &ethpb.BeaconBlockHeader{
+			Slot:      0,
+			StateRoot: []byte("B"),
+		},
 	}
-	signingRoot, err = ssz.SigningRoot(header2)
+	signingRoot, err = ssz.HashTreeRoot(header2.Header)
 	if err != nil {
 		t.Errorf("Could not get signing root of beacon block header: %v", err)
 	}
@@ -1278,7 +1302,6 @@ func TestProcessDeposits_SameValidatorMultipleDepositsSameBlock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log(dep)
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			// 3 deposits from the same validator
@@ -1400,7 +1423,7 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 			Amount:    1000,
 		},
 	}
-	sr, err := ssz.SigningRoot(deposit.Data)
+	sr, err := ssz.HashTreeRoot(deposit.Data)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1558,9 +1581,11 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 }
 
 func TestProcessVoluntaryExits_ValidatorNotActive(t *testing.T) {
-	exits := []*ethpb.VoluntaryExit{
+	exits := []*ethpb.SignedVoluntaryExit{
 		{
-			ValidatorIndex: 0,
+			Exit: &ethpb.VoluntaryExit{
+				ValidatorIndex: 0,
+			},
 		},
 	}
 	registry := []*ethpb.Validator{
@@ -1585,9 +1610,11 @@ func TestProcessVoluntaryExits_ValidatorNotActive(t *testing.T) {
 }
 
 func TestProcessVoluntaryExits_InvalidExitEpoch(t *testing.T) {
-	exits := []*ethpb.VoluntaryExit{
+	exits := []*ethpb.SignedVoluntaryExit{
 		{
-			Epoch: 10,
+			Exit: &ethpb.VoluntaryExit{
+				Epoch: 10,
+			},
 		},
 	}
 	registry := []*ethpb.Validator{
@@ -1613,10 +1640,12 @@ func TestProcessVoluntaryExits_InvalidExitEpoch(t *testing.T) {
 }
 
 func TestProcessVoluntaryExits_NotActiveLongEnoughToExit(t *testing.T) {
-	exits := []*ethpb.VoluntaryExit{
+	exits := []*ethpb.SignedVoluntaryExit{
 		{
-			ValidatorIndex: 0,
-			Epoch:          0,
+			Exit: &ethpb.VoluntaryExit{
+				ValidatorIndex: 0,
+				Epoch:          0,
+			},
 		},
 	}
 	registry := []*ethpb.Validator{
@@ -1641,10 +1670,12 @@ func TestProcessVoluntaryExits_NotActiveLongEnoughToExit(t *testing.T) {
 }
 
 func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
-	exits := []*ethpb.VoluntaryExit{
+	exits := []*ethpb.SignedVoluntaryExit{
 		{
-			ValidatorIndex: 0,
-			Epoch:          0,
+			Exit: &ethpb.VoluntaryExit{
+				ValidatorIndex: 0,
+				Epoch:          0,
+			},
 		},
 	}
 	registry := []*ethpb.Validator{
@@ -1665,7 +1696,7 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 
 	priv := bls.RandKey()
 	state.Validators[0].PublicKey = priv.PublicKey().Marshal()[:]
-	signingRoot, err := ssz.SigningRoot(exits[0])
+	signingRoot, err := ssz.HashTreeRoot(exits[0].Exit)
 	if err != nil {
 		t.Error(err)
 	}

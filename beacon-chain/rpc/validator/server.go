@@ -153,7 +153,7 @@ func (vs *Server) DomainData(ctx context.Context, request *ethpb.DomainRequest) 
 
 // CanonicalHead of the current beacon chain. This method is requested on-demand
 // by a validator when it is their time to propose or attest.
-func (vs *Server) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*ethpb.BeaconBlock, error) {
+func (vs *Server) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*ethpb.SignedBeaconBlock, error) {
 	return vs.HeadFetcher.HeadBlock(), nil
 }
 

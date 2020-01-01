@@ -213,7 +213,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 
 	sk := bls.RandKey()
 	deposit.Data.PublicKey = sk.PublicKey().Marshal()
-	signedRoot, err := ssz.SigningRoot(deposit.Data)
+	signedRoot, err := ssz.HashTreeRoot(deposit.Data)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -37,7 +37,7 @@ func (s *Service) processDepositOld(
 		if err != nil {
 			return errors.Wrap(err, "could not convert bytes to signature")
 		}
-		root, err := ssz.SigningRoot(deposit.Data)
+		root, err := ssz.HashTreeRoot(deposit.Data)
 		if err != nil {
 			return errors.Wrap(err, "could not sign root for deposit data")
 		}

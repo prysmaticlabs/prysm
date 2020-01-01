@@ -42,11 +42,11 @@ type store struct {
 	headRoot []byte
 }
 
-func (s *store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
+func (s *store) OnBlock(ctx context.Context, b *ethpb.SignedBeaconBlock) error {
 	return nil
 }
 
-func (s *store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.BeaconBlock) error {
+func (s *store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.SignedBeaconBlock) error {
 	return nil
 }
 
@@ -88,18 +88,6 @@ func (mb *mockBroadcaster) Broadcast(_ context.Context, _ proto.Message) error {
 }
 
 var _ = p2p.Broadcaster(&mockBroadcaster{})
-
-func setupGenesisBlock(t *testing.T, cs *Service) ([32]byte, *ethpb.BeaconBlock) {
-	genesis := b.NewGenesisBlock([]byte{})
-	if err := cs.beaconDB.SaveBlock(context.Background(), genesis); err != nil {
-		t.Fatalf("could not save block to db: %v", err)
-	}
-	parentHash, err := ssz.SigningRoot(genesis)
-	if err != nil {
-		t.Fatalf("unable to get tree hash root of canonical head: %v", err)
-	}
-	return parentHash, genesis
-}
 
 func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	endpoint := "ws://127.0.0.1"
@@ -198,7 +186,7 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	chainService := setupBeaconChain(t, db)
 
 	genesisBlk := b.NewGenesisBlock([]byte{})
-	blkRoot, err := ssz.SigningRoot(genesisBlk)
+	blkRoot, err := ssz.HashTreeRoot(genesisBlk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -291,7 +279,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	ctx := context.Background()
 
 	genesis := b.NewGenesisBlock([]byte{})
-	genesisRoot, err := ssz.SigningRoot(genesis)
+	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -303,9 +291,9 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	}
 
 	finalizedSlot := params.BeaconConfig().SlotsPerEpoch*2 + 1
-	headBlock := &ethpb.BeaconBlock{Slot: finalizedSlot, ParentRoot: genesisRoot[:]}
+	headBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: finalizedSlot, ParentRoot: genesisRoot[:]}}
 	headState := &pb.BeaconState{Slot: finalizedSlot}
-	headRoot, _ := ssz.SigningRoot(headBlock)
+	headRoot, _ := ssz.HashTreeRoot(headBlock.Block)
 	if err := db.SaveState(ctx, headState, headRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -335,7 +323,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	if !reflect.DeepEqual(s, headState) {
 		t.Error("head state incorrect")
 	}
-	if headBlock.Slot != c.HeadSlot() {
+	if headBlock.Block.Slot != c.HeadSlot() {
 		t.Error("head slot incorrect")
 	}
 	if !bytes.Equal(headRoot[:], c.HeadRoot()) {
@@ -354,8 +342,8 @@ func TestChainService_SaveHeadNoDB(t *testing.T) {
 		beaconDB:       db,
 		canonicalRoots: make(map[uint64][]byte),
 	}
-	b := &ethpb.BeaconBlock{Slot: 1}
-	r, _ := ssz.SigningRoot(b)
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
+	r, _ := ssz.HashTreeRoot(b)
 	if err := s.saveHeadNoDB(ctx, b, r); err != nil {
 		t.Fatal(err)
 	}

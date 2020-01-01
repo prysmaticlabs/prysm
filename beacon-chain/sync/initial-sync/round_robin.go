@@ -67,14 +67,14 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		//   Four requests will be spread across the peers using step argument to distribute the load
 		//   i.e. the first peer is asked for block 64, 68, 72... while the second peer is asked for
 		//   65, 69, 73... and so on for other peers.
-		var request func(start uint64, step uint64, count uint64, peers []peer.ID, remainder int) ([]*eth.BeaconBlock, error)
-		request = func(start uint64, step uint64, count uint64, peers []peer.ID, remainder int) ([]*eth.BeaconBlock, error) {
+		var request func(start uint64, step uint64, count uint64, peers []peer.ID, remainder int) ([]*eth.SignedBeaconBlock, error)
+		request = func(start uint64, step uint64, count uint64, peers []peer.ID, remainder int) ([]*eth.SignedBeaconBlock, error) {
 			if len(peers) == 0 {
 				return nil, errors.WithStack(errors.New("no peers left to request blocks"))
 			}
 			var p2pRequestCount int32
 			errChan := make(chan error)
-			blocksChan := make(chan []*eth.BeaconBlock)
+			blocksChan := make(chan []*eth.SignedBeaconBlock)
 
 			// Handle block large block ranges of skipped slots.
 			start += count * uint64(lastEmptyRequests*len(peers))
@@ -146,7 +146,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 				}(i, pid)
 			}
 
-			var unionRespBlocks []*eth.BeaconBlock
+			var unionRespBlocks []*eth.SignedBeaconBlock
 			for {
 				select {
 				case err := <-errChan:
@@ -185,13 +185,13 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		// process sequentially. This method doesn't make much wall time compared to block
 		// processing.
 		sort.Slice(blocks, func(i, j int) bool {
-			return blocks[i].Slot < blocks[j].Slot
+			return blocks[i].Block.Slot < blocks[j].Block.Slot
 		})
 
 		for _, blk := range blocks {
-			s.logSyncStatus(genesis, blk, peers, counter)
-			if !s.db.HasBlock(ctx, bytesutil.ToBytes32(blk.ParentRoot)) {
-				log.Debugf("Beacon node doesn't have a block in db with root %#x", blk.ParentRoot)
+			s.logSyncStatus(genesis, blk.Block, peers, counter)
+			if !s.db.HasBlock(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot)) {
+				log.Debugf("Beacon node doesn't have a block in db with root %#x", blk.Block.ParentRoot)
 				continue
 			}
 			if featureconfig.Get().InitSyncNoVerify {
@@ -252,7 +252,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		}
 
 		for _, blk := range resp {
-			s.logSyncStatus(genesis, blk, []peer.ID{best}, counter)
+			s.logSyncStatus(genesis, blk.Block, []peer.ID{best}, counter)
 			if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk); err != nil {
 				return err
 			}
@@ -266,7 +266,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 }
 
 // requestBlocks by range to a specific peer.
-func (s *Service) requestBlocks(ctx context.Context, req *p2ppb.BeaconBlocksByRangeRequest, pid peer.ID) ([]*eth.BeaconBlock, error) {
+func (s *Service) requestBlocks(ctx context.Context, req *p2ppb.BeaconBlocksByRangeRequest, pid peer.ID) ([]*eth.SignedBeaconBlock, error) {
 	log.WithFields(logrus.Fields{
 		"peer":  pid,
 		"start": req.StartSlot,
@@ -280,7 +280,7 @@ func (s *Service) requestBlocks(ctx context.Context, req *p2ppb.BeaconBlocksByRa
 	}
 	defer stream.Close()
 
-	resp := make([]*eth.BeaconBlock, 0, req.Count)
+	resp := make([]*eth.SignedBeaconBlock, 0, req.Count)
 	for {
 		blk, err := prysmsync.ReadChunkedBlock(stream, s.p2p)
 		if err == io.EOF {
