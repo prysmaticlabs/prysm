@@ -20,6 +20,7 @@ var (
 	archivedCommitteeInfoBucket          = []byte("archived-committee-info")
 	archivedBalancesBucket               = []byte("archived-balances")
 	archivedValidatorParticipationBucket = []byte("archived-validator-participation")
+	powchainBucket                       = []byte("powchain")
 
 	// Key indices buckets.
 	blockParentRootIndicesBucket        = []byte("block-parent-root-indices")
@@ -37,6 +38,7 @@ var (
 	depositContractAddressKey = []byte("deposit-contract")
 	justifiedCheckpointKey    = []byte("justified-checkpoint")
 	finalizedCheckpointKey    = []byte("finalized-checkpoint")
+	powchainDataKey           = []byte("powchain-data")
 
 	// Migration bucket.
 	migrationBucket = []byte("migrations")
