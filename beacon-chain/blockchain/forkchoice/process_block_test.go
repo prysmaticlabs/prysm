@@ -607,11 +607,19 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 
 	store := NewForkChoiceService(ctx, db)
+	signedBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	if err := db.SaveBlock(ctx, signedBlock); err != nil {
+		t.Fatal(err)
+	}
+	r, err := ssz.HashTreeRoot(signedBlock.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	store.justifiedCheckpt = &ethpb.Checkpoint{Root: []byte{'A'}}
 	store.bestJustifiedCheckpt = &ethpb.Checkpoint{Root: []byte{'A'}}
 
 	// Could update
-	s := &pb.BeaconState{CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 1}}
+	s := &pb.BeaconState{CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 1, Root: r[:]}}
 	if err := store.updateJustified(context.Background(), s); err != nil {
 		t.Fatal(err)
 	}
