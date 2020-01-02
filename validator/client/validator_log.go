@@ -9,8 +9,9 @@ import (
 )
 
 type attSubmitted struct {
-	data    *ethpb.AttestationData
-	indices []uint64
+	data              *ethpb.AttestationData
+	attesterIndices   []uint64
+	aggregatorIndices []uint64
 }
 
 func (v *validator) LogAttestationsSubmitted() {
@@ -19,15 +20,16 @@ func (v *validator) LogAttestationsSubmitted() {
 
 	for _, attLog := range v.attLogs {
 		log.WithFields(logrus.Fields{
-			"Slot":             attLog.data.Slot,
-			"CommitteeIndex":   attLog.data.CommitteeIndex,
-			"BeaconBlockRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(attLog.data.BeaconBlockRoot)),
-			"SourceEpoch":      attLog.data.Source.Epoch,
-			"SourceRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(attLog.data.Source.Root)),
-			"TargetEpoch":      attLog.data.Target.Epoch,
-			"TargetRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(attLog.data.Target.Root)),
-			"ValidatorIndices": attLog.indices,
-		}).Info("Submitted new unaggregated attestations")
+			"Slot":              attLog.data.Slot,
+			"CommitteeIndex":    attLog.data.CommitteeIndex,
+			"BeaconBlockRoot":   fmt.Sprintf("%#x", bytesutil.Trunc(attLog.data.BeaconBlockRoot)),
+			"SourceEpoch":       attLog.data.Source.Epoch,
+			"SourceRoot":        fmt.Sprintf("%#x", bytesutil.Trunc(attLog.data.Source.Root)),
+			"TargetEpoch":       attLog.data.Target.Epoch,
+			"TargetRoot":        fmt.Sprintf("%#x", bytesutil.Trunc(attLog.data.Target.Root)),
+			"AttesterIndices":   attLog.attesterIndices,
+			"AggregatorIndices": attLog.aggregatorIndices,
+		}).Info("Submitted new attestations")
 	}
 
 	v.attLogs = make(map[[32]byte]*attSubmitted)
