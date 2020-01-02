@@ -108,15 +108,15 @@ func run(ctx context.Context, v Validator) {
 							log.Warnf("Unhandled role %v", role)
 						}
 					}
-
+					wg.Done()
 				}(roles, id)
 			}
 			// Wait for all processes to complete, then report span complete.
 			go func() {
 				wg.Wait()
+				v.LogAttestationsSubmitted()
 				span.End()
 			}()
-			v.LogAttestationsSubmitted()
 		}
 	}
 }
