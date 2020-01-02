@@ -31,20 +31,6 @@ func TestBeaconDB_InsertDeposit_LogsOnNilDepositInsertion(t *testing.T) {
 	}
 }
 
-func TestBeaconDB_InsertDeposit_LogsOnNilBlockNumberInsertion(t *testing.T) {
-	hook := logTest.NewGlobal()
-	dc := DepositCache{}
-
-	dc.InsertDeposit(context.Background(), &ethpb.Deposit{}, 0, 0, [32]byte{})
-
-	if len(dc.deposits) != 0 {
-		t.Fatal("Number of deposits changed")
-	}
-	if hook.LastEntry().Message != nilDepositErr {
-		t.Errorf("Did not log correct message, wanted \"Ignoring nil deposit insertion\", got \"%s\"", hook.LastEntry().Message)
-	}
-}
-
 func TestBeaconDB_InsertDeposit_MaintainsSortedOrderByIndex(t *testing.T) {
 	dc := DepositCache{}
 
