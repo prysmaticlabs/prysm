@@ -86,11 +86,6 @@ func (m *POWChain) ChainStartDeposits() []*ethpb.Deposit {
 	return []*ethpb.Deposit{}
 }
 
-// ChainStartDepositHashes --
-func (m *POWChain) ChainStartDepositHashes() ([][]byte, error) {
-	return [][]byte{}, nil
-}
-
 // ChainStartEth1Data --
 func (m *POWChain) ChainStartEth1Data() *ethpb.Eth1Data {
 	return m.Eth1Data

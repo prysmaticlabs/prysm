@@ -375,17 +375,3 @@ func (s *Service) checkForChainStart(ctx context.Context, blkNum *big.Int) error
 	}
 	return nil
 }
-
-// ChainStartDepositHashes returns the hashes of all the chainstart deposits
-// stored in memory.
-func (s *Service) ChainStartDepositHashes() ([][]byte, error) {
-	hashes := make([][]byte, len(s.chainStartData.ChainstartDeposits))
-	for i, dep := range s.chainStartData.ChainstartDeposits {
-		hash, err := ssz.HashTreeRoot(dep.Data)
-		if err != nil {
-			return nil, err
-		}
-		hashes[i] = hash[:]
-	}
-	return hashes, nil
-}

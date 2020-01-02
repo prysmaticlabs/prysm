@@ -67,11 +67,6 @@ func (f *FaultyMockPOWChain) ChainStartDeposits() []*ethpb.Deposit {
 	return []*ethpb.Deposit{}
 }
 
-// ChainStartDepositHashes --
-func (f *FaultyMockPOWChain) ChainStartDepositHashes() ([][]byte, error) {
-	return [][]byte{}, errors.New("hashing failed")
-}
-
 // ChainStartEth1Data --
 func (f *FaultyMockPOWChain) ChainStartEth1Data() *ethpb.Eth1Data {
 	return &ethpb.Eth1Data{}
