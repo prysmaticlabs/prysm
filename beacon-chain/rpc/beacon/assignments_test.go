@@ -151,7 +151,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 	blk := &ethpb.BeaconBlock{
 		Slot: 0,
 	}
-	blockRoot, err := ssz.SigningRoot(blk)
+	blockRoot, err := ssz.HashTreeRoot(blk)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -245,7 +245,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 	blk := &ethpb.BeaconBlock{
 		Slot: 0,
 	}
-	blockRoot, err := ssz.SigningRoot(blk)
+	blockRoot, err := ssz.HashTreeRoot(blk)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -345,7 +345,7 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 	blk := &ethpb.BeaconBlock{
 		Slot: 0,
 	}
-	blockRoot, err := ssz.SigningRoot(blk)
+	blockRoot, err := ssz.HashTreeRoot(blk)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -420,7 +420,7 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 	blk := &ethpb.BeaconBlock{
 		Slot: 0,
 	}
-	blockRoot, err := ssz.SigningRoot(blk)
+	blockRoot, err := ssz.HashTreeRoot(blk)
 	if err != nil {
 		t.Fatal(err)
 	}

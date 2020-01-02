@@ -37,7 +37,7 @@ func (r *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 		return false
 	}
 
-	exit, ok := m.(*ethpb.VoluntaryExit)
+	exit, ok := m.(*ethpb.SignedVoluntaryExit)
 	if !ok {
 		return false
 	}
@@ -48,7 +48,7 @@ func (r *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 		return false
 	}
 
-	exitedEpochSlot := exit.Epoch * params.BeaconConfig().SlotsPerEpoch
+	exitedEpochSlot := exit.Exit.Epoch * params.BeaconConfig().SlotsPerEpoch
 	if s.Slot < exitedEpochSlot {
 		var err error
 		s, err = state.ProcessSlots(ctx, s, exitedEpochSlot)

@@ -29,25 +29,27 @@ func TestRegularSyncBeaconBlockSubscriber_FilterByFinalizedEpoch(t *testing.T) {
 	defer dbtest.TeardownDB(t, db)
 
 	s := &pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 1}}
-	parent := &ethpb.BeaconBlock{}
+	parent := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	if err := db.SaveBlock(context.Background(), parent); err != nil {
 		t.Fatal(err)
 	}
-	parentRoot, _ := ssz.SigningRoot(parent)
+	parentRoot, _ := ssz.HashTreeRoot(parent.Block)
 	r := &Service{
 		db:      db,
 		chain:   &mock.ChainService{State: s},
 		attPool: attestations.NewPool(),
 	}
 
-	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: parentRoot[:], Body: &ethpb.BeaconBlockBody{}}
+	b := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: parentRoot[:], Body: &ethpb.BeaconBlockBody{}},
+	}
 	if err := r.beaconBlockSubscriber(context.Background(), b); err != nil {
 		t.Fatal(err)
 	}
 	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Received a block older than finalized checkpoint, 1 < %d", params.BeaconConfig().SlotsPerEpoch))
 
 	hook.Reset()
-	b.Slot = params.BeaconConfig().SlotsPerEpoch
+	b.Block.Slot = params.BeaconConfig().SlotsPerEpoch
 	if err := r.beaconBlockSubscriber(context.Background(), b); err != nil {
 		t.Fatal(err)
 	}

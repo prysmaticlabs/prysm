@@ -207,7 +207,7 @@ func beaconState2FullEpochs() (*pb.BeaconState, error) {
 	return beaconState, nil
 }
 
-func fullBlock() (*ethpb.BeaconBlock, error) {
+func fullBlock() (*ethpb.SignedBeaconBlock, error) {
 	path, err := bazel.Runfile(FullBlockFileName)
 	if err != nil {
 		return nil, err
@@ -216,7 +216,7 @@ func fullBlock() (*ethpb.BeaconBlock, error) {
 	if err != nil {
 		return nil, err
 	}
-	beaconBlock := &ethpb.BeaconBlock{}
+	beaconBlock := &ethpb.SignedBeaconBlock{}
 	if err := ssz.Unmarshal(blockBytes, beaconBlock); err != nil {
 		return nil, err
 	}

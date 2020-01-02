@@ -18,7 +18,7 @@ func BenchmarkForkChoiceTree1(b *testing.B) {
 
 	store := NewForkChoiceService(ctx, db)
 
-	roots, err := blockTree1(db)
+	roots, err := blockTree1(db, []byte{'g'})
 	if err != nil {
 		b.Fatal(err)
 	}

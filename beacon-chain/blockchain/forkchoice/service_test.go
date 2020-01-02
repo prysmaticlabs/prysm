@@ -32,7 +32,7 @@ func TestStore_GenesisStoreOk(t *testing.T) {
 		t.Fatal(err)
 	}
 	genesisBlk := blocks.NewGenesisBlock(genesisStateRoot[:])
-	genesisBlkRoot, err := ssz.SigningRoot(genesisBlk)
+	genesisBlkRoot, err := ssz.HashTreeRoot(genesisBlk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +68,7 @@ func TestStore_AncestorOk(t *testing.T) {
 
 	store := NewForkChoiceService(ctx, db)
 
-	roots, err := blockTree1(db)
+	roots, err := blockTree1(db, []byte{'g'})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +108,7 @@ func TestStore_AncestorNotPartOfTheChain(t *testing.T) {
 
 	store := NewForkChoiceService(ctx, db)
 
-	roots, err := blockTree1(db)
+	roots, err := blockTree1(db, []byte{'g'})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,7 +139,7 @@ func TestStore_LatestAttestingBalance(t *testing.T) {
 
 	store := NewForkChoiceService(ctx, db)
 
-	roots, err := blockTree1(db)
+	roots, err := blockTree1(db, []byte{'g'})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -155,7 +155,7 @@ func TestStore_LatestAttestingBalance(t *testing.T) {
 		t.Fatal(err)
 	}
 	b := blocks.NewGenesisBlock(stateRoot[:])
-	blkRoot, err := ssz.SigningRoot(b)
+	blkRoot, err := ssz.HashTreeRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -211,7 +211,7 @@ func TestStore_ChildrenBlocksFromParentRoot(t *testing.T) {
 
 	store := NewForkChoiceService(ctx, db)
 
-	roots, err := blockTree1(db)
+	roots, err := blockTree1(db, []byte{'g'})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -242,7 +242,7 @@ func TestStore_GetHead(t *testing.T) {
 
 	store := NewForkChoiceService(ctx, db)
 
-	roots, err := blockTree1(db)
+	roots, err := blockTree1(db, []byte{'g'})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -258,7 +258,7 @@ func TestStore_GetHead(t *testing.T) {
 		t.Fatal(err)
 	}
 	b := blocks.NewGenesisBlock(stateRoot[:])
-	blkRoot, err := ssz.SigningRoot(b)
+	blkRoot, err := ssz.HashTreeRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -343,7 +343,7 @@ func TestCacheGenesisState_Correct(t *testing.T) {
 	featureconfig.Init(config)
 
 	b := &ethpb.BeaconBlock{Slot: 1}
-	r, _ := ssz.SigningRoot(b)
+	r, _ := ssz.HashTreeRoot(b)
 	s := &pb.BeaconState{GenesisTime: 99}
 
 	store.db.SaveState(ctx, s, r)
@@ -367,7 +367,7 @@ func TestStore_GetFilterBlockTree_CorrectLeaf(t *testing.T) {
 
 	store := NewForkChoiceService(ctx, db)
 
-	roots, err := blockTree1(db)
+	roots, err := blockTree1(db, []byte{'g'})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -378,7 +378,7 @@ func TestStore_GetFilterBlockTree_CorrectLeaf(t *testing.T) {
 		t.Fatal(err)
 	}
 	b := blocks.NewGenesisBlock(stateRoot[:])
-	blkRoot, err := ssz.SigningRoot(b)
+	blkRoot, err := ssz.HashTreeRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -412,7 +412,7 @@ func TestStore_GetFilterBlockTree_CorrectLeaf(t *testing.T) {
 		root32 := bytesutil.ToBytes32(root)
 		b, _ := store.db.Block(ctx, root32)
 		if b != nil {
-			wanted[root32] = b
+			wanted[root32] = b.Block
 		}
 	}
 	if !reflect.DeepEqual(tree, wanted) {
@@ -427,7 +427,7 @@ func TestStore_GetFilterBlockTree_IncorrectLeaf(t *testing.T) {
 
 	store := NewForkChoiceService(ctx, db)
 
-	roots, err := blockTree1(db)
+	roots, err := blockTree1(db, []byte{'g'})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -438,7 +438,7 @@ func TestStore_GetFilterBlockTree_IncorrectLeaf(t *testing.T) {
 		t.Fatal(err)
 	}
 	b := blocks.NewGenesisBlock(stateRoot[:])
-	blkRoot, err := ssz.SigningRoot(b)
+	blkRoot, err := ssz.HashTreeRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -487,13 +487,13 @@ func TestStore_GetFilterBlockTree_IncorrectLeaf(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wanted[root32] = b
+	wanted[root32] = b.Block
 	root32 = bytesutil.ToBytes32(roots[1])
 	b, err = store.db.Block(ctx, root32)
 	if err != nil {
 		t.Fatal(err)
 	}
-	wanted[root32] = b
+	wanted[root32] = b.Block
 
 	if !reflect.DeepEqual(tree, wanted) {
 		t.Error("Did not filter tree correctly")

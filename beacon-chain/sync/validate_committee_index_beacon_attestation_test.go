@@ -33,14 +33,16 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 		},
 	}
 
-	blk := &ethpb.BeaconBlock{
-		Slot: 55,
+	blk := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Slot: 55,
+		},
 	}
 	if err := db.SaveBlock(ctx, blk); err != nil {
 		t.Fatal(err)
 	}
 
-	validBlockRoot, err := ssz.SigningRoot(blk)
+	validBlockRoot, err := ssz.HashTreeRoot(blk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}

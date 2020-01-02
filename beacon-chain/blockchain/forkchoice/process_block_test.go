@@ -29,21 +29,38 @@ func TestStore_OnBlock(t *testing.T) {
 
 	store := NewForkChoiceService(ctx, db)
 
-	roots, err := blockTree1(db)
+	genesisStateRoot, err := ssz.HashTreeRoot(&pb.BeaconState{})
+	if err != nil {
+		t.Error(err)
+	}
+	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
+	if err := db.SaveBlock(ctx, genesis); err != nil {
+		t.Error(err)
+	}
+	validGenesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	if err != nil {
+		t.Error(err)
+	}
+	if err := store.db.SaveState(ctx, &pb.BeaconState{}, validGenesisRoot); err != nil {
+		t.Fatal(err)
+	}
+	roots, err := blockTree1(db, validGenesisRoot[:])
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	randomParentRoot := [32]byte{'a'}
+	random := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: validGenesisRoot[:]}}
+	if err := db.SaveBlock(ctx, random); err != nil {
+		t.Error(err)
+	}
+	randomParentRoot, err := ssz.HashTreeRoot(random.Block)
+	if err != nil {
+		t.Error(err)
+	}
 	if err := store.db.SaveState(ctx, &pb.BeaconState{}, randomParentRoot); err != nil {
 		t.Fatal(err)
 	}
 	randomParentRoot2 := roots[1]
 	if err := store.db.SaveState(ctx, &pb.BeaconState{}, bytesutil.ToBytes32(randomParentRoot2)); err != nil {
-		t.Fatal(err)
-	}
-	validGenesisRoot := [32]byte{'g'}
-	if err := store.db.SaveState(ctx, &pb.BeaconState{}, validGenesisRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -87,7 +104,7 @@ func TestStore_OnBlock(t *testing.T) {
 			}
 			store.finalizedCheckpt.Root = roots[0]
 
-			err := store.OnBlock(ctx, tt.blk)
+			err := store.OnBlock(ctx, &ethpb.SignedBeaconBlock{Block: tt.blk})
 			if !strings.Contains(err.Error(), tt.wantErrString) {
 				t.Errorf("Store.OnBlock() error = %v, wantErr = %v", err, tt.wantErrString)
 			}
@@ -268,13 +285,15 @@ func TestRemoveStateSinceLastFinalized(t *testing.T) {
 
 	// Save 100 blocks in DB, each has a state.
 	numBlocks := 100
-	totalBlocks := make([]*ethpb.BeaconBlock, numBlocks)
+	totalBlocks := make([]*ethpb.SignedBeaconBlock, numBlocks)
 	blockRoots := make([][32]byte, 0)
 	for i := 0; i < len(totalBlocks); i++ {
-		totalBlocks[i] = &ethpb.BeaconBlock{
-			Slot: uint64(i),
+		totalBlocks[i] = &ethpb.SignedBeaconBlock{
+			Block: &ethpb.BeaconBlock{
+				Slot: uint64(i),
+			},
 		}
-		r, err := ssz.SigningRoot(totalBlocks[i])
+		r, err := ssz.HashTreeRoot(totalBlocks[i].Block)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -342,10 +361,10 @@ func TestRemoveStateSinceLastFinalized_EmptyStartSlot(t *testing.T) {
 		t.Error("Should be able to update justified, received false")
 	}
 
-	lastJustifiedBlk := &ethpb.BeaconBlock{ParentRoot: []byte{'G'}}
-	lastJustifiedRoot, _ := ssz.SigningRoot(lastJustifiedBlk)
-	newJustifiedBlk := &ethpb.BeaconBlock{Slot: 1, ParentRoot: lastJustifiedRoot[:]}
-	newJustifiedRoot, _ := ssz.SigningRoot(newJustifiedBlk)
+	lastJustifiedBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{ParentRoot: []byte{'G'}}}
+	lastJustifiedRoot, _ := ssz.HashTreeRoot(lastJustifiedBlk.Block)
+	newJustifiedBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: lastJustifiedRoot[:]}}
+	newJustifiedRoot, _ := ssz.HashTreeRoot(newJustifiedBlk.Block)
 	if err := store.db.SaveBlock(ctx, newJustifiedBlk); err != nil {
 		t.Fatal(err)
 	}
@@ -374,10 +393,10 @@ func TestShouldUpdateJustified_ReturnFalse(t *testing.T) {
 
 	store := NewForkChoiceService(ctx, db)
 
-	lastJustifiedBlk := &ethpb.BeaconBlock{ParentRoot: []byte{'G'}}
-	lastJustifiedRoot, _ := ssz.SigningRoot(lastJustifiedBlk)
-	newJustifiedBlk := &ethpb.BeaconBlock{ParentRoot: lastJustifiedRoot[:]}
-	newJustifiedRoot, _ := ssz.SigningRoot(newJustifiedBlk)
+	lastJustifiedBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{ParentRoot: []byte{'G'}}}
+	lastJustifiedRoot, _ := ssz.HashTreeRoot(lastJustifiedBlk.Block)
+	newJustifiedBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{ParentRoot: lastJustifiedRoot[:]}}
+	newJustifiedRoot, _ := ssz.HashTreeRoot(newJustifiedBlk.Block)
 	if err := store.db.SaveBlock(ctx, newJustifiedBlk); err != nil {
 		t.Fatal(err)
 	}
@@ -438,13 +457,15 @@ func TestUpdateJustifiedCheckpoint_NoUpdate(t *testing.T) {
 
 		// Save 5 blocks in DB, each has a state.
 		numBlocks := 5
-		totalBlocks := make([]*ethpb.BeaconBlock, numBlocks)
+		totalBlocks := make([]*ethpb.SignedBeaconBlock, numBlocks)
 		blockRoots := make([][32]byte, 0)
 		for i := 0; i < len(totalBlocks); i++ {
-			totalBlocks[i] = &ethpb.BeaconBlock{
-				Slot: uint64(i),
+			totalBlocks[i] = &ethpb.SignedBeaconBlock{
+				Block: &ethpb.BeaconBlock{
+					Slot: uint64(i),
+				},
 			}
-			r, err := ssz.SigningRoot(totalBlocks[i])
+			r, err := ssz.HashTreeRoot(totalBlocks[i].Block)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -553,12 +574,12 @@ func TestSaveInitState_CanSaveDelete(t *testing.T) {
 	for i := uint64(0); i < 64; i++ {
 		b := &ethpb.BeaconBlock{Slot: i}
 		s := &pb.BeaconState{Slot: i}
-		r, _ := ssz.SigningRoot(b)
+		r, _ := ssz.HashTreeRoot(b)
 		store.initSyncState[r] = s
 	}
 
 	// Set finalized root as slot 32
-	finalizedRoot, _ := ssz.SigningRoot(&ethpb.BeaconBlock{Slot: 32})
+	finalizedRoot, _ := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 32})
 
 	if err := store.saveInitState(ctx, &pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{
 		Epoch: 1, Root: finalizedRoot[:]}}); err != nil {
@@ -586,11 +607,19 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 
 	store := NewForkChoiceService(ctx, db)
+	signedBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	if err := db.SaveBlock(ctx, signedBlock); err != nil {
+		t.Fatal(err)
+	}
+	r, err := ssz.HashTreeRoot(signedBlock.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	store.justifiedCheckpt = &ethpb.Checkpoint{Root: []byte{'A'}}
 	store.bestJustifiedCheckpt = &ethpb.Checkpoint{Root: []byte{'A'}}
 
 	// Could update
-	s := &pb.BeaconState{CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 1}}
+	s := &pb.BeaconState{CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 1, Root: r[:]}}
 	if err := store.updateJustified(context.Background(), s); err != nil {
 		t.Fatal(err)
 	}

@@ -137,7 +137,7 @@ func TestHeadRoot_CanRetrieve(t *testing.T) {
 }
 
 func TestHeadBlock_CanRetrieve(t *testing.T) {
-	b := &ethpb.BeaconBlock{Slot: 1}
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
 	c := &Service{headBlock: b}
 	if !reflect.DeepEqual(b, c.HeadBlock()) {
 		t.Error("incorrect head block received")

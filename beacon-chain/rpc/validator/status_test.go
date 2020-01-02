@@ -82,7 +82,7 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	genesisRoot, err := ssz.SigningRoot(block)
+	genesisRoot, err := ssz.HashTreeRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -181,7 +181,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	genesisRoot, err := ssz.SigningRoot(block)
+	genesisRoot, err := ssz.HashTreeRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -246,7 +246,7 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	genesisRoot, err := ssz.SigningRoot(block)
+	genesisRoot, err := ssz.HashTreeRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -318,7 +318,7 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	genesisRoot, err := ssz.SigningRoot(block)
+	genesisRoot, err := ssz.HashTreeRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -388,7 +388,7 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	genesisRoot, err := ssz.SigningRoot(block)
+	genesisRoot, err := ssz.HashTreeRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -458,7 +458,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	genesisRoot, err := ssz.SigningRoot(block)
+	genesisRoot, err := ssz.HashTreeRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -567,7 +567,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 		},
 	}
 	block := blk.NewGenesisBlock([]byte{})
-	genesisRoot, err := ssz.SigningRoot(block)
+	genesisRoot, err := ssz.HashTreeRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}

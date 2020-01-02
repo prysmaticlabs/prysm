@@ -45,7 +45,7 @@ type Service struct {
 	p2p               p2p.Broadcaster
 	maxRoutines       int64
 	headSlot          uint64
-	headBlock         *ethpb.BeaconBlock
+	headBlock         *ethpb.SignedBeaconBlock
 	headState         *pb.BeaconState
 	canonicalRoots    map[uint64][]byte
 	headLock          sync.RWMutex
@@ -230,18 +230,22 @@ func (s *Service) Status() error {
 }
 
 // This gets called to update canonical root mapping.
-func (s *Service) saveHead(ctx context.Context, b *ethpb.BeaconBlock, r [32]byte) error {
+func (s *Service) saveHead(ctx context.Context, signed *ethpb.SignedBeaconBlock, r [32]byte) error {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
-	s.headSlot = b.Slot
+	if signed == nil || signed.Block == nil {
+		return errors.New("cannot save nil head block")
+	}
 
-	s.canonicalRoots[b.Slot] = r[:]
+	s.headSlot = signed.Block.Slot
+
+	s.canonicalRoots[signed.Block.Slot] = r[:]
 
 	if err := s.beaconDB.SaveHeadBlockRoot(ctx, r); err != nil {
 		return errors.Wrap(err, "could not save head root in DB")
 	}
-	s.headBlock = b
+	s.headBlock = signed
 
 	headState, err := s.beaconDB.State(ctx, r)
 	if err != nil {
@@ -250,7 +254,7 @@ func (s *Service) saveHead(ctx context.Context, b *ethpb.BeaconBlock, r [32]byte
 	s.headState = headState
 
 	log.WithFields(logrus.Fields{
-		"slot":     b.Slot,
+		"slot":     signed.Block.Slot,
 		"headRoot": fmt.Sprintf("%#x", r),
 	}).Debug("Saved new head info")
 	return nil
@@ -259,13 +263,13 @@ func (s *Service) saveHead(ctx context.Context, b *ethpb.BeaconBlock, r [32]byte
 // This gets called to update canonical root mapping. It does not save head block
 // root in DB. With the inception of inital-sync-cache-state flag, it uses finalized
 // check point as anchors to resume sync therefore head is no longer needed to be saved on per slot basis.
-func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.BeaconBlock, r [32]byte) error {
+func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, r [32]byte) error {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
-	s.headSlot = b.Slot
+	s.headSlot = b.Block.Slot
 
-	s.canonicalRoots[b.Slot] = r[:]
+	s.canonicalRoots[b.Block.Slot] = r[:]
 
 	s.headBlock = b
 
@@ -276,7 +280,7 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.BeaconBlock, r [32]
 	s.headState = headState
 
 	log.WithFields(logrus.Fields{
-		"slot":     b.Slot,
+		"slot":     b.Block.Slot,
 		"headRoot": fmt.Sprintf("%#x", r),
 	}).Debug("Saved new head info")
 	return nil
@@ -302,7 +306,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconSt
 		return errors.Wrap(err, "could not tree hash genesis state")
 	}
 	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
-	genesisBlkRoot, err := ssz.SigningRoot(genesisBlk)
+	genesisBlkRoot, err := ssz.HashTreeRoot(genesisBlk.Block)
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}
@@ -345,7 +349,10 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block from db")
 	}
-	genesisBlkRoot, err := ssz.SigningRoot(genesisBlock)
+	if genesisBlock == nil {
+		return errors.New("no genesis block in db")
+	}
+	genesisBlkRoot, err := ssz.HashTreeRoot(genesisBlock.Block)
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root of genesis block")
 	}
@@ -369,7 +376,9 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		return errors.Wrap(err, "could not get finalized block from db")
 	}
 
-	s.headSlot = s.headBlock.Slot
+	if s.headBlock != nil && s.headBlock.Block != nil {
+		s.headSlot = s.headBlock.Block.Slot
+	}
 	s.canonicalRoots[s.headSlot] = finalized.Root
 
 	return nil

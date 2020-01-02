@@ -9,12 +9,11 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
+	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
@@ -244,9 +243,10 @@ func TestRoundRobinSync(t *testing.T) {
 			connectPeers(t, p, tt.peers, p.Peers())
 			genesisRoot := rootCache[0]
 
-			err := beaconDB.SaveBlock(context.Background(), &eth.BeaconBlock{
-				Slot: 0,
-			})
+			err := beaconDB.SaveBlock(context.Background(), &eth.SignedBeaconBlock{
+				Block: &eth.BeaconBlock{
+					Slot: 0,
+				}})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -274,7 +274,7 @@ func TestRoundRobinSync(t *testing.T) {
 			}
 			var receivedBlockSlots []uint64
 			for _, blk := range mc.BlocksReceived {
-				receivedBlockSlots = append(receivedBlockSlots, blk.Slot)
+				receivedBlockSlots = append(receivedBlockSlots, blk.Block.Slot)
 			}
 			if missing := sliceutil.NotUint64(sliceutil.IntersectionUint64(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots); len(missing) > 0 {
 				t.Errorf("Missing blocks at slots %v", missing)
@@ -319,23 +319,25 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData, peerStatus
 			// Determine the correct subset of blocks to return as dictated by the test scenario.
 			blocks := sliceutil.IntersectionUint64(datum.blocks, requestedBlocks)
 
-			ret := make([]*eth.BeaconBlock, 0)
+			ret := make([]*eth.SignedBeaconBlock, 0)
 			for _, slot := range blocks {
 				if (slot-req.StartSlot)%req.Step != 0 {
 					continue
 				}
 				parentRoot := rootCache[parentSlotCache[slot]]
-				blk := &eth.BeaconBlock{
-					Slot:       slot,
-					ParentRoot: parentRoot[:],
+				blk := &eth.SignedBeaconBlock{
+					Block: &eth.BeaconBlock{
+						Slot:       slot,
+						ParentRoot: parentRoot[:],
+					},
 				}
 				// If forked peer, give a different parent root.
 				if datum.forkedPeer {
 					newRoot := hashutil.Hash(parentRoot[:])
-					blk.ParentRoot = newRoot[:]
+					blk.Block.ParentRoot = newRoot[:]
 				}
 				ret = append(ret, blk)
-				currRoot, _ := ssz.SigningRoot(blk)
+				currRoot, _ := ssz.HashTreeRoot(blk.Block)
 				logrus.Infof("block with slot %d , signing root %#x and parent root %#x", slot, currRoot, parentRoot)
 			}
 
@@ -397,7 +399,7 @@ func initializeRootCache(reqSlots []uint64, t *testing.T) {
 	genesisBlock := &eth.BeaconBlock{
 		Slot: 0,
 	}
-	genesisRoot, err := ssz.SigningRoot(genesisBlock)
+	genesisRoot, err := ssz.HashTreeRoot(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -408,7 +410,7 @@ func initializeRootCache(reqSlots []uint64, t *testing.T) {
 			Slot:       slot,
 			ParentRoot: parentRoot[:],
 		}
-		parentRoot, err = ssz.SigningRoot(currentBlock)
+		parentRoot, err = ssz.HashTreeRoot(currentBlock)
 		if err != nil {
 			t.Fatal(err)
 		}

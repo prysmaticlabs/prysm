@@ -48,10 +48,10 @@ func TestGetHeadFromYaml(t *testing.T) {
 			// genesis block condition
 			if blk.ID == blk.Parent {
 				b := &ethpb.BeaconBlock{Slot: 0, ParentRoot: []byte{'g'}}
-				if err := db.SaveBlock(ctx, b); err != nil {
+				if err := db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: b}); err != nil {
 					t.Fatal(err)
 				}
-				root, err := ssz.SigningRoot(b)
+				root, err := ssz.HashTreeRoot(b)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -65,11 +65,11 @@ func TestGetHeadFromYaml(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				b := &ethpb.BeaconBlock{Slot: uint64(slot), ParentRoot: blksRoot[parentSlot]}
+				b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: uint64(slot), ParentRoot: blksRoot[parentSlot]}}
 				if err := db.SaveBlock(ctx, b); err != nil {
 					t.Fatal(err)
 				}
-				root, err := ssz.SigningRoot(b)
+				root, err := ssz.HashTreeRoot(b.Block)
 				if err != nil {
 					t.Fatal(err)
 				}

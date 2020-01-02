@@ -24,31 +24,31 @@ func TestStore_OnAttestation(t *testing.T) {
 
 	store := NewForkChoiceService(ctx, db)
 
-	_, err := blockTree1(db)
+	_, err := blockTree1(db, []byte{'g'})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	BlkWithOutState := &ethpb.BeaconBlock{Slot: 0}
+	BlkWithOutState := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 0}}
 	if err := db.SaveBlock(ctx, BlkWithOutState); err != nil {
 		t.Fatal(err)
 	}
-	BlkWithOutStateRoot, _ := ssz.SigningRoot(BlkWithOutState)
+	BlkWithOutStateRoot, _ := ssz.HashTreeRoot(BlkWithOutState.Block)
 
-	BlkWithStateBadAtt := &ethpb.BeaconBlock{Slot: 1}
+	BlkWithStateBadAtt := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
 	if err := db.SaveBlock(ctx, BlkWithStateBadAtt); err != nil {
 		t.Fatal(err)
 	}
-	BlkWithStateBadAttRoot, _ := ssz.SigningRoot(BlkWithStateBadAtt)
+	BlkWithStateBadAttRoot, _ := ssz.HashTreeRoot(BlkWithStateBadAtt.Block)
 	if err := store.db.SaveState(ctx, &pb.BeaconState{}, BlkWithStateBadAttRoot); err != nil {
 		t.Fatal(err)
 	}
 
-	BlkWithValidState := &ethpb.BeaconBlock{Slot: 2}
+	BlkWithValidState := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 2}}
 	if err := db.SaveBlock(ctx, BlkWithValidState); err != nil {
 		t.Fatal(err)
 	}
-	BlkWithValidStateRoot, _ := ssz.SigningRoot(BlkWithValidState)
+	BlkWithValidStateRoot, _ := ssz.HashTreeRoot(BlkWithValidState.Block)
 	if err := store.db.SaveState(ctx, &pb.BeaconState{
 		Fork: &pb.Fork{
 			Epoch:           0,
@@ -342,9 +342,9 @@ func TestVerifyBeaconBlock_futureBlock(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 
 	s := NewForkChoiceService(ctx, db)
-	b := &ethpb.BeaconBlock{Slot: 2}
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 2}}
 	s.db.SaveBlock(ctx, b)
-	r, _ := ssz.SigningRoot(b)
+	r, _ := ssz.HashTreeRoot(b.Block)
 	d := &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: r[:]}
 
 	if err := s.verifyBeaconBlock(ctx, d); !strings.Contains(err.Error(), "could not process attestation for future block") {
@@ -358,9 +358,9 @@ func TestVerifyBeaconBlock_OK(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 
 	s := NewForkChoiceService(ctx, db)
-	b := &ethpb.BeaconBlock{Slot: 2}
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 2}}
 	s.db.SaveBlock(ctx, b)
-	r, _ := ssz.SigningRoot(b)
+	r, _ := ssz.HashTreeRoot(b.Block)
 	d := &ethpb.AttestationData{Slot: 2, BeaconBlockRoot: r[:]}
 
 	if err := s.verifyBeaconBlock(ctx, d); err != nil {

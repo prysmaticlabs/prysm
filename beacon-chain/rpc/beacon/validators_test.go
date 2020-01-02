@@ -1493,7 +1493,7 @@ func setupValidators(t *testing.T, db db.Database, count int) ([]*ethpb.Validato
 	blk := &ethpb.BeaconBlock{
 		Slot: 0,
 	}
-	blockRoot, err := ssz.SigningRoot(blk)
+	blockRoot, err := ssz.HashTreeRoot(blk)
 	if err != nil {
 		t.Fatal(err)
 	}

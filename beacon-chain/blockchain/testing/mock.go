@@ -22,11 +22,11 @@ import (
 type ChainService struct {
 	State                       *pb.BeaconState
 	Root                        []byte
-	Block                       *ethpb.BeaconBlock
+	Block                       *ethpb.SignedBeaconBlock
 	FinalizedCheckPoint         *ethpb.Checkpoint
 	CurrentJustifiedCheckPoint  *ethpb.Checkpoint
 	PreviousJustifiedCheckPoint *ethpb.Checkpoint
-	BlocksReceived              []*ethpb.BeaconBlock
+	BlocksReceived              []*ethpb.SignedBeaconBlock
 	Genesis                     time.Time
 	Fork                        *pb.Fork
 	DB                          db.Database
@@ -77,31 +77,31 @@ func (mon *MockOperationNotifier) OperationFeed() *event.Feed {
 }
 
 // ReceiveBlock mocks ReceiveBlock method in chain service.
-func (ms *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
+func (ms *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock) error {
 	return nil
 }
 
 // ReceiveBlockNoVerify mocks ReceiveBlockNoVerify method in chain service.
-func (ms *ChainService) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.BeaconBlock) error {
+func (ms *ChainService) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedBeaconBlock) error {
 	return nil
 }
 
 // ReceiveBlockNoPubsub mocks ReceiveBlockNoPubsub method in chain service.
-func (ms *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconBlock) error {
+func (ms *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedBeaconBlock) error {
 	return nil
 }
 
 // ReceiveBlockNoPubsubForkchoice mocks ReceiveBlockNoPubsubForkchoice method in chain service.
-func (ms *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.BeaconBlock) error {
+func (ms *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.SignedBeaconBlock) error {
 	if ms.State == nil {
 		ms.State = &pb.BeaconState{}
 	}
-	if !bytes.Equal(ms.Root, block.ParentRoot) {
-		return errors.Errorf("wanted %#x but got %#x", ms.Root, block.ParentRoot)
+	if !bytes.Equal(ms.Root, block.Block.ParentRoot) {
+		return errors.Errorf("wanted %#x but got %#x", ms.Root, block.Block.ParentRoot)
 	}
-	ms.State.Slot = block.Slot
+	ms.State.Slot = block.Block.Slot
 	ms.BlocksReceived = append(ms.BlocksReceived, block)
-	signingRoot, err := ssz.SigningRoot(block)
+	signingRoot, err := ssz.HashTreeRoot(block.Block)
 	if err != nil {
 		return err
 	}
@@ -109,7 +109,7 @@ func (ms *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, bloc
 		if err := ms.DB.SaveBlock(ctx, block); err != nil {
 			return err
 		}
-		logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, block.Slot)
+		logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, block.Block.Slot)
 	}
 	ms.Root = signingRoot[:]
 	ms.Block = block
@@ -132,7 +132,7 @@ func (ms *ChainService) HeadRoot() []byte {
 }
 
 // HeadBlock mocks HeadBlock method in chain service.
-func (ms *ChainService) HeadBlock() *ethpb.BeaconBlock {
+func (ms *ChainService) HeadBlock() *ethpb.SignedBeaconBlock {
 	return ms.Block
 }
 

@@ -26,8 +26,8 @@ import (
 // to beacon blocks to compute head.
 type ForkChoicer interface {
 	Head(ctx context.Context) ([]byte, error)
-	OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error
-	OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.BeaconBlock) error
+	OnBlock(ctx context.Context, b *ethpb.SignedBeaconBlock) error
+	OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.SignedBeaconBlock) error
 	OnAttestation(ctx context.Context, a *ethpb.Attestation) error
 	GenesisStore(ctx context.Context, justifiedCheckpoint *ethpb.Checkpoint, finalizedCheckpoint *ethpb.Checkpoint) error
 	FinalizedCheckpt() *ethpb.Checkpoint
@@ -132,7 +132,7 @@ func (s *Store) cacheGenesisState(ctx context.Context) error {
 		return errors.Wrap(err, "could not tree hash genesis state")
 	}
 	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
-	genesisBlkRoot, err := ssz.SigningRoot(genesisBlk)
+	genesisBlkRoot, err := ssz.HashTreeRoot(genesisBlk.Block)
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}
@@ -156,10 +156,14 @@ func (s *Store) ancestor(ctx context.Context, root []byte, slot uint64) ([]byte,
 	ctx, span := trace.StartSpan(ctx, "forkchoice.ancestor")
 	defer span.End()
 
-	b, err := s.db.Block(ctx, bytesutil.ToBytes32(root))
+	signed, err := s.db.Block(ctx, bytesutil.ToBytes32(root))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get ancestor block")
 	}
+	if signed == nil || signed.Block == nil {
+		return nil, errors.New("nil block")
+	}
+	b := signed.Block
 
 	// If we dont have the ancestor in the DB, simply return nil so rest of fork choice
 	// operation can proceed. This is not an error condition.
@@ -203,10 +207,14 @@ func (s *Store) latestAttestingBalance(ctx context.Context, root []byte) (uint64
 		return 0, errors.Wrap(err, "could not get active indices for last justified checkpoint")
 	}
 
-	wantedBlk, err := s.db.Block(ctx, bytesutil.ToBytes32(root))
+	wantedBlkSigned, err := s.db.Block(ctx, bytesutil.ToBytes32(root))
 	if err != nil {
 		return 0, errors.Wrap(err, "could not get target block")
 	}
+	if wantedBlkSigned == nil || wantedBlkSigned.Block == nil {
+		return 0, errors.New("nil wanted block")
+	}
+	wantedBlk := wantedBlkSigned.Block
 
 	balances := uint64(0)
 	s.voteLock.RLock()
@@ -357,10 +365,14 @@ func (s *Store) getFilterBlockTree(ctx context.Context) (map[[32]byte]*ethpb.Bea
 func (s *Store) filterBlockTree(ctx context.Context, blockRoot [32]byte, filteredBlocks map[[32]byte]*ethpb.BeaconBlock) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "forkchoice.filterBlockTree")
 	defer span.End()
-	block, err := s.db.Block(ctx, blockRoot)
+	signed, err := s.db.Block(ctx, blockRoot)
 	if err != nil {
 		return false, err
 	}
+	if signed == nil || signed.Block == nil {
+		return false, errors.New("nil block")
+	}
+	block := signed.Block
 
 	filter := filters.NewFilter().SetParentRoot(blockRoot[:])
 	childrenRoots, err := s.db.BlockRoots(ctx, filter)

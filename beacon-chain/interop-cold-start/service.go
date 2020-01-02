@@ -144,7 +144,7 @@ func (s *Service) saveGenesisState(ctx context.Context, genesisState *pb.BeaconS
 		return errors.Wrap(err, "could not tree hash genesis state")
 	}
 	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
-	genesisBlkRoot, err := ssz.SigningRoot(genesisBlk)
+	genesisBlkRoot, err := ssz.HashTreeRoot(genesisBlk.Block)
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}

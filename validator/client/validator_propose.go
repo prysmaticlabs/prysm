@@ -56,10 +56,13 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		log.WithError(err).Error("Failed to sign block")
 		return
 	}
-	b.Signature = sig
+	blk := &ethpb.SignedBeaconBlock{
+		Block:     b,
+		Signature: sig,
+	}
 
 	// Propose and broadcast block via beacon node
-	blkResp, err := v.validatorClient.ProposeBlock(ctx, b)
+	blkResp, err := v.validatorClient.ProposeBlock(ctx, blk)
 	if err != nil {
 		log.WithError(err).Error("Failed to propose block")
 		return
@@ -71,7 +74,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		trace.Int64Attribute("numAttestations", int64(len(b.Body.Attestations))),
 	)
 
-	log.WithField("signature", fmt.Sprintf("%#x", b.Signature)).Debug("block signature")
+	log.WithField("signature", fmt.Sprintf("%#x", blk.Signature)).Debug("block signature")
 	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
 	log.WithFields(logrus.Fields{
 		"slot":            b.Slot,
@@ -110,7 +113,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get domain data")
 	}
-	root, err := ssz.SigningRoot(b)
+	root, err := ssz.HashTreeRoot(b)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get signing root")
 	}

@@ -105,7 +105,7 @@ index b177b76..28b4b46 100644
 +    bytes root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
  }
 diff --git a/eth/v1alpha1/beacon_block.proto b/eth/v1alpha1/beacon_block.proto
-index 7cc5f04..f23a750 100644
+index 2ce5c34..4cbb276 100644
 --- a/eth/v1alpha1/beacon_block.proto
 +++ b/eth/v1alpha1/beacon_block.proto
 @@ -15,6 +15,7 @@ syntax = "proto3";
@@ -116,7 +116,7 @@ index 7cc5f04..f23a750 100644
  import "eth/v1alpha1/attestation.proto";
  
  option csharp_namespace = "Ethereum.Eth.v1alpha1";
-@@ -30,47 +31,47 @@ message BeaconBlock {
+@@ -30,10 +31,10 @@ message BeaconBlock {
      uint64 slot = 1; 
  
      // 32 byte root of the parent block.
@@ -129,10 +129,12 @@ index 7cc5f04..f23a750 100644
  
      // The block body itself.
      BeaconBlockBody body = 4;
+@@ -45,38 +46,38 @@ message SignedBeaconBlock {
+     BeaconBlock block = 1;
  
      // 96 byte BLS signature from the validator that produced this block.
--    bytes signature = 5;
-+    bytes signature = 5 [(gogoproto.moretags) = "ssz-size:\"96\""];
+-    bytes signature = 2;
++    bytes signature = 2 [(gogoproto.moretags) = "ssz-size:\"96\""];
  }
  
  // The block body of an Ethereum 2.0 beacon block.
@@ -169,12 +171,12 @@ index 7cc5f04..f23a750 100644
 +    repeated Deposit deposits = 7 [(gogoproto.moretags) = "ssz-max:\"16\""];
  
      // At most MAX_VOLUNTARY_EXITS.
--    repeated VoluntaryExit voluntary_exits = 8;
-+    repeated VoluntaryExit voluntary_exits = 8 [(gogoproto.moretags) = "ssz-max:\"16\""];
+-    repeated SignedVoluntaryExit voluntary_exits = 8;
++    repeated SignedVoluntaryExit voluntary_exits = 8 [(gogoproto.moretags) = "ssz-max:\"16\""];
  }
  
  // Proposer slashings are proofs that a slashable offense has been committed by
-@@ -101,20 +102,20 @@ message AttesterSlashing {
+@@ -107,20 +108,20 @@ message AttesterSlashing {
  message Deposit {
      message Data {
          // 48 byte BLS public key of the validator.
@@ -199,12 +201,12 @@ index 7cc5f04..f23a750 100644
  
      Data data = 2;
  }
-@@ -129,14 +130,14 @@ message VoluntaryExit {
-     uint64 validator_index = 2;
+@@ -142,14 +143,14 @@ message SignedVoluntaryExit {
+     VoluntaryExit exit = 1;
  
      // Validator's 96 byte signature
--    bytes signature = 3;
-+    bytes signature = 3 [(gogoproto.moretags) = "ssz-size:\"96\""];
+-    bytes signature = 2;
++    bytes signature = 2 [(gogoproto.moretags) = "ssz-size:\"96\""];
  }
  
  // Eth1Data represents references to the Ethereum 1.x deposit contract.
@@ -216,7 +218,7 @@ index 7cc5f04..f23a750 100644
  
      // The total number of deposits included in the beacon chain since genesis
      // including the deposits in this block.
-@@ -144,7 +145,7 @@ message Eth1Data {
+@@ -157,7 +158,7 @@ message Eth1Data {
  
      // The 32 byte block hash of the Ethereum 1.x block considered for deposit
      // inclusion.
@@ -225,7 +227,7 @@ index 7cc5f04..f23a750 100644
  }
  
  // A beacon block header is essentially a beacon block with only a reference to
-@@ -155,23 +156,23 @@ message BeaconBlockHeader {
+@@ -169,13 +170,13 @@ message BeaconBlockHeader {
      uint64 slot = 1; 
  
      // 32 byte merkle tree root of the parent ssz encoded block.
@@ -239,10 +241,15 @@ index 7cc5f04..f23a750 100644
      // 32 byte merkle tree root of the ssz encoded block body.
 -    bytes body_root = 4;
 +    bytes body_root = 4 [(gogoproto.moretags) = "ssz-size:\"32\""];
+ }
  
-     // 96 byte BLS signature from the validator that produced this block.
--    bytes signature = 5;
-+    bytes signature = 5 [(gogoproto.moretags) = "ssz-size:\"96\""];
+ message SignedBeaconBlockHeader {
+@@ -183,14 +184,14 @@ message SignedBeaconBlockHeader {
+     BeaconBlockHeader header = 1;
+
+     // 96 byte BLS signature from the validator that produced this block header.
+-    bytes signature = 2;
++    bytes signature = 2 [(gogoproto.moretags) = "ssz-size:\"96\""];
  }
  
  message IndexedAttestation {

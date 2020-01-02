@@ -74,7 +74,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	genesisRoot, err := ssz.SigningRoot(block)
+	genesisRoot, err := ssz.HashTreeRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -144,7 +144,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		},
 	}
 	block := blk.NewGenesisBlock([]byte{})
-	genesisRoot, err := ssz.SigningRoot(block)
+	genesisRoot, err := ssz.HashTreeRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -152,7 +152,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		PublicKey:             pubKey1,
 		WithdrawalCredentials: []byte("hey"),
 	}
-	signingRoot, err := ssz.SigningRoot(depData)
+	signingRoot, err := ssz.HashTreeRoot(depData)
 	if err != nil {
 		t.Error(err)
 	}

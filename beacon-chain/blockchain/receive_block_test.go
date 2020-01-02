@@ -31,7 +31,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	genesisBlkRoot, err := ssz.SigningRoot(genesis)
+	genesisBlkRoot, err := ssz.HashTreeRoot(genesis.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,11 +73,11 @@ func TestReceiveReceiveBlockNoPubsub_CanSaveHeadInfo(t *testing.T) {
 
 	chainService := setupBeaconChain(t, db)
 
-	headBlk := &ethpb.BeaconBlock{Slot: 100}
+	headBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 100}}
 	if err := db.SaveBlock(ctx, headBlk); err != nil {
 		t.Fatal(err)
 	}
-	r, err := ssz.SigningRoot(headBlk)
+	r, err := ssz.HashTreeRoot(headBlk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,9 +87,12 @@ func TestReceiveReceiveBlockNoPubsub_CanSaveHeadInfo(t *testing.T) {
 	}
 	chainService.forkChoiceStore = &store{headRoot: r[:]}
 
-	if err := chainService.ReceiveBlockNoPubsub(ctx, &ethpb.BeaconBlock{
-		Slot: 1,
-		Body: &ethpb.BeaconBlockBody{}}); err != nil {
+	if err := chainService.ReceiveBlockNoPubsub(ctx, &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Slot: 1,
+			Body: &ethpb.BeaconBlockBody{},
+		},
+	}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -112,14 +115,17 @@ func TestReceiveReceiveBlockNoPubsub_SameHead(t *testing.T) {
 
 	chainService := setupBeaconChain(t, db)
 
-	headBlk := &ethpb.BeaconBlock{}
+	headBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	if err := db.SaveBlock(ctx, headBlk); err != nil {
 		t.Fatal(err)
 	}
-	newBlk := &ethpb.BeaconBlock{
-		Slot: 1,
-		Body: &ethpb.BeaconBlockBody{}}
-	newRoot, _ := ssz.SigningRoot(newBlk)
+	newBlk := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Slot: 1,
+			Body: &ethpb.BeaconBlockBody{},
+		},
+	}
+	newRoot, _ := ssz.HashTreeRoot(newBlk.Block)
 	if err := db.SaveBlock(ctx, newBlk); err != nil {
 		t.Fatal(err)
 	}
@@ -154,7 +160,7 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 	}
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
-	parentRoot, err := ssz.SigningRoot(genesis)
+	parentRoot, err := ssz.HashTreeRoot(genesis.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,7 +179,7 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveState(ctx, beaconState, bytesutil.ToBytes32(block.ParentRoot)); err != nil {
+	if err := db.SaveState(ctx, beaconState, bytesutil.ToBytes32(block.Block.ParentRoot)); err != nil {
 		t.Fatal(err)
 	}
 

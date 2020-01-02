@@ -41,11 +41,14 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	}
 	// Only save head if it's different than the current head.
 	if !bytes.Equal(headRoot, s.HeadRoot()) {
-		headBlk, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
+		signed, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
 		if err != nil {
 			return errors.Wrap(err, "could not compute state from block head")
 		}
-		if err := s.saveHead(ctx, headBlk, bytesutil.ToBytes32(headRoot)); err != nil {
+		if signed == nil || signed.Block == nil {
+			return errors.New("nil head block")
+		}
+		if err := s.saveHead(ctx, signed, bytesutil.ToBytes32(headRoot)); err != nil {
 			return errors.Wrap(err, "could not save head")
 		}
 	}

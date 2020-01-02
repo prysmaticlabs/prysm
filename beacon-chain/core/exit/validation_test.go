@@ -84,7 +84,7 @@ func TestValidation(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	genesisRoot, err := ssz.SigningRoot(block)
+	genesisRoot, err := ssz.HashTreeRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -99,10 +99,12 @@ func TestValidation(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			req := &ethpb.VoluntaryExit{
-				Epoch:          test.epoch,
-				ValidatorIndex: test.validatorIndex,
-				Signature:      test.signature,
+			req := &ethpb.SignedVoluntaryExit{
+				Exit: &ethpb.VoluntaryExit{
+					Epoch:          test.epoch,
+					ValidatorIndex: test.validatorIndex,
+				},
+				Signature: test.signature,
 			}
 
 			err := exit.ValidateVoluntaryExit(headState, genesisTime, req)

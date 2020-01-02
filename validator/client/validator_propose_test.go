@@ -97,7 +97,7 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 
 	m.validatorClient.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.BeaconBlock{}),
+		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
 	).Return(nil /*response*/, errors.New("uh oh"))
 
 	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
@@ -125,7 +125,7 @@ func TestProposeBlock_BroadcastsBlock(t *testing.T) {
 
 	m.validatorClient.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.BeaconBlock{}),
+		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
 	).Return(&ethpb.ProposeResponse{}, nil /*error*/)
 
 	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
@@ -152,19 +152,19 @@ func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
 		gomock.Any(), //epoch
 	).Return(&ethpb.DomainResponse{}, nil /*err*/)
 
-	var sentBlock *ethpb.BeaconBlock
+	var sentBlock *ethpb.SignedBeaconBlock
 
 	m.validatorClient.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.BeaconBlock{}),
-	).DoAndReturn(func(ctx context.Context, block *ethpb.BeaconBlock) (*ethpb.ProposeResponse, error) {
+		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
+	).DoAndReturn(func(ctx context.Context, block *ethpb.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 		sentBlock = block
 		return &ethpb.ProposeResponse{}, nil
 	})
 
 	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
 
-	if string(sentBlock.Body.Graffiti) != string(validator.graffiti) {
-		t.Errorf("Block was broadcast with the wrong graffiti field, wanted \"%v\", got \"%v\"", string(validator.graffiti), string(sentBlock.Body.Graffiti))
+	if string(sentBlock.Block.Body.Graffiti) != string(validator.graffiti) {
+		t.Errorf("Block was broadcast with the wrong graffiti field, wanted \"%v\", got \"%v\"", string(validator.graffiti), string(sentBlock.Block.Body.Graffiti))
 	}
 }
