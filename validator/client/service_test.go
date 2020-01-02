@@ -125,7 +125,7 @@ func TestPubKeysFromMap(t *testing.T) {
 		// Ensure each public key is different from the others
 		for j := range pubKeys {
 			if i != j && bytes.Compare(pubKeys[i], pubKeys[j]) == 0 {
-				t.Fatalf("Non-unique public keys at indices %d and %d", i, j)
+				t.Fatalf("Non-unique public keys at attesterIndices %d and %d", i, j)
 			}
 		}
 	}

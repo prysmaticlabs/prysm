@@ -180,9 +180,9 @@ func (v *validator) saveAttesterIndexToData(data *ethpb.AttestationData, index u
 	}
 
 	if v.attLogs[h] == nil {
-		v.attLogs[h] = &attSubmitted{data, []uint64{}}
+		v.attLogs[h] = &attSubmitted{data, []uint64{}, []uint64{}}
 	}
-	v.attLogs[h] = &attSubmitted{data, append(v.attLogs[h].indices, index)}
+	v.attLogs[h] = &attSubmitted{data, append(v.attLogs[h].attesterIndices, index), []uint64{}}
 
 	return nil
 }
