@@ -103,4 +103,5 @@ func (r *Service) Status() error {
 type Checker interface {
 	Syncing() bool
 	Status() error
+	Resync() error
 }

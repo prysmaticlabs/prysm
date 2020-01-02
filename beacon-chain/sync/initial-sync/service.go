@@ -2,10 +2,9 @@ package initialsync
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -15,6 +14,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/sirupsen/logrus"
 )
 
 var _ = shared.Service(&Service{})
@@ -113,20 +114,7 @@ func (s *Service) Start() {
 		s.synced = true
 		return
 	}
-
-	// Every 5 sec, report handshake count.
-	for {
-		count := len(s.p2p.Peers().Connected())
-		if count >= flags.Get().MinimumSyncPeers {
-			break
-		}
-		log.WithField(
-			"handshakes",
-			fmt.Sprintf("%d/%d", count, flags.Get().MinimumSyncPeers),
-		).Info("Waiting for enough peer handshakes before syncing")
-		time.Sleep(handshakePollingInterval)
-	}
-
+	s.waitForMinimumPeers()
 	if err := s.roundRobinSync(genesis); err != nil {
 		panic(err)
 	}
@@ -151,4 +139,39 @@ func (s *Service) Status() error {
 // Syncing returns true if initial sync is still running.
 func (s *Service) Syncing() bool {
 	return !s.synced
+}
+
+// Resync allows a node to start syncing again if it has fallen
+// behind the current network head.
+func (s *Service) Resync() error {
+	// set it to false since we are syncing again
+	s.synced = false
+	headState, err := s.chain.HeadState(context.Background())
+	if err != nil {
+		return errors.Wrap(err, "could not retrieve head state")
+	}
+	genesis := time.Unix(int64(headState.GenesisTime), 0)
+
+	s.waitForMinimumPeers()
+	if err := s.roundRobinSync(genesis); err != nil {
+		return errors.Wrap(err, "could not retrieve head state")
+	}
+	log.Infof("Synced up to slot %d", s.chain.HeadSlot())
+
+	s.synced = true
+	return nil
+}
+
+func (s *Service) waitForMinimumPeers() {
+	// Every 5 sec, report handshake count.
+	for {
+		count := len(s.p2p.Peers().Connected())
+		if count >= flags.Get().MinimumSyncPeers {
+			break
+		}
+		log.WithFields(logrus.Fields{
+			"valid handshakes":    count,
+			"required handshakes": flags.Get().MinimumSyncPeers}).Info("Waiting for enough peer handshakes before syncing")
+		time.Sleep(handshakePollingInterval)
+	}
 }

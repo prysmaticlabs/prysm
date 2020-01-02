@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -145,4 +146,11 @@ func (r *Service) validatePendingSlots() error {
 	}
 	oldBlockRoots = nil
 	return nil
+}
+
+func (r *Service) clearPendingSlots() {
+	r.pendingQueueLock.Lock()
+	defer r.pendingQueueLock.Unlock()
+	r.slotToPendingBlocks = make(map[uint64]*ethpb.BeaconBlock)
+	r.seenPendingBlocks = make(map[[32]byte]bool)
 }
