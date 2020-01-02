@@ -34,4 +34,10 @@ var (
 		},
 		[]string{"topic"},
 	)
+	numberOfTimesResyncedCounter = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "number_of_times_resynced",
+			Help: "Count the number of times a node resyncs.",
+		},
+	)
 )
