@@ -102,7 +102,7 @@ func (s *Service) slasherOldAtetstationFeeder() error {
 				log.Error(err)
 				continue
 			}
-			sar, err, errChArr := s.slasher.IsSlashableAttestation(s.context, ia)
+			sar, err := s.slasher.IsSlashableAttestation(s.context, ia)
 			if err != nil {
 				log.Error(err)
 				continue
@@ -110,7 +110,7 @@ func (s *Service) slasherOldAtetstationFeeder() error {
 			if len(sar.AttesterSlashing) > 0 {
 				log.Infof("slashing response: %v", sar.AttesterSlashing)
 			}
-			mergeChannels(errChArr, errOut, errorWg)
+			//mergeChannels(errChArr, errOut, errorWg)
 		}
 	}
 	errorWg.Wait()
@@ -121,7 +121,7 @@ func (s *Service) slasherOldAtetstationFeeder() error {
 	return nil
 }
 
-func mergeChannels(cs []chan error, out chan error, wg sync.WaitGroup) {
+func mergeChannels(cs []chan error, out chan error, wg *sync.WaitGroup) {
 	wg.Add(len(cs))
 	for _, c := range cs {
 		go func(c <-chan error) {

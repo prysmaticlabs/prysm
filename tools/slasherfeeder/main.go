@@ -32,7 +32,7 @@ import (
 
 var (
 	// Required fields
-	datadir = flag.String("datadir", "/Users/shay/Library/Eth2/beaconchaindata/", "Path to data directory.")
+	datadir = flag.String("datadir", "/Users/shayzluf/Library/Eth2/beaconchaindata/", "Path to data directory.")
 )
 
 // sortableAttestations implements the Sort interface to sort attestations
@@ -112,11 +112,11 @@ func main() {
 		log.Infof("detecting slashable events on: %d attestations from epoch: %d took: %d on average: %d per attestation", len(atts), e, elapsed.Milliseconds(), elapsed.Milliseconds()/int64(len(atts)))
 
 	}
-	errorWg.Wait()
-	close(errOut)
-	for err := range errOut {
-		log.Error(errors.Wrap(err, "error while writing to db in background"))
-	}
+	//errorWg.Wait()
+	//close(errOut)
+	//for err := range errOut {
+	//	log.Error(errors.Wrap(err, "error while writing to db in background"))
+	//}
 	fmt.Println("done")
 }
 
@@ -335,7 +335,7 @@ func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, commi
 	return inAtt, nil
 }
 
-func mergeChannels(cs []chan error, out chan error, wg sync.WaitGroup) {
+func mergeChannels(cs []chan error, out chan error, wg *sync.WaitGroup) {
 	wg.Add(len(cs))
 	for _, c := range cs {
 		go func(c <-chan error) {
