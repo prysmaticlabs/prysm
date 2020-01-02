@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -158,6 +159,10 @@ func (r *Service) subscribe(topic string, validator pubsub.Validator, handle sub
 				continue
 			}
 
+			if msg.ReceivedFrom == r.p2p.PeerID() {
+				continue
+			}
+
 			messageReceivedCounter.WithLabelValues(topic + r.p2p.Encoding().ProtocolSuffix()).Inc()
 
 			go pipeline(msg)
@@ -171,6 +176,7 @@ func (r *Service) subscribe(topic string, validator pubsub.Validator, handle sub
 // appropriate counter if the particular message fails to validate.
 func wrapAndReportValidation(topic string, v pubsub.Validator) (string, pubsub.Validator) {
 	return topic, func(ctx context.Context, pid peer.ID, msg *pubsub.Message) bool {
+		defer messagehandler.HandlePanic(ctx, msg)
 		b := v(ctx, pid, msg)
 		if !b {
 			messageFailedValidationCounter.WithLabelValues(topic).Inc()

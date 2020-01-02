@@ -269,8 +269,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 			return err
 		}
 	}
-
-	s.lastRequestedBlock.Set(s.blockHeight)
+	s.lastRequestedBlock.Set(big.NewInt(int64(currentBlockNum)))
 
 	currentState, err := s.beaconDB.HeadState(ctx)
 	if err != nil {
@@ -295,9 +294,8 @@ func (s *Service) requestBatchedLogs(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		s.lastRequestedBlock.Set(big.NewInt(int64(i)))
 	}
-
-	s.lastRequestedBlock.Set(requestedBlock)
 	return nil
 }
 
