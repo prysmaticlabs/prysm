@@ -45,3 +45,12 @@ message SparseMerkleTrie {
 message TrieLayer {
     repeated bytes layer = 1;
 }
+
+// DepositContainer defines a container that can be used to store
+// deposit related information for a particular deposit.
+message DepositContainer {
+    int64 index = 1;
+    uint64 eth1_block_height = 2;
+    ethereum.eth.v1alpha1.Deposit deposit = 3;
+    bytes deposit_root = 4;
+}

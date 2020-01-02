@@ -8,6 +8,10 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
+	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -33,28 +37,19 @@ type DepositFetcher interface {
 // stores all the deposit related data that is required by the beacon-node.
 type DepositCache struct {
 	// Beacon chain deposits in memory.
-	pendingDeposits       []*DepositContainer
-	deposits              []*DepositContainer
+	pendingDeposits       []*dbpb.DepositContainer
+	deposits              []*dbpb.DepositContainer
 	depositsLock          sync.RWMutex
 	chainStartDeposits    []*ethpb.Deposit
 	chainstartPubkeys     map[string]bool
 	chainstartPubkeysLock sync.RWMutex
 }
 
-// DepositContainer object for holding the deposit and a reference to the block in
-// which the deposit transaction was included in the proof of work chain.
-type DepositContainer struct {
-	Deposit     *ethpb.Deposit
-	Block       *big.Int
-	Index       int
-	depositRoot [32]byte
-}
-
 // NewDepositCache instantiates a new deposit cache
 func NewDepositCache() *DepositCache {
 	return &DepositCache{
-		pendingDeposits:    []*DepositContainer{},
-		deposits:           []*DepositContainer{},
+		pendingDeposits:    []*dbpb.DepositContainer{},
+		deposits:           []*dbpb.DepositContainer{},
 		chainstartPubkeys:  make(map[string]bool),
 		chainStartDeposits: make([]*ethpb.Deposit, 0),
 	}
@@ -62,7 +57,7 @@ func NewDepositCache() *DepositCache {
 
 // InsertDeposit into the database. If deposit or block number are nil
 // then this method does nothing.
-func (dc *DepositCache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNum *big.Int, index int, depositRoot [32]byte) {
+func (dc *DepositCache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNum *big.Int, index int64, depositRoot [32]byte) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.InsertDeposit")
 	defer span.End()
 	if d == nil || blockNum == nil {
@@ -78,7 +73,7 @@ func (dc *DepositCache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blo
 	defer dc.depositsLock.Unlock()
 	// keep the slice sorted on insertion in order to avoid costly sorting on retrival.
 	heightIdx := sort.Search(len(dc.deposits), func(i int) bool { return dc.deposits[i].Index >= index })
-	newDeposits := append([]*DepositContainer{{Deposit: d, Block: blockNum, depositRoot: depositRoot, Index: index}}, dc.deposits[heightIdx:]...)
+	newDeposits := append([]*dbpb.DepositContainer{{Deposit: d, Eth1BlockHeight: blockNum.Uint64(), DepositRoot: depositRoot[:], Index: index}}, dc.deposits[heightIdx:]...)
 	dc.deposits = append(dc.deposits[:heightIdx], newDeposits...)
 	historicalDepositsCount.Inc()
 }
@@ -115,7 +110,7 @@ func (dc *DepositCache) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*
 
 	var deposits []*ethpb.Deposit
 	for _, ctnr := range dc.deposits {
-		if beforeBlk == nil || beforeBlk.Cmp(ctnr.Block) > -1 {
+		if beforeBlk == nil || beforeBlk.Uint64() >= ctnr.Eth1BlockHeight {
 			deposits = append(deposits, ctnr.Deposit)
 		}
 	}
@@ -129,13 +124,13 @@ func (dc *DepositCache) DepositsNumberAndRootAtHeight(ctx context.Context, block
 	defer span.End()
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
-	heightIdx := sort.Search(len(dc.deposits), func(i int) bool { return dc.deposits[i].Block.Cmp(blockHeight) > 0 })
+	heightIdx := sort.Search(len(dc.deposits), func(i int) bool { return dc.deposits[i].Eth1BlockHeight > blockHeight.Uint64() })
 	// send the deposit root of the empty trie, if eth1follow distance is greater than the time of the earliest
 	// deposit.
 	if heightIdx == 0 {
 		return 0, [32]byte{}
 	}
-	return uint64(heightIdx), dc.deposits[heightIdx-1].depositRoot
+	return uint64(heightIdx), bytesutil.ToBytes32(dc.deposits[heightIdx-1].DepositRoot)
 }
 
 // DepositByPubkey looks through historical deposits and finds one which contains
@@ -151,7 +146,7 @@ func (dc *DepositCache) DepositByPubkey(ctx context.Context, pubKey []byte) (*et
 	for _, ctnr := range dc.deposits {
 		if bytes.Equal(ctnr.Deposit.Data.PublicKey, pubKey) {
 			deposit = ctnr.Deposit
-			blockNum = ctnr.Block
+			blockNum = big.NewInt(int64(ctnr.Eth1BlockHeight))
 			break
 		}
 	}
