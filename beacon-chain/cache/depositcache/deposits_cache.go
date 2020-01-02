@@ -78,6 +78,28 @@ func (dc *DepositCache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blo
 	historicalDepositsCount.Inc()
 }
 
+// InsertDepositContainers inserts a set of deposit containers into our deposit cache.
+func (dc *DepositCache) InsertDepositContainers(ctx context.Context, ctrs []*dbpb.DepositContainer) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.InsertDepositContainers")
+	defer span.End()
+	dc.depositsLock.Lock()
+	defer dc.depositsLock.Unlock()
+
+	sort.SliceStable(ctrs, func(i int, j int) bool { return ctrs[i].Index < ctrs[j].Index })
+	dc.deposits = ctrs
+	historicalDepositsCount.Add(float64(len(ctrs)))
+}
+
+// AllDepositContainers returns a list of deposits all historical deposit containers until the given block number.
+func (dc *DepositCache) AllDepositContainers(ctx context.Context) []*dbpb.DepositContainer {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.AllDepositContainers")
+	defer span.End()
+	dc.depositsLock.RLock()
+	defer dc.depositsLock.RUnlock()
+
+	return dc.deposits
+}
+
 // MarkPubkeyForChainstart sets the pubkey deposit status to true.
 func (dc *DepositCache) MarkPubkeyForChainstart(ctx context.Context, pubkey string) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.MarkPubkeyForChainstart")

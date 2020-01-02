@@ -203,6 +203,9 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		s.preGenesisState = eth1Data.BeaconState
 		s.latestEth1Data = eth1Data.CurrentEth1Data
 		s.lastReceivedMerkleIndex = int64(len(s.depositTrie.Items()) - 1)
+		if err := s.initDepositCaches(ctx, eth1Data.DepositContainers); err != nil {
+			return nil, errors.Wrap(err, "could not initialize caches")
+		}
 	}
 	return s, nil
 }
@@ -395,6 +398,25 @@ func (s *Service) initDataFromContract() error {
 		return errors.Wrap(err, "could not retrieve deposit root")
 	}
 	s.depositRoot = root[:]
+	return nil
+}
+
+func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.DepositContainer) error {
+	s.depositCache.InsertDepositContainers(ctx, ctrs)
+	currentState, err := s.beaconDB.HeadState(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get head state")
+	}
+	// do not add to pending cache
+	// if no state exists.
+	if currentState == nil {
+		return nil
+	}
+	currIndex := currentState.Eth1DepositIndex
+
+	for _, c := range ctrs[currIndex:] {
+		s.depositCache.InsertPendingDeposit(ctx, c.Deposit, c.Eth1BlockHeight, c.Index, bytesutil.ToBytes32(c.DepositRoot))
+	}
 	return nil
 }
 
