@@ -56,7 +56,7 @@ type FinalizationFetcher interface {
 
 // FinalizedCheckpt returns the latest finalized checkpoint from head state.
 func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
-	if s.headState == nil ||  s.headState.FinalizedCheckpoint == nil {
+	if s.headState == nil || s.headState.FinalizedCheckpoint == nil {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
@@ -65,7 +65,7 @@ func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
 
 // CurrentJustifiedCheckpt returns the current justified checkpoint from head state.
 func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
-	if s.headState == nil ||  s.headState.CurrentJustifiedCheckpoint == nil {
+	if s.headState == nil || s.headState.CurrentJustifiedCheckpoint == nil {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
@@ -74,7 +74,7 @@ func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
 
 // PreviousJustifiedCheckpt returns the previous justified checkpoint from head state.
 func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
-	if s.headState == nil ||  s.headState.PreviousJustifiedCheckpoint == nil {
+	if s.headState == nil || s.headState.PreviousJustifiedCheckpoint == nil {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
