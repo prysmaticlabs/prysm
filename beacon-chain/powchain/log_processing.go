@@ -23,7 +23,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -201,33 +200,16 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 	s.chainStartData.GenesisBlock = blockNumber.Uint64()
 
 	chainStartTime := time.Unix(int64(genesisTime), 0)
-	depHashes, err := s.ChainStartDepositHashes()
-	if err != nil {
-		log.Errorf("Generating chainstart deposit hashes failed: %v", err)
-		return
-	}
-
-	// We then update the in-memory deposit trie from the chain start
-	// deposits at this point, as this trie will be later needed for
-	// incoming, post-chain start deposits.
-	sparseMerkleTrie, err := trieutil.GenerateTrieFromItems(
-		depHashes,
-		int(params.BeaconConfig().DepositContractTreeDepth),
-	)
-	if err != nil {
-		log.Fatalf("Unable to generate deposit trie from ChainStart deposits: %v", err)
-	}
 
 	for i := range s.chainStartData.ChainstartDeposits {
-		proof, err := sparseMerkleTrie.MerkleProof(i)
+		proof, err := s.depositTrie.MerkleProof(i)
 		if err != nil {
 			log.Errorf("Unable to generate deposit proof %v", err)
 		}
 		s.chainStartData.ChainstartDeposits[i].Proof = proof
 	}
 
-	s.depositTrie = sparseMerkleTrie
-	root := sparseMerkleTrie.Root()
+	root := s.depositTrie.Root()
 	s.chainStartData.Eth1Data = &ethpb.Eth1Data{
 		DepositCount: uint64(len(s.chainStartData.ChainstartDeposits)),
 		DepositRoot:  root[:],
