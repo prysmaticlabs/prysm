@@ -8,21 +8,19 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/prysmaticlabs/go-ssz"
-	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -42,7 +40,7 @@ func init() {
 }
 
 func TestConstants(t *testing.T) {
-	if maxPeersToSync*blockBatchSize > 1000 {
+	if params.BeaconConfig().MaxPeersToSync*blockBatchSize > 1000 {
 		t.Fatal("rpc rejects requests over 1000 range slots")
 	}
 }
@@ -372,8 +370,8 @@ func makeGenesisTime(currentSlot uint64) time.Time {
 func TestMakeGenesisTime(t *testing.T) {
 	currentSlot := uint64(64)
 	gt := makeGenesisTime(currentSlot)
-	if slotsSinceGenesis(gt) != currentSlot {
-		t.Fatalf("Wanted %d, got %d", currentSlot, slotsSinceGenesis(gt))
+	if slotutil.SlotsSinceGenesis(gt) != currentSlot {
+		t.Fatalf("Wanted %d, got %d", currentSlot, slotutil.SlotsSinceGenesis(gt))
 	}
 }
 
@@ -423,25 +421,5 @@ func TestMakeSequence(t *testing.T) {
 	want := []uint64{3, 4, 5}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("Wanted %v, got %v", want, got)
-	}
-}
-
-func TestBestFinalized_returnsMaxValue(t *testing.T) {
-	p := p2pt.NewTestP2P(t)
-	s := &Service{
-		p2p: p,
-	}
-
-	for i := 0; i <= maxPeersToSync+100; i++ {
-		s.p2p.Peers().Add(peer.ID(i), nil, network.DirOutbound)
-		s.p2p.Peers().SetConnectionState(peer.ID(i), peers.PeerConnected)
-		s.p2p.Peers().SetChainState(peer.ID(i), &pb.Status{
-			FinalizedEpoch: 10,
-		})
-	}
-
-	_, _, pids := s.bestFinalized()
-	if len(pids) != maxPeersToSync {
-		t.Fatalf("returned wrong number of peers, wanted %d, got %d", maxPeersToSync, len(pids))
 	}
 }
