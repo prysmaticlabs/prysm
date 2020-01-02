@@ -25,18 +25,23 @@ func createAttesterSlashing(enc []byte) (*ethpb.AttesterSlashing, error) {
 // returns empty []*ethpb.AttesterSlashing if no slashing has been found with this status.
 func (db *Store) AttesterSlashings(status SlashingStatus) ([]*ethpb.AttesterSlashing, error) {
 	var attesterSlashings []*ethpb.AttesterSlashing
+	encoded := make([][]byte, 0)
 	err := db.view(func(tx *bolt.Tx) error {
 		c := tx.Bucket(slashingBucket).Cursor()
 		prefix := encodeStatusType(status, SlashingType(Attestation))
 		for k, v := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, v = c.Next() {
-			ps, err := createAttesterSlashing(v)
-			if err != nil {
-				return err
-			}
-			attesterSlashings = append(attesterSlashings, ps)
+			encoded = append(encoded, v)
 		}
 		return nil
 	})
+	for _, enc := range encoded {
+		ps, err := createAttesterSlashing(enc)
+		if err != nil {
+			return nil, err
+		}
+		attesterSlashings = append(attesterSlashings, ps)
+	}
+
 	return attesterSlashings, err
 }
 
