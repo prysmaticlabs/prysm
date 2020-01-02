@@ -19,7 +19,7 @@ func TestStore_ProposerSlashingNilBucket(t *testing.T) {
 		t.Fatal("HasProposerSlashing should return false")
 	}
 
-	p, err := db.ProposerSlashings(SlashingStatus(Active))
+	p, err := db.ProposalSlashingsByStatus(SlashingStatus(Active))
 	if err != nil {
 		t.Fatalf("failed to get proposer slashing: %v", err)
 	}
@@ -55,7 +55,7 @@ func TestStore_SaveProposerSlashing(t *testing.T) {
 			t.Fatalf("save proposer slashing failed: %v", err)
 		}
 
-		proposerSlashings, err := db.ProposerSlashings(tt.ss)
+		proposerSlashings, err := db.ProposalSlashingsByStatus(tt.ss)
 		if err != nil {
 			t.Fatalf("failed to get proposer slashings: %v", err)
 		}

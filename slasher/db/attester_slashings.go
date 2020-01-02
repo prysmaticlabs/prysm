@@ -22,7 +22,7 @@ func createAttesterSlashing(enc []byte) (*ethpb.AttesterSlashing, error) {
 }
 
 func toAttesterSlashings(encoded [][]byte) ([]*ethpb.AttesterSlashing, error) {
-	var attesterSlashings []*ethpb.AttesterSlashing
+	attesterSlashings := make([]*ethpb.AttesterSlashing, len(encoded))
 	for _, enc := range encoded {
 		ps, err := createAttesterSlashing(enc)
 		if err != nil {
@@ -36,23 +36,6 @@ func toAttesterSlashings(encoded [][]byte) ([]*ethpb.AttesterSlashing, error) {
 // AttesterSlashings accepts a status and returns all slashings with this status.
 // returns empty []*ethpb.AttesterSlashing if no slashing has been found with this status.
 func (db *Store) AttesterSlashings(status SlashingStatus) ([]*ethpb.AttesterSlashing, error) {
-	encoded := make([][]byte, 0)
-	err := db.view(func(tx *bolt.Tx) error {
-		c := tx.Bucket(slashingBucket).Cursor()
-		prefix := encodeStatusType(status, SlashingType(Attestation))
-		for k, v := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, v = c.Next() {
-			encoded = append(encoded, v)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return toAttesterSlashings(encoded)
-}
-
-// AttestingSlashingsByStatus return all attestation slashing proofs with certain status.
-func (db *Store) AttestingSlashingsByStatus(status SlashingStatus) ([]*ethpb.AttesterSlashing, error) {
 	encoded := make([][]byte, 0)
 	err := db.view(func(tx *bolt.Tx) error {
 		c := tx.Bucket(slashingBucket).Cursor()

@@ -76,7 +76,7 @@ func createProposerSlashing(enc []byte) (*ethpb.ProposerSlashing, error) {
 }
 
 func toProposerSlashings(encoded [][]byte) ([]*ethpb.ProposerSlashing, error) {
-	var proposerSlashings []*ethpb.ProposerSlashing
+	proposerSlashings := make([]*ethpb.ProposerSlashing, len(encoded))
 	for _, enc := range encoded {
 		ps, err := createProposerSlashing(enc)
 		if err != nil {
@@ -85,24 +85,6 @@ func toProposerSlashings(encoded [][]byte) ([]*ethpb.ProposerSlashing, error) {
 		proposerSlashings = append(proposerSlashings, ps)
 	}
 	return proposerSlashings, nil
-}
-
-// ProposerSlashings accepts a status and returns all slashings with this status.
-// returns empty proposer slashing slice if no slashing has been found with this status.
-func (db *Store) ProposerSlashings(status SlashingStatus) ([]*ethpb.ProposerSlashing, error) {
-	encoded := make([][]byte, 0)
-	err := db.view(func(tx *bolt.Tx) error {
-		c := tx.Bucket(slashingBucket).Cursor()
-		prefix := encodeStatusType(status, SlashingType(Proposal))
-		for k, v := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, v = c.Next() {
-			encoded = append(encoded, v)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return toProposerSlashings(encoded)
 }
 
 // ProposalSlashingsByStatus returns all the proposal slashing proofs with a certain status.
