@@ -28,6 +28,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
@@ -314,6 +315,46 @@ func (p *Status) Decay() {
 			status.badResponses--
 		}
 	}
+}
+
+// BestFinalized returns the highest finalized epoch that is agreed upon by the majority of
+// peers. This method may not return the absolute highest finalized, but the finalized epoch in
+// which most peers can serve blocks. Ideally, all peers would be reporting the same finalized
+// epoch.
+// Returns the best finalized root, epoch number, and peers that agree.
+func (p *Status) BestFinalized(maxPeers int) ([]byte, uint64, []peer.ID) {
+	finalized := make(map[[32]byte]uint64)
+	rootToEpoch := make(map[[32]byte]uint64)
+	for _, pid := range p.Connected() {
+		peerChainState, err := p.ChainState(pid)
+		if err == nil && peerChainState != nil {
+			r := bytesutil.ToBytes32(peerChainState.FinalizedRoot)
+			finalized[r]++
+			rootToEpoch[r] = peerChainState.FinalizedEpoch
+		}
+	}
+
+	var mostVotedFinalizedRoot [32]byte
+	var mostVotes uint64
+	for root, count := range finalized {
+		if count > mostVotes {
+			mostVotes = count
+			mostVotedFinalizedRoot = root
+		}
+	}
+
+	var pids []peer.ID
+	for _, pid := range p.Connected() {
+		peerChainState, err := p.ChainState(pid)
+		if err == nil && peerChainState != nil && peerChainState.FinalizedEpoch >= rootToEpoch[mostVotedFinalizedRoot] {
+			pids = append(pids, pid)
+			if len(pids) >= maxPeers {
+				break
+			}
+		}
+	}
+
+	return mostVotedFinalizedRoot[:], rootToEpoch[mostVotedFinalizedRoot], pids
 }
 
 // fetch is a helper function that fetches a peer status, possibly creating it.
