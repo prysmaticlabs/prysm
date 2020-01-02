@@ -76,8 +76,7 @@ func (ss *Server) DetectAndUpdateMaxEpochSpan(
 			break
 		}
 	}
-	er := ss.SlasherDB.SaveValidatorSpansMap(validatorIdx, spanMap)
-	err = <-er
+	err = ss.SlasherDB.SaveValidatorSpansMap(validatorIdx, spanMap)
 	if err != nil {
 		return 0, nil, err
 	}

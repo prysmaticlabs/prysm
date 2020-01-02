@@ -65,6 +65,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	log.Infof("finalized epoch: %v", cp.Epoch)
 	for e := uint64(0); e < cp.Epoch; e++ {
 		atts, err := d.Attestations(ctx, filters.NewFilter().SetTargetEpoch(e))
 		bcs, err := ListBeaconCommittees(ctx, d, &ethpb.ListCommitteesRequest{

@@ -40,7 +40,7 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 	atsSlashinngRes := &slashpb.AttesterSlashingResponse{}
 	at := make(chan []*ethpb.AttesterSlashing, len(indices))
 	er := make(chan error, len(indices))
-	var errChArr []chan error
+	//var errChArr []chan error
 	lastIdx := int64(-1)
 	var wg sync.WaitGroup
 	for _, idx := range indices {
@@ -56,8 +56,8 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 		}
 		wg.Add(1)
 		go func(idx uint64) {
-			atts, err, errch := ss.DetectSurroundVotes(ctx, idx, req)
-			errChArr = append(errChArr, errch)
+			atts, err := ss.DetectSurroundVotes(ctx, idx, req)
+			//errChArr = append(errChArr, errch)
 			if err != nil {
 				er <- err
 				wg.Done()
@@ -123,26 +123,27 @@ func (ss *Server) SlashableAttestations(req *empty.Empty, server slashpb.Slasher
 
 // DetectSurroundVotes is a method used to return the attestation that were detected
 // by min max surround detection method.
-func (ss *Server) DetectSurroundVotes(ctx context.Context, validatorIdx uint64, req *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error, chan error) {
+func (ss *Server) DetectSurroundVotes(ctx context.Context, validatorIdx uint64, req *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error) {
 	spanMap, err := ss.SlasherDB.ValidatorSpansMap(validatorIdx)
 	if err != nil {
-		return nil, err, nil
+		return nil, err
 	}
 	minTargetEpoch, spanMap, err := ss.DetectAndUpdateMinEpochSpan(ctx, req.Data.Source.Epoch, req.Data.Target.Epoch, validatorIdx, spanMap)
 	if err != nil {
-		return nil, err, nil
+		return nil, err
 	}
 	maxTargetEpoch, spanMap, err := ss.DetectAndUpdateMaxEpochSpan(ctx, req.Data.Source.Epoch, req.Data.Target.Epoch, validatorIdx, spanMap)
 	if err != nil {
-		return nil, err, nil
+		return nil, err
 	}
-	er := ss.SlasherDB.SaveValidatorSpansMap(validatorIdx, spanMap)
+	//er := ss.SlasherDB.SaveValidatorSpansMap(validatorIdx, spanMap)
+	ss.SlasherDB.SaveValidatorSpansMap(validatorIdx, spanMap)
 
 	var as []*ethpb.AttesterSlashing
 	if minTargetEpoch > 0 {
 		attestations, err := ss.SlasherDB.IndexedAttestation(minTargetEpoch, validatorIdx)
 		if err != nil {
-			return nil, err, er
+			return nil, err
 		}
 		for _, ia := range attestations {
 			if ia.Data.Source.Epoch > req.Data.Source.Epoch && ia.Data.Target.Epoch < req.Data.Target.Epoch {
@@ -156,7 +157,7 @@ func (ss *Server) DetectSurroundVotes(ctx context.Context, validatorIdx uint64, 
 	if maxTargetEpoch > 0 {
 		attestations, err := ss.SlasherDB.IndexedAttestation(maxTargetEpoch, validatorIdx)
 		if err != nil {
-			return nil, err, er
+			return nil, err
 		}
 		for _, ia := range attestations {
 			if ia.Data.Source.Epoch < req.Data.Source.Epoch && ia.Data.Target.Epoch > req.Data.Target.Epoch {
@@ -167,5 +168,5 @@ func (ss *Server) DetectSurroundVotes(ctx context.Context, validatorIdx uint64, 
 			}
 		}
 	}
-	return as, nil, er
+	return as, nil
 }

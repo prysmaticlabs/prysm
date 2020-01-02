@@ -77,29 +77,30 @@ func (db *Store) ValidatorSpansMap(validatorIdx uint64) (*slashpb.EpochSpanMap, 
 }
 
 // SaveValidatorSpansMap accepts a validator index and span map and writes it to disk.
-func (db *Store) SaveValidatorSpansMap(validatorIdx uint64, spanMap *slashpb.EpochSpanMap) chan error {
+func (db *Store) SaveValidatorSpansMap(validatorIdx uint64, spanMap *slashpb.EpochSpanMap) error {
 	spanCache.Add(validatorIdx, spanMap)
 	spanCacheSize.Set(float64(spanCache.Len()))
-	er := make(chan error)
-	go func(validatorIdx uint64, spanMap *slashpb.EpochSpanMap, errChan chan error) {
-		val, err := proto.Marshal(spanMap)
-		if err != nil {
-			errChan <- errors.Wrap(err, "failed to marshal span map")
-			close(errChan)
-			return
-		}
-		key := bytesutil.Bytes4(validatorIdx)
-		err = db.batch(func(tx *bolt.Tx) error {
-			bucket := tx.Bucket(validatorsMinMaxSpanBucket)
-			if err := bucket.Put(key, val); err != nil {
-				errChan <- errors.Wrapf(err, "failed to delete validator id: %d from validators min max span bucket", validatorIdx)
-
-			}
-			return err
-		})
-		close(errChan)
-	}(validatorIdx, spanMap, er)
-	return er
+	//er := make(chan error)
+	//go func(validatorIdx uint64, spanMap *slashpb.EpochSpanMap, errChan chan error) {
+	//	val, err := proto.Marshal(spanMap)
+	//	if err != nil {
+	//		errChan <- errors.Wrap(err, "failed to marshal span map")
+	//		close(errChan)
+	//		return
+	//	}
+	//	key := bytesutil.Bytes4(validatorIdx)
+	//	err = db.batch(func(tx *bolt.Tx) error {
+	//		bucket := tx.Bucket(validatorsMinMaxSpanBucket)
+	//		if err := bucket.Put(key, val); err != nil {
+	//			errChan <- errors.Wrapf(err, "failed to delete validator id: %d from validators min max span bucket", validatorIdx)
+	//
+	//		}
+	//		return err
+	//	})
+	//	close(errChan)
+	//}(validatorIdx, spanMap, er)
+	//return er
+	return nil
 }
 
 // DeleteValidatorSpanMap deletes a validator span map using a validator index as bucket key.
