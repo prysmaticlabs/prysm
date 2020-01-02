@@ -30,10 +30,10 @@ type PendingDepositsFetcher interface {
 
 // InsertPendingDeposit into the database. If deposit or block number are nil
 // then this method does nothing.
-func (dc *DepositCache) InsertPendingDeposit(ctx context.Context, d *ethpb.Deposit, blockNum *big.Int, index int64, depositRoot [32]byte) {
+func (dc *DepositCache) InsertPendingDeposit(ctx context.Context, d *ethpb.Deposit, blockNum uint64, index int64, depositRoot [32]byte) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.InsertPendingDeposit")
 	defer span.End()
-	if d == nil || blockNum == nil {
+	if d == nil {
 		log.WithFields(log.Fields{
 			"block":   blockNum,
 			"deposit": d,
@@ -43,7 +43,7 @@ func (dc *DepositCache) InsertPendingDeposit(ctx context.Context, d *ethpb.Depos
 	dc.depositsLock.Lock()
 	defer dc.depositsLock.Unlock()
 	dc.pendingDeposits = append(dc.pendingDeposits,
-		&dbpb.DepositContainer{Deposit: d, Eth1BlockHeight: blockNum.Uint64(), Index: index, DepositRoot: depositRoot[:]})
+		&dbpb.DepositContainer{Deposit: d, Eth1BlockHeight: blockNum, Index: index, DepositRoot: depositRoot[:]})
 	pendingDepositsCount.Inc()
 	span.AddAttributes(trace.Int64Attribute("count", int64(len(dc.pendingDeposits))))
 }

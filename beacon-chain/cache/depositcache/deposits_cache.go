@@ -57,10 +57,10 @@ func NewDepositCache() *DepositCache {
 
 // InsertDeposit into the database. If deposit or block number are nil
 // then this method does nothing.
-func (dc *DepositCache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNum *big.Int, index int64, depositRoot [32]byte) {
+func (dc *DepositCache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNum uint64, index int64, depositRoot [32]byte) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.InsertDeposit")
 	defer span.End()
-	if d == nil || blockNum == nil {
+	if d == nil {
 		log.WithFields(log.Fields{
 			"block":        blockNum,
 			"deposit":      d,
@@ -73,7 +73,7 @@ func (dc *DepositCache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blo
 	defer dc.depositsLock.Unlock()
 	// keep the slice sorted on insertion in order to avoid costly sorting on retrival.
 	heightIdx := sort.Search(len(dc.deposits), func(i int) bool { return dc.deposits[i].Index >= index })
-	newDeposits := append([]*dbpb.DepositContainer{{Deposit: d, Eth1BlockHeight: blockNum.Uint64(), DepositRoot: depositRoot[:], Index: index}}, dc.deposits[heightIdx:]...)
+	newDeposits := append([]*dbpb.DepositContainer{{Deposit: d, Eth1BlockHeight: blockNum, DepositRoot: depositRoot[:], Index: index}}, dc.deposits[heightIdx:]...)
 	dc.deposits = append(dc.deposits[:heightIdx], newDeposits...)
 	historicalDepositsCount.Inc()
 }

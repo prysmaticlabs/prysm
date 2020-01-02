@@ -21,7 +21,7 @@ func TestBeaconDB_InsertDeposit_LogsOnNilDepositInsertion(t *testing.T) {
 	hook := logTest.NewGlobal()
 	dc := DepositCache{}
 
-	dc.InsertDeposit(context.Background(), nil, big.NewInt(1), 0, [32]byte{})
+	dc.InsertDeposit(context.Background(), nil, 1, 0, [32]byte{})
 
 	if len(dc.deposits) != 0 {
 		t.Fatal("Number of deposits changed")
@@ -35,7 +35,7 @@ func TestBeaconDB_InsertDeposit_LogsOnNilBlockNumberInsertion(t *testing.T) {
 	hook := logTest.NewGlobal()
 	dc := DepositCache{}
 
-	dc.InsertDeposit(context.Background(), &ethpb.Deposit{}, nil, 0, [32]byte{})
+	dc.InsertDeposit(context.Background(), &ethpb.Deposit{}, 0, 0, [32]byte{})
 
 	if len(dc.deposits) != 0 {
 		t.Fatal("Number of deposits changed")
@@ -49,27 +49,27 @@ func TestBeaconDB_InsertDeposit_MaintainsSortedOrderByIndex(t *testing.T) {
 	dc := DepositCache{}
 
 	insertions := []struct {
-		blkNum  *big.Int
+		blkNum  uint64
 		deposit *ethpb.Deposit
 		index   int64
 	}{
 		{
-			blkNum:  big.NewInt(0),
+			blkNum:  0,
 			deposit: &ethpb.Deposit{},
 			index:   0,
 		},
 		{
-			blkNum:  big.NewInt(0),
+			blkNum:  0,
 			deposit: &ethpb.Deposit{},
 			index:   3,
 		},
 		{
-			blkNum:  big.NewInt(0),
+			blkNum:  0,
 			deposit: &ethpb.Deposit{},
 			index:   1,
 		},
 		{
-			blkNum:  big.NewInt(0),
+			blkNum:  0,
 			deposit: &ethpb.Deposit{},
 			index:   4,
 		},
