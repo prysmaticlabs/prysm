@@ -151,6 +151,6 @@ func (r *Service) validatePendingSlots() error {
 func (r *Service) clearPendingSlots() {
 	r.pendingQueueLock.Lock()
 	defer r.pendingQueueLock.Unlock()
-	r.slotToPendingBlocks = make(map[uint64]*ethpb.BeaconBlock)
+	r.slotToPendingBlocks = make(map[uint64]*ethpb.SignedBeaconBlock)
 	r.seenPendingBlocks = make(map[[32]byte]bool)
 }

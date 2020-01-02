@@ -8,11 +8,9 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/prysmaticlabs/go-ssz"
-	"github.com/libp2p/go-libp2p-core/peer"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
@@ -23,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -376,8 +373,8 @@ func makeGenesisTime(currentSlot uint64) time.Time {
 func TestMakeGenesisTime(t *testing.T) {
 	currentSlot := uint64(64)
 	gt := makeGenesisTime(currentSlot)
-	if slotutil.SlotsSinceGenesis(gt) != currentSlot {
-		t.Fatalf("Wanted %d, got %d", currentSlot, slotutil.SlotsSinceGenesis(gt))
+	if helpers.SlotsSince(gt) != currentSlot {
+		t.Fatalf("Wanted %d, got %d", currentSlot, helpers.SlotsSince(gt))
 	}
 }
 
