@@ -6,9 +6,8 @@ import (
 	"math/big"
 	"testing"
 
-	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )

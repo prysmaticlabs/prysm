@@ -8,13 +8,11 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
-	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
