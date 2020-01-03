@@ -639,7 +639,7 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
-	if err := UpdateCommitteeCache(state); err != nil {
+	if err := UpdateCommitteeCache(state, state.Slot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -844,5 +844,43 @@ func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
 			index = (index + 1) % params.BeaconConfig().MaxCommitteesPerSlot
 			i = 0
 		}
+	}
+}
+
+func TestBeaconCommitteeFromState_UpdateCacheForPreviousEpoch(t *testing.T) {
+	c := featureconfig.Get()
+	c.EnableNewCache = true
+	featureconfig.Init(c)
+	defer featureconfig.Init(nil)
+
+	committeeSize := uint64(16)
+	validators := make([]*ethpb.Validator, committeeSize*params.BeaconConfig().SlotsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	state := &pb.BeaconState{
+		Slot:        params.BeaconConfig().SlotsPerEpoch,
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	}
+
+	if _, err := BeaconCommitteeFromState(state, 1 /* previous epoch */, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify previous epoch is cached
+	seed, err := Seed(state, 0, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		t.Fatal(err)
+	}
+	activeIndices, err := committeeCache.ActiveIndices(seed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if activeIndices == nil {
+		t.Error("did not cache active indices")
 	}
 }
