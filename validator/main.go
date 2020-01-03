@@ -28,7 +28,6 @@ func startNode(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-
 	validatorClient.Start()
 	return nil
 }

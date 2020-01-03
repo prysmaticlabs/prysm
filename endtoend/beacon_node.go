@@ -65,7 +65,6 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 
 	args := []string{
 		"--no-discovery",
-		"--force-clear-db",
 		"--http-web3provider=http://127.0.0.1:8545",
 		"--web3provider=ws://127.0.0.1:8546",
 		fmt.Sprintf("--datadir=%s/eth2-beacon-node-%d", tmpPath, index),
