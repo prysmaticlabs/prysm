@@ -64,8 +64,14 @@ func RandKey() *SecretKey {
 
 // SecretKeyFromBytes creates a BLS private key from a BigEndian byte slice.
 func SecretKeyFromBytes(priv []byte) (*SecretKey, error) {
+	if len(priv) != 32 {
+		return nil, errors.New("secret key must be 32 bytes")
+	}
 	secKey := &bls12.SecretKey{}
 	err := secKey.Deserialize(priv)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not unmarshal bytes into secret key")
+	}
 	return &SecretKey{p: secKey}, err
 }
 
@@ -73,6 +79,9 @@ func SecretKeyFromBytes(priv []byte) (*SecretKey, error) {
 func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 	if featureconfig.Get().SkipBLSVerify {
 		return &PublicKey{}, nil
+	}
+	if len(pub) != 48 {
+		return nil, errors.New("public key must be 48 bytes")
 	}
 	cv, ok := pubkeyCache.Get(string(pub))
 	if ok && featureconfig.Get().EnableBLSPubkeyCache {
