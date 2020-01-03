@@ -8,11 +8,11 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -115,24 +115,23 @@ func (bs *Server) ListAttestations(
 	}, nil
 }
 
-// StreamAttestations to clients every single time a new attestation is received.
+// StreamAttestations to clients at the end of every slot. This method retrieves the
+// aggregated attestations currently in the pool at the start of a slot and sends
+// them over a gRPC stream.
 func (bs *Server) StreamAttestations(
 	_ *ptypes.Empty, stream ethpb.BeaconChain_StreamAttestationsServer,
 ) error {
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := bs.StateNotifier.StateFeed().Subscribe(stateChannel)
-	defer stateSub.Unsubscribe()
+	genesisTime := bs.GenesisTimeFetcher.GenesisTime()
+	st := slotutil.GetSlotTicker(genesisTime, params.BeaconConfig().SecondsPerSlot)
 	for {
 		select {
-		case event := <-stateChannel:
-			if event.Type == statefeed.BlockProcessed {
-				res := &ethpb.Attestation{}
-				if err := stream.Send(res); err != nil {
+		case <-st.C():
+			atts := bs.Pool.AggregatedAttestations()
+			for i := 0; i < len(atts); i++ {
+				if err := stream.Send(atts[i]); err != nil {
 					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
 				}
 			}
-		case <-stateSub.Err():
-			return status.Error(codes.Aborted, "Subscriber closed, exiting goroutine")
 		case <-bs.Ctx.Done():
 			return status.Error(codes.Canceled, "Context canceled")
 		case <-stream.Context().Done():

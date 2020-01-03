@@ -7,14 +7,21 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
+	ptypes "github.com/gogo/protobuf/types"
+	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -512,4 +519,72 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 		t.Log(res.Attestations, atts[i:j])
 		t.Error("Incorrect attestations response")
 	}
+}
+
+func TestServer_StreamAttestations_ContextCanceled(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+	ctx := context.Background()
+
+	ctx, cancel := context.WithCancel(ctx)
+	chainService := &mock.ChainService{
+		Genesis: time.Now(),
+	}
+	server := &Server{
+		Ctx:                ctx,
+		GenesisTimeFetcher: chainService,
+	}
+
+	exitRoutine := make(chan bool)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := mockRPC.NewMockBeaconChain_StreamAttestationsServer(ctrl)
+	mockStream.EXPECT().Context().Return(ctx)
+	go func(tt *testing.T) {
+		if err := server.StreamAttestations(&ptypes.Empty{}, mockStream); !strings.Contains(err.Error(), "Context canceled") {
+			tt.Errorf("Could not call RPC method: %v", err)
+		}
+		<-exitRoutine
+	}(t)
+	cancel()
+	exitRoutine <- true
+}
+
+func TestServer_StreamAttestations_OnSlotTick(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+	exitRoutine := make(chan bool)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	ctx := context.Background()
+	chainService := &mock.ChainService{
+		Genesis: time.Now(),
+	}
+	server := &Server{
+		Ctx:                ctx,
+		GenesisTimeFetcher: chainService,
+	}
+
+	mockStream := mockRPC.NewMockBeaconChain_StreamChainHeadServer(ctrl)
+	mockStream.EXPECT().Send(
+		&ethpb.ChainHead{},
+	).Do(func(arg0 interface{}) {
+		exitRoutine <- true
+	})
+	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
+
+	go func(tt *testing.T) {
+		if err := server.StreamChainHead(&ptypes.Empty{}, mockStream); err != nil {
+			tt.Errorf("Could not call RPC method: %v", err)
+		}
+	}(t)
+
+	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
+	for sent := 0; sent == 0; {
+		sent = server.StateNotifier.StateFeed().Send(&feed.Event{
+			Type: statefeed.BlockProcessed,
+			Data: &statefeed.BlockProcessedData{},
+		})
+	}
+	<-exitRoutine
 }
