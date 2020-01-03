@@ -70,7 +70,6 @@ message EpochSpanMap {
     map<uint64, MinMaxEpochSpan> epoch_span_map = 1;
 }
 
-
 // ProposalHistory defines the structure for recording a validators historical proposals.
 // Using a bitlist to represent the epochs and an uint64 to mark the latest marked
 // epoch of the bitlist, we can easily store which epochs a validator has proposed
