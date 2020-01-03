@@ -119,6 +119,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	if err != nil {
 		t.Fatalf("unable to setup chain service: %v", err)
 	}
+	chainService.genesisTime = time.Unix(1, 0) // non-zero time
 
 	return chainService
 }
