@@ -289,6 +289,9 @@ func TestRemoveStateSinceLastFinalized(t *testing.T) {
 			t.Fatal(err)
 		}
 		blockRoots = append(blockRoots, r)
+		if err := store.db.SaveHeadBlockRoot(ctx, r); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	// New finalized epoch: 1
@@ -360,6 +363,9 @@ func TestRemoveStateSinceLastFinalized_EmptyStartSlot(t *testing.T) {
 			t.Fatal(err)
 		}
 		blockRoots = append(blockRoots, r)
+	}
+	if err := store.db.SaveHeadBlockRoot(ctx, blockRoots[0]); err != nil {
+		t.Fatal(err)
 	}
 	if err := store.rmStatesOlderThanLastFinalized(ctx, 10, 11); err != nil {
 		t.Fatal(err)
