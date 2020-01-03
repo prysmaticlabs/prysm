@@ -56,6 +56,7 @@ func initializeValidators(
 			fmt.Sprintf("--interop-num-validators=%d", validatorsPerNode),
 			fmt.Sprintf("--interop-start-index=%d", validatorsPerNode*n),
 			fmt.Sprintf("--monitoring-port=%d", 9080+n),
+			fmt.Sprintf("--datadir=%s/eth1-val-%d", tmpPath, index),
 			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", 4000+n),
 		}
 		cmd := exec.Command(binaryPath, args...)

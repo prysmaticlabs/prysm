@@ -186,7 +186,7 @@ func TestSaveProposalHistory_OK(t *testing.T) {
 			},
 		},
 		{
-			pubkey: []byte{0},
+			pubkey: []byte{3},
 			epoch:  uint64(2),
 			history: &slashpb.ProposalHistory{
 				EpochBits:          bitfield.Bitlist{0x04, 0x04},
