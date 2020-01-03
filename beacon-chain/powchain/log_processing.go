@@ -356,22 +356,22 @@ func (s *Service) processBlksInRange(ctx context.Context, startBlk uint64, endBl
 
 // checkForChainStart checks the given  block number for if chainstart has occurred.
 func (s *Service) checkForChainStart(ctx context.Context, blkNum *big.Int) error {
-	blk, err := s.blockFetcher.BlockByNumber(ctx, blkNum)
+	hash, err := s.BlockHashByHeight(ctx, blkNum)
 	if err != nil {
-		return errors.Wrap(err, "could not get eth1 block")
+		return errors.Wrap(err, "could not get eth1 block hash")
 	}
-	if blk == nil {
-		return errors.Wrap(err, "got empty block from powchain service")
+	if hash == [32]byte{} {
+		return errors.Wrap(err, "got empty block hash")
 	}
-	if blk.Hash() == [32]byte{} {
-		return errors.New("got empty blockhash from powchain service")
+	timeStamp, err := s.BlockTimeByHeight(ctx, blkNum)
+	if err != nil {
+		return errors.Wrap(err, "could not get block timestamp")
 	}
-	timeStamp := blk.Time()
 	valCount, _ := helpers.ActiveValidatorCount(s.preGenesisState, 0)
 	triggered := state.IsValidGenesisState(valCount, s.createGenesisTime(timeStamp))
 	if triggered {
 		s.chainStartData.GenesisTime = s.createGenesisTime(timeStamp)
-		s.ProcessChainStart(s.chainStartData.GenesisTime, blk.Hash(), blk.Number())
+		s.ProcessChainStart(s.chainStartData.GenesisTime, hash, blkNum)
 	}
 	return nil
 }
