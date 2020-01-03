@@ -8,6 +8,8 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -114,11 +116,29 @@ func (bs *Server) ListAttestations(
 }
 
 // StreamAttestations to clients every single time a new attestation is received.
-// TODO(#4184): Implement.
 func (bs *Server) StreamAttestations(
-	_ *ptypes.Empty, _ ethpb.BeaconChain_StreamAttestationsServer,
+	_ *ptypes.Empty, stream ethpb.BeaconChain_StreamAttestationsServer,
 ) error {
-	return status.Error(codes.Unimplemented, "Not yet implemented")
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := bs.StateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
+	for {
+		select {
+		case event := <-stateChannel:
+			if event.Type == statefeed.BlockProcessed {
+				res := &ethpb.Attestation{}
+				if err := stream.Send(res); err != nil {
+					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+				}
+			}
+		case <-stateSub.Err():
+			return status.Error(codes.Aborted, "Subscriber closed, exiting goroutine")
+		case <-bs.Ctx.Done():
+			return status.Error(codes.Canceled, "Context canceled")
+		case <-stream.Context().Done():
+			return status.Error(codes.Canceled, "Context canceled")
+		}
+	}
 }
 
 // AttestationPool retrieves pending attestations.
