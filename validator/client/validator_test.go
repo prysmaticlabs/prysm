@@ -62,7 +62,7 @@ func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
 		keyManager:      testKeyManager,
 		validatorClient: client,
 	}
-	genesis := uint64(time.Unix(0, 0).Unix())
+	genesis := uint64(time.Unix(1, 0).Unix())
 	clientStream := internal.NewMockValidatorService_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
@@ -254,6 +254,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	v := validator{
 		keyManager:      testKeyManager,
 		validatorClient: client,
+		genesisTime:     1,
 	}
 	resp := generateMockStatusResponse(publicKeys(v.keyManager))
 	resp.Statuses[0].Status.Status = pb.ValidatorStatus_ACTIVE
@@ -281,6 +282,7 @@ func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
 	v := validator{
 		keyManager:      testKeyManager,
 		validatorClient: client,
+		genesisTime:     1,
 	}
 	client.EXPECT().CanonicalHead(
 		gomock.Any(),
@@ -320,6 +322,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	v := validator{
 		keyManager:      testKeyManagerThreeValidators,
 		validatorClient: client,
+		genesisTime:     1,
 	}
 	resp := generateMockStatusResponse(publicKeys(v.keyManager))
 	resp.Statuses[0].Status.Status = pb.ValidatorStatus_ACTIVE
@@ -348,6 +351,8 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 	v := validator{
 		keyManager:      testKeyManagerThreeValidators,
 		validatorClient: client,
+		pubkeys:         publicKeys(keyMapThreeValidators),
+		genesisTime: 1,
 	}
 	resp := generateMockStatusResponse(publicKeys(v.keyManager))
 	resp.Statuses[0].Status.Status = pb.ValidatorStatus_ACTIVE
