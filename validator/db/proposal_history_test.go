@@ -125,6 +125,26 @@ func TestSetProposedForEpoch_PreventsProposingFutureEpochs(t *testing.T) {
 	}
 }
 
+func TestProposalHistory_InitializesNewPubKeys(t *testing.T) {
+	pubkeys := [][]byte{[]byte{30}, []byte{25}, []byte{20}}
+	db := SetupDB(t, pubkeys)
+	defer TeardownDB(t, db)
+
+	for _, pub := range pubkeys {
+		proposalHistory, err := db.ProposalHistory(pub)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		clean := &slashpb.ProposalHistory{
+			EpochBits: bitfield.NewBitlist(params.BeaconConfig().WeakSubjectivityPeriod),
+		}
+		if !reflect.DeepEqual(proposalHistory, clean) {
+			t.Fatalf("Expected proposal history epoch bits to be empty, received %v", proposalHistory)
+		}
+	}
+}
+
 func TestProposalHistory_NilDB(t *testing.T) {
 	db := SetupDB(t, [][]byte{})
 	defer TeardownDB(t, db)
@@ -136,8 +156,8 @@ func TestProposalHistory_NilDB(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if proposalHistory != nil {
-		t.Fatal("Expected proposal history to be nil")
+	if !reflect.DeepEqual(proposalHistory, &slashpb.ProposalHistory{}) {
+		t.Fatalf("Expected proposal history to be empty, received: %v", proposalHistory)
 	}
 }
 

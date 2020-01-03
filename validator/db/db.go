@@ -88,6 +88,7 @@ func NewKVStore(dirPath string, pubkeys [][]byte) (*Store, error) {
 		return nil, err
 	}
 
+	// Initialize the required pubkeys into the DB to ensure they're not empty.
 	for _, pubkey := range pubkeys {
 		history, err := kv.ProposalHistory(pubkey)
 		if err != nil {
