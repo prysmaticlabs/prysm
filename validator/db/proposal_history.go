@@ -38,7 +38,9 @@ func SetProposedForEpoch(history *slashpb.ProposalHistory, epoch uint64) {
 			return
 		}
 		// If the epoch to mark is ahead of latest written epoch, override the old votes and mark the requested epoch.
-		for i := history.LatestEpochWritten + 1; i < epoch; i++ {
+		// Limit the overwriting to one weak subjectivity period as further is not needed.
+		maxToWrite := history.LatestEpochWritten + wsPeriod
+		for i := history.LatestEpochWritten + 1; i < epoch && i < maxToWrite; i++ {
 			history.EpochBits.SetBitAt(i%wsPeriod, false)
 		}
 		history.LatestEpochWritten = epoch
@@ -46,7 +48,7 @@ func SetProposedForEpoch(history *slashpb.ProposalHistory, epoch uint64) {
 	history.EpochBits.SetBitAt(epoch%wsPeriod, true)
 }
 
-func unmarshallProposalHistory(enc []byte) (*slashpb.ProposalHistory, error) {
+func unmarshalProposalHistory(enc []byte) (*slashpb.ProposalHistory, error) {
 	history := &slashpb.ProposalHistory{}
 	err := proto.Unmarshal(enc, history)
 	if err != nil {

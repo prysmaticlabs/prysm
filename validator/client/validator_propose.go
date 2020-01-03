@@ -59,11 +59,9 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	}
 
 	if db.HasProposedForEpoch(history, epoch) {
-		log.Info("Tried to sign a double proposal, rejected")
+		log.WithField("epoch", epoch).Warn("Tried to sign a double proposal, rejected")
 		return
 	}
-
-	log.WithField("epoch", epoch).Info("Validator has not proposed for this epoch")
 
 	// Sign returned block from beacon node
 	sig, err := v.signBlock(ctx, pubKey, epoch, b)
