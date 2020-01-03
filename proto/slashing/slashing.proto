@@ -71,10 +71,11 @@ message EpochSpanMap {
 }
 
 
-// ValidatorProposalHistory defines the structure for recording a validators historical proposals.
-// Using a bitlist and an uint64 to mark the last marked epoch of the bitlist, we can easily store
-// which epochs a validator has proposed a block for while pruning the older data.
-message ValidatorProposalHistory {
-    bytes proposal_history = 1 [(gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
+// ProposalHistory defines the structure for recording a validators historical proposals.
+// Using a bitlist to represent the epochs and an uint64 to mark the latest marked
+// epoch of the bitlist, we can easily store which epochs a validator has proposed
+// a block for while pruning the older data.
+message ProposalHistory {
+    bytes epoch_bits = 1 [(gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
     uint64 latest_epoch_written = 2;
 }
