@@ -136,6 +136,11 @@ func TestProposeBlock_BroadcastsBlock(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.BeaconBlock{}),
 	).Return(&pb.ProposeResponse{}, nil /*error*/)
 
+	m.validatorClient.EXPECT().ValidatorIndex(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
+	).Return(&pb.ValidatorIndexResponse{}, nil)
+
 	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
 }
 
@@ -169,6 +174,11 @@ func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
 		sentBlock = block
 		return &pb.ProposeResponse{}, nil
 	})
+
+	m.validatorClient.EXPECT().ValidatorIndex(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
+	).Return(&pb.ValidatorIndexResponse{}, nil)
 
 	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
 
