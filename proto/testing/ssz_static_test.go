@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
+	"github.com/prysmaticlabs/prysm/shared/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -50,7 +51,17 @@ func runSSZStaticTests(t *testing.T, config string) {
 					t.Fatalf("Failed to Unmarshal: %v", err)
 				}
 
-				root, err := ssz.HashTreeRoot(object)
+				// Custom hash tree root for beacon state.
+				var htr func(interface{}) ([32]byte, error)
+				if _, ok := object.(*pb.BeaconState); ok {
+					htr = func(s interface{}) ([32]byte, error){
+						return stateutil.HashTreeRootState(s.(*pb.BeaconState))
+					}
+				} else {
+					htr = ssz.HashTreeRoot
+				}
+
+				root, err := htr(object)
 				if err != nil {
 					t.Fatal(err)
 				}
