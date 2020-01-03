@@ -139,7 +139,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 // If the request is from the past, and likely previously pruned it will return false.
 func HasProposedForEpoch(history *slashpb.ProposalHistory, epoch uint64) bool {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-	// Previously pruned, but to be safe we should return false.
+	// Previously pruned, we should return false.
 	if int(epoch) <= int(history.LatestEpochWritten)-int(wsPeriod) {
 		return false
 	}

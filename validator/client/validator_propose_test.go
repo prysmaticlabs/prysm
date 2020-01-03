@@ -247,8 +247,7 @@ func TestSetProposedForEpoch_SetsBit(t *testing.T) {
 		if i == epoch {
 			continue
 		}
-		proposed = HasProposedForEpoch(proposals, i)
-		if proposed {
+		if HasProposedForEpoch(proposals, i) {
 			t.Fatalf("Expected epoch %d to not be marked as proposed", i)
 		}
 	}

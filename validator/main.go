@@ -28,6 +28,7 @@ func startNode(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+
 	validatorClient.Start()
 	return nil
 }
@@ -45,6 +46,7 @@ var appFlags = []cli.Flag{
 	flags.InteropNumValidators,
 	cmd.VerbosityFlag,
 	cmd.DataDirFlag,
+	cmd.ClearDB,
 	cmd.EnableTracingFlag,
 	cmd.TracingProcessNameFlag,
 	cmd.TracingEndpointFlag,

@@ -150,12 +150,14 @@ func (s *ValidatorClient) registerPrometheusService(ctx *cli.Context) error {
 func (s *ValidatorClient) registerClientService(ctx *cli.Context, keys map[string]*keystore.Key) error {
 	endpoint := ctx.GlobalString(flags.BeaconRPCProviderFlag.Name)
 	dataDir := ctx.GlobalString(cmd.DataDirFlag.Name)
+	clearDB := ctx.GlobalBool(cmd.ClearDB.Name)
 	logValidatorBalances := !ctx.GlobalBool(flags.DisablePenaltyRewardLogFlag.Name)
 	cert := ctx.GlobalString(flags.CertFlag.Name)
 	graffiti := ctx.GlobalString(flags.GraffitiFlag.Name)
 	v, err := client.NewValidatorService(context.Background(), &client.Config{
 		Endpoint:             endpoint,
 		DataDir:              dataDir,
+		ClearDB:              clearDB,
 		Keys:                 keys,
 		LogValidatorBalances: logValidatorBalances,
 		CertFlag:             cert,

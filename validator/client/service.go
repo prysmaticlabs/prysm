@@ -32,6 +32,7 @@ type ValidatorService struct {
 	endpoint             string
 	withCert             string
 	dataDir              string
+	clearDB              bool
 	keys                 map[[48]byte]*keystore.Key
 	logValidatorBalances bool
 }
@@ -40,8 +41,9 @@ type ValidatorService struct {
 type Config struct {
 	Endpoint             string
 	DataDir              string
+	ClearDB              bool
 	CertFlag             string
-	GraffitiFlag         string
+	GraffitiFlag          string
 	Keys                 map[string]*keystore.Key
 	LogValidatorBalances bool
 }
@@ -62,7 +64,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		endpoint:             cfg.Endpoint,
 		withCert:             cfg.CertFlag,
 		dataDir:              cfg.DataDir,
-		graffiti:             []byte(cfg.GraffitiFlag),
+		graffiti:              []byte(cfg.GraffitiFlag),
 		keys:                 pubKeys,
 		logValidatorBalances: cfg.LogValidatorBalances,
 	}, nil
@@ -103,14 +105,27 @@ func (v *ValidatorService) Start() {
 		return
 	}
 	log.Info("Successfully started gRPC connection")
-	db, err := db.NewKVStore(v.dataDir, pubKeys)
+
+	valDB, err := db.NewKVStore(v.dataDir, pubKeys)
 	if err != nil {
 		log.Errorf("Could not create DB in dir %s: %v", v.dataDir, err)
 		return
 	}
+	if v.clearDB {
+		if err := valDB.ClearDB(); err != nil {
+			log.Errorf("Could not clear DB in dir %s: %v", v.dataDir, err)
+			return
+		}
+		valDB, err = db.NewKVStore(v.dataDir, pubKeys)
+		if err != nil {
+			log.Errorf("Could not create DB in dir %s: %v", v.dataDir, err)
+			return
+		}
+	}
+
 	v.conn = conn
 	v.validator = &validator{
-		db:                   db,
+		db:                   valDB,
 		validatorClient:      pb.NewValidatorServiceClient(v.conn),
 		attesterClient:       pb.NewAttesterServiceClient(v.conn),
 		proposerClient:       pb.NewProposerServiceClient(v.conn),
