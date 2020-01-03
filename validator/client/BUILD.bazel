@@ -18,6 +18,7 @@ go_library(
         "//beacon-chain/core/helpers:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/beacon/rpc/v1:go_default_library",
+        "//proto/slashing:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/keystore:go_default_library",
@@ -59,6 +60,7 @@ go_test(
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/beacon/rpc/v1:go_default_library",
+        "//proto/slashing:go_default_library",
         "//shared:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/keystore:go_default_library",

@@ -5,48 +5,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
-
-// HasProposedForEpoch returns whether a validators proposal history has been marked for the entered epoch.
-// If the request is more in the future than what the history contains, it will return false.
-// If the request is from the past, and likely previously pruned it will return false.
-func HasProposedForEpoch(history *slashpb.ProposalHistory, epoch uint64) bool {
-	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-	// Previously pruned, but to be safe we should return false.
-	if int(epoch) <= int(history.LatestEpochWritten)-int(wsPeriod) {
-		return false
-	}
-	// Accessing future proposals that haven't been marked yet. Needs to return false.
-	if epoch > history.LatestEpochWritten {
-		return false
-	}
-	return history.EpochBits.BitAt(epoch % wsPeriod)
-}
-
-// SetProposedForEpoch updates the proposal history to mark the indicated epoch in the bitlist
-// and updates the last epoch written if needed.
-func SetProposedForEpoch(history *slashpb.ProposalHistory, epoch uint64) {
-	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-
-	if epoch > history.LatestEpochWritten {
-		// If the history is empty, just update the latest written and mark the epoch.
-		// This is for the first run of a validator.
-		if history.EpochBits.Count() < 1 {
-			history.LatestEpochWritten = epoch
-			history.EpochBits.SetBitAt(epoch%wsPeriod, true)
-			return
-		}
-		// If the epoch to mark is ahead of latest written epoch, override the old votes and mark the requested epoch.
-		// Limit the overwriting to one weak subjectivity period as further is not needed.
-		maxToWrite := history.LatestEpochWritten + wsPeriod
-		for i := history.LatestEpochWritten + 1; i < epoch && i < maxToWrite; i++ {
-			history.EpochBits.SetBitAt(i%wsPeriod, false)
-		}
-		history.LatestEpochWritten = epoch
-	}
-	history.EpochBits.SetBitAt(epoch%wsPeriod, true)
-}
 
 func unmarshalProposalHistory(enc []byte) (*slashpb.ProposalHistory, error) {
 	history := &slashpb.ProposalHistory{}
@@ -65,7 +24,7 @@ func (db *Store) ProposalHistory(pubKey []byte) (*slashpb.ProposalHistory, error
 	err = db.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
 		enc := bucket.Get(pubKey)
-		proposalHistory, err = unmarshallProposalHistory(enc)
+		proposalHistory, err = unmarshalProposalHistory(enc)
 		if err != nil {
 			return err
 		}
