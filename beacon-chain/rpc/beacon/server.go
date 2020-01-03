@@ -27,4 +27,5 @@ type Server struct {
 	IncomingAttestation chan *ethpb.Attestation
 	CanonicalStateChan  chan *pbp2p.BeaconState
 	ChainStartChan      chan time.Time
+	GenesisTimeFetcher  blockchain.GenesisTimeFetcher
 }
