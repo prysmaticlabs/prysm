@@ -404,9 +404,8 @@ func ShuffledIndices(state *pb.BeaconState, epoch uint64) ([]uint64, error) {
 
 // UpdateCommitteeCache gets called at the beginning of every epoch to cache the committee shuffled indices
 // list with committee index and epoch number. It caches the shuffled indices for current epoch and next epoch.
-func UpdateCommitteeCache(state *pb.BeaconState) error {
-	currentEpoch := CurrentEpoch(state)
-	for _, epoch := range []uint64{currentEpoch, currentEpoch + 1} {
+func UpdateCommitteeCache(state *pb.BeaconState, epoch uint64) error {
+	for _, epoch := range []uint64{epoch, epoch + 1} {
 		shuffledIndices, err := ShuffledIndices(state, epoch)
 		if err != nil {
 			return err
