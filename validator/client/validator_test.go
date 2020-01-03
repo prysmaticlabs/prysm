@@ -259,6 +259,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 		keys:            keyMap,
 		pubkeys:         make([][]byte, 0),
 		validatorClient: client,
+		genesisTime:     1,
 	}
 	v.pubkeys = publicKeys(v.keys)
 	resp := generateMockStatusResponse(v.pubkeys)
