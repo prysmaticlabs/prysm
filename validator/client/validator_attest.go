@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -26,7 +27,6 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	defer span.End()
 
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
-	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
 
 	duty, err := v.duty(pubKey)
 	if err != nil {
@@ -34,7 +34,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
-	indexInCommittee, err := v.indexInCommittee(ctx, pubKey, duty)
+	indexInCommittee, validatorIndex, err := v.indexInCommittee(ctx, pubKey, duty)
 	if err != nil {
 		log.Errorf("Could not get validator index in assignment: %v", err)
 		return
@@ -54,8 +54,6 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		log.Errorf("Could not request attestation to sign at slot %d: %v", slot, err)
 		return
 	}
-	log = log.WithField("slot", data.Slot)
-	log = log.WithField("committeeIndex", data.CommitteeIndex)
 
 	sig, err := v.signAtt(ctx, pubKey, data)
 	if err != nil {
@@ -77,8 +75,10 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
-	headRoot := fmt.Sprintf("%#x", bytesutil.Trunc(data.BeaconBlockRoot))
-	log.WithField("headRoot", headRoot).Info("Submitted new attestation")
+	if err := v.saveAttesterIndexToData(data, validatorIndex); err != nil {
+		log.Errorf("Could not save validator index for logging: %v", err)
+		return
+	}
 
 	span.AddAttributes(
 		trace.Int64Attribute("slot", int64(slot)),
@@ -129,19 +129,19 @@ func (v *validator) indexInCommittee(
 	ctx context.Context,
 	pubKey [48]byte,
 	duty *ethpb.DutiesResponse_Duty,
-) (uint64, error) {
+) (uint64, uint64, error) {
 	res, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubKey[:]})
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 
 	for i, validatorIndex := range duty.Committee {
 		if validatorIndex == res.Index {
-			return uint64(i), nil
+			return uint64(i), res.Index, nil
 		}
 	}
 
-	return 0, fmt.Errorf("index %d not in committee", res.Index)
+	return 0, 0, fmt.Errorf("index %d not in committee", res.Index)
 }
 
 // Given validator's public key, this returns the signature of an attestation data.
@@ -161,4 +161,23 @@ func (v *validator) signAtt(ctx context.Context, pubKey [48]byte, data *ethpb.At
 
 	sig := v.keys[pubKey].SecretKey.Sign(root[:], domain.SignatureDomain)
 	return sig.Marshal(), nil
+}
+
+// For logging, this saves the last submitted attester index to its attestation data. The purpose of this
+// is to enhance attesting logs to be readable when multiple validator keys ran in a single client.
+func (v *validator) saveAttesterIndexToData(data *ethpb.AttestationData, index uint64) error {
+	v.attLogsLock.Lock()
+	defer v.attLogsLock.Unlock()
+
+	h, err := hashutil.HashProto(data)
+	if err != nil {
+		return err
+	}
+
+	if v.attLogs[h] == nil {
+		v.attLogs[h] = &attSubmitted{data, []uint64{}, []uint64{}}
+	}
+	v.attLogs[h] = &attSubmitted{data, append(v.attLogs[h].attesterIndices, index), []uint64{}}
+
+	return nil
 }

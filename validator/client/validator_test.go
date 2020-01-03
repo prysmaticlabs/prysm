@@ -533,6 +533,12 @@ func TestUpdateAssignments_OK(t *testing.T) {
 		gomock.Any(),
 	).Return(resp, nil)
 
+	indexResp := &ethpb.ValidatorIndexResponse{}
+	client.EXPECT().ValidatorIndex(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(indexResp, nil)
+
 	if err := v.UpdateDuties(context.Background(), slot); err != nil {
 		t.Fatalf("Could not update assignments: %v", err)
 	}
