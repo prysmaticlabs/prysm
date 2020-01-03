@@ -100,6 +100,7 @@ func (v *ValidatorService) Start() {
 		graffiti:             v.graffiti,
 		logValidatorBalances: v.logValidatorBalances,
 		prevBalance:          make(map[[48]byte]uint64),
+		attLogs:              make(map[[32]byte]*attSubmitted),
 	}
 	go run(v.ctx, v.validator)
 }

@@ -89,8 +89,6 @@ func TestAttestToBlockHead_SubmitAttestationRequestFailure(t *testing.T) {
 }
 
 func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
-	hook := logTest.NewGlobal()
-
 	validator, m, finish := setup(t)
 	defer finish()
 	validatorIndex := uint64(7)
@@ -161,7 +159,6 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	if !reflect.DeepEqual(generatedAttestation, expectedAttestation) {
 		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
 	}
-	testutil.AssertLogsContain(t, hook, "Submitted new attestation")
 }
 
 func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
