@@ -410,10 +410,11 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 	// do not add to pending cache
 	// if no state exists.
 	if currentState == nil {
+		validDepositsCount.Add(float64(s.preGenesisState.Eth1DepositIndex + 1))
 		return nil
 	}
 	currIndex := currentState.Eth1DepositIndex
-
+	validDepositsCount.Add(float64(currIndex + 1))
 	for _, c := range ctrs[currIndex:] {
 		s.depositCache.InsertPendingDeposit(ctx, c.Deposit, c.Eth1BlockHeight, c.Index, bytesutil.ToBytes32(c.DepositRoot))
 	}
