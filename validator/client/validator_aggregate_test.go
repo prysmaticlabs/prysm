@@ -25,7 +25,6 @@ func TestSubmitAggregateAndProof_GetDutiesRequestFailure(t *testing.T) {
 }
 
 func TestSubmitAggregateAndProof_Ok(t *testing.T) {
-	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
 	defer finish()
 	validator.duties = &ethpb.DutiesResponse{
@@ -46,8 +45,14 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 		gomock.AssignableToTypeOf(&pb.AggregationRequest{}),
 	).Return(&pb.AggregationResponse{}, nil)
 
+	m.validatorClient.EXPECT().ValidatorIndex(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&ethpb.ValidatorIndexRequest{}),
+	).Return(&ethpb.ValidatorIndexResponse{
+		Index: 0,
+	}, nil)
+
 	validator.SubmitAggregateAndProof(context.Background(), 0, validatorPubKey)
-	testutil.AssertLogsContain(t, hook, "Assigned and submitted aggregation and proof request")
 }
 
 func TestWaitForSlotTwoThird_WaitCorrectly(t *testing.T) {
