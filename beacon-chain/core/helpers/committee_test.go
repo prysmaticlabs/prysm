@@ -639,7 +639,7 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
-	if err := UpdateCommitteeCache(state, state.Slot); err != nil {
+	if err := UpdateCommitteeCache(state, CurrentEpoch(state)); err != nil {
 		t.Fatal(err)
 	}
 
