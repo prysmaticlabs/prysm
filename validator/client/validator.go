@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"sync"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -35,6 +36,8 @@ type validator struct {
 	pubkeys              [][]byte
 	prevBalance          map[[48]byte]uint64
 	logValidatorBalances bool
+	attLogs              map[[32]byte]*attSubmitted
+	attLogsLock          sync.Mutex
 }
 
 // Done cleans up the validator.
@@ -241,10 +244,16 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	// Only log the full assignments output on epoch start to be less verbose.
 	if slot%params.BeaconConfig().SlotsPerEpoch == 0 {
 		for _, duty := range v.duties.Duties {
+			res, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: duty.PublicKey})
+			if err != nil {
+				return err
+			}
 			lFields := logrus.Fields{
-				"pubKey": fmt.Sprintf("%#x", bytesutil.Trunc(duty.PublicKey)),
-				"epoch":  slot / params.BeaconConfig().SlotsPerEpoch,
-				"status": duty.Status,
+				"pubKey":         fmt.Sprintf("%#x", bytesutil.Trunc(duty.PublicKey)),
+				"validatorIndex": res.Index,
+				"committeeIndex": duty.CommitteeIndex,
+				"epoch":          slot / params.BeaconConfig().SlotsPerEpoch,
+				"status":         duty.Status,
 			}
 			if duty.Status == ethpb.ValidatorStatus_ACTIVE {
 				if duty.ProposerSlot > 0 {
