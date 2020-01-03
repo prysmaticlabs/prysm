@@ -521,8 +521,8 @@ func (s *Store) saveInitState(ctx context.Context, state *pb.BeaconState) error 
 	return nil
 }
 
-// This filters block roots are not known as head root and finalized root for DB.
-// It serves as the last line as defence before we prune states.
+// This filters block roots that are not known as head root and finalized root in DB.
+// It serves as the last line of defence before we prune states.
 func (s *Store) filterBlockRoots(ctx context.Context, roots [][32]byte) ([][32]byte, error) {
 	f, err := s.db.FinalizedCheckpoint(ctx)
 	if err != nil {
