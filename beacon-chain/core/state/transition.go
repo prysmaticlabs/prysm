@@ -271,24 +271,17 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 	}
 
 	highestSlot := state.Slot
-	var root [32]byte
+	var key [32]byte
 	var writeToCache bool
 	var err error
 
 	if featureconfig.Get().EnableSkipSlotsCache {
 		// Restart from cached value, if one exists.
-		if featureconfig.Get().EnableCustomStateSSZ {
-			root, err = stateutil.HashTreeRootState(state)
-			if err != nil {
-				return nil, errors.Wrap(err, "could not HashTreeRoot(state)")
-			}
-		} else {
-			root, err = ssz.HashTreeRoot(state)
-			if err != nil {
-				return nil, errors.Wrap(err, "could not HashTreeRoot(state)")
-			}
+		key, err = cacheKey(state)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not create cache key")
 		}
-		cached, ok := skipSlotCache.Get(root)
+		cached, ok := skipSlotCache.Get(key)
 		// if cache key does not exist, we write it to the cache.
 		writeToCache = !ok
 		if ok {
@@ -310,7 +303,7 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 			if featureconfig.Get().EnableSkipSlotsCache {
 				// Cache last best value.
 				if highestSlot < state.Slot && writeToCache {
-					skipSlotCache.Add(root, proto.Clone(state).(*pb.BeaconState))
+					skipSlotCache.Add(key, proto.Clone(state).(*pb.BeaconState))
 				}
 			}
 			return nil, ctx.Err()
@@ -333,7 +326,7 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 	if featureconfig.Get().EnableSkipSlotsCache {
 		// Clone result state so that caches are not mutated.
 		if highestSlot < state.Slot && writeToCache {
-			skipSlotCache.Add(root, proto.Clone(state).(*pb.BeaconState))
+			skipSlotCache.Add(key, proto.Clone(state).(*pb.BeaconState))
 		}
 	}
 
