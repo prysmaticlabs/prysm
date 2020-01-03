@@ -483,3 +483,45 @@ func TestSaveInitState_CanSaveDelete(t *testing.T) {
 		t.Errorf("wanted: %d, got: %d", len(store.initSyncState), params.BeaconConfig().SlotsPerEpoch)
 	}
 }
+
+func TestFilterBlockRoots_CanFilter(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	store := NewForkChoiceService(ctx, db)
+	fBlock := &ethpb.BeaconBlock{}
+	fRoot, _ := ssz.SigningRoot(fBlock)
+	hBlock := &ethpb.BeaconBlock{Slot: 1}
+	headRoot, _ := ssz.SigningRoot(hBlock)
+	if err := store.db.SaveBlock(ctx, fBlock); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveState(ctx, &pb.BeaconState{}, fRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: fRoot[:]}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveBlock(ctx, hBlock); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveState(ctx, &pb.BeaconState{}, headRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveHeadBlockRoot(ctx, headRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	roots := [][32]byte{{'C'}, {'D'}, headRoot, {'E'}, fRoot, {'F'}}
+	wanted := [][32]byte{{'C'}, {'D'}, {'E'}, {'F'}}
+
+	received, err := store.filterBlockRoots(ctx, roots)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(wanted, received) {
+		t.Error("Did not filter correctly")
+	}
+}
