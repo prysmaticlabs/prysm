@@ -79,7 +79,7 @@ func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) ([]uint64, erro
 	}
 
 	if featureconfig.Get().EnableNewCache {
-		if err := UpdateCommitteeCache(state); err != nil {
+		if err := UpdateCommitteeCache(state, epoch); err != nil {
 			return nil, errors.Wrap(err, "could not update committee cache")
 		}
 	}
