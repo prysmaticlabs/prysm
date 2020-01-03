@@ -288,6 +288,7 @@ func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
 	v := validator{
 		keys:            keyMap,
 		validatorClient: client,
+		genesisTime:     1,
 	}
 	client.EXPECT().CanonicalHead(
 		gomock.Any(),
@@ -328,6 +329,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		keys:            keyMapThreeValidators,
 		pubkeys:         make([][]byte, 0),
 		validatorClient: client,
+		genesisTime:     1,
 	}
 	v.pubkeys = publicKeys(v.keys)
 	resp := generateMockStatusResponse(v.pubkeys)
@@ -358,6 +360,7 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 		keys:            keyMapThreeValidators,
 		validatorClient: client,
 		pubkeys:         publicKeys(keyMapThreeValidators),
+		genesisTime: 1,
 	}
 	resp := generateMockStatusResponse(v.pubkeys)
 	resp.Statuses[0].Status.Status = pb.ValidatorStatus_ACTIVE
