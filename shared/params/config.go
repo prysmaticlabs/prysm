@@ -81,7 +81,9 @@ type BeaconChainConfig struct {
 	// Prysm constants.
 	GweiPerEth                uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
 	LogBlockDelay             int64         // Number of blocks to wait from the current head before processing logs from the deposit contract.
+	BLSSecretkeyLength        int           // BLSSecretkeyLength defines the expected length of BLS secret keys in bytes.
 	BLSPubkeyLength           int           // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
+	BLSSignatureLength        int           // BLSSignatureLength defines the expected length of BLS signatures in bytes.
 	DefaultBufferSize         int           // DefaultBufferSize for channels across the Prysm repository.
 	ValidatorPrivkeyFileName  string        // ValidatorPrivKeyFileName specifies the string name of a validator private key file.
 	WithdrawalPrivkeyFileName string        // WithdrawalPrivKeyFileName specifies the string name of a withdrawal private key file.
@@ -92,6 +94,7 @@ type BeaconChainConfig struct {
 	EmptySignature            [96]byte      // EmptySignature is used to represent a zeroed out BLS Signature.
 	DefaultPageSize           int           // DefaultPageSize defines the default page size for RPC server request.
 	MaxPageSize               int           // MaxPageSize defines the max page size for RPC server respond.
+	MaxPeersToSync            int           // MaxPeersToSync describes the limit for number of peers in round robin sync.
 
 	// Slasher constants.
 	WeakSubjectivityPeriod    uint64 // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
@@ -176,7 +179,9 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	// Prysm constants.
 	GweiPerEth:                1000000000,
 	LogBlockDelay:             2,
+	BLSSecretkeyLength:        32,
 	BLSPubkeyLength:           48,
+	BLSSignatureLength:        96,
 	DefaultBufferSize:         10000,
 	WithdrawalPrivkeyFileName: "/shardwithdrawalkey",
 	ValidatorPrivkeyFileName:  "/validatorprivatekey",
@@ -186,6 +191,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	EmptySignature:            [96]byte{},
 	DefaultPageSize:           250,
 	MaxPageSize:               500,
+	MaxPeersToSync:            15,
 
 	// Slasher related values.
 	WeakSubjectivityPeriod:    54000,
