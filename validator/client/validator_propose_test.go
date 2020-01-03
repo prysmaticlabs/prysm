@@ -7,9 +7,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-bitfield"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
@@ -122,14 +120,6 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
 	defer finish()
-
-	history := &slashpb.ProposalHistory{
-		EpochBits:          bitfield.NewBitlist(params.BeaconConfig().WeakSubjectivityPeriod),
-		LatestEpochWritten: 0,
-	}
-	if err := validator.db.SaveProposalHistory(validatorPubKey[:], history); err != nil {
-		t.Fatal(err)
-	}
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx

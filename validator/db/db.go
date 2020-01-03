@@ -3,6 +3,7 @@ package db
 import (
 	"os"
 	"path"
+	"reflect"
 	"time"
 
 	"github.com/boltdb/bolt"
@@ -92,7 +93,7 @@ func NewKVStore(dirPath string, pubkeys [][]byte) (*Store, error) {
 		if err != nil {
 			return nil, err
 		}
-		if history == nil {
+		if reflect.DeepEqual(history, &slashpb.ProposalHistory{}) {
 			cleanHistory := &slashpb.ProposalHistory{
 				EpochBits: bitfield.NewBitlist(params.BeaconConfig().WeakSubjectivityPeriod),
 			}
