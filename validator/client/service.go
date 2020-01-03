@@ -43,7 +43,7 @@ type Config struct {
 	DataDir              string
 	ClearDB              bool
 	CertFlag             string
-	GraffitiFlag          string
+	GraffitiFlag         string
 	Keys                 map[string]*keystore.Key
 	LogValidatorBalances bool
 }
@@ -64,7 +64,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		endpoint:             cfg.Endpoint,
 		withCert:             cfg.CertFlag,
 		dataDir:              cfg.DataDir,
-		graffiti:              []byte(cfg.GraffitiFlag),
+		graffiti:             []byte(cfg.GraffitiFlag),
 		keys:                 pubKeys,
 		logValidatorBalances: cfg.LogValidatorBalances,
 	}, nil
