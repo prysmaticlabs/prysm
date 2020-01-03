@@ -54,7 +54,7 @@ func runSSZStaticTests(t *testing.T, config string) {
 				// Custom hash tree root for beacon state.
 				var htr func(interface{}) ([32]byte, error)
 				if _, ok := object.(*pb.BeaconState); ok {
-					htr = func(s interface{}) ([32]byte, error){
+					htr = func(s interface{}) ([32]byte, error) {
 						return stateutil.HashTreeRootState(s.(*pb.BeaconState))
 					}
 				} else {
