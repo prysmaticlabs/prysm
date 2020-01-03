@@ -110,9 +110,7 @@ func (r *Service) subscribeWithBase(base proto.Message, topic string, validator 
 	log := log.WithField("topic", topic)
 
 	if err := r.p2p.PubSub().RegisterTopicValidator(wrapAndReportValidation(topic, validator)); err != nil {
-		// Configuring a topic validator would only return an error as a result of misconfiguration
-		// and is not a runtime concern.
-		panic(err)
+		log.WithError(err).Error("Failed to register validator")
 	}
 
 	sub, err := r.p2p.PubSub().Subscribe(topic)
@@ -219,8 +217,9 @@ func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() i
 				if len(subscriptions) > wantedSubs { // Reduce topics
 					var cancelSubs []*pubsub.Subscription
 					subscriptions, cancelSubs = subscriptions[:wantedSubs-1], subscriptions[wantedSubs:]
-					for _, sub := range cancelSubs {
+					for i, sub := range cancelSubs {
 						sub.Cancel()
+						r.p2p.PubSub().UnregisterTopicValidator(fmt.Sprintf(topicFormat, i+wantedSubs))
 					}
 				} else if len(subscriptions) < wantedSubs { // Increase topics
 					for i := len(subscriptions); i < wantedSubs; i++ {
