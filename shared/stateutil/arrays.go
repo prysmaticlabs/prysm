@@ -14,8 +14,7 @@ import (
 var (
 	leavesCache = make(map[string][][]byte)
 	layersCache = make(map[string][][][]byte)
-	lock        sync.Mutex
-	readLock    sync.RWMutex
+	lock        sync.RWMutex
 )
 
 func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte, error) {
@@ -31,9 +30,9 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 	emptyKey := hashutil.FastSum256(hashKeyElements)
 	bytesProcessed := 0
 	changedIndices := make([]int, 0)
-	readLock.RLock()
+	lock.RLock()
 	prevLeaves, ok := leavesCache[fieldName]
-	readLock.RUnlock()
+	lock.RUnlock()
 	if len(prevLeaves) == 0 || h.rootsCache == nil {
 		prevLeaves = leaves
 	}
