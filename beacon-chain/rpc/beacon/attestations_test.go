@@ -18,9 +18,8 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -541,7 +540,10 @@ func TestServer_StreamAttestations_ContextCanceled(t *testing.T) {
 	mockStream := mockRPC.NewMockBeaconChain_StreamAttestationsServer(ctrl)
 	mockStream.EXPECT().Context().Return(ctx)
 	go func(tt *testing.T) {
-		if err := server.StreamAttestations(&ptypes.Empty{}, mockStream); !strings.Contains(err.Error(), "Context canceled") {
+		if err := server.StreamAttestations(
+			&ptypes.Empty{},
+			mockStream,
+		); !strings.Contains(err.Error(), "Context canceled") {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
 		<-exitRoutine
@@ -557,34 +559,38 @@ func TestServer_StreamAttestations_OnSlotTick(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	ctx := context.Background()
+	secondsPerSlot := time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot)
 	chainService := &mock.ChainService{
-		Genesis: time.Now(),
+		Genesis: time.Now().Add(-secondsPerSlot),
 	}
 	server := &Server{
 		Ctx:                ctx,
 		GenesisTimeFetcher: chainService,
+		Pool:               attestations.NewPool(),
 	}
 
-	mockStream := mockRPC.NewMockBeaconChain_StreamChainHeadServer(ctrl)
-	mockStream.EXPECT().Send(
-		&ethpb.ChainHead{},
-	).Do(func(arg0 interface{}) {
+	atts := []*ethpb.Attestation{
+		{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}},
+		{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1101}},
+		{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b1101}},
+	}
+	if err := server.Pool.SaveAggregatedAttestations(atts); err != nil {
+		t.Fatal(err)
+	}
+
+	mockStream := mockRPC.NewMockBeaconChain_StreamAttestationsServer(ctrl)
+	mockStream.EXPECT().Send(atts[0])
+	mockStream.EXPECT().Send(atts[1])
+	mockStream.EXPECT().Send(atts[2]).Do(func(arg0 interface{}) {
 		exitRoutine <- true
 	})
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 
 	go func(tt *testing.T) {
-		if err := server.StreamChainHead(&ptypes.Empty{}, mockStream); err != nil {
+		if err := server.StreamAttestations(&ptypes.Empty{}, mockStream); err != nil {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
 	}(t)
 
-	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
-	for sent := 0; sent == 0; {
-		sent = server.StateNotifier.StateFeed().Send(&feed.Event{
-			Type: statefeed.BlockProcessed,
-			Data: &statefeed.BlockProcessedData{},
-		})
-	}
 	<-exitRoutine
 }
