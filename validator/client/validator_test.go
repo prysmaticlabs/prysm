@@ -360,7 +360,7 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 		keys:            keyMapThreeValidators,
 		validatorClient: client,
 		pubkeys:         publicKeys(keyMapThreeValidators),
-		genesisTime: 1,
+		genesisTime:     1,
 	}
 	resp := generateMockStatusResponse(v.pubkeys)
 	resp.Statuses[0].Status.Status = pb.ValidatorStatus_ACTIVE
