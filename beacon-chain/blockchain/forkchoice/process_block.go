@@ -138,7 +138,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 
 		// Update committees cache at epoch boundary slot.
 		if featureconfig.Get().EnableNewCache {
-			if err := helpers.UpdateCommitteeCache(postState); err != nil {
+			if err := helpers.UpdateCommitteeCache(postState, helpers.CurrentEpoch(postState)); err != nil {
 				return err
 			}
 		}

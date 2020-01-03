@@ -205,7 +205,7 @@ func (s *Service) initializeBeaconChain(
 
 	// Update committee shuffled indices for genesis epoch.
 	if featureconfig.Get().EnableNewCache {
-		if err := helpers.UpdateCommitteeCache(genesisState); err != nil {
+		if err := helpers.UpdateCommitteeCache(genesisState, 0 /* genesis epoch */); err != nil {
 			return err
 		}
 	}

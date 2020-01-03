@@ -351,6 +351,7 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 	v := validator{
 		keyManager:      testKeyManagerThreeValidators,
 		validatorClient: client,
+		pubkeys:         publicKeys(keyMapThreeValidators),
 		genesisTime:     1,
 	}
 	resp := generateMockStatusResponse(publicKeys(v.keyManager))
