@@ -155,7 +155,7 @@ func TestStore_UpdateBlockAttestationVote(t *testing.T) {
 		attestedIndices = append(attestedIndices, k)
 	}
 
-	if err := store.updateBlockAttestationVote(ctx, att); err != nil {
+	if err := store.updateBlockAttestationVote(ctx, beaconState, att); err != nil {
 		t.Fatal(err)
 	}
 	for _, i := range attestedIndices {
@@ -195,7 +195,7 @@ func TestStore_UpdateBlockAttestationsVote(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := store.updateBlockAttestationsVotes(ctx, atts); err != nil {
+	if err := store.updateBlockAttestationsVotes(ctx, beaconState, atts); err != nil {
 		t.Fatal(err)
 	}
 
