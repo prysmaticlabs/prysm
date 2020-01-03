@@ -543,7 +543,7 @@ func TestServer_StreamAttestations_ContextCanceled(t *testing.T) {
 			&ptypes.Empty{},
 			mockStream,
 		); !strings.Contains(err.Error(), "Context canceled") {
-			tt.Errorf("Could not call RPC method: %v", err)
+			tt.Errorf("Expected context canceled error got: %v", err)
 		}
 		<-exitRoutine
 	}(t)
