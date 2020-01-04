@@ -3,7 +3,6 @@ package validator
 import (
 	"context"
 	"fmt"
-	"math/big"
 	"strings"
 	"testing"
 	"time"
@@ -167,7 +166,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
 	depositCache := depositcache.NewDepositCache()
-	depositCache.InsertDeposit(ctx, deposit, big.NewInt(10) /*blockNum*/, 0, depositTrie.Root())
+	depositCache.InsertDeposit(ctx, deposit, 10 /*blockNum*/, 0, depositTrie.Root())
 	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey1), 0); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
 	}

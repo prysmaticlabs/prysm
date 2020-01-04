@@ -81,10 +81,11 @@ func (s *Service) ProcessLog(ctx context.Context, depositLog gethTypes.Log) erro
 		}
 		if s.lastReceivedMerkleIndex%eth1DataSavingInterval == 0 {
 			eth1Data := &protodb.ETH1ChainData{
-				CurrentEth1Data: s.latestEth1Data,
-				ChainstartData:  s.chainStartData,
-				BeaconState:     s.preGenesisState,
-				Trie:            s.depositTrie.ToProto(),
+				CurrentEth1Data:   s.latestEth1Data,
+				ChainstartData:    s.chainStartData,
+				BeaconState:       s.preGenesisState,
+				Trie:              s.depositTrie.ToProto(),
+				DepositContainers: s.depositCache.AllDepositContainers(ctx),
 			}
 			return s.beaconDB.SavePowchainData(ctx, eth1Data)
 		}
@@ -161,7 +162,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	}
 
 	// We always store all historical deposits in the DB.
-	s.depositCache.InsertDeposit(ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)), int(index), s.depositTrie.Root())
+	s.depositCache.InsertDeposit(ctx, deposit, depositLog.BlockNumber, int64(index), s.depositTrie.Root())
 	validData := true
 	if !s.chainStartData.Chainstarted {
 		s.chainStartData.ChainstartDeposits = append(s.chainStartData.ChainstartDeposits, deposit)
@@ -175,7 +176,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 			validData = false
 		}
 	} else {
-		s.depositCache.InsertPendingDeposit(ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)), int(index), s.depositTrie.Root())
+		s.depositCache.InsertPendingDeposit(ctx, deposit, depositLog.BlockNumber, int64(index), s.depositTrie.Root())
 	}
 	if validData {
 		log.WithFields(logrus.Fields{
