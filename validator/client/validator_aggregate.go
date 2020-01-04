@@ -71,7 +71,11 @@ func (v *validator) signSlot(ctx context.Context, pubKey [48]byte, slot uint64) 
 		return nil, err
 	}
 
-	sig := v.keys[pubKey].SecretKey.Sign(slotRoot[:], domain.SignatureDomain)
+	sig, err := v.keyManager.Sign(pubKey, slotRoot, domain.SignatureDomain)
+	if err != nil {
+		return nil, err
+	}
+
 	return sig.Marshal(), nil
 }
 
