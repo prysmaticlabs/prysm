@@ -304,6 +304,9 @@ func TestRemoveStateSinceLastFinalized(t *testing.T) {
 			t.Fatal(err)
 		}
 		blockRoots = append(blockRoots, r)
+		if err := store.db.SaveHeadBlockRoot(ctx, r); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	// New finalized epoch: 1
@@ -477,6 +480,9 @@ func TestUpdateJustifiedCheckpoint_NoUpdate(t *testing.T) {
 			}
 			blockRoots = append(blockRoots, r)
 		}
+		if err := store.db.SaveHeadBlockRoot(ctx, blockRoots[0]); err != nil {
+			t.Fatal(err)
+		}
 		if err := store.rmStatesOlderThanLastFinalized(ctx, 10, 11); err != nil {
 			t.Fatal(err)
 		}
@@ -636,5 +642,47 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 
 	if store.bestJustifiedCheckpt.Epoch != 2 {
 		t.Error("Incorrect justified epoch in store")
+	}
+}
+
+func TestFilterBlockRoots_CanFilter(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	store := NewForkChoiceService(ctx, db)
+	fBlock := &ethpb.BeaconBlock{}
+	fRoot, _ := ssz.HashTreeRoot(fBlock)
+	hBlock := &ethpb.BeaconBlock{Slot: 1}
+	headRoot, _ := ssz.HashTreeRoot(hBlock)
+	if err := store.db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: fBlock}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveState(ctx, &pb.BeaconState{}, fRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: fRoot[:]}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: hBlock}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveState(ctx, &pb.BeaconState{}, headRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveHeadBlockRoot(ctx, headRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	roots := [][32]byte{{'C'}, {'D'}, headRoot, {'E'}, fRoot, {'F'}}
+	wanted := [][32]byte{{'C'}, {'D'}, {'E'}, {'F'}}
+
+	received, err := store.filterBlockRoots(ctx, roots)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(wanted, received) {
+		t.Error("Did not filter correctly")
 	}
 }
