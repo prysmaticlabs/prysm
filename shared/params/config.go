@@ -235,10 +235,7 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.EjectionBalance /= 10
 	demoConfig.EffectiveBalanceIncrement /= 10
 
-	demoConfig.WhistleBlowerRewardQuotient /= 10
-	demoConfig.ProposerRewardQuotient /= 10
 	demoConfig.InactivityPenaltyQuotient /= 10
-	demoConfig.MinSlashingPenaltyQuotient /= 10
 
 	// Increment this number after a full testnet tear down.
 	demoConfig.GenesisForkVersion = []byte{0, 0, 0, 4}
