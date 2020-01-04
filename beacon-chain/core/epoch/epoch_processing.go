@@ -177,13 +177,6 @@ func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 			activationQ = append(activationQ, uint64(idx))
 		}
 	}
-	// Order by the sequence of activation_eligibility_epoch setting and then index
-	sort.Slice(activationQ, func(i, j int) bool {
-		return state.Validators[i].ActivationEligibilityEpoch < state.Validators[j].ActivationEligibilityEpoch
-	})
-	sort.Slice(activationQ, func(i, j int) bool {
-		return activationQ[i] < activationQ[j]
-	})
 
 	epochState = state
 	sort.Sort(sortableIndices(activationQ))
