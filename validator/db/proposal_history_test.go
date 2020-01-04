@@ -10,7 +10,7 @@ import (
 )
 
 func TestProposalHistory_InitializesNewPubKeys(t *testing.T) {
-	pubkeys := [][]byte{[]byte{30}, []byte{25}, []byte{20}}
+	pubkeys := [][48]byte{[48]byte{30}, [48]byte{25}, [48]byte{20}}
 	db := SetupDB(t, pubkeys)
 	defer TeardownDB(t, db)
 
@@ -30,7 +30,7 @@ func TestProposalHistory_InitializesNewPubKeys(t *testing.T) {
 }
 
 func TestProposalHistory_NilDB(t *testing.T) {
-	db := SetupDB(t, [][]byte{})
+	db := SetupDB(t, [][48]byte{})
 	defer TeardownDB(t, db)
 
 	balPubkey := []byte{1, 2, 3}
@@ -46,7 +46,7 @@ func TestProposalHistory_NilDB(t *testing.T) {
 }
 
 func TestSaveProposalHistory_OK(t *testing.T) {
-	db := SetupDB(t, [][]byte{})
+	db := SetupDB(t, [][48]byte{})
 	defer TeardownDB(t, db)
 	tests := []struct {
 		pubkey  []byte
@@ -104,7 +104,7 @@ func TestSaveProposalHistory_OK(t *testing.T) {
 }
 
 func TestSaveProposalHistory_Overwrites(t *testing.T) {
-	db := SetupDB(t, [][]byte{})
+	db := SetupDB(t, [][48]byte{})
 	defer TeardownDB(t, db)
 	tests := []struct {
 		pubkey  []byte
@@ -162,7 +162,7 @@ func TestSaveProposalHistory_Overwrites(t *testing.T) {
 }
 
 func TestDeleteProposalHistory_OK(t *testing.T) {
-	db := SetupDB(t, [][]byte{})
+	db := SetupDB(t, [][48]byte{})
 	defer TeardownDB(t, db)
 	tests := []struct {
 		pubkey  []byte

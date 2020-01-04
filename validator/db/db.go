@@ -63,7 +63,7 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 // NewKVStore initializes a new boltDB key-value store at the directory
 // path specified, creates the kv-buckets based on the schema, and stores
 // an open connection db object as a property of the Store struct.
-func NewKVStore(dirPath string, pubkeys [][]byte) (*Store, error) {
+func NewKVStore(dirPath string, pubkeys [][48]byte) (*Store, error) {
 	if err := os.MkdirAll(dirPath, 0700); err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func NewKVStore(dirPath string, pubkeys [][]byte) (*Store, error) {
 
 	// Initialize the required pubkeys into the DB to ensure they're not empty.
 	for _, pubkey := range pubkeys {
-		history, err := kv.ProposalHistory(pubkey)
+		history, err := kv.ProposalHistory(pubkey[:])
 		if err != nil {
 			return nil, err
 		}
@@ -98,7 +98,7 @@ func NewKVStore(dirPath string, pubkeys [][]byte) (*Store, error) {
 			cleanHistory := &slashpb.ProposalHistory{
 				EpochBits: bitfield.NewBitlist(params.BeaconConfig().WeakSubjectivityPeriod),
 			}
-			if err := kv.SaveProposalHistory(pubkey, cleanHistory); err != nil {
+			if err := kv.SaveProposalHistory(pubkey[:], cleanHistory); err != nil {
 				return nil, err
 			}
 		}

@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"fmt"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -10,9 +9,8 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/validator/db"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -33,7 +31,7 @@ type ValidatorService struct {
 	withCert             string
 	dataDir              string
 	clearDB              bool
-	keys                 map[[48]byte]*keystore.Key
+	keyManager           keymanager.KeyManager
 	logValidatorBalances bool
 }
 
@@ -44,7 +42,7 @@ type Config struct {
 	ClearDB              bool
 	CertFlag             string
 	GraffitiFlag         string
-	Keys                 map[string]*keystore.Key
+	KeyManager           keymanager.KeyManager
 	LogValidatorBalances bool
 }
 
@@ -52,12 +50,6 @@ type Config struct {
 // registry.
 func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	pubKeys := make(map[[48]byte]*keystore.Key)
-	for _, v := range cfg.Keys {
-		var pubKey [48]byte
-		copy(pubKey[:], v.PublicKey.Marshal())
-		pubKeys[pubKey] = v
-	}
 	return &ValidatorService{
 		ctx:                  ctx,
 		cancel:               cancel,
@@ -65,7 +57,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		withCert:             cfg.CertFlag,
 		dataDir:              cfg.DataDir,
 		graffiti:             []byte(cfg.GraffitiFlag),
-		keys:                 pubKeys,
+		keyManager:           cfg.KeyManager,
 		logValidatorBalances: cfg.LogValidatorBalances,
 	}, nil
 }
@@ -73,8 +65,6 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 // Start the validator service. Launches the main go routine for the validator
 // client.
 func (v *ValidatorService) Start() {
-	pubKeys := pubKeysFromMap(v.keys)
-
 	var dialOpt grpc.DialOption
 	if v.withCert != "" {
 		creds, err := credentials.NewClientTLSFromFile(v.withCert, "")
@@ -106,7 +96,12 @@ func (v *ValidatorService) Start() {
 	}
 	log.Info("Successfully started gRPC connection")
 
-	valDB, err := db.NewKVStore(v.dataDir, pubKeys)
+	pubkeys, err := v.keyManager.FetchValidatingKeys()
+	if err != nil {
+		log.Errorf("Could not get validating keys: %v", err)
+		return
+	}
+	valDB, err := db.NewKVStore(v.dataDir, pubkeys)
 	if err != nil {
 		log.Errorf("Could not create DB in dir %s: %v", v.dataDir, err)
 		return
@@ -116,7 +111,7 @@ func (v *ValidatorService) Start() {
 			log.Errorf("Could not clear DB in dir %s: %v", v.dataDir, err)
 			return
 		}
-		valDB, err = db.NewKVStore(v.dataDir, pubKeys)
+		valDB, err = db.NewKVStore(v.dataDir, pubkeys)
 		if err != nil {
 			log.Errorf("Could not create DB in dir %s: %v", v.dataDir, err)
 			return
@@ -131,9 +126,8 @@ func (v *ValidatorService) Start() {
 		proposerClient:       pb.NewProposerServiceClient(v.conn),
 		aggregatorClient:     pb.NewAggregatorServiceClient(v.conn),
 		node:                 ethpb.NewNodeClient(v.conn),
-		keys:                 v.keys,
+		keyManager:           v.keyManager,
 		graffiti:             v.graffiti,
-		pubkeys:              pubKeys,
 		logValidatorBalances: v.logValidatorBalances,
 		prevBalance:          make(map[[48]byte]uint64),
 		attLogs:              make(map[[32]byte]*attSubmitted),
@@ -159,16 +153,4 @@ func (v *ValidatorService) Status() error {
 		return errors.New("no connection to beacon RPC")
 	}
 	return nil
-}
-
-// pubKeysFromMap is a helper that creates an array of public keys given a map of keystores
-func pubKeysFromMap(keys map[[48]byte]*keystore.Key) [][]byte {
-	pubKeys := make([][]byte, 0)
-	for pubKey := range keys {
-		var pubKeyCopy [48]byte
-		copy(pubKeyCopy[:], pubKey[:])
-		pubKeys = append(pubKeys, pubKeyCopy[:])
-		log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKeyCopy[:]))).Info("New validator service")
-	}
-	return pubKeys
 }

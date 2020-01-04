@@ -79,7 +79,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")
 	}
-	if err := s.updateBlockAttestationsVotes(ctx, postState, b.Body.Attestations); err != nil {
+	if err := s.updateBlockAttestationsVotes(ctx, b.Body.Attestations); err != nil {
 		return errors.Wrap(err, "could not update votes for attestations in block")
 	}
 
@@ -138,7 +138,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 
 		// Update committees cache at epoch boundary slot.
 		if featureconfig.Get().EnableNewCache {
-			if err := helpers.UpdateCommitteeCache(postState); err != nil {
+			if err := helpers.UpdateCommitteeCache(postState, helpers.CurrentEpoch(postState)); err != nil {
 				return err
 			}
 		}
@@ -278,7 +278,7 @@ func (s *Store) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*pb
 
 // updateBlockAttestationsVotes checks the attestations in block and filter out the seen ones,
 // the unseen ones get passed to updateBlockAttestationVote for updating fork choice votes.
-func (s *Store) updateBlockAttestationsVotes(ctx context.Context, state *pb.BeaconState, atts []*ethpb.Attestation) error {
+func (s *Store) updateBlockAttestationsVotes(ctx context.Context, atts []*ethpb.Attestation) error {
 	s.seenAttsLock.Lock()
 	defer s.seenAttsLock.Unlock()
 
@@ -291,7 +291,7 @@ func (s *Store) updateBlockAttestationsVotes(ctx context.Context, state *pb.Beac
 		if s.seenAtts[r] {
 			continue
 		}
-		if err := s.updateBlockAttestationVote(ctx, state, att); err != nil {
+		if err := s.updateBlockAttestationVote(ctx, att); err != nil {
 			log.WithError(err).Warn("Attestation failed to update vote")
 		}
 		s.seenAtts[r] = true
@@ -300,9 +300,16 @@ func (s *Store) updateBlockAttestationsVotes(ctx context.Context, state *pb.Beac
 }
 
 // updateBlockAttestationVotes checks the attestation to update validator's latest votes.
-func (s *Store) updateBlockAttestationVote(ctx context.Context, state *pb.BeaconState, att *ethpb.Attestation) error {
+func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attestation) error {
 	tgt := att.Data.Target
-	committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
+	baseState, err := s.db.State(ctx, bytesutil.ToBytes32(tgt.Root))
+	if err != nil {
+		return errors.Wrap(err, "could not get state for attestation tgt root")
+	}
+	if baseState == nil {
+		return errors.New("no state found in db with attestation tgt root")
+	}
+	committee, err := helpers.BeaconCommitteeFromState(baseState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return err
 	}

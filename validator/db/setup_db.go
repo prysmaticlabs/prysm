@@ -10,7 +10,7 @@ import (
 )
 
 // SetupDB instantiates and returns a DB instance for the validator client.
-func SetupDB(t testing.TB, pubkeys [][]byte) *Store {
+func SetupDB(t testing.TB, pubkeys [][48]byte) *Store {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	if err != nil {
 		t.Fatalf("Could not generate random file path: %v", err)
