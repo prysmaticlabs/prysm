@@ -14,6 +14,7 @@ message ETH1ChainData {
     ChainStartData chainstart_data = 2;
     ethereum.beacon.p2p.v1.BeaconState beacon_state = 3;
     SparseMerkleTrie trie = 4;
+    repeated DepositContainer deposit_containers = 5;
 }
 
 // LatestETH1Data contains the current state of the eth1 chain.
@@ -44,4 +45,13 @@ message SparseMerkleTrie {
 // the lack of protobuf support for multi-dimensional arrays.(Ex: 3d,4d,...)
 message TrieLayer {
     repeated bytes layer = 1;
+}
+
+// DepositContainer defines a container that can be used to store
+// deposit related information for a particular deposit.
+message DepositContainer {
+    int64 index = 1;
+    uint64 eth1_block_height = 2;
+    ethereum.eth.v1alpha1.Deposit deposit = 3;
+    bytes deposit_root = 4;
 }
