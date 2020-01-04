@@ -25,11 +25,12 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	tmpPath := bazel.TestTmpDir()
 	config.tmpPath = tmpPath
 	t.Logf("Test Path: %s\n", tmpPath)
+	t.Logf("Starting time: %s\n", tmpPath)
 
 	contractAddr, keystorePath, eth1PID := startEth1(t, tmpPath)
 	config.contractAddr = contractAddr
 	beaconNodes := startBeaconNodes(t, config)
-	valClients := initializeValidators(t, config, keystorePath, beaconNodes)
+	valClients := initializeValidators(t, config, keystorePath)
 	processIDs := []int{eth1PID}
 	for _, vv := range valClients {
 		processIDs = append(processIDs, vv.processID)

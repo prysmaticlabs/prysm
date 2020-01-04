@@ -67,6 +67,7 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 		"--no-discovery",
 		"--force-clear-db",
 		"--fast-assignments",
+		"--new-cache",
 		"--enable-attestation-cache",
 		"--enable-bls-pubkey-cache",
 		"--http-web3provider=http://127.0.0.1:8545",
@@ -142,8 +143,8 @@ func getMultiAddrFromLogFile(name string) (string, error) {
 
 func waitForTextInFile(file *os.File, text string) error {
 	wait := 0
-	// Putting the wait cap at 24 seconds.
-	maxWait := 36
+	// Putting the wait cap at 32 seconds.
+	maxWait := 32
 	for wait < maxWait {
 		time.Sleep(2 * time.Second)
 		// Rewind the file pointer to the start of the file so we can read it again.

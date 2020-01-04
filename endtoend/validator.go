@@ -32,7 +32,6 @@ func initializeValidators(
 	t *testing.T,
 	config *end2EndConfig,
 	keystorePath string,
-	beaconNodes []*beaconNodeInfo,
 ) []*validatorClientInfo {
 	binaryPath, found := bazel.FindBinary("validator", "validator")
 	if !found {
