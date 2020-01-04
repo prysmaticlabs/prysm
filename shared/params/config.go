@@ -225,22 +225,25 @@ func MainnetConfig() *BeaconChainConfig {
 	return defaultBeaconConfig
 }
 
-// DemoBeaconConfig retrieves the demo beacon chain config.
-// Notable changes from minimal config:
-//   - Max effective balance is 3.2 ETH
-//   - Ejection threshold is 1.6 ETH
+// DemoBeaconConfig retrieves the demo beacon chain config. This is mainnet config with 1/10th of
+// mainnet deposit values.
 func DemoBeaconConfig() *BeaconChainConfig {
-	demoConfig := MainnetConfig()
+	demoConfig := *MainnetConfig()
 
-	demoConfig.MinDepositAmount = 0.1 * 1e9
-	demoConfig.MaxEffectiveBalance = 3.2 * 1e9
-	demoConfig.EjectionBalance = 1.6 * 1e9
-	demoConfig.EffectiveBalanceIncrement = 0.1 * 1e9
+	demoConfig.MinDepositAmount /= 10
+	demoConfig.MaxEffectiveBalance /= 10
+	demoConfig.EjectionBalance /= 10
+	demoConfig.EffectiveBalanceIncrement /= 10
+
+	demoConfig.WhistleBlowerRewardQuotient /= 10
+	demoConfig.ProposerRewardQuotient /= 10
+	demoConfig.InactivityPenaltyQuotient /= 10
+	demoConfig.MinSlashingPenaltyQuotient /= 10
 
 	// Increment this number after a full testnet tear down.
 	demoConfig.GenesisForkVersion = []byte{0, 0, 0, 4}
 
-	return demoConfig
+	return &demoConfig
 }
 
 // MinimalSpecConfig retrieves the minimal config used in spec tests.
