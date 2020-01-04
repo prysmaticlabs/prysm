@@ -10,7 +10,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -52,17 +51,6 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		return
 	}
 
-	history, err := v.db.ProposalHistory(pubKey[:])
-	if err != nil {
-		log.WithError(err).Error("Failed to get proposal history")
-		return
-	}
-
-	if HasProposedForEpoch(history, epoch) {
-		log.WithField("epoch", epoch).Warn("Tried to sign a double proposal, rejected")
-		return
-	}
-
 	// Sign returned block from beacon node
 	sig, err := v.signBlock(ctx, pubKey, epoch, b)
 	if err != nil {
@@ -70,12 +58,6 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		return
 	}
 	b.Signature = sig
-
-	history = SetProposedForEpoch(history, epoch)
-	if err := v.db.SaveProposalHistory(pubKey[:], history); err != nil {
-		log.WithError(err).Error("Failed to save updated proposal history")
-		return
-	}
 
 	// Propose and broadcast block via beacon node
 	blkResp, err := v.proposerClient.ProposeBlock(ctx, b)
@@ -133,47 +115,4 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 		return nil, errors.Wrap(err, "could not get signing root")
 	}
 	return sig.Marshal(), nil
-}
-
-
-// HasProposedForEpoch returns whether a validators proposal history has been marked for the entered epoch.
-// If the request is more in the future than what the history contains, it will return false.
-// If the request is from the past, and likely previously pruned it will return false.
-func HasProposedForEpoch(history *slashpb.ProposalHistory, epoch uint64) bool {
-	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-	// Previously pruned, we should return false.
-	if int(epoch) <= int(history.LatestEpochWritten)-int(wsPeriod) {
-		return false
-	}
-	// Accessing future proposals that haven't been marked yet. Needs to return false.
-	if epoch > history.LatestEpochWritten {
-		return false
-	}
-	return history.EpochBits.BitAt(epoch % wsPeriod)
-}
-
-// SetProposedForEpoch updates the proposal history to mark the indicated epoch in the bitlist
-// and updates the last epoch written if needed.
-// Returns the modified proposal history.
-func SetProposedForEpoch(history *slashpb.ProposalHistory, epoch uint64) *slashpb.ProposalHistory {
-	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-
-	if epoch > history.LatestEpochWritten {
-		// If the history is empty, just update the latest written and mark the epoch.
-		// This is for the first run of a validator.
-		if history.EpochBits.Count() < 1 {
-			history.LatestEpochWritten = epoch
-			history.EpochBits.SetBitAt(epoch%wsPeriod, true)
-			return history
-		}
-		// If the epoch to mark is ahead of latest written epoch, override the old votes and mark the requested epoch.
-		// Limit the overwriting to one weak subjectivity period as further is not needed.
-		maxToWrite := history.LatestEpochWritten + wsPeriod
-		for i := history.LatestEpochWritten + 1; i < epoch && i <= maxToWrite; i++ {
-			history.EpochBits.SetBitAt(i%wsPeriod, false)
-		}
-		history.LatestEpochWritten = epoch
-	}
-	history.EpochBits.SetBitAt(epoch%wsPeriod, true)
-	return history
 }
