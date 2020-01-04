@@ -278,9 +278,9 @@ func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
 	defer ctrl.Finish()
 	client := internal.NewMockBeaconChainClient(ctrl)
 	v := validator{
-		keyManager:      testKeyManager,
+		keyManager:   testKeyManager,
 		beaconClient: client,
-		genesisTime:     1,
+		genesisTime:  1,
 	}
 	client.EXPECT().GetChainHead(
 		gomock.Any(),
@@ -296,7 +296,7 @@ func TestCanonicalHeadSlot_OK(t *testing.T) {
 	defer ctrl.Finish()
 	client := internal.NewMockBeaconChainClient(ctrl)
 	v := validator{
-		keyManager:      testKeyManager,
+		keyManager:   testKeyManager,
 		beaconClient: client,
 	}
 	client.EXPECT().GetChainHead(
