@@ -42,13 +42,6 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 		gomock.AssignableToTypeOf(&pb.AggregationRequest{}),
 	).Return(&pb.AggregationResponse{}, nil)
 
-	m.validatorClient.EXPECT().ValidatorIndex(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
-	).Return(&pb.ValidatorIndexResponse{
-		Index: 0,
-	}, nil)
-
 	validator.SubmitAggregateAndProof(context.Background(), 0, validatorPubKey)
 }
 

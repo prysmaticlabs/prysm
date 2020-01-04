@@ -38,6 +38,8 @@ type validator struct {
 	logValidatorBalances bool
 	attLogs              map[[32]byte]*attSubmitted
 	attLogsLock          sync.Mutex
+	pubKeyToID           map[[48]byte]uint64
+	pubKeyToIDLock       sync.Mutex
 }
 
 // Done cleans up the validator.
@@ -251,6 +253,9 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	v.assignments = resp
 	// Only log the full assignments output on epoch start to be less verbose.
 	if slot%params.BeaconConfig().SlotsPerEpoch == 0 {
+		v.pubKeyToIDLock.Lock()
+		defer v.pubKeyToIDLock.Unlock()
+
 		for _, assignment := range v.assignments.ValidatorAssignment {
 			// TODO(4379): Make validator index part of the assignment respond.
 			res, err := v.validatorClient.ValidatorIndex(ctx, &pb.ValidatorIndexRequest{PublicKey: assignment.PublicKey})
@@ -271,6 +276,8 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 				lFields["attesterSlot"] = assignment.AttesterSlot
 			}
 			log.WithFields(lFields).Info("New assignment")
+
+			v.pubKeyToID[bytesutil.ToBytes48(assignment.PublicKey)] = res.Index
 		}
 	}
 

@@ -72,12 +72,8 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		trace.Int64Attribute("numAttestations", int64(len(b.Body.Attestations))),
 	)
 
-	res, err := v.validatorClient.ValidatorIndex(ctx, &pb.ValidatorIndexRequest{PublicKey: pubKey[:]})
-	if err != nil {
-		log.WithError(err).Error("Failed to get validator index")
-		return
-	}
-
+	v.pubKeyToIDLock.Lock()
+	defer v.pubKeyToIDLock.Unlock()
 	log.WithField("signature", fmt.Sprintf("%#x", b.Signature)).Debug("block signature")
 	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
 	log.WithFields(logrus.Fields{
@@ -85,7 +81,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		"blockRoot":       blkRoot,
 		"numAttestations": len(b.Body.Attestations),
 		"numDeposits":     len(b.Body.Deposits),
-		"proposerIndex":   res.Index,
+		"proposerIndex":   v.pubKeyToID[pubKey],
 	}).Info("Submitted new block")
 }
 
