@@ -11,7 +11,6 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
@@ -19,7 +18,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
@@ -86,9 +84,6 @@ func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) er
 	postState, err := state.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")
-	}
-	if err := s.updateBlockAttestationsVotes(ctx, b.Body.Attestations); err != nil {
-		return errors.Wrap(err, "could not update votes for attestations in block")
 	}
 
 	if err := s.db.SaveBlock(ctx, signed); err != nil {
@@ -285,62 +280,6 @@ func (s *Store) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*pb
 	}
 
 	return preState, nil
-}
-
-// updateBlockAttestationsVotes checks the attestations in block and filter out the seen ones,
-// the unseen ones get passed to updateBlockAttestationVote for updating fork choice votes.
-func (s *Store) updateBlockAttestationsVotes(ctx context.Context, atts []*ethpb.Attestation) error {
-	s.seenAttsLock.Lock()
-	defer s.seenAttsLock.Unlock()
-
-	for _, att := range atts {
-		// If we have not seen the attestation yet
-		r, err := hashutil.HashProto(att)
-		if err != nil {
-			return err
-		}
-		if s.seenAtts[r] {
-			continue
-		}
-		if err := s.updateBlockAttestationVote(ctx, att); err != nil {
-			log.WithError(err).Warn("Attestation failed to update vote")
-		}
-		s.seenAtts[r] = true
-	}
-	return nil
-}
-
-// updateBlockAttestationVotes checks the attestation to update validator's latest votes.
-func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attestation) error {
-	tgt := att.Data.Target
-	baseState, err := s.db.State(ctx, bytesutil.ToBytes32(tgt.Root))
-	if err != nil {
-		return errors.Wrap(err, "could not get state for attestation tgt root")
-	}
-	if baseState == nil {
-		return errors.New("no state found in db with attestation tgt root")
-	}
-	committee, err := helpers.BeaconCommitteeFromState(baseState, att.Data.Slot, att.Data.CommitteeIndex)
-	if err != nil {
-		return err
-	}
-	indexedAtt, err := blocks.ConvertToIndexed(ctx, att, committee)
-	if err != nil {
-		return errors.Wrap(err, "could not convert attestation to indexed attestation")
-	}
-
-	s.voteLock.Lock()
-	defer s.voteLock.Unlock()
-	for _, i := range indexedAtt.AttestingIndices {
-		vote, ok := s.latestVoteMap[i]
-		if !ok || tgt.Epoch > vote.Epoch {
-			s.latestVoteMap[i] = &pb.ValidatorLatestVote{
-				Epoch: tgt.Epoch,
-				Root:  tgt.Root,
-			}
-		}
-	}
-	return nil
 }
 
 // verifyBlkPreState validates input block has a valid pre-state.

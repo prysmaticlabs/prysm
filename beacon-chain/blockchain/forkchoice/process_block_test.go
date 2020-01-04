@@ -17,9 +17,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestStore_OnBlock(t *testing.T) {
@@ -135,87 +133,6 @@ func TestStore_SaveNewValidators(t *testing.T) {
 	}
 	if db.HasValidatorIndex(ctx, bytesutil.ToBytes48([]byte{1})) {
 		t.Error("validator not suppose to be saved in db")
-	}
-}
-
-func TestStore_UpdateBlockAttestationVote(t *testing.T) {
-	ctx := context.Background()
-	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
-	params.UseMinimalConfig()
-
-	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
-
-	store := NewForkChoiceService(ctx, db)
-	r := [32]byte{'A'}
-	att := &ethpb.Attestation{
-		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
-			Target: &ethpb.Checkpoint{Epoch: 0, Root: r[:]},
-		},
-		AggregationBits: []byte{255},
-	}
-	if err := store.db.SaveState(ctx, beaconState, r); err != nil {
-		t.Fatal(err)
-	}
-
-	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
-	if err != nil {
-		t.Error(err)
-	}
-	indexedAtt, err := blocks.ConvertToIndexed(ctx, att, committee)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := store.updateBlockAttestationVote(ctx, att); err != nil {
-		t.Fatal(err)
-	}
-
-	for _, i := range indexedAtt.AttestingIndices {
-		v := store.latestVoteMap[i]
-		if !reflect.DeepEqual(v.Root, r[:]) {
-			t.Error("Attested roots don't match")
-		}
-	}
-}
-
-func TestStore_UpdateBlockAttestationsVote(t *testing.T) {
-	ctx := context.Background()
-	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
-	params.UseMinimalConfig()
-
-	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
-
-	store := NewForkChoiceService(ctx, db)
-	r := [32]byte{'A'}
-	atts := make([]*ethpb.Attestation, 5)
-	hashes := make([][32]byte, 5)
-	for i := 0; i < len(atts); i++ {
-		atts[i] = &ethpb.Attestation{
-			Data: &ethpb.AttestationData{
-				Source: &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
-				Target: &ethpb.Checkpoint{Epoch: 0, Root: r[:]},
-			},
-			AggregationBits: []byte{255},
-		}
-		h, _ := hashutil.HashProto(atts[i])
-		hashes[i] = h
-	}
-
-	if err := store.db.SaveState(ctx, beaconState, r); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := store.updateBlockAttestationsVotes(ctx, atts); err != nil {
-		t.Fatal(err)
-	}
-
-	for _, h := range hashes {
-		if !store.seenAtts[h] {
-			t.Error("Seen attestation did not get recorded")
-		}
 	}
 }
 

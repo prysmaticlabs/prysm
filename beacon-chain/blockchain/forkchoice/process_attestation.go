@@ -2,6 +2,7 @@ package forkchoice
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -300,6 +301,7 @@ func (s *Store) setSeenAtt(a *ethpb.Attestation) error {
 	if err != nil {
 		return err
 	}
+	log.Info("Setting seen att ", hex.EncodeToString(r[:5]), a.Data.Slot, a.Data.CommitteeIndex)
 	s.seenAtts[r] = true
 
 	return nil
