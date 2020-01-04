@@ -151,8 +151,11 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sig := validator.keys[validatorPubKey].SecretKey.Sign(root[:], 0).Marshal()
-	expectedAttestation.Signature = sig
+	sig, err := validator.keyManager.Sign(validatorPubKey, root, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectedAttestation.Signature = sig.Marshal()
 	if !reflect.DeepEqual(generatedAttestation, expectedAttestation) {
 		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
 	}
