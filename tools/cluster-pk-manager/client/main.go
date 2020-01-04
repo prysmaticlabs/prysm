@@ -47,7 +47,8 @@ func main() {
 	for i, privateKey := range resp.PrivateKeys.PrivateKeys {
 		pk, err := bls.SecretKeyFromBytes(privateKey)
 		if err != nil {
-			panic(err)
+			fmt.Printf("Failed to deserialize pk: %v\n", err)
+			continue
 		}
 
 		k := &keystore.Key{
