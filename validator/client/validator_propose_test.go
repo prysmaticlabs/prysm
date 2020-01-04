@@ -25,7 +25,7 @@ type mocks struct {
 }
 
 func setup(t *testing.T) (*validator, *mocks, func()) {
-	db := db.SetupDB(t, pubKeysFromMap(keyMap))
+	db := db.SetupDB(t, [][48]byte{validatorPubKey})
 	ctrl := gomock.NewController(t)
 	m := &mocks{
 		proposerClient:   internal.NewMockProposerServiceClient(ctrl),

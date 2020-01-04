@@ -6,7 +6,7 @@ import (
 )
 
 func TestClearDB(t *testing.T) {
-	db := SetupDB(t, [][]byte{})
+	db := SetupDB(t, [][48]byte{})
 	defer TeardownDB(t, db)
 	if err := db.ClearDB(); err != nil {
 		t.Fatal(err)

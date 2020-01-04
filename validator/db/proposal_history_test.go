@@ -15,7 +15,7 @@ func TestProposalHistory_InitializesNewPubKeys(t *testing.T) {
 	defer TeardownDB(t, db)
 
 	for _, pub := range pubkeys {
-		proposalHistory, err := db.ProposalHistory(pub)
+		proposalHistory, err := db.ProposalHistory(pub[:])
 		if err != nil {
 			t.Fatal(err)
 		}
