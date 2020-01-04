@@ -23,9 +23,15 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		return nil
 	}
 
+	pks, err := v.keyManager.FetchValidatingKeys()
+	if err != nil {
+		return err
+	}
+	pubKeys := bytesutil.FromBytes48Array(pks)
+
 	req := &ethpb.ValidatorPerformanceRequest{
 		Slot:       slot,
-		PublicKeys: v.pubkeys,
+		PublicKeys: pubKeys,
 	}
 	resp, err := v.beaconClient.GetValidatorPerformance(ctx, req)
 	if err != nil {
@@ -36,7 +42,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 	for _, val := range resp.MissingValidators {
 		missingValidators[bytesutil.ToBytes48(val)] = true
 	}
-	for i, pkey := range v.pubkeys {
+	for i, pkey := range pubKeys {
 		pubKey := fmt.Sprintf("%#x", pkey[:8])
 		log := log.WithField("pubKey", pubKey)
 		if missingValidators[bytesutil.ToBytes48(pkey)] {

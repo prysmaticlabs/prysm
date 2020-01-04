@@ -16,9 +16,9 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -32,8 +32,7 @@ type validator struct {
 	graffiti             []byte
 	aggregatorClient     pb.AggregatorServiceClient
 	node                 ethpb.NodeClient
-	keys                 map[[48]byte]*keystore.Key
-	pubkeys              [][]byte
+	keyManager           keymanager.KeyManager
 	prevBalance          map[[48]byte]uint64
 	logValidatorBalances bool
 	attLogs              map[[32]byte]*attSubmitted
@@ -87,8 +86,12 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 func (v *validator) WaitForActivation(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
 	defer span.End()
+	validatingKeys, err := v.keyManager.FetchValidatingKeys()
+	if err != nil {
+		return errors.Wrap(err, "could not fetch validating keys")
+	}
 	req := &ethpb.ValidatorActivationRequest{
-		PublicKeys: v.pubkeys,
+		PublicKeys: bytesutil.FromBytes48Array(validatingKeys),
 	}
 	stream, err := v.validatorClient.WaitForActivation(ctx, req)
 	if err != nil {
@@ -228,9 +231,13 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	ctx, span := trace.StartSpan(ctx, "validator.UpdateAssignments")
 	defer span.End()
 
+	validatingKeys, err := v.keyManager.FetchValidatingKeys()
+	if err != nil {
+		return err
+	}
 	req := &ethpb.DutiesRequest{
 		Epoch:      slot / params.BeaconConfig().SlotsPerEpoch,
-		PublicKeys: v.pubkeys,
+		PublicKeys: bytesutil.FromBytes48Array(validatingKeys),
 	}
 
 	resp, err := v.validatorClient.GetDuties(ctx, req)
