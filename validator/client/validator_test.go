@@ -525,13 +525,14 @@ func TestUpdateAssignments_OK(t *testing.T) {
 	v := validator{
 		keyManager:      testKeyManager,
 		validatorClient: client,
+		pubKeyToID:      make(map[[48]byte]uint64),
 	}
 	client.EXPECT().CommitteeAssignment(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(resp, nil)
 
-	indexResp := &pb.ValidatorIndexResponse{}
+	indexResp := &pb.ValidatorIndexResponse{Index: 100}
 	client.EXPECT().ValidatorIndex(
 		gomock.Any(),
 		gomock.Any(),
