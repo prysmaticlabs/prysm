@@ -122,6 +122,28 @@ func ToBytes48(x []byte) [48]byte {
 	return y
 }
 
+// FromBytes32 is a convenience method for converting a fixed-size byte array
+// to a byte slice.
+func FromBytes32(x [32]byte) []byte {
+	return x[:]
+}
+
+// FromBytes48 is a convenience method for converting a fixed-size byte array
+// to a byte slice.
+func FromBytes48(x [48]byte) []byte {
+	return x[:]
+}
+
+// FromBytes48Array is a convenience method for converting an array of
+// fixed-size byte arrays to an array of byte slices.
+func FromBytes48Array(x [][48]byte) [][]byte {
+	y := make([][]byte, len(x))
+	for i := range x {
+		y[i] = x[i][:]
+	}
+	return y
+}
+
 // Xor xors the bytes in x and y and returns the result.
 func Xor(x []byte, y []byte) []byte {
 	n := len(x)
