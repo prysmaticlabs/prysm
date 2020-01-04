@@ -9,23 +9,27 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
 // ChainService defines the mock interface for testing
 type ChainService struct {
-	State               *pb.BeaconState
-	Root                []byte
-	Block               *ethpb.BeaconBlock
-	FinalizedCheckPoint *ethpb.Checkpoint
-	BlocksReceived      []*ethpb.BeaconBlock
-	Genesis             time.Time
-	Fork                *pb.Fork
-	DB                  db.Database
-	stateNotifier       statefeed.Notifier
+	State                       *pb.BeaconState
+	Root                        []byte
+	Block                       *ethpb.BeaconBlock
+	FinalizedCheckPoint         *ethpb.Checkpoint
+	CurrentJustifiedCheckPoint  *ethpb.Checkpoint
+	PreviousJustifiedCheckPoint *ethpb.Checkpoint
+	BlocksReceived              []*ethpb.BeaconBlock
+	Genesis                     time.Time
+	Fork                        *pb.Fork
+	DB                          db.Database
+	stateNotifier               statefeed.Notifier
 }
 
 // StateNotifier mocks the same method in the chain service.
@@ -121,6 +125,16 @@ func (ms *ChainService) FinalizedCheckpt() *ethpb.Checkpoint {
 	return ms.FinalizedCheckPoint
 }
 
+// CurrentJustifiedCheckpt mocks CurrentJustifiedCheckpt method in chain service.
+func (ms *ChainService) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
+	return ms.CurrentJustifiedCheckPoint
+}
+
+// PreviousJustifiedCheckpt mocks PreviousJustifiedCheckpt method in chain service.
+func (ms *ChainService) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
+	return ms.PreviousJustifiedCheckPoint
+}
+
 // ReceiveAttestation mocks ReceiveAttestation method in chain service.
 func (ms *ChainService) ReceiveAttestation(context.Context, *ethpb.Attestation) error {
 	return nil
@@ -129,6 +143,16 @@ func (ms *ChainService) ReceiveAttestation(context.Context, *ethpb.Attestation) 
 // ReceiveAttestationNoPubsub mocks ReceiveAttestationNoPubsub method in chain service.
 func (ms *ChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attestation) error {
 	return nil
+}
+
+// HeadValidatorsIndices mocks the same method in the chain service.
+func (ms *ChainService) HeadValidatorsIndices(epoch uint64) ([]uint64, error) {
+	return helpers.ActiveValidatorIndices(ms.State, epoch)
+}
+
+// HeadSeed mocks the same method in the chain service.
+func (ms *ChainService) HeadSeed(epoch uint64) ([32]byte, error) {
+	return helpers.Seed(ms.State, epoch, params.BeaconConfig().DomainBeaconAttester)
 }
 
 // GenesisTime mocks the same method in the chain service.

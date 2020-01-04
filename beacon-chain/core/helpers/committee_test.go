@@ -116,7 +116,8 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 	for _, tt := range tests {
 		attestationData.Target = &ethpb.Checkpoint{Epoch: 0}
 		attestationData.Slot = tt.attestationSlot
-		committee, err := BeaconCommittee(state, tt.attestationSlot, 0 /* committee index */)
+
+		committee, err := BeaconCommitteeFromState(state, tt.attestationSlot, 0 /* committee index */)
 		if err != nil {
 			t.Error(err)
 		}
@@ -210,7 +211,7 @@ func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
 	}
 	attestationData := &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}
 
-	committee, err := BeaconCommittee(state, attestationData.Slot, attestationData.CommitteeIndex)
+	committee, err := BeaconCommitteeFromState(state, attestationData.Slot, attestationData.CommitteeIndex)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -638,7 +639,7 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
-	if err := UpdateCommitteeCache(state); err != nil {
+	if err := UpdateCommitteeCache(state, CurrentEpoch(state)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -843,5 +844,43 @@ func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
 			index = (index + 1) % params.BeaconConfig().MaxCommitteesPerSlot
 			i = 0
 		}
+	}
+}
+
+func TestBeaconCommitteeFromState_UpdateCacheForPreviousEpoch(t *testing.T) {
+	c := featureconfig.Get()
+	c.EnableNewCache = true
+	featureconfig.Init(c)
+	defer featureconfig.Init(nil)
+
+	committeeSize := uint64(16)
+	validators := make([]*ethpb.Validator, committeeSize*params.BeaconConfig().SlotsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	state := &pb.BeaconState{
+		Slot:        params.BeaconConfig().SlotsPerEpoch,
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	}
+
+	if _, err := BeaconCommitteeFromState(state, 1 /* previous epoch */, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify previous epoch is cached
+	seed, err := Seed(state, 0, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		t.Fatal(err)
+	}
+	activeIndices, err := committeeCache.ActiveIndices(seed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if activeIndices == nil {
+		t.Error("did not cache active indices")
 	}
 }

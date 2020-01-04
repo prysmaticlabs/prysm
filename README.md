@@ -16,14 +16,14 @@ Participation is now open to the public for our Ethereum 2.0 phase 0 testnet rel
 # Table of Contents
 
 - [Dependencies](#dependencies)
-- [Installation](#installation)
+- [Installation](#installing-prysm)
     - [Build via Docker](#build-via-docker)
     - [Build via Bazel](#build-via-bazel)
 - [Connecting to the public testnet: running a beacon node](#connecting-to-the-testnet-running-a-beacon-node)
-    - [Running via Docker](#build-via-docker)
-    - [Running via Bazel](#build-via-bazel)
+    - [Running via Docker](#running-via-docker)
+    - [Running via Bazel](#running-via-bazel)
 - [Staking ETH: running a validator client](#staking-eth-running-a-validator-client)
-    - [Activating your validator: depositing 3.2 Goerli ETH](#activating-your-validator-depositing-32-goerli-eth)
+    - [Activating your validator: depositing 3.2 Goerli ETH](#activating-your-validator-depositing-32-göerli-eth)
     - [Starting the validator with Bazel](#starting-the-validator-with-bazel)
 - [Setting up a local ETH2 development chain](#setting-up-a-local-eth2-development-chain)
     - [Installation and dependencies](#installation-and-dependencies) 
@@ -33,182 +33,170 @@ Participation is now open to the public for our Ethereum 2.0 phase 0 testnet rel
 -   [License](#license)
 
 ## Dependencies
-Prysm can be installed either with Docker **(recommended method)** or using our build tool, Bazel. The below instructions include sections for performing both.
 
-**For Docker installations:**
-  - The latest release of [Docker](https://docs.docker.com/install/)
+Prysm can be installed either with Docker **\(recommended\)** or using our build tool, Bazel. The below instructions include sections for performing both.
 
-**For Bazel installations:**
-  - The latest release of [Bazel](https://docs.bazel.build/versions/master/install.html)
-  - A modern UNIX operating system (MacOS included)
+#### **For Docker installations:**
 
-## Installation
+* The latest release of [Docker](https://docs.docker.com/install/)
+
+#### **For Bazel installations:**
+
+* The latest release of [Bazel](https://docs.bazel.build/versions/master/install.html)
+* The latest release of `cmake`
+* The latest release of `git`
+* A modern UNIX operating system \(macOS included\)
+
+## Installing Prysm
 
 ### Build via Docker
+
 1. Ensure you are running the most recent version of Docker by issuing the command:
-```
+
+```text
 docker -v
 ```
-2.  To pull the Prysm images from the server, issue the following commands:
-```
+
+2. To pull the Prysm images, issue the following commands:
+
+```text
 docker pull gcr.io/prysmaticlabs/prysm/validator:latest
 docker pull gcr.io/prysmaticlabs/prysm/beacon-chain:latest
 ```
+
 This process will also install any related dependencies.
 
 ### Build via Bazel
 
 1. Open a terminal window. Ensure you are running the most recent version of Bazel by issuing the command:
-```
+
+```text
 bazel version
 ```
-2. Clone this repository and enter the directory:
-```
+
+2. Clone Prysm's [main repository](https://github.com/prysmaticlabs/prysm) and enter the directory:
+
+```text
 git clone https://github.com/prysmaticlabs/prysm
 cd prysm
 ```
-3. Build both the beacon chain node implementation and the validator client:
-```
+
+3. Build both the beacon chain node and the validator client:
+
+```text
 bazel build //beacon-chain:beacon-chain
 bazel build //validator:validator
 ```
+
 Bazel will automatically pull and install any dependencies as well, including Go and necessary compilers.
-
-4. Build the configuration for the Prysm testnet by issuing the commands:
-
-```
-bazel build --define ssz=minimal //beacon-chain:beacon-chain
-bazel build --define ssz=minimal //validator:validator
-```
-
-The binaries will be built in an architecture-dependent subdirectory of `bazel-bin`, and are supplied as part of Bazel's build process.  To fetch the location, issue the command:
-
-```
-$ bazel build --define ssz=minimal //beacon-chain:beacon-chain
-...
-Target //beacon-chain:beacon-chain up-to-date:
-  bazel-bin/beacon-chain/linux_amd64_stripped/beacon-chain
-...
-```
-
-In the example above, the beacon chain binary has been created in `bazel-bin/beacon-chain/linux_amd64_stripped/beacon-chain`.
 
 ## Connecting to the testnet: running a beacon node
 
-This section contains instructions for initialising a beacon node and connecting to the public testnet. To further understand the role that both the beacon node and validator play in Prysm, see [this section of our documentation](https://prysmaticlabs.gitbook.io/prysm/how-prysm-works/overview-technical).
+Below are instructions for initialising a beacon node and connecting to the public testnet. To further understand the role that the beacon node plays in Prysm, see [this section of the documentation.](https://prysmaticlabs.gitbook.io/prysm/how-prysm-works/overview-technical)
+
+
+**NOTE:** It is recommended to open up port 13000 on your local router to improve connectivity and receive more peers from the network. To do so, navigate to `192.168.0.1` in your browser and login if required. Follow along with the interface to modify your routers firewall settings. When this task is completed, append the parameter`--p2p-host-ip=$(curl -s ident.me)` to your selected beacon startup command presented in this section to use the newly opened port.
 
 ### Running via Docker
 
-#### Docker on Linux/Mac
+#### **Docker on Linux/macOS:**
 
 To start your beacon node, issue the following command:
 
-```
-docker run -v $HOME/prysm-data:/data -p 4000:4000 \
-  --name beacon-node \
-  gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
-  --no-genesis-delay \
-  --datadir=/data
-```
-
-(Optional) If you want to enable gRPC, then run this command instead of the one above:
-
-```
-docker run -v $HOME/prysm-data:/data -p 4000:4000 -p 7000:7000 \
-  --name beacon-node \
+```text
+docker run -it -v $HOME/prysm:/data -p 4000:4000 --name beacon-node \
   gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
   --datadir=/data \
-  --no-genesis-delay \
-  --grpc-gateway-port=7000
+  --init-sync-no-verify
 ```
 
-You can halt the beacon node using `Ctrl+c` or with the following command:
+The beacon node can be halted by either using `Ctrl+c` or with the command:
 
-```
+```text
 docker stop beacon-node
 ```
 
-To restart the beacon node, issue the command:
+To restart the beacon node, issue the following command:
 
-```
+```text
 docker start -ai beacon-node
 ```
 
-To delete a corrupted container, issue the command:
+To delete a corrupted container, issue the following command:
 
-```
+```text
 docker rm beacon-node
 ```
 
-To recreate a deleted container and refresh the chain database, issue the start command with an additional `--force-clear-db` parameter:
+To recreate a deleted container and refresh the chain database, issue the start command with an additional `--clear-db` parameter:
 
-```
-docker run -it -v $HOME/prysm-data:/data -p 4000:4000 --name beacon-node \
+```text
+docker run -it -v $HOME/prysm:/data -p 4000:4000 --name beacon-node \
   gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
   --datadir=/data \
-  --force-clear-db
+  --clear-db
 ```
 
-#### Docker on Windows
+#### **Docker on Windows:**
 
-1) You will need to share the local drive you wish to mount to to container (e.g. C:).
-    1. Enter Docker settings (right click the tray icon)
-    2. Click 'Shared Drives'
-    3. Select a drive to share
-    4. Click 'Apply'
+1. You will need to 'share' the local drive you wish to mount to \(e.g. C:\).
+   1. Enter Docker settings \(right click the tray icon\)
+   2. Click 'Shared Drives'
+   3. Select a drive to share
+   4. Click 'Apply'
+   
+2. You will next need to create a directory named `/prysm/` within your selected shared Drive. This folder will be used as a local data directory for Beacon Node chain data as well as account and keystore information required by the validator. Docker will **not** create this directory if it does not exist already. For the purposes of these instructions, it is assumed that `C:` is your prior-selected shared Drive.
+3. To run the beacon node, issue the following command:
 
-2) You will next need to create a directory named ```/tmp/prysm-data/``` within your selected shared Drive. This folder will be used as a local data directory for Beacon Node chain data as well as account and keystore information required by the validator. Docker will **not** create this directory if it does not exist already. For the purposes of these instructions, it is assumed that ```C:``` is your prior-selected shared Drive.
-
-4) To run the beacon node, issue the command:
-```
-docker run -it -v c:/tmp/prysm-data:/data -p 4000:4000 gcr.io/prysmaticlabs/prysm/beacon-chain:latest --datadir=/data
+```text
+docker run -it -v c:/prysm/:/data -p 4000:4000 gcr.io/prysmaticlabs/prysm/beacon-chain:latest --datadir=/data --init-sync-no-verify --clear-db
 ```
 
 ### Running via Bazel
 
-1) To start your Beacon Node with Bazel, issue the command:
+To start your Beacon Node with Bazel, issue the following command:
+
+```text
+bazel run //beacon-chain -- --clear-db --datadir=$HOME/prysm
 ```
-bazel run //beacon-chain -- --datadir=/tmp/prysm-data
-```
-This will sync up the Beacon Node with the latest head block in the network. Note that the beacon node must be **completely synced** before attempting to initialise a validator client, otherwise the validator will not be able to complete the deposit and funds will be lost.
+
+This will sync up the beacon node with the latest head block in the network.
 
 
-## Staking ETH: running a validator client
+**NOTE:** The beacon node must be **completely synced** before attempting to initialise a validator client, otherwise the validator will not be able to complete the deposit and **funds will lost**.
 
-Once your beacon node is up, the chain will be waiting for you to deposit 3.2 Goerli ETH into the Validator Deposit Contract to activate your validator (discussed in the section below). First though, you will need to create a validator client to connect to this node in order to stake and participate. Each validator represents 3.2 Goerli ETH being staked in the system, and it is possible to spin up as many as you desire in order to have more stake in the network.
 
-For more information on the functionality of validator clients, see [this section](https://prysmaticlabs.gitbook.io/prysm/how-prysm-works/validator-clients) of our official documentation.
+## Staking ETH: Running a validator client
 
-### Activating your validator: depositing 3.2 Goerli ETH
+Once your beacon node is up, the chain will be waiting for you to deposit 3.2 Goerli ETH into a [validator deposit contract](how-prysm-works/validator-deposit-contract.md) in order to activate your validator \(discussed in the section below\). First though, you will need to create this validator and connect to this node to participate in consensus.
 
-Using your validator deposit data from the previous step, follow the instructions found on https://prylabs.net/participate to make a deposit.
+Each validator represents 3.2 Goerli ETH being staked in the system, and it is possible to spin up as many as you desire in order to have more stake in the network.
 
-It will take a while for the nodes in the network to process your deposit, but once your node is active, the validator will begin doing its responsibility. In your validator client, you will be able to frequently see your validator balance as it goes up over time. Note that, should your node ever go offline for a long period, you'll start gradually losing your deposit until you are removed from the system.
+### Activating your validator: depositing 3.2 Göerli ETH
 
-### Starting the validator with Bazel
+To begin setting up a validator, follow the instructions found on [prylabs.net](https://prylabs.net) to use the Göerli ETH faucet and make a deposit. For step-by-step assistance with the deposit page, see the [Activating a Validator ](activating-a-validator.md)section of this documentation.
 
-1. Open another terminal window. Enter your Prysm directory and run the validator by issuing the following command:
-```
-cd prysm
-bazel run //validator
-```
+It will take a while for the nodes in the network to process a deposit. Once the node is active, the validator will immediately begin performing its responsibilities.
+
+In your validator client, you will be able to frequently see your validator balance as it goes up over time. Note that, should your node ever go offline for a long period, a validator will start gradually losing its deposit until it is removed from the network entirely.
+
 **Congratulations, you are now running Ethereum 2.0 Phase 0!**
 
 ## Setting up a local ETH2 development chain
 
-This section outlines the process of setting up Prysm for local interop testing with other Ethereum 2.0 client implementations. See the [INTEROP.md](https://github.com/prysmaticlabs/prysm/blob/master/INTEROP.md) file for advanced configuration options. For more background information on interoperability development, see [this blog post](https://blog.ethereum.org/2019/09/19/eth2-interop-in-review/).
+This section outlines the process of setting up Prysm for local testing with other Ethereum 2.0 client implementations. See the [INTEROP.md](https://github.com/prysmaticlabs/prysm/blob/master/INTEROP.md) file for advanced configuration options. For more background information on interoperability development, see [this blog post](https://blog.ethereum.org/2019/09/19/eth2-interop-in-review/).
 
 ### Installation and dependencies
 
-To begin setting up a local ETH2 development chain, follow the **Bazel** instructions found in the [dependencies](#dependencies) and [installation](#installation) sections respectively. 
+To begin setting up a local ETH2 development chain, follow the **Bazel** instructions found in the [dependencies](https://github.com/prysmaticlabs/prysm#dependencies) and [installation](https://github.com/prysmaticlabs/prysm#installation) sections respectively.
 
 ### Running a local beacon node and validator client
 
-The example below will deterministically generate a beacon genesis state, initiate Prysm with 64 validators and set the genesis time to your local machines current UNIX time.
+The example below will generate a beacon genesis state and initiate Prysm with 64 validators with the genesis time set to your machines UNIX time.
 
-1. Open up two terminal windows. In the first, issue the command:
+Open up two terminal windows. In the first, issue the command:
 
-```
+```text
 bazel run //beacon-chain -- \
 --no-genesis-delay \
 --bootstrap-node= \
@@ -218,9 +206,9 @@ bazel run //beacon-chain -- \
 --interop-eth1data-votes
 ```
 
-2. Wait a moment for the beacon chain to start. In the other terminal, issue the command:
+Wait a moment for the beacon chain to start. In the other terminal, issue the command:
 
-```
+```text
 bazel run //validator -- --interop-num-validators 64
 ```
 
@@ -229,14 +217,17 @@ This command will kickstart the system with your 64 validators performing their 
 ## Testing Prysm
 
 To run the unit tests of our system, issue the command:
-```
+
+```text
 bazel test //...
 ```
 
-To run the linter, ensure you have [golangci-lint](https://github.com/golangci/golangci-lint) installed, then issue the command:
-```
+To run our linter, make sure you have [golangci-lint](https://github.com/golangci/golangci-lint) installed and then issue the command:
+
+```text
 golangci-lint run
 ```
+
 
 ## Contributing
 Want to get involved? Check out our [Contribution Guide](https://prysmaticlabs.gitbook.io/prysm/getting-involved/contribution-guidelines) to learn more!

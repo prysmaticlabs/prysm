@@ -6,6 +6,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -30,6 +31,8 @@ type HeadFetcher interface {
 	HeadRoot() []byte
 	HeadBlock() *ethpb.BeaconBlock
 	HeadState(ctx context.Context) (*pb.BeaconState, error)
+	HeadValidatorsIndices(epoch uint64) ([]uint64, error)
+	HeadSeed(epoch uint64) ([32]byte, error)
 }
 
 // CanonicalRootFetcher defines a common interface for methods in blockchain service which
@@ -44,19 +47,38 @@ type ForkFetcher interface {
 }
 
 // FinalizationFetcher defines a common interface for methods in blockchain service which
-// directly retrieves finalization related data.
+// directly retrieves finalization and justification related data.
 type FinalizationFetcher interface {
 	FinalizedCheckpt() *ethpb.Checkpoint
+	CurrentJustifiedCheckpt() *ethpb.Checkpoint
+	PreviousJustifiedCheckpt() *ethpb.Checkpoint
 }
 
-// FinalizedCheckpt returns the latest finalized checkpoint tracked in fork choice service.
+// FinalizedCheckpt returns the latest finalized checkpoint from head state.
 func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
-	cp := s.forkChoiceStore.FinalizedCheckpt()
-	if cp != nil {
-		return cp
+	if s.headState == nil || s.headState.FinalizedCheckpoint == nil {
+		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
-	return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	return s.headState.FinalizedCheckpoint
+}
+
+// CurrentJustifiedCheckpt returns the current justified checkpoint from head state.
+func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
+	if s.headState == nil || s.headState.CurrentJustifiedCheckpoint == nil {
+		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	}
+
+	return s.headState.CurrentJustifiedCheckpoint
+}
+
+// PreviousJustifiedCheckpt returns the previous justified checkpoint from head state.
+func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
+	if s.headState == nil || s.headState.PreviousJustifiedCheckpoint == nil {
+		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	}
+
+	return s.headState.PreviousJustifiedCheckpoint
 }
 
 // HeadSlot returns the slot of the head of the chain.
@@ -100,6 +122,16 @@ func (s *Service) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 	}
 
 	return proto.Clone(s.headState).(*pb.BeaconState), nil
+}
+
+// HeadValidatorsIndices returns a list of active validator indices from the head view of a given epoch.
+func (s *Service) HeadValidatorsIndices(epoch uint64) ([]uint64, error) {
+	return helpers.ActiveValidatorIndices(s.headState, epoch)
+}
+
+// HeadSeed returns the seed from the head view of a given epoch.
+func (s *Service) HeadSeed(epoch uint64) ([32]byte, error) {
+	return helpers.Seed(s.headState, epoch, params.BeaconConfig().DomainBeaconAttester)
 }
 
 // CanonicalRoot returns the canonical root of a given slot.

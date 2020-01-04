@@ -8,11 +8,9 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -43,7 +41,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 	// https://github.com/ethereum/eth2.0-specs/blob/v0.9.0/specs/validator/0_beacon-chain-validator.md#broadcast-aggregate
 	v.waitToSlotTwoThirds(ctx, slot)
 
-	res, err := v.aggregatorClient.SubmitAggregateAndProof(ctx, &pb.AggregationRequest{
+	_, err = v.aggregatorClient.SubmitAggregateAndProof(ctx, &pb.AggregationRequest{
 		Slot:           slot,
 		CommitteeIndex: assignment.CommitteeIndex,
 		PublicKey:      pubKey[:],
@@ -54,12 +52,10 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 		return
 	}
 
-	log.WithFields(logrus.Fields{
-		"slot":            slot,
-		"committeeIndex":  assignment.CommitteeIndex,
-		"pubKey":          fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])),
-		"aggregationRoot": fmt.Sprintf("%#x", bytesutil.Trunc(res.Root[:])),
-	}).Debug("Assigned and submitted aggregation and proof request")
+	if err := v.addIndicesToLog(ctx, assignment.CommitteeIndex, pubKey); err != nil {
+		log.Errorf("Could not add aggregator indices to logs: %v", err)
+		return
+	}
 }
 
 // This implements selection logic outlined in:
@@ -75,7 +71,11 @@ func (v *validator) signSlot(ctx context.Context, pubKey [48]byte, slot uint64) 
 		return nil, err
 	}
 
-	sig := v.keys[pubKey].SecretKey.Sign(slotRoot[:], domain.SignatureDomain)
+	sig, err := v.keyManager.Sign(pubKey, slotRoot, domain.SignatureDomain)
+	if err != nil {
+		return nil, err
+	}
+
 	return sig.Marshal(), nil
 }
 
@@ -92,4 +92,21 @@ func (v *validator) waitToSlotTwoThirds(ctx context.Context, slot uint64) {
 	startTime := slotutil.SlotStartTime(v.genesisTime, slot)
 	finalTime := startTime.Add(delay)
 	time.Sleep(roughtime.Until(finalTime))
+}
+
+func (v *validator) addIndicesToLog(ctx context.Context, committeeIndex uint64, pubKey [48]byte) error {
+	v.attLogsLock.Lock()
+	defer v.attLogsLock.Unlock()
+	v.pubKeyToIDLock.RLock()
+	defer v.pubKeyToIDLock.RUnlock()
+
+	for _, log := range v.attLogs {
+		if committeeIndex == log.data.CommitteeIndex {
+			if _, ok := v.pubKeyToID[pubKey]; ok {
+				log.aggregatorIndices = append(log.aggregatorIndices, v.pubKeyToID[pubKey])
+			}
+		}
+	}
+
+	return nil
 }
