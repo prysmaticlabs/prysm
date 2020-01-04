@@ -6,10 +6,11 @@ import (
 	"math/big"
 	"math/rand"
 
+	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -256,7 +257,7 @@ func (vs *Server) deposits(ctx context.Context, currentVote *ethpb.Eth1Data) ([]
 
 	// Deposits need to be received in order of merkle index root, so this has to make sure
 	// deposits are sorted from lowest to highest.
-	var pendingDeps []*depositcache.DepositContainer
+	var pendingDeps []*dbpb.DepositContainer
 	for _, dep := range allPendingContainers {
 		if uint64(dep.Index) >= headState.Eth1DepositIndex && uint64(dep.Index) < canonicalEth1Data.DepositCount {
 			pendingDeps = append(pendingDeps, dep)
@@ -268,7 +269,7 @@ func (vs *Server) deposits(ctx context.Context, currentVote *ethpb.Eth1Data) ([]
 		if uint64(i) == params.BeaconConfig().MaxDeposits {
 			break
 		}
-		pendingDeps[i].Deposit, err = constructMerkleProof(depositTrie, pendingDeps[i].Index, pendingDeps[i].Deposit)
+		pendingDeps[i].Deposit, err = constructMerkleProof(depositTrie, int(pendingDeps[i].Index), pendingDeps[i].Deposit)
 		if err != nil {
 			return nil, err
 		}

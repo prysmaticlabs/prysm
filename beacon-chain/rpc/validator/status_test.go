@@ -2,7 +2,6 @@ package validator
 
 import (
 	"context"
-	"math/big"
 	"testing"
 	"time"
 
@@ -41,7 +40,7 @@ func TestValidatorStatus_DepositReceived(t *testing.T) {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
 	depositCache := depositcache.NewDepositCache()
-	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	p := &mockPOW.POWChain{
 		TimesByHeight: map[int]uint64{
@@ -117,7 +116,7 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
 	depositCache := depositcache.NewDepositCache()
-	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	p := &mockPOW.POWChain{
@@ -172,7 +171,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
 	depositCache := depositcache.NewDepositCache()
-	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 
 	// Active because activation epoch <= current epoch < exit epoch.
 	activeEpoch := helpers.DelayedActivationExitEpoch(0)
@@ -274,7 +273,7 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
 	depositCache := depositcache.NewDepositCache()
-	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	p := &mockPOW.POWChain{
 		TimesByHeight: map[int]uint64{
@@ -344,7 +343,7 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
 	depositCache := depositcache.NewDepositCache()
-	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	p := &mockPOW.POWChain{
 		TimesByHeight: map[int]uint64{
@@ -414,7 +413,7 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
 	depositCache := depositcache.NewDepositCache()
-	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	p := &mockPOW.POWChain{
 		TimesByHeight: map[int]uint64{
@@ -491,7 +490,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
 	depositCache := depositcache.NewDepositCache()
-	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	p := &mockPOW.POWChain{
 		TimesByHeight: map[int]uint64{
@@ -586,7 +585,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
 	depositCache := depositcache.NewDepositCache()
-	depositCache.InsertDeposit(ctx, dep, big.NewInt(10) /*blockNum*/, 0, depositTrie.Root())
+	depositCache.InsertDeposit(ctx, dep, 10 /*blockNum*/, 0, depositTrie.Root())
 	depData = &ethpb.Deposit_Data{
 		PublicKey:             []byte{'C'},
 		Signature:             []byte("hi"),
@@ -598,7 +597,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 		Data: depData,
 	}
 	depositTrie.Insert(dep.Data.Signature, 15)
-	depositCache.InsertDeposit(context.Background(), dep, big.NewInt(15), 0, depositTrie.Root())
+	depositCache.InsertDeposit(context.Background(), dep, 0, 0, depositTrie.Root())
 
 	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKeys[0]), 0); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
