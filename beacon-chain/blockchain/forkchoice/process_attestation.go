@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -130,11 +129,6 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 
 	// Update every validator's latest vote.
 	if err := s.updateAttVotes(ctx, indexedAtt, tgt.Root, tgt.Epoch); err != nil {
-		return err
-	}
-
-	// Mark attestation as seen we don't update votes when it appears in block.
-	if err := s.setSeenAtt(a); err != nil {
 		return err
 	}
 
@@ -288,20 +282,6 @@ func (s *Store) updateAttVotes(
 			}
 		}
 	}
-	return nil
-}
-
-// setSeenAtt sets the attestation hash in seen attestation map to true.
-func (s *Store) setSeenAtt(a *ethpb.Attestation) error {
-	s.seenAttsLock.Lock()
-	defer s.seenAttsLock.Unlock()
-
-	r, err := hashutil.HashProto(a)
-	if err != nil {
-		return err
-	}
-	s.seenAtts[r] = true
-
 	return nil
 }
 
