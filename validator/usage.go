@@ -46,6 +46,7 @@ var appHelpFlagGroups = []flagGroup{
 		Flags: []cli.Flag{
 			cmd.VerbosityFlag,
 			cmd.DataDirFlag,
+			cmd.ClearDB,
 			cmd.EnableTracingFlag,
 			cmd.TracingProcessNameFlag,
 			cmd.TracingEndpointFlag,
