@@ -36,7 +36,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
-	indexInCommittee, validatorIndex, err := v.indexInCommittee(ctx, pubKey, assignment)
+	indexInCommittee, validatorIndex, err := v.indexInCommittee(pubKey, assignment)
 	if err != nil {
 		log.Errorf("Could not get validator index in assignment: %v", err)
 		return
@@ -129,22 +129,18 @@ func (v *validator) assignment(pubKey [48]byte) (*pb.AssignmentResponse_Validato
 
 // This returns the index of validator's position in a committee. It's used to construct aggregation and
 // custody bit fields.
-func (v *validator) indexInCommittee(
-	ctx context.Context,
-	pubKey [48]byte,
-	assignment *pb.AssignmentResponse_ValidatorAssignment) (uint64, uint64, error) {
-	res, err := v.validatorClient.ValidatorIndex(ctx, &pb.ValidatorIndexRequest{PublicKey: pubKey[:]})
-	if err != nil {
-		return 0, 0, err
-	}
+func (v *validator) indexInCommittee(pubKey [48]byte, assignment *pb.AssignmentResponse_ValidatorAssignment) (uint64, uint64, error) {
+	v.pubKeyToIDLock.RLock()
+	defer v.pubKeyToIDLock.RUnlock()
 
+	index := v.pubKeyToID[pubKey]
 	for i, validatorIndex := range assignment.Committee {
-		if validatorIndex == res.Index {
-			return uint64(i), res.Index, nil
+		if validatorIndex == index {
+			return uint64(i), index, nil
 		}
 	}
 
-	return 0, 0, fmt.Errorf("index %d not in committee", res.Index)
+	return 0, 0, fmt.Errorf("index %d not in committee", index)
 }
 
 // Given validator's public key, this returns the signature of an attestation data.
