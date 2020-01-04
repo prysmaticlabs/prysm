@@ -479,6 +479,11 @@ func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot ui
 		return err
 	}
 
+	roots, err = s.filterBlockRoots(ctx, roots)
+	if err != nil {
+		return err
+	}
+
 	if err := s.db.DeleteStates(ctx, roots); err != nil {
 		return err
 	}
@@ -603,4 +608,32 @@ func (s *Store) saveInitState(ctx context.Context, state *pb.BeaconState) error 
 		}
 	}
 	return nil
+}
+
+// This filters block roots that are not known as head root and finalized root in DB.
+// It serves as the last line of defence before we prune states.
+func (s *Store) filterBlockRoots(ctx context.Context, roots [][32]byte) ([][32]byte, error) {
+	f, err := s.db.FinalizedCheckpoint(ctx)
+	if err != nil {
+		return nil, err
+	}
+	fRoot := f.Root
+	h, err := s.db.HeadBlock(ctx)
+	if err != nil {
+		return nil, err
+	}
+	hRoot, err := ssz.SigningRoot(h)
+	if err != nil {
+		return nil, err
+	}
+
+	filtered := make([][32]byte, 0, len(roots))
+	for _, root := range roots {
+		if bytes.Equal(root[:], fRoot[:]) || bytes.Equal(root[:], hRoot[:]) {
+			continue
+		}
+		filtered = append(filtered, root)
+	}
+
+	return filtered, nil
 }
