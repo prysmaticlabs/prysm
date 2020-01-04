@@ -168,7 +168,7 @@ func TestStore_UpdateBlockAttestationVote(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := store.updateBlockAttestationVote(ctx, beaconState, att); err != nil {
+	if err := store.updateBlockAttestationVote(ctx, att); err != nil {
 		t.Fatal(err)
 	}
 
@@ -208,7 +208,7 @@ func TestStore_UpdateBlockAttestationsVote(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := store.updateBlockAttestationsVotes(ctx, beaconState, atts); err != nil {
+	if err := store.updateBlockAttestationsVotes(ctx, atts); err != nil {
 		t.Fatal(err)
 	}
 
