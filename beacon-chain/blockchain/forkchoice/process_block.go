@@ -103,7 +103,6 @@ func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) er
 	// Update finalized check point.
 	// Prune the block cache and helper caches on every new finalized epoch.
 	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
-		s.clearSeenAtts()
 		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint); err != nil {
 			return errors.Wrap(err, "could not save finalized checkpoint")
 		}
@@ -206,8 +205,6 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, signed *e
 	// Update finalized check point.
 	// Prune the block cache and helper caches on every new finalized epoch.
 	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
-		s.clearSeenAtts()
-
 		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 		if endSlot > startSlot {
@@ -363,13 +360,6 @@ func (s *Store) saveNewBlockAttestations(ctx context.Context, atts []*ethpb.Atte
 		return err
 	}
 	return nil
-}
-
-// clearSeenAtts clears seen attestations map, it gets called upon new finalization.
-func (s *Store) clearSeenAtts() {
-	s.seenAttsLock.Lock()
-	s.seenAttsLock.Unlock()
-	s.seenAtts = make(map[[32]byte]bool)
 }
 
 // rmStatesOlderThanLastFinalized deletes the states in db since last finalized check point.

@@ -44,8 +44,6 @@ type Store struct {
 	prevFinalizedCheckpt  *ethpb.Checkpoint
 	checkpointState       *cache.CheckpointStateCache
 	checkpointStateLock   sync.Mutex
-	seenAtts              map[[32]byte]bool
-	seenAttsLock          sync.Mutex
 	genesisTime           uint64
 	bestJustifiedCheckpt  *ethpb.Checkpoint
 	latestVoteMap         map[uint64]*pb.ValidatorLatestVote
@@ -65,7 +63,6 @@ func NewForkChoiceService(ctx context.Context, db db.Database) *Store {
 		db:              db,
 		checkpointState: cache.NewCheckpointStateCache(),
 		latestVoteMap:   make(map[uint64]*pb.ValidatorLatestVote),
-		seenAtts:        make(map[[32]byte]bool),
 		initSyncState:   make(map[[32]byte]*pb.BeaconState),
 	}
 }
