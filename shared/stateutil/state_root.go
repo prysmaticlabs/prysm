@@ -24,7 +24,10 @@ func init() {
 		// 100,000 roots will take up approximately 3 MB in memory.
 		BufferItems: 64, // number of keys per Get buffer.
 	})
-	globalHasher = &stateRootHasher{rootsCache: rootsCache}
+	// Temporarily disable roots cache until cache issues can be resolved.
+	//globalHasher = &stateRootHasher{rootsCache: rootsCache}
+	_ = rootsCache
+	globalHasher = &stateRootHasher{}
 }
 
 type stateRootHasher struct {
