@@ -52,7 +52,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 		return
 	}
 
-	if err := v.addIndicesToLog(ctx, assignment.CommitteeIndex, pubKey[:]); err != nil {
+	if err := v.addIndicesToLog(ctx, assignment.CommitteeIndex, pubKey); err != nil {
 		log.Errorf("Could not add aggregator indices to logs: %v", err)
 		return
 	}
@@ -94,17 +94,17 @@ func (v *validator) waitToSlotTwoThirds(ctx context.Context, slot uint64) {
 	time.Sleep(roughtime.Until(finalTime))
 }
 
-func (v *validator) addIndicesToLog(ctx context.Context, committeeIndex uint64, pubKey []byte) error {
+func (v *validator) addIndicesToLog(ctx context.Context, committeeIndex uint64, pubKey [48]byte) error {
 	v.attLogsLock.Lock()
 	defer v.attLogsLock.Unlock()
-	res, err := v.validatorClient.ValidatorIndex(ctx, &pb.ValidatorIndexRequest{PublicKey: pubKey})
-	if err != nil {
-		return err
-	}
+	v.pubKeyToIDLock.RLock()
+	defer v.pubKeyToIDLock.RUnlock()
 
 	for _, log := range v.attLogs {
 		if committeeIndex == log.data.CommitteeIndex {
-			log.aggregatorIndices = append(log.aggregatorIndices, res.Index)
+			if _, ok := v.pubKeyToID[pubKey]; ok {
+				log.aggregatorIndices = append(log.aggregatorIndices, v.pubKeyToID[pubKey])
+			}
 		}
 	}
 
