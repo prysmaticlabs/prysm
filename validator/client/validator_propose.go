@@ -72,8 +72,8 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		trace.Int64Attribute("numAttestations", int64(len(b.Body.Attestations))),
 	)
 
-	v.pubKeyToIDLock.Lock()
-	defer v.pubKeyToIDLock.Unlock()
+	v.pubKeyToIDLock.RLock()
+	defer v.pubKeyToIDLock.RUnlock()
 	log.WithField("signature", fmt.Sprintf("%#x", b.Signature)).Debug("block signature")
 	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
 	log.WithFields(logrus.Fields{

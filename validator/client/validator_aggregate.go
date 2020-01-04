@@ -97,12 +97,14 @@ func (v *validator) waitToSlotTwoThirds(ctx context.Context, slot uint64) {
 func (v *validator) addIndicesToLog(ctx context.Context, committeeIndex uint64, pubKey [48]byte) error {
 	v.attLogsLock.Lock()
 	defer v.attLogsLock.Unlock()
-	v.pubKeyToIDLock.Lock()
-	defer v.pubKeyToIDLock.Unlock()
+	v.pubKeyToIDLock.RLock()
+	defer v.pubKeyToIDLock.RUnlock()
 
 	for _, log := range v.attLogs {
 		if committeeIndex == log.data.CommitteeIndex {
-			log.aggregatorIndices = append(log.aggregatorIndices, v.pubKeyToID[pubKey])
+			if _, ok := v.pubKeyToID[pubKey]; ok {
+				log.aggregatorIndices = append(log.aggregatorIndices, v.pubKeyToID[pubKey])
+			}
 		}
 	}
 

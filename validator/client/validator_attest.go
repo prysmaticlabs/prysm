@@ -130,8 +130,8 @@ func (v *validator) assignment(pubKey [48]byte) (*pb.AssignmentResponse_Validato
 // This returns the index of validator's position in a committee. It's used to construct aggregation and
 // custody bit fields.
 func (v *validator) indexInCommittee(pubKey [48]byte, assignment *pb.AssignmentResponse_ValidatorAssignment) (uint64, uint64, error) {
-	v.pubKeyToIDLock.Lock()
-	defer v.pubKeyToIDLock.Unlock()
+	v.pubKeyToIDLock.RLock()
+	defer v.pubKeyToIDLock.RUnlock()
 
 	index := v.pubKeyToID[pubKey]
 	for i, validatorIndex := range assignment.Committee {
