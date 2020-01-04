@@ -143,11 +143,6 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.BeaconBlock{}),
 	).Return(&pb.ProposeResponse{}, nil /*error*/)
 
-	m.validatorClient.EXPECT().ValidatorIndex(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
-	).Return(&pb.ValidatorIndexResponse{}, nil)
-
 	validator.ProposeBlock(context.Background(), params.BeaconConfig().SlotsPerEpoch*5+2, validatorPubKey)
 	testutil.AssertLogsDoNotContain(t, hook, "Tried to sign a double proposal")
 
