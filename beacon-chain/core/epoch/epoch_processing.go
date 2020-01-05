@@ -19,6 +19,21 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+var epochState *pb.BeaconState
+
+// sortableIndices implements the Sort interface to sort newly activated validator indices
+// by activation epoch and by index number.
+type sortableIndices []uint64
+
+func (s sortableIndices) Len() int      { return len(s) }
+func (s sortableIndices) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+func (s sortableIndices) Less(i, j int) bool {
+	if epochState.Validators[s[i]].ActivationEligibilityEpoch == epochState.Validators[s[j]].ActivationEligibilityEpoch {
+		return s[i] < s[j]
+	}
+	return epochState.Validators[s[i]].ActivationEligibilityEpoch < epochState.Validators[s[j]].ActivationEligibilityEpoch
+}
+
 // MatchedAttestations is an object that contains the correctly
 // voted attestations based on source, target and head criteria.
 type MatchedAttestations struct {
@@ -162,13 +177,9 @@ func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 			activationQ = append(activationQ, uint64(idx))
 		}
 	}
-	// Order by the sequence of activation_eligibility_epoch setting and then index
-	sort.Slice(activationQ, func(i, j int) bool {
-		return state.Validators[i].ActivationEligibilityEpoch < state.Validators[j].ActivationEligibilityEpoch
-	})
-	sort.Slice(activationQ, func(i, j int) bool {
-		return activationQ[i] < activationQ[j]
-	})
+
+	epochState = state
+	sort.Sort(sortableIndices(activationQ))
 
 	// Only activate just enough validators according to the activation churn limit.
 	limit := len(activationQ)
@@ -186,6 +197,7 @@ func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	if int(churnLimit) < limit {
 		limit = int(churnLimit)
 	}
+
 	for _, index := range activationQ[:limit] {
 		validator := state.Validators[index]
 		validator.ActivationEpoch = helpers.DelayedActivationExitEpoch(currentEpoch)
