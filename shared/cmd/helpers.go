@@ -6,8 +6,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/prometheus/common/log"
+	"github.com/sirupsen/logrus"
 )
+
+var log = logrus.WithField("prefix", "node")
 
 // ConfirmAction uses the passed in actionText as the confirmation text displayed in the terminal.
 // The user must enter Y or N to indicate whether they confirm the action detailed in the warning text.
@@ -27,7 +29,7 @@ func ConfirmAction(actionText string) (bool, error) {
 		trimmedLine := strings.TrimSpace(string(line))
 		lineInput := strings.ToUpper(trimmedLine)
 		if lineInput != "Y" && lineInput != "N" {
-			log.Errorf("Invalid option of %s chosen, enter Y/N", line)
+			log.Errorf("Invalid option of %s chosen, please only enter Y or N", line)
 			continue
 		}
 		if lineInput == "Y" {
