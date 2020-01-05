@@ -153,6 +153,11 @@ func (s *Store) ancestor(ctx context.Context, root []byte, slot uint64) ([]byte,
 	ctx, span := trace.StartSpan(ctx, "forkchoice.ancestor")
 	defer span.End()
 
+	// Stop recursive ancestry lookup if context is cancelled.
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
 	signed, err := s.db.Block(ctx, bytesutil.ToBytes32(root))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get ancestor block")
