@@ -16,6 +16,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/stateutil"
 )
 
 func TestStore_GenesisStoreOk(t *testing.T) {
@@ -27,7 +28,7 @@ func TestStore_GenesisStoreOk(t *testing.T) {
 
 	genesisTime := time.Unix(9999, 0)
 	genesisState := &pb.BeaconState{GenesisTime: uint64(genesisTime.Unix())}
-	genesisStateRoot, err := ssz.HashTreeRoot(genesisState)
+	genesisStateRoot, err := stateutil.HashTreeRootState(genesisState)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,6 +38,9 @@ func TestStore_GenesisStoreOk(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := db.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveGenesisBlockRoot(ctx, genesisBlkRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -150,7 +154,7 @@ func TestStore_LatestAttestingBalance(t *testing.T) {
 	}
 
 	s := &pb.BeaconState{Validators: validators}
-	stateRoot, err := ssz.HashTreeRoot(s)
+	stateRoot, err := stateutil.HashTreeRootState(s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -160,6 +164,9 @@ func TestStore_LatestAttestingBalance(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := db.SaveState(ctx, s, blkRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveGenesisBlockRoot(ctx, blkRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -253,7 +260,7 @@ func TestStore_GetHead(t *testing.T) {
 	}
 
 	s := &pb.BeaconState{Validators: validators}
-	stateRoot, err := ssz.HashTreeRoot(s)
+	stateRoot, err := stateutil.HashTreeRootState(s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -263,6 +270,9 @@ func TestStore_GetHead(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := store.db.SaveState(ctx, s, blkRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveGenesisBlockRoot(ctx, blkRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -373,7 +383,7 @@ func TestStore_GetFilterBlockTree_CorrectLeaf(t *testing.T) {
 	}
 
 	s := &pb.BeaconState{}
-	stateRoot, err := ssz.HashTreeRoot(s)
+	stateRoot, err := stateutil.HashTreeRootState(s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -383,6 +393,9 @@ func TestStore_GetFilterBlockTree_CorrectLeaf(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := store.db.SaveState(ctx, s, blkRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveGenesisBlockRoot(ctx, blkRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -433,7 +446,7 @@ func TestStore_GetFilterBlockTree_IncorrectLeaf(t *testing.T) {
 	}
 
 	s := &pb.BeaconState{}
-	stateRoot, err := ssz.HashTreeRoot(s)
+	stateRoot, err := stateutil.HashTreeRootState(s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -443,6 +456,9 @@ func TestStore_GetFilterBlockTree_IncorrectLeaf(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := store.db.SaveState(ctx, s, blkRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveGenesisBlockRoot(ctx, blkRoot); err != nil {
 		t.Fatal(err)
 	}
 

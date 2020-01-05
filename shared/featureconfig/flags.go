@@ -29,11 +29,6 @@ var (
 		Name:  "enable-eth1-data-vote-cache",
 		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
 	}
-	// EnableCustomStateSSZ see https://github.com/prysmaticlabs/prysm/pull/4077.
-	EnableCustomStateSSZ = cli.BoolFlag{
-		Name:  "enable-custom-state-ssz",
-		Usage: "Enable custom hash_tree_root(state) for Prysm. See https://github.com/prysmaticlabs/prysm/issues/4077",
-	}
 	enableShuffledIndexCache = cli.BoolFlag{
 		Name:  "enable-shuffled-index-cache",
 		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
@@ -128,6 +123,12 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+
+	deprecatedEnableCustomStateSSZ = cli.BoolFlag{
+		Name:   "enable-custom-state-ssz",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedEnableCommitteeCacheFlag = cli.BoolFlag{
 		Name:   "enable-committee-cache",
 		Usage:  deprecatedUsage,
@@ -150,6 +151,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnablePruneBoundaryStateFlag,
 	deprecatedEnableActiveIndicesCacheFlag,
 	deprecatedEnableActiveCountCacheFlag,
+	deprecatedEnableCustomStateSSZ,
 	deprecatedEnableCommitteeCacheFlag,
 	deprecatedEnableBLSPubkeyCacheFlag,
 }
@@ -166,7 +168,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	writeSSZStateTransitionsFlag,
 	EnableAttestationCacheFlag,
 	EnableEth1DataVoteCacheFlag,
-	EnableCustomStateSSZ,
 	initSyncVerifyEverythingFlag,
 	initSyncCacheState,
 	NewCacheFlag,

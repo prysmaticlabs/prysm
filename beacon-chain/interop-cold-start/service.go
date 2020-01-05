@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interop"
+	"github.com/prysmaticlabs/prysm/shared/stateutil"
 )
 
 var _ = shared.Service(&Service{})
@@ -139,7 +140,7 @@ func (s *Service) DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight
 
 func (s *Service) saveGenesisState(ctx context.Context, genesisState *pb.BeaconState) error {
 	s.chainStartDeposits = make([]*ethpb.Deposit, len(genesisState.Validators))
-	stateRoot, err := ssz.HashTreeRoot(genesisState)
+	stateRoot, err := stateutil.HashTreeRootState(genesisState)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash genesis state")
 	}

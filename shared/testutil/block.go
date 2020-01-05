@@ -18,6 +18,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/stateutil"
 )
 
 // BlockGenConfig is used to define the requested conditions
@@ -106,7 +107,7 @@ func GenerateFullBlock(
 	}
 
 	newHeader := proto.Clone(bState.LatestBlockHeader).(*ethpb.BeaconBlockHeader)
-	prevStateRoot, err := ssz.HashTreeRoot(bState)
+	prevStateRoot, err := stateutil.HashTreeRootState(bState)
 	if err != nil {
 		return nil, err
 	}

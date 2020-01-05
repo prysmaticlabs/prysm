@@ -44,6 +44,9 @@ func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 }
 
 func (h *stateRootHasher) hashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
+	if state == nil {
+		return [32]byte{}, errors.New("nil state")
+	}
 	// There are 20 fields in the beacon state.
 	fieldRoots := make([][]byte, 20)
 

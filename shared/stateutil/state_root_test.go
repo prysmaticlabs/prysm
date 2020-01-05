@@ -82,7 +82,7 @@ func BenchmarkHashTreeRootState_Generic_512(b *testing.B) {
 	genesisState := setupGenesisState(b, 512)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := ssz.HashTreeRoot(genesisState); err != nil {
+		if _, err := stateutil.HashTreeRootState(genesisState); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -93,7 +93,7 @@ func BenchmarkHashTreeRootState_Generic_16384(b *testing.B) {
 	genesisState := setupGenesisState(b, 16384)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := ssz.HashTreeRoot(genesisState); err != nil {
+		if _, err := stateutil.HashTreeRootState(genesisState); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -104,14 +104,14 @@ func BenchmarkHashTreeRootState_Generic_300000(b *testing.B) {
 	genesisState := setupGenesisState(b, 300000)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := ssz.HashTreeRoot(genesisState); err != nil {
+		if _, err := stateutil.HashTreeRootState(genesisState); err != nil {
 			b.Fatal(err)
 		}
 	}
 }
 
 func setupGenesisState(tb testing.TB, count uint64) *pb.BeaconState {
-	genesisState, _, err := interop.GenerateGenesisState(0, 1)
+	genesisState, _, err := interop.GenerateGenesisStatei(0, 1)
 	if err != nil {
 		tb.Fatalf("Could not generate genesis beacon state: %v", err)
 	}
