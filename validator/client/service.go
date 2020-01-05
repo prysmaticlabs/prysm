@@ -30,7 +30,6 @@ type ValidatorService struct {
 	endpoint             string
 	withCert             string
 	dataDir              string
-	clearDB              bool
 	keyManager           keymanager.KeyManager
 	logValidatorBalances bool
 }
@@ -39,7 +38,6 @@ type ValidatorService struct {
 type Config struct {
 	Endpoint             string
 	DataDir              string
-	ClearDB              bool
 	CertFlag             string
 	GraffitiFlag         string
 	KeyManager           keymanager.KeyManager
@@ -101,21 +99,11 @@ func (v *ValidatorService) Start() {
 		log.Errorf("Could not get validating keys: %v", err)
 		return
 	}
+
 	valDB, err := db.NewKVStore(v.dataDir, pubkeys)
 	if err != nil {
-		log.Errorf("Could not create DB in dir %s: %v", v.dataDir, err)
+		log.Errorf("Could not initialize db: %v", err)
 		return
-	}
-	if v.clearDB {
-		if err := valDB.ClearDB(); err != nil {
-			log.Errorf("Could not clear DB in dir %s: %v", v.dataDir, err)
-			return
-		}
-		valDB, err = db.NewKVStore(v.dataDir, pubkeys)
-		if err != nil {
-			log.Errorf("Could not create DB in dir %s: %v", v.dataDir, err)
-			return
-		}
 	}
 
 	v.conn = conn
