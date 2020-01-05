@@ -190,7 +190,16 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 
 		for _, blk := range blocks {
 			s.logSyncStatus(genesis, blk, peers, counter)
-			if !s.db.HasBlock(ctx, bytesutil.ToBytes32(blk.ParentRoot)) {
+			retState, err := s.db.State(ctx, bytesutil.ToBytes32(blk.ParentRoot))
+			if err != nil {
+				return err
+			}
+			hasState := retState != nil
+			if !hasState {
+				log.Debugf("Beacon node doesn't have a state in db with root %#x as head block root", blk.ParentRoot)
+				continue
+			}
+			if !s.db.HasBlock(ctx, bytesutil.ToBytes32(blk.ParentRoot)) || !hasState {
 				log.Debugf("Beacon node doesn't have a block in db with root %#x", blk.ParentRoot)
 				continue
 			}
