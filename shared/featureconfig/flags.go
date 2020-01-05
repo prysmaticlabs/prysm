@@ -85,10 +85,6 @@ var (
 			"initial sync and disk-IO is one of the biggest bottleneck. This still saves finalized state in DB " +
 			"and start syncing from there",
 	}
-	fastCommitteeAssignmentsFlag = cli.BoolFlag{
-		Name:  "fast-assignments",
-		Usage: "Use new algorithm for computing committee assignments",
-	}
 )
 
 // Deprecated flags list.
@@ -140,6 +136,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedFastCommitteeAssignmentsFlag = cli.BoolFlag{
+		Name:  "fast-assignments",
+		Usage: deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -152,6 +153,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableActiveIndicesCacheFlag,
 	deprecatedEnableActiveCountCacheFlag,
 	deprecatedEnableCommitteeCacheFlag,
+	deprecatedFastCommitteeAssignmentsFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -178,5 +180,4 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableSkipSlotsCache,
 	enableSnappyDBCompressionFlag,
 	enablePruneBoundaryStateFlag,
-	fastCommitteeAssignmentsFlag,
 }...)
