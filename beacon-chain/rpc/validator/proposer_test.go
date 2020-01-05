@@ -51,9 +51,6 @@ func TestProposeBlock_OK(t *testing.T) {
 	if err := db.SaveState(ctx, beaconState, genesisRoot); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
-	if err := db.SaveHeadBlockRoot(ctx, genesisRoot); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
 
 	proposerServer := &Server{
 		BeaconDB:          db,
