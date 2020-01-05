@@ -15,7 +15,7 @@ var log = logrus.WithField("prefix", "node")
 // The user must enter Y or N to indicate whether they confirm the action detailed in the warning text.
 // Returns a boolean representing the user's answer.
 func ConfirmAction(actionText string, deniedText string) (bool, error) {
-	var clearDB bool
+	var confirmed bool
 	reader := bufio.NewReader(os.Stdin)
 	log.Warn(actionText)
 
@@ -29,16 +29,16 @@ func ConfirmAction(actionText string, deniedText string) (bool, error) {
 		trimmedLine := strings.TrimSpace(string(line))
 		lineInput := strings.ToUpper(trimmedLine)
 		if lineInput != "Y" && lineInput != "N" {
-			log.Errorf("Invalid option of %s chosen, please only enter YzN", line)
+			log.Errorf("Invalid option of %s chosen, please only enter Y/N", line)
 			continue
 		}
 		if lineInput == "Y" {
-			clearDB = true
+			confirmed = true
 			break
 		}
 		log.Warn(deniedText)
 		break
 	}
 
-	return clearDB, nil
+	return confirmed, nil
 }
