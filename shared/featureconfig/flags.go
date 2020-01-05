@@ -52,10 +52,6 @@ var (
 		Name:  "enable-db-backup-webhook",
 		Usage: "Serve HTTP handler to initiate database backups. The handler is served on the monitoring port at path /db/backup.",
 	}
-	enableBLSPubkeyCacheFlag = cli.BoolFlag{
-		Name:  "enable-bls-pubkey-cache",
-		Usage: "Enable BLS pubkey cache to improve wall time of PubkeyFromBytes",
-	}
 	// enableSkipSlotsCache enables the skips slots lru cache to be used in runtime.
 	enableSkipSlotsCache = cli.BoolFlag{
 		Name:  "enable-skip-slots-cache",
@@ -137,6 +133,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableBLSPubkeyCacheFlag = cli.BoolFlag{
+		Name:   "enable-bls-pubkey-cache",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -150,6 +151,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableActiveIndicesCacheFlag,
 	deprecatedEnableActiveCountCacheFlag,
 	deprecatedEnableCommitteeCacheFlag,
+	deprecatedEnableBLSPubkeyCacheFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -171,7 +173,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	SkipBLSVerifyFlag,
 	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,
-	enableBLSPubkeyCacheFlag,
 	enableShuffledIndexCache,
 	enableSkipSlotsCache,
 	fastCommitteeAssignmentsFlag,
