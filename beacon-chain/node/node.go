@@ -218,12 +218,10 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 	if clearDB && !forceClearDB {
 		actionText := "This will delete your beacon chain data base stored in your data directory. " +
 			"Your database backups will not be removed - do you want to proceed? (Y/N)"
-		clearDBConfirmed, err = cmd.ConfirmAction(actionText)
+		deniedText := "Database will not be deleted. No changes have been made."
+		clearDBConfirmed, err = cmd.ConfirmAction(actionText, deniedText)
 		if err != nil {
 			return err
-		}
-		if !clearDBConfirmed {
-			log.Warning("Database will not be deleted. No changes have been made.")
 		}
 	}
 	if clearDBConfirmed || forceClearDB {
