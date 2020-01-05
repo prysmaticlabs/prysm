@@ -111,7 +111,7 @@ func BenchmarkHashTreeRootState_Generic_300000(b *testing.B) {
 }
 
 func setupGenesisState(tb testing.TB, count uint64) *pb.BeaconState {
-	genesisState, _, err := interop.GenerateGenesisStatei(0, 1)
+	genesisState, _, err := interop.GenerateGenesisState(0, 1)
 	if err != nil {
 		tb.Fatalf("Could not generate genesis beacon state: %v", err)
 	}
