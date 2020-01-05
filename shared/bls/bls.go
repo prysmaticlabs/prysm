@@ -84,7 +84,7 @@ func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 		return nil, fmt.Errorf("public key must be %d bytes", params.BeaconConfig().BLSPubkeyLength)
 	}
 	cv, ok := pubkeyCache.Get(string(pub))
-	if ok && featureconfig.Get().EnableBLSPubkeyCache {
+	if ok {
 		return cv.(*PublicKey).Copy()
 	}
 	pubKey := &bls12.PublicKey{}
@@ -97,9 +97,7 @@ func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not copy pubkey")
 	}
-	if featureconfig.Get().EnableBLSPubkeyCache {
-		pubkeyCache.Set(string(pub), copiedKey, 48)
-	}
+	pubkeyCache.Set(string(pub), copiedKey, 48)
 	return pubkeyObj, nil
 }
 

@@ -61,7 +61,6 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 	config := &featureconfig.Flags{
 		EnableNewCache:           true,
 		EnableShuffledIndexCache: true,
-		EnableBLSPubkeyCache:     true,
 	}
 	featureconfig.Init(config)
 	SetConfig()
@@ -102,7 +101,6 @@ func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
 	config := &featureconfig.Flags{
 		EnableNewCache:           true,
 		EnableShuffledIndexCache: true,
-		EnableBLSPubkeyCache:     true,
 	}
 	featureconfig.Init(config)
 	SetConfig()
