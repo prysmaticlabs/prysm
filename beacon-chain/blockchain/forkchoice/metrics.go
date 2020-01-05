@@ -3,6 +3,7 @@ package forkchoice
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -60,6 +61,14 @@ var (
 	currentEth1DataDepositCount = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "current_eth1_data_deposit_count",
 		Help: "The current eth1 deposit count in the last processed state eth1data field.",
+	})
+	beaconTotalBalances = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "beacon_total_balances",
+		Help: "The total balances of validators from previous epoch",
+	})
+	beaconTargetBalances = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "beacon_voted_target_balances",
+		Help: "The voted target balances of validators from previous epoch",
 	})
 )
 
@@ -143,5 +152,10 @@ func reportEpochMetrics(state *pb.BeaconState) {
 	}
 	if state.Eth1Data != nil {
 		currentEth1DataDepositCount.Set(float64(state.Eth1Data.DepositCount))
+	}
+
+	if precompute.Balances != nil {
+		beaconTotalBalances.Set(float64(precompute.Balances.PrevEpoch))
+		beaconTargetBalances.Set(float64(precompute.Balances.PrevEpochTargetAttesters))
 	}
 }
