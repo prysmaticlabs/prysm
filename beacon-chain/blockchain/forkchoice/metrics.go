@@ -62,13 +62,13 @@ var (
 		Name: "current_eth1_data_deposit_count",
 		Help: "The current eth1 deposit count in the last processed state eth1data field.",
 	})
-	beaconTotalBalances = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "beacon_total_balances",
-		Help: "The total balances of validators from previous epoch",
+	beaconEligibleBalances = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "total_eligible_balances",
+		Help: "The total amount of ether, in gwei, that has been used in voting attestation target of previous epoch",
 	})
-	beaconTargetBalances = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "beacon_voted_target_balances",
-		Help: "The voted target balances of validators from previous epoch",
+	beaconVotedTargetBalances = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "total_voted_target_balances",
+		Help: "The total amount of ether, in gwei, that is eligible for voting of previous epoch",
 	})
 )
 
@@ -155,7 +155,7 @@ func reportEpochMetrics(state *pb.BeaconState) {
 	}
 
 	if precompute.Balances != nil {
-		beaconTotalBalances.Set(float64(precompute.Balances.PrevEpoch))
-		beaconTargetBalances.Set(float64(precompute.Balances.PrevEpochTargetAttesters))
+		beaconEligibleBalances.Set(float64(precompute.Balances.PrevEpoch))
+		beaconVotedTargetBalances.Set(float64(precompute.Balances.PrevEpochTargetAttesters))
 	}
 }
