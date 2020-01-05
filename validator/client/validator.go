@@ -37,6 +37,8 @@ type validator struct {
 	logValidatorBalances bool
 	attLogs              map[[32]byte]*attSubmitted
 	attLogsLock          sync.Mutex
+	pubKeyToID           map[[48]byte]uint64
+	pubKeyToIDLock       sync.RWMutex
 }
 
 // Done cleans up the validator.
@@ -250,24 +252,33 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	v.duties = resp
 	// Only log the full assignments output on epoch start to be less verbose.
 	if slot%params.BeaconConfig().SlotsPerEpoch == 0 {
+		v.pubKeyToIDLock.Lock()
+		defer v.pubKeyToIDLock.Unlock()
+
 		for _, duty := range v.duties.Duties {
-			res, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: duty.PublicKey})
-			if err != nil {
-				return err
+			if _, ok := v.pubKeyToID[bytesutil.ToBytes48(duty.PublicKey)]; !ok {
+				// TODO(4379): Make validator index part of the assignment respond.
+				res, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: duty.PublicKey})
+				if err != nil {
+					return err
+				}
+				v.pubKeyToID[bytesutil.ToBytes48(duty.PublicKey)] = res.Index
 			}
 			lFields := logrus.Fields{
 				"pubKey":         fmt.Sprintf("%#x", bytesutil.Trunc(duty.PublicKey)),
-				"validatorIndex": res.Index,
+				"validatorIndex": v.pubKeyToID[bytesutil.ToBytes48(duty.PublicKey)],
 				"committeeIndex": duty.CommitteeIndex,
 				"epoch":          slot / params.BeaconConfig().SlotsPerEpoch,
 				"status":         duty.Status,
 			}
+
 			if duty.Status == ethpb.ValidatorStatus_ACTIVE {
 				if duty.ProposerSlot > 0 {
 					lFields["proposerSlot"] = duty.ProposerSlot
 				}
 				lFields["attesterSlot"] = duty.AttesterSlot
 			}
+
 			log.WithFields(lFields).Info("New assignment")
 		}
 	}

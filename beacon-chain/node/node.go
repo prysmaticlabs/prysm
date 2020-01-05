@@ -223,8 +223,22 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	if clearDB || forceClearDB {
-		d, err = confirmDelete(d, dbPath, forceClearDB)
+	clearDBConfirmed := false
+	if clearDB && !forceClearDB {
+		actionText := "This will delete your beacon chain data base stored in your data directory. " +
+			"Your database backups will not be removed - do you want to proceed? (Y/N)"
+		deniedText := "Database will not be deleted. No changes have been made."
+		clearDBConfirmed, err = cmd.ConfirmAction(actionText, deniedText)
+		if err != nil {
+			return err
+		}
+	}
+	if clearDBConfirmed || forceClearDB {
+		log.Warning("Removing database")
+		if err := d.ClearDB(); err != nil {
+			return err
+		}
+		d, err = db.NewDB(dbPath)
 		if err != nil {
 			return err
 		}
