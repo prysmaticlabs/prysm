@@ -86,7 +86,7 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 
 	clearFlag := ctx.GlobalBool(cmd.ClearDB.Name)
 	forceClearFlag := ctx.GlobalBool(cmd.ForceClearDB.Name)
-	if clearFlag || forceClearFlag{
+	if clearFlag || forceClearFlag {
 		pubkeys, err := keyManager.FetchValidatingKeys()
 		if err != nil {
 			return nil, err
