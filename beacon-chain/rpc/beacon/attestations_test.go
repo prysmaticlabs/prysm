@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
@@ -21,6 +20,7 @@ import (
 	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	mocktick "github.com/prysmaticlabs/prysm/shared/slotutil/testing"
 )
 
 func TestServer_ListAttestations_NoResults(t *testing.T) {
@@ -525,12 +525,12 @@ func TestServer_StreamAttestations_ContextCanceled(t *testing.T) {
 	ctx := context.Background()
 
 	ctx, cancel := context.WithCancel(ctx)
-	chainService := &mock.ChainService{
-		Genesis: time.Now(),
+	ticker := &mocktick.MockTicker{
+		Channel: make(chan uint64),
 	}
 	server := &Server{
-		Ctx:                ctx,
-		GenesisTimeFetcher: chainService,
+		Ctx:        ctx,
+		SlotTicker: ticker,
 	}
 
 	exitRoutine := make(chan bool)
@@ -558,14 +558,13 @@ func TestServer_StreamAttestations_OnSlotTick(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	ctx := context.Background()
-	secondsPerSlot := time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot)
-	chainService := &mock.ChainService{
-		Genesis: time.Now().Add(-secondsPerSlot),
+	ticker := &mocktick.MockTicker{
+		Channel: make(chan uint64),
 	}
 	server := &Server{
-		Ctx:                ctx,
-		GenesisTimeFetcher: chainService,
-		Pool:               attestations.NewPool(),
+		Ctx:        ctx,
+		SlotTicker: ticker,
+		Pool:       attestations.NewPool(),
 	}
 
 	atts := []*ethpb.Attestation{
@@ -590,6 +589,6 @@ func TestServer_StreamAttestations_OnSlotTick(t *testing.T) {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
 	}(t)
-
+	ticker.Channel <- 0
 	<-exitRoutine
 }

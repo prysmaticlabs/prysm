@@ -67,6 +67,10 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 		"--verbosity=debug",
 		"--force-clear-db",
 		"--no-discovery",
+		"--new-cache",
+		"--enable-shuffled-index-cache",
+		"--enable-skip-slots-cache",
+		"--enable-attestation-cache",
 		"--http-web3provider=http://127.0.0.1:8545",
 		"--web3provider=ws://127.0.0.1:8546",
 		fmt.Sprintf("--datadir=%s/eth2-beacon-node-%d", tmpPath, index),
@@ -102,7 +106,7 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 
 	multiAddr, err := getMultiAddrFromLogFile(file.Name())
 	if err != nil {
-		t.Fatalf("could not get multiaddr fpr node %d: %v", index, err)
+		t.Fatalf("could not get multiaddr for node %d: %v", index, err)
 	}
 
 	return &beaconNodeInfo{
@@ -137,9 +141,9 @@ func getMultiAddrFromLogFile(name string) (string, error) {
 
 func waitForTextInFile(file *os.File, text string) error {
 	wait := 0
-	// Putting the wait cap at 24 seconds.
-	totalWait := 24
-	for wait < totalWait {
+	// Putting the wait cap at 36 seconds.
+	maxWait := 36
+	for wait < maxWait {
 		time.Sleep(2 * time.Second)
 		// Rewind the file pointer to the start of the file so we can read it again.
 		_, err := file.Seek(0, io.SeekStart)
@@ -162,5 +166,5 @@ func waitForTextInFile(file *os.File, text string) error {
 	if err != nil {
 		return err
 	}
-	return fmt.Errorf("could not find requested text %s in logs:\n%s", text, string(contents))
+	return fmt.Errorf("could not find requested text \"%s\" in logs:\n%s", text, string(contents))
 }

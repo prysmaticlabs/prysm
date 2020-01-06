@@ -1467,7 +1467,7 @@ func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 	bs := &Server{
 		BeaconDB:             db,
 		HeadFetcher:          m,
-		participationFetcher: m,
+		ParticipationFetcher: m,
 	}
 
 	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{})
