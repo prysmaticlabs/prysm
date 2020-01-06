@@ -65,7 +65,8 @@ go_image(
 container_bundle(
     name = "image_bundle",
     images = {
-        "gcr.io/prysmaticlabs/prysm/beacon-chain:cacheFix": ":image",
+        "gcr.io/prysmaticlabs/prysm/beacon-chain:latest": ":image",
+        "gcr.io/prysmaticlabs/prysm/beacon-chain:{DOCKER_TAG}": ":image",
     },
     tags = ["manual"],
 )
