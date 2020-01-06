@@ -31,7 +31,7 @@ type PendingDepositsFetcher interface {
 // InsertPendingDeposit into the database. If deposit or block number are nil
 // then this method does nothing.
 func (dc *DepositCache) InsertPendingDeposit(ctx context.Context, d *ethpb.Deposit, blockNum uint64, index int64, depositRoot [32]byte) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.InsertPendingDeposit")
+	ctx, span := trace.StartSpan(ctx, "DepositsCache.InsertPendingDeposit")
 	defer span.End()
 	if d == nil {
 		log.WithFields(log.Fields{
@@ -46,18 +46,6 @@ func (dc *DepositCache) InsertPendingDeposit(ctx context.Context, d *ethpb.Depos
 		&dbpb.DepositContainer{Deposit: d, Eth1BlockHeight: blockNum, Index: index, DepositRoot: depositRoot[:]})
 	pendingDepositsCount.Inc()
 	span.AddAttributes(trace.Int64Attribute("count", int64(len(dc.pendingDeposits))))
-}
-
-// InsertPendingDepositContainers inserts a set of deposit containers into our pending deposit cache.
-func (dc *DepositCache) InsertPendingDepositContainers(ctx context.Context, ctrs []*dbpb.DepositContainer) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.InsertPendingDepositContainers")
-	defer span.End()
-	dc.depositsLock.Lock()
-	defer dc.depositsLock.Unlock()
-
-	sort.SliceStable(ctrs, func(i int, j int) bool { return ctrs[i].Index < ctrs[j].Index })
-	dc.pendingDeposits = ctrs
-	pendingDepositsCount.Add(float64(len(ctrs)))
 }
 
 // PendingDeposits returns a list of deposits until the given block number

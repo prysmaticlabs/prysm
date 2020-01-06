@@ -25,6 +25,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -193,18 +194,20 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		preGenesisState:         state.EmptyGenesisState(),
 	}
 
-	eth1Data, err := config.BeaconDB.PowchainData(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to retrieve eth1 data")
-	}
-	if eth1Data != nil {
-		s.depositTrie = trieutil.CreateTrieFromProto(eth1Data.Trie)
-		s.chainStartData = eth1Data.ChainstartData
-		s.preGenesisState = eth1Data.BeaconState
-		s.latestEth1Data = eth1Data.CurrentEth1Data
-		s.lastReceivedMerkleIndex = int64(len(s.depositTrie.Items()) - 1)
-		if err := s.initDepositCaches(ctx, eth1Data.DepositContainers); err != nil {
-			return nil, errors.Wrap(err, "could not initialize caches")
+	if flags.Get().EnableSavingOfDepositData {
+		eth1Data, err := config.BeaconDB.PowchainData(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to retrieve eth1 data")
+		}
+		if eth1Data != nil {
+			s.depositTrie = trieutil.CreateTrieFromProto(eth1Data.Trie)
+			s.chainStartData = eth1Data.ChainstartData
+			s.preGenesisState = eth1Data.BeaconState
+			s.latestEth1Data = eth1Data.CurrentEth1Data
+			s.lastReceivedMerkleIndex = int64(len(s.depositTrie.Items()) - 1)
+			if err := s.initDepositCaches(ctx, eth1Data.DepositContainers); err != nil {
+				return nil, errors.Wrap(err, "could not initialize caches")
+			}
 		}
 	}
 	return s, nil
@@ -403,7 +406,6 @@ func (s *Service) initDataFromContract() error {
 
 func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.DepositContainer) error {
 	s.depositCache.InsertDepositContainers(ctx, ctrs)
-	s.depositCache.InsertPendingDepositContainers(ctx, ctrs)
 	currentState, err := s.beaconDB.HeadState(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get head state")
@@ -417,7 +419,13 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 	currIndex := currentState.Eth1DepositIndex
 	validDepositsCount.Add(float64(currIndex + 1))
 
-	s.depositCache.PrunePendingDeposits(ctx, int(currIndex))
+	// Only add pending deposits if the container slice length
+	// is more than the current index in state.
+	if len(ctrs) > int(currIndex) {
+		for _, c := range ctrs[currIndex:] {
+			s.depositCache.InsertPendingDeposit(ctx, c.Deposit, c.Eth1BlockHeight, c.Index, bytesutil.ToBytes32(c.DepositRoot))
+		}
+	}
 	return nil
 }
 
