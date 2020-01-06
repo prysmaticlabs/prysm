@@ -10,7 +10,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var errMissingStateForFinalizedCheckpoint = errors.New("no state exists with checkpoint root")
+var errMissingStateForCheckpoint = errors.New("no state exists with checkpoint root")
 
 // JustifiedCheckpoint returns the latest justified checkpoint in beacon chain.
 func (k *Store) JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error) {
@@ -63,6 +63,13 @@ func (k *Store) SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(checkpointBucket)
+		// The corresponding state must exist or there is a risk that the beacondb enters a state
+		// where the justified beaconState is missing. This may be a fatal condition requiring
+		// a new sync from genesis.
+		if tx.Bucket(stateBucket).Get(checkpoint.Root) == nil {
+			traceutil.AnnotateError(span, errMissingStateForCheckpoint)
+			return errMissingStateForCheckpoint
+		}
 		return bucket.Put(justifiedCheckpointKey, enc)
 	})
 }
@@ -82,8 +89,8 @@ func (k *Store) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 		// where the finalized beaconState is missing. This would be a fatal condition requiring
 		// a new sync from genesis.
 		if tx.Bucket(stateBucket).Get(checkpoint.Root) == nil {
-			traceutil.AnnotateError(span, errMissingStateForFinalizedCheckpoint)
-			return errMissingStateForFinalizedCheckpoint
+			traceutil.AnnotateError(span, errMissingStateForCheckpoint)
+			return errMissingStateForCheckpoint
 		}
 
 		if err := bucket.Put(finalizedCheckpointKey, enc); err != nil {

@@ -15,9 +15,14 @@ func TestStore_JustifiedCheckpoint_CanSaveRetrieve(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	ctx := context.Background()
+	root := bytesutil.ToBytes32([]byte{'A'})
 	cp := &ethpb.Checkpoint{
 		Epoch: 10,
-		Root:  []byte{'A'},
+		Root:  root[:],
+	}
+
+	if err := db.SaveState(ctx, &pb.BeaconState{Slot:1}, root); err != nil {
+		t.Fatal(err)
 	}
 
 	if err := db.SaveJustifiedCheckpoint(ctx, cp); err != nil {
@@ -130,7 +135,7 @@ func TestStore_FinalizedCheckpoint_StateMustExist(t *testing.T) {
 		Root:  []byte{'B'},
 	}
 
-	if err := db.SaveFinalizedCheckpoint(ctx, cp); err != errMissingStateForFinalizedCheckpoint {
-		t.Fatalf("wanted err %v, got %v", errMissingStateForFinalizedCheckpoint, err)
+	if err := db.SaveFinalizedCheckpoint(ctx, cp); err != errMissingStateForCheckpoint {
+		t.Fatalf("wanted err %v, got %v", errMissingStateForCheckpoint, err)
 	}
 }
