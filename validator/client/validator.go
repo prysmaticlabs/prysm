@@ -261,7 +261,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 				// TODO(4379): Make validator index part of the assignment respond.
 				res, err := v.validatorClient.ValidatorIndex(ctx, &pb.ValidatorIndexRequest{PublicKey: assignment.PublicKey})
 				if err != nil {
-					log.Warn("Validator pub key %#x does not exist in beacon node", bytesutil.Trunc(duty.PublicKey))
+					log.Warn("Validator pub key %#x does not exist in beacon node", bytesutil.Trunc(assignment.PublicKey))
 					continue
 				}
 				v.pubKeyToID[bytesutil.ToBytes48(assignment.PublicKey)] = res.Index
