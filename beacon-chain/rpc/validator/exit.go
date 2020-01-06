@@ -20,7 +20,7 @@ func (vs *Server) ProposeExit(ctx context.Context, req *ethpb.SignedVoluntaryExi
 	}
 
 	// Confirm the validator is eligible to exit with the parameters provided
-	err = exit.ValidateVoluntaryExit(s, vs.GenesisTimeFetcher.GenesisTime(), req)
+	err = exit.ValidateVoluntaryExit(s, vs.GenesisTime, req)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
