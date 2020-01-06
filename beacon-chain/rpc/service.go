@@ -30,6 +30,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
@@ -175,6 +176,9 @@ func (s *Service) Start() {
 		log.Warn("You are using an insecure gRPC connection! Provide a certificate and key to connect securely")
 	}
 	s.grpcServer = grpc.NewServer(opts...)
+
+	genesisTime := s.genesisTimeFetcher.GenesisTime()
+	ticker := slotutil.GetSlotTicker(genesisTime, params.BeaconConfig().SecondsPerSlot)
 	validatorServer := &validator.Server{
 		Ctx:                    s.ctx,
 		BeaconDB:               s.beaconDB,
@@ -195,7 +199,7 @@ func (s *Service) Start() {
 		MockEth1Votes:          s.mockEth1Votes,
 		Eth1BlockFetcher:       s.powChainService,
 		PendingDepositsFetcher: s.pendingDepositFetcher,
-		GenesisTimeFetcher:     s.genesisTimeFetcher,
+		GenesisTime:            genesisTime,
 	}
 	nodeServer := &node.Server{
 		BeaconDB:           s.beaconDB,
@@ -213,7 +217,7 @@ func (s *Service) Start() {
 		ChainStartFetcher:   s.chainStartFetcher,
 		CanonicalStateChan:  s.canonicalStateChan,
 		StateNotifier:       s.stateNotifier,
-		GenesisTimeFetcher:  s.genesisTimeFetcher,
+		SlotTicker:          ticker,
 	}
 	aggregatorServer := &aggregator.Server{
 		BeaconDB:    s.beaconDB,
