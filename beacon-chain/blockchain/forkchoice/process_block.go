@@ -195,10 +195,9 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, signed *e
 	}
 
 	// Update justified check point.
-	if postState.CurrentJustifiedCheckpoint.Epoch > s.JustifiedCheckpt().Epoch {
-		s.justifiedCheckpt = postState.CurrentJustifiedCheckpoint
-		if err := s.db.SaveJustifiedCheckpoint(ctx, postState.CurrentJustifiedCheckpoint); err != nil {
-			return errors.Wrap(err, "could not save justified checkpoint")
+	if postState.CurrentJustifiedCheckpoint.Epoch > s.justifiedCheckpt.Epoch {
+		if err := s.updateJustified(ctx, postState); err != nil {
+			return err
 		}
 	}
 
