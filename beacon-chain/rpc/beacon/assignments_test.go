@@ -160,7 +160,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 
 	s := &pbp2p.BeaconState{
 		Validators:  validators,
-		RandaoMixes: bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().SlotsPerHistoricalRoot)),
+		RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot),
 	}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
@@ -255,7 +255,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 	s := &pbp2p.BeaconState{
 		Validators:  validators,
 		Balances:    balances,
-		RandaoMixes: bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().SlotsPerHistoricalRoot)),
+		RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot),
 	}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
@@ -354,7 +354,7 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 	}
 	s := &pbp2p.BeaconState{
 		Validators:  validators,
-		RandaoMixes: bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().SlotsPerHistoricalRoot)),
+		RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot),
 	}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
@@ -430,7 +430,7 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 	}
 	s := &pbp2p.BeaconState{
 		Validators:  validators,
-		RandaoMixes: bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().SlotsPerHistoricalRoot)),
+		RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot),
 	}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)

@@ -13,13 +13,13 @@ import (
 )
 
 func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
-	var blockRoots [][32]byte
+	var blockRoots []bytesutil.Bytes32Array
 
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
 		blockRoots = append(blockRoots, [32]byte{byte(i)})
 	}
 	s := &pb.BeaconState{
-		BlockRoots: bytesutil.ConvertToCustomType(blockRoots),
+		BlockRoots: blockRoots,
 	}
 
 	tests := []struct {
@@ -77,13 +77,13 @@ func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
 }
 
 func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
-	var blockRoots [][32]byte
+	var blockRoots []bytesutil.Bytes32Array
 
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
 		blockRoots = append(blockRoots, [32]byte{byte(i)})
 	}
 	state := &pb.BeaconState{
-		BlockRoots: bytesutil.ConvertToCustomType(blockRoots),
+		BlockRoots: blockRoots,
 	}
 
 	tests := []struct {

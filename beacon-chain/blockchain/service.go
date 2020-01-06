@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/stateutil"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -305,7 +307,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconSt
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
-	stateRoot, err := ssz.HashTreeRoot(genesisState)
+	stateRoot, err := stateutil.HashTreeRootState(genesisState)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash genesis state")
 	}

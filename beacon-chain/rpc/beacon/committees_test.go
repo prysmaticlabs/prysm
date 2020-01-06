@@ -24,7 +24,7 @@ func TestServer_ListBeaconCommittees(t *testing.T) {
 	numValidators := 128
 	headState := setupActiveValidators(t, db, numValidators)
 
-	headState.RandaoMixes = bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().SlotsPerHistoricalRoot))
+	headState.RandaoMixes = make([]bytesutil.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot)
 	for i := 0; i < len(headState.RandaoMixes); i++ {
 		headState.RandaoMixes[i] = [32]byte{}
 	}
@@ -101,7 +101,7 @@ func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
 	numValidators := 128
 	headState := setupActiveValidators(t, db, numValidators)
 
-	headState.RandaoMixes = bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().SlotsPerHistoricalRoot))
+	headState.RandaoMixes = make([]bytesutil.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot)
 	for i := 0; i < len(headState.RandaoMixes); i++ {
 		headState.RandaoMixes[i] = [32]byte{}
 	}

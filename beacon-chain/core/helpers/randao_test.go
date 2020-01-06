@@ -11,13 +11,13 @@ import (
 )
 
 func TestRandaoMix_OK(t *testing.T) {
-	randaoMixes := make([][32]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	randaoMixes := make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
 		var intInBytes [32]byte
 		binary.LittleEndian.PutUint64(intInBytes[:], uint64(i))
 		randaoMixes[i] = intInBytes
 	}
-	state := &pb.BeaconState{RandaoMixes: bytesutil.ConvertToCustomType(randaoMixes)}
+	state := &pb.BeaconState{RandaoMixes: randaoMixes}
 	tests := []struct {
 		epoch     uint64
 		randaoMix [32]byte
@@ -46,13 +46,13 @@ func TestRandaoMix_OK(t *testing.T) {
 }
 
 func TestRandaoMix_CopyOK(t *testing.T) {
-	randaoMixes := make([][32]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	randaoMixes := make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
 		intInBytes := [32]byte{}
 		binary.LittleEndian.PutUint64(intInBytes[:], uint64(i))
 		randaoMixes[i] = intInBytes
 	}
-	state := &pb.BeaconState{RandaoMixes: bytesutil.ConvertToCustomType(randaoMixes)}
+	state := &pb.BeaconState{RandaoMixes: randaoMixes}
 	tests := []struct {
 		epoch     uint64
 		randaoMix [32]byte
@@ -87,7 +87,7 @@ func TestRandaoMix_CopyOK(t *testing.T) {
 }
 
 func TestGenerateSeed_OK(t *testing.T) {
-	randaoMixes := make([][32]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	randaoMixes := make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
 		intInBytes := [32]byte{}
 		binary.LittleEndian.PutUint64(intInBytes[:], uint64(i))
@@ -95,7 +95,7 @@ func TestGenerateSeed_OK(t *testing.T) {
 	}
 	slot := 10 * params.BeaconConfig().MinSeedLookahead * params.BeaconConfig().SlotsPerEpoch
 	state := &pb.BeaconState{
-		RandaoMixes: bytesutil.ConvertToCustomType(randaoMixes),
+		RandaoMixes: randaoMixes,
 		Slot:        slot,
 	}
 

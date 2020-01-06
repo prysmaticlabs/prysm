@@ -103,7 +103,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, bState *pb.BeaconState, eth
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
 
-	randaoMixes := make([][32]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	randaoMixes := make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
 		var h [32]byte
 		copy(h[:], eth1Data.BlockHash)
@@ -117,12 +117,12 @@ func OptimizedGenesisBeaconState(genesisTime uint64, bState *pb.BeaconState, eth
 		activeIndexRoots[i] = zeroHash[:]
 	}
 
-	blockRoots := make([][32]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	blockRoots := make([]bytesutil.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot)
 	for i := 0; i < len(blockRoots); i++ {
 		blockRoots[i] = zeroHash
 	}
 
-	stateRoots := make([][32]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	stateRoots := make([]bytesutil.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot)
 	for i := 0; i < len(stateRoots); i++ {
 		stateRoots[i] = zeroHash
 	}
@@ -145,7 +145,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, bState *pb.BeaconState, eth
 		Balances:   bState.Balances,
 
 		// Randomness and committees.
-		RandaoMixes: bytesutil.ConvertToCustomType(randaoMixes),
+		RandaoMixes: randaoMixes,
 
 		// Finality.
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{
@@ -162,9 +162,9 @@ func OptimizedGenesisBeaconState(genesisTime uint64, bState *pb.BeaconState, eth
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
 
-		HistoricalRoots:           bytesutil.ConvertToCustomType([][32]byte{}),
-		BlockRoots:                bytesutil.ConvertToCustomType(blockRoots),
-		StateRoots:                bytesutil.ConvertToCustomType(stateRoots),
+		HistoricalRoots:           []bytesutil.Bytes32Array{},
+		BlockRoots:                blockRoots,
+		StateRoots:                stateRoots,
 		Slashings:                 slashings,
 		CurrentEpochAttestations:  []*pb.PendingAttestation{},
 		PreviousEpochAttestations: []*pb.PendingAttestation{},
@@ -204,7 +204,7 @@ func EmptyGenesisState() *pb.BeaconState {
 		Balances:   []uint64{},
 
 		JustificationBits:         []byte{0},
-		HistoricalRoots:           bytesutil.ConvertToCustomType([][32]byte{}),
+		HistoricalRoots:           []bytesutil.Bytes32Array{},
 		CurrentEpochAttestations:  []*pb.PendingAttestation{},
 		PreviousEpochAttestations: []*pb.PendingAttestation{},
 

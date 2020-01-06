@@ -17,7 +17,7 @@ var (
 	lock        sync.RWMutex
 )
 
-func (h *stateRootHasher) arraysRoot(roots [][32]byte, fieldName string) ([32]byte, error) {
+func (h *stateRootHasher) arraysRoot(roots []bytesutil.Bytes32Array, fieldName string) ([32]byte, error) {
 	lock.Lock()
 	if _, ok := layersCache[fieldName]; !ok && h.rootsCache != nil {
 		depth := merkle.GetDepth(uint64(len(roots)))

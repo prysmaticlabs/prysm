@@ -55,7 +55,7 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 	ctx := context.Background()
 
 	s := &pbp2p.BeaconState{
-		RandaoMixes: bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().EpochsPerHistoricalVector)),
+		RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	aggregatorServer := &Server{
@@ -79,7 +79,7 @@ func TestSubmitAggregateAndProof_IsAggregator(t *testing.T) {
 	ctx := context.Background()
 
 	s := &pbp2p.BeaconState{
-		RandaoMixes: bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().EpochsPerHistoricalVector)),
+		RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	aggregatorServer := &Server{

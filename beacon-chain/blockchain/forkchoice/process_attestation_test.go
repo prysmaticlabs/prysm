@@ -57,7 +57,7 @@ func TestStore_OnAttestation(t *testing.T) {
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 		},
-		RandaoMixes: bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().SlotsPerHistoricalRoot)),
+		RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot),
 	}, BlkWithValidStateRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -135,9 +135,9 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 		},
-		RandaoMixes:         bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().EpochsPerHistoricalVector)),
-		StateRoots:          bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().EpochsPerHistoricalVector)),
-		BlockRoots:          bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().SlotsPerHistoricalRoot)),
+		RandaoMixes:         make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
+		StateRoots:          make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
+		BlockRoots:          make([]bytesutil.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot),
 		LatestBlockHeader:   &ethpb.BeaconBlockHeader{},
 		JustificationBits:   []byte{0},
 		Slashings:           make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),

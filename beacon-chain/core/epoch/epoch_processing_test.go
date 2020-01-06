@@ -43,7 +43,7 @@ func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 	}
 	state := &pb.BeaconState{
 		Validators:  validators,
-		RandaoMixes: bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().EpochsPerHistoricalVector)),
+		RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	indices, err := unslashedAttestingIndices(state, atts)
@@ -91,7 +91,7 @@ func TestUnslashedAttestingIndices_DuplicatedAttestations(t *testing.T) {
 	}
 	state := &pb.BeaconState{
 		Validators:  validators,
-		RandaoMixes: bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().EpochsPerHistoricalVector)),
+		RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	indices, err := unslashedAttestingIndices(state, atts)
@@ -133,7 +133,7 @@ func TestAttestingBalance_CorrectBalance(t *testing.T) {
 	}
 	state := &pb.BeaconState{
 		Slot:        2,
-		RandaoMixes: bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().EpochsPerHistoricalVector)),
+		RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 		Validators:  validators,
 		Balances:    balances,
 	}
@@ -493,9 +493,9 @@ func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 		Slot:                        slot,
 		Balances:                    validatorBalances,
 		Validators:                  validators,
-		RandaoMixes:                 bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().EpochsPerHistoricalVector)),
+		RandaoMixes:                 make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 		Slashings:                   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		BlockRoots:                  bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().SlotsPerEpoch*10)),
+		BlockRoots:                  make([]bytesutil.Bytes32Array, params.BeaconConfig().SlotsPerEpoch*10),
 		FinalizedCheckpoint:         &ethpb.Checkpoint{},
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{},
 		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{},

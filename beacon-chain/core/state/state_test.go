@@ -81,7 +81,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if len(newState.RandaoMixes) != latestRandaoMixesLength {
 		t.Error("Length of RandaoMixes was not correctly initialized")
 	}
-	if !bytes.Equal(newState.RandaoMixes[0], eth1Data.BlockHash) {
+	if !bytes.Equal(newState.RandaoMixes[0][:], eth1Data.BlockHash) {
 		t.Error("RandaoMixes was not correctly initialized")
 	}
 
@@ -112,10 +112,10 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
 	// History root checks.
-	if !bytes.Equal(newState.StateRoots[0], zeroHash) {
+	if !bytes.Equal(newState.StateRoots[0][:], zeroHash) {
 		t.Error("StateRoots was not correctly initialized")
 	}
-	if !bytes.Equal(newState.BlockRoots[0], zeroHash) {
+	if !bytes.Equal(newState.BlockRoots[0][:], zeroHash) {
 		t.Error("BlockRoots was not correctly initialized")
 	}
 
@@ -167,7 +167,7 @@ func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
 	}
 
 	for _, h := range s.BlockRoots {
-		if !bytes.Equal(h, params.BeaconConfig().ZeroHash[:]) {
+		if !bytes.Equal(h[:], params.BeaconConfig().ZeroHash[:]) {
 			t.Errorf("Unexpected non-zero hash data: %v", h)
 		}
 	}

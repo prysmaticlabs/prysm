@@ -92,25 +92,25 @@ func TestHashTreeRootState_ElementsChanged_RecomputeBranch(t *testing.T) {
 	hasher := &stateRootHasher{}
 	hasherWithCache := globalHasher
 	state := &ethereum_beacon_p2p_v1.BeaconState{}
-	initialRoots := make([][32]byte, 5)
+	initialRoots := make([]bytesutil.Bytes32Array, 5)
 	for i := 0; i < len(initialRoots); i++ {
 		var someRt [32]byte
 		copy(someRt[:], "hello")
 		initialRoots[i] = someRt
 	}
-	state.RandaoMixes = bytesutil.ConvertToCustomType(initialRoots)
+	state.RandaoMixes = initialRoots
 	if _, err := hasherWithCache.hashTreeRootState(state); err != nil {
 		t.Fatal(err)
 	}
 
-	badRoots := make([][32]byte, 5)
+	badRoots := make([]bytesutil.Bytes32Array, 5)
 	for i := 0; i < len(badRoots); i++ {
 		var someRt [32]byte
 		copy(someRt[:], strconv.Itoa(i))
 		badRoots[i] = someRt
 	}
 
-	state.RandaoMixes = bytesutil.ConvertToCustomType(badRoots)
+	state.RandaoMixes = badRoots
 	r1, err := hasher.hashTreeRootState(state)
 	if err != nil {
 		t.Fatal(err)
