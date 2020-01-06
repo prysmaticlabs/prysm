@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	epochProcessing "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -114,10 +114,7 @@ func (s *Service) archiveActiveSetChanges(ctx context.Context, headState *pb.Bea
 // We compute participation metrics by first retrieving the head state and
 // matching validator attestations during the epoch.
 func (s *Service) archiveParticipation(ctx context.Context, headState *pb.BeaconState, epoch uint64) error {
-	participation, err := epochProcessing.ComputeValidatorParticipation(headState, epoch)
-	if err != nil {
-		return errors.Wrap(err, "could not compute participation")
-	}
+	participation := &ethpb.ValidatorParticipation{}
 	return s.beaconDB.SaveArchivedValidatorParticipation(ctx, epoch, participation)
 }
 

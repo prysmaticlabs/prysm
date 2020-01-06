@@ -8,7 +8,6 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -442,12 +441,8 @@ func (bs *Server) GetValidatorParticipation(
 		)
 	}
 
-	// Else if the request is for the current epoch, we compute validator participation
-	// right away and return the result based on the head state.
-	participation, err := epoch.ComputeValidatorParticipation(headState, requestedEpoch)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not compute participation: %v", err)
-	}
+	participation := &ethpb.ValidatorParticipation{}
+
 	return &ethpb.ValidatorParticipationResponse{
 		Epoch:         requestedEpoch,
 		Finalized:     requestedEpoch <= headState.FinalizedCheckpoint.Epoch,
