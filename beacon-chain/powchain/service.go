@@ -403,7 +403,7 @@ func (s *Service) initDataFromContract() error {
 
 func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.DepositContainer) error {
 	s.depositCache.InsertDepositContainers(ctx, ctrs)
-	s.depositCache.InsertDepositContainers(ctx, ctrs)
+	s.depositCache.InsertPendingDepositContainers(ctx, ctrs)
 	currentState, err := s.beaconDB.HeadState(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get head state")
