@@ -41,12 +41,12 @@ func TestSub(t *testing.T) {
 	genesisTime := time.Now().Add(time.Duration(-100*int64(params.BeaconConfig().SecondsPerSlot*params.BeaconConfig().SlotsPerEpoch)) * time.Second)
 	mockChainService := &mockChain.ChainService{State: beaconState, Root: genesisRoot[:], Genesis: genesisTime}
 	server := &Server{
-		BeaconDB:           db,
-		HeadFetcher:        mockChainService,
-		SyncChecker:        &mockSync.Sync{IsSyncing: false},
-		GenesisTimeFetcher: mockChainService,
-		StateNotifier:      mockChainService.StateNotifier(),
-		OperationNotifier:  mockChainService.OperationNotifier(),
+		BeaconDB:          db,
+		HeadFetcher:       mockChainService,
+		SyncChecker:       &mockSync.Sync{IsSyncing: false},
+		GenesisTime:       genesisTime,
+		StateNotifier:     mockChainService.StateNotifier(),
+		OperationNotifier: mockChainService.OperationNotifier(),
 	}
 
 	// Subscribe to operation notifications
