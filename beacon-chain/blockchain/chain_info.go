@@ -147,7 +147,13 @@ func (s *Service) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 		return s.beaconDB.HeadState(ctx)
 	}
 
-	return proto.Clone(s.headState).(*pb.BeaconState), nil
+	bState := &pb.BeaconState{}
+	m, err := s.headState.Marshal()
+	if err != nil {
+		return nil, err
+	}
+	bState.Unmarshal(m)
+	return bState, nil
 }
 
 // HeadValidatorsIndices returns a list of active validator indices from the head view of a given epoch.
