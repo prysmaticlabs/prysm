@@ -21,7 +21,7 @@ func TestStore_JustifiedCheckpoint_CanSaveRetrieve(t *testing.T) {
 		Root:  root[:],
 	}
 
-	if err := db.SaveState(ctx, &pb.BeaconState{Slot:1}, root); err != nil {
+	if err := db.SaveState(ctx, &pb.BeaconState{Slot: 1}, root); err != nil {
 		t.Fatal(err)
 	}
 
