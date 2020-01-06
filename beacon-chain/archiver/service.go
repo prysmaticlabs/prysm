@@ -22,13 +22,13 @@ var log = logrus.WithField("prefix", "archiver")
 // Service defining archiver functionality for persisting checkpointed
 // beacon chain information to a database backend for historical purposes.
 type Service struct {
-	ctx               context.Context
-	cancel            context.CancelFunc
-	beaconDB          db.Database
-	headFetcher       blockchain.HeadFetcher
+	ctx                  context.Context
+	cancel               context.CancelFunc
+	beaconDB             db.Database
+	headFetcher          blockchain.HeadFetcher
 	participationFetcher blockchain.ParticipationFetcher
-	stateNotifier     statefeed.Notifier
-	lastArchivedEpoch uint64
+	stateNotifier        statefeed.Notifier
+	lastArchivedEpoch    uint64
 }
 
 // Config options for the archiver service.
@@ -117,9 +117,9 @@ func (s *Service) archiveActiveSetChanges(ctx context.Context, headState *pb.Bea
 func (s *Service) archiveParticipation(ctx context.Context, epoch uint64) error {
 	p := s.participationFetcher.Participation(epoch)
 	participation := &ethpb.ValidatorParticipation{
-		EligibleEther: p.CurrentEpoch,
-		VotedEther: p.CurrentEpochTargetAttesters,
-		GlobalParticipationRate: float32(p.CurrentEpochTargetAttesters/p.CurrentEpoch),
+		EligibleEther:           p.CurrentEpoch,
+		VotedEther:              p.CurrentEpochTargetAttesters,
+		GlobalParticipationRate: float32(p.CurrentEpochTargetAttesters) / float32(p.CurrentEpoch),
 	}
 	return s.beaconDB.SaveArchivedValidatorParticipation(ctx, epoch, participation)
 }
