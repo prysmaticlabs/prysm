@@ -304,8 +304,8 @@ func GenerateAttestations(
 	}
 
 	var err error
-	targetRoot := make([]byte, 32)
-	headRoot := make([]byte, 32)
+	var targetRoot [32]byte
+	var headRoot [32]byte
 	// Only calculate head state if its an attestation for the current slot or future slot.
 	if generateHeadState || slot == bState.Slot {
 		headState := proto.Clone(bState).(*pb.BeaconState)
@@ -368,11 +368,11 @@ func GenerateAttestations(
 		attData := &ethpb.AttestationData{
 			Slot:            slot,
 			CommitteeIndex:  c,
-			BeaconBlockRoot: headRoot,
+			BeaconBlockRoot: headRoot[:],
 			Source:          bState.CurrentJustifiedCheckpoint,
 			Target: &ethpb.Checkpoint{
 				Epoch: currentEpoch,
-				Root:  targetRoot,
+				Root:  targetRoot[:],
 			},
 		}
 

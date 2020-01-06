@@ -70,6 +70,6 @@ message ValidatorLatestVote {
 }
 
 message HistoricalBatch {
-  repeated bytes block_roots = 1 [(gogoproto.moretags) = "ssz-size:\"block_roots.size\""];
-  repeated bytes state_roots = 2 [(gogoproto.moretags) = "ssz-size:\"state_roots.size\""];
+  repeated bytes block_roots = 1 [(gogoproto.moretags) = "ssz-size:\"block_roots.size\"",(gogoproto.customtype) = "github.com/prysmaticlabs/prysm/shared/bytesutil.Bytes32Array", (gogoproto.nullable) = false];
+  repeated bytes state_roots = 2 [(gogoproto.moretags) = "ssz-size:\"state_roots.size\"",(gogoproto.customtype) = "github.com/prysmaticlabs/prysm/shared/bytesutil.Bytes32Array", (gogoproto.nullable) = false];
 }

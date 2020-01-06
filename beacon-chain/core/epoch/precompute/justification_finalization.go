@@ -33,7 +33,7 @@ func ProcessJustificationAndFinalizationPreCompute(state *pb.BeaconState, p *Bal
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get block root for previous epoch %d", prevEpoch)
 		}
-		state.CurrentJustifiedCheckpoint = &ethpb.Checkpoint{Epoch: prevEpoch, Root: blockRoot}
+		state.CurrentJustifiedCheckpoint = &ethpb.Checkpoint{Epoch: prevEpoch, Root: blockRoot[:]}
 		state.JustificationBits.SetBitAt(1, true)
 	}
 
@@ -43,7 +43,7 @@ func ProcessJustificationAndFinalizationPreCompute(state *pb.BeaconState, p *Bal
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get block root for current epoch %d", prevEpoch)
 		}
-		state.CurrentJustifiedCheckpoint = &ethpb.Checkpoint{Epoch: currentEpoch, Root: blockRoot}
+		state.CurrentJustifiedCheckpoint = &ethpb.Checkpoint{Epoch: currentEpoch, Root: blockRoot[:]}
 		state.JustificationBits.SetBitAt(0, true)
 	}
 

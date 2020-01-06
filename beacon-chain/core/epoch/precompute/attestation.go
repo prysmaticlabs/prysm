@@ -107,7 +107,7 @@ func SameTarget(state *pb.BeaconState, a *pb.PendingAttestation, e uint64) (bool
 	if err != nil {
 		return false, err
 	}
-	if bytes.Equal(a.Data.Target.Root, r) {
+	if bytes.Equal(a.Data.Target.Root, r[:]) {
 		return true, nil
 	}
 	return false, nil
@@ -119,7 +119,7 @@ func SameHead(state *pb.BeaconState, a *pb.PendingAttestation) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if bytes.Equal(a.Data.BeaconBlockRoot, r) {
+	if bytes.Equal(a.Data.BeaconBlockRoot, r[:]) {
 		return true, nil
 	}
 	return false, nil

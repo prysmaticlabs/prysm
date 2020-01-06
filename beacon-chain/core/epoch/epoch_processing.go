@@ -261,7 +261,7 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "could not hash historical batch")
 		}
-		state.HistoricalRoots = append(state.HistoricalRoots, batchRoot[:])
+		state.HistoricalRoots = append(state.HistoricalRoots, batchRoot)
 	}
 
 	// Rotate current and previous epoch attestations.

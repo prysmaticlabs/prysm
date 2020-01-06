@@ -6,6 +6,8 @@ package state
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -101,26 +103,26 @@ func OptimizedGenesisBeaconState(genesisTime uint64, bState *pb.BeaconState, eth
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
 
-	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	randaoMixes := make([][32]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
-		h := make([]byte, 32)
-		copy(h, eth1Data.BlockHash)
+		var h [32]byte
+		copy(h[:], eth1Data.BlockHash)
 		randaoMixes[i] = h
 	}
 
-	zeroHash := params.BeaconConfig().ZeroHash[:]
+	zeroHash := params.BeaconConfig().ZeroHash
 
 	activeIndexRoots := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(activeIndexRoots); i++ {
-		activeIndexRoots[i] = zeroHash
+		activeIndexRoots[i] = zeroHash[:]
 	}
 
-	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	blockRoots := make([][32]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	for i := 0; i < len(blockRoots); i++ {
 		blockRoots[i] = zeroHash
 	}
 
-	stateRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	stateRoots := make([][32]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	for i := 0; i < len(stateRoots); i++ {
 		stateRoots[i] = zeroHash
 	}
@@ -143,7 +145,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, bState *pb.BeaconState, eth
 		Balances:   bState.Balances,
 
 		// Randomness and committees.
-		RandaoMixes: randaoMixes,
+		RandaoMixes: bytesutil.ConvertToCustomType(randaoMixes),
 
 		// Finality.
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{
@@ -160,9 +162,9 @@ func OptimizedGenesisBeaconState(genesisTime uint64, bState *pb.BeaconState, eth
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
 
-		HistoricalRoots:           [][]byte{},
-		BlockRoots:                blockRoots,
-		StateRoots:                stateRoots,
+		HistoricalRoots:           bytesutil.ConvertToCustomType([][32]byte{}),
+		BlockRoots:                bytesutil.ConvertToCustomType(blockRoots),
+		StateRoots:                bytesutil.ConvertToCustomType(stateRoots),
 		Slashings:                 slashings,
 		CurrentEpochAttestations:  []*pb.PendingAttestation{},
 		PreviousEpochAttestations: []*pb.PendingAttestation{},
@@ -179,8 +181,8 @@ func OptimizedGenesisBeaconState(genesisTime uint64, bState *pb.BeaconState, eth
 	}
 
 	state.LatestBlockHeader = &ethpb.BeaconBlockHeader{
-		ParentRoot: zeroHash,
-		StateRoot:  zeroHash,
+		ParentRoot: zeroHash[:],
+		StateRoot:  zeroHash[:],
 		BodyRoot:   bodyRoot[:],
 	}
 
@@ -202,7 +204,7 @@ func EmptyGenesisState() *pb.BeaconState {
 		Balances:   []uint64{},
 
 		JustificationBits:         []byte{0},
-		HistoricalRoots:           [][]byte{},
+		HistoricalRoots:           bytesutil.ConvertToCustomType([][32]byte{}),
 		CurrentEpochAttestations:  []*pb.PendingAttestation{},
 		PreviousEpochAttestations: []*pb.PendingAttestation{},
 

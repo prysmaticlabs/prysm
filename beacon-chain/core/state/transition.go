@@ -205,7 +205,7 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not tree hash prev state root")
 	}
-	state.StateRoots[state.Slot%params.BeaconConfig().SlotsPerHistoricalRoot] = prevStateRoot[:]
+	state.StateRoots[state.Slot%params.BeaconConfig().SlotsPerHistoricalRoot] = prevStateRoot
 
 	zeroHash := params.BeaconConfig().ZeroHash
 	// Cache latest block header state root.
@@ -218,7 +218,7 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 		return nil, errors.Wrap(err, "could not determine prev block root")
 	}
 	// Cache the block root.
-	state.BlockRoots[state.Slot%params.BeaconConfig().SlotsPerHistoricalRoot] = prevBlockRoot[:]
+	state.BlockRoots[state.Slot%params.BeaconConfig().SlotsPerHistoricalRoot] = prevBlockRoot
 	return state, nil
 }
 

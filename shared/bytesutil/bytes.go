@@ -22,6 +22,14 @@ func (b Bytes32Array) Unmarshal(data []byte) error {
 	return nil
 }
 
+func ConvertToCustomType(data [][32]byte) []Bytes32Array {
+	return interface{}(data).([]Bytes32Array)
+}
+
+func ConvertFromCustomType(data []Bytes32Array) [][32]byte {
+	return interface{}(data).([][32]byte)
+}
+
 // ToBytes returns integer x to bytes in little-endian format at the specified length.
 // Spec pseudocode definition:
 //   def int_to_bytes(integer: int, length: int) -> bytes:
