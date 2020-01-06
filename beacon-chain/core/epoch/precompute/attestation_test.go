@@ -76,9 +76,9 @@ func TestSameHead(t *testing.T) {
 	beaconState.Slot = 1
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
 		Target: &ethpb.Checkpoint{Epoch: 0}}}
-	r := []byte{'A'}
+	r := [32]byte{'A'}
 	beaconState.BlockRoots[0] = r
-	att.Data.BeaconBlockRoot = r
+	att.Data.BeaconBlockRoot = r[:]
 	same, err := precompute.SameHead(beaconState, &pb.PendingAttestation{Data: att.Data})
 	if err != nil {
 		t.Fatal(err)
@@ -101,9 +101,9 @@ func TestSameTarget(t *testing.T) {
 	beaconState.Slot = 1
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
 		Target: &ethpb.Checkpoint{Epoch: 0}}}
-	r := []byte{'A'}
+	r := [32]byte{'A'}
 	beaconState.BlockRoots[0] = r
-	att.Data.Target.Root = r
+	att.Data.Target.Root = r[:]
 	same, err := precompute.SameTarget(beaconState, &pb.PendingAttestation{Data: att.Data}, 0)
 	if err != nil {
 		t.Fatal(err)
@@ -126,10 +126,10 @@ func TestAttestedPrevEpoch(t *testing.T) {
 	beaconState.Slot = params.BeaconConfig().SlotsPerEpoch
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
 		Target: &ethpb.Checkpoint{Epoch: 0}}}
-	r := []byte{'A'}
+	r := [32]byte{'A'}
 	beaconState.BlockRoots[0] = r
-	att.Data.Target.Root = r
-	att.Data.BeaconBlockRoot = r
+	att.Data.Target.Root = r[:]
+	att.Data.BeaconBlockRoot = r[:]
 	votedEpoch, votedTarget, votedHead, err := precompute.AttestedPrevEpoch(beaconState, &pb.PendingAttestation{Data: att.Data})
 	if err != nil {
 		t.Fatal(err)
@@ -150,10 +150,10 @@ func TestAttestedCurrentEpoch(t *testing.T) {
 	beaconState.Slot = params.BeaconConfig().SlotsPerEpoch + 1
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
 		Target: &ethpb.Checkpoint{Epoch: 1}}}
-	r := []byte{'A'}
+	r := [32]byte{'A'}
 	beaconState.BlockRoots[params.BeaconConfig().SlotsPerEpoch] = r
-	att.Data.Target.Root = r
-	att.Data.BeaconBlockRoot = r
+	att.Data.Target.Root = r[:]
+	att.Data.BeaconBlockRoot = r[:]
 	votedEpoch, votedTarget, err := precompute.AttestedCurrentEpoch(beaconState, &pb.PendingAttestation{Data: att.Data})
 	if err != nil {
 		t.Fatal(err)
@@ -181,10 +181,10 @@ func TestProcessAttestations(t *testing.T) {
 	att2 := &ethpb.Attestation{Data: &ethpb.AttestationData{
 		Target: &ethpb.Checkpoint{Epoch: 0}},
 		AggregationBits: bf}
-	beaconState.BlockRoots[0] = []byte{'A'}
+	beaconState.BlockRoots[0] = [32]byte{'A'}
 	att1.Data.Target.Root = []byte{'A'}
 	att1.Data.BeaconBlockRoot = []byte{'A'}
-	beaconState.BlockRoots[0] = []byte{'B'}
+	beaconState.BlockRoots[0] = [32]byte{'B'}
 	att2.Data.Target.Root = []byte{'A'}
 	att2.Data.BeaconBlockRoot = []byte{'B'}
 	beaconState.PreviousEpochAttestations = []*pb.PendingAttestation{{Data: att1.Data, AggregationBits: bf}}

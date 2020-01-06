@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
@@ -53,7 +55,7 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 	ctx := context.Background()
 
 	s := &pbp2p.BeaconState{
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes: bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().EpochsPerHistoricalVector)),
 	}
 
 	aggregatorServer := &Server{
@@ -77,7 +79,7 @@ func TestSubmitAggregateAndProof_IsAggregator(t *testing.T) {
 	ctx := context.Background()
 
 	s := &pbp2p.BeaconState{
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes: bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().EpochsPerHistoricalVector)),
 	}
 
 	aggregatorServer := &Server{

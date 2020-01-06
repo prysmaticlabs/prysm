@@ -5,19 +5,21 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
-	var blockRoots [][]byte
+	var blockRoots [][32]byte
 
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
-		blockRoots = append(blockRoots, []byte{byte(i)})
+		blockRoots = append(blockRoots, [32]byte{byte(i)})
 	}
 	s := &pb.BeaconState{
-		BlockRoots: blockRoots,
+		BlockRoots: bytesutil.ConvertToCustomType(blockRoots),
 	}
 
 	tests := []struct {
@@ -63,7 +65,7 @@ func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
 				t.Fatalf("failed to get block root at slot %d: %v",
 					wantedSlot, err)
 			}
-			if !bytes.Equal(result, tt.expectedRoot) {
+			if !bytes.Equal(result[:], tt.expectedRoot) {
 				t.Errorf(
 					"result block root was an unexpected value, wanted %v, got %v",
 					tt.expectedRoot,
@@ -75,13 +77,13 @@ func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
 }
 
 func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
-	var blockRoots [][]byte
+	var blockRoots [][32]byte
 
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
-		blockRoots = append(blockRoots, []byte{byte(i)})
+		blockRoots = append(blockRoots, [32]byte{byte(i)})
 	}
 	state := &pb.BeaconState{
-		BlockRoots: blockRoots,
+		BlockRoots: bytesutil.ConvertToCustomType(blockRoots),
 	}
 
 	tests := []struct {

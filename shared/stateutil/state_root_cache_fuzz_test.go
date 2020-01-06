@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	fuzz "github.com/google/gofuzz"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
@@ -90,25 +92,25 @@ func TestHashTreeRootState_ElementsChanged_RecomputeBranch(t *testing.T) {
 	hasher := &stateRootHasher{}
 	hasherWithCache := globalHasher
 	state := &ethereum_beacon_p2p_v1.BeaconState{}
-	initialRoots := make([][]byte, 5)
+	initialRoots := make([][32]byte, 5)
 	for i := 0; i < len(initialRoots); i++ {
 		var someRt [32]byte
 		copy(someRt[:], "hello")
-		initialRoots[i] = someRt[:]
+		initialRoots[i] = someRt
 	}
-	state.RandaoMixes = initialRoots
+	state.RandaoMixes = bytesutil.ConvertToCustomType(initialRoots)
 	if _, err := hasherWithCache.hashTreeRootState(state); err != nil {
 		t.Fatal(err)
 	}
 
-	badRoots := make([][]byte, 5)
+	badRoots := make([][32]byte, 5)
 	for i := 0; i < len(badRoots); i++ {
 		var someRt [32]byte
 		copy(someRt[:], strconv.Itoa(i))
-		badRoots[i] = someRt[:]
+		badRoots[i] = someRt
 	}
 
-	state.RandaoMixes = badRoots
+	state.RandaoMixes = bytesutil.ConvertToCustomType(badRoots)
 	r1, err := hasher.hashTreeRootState(state)
 	if err != nil {
 		t.Fatal(err)

@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -1448,9 +1450,9 @@ func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 		Slot:                       epoch*params.BeaconConfig().SlotsPerEpoch + 1,
 		Validators:                 validators,
 		Balances:                   balances,
-		BlockRoots:                 make([][]byte, 128),
+		BlockRoots:                 bytesutil.ConvertToCustomType(make([][32]byte, 128)),
 		Slashings:                  []uint64{0, 1e9, 1e9},
-		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes:                bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().EpochsPerHistoricalVector)),
 		CurrentEpochAttestations:   atts,
 		FinalizedCheckpoint:        &ethpb.Checkpoint{},
 		JustificationBits:          bitfield.Bitvector4{0x00},

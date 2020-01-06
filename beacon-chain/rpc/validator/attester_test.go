@@ -6,6 +6,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -64,7 +66,7 @@ func TestProposeAttestation_OK(t *testing.T) {
 	state := &pbp2p.BeaconState{
 		Slot:        params.BeaconConfig().SlotsPerEpoch + 1,
 		Validators:  validators,
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes: bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().EpochsPerHistoricalVector)),
 	}
 
 	if err := db.SaveState(ctx, state, root); err != nil {
@@ -138,15 +140,15 @@ func TestGetAttestationData_OK(t *testing.T) {
 
 	beaconState := &pbp2p.BeaconState{
 		Slot:       3*params.BeaconConfig().SlotsPerEpoch + 1,
-		BlockRoots: make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		BlockRoots: bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().SlotsPerHistoricalRoot)),
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{
 			Epoch: 2,
 			Root:  justifiedRoot[:],
 		},
 	}
-	beaconState.BlockRoots[1] = blockRoot[:]
-	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
-	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
+	beaconState.BlockRoots[1] = blockRoot
+	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot
+	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot
 	attesterServer := &Server{
 		P2P:              &mockp2p.MockBroadcaster{},
 		SyncChecker:      &mockSync.Sync{IsSyncing: false},
@@ -230,15 +232,15 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	}
 	beaconState := &pbp2p.BeaconState{
 		Slot:       10000,
-		BlockRoots: make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		BlockRoots: bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().SlotsPerHistoricalRoot)),
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{
 			Epoch: helpers.SlotToEpoch(1500),
 			Root:  justifiedBlockRoot[:],
 		},
 	}
-	beaconState.BlockRoots[1] = blockRoot[:]
-	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot[:]
-	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
+	beaconState.BlockRoots[1] = blockRoot
+	beaconState.BlockRoots[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot
+	beaconState.BlockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot
 	attesterServer := &Server{
 		P2P:              &mockp2p.MockBroadcaster{},
 		AttestationCache: cache.NewAttestationCache(),

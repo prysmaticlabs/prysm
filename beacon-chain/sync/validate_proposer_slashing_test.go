@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -49,10 +51,10 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *pb.Beac
 			Epoch:           0,
 		},
 		Slashings:   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes: bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().EpochsPerHistoricalVector)),
 
-		StateRoots:        make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
-		BlockRoots:        make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		StateRoots:        bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().SlotsPerHistoricalRoot)),
+		BlockRoots:        bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().SlotsPerHistoricalRoot)),
 		LatestBlockHeader: &ethpb.BeaconBlockHeader{},
 	}
 

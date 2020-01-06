@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -22,9 +24,9 @@ func TestServer_ListBeaconCommittees(t *testing.T) {
 	numValidators := 128
 	headState := setupActiveValidators(t, db, numValidators)
 
-	headState.RandaoMixes = make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	headState.RandaoMixes = bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().SlotsPerHistoricalRoot))
 	for i := 0; i < len(headState.RandaoMixes); i++ {
-		headState.RandaoMixes[i] = make([]byte, 32)
+		headState.RandaoMixes[i] = [32]byte{}
 	}
 
 	bs := &Server{
@@ -99,9 +101,9 @@ func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
 	numValidators := 128
 	headState := setupActiveValidators(t, db, numValidators)
 
-	headState.RandaoMixes = make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	headState.RandaoMixes = bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().SlotsPerHistoricalRoot))
 	for i := 0; i < len(headState.RandaoMixes); i++ {
-		headState.RandaoMixes[i] = make([]byte, 32)
+		headState.RandaoMixes[i] = [32]byte{}
 	}
 
 	headState.Slot = params.BeaconConfig().SlotsPerEpoch * 10

@@ -3,6 +3,8 @@ package validator
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -69,9 +71,9 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 
 	targetEpoch := helpers.CurrentEpoch(headState)
 	epochStartSlot := helpers.StartSlot(targetEpoch)
-	targetRoot := make([]byte, 32)
+	var targetRoot [32]byte
 	if epochStartSlot == headState.Slot {
-		targetRoot = headRoot[:]
+		targetRoot = bytesutil.ToBytes32(headRoot)
 	} else {
 		targetRoot, err = helpers.BlockRootAtSlot(headState, epochStartSlot)
 		if err != nil {
@@ -86,7 +88,7 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 		Source:          headState.CurrentJustifiedCheckpoint,
 		Target: &ethpb.Checkpoint{
 			Epoch: targetEpoch,
-			Root:  targetRoot,
+			Root:  targetRoot[:],
 		},
 	}
 

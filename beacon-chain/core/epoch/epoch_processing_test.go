@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -41,7 +43,7 @@ func TestUnslashedAttestingIndices_CanSortAndFilter(t *testing.T) {
 	}
 	state := &pb.BeaconState{
 		Validators:  validators,
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes: bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().EpochsPerHistoricalVector)),
 	}
 
 	indices, err := unslashedAttestingIndices(state, atts)
@@ -89,7 +91,7 @@ func TestUnslashedAttestingIndices_DuplicatedAttestations(t *testing.T) {
 	}
 	state := &pb.BeaconState{
 		Validators:  validators,
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes: bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().EpochsPerHistoricalVector)),
 	}
 
 	indices, err := unslashedAttestingIndices(state, atts)
@@ -131,10 +133,9 @@ func TestAttestingBalance_CorrectBalance(t *testing.T) {
 	}
 	state := &pb.BeaconState{
 		Slot:        2,
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-
-		Validators: validators,
-		Balances:   balances,
+		RandaoMixes: bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().EpochsPerHistoricalVector)),
+		Validators:  validators,
+		Balances:    balances,
 	}
 
 	balance, err := AttestingBalance(state, atts)
@@ -286,7 +287,7 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	s.Eth1DataVotes = []*ethpb.Eth1Data{}
 	s.Balances[0] = 29 * 1e9
 	s.Slashings[ce] = 0
-	s.RandaoMixes[ce] = []byte{'A'}
+	s.RandaoMixes[ce] = [32]byte{'A'}
 	newS, err := ProcessFinalUpdates(s)
 	if err != nil {
 		t.Fatal(err)
@@ -305,7 +306,7 @@ func TestProcessFinalUpdates_CanProcess(t *testing.T) {
 	}
 
 	// Verify randao is correctly updated in the right position.
-	if bytes.Equal(newS.RandaoMixes[ne], params.BeaconConfig().ZeroHash[:]) {
+	if bytes.Equal(newS.RandaoMixes[ne][:], params.BeaconConfig().ZeroHash[:]) {
 		t.Error("latest RANDAO still zero hashes")
 	}
 
@@ -492,9 +493,9 @@ func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 		Slot:                        slot,
 		Balances:                    validatorBalances,
 		Validators:                  validators,
-		RandaoMixes:                 make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes:                 bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().EpochsPerHistoricalVector)),
 		Slashings:                   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		BlockRoots:                  make([][]byte, params.BeaconConfig().SlotsPerEpoch*10),
+		BlockRoots:                  bytesutil.ConvertToCustomType(make([][32]byte, params.BeaconConfig().SlotsPerEpoch*10)),
 		FinalizedCheckpoint:         &ethpb.Checkpoint{},
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{},
 		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{},

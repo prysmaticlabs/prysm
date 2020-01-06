@@ -11,16 +11,16 @@ import (
 )
 
 func TestRandaoMix_OK(t *testing.T) {
-	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	randaoMixes := make([][32]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
-		intInBytes := make([]byte, 32)
-		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
+		var intInBytes [32]byte
+		binary.LittleEndian.PutUint64(intInBytes[:], uint64(i))
 		randaoMixes[i] = intInBytes
 	}
-	state := &pb.BeaconState{RandaoMixes: randaoMixes}
+	state := &pb.BeaconState{RandaoMixes: bytesutil.ConvertToCustomType(randaoMixes)}
 	tests := []struct {
 		epoch     uint64
-		randaoMix []byte
+		randaoMix [32]byte
 	}{
 		{
 			epoch:     10,
@@ -38,7 +38,7 @@ func TestRandaoMix_OK(t *testing.T) {
 	for _, test := range tests {
 		state.Slot = (test.epoch + 1) * params.BeaconConfig().SlotsPerEpoch
 		mix := RandaoMix(state, test.epoch)
-		if !bytes.Equal(test.randaoMix, mix) {
+		if !bytes.Equal(test.randaoMix[:], mix[:]) {
 			t.Errorf("Incorrect randao mix. Wanted: %#x, got: %#x",
 				test.randaoMix, mix)
 		}
@@ -46,16 +46,16 @@ func TestRandaoMix_OK(t *testing.T) {
 }
 
 func TestRandaoMix_CopyOK(t *testing.T) {
-	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	randaoMixes := make([][32]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
-		intInBytes := make([]byte, 32)
-		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
+		intInBytes := [32]byte{}
+		binary.LittleEndian.PutUint64(intInBytes[:], uint64(i))
 		randaoMixes[i] = intInBytes
 	}
-	state := &pb.BeaconState{RandaoMixes: randaoMixes}
+	state := &pb.BeaconState{RandaoMixes: bytesutil.ConvertToCustomType(randaoMixes)}
 	tests := []struct {
 		epoch     uint64
-		randaoMix []byte
+		randaoMix [32]byte
 	}{
 		{
 			epoch:     10,
@@ -74,10 +74,10 @@ func TestRandaoMix_CopyOK(t *testing.T) {
 		state.Slot = (test.epoch + 1) * params.BeaconConfig().SlotsPerEpoch
 		mix := RandaoMix(state, test.epoch)
 		uniqueNumber := params.BeaconConfig().EpochsPerHistoricalVector + 1000
-		binary.LittleEndian.PutUint64(mix, uniqueNumber)
+		binary.LittleEndian.PutUint64(mix[:], uniqueNumber)
 
 		for _, mx := range randaoMixes {
-			mxNum := bytesutil.FromBytes8(mx)
+			mxNum := bytesutil.FromBytes8(mx[:])
 			if mxNum == uniqueNumber {
 				t.Fatalf("two distinct slices which have different representations in memory still contain"+
 					"the same value: %d", mxNum)
@@ -87,16 +87,17 @@ func TestRandaoMix_CopyOK(t *testing.T) {
 }
 
 func TestGenerateSeed_OK(t *testing.T) {
-	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	randaoMixes := make([][32]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
-		intInBytes := make([]byte, 32)
-		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
+		intInBytes := [32]byte{}
+		binary.LittleEndian.PutUint64(intInBytes[:], uint64(i))
 		randaoMixes[i] = intInBytes
 	}
 	slot := 10 * params.BeaconConfig().MinSeedLookahead * params.BeaconConfig().SlotsPerEpoch
 	state := &pb.BeaconState{
-		RandaoMixes: randaoMixes,
-		Slot:        slot}
+		RandaoMixes: bytesutil.ConvertToCustomType(randaoMixes),
+		Slot:        slot,
+	}
 
 	got, err := Seed(state, 10, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
