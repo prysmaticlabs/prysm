@@ -4,15 +4,11 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // SetConfig sets the global params for spec tests depending on the option chosen.
 func SetConfig(config string) error {
-	c := featureconfig.Get()
-	c.EnableCustomStateSSZ = true
-	featureconfig.Init(c)
 	switch config {
 	case "minimal":
 		newConfig := params.MinimalSpecConfig()

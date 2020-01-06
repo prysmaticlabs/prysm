@@ -3,6 +3,8 @@ package validator
 import (
 	"context"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
+	"github.com/prysmaticlabs/prysm/shared/stateutil"
+
 	"math/big"
 	"strings"
 	"testing"
@@ -82,7 +84,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
-	stateRoot, err := ssz.HashTreeRoot(beaconState)
+	stateRoot, err := stateutil.HashTreeRootState(beaconState)
 	if err != nil {
 		t.Fatalf("Could not hash genesis state: %v", err)
 	}

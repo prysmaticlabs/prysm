@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/stateutil"
 )
 
 func TestStore_OnBlock(t *testing.T) {
@@ -27,7 +28,7 @@ func TestStore_OnBlock(t *testing.T) {
 
 	store := NewForkChoiceService(ctx, db)
 
-	genesisStateRoot, err := ssz.HashTreeRoot(&pb.BeaconState{})
+	genesisStateRoot, err := stateutil.HashTreeRootState(&pb.BeaconState{})
 	if err != nil {
 		t.Error(err)
 	}
