@@ -29,6 +29,7 @@ import (
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
@@ -193,18 +194,20 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		preGenesisState:         state.EmptyGenesisState(),
 	}
 
-	eth1Data, err := config.BeaconDB.PowchainData(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to retrieve eth1 data")
-	}
-	if eth1Data != nil {
-		s.depositTrie = trieutil.CreateTrieFromProto(eth1Data.Trie)
-		s.chainStartData = eth1Data.ChainstartData
-		s.preGenesisState = eth1Data.BeaconState
-		s.latestEth1Data = eth1Data.CurrentEth1Data
-		s.lastReceivedMerkleIndex = int64(len(s.depositTrie.Items()) - 1)
-		if err := s.initDepositCaches(ctx, eth1Data.DepositContainers); err != nil {
-			return nil, errors.Wrap(err, "could not initialize caches")
+	if featureconfig.Get().EnableSavingOfDepositData {
+		eth1Data, err := config.BeaconDB.PowchainData(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to retrieve eth1 data")
+		}
+		if eth1Data != nil {
+			s.depositTrie = trieutil.CreateTrieFromProto(eth1Data.Trie)
+			s.chainStartData = eth1Data.ChainstartData
+			s.preGenesisState = eth1Data.BeaconState
+			s.latestEth1Data = eth1Data.CurrentEth1Data
+			s.lastReceivedMerkleIndex = int64(len(s.depositTrie.Items()) - 1)
+			if err := s.initDepositCaches(ctx, eth1Data.DepositContainers); err != nil {
+				return nil, errors.Wrap(err, "could not initialize caches")
+			}
 		}
 	}
 	return s, nil
@@ -415,8 +418,13 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 	}
 	currIndex := currentState.Eth1DepositIndex
 	validDepositsCount.Add(float64(currIndex + 1))
-	for _, c := range ctrs[currIndex:] {
-		s.depositCache.InsertPendingDeposit(ctx, c.Deposit, c.Eth1BlockHeight, c.Index, bytesutil.ToBytes32(c.DepositRoot))
+
+	// Only add pending deposits if the container slice length
+	// is more than the current index in state.
+	if len(ctrs) > int(currIndex) {
+		for _, c := range ctrs[currIndex:] {
+			s.depositCache.InsertPendingDeposit(ctx, c.Deposit, c.Eth1BlockHeight, c.Index, bytesutil.ToBytes32(c.DepositRoot))
+		}
 	}
 	return nil
 }

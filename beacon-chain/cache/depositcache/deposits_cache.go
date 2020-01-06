@@ -56,7 +56,7 @@ func NewDepositCache() *DepositCache {
 // InsertDeposit into the database. If deposit or block number are nil
 // then this method does nothing.
 func (dc *DepositCache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNum uint64, index int64, depositRoot [32]byte) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.InsertDeposit")
+	ctx, span := trace.StartSpan(ctx, "DepositsCache.InsertDeposit")
 	defer span.End()
 	if d == nil {
 		log.WithFields(log.Fields{
@@ -78,7 +78,7 @@ func (dc *DepositCache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blo
 
 // InsertDepositContainers inserts a set of deposit containers into our deposit cache.
 func (dc *DepositCache) InsertDepositContainers(ctx context.Context, ctrs []*dbpb.DepositContainer) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.InsertDepositContainers")
+	ctx, span := trace.StartSpan(ctx, "DepositsCache.InsertDepositContainers")
 	defer span.End()
 	dc.depositsLock.Lock()
 	defer dc.depositsLock.Unlock()
@@ -100,7 +100,7 @@ func (dc *DepositCache) AllDepositContainers(ctx context.Context) []*dbpb.Deposi
 
 // MarkPubkeyForChainstart sets the pubkey deposit status to true.
 func (dc *DepositCache) MarkPubkeyForChainstart(ctx context.Context, pubkey string) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.MarkPubkeyForChainstart")
+	ctx, span := trace.StartSpan(ctx, "DepositsCache.MarkPubkeyForChainstart")
 	defer span.End()
 	dc.chainstartPubkeysLock.Lock()
 	defer dc.chainstartPubkeysLock.Unlock()
@@ -109,7 +109,7 @@ func (dc *DepositCache) MarkPubkeyForChainstart(ctx context.Context, pubkey stri
 
 // PubkeyInChainstart returns bool for whether the pubkey passed in has deposited.
 func (dc *DepositCache) PubkeyInChainstart(ctx context.Context, pubkey string) bool {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.PubkeyInChainstart")
+	ctx, span := trace.StartSpan(ctx, "DepositsCache.PubkeyInChainstart")
 	defer span.End()
 	dc.chainstartPubkeysLock.Lock()
 	defer dc.chainstartPubkeysLock.Unlock()
@@ -123,7 +123,7 @@ func (dc *DepositCache) PubkeyInChainstart(ctx context.Context, pubkey string) b
 // AllDeposits returns a list of deposits all historical deposits until the given block number
 // (inclusive). If no block is specified then this method returns all historical deposits.
 func (dc *DepositCache) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*ethpb.Deposit {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.AllDeposits")
+	ctx, span := trace.StartSpan(ctx, "DepositsCache.AllDeposits")
 	defer span.End()
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
@@ -140,7 +140,7 @@ func (dc *DepositCache) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*
 // DepositsNumberAndRootAtHeight returns number of deposits made prior to blockheight and the
 // root that corresponds to the latest deposit at that blockheight.
 func (dc *DepositCache) DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight *big.Int) (uint64, [32]byte) {
-	ctx, span := trace.StartSpan(ctx, "Beacondb.DepositsNumberAndRootAtHeight")
+	ctx, span := trace.StartSpan(ctx, "DepositsCache.DepositsNumberAndRootAtHeight")
 	defer span.End()
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
@@ -156,7 +156,7 @@ func (dc *DepositCache) DepositsNumberAndRootAtHeight(ctx context.Context, block
 // DepositByPubkey looks through historical deposits and finds one which contains
 // a certain public key within its deposit data.
 func (dc *DepositCache) DepositByPubkey(ctx context.Context, pubKey []byte) (*ethpb.Deposit, *big.Int) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.DepositByPubkey")
+	ctx, span := trace.StartSpan(ctx, "DepositsCache.DepositByPubkey")
 	defer span.End()
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
