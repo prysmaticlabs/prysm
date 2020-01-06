@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -120,11 +119,9 @@ func (bs *Server) ListAttestations(
 func (bs *Server) StreamAttestations(
 	_ *ptypes.Empty, stream ethpb.BeaconChain_StreamAttestationsServer,
 ) error {
-	genesisTime := bs.GenesisTimeFetcher.GenesisTime()
-	st := slotutil.GetSlotTicker(genesisTime, params.BeaconConfig().SecondsPerSlot)
 	for {
 		select {
-		case <-st.C():
+		case <-bs.SlotTicker.C():
 			atts := bs.Pool.AggregatedAttestations()
 			for i := 0; i < len(atts); i++ {
 				if err := stream.Send(atts[i]); err != nil {

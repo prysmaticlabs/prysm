@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// CommitteeAssignment returns the committee assignment response from a given validator public key.
+// GetDuties returns the committee assignment response from a given validator public key.
 // The committee assignment response contains the following fields for the current and previous epoch:
 //	1.) The list of validators in the committee.
 //	2.) The shard to which the committee is assigned.

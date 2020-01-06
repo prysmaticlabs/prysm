@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+var _ = Ticker(&SlotTicker{})
+
 func TestSlotTicker(t *testing.T) {
 	ticker := &SlotTicker{
 		c:    make(chan uint64),
