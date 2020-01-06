@@ -44,6 +44,6 @@ func Seed(state *pb.BeaconState, epoch uint64, domain []byte) ([32]byte, error) 
 func RandaoMix(state *pb.BeaconState, epoch uint64) []byte {
 	newMixLength := len(state.RandaoMixes[epoch%params.BeaconConfig().EpochsPerHistoricalVector])
 	newMix := make([]byte, newMixLength)
-	copy(newMix, state.RandaoMixes[epoch%params.BeaconConfig().EpochsPerHistoricalVector])
+	copy(newMix, state.RandaoMixes[epoch%params.BeaconConfig().EpochsPerHistoricalVector][:])
 	return newMix
 }

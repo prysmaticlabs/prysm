@@ -14,9 +14,9 @@ message BeaconState {
 
   // History [2001-3000]
   ethereum.eth.v1alpha1.BeaconBlockHeader latest_block_header = 2001;
-  repeated bytes block_roots = 2002 [(gogoproto.moretags) = "ssz-size:\"block_roots.size\""];
-  repeated bytes state_roots = 2003 [(gogoproto.moretags) = "ssz-size:\"state_roots.size\""];
-  repeated bytes historical_roots = 2004 [(gogoproto.moretags) = "ssz-size:\"?,32\" ssz-max:\"16777216\""];
+  repeated bytes block_roots = 2002 [(gogoproto.moretags) = "ssz-size:\"block_roots.size\"" ,(gogoproto.customtype) = "github.com/prysmaticlabs/prysm/shared/bytesutil.Bytes32Array", (gogoproto.nullable) = false];
+  repeated bytes state_roots = 2003 [(gogoproto.moretags) = "ssz-size:\"state_roots.size\"",(gogoproto.customtype) = "github.com/prysmaticlabs/prysm/shared/bytesutil.Bytes32Array", (gogoproto.nullable) = false];
+  repeated bytes historical_roots = 2004 [(gogoproto.moretags) = "ssz-size:\"?,32\" ssz-max:\"16777216\"",(gogoproto.customtype) = "github.com/prysmaticlabs/prysm/shared/bytesutil.Bytes32Array", (gogoproto.nullable) = false];
 
   // Eth1 [3001-4000]
   ethereum.eth.v1alpha1.Eth1Data eth1_data = 3001;
@@ -28,7 +28,7 @@ message BeaconState {
   repeated uint64 balances = 4002 [(gogoproto.moretags) = "ssz-max:\"1099511627776\""];
 
   // Randomness [5001-6000]
-  repeated bytes randao_mixes = 5001 [(gogoproto.moretags) = "ssz-size:\"randao_mixes.size\""];
+  repeated bytes randao_mixes = 5001 [(gogoproto.moretags) = "ssz-size:\"randao_mixes.size\"",(gogoproto.customtype) = "github.com/prysmaticlabs/prysm/shared/bytesutil.Bytes32Array", (gogoproto.nullable) = false];
 
   // Slashings [6001-7000]
   repeated uint64 slashings = 6001 [(gogoproto.moretags) = "ssz-size:\"slashings.size\""];

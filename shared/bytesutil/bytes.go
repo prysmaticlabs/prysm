@@ -5,6 +5,23 @@ import (
 	"encoding/binary"
 )
 
+type Bytes32Array [32]byte
+
+func (b Bytes32Array) Size() int {
+	return len(b)
+}
+
+func (b Bytes32Array) MarshalTo(data []byte) (int, error) {
+	data = make([]byte, 32)
+	copy(data, b[:])
+	return len(data), nil
+}
+
+func (b Bytes32Array) Unmarshal(data []byte) error {
+	copy(b[:], data)
+	return nil
+}
+
 // ToBytes returns integer x to bytes in little-endian format at the specified length.
 // Spec pseudocode definition:
 //   def int_to_bytes(integer: int, length: int) -> bytes:

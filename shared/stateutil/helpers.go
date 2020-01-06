@@ -49,7 +49,7 @@ func bitwiseMerkleize(chunks [][]byte, count uint64, limit uint64) ([32]byte, er
 	}
 	hasher := htr.HashFn(hashutil.Hash)
 	leafIndexer := func(i uint64) []byte {
-		return chunks[i]
+		return chunks[i][:]
 	}
 	return merkle.Merkleize(hasher, count, limit, leafIndexer), nil
 }

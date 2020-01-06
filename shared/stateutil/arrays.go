@@ -17,7 +17,7 @@ var (
 	lock        sync.RWMutex
 )
 
-func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte, error) {
+func (h *stateRootHasher) arraysRoot(roots [][32]byte, fieldName string) ([32]byte, error) {
 	lock.Lock()
 	if _, ok := layersCache[fieldName]; !ok && h.rootsCache != nil {
 		depth := merkle.GetDepth(uint64(len(roots)))
@@ -41,7 +41,7 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 		prevLeaves = leaves
 	}
 	for i := 0; i < len(roots) && i < len(leaves) && i < len(prevLeaves); i++ {
-		padded := bytesutil.ToBytes32(roots[i])
+		padded := roots[i]
 		copy(hashKeyElements[bytesProcessed:bytesProcessed+32], padded[:])
 		leaves[i] = padded[:]
 		// We check if any items changed since the roots were last recomputed.
