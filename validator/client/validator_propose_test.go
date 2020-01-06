@@ -9,7 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/validator/db"
+	db2 "github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/internal"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -22,7 +22,7 @@ type mocks struct {
 }
 
 func setup(t *testing.T) (*validator, *mocks, func()) {
-	db := db.SetupDB(t, [][48]byte{validatorPubKey})
+	db := db2.SetupDB(t, [][48]byte{validatorPubKey})
 	ctrl := gomock.NewController(t)
 	m := &mocks{
 		proposerClient:   internal.NewMockProposerServiceClient(ctrl),

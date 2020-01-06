@@ -1,9 +1,9 @@
 package db
 
 import (
+	"context"
 	"os"
-	"path"
-	"reflect"
+	"path/filepath"
 	"time"
 
 	"github.com/boltdb/bolt"
@@ -11,10 +11,13 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/validator/db/iface"
 	"github.com/sirupsen/logrus"
 )
 
-var log = logrus.WithField("prefix", "slasherDB")
+var log = logrus.WithField("prefix", "db")
+
+var _ = iface.ValidatorDB(&Store{})
 
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
@@ -67,7 +70,7 @@ func NewKVStore(dirPath string, pubkeys [][48]byte) (*Store, error) {
 	if err := os.MkdirAll(dirPath, 0700); err != nil {
 		return nil, err
 	}
-	datafile := path.Join(dirPath, "validator.db")
+	datafile := filepath.Join(dirPath, "validator.db")
 	boltDB, err := bolt.Open(datafile, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		if err == bolt.ErrTimeout {
@@ -83,22 +86,22 @@ func NewKVStore(dirPath string, pubkeys [][48]byte) (*Store, error) {
 			tx,
 			historicProposalsBucket,
 			validatorsMinMaxSpanBucket,
-		)
+	)
 	}); err != nil {
 		return nil, err
 	}
 
 	// Initialize the required pubkeys into the DB to ensure they're not empty.
 	for _, pubkey := range pubkeys {
-		history, err := kv.ProposalHistory(pubkey[:])
+		history, err := kv.ProposalHistory(context.Background(), pubkey[:])
 		if err != nil {
 			return nil, err
 		}
-		if reflect.DeepEqual(history, &slashpb.ProposalHistory{}) {
+		if history == nil {
 			cleanHistory := &slashpb.ProposalHistory{
 				EpochBits: bitfield.NewBitlist(params.BeaconConfig().WeakSubjectivityPeriod),
 			}
-			if err := kv.SaveProposalHistory(pubkey[:], cleanHistory); err != nil {
+			if err := kv.SaveProposalHistory(context.Background(), pubkey[:], cleanHistory); err != nil {
 				return nil, err
 			}
 		}

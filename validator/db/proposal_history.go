@@ -1,10 +1,13 @@
 package db
 
 import (
+	"context"
+
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	"go.opencensus.io/trace"
 )
 
 func unmarshalProposalHistory(enc []byte) (*slashpb.ProposalHistory, error) {
@@ -18,23 +21,29 @@ func unmarshalProposalHistory(enc []byte) (*slashpb.ProposalHistory, error) {
 
 // ProposalHistory accepts a validator public key and returns the corresponding proposal history.
 // Returns nil if there is no proposal history for the validator.
-func (db *Store) ProposalHistory(pubKey []byte) (*slashpb.ProposalHistory, error) {
+func (db *Store) ProposalHistory(ctx context.Context, publicKey []byte) (*slashpb.ProposalHistory, error) {
+	ctx, span := trace.StartSpan(ctx, "Validator.ProposalHistory")
+	defer span.End()
+
 	var err error
 	var proposalHistory *slashpb.ProposalHistory
 	err = db.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
-		enc := bucket.Get(pubKey)
-		proposalHistory, err = unmarshalProposalHistory(enc)
-		if err != nil {
-			return err
+		enc := bucket.Get(publicKey)
+		if enc == nil {
+			return nil
 		}
-		return nil
+		proposalHistory, err = unmarshalProposalHistory(enc)
+		return err
 	})
 	return proposalHistory, err
 }
 
 // SaveProposalHistory returns the proposal history for the requested validator public key.
-func (db *Store) SaveProposalHistory(pubKey []byte, proposalHistory *slashpb.ProposalHistory) error {
+func (db *Store) SaveProposalHistory(ctx context.Context, pubKey []byte, proposalHistory *slashpb.ProposalHistory) error {
+	ctx, span := trace.StartSpan(ctx, "Validator.SaveProposalHistory")
+	defer span.End()
+
 	enc, err := proto.Marshal(proposalHistory)
 	if err != nil {
 		return errors.Wrap(err, "failed to encode proposal history")
@@ -51,7 +60,10 @@ func (db *Store) SaveProposalHistory(pubKey []byte, proposalHistory *slashpb.Pro
 }
 
 // DeleteProposalHistory deletes the proposal history for the corresponding validator public key.
-func (db *Store) DeleteProposalHistory(pubkey []byte) error {
+func (db *Store) DeleteProposalHistory(ctx context.Context, pubkey []byte) error {
+	ctx, span := trace.StartSpan(ctx, "Validator.DeleteProposalHistory")
+	defer span.End()
+
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
 		if err := bucket.Delete(pubkey); err != nil {

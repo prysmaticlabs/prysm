@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 )
 
@@ -15,7 +15,7 @@ func SetupDB(t testing.TB, pubkeys [][48]byte) *Store {
 	if err != nil {
 		t.Fatalf("Could not generate random file path: %v", err)
 	}
-	p := path.Join(TempDir(), fmt.Sprintf("/%d", randPath))
+	p := filepath.Join(TempDir(), fmt.Sprintf("/%d", randPath))
 	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
