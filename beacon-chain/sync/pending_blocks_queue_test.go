@@ -30,7 +30,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 	defer dbtest.TeardownDB(t, db)
 
 	p1 := p2ptest.NewTestP2P(t)
-	r := &RegularSync{
+	r := &Service{
 		p2p: p1,
 		db:  db,
 		chain: &mock.ChainService{
@@ -119,7 +119,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 		}
 	})
 
-	r := &RegularSync{
+	r := &Service{
 		p2p: p1,
 		db:  db,
 		chain: &mock.ChainService{
@@ -214,7 +214,7 @@ func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
 		t.Error("Expected peers to be connected")
 	}
 
-	r := &RegularSync{
+	r := &Service{
 		p2p: p1,
 		db:  db,
 		chain: &mock.ChainService{

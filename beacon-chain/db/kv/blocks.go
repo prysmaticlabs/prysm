@@ -9,8 +9,10 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"go.opencensus.io/trace"
 )
@@ -84,6 +86,8 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Be
 			tx.Bucket(blockSlotIndicesBucket),
 			filtersMap[filters.StartSlot],
 			filtersMap[filters.EndSlot],
+			filtersMap[filters.StartEpoch],
+			filtersMap[filters.EndEpoch],
 		)
 
 		// Once we have a list of block roots that correspond to each
@@ -144,6 +148,8 @@ func (k *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]b
 			tx.Bucket(blockSlotIndicesBucket),
 			filtersMap[filters.StartSlot],
 			filtersMap[filters.EndSlot],
+			filtersMap[filters.StartEpoch],
+			filtersMap[filters.EndEpoch],
 		)
 
 		// Once we have a list of block roots that correspond to each
@@ -349,7 +355,13 @@ func (k *Store) SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) er
 // fetchBlockRootsBySlotRange looks into a boltDB bucket and performs a binary search
 // range scan using sorted left-padded byte keys using a start slot and an end slot.
 // If both the start and end slot are the same, and are 0, the function returns nil.
-func fetchBlockRootsBySlotRange(bkt *bolt.Bucket, startSlotEncoded, endSlotEncoded interface{}) [][]byte {
+func fetchBlockRootsBySlotRange(
+	bkt *bolt.Bucket,
+	startSlotEncoded interface{},
+	endSlotEncoded interface{},
+	startEpochEncoded interface{},
+	endEpochEncoded interface{},
+) [][]byte {
 	var startSlot, endSlot uint64
 	var ok bool
 	if startSlot, ok = startSlotEncoded.(uint64); !ok {
@@ -357,6 +369,12 @@ func fetchBlockRootsBySlotRange(bkt *bolt.Bucket, startSlotEncoded, endSlotEncod
 	}
 	if endSlot, ok = endSlotEncoded.(uint64); !ok {
 		endSlot = 0
+	}
+	startEpoch, startEpochOk := startEpochEncoded.(uint64)
+	endEpoch, endEpochOk := endEpochEncoded.(uint64)
+	if startEpochOk && endEpochOk {
+		startSlot = helpers.StartSlot(startEpoch)
+		endSlot = helpers.StartSlot(endEpoch) + params.BeaconConfig().SlotsPerEpoch - 1
 	}
 	min := []byte(fmt.Sprintf("%07d", startSlot))
 	max := []byte(fmt.Sprintf("%07d", endSlot))
@@ -421,6 +439,8 @@ func createBlockIndicesFromFilters(f *filters.QueryFilter) (map[string][]byte, e
 			indicesByBucket[string(blockParentRootIndicesBucket)] = parentRoot
 		case filters.StartSlot:
 		case filters.EndSlot:
+		case filters.StartEpoch:
+		case filters.EndEpoch:
 		default:
 			return nil, fmt.Errorf("filter criterion %v not supported for blocks", k)
 		}

@@ -286,6 +286,12 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Update effective balances with hysteresis.
 	for i, v := range state.Validators {
+		if v == nil {
+			return nil, fmt.Errorf("validator %d is nil in state", i)
+		}
+		if i >= len(state.Balances) {
+			return nil, fmt.Errorf("validator index exceeds validator length in state %d >= %d", i, len(state.Balances))
+		}
 		balance := state.Balances[i]
 		halfInc := params.BeaconConfig().EffectiveBalanceIncrement / 2
 		if balance < v.EffectiveBalance || v.EffectiveBalance+3*halfInc < balance {
@@ -298,10 +304,17 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Set total slashed balances.
 	slashedExitLength := params.BeaconConfig().EpochsPerSlashingsVector
-	state.Slashings[nextEpoch%slashedExitLength] = 0
+	slashedEpoch := int(nextEpoch % slashedExitLength)
+	if len(state.Slashings) != int(slashedExitLength) {
+		return nil, fmt.Errorf("state slashing length %d different than EpochsPerHistoricalVector %d", len(state.Slashings), slashedExitLength)
+	}
+	state.Slashings[slashedEpoch] = 0
 
 	// Set RANDAO mix.
 	randaoMixLength := params.BeaconConfig().EpochsPerHistoricalVector
+	if len(state.RandaoMixes) != int(randaoMixLength) {
+		return nil, fmt.Errorf("state randao length %d different than EpochsPerHistoricalVector %d", len(state.RandaoMixes), randaoMixLength)
+	}
 	mix := helpers.RandaoMix(state, currentEpoch)
 	state.RandaoMixes[nextEpoch%randaoMixLength] = mix
 
@@ -339,8 +352,9 @@ func ProcessFinalUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 func unslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestation) ([]uint64, error) {
 	var setIndices []uint64
 	seen := make(map[uint64]bool)
+
 	for _, att := range atts {
-		committee, err := helpers.BeaconCommittee(state, att.Data.Slot, att.Data.CommitteeIndex)
+		committee, err := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
 		if err != nil {
 			return nil, err
 		}

@@ -14,7 +14,7 @@ import (
 )
 
 // beaconBlocksByRangeRPCHandler looks up the request blocks from the database from a given start block.
-func (r *RegularSync) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
+func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	ctx, span := trace.StartSpan(ctx, "sync.BeaconBlocksByRangeHandler")
 	defer span.End()
 	defer stream.Close()

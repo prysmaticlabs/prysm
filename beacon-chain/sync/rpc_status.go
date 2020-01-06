@@ -9,16 +9,18 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
 
-const statusInterval = 6 * time.Minute // 60 slots.
+const statusInterval = 6 * time.Minute // 30 slots.
 
 // maintainPeerStatuses by infrequently polling peers for their latest status.
-func (r *RegularSync) maintainPeerStatuses() {
+func (r *Service) maintainPeerStatuses() {
 	ctx := context.Background()
 	runutil.RunEvery(r.ctx, statusInterval, func() {
 		for _, pid := range r.p2p.Peers().Connected() {
@@ -34,11 +36,22 @@ func (r *RegularSync) maintainPeerStatuses() {
 				}
 			}
 		}
+		if !r.initialSync.Syncing() {
+			_, highestEpoch, _ := r.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync)
+			if helpers.StartSlot(highestEpoch) > r.chain.HeadSlot() {
+				numberOfTimesResyncedCounter.Inc()
+				r.clearPendingSlots()
+				// block until we can resync the node
+				if err := r.initialSync.Resync(); err != nil {
+					log.Errorf("Could not Resync Chain: %v", err)
+				}
+			}
+		}
 	})
 }
 
 // sendRPCStatusRequest for a given topic with an expected protobuf message type.
-func (r *RegularSync) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
+func (r *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
@@ -77,13 +90,13 @@ func (r *RegularSync) sendRPCStatusRequest(ctx context.Context, id peer.ID) erro
 	return err
 }
 
-func (r *RegularSync) removeDisconnectedPeerStatus(ctx context.Context, pid peer.ID) error {
+func (r *Service) removeDisconnectedPeerStatus(ctx context.Context, pid peer.ID) error {
 	return nil
 }
 
 // statusRPCHandler reads the incoming Status RPC from the peer and responds with our version of a status message.
 // This handler will disconnect any peer that does not match our fork version.
-func (r *RegularSync) statusRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
+func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	defer stream.Close()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -130,9 +143,17 @@ func (r *RegularSync) statusRPCHandler(ctx context.Context, msg interface{}, str
 	return err
 }
 
-func (r *RegularSync) validateStatusMessage(msg *pb.Status, stream network.Stream) error {
+func (r *Service) validateStatusMessage(msg *pb.Status, stream network.Stream) error {
 	if !bytes.Equal(params.BeaconConfig().GenesisForkVersion, msg.HeadForkVersion) {
 		return errWrongForkVersion
+	}
+	genesis := r.chain.GenesisTime()
+	maxEpoch := slotutil.EpochsSinceGenesis(genesis)
+	// It would take a minimum of 2 epochs to finalize a
+	// previous epoch
+	maxFinalizedEpoch := maxEpoch - 2
+	if msg.FinalizedEpoch > maxFinalizedEpoch {
+		return errInvalidEpoch
 	}
 	return nil
 }

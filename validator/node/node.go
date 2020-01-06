@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"sync"
 	"syscall"
 
@@ -15,13 +16,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/flags"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -77,7 +78,7 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 		}
 	}
 
-	keys, err := keysParser(ctx)
+	keyManager, err := selectKeyManager(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +87,7 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 		return nil, err
 	}
 
-	if err := ValidatorClient.registerClientService(ctx, keys); err != nil {
+	if err := ValidatorClient.registerClientService(ctx, keyManager); err != nil {
 		return nil, err
 	}
 
@@ -147,14 +148,14 @@ func (s *ValidatorClient) registerPrometheusService(ctx *cli.Context) error {
 	return s.services.RegisterService(service)
 }
 
-func (s *ValidatorClient) registerClientService(ctx *cli.Context, keys map[string]*keystore.Key) error {
+func (s *ValidatorClient) registerClientService(ctx *cli.Context, keyManager keymanager.KeyManager) error {
 	endpoint := ctx.GlobalString(flags.BeaconRPCProviderFlag.Name)
 	logValidatorBalances := !ctx.GlobalBool(flags.DisablePenaltyRewardLogFlag.Name)
 	cert := ctx.GlobalString(flags.CertFlag.Name)
 	graffiti := ctx.GlobalString(flags.GraffitiFlag.Name)
 	v, err := client.NewValidatorService(context.Background(), &client.Config{
 		Endpoint:             endpoint,
-		Keys:                 keys,
+		KeyManager:           keyManager,
 		LogValidatorBalances: logValidatorBalances,
 		CertFlag:             cert,
 		GraffitiFlag:         graffiti,
@@ -163,4 +164,29 @@ func (s *ValidatorClient) registerClientService(ctx *cli.Context, keys map[strin
 		return errors.Wrap(err, "could not initialize client service")
 	}
 	return s.services.RegisterService(v)
+}
+
+// selectKeyManager selects the key manager depending on the options provided by the user.
+func selectKeyManager(ctx *cli.Context) (keymanager.KeyManager, error) {
+	if unencryptedKeys := ctx.String(flags.UnencryptedKeysFlag.Name); unencryptedKeys != "" {
+		// Fetch keys from unencrypted store.
+		path, err := filepath.Abs(unencryptedKeys)
+		if err != nil {
+			return nil, err
+		}
+		r, err := os.Open(path)
+		if err != nil {
+			return nil, err
+		}
+		defer r.Close()
+		return keymanager.NewUnencrypted(r)
+	}
+
+	if numValidatorKeys := ctx.GlobalUint64(flags.InteropNumValidators.Name); numValidatorKeys > 0 {
+		// Generate keys from interop seed.
+		return keymanager.NewInterop(numValidatorKeys, ctx.GlobalUint64(flags.InteropStartIndex.Name))
+	}
+
+	// Fetch keys from keystore.
+	return keymanager.NewKeystore(ctx.String(flags.KeystorePathFlag.Name), ctx.String(flags.PasswordFlag.Name))
 }

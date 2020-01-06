@@ -5,7 +5,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"google.golang.org/grpc/codes"
@@ -36,7 +35,12 @@ func (vs *Server) CommitteeAssignment(ctx context.Context, req *pb.AssignmentReq
 		}
 	}
 
-	var assignments []*pb.AssignmentResponse_ValidatorAssignment
+	committeeAssignments, proposerIndexToSlot, err := helpers.CommitteeAssignments(s, req.EpochStart)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
+	}
+
+	var validatorAssignments []*pb.AssignmentResponse_ValidatorAssignment
 	for _, pubKey := range req.PublicKeys {
 		if ctx.Err() != nil {
 			return nil, status.Errorf(codes.Aborted, "Could not continue fetching assignments: %v", ctx.Err())
@@ -52,34 +56,21 @@ func (vs *Server) CommitteeAssignment(ctx context.Context, req *pb.AssignmentReq
 			return nil, status.Errorf(codes.Internal, "Could not fetch validator idx for public key %#x: %v", pubKey, err)
 		}
 		if ok {
-			st := vs.assignmentStatus(idx, s)
-			assignment.Status = st
-			if st == pb.ValidatorStatus_ACTIVE {
-				assignment, err = vs.assignment(idx, s, req.EpochStart)
-				if err != nil {
-					return nil, status.Errorf(codes.Internal, "Could not fetch assignment for public key %#x: %v", pubKey, err)
-				}
+			ca, ok := committeeAssignments[idx]
+			if ok {
+				assignment.Committee = ca.Committee
+				assignment.Status = pb.ValidatorStatus_ACTIVE
 				assignment.PublicKey = pubKey
+				assignment.AttesterSlot = ca.AttesterSlot
+				assignment.ProposerSlot = proposerIndexToSlot[idx]
+				assignment.CommitteeIndex = ca.CommitteeIndex
 			}
 		}
-		assignments = append(assignments, assignment)
+
+		validatorAssignments = append(validatorAssignments, assignment)
 	}
 
 	return &pb.AssignmentResponse{
-		ValidatorAssignment: assignments,
-	}, nil
-}
-
-func (vs *Server) assignment(idx uint64, beaconState *pbp2p.BeaconState, epoch uint64) (*pb.AssignmentResponse_ValidatorAssignment, error) {
-	committee, committeeIndex, aSlot, pSlot, err := helpers.CommitteeAssignment(beaconState, epoch, idx)
-	if err != nil {
-		return nil, err
-	}
-	return &pb.AssignmentResponse_ValidatorAssignment{
-		Committee:      committee,
-		CommitteeIndex: committeeIndex,
-		AttesterSlot:   aSlot,
-		ProposerSlot:   pSlot,
-		Status:         vs.assignmentStatus(idx, beaconState),
+		ValidatorAssignment: validatorAssignments,
 	}, nil
 }

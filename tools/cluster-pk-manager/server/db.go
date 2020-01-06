@@ -260,7 +260,8 @@ func (d *db) KeyMap() ([][]byte, map[[48]byte]keyMap, error) {
 			for i, pk := range pks.PrivateKeys {
 				seckey, err := bls.SecretKeyFromBytes(pk)
 				if err != nil {
-					return err
+					log.WithError(err).Warn("Could not deserialize secret key... removing")
+					return tx.Bucket(assignedPkBucket).Delete(k)
 				}
 
 				keytoSet := bytesutil.ToBytes48(seckey.PublicKey().Marshal())

@@ -33,8 +33,9 @@ func setup(t *testing.T) (*validator, *mocks, func()) {
 		attesterClient:   m.attesterClient,
 		validatorClient:  m.validatorClient,
 		aggregatorClient: m.aggregatorClient,
-		keys:             keyMap,
+		keyManager:       testKeyManager,
 		graffiti:         []byte{},
+		attLogs:          make(map[[32]byte]*attSubmitted),
 	}
 
 	return validator, m, ctrl.Finish

@@ -34,10 +34,7 @@ func (bs *Server) ListBlocks(
 
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListBlocksRequest_Epoch:
-		startSlot := q.Epoch * params.BeaconConfig().SlotsPerEpoch
-		endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch - 1
-
-		blks, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot))
+		blks, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartEpoch(q.Epoch).SetEndEpoch(q.Epoch))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Failed to get blocks: %v", err)
 		}
@@ -192,7 +189,9 @@ func (bs *Server) StreamChainHead(_ *ptypes.Empty, stream ethpb.BeaconChain_Stre
 				if err != nil {
 					return status.Errorf(codes.Internal, "Could not retrieve chain head: %v", err)
 				}
-				return stream.Send(res)
+				if err := stream.Send(res); err != nil {
+					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+				}
 			}
 		case <-stateSub.Err():
 			return status.Error(codes.Aborted, "Subscriber closed, exiting goroutine")
@@ -206,32 +205,27 @@ func (bs *Server) StreamChainHead(_ *ptypes.Empty, stream ethpb.BeaconChain_Stre
 
 // Retrieve chain head information from the DB and the current beacon state.
 func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, error) {
-	headState, err := bs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
-	}
-
 	headBlock := bs.HeadFetcher.HeadBlock()
 	headBlockRoot, err := ssz.SigningRoot(headBlock)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head block root: %v", err)
 	}
 
-	finalizedCheckpoint := headState.FinalizedCheckpoint
+	finalizedCheckpoint := bs.FinalizationFetcher.FinalizedCheckpt()
 	b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(finalizedCheckpoint.Root))
 	if err != nil || b == nil {
 		return nil, status.Error(codes.Internal, "Could not get finalized block")
 	}
 	finalizedSlot := b.Slot
 
-	justifiedCheckpoint := headState.CurrentJustifiedCheckpoint
+	justifiedCheckpoint := bs.FinalizationFetcher.CurrentJustifiedCheckpt()
 	b, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(justifiedCheckpoint.Root))
 	if err != nil || b == nil {
 		return nil, status.Error(codes.Internal, "Could not get justified block")
 	}
 	justifiedSlot := b.Slot
 
-	prevJustifiedCheckpoint := headState.PreviousJustifiedCheckpoint
+	prevJustifiedCheckpoint := bs.FinalizationFetcher.PreviousJustifiedCheckpt()
 	b, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(prevJustifiedCheckpoint.Root))
 	if err != nil || b == nil {
 		return nil, status.Error(codes.Internal, "Could not get prev justified block")

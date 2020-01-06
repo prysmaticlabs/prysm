@@ -13,7 +13,7 @@ import (
 // chunkWriter writes the given message as a chunked response to the given network
 // stream.
 // response_chunk ::= | <result> | <encoding-dependent-header> | <encoded-payload>
-func (r *RegularSync) chunkWriter(stream libp2pcore.Stream, msg interface{}) error {
+func (r *Service) chunkWriter(stream libp2pcore.Stream, msg interface{}) error {
 	setStreamWriteDeadline(stream, defaultWriteDuration)
 	return WriteChunk(stream, r.p2p.Encoding(), msg)
 }

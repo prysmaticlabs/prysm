@@ -25,7 +25,7 @@ func TestGoodByeRPCHandler_Disconnects_With_Peer(t *testing.T) {
 	d := db.SetupDB(t)
 	defer db.TeardownDB(t, d)
 
-	r := &RegularSync{
+	r := &Service{
 		db:  d,
 		p2p: p1,
 	}
