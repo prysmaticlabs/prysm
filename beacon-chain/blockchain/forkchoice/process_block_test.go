@@ -541,7 +541,7 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 	}
 	store.justifiedCheckpt = &ethpb.Checkpoint{Root: []byte{'A'}}
 	store.bestJustifiedCheckpt = &ethpb.Checkpoint{Root: []byte{'A'}}
-
+	store.initSyncState[r] = &pb.BeaconState{}
 	if err := db.SaveState(ctx, &pb.BeaconState{}, r); err != nil {
 		t.Fatal(err)
 	}
