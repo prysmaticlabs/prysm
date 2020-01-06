@@ -53,7 +53,8 @@ func (vs *Server) CommitteeAssignment(ctx context.Context, req *pb.AssignmentReq
 
 		idx, ok, err := vs.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not fetch validator idx for public key %#x: %v", pubKey, err)
+			log.Warnf("Could not fetch validator idx for public key %#x: %v", pubKey, err)
+			ok = false
 		}
 		if ok {
 			ca, ok := committeeAssignments[idx]
@@ -66,7 +67,6 @@ func (vs *Server) CommitteeAssignment(ctx context.Context, req *pb.AssignmentReq
 				assignment.CommitteeIndex = ca.CommitteeIndex
 			}
 		}
-
 		validatorAssignments = append(validatorAssignments, assignment)
 	}
 
