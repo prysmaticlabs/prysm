@@ -58,11 +58,12 @@ func TestStatus_CredentialError(t *testing.T) {
 
 func TestRPC_InsecureEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
-	chainService := &mock.ChainService{}
+	chainService := &mock.ChainService{Genesis: time.Now()}
 	rpcService := NewService(context.Background(), &Config{
 		Port:                "7777",
 		SyncService:         &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:       chainService,
+		GenesisTimeFetcher:  chainService,
 		AttestationReceiver: chainService,
 		HeadFetcher:         chainService,
 		POWChainService:     &mockPOW.POWChain{},
