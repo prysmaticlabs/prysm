@@ -2,6 +2,7 @@ package endtoend
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"math/big"
