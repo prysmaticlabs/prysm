@@ -77,6 +77,10 @@ var (
 		Name:  "fast-assignments",
 		Usage: "Use new algorithm for computing committee assignments",
 	}
+	saveDepositData = cli.BoolFlag{
+		Name:  "save-deposit-data",
+		Usage: "Enable of the saving of deposit related data",
+	}
 )
 
 // Deprecated flags list.
@@ -176,4 +180,5 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableShuffledIndexCache,
 	enableSkipSlotsCache,
 	fastCommitteeAssignmentsFlag,
+	saveDepositData,
 }...)

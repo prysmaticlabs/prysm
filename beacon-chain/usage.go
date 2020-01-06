@@ -86,7 +86,6 @@ var appHelpFlagGroups = []flagGroup{
 			flags.KeyFlag,
 			flags.GRPCGatewayPort,
 			flags.HTTPWeb3ProviderFlag,
-			flags.SaveDepositData,
 		},
 	},
 	{

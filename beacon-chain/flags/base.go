@@ -56,11 +56,4 @@ var (
 		Usage: "The required number of valid peers to connect with before syncing.",
 		Value: 3,
 	}
-
-	// SaveDepositData specifies the beacon node to save all the deposit related logs and data
-	// to disk, so that on a restart we will not have to re-process all the deposit logs again.
-	SaveDepositData = cli.BoolFlag{
-		Name:  "save-deposit-data",
-		Usage: "Enable of the saving of deposit related data",
-	}
 )

@@ -17,7 +17,6 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -80,7 +79,7 @@ func (s *Service) ProcessLog(ctx context.Context, depositLog gethTypes.Log) erro
 		if err := s.ProcessDepositLog(ctx, depositLog); err != nil {
 			return errors.Wrap(err, "Could not process deposit log")
 		}
-		if flags.Get().EnableSavingOfDepositData && s.lastReceivedMerkleIndex%eth1DataSavingInterval == 0 {
+		if featureconfig.Get().EnableSavingOfDepositData && s.lastReceivedMerkleIndex%eth1DataSavingInterval == 0 {
 			eth1Data := &protodb.ETH1ChainData{
 				CurrentEth1Data:   s.latestEth1Data,
 				ChainstartData:    s.chainStartData,

@@ -25,11 +25,11 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
@@ -194,7 +194,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		preGenesisState:         state.EmptyGenesisState(),
 	}
 
-	if flags.Get().EnableSavingOfDepositData {
+	if featureconfig.Get().EnableSavingOfDepositData {
 		eth1Data, err := config.BeaconDB.PowchainData(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to retrieve eth1 data")

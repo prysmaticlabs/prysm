@@ -14,7 +14,6 @@ type GlobalFlags struct {
 	EnableArchivedBlocks              bool
 	EnableArchivedAttestations        bool
 	MinimumSyncPeers                  int
-	EnableSavingOfDepositData         bool
 }
 
 var globalConfig *GlobalFlags
@@ -47,9 +46,6 @@ func ConfigureGlobalFlags(ctx *cli.Context) {
 	}
 	if ctx.GlobalBool(ArchiveAttestationsFlag.Name) {
 		cfg.EnableArchivedAttestations = true
-	}
-	if ctx.GlobalBool(SaveDepositData.Name) {
-		cfg.EnableSavingOfDepositData = true
 	}
 	configureMinimumPeers(ctx, cfg)
 
