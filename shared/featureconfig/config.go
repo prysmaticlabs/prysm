@@ -35,7 +35,6 @@ type Flags struct {
 	EnableSnappyDBCompression bool   // EnableSnappyDBCompression in the database.
 	InitSyncCacheState        bool   // InitSyncCacheState caches state during initial sync.
 	KafkaBootstrapServers     string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
-	NewCommitteeAssignments   bool   // NewCommitteeAssignments uses the new committee assignments algorithm.
 	EnableSavingOfDepositData bool   // EnableSavingOfDepositData allows the saving of eth1 related data such as deposits,chain data to be saved.
 
 	// Cache toggles.
@@ -119,10 +118,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(initSyncCacheState.Name) {
 		log.Warn("Enabled initial sync cache state mode.")
 		cfg.InitSyncCacheState = true
-	}
-	if ctx.GlobalBool(fastCommitteeAssignmentsFlag.Name) {
-		log.Warn("Enabled fast committee assignments algorithm.")
-		cfg.NewCommitteeAssignments = true
 	}
 	if ctx.GlobalBool(saveDepositData.Name) {
 		log.Warn("Enabled saving of eth1 related chain/deposit data.")

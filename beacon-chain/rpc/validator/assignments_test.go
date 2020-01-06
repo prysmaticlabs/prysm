@@ -15,16 +15,10 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func init() {
-	fc := featureconfig.Get()
-	fc.NewCommitteeAssignments = true
-	featureconfig.Init(fc)
-}
 
 func TestGetDuties_NextEpoch_WrongPubkeyLength(t *testing.T) {
 	db := dbutil.SetupDB(t)
