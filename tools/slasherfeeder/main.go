@@ -8,17 +8,15 @@ import (
 	"sync"
 	"time"
 
-	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
-
-	"github.com/pkg/errors"
-
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -66,7 +64,7 @@ func main() {
 		panic(err)
 	}
 	log.Infof("finalized epoch: %v", cp.Epoch)
-	for e := uint64(0); e < cp.Epoch; e++ {
+	for e := uint64(8653); e < cp.Epoch; e++ {
 		atts, err := d.Attestations(ctx, filters.NewFilter().SetTargetEpoch(e))
 		bcs, err := ListBeaconCommittees(ctx, d, &ethpb.ListCommitteesRequest{
 			QueryFilter: &ethpb.ListCommitteesRequest_Epoch{
@@ -74,7 +72,8 @@ func main() {
 			},
 		})
 		if err != nil {
-			panic(err)
+			log.Errorf("error while trying to ListBeaconCommittees: %v", err)
+			continue
 		}
 		start := time.Now()
 
@@ -110,7 +109,9 @@ func main() {
 
 		}
 		elapsed := time.Since(start)
-		log.Infof("detecting slashable events on: %d attestations from epoch: %d took: %d on average: %d per attestation", len(atts), e, elapsed.Milliseconds(), elapsed.Milliseconds()/int64(len(atts)))
+		if len(atts) > 0 && e%100 == 0 {
+			log.Infof("detecting slashable events on: %d attestations from epoch: %d took: %d on average: %d per attestation", len(atts), e, elapsed.Milliseconds(), elapsed.Milliseconds()/int64(len(atts)))
+		}
 
 	}
 	//errorWg.Wait()
