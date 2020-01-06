@@ -29,7 +29,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	contractAddr, keystorePath, eth1PID := startEth1(t, tmpPath)
 	config.contractAddr = contractAddr
 	beaconNodes := startBeaconNodes(t, config)
-	valClients := initializeValidators(t, config, keystorePath, beaconNodes)
+	valClients := initializeValidators(t, config, keystorePath)
 	processIDs := []int{eth1PID}
 	for _, vv := range valClients {
 		processIDs = append(processIDs, vv.processID)
@@ -57,6 +57,12 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	if err := waitForTextInFile(beaconLogFile, "Sending genesis time notification"); err != nil {
 		t.Fatalf("failed to find genesis in logs, this means the chain did not start: %v", err)
 	}
+
+	// Failing early in case chain doesn't start.
+	if t.Failed() {
+		return
+	}
+
 	conn, err := grpc.Dial("127.0.0.1:4000", grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("Failed to dial: %v", err)
@@ -74,7 +80,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	currentEpoch := uint64(0)
 	ticker := GetEpochTicker(genesisTime, epochSeconds)
 	for c := range ticker.C() {
-		if c >= config.epochsToRun {
+		if c >= config.epochsToRun || t.Failed()  {
 			ticker.Done()
 			break
 		}
@@ -142,11 +148,11 @@ func killProcesses(t *testing.T, pIDs []int) {
 
 func logOutput(t *testing.T, tmpPath string) {
 	if t.Failed() {
-		beacon1LogFile, err := os.Open(path.Join(tmpPath, "beacon-1.log"))
+		beacon0LogFile, err := os.Open(path.Join(tmpPath, "beacon-0.log"))
 		if err != nil {
 			t.Fatal(err)
 		}
-		scanner := bufio.NewScanner(beacon1LogFile)
+		scanner := bufio.NewScanner(beacon0LogFile)
 		t.Log("Beacon chain node output:")
 		for scanner.Scan() {
 			currentLine := scanner.Text()
