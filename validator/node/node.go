@@ -85,13 +85,14 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 	}
 
 	clearFlag := ctx.GlobalBool(cmd.ClearDB.Name)
-	if clearFlag {
+	forceClearFlag := ctx.GlobalBool(cmd.ForceClearDB.Name)
+	if clearFlag || forceClearFlag{
 		pubkeys, err := keyManager.FetchValidatingKeys()
 		if err != nil {
 			return nil, err
 		}
 		dataDir := ctx.GlobalString(cmd.DataDirFlag.Name)
-		if err := clearDB(dataDir, pubkeys); err != nil {
+		if err := clearDB(dataDir, pubkeys, forceClearFlag); err != nil {
 			return nil, err
 		}
 	}
@@ -206,13 +207,18 @@ func selectKeyManager(ctx *cli.Context) (keymanager.KeyManager, error) {
 	return keymanager.NewKeystore(ctx.String(flags.KeystorePathFlag.Name), ctx.String(flags.PasswordFlag.Name))
 }
 
-func clearDB(dataDir string, pubkeys [][48]byte) error {
-	actionText := "This will delete your validator's historical actions database stored in your data directory. " +
-		"This may lead to potential slashing - do you want to proceed? (Y/N)"
-	deniedText := "The historical actions database will not be deleted. No changes have been made."
-	clearDBConfirmed, err := cmd.ConfirmAction(actionText, deniedText)
-	if err != nil {
-		return errors.Wrapf(err, "Could not create DB in dir %s", dataDir)
+func clearDB(dataDir string, pubkeys [][48]byte, force bool) error {
+	var err error
+	clearDBConfirmed := force
+
+	if !force {
+		actionText := "This will delete your validator's historical actions database stored in your data directory. " +
+			"This may lead to potential slashing - do you want to proceed? (Y/N)"
+		deniedText := "The historical actions database will not be deleted. No changes have been made."
+		clearDBConfirmed, err = cmd.ConfirmAction(actionText, deniedText)
+		if err != nil {
+			return errors.Wrapf(err, "Could not create DB in dir %s", dataDir)
+		}
 	}
 
 	if clearDBConfirmed {

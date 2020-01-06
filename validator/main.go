@@ -47,6 +47,7 @@ var appFlags = []cli.Flag{
 	cmd.VerbosityFlag,
 	cmd.DataDirFlag,
 	cmd.ClearDB,
+	cmd.ForceClearDB,
 	cmd.EnableTracingFlag,
 	cmd.TracingProcessNameFlag,
 	cmd.TracingEndpointFlag,
