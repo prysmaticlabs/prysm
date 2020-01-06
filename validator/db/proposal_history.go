@@ -51,10 +51,7 @@ func (db *Store) SaveProposalHistory(ctx context.Context, pubKey []byte, proposa
 
 	err = db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
-		if err := bucket.Put(pubKey, enc); err != nil {
-			return errors.Wrap(err, "failed to save the proposal history")
-		}
-		return nil
+		return bucket.Put(pubKey, enc)
 	})
 	return err
 }
