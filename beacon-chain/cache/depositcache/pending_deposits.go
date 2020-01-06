@@ -48,6 +48,18 @@ func (dc *DepositCache) InsertPendingDeposit(ctx context.Context, d *ethpb.Depos
 	span.AddAttributes(trace.Int64Attribute("count", int64(len(dc.pendingDeposits))))
 }
 
+// InsertPendingDepositContainers inserts a set of deposit containers into our pending deposit cache.
+func (dc *DepositCache) InsertPendingDepositContainers(ctx context.Context, ctrs []*dbpb.DepositContainer) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.InsertPendingDepositContainers")
+	defer span.End()
+	dc.depositsLock.Lock()
+	defer dc.depositsLock.Unlock()
+
+	sort.SliceStable(ctrs, func(i int, j int) bool { return ctrs[i].Index < ctrs[j].Index })
+	dc.pendingDeposits = ctrs
+	pendingDepositsCount.Add(float64(len(ctrs)))
+}
+
 // PendingDeposits returns a list of deposits until the given block number
 // (inclusive). If no block is specified then this method returns all pending
 // deposits.

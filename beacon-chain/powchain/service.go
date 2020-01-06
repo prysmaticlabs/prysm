@@ -403,6 +403,7 @@ func (s *Service) initDataFromContract() error {
 
 func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.DepositContainer) error {
 	s.depositCache.InsertDepositContainers(ctx, ctrs)
+	s.depositCache.InsertDepositContainers(ctx, ctrs)
 	currentState, err := s.beaconDB.HeadState(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get head state")
@@ -415,9 +416,8 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 	}
 	currIndex := currentState.Eth1DepositIndex
 	validDepositsCount.Add(float64(currIndex + 1))
-	for _, c := range ctrs[currIndex:] {
-		s.depositCache.InsertPendingDeposit(ctx, c.Deposit, c.Eth1BlockHeight, c.Index, bytesutil.ToBytes32(c.DepositRoot))
-	}
+
+	s.depositCache.PrunePendingDeposits(ctx, int(currIndex))
 	return nil
 }
 
