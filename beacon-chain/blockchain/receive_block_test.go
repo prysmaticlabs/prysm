@@ -13,6 +13,7 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -154,7 +155,7 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	stateRoot, err := ssz.HashTreeRoot(beaconState)
+	stateRoot, err := stateutil.HashTreeRootState(beaconState)
 	if err != nil {
 		t.Fatal(err)
 	}
