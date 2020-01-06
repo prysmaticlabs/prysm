@@ -22,6 +22,7 @@ type Server struct {
 	ChainStartFetcher   powchain.ChainStartFetcher
 	HeadFetcher         blockchain.HeadFetcher
 	FinalizationFetcher blockchain.FinalizationFetcher
+	participationFetcher blockchain.ParticipationFetcher
 	StateNotifier       statefeed.Notifier
 	Pool                attestations.Pool
 	IncomingAttestation chan *ethpb.Attestation

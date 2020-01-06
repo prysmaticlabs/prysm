@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -51,6 +52,8 @@ type Service struct {
 	headLock          sync.RWMutex
 	stateNotifier     statefeed.Notifier
 	genesisRoot       [32]byte
+	epochParticipation    map[uint64]*precompute.Balance
+	epochParticipationLock          sync.RWMutex
 }
 
 // Config options for the service.
@@ -82,6 +85,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		canonicalRoots:    make(map[uint64][]byte),
 		maxRoutines:       cfg.MaxRoutines,
 		stateNotifier:     cfg.StateNotifier,
+		epochParticipation: make(map[uint64]*precompute.Balance),
 	}, nil
 }
 

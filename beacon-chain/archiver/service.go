@@ -26,6 +26,7 @@ type Service struct {
 	cancel            context.CancelFunc
 	beaconDB          db.Database
 	headFetcher       blockchain.HeadFetcher
+	participationFetcher blockchain.ParticipationFetcher
 	stateNotifier     statefeed.Notifier
 	lastArchivedEpoch uint64
 }
@@ -113,8 +114,13 @@ func (s *Service) archiveActiveSetChanges(ctx context.Context, headState *pb.Bea
 
 // We compute participation metrics by first retrieving the head state and
 // matching validator attestations during the epoch.
-func (s *Service) archiveParticipation(ctx context.Context, headState *pb.BeaconState, epoch uint64) error {
-	participation := &ethpb.ValidatorParticipation{}
+func (s *Service) archiveParticipation(ctx context.Context, epoch uint64) error {
+	p := s.participationFetcher.Participation(epoch)
+	participation := &ethpb.ValidatorParticipation{
+		EligibleEther: p.CurrentEpoch,
+		VotedEther: p.CurrentEpochTargetAttesters,
+		GlobalParticipationRate: float32(p.CurrentEpochTargetAttesters/p.CurrentEpoch),
+	}
 	return s.beaconDB.SaveArchivedValidatorParticipation(ctx, epoch, participation)
 }
 
@@ -158,7 +164,7 @@ func (s *Service) run(ctx context.Context) {
 					log.WithError(err).Error("Could not archive active validator set changes")
 					continue
 				}
-				if err := s.archiveParticipation(ctx, headState, epochToArchive); err != nil {
+				if err := s.archiveParticipation(ctx, epochToArchive); err != nil {
 					log.WithError(err).Error("Could not archive validator participation")
 					continue
 				}

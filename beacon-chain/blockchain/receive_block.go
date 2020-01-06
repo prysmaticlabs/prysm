@@ -9,8 +9,10 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -122,6 +124,10 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 	// Log state transition data.
 	logStateTransitionData(blockCopy.Block, root[:])
 
+	s.epochParticipationLock.Lock()
+	defer s.epochParticipationLock.Unlock()
+	s.epochParticipation[helpers.SlotToEpoch(blockCopy.Block.Slot)] = precompute.Balances
+
 	processedBlkNoPubsub.Inc()
 
 	return nil
@@ -167,6 +173,10 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 
 	// Log state transition data.
 	logStateTransitionData(blockCopy.Block, root[:])
+
+	s.epochParticipationLock.Lock()
+	defer s.epochParticipationLock.Unlock()
+	s.epochParticipation[helpers.SlotToEpoch(blockCopy.Block.Slot)] = precompute.Balances
 
 	processedBlkNoPubsubForkchoice.Inc()
 	return nil
@@ -225,6 +235,10 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 		"attestations": len(blockCopy.Block.Body.Attestations),
 		"deposits":     len(blockCopy.Block.Body.Deposits),
 	}).Debug("Finished applying state transition")
+
+	s.epochParticipationLock.Lock()
+	defer s.epochParticipationLock.Unlock()
+	s.epochParticipation[helpers.SlotToEpoch(blockCopy.Block.Slot)] = precompute.Balances
 
 	return nil
 }
