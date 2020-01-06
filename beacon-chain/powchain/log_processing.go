@@ -79,7 +79,7 @@ func (s *Service) ProcessLog(ctx context.Context, depositLog gethTypes.Log) erro
 		if err := s.ProcessDepositLog(ctx, depositLog); err != nil {
 			return errors.Wrap(err, "Could not process deposit log")
 		}
-		if s.lastReceivedMerkleIndex%eth1DataSavingInterval == 0 {
+		if featureconfig.Get().EnableSavingOfDepositData && s.lastReceivedMerkleIndex%eth1DataSavingInterval == 0 {
 			eth1Data := &protodb.ETH1ChainData{
 				CurrentEth1Data:   s.latestEth1Data,
 				ChainstartData:    s.chainStartData,

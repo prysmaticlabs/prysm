@@ -26,7 +26,7 @@ func (k *Store) SavePowchainData(ctx context.Context, data *db.ETH1ChainData) er
 
 // PowchainData retrieves the powchain data.
 func (k *Store) PowchainData(ctx context.Context) (*db.ETH1ChainData, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SavePowchainData")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.PowchainData")
 	defer span.End()
 
 	var data *db.ETH1ChainData
