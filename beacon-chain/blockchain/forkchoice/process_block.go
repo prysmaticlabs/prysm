@@ -474,16 +474,9 @@ func (s *Store) updateJustified(ctx context.Context, state *pb.BeaconState) erro
 		if err := s.db.SaveState(ctx, justifiedState, justifiedRoot); err != nil {
 			return errors.Wrap(err, "could not save justified state")
 		}
-		if err := s.db.SaveJustifiedCheckpoint(ctx, state.CurrentJustifiedCheckpoint); err != nil {
-			return errors.Wrap(err, "could not save justified checkpoint")
-		}
-	} else {
-		if err := s.db.SaveJustifiedCheckpoint(ctx, state.CurrentJustifiedCheckpoint); err != nil {
-			return errors.Wrap(err, "could not save justified checkpoint")
-		}
 	}
 
-	return nil
+	return s.db.SaveJustifiedCheckpoint(ctx, state.CurrentJustifiedCheckpoint)
 }
 
 // currentSlot returns the current slot based on time.
