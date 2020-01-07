@@ -113,12 +113,27 @@ func (bs *Server) ListAttestations(
 	}, nil
 }
 
-// StreamAttestations to clients every single time a new attestation is received.
-// TODO(#4184): Implement.
+// StreamAttestations to clients at the end of every slot. This method retrieves the
+// aggregated attestations currently in the pool at the start of a slot and sends
+// them over a gRPC stream.
 func (bs *Server) StreamAttestations(
-	_ *ptypes.Empty, _ ethpb.BeaconChain_StreamAttestationsServer,
+	_ *ptypes.Empty, stream ethpb.BeaconChain_StreamAttestationsServer,
 ) error {
-	return status.Error(codes.Unimplemented, "Not yet implemented")
+	for {
+		select {
+		case <-bs.SlotTicker.C():
+			atts := bs.Pool.AggregatedAttestations()
+			for i := 0; i < len(atts); i++ {
+				if err := stream.Send(atts[i]); err != nil {
+					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+				}
+			}
+		case <-bs.Ctx.Done():
+			return status.Error(codes.Canceled, "Context canceled")
+		case <-stream.Context().Done():
+			return status.Error(codes.Canceled, "Context canceled")
+		}
+	}
 }
 
 // AttestationPool retrieves pending attestations.

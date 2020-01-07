@@ -74,20 +74,15 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		trace.Int64Attribute("numAttestations", int64(len(b.Body.Attestations))),
 	)
 
-	res, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubKey[:]})
-	if err != nil {
-		log.WithError(err).Error("Failed to get validator index")
-		return
-	}
-
-	log.WithField("signature", fmt.Sprintf("%#x", blk.Signature)).Debug("block signature")
+	v.pubKeyToIDLock.RLock()
+	defer v.pubKeyToIDLock.RUnlock()
 	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
 	log.WithFields(logrus.Fields{
 		"slot":            b.Slot,
 		"blockRoot":       blkRoot,
 		"numAttestations": len(b.Body.Attestations),
 		"numDeposits":     len(b.Body.Deposits),
-		"proposerIndex":   res.Index,
+		"proposerIndex":   v.pubKeyToID[pubKey],
 	}).Info("Submitted new block")
 }
 
@@ -105,9 +100,12 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get domain data")
 	}
-	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, epoch)
-	randaoReveal := v.keys[pubKey].SecretKey.Sign(buf, domain.SignatureDomain)
+	var buf [32]byte
+	binary.LittleEndian.PutUint64(buf[:], epoch)
+	randaoReveal, err := v.keyManager.Sign(pubKey, buf, domain.SignatureDomain)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not sign reveal")
+	}
 	return randaoReveal.Marshal(), nil
 }
 
@@ -124,6 +122,9 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get signing root")
 	}
-	sig := v.keys[pubKey].SecretKey.Sign(root[:], domain.SignatureDomain)
+	sig, err := v.keyManager.Sign(pubKey, root, domain.SignatureDomain)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get signing root")
+	}
 	return sig.Marshal(), nil
 }

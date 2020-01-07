@@ -19,6 +19,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/stateutil"
 	"go.opencensus.io/trace"
 )
 
@@ -44,8 +45,6 @@ type Store struct {
 	prevFinalizedCheckpt  *ethpb.Checkpoint
 	checkpointState       *cache.CheckpointStateCache
 	checkpointStateLock   sync.Mutex
-	seenAtts              map[[32]byte]bool
-	seenAttsLock          sync.Mutex
 	genesisTime           uint64
 	bestJustifiedCheckpt  *ethpb.Checkpoint
 	latestVoteMap         map[uint64]*pb.ValidatorLatestVote
@@ -65,7 +64,6 @@ func NewForkChoiceService(ctx context.Context, db db.Database) *Store {
 		db:              db,
 		checkpointState: cache.NewCheckpointStateCache(),
 		latestVoteMap:   make(map[uint64]*pb.ValidatorLatestVote),
-		seenAtts:        make(map[[32]byte]bool),
 		initSyncState:   make(map[[32]byte]*pb.BeaconState),
 	}
 }
@@ -127,7 +125,7 @@ func (s *Store) cacheGenesisState(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	stateRoot, err := ssz.HashTreeRoot(genesisState)
+	stateRoot, err := stateutil.HashTreeRootState(genesisState)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash genesis state")
 	}
@@ -155,6 +153,11 @@ func (s *Store) cacheGenesisState(ctx context.Context) error {
 func (s *Store) ancestor(ctx context.Context, root []byte, slot uint64) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "forkchoice.ancestor")
 	defer span.End()
+
+	// Stop recursive ancestry lookup if context is cancelled.
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 
 	signed, err := s.db.Block(ctx, bytesutil.ToBytes32(root))
 	if err != nil {

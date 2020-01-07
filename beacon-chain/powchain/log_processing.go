@@ -79,12 +79,13 @@ func (s *Service) ProcessLog(ctx context.Context, depositLog gethTypes.Log) erro
 		if err := s.ProcessDepositLog(ctx, depositLog); err != nil {
 			return errors.Wrap(err, "Could not process deposit log")
 		}
-		if s.lastReceivedMerkleIndex%eth1DataSavingInterval == 0 {
+		if featureconfig.Get().EnableSavingOfDepositData && s.lastReceivedMerkleIndex%eth1DataSavingInterval == 0 {
 			eth1Data := &protodb.ETH1ChainData{
-				CurrentEth1Data: s.latestEth1Data,
-				ChainstartData:  s.chainStartData,
-				BeaconState:     s.preGenesisState,
-				Trie:            s.depositTrie.ToProto(),
+				CurrentEth1Data:   s.latestEth1Data,
+				ChainstartData:    s.chainStartData,
+				BeaconState:       s.preGenesisState,
+				Trie:              s.depositTrie.ToProto(),
+				DepositContainers: s.depositCache.AllDepositContainers(ctx),
 			}
 			return s.beaconDB.SavePowchainData(ctx, eth1Data)
 		}
@@ -161,7 +162,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	}
 
 	// We always store all historical deposits in the DB.
-	s.depositCache.InsertDeposit(ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)), int(index), s.depositTrie.Root())
+	s.depositCache.InsertDeposit(ctx, deposit, depositLog.BlockNumber, int64(index), s.depositTrie.Root())
 	validData := true
 	if !s.chainStartData.Chainstarted {
 		s.chainStartData.ChainstartDeposits = append(s.chainStartData.ChainstartDeposits, deposit)
@@ -175,7 +176,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 			validData = false
 		}
 	} else {
-		s.depositCache.InsertPendingDeposit(ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)), int(index), s.depositTrie.Root())
+		s.depositCache.InsertPendingDeposit(ctx, deposit, depositLog.BlockNumber, int64(index), s.depositTrie.Root())
 	}
 	if validData {
 		log.WithFields(logrus.Fields{
@@ -228,12 +229,9 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 }
 
 func (s *Service) createGenesisTime(timeStamp uint64) uint64 {
-	if !featureconfig.Get().GenesisDelay {
-		return uint64(time.Unix(int64(timeStamp), 0).Add(30 * time.Second).Unix())
-	}
-	timeStampRdDown := timeStamp - timeStamp%params.BeaconConfig().SecondsPerDay
+	timeStampRdDown := timeStamp - timeStamp%params.BeaconConfig().MinGenesisDelay
 	// genesisTime will be set to the first second of the day, two days after it was triggered.
-	return timeStampRdDown + 2*params.BeaconConfig().SecondsPerDay
+	return timeStampRdDown + 2*params.BeaconConfig().MinGenesisDelay
 }
 
 // processPastLogs processes all the past logs from the deposit contract and

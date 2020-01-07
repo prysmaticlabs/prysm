@@ -61,7 +61,6 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 	config := &featureconfig.Flags{
 		EnableNewCache:           true,
 		EnableShuffledIndexCache: true,
-		EnableBLSPubkeyCache:     true,
 	}
 	featureconfig.Init(config)
 	SetConfig()
@@ -80,7 +79,7 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 	// some attestations in block are from previous epoch
 	currentSlot := beaconState.Slot
 	beaconState.Slot -= params.BeaconConfig().SlotsPerEpoch
-	if err := helpers.UpdateCommitteeCache(beaconState); err != nil {
+	if err := helpers.UpdateCommitteeCache(beaconState, helpers.CurrentEpoch(beaconState)); err != nil {
 		b.Fatal(err)
 	}
 	beaconState.Slot = currentSlot
@@ -102,7 +101,6 @@ func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
 	config := &featureconfig.Flags{
 		EnableNewCache:           true,
 		EnableShuffledIndexCache: true,
-		EnableBLSPubkeyCache:     true,
 	}
 	featureconfig.Init(config)
 	SetConfig()
@@ -116,7 +114,7 @@ func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
 	// some attestations in block are from previous epoch
 	currentSlot := beaconState.Slot
 	beaconState.Slot -= params.BeaconConfig().SlotsPerEpoch
-	if err := helpers.UpdateCommitteeCache(beaconState); err != nil {
+	if err := helpers.UpdateCommitteeCache(beaconState, helpers.CurrentEpoch(beaconState)); err != nil {
 		b.Fatal(err)
 	}
 	beaconState.Slot = currentSlot

@@ -17,9 +17,8 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/stateutil"
 )
 
 func TestStore_OnBlock(t *testing.T) {
@@ -29,7 +28,7 @@ func TestStore_OnBlock(t *testing.T) {
 
 	store := NewForkChoiceService(ctx, db)
 
-	genesisStateRoot, err := ssz.HashTreeRoot(&pb.BeaconState{})
+	genesisStateRoot, err := stateutil.HashTreeRootState(&pb.BeaconState{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -138,87 +137,6 @@ func TestStore_SaveNewValidators(t *testing.T) {
 	}
 }
 
-func TestStore_UpdateBlockAttestationVote(t *testing.T) {
-	ctx := context.Background()
-	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
-	params.UseMinimalConfig()
-
-	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
-
-	store := NewForkChoiceService(ctx, db)
-	r := [32]byte{'A'}
-	att := &ethpb.Attestation{
-		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
-			Target: &ethpb.Checkpoint{Epoch: 0, Root: r[:]},
-		},
-		AggregationBits: []byte{255},
-	}
-	if err := store.db.SaveState(ctx, beaconState, r); err != nil {
-		t.Fatal(err)
-	}
-
-	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
-	if err != nil {
-		t.Error(err)
-	}
-	indexedAtt, err := blocks.ConvertToIndexed(ctx, att, committee)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := store.updateBlockAttestationVote(ctx, att); err != nil {
-		t.Fatal(err)
-	}
-
-	for _, i := range indexedAtt.AttestingIndices {
-		v := store.latestVoteMap[i]
-		if !reflect.DeepEqual(v.Root, r[:]) {
-			t.Error("Attested roots don't match")
-		}
-	}
-}
-
-func TestStore_UpdateBlockAttestationsVote(t *testing.T) {
-	ctx := context.Background()
-	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
-	params.UseMinimalConfig()
-
-	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
-
-	store := NewForkChoiceService(ctx, db)
-	r := [32]byte{'A'}
-	atts := make([]*ethpb.Attestation, 5)
-	hashes := make([][32]byte, 5)
-	for i := 0; i < len(atts); i++ {
-		atts[i] = &ethpb.Attestation{
-			Data: &ethpb.AttestationData{
-				Source: &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
-				Target: &ethpb.Checkpoint{Epoch: 0, Root: r[:]},
-			},
-			AggregationBits: []byte{255},
-		}
-		h, _ := hashutil.HashProto(atts[i])
-		hashes[i] = h
-	}
-
-	if err := store.db.SaveState(ctx, beaconState, r); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := store.updateBlockAttestationsVotes(ctx, atts); err != nil {
-		t.Fatal(err)
-	}
-
-	for _, h := range hashes {
-		if !store.seenAtts[h] {
-			t.Error("Seen attestation did not get recorded")
-		}
-	}
-}
-
 func TestStore_SavesNewBlockAttestations(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
@@ -304,6 +222,9 @@ func TestRemoveStateSinceLastFinalized(t *testing.T) {
 			t.Fatal(err)
 		}
 		blockRoots = append(blockRoots, r)
+		if err := store.db.SaveHeadBlockRoot(ctx, r); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	// New finalized epoch: 1
@@ -477,6 +398,9 @@ func TestUpdateJustifiedCheckpoint_NoUpdate(t *testing.T) {
 			}
 			blockRoots = append(blockRoots, r)
 		}
+		if err := store.db.SaveHeadBlockRoot(ctx, blockRoots[0]); err != nil {
+			t.Fatal(err)
+		}
 		if err := store.rmStatesOlderThanLastFinalized(ctx, 10, 11); err != nil {
 			t.Fatal(err)
 		}
@@ -618,6 +542,10 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 	store.justifiedCheckpt = &ethpb.Checkpoint{Root: []byte{'A'}}
 	store.bestJustifiedCheckpt = &ethpb.Checkpoint{Root: []byte{'A'}}
 
+	if err := db.SaveState(ctx, &pb.BeaconState{}, r); err != nil {
+		t.Fatal(err)
+	}
+
 	// Could update
 	s := &pb.BeaconState{CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 1, Root: r[:]}}
 	if err := store.updateJustified(context.Background(), s); err != nil {
@@ -636,5 +564,47 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 
 	if store.bestJustifiedCheckpt.Epoch != 2 {
 		t.Error("Incorrect justified epoch in store")
+	}
+}
+
+func TestFilterBlockRoots_CanFilter(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	store := NewForkChoiceService(ctx, db)
+	fBlock := &ethpb.BeaconBlock{}
+	fRoot, _ := ssz.HashTreeRoot(fBlock)
+	hBlock := &ethpb.BeaconBlock{Slot: 1}
+	headRoot, _ := ssz.HashTreeRoot(hBlock)
+	if err := store.db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: fBlock}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveState(ctx, &pb.BeaconState{}, fRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: fRoot[:]}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: hBlock}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveState(ctx, &pb.BeaconState{}, headRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveHeadBlockRoot(ctx, headRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	roots := [][32]byte{{'C'}, {'D'}, headRoot, {'E'}, fRoot, {'F'}}
+	wanted := [][32]byte{{'C'}, {'D'}, {'E'}, {'F'}}
+
+	received, err := store.filterBlockRoots(ctx, roots)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(wanted, received) {
+		t.Error("Did not filter correctly")
 	}
 }

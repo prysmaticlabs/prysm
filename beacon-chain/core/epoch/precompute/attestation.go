@@ -11,6 +11,10 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// Balances stores balances such as prev/current total validator balances, attested balances and more.
+// It's used for metrics reporting.
+var Balances *Balance
+
 // ProcessAttestations process the attestations in state and update individual validator's pre computes,
 // it also tracks and updates epoch attesting balances.
 func ProcessAttestations(
@@ -48,6 +52,7 @@ func ProcessAttestations(
 	}
 
 	bp = UpdateBalance(vp, bp)
+	Balances = bp
 
 	return vp, bp, nil
 }

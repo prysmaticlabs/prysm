@@ -119,6 +119,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	if err != nil {
 		t.Fatalf("unable to setup chain service: %v", err)
 	}
+	chainService.genesisTime = time.Unix(1, 0) // non-zero time
 
 	return chainService
 }
@@ -134,7 +135,7 @@ func TestChainStartStop_Uninitialized(t *testing.T) {
 	stateSub := chainService.stateNotifier.StateFeed().Subscribe(stateSubChannel)
 
 	// Test the chain start state notifier.
-	genesisTime := time.Unix(0, 0)
+	genesisTime := time.Unix(1, 0)
 	chainService.Start()
 	event := &feed.Event{
 		Type: statefeed.ChainStarted,

@@ -14,6 +14,7 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"gopkg.in/yaml.v2"
 )
 
@@ -37,6 +38,8 @@ func TestGetHeadFromYaml(t *testing.T) {
 	}
 	var c *Config
 	err = yaml.Unmarshal(yamlFile, &c)
+
+	params.UseMainnetConfig()
 
 	for _, test := range c.TestCases {
 		db := testDB.SetupDB(t)

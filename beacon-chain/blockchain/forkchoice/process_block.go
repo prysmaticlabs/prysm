@@ -11,7 +11,6 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
@@ -19,7 +18,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
@@ -87,9 +85,6 @@ func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) er
 	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")
 	}
-	if err := s.updateBlockAttestationsVotes(ctx, b.Body.Attestations); err != nil {
-		return errors.Wrap(err, "could not update votes for attestations in block")
-	}
 
 	if err := s.db.SaveBlock(ctx, signed); err != nil {
 		return errors.Wrapf(err, "could not save block from slot %d", b.Slot)
@@ -108,7 +103,6 @@ func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) er
 	// Update finalized check point.
 	// Prune the block cache and helper caches on every new finalized epoch.
 	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
-		s.clearSeenAtts()
 		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint); err != nil {
 			return errors.Wrap(err, "could not save finalized checkpoint")
 		}
@@ -142,7 +136,7 @@ func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) er
 
 		// Update committees cache at epoch boundary slot.
 		if featureconfig.Get().EnableNewCache {
-			if err := helpers.UpdateCommitteeCache(postState); err != nil {
+			if err := helpers.UpdateCommitteeCache(postState, helpers.CurrentEpoch(postState)); err != nil {
 				return err
 			}
 		}
@@ -201,18 +195,15 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, signed *e
 	}
 
 	// Update justified check point.
-	if postState.CurrentJustifiedCheckpoint.Epoch > s.JustifiedCheckpt().Epoch {
-		s.justifiedCheckpt = postState.CurrentJustifiedCheckpoint
-		if err := s.db.SaveJustifiedCheckpoint(ctx, postState.CurrentJustifiedCheckpoint); err != nil {
-			return errors.Wrap(err, "could not save justified checkpoint")
+	if postState.CurrentJustifiedCheckpoint.Epoch > s.justifiedCheckpt.Epoch {
+		if err := s.updateJustified(ctx, postState); err != nil {
+			return err
 		}
 	}
 
 	// Update finalized check point.
 	// Prune the block cache and helper caches on every new finalized epoch.
 	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
-		s.clearSeenAtts()
-
 		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 		if endSlot > startSlot {
@@ -285,62 +276,6 @@ func (s *Store) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*pb
 	}
 
 	return preState, nil
-}
-
-// updateBlockAttestationsVotes checks the attestations in block and filter out the seen ones,
-// the unseen ones get passed to updateBlockAttestationVote for updating fork choice votes.
-func (s *Store) updateBlockAttestationsVotes(ctx context.Context, atts []*ethpb.Attestation) error {
-	s.seenAttsLock.Lock()
-	defer s.seenAttsLock.Unlock()
-
-	for _, att := range atts {
-		// If we have not seen the attestation yet
-		r, err := hashutil.HashProto(att)
-		if err != nil {
-			return err
-		}
-		if s.seenAtts[r] {
-			continue
-		}
-		if err := s.updateBlockAttestationVote(ctx, att); err != nil {
-			log.WithError(err).Warn("Attestation failed to update vote")
-		}
-		s.seenAtts[r] = true
-	}
-	return nil
-}
-
-// updateBlockAttestationVotes checks the attestation to update validator's latest votes.
-func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attestation) error {
-	tgt := att.Data.Target
-	baseState, err := s.db.State(ctx, bytesutil.ToBytes32(tgt.Root))
-	if err != nil {
-		return errors.Wrap(err, "could not get state for attestation tgt root")
-	}
-	if baseState == nil {
-		return errors.New("no state found in db with attestation tgt root")
-	}
-	committee, err := helpers.BeaconCommitteeFromState(baseState, att.Data.Slot, att.Data.CommitteeIndex)
-	if err != nil {
-		return err
-	}
-	indexedAtt, err := blocks.ConvertToIndexed(ctx, att, committee)
-	if err != nil {
-		return errors.Wrap(err, "could not convert attestation to indexed attestation")
-	}
-
-	s.voteLock.Lock()
-	defer s.voteLock.Unlock()
-	for _, i := range indexedAtt.AttestingIndices {
-		vote, ok := s.latestVoteMap[i]
-		if !ok || tgt.Epoch > vote.Epoch {
-			s.latestVoteMap[i] = &pb.ValidatorLatestVote{
-				Epoch: tgt.Epoch,
-				Root:  tgt.Root,
-			}
-		}
-	}
-	return nil
 }
 
 // verifyBlkPreState validates input block has a valid pre-state.
@@ -426,13 +361,6 @@ func (s *Store) saveNewBlockAttestations(ctx context.Context, atts []*ethpb.Atte
 	return nil
 }
 
-// clearSeenAtts clears seen attestations map, it gets called upon new finalization.
-func (s *Store) clearSeenAtts() {
-	s.seenAttsLock.Lock()
-	s.seenAttsLock.Unlock()
-	s.seenAtts = make(map[[32]byte]bool)
-}
-
 // rmStatesOlderThanLastFinalized deletes the states in db since last finalized check point.
 func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot uint64, endSlot uint64) error {
 	ctx, span := trace.StartSpan(ctx, "forkchoice.rmStatesBySlots")
@@ -475,6 +403,11 @@ func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot ui
 
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
 	roots, err := s.db.BlockRoots(ctx, filter)
+	if err != nil {
+		return err
+	}
+
+	roots, err = s.filterBlockRoots(ctx, roots)
 	if err != nil {
 		return err
 	}
@@ -603,4 +536,32 @@ func (s *Store) saveInitState(ctx context.Context, state *pb.BeaconState) error 
 		}
 	}
 	return nil
+}
+
+// This filters block roots that are not known as head root and finalized root in DB.
+// It serves as the last line of defence before we prune states.
+func (s *Store) filterBlockRoots(ctx context.Context, roots [][32]byte) ([][32]byte, error) {
+	f, err := s.db.FinalizedCheckpoint(ctx)
+	if err != nil {
+		return nil, err
+	}
+	fRoot := f.Root
+	h, err := s.db.HeadBlock(ctx)
+	if err != nil {
+		return nil, err
+	}
+	hRoot, err := ssz.SigningRoot(h)
+	if err != nil {
+		return nil, err
+	}
+
+	filtered := make([][32]byte, 0, len(roots))
+	for _, root := range roots {
+		if bytes.Equal(root[:], fRoot[:]) || bytes.Equal(root[:], hRoot[:]) {
+			continue
+		}
+		filtered = append(filtered, root)
+	}
+
+	return filtered, nil
 }

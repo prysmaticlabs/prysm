@@ -70,17 +70,9 @@ func ExecuteStateTransition(
 	interop.WriteBlockToDisk(signed, false)
 	interop.WriteStateToDisk(state)
 
-	var postStateRoot [32]byte
-	if featureconfig.Get().EnableCustomStateSSZ {
-		postStateRoot, err = stateutil.HashTreeRootState(state)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not tree hash processed state")
-		}
-	} else {
-		postStateRoot, err = ssz.HashTreeRoot(state)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not tree hash processed state")
-		}
+	postStateRoot, err := stateutil.HashTreeRootState(state)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not tree hash processed state")
 	}
 	if !bytes.Equal(postStateRoot[:], signed.Block.StateRoot) {
 		return state, fmt.Errorf("validate state root failed, wanted: %#x, received: %#x",
@@ -184,10 +176,7 @@ func CalculateStateRoot(
 		return [32]byte{}, errors.Wrap(err, "could not process block")
 	}
 
-	if featureconfig.Get().EnableCustomStateSSZ {
-		return stateutil.HashTreeRootState(stateCopy)
-	}
-	return ssz.HashTreeRoot(stateCopy)
+	return stateutil.HashTreeRootState(stateCopy)
 }
 
 // ProcessSlot happens every slot and focuses on the slot counter and block roots record updates.
@@ -211,20 +200,10 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(state.Slot)))
 
-	var prevStateRoot [32]byte
-	var err error
-	if featureconfig.Get().EnableCustomStateSSZ {
-		prevStateRoot, err = stateutil.HashTreeRootState(state)
-		if err != nil {
-			traceutil.AnnotateError(span, err)
-			return nil, errors.Wrap(err, "could not tree hash prev state root")
-		}
-	} else {
-		prevStateRoot, err = ssz.HashTreeRoot(state)
-		if err != nil {
-			traceutil.AnnotateError(span, err)
-			return nil, errors.Wrap(err, "could not tree hash prev state root")
-		}
+	prevStateRoot, err := stateutil.HashTreeRootState(state)
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return nil, errors.Wrap(err, "could not tree hash prev state root")
 	}
 	state.StateRoots[state.Slot%params.BeaconConfig().SlotsPerHistoricalRoot] = prevStateRoot[:]
 
@@ -271,24 +250,17 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 	}
 
 	highestSlot := state.Slot
-	var root [32]byte
+	var key [32]byte
 	var writeToCache bool
 	var err error
 
 	if featureconfig.Get().EnableSkipSlotsCache {
 		// Restart from cached value, if one exists.
-		if featureconfig.Get().EnableCustomStateSSZ {
-			root, err = stateutil.HashTreeRootState(state)
-			if err != nil {
-				return nil, errors.Wrap(err, "could not HashTreeRoot(state)")
-			}
-		} else {
-			root, err = ssz.HashTreeRoot(state)
-			if err != nil {
-				return nil, errors.Wrap(err, "could not HashTreeRoot(state)")
-			}
+		key, err = cacheKey(state)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not create cache key")
 		}
-		cached, ok := skipSlotCache.Get(root)
+		cached, ok := skipSlotCache.Get(key)
 		// if cache key does not exist, we write it to the cache.
 		writeToCache = !ok
 		if ok {
@@ -310,7 +282,7 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 			if featureconfig.Get().EnableSkipSlotsCache {
 				// Cache last best value.
 				if highestSlot < state.Slot && writeToCache {
-					skipSlotCache.Add(root, proto.Clone(state).(*pb.BeaconState))
+					skipSlotCache.Add(key, proto.Clone(state).(*pb.BeaconState))
 				}
 			}
 			return nil, ctx.Err()
@@ -333,7 +305,7 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 	if featureconfig.Get().EnableSkipSlotsCache {
 		// Clone result state so that caches are not mutated.
 		if highestSlot < state.Slot && writeToCache {
-			skipSlotCache.Add(root, proto.Clone(state).(*pb.BeaconState))
+			skipSlotCache.Add(key, proto.Clone(state).(*pb.BeaconState))
 		}
 	}
 

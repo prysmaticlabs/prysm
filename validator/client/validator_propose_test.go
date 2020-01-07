@@ -26,7 +26,7 @@ func setup(t *testing.T) (*validator, *mocks, func()) {
 	validator := &validator{
 		validatorClient:  m.validatorClient,
 		aggregatorClient: m.aggregatorClient,
-		keys:             keyMap,
+		keyManager:       testKeyManager,
 		graffiti:         []byte{},
 		attLogs:          make(map[[32]byte]*attSubmitted),
 	}
@@ -129,11 +129,6 @@ func TestProposeBlock_BroadcastsBlock(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
 	).Return(&ethpb.ProposeResponse{}, nil /*error*/)
 
-	m.validatorClient.EXPECT().ValidatorIndex(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.ValidatorIndexRequest{}),
-	).Return(&ethpb.ValidatorIndexResponse{}, nil)
-
 	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
 }
 
@@ -167,11 +162,6 @@ func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
 		sentBlock = block
 		return &ethpb.ProposeResponse{}, nil
 	})
-
-	m.validatorClient.EXPECT().ValidatorIndex(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.ValidatorIndexRequest{}),
-	).Return(&ethpb.ValidatorIndexResponse{}, nil)
 
 	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
 

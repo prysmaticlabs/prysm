@@ -25,7 +25,6 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
-	GenesisDelay              bool   // GenesisDelay when processing a chain start genesis event.
 	MinimalConfig             bool   // MinimalConfig as defined in the spec.
 	WriteSSZStateTransitions  bool   // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify          bool   // InitSyncNoVerify when initial syncing w/o verifying block's contents.
@@ -33,16 +32,14 @@ type Flags struct {
 	EnableBackupWebhook       bool   // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
 	PruneEpochBoundaryStates  bool   // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
 	EnableSnappyDBCompression bool   // EnableSnappyDBCompression in the database.
-	EnableCustomStateSSZ      bool   // EnableCustomStateSSZ in the the state transition function.
 	InitSyncCacheState        bool   // InitSyncCacheState caches state during initial sync.
 	KafkaBootstrapServers     string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
-	NewCommitteeAssignments   bool   // NewCommitteeAssignments uses the new committee assignments algorithm.
+	EnableSavingOfDepositData bool   // EnableSavingOfDepositData allows the saving of eth1 related data such as deposits,chain data to be saved.
 
 	// Cache toggles.
 	EnableAttestationCache   bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableEth1DataVoteCache  bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableNewCache           bool // EnableNewCache enables the node to use the new caching scheme.
-	EnableBLSPubkeyCache     bool // EnableBLSPubkeyCache to improve wall time of PubkeyFromBytes.
 	EnableShuffledIndexCache bool // EnableShuffledIndexCache to cache expensive shuffled index computation.
 	EnableSkipSlotsCache     bool // EnableSkipSlotsCache caches the state in skipped slots.
 }
@@ -71,10 +68,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
 	}
-	if ctx.GlobalBool(GenesisDelayFlag.Name) {
-		log.Warn("Using non standard genesis delay. This may cause problems in a multi-node environment.")
-		cfg.GenesisDelay = true
-	}
 	if ctx.GlobalBool(writeSSZStateTransitionsFlag.Name) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
 		cfg.WriteSSZStateTransitions = true
@@ -86,10 +79,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(EnableEth1DataVoteCacheFlag.Name) {
 		log.Warn("Enabled unsafe eth1 data vote cache")
 		cfg.EnableEth1DataVoteCache = true
-	}
-	if ctx.GlobalBool(EnableCustomStateSSZ.Name) {
-		log.Warn("Enabled custom state ssz for the state transition function")
-		cfg.EnableCustomStateSSZ = true
 	}
 	if ctx.GlobalBool(initSyncVerifyEverythingFlag.Name) {
 		log.Warn("Initial syncing with verifying all block's content signatures.")
@@ -109,10 +98,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Allowing database backups to be triggered from HTTP webhook.")
 		cfg.EnableBackupWebhook = true
 	}
-	if ctx.GlobalBool(enableBLSPubkeyCacheFlag.Name) {
-		log.Warn("Enabled BLS pubkey cache.")
-		cfg.EnableBLSPubkeyCache = true
-	}
 	if ctx.GlobalBool(enableShuffledIndexCache.Name) {
 		log.Warn("Enabled shuffled index cache.")
 		cfg.EnableShuffledIndexCache = true
@@ -129,9 +114,9 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabled initial sync cache state mode.")
 		cfg.InitSyncCacheState = true
 	}
-	if ctx.GlobalBool(fastCommitteeAssignmentsFlag.Name) {
-		log.Warn("Enabled fast committee assignments algorithm.")
-		cfg.NewCommitteeAssignments = true
+	if ctx.GlobalBool(saveDepositData.Name) {
+		log.Warn("Enabled saving of eth1 related chain/deposit data.")
+		cfg.EnableSavingOfDepositData = true
 	}
 	Init(cfg)
 }

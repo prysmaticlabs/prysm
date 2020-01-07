@@ -31,7 +31,7 @@ func TestRequestAttestation_ValidatorDutiesRequestFailure(t *testing.T) {
 func TestAttestToBlockHead_RequestAttestationFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	validator, m, finish := setup(t)
+	validator, _, finish := setup(t)
 	defer finish()
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
@@ -39,10 +39,6 @@ func TestAttestToBlockHead_RequestAttestationFailure(t *testing.T) {
 			CommitteeIndex: 5,
 		},
 	}}
-	m.validatorClient.EXPECT().ValidatorIndex(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.ValidatorIndexRequest{}),
-	).Return(&ethpb.ValidatorIndexResponse{Index: 5}, nil)
 
 	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
 	testutil.AssertLogsContain(t, hook, "Could not get validator index in assignment")
@@ -59,12 +55,6 @@ func TestAttestToBlockHead_SubmitAttestationRequestFailure(t *testing.T) {
 			CommitteeIndex: 5,
 			Committee:      make([]uint64, 111),
 		}}}
-	m.validatorClient.EXPECT().ValidatorIndex(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.ValidatorIndexRequest{}),
-	).Return(&ethpb.ValidatorIndexResponse{
-		Index: 0,
-	}, nil)
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
@@ -97,12 +87,6 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 			CommitteeIndex: 5,
 			Committee:      committee,
 		}}}
-	m.validatorClient.EXPECT().ValidatorIndex(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.ValidatorIndexRequest{}),
-	).Return(&ethpb.ValidatorIndexResponse{
-		Index: validatorIndex,
-	}, nil)
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
@@ -128,7 +112,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
 
 	aggregationBitfield := bitfield.NewBitlist(uint64(len(committee)))
-	aggregationBitfield.SetBitAt(4, true)
+	aggregationBitfield.SetBitAt(0, true)
 	expectedAttestation := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: []byte("A"),
@@ -143,8 +127,11 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sig := validator.keys[validatorPubKey].SecretKey.Sign(root[:], 0).Marshal()
-	expectedAttestation.Signature = sig
+	sig, err := validator.keyManager.Sign(validatorPubKey, root, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectedAttestation.Signature = sig.Marshal()
 	if !reflect.DeepEqual(generatedAttestation, expectedAttestation) {
 		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
 	}
@@ -166,11 +153,6 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
 	).Times(0)
 
-	m.validatorClient.EXPECT().ValidatorIndex(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.ValidatorIndexRequest{}),
-	).Times(0)
-
 	m.validatorClient.EXPECT().ProposeAttestation(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
@@ -186,7 +168,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	defer finish()
 
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(1)
 	defer wg.Wait()
 
 	validator.genesisTime = uint64(roughtime.Now().Unix())
@@ -206,15 +188,6 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 		BeaconBlockRoot: []byte("A"),
 		Target:          &ethpb.Checkpoint{Root: []byte("B")},
 		Source:          &ethpb.Checkpoint{Root: []byte("C"), Epoch: 3},
-	}, nil).Do(func(arg0, arg1 interface{}) {
-		wg.Done()
-	})
-
-	m.validatorClient.EXPECT().ValidatorIndex(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.ValidatorIndexRequest{}),
-	).Return(&ethpb.ValidatorIndexResponse{
-		Index: validatorIndex,
 	}, nil).Do(func(arg0, arg1 interface{}) {
 		wg.Done()
 	})
@@ -243,12 +216,6 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 			CommitteeIndex: 5,
 			Committee:      committee,
 		}}}
-	m.validatorClient.EXPECT().ValidatorIndex(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.ValidatorIndexRequest{}),
-	).Return(&ethpb.ValidatorIndexResponse{
-		Index: validatorIndex,
-	}, nil)
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),

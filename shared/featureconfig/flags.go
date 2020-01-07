@@ -5,11 +5,6 @@ import (
 )
 
 var (
-	// GenesisDelayFlag disables the standard genesis delay.
-	GenesisDelayFlag = cli.BoolFlag{
-		Name:  "genesis-delay",
-		Usage: "Wait and process the genesis event at the midnight of the next day rather than 30s after the ETH1 block time of the chainstart triggering deposit",
-	}
 	// MinimalConfigFlag enables the minimal configuration.
 	MinimalConfigFlag = cli.BoolFlag{
 		Name:  "minimal-config",
@@ -29,11 +24,6 @@ var (
 		Name:  "enable-eth1-data-vote-cache",
 		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
 	}
-	// EnableCustomStateSSZ see https://github.com/prysmaticlabs/prysm/pull/4077.
-	EnableCustomStateSSZ = cli.BoolFlag{
-		Name:  "enable-custom-state-ssz",
-		Usage: "Enable custom hash_tree_root(state) for Prysm. See https://github.com/prysmaticlabs/prysm/issues/4077",
-	}
 	enableShuffledIndexCache = cli.BoolFlag{
 		Name:  "enable-shuffled-index-cache",
 		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
@@ -51,10 +41,6 @@ var (
 	enableBackupWebhookFlag = cli.BoolFlag{
 		Name:  "enable-db-backup-webhook",
 		Usage: "Serve HTTP handler to initiate database backups. The handler is served on the monitoring port at path /db/backup.",
-	}
-	enableBLSPubkeyCacheFlag = cli.BoolFlag{
-		Name:  "enable-bls-pubkey-cache",
-		Usage: "Enable BLS pubkey cache to improve wall time of PubkeyFromBytes",
 	}
 	// enableSkipSlotsCache enables the skips slots lru cache to be used in runtime.
 	enableSkipSlotsCache = cli.BoolFlag{
@@ -77,9 +63,9 @@ var (
 			"initial sync and disk-IO is one of the biggest bottleneck. This still saves finalized state in DB " +
 			"and start syncing from there",
 	}
-	fastCommitteeAssignmentsFlag = cli.BoolFlag{
-		Name:  "fast-assignments",
-		Usage: "Use new algorithm for computing committee assignments",
+	saveDepositData = cli.BoolFlag{
+		Name:  "save-deposit-data",
+		Usage: "Enable of the saving of deposit related data",
 	}
 )
 
@@ -132,9 +118,30 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+
+	deprecatedEnableCustomStateSSZ = cli.BoolFlag{
+		Name:   "enable-custom-state-ssz",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedEnableCommitteeCacheFlag = cli.BoolFlag{
 		Name:   "enable-committee-cache",
 		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnableBLSPubkeyCacheFlag = cli.BoolFlag{
+		Name:   "enable-bls-pubkey-cache",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedFastCommitteeAssignmentsFlag = cli.BoolFlag{
+		Name:  "fast-assignments",
+		Usage: deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedGenesisDelayFlag = cli.BoolFlag{
+		Name: "genesis-delay",
+		Usage: deprecatedUsage,
 		Hidden: true,
 	}
 )
@@ -149,7 +156,11 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnablePruneBoundaryStateFlag,
 	deprecatedEnableActiveIndicesCacheFlag,
 	deprecatedEnableActiveCountCacheFlag,
+	deprecatedEnableCustomStateSSZ,
 	deprecatedEnableCommitteeCacheFlag,
+	deprecatedEnableBLSPubkeyCacheFlag,
+	deprecatedFastCommitteeAssignmentsFlag,
+	deprecatedGenesisDelayFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -159,20 +170,17 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
-	GenesisDelayFlag,
 	MinimalConfigFlag,
 	writeSSZStateTransitionsFlag,
 	EnableAttestationCacheFlag,
 	EnableEth1DataVoteCacheFlag,
-	EnableCustomStateSSZ,
 	initSyncVerifyEverythingFlag,
 	initSyncCacheState,
 	NewCacheFlag,
 	SkipBLSVerifyFlag,
 	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,
-	enableBLSPubkeyCacheFlag,
 	enableShuffledIndexCache,
 	enableSkipSlotsCache,
-	fastCommitteeAssignmentsFlag,
+	saveDepositData,
 }...)
