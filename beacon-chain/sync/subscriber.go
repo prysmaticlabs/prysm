@@ -211,7 +211,7 @@ func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() i
 				stateSub.Unsubscribe()
 				return
 			case <-stateChannel:
-				// Update topic count
+				// Update topic count.
 				wantedSubs := determineSubsLen()
 				// Resize as appropriate.
 				if len(subscriptions) > wantedSubs { // Reduce topics
