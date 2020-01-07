@@ -10,14 +10,13 @@ import (
 	"testing"
 	"time"
 
-	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
-
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	depositcontract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"

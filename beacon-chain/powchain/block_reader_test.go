@@ -7,12 +7,11 @@ import (
 	"testing"
 	"time"
 
-	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
