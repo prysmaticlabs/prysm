@@ -24,7 +24,8 @@ import (
 func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	tmpPath := bazel.TestTmpDir()
 	config.tmpPath = tmpPath
-	t.Logf("Test Path: %s\n", tmpPath)
+	t.Logf("Starting time: %s\n", time.Now().String())
+	t.Logf("\nTest Path: %s\n\n", tmpPath)
 
 	contractAddr, keystorePath, eth1PID := startEth1(t, tmpPath)
 	config.contractAddr = contractAddr
@@ -37,7 +38,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	for _, bb := range beaconNodes {
 		processIDs = append(processIDs, bb.processID)
 	}
-	defer logOutput(t, tmpPath)
+	defer logOutput(t, tmpPath, config)
 	defer killProcesses(t, processIDs)
 
 	if config.numBeaconNodes > 1 {
@@ -50,7 +51,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 		})
 	}
 
-	beaconLogFile, err := os.Open(path.Join(tmpPath, "beacon-0.log"))
+	beaconLogFile, err := os.Open(path.Join(tmpPath, fmt.Sprintf(beaconNodeLogFileName, 0)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,6 +100,8 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 		currentEpoch++
 	}
 
+	t.Fail()
+
 	if currentEpoch < config.epochsToRun {
 		t.Fatalf("Test ended prematurely, only reached epoch %d", currentEpoch)
 	}
@@ -146,18 +149,52 @@ func killProcesses(t *testing.T, pIDs []int) {
 	}
 }
 
-func logOutput(t *testing.T, tmpPath string) {
+func logOutput(t *testing.T, tmpPath string, config *end2EndConfig) {
 	if t.Failed() {
-		beacon0LogFile, err := os.Open(path.Join(tmpPath, "beacon-0.log"))
-		if err != nil {
-			t.Fatal(err)
+		// Log out errors from beacon chain nodes.
+		for i := uint64(0); i < config.numBeaconNodes; i++ {
+			beaconLogFile, err := os.Open(path.Join(tmpPath, fmt.Sprintf(beaconNodeLogFileName, i)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			logErrorOutput(t, beaconLogFile, "beacon chain node", i)
 		}
-		scanner := bufio.NewScanner(beacon0LogFile)
-		t.Log("Beacon chain node output:")
-		for scanner.Scan() {
-			currentLine := scanner.Text()
-			t.Log(currentLine)
+
+		// Log out errors from validator clients.
+		for i := uint64(0); i < config.numValidators; i++ {
+			validatorLogFile, err := os.Open(path.Join(tmpPath, fmt.Sprintf(validatorLogFileName, i)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			logErrorOutput(t, validatorLogFile, "validator client", i)
 		}
-		t.Log("End of beacon chain node output")
 	}
+}
+
+func logErrorOutput(t *testing.T, file *os.File, title string, index uint64) {
+	var errorLines []string
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		currentLine := scanner.Text()
+		if strings.Contains(currentLine, "level=error") {
+			errorLines = append(errorLines, currentLine)
+		}
+	}
+
+	if len(errorLines) < 1 {
+		return
+	}
+
+	t.Log("===================================================================")
+	t.Logf("Start of %s %d error output:", title, index)
+	t.Log("")
+
+	for _, err := range errorLines {
+		t.Log(err)
+	}
+
+	t.Log("")
+	t.Logf("End of %s %d error output:", title, index)
+	t.Log("===================================================================")
 }
