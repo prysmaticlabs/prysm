@@ -453,10 +453,12 @@ func (s *Service) processSubscribedHeaders(header *gethTypes.Header) {
 
 func (s *Service) batchRequestHeaders(startBlock uint64, endBlock uint64) ([]*gethTypes.Header, error) {
 	requestRange := (endBlock - startBlock) + 1
-	log.Errorf("Request range: %d", requestRange)
 	elems := make([]rpc.BatchElem, 0, requestRange)
 	headers := make([]*gethTypes.Header, 0, requestRange)
 	errors := make([]error, 0, requestRange)
+	if requestRange == 0 {
+		return headers, nil
+	}
 	for i := startBlock; i <= endBlock; i++ {
 		header := &gethTypes.Header{}
 		err := error(nil)
@@ -480,7 +482,6 @@ func (s *Service) batchRequestHeaders(startBlock uint64, endBlock uint64) ([]*ge
 	}
 	for _, h := range headers {
 		if h != nil {
-			log.Infof("%#x and number %d and time %d", h.Hash(), h.Number.Uint64(), h.Time)
 			s.blockCache.AddBlock(gethTypes.NewBlockWithHeader(h))
 		}
 	}
@@ -502,7 +503,7 @@ func safelyHandlePanic() {
 func (s *Service) handleDelayTicker() {
 	defer safelyHandlePanic()
 	if !s.chainStartData.Chainstarted {
-		if err := s.checkForChainStart(context.Background(), big.NewInt(int64(s.latestEth1Data.LastRequestedBlock))); err != nil {
+		if err := s.checkBlockNumberForChainStart(context.Background(), big.NewInt(int64(s.latestEth1Data.LastRequestedBlock))); err != nil {
 			s.runError = err
 			log.Error(err)
 			return
