@@ -100,8 +100,6 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 		currentEpoch++
 	}
 
-	t.Fail()
-
 	if currentEpoch < config.epochsToRun {
 		t.Fatalf("Test ended prematurely, only reached epoch %d", currentEpoch)
 	}
