@@ -30,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -81,7 +82,7 @@ type Service struct {
 	slasherProvider        string
 	slasherCert            string
 	slasherCredentialError error
-	slasherClient          pb.SlasherClient
+	slasherClient          slashpb.SlasherClient
 }
 
 // Config options for the beacon node RPC server.
@@ -299,7 +300,7 @@ func (s *Service) startSlasherClient() {
 	}
 	log.Info("Successfully started hash slinging slasher©️ gRPC connection")
 	s.slasherConn = conn
-	s.slasherClient = pb.NewSlasherClient(s.slasherConn)
+	s.slasherClient = slashpb.NewSlasherClient(s.slasherConn)
 }
 
 // Stop the service.
