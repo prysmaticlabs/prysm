@@ -148,7 +148,6 @@ var (
 )
 
 var deprecatedFlags = []cli.Flag{
-	deprecatedNoGenesisDelayFlag,
 	deprecatedEnableFinalizedBlockRootIndexFlag,
 	deprecatedScatterFlag,
 	deprecatedPruneFinalizedStatesFlag,
@@ -171,6 +170,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
+	noGenesisDelayFlag,
 	MinimalConfigFlag,
 	writeSSZStateTransitionsFlag,
 	EnableAttestationCacheFlag,
