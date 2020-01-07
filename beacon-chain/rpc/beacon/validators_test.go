@@ -1460,8 +1460,8 @@ func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 	m := &mock.ChainService{
 		State: s,
 		Balance: &precompute.Balance{
-			CurrentEpoch:                validatorCount * params.BeaconConfig().MaxEffectiveBalance,
-			CurrentEpochTargetAttesters: attestedBalance,
+			PrevEpoch:                validatorCount * params.BeaconConfig().MaxEffectiveBalance,
+			PrevEpochTargetAttesters: attestedBalance,
 		},
 	}
 	bs := &Server{

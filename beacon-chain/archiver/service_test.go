@@ -389,7 +389,7 @@ func setupService(t *testing.T) (*Service, db.Database) {
 		cancel:        cancel,
 		stateNotifier: mockChainService.StateNotifier(),
 		participationFetcher: &mock.ChainService{
-			Balance: &precompute.Balance{CurrentEpoch: totalBalance, CurrentEpochTargetAttesters: 1}},
+			Balance: &precompute.Balance{PrevEpoch: totalBalance, PrevEpochTargetAttesters: 1}},
 	}, beaconDB
 }
 
