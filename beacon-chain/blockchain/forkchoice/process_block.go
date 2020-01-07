@@ -93,6 +93,9 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	// Update justified check point.
 	if postState.CurrentJustifiedCheckpoint.Epoch > s.JustifiedCheckpt().Epoch {
 		s.justifiedCheckpt = postState.CurrentJustifiedCheckpoint
+		if err := s.saveJustifiedState(ctx, bytesutil.ToBytes32(postState.CurrentJustifiedCheckpoint.Root)); err != nil {
+			return err
+		}
 		if err := s.db.SaveJustifiedCheckpoint(ctx, postState.CurrentJustifiedCheckpoint); err != nil {
 			return errors.Wrap(err, "could not save justified checkpoint")
 		}
@@ -191,6 +194,9 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.
 	// Update justified check point.
 	if postState.CurrentJustifiedCheckpoint.Epoch > s.JustifiedCheckpt().Epoch {
 		s.justifiedCheckpt = postState.CurrentJustifiedCheckpoint
+		if err := s.saveJustifiedState(ctx, bytesutil.ToBytes32(postState.CurrentJustifiedCheckpoint.Root)); err != nil {
+			return err
+		}
 		if err := s.db.SaveJustifiedCheckpoint(ctx, postState.CurrentJustifiedCheckpoint); err != nil {
 			return errors.Wrap(err, "could not save justified checkpoint")
 		}
@@ -554,4 +560,12 @@ func (s *Store) filterBlockRoots(ctx context.Context, roots [][32]byte) ([][32]b
 	}
 
 	return filtered, nil
+}
+
+func (s *Store) saveJustifiedState(ctx context.Context, justifiedRoot [32]byte) error {
+	if !featureconfig.Get().InitSyncCacheState {
+		return nil
+	}
+	justifiedState := s.initSyncState[justifiedRoot]
+	return s.db.SaveState(ctx, justifiedState, justifiedRoot)
 }
