@@ -118,10 +118,13 @@ func (s *Service) archiveActiveSetChanges(ctx context.Context, headState *pb.Bea
 // matching validator attestations during the epoch.
 func (s *Service) archiveParticipation(ctx context.Context, epoch uint64) error {
 	p := s.participationFetcher.Participation(epoch)
-	participation := &ethpb.ValidatorParticipation{
-		EligibleEther:           p.CurrentEpoch,
-		VotedEther:              p.CurrentEpochTargetAttesters,
-		GlobalParticipationRate: float32(p.CurrentEpochTargetAttesters) / float32(p.CurrentEpoch),
+	participation := &ethpb.ValidatorParticipation{}
+	if p != nil {
+		participation = &ethpb.ValidatorParticipation{
+			EligibleEther:           p.CurrentEpoch,
+			VotedEther:              p.CurrentEpochTargetAttesters,
+			GlobalParticipationRate: float32(p.CurrentEpochTargetAttesters) / float32(p.CurrentEpoch),
+		}
 	}
 	return s.beaconDB.SaveArchivedValidatorParticipation(ctx, epoch, participation)
 }
