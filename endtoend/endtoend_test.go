@@ -81,7 +81,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	currentEpoch := uint64(0)
 	ticker := GetEpochTicker(genesisTime, epochSeconds)
 	for c := range ticker.C() {
-		if c >= config.epochsToRun || t.Failed()  {
+		if c >= config.epochsToRun || t.Failed() {
 			ticker.Done()
 			break
 		}
@@ -149,7 +149,6 @@ func killProcesses(t *testing.T, pIDs []int) {
 		}
 	}
 }
-
 
 func logOutput(t *testing.T, tmpPath string, config *end2EndConfig) {
 	if t.Failed() {
