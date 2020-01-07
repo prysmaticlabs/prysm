@@ -25,7 +25,7 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
-	NoGensisDelay             bool   // NoGenesisDelay signals to start the chain as quickly as possible.
+	NoGenesisDelay            bool   // NoGenesisDelay signals to start the chain as quickly as possible.
 	MinimalConfig             bool   // MinimalConfig as defined in the spec.
 	WriteSSZStateTransitions  bool   // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify          bool   // InitSyncNoVerify when initial syncing w/o verifying block's contents.
@@ -67,7 +67,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	cfg := &Flags{}
 	if ctx.GlobalBool(noGenesisDelayFlag.Name) {
 		log.Warn("Starting ETH2 with no genesis delay")
-		cfg.NoGensisDelay = true
+		cfg.NoGenesisDelay = true
 	}
 	if ctx.GlobalBool(MinimalConfigFlag.Name) {
 		log.Warn("Using minimal config")

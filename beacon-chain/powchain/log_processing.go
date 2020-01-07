@@ -229,7 +229,7 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 }
 
 func (s *Service) createGenesisTime(timeStamp uint64) uint64 {
-	if featureconfig.Get().NoGensisDelay {
+	if featureconfig.Get().NoGenesisDelay {
 		return timeStamp
 	}
 	timeStampRdDown := timeStamp - timeStamp%params.BeaconConfig().MinGenesisDelay
