@@ -88,6 +88,7 @@ type Config struct {
 	HeadFetcher           blockchain.HeadFetcher
 	ForkFetcher           blockchain.ForkFetcher
 	FinalizationFetcher   blockchain.FinalizationFetcher
+	ParticipationFetcher  blockchain.ParticipationFetcher
 	AttestationReceiver   blockchain.AttestationReceiver
 	BlockReceiver         blockchain.BlockReceiver
 	POWChainService       powchain.Chain
@@ -115,6 +116,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		headFetcher:           cfg.HeadFetcher,
 		forkFetcher:           cfg.ForkFetcher,
 		finalizationFetcher:   cfg.FinalizationFetcher,
+		participationFetcher:  cfg.ParticipationFetcher,
 		genesisTimeFetcher:    cfg.GenesisTimeFetcher,
 		attestationReceiver:   cfg.AttestationReceiver,
 		blockReceiver:         cfg.BlockReceiver,

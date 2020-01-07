@@ -460,6 +460,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		HeadFetcher:           chainService,
 		ForkFetcher:           chainService,
 		FinalizationFetcher:   chainService,
+		ParticipationFetcher:  chainService,
 		BlockReceiver:         chainService,
 		AttestationReceiver:   chainService,
 		GenesisTimeFetcher:    chainService,
