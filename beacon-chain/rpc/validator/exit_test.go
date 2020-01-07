@@ -69,7 +69,7 @@ func TestSub(t *testing.T) {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 
-	// Ensure the state notification was broadcast
+	// Ensure the state notification was broadcast.
 	notificationFound := false
 	for !notificationFound {
 		select {
