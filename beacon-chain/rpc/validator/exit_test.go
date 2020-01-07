@@ -54,7 +54,7 @@ func TestSub(t *testing.T) {
 	opSub := server.OperationNotifier.OperationFeed().Subscribe(opChannel)
 	defer opSub.Unsubscribe()
 
-	// Send the request, expect a result on the state feed
+	// Send the request, expect a result on the state feed.
 	epoch := uint64(2048)
 	validatorIndex := uint64(0)
 	req := &ethpb.SignedVoluntaryExit{
