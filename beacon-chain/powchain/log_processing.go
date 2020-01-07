@@ -262,14 +262,24 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 
 	for _, log := range logs {
 		if log.BlockNumber > currentBlockNum {
-			if !s.chainStartData.Chainstarted {
-				if err := s.checkForChainStart(ctx, big.NewInt(int64(currentBlockNum))); err != nil {
-					return err
+
+			logrus.Errorf("last requested block %d , block height %d", currentBlockNum, log.BlockNumber-1)
+			headers, err := s.batchRequestHeaders(currentBlockNum, log.BlockNumber-1)
+			if err != nil {
+				return err
+			}
+
+			for _, h := range headers {
+				if !s.chainStartData.Chainstarted {
+					if err := s.checkForChainStart(ctx, big.NewInt(h.Number.Int64())); err != nil {
+						return err
+					}
 				}
 			}
 			// set new block number after checking for chainstart for previous block.
 			s.latestEth1Data.LastRequestedBlock = currentBlockNum
 			currentBlockNum = log.BlockNumber
+
 		}
 		if err := s.ProcessLog(ctx, log); err != nil {
 			return err

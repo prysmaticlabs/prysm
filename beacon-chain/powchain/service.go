@@ -462,7 +462,7 @@ func (s *Service) batchRequestHeaders(startBlock uint64, endBlock uint64) ([]*ge
 		err := error(nil)
 		elems = append(elems, rpc.BatchElem{
 			Method: "eth_getBlockByNumber",
-			Args:   []interface{}{hexutil.EncodeBig(big.NewInt(int64(i)))},
+			Args:   []interface{}{hexutil.EncodeBig(big.NewInt(int64(i))), true},
 			Result: header,
 			Error:  err,
 		})
@@ -545,12 +545,6 @@ func (s *Service) run(done <-chan struct{}) {
 
 	s.latestEth1Data.BlockHeight = header.Number.Uint64()
 	s.latestEth1Data.BlockHash = header.Hash().Bytes()
-
-	if _, err := s.batchRequestHeaders(s.latestEth1Data.LastRequestedBlock, s.latestEth1Data.BlockHeight); err != nil {
-		log.Errorf("Unable to process past headers %v", err)
-		s.runError = err
-		return
-	}
 
 	if err := s.processPastLogs(context.Background()); err != nil {
 		log.Errorf("Unable to process past logs %v", err)
