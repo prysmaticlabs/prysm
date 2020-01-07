@@ -655,7 +655,7 @@ func TestConsistentGenesisState(t *testing.T) {
 
 	// 64 Validators are used as size required for beacon-chain to start. This number
 	// is defined in the deposit contract as the number required for the testnet. The actual number
-	// is 2**14
+	// is 2**14.
 	for i := 0; i < depositsReqForChainStart; i++ {
 		data := deposits[i].Data
 		testAcc.TxOpts.Value = contracts.Amount32Eth()
