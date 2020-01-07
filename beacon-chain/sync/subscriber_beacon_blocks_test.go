@@ -82,7 +82,7 @@ func TestDeleteAttsInPool(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Only 2 should remain
+	// Only 2 should remain.
 	if !reflect.DeepEqual(r.attPool.AggregatedAttestations(), []*ethpb.Attestation{att2}) {
 		t.Error("Did not get wanted attestation from pool")
 	}
