@@ -8,13 +8,10 @@ import (
 	"net"
 	"os"
 
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -33,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
@@ -299,7 +297,7 @@ func (s *Service) startSlasherClient() {
 		log.Errorf("Could not dial endpoint: %s, %v", s.slasherProvider, err)
 		return
 	}
-	log.Info("Successfully started gRPC connection")
+	log.Info("Successfully started hash slinging slasher©️ gRPC connection")
 	s.slasherConn = conn
 	s.slasherClient = pb.NewSlasherClient(s.slasherConn)
 }
@@ -319,15 +317,11 @@ func (s *Service) Stop() error {
 
 // Status returns nil or credentialError
 func (s *Service) Status() error {
-	var err error
 	if s.credentialError != nil {
-		err = s.credentialError
+		return s.credentialError
 	}
 	if s.slasherCredentialError != nil {
-		if err != nil {
-			return errors.Wrap(err, "Slasher cred error: "+s.slasherCredentialError.Error())
-		}
 		return s.slasherCredentialError
 	}
-	return err
+	return nil
 }

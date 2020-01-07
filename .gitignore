@@ -27,5 +27,3 @@ password.txt
 /go.mod
 /go.sum
 
-# Slasher tmp db
-/slasherdata/slasher.db

@@ -137,7 +137,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabled fast committee assignments algorithm.")
 		cfg.NewCommitteeAssignments = true
 	}
-	if ctx.GlobalBool(connectToSlasherFlag.Name) {
+	if ctx.GlobalBool(enableSlasherFlag.Name) {
 		log.Warn("Enabled slasher connection.")
 		cfg.EnableSlasherConnection = true
 	}
