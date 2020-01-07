@@ -42,7 +42,7 @@ func TeardownDB(t testing.TB, db *Store) {
 	if err := db.Close(); err != nil {
 		t.Fatalf("Failed to close database: %v", err)
 	}
-	if err := os.RemoveAll(db.DatabasePath()); err != nil {
+	if err := os.Remove(filepath.Join(db.DatabasePath(), databaseFileName)); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
 }

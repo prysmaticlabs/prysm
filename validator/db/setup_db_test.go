@@ -2,6 +2,7 @@ package db
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -12,7 +13,7 @@ func TestClearDB(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := os.Stat(db.DatabasePath()); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(db.DatabasePath(), databaseFileName)); !os.IsNotExist(err) {
 		t.Fatalf("DB was not cleared: %v", err)
 	}
 }
