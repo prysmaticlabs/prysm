@@ -22,19 +22,22 @@ var ValidatorCount = uint64(65536)
 var AttestationsPerEpoch = uint64(128)
 
 // GenesisFileName is the generated genesis beacon state file name.
-var GenesisFileName = fmt.Sprintf("shared/benchutil/benchmark_files/bStateGenesis-%dAtts-%dVals.ssz", AttestationsPerEpoch, ValidatorCount)
+var GenesisFileName = fmt.Sprintf("bStateGenesis-%dAtts-%dVals.ssz", AttestationsPerEpoch, ValidatorCount)
 
 // BState1EpochFileName is the generated beacon state after 1 skipped epoch file name.
-var BState1EpochFileName = fmt.Sprintf("shared/benchutil/benchmark_files/bState1Epoch-%dAtts-%dVals.ssz", AttestationsPerEpoch, ValidatorCount)
+var BState1EpochFileName = fmt.Sprintf("bState1Epoch-%dAtts-%dVals.ssz", AttestationsPerEpoch, ValidatorCount)
 
 // BState2EpochFileName is the generated beacon state after 2 full epochs file name.
-var BState2EpochFileName = fmt.Sprintf("shared/benchutil/benchmark_files/bState2Epochs-%dAtts-%dVals.ssz", AttestationsPerEpoch, ValidatorCount)
+var BState2EpochFileName = fmt.Sprintf("bState2Epochs-%dAtts-%dVals.ssz", AttestationsPerEpoch, ValidatorCount)
 
 // FullBlockFileName is the generated full block file name.
-var FullBlockFileName = fmt.Sprintf("shared/benchutil/benchmark_files/fullBlock-%dAtts-%dVals.ssz", AttestationsPerEpoch, ValidatorCount)
+var FullBlockFileName = fmt.Sprintf("fullBlock-%dAtts-%dVals.ssz", AttestationsPerEpoch, ValidatorCount)
 
+func filePath(path string) string {
+	return fmt.Sprintf("shared/benchutil/benchmark_files/%s", path)
+}
 func PregenState1Epoch() (*pb.BeaconState, error) {
-	path, err := bazel.Runfile(BState1EpochFileName)
+	path, err := bazel.Runfile(filePath(BState1EpochFileName))
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +53,7 @@ func PregenState1Epoch() (*pb.BeaconState, error) {
 }
 
 func PreGenState2FullEpochs() (*pb.BeaconState, error) {
-	path, err := bazel.Runfile(BState2EpochFileName)
+	path, err := bazel.Runfile(filePath(BState2EpochFileName))
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +69,7 @@ func PreGenState2FullEpochs() (*pb.BeaconState, error) {
 }
 
 func PregenFullBlock() (*ethpb.BeaconBlock, error) {
-	path, err := bazel.Runfile(FullBlockFileName)
+	path, err := bazel.Runfile(filePath(FullBlockFileName))
 	if err != nil {
 		return nil, err
 	}

@@ -32,7 +32,7 @@ func main() {
 		log.Fatal(err)
 	}
 	// Removing this since its 10MB large and no longer needed.
-	if err := os.Remove(filePath(benchutil.GenesisFileName)); err != nil {
+	if err := os.Remove(benchutil.GenesisFileName); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -46,7 +46,7 @@ func generateGenesisBeaconState() error {
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(filePath(benchutil.GenesisFileName), beaconBytes, 0644); err != nil {
+	if err := ioutil.WriteFile(benchutil.GenesisFileName, beaconBytes, 0644); err != nil {
 		return err
 	}
 	return nil
@@ -120,7 +120,7 @@ func generateMarshalledFullStateAndBlock() error {
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(filePath(benchutil.BState1EpochFileName), beaconBytes, 0644); err != nil {
+	if err := ioutil.WriteFile(benchutil.BState1EpochFileName, beaconBytes, 0644); err != nil {
 		return err
 	}
 
@@ -134,7 +134,7 @@ func generateMarshalledFullStateAndBlock() error {
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(filePath(benchutil.FullBlockFileName), blockBytes, 0644); err != nil {
+	if err := ioutil.WriteFile(benchutil.FullBlockFileName, blockBytes, 0644); err != nil {
 		return err
 	}
 	return nil
