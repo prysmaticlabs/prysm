@@ -453,7 +453,7 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	web3Service.rpcClient = &mockPOW.RpcClient{Backend: testAcc.Backend}
+	web3Service.rpcClient = &mockPOW.RPCClient{Backend: testAcc.Backend}
 	web3Service.httpLogger = testAcc.Backend
 	web3Service.latestEth1Data.LastRequestedBlock = 0
 	web3Service.latestEth1Data.BlockHeight = 0
@@ -714,7 +714,7 @@ func newPowchainService(t *testing.T, eth1Backend *contracts.TestAccount, beacon
 	if err != nil {
 		t.Fatal(err)
 	}
-	web3Service.rpcClient = &mockPOW.RpcClient{Backend: eth1Backend.Backend}
+	web3Service.rpcClient = &mockPOW.RPCClient{Backend: eth1Backend.Backend}
 	web3Service.reader = &goodReader{backend: eth1Backend.Backend}
 	web3Service.blockFetcher = &goodFetcher{backend: eth1Backend.Backend}
 	web3Service.httpLogger = &goodLogger{backend: eth1Backend.Backend}

@@ -106,13 +106,13 @@ func (m *POWChain) IsConnectedToETH1() bool {
 	return true
 }
 
-// RpcClient defines the mock rpc client.
-type RpcClient struct {
+// RPCClient defines the mock rpc client.
+type RPCClient struct {
 	Backend *backends.SimulatedBackend
 }
 
 // BatchCall --
-func (r *RpcClient) BatchCall(b []rpc.BatchElem) error {
+func (r *RPCClient) BatchCall(b []rpc.BatchElem) error {
 	if r.Backend == nil {
 		return nil
 	}
