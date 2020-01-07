@@ -7,23 +7,30 @@ import (
 
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/internal"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 type mocks struct {
-	validatorClient  *internal.MockBeaconNodeValidatorClient
+	proposerClient   *internal.MockProposerServiceClient
+	validatorClient  *internal.MockValidatorServiceClient
+	attesterClient   *internal.MockAttesterServiceClient
 	aggregatorClient *internal.MockAggregatorServiceClient
 }
 
 func setup(t *testing.T) (*validator, *mocks, func()) {
 	ctrl := gomock.NewController(t)
 	m := &mocks{
-		validatorClient:  internal.NewMockBeaconNodeValidatorClient(ctrl),
+		proposerClient:   internal.NewMockProposerServiceClient(ctrl),
+		validatorClient:  internal.NewMockValidatorServiceClient(ctrl),
+		attesterClient:   internal.NewMockAttesterServiceClient(ctrl),
 		aggregatorClient: internal.NewMockAggregatorServiceClient(ctrl),
 	}
 	validator := &validator{
+		proposerClient:   m.proposerClient,
+		attesterClient:   m.attesterClient,
 		validatorClient:  m.validatorClient,
 		aggregatorClient: m.aggregatorClient,
 		keyManager:       testKeyManager,
@@ -65,9 +72,9 @@ func TestProposeBlock_RequestBlockFailed(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&pb.DomainResponse{}, nil /*err*/)
 
-	m.validatorClient.EXPECT().GetBlock(
+	m.proposerClient.EXPECT().RequestBlock(
 		gomock.Any(), // ctx
 		gomock.Any(), // block request
 	).Return(nil /*response*/, errors.New("uh oh"))
@@ -84,9 +91,9 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&pb.DomainResponse{}, nil /*err*/)
 
-	m.validatorClient.EXPECT().GetBlock(
+	m.proposerClient.EXPECT().RequestBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
 	).Return(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}, nil /*err*/)
@@ -94,11 +101,11 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&pb.DomainResponse{}, nil /*err*/)
 
-	m.validatorClient.EXPECT().ProposeBlock(
+	m.proposerClient.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
+		gomock.AssignableToTypeOf(&ethpb.BeaconBlock{}),
 	).Return(nil /*response*/, errors.New("uh oh"))
 
 	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
@@ -112,9 +119,9 @@ func TestProposeBlock_BroadcastsBlock(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&pb.DomainResponse{}, nil /*err*/)
 
-	m.validatorClient.EXPECT().GetBlock(
+	m.proposerClient.EXPECT().RequestBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
 	).Return(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}, nil /*err*/)
@@ -122,12 +129,12 @@ func TestProposeBlock_BroadcastsBlock(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&pb.DomainResponse{}, nil /*err*/)
 
-	m.validatorClient.EXPECT().ProposeBlock(
+	m.proposerClient.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
-	).Return(&ethpb.ProposeResponse{}, nil /*error*/)
+		gomock.AssignableToTypeOf(&ethpb.BeaconBlock{}),
+	).Return(&pb.ProposeResponse{}, nil /*error*/)
 
 	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
 }
@@ -141,9 +148,9 @@ func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&pb.DomainResponse{}, nil /*err*/)
 
-	m.validatorClient.EXPECT().GetBlock(
+	m.proposerClient.EXPECT().RequestBlock(
 		gomock.Any(), // ctx
 		gomock.Any(),
 	).Return(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{Graffiti: validator.graffiti}}, nil /*err*/)
@@ -151,21 +158,21 @@ func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), //epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&pb.DomainResponse{}, nil /*err*/)
 
-	var sentBlock *ethpb.SignedBeaconBlock
+	var sentBlock *ethpb.BeaconBlock
 
-	m.validatorClient.EXPECT().ProposeBlock(
+	m.proposerClient.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
-	).DoAndReturn(func(ctx context.Context, block *ethpb.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
+		gomock.AssignableToTypeOf(&ethpb.BeaconBlock{}),
+	).DoAndReturn(func(ctx context.Context, block *ethpb.BeaconBlock) (*pb.ProposeResponse, error) {
 		sentBlock = block
-		return &ethpb.ProposeResponse{}, nil
+		return &pb.ProposeResponse{}, nil
 	})
 
 	validator.ProposeBlock(context.Background(), 1, validatorPubKey)
 
-	if string(sentBlock.Block.Body.Graffiti) != string(validator.graffiti) {
-		t.Errorf("Block was broadcast with the wrong graffiti field, wanted \"%v\", got \"%v\"", string(validator.graffiti), string(sentBlock.Block.Body.Graffiti))
+	if string(sentBlock.Body.Graffiti) != string(validator.graffiti) {
+		t.Errorf("Block was broadcast with the wrong graffiti field, wanted \"%v\", got \"%v\"", string(validator.graffiti), string(sentBlock.Body.Graffiti))
 	}
 }

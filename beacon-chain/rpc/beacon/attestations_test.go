@@ -10,17 +10,14 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
-	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
-	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
+	mockOps "github.com/prysmaticlabs/prysm/beacon-chain/operations/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	mocktick "github.com/prysmaticlabs/prysm/shared/slotutil/testing"
 )
 
 func TestServer_ListAttestations_NoResults(t *testing.T) {
@@ -72,12 +69,11 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 	}
 
 	parentRoot := [32]byte{1, 2, 3}
-	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{
+	blk := &ethpb.BeaconBlock{
 		Slot:       0,
 		ParentRoot: parentRoot[:],
-	},
 	}
-	root, err := ssz.HashTreeRoot(blk.Block)
+	root, err := ssz.SigningRoot(blk)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,6 +86,7 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 			Slot:            0,
 			BeaconBlockRoot: root[:],
 		},
+		CustodyBits: bitfield.Bitlist{0b10},
 	}
 	if err := db.SaveAttestation(ctx, att); err != nil {
 		t.Fatal(err)
@@ -140,6 +137,7 @@ func TestServer_ListAttestations_NoPagination(t *testing.T) {
 				Slot:            i,
 			},
 			AggregationBits: bitfield.Bitlist{0b11},
+			CustodyBits:     bitfield.NewBitlist(1),
 		}
 		if err := db.SaveAttestation(ctx, attExample); err != nil {
 			t.Fatal(err)
@@ -294,6 +292,7 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 				Slot:            i,
 			},
 			AggregationBits: bitfield.Bitlist{0b11},
+			CustodyBits:     bitfield.NewBitlist(1),
 		}
 		if err := db.SaveAttestation(ctx, attExample); err != nil {
 			t.Fatal(err)
@@ -323,17 +322,20 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 						BeaconBlockRoot: []byte("root"),
 						Slot:            3,
 					},
-						AggregationBits: bitfield.Bitlist{0b11}},
+						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Slot:            4,
 					},
-						AggregationBits: bitfield.Bitlist{0b11}},
+						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Slot:            5,
 					},
-						AggregationBits: bitfield.Bitlist{0b11}},
+						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1)},
 				},
 				NextPageToken: strconv.Itoa(2),
 				TotalSize:     int32(count)}},
@@ -351,26 +353,31 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 						BeaconBlockRoot: []byte("root"),
 						Slot:            50,
 					},
-						AggregationBits: bitfield.Bitlist{0b11}},
+						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Slot:            51,
 					},
-						AggregationBits: bitfield.Bitlist{0b11}},
+						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Slot:            52,
 					},
-						AggregationBits: bitfield.Bitlist{0b11}},
+						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Slot:            53,
 					},
-						AggregationBits: bitfield.Bitlist{0b11}},
+						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Slot:            54,
-					}, AggregationBits: bitfield.Bitlist{0b11}},
+					}, AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits: bitfield.NewBitlist(1)},
 				},
 				NextPageToken: strconv.Itoa(11),
 				TotalSize:     int32(count)}},
@@ -388,7 +395,8 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 						BeaconBlockRoot: []byte("root"),
 						Slot:            99,
 					},
-						AggregationBits: bitfield.Bitlist{0b11}},
+						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1)},
 				},
 				NextPageToken: "",
 				TotalSize:     int32(count)}},
@@ -404,12 +412,14 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 					},
-						AggregationBits: bitfield.Bitlist{0b11}},
+						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1)},
 					{Data: &ethpb.AttestationData{
 						BeaconBlockRoot: []byte("root"),
 						Slot:            1,
 					},
 						AggregationBits: bitfield.Bitlist{0b11},
+						CustodyBits:     bitfield.NewBitlist(1),
 					},
 				},
 				NextPageToken: strconv.Itoa(1),
@@ -490,6 +500,7 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 				Slot:            i,
 			},
 			AggregationBits: bitfield.Bitlist{0b11},
+			CustodyBits:     bitfield.NewBitlist(1),
 		}
 		if err := db.SaveAttestation(ctx, attExample); err != nil {
 			t.Fatal(err)
@@ -519,76 +530,36 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 	}
 }
 
-func TestServer_StreamAttestations_ContextCanceled(t *testing.T) {
-	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
+func TestServer_AttestationPool(t *testing.T) {
 	ctx := context.Background()
-
-	ctx, cancel := context.WithCancel(ctx)
-	ticker := &mocktick.MockTicker{
-		Channel: make(chan uint64),
+	block := &ethpb.BeaconBlock{
+		Slot: 10,
 	}
-	server := &Server{
-		Ctx:        ctx,
-		SlotTicker: ticker,
+	bs := &Server{
+		Pool: &mockOps.Operations{
+			Attestations: []*ethpb.Attestation{
+				{
+					Data: &ethpb.AttestationData{
+						BeaconBlockRoot: []byte("1"),
+					},
+				},
+				{
+					Data: &ethpb.AttestationData{
+						BeaconBlockRoot: []byte("2"),
+					},
+				},
+			},
+		},
+		HeadFetcher: &mock.ChainService{
+			Block: block,
+		},
 	}
-
-	exitRoutine := make(chan bool)
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mockStream := mockRPC.NewMockBeaconChain_StreamAttestationsServer(ctrl)
-	mockStream.EXPECT().Context().Return(ctx)
-	go func(tt *testing.T) {
-		if err := server.StreamAttestations(
-			&ptypes.Empty{},
-			mockStream,
-		); !strings.Contains(err.Error(), "Context canceled") {
-			tt.Errorf("Expected context canceled error got: %v", err)
-		}
-		<-exitRoutine
-	}(t)
-	cancel()
-	exitRoutine <- true
-}
-
-func TestServer_StreamAttestations_OnSlotTick(t *testing.T) {
-	db := dbTest.SetupDB(t)
-	defer dbTest.TeardownDB(t, db)
-	exitRoutine := make(chan bool)
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	ctx := context.Background()
-	ticker := &mocktick.MockTicker{
-		Channel: make(chan uint64),
-	}
-	server := &Server{
-		Ctx:        ctx,
-		SlotTicker: ticker,
-		Pool:       attestations.NewPool(),
-	}
-
-	atts := []*ethpb.Attestation{
-		{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}},
-		{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1101}},
-		{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b1101}},
-	}
-	if err := server.Pool.SaveAggregatedAttestations(atts); err != nil {
+	res, err := bs.AttestationPool(ctx, &ptypes.Empty{})
+	if err != nil {
 		t.Fatal(err)
 	}
-
-	mockStream := mockRPC.NewMockBeaconChain_StreamAttestationsServer(ctrl)
-	mockStream.EXPECT().Send(atts[0])
-	mockStream.EXPECT().Send(atts[1])
-	mockStream.EXPECT().Send(atts[2]).Do(func(arg0 interface{}) {
-		exitRoutine <- true
-	})
-	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
-
-	go func(tt *testing.T) {
-		if err := server.StreamAttestations(&ptypes.Empty{}, mockStream); err != nil {
-			tt.Errorf("Could not call RPC method: %v", err)
-		}
-	}(t)
-	ticker.Channel <- 0
-	<-exitRoutine
+	want, _ := bs.Pool.AttestationPoolNoVerify(ctx)
+	if !reflect.DeepEqual(res.Attestations, want) {
+		t.Errorf("Wanted AttestationPool() = %v, received %v", want, res.Attestations)
+	}
 }

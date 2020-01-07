@@ -25,7 +25,7 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
-	NoGenesisDelay            bool   // NoGenesisDelay signals to start the chain as quickly as possible.
+	GenesisDelay              bool   // GenesisDelay when processing a chain start genesis event.
 	MinimalConfig             bool   // MinimalConfig as defined in the spec.
 	WriteSSZStateTransitions  bool   // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify          bool   // InitSyncNoVerify when initial syncing w/o verifying block's contents.
@@ -33,9 +33,9 @@ type Flags struct {
 	EnableBackupWebhook       bool   // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
 	PruneEpochBoundaryStates  bool   // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
 	EnableSnappyDBCompression bool   // EnableSnappyDBCompression in the database.
+	EnableCustomStateSSZ      bool   // EnableCustomStateSSZ in the the state transition function.
 	InitSyncCacheState        bool   // InitSyncCacheState caches state during initial sync.
 	KafkaBootstrapServers     string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
-	EnableSavingOfDepositData bool   // EnableSavingOfDepositData allows the saving of eth1 related data such as deposits,chain data to be saved.
 
 	// Cache toggles.
 	EnableAttestationCache   bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
@@ -65,13 +65,13 @@ func Init(c *Flags) {
 func ConfigureBeaconChain(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	if ctx.GlobalBool(noGenesisDelayFlag.Name) {
-		log.Warn("Starting ETH2 with no genesis delay")
-		cfg.NoGenesisDelay = true
-	}
 	if ctx.GlobalBool(MinimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
+	}
+	if ctx.GlobalBool(GenesisDelayFlag.Name) {
+		log.Warn("Using non standard genesis delay. This may cause problems in a multi-node environment.")
+		cfg.GenesisDelay = true
 	}
 	if ctx.GlobalBool(writeSSZStateTransitionsFlag.Name) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
@@ -84,6 +84,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(EnableEth1DataVoteCacheFlag.Name) {
 		log.Warn("Enabled unsafe eth1 data vote cache")
 		cfg.EnableEth1DataVoteCache = true
+	}
+	if ctx.GlobalBool(EnableCustomStateSSZ.Name) {
+		log.Warn("Enabled custom state ssz for the state transition function")
+		cfg.EnableCustomStateSSZ = true
 	}
 	if ctx.GlobalBool(initSyncVerifyEverythingFlag.Name) {
 		log.Warn("Initial syncing with verifying all block's content signatures.")
@@ -115,13 +119,17 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling experimental kafka streaming.")
 		cfg.KafkaBootstrapServers = ctx.GlobalString(kafkaBootstrapServersFlag.Name)
 	}
+	if ctx.GlobalBool(enableSnappyDBCompressionFlag.Name) {
+		log.Warn("Enabled snappy compression in the database.")
+		cfg.EnableSnappyDBCompression = true
+	}
+	if ctx.GlobalBool(enablePruneBoundaryStateFlag.Name) {
+		log.Warn("Enabled pruning epoch boundary states before last finalized check point.")
+		cfg.PruneEpochBoundaryStates = true
+	}
 	if ctx.GlobalBool(initSyncCacheState.Name) {
 		log.Warn("Enabled initial sync cache state mode.")
 		cfg.InitSyncCacheState = true
-	}
-	if ctx.GlobalBool(saveDepositData.Name) {
-		log.Warn("Enabled saving of eth1 related chain/deposit data.")
-		cfg.EnableSavingOfDepositData = true
 	}
 	Init(cfg)
 }

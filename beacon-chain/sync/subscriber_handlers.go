@@ -7,8 +7,7 @@ import (
 )
 
 func (r *Service) voluntaryExitSubscriber(ctx context.Context, msg proto.Message) error {
-	// TODO(#3259): Requires handlers in operations service to be implemented.
-	return nil
+	return r.operations.HandleValidatorExits(ctx, msg)
 }
 
 func (r *Service) attesterSlashingSubscriber(ctx context.Context, msg proto.Message) error {

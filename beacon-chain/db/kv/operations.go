@@ -44,7 +44,7 @@ func (k *Store) HasVoluntaryExit(ctx context.Context, exitRoot [32]byte) bool {
 func (k *Store) SaveVoluntaryExit(ctx context.Context, exit *ethpb.VoluntaryExit) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveVoluntaryExit")
 	defer span.End()
-	exitRoot, err := ssz.HashTreeRoot(exit)
+	exitRoot, err := ssz.SigningRoot(exit)
 	if err != nil {
 		return err
 	}

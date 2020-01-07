@@ -52,8 +52,7 @@ func runBlockHeaderTest(t *testing.T, config string) {
 				t.Fatal(err)
 			}
 
-			// Spectest blocks are not signed, so we'll call NoVerify to skip sig verification.
-			beaconState, err := blocks.ProcessBlockHeaderNoVerify(preBeaconState, block)
+			beaconState, err := blocks.ProcessBlockHeader(preBeaconState, block)
 			if postSSZExists {
 				if err != nil {
 					t.Fatalf("Unexpected error: %v", err)

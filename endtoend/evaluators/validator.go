@@ -51,26 +51,26 @@ func validatorsAreActive(client eth.BeaconChainClient) error {
 	}
 
 	expectedCount := params.BeaconConfig().MinGenesisActiveValidatorCount
-	receivedCount := uint64(len(validators.ValidatorList))
+	receivedCount := uint64(len(validators.Validators))
 	if expectedCount != receivedCount {
 		return fmt.Errorf("expected validator count to be %d, recevied %d", expectedCount, receivedCount)
 	}
 
-	for _, item := range validators.ValidatorList {
-		if item.Validator.ActivationEpoch != 0 {
-			return fmt.Errorf("expected genesis validator epoch to be 0, received %d", item.Validator.ActivationEpoch)
+	for _, val := range validators.Validators {
+		if val.ActivationEpoch != 0 {
+			return fmt.Errorf("expected genesis validator epoch to be 0, received %d", val.ActivationEpoch)
 		}
-		if item.Validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-			return fmt.Errorf("expected genesis validator exit epoch to be far future, received %d", item.Validator.ExitEpoch)
+		if val.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+			return fmt.Errorf("expected genesis validator exit epoch to be far future, received %d", val.ExitEpoch)
 		}
-		if item.Validator.WithdrawableEpoch != params.BeaconConfig().FarFutureEpoch {
-			return fmt.Errorf("expected genesis validator withdrawable epoch to be far future, received %d", item.Validator.WithdrawableEpoch)
+		if val.WithdrawableEpoch != params.BeaconConfig().FarFutureEpoch {
+			return fmt.Errorf("expected genesis validator withdrawable epoch to be far future, received %d", val.WithdrawableEpoch)
 		}
-		if item.Validator.EffectiveBalance != params.BeaconConfig().MaxEffectiveBalance {
+		if val.EffectiveBalance != params.BeaconConfig().MaxEffectiveBalance {
 			return fmt.Errorf(
 				"expected genesis validator effective balance to be %d, received %d",
 				params.BeaconConfig().MaxEffectiveBalance,
-				item.Validator.EffectiveBalance,
+				val.EffectiveBalance,
 			)
 		}
 	}

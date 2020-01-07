@@ -20,20 +20,16 @@ func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
 	slot := uint64(20)
 	ctx := context.Background()
 	// First we save a previous block to ensure the cache max size is reached.
-	prevBlock := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot:       slot - 1,
-			ParentRoot: []byte{1, 2, 3},
-		},
+	prevBlock := &ethpb.BeaconBlock{
+		Slot:       slot - 1,
+		ParentRoot: []byte{1, 2, 3},
 	}
 	if err := db.SaveBlock(ctx, prevBlock); err != nil {
 		t.Fatal(err)
 	}
-	block := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot:       slot,
-			ParentRoot: []byte{1, 2, 3},
-		},
+	block := &ethpb.BeaconBlock{
+		Slot:       slot,
+		ParentRoot: []byte{1, 2, 3},
 	}
 	// Even with a full cache, saving new blocks should not cause
 	// duplicated blocks in the DB.
@@ -58,13 +54,11 @@ func TestStore_BlocksCRUD(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	ctx := context.Background()
-	block := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot:       20,
-			ParentRoot: []byte{1, 2, 3},
-		},
+	block := &ethpb.BeaconBlock{
+		Slot:       20,
+		ParentRoot: []byte{1, 2, 3},
 	}
-	blockRoot, err := ssz.HashTreeRoot(block.Block)
+	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,19 +95,16 @@ func TestStore_BlocksBatchDelete(t *testing.T) {
 	defer teardownDB(t, db)
 	ctx := context.Background()
 	numBlocks := 1000
-	totalBlocks := make([]*ethpb.SignedBeaconBlock, numBlocks)
+	totalBlocks := make([]*ethpb.BeaconBlock, numBlocks)
 	blockRoots := make([][32]byte, 0)
-	oddBlocks := make([]*ethpb.SignedBeaconBlock, 0)
+	oddBlocks := make([]*ethpb.BeaconBlock, 0)
 	for i := 0; i < len(totalBlocks); i++ {
-		totalBlocks[i] = &ethpb.SignedBeaconBlock{
-			Block: &ethpb.BeaconBlock{
-				Slot:       uint64(i),
-				ParentRoot: []byte("parent"),
-			},
+		totalBlocks[i] = &ethpb.BeaconBlock{
+			Slot:       uint64(i),
+			ParentRoot: []byte("parent"),
 		}
-
 		if i%2 == 0 {
-			r, err := ssz.HashTreeRoot(totalBlocks[i].Block)
+			r, err := ssz.SigningRoot(totalBlocks[i])
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -142,7 +133,7 @@ func TestStore_BlocksBatchDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 	sort.Slice(retrieved, func(i, j int) bool {
-		return retrieved[i].Block.Slot < retrieved[j].Block.Slot
+		return retrieved[i].Slot < retrieved[j].Slot
 	})
 	if !reflect.DeepEqual(retrieved, oddBlocks) {
 		t.Errorf("Wanted %v, received %v", oddBlocks, retrieved)
@@ -153,13 +144,11 @@ func TestStore_GenesisBlock(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	ctx := context.Background()
-	genesisBlock := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot:       0,
-			ParentRoot: []byte{1, 2, 3},
-		},
+	genesisBlock := &ethpb.BeaconBlock{
+		Slot:       0,
+		ParentRoot: []byte{1, 2, 3},
 	}
-	blockRoot, err := ssz.HashTreeRoot(genesisBlock.Block)
+	blockRoot, err := ssz.SigningRoot(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -182,13 +171,11 @@ func TestStore_BlocksCRUD_NoCache(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	ctx := context.Background()
-	block := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot:       20,
-			ParentRoot: []byte{1, 2, 3},
-		},
+	block := &ethpb.BeaconBlock{
+		Slot:       20,
+		ParentRoot: []byte{1, 2, 3},
 	}
-	blockRoot, err := ssz.HashTreeRoot(block.Block)
+	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -224,36 +211,26 @@ func TestStore_BlocksCRUD_NoCache(t *testing.T) {
 func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
-	blocks := []*ethpb.SignedBeaconBlock{
+	blocks := []*ethpb.BeaconBlock{
 		{
-			Block: &ethpb.BeaconBlock{
-				Slot:       4,
-				ParentRoot: []byte("parent"),
-			},
+			Slot:       4,
+			ParentRoot: []byte("parent"),
 		},
 		{
-			Block: &ethpb.BeaconBlock{
-				Slot:       5,
-				ParentRoot: []byte("parent2"),
-			},
+			Slot:       5,
+			ParentRoot: []byte("parent2"),
 		},
 		{
-			Block: &ethpb.BeaconBlock{
-				Slot:       6,
-				ParentRoot: []byte("parent2"),
-			},
+			Slot:       6,
+			ParentRoot: []byte("parent2"),
 		},
 		{
-			Block: &ethpb.BeaconBlock{
-				Slot:       7,
-				ParentRoot: []byte("parent3"),
-			},
+			Slot:       7,
+			ParentRoot: []byte("parent3"),
 		},
 		{
-			Block: &ethpb.BeaconBlock{
-				Slot:       8,
-				ParentRoot: []byte("parent4"),
-			},
+			Slot:       8,
+			ParentRoot: []byte("parent4"),
 		},
 	}
 	ctx := context.Background()
@@ -330,13 +307,11 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 func TestStore_Blocks_Retrieve_SlotRange(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
-	b := make([]*ethpb.SignedBeaconBlock, 500)
+	b := make([]*ethpb.BeaconBlock, 500)
 	for i := 0; i < 500; i++ {
-		b[i] = &ethpb.SignedBeaconBlock{
-			Block: &ethpb.BeaconBlock{
-				ParentRoot: []byte("parent"),
-				Slot:       uint64(i),
-			},
+		b[i] = &ethpb.BeaconBlock{
+			ParentRoot: []byte("parent"),
+			Slot:       uint64(i),
 		}
 	}
 	ctx := context.Background()
@@ -357,13 +332,11 @@ func TestStore_Blocks_Retrieve_Epoch(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	slots := params.BeaconConfig().SlotsPerEpoch * 7
-	b := make([]*ethpb.SignedBeaconBlock, slots)
+	b := make([]*ethpb.BeaconBlock, slots)
 	for i := uint64(0); i < slots; i++ {
-		b[i] = &ethpb.SignedBeaconBlock{
-			Block: &ethpb.BeaconBlock{
-				ParentRoot: []byte("parent"),
-				Slot:       i,
-			},
+		b[i] = &ethpb.BeaconBlock{
+			ParentRoot: []byte("parent"),
+			Slot:       i,
 		}
 	}
 	ctx := context.Background()

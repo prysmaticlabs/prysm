@@ -52,7 +52,7 @@ func (bs *Server) ListAttestations(
 		if len(blks) != 1 {
 			return nil, status.Error(codes.Internal, "Found more than 1 genesis block")
 		}
-		genesisRoot, err := ssz.HashTreeRoot(blks[0].Block)
+		genesisRoot, err := ssz.SigningRoot(blks[0])
 		if err != nil {
 			return nil, err
 		}
@@ -113,27 +113,12 @@ func (bs *Server) ListAttestations(
 	}, nil
 }
 
-// StreamAttestations to clients at the end of every slot. This method retrieves the
-// aggregated attestations currently in the pool at the start of a slot and sends
-// them over a gRPC stream.
+// StreamAttestations to clients every single time a new attestation is received.
+// TODO(#4184): Implement.
 func (bs *Server) StreamAttestations(
-	_ *ptypes.Empty, stream ethpb.BeaconChain_StreamAttestationsServer,
+	_ *ptypes.Empty, _ ethpb.BeaconChain_StreamAttestationsServer,
 ) error {
-	for {
-		select {
-		case <-bs.SlotTicker.C():
-			atts := bs.Pool.AggregatedAttestations()
-			for i := 0; i < len(atts); i++ {
-				if err := stream.Send(atts[i]); err != nil {
-					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
-				}
-			}
-		case <-bs.Ctx.Done():
-			return status.Error(codes.Canceled, "Context canceled")
-		case <-stream.Context().Done():
-			return status.Error(codes.Canceled, "Context canceled")
-		}
-	}
+	return status.Error(codes.Unimplemented, "Not yet implemented")
 }
 
 // AttestationPool retrieves pending attestations.
@@ -148,7 +133,10 @@ func (bs *Server) StreamAttestations(
 func (bs *Server) AttestationPool(
 	ctx context.Context, _ *ptypes.Empty,
 ) (*ethpb.AttestationPoolResponse, error) {
-	atts := bs.Pool.AggregatedAttestations()
+	atts, err := bs.Pool.AttestationPoolNoVerify(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
+	}
 	return &ethpb.AttestationPoolResponse{
 		Attestations: atts,
 	}, nil

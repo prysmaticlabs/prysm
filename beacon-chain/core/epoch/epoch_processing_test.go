@@ -497,7 +497,7 @@ func TestProcessRegistryUpdates_NoRotation(t *testing.T) {
 func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                5 * params.BeaconConfig().SlotsPerEpoch,
-		FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 6},
+		FinalizedCheckpoint: &ethpb.Checkpoint{},
 	}
 	limit, err := helpers.ValidatorChurnLimit(0)
 	if err != nil {
@@ -516,7 +516,7 @@ func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 		t.Error(err)
 	}
 	for i, validator := range newState.Validators {
-		if validator.ActivationEligibilityEpoch != currentEpoch+1 {
+		if validator.ActivationEligibilityEpoch != currentEpoch {
 			t.Errorf("Could not update registry %d, wanted activation eligibility epoch %d got %d",
 				i, currentEpoch, validator.ActivationEligibilityEpoch)
 		}

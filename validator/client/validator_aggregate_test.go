@@ -6,17 +6,16 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-func TestSubmitAggregateAndProof_GetDutiesRequestFailure(t *testing.T) {
+func TestSubmitAggregateAndProof_AssignmentRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, _, finish := setup(t)
-	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{}}
+	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{}}
 	defer finish()
 
 	validator.SubmitAggregateAndProof(context.Background(), 0, validatorPubKey)
@@ -27,18 +26,16 @@ func TestSubmitAggregateAndProof_GetDutiesRequestFailure(t *testing.T) {
 func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 	validator, m, finish := setup(t)
 	defer finish()
-	validator.duties = &ethpb.DutiesResponse{
-		Duties: []*ethpb.DutiesResponse_Duty{
-			{
-				PublicKey: validatorKey.PublicKey.Marshal(),
-			},
+	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
+		{
+			PublicKey: validatorKey.PublicKey.Marshal(),
 		},
-	}
+	}}
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&pb.DomainResponse{}, nil /*err*/)
 
 	m.aggregatorClient.EXPECT().SubmitAggregateAndProof(
 		gomock.Any(), // ctx

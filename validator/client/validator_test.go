@@ -40,36 +40,36 @@ func publicKeys(km keymanager.KeyManager) [][]byte {
 	return res
 }
 
-func generateMockStatusResponse(pubkeys [][]byte) *ethpb.ValidatorActivationResponse {
-	multipleStatus := make([]*ethpb.ValidatorActivationResponse_Status, len(pubkeys))
+func generateMockStatusResponse(pubkeys [][]byte) *pb.ValidatorActivationResponse {
+	multipleStatus := make([]*pb.ValidatorActivationResponse_Status, len(pubkeys))
 	for i, key := range pubkeys {
-		multipleStatus[i] = &ethpb.ValidatorActivationResponse_Status{
+		multipleStatus[i] = &pb.ValidatorActivationResponse_Status{
 			PublicKey: key,
-			Status: &ethpb.ValidatorStatusResponse{
-				Status: ethpb.ValidatorStatus_UNKNOWN_STATUS,
+			Status: &pb.ValidatorStatusResponse{
+				Status: pb.ValidatorStatus_UNKNOWN_STATUS,
 			},
 		}
 	}
-	return &ethpb.ValidatorActivationResponse{Statuses: multipleStatus}
+	return &pb.ValidatorActivationResponse{Statuses: multipleStatus}
 }
 
 func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
+	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
 		keyManager:      testKeyManager,
 		validatorClient: client,
 	}
 	genesis := uint64(time.Unix(1, 0).Unix())
-	clientStream := internal.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
+	clientStream := internal.NewMockValidatorService_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
 		&ptypes.Empty{},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
-		&ethpb.ChainStartResponse{
+		&pb.ChainStartResponse{
 			Started:     true,
 			GenesisTime: genesis,
 		},
@@ -89,20 +89,20 @@ func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
 func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
+	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
 		keyManager:      testKeyManager,
 		validatorClient: client,
 	}
 	genesis := uint64(time.Unix(0, 0).Unix())
-	clientStream := internal.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
+	clientStream := internal.NewMockValidatorService_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
 		&ptypes.Empty{},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
-		&ethpb.ChainStartResponse{
+		&pb.ChainStartResponse{
 			Started:     true,
 			GenesisTime: genesis,
 		},
@@ -120,13 +120,13 @@ func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
+	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
 		keyManager:      testKeyManager,
 		validatorClient: client,
 	}
-	clientStream := internal.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
+	clientStream := internal.NewMockValidatorService_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
 		&ptypes.Empty{},
@@ -141,13 +141,13 @@ func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
 func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
+	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
 		keyManager:      testKeyManager,
 		validatorClient: client,
 	}
-	clientStream := internal.NewMockBeaconNodeValidator_WaitForChainStartClient(ctrl)
+	clientStream := internal.NewMockValidatorService_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
 		&ptypes.Empty{},
@@ -166,22 +166,24 @@ func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 func TestWaitActivation_ContextCanceled(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
+	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
 		keyManager:      testKeyManager,
 		validatorClient: client,
 	}
-	clientStream := internal.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
+	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
 
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
-		&ethpb.ValidatorActivationRequest{
+		&pb.ValidatorActivationRequest{
 			PublicKeys: publicKeys(v.keyManager),
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
-		&ethpb.ValidatorActivationResponse{},
+		&pb.ValidatorActivationResponse{
+			ActivatedPublicKeys: publicKeys(v.keyManager),
+		},
 		nil,
 	)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -196,16 +198,16 @@ func TestWaitActivation_ContextCanceled(t *testing.T) {
 func TestWaitActivation_StreamSetupFails(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
+	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
 		keyManager:      testKeyManager,
 		validatorClient: client,
 	}
-	clientStream := internal.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
+	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
-		&ethpb.ValidatorActivationRequest{
+		&pb.ValidatorActivationRequest{
 			PublicKeys: publicKeys(v.keyManager),
 		},
 	).Return(clientStream, errors.New("failed stream"))
@@ -219,16 +221,16 @@ func TestWaitActivation_StreamSetupFails(t *testing.T) {
 func TestWaitActivation_ReceiveErrorFromStream(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
+	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
 		keyManager:      testKeyManager,
 		validatorClient: client,
 	}
-	clientStream := internal.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
+	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
-		&ethpb.ValidatorActivationRequest{
+		&pb.ValidatorActivationRequest{
 			PublicKeys: publicKeys(v.keyManager),
 		},
 	).Return(clientStream, nil)
@@ -247,7 +249,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
+	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
 		keyManager:      testKeyManager,
@@ -255,11 +257,11 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 		genesisTime:     1,
 	}
 	resp := generateMockStatusResponse(publicKeys(v.keyManager))
-	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
-	clientStream := internal.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
+	resp.Statuses[0].Status.Status = pb.ValidatorStatus_ACTIVE
+	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
-		&ethpb.ValidatorActivationRequest{
+		&pb.ValidatorActivationRequest{
 			PublicKeys: publicKeys(v.keyManager),
 		},
 	).Return(clientStream, nil)
@@ -276,13 +278,13 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconChainClient(ctrl)
+	client := internal.NewMockValidatorServiceClient(ctrl)
 	v := validator{
-		keyManager:   testKeyManager,
-		beaconClient: client,
-		genesisTime:  1,
+		keyManager:      testKeyManager,
+		validatorClient: client,
+		genesisTime:     1,
 	}
-	client.EXPECT().GetChainHead(
+	client.EXPECT().CanonicalHead(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(nil, errors.New("failed"))
@@ -294,15 +296,15 @@ func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
 func TestCanonicalHeadSlot_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconChainClient(ctrl)
+	client := internal.NewMockValidatorServiceClient(ctrl)
 	v := validator{
-		keyManager:   testKeyManager,
-		beaconClient: client,
+		keyManager:      testKeyManager,
+		validatorClient: client,
 	}
-	client.EXPECT().GetChainHead(
+	client.EXPECT().CanonicalHead(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(&ethpb.ChainHead{HeadSlot: 0}, nil)
+	).Return(&ethpb.BeaconBlock{Slot: 0}, nil)
 	headSlot, err := v.CanonicalHeadSlot(context.Background())
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -311,12 +313,11 @@ func TestCanonicalHeadSlot_OK(t *testing.T) {
 		t.Errorf("Mismatch slots, wanted: %v, received: %v", 0, headSlot)
 	}
 }
-
 func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
+	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
 		keyManager:      testKeyManagerThreeValidators,
@@ -324,12 +325,12 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		genesisTime:     1,
 	}
 	resp := generateMockStatusResponse(publicKeys(v.keyManager))
-	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
-	resp.Statuses[1].Status.Status = ethpb.ValidatorStatus_ACTIVE
-	clientStream := internal.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
+	resp.Statuses[0].Status.Status = pb.ValidatorStatus_ACTIVE
+	resp.Statuses[1].Status.Status = pb.ValidatorStatus_ACTIVE
+	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
-		&ethpb.ValidatorActivationRequest{
+		&pb.ValidatorActivationRequest{
 			PublicKeys: publicKeys(v.keyManager),
 		},
 	).Return(clientStream, nil)
@@ -345,7 +346,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
+	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
 		keyManager:      testKeyManagerThreeValidators,
@@ -353,14 +354,16 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 		genesisTime:     1,
 	}
 	resp := generateMockStatusResponse(publicKeys(v.keyManager))
-	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
-	clientStream := internal.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
+	resp.Statuses[0].Status.Status = pb.ValidatorStatus_ACTIVE
+	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
-		&ethpb.ValidatorActivationResponse{},
+		&pb.ValidatorActivationResponse{
+			ActivatedPublicKeys: make([][]byte, 0),
+		},
 		nil,
 	)
 	clientStream.EXPECT().Recv().Return(
@@ -444,14 +447,14 @@ func TestWaitSync_Syncing(t *testing.T) {
 func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignments(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
+	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	slot := uint64(1)
 	v := validator{
 		keyManager:      testKeyManager,
 		validatorClient: client,
-		duties: &ethpb.DutiesResponse{
-			Duties: []*ethpb.DutiesResponse_Duty{
+		assignments: &pb.AssignmentResponse{
+			ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 				{
 					Committee:      []uint64{},
 					AttesterSlot:   10,
@@ -460,12 +463,12 @@ func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignm
 			},
 		},
 	}
-	client.EXPECT().GetDuties(
+	client.EXPECT().CommitteeAssignment(
 		gomock.Any(),
 		gomock.Any(),
 	).Times(0)
 
-	if err := v.UpdateDuties(context.Background(), slot); err != nil {
+	if err := v.UpdateAssignments(context.Background(), slot); err != nil {
 		t.Errorf("Could not update assignments: %v", err)
 	}
 }
@@ -473,13 +476,13 @@ func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignm
 func TestUpdateAssignments_ReturnsError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
+	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
 		keyManager:      testKeyManager,
 		validatorClient: client,
-		duties: &ethpb.DutiesResponse{
-			Duties: []*ethpb.DutiesResponse_Duty{
+		assignments: &pb.AssignmentResponse{
+			ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 				{
 					CommitteeIndex: 1,
 				},
@@ -489,15 +492,15 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 
 	expected := errors.New("bad")
 
-	client.EXPECT().GetDuties(
+	client.EXPECT().CommitteeAssignment(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(nil, expected)
 
-	if err := v.UpdateDuties(context.Background(), params.BeaconConfig().SlotsPerEpoch); err != expected {
+	if err := v.UpdateAssignments(context.Background(), params.BeaconConfig().SlotsPerEpoch); err != expected {
 		t.Errorf("Bad error; want=%v got=%v", expected, err)
 	}
-	if v.duties != nil {
+	if v.assignments != nil {
 		t.Error("Assignments should have been cleared on failure")
 	}
 }
@@ -505,11 +508,11 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 func TestUpdateAssignments_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
+	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	slot := params.BeaconConfig().SlotsPerEpoch
-	resp := &ethpb.DutiesResponse{
-		Duties: []*ethpb.DutiesResponse_Duty{
+	resp := &pb.AssignmentResponse{
+		ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 			{
 				AttesterSlot:   params.BeaconConfig().SlotsPerEpoch,
 				CommitteeIndex: 100,
@@ -524,40 +527,28 @@ func TestUpdateAssignments_OK(t *testing.T) {
 		validatorClient: client,
 		pubKeyToID:      make(map[[48]byte]uint64),
 	}
-	client.EXPECT().GetDuties(
+	client.EXPECT().CommitteeAssignment(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(resp, nil)
 
-	indexResp := &ethpb.ValidatorIndexResponse{Index: 100}
+	indexResp := &pb.ValidatorIndexResponse{Index: 100}
 	client.EXPECT().ValidatorIndex(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(indexResp, nil)
 
-	if err := v.UpdateDuties(context.Background(), slot); err != nil {
+	if err := v.UpdateAssignments(context.Background(), slot); err != nil {
 		t.Fatalf("Could not update assignments: %v", err)
 	}
-	if v.duties.Duties[0].ProposerSlot != params.BeaconConfig().SlotsPerEpoch+1 {
-		t.Errorf(
-			"Unexpected validator assignments. want=%v got=%v",
-			params.BeaconConfig().SlotsPerEpoch+1,
-			v.duties.Duties[0].ProposerSlot,
-		)
+	if v.assignments.ValidatorAssignment[0].ProposerSlot != params.BeaconConfig().SlotsPerEpoch+1 {
+		t.Errorf("Unexpected validator assignments. want=%v got=%v", params.BeaconConfig().SlotsPerEpoch+1, v.assignments.ValidatorAssignment[0].ProposerSlot)
 	}
-	if v.duties.Duties[0].AttesterSlot != params.BeaconConfig().SlotsPerEpoch {
-		t.Errorf(
-			"Unexpected validator assignments. want=%v got=%v",
-			params.BeaconConfig().SlotsPerEpoch,
-			v.duties.Duties[0].AttesterSlot,
-		)
+	if v.assignments.ValidatorAssignment[0].AttesterSlot != params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Unexpected validator assignments. want=%v got=%v", params.BeaconConfig().SlotsPerEpoch, v.assignments.ValidatorAssignment[0].AttesterSlot)
 	}
-	if v.duties.Duties[0].CommitteeIndex != resp.Duties[0].CommitteeIndex {
-		t.Errorf(
-			"Unexpected validator assignments. want=%v got=%v",
-			resp.Duties[0].CommitteeIndex,
-			v.duties.Duties[0].CommitteeIndex,
-		)
+	if v.assignments.ValidatorAssignment[0].CommitteeIndex != resp.ValidatorAssignment[0].CommitteeIndex {
+		t.Errorf("Unexpected validator assignments. want=%v got=%v", resp.ValidatorAssignment[0].CommitteeIndex, v.assignments.ValidatorAssignment[0].CommitteeIndex)
 	}
 }
 
@@ -571,8 +562,8 @@ func TestRolesAt_OK(t *testing.T) {
 	sks[2] = bls.RandKey()
 	sks[3] = bls.RandKey()
 	v.keyManager = keymanager.NewDirect(sks)
-	v.duties = &ethpb.DutiesResponse{
-		Duties: []*ethpb.DutiesResponse_Duty{
+	v.assignments = &pb.AssignmentResponse{
+		ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
 			{
 				CommitteeIndex: 1,
 				AttesterSlot:   1,
@@ -600,11 +591,11 @@ func TestRolesAt_OK(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&pb.DomainResponse{}, nil /*err*/)
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&pb.DomainResponse{}, nil /*err*/)
 
 	roleMap, err := v.RolesAt(context.Background(), 1)
 	if err != nil {

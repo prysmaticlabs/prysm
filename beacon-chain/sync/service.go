@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared"
 )
@@ -20,7 +20,7 @@ var _ = shared.Service(&Service{})
 type Config struct {
 	P2P           p2p.P2P
 	DB            db.Database
-	AttPool       attestations.Pool
+	Operations    *operations.Service
 	Chain         blockchainService
 	InitialSync   Checker
 	StateNotifier statefeed.Notifier
@@ -44,10 +44,10 @@ func NewRegularSync(cfg *Config) *Service {
 		cancel:              cancel,
 		db:                  cfg.DB,
 		p2p:                 cfg.P2P,
-		attPool:             cfg.AttPool,
+		operations:          cfg.Operations,
 		chain:               cfg.Chain,
 		initialSync:         cfg.InitialSync,
-		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
+		slotToPendingBlocks: make(map[uint64]*ethpb.BeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 		stateNotifier:       cfg.StateNotifier,
 	}
@@ -65,9 +65,9 @@ type Service struct {
 	cancel              context.CancelFunc
 	p2p                 p2p.P2P
 	db                  db.Database
-	attPool             attestations.Pool
+	operations          *operations.Service
 	chain               blockchainService
-	slotToPendingBlocks map[uint64]*ethpb.SignedBeaconBlock
+	slotToPendingBlocks map[uint64]*ethpb.BeaconBlock
 	seenPendingBlocks   map[[32]byte]bool
 	pendingQueueLock    sync.RWMutex
 	chainStarted        bool

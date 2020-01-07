@@ -40,7 +40,7 @@ func TestKV_Aggregated_CanSaveRetrieve(t *testing.T) {
 		}
 	}
 
-	returned := cache.AggregatedAttestations()
+	returned := cache.AggregatedAttestation()
 
 	sort.Slice(returned, func(i, j int) bool {
 		return returned[i].Data.Slot < returned[j].Data.Slot
@@ -72,7 +72,7 @@ func TestKV_Aggregated_CanDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	returned := cache.AggregatedAttestations()
+	returned := cache.AggregatedAttestation()
 	wanted := []*ethpb.Attestation{att2}
 
 	if !reflect.DeepEqual(wanted, returned) {

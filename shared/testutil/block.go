@@ -18,7 +18,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/stateutil"
 )
 
 // BlockGenConfig is used to define the requested conditions
@@ -50,7 +49,7 @@ func GenerateFullBlock(
 	privs []*bls.SecretKey,
 	conf *BlockGenConfig,
 	slot uint64,
-) (*ethpb.SignedBeaconBlock, error) {
+) (*ethpb.BeaconBlock, error) {
 	currentSlot := bState.Slot
 	if currentSlot > slot {
 		return nil, fmt.Errorf("current slot in state is larger than given slot. %d > %d", currentSlot, slot)
@@ -98,7 +97,7 @@ func GenerateFullBlock(
 	}
 
 	numToGen = conf.NumVoluntaryExits
-	exits := []*ethpb.SignedVoluntaryExit{}
+	exits := []*ethpb.VoluntaryExit{}
 	if numToGen > 0 {
 		exits, err = generateVoluntaryExits(bState, privs, numToGen)
 		if err != nil {
@@ -107,12 +106,12 @@ func GenerateFullBlock(
 	}
 
 	newHeader := proto.Clone(bState.LatestBlockHeader).(*ethpb.BeaconBlockHeader)
-	prevStateRoot, err := stateutil.HashTreeRootState(bState)
+	prevStateRoot, err := ssz.HashTreeRoot(bState)
 	if err != nil {
 		return nil, err
 	}
 	newHeader.StateRoot = prevStateRoot[:]
-	parentRoot, err := ssz.HashTreeRoot(newHeader)
+	parentRoot, err := ssz.SigningRoot(newHeader)
 	if err != nil {
 		return nil, err
 	}
@@ -148,8 +147,9 @@ func GenerateFullBlock(
 	if err != nil {
 		return nil, err
 	}
+	block.Signature = signature.Marshal()
 
-	return &ethpb.SignedBeaconBlock{Block: block, Signature: signature.Marshal()}, nil
+	return block, nil
 }
 
 func generateProposerSlashings(
@@ -165,26 +165,22 @@ func generateProposerSlashings(
 		if err != nil {
 			return nil, err
 		}
-		header1 := &ethpb.SignedBeaconBlockHeader{
-			Header: &ethpb.BeaconBlockHeader{
-				Slot:     bState.Slot,
-				BodyRoot: []byte{0, 1, 0},
-			},
+		header1 := &ethpb.BeaconBlockHeader{
+			Slot:     bState.Slot,
+			BodyRoot: []byte{0, 1, 0},
 		}
-		root, err := ssz.HashTreeRoot(header1.Header)
+		root, err := ssz.SigningRoot(header1)
 		if err != nil {
 			return nil, err
 		}
 		domain := helpers.Domain(bState.Fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 		header1.Signature = privs[proposerIndex].Sign(root[:], domain).Marshal()
 
-		header2 := &ethpb.SignedBeaconBlockHeader{
-			Header: &ethpb.BeaconBlockHeader{
-				Slot:     bState.Slot,
-				BodyRoot: []byte{0, 2, 0},
-			},
+		header2 := &ethpb.BeaconBlockHeader{
+			Slot:     bState.Slot,
+			BodyRoot: []byte{0, 2, 0},
 		}
-		root, err = ssz.HashTreeRoot(header2.Header)
+		root, err = ssz.SigningRoot(header2)
 		if err != nil {
 			return nil, err
 		}
@@ -234,7 +230,10 @@ func generateAttesterSlashings(
 			},
 			AggregationBits: aggregationBits,
 		}
-		dataRoot, err := ssz.HashTreeRoot(att1.Data)
+		dataRoot, err := ssz.HashTreeRoot(&pb.AttestationDataAndCustodyBit{
+			Data:       att1.Data,
+			CustodyBit: false,
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -257,7 +256,10 @@ func generateAttesterSlashings(
 			},
 			AggregationBits: aggregationBits,
 		}
-		dataRoot, err = ssz.HashTreeRoot(att2.Data)
+		dataRoot, err = ssz.HashTreeRoot(&pb.AttestationDataAndCustodyBit{
+			Data:       att2.Data,
+			CustodyBit: false,
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -376,7 +378,10 @@ func GenerateAttestations(
 			},
 		}
 
-		dataRoot, err := ssz.HashTreeRoot(attData)
+		dataRoot, err := ssz.HashTreeRoot(&pb.AttestationDataAndCustodyBit{
+			Data:       attData,
+			CustodyBit: false,
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -385,6 +390,7 @@ func GenerateAttestations(
 		bitsPerAtt := committeeSize / uint64(attsPerCommittee)
 		for i := uint64(0); i < committeeSize; i += bitsPerAtt {
 			aggregationBits := bitfield.NewBitlist(committeeSize)
+			custodyBits := bitfield.NewBitlist(committeeSize)
 			sigs := []*bls.Signature{}
 			for b := i; b < i+bitsPerAtt; b++ {
 				aggregationBits.SetBitAt(b, true)
@@ -394,6 +400,7 @@ func GenerateAttestations(
 			att := &ethpb.Attestation{
 				Data:            attData,
 				AggregationBits: aggregationBits,
+				CustodyBits:     custodyBits,
 				Signature:       bls.AggregateSignatures(sigs).Marshal(),
 			}
 			attestations = append(attestations, att)
@@ -426,22 +433,20 @@ func generateVoluntaryExits(
 	bState *pb.BeaconState,
 	privs []*bls.SecretKey,
 	numExits uint64,
-) ([]*ethpb.SignedVoluntaryExit, error) {
+) ([]*ethpb.VoluntaryExit, error) {
 	currentEpoch := helpers.CurrentEpoch(bState)
 
-	voluntaryExits := make([]*ethpb.SignedVoluntaryExit, numExits)
+	voluntaryExits := make([]*ethpb.VoluntaryExit, numExits)
 	for i := 0; i < len(voluntaryExits); i++ {
 		valIndex, err := randValIndex(bState)
 		if err != nil {
 			return nil, err
 		}
-		exit := &ethpb.SignedVoluntaryExit{
-			Exit: &ethpb.VoluntaryExit{
-				Epoch:          helpers.PrevEpoch(bState),
-				ValidatorIndex: valIndex,
-			},
+		exit := &ethpb.VoluntaryExit{
+			Epoch:          helpers.PrevEpoch(bState),
+			ValidatorIndex: valIndex,
 		}
-		root, err := ssz.HashTreeRoot(exit.Exit)
+		root, err := ssz.SigningRoot(exit)
 		if err != nil {
 			return nil, err
 		}

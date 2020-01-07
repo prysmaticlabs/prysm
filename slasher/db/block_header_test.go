@@ -34,22 +34,22 @@ func TestSaveHistoryBlkHdr(t *testing.T) {
 	tests := []struct {
 		epoch uint64
 		vID   uint64
-		bh    *ethpb.SignedBeaconBlockHeader
+		bh    *ethpb.BeaconBlockHeader
 	}{
 		{
 			epoch: uint64(0),
 			vID:   uint64(0),
-			bh:    &ethpb.SignedBeaconBlockHeader{Signature: []byte("let me in")},
+			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in")},
 		},
 		{
 			epoch: uint64(0),
 			vID:   uint64(1),
-			bh:    &ethpb.SignedBeaconBlockHeader{Signature: []byte("let me in 2nd")},
+			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 2nd")},
 		},
 		{
 			epoch: uint64(1),
 			vID:   uint64(0),
-			bh:    &ethpb.SignedBeaconBlockHeader{Signature: []byte("let me in 3rd")},
+			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 3rd")},
 		},
 	}
 
@@ -77,22 +77,22 @@ func TestDeleteHistoryBlkHdr(t *testing.T) {
 	tests := []struct {
 		epoch uint64
 		vID   uint64
-		bh    *ethpb.SignedBeaconBlockHeader
+		bh    *ethpb.BeaconBlockHeader
 	}{
 		{
 			epoch: uint64(0),
 			vID:   uint64(0),
-			bh:    &ethpb.SignedBeaconBlockHeader{Signature: []byte("let me in")},
+			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in")},
 		},
 		{
 			epoch: uint64(0),
 			vID:   uint64(1),
-			bh:    &ethpb.SignedBeaconBlockHeader{Signature: []byte("let me in 2nd")},
+			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 2nd")},
 		},
 		{
 			epoch: uint64(1),
 			vID:   uint64(0),
-			bh:    &ethpb.SignedBeaconBlockHeader{Signature: []byte("let me in 3rd")},
+			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 3rd")},
 		},
 	}
 	for _, tt := range tests {
@@ -135,22 +135,22 @@ func TestHasHistoryBlkHdr(t *testing.T) {
 	tests := []struct {
 		epoch uint64
 		vID   uint64
-		bh    *ethpb.SignedBeaconBlockHeader
+		bh    *ethpb.BeaconBlockHeader
 	}{
 		{
 			epoch: uint64(0),
 			vID:   uint64(0),
-			bh:    &ethpb.SignedBeaconBlockHeader{Signature: []byte("let me in")},
+			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in")},
 		},
 		{
 			epoch: uint64(0),
 			vID:   uint64(1),
-			bh:    &ethpb.SignedBeaconBlockHeader{Signature: []byte("let me in 2nd")},
+			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 2nd")},
 		},
 		{
 			epoch: uint64(1),
 			vID:   uint64(0),
-			bh:    &ethpb.SignedBeaconBlockHeader{Signature: []byte("let me in 3rd")},
+			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 3rd")},
 		},
 	}
 	for _, tt := range tests {
@@ -184,32 +184,32 @@ func TestPruneHistoryBlkHdr(t *testing.T) {
 	tests := []struct {
 		epoch uint64
 		vID   uint64
-		bh    *ethpb.SignedBeaconBlockHeader
+		bh    *ethpb.BeaconBlockHeader
 	}{
 		{
 			epoch: uint64(0),
 			vID:   uint64(0),
-			bh:    &ethpb.SignedBeaconBlockHeader{Signature: []byte("let me in")},
+			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in")},
 		},
 		{
 			epoch: uint64(0),
 			vID:   uint64(1),
-			bh:    &ethpb.SignedBeaconBlockHeader{Signature: []byte("let me in 2nd")},
+			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 2nd")},
 		},
 		{
 			epoch: uint64(1),
 			vID:   uint64(0),
-			bh:    &ethpb.SignedBeaconBlockHeader{Signature: []byte("let me in 3rd")},
+			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 3rd")},
 		},
 		{
 			epoch: uint64(2),
 			vID:   uint64(0),
-			bh:    &ethpb.SignedBeaconBlockHeader{Signature: []byte("let me in 4th")},
+			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 4th")},
 		},
 		{
 			epoch: uint64(3),
 			vID:   uint64(0),
-			bh:    &ethpb.SignedBeaconBlockHeader{Signature: []byte("let me in 5th")},
+			bh:    &ethpb.BeaconBlockHeader{Signature: []byte("let me in 5th")},
 		},
 	}
 

@@ -23,15 +23,15 @@ func TestBlockSignature(t *testing.T) {
 		t.Error(err)
 	}
 	beaconState.Slot--
-	signingRoot, err := ssz.HashTreeRoot(block.Block)
+	signingRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		t.Error(err)
 	}
-	epoch := helpers.SlotToEpoch(block.Block.Slot)
+	epoch := helpers.SlotToEpoch(block.Slot)
 	domain := helpers.Domain(beaconState.Fork, epoch, params.BeaconConfig().DomainBeaconProposer)
 	blockSig := privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()
 
-	signature, err := BlockSignature(beaconState, block.Block, privKeys)
+	signature, err := BlockSignature(beaconState, block, privKeys)
 	if err != nil {
 		t.Error(err)
 	}

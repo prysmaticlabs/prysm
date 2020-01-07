@@ -40,7 +40,7 @@ message ValidatorIDToIdxAttList {
 }
 
 message ProposerSlashingRequest {
-    ethereum.eth.v1alpha1.SignedBeaconBlockHeader block_header = 1;
+    ethereum.eth.v1alpha1.BeaconBlockHeader block_header = 1;
     uint64 validator_index = 2;
 }
 

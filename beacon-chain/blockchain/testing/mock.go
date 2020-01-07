@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -22,16 +21,15 @@ import (
 type ChainService struct {
 	State                       *pb.BeaconState
 	Root                        []byte
-	Block                       *ethpb.SignedBeaconBlock
+	Block                       *ethpb.BeaconBlock
 	FinalizedCheckPoint         *ethpb.Checkpoint
 	CurrentJustifiedCheckPoint  *ethpb.Checkpoint
 	PreviousJustifiedCheckPoint *ethpb.Checkpoint
-	BlocksReceived              []*ethpb.SignedBeaconBlock
+	BlocksReceived              []*ethpb.BeaconBlock
 	Genesis                     time.Time
 	Fork                        *pb.Fork
 	DB                          db.Database
 	stateNotifier               statefeed.Notifier
-	opNotifier                  opfeed.Notifier
 }
 
 // StateNotifier mocks the same method in the chain service.
@@ -55,53 +53,32 @@ func (msn *MockStateNotifier) StateFeed() *event.Feed {
 	return msn.feed
 }
 
-// OperationNotifier mocks the same method in the chain service.
-func (ms *ChainService) OperationNotifier() opfeed.Notifier {
-	if ms.opNotifier == nil {
-		ms.opNotifier = &MockOperationNotifier{}
-	}
-	return ms.opNotifier
-}
-
-// MockOperationNotifier mocks the operation notifier.
-type MockOperationNotifier struct {
-	feed *event.Feed
-}
-
-// OperationFeed returns an operation feed.
-func (mon *MockOperationNotifier) OperationFeed() *event.Feed {
-	if mon.feed == nil {
-		mon.feed = new(event.Feed)
-	}
-	return mon.feed
-}
-
 // ReceiveBlock mocks ReceiveBlock method in chain service.
-func (ms *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlock) error {
+func (ms *ChainService) ReceiveBlock(ctx context.Context, block *ethpb.BeaconBlock) error {
 	return nil
 }
 
 // ReceiveBlockNoVerify mocks ReceiveBlockNoVerify method in chain service.
-func (ms *ChainService) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedBeaconBlock) error {
+func (ms *ChainService) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.BeaconBlock) error {
 	return nil
 }
 
 // ReceiveBlockNoPubsub mocks ReceiveBlockNoPubsub method in chain service.
-func (ms *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedBeaconBlock) error {
+func (ms *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.BeaconBlock) error {
 	return nil
 }
 
 // ReceiveBlockNoPubsubForkchoice mocks ReceiveBlockNoPubsubForkchoice method in chain service.
-func (ms *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.SignedBeaconBlock) error {
+func (ms *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.BeaconBlock) error {
 	if ms.State == nil {
 		ms.State = &pb.BeaconState{}
 	}
-	if !bytes.Equal(ms.Root, block.Block.ParentRoot) {
-		return errors.Errorf("wanted %#x but got %#x", ms.Root, block.Block.ParentRoot)
+	if !bytes.Equal(ms.Root, block.ParentRoot) {
+		return errors.Errorf("wanted %#x but got %#x", ms.Root, block.ParentRoot)
 	}
-	ms.State.Slot = block.Block.Slot
+	ms.State.Slot = block.Slot
 	ms.BlocksReceived = append(ms.BlocksReceived, block)
-	signingRoot, err := ssz.HashTreeRoot(block.Block)
+	signingRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		return err
 	}
@@ -109,7 +86,7 @@ func (ms *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, bloc
 		if err := ms.DB.SaveBlock(ctx, block); err != nil {
 			return err
 		}
-		logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, block.Block.Slot)
+		logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, block.Slot)
 	}
 	ms.Root = signingRoot[:]
 	ms.Block = block
@@ -118,9 +95,6 @@ func (ms *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, bloc
 
 // HeadSlot mocks HeadSlot method in chain service.
 func (ms *ChainService) HeadSlot() uint64 {
-	if ms.State == nil {
-		return 0
-	}
 	return ms.State.Slot
 
 }
@@ -132,7 +106,7 @@ func (ms *ChainService) HeadRoot() []byte {
 }
 
 // HeadBlock mocks HeadBlock method in chain service.
-func (ms *ChainService) HeadBlock() *ethpb.SignedBeaconBlock {
+func (ms *ChainService) HeadBlock() *ethpb.BeaconBlock {
 	return ms.Block
 }
 
@@ -173,9 +147,6 @@ func (ms *ChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attes
 
 // HeadValidatorsIndices mocks the same method in the chain service.
 func (ms *ChainService) HeadValidatorsIndices(epoch uint64) ([]uint64, error) {
-	if ms.State == nil {
-		return []uint64{}, nil
-	}
 	return helpers.ActiveValidatorIndices(ms.State, epoch)
 }
 

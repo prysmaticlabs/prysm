@@ -26,9 +26,10 @@ import (
 type validator struct {
 	genesisTime          uint64
 	ticker               *slotutil.SlotTicker
-	duties               *ethpb.DutiesResponse
-	validatorClient      ethpb.BeaconNodeValidatorClient
-	beaconClient         ethpb.BeaconChainClient
+	assignments          *pb.AssignmentResponse
+	proposerClient       pb.ProposerServiceClient
+	validatorClient      pb.ValidatorServiceClient
+	attesterClient       pb.AttesterServiceClient
 	graffiti             []byte
 	aggregatorClient     pb.AggregatorServiceClient
 	node                 ethpb.NodeClient
@@ -92,7 +93,7 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not fetch validating keys")
 	}
-	req := &ethpb.ValidatorActivationRequest{
+	req := &pb.ValidatorActivationRequest{
 		PublicKeys: bytesutil.FromBytes48Array(validatingKeys),
 	}
 	stream, err := v.validatorClient.WaitForActivation(ctx, req)
@@ -160,27 +161,27 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 	}
 }
 
-func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.ValidatorActivationResponse_Status) [][]byte {
+func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*pb.ValidatorActivationResponse_Status) [][]byte {
 	var activatedKeys [][]byte
 	for _, status := range validatorStatuses {
 		log := log.WithFields(logrus.Fields{
 			"pubKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey[:])),
 			"status": status.Status.Status.String(),
 		})
-		if status.Status.Status == ethpb.ValidatorStatus_ACTIVE {
+		if status.Status.Status == pb.ValidatorStatus_ACTIVE {
 			activatedKeys = append(activatedKeys, status.PublicKey)
 			continue
 		}
-		if status.Status.Status == ethpb.ValidatorStatus_EXITED {
+		if status.Status.Status == pb.ValidatorStatus_EXITED {
 			log.Info("Validator exited")
 			continue
 		}
-		if status.Status.Status == ethpb.ValidatorStatus_DEPOSIT_RECEIVED {
+		if status.Status.Status == pb.ValidatorStatus_DEPOSIT_RECEIVED {
 			log.WithField("expectedInclusionSlot", status.Status.DepositInclusionSlot).Info(
 				"Deposit for validator received but not processed into state")
 			continue
 		}
-		if uint64(status.Status.ActivationEpoch) == params.BeaconConfig().FarFutureEpoch {
+		if status.Status.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
 			log.WithFields(logrus.Fields{
 				"depositInclusionSlot":      status.Status.DepositInclusionSlot,
 				"positionInActivationQueue": status.Status.PositionInActivationQueue,
@@ -201,11 +202,11 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 func (v *validator) CanonicalHeadSlot(ctx context.Context) (uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.CanonicalHeadSlot")
 	defer span.End()
-	head, err := v.beaconClient.GetChainHead(ctx, &ptypes.Empty{})
+	head, err := v.validatorClient.CanonicalHead(ctx, &ptypes.Empty{})
 	if err != nil {
 		return 0, err
 	}
-	return head.HeadSlot, nil
+	return head.Slot, nil
 }
 
 // NextSlot emits the next slot number at the start time of that slot.
@@ -219,11 +220,11 @@ func (v *validator) SlotDeadline(slot uint64) time.Time {
 	return time.Unix(int64(v.genesisTime), 0 /*ns*/).Add(time.Duration(secs) * time.Second)
 }
 
-// UpdateDuties checks the slot number to determine if the validator's
+// UpdateAssignments checks the slot number to determine if the validator's
 // list of upcoming assignments needs to be updated. For example, at the
 // beginning of a new epoch.
-func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
-	if slot%params.BeaconConfig().SlotsPerEpoch != 0 && v.duties != nil {
+func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
+	if slot%params.BeaconConfig().SlotsPerEpoch != 0 && v.assignments != nil {
 		// Do nothing if not epoch start AND assignments already exist.
 		return nil
 	}
@@ -237,47 +238,47 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	if err != nil {
 		return err
 	}
-	req := &ethpb.DutiesRequest{
-		Epoch:      slot / params.BeaconConfig().SlotsPerEpoch,
+	req := &pb.AssignmentRequest{
+		EpochStart: slot / params.BeaconConfig().SlotsPerEpoch,
 		PublicKeys: bytesutil.FromBytes48Array(validatingKeys),
 	}
 
-	resp, err := v.validatorClient.GetDuties(ctx, req)
+	resp, err := v.validatorClient.CommitteeAssignment(ctx, req)
 	if err != nil {
-		v.duties = nil // Clear assignments so we know to retry the request.
+		v.assignments = nil // Clear assignments so we know to retry the request.
 		log.Error(err)
 		return err
 	}
 
-	v.duties = resp
+	v.assignments = resp
 	// Only log the full assignments output on epoch start to be less verbose.
 	if slot%params.BeaconConfig().SlotsPerEpoch == 0 {
 		v.pubKeyToIDLock.Lock()
 		defer v.pubKeyToIDLock.Unlock()
 
-		for _, duty := range v.duties.Duties {
-			if _, ok := v.pubKeyToID[bytesutil.ToBytes48(duty.PublicKey)]; !ok {
+		for _, assignment := range v.assignments.ValidatorAssignment {
+			if _, ok := v.pubKeyToID[bytesutil.ToBytes48(assignment.PublicKey)]; !ok {
 				// TODO(4379): Make validator index part of the assignment respond.
-				res, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: duty.PublicKey})
+				res, err := v.validatorClient.ValidatorIndex(ctx, &pb.ValidatorIndexRequest{PublicKey: assignment.PublicKey})
 				if err != nil {
-					log.Warnf("Validator pub key %#x does not exist in beacon node", bytesutil.Trunc(duty.PublicKey))
+					log.Warnf("Validator pub key %#x does not exist in beacon node", bytesutil.Trunc(assignment.PublicKey))
 					continue
 				}
-				v.pubKeyToID[bytesutil.ToBytes48(duty.PublicKey)] = res.Index
+				v.pubKeyToID[bytesutil.ToBytes48(assignment.PublicKey)] = res.Index
 			}
 			lFields := logrus.Fields{
-				"pubKey":         fmt.Sprintf("%#x", bytesutil.Trunc(duty.PublicKey)),
-				"validatorIndex": v.pubKeyToID[bytesutil.ToBytes48(duty.PublicKey)],
-				"committeeIndex": duty.CommitteeIndex,
+				"pubKey":         fmt.Sprintf("%#x", bytesutil.Trunc(assignment.PublicKey)),
+				"validatorIndex": v.pubKeyToID[bytesutil.ToBytes48(assignment.PublicKey)],
+				"committeeIndex": assignment.CommitteeIndex,
 				"epoch":          slot / params.BeaconConfig().SlotsPerEpoch,
-				"status":         duty.Status,
+				"status":         assignment.Status,
 			}
 
-			if duty.Status == ethpb.ValidatorStatus_ACTIVE {
-				if duty.ProposerSlot > 0 {
-					lFields["proposerSlot"] = duty.ProposerSlot
+			if assignment.Status == pb.ValidatorStatus_ACTIVE {
+				if assignment.ProposerSlot > 0 {
+					lFields["proposerSlot"] = assignment.ProposerSlot
 				}
-				lFields["attesterSlot"] = duty.AttesterSlot
+				lFields["attesterSlot"] = assignment.AttesterSlot
 			}
 
 			log.WithFields(lFields).Info("New assignment")
@@ -292,19 +293,19 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 // validator assignments are unknown. Otherwise returns a valid ValidatorRole map.
 func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]pb.ValidatorRole, error) {
 	rolesAt := make(map[[48]byte][]pb.ValidatorRole)
-	for _, duty := range v.duties.Duties {
+	for _, assignment := range v.assignments.ValidatorAssignment {
 		var roles []pb.ValidatorRole
 
-		if duty == nil {
+		if assignment == nil {
 			continue
 		}
-		if duty.ProposerSlot == slot {
+		if assignment.ProposerSlot == slot {
 			roles = append(roles, pb.ValidatorRole_PROPOSER)
 		}
-		if duty.AttesterSlot == slot {
+		if assignment.AttesterSlot == slot {
 			roles = append(roles, pb.ValidatorRole_ATTESTER)
 
-			aggregator, err := v.isAggregator(ctx, duty.Committee, slot, bytesutil.ToBytes48(duty.PublicKey))
+			aggregator, err := v.isAggregator(ctx, assignment.Committee, slot, bytesutil.ToBytes48(assignment.PublicKey))
 			if err != nil {
 				return nil, errors.Wrap(err, "could not check if a validator is an aggregator")
 			}
@@ -318,7 +319,7 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]pb
 		}
 
 		var pubKey [48]byte
-		copy(pubKey[:], duty.PublicKey)
+		copy(pubKey[:], assignment.PublicKey)
 		rolesAt[pubKey] = roles
 	}
 	return rolesAt, nil

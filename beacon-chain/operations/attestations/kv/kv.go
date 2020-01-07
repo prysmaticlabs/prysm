@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/patrickmn/go-cache"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -13,8 +14,7 @@ import (
 type AttCaches struct {
 	aggregatedAtt   *cache.Cache
 	unAggregatedAtt *cache.Cache
-	forkchoiceAtt   *cache.Cache
-	blockAtt        *cache.Cache
+	attInBlock      *cache.Cache
 }
 
 // NewAttCaches initializes a new attestation pool consists of multiple KV store in cache for
@@ -27,9 +27,15 @@ func NewAttCaches() *AttCaches {
 	pool := &AttCaches{
 		unAggregatedAtt: cache.New(secsInEpoch*time.Second, 2*secsInEpoch*time.Second),
 		aggregatedAtt:   cache.New(secsInEpoch*time.Second, 2*secsInEpoch*time.Second),
-		forkchoiceAtt:   cache.New(secsInEpoch*time.Second, 2*secsInEpoch*time.Second),
-		blockAtt:        cache.New(secsInEpoch*time.Second, 2*secsInEpoch*time.Second),
+		attInBlock:      cache.New(secsInEpoch*time.Second, 2*secsInEpoch*time.Second),
 	}
 
 	return pool
+}
+
+func aggregated(bits bitfield.Bitlist) bool {
+	if bits.Count() > 1 {
+		return true
+	}
+	return false
 }

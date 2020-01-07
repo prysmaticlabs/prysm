@@ -7,6 +7,7 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/sirupsen/logrus"
 )
 
@@ -14,6 +15,13 @@ var pruneStatesKey = []byte("prune-states")
 
 func (kv *Store) pruneStates(ctx context.Context) error {
 	var pruned bool
+
+	if !featureconfig.Get().PruneEpochBoundaryStates {
+		return kv.db.Update(func(tx *bolt.Tx) error {
+			bkt := tx.Bucket(migrationBucket)
+			return bkt.Put(pruneStatesKey, []byte{0x00})
+		})
+	}
 
 	kv.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(migrationBucket)

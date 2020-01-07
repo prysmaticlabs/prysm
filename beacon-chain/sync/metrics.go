@@ -13,6 +13,13 @@ var (
 		},
 		[]string{"topic"},
 	)
+	messageReceivedBeforeChainStartCounter = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "p2p_message_received_before_chain_start",
+			Help: "Count of messages received before chain started.",
+		},
+		[]string{"topic"},
+	)
 	messageFailedValidationCounter = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "p2p_message_failed_validation_total",

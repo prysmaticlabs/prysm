@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -25,7 +24,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
 
-	duty, err := v.duty(pubKey)
+	assignment, err := v.assignment(pubKey)
 	if err != nil {
 		log.Errorf("Could not fetch validator assignment: %v", err)
 		return
@@ -44,7 +43,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 
 	_, err = v.aggregatorClient.SubmitAggregateAndProof(ctx, &pb.AggregationRequest{
 		Slot:           slot,
-		CommitteeIndex: duty.CommitteeIndex,
+		CommitteeIndex: assignment.CommitteeIndex,
 		PublicKey:      pubKey[:],
 		SlotSignature:  slotSig,
 	})
@@ -53,7 +52,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 		return
 	}
 
-	if err := v.addIndicesToLog(ctx, duty.CommitteeIndex, pubKey); err != nil {
+	if err := v.addIndicesToLog(ctx, assignment.CommitteeIndex, pubKey); err != nil {
 		log.Errorf("Could not add aggregator indices to logs: %v", err)
 		return
 	}
@@ -62,10 +61,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 // This implements selection logic outlined in:
 // https://github.com/ethereum/eth2.0-specs/blob/v0.9.0/specs/validator/0_beacon-chain-validator.md#aggregation-selection
 func (v *validator) signSlot(ctx context.Context, pubKey [48]byte, slot uint64) ([]byte, error) {
-	domain, err := v.validatorClient.DomainData(ctx, &ethpb.DomainRequest{
-		Epoch:  helpers.SlotToEpoch(slot),
-		Domain: params.BeaconConfig().DomainBeaconAttester,
-	})
+	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: helpers.SlotToEpoch(slot), Domain: params.BeaconConfig().DomainBeaconAttester})
 	if err != nil {
 		return nil, err
 	}

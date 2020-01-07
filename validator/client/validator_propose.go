@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -40,10 +41,10 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	}
 
 	// Request block from beacon node
-	b, err := v.validatorClient.GetBlock(ctx, &ethpb.BlockRequest{
+	b, err := v.proposerClient.RequestBlock(ctx, &pb.BlockRequest{
 		Slot:         slot,
 		RandaoReveal: randaoReveal,
-		Graffiti:     v.graffiti,
+		Graffiti:     []byte(v.graffiti),
 	})
 	if err != nil {
 		log.WithError(err).Error("Failed to request block from beacon node")
@@ -56,13 +57,10 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		log.WithError(err).Error("Failed to sign block")
 		return
 	}
-	blk := &ethpb.SignedBeaconBlock{
-		Block:     b,
-		Signature: sig,
-	}
+	b.Signature = sig
 
 	// Propose and broadcast block via beacon node
-	blkResp, err := v.validatorClient.ProposeBlock(ctx, blk)
+	blkResp, err := v.proposerClient.ProposeBlock(ctx, b)
 	if err != nil {
 		log.WithError(err).Error("Failed to propose block")
 		return
@@ -76,6 +74,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 
 	v.pubKeyToIDLock.RLock()
 	defer v.pubKeyToIDLock.RUnlock()
+	log.WithField("signature", fmt.Sprintf("%#x", b.Signature)).Debug("block signature")
 	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
 	log.WithFields(logrus.Fields{
 		"slot":            b.Slot,
@@ -86,17 +85,9 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	}).Info("Submitted new block")
 }
 
-// ProposeExit --
-func (v *validator) ProposeExit(ctx context.Context, exit *ethpb.VoluntaryExit) error {
-	return errors.New("unimplemented")
-}
-
 // Sign randao reveal with randao domain and private key.
 func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch uint64) ([]byte, error) {
-	domain, err := v.validatorClient.DomainData(ctx, &ethpb.DomainRequest{
-		Epoch:  epoch,
-		Domain: params.BeaconConfig().DomainRandao,
-	})
+	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: epoch, Domain: params.BeaconConfig().DomainRandao})
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get domain data")
 	}
@@ -111,14 +102,11 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch
 
 // Sign block with proposer domain and private key.
 func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64, b *ethpb.BeaconBlock) ([]byte, error) {
-	domain, err := v.validatorClient.DomainData(ctx, &ethpb.DomainRequest{
-		Epoch:  epoch,
-		Domain: params.BeaconConfig().DomainBeaconProposer,
-	})
+	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: epoch, Domain: params.BeaconConfig().DomainBeaconProposer})
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get domain data")
 	}
-	root, err := ssz.HashTreeRoot(b)
+	root, err := ssz.SigningRoot(b)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get signing root")
 	}

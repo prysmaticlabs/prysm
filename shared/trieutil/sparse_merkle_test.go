@@ -182,27 +182,6 @@ func TestMerkleTrie_VerifyMerkleProof_TrieUpdated(t *testing.T) {
 	m.Insert([]byte{6}, 15)
 }
 
-func TestRoundtripProto_OK(t *testing.T) {
-	items := [][]byte{
-		{1},
-		{2},
-		{3},
-		{4},
-	}
-	m, err := GenerateTrieFromItems(items, 33)
-	if err != nil {
-		t.Fatalf("Could not generate Merkle trie from items: %v", err)
-	}
-	protoTrie := m.ToProto()
-	depositRoot := m.HashTreeRoot()
-
-	newTrie := CreateTrieFromProto(protoTrie)
-
-	if newTrie.HashTreeRoot() != depositRoot {
-		t.Errorf("Wanted a deposit trie root of %#x but got %#x", depositRoot, newTrie.HashTreeRoot())
-	}
-}
-
 func BenchmarkGenerateTrieFromItems(b *testing.B) {
 	items := [][]byte{
 		[]byte("A"),

@@ -32,7 +32,7 @@ func (k *Store) Backup(ctx context.Context) error {
 	if err := os.MkdirAll(backupsDir, os.ModePerm); err != nil {
 		return err
 	}
-	backupPath := path.Join(backupsDir, fmt.Sprintf("prysm_beacondb_at_slot_%07d.backup", head.Block.Slot))
+	backupPath := path.Join(backupsDir, fmt.Sprintf("prysm_beacondb_at_slot_%07d.backup", head.Slot))
 	logrus.WithField("prefix", "db").WithField("backup", backupPath).Info("Writing backup database.")
 	return k.db.View(func(tx *bolt.Tx) error {
 		return tx.CopyFile(backupPath, 0666)

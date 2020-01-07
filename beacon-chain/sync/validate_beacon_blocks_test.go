@@ -28,12 +28,10 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 	ctx := context.Background()
 	db := dbtest.SetupDB(t)
 	defer dbtest.TeardownDB(t, db)
-	msg := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot:       1,
-			ParentRoot: testutil.Random32Bytes(t),
-		},
-		Signature: []byte("fake"),
+	msg := &ethpb.BeaconBlock{
+		Slot:       1,
+		ParentRoot: testutil.Random32Bytes(t),
+		Signature:  []byte("fake"),
 	}
 
 	p := p2ptest.NewTestP2P(t)
@@ -73,11 +71,9 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 	ctx := context.Background()
 
 	p := p2ptest.NewTestP2P(t)
-	msg := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot:       100,
-			ParentRoot: testutil.Random32Bytes(t),
-		},
+	msg := &ethpb.BeaconBlock{
+		Slot:       100,
+		ParentRoot: testutil.Random32Bytes(t),
 	}
 	if err := db.SaveBlock(context.Background(), msg); err != nil {
 		t.Fatal(err)
@@ -121,11 +117,9 @@ func TestValidateBeaconBlockPubSub_ValidSignature(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	msg := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ParentRoot: testutil.Random32Bytes(t),
-		},
-		Signature: sk.Sign([]byte("data"), 0).Marshal(),
+	msg := &ethpb.BeaconBlock{
+		ParentRoot: testutil.Random32Bytes(t),
+		Signature:  sk.Sign([]byte("data"), 0).Marshal(),
 	}
 
 	r := &Service{
@@ -171,11 +165,9 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	msg := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ParentRoot: testutil.Random32Bytes(t),
-		},
-		Signature: sk.Sign([]byte("data"), 0).Marshal(),
+	msg := &ethpb.BeaconBlock{
+		ParentRoot: testutil.Random32Bytes(t),
+		Signature:  sk.Sign([]byte("data"), 0).Marshal(),
 	}
 
 	r := &Service{
@@ -218,12 +210,10 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	msg := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ParentRoot: testutil.Random32Bytes(t),
-			Slot:       1000,
-		},
-		Signature: sk.Sign([]byte("data"), 0).Marshal(),
+	msg := &ethpb.BeaconBlock{
+		ParentRoot: testutil.Random32Bytes(t),
+		Signature:  sk.Sign([]byte("data"), 0).Marshal(),
+		Slot:       1000,
 	}
 
 	r := &Service{
@@ -262,12 +252,10 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	msg := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ParentRoot: testutil.Random32Bytes(t),
-			Slot:       10,
-		},
-		Signature: sk.Sign([]byte("data"), 0).Marshal(),
+	msg := &ethpb.BeaconBlock{
+		ParentRoot: testutil.Random32Bytes(t),
+		Signature:  sk.Sign([]byte("data"), 0).Marshal(),
+		Slot:       10,
 	}
 
 	genesisTime := time.Now()

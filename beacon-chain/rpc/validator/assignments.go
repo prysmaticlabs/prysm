@@ -3,21 +3,21 @@ package validator
 import (
 	"context"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-// GetDuties returns the committee assignment response from a given validator public key.
+// CommitteeAssignment returns the committee assignment response from a given validator public key.
 // The committee assignment response contains the following fields for the current and previous epoch:
 //	1.) The list of validators in the committee.
 //	2.) The shard to which the committee is assigned.
 //	3.) The slot at which the committee is assigned.
 //	4.) The bool signaling if the validator is expected to propose a block at the assigned slot.
-func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
+func (vs *Server) CommitteeAssignment(ctx context.Context, req *pb.AssignmentRequest) (*pb.AssignmentResponse, error) {
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
@@ -28,26 +28,27 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 	}
 
 	// Advance state with empty transitions up to the requested epoch start slot.
-	if epochStartSlot := helpers.StartSlot(req.Epoch); s.Slot < epochStartSlot {
+	if epochStartSlot := helpers.StartSlot(req.EpochStart); s.Slot < epochStartSlot {
 		s, err = state.ProcessSlots(ctx, s, epochStartSlot)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", epochStartSlot, err)
 		}
 	}
 
-	committeeAssignments, proposerIndexToSlot, err := helpers.CommitteeAssignments(s, req.Epoch)
+	committeeAssignments, proposerIndexToSlot, err := helpers.CommitteeAssignments(s, req.EpochStart)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
 
-	var validatorAssignments []*ethpb.DutiesResponse_Duty
+	var validatorAssignments []*pb.AssignmentResponse_ValidatorAssignment
 	for _, pubKey := range req.PublicKeys {
 		if ctx.Err() != nil {
 			return nil, status.Errorf(codes.Aborted, "Could not continue fetching assignments: %v", ctx.Err())
 		}
 		// Default assignment.
-		assignment := &ethpb.DutiesResponse_Duty{
+		assignment := &pb.AssignmentResponse_ValidatorAssignment{
 			PublicKey: pubKey,
+			Status:    pb.ValidatorStatus_UNKNOWN_STATUS,
 		}
 
 		idx, ok, err := vs.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
@@ -58,7 +59,7 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 			ca, ok := committeeAssignments[idx]
 			if ok {
 				assignment.Committee = ca.Committee
-				assignment.Status = ethpb.ValidatorStatus_ACTIVE
+				assignment.Status = pb.ValidatorStatus_ACTIVE
 				assignment.PublicKey = pubKey
 				assignment.AttesterSlot = ca.AttesterSlot
 				assignment.ProposerSlot = proposerIndexToSlot[idx]
@@ -69,7 +70,7 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 		validatorAssignments = append(validatorAssignments, assignment)
 	}
 
-	return &ethpb.DutiesResponse{
-		Duties: validatorAssignments,
+	return &pb.AssignmentResponse{
+		ValidatorAssignment: validatorAssignments,
 	}, nil
 }

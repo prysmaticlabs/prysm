@@ -46,7 +46,7 @@ func (r *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg
 	if err != nil {
 		return false
 	}
-	slashSlot := slashing.Header_1.Header.Slot
+	slashSlot := slashing.Header_1.Slot
 	if s.Slot < slashSlot {
 		if ctx.Err() != nil {
 			return false

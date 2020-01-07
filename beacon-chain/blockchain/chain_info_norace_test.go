@@ -18,7 +18,7 @@ func TestHeadSlot_DataRace(t *testing.T) {
 	go func() {
 		s.saveHead(
 			context.Background(),
-			&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 777}},
+			&ethpb.BeaconBlock{Slot: 777},
 			[32]byte{},
 		)
 	}()
@@ -35,7 +35,7 @@ func TestHeadRoot_DataRace(t *testing.T) {
 	go func() {
 		s.saveHead(
 			context.Background(),
-			&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 777}},
+			&ethpb.BeaconBlock{Slot: 777},
 			[32]byte{},
 		)
 	}()
@@ -52,7 +52,7 @@ func TestHeadBlock_DataRace(t *testing.T) {
 	go func() {
 		s.saveHead(
 			context.Background(),
-			&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 777}},
+			&ethpb.BeaconBlock{Slot: 777},
 			[32]byte{},
 		)
 	}()
@@ -69,7 +69,7 @@ func TestHeadState_DataRace(t *testing.T) {
 	go func() {
 		s.saveHead(
 			context.Background(),
-			&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 777}},
+			&ethpb.BeaconBlock{Slot: 777},
 			[32]byte{},
 		)
 	}()

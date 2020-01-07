@@ -356,7 +356,7 @@ func VerifyBitfieldLength(bf bitfield.Bitfield, committeeSize uint64) error {
 	return nil
 }
 
-// VerifyAttestationBitfieldLengths verifies that an attestations aggregation bitfields is
+// VerifyAttestationBitfieldLengths verifies that an attestations aggregation and custody bitfields are
 // a valid length matching the size of the committee.
 func VerifyAttestationBitfieldLengths(state *pb.BeaconState, att *ethpb.Attestation) error {
 	committee, err := BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
@@ -370,6 +370,9 @@ func VerifyAttestationBitfieldLengths(state *pb.BeaconState, att *ethpb.Attestat
 
 	if err := VerifyBitfieldLength(att.AggregationBits, uint64(len(committee))); err != nil {
 		return errors.Wrap(err, "failed to verify aggregation bitfield")
+	}
+	if err := VerifyBitfieldLength(att.CustodyBits, uint64(len(committee))); err != nil {
+		return errors.Wrap(err, "failed to verify custody bitfield")
 	}
 	return nil
 }

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"testing"
-	"time"
 
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
@@ -23,9 +22,7 @@ func init() {
 
 func TestLifecycle_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-	chainService := &mock.ChainService{
-		Genesis: time.Now(),
-	}
+	chainService := &mock.ChainService{}
 	rpcService := NewService(context.Background(), &Config{
 		Port:                "7348",
 		CertFlag:            "alice.crt",
@@ -34,7 +31,6 @@ func TestLifecycle_OK(t *testing.T) {
 		BlockReceiver:       chainService,
 		AttestationReceiver: chainService,
 		HeadFetcher:         chainService,
-		GenesisTimeFetcher:  chainService,
 		POWChainService:     &mockPOW.POWChain{},
 		StateNotifier:       chainService.StateNotifier(),
 	})
@@ -58,12 +54,11 @@ func TestStatus_CredentialError(t *testing.T) {
 
 func TestRPC_InsecureEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
-	chainService := &mock.ChainService{Genesis: time.Now()}
+	chainService := &mock.ChainService{}
 	rpcService := NewService(context.Background(), &Config{
 		Port:                "7777",
 		SyncService:         &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:       chainService,
-		GenesisTimeFetcher:  chainService,
 		AttestationReceiver: chainService,
 		HeadFetcher:         chainService,
 		POWChainService:     &mockPOW.POWChain{},

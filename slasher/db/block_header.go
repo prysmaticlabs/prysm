@@ -11,8 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func createBlockHeader(enc []byte) (*ethpb.SignedBeaconBlockHeader, error) {
-	protoBlockHeader := &ethpb.SignedBeaconBlockHeader{}
+func createBlockHeader(enc []byte) (*ethpb.BeaconBlockHeader, error) {
+	protoBlockHeader := &ethpb.BeaconBlockHeader{}
 	err := proto.Unmarshal(enc, protoBlockHeader)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal encoding")
@@ -22,8 +22,8 @@ func createBlockHeader(enc []byte) (*ethpb.SignedBeaconBlockHeader, error) {
 
 // BlockHeader accepts an epoch and validator id and returns the corresponding block header array.
 // Returns nil if the block header for those values does not exist.
-func (db *Store) BlockHeader(epoch uint64, validatorID uint64) ([]*ethpb.SignedBeaconBlockHeader, error) {
-	var blockHeaders []*ethpb.SignedBeaconBlockHeader
+func (db *Store) BlockHeader(epoch uint64, validatorID uint64) ([]*ethpb.BeaconBlockHeader, error) {
+	var blockHeaders []*ethpb.BeaconBlockHeader
 	err := db.view(func(tx *bolt.Tx) error {
 		c := tx.Bucket(historicBlockHeadersBucket).Cursor()
 		prefix := encodeEpochValidatorID(epoch, validatorID)
@@ -58,7 +58,7 @@ func (db *Store) HasBlockHeader(epoch uint64, validatorID uint64) bool {
 }
 
 // SaveBlockHeader accepts a block header and writes it to disk.
-func (db *Store) SaveBlockHeader(epoch uint64, validatorID uint64, blockHeader *ethpb.SignedBeaconBlockHeader) error {
+func (db *Store) SaveBlockHeader(epoch uint64, validatorID uint64, blockHeader *ethpb.BeaconBlockHeader) error {
 	key := encodeEpochValidatorIDSig(epoch, validatorID, blockHeader.Signature)
 	enc, err := proto.Marshal(blockHeader)
 	if err != nil {
@@ -82,7 +82,7 @@ func (db *Store) SaveBlockHeader(epoch uint64, validatorID uint64, blockHeader *
 }
 
 // DeleteBlockHeader deletes a block header using the epoch and validator id.
-func (db *Store) DeleteBlockHeader(epoch uint64, validatorID uint64, blockHeader *ethpb.SignedBeaconBlockHeader) error {
+func (db *Store) DeleteBlockHeader(epoch uint64, validatorID uint64, blockHeader *ethpb.BeaconBlockHeader) error {
 
 	key := encodeEpochValidatorIDSig(epoch, validatorID, blockHeader.Signature)
 

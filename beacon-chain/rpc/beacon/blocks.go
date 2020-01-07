@@ -56,7 +56,7 @@ func (bs *Server) ListBlocks(
 		returnedBlks := blks[start:end]
 		containers := make([]*ethpb.BeaconBlockContainer, len(returnedBlks))
 		for i, b := range returnedBlks {
-			root, err := ssz.HashTreeRoot(b.Block)
+			root, err := ssz.SigningRoot(b)
 			if err != nil {
 				return nil, err
 			}
@@ -83,7 +83,7 @@ func (bs *Server) ListBlocks(
 				NextPageToken:   strconv.Itoa(0),
 			}, nil
 		}
-		root, err := ssz.HashTreeRoot(blk.Block)
+		root, err := ssz.SigningRoot(blk)
 		if err != nil {
 			return nil, err
 		}
@@ -119,7 +119,7 @@ func (bs *Server) ListBlocks(
 		returnedBlks := blks[start:end]
 		containers := make([]*ethpb.BeaconBlockContainer, len(returnedBlks))
 		for i, b := range returnedBlks {
-			root, err := ssz.HashTreeRoot(b.Block)
+			root, err := ssz.SigningRoot(b)
 			if err != nil {
 				return nil, err
 			}
@@ -146,7 +146,7 @@ func (bs *Server) ListBlocks(
 		if numBlks != 1 {
 			return nil, status.Error(codes.Internal, "Found more than 1 genesis block")
 		}
-		root, err := ssz.HashTreeRoot(blks[0].Block)
+		root, err := ssz.SigningRoot(blks[0])
 		if err != nil {
 			return nil, err
 		}
@@ -206,35 +206,35 @@ func (bs *Server) StreamChainHead(_ *ptypes.Empty, stream ethpb.BeaconChain_Stre
 // Retrieve chain head information from the DB and the current beacon state.
 func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, error) {
 	headBlock := bs.HeadFetcher.HeadBlock()
-	headBlockRoot, err := ssz.HashTreeRoot(headBlock.Block)
+	headBlockRoot, err := ssz.SigningRoot(headBlock)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head block root: %v", err)
 	}
 
 	finalizedCheckpoint := bs.FinalizationFetcher.FinalizedCheckpt()
 	b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(finalizedCheckpoint.Root))
-	if err != nil || b == nil || b.Block == nil {
+	if err != nil || b == nil {
 		return nil, status.Error(codes.Internal, "Could not get finalized block")
 	}
-	finalizedSlot := b.Block.Slot
+	finalizedSlot := b.Slot
 
 	justifiedCheckpoint := bs.FinalizationFetcher.CurrentJustifiedCheckpt()
 	b, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(justifiedCheckpoint.Root))
-	if err != nil || b == nil || b.Block == nil {
+	if err != nil || b == nil {
 		return nil, status.Error(codes.Internal, "Could not get justified block")
 	}
-	justifiedSlot := b.Block.Slot
+	justifiedSlot := b.Slot
 
 	prevJustifiedCheckpoint := bs.FinalizationFetcher.PreviousJustifiedCheckpt()
 	b, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(prevJustifiedCheckpoint.Root))
-	if err != nil || b == nil || b.Block == nil {
+	if err != nil || b == nil {
 		return nil, status.Error(codes.Internal, "Could not get prev justified block")
 	}
-	prevJustifiedSlot := b.Block.Slot
+	prevJustifiedSlot := b.Slot
 
 	return &ethpb.ChainHead{
-		HeadSlot:                   headBlock.Block.Slot,
-		HeadEpoch:                  helpers.SlotToEpoch(headBlock.Block.Slot),
+		HeadSlot:                   headBlock.Slot,
+		HeadEpoch:                  helpers.SlotToEpoch(headBlock.Slot),
 		HeadBlockRoot:              headBlockRoot[:],
 		FinalizedSlot:              finalizedSlot,
 		FinalizedEpoch:             finalizedCheckpoint.Epoch,

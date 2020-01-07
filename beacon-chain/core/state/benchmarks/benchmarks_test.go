@@ -20,7 +20,6 @@ import (
 var runAmount = 25
 
 func TestBenchmarkExecuteStateTransition(t *testing.T) {
-	t.Skip("TODO(4098): Regenerate test data with v0.9.2 spec")
 	SetConfig()
 	beaconState, err := beaconState1Epoch()
 	if err != nil {
@@ -205,7 +204,7 @@ func beaconState2FullEpochs() (*pb.BeaconState, error) {
 	return beaconState, nil
 }
 
-func fullBlock() (*ethpb.SignedBeaconBlock, error) {
+func fullBlock() (*ethpb.BeaconBlock, error) {
 	path, err := bazel.Runfile(FullBlockFileName)
 	if err != nil {
 		return nil, err
@@ -214,7 +213,7 @@ func fullBlock() (*ethpb.SignedBeaconBlock, error) {
 	if err != nil {
 		return nil, err
 	}
-	beaconBlock := &ethpb.SignedBeaconBlock{}
+	beaconBlock := &ethpb.BeaconBlock{}
 	if err := ssz.Unmarshal(blockBytes, beaconBlock); err != nil {
 		return nil, err
 	}

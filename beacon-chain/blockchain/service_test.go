@@ -18,10 +18,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	ops "github.com/prysmaticlabs/prysm/beacon-chain/operations/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -42,11 +41,11 @@ type store struct {
 	headRoot []byte
 }
 
-func (s *store) OnBlock(ctx context.Context, b *ethpb.SignedBeaconBlock) error {
+func (s *store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	return nil
 }
 
-func (s *store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.SignedBeaconBlock) error {
+func (s *store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.BeaconBlock) error {
 	return nil
 }
 
@@ -89,13 +88,24 @@ func (mb *mockBroadcaster) Broadcast(_ context.Context, _ proto.Message) error {
 
 var _ = p2p.Broadcaster(&mockBroadcaster{})
 
+func setupGenesisBlock(t *testing.T, cs *Service) ([32]byte, *ethpb.BeaconBlock) {
+	genesis := b.NewGenesisBlock([]byte{})
+	if err := cs.beaconDB.SaveBlock(context.Background(), genesis); err != nil {
+		t.Fatalf("could not save block to db: %v", err)
+	}
+	parentHash, err := ssz.SigningRoot(genesis)
+	if err != nil {
+		t.Fatalf("unable to get tree hash root of canonical head: %v", err)
+	}
+	return parentHash, genesis
+}
+
 func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	endpoint := "ws://127.0.0.1"
 	ctx := context.Background()
 	var web3Service *powchain.Service
 	var err error
 	web3Service, err = powchain.NewService(ctx, &powchain.Web3ServiceConfig{
-		BeaconDB:        beaconDB,
 		ETH1Endpoint:    endpoint,
 		DepositContract: common.Address{},
 	})
@@ -108,9 +118,9 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		BeaconDB:          beaconDB,
 		DepositCache:      depositcache.NewDepositCache(),
 		ChainStartFetcher: web3Service,
+		OpsPoolService:    &ops.Operations{},
 		P2p:               &mockBroadcaster{},
 		StateNotifier:     &mockBeaconNode{},
-		AttPool:           attestations.NewPool(),
 	}
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
@@ -119,7 +129,6 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	if err != nil {
 		t.Fatalf("unable to setup chain service: %v", err)
 	}
-	chainService.genesisTime = time.Unix(1, 0) // non-zero time
 
 	return chainService
 }
@@ -135,7 +144,7 @@ func TestChainStartStop_Uninitialized(t *testing.T) {
 	stateSub := chainService.stateNotifier.StateFeed().Subscribe(stateSubChannel)
 
 	// Test the chain start state notifier.
-	genesisTime := time.Unix(1, 0)
+	genesisTime := time.Unix(0, 0)
 	chainService.Start()
 	event := &feed.Event{
 		Type: statefeed.ChainStarted,
@@ -188,7 +197,7 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	chainService := setupBeaconChain(t, db)
 
 	genesisBlk := b.NewGenesisBlock([]byte{})
-	blkRoot, err := ssz.HashTreeRoot(genesisBlk.Block)
+	blkRoot, err := ssz.SigningRoot(genesisBlk)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -228,28 +237,11 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 	ctx := context.Background()
 
 	bc := setupBeaconChain(t, db)
-	var err error
 
 	// Set up 10 deposits pre chain start for validators to register
 	count := uint64(10)
 	deposits, _, _ := testutil.DeterministicDepositsAndKeys(count)
-	trie, _, err := testutil.DepositTrieFromDeposits(deposits)
-	if err != nil {
-		t.Fatal(err)
-	}
-	hashTreeRoot := trie.HashTreeRoot()
-	genState := state.EmptyGenesisState()
-	genState.Eth1Data = &ethpb.Eth1Data{
-		DepositRoot:  hashTreeRoot[:],
-		DepositCount: uint64(len(deposits)),
-	}
-	genState, err = b.ProcessDeposits(ctx, genState, &ethpb.BeaconBlockBody{Deposits: deposits})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := bc.initializeBeaconChain(ctx, time.Unix(0, 0), genState, &ethpb.Eth1Data{
-		DepositRoot: hashTreeRoot[:],
-	}); err != nil {
+	if err := bc.initializeBeaconChain(ctx, time.Unix(0, 0), deposits, &ethpb.Eth1Data{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -281,7 +273,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	ctx := context.Background()
 
 	genesis := b.NewGenesisBlock([]byte{})
-	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	genesisRoot, err := ssz.SigningRoot(genesis)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -293,9 +285,9 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	}
 
 	finalizedSlot := params.BeaconConfig().SlotsPerEpoch*2 + 1
-	headBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: finalizedSlot, ParentRoot: genesisRoot[:]}}
+	headBlock := &ethpb.BeaconBlock{Slot: finalizedSlot, ParentRoot: genesisRoot[:]}
 	headState := &pb.BeaconState{Slot: finalizedSlot}
-	headRoot, _ := ssz.HashTreeRoot(headBlock.Block)
+	headRoot, _ := ssz.SigningRoot(headBlock)
 	if err := db.SaveState(ctx, headState, headRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -325,14 +317,11 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	if !reflect.DeepEqual(s, headState) {
 		t.Error("head state incorrect")
 	}
-	if headBlock.Block.Slot != c.HeadSlot() {
+	if headBlock.Slot != c.HeadSlot() {
 		t.Error("head slot incorrect")
 	}
 	if !bytes.Equal(headRoot[:], c.HeadRoot()) {
 		t.Error("head slot incorrect")
-	}
-	if c.genesisRoot != genesisRoot {
-		t.Error("genesis block root incorrect")
 	}
 }
 
@@ -344,8 +333,8 @@ func TestChainService_SaveHeadNoDB(t *testing.T) {
 		beaconDB:       db,
 		canonicalRoots: make(map[uint64][]byte),
 	}
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
-	r, _ := ssz.HashTreeRoot(b)
+	b := &ethpb.BeaconBlock{Slot: 1}
+	r, _ := ssz.SigningRoot(b)
 	if err := s.saveHeadNoDB(ctx, b, r); err != nil {
 		t.Fatal(err)
 	}

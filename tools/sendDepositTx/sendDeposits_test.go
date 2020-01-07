@@ -135,7 +135,7 @@ func TestEndtoEndDeposits(t *testing.T) {
 
 	encodedDeposits := make([][]byte, numberOfValidators*numberOfDeposits)
 	for i := 0; i < int(numberOfValidators); i++ {
-		hashedDeposit, err := ssz.HashTreeRoot(deposits[i].Data)
+		hashedDeposit, err := ssz.SigningRoot(deposits[i].Data)
 		if err != nil {
 			t.Fatalf("could not tree hash deposit data: %v", err)
 		}

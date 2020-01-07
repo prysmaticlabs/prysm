@@ -7,19 +7,20 @@ import (
 	"sync"
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func TestGetDuties_NextEpoch_WrongPubkeyLength(t *testing.T) {
+
+func TestCommitteeAssignment_NextEpoch_WrongPubkeyLength(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
@@ -29,7 +30,7 @@ func TestGetDuties_NextEpoch_WrongPubkeyLength(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	genesisRoot, err := ssz.HashTreeRoot(block.Block)
+	genesisRoot, err := ssz.SigningRoot(block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -39,24 +40,24 @@ func TestGetDuties_NextEpoch_WrongPubkeyLength(t *testing.T) {
 		HeadFetcher: &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}
-	req := &ethpb.DutiesRequest{
+	req := &pb.AssignmentRequest{
 		PublicKeys: [][]byte{{1}},
-		Epoch:      0,
+		EpochStart: 0,
 	}
 	want := fmt.Sprintf("expected public key to have length %d", params.BeaconConfig().BLSPubkeyLength)
-	if _, err := Server.GetDuties(context.Background(), req); err != nil && !strings.Contains(err.Error(), want) {
+	if _, err := Server.CommitteeAssignment(context.Background(), req); err != nil && !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
 }
 
-func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
+func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 	beaconState, _ := testutil.DeterministicGenesisState(t, 10)
 
 	genesis := blk.NewGenesisBlock([]byte{})
-	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	genesisRoot, err := ssz.SigningRoot(genesis)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -68,23 +69,23 @@ func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 	}
 
 	pubKey := make([]byte, 96)
-	req := &ethpb.DutiesRequest{
+	req := &pb.AssignmentRequest{
 		PublicKeys: [][]byte{pubKey},
-		Epoch:      0,
+		EpochStart: 0,
 	}
 	want := fmt.Sprintf("validator %#x does not exist", req.PublicKeys[0])
-	if _, err := vs.GetDuties(ctx, req); err != nil && !strings.Contains(err.Error(), want) {
+	if _, err := vs.CommitteeAssignment(ctx, req); err != nil && !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
 }
 
-func TestGetDuties_OK(t *testing.T) {
+func TestCommitteeAssignment_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	genesis := blk.NewGenesisBlock([]byte{})
-	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
+	depChainStart := uint64(64)
 	deposits, _, _ := testutil.DeterministicDepositsAndKeys(depChainStart)
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	if err != nil {
@@ -94,7 +95,7 @@ func TestGetDuties_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}
-	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	genesisRoot, err := ssz.SigningRoot(genesis)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -124,42 +125,42 @@ func TestGetDuties_OK(t *testing.T) {
 	}
 
 	// Test the first validator in registry.
-	req := &ethpb.DutiesRequest{
+	req := &pb.AssignmentRequest{
 		PublicKeys: [][]byte{deposits[0].Data.PublicKey},
-		Epoch:      0,
+		EpochStart: 0,
 	}
-	res, err := vs.GetDuties(context.Background(), req)
+	res, err := vs.CommitteeAssignment(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Could not call epoch committee assignment %v", err)
 	}
-	if res.Duties[0].AttesterSlot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
+	if res.ValidatorAssignment[0].AttesterSlot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
-			res.Duties[0].AttesterSlot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
+			res.ValidatorAssignment[0].AttesterSlot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
 	}
 
 	// Test the last validator in registry.
 	lastValidatorIndex := depChainStart - 1
-	req = &ethpb.DutiesRequest{
+	req = &pb.AssignmentRequest{
 		PublicKeys: [][]byte{deposits[lastValidatorIndex].Data.PublicKey},
-		Epoch:      0,
+		EpochStart: 0,
 	}
-	res, err = vs.GetDuties(context.Background(), req)
+	res, err = vs.CommitteeAssignment(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Could not call epoch committee assignment %v", err)
 	}
-	if res.Duties[0].AttesterSlot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
+	if res.ValidatorAssignment[0].AttesterSlot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
-			res.Duties[0].AttesterSlot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
+			res.ValidatorAssignment[0].AttesterSlot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
 	}
 }
 
-func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
+func TestCommitteeAssignment_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
 	genesis := blk.NewGenesisBlock([]byte{})
-	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
+	depChainStart := uint64(64)
 	deposits, _, _ := testutil.DeterministicDepositsAndKeys(depChainStart)
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	if err != nil {
@@ -171,7 +172,7 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	}
 	bState.Slot = 5 // Set state to non-epoch start slot.
 
-	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	genesisRoot, err := ssz.SigningRoot(genesis)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -201,20 +202,20 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	}
 
 	// Test the first validator in registry.
-	req := &ethpb.DutiesRequest{
+	req := &pb.AssignmentRequest{
 		PublicKeys: [][]byte{deposits[0].Data.PublicKey},
-		Epoch:      0,
+		EpochStart: 0,
 	}
-	res, err := vs.GetDuties(context.Background(), req)
+	res, err := vs.CommitteeAssignment(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(res.Duties) != 1 {
+	if len(res.ValidatorAssignment) != 1 {
 		t.Error("Expected 1 assignment")
 	}
 }
 
-func TestGetDuties_MultipleKeys_OK(t *testing.T) {
+func TestCommitteeAssignment_MultipleKeys_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
@@ -230,7 +231,7 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}
-	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	genesisRoot, err := ssz.SigningRoot(genesis)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -263,31 +264,31 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	pubkey1 := deposits[1].Data.PublicKey
 
 	// Test the first validator in registry.
-	req := &ethpb.DutiesRequest{
+	req := &pb.AssignmentRequest{
 		PublicKeys: [][]byte{pubkey0, pubkey1},
-		Epoch:      0,
+		EpochStart: 0,
 	}
-	res, err := vs.GetDuties(context.Background(), req)
+	res, err := vs.CommitteeAssignment(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Could not call epoch committee assignment %v", err)
 	}
 
-	if len(res.Duties) != 2 {
-		t.Errorf("expected 2 assignments but got %d", len(res.Duties))
+	if len(res.ValidatorAssignment) != 2 {
+		t.Errorf("expected 2 assignments but got %d", len(res.ValidatorAssignment))
 	}
-	if res.Duties[0].AttesterSlot != 4 {
-		t.Errorf("Expected res.Duties[0].AttesterSlot == 4, got %d", res.Duties[0].AttesterSlot)
+	if res.ValidatorAssignment[0].AttesterSlot != 4 {
+		t.Errorf("Expected res.ValidatorAssignment[0].AttesterSlot == 4, got %d", res.ValidatorAssignment[0].AttesterSlot)
 	}
-	if res.Duties[1].AttesterSlot != 3 {
-		t.Errorf("Expected res.Duties[1].AttesterSlot == 3, got %d", res.Duties[0].AttesterSlot)
+	if res.ValidatorAssignment[1].AttesterSlot != 3 {
+		t.Errorf("Expected res.ValidatorAssignment[1].AttesterSlot == 3, got %d", res.ValidatorAssignment[0].AttesterSlot)
 	}
 }
 
-func TestGetDuties_SyncNotReady(t *testing.T) {
+func TestCommitteeAssignment_SyncNotReady(t *testing.T) {
 	vs := &Server{
 		SyncChecker: &mockSync.Sync{IsSyncing: true},
 	}
-	_, err := vs.GetDuties(context.Background(), &ethpb.DutiesRequest{})
+	_, err := vs.CommitteeAssignment(context.Background(), &pb.AssignmentRequest{})
 	if strings.Contains(err.Error(), "syncing to latest head") {
 		t.Error("Did not get wanted error")
 	}
@@ -309,7 +310,7 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Could not setup genesis state: %v", err)
 	}
-	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	genesisRoot, err := ssz.SigningRoot(genesis)
 	if err != nil {
 		b.Fatalf("Could not get signing root %v", err)
 	}
@@ -343,13 +344,13 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 	for i, deposit := range deposits {
 		pks[i] = deposit.Data.PublicKey
 	}
-	req := &ethpb.DutiesRequest{
+	req := &pb.AssignmentRequest{
 		PublicKeys: pks,
-		Epoch:      0,
+		EpochStart: 0,
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := vs.GetDuties(context.Background(), req)
+		_, err := vs.CommitteeAssignment(context.Background(), req)
 		if err != nil {
 			b.Error(err)
 		}

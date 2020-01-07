@@ -15,7 +15,7 @@ type BeaconChainConfig struct {
 	FarFutureEpoch           uint64 `yaml:"FAR_FUTURE_EPOCH"`            // FarFutureEpoch represents a epoch extremely far away in the future used as the default penalization slot for validators.
 	BaseRewardsPerEpoch      uint64 `yaml:"BASE_REWARDS_PER_EPOCH"`      // BaseRewardsPerEpoch is used to calculate the per epoch rewards.
 	DepositContractTreeDepth uint64 `yaml:"DEPOSIT_CONTRACT_TREE_DEPTH"` // Depth of the Merkle trie of deposits in the validator deposit contract on the PoW chain.
-	MinGenesisDelay          uint64 `yaml:"MIN_GENESIS_DELAY"`           // Minimum number of seconds to delay starting the ETH2 genesis. Must be at least 1 second.
+	SecondsPerDay            uint64 `yaml:"SECONDS_PER_DAY"`             // SecondsPerDay number of seconds in day constant.
 
 	// Misc constants.
 	TargetCommitteeSize            uint64 `yaml:"TARGET_COMMITTEE_SIZE"`        // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
@@ -25,7 +25,7 @@ type BeaconChainConfig struct {
 	ChurnLimitQuotient             uint64 `yaml:"CHURN_LIMIT_QUOTIENT"`               // ChurnLimitQuotient is used to determine the limit of how many validators can rotate per epoch.
 	ShuffleRoundCount              uint64 `yaml:"SHUFFLE_ROUND_COUNT"`                // ShuffleRoundCount is used for retrieving the permuted index.
 	MinGenesisActiveValidatorCount uint64 `yaml:"MIN_GENESIS_ACTIVE_VALIDATOR_COUNT"` // MinGenesisActiveValidatorCount defines how many validator deposits needed to kick off beacon chain.
-	MinGenesisTime                 uint64 `yaml:"MIN_GENESIS_TIME"`                   // MinGenesisTime is the time that needed to pass before kicking off beacon chain.
+	MinGenesisTime                 uint64 `yaml:"MIN_GENESIS_TIME"`                   // MinGenesisTime is the time that needed to pass before kicking off beacon chain. Currently set to Jan/3/2020.
 	TargetAggregatorsPerCommittee  uint64 // TargetAggregatorsPerCommittee defines the number of aggregators inside one committee.
 
 	// Gwei value constants.
@@ -50,8 +50,6 @@ type BeaconChainConfig struct {
 	PersistentCommitteePeriod        uint64 `yaml:"PERSISTENT_COMMITTEE_PERIOD"`         // PersistentCommitteePeriod is the minimum amount of epochs a validator must participate before exitting.
 	MinEpochsToInactivityPenalty     uint64 `yaml:"MIN_EPOCHS_TO_INACTIVITY_PENALTY"`    // MinEpochsToInactivityPenalty defines the minimum amount of epochs since finality to begin penalizing inactivity.
 	Eth1FollowDistance               uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
-	SafeSlotsToUpdateJustified       uint64 // SafeSlotsToUpdateJustified is the minimal slots needed to update justified check point.
-	AttestationPropagationSlotRange  uint64 // AttestationPropagationSlotRange is the maximum number of slots during which an attestation can be propagated.
 
 	// State list lengths
 	EpochsPerHistoricalVector uint64 `yaml:"EPOCHS_PER_HISTORICAL_VECTOR"` // EpochsPerHistoricalVector defines max length in epoch to store old historical stats in beacon state.
@@ -115,7 +113,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	FarFutureEpoch:           1<<64 - 1,
 	BaseRewardsPerEpoch:      4,
 	DepositContractTreeDepth: 32,
-	MinGenesisDelay:          86400, // 1 day
+	SecondsPerDay:            86400,
 
 	// Misc constant.
 	TargetCommitteeSize:            128,
@@ -124,8 +122,8 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MinPerEpochChurnLimit:          4,
 	ChurnLimitQuotient:             1 << 16,
 	ShuffleRoundCount:              90,
-	MinGenesisActiveValidatorCount: 16384,
-	MinGenesisTime:                 0, // Zero until a proper time is decided.
+	MinGenesisActiveValidatorCount: 65536,
+	MinGenesisTime:                 1578009600,
 	TargetAggregatorsPerCommittee:  16,
 
 	// Gwei value constants.
@@ -150,8 +148,6 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	PersistentCommitteePeriod:        2048,
 	MinEpochsToInactivityPenalty:     4,
 	Eth1FollowDistance:               1024,
-	SafeSlotsToUpdateJustified:       8,
-	AttestationPropagationSlotRange:  32,
 
 	// State list length constants.
 	EpochsPerHistoricalVector: 65536,
@@ -225,22 +221,23 @@ func MainnetConfig() *BeaconChainConfig {
 	return defaultBeaconConfig
 }
 
-// DemoBeaconConfig retrieves the demo beacon chain config. This is mainnet config with 1/10th of
-// mainnet deposit values.
+// DemoBeaconConfig retrieves the demo beacon chain config.
+// Notable changes from minimal config:
+//   - Max effective balance is 3.2 ETH
+//   - Ejection threshold is 3.175 ETH
+//   - Genesis threshold is disabled (minimum date to start the chain)
 func DemoBeaconConfig() *BeaconChainConfig {
-	demoConfig := *MainnetConfig()
-
-	demoConfig.MinDepositAmount /= 10
-	demoConfig.MaxEffectiveBalance /= 10
-	demoConfig.EjectionBalance /= 10
-	demoConfig.EffectiveBalanceIncrement /= 10
-
-	demoConfig.InactivityPenaltyQuotient /= 10
+	demoConfig := MinimalSpecConfig()
+	demoConfig.MinDepositAmount = 100
+	demoConfig.MaxEffectiveBalance = 3.2 * 1e9
+	demoConfig.EjectionBalance = 3 * 1e9
+	demoConfig.EffectiveBalanceIncrement = 0.1 * 1e9
+	demoConfig.Eth1FollowDistance = 16
 
 	// Increment this number after a full testnet tear down.
-	demoConfig.GenesisForkVersion = []byte{0, 0, 0, 4}
+	demoConfig.GenesisForkVersion = []byte{0, 0, 0, 3}
 
-	return &demoConfig
+	return demoConfig
 }
 
 // MinimalSpecConfig retrieves the minimal config used in spec tests.
@@ -255,8 +252,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.ShuffleRoundCount = 10
 	minimalConfig.MinGenesisActiveValidatorCount = 64
 	minimalConfig.MinGenesisTime = 0
-	minimalConfig.MinGenesisDelay = 300 // 5 minutes
-	minimalConfig.TargetAggregatorsPerCommittee = 3
+	minimalConfig.TargetAggregatorsPerCommittee = 2
 
 	// Gwei values
 	minimalConfig.MinDepositAmount = 1e9
@@ -268,7 +264,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.BLSWithdrawalPrefixByte = byte(0)
 
 	// Time parameters
-	minimalConfig.SecondsPerSlot = 6
+	minimalConfig.SecondsPerSlot = 12
 	minimalConfig.MinAttestationInclusionDelay = 1
 	minimalConfig.SlotsPerEpoch = 8
 	minimalConfig.MinSeedLookahead = 1
@@ -278,7 +274,6 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.MinValidatorWithdrawabilityDelay = 256
 	minimalConfig.PersistentCommitteePeriod = 2048
 	minimalConfig.MinEpochsToInactivityPenalty = 4
-	minimalConfig.SafeSlotsToUpdateJustified = 2
 
 	// State vector lengths
 	minimalConfig.EpochsPerHistoricalVector = 64

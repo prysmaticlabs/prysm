@@ -30,8 +30,8 @@ func WriteChunk(stream libp2pcore.Stream, encoding encoder.NetworkEncoding, msg 
 
 // ReadChunkedBlock handles each response chunk that is sent by the
 // peer and converts it into a beacon block.
-func ReadChunkedBlock(stream libp2pcore.Stream, p2p p2p.P2P) (*eth.SignedBeaconBlock, error) {
-	blk := &eth.SignedBeaconBlock{}
+func ReadChunkedBlock(stream libp2pcore.Stream, p2p p2p.P2P) (*eth.BeaconBlock, error) {
+	blk := &eth.BeaconBlock{}
 	if err := readResponseChunk(stream, p2p, blk); err != nil {
 		return nil, err
 	}

@@ -41,7 +41,7 @@ func TestCancelledContext_WaitsForActivation(t *testing.T) {
 	}
 }
 
-func TestUpdateDuties_NextSlot(t *testing.T) {
+func TestUpdateAssignments_NextSlot(t *testing.T) {
 	v := &fakeValidator{}
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -56,15 +56,15 @@ func TestUpdateDuties_NextSlot(t *testing.T) {
 
 	run(ctx, v)
 
-	if !v.UpdateDutiesCalled {
+	if !v.UpdateAssignmentsCalled {
 		t.Fatalf("Expected UpdateAssignments(%d) to be called", slot)
 	}
-	if v.UpdateDutiesArg1 != slot {
-		t.Errorf("UpdateAssignments was called with wrong argument. Want=%d, got=%d", slot, v.UpdateDutiesArg1)
+	if v.UpdateAssignmentsArg1 != slot {
+		t.Errorf("UpdateAssignments was called with wrong argument. Want=%d, got=%d", slot, v.UpdateAssignmentsArg1)
 	}
 }
 
-func TestUpdateDuties_HandlesError(t *testing.T) {
+func TestUpdateAssignments_HandlesError(t *testing.T) {
 	hook := logTest.NewGlobal()
 	v := &fakeValidator{}
 	ctx, cancel := context.WithCancel(context.Background())
@@ -77,7 +77,7 @@ func TestUpdateDuties_HandlesError(t *testing.T) {
 
 		cancel()
 	}()
-	v.UpdateDutiesRet = errors.New("bad")
+	v.UpdateAssignmentsRet = errors.New("bad")
 
 	run(ctx, v)
 

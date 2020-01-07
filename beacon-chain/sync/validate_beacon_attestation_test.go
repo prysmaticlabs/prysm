@@ -35,16 +35,14 @@ func TestValidateBeaconAttestation_ValidBlock(t *testing.T) {
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
-	blk := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot: 55,
-		},
+	blk := &ethpb.BeaconBlock{
+		Slot: 55,
 	}
 	if err := db.SaveBlock(ctx, blk); err != nil {
 		t.Fatal(err)
 	}
 
-	blockRoot, err := ssz.HashTreeRoot(blk.Block)
+	blockRoot, err := ssz.SigningRoot(blk)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,11 +134,11 @@ func TestValidateBeaconAttestation_Syncing(t *testing.T) {
 	blk := &ethpb.BeaconBlock{
 		Slot: 55,
 	}
-	if err := db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: blk}); err != nil {
+	if err := db.SaveBlock(ctx, blk); err != nil {
 		t.Fatal(err)
 	}
 
-	blockRoot, err := ssz.HashTreeRoot(blk)
+	blockRoot, err := ssz.SigningRoot(blk)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -186,16 +184,14 @@ func TestValidateBeaconAttestation_OldAttestation(t *testing.T) {
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
-	blk := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot: 55,
-		},
+	blk := &ethpb.BeaconBlock{
+		Slot: 55,
 	}
 	if err := db.SaveBlock(ctx, blk); err != nil {
 		t.Fatal(err)
 	}
 
-	blockRoot, err := ssz.HashTreeRoot(blk.Block)
+	blockRoot, err := ssz.SigningRoot(blk)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -277,16 +273,14 @@ func TestValidateBeaconAttestation_FirstEpoch(t *testing.T) {
 		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 
-	blk := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot: 1,
-		},
+	blk := &ethpb.BeaconBlock{
+		Slot: 1,
 	}
 	if err := db.SaveBlock(ctx, blk); err != nil {
 		t.Fatal(err)
 	}
 
-	blockRoot, err := ssz.HashTreeRoot(blk.Block)
+	blockRoot, err := ssz.SigningRoot(blk)
 	if err != nil {
 		t.Fatal(err)
 	}

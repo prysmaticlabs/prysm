@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
-	"github.com/prysmaticlabs/prysm/shared/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -37,7 +36,7 @@ func runSSZStaticTests(t *testing.T, config string) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				object, err := UnmarshalledSSZ(t, serializedBytes, folder.Name())
+				object, err := UnmarshalledSSZ(serializedBytes, folder.Name())
 				if err != nil {
 					t.Fatalf("Could not unmarshall serialized SSZ: %v", err)
 				}
@@ -51,17 +50,7 @@ func runSSZStaticTests(t *testing.T, config string) {
 					t.Fatalf("Failed to Unmarshal: %v", err)
 				}
 
-				// Custom hash tree root for beacon state.
-				var htr func(interface{}) ([32]byte, error)
-				if _, ok := object.(*pb.BeaconState); ok {
-					htr = func(s interface{}) ([32]byte, error) {
-						return stateutil.HashTreeRootState(s.(*pb.BeaconState))
-					}
-				} else {
-					htr = ssz.HashTreeRoot
-				}
-
-				root, err := htr(object)
+				root, err := ssz.HashTreeRoot(object)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -80,7 +69,7 @@ func runSSZStaticTests(t *testing.T, config string) {
 				if rootsYaml.SigningRoot == "" {
 					return
 				}
-				signingRoot, err := ssz.HashTreeRoot(object)
+				signingRoot, err := ssz.SigningRoot(object)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -100,17 +89,19 @@ func runSSZStaticTests(t *testing.T, config string) {
 	}
 }
 
-func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (interface{}, error) {
+func UnmarshalledSSZ(serializedBytes []byte, folderName string) (interface{}, error) {
 	var obj interface{}
 	switch folderName {
 	case "Attestation":
 		obj = &ethpb.Attestation{}
 	case "AttestationData":
 		obj = &ethpb.AttestationData{}
+	case "AttestationDataAndCustodyBit":
+		obj = &pb.AttestationDataAndCustodyBit{}
 	case "AttesterSlashing":
 		obj = &ethpb.AttesterSlashing{}
 	case "AggregateAndProof":
-		obj = &ethpb.AggregateAttestationAndProof{}
+		obj = &pb.AggregateAndProof{}
 	case "BeaconBlock":
 		obj = &ethpb.BeaconBlock{}
 	case "BeaconBlockBody":
@@ -125,9 +116,6 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		obj = &ethpb.Deposit{}
 	case "DepositData":
 		obj = &ethpb.Deposit_Data{}
-	case "DepositMessage":
-		t.Skip("Unused type")
-		return nil, nil
 	case "Eth1Data":
 		obj = &ethpb.Eth1Data{}
 	case "Fork":
@@ -140,12 +128,6 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		obj = &pb.PendingAttestation{}
 	case "ProposerSlashing":
 		obj = &ethpb.ProposerSlashing{}
-	case "SignedBeaconBlock":
-		obj = &ethpb.SignedBeaconBlock{}
-	case "SignedBeaconBlockHeader":
-		obj = &ethpb.SignedBeaconBlockHeader{}
-	case "SignedVoluntaryExit":
-		obj = &ethpb.SignedVoluntaryExit{}
 	case "Validator":
 		obj = &ethpb.Validator{}
 	case "VoluntaryExit":

@@ -5,12 +5,11 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 )
 
 // SaveAggregatedAttestation saves an aggregated attestation in cache.
 func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
-	if !helpers.IsAggregated(att) {
+	if !aggregated(att.AggregationBits) {
 		return errors.New("attestation is not aggregated")
 	}
 
@@ -26,18 +25,8 @@ func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
 	return nil
 }
 
-// SaveAggregatedAttestations saves a list of aggregated attestations in cache.
-func (p *AttCaches) SaveAggregatedAttestations(atts []*ethpb.Attestation) error {
-	for _, att := range atts {
-		if err := p.SaveAggregatedAttestation(att); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// AggregatedAttestations returns the aggregated attestations in cache.
-func (p *AttCaches) AggregatedAttestations() []*ethpb.Attestation {
+// AggregatedAttestation returns the aggregated attestations in cache.
+func (p *AttCaches) AggregatedAttestation() []*ethpb.Attestation {
 	atts := make([]*ethpb.Attestation, 0, p.aggregatedAtt.ItemCount())
 	for s, i := range p.aggregatedAtt.Items() {
 		// Type assertion for the worst case. This shouldn't happen.
@@ -51,29 +40,9 @@ func (p *AttCaches) AggregatedAttestations() []*ethpb.Attestation {
 	return atts
 }
 
-// AggregatedAttestationsBySlotIndex returns the aggregated attestations in cache,
-// filtered by committee index and slot.
-func (p *AttCaches) AggregatedAttestationsBySlotIndex(slot uint64, committeeIndex uint64) []*ethpb.Attestation {
-	atts := make([]*ethpb.Attestation, 0, p.aggregatedAtt.ItemCount())
-	for s, i := range p.aggregatedAtt.Items() {
-
-		// Type assertion for the worst case. This shouldn't happen.
-		att, ok := i.Object.(*ethpb.Attestation)
-		if !ok {
-			p.aggregatedAtt.Delete(s)
-		}
-
-		if slot == att.Data.Slot && committeeIndex == att.Data.CommitteeIndex {
-			atts = append(atts, att)
-		}
-	}
-
-	return atts
-}
-
 // DeleteAggregatedAttestation deletes the aggregated attestations in cache.
 func (p *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
-	if !helpers.IsAggregated(att) {
+	if !aggregated(att.AggregationBits) {
 		return errors.New("attestation is not aggregated")
 	}
 

@@ -39,23 +39,19 @@ func TestStore_ArchivedActiveValidatorChanges(t *testing.T) {
 		ProposerSlashings: []*ethpb.ProposerSlashing{
 			{
 				ProposerIndex: 1212,
-				Header_1: &ethpb.SignedBeaconBlockHeader{
-					Header: &ethpb.BeaconBlockHeader{
-						Slot:       10,
-						ParentRoot: someRoot[:],
-						StateRoot:  someRoot[:],
-						BodyRoot:   someRoot[:],
-					},
-					Signature: make([]byte, 96),
+				Header_1: &ethpb.BeaconBlockHeader{
+					Slot:       10,
+					ParentRoot: someRoot[:],
+					StateRoot:  someRoot[:],
+					BodyRoot:   someRoot[:],
+					Signature:  make([]byte, 96),
 				},
-				Header_2: &ethpb.SignedBeaconBlockHeader{
-					Header: &ethpb.BeaconBlockHeader{
-						Slot:       10,
-						ParentRoot: someRoot[:],
-						StateRoot:  someRoot[:],
-						BodyRoot:   someRoot[:],
-					},
-					Signature: make([]byte, 96),
+				Header_2: &ethpb.BeaconBlockHeader{
+					Slot:       10,
+					ParentRoot: someRoot[:],
+					StateRoot:  someRoot[:],
+					BodyRoot:   someRoot[:],
+					Signature:  make([]byte, 96),
 				},
 			},
 		},

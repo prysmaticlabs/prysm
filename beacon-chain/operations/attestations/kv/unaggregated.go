@@ -5,12 +5,11 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 )
 
 // SaveUnaggregatedAttestation saves an unaggregated attestation in cache.
 func (p *AttCaches) SaveUnaggregatedAttestation(att *ethpb.Attestation) error {
-	if helpers.IsAggregated(att) {
+	if aggregated(att.AggregationBits) {
 		return errors.New("attestation is aggregated")
 	}
 
@@ -26,19 +25,9 @@ func (p *AttCaches) SaveUnaggregatedAttestation(att *ethpb.Attestation) error {
 	return nil
 }
 
-// SaveUnaggregatedAttestations saves a list of unaggregated attestations in cache.
-func (p *AttCaches) SaveUnaggregatedAttestations(atts []*ethpb.Attestation) error {
-	for _, att := range atts {
-		if err := p.SaveUnaggregatedAttestation(att); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// UnaggregatedAttestations returns all the unaggregated attestations in cache.
-func (p *AttCaches) UnaggregatedAttestations() []*ethpb.Attestation {
+// UnaggregatedAttestation returns the aggregated attestations in cache,
+// filtered by committee index and slot.
+func (p *AttCaches) UnaggregatedAttestation(slot uint64, committeeIndex uint64) []*ethpb.Attestation {
 	atts := make([]*ethpb.Attestation, 0, p.unAggregatedAtt.ItemCount())
 	for s, i := range p.unAggregatedAtt.Items() {
 
@@ -48,7 +37,9 @@ func (p *AttCaches) UnaggregatedAttestations() []*ethpb.Attestation {
 			p.unAggregatedAtt.Delete(s)
 		}
 
-		atts = append(atts, att)
+		if slot == att.Data.Slot && committeeIndex == att.Data.CommitteeIndex {
+			atts = append(atts, att)
+		}
 	}
 
 	return atts
@@ -56,8 +47,8 @@ func (p *AttCaches) UnaggregatedAttestations() []*ethpb.Attestation {
 
 // DeleteUnaggregatedAttestation deletes the unaggregated attestations in cache.
 func (p *AttCaches) DeleteUnaggregatedAttestation(att *ethpb.Attestation) error {
-	if helpers.IsAggregated(att) {
-		return errors.New("attestation is aggregated")
+	if aggregated(att.AggregationBits) {
+		return errors.New("attestation is not aggregated")
 	}
 
 	r, err := ssz.HashTreeRoot(att)

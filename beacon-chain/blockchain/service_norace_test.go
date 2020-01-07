@@ -25,13 +25,13 @@ func TestChainService_SaveHead_DataRace(t *testing.T) {
 	go func() {
 		s.saveHead(
 			context.Background(),
-			&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 777}},
+			&ethpb.BeaconBlock{Slot: 777},
 			[32]byte{},
 		)
 	}()
 	s.saveHead(
 		context.Background(),
-		&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 888}},
+		&ethpb.BeaconBlock{Slot: 888},
 		[32]byte{},
 	)
 }

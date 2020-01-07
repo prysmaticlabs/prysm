@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+
 	"fmt"
-	"reflect"
 	"sort"
 
 	"github.com/gogo/protobuf/proto"
@@ -21,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -38,26 +37,6 @@ var eth1DataCache = cache.NewEth1DataVoteCache()
 var ErrSigFailedToVerify = errors.New("signature did not verify")
 
 func verifySigningRoot(obj interface{}, pub []byte, signature []byte, domain uint64) error {
-	publicKey, err := bls.PublicKeyFromBytes(pub)
-	if err != nil {
-		return errors.Wrap(err, "could not convert bytes to public key")
-	}
-	sig, err := bls.SignatureFromBytes(signature)
-	if err != nil {
-		return errors.Wrap(err, "could not convert bytes to signature")
-	}
-	root, err := ssz.HashTreeRoot(obj)
-	if err != nil {
-		return errors.Wrap(err, "could not get signing root")
-	}
-	if !sig.Verify(root[:], publicKey, domain) {
-		return ErrSigFailedToVerify
-	}
-	return nil
-}
-
-// Deprecated: This method uses deprecated ssz.SigningRoot.
-func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, pub []byte, signature []byte, domain uint64) error {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to public key")
@@ -182,9 +161,9 @@ func Eth1DataHasEnoughSupport(beaconState *pb.BeaconState, data *ethpb.Eth1Data)
 //    assert bls_verify(proposer.pubkey, signing_root(block), block.signature, get_domain(state, DOMAIN_BEACON_PROPOSER))
 func ProcessBlockHeader(
 	beaconState *pb.BeaconState,
-	block *ethpb.SignedBeaconBlock,
+	block *ethpb.BeaconBlock,
 ) (*pb.BeaconState, error) {
-	beaconState, err := ProcessBlockHeaderNoVerify(beaconState, block.Block)
+	beaconState, err := ProcessBlockHeaderNoVerify(beaconState, block)
 	if err != nil {
 		return nil, err
 	}
@@ -194,11 +173,14 @@ func ProcessBlockHeader(
 		return nil, err
 	}
 	proposer := beaconState.Validators[idx]
+	if proposer.Slashed {
+		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
+	}
 
 	// Verify proposer signature.
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	domain := helpers.Domain(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
-	if err := verifySigningRoot(block.Block, proposer.PublicKey, block.Signature, domain); err != nil {
+	if err := verifySigningRoot(block, proposer.PublicKey, block.Signature, domain); err != nil {
 		return nil, ErrSigFailedToVerify
 	}
 
@@ -232,14 +214,11 @@ func ProcessBlockHeaderNoVerify(
 	beaconState *pb.BeaconState,
 	block *ethpb.BeaconBlock,
 ) (*pb.BeaconState, error) {
-	if block == nil {
-		return nil, errors.New("nil block")
-	}
 	if beaconState.Slot != block.Slot {
 		return nil, fmt.Errorf("state slot: %d is different then block slot: %d", beaconState.Slot, block.Slot)
 	}
 
-	parentRoot, err := ssz.HashTreeRoot(beaconState.LatestBlockHeader)
+	parentRoot, err := ssz.SigningRoot(beaconState.LatestBlockHeader)
 	if err != nil {
 		return nil, err
 	}
@@ -249,24 +228,17 @@ func ProcessBlockHeaderNoVerify(
 			block.ParentRoot, parentRoot)
 	}
 
-	idx, err := helpers.BeaconProposerIndex(beaconState)
-	if err != nil {
-		return nil, err
-	}
-	proposer := beaconState.Validators[idx]
-	if proposer.Slashed {
-		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
-	}
-
 	bodyRoot, err := ssz.HashTreeRoot(block.Body)
 	if err != nil {
 		return nil, err
 	}
+	emptySig := make([]byte, 96)
 	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{
 		Slot:       block.Slot,
 		ParentRoot: block.ParentRoot,
 		StateRoot:  params.BeaconConfig().ZeroHash[:],
 		BodyRoot:   bodyRoot[:],
+		Signature:  emptySig,
 	}
 	return beaconState, nil
 }
@@ -390,8 +362,8 @@ func VerifyProposerSlashing(
 ) error {
 	proposer := beaconState.Validators[slashing.ProposerIndex]
 
-	if slashing.Header_1.Header.Slot != slashing.Header_2.Header.Slot {
-		return fmt.Errorf("mismatched header slots, received %d == %d", slashing.Header_1.Header.Slot, slashing.Header_2.Header.Slot)
+	if slashing.Header_1.Slot != slashing.Header_2.Slot {
+		return fmt.Errorf("mismatched header slots, received %d == %d", slashing.Header_1.Slot, slashing.Header_2.Slot)
 	}
 	if proto.Equal(slashing.Header_1, slashing.Header_2) {
 		return errors.New("expected slashing headers to differ")
@@ -400,10 +372,10 @@ func VerifyProposerSlashing(
 		return fmt.Errorf("validator with key %#x is not slashable", proposer.PublicKey)
 	}
 	// Using headerEpoch1 here because both of the headers should have the same epoch.
-	domain := helpers.Domain(beaconState.Fork, helpers.StartSlot(slashing.Header_1.Header.Slot), params.BeaconConfig().DomainBeaconProposer)
-	headers := []*ethpb.SignedBeaconBlockHeader{slashing.Header_1, slashing.Header_2}
+	domain := helpers.Domain(beaconState.Fork, helpers.StartSlot(slashing.Header_1.Slot), params.BeaconConfig().DomainBeaconProposer)
+	headers := append([]*ethpb.BeaconBlockHeader{slashing.Header_1}, slashing.Header_2)
 	for _, header := range headers {
-		if err := verifySigningRoot(header.Header, proposer.PublicKey, header.Signature, domain); err != nil {
+		if err := verifySigningRoot(header, proposer.PublicKey, header.Signature, domain); err != nil {
 			return errors.Wrap(err, "could not verify beacon block header")
 		}
 	}
@@ -416,15 +388,19 @@ func VerifyProposerSlashing(
 //
 // Spec pseudocode definition:
 //   def process_attester_slashing(state: BeaconState, attester_slashing: AttesterSlashing) -> None:
+//    """
+//    Process ``AttesterSlashing`` operation.
+//    """
 //    attestation_1 = attester_slashing.attestation_1
 //    attestation_2 = attester_slashing.attestation_2
 //    assert is_slashable_attestation_data(attestation_1.data, attestation_2.data)
-//    assert is_valid_indexed_attestation(state, attestation_1)
-//    assert is_valid_indexed_attestation(state, attestation_2)
+//    validate_indexed_attestation(state, attestation_1)
+//    validate_indexed_attestation(state, attestation_2)
 //
 //    slashed_any = False
-//    indices = set(attestation_1.attesting_indices).intersection(attestation_2.attesting_indices)
-//    for index in sorted(indices):
+//    attesting_indices_1 = attestation_1.custody_bit_0_indices + attestation_1.custody_bit_1_indices
+//    attesting_indices_2 = attestation_2.custody_bit_0_indices + attestation_2.custody_bit_1_indices
+//    for index in sorted(set(attesting_indices_1).intersection(attesting_indices_2)):
 //        if is_slashable_validator(state.validators[index], get_current_epoch(state)):
 //            slash_validator(state, index)
 //            slashed_any = True
@@ -496,8 +472,10 @@ func IsSlashableAttestationData(data1 *ethpb.AttestationData, data2 *ethpb.Attes
 }
 
 func slashableAttesterIndices(slashing *ethpb.AttesterSlashing) []uint64 {
-	indices1 := slashing.Attestation_1.AttestingIndices
-	indices2 := slashing.Attestation_1.AttestingIndices
+	att1 := slashing.Attestation_1
+	att2 := slashing.Attestation_1
+	indices1 := append(att1.CustodyBit_0Indices, att1.CustodyBit_1Indices...)
+	indices2 := append(att2.CustodyBit_0Indices, att2.CustodyBit_1Indices...)
 	return sliceutil.IntersectionUint64(indices1, indices2)
 }
 
@@ -535,11 +513,10 @@ func ProcessAttestationsNoVerify(ctx context.Context, beaconState *pb.BeaconStat
 //    data = attestation.data
 //    assert data.index < get_committee_count_at_slot(state, data.slot)
 //    assert data.target.epoch in (get_previous_epoch(state), get_current_epoch(state))
-//    assert data.target.epoch == compute_epoch_at_slot(data.slot)
 //    assert data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= data.slot + SLOTS_PER_EPOCH
 //
 //    committee = get_beacon_committee(state, data.slot, data.index)
-//    assert len(attestation.aggregation_bits) == len(committee)
+//    assert len(attestation.aggregation_bits) == len(attestation.custody_bits) == len(committee)
 //
 //    pending_attestation = PendingAttestation(
 //        data=data,
@@ -583,9 +560,6 @@ func ProcessAttestationNoVerify(ctx context.Context, beaconState *pb.BeaconState
 			helpers.PrevEpoch(beaconState),
 			helpers.CurrentEpoch(beaconState),
 		)
-	}
-	if helpers.SlotToEpoch(data.Slot) != data.Target.Epoch {
-		return nil, fmt.Errorf("data slot is not in the same epoch as target %d != %d", helpers.SlotToEpoch(data.Slot), data.Target.Epoch)
 	}
 
 	s := att.Data.Slot
@@ -662,9 +636,13 @@ func ProcessAttestationNoVerify(ctx context.Context, beaconState *pb.BeaconState
 //    Return the indexed attestation corresponding to ``attestation``.
 //    """
 //    attesting_indices = get_attesting_indices(state, attestation.data, attestation.aggregation_bits)
+//    custody_bit_1_indices = get_attesting_indices(state, attestation.data, attestation.custody_bits)
+//    assert custody_bit_1_indices.issubset(attesting_indices)
+//    custody_bit_0_indices = attesting_indices.difference(custody_bit_1_indices)
 //
 //    return IndexedAttestation(
-//        attesting_indices=sorted(attesting_indices),
+//        custody_bit_0_indices=sorted(custody_bit_0_indices),
+//        custody_bit_1_indices=sorted(custody_bit_1_indices),
 //        data=attestation.data,
 //        signature=attestation.signature,
 //    )
@@ -677,13 +655,35 @@ func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, commi
 		return nil, errors.Wrap(err, "could not get attesting indices")
 	}
 
-	sort.Slice(attIndices, func(i, j int) bool {
-		return attIndices[i] < attIndices[j]
+	cb1i, err := helpers.AttestingIndices(attestation.CustodyBits, committee)
+	if err != nil {
+		return nil, err
+	}
+	if !sliceutil.SubsetUint64(cb1i, attIndices) {
+		return nil, fmt.Errorf("%v is not a subset of %v", cb1i, attIndices)
+	}
+	cb1Map := make(map[uint64]bool)
+	for _, idx := range cb1i {
+		cb1Map[idx] = true
+	}
+	cb0i := []uint64{}
+	for _, idx := range attIndices {
+		if !cb1Map[idx] {
+			cb0i = append(cb0i, idx)
+		}
+	}
+	sort.Slice(cb0i, func(i, j int) bool {
+		return cb0i[i] < cb0i[j]
+	})
+
+	sort.Slice(cb1i, func(i, j int) bool {
+		return cb1i[i] < cb1i[j]
 	})
 	inAtt := &ethpb.IndexedAttestation{
-		Data:             attestation.Data,
-		Signature:        attestation.Signature,
-		AttestingIndices: attIndices,
+		Data:                attestation.Data,
+		Signature:           attestation.Signature,
+		CustodyBit_0Indices: cb0i,
+		CustodyBit_1Indices: cb1i,
 	}
 	return inAtt, nil
 }
@@ -695,19 +695,33 @@ func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, commi
 //    """
 //    Check if ``indexed_attestation`` has valid indices and signature.
 //    """
-//    indices = indexed_attestation.attesting_indices
+//    bit_0_indices = indexed_attestation.custody_bit_0_indices
+//    bit_1_indices = indexed_attestation.custody_bit_1_indices
 //
-//    # Verify max number of indices
-//    if not len(indices) <= MAX_VALIDATORS_PER_COMMITTEE:
+//    # Verify no index has custody bit equal to 1 [to be removed in phase 1]
+//    if not len(bit_1_indices) == 0:
 //        return False
-//    # Verify indices are sorted and unique
-//        if not indices == sorted(set(indices)):
+//    # Verify max number of indices
+//    if not len(bit_0_indices) + len(bit_1_indices) <= MAX_VALIDATORS_PER_COMMITTEE:
+//        return False
+//    # Verify index sets are disjoint
+//    if not len(set(bit_0_indices).intersection(bit_1_indices)) == 0:
+//        return False
+//    # Verify indices are sorted
+//    if not (bit_0_indices == sorted(bit_0_indices) and bit_1_indices == sorted(bit_1_indices)):
+//        return False
 //    # Verify aggregate signature
-//    if not bls_verify(
-//        pubkey=bls_aggregate_pubkeys([state.validators[i].pubkey for i in indices]),
-//        message_hash=hash_tree_root(indexed_attestation.data),
+//    if not bls_verify_multiple(
+//        pubkeys=[
+//            bls_aggregate_pubkeys([state.validators[i].pubkey for i in bit_0_indices]),
+//            bls_aggregate_pubkeys([state.validators[i].pubkey for i in bit_1_indices]),
+//        ],
+//        message_hashes=[
+//            hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b0)),
+//            hash_tree_root(AttestationDataAndCustodyBit(data=indexed_attestation.data, custody_bit=0b1)),
+//        ],
 //        signature=indexed_attestation.signature,
-//        domain=get_domain(state, DOMAIN_BEACON_ATTESTER, indexed_attestation.data.target.epoch),
+//        domain=get_domain(state, DOMAIN_ATTESTATION, indexed_attestation.data.target.epoch),
 //    ):
 //        return False
 //    return True
@@ -715,48 +729,87 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *pb.BeaconState, 
 	ctx, span := trace.StartSpan(ctx, "core.VerifyIndexedAttestation")
 	defer span.End()
 
-	indices := indexedAtt.AttestingIndices
+	custodyBit0Indices := indexedAtt.CustodyBit_0Indices
+	custodyBit1Indices := indexedAtt.CustodyBit_1Indices
 
-	if uint64(len(indices)) > params.BeaconConfig().MaxValidatorsPerCommittee {
-		return fmt.Errorf("validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE, %d > %d", len(indices), params.BeaconConfig().MaxValidatorsPerCommittee)
+	// To be removed in phase 1
+	if len(custodyBit1Indices) != 0 {
+		return fmt.Errorf("expected no bit 1 indices, received %v", len(custodyBit1Indices))
 	}
 
-	set := make(map[uint64]bool)
-	setIndices := make([]uint64, 0, len(indices))
-	for _, i := range indices {
-		if ok := set[i]; ok {
-			continue
-		}
-		setIndices = append(setIndices, i)
-		set[i] = true
+	maxIndices := params.BeaconConfig().MaxValidatorsPerCommittee
+	totalIndicesLength := uint64(len(custodyBit0Indices) + len(custodyBit1Indices))
+	if totalIndicesLength > maxIndices {
+		return fmt.Errorf("over max number of allowed indices per attestation: %d", totalIndicesLength)
 	}
-	sort.SliceStable(setIndices, func(i, j int) bool {
-		return setIndices[i] < setIndices[j]
+	custodyBitIntersection := sliceutil.IntersectionUint64(custodyBit0Indices, custodyBit1Indices)
+	if len(custodyBitIntersection) != 0 {
+		return fmt.Errorf("expected disjoint indices intersection, received %v", custodyBitIntersection)
+	}
+
+	custodyBit0IndicesIsSorted := sort.SliceIsSorted(custodyBit0Indices, func(i, j int) bool {
+		return custodyBit0Indices[i] < custodyBit0Indices[j]
 	})
-	if !reflect.DeepEqual(setIndices, indices) {
-		return errors.New("attesting indices is not uniquely sorted")
+
+	if !custodyBit0IndicesIsSorted {
+		return fmt.Errorf("custody Bit0 indices are not sorted, got %v", custodyBit0Indices)
+	}
+
+	custodyBit1IndicesIsSorted := sort.SliceIsSorted(custodyBit1Indices, func(i, j int) bool {
+		return custodyBit1Indices[i] < custodyBit1Indices[j]
+	})
+
+	if !custodyBit1IndicesIsSorted {
+		return fmt.Errorf("custody Bit1 indices are not sorted, got %v", custodyBit1Indices)
 	}
 
 	domain := helpers.Domain(beaconState.Fork, indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
-	var pubkey *bls.PublicKey
-	var err error
-	if len(indices) > 0 {
-		pubkey, err = bls.PublicKeyFromBytes(beaconState.Validators[indices[0]].PublicKey)
+	var pubkeys []*bls.PublicKey
+	if len(custodyBit0Indices) > 0 {
+		pubkey, err := bls.PublicKeyFromBytes(beaconState.Validators[custodyBit0Indices[0]].PublicKey)
 		if err != nil {
 			return errors.Wrap(err, "could not deserialize validator public key")
 		}
-		for _, i := range indices[1:] {
+		for _, i := range custodyBit0Indices[1:] {
 			pk, err := bls.PublicKeyFromBytes(beaconState.Validators[i].PublicKey)
 			if err != nil {
 				return errors.Wrap(err, "could not deserialize validator public key")
 			}
 			pubkey.Aggregate(pk)
 		}
+		pubkeys = append(pubkeys, pubkey)
+	}
+	if len(custodyBit1Indices) > 0 {
+		pubkey, err := bls.PublicKeyFromBytes(beaconState.Validators[custodyBit1Indices[0]].PublicKey)
+		if err != nil {
+			return errors.Wrap(err, "could not deserialize validator public key")
+		}
+		for _, i := range custodyBit1Indices[1:] {
+			pk, err := bls.PublicKeyFromBytes(beaconState.Validators[i].PublicKey)
+			if err != nil {
+				return errors.Wrap(err, "could not deserialize validator public key")
+			}
+			pubkey.Aggregate(pk)
+		}
+		pubkeys = append(pubkeys, pubkey)
 	}
 
-	messageHash, err := ssz.HashTreeRoot(indexedAtt.Data)
-	if err != nil {
-		return errors.Wrap(err, "could not tree hash att data")
+	var msgs [][32]byte
+	cus0 := &pb.AttestationDataAndCustodyBit{Data: indexedAtt.Data, CustodyBit: false}
+	cus1 := &pb.AttestationDataAndCustodyBit{Data: indexedAtt.Data, CustodyBit: true}
+	if len(custodyBit0Indices) > 0 {
+		cus0Root, err := ssz.HashTreeRoot(cus0)
+		if err != nil {
+			return errors.Wrap(err, "could not tree hash att data and custody bit 0")
+		}
+		msgs = append(msgs, cus0Root)
+	}
+	if len(custodyBit1Indices) > 0 {
+		cus1Root, err := ssz.HashTreeRoot(cus1)
+		if err != nil {
+			return errors.Wrap(err, "could not tree hash att data and custody bit 1")
+		}
+		msgs = append(msgs, cus1Root)
 	}
 
 	sig, err := bls.SignatureFromBytes(indexedAtt.Signature)
@@ -764,8 +817,9 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *pb.BeaconState, 
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
 
-	voted := len(indices) > 0
-	if voted && !sig.Verify(messageHash[:], pubkey, domain) {
+	hasVotes := len(custodyBit0Indices) > 0 || len(custodyBit1Indices) > 0
+
+	if hasVotes && !sig.VerifyAggregate(pubkeys, msgs, domain) {
 		return ErrSigFailedToVerify
 	}
 	return nil
@@ -802,29 +856,6 @@ func ProcessDeposits(ctx context.Context, beaconState *pb.BeaconState, body *eth
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
 		}
-	}
-	return beaconState, nil
-}
-
-// ProcessPreGenesisDeposit processes a deposit for the beacon state before chainstart.
-func ProcessPreGenesisDeposit(ctx context.Context, beaconState *pb.BeaconState,
-	deposit *ethpb.Deposit, validatorIndices map[[48]byte]int) (*pb.BeaconState, error) {
-	var err error
-	beaconState, err = ProcessDeposit(beaconState, deposit, validatorIndices)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process deposit")
-	}
-	pubkey := deposit.Data.PublicKey
-	index, ok := validatorIndices[bytesutil.ToBytes48(pubkey)]
-	if !ok {
-		return beaconState, nil
-	}
-	balance := beaconState.Balances[index]
-	beaconState.Validators[index].EffectiveBalance = mathutil.Min(balance-balance%params.BeaconConfig().EffectiveBalanceIncrement, params.BeaconConfig().MaxEffectiveBalance)
-	if beaconState.Validators[index].EffectiveBalance ==
-		params.BeaconConfig().MaxEffectiveBalance {
-		beaconState.Validators[index].ActivationEligibilityEpoch = 0
-		beaconState.Validators[index].ActivationEpoch = 0
 	}
 	return beaconState, nil
 }
@@ -883,7 +914,7 @@ func ProcessDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit, valInde
 	if !ok {
 		domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
 		depositSig := deposit.Data.Signature
-		if err := verifyDepositDataSigningRoot(deposit.Data, pubKey, depositSig, domain); err != nil {
+		if err := verifySigningRoot(deposit.Data, pubKey, depositSig, domain); err != nil {
 			// Ignore this error as in the spec pseudo code.
 			log.Errorf("Skipping deposit: could not verify deposit data signature: %v", err)
 			return beaconState, nil
@@ -903,7 +934,6 @@ func ProcessDeposit(beaconState *pb.BeaconState, deposit *ethpb.Deposit, valInde
 			EffectiveBalance:           effectiveBalance,
 		})
 		beaconState.Balances = append(beaconState.Balances, amount)
-		valIndexMap[bytesutil.ToBytes48(pubKey)] = len(beaconState.Validators) - 1
 	} else {
 		beaconState = helpers.IncreaseBalance(beaconState, uint64(index), amount)
 	}
@@ -963,7 +993,7 @@ func ProcessVoluntaryExits(ctx context.Context, beaconState *pb.BeaconState, bod
 		if err := VerifyExit(beaconState, exit); err != nil {
 			return nil, errors.Wrapf(err, "could not verify exit %d", idx)
 		}
-		beaconState, err = v.InitiateValidatorExit(beaconState, exit.Exit.ValidatorIndex)
+		beaconState, err = v.InitiateValidatorExit(beaconState, exit.ValidatorIndex)
 		if err != nil {
 			return nil, err
 		}
@@ -981,7 +1011,7 @@ func ProcessVoluntaryExitsNoVerify(
 	exits := body.VoluntaryExits
 
 	for idx, exit := range exits {
-		beaconState, err = v.InitiateValidatorExit(beaconState, exit.Exit.ValidatorIndex)
+		beaconState, err = v.InitiateValidatorExit(beaconState, exit.ValidatorIndex)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to process voluntary exit at index %d", idx)
 		}
@@ -1008,12 +1038,7 @@ func ProcessVoluntaryExitsNoVerify(
 //    # Verify signature
 //    domain = get_domain(state, DOMAIN_VOLUNTARY_EXIT, exit.epoch)
 //    assert bls_verify(validator.pubkey, signing_root(exit), exit.signature, domain)
-func VerifyExit(beaconState *pb.BeaconState, signed *ethpb.SignedVoluntaryExit) error {
-	if signed == nil || signed.Exit == nil {
-		return errors.New("nil exit")
-	}
-
-	exit := signed.Exit
+func VerifyExit(beaconState *pb.BeaconState, exit *ethpb.VoluntaryExit) error {
 	if int(exit.ValidatorIndex) >= len(beaconState.Validators) {
 		return fmt.Errorf("validator index out of bound %d > %d", exit.ValidatorIndex, len(beaconState.Validators))
 	}
@@ -1041,7 +1066,7 @@ func VerifyExit(beaconState *pb.BeaconState, signed *ethpb.SignedVoluntaryExit) 
 		)
 	}
 	domain := helpers.Domain(beaconState.Fork, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit)
-	if err := verifySigningRoot(exit, validator.PublicKey, signed.Signature, domain); err != nil {
+	if err := verifySigningRoot(exit, validator.PublicKey, exit.Signature, domain); err != nil {
 		return ErrSigFailedToVerify
 	}
 	return nil

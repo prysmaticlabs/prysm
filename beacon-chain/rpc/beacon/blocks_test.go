@@ -91,13 +91,11 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 
 	// Should return the proper genesis block if it exists.
 	parentRoot := [32]byte{1, 2, 3}
-	blk := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot:       0,
-			ParentRoot: parentRoot[:],
-		},
+	blk := &ethpb.BeaconBlock{
+		Slot:       0,
+		ParentRoot: parentRoot[:],
 	}
-	root, err := ssz.HashTreeRoot(blk.Block)
+	root, err := ssz.SigningRoot(blk)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,15 +144,13 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 	ctx := context.Background()
 
 	count := uint64(100)
-	blks := make([]*ethpb.SignedBeaconBlock, count)
+	blks := make([]*ethpb.BeaconBlock, count)
 	blkContainers := make([]*ethpb.BeaconBlockContainer, count)
 	for i := uint64(0); i < count; i++ {
-		b := &ethpb.SignedBeaconBlock{
-			Block: &ethpb.BeaconBlock{
-				Slot: i,
-			},
+		b := &ethpb.BeaconBlock{
+			Slot: i,
 		}
-		root, err := ssz.HashTreeRoot(b.Block)
+		root, err := ssz.SigningRoot(b)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -169,7 +165,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 		BeaconDB: db,
 	}
 
-	root6, err := ssz.HashTreeRoot(blks[6].Block)
+	root6, err := ssz.SigningRoot(&ethpb.BeaconBlock{Slot: 6})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,7 +179,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			QueryFilter: &ethpb.ListBlocksRequest_Slot{Slot: 5},
 			PageSize:    3},
 			res: &ethpb.ListBlocksResponse{
-				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 5}}, BlockRoot: blkContainers[5].BlockRoot}},
+				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.BeaconBlock{Slot: 5}, BlockRoot: blkContainers[5].BlockRoot}},
 				NextPageToken:   "",
 				TotalSize:       1}},
 		{req: &ethpb.ListBlocksRequest{
@@ -191,11 +187,11 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 			QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]},
 			PageSize:    3},
 			res: &ethpb.ListBlocksResponse{
-				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 6}}, BlockRoot: blkContainers[6].BlockRoot}},
+				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.BeaconBlock{Slot: 6}, BlockRoot: blkContainers[6].BlockRoot}},
 				TotalSize:       1}},
 		{req: &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: root6[:]}},
 			res: &ethpb.ListBlocksResponse{
-				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 6}}, BlockRoot: blkContainers[6].BlockRoot}},
+				BlockContainers: []*ethpb.BeaconBlockContainer{{Block: &ethpb.BeaconBlock{Slot: 6}, BlockRoot: blkContainers[6].BlockRoot}},
 				TotalSize:       1}},
 		{req: &ethpb.ListBlocksRequest{
 			PageToken:   strconv.Itoa(0),
@@ -231,16 +227,14 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 				TotalSize:       int32(params.BeaconConfig().SlotsPerEpoch / 2)}},
 	}
 
-	for i, test := range tests {
-		t.Run(fmt.Sprintf("test_%d", i), func(t *testing.T) {
-			res, err := bs.ListBlocks(ctx, test.req)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !proto.Equal(res, test.res) {
-				t.Errorf("Incorrect blocks response, wanted %v, received %v", test.res, res)
-			}
-		})
+	for _, test := range tests {
+		res, err := bs.ListBlocks(ctx, test.req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !proto.Equal(res, test.res) {
+			t.Errorf("Incorrect blocks response, wanted %v, received %v", test.res, res)
+		}
 	}
 }
 
@@ -321,7 +315,6 @@ func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
 	defer dbTest.TeardownDB(t, db)
 
 	s := &pbp2p.BeaconState{
-		Slot:                        1,
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 3, Root: []byte{'A'}},
 		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Epoch: 2, Root: []byte{'B'}},
 		FinalizedCheckpoint:         &ethpb.Checkpoint{Epoch: 1, Root: []byte{'C'}},
@@ -329,7 +322,7 @@ func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
 
 	bs := &Server{
 		BeaconDB:    db,
-		HeadFetcher: &mock.ChainService{Block: &ethpb.SignedBeaconBlock{}, State: s},
+		HeadFetcher: &mock.ChainService{Block: &ethpb.BeaconBlock{}, State: s},
 		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint:         s.FinalizedCheckpoint,
 			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint,
@@ -345,24 +338,23 @@ func TestServer_GetChainHead(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
-	finalizedBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: []byte{'A'}}}
+	finalizedBlock := &ethpb.BeaconBlock{Slot: 1, ParentRoot: []byte{'A'}}
 	db.SaveBlock(context.Background(), finalizedBlock)
-	fRoot, _ := ssz.HashTreeRoot(finalizedBlock.Block)
-	justifiedBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 2, ParentRoot: []byte{'B'}}}
+	fRoot, _ := ssz.SigningRoot(finalizedBlock)
+	justifiedBlock := &ethpb.BeaconBlock{Slot: 2, ParentRoot: []byte{'B'}}
 	db.SaveBlock(context.Background(), justifiedBlock)
-	jRoot, _ := ssz.HashTreeRoot(justifiedBlock.Block)
-	prevJustifiedBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 3, ParentRoot: []byte{'C'}}}
+	jRoot, _ := ssz.SigningRoot(justifiedBlock)
+	prevJustifiedBlock := &ethpb.BeaconBlock{Slot: 3, ParentRoot: []byte{'C'}}
 	db.SaveBlock(context.Background(), prevJustifiedBlock)
-	pjRoot, _ := ssz.HashTreeRoot(prevJustifiedBlock.Block)
+	pjRoot, _ := ssz.SigningRoot(prevJustifiedBlock)
 
 	s := &pbp2p.BeaconState{
-		Slot:                        1,
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 3, Root: pjRoot[:]},
 		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Epoch: 2, Root: jRoot[:]},
 		FinalizedCheckpoint:         &ethpb.Checkpoint{Epoch: 1, Root: fRoot[:]},
 	}
 
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.PreviousJustifiedCheckpoint.Epoch*params.BeaconConfig().SlotsPerEpoch + 1}}
+	b := &ethpb.BeaconBlock{Slot: s.PreviousJustifiedCheckpoint.Epoch*params.BeaconConfig().SlotsPerEpoch + 1}
 	bs := &Server{
 		BeaconDB:    db,
 		HeadFetcher: &mock.ChainService{Block: b, State: s},
@@ -446,24 +438,23 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
-	finalizedBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: []byte{'A'}}}
+	finalizedBlock := &ethpb.BeaconBlock{Slot: 1, ParentRoot: []byte{'A'}}
 	db.SaveBlock(context.Background(), finalizedBlock)
-	fRoot, _ := ssz.HashTreeRoot(finalizedBlock.Block)
-	justifiedBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 2, ParentRoot: []byte{'B'}}}
+	fRoot, _ := ssz.SigningRoot(finalizedBlock)
+	justifiedBlock := &ethpb.BeaconBlock{Slot: 2, ParentRoot: []byte{'B'}}
 	db.SaveBlock(context.Background(), justifiedBlock)
-	jRoot, _ := ssz.HashTreeRoot(justifiedBlock.Block)
-	prevJustifiedBlock := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 3, ParentRoot: []byte{'C'}}}
+	jRoot, _ := ssz.SigningRoot(justifiedBlock)
+	prevJustifiedBlock := &ethpb.BeaconBlock{Slot: 3, ParentRoot: []byte{'C'}}
 	db.SaveBlock(context.Background(), prevJustifiedBlock)
-	pjRoot, _ := ssz.HashTreeRoot(prevJustifiedBlock.Block)
+	pjRoot, _ := ssz.SigningRoot(prevJustifiedBlock)
 
 	s := &pbp2p.BeaconState{
-		Slot:                        1,
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 3, Root: pjRoot[:]},
 		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Epoch: 2, Root: jRoot[:]},
 		FinalizedCheckpoint:         &ethpb.Checkpoint{Epoch: 1, Root: fRoot[:]},
 	}
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.PreviousJustifiedCheckpoint.Epoch*params.BeaconConfig().SlotsPerEpoch + 1}}
-	hRoot, _ := ssz.HashTreeRoot(b.Block)
+	b := &ethpb.BeaconBlock{Slot: s.PreviousJustifiedCheckpoint.Epoch*params.BeaconConfig().SlotsPerEpoch + 1}
+	hRoot, _ := ssz.SigningRoot(b)
 
 	chainService := &mock.ChainService{}
 	ctx := context.Background()
@@ -483,8 +474,8 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	mockStream := mockRPC.NewMockBeaconChain_StreamChainHeadServer(ctrl)
 	mockStream.EXPECT().Send(
 		&ethpb.ChainHead{
-			HeadSlot:                   b.Block.Slot,
-			HeadEpoch:                  helpers.SlotToEpoch(b.Block.Slot),
+			HeadSlot:                   b.Slot,
+			HeadEpoch:                  helpers.SlotToEpoch(b.Slot),
 			HeadBlockRoot:              hRoot[:],
 			FinalizedSlot:              1,
 			FinalizedEpoch:             1,

@@ -65,29 +65,25 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *pb.Beac
 
 	someRoot := [32]byte{1, 2, 3}
 	someRoot2 := [32]byte{4, 5, 6}
-	header1 := &ethpb.SignedBeaconBlockHeader{
-		Header: &ethpb.BeaconBlockHeader{
-			Slot:       0,
-			ParentRoot: someRoot[:],
-			StateRoot:  someRoot[:],
-			BodyRoot:   someRoot[:],
-		},
+	header1 := &ethpb.BeaconBlockHeader{
+		Slot:       0,
+		ParentRoot: someRoot[:],
+		StateRoot:  someRoot[:],
+		BodyRoot:   someRoot[:],
 	}
-	signingRoot, err := ssz.HashTreeRoot(header1.Header)
+	signingRoot, err := ssz.SigningRoot(header1)
 	if err != nil {
 		t.Errorf("Could not get signing root of beacon block header: %v", err)
 	}
 	header1.Signature = privKey.Sign(signingRoot[:], domain).Marshal()[:]
 
-	header2 := &ethpb.SignedBeaconBlockHeader{
-		Header: &ethpb.BeaconBlockHeader{
-			Slot:       0,
-			ParentRoot: someRoot2[:],
-			StateRoot:  someRoot2[:],
-			BodyRoot:   someRoot2[:],
-		},
+	header2 := &ethpb.BeaconBlockHeader{
+		Slot:       0,
+		ParentRoot: someRoot2[:],
+		StateRoot:  someRoot2[:],
+		BodyRoot:   someRoot2[:],
 	}
-	signingRoot, err = ssz.HashTreeRoot(header2.Header)
+	signingRoot, err = ssz.SigningRoot(header2)
 	if err != nil {
 		t.Errorf("Could not get signing root of beacon block header: %v", err)
 	}
@@ -148,7 +144,7 @@ func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 
 	slashing, state := setupValidProposerSlashing(t)
-	slashing.Header_1.Header.Slot = 100000000
+	slashing.Header_1.Slot = 100000000
 
 	ctx, _ := context.WithTimeout(context.Background(), 100*time.Millisecond)
 
