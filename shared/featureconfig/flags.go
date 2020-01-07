@@ -141,6 +141,8 @@ var (
 	}
 	deprecatedGenesisDelayFlag = cli.BoolFlag{
 		Name: "genesis-delay",
+		Usage: deprecatedUsage,
+		Hidden: true,
 	}
 )
 
