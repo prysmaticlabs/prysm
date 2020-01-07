@@ -237,6 +237,7 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.EjectionBalance = 3 * 1e9
 	demoConfig.EffectiveBalanceIncrement = 0.1 * 1e9
 	demoConfig.Eth1FollowDistance = 16
+	demoConfig.MinGenesisDelay = 30 // 30 seconds
 
 	// Increment this number after a full testnet tear down.
 	demoConfig.GenesisForkVersion = []byte{0, 0, 0, 3}
