@@ -146,8 +146,12 @@ func killProcesses(t *testing.T, pIDs []int) {
 		if err := process.Kill(); err != nil {
 			t.Fatal(err)
 		}
+		if err := process.Release(); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
+
 
 func logOutput(t *testing.T, tmpPath string, config *end2EndConfig) {
 	if t.Failed() {
