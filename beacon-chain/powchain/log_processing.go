@@ -229,6 +229,9 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 }
 
 func (s *Service) createGenesisTime(timeStamp uint64) uint64 {
+	if featureconfig.Get().NoGenesisDelay {
+		return timeStamp
+	}
 	timeStampRdDown := timeStamp - timeStamp%params.BeaconConfig().MinGenesisDelay
 	// genesisTime will be set to the first second of the day, two days after it was triggered.
 	return timeStampRdDown + 2*params.BeaconConfig().MinGenesisDelay
