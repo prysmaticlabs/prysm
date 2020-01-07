@@ -190,7 +190,7 @@ func ResetCache() {
 	cachedDeposits = []*ethpb.Deposit{}
 }
 
-// DeterministicDepositsAndKeysSameValidator returns the entered amount of deposits and secret keys.
+// DeterministicDepositsAndKeysSameValidator returns the entered amount of deposits and secret keys
 // of the same validator. This is for negative test cases such as same deposits from same validators in a block don't
 // result in duplicated validator indices.
 func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*ethpb.Deposit, []*bls.SecretKey, error) {
