@@ -713,6 +713,7 @@ func newPowchainService(t *testing.T, eth1Backend *contracts.TestAccount, beacon
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	web3Service.rpcClient = &mockPOW.RPCClient{Backend: eth1Backend.Backend}
 	web3Service.reader = &goodReader{backend: eth1Backend.Backend}
 	web3Service.blockFetcher = &goodFetcher{backend: eth1Backend.Backend}

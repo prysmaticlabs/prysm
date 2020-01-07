@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -1456,9 +1457,17 @@ func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{},
 	}
 
+	m := &mock.ChainService{
+		State: s,
+		Balance: &precompute.Balance{
+			PrevEpoch:                validatorCount * params.BeaconConfig().MaxEffectiveBalance,
+			PrevEpochTargetAttesters: attestedBalance,
+		},
+	}
 	bs := &Server{
-		BeaconDB:    db,
-		HeadFetcher: &mock.ChainService{State: s},
+		BeaconDB:             db,
+		HeadFetcher:          m,
+		ParticipationFetcher: m,
 	}
 
 	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{})

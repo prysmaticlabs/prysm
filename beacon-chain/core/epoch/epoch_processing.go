@@ -5,7 +5,6 @@
 package epoch
 
 import (
-	"bytes"
 	"fmt"
 	"sort"
 
@@ -32,81 +31,6 @@ func (s sortableIndices) Less(i, j int) bool {
 		return s[i] < s[j]
 	}
 	return epochState.Validators[s[i]].ActivationEligibilityEpoch < epochState.Validators[s[j]].ActivationEligibilityEpoch
-}
-
-// MatchedAttestations is an object that contains the correctly
-// voted attestations based on source, target and head criteria.
-type MatchedAttestations struct {
-	source []*pb.PendingAttestation
-	Target []*pb.PendingAttestation
-	head   []*pb.PendingAttestation
-}
-
-// MatchAttestations matches the attestations gathered in a span of an epoch
-// and categorize them whether they correctly voted for source, target and head.
-// We combined the individual helpers from spec for efficiency and to achieve O(N) run time.
-//
-// Spec pseudocode definition:
-//  def get_matching_source_attestations(state: BeaconState, epoch: Epoch) -> List[PendingAttestation]:
-//    assert epoch in (get_current_epoch(state), get_previous_epoch(state))
-//    return state.current_epoch_attestations if epoch == get_current_epoch(state) else state.previous_epoch_attestations
-//
-//  def get_matching_target_attestations(state: BeaconState, epoch: Epoch) -> List[PendingAttestation]:
-//    return [
-//        a for a in get_matching_source_attestations(state, epoch)
-//        if a.data.target_root == get_block_root(state, epoch)
-//    ]
-//
-//  def get_matching_head_attestations(state: BeaconState, epoch: Epoch) -> List[PendingAttestation]:
-//    return [
-//        a for a in get_matching_source_attestations(state, epoch)
-//        if a.data.beacon_block_root == get_block_root_at_slot(state, get_attestation_data_slot(state, a.data))
-//    ]
-func MatchAttestations(state *pb.BeaconState, epoch uint64) (*MatchedAttestations, error) {
-	currentEpoch := helpers.CurrentEpoch(state)
-	previousEpoch := helpers.PrevEpoch(state)
-
-	// Input epoch for matching the source attestations has to be within range
-	// of current epoch & previous epoch.
-	if epoch != currentEpoch && epoch != previousEpoch {
-		return nil, fmt.Errorf("input epoch: %d != current epoch: %d or previous epoch: %d",
-			epoch, currentEpoch, previousEpoch)
-	}
-
-	// Decide if the source attestations are coming from current or previous epoch.
-	var srcAtts []*pb.PendingAttestation
-	if epoch == currentEpoch {
-		srcAtts = state.CurrentEpochAttestations
-	} else {
-		srcAtts = state.PreviousEpochAttestations
-	}
-	targetRoot, err := helpers.BlockRoot(state, epoch)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not get block root for epoch %d", epoch)
-	}
-
-	tgtAtts := make([]*pb.PendingAttestation, 0, len(srcAtts))
-	headAtts := make([]*pb.PendingAttestation, 0, len(srcAtts))
-	for _, srcAtt := range srcAtts {
-		// If the target root matches attestation's target root,
-		// then we know this attestation has correctly voted for target.
-		if bytes.Equal(srcAtt.Data.Target.Root, targetRoot) {
-			tgtAtts = append(tgtAtts, srcAtt)
-		}
-		headRoot, err := helpers.BlockRootAtSlot(state, srcAtt.Data.Slot)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not get block root for slot %d", srcAtt.Data.Slot)
-		}
-		if bytes.Equal(srcAtt.Data.BeaconBlockRoot, headRoot) {
-			headAtts = append(headAtts, srcAtt)
-		}
-	}
-
-	return &MatchedAttestations{
-		source: srcAtts,
-		Target: tgtAtts,
-		head:   headAtts,
-	}, nil
 }
 
 // AttestingBalance returns the total balance from all the attesting indices.
