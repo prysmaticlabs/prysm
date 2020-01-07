@@ -24,7 +24,6 @@ func TestSubmitAggregateAndProof_AssignmentRequestFailure(t *testing.T) {
 }
 
 func TestSubmitAggregateAndProof_Ok(t *testing.T) {
-	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
 	defer finish()
 	validator.assignments = &pb.AssignmentResponse{ValidatorAssignment: []*pb.AssignmentResponse_ValidatorAssignment{
@@ -44,7 +43,6 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 	).Return(&pb.AggregationResponse{}, nil)
 
 	validator.SubmitAggregateAndProof(context.Background(), 0, validatorPubKey)
-	testutil.AssertLogsContain(t, hook, "Assigned and submitted aggregation and proof request")
 }
 
 func TestWaitForSlotTwoThird_WaitCorrectly(t *testing.T) {

@@ -5,6 +5,7 @@ package bls
 
 import (
 	"encoding/binary"
+	"fmt"
 	"math/big"
 
 	"github.com/dgraph-io/ristretto"
@@ -13,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	bls12 "github.com/herumi/bls-eth-go-binary/bls"
 )
@@ -64,8 +66,14 @@ func RandKey() *SecretKey {
 
 // SecretKeyFromBytes creates a BLS private key from a BigEndian byte slice.
 func SecretKeyFromBytes(priv []byte) (*SecretKey, error) {
+	if len(priv) != params.BeaconConfig().BLSSecretkeyLength {
+		return nil, fmt.Errorf("secret key must be %d bytes", params.BeaconConfig().BLSSecretkeyLength)
+	}
 	secKey := &bls12.SecretKey{}
 	err := secKey.Deserialize(priv)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not unmarshal bytes into secret key")
+	}
 	return &SecretKey{p: secKey}, err
 }
 
@@ -74,8 +82,11 @@ func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 	if featureconfig.Get().SkipBLSVerify {
 		return &PublicKey{}, nil
 	}
+	if len(pub) != params.BeaconConfig().BLSPubkeyLength {
+		return nil, fmt.Errorf("public key must be %d bytes", params.BeaconConfig().BLSPubkeyLength)
+	}
 	cv, ok := pubkeyCache.Get(string(pub))
-	if ok && featureconfig.Get().EnableBLSPubkeyCache {
+	if ok {
 		return cv.(*PublicKey).Copy()
 	}
 	pubKey := &bls12.PublicKey{}
@@ -88,9 +99,7 @@ func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not copy pubkey")
 	}
-	if featureconfig.Get().EnableBLSPubkeyCache {
-		pubkeyCache.Set(string(pub), copiedKey, 48)
-	}
+	pubkeyCache.Set(string(pub), copiedKey, 48)
 	return pubkeyObj, nil
 }
 
@@ -99,8 +108,8 @@ func SignatureFromBytes(sig []byte) (*Signature, error) {
 	if featureconfig.Get().SkipBLSVerify {
 		return &Signature{}, nil
 	}
-	if len(sig) != 96 {
-		return nil, errors.New("signature must be 96 bytes")
+	if len(sig) != params.BeaconConfig().BLSSignatureLength {
+		return nil, fmt.Errorf("signature must be %d bytes", params.BeaconConfig().BLSSignatureLength)
 	}
 	signature := &bls12.Sign{}
 	err := signature.Deserialize(sig)
@@ -134,8 +143,8 @@ func (s *SecretKey) Sign(msg []byte, domain uint64) *Signature {
 // Marshal a secret key into a LittleEndian byte slice.
 func (s *SecretKey) Marshal() []byte {
 	keyBytes := s.p.Serialize()
-	if len(keyBytes) < 32 {
-		emptyBytes := make([]byte, 32-len(keyBytes))
+	if len(keyBytes) < params.BeaconConfig().BLSSecretkeyLength {
+		emptyBytes := make([]byte, params.BeaconConfig().BLSSecretkeyLength-len(keyBytes))
 		keyBytes = append(emptyBytes, keyBytes...)
 	}
 	return keyBytes
@@ -249,7 +258,7 @@ func AggregateSignatures(sigs []*Signature) *Signature {
 // Marshal a signature into a LittleEndian byte slice.
 func (s *Signature) Marshal() []byte {
 	if featureconfig.Get().SkipBLSVerify {
-		return make([]byte, 96)
+		return make([]byte, params.BeaconConfig().BLSSignatureLength)
 	}
 
 	rawBytes := s.s.Serialize()
