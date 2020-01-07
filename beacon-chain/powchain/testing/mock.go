@@ -106,6 +106,7 @@ func (m *POWChain) IsConnectedToETH1() bool {
 	return true
 }
 
+// RpcClient defines the mock rpc client.
 type RpcClient struct {
 	Backend *backends.SimulatedBackend
 }

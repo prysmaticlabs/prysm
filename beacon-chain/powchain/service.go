@@ -107,6 +107,7 @@ type RPCBlockFetcher interface {
 	BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
 }
 
+// RPCClient defines the rpc methods required to interact with the eth1 node.
 type RPCClient interface {
 	BatchCall(b []rpc.BatchElem) error
 }
