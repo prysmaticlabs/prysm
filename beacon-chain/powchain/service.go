@@ -107,6 +107,10 @@ type RPCBlockFetcher interface {
 	BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
 }
 
+type RPCClient interface {
+	BatchCall(b []rpc.BatchElem) error
+}
+
 // Service fetches important information about the canonical
 // Ethereum ETH1.0 chain via a web3 endpoint using an ethclient. The Random
 // Beacon Chain requires synchronization with the ETH1.0 chain's current
@@ -126,7 +130,7 @@ type Service struct {
 	logger                  bind.ContractFilterer
 	httpLogger              bind.ContractFilterer
 	blockFetcher            RPCBlockFetcher
-	rpcClient               *rpc.Client
+	rpcClient               RPCClient
 	blockCache              *blockCache // cache to store block hash/block height.
 	latestEth1Data          *protodb.LatestETH1Data
 	depositContractCaller   *contracts.DepositContractCaller

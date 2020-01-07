@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
@@ -207,6 +209,7 @@ func TestStart_OK(t *testing.T) {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 	web3Service = setDefaultMocks(web3Service)
+	web3Service.rpcClient = &mockPOW.RpcClient{Backend: testAcc.Backend}
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
 	if err != nil {
 		t.Fatal(err)

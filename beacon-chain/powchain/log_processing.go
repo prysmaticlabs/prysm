@@ -260,7 +260,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// headers map
+	// to store all blocks
 	headersMap := make(map[uint64]*gethTypes.Header)
 
 	// batch request the desired headers and store them in a
