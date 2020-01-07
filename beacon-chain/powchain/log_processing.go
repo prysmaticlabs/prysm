@@ -32,6 +32,7 @@ var (
 
 const eth1LookBackPeriod = 100
 const eth1DataSavingInterval = 100
+const eth1HeaderReqLimit = 2000
 
 // Eth2GenesisPowchainInfo retrieves the genesis time and eth1 block number of the beacon chain
 // from the deposit contract.
@@ -62,7 +63,7 @@ func (s *Service) ProcessETH1Block(ctx context.Context, blkNum *big.Int) error {
 		}
 	}
 	if !s.chainStartData.Chainstarted {
-		if err := s.checkForChainStart(ctx, blkNum); err != nil {
+		if err := s.checkBlockNumberForChainStart(ctx, blkNum); err != nil {
 			return err
 		}
 	}
@@ -262,12 +263,42 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	// To store all blocks.
+	headersMap := make(map[uint64]*gethTypes.Header)
+
+	// Batch request the desired headers and store them in a
+	// map for quick access.
+	requestHeaders := func(startBlk uint64, endBlk uint64) error {
+		headers, err := s.batchRequestHeaders(startBlk, endBlk)
+		if err != nil {
+			return err
+		}
+		for _, h := range headers {
+			if h != nil && h.Number != nil {
+				headersMap[h.Number.Uint64()] = h
+			}
+		}
+		return nil
+	}
+
+	if err := requestHeaders(currentBlockNum, currentBlockNum+eth1HeaderReqLimit); err != nil {
+		return err
+	}
 
 	for _, log := range logs {
 		if log.BlockNumber > currentBlockNum {
-			if !s.chainStartData.Chainstarted {
-				if err := s.checkForChainStart(ctx, big.NewInt(int64(currentBlockNum))); err != nil {
-					return err
+			for i := currentBlockNum; i <= log.BlockNumber-1; i++ {
+				if !s.chainStartData.Chainstarted {
+					h, ok := headersMap[i]
+					if !ok {
+						if err := requestHeaders(i, i+eth1HeaderReqLimit); err != nil {
+							return err
+						}
+						// Retry this block.
+						i--
+						continue
+					}
+					s.checkHeaderForChainstart(h)
 				}
 			}
 			// set new block number after checking for chainstart for previous block.
@@ -280,7 +311,6 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	}
 
 	s.latestEth1Data.LastRequestedBlock = currentBlockNum
-
 	currentState, err := s.beaconDB.HeadState(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get head state")
@@ -355,24 +385,32 @@ func (s *Service) processBlksInRange(ctx context.Context, startBlk uint64, endBl
 	return nil
 }
 
-// checkForChainStart checks the given  block number for if chainstart has occurred.
-func (s *Service) checkForChainStart(ctx context.Context, blkNum *big.Int) error {
-	blk, err := s.blockFetcher.BlockByNumber(ctx, blkNum)
+// checkBlockNumberForChainStart checks the given block number for if chainstart has occurred.
+func (s *Service) checkBlockNumberForChainStart(ctx context.Context, blkNum *big.Int) error {
+	hash, err := s.BlockHashByHeight(ctx, blkNum)
 	if err != nil {
-		return errors.Wrap(err, "could not get eth1 block")
+		return errors.Wrap(err, "could not get eth1 block hash")
 	}
-	if blk == nil {
-		return errors.Wrap(err, "got empty block from powchain service")
+	if hash == [32]byte{} {
+		return errors.Wrap(err, "got empty block hash")
 	}
-	if blk.Hash() == [32]byte{} {
-		return errors.New("got empty blockhash from powchain service")
+	timeStamp, err := s.BlockTimeByHeight(ctx, blkNum)
+	if err != nil {
+		return errors.Wrap(err, "could not get block timestamp")
 	}
-	timeStamp := blk.Time()
-	valCount, _ := helpers.ActiveValidatorCount(s.preGenesisState, 0)
-	triggered := state.IsValidGenesisState(valCount, s.createGenesisTime(timeStamp))
-	if triggered {
-		s.chainStartData.GenesisTime = s.createGenesisTime(timeStamp)
-		s.ProcessChainStart(s.chainStartData.GenesisTime, blk.Hash(), blk.Number())
-	}
+	s.checkForChainstart(hash, blkNum, timeStamp)
 	return nil
+}
+
+func (s *Service) checkHeaderForChainstart(header *gethTypes.Header) {
+	s.checkForChainstart(header.Hash(), header.Number, header.Time)
+}
+
+func (s *Service) checkForChainstart(blockHash [32]byte, blockNumber *big.Int, blockTime uint64) {
+	valCount, _ := helpers.ActiveValidatorCount(s.preGenesisState, 0)
+	triggered := state.IsValidGenesisState(valCount, s.createGenesisTime(blockTime))
+	if triggered {
+		s.chainStartData.GenesisTime = s.createGenesisTime(blockTime)
+		s.ProcessChainStart(s.chainStartData.GenesisTime, blockHash, blockNumber)
+	}
 }
