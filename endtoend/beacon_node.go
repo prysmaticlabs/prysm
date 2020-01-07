@@ -143,7 +143,7 @@ func getMultiAddrFromLogFile(name string) (string, error) {
 func waitForTextInFile(file *os.File, text string) error {
 	wait := 0
 	// Cap the wait in case there are issues starting.
-	maxWait := 60
+	maxWait := 36
 	for wait < maxWait {
 		time.Sleep(2 * time.Second)
 		// Rewind the file pointer to the start of the file so we can read it again.
