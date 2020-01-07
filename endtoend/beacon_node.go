@@ -37,6 +37,8 @@ type end2EndConfig struct {
 	evaluators     []ev.Evaluator
 }
 
+var beaconNodeLogFileName = "beacon-%d.log"
+
 // startBeaconNodes starts the requested amount of beacon nodes, passing in the deposit contract given.
 func startBeaconNodes(t *testing.T, config *end2EndConfig) []*beaconNodeInfo {
 	numNodes := config.numBeaconNodes
@@ -58,7 +60,8 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 		t.Log(binaryPath)
 		t.Fatal("beacon chain binary not found")
 	}
-	file, err := os.Create(path.Join(tmpPath, fmt.Sprintf("beacon-%d.log", index)))
+
+	stdOutFile, err := os.Create(path.Join(tmpPath, fmt.Sprintf(beaconNodeLogFileName, index)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,19 +95,19 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 		}
 	}
 
-	t.Logf("Starting beacon chain with flags %s", strings.Join(args, " "))
+	t.Logf("Starting beacon chain with flags: %s", strings.Join(args, " "))
 	cmd := exec.Command(binaryPath, args...)
-	cmd.Stderr = file
-	cmd.Stdout = file
+	cmd.Stdout = stdOutFile
+	cmd.Stderr = stdOutFile
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("Failed to start beacon node: %v", err)
 	}
 
-	if err = waitForTextInFile(file, "Node started p2p server"); err != nil {
+	if err = waitForTextInFile(stdOutFile, "Node started p2p server"); err != nil {
 		t.Fatalf("could not find multiaddr for node %d, this means the node had issues starting: %v", index, err)
 	}
 
-	multiAddr, err := getMultiAddrFromLogFile(file.Name())
+	multiAddr, err := getMultiAddrFromLogFile(stdOutFile.Name())
 	if err != nil {
 		t.Fatalf("could not get multiaddr for node %d: %v", index, err)
 	}
@@ -141,7 +144,7 @@ func getMultiAddrFromLogFile(name string) (string, error) {
 
 func waitForTextInFile(file *os.File, text string) error {
 	wait := 0
-	// Putting the wait cap at 36 seconds.
+	// Cap the wait in case there are issues starting.
 	maxWait := 36
 	for wait < maxWait {
 		time.Sleep(2 * time.Second)
