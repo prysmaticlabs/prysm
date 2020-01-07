@@ -67,17 +67,18 @@ var (
 		Name:  "save-deposit-data",
 		Usage: "Enable of the saving of deposit related data",
 	}
+	noGenesisDelayFlag = cli.BoolFlag{
+		Name:   "no-genesis-delay",
+		Usage:  "Start the genesis event right away using the eth1 block timestamp which " +
+			"triggered the genesis as the genesis time. This flag should be used for local " +
+			"development and testing only.",
+	}
 )
 
 // Deprecated flags list.
 const deprecatedUsage = "DEPRECATED. DO NOT USE."
 
 var (
-	deprecatedNoGenesisDelayFlag = cli.BoolFlag{
-		Name:   "no-genesis-delay",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
 	deprecatedEnableFinalizedBlockRootIndexFlag = cli.BoolFlag{
 		Name:   "enable-finalized-block-root-index",
 		Usage:  deprecatedUsage,
@@ -140,8 +141,8 @@ var (
 		Hidden: true,
 	}
 	deprecatedGenesisDelayFlag = cli.BoolFlag{
-		Name: "genesis-delay",
-		Usage: deprecatedUsage,
+		Name:   "genesis-delay",
+		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
 )
