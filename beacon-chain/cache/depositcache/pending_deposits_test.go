@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"testing"
 
-	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 )
 
 var _ = PendingDepositsFetcher(&DepositCache{})

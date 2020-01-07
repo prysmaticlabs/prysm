@@ -394,6 +394,7 @@ func (s *Service) checkBlockNumberForChainStart(ctx context.Context, blkNum *big
 	if hash == [32]byte{} {
 		return errors.Wrap(err, "got empty block hash")
 	}
+
 	timeStamp, err := s.BlockTimeByHeight(ctx, blkNum)
 	if err != nil {
 		return errors.Wrap(err, "could not get block timestamp")

@@ -54,6 +54,7 @@ type Service struct {
 	headFetcher           blockchain.HeadFetcher
 	forkFetcher           blockchain.ForkFetcher
 	finalizationFetcher   blockchain.FinalizationFetcher
+	participationFetcher  blockchain.ParticipationFetcher
 	genesisTimeFetcher    blockchain.GenesisTimeFetcher
 	attestationReceiver   blockchain.AttestationReceiver
 	blockReceiver         blockchain.BlockReceiver
@@ -87,6 +88,7 @@ type Config struct {
 	HeadFetcher           blockchain.HeadFetcher
 	ForkFetcher           blockchain.ForkFetcher
 	FinalizationFetcher   blockchain.FinalizationFetcher
+	ParticipationFetcher  blockchain.ParticipationFetcher
 	AttestationReceiver   blockchain.AttestationReceiver
 	BlockReceiver         blockchain.BlockReceiver
 	POWChainService       powchain.Chain
@@ -114,6 +116,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		headFetcher:           cfg.HeadFetcher,
 		forkFetcher:           cfg.ForkFetcher,
 		finalizationFetcher:   cfg.FinalizationFetcher,
+		participationFetcher:  cfg.ParticipationFetcher,
 		genesisTimeFetcher:    cfg.GenesisTimeFetcher,
 		attestationReceiver:   cfg.AttestationReceiver,
 		blockReceiver:         cfg.BlockReceiver,
@@ -209,15 +212,16 @@ func (s *Service) Start() {
 		PeersFetcher:       s.peersFetcher,
 	}
 	beaconChainServer := &beacon.Server{
-		Ctx:                 s.ctx,
-		BeaconDB:            s.beaconDB,
-		Pool:                s.attestationsPool,
-		HeadFetcher:         s.headFetcher,
-		FinalizationFetcher: s.finalizationFetcher,
-		ChainStartFetcher:   s.chainStartFetcher,
-		CanonicalStateChan:  s.canonicalStateChan,
-		StateNotifier:       s.stateNotifier,
-		SlotTicker:          ticker,
+		Ctx:                  s.ctx,
+		BeaconDB:             s.beaconDB,
+		Pool:                 s.attestationsPool,
+		HeadFetcher:          s.headFetcher,
+		FinalizationFetcher:  s.finalizationFetcher,
+		ParticipationFetcher: s.participationFetcher,
+		ChainStartFetcher:    s.chainStartFetcher,
+		CanonicalStateChan:   s.canonicalStateChan,
+		StateNotifier:        s.stateNotifier,
+		SlotTicker:           ticker,
 	}
 	aggregatorServer := &aggregator.Server{
 		BeaconDB:    s.beaconDB,

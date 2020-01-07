@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -34,23 +35,25 @@ import (
 // Service represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type Service struct {
-	ctx               context.Context
-	cancel            context.CancelFunc
-	beaconDB          db.Database
-	depositCache      *depositcache.DepositCache
-	chainStartFetcher powchain.ChainStartFetcher
-	attPool           attestations.Pool
-	forkChoiceStore   forkchoice.ForkChoicer
-	genesisTime       time.Time
-	p2p               p2p.Broadcaster
-	maxRoutines       int64
-	headSlot          uint64
-	headBlock         *ethpb.SignedBeaconBlock
-	headState         *pb.BeaconState
-	canonicalRoots    map[uint64][]byte
-	headLock          sync.RWMutex
-	stateNotifier     statefeed.Notifier
-	genesisRoot       [32]byte
+	ctx                    context.Context
+	cancel                 context.CancelFunc
+	beaconDB               db.Database
+	depositCache           *depositcache.DepositCache
+	chainStartFetcher      powchain.ChainStartFetcher
+	attPool                attestations.Pool
+	forkChoiceStore        forkchoice.ForkChoicer
+	genesisTime            time.Time
+	p2p                    p2p.Broadcaster
+	maxRoutines            int64
+	headSlot               uint64
+	headBlock              *ethpb.SignedBeaconBlock
+	headState              *pb.BeaconState
+	canonicalRoots         map[uint64][]byte
+	headLock               sync.RWMutex
+	stateNotifier          statefeed.Notifier
+	genesisRoot            [32]byte
+	epochParticipation     map[uint64]*precompute.Balance
+	epochParticipationLock sync.RWMutex
 }
 
 // Config options for the service.
@@ -71,17 +74,18 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	store := forkchoice.NewForkChoiceService(ctx, cfg.BeaconDB)
 	return &Service{
-		ctx:               ctx,
-		cancel:            cancel,
-		beaconDB:          cfg.BeaconDB,
-		depositCache:      cfg.DepositCache,
-		chainStartFetcher: cfg.ChainStartFetcher,
-		attPool:           cfg.AttPool,
-		forkChoiceStore:   store,
-		p2p:               cfg.P2p,
-		canonicalRoots:    make(map[uint64][]byte),
-		maxRoutines:       cfg.MaxRoutines,
-		stateNotifier:     cfg.StateNotifier,
+		ctx:                ctx,
+		cancel:             cancel,
+		beaconDB:           cfg.BeaconDB,
+		depositCache:       cfg.DepositCache,
+		chainStartFetcher:  cfg.ChainStartFetcher,
+		attPool:            cfg.AttPool,
+		forkChoiceStore:    store,
+		p2p:                cfg.P2p,
+		canonicalRoots:     make(map[uint64][]byte),
+		maxRoutines:        cfg.MaxRoutines,
+		stateNotifier:      cfg.StateNotifier,
+		epochParticipation: make(map[uint64]*precompute.Balance),
 	}, nil
 }
 

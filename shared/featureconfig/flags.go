@@ -68,8 +68,8 @@ var (
 		Usage: "Enable of the saving of deposit related data",
 	}
 	noGenesisDelayFlag = cli.BoolFlag{
-		Name:   "no-genesis-delay",
-		Usage:  "Start the genesis event right away using the eth1 block timestamp which " +
+		Name: "no-genesis-delay",
+		Usage: "Start the genesis event right away using the eth1 block timestamp which " +
 			"triggered the genesis as the genesis time. This flag should be used for local " +
 			"development and testing only.",
 	}

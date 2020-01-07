@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -27,6 +28,7 @@ type ChainService struct {
 	CurrentJustifiedCheckPoint  *ethpb.Checkpoint
 	PreviousJustifiedCheckPoint *ethpb.Checkpoint
 	BlocksReceived              []*ethpb.SignedBeaconBlock
+	Balance                     *precompute.Balance
 	Genesis                     time.Time
 	Fork                        *pb.Fork
 	DB                          db.Database
@@ -187,4 +189,9 @@ func (ms *ChainService) HeadSeed(epoch uint64) ([32]byte, error) {
 // GenesisTime mocks the same method in the chain service.
 func (ms *ChainService) GenesisTime() time.Time {
 	return ms.Genesis
+}
+
+// Participation mocks the same method in the chain service.
+func (ms *ChainService) Participation(epoch uint64) *precompute.Balance {
+	return ms.Balance
 }

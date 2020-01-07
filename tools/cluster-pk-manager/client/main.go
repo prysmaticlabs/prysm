@@ -13,10 +13,10 @@ import (
 )
 
 var (
-	serverAddr  = flag.String("server", "", "The address of the gRPC server")
-	podName     = flag.String("pod-name", "", "The name of the pod running this tool")
-	numKeys     = flag.Uint64("keys", 1, "The number of keys to request")
-	outputJSON  = flag.String("output-json", "", "JSON file to write output to")
+	serverAddr = flag.String("server", "", "The address of the gRPC server")
+	podName    = flag.String("pod-name", "", "The name of the pod running this tool")
+	numKeys    = flag.Uint64("keys", 1, "The number of keys to request")
+	outputJSON = flag.String("output-json", "", "JSON file to write output to")
 )
 
 // UnencryptedKeysContainer defines the structure of the unecrypted key JSON file.
