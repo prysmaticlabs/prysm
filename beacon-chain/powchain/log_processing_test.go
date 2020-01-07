@@ -670,7 +670,7 @@ func TestConsistentGenesisState(t *testing.T) {
 		t.Fatalf("Service hasn't chainstarted yet with a block height of %d", web3Service.latestEth1Data.BlockHeight)
 	}
 
-	// Advance 10 blocks
+	// Advance 10 blocks.
 	for i := 0; i < 10; i++ {
 		testAcc.Backend.Commit()
 	}
