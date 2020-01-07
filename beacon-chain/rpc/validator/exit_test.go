@@ -49,7 +49,7 @@ func TestSub(t *testing.T) {
 		OperationNotifier: mockChainService.OperationNotifier(),
 	}
 
-	// Subscribe to operation notifications
+	// Subscribe to operation notifications.
 	opChannel := make(chan *feed.Event, 1024)
 	opSub := server.OperationNotifier.OperationFeed().Subscribe(opChannel)
 	defer opSub.Unsubscribe()
