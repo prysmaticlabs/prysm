@@ -23,12 +23,12 @@ func createAttesterSlashing(enc []byte) (*ethpb.AttesterSlashing, error) {
 
 func toAttesterSlashings(encoded [][]byte) ([]*ethpb.AttesterSlashing, error) {
 	attesterSlashings := make([]*ethpb.AttesterSlashing, len(encoded))
-	for _, enc := range encoded {
+	for i, enc := range encoded {
 		ps, err := createAttesterSlashing(enc)
 		if err != nil {
 			return nil, err
 		}
-		attesterSlashings = append(attesterSlashings, ps)
+		attesterSlashings[i] = ps
 	}
 	return attesterSlashings, nil
 }
@@ -49,19 +49,6 @@ func (db *Store) AttesterSlashings(status SlashingStatus) ([]*ethpb.AttesterSlas
 		return nil, err
 	}
 	return toAttesterSlashings(encoded)
-}
-
-// SaveAttesterSlashing accepts a slashing proof and its status and writes it to disk.
-func (db *Store) SaveAttesterSlashing(status SlashingStatus, attesterSlashing *ethpb.AttesterSlashing) error {
-	found, st, err := db.HasAttesterSlashing(attesterSlashing)
-	if err != nil {
-		return errors.Wrap(err, "failed to check if attester slashing is already in db")
-	}
-	if found && st == status {
-		return nil
-	}
-	return db.updateAttesterSlashingStatus(attesterSlashing, status)
-
 }
 
 // DeleteAttesterSlashingWithStatus deletes a slashing proof using the slashing status and slashing proof.
@@ -91,13 +78,16 @@ func (db *Store) DeleteAttesterSlashing(slashing *ethpb.AttesterSlashing) error 
 	}
 	err = db.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
-		b.ForEach(func(k, v []byte) error {
+		err = b.ForEach(func(k, v []byte) error {
 			if bytes.HasSuffix(k, root[:]) {
-				b.Delete(k)
+				err = b.Delete(k)
+				if err != nil {
+					return err
+				}
 			}
 			return nil
 		})
-		return nil
+		return err
 	})
 	return err
 }
@@ -125,15 +115,23 @@ func (db *Store) HasAttesterSlashing(slashing *ethpb.AttesterSlashing) (bool, Sl
 	return found, status, err
 }
 
-// updateAttesterSlashingStatus deletes a attester slashing and saves it with a new status.
-// if old attester slashing is not found a new entry is being saved as a new entry.
-func (db *Store) updateAttesterSlashingStatus(slashing *ethpb.AttesterSlashing, status SlashingStatus) error {
+// SaveAttesterSlashing accepts a slashing proof and its status and writes it to disk.
+func (db *Store) SaveAttesterSlashing(status SlashingStatus, slashing *ethpb.AttesterSlashing) error {
 	root, err := ssz.HashTreeRoot(slashing)
 	if err != nil {
 		return errors.Wrap(err, "failed to get hash root of attesterSlashing")
 	}
+	enc, err := proto.Marshal(slashing)
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal")
+	}
+	key := encodeStatusTypeRoot(status, SlashingType(Attestation), root)
 	err = db.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
+		e := b.Get(key)
+		if e != nil {
+			return nil
+		}
 		var keysToDelete [][]byte
 		c := b.Cursor()
 		for k, _ := c.First(); k != nil; k, _ = c.Next() {
@@ -148,11 +146,7 @@ func (db *Store) updateAttesterSlashingStatus(slashing *ethpb.AttesterSlashing, 
 			}
 
 		}
-		enc, err := proto.Marshal(slashing)
-		if err != nil {
-			return errors.Wrap(err, "failed to marshal")
-		}
-		err = b.Put(encodeStatusTypeRoot(status, SlashingType(Attestation), root), enc)
+		err = b.Put(key, enc)
 		return err
 	})
 	if err != nil {

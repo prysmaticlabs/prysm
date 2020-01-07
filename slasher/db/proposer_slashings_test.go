@@ -23,8 +23,8 @@ func TestStore_ProposerSlashingNilBucket(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get proposer slashing: %v", err)
 	}
-	if p != nil {
-		t.Fatalf("get should return nil for a non existent key")
+	if p == nil || len(p) != 0 {
+		t.Fatalf("get should return empty attester slashing array for a non existent key")
 	}
 }
 

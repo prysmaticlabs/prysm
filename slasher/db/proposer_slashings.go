@@ -77,12 +77,12 @@ func createProposerSlashing(enc []byte) (*ethpb.ProposerSlashing, error) {
 
 func toProposerSlashings(encoded [][]byte) ([]*ethpb.ProposerSlashing, error) {
 	proposerSlashings := make([]*ethpb.ProposerSlashing, len(encoded))
-	for _, enc := range encoded {
+	for i, enc := range encoded {
 		ps, err := createProposerSlashing(enc)
 		if err != nil {
 			return nil, err
 		}
-		proposerSlashings = append(proposerSlashings, ps)
+		proposerSlashings[i] = ps
 	}
 	return proposerSlashings, nil
 }
@@ -102,19 +102,6 @@ func (db *Store) ProposalSlashingsByStatus(status SlashingStatus) ([]*ethpb.Prop
 		return nil, err
 	}
 	return toProposerSlashings(encoded)
-}
-
-// SaveProposerSlashing accepts a proposer slashing and its status header and writes it to disk.
-func (db *Store) SaveProposerSlashing(status SlashingStatus, proposerSlashing *ethpb.ProposerSlashing) error {
-	found, st, err := db.HasProposerSlashing(proposerSlashing)
-	if err != nil {
-		return errors.Wrap(err, "failed to check if proposer slashing is already in db")
-	}
-	if found && st == status {
-		return nil
-	}
-	return db.updateProposerSlashingStatus(proposerSlashing, status)
-
 }
 
 // DeleteProposerSlashingWithStatus deletes a proposal slashing proof given its status.
@@ -144,13 +131,16 @@ func (db *Store) DeleteProposerSlashing(slashing *ethpb.ProposerSlashing) error 
 	}
 	err = db.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
-		b.ForEach(func(k, v []byte) error {
+		err = b.ForEach(func(k, v []byte) error {
 			if bytes.HasSuffix(k, root[:]) {
-				b.Delete(k)
+				err = b.Delete(k)
+				if err != nil {
+					return err
+				}
 			}
 			return nil
 		})
-		return nil
+		return err
 	})
 	return err
 }
@@ -178,15 +168,23 @@ func (db *Store) HasProposerSlashing(slashing *ethpb.ProposerSlashing) (bool, Sl
 	return found, status, err
 }
 
-// updateProposerSlashingStatus deletes a proposer slashing and saves it with a new status.
-// if old proposer slashing is not found a new entry is being saved as a new entry.
-func (db *Store) updateProposerSlashingStatus(slashing *ethpb.ProposerSlashing, status SlashingStatus) error {
+// SaveProposerSlashing accepts a proposer slashing and its status header and writes it to disk.
+func (db *Store) SaveProposerSlashing(status SlashingStatus, slashing *ethpb.ProposerSlashing) error {
 	root, err := ssz.HashTreeRoot(slashing)
 	if err != nil {
 		return errors.Wrap(err, "failed to get hash root of proposerSlashing")
 	}
+	enc, err := proto.Marshal(slashing)
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal")
+	}
+	key := encodeStatusTypeRoot(status, SlashingType(Attestation), root)
 	err = db.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
+		e := b.Get(key)
+		if e != nil {
+			return nil
+		}
 		var keysToDelete [][]byte
 		c := b.Cursor()
 		for k, _ := c.First(); k != nil; k, _ = c.Next() {
@@ -200,10 +198,6 @@ func (db *Store) updateProposerSlashingStatus(slashing *ethpb.ProposerSlashing, 
 				return err
 			}
 
-		}
-		enc, err := proto.Marshal(slashing)
-		if err != nil {
-			return errors.Wrap(err, "failed to marshal")
 		}
 		err = b.Put(encodeStatusTypeRoot(status, SlashingType(Proposal), root), enc)
 		return err
