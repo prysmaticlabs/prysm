@@ -260,11 +260,11 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// to store all blocks
+	// To store all blocks.
 	headersMap := make(map[uint64]*gethTypes.Header)
 
-	// batch request the desired headers and store them in a
-	// map for quick access
+	// Batch request the desired headers and store them in a
+	// map for quick access.
 	requestHeaders := func(startBlk uint64, endBlk uint64) error {
 		headers, err := s.batchRequestHeaders(startBlk, endBlk)
 		if err != nil {
@@ -291,7 +291,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 						if err := requestHeaders(i, i+eth1HeaderReqLimit); err != nil {
 							return err
 						}
-						// retry this block
+						// Retry this block.
 						i--
 						continue
 					}
@@ -382,7 +382,7 @@ func (s *Service) processBlksInRange(ctx context.Context, startBlk uint64, endBl
 	return nil
 }
 
-// checkBlockNumberForChainStart checks the given  block number for if chainstart has occurred.
+// checkBlockNumberForChainStart checks the given block number for if chainstart has occurred.
 func (s *Service) checkBlockNumberForChainStart(ctx context.Context, blkNum *big.Int) error {
 	hash, err := s.BlockHashByHeight(ctx, blkNum)
 	if err != nil {
