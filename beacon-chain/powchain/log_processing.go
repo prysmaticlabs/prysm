@@ -271,7 +271,9 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 			return err
 		}
 		for _, h := range headers {
-			headersMap[h.Number.Uint64()] = h
+			if h != nil {
+				headersMap[h.Number.Uint64()] = h
+			}
 		}
 		return nil
 	}
