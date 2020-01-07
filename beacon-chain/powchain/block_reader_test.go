@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
@@ -43,8 +42,6 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 	web3Service = setDefaultMocks(web3Service)
-	web3Service.rpcClient = &mockPOW.RPCClient{Backend: testAcc.Backend}
-
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
 	if err != nil {
 		t.Fatal(err)

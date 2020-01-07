@@ -2,7 +2,6 @@ package keystore
 
 import (
 	"bytes"
-	"crypto/rand"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -51,9 +50,7 @@ func TestStoreRandomKey(t *testing.T) {
 		scryptP:     LightScryptP,
 	}
 
-	reader := rand.Reader
-
-	if err := storeNewRandomKey(ks, reader, "password"); err != nil {
+	if err := storeNewRandomKey(ks, "password"); err != nil {
 		t.Fatalf("storage of random key unsuccessful %v", err)
 	}
 
@@ -79,9 +76,7 @@ func TestNewKeyFromBLS(t *testing.T) {
 		t.Fatalf("secret key is not of the expected value %d", key.SecretKey.Marshal())
 	}
 
-	reader := rand.Reader
-
-	_, err = NewKey(reader)
+	_, err = NewKey()
 	if err != nil {
 		t.Fatalf("random key unable to be generated: %v", err)
 	}
