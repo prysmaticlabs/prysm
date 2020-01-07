@@ -77,16 +77,17 @@ func (kv *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 			break
 		}
 
-		block, err := kv.Block(ctx, bytesutil.ToBytes32(root))
+		signedBlock, err := kv.Block(ctx, bytesutil.ToBytes32(root))
 		if err != nil {
 			traceutil.AnnotateError(span, err)
 			return err
 		}
-		if block == nil {
+		if signedBlock == nil || signedBlock.Block == nil {
 			err := fmt.Errorf("missing block in database: block root=%#x", root)
 			traceutil.AnnotateError(span, err)
 			return err
 		}
+		block := signedBlock.Block
 
 		container := &dbpb.FinalizedBlockRootContainer{
 			ParentRoot: block.ParentRoot,

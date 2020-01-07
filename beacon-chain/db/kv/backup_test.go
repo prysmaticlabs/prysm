@@ -16,13 +16,12 @@ func TestStore_Backup(t *testing.T) {
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
-	head := &eth.BeaconBlock{}
-	head.Slot = 5000
+	head := &eth.SignedBeaconBlock{Block: &eth.BeaconBlock{Slot: 5000}}
 
 	if err := db.SaveBlock(ctx, head); err != nil {
 		t.Fatal(err)
 	}
-	root, err := ssz.SigningRoot(head)
+	root, err := ssz.HashTreeRoot(head.Block)
 	if err != nil {
 		t.Fatal(err)
 	}

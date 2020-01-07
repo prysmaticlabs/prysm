@@ -91,7 +91,7 @@ func TestGenerateFullBlock_ValidProposerSlashings(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	slashableIndice := block.Body.ProposerSlashings[0].ProposerIndex
+	slashableIndice := block.Block.Body.ProposerSlashings[0].ProposerIndex
 	if !beaconState.Validators[slashableIndice].Slashed {
 		t.Fatal("expected validator to be slashed")
 	}
@@ -113,7 +113,7 @@ func TestGenerateFullBlock_ValidAttesterSlashings(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	slashableIndices := block.Body.AttesterSlashings[0].Attestation_1.CustodyBit_0Indices
+	slashableIndices := block.Block.Body.AttesterSlashings[0].Attestation_1.AttestingIndices
 	if !beaconState.Validators[slashableIndices[0]].Slashed {
 		t.Fatal("expected validator to be slashed")
 	}
@@ -163,7 +163,7 @@ func TestGenerateFullBlock_ValidDeposits(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	depositedPubkey := block.Body.Deposits[0].Data.PublicKey
+	depositedPubkey := block.Block.Body.Deposits[0].Data.PublicKey
 	valIndexMap := stateutils.ValidatorIndexMap(beaconState)
 	index := valIndexMap[bytesutil.ToBytes48(depositedPubkey)]
 	if beaconState.Validators[index].EffectiveBalance != params.BeaconConfig().MaxEffectiveBalance {
@@ -190,7 +190,7 @@ func TestGenerateFullBlock_ValidVoluntaryExits(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	exitedIndex := block.Body.VoluntaryExits[0].ValidatorIndex
+	exitedIndex := block.Block.Body.VoluntaryExits[0].Exit.ValidatorIndex
 	if beaconState.Validators[exitedIndex].ExitEpoch == params.BeaconConfig().FarFutureEpoch {
 		t.Fatal("expected exiting validator index to be marked as exiting")
 	}

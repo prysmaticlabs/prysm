@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"time"
 
@@ -29,7 +30,7 @@ type GenesisTimeFetcher interface {
 type HeadFetcher interface {
 	HeadSlot() uint64
 	HeadRoot() []byte
-	HeadBlock() *ethpb.BeaconBlock
+	HeadBlock() *ethpb.SignedBeaconBlock
 	HeadState(ctx context.Context) (*pb.BeaconState, error)
 	HeadValidatorsIndices(epoch uint64) ([]uint64, error)
 	HeadSeed(epoch uint64) ([32]byte, error)
@@ -60,6 +61,12 @@ func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
+	// If head state exists but there hasn't been a finalized check point,
+	// the check point's root should refer to genesis block root.
+	if bytes.Equal(s.headState.FinalizedCheckpoint.Root, params.BeaconConfig().ZeroHash[:]) {
+		return &ethpb.Checkpoint{Root: s.genesisRoot[:]}
+	}
+
 	return s.headState.FinalizedCheckpoint
 }
 
@@ -69,6 +76,12 @@ func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
+	// If head state exists but there hasn't been a justified check point,
+	// the check point root should refer to genesis block root.
+	if bytes.Equal(s.headState.CurrentJustifiedCheckpoint.Root, params.BeaconConfig().ZeroHash[:]) {
+		return &ethpb.Checkpoint{Root: s.genesisRoot[:]}
+	}
+
 	return s.headState.CurrentJustifiedCheckpoint
 }
 
@@ -76,6 +89,12 @@ func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
 func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
 	if s.headState == nil || s.headState.PreviousJustifiedCheckpoint == nil {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	}
+
+	// If head state exists but there hasn't been a justified check point,
+	// the check point root should refer to genesis block root.
+	if bytes.Equal(s.headState.PreviousJustifiedCheckpoint.Root, params.BeaconConfig().ZeroHash[:]) {
+		return &ethpb.Checkpoint{Root: s.genesisRoot[:]}
 	}
 
 	return s.headState.PreviousJustifiedCheckpoint
@@ -103,11 +122,11 @@ func (s *Service) HeadRoot() []byte {
 }
 
 // HeadBlock returns the head block of the chain.
-func (s *Service) HeadBlock() *ethpb.BeaconBlock {
+func (s *Service) HeadBlock() *ethpb.SignedBeaconBlock {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
-	return proto.Clone(s.headBlock).(*ethpb.BeaconBlock)
+	return proto.Clone(s.headBlock).(*ethpb.SignedBeaconBlock)
 }
 
 // HeadState returns the head state of the chain.
@@ -126,11 +145,18 @@ func (s *Service) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 
 // HeadValidatorsIndices returns a list of active validator indices from the head view of a given epoch.
 func (s *Service) HeadValidatorsIndices(epoch uint64) ([]uint64, error) {
+	if s.headState == nil {
+		return []uint64{}, nil
+	}
 	return helpers.ActiveValidatorIndices(s.headState, epoch)
 }
 
 // HeadSeed returns the seed from the head view of a given epoch.
 func (s *Service) HeadSeed(epoch uint64) ([32]byte, error) {
+	if s.headState == nil {
+		return [32]byte{}, nil
+	}
+
 	return helpers.Seed(s.headState, epoch, params.BeaconConfig().DomainBeaconAttester)
 }
 

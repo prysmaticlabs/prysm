@@ -31,8 +31,8 @@ func (r *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 			return err
 		}
 		r.pendingQueueLock.Lock()
-		r.slotToPendingBlocks[blk.Slot] = blk
-		blkRoot, err := ssz.SigningRoot(blk)
+		r.slotToPendingBlocks[blk.Block.Slot] = blk
+		blkRoot, err := ssz.HashTreeRoot(blk.Block)
 		if err != nil {
 			return err
 		}

@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"sort"
 
+	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -23,15 +24,15 @@ var (
 // PendingDepositsFetcher specifically outlines a struct that can retrieve deposits
 // which have not yet been included in the chain.
 type PendingDepositsFetcher interface {
-	PendingContainers(ctx context.Context, beforeBlk *big.Int) []*DepositContainer
+	PendingContainers(ctx context.Context, beforeBlk *big.Int) []*dbpb.DepositContainer
 }
 
 // InsertPendingDeposit into the database. If deposit or block number are nil
 // then this method does nothing.
-func (dc *DepositCache) InsertPendingDeposit(ctx context.Context, d *ethpb.Deposit, blockNum *big.Int, index int, depositRoot [32]byte) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.InsertPendingDeposit")
+func (dc *DepositCache) InsertPendingDeposit(ctx context.Context, d *ethpb.Deposit, blockNum uint64, index int64, depositRoot [32]byte) {
+	ctx, span := trace.StartSpan(ctx, "DepositsCache.InsertPendingDeposit")
 	defer span.End()
-	if d == nil || blockNum == nil {
+	if d == nil {
 		log.WithFields(log.Fields{
 			"block":   blockNum,
 			"deposit": d,
@@ -40,7 +41,8 @@ func (dc *DepositCache) InsertPendingDeposit(ctx context.Context, d *ethpb.Depos
 	}
 	dc.depositsLock.Lock()
 	defer dc.depositsLock.Unlock()
-	dc.pendingDeposits = append(dc.pendingDeposits, &DepositContainer{Deposit: d, Block: blockNum, Index: index, depositRoot: depositRoot})
+	dc.pendingDeposits = append(dc.pendingDeposits,
+		&dbpb.DepositContainer{Deposit: d, Eth1BlockHeight: blockNum, Index: index, DepositRoot: depositRoot[:]})
 	pendingDepositsCount.Inc()
 	span.AddAttributes(trace.Int64Attribute("count", int64(len(dc.pendingDeposits))))
 }
@@ -54,9 +56,9 @@ func (dc *DepositCache) PendingDeposits(ctx context.Context, beforeBlk *big.Int)
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
 
-	var depositCntrs []*DepositContainer
+	var depositCntrs []*dbpb.DepositContainer
 	for _, ctnr := range dc.pendingDeposits {
-		if beforeBlk == nil || beforeBlk.Cmp(ctnr.Block) > -1 {
+		if beforeBlk == nil || beforeBlk.Uint64() >= ctnr.Eth1BlockHeight {
 			depositCntrs = append(depositCntrs, ctnr)
 		}
 	}
@@ -77,15 +79,15 @@ func (dc *DepositCache) PendingDeposits(ctx context.Context, beforeBlk *big.Int)
 
 // PendingContainers returns a list of deposit containers until the given block number
 // (inclusive).
-func (dc *DepositCache) PendingContainers(ctx context.Context, beforeBlk *big.Int) []*DepositContainer {
+func (dc *DepositCache) PendingContainers(ctx context.Context, beforeBlk *big.Int) []*dbpb.DepositContainer {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.PendingDeposits")
 	defer span.End()
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
 
-	var depositCntrs []*DepositContainer
+	var depositCntrs []*dbpb.DepositContainer
 	for _, ctnr := range dc.pendingDeposits {
-		if beforeBlk == nil || beforeBlk.Cmp(ctnr.Block) > -1 {
+		if beforeBlk == nil || beforeBlk.Uint64() >= ctnr.Eth1BlockHeight {
 			depositCntrs = append(depositCntrs, ctnr)
 		}
 	}
@@ -151,9 +153,9 @@ func (dc *DepositCache) PrunePendingDeposits(ctx context.Context, merkleTreeInde
 	dc.depositsLock.Lock()
 	defer dc.depositsLock.Unlock()
 
-	var cleanDeposits []*DepositContainer
+	var cleanDeposits []*dbpb.DepositContainer
 	for _, dp := range dc.pendingDeposits {
-		if dp.Index >= merkleTreeIndex {
+		if dp.Index >= int64(merkleTreeIndex) {
 			cleanDeposits = append(cleanDeposits, dp)
 		}
 	}

@@ -84,15 +84,16 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		traceutil.AnnotateError(span, err)
 		return err
 	}
-	for i, blk := range blks {
-		if blk == nil {
+	for i, b := range blks {
+		if b == nil || b.Block == nil {
 			continue
 		}
+		blk := b.Block
 
 		isRequestedSlotStep := (blk.Slot-startSlot)%m.Step == 0
 		isRecentUnfinalizedSlot := blk.Slot >= helpers.StartSlot(checkpoint.Epoch+1) || checkpoint.Epoch == 0
 		if isRequestedSlotStep && (isRecentUnfinalizedSlot || r.db.IsFinalizedBlock(ctx, roots[i])) {
-			if err := r.chunkWriter(stream, blk); err != nil {
+			if err := r.chunkWriter(stream, b); err != nil {
 				log.WithError(err).Error("Failed to send a chunked response")
 				return err
 			}

@@ -109,15 +109,17 @@ func TestStore_StatesBatchDelete(t *testing.T) {
 	defer teardownDB(t, db)
 	ctx := context.Background()
 	numBlocks := 100
-	totalBlocks := make([]*ethpb.BeaconBlock, numBlocks)
+	totalBlocks := make([]*ethpb.SignedBeaconBlock, numBlocks)
 	blockRoots := make([][32]byte, 0)
 	evenBlockRoots := make([][32]byte, 0)
 	for i := 0; i < len(totalBlocks); i++ {
-		totalBlocks[i] = &ethpb.BeaconBlock{
-			Slot:       uint64(i),
-			ParentRoot: []byte("parent"),
+		totalBlocks[i] = &ethpb.SignedBeaconBlock{
+			Block: &ethpb.BeaconBlock{
+				Slot:       uint64(i),
+				ParentRoot: []byte("parent"),
+			},
 		}
-		r, err := ssz.SigningRoot(totalBlocks[i])
+		r, err := ssz.HashTreeRoot(totalBlocks[i].Block)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -180,15 +182,17 @@ func TestStore_DeleteFinalizedState(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	blk := &ethpb.BeaconBlock{
-		ParentRoot: genesis[:],
-		Slot:       100,
+	blk := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			ParentRoot: genesis[:],
+			Slot:       100,
+		},
 	}
 	if err := db.SaveBlock(ctx, blk); err != nil {
 		t.Fatal(err)
 	}
 
-	finalizedBlockRoot, err := ssz.SigningRoot(blk)
+	finalizedBlockRoot, err := ssz.HashTreeRoot(blk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -217,15 +221,17 @@ func TestStore_DeleteHeadState(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	blk := &ethpb.BeaconBlock{
-		ParentRoot: genesis[:],
-		Slot:       100,
+	blk := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			ParentRoot: genesis[:],
+			Slot:       100,
+		},
 	}
 	if err := db.SaveBlock(ctx, blk); err != nil {
 		t.Fatal(err)
 	}
 
-	headBlockRoot, err := ssz.SigningRoot(blk)
+	headBlockRoot, err := ssz.HashTreeRoot(blk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
