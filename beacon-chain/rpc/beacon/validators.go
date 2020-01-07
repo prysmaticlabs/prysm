@@ -443,9 +443,9 @@ func (bs *Server) GetValidatorParticipation(
 
 	p := bs.ParticipationFetcher.Participation(requestedEpoch)
 	participation := &ethpb.ValidatorParticipation{
-		EligibleEther:           p.CurrentEpoch,
-		VotedEther:              p.CurrentEpochTargetAttesters,
-		GlobalParticipationRate: float32(p.CurrentEpochTargetAttesters) / float32(p.CurrentEpoch),
+		EligibleEther:           p.PrevEpoch,
+		VotedEther:              p.PrevEpochTargetAttesters,
+		GlobalParticipationRate: float32(p.PrevEpochTargetAttesters) / float32(p.PrevEpoch),
 	}
 
 	return &ethpb.ValidatorParticipationResponse{
