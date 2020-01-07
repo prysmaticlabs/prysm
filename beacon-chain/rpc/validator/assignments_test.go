@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-
 func TestGetDuties_NextEpoch_WrongPubkeyLength(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)

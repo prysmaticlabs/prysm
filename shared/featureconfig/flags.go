@@ -135,8 +135,8 @@ var (
 		Hidden: true,
 	}
 	deprecatedFastCommitteeAssignmentsFlag = cli.BoolFlag{
-		Name:  "fast-assignments",
-		Usage: deprecatedUsage,
+		Name:   "fast-assignments",
+		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
 	deprecatedGenesisDelayFlag = cli.BoolFlag{
