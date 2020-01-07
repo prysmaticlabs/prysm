@@ -2,6 +2,7 @@ package endtoend
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"math/big"
@@ -31,7 +32,6 @@ func initializeValidators(
 	t *testing.T,
 	config *end2EndConfig,
 	keystorePath string,
-	beaconNodes []*beaconNodeInfo,
 ) []*validatorClientInfo {
 	binaryPath, found := bazel.FindBinary("validator", "validator")
 	if !found {
@@ -88,6 +88,11 @@ func initializeValidators(
 	depositInGwei := big.NewInt(int64(params.BeaconConfig().MaxEffectiveBalance))
 	txOps.Value = depositInGwei.Mul(depositInGwei, big.NewInt(int64(params.BeaconConfig().GweiPerEth)))
 	txOps.GasLimit = 4000000
+	nonce, err := web3.PendingNonceAt(context.Background(), txOps.From)
+	if err != nil {
+		t.Fatal(err)
+	}
+	txOps.Nonce = big.NewInt(int64(nonce))
 
 	contract, err := contracts.NewDepositContract(config.contractAddr, web3)
 	if err != nil {
@@ -102,16 +107,17 @@ func initializeValidators(
 	for index, dd := range deposits {
 		_, err = contract.Deposit(txOps, dd.Data.PublicKey, dd.Data.WithdrawalCredentials, dd.Data.Signature, roots[index])
 		if err != nil {
-			t.Error("unable to send transaction to contract")
+			t.Errorf("unable to send transaction to contract: %v", err)
 		}
+		txOps.Nonce = txOps.Nonce.Add(txOps.Nonce, big.NewInt(1))
 	}
 
 	keystore, err := keystore.DecryptKey(jsonBytes, "" /*password*/)
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Picked 20 for this as a "safe" number of blocks to mine so the deposits
-	// are detected.
+
+	// "Safe" amount of blocks to mine to make sure the deposits are seen.
 	if err := mineBlocks(web3, keystore, 20); err != nil {
 		t.Fatalf("failed to mine blocks %v", err)
 	}

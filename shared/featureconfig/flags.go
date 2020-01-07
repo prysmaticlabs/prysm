@@ -86,10 +86,6 @@ var (
 		Usage: "Connect to slasher in order to retrieve slashable events. Slasher is connected to beacon node using grpc" +
 			"User should be running slasher on current machine or include slasher-provider flag.",
 	}
-	fastCommitteeAssignmentsFlag = cli.BoolFlag{
-		Name:  "fast-assignments",
-		Usage: "Use new algorithm for computing committee assignments",
-	}
 )
 
 // Deprecated flags list.
@@ -146,6 +142,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedFastCommitteeAssignmentsFlag = cli.BoolFlag{
+		Name:   "fast-assignments",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -159,6 +160,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableActiveCountCacheFlag,
 	deprecatedEnableCommitteeCacheFlag,
 	deprecatedEnableBLSPubkeyCacheFlag,
+	deprecatedFastCommitteeAssignmentsFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -184,6 +186,5 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableSkipSlotsCache,
 	enableSnappyDBCompressionFlag,
 	enablePruneBoundaryStateFlag,
-	fastCommitteeAssignmentsFlag,
 	enableSlasherFlag,
 }...)
