@@ -172,14 +172,14 @@ func generate2FullEpochState() error {
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(filePath(benchutil.BState2EpochFileName), beaconBytes, 0644); err != nil {
+	if err := ioutil.WriteFile(benchutil.BState2EpochFileName, beaconBytes, 0644); err != nil {
 		return err
 	}
 	return nil
 }
 
 func genesisBeaconState() (*pb.BeaconState, error) {
-	beaconBytes, err := ioutil.ReadFile(filePath(benchutil.GenesisFileName))
+	beaconBytes, err := ioutil.ReadFile(benchutil.GenesisFileName)
 	if err != nil {
 		return nil, err
 	}
@@ -188,9 +188,4 @@ func genesisBeaconState() (*pb.BeaconState, error) {
 		return nil, err
 	}
 	return genesisState, nil
-}
-
-// filePath prefixes the file path to the file names.
-func filePath(fileName string) string {
-	return fmt.Sprintf("shared/benchutil/%s", fileName)
 }

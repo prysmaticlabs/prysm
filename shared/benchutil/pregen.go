@@ -22,16 +22,16 @@ var ValidatorCount = uint64(65536)
 var AttestationsPerEpoch = uint64(128)
 
 // GenesisFileName is the generated genesis beacon state file name.
-var GenesisFileName = fmt.Sprintf("benchmark_files/bStateGenesis-%dAtts-%dVals.ssz", AttestationsPerEpoch, ValidatorCount)
+var GenesisFileName = fmt.Sprintf("shared/benchutil/benchmark_files/bStateGenesis-%dAtts-%dVals.ssz", AttestationsPerEpoch, ValidatorCount)
 
 // BState1EpochFileName is the generated beacon state after 1 skipped epoch file name.
-var BState1EpochFileName = fmt.Sprintf("benchmark_files/bState1Epoch-%dAtts-%dVals.ssz", AttestationsPerEpoch, ValidatorCount)
+var BState1EpochFileName = fmt.Sprintf("shared/benchutil/benchmark_files/bState1Epoch-%dAtts-%dVals.ssz", AttestationsPerEpoch, ValidatorCount)
 
 // BState2EpochFileName is the generated beacon state after 2 full epochs file name.
-var BState2EpochFileName = fmt.Sprintf("benchmark_files/bState2Epochs-%dAtts-%dVals.ssz", AttestationsPerEpoch, ValidatorCount)
+var BState2EpochFileName = fmt.Sprintf("shared/benchutil/benchmark_files/bState2Epochs-%dAtts-%dVals.ssz", AttestationsPerEpoch, ValidatorCount)
 
 // FullBlockFileName is the generated full block file name.
-var FullBlockFileName = fmt.Sprintf("benchmark_files/fullBlock-%dAtts-%dVals.ssz", AttestationsPerEpoch, ValidatorCount)
+var FullBlockFileName = fmt.Sprintf("shared/benchutil/benchmark_files/fullBlock-%dAtts-%dVals.ssz", AttestationsPerEpoch, ValidatorCount)
 
 func PregenState1Epoch() (*pb.BeaconState, error) {
 	path, err := bazel.Runfile(BState1EpochFileName)
