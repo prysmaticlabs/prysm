@@ -670,12 +670,12 @@ func TestConsistentGenesisState(t *testing.T) {
 		t.Fatalf("Service hasn't chainstarted yet with a block height of %d", web3Service.latestEth1Data.BlockHeight)
 	}
 
-	// Advance 10 blocks
+	// Advance 10 blocks.
 	for i := 0; i < 10; i++ {
 		testAcc.Backend.Commit()
 	}
 
-	// tearing down to prevent registration error
+	// Tearing down to prevent registration error.
 	testDB.TeardownDB(t, beaconDB)
 
 	newBeaconDB := testDB.SetupDB(t)

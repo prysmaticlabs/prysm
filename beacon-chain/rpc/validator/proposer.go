@@ -36,7 +36,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
-	// Retrieve the parent block as the current head of the canonical chain
+	// Retrieve the parent block as the current head of the canonical chain.
 	parent := vs.HeadFetcher.HeadBlock()
 
 	parentRoot, err := ssz.HashTreeRoot(parent.Block)
