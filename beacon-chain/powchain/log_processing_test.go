@@ -675,7 +675,7 @@ func TestConsistentGenesisState(t *testing.T) {
 		testAcc.Backend.Commit()
 	}
 
-	// tearing down to prevent registration error
+	// Tearing down to prevent registration error.
 	testDB.TeardownDB(t, beaconDB)
 
 	newBeaconDB := testDB.SetupDB(t)
