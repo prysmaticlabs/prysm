@@ -2,7 +2,6 @@ package accounts
 
 import (
 	"bufio"
-	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -61,7 +60,7 @@ func NewValidatorAccount(directory string, password string) error {
 	validatorKeyFile := directory + params.BeaconConfig().ValidatorPrivkeyFileName
 	ks := keystore.NewKeystore(directory)
 	// If the keystore does not exists at the path, we create a new one for the validator.
-	shardWithdrawalKey, err := keystore.NewKey(rand.Reader)
+	shardWithdrawalKey, err := keystore.NewKey()
 	if err != nil {
 		return err
 	}
@@ -73,7 +72,7 @@ func NewValidatorAccount(directory string, password string) error {
 		"path",
 		shardWithdrawalKeyFile,
 	).Info("Keystore generated for shard withdrawals at path")
-	validatorKey, err := keystore.NewKey(rand.Reader)
+	validatorKey, err := keystore.NewKey()
 	if err != nil {
 		return err
 	}

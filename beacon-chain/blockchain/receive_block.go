@@ -122,7 +122,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 	isCompetingBlock(root[:], blockCopy.Block.Slot, headRoot, signedHeadBlock.Block.Slot)
 
 	// Log state transition data.
-	logStateTransitionData(blockCopy.Block, root[:])
+	logStateTransitionData(blockCopy.Block)
 
 	s.epochParticipationLock.Lock()
 	defer s.epochParticipationLock.Unlock()
@@ -172,7 +172,7 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 	s.reportSlotMetrics(blockCopy.Block.Slot)
 
 	// Log state transition data.
-	logStateTransitionData(blockCopy.Block, root[:])
+	logStateTransitionData(blockCopy.Block)
 
 	s.epochParticipationLock.Lock()
 	defer s.epochParticipationLock.Unlock()
