@@ -192,6 +192,6 @@ func logErrorOutput(t *testing.T, file *os.File, title string, index uint64) {
 		t.Log(err)
 	}
 
-	t.Logf("\nEnd of %s %d error output:\n", title, index)
+	t.Logf("\nEnd of %s %d error output:", title, index)
 	t.Log("===================================================================")
 }
