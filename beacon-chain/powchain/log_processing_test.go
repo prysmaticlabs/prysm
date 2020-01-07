@@ -653,7 +653,7 @@ func TestConsistentGenesisState(t *testing.T) {
 
 	// 64 Validators are used as size required for beacon-chain to start. This number
 	// is defined in the deposit contract as the number required for the testnet. The actual number
-	// is 2**14
+	// is 2**14.
 	for i := 0; i < depositsReqForChainStart; i++ {
 		data := deposits[i].Data
 		testAcc.TxOpts.Value = contracts.Amount32Eth()
@@ -670,12 +670,12 @@ func TestConsistentGenesisState(t *testing.T) {
 		t.Fatalf("Service hasn't chainstarted yet with a block height of %d", web3Service.latestEth1Data.BlockHeight)
 	}
 
-	// Advance 10 blocks
+	// Advance 10 blocks.
 	for i := 0; i < 10; i++ {
 		testAcc.Backend.Commit()
 	}
 
-	// tearing down to prevent registration error
+	// Tearing down to prevent registration error.
 	testDB.TeardownDB(t, beaconDB)
 
 	newBeaconDB := testDB.SetupDB(t)

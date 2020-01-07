@@ -15,7 +15,7 @@ type BeaconChainConfig struct {
 	FarFutureEpoch           uint64 `yaml:"FAR_FUTURE_EPOCH"`            // FarFutureEpoch represents a epoch extremely far away in the future used as the default penalization slot for validators.
 	BaseRewardsPerEpoch      uint64 `yaml:"BASE_REWARDS_PER_EPOCH"`      // BaseRewardsPerEpoch is used to calculate the per epoch rewards.
 	DepositContractTreeDepth uint64 `yaml:"DEPOSIT_CONTRACT_TREE_DEPTH"` // Depth of the Merkle trie of deposits in the validator deposit contract on the PoW chain.
-	SecondsPerDay            uint64 `yaml:"SECONDS_PER_DAY"`             // SecondsPerDay number of seconds in day constant.
+	MinGenesisDelay          uint64 `yaml:"MIN_GENESIS_DELAY"`           // Minimum number of seconds to delay starting the ETH2 genesis. Must be at least 1 second.
 
 	// Misc constants.
 	TargetCommitteeSize            uint64 `yaml:"TARGET_COMMITTEE_SIZE"`        // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
@@ -25,7 +25,7 @@ type BeaconChainConfig struct {
 	ChurnLimitQuotient             uint64 `yaml:"CHURN_LIMIT_QUOTIENT"`               // ChurnLimitQuotient is used to determine the limit of how many validators can rotate per epoch.
 	ShuffleRoundCount              uint64 `yaml:"SHUFFLE_ROUND_COUNT"`                // ShuffleRoundCount is used for retrieving the permuted index.
 	MinGenesisActiveValidatorCount uint64 `yaml:"MIN_GENESIS_ACTIVE_VALIDATOR_COUNT"` // MinGenesisActiveValidatorCount defines how many validator deposits needed to kick off beacon chain.
-	MinGenesisTime                 uint64 `yaml:"MIN_GENESIS_TIME"`                   // MinGenesisTime is the time that needed to pass before kicking off beacon chain. Currently set to Jan/3/2020.
+	MinGenesisTime                 uint64 `yaml:"MIN_GENESIS_TIME"`                   // MinGenesisTime is the time that needed to pass before kicking off beacon chain.
 	TargetAggregatorsPerCommittee  uint64 // TargetAggregatorsPerCommittee defines the number of aggregators inside one committee.
 
 	// Gwei value constants.
@@ -115,7 +115,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	FarFutureEpoch:           1<<64 - 1,
 	BaseRewardsPerEpoch:      4,
 	DepositContractTreeDepth: 32,
-	SecondsPerDay:            86400,
+	MinGenesisDelay:          86400, // 1 day
 
 	// Misc constant.
 	TargetCommitteeSize:            128,
@@ -225,23 +225,22 @@ func MainnetConfig() *BeaconChainConfig {
 	return defaultBeaconConfig
 }
 
-// DemoBeaconConfig retrieves the demo beacon chain config.
-// Notable changes from minimal config:
-//   - Max effective balance is 3.2 ETH
-//   - Ejection threshold is 3.175 ETH
-//   - Genesis threshold is disabled (minimum date to start the chain)
+// DemoBeaconConfig retrieves the demo beacon chain config. This is mainnet config with 1/10th of
+// mainnet deposit values.
 func DemoBeaconConfig() *BeaconChainConfig {
-	demoConfig := MinimalSpecConfig()
-	demoConfig.MinDepositAmount = 100
-	demoConfig.MaxEffectiveBalance = 3.2 * 1e9
-	demoConfig.EjectionBalance = 3 * 1e9
-	demoConfig.EffectiveBalanceIncrement = 0.1 * 1e9
-	demoConfig.Eth1FollowDistance = 16
+	demoConfig := *MainnetConfig()
+
+	demoConfig.MinDepositAmount /= 10
+	demoConfig.MaxEffectiveBalance /= 10
+	demoConfig.EjectionBalance /= 10
+	demoConfig.EffectiveBalanceIncrement /= 10
+
+	demoConfig.InactivityPenaltyQuotient /= 10
 
 	// Increment this number after a full testnet tear down.
-	demoConfig.GenesisForkVersion = []byte{0, 0, 0, 3}
+	demoConfig.GenesisForkVersion = []byte{0, 0, 0, 4}
 
-	return demoConfig
+	return &demoConfig
 }
 
 // MinimalSpecConfig retrieves the minimal config used in spec tests.
@@ -256,6 +255,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.ShuffleRoundCount = 10
 	minimalConfig.MinGenesisActiveValidatorCount = 64
 	minimalConfig.MinGenesisTime = 0
+	minimalConfig.MinGenesisDelay = 300 // 5 minutes
 	minimalConfig.TargetAggregatorsPerCommittee = 3
 
 	// Gwei values

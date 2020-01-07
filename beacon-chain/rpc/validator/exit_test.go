@@ -19,7 +19,6 @@ import (
 )
 
 func TestSub(t *testing.T) {
-
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
@@ -37,7 +36,7 @@ func TestSub(t *testing.T) {
 		t.Fatalf("Could not get signing root %v", err)
 	}
 
-	// Set genesis time to be 100 epochs ago
+	// Set genesis time to be 100 epochs ago.
 	genesisTime := time.Now().Add(time.Duration(-100*int64(params.BeaconConfig().SecondsPerSlot*params.BeaconConfig().SlotsPerEpoch)) * time.Second)
 	mockChainService := &mockChain.ChainService{State: beaconState, Root: genesisRoot[:], Genesis: genesisTime}
 	server := &Server{
@@ -49,12 +48,12 @@ func TestSub(t *testing.T) {
 		OperationNotifier: mockChainService.OperationNotifier(),
 	}
 
-	// Subscribe to operation notifications
+	// Subscribe to operation notifications.
 	opChannel := make(chan *feed.Event, 1024)
 	opSub := server.OperationNotifier.OperationFeed().Subscribe(opChannel)
 	defer opSub.Unsubscribe()
 
-	// Send the request, expect a result on the state feed
+	// Send the request, expect a result on the state feed.
 	epoch := uint64(2048)
 	validatorIndex := uint64(0)
 	req := &ethpb.SignedVoluntaryExit{
@@ -70,7 +69,7 @@ func TestSub(t *testing.T) {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 
-	// Ensure the state notification was broadcast
+	// Ensure the state notification was broadcast.
 	notificationFound := false
 	for !notificationFound {
 		select {

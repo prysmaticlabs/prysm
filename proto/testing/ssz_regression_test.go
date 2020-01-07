@@ -54,7 +54,6 @@ func TestBlockHeaderSigningRoot(t *testing.T) {
 				ParentRoot: hexDecodeOrDie(t, "f9b2785de53069d4ad16cc0ec729afe9f879e391433ec120bb15b5082a486705"),
 				StateRoot:  hexDecodeOrDie(t, "737d1c6ff6e2edf7f0627bf55381e6b08f6c2c56ed8d1895ae47a782dc09382e"),
 				BodyRoot:   hexDecodeOrDie(t, "affff5006c34a3a2bf7f18b7860675f002187ea809f708fa8f44c424321bcd1c"),
-				//Signature:  hexDecodeOrDie(t, "17d25044259a0ccd99d1b45eeec4e084e5fb0fef98d5805001b248feb555b947ecf6842b9ad546f98f63ef89117575d73223e9fb9ee8143857b6fcc79600fffed1966cea46f7524236cd1e83531aef906cb8b4c296d50695bb83efa84075d309"),
 			},
 			header2: sszspectest.MainnetBlockHeader{
 				Slot:       14215038047959786547,

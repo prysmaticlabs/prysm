@@ -16,17 +16,17 @@ type Pool interface {
 	AggregatedAttestations() []*ethpb.Attestation
 	AggregatedAttestationsBySlotIndex(slot uint64, committeeIndex uint64) []*ethpb.Attestation
 	DeleteAggregatedAttestation(att *ethpb.Attestation) error
-	// For unaggregated attestations
+	// For unaggregated attestations.
 	SaveUnaggregatedAttestation(att *ethpb.Attestation) error
 	SaveUnaggregatedAttestations(atts []*ethpb.Attestation) error
 	UnaggregatedAttestations() []*ethpb.Attestation
 	DeleteUnaggregatedAttestation(att *ethpb.Attestation) error
-	// For attestations that were included in the block
+	// For attestations that were included in the block.
 	SaveBlockAttestation(att *ethpb.Attestation) error
 	SaveBlockAttestations(atts []*ethpb.Attestation) error
 	BlockAttestations() []*ethpb.Attestation
 	DeleteBlockAttestation(att *ethpb.Attestation) error
-	// For attestations to be passed to fork choice
+	// For attestations to be passed to fork choice.
 	SaveForkchoiceAttestation(att *ethpb.Attestation) error
 	SaveForkchoiceAttestations(atts []*ethpb.Attestation) error
 	ForkchoiceAttestations() []*ethpb.Attestation

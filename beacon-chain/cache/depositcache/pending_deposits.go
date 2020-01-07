@@ -6,7 +6,6 @@ import (
 	"sort"
 
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"

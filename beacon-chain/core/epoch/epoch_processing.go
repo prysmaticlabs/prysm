@@ -94,7 +94,7 @@ func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 		}
 	}
 
-	// Queue validators eligible for activation and not yet dequeued for activation
+	// Queue validators eligible for activation and not yet dequeued for activation.
 	var activationQ []uint64
 	for idx, validator := range state.Validators {
 		if helpers.IsEligibleForActivation(state, validator) {

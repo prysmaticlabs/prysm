@@ -157,7 +157,7 @@ func (r *Service) subscribeWithBase(base proto.Message, topic string, validator 
 		for {
 			msg, err := sub.Next(r.ctx)
 			if err != nil {
-				// This should only happen when the context is cancelled or subscription is cancelled?.
+				// This should only happen when the context is cancelled or subscription is cancelled.
 				log.WithError(err).Error("Subscription next failed")
 				return
 			}
@@ -211,7 +211,7 @@ func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() i
 				stateSub.Unsubscribe()
 				return
 			case <-stateChannel:
-				// Update topic count
+				// Update topic count.
 				wantedSubs := determineSubsLen()
 				// Resize as appropriate.
 				if len(subscriptions) > wantedSubs { // Reduce topics
