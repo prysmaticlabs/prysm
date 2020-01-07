@@ -162,10 +162,7 @@ func logOutput(t *testing.T, tmpPath string, config *end2EndConfig) {
 				t.Fatal(err)
 			}
 			logErrorOutput(t, beaconLogFile, "beacon chain node", i)
-		}
 
-		// Log out errors from validator clients.
-		for i := uint64(0); i < config.numValidators; i++ {
 			validatorLogFile, err := os.Open(path.Join(tmpPath, fmt.Sprintf(validatorLogFileName, i)))
 			if err != nil {
 				t.Fatal(err)
