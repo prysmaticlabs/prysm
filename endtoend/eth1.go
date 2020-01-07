@@ -43,8 +43,9 @@ func startEth1(t *testing.T, tmpPath string) (common.Address, string, int) {
 		"--dev",
 		"--dev.period=0",
 		"--ipcdisable",
-	}
-	cmd := exec.Command(binaryPath, args...)
+		"removedb",
+}
+		cmd := exec.Command(binaryPath, args...)
 	file, err := os.Create(path.Join(tmpPath, "eth1.log"))
 	if err != nil {
 		t.Fatal(err)

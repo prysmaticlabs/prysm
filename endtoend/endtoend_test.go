@@ -25,7 +25,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	tmpPath := bazel.TestTmpDir()
 	config.tmpPath = tmpPath
 	t.Logf("Starting time: %s\n", time.Now().String())
-	t.Logf("\nTest Path: %s\n\n", tmpPath)
+	t.Logf("Test Path: %s\n\n", tmpPath)
 
 	contractAddr, keystorePath, eth1PID := startEth1(t, tmpPath)
 	config.contractAddr = contractAddr
@@ -187,14 +187,12 @@ func logErrorOutput(t *testing.T, file *os.File, title string, index uint64) {
 	}
 
 	t.Log("===================================================================")
-	t.Logf("Start of %s %d error output:", title, index)
-	t.Log("")
+	t.Logf("Start of %s %d error output:\n", title, index)
 
 	for _, err := range errorLines {
 		t.Log(err)
 	}
 
-	t.Log("")
-	t.Logf("End of %s %d error output:", title, index)
+	t.Logf("\nEnd of %s %d error output:\n", title, index)
 	t.Log("===================================================================")
 }

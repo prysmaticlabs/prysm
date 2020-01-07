@@ -72,8 +72,6 @@ func initializeValidators(
 			monitorPort: 9080 + n,
 		}
 	}
-	// Small buffer to make logging cleaner at a glance.
-	t.Log("")
 
 	client, err := rpc.DialHTTP("http://127.0.0.1:8545")
 	if err != nil {
