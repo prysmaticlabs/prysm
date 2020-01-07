@@ -94,13 +94,13 @@ func (p *AttCaches) HasAggregatedAttestation(att *ethpb.Attestation) (bool, erro
 		return false, errors.Wrap(err, "could not tree hash attestation")
 	}
 
-	for k, _ := range p.aggregatedAtt.Items() {
+	for k := range p.aggregatedAtt.Items() {
 		if k == string(r[:]) {
 			return true, nil
 		}
 	}
 
-	for k, _ := range p.blockAtt.Items() {
+	for k := range p.blockAtt.Items() {
 		if k == string(r[:]) {
 			return true, nil
 		}
