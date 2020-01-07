@@ -49,7 +49,6 @@ func (p *AttCaches) ForkchoiceAttestations() []*ethpb.Attestation {
 
 // DeleteForkchoiceAttestation deletes a forkchoice attestation in cache.
 func (p *AttCaches) DeleteForkchoiceAttestation(att *ethpb.Attestation) error {
-
 	r, err := ssz.HashTreeRoot(att)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")
