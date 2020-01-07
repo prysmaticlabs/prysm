@@ -2,13 +2,12 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 
+	"github.com/bazelbuild/buildtools/file"
 	pb "github.com/prysmaticlabs/prysm/proto/cluster"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/keystore"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	_ "go.uber.org/automaxprocs"
 	"google.golang.org/grpc"
 )
@@ -16,17 +15,25 @@ import (
 var (
 	serverAddr  = flag.String("server", "", "The address of the gRPC server")
 	podName     = flag.String("pod-name", "", "The name of the pod running this tool")
-	keystoreDir = flag.String("keystore-dir", "", "The directory to generate keystore with received validator key")
-	password    = flag.String("keystore-password", "", "The password to unlock the new keystore")
 	numKeys     = flag.Uint64("keys", 1, "The number of keys to request")
+	outputJSON  = flag.String("output-json", "", "JSON file to write output to")
 )
+
+// UnencryptedKeysContainer defines the structure of the unecrypted key JSON file.
+type UnencryptedKeysContainer struct {
+	Keys []*UnencryptedKeys `json:"keys"`
+}
+
+// UnencryptedKeys is the inner struct of the JSON file.
+type UnencryptedKeys struct {
+	ValidatorKey  []byte `json:"validator_key"`
+	WithdrawalKey []byte `json:"withdrawal_key"`
+}
 
 func main() {
 	flag.Parse()
 
 	fmt.Printf("Starting client to fetch private key for pod %s\n", *podName)
-
-	store := keystore.NewKeystore(*keystoreDir)
 
 	ctx := context.Background()
 	conn, err := grpc.DialContext(ctx, *serverAddr, grpc.WithInsecure())
@@ -44,23 +51,23 @@ func main() {
 		panic(err)
 	}
 
+	keys := make([]*UnencryptedKeys, len(resp.PrivateKeys.PrivateKeys))
+
 	for i, privateKey := range resp.PrivateKeys.PrivateKeys {
-		pk, err := bls.SecretKeyFromBytes(privateKey)
-		if err != nil {
-			fmt.Printf("Failed to deserialize pk: %v\n", err)
-			continue
+		keys[i] = &UnencryptedKeys{
+			ValidatorKey:  privateKey,
+			WithdrawalKey: privateKey,
 		}
-
-		k := &keystore.Key{
-			PublicKey: pk.PublicKey(),
-			SecretKey: pk,
-		}
-
-		validatorKeyFile := *keystoreDir + params.BeaconConfig().ValidatorPrivkeyFileName + "-" + fmt.Sprintf("%d", i)
-		if err := store.StoreKey(validatorKeyFile, k, *password); err != nil {
-			panic(err)
-		}
-
-		fmt.Printf("New key written to %s\n", validatorKeyFile)
 	}
+
+	c := &UnencryptedKeysContainer{Keys: keys}
+	enc, err := json.Marshal(c)
+	if err != nil {
+		panic(err)
+	}
+	if err := file.WriteFile(*outputJSON, enc); err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("Wrote %d keys\n", len(keys))
 }
