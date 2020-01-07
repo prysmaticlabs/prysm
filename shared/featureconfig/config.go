@@ -67,7 +67,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	cfg := &Flags{}
 	if ctx.GlobalBool(noGenesisDelayFlag.Name) {
 		log.Warn("Starting ETH2 with no genesis delay")
-		cfg.NoGensisDelay = true
+		cfg.NoGenesisDelay = true
 	}
 	if ctx.GlobalBool(MinimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
