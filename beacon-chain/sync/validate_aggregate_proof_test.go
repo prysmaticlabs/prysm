@@ -16,6 +16,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
@@ -217,6 +218,66 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 				p2p.GossipTypeMapping[reflect.TypeOf(aggregateAndProof)],
 			},
 		},
+	}
+	if r.validateAggregateAndProof(context.Background(), "", msg) {
+		t.Error("Expected validate to fail")
+	}
+}
+
+func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
+	db := dbtest.SetupDB(t)
+	defer dbtest.TeardownDB(t, db)
+	p := p2ptest.NewTestP2P(t)
+
+	validators := uint64(256)
+	beaconState, _ := testutil.DeterministicGenesisState(t, validators)
+
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	db.SaveBlock(context.Background(), b)
+	root, _ := ssz.HashTreeRoot(b.Block)
+
+	aggBits := bitfield.NewBitlist(3)
+	aggBits.SetBitAt(0, true)
+	att := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			Slot:            1,
+			BeaconBlockRoot: root[:],
+			Source:          &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+			Target:          &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+		},
+		AggregationBits: aggBits,
+	}
+
+	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
+		Aggregate: att,
+	}
+
+	beaconState.GenesisTime = uint64(time.Now().Unix())
+	r := &Service{
+		attPool:     attestations.NewPool(),
+		p2p:         p,
+		db:          db,
+		initialSync: &mockSync.Sync{IsSyncing: false},
+		chain: &mock.ChainService{Genesis: time.Now(),
+			State: beaconState},
+	}
+
+	buf := new(bytes.Buffer)
+	if _, err := p.Encoding().Encode(buf, aggregateAndProof); err != nil {
+		t.Fatal(err)
+	}
+
+	msg := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data: buf.Bytes(),
+			TopicIDs: []string{
+				p2p.GossipTypeMapping[reflect.TypeOf(aggregateAndProof)],
+			},
+		},
+	}
+
+	if err := r.attPool.SaveBlockAttestation(att); err != nil {
+		t.Fatal(err)
 	}
 	if r.validateAggregateAndProof(context.Background(), "", msg) {
 		t.Error("Expected validate to fail")

@@ -86,3 +86,25 @@ func (p *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
 
 	return nil
 }
+
+// HasAggregatedAttestation checks if the input attestations has already existed in cache.
+func (p *AttCaches) HasAggregatedAttestation(att *ethpb.Attestation) (bool, error) {
+	r, err := ssz.HashTreeRoot(att)
+	if err != nil {
+		return false, errors.Wrap(err, "could not tree hash attestation")
+	}
+
+	for k, _ := range p.aggregatedAtt.Items() {
+		if k == string(r[:]) {
+			return true, nil
+		}
+	}
+
+	for k, _ := range p.blockAtt.Items() {
+		if k == string(r[:]) {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
