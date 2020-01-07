@@ -19,7 +19,7 @@ func (vs *Server) ProposeExit(ctx context.Context, req *ethpb.SignedVoluntaryExi
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 
-	// Confirm the validator is eligible to exit with the parameters provided
+	// Confirm the validator is eligible to exit with the parameters provided.
 	err = exit.ValidateVoluntaryExit(s, vs.GenesisTime, req)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
