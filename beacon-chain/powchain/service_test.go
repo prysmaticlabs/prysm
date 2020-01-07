@@ -11,11 +11,15 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	depositcontract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -32,29 +36,57 @@ func (b *badReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.H
 	return nil, errors.New("subscription has failed")
 }
 
-type goodReader struct{}
-
-func (g *goodReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
-	return new(event.Feed).Subscribe(ch), nil
+type goodReader struct {
+	backend *backends.SimulatedBackend
 }
 
-type goodLogger struct{}
+func (g *goodReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
+	if g.backend == nil {
+		return new(event.Feed).Subscribe(ch), nil
+	}
+	headChan := make(chan core.ChainHeadEvent)
+	eventSub := g.backend.Blockchain().SubscribeChainHeadEvent(headChan)
+	feed := new(event.Feed)
+	sub := feed.Subscribe(ch)
+	go func() {
+		for {
+			select {
+			case blk := <-headChan:
+				feed.Send(blk.Block.Header())
+			case <-ctx.Done():
+				eventSub.Unsubscribe()
+				return
+			}
+		}
+	}()
+	return sub, nil
+}
+
+type goodLogger struct {
+	backend *backends.SimulatedBackend
+}
 
 func (g *goodLogger) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error) {
-	return new(event.Feed).Subscribe(ch), nil
+	if g.backend == nil {
+		return new(event.Feed).Subscribe(ch), nil
+	}
+	return g.backend.SubscribeFilterLogs(ctx, q, ch)
 }
 
 func (g *goodLogger) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]gethTypes.Log, error) {
-	logs := make([]gethTypes.Log, 3)
-	for i := 0; i < len(logs); i++ {
-		logs[i].Address = common.Address{}
-		logs[i].Topics = make([]common.Hash, 5)
-		logs[i].Topics[0] = common.Hash{'a'}
-		logs[i].Topics[1] = common.Hash{'b'}
-		logs[i].Topics[2] = common.Hash{'c'}
+	if g.backend == nil {
+		logs := make([]gethTypes.Log, 3)
+		for i := 0; i < len(logs); i++ {
+			logs[i].Address = common.Address{}
+			logs[i].Topics = make([]common.Hash, 5)
+			logs[i].Topics[0] = common.Hash{'a'}
+			logs[i].Topics[1] = common.Hash{'b'}
+			logs[i].Topics[2] = common.Hash{'c'}
 
+		}
+		return logs, nil
 	}
-	return logs, nil
+	return g.backend.FilterLogs(ctx, q)
 }
 
 type goodNotifier struct {
@@ -68,43 +100,54 @@ func (g *goodNotifier) StateFeed() *event.Feed {
 	return g.MockStateFeed
 }
 
-type goodFetcher struct{}
+type goodFetcher struct {
+	backend *backends.SimulatedBackend
+}
 
 func (g *goodFetcher) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
 	if bytes.Equal(hash.Bytes(), common.BytesToHash([]byte{0}).Bytes()) {
 		return nil, fmt.Errorf("expected block hash to be nonzero %v", hash)
 	}
+	if g.backend == nil {
+		return gethTypes.NewBlock(
+			&gethTypes.Header{
+				Number: big.NewInt(0),
+			},
+			[]*gethTypes.Transaction{},
+			[]*gethTypes.Header{},
+			[]*gethTypes.Receipt{},
+		), nil
+	}
+	return g.backend.Blockchain().GetBlockByHash(hash), nil
 
-	block := gethTypes.NewBlock(
-		&gethTypes.Header{
-			Number: big.NewInt(0),
-		},
-		[]*gethTypes.Transaction{},
-		[]*gethTypes.Header{},
-		[]*gethTypes.Receipt{},
-	)
-
-	return block, nil
 }
 
 func (g *goodFetcher) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
-	block := gethTypes.NewBlock(
-		&gethTypes.Header{
-			Number: big.NewInt(15),
-			Time:   150,
-		},
-		[]*gethTypes.Transaction{},
-		[]*gethTypes.Header{},
-		[]*gethTypes.Receipt{},
-	)
+	if g.backend == nil {
+		return gethTypes.NewBlock(
+			&gethTypes.Header{
+				Number: big.NewInt(15),
+				Time:   150,
+			},
+			[]*gethTypes.Transaction{},
+			[]*gethTypes.Header{},
+			[]*gethTypes.Receipt{},
+		), nil
+	}
 
-	return block, nil
+	return g.backend.Blockchain().GetBlockByNumber(number.Uint64()), nil
 }
 
 func (g *goodFetcher) HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error) {
-	return &gethTypes.Header{
-		Number: big.NewInt(0),
-	}, nil
+	if g.backend == nil {
+		return &gethTypes.Header{
+			Number: big.NewInt(0),
+		}, nil
+	}
+	if number == nil {
+		return g.backend.Blockchain().CurrentHeader(), nil
+	}
+	return g.backend.Blockchain().GetHeaderByNumber(number.Uint64()), nil
 }
 
 var depositsReqForChainStart = 64
@@ -113,9 +156,12 @@ func TestNewWeb3Service_OK(t *testing.T) {
 	endpoint := "http://127.0.0.1"
 	ctx := context.Background()
 	var err error
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	if _, err = NewService(ctx, &Web3ServiceConfig{
 		ETH1Endpoint:    endpoint,
 		DepositContract: common.Address{},
+		BeaconDB:        beaconDB,
 	}); err == nil {
 		t.Errorf("passing in an HTTP endpoint should throw an error, received nil")
 	}
@@ -123,6 +169,7 @@ func TestNewWeb3Service_OK(t *testing.T) {
 	if _, err = NewService(ctx, &Web3ServiceConfig{
 		ETH1Endpoint:    endpoint,
 		DepositContract: common.Address{},
+		BeaconDB:        beaconDB,
 	}); err == nil {
 		t.Errorf("passing in a non-ws, wss, or ipc endpoint should throw an error, received nil")
 	}
@@ -130,6 +177,7 @@ func TestNewWeb3Service_OK(t *testing.T) {
 	if _, err = NewService(ctx, &Web3ServiceConfig{
 		ETH1Endpoint:    endpoint,
 		DepositContract: common.Address{},
+		BeaconDB:        beaconDB,
 	}); err != nil {
 		t.Errorf("passing in as ws endpoint should not throw error, received %v", err)
 	}
@@ -137,6 +185,7 @@ func TestNewWeb3Service_OK(t *testing.T) {
 	if _, err = NewService(ctx, &Web3ServiceConfig{
 		ETH1Endpoint:    endpoint,
 		DepositContract: common.Address{},
+		BeaconDB:        beaconDB,
 	}); err != nil {
 		t.Errorf("passing in an ipc endpoint should not throw error, received %v", err)
 	}
@@ -159,6 +208,7 @@ func TestStart_OK(t *testing.T) {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 	web3Service = setDefaultMocks(web3Service)
+	web3Service.rpcClient = &mockPOW.RPCClient{Backend: testAcc.Backend}
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
 	if err != nil {
 		t.Fatal(err)
@@ -179,14 +229,16 @@ func TestStart_OK(t *testing.T) {
 
 func TestStop_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-
 	testAcc, err := contracts.Setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
+		BeaconDB:        beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -211,14 +263,16 @@ func TestStop_OK(t *testing.T) {
 }
 
 func TestInitDataFromContract_OK(t *testing.T) {
-
 	testAcc, err := contracts.Setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
+		BeaconDB:        beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -242,9 +296,12 @@ func TestWeb3Service_BadReader(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint:    endpoint,
 		DepositContract: testAcc.ContractAddr,
+		BeaconDB:        beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -270,19 +327,18 @@ func TestWeb3Service_BadReader(t *testing.T) {
 func TestStatus(t *testing.T) {
 	now := time.Now()
 
-	beforeFiveMinutesAgo := now.Add(-5*time.Minute - 30*time.Second)
-	afterFiveMinutesAgo := now.Add(-5*time.Minute + 30*time.Second)
+	beforeFiveMinutesAgo := uint64(now.Add(-5*time.Minute - 30*time.Second).Unix())
+	afterFiveMinutesAgo := uint64(now.Add(-5*time.Minute + 30*time.Second).Unix())
 
 	testCases := map[*Service]string{
 		// "status is ok" cases
 		{}: "",
-		{isRunning: true, blockTime: afterFiveMinutesAgo}:         "",
-		{isRunning: false, blockTime: beforeFiveMinutesAgo}:       "",
-		{isRunning: false, runError: errors.New("test runError")}: "",
+		{isRunning: true, latestEth1Data: &protodb.LatestETH1Data{BlockTime: afterFiveMinutesAgo}}:   "",
+		{isRunning: false, latestEth1Data: &protodb.LatestETH1Data{BlockTime: beforeFiveMinutesAgo}}: "",
+		{isRunning: false, runError: errors.New("test runError")}:                                    "",
 		// "status is error" cases
-		{isRunning: true, blockTime: beforeFiveMinutesAgo}: "eth1 client is not syncing",
-		{isRunning: true}: "eth1 client is not syncing",
-		{isRunning: true, runError: errors.New("test runError")}: "test runError",
+		{isRunning: true, latestEth1Data: &protodb.LatestETH1Data{BlockTime: beforeFiveMinutesAgo}}: "eth1 client is not syncing",
+		{isRunning: true, runError: errors.New("test runError")}:                                    "test runError",
 	}
 
 	for web3ServiceState, wantedErrorText := range testCases {
@@ -301,9 +357,11 @@ func TestStatus(t *testing.T) {
 
 func TestHandlePanic_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint: endpoint,
+		BeaconDB:     beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)

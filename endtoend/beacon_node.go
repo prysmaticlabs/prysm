@@ -67,6 +67,9 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 	}
 
 	args := []string{
+		"--no-genesis-delay",
+		"--verbosity=debug",
+		"--force-clear-db",
 		"--no-discovery",
 		"--new-cache",
 		"--enable-shuffled-index-cache",

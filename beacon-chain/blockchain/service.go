@@ -21,7 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -39,17 +39,18 @@ type Service struct {
 	beaconDB          db.Database
 	depositCache      *depositcache.DepositCache
 	chainStartFetcher powchain.ChainStartFetcher
-	opsPoolService    operations.OperationFeeds
+	attPool           attestations.Pool
 	forkChoiceStore   forkchoice.ForkChoicer
 	genesisTime       time.Time
 	p2p               p2p.Broadcaster
 	maxRoutines       int64
 	headSlot          uint64
-	headBlock         *ethpb.BeaconBlock
+	headBlock         *ethpb.SignedBeaconBlock
 	headState         *pb.BeaconState
 	canonicalRoots    map[uint64][]byte
 	headLock          sync.RWMutex
 	stateNotifier     statefeed.Notifier
+	genesisRoot       [32]byte
 }
 
 // Config options for the service.
@@ -58,7 +59,7 @@ type Config struct {
 	ChainStartFetcher powchain.ChainStartFetcher
 	BeaconDB          db.Database
 	DepositCache      *depositcache.DepositCache
-	OpsPoolService    operations.OperationFeeds
+	AttPool           attestations.Pool
 	P2p               p2p.Broadcaster
 	MaxRoutines       int64
 	StateNotifier     statefeed.Notifier
@@ -75,7 +76,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		beaconDB:          cfg.BeaconDB,
 		depositCache:      cfg.DepositCache,
 		chainStartFetcher: cfg.ChainStartFetcher,
-		opsPoolService:    cfg.OpsPoolService,
+		attPool:           cfg.AttPool,
 		forkChoiceStore:   store,
 		p2p:               cfg.P2p,
 		canonicalRoots:    make(map[uint64][]byte),
@@ -168,8 +169,8 @@ func (s *Service) Start() {
 // processChainStartTime initializes a series of deposits from the ChainStart deposits in the eth1
 // deposit contract, initializes the beacon chain's state, and kicks off the beacon chain.
 func (s *Service) processChainStartTime(ctx context.Context, genesisTime time.Time) {
-	initialDeposits := s.chainStartFetcher.ChainStartDeposits()
-	if err := s.initializeBeaconChain(ctx, genesisTime, initialDeposits, s.chainStartFetcher.ChainStartEth1Data()); err != nil {
+	preGenesisState := s.chainStartFetcher.PreGenesisState()
+	if err := s.initializeBeaconChain(ctx, genesisTime, preGenesisState, s.chainStartFetcher.ChainStartEth1Data()); err != nil {
 		log.Fatalf("Could not initialize beacon chain: %v", err)
 	}
 	s.stateNotifier.StateFeed().Send(&feed.Event{
@@ -186,7 +187,7 @@ func (s *Service) processChainStartTime(ctx context.Context, genesisTime time.Ti
 func (s *Service) initializeBeaconChain(
 	ctx context.Context,
 	genesisTime time.Time,
-	deposits []*ethpb.Deposit,
+	preGenesisState *pb.BeaconState,
 	eth1data *ethpb.Eth1Data) error {
 	_, span := trace.StartSpan(context.Background(), "beacon-chain.Service.initializeBeaconChain")
 	defer span.End()
@@ -194,7 +195,7 @@ func (s *Service) initializeBeaconChain(
 	s.genesisTime = genesisTime
 	unixTime := uint64(genesisTime.Unix())
 
-	genesisState, err := state.GenesisBeaconState(deposits, unixTime, eth1data)
+	genesisState, err := state.OptimizedGenesisBeaconState(unixTime, preGenesisState, eth1data)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize genesis state")
 	}
@@ -229,18 +230,22 @@ func (s *Service) Status() error {
 }
 
 // This gets called to update canonical root mapping.
-func (s *Service) saveHead(ctx context.Context, b *ethpb.BeaconBlock, r [32]byte) error {
+func (s *Service) saveHead(ctx context.Context, signed *ethpb.SignedBeaconBlock, r [32]byte) error {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
-	s.headSlot = b.Slot
+	if signed == nil || signed.Block == nil {
+		return errors.New("cannot save nil head block")
+	}
 
-	s.canonicalRoots[b.Slot] = r[:]
+	s.headSlot = signed.Block.Slot
+
+	s.canonicalRoots[signed.Block.Slot] = r[:]
 
 	if err := s.beaconDB.SaveHeadBlockRoot(ctx, r); err != nil {
 		return errors.Wrap(err, "could not save head root in DB")
 	}
-	s.headBlock = b
+	s.headBlock = signed
 
 	headState, err := s.beaconDB.State(ctx, r)
 	if err != nil {
@@ -249,7 +254,7 @@ func (s *Service) saveHead(ctx context.Context, b *ethpb.BeaconBlock, r [32]byte
 	s.headState = headState
 
 	log.WithFields(logrus.Fields{
-		"slot":     b.Slot,
+		"slot":     signed.Block.Slot,
 		"headRoot": fmt.Sprintf("%#x", r),
 	}).Debug("Saved new head info")
 	return nil
@@ -258,13 +263,13 @@ func (s *Service) saveHead(ctx context.Context, b *ethpb.BeaconBlock, r [32]byte
 // This gets called to update canonical root mapping. It does not save head block
 // root in DB. With the inception of inital-sync-cache-state flag, it uses finalized
 // check point as anchors to resume sync therefore head is no longer needed to be saved on per slot basis.
-func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.BeaconBlock, r [32]byte) error {
+func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, r [32]byte) error {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
-	s.headSlot = b.Slot
+	s.headSlot = b.Block.Slot
 
-	s.canonicalRoots[b.Slot] = r[:]
+	s.canonicalRoots[b.Block.Slot] = r[:]
 
 	s.headBlock = b
 
@@ -275,7 +280,7 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.BeaconBlock, r [32]
 	s.headState = headState
 
 	log.WithFields(logrus.Fields{
-		"slot":     b.Slot,
+		"slot":     b.Block.Slot,
 		"headRoot": fmt.Sprintf("%#x", r),
 	}).Debug("Saved new head info")
 	return nil
@@ -301,7 +306,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconSt
 		return errors.Wrap(err, "could not tree hash genesis state")
 	}
 	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
-	genesisBlkRoot, err := ssz.SigningRoot(genesisBlk)
+	genesisBlkRoot, err := ssz.HashTreeRoot(genesisBlk.Block)
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}
@@ -327,6 +332,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconSt
 		return errors.Wrap(err, "Could not start fork choice service: %v")
 	}
 
+	s.genesisRoot = genesisBlkRoot
 	s.headBlock = genesisBlk
 	s.headState = genesisState
 	s.canonicalRoots[genesisState.Slot] = genesisBlkRoot[:]
@@ -338,6 +344,19 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconSt
 func (s *Service) initializeChainInfo(ctx context.Context) error {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
+
+	genesisBlock, err := s.beaconDB.GenesisBlock(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get genesis block from db")
+	}
+	if genesisBlock == nil {
+		return errors.New("no genesis block in db")
+	}
+	genesisBlkRoot, err := ssz.HashTreeRoot(genesisBlock.Block)
+	if err != nil {
+		return errors.Wrap(err, "could not get signing root of genesis block")
+	}
+	s.genesisRoot = genesisBlkRoot
 
 	finalized, err := s.beaconDB.FinalizedCheckpoint(ctx)
 	if err != nil {
@@ -357,7 +376,9 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		return errors.Wrap(err, "could not get finalized block from db")
 	}
 
-	s.headSlot = s.headBlock.Slot
+	if s.headBlock != nil && s.headBlock.Block != nil {
+		s.headSlot = s.headBlock.Block.Slot
+	}
 	s.canonicalRoots[s.headSlot] = finalized.Root
 
 	return nil

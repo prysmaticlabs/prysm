@@ -19,6 +19,21 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+var epochState *pb.BeaconState
+
+// sortableIndices implements the Sort interface to sort newly activated validator indices
+// by activation epoch and by index number.
+type sortableIndices []uint64
+
+func (s sortableIndices) Len() int      { return len(s) }
+func (s sortableIndices) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+func (s sortableIndices) Less(i, j int) bool {
+	if epochState.Validators[s[i]].ActivationEligibilityEpoch == epochState.Validators[s[j]].ActivationEligibilityEpoch {
+		return s[i] < s[j]
+	}
+	return epochState.Validators[s[i]].ActivationEligibilityEpoch < epochState.Validators[s[j]].ActivationEligibilityEpoch
+}
+
 // MatchedAttestations is an object that contains the correctly
 // voted attestations based on source, target and head criteria.
 type MatchedAttestations struct {
@@ -117,38 +132,33 @@ func AttestingBalance(state *pb.BeaconState, atts []*pb.PendingAttestation) (uin
 // Spec pseudocode definition:
 //   def process_registry_updates(state: BeaconState) -> None:
 //    # Process activation eligibility and ejections
-//    for index, validator in enumerate(state.validator_registry):
-//        if (
-//            validator.activation_eligibility_epoch == FAR_FUTURE_EPOCH and
-//            validator.effective_balance >= MAX_EFFECTIVE_BALANCE
-//        ):
-//            validator.activation_eligibility_epoch = get_current_epoch(state)
+//    for index, validator in enumerate(state.validators):
+//        if is_eligible_for_activation_queue(validator):
+//            validator.activation_eligibility_epoch = get_current_epoch(state) + 1
 //
 //        if is_active_validator(validator, get_current_epoch(state)) and validator.effective_balance <= EJECTION_BALANCE:
-//            initiate_validator_exit(state, index)
+//            initiate_validator_exit(state, ValidatorIndex(index))
 //
-//    # Queue validators eligible for activation and not dequeued for activation prior to finalized epoch
+//    # Queue validators eligible for activation and not yet dequeued for activation
 //    activation_queue = sorted([
-//        index for index, validator in enumerate(state.validator_registry) if
-//        validator.activation_eligibility_epoch != FAR_FUTURE_EPOCH and
-//        validator.activation_epoch >= get_delayed_activation_exit_epoch(state.finalized_epoch)
-//    ], key=lambda index: state.validator_registry[index].activation_eligibility_epoch)
-//    # Dequeued validators for activation up to churn limit (without resetting activation epoch)
-//    for index in activation_queue[:get_churn_limit(state)]:
-//        validator = state.validator_registry[index]
-//        if validator.activation_epoch == FAR_FUTURE_EPOCH:
-//            validator.activation_epoch = get_delayed_activation_exit_epoch(get_current_epoch(state))
+//        index for index, validator in enumerate(state.validators)
+//        if is_eligible_for_activation(state, validator)
+//        # Order by the sequence of activation_eligibility_epoch setting and then index
+//    ], key=lambda index: (state.validators[index].activation_eligibility_epoch, index))
+//    # Dequeued validators for activation up to churn limit
+//    for index in activation_queue[:get_validator_churn_limit(state)]:
+//        validator = state.validators[index]
+//        validator.activation_epoch = compute_activation_exit_epoch(get_current_epoch(state))
 func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
 
 	var err error
 	for idx, validator := range state.Validators {
 		// Process the validators for activation eligibility.
-		eligibleToActivate := validator.ActivationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch
-		properBalance := validator.EffectiveBalance >= params.BeaconConfig().MaxEffectiveBalance
-		if eligibleToActivate && properBalance {
-			validator.ActivationEligibilityEpoch = currentEpoch
+		if helpers.IsEligibleForActivationQueue(validator) {
+			validator.ActivationEligibilityEpoch = helpers.CurrentEpoch(state) + 1
 		}
+
 		// Process the validators for ejection.
 		isActive := helpers.IsActiveValidator(validator, currentEpoch)
 		belowEjectionBalance := validator.EffectiveBalance <= params.BeaconConfig().EjectionBalance
@@ -160,18 +170,16 @@ func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 		}
 	}
 
-	// Queue the validators whose eligible to activate and sort them by activation eligibility epoch number
+	// Queue validators eligible for activation and not yet dequeued for activation.
 	var activationQ []uint64
 	for idx, validator := range state.Validators {
-		eligibleActivated := validator.ActivationEligibilityEpoch != params.BeaconConfig().FarFutureEpoch
-		canBeActive := validator.ActivationEpoch >= helpers.DelayedActivationExitEpoch(state.FinalizedCheckpoint.Epoch)
-		if eligibleActivated && canBeActive {
+		if helpers.IsEligibleForActivation(state, validator) {
 			activationQ = append(activationQ, uint64(idx))
 		}
 	}
-	sort.Slice(activationQ, func(i, j int) bool {
-		return state.Validators[i].ActivationEligibilityEpoch < state.Validators[j].ActivationEligibilityEpoch
-	})
+
+	epochState = state
+	sort.Sort(sortableIndices(activationQ))
 
 	// Only activate just enough validators according to the activation churn limit.
 	limit := len(activationQ)
@@ -189,12 +197,12 @@ func ProcessRegistryUpdates(state *pb.BeaconState) (*pb.BeaconState, error) {
 	if int(churnLimit) < limit {
 		limit = int(churnLimit)
 	}
+
 	for _, index := range activationQ[:limit] {
 		validator := state.Validators[index]
-		if validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
-			validator.ActivationEpoch = helpers.DelayedActivationExitEpoch(currentEpoch)
-		}
+		validator.ActivationEpoch = helpers.DelayedActivationExitEpoch(currentEpoch)
 	}
+
 	return state, nil
 }
 
