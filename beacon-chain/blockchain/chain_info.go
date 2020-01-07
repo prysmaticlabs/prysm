@@ -191,7 +191,7 @@ func (s *Service) CurrentFork() *pb.Fork {
 	return proto.Clone(s.headState.Fork).(*pb.Fork)
 }
 
-// Participation returns the participation stats of a given epoch
+// Participation returns the participation stats of a given epoch.
 func (s *Service) Participation(epoch uint64) *precompute.Balance {
 	s.epochParticipationLock.RLock()
 	defer s.epochParticipationLock.RUnlock()
