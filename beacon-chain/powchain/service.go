@@ -456,6 +456,8 @@ func (s *Service) processSubscribedHeaders(header *gethTypes.Header) {
 	}
 }
 
+// batchRequestHeaders requests the block range specified in the arguments. Instead of requesting
+// each block in one call, it batches all requests into a single rpc call.
 func (s *Service) batchRequestHeaders(startBlock uint64, endBlock uint64) ([]*gethTypes.Header, error) {
 	requestRange := (endBlock - startBlock) + 1
 	elems := make([]rpc.BatchElem, 0, requestRange)
