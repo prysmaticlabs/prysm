@@ -75,7 +75,7 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 		return nil, status.Errorf(codes.InvalidArgument, "Validator is not an aggregator")
 	}
 
-	// Retrieve the unaggregated attestation from pool
+	// Retrieve the unaggregated attestation from pool.
 	aggregatedAtts := as.AttPool.AggregatedAttestationsBySlotIndex(req.Slot, req.CommitteeIndex)
 
 	for _, aggregatedAtt := range aggregatedAtts {

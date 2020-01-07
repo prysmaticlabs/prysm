@@ -19,7 +19,6 @@ import (
 )
 
 func TestSub(t *testing.T) {
-
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
@@ -70,7 +69,7 @@ func TestSub(t *testing.T) {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 
-	// Ensure the state notification was broadcast
+	// Ensure the state notification was broadcast.
 	notificationFound := false
 	for !notificationFound {
 		select {
