@@ -33,20 +33,22 @@ type Service struct {
 
 // Config options for the archiver service.
 type Config struct {
-	BeaconDB      db.Database
-	HeadFetcher   blockchain.HeadFetcher
-	StateNotifier statefeed.Notifier
+	BeaconDB             db.Database
+	HeadFetcher          blockchain.HeadFetcher
+	ParticipationFetcher blockchain.ParticipationFetcher
+	StateNotifier        statefeed.Notifier
 }
 
 // NewArchiverService initializes the service from configuration options.
 func NewArchiverService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:           ctx,
-		cancel:        cancel,
-		beaconDB:      cfg.BeaconDB,
-		headFetcher:   cfg.HeadFetcher,
-		stateNotifier: cfg.StateNotifier,
+		ctx:                  ctx,
+		cancel:               cancel,
+		beaconDB:             cfg.BeaconDB,
+		headFetcher:          cfg.HeadFetcher,
+		participationFetcher: cfg.ParticipationFetcher,
+		stateNotifier:        cfg.StateNotifier,
 	}
 }
 
