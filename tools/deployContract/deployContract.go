@@ -171,7 +171,7 @@ func main() {
 		}).Info("New contract deployed")
 
 		if k8sConfigMapName != "" {
-			if err := updateKubernetesConfigMap(k8sConfigMapName, addr.Hex()); err != nil {
+			if err := updateKubernetesConfigMap(addr.Hex()); err != nil {
 				log.Fatalf("Failed to update kubernetes config map: %v", err)
 			} else {
 				log.Printf("Updated config map %s", k8sConfigMapName)
@@ -187,7 +187,7 @@ func main() {
 
 // updateKubernetesConfigMap in the beacon-chain namespace. This specifically
 // updates the data value for DEPOSIT_CONTRACT_ADDRESS.
-func updateKubernetesConfigMap(configMapName string, contractAddr string) error {
+func updateKubernetesConfigMap(contractAddr string) error {
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		return err

@@ -2,9 +2,6 @@ package validator
 
 import (
 	"context"
-	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
-	"github.com/prysmaticlabs/prysm/shared/stateutil"
-
 	"math/big"
 	"strings"
 	"testing"
@@ -20,10 +17,12 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
+	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )

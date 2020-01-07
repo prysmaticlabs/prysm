@@ -105,7 +105,7 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 
 	resp.Eth1DepositBlockNumber = eth1BlockNumBigInt.Uint64()
 
-	depositBlockSlot, err := vs.depositBlockSlot(ctx, headState.Slot, eth1BlockNumBigInt, headState)
+	depositBlockSlot, err := vs.depositBlockSlot(ctx, eth1BlockNumBigInt, headState)
 	if err != nil {
 		return resp
 	}
@@ -176,12 +176,7 @@ func (vs *Server) assignmentStatus(validatorIdx uint64, beaconState *pbp2p.Beaco
 	return status
 }
 
-func (vs *Server) depositBlockSlot(
-	ctx context.Context,
-	currentSlot uint64,
-	eth1BlockNumBigInt *big.Int,
-	beaconState *pbp2p.BeaconState,
-) (uint64, error) {
+func (vs *Server) depositBlockSlot(ctx context.Context, eth1BlockNumBigInt *big.Int, beaconState *pbp2p.BeaconState, ) (uint64, error) {
 	blockTimeStamp, err := vs.BlockFetcher.BlockTimeByHeight(ctx, eth1BlockNumBigInt)
 	if err != nil {
 		return 0, err
