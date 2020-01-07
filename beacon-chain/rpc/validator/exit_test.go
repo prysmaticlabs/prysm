@@ -37,7 +37,7 @@ func TestSub(t *testing.T) {
 		t.Fatalf("Could not get signing root %v", err)
 	}
 
-	// Set genesis time to be 100 epochs ago
+	// Set genesis time to be 100 epochs ago.
 	genesisTime := time.Now().Add(time.Duration(-100*int64(params.BeaconConfig().SecondsPerSlot*params.BeaconConfig().SlotsPerEpoch)) * time.Second)
 	mockChainService := &mockChain.ChainService{State: beaconState, Root: genesisRoot[:], Genesis: genesisTime}
 	server := &Server{
