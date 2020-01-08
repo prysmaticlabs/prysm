@@ -31,6 +31,7 @@ go_test(
     srcs = [
         "attestation_data_test.go",
         "checkpoint_state_test.go",
+        "committee_fuzz_test.go",
         "committee_test.go",
         "eth1_data_test.go",
         "feature_flag_test.go",
@@ -44,6 +45,7 @@ go_test(
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
+        "@com_github_google_gofuzz//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
     ],
 )
