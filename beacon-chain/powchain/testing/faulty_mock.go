@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
@@ -20,11 +21,6 @@ type FaultyMockPOWChain struct {
 // Eth2GenesisPowchainInfo --
 func (f *FaultyMockPOWChain) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 	return 0, big.NewInt(0)
-}
-
-// ChainStartFeed --
-func (f *FaultyMockPOWChain) ChainStartFeed() *event.Feed {
-	return f.ChainFeed
 }
 
 // LatestBlockHeight --
@@ -62,8 +58,8 @@ func (f *FaultyMockPOWChain) DepositRoot() [32]byte {
 }
 
 // DepositTrie --
-func (f *FaultyMockPOWChain) DepositTrie() *trieutil.MerkleTrie {
-	return &trieutil.MerkleTrie{}
+func (f *FaultyMockPOWChain) DepositTrie() *trieutil.SparseMerkleTrie {
+	return &trieutil.SparseMerkleTrie{}
 }
 
 // ChainStartDeposits --
@@ -71,14 +67,14 @@ func (f *FaultyMockPOWChain) ChainStartDeposits() []*ethpb.Deposit {
 	return []*ethpb.Deposit{}
 }
 
-// ChainStartDepositHashes --
-func (f *FaultyMockPOWChain) ChainStartDepositHashes() ([][]byte, error) {
-	return [][]byte{}, errors.New("hashing failed")
-}
-
 // ChainStartEth1Data --
 func (f *FaultyMockPOWChain) ChainStartEth1Data() *ethpb.Eth1Data {
 	return &ethpb.Eth1Data{}
+}
+
+// PreGenesisState --
+func (f *FaultyMockPOWChain) PreGenesisState() *pb.BeaconState {
+	return &pb.BeaconState{}
 }
 
 // IsConnectedToETH1 --

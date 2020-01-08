@@ -58,16 +58,11 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		err = localTrie.InsertIntoTrie(item[:], i)
-		if err != nil {
-			t.Error(err)
-		}
-
+		localTrie.Insert(item[:], i)
 		depRoot, err = testAcc.Contract.GetDepositRoot(&bind.CallOpts{})
 		if err != nil {
 			t.Fatal(err)
 		}
-
 		if depRoot != localTrie.HashTreeRoot() {
 			t.Errorf("Local deposit trie root and contract deposit trie root are not equal for index %d. Expected %#x , Got %#x", i, depRoot, localTrie.Root())
 		}
@@ -114,7 +109,7 @@ func TestDepositTrieRoot_Fail(t *testing.T) {
 		}
 
 		// Change an element in the data when storing locally
-		copy(data.PublicKey, []byte(strconv.Itoa(i+10)))
+		copy(data.PublicKey, strconv.Itoa(i+10))
 
 		testAcc.Backend.Commit()
 		item, err := ssz.HashTreeRoot(data)
@@ -122,10 +117,7 @@ func TestDepositTrieRoot_Fail(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		err = localTrie.InsertIntoTrie(item[:], i)
-		if err != nil {
-			t.Error(err)
-		}
+		localTrie.Insert(item[:], i)
 
 		depRoot, err = testAcc.Contract.GetDepositRoot(&bind.CallOpts{})
 		if err != nil {

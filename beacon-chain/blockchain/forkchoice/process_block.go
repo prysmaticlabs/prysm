@@ -5,12 +5,12 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
@@ -18,7 +18,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
@@ -51,14 +50,21 @@ import (
 //
 //    # Update justified checkpoint
 //    if state.current_justified_checkpoint.epoch > store.justified_checkpoint.epoch:
-//        store.justified_checkpoint = state.current_justified_checkpoint
+//        if state.current_justified_checkpoint.epoch > store.best_justified_checkpoint.epoch:
+//            store.best_justified_checkpoint = state.current_justified_checkpoint
 //
 //    # Update finalized checkpoint
 //    if state.finalized_checkpoint.epoch > store.finalized_checkpoint.epoch:
 //        store.finalized_checkpoint = state.finalized_checkpoint
-func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
+func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "forkchoice.onBlock")
 	defer span.End()
+
+	if signed == nil || signed.Block == nil {
+		return errors.New("nil block")
+	}
+
+	b := signed.Block
 
 	// Retrieve incoming block's pre state.
 	preState, err := s.getBlockPreState(ctx, b)
@@ -67,7 +73,7 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	}
 	preStateValidatorCount := len(preState.Validators)
 
-	root, err := ssz.SigningRoot(b)
+	root, err := ssz.HashTreeRoot(b)
 	if err != nil {
 		return errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
 	}
@@ -75,15 +81,12 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 		"slot": b.Slot,
 		"root": fmt.Sprintf("0x%s...", hex.EncodeToString(root[:])[:8]),
 	}).Info("Executing state transition on block")
-	postState, err := state.ExecuteStateTransition(ctx, preState, b)
+	postState, err := state.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")
 	}
-	if err := s.updateBlockAttestationsVotes(ctx, b.Body.Attestations); err != nil {
-		return errors.Wrap(err, "could not update votes for attestations in block")
-	}
 
-	if err := s.db.SaveBlock(ctx, b); err != nil {
+	if err := s.db.SaveBlock(ctx, signed); err != nil {
 		return errors.Wrapf(err, "could not save block from slot %d", b.Slot)
 	}
 	if err := s.db.SaveState(ctx, postState, root); err != nil {
@@ -91,25 +94,20 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	}
 
 	// Update justified check point.
-	if postState.CurrentJustifiedCheckpoint.Epoch > s.JustifiedCheckpt().Epoch {
-		s.justifiedCheckpt = postState.CurrentJustifiedCheckpoint
-		if err := s.db.SaveJustifiedCheckpoint(ctx, postState.CurrentJustifiedCheckpoint); err != nil {
-			return errors.Wrap(err, "could not save justified checkpoint")
+	if postState.CurrentJustifiedCheckpoint.Epoch > s.justifiedCheckpt.Epoch {
+		if err := s.updateJustified(ctx, postState); err != nil {
+			return err
 		}
 	}
 
 	// Update finalized check point.
 	// Prune the block cache and helper caches on every new finalized epoch.
 	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
-		s.clearSeenAtts()
 		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint); err != nil {
 			return errors.Wrap(err, "could not save finalized checkpoint")
 		}
 
-		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch) + 1
-		if featureconfig.Get().PruneEpochBoundaryStates {
-			startSlot = helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
-		}
+		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 		if endSlot > startSlot {
 			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
@@ -132,16 +130,18 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 	}
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.
-	if helpers.IsEpochStart(postState.Slot) {
+	if postState.Slot >= s.nextEpochBoundarySlot {
 		logEpochData(postState)
 		reportEpochMetrics(postState)
 
-		// Update committee shuffled indices at the end of every epoch
+		// Update committees cache at epoch boundary slot.
 		if featureconfig.Get().EnableNewCache {
-			if err := helpers.UpdateCommitteeCache(postState); err != nil {
+			if err := helpers.UpdateCommitteeCache(postState, helpers.CurrentEpoch(postState)); err != nil {
 				return err
 			}
 		}
+
+		s.nextEpochBoundarySlot = helpers.StartSlot(helpers.NextEpoch(postState))
 	}
 
 	return nil
@@ -151,9 +151,15 @@ func (s *Store) OnBlock(ctx context.Context, b *ethpb.BeaconBlock) error {
 // It runs state transition on the block and without any BLS verification. The BLS verification
 // includes proposer signature, randao and attestation's aggregated signature. It also does not save
 // attestations.
-func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.BeaconBlock) error {
+func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, signed *ethpb.SignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "forkchoice.onBlock")
 	defer span.End()
+
+	if signed == nil || signed.Block == nil {
+		return errors.New("nil block")
+	}
+
+	b := signed.Block
 
 	s.initSyncStateLock.Lock()
 	defer s.initSyncStateLock.Unlock()
@@ -167,15 +173,15 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.
 
 	log.WithField("slot", b.Slot).Debug("Executing state transition on block")
 
-	postState, err := state.ExecuteStateTransitionNoVerify(ctx, preState, b)
+	postState, err := state.ExecuteStateTransitionNoVerify(ctx, preState, signed)
 	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")
 	}
 
-	if err := s.db.SaveBlock(ctx, b); err != nil {
+	if err := s.db.SaveBlock(ctx, signed); err != nil {
 		return errors.Wrapf(err, "could not save block from slot %d", b.Slot)
 	}
-	root, err := ssz.SigningRoot(b)
+	root, err := ssz.HashTreeRoot(b)
 	if err != nil {
 		return errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
 	}
@@ -189,22 +195,16 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.
 	}
 
 	// Update justified check point.
-	if postState.CurrentJustifiedCheckpoint.Epoch > s.JustifiedCheckpt().Epoch {
-		s.justifiedCheckpt = postState.CurrentJustifiedCheckpoint
-		if err := s.db.SaveJustifiedCheckpoint(ctx, postState.CurrentJustifiedCheckpoint); err != nil {
-			return errors.Wrap(err, "could not save justified checkpoint")
+	if postState.CurrentJustifiedCheckpoint.Epoch > s.justifiedCheckpt.Epoch {
+		if err := s.updateJustified(ctx, postState); err != nil {
+			return err
 		}
 	}
 
 	// Update finalized check point.
 	// Prune the block cache and helper caches on every new finalized epoch.
 	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
-		s.clearSeenAtts()
-
-		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch) + 1
-		if featureconfig.Get().PruneEpochBoundaryStates {
-			startSlot = helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
-		}
+		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 		if endSlot > startSlot {
 			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
@@ -238,15 +238,10 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.
 	}
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.
-	if helpers.IsEpochStart(postState.Slot) {
+	if postState.Slot >= s.nextEpochBoundarySlot {
 		reportEpochMetrics(postState)
 
-		// Update committee shuffled indices at the end of every epoch
-		if featureconfig.Get().EnableNewCache {
-			if err := helpers.UpdateCommitteeCache(postState); err != nil {
-				return err
-			}
-		}
+		s.nextEpochBoundarySlot = helpers.StartSlot(helpers.NextEpoch(postState))
 	}
 
 	return nil
@@ -283,57 +278,6 @@ func (s *Store) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*pb
 	return preState, nil
 }
 
-// updateBlockAttestationsVotes checks the attestations in block and filter out the seen ones,
-// the unseen ones get passed to updateBlockAttestationVote for updating fork choice votes.
-func (s *Store) updateBlockAttestationsVotes(ctx context.Context, atts []*ethpb.Attestation) error {
-	s.seenAttsLock.Lock()
-	defer s.seenAttsLock.Unlock()
-
-	for _, att := range atts {
-		// If we have not seen the attestation yet
-		r, err := hashutil.HashProto(att)
-		if err != nil {
-			return err
-		}
-		if s.seenAtts[r] {
-			continue
-		}
-		if err := s.updateBlockAttestationVote(ctx, att); err != nil {
-			log.WithError(err).Warn("Attestation failed to update vote")
-		}
-		s.seenAtts[r] = true
-	}
-	return nil
-}
-
-// updateBlockAttestationVotes checks the attestation to update validator's latest votes.
-func (s *Store) updateBlockAttestationVote(ctx context.Context, att *ethpb.Attestation) error {
-	tgt := att.Data.Target
-	baseState, err := s.db.State(ctx, bytesutil.ToBytes32(tgt.Root))
-	if err != nil {
-		return errors.Wrap(err, "could not get state for attestation tgt root")
-	}
-	if baseState == nil {
-		return errors.New("no state found in db with attestation tgt root")
-	}
-	indexedAtt, err := blocks.ConvertToIndexed(ctx, baseState, att)
-	if err != nil {
-		return errors.Wrap(err, "could not convert attestation to indexed attestation")
-	}
-	s.voteLock.Lock()
-	defer s.voteLock.Unlock()
-	for _, i := range append(indexedAtt.CustodyBit_0Indices, indexedAtt.CustodyBit_1Indices...) {
-		vote, ok := s.latestVoteMap[i]
-		if !ok || tgt.Epoch > vote.Epoch {
-			s.latestVoteMap[i] = &pb.ValidatorLatestVote{
-				Epoch: tgt.Epoch,
-				Root:  tgt.Root,
-			}
-		}
-	}
-	return nil
-}
-
 // verifyBlkPreState validates input block has a valid pre-state.
 func (s *Store) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (*pb.BeaconState, error) {
 	preState, err := s.db.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
@@ -352,10 +296,11 @@ func (s *Store) verifyBlkDescendant(ctx context.Context, root [32]byte, slot uin
 	ctx, span := trace.StartSpan(ctx, "forkchoice.verifyBlkDescendant")
 	defer span.End()
 
-	finalizedBlk, err := s.db.Block(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root))
-	if err != nil || finalizedBlk == nil {
+	finalizedBlkSigned, err := s.db.Block(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root))
+	if err != nil || finalizedBlkSigned == nil || finalizedBlkSigned.Block == nil {
 		return errors.Wrap(err, "could not get finalized block")
 	}
+	finalizedBlk := finalizedBlkSigned.Block
 
 	bFinalizedRoot, err := s.ancestor(ctx, root[:], finalizedBlk.Slot)
 	if err != nil {
@@ -416,30 +361,21 @@ func (s *Store) saveNewBlockAttestations(ctx context.Context, atts []*ethpb.Atte
 	return nil
 }
 
-// clearSeenAtts clears seen attestations map, it gets called upon new finalization.
-func (s *Store) clearSeenAtts() {
-	s.seenAttsLock.Lock()
-	s.seenAttsLock.Unlock()
-	s.seenAtts = make(map[[32]byte]bool)
-}
-
 // rmStatesOlderThanLastFinalized deletes the states in db since last finalized check point.
 func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot uint64, endSlot uint64) error {
 	ctx, span := trace.StartSpan(ctx, "forkchoice.rmStatesBySlots")
 	defer span.End()
 
 	// Make sure start slot is not a skipped slot
-	if featureconfig.Get().PruneEpochBoundaryStates {
-		for i := startSlot; i > 0; i-- {
-			filter := filters.NewFilter().SetStartSlot(i).SetEndSlot(i)
-			b, err := s.db.Blocks(ctx, filter)
-			if err != nil {
-				return err
-			}
-			if len(b) > 0 {
-				startSlot = i
-				break
-			}
+	for i := startSlot; i > 0; i-- {
+		filter := filters.NewFilter().SetStartSlot(i).SetEndSlot(i)
+		b, err := s.db.Blocks(ctx, filter)
+		if err != nil {
+			return err
+		}
+		if len(b) > 0 {
+			startSlot = i
+			break
 		}
 	}
 
@@ -471,11 +407,92 @@ func (s *Store) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot ui
 		return err
 	}
 
+	roots, err = s.filterBlockRoots(ctx, roots)
+	if err != nil {
+		return err
+	}
+
 	if err := s.db.DeleteStates(ctx, roots); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// shouldUpdateCurrentJustified prevents bouncing attack, by only update conflicting justified
+// checkpoints in the fork choice if in the early slots of the epoch.
+// Otherwise, delay incorporation of new justified checkpoint until next epoch boundary.
+// See https://ethresear.ch/t/prevention-of-bouncing-attack-on-ffg/6114 for more detailed analysis and discussion.
+func (s *Store) shouldUpdateCurrentJustified(ctx context.Context, newJustifiedCheckpt *ethpb.Checkpoint) (bool, error) {
+	if helpers.SlotsSinceEpochStarts(s.currentSlot()) < params.BeaconConfig().SafeSlotsToUpdateJustified {
+		return true, nil
+	}
+	newJustifiedBlockSigned, err := s.db.Block(ctx, bytesutil.ToBytes32(newJustifiedCheckpt.Root))
+	if err != nil {
+		return false, err
+	}
+	if newJustifiedBlockSigned == nil || newJustifiedBlockSigned.Block == nil {
+		return false, errors.New("nil new justified block")
+	}
+	newJustifiedBlock := newJustifiedBlockSigned.Block
+	if newJustifiedBlock.Slot <= helpers.StartSlot(s.justifiedCheckpt.Epoch) {
+		return false, nil
+	}
+	justifiedBlockSigned, err := s.db.Block(ctx, bytesutil.ToBytes32(s.justifiedCheckpt.Root))
+	if err != nil {
+		return false, err
+	}
+	if justifiedBlockSigned == nil || justifiedBlockSigned.Block == nil {
+		return false, errors.New("nil justified block")
+	}
+	justifiedBlock := justifiedBlockSigned.Block
+	b, err := s.ancestor(ctx, newJustifiedCheckpt.Root, justifiedBlock.Slot)
+	if err != nil {
+		return false, err
+	}
+	if !bytes.Equal(b, s.justifiedCheckpt.Root) {
+		return false, nil
+	}
+	return true, nil
+}
+
+func (s *Store) updateJustified(ctx context.Context, state *pb.BeaconState) error {
+	if state.CurrentJustifiedCheckpoint.Epoch > s.bestJustifiedCheckpt.Epoch {
+		s.bestJustifiedCheckpt = state.CurrentJustifiedCheckpoint
+	}
+	canUpdate, err := s.shouldUpdateCurrentJustified(ctx, state.CurrentJustifiedCheckpoint)
+	if err != nil {
+		return err
+	}
+	if canUpdate {
+		s.justifiedCheckpt = state.CurrentJustifiedCheckpoint
+	}
+
+	if featureconfig.Get().InitSyncCacheState {
+		justifiedRoot := bytesutil.ToBytes32(state.CurrentJustifiedCheckpoint.Root)
+		justifiedState := s.initSyncState[justifiedRoot]
+		if err := s.db.SaveState(ctx, justifiedState, justifiedRoot); err != nil {
+			return errors.Wrap(err, "could not save justified state")
+		}
+	}
+
+	return s.db.SaveJustifiedCheckpoint(ctx, state.CurrentJustifiedCheckpoint)
+}
+
+// currentSlot returns the current slot based on time.
+func (s *Store) currentSlot() uint64 {
+	return (uint64(time.Now().Unix()) - s.genesisTime) / params.BeaconConfig().SecondsPerSlot
+}
+
+// updates justified check point in store if a better check point is known
+func (s *Store) updateJustifiedCheckpoint() {
+	// Update at epoch boundary slot only
+	if !helpers.IsEpochStart(s.currentSlot()) {
+		return
+	}
+	if s.bestJustifiedCheckpt.Epoch > s.justifiedCheckpt.Epoch {
+		s.justifiedCheckpt = s.bestJustifiedCheckpt
+	}
 }
 
 // This receives cached state in memory for initial sync only during initial sync.
@@ -524,4 +541,32 @@ func (s *Store) saveInitState(ctx context.Context, state *pb.BeaconState) error 
 		}
 	}
 	return nil
+}
+
+// This filters block roots that are not known as head root and finalized root in DB.
+// It serves as the last line of defence before we prune states.
+func (s *Store) filterBlockRoots(ctx context.Context, roots [][32]byte) ([][32]byte, error) {
+	f, err := s.db.FinalizedCheckpoint(ctx)
+	if err != nil {
+		return nil, err
+	}
+	fRoot := f.Root
+	h, err := s.db.HeadBlock(ctx)
+	if err != nil {
+		return nil, err
+	}
+	hRoot, err := ssz.SigningRoot(h)
+	if err != nil {
+		return nil, err
+	}
+
+	filtered := make([][32]byte, 0, len(roots))
+	for _, root := range roots {
+		if bytes.Equal(root[:], fRoot[:]) || bytes.Equal(root[:], hRoot[:]) {
+			continue
+		}
+		filtered = append(filtered, root)
+	}
+
+	return filtered, nil
 }

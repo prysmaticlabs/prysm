@@ -10,9 +10,8 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -28,15 +27,14 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	defer span.End()
 
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
-	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
 
-	assignment, err := v.assignment(pubKey)
+	duty, err := v.duty(pubKey)
 	if err != nil {
 		log.Errorf("Could not fetch validator assignment: %v", err)
 		return
 	}
 
-	indexInCommittee, err := v.indexInCommittee(ctx, pubKey, assignment)
+	indexInCommittee, validatorIndex, err := v.indexInCommittee(pubKey, duty)
 	if err != nil {
 		log.Errorf("Could not get validator index in assignment: %v", err)
 		return
@@ -47,17 +45,15 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	// https://github.com/ethereum/eth2.0-specs/blob/v0.9.0/specs/validator/0_beacon-chain-validator.md#attesting
 	v.waitToOneThird(ctx, slot)
 
-	req := &pb.AttestationRequest{
+	req := &ethpb.AttestationDataRequest{
 		Slot:           slot,
-		CommitteeIndex: assignment.CommitteeIndex,
+		CommitteeIndex: duty.CommitteeIndex,
 	}
-	data, err := v.attesterClient.RequestAttestation(ctx, req)
+	data, err := v.validatorClient.GetAttestationData(ctx, req)
 	if err != nil {
 		log.Errorf("Could not request attestation to sign at slot %d: %v", slot, err)
 		return
 	}
-	log = log.WithField("slot", data.Slot)
-	log = log.WithField("committeeIndex", data.CommitteeIndex)
 
 	sig, err := v.signAtt(ctx, pubKey, data)
 	if err != nil {
@@ -65,28 +61,28 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
-	custodyBitfield := bitfield.NewBitlist(uint64(len(assignment.Committee)))
-	aggregationBitfield := bitfield.NewBitlist(uint64(len(assignment.Committee)))
+	aggregationBitfield := bitfield.NewBitlist(uint64(len(duty.Committee)))
 	aggregationBitfield.SetBitAt(indexInCommittee, true)
 	attestation := &ethpb.Attestation{
 		Data:            data,
-		CustodyBits:     custodyBitfield,
 		AggregationBits: aggregationBitfield,
 		Signature:       sig,
 	}
 
-	attResp, err := v.attesterClient.SubmitAttestation(ctx, attestation)
+	attResp, err := v.validatorClient.ProposeAttestation(ctx, attestation)
 	if err != nil {
 		log.Errorf("Could not submit attestation to beacon node: %v", err)
 		return
 	}
 
-	headRoot := fmt.Sprintf("%#x", bytesutil.Trunc(data.BeaconBlockRoot))
-	log.WithField("headRoot", headRoot).Info("Submitted new attestation")
+	if err := v.saveAttesterIndexToData(data, validatorIndex); err != nil {
+		log.Errorf("Could not save validator index for logging: %v", err)
+		return
+	}
 
 	span.AddAttributes(
 		trace.Int64Attribute("slot", int64(slot)),
-		trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attResp.Root)),
+		trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attResp.AttestationDataRoot)),
 		trace.Int64Attribute("committeeIndex", int64(data.CommitteeIndex)),
 		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", data.BeaconBlockRoot)),
 		trace.Int64Attribute("justifiedEpoch", int64(data.Source.Epoch)),
@@ -113,57 +109,74 @@ func (v *validator) waitToOneThird(ctx context.Context, slot uint64) {
 }
 
 // Given the validator public key, this gets the validator assignment.
-func (v *validator) assignment(pubKey [48]byte) (*pb.AssignmentResponse_ValidatorAssignment, error) {
-	if v.assignments == nil {
-		return nil, errors.New("no assignments for validators")
+func (v *validator) duty(pubKey [48]byte) (*ethpb.DutiesResponse_Duty, error) {
+	if v.duties == nil {
+		return nil, errors.New("no duties for validators")
 	}
 
-	for _, assign := range v.assignments.ValidatorAssignment {
-		if bytes.Equal(pubKey[:], assign.PublicKey) {
-			return assign, nil
+	for _, duty := range v.duties.Duties {
+		if bytes.Equal(pubKey[:], duty.PublicKey) {
+			return duty, nil
 		}
 	}
 
-	return nil, fmt.Errorf("pubkey %#x not in assignment", bytesutil.Trunc(pubKey[:]))
+	return nil, fmt.Errorf("pubkey %#x not in duties", bytesutil.Trunc(pubKey[:]))
 }
 
 // This returns the index of validator's position in a committee. It's used to construct aggregation and
 // custody bit fields.
-func (v *validator) indexInCommittee(
-	ctx context.Context,
-	pubKey [48]byte,
-	assignment *pb.AssignmentResponse_ValidatorAssignment) (uint64, error) {
-	res, err := v.validatorClient.ValidatorIndex(ctx, &pb.ValidatorIndexRequest{PublicKey: pubKey[:]})
-	if err != nil {
-		return 0, err
-	}
+func (v *validator) indexInCommittee(pubKey [48]byte, duty *ethpb.DutiesResponse_Duty) (uint64, uint64, error) {
+	v.pubKeyToIDLock.RLock()
+	defer v.pubKeyToIDLock.RUnlock()
 
-	for i, validatorIndex := range assignment.Committee {
-		if validatorIndex == res.Index {
-			return uint64(i), nil
+	index := v.pubKeyToID[pubKey]
+	for i, validatorIndex := range duty.Committee {
+		if validatorIndex == index {
+			return uint64(i), index, nil
 		}
 	}
 
-	return 0, fmt.Errorf("index %d not in committee", res.Index)
+	return 0, 0, fmt.Errorf("index %d not in committee", index)
 }
 
 // Given validator's public key, this returns the signature of an attestation data.
 func (v *validator) signAtt(ctx context.Context, pubKey [48]byte, data *ethpb.AttestationData) ([]byte, error) {
-	domain, err := v.validatorClient.DomainData(ctx, &pb.DomainRequest{Epoch: data.Target.Epoch, Domain: params.BeaconConfig().DomainBeaconAttester})
-	if err != nil {
-		return nil, err
-	}
-	attDataAndCustodyBit := &pbp2p.AttestationDataAndCustodyBit{
-		Data: data,
-		// Default is false until phase 1 where proof of custody gets implemented.
-		CustodyBit: false,
-	}
-
-	root, err := ssz.HashTreeRoot(attDataAndCustodyBit)
+	domain, err := v.validatorClient.DomainData(ctx, &ethpb.DomainRequest{
+		Epoch:  data.Target.Epoch,
+		Domain: params.BeaconConfig().DomainBeaconAttester,
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	sig := v.keys[pubKey].SecretKey.Sign(root[:], domain.SignatureDomain)
+	root, err := ssz.HashTreeRoot(data)
+	if err != nil {
+		return nil, err
+	}
+
+	sig, err := v.keyManager.Sign(pubKey, root, domain.SignatureDomain)
+	if err != nil {
+		return nil, err
+	}
+
 	return sig.Marshal(), nil
+}
+
+// For logging, this saves the last submitted attester index to its attestation data. The purpose of this
+// is to enhance attesting logs to be readable when multiple validator keys ran in a single client.
+func (v *validator) saveAttesterIndexToData(data *ethpb.AttestationData, index uint64) error {
+	v.attLogsLock.Lock()
+	defer v.attLogsLock.Unlock()
+
+	h, err := hashutil.HashProto(data)
+	if err != nil {
+		return err
+	}
+
+	if v.attLogs[h] == nil {
+		v.attLogs[h] = &attSubmitted{data, []uint64{}, []uint64{}}
+	}
+	v.attLogs[h] = &attSubmitted{data, append(v.attLogs[h].attesterIndices, index), []uint64{}}
+
+	return nil
 }

@@ -2,25 +2,27 @@ package cache
 
 import (
 	"reflect"
+	"sort"
 	"strconv"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestCommitteeKeyFn_OK(t *testing.T) {
-	item := &Committee{
-		Epoch:          999,
-		CommitteeCount: 1,
-		Committee:      []uint64{1, 2, 3, 4, 5},
+	item := &Committees{
+		CommitteeCount:  1,
+		Seed:            [32]byte{'A'},
+		ShuffledIndices: []uint64{1, 2, 3, 4, 5},
 	}
 
-	key, err := committeeKeyFn(item)
+	k, err := committeeKeyFn(item)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if key != strconv.Itoa(int(item.Epoch)) {
-		t.Errorf("Incorrect hash key: %s, expected %s", key, strconv.Itoa(int(item.Epoch)))
+	if k != key(item.Seed) {
+		t.Errorf("Incorrect hash k: %s, expected %s", k, key(item.Seed))
 	}
 }
 
@@ -32,17 +34,17 @@ func TestCommitteeKeyFn_InvalidObj(t *testing.T) {
 }
 
 func TestCommitteeCache_CommitteesByEpoch(t *testing.T) {
-	cache := NewCommitteeCache()
+	cache := NewCommitteesCache()
 
-	item := &Committee{
-		Epoch:          1,
-		Committee:      []uint64{1, 2, 3, 4, 5, 6},
-		CommitteeCount: 3,
+	item := &Committees{
+		ShuffledIndices: []uint64{1, 2, 3, 4, 5, 6},
+		Seed:            [32]byte{'A'},
+		CommitteeCount:  3,
 	}
 
-	slot := uint64(item.Epoch * params.BeaconConfig().SlotsPerEpoch)
+	slot := params.BeaconConfig().SlotsPerEpoch
 	committeeIndex := uint64(1)
-	indices, err := cache.ShuffledIndices(slot, committeeIndex)
+	indices, err := cache.Committee(slot, item.Seed, committeeIndex)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,102 +56,26 @@ func TestCommitteeCache_CommitteesByEpoch(t *testing.T) {
 		t.Fatal(err)
 	}
 	wantedIndex := uint64(0)
-	indices, err = cache.ShuffledIndices(slot, wantedIndex)
+	indices, err = cache.Committee(slot, item.Seed, wantedIndex)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	start, end := startEndIndices(item, wantedIndex)
-	if !reflect.DeepEqual(indices, item.Committee[start:end]) {
+	if !reflect.DeepEqual(indices, item.ShuffledIndices[start:end]) {
 		t.Errorf(
 			"Expected fetched active indices to be %v, got %v",
 			indices,
-			item.Committee[start:end],
+			item.ShuffledIndices[start:end],
 		)
 	}
 }
 
-func TestCommitteeCache_CanRotate(t *testing.T) {
-	cache := NewCommitteeCache()
-	item1 := &Committee{Epoch: 1}
-	if err := cache.AddCommitteeShuffledList(item1); err != nil {
-		t.Fatal(err)
-	}
-	item2 := &Committee{Epoch: 2}
-	if err := cache.AddCommitteeShuffledList(item2); err != nil {
-		t.Fatal(err)
-	}
-	epochs, err := cache.Epochs()
-	if err != nil {
-		t.Fatal(err)
-	}
-	wanted := item1.Epoch + item2.Epoch
-	if sum(epochs) != wanted {
-		t.Errorf("Wanted: %v, got: %v", wanted, sum(epochs))
-	}
-
-	item3 := &Committee{Epoch: 4}
-	if err := cache.AddCommitteeShuffledList(item3); err != nil {
-		t.Fatal(err)
-	}
-	epochs, err = cache.Epochs()
-	if err != nil {
-		t.Fatal(err)
-	}
-	wanted = item1.Epoch + item2.Epoch + item3.Epoch
-	if sum(epochs) != wanted {
-		t.Errorf("Wanted: %v, got: %v", wanted, sum(epochs))
-	}
-
-	item4 := &Committee{Epoch: 6}
-	if err := cache.AddCommitteeShuffledList(item4); err != nil {
-		t.Fatal(err)
-	}
-	epochs, err = cache.Epochs()
-	if err != nil {
-		t.Fatal(err)
-	}
-	wanted = item2.Epoch + item3.Epoch + item4.Epoch
-	if sum(epochs) != wanted {
-		t.Errorf("Wanted: %v, got: %v", wanted, sum(epochs))
-	}
-}
-
-func TestCommitteeCache_EpochInCache(t *testing.T) {
-	cache := NewCommitteeCache()
-	if err := cache.AddCommitteeShuffledList(&Committee{Epoch: 1}); err != nil {
-		t.Fatal(err)
-	}
-	if err := cache.AddCommitteeShuffledList(&Committee{Epoch: 2}); err != nil {
-		t.Fatal(err)
-	}
-	if err := cache.AddCommitteeShuffledList(&Committee{Epoch: 99}); err != nil {
-		t.Fatal(err)
-	}
-	if err := cache.AddCommitteeShuffledList(&Committee{Epoch: 100}); err != nil {
-		t.Fatal(err)
-	}
-	inCache, err := cache.EpochInCache(1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if inCache {
-		t.Error("Epoch shouldn't be in cache")
-	}
-	inCache, err = cache.EpochInCache(100)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !inCache {
-		t.Error("Epoch should be in cache")
-	}
-}
-
 func TestCommitteeCache_ActiveIndices(t *testing.T) {
-	cache := NewCommitteeCache()
+	cache := NewCommitteesCache()
 
-	item := &Committee{Epoch: 1, Committee: []uint64{1, 2, 3, 4, 5, 6}}
-	indices, err := cache.ActiveIndices(1)
+	item := &Committees{Seed: [32]byte{'A'}, SortedIndices: []uint64{1, 2, 3, 4, 5, 6}}
+	indices, err := cache.ActiveIndices(item.Seed)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,19 +87,41 @@ func TestCommitteeCache_ActiveIndices(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	indices, err = cache.ActiveIndices(1)
+	indices, err = cache.ActiveIndices(item.Seed)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(indices, item.Committee) {
+	if !reflect.DeepEqual(indices, item.SortedIndices) {
 		t.Error("Did not receive correct active indices from cache")
 	}
 }
 
-func sum(values []uint64) uint64 {
-	sum := uint64(0)
-	for _, v := range values {
-		sum = v + sum
+func TestCommitteeCache_CanRotate(t *testing.T) {
+	cache := NewCommitteesCache()
+
+	// Should rotate out all the epochs except 190 through 199.
+	for i := 100; i < 200; i++ {
+		s := []byte(strconv.Itoa(i))
+		item := &Committees{Seed: bytesutil.ToBytes32(s)}
+		if err := cache.AddCommitteeShuffledList(item); err != nil {
+			t.Fatal(err)
+		}
 	}
-	return sum
+
+	k := cache.CommitteeCache.ListKeys()
+	if len(k) != maxCommitteesCacheSize {
+		t.Errorf("wanted: %d, got: %d", maxCommitteesCacheSize, len(k))
+	}
+
+	sort.Slice(k, func(i, j int) bool {
+		return k[i] < k[j]
+	})
+	s := bytesutil.ToBytes32([]byte(strconv.Itoa(190)))
+	if k[0] != key(s) {
+		t.Error("incorrect key received for slot 190")
+	}
+	s = bytesutil.ToBytes32([]byte(strconv.Itoa(199)))
+	if k[len(k)-1] != key(s) {
+		t.Error("incorrect key received for slot 199")
+	}
 }

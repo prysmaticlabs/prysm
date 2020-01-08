@@ -13,7 +13,7 @@ import (
 // chunkWriter writes the given message as a chunked response to the given network
 // stream.
 // response_chunk ::= | <result> | <encoding-dependent-header> | <encoded-payload>
-func (r *RegularSync) chunkWriter(stream libp2pcore.Stream, msg interface{}) error {
+func (r *Service) chunkWriter(stream libp2pcore.Stream, msg interface{}) error {
 	setStreamWriteDeadline(stream, defaultWriteDuration)
 	return WriteChunk(stream, r.p2p.Encoding(), msg)
 }
@@ -30,8 +30,8 @@ func WriteChunk(stream libp2pcore.Stream, encoding encoder.NetworkEncoding, msg 
 
 // ReadChunkedBlock handles each response chunk that is sent by the
 // peer and converts it into a beacon block.
-func ReadChunkedBlock(stream libp2pcore.Stream, p2p p2p.P2P) (*eth.BeaconBlock, error) {
-	blk := &eth.BeaconBlock{}
+func ReadChunkedBlock(stream libp2pcore.Stream, p2p p2p.P2P) (*eth.SignedBeaconBlock, error) {
+	blk := &eth.SignedBeaconBlock{}
 	if err := readResponseChunk(stream, p2p, blk); err != nil {
 		return nil, err
 	}

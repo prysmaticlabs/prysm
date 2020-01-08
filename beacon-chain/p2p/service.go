@@ -24,12 +24,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/runutil"
 )
 
 var _ = shared.Service(&Service{})
 
 var pollingPeriod = 1 * time.Second
-var ttl = 1 * time.Hour
 
 const prysmProtocolPrefix = "/prysm/0.0.0"
 
@@ -93,7 +93,7 @@ func NewService(cfg *Config) (*Service, error) {
 		dopts := []dhtopts.Option{
 			dhtopts.Datastore(dsync.MutexWrap(ds.NewMapDatastore())),
 			dhtopts.Protocols(
-				protocol.ID(prysmProtocolPrefix + "/dht"),
+				prysmProtocolPrefix + "/dht",
 			),
 		}
 
@@ -115,6 +115,7 @@ func NewService(cfg *Config) (*Service, error) {
 	psOpts := []pubsub.Option{
 		pubsub.WithMessageSigning(false),
 		pubsub.WithStrictSignatureVerification(false),
+		pubsub.WithMessageIdFn(msgIDFunction),
 	}
 	gs, err := pubsub.NewGossipSub(s.ctx, s.host, psOpts...)
 	if err != nil {
@@ -187,7 +188,7 @@ func (s *Service) Start() {
 			s.host.ConnManager().Protect(peer.ID, "bootnode")
 		}
 		bcfg := kaddht.DefaultBootstrapConfig
-		bcfg.Period = time.Duration(30 * time.Second)
+		bcfg.Period = 30 * time.Second
 		if err := s.dht.BootstrapWithConfig(s.ctx, bcfg); err != nil {
 			log.WithError(err).Error("Failed to bootstrap DHT")
 		}
@@ -203,15 +204,20 @@ func (s *Service) Start() {
 		s.connectWithAllPeers(addrs)
 	}
 
-	startPeerWatcher(s.ctx, s.host, peersToWatch...)
-	startPeerDecay(s.ctx, s.peers)
-	registerMetrics(s)
+	// Periodic functions.
+	runutil.RunEvery(s.ctx, 5*time.Second, func() {
+		ensurePeerConnections(s.ctx, s.host, peersToWatch...)
+	})
+	runutil.RunEvery(s.ctx, time.Hour, s.Peers().Decay)
+	runutil.RunEvery(s.ctx, 10*time.Second, s.updateMetrics)
+
 	multiAddrs := s.host.Network().ListenAddresses()
 	logIP4Addr(s.host.ID(), multiAddrs...)
 }
 
 // Stop the p2p service and terminate all peer connections.
 func (s *Service) Stop() error {
+	defer s.cancel()
 	s.started = false
 	if s.dv5Listener != nil {
 		s.dv5Listener.Close()
@@ -274,22 +280,15 @@ func (s *Service) Peers() *peers.Status {
 
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.
 func (s *Service) listenForNewNodes() {
-	ticker := time.NewTicker(pollingPeriod)
 	bootNode, err := enode.Parse(enode.ValidSchemes, s.cfg.Discv5BootStrapAddr[0])
 	if err != nil {
 		log.Fatal(err)
 	}
-	for {
-		select {
-		case <-ticker.C:
-			nodes := s.dv5Listener.Lookup(bootNode.ID())
-			multiAddresses := convertToMultiAddr(nodes)
-			s.connectWithAllPeers(multiAddresses)
-		case <-s.ctx.Done():
-			log.Debug("p2p context is closed, exiting routine")
-			return
-		}
-	}
+	runutil.RunEvery(s.ctx, pollingPeriod, func() {
+		nodes := s.dv5Listener.Lookup(bootNode.ID())
+		multiAddresses := convertToMultiAddr(nodes)
+		s.connectWithAllPeers(multiAddresses)
+	})
 }
 
 func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {

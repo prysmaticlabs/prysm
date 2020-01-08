@@ -8,7 +8,7 @@ import (
 )
 
 func TestRegularSync_generateErrorResponse(t *testing.T) {
-	r := &RegularSync{
+	r := &Service{
 		p2p: p2ptest.NewTestP2P(t),
 	}
 	data, err := r.generateErrorResponse(responseCodeServerError, "something bad happened")

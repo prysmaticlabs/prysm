@@ -40,7 +40,7 @@ func TestKV_Aggregated_CanSaveRetrieve(t *testing.T) {
 		}
 	}
 
-	returned := cache.AggregatedAttestation()
+	returned := cache.AggregatedAttestations()
 
 	sort.Slice(returned, func(i, j int) bool {
 		return returned[i].Data.Slot < returned[j].Data.Slot
@@ -72,7 +72,7 @@ func TestKV_Aggregated_CanDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	returned := cache.AggregatedAttestation()
+	returned := cache.AggregatedAttestations()
 	wanted := []*ethpb.Attestation{att2}
 
 	if !reflect.DeepEqual(wanted, returned) {
@@ -104,5 +104,47 @@ func TestKV_Aggregated_CheckExpTime(t *testing.T) {
 	if math.RoundToEven(exp.Sub(time.Now()).Seconds()) != wanted {
 		t.Errorf("Did not receive correct exp time. Wanted: %f, got: %f", wanted,
 			math.RoundToEven(exp.Sub(time.Now()).Seconds()))
+	}
+}
+
+func TestKV_HasAggregatedAttestation(t *testing.T) {
+	cache := NewAttCaches()
+
+	att := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b111}}
+	has, err := cache.HasAggregatedAttestation(att)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if has {
+		t.Error("should not have unsaved att in cache")
+	}
+	if err := cache.SaveAggregatedAttestation(att); err != nil {
+		t.Fatal(err)
+	}
+	has, err = cache.HasAggregatedAttestation(att)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !has {
+		t.Error("should have saved att in cache")
+	}
+
+	att = &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1111}}
+	has, err = cache.HasAggregatedAttestation(att)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if has {
+		t.Error("should not have unsaved att in cache")
+	}
+	if err := cache.SaveBlockAttestation(att); err != nil {
+		t.Fatal(err)
+	}
+	has, err = cache.HasAggregatedAttestation(att)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !has {
+		t.Error("should have saved att in cache")
 	}
 }

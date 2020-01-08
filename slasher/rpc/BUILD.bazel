@@ -10,7 +10,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
-        "//proto/beacon/rpc/v1:go_default_library",
+        "//proto/slashing:go_default_library",
         "//shared/params:go_default_library",
         "//slasher/db:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
@@ -32,7 +32,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//proto/beacon/rpc/v1:go_default_library",
+        "//proto/slashing:go_default_library",
         "//shared/params:go_default_library",
         "//slasher/db:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",

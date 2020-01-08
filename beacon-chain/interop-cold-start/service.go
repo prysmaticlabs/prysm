@@ -15,8 +15,8 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/interop"
+	"github.com/prysmaticlabs/prysm/shared/stateutil"
 )
 
 var _ = shared.Service(&Service{})
@@ -123,9 +123,9 @@ func (s *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 	return &ethpb.Eth1Data{}
 }
 
-// ChainStartFeed mocks out the powchain functionality for interop.
-func (s *Service) ChainStartFeed() *event.Feed {
-	return new(event.Feed)
+// PreGenesisState returns an empty beacon state.
+func (s *Service) PreGenesisState() *pb.BeaconState {
+	return &pb.BeaconState{}
 }
 
 // DepositByPubkey mocks out the deposit cache functionality for interop.
@@ -140,12 +140,12 @@ func (s *Service) DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight
 
 func (s *Service) saveGenesisState(ctx context.Context, genesisState *pb.BeaconState) error {
 	s.chainStartDeposits = make([]*ethpb.Deposit, len(genesisState.Validators))
-	stateRoot, err := ssz.HashTreeRoot(genesisState)
+	stateRoot, err := stateutil.HashTreeRootState(genesisState)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash genesis state")
 	}
 	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
-	genesisBlkRoot, err := ssz.SigningRoot(genesisBlk)
+	genesisBlkRoot, err := ssz.HashTreeRoot(genesisBlk.Block)
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}

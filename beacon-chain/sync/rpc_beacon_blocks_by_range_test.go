@@ -33,12 +33,12 @@ func TestBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 
 	// Populate the database with blocks that would match the request.
 	for i := req.StartSlot; i < req.StartSlot+(req.Step*req.Count); i++ {
-		if err := d.SaveBlock(context.Background(), &ethpb.BeaconBlock{Slot: i}); err != nil {
+		if err := d.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: i}}); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	r := &RegularSync{p2p: p1, db: d}
+	r := &Service{p2p: p1, db: d}
 	pcl := protocol.ID("/testing")
 
 	var wg sync.WaitGroup
@@ -47,12 +47,12 @@ func TestBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 		defer wg.Done()
 		for i := req.StartSlot; i < req.Count*req.Step; i += req.Step {
 			expectSuccess(t, r, stream)
-			res := &ethpb.BeaconBlock{}
+			res := &ethpb.SignedBeaconBlock{}
 			if err := r.p2p.Encoding().DecodeWithLength(stream, res); err != nil {
 				t.Error(err)
 			}
-			if (res.Slot-req.StartSlot)%req.Step != 0 {
-				t.Errorf("Received unexpected block slot %d", res.Slot)
+			if (res.Block.Slot-req.StartSlot)%req.Step != 0 {
+				t.Errorf("Received unexpected block slot %d", res.Block.Slot)
 			}
 		}
 	})

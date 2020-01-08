@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -11,7 +12,9 @@ import (
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -19,17 +22,18 @@ import (
 
 func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
-	r := RegularSync{
-		ctx: context.Background(),
-		p2p: p2p,
+	r := Service{
+		ctx:         context.Background(),
+		p2p:         p2p,
+		initialSync: &mockSync.Sync{IsSyncing: false},
 	}
 	topic := "/eth2/voluntary_exit"
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	r.subscribe(topic, noopValidator, func(_ context.Context, msg proto.Message) error {
-		m := msg.(*pb.VoluntaryExit)
-		if m.Epoch != 55 {
+	r.subscribe(topic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
+		m := msg.(*pb.SignedVoluntaryExit)
+		if m.Exit == nil || m.Exit.Epoch != 55 {
 			t.Errorf("Unexpected incoming message: %+v", m)
 		}
 		wg.Done()
@@ -37,7 +41,7 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 	})
 	r.chainStarted = true
 
-	p2p.ReceivePubSub(topic, &pb.VoluntaryExit{Epoch: 55})
+	p2p.ReceivePubSub(topic, &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}})
 
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
@@ -47,11 +51,12 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 func TestSubscribe_WaitToSync(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
 	chainService := &mockChain.ChainService{}
-	r := RegularSync{
+	r := Service{
 		ctx:           context.Background(),
 		p2p:           p2p,
 		chain:         chainService,
 		stateNotifier: chainService.StateNotifier(),
+		initialSync:   &mockSync.Sync{IsSyncing: false},
 	}
 
 	topic := "/eth2/beacon_block"
@@ -72,9 +77,11 @@ func TestSubscribe_WaitToSync(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	msg := &pb.BeaconBlock{
-		ParentRoot: testutil.Random32Bytes(t),
-		Signature:  sk.Sign([]byte("data"), 0).Marshal(),
+	msg := &pb.SignedBeaconBlock{
+		Block: &pb.BeaconBlock{
+			ParentRoot: testutil.Random32Bytes(t),
+		},
+		Signature: sk.Sign([]byte("data"), 0).Marshal(),
 	}
 	p2p.ReceivePubSub(topic, msg)
 	// wait for chainstart to be sent
@@ -86,22 +93,22 @@ func TestSubscribe_WaitToSync(t *testing.T) {
 }
 
 func TestSubscribe_HandlesPanic(t *testing.T) {
-	p2p := p2ptest.NewTestP2P(t)
-	r := RegularSync{
+	p := p2ptest.NewTestP2P(t)
+	r := Service{
 		ctx: context.Background(),
-		p2p: p2p,
+		p2p: p,
 	}
 
-	topic := "/eth2/voluntary_exit"
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.SignedVoluntaryExit{})]
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	r.subscribe(topic, noopValidator, func(_ context.Context, msg proto.Message) error {
+	r.subscribe(topic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
 		defer wg.Done()
 		panic("bad")
 	})
 	r.chainStarted = true
-	p2p.ReceivePubSub(topic, &pb.VoluntaryExit{Epoch: 55})
+	p.ReceivePubSub(topic, &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}})
 
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")

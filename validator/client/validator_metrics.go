@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -23,11 +23,17 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		return nil
 	}
 
-	req := &pb.ValidatorPerformanceRequest{
-		Slot:       slot,
-		PublicKeys: v.pubkeys,
+	pks, err := v.keyManager.FetchValidatingKeys()
+	if err != nil {
+		return err
 	}
-	resp, err := v.validatorClient.ValidatorPerformance(ctx, req)
+	pubKeys := bytesutil.FromBytes48Array(pks)
+
+	req := &ethpb.ValidatorPerformanceRequest{
+		Slot:       slot,
+		PublicKeys: pubKeys,
+	}
+	resp, err := v.beaconClient.GetValidatorPerformance(ctx, req)
 	if err != nil {
 		return err
 	}
@@ -36,7 +42,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 	for _, val := range resp.MissingValidators {
 		missingValidators[bytesutil.ToBytes48(val)] = true
 	}
-	for i, pkey := range v.pubkeys {
+	for i, pkey := range pubKeys {
 		pubKey := fmt.Sprintf("%#x", pkey[:8])
 		log := log.WithField("pubKey", pubKey)
 		if missingValidators[bytesutil.ToBytes48(pkey)] {

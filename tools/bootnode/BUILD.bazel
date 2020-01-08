@@ -20,7 +20,6 @@ go_library(
         "@com_github_ipfs_go_log//:go_default_library",
         "@com_github_libp2p_go_libp2p//:go_default_library",
         "@com_github_libp2p_go_libp2p_core//crypto:go_default_library",
-        "@com_github_libp2p_go_libp2p_core//protocol:go_default_library",
         "@com_github_libp2p_go_libp2p_kad_dht//:go_default_library",
         "@com_github_libp2p_go_libp2p_kad_dht//opts:go_default_library",
         "@com_github_multiformats_go_multiaddr//:go_default_library",
@@ -33,6 +32,7 @@ go_library(
 go_image(
     name = "image",
     srcs = ["bootnode.go"],
+    base = "//tools:go_image",
     goarch = "amd64",
     goos = "linux",
     importpath = "github.com/prysmaticlabs/prysm/tools/bootnode",

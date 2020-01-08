@@ -30,7 +30,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 	defer dbtest.TeardownDB(t, db)
 
 	p1 := p2ptest.NewTestP2P(t)
-	r := &RegularSync{
+	r := &Service{
 		p2p: p1,
 		db:  db,
 		chain: &mock.ChainService{
@@ -38,27 +38,27 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 				Epoch: 0,
 			},
 		},
-		slotToPendingBlocks: make(map[uint64]*ethpb.BeaconBlock),
+		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
 
-	b0 := &ethpb.BeaconBlock{}
+	b0 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	if err := r.db.SaveBlock(context.Background(), b0); err != nil {
 		t.Fatal(err)
 	}
-	b0Root, _ := ssz.SigningRoot(b0)
-	b3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: b0Root[:]}
+	b0Root, _ := ssz.HashTreeRoot(b0.Block)
+	b3 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 3, ParentRoot: b0Root[:]}}
 	if err := r.db.SaveBlock(context.Background(), b3); err != nil {
 		t.Fatal(err)
 	}
 	// Incomplete block link
-	b1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: b0Root[:]}
-	b1Root, _ := ssz.SigningRoot(b1)
-	b2 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: b1Root[:]}
-	b2Root, _ := ssz.SigningRoot(b1)
+	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: b0Root[:]}}
+	b1Root, _ := ssz.HashTreeRoot(b1.Block)
+	b2 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 2, ParentRoot: b1Root[:]}}
+	b2Root, _ := ssz.HashTreeRoot(b1.Block)
 
 	// Add b2 to the cache
-	r.slotToPendingBlocks[b2.Slot] = b2
+	r.slotToPendingBlocks[b2.Block.Slot] = b2
 	r.seenPendingBlocks[b2Root] = true
 
 	if err := r.processPendingBlocks(context.Background()); err != nil {
@@ -72,7 +72,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 	}
 
 	// Add b1 to the cache
-	r.slotToPendingBlocks[b1.Slot] = b1
+	r.slotToPendingBlocks[b1.Block.Slot] = b1
 	r.seenPendingBlocks[b1Root] = true
 	if err := r.db.SaveBlock(context.Background(), b1); err != nil {
 		t.Fatal(err)
@@ -119,44 +119,44 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 		}
 	})
 
-	r := &RegularSync{
+	r := &Service{
 		p2p: p1,
 		db:  db,
 		chain: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 			},
-		}, slotToPendingBlocks: make(map[uint64]*ethpb.BeaconBlock),
+		}, slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks: make(map[[32]byte]bool),
 	}
 	p1.Peers().Add(p2.PeerID(), nil, network.DirOutbound)
 	p1.Peers().SetConnectionState(p2.PeerID(), peers.PeerConnected)
 	p1.Peers().SetChainState(p2.PeerID(), &pb.Status{})
 
-	b0 := &ethpb.BeaconBlock{}
+	b0 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	if err := r.db.SaveBlock(context.Background(), b0); err != nil {
 		t.Fatal(err)
 	}
-	b0Root, _ := ssz.SigningRoot(b0)
-	b1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: b0Root[:]}
+	b0Root, _ := ssz.HashTreeRoot(b0.Block)
+	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: b0Root[:]}}
 	if err := r.db.SaveBlock(context.Background(), b1); err != nil {
 		t.Fatal(err)
 	}
-	b1Root, _ := ssz.SigningRoot(b1)
+	b1Root, _ := ssz.HashTreeRoot(b1.Block)
 
 	// Incomplete block links
 	b2 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: b1Root[:]}
-	b2Root, _ := ssz.SigningRoot(b2)
+	b2Root, _ := ssz.HashTreeRoot(b2)
 	b5 := &ethpb.BeaconBlock{Slot: 5, ParentRoot: b2Root[:]}
-	b5Root, _ := ssz.SigningRoot(b5)
+	b5Root, _ := ssz.HashTreeRoot(b5)
 	b3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: b0Root[:]}
-	b3Root, _ := ssz.SigningRoot(b3)
+	b3Root, _ := ssz.HashTreeRoot(b3)
 	b4 := &ethpb.BeaconBlock{Slot: 4, ParentRoot: b3Root[:]}
-	b4Root, _ := ssz.SigningRoot(b4)
+	b4Root, _ := ssz.HashTreeRoot(b4)
 
-	r.slotToPendingBlocks[b4.Slot] = b4
+	r.slotToPendingBlocks[b4.Slot] = &ethpb.SignedBeaconBlock{Block: b4}
 	r.seenPendingBlocks[b4Root] = true
-	r.slotToPendingBlocks[b5.Slot] = b5
+	r.slotToPendingBlocks[b5.Slot] = &ethpb.SignedBeaconBlock{Block: b5}
 	r.seenPendingBlocks[b5Root] = true
 
 	if err := r.processPendingBlocks(context.Background()); err != nil {
@@ -170,9 +170,9 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 	}
 
 	// Add b3 to the cache
-	r.slotToPendingBlocks[b3.Slot] = b3
+	r.slotToPendingBlocks[b3.Slot] = &ethpb.SignedBeaconBlock{Block: b3}
 	r.seenPendingBlocks[b3Root] = true
-	if err := r.db.SaveBlock(context.Background(), b3); err != nil {
+	if err := r.db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b3}); err != nil {
 		t.Fatal(err)
 	}
 	if err := r.processPendingBlocks(context.Background()); err != nil {
@@ -186,10 +186,10 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks2(t *testing.T) {
 	}
 
 	// Add b2 to the cache
-	r.slotToPendingBlocks[b2.Slot] = b2
+	r.slotToPendingBlocks[b2.Slot] = &ethpb.SignedBeaconBlock{Block: b2}
 	r.seenPendingBlocks[b2Root] = true
 
-	if err := r.db.SaveBlock(context.Background(), b2); err != nil {
+	if err := r.db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b2}); err != nil {
 		t.Fatal(err)
 	}
 	if err := r.processPendingBlocks(context.Background()); err != nil {
@@ -214,48 +214,48 @@ func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
 		t.Error("Expected peers to be connected")
 	}
 
-	r := &RegularSync{
+	r := &Service{
 		p2p: p1,
 		db:  db,
 		chain: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 1,
 			},
-		}, slotToPendingBlocks: make(map[uint64]*ethpb.BeaconBlock),
+		}, slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks: make(map[[32]byte]bool),
 	}
 	p1.Peers().Add(p1.PeerID(), nil, network.DirOutbound)
 	p1.Peers().SetConnectionState(p1.PeerID(), peers.PeerConnected)
 	p1.Peers().SetChainState(p1.PeerID(), &pb.Status{})
 
-	b0 := &ethpb.BeaconBlock{}
+	b0 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	if err := r.db.SaveBlock(context.Background(), b0); err != nil {
 		t.Fatal(err)
 	}
-	b0Root, _ := ssz.SigningRoot(b0)
-	b1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: b0Root[:]}
+	b0Root, _ := ssz.HashTreeRoot(b0.Block)
+	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1, ParentRoot: b0Root[:]}}
 	if err := r.db.SaveBlock(context.Background(), b1); err != nil {
 		t.Fatal(err)
 	}
-	b1Root, _ := ssz.SigningRoot(b1)
+	b1Root, _ := ssz.HashTreeRoot(b1.Block)
 
 	// Incomplete block links
 	b2 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: b1Root[:]}
-	b2Root, _ := ssz.SigningRoot(b2)
+	b2Root, _ := ssz.HashTreeRoot(b2)
 	b5 := &ethpb.BeaconBlock{Slot: 5, ParentRoot: b2Root[:]}
-	b5Root, _ := ssz.SigningRoot(b5)
+	b5Root, _ := ssz.HashTreeRoot(b5)
 	b3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: b0Root[:]}
-	b3Root, _ := ssz.SigningRoot(b3)
+	b3Root, _ := ssz.HashTreeRoot(b3)
 	b4 := &ethpb.BeaconBlock{Slot: 4, ParentRoot: b3Root[:]}
-	b4Root, _ := ssz.SigningRoot(b4)
+	b4Root, _ := ssz.HashTreeRoot(b4)
 
-	r.slotToPendingBlocks[b2.Slot] = b2
+	r.slotToPendingBlocks[b2.Slot] = &ethpb.SignedBeaconBlock{Block: b2}
 	r.seenPendingBlocks[b2Root] = true
-	r.slotToPendingBlocks[b3.Slot] = b3
+	r.slotToPendingBlocks[b3.Slot] = &ethpb.SignedBeaconBlock{Block: b3}
 	r.seenPendingBlocks[b3Root] = true
-	r.slotToPendingBlocks[b4.Slot] = b4
+	r.slotToPendingBlocks[b4.Slot] = &ethpb.SignedBeaconBlock{Block: b4}
 	r.seenPendingBlocks[b4Root] = true
-	r.slotToPendingBlocks[b5.Slot] = b5
+	r.slotToPendingBlocks[b5.Slot] = &ethpb.SignedBeaconBlock{Block: b5}
 	r.seenPendingBlocks[b5Root] = true
 
 	if err := r.processPendingBlocks(context.Background()); err != nil {

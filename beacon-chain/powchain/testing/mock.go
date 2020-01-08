@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -24,11 +25,6 @@ type POWChain struct {
 	GenesisEth1Block    *big.Int
 }
 
-// ChainStartFeed --
-func (m *POWChain) ChainStartFeed() *event.Feed {
-	return m.ChainFeed
-}
-
 // Eth2GenesisPowchainInfo --
 func (m *POWChain) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 	blk := m.GenesisEth1Block
@@ -39,8 +35,8 @@ func (m *POWChain) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 }
 
 // DepositTrie --
-func (m *POWChain) DepositTrie() *trieutil.MerkleTrie {
-	return &trieutil.MerkleTrie{}
+func (m *POWChain) DepositTrie() *trieutil.SparseMerkleTrie {
+	return &trieutil.SparseMerkleTrie{}
 }
 
 // BlockExists --
@@ -90,14 +86,14 @@ func (m *POWChain) ChainStartDeposits() []*ethpb.Deposit {
 	return []*ethpb.Deposit{}
 }
 
-// ChainStartDepositHashes --
-func (m *POWChain) ChainStartDepositHashes() ([][]byte, error) {
-	return [][]byte{}, nil
-}
-
 // ChainStartEth1Data --
 func (m *POWChain) ChainStartEth1Data() *ethpb.Eth1Data {
 	return m.Eth1Data
+}
+
+// PreGenesisState --
+func (m *POWChain) PreGenesisState() *pb.BeaconState {
+	return &pb.BeaconState{}
 }
 
 // IsConnectedToETH1 --

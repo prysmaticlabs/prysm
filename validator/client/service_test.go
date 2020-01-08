@@ -1,18 +1,18 @@
 package client
 
 import (
-	"bytes"
 	"context"
-	"crypto/rand"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -21,21 +21,30 @@ var validatorKey *keystore.Key
 var validatorPubKey [48]byte
 var keyMap map[[48]byte]*keystore.Key
 var keyMapThreeValidators map[[48]byte]*keystore.Key
+var testKeyManager keymanager.KeyManager
+var testKeyManagerThreeValidators keymanager.KeyManager
 
 func keySetup() {
 	keyMap = make(map[[48]byte]*keystore.Key)
 	keyMapThreeValidators = make(map[[48]byte]*keystore.Key)
 
-	validatorKey, _ = keystore.NewKey(rand.Reader)
+	validatorKey, _ = keystore.NewKey()
 	copy(validatorPubKey[:], validatorKey.PublicKey.Marshal())
 	keyMap[validatorPubKey] = validatorKey
 
+	sks := make([]*bls.SecretKey, 1)
+	sks[0] = validatorKey.SecretKey
+	testKeyManager = keymanager.NewDirect(sks)
+
+	sks = make([]*bls.SecretKey, 3)
 	for i := 0; i < 3; i++ {
-		vKey, _ := keystore.NewKey(rand.Reader)
+		vKey, _ := keystore.NewKey()
 		var pubKey [48]byte
 		copy(pubKey[:], vKey.PublicKey.Marshal())
 		keyMapThreeValidators[pubKey] = vKey
+		sks[i] = vKey.SecretKey
 	}
+	testKeyManagerThreeValidators = keymanager.NewDirect(sks)
 }
 
 func TestMain(m *testing.M) {
@@ -70,11 +79,11 @@ func TestLifecycle(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	validatorService := &ValidatorService{
-		ctx:      ctx,
-		cancel:   cancel,
-		endpoint: "merkle tries",
-		withCert: "alice.crt",
-		keys:     keyMap,
+		ctx:        ctx,
+		cancel:     cancel,
+		endpoint:   "merkle tries",
+		withCert:   "alice.crt",
+		keyManager: keymanager.NewDirect(nil),
 	}
 	validatorService.Start()
 	if err := validatorService.Stop(); err != nil {
@@ -89,10 +98,10 @@ func TestLifecycle_Insecure(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	validatorService := &ValidatorService{
-		ctx:      ctx,
-		cancel:   cancel,
-		endpoint: "merkle tries",
-		keys:     keyMap,
+		ctx:        ctx,
+		cancel:     cancel,
+		endpoint:   "merkle tries",
+		keyManager: keymanager.NewDirect(nil),
 	}
 	validatorService.Start()
 	testutil.AssertLogsContain(t, hook, "You are using an insecure gRPC connection")
@@ -106,27 +115,5 @@ func TestStatus_NoConnectionError(t *testing.T) {
 	validatorService := &ValidatorService{}
 	if err := validatorService.Status(); !strings.Contains(err.Error(), "no connection") {
 		t.Errorf("Expected status check to fail if no connection is found, received: %v", err)
-	}
-}
-
-func TestPubKeysFromMap(t *testing.T) {
-	pubKeys := pubKeysFromMap(keyMapThreeValidators)
-	if len(pubKeys) != len(keyMapThreeValidators) {
-		t.Fatalf("Incorrect number of public keys: expected %d, obtained %d", len(keyMapThreeValidators), len(pubKeys))
-	}
-
-	for i := range pubKeys {
-		// Ensure each public key exists in the map
-		var pubKey [48]byte
-		copy(pubKey[:], pubKeys[i])
-		if _, exists := keyMapThreeValidators[pubKey]; !exists {
-			t.Fatalf("Public key %#x does not exist in original map", pubKeys[i])
-		}
-		// Ensure each public key is different from the others
-		for j := range pubKeys {
-			if i != j && bytes.Compare(pubKeys[i], pubKeys[j]) == 0 {
-				t.Fatalf("Non-unique public keys at indices %d and %d", i, j)
-			}
-		}
 	}
 }

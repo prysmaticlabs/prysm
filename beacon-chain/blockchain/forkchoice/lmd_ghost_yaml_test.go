@@ -14,6 +14,7 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"gopkg.in/yaml.v2"
 )
 
@@ -38,6 +39,8 @@ func TestGetHeadFromYaml(t *testing.T) {
 	var c *Config
 	err = yaml.Unmarshal(yamlFile, &c)
 
+	params.UseMainnetConfig()
+
 	for _, test := range c.TestCases {
 		db := testDB.SetupDB(t)
 		defer testDB.TeardownDB(t, db)
@@ -48,10 +51,10 @@ func TestGetHeadFromYaml(t *testing.T) {
 			// genesis block condition
 			if blk.ID == blk.Parent {
 				b := &ethpb.BeaconBlock{Slot: 0, ParentRoot: []byte{'g'}}
-				if err := db.SaveBlock(ctx, b); err != nil {
+				if err := db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: b}); err != nil {
 					t.Fatal(err)
 				}
-				root, err := ssz.SigningRoot(b)
+				root, err := ssz.HashTreeRoot(b)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -65,15 +68,18 @@ func TestGetHeadFromYaml(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				b := &ethpb.BeaconBlock{Slot: uint64(slot), ParentRoot: blksRoot[parentSlot]}
+				b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: uint64(slot), ParentRoot: blksRoot[parentSlot]}}
 				if err := db.SaveBlock(ctx, b); err != nil {
 					t.Fatal(err)
 				}
-				root, err := ssz.SigningRoot(b)
+				root, err := ssz.HashTreeRoot(b.Block)
 				if err != nil {
 					t.Fatal(err)
 				}
 				blksRoot[slot] = root[:]
+				if err := db.SaveState(ctx, &pb.BeaconState{}, root); err != nil {
+					t.Fatal(err)
+				}
 			}
 		}
 
@@ -100,12 +106,10 @@ func TestGetHeadFromYaml(t *testing.T) {
 
 		s := &pb.BeaconState{Validators: validators}
 
-		if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
+		if err := store.db.SaveState(ctx, s, bytesutil.ToBytes32(blksRoot[0])); err != nil {
 			t.Fatal(err)
 		}
-
-		store.justifiedCheckpt.Root = blksRoot[0]
-		if err := store.db.SaveState(ctx, s, bytesutil.ToBytes32(blksRoot[0])); err != nil {
+		if err := store.GenesisStore(ctx, &ethpb.Checkpoint{Root: blksRoot[0]}, &ethpb.Checkpoint{Root: blksRoot[0]}); err != nil {
 			t.Fatal(err)
 		}
 

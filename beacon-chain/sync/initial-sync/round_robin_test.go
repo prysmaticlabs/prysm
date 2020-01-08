@@ -8,17 +8,15 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/prysmaticlabs/go-ssz"
-	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -42,7 +40,7 @@ func init() {
 }
 
 func TestConstants(t *testing.T) {
-	if maxPeersToSync*blockBatchSize > 1000 {
+	if params.BeaconConfig().MaxPeersToSync*blockBatchSize > 1000 {
 		t.Fatal("rpc rejects requests over 1000 range slots")
 	}
 }
@@ -205,29 +203,29 @@ func TestRoundRobinSync(t *testing.T) {
 		},
 		{
 			name:               "Multiple peers with missing parent blocks",
-			currentSlot:        320, // 5 epochs
-			expectedBlockSlots: makeSequence(1, 320),
+			currentSlot:        160, // 5 epochs
+			expectedBlockSlots: makeSequence(1, 160),
 			peers: []*peerData{
 				{
-					blocks:         makeSequence(1, 320),
+					blocks:         makeSequence(1, 160),
 					finalizedEpoch: 4,
-					headSlot:       320,
+					headSlot:       160,
 				},
 				{
 					blocks:         append(makeSequence(1, 6), makeSequence(161, 165)...),
 					finalizedEpoch: 4,
-					headSlot:       320,
+					headSlot:       160,
 					forkedPeer:     true,
 				},
 				{
-					blocks:         makeSequence(1, 320),
+					blocks:         makeSequence(1, 160),
 					finalizedEpoch: 4,
-					headSlot:       320,
+					headSlot:       160,
 				},
 				{
-					blocks:         makeSequence(1, 320),
+					blocks:         makeSequence(1, 160),
 					finalizedEpoch: 4,
-					headSlot:       320,
+					headSlot:       160,
 				},
 			},
 		},
@@ -243,9 +241,10 @@ func TestRoundRobinSync(t *testing.T) {
 			connectPeers(t, p, tt.peers, p.Peers())
 			genesisRoot := rootCache[0]
 
-			err := beaconDB.SaveBlock(context.Background(), &eth.BeaconBlock{
-				Slot: 0,
-			})
+			err := beaconDB.SaveBlock(context.Background(), &eth.SignedBeaconBlock{
+				Block: &eth.BeaconBlock{
+					Slot: 0,
+				}})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -255,7 +254,7 @@ func TestRoundRobinSync(t *testing.T) {
 				Root:  genesisRoot[:],
 				DB:    beaconDB,
 			} // no-op mock
-			s := &InitialSync{
+			s := &Service{
 				chain:        mc,
 				p2p:          p,
 				db:           beaconDB,
@@ -273,7 +272,7 @@ func TestRoundRobinSync(t *testing.T) {
 			}
 			var receivedBlockSlots []uint64
 			for _, blk := range mc.BlocksReceived {
-				receivedBlockSlots = append(receivedBlockSlots, blk.Slot)
+				receivedBlockSlots = append(receivedBlockSlots, blk.Block.Slot)
 			}
 			if missing := sliceutil.NotUint64(sliceutil.IntersectionUint64(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots); len(missing) > 0 {
 				t.Errorf("Missing blocks at slots %v", missing)
@@ -318,23 +317,25 @@ func connectPeers(t *testing.T, host *p2pt.TestP2P, data []*peerData, peerStatus
 			// Determine the correct subset of blocks to return as dictated by the test scenario.
 			blocks := sliceutil.IntersectionUint64(datum.blocks, requestedBlocks)
 
-			ret := make([]*eth.BeaconBlock, 0)
+			ret := make([]*eth.SignedBeaconBlock, 0)
 			for _, slot := range blocks {
 				if (slot-req.StartSlot)%req.Step != 0 {
 					continue
 				}
 				parentRoot := rootCache[parentSlotCache[slot]]
-				blk := &eth.BeaconBlock{
-					Slot:       slot,
-					ParentRoot: parentRoot[:],
+				blk := &eth.SignedBeaconBlock{
+					Block: &eth.BeaconBlock{
+						Slot:       slot,
+						ParentRoot: parentRoot[:],
+					},
 				}
 				// If forked peer, give a different parent root.
 				if datum.forkedPeer {
 					newRoot := hashutil.Hash(parentRoot[:])
-					blk.ParentRoot = newRoot[:]
+					blk.Block.ParentRoot = newRoot[:]
 				}
 				ret = append(ret, blk)
-				currRoot, _ := ssz.SigningRoot(blk)
+				currRoot, _ := ssz.HashTreeRoot(blk.Block)
 				logrus.Infof("block with slot %d , signing root %#x and parent root %#x", slot, currRoot, parentRoot)
 			}
 
@@ -372,8 +373,8 @@ func makeGenesisTime(currentSlot uint64) time.Time {
 func TestMakeGenesisTime(t *testing.T) {
 	currentSlot := uint64(64)
 	gt := makeGenesisTime(currentSlot)
-	if slotsSinceGenesis(gt) != currentSlot {
-		t.Fatalf("Wanted %d, got %d", currentSlot, slotsSinceGenesis(gt))
+	if helpers.SlotsSince(gt) != currentSlot {
+		t.Fatalf("Wanted %d, got %d", currentSlot, helpers.SlotsSince(gt))
 	}
 }
 
@@ -396,7 +397,7 @@ func initializeRootCache(reqSlots []uint64, t *testing.T) {
 	genesisBlock := &eth.BeaconBlock{
 		Slot: 0,
 	}
-	genesisRoot, err := ssz.SigningRoot(genesisBlock)
+	genesisRoot, err := ssz.HashTreeRoot(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -407,7 +408,7 @@ func initializeRootCache(reqSlots []uint64, t *testing.T) {
 			Slot:       slot,
 			ParentRoot: parentRoot[:],
 		}
-		parentRoot, err = ssz.SigningRoot(currentBlock)
+		parentRoot, err = ssz.HashTreeRoot(currentBlock)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -423,25 +424,5 @@ func TestMakeSequence(t *testing.T) {
 	want := []uint64{3, 4, 5}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("Wanted %v, got %v", want, got)
-	}
-}
-
-func TestBestFinalized_returnsMaxValue(t *testing.T) {
-	p := p2pt.NewTestP2P(t)
-	s := &InitialSync{
-		p2p: p,
-	}
-
-	for i := 0; i <= maxPeersToSync+100; i++ {
-		s.p2p.Peers().Add(peer.ID(i), nil, network.DirOutbound)
-		s.p2p.Peers().SetConnectionState(peer.ID(i), peers.PeerConnected)
-		s.p2p.Peers().SetChainState(peer.ID(i), &pb.Status{
-			FinalizedEpoch: 10,
-		})
-	}
-
-	_, _, pids := s.bestFinalized()
-	if len(pids) != maxPeersToSync {
-		t.Fatalf("returned wrong number of peers, wanted %d, got %d", maxPeersToSync, len(pids))
 	}
 }

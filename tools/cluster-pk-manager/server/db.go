@@ -140,9 +140,20 @@ func (d *db) AllocateNewPkToPod(
 	allocatedPkCount.Inc()
 	assignedPkCount.Inc()
 	return d.db.Update(func(tx *bolt.Tx) error {
+		pks := &pb.PrivateKeys{}
+		if b := tx.Bucket(assignedPkBucket).Get([]byte(podName)); b != nil {
+			if err := proto.Unmarshal(b, pks); err != nil {
+				return err
+			}
+		}
+		pks.PrivateKeys = append(pks.PrivateKeys, pk.SecretKey.Marshal())
+		b, err := proto.Marshal(pks)
+		if err != nil {
+			return err
+		}
 		return tx.Bucket(assignedPkBucket).Put(
 			[]byte(podName),
-			pk.SecretKey.Marshal(),
+			b,
 		)
 	})
 }
@@ -225,7 +236,7 @@ func (d *db) Allocations() (map[string][][]byte, error) {
 		return tx.Bucket(assignedPkBucket).ForEach(func(k, v []byte) error {
 			pks := &pb.PrivateKeys{}
 			if err := proto.Unmarshal(v, pks); err != nil {
-				return err
+				log.WithError(err).Error("Could not unmarshal private key")
 			}
 			pubkeys := make([][]byte, len(pks.PrivateKeys))
 			for i, pk := range pks.PrivateKeys {
@@ -260,7 +271,8 @@ func (d *db) KeyMap() ([][]byte, map[[48]byte]keyMap, error) {
 			for i, pk := range pks.PrivateKeys {
 				seckey, err := bls.SecretKeyFromBytes(pk)
 				if err != nil {
-					return err
+					log.WithError(err).Warn("Could not deserialize secret key... removing")
+					return tx.Bucket(assignedPkBucket).Delete(k)
 				}
 
 				keytoSet := bytesutil.ToBytes48(seckey.PublicKey().Marshal())

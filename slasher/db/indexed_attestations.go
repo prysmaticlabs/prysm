@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -24,8 +24,8 @@ func createIndexedAttestation(enc []byte) (*ethpb.IndexedAttestation, error) {
 	return protoIdxAtt, nil
 }
 
-func createValidatorIDsToIndexedAttestationList(enc []byte) (*pb.ValidatorIDToIdxAttList, error) {
-	protoIdxAtt := &pb.ValidatorIDToIdxAttList{}
+func createValidatorIDsToIndexedAttestationList(enc []byte) (*slashpb.ValidatorIDToIdxAttList, error) {
+	protoIdxAtt := &slashpb.ValidatorIDToIdxAttList{}
 	err := proto.Unmarshal(enc, protoIdxAtt)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal encoding")
@@ -152,15 +152,14 @@ func (db *Store) SaveIndexedAttestation(idxAttestation *ethpb.IndexedAttestation
 }
 
 func createIndexedAttestationIndicesFromData(idxAttestation *ethpb.IndexedAttestation, tx *bolt.Tx) error {
-	indices := append(idxAttestation.CustodyBit_0Indices, idxAttestation.CustodyBit_1Indices...)
 	dataRoot, err := ssz.HashTreeRoot(idxAttestation.Data)
 
 	if err != nil {
 		return errors.Wrap(err, "failed to hash indexed attestation data.")
 	}
-	protoIdxAtt := &pb.ValidatorIDToIdxAtt{
+	protoIdxAtt := &slashpb.ValidatorIDToIdxAtt{
 		Signature: idxAttestation.Signature,
-		Indices:   indices,
+		Indices:   idxAttestation.AttestingIndices,
 		DataRoot:  dataRoot[:],
 	}
 	key := bytesutil.Bytes8(idxAttestation.Data.Target.Epoch)
@@ -201,11 +200,10 @@ func (db *Store) DeleteIndexedAttestation(idxAttestation *ethpb.IndexedAttestati
 }
 
 func removeIndexedAttestationIndicesFromData(idxAttestation *ethpb.IndexedAttestation, tx *bolt.Tx) error {
-	indices := append(idxAttestation.CustodyBit_0Indices, idxAttestation.CustodyBit_1Indices...)
 	dataRoot, err := ssz.HashTreeRoot(idxAttestation.Data)
-	protoIdxAtt := &pb.ValidatorIDToIdxAtt{
+	protoIdxAtt := &slashpb.ValidatorIDToIdxAtt{
 		Signature: idxAttestation.Signature,
-		Indices:   indices,
+		Indices:   idxAttestation.AttestingIndices,
 		DataRoot:  dataRoot[:],
 	}
 	key := bytesutil.Bytes8(idxAttestation.Data.Target.Epoch)

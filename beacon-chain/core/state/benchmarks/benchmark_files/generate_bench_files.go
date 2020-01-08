@@ -94,14 +94,14 @@ func generateMarshalledFullStateAndBlock() error {
 	if err != nil {
 		return err
 	}
-	block.Body.Attestations = append(atts, block.Body.Attestations...)
+	block.Block.Body.Attestations = append(atts, block.Block.Body.Attestations...)
 
 	s, err := state.CalculateStateRoot(context.Background(), beaconState, block)
 	if err != nil {
 		return err
 	}
-	block.StateRoot = s[:]
-	blockRoot, err := ssz.SigningRoot(block)
+	block.Block.StateRoot = s[:]
+	blockRoot, err := ssz.HashTreeRoot(block.Block)
 	if err != nil {
 		return err
 	}

@@ -3,13 +3,14 @@ package aggregator
 import (
 	"context"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -28,6 +29,8 @@ type Server struct {
 	BeaconDB    db.Database
 	HeadFetcher blockchain.HeadFetcher
 	SyncChecker sync.Checker
+	AttPool     attestations.Pool
+	P2p         p2p.Broadcaster
 }
 
 // SubmitAggregateAndProof is called by a validator when its assigned to be an aggregator.
@@ -41,15 +44,6 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
-	headState, err := as.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
-	}
-	headState, err = state.ProcessSlots(ctx, headState, req.Slot)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
-	}
-
 	validatorIndex, exists, err := as.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(req.PublicKey))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get validator index from DB: %v", err)
@@ -58,12 +52,22 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 		return nil, status.Error(codes.Internal, "Could not locate validator index in DB")
 	}
 
-	// Check if the validator is an aggregator
-	sig, err := bls.SignatureFromBytes(req.SlotSignature)
+	epoch := helpers.SlotToEpoch(req.Slot)
+	activeValidatorIndices, err := as.HeadFetcher.HeadValidatorsIndices(epoch)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not convert signature to byte: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get validators: %v", err)
 	}
-	isAggregator, err := helpers.IsAggregator(headState, req.Slot, req.CommitteeIndex, sig)
+	seed, err := as.HeadFetcher.HeadSeed(epoch)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get seed: %v", err)
+	}
+	committee, err := helpers.BeaconCommittee(activeValidatorIndices, seed, req.Slot, req.CommitteeIndex)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if the validator is an aggregator
+	isAggregator, err := helpers.IsAggregator(uint64(len(committee)), req.Slot, req.CommitteeIndex, req.SlotSignature)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get aggregator status: %v", err)
 	}
@@ -71,13 +75,30 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 		return nil, status.Errorf(codes.InvalidArgument, "Validator is not an aggregator")
 	}
 
-	// TODO(3865): Broadcast aggregated attestation & proof via the aggregation topic
+	// Retrieve the unaggregated attestation from pool.
+	aggregatedAtts := as.AttPool.AggregatedAttestationsBySlotIndex(req.Slot, req.CommitteeIndex)
 
-	log.WithFields(logrus.Fields{
-		"slot":           req.Slot,
-		"validatorIndex": validatorIndex,
-		"committeeIndex": req.CommitteeIndex,
-	}).Debug("Broadcasting aggregated attestation and proof")
+	for _, aggregatedAtt := range aggregatedAtts {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		if helpers.IsAggregated(aggregatedAtt) {
+			if err := as.P2p.Broadcast(ctx, &ethpb.AggregateAttestationAndProof{
+				AggregatorIndex: validatorIndex,
+				SelectionProof:  req.SlotSignature,
+				Aggregate:       aggregatedAtt,
+			}); err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not broadcast aggregated attestation: %v", err)
+			}
+
+			log.WithFields(logrus.Fields{
+				"slot":            req.Slot,
+				"committeeIndex":  req.CommitteeIndex,
+				"validatorIndex":  validatorIndex,
+				"aggregatedCount": aggregatedAtt.AggregationBits.Count(),
+			}).Debug("Broadcasting aggregated attestation and proof")
+		}
+	}
 
 	return &pb.AggregationResponse{}, nil
 }

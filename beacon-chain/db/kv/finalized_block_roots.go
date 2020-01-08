@@ -7,7 +7,6 @@ import (
 
 	"github.com/boltdb/bolt"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -38,7 +37,7 @@ var containerFinalizedButNotCanonical = []byte("recent block needs reindexing to
 //
 // This method ensures that all blocks from the current finalized epoch are considered "final" while
 // maintaining only canonical and finalized blocks older than the current finalized epoch.
-func (kv *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, checkpoint *ethpb.Checkpoint) error {
+func (k *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, checkpoint *ethpb.Checkpoint) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.updateFinalizedBlockRoots")
 	defer span.End()
 
@@ -49,16 +48,17 @@ func (kv *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 	genesisRoot := tx.Bucket(blocksBucket).Get(genesisBlockRootKey)
 
 	// De-index recent finalized block roots, to be re-indexed.
-	prevousFinalizedCheckpoint := &ethpb.Checkpoint{}
+	previousFinalizedCheckpoint := &ethpb.Checkpoint{}
 	if b := bkt.Get(previousFinalizedCheckpointKey); b != nil {
-		if err := decode(b, prevousFinalizedCheckpoint); err != nil {
+		if err := decode(b, previousFinalizedCheckpoint); err != nil {
 			traceutil.AnnotateError(span, err)
 			return err
 		}
 	}
-	previousFinalizedCheckpointStartSlot := helpers.StartSlot(prevousFinalizedCheckpoint.Epoch)
-	recentFinalizedCheckpointEndSlot := helpers.StartSlot(checkpoint.Epoch + 1)
-	blockRoots, err := kv.BlockRoots(ctx, filters.NewFilter().SetStartSlot(previousFinalizedCheckpointStartSlot).SetEndSlot(recentFinalizedCheckpointEndSlot))
+	blockRoots, err := k.BlockRoots(ctx, filters.NewFilter().
+		SetStartEpoch(previousFinalizedCheckpoint.Epoch).
+		SetEndEpoch(checkpoint.Epoch+1),
+	)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return err
@@ -77,16 +77,17 @@ func (kv *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 			break
 		}
 
-		block, err := kv.Block(ctx, bytesutil.ToBytes32(root))
+		signedBlock, err := k.Block(ctx, bytesutil.ToBytes32(root))
 		if err != nil {
 			traceutil.AnnotateError(span, err)
 			return err
 		}
-		if block == nil {
+		if signedBlock == nil || signedBlock.Block == nil {
 			err := fmt.Errorf("missing block in database: block root=%#x", root)
 			traceutil.AnnotateError(span, err)
 			return err
 		}
+		block := signedBlock.Block
 
 		container := &dbpb.FinalizedBlockRootContainer{
 			ParentRoot: block.ParentRoot,
@@ -127,7 +128,7 @@ func (kv *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 	}
 
 	// Upsert blocks from the current finalized epoch.
-	roots, err := kv.BlockRoots(ctx, filters.NewFilter().SetStartSlot(helpers.StartSlot(checkpoint.Epoch)).SetEndSlot(helpers.StartSlot(checkpoint.Epoch+1)))
+	roots, err := k.BlockRoots(ctx, filters.NewFilter().SetStartEpoch(checkpoint.Epoch).SetEndEpoch(checkpoint.Epoch+1))
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return err
@@ -157,12 +158,12 @@ func (kv *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, che
 // A beacon block root contained exists in this index if it is considered finalized and canonical.
 // Note: beacon blocks from the latest finalized epoch return true, whether or not they are
 // considered canonical in the "head view" of the beacon node.
-func (kv *Store) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool {
+func (k *Store) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.IsFinalizedBlock")
 	defer span.End()
 
 	var exists bool
-	err := kv.db.View(func(tx *bolt.Tx) error {
+	err := k.db.View(func(tx *bolt.Tx) error {
 		exists = tx.Bucket(finalizedBlockRootsIndexBucket).Get(blockRoot[:]) != nil
 		return nil
 	})
