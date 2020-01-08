@@ -77,6 +77,9 @@ func (v *ValidatorService) Start() {
 	}
 	opts := []grpc.DialOption{
 		dialOpt,
+		grpc.WithDefaultCallOptions(
+			grpc.MaxCallRecvMsgSize(10 * 5 << 20), // 10Mb
+		),
 		grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),
 		grpc.WithStreamInterceptor(middleware.ChainStreamClient(
 			grpc_opentracing.StreamClientInterceptor(),
@@ -109,9 +112,8 @@ func (v *ValidatorService) Start() {
 	v.conn = conn
 	v.validator = &validator{
 		db:                   valDB,
-		validatorClient:      pb.NewValidatorServiceClient(v.conn),
-		attesterClient:       pb.NewAttesterServiceClient(v.conn),
-		proposerClient:       pb.NewProposerServiceClient(v.conn),
+		validatorClient:      ethpb.NewBeaconNodeValidatorClient(v.conn),
+		beaconClient:         ethpb.NewBeaconChainClient(v.conn),
 		aggregatorClient:     pb.NewAggregatorServiceClient(v.conn),
 		node:                 ethpb.NewNodeClient(v.conn),
 		keyManager:           v.keyManager,

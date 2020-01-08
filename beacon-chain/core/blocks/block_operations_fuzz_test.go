@@ -26,7 +26,7 @@ func TestFuzzProcessAttestation_10000(t *testing.T) {
 func TestFuzzProcessBlockHeader_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	state := &ethereum_beacon_p2p_v1.BeaconState{}
-	block := &eth.BeaconBlock{}
+	block := &eth.SignedBeaconBlock{}
 
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)

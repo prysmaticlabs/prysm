@@ -3,7 +3,6 @@ package validator
 import (
 	"context"
 	"fmt"
-	"math/big"
 	"strings"
 	"testing"
 	"time"
@@ -22,7 +21,6 @@ import (
 	internal "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -54,7 +52,7 @@ func TestValidatorIndex_OK(t *testing.T) {
 		BeaconDB: db,
 	}
 
-	req := &pb.ValidatorIndexRequest{
+	req := &ethpb.ValidatorIndexRequest{
 		PublicKey: pubKey,
 	}
 	if _, err := Server.ValidatorIndex(context.Background(), req); err != nil {
@@ -75,7 +73,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	genesisRoot, err := ssz.SigningRoot(block)
+	genesisRoot, err := ssz.HashTreeRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -91,13 +89,13 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 		DepositFetcher:     depositcache.NewDepositCache(),
 		HeadFetcher:        &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
 	}
-	req := &pb.ValidatorActivationRequest{
+	req := &ethpb.ValidatorActivationRequest{
 		PublicKeys: [][]byte{[]byte("A")},
 	}
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockChainStream := mockRPC.NewMockValidatorService_WaitForActivationServer(ctrl)
+	mockChainStream := mockRPC.NewMockBeaconNodeValidator_WaitForActivationServer(ctrl)
 	mockChainStream.EXPECT().Context().Return(context.Background())
 	mockChainStream.EXPECT().Send(gomock.Any()).Return(nil)
 	mockChainStream.EXPECT().Context().Return(context.Background())
@@ -145,7 +143,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		},
 	}
 	block := blk.NewGenesisBlock([]byte{})
-	genesisRoot, err := ssz.SigningRoot(block)
+	genesisRoot, err := ssz.HashTreeRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -153,7 +151,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		PublicKey:             pubKey1,
 		WithdrawalCredentials: []byte("hey"),
 	}
-	signingRoot, err := ssz.SigningRoot(depData)
+	signingRoot, err := ssz.HashTreeRoot(depData)
 	if err != nil {
 		t.Error(err)
 	}
@@ -168,7 +166,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		t.Fatal(fmt.Errorf("could not setup deposit trie: %v", err))
 	}
 	depositCache := depositcache.NewDepositCache()
-	depositCache.InsertDeposit(ctx, deposit, big.NewInt(10) /*blockNum*/, 0, depositTrie.Root())
+	depositCache.InsertDeposit(ctx, deposit, 10 /*blockNum*/, 0, depositTrie.Root())
 	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey1), 0); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
 	}
@@ -185,27 +183,27 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		DepositFetcher:     depositCache,
 		HeadFetcher:        &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
 	}
-	req := &pb.ValidatorActivationRequest{
+	req := &ethpb.ValidatorActivationRequest{
 		PublicKeys: [][]byte{pubKey1, pubKey2},
 	}
 	ctrl := gomock.NewController(t)
 
 	defer ctrl.Finish()
-	mockChainStream := internal.NewMockValidatorService_WaitForActivationServer(ctrl)
+	mockChainStream := internal.NewMockBeaconNodeValidator_WaitForActivationServer(ctrl)
 	mockChainStream.EXPECT().Context().Return(context.Background())
 	mockChainStream.EXPECT().Send(
-		&pb.ValidatorActivationResponse{
-			Statuses: []*pb.ValidatorActivationResponse_Status{
+		&ethpb.ValidatorActivationResponse{
+			Statuses: []*ethpb.ValidatorActivationResponse_Status{
 				{PublicKey: pubKey1,
-					Status: &pb.ValidatorStatusResponse{
-						Status:                 pb.ValidatorStatus_ACTIVE,
+					Status: &ethpb.ValidatorStatusResponse{
+						Status:                 ethpb.ValidatorStatus_ACTIVE,
 						Eth1DepositBlockNumber: 10,
 						DepositInclusionSlot:   2218,
 					},
 				},
 				{PublicKey: pubKey2,
-					Status: &pb.ValidatorStatusResponse{
-						ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
+					Status: &ethpb.ValidatorStatusResponse{
+						ActivationEpoch: int64(params.BeaconConfig().FarFutureEpoch),
 					},
 				},
 			},
@@ -236,7 +234,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStream := mockRPC.NewMockValidatorService_WaitForChainStartServer(ctrl)
+	mockStream := mockRPC.NewMockBeaconNodeValidator_WaitForChainStartServer(ctrl)
 	go func(tt *testing.T) {
 		if err := Server.WaitForChainStart(&ptypes.Empty{}, mockStream); !strings.Contains(err.Error(), "Context canceled") {
 			tt.Errorf("Could not call RPC method: %v", err)
@@ -270,9 +268,9 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStream := mockRPC.NewMockValidatorService_WaitForChainStartServer(ctrl)
+	mockStream := mockRPC.NewMockBeaconNodeValidator_WaitForChainStartServer(ctrl)
 	mockStream.EXPECT().Send(
-		&pb.ChainStartResponse{
+		&ethpb.ChainStartResponse{
 			Started:     true,
 			GenesisTime: uint64(time.Unix(0, 0).Unix()),
 		},
@@ -299,9 +297,9 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStream := mockRPC.NewMockValidatorService_WaitForChainStartServer(ctrl)
+	mockStream := mockRPC.NewMockBeaconNodeValidator_WaitForChainStartServer(ctrl)
 	mockStream.EXPECT().Send(
-		&pb.ChainStartResponse{
+		&ethpb.ChainStartResponse{
 			Started:     true,
 			GenesisTime: uint64(time.Unix(0, 0).Unix()),
 		},

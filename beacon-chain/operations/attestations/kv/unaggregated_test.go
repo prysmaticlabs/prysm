@@ -1,10 +1,8 @@
 package kv
 
 import (
-	"encoding/binary"
 	"math"
 	"reflect"
-	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -27,32 +25,6 @@ func TestKV_Unaggregated_AlreadyAggregated(t *testing.T) {
 	}
 }
 
-func TestKV_Unaggregated_CanSaveRetrieve(t *testing.T) {
-	cache := NewAttCaches()
-
-	data := &ethpb.AttestationData{Slot: 100, CommitteeIndex: 99}
-	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b101}}
-	att2 := &ethpb.Attestation{Data: data, Signature: []byte{0, 0}, AggregationBits: bitfield.Bitlist{0b110}}
-	att3 := &ethpb.Attestation{Data: data, Signature: []byte{0, 1}, AggregationBits: bitfield.Bitlist{0b110}}
-	atts := []*ethpb.Attestation{att1, att2, att3}
-
-	for _, att := range atts {
-		if err := cache.SaveUnaggregatedAttestation(att); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	returned := cache.UnaggregatedAttestation(data.Slot, data.CommitteeIndex)
-	sort.Slice(returned, func(i, j int) bool {
-		return binary.BigEndian.Uint16(returned[i].Signature) < binary.BigEndian.Uint16(returned[j].Signature)
-	})
-
-	wanted := []*ethpb.Attestation{att2, att3}
-	if !reflect.DeepEqual(wanted, returned) {
-		t.Error("Did not receive correct unaggregated atts")
-	}
-}
-
 func TestKV_Unaggregated_CanDelete(t *testing.T) {
 	cache := NewAttCaches()
 
@@ -67,11 +39,17 @@ func TestKV_Unaggregated_CanDelete(t *testing.T) {
 		}
 	}
 
+	if err := cache.DeleteUnaggregatedAttestation(att1); err != nil {
+		t.Fatal(err)
+	}
 	if err := cache.DeleteUnaggregatedAttestation(att2); err != nil {
 		t.Fatal(err)
 	}
+	if err := cache.DeleteUnaggregatedAttestation(att3); err != nil {
+		t.Fatal(err)
+	}
 
-	returned := cache.UnaggregatedAttestation(2, 0)
+	returned := cache.UnaggregatedAttestations()
 
 	if !reflect.DeepEqual([]*ethpb.Attestation{}, returned) {
 		t.Error("Did not receive correct aggregated atts")

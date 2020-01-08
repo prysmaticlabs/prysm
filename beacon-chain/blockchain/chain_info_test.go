@@ -20,7 +20,9 @@ var _ = GenesisTimeFetcher(&Service{})
 var _ = ForkFetcher(&Service{})
 
 func TestFinalizedCheckpt_Nil(t *testing.T) {
-	c := setupBeaconChain(t, nil)
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	c := setupBeaconChain(t, db)
 	c.headState, _ = testutil.DeterministicGenesisState(t, 1)
 	if !bytes.Equal(c.FinalizedCheckpt().Root, params.BeaconConfig().ZeroHash[:]) {
 		t.Error("Incorrect pre chain start value")
@@ -28,7 +30,9 @@ func TestFinalizedCheckpt_Nil(t *testing.T) {
 }
 
 func TestHeadRoot_Nil(t *testing.T) {
-	c := setupBeaconChain(t, nil)
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	c := setupBeaconChain(t, db)
 	if !bytes.Equal(c.HeadRoot(), params.BeaconConfig().ZeroHash[:]) {
 		t.Error("Incorrect pre chain start value")
 	}
@@ -47,6 +51,20 @@ func TestFinalizedCheckpt_CanRetrieve(t *testing.T) {
 	}
 }
 
+func TestFinalizedCheckpt_GenesisRootOk(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	cp := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	c := setupBeaconChain(t, db)
+	c.headState = &pb.BeaconState{FinalizedCheckpoint: cp}
+	c.genesisRoot = [32]byte{'A'}
+
+	if !bytes.Equal(c.FinalizedCheckpt().Root, c.genesisRoot[:]) {
+		t.Errorf("Got: %v, wanted: %v", c.FinalizedCheckpt().Root, c.genesisRoot[:])
+	}
+}
+
 func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
@@ -60,6 +78,20 @@ func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
 	}
 }
 
+func TestJustifiedCheckpt_GenesisRootOk(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	cp := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	c := setupBeaconChain(t, db)
+	c.headState = &pb.BeaconState{CurrentJustifiedCheckpoint: cp}
+	c.genesisRoot = [32]byte{'B'}
+
+	if !bytes.Equal(c.CurrentJustifiedCheckpt().Root, c.genesisRoot[:]) {
+		t.Errorf("Got: %v, wanted: %v", c.CurrentJustifiedCheckpt().Root, c.genesisRoot[:])
+	}
+}
+
 func TestPreviousJustifiedCheckpt_CanRetrieve(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
@@ -70,6 +102,20 @@ func TestPreviousJustifiedCheckpt_CanRetrieve(t *testing.T) {
 
 	if c.PreviousJustifiedCheckpt().Epoch != cp.Epoch {
 		t.Errorf("Previous Justifiied epoch at genesis should be %d, got: %d", cp.Epoch, c.PreviousJustifiedCheckpt().Epoch)
+	}
+}
+
+func TestPrevJustifiedCheckpt_GenesisRootOk(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	cp := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	c := setupBeaconChain(t, db)
+	c.headState = &pb.BeaconState{PreviousJustifiedCheckpoint: cp}
+	c.genesisRoot = [32]byte{'C'}
+
+	if !bytes.Equal(c.PreviousJustifiedCheckpt().Root, c.genesisRoot[:]) {
+		t.Errorf("Got: %v, wanted: %v", c.PreviousJustifiedCheckpt().Root, c.genesisRoot[:])
 	}
 }
 
@@ -91,7 +137,7 @@ func TestHeadRoot_CanRetrieve(t *testing.T) {
 }
 
 func TestHeadBlock_CanRetrieve(t *testing.T) {
-	b := &ethpb.BeaconBlock{Slot: 1}
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
 	c := &Service{headBlock: b}
 	if !reflect.DeepEqual(b, c.HeadBlock()) {
 		t.Error("incorrect head block received")

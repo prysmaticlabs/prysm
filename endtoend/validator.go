@@ -27,6 +27,8 @@ type validatorClientInfo struct {
 	monitorPort uint64
 }
 
+var validatorLogFileName = "vals-%d.log"
+
 // initializeValidators sends the deposits to the eth1 chain and starts the validator clients.
 func initializeValidators(
 	t *testing.T,
@@ -48,7 +50,7 @@ func initializeValidators(
 	valClients := make([]*validatorClientInfo, beaconNodeNum)
 	validatorsPerNode := validatorNum / beaconNodeNum
 	for n := uint64(0); n < beaconNodeNum; n++ {
-		file, err := os.Create(path.Join(tmpPath, fmt.Sprintf("vals-%d.log", n)))
+		file, err := os.Create(path.Join(tmpPath, fmt.Sprintf(validatorLogFileName, n)))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -59,10 +61,13 @@ func initializeValidators(
 			fmt.Sprintf("--datadir=%s/eth2-val-%d", tmpPath, n),
 			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", 4000+n),
 		}
+		if config.minimalConfig {
+			args = append(args, "--minimal-config")
+		}
 		cmd := exec.Command(binaryPath, args...)
 		cmd.Stdout = file
 		cmd.Stderr = file
-		t.Logf("Starting validator client with flags %s", strings.Join(args, " "))
+		t.Logf("Starting validator client with flags: %s", strings.Join(args, " "))
 		if err := cmd.Start(); err != nil {
 			t.Fatal(err)
 		}

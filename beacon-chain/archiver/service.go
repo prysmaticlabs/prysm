@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	epochProcessing "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -22,30 +22,33 @@ var log = logrus.WithField("prefix", "archiver")
 // Service defining archiver functionality for persisting checkpointed
 // beacon chain information to a database backend for historical purposes.
 type Service struct {
-	ctx               context.Context
-	cancel            context.CancelFunc
-	beaconDB          db.Database
-	headFetcher       blockchain.HeadFetcher
-	stateNotifier     statefeed.Notifier
-	lastArchivedEpoch uint64
+	ctx                  context.Context
+	cancel               context.CancelFunc
+	beaconDB             db.Database
+	headFetcher          blockchain.HeadFetcher
+	participationFetcher blockchain.ParticipationFetcher
+	stateNotifier        statefeed.Notifier
+	lastArchivedEpoch    uint64
 }
 
 // Config options for the archiver service.
 type Config struct {
-	BeaconDB      db.Database
-	HeadFetcher   blockchain.HeadFetcher
-	StateNotifier statefeed.Notifier
+	BeaconDB             db.Database
+	HeadFetcher          blockchain.HeadFetcher
+	ParticipationFetcher blockchain.ParticipationFetcher
+	StateNotifier        statefeed.Notifier
 }
 
 // NewArchiverService initializes the service from configuration options.
 func NewArchiverService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:           ctx,
-		cancel:        cancel,
-		beaconDB:      cfg.BeaconDB,
-		headFetcher:   cfg.HeadFetcher,
-		stateNotifier: cfg.StateNotifier,
+		ctx:                  ctx,
+		cancel:               cancel,
+		beaconDB:             cfg.BeaconDB,
+		headFetcher:          cfg.HeadFetcher,
+		participationFetcher: cfg.ParticipationFetcher,
+		stateNotifier:        cfg.StateNotifier,
 	}
 }
 
@@ -113,10 +116,15 @@ func (s *Service) archiveActiveSetChanges(ctx context.Context, headState *pb.Bea
 
 // We compute participation metrics by first retrieving the head state and
 // matching validator attestations during the epoch.
-func (s *Service) archiveParticipation(ctx context.Context, headState *pb.BeaconState, epoch uint64) error {
-	participation, err := epochProcessing.ComputeValidatorParticipation(headState, epoch)
-	if err != nil {
-		return errors.Wrap(err, "could not compute participation")
+func (s *Service) archiveParticipation(ctx context.Context, epoch uint64) error {
+	p := s.participationFetcher.Participation(epoch)
+	participation := &ethpb.ValidatorParticipation{}
+	if p != nil {
+		participation = &ethpb.ValidatorParticipation{
+			EligibleEther:           p.PrevEpoch,
+			VotedEther:              p.PrevEpochTargetAttesters,
+			GlobalParticipationRate: float32(p.PrevEpochTargetAttesters) / float32(p.PrevEpoch),
+		}
 	}
 	return s.beaconDB.SaveArchivedValidatorParticipation(ctx, epoch, participation)
 }
@@ -161,7 +169,7 @@ func (s *Service) run(ctx context.Context) {
 					log.WithError(err).Error("Could not archive active validator set changes")
 					continue
 				}
-				if err := s.archiveParticipation(ctx, headState, epochToArchive); err != nil {
+				if err := s.archiveParticipation(ctx, epochToArchive); err != nil {
 					log.WithError(err).Error("Could not archive validator participation")
 					continue
 				}
