@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/slasher/flags"
+
 	"github.com/gogo/protobuf/proto"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/urfave/cli"
@@ -72,6 +74,30 @@ func TestValidatorSpanMap_NilDB(t *testing.T) {
 func TestValidatorSpanMap_Save(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
+	ctx := cli.NewContext(app, set, nil)
+	db := SetupSlasherDB(t, ctx)
+	defer TeardownSlasherDB(t, db)
+
+	for _, tt := range spanTests {
+		err := db.SaveValidatorSpansMap(tt.validatorIdx, tt.spanMap)
+		if err != nil {
+			t.Fatalf("Save validator span map failed: %v", err)
+		}
+		sm, err := db.ValidatorSpansMap(tt.validatorIdx)
+		if err != nil {
+			t.Fatalf("Failed to get validator span map: %v", err)
+		}
+
+		if sm == nil || !proto.Equal(sm, tt.spanMap) {
+			t.Fatalf("Get should return validator span map: %v got: %v", tt.spanMap, sm)
+		}
+	}
+}
+
+func TestValidatorSpanMap_Save_With_Cache(t *testing.T) {
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
 	ctx := cli.NewContext(app, set, nil)
 	db := SetupSlasherDB(t, ctx)
 	defer TeardownSlasherDB(t, db)

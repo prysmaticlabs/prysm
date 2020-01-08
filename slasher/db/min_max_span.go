@@ -1,27 +1,52 @@
 package db
 
 import (
+	"fmt"
+
 	"github.com/boltdb/bolt"
+	"github.com/dgraph-io/ristretto"
 	"github.com/gogo/protobuf/proto"
-	"github.com/karlseguin/ccache"
 	"github.com/pkg/errors"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 )
 
-const maxCacheSize = 10000
-
-var spanCache *ccache.Cache
+const cacheItems = 20000
+const maxCacheSize = 2 << 30 //(2GB)
+var spanCache *ristretto.Cache
+var d *Store
 
 func init() {
 	var err error
-	spanCache = ccache.New(ccache.Configure())
+	spanCache, err = ristretto.NewCache(&ristretto.Config{
+		NumCounters: cacheItems,   // number of keys to track frequency of (10M).
+		MaxCost:     maxCacheSize, // maximum cost of cache.
+		BufferItems: 64,           // number of keys per Get buffer.
+		OnEvict:     saveToDB,
+	})
 	if err != nil {
 		errors.Wrap(err, "failed to start span cache")
 		panic(err)
 	}
 }
+
+func saveToDB(validatorIdx uint64, conflict uint64, value interface{}, cost int64) {
+	err := d.batch(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(validatorsMinMaxSpanBucket)
+		key := bytesutil.Bytes4(validatorIdx)
+		val, err := proto.Marshal(value.(*slashpb.EpochSpanMap))
+		if err != nil {
+			return errors.Wrap(err, "failed to marshal span map")
+		}
+		if err := bucket.Put(key, val); err != nil {
+			return errors.Wrapf(err, "failed to delete validator id: %d from validators min max span bucket", validatorIdx)
+		}
+		return err
+	})
+	log.Errorf("failed to save spanmap to db on cache eviction: %v", err)
+}
+
 func createEpochSpanMap(enc []byte) (*slashpb.EpochSpanMap, error) {
 	epochSpanMap := &slashpb.EpochSpanMap{}
 	err := proto.Unmarshal(enc, epochSpanMap)
@@ -37,7 +62,6 @@ func createEpochSpanMap(enc []byte) (*slashpb.EpochSpanMap, error) {
 func (db *Store) ValidatorSpansMap(validatorIdx uint64) (*slashpb.EpochSpanMap, error) {
 	var sm *slashpb.EpochSpanMap
 	if db.ctx.GlobalBool(flags.UseSpanCacheFlag.Name) {
-		spanCache.
 		sm, ok := spanCache.Get(validatorIdx)
 		if ok {
 			return sm.(*slashpb.EpochSpanMap), nil
@@ -61,8 +85,13 @@ func (db *Store) ValidatorSpansMap(validatorIdx uint64) (*slashpb.EpochSpanMap, 
 
 // SaveValidatorSpansMap accepts a validator index and span map and writes it to disk.
 func (db *Store) SaveValidatorSpansMap(validatorIdx uint64, spanMap *slashpb.EpochSpanMap) error {
-	evicted := spanCache.Add(validatorIdx, spanMap)
-
+	if db.ctx.GlobalBool(flags.UseSpanCacheFlag.Name) {
+		saved := spanCache.Set(validatorIdx, spanMap, 0)
+		if !saved {
+			return fmt.Errorf("failed to save span map to cache")
+		}
+		return nil
+	}
 	err := db.batch(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsMinMaxSpanBucket)
 		key := bytesutil.Bytes4(validatorIdx)
@@ -80,6 +109,9 @@ func (db *Store) SaveValidatorSpansMap(validatorIdx uint64, spanMap *slashpb.Epo
 
 // DeleteValidatorSpanMap deletes a validator span map using a validator index as bucket key.
 func (db *Store) DeleteValidatorSpanMap(validatorIdx uint64) error {
+	if db.ctx.GlobalBool(flags.UseSpanCacheFlag.Name) {
+		spanCache.Del(validatorIdx)
+	}
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsMinMaxSpanBucket)
 		key := bytesutil.Bytes4(validatorIdx)
