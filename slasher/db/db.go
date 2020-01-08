@@ -5,6 +5,8 @@ import (
 	"path"
 	"time"
 
+	"github.com/dgraph-io/ristretto"
+
 	"github.com/urfave/cli"
 
 	"github.com/boltdb/bolt"
@@ -39,7 +41,9 @@ func (db *Store) view(fn func(*bolt.Tx) error) error {
 
 // NewDB initializes a new DB.
 func NewDB(dirPath string, ctx *cli.Context) (*Store, error) {
-	return NewKVStore(dirPath, ctx)
+	var err error
+	d, err = NewKVStore(dirPath, ctx)
+	return d, err
 }
 
 // ClearDB removes the previously stored directory at the data directory.
@@ -81,7 +85,16 @@ func NewKVStore(dirPath string, ctx *cli.Context) (*Store, error) {
 	}
 
 	kv := &Store{db: boltDB, databasePath: dirPath}
-
+	spanCache, err = ristretto.NewCache(&ristretto.Config{
+		NumCounters: CacheItems,   // number of keys to track frequency of (10M).
+		MaxCost:     maxCacheSize, // maximum cost of cache.
+		BufferItems: 64,           // number of keys per Get buffer.
+		OnEvict:     saveToDB,
+	})
+	if err != nil {
+		errors.Wrap(err, "failed to start span cache")
+		panic(err)
+	}
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
 		return createBuckets(
 			tx,

@@ -196,3 +196,50 @@ func TestValidatorSpanMap_Delete_With_Cache(t *testing.T) {
 		}
 	}
 }
+
+func TestValidatorSpanMap_Save_On_Evict(t *testing.T) {
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
+	ctx := cli.NewContext(app, set, nil)
+	maxCacheSize = int64(1)
+	CacheItems = 1
+	db := SetupSlasherDB(t, ctx)
+	defer TeardownSlasherDB(t, db)
+
+	for _, tt := range spanTests {
+		err := db.SaveValidatorSpansMap(tt.validatorIdx, tt.spanMap)
+		if err != nil {
+			t.Fatalf("Save validator span map failed: %v", err)
+		}
+	}
+	// wait for value to pass through cache buffers
+	time.Sleep(time.Millisecond * 10)
+	//for _, tt := range spanTests {
+	//	spanCache.Del(tt.validatorIdx)
+	//}
+	//// wait for value to pass through cache buffers
+	//time.Sleep(time.Millisecond * 10)
+
+	sm, err := db.ValidatorSpansMap(spanTests[0].validatorIdx)
+	if err != nil {
+		t.Fatalf("Failed to get validator span map: %v", err)
+	}
+	if sm == nil || !proto.Equal(sm, spanTests[0].spanMap) {
+		t.Fatalf("Get should return validator span map: %v got: %v", spanTests[0].spanMap, sm)
+	}
+	err = db.DeleteValidatorSpanMap(spanTests[0].validatorIdx)
+	if err != nil {
+		t.Fatalf("Delete validator span map error: %v", err)
+	}
+	// wait for value to pass through cache buffers
+	time.Sleep(time.Millisecond * 10)
+	sm, err = db.ValidatorSpansMap(spanTests[0].validatorIdx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(sm.EpochSpanMap, map[uint64]*slashpb.MinMaxEpochSpan{}) {
+		t.Errorf("Expected validator span map to be deleted, received: %v", sm)
+	}
+
+}

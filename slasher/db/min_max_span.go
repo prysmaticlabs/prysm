@@ -12,23 +12,14 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 )
 
-const cacheItems = 20000
-const maxCacheSize = 2 << 30 //(2GB)
+var CacheItems = int64(20000)
+
+var maxCacheSize = int64(2 << 30) //(2GB)
 var spanCache *ristretto.Cache
 var d *Store
 
 func init() {
-	var err error
-	spanCache, err = ristretto.NewCache(&ristretto.Config{
-		NumCounters: cacheItems,   // number of keys to track frequency of (10M).
-		MaxCost:     maxCacheSize, // maximum cost of cache.
-		BufferItems: 64,           // number of keys per Get buffer.
-		OnEvict:     saveToDB,
-	})
-	if err != nil {
-		errors.Wrap(err, "failed to start span cache")
-		panic(err)
-	}
+
 }
 
 func saveToDB(validatorIdx uint64, _ uint64, value interface{}, cost int64) {
