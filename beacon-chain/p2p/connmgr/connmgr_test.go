@@ -103,7 +103,7 @@ func TestConnsToClose(t *testing.T) {
 		t.Fatal("expected no connections")
 	}
 
-	cm = NewConnManager(1, 1, time.Duration(10*time.Minute))
+	cm = NewConnManager(1, 1, 10*time.Minute)
 	not := cm.Notifee()
 	for i := 0; i < 5; i++ {
 		conn := randConn(t, nil)
@@ -117,7 +117,7 @@ func TestConnsToClose(t *testing.T) {
 
 func TestGetTagInfo(t *testing.T) {
 	start := time.Now()
-	cm := NewConnManager(1, 1, time.Duration(10*time.Minute))
+	cm := NewConnManager(1, 1, 10*time.Minute)
 	not := cm.Notifee()
 	conn := randConn(t, nil)
 	not.Connected(nil, conn)
@@ -187,7 +187,7 @@ func TestGetTagInfo(t *testing.T) {
 }
 
 func TestTagPeerNonExistant(t *testing.T) {
-	cm := NewConnManager(1, 1, time.Duration(10*time.Minute))
+	cm := NewConnManager(1, 1, 10*time.Minute)
 
 	id := tu.RandPeerIDFatal(t)
 	cm.TagPeer(id, "test", 1)
@@ -198,7 +198,7 @@ func TestTagPeerNonExistant(t *testing.T) {
 }
 
 func TestUntagPeer(t *testing.T) {
-	cm := NewConnManager(1, 1, time.Duration(10*time.Minute))
+	cm := NewConnManager(1, 1, 10*time.Minute)
 	not := cm.Notifee()
 	conn := randConn(t, nil)
 	not.Connected(nil, conn)
@@ -228,7 +228,7 @@ func TestUntagPeer(t *testing.T) {
 
 func TestGetInfo(t *testing.T) {
 	start := time.Now()
-	gp := time.Duration(10 * time.Minute)
+	gp := 10 * time.Minute
 	cm := NewConnManager(1, 5, gp)
 	not := cm.Notifee()
 	conn := randConn(t, nil)
@@ -255,7 +255,7 @@ func TestGetInfo(t *testing.T) {
 }
 
 func TestDoubleConnection(t *testing.T) {
-	gp := time.Duration(10 * time.Minute)
+	gp := 10 * time.Minute
 	cm := NewConnManager(1, 5, gp)
 	not := cm.Notifee()
 	conn := randConn(t, nil)
@@ -271,7 +271,7 @@ func TestDoubleConnection(t *testing.T) {
 }
 
 func TestDisconnected(t *testing.T) {
-	gp := time.Duration(10 * time.Minute)
+	gp := 10 * time.Minute
 	cm := NewConnManager(1, 5, gp)
 	not := cm.Notifee()
 	conn := randConn(t, nil)
@@ -605,7 +605,7 @@ func TestPeerProtectionIdempotent(t *testing.T) {
 }
 
 func TestUpsertTag(t *testing.T) {
-	cm := NewConnManager(1, 1, time.Duration(10*time.Minute))
+	cm := NewConnManager(1, 1, 10*time.Minute)
 	not := cm.Notifee()
 	conn := randConn(t, nil)
 	rp := conn.RemotePeer()

@@ -12,10 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-const (
-	blsWithdrawalPrefixByte = byte(0)
-)
-
 var (
 	numValidators    = flag.Int("num-validators", 0, "Number of validators to deterministically include in the generated genesis state")
 	useMainnetConfig = flag.Bool("mainnet-config", false, "Select whether genesis state should be generated with mainnet or minimal (default) params")

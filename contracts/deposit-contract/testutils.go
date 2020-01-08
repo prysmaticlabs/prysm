@@ -40,7 +40,7 @@ func Setup() (*TestAccount, error) {
 	// strip off the 0x and the first 2 characters 04 which is always the EC prefix and is not required.
 	publicKeyBytes := crypto.FromECDSAPub(pubKeyECDSA)[4:]
 	var pubKey = make([]byte, 48)
-	copy(pubKey[:], []byte(publicKeyBytes))
+	copy(pubKey[:], publicKeyBytes)
 
 	addr := crypto.PubkeyToAddress(privKey.PublicKey)
 	txOpts := bind.NewKeyedTransactor(privKey)
@@ -60,12 +60,6 @@ func Setup() (*TestAccount, error) {
 // Amount32Eth returns 32Eth(in wei) in terms of the big.Int type.
 func Amount32Eth() *big.Int {
 	amount, _ := new(big.Int).SetString(amount32Eth, 10)
-	return amount
-}
-
-// Amount33Eth returns 33Eth(in wei) in terms of the big.Int type.
-func Amount33Eth() *big.Int {
-	amount, _ := new(big.Int).SetString(amount33Eth, 10)
 	return amount
 }
 
