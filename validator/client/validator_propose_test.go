@@ -311,7 +311,7 @@ func TestSetProposedForEpoch_PrunesOverWSPeriod(t *testing.T) {
 		t.Fatalf("Expected latest epoch written to be %d, received %d", prunedEpoch, proposals.LatestEpochWritten)
 	}
 
-	epoch := uint64(wsPeriod + 4)
+	epoch := wsPeriod + 4
 	proposals = SetProposedForEpoch(proposals, epoch)
 	if !HasProposedForEpoch(proposals, epoch) {
 		t.Fatalf("Expected to be marked as proposed for epoch %d", epoch)
@@ -321,7 +321,7 @@ func TestSetProposedForEpoch_PrunesOverWSPeriod(t *testing.T) {
 	}
 
 	if HasProposedForEpoch(proposals, epoch-wsPeriod+prunedEpoch) {
-		t.Fatalf("Expected pruned epoch %d to not be marked as proposed", epoch)
+		t.Fatalf("Expected the bit of pruned epoch %d to not be marked as proposed", epoch)
 	}
 	// Make sure no other bits are changed.
 	for i := epoch-wsPeriod+1; i <= epoch; i++ {
