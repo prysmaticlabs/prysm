@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -451,6 +452,7 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	web3Service.rpcClient = &mockPOW.RPCClient{Backend: testAcc.Backend}
 	web3Service.httpLogger = testAcc.Backend
 	web3Service.latestEth1Data.LastRequestedBlock = 0
 	web3Service.latestEth1Data.BlockHeight = 0
@@ -711,6 +713,8 @@ func newPowchainService(t *testing.T, eth1Backend *contracts.TestAccount, beacon
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	web3Service.rpcClient = &mockPOW.RPCClient{Backend: eth1Backend.Backend}
 	web3Service.reader = &goodReader{backend: eth1Backend.Backend}
 	web3Service.blockFetcher = &goodFetcher{backend: eth1Backend.Backend}
 	web3Service.httpLogger = &goodLogger{backend: eth1Backend.Backend}
