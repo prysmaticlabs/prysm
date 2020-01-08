@@ -64,7 +64,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	// Use zero hash as stub for state root to compute later.
 	stateRoot := params.BeaconConfig().ZeroHash[:]
 
-	graffiti := bytesutil.ToBytes32([]byte(req.Graffiti))
+	graffiti := bytesutil.ToBytes32(req.Graffiti)
 
 	blk := &ethpb.BeaconBlock{
 		Slot:       req.Slot,

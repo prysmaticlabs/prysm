@@ -8,7 +8,7 @@ import (
 var log = logrus.WithField("prefix", "blockchain")
 
 // logs state transition related data every slot.
-func logStateTransitionData(b *ethpb.BeaconBlock, r []byte) {
+func logStateTransitionData(b *ethpb.BeaconBlock) {
 	log.WithFields(logrus.Fields{
 		"slot":         b.Slot,
 		"attestations": len(b.Body.Attestations),

@@ -2,7 +2,6 @@ package keystore
 
 import (
 	"bytes"
-	"crypto/rand"
 	"os"
 	"testing"
 
@@ -21,7 +20,7 @@ func TestStoreAndGetKey(t *testing.T) {
 		scryptP:     LightScryptP,
 	}
 
-	key, err := NewKey(rand.Reader)
+	key, err := NewKey()
 	if err != nil {
 		t.Fatalf("key generation failed %v", err)
 	}
@@ -53,7 +52,7 @@ func TestStoreAndGetKeys(t *testing.T) {
 		scryptP:     LightScryptP,
 	}
 
-	key, err := NewKey(rand.Reader)
+	key, err := NewKey()
 	if err != nil {
 		t.Fatalf("key generation failed %v", err)
 	}
@@ -61,7 +60,7 @@ func TestStoreAndGetKeys(t *testing.T) {
 	if err := ks.StoreKey(tmpdir+filePrefix+"/test-1", key, "password"); err != nil {
 		t.Fatalf("unable to store key %v", err)
 	}
-	key2, err := NewKey(rand.Reader)
+	key2, err := NewKey()
 	if err != nil {
 		t.Fatalf("key generation failed %v", err)
 	}

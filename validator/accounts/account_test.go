@@ -1,7 +1,6 @@
 package accounts
 
 import (
-	"crypto/rand"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -14,7 +13,7 @@ import (
 func TestNewValidatorAccount_AccountExists(t *testing.T) {
 	directory := testutil.TempDir() + "/testkeystore"
 	defer os.RemoveAll(directory)
-	validatorKey, err := keystore.NewKey(rand.Reader)
+	validatorKey, err := keystore.NewKey()
 	if err != nil {
 		t.Fatalf("Cannot create new key: %v", err)
 	}
