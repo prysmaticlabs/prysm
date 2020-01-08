@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -101,7 +100,7 @@ func (s *Service) Start() {
 		time.Sleep(roughtime.Until(genesis))
 	}
 	s.chainStarted = true
-	currentSlot := slotutil.SlotsSinceGenesis(genesis)
+	currentSlot := helpers.SlotsSince(genesis)
 	if helpers.SlotToEpoch(currentSlot) == 0 {
 		log.Info("Chain started within the last epoch - not syncing")
 		s.synced = true

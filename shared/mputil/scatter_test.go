@@ -106,7 +106,7 @@ func TestError(t *testing.T) {
 			val++
 			if val == 1011 {
 				mu.Unlock()
-				return nil, errors.New("Bad number!")
+				return nil, errors.New("bad number")
 			}
 			mu.Unlock()
 		}

@@ -112,9 +112,8 @@ func BenchmarkCheckAttestations(b *testing.B) {
 		cb = append(cb, i)
 	}
 	ia1 := &ethpb.IndexedAttestation{
-		CustodyBit_0Indices: cb,
-		CustodyBit_1Indices: []uint64{},
-		Signature:           make([]byte, 96),
+		AttestingIndices: cb,
+		Signature:        make([]byte, 96),
 		Data: &ethpb.AttestationData{
 			CommitteeIndex:  0,
 			BeaconBlockRoot: make([]byte, 32),

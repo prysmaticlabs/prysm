@@ -32,7 +32,7 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 		return nil, err
 	}
 	tEpoch := req.Data.Target.Epoch
-	indices := append(req.CustodyBit_0Indices, req.CustodyBit_1Indices...)
+	indices := req.AttestingIndices
 	root, err := ssz.HashTreeRoot(req.Data)
 	if err != nil {
 		return nil, err
@@ -86,7 +86,7 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 // a slashable proposal.
 func (ss *Server) IsSlashableBlock(ctx context.Context, psr *slashpb.ProposerSlashingRequest) (*slashpb.ProposerSlashingResponse, error) {
 	//TODO(#3133): add signature validation
-	epoch := helpers.SlotToEpoch(psr.BlockHeader.Slot)
+	epoch := helpers.SlotToEpoch(psr.BlockHeader.Header.Slot)
 	blockHeaders, err := ss.SlasherDB.BlockHeader(epoch, psr.ValidatorIndex)
 	if err != nil {
 		return nil, errors.Wrap(err, "slasher service error while trying to retrieve blocks")

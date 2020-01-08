@@ -9,6 +9,7 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/proto/beacon/db"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -29,17 +30,17 @@ type Database interface {
 	SaveAttestation(ctx context.Context, att *eth.Attestation) error
 	SaveAttestations(ctx context.Context, atts []*eth.Attestation) error
 	// Block related methods.
-	Block(ctx context.Context, blockRoot [32]byte) (*eth.BeaconBlock, error)
-	HeadBlock(ctx context.Context) (*eth.BeaconBlock, error)
-	Blocks(ctx context.Context, f *filters.QueryFilter) ([]*eth.BeaconBlock, error)
+	Block(ctx context.Context, blockRoot [32]byte) (*eth.SignedBeaconBlock, error)
+	HeadBlock(ctx context.Context) (*eth.SignedBeaconBlock, error)
+	Blocks(ctx context.Context, f *filters.QueryFilter) ([]*eth.SignedBeaconBlock, error)
 	BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]byte, error)
 	HasBlock(ctx context.Context, blockRoot [32]byte) bool
 	DeleteBlock(ctx context.Context, blockRoot [32]byte) error
 	DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error
-	SaveBlock(ctx context.Context, block *eth.BeaconBlock) error
-	SaveBlocks(ctx context.Context, blocks []*eth.BeaconBlock) error
+	SaveBlock(ctx context.Context, block *eth.SignedBeaconBlock) error
+	SaveBlocks(ctx context.Context, blocks []*eth.SignedBeaconBlock) error
 	SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
-	GenesisBlock(ctx context.Context) (*ethpb.BeaconBlock, error)
+	GenesisBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error)
 	SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool
 	// Validator related methods.
@@ -85,4 +86,7 @@ type Database interface {
 	// Deposit contract related handlers.
 	DepositContractAddress(ctx context.Context) ([]byte, error)
 	SaveDepositContractAddress(ctx context.Context, addr common.Address) error
+	//Powchain operations
+	PowchainData(ctx context.Context) (*db.ETH1ChainData, error)
+	SavePowchainData(ctx context.Context, data *db.ETH1ChainData) error
 }

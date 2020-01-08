@@ -4,4 +4,4 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations/kv"
 )
 
-var _ = AttestationPool(&kv.AttCaches{})
+var _ = Pool(&kv.AttCaches{})

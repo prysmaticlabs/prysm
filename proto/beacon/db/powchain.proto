@@ -3,6 +3,7 @@ syntax = "proto3";
 package prysm.beacon.db;
 
 import "eth/v1alpha1/beacon_block.proto";
+import "proto/beacon/p2p/v1/types.proto";
 
 option go_package = "github.com/prysmaticlabs/prysm/proto/beacon/db";
 
@@ -11,14 +12,16 @@ option go_package = "github.com/prysmaticlabs/prysm/proto/beacon/db";
 message ETH1ChainData {
     LatestETH1Data current_eth1_data = 1 ;
     ChainStartData chainstart_data = 2;
-    SparseMerkleTrie trie = 3;
+    ethereum.beacon.p2p.v1.BeaconState beacon_state = 3;
+    SparseMerkleTrie trie = 4;
+    repeated DepositContainer deposit_containers = 5;
 }
 
 // LatestETH1Data contains the current state of the eth1 chain.
 message LatestETH1Data {
     uint64 block_height = 2;
     uint64 block_time = 3;
-    repeated bytes block_hash = 4;
+    bytes block_hash = 4;
     uint64 last_requested_block = 5;
 }
 
@@ -42,4 +45,13 @@ message SparseMerkleTrie {
 // the lack of protobuf support for multi-dimensional arrays.(Ex: 3d,4d,...)
 message TrieLayer {
     repeated bytes layer = 1;
+}
+
+// DepositContainer defines a container that can be used to store
+// deposit related information for a particular deposit.
+message DepositContainer {
+    int64 index = 1;
+    uint64 eth1_block_height = 2;
+    ethereum.eth.v1alpha1.Deposit deposit = 3;
+    bytes deposit_root = 4;
 }

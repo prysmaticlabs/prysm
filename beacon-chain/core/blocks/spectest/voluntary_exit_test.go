@@ -24,12 +24,12 @@ func runVoluntaryExitTest(t *testing.T, config string) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			voluntaryExit := &ethpb.VoluntaryExit{}
+			voluntaryExit := &ethpb.SignedVoluntaryExit{}
 			if err := ssz.Unmarshal(exitFile, voluntaryExit); err != nil {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
 
-			body := &ethpb.BeaconBlockBody{VoluntaryExits: []*ethpb.VoluntaryExit{voluntaryExit}}
+			body := &ethpb.BeaconBlockBody{VoluntaryExits: []*ethpb.SignedVoluntaryExit{voluntaryExit}}
 			testutil.RunBlockOperationTest(t, folderPath, body, blocks.ProcessVoluntaryExits)
 		})
 	}

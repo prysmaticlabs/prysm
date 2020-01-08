@@ -11,6 +11,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -36,6 +37,7 @@ func TestArchiverService_ReceivesBlockProcessedEvent(t *testing.T) {
 	svc.headFetcher = &mock.ChainService{
 		State: &pb.BeaconState{Slot: 1},
 	}
+
 	event := &feed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
@@ -79,7 +81,7 @@ func TestArchiverService_ArchivesEvenThroughSkipSlot(t *testing.T) {
 	hook := logTest.NewGlobal()
 	svc, beaconDB := setupService(t)
 	validatorCount := uint64(100)
-	headState := setupState(t, validatorCount)
+	headState := setupState(validatorCount)
 	defer dbutil.TeardownDB(t, beaconDB)
 	event := &feed.Event{
 		Type: statefeed.BlockProcessed,
@@ -128,7 +130,7 @@ func TestArchiverService_ArchivesEvenThroughSkipSlot(t *testing.T) {
 func TestArchiverService_ComputesAndSavesParticipation(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validatorCount := uint64(100)
-	headState := setupState(t, validatorCount)
+	headState := setupState(validatorCount)
 	svc, beaconDB := setupService(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	svc.headFetcher = &mock.ChainService{
@@ -144,6 +146,7 @@ func TestArchiverService_ComputesAndSavesParticipation(t *testing.T) {
 	triggerStateEvent(t, svc, event)
 
 	attestedBalance := uint64(1)
+
 	currentEpoch := helpers.CurrentEpoch(headState)
 	wanted := &ethpb.ValidatorParticipation{
 		VotedEther:              attestedBalance,
@@ -165,7 +168,7 @@ func TestArchiverService_ComputesAndSavesParticipation(t *testing.T) {
 func TestArchiverService_SavesIndicesAndBalances(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validatorCount := uint64(100)
-	headState := setupState(t, validatorCount)
+	headState := setupState(validatorCount)
 	svc, beaconDB := setupService(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	svc.headFetcher = &mock.ChainService{
@@ -198,7 +201,7 @@ func TestArchiverService_SavesIndicesAndBalances(t *testing.T) {
 func TestArchiverService_SavesCommitteeInfo(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validatorCount := uint64(100)
-	headState := setupState(t, validatorCount)
+	headState := setupState(validatorCount)
 	svc, beaconDB := setupService(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	svc.headFetcher = &mock.ChainService{
@@ -245,7 +248,7 @@ func TestArchiverService_SavesCommitteeInfo(t *testing.T) {
 func TestArchiverService_SavesActivatedValidatorChanges(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validatorCount := uint64(100)
-	headState := setupState(t, validatorCount)
+	headState := setupState(validatorCount)
 	svc, beaconDB := setupService(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	svc.headFetcher = &mock.ChainService{
@@ -280,7 +283,7 @@ func TestArchiverService_SavesActivatedValidatorChanges(t *testing.T) {
 func TestArchiverService_SavesSlashedValidatorChanges(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validatorCount := uint64(100)
-	headState := setupState(t, validatorCount)
+	headState := setupState(validatorCount)
 	svc, beaconDB := setupService(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	svc.headFetcher = &mock.ChainService{
@@ -314,7 +317,7 @@ func TestArchiverService_SavesSlashedValidatorChanges(t *testing.T) {
 func TestArchiverService_SavesExitedValidatorChanges(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validatorCount := uint64(100)
-	headState := setupState(t, validatorCount)
+	headState := setupState(validatorCount)
 	svc, beaconDB := setupService(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	svc.headFetcher = &mock.ChainService{
@@ -344,7 +347,7 @@ func TestArchiverService_SavesExitedValidatorChanges(t *testing.T) {
 	}
 }
 
-func setupState(t *testing.T, validatorCount uint64) *pb.BeaconState {
+func setupState(validatorCount uint64) *pb.BeaconState {
 	validators := make([]*ethpb.Validator, validatorCount)
 	balances := make([]uint64, validatorCount)
 	for i := 0; i < len(validators); i++ {
@@ -377,12 +380,16 @@ func setupState(t *testing.T, validatorCount uint64) *pb.BeaconState {
 func setupService(t *testing.T) (*Service, db.Database) {
 	beaconDB := dbutil.SetupDB(t)
 	ctx, cancel := context.WithCancel(context.Background())
+	validatorCount := uint64(100)
+	totalBalance := validatorCount * params.BeaconConfig().MaxEffectiveBalance
 	mockChainService := &mock.ChainService{}
 	return &Service{
 		beaconDB:      beaconDB,
 		ctx:           ctx,
 		cancel:        cancel,
 		stateNotifier: mockChainService.StateNotifier(),
+		participationFetcher: &mock.ChainService{
+			Balance: &precompute.Balance{PrevEpoch: totalBalance, PrevEpochTargetAttesters: 1}},
 	}, beaconDB
 }
 

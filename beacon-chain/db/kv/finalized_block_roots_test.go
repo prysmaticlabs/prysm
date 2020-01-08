@@ -28,7 +28,7 @@ func TestStore_IsFinalizedBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	root, err := ssz.SigningRoot(blks[slotsPerEpoch])
+	root, err := ssz.HashTreeRoot(blks[slotsPerEpoch].Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +49,7 @@ func TestStore_IsFinalizedBlock(t *testing.T) {
 
 	// All blocks up to slotsPerEpoch*2 should be in the finalized index.
 	for i := 0; i < slotsPerEpoch*2; i++ {
-		root, err := ssz.SigningRoot(blks[i])
+		root, err := ssz.HashTreeRoot(blks[i].Block)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -58,7 +58,7 @@ func TestStore_IsFinalizedBlock(t *testing.T) {
 		}
 	}
 	for i := slotsPerEpoch * 3; i < len(blks); i++ {
-		root, err := ssz.SigningRoot(blks[i])
+		root, err := ssz.HashTreeRoot(blks[i].Block)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -152,25 +152,27 @@ func TestStore_IsFinalized_ForkEdgeCase(t *testing.T) {
 	}
 }
 
-func sszRootOrDie(t *testing.T, block *ethpb.BeaconBlock) []byte {
-	root, err := ssz.SigningRoot(block)
+func sszRootOrDie(t *testing.T, block *ethpb.SignedBeaconBlock) []byte {
+	root, err := ssz.HashTreeRoot(block.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return root[:]
 }
 
-func makeBlocks(t *testing.T, i, n int, previousRoot [32]byte) []*ethpb.BeaconBlock {
-	blocks := make([]*ethpb.BeaconBlock, n)
+func makeBlocks(t *testing.T, i, n int, previousRoot [32]byte) []*ethpb.SignedBeaconBlock {
+	blocks := make([]*ethpb.SignedBeaconBlock, n)
 	for j := i; j < n+i; j++ {
 		parentRoot := make([]byte, 32)
 		copy(parentRoot, previousRoot[:])
-		blocks[j-i] = &ethpb.BeaconBlock{
-			Slot:       uint64(j + 1),
-			ParentRoot: parentRoot,
+		blocks[j-i] = &ethpb.SignedBeaconBlock{
+			Block: &ethpb.BeaconBlock{
+				Slot:       uint64(j + 1),
+				ParentRoot: parentRoot,
+			},
 		}
 		var err error
-		previousRoot, err = ssz.SigningRoot(blocks[j-i])
+		previousRoot, err = ssz.HashTreeRoot(blocks[j-i].Block)
 		if err != nil {
 			t.Fatal(err)
 		}
