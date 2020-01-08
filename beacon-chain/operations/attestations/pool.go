@@ -16,6 +16,7 @@ type Pool interface {
 	AggregatedAttestations() []*ethpb.Attestation
 	AggregatedAttestationsBySlotIndex(slot uint64, committeeIndex uint64) []*ethpb.Attestation
 	DeleteAggregatedAttestation(att *ethpb.Attestation) error
+	HasAggregatedAttestation(att *ethpb.Attestation) (bool, error)
 	// For unaggregated attestations.
 	SaveUnaggregatedAttestation(att *ethpb.Attestation) error
 	SaveUnaggregatedAttestations(atts []*ethpb.Attestation) error
