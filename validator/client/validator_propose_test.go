@@ -115,7 +115,7 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
 	defer finish()
-
+	defer db.TeardownDB(t, validator.db)
 
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
@@ -142,6 +142,72 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 
 	validator.ProposeBlock(context.Background(), params.BeaconConfig().SlotsPerEpoch*5+2, validatorPubKey)
 	testutil.AssertLogsContain(t, hook, "Tried to sign a double proposal")
+}
+
+func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
+	hook := logTest.NewGlobal()
+	validator, m, finish := setup(t)
+	defer finish()
+	defer db.TeardownDB(t, validator.db)
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), //epoch
+	).Times(2).Return(&ethpb.DomainResponse{}, nil /*err*/)
+
+	m.validatorClient.EXPECT().GetBlock(
+		gomock.Any(), // ctx
+		gomock.Any(),
+	).Times(2).Return(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}, nil /*err*/)
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), //epoch
+	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+
+	m.validatorClient.EXPECT().ProposeBlock(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
+	).Return(&ethpb.ProposeResponse{}, nil /*error*/)
+
+	validator.ProposeBlock(context.Background(), params.BeaconConfig().WeakSubjectivityPeriod+9, validatorPubKey)
+	testutil.AssertLogsDoNotContain(t, hook, "Tried to sign a double proposal")
+
+	validator.ProposeBlock(context.Background(), params.BeaconConfig().WeakSubjectivityPeriod+9, validatorPubKey)
+	testutil.AssertLogsContain(t, hook, "Tried to sign a double proposal")
+}
+
+func TestProposeBlock_AllowsPastProposals(t *testing.T) {
+	hook := logTest.NewGlobal()
+	validator, m, finish := setup(t)
+	defer finish()
+	defer db.TeardownDB(t, validator.db)
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), //epoch
+	).Times(2).Return(&ethpb.DomainResponse{}, nil /*err*/)
+
+	m.validatorClient.EXPECT().GetBlock(
+		gomock.Any(), // ctx
+		gomock.Any(),
+	).Times(2).Return(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}, nil /*err*/)
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), //epoch
+	).Times(2).Return(&ethpb.DomainResponse{}, nil /*err*/)
+
+	m.validatorClient.EXPECT().ProposeBlock(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
+	).Times(2).Return(&ethpb.ProposeResponse{}, nil /*error*/)
+
+	validator.ProposeBlock(context.Background(), params.BeaconConfig().WeakSubjectivityPeriod+9, validatorPubKey)
+	testutil.AssertLogsDoNotContain(t, hook, "Tried to sign a double proposal")
+
+	validator.ProposeBlock(context.Background(), params.BeaconConfig().WeakSubjectivityPeriod-400, validatorPubKey)
+	testutil.AssertLogsDoNotContain(t, hook, "Tried to sign a double proposal")
 }
 
 func TestProposeBlock_BroadcastsBlock(t *testing.T) {
