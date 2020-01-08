@@ -11,22 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
-func TestNewContainerFromAttestations(t *testing.T) {
-	atts := []*ethpb.Attestation{
-		{
-			AggregationBits: bitfield.Bitlist{0b00000001, 0b1},
-			Signature:       bls.NewAggregateSignature().Marshal(),
-			Data:            &ethpb.AttestationData{},
-		},
-	}
-
-	ac := dbpb.NewContainerFromAttestations(atts)
-
-	if len(ac.SignaturePairs) != 1 {
-		t.Errorf("wrong length of pairs. wanted 1 got %d", len(ac.SignaturePairs))
-	}
-}
-
 func TestAttestationContainer_Contains(t *testing.T) {
 	tests := []struct {
 		input    []bitfield.Bitlist

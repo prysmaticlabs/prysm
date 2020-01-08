@@ -591,6 +591,6 @@ func (bs *Server) GetValidatorPerformance(
 		AverageActiveValidatorBalance: avgBalance,
 		MissingValidators:             missingValidators,
 		TotalValidators:               uint64(len(headState.Validators)),
-		TotalActiveValidators:         uint64(activeCount),
+		TotalActiveValidators:         activeCount,
 	}, nil
 }

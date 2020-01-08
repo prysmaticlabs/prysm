@@ -30,7 +30,6 @@ import (
 var _ = shared.Service(&Service{})
 
 var pollingPeriod = 1 * time.Second
-var ttl = 1 * time.Hour
 
 const prysmProtocolPrefix = "/prysm/0.0.0"
 
@@ -94,7 +93,7 @@ func NewService(cfg *Config) (*Service, error) {
 		dopts := []dhtopts.Option{
 			dhtopts.Datastore(dsync.MutexWrap(ds.NewMapDatastore())),
 			dhtopts.Protocols(
-				protocol.ID(prysmProtocolPrefix + "/dht"),
+				prysmProtocolPrefix + "/dht",
 			),
 		}
 
@@ -189,7 +188,7 @@ func (s *Service) Start() {
 			s.host.ConnManager().Protect(peer.ID, "bootnode")
 		}
 		bcfg := kaddht.DefaultBootstrapConfig
-		bcfg.Period = time.Duration(30 * time.Second)
+		bcfg.Period = 30 * time.Second
 		if err := s.dht.BootstrapWithConfig(s.ctx, bcfg); err != nil {
 			log.WithError(err).Error("Failed to bootstrap DHT")
 		}

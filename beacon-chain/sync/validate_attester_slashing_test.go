@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -104,7 +103,7 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 			},
 		},
 	}
-	valid := r.validateAttesterSlashing(ctx, peer.ID("foobar"), msg)
+	valid := r.validateAttesterSlashing(ctx, "foobar", msg)
 
 	if !valid {
 		t.Error("Failed Validation")

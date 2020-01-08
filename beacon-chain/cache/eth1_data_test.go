@@ -91,7 +91,7 @@ func TestEth1Data_MaxSize(t *testing.T) {
 
 	for i := 0; i < maxEth1DataVoteSize+1; i++ {
 		var hash [32]byte
-		copy(hash[:], []byte(strconv.Itoa(i)))
+		copy(hash[:], strconv.Itoa(i))
 		eInfo := &Eth1DataVote{
 			Eth1DataHash: hash,
 		}
