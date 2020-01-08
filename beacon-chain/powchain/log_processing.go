@@ -281,7 +281,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		return nil
 	}
 
-	if logs[0].BlockNumber > currentBlockNum {
+	if len(logs) > 0 && logs[0].BlockNumber > currentBlockNum {
 		currentBlockNum = logs[0].BlockNumber
 	}
 
