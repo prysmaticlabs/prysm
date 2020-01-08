@@ -665,6 +665,10 @@ func TestConsistentGenesisState(t *testing.T) {
 		testAcc.Backend.Commit()
 	}
 
+	for i := 0; i < int(params.BeaconConfig().LogBlockDelay); i++ {
+		testAcc.Backend.Commit()
+	}
+
 	time.Sleep(2 * time.Second)
 	if !web3Service.chainStartData.Chainstarted {
 		t.Fatalf("Service hasn't chainstarted yet with a block height of %d", web3Service.latestEth1Data.BlockHeight)
