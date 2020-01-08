@@ -281,6 +281,10 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		return nil
 	}
 
+	if logs[0].BlockNumber > currentBlockNum {
+		currentBlockNum = logs[0].BlockNumber
+	}
+
 	if err := requestHeaders(currentBlockNum, currentBlockNum+eth1HeaderReqLimit); err != nil {
 		return err
 	}
