@@ -3,7 +3,7 @@ package db
 import (
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
-	lru "github.com/hashicorp/golang-lru"
+	"github.com/karlseguin/ccache"
 	"github.com/pkg/errors"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -12,11 +12,11 @@ import (
 
 const maxCacheSize = 10000
 
-var spanCache *lru.ARCCache
+var spanCache *ccache.Cache
 
 func init() {
 	var err error
-	spanCache, err = lru.NewARC(maxCacheSize)
+	spanCache = ccache.New(ccache.Configure())
 	if err != nil {
 		errors.Wrap(err, "failed to start span cache")
 		panic(err)
@@ -37,6 +37,7 @@ func createEpochSpanMap(enc []byte) (*slashpb.EpochSpanMap, error) {
 func (db *Store) ValidatorSpansMap(validatorIdx uint64) (*slashpb.EpochSpanMap, error) {
 	var sm *slashpb.EpochSpanMap
 	if db.ctx.GlobalBool(flags.UseSpanCacheFlag.Name) {
+		spanCache.
 		sm, ok := spanCache.Get(validatorIdx)
 		if ok {
 			return sm.(*slashpb.EpochSpanMap), nil
@@ -60,7 +61,8 @@ func (db *Store) ValidatorSpansMap(validatorIdx uint64) (*slashpb.EpochSpanMap, 
 
 // SaveValidatorSpansMap accepts a validator index and span map and writes it to disk.
 func (db *Store) SaveValidatorSpansMap(validatorIdx uint64, spanMap *slashpb.EpochSpanMap) error {
-	spanCache.Add(validatorIdx, spanMap)
+	evicted := spanCache.Add(validatorIdx, spanMap)
+
 	err := db.batch(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsMinMaxSpanBucket)
 		key := bytesutil.Bytes4(validatorIdx)

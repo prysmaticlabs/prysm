@@ -60,8 +60,8 @@ go_test(
         "no-cache",
     ],
     deps = [
-        "//slasher/flags:go_default_library",
         "//slasher/db:go_default_library",
+        "//slasher/flags:go_default_library",
         "@com_github_urfave_cli//:go_default_library",
     ],
 )
