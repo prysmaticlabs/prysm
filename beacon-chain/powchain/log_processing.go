@@ -299,7 +299,7 @@ func (s *Service) requestBatchedLogs(ctx context.Context) error {
 	// We request for the nth block behind the current head, in order to have
 	// stabilized logs when we retrieve it from the 1.0 chain.
 
-	requestedBlock := s.latestEth1Data.BlockHeight
+	requestedBlock := s.latestEth1Data.BlockHeight - uint64(params.BeaconConfig().LogBlockDelay)
 	for i := s.latestEth1Data.LastRequestedBlock + 1; i <= requestedBlock; i++ {
 		err := s.ProcessETH1Block(ctx, big.NewInt(int64(i)))
 		if err != nil {
