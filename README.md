@@ -23,7 +23,7 @@ Participation is now open to the public for our Ethereum 2.0 phase 0 testnet rel
     - [Running via Docker](#running-via-docker)
     - [Running via Bazel](#running-via-bazel)
 - [Staking ETH: running a validator client](#staking-eth-running-a-validator-client)
-    - [Activating your validator: depositing 3.2 Goerli ETH](#activating-your-validator-depositing-32-göerli-eth)
+    - [Activating your validator: depositing 3.2 Goerli ETH](#activating-your-validator-depositing-32-gerli-eth)
     - [Starting the validator with Bazel](#starting-the-validator-with-bazel)
 - [Setting up a local ETH2 development chain](#setting-up-a-local-eth2-development-chain)
     - [Installation and dependencies](#installation-and-dependencies) 

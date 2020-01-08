@@ -110,7 +110,7 @@ func ActiveValidatorCount(state *pb.BeaconState, epoch uint64) (uint64, error) {
 //    """
 //    return Epoch(epoch + 1 + ACTIVATION_EXIT_DELAY)
 func DelayedActivationExitEpoch(epoch uint64) uint64 {
-	return epoch + 1 + params.BeaconConfig().MaxSeedLookhead
+	return epoch + 1 + params.BeaconConfig().MaxSeedLookahead
 }
 
 // ValidatorChurnLimit returns the number of validators that are allowed to
