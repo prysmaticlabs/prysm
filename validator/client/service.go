@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
@@ -28,6 +29,7 @@ type ValidatorService struct {
 	conn                 *grpc.ClientConn
 	endpoint             string
 	withCert             string
+	dataDir              string
 	keyManager           keymanager.KeyManager
 	logValidatorBalances bool
 }
@@ -35,6 +37,7 @@ type ValidatorService struct {
 // Config for the validator service.
 type Config struct {
 	Endpoint             string
+	DataDir              string
 	CertFlag             string
 	GraffitiFlag         string
 	KeyManager           keymanager.KeyManager
@@ -50,6 +53,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		cancel:               cancel,
 		endpoint:             cfg.Endpoint,
 		withCert:             cfg.CertFlag,
+		dataDir:              cfg.DataDir,
 		graffiti:             []byte(cfg.GraffitiFlag),
 		keyManager:           cfg.KeyManager,
 		logValidatorBalances: cfg.LogValidatorBalances,
@@ -92,8 +96,22 @@ func (v *ValidatorService) Start() {
 		return
 	}
 	log.Info("Successfully started gRPC connection")
+
+	pubkeys, err := v.keyManager.FetchValidatingKeys()
+	if err != nil {
+		log.Errorf("Could not get validating keys: %v", err)
+		return
+	}
+
+	valDB, err := db.NewKVStore(v.dataDir, pubkeys)
+	if err != nil {
+		log.Errorf("Could not initialize db: %v", err)
+		return
+	}
+
 	v.conn = conn
 	v.validator = &validator{
+		db:                   valDB,
 		validatorClient:      ethpb.NewBeaconNodeValidatorClient(v.conn),
 		beaconClient:         ethpb.NewBeaconChainClient(v.conn),
 		aggregatorClient:     pb.NewAggregatorServiceClient(v.conn),
