@@ -30,7 +30,6 @@ import (
 	logging "github.com/ipfs/go-log"
 	libp2p "github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/protocol"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	dhtopts "github.com/libp2p/go-libp2p-kad-dht/opts"
 	ma "github.com/multiformats/go-multiaddr"
@@ -120,7 +119,7 @@ func startKademliaDHT(privKey crypto.PrivKey) {
 	dopts := []dhtopts.Option{
 		dhtopts.Datastore(dsync.MutexWrap(ds.NewMapDatastore())),
 		dhtopts.Protocols(
-			protocol.ID(dhtProtocol),
+			dhtProtocol,
 		),
 	}
 

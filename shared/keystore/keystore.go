@@ -213,7 +213,7 @@ func DecryptKey(keyjson []byte, password string) (*Key, error) {
 	}
 
 	return &Key{
-		ID:        uuid.UUID(keyID),
+		ID:        keyID,
 		PublicKey: secretKey.PublicKey(),
 		SecretKey: secretKey,
 	}, nil

@@ -137,7 +137,7 @@ func CreateValidatorAccount(path string, passphrase string) (string, string, err
 		reader := bufio.NewReader(os.Stdin)
 		log.Info("Create a new validator account for eth2")
 		log.Info("Enter a password:")
-		bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
+		bytePassword, err := terminal.ReadPassword(syscall.Stdin)
 		if err != nil {
 			log.Fatalf("Could not read account password: %v", err)
 		}

@@ -37,7 +37,7 @@ func TestMarshalAndUnmarshal(t *testing.T) {
 		t.Fatalf("unable to unmarshal object %v", err)
 	}
 
-	if !bytes.Equal([]byte(newKey.ID), []byte(testID)) {
+	if !bytes.Equal(newKey.ID, testID) {
 		t.Fatalf("retrieved id not the same as pre serialized id: %v ", newKey.ID)
 	}
 }

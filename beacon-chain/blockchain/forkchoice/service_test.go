@@ -329,7 +329,7 @@ func TestStore_GetHead(t *testing.T) {
 	// 18 validators switches vote to B1 to gain 51%, enough to switch head
 	for i := 0; i < 18; i++ {
 		idx := 50 + uint64(i)
-		store.latestVoteMap[uint64(idx)] = &pb.ValidatorLatestVote{Root: roots[1]}
+		store.latestVoteMap[idx] = &pb.ValidatorLatestVote{Root: roots[1]}
 	}
 	head, err = store.Head(ctx)
 	if err != nil {

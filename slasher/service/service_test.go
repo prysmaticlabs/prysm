@@ -100,7 +100,6 @@ func waitForStarted(rpcService *Service, t *testing.T) {
 		s, err := rpcService.Status()
 		if err != nil {
 			t.Fatal(err)
-			break
 		}
 		if s {
 			break

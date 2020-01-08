@@ -108,7 +108,7 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	if err != nil {
 		log.Error(err)
 	}
-	deposits[0].Proof, err = trie.MerkleProof((0))
+	deposits[0].Proof, err = trie.MerkleProof(0)
 	if err != nil {
 		t.Fatal(err)
 	}

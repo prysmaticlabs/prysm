@@ -43,11 +43,11 @@ type BeaconChainConfig struct {
 	SecondsPerSlot                   uint64 `yaml:"SECONDS_PER_SLOT"`                    // SecondsPerSlot is how many seconds are in a single slot.
 	SlotsPerEpoch                    uint64 `yaml:"SLOTS_PER_EPOCH"`                     // SlotsPerEpoch is the number of slots in an epoch.
 	MinSeedLookahead                 uint64 `yaml:"MIN_SEED_LOOKAHEAD"`                  // SeedLookahead is the duration of randao look ahead seed.
-	MaxSeedLookhead                  uint64 `yaml:"ACTIVATION_EXIT_DELAY"`               // MaxSeedLookhead is the duration a validator has to wait for entry and exit in epoch.
+	MaxSeedLookahead                 uint64 `yaml:"MIN_SEED_LOOKAHEAD"`               // MaxSeedLookahead is the duration a validator has to wait for entry and exit in epoch.
 	SlotsPerEth1VotingPeriod         uint64 `yaml:"SLOTS_PER_ETH1_VOTING_PERIOD"`        // SlotsPerEth1VotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
 	SlotsPerHistoricalRoot           uint64 `yaml:"SLOTS_PER_HISTORICAL_ROOT"`           // SlotsPerHistoricalRoot defines how often the historical root is saved.
 	MinValidatorWithdrawabilityDelay uint64 `yaml:"MIN_VALIDATOR_WITHDRAWABILITY_DELAY"` // MinValidatorWithdrawabilityDelay is the shortest amount of time a validator has to wait to withdraw.
-	PersistentCommitteePeriod        uint64 `yaml:"PERSISTENT_COMMITTEE_PERIOD"`         // PersistentCommitteePeriod is the minimum amount of epochs a validator must participate before exitting.
+	PersistentCommitteePeriod        uint64 `yaml:"PERSISTENT_COMMITTEE_PERIOD"`         // PersistentCommitteePeriod is the minimum amount of epochs a validator must participate before exiting.
 	MinEpochsToInactivityPenalty     uint64 `yaml:"MIN_EPOCHS_TO_INACTIVITY_PENALTY"`    // MinEpochsToInactivityPenalty defines the minimum amount of epochs since finality to begin penalizing inactivity.
 	Eth1FollowDistance               uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
 	SafeSlotsToUpdateJustified       uint64 // SafeSlotsToUpdateJustified is the minimal slots needed to update justified check point.
@@ -83,7 +83,7 @@ type BeaconChainConfig struct {
 	// Prysm constants.
 	GweiPerEth                uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
 	LogBlockDelay             int64         // Number of blocks to wait from the current head before processing logs from the deposit contract.
-	BLSSecretkeyLength        int           // BLSSecretkeyLength defines the expected length of BLS secret keys in bytes.
+	BLSSecretKeyLength        int           // BLSSecretKeyLength defines the expected length of BLS secret keys in bytes.
 	BLSPubkeyLength           int           // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
 	BLSSignatureLength        int           // BLSSignatureLength defines the expected length of BLS signatures in bytes.
 	DefaultBufferSize         int           // DefaultBufferSize for channels across the Prysm repository.
@@ -143,7 +143,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	SecondsPerSlot:                   12,
 	SlotsPerEpoch:                    32,
 	MinSeedLookahead:                 1,
-	MaxSeedLookhead:                  4,
+	MaxSeedLookahead:                  4,
 	SlotsPerEth1VotingPeriod:         1024,
 	SlotsPerHistoricalRoot:           8192,
 	MinValidatorWithdrawabilityDelay: 256,
@@ -183,7 +183,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	// Prysm constants.
 	GweiPerEth:                1000000000,
 	LogBlockDelay:             2,
-	BLSSecretkeyLength:        32,
+	BLSSecretKeyLength:        32,
 	BLSPubkeyLength:           48,
 	BLSSignatureLength:        96,
 	DefaultBufferSize:         10000,
@@ -272,7 +272,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.MinAttestationInclusionDelay = 1
 	minimalConfig.SlotsPerEpoch = 8
 	minimalConfig.MinSeedLookahead = 1
-	minimalConfig.MaxSeedLookhead = 4
+	minimalConfig.MaxSeedLookahead = 4
 	minimalConfig.SlotsPerEth1VotingPeriod = 16
 	minimalConfig.SlotsPerHistoricalRoot = 64
 	minimalConfig.MinValidatorWithdrawabilityDelay = 256
@@ -310,11 +310,6 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.DepositContractTreeDepth = 32
 	minimalConfig.FarFutureEpoch = 1<<64 - 1
 	return &minimalConfig
-}
-
-// ContractConfig retrieves the deposit contract config
-func ContractConfig() *DepositContractConfig {
-	return contractConfig
 }
 
 // UseDemoBeaconConfig for beacon chain services.
