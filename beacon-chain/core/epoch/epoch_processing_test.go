@@ -323,8 +323,8 @@ func TestProcessRegistryUpdates_NoRotation(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 5 * params.BeaconConfig().SlotsPerEpoch,
 		Validators: []*ethpb.Validator{
-			{ExitEpoch: params.BeaconConfig().MaxSeedLookhead},
-			{ExitEpoch: params.BeaconConfig().MaxSeedLookhead},
+			{ExitEpoch: params.BeaconConfig().MaxSeedLookahead},
+			{ExitEpoch: params.BeaconConfig().MaxSeedLookahead},
 		},
 		Balances: []uint64{
 			params.BeaconConfig().MaxEffectiveBalance,
@@ -337,9 +337,9 @@ func TestProcessRegistryUpdates_NoRotation(t *testing.T) {
 		t.Fatal(err)
 	}
 	for i, validator := range newState.Validators {
-		if validator.ExitEpoch != params.BeaconConfig().MaxSeedLookhead {
+		if validator.ExitEpoch != params.BeaconConfig().MaxSeedLookahead {
 			t.Errorf("Could not update registry %d, wanted exit slot %d got %d",
-				i, params.BeaconConfig().MaxSeedLookhead, validator.ExitEpoch)
+				i, params.BeaconConfig().MaxSeedLookahead, validator.ExitEpoch)
 		}
 	}
 }
@@ -385,10 +385,10 @@ func TestProcessRegistryUpdates_ActivationCompletes(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 5 * params.BeaconConfig().SlotsPerEpoch,
 		Validators: []*ethpb.Validator{
-			{ExitEpoch: params.BeaconConfig().MaxSeedLookhead,
-				ActivationEpoch: 5 + params.BeaconConfig().MaxSeedLookhead + 1},
-			{ExitEpoch: params.BeaconConfig().MaxSeedLookhead,
-				ActivationEpoch: 5 + params.BeaconConfig().MaxSeedLookhead + 1},
+			{ExitEpoch: params.BeaconConfig().MaxSeedLookahead,
+				ActivationEpoch: 5 + params.BeaconConfig().MaxSeedLookahead + 1},
+			{ExitEpoch: params.BeaconConfig().MaxSeedLookahead,
+				ActivationEpoch: 5 + params.BeaconConfig().MaxSeedLookahead + 1},
 		},
 		FinalizedCheckpoint: &ethpb.Checkpoint{},
 	}
@@ -397,9 +397,9 @@ func TestProcessRegistryUpdates_ActivationCompletes(t *testing.T) {
 		t.Error(err)
 	}
 	for i, validator := range newState.Validators {
-		if validator.ExitEpoch != params.BeaconConfig().MaxSeedLookhead {
+		if validator.ExitEpoch != params.BeaconConfig().MaxSeedLookahead {
 			t.Errorf("Could not update registry %d, wanted exit slot %d got %d",
-				i, params.BeaconConfig().MaxSeedLookhead, validator.ExitEpoch)
+				i, params.BeaconConfig().MaxSeedLookahead, validator.ExitEpoch)
 		}
 	}
 }
@@ -424,9 +424,9 @@ func TestProcessRegistryUpdates_ValidatorsEjected(t *testing.T) {
 		t.Error(err)
 	}
 	for i, validator := range newState.Validators {
-		if validator.ExitEpoch != params.BeaconConfig().MaxSeedLookhead+1 {
+		if validator.ExitEpoch != params.BeaconConfig().MaxSeedLookahead+1 {
 			t.Errorf("Could not update registry %d, wanted exit slot %d got %d",
-				i, params.BeaconConfig().MaxSeedLookhead+1, validator.ExitEpoch)
+				i, params.BeaconConfig().MaxSeedLookahead+1, validator.ExitEpoch)
 		}
 	}
 }

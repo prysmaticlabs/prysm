@@ -6,7 +6,6 @@ package bls
 import (
 	"encoding/binary"
 	"fmt"
-	"math/big"
 
 	"github.com/dgraph-io/ristretto"
 	bls12 "github.com/herumi/bls-eth-go-binary/bls"
@@ -38,8 +37,6 @@ const CurveOrder = "524358751751261904794477405081859658376905525005276378226036
 // The size would be a combination of both the message(32 bytes) and domain(8 bytes) size.
 const concatMsgDomainSize = 40
 
-var curveOrder, _ = new(big.Int).SetString(CurveOrder, 10)
-
 // Signature used in the BLS signature scheme.
 type Signature struct {
 	s *bls12.Sign
@@ -64,8 +61,8 @@ func RandKey() *SecretKey {
 
 // SecretKeyFromBytes creates a BLS private key from a BigEndian byte slice.
 func SecretKeyFromBytes(priv []byte) (*SecretKey, error) {
-	if len(priv) != params.BeaconConfig().BLSSecretkeyLength {
-		return nil, fmt.Errorf("secret key must be %d bytes", params.BeaconConfig().BLSSecretkeyLength)
+	if len(priv) != params.BeaconConfig().BLSSecretKeyLength {
+		return nil, fmt.Errorf("secret key must be %d bytes", params.BeaconConfig().BLSSecretKeyLength)
 	}
 	secKey := &bls12.SecretKey{}
 	err := secKey.Deserialize(priv)
@@ -141,8 +138,8 @@ func (s *SecretKey) Sign(msg []byte, domain uint64) *Signature {
 // Marshal a secret key into a LittleEndian byte slice.
 func (s *SecretKey) Marshal() []byte {
 	keyBytes := s.p.Serialize()
-	if len(keyBytes) < params.BeaconConfig().BLSSecretkeyLength {
-		emptyBytes := make([]byte, params.BeaconConfig().BLSSecretkeyLength-len(keyBytes))
+	if len(keyBytes) < params.BeaconConfig().BLSSecretKeyLength {
+		emptyBytes := make([]byte, params.BeaconConfig().BLSSecretKeyLength-len(keyBytes))
 		keyBytes = append(emptyBytes, keyBytes...)
 	}
 	return keyBytes

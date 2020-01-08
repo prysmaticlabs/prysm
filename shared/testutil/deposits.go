@@ -91,7 +91,7 @@ func DeterministicDepositsAndKeys(numDeposits uint64) ([]*ethpb.Deposit, []*bls.
 	}
 	requestedDeposits := cachedDeposits[:numDeposits]
 	for i := range requestedDeposits {
-		proof, err := depositTrie.MerkleProof(int(i))
+		proof, err := depositTrie.MerkleProof(i)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not create merkle proof")
 		}
@@ -256,7 +256,7 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*ethpb.Dep
 	}
 	requestedDeposits := cachedDeposits[:numDeposits]
 	for i := range requestedDeposits {
-		proof, err := depositTrie.MerkleProof(int(i))
+		proof, err := depositTrie.MerkleProof(i)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not create merkle proof")
 		}

@@ -178,7 +178,7 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 func TestDelayedActivationExitEpoch_OK(t *testing.T) {
 	epoch := uint64(9999)
 	got := DelayedActivationExitEpoch(epoch)
-	wanted := epoch + 1 + params.BeaconConfig().MaxSeedLookhead
+	wanted := epoch + 1 + params.BeaconConfig().MaxSeedLookahead
 	if wanted != got {
 		t.Errorf("Wanted: %d, received: %d", wanted, got)
 	}
