@@ -31,7 +31,9 @@ func init() {
 	}
 }
 
-func saveToDB(validatorIdx uint64, conflict uint64, value interface{}, cost int64) {
+func saveToDB(validatorIdx uint64, _ uint64, value interface{}, cost int64) {
+	log.Infof("evicting span map fro validator id: %d", validatorIdx)
+
 	err := d.batch(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsMinMaxSpanBucket)
 		key := bytesutil.Bytes4(validatorIdx)
@@ -44,7 +46,9 @@ func saveToDB(validatorIdx uint64, conflict uint64, value interface{}, cost int6
 		}
 		return err
 	})
-	log.Errorf("failed to save spanmap to db on cache eviction: %v", err)
+	if err != nil {
+		log.Errorf("failed to save spanmap to db on cache eviction: %v", err)
+	}
 }
 
 func createEpochSpanMap(enc []byte) (*slashpb.EpochSpanMap, error) {

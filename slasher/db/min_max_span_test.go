@@ -4,6 +4,7 @@ import (
 	"flag"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 
@@ -107,6 +108,8 @@ func TestValidatorSpanMap_Save_With_Cache(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Save validator span map failed: %v", err)
 		}
+		// wait for value to pass through cache buffers
+		time.Sleep(time.Millisecond * 10)
 		sm, err := db.ValidatorSpansMap(tt.validatorIdx)
 		if err != nil {
 			t.Fatalf("Failed to get validator span map: %v", err)
@@ -144,6 +147,46 @@ func TestValidatorSpanMap_Delete(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Delete validator span map error: %v", err)
 		}
+		sm, err = db.ValidatorSpansMap(tt.validatorIdx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(sm.EpochSpanMap, map[uint64]*slashpb.MinMaxEpochSpan{}) {
+			t.Errorf("Expected validator span map to be deleted, received: %v", sm)
+		}
+	}
+}
+
+func TestValidatorSpanMap_Delete_With_Cache(t *testing.T) {
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
+	ctx := cli.NewContext(app, set, nil)
+	db := SetupSlasherDB(t, ctx)
+	defer TeardownSlasherDB(t, db)
+
+	for _, tt := range spanTests {
+		err := db.SaveValidatorSpansMap(tt.validatorIdx, tt.spanMap)
+		if err != nil {
+			t.Fatalf("Save validator span map failed: %v", err)
+		}
+	}
+	// wait for value to pass through cache buffers
+	time.Sleep(time.Millisecond * 10)
+	for _, tt := range spanTests {
+		sm, err := db.ValidatorSpansMap(tt.validatorIdx)
+		if err != nil {
+			t.Fatalf("Failed to get validator span map: %v", err)
+		}
+		if sm == nil || !proto.Equal(sm, tt.spanMap) {
+			t.Fatalf("Get should return validator span map: %v got: %v", tt.spanMap, sm)
+		}
+		err = db.DeleteValidatorSpanMap(tt.validatorIdx)
+		if err != nil {
+			t.Fatalf("Delete validator span map error: %v", err)
+		}
+		// wait for value to pass through cache buffers
+		time.Sleep(time.Millisecond * 10)
 		sm, err = db.ValidatorSpansMap(tt.validatorIdx)
 		if err != nil {
 			t.Fatal(err)
