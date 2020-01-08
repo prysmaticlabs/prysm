@@ -48,7 +48,7 @@ container_image(
     name = "cc_image",
     base = "@cc_image_base//image",
     tars = [":passwd_tar"],
-    user = "nonroot",
+    user = "root",
     visibility = ["//visibility:public"],
 )
 
@@ -56,6 +56,6 @@ container_image(
     name = "go_image",
     base = "@go_image_base//image",
     tars = [":passwd_tar"],
-    user = "nonroot",
+    user = "root",
     visibility = ["//visibility:public"],
 )
