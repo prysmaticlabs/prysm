@@ -21,7 +21,6 @@ package keystore
 import (
 	"encoding/hex"
 	"encoding/json"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -151,13 +150,13 @@ func NewKeyFromBLS(blsKey *bls.SecretKey) (*Key, error) {
 }
 
 // NewKey generates a new random key.
-func NewKey(rand io.Reader) (*Key, error) {
+func NewKey() (*Key, error) {
 	secretKey := bls.RandKey()
 	return NewKeyFromBLS(secretKey)
 }
 
-func storeNewRandomKey(ks keyStore, rand io.Reader, password string) error {
-	key, err := NewKey(rand)
+func storeNewRandomKey(ks keyStore, password string) error {
+	key, err := NewKey()
 	if err != nil {
 		return err
 	}

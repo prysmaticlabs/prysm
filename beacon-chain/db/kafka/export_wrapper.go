@@ -100,7 +100,7 @@ func (e Exporter) SaveAttestations(ctx context.Context, atts []*eth.Attestation)
 }
 
 // SaveBlock publishes to the kafka topic for beacon blocks.
-func (e Exporter) SaveBlock(ctx context.Context, block *eth.BeaconBlock) error {
+func (e Exporter) SaveBlock(ctx context.Context, block *eth.SignedBeaconBlock) error {
 	go func() {
 		if err := e.publish(ctx, "beacon_block", block); err != nil {
 			log.WithError(err).Error("Failed to publish block")
@@ -111,7 +111,7 @@ func (e Exporter) SaveBlock(ctx context.Context, block *eth.BeaconBlock) error {
 }
 
 // SaveBlocks publishes to the kafka topic for beacon blocks.
-func (e Exporter) SaveBlocks(ctx context.Context, blocks []*eth.BeaconBlock) error {
+func (e Exporter) SaveBlocks(ctx context.Context, blocks []*eth.SignedBeaconBlock) error {
 	go func() {
 		for _, block := range blocks {
 			if err := e.publish(ctx, "beacon_block", block); err != nil {

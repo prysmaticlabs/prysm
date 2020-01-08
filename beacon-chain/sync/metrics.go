@@ -13,13 +13,6 @@ var (
 		},
 		[]string{"topic"},
 	)
-	messageReceivedBeforeChainStartCounter = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "p2p_message_received_before_chain_start",
-			Help: "Count of messages received before chain started.",
-		},
-		[]string{"topic"},
-	)
 	messageFailedValidationCounter = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "p2p_message_failed_validation_total",
@@ -33,5 +26,11 @@ var (
 			Help: "Count of messages that passed validation but failed processing.",
 		},
 		[]string{"topic"},
+	)
+	numberOfTimesResyncedCounter = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "number_of_times_resynced",
+			Help: "Count the number of times a node resyncs.",
+		},
 	)
 )

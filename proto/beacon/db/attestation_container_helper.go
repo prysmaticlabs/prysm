@@ -5,25 +5,6 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 )
 
-// NewContainerFromAttestations creates a new attestation contain with signature pairs from the
-// given list of attestations.
-func NewContainerFromAttestations(atts []*ethpb.Attestation) *AttestationContainer {
-	if len(atts) == 0 {
-		panic("no attestations provided")
-	}
-	var sp []*AttestationContainer_SignaturePair
-	for _, att := range atts {
-		sp = append(sp, &AttestationContainer_SignaturePair{
-			AggregationBits: att.AggregationBits,
-			Signature:       att.Signature,
-		})
-	}
-	return &AttestationContainer{
-		Data:           atts[0].Data,
-		SignaturePairs: sp,
-	}
-}
-
 // Contains returns true if the attestation bits are fully contained in some attestations.
 func (ac *AttestationContainer) Contains(att *ethpb.Attestation) bool {
 	all := bitfield.NewBitlist(att.AggregationBits.Len())
@@ -48,9 +29,6 @@ func (ac *AttestationContainer) ToAttestations() []*ethpb.Attestation {
 			Data:            ac.Data,
 			AggregationBits: sp.AggregationBits,
 			Signature:       sp.Signature,
-			// TODO(3791): Add custody bits in phase 1.
-			// Stub: CustodyBits must be same length as aggregation bits; committee size.
-			CustodyBits: bitfield.NewBitlist(sp.AggregationBits.Len()),
 		}
 	}
 	return atts

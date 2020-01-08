@@ -37,6 +37,8 @@ type end2EndConfig struct {
 	evaluators     []ev.Evaluator
 }
 
+var beaconNodeLogFileName = "beacon-%d.log"
+
 // startBeaconNodes starts the requested amount of beacon nodes, passing in the deposit contract given.
 func startBeaconNodes(t *testing.T, config *end2EndConfig) []*beaconNodeInfo {
 	numNodes := config.numBeaconNodes
@@ -58,13 +60,21 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 		t.Log(binaryPath)
 		t.Fatal("beacon chain binary not found")
 	}
-	file, err := os.Create(path.Join(tmpPath, fmt.Sprintf("beacon-%d.log", index)))
+
+	stdOutFile, err := os.Create(path.Join(tmpPath, fmt.Sprintf(beaconNodeLogFileName, index)))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	args := []string{
+		"--no-genesis-delay",
+		"--verbosity=debug",
+		"--force-clear-db",
 		"--no-discovery",
+		"--new-cache",
+		"--enable-shuffled-index-cache",
+		"--enable-skip-slots-cache",
+		"--enable-attestation-cache",
 		"--http-web3provider=http://127.0.0.1:8545",
 		"--web3provider=ws://127.0.0.1:8546",
 		fmt.Sprintf("--datadir=%s/eth2-beacon-node-%d", tmpPath, index),
@@ -86,21 +96,21 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 		}
 	}
 
-	t.Logf("Starting beacon chain with flags %s", strings.Join(args, " "))
+	t.Logf("Starting beacon chain with flags: %s", strings.Join(args, " "))
 	cmd := exec.Command(binaryPath, args...)
-	cmd.Stderr = file
-	cmd.Stdout = file
+	cmd.Stdout = stdOutFile
+	cmd.Stderr = stdOutFile
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("Failed to start beacon node: %v", err)
 	}
 
-	if err = waitForTextInFile(file, "Node started p2p server"); err != nil {
+	if err = waitForTextInFile(stdOutFile, "Node started p2p server"); err != nil {
 		t.Fatalf("could not find multiaddr for node %d, this means the node had issues starting: %v", index, err)
 	}
 
-	multiAddr, err := getMultiAddrFromLogFile(file.Name())
+	multiAddr, err := getMultiAddrFromLogFile(stdOutFile.Name())
 	if err != nil {
-		t.Fatalf("could not get multiaddr fpr node %d: %v", index, err)
+		t.Fatalf("could not get multiaddr for node %d: %v", index, err)
 	}
 
 	return &beaconNodeInfo{
@@ -135,9 +145,9 @@ func getMultiAddrFromLogFile(name string) (string, error) {
 
 func waitForTextInFile(file *os.File, text string) error {
 	wait := 0
-	// Putting the wait cap at 24 seconds.
-	totalWait := 24
-	for wait < totalWait {
+	// Cap the wait in case there are issues starting.
+	maxWait := 36
+	for wait < maxWait {
 		time.Sleep(2 * time.Second)
 		// Rewind the file pointer to the start of the file so we can read it again.
 		_, err := file.Seek(0, io.SeekStart)
@@ -160,5 +170,5 @@ func waitForTextInFile(file *os.File, text string) error {
 	if err != nil {
 		return err
 	}
-	return fmt.Errorf("could not find requested text %s in logs:\n%s", text, string(contents))
+	return fmt.Errorf("could not find requested text \"%s\" in logs:\n%s", text, string(contents))
 }

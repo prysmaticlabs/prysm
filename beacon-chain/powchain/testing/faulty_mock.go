@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
@@ -66,14 +67,14 @@ func (f *FaultyMockPOWChain) ChainStartDeposits() []*ethpb.Deposit {
 	return []*ethpb.Deposit{}
 }
 
-// ChainStartDepositHashes --
-func (f *FaultyMockPOWChain) ChainStartDepositHashes() ([][]byte, error) {
-	return [][]byte{}, errors.New("hashing failed")
-}
-
 // ChainStartEth1Data --
 func (f *FaultyMockPOWChain) ChainStartEth1Data() *ethpb.Eth1Data {
 	return &ethpb.Eth1Data{}
+}
+
+// PreGenesisState --
+func (f *FaultyMockPOWChain) PreGenesisState() *pb.BeaconState {
+	return &pb.BeaconState{}
 }
 
 // IsConnectedToETH1 --

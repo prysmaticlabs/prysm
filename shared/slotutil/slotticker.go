@@ -6,6 +6,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
+// The Ticker interface defines a type which can expose a
+// receive-only channel firing slot events.
+type Ticker interface {
+	C() <-chan uint64
+	Done()
+}
+
 // SlotTicker is a special ticker for the beacon chain block.
 // The channel emits over the slot interval, and ensures that
 // the ticks are in line with the genesis time. This means that
@@ -32,6 +39,9 @@ func (s *SlotTicker) Done() {
 
 // GetSlotTicker is the constructor for SlotTicker.
 func GetSlotTicker(genesisTime time.Time, secondsPerSlot uint64) *SlotTicker {
+	if genesisTime.Unix() == 0 {
+		panic("zero genesis time")
+	}
 	ticker := &SlotTicker{
 		c:    make(chan uint64),
 		done: make(chan struct{}),

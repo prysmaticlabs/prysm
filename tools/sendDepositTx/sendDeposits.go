@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
@@ -167,7 +166,7 @@ func main() {
 
 		validatorKeys := make(map[string]*prysmKeyStore.Key)
 		if randomKey {
-			validatorKey, err := prysmKeyStore.NewKey(rand.Reader)
+			validatorKey, err := prysmKeyStore.NewKey()
 			validatorKeys[hex.EncodeToString(validatorKey.PublicKey.Marshal())] = validatorKey
 			if err != nil {
 				log.Errorf("Could not generate random key: %v", err)

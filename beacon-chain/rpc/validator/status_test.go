@@ -2,7 +2,6 @@ package validator
 
 import (
 	"context"
-	"math/big"
 	"testing"
 	"time"
 
@@ -16,7 +15,6 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -42,7 +40,7 @@ func TestValidatorStatus_DepositReceived(t *testing.T) {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
 	depositCache := depositcache.NewDepositCache()
-	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	p := &mockPOW.POWChain{
 		TimesByHeight: map[int]uint64{
@@ -58,15 +56,15 @@ func TestValidatorStatus_DepositReceived(t *testing.T) {
 		},
 		Eth1InfoFetcher: p,
 	}
-	req := &pb.ValidatorIndexRequest{
+	req := &ethpb.ValidatorStatusRequest{
 		PublicKey: pubKey,
 	}
 	resp, err := vs.ValidatorStatus(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Could not get validator status %v", err)
 	}
-	if resp.Status != pb.ValidatorStatus_DEPOSIT_RECEIVED {
-		t.Errorf("Wanted %v, got %v", pb.ValidatorStatus_DEPOSIT_RECEIVED, resp.Status)
+	if resp.Status != ethpb.ValidatorStatus_DEPOSIT_RECEIVED {
+		t.Errorf("Wanted %v, got %v", ethpb.ValidatorStatus_DEPOSIT_RECEIVED, resp.Status)
 	}
 }
 
@@ -83,7 +81,7 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	genesisRoot, err := ssz.SigningRoot(block)
+	genesisRoot, err := ssz.HashTreeRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -118,7 +116,7 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
 	depositCache := depositcache.NewDepositCache()
-	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	p := &mockPOW.POWChain{
@@ -134,15 +132,15 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 		DepositFetcher:    depositCache,
 		HeadFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
 	}
-	req := &pb.ValidatorIndexRequest{
+	req := &ethpb.ValidatorStatusRequest{
 		PublicKey: pubKey,
 	}
 	resp, err := vs.ValidatorStatus(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Could not get validator status %v", err)
 	}
-	if resp.Status != pb.ValidatorStatus_PENDING_ACTIVE {
-		t.Errorf("Wanted %v, got %v", pb.ValidatorStatus_PENDING_ACTIVE, resp.Status)
+	if resp.Status != ethpb.ValidatorStatus_PENDING_ACTIVE {
+		t.Errorf("Wanted %v, got %v", ethpb.ValidatorStatus_PENDING_ACTIVE, resp.Status)
 	}
 }
 
@@ -173,7 +171,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
 	depositCache := depositcache.NewDepositCache()
-	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 
 	// Active because activation epoch <= current epoch < exit epoch.
 	activeEpoch := helpers.DelayedActivationExitEpoch(0)
@@ -182,7 +180,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	genesisRoot, err := ssz.SigningRoot(block)
+	genesisRoot, err := ssz.HashTreeRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -210,7 +208,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 		DepositFetcher:    depositCache,
 		HeadFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
 	}
-	req := &pb.ValidatorIndexRequest{
+	req := &ethpb.ValidatorStatusRequest{
 		PublicKey: pubKey,
 	}
 	resp, err := vs.ValidatorStatus(context.Background(), req)
@@ -218,8 +216,8 @@ func TestValidatorStatus_Active(t *testing.T) {
 		t.Fatalf("Could not get validator status %v", err)
 	}
 
-	expected := &pb.ValidatorStatusResponse{
-		Status:               pb.ValidatorStatus_ACTIVE,
+	expected := &ethpb.ValidatorStatusResponse{
+		Status:               ethpb.ValidatorStatus_ACTIVE,
 		ActivationEpoch:      5,
 		DepositInclusionSlot: 2218,
 	}
@@ -247,7 +245,7 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	genesisRoot, err := ssz.SigningRoot(block)
+	genesisRoot, err := ssz.HashTreeRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -275,7 +273,7 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
 	depositCache := depositcache.NewDepositCache()
-	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	p := &mockPOW.POWChain{
 		TimesByHeight: map[int]uint64{
@@ -290,15 +288,15 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 		DepositFetcher:    depositCache,
 		HeadFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
 	}
-	req := &pb.ValidatorIndexRequest{
+	req := &ethpb.ValidatorStatusRequest{
 		PublicKey: pubKey,
 	}
 	resp, err := vs.ValidatorStatus(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Could not get validator status %v", err)
 	}
-	if resp.Status != pb.ValidatorStatus_INITIATED_EXIT {
-		t.Errorf("Wanted %v, got %v", pb.ValidatorStatus_INITIATED_EXIT, resp.Status)
+	if resp.Status != ethpb.ValidatorStatus_INITIATED_EXIT {
+		t.Errorf("Wanted %v, got %v", ethpb.ValidatorStatus_INITIATED_EXIT, resp.Status)
 	}
 }
 
@@ -319,7 +317,7 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	genesisRoot, err := ssz.SigningRoot(block)
+	genesisRoot, err := ssz.HashTreeRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -345,7 +343,7 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
 	depositCache := depositcache.NewDepositCache()
-	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	p := &mockPOW.POWChain{
 		TimesByHeight: map[int]uint64{
@@ -360,15 +358,15 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 		DepositFetcher:    depositCache,
 		HeadFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
 	}
-	req := &pb.ValidatorIndexRequest{
+	req := &ethpb.ValidatorStatusRequest{
 		PublicKey: pubKey,
 	}
 	resp, err := vs.ValidatorStatus(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Could not get validator status %v", err)
 	}
-	if resp.Status != pb.ValidatorStatus_WITHDRAWABLE {
-		t.Errorf("Wanted %v, got %v", pb.ValidatorStatus_WITHDRAWABLE, resp.Status)
+	if resp.Status != ethpb.ValidatorStatus_WITHDRAWABLE {
+		t.Errorf("Wanted %v, got %v", ethpb.ValidatorStatus_WITHDRAWABLE, resp.Status)
 	}
 }
 
@@ -389,7 +387,7 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	genesisRoot, err := ssz.SigningRoot(block)
+	genesisRoot, err := ssz.HashTreeRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -415,7 +413,7 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
 	depositCache := depositcache.NewDepositCache()
-	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	p := &mockPOW.POWChain{
 		TimesByHeight: map[int]uint64{
@@ -430,15 +428,15 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 		BlockFetcher:      p,
 		HeadFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
 	}
-	req := &pb.ValidatorIndexRequest{
+	req := &ethpb.ValidatorStatusRequest{
 		PublicKey: pubKey,
 	}
 	resp, err := vs.ValidatorStatus(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Could not get validator status %v", err)
 	}
-	if resp.Status != pb.ValidatorStatus_EXITED_SLASHED {
-		t.Errorf("Wanted %v, got %v", pb.ValidatorStatus_EXITED_SLASHED, resp.Status)
+	if resp.Status != ethpb.ValidatorStatus_EXITED_SLASHED {
+		t.Errorf("Wanted %v, got %v", ethpb.ValidatorStatus_EXITED_SLASHED, resp.Status)
 	}
 }
 
@@ -459,7 +457,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	genesisRoot, err := ssz.SigningRoot(block)
+	genesisRoot, err := ssz.HashTreeRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -492,7 +490,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
 	depositCache := depositcache.NewDepositCache()
-	depositCache.InsertDeposit(ctx, deposit, big.NewInt(0) /*blockNum*/, 0, depositTrie.Root())
+	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
 	p := &mockPOW.POWChain{
 		TimesByHeight: map[int]uint64{
@@ -507,15 +505,15 @@ func TestValidatorStatus_Exited(t *testing.T) {
 		DepositFetcher:    depositCache,
 		HeadFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
 	}
-	req := &pb.ValidatorIndexRequest{
+	req := &ethpb.ValidatorStatusRequest{
 		PublicKey: pubKey,
 	}
 	resp, err := vs.ValidatorStatus(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Could not get validator status %v", err)
 	}
-	if resp.Status != pb.ValidatorStatus_EXITED {
-		t.Errorf("Wanted %v, got %v", pb.ValidatorStatus_EXITED, resp.Status)
+	if resp.Status != ethpb.ValidatorStatus_EXITED {
+		t.Errorf("Wanted %v, got %v", ethpb.ValidatorStatus_EXITED, resp.Status)
 	}
 }
 
@@ -534,15 +532,15 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 		},
 		BeaconDB: db,
 	}
-	req := &pb.ValidatorIndexRequest{
+	req := &ethpb.ValidatorStatusRequest{
 		PublicKey: pubKey,
 	}
 	resp, err := vs.ValidatorStatus(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Could not get validator status %v", err)
 	}
-	if resp.Status != pb.ValidatorStatus_UNKNOWN_STATUS {
-		t.Errorf("Wanted %v, got %v", pb.ValidatorStatus_UNKNOWN_STATUS, resp.Status)
+	if resp.Status != ethpb.ValidatorStatus_UNKNOWN_STATUS {
+		t.Errorf("Wanted %v, got %v", ethpb.ValidatorStatus_UNKNOWN_STATUS, resp.Status)
 	}
 }
 
@@ -568,7 +566,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 		},
 	}
 	block := blk.NewGenesisBlock([]byte{})
-	genesisRoot, err := ssz.SigningRoot(block)
+	genesisRoot, err := ssz.HashTreeRoot(block.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
@@ -587,7 +585,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 		t.Fatalf("Could not setup deposit trie: %v", err)
 	}
 	depositCache := depositcache.NewDepositCache()
-	depositCache.InsertDeposit(ctx, dep, big.NewInt(10) /*blockNum*/, 0, depositTrie.Root())
+	depositCache.InsertDeposit(ctx, dep, 10 /*blockNum*/, 0, depositTrie.Root())
 	depData = &ethpb.Deposit_Data{
 		PublicKey:             []byte{'C'},
 		Signature:             []byte("hi"),
@@ -599,7 +597,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 		Data: depData,
 	}
 	depositTrie.Insert(dep.Data.Signature, 15)
-	depositCache.InsertDeposit(context.Background(), dep, big.NewInt(15), 0, depositTrie.Root())
+	depositCache.InsertDeposit(context.Background(), dep, 0, 0, depositTrie.Root())
 
 	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKeys[0]), 0); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
@@ -624,17 +622,17 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 	if !activeExists {
 		t.Fatal("No activated validator exists when there was supposed to be 2")
 	}
-	if response[0].Status.Status != pb.ValidatorStatus_ACTIVE {
+	if response[0].Status.Status != ethpb.ValidatorStatus_ACTIVE {
 		t.Errorf("Validator with pubkey %#x is not activated and instead has this status: %s",
 			response[0].PublicKey, response[0].Status.Status.String())
 	}
 
-	if response[1].Status.Status != pb.ValidatorStatus_ACTIVE {
+	if response[1].Status.Status != ethpb.ValidatorStatus_ACTIVE {
 		t.Errorf("Validator with pubkey %#x was activated when not supposed to",
 			response[1].PublicKey)
 	}
 
-	if response[2].Status.Status != pb.ValidatorStatus_DEPOSIT_RECEIVED {
+	if response[2].Status.Status != ethpb.ValidatorStatus_DEPOSIT_RECEIVED {
 		t.Errorf("Validator with pubkey %#x is not activated and instead has this status: %s",
 			response[2].PublicKey, response[2].Status.Status.String())
 	}

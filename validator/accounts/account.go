@@ -1,17 +1,20 @@
 package accounts
 
 import (
-	"crypto/rand"
+	"bufio"
 	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
+	"strings"
+	"syscall"
 
 	"github.com/pkg/errors"
 	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 var log = logrus.WithField("prefix", "accounts")
@@ -57,7 +60,7 @@ func NewValidatorAccount(directory string, password string) error {
 	validatorKeyFile := directory + params.BeaconConfig().ValidatorPrivkeyFileName
 	ks := keystore.NewKeystore(directory)
 	// If the keystore does not exists at the path, we create a new one for the validator.
-	shardWithdrawalKey, err := keystore.NewKey(rand.Reader)
+	shardWithdrawalKey, err := keystore.NewKey()
 	if err != nil {
 		return err
 	}
@@ -69,7 +72,7 @@ func NewValidatorAccount(directory string, password string) error {
 		"path",
 		shardWithdrawalKeyFile,
 	).Info("Keystore generated for shard withdrawals at path")
-	validatorKey, err := keystore.NewKey(rand.Reader)
+	validatorKey, err := keystore.NewKey()
 	if err != nil {
 		return err
 	}
@@ -125,4 +128,33 @@ func Exists(keystorePath string) (bool, error) {
 		return false, nil
 	}
 	return true, err
+}
+
+// CreateValidatorAccount creates a validator account from the given cli context.
+func CreateValidatorAccount(path string, passphrase string) (string, string, error) {
+	if passphrase == "" {
+		reader := bufio.NewReader(os.Stdin)
+		log.Info("Create a new validator account for eth2")
+		log.Info("Enter a password:")
+		bytePassword, err := terminal.ReadPassword(syscall.Stdin)
+		if err != nil {
+			log.Fatalf("Could not read account password: %v", err)
+		}
+		text := string(bytePassword)
+		passphrase = strings.Replace(text, "\n", "", -1)
+		log.Infof("Keystore path to save your private keys (leave blank for default %s):", path)
+		text, err = reader.ReadString('\n')
+		if err != nil {
+			log.Fatal(err)
+		}
+		text = strings.Replace(text, "\n", "", -1)
+		if text != "" {
+			path = text
+		}
+	}
+
+	if err := NewValidatorAccount(path, passphrase); err != nil {
+		return "", "", errors.Wrapf(err, "could not initialize validator account")
+	}
+	return path, passphrase, nil
 }

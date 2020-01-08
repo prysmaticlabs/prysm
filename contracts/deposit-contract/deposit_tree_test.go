@@ -109,7 +109,7 @@ func TestDepositTrieRoot_Fail(t *testing.T) {
 		}
 
 		// Change an element in the data when storing locally
-		copy(data.PublicKey, []byte(strconv.Itoa(i+10)))
+		copy(data.PublicKey, strconv.Itoa(i+10))
 
 		testAcc.Backend.Commit()
 		item, err := ssz.HashTreeRoot(data)

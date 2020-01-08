@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
@@ -23,6 +24,20 @@ func NewTrie(depth int) (*SparseMerkleTrie, error) {
 	var zeroBytes [32]byte
 	items := [][]byte{zeroBytes[:]}
 	return GenerateTrieFromItems(items, depth)
+}
+
+// CreateTrieFromProto creates a Sparse Merkle Trie from its corresponding merkle trie.
+func CreateTrieFromProto(trieObj *protodb.SparseMerkleTrie) *SparseMerkleTrie {
+	trie := &SparseMerkleTrie{
+		depth:         uint(trieObj.Depth),
+		originalItems: trieObj.OriginalItems,
+	}
+	branches := make([][][]byte, len(trieObj.Layers))
+	for i, layer := range trieObj.Layers {
+		branches[i] = layer.Layer
+	}
+	trie.branches = branches
+	return trie
 }
 
 // GenerateTrieFromItems constructs a Merkle trie from a sequence of byte slices.
@@ -146,6 +161,22 @@ func (m *SparseMerkleTrie) HashTreeRoot() [32]byte {
 	newNode := append(m.branches[len(m.branches)-1][0], bytesutil.Bytes8(depositCount)...)
 	newNode = append(newNode, zeroBytes[:24]...)
 	return hashutil.Hash(newNode)
+}
+
+// ToProto converts the underlying trie into its corresponding
+// proto object
+func (m *SparseMerkleTrie) ToProto() *protodb.SparseMerkleTrie {
+	trie := &protodb.SparseMerkleTrie{
+		Depth:         uint64(m.depth),
+		Layers:        make([]*protodb.TrieLayer, len(m.branches)),
+		OriginalItems: m.originalItems,
+	}
+	for i, l := range m.branches {
+		trie.Layers[i] = &protodb.TrieLayer{
+			Layer: l,
+		}
+	}
+	return trie
 }
 
 // VerifyMerkleProof verifies a Merkle branch against a root of a trie.

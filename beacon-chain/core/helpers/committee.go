@@ -356,7 +356,7 @@ func VerifyBitfieldLength(bf bitfield.Bitfield, committeeSize uint64) error {
 	return nil
 }
 
-// VerifyAttestationBitfieldLengths verifies that an attestations aggregation and custody bitfields are
+// VerifyAttestationBitfieldLengths verifies that an attestations aggregation bitfields is
 // a valid length matching the size of the committee.
 func VerifyAttestationBitfieldLengths(state *pb.BeaconState, att *ethpb.Attestation) error {
 	committee, err := BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
@@ -370,9 +370,6 @@ func VerifyAttestationBitfieldLengths(state *pb.BeaconState, att *ethpb.Attestat
 
 	if err := VerifyBitfieldLength(att.AggregationBits, uint64(len(committee))); err != nil {
 		return errors.Wrap(err, "failed to verify aggregation bitfield")
-	}
-	if err := VerifyBitfieldLength(att.CustodyBits, uint64(len(committee))); err != nil {
-		return errors.Wrap(err, "failed to verify custody bitfield")
 	}
 	return nil
 }
@@ -407,9 +404,8 @@ func ShuffledIndices(state *pb.BeaconState, epoch uint64) ([]uint64, error) {
 
 // UpdateCommitteeCache gets called at the beginning of every epoch to cache the committee shuffled indices
 // list with committee index and epoch number. It caches the shuffled indices for current epoch and next epoch.
-func UpdateCommitteeCache(state *pb.BeaconState) error {
-	currentEpoch := CurrentEpoch(state)
-	for _, epoch := range []uint64{currentEpoch, currentEpoch + 1} {
+func UpdateCommitteeCache(state *pb.BeaconState, epoch uint64) error {
+	for _, epoch := range []uint64{epoch, epoch + 1} {
 		shuffledIndices, err := ShuffledIndices(state, epoch)
 		if err != nil {
 			return err

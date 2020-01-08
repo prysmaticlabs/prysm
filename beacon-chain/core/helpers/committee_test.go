@@ -481,13 +481,11 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 	tests := []struct {
 		attestation         *ethpb.Attestation
 		stateSlot           uint64
-		invalidCustodyBits  bool
 		verificationFailure bool
 	}{
 		{
 			attestation: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0x05},
-				CustodyBits:     bitfield.Bitlist{0x05},
 				Data: &ethpb.AttestationData{
 					CommitteeIndex: 5,
 					Target:         &ethpb.Checkpoint{},
@@ -499,7 +497,6 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 
 			attestation: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0x06},
-				CustodyBits:     bitfield.Bitlist{0x06},
 				Data: &ethpb.AttestationData{
 					CommitteeIndex: 10,
 					Target:         &ethpb.Checkpoint{},
@@ -510,7 +507,6 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 		{
 			attestation: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0x06},
-				CustodyBits:     bitfield.Bitlist{0x06},
 				Data: &ethpb.AttestationData{
 					CommitteeIndex: 20,
 					Target:         &ethpb.Checkpoint{},
@@ -521,20 +517,16 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 		{
 			attestation: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0x06},
-				CustodyBits:     bitfield.Bitlist{0x10},
 				Data: &ethpb.AttestationData{
 					CommitteeIndex: 20,
 					Target:         &ethpb.Checkpoint{},
 				},
 			},
-			stateSlot:           20,
-			verificationFailure: true,
-			invalidCustodyBits:  true,
+			stateSlot: 20,
 		},
 		{
 			attestation: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0xFF, 0xC0, 0x01},
-				CustodyBits:     bitfield.Bitlist{0xFF, 0xC0, 0x01},
 				Data: &ethpb.AttestationData{
 					CommitteeIndex: 5,
 					Target:         &ethpb.Checkpoint{},
@@ -546,7 +538,6 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 		{
 			attestation: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0xFF, 0x01},
-				CustodyBits:     bitfield.Bitlist{0xFF, 0x01},
 				Data: &ethpb.AttestationData{
 					CommitteeIndex: 20,
 					Target:         &ethpb.Checkpoint{},
@@ -561,11 +552,6 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 		state.Slot = tt.stateSlot
 		err := VerifyAttestationBitfieldLengths(state, tt.attestation)
 		if tt.verificationFailure {
-			if tt.invalidCustodyBits {
-				if !strings.Contains(err.Error(), "custody bitfield") {
-					t.Errorf("%d expected custody bits to fail: %v", i, err)
-				}
-			}
 			if err == nil {
 				t.Error("verification succeeded when it was supposed to fail")
 			}
@@ -639,7 +625,7 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
-	if err := UpdateCommitteeCache(state); err != nil {
+	if err := UpdateCommitteeCache(state, CurrentEpoch(state)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -844,5 +830,43 @@ func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
 			index = (index + 1) % params.BeaconConfig().MaxCommitteesPerSlot
 			i = 0
 		}
+	}
+}
+
+func TestBeaconCommitteeFromState_UpdateCacheForPreviousEpoch(t *testing.T) {
+	c := featureconfig.Get()
+	c.EnableNewCache = true
+	featureconfig.Init(c)
+	defer featureconfig.Init(nil)
+
+	committeeSize := uint64(16)
+	validators := make([]*ethpb.Validator, committeeSize*params.BeaconConfig().SlotsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	state := &pb.BeaconState{
+		Slot:        params.BeaconConfig().SlotsPerEpoch,
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	}
+
+	if _, err := BeaconCommitteeFromState(state, 1 /* previous epoch */, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify previous epoch is cached
+	seed, err := Seed(state, 0, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		t.Fatal(err)
+	}
+	activeIndices, err := committeeCache.ActiveIndices(seed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if activeIndices == nil {
+		t.Error("did not cache active indices")
 	}
 }

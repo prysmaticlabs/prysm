@@ -9,13 +9,15 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
 
-const statusInterval = 6 * time.Minute // 60 slots.
+const statusInterval = 6 * time.Minute // 30 slots.
 
 // maintainPeerStatuses by infrequently polling peers for their latest status.
 func (r *Service) maintainPeerStatuses() {
@@ -31,6 +33,17 @@ func (r *Service) maintainPeerStatuses() {
 			if roughtime.Now().After(lastUpdated.Add(statusInterval)) {
 				if err := r.sendRPCStatusRequest(ctx, pid); err != nil {
 					log.WithField("peer", pid).WithError(err).Error("Failed to request peer status")
+				}
+			}
+		}
+		if !r.initialSync.Syncing() {
+			_, highestEpoch, _ := r.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync)
+			if helpers.StartSlot(highestEpoch) > r.chain.HeadSlot() {
+				numberOfTimesResyncedCounter.Inc()
+				r.clearPendingSlots()
+				// block until we can resync the node
+				if err := r.initialSync.Resync(); err != nil {
+					log.Errorf("Could not Resync Chain: %v", err)
 				}
 			}
 		}
@@ -133,6 +146,14 @@ func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 func (r *Service) validateStatusMessage(msg *pb.Status, stream network.Stream) error {
 	if !bytes.Equal(params.BeaconConfig().GenesisForkVersion, msg.HeadForkVersion) {
 		return errWrongForkVersion
+	}
+	genesis := r.chain.GenesisTime()
+	maxEpoch := slotutil.EpochsSinceGenesis(genesis)
+	// It would take a minimum of 2 epochs to finalize a
+	// previous epoch
+	maxFinalizedEpoch := maxEpoch - 2
+	if msg.FinalizedEpoch > maxFinalizedEpoch {
+		return errInvalidEpoch
 	}
 	return nil
 }
