@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/client"
 	"github.com/prysmaticlabs/prysm/validator/flags"
+	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -81,6 +82,19 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 	keyManager, err := selectKeyManager(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	clearFlag := ctx.GlobalBool(cmd.ClearDB.Name)
+	forceClearFlag := ctx.GlobalBool(cmd.ForceClearDB.Name)
+	if clearFlag || forceClearFlag {
+		pubkeys, err := keyManager.FetchValidatingKeys()
+		if err != nil {
+			return nil, err
+		}
+		dataDir := ctx.GlobalString(cmd.DataDirFlag.Name)
+		if err := clearDB(dataDir, pubkeys, forceClearFlag); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := ValidatorClient.registerPrometheusService(ctx); err != nil {
@@ -150,11 +164,13 @@ func (s *ValidatorClient) registerPrometheusService(ctx *cli.Context) error {
 
 func (s *ValidatorClient) registerClientService(ctx *cli.Context, keyManager keymanager.KeyManager) error {
 	endpoint := ctx.GlobalString(flags.BeaconRPCProviderFlag.Name)
+	dataDir := ctx.GlobalString(cmd.DataDirFlag.Name)
 	logValidatorBalances := !ctx.GlobalBool(flags.DisablePenaltyRewardLogFlag.Name)
 	cert := ctx.GlobalString(flags.CertFlag.Name)
 	graffiti := ctx.GlobalString(flags.GraffitiFlag.Name)
 	v, err := client.NewValidatorService(context.Background(), &client.Config{
 		Endpoint:             endpoint,
+		DataDir:              dataDir,
 		KeyManager:           keyManager,
 		LogValidatorBalances: logValidatorBalances,
 		CertFlag:             cert,
@@ -189,4 +205,33 @@ func selectKeyManager(ctx *cli.Context) (keymanager.KeyManager, error) {
 
 	// Fetch keys from keystore.
 	return keymanager.NewKeystore(ctx.String(flags.KeystorePathFlag.Name), ctx.String(flags.PasswordFlag.Name))
+}
+
+func clearDB(dataDir string, pubkeys [][48]byte, force bool) error {
+	var err error
+	clearDBConfirmed := force
+
+	if !force {
+		actionText := "This will delete your validator's historical actions database stored in your data directory. " +
+			"This may lead to potential slashing - do you want to proceed? (Y/N)"
+		deniedText := "The historical actions database will not be deleted. No changes have been made."
+		clearDBConfirmed, err = cmd.ConfirmAction(actionText, deniedText)
+		if err != nil {
+			return errors.Wrapf(err, "Could not create DB in dir %s", dataDir)
+		}
+	}
+
+	if clearDBConfirmed {
+		valDB, err := db.NewKVStore(dataDir, pubkeys)
+		if err != nil {
+			return errors.Wrapf(err, "Could not create DB in dir %s", dataDir)
+		}
+
+		log.Warning("Removing database")
+		if err := valDB.ClearDB(); err != nil {
+			return errors.Wrapf(err, "Could not clear DB in dir %s", dataDir)
+		}
+	}
+
+	return nil
 }
