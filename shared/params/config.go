@@ -43,7 +43,7 @@ type BeaconChainConfig struct {
 	SecondsPerSlot                   uint64 `yaml:"SECONDS_PER_SLOT"`                    // SecondsPerSlot is how many seconds are in a single slot.
 	SlotsPerEpoch                    uint64 `yaml:"SLOTS_PER_EPOCH"`                     // SlotsPerEpoch is the number of slots in an epoch.
 	MinSeedLookahead                 uint64 `yaml:"MIN_SEED_LOOKAHEAD"`                  // SeedLookahead is the duration of randao look ahead seed.
-	MaxSeedLookahead                 uint64 `yaml:"MIN_SEED_LOOKAHEAD"`               // MaxSeedLookahead is the duration a validator has to wait for entry and exit in epoch.
+	MaxSeedLookahead                 uint64 `yaml:"MIN_SEED_LOOKAHEAD"`                  // MaxSeedLookahead is the duration a validator has to wait for entry and exit in epoch.
 	SlotsPerEth1VotingPeriod         uint64 `yaml:"SLOTS_PER_ETH1_VOTING_PERIOD"`        // SlotsPerEth1VotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
 	SlotsPerHistoricalRoot           uint64 `yaml:"SLOTS_PER_HISTORICAL_ROOT"`           // SlotsPerHistoricalRoot defines how often the historical root is saved.
 	MinValidatorWithdrawabilityDelay uint64 `yaml:"MIN_VALIDATOR_WITHDRAWABILITY_DELAY"` // MinValidatorWithdrawabilityDelay is the shortest amount of time a validator has to wait to withdraw.
@@ -143,7 +143,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	SecondsPerSlot:                   12,
 	SlotsPerEpoch:                    32,
 	MinSeedLookahead:                 1,
-	MaxSeedLookahead:                  4,
+	MaxSeedLookahead:                 4,
 	SlotsPerEth1VotingPeriod:         1024,
 	SlotsPerHistoricalRoot:           8192,
 	MinValidatorWithdrawabilityDelay: 256,

@@ -101,7 +101,7 @@ func TestEndtoEndDeposits(t *testing.T) {
 		t.Fatal("no logs")
 	}
 
-	if len(logs) != int(numberOfDeposits * numberOfValidators) {
+	if len(logs) != int(numberOfDeposits*numberOfValidators) {
 		t.Fatal("No sufficient number of logs")
 	}
 
