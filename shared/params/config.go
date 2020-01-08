@@ -174,7 +174,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// Prysm constants.
 	GweiPerEth:                1000000000,
-	LogBlockDelay:             2,
+	LogBlockDelay:             4,
 	BLSSecretKeyLength:        32,
 	BLSPubkeyLength:           48,
 	BLSSignatureLength:        96,
