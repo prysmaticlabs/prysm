@@ -106,3 +106,45 @@ func TestKV_Aggregated_CheckExpTime(t *testing.T) {
 			math.RoundToEven(exp.Sub(time.Now()).Seconds()))
 	}
 }
+
+func TestKV_HasAggregatedAttestation(t *testing.T) {
+	cache := NewAttCaches()
+
+	att := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b111}}
+	has, err := cache.HasAggregatedAttestation(att)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if has {
+		t.Error("should not have unsaved att in cache")
+	}
+	if err := cache.SaveAggregatedAttestation(att); err != nil {
+		t.Fatal(err)
+	}
+	has, err = cache.HasAggregatedAttestation(att)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !has {
+		t.Error("should have saved att in cache")
+	}
+
+	att = &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1111}}
+	has, err = cache.HasAggregatedAttestation(att)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if has {
+		t.Error("should not have unsaved att in cache")
+	}
+	if err := cache.SaveBlockAttestation(att); err != nil {
+		t.Fatal(err)
+	}
+	has, err = cache.HasAggregatedAttestation(att)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !has {
+		t.Error("should have saved att in cache")
+	}
+}
