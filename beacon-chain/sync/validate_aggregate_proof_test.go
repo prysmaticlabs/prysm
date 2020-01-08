@@ -128,6 +128,7 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 		p2p:         p,
 		db:          db,
 		initialSync: &mockSync.Sync{IsSyncing: false},
+		attPool:     attestations.NewPool(),
 	}
 
 	buf := new(bytes.Buffer)
@@ -184,6 +185,7 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 		initialSync: &mockSync.Sync{IsSyncing: false},
 		chain: &mock.ChainService{Genesis: time.Now(),
 			State: beaconState},
+		attPool: attestations.NewPool(),
 	}
 
 	buf := new(bytes.Buffer)
@@ -349,6 +351,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
 			}},
+		attPool: attestations.NewPool(),
 	}
 
 	buf := new(bytes.Buffer)
