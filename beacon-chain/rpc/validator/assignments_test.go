@@ -19,8 +19,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-// _pubKey is a helper to generate a well-formed public key.
-func _pubKey(i uint64) []byte {
+// pubKey is a helper to generate a well-formed public key.
+func pubKey(i uint64) []byte {
 	pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 	binary.LittleEndian.PutUint64(pubKey, uint64(i))
 	return pubKey
@@ -73,7 +73,7 @@ func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}
 
-	pubKey := _pubKey(99999)
+	pubKey := pubKey(99999)
 	req := &ethpb.DutiesRequest{
 		PublicKeys: [][]byte{pubKey},
 		Epoch:      0,

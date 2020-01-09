@@ -225,7 +225,7 @@ func TestServer_ListValidatorBalances_ExceedsMaxPageSize(t *testing.T) {
 	}
 }
 
-func _pubKey(i uint64) []byte {
+func pubKey(i uint64) []byte {
 	pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 	binary.LittleEndian.PutUint64(pubKey, i)
 	return pubKey
@@ -251,10 +251,10 @@ func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 		req *ethpb.ListValidatorBalancesRequest
 		res *ethpb.ValidatorBalances
 	}{
-		{req: &ethpb.ListValidatorBalancesRequest{PublicKeys: [][]byte{_pubKey(99)}},
+		{req: &ethpb.ListValidatorBalancesRequest{PublicKeys: [][]byte{pubKey(99)}},
 			res: &ethpb.ValidatorBalances{
 				Balances: []*ethpb.ValidatorBalances_Balance{
-					{Index: 99, PublicKey: _pubKey(99), Balance: 99},
+					{Index: 99, PublicKey: pubKey(99), Balance: 99},
 				},
 				NextPageToken: "",
 				TotalSize:     1,
@@ -263,30 +263,30 @@ func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 		{req: &ethpb.ListValidatorBalancesRequest{Indices: []uint64{1, 2, 3}},
 			res: &ethpb.ValidatorBalances{
 				Balances: []*ethpb.ValidatorBalances_Balance{
-					{Index: 1, PublicKey: _pubKey(1), Balance: 1},
-					{Index: 2, PublicKey: _pubKey(2), Balance: 2},
-					{Index: 3, PublicKey: _pubKey(3), Balance: 3},
+					{Index: 1, PublicKey: pubKey(1), Balance: 1},
+					{Index: 2, PublicKey: pubKey(2), Balance: 2},
+					{Index: 3, PublicKey: pubKey(3), Balance: 3},
 				},
 				NextPageToken: "",
 				TotalSize:     3,
 			},
 		},
-		{req: &ethpb.ListValidatorBalancesRequest{PublicKeys: [][]byte{_pubKey(10), _pubKey(11), _pubKey(12)}},
+		{req: &ethpb.ListValidatorBalancesRequest{PublicKeys: [][]byte{pubKey(10), pubKey(11), pubKey(12)}},
 			res: &ethpb.ValidatorBalances{
 				Balances: []*ethpb.ValidatorBalances_Balance{
-					{Index: 10, PublicKey: _pubKey(10), Balance: 10},
-					{Index: 11, PublicKey: _pubKey(11), Balance: 11},
-					{Index: 12, PublicKey: _pubKey(12), Balance: 12},
+					{Index: 10, PublicKey: pubKey(10), Balance: 10},
+					{Index: 11, PublicKey: pubKey(11), Balance: 11},
+					{Index: 12, PublicKey: pubKey(12), Balance: 12},
 				},
 				NextPageToken: "",
 				TotalSize:     3,
 			}},
-		{req: &ethpb.ListValidatorBalancesRequest{PublicKeys: [][]byte{_pubKey(2), _pubKey(3)}, Indices: []uint64{3, 4}}, // Duplication
+		{req: &ethpb.ListValidatorBalancesRequest{PublicKeys: [][]byte{pubKey(2), pubKey(3)}, Indices: []uint64{3, 4}}, // Duplication
 			res: &ethpb.ValidatorBalances{
 				Balances: []*ethpb.ValidatorBalances_Balance{
-					{Index: 2, PublicKey: _pubKey(2), Balance: 2},
-					{Index: 3, PublicKey: _pubKey(3), Balance: 3},
-					{Index: 4, PublicKey: _pubKey(4), Balance: 4},
+					{Index: 2, PublicKey: pubKey(2), Balance: 2},
+					{Index: 3, PublicKey: pubKey(3), Balance: 3},
+					{Index: 4, PublicKey: pubKey(4), Balance: 4},
 				},
 				NextPageToken: "",
 				TotalSize:     3,
@@ -294,8 +294,8 @@ func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 		{req: &ethpb.ListValidatorBalancesRequest{PublicKeys: [][]byte{{}}, Indices: []uint64{3, 4}}, // Public key has a blank value
 			res: &ethpb.ValidatorBalances{
 				Balances: []*ethpb.ValidatorBalances_Balance{
-					{Index: 3, PublicKey: _pubKey(3), Balance: 3},
-					{Index: 4, PublicKey: _pubKey(4), Balance: 4},
+					{Index: 3, PublicKey: pubKey(3), Balance: 3},
+					{Index: 4, PublicKey: pubKey(4), Balance: 4},
 				},
 				NextPageToken: "",
 				TotalSize:     2,
@@ -337,35 +337,35 @@ func TestServer_ListValidatorBalances_Pagination_CustomPageSizes(t *testing.T) {
 		{req: &ethpb.ListValidatorBalancesRequest{PageToken: strconv.Itoa(1), PageSize: 3},
 			res: &ethpb.ValidatorBalances{
 				Balances: []*ethpb.ValidatorBalances_Balance{
-					{PublicKey: _pubKey(3), Index: 3, Balance: uint64(3)},
-					{PublicKey: _pubKey(4), Index: 4, Balance: uint64(4)},
-					{PublicKey: _pubKey(5), Index: 5, Balance: uint64(5)}},
+					{PublicKey: pubKey(3), Index: 3, Balance: uint64(3)},
+					{PublicKey: pubKey(4), Index: 4, Balance: uint64(4)},
+					{PublicKey: pubKey(5), Index: 5, Balance: uint64(5)}},
 				NextPageToken: strconv.Itoa(2),
 				TotalSize:     int32(count)}},
 		{req: &ethpb.ListValidatorBalancesRequest{PageToken: strconv.Itoa(10), PageSize: 5},
 			res: &ethpb.ValidatorBalances{
 				Balances: []*ethpb.ValidatorBalances_Balance{
-					{PublicKey: _pubKey(50), Index: 50, Balance: uint64(50)},
-					{PublicKey: _pubKey(51), Index: 51, Balance: uint64(51)},
-					{PublicKey: _pubKey(52), Index: 52, Balance: uint64(52)},
-					{PublicKey: _pubKey(53), Index: 53, Balance: uint64(53)},
-					{PublicKey: _pubKey(54), Index: 54, Balance: uint64(54)}},
+					{PublicKey: pubKey(50), Index: 50, Balance: uint64(50)},
+					{PublicKey: pubKey(51), Index: 51, Balance: uint64(51)},
+					{PublicKey: pubKey(52), Index: 52, Balance: uint64(52)},
+					{PublicKey: pubKey(53), Index: 53, Balance: uint64(53)},
+					{PublicKey: pubKey(54), Index: 54, Balance: uint64(54)}},
 				NextPageToken: strconv.Itoa(11),
 				TotalSize:     int32(count)}},
 		{req: &ethpb.ListValidatorBalancesRequest{PageToken: strconv.Itoa(33), PageSize: 3},
 			res: &ethpb.ValidatorBalances{
 				Balances: []*ethpb.ValidatorBalances_Balance{
-					{PublicKey: _pubKey(99), Index: 99, Balance: uint64(99)},
-					{PublicKey: _pubKey(100), Index: 100, Balance: uint64(100)},
-					{PublicKey: _pubKey(101), Index: 101, Balance: uint64(101)},
+					{PublicKey: pubKey(99), Index: 99, Balance: uint64(99)},
+					{PublicKey: pubKey(100), Index: 100, Balance: uint64(100)},
+					{PublicKey: pubKey(101), Index: 101, Balance: uint64(101)},
 				},
 				NextPageToken: "34",
 				TotalSize:     int32(count)}},
 		{req: &ethpb.ListValidatorBalancesRequest{PageSize: 2},
 			res: &ethpb.ValidatorBalances{
 				Balances: []*ethpb.ValidatorBalances_Balance{
-					{PublicKey: _pubKey(0), Index: 0, Balance: uint64(0)},
-					{PublicKey: _pubKey(1), Index: 1, Balance: uint64(1)}},
+					{PublicKey: pubKey(0), Index: 0, Balance: uint64(0)},
+					{PublicKey: pubKey(1), Index: 1, Balance: uint64(1)}},
 				NextPageToken: strconv.Itoa(1),
 				TotalSize:     int32(count)}},
 	}
@@ -549,7 +549,7 @@ func TestServer_ListValidators_OnlyActiveValidators(t *testing.T) {
 	validators := make([]*ethpb.Validator, count)
 	activeValidators := make([]*ethpb.Validators_ValidatorContainer, 0)
 	for i := 0; i < count; i++ {
-		pubKey := _pubKey(uint64(i))
+		pubKey := pubKey(uint64(i))
 		if err := db.SaveValidatorIndex(ctx, pubKey, uint64(i)); err != nil {
 			t.Fatal(err)
 		}
@@ -665,19 +665,19 @@ func TestServer_ListValidators_Pagination(t *testing.T) {
 				ValidatorList: []*ethpb.Validators_ValidatorContainer{
 					{
 						Validator: &ethpb.Validator{
-							PublicKey: _pubKey(3),
+							PublicKey: pubKey(3),
 						},
 						Index: 3,
 					},
 					{
 						Validator: &ethpb.Validator{
-							PublicKey: _pubKey(4),
+							PublicKey: pubKey(4),
 						},
 						Index: 4,
 					},
 					{
 						Validator: &ethpb.Validator{
-							PublicKey: _pubKey(5),
+							PublicKey: pubKey(5),
 						},
 						Index: 5,
 					},
@@ -689,31 +689,31 @@ func TestServer_ListValidators_Pagination(t *testing.T) {
 				ValidatorList: []*ethpb.Validators_ValidatorContainer{
 					{
 						Validator: &ethpb.Validator{
-							PublicKey: _pubKey(50),
+							PublicKey: pubKey(50),
 						},
 						Index: 50,
 					},
 					{
 						Validator: &ethpb.Validator{
-							PublicKey: _pubKey(51),
+							PublicKey: pubKey(51),
 						},
 						Index: 51,
 					},
 					{
 						Validator: &ethpb.Validator{
-							PublicKey: _pubKey(52),
+							PublicKey: pubKey(52),
 						},
 						Index: 52,
 					},
 					{
 						Validator: &ethpb.Validator{
-							PublicKey: _pubKey(53),
+							PublicKey: pubKey(53),
 						},
 						Index: 53,
 					},
 					{
 						Validator: &ethpb.Validator{
-							PublicKey: _pubKey(54),
+							PublicKey: pubKey(54),
 						},
 						Index: 54,
 					},
@@ -725,7 +725,7 @@ func TestServer_ListValidators_Pagination(t *testing.T) {
 				ValidatorList: []*ethpb.Validators_ValidatorContainer{
 					{
 						Validator: &ethpb.Validator{
-							PublicKey: _pubKey(99),
+							PublicKey: pubKey(99),
 						},
 						Index: 99,
 					},
@@ -737,13 +737,13 @@ func TestServer_ListValidators_Pagination(t *testing.T) {
 				ValidatorList: []*ethpb.Validators_ValidatorContainer{
 					{
 						Validator: &ethpb.Validator{
-							PublicKey: _pubKey(0),
+							PublicKey: pubKey(0),
 						},
 						Index: 0,
 					},
 					{
 						Validator: &ethpb.Validator{
-							PublicKey: _pubKey(1),
+							PublicKey: pubKey(1),
 						},
 						Index: 1,
 					},
@@ -907,7 +907,7 @@ func TestServer_GetValidator(t *testing.T) {
 	for i := 0; i < count; i++ {
 		validators[i] = &ethpb.Validator{
 			ActivationEpoch: uint64(i),
-			PublicKey:       _pubKey(uint64(i)),
+			PublicKey:       pubKey(uint64(i)),
 		}
 	}
 
@@ -946,7 +946,7 @@ func TestServer_GetValidator(t *testing.T) {
 		{
 			req: &ethpb.GetValidatorRequest{
 				QueryFilter: &ethpb.GetValidatorRequest_PublicKey{
-					PublicKey: _pubKey(5),
+					PublicKey: pubKey(5),
 				},
 			},
 			res:     validators[5],
@@ -1499,7 +1499,7 @@ func setupValidators(t *testing.T, db db.Database, count int) ([]*ethpb.Validato
 	balances := make([]uint64, count)
 	validators := make([]*ethpb.Validator, 0, count)
 	for i := 0; i < count; i++ {
-		pubKey := _pubKey(uint64(i))
+		pubKey := pubKey(uint64(i))
 		if err := db.SaveValidatorIndex(ctx, pubKey, uint64(i)); err != nil {
 			t.Fatal(err)
 		}

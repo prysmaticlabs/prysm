@@ -42,7 +42,7 @@ func TestValidatorIndex_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pubKey := _pubKey(1)
+	pubKey := pubKey(1)
 	if err := db.SaveValidatorIndex(ctx, pubKey, 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
@@ -89,7 +89,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 		HeadFetcher:        &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorActivationRequest{
-		PublicKeys: [][]byte{_pubKey(1)},
+		PublicKeys: [][]byte{pubKey(1)},
 	}
 
 	ctrl := gomock.NewController(t)

@@ -28,8 +28,8 @@ func init() {
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 }
 
-// _pubKey is a helper to generate a well-formed public key.
-func _pubKey(i uint64) []byte {
+// pubKey is a helper to generate a well-formed public key.
+func pubKey(i uint64) []byte {
 	pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 	binary.LittleEndian.PutUint64(pubKey, uint64(i))
 	return pubKey
@@ -72,7 +72,7 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'A'}, 0)
-	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: _pubKey(3)}
+	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey(3)}
 	wanted := "Could not locate validator index in DB"
 	if _, err := aggregatorServer.SubmitAggregateAndProof(ctx, req); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Did not receive wanted error: expected %v, received %v", wanted, err.Error())
@@ -97,7 +97,7 @@ func TestSubmitAggregateAndProof_IsAggregator(t *testing.T) {
 
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'A'}, 0)
-	pubKey := _pubKey(1)
+	pubKey := pubKey(1)
 	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 	if err := aggregatorServer.BeaconDB.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
 		t.Fatal(err)
@@ -135,7 +135,7 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'B'}, 0)
-	pubKey := _pubKey(2)
+	pubKey := pubKey(2)
 	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 	if err := aggregatorServer.BeaconDB.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
 		t.Fatal(err)
@@ -188,7 +188,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'B'}, 0)
-	pubKey := _pubKey(2)
+	pubKey := pubKey(2)
 	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 	if err := aggregatorServer.BeaconDB.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
 		t.Fatal(err)
