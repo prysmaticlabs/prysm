@@ -108,35 +108,9 @@ func (bs *Server) ListValidatorAssignments(
 	archivedBalances := []uint64{}
 
 	if shouldFetchFromArchive {
-		archivedInfo, err = bs.BeaconDB.ArchivedCommitteeInfo(ctx, requestedEpoch)
+		archivedInfo, archivedBalances, err = bs.archivedCommitteeData(ctx, requestedEpoch)
 		if err != nil {
-			return nil, status.Errorf(
-				codes.Internal,
-				"Could not retrieve archived committee info for epoch %d",
-				requestedEpoch,
-			)
-		}
-		if archivedInfo == nil {
-			return nil, status.Errorf(
-				codes.NotFound,
-				"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
-				requestedEpoch,
-			)
-		}
-		archivedBalances, err = bs.BeaconDB.ArchivedBalances(ctx, requestedEpoch)
-		if err != nil {
-			return nil, status.Errorf(
-				codes.Internal,
-				"Could not retrieve archived balances for epoch %d",
-				requestedEpoch,
-			)
-		}
-		if archivedBalances == nil {
-			return nil, status.Errorf(
-				codes.NotFound,
-				"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
-				requestedEpoch,
-			)
+			return nil, err
 		}
 	} else {
 		committeeAssignments, proposerIndexToSlot, err = helpers.CommitteeAssignments(headState, requestedEpoch)
@@ -171,11 +145,11 @@ func (bs *Server) ListValidatorAssignments(
 			res = append(res, assign)
 			continue
 		}
-		comAssingnment := committeeAssignments[index]
+		comAssignment := committeeAssignments[index]
 		assign := &ethpb.ValidatorAssignments_CommitteeAssignment{
-			BeaconCommittees: comAssingnment.Committee,
-			CommitteeIndex:   comAssingnment.CommitteeIndex,
-			AttesterSlot:     comAssingnment.AttesterSlot,
+			BeaconCommittees: comAssignment.Committee,
+			CommitteeIndex:   comAssignment.CommitteeIndex,
+			AttesterSlot:     comAssignment.AttesterSlot,
 			ProposerSlot:     proposerIndexToSlot[index],
 			PublicKey:        headState.Validators[index].PublicKey,
 		}
@@ -237,6 +211,41 @@ func archivedValidatorCommittee(
 		}
 	}
 	return nil, 0, 0, 0, fmt.Errorf("could not find committee for validator index %d", validatorIndex)
+}
+
+func (bs *Server) archivedCommitteeData(ctx context.Context, requestedEpoch uint64) (*pb.ArchivedCommitteeInfo,
+	[]uint64, error) {
+	archivedInfo, err := bs.BeaconDB.ArchivedCommitteeInfo(ctx, requestedEpoch)
+	if err != nil {
+		return nil, nil, status.Errorf(
+			codes.Internal,
+			"Could not retrieve archived committee info for epoch %d",
+			requestedEpoch,
+		)
+	}
+	if archivedInfo == nil {
+		return nil, nil, status.Errorf(
+			codes.NotFound,
+			"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
+			requestedEpoch,
+		)
+	}
+	archivedBalances, err := bs.BeaconDB.ArchivedBalances(ctx, requestedEpoch)
+	if err != nil {
+		return nil, nil, status.Errorf(
+			codes.Internal,
+			"Could not retrieve archived balances for epoch %d",
+			requestedEpoch,
+		)
+	}
+	if archivedBalances == nil {
+		return nil, nil, status.Errorf(
+			codes.NotFound,
+			"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
+			requestedEpoch,
+		)
+	}
+	return archivedInfo, archivedBalances, nil
 }
 
 // helpers.ComputeProposerIndex wrapper.
