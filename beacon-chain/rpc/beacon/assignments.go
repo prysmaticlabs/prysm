@@ -101,42 +101,30 @@ func (bs *Server) ListValidatorAssignments(
 
 	shouldFetchFromArchive := requestedEpoch < bs.FinalizationFetcher.FinalizedCheckpt().Epoch
 
+	// initialize all committee related data.
+	committeeAssignments := map[uint64]*helpers.CommitteeAssignmentContainer{}
+	proposerIndexToSlot := map[uint64]uint64{}
+	archivedInfo := &pb.ArchivedCommitteeInfo{}
+	archivedBalances := []uint64{}
+
+	if shouldFetchFromArchive {
+		archivedInfo, archivedBalances, err = bs.archivedCommitteeData(ctx, requestedEpoch)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		committeeAssignments, proposerIndexToSlot, err = helpers.CommitteeAssignments(headState, requestedEpoch)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
+		}
+	}
+
 	for _, index := range filteredIndices[start:end] {
 		if int(index) >= len(headState.Validators) {
 			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= validator count %d",
 				index, len(headState.Validators))
 		}
 		if shouldFetchFromArchive {
-			archivedInfo, err := bs.BeaconDB.ArchivedCommitteeInfo(ctx, requestedEpoch)
-			if err != nil {
-				return nil, status.Errorf(
-					codes.Internal,
-					"Could not retrieve archived committee info for epoch %d",
-					requestedEpoch,
-				)
-			}
-			if archivedInfo == nil {
-				return nil, status.Errorf(
-					codes.NotFound,
-					"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
-					requestedEpoch,
-				)
-			}
-			archivedBalances, err := bs.BeaconDB.ArchivedBalances(ctx, requestedEpoch)
-			if err != nil {
-				return nil, status.Errorf(
-					codes.Internal,
-					"Could not retrieve archived balances for epoch %d",
-					requestedEpoch,
-				)
-			}
-			if archivedBalances == nil {
-				return nil, status.Errorf(
-					codes.NotFound,
-					"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
-					requestedEpoch,
-				)
-			}
 			committee, committeeIndex, attesterSlot, proposerSlot, err := archivedValidatorCommittee(
 				requestedEpoch,
 				index,
@@ -157,15 +145,12 @@ func (bs *Server) ListValidatorAssignments(
 			res = append(res, assign)
 			continue
 		}
-		committee, committeeIndex, attesterSlot, proposerSlot, err := helpers.CommitteeAssignment(headState, requestedEpoch, index)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not retrieve assignment for validator %d: %v", index, err)
-		}
+		comAssignment := committeeAssignments[index]
 		assign := &ethpb.ValidatorAssignments_CommitteeAssignment{
-			BeaconCommittees: committee,
-			CommitteeIndex:   committeeIndex,
-			AttesterSlot:     attesterSlot,
-			ProposerSlot:     proposerSlot,
+			BeaconCommittees: comAssignment.Committee,
+			CommitteeIndex:   comAssignment.CommitteeIndex,
+			AttesterSlot:     comAssignment.AttesterSlot,
+			ProposerSlot:     proposerIndexToSlot[index],
 			PublicKey:        headState.Validators[index].PublicKey,
 		}
 		res = append(res, assign)
@@ -226,6 +211,41 @@ func archivedValidatorCommittee(
 		}
 	}
 	return nil, 0, 0, 0, fmt.Errorf("could not find committee for validator index %d", validatorIndex)
+}
+
+func (bs *Server) archivedCommitteeData(ctx context.Context, requestedEpoch uint64) (*pb.ArchivedCommitteeInfo,
+	[]uint64, error) {
+	archivedInfo, err := bs.BeaconDB.ArchivedCommitteeInfo(ctx, requestedEpoch)
+	if err != nil {
+		return nil, nil, status.Errorf(
+			codes.Internal,
+			"Could not retrieve archived committee info for epoch %d",
+			requestedEpoch,
+		)
+	}
+	if archivedInfo == nil {
+		return nil, nil, status.Errorf(
+			codes.NotFound,
+			"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
+			requestedEpoch,
+		)
+	}
+	archivedBalances, err := bs.BeaconDB.ArchivedBalances(ctx, requestedEpoch)
+	if err != nil {
+		return nil, nil, status.Errorf(
+			codes.Internal,
+			"Could not retrieve archived balances for epoch %d",
+			requestedEpoch,
+		)
+	}
+	if archivedBalances == nil {
+		return nil, nil, status.Errorf(
+			codes.NotFound,
+			"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
+			requestedEpoch,
+		)
+	}
+	return archivedInfo, archivedBalances, nil
 }
 
 // helpers.ComputeProposerIndex wrapper.
