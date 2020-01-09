@@ -43,6 +43,7 @@ type Flags struct {
 	EnableNewCache           bool // EnableNewCache enables the node to use the new caching scheme.
 	EnableShuffledIndexCache bool // EnableShuffledIndexCache to cache expensive shuffled index computation.
 	EnableSkipSlotsCache     bool // EnableSkipSlotsCache caches the state in skipped slots.
+	EnableSlasherConnection  bool // EnableSlasher enable retrieval of slashing events from a slasher instance.
 }
 
 var featureConfig *Flags
@@ -122,6 +123,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(saveDepositData.Name) {
 		log.Warn("Enabled saving of eth1 related chain/deposit data.")
 		cfg.EnableSavingOfDepositData = true
+	}
+	if ctx.GlobalBool(enableSlasherFlag.Name) {
+		log.Warn("Enable slasher connection.")
+		cfg.EnableSlasherConnection = true
 	}
 	Init(cfg)
 }
