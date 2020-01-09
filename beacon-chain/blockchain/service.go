@@ -293,7 +293,7 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 // This gets called when beacon chain is first initialized to save validator indices and pubkeys in db
 func (s *Service) saveGenesisValidators(ctx context.Context, state *pb.BeaconState) error {
 	for i, v := range state.Validators {
-		if err := s.beaconDB.SaveValidatorIndex(ctx, bytesutil.ToBytes48(v.PublicKey), uint64(i)); err != nil {
+		if err := s.beaconDB.SaveValidatorIndex(ctx, v.PublicKey, uint64(i)); err != nil {
 			return errors.Wrapf(err, "could not save validator index: %d", i)
 		}
 	}

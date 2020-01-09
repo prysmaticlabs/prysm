@@ -22,7 +22,6 @@ import (
 	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -43,8 +42,8 @@ func TestValidatorIndex_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pubKey := []byte{'A'}
-	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey), 0); err != nil {
+	pubKey := _pubKey(1)
+	if err := db.SaveValidatorIndex(ctx, pubKey, 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
@@ -90,7 +89,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 		HeadFetcher:        &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorActivationRequest{
-		PublicKeys: [][]byte{[]byte("A")},
+		PublicKeys: [][]byte{_pubKey(1)},
 	}
 
 	ctrl := gomock.NewController(t)
@@ -125,10 +124,10 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	pubKey1 := priv1.PublicKey().Marshal()[:]
 	pubKey2 := priv2.PublicKey().Marshal()[:]
 
-	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey1), 0); err != nil {
+	if err := db.SaveValidatorIndex(ctx, pubKey1, 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
-	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey2), 0); err != nil {
+	if err := db.SaveValidatorIndex(ctx, pubKey2, 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
@@ -167,10 +166,10 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	}
 	depositCache := depositcache.NewDepositCache()
 	depositCache.InsertDeposit(ctx, deposit, 10 /*blockNum*/, 0, depositTrie.Root())
-	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey1), 0); err != nil {
+	if err := db.SaveValidatorIndex(ctx, pubKey1, 0); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
 	}
-	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey2), 1); err != nil {
+	if err := db.SaveValidatorIndex(ctx, pubKey2, 1); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
 	}
 	vs := &Server{

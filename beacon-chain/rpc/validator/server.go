@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -103,7 +102,7 @@ func (vs *Server) WaitForActivation(req *ethpb.ValidatorActivationRequest, strea
 
 // ValidatorIndex is called by a validator to get its index location in the beacon state.
 func (vs *Server) ValidatorIndex(ctx context.Context, req *ethpb.ValidatorIndexRequest) (*ethpb.ValidatorIndexResponse, error) {
-	index, ok, err := vs.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(req.PublicKey))
+	index, ok, err := vs.BeaconDB.ValidatorIndex(ctx, req.PublicKey)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not fetch validator index: %v", err)
 	}
