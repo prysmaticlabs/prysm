@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"strings"
 	"sync"
@@ -14,10 +15,16 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
+
+// pubKey is a helper to generate a well-formed public key.
+func pubKey(i uint64) []byte {
+	pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
+	binary.LittleEndian.PutUint64(pubKey, uint64(i))
+	return pubKey
+}
 
 func TestGetDuties_NextEpoch_WrongPubkeyLength(t *testing.T) {
 	db := dbutil.SetupDB(t)
@@ -43,9 +50,8 @@ func TestGetDuties_NextEpoch_WrongPubkeyLength(t *testing.T) {
 		PublicKeys: [][]byte{{1}},
 		Epoch:      0,
 	}
-	want := fmt.Sprintf("expected public key to have length %d", params.BeaconConfig().BLSPubkeyLength)
-	if _, err := Server.GetDuties(context.Background(), req); err != nil && !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err)
+	if _, err := Server.GetDuties(context.Background(), req); err != nil && !strings.Contains(err.Error(), "incorrect key length") {
+		t.Errorf("Expected \"incorrect key length\", received %v", err)
 	}
 }
 
@@ -67,7 +73,7 @@ func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}
 
-	pubKey := make([]byte, 96)
+	pubKey := pubKey(99999)
 	req := &ethpb.DutiesRequest{
 		PublicKeys: [][]byte{pubKey},
 		Epoch:      0,
@@ -105,7 +111,7 @@ func TestGetDuties_OK(t *testing.T) {
 	for i := 0; i < len(deposits); i++ {
 		wg.Add(1)
 		go func(index int) {
-			errs <- db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(deposits[index].Data.PublicKey), uint64(index))
+			errs <- db.SaveValidatorIndex(ctx, deposits[index].Data.PublicKey, uint64(index))
 			wg.Done()
 		}(i)
 	}
@@ -182,7 +188,7 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	for i := 0; i < len(deposits); i++ {
 		wg.Add(1)
 		go func(index int) {
-			errs <- db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(deposits[index].Data.PublicKey), uint64(index))
+			errs <- db.SaveValidatorIndex(ctx, deposits[index].Data.PublicKey, uint64(index))
 			wg.Done()
 		}(i)
 	}
@@ -241,7 +247,7 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	for i := 0; i < numOfValidators; i++ {
 		wg.Add(1)
 		go func(index int) {
-			errs <- db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(deposits[index].Data.PublicKey), uint64(index))
+			errs <- db.SaveValidatorIndex(ctx, deposits[index].Data.PublicKey, uint64(index))
 			wg.Done()
 		}(i)
 	}
@@ -320,7 +326,7 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 	for i := 0; i < numOfValidators; i++ {
 		wg.Add(1)
 		go func(index int) {
-			errs <- db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(deposits[index].Data.PublicKey), uint64(index))
+			errs <- db.SaveValidatorIndex(ctx, deposits[index].Data.PublicKey, uint64(index))
 			wg.Done()
 		}(i)
 	}

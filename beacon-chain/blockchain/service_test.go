@@ -259,7 +259,7 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 	}
 
 	for _, v := range s.Validators {
-		if !db.HasValidatorIndex(ctx, bytesutil.ToBytes48(v.PublicKey)) {
+		if !db.HasValidatorIndex(ctx, v.PublicKey) {
 			t.Errorf("Validator %s missing from db", hex.EncodeToString(v.PublicKey))
 		}
 	}

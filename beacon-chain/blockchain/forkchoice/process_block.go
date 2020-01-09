@@ -332,7 +332,7 @@ func (s *Store) saveNewValidators(ctx context.Context, preStateValidatorCount in
 	if preStateValidatorCount != postStateValidatorCount {
 		for i := preStateValidatorCount; i < postStateValidatorCount; i++ {
 			pubKey := postState.Validators[i].PublicKey
-			if err := s.db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey), uint64(i)); err != nil {
+			if err := s.db.SaveValidatorIndex(ctx, pubKey, uint64(i)); err != nil {
 				return errors.Wrapf(err, "could not save activated validator: %d", i)
 			}
 			log.WithFields(logrus.Fields{

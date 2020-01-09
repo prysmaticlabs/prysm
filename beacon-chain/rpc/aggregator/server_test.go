@@ -2,6 +2,7 @@ package aggregator
 
 import (
 	"context"
+	"encoding/binary"
 	"reflect"
 	"strings"
 	"testing"
@@ -25,6 +26,13 @@ import (
 func init() {
 	// Use minimal config to reduce test setup time.
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+}
+
+// pubKey is a helper to generate a well-formed public key.
+func pubKey(i uint64) []byte {
+	pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
+	binary.LittleEndian.PutUint64(pubKey, uint64(i))
+	return pubKey
 }
 
 func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
@@ -64,10 +72,10 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'A'}, 0)
-	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal()}
+	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey(3)}
 	wanted := "Could not locate validator index in DB"
 	if _, err := aggregatorServer.SubmitAggregateAndProof(ctx, req); !strings.Contains(err.Error(), wanted) {
-		t.Error("Did not receive wanted error")
+		t.Errorf("Did not receive wanted error: expected %v, received %v", wanted, err.Error())
 	}
 }
 
@@ -89,8 +97,8 @@ func TestSubmitAggregateAndProof_IsAggregator(t *testing.T) {
 
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'A'}, 0)
-	pubKey := [48]byte{'A'}
-	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey[:]}
+	pubKey := pubKey(1)
+	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 	if err := aggregatorServer.BeaconDB.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
 		t.Fatal(err)
 	}
@@ -127,8 +135,8 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'B'}, 0)
-	pubKey := [48]byte{'B'}
-	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey[:]}
+	pubKey := pubKey(2)
+	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 	if err := aggregatorServer.BeaconDB.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
 		t.Fatal(err)
 	}
@@ -180,8 +188,8 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'B'}, 0)
-	pubKey := [48]byte{'B'}
-	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey[:]}
+	pubKey := pubKey(2)
+	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 	if err := aggregatorServer.BeaconDB.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
 		t.Fatal(err)
 	}
