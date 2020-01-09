@@ -195,7 +195,6 @@ func (s *Service) initializeBeaconChain(
 	eth1data *ethpb.Eth1Data) error {
 	_, span := trace.StartSpan(context.Background(), "beacon-chain.Service.initializeBeaconChain")
 	defer span.End()
-	log.Info("Genesis time reached, starting the beacon chain")
 	s.genesisTime = genesisTime
 	unixTime := uint64(genesisTime.Unix())
 
@@ -207,6 +206,8 @@ func (s *Service) initializeBeaconChain(
 	if err := s.saveGenesisData(ctx, genesisState); err != nil {
 		return errors.Wrap(err, "could not save genesis data")
 	}
+
+	log.Info("Initialized beacon chain genesis state")
 
 	// Update committee shuffled indices for genesis epoch.
 	if featureconfig.Get().EnableNewCache {
