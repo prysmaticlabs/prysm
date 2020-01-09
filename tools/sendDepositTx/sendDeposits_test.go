@@ -101,7 +101,7 @@ func TestEndtoEndDeposits(t *testing.T) {
 		t.Fatal("no logs")
 	}
 
-	if len(logs) != int((numberOfDeposits * numberOfValidators)) {
+	if len(logs) != int(numberOfDeposits*numberOfValidators) {
 		t.Fatal("No sufficient number of logs")
 	}
 
@@ -135,7 +135,7 @@ func TestEndtoEndDeposits(t *testing.T) {
 
 	encodedDeposits := make([][]byte, numberOfValidators*numberOfDeposits)
 	for i := 0; i < int(numberOfValidators); i++ {
-		hashedDeposit, err := ssz.SigningRoot(deposits[i].Data)
+		hashedDeposit, err := ssz.HashTreeRoot(deposits[i].Data)
 		if err != nil {
 			t.Fatalf("could not tree hash deposit data: %v", err)
 		}

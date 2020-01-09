@@ -5,11 +5,6 @@ import (
 )
 
 var (
-	// GenesisDelayFlag disables the standard genesis delay.
-	GenesisDelayFlag = cli.BoolFlag{
-		Name:  "genesis-delay",
-		Usage: "Wait and process the genesis event at the midnight of the next day rather than 30s after the ETH1 block time of the chainstart triggering deposit",
-	}
 	// MinimalConfigFlag enables the minimal configuration.
 	MinimalConfigFlag = cli.BoolFlag{
 		Name:  "minimal-config",
@@ -28,11 +23,6 @@ var (
 	EnableEth1DataVoteCacheFlag = cli.BoolFlag{
 		Name:  "enable-eth1-data-vote-cache",
 		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
-	}
-	// EnableCustomStateSSZ see https://github.com/prysmaticlabs/prysm/pull/4077.
-	EnableCustomStateSSZ = cli.BoolFlag{
-		Name:  "enable-custom-state-ssz",
-		Usage: "Enable custom hash_tree_root(state) for Prysm. See https://github.com/prysmaticlabs/prysm/issues/4077",
 	}
 	enableShuffledIndexCache = cli.BoolFlag{
 		Name:  "enable-shuffled-index-cache",
@@ -61,14 +51,6 @@ var (
 		Name:  "kafka-url",
 		Usage: "Stream attestations and blocks to specified kafka servers. This field is used for bootstrap.servers kafka config field.",
 	}
-	enableSnappyDBCompressionFlag = cli.BoolFlag{
-		Name:  "snappy",
-		Usage: "Enables snappy compression in the database.",
-	}
-	enablePruneBoundaryStateFlag = cli.BoolFlag{
-		Name:  "prune-states",
-		Usage: "Prune epoch boundary states before last finalized check point",
-	}
 	initSyncVerifyEverythingFlag = cli.BoolFlag{
 		Name: "initial-sync-verify-all-signatures",
 		Usage: "Initial sync to finalized checkpoint with verifying block's signature, RANDAO " +
@@ -86,17 +68,22 @@ var (
 		Usage: "Connect to slasher in order to retrieve slashable events. Slasher is connected to beacon node using grpc" +
 			"User should be running slasher on current machine or include slasher-provider flag.",
 	}
+	saveDepositData = cli.BoolFlag{
+		Name:  "save-deposit-data",
+		Usage: "Enable of the saving of deposit related data",
+	}
+	noGenesisDelayFlag = cli.BoolFlag{
+		Name: "no-genesis-delay",
+		Usage: "Start the genesis event right away using the eth1 block timestamp which " +
+			"triggered the genesis as the genesis time. This flag should be used for local " +
+			"development and testing only.",
+	}
 )
 
 // Deprecated flags list.
 const deprecatedUsage = "DEPRECATED. DO NOT USE."
 
 var (
-	deprecatedNoGenesisDelayFlag = cli.BoolFlag{
-		Name:   "no-genesis-delay",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
 	deprecatedEnableFinalizedBlockRootIndexFlag = cli.BoolFlag{
 		Name:   "enable-finalized-block-root-index",
 		Usage:  deprecatedUsage,
@@ -117,8 +104,13 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedInitSyncNoVerifyFlag = cli.BoolFlag{
-		Name:   "init-sync-no-verify",
+	deprecatedEnableSnappyDBCompressionFlag = cli.BoolFlag{
+		Name:   "snappy",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnablePruneBoundaryStateFlag = cli.BoolFlag{
+		Name:   "prune-states",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
@@ -129,6 +121,12 @@ var (
 	}
 	deprecatedEnableActiveCountCacheFlag = cli.BoolFlag{
 		Name:   "enable-active-count-cache",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+
+	deprecatedEnableCustomStateSSZ = cli.BoolFlag{
+		Name:   "enable-custom-state-ssz",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
@@ -147,20 +145,27 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedGenesisDelayFlag = cli.BoolFlag{
+		Name:   "genesis-delay",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
-	deprecatedNoGenesisDelayFlag,
 	deprecatedEnableFinalizedBlockRootIndexFlag,
 	deprecatedScatterFlag,
 	deprecatedPruneFinalizedStatesFlag,
 	deprecatedOptimizeProcessEpoch,
-	deprecatedInitSyncNoVerifyFlag,
+	deprecatedEnableSnappyDBCompressionFlag,
+	deprecatedEnablePruneBoundaryStateFlag,
 	deprecatedEnableActiveIndicesCacheFlag,
 	deprecatedEnableActiveCountCacheFlag,
+	deprecatedEnableCustomStateSSZ,
 	deprecatedEnableCommitteeCacheFlag,
 	deprecatedEnableBLSPubkeyCacheFlag,
 	deprecatedFastCommitteeAssignmentsFlag,
+	deprecatedGenesisDelayFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -170,12 +175,11 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
-	GenesisDelayFlag,
+	noGenesisDelayFlag,
 	MinimalConfigFlag,
 	writeSSZStateTransitionsFlag,
 	EnableAttestationCacheFlag,
 	EnableEth1DataVoteCacheFlag,
-	EnableCustomStateSSZ,
 	initSyncVerifyEverythingFlag,
 	initSyncCacheState,
 	NewCacheFlag,
@@ -184,7 +188,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableBackupWebhookFlag,
 	enableShuffledIndexCache,
 	enableSkipSlotsCache,
-	enableSnappyDBCompressionFlag,
-	enablePruneBoundaryStateFlag,
+	saveDepositData,
 	enableSlasherFlag,
 }...)

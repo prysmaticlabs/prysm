@@ -8,10 +8,12 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -30,8 +32,11 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	genesisBlkRoot, err := ssz.SigningRoot(genesis)
+	genesisBlkRoot, err := ssz.HashTreeRoot(genesis.Block)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, beaconState, genesisBlkRoot); err != nil {
 		t.Fatal(err)
 	}
 	cp := &ethpb.Checkpoint{Root: genesisBlkRoot[:]}
@@ -69,11 +74,11 @@ func TestReceiveReceiveBlockNoPubsub_CanSaveHeadInfo(t *testing.T) {
 
 	chainService := setupBeaconChain(t, db)
 
-	headBlk := &ethpb.BeaconBlock{Slot: 100}
+	headBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 100}}
 	if err := db.SaveBlock(ctx, headBlk); err != nil {
 		t.Fatal(err)
 	}
-	r, err := ssz.SigningRoot(headBlk)
+	r, err := ssz.HashTreeRoot(headBlk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,9 +88,12 @@ func TestReceiveReceiveBlockNoPubsub_CanSaveHeadInfo(t *testing.T) {
 	}
 	chainService.forkChoiceStore = &store{headRoot: r[:]}
 
-	if err := chainService.ReceiveBlockNoPubsub(ctx, &ethpb.BeaconBlock{
-		Slot: 1,
-		Body: &ethpb.BeaconBlockBody{}}); err != nil {
+	if err := chainService.ReceiveBlockNoPubsub(ctx, &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Slot: 1,
+			Body: &ethpb.BeaconBlockBody{},
+		},
+	}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -108,14 +116,17 @@ func TestReceiveReceiveBlockNoPubsub_SameHead(t *testing.T) {
 
 	chainService := setupBeaconChain(t, db)
 
-	headBlk := &ethpb.BeaconBlock{}
+	headBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	if err := db.SaveBlock(ctx, headBlk); err != nil {
 		t.Fatal(err)
 	}
-	newBlk := &ethpb.BeaconBlock{
-		Slot: 1,
-		Body: &ethpb.BeaconBlockBody{}}
-	newRoot, _ := ssz.SigningRoot(newBlk)
+	newBlk := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Slot: 1,
+			Body: &ethpb.BeaconBlockBody{},
+		},
+	}
+	newRoot, _ := ssz.HashTreeRoot(newBlk.Block)
 	if err := db.SaveBlock(ctx, newBlk); err != nil {
 		t.Fatal(err)
 	}
@@ -144,7 +155,20 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := chainService.forkChoiceStore.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
+	stateRoot, err := stateutil.HashTreeRootState(beaconState)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	genesis := b.NewGenesisBlock(stateRoot[:])
+	parentRoot, err := ssz.HashTreeRoot(genesis.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, beaconState, parentRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainService.forkChoiceStore.GenesisStore(ctx, &ethpb.Checkpoint{Root: parentRoot[:]}, &ethpb.Checkpoint{Root: parentRoot[:]}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -156,7 +180,7 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.SaveState(ctx, beaconState, bytesutil.ToBytes32(block.ParentRoot)); err != nil {
+	if err := db.SaveState(ctx, beaconState, bytesutil.ToBytes32(block.Block.ParentRoot)); err != nil {
 		t.Fatal(err)
 	}
 

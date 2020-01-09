@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"crypto/ecdsa"
-	"crypto/rand"
 	"math/big"
 	"sync"
 	"time"
@@ -139,7 +138,7 @@ func (s *server) allocateNewKeys(ctx context.Context, podName string, numKeys in
 	txMap := make(map[*keystore.Key]*types.Transaction)
 
 	for i := 0; i < numKeys; i++ {
-		key, err := keystore.NewKey(rand.Reader)
+		key, err := keystore.NewKey()
 		if err != nil {
 			return nil, err
 		}

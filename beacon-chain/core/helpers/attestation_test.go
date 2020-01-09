@@ -176,7 +176,6 @@ func TestAggregateAttestations(t *testing.T) {
 			atts[i] = &ethpb.Attestation{
 				AggregationBits: b,
 				Data:            nil,
-				CustodyBits:     nil,
 				Signature:       sig.Marshal(),
 			}
 		}

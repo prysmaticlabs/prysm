@@ -55,7 +55,7 @@ func TestCreateListener(t *testing.T) {
 		t.Errorf("Ip address is not the expected type, wanted %s but got %s", ipAddr.String(), listener.Self().IP().String())
 	}
 
-	if port != int(listener.Self().UDP()) {
+	if port != listener.Self().UDP() {
 		t.Errorf("In correct port number, wanted %d but got %d", port, listener.Self().UDP())
 	}
 	pubkey := listener.Self().Pubkey()

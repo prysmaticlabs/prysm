@@ -150,7 +150,6 @@ func killProcesses(t *testing.T, pIDs []int) {
 	}
 }
 
-
 func logOutput(t *testing.T, tmpPath string, config *end2EndConfig) {
 	if t.Failed() {
 		// Log out errors from beacon chain nodes.

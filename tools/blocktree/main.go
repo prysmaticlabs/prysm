@@ -63,7 +63,7 @@ func main() {
 	m := make(map[[32]byte]*node)
 	for i := 0; i < len(blks); i++ {
 		b := blks[i]
-		r, err := ssz.SigningRoot(b)
+		r, err := ssz.HashTreeRoot(b.Block)
 		if err != nil {
 			panic(err)
 		}
@@ -75,7 +75,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		slot := b.Slot
+		slot := b.Block.Slot
 		// If the state is not available, roll back
 		for state == nil {
 			slot--
@@ -84,7 +84,7 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
-			rs, err := ssz.SigningRoot(bs[0])
+			rs, err := ssz.HashTreeRoot(bs[0].Block)
 			if err != nil {
 				panic(err)
 			}
@@ -110,11 +110,11 @@ func main() {
 
 		// Construct label of each node.
 		rStr := hex.EncodeToString(r[:2])
-		label := "slot: " + strconv.Itoa(int(b.Slot)) + "\n root: " + rStr + "\n votes: " + strconv.Itoa(len(m[r].score))
+		label := "slot: " + strconv.Itoa(int(b.Block.Slot)) + "\n root: " + rStr + "\n votes: " + strconv.Itoa(len(m[r].score))
 
 		dotN := graph.Node(rStr).Box().Attr("label", label)
 		n := &node{
-			parentRoot: bytesutil.ToBytes32(b.ParentRoot),
+			parentRoot: bytesutil.ToBytes32(b.Block.ParentRoot),
 			dothNode:   &dotN,
 		}
 		m[r] = n

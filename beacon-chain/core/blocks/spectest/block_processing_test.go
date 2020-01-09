@@ -53,7 +53,7 @@ func runBlockProcessingTest(t *testing.T, config string) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				block := &ethpb.BeaconBlock{}
+				block := &ethpb.SignedBeaconBlock{}
 				if err := ssz.Unmarshal(blockFile, block); err != nil {
 					t.Fatalf("Failed to unmarshal: %v", err)
 				}

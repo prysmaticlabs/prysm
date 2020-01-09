@@ -93,6 +93,7 @@ func NewKVStore(dirPath string) (*Store, error) {
 			archivedCommitteeInfoBucket,
 			archivedBalancesBucket,
 			archivedValidatorParticipationBucket,
+			powchainBucket,
 			// Indices buckets.
 			attestationHeadBlockRootBucket,
 			attestationSourceRootIndicesBucket,
@@ -106,10 +107,6 @@ func NewKVStore(dirPath string) (*Store, error) {
 			migrationBucket,
 		)
 	}); err != nil {
-		return nil, err
-	}
-
-	if err := kv.ensureSnappy(); err != nil {
 		return nil, err
 	}
 

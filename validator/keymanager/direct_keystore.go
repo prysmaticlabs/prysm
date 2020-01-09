@@ -30,7 +30,7 @@ func NewKeystore(path string, passphrase string) (KeyManager, error) {
 	} else {
 		if passphrase == "" {
 			log.Info("Enter your validator account password:")
-			bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
+			bytePassword, err := terminal.ReadPassword(syscall.Stdin)
 			if err != nil {
 				return nil, err
 			}
