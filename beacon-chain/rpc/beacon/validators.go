@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
@@ -80,7 +79,7 @@ func (bs *Server) ListValidatorBalances(
 			continue
 		}
 
-		index, ok, err := bs.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
+		index, ok, err := bs.BeaconDB.ValidatorIndex(ctx, pubKey)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve validator index: %v", err)
 		}
@@ -566,7 +565,7 @@ func (bs *Server) GetValidatorPerformance(
 	balances := make([]uint64, len(req.PublicKeys))
 	missingValidators := make([][]byte, 0)
 	for i, key := range req.PublicKeys {
-		index, ok, err := bs.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(key))
+		index, ok, err := bs.BeaconDB.ValidatorIndex(ctx, key)
 		if err != nil || !ok {
 			missingValidators = append(missingValidators, key)
 			balances[i] = 0
