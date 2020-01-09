@@ -8,5 +8,3 @@ var (
 	// see https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
 	validatorsMinMaxSpanBucket = []byte("validators-min-max-span-bucket")
 )
-
-

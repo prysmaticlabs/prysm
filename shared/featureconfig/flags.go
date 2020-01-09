@@ -63,6 +63,11 @@ var (
 			"initial sync and disk-IO is one of the biggest bottleneck. This still saves finalized state in DB " +
 			"and start syncing from there",
 	}
+	enableSlasherFlag = cli.BoolFlag{
+		Name: "enable-slasher",
+		Usage: "Connect to slasher in order to retrieve slashable events. Slasher is connected to beacon node using grpc" +
+			"User should be running slasher on current machine or include slasher-provider flag.",
+	}
 	saveDepositData = cli.BoolFlag{
 		Name:  "save-deposit-data",
 		Usage: "Enable of the saving of deposit related data",
@@ -184,4 +189,5 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableShuffledIndexCache,
 	enableSkipSlotsCache,
 	saveDepositData,
+	enableSlasherFlag,
 }...)
