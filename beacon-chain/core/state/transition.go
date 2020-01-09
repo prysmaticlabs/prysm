@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -160,7 +159,7 @@ func CalculateStateRoot(
 		return [32]byte{}, errors.New("nil block")
 	}
 
-	stateCopy := proto.Clone(state).(*pb.BeaconState)
+	stateCopy := stateutil.CopyState(state)
 	b.ClearEth1DataVoteCache()
 
 	var err error
@@ -267,7 +266,7 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 			// do not write to cache if state with higher slot exists.
 			writeToCache = cached.(*pb.BeaconState).Slot <= slot
 			if cached.(*pb.BeaconState).Slot <= slot {
-				state = proto.Clone(cached.(*pb.BeaconState)).(*pb.BeaconState)
+				state = stateutil.CopyState(cached.(*pb.BeaconState))
 				highestSlot = state.Slot
 				skipSlotCacheHit.Inc()
 			} else {
@@ -282,7 +281,7 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 			if featureconfig.Get().EnableSkipSlotsCache {
 				// Cache last best value.
 				if highestSlot < state.Slot && writeToCache {
-					skipSlotCache.Add(key, proto.Clone(state).(*pb.BeaconState))
+					skipSlotCache.Add(key, stateutil.CopyState(state))
 				}
 			}
 			return nil, ctx.Err()
@@ -305,7 +304,7 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 	if featureconfig.Get().EnableSkipSlotsCache {
 		// Clone result state so that caches are not mutated.
 		if highestSlot < state.Slot && writeToCache {
-			skipSlotCache.Add(key, proto.Clone(state).(*pb.BeaconState))
+			skipSlotCache.Add(key, stateutil.CopyState(state))
 		}
 	}
 

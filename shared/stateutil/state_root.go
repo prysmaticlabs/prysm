@@ -3,6 +3,9 @@ package stateutil
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
+
+	"github.com/gogo/protobuf/proto"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
@@ -41,6 +44,79 @@ type stateRootHasher struct {
 // on the Prysm BeaconState data structure).
 func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	return globalHasher.hashTreeRootState(state)
+}
+
+func CopyState(state *pb.BeaconState) *pb.BeaconState {
+	ot, _ := json.Marshal(state)
+	st := &pb.BeaconState{}
+	json.Unmarshal(ot, st)
+	return st
+}
+
+func CopyState2(state *pb.BeaconState) *pb.BeaconState {
+	blockRoots := make([]bytesutil.Bytes32Array, len(state.BlockRoots))
+	for i, r := range state.BlockRoots {
+		blockRoots[i] = r
+	}
+	stateRoots := make([]bytesutil.Bytes32Array, len(state.StateRoots))
+	for i, r := range state.StateRoots {
+		stateRoots[i] = r
+	}
+	historicalRoots := make([]bytesutil.Bytes32Array, len(state.HistoricalRoots))
+	for i, r := range state.HistoricalRoots {
+		historicalRoots[i] = r
+	}
+	randaoMixes := make([]bytesutil.Bytes32Array, len(state.RandaoMixes))
+	for i, r := range state.RandaoMixes {
+		randaoMixes[i] = r
+	}
+	eth1DataVotes := make([]*ethpb.Eth1Data, len(state.Eth1DataVotes))
+	for i, v := range state.Eth1DataVotes {
+		eth1DataVotes[i] = proto.Clone(v).(*ethpb.Eth1Data)
+	}
+	validators := make([]*ethpb.Validator, len(state.Validators))
+	for i, v := range state.Validators {
+		validators[i] = proto.Clone(v).(*ethpb.Validator)
+	}
+	balances := make([]uint64, len(state.Balances))
+	copy(balances, state.Balances)
+
+	slashings := make([]uint64, len(state.Slashings))
+	copy(slashings, state.Slashings)
+
+	prevAtt := make([]*pb.PendingAttestation, len(state.PreviousEpochAttestations))
+	for i, p := range state.PreviousEpochAttestations {
+		prevAtt[i] = proto.Clone(p).(*pb.PendingAttestation)
+	}
+	currAtt := make([]*pb.PendingAttestation, len(state.CurrentEpochAttestations))
+	for i, p := range state.CurrentEpochAttestations {
+		prevAtt[i] = proto.Clone(p).(*pb.PendingAttestation)
+	}
+	justBits := make([]byte, state.JustificationBits.Len())
+	copy(justBits, state.JustificationBits)
+
+	return &pb.BeaconState{
+		GenesisTime:                 state.GenesisTime,
+		Slot:                        state.Slot,
+		Fork:                        proto.Clone(state.Fork).(*pb.Fork),
+		LatestBlockHeader:           proto.Clone(state.LatestBlockHeader).(*ethpb.BeaconBlockHeader),
+		BlockRoots:                  blockRoots,
+		StateRoots:                  stateRoots,
+		HistoricalRoots:             historicalRoots,
+		Eth1Data:                    proto.Clone(state.Eth1Data).(*ethpb.Eth1Data),
+		Eth1DataVotes:               eth1DataVotes,
+		Eth1DepositIndex:            state.Eth1DepositIndex,
+		Validators:                  validators,
+		Balances:                    balances,
+		RandaoMixes:                 randaoMixes,
+		Slashings:                   slashings,
+		PreviousEpochAttestations:   prevAtt,
+		CurrentEpochAttestations:    currAtt,
+		JustificationBits:           justBits,
+		PreviousJustifiedCheckpoint: proto.Clone(state.PreviousJustifiedCheckpoint).(*ethpb.Checkpoint),
+		CurrentJustifiedCheckpoint:  proto.Clone(state.CurrentJustifiedCheckpoint).(*ethpb.Checkpoint),
+		FinalizedCheckpoint:         proto.Clone(state.FinalizedCheckpoint).(*ethpb.Checkpoint),
+	}
 }
 
 func (h *stateRootHasher) hashTreeRootState(state *pb.BeaconState) ([32]byte, error) {

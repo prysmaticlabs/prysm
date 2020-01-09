@@ -7,7 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/shared/stateutil"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -509,7 +510,7 @@ func (s *Store) cachedPreState(ctx context.Context, b *ethpb.BeaconBlock) (*pb.B
 				return nil, fmt.Errorf("pre state of slot %d does not exist", b.Slot)
 			}
 		}
-		return proto.Clone(preState).(*pb.BeaconState), nil
+		return stateutil.CopyState(preState), nil
 	}
 
 	preState, err := s.db.State(ctx, bytesutil.ToBytes32(b.ParentRoot))

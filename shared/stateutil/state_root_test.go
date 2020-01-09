@@ -44,6 +44,22 @@ func TestHashTreeRootEquality(t *testing.T) {
 	}
 }
 
+func TestCopyState(t *testing.T) {
+	genesisState := setupGenesisState(t, 512)
+	r1, err := stateutil.HashTreeRootState(genesisState)
+	if err != nil {
+		t.Fatal(err)
+	}
+	copiedState := stateutil.CopyState(genesisState)
+	r2, err := stateutil.HashTreeRootState(copiedState)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r1 != r2 {
+		t.Errorf("Wanted %#x, got %#x", r1, r2)
+	}
+}
+
 func BenchmarkHashTreeRootState_Custom_512(b *testing.B) {
 	b.StopTimer()
 	genesisState := setupGenesisState(b, 512)
