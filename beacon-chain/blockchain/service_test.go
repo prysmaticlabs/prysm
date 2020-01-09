@@ -176,7 +176,7 @@ func TestChainStartStop_Uninitialized(t *testing.T) {
 		t.Error("Context was not canceled")
 	}
 	testutil.AssertLogsContain(t, hook, "Waiting")
-	testutil.AssertLogsContain(t, hook, "Genesis time reached")
+	testutil.AssertLogsContain(t, hook, "Initialized beacon chain genesis state")
 }
 
 func TestChainStartStop_Initialized(t *testing.T) {

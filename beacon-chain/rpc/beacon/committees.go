@@ -105,10 +105,8 @@ func (bs *Server) ListBeaconCommittees(
 			countAtSlot = 1
 		}
 		committeeItems := make([]*ethpb.BeaconCommittees_CommitteeItem, countAtSlot)
-		for i := uint64(0); i < countAtSlot; i++ {
-			epochOffset := i + (slot%params.BeaconConfig().SlotsPerEpoch)*countAtSlot
-			totalCount := countAtSlot * params.BeaconConfig().SlotsPerEpoch
-			committee, err := helpers.ComputeCommittee(activeIndices, attesterSeed, epochOffset, totalCount)
+		for committeeIndex := uint64(0); committeeIndex < countAtSlot; committeeIndex++ {
+			committee, err := helpers.BeaconCommittee(activeIndices, attesterSeed, slot, committeeIndex)
 			if err != nil {
 				return nil, status.Errorf(
 					codes.Internal,
@@ -117,7 +115,7 @@ func (bs *Server) ListBeaconCommittees(
 					err,
 				)
 			}
-			committeeItems[i] = &ethpb.BeaconCommittees_CommitteeItem{
+			committeeItems[committeeIndex] = &ethpb.BeaconCommittees_CommitteeItem{
 				ValidatorIndices: committee,
 			}
 		}
