@@ -51,7 +51,7 @@ func TestSaveProposalHistory_OK(t *testing.T) {
 	defer TeardownDB(t, db)
 
 	pubkey := []byte{3}
-	epoch :=  uint64(2)
+	epoch := uint64(2)
 	history := &slashpb.ProposalHistory{
 		EpochBits:          bitfield.Bitlist{0x04, 0x04},
 		LatestEpochWritten: 2,
@@ -71,10 +71,10 @@ func TestSaveProposalHistory_OK(t *testing.T) {
 	if !savedHistory.EpochBits.BitAt(epoch) {
 		t.Fatalf("Expected epoch %d to be marked as proposed", history.EpochBits.Count())
 	}
-	if savedHistory.EpochBits.BitAt(epoch+1) {
+	if savedHistory.EpochBits.BitAt(epoch + 1) {
 		t.Fatalf("Expected epoch %d to not be marked as proposed", epoch+1)
 	}
-	if savedHistory.EpochBits.BitAt(epoch-1) {
+	if savedHistory.EpochBits.BitAt(epoch - 1) {
 		t.Fatalf("Expected epoch %d to not be marked as proposed", epoch-1)
 	}
 }
@@ -128,10 +128,10 @@ func TestSaveProposalHistory_Overwrites(t *testing.T) {
 		if !history.EpochBits.BitAt(tt.epoch) {
 			t.Fatalf("Expected epoch %d to be marked as proposed", history.EpochBits.Count())
 		}
-		if history.EpochBits.BitAt(tt.epoch+1) {
+		if history.EpochBits.BitAt(tt.epoch + 1) {
 			t.Fatalf("Expected epoch %d to not be marked as proposed", tt.epoch+1)
 		}
-		if history.EpochBits.BitAt(tt.epoch-1) {
+		if history.EpochBits.BitAt(tt.epoch - 1) {
 			t.Fatalf("Expected epoch %d to not be marked as proposed", tt.epoch-1)
 		}
 	}
