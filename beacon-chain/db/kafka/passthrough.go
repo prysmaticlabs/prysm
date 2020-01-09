@@ -87,17 +87,17 @@ func (e Exporter) DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error
 }
 
 // ValidatorIndex -- passthrough.
-func (e Exporter) ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, bool, error) {
+func (e Exporter) ValidatorIndex(ctx context.Context, publicKey []byte) (uint64, bool, error) {
 	return e.db.ValidatorIndex(ctx, publicKey)
 }
 
 // HasValidatorIndex -- passthrough.
-func (e Exporter) HasValidatorIndex(ctx context.Context, publicKey [48]byte) bool {
+func (e Exporter) HasValidatorIndex(ctx context.Context, publicKey []byte) bool {
 	return e.db.HasValidatorIndex(ctx, publicKey)
 }
 
 // DeleteValidatorIndex -- passthrough.
-func (e Exporter) DeleteValidatorIndex(ctx context.Context, publicKey [48]byte) error {
+func (e Exporter) DeleteValidatorIndex(ctx context.Context, publicKey []byte) error {
 	return e.db.DeleteValidatorIndex(ctx, publicKey)
 }
 
@@ -212,7 +212,7 @@ func (e Exporter) SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) 
 }
 
 // SaveValidatorIndex -- passthrough.
-func (e Exporter) SaveValidatorIndex(ctx context.Context, publicKey [48]byte, validatorIdx uint64) error {
+func (e Exporter) SaveValidatorIndex(ctx context.Context, publicKey []byte, validatorIdx uint64) error {
 	return e.db.SaveValidatorIndex(ctx, publicKey, validatorIdx)
 }
 

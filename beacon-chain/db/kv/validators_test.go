@@ -9,7 +9,7 @@ func TestStore_ValidatorIndexCRUD(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 	validatorIdx := uint64(100)
-	pubKey := [48]byte{1, 2, 3, 4}
+	pubKey := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4}
 	ctx := context.Background()
 	_, ok, err := db.ValidatorIndex(ctx, pubKey)
 	if err != nil {

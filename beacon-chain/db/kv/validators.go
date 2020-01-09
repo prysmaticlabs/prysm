@@ -5,20 +5,25 @@ import (
 	"encoding/binary"
 
 	"github.com/boltdb/bolt"
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
 
 // ValidatorIndex by public key.
-func (k *Store) ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, bool, error) {
+func (k *Store) ValidatorIndex(ctx context.Context, publicKey []byte) (uint64, bool, error) {
+	if len(publicKey) != params.BeaconConfig().BLSPubkeyLength {
+		return 0, false, errors.New("incorrect key length")
+	}
 	// Return latest validatorIndex from cache if it exists.
-	if v, ok := k.validatorIndexCache.Get(string(publicKey[:])); v != nil && ok {
+	if v, ok := k.validatorIndexCache.Get(string(publicKey)); v != nil && ok {
 		return v.(uint64), true, nil
 	}
 	var validatorIdx uint64
 	var ok bool
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(validatorsBucket)
-		enc := bkt.Get(publicKey[:])
+		enc := bkt.Get(publicKey)
 		if enc == nil {
 			return nil
 		}
@@ -31,42 +36,45 @@ func (k *Store) ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64,
 }
 
 // HasValidatorIndex verifies if a validator's index by public key exists in the db.
-func (k *Store) HasValidatorIndex(ctx context.Context, publicKey [48]byte) bool {
+func (k *Store) HasValidatorIndex(ctx context.Context, publicKey []byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasValidatorIndex")
 	defer span.End()
-	if v, ok := k.validatorIndexCache.Get(string(publicKey[:])); v != nil && ok {
+	if v, ok := k.validatorIndexCache.Get(string(publicKey)); v != nil && ok {
 		return true
 	}
 	exists := false
 	// #nosec G104. Always returns nil.
 	k.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(validatorsBucket)
-		exists = bkt.Get(publicKey[:]) != nil
+		exists = bkt.Get(publicKey) != nil
 		return nil
 	})
 	return exists
 }
 
 // DeleteValidatorIndex clears a validator index from the db by the validator's public key.
-func (k *Store) DeleteValidatorIndex(ctx context.Context, publicKey [48]byte) error {
+func (k *Store) DeleteValidatorIndex(ctx context.Context, publicKey []byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteValidatorIndex")
 	defer span.End()
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsBucket)
-		k.validatorIndexCache.Del(string(publicKey[:]))
-		return bucket.Delete(publicKey[:])
+		k.validatorIndexCache.Del(string(publicKey))
+		return bucket.Delete(publicKey)
 	})
 }
 
 // SaveValidatorIndex by public key in the db.
-func (k *Store) SaveValidatorIndex(ctx context.Context, publicKey [48]byte, validatorIdx uint64) error {
+func (k *Store) SaveValidatorIndex(ctx context.Context, publicKey []byte, validatorIdx uint64) error {
+	if len(publicKey) != params.BeaconConfig().BLSPubkeyLength {
+		return errors.New("incorrect key length")
+	}
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveValidatorIndex")
 	defer span.End()
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsBucket)
 		buf := uint64ToBytes(validatorIdx)
-		k.validatorIndexCache.Set(string(publicKey[:]), validatorIdx, int64(len(buf)))
-		return bucket.Put(publicKey[:], buf)
+		k.validatorIndexCache.Set(string(publicKey), validatorIdx, int64(len(buf)))
+		return bucket.Put(publicKey, buf)
 	})
 }
 
