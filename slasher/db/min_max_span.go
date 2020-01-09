@@ -4,23 +4,12 @@ import (
 	"fmt"
 
 	"github.com/boltdb/bolt"
-	"github.com/dgraph-io/ristretto"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 )
-
-var CacheItems = int64(20000)
-
-var maxCacheSize = int64(2 << 30) //(2GB)
-var spanCache *ristretto.Cache
-var d *Store
-
-func init() {
-
-}
 
 func saveToDB(validatorIdx uint64, _ uint64, value interface{}, cost int64) {
 	log.Infof("evicting span map fro validator id: %d", validatorIdx)
@@ -81,7 +70,7 @@ func (db *Store) ValidatorSpansMap(validatorIdx uint64) (*slashpb.EpochSpanMap, 
 // SaveValidatorSpansMap accepts a validator index and span map and writes it to disk.
 func (db *Store) SaveValidatorSpansMap(validatorIdx uint64, spanMap *slashpb.EpochSpanMap) error {
 	if db.ctx.GlobalBool(flags.UseSpanCacheFlag.Name) {
-		saved := spanCache.Set(validatorIdx, spanMap, 0)
+		saved := spanCache.Set(validatorIdx, spanMap, 1)
 		if !saved {
 			return fmt.Errorf("failed to save span map to cache")
 		}

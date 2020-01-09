@@ -95,7 +95,7 @@ func TestValidatorSpanMap_Save(t *testing.T) {
 	}
 }
 
-func TestValidatorSpanMap_Save_With_Cache(t *testing.T) {
+func TestValidatorSpanMap_SaveWithCache(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
@@ -157,7 +157,7 @@ func TestValidatorSpanMap_Delete(t *testing.T) {
 	}
 }
 
-func TestValidatorSpanMap_Delete_With_Cache(t *testing.T) {
+func TestValidatorSpanMap_DeleteWithCache(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
@@ -193,6 +193,45 @@ func TestValidatorSpanMap_Delete_With_Cache(t *testing.T) {
 		}
 		if !reflect.DeepEqual(sm.EpochSpanMap, map[uint64]*slashpb.MinMaxEpochSpan{}) {
 			t.Errorf("Expected validator span map to be deleted, received: %v", sm)
+		}
+	}
+}
+
+func TestValidatorSpanMap_SaveOnEvict(t *testing.T) {
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
+	ctx := cli.NewContext(app, set, nil)
+	cacheItems = 5
+	maxCacheSize = 5
+	db := SetupSlasherDB(t, ctx)
+	defer TeardownSlasherDB(t, db)
+	tsm := &spanMapTestStruct{
+		validatorIdx: 1,
+		spanMap: &slashpb.EpochSpanMap{
+			EpochSpanMap: map[uint64]*slashpb.MinMaxEpochSpan{
+				1: {MinEpochSpan: 10, MaxEpochSpan: 20},
+				2: {MinEpochSpan: 11, MaxEpochSpan: 21},
+				3: {MinEpochSpan: 12, MaxEpochSpan: 22},
+			},
+		},
+	}
+	for i := uint64(0); i < 6; i++ {
+
+		err := db.SaveValidatorSpansMap(i, tsm.spanMap)
+		if err != nil {
+			t.Fatalf("Save validator span map failed: %v", err)
+		}
+	}
+	// wait for value to pass through cache buffers
+	time.Sleep(time.Millisecond * 1000)
+	for i := uint64(0); i < 6; i++ {
+		sm, err := db.ValidatorSpansMap(i)
+		if err != nil {
+			t.Fatalf("Failed to get validator span map: %v", err)
+		}
+		if sm == nil || !proto.Equal(sm, tsm.spanMap) {
+			t.Fatalf("Get should return validator: %d span map: %v got: %v", i, tsm.spanMap, sm)
 		}
 	}
 }

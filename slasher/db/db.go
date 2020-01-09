@@ -15,6 +15,10 @@ import (
 )
 
 var log = logrus.WithField("prefix", "slasherDB")
+var cacheItems = int64(20000)
+var maxCacheSize = int64(2 << 30) //(2GB)
+var spanCache *ristretto.Cache
+var d *Store
 
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
@@ -86,7 +90,7 @@ func NewKVStore(dirPath string, ctx *cli.Context) (*Store, error) {
 
 	kv := &Store{db: boltDB, databasePath: dirPath}
 	spanCache, err = ristretto.NewCache(&ristretto.Config{
-		NumCounters: CacheItems,   // number of keys to track frequency of (10M).
+		NumCounters: cacheItems,   // number of keys to track frequency of (10M).
 		MaxCost:     maxCacheSize, // maximum cost of cache.
 		BufferItems: 64,           // number of keys per Get buffer.
 		OnEvict:     saveToDB,
