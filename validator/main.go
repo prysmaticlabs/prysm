@@ -46,6 +46,8 @@ var appFlags = []cli.Flag{
 	flags.InteropNumValidators,
 	cmd.VerbosityFlag,
 	cmd.DataDirFlag,
+	cmd.ClearDB,
+	cmd.ForceClearDB,
 	cmd.EnableTracingFlag,
 	cmd.TracingProcessNameFlag,
 	cmd.TracingEndpointFlag,
