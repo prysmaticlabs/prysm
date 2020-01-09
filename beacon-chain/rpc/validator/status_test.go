@@ -15,7 +15,6 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -26,7 +25,7 @@ func TestValidatorStatus_DepositReceived(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	pubKey := []byte{'A'}
+	pubKey := pubKey(1)
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
 		Signature:             []byte("hi"),
@@ -73,8 +72,8 @@ func TestValidatorStatus_PendingActive(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	pubKey := []byte{'A'}
-	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey), 0); err != nil {
+	pubKey := pubKey(1)
+	if err := db.SaveValidatorIndex(ctx, pubKey, 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 	block := blk.NewGenesisBlock([]byte{})
@@ -152,8 +151,8 @@ func TestValidatorStatus_Active(t *testing.T) {
 	defer params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	ctx := context.Background()
 
-	pubKey := []byte{'A'}
-	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey), 0); err != nil {
+	pubKey := pubKey(1)
+	if err := db.SaveValidatorIndex(ctx, pubKey, 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
@@ -231,8 +230,8 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	pubKey := []byte{'A'}
-	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey), 0); err != nil {
+	pubKey := pubKey(1)
+	if err := db.SaveValidatorIndex(ctx, pubKey, 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
@@ -305,8 +304,8 @@ func TestValidatorStatus_Withdrawable(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	pubKey := []byte{'A'}
-	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey), 0); err != nil {
+	pubKey := pubKey(1)
+	if err := db.SaveValidatorIndex(ctx, pubKey, 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
@@ -375,8 +374,8 @@ func TestValidatorStatus_ExitedSlashed(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	pubKey := []byte{'A'}
-	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey), 0); err != nil {
+	pubKey := pubKey(1)
+	if err := db.SaveValidatorIndex(ctx, pubKey, 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
@@ -445,8 +444,8 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	pubKey := []byte{'A'}
-	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey), 0); err != nil {
+	pubKey := pubKey(1)
+	if err := db.SaveValidatorIndex(ctx, pubKey, 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
@@ -520,7 +519,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
-	pubKey := []byte{'A'}
+	pubKey := pubKey(1)
 	depositCache := depositcache.NewDepositCache()
 	vs := &Server{
 		DepositFetcher:  depositCache,
@@ -549,7 +548,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	pubKeys := [][]byte{{'A'}, {'B'}, {'C'}}
+	pubKeys := [][]byte{pubKey(1), pubKey(2), pubKey(3)}
 	beaconState := &pbp2p.BeaconState{
 		Slot: 4000,
 		Validators: []*ethpb.Validator{
@@ -571,7 +570,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 		t.Fatalf("Could not get signing root %v", err)
 	}
 	depData := &ethpb.Deposit_Data{
-		PublicKey:             []byte{'A'},
+		PublicKey:             pubKey(1),
 		Signature:             []byte("hi"),
 		WithdrawalCredentials: []byte("hey"),
 		Amount:                10,
@@ -587,7 +586,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 	depositCache := depositcache.NewDepositCache()
 	depositCache.InsertDeposit(ctx, dep, 10 /*blockNum*/, 0, depositTrie.Root())
 	depData = &ethpb.Deposit_Data{
-		PublicKey:             []byte{'C'},
+		PublicKey:             pubKey(3),
 		Signature:             []byte("hi"),
 		WithdrawalCredentials: []byte("hey"),
 		Amount:                10,
@@ -599,10 +598,10 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 	depositTrie.Insert(dep.Data.Signature, 15)
 	depositCache.InsertDeposit(context.Background(), dep, 0, 0, depositTrie.Root())
 
-	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKeys[0]), 0); err != nil {
+	if err := db.SaveValidatorIndex(ctx, pubKeys[0], 0); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
 	}
-	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKeys[1]), 1); err != nil {
+	if err := db.SaveValidatorIndex(ctx, pubKeys[1], 1); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
 	}
 	vs := &Server{
