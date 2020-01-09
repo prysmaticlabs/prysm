@@ -5,6 +5,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/stateutil"
+
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
@@ -147,13 +149,7 @@ func (s *Service) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 		return s.beaconDB.HeadState(ctx)
 	}
 
-	bState := &pb.BeaconState{}
-	m, err := s.headState.Marshal()
-	if err != nil {
-		return nil, err
-	}
-	bState.Unmarshal(m)
-	return bState, nil
+	return stateutil.CopyState(s.headState), nil
 }
 
 // HeadValidatorsIndices returns a list of active validator indices from the head view of a given epoch.

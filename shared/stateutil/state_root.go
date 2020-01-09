@@ -46,14 +46,14 @@ func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	return globalHasher.hashTreeRootState(state)
 }
 
-func CopyState(state *pb.BeaconState) *pb.BeaconState {
+func CopyState2(state *pb.BeaconState) *pb.BeaconState {
 	ot, _ := json.Marshal(state)
 	st := &pb.BeaconState{}
 	json.Unmarshal(ot, st)
 	return st
 }
 
-func CopyState2(state *pb.BeaconState) *pb.BeaconState {
+func CopyState(state *pb.BeaconState) *pb.BeaconState {
 	blockRoots := make([]bytesutil.Bytes32Array, len(state.BlockRoots))
 	for i, r := range state.BlockRoots {
 		blockRoots[i] = r
