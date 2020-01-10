@@ -114,12 +114,10 @@ func (s *Service) Start() {
 		return
 	}
 	s.waitForMinimumPeers()
-	if err := s.roundRobinSync(genesis); err != nil {
-		panic(err)
+	if err := s.roundRobinSync(genesis); err == nil {
+		log.Infof("Synced up to slot %d", s.chain.HeadSlot())
+		s.synced = true
 	}
-
-	log.Infof("Synced up to slot %d", s.chain.HeadSlot())
-	s.synced = true
 }
 
 // Stop initial sync.
@@ -152,12 +150,14 @@ func (s *Service) Resync() error {
 	genesis := time.Unix(int64(headState.GenesisTime), 0)
 
 	s.waitForMinimumPeers()
-	if err := s.roundRobinSync(genesis); err != nil {
-		return errors.Wrap(err, "could not retrieve head state")
+	err = s.roundRobinSync(genesis)
+	if err == nil {
+		s.synced = true
+	} else {
+		log = log.WithError(err)
 	}
-	log.Infof("Synced up to slot %d", s.chain.HeadSlot())
+	log.WithField("synced", s.synced).WithField("slot", s.chain.HeadSlot()).Info("Resync attempt complete")
 
-	s.synced = true
 	return nil
 }
 
