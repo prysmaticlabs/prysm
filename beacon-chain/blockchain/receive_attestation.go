@@ -100,6 +100,8 @@ func (s *Service) processAttestation() {
 	}
 }
 
+// This verifies the epoch of input checkpoint is within current epoch and previous epoch
+// with respect to current time. Returns true if it's within, false if it's not.
 func (s *Service) verifyCheckpointEpoch(c *ethpb.Checkpoint) bool {
 	now := uint64(time.Now().Unix())
 	genesisTime := uint64(s.genesisTime.Unix())
