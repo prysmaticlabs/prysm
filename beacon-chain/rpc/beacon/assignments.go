@@ -250,12 +250,3 @@ func (bs *Server) archivedCommitteeData(ctx context.Context, requestedEpoch uint
 	}
 	return archivedInfo, archivedBalances, nil
 }
-
-// helpers.ComputeProposerIndex wrapper.
-func archivedProposerIndex(activeIndices []uint64, activeBalances []uint64, seed [32]byte) (uint64, error) {
-	validators := make([]*ethpb.Validator, 0, len(activeBalances))
-	for i, bal := range activeBalances {
-		validators[i] = &ethpb.Validator{EffectiveBalance: bal}
-	}
-	return helpers.ComputeProposerIndex(validators, activeIndices, seed)
-}
