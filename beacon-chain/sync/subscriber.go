@@ -18,7 +18,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-const pubsubMessageTimeout = 10 * time.Second
+const pubsubMessageTimeout = 30 * time.Second
 
 // subHandler represents handler for a given subscription.
 type subHandler func(context.Context, proto.Message) error
