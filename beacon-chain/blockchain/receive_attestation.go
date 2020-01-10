@@ -75,6 +75,12 @@ func (s *Service) processAttestation() {
 			atts := s.attPool.ForkchoiceAttestations()
 			fmt.Println("NUMBER OF FORKCHOICE ATTESTATIONS: ", len(atts))
 			for _, a := range atts {
+				hasState := s.beaconDB.HasState(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
+				hasBlock := s.beaconDB.HasBlock(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
+				if !(hasState && hasBlock) {
+					continue
+				}
+
 				if err := s.attPool.DeleteForkchoiceAttestation(a); err != nil {
 					log.WithError(err).Error("Could not delete fork choice attestation in pool")
 				}

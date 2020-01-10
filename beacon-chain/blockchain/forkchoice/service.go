@@ -401,6 +401,7 @@ func (s *Store) filterBlockTree(ctx context.Context, blockRoot [32]byte, filtere
 		return false, nil
 	}
 
+
 	headState, err := s.db.State(ctx, blockRoot)
 	if err != nil {
 		return false, err
