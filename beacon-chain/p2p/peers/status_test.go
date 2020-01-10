@@ -378,7 +378,7 @@ func TestBestPeer(t *testing.T) {
 		FinalizedEpoch: 3,
 		FinalizedRoot:  junkRoot[:],
 	})
-	retRoot, retEpoch, _ := p.BestFinalized(15)
+	retRoot, retEpoch, _ := p.BestFinalized(15, 0)
 	if !bytes.Equal(retRoot, expectedRoot[:]) {
 		t.Errorf("Incorrect Finalized Root retrieved; wanted %v but got %v", expectedRoot, retRoot)
 	}
@@ -400,7 +400,7 @@ func TestBestFinalized_returnsMaxValue(t *testing.T) {
 		})
 	}
 
-	_, _, pids := p.BestFinalized(maxPeers)
+	_, _, pids := p.BestFinalized(maxPeers, 0)
 	if len(pids) != maxPeers {
 		t.Fatalf("returned wrong number of peers, wanted %d, got %d", maxPeers, len(pids))
 	}
