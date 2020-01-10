@@ -98,6 +98,20 @@ func (k *Store) SaveState(ctx context.Context, state *pb.BeaconState, blockRoot 
 	})
 }
 
+// HasState checks if a state by root exists in the db.
+func (k *Store) HasState(ctx context.Context, blockRoot [32]byte) bool {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasState")
+	defer span.End()
+	var exists bool
+	// #nosec G104. Always returns nil.
+	k.db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(stateBucket)
+		exists = bucket.Get(blockRoot[:]) != nil
+		return nil
+	})
+	return exists
+}
+
 // DeleteState by block root.
 func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteState")
