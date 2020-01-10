@@ -115,7 +115,7 @@ func NewKVStore(dirPath string) (*Store, error) {
 		return nil, err
 	}
 
-	err = prometheus.Register(createBoltCollector(kv.db))
+	//err = prometheus.Register(createBoltCollector(kv.db))
 
 	return kv, err
 }
