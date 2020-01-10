@@ -399,13 +399,15 @@ func fetchBlockRootsBySlotRange(
 	roots := make([][]byte, 0)
 	c := bkt.Cursor()
 	for k, v := c.Seek(min); conditional(k, max); k, v = c.Next() {
-		slot, err := strconv.ParseUint(string(k), 10, 64)
-		if err != nil {
-			log.WithError(err).Error("Cannot parse key to uint")
-			continue
-		}
-		if slot%step != 0 {
-			continue
+		if step > 1 {
+			slot, err := strconv.ParseUint(string(k), 10, 64)
+			if err != nil {
+				log.WithError(err).Error("Cannot parse key to uint")
+				continue
+			}
+			if slot%step != 0 {
+				continue
+			}
 		}
 		splitRoots := make([][]byte, 0)
 		for i := 0; i < len(v); i += 32 {
