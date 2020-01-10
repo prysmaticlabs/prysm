@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"testing"
+	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -43,4 +44,20 @@ func TestReceiveAttestationNoPubsub_ProcessCorrectly(t *testing.T) {
 
 	testutil.AssertLogsContain(t, hook, "Saved new head info")
 	testutil.AssertLogsDoNotContain(t, hook, "Broadcasting attestation")
+}
+
+func TestVerifyCheckpointEpoch_Ok(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	chainService := setupBeaconChain(t, db)
+	chainService.genesisTime = time.Now()
+
+	if !chainService.verifyCheckpointEpoch(&ethpb.Checkpoint{}) {
+		t.Error("Wanted true, got false")
+	}
+
+	if chainService.verifyCheckpointEpoch(&ethpb.Checkpoint{Epoch: 1}) {
+		t.Error("Wanted false, got true")
+	}
 }
