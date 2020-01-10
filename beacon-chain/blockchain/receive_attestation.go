@@ -73,7 +73,6 @@ func (s *Service) processAttestation() {
 		case <-st.C():
 			ctx := context.Background()
 			atts := s.attPool.ForkchoiceAttestations()
-			fmt.Println("NUMBER OF FORKCHOICE ATTESTATIONS: ", len(atts))
 			for _, a := range atts {
 				hasState := s.beaconDB.HasState(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
 				hasBlock := s.beaconDB.HasBlock(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
