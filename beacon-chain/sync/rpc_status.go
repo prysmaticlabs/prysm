@@ -36,14 +36,13 @@ func (r *Service) maintainPeerStatuses() {
 				}
 			}
 		}
-		if !r.initialSync.Syncing() {
-			_, highestEpoch, _ := r.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync)
+		for !r.initialSync.Syncing() {
+			_, highestEpoch, _ := r.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, r.chain.HeadSlot()/params.BeaconConfig().SlotsPerEpoch)
 			if helpers.StartSlot(highestEpoch) > r.chain.HeadSlot() {
 				numberOfTimesResyncedCounter.Inc()
 				r.clearPendingSlots()
-				// block until we can resync the node
 				if err := r.initialSync.Resync(); err != nil {
-					log.Errorf("Could not Resync Chain: %v", err)
+					log.Errorf("Could not resync chain: %v", err)
 				}
 			}
 		}
