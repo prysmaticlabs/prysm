@@ -216,6 +216,11 @@ func (e Exporter) SaveValidatorIndex(ctx context.Context, publicKey []byte, vali
 	return e.db.SaveValidatorIndex(ctx, publicKey, validatorIdx)
 }
 
+// SaveValidatorIndices -- passthrough.
+func (e Exporter) SaveValidatorIndices(ctx context.Context, publicKeys [][]byte, validatorIndices []uint64) error {
+	return e.db.SaveValidatorIndices(ctx, publicKeys, validatorIndices)
+}
+
 // SaveState -- passthrough.
 func (e Exporter) SaveState(ctx context.Context, state *ethereum_beacon_p2p_v1.BeaconState, blockRoot [32]byte) error {
 	return e.db.SaveState(ctx, state, blockRoot)
