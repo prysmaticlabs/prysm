@@ -45,6 +45,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	randGenerator := rand.New(rand.NewSource(time.Now().Unix()))
 	var lastEmptyRequests int
 	// Step 1 - Sync to end of finalized epoch.
+	log.WithField("highestfinalizedepoch", s.highestFinalizedEpoch()).WithField("headslot", s.chain.HeadSlot()).WithField("targetslot", helpers.StartSlot(s.highestFinalizedEpoch()+1)).Info("jgmjgm")
 	for s.chain.HeadSlot() < helpers.StartSlot(s.highestFinalizedEpoch()+1) {
 		root, finalizedEpoch, peers := s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync)
 		if len(peers) == 0 {
@@ -68,6 +69,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		//   65, 69, 73... and so on for other peers.
 		var request func(start uint64, step uint64, count uint64, peers []peer.ID, remainder int) ([]*eth.SignedBeaconBlock, error)
 		request = func(start uint64, step uint64, count uint64, peers []peer.ID, remainder int) ([]*eth.SignedBeaconBlock, error) {
+			log.WithField("start", start).WithField("step", step).WithField("count", count).WithField("remainder", remainder).WithField("peers", len(peers)).Info("jgm")
 			if len(peers) == 0 {
 				return nil, errors.WithStack(errors.New("no peers left to request blocks"))
 			}
@@ -120,7 +122,6 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 					}()
 
 					resp, err := s.requestBlocks(ctx, req, pid)
-					log.WithField("peer", pid.Pretty()).Debugf("Received %d blocks", len(resp))
 					if err != nil {
 						// fail over to other peers by splitting this requests evenly across them.
 						ps := append(peers[:i], peers[i+1:]...)
@@ -141,6 +142,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 							return
 						}
 					}
+					log.WithField("peer", pid).WithField("count", len(resp)).Debug("Received blocks")
 					blocksChan <- resp
 				}(i, pid)
 			}
@@ -164,6 +166,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		}
 		startBlock := s.chain.HeadSlot() + 1
 		skippedBlocks := blockBatchSize * uint64(lastEmptyRequests*len(peers))
+		log.WithField("startblock", startBlock).WithField("skippedBlocks", skippedBlocks).WithField("finalizedEpoch", finalizedEpoch).WithField("skipcondition", startBlock+skippedBlocks > helpers.StartSlot(finalizedEpoch+1)).Info("jgm")
 		if startBlock+skippedBlocks > helpers.StartSlot(finalizedEpoch+1) {
 			log.WithField("finalizedEpoch", finalizedEpoch).Debug("Requested block range is greater than the finalized epoch")
 			break
@@ -338,6 +341,7 @@ func (s *Service) bestFinalized() ([]byte, uint64, []peer.ID) {
 		}
 	}
 
+	log.WithField("pids", pids).WithField("peers", len(pids)).Warn("jgm")
 	return mostVotedFinalizedRoot[:], rootToEpoch[mostVotedFinalizedRoot], pids
 }
 

@@ -327,10 +327,12 @@ func (p *Status) BestFinalized(maxPeers int) ([]byte, uint64, []peer.ID) {
 	rootToEpoch := make(map[[32]byte]uint64)
 	for _, pid := range p.Connected() {
 		peerChainState, err := p.ChainState(pid)
-		if err == nil && peerChainState != nil {
-			r := bytesutil.ToBytes32(peerChainState.FinalizedRoot)
-			finalized[r]++
-			rootToEpoch[r] = peerChainState.FinalizedEpoch
+		if peerChainState.FinalizedEpoch > 0 {
+			if err == nil && peerChainState != nil {
+				r := bytesutil.ToBytes32(peerChainState.FinalizedRoot)
+				finalized[r]++
+				rootToEpoch[r] = peerChainState.FinalizedEpoch
+			}
 		}
 	}
 
