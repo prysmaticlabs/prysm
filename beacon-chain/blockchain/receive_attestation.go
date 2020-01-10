@@ -73,6 +73,7 @@ func (s *Service) processAttestation() {
 		case <-st.C():
 			ctx := context.Background()
 			atts := s.attPool.ForkchoiceAttestations()
+			fmt.Println("NUMBER OF FORKCHOICE ATTESTATIONS: ", len(atts))
 			for _, a := range atts {
 				if err := s.attPool.DeleteForkchoiceAttestation(a); err != nil {
 					log.WithError(err).Error("Could not delete fork choice attestation in pool")
