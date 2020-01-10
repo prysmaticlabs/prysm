@@ -90,19 +90,20 @@ func TestBatchAttestations_Single(t *testing.T) {
 
 	sk := bls.RandKey()
 	sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
+	d := &ethpb.AttestationData{}
 
 	unaggregatedAtts := []*ethpb.Attestation{
-		{AggregationBits: bitfield.Bitlist{0b101000}, Signature: sig.Marshal()},
-		{AggregationBits: bitfield.Bitlist{0b100100}, Signature: sig.Marshal()},
+		{Data: d, AggregationBits: bitfield.Bitlist{0b101000}, Signature: sig.Marshal()},
+		{Data: d, AggregationBits: bitfield.Bitlist{0b100100}, Signature: sig.Marshal()},
 	}
 	aggregatedAtts := []*ethpb.Attestation{
-		{AggregationBits: bitfield.Bitlist{0b101100}, Signature: sig.Marshal()},
-		{AggregationBits: bitfield.Bitlist{0b110010}, Signature: sig.Marshal()},
+		{Data: d, AggregationBits: bitfield.Bitlist{0b101100}, Signature: sig.Marshal()},
+		{Data: d, AggregationBits: bitfield.Bitlist{0b110010}, Signature: sig.Marshal()},
 	}
 	blockAtts := []*ethpb.Attestation{
-		{AggregationBits: bitfield.Bitlist{0b110010}, Signature: sig.Marshal()},
-		{AggregationBits: bitfield.Bitlist{0b100010}, Signature: sig.Marshal()},
-		{AggregationBits: bitfield.Bitlist{0b110010}, Signature: sig.Marshal()}, // Duplicated
+		{Data: d, AggregationBits: bitfield.Bitlist{0b110010}, Signature: sig.Marshal()},
+		{Data: d, AggregationBits: bitfield.Bitlist{0b100010}, Signature: sig.Marshal()},
+		{Data: d, AggregationBits: bitfield.Bitlist{0b110010}, Signature: sig.Marshal()}, // Duplicated
 	}
 	if err := s.pool.SaveUnaggregatedAttestations(unaggregatedAtts); err != nil {
 		t.Fatal(err)
@@ -219,7 +220,7 @@ func TestSeenAttestations_PresentInCache(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	att1 := &ethpb.Attestation{Signature: []byte{'A'}}
+	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, Signature: []byte{'A'}, AggregationBits: bitfield.Bitlist{0x03}}
 	got, err := s.seen(att1)
 	if err != nil {
 		t.Fatal(err)
@@ -229,7 +230,9 @@ func TestSeenAttestations_PresentInCache(t *testing.T) {
 	}
 
 	time.Sleep(100 * time.Millisecond)
-	got, err = s.seen(att1)
+
+	att2 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, Signature: []byte{'A'}, AggregationBits: bitfield.Bitlist{0x03}}
+	got, err = s.seen(att2)
 	if err != nil {
 		t.Fatal(err)
 	}
