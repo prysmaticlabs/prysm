@@ -124,7 +124,6 @@ func (q *QueryFilter) SetEndEpoch(val uint64) *QueryFilter {
 	return q
 }
 
-
 // SetSlotStep enables filtering by slot for every step interval. For example, a slot range query
 // for blocks from 0 to 9 with a step of 2 would return objects at slot 0, 2, 4, 6, 8.
 func (q *QueryFilter) SetSlotStep(val uint64) *QueryFilter {
