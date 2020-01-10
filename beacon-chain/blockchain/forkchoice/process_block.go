@@ -337,7 +337,7 @@ func (s *Store) saveNewValidators(ctx context.Context, preStateValidatorCount in
 			pubKeys = append(pubKeys, postState.Validators[i].PublicKey)
 		}
 		if err := s.db.SaveValidatorIndices(ctx, pubKeys, indices); err != nil {
-			return errors.Wrapf(err, "could not save activated validator: %d", i)
+			return errors.Wrapf(err, "could not save activated validators: %v", indices)
 		}
 		log.WithFields(logrus.Fields{
 			"indices":             indices,
