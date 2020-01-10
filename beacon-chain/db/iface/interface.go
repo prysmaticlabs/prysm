@@ -48,6 +48,7 @@ type Database interface {
 	HasValidatorIndex(ctx context.Context, publicKey []byte) bool
 	DeleteValidatorIndex(ctx context.Context, publicKey []byte) error
 	SaveValidatorIndex(ctx context.Context, publicKey []byte, validatorIdx uint64) error
+	SaveValidatorIndices(ctx context.Context, publicKeys [][]byte, validatorIndices []uint64) error
 	// State related methods.
 	State(ctx context.Context, blockRoot [32]byte) (*ethereum_beacon_p2p_v1.BeaconState, error)
 	HeadState(ctx context.Context) (*ethereum_beacon_p2p_v1.BeaconState, error)
