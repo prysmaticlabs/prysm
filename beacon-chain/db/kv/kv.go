@@ -52,6 +52,7 @@ func NewKVStore(dirPath string) (*Store, error) {
 		}
 		return nil, err
 	}
+	boltDB.AllocSize = 8 * 1024 * 1024
 	blockCache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: 1000,           // number of keys to track frequency of (1000).
 		MaxCost:     BlockCacheSize, // maximum cost of cache (1000 Blocks).
