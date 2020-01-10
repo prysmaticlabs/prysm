@@ -25,9 +25,9 @@ func init() {
 		BufferItems: 64, // number of keys per Get buffer.
 	})
 	// Temporarily disable roots cache until cache issues can be resolved.
-	//globalHasher = &stateRootHasher{rootsCache: rootsCache}
-	_ = rootsCache
-	globalHasher = &stateRootHasher{}
+	globalHasher = &stateRootHasher{rootsCache: rootsCache}
+	//_ = rootsCache
+	//globalHasher = &stateRootHasher{}
 }
 
 type stateRootHasher struct {
