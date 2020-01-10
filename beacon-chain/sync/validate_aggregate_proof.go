@@ -79,7 +79,8 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 
-	if attSlot > s.Slot {
+	// Only advance state if different epoch as the committee can only change on an epoch transition.
+	if helpers.SlotToEpoch(attSlot) > helpers.SlotToEpoch(s.Slot) {
 		s, err = state.ProcessSlots(ctx, s, attSlot)
 		if err != nil {
 			traceutil.AnnotateError(span, err)
