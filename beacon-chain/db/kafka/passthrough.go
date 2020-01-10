@@ -281,6 +281,11 @@ func (e Exporter) DeleteStates(ctx context.Context, blockRoots [][32]byte) error
 	return e.db.DeleteStates(ctx, blockRoots)
 }
 
+// HasState -- passthrough.
+func (e Exporter) HasState(ctx context.Context, blockRoot [32]byte) bool {
+	return e.db.HasState(ctx, blockRoot)
+}
+
 // IsFinalizedBlock -- passthrough.
 func (e Exporter) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool {
 	return e.db.IsFinalizedBlock(ctx, blockRoot)
