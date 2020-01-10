@@ -18,8 +18,16 @@ func TestState_CanSaveRetrieve(t *testing.T) {
 	s := &pb.BeaconState{Slot: 100}
 	r := [32]byte{'A'}
 
+	if db.HasState(context.Background(), r) {
+		t.Fatal("wanted false")
+	}
+
 	if err := db.SaveState(context.Background(), s, r); err != nil {
 		t.Fatal(err)
+	}
+
+	if !db.HasState(context.Background(), r) {
+		t.Fatal("wanted true")
 	}
 
 	savedS, err := db.State(context.Background(), r)
