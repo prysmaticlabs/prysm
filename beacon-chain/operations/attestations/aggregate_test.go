@@ -47,13 +47,13 @@ func TestAggregateAttestations_MultipleAttestationsSameRoot(t *testing.T) {
 	sk := bls.RandKey()
 	sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
 
-	unaggregatedAtts := []*ethpb.Attestation{
-		{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b100001}, Signature: sig.Marshal()},
+	attsToBeAggregated := []*ethpb.Attestation{
+		{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b110001}, Signature: sig.Marshal()},
 		{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b100010}, Signature: sig.Marshal()},
-		{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b100100}, Signature: sig.Marshal()},
+		{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b101100}, Signature: sig.Marshal()},
 	}
 
-	if err := s.aggregateAttestations(context.Background(), unaggregatedAtts); err != nil {
+	if err := s.aggregateAttestations(context.Background(), attsToBeAggregated); err != nil {
 		t.Fatal(err)
 	}
 
@@ -61,7 +61,7 @@ func TestAggregateAttestations_MultipleAttestationsSameRoot(t *testing.T) {
 		t.Error("Nothing should be unaggregated")
 	}
 
-	wanted, err := helpers.AggregateAttestations(unaggregatedAtts)
+	wanted, err := helpers.AggregateAttestations(attsToBeAggregated)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +83,7 @@ func TestAggregateAttestations_MultipleAttestationsDifferentRoots(t *testing.T) 
 		{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b100001}, Signature: sig.Marshal()},
 		{Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b100010}, Signature: sig.Marshal()},
 		{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b100001}, Signature: sig.Marshal()},
-		{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b100100}, Signature: sig.Marshal()},
+		{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b100110}, Signature: sig.Marshal()},
 		{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b100100}, Signature: sig.Marshal()},
 	}
 
