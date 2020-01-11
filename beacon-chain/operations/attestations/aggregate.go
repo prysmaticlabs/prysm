@@ -60,15 +60,8 @@ func (s *Service) aggregateAttestations(ctx context.Context, attsToBeAggregated 
 			return err
 		}
 		for _, att := range aggregatedAtts {
-			// In case of aggregation bit overlaps or there's only one
-			// unaggregated att in pool. Not every attestations will
-			// be aggregated.
 			if helpers.IsAggregated(att) {
 				if err := s.pool.SaveAggregatedAttestation(att); err != nil {
-					return err
-				}
-			} else {
-				if err := s.pool.SaveUnaggregatedAttestation(att); err != nil {
 					return err
 				}
 			}
