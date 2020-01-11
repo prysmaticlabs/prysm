@@ -37,7 +37,7 @@ func (r *Service) maintainPeerStatuses() {
 			}
 		}
 		for !r.initialSync.Syncing() {
-			_, highestEpoch, _ := r.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, r.chain.HeadSlot()/params.BeaconConfig().SlotsPerEpoch)
+			_, highestEpoch, _ := r.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(r.chain.HeadSlot()))
 			if helpers.StartSlot(highestEpoch) > r.chain.HeadSlot() {
 				numberOfTimesResyncedCounter.Inc()
 				r.clearPendingSlots()
