@@ -405,7 +405,7 @@ func fetchBlockRootsBySlotRange(
 				log.WithError(err).Error("Cannot parse key to uint")
 				continue
 			}
-			if slot%step != 0 {
+			if (slot-startSlot)%step != 0 {
 				continue
 			}
 		}

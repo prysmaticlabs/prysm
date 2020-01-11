@@ -414,7 +414,7 @@ func TestStore_Blocks_Retrieve_SlotRangeWithStep(t *testing.T) {
 		t.Errorf("Wanted %d, received %d", want, len(retrieved))
 	}
 	for _, b := range retrieved {
-		if b.Block.Slot%step != 0 {
+		if (b.Block.Slot-100)%step != 0 {
 			t.Errorf("Unexpect block slot %d", b.Block.Slot)
 		}
 	}
