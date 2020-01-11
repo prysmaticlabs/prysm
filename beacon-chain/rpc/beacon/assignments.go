@@ -105,14 +105,14 @@ func (bs *Server) ListValidatorAssignments(
 	proposerIndexToSlot := map[uint64]uint64{}
 	archivedInfo := &pb.ArchivedCommitteeInfo{}
 	archivedBalances := []uint64{}
-	archivedAssingments := make(map[uint64]*ethpb.ValidatorAssignments_CommitteeAssignment)
+	archivedAssignments := make(map[uint64]*ethpb.ValidatorAssignments_CommitteeAssignment)
 
 	if shouldFetchFromArchive {
 		archivedInfo, archivedBalances, err = bs.archivedCommitteeData(ctx, requestedEpoch)
 		if err != nil {
 			return nil, err
 		}
-		archivedAssingments, err = archivedValidatorCommittee(
+		archivedAssignments, err = archivedValidatorCommittee(
 			requestedEpoch,
 			archivedInfo,
 			activeIndices,
@@ -134,7 +134,7 @@ func (bs *Server) ListValidatorAssignments(
 				index, len(headState.Validators))
 		}
 		if shouldFetchFromArchive {
-			assignment, ok := archivedAssingments[index]
+			assignment, ok := archivedAssignments[index]
 			if !ok {
 				return nil, status.Errorf(codes.Internal, "Could not get archived committee assignment for index %d", index)
 			}
