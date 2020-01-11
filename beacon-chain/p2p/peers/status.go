@@ -317,17 +317,16 @@ func (p *Status) Decay() {
 	}
 }
 
-// BestFinalized returns the highest finalized epoch that is agreed upon by the majority of
-// peers. This method may not return the absolute highest finalized, but the finalized epoch in
-// which most peers can serve blocks. Ideally, all peers would be reporting the same finalized
-// epoch.
-// Returns the best finalized root, epoch number, and peers that agree.
-func (p *Status) BestFinalized(maxPeers int) ([]byte, uint64, []peer.ID) {
+// BestFinalized returns the highest finalized epoch equal to or higher than ours that is agreed upon by the majority of peers.
+// This method may not return the absolute highest finalized, but the finalized epoch in which most peers can serve blocks.
+// Ideally, all peers would be reporting the same finalized epoch.
+// Returns the best finalized root, epoch number, and list of peers that agree.
+func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) ([]byte, uint64, []peer.ID) {
 	finalized := make(map[[32]byte]uint64)
 	rootToEpoch := make(map[[32]byte]uint64)
 	for _, pid := range p.Connected() {
 		peerChainState, err := p.ChainState(pid)
-		if err == nil && peerChainState != nil {
+		if err == nil && peerChainState != nil && peerChainState.FinalizedEpoch >= ourFinalizedEpoch {
 			r := bytesutil.ToBytes32(peerChainState.FinalizedRoot)
 			finalized[r]++
 			rootToEpoch[r] = peerChainState.FinalizedEpoch

@@ -39,6 +39,8 @@ const (
 	TargetEpoch FilterType = 8
 	// TargetRoot defines a filter for the target root attribute of objects.
 	TargetRoot FilterType = 9
+	// SlotStep is used for range filters of objects by their slot in step increments.
+	SlotStep FilterType = 10
 )
 
 // QueryFilter defines a generic interface for type-asserting
@@ -119,5 +121,12 @@ func (q *QueryFilter) SetStartEpoch(val uint64) *QueryFilter {
 // SetEndEpoch enables filtering by the EndEpoch attribute of an object (inclusive).
 func (q *QueryFilter) SetEndEpoch(val uint64) *QueryFilter {
 	q.queries[EndEpoch] = val
+	return q
+}
+
+// SetSlotStep enables filtering by slot for every step interval. For example, a slot range query
+// for blocks from 0 to 9 with a step of 2 would return objects at slot 0, 2, 4, 6, 8.
+func (q *QueryFilter) SetSlotStep(val uint64) *QueryFilter {
+	q.queries[SlotStep] = val
 	return q
 }

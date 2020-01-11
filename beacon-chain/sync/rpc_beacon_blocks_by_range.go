@@ -62,7 +62,7 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		}
 	}
 
-	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
+	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot).SetSlotStep(m.Step)
 	blks, err := r.db.Blocks(ctx, filter)
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve blocks")
