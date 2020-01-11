@@ -38,8 +38,6 @@ func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
 	}
 	atts = append(atts, att)
 
-	// TODO: ensure that the new attestation does not supersede existing attestations.
-
 	// DefaultExpiration is set to what was given to New(). In this case
 	// it's one epoch.
 	p.aggregatedAtt.Set(key, atts, cache.DefaultExpiration)
