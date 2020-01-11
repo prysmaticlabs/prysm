@@ -1517,7 +1517,7 @@ func setupValidators(t *testing.T, db db.Database, count int) ([]*ethpb.Validato
 	}
 	if err := db.SaveState(
 		context.Background(),
-		&pbp2p.BeaconState{Validators: validators, Balances: balances},
+		&pbp2p.BeaconState{Validators: validators, Balances: balances, RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)},
 		blockRoot,
 	); err != nil {
 		t.Fatal(err)

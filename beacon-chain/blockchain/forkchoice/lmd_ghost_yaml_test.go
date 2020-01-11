@@ -104,7 +104,7 @@ func TestGetHeadFromYaml(t *testing.T) {
 			validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
 		}
 
-		s := &pb.BeaconState{Validators: validators}
+		s := &pb.BeaconState{Validators: validators, RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
 
 		if err := store.db.SaveState(ctx, s, bytesutil.ToBytes32(blksRoot[0])); err != nil {
 			t.Fatal(err)

@@ -19,6 +19,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+func init() {
+	helpers.ClearCache()
+}
+
 func TestServer_ListAssignments_CannotRequestFutureEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
@@ -52,7 +56,7 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 	bs := &Server{
 		BeaconDB: db,
 		HeadFetcher: &mock.ChainService{
-			State: &pbp2p.BeaconState{Slot: 0},
+			State: &pbp2p.BeaconState{Slot: 0, RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)},
 		},
 	}
 	wanted := &ethpb.ValidatorAssignments{

@@ -316,6 +316,7 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 }
 
 func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
+	ClearCache()
 	validators := make([]*ethpb.Validator, 1)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -338,6 +339,7 @@ func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 // Test helpers.CommitteeAssignments against the results of helpers.CommitteeAssignment by validator
 // index. Warning: this test is a bit slow!
 func TestCommitteeAssignments_AgreesWithSpecDefinitionMethod(t *testing.T) {
+	ClearCache()
 	// Initialize test with 256 validators, each slot and each index gets 4 validators.
 	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
@@ -607,7 +609,6 @@ func TestShuffledIndices_ShuffleRightLength(t *testing.T) {
 
 func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 	c := featureconfig.Get()
-	c.EnableNewCache = true
 	featureconfig.Init(c)
 	defer featureconfig.Init(nil)
 
@@ -835,7 +836,6 @@ func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
 
 func TestBeaconCommitteeFromState_UpdateCacheForPreviousEpoch(t *testing.T) {
 	c := featureconfig.Get()
-	c.EnableNewCache = true
 	featureconfig.Init(c)
 	defer featureconfig.Init(nil)
 
