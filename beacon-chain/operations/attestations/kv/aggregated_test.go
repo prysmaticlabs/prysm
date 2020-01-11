@@ -4,7 +4,6 @@ import (
 	"math"
 	"reflect"
 	"sort"
-	"strings"
 	"testing"
 	"time"
 
@@ -20,9 +19,11 @@ func TestKV_Aggregated_NotAggregated(t *testing.T) {
 
 	att := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b11}}
 
-	wanted := "attestation is not aggregated"
-	if err := cache.SaveAggregatedAttestation(att); !strings.Contains(err.Error(), wanted) {
-		t.Error("Did not received wanted error")
+	if err := cache.SaveAggregatedAttestation(att); err != nil {
+		t.Error(err)
+	}
+	if ok, _ := cache.HasAggregatedAttestation(att); !ok {
+		t.Error("Expected cache to have attestation")
 	}
 }
 
@@ -84,7 +85,7 @@ func TestKV_Aggregated_CheckExpTime(t *testing.T) {
 	cache := NewAttCaches()
 
 	att := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b111}}
-	r, _ := ssz.HashTreeRoot(att)
+	r, _ := ssz.HashTreeRoot(att.Data)
 
 	if err := cache.SaveAggregatedAttestation(att); err != nil {
 		t.Fatal(err)
@@ -95,7 +96,7 @@ func TestKV_Aggregated_CheckExpTime(t *testing.T) {
 		t.Error("Saved att does not exist")
 	}
 
-	receivedAtt := item.(*ethpb.Attestation)
+	receivedAtt := item.([]*ethpb.Attestation)[0]
 	if !proto.Equal(att, receivedAtt) {
 		t.Error("Did not receive correct aggregated att")
 	}
@@ -108,43 +109,174 @@ func TestKV_Aggregated_CheckExpTime(t *testing.T) {
 }
 
 func TestKV_HasAggregatedAttestation(t *testing.T) {
-	cache := NewAttCaches()
+	tests := []struct {
+		name     string
+		existing []*ethpb.Attestation
+		input    *ethpb.Attestation
+		want     bool
+	}{
+		{
+			name: "empty cache aggregated",
+			input: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					Slot: 1,
+				},
+				AggregationBits: bitfield.Bitlist{0b1111}},
+			want: false,
+		},
+		{
+			name: "empty cache unaggregated",
+			input: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					Slot: 1,
+				},
+				AggregationBits: bitfield.Bitlist{0b1001}},
+			want: false,
+		},
+		{
+			name: "single attestation in cache with exact match",
+			existing: []*ethpb.Attestation{{
+				Data: &ethpb.AttestationData{
+					Slot: 1,
+				},
+				AggregationBits: bitfield.Bitlist{0b1111}},
+			},
+			input: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					Slot: 1,
+				},
+				AggregationBits: bitfield.Bitlist{0b1111}},
+			want: true,
+		},
+		{
+			name: "single attestation in cache with subset aggregation",
+			existing: []*ethpb.Attestation{{
+				Data: &ethpb.AttestationData{
+					Slot: 1,
+				},
+				AggregationBits: bitfield.Bitlist{0b1111}},
+			},
+			input: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					Slot: 1,
+				},
+				AggregationBits: bitfield.Bitlist{0b1110}},
+			want: true,
+		},
+		{
+			name: "single attestation in cache with superset aggregation",
+			existing: []*ethpb.Attestation{{
+				Data: &ethpb.AttestationData{
+					Slot: 1,
+				},
+				AggregationBits: bitfield.Bitlist{0b1110}},
+			},
+			input: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					Slot: 1,
+				},
+				AggregationBits: bitfield.Bitlist{0b1111}},
+			want: false,
+		},
+		{
+			name: "multiple attestations with same data in cache with overlapping aggregation, input is subset",
+			existing: []*ethpb.Attestation{
+				{
+					Data: &ethpb.AttestationData{
+						Slot: 1,
+					},
+					AggregationBits: bitfield.Bitlist{0b1111000},
+				},
+				{
+					Data: &ethpb.AttestationData{
+						Slot: 1,
+					},
+					AggregationBits: bitfield.Bitlist{0b1100111},
+				},
+			},
+			input: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					Slot: 1,
+				},
+				AggregationBits: bitfield.Bitlist{0b1100000}},
+			want: true,
+		},
+		{
+			name: "multiple attestations with same data in cache with overlapping aggregation and input is superset",
+			existing: []*ethpb.Attestation{
+				{
+					Data: &ethpb.AttestationData{
+						Slot: 1,
+					},
+					AggregationBits: bitfield.Bitlist{0b1111000},
+				},
+				{
+					Data: &ethpb.AttestationData{
+						Slot: 1,
+					},
+					AggregationBits: bitfield.Bitlist{0b1100111},
+				},
+			},
+			input: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					Slot: 1,
+				},
+				AggregationBits: bitfield.Bitlist{0b1111111}},
+			want: false,
+		},
+		{
+			name: "multiple attestations with different data in cache",
+			existing: []*ethpb.Attestation{
+				{
+					Data: &ethpb.AttestationData{
+						Slot: 2,
+					},
+					AggregationBits: bitfield.Bitlist{0b1111000},
+				},
+				{
+					Data: &ethpb.AttestationData{
+						Slot: 3,
+					},
+					AggregationBits: bitfield.Bitlist{0b1100111},
+				},
+			},
+			input: &ethpb.Attestation{
+				Data: &ethpb.AttestationData{
+					Slot: 1,
+				},
+				AggregationBits: bitfield.Bitlist{0b1111111}},
+			want: false,
+		},
+	}
 
-	att := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b111}}
-	has, err := cache.HasAggregatedAttestation(att)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if has {
-		t.Error("should not have unsaved att in cache")
-	}
-	if err := cache.SaveAggregatedAttestation(att); err != nil {
-		t.Fatal(err)
-	}
-	has, err = cache.HasAggregatedAttestation(att)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !has {
-		t.Error("should have saved att in cache")
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cache := NewAttCaches()
+			if err := cache.SaveAggregatedAttestations(tt.existing); err != nil {
+				t.Error(err)
+			}
 
-	att = &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1111}}
-	has, err = cache.HasAggregatedAttestation(att)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if has {
-		t.Error("should not have unsaved att in cache")
-	}
-	if err := cache.SaveBlockAttestation(att); err != nil {
-		t.Fatal(err)
-	}
-	has, err = cache.HasAggregatedAttestation(att)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !has {
-		t.Error("should have saved att in cache")
+			result, err := cache.HasAggregatedAttestation(tt.input)
+			if err != nil {
+				t.Error(err)
+			}
+			if result != tt.want {
+				t.Errorf("Result = %v, wanted = %v", result, tt.want)
+			}
+
+			// Same test for block attestations
+			cache = NewAttCaches()
+			if err := cache.SaveBlockAttestations(tt.existing); err != nil {
+				t.Error(err)
+			}
+
+			result, err = cache.HasAggregatedAttestation(tt.input)
+			if err != nil {
+				t.Error(err)
+			}
+			if result != tt.want {
+				t.Errorf("Result = %v, wanted = %v", result, tt.want)
+			}
+		})
 	}
 }
