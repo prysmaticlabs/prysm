@@ -18,9 +18,8 @@ func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
 
-	key := string(r[:])
 	var atts []*ethpb.Attestation
-	d, ok := p.aggregatedAtt.Get(key)
+	d, ok := p.aggregatedAtt.Get(string(r[:]))
 	if !ok {
 		atts = make([]*ethpb.Attestation, 0)
 	} else {
@@ -40,7 +39,7 @@ func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
 
 	// DefaultExpiration is set to what was given to New(). In this case
 	// it's one epoch.
-	p.aggregatedAtt.Set(key, atts, cache.DefaultExpiration)
+	p.aggregatedAtt.Set(string(r[:]), atts, cache.DefaultExpiration)
 
 	return nil
 }
@@ -99,8 +98,7 @@ func (p *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation data")
 	}
-	key := string(r[:])
-	a, ok := p.aggregatedAtt.Get(key)
+	a, ok := p.aggregatedAtt.Get(string(r[:]))
 	if !ok {
 		return nil
 	}
@@ -115,9 +113,9 @@ func (p *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
 		}
 	}
 	if len(filtered) == 0 {
-		p.aggregatedAtt.Delete(key)
+		p.aggregatedAtt.Delete(string(r[:]))
 	} else {
-		p.aggregatedAtt.Set(key, filtered, cache.DefaultExpiration)
+		p.aggregatedAtt.Set(string(r[:]), filtered, cache.DefaultExpiration)
 	}
 
 	return nil

@@ -14,9 +14,8 @@ func (p *AttCaches) SaveBlockAttestation(att *ethpb.Attestation) error {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
 
-	key := string(r[:])
 	var atts []*ethpb.Attestation
-	d, ok := p.blockAtt.Get(key)
+	d, ok := p.blockAtt.Get(string(r[:]))
 	if !ok {
 		atts = make([]*ethpb.Attestation, 0)
 	} else {
