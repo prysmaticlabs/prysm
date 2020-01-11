@@ -189,7 +189,7 @@ func archivedValidatorCommittee(
 		proposerIndexToSlot[i] = slot
 	}
 
-	assingmentMap := make(map[uint64]*ethpb.ValidatorAssignments_CommitteeAssignment)
+	assignmentMap := make(map[uint64]*ethpb.ValidatorAssignments_CommitteeAssignment)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		var countAtSlot = uint64(len(activeIndices)) / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
 		if countAtSlot > params.BeaconConfig().MaxCommitteesPerSlot {
@@ -204,7 +204,7 @@ func archivedValidatorCommittee(
 				return nil, errors.Wrap(err, "could not compute committee")
 			}
 			for _, index := range committee {
-				assingmentMap[index] = &ethpb.ValidatorAssignments_CommitteeAssignment{
+				assignmentMap[index] = &ethpb.ValidatorAssignments_CommitteeAssignment{
 					BeaconCommittees: committee,
 					CommitteeIndex:   i,
 					AttesterSlot:     slot,
@@ -213,7 +213,7 @@ func archivedValidatorCommittee(
 			}
 		}
 	}
-	return assingmentMap, nil
+	return assignmentMap, nil
 }
 
 func (bs *Server) archivedCommitteeData(ctx context.Context, requestedEpoch uint64) (*pb.ArchivedCommitteeInfo,
