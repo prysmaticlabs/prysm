@@ -387,3 +387,35 @@ func TestStore_Blocks_Retrieve_Epoch(t *testing.T) {
 		t.Errorf("Wanted %d, received %d", want, len(retrieved))
 	}
 }
+
+func TestStore_Blocks_Retrieve_SlotRangeWithStep(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	b := make([]*ethpb.SignedBeaconBlock, 500)
+	for i := 0; i < 500; i++ {
+		b[i] = &ethpb.SignedBeaconBlock{
+			Block: &ethpb.BeaconBlock{
+				ParentRoot: []byte("parent"),
+				Slot:       uint64(i),
+			},
+		}
+	}
+	const step = 2
+	ctx := context.Background()
+	if err := db.SaveBlocks(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+	retrieved, err := db.Blocks(ctx, filters.NewFilter().SetStartSlot(100).SetEndSlot(399).SetSlotStep(step))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := 150
+	if len(retrieved) != want {
+		t.Errorf("Wanted %d, received %d", want, len(retrieved))
+	}
+	for _, b := range retrieved {
+		if (b.Block.Slot-100)%step != 0 {
+			t.Errorf("Unexpect block slot %d", b.Block.Slot)
+		}
+	}
+}
