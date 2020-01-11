@@ -5,10 +5,14 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 )
 
 // SaveAggregatedAttestation saves an aggregated attestation in cache.
 func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
+	if !helpers.IsAggregated(att) {
+		return errors.New("attestation is not aggregated")
+	}
 	r, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")
@@ -90,6 +94,9 @@ func (p *AttCaches) AggregatedAttestationsBySlotIndex(slot uint64, committeeInde
 
 // DeleteAggregatedAttestation deletes the aggregated attestations in cache.
 func (p *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
+	if !helpers.IsAggregated(att) {
+		return errors.New("attestation is not aggregated")
+	}
 	r, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation data")

@@ -4,6 +4,7 @@ import (
 	"math"
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -19,11 +20,9 @@ func TestKV_Aggregated_NotAggregated(t *testing.T) {
 
 	att := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b11}}
 
-	if err := cache.SaveAggregatedAttestation(att); err != nil {
-		t.Error(err)
-	}
-	if ok, _ := cache.HasAggregatedAttestation(att); !ok {
-		t.Error("Expected cache to have attestation")
+	wanted := "attestation is not aggregated"
+	if err := cache.SaveAggregatedAttestation(att); !strings.Contains(err.Error(), wanted) {
+		t.Error("Did not received wanted error")
 	}
 }
 
