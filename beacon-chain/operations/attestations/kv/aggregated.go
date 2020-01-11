@@ -47,7 +47,7 @@ func (p *AttCaches) SaveAggregatedAttestations(atts []*ethpb.Attestation) error 
 	return nil
 }
 
-// AggregatedAttestations returns the aggregated attestations in cache.
+// AggregatedAttestations returns all the aggregated attestations in cache.
 func (p *AttCaches) AggregatedAttestations() []*ethpb.Attestation {
 	var atts []*ethpb.Attestation
 	for s, i := range p.aggregatedAtt.Items() {
@@ -62,7 +62,7 @@ func (p *AttCaches) AggregatedAttestations() []*ethpb.Attestation {
 	return atts
 }
 
-// AggregatedAttestationsBySlotIndex returns the aggregated attestations in cache,
+// AggregatedAttestationsBySlotIndex returns the all aggregated attestations in cache,
 // filtered by committee index and slot.
 func (p *AttCaches) AggregatedAttestationsBySlotIndex(slot uint64, committeeIndex uint64) []*ethpb.Attestation {
 	var aggregatedAttsBySlotIndex []*ethpb.Attestation
@@ -83,7 +83,7 @@ func (p *AttCaches) AggregatedAttestationsBySlotIndex(slot uint64, committeeInde
 	return aggregatedAttsBySlotIndex
 }
 
-// HasAggregatedAttestation checks if the input attestations has already existed in cache.
+// HasAggregatedAttestation checks if the input attestation has already existed in cache.
 func (p *AttCaches) HasAggregatedAttestation(att *ethpb.Attestation) (bool, error) {
 	r, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
