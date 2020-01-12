@@ -6,7 +6,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -57,18 +56,16 @@ func IsSlashableValidator(validator *ethpb.Validator, epoch uint64) bool {
 //    """
 //    return [ValidatorIndex(i) for i, v in enumerate(state.validators) if is_active_validator(v, epoch)]
 func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) ([]uint64, error) {
-	if featureconfig.Get().EnableNewCache {
-		seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get seed")
-		}
-		activeIndices, err := committeeCache.ActiveIndices(seed)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not interface with committee cache")
-		}
-		if activeIndices != nil {
-			return activeIndices, nil
-		}
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get seed")
+	}
+	activeIndices, err := committeeCache.ActiveIndices(seed)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not interface with committee cache")
+	}
+	if activeIndices != nil {
+		return activeIndices, nil
 	}
 
 	var indices []uint64
@@ -78,10 +75,8 @@ func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) ([]uint64, erro
 		}
 	}
 
-	if featureconfig.Get().EnableNewCache {
-		if err := UpdateCommitteeCache(state, epoch); err != nil {
-			return nil, errors.Wrap(err, "could not update committee cache")
-		}
+	if err := UpdateCommitteeCache(state, epoch); err != nil {
+		return nil, errors.Wrap(err, "could not update committee cache")
 	}
 
 	return indices, nil
