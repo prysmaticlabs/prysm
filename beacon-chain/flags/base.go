@@ -48,13 +48,17 @@ var (
 		Name:  "grpc-gateway-port",
 		Usage: "Enable gRPC gateway for JSON requests",
 	}
-
 	// MinSyncPeers specifies the required number of successful peer handshakes in order
 	// to start syncing with external peers.
 	MinSyncPeers = cli.IntFlag{
 		Name:  "min-sync-peers",
 		Usage: "The required number of valid peers to connect with before syncing.",
 		Value: 3,
+	}
+	ContractDeploymentBlock = cli.IntFlag{
+		Name:  "contract-deployment-block",
+		Usage: "The eth1 block in which the deposit contract was deployed.",
+		Value: 1960177,
 	}
 	// SlasherCertFlag defines a flag for the slasher TLS certificate.
 	SlasherCertFlag = cli.StringFlag{

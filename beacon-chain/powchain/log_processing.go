@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
@@ -17,6 +18,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -242,29 +244,17 @@ func (s *Service) createGenesisTime(timeStamp uint64) uint64 {
 // updates the deposit trie with the data from each individual log.
 func (s *Service) processPastLogs(ctx context.Context) error {
 	currentBlockNum := s.latestEth1Data.LastRequestedBlock
-	query := ethereum.FilterQuery{
-		Addresses: []common.Address{
-			s.depositContractAddress,
-		},
-	}
-
-	// if we are not starting from the first deposit log, we use
-	// the current saved last requested block number.
-	if s.lastReceivedMerkleIndex != -1 {
-		query = ethereum.FilterQuery{
-			Addresses: []common.Address{
-				s.depositContractAddress,
-			},
-			FromBlock: big.NewInt(int64(currentBlockNum)),
-		}
-	}
-
-	logs, err := s.httpLogger.FilterLogs(ctx, query)
-	if err != nil {
-		return err
+	deploymentBlock := int64(flags.Get().DeploymentBlock)
+	if uint64(deploymentBlock) > currentBlockNum {
+		currentBlockNum = uint64(deploymentBlock)
 	}
 	// To store all blocks.
 	headersMap := make(map[uint64]*gethTypes.Header)
+	rawLogCount, err := s.depositContractCaller.GetDepositCount(&bind.CallOpts{})
+	if err != nil {
+		return err
+	}
+	logCount := binary.LittleEndian.Uint64(rawLogCount)
 
 	// Batch request the desired headers and store them in a
 	// map for quick access.
@@ -281,37 +271,59 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		return nil
 	}
 
-	if len(logs) > 0 && logs[0].BlockNumber > currentBlockNum {
-		currentBlockNum = logs[0].BlockNumber
-	}
-
-	if err := requestHeaders(currentBlockNum, currentBlockNum+eth1HeaderReqLimit); err != nil {
-		return err
-	}
-
-	for _, log := range logs {
-		if log.BlockNumber > currentBlockNum {
-			for i := currentBlockNum; i <= log.BlockNumber-1; i++ {
-				if !s.chainStartData.Chainstarted {
-					h, ok := headersMap[i]
-					if !ok {
-						if err := requestHeaders(i, i+eth1HeaderReqLimit); err != nil {
-							return err
-						}
-						// Retry this block.
-						i--
-						continue
-					}
-					s.checkHeaderForChainstart(h)
-				}
-			}
-			// set new block number after checking for chainstart for previous block.
-			s.latestEth1Data.LastRequestedBlock = currentBlockNum
-			currentBlockNum = log.BlockNumber
+	for currentBlockNum < s.LatestBlockHeight().Uint64() {
+		if logCount == uint64(s.lastReceivedMerkleIndex+1) {
+			break
 		}
-		if err := s.ProcessLog(ctx, log); err != nil {
+		start := currentBlockNum
+		end := currentBlockNum + eth1HeaderReqLimit
+		query := ethereum.FilterQuery{
+			Addresses: []common.Address{
+				s.depositContractAddress,
+			},
+			FromBlock: big.NewInt(int64(start)),
+			ToBlock:   big.NewInt(int64(end)),
+		}
+		remainingLogs := logCount - uint64(s.lastReceivedMerkleIndex+1)
+		if remainingLogs < 10000 {
+			query.ToBlock = s.LatestBlockHeight()
+			end = s.LatestBlockHeight().Uint64()
+		}
+		logs, err := s.httpLogger.FilterLogs(ctx, query)
+		if err != nil {
 			return err
 		}
+		if !s.chainStartData.Chainstarted {
+			if err := requestHeaders(start, end); err != nil {
+				return err
+			}
+		}
+
+		for _, log := range logs {
+			if log.BlockNumber > currentBlockNum {
+				for i := currentBlockNum; i <= log.BlockNumber-1; i++ {
+					if !s.chainStartData.Chainstarted {
+						h, ok := headersMap[i]
+						if !ok {
+							if err := requestHeaders(i, i+eth1HeaderReqLimit); err != nil {
+								return err
+							}
+							// Retry this block.
+							i--
+							continue
+						}
+						s.checkHeaderForChainstart(h)
+					}
+				}
+				// set new block number after checking for chainstart for previous block.
+				s.latestEth1Data.LastRequestedBlock = currentBlockNum
+				currentBlockNum = log.BlockNumber
+			}
+			if err := s.ProcessLog(ctx, log); err != nil {
+				return err
+			}
+		}
+		currentBlockNum = end
 	}
 
 	s.latestEth1Data.LastRequestedBlock = currentBlockNum

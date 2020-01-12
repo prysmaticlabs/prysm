@@ -96,6 +96,7 @@ type BeaconChainConfig struct {
 	DefaultPageSize           int           // DefaultPageSize defines the default page size for RPC server request.
 	MaxPageSize               int           // MaxPageSize defines the max page size for RPC server respond.
 	MaxPeersToSync            int           // MaxPeersToSync describes the limit for number of peers in round robin sync.
+	ContractDeploymentBlock   int           // ContractDeploymentBlock defines eth1 block in which the dpeosit contract was deployed/
 
 	// Slasher constants.
 	WeakSubjectivityPeriod    uint64 // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
@@ -188,6 +189,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	DefaultPageSize:           250,
 	MaxPageSize:               500,
 	MaxPeersToSync:            15,
+	ContractDeploymentBlock:   1960177,
 
 	// Slasher related values.
 	WeakSubjectivityPeriod:    54000,
