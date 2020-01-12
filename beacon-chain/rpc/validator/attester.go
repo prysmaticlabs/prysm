@@ -69,9 +69,11 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 		return nil, status.Errorf(codes.Internal, "Could not hash head block: %v", err)
 	}
 
-	headState, err = state.ProcessSlots(ctx, headState, req.Slot)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
+	if helpers.CurrentEpoch(headState) < helpers.SlotToEpoch(req.Slot) {
+		headState, err = state.ProcessSlots(ctx, headState, req.Slot)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
+		}
 	}
 
 	targetEpoch := helpers.CurrentEpoch(headState)

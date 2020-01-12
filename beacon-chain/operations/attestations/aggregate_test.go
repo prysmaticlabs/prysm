@@ -33,8 +33,8 @@ func TestAggregateAttestations_SingleAttestation(t *testing.T) {
 		t.Error("Nothing should be aggregated")
 	}
 
-	if !reflect.DeepEqual(unaggregatedAtts, s.pool.UnaggregatedAttestations()) {
-		t.Error("Did not preserve unaggregated attestation")
+	if len(s.pool.UnaggregatedAttestations()) != 0 {
+		t.Error("Unaggregated pool should be empty")
 	}
 }
 
@@ -91,12 +91,8 @@ func TestAggregateAttestations_MultipleAttestationsDifferentRoots(t *testing.T) 
 		t.Fatal(err)
 	}
 
-	wanted, err := helpers.AggregateAttestations([]*ethpb.Attestation{atts[4]})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(wanted, s.pool.UnaggregatedAttestations()) {
-		t.Error("Did not preserve unaggregated attestation")
+	if len(s.pool.UnaggregatedAttestations()) != 0 {
+		t.Error("Unaggregated att pool did not clean up")
 	}
 
 	received := s.pool.AggregatedAttestations()
@@ -105,7 +101,7 @@ func TestAggregateAttestations_MultipleAttestationsDifferentRoots(t *testing.T) 
 	})
 	att1, _ := helpers.AggregateAttestations([]*ethpb.Attestation{atts[0], atts[1]})
 	att2, _ := helpers.AggregateAttestations([]*ethpb.Attestation{atts[2], atts[3]})
-	wanted = append(att1, att2...)
+	wanted := append(att1, att2...)
 	if !reflect.DeepEqual(wanted, s.pool.AggregatedAttestations()) {
 		t.Error("Did not aggregate attestations")
 	}
