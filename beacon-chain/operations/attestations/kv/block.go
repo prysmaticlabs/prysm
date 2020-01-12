@@ -9,14 +9,33 @@ import (
 
 // SaveBlockAttestation saves an block attestation in cache.
 func (p *AttCaches) SaveBlockAttestation(att *ethpb.Attestation) error {
-	r, err := ssz.HashTreeRoot(att)
+	r, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
 
+	var atts []*ethpb.Attestation
+	d, ok := p.blockAtt.Get(string(r[:]))
+	if !ok {
+		atts = make([]*ethpb.Attestation, 0)
+	} else {
+		atts, ok = d.([]*ethpb.Attestation)
+		if !ok {
+			return errors.New("cached value is not of type []*ethpb.Attestation")
+		}
+	}
+
+	// Ensure that this attestation is not already fully contained in an existing attestation.
+	for _, a := range atts {
+		if a.AggregationBits.Contains(att.AggregationBits) {
+			return nil
+		}
+	}
+	atts = append(atts, att)
+
 	// DefaultExpiration is set to what was given to New(). In this case
 	// it's one epoch.
-	p.blockAtt.Set(string(r[:]), att, cache.DefaultExpiration)
+	p.blockAtt.Set(string(r[:]), atts, cache.DefaultExpiration)
 
 	return nil
 }
@@ -37,11 +56,11 @@ func (p *AttCaches) BlockAttestations() []*ethpb.Attestation {
 	atts := make([]*ethpb.Attestation, 0, p.blockAtt.ItemCount())
 	for s, i := range p.blockAtt.Items() {
 		// Type assertion for the worst case. This shouldn't happen.
-		att, ok := i.Object.(*ethpb.Attestation)
+		att, ok := i.Object.([]*ethpb.Attestation)
 		if !ok {
 			p.blockAtt.Delete(s)
 		}
-		atts = append(atts, att)
+		atts = append(atts, att...)
 	}
 
 	return atts
@@ -49,7 +68,7 @@ func (p *AttCaches) BlockAttestations() []*ethpb.Attestation {
 
 // DeleteBlockAttestation deletes a block attestation in cache.
 func (p *AttCaches) DeleteBlockAttestation(att *ethpb.Attestation) error {
-	r, err := ssz.HashTreeRoot(att)
+	r, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
