@@ -31,6 +31,7 @@ type Config struct {
 }
 
 func TestGetHeadFromYaml(t *testing.T) {
+	helpers.ClearCache()
 	ctx := context.Background()
 	filename, _ := filepath.Abs("./lmd_ghost_test.yaml")
 	yamlFile, err := ioutil.ReadFile(filename)
@@ -43,7 +44,6 @@ func TestGetHeadFromYaml(t *testing.T) {
 	params.UseMainnetConfig()
 
 	for _, test := range c.TestCases {
-		helpers.ClearCache()
 		db := testDB.SetupDB(t)
 		defer testDB.TeardownDB(t, db)
 
