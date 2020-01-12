@@ -24,10 +24,6 @@ var (
 		Name:  "enable-eth1-data-vote-cache",
 		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
 	}
-	enableShuffledIndexCache = cli.BoolFlag{
-		Name:  "enable-shuffled-index-cache",
-		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
-	}
 	// SkipBLSVerifyFlag skips BLS signature verification across the runtime for development purposes.
 	SkipBLSVerifyFlag = cli.BoolFlag{
 		Name:  "skip-bls-verify",
@@ -185,7 +181,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	SkipBLSVerifyFlag,
 	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,
-	enableShuffledIndexCache,
 	enableSkipSlotsCache,
 	saveDepositData,
 	enableSlasherFlag,
