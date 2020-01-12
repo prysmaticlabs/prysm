@@ -36,7 +36,10 @@ func (r *Service) maintainPeerStatuses() {
 				}
 			}
 		}
-		for !r.initialSync.Syncing() {
+		// If our head slot is not in the latest epoch, check peers to determine if we need to
+		// resync with the network.
+		currentSlot := uint64(roughtime.Now().Unix()-r.chain.GenesisTime().Unix()) / params.BeaconConfig().SecondsPerSlot
+		for !r.initialSync.Syncing() && helpers.SlotToEpoch(r.chain.HeadSlot()) < helpers.SlotToEpoch(currentSlot) {
 			_, highestEpoch, _ := r.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(r.chain.HeadSlot()))
 			if helpers.StartSlot(highestEpoch) > r.chain.HeadSlot() {
 				numberOfTimesResyncedCounter.Inc()
