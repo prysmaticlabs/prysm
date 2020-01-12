@@ -245,6 +245,7 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 
 // This checks if the block is from a competing chain, emits warning and updates metrics.
 func isCompetingBlock(root []byte, slot uint64, headRoot []byte, headSlot uint64) {
+	if !bytes.Equal(root[:], headRoot) {
 		log.WithFields(logrus.Fields{
 			"blkSlot":  slot,
 			"blkRoot":  hex.EncodeToString(root[:]),
@@ -252,4 +253,5 @@ func isCompetingBlock(root []byte, slot uint64, headRoot []byte, headSlot uint64
 			"headRoot": hex.EncodeToString(headRoot),
 		}).Warn("Calculated head diffs from new block")
 		competingBlks.Inc()
+	}
 }
