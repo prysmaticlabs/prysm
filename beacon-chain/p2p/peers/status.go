@@ -21,6 +21,7 @@ package peers
 
 import (
 	"errors"
+	"sort"
 	"sync"
 	"time"
 
@@ -319,41 +320,55 @@ func (p *Status) Decay() {
 
 // BestFinalized returns the highest finalized epoch equal to or higher than ours that is agreed upon by the majority of peers.
 // This method may not return the absolute highest finalized, but the finalized epoch in which most peers can serve blocks.
-// Ideally, all peers would be reporting the same finalized epoch.
-// Returns the best finalized root, epoch number, and list of peers that agree.
+// Ideally, all peers would be reporting the same finalized epoch but some may be behind due to their own latency, or because of
+// their finalized epoch at the time we queried them.
+// Returns the best finalized root, epoch number, and list of peers that are at or beyond that epoch.
 func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) ([]byte, uint64, []peer.ID) {
 	finalized := make(map[[32]byte]uint64)
 	rootToEpoch := make(map[[32]byte]uint64)
+	pidEpochs := make(map[peer.ID]uint64)
+	potentialPIDs := make([]peer.ID, 0)
 	for _, pid := range p.Connected() {
 		peerChainState, err := p.ChainState(pid)
 		if err == nil && peerChainState != nil && peerChainState.FinalizedEpoch >= ourFinalizedEpoch {
-			r := bytesutil.ToBytes32(peerChainState.FinalizedRoot)
-			finalized[r]++
-			rootToEpoch[r] = peerChainState.FinalizedEpoch
+			root := bytesutil.ToBytes32(peerChainState.FinalizedRoot)
+			finalized[root]++
+			rootToEpoch[root] = peerChainState.FinalizedEpoch
+			pidEpochs[pid] = peerChainState.FinalizedEpoch
+			potentialPIDs = append(potentialPIDs, pid)
 		}
 	}
 
-	var mostVotedFinalizedRoot [32]byte
+	// Select the target epoch, which is the epoch most peers agree upon.
+	var targetRoot [32]byte
 	var mostVotes uint64
 	for root, count := range finalized {
 		if count > mostVotes {
 			mostVotes = count
-			mostVotedFinalizedRoot = root
+			targetRoot = root
+		}
+	}
+	targetEpoch := rootToEpoch[targetRoot]
+
+	// Sort PIDs by finalized epoch, in decreasing order.
+	sort.Slice(potentialPIDs, func(i, j int) bool {
+		return pidEpochs[potentialPIDs[i]] > pidEpochs[potentialPIDs[j]]
+	})
+
+	// Trim potential peers to those on or after target epoch.
+	for i, pid := range potentialPIDs {
+		if pidEpochs[pid] < targetEpoch {
+			potentialPIDs = potentialPIDs[:i]
+			break
 		}
 	}
 
-	var pids []peer.ID
-	for _, pid := range p.Connected() {
-		peerChainState, err := p.ChainState(pid)
-		if err == nil && peerChainState != nil && peerChainState.FinalizedEpoch >= rootToEpoch[mostVotedFinalizedRoot] {
-			pids = append(pids, pid)
-			if len(pids) >= maxPeers {
-				break
-			}
-		}
+	// Trim potential peers to at most maxPeers.
+	if len(potentialPIDs) > maxPeers {
+		potentialPIDs = potentialPIDs[:len(potentialPIDs)]
 	}
 
-	return mostVotedFinalizedRoot[:], rootToEpoch[mostVotedFinalizedRoot], pids
+	return targetRoot[:], targetEpoch, potentialPIDs
 }
 
 // fetch is a helper function that fetches a peer status, possibly creating it.
