@@ -98,7 +98,9 @@ func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) er
 		if err != nil {
 			return errors.Wrap(err, "could not calculate filtered block tree")
 		}
+		s.filteredBlockTreeLock.Lock()
 		s.filteredBlockTree = tree
+		s.filteredBlockTreeLock.Unlock()
 	}
 
 	// Update justified check point.

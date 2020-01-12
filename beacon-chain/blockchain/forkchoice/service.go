@@ -53,6 +53,7 @@ type Store struct {
 	initSyncStateLock     sync.RWMutex
 	nextEpochBoundarySlot uint64
 	filteredBlockTree     map[[32]byte]*ethpb.BeaconBlock
+	filteredBlockTreeLock   sync.Mutex
 }
 
 // NewForkChoiceService instantiates a new service instance that will
@@ -266,7 +267,9 @@ func (s *Store) Head(ctx context.Context) ([]byte, error) {
 	filteredBlocks := make(map[[32]byte]*ethpb.BeaconBlock)
 	var err error
 	if featureconfig.Get().EnableBlockTreeCache {
+		s.filteredBlockTreeLock.Lock()
 		filteredBlocks = s.filteredBlockTree
+		s.filteredBlockTreeLock.Unlock()
 	} else {
 		filteredBlocks, err = s.getFilterBlockTree(ctx)
 		if err != nil {
