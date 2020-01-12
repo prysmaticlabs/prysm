@@ -159,7 +159,6 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		ClearCache()
 		state.Slot = tt.slot
 		result, err := BeaconProposerIndex(state)
 		if err != nil {
@@ -267,7 +266,6 @@ func TestActiveValidatorIndices(t *testing.T) {
 			name: "all_active_epoch_10",
 			args: args{
 				state: &pb.BeaconState{
-					RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 					Validators: []*ethpb.Validator{
 						{
 							ActivationEpoch: 0,
@@ -291,7 +289,6 @@ func TestActiveValidatorIndices(t *testing.T) {
 			name: "some_active_epoch_10",
 			args: args{
 				state: &pb.BeaconState{
-					RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 					Validators: []*ethpb.Validator{
 						{
 							ActivationEpoch: 0,
@@ -315,7 +312,6 @@ func TestActiveValidatorIndices(t *testing.T) {
 			name: "some_active_with_recent_new_epoch_10",
 			args: args{
 				state: &pb.BeaconState{
-					RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 					Validators: []*ethpb.Validator{
 						{
 							ActivationEpoch: 0,
@@ -343,7 +339,6 @@ func TestActiveValidatorIndices(t *testing.T) {
 			name: "some_active_with_recent_new_epoch_10",
 			args: args{
 				state: &pb.BeaconState{
-					RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 					Validators: []*ethpb.Validator{
 						{
 							ActivationEpoch: 0,
@@ -371,7 +366,6 @@ func TestActiveValidatorIndices(t *testing.T) {
 			name: "some_active_with_recent_new_epoch_10",
 			args: args{
 				state: &pb.BeaconState{
-					RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 					Validators: []*ethpb.Validator{
 						{
 							ActivationEpoch: 0,
@@ -406,7 +400,6 @@ func TestActiveValidatorIndices(t *testing.T) {
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ActiveValidatorIndices() got = %v, want %v", got, tt.want)
 			}
-			ClearCache()
 		})
 	}
 }
