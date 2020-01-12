@@ -35,6 +35,7 @@ var (
 const eth1LookBackPeriod = 100
 const eth1DataSavingInterval = 100
 const eth1HeaderReqLimit = 2000
+const depositlogRequestLimit = 10000
 
 // Eth2GenesisPowchainInfo retrieves the genesis time and eth1 block number of the beacon chain
 // from the deposit contract.
@@ -279,6 +280,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	}
 
 	for currentBlockNum < s.LatestBlockHeight().Uint64() {
+		// stop requesting, if we have all the logs
 		if logCount == uint64(s.lastReceivedMerkleIndex+1) {
 			break
 		}
@@ -292,7 +294,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 			ToBlock:   big.NewInt(int64(end)),
 		}
 		remainingLogs := logCount - uint64(s.lastReceivedMerkleIndex+1)
-		if remainingLogs < 10000 {
+		if remainingLogs < depositlogRequestLimit {
 			query.ToBlock = s.LatestBlockHeight()
 			end = s.LatestBlockHeight().Uint64()
 		}
