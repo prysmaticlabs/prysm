@@ -18,8 +18,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const resyncInterval = 30 * time.Second
-
 // maintainPeerStatuses by infrequently polling peers for their latest status.
 func (r *Service) maintainPeerStatuses() {
 	// Run twice per epoch.
@@ -44,7 +42,9 @@ func (r *Service) maintainPeerStatuses() {
 // resyncIfBehind checks periodically to see if we are in normal sync but have fallen behind our peers by more than an epoch,
 // in which case we attempt a resync using the initial sync method to catch up.
 func (r *Service) resyncIfBehind() {
-	runutil.RunEvery(r.ctx, resyncInterval, func() {
+	// Run sixteen times per epoch.
+	interval := time.Duration(params.BeaconConfig().SecondsPerSlot*params.BeaconConfig().SlotsPerEpoch/16) * time.Second
+	runutil.RunEvery(r.ctx, interval, func() {
 		currentEpoch := uint64(roughtime.Now().Unix()-r.chain.GenesisTime().Unix()) / (params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch)
 		syncedEpoch := helpers.SlotToEpoch(r.chain.HeadSlot())
 		if !r.initialSync.Syncing() && syncedEpoch < currentEpoch-1 {
