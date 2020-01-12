@@ -14,7 +14,6 @@ import (
 	jsoniter "github.com/json-iterator/go"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
@@ -94,7 +93,6 @@ func RunBlockOperationTest(
 		t.Fatal(err)
 	}
 
-	helpers.ClearCache()
 	beaconState, err := operationFn(context.Background(), preState, body)
 	if postSSZExists {
 		if err != nil {
