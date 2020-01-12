@@ -1135,7 +1135,6 @@ func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 }
 
 func TestConvertToIndexed_OK(t *testing.T) {
-	helpers.ClearCache()
 	validators := make([]*ethpb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
