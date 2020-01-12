@@ -38,12 +38,10 @@ type Flags struct {
 	EnableSavingOfDepositData bool   // EnableSavingOfDepositData allows the saving of eth1 related data such as deposits,chain data to be saved.
 
 	// Cache toggles.
-	EnableAttestationCache   bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableEth1DataVoteCache  bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableNewCache           bool // EnableNewCache enables the node to use the new caching scheme.
-	EnableShuffledIndexCache bool // EnableShuffledIndexCache to cache expensive shuffled index computation.
-	EnableSkipSlotsCache     bool // EnableSkipSlotsCache caches the state in skipped slots.
-	EnableSlasherConnection  bool // EnableSlasher enable retrieval of slashing events from a slasher instance.
+	EnableAttestationCache  bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
+	EnableEth1DataVoteCache bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
+	EnableSkipSlotsCache    bool // EnableSkipSlotsCache caches the state in skipped slots.
+	EnableSlasherConnection bool // EnableSlasher enable retrieval of slashing events from a slasher instance.
 }
 
 var featureConfig *Flags
@@ -92,10 +90,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	} else {
 		cfg.InitSyncNoVerify = true
 	}
-	if ctx.GlobalBool(NewCacheFlag.Name) {
-		log.Warn("Using new cache for committee shuffled indices")
-		cfg.EnableNewCache = true
-	}
 	if ctx.GlobalBool(SkipBLSVerifyFlag.Name) {
 		log.Warn("UNSAFE: Skipping BLS verification at runtime")
 		cfg.SkipBLSVerify = true
@@ -103,10 +97,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(enableBackupWebhookFlag.Name) {
 		log.Warn("Allowing database backups to be triggered from HTTP webhook.")
 		cfg.EnableBackupWebhook = true
-	}
-	if ctx.GlobalBool(enableShuffledIndexCache.Name) {
-		log.Warn("Enabled shuffled index cache.")
-		cfg.EnableShuffledIndexCache = true
 	}
 	if ctx.GlobalBool(enableSkipSlotsCache.Name) {
 		log.Warn("Enabled skip slots cache.")
