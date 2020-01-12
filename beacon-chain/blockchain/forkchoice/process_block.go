@@ -145,10 +145,8 @@ func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) er
 		reportEpochMetrics(postState)
 
 		// Update committees cache at epoch boundary slot.
-		if featureconfig.Get().EnableNewCache {
-			if err := helpers.UpdateCommitteeCache(postState, helpers.CurrentEpoch(postState)); err != nil {
-				return err
-			}
+		if err := helpers.UpdateCommitteeCache(postState, helpers.CurrentEpoch(postState)); err != nil {
+			return err
 		}
 
 		s.nextEpochBoundarySlot = helpers.StartSlot(helpers.NextEpoch(postState))
