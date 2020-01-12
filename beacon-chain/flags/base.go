@@ -55,6 +55,7 @@ var (
 		Usage: "The required number of valid peers to connect with before syncing.",
 		Value: 3,
 	}
+	// ContractDeploymentBlock is the block in which the eth1 deposit contract was deployed.
 	ContractDeploymentBlock = cli.IntFlag{
 		Name:  "contract-deployment-block",
 		Usage: "The eth1 block in which the deposit contract was deployed.",
