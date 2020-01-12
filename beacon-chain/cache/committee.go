@@ -95,6 +95,10 @@ func (c *CommitteeCache) Committee(slot uint64, seed [32]byte, index uint64) ([]
 	indexOffSet := index + (slot%params.BeaconConfig().SlotsPerEpoch)*committeeCountPerSlot
 	start, end := startEndIndices(item, indexOffSet)
 
+	if int(end) >= len(item.ShuffledIndices) {
+		return nil, errors.New("requested index out of bound")
+	}
+
 	return item.ShuffledIndices[start:end], nil
 }
 
