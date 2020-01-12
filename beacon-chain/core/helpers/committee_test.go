@@ -316,7 +316,6 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 }
 
 func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
-	ClearCache()
 	validators := make([]*ethpb.Validator, 1)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -339,7 +338,6 @@ func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 // Test helpers.CommitteeAssignments against the results of helpers.CommitteeAssignment by validator
 // index. Warning: this test is a bit slow!
 func TestCommitteeAssignments_AgreesWithSpecDefinitionMethod(t *testing.T) {
-	ClearCache()
 	// Initialize test with 256 validators, each slot and each index gets 4 validators.
 	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
@@ -441,7 +439,6 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			ClearCache()
 			validatorIndexToCommittee, proposerIndexToSlot, err := CommitteeAssignments(state, SlotToEpoch(tt.slot))
 			if err != nil {
 				t.Fatalf("failed to determine CommitteeAssignments: %v", err)
@@ -552,7 +549,6 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		ClearCache()
 		state.Slot = tt.stateSlot
 		err := VerifyAttestationBitfieldLengths(state, tt.attestation)
 		if tt.verificationFailure {
@@ -610,8 +606,8 @@ func TestShuffledIndices_ShuffleRightLength(t *testing.T) {
 }
 
 func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
-	ClearCache()
 	c := featureconfig.Get()
+	c.EnableNewCache = true
 	featureconfig.Init(c)
 	defer featureconfig.Init(nil)
 
@@ -839,6 +835,7 @@ func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
 
 func TestBeaconCommitteeFromState_UpdateCacheForPreviousEpoch(t *testing.T) {
 	c := featureconfig.Get()
+	c.EnableNewCache = true
 	featureconfig.Init(c)
 	defer featureconfig.Init(nil)
 

@@ -28,6 +28,11 @@ var (
 		Name:  "enable-shuffled-index-cache",
 		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
 	}
+	// NewCacheFlag enables the node to use the new caching scheme.
+	NewCacheFlag = cli.BoolFlag{
+		Name:  "new-cache",
+		Usage: "Use the new shuffled indices cache for committee. Much improvement than previous caching implementations",
+	}
 	// SkipBLSVerifyFlag skips BLS signature verification across the runtime for development purposes.
 	SkipBLSVerifyFlag = cli.BoolFlag{
 		Name:  "skip-bls-verify",
@@ -145,10 +150,6 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedNewCacheFlag = cli.BoolFlag{
-		Name:   "new-cache",
-		Usage:  deprecatedUsage,
-		Hidden: true}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -165,7 +166,6 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableBLSPubkeyCacheFlag,
 	deprecatedFastCommitteeAssignmentsFlag,
 	deprecatedGenesisDelayFlag,
-	deprecatedNewCacheFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -182,6 +182,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	EnableEth1DataVoteCacheFlag,
 	initSyncVerifyEverythingFlag,
 	initSyncCacheState,
+	NewCacheFlag,
 	SkipBLSVerifyFlag,
 	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,
