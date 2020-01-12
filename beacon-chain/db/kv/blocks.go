@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -320,8 +321,14 @@ func (k *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveHeadBlockRoot")
 	defer span.End()
 	return k.db.Update(func(tx *bolt.Tx) error {
-		if tx.Bucket(stateBucket).Get(blockRoot[:]) == nil {
+		if head := tx.Bucket(stateBucket).Get(blockRoot[:]); head == nil {
 			return errors.New("no state found with head block root")
+		} else {
+			h := &pb.BeaconState{}
+			if err := decode(head, h); err != nil {
+				return errors.Wrap(err, "could not unmarshal head state")
+			}
+			k.headState = h
 		}
 		bucket := tx.Bucket(blocksBucket)
 		return bucket.Put(headBlockRootKey, blockRoot[:])

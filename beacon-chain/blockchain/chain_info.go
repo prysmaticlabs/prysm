@@ -29,11 +29,17 @@ type GenesisTimeFetcher interface {
 // HeadFetcher defines a common interface for methods in blockchain service which
 // directly retrieves head related data.
 type HeadFetcher interface {
+	// Deprecated: Use beacondb.TODO.
 	HeadSlot() uint64
+	// Deprecated: Use beacondb.TODO.
 	HeadRoot() []byte
+	// Deprecated: Use beacondb.HeadBlock.
 	HeadBlock() *ethpb.SignedBeaconBlock
+	// Deprecated: Use beacondb.HeadState.
 	HeadState(ctx context.Context) (*pb.BeaconState, error)
+	// Deprecated: Use beacondb.TODO.
 	HeadValidatorsIndices(epoch uint64) ([]uint64, error)
+	// Deprecated: Use beacondb.TODO.
 	HeadSeed(epoch uint64) ([32]byte, error)
 }
 
@@ -51,8 +57,12 @@ type ForkFetcher interface {
 // FinalizationFetcher defines a common interface for methods in blockchain service which
 // directly retrieves finalization and justification related data.
 type FinalizationFetcher interface {
+	// Deprecated: Use beacondb.FinalizedCheckpoint.
 	FinalizedCheckpt() *ethpb.Checkpoint
+	// Deprecated: Use beacondb.CurrentJustifiedCheckpoint.
 	CurrentJustifiedCheckpt() *ethpb.Checkpoint
+	// Deprecated: Use beacondb.TODO.
+	// TODO: Write a beacondb method to return this value.
 	PreviousJustifiedCheckpt() *ethpb.Checkpoint
 }
 
@@ -63,48 +73,50 @@ type ParticipationFetcher interface {
 }
 
 // FinalizedCheckpt returns the latest finalized checkpoint from head state.
+// Deprecated: Use beacondb.FinalizedCheckpoint.
 func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
-	if s.headState == nil || s.headState.FinalizedCheckpoint == nil {
+	headState, err := s.beaconDB.HeadState(context.TODO())
+	if err != nil || headState == nil || headState.FinalizedCheckpoint == nil {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
 	// If head state exists but there hasn't been a finalized check point,
 	// the check point's root should refer to genesis block root.
-	if bytes.Equal(s.headState.FinalizedCheckpoint.Root, params.BeaconConfig().ZeroHash[:]) {
+	if bytes.Equal(headState.FinalizedCheckpoint.Root, params.BeaconConfig().ZeroHash[:]) {
 		return &ethpb.Checkpoint{Root: s.genesisRoot[:]}
 	}
 
-	return s.headState.FinalizedCheckpoint
+	return headState.FinalizedCheckpoint
 }
 
 // CurrentJustifiedCheckpt returns the current justified checkpoint from head state.
+// Deprecated: Use beacondb.JustifiedCheckpoint.
 func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
-	if s.headState == nil || s.headState.CurrentJustifiedCheckpoint == nil {
-		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
-	}
+	c, _ := s.beaconDB.JustifiedCheckpoint(context.TODO())
 
 	// If head state exists but there hasn't been a justified check point,
 	// the check point root should refer to genesis block root.
-	if bytes.Equal(s.headState.CurrentJustifiedCheckpoint.Root, params.BeaconConfig().ZeroHash[:]) {
+	if bytes.Equal(c.Root, params.BeaconConfig().ZeroHash[:]) {
 		return &ethpb.Checkpoint{Root: s.genesisRoot[:]}
 	}
-
-	return s.headState.CurrentJustifiedCheckpoint
+	return c
 }
 
 // PreviousJustifiedCheckpt returns the previous justified checkpoint from head state.
+// TODO: This is a full state read that could be another method in the DB.
 func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
-	if s.headState == nil || s.headState.PreviousJustifiedCheckpoint == nil {
+	headState, _ := s.HeadState(context.TODO())
+	if headState == nil || headState.PreviousJustifiedCheckpoint == nil {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
 	// If head state exists but there hasn't been a justified check point,
 	// the check point root should refer to genesis block root.
-	if bytes.Equal(s.headState.PreviousJustifiedCheckpoint.Root, params.BeaconConfig().ZeroHash[:]) {
+	if bytes.Equal(headState.PreviousJustifiedCheckpoint.Root, params.BeaconConfig().ZeroHash[:]) {
 		return &ethpb.Checkpoint{Root: s.genesisRoot[:]}
 	}
 
-	return s.headState.PreviousJustifiedCheckpoint
+	return headState.PreviousJustifiedCheckpoint
 }
 
 // HeadSlot returns the slot of the head of the chain.
@@ -129,42 +141,41 @@ func (s *Service) HeadRoot() []byte {
 }
 
 // HeadBlock returns the head block of the chain.
+// Deprecated: Use beacondb.HeadBlock.
 func (s *Service) HeadBlock() *ethpb.SignedBeaconBlock {
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
-
-	return proto.Clone(s.headBlock).(*ethpb.SignedBeaconBlock)
+	hb, _ := s.beaconDB.HeadBlock(context.TODO())
+	return hb
 }
 
 // HeadState returns the head state of the chain.
 // If the head state is nil from service struct,
 // it will attempt to get from DB and error if nil again.
+// Deprecated: Use beacondb.HeadState.
 func (s *Service) HeadState(ctx context.Context) (*pb.BeaconState, error) {
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
-
-	if s.headState == nil {
-		return s.beaconDB.HeadState(ctx)
-	}
-
-	return proto.Clone(s.headState).(*pb.BeaconState), nil
+	return s.beaconDB.HeadState(ctx)
 }
 
 // HeadValidatorsIndices returns a list of active validator indices from the head view of a given epoch.
+// TODO: This is a full state read. Maybe it can be reduced?
 func (s *Service) HeadValidatorsIndices(epoch uint64) ([]uint64, error) {
-	if s.headState == nil {
+	headState, _ := s.HeadState(context.TODO())
+	if headState == nil {
 		return []uint64{}, nil
 	}
-	return helpers.ActiveValidatorIndices(s.headState, epoch)
+	return helpers.ActiveValidatorIndices(headState, epoch)
 }
 
 // HeadSeed returns the seed from the head view of a given epoch.
 func (s *Service) HeadSeed(epoch uint64) ([32]byte, error) {
-	if s.headState == nil {
+	headState, err := s.beaconDB.HeadState(context.TODO())
+	if err != nil {
+		return [32]byte{}, err
+	}
+	if headState == nil {
 		return [32]byte{}, nil
 	}
 
-	return helpers.Seed(s.headState, epoch, params.BeaconConfig().DomainBeaconAttester)
+	return helpers.Seed(headState, epoch, params.BeaconConfig().DomainBeaconAttester)
 }
 
 // CanonicalRoot returns the canonical root of a given slot.
@@ -181,14 +192,16 @@ func (s *Service) GenesisTime() time.Time {
 }
 
 // CurrentFork retrieves the latest fork information of the beacon chain.
+// TODO: Can this be improved? It is a full state read now just for the fork.
 func (s *Service) CurrentFork() *pb.Fork {
-	if s.headState == nil {
+	headState, _ := s.beaconDB.HeadState(context.TODO())
+	if headState == nil {
 		return &pb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		}
 	}
-	return proto.Clone(s.headState.Fork).(*pb.Fork)
+	return proto.Clone(headState.Fork).(*pb.Fork)
 }
 
 // Participation returns the participation stats of a given epoch.

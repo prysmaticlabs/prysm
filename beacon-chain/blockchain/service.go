@@ -47,7 +47,6 @@ type Service struct {
 	maxRoutines            int64
 	headSlot               uint64
 	headBlock              *ethpb.SignedBeaconBlock
-	headState              *pb.BeaconState
 	canonicalRoots         map[uint64][]byte
 	headLock               sync.RWMutex
 	stateNotifier          statefeed.Notifier
@@ -252,12 +251,6 @@ func (s *Service) saveHead(ctx context.Context, signed *ethpb.SignedBeaconBlock,
 	}
 	s.headBlock = signed
 
-	headState, err := s.beaconDB.State(ctx, r)
-	if err != nil {
-		return errors.Wrap(err, "could not retrieve head state in DB")
-	}
-	s.headState = headState
-
 	log.WithFields(logrus.Fields{
 		"slot":     signed.Block.Slot,
 		"headRoot": fmt.Sprintf("%#x", r),
@@ -277,12 +270,6 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 	s.canonicalRoots[b.Block.Slot] = r[:]
 
 	s.headBlock = b
-
-	headState, err := s.beaconDB.State(ctx, r)
-	if err != nil {
-		return errors.Wrap(err, "could not retrieve head state in DB")
-	}
-	s.headState = headState
 
 	log.WithFields(logrus.Fields{
 		"slot":     b.Block.Slot,
@@ -340,7 +327,6 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconSt
 
 	s.genesisRoot = genesisBlkRoot
 	s.headBlock = genesisBlk
-	s.headState = genesisState
 	s.canonicalRoots[genesisState.Slot] = genesisBlkRoot[:]
 
 	return nil
@@ -372,10 +358,6 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		// This should never happen. At chain start, the finalized checkpoint
 		// would be the genesis state and block.
 		return errors.New("no finalized epoch in the database")
-	}
-	s.headState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(finalized.Root))
-	if err != nil {
-		return errors.Wrap(err, "could not get finalized state from db")
 	}
 	s.headBlock, err = s.beaconDB.Block(ctx, bytesutil.ToBytes32(finalized.Root))
 	if err != nil {

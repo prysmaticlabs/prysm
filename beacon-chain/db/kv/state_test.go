@@ -72,6 +72,10 @@ func TestHeadState_CanSaveRetrieve(t *testing.T) {
 	if !reflect.DeepEqual(s, savedHeadS) {
 		t.Error("did not retrieve saved state")
 	}
+
+	if !reflect.DeepEqual(s, db.headState) {
+		t.Error("did not cache head state")
+	}
 }
 
 func TestGenesisState_CanSaveRetrieve(t *testing.T) {

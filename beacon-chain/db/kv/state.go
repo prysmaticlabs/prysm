@@ -5,6 +5,7 @@ import (
 	"context"
 
 	"github.com/boltdb/bolt"
+	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -35,6 +36,9 @@ func (k *Store) State(ctx context.Context, blockRoot [32]byte) (*pb.BeaconState,
 func (k *Store) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HeadState")
 	defer span.End()
+	if k.headState != nil {
+		return proto.Clone(k.headState).(*pb.BeaconState), nil
+	}
 	var s *pb.BeaconState
 	err := k.db.View(func(tx *bolt.Tx) error {
 		// Retrieve head block's signing root from blocks bucket,
