@@ -365,7 +365,7 @@ func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) ([]byte, 
 
 	// Trim potential peers to at most maxPeers.
 	if len(potentialPIDs) > maxPeers {
-		potentialPIDs = potentialPIDs[:len(potentialPIDs)]
+		potentialPIDs = potentialPIDs[:maxPeers]
 	}
 
 	return targetRoot[:], targetEpoch, potentialPIDs
