@@ -1277,8 +1277,8 @@ func TestDeleteAttsInPool_Aggregated(t *testing.T) {
 		AttPool: attestations.NewPool(),
 	}
 
-	aggregatedAtts := []*ethpb.Attestation{{AggregationBits: bitfield.Bitlist{0b01101}}, {AggregationBits: bitfield.Bitlist{0b0111}}}
-	unaggregatedAtts := []*ethpb.Attestation{{AggregationBits: bitfield.Bitlist{0b001}}, {AggregationBits: bitfield.Bitlist{0b0001}}}
+	aggregatedAtts := []*ethpb.Attestation{{AggregationBits: bitfield.Bitlist{0b10101}}, {AggregationBits: bitfield.Bitlist{0b11010}}}
+	unaggregatedAtts := []*ethpb.Attestation{{AggregationBits: bitfield.Bitlist{0b1001}}, {AggregationBits: bitfield.Bitlist{0b0001}}}
 
 	if err := s.AttPool.SaveAggregatedAttestations(aggregatedAtts); err != nil {
 		t.Fatal(err)

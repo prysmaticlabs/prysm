@@ -187,6 +187,13 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 			"merkleTreeIndex": index,
 		}).Debug("Deposit registered from deposit contract")
 		validDepositsCount.Inc()
+		// Notify users what is going on, from time to time.
+		if !s.chainStartData.Chainstarted {
+			deposits := len(s.chainStartData.ChainstartDeposits)
+			if deposits%512 == 0 {
+				log.WithField("deposits", deposits).Info("Processing deposits from Ethereum 1 chain")
+			}
+		}
 	} else {
 		log.WithFields(logrus.Fields{
 			"eth1Block":       depositLog.BlockHash.Hex(),

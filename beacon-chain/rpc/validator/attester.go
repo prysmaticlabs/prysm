@@ -56,15 +56,24 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 		}
 	}()
 
-	headState, err := vs.HeadFetcher.HeadState(ctx)
+	headState, err := vs.BeaconDB.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
 	}
-	headRoot := vs.HeadFetcher.HeadRoot()
-
-	headState, err = state.ProcessSlots(ctx, headState, req.Slot)
+	headBlock, err := vs.BeaconDB.HeadBlock(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
+		return nil, status.Errorf(codes.Internal, "Could not retrieve head block: %v", err)
+	}
+	headRoot, err := ssz.HashTreeRoot(headBlock.Block)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not hash head block: %v", err)
+	}
+
+	if helpers.CurrentEpoch(headState) < helpers.SlotToEpoch(req.Slot) {
+		headState, err = state.ProcessSlots(ctx, headState, req.Slot)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
+		}
 	}
 
 	targetEpoch := helpers.CurrentEpoch(headState)

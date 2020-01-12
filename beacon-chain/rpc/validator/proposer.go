@@ -36,7 +36,10 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	}
 
 	// Retrieve the parent block as the current head of the canonical chain.
-	parent := vs.HeadFetcher.HeadBlock()
+	parent, err := vs.BeaconDB.HeadBlock(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	parentRoot, err := ssz.HashTreeRoot(parent.Block)
 	if err != nil {
