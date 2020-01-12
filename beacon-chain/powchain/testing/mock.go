@@ -6,10 +6,11 @@ import (
 	"math/big"
 	"time"
 
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -116,12 +117,12 @@ func (r *RPCClient) BatchCall(b []rpc.BatchElem) error {
 		return nil
 	}
 
-	for _, r := range b {
-		num, err := hexutil.DecodeBig(r.Args[0].(string))
+	for _, e := range b {
+		num, err := hexutil.DecodeBig(e.Args[0].(string))
 		if err != nil {
 			return err
 		}
-		r.Result.(*gethTypes.Header).Number = num
+		e.Result.(*gethTypes.Header).Number = num
 	}
 	return nil
 }

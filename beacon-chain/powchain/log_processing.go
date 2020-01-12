@@ -286,6 +286,9 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		}
 		start := currentBlockNum
 		end := currentBlockNum + eth1HeaderReqLimit
+		if end > s.LatestBlockHeight().Uint64() {
+			end = s.LatestBlockHeight().Uint64()
+		}
 		query := ethereum.FilterQuery{
 			Addresses: []common.Address{
 				s.depositContractAddress,
@@ -310,19 +313,8 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 
 		for _, log := range logs {
 			if log.BlockNumber > currentBlockNum {
-				for i := currentBlockNum; i <= log.BlockNumber-1; i++ {
-					if !s.chainStartData.Chainstarted {
-						h, ok := headersMap[i]
-						if !ok {
-							if err := requestHeaders(i, i+eth1HeaderReqLimit); err != nil {
-								return err
-							}
-							// Retry this block.
-							i--
-							continue
-						}
-						s.checkHeaderForChainstart(h)
-					}
+				if err := s.checkHeaderRange(currentBlockNum, log.BlockNumber-1, headersMap, requestHeaders); err != nil {
+					return err
 				}
 				// set new block number after checking for chainstart for previous block.
 				s.latestEth1Data.LastRequestedBlock = currentBlockNum
@@ -331,6 +323,9 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 			if err := s.ProcessLog(ctx, log); err != nil {
 				return err
 			}
+		}
+		if err := s.checkHeaderRange(currentBlockNum, end, headersMap, requestHeaders); err != nil {
+			return err
 		}
 		currentBlockNum = end
 	}
@@ -430,6 +425,26 @@ func (s *Service) checkBlockNumberForChainStart(ctx context.Context, blkNum *big
 
 func (s *Service) checkHeaderForChainstart(header *gethTypes.Header) {
 	s.checkForChainstart(header.Hash(), header.Number, header.Time)
+}
+
+func (s *Service) checkHeaderRange(start uint64, end uint64,
+	headersMap map[uint64]*gethTypes.Header,
+	requestHeaders func(uint64, uint64) error) error {
+	for i := start; i <= end; i++ {
+		if !s.chainStartData.Chainstarted {
+			h, ok := headersMap[i]
+			if !ok {
+				if err := requestHeaders(i, i+eth1HeaderReqLimit); err != nil {
+					return err
+				}
+				// Retry this block.
+				i--
+				continue
+			}
+			s.checkHeaderForChainstart(h)
+		}
+	}
+	return nil
 }
 
 func (s *Service) checkForChainstart(blockHash [32]byte, blockNumber *big.Int, blockTime uint64) {
