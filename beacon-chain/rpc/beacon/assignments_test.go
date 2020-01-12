@@ -19,10 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func init() {
-	helpers.ClearCache()
-}
-
 func TestServer_ListAssignments_CannotRequestFutureEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
@@ -217,6 +213,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 }
 
 func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testing.T) {
+	helpers.ClearCache()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -334,6 +331,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 }
 
 func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) {
+	helpers.ClearCache()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 

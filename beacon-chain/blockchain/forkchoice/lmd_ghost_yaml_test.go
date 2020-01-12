@@ -11,6 +11,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -42,6 +43,7 @@ func TestGetHeadFromYaml(t *testing.T) {
 	params.UseMainnetConfig()
 
 	for _, test := range c.TestCases {
+		helpers.ClearCache()
 		db := testDB.SetupDB(t)
 		defer testDB.TeardownDB(t, db)
 

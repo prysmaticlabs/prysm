@@ -441,6 +441,7 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			ClearCache()
 			validatorIndexToCommittee, proposerIndexToSlot, err := CommitteeAssignments(state, SlotToEpoch(tt.slot))
 			if err != nil {
 				t.Fatalf("failed to determine CommitteeAssignments: %v", err)
@@ -551,6 +552,7 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 	}
 
 	for i, tt := range tests {
+		ClearCache()
 		state.Slot = tt.stateSlot
 		err := VerifyAttestationBitfieldLengths(state, tt.attestation)
 		if tt.verificationFailure {
@@ -608,6 +610,7 @@ func TestShuffledIndices_ShuffleRightLength(t *testing.T) {
 }
 
 func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
+	ClearCache()
 	c := featureconfig.Get()
 	featureconfig.Init(c)
 	defer featureconfig.Init(nil)
