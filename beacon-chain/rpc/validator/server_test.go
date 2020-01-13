@@ -228,6 +228,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 		},
 		StateNotifier: chainService.StateNotifier(),
 		BeaconDB:      db,
+		HeadFetcher:   chainService,
 	}
 
 	exitRoutine := make(chan bool)
@@ -256,7 +257,7 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	chainService := &mockChain.ChainService{}
+	chainService := &mockChain.ChainService{State: &pbp2p.BeaconState{Slot: 3}}
 	Server := &Server{
 		Ctx: context.Background(),
 		ChainStartFetcher: &mockPOW.POWChain{
@@ -264,6 +265,7 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 		},
 		BeaconDB:      db,
 		StateNotifier: chainService.StateNotifier(),
+		HeadFetcher:   chainService,
 	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -292,6 +294,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 		},
 		BeaconDB:      db,
 		StateNotifier: chainService.StateNotifier(),
+		HeadFetcher:   chainService,
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)

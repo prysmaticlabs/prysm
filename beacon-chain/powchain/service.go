@@ -137,7 +137,7 @@ type Service struct {
 	depositRoot             []byte
 	depositTrie             *trieutil.SparseMerkleTrie
 	chainStartData          *protodb.ChainStartData
-	beaconDB                db.Database
+	beaconDB                db.HeadAccessDatabase // Circular dep if using HeadFetcher.
 	depositCache            *depositcache.DepositCache
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	isRunning               bool
@@ -153,7 +153,7 @@ type Web3ServiceConfig struct {
 	ETH1Endpoint    string
 	HTTPEndPoint    string
 	DepositContract common.Address
-	BeaconDB        db.Database
+	BeaconDB        db.HeadAccessDatabase
 	DepositCache    *depositcache.DepositCache
 	StateNotifier   statefeed.Notifier
 }
