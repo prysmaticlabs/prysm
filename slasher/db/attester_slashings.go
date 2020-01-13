@@ -95,14 +95,11 @@ func (db *Store) HasAttesterSlashing(slashing *ethpb.AttesterSlashing) (bool, Sl
 
 // SaveAttesterSlashing accepts a slashing proof and its status and writes it to disk.
 func (db *Store) SaveAttesterSlashing(status SlashingStatus, slashing *ethpb.AttesterSlashing) error {
-	root, err := hashutil.HashProto(slashing)
-	if err != nil {
-		return errors.Wrap(err, "failed to get hash root of attesterSlashing")
-	}
 	enc, err := proto.Marshal(slashing)
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal")
 	}
+	root := hashutil.Hash(enc)
 	key := encodeTypeRoot(SlashingType(Attestation), root)
 	err = db.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)

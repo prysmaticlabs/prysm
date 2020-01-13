@@ -149,14 +149,11 @@ func (db *Store) HasProposerSlashing(slashing *ethpb.ProposerSlashing) (bool, Sl
 
 // SaveProposerSlashing accepts a proposer slashing and its status header and writes it to disk.
 func (db *Store) SaveProposerSlashing(status SlashingStatus, slashing *ethpb.ProposerSlashing) error {
-	root, err := hashutil.HashProto(slashing)
-	if err != nil {
-		return errors.Wrap(err, "failed to get hash root of proposerSlashing")
-	}
 	enc, err := proto.Marshal(slashing)
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal")
 	}
+	root := hashutil.Hash(enc)
 	key := encodeTypeRoot(SlashingType(Proposal), root)
 	err = db.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
