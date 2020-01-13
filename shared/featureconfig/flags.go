@@ -71,7 +71,7 @@ var (
 	}
 	cacheFilteredBlockTree = cli.BoolFlag{
 		Name: "cache-filtered-block-tree",
-		Usage: "Cache filtered block tree by maintaining it rather than continually recalculating on the fly," +
+		Usage: "Cache filtered block tree by maintaining it rather than continually recalculating on the fly, " +
 			"this is used for fork choice.",
 	}
 )
