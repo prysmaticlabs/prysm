@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -303,36 +302,18 @@ func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, commi
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get attesting indices")
 	}
-
-	cb1i, err := helpers.AttestingIndices(attestation.CustodyBits, committee)
-	if err != nil {
-		return nil, err
-	}
-	if !sliceutil.SubsetUint64(cb1i, attIndices) {
-		return nil, fmt.Errorf("%v is not a subset of %v", cb1i, attIndices)
-	}
-	cb1Map := make(map[uint64]bool)
-	for _, idx := range cb1i {
-		cb1Map[idx] = true
-	}
 	cb0i := []uint64{}
 	for _, idx := range attIndices {
-		if !cb1Map[idx] {
-			cb0i = append(cb0i, idx)
-		}
+		cb0i = append(cb0i, idx)
 	}
 	sort.Slice(cb0i, func(i, j int) bool {
 		return cb0i[i] < cb0i[j]
 	})
 
-	sort.Slice(cb1i, func(i, j int) bool {
-		return cb1i[i] < cb1i[j]
-	})
 	inAtt := &ethpb.IndexedAttestation{
-		Data:                attestation.Data,
-		Signature:           attestation.Signature,
-		CustodyBit_0Indices: cb0i,
-		CustodyBit_1Indices: cb1i,
+		Data:             attestation.Data,
+		Signature:        attestation.Signature,
+		AttestingIndices: cb0i,
 	}
 	return inAtt, nil
 }
