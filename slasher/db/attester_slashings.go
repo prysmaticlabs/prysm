@@ -13,7 +13,6 @@ import (
 
 func createAttesterSlashing(enc []byte) (*ethpb.AttesterSlashing, error) {
 	protoSlashing := &ethpb.AttesterSlashing{}
-
 	err := proto.Unmarshal(enc, protoSlashing)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal encoding")
