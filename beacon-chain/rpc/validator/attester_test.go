@@ -158,13 +158,13 @@ func TestGetAttestationData_OK(t *testing.T) {
 		AttestationCache: cache.NewAttestationCache(),
 		HeadFetcher:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
 	}
-	if err := attesterServer.BeaconDB.SaveState(ctx, beaconState, blockRoot); err != nil {
+	if err := db.SaveState(ctx, beaconState, blockRoot); err != nil {
 		t.Fatal(err)
 	}
-	if err := attesterServer.BeaconDB.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: block}); err != nil {
+	if err := db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: block}); err != nil {
 		t.Fatal(err)
 	}
-	if err := attesterServer.BeaconDB.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
+	if err := db.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -263,13 +263,13 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 		HeadFetcher:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
 		SyncChecker:      &mockSync.Sync{IsSyncing: false},
 	}
-	if err := attesterServer.BeaconDB.SaveState(ctx, beaconState, blockRoot); err != nil {
+	if err := db.SaveState(ctx, beaconState, blockRoot); err != nil {
 		t.Fatal(err)
 	}
-	if err := attesterServer.BeaconDB.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: block}); err != nil {
+	if err := db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: block}); err != nil {
 		t.Fatal(err)
 	}
-	if err := attesterServer.BeaconDB.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
+	if err := db.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
 		t.Fatal(err)
 	}
 
