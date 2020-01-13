@@ -17,7 +17,6 @@ import (
 // directly retrieves chain info related data.
 type ChainInfoFetcher interface {
 	HeadFetcher
-	CanonicalRootFetcher
 	FinalizationFetcher
 }
 
@@ -35,12 +34,6 @@ type HeadFetcher interface {
 	HeadState(ctx context.Context) (*pb.BeaconState, error)
 	HeadValidatorsIndices(epoch uint64) ([]uint64, error)
 	HeadSeed(epoch uint64) ([32]byte, error)
-}
-
-// CanonicalRootFetcher defines a common interface for methods in blockchain service which
-// directly retrieves canonical roots related data.
-type CanonicalRootFetcher interface {
-	CanonicalRoot(slot uint64) []byte
 }
 
 // ForkFetcher retrieves the current fork information of the Ethereum beacon chain.
@@ -165,14 +158,6 @@ func (s *Service) HeadSeed(epoch uint64) ([32]byte, error) {
 	}
 
 	return helpers.Seed(s.headState, epoch, params.BeaconConfig().DomainBeaconAttester)
-}
-
-// CanonicalRoot returns the canonical root of a given slot.
-func (s *Service) CanonicalRoot(slot uint64) []byte {
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
-
-	return s.canonicalRoots[slot]
 }
 
 // GenesisTime returns the genesis time of beacon chain.

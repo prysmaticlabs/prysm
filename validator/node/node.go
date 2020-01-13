@@ -168,13 +168,15 @@ func (s *ValidatorClient) registerClientService(ctx *cli.Context, keyManager key
 	logValidatorBalances := !ctx.GlobalBool(flags.DisablePenaltyRewardLogFlag.Name)
 	cert := ctx.GlobalString(flags.CertFlag.Name)
 	graffiti := ctx.GlobalString(flags.GraffitiFlag.Name)
+	maxCallRecvMsgSize := ctx.GlobalInt(flags.GrpcMaxCallRecvMsgSizeFlag.Name)
 	v, err := client.NewValidatorService(context.Background(), &client.Config{
-		Endpoint:             endpoint,
-		DataDir:              dataDir,
-		KeyManager:           keyManager,
-		LogValidatorBalances: logValidatorBalances,
-		CertFlag:             cert,
-		GraffitiFlag:         graffiti,
+		Endpoint:                   endpoint,
+		DataDir:                    dataDir,
+		KeyManager:                 keyManager,
+		LogValidatorBalances:       logValidatorBalances,
+		CertFlag:                   cert,
+		GraffitiFlag:               graffiti,
+		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize client service")

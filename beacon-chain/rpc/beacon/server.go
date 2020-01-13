@@ -18,7 +18,7 @@ import (
 // providing RPC endpoints to access data relevant to the Ethereum 2.0 phase 0
 // beacon chain.
 type Server struct {
-	BeaconDB             db.Database
+	BeaconDB             db.ReadOnlyDatabase
 	Ctx                  context.Context
 	ChainStartFetcher    powchain.ChainStartFetcher
 	HeadFetcher          blockchain.HeadFetcher
