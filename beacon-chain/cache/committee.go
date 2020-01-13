@@ -111,7 +111,7 @@ func (c *CommitteeCache) AddCommitteeShuffledList(committees *Committees) error 
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	if err := c.CommitteeCache.AddIfNotPresent(committees); err != nil {
+	if err := c.CommitteeCache.Add(committees); err != nil {
 		return err
 	}
 	fmt.Println("Saved proposer indices ", committees.ProposerIndices, hex.EncodeToString(committees.Seed[:]))
@@ -163,7 +163,7 @@ func (c *CommitteeCache) ProposerIndices(seed [32]byte) ([]uint64, error) {
 	if !ok {
 		return nil, ErrNotCommittee
 	}
-
+	fmt.Println("Retrieving proposer indices ", item.ProposerIndices, hex.EncodeToString(item.Seed[:]))
 	return item.ProposerIndices, nil
 }
 

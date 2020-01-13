@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"encoding/hex"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -153,7 +152,6 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 		if err != nil {
 			return 0, errors.Wrap(err, "could not interface with committee cache")
 		}
-		fmt.Println("Retrieving ", proposerIndices, hex.EncodeToString(seed[:]))
 		if proposerIndices != nil {
 			fmt.Println("Proposer index hit! ", state.Slot % params.BeaconConfig().SlotsPerEpoch, proposerIndices[state.Slot % params.BeaconConfig().SlotsPerEpoch])
 			return proposerIndices[state.Slot % params.BeaconConfig().SlotsPerEpoch], nil
