@@ -37,4 +37,9 @@ var (
 		Name:  "span-map-cache",
 		Usage: "Enable span map cache",
 	}
+	// RebuildSpanMapsFlag iterate through all indexed attestations in db and update all validators span maps from scratch.
+	RebuildSpanMapsFlag = cli.BoolFlag{
+		Name:  "rebuild-span-maps",
+		Usage: "Rebuild span maps from indexed attestations in db",
+	}
 )

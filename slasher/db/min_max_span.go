@@ -91,6 +91,27 @@ func (db *Store) SaveValidatorSpansMap(validatorIdx uint64, spanMap *slashpb.Epo
 	return err
 }
 
+// SaveValidatorSpansMap accepts a validator index and span map and writes it to disk.
+func (db *Store) SaveCachedSpansMaps() error {
+	if db.ctx.GlobalBool(flags.UseSpanCacheFlag.Name) {
+		saved := spanCache.Clear(validatorIdx, spanMap, 1)
+		err := db.batch(func(tx *bolt.Tx) error {
+			bucket := tx.Bucket(validatorsMinMaxSpanBucket)
+			key := bytesutil.Bytes4(validatorIdx)
+			val, err := proto.Marshal(spanMap)
+			if err != nil {
+				return errors.Wrap(err, "failed to marshal span map")
+			}
+			if err := bucket.Put(key, val); err != nil {
+				return errors.Wrapf(err, "failed to delete validator id: %d from validators min max span bucket", validatorIdx)
+			}
+			return err
+		})
+	}
+
+	return err
+}
+
 // DeleteValidatorSpanMap deletes a validator span map using a validator index as bucket key.
 func (db *Store) DeleteValidatorSpanMap(validatorIdx uint64) error {
 	if db.ctx.GlobalBool(flags.UseSpanCacheFlag.Name) {

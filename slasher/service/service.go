@@ -163,7 +163,7 @@ func (s *Service) startSlasher() {
 	slasherServer := rpc.Server{
 		SlasherDB: s.slasherDb,
 	}
-	if s.ctx.GlobalBool(flags.UseSpanCacheFlag.Name) {
+	if s.ctx.GlobalBool(flags.RebuildSpanMapsFlag.Name) {
 		s.loadSpanMaps(err, slasherServer)
 	}
 	slashpb.RegisterSlasherServer(s.grpcServer, &slasherServer)
@@ -256,6 +256,7 @@ func (s *Service) Close() {
 	if err != nil {
 		log.Panicf("Could not stop the slasher service: %v", err)
 	}
+	s.slasherDb.
 	if err := s.slasherDb.Close(); err != nil {
 		log.Errorf("Failed to close slasher database: %v", err)
 	}
