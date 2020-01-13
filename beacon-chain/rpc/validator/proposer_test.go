@@ -1026,8 +1026,9 @@ func TestFilterAttestation_OK(t *testing.T) {
 	}
 
 	proposerServer := &Server{
-		BeaconDB: db,
-		AttPool:  attestations.NewPool(),
+		BeaconDB:    db,
+		AttPool:     attestations.NewPool(),
+		HeadFetcher: &mock.ChainService{State: state, Root: genesisRoot[:]},
 	}
 
 	atts := make([]*ethpb.Attestation, 10)
