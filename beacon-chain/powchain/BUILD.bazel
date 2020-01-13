@@ -69,6 +69,7 @@ go_test(
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/testing:go_default_library",
+        "//beacon-chain/flags:go_default_library",
         "//beacon-chain/powchain/testing:go_default_library",
         "//contracts/deposit-contract:go_default_library",
         "//proto/beacon/db:go_default_library",

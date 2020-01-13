@@ -16,7 +16,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/rpc"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -109,7 +108,7 @@ type RPCBlockFetcher interface {
 
 // RPCClient defines the rpc methods required to interact with the eth1 node.
 type RPCClient interface {
-	BatchCall(b []rpc.BatchElem) error
+	BatchCall(b []gethRPC.BatchElem) error
 }
 
 // Service fetches important information about the canonical
@@ -340,7 +339,7 @@ func (s *Service) connectToPowChain() error {
 	return nil
 }
 
-func (s *Service) dialETH1Nodes() (*ethclient.Client, *ethclient.Client, *rpc.Client, error) {
+func (s *Service) dialETH1Nodes() (*ethclient.Client, *ethclient.Client, *gethRPC.Client, error) {
 	httpRPCClient, err := gethRPC.Dial(s.httpEndpoint)
 	if err != nil {
 		return nil, nil, nil, err
@@ -358,7 +357,7 @@ func (s *Service) dialETH1Nodes() (*ethclient.Client, *ethclient.Client, *rpc.Cl
 }
 
 func (s *Service) initializeConnection(powClient *ethclient.Client,
-	httpClient *ethclient.Client, rpcClient *rpc.Client, contractCaller *contracts.DepositContractCaller) {
+	httpClient *ethclient.Client, rpcClient *gethRPC.Client, contractCaller *contracts.DepositContractCaller) {
 
 	s.reader = powClient
 	s.logger = powClient
@@ -460,7 +459,7 @@ func (s *Service) processSubscribedHeaders(header *gethTypes.Header) {
 // each block in one call, it batches all requests into a single rpc call.
 func (s *Service) batchRequestHeaders(startBlock uint64, endBlock uint64) ([]*gethTypes.Header, error) {
 	requestRange := (endBlock - startBlock) + 1
-	elems := make([]rpc.BatchElem, 0, requestRange)
+	elems := make([]gethRPC.BatchElem, 0, requestRange)
 	headers := make([]*gethTypes.Header, 0, requestRange)
 	errors := make([]error, 0, requestRange)
 	if requestRange == 0 {
@@ -469,7 +468,7 @@ func (s *Service) batchRequestHeaders(startBlock uint64, endBlock uint64) ([]*ge
 	for i := startBlock; i <= endBlock; i++ {
 		header := &gethTypes.Header{}
 		err := error(nil)
-		elems = append(elems, rpc.BatchElem{
+		elems = append(elems, gethRPC.BatchElem{
 			Method: "eth_getBlockByNumber",
 			Args:   []interface{}{hexutil.EncodeBig(big.NewInt(int64(i))), true},
 			Result: header,
