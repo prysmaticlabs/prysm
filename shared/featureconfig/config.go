@@ -43,6 +43,7 @@ type Flags struct {
 	EnableSkipSlotsCache     bool // EnableSkipSlotsCache caches the state in skipped slots.
 	EnableSlasherConnection  bool // EnableSlasher enable retrieval of slashing events from a slasher instance.
 	EnableBlockTreeCache     bool // EnableBlockTreeCache enable fork choice service to maintain latest filtered block tree.
+	EnableAncestorCache       bool   // EnableAncestorCache enable ancestor look up using block tree cache.
 }
 
 var featureConfig *Flags
@@ -122,6 +123,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(cacheFilteredBlockTree.Name) {
 		log.Warn("Enabled filtered block tree cache for fork choice.")
 		cfg.EnableBlockTreeCache = true
+	}
+	if ctx.GlobalBool(cacheAncestorBlock.Name) {
+		log.Warn("Enabled ancestor block look up using block tree cache")
+		cfg.EnableAncestorCache = true
 	}
 	Init(cfg)
 }

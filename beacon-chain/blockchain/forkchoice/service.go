@@ -161,26 +161,30 @@ func (s *Store) ancestor(ctx context.Context, root []byte, slot uint64) ([]byte,
 		return nil, ctx.Err()
 	}
 
-	signed, err := s.db.Block(ctx, bytesutil.ToBytes32(root))
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get ancestor block")
+	var ancestorBlock *ethpb.BeaconBlock
+	if featureconfig.Get().EnableAncestorCache {
+		s.filteredBlockTreeLock.RLock()
+		ancestorBlock = s.filteredBlockTree[bytesutil.ToBytes32(root)]
+		s.filteredBlockTreeLock.RUnlock()
+	} else {
+		signed, err := s.db.Block(ctx, bytesutil.ToBytes32(root))
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get ancestor block")
+		}
+		ancestorBlock = signed.Block
 	}
-	if signed == nil || signed.Block == nil {
-		return nil, errors.New("nil block")
-	}
-	b := signed.Block
 
 	// If we dont have the ancestor in the DB, simply return nil so rest of fork choice
 	// operation can proceed. This is not an error condition.
-	if b == nil || b.Slot < slot {
+	if ancestorBlock == nil || ancestorBlock.Slot < slot {
 		return nil, nil
 	}
 
-	if b.Slot == slot {
+	if ancestorBlock.Slot == slot {
 		return root, nil
 	}
 
-	return s.ancestor(ctx, b.ParentRoot, slot)
+	return s.ancestor(ctx, ancestorBlock.ParentRoot, slot)
 }
 
 // latestAttestingBalance returns the staked balance of a block from the input block root.
@@ -212,14 +216,22 @@ func (s *Store) latestAttestingBalance(ctx context.Context, root []byte) (uint64
 		return 0, errors.Wrap(err, "could not get active indices for last justified checkpoint")
 	}
 
-	wantedBlkSigned, err := s.db.Block(ctx, bytesutil.ToBytes32(root))
-	if err != nil {
-		return 0, errors.Wrap(err, "could not get target block")
+	var wantedBlk *ethpb.BeaconBlock
+	if featureconfig.Get().EnableAncestorCache {
+		s.filteredBlockTreeLock.RLock()
+		wantedBlk = s.filteredBlockTree[bytesutil.ToBytes32(root)]
+		s.filteredBlockTreeLock.RUnlock()
+	} else {
+		wantedBlkSigned, err := s.db.Block(ctx, bytesutil.ToBytes32(root))
+		if err != nil {
+			return 0, errors.Wrap(err, "could not get ancestor block")
+		}
+		wantedBlk = wantedBlkSigned.Block
 	}
-	if wantedBlkSigned == nil || wantedBlkSigned.Block == nil {
+
+	if wantedBlk == nil {
 		return 0, errors.New("nil wanted block")
 	}
-	wantedBlk := wantedBlkSigned.Block
 
 	balances := uint64(0)
 	s.voteLock.RLock()

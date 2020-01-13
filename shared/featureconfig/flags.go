@@ -74,6 +74,10 @@ var (
 		Usage: "Cache filtered block tree by maintaining it rather than continually recalculating on the fly, " +
 			"this is used for fork choice.",
 	}
+	cacheAncestorBlock = cli.BoolFlag{
+		Name: "cache-ancestor-block",
+		Usage: "Ancestor block look up using cached block tree",
+	}
 )
 
 // Deprecated flags list.
@@ -198,4 +202,5 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	saveDepositData,
 	enableSlasherFlag,
 	cacheFilteredBlockTree,
+	cacheAncestorBlock,
 }...)
