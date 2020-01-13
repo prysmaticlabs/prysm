@@ -4,6 +4,9 @@ bazel-*
 .DS_Store
 .swp
 
+# Ignore VI/Vim swapfiles
+.*.sw?
+
 # IntelliJ
 .idea
 .ijwb
