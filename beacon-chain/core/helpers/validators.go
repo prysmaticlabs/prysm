@@ -1,8 +1,6 @@
 package helpers
 
 import (
-	"fmt"
-
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -153,8 +151,7 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 			return 0, errors.Wrap(err, "could not interface with committee cache")
 		}
 		if proposerIndices != nil {
-			fmt.Println("Proposer index hit! ", state.Slot % params.BeaconConfig().SlotsPerEpoch, proposerIndices[state.Slot % params.BeaconConfig().SlotsPerEpoch])
-			return proposerIndices[state.Slot % params.BeaconConfig().SlotsPerEpoch], nil
+			return proposerIndices[state.Slot%params.BeaconConfig().SlotsPerEpoch], nil
 		}
 	}
 
@@ -172,7 +169,6 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 	}
 
 	if featureconfig.Get().EnableProposerIndexCache {
-		fmt.Println("Recalculating committee cache from proposer index")
 		if err := UpdateCommitteeCache(state, CurrentEpoch(state)); err != nil {
 			return 0, errors.Wrap(err, "could not update committee cache")
 		}

@@ -163,7 +163,7 @@ func (c *CommitteeCache) ProposerIndices(seed [32]byte) ([]uint64, error) {
 	if !ok {
 		return nil, ErrNotCommittee
 	}
-	fmt.Println("Retrieving proposer indices ", item.ProposerIndices, hex.EncodeToString(item.Seed[:]))
+
 	return item.ProposerIndices, nil
 }
 

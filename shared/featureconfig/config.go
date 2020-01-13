@@ -43,7 +43,7 @@ type Flags struct {
 	EnableSkipSlotsCache     bool // EnableSkipSlotsCache caches the state in skipped slots.
 	EnableSlasherConnection  bool // EnableSlasher enable retrieval of slashing events from a slasher instance.
 	EnableBlockTreeCache     bool // EnableBlockTreeCache enable fork choice service to maintain latest filtered block tree.
-	EnableProposerIndexCache     bool // EnableProposerIndexCache enable caching of proposer index.
+	EnableProposerIndexCache bool // EnableProposerIndexCache enable caching of proposer index.
 }
 
 var featureConfig *Flags

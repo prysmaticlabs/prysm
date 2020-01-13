@@ -465,7 +465,7 @@ func precomputeProposerIndices(state *pb.BeaconState, activeIndices []uint64) ([
 	slot := StartSlot(e)
 
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
-		seedWithSlot := append(seed[:], bytesutil.Bytes8(slot + i)...)
+		seedWithSlot := append(seed[:], bytesutil.Bytes8(slot+i)...)
 		seedWithSlotHash := hashutil.Hash(seedWithSlot)
 		index, err := ComputeProposerIndex(state.Validators, activeIndices, seedWithSlotHash)
 		if err != nil {
@@ -473,6 +473,6 @@ func precomputeProposerIndices(state *pb.BeaconState, activeIndices []uint64) ([
 		}
 		proposerIndices[i] = index
 	}
-	fmt.Println("Precompute", proposerIndices)
+
 	return proposerIndices, nil
 }

@@ -75,7 +75,7 @@ var (
 			"this is used for fork choice.",
 	}
 	cacheProposerIndices = cli.BoolFlag{
-		Name: "cache-proposer-indices",
+		Name:  "cache-proposer-indices",
 		Usage: "Cache proposer indices on per epoch basis.",
 	}
 )
@@ -156,11 +156,10 @@ var (
 		Hidden: true,
 	}
 	deprecatedEnableShuffledIndexCache = cli.BoolFlag{
-		Name:  "enable-shuffled-index-cache",
+		Name:   "enable-shuffled-index-cache",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-
 )
 
 var deprecatedFlags = []cli.Flag{
