@@ -1,7 +1,9 @@
 package cache
 
 import (
+	"encoding/hex"
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -112,7 +114,7 @@ func (c *CommitteeCache) AddCommitteeShuffledList(committees *Committees) error 
 	if err := c.CommitteeCache.AddIfNotPresent(committees); err != nil {
 		return err
 	}
-
+	fmt.Println("Saved proposer indices ", committees.ProposerIndices, hex.EncodeToString(committees.Seed[:]))
 	trim(c.CommitteeCache, maxCommitteesCacheSize)
 	return nil
 }

@@ -425,7 +425,7 @@ func UpdateCommitteeCache(state *pb.BeaconState, epoch uint64) error {
 			return sortedIndices[i] < sortedIndices[j]
 		})
 
-		var proposerIndices[]uint64
+		var proposerIndices []uint64
 		if featureconfig.Get().EnableProposerIndexCache {
 			if e == epoch {
 				proposerIndices, err = precomputeProposerIndices(state, sortedIndices)
@@ -465,7 +465,6 @@ func precomputeProposerIndices(state *pb.BeaconState, activeIndices []uint64) ([
 	slot := StartSlot(e)
 
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
-		fmt.Println("Precompute ", i, slot + i, len(activeIndices))
 		seedWithSlot := append(seed[:], bytesutil.Bytes8(slot + i)...)
 		seedWithSlotHash := hashutil.Hash(seedWithSlot)
 		index, err := ComputeProposerIndex(state.Validators, activeIndices, seedWithSlotHash)
@@ -474,6 +473,6 @@ func precomputeProposerIndices(state *pb.BeaconState, activeIndices []uint64) ([
 		}
 		proposerIndices[i] = index
 	}
-
+	fmt.Println("Precompute", proposerIndices)
 	return proposerIndices, nil
 }
