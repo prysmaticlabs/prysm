@@ -24,10 +24,6 @@ var (
 		Name:  "enable-eth1-data-vote-cache",
 		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
 	}
-	enableShuffledIndexCache = cli.BoolFlag{
-		Name:  "enable-shuffled-index-cache",
-		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
-	}
 	// SkipBLSVerifyFlag skips BLS signature verification across the runtime for development purposes.
 	SkipBLSVerifyFlag = cli.BoolFlag{
 		Name:  "skip-bls-verify",
@@ -72,6 +68,11 @@ var (
 		Usage: "Start the genesis event right away using the eth1 block timestamp which " +
 			"triggered the genesis as the genesis time. This flag should be used for local " +
 			"development and testing only.",
+	}
+	cacheFilteredBlockTree = cli.BoolFlag{
+		Name: "cache-filtered-block-tree",
+		Usage: "Cache filtered block tree by maintaining it rather than continually recalculating on the fly, " +
+			"this is used for fork choice.",
 	}
 )
 
@@ -148,7 +149,14 @@ var (
 	deprecatedNewCacheFlag = cli.BoolFlag{
 		Name:   "new-cache",
 		Usage:  deprecatedUsage,
-		Hidden: true}
+		Hidden: true,
+	}
+	deprecatedEnableShuffledIndexCache = cli.BoolFlag{
+		Name:  "enable-shuffled-index-cache",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -166,6 +174,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedFastCommitteeAssignmentsFlag,
 	deprecatedGenesisDelayFlag,
 	deprecatedNewCacheFlag,
+	deprecatedEnableShuffledIndexCache,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -185,8 +194,8 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	SkipBLSVerifyFlag,
 	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,
-	enableShuffledIndexCache,
 	enableSkipSlotsCache,
 	saveDepositData,
 	enableSlasherFlag,
+	cacheFilteredBlockTree,
 }...)
