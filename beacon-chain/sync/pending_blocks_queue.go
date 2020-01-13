@@ -51,7 +51,7 @@ func (r *Service) processPendingBlocks(ctx context.Context) error {
 
 		r.pendingQueueLock.RLock()
 		b := r.slotToPendingBlocks[uint64(s)]
-		// skip if block does not exist
+		// Skip if block does not exist.
 		if b == nil || b.Block == nil {
 			continue
 		}
