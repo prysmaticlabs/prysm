@@ -55,6 +55,11 @@ var (
 		Name:  "graffiti",
 		Usage: "String to include in proposed blocks",
 	}
+	// GrpcMaxCallRecvMsgSizeFlag defines the max call message size for GRPC
+	GrpcMaxCallRecvMsgSizeFlag = cli.IntFlag{
+		Name:  "grpc-max-msg-size",
+		Usage: "Integer to define max recieve message call size (default: 52428800 (for 50Mb)).",
+	}
 )
 
 func homeDir() string {
