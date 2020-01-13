@@ -27,6 +27,7 @@ go_library(
         "//shared/tracing:go_default_library",
         "//shared/version:go_default_library",
         "//validator/client:go_default_library",
+        "//validator/db:go_default_library",
         "//validator/flags:go_default_library",
         "//validator/keymanager:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

@@ -44,10 +44,11 @@ type Database interface {
 	SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool
 	// Validator related methods.
-	ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, bool, error)
-	HasValidatorIndex(ctx context.Context, publicKey [48]byte) bool
-	DeleteValidatorIndex(ctx context.Context, publicKey [48]byte) error
-	SaveValidatorIndex(ctx context.Context, publicKey [48]byte, validatorIdx uint64) error
+	ValidatorIndex(ctx context.Context, publicKey []byte) (uint64, bool, error)
+	HasValidatorIndex(ctx context.Context, publicKey []byte) bool
+	DeleteValidatorIndex(ctx context.Context, publicKey []byte) error
+	SaveValidatorIndex(ctx context.Context, publicKey []byte, validatorIdx uint64) error
+	SaveValidatorIndices(ctx context.Context, publicKeys [][]byte, validatorIndices []uint64) error
 	// State related methods.
 	State(ctx context.Context, blockRoot [32]byte) (*ethereum_beacon_p2p_v1.BeaconState, error)
 	HeadState(ctx context.Context) (*ethereum_beacon_p2p_v1.BeaconState, error)
@@ -55,6 +56,7 @@ type Database interface {
 	SaveState(ctx context.Context, state *ethereum_beacon_p2p_v1.BeaconState, blockRoot [32]byte) error
 	DeleteState(ctx context.Context, blockRoot [32]byte) error
 	DeleteStates(ctx context.Context, blockRoots [][32]byte) error
+	HasState(ctx context.Context, blockRoot [32]byte) bool
 	// Slashing operations.
 	ProposerSlashing(ctx context.Context, slashingRoot [32]byte) (*eth.ProposerSlashing, error)
 	AttesterSlashing(ctx context.Context, slashingRoot [32]byte) (*eth.AttesterSlashing, error)

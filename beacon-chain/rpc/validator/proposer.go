@@ -36,7 +36,10 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	}
 
 	// Retrieve the parent block as the current head of the canonical chain.
-	parent := vs.HeadFetcher.HeadBlock()
+	parent, err := vs.BeaconDB.HeadBlock(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	parentRoot, err := ssz.HashTreeRoot(parent.Block)
 	if err != nil {
@@ -355,7 +358,11 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, slot 
 			break
 		}
 
-		if _, err := blocks.ProcessAttestation(ctx, bState, att); err != nil {
+		// TODO(4512): Until we align bls lib to latest IETF spec with `FastAggregateVerify`,
+		// we assume complete honest model and skip attestation's signature verification before
+		// including in block. We do verify everything about the attestation and just not
+		// its signature.
+		if _, err := blocks.ProcessAttestationNoVerify(ctx, bState, att); err != nil {
 			inValidAtts = append(inValidAtts, att)
 			continue
 

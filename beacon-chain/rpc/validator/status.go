@@ -9,7 +9,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -141,7 +140,7 @@ func (vs *Server) retrieveStatusFromState(
 	if headState == nil {
 		return ethpb.ValidatorStatus(0), 0, errors.New("head state does not exist")
 	}
-	idx, ok, err := vs.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
+	idx, ok, err := vs.BeaconDB.ValidatorIndex(ctx, pubKey)
 	if err != nil {
 		return ethpb.ValidatorStatus(0), 0, err
 	}
@@ -176,7 +175,7 @@ func (vs *Server) assignmentStatus(validatorIdx uint64, beaconState *pbp2p.Beaco
 	return status
 }
 
-func (vs *Server) depositBlockSlot(ctx context.Context, eth1BlockNumBigInt *big.Int, beaconState *pbp2p.BeaconState, ) (uint64, error) {
+func (vs *Server) depositBlockSlot(ctx context.Context, eth1BlockNumBigInt *big.Int, beaconState *pbp2p.BeaconState) (uint64, error) {
 	blockTimeStamp, err := vs.BlockFetcher.BlockTimeByHeight(ctx, eth1BlockNumBigInt)
 	if err != nil {
 		return 0, err

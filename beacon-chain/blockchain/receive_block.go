@@ -85,19 +85,22 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 	if err != nil {
 		return errors.Wrap(err, "could not get head from fork choice service")
 	}
-	signedHeadBlock, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
-	if err != nil {
-		return errors.Wrap(err, "could not compute state from block head")
-	}
-	if signedHeadBlock == nil || signedHeadBlock.Block == nil {
-		return errors.New("nil head block")
-	}
 
 	// Only save head if it's different than the current head.
 	if !bytes.Equal(headRoot, s.HeadRoot()) {
+		signedHeadBlock, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
+		if err != nil {
+			return errors.Wrap(err, "could not compute state from block head")
+		}
+		if signedHeadBlock == nil || signedHeadBlock.Block == nil {
+			return errors.New("nil head block")
+		}
+
 		if err := s.saveHead(ctx, signedHeadBlock, bytesutil.ToBytes32(headRoot)); err != nil {
 			return errors.Wrap(err, "could not save head")
 		}
+
+		isCompetingBlock(root[:], blockCopy.Block.Slot, headRoot, signedHeadBlock.Block.Slot)
 	}
 
 	// Send notification of the processed block to the state feed.
@@ -117,9 +120,6 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 
 	// Reports on block and fork choice metrics.
 	s.reportSlotMetrics(blockCopy.Block.Slot)
-
-	// Log if block is a competing block.
-	isCompetingBlock(root[:], blockCopy.Block.Slot, headRoot, signedHeadBlock.Block.Slot)
 
 	// Log state transition data.
 	logStateTransitionData(blockCopy.Block)

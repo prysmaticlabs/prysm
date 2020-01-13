@@ -11,11 +11,13 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/stateutil"
 )
 
@@ -137,6 +139,7 @@ func TestStore_AncestorNotPartOfTheChain(t *testing.T) {
 }
 
 func TestStore_LatestAttestingBalance(t *testing.T) {
+	helpers.ClearCache()
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
@@ -153,7 +156,7 @@ func TestStore_LatestAttestingBalance(t *testing.T) {
 		validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
 	}
 
-	s := &pb.BeaconState{Validators: validators}
+	s := &pb.BeaconState{Validators: validators, RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
 	stateRoot, err := stateutil.HashTreeRootState(s)
 	if err != nil {
 		t.Fatal(err)
@@ -243,6 +246,7 @@ func TestStore_ChildrenBlocksFromParentRoot(t *testing.T) {
 }
 
 func TestStore_GetHead(t *testing.T) {
+	helpers.ClearCache()
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
@@ -259,7 +263,7 @@ func TestStore_GetHead(t *testing.T) {
 		validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
 	}
 
-	s := &pb.BeaconState{Validators: validators}
+	s := &pb.BeaconState{Validators: validators, RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
 	stateRoot, err := stateutil.HashTreeRootState(s)
 	if err != nil {
 		t.Fatal(err)

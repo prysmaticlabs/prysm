@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -74,8 +76,18 @@ func (s *Service) processAttestation() {
 			ctx := context.Background()
 			atts := s.attPool.ForkchoiceAttestations()
 			for _, a := range atts {
+				hasState := s.beaconDB.HasState(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
+				hasBlock := s.beaconDB.HasBlock(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
+				if !(hasState && hasBlock) {
+					continue
+				}
+
 				if err := s.attPool.DeleteForkchoiceAttestation(a); err != nil {
 					log.WithError(err).Error("Could not delete fork choice attestation in pool")
+				}
+
+				if !s.verifyCheckpointEpoch(a.Data.Target) {
+					continue
 				}
 
 				if err := s.ReceiveAttestationNoPubsub(ctx, a); err != nil {
@@ -86,4 +98,24 @@ func (s *Service) processAttestation() {
 			}
 		}
 	}
+}
+
+// This verifies the epoch of input checkpoint is within current epoch and previous epoch
+// with respect to current time. Returns true if it's within, false if it's not.
+func (s *Service) verifyCheckpointEpoch(c *ethpb.Checkpoint) bool {
+	now := uint64(time.Now().Unix())
+	genesisTime := uint64(s.genesisTime.Unix())
+	currentSlot := (now - genesisTime) / params.BeaconConfig().SecondsPerSlot
+	currentEpoch := helpers.SlotToEpoch(currentSlot)
+
+	var prevEpoch uint64
+	if currentEpoch > 1 {
+		prevEpoch = currentEpoch - 1
+	}
+
+	if c.Epoch != prevEpoch && c.Epoch != currentEpoch {
+		return false
+	}
+
+	return true
 }
