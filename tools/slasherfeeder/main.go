@@ -30,7 +30,7 @@ import (
 
 var (
 	// Required fields
-	datadir = flag.String("datadir", "/Users/shayzluf/Library/Eth2/beaconchaindata/", "Path to data directory.")
+	datadir = flag.String("datadir", "/Users/shayzluf/data/beaconchaindata", "Path to data directory.")
 )
 
 // sortableAttestations implements the Sort interface to sort attestations
