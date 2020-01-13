@@ -1494,7 +1494,7 @@ func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 	}
 }
 
-func BenchmarkServer_ListValidatorBalances(b *testing.B) {
+func BenchmarkListValidatorBalances(b *testing.B) {
 	b.StopTimer()
 	db := dbTest.SetupDB(b)
 	defer dbTest.TeardownDB(b, db)
@@ -1523,7 +1523,7 @@ func BenchmarkServer_ListValidatorBalances(b *testing.B) {
 	}
 }
 
-func BenchmarkServer_ListValidatorBalances_FromArchive(b *testing.B) {
+func BenchmarkListValidatorBalances_FromArchive(b *testing.B) {
 	b.StopTimer()
 	db := dbTest.SetupDB(b)
 	defer dbTest.TeardownDB(b, db)
