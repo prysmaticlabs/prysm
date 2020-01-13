@@ -51,7 +51,7 @@ type ReadOnlyDatabase interface {
 	ArchivedValidatorParticipation(ctx context.Context, epoch uint64) (*eth.ValidatorParticipation, error)
 	// Deposit contract related handlers.
 	DepositContractAddress(ctx context.Context) ([]byte, error)
-	//Powchain operations
+	// Powchain operations.
 	PowchainData(ctx context.Context) (*db.ETH1ChainData, error)
 }
 
@@ -96,7 +96,7 @@ type NoHeadAccessDatabase interface {
 	SaveArchivedValidatorParticipation(ctx context.Context, epoch uint64, part *eth.ValidatorParticipation) error
 	// Deposit contract related handlers.
 	SaveDepositContractAddress(ctx context.Context, addr common.Address) error
-	//Powchain operations
+	// Powchain operations.
 	SavePowchainData(ctx context.Context, data *db.ETH1ChainData) error
 }
 
