@@ -32,16 +32,18 @@ type ValidatorService struct {
 	dataDir              string
 	keyManager           keymanager.KeyManager
 	logValidatorBalances bool
+	maxCallRecvMsgSize   int
 }
 
 // Config for the validator service.
 type Config struct {
-	Endpoint             string
-	DataDir              string
-	CertFlag             string
-	GraffitiFlag         string
-	KeyManager           keymanager.KeyManager
-	LogValidatorBalances bool
+	Endpoint                   string
+	DataDir                    string
+	CertFlag                   string
+	GraffitiFlag               string
+	KeyManager                 keymanager.KeyManager
+	LogValidatorBalances       bool
+	GrpcMaxCallRecvMsgSizeFlag int
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -57,6 +59,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		graffiti:             []byte(cfg.GraffitiFlag),
 		keyManager:           cfg.KeyManager,
 		logValidatorBalances: cfg.LogValidatorBalances,
+		maxCallRecvMsgSize:   cfg.GrpcMaxCallRecvMsgSizeFlag,
 	}, nil
 }
 
@@ -64,6 +67,8 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 // client.
 func (v *ValidatorService) Start() {
 	var dialOpt grpc.DialOption
+	var maxCallRecvMsgSize int
+
 	if v.withCert != "" {
 		creds, err := credentials.NewClientTLSFromFile(v.withCert, "")
 		if err != nil {
@@ -75,10 +80,17 @@ func (v *ValidatorService) Start() {
 		dialOpt = grpc.WithInsecure()
 		log.Warn("You are using an insecure gRPC connection! Please provide a certificate and key to use a secure connection.")
 	}
+
+	if v.maxCallRecvMsgSize != 0 {
+		maxCallRecvMsgSize = v.maxCallRecvMsgSize
+	} else {
+		maxCallRecvMsgSize = 10 * 5 << 20 // Default 50Mb
+	}
+
 	opts := []grpc.DialOption{
 		dialOpt,
 		grpc.WithDefaultCallOptions(
-			grpc.MaxCallRecvMsgSize(10 * 5 << 20), // 10Mb
+			grpc.MaxCallRecvMsgSize(maxCallRecvMsgSize),
 		),
 		grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),
 		grpc.WithStreamInterceptor(middleware.ChainStreamClient(
