@@ -53,7 +53,7 @@ func (db *Store) AttesterSlashings(status SlashingStatus) ([]*ethpb.AttesterSlas
 	return toAttesterSlashings(encoded)
 }
 
-// DeleteAttesterSlashingWithStatus deletes a slashing proof using the slashing status and slashing proof.
+// DeleteAttesterSlashing deletes a slashing proof from db.
 func (db *Store) DeleteAttesterSlashing(attesterSlashing *ethpb.AttesterSlashing) error {
 	root, err := hashutil.HashProto(attesterSlashing)
 	if err != nil {

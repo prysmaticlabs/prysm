@@ -113,17 +113,15 @@ func (db *Store) DeleteProposerSlashing(slashing *ethpb.ProposerSlashing) error 
 		return errors.Wrap(err, "failed to get hash root of proposerSlashing")
 	}
 	err = db.update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(slashingBucket)
-		err = b.ForEach(func(k, v []byte) error {
-			if bytes.HasSuffix(k, root[:]) {
-				err = b.Delete(k)
-				if err != nil {
-					return err
-				}
-			}
-			return nil
-		})
-		return err
+		bucket := tx.Bucket(slashingBucket)
+		k := encodeTypeRoot(SlashingType(Proposal), root)
+		if err != nil {
+			return errors.Wrap(err, "failed to get key for for attester slashing.")
+		}
+		if err := bucket.Delete(k); err != nil {
+			return errors.Wrap(err, "failed to delete the slashing proof from slashing bucket")
+		}
+		return nil
 	})
 	return err
 }
