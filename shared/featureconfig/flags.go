@@ -74,6 +74,10 @@ var (
 		Usage: "Cache filtered block tree by maintaining it rather than continually recalculating on the fly, " +
 			"this is used for fork choice.",
 	}
+	cacheProposerIndices = cli.BoolFlag{
+		Name: "cache-proposer-indices",
+		Usage: "Cache proposer indices on per epoch basis.",
+	}
 )
 
 // Deprecated flags list.
@@ -198,4 +202,5 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	saveDepositData,
 	enableSlasherFlag,
 	cacheFilteredBlockTree,
+	cacheProposerIndices,
 }...)
