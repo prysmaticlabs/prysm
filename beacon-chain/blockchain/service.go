@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -37,7 +38,7 @@ import (
 type Service struct {
 	ctx                    context.Context
 	cancel                 context.CancelFunc
-	beaconDB               db.Database
+	beaconDB               db.HeadAccessDatabase
 	depositCache           *depositcache.DepositCache
 	chainStartFetcher      powchain.ChainStartFetcher
 	attPool                attestations.Pool
@@ -60,7 +61,7 @@ type Service struct {
 type Config struct {
 	BeaconBlockBuf    int
 	ChainStartFetcher powchain.ChainStartFetcher
-	BeaconDB          db.Database
+	BeaconDB          db.HeadAccessDatabase
 	DepositCache      *depositcache.DepositCache
 	AttPool           attestations.Pool
 	P2p               p2p.Broadcaster
@@ -248,7 +249,7 @@ func (s *Service) saveHead(ctx context.Context, signed *ethpb.SignedBeaconBlock,
 	if err := s.beaconDB.SaveHeadBlockRoot(ctx, r); err != nil {
 		return errors.Wrap(err, "could not save head root in DB")
 	}
-	s.headBlock = signed
+	s.headBlock = proto.Clone(signed).(*ethpb.SignedBeaconBlock)
 
 	headState, err := s.beaconDB.State(ctx, r)
 	if err != nil {
@@ -274,7 +275,7 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 
 	s.canonicalRoots[b.Block.Slot] = r[:]
 
-	s.headBlock = b
+	s.headBlock = proto.Clone(b).(*ethpb.SignedBeaconBlock)
 
 	headState, err := s.beaconDB.State(ctx, r)
 	if err != nil {
