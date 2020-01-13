@@ -3,12 +3,11 @@ package db
 import (
 	"bytes"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 func createAttesterSlashing(enc []byte) (*ethpb.AttesterSlashing, error) {
@@ -71,7 +70,7 @@ func (db *Store) DeleteAttesterSlashing(attesterSlashing *ethpb.AttesterSlashing
 	})
 }
 
-// HasAttesterSlashing returns the slashing key if it is found in db.
+// HasAttesterSlashing returns true and slashing status if slashing is found in db.
 func (db *Store) HasAttesterSlashing(slashing *ethpb.AttesterSlashing) (bool, SlashingStatus, error) {
 	root, err := hashutil.HashProto(slashing)
 	var status SlashingStatus

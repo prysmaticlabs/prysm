@@ -3,12 +3,11 @@ package db
 import (
 	"bytes"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 // SlashingStatus enum like structure.
