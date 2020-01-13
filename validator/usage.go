@@ -81,6 +81,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.DisablePenaltyRewardLogFlag,
 			flags.UnencryptedKeysFlag,
 			flags.GraffitiFlag,
+			flags.GrpcMaxCallRecvMsgSizeFlag,
 		},
 	},
 	{
