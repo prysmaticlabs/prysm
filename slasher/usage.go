@@ -72,6 +72,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.CertFlag,
 			flags.KeyFlag,
 			flags.RPCPort,
+			flags.UseSpanCacheFlag,
 		},
 	},
 }
