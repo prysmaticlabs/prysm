@@ -99,7 +99,7 @@ func TestSubmitAggregateAndProof_IsAggregator(t *testing.T) {
 	sig := priv.Sign([]byte{'A'}, 0)
 	pubKey := pubKey(1)
 	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
-	if err := aggregatorServer.BeaconDB.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
+	if err := db.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
 		t.Fatal(err)
 	}
 
@@ -137,7 +137,7 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 	sig := priv.Sign([]byte{'B'}, 0)
 	pubKey := pubKey(2)
 	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
-	if err := aggregatorServer.BeaconDB.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
+	if err := db.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
 		t.Fatal(err)
 	}
 
@@ -190,7 +190,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	sig := priv.Sign([]byte{'B'}, 0)
 	pubKey := pubKey(2)
 	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
-	if err := aggregatorServer.BeaconDB.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
+	if err := db.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
 		t.Fatal(err)
 	}
 

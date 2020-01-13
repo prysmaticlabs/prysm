@@ -173,12 +173,3 @@ func TestCurrentFork_CanRetrieve(t *testing.T) {
 	}
 }
 
-func TestCanonicalRoot_CanRetrieve(t *testing.T) {
-	c := &Service{canonicalRoots: make(map[uint64][]byte)}
-	slot := uint64(123)
-	r := []byte{'B'}
-	c.canonicalRoots[slot] = r
-	if !bytes.Equal(r, c.CanonicalRoot(slot)) {
-		t.Errorf("Wanted head root: %v, got: %d", []byte{'A'}, c.CanonicalRoot(slot))
-	}
-}

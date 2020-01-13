@@ -68,7 +68,7 @@ func TestProposeBlock_OK(t *testing.T) {
 			Body:       &ethpb.BeaconBlockBody{},
 		},
 	}
-	if err := proposerServer.BeaconDB.SaveBlock(ctx, req); err != nil {
+	if err := db.SaveBlock(ctx, req); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := proposerServer.ProposeBlock(context.Background(), req); err != nil {
