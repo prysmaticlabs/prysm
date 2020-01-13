@@ -324,11 +324,12 @@ func (p *Status) Decay() {
 // their finalized epoch at the time we queried them.
 // Returns the best finalized root, epoch number, and list of peers that are at or beyond that epoch.
 func (p *Status) BestFinalized(maxPeers int, ourFinalizedEpoch uint64) ([]byte, uint64, []peer.ID) {
+	connected := p.Connected()
 	finalized := make(map[[32]byte]uint64)
 	rootToEpoch := make(map[[32]byte]uint64)
 	pidEpochs := make(map[peer.ID]uint64)
-	potentialPIDs := make([]peer.ID, 0)
-	for _, pid := range p.Connected() {
+	potentialPIDs := make([]peer.ID, 0, len(connected))
+	for _, pid := range connected {
 		peerChainState, err := p.ChainState(pid)
 		if err == nil && peerChainState != nil && peerChainState.FinalizedEpoch >= ourFinalizedEpoch {
 			root := bytesutil.ToBytes32(peerChainState.FinalizedRoot)
