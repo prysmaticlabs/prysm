@@ -51,7 +51,14 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	attSlot := m.Aggregate.Data.Slot
 
 	// Verify aggregate attestation has not already been seen via aggregate gossip, within a block, or through the creation locally.
-	// TODO(3835): Blocked by operation pool redesign
+	seen, err := r.attPool.HasAggregatedAttestation(m.Aggregate)
+	if err != nil {
+		traceutil.AnnotateError(span, err)
+		return false
+	}
+	if seen {
+		return false
+	}
 
 	// Verify the block being voted for passes validation. The block should have passed validation if it's in the DB.
 	if !r.db.HasBlock(ctx, bytesutil.ToBytes32(m.Aggregate.Data.BeaconBlockRoot)) {
@@ -72,7 +79,8 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 
-	if attSlot > s.Slot {
+	// Only advance state if different epoch as the committee can only change on an epoch transition.
+	if helpers.SlotToEpoch(attSlot) > helpers.SlotToEpoch(s.Slot) {
 		s, err = state.ProcessSlots(ctx, s, attSlot)
 		if err != nil {
 			traceutil.AnnotateError(span, err)

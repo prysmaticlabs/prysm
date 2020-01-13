@@ -11,6 +11,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -30,6 +31,7 @@ type Config struct {
 }
 
 func TestGetHeadFromYaml(t *testing.T) {
+	helpers.ClearCache()
 	ctx := context.Background()
 	filename, _ := filepath.Abs("./lmd_ghost_test.yaml")
 	yamlFile, err := ioutil.ReadFile(filename)
@@ -104,7 +106,7 @@ func TestGetHeadFromYaml(t *testing.T) {
 			validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
 		}
 
-		s := &pb.BeaconState{Validators: validators}
+		s := &pb.BeaconState{Validators: validators, RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
 
 		if err := store.db.SaveState(ctx, s, bytesutil.ToBytes32(blksRoot[0])); err != nil {
 			t.Fatal(err)

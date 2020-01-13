@@ -176,7 +176,7 @@ func TestChainStartStop_Uninitialized(t *testing.T) {
 		t.Error("Context was not canceled")
 	}
 	testutil.AssertLogsContain(t, hook, "Waiting")
-	testutil.AssertLogsContain(t, hook, "Genesis time reached")
+	testutil.AssertLogsContain(t, hook, "Initialized beacon chain genesis state")
 }
 
 func TestChainStartStop_Initialized(t *testing.T) {
@@ -259,7 +259,7 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 	}
 
 	for _, v := range s.Validators {
-		if !db.HasValidatorIndex(ctx, bytesutil.ToBytes48(v.PublicKey)) {
+		if !db.HasValidatorIndex(ctx, v.PublicKey) {
 			t.Errorf("Validator %s missing from db", hex.EncodeToString(v.PublicKey))
 		}
 	}

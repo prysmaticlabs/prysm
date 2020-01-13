@@ -87,17 +87,17 @@ func (e Exporter) DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error
 }
 
 // ValidatorIndex -- passthrough.
-func (e Exporter) ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, bool, error) {
+func (e Exporter) ValidatorIndex(ctx context.Context, publicKey []byte) (uint64, bool, error) {
 	return e.db.ValidatorIndex(ctx, publicKey)
 }
 
 // HasValidatorIndex -- passthrough.
-func (e Exporter) HasValidatorIndex(ctx context.Context, publicKey [48]byte) bool {
+func (e Exporter) HasValidatorIndex(ctx context.Context, publicKey []byte) bool {
 	return e.db.HasValidatorIndex(ctx, publicKey)
 }
 
 // DeleteValidatorIndex -- passthrough.
-func (e Exporter) DeleteValidatorIndex(ctx context.Context, publicKey [48]byte) error {
+func (e Exporter) DeleteValidatorIndex(ctx context.Context, publicKey []byte) error {
 	return e.db.DeleteValidatorIndex(ctx, publicKey)
 }
 
@@ -212,8 +212,13 @@ func (e Exporter) SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) 
 }
 
 // SaveValidatorIndex -- passthrough.
-func (e Exporter) SaveValidatorIndex(ctx context.Context, publicKey [48]byte, validatorIdx uint64) error {
+func (e Exporter) SaveValidatorIndex(ctx context.Context, publicKey []byte, validatorIdx uint64) error {
 	return e.db.SaveValidatorIndex(ctx, publicKey, validatorIdx)
+}
+
+// SaveValidatorIndices -- passthrough.
+func (e Exporter) SaveValidatorIndices(ctx context.Context, publicKeys [][]byte, validatorIndices []uint64) error {
+	return e.db.SaveValidatorIndices(ctx, publicKeys, validatorIndices)
 }
 
 // SaveState -- passthrough.
@@ -279,6 +284,11 @@ func (e Exporter) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 // DeleteStates -- passthrough.
 func (e Exporter) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 	return e.db.DeleteStates(ctx, blockRoots)
+}
+
+// HasState -- passthrough.
+func (e Exporter) HasState(ctx context.Context, blockRoot [32]byte) bool {
+	return e.db.HasState(ctx, blockRoot)
 }
 
 // IsFinalizedBlock -- passthrough.

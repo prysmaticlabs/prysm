@@ -1050,7 +1050,7 @@ func TestFilterAttestation_OK(t *testing.T) {
 		aggBits.SetBitAt(0, true)
 		atts[i] = &ethpb.Attestation{Data: &ethpb.AttestationData{
 			CommitteeIndex: uint64(i),
-			Target:         &ethpb.Checkpoint{},
+			Target:         &ethpb.Checkpoint{Epoch: 1},
 			Source:         &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}},
 			AggregationBits: aggBits,
 		}
@@ -1075,7 +1075,7 @@ func TestFilterAttestation_OK(t *testing.T) {
 		}
 		atts[i].Signature = bls.AggregateSignatures(sigs).Marshal()[:]
 	}
-
+	atts[0].Data.Target.Epoch = 0
 	received, err = proposerServer.filterAttestationsForBlockInclusion(context.Background(), 1, atts)
 	if err != nil {
 		t.Fatal(err)
@@ -1277,8 +1277,8 @@ func TestDeleteAttsInPool_Aggregated(t *testing.T) {
 		AttPool: attestations.NewPool(),
 	}
 
-	aggregatedAtts := []*ethpb.Attestation{{AggregationBits: bitfield.Bitlist{0b01101}}, {AggregationBits: bitfield.Bitlist{0b0111}}}
-	unaggregatedAtts := []*ethpb.Attestation{{AggregationBits: bitfield.Bitlist{0b001}}, {AggregationBits: bitfield.Bitlist{0b0001}}}
+	aggregatedAtts := []*ethpb.Attestation{{AggregationBits: bitfield.Bitlist{0b10101}}, {AggregationBits: bitfield.Bitlist{0b11010}}}
+	unaggregatedAtts := []*ethpb.Attestation{{AggregationBits: bitfield.Bitlist{0b1001}}, {AggregationBits: bitfield.Bitlist{0b0001}}}
 
 	if err := s.AttPool.SaveAggregatedAttestations(aggregatedAtts); err != nil {
 		t.Fatal(err)
