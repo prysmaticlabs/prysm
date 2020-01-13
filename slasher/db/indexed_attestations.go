@@ -68,6 +68,42 @@ func (db *Store) IndexedAttestation(targetEpoch uint64, validatorID uint64) ([]*
 	return iAtt, err
 }
 
+// IndexedAttestations accepts a target epoch and returns a list of
+// indexed attestations.
+// Returns nil if the indexed attestation does not exist with that target epoch.
+func (db *Store) IndexedAttestations(targetEpoch uint64) ([]*ethpb.IndexedAttestation, error) {
+	var iAtt []*ethpb.IndexedAttestation
+	key := bytesutil.Bytes8(targetEpoch)
+	err := db.view(func(tx *bolt.Tx) error {
+		c := tx.Bucket(historicIndexedAttestationsBucket).Cursor()
+		for k, enc := c.Seek(key); k != nil && bytes.Equal(k[:8], key); k, _ = c.Next() {
+			iA, err := createIndexedAttestation(enc)
+			if err != nil {
+				return err
+			}
+			iAtt = append(iAtt, iA)
+		}
+		return nil
+	})
+	return iAtt, err
+}
+
+// LatestIndexedAttestationsTargetEpoch returns latest target epoch in db
+// returns 0 if there is no indexed attestations in db.
+func (db *Store) LatestIndexedAttestationsTargetEpoch() (uint64, error) {
+	var lt uint64
+	err := db.view(func(tx *bolt.Tx) error {
+		c := tx.Bucket(historicIndexedAttestationsBucket).Cursor()
+		k, _ := c.Last()
+		if k == nil {
+			return nil
+		}
+		lt = bytesutil.FromBytes8(k[:8])
+		return nil
+	})
+	return lt, err
+}
+
 // DoubleVotes looks up db for slashable attesting data that were preformed by the same validator.
 func (db *Store) DoubleVotes(targetEpoch uint64, validatorIdx uint64, dataRoot []byte, origAtt *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error) {
 	idxAttestations, err := db.IndexedAttestation(targetEpoch, validatorIdx)

@@ -12,6 +12,8 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/prysmaticlabs/prysm/slasher/flags"
+
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -161,7 +163,9 @@ func (s *Service) startSlasher() {
 	slasherServer := rpc.Server{
 		SlasherDB: s.slasherDb,
 	}
-
+	if s.ctx.GlobalBool(flags.UseSpanCacheFlag.Name) {
+		s.loadSpanMaps(err, slasherServer)
+	}
 	slashpb.RegisterSlasherServer(s.grpcServer, &slasherServer)
 
 	// Register reflection service on gRPC server.
@@ -174,6 +178,25 @@ func (s *Service) startSlasher() {
 			}
 		}
 	}()
+}
+
+func (s *Service) loadSpanMaps(err error, slasherServer rpc.Server) {
+	lt, err := slasherServer.SlasherDB.LatestIndexedAttestationsTargetEpoch()
+	if err != nil {
+		log.Errorf("Could not extract latest target epoch from indexed attestations store:%v", err)
+	}
+	for i := uint64(0); i < lt; i++ {
+		ias, err := slasherServer.SlasherDB.IndexedAttestations(i)
+		if err != nil {
+			log.Errorf("Got error while trying to retrieve indexed attestations from db:%v", err)
+		}
+		for _, ia := range ias {
+			slasherServer.UpdateSpanMaps(s.context, ia)
+		}
+		if i%5 == 0 {
+			log.Infof("update span maps for epoch: %d", i)
+		}
+	}
 }
 
 func (s *Service) startBeaconClient() {
