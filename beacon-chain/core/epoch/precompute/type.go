@@ -29,7 +29,7 @@ type Validator struct {
 	InclusionSlot uint64
 	// InclusionDistance is the distance between the assigned slot and this validator's attestation was included in block.
 	InclusionDistance uint64
-	// ProposerIndices is the index of proposer at slot where this validator's attestation was included.
+	// ProposerIndex is the index of proposer at slot where this validator's attestation was included.
 	ProposerIndex uint64
 }
 

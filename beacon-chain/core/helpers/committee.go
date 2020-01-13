@@ -427,6 +427,8 @@ func UpdateCommitteeCache(state *pb.BeaconState, epoch uint64) error {
 
 		var proposerIndices []uint64
 		if featureconfig.Get().EnableProposerIndexCache {
+			// Given we can not pre-compute proposer indices of the next epoch, this limits
+			// proposer indices calculation to only the current epoch.
 			if e == epoch {
 				proposerIndices, err = precomputeProposerIndices(state, sortedIndices)
 				if err != nil {
