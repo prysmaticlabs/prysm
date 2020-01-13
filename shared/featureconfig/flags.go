@@ -69,6 +69,11 @@ var (
 			"triggered the genesis as the genesis time. This flag should be used for local " +
 			"development and testing only.",
 	}
+	cacheFilteredBlockTree = cli.BoolFlag{
+		Name: "cache-filtered-block-tree",
+		Usage: "Cache filtered block tree by maintaining it rather than continually recalculating on the fly, " +
+			"this is used for fork choice.",
+	}
 )
 
 // Deprecated flags list.
@@ -192,4 +197,5 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableSkipSlotsCache,
 	saveDepositData,
 	enableSlasherFlag,
+	cacheFilteredBlockTree,
 }...)
