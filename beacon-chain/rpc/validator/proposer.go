@@ -350,11 +350,7 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, slot 
 			break
 		}
 
-		// TODO(4512): Until we align bls lib to latest IETF spec with `FastAggregateVerify`,
-		// we assume complete honest model and skip attestation's signature verification before
-		// including in block. We do verify everything about the attestation and just not
-		// its signature.
-		if _, err := blocks.ProcessAttestationNoVerify(ctx, bState, att); err != nil {
+		if _, err := blocks.ProcessAttestation(ctx, bState, att); err != nil {
 			inValidAtts = append(inValidAtts, att)
 			continue
 
