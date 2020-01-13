@@ -19,7 +19,7 @@ var _ = shared.Service(&Service{})
 // Config to set up the regular sync service.
 type Config struct {
 	P2P           p2p.P2P
-	DB            db.Database
+	DB            db.NoHeadAccessDatabase
 	AttPool       attestations.Pool
 	Chain         blockchainService
 	InitialSync   Checker
@@ -64,7 +64,7 @@ type Service struct {
 	ctx                 context.Context
 	cancel              context.CancelFunc
 	p2p                 p2p.P2P
-	db                  db.Database
+	db                  db.NoHeadAccessDatabase
 	attPool             attestations.Pool
 	chain               blockchainService
 	slotToPendingBlocks map[uint64]*ethpb.SignedBeaconBlock

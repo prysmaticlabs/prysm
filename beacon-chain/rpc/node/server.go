@@ -24,7 +24,7 @@ import (
 type Server struct {
 	SyncChecker        sync.Checker
 	Server             *grpc.Server
-	BeaconDB           db.Database
+	BeaconDB           db.ReadOnlyDatabase
 	PeersFetcher       p2p.PeersProvider
 	GenesisTimeFetcher blockchain.GenesisTimeFetcher
 }
