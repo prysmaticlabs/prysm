@@ -25,7 +25,7 @@ func init() {
 
 // Server defines a server implementation of the gRPC aggregator service.
 type Server struct {
-	BeaconDB    db.Database
+	BeaconDB    db.ReadOnlyDatabase
 	HeadFetcher blockchain.HeadFetcher
 	SyncChecker sync.Checker
 	AttPool     attestations.Pool
