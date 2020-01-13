@@ -39,6 +39,7 @@ type Committees struct {
 	Seed            [32]byte
 	ShuffledIndices []uint64
 	SortedIndices   []uint64
+	ProposerIndices []uint64
 }
 
 // CommitteeCache is a struct with 1 queue for looking up shuffled indices list by seed.
@@ -138,6 +139,30 @@ func (c *CommitteeCache) ActiveIndices(seed [32]byte) ([]uint64, error) {
 	}
 
 	return item.SortedIndices, nil
+}
+
+// ProposerIndices returns the proposer indices of a given seed.
+func (c *CommitteeCache) ProposerIndices(seed [32]byte) ([]uint64, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	obj, exists, err := c.CommitteeCache.GetByKey(key(seed))
+	if err != nil {
+		return nil, err
+	}
+
+	if exists {
+		CommitteeCacheHit.Inc()
+	} else {
+		CommitteeCacheMiss.Inc()
+		return nil, nil
+	}
+
+	item, ok := obj.(*Committees)
+	if !ok {
+		return nil, ErrNotCommittee
+	}
+
+	return item.ProposerIndices, nil
 }
 
 func startEndIndices(c *Committees, index uint64) (uint64, uint64) {

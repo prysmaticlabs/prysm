@@ -139,8 +139,19 @@ func ValidatorChurnLimit(activeValidatorCount uint64) (uint64, error) {
 //    return compute_proposer_index(state, indices, seed)
 func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 	e := CurrentEpoch(state)
+	seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not generate seed")
+	}
+	proposerIndices, err := committeeCache.ProposerIndices(seed)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not interface with committee cache")
+	}
+	if proposerIndices != nil {
+		return proposerIndices[state.Slot], nil
+	}
 
-	seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconProposer)
+	seed, err = Seed(state, e, params.BeaconConfig().DomainBeaconProposer)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not generate seed")
 	}
@@ -151,6 +162,10 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 	indices, err := ActiveValidatorIndices(state, e)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not get active indices")
+	}
+
+	if err := UpdateCommitteeCache(state, CurrentEpoch(state)); err != nil {
+		return 0, errors.Wrap(err, "could not update committee cache")
 	}
 
 	return ComputeProposerIndex(state.Validators, indices, seedWithSlotHash)

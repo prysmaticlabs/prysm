@@ -10,6 +10,8 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
@@ -400,15 +402,15 @@ func ShuffledIndices(state *pb.BeaconState, epoch uint64) ([]uint64, error) {
 // UpdateCommitteeCache gets called at the beginning of every epoch to cache the committee shuffled indices
 // list with committee index and epoch number. It caches the shuffled indices for current epoch and next epoch.
 func UpdateCommitteeCache(state *pb.BeaconState, epoch uint64) error {
-	for _, epoch := range []uint64{epoch, epoch + 1} {
-		shuffledIndices, err := ShuffledIndices(state, epoch)
+	for _, e := range []uint64{epoch, epoch + 1} {
+		shuffledIndices, err := ShuffledIndices(state, e)
 		if err != nil {
 			return err
 		}
 
 		count := SlotCommitteeCount(uint64(len(shuffledIndices)))
 
-		seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
+		seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconAttester)
 		if err != nil {
 			return err
 		}
@@ -422,11 +424,20 @@ func UpdateCommitteeCache(state *pb.BeaconState, epoch uint64) error {
 			return sortedIndices[i] < sortedIndices[j]
 		})
 
+		var proposerIndices[]uint64
+		if e == epoch {
+			proposerIndices, err = precomputeProposerIndices(state, sortedIndices)
+			if err != nil {
+				return err
+			}
+		}
+
 		if err := committeeCache.AddCommitteeShuffledList(&cache.Committees{
 			ShuffledIndices: shuffledIndices,
 			CommitteeCount:  count * params.BeaconConfig().SlotsPerEpoch,
 			Seed:            seed,
 			SortedIndices:   sortedIndices,
+			ProposerIndices: proposerIndices,
 		}); err != nil {
 			return err
 		}
@@ -438,4 +449,26 @@ func UpdateCommitteeCache(state *pb.BeaconState, epoch uint64) error {
 // ClearCache clears the committee cache
 func ClearCache() {
 	committeeCache = cache.NewCommitteesCache()
+}
+
+func precomputeProposerIndices(state *pb.BeaconState, activeIndices []uint64) ([]uint64, error) {
+	proposerIndices := make([]uint64, params.BeaconConfig().SlotsPerEpoch)
+
+	e := CurrentEpoch(state)
+	seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not generate seed")
+	}
+
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+		seedWithSlot := append(seed[:], bytesutil.Bytes8(state.Slot + i)...)
+		seedWithSlotHash := hashutil.Hash(seedWithSlot)
+		index, err := ComputeProposerIndex(state.Validators, activeIndices, seedWithSlotHash)
+		if err != nil {
+			return nil, err
+		}
+		proposerIndices[i] = index
+	}
+
+	return proposerIndices, nil
 }
