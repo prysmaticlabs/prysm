@@ -1,8 +1,6 @@
 package blockchain
 
 import (
-	"context"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -63,13 +61,8 @@ func (s *Service) reportSlotMetrics(currentSlot uint64) {
 	beaconSlot.Set(float64(currentSlot))
 	beaconHeadSlot.Set(float64(s.HeadSlot()))
 	beaconHeadRoot.Set(float64(bytesutil.ToLowInt64(s.HeadRoot())))
-	fc, err := s.beaconDB.FinalizedCheckpoint(context.TODO())
-	if err != nil {
-		log.WithError(err).Error("Failed to fetch finalized checkpoint from database.")
-		return
-	}
-	if fc != nil {
-		headFinalizedEpoch.Set(float64(fc.Epoch))
-		headFinalizedRoot.Set(float64(bytesutil.ToLowInt64(fc.Root)))
+	if s.headState != nil {
+		headFinalizedEpoch.Set(float64(s.headState.FinalizedCheckpoint.Epoch))
+		headFinalizedRoot.Set(float64(bytesutil.ToLowInt64(s.headState.FinalizedCheckpoint.Root)))
 	}
 }

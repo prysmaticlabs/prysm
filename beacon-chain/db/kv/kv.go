@@ -12,7 +12,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 var _ = iface.Database(&Store{})
@@ -37,7 +36,6 @@ type Store struct {
 	databasePath        string
 	blockCache          *ristretto.Cache
 	validatorIndexCache *ristretto.Cache
-	headState           *pb.BeaconState
 }
 
 // NewKVStore initializes a new boltDB key-value store at the directory
