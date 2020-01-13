@@ -210,10 +210,8 @@ func (s *Service) initializeBeaconChain(
 	log.Info("Initialized beacon chain genesis state")
 
 	// Update committee shuffled indices for genesis epoch.
-	if featureconfig.Get().EnableNewCache {
-		if err := helpers.UpdateCommitteeCache(genesisState, 0 /* genesis epoch */); err != nil {
-			return err
-		}
+	if err := helpers.UpdateCommitteeCache(genesisState, 0 /* genesis epoch */); err != nil {
+		return err
 	}
 
 	return nil
@@ -293,12 +291,13 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 
 // This gets called when beacon chain is first initialized to save validator indices and pubkeys in db
 func (s *Service) saveGenesisValidators(ctx context.Context, state *pb.BeaconState) error {
+	pubkeys := make([][]byte, len(state.Validators))
+	indices := make([]uint64, len(state.Validators))
 	for i, v := range state.Validators {
-		if err := s.beaconDB.SaveValidatorIndex(ctx, v.PublicKey, uint64(i)); err != nil {
-			return errors.Wrapf(err, "could not save validator index: %d", i)
-		}
+		pubkeys[i] = v.PublicKey
+		indices[i] = uint64(i)
 	}
-	return nil
+	return s.beaconDB.SaveValidatorIndices(ctx, pubkeys, indices)
 }
 
 // This gets called when beacon chain is first initialized to save genesis data (state, block, and more) in db

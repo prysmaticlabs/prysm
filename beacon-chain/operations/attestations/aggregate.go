@@ -24,8 +24,8 @@ func (s *Service) aggregateRoutine() {
 		case <-s.ctx.Done():
 			return
 		case <-ticker.C:
-			unaggregatedAtts := s.pool.UnaggregatedAttestations()
-			if err := s.aggregateAttestations(ctx, unaggregatedAtts); err != nil {
+			attsToBeAggregated := append(s.pool.UnaggregatedAttestations(), s.pool.AggregatedAttestations()...)
+			if err := s.aggregateAttestations(ctx, attsToBeAggregated); err != nil {
 				log.WithError(err).Error("Could not aggregate attestation")
 			}
 		}
@@ -34,39 +34,34 @@ func (s *Service) aggregateRoutine() {
 
 // This aggregates the input attestations via AggregateAttestations helper
 // function.
-func (s *Service) aggregateAttestations(ctx context.Context, unaggregatedAtts []*ethpb.Attestation) error {
+func (s *Service) aggregateAttestations(ctx context.Context, attsToBeAggregated []*ethpb.Attestation) error {
 	ctx, span := trace.StartSpan(ctx, "Operations.attestations.aggregateAttestations")
 	defer span.End()
 
-	unaggregatedAttsByRoot := make(map[[32]byte][]*ethpb.Attestation)
+	attsByRoot := make(map[[32]byte][]*ethpb.Attestation)
 
-	for _, att := range unaggregatedAtts {
+	for _, att := range attsToBeAggregated {
 		attDataRoot, err := ssz.HashTreeRoot(att.Data)
 		if err != nil {
 			return err
 		}
-		unaggregatedAttsByRoot[attDataRoot] = append(unaggregatedAttsByRoot[attDataRoot], att)
+		attsByRoot[attDataRoot] = append(attsByRoot[attDataRoot], att)
 
-		if err := s.pool.DeleteUnaggregatedAttestation(att); err != nil {
-			return err
+		if !helpers.IsAggregated(att) {
+			if err := s.pool.DeleteUnaggregatedAttestation(att); err != nil {
+				return err
+			}
 		}
 	}
 
-	for _, atts := range unaggregatedAttsByRoot {
+	for _, atts := range attsByRoot {
 		aggregatedAtts, err := helpers.AggregateAttestations(atts)
 		if err != nil {
 			return err
 		}
 		for _, att := range aggregatedAtts {
-			// In case of aggregation bit overlaps or there's only one
-			// unaggregated att in pool. Not every attestations will
-			// be aggregated.
 			if helpers.IsAggregated(att) {
 				if err := s.pool.SaveAggregatedAttestation(att); err != nil {
-					return err
-				}
-			} else {
-				if err := s.pool.SaveUnaggregatedAttestation(att); err != nil {
 					return err
 				}
 			}

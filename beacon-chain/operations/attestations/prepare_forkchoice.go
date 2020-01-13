@@ -2,9 +2,11 @@ package attestations
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -44,6 +46,7 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 
 	atts := append(s.pool.UnaggregatedAttestations(), s.pool.AggregatedAttestations()...)
 	atts = append(atts, s.pool.BlockAttestations()...)
+	atts = append(atts, s.pool.ForkchoiceAttestations()...)
 
 	for _, att := range atts {
 		seen, err := s.seen(att)
@@ -94,13 +97,21 @@ func (s *Service) aggregateAndSaveForkChoiceAtts(atts []*ethpb.Attestation) erro
 // This checks if the attestation has previously been aggregated for fork choice
 // return true if yes, false if no.
 func (s *Service) seen(att *ethpb.Attestation) (bool, error) {
-	attRoot, err := hashutil.HashProto(att)
+	attRoot, err := hashutil.HashProto(att.Data)
 	if err != nil {
 		return false, err
 	}
-	if _, ok := s.forkChoiceProcessedRoots.Get(string(attRoot[:])); ok {
-		return true, nil
+	savedBits, ok := s.forkChoiceProcessedRoots.Get(string(attRoot[:]))
+	if ok {
+		savedBitlist, ok := savedBits.(bitfield.Bitlist)
+		if !ok {
+			return false, errors.New("not a bit field")
+		}
+		if savedBitlist.Overlaps(att.AggregationBits) {
+			return true, nil
+		}
 	}
-	s.forkChoiceProcessedRoots.Set(string(attRoot[:]), true /*value*/, 1 /*cost*/)
+
+	s.forkChoiceProcessedRoots.Set(string(attRoot[:]), att.AggregationBits, 1 /*cost*/)
 	return false, nil
 }

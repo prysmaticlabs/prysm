@@ -52,6 +52,8 @@ type Store struct {
 	initSyncState         map[[32]byte]*pb.BeaconState
 	initSyncStateLock     sync.RWMutex
 	nextEpochBoundarySlot uint64
+	filteredBlockTree     map[[32]byte]*ethpb.BeaconBlock
+	filteredBlockTreeLock   sync.RWMutex
 }
 
 // NewForkChoiceService instantiates a new service instance that will
@@ -262,9 +264,17 @@ func (s *Store) Head(ctx context.Context) ([]byte, error) {
 	defer span.End()
 
 	head := s.JustifiedCheckpt().Root
-	filteredBlocks, err := s.getFilterBlockTree(ctx)
-	if err != nil {
-		return nil, err
+	filteredBlocks := make(map[[32]byte]*ethpb.BeaconBlock)
+	var err error
+	if featureconfig.Get().EnableBlockTreeCache {
+		s.filteredBlockTreeLock.RLock()
+		filteredBlocks = s.filteredBlockTree
+		s.filteredBlockTreeLock.RUnlock()
+	} else {
+		filteredBlocks, err = s.getFilterBlockTree(ctx)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	justifiedSlot := helpers.StartSlot(s.justifiedCheckpt.Epoch)
@@ -366,6 +376,10 @@ func (s *Store) getFilterBlockTree(ctx context.Context) (map[[32]byte]*ethpb.Bea
 //    # Otherwise, branch not viable
 //    return False
 func (s *Store) filterBlockTree(ctx context.Context, blockRoot [32]byte, filteredBlocks map[[32]byte]*ethpb.BeaconBlock) (bool, error) {
+	if !s.db.HasState(ctx, blockRoot) {
+		return false, nil
+	}
+
 	ctx, span := trace.StartSpan(ctx, "forkchoice.filterBlockTree")
 	defer span.End()
 	signed, err := s.db.Block(ctx, blockRoot)
@@ -400,7 +414,6 @@ func (s *Store) filterBlockTree(ctx context.Context, blockRoot [32]byte, filtere
 		}
 		return false, nil
 	}
-
 
 	headState, err := s.db.State(ctx, blockRoot)
 	if err != nil {
