@@ -93,6 +93,16 @@ func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) er
 		return errors.Wrap(err, "could not save state")
 	}
 
+	if featureconfig.Get().EnableBlockTreeCache {
+		tree, err := s.getFilterBlockTree(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not calculate filtered block tree")
+		}
+		s.filteredBlockTreeLock.Lock()
+		s.filteredBlockTree = tree
+		s.filteredBlockTreeLock.Unlock()
+	}
+
 	// Update justified check point.
 	if postState.CurrentJustifiedCheckpoint.Epoch > s.justifiedCheckpt.Epoch {
 		if err := s.updateJustified(ctx, postState); err != nil {
@@ -135,10 +145,8 @@ func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) er
 		reportEpochMetrics(postState)
 
 		// Update committees cache at epoch boundary slot.
-		if featureconfig.Get().EnableNewCache {
-			if err := helpers.UpdateCommitteeCache(postState, helpers.CurrentEpoch(postState)); err != nil {
-				return err
-			}
+		if err := helpers.UpdateCommitteeCache(postState, helpers.CurrentEpoch(postState)); err != nil {
+			return err
 		}
 
 		s.nextEpochBoundarySlot = helpers.StartSlot(helpers.NextEpoch(postState))
