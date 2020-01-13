@@ -2,7 +2,10 @@ package rpc
 
 import (
 	"context"
+	"flag"
 	"testing"
+
+	"github.com/urfave/cli"
 
 	"github.com/gogo/protobuf/proto"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
@@ -192,7 +195,10 @@ func init() {
 }
 
 func TestServer_UpdateMaxEpochSpan(t *testing.T) {
-	dbs := db.SetupSlasherDB(t)
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	c := cli.NewContext(app, set, nil)
+	dbs := db.SetupSlasherDB(t, c)
 	defer db.TeardownSlasherDB(t, dbs)
 	ctx := context.Background()
 	slasherServer := &Server{
@@ -224,7 +230,10 @@ func TestServer_UpdateMaxEpochSpan(t *testing.T) {
 }
 
 func TestServer_UpdateMinEpochSpan(t *testing.T) {
-	dbs := db.SetupSlasherDB(t)
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	c := cli.NewContext(app, set, nil)
+	dbs := db.SetupSlasherDB(t, c)
 	defer db.TeardownSlasherDB(t, dbs)
 	ctx := context.Background()
 	slasherServer := &Server{
@@ -256,7 +265,10 @@ func TestServer_UpdateMinEpochSpan(t *testing.T) {
 }
 
 func TestServer_FailToUpdate(t *testing.T) {
-	dbs := db.SetupSlasherDB(t)
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	c := cli.NewContext(app, set, nil)
+	dbs := db.SetupSlasherDB(t, c)
 	defer db.TeardownSlasherDB(t, dbs)
 	ctx := context.Background()
 	slasherServer := &Server{
