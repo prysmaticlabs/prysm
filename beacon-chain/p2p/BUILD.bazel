@@ -80,6 +80,7 @@ go_test(
         "broadcaster_test.go",
         "dial_relay_node_test.go",
         "discovery_test.go",
+        "gossip_topic_mappings_test.go",
         "options_test.go",
         "parameter_test.go",
         "sender_test.go",
@@ -105,6 +106,7 @@ go_test(
         "@com_github_libp2p_go_libp2p_pubsub//:go_default_library",
         "@com_github_libp2p_go_libp2p_swarm//testing:go_default_library",
         "@com_github_multiformats_go_multiaddr//:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
     ],
 )

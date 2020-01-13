@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/node"
 	"github.com/sirupsen/logrus"
@@ -45,6 +46,8 @@ var appFlags = []cli.Flag{
 	flags.InteropNumValidators,
 	cmd.VerbosityFlag,
 	cmd.DataDirFlag,
+	cmd.ClearDB,
+	cmd.ForceClearDB,
 	cmd.EnableTracingFlag,
 	cmd.TracingProcessNameFlag,
 	cmd.TracingEndpointFlag,
@@ -102,7 +105,7 @@ contract in order to activate the validator client`,
 							}
 						}
 
-						if keystoreDir, _, err := node.CreateValidatorAccount(ctx); err != nil {
+						if keystoreDir, _, err := accounts.CreateValidatorAccount(ctx.String(flags.KeystorePathFlag.Name), ctx.String(flags.PasswordFlag.Name)); err != nil {
 							log.WithError(err).Fatalf("Could not create validator at path: %s", keystoreDir)
 						}
 					},

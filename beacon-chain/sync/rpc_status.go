@@ -36,14 +36,16 @@ func (r *Service) maintainPeerStatuses() {
 				}
 			}
 		}
-		if !r.initialSync.Syncing() {
-			_, highestEpoch, _ := r.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync)
+		// If our head slot is not in the latest epoch, check peers to determine if we need to
+		// resync with the network.
+		currentSlot := uint64(roughtime.Now().Unix()-r.chain.GenesisTime().Unix()) / params.BeaconConfig().SecondsPerSlot
+		for !r.initialSync.Syncing() && helpers.SlotToEpoch(r.chain.HeadSlot()) < helpers.SlotToEpoch(currentSlot) {
+			_, highestEpoch, _ := r.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(r.chain.HeadSlot()))
 			if helpers.StartSlot(highestEpoch) > r.chain.HeadSlot() {
 				numberOfTimesResyncedCounter.Inc()
 				r.clearPendingSlots()
-				// block until we can resync the node
 				if err := r.initialSync.Resync(); err != nil {
-					log.Errorf("Could not Resync Chain: %v", err)
+					log.Errorf("Could not resync chain: %v", err)
 				}
 			}
 		}
@@ -105,7 +107,7 @@ func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 	m := msg.(*pb.Status)
 
 	if err := r.validateStatusMessage(m, stream); err != nil {
-		log.WithField("peer", stream.Conn().RemotePeer()).Warn("Invalid fork version from peer")
+		log.WithField("peer", stream.Conn().RemotePeer()).Debug("Invalid fork version from peer")
 		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
 		originalErr := err
 		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, err.Error())
@@ -113,7 +115,8 @@ func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 			log.WithError(err).Error("Failed to generate a response error")
 		} else {
 			if _, err := stream.Write(resp); err != nil {
-				log.WithError(err).Errorf("Failed to write to stream")
+				// The peer may already be ignoring us, as we disagree on fork version, so log this as debug only.
+				log.WithError(err).Debug("Failed to write to stream")
 			}
 		}
 		stream.Close() // Close before disconnecting.

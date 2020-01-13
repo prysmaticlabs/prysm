@@ -2,6 +2,7 @@ package endtoend
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"math/big"
@@ -26,12 +27,13 @@ type validatorClientInfo struct {
 	monitorPort uint64
 }
 
+var validatorLogFileName = "vals-%d.log"
+
 // initializeValidators sends the deposits to the eth1 chain and starts the validator clients.
 func initializeValidators(
 	t *testing.T,
 	config *end2EndConfig,
 	keystorePath string,
-	beaconNodes []*beaconNodeInfo,
 ) []*validatorClientInfo {
 	binaryPath, found := bazel.FindBinary("validator", "validator")
 	if !found {
@@ -48,7 +50,7 @@ func initializeValidators(
 	valClients := make([]*validatorClientInfo, beaconNodeNum)
 	validatorsPerNode := validatorNum / beaconNodeNum
 	for n := uint64(0); n < beaconNodeNum; n++ {
-		file, err := os.Create(path.Join(tmpPath, fmt.Sprintf("vals-%d.log", n)))
+		file, err := os.Create(path.Join(tmpPath, fmt.Sprintf(validatorLogFileName, n)))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -56,12 +58,16 @@ func initializeValidators(
 			fmt.Sprintf("--interop-num-validators=%d", validatorsPerNode),
 			fmt.Sprintf("--interop-start-index=%d", validatorsPerNode*n),
 			fmt.Sprintf("--monitoring-port=%d", 9080+n),
+			fmt.Sprintf("--datadir=%s/eth2-val-%d", tmpPath, n),
 			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", 4000+n),
+		}
+		if config.minimalConfig {
+			args = append(args, "--minimal-config")
 		}
 		cmd := exec.Command(binaryPath, args...)
 		cmd.Stdout = file
 		cmd.Stderr = file
-		t.Logf("Starting validator client with flags %s", strings.Join(args, " "))
+		t.Logf("Starting validator client with flags: %s", strings.Join(args, " "))
 		if err := cmd.Start(); err != nil {
 			t.Fatal(err)
 		}
@@ -88,6 +94,11 @@ func initializeValidators(
 	depositInGwei := big.NewInt(int64(params.BeaconConfig().MaxEffectiveBalance))
 	txOps.Value = depositInGwei.Mul(depositInGwei, big.NewInt(int64(params.BeaconConfig().GweiPerEth)))
 	txOps.GasLimit = 4000000
+	nonce, err := web3.PendingNonceAt(context.Background(), txOps.From)
+	if err != nil {
+		t.Fatal(err)
+	}
+	txOps.Nonce = big.NewInt(int64(nonce))
 
 	contract, err := contracts.NewDepositContract(config.contractAddr, web3)
 	if err != nil {
@@ -102,16 +113,17 @@ func initializeValidators(
 	for index, dd := range deposits {
 		_, err = contract.Deposit(txOps, dd.Data.PublicKey, dd.Data.WithdrawalCredentials, dd.Data.Signature, roots[index])
 		if err != nil {
-			t.Error("unable to send transaction to contract")
+			t.Errorf("unable to send transaction to contract: %v", err)
 		}
+		txOps.Nonce = txOps.Nonce.Add(txOps.Nonce, big.NewInt(1))
 	}
 
 	keystore, err := keystore.DecryptKey(jsonBytes, "" /*password*/)
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Picked 20 for this as a "safe" number of blocks to mine so the deposits
-	// are detected.
+
+	// "Safe" amount of blocks to mine to make sure the deposits are seen.
 	if err := mineBlocks(web3, keystore, 20); err != nil {
 		t.Fatalf("failed to mine blocks %v", err)
 	}

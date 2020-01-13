@@ -3,6 +3,7 @@ package forkchoice
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -47,7 +48,7 @@ var (
 	})
 	validatorsCount = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "validator_count",
-		Help: "The total number of validators, in GWei",
+		Help: "The total number of validators",
 	}, []string{"state"})
 	validatorsBalance = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "validators_total_balance",
@@ -60,6 +61,14 @@ var (
 	currentEth1DataDepositCount = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "current_eth1_data_deposit_count",
 		Help: "The current eth1 deposit count in the last processed state eth1data field.",
+	})
+	totalEligibleBalances = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "total_eligible_balances",
+		Help: "The total amount of ether, in gwei, that has been used in voting attestation target of previous epoch",
+	})
+	totalVotedTargetBalances = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "total_voted_target_balances",
+		Help: "The total amount of ether, in gwei, that is eligible for voting of previous epoch",
 	})
 )
 
@@ -143,5 +152,10 @@ func reportEpochMetrics(state *pb.BeaconState) {
 	}
 	if state.Eth1Data != nil {
 		currentEth1DataDepositCount.Set(float64(state.Eth1Data.DepositCount))
+	}
+
+	if precompute.Balances != nil {
+		totalEligibleBalances.Set(float64(precompute.Balances.PrevEpoch))
+		totalVotedTargetBalances.Set(float64(precompute.Balances.PrevEpochTargetAttesters))
 	}
 }

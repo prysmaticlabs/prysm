@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -35,13 +34,9 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *pb.Beac
 			Source: &ethpb.Checkpoint{Epoch: 1},
 			Target: &ethpb.Checkpoint{Epoch: 0},
 		},
-		CustodyBit_0Indices: []uint64{0, 1},
+		AttestingIndices: []uint64{0, 1},
 	}
-	dataAndCustodyBit := &pb.AttestationDataAndCustodyBit{
-		Data:       att1.Data,
-		CustodyBit: false,
-	}
-	hashTreeRoot, err := ssz.HashTreeRoot(dataAndCustodyBit)
+	hashTreeRoot, err := ssz.HashTreeRoot(att1.Data)
 	if err != nil {
 		t.Error(err)
 	}
@@ -56,13 +51,9 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *pb.Beac
 			Source: &ethpb.Checkpoint{Epoch: 0},
 			Target: &ethpb.Checkpoint{Epoch: 0},
 		},
-		CustodyBit_0Indices: []uint64{0, 1},
+		AttestingIndices: []uint64{0, 1},
 	}
-	dataAndCustodyBit = &pb.AttestationDataAndCustodyBit{
-		Data:       att2.Data,
-		CustodyBit: false,
-	}
-	hashTreeRoot, err = ssz.HashTreeRoot(dataAndCustodyBit)
+	hashTreeRoot, err = ssz.HashTreeRoot(att2.Data)
 	if err != nil {
 		t.Error(err)
 	}
@@ -112,7 +103,7 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 			},
 		},
 	}
-	valid := r.validateAttesterSlashing(ctx, peer.ID("foobar"), msg)
+	valid := r.validateAttesterSlashing(ctx, "foobar", msg)
 
 	if !valid {
 		t.Error("Failed Validation")

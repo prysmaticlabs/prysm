@@ -4,6 +4,7 @@ package ethereum.slashing;
 
 import "google/protobuf/empty.proto";
 import "eth/v1alpha1/beacon_block.proto";
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
 // Slasher service API
 //
@@ -39,7 +40,7 @@ message ValidatorIDToIdxAttList {
 }
 
 message ProposerSlashingRequest {
-    ethereum.eth.v1alpha1.BeaconBlockHeader block_header = 1;
+    ethereum.eth.v1alpha1.SignedBeaconBlockHeader block_header = 1;
     uint64 validator_index = 2;
 }
 
@@ -67,6 +68,15 @@ message MinMaxEpochSpan {
 message EpochSpanMap {
     // uint64 is for storing the epoch
     map<uint64, MinMaxEpochSpan> epoch_span_map = 1;
+}
+
+// ProposalHistory defines the structure for recording a validators historical proposals.
+// Using a bitlist to represent the epochs and an uint64 to mark the latest marked
+// epoch of the bitlist, we can easily store which epochs a validator has proposed
+// a block for while pruning the older data.
+message ProposalHistory {
+    bytes epoch_bits = 1 [(gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
+    uint64 latest_epoch_written = 2;
 }
 
 message Error {

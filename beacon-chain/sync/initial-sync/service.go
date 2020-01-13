@@ -13,8 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -101,7 +101,7 @@ func (s *Service) Start() {
 		time.Sleep(roughtime.Until(genesis))
 	}
 	s.chainStarted = true
-	currentSlot := slotutil.SlotsSinceGenesis(genesis)
+	currentSlot := helpers.SlotsSince(genesis)
 	if helpers.SlotToEpoch(currentSlot) == 0 {
 		log.Info("Chain started within the last epoch - not syncing")
 		s.synced = true
@@ -115,12 +115,10 @@ func (s *Service) Start() {
 		return
 	}
 	s.waitForMinimumPeers()
-	if err := s.roundRobinSync(genesis); err != nil {
-		panic(err)
+	if err := s.roundRobinSync(genesis); err == nil {
+		log.Infof("Synced up to slot %d", s.chain.HeadSlot())
+		s.synced = true
 	}
-
-	log.Infof("Synced up to slot %d", s.chain.HeadSlot())
-	s.synced = true
 }
 
 // Stop initial sync.
@@ -153,25 +151,30 @@ func (s *Service) Resync() error {
 	genesis := time.Unix(int64(headState.GenesisTime), 0)
 
 	s.waitForMinimumPeers()
-	if err := s.roundRobinSync(genesis); err != nil {
-		return errors.Wrap(err, "could not retrieve head state")
+	err = s.roundRobinSync(genesis)
+	if err == nil {
+		s.synced = true
+	} else {
+		log = log.WithError(err)
 	}
-	log.Infof("Synced up to slot %d", s.chain.HeadSlot())
+	log.WithField("synced", s.synced).WithField("slot", s.chain.HeadSlot()).Info("Resync attempt complete")
 
-	s.synced = true
 	return nil
 }
 
 func (s *Service) waitForMinimumPeers() {
-	// Every 5 sec, report handshake count.
+	required := params.BeaconConfig().MaxPeersToSync
+	if flags.Get().MinimumSyncPeers < required {
+		required = flags.Get().MinimumSyncPeers
+	}
 	for {
-		count := len(s.p2p.Peers().Connected())
-		if count >= flags.Get().MinimumSyncPeers {
+		_, _, peers := s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(s.chain.HeadSlot()))
+		if len(peers) >= required {
 			break
 		}
 		log.WithFields(logrus.Fields{
-			"valid handshakes":    count,
-			"required handshakes": flags.Get().MinimumSyncPeers}).Info("Waiting for enough peer handshakes before syncing")
+			"suitable": len(peers),
+			"required": required}).Info("Waiting for enough suitable peers before syncing")
 		time.Sleep(handshakePollingInterval)
 	}
 }

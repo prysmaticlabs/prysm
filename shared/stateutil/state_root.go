@@ -24,7 +24,10 @@ func init() {
 		// 100,000 roots will take up approximately 3 MB in memory.
 		BufferItems: 64, // number of keys per Get buffer.
 	})
-	globalHasher = &stateRootHasher{rootsCache: rootsCache}
+	// Temporarily disable roots cache until cache issues can be resolved.
+	//globalHasher = &stateRootHasher{rootsCache: rootsCache}
+	_ = rootsCache
+	globalHasher = &stateRootHasher{}
 }
 
 type stateRootHasher struct {
@@ -41,6 +44,9 @@ func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 }
 
 func (h *stateRootHasher) hashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
+	if state == nil {
+		return [32]byte{}, errors.New("nil state")
+	}
 	// There are 20 fields in the beacon state.
 	fieldRoots := make([][]byte, 20)
 

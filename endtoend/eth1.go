@@ -31,8 +31,16 @@ func startEth1(t *testing.T, tmpPath string) (common.Address, string, int) {
 		t.Fatal("go-ethereum binary not found")
 	}
 
+	eth1Path := path.Join(tmpPath, "eth1data/")
+	// Clear out ETH1 to prevent issues.
+	if _, err := os.Stat(eth1Path); !os.IsNotExist(err) {
+		if err := os.RemoveAll(eth1Path); err != nil {
+			t.Fatal(err)
+		}
+	}
+
 	args := []string{
-		fmt.Sprintf("--datadir=%s", path.Join(tmpPath, "eth1data/")),
+		fmt.Sprintf("--datadir=%s", eth1Path),
 		"--rpc",
 		"--rpcaddr=0.0.0.0",
 		"--rpccorsdomain=\"*\"",
