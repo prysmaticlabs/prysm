@@ -13,7 +13,6 @@ import (
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-
 type ReadOnlyDatabase interface {
 	// Attestation related methods.
 	AttestationsByDataRoot(ctx context.Context, attDataRoot [32]byte) ([]*eth.Attestation, error)

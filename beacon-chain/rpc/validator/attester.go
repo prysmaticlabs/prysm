@@ -56,7 +56,6 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 		}
 	}()
 
-
 	headState, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)

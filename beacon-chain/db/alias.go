@@ -22,4 +22,3 @@ type HeadAccessDatabase = iface.HeadAccessDatabase
 // key-value or relational database in practice. This is the full database interface which should
 // not be used often. Prefer a more restrictive interface in this package.
 type Database = iface.Database
-

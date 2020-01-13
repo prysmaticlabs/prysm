@@ -294,7 +294,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 		},
 		BeaconDB:      db,
 		StateNotifier: chainService.StateNotifier(),
-		HeadFetcher: chainService,
+		HeadFetcher:   chainService,
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)

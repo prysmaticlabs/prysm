@@ -172,4 +172,3 @@ func TestCurrentFork_CanRetrieve(t *testing.T) {
 		t.Error("Recieved incorrect fork version")
 	}
 }
-
