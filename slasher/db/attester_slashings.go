@@ -3,11 +3,12 @@ package db
 import (
 	"bytes"
 
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 )
 
 func createAttesterSlashing(enc []byte) (*ethpb.AttesterSlashing, error) {
@@ -38,9 +39,11 @@ func (db *Store) AttesterSlashings(status SlashingStatus) ([]*ethpb.AttesterSlas
 	encoded := make([][]byte, 0)
 	err := db.view(func(tx *bolt.Tx) error {
 		c := tx.Bucket(slashingBucket).Cursor()
-		prefix := encodeStatusType(status, SlashingType(Attestation))
+		prefix := encodeType(SlashingType(Attestation))
 		for k, v := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, v = c.Next() {
-			encoded = append(encoded, v)
+			if v[0] == byte(status) {
+				encoded = append(encoded, v[1:])
+			}
 		}
 		return nil
 	})
@@ -51,14 +54,14 @@ func (db *Store) AttesterSlashings(status SlashingStatus) ([]*ethpb.AttesterSlas
 }
 
 // DeleteAttesterSlashingWithStatus deletes a slashing proof using the slashing status and slashing proof.
-func (db *Store) DeleteAttesterSlashingWithStatus(status SlashingStatus, attesterSlashing *ethpb.AttesterSlashing) error {
-	root, err := ssz.HashTreeRoot(attesterSlashing)
+func (db *Store) DeleteAttesterSlashing(attesterSlashing *ethpb.AttesterSlashing) error {
+	root, err := hashutil.HashProto(attesterSlashing)
 	if err != nil {
 		return errors.Wrap(err, "failed to get hash root of attesterSlashing")
 	}
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(slashingBucket)
-		k := encodeStatusTypeRoot(status, SlashingType(Attestation), root)
+		k := encodeTypeRoot(SlashingType(Attestation), root)
 		if err != nil {
 			return errors.Wrap(err, "failed to get key for for attester slashing.")
 		}
@@ -69,45 +72,21 @@ func (db *Store) DeleteAttesterSlashingWithStatus(status SlashingStatus, atteste
 	})
 }
 
-// DeleteAttesterSlashing deletes attester slashing proof.
-func (db *Store) DeleteAttesterSlashing(slashing *ethpb.AttesterSlashing) error {
-	root, err := ssz.HashTreeRoot(slashing)
-	if err != nil {
-		return errors.Wrap(err, "failed to get hash root of attester slashing")
-	}
-	err = db.update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(slashingBucket)
-		err = b.ForEach(func(k, v []byte) error {
-			if bytes.HasSuffix(k, root[:]) {
-				err = b.Delete(k)
-				if err != nil {
-					return err
-				}
-			}
-			return nil
-		})
-		return err
-	})
-	return err
-}
-
 // HasAttesterSlashing returns the slashing key if it is found in db.
 func (db *Store) HasAttesterSlashing(slashing *ethpb.AttesterSlashing) (bool, SlashingStatus, error) {
-	root, err := ssz.HashTreeRoot(slashing)
+	root, err := hashutil.HashProto(slashing)
 	var status SlashingStatus
 	var found bool
+	key := encodeTypeRoot(SlashingType(Attestation), root)
 	if err != nil {
 		return found, status, errors.Wrap(err, "failed to get hash root of attesterSlashing")
 	}
 	err = db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
-		c := b.Cursor()
-		for k, _ := c.First(); k != nil; k, _ = c.Next() {
-			if bytes.HasSuffix(k, root[:]) {
-				found = true
-				status = SlashingStatus(k[0])
-				return nil
-			}
+		enc := b.Get(key)
+		if enc != nil {
+			found = true
+			status = SlashingStatus(enc[0])
 		}
 		return nil
 	})
@@ -116,7 +95,7 @@ func (db *Store) HasAttesterSlashing(slashing *ethpb.AttesterSlashing) (bool, Sl
 
 // SaveAttesterSlashing accepts a slashing proof and its status and writes it to disk.
 func (db *Store) SaveAttesterSlashing(status SlashingStatus, slashing *ethpb.AttesterSlashing) error {
-	root, err := ssz.HashTreeRoot(slashing)
+	root, err := hashutil.HashProto(slashing)
 	if err != nil {
 		return errors.Wrap(err, "failed to get hash root of attesterSlashing")
 	}
@@ -124,28 +103,13 @@ func (db *Store) SaveAttesterSlashing(status SlashingStatus, slashing *ethpb.Att
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal")
 	}
-	key := encodeStatusTypeRoot(status, SlashingType(Attestation), root)
+	key := encodeTypeRoot(SlashingType(Attestation), root)
 	err = db.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
-		e := b.Get(key)
+		e := b.Put(key, append([]byte{byte(status)}, enc...))
 		if e != nil {
 			return nil
 		}
-		var keysToDelete [][]byte
-		c := b.Cursor()
-		for k, _ := c.First(); k != nil; k, _ = c.Next() {
-			if bytes.HasSuffix(k, root[:]) {
-				keysToDelete = append(keysToDelete, k)
-			}
-		}
-		for _, k := range keysToDelete {
-			err = b.Delete(k)
-			if err != nil {
-				return err
-			}
-
-		}
-		err = b.Put(key, enc)
 		return err
 	})
 	if err != nil {

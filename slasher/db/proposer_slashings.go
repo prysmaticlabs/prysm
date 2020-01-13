@@ -3,11 +3,12 @@ package db
 import (
 	"bytes"
 
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 )
 
 // SlashingStatus enum like structure.
@@ -91,9 +92,11 @@ func (db *Store) ProposalSlashingsByStatus(status SlashingStatus) ([]*ethpb.Prop
 	encoded := make([][]byte, 0)
 	err := db.view(func(tx *bolt.Tx) error {
 		c := tx.Bucket(slashingBucket).Cursor()
-		prefix := encodeStatusType(status, SlashingType(Proposal))
+		prefix := encodeType(SlashingType(Proposal))
 		for k, v := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, v = c.Next() {
-			encoded = append(encoded, v)
+			if v[0] == byte(status) {
+				encoded = append(encoded, v[1:])
+			}
 		}
 		return nil
 	})
@@ -103,28 +106,9 @@ func (db *Store) ProposalSlashingsByStatus(status SlashingStatus) ([]*ethpb.Prop
 	return toProposerSlashings(encoded)
 }
 
-// DeleteProposerSlashingWithStatus deletes a proposal slashing proof given its status.
-func (db *Store) DeleteProposerSlashingWithStatus(status SlashingStatus, proposerSlashing *ethpb.ProposerSlashing) error {
-	root, err := ssz.HashTreeRoot(proposerSlashing)
-	if err != nil {
-		return errors.Wrap(err, "failed to get hash root of proposerSlashing")
-	}
-	return db.update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(slashingBucket)
-		k := encodeStatusTypeRoot(status, SlashingType(Proposal), root)
-		if err != nil {
-			return errors.Wrap(err, "failed to get key for for proposer slashing.")
-		}
-		if err := bucket.Delete(k); err != nil {
-			return errors.Wrap(err, "failed to delete the slashing proof header from slashing bucket")
-		}
-		return nil
-	})
-}
-
 // DeleteProposerSlashing deletes a proposer slashing proof.
 func (db *Store) DeleteProposerSlashing(slashing *ethpb.ProposerSlashing) error {
-	root, err := ssz.HashTreeRoot(slashing)
+	root, err := hashutil.HashProto(slashing)
 	if err != nil {
 		return errors.Wrap(err, "failed to get hash root of proposerSlashing")
 	}
@@ -146,7 +130,8 @@ func (db *Store) DeleteProposerSlashing(slashing *ethpb.ProposerSlashing) error 
 
 // HasProposerSlashing returns the slashing key if it is found in db.
 func (db *Store) HasProposerSlashing(slashing *ethpb.ProposerSlashing) (bool, SlashingStatus, error) {
-	root, err := ssz.HashTreeRoot(slashing)
+	root, err := hashutil.HashProto(slashing)
+	key := encodeTypeRoot(SlashingType(Proposal), root)
 	var status SlashingStatus
 	var found bool
 	if err != nil {
@@ -154,13 +139,10 @@ func (db *Store) HasProposerSlashing(slashing *ethpb.ProposerSlashing) (bool, Sl
 	}
 	err = db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
-		c := b.Cursor()
-		for k, _ := c.First(); k != nil; k, _ = c.Next() {
-			if bytes.HasSuffix(k, root[:]) {
-				found = true
-				status = SlashingStatus(k[0])
-				return nil
-			}
+		enc := b.Get(key)
+		if enc != nil {
+			found = true
+			status = SlashingStatus(enc[0])
 		}
 		return nil
 	})
@@ -169,7 +151,7 @@ func (db *Store) HasProposerSlashing(slashing *ethpb.ProposerSlashing) (bool, Sl
 
 // SaveProposerSlashing accepts a proposer slashing and its status header and writes it to disk.
 func (db *Store) SaveProposerSlashing(status SlashingStatus, slashing *ethpb.ProposerSlashing) error {
-	root, err := ssz.HashTreeRoot(slashing)
+	root, err := hashutil.HashProto(slashing)
 	if err != nil {
 		return errors.Wrap(err, "failed to get hash root of proposerSlashing")
 	}
@@ -177,28 +159,13 @@ func (db *Store) SaveProposerSlashing(status SlashingStatus, slashing *ethpb.Pro
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal")
 	}
-	key := encodeStatusTypeRoot(status, SlashingType(Attestation), root)
+	key := encodeTypeRoot(SlashingType(Proposal), root)
 	err = db.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
-		e := b.Get(key)
+		e := b.Put(key, append([]byte{byte(status)}, enc...))
 		if e != nil {
 			return nil
 		}
-		var keysToDelete [][]byte
-		c := b.Cursor()
-		for k, _ := c.First(); k != nil; k, _ = c.Next() {
-			if bytes.HasSuffix(k, root[:]) {
-				keysToDelete = append(keysToDelete, k)
-			}
-		}
-		for _, k := range keysToDelete {
-			err = b.Delete(k)
-			if err != nil {
-				return err
-			}
-
-		}
-		err = b.Put(encodeStatusTypeRoot(status, SlashingType(Proposal), root), enc)
 		return err
 	})
 	if err != nil {

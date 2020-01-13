@@ -67,59 +67,6 @@ func TestStore_SaveProposerSlashing(t *testing.T) {
 
 }
 
-func TestStore_DeleteProposerSlashingWithStatus(t *testing.T) {
-	db := SetupSlasherDB(t)
-	defer TeardownSlasherDB(t, db)
-	tests := []struct {
-		ss SlashingStatus
-		ps *ethpb.ProposerSlashing
-	}{
-		{
-			ss: Active,
-			ps: &ethpb.ProposerSlashing{ProposerIndex: 1},
-		},
-		{
-			ss: Included,
-			ps: &ethpb.ProposerSlashing{ProposerIndex: 2},
-		},
-		{
-			ss: Reverted,
-			ps: &ethpb.ProposerSlashing{ProposerIndex: 3},
-		},
-	}
-
-	for _, tt := range tests {
-		err := db.SaveProposerSlashing(tt.ss, tt.ps)
-		if err != nil {
-			t.Fatalf("save proposer slashing failed: %v", err)
-		}
-	}
-
-	for _, tt := range tests {
-		has, _, err := db.HasProposerSlashing(tt.ps)
-		if err != nil {
-			t.Fatalf("failed to get proposer slashing: %v", err)
-		}
-		if !has {
-			t.Fatalf("failed to find proposer slashing: %v", tt.ps)
-		}
-
-		err = db.DeleteProposerSlashingWithStatus(tt.ss, tt.ps)
-		if err != nil {
-			t.Fatalf("delete proposer slashings failed: %v", err)
-		}
-		has, _, err = db.HasProposerSlashing(tt.ps)
-		if err != nil {
-			t.Fatalf("error while trying to get non existing proposer slashing: %v", err)
-		}
-		if has {
-			t.Fatalf("proposer slashing: %v should have been deleted", tt.ps)
-		}
-
-	}
-
-}
-
 func TestStore_UpdateProposerSlashingStatus(t *testing.T) {
 	db := SetupSlasherDB(t)
 	defer TeardownSlasherDB(t, db)

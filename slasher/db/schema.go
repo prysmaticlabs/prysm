@@ -28,9 +28,9 @@ func encodeEpochValidatorIDSig(epoch uint64, validatorID uint64, sig []byte) []b
 func encodeEpochSig(targetEpoch uint64, sig []byte) []byte {
 	return append(bytesutil.Bytes8(targetEpoch), sig...)
 }
-func encodeStatusType(status SlashingStatus, st SlashingType) []byte {
-	return append([]byte{byte(status)}, byte(st))
+func encodeType(st SlashingType) []byte {
+	return []byte{byte(st)}
 }
-func encodeStatusTypeRoot(status SlashingStatus, st SlashingType, root [32]byte) []byte {
-	return append(append([]byte{byte(status)}, byte(st)), root[:]...)
+func encodeTypeRoot(st SlashingType, root [32]byte) []byte {
+	return append([]byte{byte(st)}, root[:]...)
 }
