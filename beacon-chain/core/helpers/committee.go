@@ -456,6 +456,8 @@ func ClearCache() {
 	committeeCache = cache.NewCommitteesCache()
 }
 
+// This computes proposer indices of the current epoch and returns a list of proposer indices,
+// the index of the list represents the slot number.
 func precomputeProposerIndices(state *pb.BeaconState, activeIndices []uint64) ([]uint64, error) {
 	proposerIndices := make([]uint64, params.BeaconConfig().SlotsPerEpoch)
 
