@@ -13,6 +13,7 @@ import (
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
+// ReadOnlyDatabase -- See github.com/prysmaticlabs/prysm/beacon-chain/db.ReadOnlyDatabase
 type ReadOnlyDatabase interface {
 	// Attestation related methods.
 	AttestationsByDataRoot(ctx context.Context, attDataRoot [32]byte) ([]*eth.Attestation, error)
@@ -54,6 +55,7 @@ type ReadOnlyDatabase interface {
 	PowchainData(ctx context.Context) (*db.ETH1ChainData, error)
 }
 
+// NoHeadAccessDatabase -- See github.com/prysmaticlabs/prysm/beacon-chain/db.NoHeadAccessDatabase
 type NoHeadAccessDatabase interface {
 	ReadOnlyDatabase
 
@@ -98,6 +100,7 @@ type NoHeadAccessDatabase interface {
 	SavePowchainData(ctx context.Context, data *db.ETH1ChainData) error
 }
 
+// HeadAccessDatabase -- See github.com/prysmaticlabs/prysm/beacon-chain/db.HeadAccessDatabase
 type HeadAccessDatabase interface {
 	NoHeadAccessDatabase
 
@@ -108,8 +111,7 @@ type HeadAccessDatabase interface {
 	HeadState(ctx context.Context) (*ethereum_beacon_p2p_v1.BeaconState, error)
 }
 
-// Database defines the necessary methods for Prysm's eth2 backend which may
-// be implemented by any key-value or relational database in practice.
+// Database -- See github.com/prysmaticlabs/prysm/beacon-chain/db.Database
 type Database interface {
 	io.Closer
 	HeadAccessDatabase
