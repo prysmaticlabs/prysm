@@ -72,7 +72,7 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 	targetEpoch := helpers.CurrentEpoch(headState)
 	epochStartSlot := helpers.StartSlot(targetEpoch)
 	targetRoot := make([]byte, 32)
-	if epochStartSlot == vs.HeadFetcher.HeadSlot() {
+	if epochStartSlot == headState.Slot {
 		targetRoot = headRoot[:]
 	} else {
 		targetRoot, err = helpers.BlockRootAtSlot(headState, epochStartSlot)
