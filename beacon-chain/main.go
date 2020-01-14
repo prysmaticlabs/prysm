@@ -18,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	gologging "github.com/whyrusleeping/go-logging"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	_ "go.uber.org/automaxprocs"
 )
@@ -146,7 +145,7 @@ func startNode(ctx *cli.Context) error {
 	}
 	logrus.SetLevel(level)
 	if level == logrus.TraceLevel {
-		golog.SetAllLoggers(gologging.DEBUG)
+		golog.SetAllLoggers(golog.LevelDebug)
 	}
 
 	beacon, err := node.NewBeaconNode(ctx)

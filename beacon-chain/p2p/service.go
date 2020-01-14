@@ -187,9 +187,7 @@ func (s *Service) Start() {
 			}
 			s.host.ConnManager().Protect(peer.ID, "bootnode")
 		}
-		bcfg := kaddht.DefaultBootstrapConfig
-		bcfg.Period = 30 * time.Second
-		if err := s.dht.BootstrapWithConfig(s.ctx, bcfg); err != nil {
+		if err := s.dht.Bootstrap(s.ctx); err != nil {
 			log.WithError(err).Error("Failed to bootstrap DHT")
 		}
 	}
