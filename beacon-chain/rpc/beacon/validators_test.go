@@ -1495,7 +1495,84 @@ func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 	}
 }
 
-func setupValidators(t *testing.T, db db.Database, count int) ([]*ethpb.Validator, []uint64) {
+func BenchmarkListValidatorBalances(b *testing.B) {
+	b.StopTimer()
+	db := dbTest.SetupDB(b)
+	defer dbTest.TeardownDB(b, db)
+
+	ctx := context.Background()
+	count := 1000
+	setupValidators(b, db, count)
+
+	headState, err := db.HeadState(ctx)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	bs := &Server{
+		HeadFetcher: &mock.ChainService{
+			State: headState,
+		},
+	}
+
+	req := &ethpb.ListValidatorBalancesRequest{PageSize: 100}
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := bs.ListValidatorBalances(ctx, req); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkListValidatorBalances_FromArchive(b *testing.B) {
+	b.StopTimer()
+	db := dbTest.SetupDB(b)
+	defer dbTest.TeardownDB(b, db)
+
+	ctx := context.Background()
+	currentNumValidators := 1000
+	numOldBalances := 50
+	validators := make([]*ethpb.Validator, currentNumValidators)
+	oldBalances := make([]uint64, numOldBalances)
+	for i := 0; i < currentNumValidators; i++ {
+		validators[i] = &ethpb.Validator{
+			PublicKey: []byte(strconv.Itoa(i)),
+		}
+	}
+	for i := 0; i < numOldBalances; i++ {
+		oldBalances[i] = params.BeaconConfig().MaxEffectiveBalance
+	}
+	// We archive old balances for epoch 50.
+	if err := db.SaveArchivedBalances(ctx, 50, oldBalances); err != nil {
+		b.Fatal(err)
+	}
+	bs := &Server{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: &pbp2p.BeaconState{
+				Slot:       helpers.StartSlot(100 /* epoch 100 */),
+				Validators: validators,
+			},
+		},
+	}
+
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := bs.ListValidatorBalances(
+			ctx,
+			&ethpb.ListValidatorBalancesRequest{
+				QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{
+					Epoch: 50,
+				},
+				PageSize: 100,
+			},
+		); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func setupValidators(t testing.TB, db db.Database, count int) ([]*ethpb.Validator, []uint64) {
 	ctx := context.Background()
 	balances := make([]uint64, count)
 	validators := make([]*ethpb.Validator, 0, count)
@@ -1518,7 +1595,11 @@ func setupValidators(t *testing.T, db db.Database, count int) ([]*ethpb.Validato
 	}
 	if err := db.SaveState(
 		context.Background(),
-		&pbp2p.BeaconState{Validators: validators, Balances: balances, RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)},
+		&pbp2p.BeaconState{
+			Validators:  validators,
+			Balances:    balances,
+			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		},
 		blockRoot,
 	); err != nil {
 		t.Fatal(err)
