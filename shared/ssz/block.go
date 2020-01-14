@@ -33,9 +33,27 @@ func bodySize(body *ethpb.BeaconBlockBody) int {
 
 	// ProposerSlashings.
 	size += BytesPerLengthOffset
+	blockHeaderSize := 8 + 32 + 32 + 32
 	for i := 0; i < len(body.ProposerSlashings); i++ {
-
+		size += 8
+		size += blockHeaderSize
+		size += blockHeaderSize
 	}
+
+	// AttesterSlashings.
+	size += BytesPerLengthOffset
+	// Slot + index + block root + target checkpoint + source checkpoint.
+	attDataSize := 8 + 8 + 32 + (8 + 32) + (8 + 32)
+	for i := 0; i < len(body.AttesterSlashings); i++ {
+		size += len(body.AttesterSlashings[i].Attestation_1.AttestingIndices) + BytesPerLengthOffset
+		size += attDataSize
+		size += 96
+		size += len(body.AttesterSlashings[i].Attestation_2.AttestingIndices) + BytesPerLengthOffset
+		size += attDataSize
+		size += 96
+	}
+
+	// Attestations.
 	return size
 }
 
