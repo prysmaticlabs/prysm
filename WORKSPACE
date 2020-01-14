@@ -5,9 +5,9 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 http_archive(
     name = "bazel_skylib",
-    sha256 = "2ea8a5ed2b448baf4a6855d3ce049c4c452a6470b1efd1504fdb7c1c134d220a",
-    strip_prefix = "bazel-skylib-0.8.0",
-    url = "https://github.com/bazelbuild/bazel-skylib/archive/0.8.0.tar.gz",
+    sha256 = "e5d90f0ec952883d56747b7604e2a15ee36e288bb556c3d0ed33e818a4d971f2",
+    strip_prefix = "bazel-skylib-1.0.2",
+    url = "https://github.com/bazelbuild/bazel-skylib/archive/1.0.2.tar.gz",
 )
 
 http_archive(
@@ -44,8 +44,8 @@ http_archive(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    sha256 = "0942d188f4d0de6ddb743b9f6642a26ce1ad89f09c0035a9a5ca5ba9615c96aa",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.38.1/rules_nodejs-0.38.1.tar.gz"],
+    sha256 = "c97bf38546c220fa250ff2cc052c1a9eac977c662c1fc23eda797b0ce8e70a43",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/1.1.0/rules_nodejs-1.1.0.tar.gz"],
 )
 
 git_repository(
@@ -265,13 +265,13 @@ go_repository(
 
 go_repository(
     name = "com_github_urfave_cli",
-    commit = "e6cf83ec39f6e1158ced1927d4ed14578fda8edb",  # v1.21.0
+    commit = "aa1b27192cfe441ec1468207f66b6e121dbd81c2",  # v2.1.1
     importpath = "github.com/urfave/cli",
 )
 
 go_repository(
     name = "com_github_go_yaml_yaml",
-    commit = "f221b8435cfb71e54062f6c6e99e9ade30b124d5",  # v2.2.4
+    commit = "1f64d6156d11335c3f22d9330b0ad14fc1e789ce",  # v2.2.7
     importpath = "github.com/go-yaml/yaml",
 )
 
@@ -320,7 +320,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_log",
-    commit = "91b837264c0f35dd4e2be341d711316b91d3573d",  # v0.0.1
+    commit = "03771230abae228f5c9a049173de35d673608842",  # v2.0.2
     importpath = "github.com/ipfs/go-log",
 )
 
@@ -422,7 +422,7 @@ go_repository(
 
 go_repository(
     name = "com_github_mr_tron_base58",
-    commit = "d504ab2e22d97cb9f10b1d146a1e6a063f4a5f43",  # v1.1.2
+    commit = "b1dd383fd2c02d7933db93f157e339f1899b5163",  # v1.1.3
     importpath = "github.com/mr-tron/base58",
 )
 
@@ -603,7 +603,7 @@ go_repository(
 
 go_repository(
     name = "com_github_jackpal_go_nat_pmp",
-    commit = "d89d09f6f3329bc3c2479aa3cafd76a5aa93a35c",
+    commit = "059203efa1edd7130293a583541b8308e7c640c4",  # v1.0.2
     importpath = "github.com/jackpal/go-nat-pmp",
 )
 
@@ -684,7 +684,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_client_golang",
-    commit = "4ab88e80c249ed361d3299e2930427d9ac43ef8d",  # v1.0.0
+    commit = "c42bebe5a5cddfc6b28cd639103369d8a75dfa89",  # v1.3.0
     importpath = "github.com/prometheus/client_golang",
 )
 
@@ -903,7 +903,7 @@ go_repository(
 
 go_repository(
     name = "in_gopkg_yaml_v2",
-    commit = "f221b8435cfb71e54062f6c6e99e9ade30b124d5",  # v2.2.4
+    commit = "1f64d6156d11335c3f22d9330b0ad14fc1e789ce",  # v2.2.7
     importpath = "gopkg.in/yaml.v2",
 )
 
@@ -1061,7 +1061,7 @@ go_repository(
 
 go_repository(
     name = "grpc_ecosystem_grpc_gateway",
-    commit = "da7a886035e25b2f274f89b6f3c64bf70a9f6780",
+    commit = "f7120437bb4f6c71f7f5076ad65a45310de2c009",  # v1.12.1
     importpath = "github.com/grpc-ecosystem/grpc-gateway",
 )
 
@@ -1116,7 +1116,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_yamux",
-    commit = "663972181d409e7263040f0b668462f87c85e1bd",  # v1.2.3
+    commit = "367fc7d3a370c44c62bc3278753532f5f4281229",  # v1.2.4
     importpath = "github.com/libp2p/go-yamux",
 )
 
@@ -1157,7 +1157,7 @@ go_ssz_dependencies()
 go_repository(
     name = "org_golang_google_grpc",
     build_file_proto_mode = "disable",
-    commit = "1d89a3c832915b2314551c1d2a506874d62e53f7",  # v1.22.0
+    commit = "f5b0812e6fe574d90da76b205e9eb51f6ddb1919",  # v1.26.0
     importpath = "google.golang.org/grpc",
 )
 
@@ -1223,7 +1223,7 @@ go_repository(
 
 go_repository(
     name = "com_github_json_iterator_go",
-    commit = "4f2e55fcf87ba29ab80379002316db67620ff622",
+    commit = "0ff49de124c6f76f8494e194af75bde0f1a49a29",  # v1.1.6
     importpath = "github.com/json-iterator/go",
     remote = "https://github.com/prestonvanloon/go",
     vcs = "git",
@@ -1249,7 +1249,7 @@ go_repository(
 
 go_repository(
     name = "com_github_patrickmn_go_cache",
-    commit = "46f407853014144407b6c2ec7ccc76bf67958d93",
+    commit = "a3647f8e31d79543b2d0f0ae2fe5c379d72cedc0",  # v2.1.0
     importpath = "github.com/patrickmn/go-cache",
 )
 
@@ -1451,7 +1451,7 @@ go_repository(
 
 go_repository(
     name = "com_github_cespare_xxhash",
-    commit = "d7df74196a9e781ede915320c11c378c1b2f3a1f",
+    commit = "d7df74196a9e781ede915320c11c378c1b2f3a1f",  # v2.1.1
     importpath = "github.com/cespare/xxhash",
 )
 
