@@ -7,6 +7,7 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/sirupsen/logrus"
 )
 
 var pruneStatesKey = []byte("prune-states")
@@ -25,8 +26,8 @@ func (k *Store) pruneStates(ctx context.Context) error {
 		return nil
 	}
 
-	//log := logrus.WithField("prefix", "kv")
-	//log.Info("Pruning states before last finalized check point. This might take a while...")
+	log := logrus.WithField("prefix", "kv")
+	log.Info("Pruning states before last finalized check point. This might take a while...")
 
 	roots, err := k.rootsToPrune(ctx)
 	if err != nil {
