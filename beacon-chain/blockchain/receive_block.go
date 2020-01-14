@@ -70,7 +70,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 	blockCopy := proto.Clone(block).(*ethpb.SignedBeaconBlock)
 
 	// Apply state transition on the new block.
-	if err := s.forkChoiceStore.OnBlock(ctx, blockCopy); err != nil {
+	if err := s.forkChoiceStore.OnBlockCacheFilteredTree(ctx, blockCopy); err != nil {
 		err := errors.Wrap(err, "could not process block from fork choice service")
 		traceutil.AnnotateError(span, err)
 		return err
