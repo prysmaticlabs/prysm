@@ -2510,7 +2510,7 @@ func (m *PendingAttestation) Unmarshal(dAtA []byte) error {
 			}
 		case 4:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ProposerIndex", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field ProposerIndices", wireType)
 			}
 			m.ProposerIndex = 0
 			for shift := uint(0); ; shift += 7 {

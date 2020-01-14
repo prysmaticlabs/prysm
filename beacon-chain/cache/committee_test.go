@@ -96,6 +96,31 @@ func TestCommitteeCache_ActiveIndices(t *testing.T) {
 	}
 }
 
+func TestCommitteeCache_ProposerIndices(t *testing.T) {
+	cache := NewCommitteesCache()
+
+	item := &Committees{Seed: [32]byte{'A'}, SortedIndices: []uint64{1, 2, 3, 4, 5, 6}, ProposerIndices: []uint64{2, 1, 3, 5, 6, 4}}
+	indices, err := cache.ProposerIndices(item.Seed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if indices != nil {
+		t.Error("Expected committee count not to exist in empty cache")
+	}
+
+	if err := cache.AddCommitteeShuffledList(item); err != nil {
+		t.Fatal(err)
+	}
+
+	indices, err = cache.ProposerIndices(item.Seed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(indices, item.ProposerIndices) {
+		t.Error("Did not receive correct proposer indices from cache")
+	}
+}
+
 func TestCommitteeCache_CanRotate(t *testing.T) {
 	cache := NewCommitteesCache()
 
