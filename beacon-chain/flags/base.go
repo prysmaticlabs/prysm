@@ -34,10 +34,10 @@ var (
 		Value: 4000,
 	}
 	// RPCMaxPageSize defines the maximum numbers per page returned in RPC responses from this
-	// beacon node.
+	// beacon node (default: 500).
 	RPCMaxPageSize = cli.IntFlag{
 		Name:  "rpc-max-page-size",
-		Usage: "Max number of items returned per page in RPC responses for paginated endpoints",
+		Usage: "Max number of items returned per page in RPC responses for paginated endpoints (default: 500)",
 		Value: 500,
 	}
 	// CertFlag defines a flag for the node's TLS certificate.
