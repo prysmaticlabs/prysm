@@ -107,6 +107,7 @@ func NewKVStore(dirPath string, ctx *cli.Context) (*Store, error) {
 			indexedAttestationsIndicesBucket,
 			validatorsPublicKeysBucket,
 			validatorsMinMaxSpanBucket,
+			slashingBucket,
 		)
 	}); err != nil {
 		return nil, err

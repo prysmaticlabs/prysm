@@ -68,7 +68,7 @@ func TestProposeBlock_OK(t *testing.T) {
 			Body:       &ethpb.BeaconBlockBody{},
 		},
 	}
-	if err := proposerServer.BeaconDB.SaveBlock(ctx, req); err != nil {
+	if err := db.SaveBlock(ctx, req); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := proposerServer.ProposeBlock(context.Background(), req); err != nil {
@@ -1026,8 +1026,9 @@ func TestFilterAttestation_OK(t *testing.T) {
 	}
 
 	proposerServer := &Server{
-		BeaconDB: db,
-		AttPool:  attestations.NewPool(),
+		BeaconDB:    db,
+		AttPool:     attestations.NewPool(),
+		HeadFetcher: &mock.ChainService{State: state, Root: genesisRoot[:]},
 	}
 
 	atts := make([]*ethpb.Attestation, 10)
@@ -1050,7 +1051,7 @@ func TestFilterAttestation_OK(t *testing.T) {
 		aggBits.SetBitAt(0, true)
 		atts[i] = &ethpb.Attestation{Data: &ethpb.AttestationData{
 			CommitteeIndex: uint64(i),
-			Target:         &ethpb.Checkpoint{Epoch: 1},
+			Target:         &ethpb.Checkpoint{},
 			Source:         &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}},
 			AggregationBits: aggBits,
 		}
@@ -1075,7 +1076,7 @@ func TestFilterAttestation_OK(t *testing.T) {
 		}
 		atts[i].Signature = bls.AggregateSignatures(sigs).Marshal()[:]
 	}
-	atts[0].Data.Target.Epoch = 0
+
 	received, err = proposerServer.filterAttestationsForBlockInclusion(context.Background(), 1, atts)
 	if err != nil {
 		t.Fatal(err)
