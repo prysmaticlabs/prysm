@@ -70,6 +70,7 @@ var appFlags = []cli.Flag{
 	flags.RPCPort,
 	flags.KeyFlag,
 	flags.UseSpanCacheFlag,
+	flags.RebuildSpanMapsFlag,
 }
 
 func init() {
