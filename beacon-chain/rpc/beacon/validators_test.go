@@ -1500,7 +1500,7 @@ func BenchmarkListValidatorBalances(b *testing.B) {
 	defer dbTest.TeardownDB(b, db)
 
 	ctx := context.Background()
-	count := 500
+	count := 1000
 	setupValidators(b, db, count)
 
 	headState, err := db.HeadState(ctx)
@@ -1514,7 +1514,7 @@ func BenchmarkListValidatorBalances(b *testing.B) {
 		},
 	}
 
-	req := &ethpb.ListValidatorBalancesRequest{PageToken: strconv.Itoa(1), PageSize: 500}
+	req := &ethpb.ListValidatorBalancesRequest{PageSize: 100}
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		if _, err := bs.ListValidatorBalances(ctx, req); err != nil {
@@ -1529,25 +1529,17 @@ func BenchmarkListValidatorBalances_FromArchive(b *testing.B) {
 	defer dbTest.TeardownDB(b, db)
 
 	ctx := context.Background()
-	currentNumValidators := 100
+	currentNumValidators := 1000
 	numOldBalances := 50
 	validators := make([]*ethpb.Validator, currentNumValidators)
-	balances := make([]uint64, currentNumValidators)
 	oldBalances := make([]uint64, numOldBalances)
-	balancesResponse := make([]*ethpb.ValidatorBalances_Balance, numOldBalances)
 	for i := 0; i < currentNumValidators; i++ {
 		validators[i] = &ethpb.Validator{
 			PublicKey: []byte(strconv.Itoa(i)),
 		}
-		balances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
 	for i := 0; i < numOldBalances; i++ {
 		oldBalances[i] = params.BeaconConfig().MaxEffectiveBalance
-		balancesResponse[i] = &ethpb.ValidatorBalances_Balance{
-			PublicKey: []byte(strconv.Itoa(i)),
-			Index:     uint64(i),
-			Balance:   params.BeaconConfig().MaxEffectiveBalance,
-		}
 	}
 	// We archive old balances for epoch 50.
 	if err := db.SaveArchivedBalances(ctx, 50, oldBalances); err != nil {
@@ -1559,7 +1551,6 @@ func BenchmarkListValidatorBalances_FromArchive(b *testing.B) {
 			State: &pbp2p.BeaconState{
 				Slot:       helpers.StartSlot(100 /* epoch 100 */),
 				Validators: validators,
-				Balances:   balances,
 			},
 		},
 	}
@@ -1572,6 +1563,7 @@ func BenchmarkListValidatorBalances_FromArchive(b *testing.B) {
 				QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{
 					Epoch: 50,
 				},
+				PageSize: 100,
 			},
 		); err != nil {
 			b.Fatal(err)

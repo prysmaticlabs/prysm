@@ -8,13 +8,14 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // ListValidatorBalances retrieves the validator balances for a given set of public keys.
@@ -120,9 +121,17 @@ func (bs *Server) ListValidatorBalances(
 		}
 	}
 
-	if len(req.Indices) == 0 && len(req.PublicKeys) == 0 {
+	if len(req.Indices) == 0 && len(req.PublicKeys) == 0 && len(balances) > 0 {
+		totalItems := int(req.PageSize)
+		if totalItems == 0 {
+			totalItems = params.BeaconConfig().DefaultPageSize
+		}
+		if len(balances) < totalItems {
+			totalItems = len(balances)
+		}
 		// Return everything.
-		for i := 0; i < len(balances); i++ {
+		numValidators := len(headState.Validators)
+		for i := 0; i < totalItems && i < numValidators; i++ {
 			res = append(res, &ethpb.ValidatorBalances_Balance{
 				PublicKey: headState.Validators[i].PublicKey,
 				Index:     uint64(i),
