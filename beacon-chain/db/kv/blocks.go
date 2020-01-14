@@ -397,6 +397,9 @@ func fetchBlockRootsBySlotRange(
 		}
 	}
 	rootsRange := (endSlot - startSlot) / step
+	if endSlot < startSlot {
+		rootsRange = 0
+	}
 	roots := make([][]byte, 0, rootsRange)
 	c := bkt.Cursor()
 	for k, v := c.Seek(min); conditional(k, max); k, v = c.Next() {
