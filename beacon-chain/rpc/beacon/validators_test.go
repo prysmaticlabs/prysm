@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -212,12 +213,12 @@ func TestServer_ListValidatorBalances_PaginationOutOfRange(t *testing.T) {
 
 func TestServer_ListValidatorBalances_ExceedsMaxPageSize(t *testing.T) {
 	bs := &Server{}
-	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
+	exceedsMax := int32(flags.Get().MaxPageSize + 1)
 
 	wanted := fmt.Sprintf(
 		"Requested page size %d can not be greater than max size %d",
 		exceedsMax,
-		params.BeaconConfig().MaxPageSize,
+		flags.Get().MaxPageSize,
 	)
 	req := &ethpb.ListValidatorBalancesRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
 	if _, err := bs.ListValidatorBalances(context.Background(), req); err != nil && !strings.Contains(err.Error(), wanted) {
@@ -793,9 +794,9 @@ func TestServer_ListValidators_PaginationOutOfRange(t *testing.T) {
 
 func TestServer_ListValidators_ExceedsMaxPageSize(t *testing.T) {
 	bs := &Server{}
-	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
+	exceedsMax := int32(flags.Get().MaxPageSize + 1)
 
-	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, params.BeaconConfig().MaxPageSize)
+	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, flags.Get().MaxPageSize)
 	req := &ethpb.ListValidatorsRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
 	if _, err := bs.ListValidators(context.Background(), req); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)

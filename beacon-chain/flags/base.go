@@ -2,8 +2,6 @@ package flags
 
 import (
 	"github.com/urfave/cli"
-
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 var (
@@ -40,7 +38,7 @@ var (
 	RPCMaxPageSize = cli.IntFlag{
 		Name:  "rpc-max-page-size",
 		Usage: "Max number of items returned per page in RPC responses for paginated endpoints",
-		Value: params.BeaconConfig().DefaultPageSize,
+		Value: 500,
 	}
 	// CertFlag defines a flag for the node's TLS certificate.
 	CertFlag = cli.StringFlag{

@@ -15,6 +15,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -106,9 +107,9 @@ func TestServer_ListAssignments_Pagination_InputOutOfRange(t *testing.T) {
 
 func TestServer_ListAssignments_Pagination_ExceedsMaxPageSize(t *testing.T) {
 	bs := &Server{}
-	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
+	exceedsMax := int32(flags.Get().MaxPageSize + 1)
 
-	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, params.BeaconConfig().MaxPageSize)
+	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, flags.Get().MaxPageSize)
 	req := &ethpb.ListValidatorAssignmentsRequest{
 		PageToken: strconv.Itoa(0),
 		PageSize:  exceedsMax,

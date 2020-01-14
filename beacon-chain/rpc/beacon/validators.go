@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
@@ -23,9 +24,9 @@ import (
 func (bs *Server) ListValidatorBalances(
 	ctx context.Context,
 	req *ethpb.ListValidatorBalancesRequest) (*ethpb.ValidatorBalances, error) {
-	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
+	if int(req.PageSize) > flags.Get().MaxPageSize {
 		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
-			req.PageSize, params.BeaconConfig().MaxPageSize)
+			req.PageSize, flags.Get().MaxPageSize)
 	}
 
 	res := make([]*ethpb.ValidatorBalances_Balance, 0)
@@ -165,9 +166,9 @@ func (bs *Server) ListValidators(
 	ctx context.Context,
 	req *ethpb.ListValidatorsRequest,
 ) (*ethpb.Validators, error) {
-	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
+	if int(req.PageSize) > flags.Get().MaxPageSize {
 		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
-			req.PageSize, params.BeaconConfig().MaxPageSize)
+			req.PageSize, flags.Get().MaxPageSize)
 	}
 
 	headState, err := bs.HeadFetcher.HeadState(ctx)
