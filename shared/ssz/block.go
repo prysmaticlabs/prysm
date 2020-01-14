@@ -74,31 +74,32 @@ func bodySize(body *ethpb.BeaconBlockBody) int {
 
 	// VoluntaryExits.
 	size += BytesPerLengthOffset
-	for i := 0; i < len(body.Attestations); i++ {
-		size += len(body.Attestations[i].AggregationBits) + BytesPerLengthOffset
-		size += attDataSize
-		size += 96
+	for i := 0; i < len(body.VoluntaryExits); i++ {
+		size += 8 + 8 + 96
 	}
 	return size
 }
 
 func MarshalBeaconBlock(blk *ethpb.BeaconBlock) []byte {
+	enc := make([]byte, beaconBlockSize(blk))
 	fixedSizePosition := 0
 	// We marshal the slot.
-	slotBuf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(slotBuf, blk.Slot)
+	binary.LittleEndian.PutUint64(enc[fixedSizePosition:fixedSizePosition+8], blk.Slot)
 	fixedSizePosition += 8
 
 	// We consider the blk.ParentRoot as well.
+	copy(enc[fixedSizePosition:fixedSizePosition+32], blk.ParentRoot)
 	fixedSizePosition += 32
+
 	// We consider blk.StateRoot as well.
+	copy(enc[fixedSizePosition:fixedSizePosition+32], blk.StateRoot)
 	fixedSizePosition += 32
 
 	// We start looking at the body.
-	currentOffsetIndex := fixedSizePosition
-	nextOffsetIndex := currentOffsetIndex
+	//currentOffsetIndex := fixedSizePosition
+	//nextOffsetIndex := currentOffsetIndex
 
-	return nil
+	return enc
 }
 
 func marshalBlockBody(body *ethpb.BeaconBlockBody, startOffset uint64) []byte {
@@ -112,6 +113,7 @@ func marshalBlockBody(body *ethpb.BeaconBlockBody, startOffset uint64) []byte {
 
 	// We consider the body.Graffiti
 	fixedSizePosition += 32
+	return []byte
 }
 
 func marshalEth1Data(data *ethpb.Eth1Data) []byte {
