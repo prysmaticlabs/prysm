@@ -96,7 +96,7 @@ func (db *Store) SaveValidatorSpansMap(validatorIdx uint64, spanMap *slashpb.Epo
 	return err
 }
 
-// SaveValidatorSpansMap accepts a validator index and span map and writes it to disk
+// SaveCachedSpansMaps saves all span map from cache to disk
 // if no span maps are in db or cache is disabled it returns nil.
 func (db *Store) SaveCachedSpansMaps() error {
 	if db.ctx.GlobalBool(flags.UseSpanCacheFlag.Name) {
