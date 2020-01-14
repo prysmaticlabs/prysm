@@ -10,7 +10,9 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
@@ -871,5 +873,48 @@ func TestBeaconCommitteeFromState_UpdateCacheForPreviousEpoch(t *testing.T) {
 	}
 	if activeIndices == nil {
 		t.Error("did not cache active indices")
+	}
+}
+
+func TestPrecomputeProposerIndices_Ok(t *testing.T) {
+	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	state := &pb.BeaconState{
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	}
+
+	indices, err := ActiveValidatorIndices(state, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	proposerIndices, err := precomputeProposerIndices(state, indices)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var wantedProposerIndices []uint64
+	seed, err := Seed(state, 0, params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+		seedWithSlot := append(seed[:], bytesutil.Bytes8(i)...)
+		seedWithSlotHash := hashutil.Hash(seedWithSlot)
+		index, err := ComputeProposerIndex(state.Validators, indices, seedWithSlotHash)
+		if err != nil {
+			t.Fatal(err)
+		}
+		wantedProposerIndices = append(wantedProposerIndices, index)
+	}
+
+	if !reflect.DeepEqual(wantedProposerIndices, proposerIndices) {
+		t.Error("Did not precompute proposer indices correctly")
 	}
 }
