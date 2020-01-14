@@ -780,12 +780,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_whyrusleeping_base32",
-    commit = "c30ac30633ccdabefe87eb12465113f06f1bab75",
-    importpath = "github.com/whyrusleeping/base32",
-)
-
-go_repository(
     name = "com_github_ipfs_go_cid",
     commit = "9bb7ea69202c6c9553479eb355ab8a8a97d43a2e",  # v0.0.3
     importpath = "github.com/ipfs/go-cid",
@@ -1018,12 +1012,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_phoreproject_bls",
-    commit = "da95d4798b09e9f45a29dc53124b2a0b4c1dfc13",
-    importpath = "github.com/phoreproject/bls",
-)
-
-go_repository(
     name = "com_github_multiformats_go_base32",
     commit = "a9c2755c3d1672dbe6a7e4a5d182169fa30b6a8e",  # v0.0.3
     importpath = "github.com/multiformats/go-base32",
@@ -1039,12 +1027,6 @@ go_repository(
     name = "com_github_grpc_ecosystem_go_grpc_middleware",
     commit = "dd15ed025b6054e5253963e355991f3070d4e593",  # v1.1.0
     importpath = "github.com/grpc-ecosystem/go-grpc-middleware",
-)
-
-go_repository(
-    name = "com_github_apache_thrift",
-    commit = "384647d290e2e4a55a14b1b7ef1b7e66293a2c33",  # v0.12.0
-    importpath = "github.com/apache/thrift",
 )
 
 go_repository(
@@ -1480,13 +1462,6 @@ go_repository(
     importpath = "github.com/cespare/xxhash/v2",
     sum = "h1:6MnRN8NT7+YBpUIWxHtefFZOKTAPgGjpQSxqLNn0+qY=",
     version = "v2.1.1",
-)
-
-go_repository(
-    name = "com_github_cpuguy83_go_md2man",
-    importpath = "github.com/cpuguy83/go-md2man",
-    sum = "h1:BSKMNlYxDvnunlTymqtgONjNnaRV1sTpcovwwjF22jk=",
-    version = "v1.0.10",
 )
 
 go_repository(
