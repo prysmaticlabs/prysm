@@ -119,6 +119,7 @@ func TestServer_ListAssignments_Pagination_ExceedsMaxPageSize(t *testing.T) {
 }
 
 func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.T) {
+	helpers.ClearCache()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
