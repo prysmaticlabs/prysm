@@ -2,10 +2,10 @@ package kv
 
 import (
 	"context"
+	"encoding/binary"
 
 	"github.com/boltdb/bolt"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"go.opencensus.io/trace"
 )
@@ -91,8 +91,8 @@ func (k *Store) ArchivedBalances(ctx context.Context, epoch uint64) ([]uint64, e
 		if enc == nil {
 			return nil
 		}
-		target = make([]uint64, 0)
-		return ssz.Unmarshal(enc, &target)
+		target = unmarshalBalances(enc)
+		return nil
 	})
 	return target, err
 }
@@ -102,10 +102,7 @@ func (k *Store) SaveArchivedBalances(ctx context.Context, epoch uint64, balances
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivedBalances")
 	defer span.End()
 	buf := uint64ToBytes(epoch)
-	enc, err := ssz.Marshal(balances)
-	if err != nil {
-		return err
-	}
+	enc := marshalBalances(balances)
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(archivedBalancesBucket)
 		return bucket.Put(buf, enc)
@@ -144,4 +141,25 @@ func (k *Store) SaveArchivedValidatorParticipation(ctx context.Context, epoch ui
 		bucket := tx.Bucket(archivedValidatorParticipationBucket)
 		return bucket.Put(buf, enc)
 	})
+}
+
+func marshalBalances(bals []uint64) []byte {
+	res := make([]byte, len(bals)*8)
+	offset := 0
+	for i := 0; i < len(bals); i++ {
+		binary.LittleEndian.PutUint64(res[offset:offset+8], bals[i])
+		offset += 8
+	}
+	return res
+}
+
+func unmarshalBalances(bals []byte) []uint64 {
+	numItems := len(bals) / 8
+	res := make([]uint64, numItems)
+	offset := 0
+	for i := 0; i < numItems; i++ {
+		res[i] = binary.LittleEndian.Uint64(bals[offset : offset+8])
+		offset += 8
+	}
+	return res
 }
