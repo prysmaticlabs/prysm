@@ -125,7 +125,7 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 		}
 	}
 	// Our position in the activation queue is the above index - our validator index.
-	if lastActivatedValidatorIdx > idx {
+	if lastActivatedValidatorIdx < idx {
 		resp.PositionInActivationQueue = int64(idx - lastActivatedValidatorIdx)
 	}
 
