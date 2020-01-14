@@ -396,9 +396,9 @@ func fetchBlockRootsBySlotRange(
 			return k != nil && bytes.Compare(k, max) <= 0
 		}
 	}
+	rootsRange := (endSlot - startSlot) / step
+	roots := make([][]byte, 0, rootsRange)
 	c := bkt.Cursor()
-	numOfkeys := c.Bucket().Stats().KeyN
-	roots := make([][]byte, 0, numOfkeys)
 	for k, v := c.Seek(min); conditional(k, max); k, v = c.Next() {
 		if step > 1 {
 			slot, err := strconv.ParseUint(string(k), 10, 64)
