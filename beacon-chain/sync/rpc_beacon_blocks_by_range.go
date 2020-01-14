@@ -44,7 +44,15 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 			log.Debug("Disconnecting bad peer")
 			r.p2p.Disconnect(stream.Conn().RemotePeer())
 		}
-		return errors.New("rate limited")
+		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, rateLimitedError)
+		if err != nil {
+			log.WithError(err).Error("Failed to generate a response error")
+		} else {
+			if _, err := stream.Write(resp); err != nil {
+				log.WithError(err).Errorf("Failed to write to stream")
+			}
+		}
+		return errors.New(rateLimitedError)
 	}
 
 	r.blocksRateLimiter.Add(stream.Conn().RemotePeer().String(), int64(m.Count))
