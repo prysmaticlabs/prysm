@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -55,19 +56,25 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 		}
 	}()
 
-
+	headState, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
+	}
 	headRoot := vs.HeadFetcher.HeadRoot()
 
-	targetEpoch := helpers.SlotToEpoch(req.Slot)
+	if helpers.CurrentEpoch(headState) < helpers.SlotToEpoch(req.Slot) {
+		headState, err = state.ProcessSlots(ctx, headState, helpers.StartSlot(helpers.SlotToEpoch(req.Slot)))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
+		}
+	}
+
+	targetEpoch := helpers.CurrentEpoch(headState)
 	epochStartSlot := helpers.StartSlot(targetEpoch)
 	targetRoot := make([]byte, 32)
-	if epochStartSlot >= vs.HeadFetcher.HeadSlot() {
+	if epochStartSlot == headState.Slot {
 		targetRoot = headRoot[:]
 	} else {
-		headState, err := vs.HeadFetcher.HeadState(ctx)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
-		}
 		targetRoot, err = helpers.BlockRootAtSlot(headState, epochStartSlot)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get target block for slot %d: %v", epochStartSlot, err)
@@ -78,7 +85,7 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 		Slot:            req.Slot,
 		CommitteeIndex:  req.CommitteeIndex,
 		BeaconBlockRoot: headRoot[:],
-		Source:          vs.FinalizationFetcher.CurrentJustifiedCheckpt(),
+		Source:          headState.CurrentJustifiedCheckpoint,
 		Target: &ethpb.Checkpoint{
 			Epoch: targetEpoch,
 			Root:  targetRoot,
