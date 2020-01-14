@@ -200,6 +200,7 @@ func (s *Service) Start() {
 		AttPool:                s.attestationsPool,
 		HeadFetcher:            s.headFetcher,
 		ForkFetcher:            s.forkFetcher,
+		FinalizationFetcher:    s.finalizationFetcher,
 		CanonicalStateChan:     s.canonicalStateChan,
 		BlockFetcher:           s.powChainService,
 		DepositFetcher:         s.depositFetcher,
