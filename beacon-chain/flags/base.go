@@ -2,6 +2,8 @@ package flags
 
 import (
 	"github.com/urfave/cli"
+
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 var (
@@ -32,6 +34,13 @@ var (
 		Name:  "rpc-port",
 		Usage: "RPC port exposed by a beacon node",
 		Value: 4000,
+	}
+	// RPCMaxPageSize defines the maximum numbers per page returned in RPC responses from this
+	// beacon node.
+	RPCMaxPageSize = cli.IntFlag{
+		Name:  "rpc-max-page-size",
+		Usage: "Max number of items returned per page in RPC responses for paginated endpoints",
+		Value: params.BeaconConfig().DefaultPageSize,
 	}
 	// CertFlag defines a flag for the node's TLS certificate.
 	CertFlag = cli.StringFlag{
