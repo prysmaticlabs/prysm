@@ -13,6 +13,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
+
 // beaconBlocksByRangeRPCHandler looks up the request blocks from the database from a given start block.
 func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	ctx, span := trace.StartSpan(ctx, "sync.BeaconBlocksByRangeHandler")
@@ -27,6 +28,7 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 
 	startSlot := m.StartSlot
 	endSlot := startSlot + (m.Step * (m.Count - 1))
+	remainingBucketCapacity := r.blocksRateLimiter.Remaining(stream.Conn().RemotePeer().String())
 
 	span.AddAttributes(
 		trace.Int64Attribute("start", int64(startSlot)),
@@ -34,7 +36,14 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		trace.Int64Attribute("step", int64(m.Step)),
 		trace.Int64Attribute("count", int64(m.Count)),
 		trace.StringAttribute("peer", stream.Conn().RemotePeer().Pretty()),
+		trace.Int64Attribute("remaining_capacity", remainingBucketCapacity),
 	)
+
+	if m.Count > uint64(remainingBucketCapacity) {
+		return errors.New("rate limited")
+	}
+
+	r.blocksRateLimiter.Add(stream.Conn().RemotePeer().String(), int64(m.Count))
 
 	// TODO(3147): Update this with reasonable constraints.
 	if endSlot-startSlot > 1000 || m.Step == 0 {

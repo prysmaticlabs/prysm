@@ -12,9 +12,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/kevinms/leakybucket-go"
 )
 
 var _ = shared.Service(&Service{})
+
+const allowedBlocksPerSecond = 32.0
+const allowedBlocksBurst = 5*allowedBlocksPerSecond
 
 // Config to set up the regular sync service.
 type Config struct {
@@ -50,6 +54,7 @@ func NewRegularSync(cfg *Config) *Service {
 		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 		stateNotifier:       cfg.StateNotifier,
+		blocksRateLimiter: leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksBurst, true /* deleteEmptyBuckets */),
 	}
 
 	r.registerRPCHandlers()
@@ -74,6 +79,7 @@ type Service struct {
 	initialSync         Checker
 	validateBlockLock   sync.RWMutex
 	stateNotifier       statefeed.Notifier
+	blocksRateLimiter  *leakybucket.Collector
 }
 
 // Start the regular sync service.

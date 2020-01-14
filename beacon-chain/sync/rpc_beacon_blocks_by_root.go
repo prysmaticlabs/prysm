@@ -64,6 +64,12 @@ func (r *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 		return errors.New("no block roots provided")
 	}
 
+	if int64(len(blockRoots)) > r.blocksRateLimiter.Remaining(stream.Conn().RemotePeer().String()) {
+		return errors.New("rate limited")
+	}
+
+	r.blocksRateLimiter.Add(stream.Conn().RemotePeer().String(), int64(len(blockRoots)))
+
 	for _, root := range blockRoots {
 		blk, err := r.db.Block(ctx, root)
 		if err != nil {
