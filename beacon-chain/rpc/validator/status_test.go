@@ -867,7 +867,7 @@ func TestDepositBlockSlotBeforeGenesisTime(t *testing.T) {
 	activeEpoch := helpers.DelayedActivationExitEpoch(0)
 
 	state := &pbp2p.BeaconState{
-		GenesisTime: uint64(time.Unix(20000, 0).Unix()),
+		GenesisTime: uint64(time.Unix(25000, 0).Unix()),
 		Slot:        10000,
 		Validators: []*ethpb.Validator{{
 			ActivationEpoch: activeEpoch,
