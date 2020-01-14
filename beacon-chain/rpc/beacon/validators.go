@@ -74,6 +74,7 @@ func (bs *Server) ListValidatorBalances(
 		)
 	}
 
+	balancesCount := len(balances)
 	for _, pubKey := range req.PublicKeys {
 		// Skip empty public key.
 		if len(pubKey) == 0 {
@@ -100,6 +101,7 @@ func (bs *Server) ListValidatorBalances(
 			Index:     index,
 			Balance:   balances[index],
 		})
+		balancesCount = len(res)
 	}
 
 	for _, index := range req.Indices {
@@ -119,28 +121,9 @@ func (bs *Server) ListValidatorBalances(
 				Balance:   balances[index],
 			})
 		}
+		balancesCount = len(res)
 	}
 
-	if len(req.Indices) == 0 && len(req.PublicKeys) == 0 && len(balances) > 0 {
-		totalItems := int(req.PageSize)
-		if totalItems == 0 {
-			totalItems = params.BeaconConfig().DefaultPageSize
-		}
-		if len(balances) < totalItems {
-			totalItems = len(balances)
-		}
-		// Return everything.
-		numValidators := len(headState.Validators)
-		for i := 0; i < totalItems && i < numValidators; i++ {
-			res = append(res, &ethpb.ValidatorBalances_Balance{
-				PublicKey: headState.Validators[i].PublicKey,
-				Index:     uint64(i),
-				Balance:   balances[i],
-			})
-		}
-	}
-
-	balancesCount := len(res)
 	// If there are no balances, we simply return a response specifying this.
 	// Otherwise, attempting to paginate 0 balances below would result in an error.
 	if balancesCount == 0 {
@@ -160,6 +143,24 @@ func (bs *Server) ListValidatorBalances(
 			err,
 		)
 	}
+
+	if len(req.Indices) == 0 && len(req.PublicKeys) == 0 {
+		// Return everything.
+		for i := start; i < end; i++ {
+			res = append(res, &ethpb.ValidatorBalances_Balance{
+				PublicKey: headState.Validators[i].PublicKey,
+				Index:     uint64(i),
+				Balance:   balances[i],
+			})
+		}
+		return &ethpb.ValidatorBalances{
+			Epoch:         epoch,
+			Balances:      res,
+			TotalSize:     int32(balancesCount),
+			NextPageToken: nextPageToken,
+		}, nil
+	}
+
 	return &ethpb.ValidatorBalances{
 		Epoch:         epoch,
 		Balances:      res[start:end],

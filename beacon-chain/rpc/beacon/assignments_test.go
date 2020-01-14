@@ -194,8 +194,6 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("Num vals: %d", len(s.Validators))
-	t.Logf("active indices: %v", activeIndices)
 	for _, index := range activeIndices[0:params.BeaconConfig().DefaultPageSize] {
 		committee, committeeIndex, attesterSlot, proposerSlot, err := helpers.CommitteeAssignment(s, 0, index)
 		if err != nil {
