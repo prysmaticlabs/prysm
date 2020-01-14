@@ -45,15 +45,40 @@ func bodySize(body *ethpb.BeaconBlockBody) int {
 	// Slot + index + block root + target checkpoint + source checkpoint.
 	attDataSize := 8 + 8 + 32 + (8 + 32) + (8 + 32)
 	for i := 0; i < len(body.AttesterSlashings); i++ {
-		size += len(body.AttesterSlashings[i].Attestation_1.AttestingIndices) + BytesPerLengthOffset
+		size += len(body.AttesterSlashings[i].Attestation_1.AttestingIndices)*8 + BytesPerLengthOffset
 		size += attDataSize
 		size += 96
-		size += len(body.AttesterSlashings[i].Attestation_2.AttestingIndices) + BytesPerLengthOffset
+		size += len(body.AttesterSlashings[i].Attestation_2.AttestingIndices)*8 + BytesPerLengthOffset
 		size += attDataSize
 		size += 96
 	}
 
 	// Attestations.
+	size += BytesPerLengthOffset
+	for i := 0; i < len(body.Attestations); i++ {
+		size += len(body.Attestations[i].AggregationBits) + BytesPerLengthOffset
+		size += attDataSize
+		size += 96
+	}
+
+	// Deposits.
+	size += BytesPerLengthOffset
+	// Public key + withdrawal credentials + amount + signature.
+	depositDataSize := 48 + 32 + 8 + 96
+	treeDepth := 32
+	for i := 0; i < len(body.Deposits); i++ {
+		size += depositDataSize
+		// (Deposit contract tree depth+1)*len(leaf).
+		size += (treeDepth + 1) * 32
+	}
+
+	// VoluntaryExits.
+	size += BytesPerLengthOffset
+	for i := 0; i < len(body.Attestations); i++ {
+		size += len(body.Attestations[i].AggregationBits) + BytesPerLengthOffset
+		size += attDataSize
+		size += 96
+	}
 	return size
 }
 
