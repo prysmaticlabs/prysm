@@ -13,7 +13,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-
 // beaconBlocksByRangeRPCHandler looks up the request blocks from the database from a given start block.
 func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
 	ctx, span := trace.StartSpan(ctx, "sync.BeaconBlocksByRangeHandler")
