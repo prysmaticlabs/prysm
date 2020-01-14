@@ -270,7 +270,7 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 	if bc.HeadBlock() == nil {
 		t.Error("Head state can't be nil after initialize beacon chain")
 	}
-	if bc.CanonicalRoot(0) == nil {
+	if bc.canonicalRoots[0] == nil {
 		t.Error("Canonical root for slot 0 can't be nil after initialize beacon chain")
 	}
 }
