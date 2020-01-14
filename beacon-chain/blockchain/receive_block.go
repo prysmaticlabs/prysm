@@ -159,7 +159,6 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 		}
 	}
 
-	log.Debug("Sending state feed")
 	// Send notification of the processed block to the state feed.
 	s.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.BlockProcessed,
@@ -168,7 +167,6 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 			Verified:  true,
 		},
 	})
-	log.Debug("Sent state feed")
 
 	// Reports on block and fork choice metrics.
 	s.reportSlotMetrics(blockCopy.Block.Slot)
