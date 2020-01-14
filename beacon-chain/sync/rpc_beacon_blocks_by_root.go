@@ -65,6 +65,11 @@ func (r *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 	}
 
 	if int64(len(blockRoots)) > r.blocksRateLimiter.Remaining(stream.Conn().RemotePeer().String()) {
+		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
+		if r.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
+			log.Debug("Disconnecting bad peer")
+			r.p2p.Disconnect(stream.Conn().RemotePeer())
+		}
 		return errors.New("rate limited")
 	}
 
