@@ -1,14 +1,20 @@
 package db
 
 import (
+	"flag"
 	"reflect"
 	"testing"
+
+	"github.com/urfave/cli"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
 func TestStore_AttesterSlashingNilBucket(t *testing.T) {
-	db := SetupSlasherDB(t)
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	ctx := cli.NewContext(app, set, nil)
+	db := SetupSlasherDB(t, ctx)
 	defer TeardownSlasherDB(t, db)
 	as := &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("hello")}}
 	has, _, err := db.HasAttesterSlashing(as)
@@ -29,7 +35,10 @@ func TestStore_AttesterSlashingNilBucket(t *testing.T) {
 }
 
 func TestStore_SaveAttesterSlashing(t *testing.T) {
-	db := SetupSlasherDB(t)
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	ctx := cli.NewContext(app, set, nil)
+	db := SetupSlasherDB(t, ctx)
 	defer TeardownSlasherDB(t, db)
 	tests := []struct {
 		ss SlashingStatus
@@ -68,7 +77,10 @@ func TestStore_SaveAttesterSlashing(t *testing.T) {
 }
 
 func TestStore_UpdateAttesterSlashingStatus(t *testing.T) {
-	db := SetupSlasherDB(t)
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	ctx := cli.NewContext(app, set, nil)
+	db := SetupSlasherDB(t, ctx)
 	defer TeardownSlasherDB(t, db)
 	tests := []struct {
 		ss SlashingStatus
