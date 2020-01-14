@@ -29,7 +29,7 @@ type Service struct {
 	cancel             context.CancelFunc
 	genesisTime        uint64
 	numValidators      uint64
-	beaconDB           db.Database
+	beaconDB           db.HeadAccessDatabase
 	powchain           powchain.Service
 	depositCache       *depositcache.DepositCache
 	genesisPath        string
@@ -40,7 +40,7 @@ type Service struct {
 type Config struct {
 	GenesisTime   uint64
 	NumValidators uint64
-	BeaconDB      db.Database
+	BeaconDB      db.HeadAccessDatabase
 	DepositCache  *depositcache.DepositCache
 	GenesisPath   string
 }

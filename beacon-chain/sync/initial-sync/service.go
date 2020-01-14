@@ -32,7 +32,7 @@ const (
 // Config to set up the initial sync service.
 type Config struct {
 	P2P           p2p.P2P
-	DB            db.Database
+	DB            db.ReadOnlyDatabase
 	Chain         blockchainService
 	StateNotifier statefeed.Notifier
 }
@@ -42,7 +42,7 @@ type Service struct {
 	ctx           context.Context
 	chain         blockchainService
 	p2p           p2p.P2P
-	db            db.Database
+	db            db.ReadOnlyDatabase
 	synced        bool
 	chainStarted  bool
 	stateNotifier statefeed.Notifier
