@@ -53,7 +53,7 @@ type Store struct {
 	initSyncStateLock     sync.RWMutex
 	nextEpochBoundarySlot uint64
 	filteredBlockTree     map[[32]byte]*ethpb.BeaconBlock
-	filteredBlockTreeLock   sync.RWMutex
+	filteredBlockTreeLock sync.RWMutex
 }
 
 // NewForkChoiceService instantiates a new service instance that will
