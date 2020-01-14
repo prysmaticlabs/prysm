@@ -41,6 +41,7 @@ type Server struct {
 	AttestationCache       *cache.AttestationCache
 	HeadFetcher            blockchain.HeadFetcher
 	ForkFetcher            blockchain.ForkFetcher
+	FinalizationFetcher    blockchain.FinalizationFetcher
 	CanonicalStateChan     chan *pbp2p.BeaconState
 	BlockFetcher           powchain.POWBlockFetcher
 	DepositFetcher         depositcache.DepositFetcher
