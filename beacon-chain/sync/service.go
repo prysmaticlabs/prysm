@@ -54,7 +54,7 @@ func NewRegularSync(cfg *Config) *Service {
 		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 		stateNotifier:       cfg.StateNotifier,
-		blocksRateLimiter:   leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksBurst, true /* deleteEmptyBuckets */),
+		blocksRateLimiter:   leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksBurst, false /* deleteEmptyBuckets */),
 	}
 
 	r.registerRPCHandlers()
