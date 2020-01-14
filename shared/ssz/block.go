@@ -8,6 +8,55 @@ import (
 
 const BytesPerLengthOffset = 4
 
+// MarshalBeaconBlock --
+func MarshalBeaconBlock(blk *ethpb.BeaconBlock) []byte {
+	buf := make([]byte, beaconBlockSize(blk))
+	fixedIndex := 0
+	// We marshal the slot.
+	binary.LittleEndian.PutUint64(buf[fixedIndex:fixedIndex+8], blk.Slot)
+	fixedIndex += 8
+
+	// We consider the blk.ParentRoot as well.
+	copy(buf[fixedIndex:fixedIndex+32], blk.ParentRoot)
+	fixedIndex += 32
+
+	// We consider blk.StateRoot as well.
+	copy(buf[fixedIndex:fixedIndex+32], blk.StateRoot)
+	fixedIndex += 32
+
+	// We marshal the block body. Given the body has variable sized elements, we
+	// need to determine the start index for writing its offset in the encoded buffer.
+	startOffsetIndex := 8 + 32 + 32 + BytesPerLengthOffset
+	marshalBlockBody(blk.Body, buf, startOffsetIndex)
+	offsetBuf := make([]byte, BytesPerLengthOffset)
+	binary.LittleEndian.PutUint32(offsetBuf, uint32(startOffsetIndex))
+	copy(buf[fixedIndex:fixedIndex+BytesPerLengthOffset], offsetBuf)
+	return buf
+}
+
+func marshalBlockBody(body *ethpb.BeaconBlockBody, buf []byte, startOffset int) {
+	fixedIndex := startOffset
+	// RandaoReveal.
+	copy(buf[fixedIndex:fixedIndex+96], body.RandaoReveal)
+	fixedIndex += 96
+
+	// Eth1Data.
+	fixedIndex = marshalEth1Data(body.Eth1Data, buf, fixedIndex)
+
+	// Graffiti..
+	copy(buf[fixedIndex:fixedIndex+32], body.RandaoReveal)
+	fixedIndex += 32
+}
+
+func marshalEth1Data(data *ethpb.Eth1Data, buf []byte, startOffset int) int {
+	fixedIndex := startOffset
+	copy(buf[fixedIndex:fixedIndex+32], data.DepositRoot)
+	fixedIndex += 32
+	binary.LittleEndian.PutUint64(buf[fixedIndex:fixedIndex+8], data.DepositCount)
+	copy(buf[fixedIndex:fixedIndex+32], data.BlockHash)
+	return fixedIndex
+}
+
 func beaconBlockSize(blk *ethpb.BeaconBlock) int {
 	size := 0
 	// Slot.
@@ -17,13 +66,9 @@ func beaconBlockSize(blk *ethpb.BeaconBlock) int {
 	// StateRoot.
 	size += 32
 
-	// BodySize.
-	size += bodySize(blk.Body) + BytesPerLengthOffset
-	return size
-}
+	body := blk.Body
+	size += BytesPerLengthOffset
 
-func bodySize(body *ethpb.BeaconBlockBody) int {
-	size := 0
 	// RandaoReveal.
 	size += 96
 	// Eth1Data.
@@ -56,7 +101,7 @@ func bodySize(body *ethpb.BeaconBlockBody) int {
 	// Attestations.
 	size += BytesPerLengthOffset
 	for i := 0; i < len(body.Attestations); i++ {
-		size += len(body.Attestations[i].AggregationBits) + BytesPerLengthOffset
+		size += int(body.Attestations[i].AggregationBits.Len()) + BytesPerLengthOffset
 		size += attDataSize
 		size += 96
 	}
@@ -79,108 +124,3 @@ func bodySize(body *ethpb.BeaconBlockBody) int {
 	}
 	return size
 }
-
-func MarshalBeaconBlock(blk *ethpb.BeaconBlock) []byte {
-	enc := make([]byte, beaconBlockSize(blk))
-	fixedSizePosition := 0
-	// We marshal the slot.
-	binary.LittleEndian.PutUint64(enc[fixedSizePosition:fixedSizePosition+8], blk.Slot)
-	fixedSizePosition += 8
-
-	// We consider the blk.ParentRoot as well.
-	copy(enc[fixedSizePosition:fixedSizePosition+32], blk.ParentRoot)
-	fixedSizePosition += 32
-
-	// We consider blk.StateRoot as well.
-	copy(enc[fixedSizePosition:fixedSizePosition+32], blk.StateRoot)
-	fixedSizePosition += 32
-
-	// We start looking at the body.
-	//currentOffsetIndex := fixedSizePosition
-	//nextOffsetIndex := currentOffsetIndex
-
-	return enc
-}
-
-func marshalBlockBody(body *ethpb.BeaconBlockBody, startOffset uint64) []byte {
-	fixedSizePosition := 0
-	// We consider the body.RandaoReveal
-	fixedSizePosition += 32
-
-	// Next we marshal the eth1 data.
-	encEth1Data := marshalEth1Data(body.Eth1Data)
-	fixedSizePosition += len(encEth1Data)
-
-	// We consider the body.Graffiti
-	fixedSizePosition += 32
-	return []byte
-}
-
-func marshalEth1Data(data *ethpb.Eth1Data) []byte {
-	res := make([]byte, 72)
-	copy(res[0:32], data.DepositRoot)
-	binary.LittleEndian.PutUint64(res[32:40], data.DepositCount)
-	copy(res[40:72], data.BlockHash)
-	return res
-}
-
-//func blockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
-//	fieldRoots := make([][]byte, 4)
-//	if header != nil {
-//		headerSlotBuf := make([]byte, 8)
-//		binary.LittleEndian.PutUint64(headerSlotBuf, header.Slot)
-//		headerSlotRoot := bytesutil.ToBytes32(headerSlotBuf)
-//		fieldRoots[0] = headerSlotRoot[:]
-//		fieldRoots[1] = header.ParentRoot
-//		fieldRoots[2] = header.StateRoot
-//		fieldRoots[3] = header.BodyRoot
-//	}
-//	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
-//}
-//
-//func eth1Root(eth1Data *ethpb.Eth1Data) ([32]byte, error) {
-//	fieldRoots := make([][]byte, 3)
-//	for i := 0; i < len(fieldRoots); i++ {
-//		fieldRoots[i] = make([]byte, 32)
-//	}
-//	if eth1Data != nil {
-//		if len(eth1Data.DepositRoot) > 0 {
-//			fieldRoots[0] = eth1Data.DepositRoot
-//		}
-//		eth1DataCountBuf := make([]byte, 8)
-//		binary.LittleEndian.PutUint64(eth1DataCountBuf, eth1Data.DepositCount)
-//		eth1CountRoot := bytesutil.ToBytes32(eth1DataCountBuf)
-//		fieldRoots[1] = eth1CountRoot[:]
-//		if len(eth1Data.BlockHash) > 0 {
-//			fieldRoots[2] = eth1Data.BlockHash
-//		}
-//	}
-//	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
-//}
-//
-//func eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
-//	eth1VotesRoots := make([][]byte, 0)
-//	for i := 0; i < len(eth1DataVotes); i++ {
-//		eth1, err := eth1Root(eth1DataVotes[i])
-//		if err != nil {
-//			return [32]byte{}, errors.Wrap(err, "could not compute eth1data merkleization")
-//		}
-//		eth1VotesRoots = append(eth1VotesRoots, eth1[:])
-//	}
-//	eth1Chunks, err := pack(eth1VotesRoots)
-//	if err != nil {
-//		return [32]byte{}, errors.Wrap(err, "could not chunk eth1 votes roots")
-//	}
-//	eth1VotesRootsRoot, err := bitwiseMerkleize(eth1Chunks, uint64(len(eth1Chunks)), params.BeaconConfig().SlotsPerEth1VotingPeriod)
-//	if err != nil {
-//		return [32]byte{}, errors.Wrap(err, "could not compute eth1data votes merkleization")
-//	}
-//	eth1VotesRootBuf := new(bytes.Buffer)
-//	if err := binary.Write(eth1VotesRootBuf, binary.LittleEndian, uint64(len(eth1DataVotes))); err != nil {
-//		return [32]byte{}, errors.Wrap(err, "could not marshal eth1data votes length")
-//	}
-//	// We need to mix in the length of the slice.
-//	eth1VotesRootBufRoot := make([]byte, 32)
-//	copy(eth1VotesRootBufRoot, eth1VotesRootBuf.Bytes())
-//	return mixInLength(eth1VotesRootsRoot, eth1VotesRootBufRoot), nil
-//}
