@@ -42,7 +42,7 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
 		if r.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
 			log.Debug("Disconnecting bad peer")
-			r.p2p.Disconnect(stream.Conn().RemotePeer())
+			defer r.p2p.Disconnect(stream.Conn().RemotePeer())
 		}
 		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, rateLimitedError)
 		if err != nil {
