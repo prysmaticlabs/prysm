@@ -46,6 +46,10 @@ func (s *store) OnBlock(ctx context.Context, b *ethpb.SignedBeaconBlock) error {
 	return nil
 }
 
+func (s *store) OnBlockCacheFilteredTree(ctx context.Context, b *ethpb.SignedBeaconBlock) error {
+	return nil
+}
+
 func (s *store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.SignedBeaconBlock) error {
 	return nil
 }

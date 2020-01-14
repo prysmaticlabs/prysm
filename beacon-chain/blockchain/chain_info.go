@@ -67,7 +67,7 @@ func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
 		return &ethpb.Checkpoint{Root: s.genesisRoot[:]}
 	}
 
-	return s.headState.FinalizedCheckpoint
+	return proto.Clone(s.headState.FinalizedCheckpoint).(*ethpb.Checkpoint)
 }
 
 // CurrentJustifiedCheckpt returns the current justified checkpoint from head state.
@@ -82,7 +82,7 @@ func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
 		return &ethpb.Checkpoint{Root: s.genesisRoot[:]}
 	}
 
-	return s.headState.CurrentJustifiedCheckpoint
+	return proto.Clone(s.headState.CurrentJustifiedCheckpoint).(*ethpb.Checkpoint)
 }
 
 // PreviousJustifiedCheckpt returns the previous justified checkpoint from head state.
@@ -97,7 +97,7 @@ func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
 		return &ethpb.Checkpoint{Root: s.genesisRoot[:]}
 	}
 
-	return s.headState.PreviousJustifiedCheckpoint
+	return proto.Clone(s.headState.PreviousJustifiedCheckpoint).(*ethpb.Checkpoint)
 }
 
 // HeadSlot returns the slot of the head of the chain.

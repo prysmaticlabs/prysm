@@ -111,9 +111,11 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 	resp.DepositInclusionSlot = int64(depositBlockSlot)
 
 	// If validator has been activated at any point, they are not in the queue so we can return
-	// the request early. Additionally, if idx is zero (default return value) then we know this
+	// the request early. Also if the validator has exited,slashed or initiated its exit
+	//  we return the request early too. We only proceed if its status is pending active
+	//  Additionally, if idx is zero (default return value) then we know this
 	// validator cannot be in the queue either.
-	if uint64(resp.ActivationEpoch) != params.BeaconConfig().FarFutureEpoch || idx == 0 {
+	if resp.Status != ethpb.ValidatorStatus_PENDING_ACTIVE || idx == 0 {
 		return resp
 	}
 
@@ -125,7 +127,7 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 		}
 	}
 	// Our position in the activation queue is the above index - our validator index.
-	if lastActivatedValidatorIdx > idx {
+	if lastActivatedValidatorIdx < idx {
 		resp.PositionInActivationQueue = int64(idx - lastActivatedValidatorIdx)
 	}
 
