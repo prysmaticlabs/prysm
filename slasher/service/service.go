@@ -256,7 +256,9 @@ func (s *Service) Close() {
 	if err != nil {
 		log.Panicf("Could not stop the slasher service: %v", err)
 	}
-	s.slasherDb.
+	if err := s.slasherDb.SaveCachedSpansMaps(); err != nil {
+		log.Fatal("didnt save span map cache to db. if span cache is enabled please restart with --%s", flags.RebuildSpanMapsFlag.Name)
+	}
 	if err := s.slasherDb.Close(); err != nil {
 		log.Errorf("Failed to close slasher database: %v", err)
 	}

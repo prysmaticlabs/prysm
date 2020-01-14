@@ -235,3 +235,35 @@ func TestValidatorSpanMap_SaveOnEvict(t *testing.T) {
 		}
 	}
 }
+
+func TestValidatorSpanMap_SaveCachedSpansMaps(t *testing.T) {
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
+	ctx := cli.NewContext(app, set, nil)
+	db := SetupSlasherDB(t, ctx)
+	defer TeardownSlasherDB(t, db)
+
+	for _, tt := range spanTests {
+		err := db.SaveValidatorSpansMap(tt.validatorIdx, tt.spanMap)
+		if err != nil {
+			t.Fatalf("Save validator span map failed: %v", err)
+		}
+	}
+	// wait for value to pass through cache buffers
+	time.Sleep(time.Millisecond * 10)
+	err := db.SaveCachedSpansMaps()
+	if err != nil {
+		t.Errorf("Failed to save cached span maps to db: %v", err)
+	}
+	spanCache.Clear()
+	for _, tt := range spanTests {
+		sm, err := db.ValidatorSpansMap(tt.validatorIdx)
+		if err != nil {
+			t.Fatalf("Failed to get validator span map: %v", err)
+		}
+		if sm == nil || !proto.Equal(sm, tt.spanMap) {
+			t.Fatalf("Get should return validator span map: %v got: %v", tt.spanMap, sm)
+		}
+	}
+}

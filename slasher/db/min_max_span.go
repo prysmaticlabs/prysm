@@ -11,6 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 )
 
+var highestValidatorIdx uint64
+
 func saveToDB(validatorIdx uint64, _ uint64, value interface{}, cost int64) {
 	log.Infof("evicting span map fro validator id: %d", validatorIdx)
 
@@ -70,6 +72,9 @@ func (db *Store) ValidatorSpansMap(validatorIdx uint64) (*slashpb.EpochSpanMap, 
 // SaveValidatorSpansMap accepts a validator index and span map and writes it to disk.
 func (db *Store) SaveValidatorSpansMap(validatorIdx uint64, spanMap *slashpb.EpochSpanMap) error {
 	if db.ctx.GlobalBool(flags.UseSpanCacheFlag.Name) {
+		if validatorIdx > highestValidatorIdx {
+			highestValidatorIdx = validatorIdx
+		}
 		saved := spanCache.Set(validatorIdx, spanMap, 1)
 		if !saved {
 			return fmt.Errorf("failed to save span map to cache")
@@ -91,25 +96,30 @@ func (db *Store) SaveValidatorSpansMap(validatorIdx uint64, spanMap *slashpb.Epo
 	return err
 }
 
-// SaveValidatorSpansMap accepts a validator index and span map and writes it to disk.
+// SaveValidatorSpansMap accepts a validator index and span map and writes it to disk
+// if no span maps are in db or cache is disabled it returns nil.
 func (db *Store) SaveCachedSpansMaps() error {
 	if db.ctx.GlobalBool(flags.UseSpanCacheFlag.Name) {
-		saved := spanCache.Clear(validatorIdx, spanMap, 1)
-		err := db.batch(func(tx *bolt.Tx) error {
+		err := db.update(func(tx *bolt.Tx) error {
 			bucket := tx.Bucket(validatorsMinMaxSpanBucket)
-			key := bytesutil.Bytes4(validatorIdx)
-			val, err := proto.Marshal(spanMap)
-			if err != nil {
-				return errors.Wrap(err, "failed to marshal span map")
+			for i := uint64(0); i <= highestValidatorIdx; i++ {
+				spanMap, ok := spanCache.Get(i)
+				if ok {
+					key := bytesutil.Bytes4(i)
+					val, err := proto.Marshal(spanMap.(*slashpb.EpochSpanMap))
+					if err != nil {
+						return errors.Wrap(err, "failed to marshal span map")
+					}
+					if err := bucket.Put(key, val); err != nil {
+						return errors.Wrapf(err, "failed to save validator id: %d from validators min max span cache", i)
+					}
+				}
 			}
-			if err := bucket.Put(key, val); err != nil {
-				return errors.Wrapf(err, "failed to delete validator id: %d from validators min max span bucket", validatorIdx)
-			}
-			return err
+			return nil
 		})
+		return err
 	}
-
-	return err
+	return nil
 }
 
 // DeleteValidatorSpanMap deletes a validator span map using a validator index as bucket key.
