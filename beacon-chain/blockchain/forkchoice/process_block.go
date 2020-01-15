@@ -135,13 +135,31 @@ func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) er
 		reportEpochMetrics(postState)
 
 		// Update committees cache at epoch boundary slot.
-		if featureconfig.Get().EnableNewCache {
-			if err := helpers.UpdateCommitteeCache(postState, helpers.CurrentEpoch(postState)); err != nil {
-				return err
-			}
+		if err := helpers.UpdateCommitteeCache(postState, helpers.CurrentEpoch(postState)); err != nil {
+			return err
 		}
 
 		s.nextEpochBoundarySlot = helpers.StartSlot(helpers.NextEpoch(postState))
+	}
+
+	return nil
+}
+
+// OnBlockCacheFilteredTree calls OnBlock with additional of caching of filtered block tree
+// for efficient fork choice processing.
+func (s *Store) OnBlockCacheFilteredTree(ctx context.Context, signed *ethpb.SignedBeaconBlock) error {
+	if err := s.OnBlock(ctx, signed); err != nil {
+		return err
+	}
+
+	if featureconfig.Get().EnableBlockTreeCache {
+		tree, err := s.getFilterBlockTree(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not calculate filtered block tree")
+		}
+		s.filteredBlockTreeLock.Lock()
+		s.filteredBlockTree = tree
+		s.filteredBlockTreeLock.Unlock()
 	}
 
 	return nil
@@ -325,22 +343,24 @@ func (s *Store) verifyBlkFinalizedSlot(b *ethpb.BeaconBlock) error {
 	return nil
 }
 
-// saveNewValidators saves newly added validator index from state to db. Does nothing if validator count has not
-// changed.
+// saveNewValidators saves newly added validator indices from the state to db.
+// Does nothing if validator count has not changed.
 func (s *Store) saveNewValidators(ctx context.Context, preStateValidatorCount int, postState *pb.BeaconState) error {
 	postStateValidatorCount := len(postState.Validators)
 	if preStateValidatorCount != postStateValidatorCount {
+		indices := make([]uint64, 0)
+		pubKeys := make([][]byte, 0)
 		for i := preStateValidatorCount; i < postStateValidatorCount; i++ {
-			pubKey := postState.Validators[i].PublicKey
-			if err := s.db.SaveValidatorIndex(ctx, pubKey, uint64(i)); err != nil {
-				return errors.Wrapf(err, "could not save activated validator: %d", i)
-			}
-			log.WithFields(logrus.Fields{
-				"index":               i,
-				"pubKey":              hex.EncodeToString(bytesutil.Trunc(pubKey)),
-				"totalValidatorCount": i + 1,
-			}).Info("New validator index saved in DB")
+			indices = append(indices, uint64(i))
+			pubKeys = append(pubKeys, postState.Validators[i].PublicKey)
 		}
+		if err := s.db.SaveValidatorIndices(ctx, pubKeys, indices); err != nil {
+			return errors.Wrapf(err, "could not save activated validators: %v", indices)
+		}
+		log.WithFields(logrus.Fields{
+			"indices":             indices,
+			"totalValidatorCount": postStateValidatorCount - preStateValidatorCount,
+		}).Info("Validator indices saved in DB")
 	}
 	return nil
 }

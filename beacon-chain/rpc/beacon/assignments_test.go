@@ -52,7 +52,7 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 	bs := &Server{
 		BeaconDB: db,
 		HeadFetcher: &mock.ChainService{
-			State: &pbp2p.BeaconState{Slot: 0},
+			State: &pbp2p.BeaconState{Slot: 0, RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)},
 		},
 	}
 	wanted := &ethpb.ValidatorAssignments{
@@ -119,6 +119,7 @@ func TestServer_ListAssignments_Pagination_ExceedsMaxPageSize(t *testing.T) {
 }
 
 func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.T) {
+	helpers.ClearCache()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -213,6 +214,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 }
 
 func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testing.T) {
+	helpers.ClearCache()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -330,6 +332,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 }
 
 func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) {
+	helpers.ClearCache()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 

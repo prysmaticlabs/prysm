@@ -3,6 +3,7 @@ package kv
 import (
 	"context"
 	"encoding/binary"
+	"fmt"
 
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
@@ -75,6 +76,32 @@ func (k *Store) SaveValidatorIndex(ctx context.Context, publicKey []byte, valida
 		buf := uint64ToBytes(validatorIdx)
 		k.validatorIndexCache.Set(string(publicKey), validatorIdx, int64(len(buf)))
 		return bucket.Put(publicKey, buf)
+	})
+}
+
+// SaveValidatorIndices by public keys to the DB.
+func (k *Store) SaveValidatorIndices(ctx context.Context, publicKeys [][]byte, validatorIndices []uint64) error {
+	if len(publicKeys) != len(validatorIndices) {
+		return fmt.Errorf(
+			"expected same number of public keys and validator indices, received %d != %d",
+			len(publicKeys),
+			len(validatorIndices),
+		)
+	}
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveValidatorIndices")
+	defer span.End()
+	return k.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(validatorsBucket)
+		var err error
+		for i := 0; i < len(publicKeys); i++ {
+			if len(publicKeys[i]) != params.BeaconConfig().BLSPubkeyLength {
+				return errors.New("incorrect key length")
+			}
+			buf := uint64ToBytes(validatorIndices[i])
+			k.validatorIndexCache.Set(string(publicKeys[i]), validatorIndices[i], int64(len(buf)))
+			err = bucket.Put(publicKeys[i], buf)
+		}
+		return err
 	})
 }
 

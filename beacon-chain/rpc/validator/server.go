@@ -37,10 +37,11 @@ func init() {
 // and more.
 type Server struct {
 	Ctx                    context.Context
-	BeaconDB               db.Database
+	BeaconDB               db.ReadOnlyDatabase
 	AttestationCache       *cache.AttestationCache
 	HeadFetcher            blockchain.HeadFetcher
 	ForkFetcher            blockchain.ForkFetcher
+	FinalizationFetcher    blockchain.FinalizationFetcher
 	CanonicalStateChan     chan *pbp2p.BeaconState
 	BlockFetcher           powchain.POWBlockFetcher
 	DepositFetcher         depositcache.DepositFetcher
@@ -161,7 +162,7 @@ func (vs *Server) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*ethpb.
 // subscribes to an event stream triggered by the powchain service whenever the ChainStart log does
 // occur in the Deposit Contract on ETH 1.0.
 func (vs *Server) WaitForChainStart(req *ptypes.Empty, stream ethpb.BeaconNodeValidator_WaitForChainStartServer) error {
-	head, err := vs.BeaconDB.HeadState(context.Background())
+	head, err := vs.HeadFetcher.HeadState(context.Background())
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
 	}

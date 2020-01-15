@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -40,7 +42,11 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 		return errors.Wrap(err, "could not get head from fork choice service")
 	}
 	// Only save head if it's different than the current head.
-	if !bytes.Equal(headRoot, s.HeadRoot()) {
+	cachedHeadRoot, err := s.HeadRoot(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get head root from cache")
+	}
+	if !bytes.Equal(headRoot, cachedHeadRoot) {
 		signed, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
 		if err != nil {
 			return errors.Wrap(err, "could not compute state from block head")
@@ -84,6 +90,10 @@ func (s *Service) processAttestation() {
 					log.WithError(err).Error("Could not delete fork choice attestation in pool")
 				}
 
+				if !s.verifyCheckpointEpoch(a.Data.Target) {
+					continue
+				}
+
 				if err := s.ReceiveAttestationNoPubsub(ctx, a); err != nil {
 					log.WithFields(logrus.Fields{
 						"targetRoot": fmt.Sprintf("%#x", a.Data.Target.Root),
@@ -92,4 +102,24 @@ func (s *Service) processAttestation() {
 			}
 		}
 	}
+}
+
+// This verifies the epoch of input checkpoint is within current epoch and previous epoch
+// with respect to current time. Returns true if it's within, false if it's not.
+func (s *Service) verifyCheckpointEpoch(c *ethpb.Checkpoint) bool {
+	now := uint64(time.Now().Unix())
+	genesisTime := uint64(s.genesisTime.Unix())
+	currentSlot := (now - genesisTime) / params.BeaconConfig().SecondsPerSlot
+	currentEpoch := helpers.SlotToEpoch(currentSlot)
+
+	var prevEpoch uint64
+	if currentEpoch > 1 {
+		prevEpoch = currentEpoch - 1
+	}
+
+	if c.Epoch != prevEpoch && c.Epoch != currentEpoch {
+		return false
+	}
+
+	return true
 }
