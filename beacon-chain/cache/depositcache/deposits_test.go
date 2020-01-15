@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -19,21 +20,7 @@ func TestBeaconDB_InsertDeposit_LogsOnNilDepositInsertion(t *testing.T) {
 	hook := logTest.NewGlobal()
 	dc := DepositCache{}
 
-	dc.InsertDeposit(context.Background(), nil, big.NewInt(1), 0, [32]byte{})
-
-	if len(dc.deposits) != 0 {
-		t.Fatal("Number of deposits changed")
-	}
-	if hook.LastEntry().Message != nilDepositErr {
-		t.Errorf("Did not log correct message, wanted \"Ignoring nil deposit insertion\", got \"%s\"", hook.LastEntry().Message)
-	}
-}
-
-func TestBeaconDB_InsertDeposit_LogsOnNilBlockNumberInsertion(t *testing.T) {
-	hook := logTest.NewGlobal()
-	dc := DepositCache{}
-
-	dc.InsertDeposit(context.Background(), &ethpb.Deposit{}, nil, 0, [32]byte{})
+	dc.InsertDeposit(context.Background(), nil, 1, 0, [32]byte{})
 
 	if len(dc.deposits) != 0 {
 		t.Fatal("Number of deposits changed")
@@ -47,27 +34,27 @@ func TestBeaconDB_InsertDeposit_MaintainsSortedOrderByIndex(t *testing.T) {
 	dc := DepositCache{}
 
 	insertions := []struct {
-		blkNum  *big.Int
+		blkNum  uint64
 		deposit *ethpb.Deposit
-		index   int
+		index   int64
 	}{
 		{
-			blkNum:  big.NewInt(0),
+			blkNum:  0,
 			deposit: &ethpb.Deposit{},
 			index:   0,
 		},
 		{
-			blkNum:  big.NewInt(0),
+			blkNum:  0,
 			deposit: &ethpb.Deposit{},
 			index:   3,
 		},
 		{
-			blkNum:  big.NewInt(0),
+			blkNum:  0,
 			deposit: &ethpb.Deposit{},
 			index:   1,
 		},
 		{
-			blkNum:  big.NewInt(0),
+			blkNum:  0,
 			deposit: &ethpb.Deposit{},
 			index:   4,
 		},
@@ -77,7 +64,7 @@ func TestBeaconDB_InsertDeposit_MaintainsSortedOrderByIndex(t *testing.T) {
 		dc.InsertDeposit(context.Background(), ins.deposit, ins.blkNum, ins.index, [32]byte{})
 	}
 
-	expectedIndices := []int{0, 1, 3, 4}
+	expectedIndices := []int64{0, 1, 3, 4}
 	for i, ei := range expectedIndices {
 		if dc.deposits[i].Index != ei {
 			t.Errorf("dc.deposits[%d].Index = %d, wanted %d", i, dc.deposits[i].Index, ei)
@@ -88,34 +75,34 @@ func TestBeaconDB_InsertDeposit_MaintainsSortedOrderByIndex(t *testing.T) {
 func TestBeaconDB_AllDeposits_ReturnsAllDeposits(t *testing.T) {
 	dc := DepositCache{}
 
-	deposits := []*DepositContainer{
+	deposits := []*dbpb.DepositContainer{
 		{
-			Block:   big.NewInt(10),
-			Deposit: &ethpb.Deposit{},
+			Eth1BlockHeight: 10,
+			Deposit:         &ethpb.Deposit{},
 		},
 		{
-			Block:   big.NewInt(10),
-			Deposit: &ethpb.Deposit{},
+			Eth1BlockHeight: 10,
+			Deposit:         &ethpb.Deposit{},
 		},
 		{
-			Block:   big.NewInt(10),
-			Deposit: &ethpb.Deposit{},
+			Eth1BlockHeight: 10,
+			Deposit:         &ethpb.Deposit{},
 		},
 		{
-			Block:   big.NewInt(11),
-			Deposit: &ethpb.Deposit{},
+			Eth1BlockHeight: 11,
+			Deposit:         &ethpb.Deposit{},
 		},
 		{
-			Block:   big.NewInt(11),
-			Deposit: &ethpb.Deposit{},
+			Eth1BlockHeight: 11,
+			Deposit:         &ethpb.Deposit{},
 		},
 		{
-			Block:   big.NewInt(12),
-			Deposit: &ethpb.Deposit{},
+			Eth1BlockHeight: 12,
+			Deposit:         &ethpb.Deposit{},
 		},
 		{
-			Block:   big.NewInt(12),
-			Deposit: &ethpb.Deposit{},
+			Eth1BlockHeight: 12,
+			Deposit:         &ethpb.Deposit{},
 		},
 	}
 	dc.deposits = deposits
@@ -129,34 +116,34 @@ func TestBeaconDB_AllDeposits_ReturnsAllDeposits(t *testing.T) {
 func TestBeaconDB_AllDeposits_FiltersDepositUpToAndIncludingBlockNumber(t *testing.T) {
 	dc := DepositCache{}
 
-	deposits := []*DepositContainer{
+	deposits := []*dbpb.DepositContainer{
 		{
-			Block:   big.NewInt(10),
-			Deposit: &ethpb.Deposit{},
+			Eth1BlockHeight: 10,
+			Deposit:         &ethpb.Deposit{},
 		},
 		{
-			Block:   big.NewInt(10),
-			Deposit: &ethpb.Deposit{},
+			Eth1BlockHeight: 10,
+			Deposit:         &ethpb.Deposit{},
 		},
 		{
-			Block:   big.NewInt(10),
-			Deposit: &ethpb.Deposit{},
+			Eth1BlockHeight: 10,
+			Deposit:         &ethpb.Deposit{},
 		},
 		{
-			Block:   big.NewInt(11),
-			Deposit: &ethpb.Deposit{},
+			Eth1BlockHeight: 11,
+			Deposit:         &ethpb.Deposit{},
 		},
 		{
-			Block:   big.NewInt(11),
-			Deposit: &ethpb.Deposit{},
+			Eth1BlockHeight: 11,
+			Deposit:         &ethpb.Deposit{},
 		},
 		{
-			Block:   big.NewInt(12),
-			Deposit: &ethpb.Deposit{},
+			Eth1BlockHeight: 12,
+			Deposit:         &ethpb.Deposit{},
 		},
 		{
-			Block:   big.NewInt(12),
-			Deposit: &ethpb.Deposit{},
+			Eth1BlockHeight: 12,
+			Deposit:         &ethpb.Deposit{},
 		},
 	}
 	dc.deposits = deposits
@@ -171,35 +158,35 @@ func TestBeaconDB_AllDeposits_FiltersDepositUpToAndIncludingBlockNumber(t *testi
 func TestBeaconDB_DepositsNumberAndRootAtHeight_ReturnsAppropriateCountAndRoot(t *testing.T) {
 	dc := DepositCache{}
 
-	dc.deposits = []*DepositContainer{
+	dc.deposits = []*dbpb.DepositContainer{
 		{
-			Block:   big.NewInt(10),
-			Deposit: &ethpb.Deposit{},
+			Eth1BlockHeight: 10,
+			Deposit:         &ethpb.Deposit{},
 		},
 		{
-			Block:   big.NewInt(10),
-			Deposit: &ethpb.Deposit{},
+			Eth1BlockHeight: 10,
+			Deposit:         &ethpb.Deposit{},
 		},
 		{
-			Block:   big.NewInt(10),
-			Deposit: &ethpb.Deposit{},
+			Eth1BlockHeight: 10,
+			Deposit:         &ethpb.Deposit{},
 		},
 		{
-			Block:   big.NewInt(11),
-			Deposit: &ethpb.Deposit{},
+			Eth1BlockHeight: 10,
+			Deposit:         &ethpb.Deposit{},
 		},
 		{
-			Block:       big.NewInt(11),
-			Deposit:     &ethpb.Deposit{},
-			depositRoot: bytesutil.ToBytes32([]byte("root")),
+			Eth1BlockHeight: 11,
+			Deposit:         &ethpb.Deposit{},
+			DepositRoot:     []byte("root"),
 		},
 		{
-			Block:   big.NewInt(12),
-			Deposit: &ethpb.Deposit{},
+			Eth1BlockHeight: 12,
+			Deposit:         &ethpb.Deposit{},
 		},
 		{
-			Block:   big.NewInt(12),
-			Deposit: &ethpb.Deposit{},
+			Eth1BlockHeight: 12,
+			Deposit:         &ethpb.Deposit{},
 		},
 	}
 
@@ -216,16 +203,16 @@ func TestBeaconDB_DepositsNumberAndRootAtHeight_ReturnsAppropriateCountAndRoot(t
 func TestBeaconDB_DepositsNumberAndRootAtHeight_ReturnsEmptyTrieIfBlockHeightLessThanOldestDeposit(t *testing.T) {
 	dc := DepositCache{}
 
-	dc.deposits = []*DepositContainer{
+	dc.deposits = []*dbpb.DepositContainer{
 		{
-			Block:       big.NewInt(10),
-			Deposit:     &ethpb.Deposit{},
-			depositRoot: bytesutil.ToBytes32([]byte("root")),
+			Eth1BlockHeight: 10,
+			Deposit:         &ethpb.Deposit{},
+			DepositRoot:     []byte("root"),
 		},
 		{
-			Block:       big.NewInt(11),
-			Deposit:     &ethpb.Deposit{},
-			depositRoot: bytesutil.ToBytes32([]byte("root")),
+			Eth1BlockHeight: 11,
+			Deposit:         &ethpb.Deposit{},
+			DepositRoot:     []byte("root"),
 		},
 	}
 
@@ -242,9 +229,9 @@ func TestBeaconDB_DepositsNumberAndRootAtHeight_ReturnsEmptyTrieIfBlockHeightLes
 func TestBeaconDB_DepositByPubkey_ReturnsFirstMatchingDeposit(t *testing.T) {
 	dc := DepositCache{}
 
-	dc.deposits = []*DepositContainer{
+	dc.deposits = []*dbpb.DepositContainer{
 		{
-			Block: big.NewInt(9),
+			Eth1BlockHeight: 9,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
 					PublicKey: []byte("pk0"),
@@ -252,7 +239,7 @@ func TestBeaconDB_DepositByPubkey_ReturnsFirstMatchingDeposit(t *testing.T) {
 			},
 		},
 		{
-			Block: big.NewInt(10),
+			Eth1BlockHeight: 10,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
 					PublicKey: []byte("pk1"),
@@ -260,7 +247,7 @@ func TestBeaconDB_DepositByPubkey_ReturnsFirstMatchingDeposit(t *testing.T) {
 			},
 		},
 		{
-			Block: big.NewInt(11),
+			Eth1BlockHeight: 11,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
 					PublicKey: []byte("pk1"),
@@ -268,7 +255,7 @@ func TestBeaconDB_DepositByPubkey_ReturnsFirstMatchingDeposit(t *testing.T) {
 			},
 		},
 		{
-			Block: big.NewInt(12),
+			Eth1BlockHeight: 12,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
 					PublicKey: []byte("pk2"),

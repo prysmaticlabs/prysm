@@ -43,5 +43,5 @@ func ReadStatusCode(stream io.Reader, encoding encoder.NetworkEncoding) (uint8, 
 		return 0, "", err
 	}
 
-	return uint8(b[0]), string(msg), nil
+	return b[0], string(msg), nil
 }

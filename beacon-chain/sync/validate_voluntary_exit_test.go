@@ -21,10 +21,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func setupValidExit(t *testing.T) (*ethpb.VoluntaryExit, *pb.BeaconState) {
-	exit := &ethpb.VoluntaryExit{
-		ValidatorIndex: 0,
-		Epoch:          0,
+func setupValidExit(t *testing.T) (*ethpb.SignedVoluntaryExit, *pb.BeaconState) {
+	exit := &ethpb.SignedVoluntaryExit{
+		Exit: &ethpb.VoluntaryExit{
+			ValidatorIndex: 0,
+			Epoch:          0,
+		},
 	}
 	registry := []*ethpb.Validator{
 		{
@@ -41,7 +43,7 @@ func setupValidExit(t *testing.T) (*ethpb.VoluntaryExit, *pb.BeaconState) {
 		Slot: params.BeaconConfig().SlotsPerEpoch * 5,
 	}
 	state.Slot = state.Slot + (params.BeaconConfig().PersistentCommitteePeriod * params.BeaconConfig().SlotsPerEpoch)
-	signingRoot, err := ssz.SigningRoot(exit)
+	signingRoot, err := ssz.HashTreeRoot(exit.Exit)
 	if err != nil {
 		t.Error(err)
 	}

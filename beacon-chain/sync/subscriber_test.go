@@ -32,8 +32,8 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 	wg.Add(1)
 
 	r.subscribe(topic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
-		m := msg.(*pb.VoluntaryExit)
-		if m.Epoch != 55 {
+		m := msg.(*pb.SignedVoluntaryExit)
+		if m.Exit == nil || m.Exit.Epoch != 55 {
 			t.Errorf("Unexpected incoming message: %+v", m)
 		}
 		wg.Done()
@@ -41,7 +41,7 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 	})
 	r.chainStarted = true
 
-	p2p.ReceivePubSub(topic, &pb.VoluntaryExit{Epoch: 55})
+	p2p.ReceivePubSub(topic, &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}})
 
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
@@ -77,9 +77,11 @@ func TestSubscribe_WaitToSync(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	msg := &pb.BeaconBlock{
-		ParentRoot: testutil.Random32Bytes(t),
-		Signature:  sk.Sign([]byte("data"), 0).Marshal(),
+	msg := &pb.SignedBeaconBlock{
+		Block: &pb.BeaconBlock{
+			ParentRoot: testutil.Random32Bytes(t),
+		},
+		Signature: sk.Sign([]byte("data"), 0).Marshal(),
 	}
 	p2p.ReceivePubSub(topic, msg)
 	// wait for chainstart to be sent
@@ -97,7 +99,7 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 		p2p: p,
 	}
 
-	topic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.VoluntaryExit{})]
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.SignedVoluntaryExit{})]
 	var wg sync.WaitGroup
 	wg.Add(1)
 
@@ -106,7 +108,7 @@ func TestSubscribe_HandlesPanic(t *testing.T) {
 		panic("bad")
 	})
 	r.chainStarted = true
-	p.ReceivePubSub(topic, &pb.VoluntaryExit{Epoch: 55})
+	p.ReceivePubSub(topic, &pb.SignedVoluntaryExit{Exit: &pb.VoluntaryExit{Epoch: 55}})
 
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")

@@ -11,11 +11,14 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/stateutil"
 )
 
 func TestStore_GenesisStoreOk(t *testing.T) {
@@ -27,16 +30,19 @@ func TestStore_GenesisStoreOk(t *testing.T) {
 
 	genesisTime := time.Unix(9999, 0)
 	genesisState := &pb.BeaconState{GenesisTime: uint64(genesisTime.Unix())}
-	genesisStateRoot, err := ssz.HashTreeRoot(genesisState)
+	genesisStateRoot, err := stateutil.HashTreeRootState(genesisState)
 	if err != nil {
 		t.Fatal(err)
 	}
 	genesisBlk := blocks.NewGenesisBlock(genesisStateRoot[:])
-	genesisBlkRoot, err := ssz.SigningRoot(genesisBlk)
+	genesisBlkRoot, err := ssz.HashTreeRoot(genesisBlk.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := db.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveGenesisBlockRoot(ctx, genesisBlkRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -68,7 +74,7 @@ func TestStore_AncestorOk(t *testing.T) {
 
 	store := NewForkChoiceService(ctx, db)
 
-	roots, err := blockTree1(db)
+	roots, err := blockTree1(db, []byte{'g'})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +114,7 @@ func TestStore_AncestorNotPartOfTheChain(t *testing.T) {
 
 	store := NewForkChoiceService(ctx, db)
 
-	roots, err := blockTree1(db)
+	roots, err := blockTree1(db, []byte{'g'})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,13 +139,14 @@ func TestStore_AncestorNotPartOfTheChain(t *testing.T) {
 }
 
 func TestStore_LatestAttestingBalance(t *testing.T) {
+	helpers.ClearCache()
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
 	store := NewForkChoiceService(ctx, db)
 
-	roots, err := blockTree1(db)
+	roots, err := blockTree1(db, []byte{'g'})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,17 +156,20 @@ func TestStore_LatestAttestingBalance(t *testing.T) {
 		validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
 	}
 
-	s := &pb.BeaconState{Validators: validators}
-	stateRoot, err := ssz.HashTreeRoot(s)
+	s := &pb.BeaconState{Validators: validators, RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
+	stateRoot, err := stateutil.HashTreeRootState(s)
 	if err != nil {
 		t.Fatal(err)
 	}
 	b := blocks.NewGenesisBlock(stateRoot[:])
-	blkRoot, err := ssz.SigningRoot(b)
+	blkRoot, err := ssz.HashTreeRoot(b.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := db.SaveState(ctx, s, blkRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveGenesisBlockRoot(ctx, blkRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -211,7 +221,7 @@ func TestStore_ChildrenBlocksFromParentRoot(t *testing.T) {
 
 	store := NewForkChoiceService(ctx, db)
 
-	roots, err := blockTree1(db)
+	roots, err := blockTree1(db, []byte{'g'})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -236,13 +246,14 @@ func TestStore_ChildrenBlocksFromParentRoot(t *testing.T) {
 }
 
 func TestStore_GetHead(t *testing.T) {
+	helpers.ClearCache()
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
 	store := NewForkChoiceService(ctx, db)
 
-	roots, err := blockTree1(db)
+	roots, err := blockTree1(db, []byte{'g'})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -252,14 +263,20 @@ func TestStore_GetHead(t *testing.T) {
 		validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
 	}
 
-	s := &pb.BeaconState{Validators: validators}
-	stateRoot, err := ssz.HashTreeRoot(s)
+	s := &pb.BeaconState{Validators: validators, RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
+	stateRoot, err := stateutil.HashTreeRootState(s)
 	if err != nil {
 		t.Fatal(err)
 	}
 	b := blocks.NewGenesisBlock(stateRoot[:])
-	blkRoot, err := ssz.SigningRoot(b)
+	blkRoot, err := ssz.HashTreeRoot(b.Block)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveState(ctx, s, blkRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveGenesisBlockRoot(ctx, blkRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -316,7 +333,7 @@ func TestStore_GetHead(t *testing.T) {
 	// 18 validators switches vote to B1 to gain 51%, enough to switch head
 	for i := 0; i < 18; i++ {
 		idx := 50 + uint64(i)
-		store.latestVoteMap[uint64(idx)] = &pb.ValidatorLatestVote{Root: roots[1]}
+		store.latestVoteMap[idx] = &pb.ValidatorLatestVote{Root: roots[1]}
 	}
 	head, err = store.Head(ctx)
 	if err != nil {
@@ -340,7 +357,7 @@ func TestCacheGenesisState_Correct(t *testing.T) {
 	featureconfig.Init(config)
 
 	b := &ethpb.BeaconBlock{Slot: 1}
-	r, _ := ssz.SigningRoot(b)
+	r, _ := ssz.HashTreeRoot(b)
 	s := &pb.BeaconState{GenesisTime: 99}
 
 	store.db.SaveState(ctx, s, r)
@@ -354,5 +371,151 @@ func TestCacheGenesisState_Correct(t *testing.T) {
 		if !reflect.DeepEqual(s, state) {
 			t.Error("Did not get wanted state")
 		}
+	}
+}
+
+func TestStore_GetFilterBlockTree_CorrectLeaf(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	store := NewForkChoiceService(ctx, db)
+
+	roots, err := blockTree1(db, []byte{'g'})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s := &pb.BeaconState{}
+	stateRoot, err := stateutil.HashTreeRootState(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := blocks.NewGenesisBlock(stateRoot[:])
+	blkRoot, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveState(ctx, s, blkRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveGenesisBlockRoot(ctx, blkRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	checkPoint := &ethpb.Checkpoint{Root: blkRoot[:]}
+
+	if err := store.GenesisStore(ctx, checkPoint, checkPoint); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveState(ctx, s, bytesutil.ToBytes32(roots[0])); err != nil {
+		t.Fatal(err)
+	}
+	store.justifiedCheckpt.Root = roots[0]
+	if err := store.checkpointState.AddCheckpointState(&cache.CheckpointState{
+		Checkpoint: store.justifiedCheckpt,
+		State:      s,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	tree, err := store.getFilterBlockTree(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wanted := make(map[[32]byte]*ethpb.BeaconBlock)
+	for _, root := range roots {
+		root32 := bytesutil.ToBytes32(root)
+		b, _ := store.db.Block(ctx, root32)
+		if b != nil {
+			wanted[root32] = b.Block
+		}
+	}
+	if !reflect.DeepEqual(tree, wanted) {
+		t.Error("Did not filter tree correctly")
+	}
+}
+
+func TestStore_GetFilterBlockTree_IncorrectLeaf(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	store := NewForkChoiceService(ctx, db)
+
+	roots, err := blockTree1(db, []byte{'g'})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s := &pb.BeaconState{}
+	stateRoot, err := stateutil.HashTreeRootState(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := blocks.NewGenesisBlock(stateRoot[:])
+	blkRoot, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveState(ctx, s, blkRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveGenesisBlockRoot(ctx, blkRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	checkPoint := &ethpb.Checkpoint{Root: blkRoot[:]}
+
+	if err := store.GenesisStore(ctx, checkPoint, checkPoint); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveState(ctx, s, bytesutil.ToBytes32(roots[0])); err != nil {
+		t.Fatal(err)
+	}
+	store.justifiedCheckpt.Root = roots[0]
+	if err := store.checkpointState.AddCheckpointState(&cache.CheckpointState{
+		Checkpoint: store.justifiedCheckpt,
+		State:      s,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	// Filter for incorrect leaves for 1, 7 and 8
+	store.db.SaveState(ctx, &pb.BeaconState{CurrentJustifiedCheckpoint: &ethpb.Checkpoint{}}, bytesutil.ToBytes32(roots[1]))
+	store.db.SaveState(ctx, &pb.BeaconState{CurrentJustifiedCheckpoint: &ethpb.Checkpoint{}}, bytesutil.ToBytes32(roots[7]))
+	store.db.SaveState(ctx, &pb.BeaconState{CurrentJustifiedCheckpoint: &ethpb.Checkpoint{}}, bytesutil.ToBytes32(roots[8]))
+	store.justifiedCheckpt.Epoch = 1
+	tree, err := store.getFilterBlockTree(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(tree) != 0 {
+		t.Error("filtered tree should be 0 length")
+	}
+
+	// Set leave 1 as correct
+	store.db.SaveState(ctx, &pb.BeaconState{CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 1, Root: store.justifiedCheckpt.Root}}, bytesutil.ToBytes32(roots[1]))
+	tree, err = store.getFilterBlockTree(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wanted := make(map[[32]byte]*ethpb.BeaconBlock)
+	root32 := bytesutil.ToBytes32(roots[0])
+	b, err = store.db.Block(ctx, root32)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wanted[root32] = b.Block
+	root32 = bytesutil.ToBytes32(roots[1])
+	b, err = store.db.Block(ctx, root32)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wanted[root32] = b.Block
+
+	if !reflect.DeepEqual(tree, wanted) {
+		t.Error("Did not filter tree correctly")
 	}
 }

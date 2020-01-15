@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"crypto/rand"
 	"os"
 	"strings"
 	"testing"
@@ -29,7 +28,7 @@ func keySetup() {
 	keyMap = make(map[[48]byte]*keystore.Key)
 	keyMapThreeValidators = make(map[[48]byte]*keystore.Key)
 
-	validatorKey, _ = keystore.NewKey(rand.Reader)
+	validatorKey, _ = keystore.NewKey()
 	copy(validatorPubKey[:], validatorKey.PublicKey.Marshal())
 	keyMap[validatorPubKey] = validatorKey
 
@@ -39,7 +38,7 @@ func keySetup() {
 
 	sks = make([]*bls.SecretKey, 3)
 	for i := 0; i < 3; i++ {
-		vKey, _ := keystore.NewKey(rand.Reader)
+		vKey, _ := keystore.NewKey()
 		var pubKey [48]byte
 		copy(pubKey[:], vKey.PublicKey.Marshal())
 		keyMapThreeValidators[pubKey] = vKey

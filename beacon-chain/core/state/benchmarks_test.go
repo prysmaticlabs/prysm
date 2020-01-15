@@ -55,8 +55,8 @@ func BenchmarkExecuteStateTransition_FullBlock(b *testing.B) {
 
 func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 	config := &featureconfig.Flags{
-		EnableNewCache:           true,
-		EnableShuffledIndexCache: true,
+		EnableProposerIndexCache: true,
+		EnableAttestationCache:   true,
 	}
 	featureconfig.Init(config)
 	benchutil.SetBenchmarkConfig()
@@ -95,8 +95,8 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 
 func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
 	config := &featureconfig.Flags{
-		EnableNewCache:           true,
-		EnableShuffledIndexCache: true,
+		EnableProposerIndexCache: true,
+		EnableAttestationCache:   true,
 	}
 	featureconfig.Init(config)
 	benchutil.SetBenchmarkConfig()

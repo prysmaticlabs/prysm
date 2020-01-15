@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
@@ -22,9 +23,13 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
@@ -60,6 +65,7 @@ type Reader interface {
 type ChainStartFetcher interface {
 	ChainStartDeposits() []*ethpb.Deposit
 	ChainStartEth1Data() *ethpb.Eth1Data
+	PreGenesisState() *pb.BeaconState
 }
 
 // ChainInfoFetcher retrieves information about eth1 metadata at the eth2 genesis time.
@@ -119,27 +125,19 @@ type Service struct {
 	logger                  bind.ContractFilterer
 	httpLogger              bind.ContractFilterer
 	blockFetcher            RPCBlockFetcher
-	blockHeight             *big.Int    // the latest ETH1.0 chain blockHeight.
-	blockHash               common.Hash // the latest ETH1.0 chain blockHash.
-	blockTime               time.Time   // the latest ETH1.0 chain blockTime.
 	blockCache              *blockCache // cache to store block hash/block height.
+	latestEth1Data          *protodb.LatestETH1Data
 	depositContractCaller   *contracts.DepositContractCaller
 	depositRoot             []byte
 	depositTrie             *trieutil.SparseMerkleTrie
-	chainStartDeposits      []*ethpb.Deposit
-	chainStarted            bool
-	chainStartBlockNumber   *big.Int
-	beaconDB                db.Database
+	chainStartData          *protodb.ChainStartData
+	beaconDB                db.HeadAccessDatabase // Circular dep if using HeadFetcher.
 	depositCache            *depositcache.DepositCache
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	isRunning               bool
 	runError                error
-	lastRequestedBlock      *big.Int
-	chainStartETH1Data      *ethpb.Eth1Data
-	activeValidatorCount    uint64
-	depositedPubkeys        map[[48]byte]uint64
+	preGenesisState         *pb.BeaconState
 	processingLock          sync.RWMutex
-	eth2GenesisTime         uint64
 	requestingOldLogs       bool
 	connectedETH1           bool
 }
@@ -149,7 +147,7 @@ type Web3ServiceConfig struct {
 	ETH1Endpoint    string
 	HTTPEndPoint    string
 	DepositContract common.Address
-	BeaconDB        db.Database
+	BeaconDB        db.HeadAccessDatabase
 	DepositCache    *depositcache.DepositCache
 	StateNotifier   statefeed.Notifier
 }
@@ -163,33 +161,56 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 			config.ETH1Endpoint,
 		)
 	}
-
 	ctx, cancel := context.WithCancel(ctx)
 	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		cancel()
 		return nil, errors.Wrap(err, "could not setup deposit trie")
 	}
-	return &Service{
-		ctx:                     ctx,
-		cancel:                  cancel,
-		headerChan:              make(chan *gethTypes.Header),
-		eth1Endpoint:            config.ETH1Endpoint,
-		httpEndpoint:            config.HTTPEndPoint,
-		blockHeight:             nil,
-		blockHash:               common.BytesToHash([]byte{}),
-		blockCache:              newBlockCache(),
-		depositContractAddress:  config.DepositContract,
-		stateNotifier:           config.StateNotifier,
-		depositTrie:             depositTrie,
-		chainStartDeposits:      make([]*ethpb.Deposit, 0),
+
+	s := &Service{
+		ctx:          ctx,
+		cancel:       cancel,
+		headerChan:   make(chan *gethTypes.Header),
+		eth1Endpoint: config.ETH1Endpoint,
+		httpEndpoint: config.HTTPEndPoint,
+		latestEth1Data: &protodb.LatestETH1Data{
+			BlockHeight:        0,
+			BlockTime:          0,
+			BlockHash:          []byte{},
+			LastRequestedBlock: 0,
+		},
+		blockCache:             newBlockCache(),
+		depositContractAddress: config.DepositContract,
+		stateNotifier:          config.StateNotifier,
+		depositTrie:            depositTrie,
+		chainStartData: &protodb.ChainStartData{
+			Eth1Data:           &ethpb.Eth1Data{},
+			ChainstartDeposits: make([]*ethpb.Deposit, 0),
+		},
 		beaconDB:                config.BeaconDB,
 		depositCache:            config.DepositCache,
 		lastReceivedMerkleIndex: -1,
-		lastRequestedBlock:      big.NewInt(0),
-		chainStartETH1Data:      &ethpb.Eth1Data{},
-		depositedPubkeys:        make(map[[48]byte]uint64),
-	}, nil
+		preGenesisState:         state.EmptyGenesisState(),
+	}
+
+	if featureconfig.Get().EnableSavingOfDepositData {
+		eth1Data, err := config.BeaconDB.PowchainData(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to retrieve eth1 data")
+		}
+		if eth1Data != nil {
+			s.depositTrie = trieutil.CreateTrieFromProto(eth1Data.Trie)
+			s.chainStartData = eth1Data.ChainstartData
+			s.preGenesisState = eth1Data.BeaconState
+			s.latestEth1Data = eth1Data.CurrentEth1Data
+			s.lastReceivedMerkleIndex = int64(len(s.depositTrie.Items()) - 1)
+			if err := s.initDepositCaches(ctx, eth1Data.DepositContainers); err != nil {
+				return nil, errors.Wrap(err, "could not initialize caches")
+			}
+		}
+	}
+	return s, nil
 }
 
 // Start a web3 service's main event loop.
@@ -214,12 +235,18 @@ func (s *Service) Stop() error {
 // ChainStartDeposits returns a slice of validator deposit data processed
 // by the deposit contract and cached in the powchain service.
 func (s *Service) ChainStartDeposits() []*ethpb.Deposit {
-	return s.chainStartDeposits
+	return s.chainStartData.ChainstartDeposits
 }
 
 // ChainStartEth1Data returns the eth1 data at chainstart.
 func (s *Service) ChainStartEth1Data() *ethpb.Eth1Data {
-	return s.chainStartETH1Data
+	return s.chainStartData.Eth1Data
+}
+
+// PreGenesisState returns a state that contains
+// pre-chainstart deposits.
+func (s *Service) PreGenesisState() *pb.BeaconState {
+	return s.preGenesisState
 }
 
 // Status is service health checks. Return nil or error.
@@ -236,7 +263,7 @@ func (s *Service) Status() error {
 	// (analyzed the time of the block from 2018-09-01 to 2019-02-13)
 	fiveMinutesTimeout := time.Now().Add(-5 * time.Minute)
 	// check that web3 client is syncing
-	if s.blockTime.Before(fiveMinutesTimeout) {
+	if time.Unix(int64(s.latestEth1Data.BlockTime), 0).Before(fiveMinutesTimeout) {
 		return errors.New("eth1 client is not syncing")
 	}
 	return nil
@@ -261,12 +288,12 @@ func (s *Service) DepositTrie() *trieutil.SparseMerkleTrie {
 
 // LatestBlockHeight in the ETH1.0 chain.
 func (s *Service) LatestBlockHeight() *big.Int {
-	return s.blockHeight
+	return big.NewInt(int64(s.latestEth1Data.BlockHeight))
 }
 
 // LatestBlockHash in the ETH1.0 chain.
 func (s *Service) LatestBlockHash() common.Hash {
-	return s.blockHash
+	return bytesutil.ToBytes32(s.latestEth1Data.BlockHash)
 }
 
 // Client for interacting with the ETH1.0 chain.
@@ -377,17 +404,42 @@ func (s *Service) initDataFromContract() error {
 	return nil
 }
 
+func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.DepositContainer) error {
+	s.depositCache.InsertDepositContainers(ctx, ctrs)
+	currentState, err := s.beaconDB.HeadState(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get head state")
+	}
+	// do not add to pending cache
+	// if no state exists.
+	if currentState == nil {
+		validDepositsCount.Add(float64(s.preGenesisState.Eth1DepositIndex + 1))
+		return nil
+	}
+	currIndex := currentState.Eth1DepositIndex
+	validDepositsCount.Add(float64(currIndex + 1))
+
+	// Only add pending deposits if the container slice length
+	// is more than the current index in state.
+	if len(ctrs) > int(currIndex) {
+		for _, c := range ctrs[currIndex:] {
+			s.depositCache.InsertPendingDeposit(ctx, c.Deposit, c.Eth1BlockHeight, c.Index, bytesutil.ToBytes32(c.DepositRoot))
+		}
+	}
+	return nil
+}
+
 // processSubscribedHeaders adds a newly observed eth1 block to the block cache and
 // updates the latest blockHeight, blockHash, and blockTime properties of the service.
 func (s *Service) processSubscribedHeaders(header *gethTypes.Header) {
 	defer safelyHandlePanic()
 	blockNumberGauge.Set(float64(header.Number.Int64()))
-	s.blockHeight = header.Number
-	s.blockHash = header.Hash()
-	s.blockTime = time.Unix(int64(header.Time), 0)
+	s.latestEth1Data.BlockHeight = header.Number.Uint64()
+	s.latestEth1Data.BlockHash = header.Hash().Bytes()
+	s.latestEth1Data.BlockTime = header.Time
 	log.WithFields(logrus.Fields{
-		"blockNumber": s.blockHeight,
-		"blockHash":   s.blockHash.Hex(),
+		"blockNumber": s.latestEth1Data.BlockHeight,
+		"blockHash":   hexutil.Encode(s.latestEth1Data.BlockHash),
 	}).Debug("Latest eth1 chain event")
 
 	if err := s.blockCache.AddBlock(gethTypes.NewBlockWithHeader(header)); err != nil {
@@ -410,18 +462,18 @@ func safelyHandlePanic() {
 
 func (s *Service) handleDelayTicker() {
 	defer safelyHandlePanic()
-	// If the last requested block has not changed,
-	// we do not request batched logs as this means there are no new
-	// logs for the powchain service to process.
-	if s.lastRequestedBlock.Cmp(s.blockHeight) == 0 {
-		return
-	}
-	if !s.chainStarted {
-		if err := s.checkForChainStart(context.Background(), s.lastRequestedBlock); err != nil {
+	if !s.chainStartData.Chainstarted {
+		if err := s.checkForChainStart(context.Background(), big.NewInt(int64(s.latestEth1Data.LastRequestedBlock))); err != nil {
 			s.runError = err
 			log.Error(err)
 			return
 		}
+	}
+	// If the last requested block has not changed,
+	// we do not request batched logs as this means there are no new
+	// logs for the powchain service to process.
+	if s.latestEth1Data.LastRequestedBlock == s.latestEth1Data.BlockHeight {
+		return
 	}
 	if err := s.requestBatchedLogs(context.Background()); err != nil {
 		s.runError = err
@@ -452,8 +504,8 @@ func (s *Service) run(done <-chan struct{}) {
 		return
 	}
 
-	s.blockHeight = header.Number
-	s.blockHash = header.Hash()
+	s.latestEth1Data.BlockHeight = header.Number.Uint64()
+	s.latestEth1Data.BlockHash = header.Hash().Bytes()
 
 	if err := s.processPastLogs(context.Background()); err != nil {
 		log.Errorf("Unable to process past logs %v", err)

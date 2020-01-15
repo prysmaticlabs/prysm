@@ -105,7 +105,7 @@ func (k *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) err
 		if err := decode(enc, ac); err != nil {
 			return err
 		}
-		indicesByBucket := createAttestationIndicesFromData(ac.Data, tx)
+		indicesByBucket := createAttestationIndicesFromData(ac.Data)
 		if err := deleteValueForIndices(indicesByBucket, attDataRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not delete root for DB indices")
 		}
@@ -126,7 +126,7 @@ func (k *Store) DeleteAttestations(ctx context.Context, attDataRoots [][32]byte)
 			if err := decode(enc, ac); err != nil {
 				return err
 			}
-			indicesByBucket := createAttestationIndicesFromData(ac.Data, tx)
+			indicesByBucket := createAttestationIndicesFromData(ac.Data)
 			if err := deleteValueForIndices(indicesByBucket, attDataRoot[:], tx); err != nil {
 				return errors.Wrap(err, "could not delete root for DB indices")
 			}
@@ -175,7 +175,7 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 			return err
 		}
 
-		indicesByBucket := createAttestationIndicesFromData(att.Data, tx)
+		indicesByBucket := createAttestationIndicesFromData(att.Data)
 		if err := updateValueForIndices(indicesByBucket, attDataRoot[:], tx); err != nil {
 			return errors.Wrap(err, "could not update DB indices")
 		}
@@ -217,7 +217,7 @@ func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation)
 				return err
 			}
 
-			indicesByBucket := createAttestationIndicesFromData(att.Data, tx)
+			indicesByBucket := createAttestationIndicesFromData(att.Data)
 			if err := updateValueForIndices(indicesByBucket, attDataRoot[:], tx); err != nil {
 				return errors.Wrap(err, "could not update DB indices")
 			}
@@ -238,7 +238,7 @@ func (k *Store) SaveAttestations(ctx context.Context, atts []*ethpb.Attestation)
 // createAttestationIndicesFromData takes in attestation data and returns
 // a map of bolt DB index buckets corresponding to each particular key for indices for
 // data, such as (shard indices bucket -> shard 5).
-func createAttestationIndicesFromData(attData *ethpb.AttestationData, tx *bolt.Tx) map[string][]byte {
+func createAttestationIndicesFromData(attData *ethpb.AttestationData) map[string][]byte {
 	indicesByBucket := make(map[string][]byte)
 	buckets := make([][]byte, 0)
 	indices := make([][]byte, 0)

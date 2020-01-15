@@ -10,7 +10,9 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
@@ -72,36 +74,32 @@ func BeaconCommitteeFromState(state *pb.BeaconState, slot uint64, committeeIndex
 		return nil, errors.Wrap(err, "could not get seed")
 	}
 
-	if featureconfig.Get().EnableNewCache {
-		indices, err := committeeCache.Committee(slot, seed, committeeIndex)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not interface with committee cache")
-		}
-		if indices != nil {
-			return indices, nil
-		}
+	indices, err := committeeCache.Committee(slot, seed, committeeIndex)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not interface with committee cache")
+	}
+	if indices != nil {
+		return indices, nil
 	}
 
-	indices, err := ActiveValidatorIndices(state, epoch)
+	activeIndices, err := ActiveValidatorIndices(state, epoch)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get active indices")
 	}
 
-	return BeaconCommittee(indices, seed, slot, committeeIndex)
+	return BeaconCommittee(activeIndices, seed, slot, committeeIndex)
 }
 
 // BeaconCommittee returns the crosslink committee of a given slot and committee index. The
 // validator indices and seed are provided as an argument rather than a direct implementation
 // from the spec definition. Having them as an argument allows for cheaper computation run time.
 func BeaconCommittee(validatorIndices []uint64, seed [32]byte, slot uint64, committeeIndex uint64) ([]uint64, error) {
-	if featureconfig.Get().EnableNewCache {
-		indices, err := committeeCache.Committee(slot, seed, committeeIndex)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not interface with committee cache")
-		}
-		if indices != nil {
-			return indices, nil
-		}
+	indices, err := committeeCache.Committee(slot, seed, committeeIndex)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not interface with committee cache")
+	}
+	if indices != nil {
+		return indices, nil
 	}
 
 	committeesPerSlot := SlotCommitteeCount(uint64(len(validatorIndices)))
@@ -356,7 +354,7 @@ func VerifyBitfieldLength(bf bitfield.Bitfield, committeeSize uint64) error {
 	return nil
 }
 
-// VerifyAttestationBitfieldLengths verifies that an attestations aggregation and custody bitfields are
+// VerifyAttestationBitfieldLengths verifies that an attestations aggregation bitfields is
 // a valid length matching the size of the committee.
 func VerifyAttestationBitfieldLengths(state *pb.BeaconState, att *ethpb.Attestation) error {
 	committee, err := BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
@@ -370,9 +368,6 @@ func VerifyAttestationBitfieldLengths(state *pb.BeaconState, att *ethpb.Attestat
 
 	if err := VerifyBitfieldLength(att.AggregationBits, uint64(len(committee))); err != nil {
 		return errors.Wrap(err, "failed to verify aggregation bitfield")
-	}
-	if err := VerifyBitfieldLength(att.CustodyBits, uint64(len(committee))); err != nil {
-		return errors.Wrap(err, "failed to verify custody bitfield")
 	}
 	return nil
 }
@@ -408,15 +403,15 @@ func ShuffledIndices(state *pb.BeaconState, epoch uint64) ([]uint64, error) {
 // UpdateCommitteeCache gets called at the beginning of every epoch to cache the committee shuffled indices
 // list with committee index and epoch number. It caches the shuffled indices for current epoch and next epoch.
 func UpdateCommitteeCache(state *pb.BeaconState, epoch uint64) error {
-	for _, epoch := range []uint64{epoch, epoch + 1} {
-		shuffledIndices, err := ShuffledIndices(state, epoch)
+	for _, e := range []uint64{epoch, epoch + 1} {
+		shuffledIndices, err := ShuffledIndices(state, e)
 		if err != nil {
 			return err
 		}
 
 		count := SlotCommitteeCount(uint64(len(shuffledIndices)))
 
-		seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
+		seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconAttester)
 		if err != nil {
 			return err
 		}
@@ -430,15 +425,58 @@ func UpdateCommitteeCache(state *pb.BeaconState, epoch uint64) error {
 			return sortedIndices[i] < sortedIndices[j]
 		})
 
+		var proposerIndices []uint64
+		if featureconfig.Get().EnableProposerIndexCache {
+			// Given we can not pre-compute proposer indices of the next epoch, this limits
+			// proposer indices calculation to only the current epoch.
+			if e == epoch {
+				proposerIndices, err = precomputeProposerIndices(state, sortedIndices)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
 		if err := committeeCache.AddCommitteeShuffledList(&cache.Committees{
 			ShuffledIndices: shuffledIndices,
 			CommitteeCount:  count * params.BeaconConfig().SlotsPerEpoch,
 			Seed:            seed,
 			SortedIndices:   sortedIndices,
+			ProposerIndices: proposerIndices,
 		}); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+// ClearCache clears the committee cache
+func ClearCache() {
+	committeeCache = cache.NewCommitteesCache()
+}
+
+// This computes proposer indices of the current epoch and returns a list of proposer indices,
+// the index of the list represents the slot number.
+func precomputeProposerIndices(state *pb.BeaconState, activeIndices []uint64) ([]uint64, error) {
+	proposerIndices := make([]uint64, params.BeaconConfig().SlotsPerEpoch)
+
+	e := CurrentEpoch(state)
+	seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not generate seed")
+	}
+	slot := StartSlot(e)
+
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+		seedWithSlot := append(seed[:], bytesutil.Bytes8(slot+i)...)
+		seedWithSlotHash := hashutil.Hash(seedWithSlot)
+		index, err := ComputeProposerIndex(state.Validators, activeIndices, seedWithSlotHash)
+		if err != nil {
+			return nil, err
+		}
+		proposerIndices[i] = index
+	}
+
+	return proposerIndices, nil
 }
