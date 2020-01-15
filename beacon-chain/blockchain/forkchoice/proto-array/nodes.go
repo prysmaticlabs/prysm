@@ -2,7 +2,8 @@ package proto_array
 
 import "bytes"
 
-// Insert registers a new block with the fork choice.
+// Insert registers a new block node to the fork choice store.
+// It updates the new node's parent with best child and descendant node.
 func (s Store) Insert(root [32]byte, parent [32]byte, justifiedEpoch uint64, finalizedEpoch uint64) {
 	s.nodeIndicesLock.Lock()
 	defer s.nodeIndicesLock.Unlock()
@@ -15,13 +16,13 @@ func (s Store) Insert(root [32]byte, parent [32]byte, justifiedEpoch uint64, fin
 	}
 
 	n := Node{
-		root: root,
-		parent: parentIndex,
+		root:           root,
+		parent:         parentIndex,
 		justifiedEpoch: justifiedEpoch,
 		finalizedEpoch: finalizedEpoch,
-		bestChild: nonExistentNode,
+		bestChild:      nonExistentNode,
 		bestDescendant: nonExistentNode,
-		weight: 0,
+		weight:         0,
 	}
 
 	s.nodeIndices[root] = uint64(index)
@@ -52,7 +53,7 @@ func (s Store) UpdateBestChildAndDescendant(parentIndex uint64, childIndex uint6
 	changeToNone := []uint64{nonExistentNode, nonExistentNode}
 	changeToChild := []uint64{childIndex, child.bestDescendant}
 	noChange := []uint64{parent.bestChild, parent.bestDescendant}
-	newParentChild := make([]uint64,0)
+	newParentChild := make([]uint64, 0)
 
 	if parent.bestChild != nonExistentNode {
 		if parent.bestChild == childIndex && !childLeadsToViableHead {
@@ -104,12 +105,18 @@ func (s Store) UpdateBestChildAndDescendant(parentIndex uint64, childIndex uint6
 	s.nodes[parentIndex] = parent
 }
 
+// LeadsToViableHead returns true if the node or the best descendent of the node is viable for head.
+// Any node with diff finalized or justified epoch than the ones in fork choice store
+// should not be viable to head.
 func (s Store) LeadsToViableHead(node Node) bool {
 	bestDescendentIndex := node.bestDescendant
 	bestDescendentNode := s.nodes[bestDescendentIndex]
 	return s.ViableForHead(bestDescendentNode) || s.ViableForHead(node)
 }
 
+// ViableForHead returns true if the node is viable to head.
+// Any node with diff finalized or justified epoch than the ones in fork choice store
+// should not be viable to head.
 func (s Store) ViableForHead(node Node) bool {
 	justified := s.justifiedEpoch == node.justifiedEpoch || s.justifiedEpoch == 0
 	finalized := s.finalizedEpoch == node.finalizedEpoch || s.finalizedEpoch == 0

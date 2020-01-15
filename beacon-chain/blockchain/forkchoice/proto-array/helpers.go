@@ -6,6 +6,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// This computes balance delta from votes. It returns a list of deltas that represents the difference
+// between old balances and new balances.
 func computeDeltas(indices map[[32]byte]uint64, votes []Vote, oldBalances []uint64, newBalances []uint64) ([]int, error) {
 	deltas := make([]int, len(indices))
 
@@ -45,5 +47,5 @@ func computeDeltas(indices map[[32]byte]uint64, votes []Vote, oldBalances []uint
 		vote.currentRoot = vote.nextRoot
 	}
 
-	return deltas
+	return deltas, nil
 }

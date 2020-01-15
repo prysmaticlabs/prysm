@@ -5,7 +5,7 @@ import "sync"
 // ForkChoice defines the overall fork choice store which includes block nodes, validator's latest votes and balances.
 type ForkChoice struct {
 	store    *Store
-	votes    []Vote  // tracks individual validator's latest vote.
+	votes    []Vote   // tracks individual validator's latest vote.
 	balances []uint64 // tracks individual validator's effective balances.
 }
 
