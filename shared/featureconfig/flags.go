@@ -5,8 +5,7 @@ import (
 )
 
 var (
-	// MinimalConfigFlag enables the minimal configuration.
-	MinimalConfigFlag = cli.BoolFlag{
+	minimalConfigFlag = cli.BoolFlag{
 		Name:  "minimal-config",
 		Usage: "Use minimal config with parameters as defined in the spec.",
 	}
@@ -14,18 +13,17 @@ var (
 		Name:  "interop-write-ssz-state-transitions",
 		Usage: "Write ssz states to disk after attempted state transition",
 	}
-	// EnableAttestationCacheFlag see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableAttestationCacheFlag = cli.BoolFlag{
+	// enableAttestationCacheFlag see https://github.com/prysmaticlabs/prysm/issues/3106.
+	enableAttestationCacheFlag = cli.BoolFlag{
 		Name:  "enable-attestation-cache",
 		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
 	}
-	// EnableEth1DataVoteCacheFlag see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableEth1DataVoteCacheFlag = cli.BoolFlag{
+	// enableEth1DataVoteCacheFlag see https://github.com/prysmaticlabs/prysm/issues/3106.
+	enableEth1DataVoteCacheFlag = cli.BoolFlag{
 		Name:  "enable-eth1-data-vote-cache",
 		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
 	}
-	// SkipBLSVerifyFlag skips BLS signature verification across the runtime for development purposes.
-	SkipBLSVerifyFlag = cli.BoolFlag{
+	skipBLSVerifyFlag = cli.BoolFlag{
 		Name:  "skip-bls-verify",
 		Usage: "Whether or not to skip BLS verification of signature at runtime, this is unsafe and should only be used for development",
 	}
@@ -33,8 +31,7 @@ var (
 		Name:  "enable-db-backup-webhook",
 		Usage: "Serve HTTP handler to initiate database backups. The handler is served on the monitoring port at path /db/backup.",
 	}
-	// enableSkipSlotsCache enables the skips slots lru cache to be used in runtime.
-	enableSkipSlotsCache = cli.BoolFlag{
+	enableSkipSlotsCacheFlag = cli.BoolFlag{
 		Name:  "enable-skip-slots-cache",
 		Usage: "Enables the skip slot cache to be used in the event of skipped slots.",
 	}
@@ -48,7 +45,7 @@ var (
 			"and attestation's aggregated signatures. Without this flag, only the proposer " +
 			"signature is verified until the node reaches the end of the finalized chain.",
 	}
-	initSyncCacheState = cli.BoolFlag{
+	initSyncCacheStateFlag = cli.BoolFlag{
 		Name: "initial-sync-cache-state",
 		Usage: "Save state in cache during initial sync. We currently save state in the DB during " +
 			"initial sync and disk-IO is one of the biggest bottleneck. This still saves finalized state in DB " +
@@ -56,10 +53,10 @@ var (
 	}
 	enableSlasherFlag = cli.BoolFlag{
 		Name: "enable-slasher",
-		Usage: "Connect to slasher in order to retrieve slashable events. Slasher is connected to beacon node using grpc" +
-			"User should be running slasher on current machine or include slasher-provider flag.",
+		Usage: "Enables connection to a slasher service in order to retrieve slashable events. Slasher is connected to the beacon node using gRPC and " +
+			"the slasher-provider flag can be used to pass its address.",
 	}
-	saveDepositData = cli.BoolFlag{
+	saveDepositDataFlag = cli.BoolFlag{
 		Name:  "save-deposit-data",
 		Usage: "Enable of the saving of deposit related data",
 	}
@@ -69,12 +66,12 @@ var (
 			"triggered the genesis as the genesis time. This flag should be used for local " +
 			"development and testing only.",
 	}
-	cacheFilteredBlockTree = cli.BoolFlag{
+	cacheFilteredBlockTreeFlag = cli.BoolFlag{
 		Name: "cache-filtered-block-tree",
 		Usage: "Cache filtered block tree by maintaining it rather than continually recalculating on the fly, " +
 			"this is used for fork choice.",
 	}
-	cacheProposerIndices = cli.BoolFlag{
+	cacheProposerIndicesFlag = cli.BoolFlag{
 		Name:  "cache-proposer-indices",
 		Usage: "Cache proposer indices on per epoch basis.",
 	}
@@ -89,7 +86,7 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedOptimizeProcessEpoch = cli.BoolFlag{
+	deprecatedOptimizeProcessEpochFlag = cli.BoolFlag{
 		Name:   "optimize-process-epoch",
 		Usage:  deprecatedUsage,
 		Hidden: true,
@@ -125,7 +122,7 @@ var (
 		Hidden: true,
 	}
 
-	deprecatedEnableCustomStateSSZ = cli.BoolFlag{
+	deprecatedEnableCustomStateSSZFlag = cli.BoolFlag{
 		Name:   "enable-custom-state-ssz",
 		Usage:  deprecatedUsage,
 		Hidden: true,
@@ -155,7 +152,7 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedEnableShuffledIndexCache = cli.BoolFlag{
+	deprecatedEnableShuffledIndexCacheFlag = cli.BoolFlag{
 		Name:   "enable-shuffled-index-cache",
 		Usage:  deprecatedUsage,
 		Hidden: true,
@@ -166,40 +163,40 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableFinalizedBlockRootIndexFlag,
 	deprecatedScatterFlag,
 	deprecatedPruneFinalizedStatesFlag,
-	deprecatedOptimizeProcessEpoch,
+	deprecatedOptimizeProcessEpochFlag,
 	deprecatedEnableSnappyDBCompressionFlag,
 	deprecatedEnablePruneBoundaryStateFlag,
 	deprecatedEnableActiveIndicesCacheFlag,
 	deprecatedEnableActiveCountCacheFlag,
-	deprecatedEnableCustomStateSSZ,
+	deprecatedEnableCustomStateSSZFlag,
 	deprecatedEnableCommitteeCacheFlag,
 	deprecatedEnableBLSPubkeyCacheFlag,
 	deprecatedFastCommitteeAssignmentsFlag,
 	deprecatedGenesisDelayFlag,
 	deprecatedNewCacheFlag,
-	deprecatedEnableShuffledIndexCache,
+	deprecatedEnableShuffledIndexCacheFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
-	MinimalConfigFlag,
+	minimalConfigFlag,
 }...)
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	noGenesisDelayFlag,
-	MinimalConfigFlag,
+	minimalConfigFlag,
 	writeSSZStateTransitionsFlag,
-	EnableAttestationCacheFlag,
-	EnableEth1DataVoteCacheFlag,
+	enableAttestationCacheFlag,
+	enableEth1DataVoteCacheFlag,
 	initSyncVerifyEverythingFlag,
-	initSyncCacheState,
-	SkipBLSVerifyFlag,
+	initSyncCacheStateFlag,
+	skipBLSVerifyFlag,
 	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,
-	enableSkipSlotsCache,
-	saveDepositData,
+	enableSkipSlotsCacheFlag,
+	saveDepositDataFlag,
 	enableSlasherFlag,
-	cacheFilteredBlockTree,
-	cacheProposerIndices,
+	cacheFilteredBlockTreeFlag,
+	cacheProposerIndicesFlag,
 }...)

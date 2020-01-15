@@ -21,7 +21,7 @@ func TestInitFeatureConfig(t *testing.T) {
 func TestConfigureBeaconConfig(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	set.Bool(featureconfig.MinimalConfigFlag.Name, true, "test")
+	set.Bool(featureconfig.minimalConfigFlag.Name, true, "test")
 	context := cli.NewContext(app, set, nil)
 	featureconfig.ConfigureBeaconChain(context)
 	if c := featureconfig.Get(); !c.MinimalConfig {

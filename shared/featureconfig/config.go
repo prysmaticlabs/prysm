@@ -1,6 +1,6 @@
 /*
 Package featureconfig defines which features are enabled for runtime
-in order to selctively enable certain features to maintain a stable runtime.
+in order to selectively enable certain features to maintain a stable runtime.
 
 The process for implementing new features using this package is as follows:
 	1. Add a new CMD flag in flags.go, and place it in the proper list(s) var for its client.
@@ -70,7 +70,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Starting ETH2 with no genesis delay")
 		cfg.NoGenesisDelay = true
 	}
-	if ctx.GlobalBool(MinimalConfigFlag.Name) {
+	if ctx.GlobalBool(minimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
 	}
@@ -78,11 +78,11 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
 		cfg.WriteSSZStateTransitions = true
 	}
-	if ctx.GlobalBool(EnableAttestationCacheFlag.Name) {
+	if ctx.GlobalBool(enableAttestationCacheFlag.Name) {
 		log.Warn("Enabled unsafe attestation cache")
 		cfg.EnableAttestationCache = true
 	}
-	if ctx.GlobalBool(EnableEth1DataVoteCacheFlag.Name) {
+	if ctx.GlobalBool(enableEth1DataVoteCacheFlag.Name) {
 		log.Warn("Enabled unsafe eth1 data vote cache")
 		cfg.EnableEth1DataVoteCache = true
 	}
@@ -92,7 +92,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	} else {
 		cfg.InitSyncNoVerify = true
 	}
-	if ctx.GlobalBool(SkipBLSVerifyFlag.Name) {
+	if ctx.GlobalBool(skipBLSVerifyFlag.Name) {
 		log.Warn("UNSAFE: Skipping BLS verification at runtime")
 		cfg.SkipBLSVerify = true
 	}
@@ -136,7 +136,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 func ConfigureValidator(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	if ctx.GlobalBool(MinimalConfigFlag.Name) {
+	if ctx.GlobalBool(minimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
 	}
