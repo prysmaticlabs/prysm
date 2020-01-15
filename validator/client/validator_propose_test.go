@@ -9,6 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
@@ -112,6 +113,10 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 }
 
 func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
+	cfg := &featureconfig.Flags{
+		BlockDoubleProposals: true,
+	}
+	featureconfig.Init(cfg)
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
 	defer finish()
@@ -145,6 +150,10 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 }
 
 func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
+	cfg := &featureconfig.Flags{
+		BlockDoubleProposals: true,
+	}
+	featureconfig.Init(cfg)
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
 	defer finish()
@@ -179,6 +188,10 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 }
 
 func TestProposeBlock_AllowsPastProposals(t *testing.T) {
+	cfg := &featureconfig.Flags{
+		BlockDoubleProposals: true,
+	}
+	featureconfig.Init(cfg)
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
 	defer finish()
