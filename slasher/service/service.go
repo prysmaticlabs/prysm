@@ -101,6 +101,7 @@ func (s *Service) Start() {
 	s.context = context.Background()
 	s.startSlasher()
 	s.startBeaconClient()
+	s.slasherOldAtetstationFeeder()
 	go s.finalisedChangeUpdater()
 	stop := s.stop
 	s.lock.Unlock()
