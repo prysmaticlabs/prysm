@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 
+	"github.com/gogo/protobuf/proto"
+	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -18,18 +20,23 @@ import (
 )
 
 func main() {
+	wd, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("Output dir is: %s", wd)
 	log.Println("Generating genesis state")
 	// Generating this for the 2 following states.
 	if err := generateGenesisBeaconState(); err != nil {
-		log.Fatal(err)
+		log.Fatalf("Could not generate genesis state: %v", err)
 	}
 	log.Println("Generating full block and state after 1 skipped epoch")
 	if err := generateMarshalledFullStateAndBlock(); err != nil {
-		log.Fatal(err)
+		log.Fatalf("Could not generate full state and block: %v", err)
 	}
 	log.Println("Generating state after 2 fully attested epochs")
 	if err := generate2FullEpochState(); err != nil {
-		log.Fatal(err)
+		log.Fatalf("Could not generate 2 full epoch state: %v", err)
 	}
 	// Removing this since its 10MB large and no longer needed.
 	if err := os.Remove(benchutil.GenesisFileName); err != nil {
@@ -42,7 +49,7 @@ func generateGenesisBeaconState() error {
 	if err != nil {
 		return err
 	}
-	beaconBytes, err := ssz.Marshal(genesisState)
+	beaconBytes, err := proto.Marshal(genesisState)
 	if err != nil {
 		return err
 	}
@@ -92,18 +99,18 @@ func generateMarshalledFullStateAndBlock() error {
 
 	block, err = testutil.GenerateFullBlock(beaconState, privs, attConfig, beaconState.Slot)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not generate full block")
 	}
 	block.Body.Attestations = append(atts, block.Body.Attestations...)
 
 	s, err := state.CalculateStateRoot(context.Background(), beaconState, block)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not calculate state root")
 	}
 	block.StateRoot = s[:]
 	blockRoot, err := ssz.SigningRoot(block)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not get signing root of block")
 	}
 	// Temporarily incrementing the beacon state slot here since BeaconProposerIndex is a
 	// function deterministic on beacon state slot.
@@ -116,7 +123,7 @@ func generateMarshalledFullStateAndBlock() error {
 	block.Signature = privs[proposerIdx].Sign(blockRoot[:], domain).Marshal()
 	beaconState.Slot--
 
-	beaconBytes, err := ssz.Marshal(beaconState)
+	beaconBytes, err := proto.Marshal(beaconState)
 	if err != nil {
 		return err
 	}
@@ -130,7 +137,7 @@ func generateMarshalledFullStateAndBlock() error {
 		return err
 	}
 
-	blockBytes, err := ssz.Marshal(block)
+	blockBytes, err := proto.Marshal(block)
 	if err != nil {
 		return err
 	}
@@ -167,7 +174,7 @@ func generate2FullEpochState() error {
 		}
 	}
 
-	beaconBytes, err := ssz.Marshal(beaconState)
+	beaconBytes, err := proto.Marshal(beaconState)
 	if err != nil {
 		return err
 	}
@@ -180,11 +187,11 @@ func generate2FullEpochState() error {
 func genesisBeaconState() (*pb.BeaconState, error) {
 	beaconBytes, err := ioutil.ReadFile(benchutil.GenesisFileName)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "cannot read genesis state file")
 	}
 	genesisState := &pb.BeaconState{}
-	if err := ssz.Unmarshal(beaconBytes, genesisState); err != nil {
-		return nil, err
+	if err := proto.Unmarshal(beaconBytes, genesisState); err != nil {
+		return nil, errors.Wrap(err, "cannot unmarshal genesis state file")
 	}
 	return genesisState, nil
 }
