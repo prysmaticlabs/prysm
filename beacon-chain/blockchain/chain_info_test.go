@@ -33,7 +33,11 @@ func TestHeadRoot_Nil(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 	c := setupBeaconChain(t, db)
-	if !bytes.Equal(c.HeadRoot(), params.BeaconConfig().ZeroHash[:]) {
+	headRoot, err := c.HeadRoot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(headRoot, params.BeaconConfig().ZeroHash[:]) {
 		t.Error("Incorrect pre chain start value")
 	}
 }
@@ -131,8 +135,12 @@ func TestHeadRoot_CanRetrieve(t *testing.T) {
 	c := &Service{canonicalRoots: make(map[uint64][]byte)}
 	c.headSlot = 100
 	c.canonicalRoots[c.headSlot] = []byte{'A'}
-	if !bytes.Equal([]byte{'A'}, c.HeadRoot()) {
-		t.Errorf("Wanted head root: %v, got: %d", []byte{'A'}, c.HeadRoot())
+	headRoot, err := c.HeadRoot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal([]byte{'A'}, headRoot) {
+		t.Errorf("Wanted head root: %v, got: %d", []byte{'A'}, headRoot)
 	}
 }
 
