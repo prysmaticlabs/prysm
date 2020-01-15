@@ -1,9 +1,11 @@
 package proto_array
 
+import "sync"
+
 // ForkChoice defines the overall fork choice store which includes block nodes, validator's latest votes and balances.
 type ForkChoice struct {
 	store    *Store
-	votes    []*Vote  // tracks individual validator's latest vote.
+	votes    []Vote  // tracks individual validator's latest vote.
 	balances []uint64 // tracks individual validator's effective balances.
 }
 
@@ -15,7 +17,8 @@ type Store struct {
 	finalizedEpoch     uint64              // latest finalized epoch in store.
 	finalizedRoot      [32]byte            // latest finalized root in store.
 	nodes              []Node              // list of block nodes, each node is a representation of one block.
-	indices            map[[32]byte]uint64 // root of block node and its index in the nodes list.
+	nodeIndices        map[[32]byte]uint64 // the root of block node and the nodes index in the list.
+	nodeIndicesLock    sync.RWMutex
 }
 
 // Node defines the individual block which includes its parent, ancestor and how much weight accounted for it.
@@ -35,3 +38,5 @@ type Vote struct {
 	nextRoot    [32]byte
 	nextEpoch   uint64
 }
+
+const nonExistentNode = ^uint64(0)

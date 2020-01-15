@@ -2,7 +2,13 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["type.go"],
+    srcs = [
+        "forkchoice.go",
+        "helpers.go",
+        "nodes.go",
+        "type.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/forkchoice/proto-array",
     visibility = ["//visibility:public"],
+    deps = ["//shared/params:go_default_library"],
 )
