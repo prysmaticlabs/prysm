@@ -42,7 +42,11 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 		return errors.Wrap(err, "could not get head from fork choice service")
 	}
 	// Only save head if it's different than the current head.
-	if !bytes.Equal(headRoot, s.HeadRoot()) {
+	cachedHeadRoot, err := s.HeadRoot(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get head root from cache")
+	}
+	if !bytes.Equal(headRoot, cachedHeadRoot) {
 		signed, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
 		if err != nil {
 			return errors.Wrap(err, "could not compute state from block head")
