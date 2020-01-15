@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -57,9 +58,11 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		return
 	}
 
-	if HasProposedForEpoch(history, epoch) {
-		log.WithField("epoch", epoch).Warn("Tried to sign a double proposal, rejected")
-		return
+	if featureconfig.Get().BlockDoubleProposals {
+		if HasProposedForEpoch(history, epoch) {
+			log.WithField("epoch", epoch).Warn("Tried to sign a double proposal, rejected")
+			return
+		}
 	}
 
 	// Sign returned block from beacon node
@@ -80,10 +83,12 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		return
 	}
 
-	history = SetProposedForEpoch(history, epoch)
-	if err := v.db.SaveProposalHistory(ctx, pubKey[:], history); err != nil {
-		log.WithError(err).Error("Failed to save updated proposal history")
-		return
+	if featureconfig.Get().BlockDoubleProposals {
+		history = SetProposedForEpoch(history, epoch)
+		if err := v.db.SaveProposalHistory(ctx, pubKey[:], history); err != nil {
+			log.WithError(err).Error("Failed to save updated proposal history")
+			return
+		}
 	}
 
 	span.AddAttributes(
