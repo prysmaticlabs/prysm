@@ -73,16 +73,16 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		Signature: sig,
 	}
 
-	history = SetProposedForEpoch(history, epoch)
-	if err := v.db.SaveProposalHistory(ctx, pubKey[:], history); err != nil {
-		log.WithError(err).Error("Failed to save updated proposal history")
-		return
-	}
-
 	// Propose and broadcast block via beacon node
 	blkResp, err := v.validatorClient.ProposeBlock(ctx, blk)
 	if err != nil {
 		log.WithError(err).Error("Failed to propose block")
+		return
+	}
+
+	history = SetProposedForEpoch(history, epoch)
+	if err := v.db.SaveProposalHistory(ctx, pubKey[:], history); err != nil {
+		log.WithError(err).Error("Failed to save updated proposal history")
 		return
 	}
 
