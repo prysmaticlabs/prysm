@@ -100,7 +100,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Allowing database backups to be triggered from HTTP webhook.")
 		cfg.EnableBackupWebhook = true
 	}
-	if ctx.GlobalBool(enableSkipSlotsCache.Name) {
+	if ctx.GlobalBool(enableSkipSlotsCacheFlag.Name) {
 		log.Warn("Enabled skip slots cache.")
 		cfg.EnableSkipSlotsCache = true
 	}
@@ -108,11 +108,11 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling experimental kafka streaming.")
 		cfg.KafkaBootstrapServers = ctx.GlobalString(kafkaBootstrapServersFlag.Name)
 	}
-	if ctx.GlobalBool(initSyncCacheState.Name) {
+	if ctx.GlobalBool(initSyncCacheStateFlag.Name) {
 		log.Warn("Enabled initial sync cache state mode.")
 		cfg.InitSyncCacheState = true
 	}
-	if ctx.GlobalBool(saveDepositData.Name) {
+	if ctx.GlobalBool(saveDepositDataFlag.Name) {
 		log.Warn("Enabled saving of eth1 related chain/deposit data.")
 		cfg.EnableSavingOfDepositData = true
 	}
@@ -120,11 +120,11 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enable slasher connection.")
 		cfg.EnableSlasherConnection = true
 	}
-	if ctx.GlobalBool(cacheFilteredBlockTree.Name) {
+	if ctx.GlobalBool(cacheFilteredBlockTreeFlag.Name) {
 		log.Warn("Enabled filtered block tree cache for fork choice.")
 		cfg.EnableBlockTreeCache = true
 	}
-	if ctx.GlobalBool(cacheProposerIndices.Name) {
+	if ctx.GlobalBool(cacheProposerIndicesFlag.Name) {
 		log.Warn("Enabled proposer index caching.")
 		cfg.EnableProposerIndexCache = true
 	}
