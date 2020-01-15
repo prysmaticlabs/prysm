@@ -7,6 +7,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -29,7 +30,7 @@ type GenesisTimeFetcher interface {
 // directly retrieves head related data.
 type HeadFetcher interface {
 	HeadSlot() uint64
-	HeadRoot() []byte
+	HeadRoot(ctx context.Context) ([]byte, error)
 	HeadBlock() *ethpb.SignedBeaconBlock
 	HeadState(ctx context.Context) (*pb.BeaconState, error)
 	HeadValidatorsIndices(epoch uint64) ([]uint64, error)
@@ -109,16 +110,29 @@ func (s *Service) HeadSlot() uint64 {
 }
 
 // HeadRoot returns the root of the head of the chain.
-func (s *Service) HeadRoot() []byte {
+func (s *Service) HeadRoot(ctx context.Context) ([]byte, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
 	root := s.canonicalRoots[s.headSlot]
 	if len(root) != 0 {
-		return root
+		return root, nil
 	}
 
-	return params.BeaconConfig().ZeroHash[:]
+	b, err := s.beaconDB.HeadBlock(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if b == nil {
+		return params.BeaconConfig().ZeroHash[:], nil
+	}
+
+	r, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		return nil, err
+	}
+
+	return r[:], nil
 }
 
 // HeadBlock returns the head block of the chain.
