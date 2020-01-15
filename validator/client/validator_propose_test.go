@@ -170,7 +170,7 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
 	).Return(&ethpb.ProposeResponse{}, nil /*error*/)
 
-	farFuture := (params.BeaconConfig().WeakSubjectivityPeriod+9)*params.BeaconConfig().SlotsPerEpoch
+	farFuture := (params.BeaconConfig().WeakSubjectivityPeriod + 9) * params.BeaconConfig().SlotsPerEpoch
 	validator.ProposeBlock(context.Background(), farFuture, validatorPubKey)
 	testutil.AssertLogsDoNotContain(t, hook, "Tried to sign a double proposal")
 
@@ -204,12 +204,11 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 		gomock.AssignableToTypeOf(&ethpb.SignedBeaconBlock{}),
 	).Times(2).Return(&ethpb.ProposeResponse{}, nil /*error*/)
 
-	farAhead := (params.BeaconConfig().WeakSubjectivityPeriod+9)*params.BeaconConfig().SlotsPerEpoch
+	farAhead := (params.BeaconConfig().WeakSubjectivityPeriod + 9) * params.BeaconConfig().SlotsPerEpoch
 	validator.ProposeBlock(context.Background(), farAhead, validatorPubKey)
 	testutil.AssertLogsDoNotContain(t, hook, "Tried to sign a double proposal")
 
-
-	past := (params.BeaconConfig().WeakSubjectivityPeriod-400)*params.BeaconConfig().SlotsPerEpoch
+	past := (params.BeaconConfig().WeakSubjectivityPeriod - 400) * params.BeaconConfig().SlotsPerEpoch
 	validator.ProposeBlock(context.Background(), past, validatorPubKey)
 	testutil.AssertLogsDoNotContain(t, hook, "Tried to sign a double proposal")
 }
@@ -328,7 +327,7 @@ func TestSetProposedForEpoch_PrunesOverWSPeriod(t *testing.T) {
 		t.Fatalf("Expected the bit of pruned epoch %d to not be marked as proposed", epoch)
 	}
 	// Make sure no other bits are changed.
-	for i := epoch-wsPeriod+1; i <= epoch; i++ {
+	for i := epoch - wsPeriod + 1; i <= epoch; i++ {
 		if i == epoch {
 			continue
 		}
@@ -393,4 +392,3 @@ func TestSetProposedForEpoch_PreventsProposingFutureEpochs(t *testing.T) {
 		t.Fatalf("Expected epoch %d to not be marked as proposed", wsPeriod+200)
 	}
 }
-

@@ -152,7 +152,6 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 	return sig.Marshal(), nil
 }
 
-
 // HasProposedForEpoch returns whether a validators proposal history has been marked for the entered epoch.
 // If the request is more in the future than what the history contains, it will return false.
 // If the request is from the past, and likely previously pruned it will return false.

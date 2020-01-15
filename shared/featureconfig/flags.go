@@ -79,7 +79,7 @@ var (
 		Usage: "Cache proposer indices on per epoch basis.",
 	}
 	BlockDoubleProposals = cli.BoolFlag{
-		Name:  "block-double-proposals",
+		Name: "block-double-proposals",
 		Usage: "Prevent the validator client from signing and broadcasting 2 different block " +
 			"proposals in the same epoch. Protects from slashing.",
 	}
