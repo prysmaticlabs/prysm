@@ -18,7 +18,7 @@ import (
 var _ = shared.Service(&Service{})
 
 const allowedBlocksPerSecond = 32.0
-const allowedBlocksBurst = 5 * allowedBlocksPerSecond
+const allowedBlocksBurst = 10 * allowedBlocksPerSecond
 
 // Config to set up the regular sync service.
 type Config struct {
