@@ -39,7 +39,9 @@ func TestHeadRoot_DataRace(t *testing.T) {
 			[32]byte{},
 		)
 	}()
-	s.HeadRoot()
+	if _, err := s.HeadRoot(context.Background()); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestHeadBlock_DataRace(t *testing.T) {
