@@ -36,14 +36,16 @@ func (r *Service) maintainPeerStatuses() {
 				}
 			}
 		}
-		if !r.initialSync.Syncing() {
-			_, highestEpoch, _ := r.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync)
+		// If our head slot is not in the latest epoch, check peers to determine if we need to
+		// resync with the network.
+		currentSlot := uint64(roughtime.Now().Unix()-r.chain.GenesisTime().Unix()) / params.BeaconConfig().SecondsPerSlot
+		for !r.initialSync.Syncing() && helpers.SlotToEpoch(r.chain.HeadSlot()) < helpers.SlotToEpoch(currentSlot) {
+			_, highestEpoch, _ := r.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(r.chain.HeadSlot()))
 			if helpers.StartSlot(highestEpoch) > r.chain.HeadSlot() {
 				numberOfTimesResyncedCounter.Inc()
 				r.clearPendingSlots()
-				// block until we can resync the node
 				if err := r.initialSync.Resync(); err != nil {
-					log.Errorf("Could not Resync Chain: %v", err)
+					log.Errorf("Could not resync chain: %v", err)
 				}
 			}
 		}
@@ -55,11 +57,16 @@ func (r *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
+	headRoot, err := r.chain.HeadRoot(ctx)
+	if err != nil {
+		return err
+	}
+
 	resp := &pb.Status{
 		HeadForkVersion: r.chain.CurrentFork().CurrentVersion,
 		FinalizedRoot:   r.chain.FinalizedCheckpt().Root,
 		FinalizedEpoch:  r.chain.FinalizedCheckpt().Epoch,
-		HeadRoot:        r.chain.HeadRoot(),
+		HeadRoot:        headRoot,
 		HeadSlot:        r.chain.HeadSlot(),
 	}
 	stream, err := r.p2p.Send(ctx, resp, id)
@@ -128,18 +135,23 @@ func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 	}
 	r.p2p.Peers().SetChainState(stream.Conn().RemotePeer(), m)
 
+	headRoot, err := r.chain.HeadRoot(ctx)
+	if err != nil {
+		return err
+	}
+
 	resp := &pb.Status{
 		HeadForkVersion: r.chain.CurrentFork().CurrentVersion,
 		FinalizedRoot:   r.chain.FinalizedCheckpt().Root,
 		FinalizedEpoch:  r.chain.FinalizedCheckpt().Epoch,
-		HeadRoot:        r.chain.HeadRoot(),
+		HeadRoot:        headRoot,
 		HeadSlot:        r.chain.HeadSlot(),
 	}
 
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		log.WithError(err).Error("Failed to write to stream")
 	}
-	_, err := r.p2p.Encoding().EncodeWithLength(stream, resp)
+	_, err = r.p2p.Encoding().EncodeWithLength(stream, resp)
 
 	return err
 }

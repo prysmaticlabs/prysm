@@ -48,7 +48,7 @@ var (
 	})
 	validatorsCount = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "validator_count",
-		Help: "The total number of validators, in GWei",
+		Help: "The total number of validators",
 	}, []string{"state"})
 	validatorsBalance = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "validators_total_balance",

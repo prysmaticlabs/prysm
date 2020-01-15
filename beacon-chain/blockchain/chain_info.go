@@ -7,6 +7,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -17,7 +18,6 @@ import (
 // directly retrieves chain info related data.
 type ChainInfoFetcher interface {
 	HeadFetcher
-	CanonicalRootFetcher
 	FinalizationFetcher
 }
 
@@ -30,17 +30,11 @@ type GenesisTimeFetcher interface {
 // directly retrieves head related data.
 type HeadFetcher interface {
 	HeadSlot() uint64
-	HeadRoot() []byte
+	HeadRoot(ctx context.Context) ([]byte, error)
 	HeadBlock() *ethpb.SignedBeaconBlock
 	HeadState(ctx context.Context) (*pb.BeaconState, error)
 	HeadValidatorsIndices(epoch uint64) ([]uint64, error)
 	HeadSeed(epoch uint64) ([32]byte, error)
-}
-
-// CanonicalRootFetcher defines a common interface for methods in blockchain service which
-// directly retrieves canonical roots related data.
-type CanonicalRootFetcher interface {
-	CanonicalRoot(slot uint64) []byte
 }
 
 // ForkFetcher retrieves the current fork information of the Ethereum beacon chain.
@@ -74,7 +68,7 @@ func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
 		return &ethpb.Checkpoint{Root: s.genesisRoot[:]}
 	}
 
-	return s.headState.FinalizedCheckpoint
+	return proto.Clone(s.headState.FinalizedCheckpoint).(*ethpb.Checkpoint)
 }
 
 // CurrentJustifiedCheckpt returns the current justified checkpoint from head state.
@@ -89,7 +83,7 @@ func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
 		return &ethpb.Checkpoint{Root: s.genesisRoot[:]}
 	}
 
-	return s.headState.CurrentJustifiedCheckpoint
+	return proto.Clone(s.headState.CurrentJustifiedCheckpoint).(*ethpb.Checkpoint)
 }
 
 // PreviousJustifiedCheckpt returns the previous justified checkpoint from head state.
@@ -104,7 +98,7 @@ func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
 		return &ethpb.Checkpoint{Root: s.genesisRoot[:]}
 	}
 
-	return s.headState.PreviousJustifiedCheckpoint
+	return proto.Clone(s.headState.PreviousJustifiedCheckpoint).(*ethpb.Checkpoint)
 }
 
 // HeadSlot returns the slot of the head of the chain.
@@ -116,16 +110,29 @@ func (s *Service) HeadSlot() uint64 {
 }
 
 // HeadRoot returns the root of the head of the chain.
-func (s *Service) HeadRoot() []byte {
+func (s *Service) HeadRoot(ctx context.Context) ([]byte, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
 	root := s.canonicalRoots[s.headSlot]
 	if len(root) != 0 {
-		return root
+		return root, nil
 	}
 
-	return params.BeaconConfig().ZeroHash[:]
+	b, err := s.beaconDB.HeadBlock(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if b == nil {
+		return params.BeaconConfig().ZeroHash[:], nil
+	}
+
+	r, err := ssz.HashTreeRoot(b.Block)
+	if err != nil {
+		return nil, err
+	}
+
+	return r[:], nil
 }
 
 // HeadBlock returns the head block of the chain.
@@ -165,14 +172,6 @@ func (s *Service) HeadSeed(epoch uint64) ([32]byte, error) {
 	}
 
 	return helpers.Seed(s.headState, epoch, params.BeaconConfig().DomainBeaconAttester)
-}
-
-// CanonicalRoot returns the canonical root of a given slot.
-func (s *Service) CanonicalRoot(slot uint64) []byte {
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
-
-	return s.canonicalRoots[slot]
 }
 
 // GenesisTime returns the genesis time of beacon chain.

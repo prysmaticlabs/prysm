@@ -70,7 +70,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 	blockCopy := proto.Clone(block).(*ethpb.SignedBeaconBlock)
 
 	// Apply state transition on the new block.
-	if err := s.forkChoiceStore.OnBlock(ctx, blockCopy); err != nil {
+	if err := s.forkChoiceStore.OnBlockCacheFilteredTree(ctx, blockCopy); err != nil {
 		err := errors.Wrap(err, "could not process block from fork choice service")
 		traceutil.AnnotateError(span, err)
 		return err
@@ -85,19 +85,26 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 	if err != nil {
 		return errors.Wrap(err, "could not get head from fork choice service")
 	}
-	signedHeadBlock, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
-	if err != nil {
-		return errors.Wrap(err, "could not compute state from block head")
-	}
-	if signedHeadBlock == nil || signedHeadBlock.Block == nil {
-		return errors.New("nil head block")
-	}
 
 	// Only save head if it's different than the current head.
-	if !bytes.Equal(headRoot, s.HeadRoot()) {
+	cachedHeadRoot, err := s.HeadRoot(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get head root from cache")
+	}
+	if !bytes.Equal(headRoot, cachedHeadRoot) {
+		signedHeadBlock, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
+		if err != nil {
+			return errors.Wrap(err, "could not compute state from block head")
+		}
+		if signedHeadBlock == nil || signedHeadBlock.Block == nil {
+			return errors.New("nil head block")
+		}
+
 		if err := s.saveHead(ctx, signedHeadBlock, bytesutil.ToBytes32(headRoot)); err != nil {
 			return errors.Wrap(err, "could not save head")
 		}
+
+		isCompetingBlock(root[:], blockCopy.Block.Slot, headRoot, signedHeadBlock.Block.Slot)
 	}
 
 	// Send notification of the processed block to the state feed.
@@ -117,9 +124,6 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 
 	// Reports on block and fork choice metrics.
 	s.reportSlotMetrics(blockCopy.Block.Slot)
-
-	// Log if block is a competing block.
-	isCompetingBlock(root[:], blockCopy.Block.Slot, headRoot, signedHeadBlock.Block.Slot)
 
 	// Log state transition data.
 	logStateTransitionData(blockCopy.Block)
@@ -152,8 +156,11 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root on received block")
 	}
-
-	if !bytes.Equal(root[:], s.HeadRoot()) {
+	cachedHeadRoot, err := s.HeadRoot(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get head root from cache")
+	}
+	if !bytes.Equal(root[:], cachedHeadRoot) {
 		if err := s.saveHead(ctx, blockCopy, root); err != nil {
 			return errors.Wrap(err, "could not save head")
 		}
@@ -199,8 +206,13 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 		return errors.Wrap(err, "could not get signing root on received blockCopy")
 	}
 
+	cachedHeadRoot, err := s.HeadRoot(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get head root from cache")
+	}
+
 	if featureconfig.Get().InitSyncCacheState {
-		if !bytes.Equal(root[:], s.HeadRoot()) {
+		if !bytes.Equal(root[:], cachedHeadRoot) {
 			if err := s.saveHeadNoDB(ctx, blockCopy, root); err != nil {
 				err := errors.Wrap(err, "could not save head")
 				traceutil.AnnotateError(span, err)
@@ -208,7 +220,7 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 			}
 		}
 	} else {
-		if !bytes.Equal(root[:], s.HeadRoot()) {
+		if !bytes.Equal(root[:], cachedHeadRoot) {
 			if err := s.saveHead(ctx, blockCopy, root); err != nil {
 				err := errors.Wrap(err, "could not save head")
 				traceutil.AnnotateError(span, err)

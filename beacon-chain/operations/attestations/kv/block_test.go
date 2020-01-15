@@ -72,7 +72,7 @@ func TestKV_BlockAttestation_CheckExpTime(t *testing.T) {
 	cache := NewAttCaches()
 
 	att := &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b111}}
-	r, _ := ssz.HashTreeRoot(att)
+	r, _ := ssz.HashTreeRoot(att.Data)
 
 	if err := cache.SaveBlockAttestation(att); err != nil {
 		t.Fatal(err)
@@ -83,7 +83,7 @@ func TestKV_BlockAttestation_CheckExpTime(t *testing.T) {
 		t.Error("Saved att does not exist")
 	}
 
-	receivedAtt := item.(*ethpb.Attestation)
+	receivedAtt := item.([]*ethpb.Attestation)[0]
 	if !proto.Equal(att, receivedAtt) {
 		t.Error("Did not receive correct aggregated att")
 	}

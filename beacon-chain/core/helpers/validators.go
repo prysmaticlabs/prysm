@@ -57,18 +57,16 @@ func IsSlashableValidator(validator *ethpb.Validator, epoch uint64) bool {
 //    """
 //    return [ValidatorIndex(i) for i, v in enumerate(state.validators) if is_active_validator(v, epoch)]
 func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) ([]uint64, error) {
-	if featureconfig.Get().EnableNewCache {
-		seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get seed")
-		}
-		activeIndices, err := committeeCache.ActiveIndices(seed)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not interface with committee cache")
-		}
-		if activeIndices != nil {
-			return activeIndices, nil
-		}
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get seed")
+	}
+	activeIndices, err := committeeCache.ActiveIndices(seed)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not interface with committee cache")
+	}
+	if activeIndices != nil {
+		return activeIndices, nil
 	}
 
 	var indices []uint64
@@ -78,10 +76,8 @@ func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) ([]uint64, erro
 		}
 	}
 
-	if featureconfig.Get().EnableNewCache {
-		if err := UpdateCommitteeCache(state, epoch); err != nil {
-			return nil, errors.Wrap(err, "could not update committee cache")
-		}
+	if err := UpdateCommitteeCache(state, epoch); err != nil {
+		return nil, errors.Wrap(err, "could not update committee cache")
 	}
 
 	return indices, nil
@@ -145,6 +141,20 @@ func ValidatorChurnLimit(activeValidatorCount uint64) (uint64, error) {
 func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 	e := CurrentEpoch(state)
 
+	if featureconfig.Get().EnableProposerIndexCache {
+		seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconAttester)
+		if err != nil {
+			return 0, errors.Wrap(err, "could not generate seed")
+		}
+		proposerIndices, err := committeeCache.ProposerIndices(seed)
+		if err != nil {
+			return 0, errors.Wrap(err, "could not interface with committee cache")
+		}
+		if proposerIndices != nil {
+			return proposerIndices[state.Slot%params.BeaconConfig().SlotsPerEpoch], nil
+		}
+	}
+
 	seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconProposer)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not generate seed")
@@ -156,6 +166,12 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 	indices, err := ActiveValidatorIndices(state, e)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not get active indices")
+	}
+
+	if featureconfig.Get().EnableProposerIndexCache {
+		if err := UpdateCommitteeCache(state, CurrentEpoch(state)); err != nil {
+			return 0, errors.Wrap(err, "could not update committee cache")
+		}
 	}
 
 	return ComputeProposerIndex(state.Validators, indices, seedWithSlotHash)

@@ -24,7 +24,7 @@ var log = logrus.WithField("prefix", "archiver")
 type Service struct {
 	ctx                  context.Context
 	cancel               context.CancelFunc
-	beaconDB             db.Database
+	beaconDB             db.NoHeadAccessDatabase
 	headFetcher          blockchain.HeadFetcher
 	participationFetcher blockchain.ParticipationFetcher
 	stateNotifier        statefeed.Notifier
@@ -33,7 +33,7 @@ type Service struct {
 
 // Config options for the archiver service.
 type Config struct {
-	BeaconDB             db.Database
+	BeaconDB             db.NoHeadAccessDatabase
 	HeadFetcher          blockchain.HeadFetcher
 	ParticipationFetcher blockchain.ParticipationFetcher
 	StateNotifier        statefeed.Notifier
