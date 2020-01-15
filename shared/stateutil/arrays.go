@@ -3,10 +3,10 @@ package stateutil
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"sync"
 
 	"github.com/protolambda/zssz/merkle"
+
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
@@ -26,9 +26,7 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 	}
 	lock.Unlock()
 
-	hashKeyElements := make([]byte, len(roots)*32)
 	leaves := make([][]byte, len(roots))
-	emptyKey := hashutil.FastSum256(hashKeyElements)
 	bytesProcessed := 0
 	changedIndices := make([]int, 0)
 	lock.RLock()
@@ -37,22 +35,24 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 	if len(prevLeaves) == 0 || h.rootsCache == nil {
 		prevLeaves = leaves
 	}
-	if h.rootsCache != nil && len(leaves) != len(prevLeaves) {
-		// We invalidate the cache completely in this case.
-		prevLeaves = leaves
-	}
-	for i := 0; i < len(roots) && i < len(leaves) && i < len(prevLeaves); i++ {
+	//if h.rootsCache != nil && len(leaves) != len(prevLeaves) {
+	//	// We invalidate the cache completely in this case.
+	//	prevLeaves = leaves
+	//}
+	for i := 0; i < len(roots); i++ {
 		padded := bytesutil.ToBytes32(roots[i])
-		copy(hashKeyElements[bytesProcessed:bytesProcessed+32], padded[:])
 		leaves[i] = padded[:]
 		// We check if any items changed since the roots were last recomputed.
-		if ok && h.rootsCache != nil && !bytes.Equal(leaves[i], prevLeaves[i]) {
+		prevLeaf := make([]byte, 32)
+		if i < len(prevLeaves) && h.rootsCache != nil {
+			prevLeaf = prevLeaves[i]
+		}
+		if ok && h.rootsCache != nil && !bytes.Equal(leaves[i], prevLeaf) {
 			changedIndices = append(changedIndices, i)
 		}
 		bytesProcessed += 32
 	}
 	if len(changedIndices) > 0 && h.rootsCache != nil {
-		fmt.Printf("Indices changed %v\n", changedIndices)
 		var rt [32]byte
 		var err error
 		// If indices did change since last computation, we only recompute
@@ -66,23 +66,16 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 		if maxChangedIndex+2 == len(chunks) && maxChangedIndex%2 != 0 {
 			changedIndices = append(changedIndices, maxChangedIndex+1)
 		}
-
 		for i := 0; i < len(changedIndices); i++ {
 			rt, err = recomputeRoot(changedIndices[i], chunks, fieldName)
 			if err != nil {
 				return [32]byte{}, err
 			}
 		}
-		fmt.Println("Recomputed the root")
+		lock.Lock()
+		leavesCache[fieldName] = chunks
+		lock.Unlock()
 		return rt, nil
-	}
-
-	hashKey := hashutil.FastSum256(hashKeyElements)
-	if hashKey != emptyKey && h.rootsCache != nil {
-		if found, ok := h.rootsCache.Get(fieldName + string(hashKey[:])); found != nil && ok {
-			fmt.Println("Cache was HIT")
-			return found.([32]byte), nil
-		}
 	}
 
 	var res [32]byte
@@ -91,10 +84,6 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 		lock.Lock()
 		leavesCache[fieldName] = leaves
 		lock.Unlock()
-	}
-	if hashKey != emptyKey && h.rootsCache != nil {
-		fmt.Println("Setting to cache")
-		h.rootsCache.Set(fieldName+string(hashKey[:]), res, 32)
 	}
 	return res, nil
 }

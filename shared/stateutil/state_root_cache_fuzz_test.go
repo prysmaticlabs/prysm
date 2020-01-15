@@ -1,7 +1,6 @@
 package stateutil
 
 import (
-	"strconv"
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
@@ -37,7 +36,7 @@ func fuzzStateRootCache(t *testing.T, seed int64, iterations uint64) {
 	state := &ethereum_beacon_p2p_v1.BeaconState{}
 
 	hasher := &stateRootHasher{}
-	hasherWithCache := globalHasher
+	hasherWithCache := cachedHasher
 
 	mismatch := 0
 	mismatchedIndices := make([]uint64, 0)
@@ -88,7 +87,7 @@ func fuzzStateRootCache(t *testing.T, seed int64, iterations uint64) {
 
 func TestHashTreeRootState_ElementsChanged_RecomputeBranch(t *testing.T) {
 	hasher := &stateRootHasher{}
-	hasherWithCache := globalHasher
+	hasherWithCache := cachedHasher
 	state := &ethereum_beacon_p2p_v1.BeaconState{}
 	initialRoots := make([][]byte, 5)
 	for i := 0; i < len(initialRoots); i++ {
@@ -101,14 +100,10 @@ func TestHashTreeRootState_ElementsChanged_RecomputeBranch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	badRoots := make([][]byte, 5)
-	for i := 0; i < len(badRoots); i++ {
-		var someRt [32]byte
-		copy(someRt[:], strconv.Itoa(i))
-		badRoots[i] = someRt[:]
-	}
+	var someRt [32]byte
+	copy(someRt[:], "2")
+	state.RandaoMixes = append(state.RandaoMixes, someRt[:])
 
-	state.RandaoMixes = badRoots
 	r1, err := hasher.hashTreeRootState(state)
 	if err != nil {
 		t.Fatal(err)

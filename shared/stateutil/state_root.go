@@ -3,12 +3,12 @@ package stateutil
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -43,10 +43,8 @@ type stateRootHasher struct {
 // on the Prysm BeaconState data structure).
 func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	if featureconfig.Get().EnableSSZCache {
-		fmt.Println("Running with cached hasher")
 		return cachedHasher.hashTreeRootState(state)
 	}
-	fmt.Println("Running without cache")
 	return nocachedHasher.hashTreeRootState(state)
 }
 

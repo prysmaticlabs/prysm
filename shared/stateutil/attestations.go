@@ -8,7 +8,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -104,13 +103,6 @@ func (h *stateRootHasher) pendingAttestationRoot(att *pb.PendingAttestation) ([3
 		binary.LittleEndian.PutUint64(proposerBuf, att.ProposerIndex)
 		copy(enc[2184:2192], proposerBuf)
 
-		// Check if it exists in cache:
-		if h.rootsCache != nil {
-			if found, ok := h.rootsCache.Get(string(enc)); found != nil && ok {
-				return found.([32]byte), nil
-			}
-		}
-
 		// Bitfield.
 		aggregationRoot, err := bitlistRoot(att.AggregationBits, 2048)
 		if err != nil {
@@ -138,32 +130,17 @@ func (h *stateRootHasher) pendingAttestationRoot(att *pb.PendingAttestation) ([3
 	if err != nil {
 		return [32]byte{}, err
 	}
-	if att != nil && h.rootsCache != nil {
-		h.rootsCache.Set(string(enc), res, 32)
-	}
 	return res, nil
 }
 
 func (h *stateRootHasher) epochAttestationsRoot(atts []*pb.PendingAttestation) ([32]byte, error) {
-	hashKeyElements := make([]byte, len(atts)*32)
 	roots := make([][]byte, len(atts))
-	emptyKey := hashutil.FastSum256(hashKeyElements)
-	bytesProcessed := 0
 	for i := 0; i < len(atts); i++ {
 		pendingRoot, err := h.pendingAttestationRoot(atts[i])
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not attestation merkleization")
 		}
 		roots[i] = pendingRoot[:]
-		copy(hashKeyElements[bytesProcessed:bytesProcessed+32], pendingRoot[:])
-		bytesProcessed += 32
-	}
-
-	hashKey := hashutil.FastSum256(hashKeyElements)
-	if hashKey != emptyKey && h.rootsCache != nil {
-		if found, ok := h.rootsCache.Get(string(hashKey[:])); found != nil && ok {
-			return found.([32]byte), nil
-		}
 	}
 
 	attsRootsRoot, err := bitwiseMerkleize(
@@ -182,8 +159,5 @@ func (h *stateRootHasher) epochAttestationsRoot(atts []*pb.PendingAttestation) (
 	attsLenRoot := make([]byte, 32)
 	copy(attsLenRoot, attsLenBuf.Bytes())
 	res := mixInLength(attsRootsRoot, attsLenRoot)
-	if hashKey != emptyKey && h.rootsCache != nil {
-		h.rootsCache.Set(string(hashKey[:]), res, 32)
-	}
 	return res, nil
 }
