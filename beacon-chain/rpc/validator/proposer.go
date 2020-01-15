@@ -36,8 +36,10 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	}
 
 	// Retrieve the parent block as the current head of the canonical chain.
-	parentRoot := vs.HeadFetcher.HeadRoot()
-
+	parentRoot, err := vs.HeadFetcher.HeadRoot(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)
+	}
 	eth1Data, err := vs.eth1Data(ctx, req.Slot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get ETH1 data: %v", err)
