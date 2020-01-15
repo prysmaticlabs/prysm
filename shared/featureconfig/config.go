@@ -141,7 +141,7 @@ func ConfigureValidator(ctx *cli.Context) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
 	}
-	if ctx.GlobalBool(BlockDoubleProposals.Name) {
+	if ctx.GlobalBool(blockDoubleProposals.Name) {
 		log.Warn("Enabled validator double proposal slashing protection.")
 		cfg.BlockDoubleProposals = true
 	}
