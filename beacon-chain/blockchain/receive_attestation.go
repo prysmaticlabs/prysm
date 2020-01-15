@@ -46,7 +46,7 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	if err != nil {
 		return errors.Wrap(err, "could not get head root from cache")
 	}
-	if !bytes.Equal(headRoot,cachedHeadRoot) {
+	if !bytes.Equal(headRoot, cachedHeadRoot) {
 		signed, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
 		if err != nil {
 			return errors.Wrap(err, "could not compute state from block head")

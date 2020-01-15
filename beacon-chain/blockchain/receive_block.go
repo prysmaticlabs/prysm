@@ -91,7 +91,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 	if err != nil {
 		return errors.Wrap(err, "could not get head root from cache")
 	}
-	if !bytes.Equal(headRoot,cachedHeadRoot) {
+	if !bytes.Equal(headRoot, cachedHeadRoot) {
 		signedHeadBlock, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
 		if err != nil {
 			return errors.Wrap(err, "could not compute state from block head")
@@ -160,7 +160,7 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 	if err != nil {
 		return errors.Wrap(err, "could not get head root from cache")
 	}
-	if !bytes.Equal(root[:],cachedHeadRoot) {
+	if !bytes.Equal(root[:], cachedHeadRoot) {
 		if err := s.saveHead(ctx, blockCopy, root); err != nil {
 			return errors.Wrap(err, "could not save head")
 		}

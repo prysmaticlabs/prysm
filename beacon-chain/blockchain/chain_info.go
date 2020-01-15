@@ -123,6 +123,9 @@ func (s *Service) HeadRoot(ctx context.Context) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	if b == nil {
+		return params.BeaconConfig().ZeroHash[:], nil
+	}
 
 	r, err := ssz.HashTreeRoot(b.Block)
 	if err != nil {
