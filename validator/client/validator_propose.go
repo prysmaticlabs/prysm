@@ -52,13 +52,13 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		return
 	}
 
-	history, err := v.db.ProposalHistory(ctx, pubKey[:])
-	if err != nil {
-		log.WithError(err).Error("Failed to get proposal history")
-		return
-	}
-
 	if featureconfig.Get().BlockDoubleProposals {
+		history, err := v.db.ProposalHistory(ctx, pubKey[:])
+		if err != nil {
+			log.WithError(err).Error("Failed to get proposal history")
+			return
+		}
+
 		if HasProposedForEpoch(history, epoch) {
 			log.WithField("epoch", epoch).Warn("Tried to sign a double proposal, rejected")
 			return
@@ -84,6 +84,11 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	}
 
 	if featureconfig.Get().BlockDoubleProposals {
+		history, err := v.db.ProposalHistory(ctx, pubKey[:])
+		if err != nil {
+			log.WithError(err).Error("Failed to get proposal history")
+			return
+		}
 		history = SetProposedForEpoch(history, epoch)
 		if err := v.db.SaveProposalHistory(ctx, pubKey[:], history); err != nil {
 			log.WithError(err).Error("Failed to save updated proposal history")
