@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/protolambda/zssz/merkle"
-
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"

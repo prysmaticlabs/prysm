@@ -1,6 +1,7 @@
 package stateutil
 
 import (
+	"strconv"
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
@@ -100,10 +101,14 @@ func TestHashTreeRootState_ElementsChanged_RecomputeBranch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var someRt [32]byte
-	copy(someRt[:], "2")
-	state.RandaoMixes = append(state.RandaoMixes, someRt[:])
+	badRoots := make([][]byte, 5)
+	for i := 0; i < len(badRoots); i++ {
+		var someRt [32]byte
+		copy(someRt[:], strconv.Itoa(i))
+		badRoots[i] = someRt[:]
+	}
 
+	state.RandaoMixes = badRoots
 	r1, err := hasher.hashTreeRootState(state)
 	if err != nil {
 		t.Fatal(err)
