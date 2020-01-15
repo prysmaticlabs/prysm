@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -45,13 +46,25 @@ func validatorBalancesRoot(balances []uint64) ([32]byte, error) {
 }
 
 func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {
+	hashKeyElements := make([]byte, len(validators)*32)
 	roots := make([][]byte, len(validators))
+	emptyKey := hashutil.FastSum256(hashKeyElements)
+	bytesProcessed := 0
 	for i := 0; i < len(validators); i++ {
 		val, err := h.validatorRoot(validators[i])
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not compute validators merkleization")
 		}
+		copy(hashKeyElements[bytesProcessed:bytesProcessed+32], val[:])
 		roots[i] = val[:]
+		bytesProcessed += 32
+	}
+
+	hashKey := hashutil.FastSum256(hashKeyElements)
+	if hashKey != emptyKey && h.rootsCache != nil {
+		if found, ok := h.rootsCache.Get(string(hashKey[:])); found != nil && ok {
+			return found.([32]byte), nil
+		}
 	}
 
 	validatorsRootsRoot, err := bitwiseMerkleize(roots, uint64(len(roots)), params.BeaconConfig().ValidatorRegistryLimit)
@@ -66,6 +79,9 @@ func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) (
 	validatorsRootsBufRoot := make([]byte, 32)
 	copy(validatorsRootsBufRoot, validatorsRootsBuf.Bytes())
 	res := mixInLength(validatorsRootsRoot, validatorsRootsBufRoot)
+	if hashKey != emptyKey && h.rootsCache != nil {
+		h.rootsCache.Set(string(hashKey[:]), res, 32)
+	}
 	return res, nil
 }
 
@@ -100,6 +116,13 @@ func (h *stateRootHasher) validatorRoot(validator *ethpb.Validator) ([32]byte, e
 		withdrawalBuf := make([]byte, 8)
 		binary.LittleEndian.PutUint64(withdrawalBuf, validator.WithdrawableEpoch)
 		copy(enc[113:121], exitBuf)
+
+		// Check if it exists in cache:
+		if h.rootsCache != nil {
+			if found, ok := h.rootsCache.Get(string(enc)); found != nil && ok {
+				return found.([32]byte), nil
+			}
+		}
 
 		// Public key.
 		pubKeyChunks, err := pack([][]byte{validator.PublicKey})
@@ -149,6 +172,9 @@ func (h *stateRootHasher) validatorRoot(validator *ethpb.Validator) ([32]byte, e
 	valRoot, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {
 		return [32]byte{}, err
+	}
+	if h.rootsCache != nil {
+		h.rootsCache.Set(string(enc), valRoot, 32)
 	}
 	return valRoot, nil
 }
