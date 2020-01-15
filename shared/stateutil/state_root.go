@@ -3,6 +3,7 @@ package stateutil
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
@@ -42,8 +43,10 @@ type stateRootHasher struct {
 // on the Prysm BeaconState data structure).
 func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	if featureconfig.Get().EnableSSZCache {
+		fmt.Println("Running with cached hasher")
 		return cachedHasher.hashTreeRootState(state)
 	}
+	fmt.Println("Running without cache")
 	return nocachedHasher.hashTreeRootState(state)
 }
 

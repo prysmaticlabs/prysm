@@ -46,6 +46,11 @@ func startBeaconNodes(t *testing.T, config *end2EndConfig) []*beaconNodeInfo {
 
 	nodeInfo := []*beaconNodeInfo{}
 	for i := uint64(0); i < numNodes; i++ {
+		if i == 0 || i == 1 {
+			config.enableSSZCache = true
+		} else {
+			config.enableSSZCache = false
+		}
 		newNode := startNewBeaconNode(t, config, nodeInfo)
 		nodeInfo = append(nodeInfo, newNode)
 	}

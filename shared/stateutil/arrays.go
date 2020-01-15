@@ -3,6 +3,7 @@ package stateutil
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/protolambda/zssz/merkle"
@@ -51,6 +52,7 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 		bytesProcessed += 32
 	}
 	if len(changedIndices) > 0 && h.rootsCache != nil {
+		fmt.Printf("Indices changed %v\n", changedIndices)
 		var rt [32]byte
 		var err error
 		// If indices did change since last computation, we only recompute
@@ -71,12 +73,14 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 				return [32]byte{}, err
 			}
 		}
+		fmt.Println("Recomputed the root")
 		return rt, nil
 	}
 
 	hashKey := hashutil.FastSum256(hashKeyElements)
 	if hashKey != emptyKey && h.rootsCache != nil {
 		if found, ok := h.rootsCache.Get(fieldName + string(hashKey[:])); found != nil && ok {
+			fmt.Println("Cache was HIT")
 			return found.([32]byte), nil
 		}
 	}
@@ -89,6 +93,7 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 		lock.Unlock()
 	}
 	if hashKey != emptyKey && h.rootsCache != nil {
+		fmt.Println("Setting to cache")
 		h.rootsCache.Set(fieldName+string(hashKey[:]), res, 32)
 	}
 	return res, nil
