@@ -1,4 +1,4 @@
-package proto_array
+package protoarray
 
 import "github.com/prysmaticlabs/prysm/shared/params"
 
