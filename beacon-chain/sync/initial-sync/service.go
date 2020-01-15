@@ -115,10 +115,11 @@ func (s *Service) Start() {
 		return
 	}
 	s.waitForMinimumPeers()
-	if err := s.roundRobinSync(genesis); err == nil {
-		log.Infof("Synced up to slot %d", s.chain.HeadSlot())
-		s.synced = true
+	if err := s.roundRobinSync(genesis); err != nil {
+		panic(err)
 	}
+	log.Infof("Synced up to slot %d", s.chain.HeadSlot())
+	s.synced = true
 }
 
 // Stop initial sync.

@@ -97,7 +97,11 @@ func TestReceiveReceiveBlockNoPubsub_CanSaveHeadInfo(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !bytes.Equal(r[:], chainService.HeadRoot()) {
+	headRoot, err := chainService.HeadRoot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(r[:], headRoot) {
 		t.Error("Incorrect head root saved")
 	}
 
