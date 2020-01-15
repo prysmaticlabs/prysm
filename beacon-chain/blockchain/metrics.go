@@ -15,10 +15,6 @@ var (
 		Name: "beacon_head_slot",
 		Help: "Slot of the head block of the beacon chain",
 	})
-	beaconHeadRoot = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "beacon_head_root",
-		Help: "Root of the head block of the beacon chain, it returns the lowest 8 bytes interpreted as little endian",
-	})
 	competingAtts = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "competing_attestations",
 		Help: "The # of attestations received and processed from a competing chain",
@@ -60,7 +56,6 @@ var (
 func (s *Service) reportSlotMetrics(currentSlot uint64) {
 	beaconSlot.Set(float64(currentSlot))
 	beaconHeadSlot.Set(float64(s.HeadSlot()))
-	beaconHeadRoot.Set(float64(bytesutil.ToLowInt64(s.HeadRoot())))
 	if s.headState != nil {
 		headFinalizedEpoch.Set(float64(s.headState.FinalizedCheckpoint.Epoch))
 		headFinalizedRoot.Set(float64(bytesutil.ToLowInt64(s.headState.FinalizedCheckpoint.Root)))
