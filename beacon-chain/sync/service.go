@@ -88,6 +88,7 @@ func (r *Service) Start() {
 	r.p2p.AddDisconnectionHandler(r.removeDisconnectedPeerStatus)
 	r.processPendingBlocksQueue()
 	r.maintainPeerStatuses()
+	r.resyncIfBehind()
 }
 
 // Stop the regular sync service.

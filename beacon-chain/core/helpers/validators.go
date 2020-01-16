@@ -169,7 +169,7 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 	}
 
 	if featureconfig.Get().EnableProposerIndexCache {
-		if err := UpdateCommitteeCache(state, CurrentEpoch(state)); err != nil {
+		if err := UpdateProposerIndicesInCache(state, CurrentEpoch(state)); err != nil {
 			return 0, errors.Wrap(err, "could not update committee cache")
 		}
 	}
