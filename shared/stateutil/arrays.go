@@ -34,10 +34,7 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 	if len(prevLeaves) == 0 || h.rootsCache == nil {
 		prevLeaves = leaves
 	}
-	//if h.rootsCache != nil && len(leaves) != len(prevLeaves) {
-	//	// We invalidate the cache completely in this case.
-	//	prevLeaves = leaves
-	//}
+
 	for i := 0; i < len(roots); i++ {
 		padded := bytesutil.ToBytes32(roots[i])
 		leaves[i] = padded[:]
