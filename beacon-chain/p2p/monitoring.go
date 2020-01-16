@@ -27,4 +27,5 @@ func (s *Service) updateMetrics() {
 	p2pPeerCount.WithLabelValues("Disconnected").Set(float64(len(s.peers.Disconnected())))
 	p2pPeerCount.WithLabelValues("Connecting").Set(float64(len(s.peers.Connecting())))
 	p2pPeerCount.WithLabelValues("Disconnecting").Set(float64(len(s.peers.Disconnecting())))
+	p2pPeerCount.WithLabelValues("Bad").Set(float64(len(s.peers.Bad())))
 }
