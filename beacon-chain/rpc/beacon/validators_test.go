@@ -1494,6 +1494,64 @@ func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 	}
 }
 
+func TestServer_GetValidatorParticipation_DoesntExist(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	epoch := uint64(1)
+	validatorCount := uint64(100)
+
+	validators := make([]*ethpb.Validator, validatorCount)
+	balances := make([]uint64, validatorCount)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+		}
+		balances[i] = params.BeaconConfig().MaxEffectiveBalance
+	}
+
+	atts := []*pbp2p.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}}}
+
+	s := &pbp2p.BeaconState{
+		Slot:                       epoch*params.BeaconConfig().SlotsPerEpoch + 1,
+		Validators:                 validators,
+		Balances:                   balances,
+		BlockRoots:                 make([][]byte, 128),
+		Slashings:                  []uint64{0, 1e9, 1e9},
+		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		CurrentEpochAttestations:   atts,
+		FinalizedCheckpoint:        &ethpb.Checkpoint{},
+		JustificationBits:          bitfield.Bitvector4{0x00},
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{},
+	}
+
+	m := &mock.ChainService{
+		State: s,
+	}
+	bs := &Server{
+		BeaconDB:             db,
+		HeadFetcher:          m,
+		ParticipationFetcher: m,
+	}
+
+	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wanted := &ethpb.ValidatorParticipation{
+		GlobalParticipationRate: 0,
+		VotedEther:              0,
+		EligibleEther:           0,
+	}
+
+	if !reflect.DeepEqual(res.Participation, wanted) {
+		t.Errorf("Incorrect validator participation response, got %s", res.Participation.String())
+	}
+}
+
 func BenchmarkListValidatorBalances(b *testing.B) {
 	b.StopTimer()
 	db := dbTest.SetupDB(b)
