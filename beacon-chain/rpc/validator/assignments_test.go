@@ -149,6 +149,16 @@ func TestGetDuties_OK(t *testing.T) {
 		t.Errorf("Assigned slot %d can't be higher than %d",
 			res.Duties[0].AttesterSlot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
 	}
+
+	// We request for duties for all validators.
+	req = &ethpb.DutiesRequest{
+		PublicKeys: pubKeys,
+		Epoch:      0,
+	}
+	res, err = vs.GetDuties(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Could not call epoch committee assignment %v", err)
+	}
 	for i := 0; i < len(res.Duties); i++ {
 		if res.Duties[i].ValidatorIndex != uint64(i) {
 			t.Errorf("Wanted %d, received %d", i, res.Duties[i].ValidatorIndex)
