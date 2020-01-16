@@ -28,7 +28,7 @@ func computeDeltas(indices map[[32]byte]uint64, votes []Vote, oldBalances []uint
 			newBalance = newBalances[validatorIndex]
 		}
 
-		// Perform delta only if vote has changed and balance has changed.
+		// Perform delta only if vote has changed or balance has changed.
 		if vote.currentRoot != vote.nextRoot || oldBalance != newBalance {
 			// Ignore the vote if it's not known in `indices`
 			nextDeltaIndex, ok := indices[vote.nextRoot]
