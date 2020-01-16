@@ -27,6 +27,9 @@ import (
 func init() {
 	// Use minimal config to reduce test setup time.
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	flags.Init(&flags.GlobalFlags{
+		MaxPageSize: 250,
+	})
 }
 
 func TestServer_ListValidatorBalances_CannotRequestFutureEpoch(t *testing.T) {
