@@ -1512,3 +1512,10 @@ go_repository(
     sum = "h1:xguurydRdfKMJjKyxNXNU8lYP0VZH1NUwJRwUorjuEw=",
     version = "v2.0.2",
 )
+
+go_repository(
+    name = "com_github_kevinms_leakybucket_go",
+    importpath = "github.com/kevinms/leakybucket-go",
+    sum = "h1:oq6BiN7v0MfWCRcJAxSV+hesVMAAV8COrQbTjYNnso4=",
+    version = "v0.0.0-20190611015032-8a3d0352aa79",
+)
