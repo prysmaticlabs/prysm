@@ -156,7 +156,7 @@ func TestStore_LatestAttestingBalance(t *testing.T) {
 		validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
 	}
 
-	s := &pb.BeaconState{Validators: validators, RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
+	s := &pb.BeaconState{Validators: validators, RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector)}
 	stateRoot, err := stateutil.HashTreeRootState(s)
 	if err != nil {
 		t.Fatal(err)
@@ -263,7 +263,7 @@ func TestStore_GetHead(t *testing.T) {
 		validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
 	}
 
-	s := &pb.BeaconState{Validators: validators, RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
+	s := &pb.BeaconState{Validators: validators, RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector)}
 	stateRoot, err := stateutil.HashTreeRootState(s)
 	if err != nil {
 		t.Fatal(err)

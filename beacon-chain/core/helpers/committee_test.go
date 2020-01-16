@@ -6,8 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -888,7 +886,7 @@ func TestPrecomputeProposerIndices_Ok(t *testing.T) {
 
 	state := &pb.BeaconState{
 		Validators:  validators,
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	indices, err := ActiveValidatorIndices(state, 0)

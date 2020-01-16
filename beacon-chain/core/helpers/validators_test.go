@@ -267,7 +267,7 @@ func TestActiveValidatorIndices(t *testing.T) {
 			name: "all_active_epoch_10",
 			args: args{
 				state: &pb.BeaconState{
-					RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+					RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 					Validators: []*ethpb.Validator{
 						{
 							ActivationEpoch: 0,
@@ -291,7 +291,7 @@ func TestActiveValidatorIndices(t *testing.T) {
 			name: "some_active_epoch_10",
 			args: args{
 				state: &pb.BeaconState{
-					RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+					RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 					Validators: []*ethpb.Validator{
 						{
 							ActivationEpoch: 0,
@@ -315,7 +315,7 @@ func TestActiveValidatorIndices(t *testing.T) {
 			name: "some_active_with_recent_new_epoch_10",
 			args: args{
 				state: &pb.BeaconState{
-					RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+					RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 					Validators: []*ethpb.Validator{
 						{
 							ActivationEpoch: 0,
@@ -343,7 +343,7 @@ func TestActiveValidatorIndices(t *testing.T) {
 			name: "some_active_with_recent_new_epoch_10",
 			args: args{
 				state: &pb.BeaconState{
-					RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+					RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 					Validators: []*ethpb.Validator{
 						{
 							ActivationEpoch: 0,
@@ -371,7 +371,7 @@ func TestActiveValidatorIndices(t *testing.T) {
 			name: "some_active_with_recent_new_epoch_10",
 			args: args{
 				state: &pb.BeaconState{
-					RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+					RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 					Validators: []*ethpb.Validator{
 						{
 							ActivationEpoch: 0,

@@ -1599,7 +1599,7 @@ func setupValidators(t testing.TB, db db.Database, count int) ([]*ethpb.Validato
 		&pbp2p.BeaconState{
 			Validators:  validators,
 			Balances:    balances,
-			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+			RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 		},
 		blockRoot,
 	); err != nil {

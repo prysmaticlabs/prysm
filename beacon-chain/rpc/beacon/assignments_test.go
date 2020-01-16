@@ -54,7 +54,7 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 	bs := &Server{
 		BeaconDB: db,
 		HeadFetcher: &mock.ChainService{
-			State: &pbp2p.BeaconState{Slot: 0, RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)},
+			State: &pbp2p.BeaconState{Slot: 0, RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector)},
 		},
 	}
 	wanted := &ethpb.ValidatorAssignments{
