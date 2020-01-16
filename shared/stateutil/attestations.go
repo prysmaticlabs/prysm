@@ -103,6 +103,13 @@ func (h *stateRootHasher) pendingAttestationRoot(att *pb.PendingAttestation) ([3
 		binary.LittleEndian.PutUint64(proposerBuf, att.ProposerIndex)
 		copy(enc[2184:2192], proposerBuf)
 
+		// Check if it exists in cache:
+		if h.rootsCache != nil {
+			if found, ok := h.rootsCache.Get(string(enc)); found != nil && ok {
+				return found.([32]byte), nil
+			}
+		}
+
 		// Bitfield.
 		aggregationRoot, err := bitlistRoot(att.AggregationBits, 2048)
 		if err != nil {
@@ -125,10 +132,12 @@ func (h *stateRootHasher) pendingAttestationRoot(att *pb.PendingAttestation) ([3
 		proposerRoot := bytesutil.ToBytes32(proposerBuf)
 		fieldRoots[3] = proposerRoot[:]
 	}
-
 	res, err := bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 	if err != nil {
 		return [32]byte{}, err
+	}
+	if h.rootsCache != nil {
+		h.rootsCache.Set(string(enc), res, 32)
 	}
 	return res, nil
 }
