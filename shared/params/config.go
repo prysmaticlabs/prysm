@@ -263,6 +263,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.MinValidatorWithdrawabilityDelay = 256
 	minimalConfig.PersistentCommitteePeriod = 2048
 	minimalConfig.MinEpochsToInactivityPenalty = 4
+	minimalConfig.Eth1FollowDistance = 16
 	minimalConfig.SafeSlotsToUpdateJustified = 2
 
 	// State vector lengths
