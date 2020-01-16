@@ -23,7 +23,8 @@ type Store struct {
 
 // Node defines the individual block which includes its parent, ancestor and how much weight accounted for it.
 type Node struct {
-	root           [32]byte // root of this node.
+	slot           uint64   // slot of the block converted to the node.
+	root           [32]byte // root of the block converted to the node.
 	parent         uint64   // the parent index of this node.
 	justifiedEpoch uint64   // justified epoch of this node.
 	finalizedEpoch uint64   // finalized epoch of this node.

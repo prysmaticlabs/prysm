@@ -1,10 +1,13 @@
 package protoarray
 
-import "bytes"
+import (
+	"bytes"
+	"errors"
+)
 
 // Insert registers a new block node to the fork choice store.
 // It updates the new node's parent with best child and descendant node.
-func (s *Store) Insert(root [32]byte, parent [32]byte, justifiedEpoch uint64, finalizedEpoch uint64) {
+func (s *Store) Insert(slot uint64, root [32]byte, parent [32]byte, justifiedEpoch uint64, finalizedEpoch uint64) {
 	s.nodeIndicesLock.Lock()
 	defer s.nodeIndicesLock.Unlock()
 
@@ -16,6 +19,7 @@ func (s *Store) Insert(root [32]byte, parent [32]byte, justifiedEpoch uint64, fi
 	}
 
 	n := Node{
+		slot:           slot,
 		root:           root,
 		parent:         parentIndex,
 		justifiedEpoch: justifiedEpoch,
@@ -33,6 +37,30 @@ func (s *Store) Insert(root [32]byte, parent [32]byte, justifiedEpoch uint64, fi
 	}
 }
 
+// Head starts from justifiedRoot and then follows the best descendant links to find the best block for head.
+func (s *Store) Head(justifiedRoot [32]byte) ([32]byte, error) {
+	justifiedIndex, ok := s.nodeIndices[justifiedRoot]
+	if !ok {
+		return [32]byte{}, errors.New("unknown justified root")
+	}
+	if int(justifiedIndex) >= len(s.nodes) {
+		return [32]byte{}, errors.New("invalid justified index")
+	}
+
+	justifiedNode := s.nodes[justifiedIndex]
+	bestDescendantIndex := justifiedNode.bestDescendant
+	if int(bestDescendantIndex) >= len(s.nodes) {
+		return [32]byte{}, errors.New("invalid best descendant index")
+	}
+
+	bestNode := s.nodes[bestDescendantIndex]
+	if s.ViableForHead(&bestNode) {
+		return [32]byte{}, errors.New("best node not viable for head")
+	}
+
+	return bestNode.root, nil
+}
+
 // UpdateBestChildAndDescendant updates parent node's best child and descendent.
 // It looks at parent node and child node and potentially modifies parent's best
 // child and best descendent values.
@@ -45,7 +73,7 @@ func (s *Store) UpdateBestChildAndDescendant(parentIndex uint64, childIndex uint
 	parent := s.nodes[parentIndex]
 	child := s.nodes[childIndex]
 
-	childLeadsToViableHead := s.LeadsToViableHead(child)
+	childLeadsToViableHead := s.LeadsToViableHead(&child)
 
 	// Define 3 variables for the 3 options mentioned above. This is to
 	// set `parent.bestChild` and `parent.bestDescendent` to. These
@@ -65,7 +93,7 @@ func (s *Store) UpdateBestChildAndDescendant(parentIndex uint64, childIndex uint
 			// descendent of the parent is updated.
 			newParentChild = changeToChild
 		} else {
-			bestChild := s.nodes[parent.bestChild]
+			bestChild := &s.nodes[parent.bestChild]
 			bestChildLeadsToViableHead := s.LeadsToViableHead(bestChild)
 
 			if childLeadsToViableHead && !bestChildLeadsToViableHead {
