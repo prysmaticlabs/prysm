@@ -11,10 +11,8 @@ Due to the sheer size of the benchmarking configurations (65536 validators), the
 
 To generate new files to use for benchmarking, run the below command in the root of Prysm.
 ```
-go run beacon-chain/core/state/benchmarks/benchmark_files/generate_bench_files.go
+bazel run //tools/benchmark-files-gen -- --output-dir $PRYSMPATH/shared/benchutil/benchmark_files/ --overwrite
 ```
-
-Bazel does not allow writing to the project directory, so running with `go run` is needed.
 
 ## Running the benchmarks
 To run the ExecuteStateTransition benchmark:
@@ -41,11 +39,11 @@ Extra flags needed to benchmark properly:
 
 ```--nocache_test_results --test_arg=-test.v --test_timeout=2000 --test_arg=-test.cpuprofile=/tmp/cpu.profile --test_arg=-test.memprofile=/tmp/mem.profile --test_output=streamed```
 
-## Current Results as of November 2019
+## Current Results as of January 2020
 ```
 BenchmarkExecuteStateTransition_FullBlock-4           20	  8427250038 ns/op
 BenchmarkExecuteStateTransition_WithCache-4   	      20	  8063193001 ns/op
 BenchmarkProcessEpoch_2FullEpochs-4           	      10	158161708836 ns/op
-BenchmarkHashTreeRoot_FullState-4   	              50	  1509721280 ns/op
-BenchmarkHashTreeRootState_FullState-4                50            67622586 ns/op
+BenchmarkHashTreeRoot_FullState-4   	              50	   933148607 ns/op
+BenchmarkHashTreeRootState_FullState-4                50           412664044 ns/op
 ```
