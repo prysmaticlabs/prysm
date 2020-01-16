@@ -7,17 +7,15 @@ import (
 
 type Bytes32Array [32]byte
 
-func (b Bytes32Array) Size() int {
+func (b *Bytes32Array) Size() int {
 	return len(b)
 }
 
-func (b Bytes32Array) MarshalTo(data []byte) (int, error) {
-	data = make([]byte, 32)
-	copy(data, b[:])
-	return len(data), nil
+func (b *Bytes32Array) MarshalTo(data []byte) (int, error) {
+	return copy(data[:b.Size()], b[:]), nil
 }
 
-func (b Bytes32Array) Unmarshal(data []byte) error {
+func (b *Bytes32Array) Unmarshal(data []byte) error {
 	copy(b[:], data)
 	return nil
 }

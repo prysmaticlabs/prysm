@@ -7,6 +7,17 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
+func TestMarshalUnmarshal(t *testing.T) {
+	array := bytesutil.Bytes32Array{'A', 'B', 'C', 'D'}
+	junk := make([]byte, 32)
+	array.MarshalTo(junk)
+	var newarray bytesutil.Bytes32Array
+	newarray.Unmarshal(junk)
+
+	if newarray != array {
+		t.Fatalf("wanted %v but got %v", array, newarray)
+	}
+}
 func TestToBytes(t *testing.T) {
 	tests := []struct {
 		a uint64
