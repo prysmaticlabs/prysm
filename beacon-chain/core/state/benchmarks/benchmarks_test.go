@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/stateutil"
 )
@@ -58,11 +57,6 @@ func BenchmarkExecuteStateTransition_FullBlock(b *testing.B) {
 }
 
 func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
-	config := &featureconfig.Flags{
-		EnableNewCache:           true,
-		EnableShuffledIndexCache: true,
-	}
-	featureconfig.Init(config)
 	SetConfig()
 
 	beaconState, err := beaconState1Epoch()
@@ -98,11 +92,6 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 }
 
 func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
-	config := &featureconfig.Flags{
-		EnableNewCache:           true,
-		EnableShuffledIndexCache: true,
-	}
-	featureconfig.Init(config)
 	SetConfig()
 	beaconState, err := beaconState2FullEpochs()
 	if err != nil {

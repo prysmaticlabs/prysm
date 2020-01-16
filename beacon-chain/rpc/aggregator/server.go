@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -26,7 +25,7 @@ func init() {
 
 // Server defines a server implementation of the gRPC aggregator service.
 type Server struct {
-	BeaconDB    db.Database
+	BeaconDB    db.ReadOnlyDatabase
 	HeadFetcher blockchain.HeadFetcher
 	SyncChecker sync.Checker
 	AttPool     attestations.Pool
@@ -44,7 +43,7 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
-	validatorIndex, exists, err := as.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(req.PublicKey))
+	validatorIndex, exists, err := as.BeaconDB.ValidatorIndex(ctx, req.PublicKey)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get validator index from DB: %v", err)
 	}

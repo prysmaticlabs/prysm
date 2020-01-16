@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"encoding/binary"
 	"reflect"
 	"testing"
 
@@ -189,12 +190,14 @@ func setupActiveValidators(t *testing.T, db db.Database, count int) *pbp2p.Beaco
 	balances := make([]uint64, count)
 	validators := make([]*ethpb.Validator, 0, count)
 	for i := 0; i < count; i++ {
-		if err := db.SaveValidatorIndex(ctx, [48]byte{byte(i)}, uint64(i)); err != nil {
+		pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
+		binary.LittleEndian.PutUint64(pubKey, uint64(i))
+		if err := db.SaveValidatorIndex(ctx, pubKey, uint64(i)); err != nil {
 			t.Fatal(err)
 		}
 		balances[i] = uint64(i)
 		validators = append(validators, &ethpb.Validator{
-			PublicKey:       []byte{byte(i)},
+			PublicKey:       pubKey,
 			ActivationEpoch: 0,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 		})

@@ -8,6 +8,7 @@ var (
 	// Slasher
 	historicIndexedAttestationsBucket = []byte("historic-indexed-attestations-bucket")
 	historicBlockHeadersBucket        = []byte("historic-block-headers-bucket")
+	slashingBucket                    = []byte("slashing-bucket")
 	indexedAttestationsIndicesBucket  = []byte("indexed-attestations-indices-bucket")
 	validatorsPublicKeysBucket        = []byte("validators-public-keys-bucket")
 	// In order to quickly detect surround and surrounded attestations we need to store
@@ -26,4 +27,10 @@ func encodeEpochValidatorIDSig(epoch uint64, validatorID uint64, sig []byte) []b
 
 func encodeEpochSig(targetEpoch uint64, sig []byte) []byte {
 	return append(bytesutil.Bytes8(targetEpoch), sig...)
+}
+func encodeType(st SlashingType) []byte {
+	return []byte{byte(st)}
+}
+func encodeTypeRoot(st SlashingType, root [32]byte) []byte {
+	return append([]byte{byte(st)}, root[:]...)
 }

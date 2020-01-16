@@ -9,7 +9,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -112,9 +111,11 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 	resp.DepositInclusionSlot = int64(depositBlockSlot)
 
 	// If validator has been activated at any point, they are not in the queue so we can return
-	// the request early. Additionally, if idx is zero (default return value) then we know this
+	// the request early. Also if the validator has exited,slashed or initiated its exit
+	//  we return the request early too. We only proceed if its status is pending active
+	//  Additionally, if idx is zero (default return value) then we know this
 	// validator cannot be in the queue either.
-	if uint64(resp.ActivationEpoch) != params.BeaconConfig().FarFutureEpoch || idx == 0 {
+	if resp.Status != ethpb.ValidatorStatus_PENDING_ACTIVE || idx == 0 {
 		return resp
 	}
 
@@ -126,7 +127,7 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 		}
 	}
 	// Our position in the activation queue is the above index - our validator index.
-	if lastActivatedValidatorIdx > idx {
+	if lastActivatedValidatorIdx < idx {
 		resp.PositionInActivationQueue = int64(idx - lastActivatedValidatorIdx)
 	}
 
@@ -141,7 +142,7 @@ func (vs *Server) retrieveStatusFromState(
 	if headState == nil {
 		return ethpb.ValidatorStatus(0), 0, errors.New("head state does not exist")
 	}
-	idx, ok, err := vs.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
+	idx, ok, err := vs.BeaconDB.ValidatorIndex(ctx, pubKey)
 	if err != nil {
 		return ethpb.ValidatorStatus(0), 0, err
 	}

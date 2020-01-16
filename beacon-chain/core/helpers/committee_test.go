@@ -12,7 +12,9 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
@@ -318,6 +320,7 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 }
 
 func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
+	ClearCache()
 	validators := make([]*ethpb.Validator, 1)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -340,6 +343,7 @@ func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 // Test helpers.CommitteeAssignments against the results of helpers.CommitteeAssignment by validator
 // index. Warning: this test is a bit slow!
 func TestCommitteeAssignments_AgreesWithSpecDefinitionMethod(t *testing.T) {
+	ClearCache()
 	// Initialize test with 256 validators, each slot and each index gets 4 validators.
 	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
@@ -441,6 +445,7 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			ClearCache()
 			validatorIndexToCommittee, proposerIndexToSlot, err := CommitteeAssignments(state, SlotToEpoch(tt.slot))
 			if err != nil {
 				t.Fatalf("failed to determine CommitteeAssignments: %v", err)
@@ -551,6 +556,7 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 	}
 
 	for i, tt := range tests {
+		ClearCache()
 		state.Slot = tt.stateSlot
 		err := VerifyAttestationBitfieldLengths(state, tt.attestation)
 		if tt.verificationFailure {
@@ -608,8 +614,8 @@ func TestShuffledIndices_ShuffleRightLength(t *testing.T) {
 }
 
 func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
+	ClearCache()
 	c := featureconfig.Get()
-	c.EnableNewCache = true
 	featureconfig.Init(c)
 	defer featureconfig.Init(nil)
 
@@ -837,7 +843,6 @@ func BenchmarkComputeCommittee4000000_WithOutCache(b *testing.B) {
 
 func TestBeaconCommitteeFromState_UpdateCacheForPreviousEpoch(t *testing.T) {
 	c := featureconfig.Get()
-	c.EnableNewCache = true
 	featureconfig.Init(c)
 	defer featureconfig.Init(nil)
 
@@ -870,5 +875,48 @@ func TestBeaconCommitteeFromState_UpdateCacheForPreviousEpoch(t *testing.T) {
 	}
 	if activeIndices == nil {
 		t.Error("did not cache active indices")
+	}
+}
+
+func TestPrecomputeProposerIndices_Ok(t *testing.T) {
+	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	state := &pb.BeaconState{
+		Validators:  validators,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	}
+
+	indices, err := ActiveValidatorIndices(state, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	proposerIndices, err := precomputeProposerIndices(state, indices)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var wantedProposerIndices []uint64
+	seed, err := Seed(state, 0, params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+		seedWithSlot := append(seed[:], bytesutil.Bytes8(i)...)
+		seedWithSlotHash := hashutil.Hash(seedWithSlot)
+		index, err := ComputeProposerIndex(state.Validators, indices, seedWithSlotHash)
+		if err != nil {
+			t.Fatal(err)
+		}
+		wantedProposerIndices = append(wantedProposerIndices, index)
+	}
+
+	if !reflect.DeepEqual(wantedProposerIndices, proposerIndices) {
+		t.Error("Did not precompute proposer indices correctly")
 	}
 }

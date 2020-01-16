@@ -106,6 +106,11 @@ type RPCBlockFetcher interface {
 	BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
 }
 
+// RPCClient defines the rpc methods required to interact with the eth1 node.
+type RPCClient interface {
+	BatchCall(b []gethRPC.BatchElem) error
+}
+
 // Service fetches important information about the canonical
 // Ethereum ETH1.0 chain via a web3 endpoint using an ethclient. The Random
 // Beacon Chain requires synchronization with the ETH1.0 chain's current
@@ -125,13 +130,14 @@ type Service struct {
 	logger                  bind.ContractFilterer
 	httpLogger              bind.ContractFilterer
 	blockFetcher            RPCBlockFetcher
+	rpcClient               RPCClient
 	blockCache              *blockCache // cache to store block hash/block height.
 	latestEth1Data          *protodb.LatestETH1Data
 	depositContractCaller   *contracts.DepositContractCaller
 	depositRoot             []byte
 	depositTrie             *trieutil.SparseMerkleTrie
 	chainStartData          *protodb.ChainStartData
-	beaconDB                db.Database
+	beaconDB                db.HeadAccessDatabase // Circular dep if using HeadFetcher.
 	depositCache            *depositcache.DepositCache
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	isRunning               bool
@@ -147,7 +153,7 @@ type Web3ServiceConfig struct {
 	ETH1Endpoint    string
 	HTTPEndPoint    string
 	DepositContract common.Address
-	BeaconDB        db.Database
+	BeaconDB        db.HeadAccessDatabase
 	DepositCache    *depositcache.DepositCache
 	StateNotifier   statefeed.Notifier
 }
@@ -319,7 +325,7 @@ func (s *Service) AreAllDepositsProcessed() (bool, error) {
 }
 
 func (s *Service) connectToPowChain() error {
-	powClient, httpClient, err := s.dialETH1Nodes()
+	powClient, httpClient, rpcClient, err := s.dialETH1Nodes()
 	if err != nil {
 		return errors.Wrap(err, "could not dial eth1 nodes")
 	}
@@ -329,29 +335,29 @@ func (s *Service) connectToPowChain() error {
 		return errors.Wrap(err, "could not create deposit contract caller")
 	}
 
-	s.initializeConnection(powClient, httpClient, depositContractCaller)
+	s.initializeConnection(powClient, httpClient, rpcClient, depositContractCaller)
 	return nil
 }
 
-func (s *Service) dialETH1Nodes() (*ethclient.Client, *ethclient.Client, error) {
+func (s *Service) dialETH1Nodes() (*ethclient.Client, *ethclient.Client, *gethRPC.Client, error) {
 	httpRPCClient, err := gethRPC.Dial(s.httpEndpoint)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	httpClient := ethclient.NewClient(httpRPCClient)
 
 	rpcClient, err := gethRPC.Dial(s.eth1Endpoint)
 	if err != nil {
 		httpClient.Close()
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	powClient := ethclient.NewClient(rpcClient)
 
-	return powClient, httpClient, nil
+	return powClient, httpClient, httpRPCClient, nil
 }
 
 func (s *Service) initializeConnection(powClient *ethclient.Client,
-	httpClient *ethclient.Client, contractCaller *contracts.DepositContractCaller) {
+	httpClient *ethclient.Client, rpcClient *gethRPC.Client, contractCaller *contracts.DepositContractCaller) {
 
 	s.reader = powClient
 	s.logger = powClient
@@ -359,6 +365,7 @@ func (s *Service) initializeConnection(powClient *ethclient.Client,
 	s.httpLogger = httpClient
 	s.blockFetcher = httpClient
 	s.depositContractCaller = contractCaller
+	s.rpcClient = rpcClient
 }
 
 func (s *Service) waitForConnection() {
@@ -448,6 +455,45 @@ func (s *Service) processSubscribedHeaders(header *gethTypes.Header) {
 	}
 }
 
+// batchRequestHeaders requests the block range specified in the arguments. Instead of requesting
+// each block in one call, it batches all requests into a single rpc call.
+func (s *Service) batchRequestHeaders(startBlock uint64, endBlock uint64) ([]*gethTypes.Header, error) {
+	requestRange := (endBlock - startBlock) + 1
+	elems := make([]gethRPC.BatchElem, 0, requestRange)
+	headers := make([]*gethTypes.Header, 0, requestRange)
+	errors := make([]error, 0, requestRange)
+	if requestRange == 0 {
+		return headers, nil
+	}
+	for i := startBlock; i <= endBlock; i++ {
+		header := &gethTypes.Header{}
+		err := error(nil)
+		elems = append(elems, gethRPC.BatchElem{
+			Method: "eth_getBlockByNumber",
+			Args:   []interface{}{hexutil.EncodeBig(big.NewInt(int64(i))), true},
+			Result: header,
+			Error:  err,
+		})
+		headers = append(headers, header)
+		errors = append(errors, err)
+	}
+	ioErr := s.rpcClient.BatchCall(elems)
+	if ioErr != nil {
+		return nil, ioErr
+	}
+	for _, e := range errors {
+		if e != nil {
+			return nil, e
+		}
+	}
+	for _, h := range headers {
+		if h != nil {
+			s.blockCache.AddBlock(gethTypes.NewBlockWithHeader(h))
+		}
+	}
+	return headers, nil
+}
+
 // safelyHandleHeader will recover and log any panic that occurs from the
 // block
 func safelyHandlePanic() {
@@ -463,7 +509,7 @@ func safelyHandlePanic() {
 func (s *Service) handleDelayTicker() {
 	defer safelyHandlePanic()
 	if !s.chainStartData.Chainstarted {
-		if err := s.checkForChainStart(context.Background(), big.NewInt(int64(s.latestEth1Data.LastRequestedBlock))); err != nil {
+		if err := s.checkBlockNumberForChainStart(context.Background(), big.NewInt(int64(s.latestEth1Data.LastRequestedBlock))); err != nil {
 			s.runError = err
 			log.Error(err)
 			return
@@ -535,6 +581,7 @@ func (s *Service) run(done <-chan struct{}) {
 				s.runError = err
 				return
 			}
+			s.runError = nil
 		case header, ok := <-s.headerChan:
 			if ok {
 				s.processSubscribedHeaders(header)

@@ -1,6 +1,6 @@
 /*
 Package featureconfig defines which features are enabled for runtime
-in order to selctively enable certain features to maintain a stable runtime.
+in order to selectively enable certain features to maintain a stable runtime.
 
 The process for implementing new features using this package is as follows:
 	1. Add a new CMD flag in flags.go, and place it in the proper list(s) var for its client.
@@ -36,14 +36,15 @@ type Flags struct {
 	InitSyncCacheState        bool   // InitSyncCacheState caches state during initial sync.
 	KafkaBootstrapServers     string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
 	EnableSavingOfDepositData bool   // EnableSavingOfDepositData allows the saving of eth1 related data such as deposits,chain data to be saved.
+	BlockDoubleProposals      bool   // BlockDoubleProposals prevents the validator client from signing any proposals that would be considered a slashable offense.
 
 	// Cache toggles.
 	EnableAttestationCache   bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableEth1DataVoteCache  bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableNewCache           bool // EnableNewCache enables the node to use the new caching scheme.
-	EnableShuffledIndexCache bool // EnableShuffledIndexCache to cache expensive shuffled index computation.
 	EnableSkipSlotsCache     bool // EnableSkipSlotsCache caches the state in skipped slots.
 	EnableSlasherConnection  bool // EnableSlasher enable retrieval of slashing events from a slasher instance.
+	EnableBlockTreeCache     bool // EnableBlockTreeCache enable fork choice service to maintain latest filtered block tree.
+	EnableProposerIndexCache bool // EnableProposerIndexCache enable caching of proposer index.
 }
 
 var featureConfig *Flags
@@ -70,7 +71,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Starting ETH2 with no genesis delay")
 		cfg.NoGenesisDelay = true
 	}
-	if ctx.GlobalBool(MinimalConfigFlag.Name) {
+	if ctx.GlobalBool(minimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
 	}
@@ -78,11 +79,11 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
 		cfg.WriteSSZStateTransitions = true
 	}
-	if ctx.GlobalBool(EnableAttestationCacheFlag.Name) {
+	if ctx.GlobalBool(enableAttestationCacheFlag.Name) {
 		log.Warn("Enabled unsafe attestation cache")
 		cfg.EnableAttestationCache = true
 	}
-	if ctx.GlobalBool(EnableEth1DataVoteCacheFlag.Name) {
+	if ctx.GlobalBool(enableEth1DataVoteCacheFlag.Name) {
 		log.Warn("Enabled unsafe eth1 data vote cache")
 		cfg.EnableEth1DataVoteCache = true
 	}
@@ -92,11 +93,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	} else {
 		cfg.InitSyncNoVerify = true
 	}
-	if ctx.GlobalBool(NewCacheFlag.Name) {
-		log.Warn("Using new cache for committee shuffled indices")
-		cfg.EnableNewCache = true
-	}
-	if ctx.GlobalBool(SkipBLSVerifyFlag.Name) {
+	if ctx.GlobalBool(skipBLSVerifyFlag.Name) {
 		log.Warn("UNSAFE: Skipping BLS verification at runtime")
 		cfg.SkipBLSVerify = true
 	}
@@ -104,11 +101,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Allowing database backups to be triggered from HTTP webhook.")
 		cfg.EnableBackupWebhook = true
 	}
-	if ctx.GlobalBool(enableShuffledIndexCache.Name) {
-		log.Warn("Enabled shuffled index cache.")
-		cfg.EnableShuffledIndexCache = true
-	}
-	if ctx.GlobalBool(enableSkipSlotsCache.Name) {
+	if ctx.GlobalBool(enableSkipSlotsCacheFlag.Name) {
 		log.Warn("Enabled skip slots cache.")
 		cfg.EnableSkipSlotsCache = true
 	}
@@ -116,17 +109,25 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling experimental kafka streaming.")
 		cfg.KafkaBootstrapServers = ctx.GlobalString(kafkaBootstrapServersFlag.Name)
 	}
-	if ctx.GlobalBool(initSyncCacheState.Name) {
+	if ctx.GlobalBool(initSyncCacheStateFlag.Name) {
 		log.Warn("Enabled initial sync cache state mode.")
 		cfg.InitSyncCacheState = true
 	}
-	if ctx.GlobalBool(saveDepositData.Name) {
+	if ctx.GlobalBool(saveDepositDataFlag.Name) {
 		log.Warn("Enabled saving of eth1 related chain/deposit data.")
 		cfg.EnableSavingOfDepositData = true
 	}
 	if ctx.GlobalBool(enableSlasherFlag.Name) {
 		log.Warn("Enable slasher connection.")
 		cfg.EnableSlasherConnection = true
+	}
+	if ctx.GlobalBool(cacheFilteredBlockTreeFlag.Name) {
+		log.Warn("Enabled filtered block tree cache for fork choice.")
+		cfg.EnableBlockTreeCache = true
+	}
+	if ctx.GlobalBool(cacheProposerIndicesFlag.Name) {
+		log.Warn("Enabled proposer index caching.")
+		cfg.EnableProposerIndexCache = true
 	}
 	Init(cfg)
 }
@@ -136,9 +137,13 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 func ConfigureValidator(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	if ctx.GlobalBool(MinimalConfigFlag.Name) {
+	if ctx.GlobalBool(minimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
+	}
+	if ctx.GlobalBool(blockDoubleProposals.Name) {
+		log.Warn("Enabled validator double proposal slashing protection.")
+		cfg.BlockDoubleProposals = true
 	}
 	Init(cfg)
 }

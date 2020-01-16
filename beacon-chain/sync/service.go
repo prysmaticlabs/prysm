@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/kevinms/leakybucket-go"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -16,10 +17,13 @@ import (
 
 var _ = shared.Service(&Service{})
 
+const allowedBlocksPerSecond = 32.0
+const allowedBlocksBurst = 10 * allowedBlocksPerSecond
+
 // Config to set up the regular sync service.
 type Config struct {
 	P2P           p2p.P2P
-	DB            db.Database
+	DB            db.NoHeadAccessDatabase
 	AttPool       attestations.Pool
 	Chain         blockchainService
 	InitialSync   Checker
@@ -50,6 +54,7 @@ func NewRegularSync(cfg *Config) *Service {
 		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 		stateNotifier:       cfg.StateNotifier,
+		blocksRateLimiter:   leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksBurst, false /* deleteEmptyBuckets */),
 	}
 
 	r.registerRPCHandlers()
@@ -64,7 +69,7 @@ type Service struct {
 	ctx                 context.Context
 	cancel              context.CancelFunc
 	p2p                 p2p.P2P
-	db                  db.Database
+	db                  db.NoHeadAccessDatabase
 	attPool             attestations.Pool
 	chain               blockchainService
 	slotToPendingBlocks map[uint64]*ethpb.SignedBeaconBlock
@@ -74,6 +79,7 @@ type Service struct {
 	initialSync         Checker
 	validateBlockLock   sync.RWMutex
 	stateNotifier       statefeed.Notifier
+	blocksRateLimiter   *leakybucket.Collector
 }
 
 // Start the regular sync service.

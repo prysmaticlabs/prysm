@@ -36,13 +36,10 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	}
 
 	// Retrieve the parent block as the current head of the canonical chain.
-	parent := vs.HeadFetcher.HeadBlock()
-
-	parentRoot, err := ssz.HashTreeRoot(parent.Block)
+	parentRoot, err := vs.HeadFetcher.HeadRoot(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get parent block signing root: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not retrieve head root: %v", err)
 	}
-
 	eth1Data, err := vs.eth1Data(ctx, req.Slot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get ETH1 data: %v", err)
@@ -337,7 +334,7 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, slot 
 	validAtts := make([]*ethpb.Attestation, 0, len(atts))
 	inValidAtts := make([]*ethpb.Attestation, 0, len(atts))
 
-	bState, err := vs.BeaconDB.HeadState(ctx)
+	bState, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, errors.New("could not head state from DB")
 	}

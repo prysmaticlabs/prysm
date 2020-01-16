@@ -68,7 +68,7 @@ func TestProposeBlock_OK(t *testing.T) {
 			Body:       &ethpb.BeaconBlockBody{},
 		},
 	}
-	if err := proposerServer.BeaconDB.SaveBlock(ctx, req); err != nil {
+	if err := db.SaveBlock(ctx, req); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := proposerServer.ProposeBlock(context.Background(), req); err != nil {
@@ -1026,8 +1026,9 @@ func TestFilterAttestation_OK(t *testing.T) {
 	}
 
 	proposerServer := &Server{
-		BeaconDB: db,
-		AttPool:  attestations.NewPool(),
+		BeaconDB:    db,
+		AttPool:     attestations.NewPool(),
+		HeadFetcher: &mock.ChainService{State: state, Root: genesisRoot[:]},
 	}
 
 	atts := make([]*ethpb.Attestation, 10)
@@ -1277,8 +1278,8 @@ func TestDeleteAttsInPool_Aggregated(t *testing.T) {
 		AttPool: attestations.NewPool(),
 	}
 
-	aggregatedAtts := []*ethpb.Attestation{{AggregationBits: bitfield.Bitlist{0b01101}}, {AggregationBits: bitfield.Bitlist{0b0111}}}
-	unaggregatedAtts := []*ethpb.Attestation{{AggregationBits: bitfield.Bitlist{0b001}}, {AggregationBits: bitfield.Bitlist{0b0001}}}
+	aggregatedAtts := []*ethpb.Attestation{{AggregationBits: bitfield.Bitlist{0b10101}}, {AggregationBits: bitfield.Bitlist{0b11010}}}
+	unaggregatedAtts := []*ethpb.Attestation{{AggregationBits: bitfield.Bitlist{0b1001}}, {AggregationBits: bitfield.Bitlist{0b0001}}}
 
 	if err := s.AttPool.SaveAggregatedAttestations(aggregatedAtts); err != nil {
 		t.Fatal(err)

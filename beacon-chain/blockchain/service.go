@@ -30,6 +30,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/stateutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -39,7 +40,7 @@ import (
 type Service struct {
 	ctx                    context.Context
 	cancel                 context.CancelFunc
-	beaconDB               db.Database
+	beaconDB               db.HeadAccessDatabase
 	depositCache           *depositcache.DepositCache
 	chainStartFetcher      powchain.ChainStartFetcher
 	attPool                attestations.Pool
@@ -62,7 +63,7 @@ type Service struct {
 type Config struct {
 	BeaconBlockBuf    int
 	ChainStartFetcher powchain.ChainStartFetcher
-	BeaconDB          db.Database
+	BeaconDB          db.HeadAccessDatabase
 	DepositCache      *depositcache.DepositCache
 	AttPool           attestations.Pool
 	P2p               p2p.Broadcaster
@@ -197,7 +198,6 @@ func (s *Service) initializeBeaconChain(
 	eth1data *ethpb.Eth1Data) error {
 	_, span := trace.StartSpan(context.Background(), "beacon-chain.Service.initializeBeaconChain")
 	defer span.End()
-	log.Info("Genesis time reached, starting the beacon chain")
 	s.genesisTime = genesisTime
 	unixTime := uint64(genesisTime.Unix())
 
@@ -210,11 +210,11 @@ func (s *Service) initializeBeaconChain(
 		return errors.Wrap(err, "could not save genesis data")
 	}
 
+	log.Info("Initialized beacon chain genesis state")
+
 	// Update committee shuffled indices for genesis epoch.
-	if featureconfig.Get().EnableNewCache {
-		if err := helpers.UpdateCommitteeCache(genesisState, 0 /* genesis epoch */); err != nil {
-			return err
-		}
+	if err := helpers.UpdateCommitteeCache(genesisState, 0 /* genesis epoch */); err != nil {
+		return err
 	}
 
 	return nil
@@ -251,7 +251,7 @@ func (s *Service) saveHead(ctx context.Context, signed *ethpb.SignedBeaconBlock,
 	if err := s.beaconDB.SaveHeadBlockRoot(ctx, r); err != nil {
 		return errors.Wrap(err, "could not save head root in DB")
 	}
-	s.headBlock = signed
+	s.headBlock = proto.Clone(signed).(*ethpb.SignedBeaconBlock)
 
 	headState, err := s.beaconDB.State(ctx, r)
 	if err != nil {
@@ -277,7 +277,7 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 
 	s.canonicalRoots[b.Block.Slot] = r[:]
 
-	s.headBlock = b
+	s.headBlock = proto.Clone(b).(*ethpb.SignedBeaconBlock)
 
 	headState, err := s.beaconDB.State(ctx, r)
 	if err != nil {
@@ -294,12 +294,13 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 
 // This gets called when beacon chain is first initialized to save validator indices and pubkeys in db
 func (s *Service) saveGenesisValidators(ctx context.Context, state *pb.BeaconState) error {
+	pubkeys := make([][]byte, len(state.Validators))
+	indices := make([]uint64, len(state.Validators))
 	for i, v := range state.Validators {
-		if err := s.beaconDB.SaveValidatorIndex(ctx, bytesutil.ToBytes48(v.PublicKey), uint64(i)); err != nil {
-			return errors.Wrapf(err, "could not save validator index: %d", i)
-		}
+		pubkeys[i] = v.PublicKey
+		indices[i] = uint64(i)
 	}
-	return nil
+	return s.beaconDB.SaveValidatorIndices(ctx, pubkeys, indices)
 }
 
 // This gets called when beacon chain is first initialized to save genesis data (state, block, and more) in db
