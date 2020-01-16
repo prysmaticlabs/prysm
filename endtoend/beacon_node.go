@@ -33,6 +33,7 @@ type end2EndConfig struct {
 	epochsToRun    uint64
 	numValidators  uint64
 	numBeaconNodes uint64
+	enableSSZCache bool
 	contractAddr   common.Address
 	evaluators     []ev.Evaluator
 }
@@ -90,6 +91,10 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 	if config.minimalConfig {
 		args = append(args, "--minimal-config")
 	}
+	if config.enableSSZCache {
+		args = append(args, "--enable-ssz-cache")
+	}
+
 	// After the first node is made, have all following nodes connect to all previously made nodes.
 	if index >= 1 {
 		for p := 0; p < index; p++ {
