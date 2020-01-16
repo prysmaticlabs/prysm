@@ -14,6 +14,7 @@ type GlobalFlags struct {
 	EnableArchivedBlocks              bool
 	EnableArchivedAttestations        bool
 	MinimumSyncPeers                  int
+	DeploymentBlock                   int
 }
 
 var globalConfig *GlobalFlags
@@ -47,6 +48,7 @@ func ConfigureGlobalFlags(ctx *cli.Context) {
 	if ctx.GlobalBool(ArchiveAttestationsFlag.Name) {
 		cfg.EnableArchivedAttestations = true
 	}
+	cfg.DeploymentBlock = ctx.GlobalInt(ContractDeploymentBlock.Name)
 	configureMinimumPeers(ctx, cfg)
 
 	Init(cfg)
