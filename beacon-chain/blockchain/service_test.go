@@ -46,6 +46,10 @@ func (s *store) OnBlock(ctx context.Context, b *ethpb.SignedBeaconBlock) error {
 	return nil
 }
 
+func (s *store) OnBlockCacheFilteredTree(ctx context.Context, b *ethpb.SignedBeaconBlock) error {
+	return nil
+}
+
 func (s *store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.SignedBeaconBlock) error {
 	return nil
 }
@@ -328,7 +332,11 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	if headBlock.Block.Slot != c.HeadSlot() {
 		t.Error("head slot incorrect")
 	}
-	if !bytes.Equal(headRoot[:], c.HeadRoot()) {
+	r, err := c.HeadRoot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(headRoot[:], r) {
 		t.Error("head slot incorrect")
 	}
 	if c.genesisRoot != genesisRoot {

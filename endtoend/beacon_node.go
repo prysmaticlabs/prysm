@@ -84,6 +84,7 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 		fmt.Sprintf("--p2p-tcp-port=%d", 13000+index),
 		fmt.Sprintf("--monitoring-port=%d", 8080+index),
 		fmt.Sprintf("--grpc-gateway-port=%d", 3200+index),
+		fmt.Sprintf("--contract-deployment-block=%d", 0),
 	}
 
 	if config.minimalConfig {
