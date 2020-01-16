@@ -33,7 +33,7 @@ func Init(c *GlobalFlags) {
 	globalConfig = c
 }
 
-// ConfigureGlobalFlags initializes the global config
+// ConfigureGlobalFlags initializes the global config.
 // based on the provided cli context.
 func ConfigureGlobalFlags(ctx *cli.Context) {
 	cfg := &GlobalFlags{}
