@@ -259,17 +259,11 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 
 		for _, duty := range v.duties.Duties {
 			if _, ok := v.pubKeyToID[bytesutil.ToBytes48(duty.PublicKey)]; !ok {
-				// TODO(4379): Make validator index part of the assignment respond.
-				res, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: duty.PublicKey})
-				if err != nil {
-					log.Warnf("Validator pub key %#x does not exist in beacon node", bytesutil.Trunc(duty.PublicKey))
-					continue
-				}
-				v.pubKeyToID[bytesutil.ToBytes48(duty.PublicKey)] = res.Index
+				v.pubKeyToID[bytesutil.ToBytes48(duty.PublicKey)] = duty.ValidatorIndex
 			}
 			lFields := logrus.Fields{
 				"pubKey":         fmt.Sprintf("%#x", bytesutil.Trunc(duty.PublicKey)),
-				"validatorIndex": v.pubKeyToID[bytesutil.ToBytes48(duty.PublicKey)],
+				"validatorIndex": duty.ValidatorIndex,
 				"committeeIndex": duty.CommitteeIndex,
 				"epoch":          slot / params.BeaconConfig().SlotsPerEpoch,
 				"status":         duty.Status,
