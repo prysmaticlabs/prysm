@@ -18,10 +18,10 @@ var (
 		Name:  "enable-attestation-cache",
 		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
 	}
-	// EnableSSZCache --
-	EnableSSZCache = cli.BoolFlag{
+	// enableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
+	enableSSZCache = cli.BoolFlag{
 		Name:  "enable-ssz-cache",
-		Usage: "Enable unsafe ssz cache mechanism.",
+		Usage: "Enable ssz state root cache mechanism.",
 	}
 	// enableEth1DataVoteCacheFlag see https://github.com/prysmaticlabs/prysm/issues/3106.
 	enableEth1DataVoteCacheFlag = cli.BoolFlag{
@@ -198,7 +198,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	noGenesisDelayFlag,
 	minimalConfigFlag,
 	writeSSZStateTransitionsFlag,
-	EnableSSZCache,
+	enableSSZCache,
 	enableAttestationCacheFlag,
 	enableEth1DataVoteCacheFlag,
 	initSyncVerifyEverythingFlag,
