@@ -455,9 +455,13 @@ func (bs *Server) GetValidatorParticipation(
 		p = &precompute.Balance{}
 	}
 	participation := &ethpb.ValidatorParticipation{
-		EligibleEther:           p.PrevEpoch,
-		VotedEther:              p.PrevEpochTargetAttesters,
-		GlobalParticipationRate: float32(p.PrevEpochTargetAttesters) / float32(p.PrevEpoch),
+		EligibleEther: p.PrevEpoch,
+		VotedEther:    p.PrevEpochTargetAttesters,
+	}
+	participation.GlobalParticipationRate = float32(0)
+	// only divide if prevEpoch is non zero
+	if p.PrevEpoch != 0 {
+		participation.GlobalParticipationRate = float32(p.PrevEpochTargetAttesters) / float32(p.PrevEpoch)
 	}
 
 	return &ethpb.ValidatorParticipationResponse{
