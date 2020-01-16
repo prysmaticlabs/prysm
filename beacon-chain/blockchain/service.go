@@ -29,6 +29,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/stateutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -306,7 +307,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconSt
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
-	stateRoot, err := ssz.HashTreeRoot(genesisState)
+	stateRoot, err := stateutil.HashTreeRootState(genesisState)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash genesis state")
 	}
