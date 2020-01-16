@@ -36,7 +36,8 @@ type Flags struct {
 	InitSyncCacheState        bool   // InitSyncCacheState caches state during initial sync.
 	KafkaBootstrapServers     string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
 	EnableSavingOfDepositData bool   // EnableSavingOfDepositData allows the saving of eth1 related data such as deposits,chain data to be saved.
-	BlockDoubleProposals      bool   // BlockDoubleProposals prevents the validator client from signing any proposals that would be considered a slashable offense.
+	ProtectProposer           bool   // ProtectProposer prevents the validator client from signing any proposals that would be considered a slashable offense.
+	ProtectAttester           bool   // ProtectAttester prevents the validator client from signing any attestations that would be considered a slashable offense.
 
 	// Cache toggles.
 	EnableAttestationCache   bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
@@ -141,8 +142,11 @@ func ConfigureValidator(ctx *cli.Context) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
 	}
-	if ctx.GlobalBool(blockDoubleProposals.Name) {
-		log.Warn("Enabled validator double proposal slashing protection.")
+	if ctx.GlobalBool(protectProposerFlag.Name) {
+		log.Warn("Enabled validator proposal slashing protection.")
+		cfg.BlockDoubleProposals = true
+	}	if ctx.GlobalBool(protectAttesterFlag.Name) {
+		log.Warn("Enabled validator attestation slashing protection.")
 		cfg.BlockDoubleProposals = true
 	}
 	Init(cfg)

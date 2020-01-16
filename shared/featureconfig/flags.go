@@ -75,10 +75,15 @@ var (
 		Name:  "cache-proposer-indices",
 		Usage: "Cache proposer indices on per epoch basis.",
 	}
-	blockDoubleProposals = cli.BoolFlag{
-		Name: "block-double-proposals",
+	protectProposerFlag = cli.BoolFlag{
+		Name: "protect-proposer",
 		Usage: "Prevent the validator client from signing and broadcasting 2 different block " +
 			"proposals in the same epoch. Protects from slashing.",
+	}
+	protectAttesterFlag = cli.BoolFlag{
+		Name: "protect-attester",
+		Usage: "Prevent the validator client from signing and broadcasting 2 any slashable attestations. " +
+			"Protects from slashing.",
 	}
 )
 
