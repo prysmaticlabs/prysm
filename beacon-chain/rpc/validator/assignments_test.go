@@ -5,11 +5,11 @@ import (
 	"encoding/binary"
 	"fmt"
 	"strings"
-	"sync"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -189,22 +189,14 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 		t.Fatalf("Could not get signing root %v", err)
 	}
 
-	var wg sync.WaitGroup
-	numOfValidators := int(depChainStart)
-	errs := make(chan error, numOfValidators)
+	pubKeys := make([][]byte, len(deposits))
+	indices := make([]uint64, len(deposits))
 	for i := 0; i < len(deposits); i++ {
-		wg.Add(1)
-		go func(index int) {
-			errs <- db.SaveValidatorIndex(ctx, deposits[index].Data.PublicKey, uint64(index))
-			wg.Done()
-		}(i)
+		pubKeys[i] = deposits[i].Data.PublicKey
+		indices[i] = uint64(i)
 	}
-	wg.Wait()
-	close(errs)
-	for err := range errs {
-		if err != nil {
-			t.Fatalf("Could not save validator index: %v", err)
-		}
+	if err := db.SaveValidatorIndices(ctx, pubKeys, indices); err != nil {
+		t.Fatal(err)
 	}
 
 	vs := &Server{
@@ -248,22 +240,14 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 		t.Fatalf("Could not get signing root %v", err)
 	}
 
-	var wg sync.WaitGroup
-	numOfValidators := int(depChainStart)
-	errs := make(chan error, numOfValidators)
-	for i := 0; i < numOfValidators; i++ {
-		wg.Add(1)
-		go func(index int) {
-			errs <- db.SaveValidatorIndex(ctx, deposits[index].Data.PublicKey, uint64(index))
-			wg.Done()
-		}(i)
+	pubKeys := make([][]byte, len(deposits))
+	indices := make([]uint64, len(deposits))
+	for i := 0; i < len(deposits); i++ {
+		pubKeys[i] = deposits[i].Data.PublicKey
+		indices[i] = uint64(i)
 	}
-	wg.Wait()
-	close(errs)
-	for err := range errs {
-		if err != nil {
-			t.Fatalf("Could not save validator index: %v", err)
-		}
+	if err := db.SaveValidatorIndices(ctx, pubKeys, indices); err != nil {
+		t.Fatal(err)
 	}
 
 	vs := &Server{
@@ -327,22 +311,14 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 		b.Fatalf("Could not get signing root %v", err)
 	}
 
-	var wg sync.WaitGroup
-	numOfValidators := int(depChainStart)
-	errs := make(chan error, numOfValidators)
-	for i := 0; i < numOfValidators; i++ {
-		wg.Add(1)
-		go func(index int) {
-			errs <- db.SaveValidatorIndex(ctx, deposits[index].Data.PublicKey, uint64(index))
-			wg.Done()
-		}(i)
+	pubKeys := make([][]byte, len(deposits))
+	indices := make([]uint64, len(deposits))
+	for i := 0; i < len(deposits); i++ {
+		pubKeys[i] = deposits[i].Data.PublicKey
+		indices[i] = uint64(i)
 	}
-	wg.Wait()
-	close(errs)
-	for err := range errs {
-		if err != nil {
-			b.Fatalf("Could not save validator index: %v", err)
-		}
+	if err := db.SaveValidatorIndices(ctx, pubKeys, indices); err != nil {
+		b.Fatal(err)
 	}
 
 	vs := &Server{
