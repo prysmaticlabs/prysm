@@ -50,13 +50,14 @@ func (s *Service) slasherOldAtetstationFeeder() error {
 	ch, err := s.beaconClient.GetChainHead(s.context, &ptypes.Empty{})
 	if err != nil {
 		log.Error(err)
+		panic(err)
 	}
 	if ch.FinalizedEpoch < 2 {
 		return fmt.Errorf("archive node doesnt have historic data for slasher to proccess. finalized epoch: %d", ch.FinalizedEpoch)
 	}
 	errOut := make(chan error)
 	var errorWg sync.WaitGroup
-	for i := uint64(0); i < ch.FinalizedEpoch; i++ {
+	for i := uint64(100); i < ch.FinalizedEpoch; i++ {
 		ats, err := s.beaconClient.ListAttestations(s.context, &ethpb.ListAttestationsRequest{
 			QueryFilter: &ethpb.ListAttestationsRequest_TargetEpoch{TargetEpoch: i},
 		})
@@ -68,8 +69,9 @@ func (s *Service) slasherOldAtetstationFeeder() error {
 				Epoch: i,
 			},
 		})
-		if err != nil {
+		if err != nil || bcs == nil {
 			log.Error(err)
+			continue
 		}
 		log.Infof("detecting slashable events on: %v attestations from epoch: %v", len(ats.Attestations), i)
 		for _, attestation := range ats.Attestations {
@@ -135,6 +137,9 @@ func (s *Service) slasherOldAtetstationFeeder() error {
 //        signature=attestation.signature,
 //    )
 func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, committee []uint64) (*ethpb.IndexedAttestation, error) {
+	if attestation.Data == nil {
+		return nil, fmt.Errorf("cant hash nil data in indexed attestation")
+	}
 	attIndices, err := helpers.AttestingIndices(attestation.AggregationBits, committee)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get attesting indices")

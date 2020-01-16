@@ -45,6 +45,7 @@ func init() {
 type Service struct {
 	slasherDb       *db.Store
 	grpcServer      *grpc.Server
+	slasher         *rpc.Server
 	port            int
 	withCert        string
 	withKey         string
@@ -88,7 +89,9 @@ func NewRPCService(cfg *Config, ctx *cli.Context) (*Service, error) {
 	if err := s.startDB(s.ctx); err != nil {
 		return nil, err
 	}
-
+	s.slasher = &rpc.Server{
+		SlasherDB: s.slasherDb,
+	}
 	return s, nil
 }
 

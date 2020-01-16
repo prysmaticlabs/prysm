@@ -1475,7 +1475,8 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_karlseguin_ccache",
-    commit = "ec06cd93a07565b373789b0078ba88fe697fddd9",  # v2.0.3
-    importpath = "github.com/karlseguin/ccache",
+    name = "com_github_kevinms_leakybucket_go",
+    importpath = "github.com/kevinms/leakybucket-go",
+    sum = "h1:oq6BiN7v0MfWCRcJAxSV+hesVMAAV8COrQbTjYNnso4=",
+    version = "v0.0.0-20190611015032-8a3d0352aa79",
 )

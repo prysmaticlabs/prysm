@@ -29,6 +29,9 @@ type Server struct {
 // is a slashable vote.
 func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.IndexedAttestation) (*slashpb.AttesterSlashingResponse, error) {
 	//TODO(#3133): add signature validation
+	if req.Data == nil {
+		return nil, fmt.Errorf("cant hash nil data in indexed attestation")
+	}
 	if err := ss.SlasherDB.SaveIndexedAttestation(req); err != nil {
 		return nil, err
 	}
@@ -75,7 +78,11 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 	close(er)
 	close(at)
 	for e := range er {
-		err = fmt.Errorf(err.Error() + " : " + e.Error())
+		if err != nil {
+			err = fmt.Errorf(err.Error() + " : " + e.Error())
+			continue
+		}
+		err = e
 	}
 	for atts := range at {
 		atsSlashinngRes.AttesterSlashing = append(atsSlashinngRes.AttesterSlashing, atts...)
