@@ -3,6 +3,7 @@ package db
 import (
 	"flag"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/urfave/cli"
@@ -133,4 +134,31 @@ func TestStore_UpdateProposerSlashingStatus(t *testing.T) {
 
 	}
 
+}
+
+func TestStore_SaveProposerSlashings(t *testing.T) {
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	ctx := cli.NewContext(app, set, nil)
+	db := SetupSlasherDB(t, ctx)
+	defer TeardownSlasherDB(t, db)
+	ps := []*ethpb.ProposerSlashing{
+		&ethpb.ProposerSlashing{ProposerIndex: 1},
+		&ethpb.ProposerSlashing{ProposerIndex: 2},
+		&ethpb.ProposerSlashing{ProposerIndex: 3},
+	}
+	err := db.SaveProposeerSlashings(Active, ps)
+	if err != nil {
+		t.Fatalf("save proposer slashings failed: %v", err)
+	}
+	proposerSlashings, err := db.ProposalSlashingsByStatus(Active)
+	if err != nil {
+		t.Fatalf("failed to get proposer slashings: %v", err)
+	}
+	sort.SliceStable(proposerSlashings, func(i, j int) bool {
+		return proposerSlashings[i].ProposerIndex < proposerSlashings[j].ProposerIndex
+	})
+	if proposerSlashings == nil || !reflect.DeepEqual(proposerSlashings, ps) {
+		t.Fatalf("proposer slashing: %v should be part of proposer slashings response: %v", ps, proposerSlashings)
+	}
 }

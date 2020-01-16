@@ -3,6 +3,7 @@ package db
 import (
 	"flag"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/urfave/cli"
@@ -76,6 +77,33 @@ func TestStore_SaveAttesterSlashing(t *testing.T) {
 
 }
 
+func TestStore_SaveAttesterSlashings(t *testing.T) {
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	ctx := cli.NewContext(app, set, nil)
+	db := SetupSlasherDB(t, ctx)
+	defer TeardownSlasherDB(t, db)
+	as := []*ethpb.AttesterSlashing{
+		&ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("1")}},
+		&ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("2")}},
+		&ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("3")}},
+	}
+	err := db.SaveAttesterSlashings(Active, as)
+	if err != nil {
+		t.Fatalf("save attester slashing failed: %v", err)
+	}
+	attesterSlashings, err := db.AttesterSlashings(Active)
+	if err != nil {
+		t.Fatalf("failed to get attester slashings: %v", err)
+	}
+	sort.SliceStable(attesterSlashings, func(i, j int) bool {
+		return attesterSlashings[i].Attestation_1.Signature[0] < attesterSlashings[j].Attestation_1.Signature[0]
+	})
+	if attesterSlashings == nil || !reflect.DeepEqual(attesterSlashings, as) {
+		t.Fatalf("attester slashing: %v should be part of attester slashings response: %v", as, attesterSlashings)
+	}
+}
+
 func TestStore_UpdateAttesterSlashingStatus(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
@@ -131,6 +159,34 @@ func TestStore_UpdateAttesterSlashingStatus(t *testing.T) {
 			t.Fatalf("failed to find attester slashing with the correct status: %v", tt.as)
 		}
 
+	}
+
+}
+
+func TestStore_LatestEpochDetected(t *testing.T) {
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	ctx := cli.NewContext(app, set, nil)
+	db := SetupSlasherDB(t, ctx)
+	defer TeardownSlasherDB(t, db)
+	e, err := db.GetLatestEpochDetected()
+	if err != nil {
+		t.Fatalf("get latest epoch detected failed: %v", err)
+	}
+	if e != 0 {
+		t.Fatalf("latest epoch detected should have been 0 before setting got: %d", e)
+	}
+	epoch := uint64(1)
+	err = db.SetLatestEpochDetected(epoch)
+	if err != nil {
+		t.Fatalf("set latest epoch detected failed: %v", err)
+	}
+	e, err = db.GetLatestEpochDetected()
+	if err != nil {
+		t.Fatalf("get latest epoch detected failed: %v", err)
+	}
+	if e != epoch {
+		t.Fatalf("latest epoch detected should have been: %d got: %d", epoch, e)
 	}
 
 }

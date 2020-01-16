@@ -231,6 +231,7 @@ func (s *Service) startBeaconClient() {
 	conn, err := grpc.DialContext(s.context, s.beaconProvider, beaconOpts...)
 	if err != nil {
 		log.Errorf("Could not dial endpoint: %s, %v", s.beaconProvider, err)
+		s.Stop()
 		return
 	}
 	log.Info("Successfully started gRPC connection")

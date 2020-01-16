@@ -3,12 +3,16 @@ package db
 import (
 	"bytes"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
+
+const LatestEpochKey = "LATEST_EPOCH_DETECTED"
 
 func createAttesterSlashing(enc []byte) (*ethpb.AttesterSlashing, error) {
 	protoSlashing := &ethpb.AttesterSlashing{}
@@ -102,13 +106,65 @@ func (db *Store) SaveAttesterSlashing(status SlashingStatus, slashing *ethpb.Att
 	err = db.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
 		e := b.Put(key, append([]byte{byte(status)}, enc...))
-		if e != nil {
-			return nil
-		}
-		return err
+		return e
 	})
 	if err != nil {
 		return err
 	}
+	return err
+}
+
+// SaveAttesterSlashings accepts a slice of slashing proof and its status and writes it to disk.
+func (db *Store) SaveAttesterSlashings(status SlashingStatus, slashings []*ethpb.AttesterSlashing) error {
+	enc := make([][]byte, len(slashings))
+	key := make([][]byte, len(slashings))
+	var err error
+	for i, slashing := range slashings {
+		enc[i], err = proto.Marshal(slashing)
+		if err != nil {
+			return errors.Wrap(err, "failed to marshal")
+		}
+		root := hashutil.Hash(enc[i])
+		key[i] = encodeTypeRoot(SlashingType(Attestation), root)
+	}
+	err = db.update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(slashingBucket)
+		for i := 0; i < len(enc); i++ {
+			e := b.Put(key[i], append([]byte{byte(status)}, enc[i]...))
+			if e != nil {
+				return e
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return err
+}
+
+// GetLatestEpochDetected returns the latest detected epoch from db.
+func (db *Store) GetLatestEpochDetected() (uint64, error) {
+	var epoch uint64
+	err := db.view(func(tx *bolt.Tx) error {
+		b := tx.Bucket(slashingBucket)
+		enc := b.Get([]byte(LatestEpochKey))
+		if enc == nil {
+			epoch = 0
+			return nil
+		}
+		epoch = bytesutil.FromBytes8(enc)
+		return nil
+	})
+	return epoch, err
+}
+
+// SetLatestEpochDetected returns the latest detected epoch from db.
+func (db *Store) SetLatestEpochDetected(epoch uint64) error {
+	err := db.update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(slashingBucket)
+		err := b.Put([]byte(LatestEpochKey), bytesutil.Bytes8(epoch))
+		return err
+	})
 	return err
 }

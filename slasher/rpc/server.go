@@ -51,7 +51,7 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 			return nil, fmt.Errorf("indexed attestation contains repeated or non sorted ids")
 		}
 		wg.Add(1)
-		go func(idx uint64) {
+		go func(idx uint64, root [32]byte, req *ethpb.IndexedAttestation) {
 			atts, err := ss.SlasherDB.DoubleVotes(tEpoch, idx, root[:], req)
 			if err != nil {
 				er <- err
@@ -72,7 +72,7 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 			}
 			wg.Done()
 			return
-		}(idx)
+		}(idx, root, req)
 	}
 	wg.Wait()
 	close(er)
@@ -204,6 +204,9 @@ func (ss *Server) DetectSurroundVotes(ctx context.Context, validatorIdx uint64, 
 			return nil, err
 		}
 		for _, ia := range attestations {
+			if ia.Data == nil {
+				continue
+			}
 			if ia.Data.Source.Epoch > req.Data.Source.Epoch && ia.Data.Target.Epoch < req.Data.Target.Epoch {
 				as = append(as, &ethpb.AttesterSlashing{
 					Attestation_1: req,

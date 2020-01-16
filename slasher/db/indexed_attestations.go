@@ -127,11 +127,14 @@ func (db *Store) DoubleVotes(targetEpoch uint64, validatorIdx uint64, dataRoot [
 	if err != nil {
 		return nil, err
 	}
-	if idxAttestations == nil {
+	if idxAttestations == nil || len(idxAttestations) == 0 {
 		return nil, fmt.Errorf("cennot check nil indexattestation for double vote")
 	}
 	var slashIdxAtt []*ethpb.IndexedAttestation
 	for _, at := range idxAttestations {
+		if at.Data == nil {
+			continue
+		}
 		root, err := hashutil.HashProto(at.Data)
 		if err != nil {
 			return nil, err

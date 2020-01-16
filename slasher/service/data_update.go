@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/slasher/db"
+
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -50,14 +52,19 @@ func (s *Service) slasherOldAtetstationFeeder() error {
 	ch, err := s.beaconClient.GetChainHead(s.context, &ptypes.Empty{})
 	if err != nil {
 		log.Error(err)
-		panic(err)
+		s.Stop()
 	}
 	if ch.FinalizedEpoch < 2 {
 		return fmt.Errorf("archive node doesnt have historic data for slasher to proccess. finalized epoch: %d", ch.FinalizedEpoch)
 	}
 	errOut := make(chan error)
 	var errorWg sync.WaitGroup
-	for i := uint64(100); i < ch.FinalizedEpoch; i++ {
+	e, err := s.slasherDb.GetLatestEpochDetected()
+	if err != nil {
+		log.Error(err)
+		s.Stop()
+	}
+	for i := e; i < ch.FinalizedEpoch; i++ {
 		ats, err := s.beaconClient.ListAttestations(s.context, &ethpb.ListAttestationsRequest{
 			QueryFilter: &ethpb.ListAttestationsRequest_TargetEpoch{TargetEpoch: i},
 		})
@@ -100,11 +107,12 @@ func (s *Service) slasherOldAtetstationFeeder() error {
 				log.Error(err)
 				continue
 			}
+			s.slasherDb.SaveAttesterSlashings(db.Active, sar.AttesterSlashing)
 			if len(sar.AttesterSlashing) > 0 {
 				log.Infof("slashing response: %v", sar.AttesterSlashing)
 			}
-			//mergeChannels(errChArr, errOut, errorWg)
 		}
+		s.slasherDb.SetLatestEpochDetected(i)
 	}
 	errorWg.Wait()
 	close(errOut)
