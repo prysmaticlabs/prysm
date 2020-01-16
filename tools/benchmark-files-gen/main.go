@@ -22,7 +22,7 @@ import (
 
 var (
 	outputDir = flag.String("output-dir", "", "Directory to write SSZ files to")
-	overwrite  = flag.Bool("overwrite", false, "If SSZ files exist in the output directory, they will be overwritten")
+	overwrite = flag.Bool("overwrite", false, "If SSZ files exist in the output directory, they will be overwritten")
 )
 
 func main() {
