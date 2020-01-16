@@ -8,6 +8,7 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -450,10 +451,17 @@ func (bs *Server) GetValidatorParticipation(
 	}
 
 	p := bs.ParticipationFetcher.Participation(requestedEpoch)
+	if p == nil {
+		p = &precompute.Balance{}
+	}
 	participation := &ethpb.ValidatorParticipation{
-		EligibleEther:           p.PrevEpoch,
-		VotedEther:              p.PrevEpochTargetAttesters,
-		GlobalParticipationRate: float32(p.PrevEpochTargetAttesters) / float32(p.PrevEpoch),
+		EligibleEther: p.PrevEpoch,
+		VotedEther:    p.PrevEpochTargetAttesters,
+	}
+	participation.GlobalParticipationRate = float32(0)
+	// only divide if prevEpoch is non zero
+	if p.PrevEpoch != 0 {
+		participation.GlobalParticipationRate = float32(p.PrevEpochTargetAttesters) / float32(p.PrevEpoch)
 	}
 
 	return &ethpb.ValidatorParticipationResponse{
