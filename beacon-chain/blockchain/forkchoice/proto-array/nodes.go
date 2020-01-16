@@ -4,7 +4,7 @@ import "bytes"
 
 // Insert registers a new block node to the fork choice store.
 // It updates the new node's parent with best child and descendant node.
-func (s Store) Insert(root [32]byte, parent [32]byte, justifiedEpoch uint64, finalizedEpoch uint64) {
+func (s *Store) Insert(root [32]byte, parent [32]byte, justifiedEpoch uint64, finalizedEpoch uint64) {
 	s.nodeIndicesLock.Lock()
 	defer s.nodeIndicesLock.Unlock()
 
@@ -41,7 +41,7 @@ func (s Store) Insert(root [32]byte, parent [32]byte, justifiedEpoch uint64, fin
 // - The child is already the best child and the parent is updated with the new best descendant.
 // - The child is not the best child but becomes the best child.
 // - The child is not the best child and does not become best child.
-func (s Store) UpdateBestChildAndDescendant(parentIndex uint64, childIndex uint64) {
+func (s *Store) UpdateBestChildAndDescendant(parentIndex uint64, childIndex uint64) {
 	parent := s.nodes[parentIndex]
 	child := s.nodes[childIndex]
 
@@ -108,16 +108,16 @@ func (s Store) UpdateBestChildAndDescendant(parentIndex uint64, childIndex uint6
 // LeadsToViableHead returns true if the node or the best descendent of the node is viable for head.
 // Any node with diff finalized or justified epoch than the ones in fork choice store
 // should not be viable to head.
-func (s Store) LeadsToViableHead(node Node) bool {
+func (s *Store) LeadsToViableHead(node *Node) bool {
 	bestDescendentIndex := node.bestDescendant
-	bestDescendentNode := s.nodes[bestDescendentIndex]
+	bestDescendentNode := &s.nodes[bestDescendentIndex]
 	return s.ViableForHead(bestDescendentNode) || s.ViableForHead(node)
 }
 
 // ViableForHead returns true if the node is viable to head.
 // Any node with diff finalized or justified epoch than the ones in fork choice store
 // should not be viable to head.
-func (s Store) ViableForHead(node Node) bool {
+func (s *Store) ViableForHead(node *Node) bool {
 	justified := s.justifiedEpoch == node.justifiedEpoch || s.justifiedEpoch == 0
 	finalized := s.finalizedEpoch == node.finalizedEpoch || s.finalizedEpoch == 0
 	return justified && finalized
