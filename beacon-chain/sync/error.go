@@ -9,6 +9,7 @@ import (
 )
 
 const genericError = "internal service error"
+const rateLimitedError = "rate limited"
 
 var errWrongForkVersion = errors.New("wrong fork version")
 var errInvalidEpoch = errors.New("invalid epoch")
