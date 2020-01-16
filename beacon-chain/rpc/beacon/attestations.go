@@ -9,8 +9,8 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -34,9 +34,9 @@ func (s sortableAttestations) Less(i, j int) bool {
 func (bs *Server) ListAttestations(
 	ctx context.Context, req *ethpb.ListAttestationsRequest,
 ) (*ethpb.ListAttestationsResponse, error) {
-	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
+	if int(req.PageSize) > flags.Get().MaxPageSize {
 		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
-			req.PageSize, params.BeaconConfig().MaxPageSize)
+			req.PageSize, flags.Get().MaxPageSize)
 	}
 	var atts []*ethpb.Attestation
 	var err error
