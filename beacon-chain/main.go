@@ -34,6 +34,7 @@ var appFlags = []cli.Flag{
 	flags.GRPCGatewayPort,
 	flags.MinSyncPeers,
 	flags.RPCMaxPageSize,
+	flags.ContractDeploymentBlock,
 	flags.InteropMockEth1DataVotesFlag,
 	flags.InteropGenesisStateFlag,
 	flags.InteropNumValidatorsFlag,

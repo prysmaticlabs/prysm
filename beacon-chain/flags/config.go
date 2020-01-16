@@ -15,6 +15,7 @@ type GlobalFlags struct {
 	EnableArchivedAttestations        bool
 	MinimumSyncPeers                  int
 	MaxPageSize                       int
+	DeploymentBlock                   int
 }
 
 var globalConfig *GlobalFlags
@@ -49,6 +50,7 @@ func ConfigureGlobalFlags(ctx *cli.Context) {
 		cfg.EnableArchivedAttestations = true
 	}
 	cfg.MaxPageSize = ctx.GlobalInt(RPCMaxPageSize.Name)
+	cfg.DeploymentBlock = ctx.GlobalInt(ContractDeploymentBlock.Name)
 	configureMinimumPeers(ctx, cfg)
 
 	Init(cfg)

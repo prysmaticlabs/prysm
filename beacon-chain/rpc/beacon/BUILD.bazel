@@ -14,6 +14,7 @@ go_library(
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/blockchain:go_default_library",
+        "//beacon-chain/core/epoch/precompute:go_default_library",
         "//beacon-chain/core/feed:go_default_library",
         "//beacon-chain/core/feed/state:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",

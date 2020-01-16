@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"math/big"
 	"context"
 	"testing"
 	"time"
@@ -742,5 +743,157 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 	}
 	if resp.PositionInActivationQueue != 2 {
 		t.Errorf("Expected Position in activation queue of %d but instead got %d", 2, resp.PositionInActivationQueue)
+	}
+}
+
+func TestDepositBlockSlotAfterGenesisTime(t *testing.T) {
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
+	ctx := context.Background()
+
+	pubKey := pubKey(1)
+	if err := db.SaveValidatorIndex(ctx, pubKey, 0); err != nil {
+		t.Fatalf("Could not save validator index: %v", err)
+	}
+
+	depData := &ethpb.Deposit_Data{
+		PublicKey:             pubKey,
+		Signature:             []byte("hi"),
+		WithdrawalCredentials: []byte("hey"),
+	}
+
+	deposit := &ethpb.Deposit{
+		Data: depData,
+	}
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatalf("Could not setup deposit trie: %v", err)
+	}
+	depositCache := depositcache.NewDepositCache()
+	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
+
+	timestamp := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
+	p := &mockPOW.POWChain{
+		TimesByHeight: map[int]uint64{
+			int(params.BeaconConfig().Eth1FollowDistance): uint64(timestamp),
+		},
+	}
+
+	block := blk.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(ctx, block); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+	genesisRoot, err := ssz.HashTreeRoot(block.Block)
+	if err != nil {
+		t.Fatalf("Could not get signing root %v", err)
+	}
+
+	activeEpoch := helpers.DelayedActivationExitEpoch(0)
+
+	state := &pbp2p.BeaconState{
+		GenesisTime: uint64(time.Unix(0, 0).Unix()),
+		Slot:        10000,
+		Validators: []*ethpb.Validator{{
+			ActivationEpoch: activeEpoch,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+			PublicKey:       pubKey},
+		}}
+
+	vs := &Server{
+		BeaconDB:          db,
+		ChainStartFetcher: p,
+		BlockFetcher:      p,
+		Eth1InfoFetcher:   p,
+		DepositFetcher:    depositCache,
+		HeadFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+	}
+
+	eth1BlockNumBigInt := big.NewInt(1000000)
+
+	resp, err := vs.depositBlockSlot(context.Background(), eth1BlockNumBigInt, state)
+	if err != nil {
+		t.Fatalf("Could not get the deposit block slot %v", err)
+	}
+
+	expected := uint64(2405)
+
+	if resp != expected {
+		t.Errorf("Wanted %v, got %v", expected, resp)
+	}
+}
+
+func TestDepositBlockSlotBeforeGenesisTime(t *testing.T) {
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
+	ctx := context.Background()
+
+	pubKey := pubKey(1)
+	if err := db.SaveValidatorIndex(ctx, pubKey, 0); err != nil {
+		t.Fatalf("Could not save validator index: %v", err)
+	}
+
+	depData := &ethpb.Deposit_Data{
+		PublicKey:             pubKey,
+		Signature:             []byte("hi"),
+		WithdrawalCredentials: []byte("hey"),
+	}
+
+	deposit := &ethpb.Deposit{
+		Data: depData,
+	}
+	depositTrie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatalf("Could not setup deposit trie: %v", err)
+	}
+	depositCache := depositcache.NewDepositCache()
+	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
+
+	timestamp := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
+	p := &mockPOW.POWChain{
+		TimesByHeight: map[int]uint64{
+			int(params.BeaconConfig().Eth1FollowDistance): uint64(timestamp),
+		},
+	}
+
+	block := blk.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(ctx, block); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+	genesisRoot, err := ssz.HashTreeRoot(block.Block)
+	if err != nil {
+		t.Fatalf("Could not get signing root %v", err)
+	}
+
+	activeEpoch := helpers.DelayedActivationExitEpoch(0)
+
+	state := &pbp2p.BeaconState{
+		GenesisTime: uint64(time.Unix(25000, 0).Unix()),
+		Slot:        10000,
+		Validators: []*ethpb.Validator{{
+			ActivationEpoch: activeEpoch,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+			PublicKey:       pubKey},
+		}}
+
+	vs := &Server{
+		BeaconDB:          db,
+		ChainStartFetcher: p,
+		BlockFetcher:      p,
+		Eth1InfoFetcher:   p,
+		DepositFetcher:    depositCache,
+		HeadFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+	}
+
+	eth1BlockNumBigInt := big.NewInt(1000000)
+
+	resp, err := vs.depositBlockSlot(context.Background(), eth1BlockNumBigInt, state)
+	if err != nil {
+		t.Fatalf("Could not get the deposit block slot %v", err)
+	}
+
+	expected := uint64(0)
+
+	if resp != expected {
+		t.Errorf("Wanted %v, got %v", expected, resp)
 	}
 }
