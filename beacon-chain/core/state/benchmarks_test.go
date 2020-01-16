@@ -18,11 +18,11 @@ var runAmount = 25
 
 func TestBenchmarkExecuteStateTransition(t *testing.T) {
 	benchutil.SetBenchmarkConfig()
-	beaconState, err := benchutil.PregenState1Epoch()
+	beaconState, err := benchutil.PreGenState1Epoch()
 	if err != nil {
 		t.Fatal(err)
 	}
-	block, err := benchutil.PregenFullBlock()
+	block, err := benchutil.PreGenFullBlock()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,12 +34,12 @@ func TestBenchmarkExecuteStateTransition(t *testing.T) {
 
 func BenchmarkExecuteStateTransition_FullBlock(b *testing.B) {
 	benchutil.SetBenchmarkConfig()
-	beaconState, err := benchutil.PregenState1Epoch()
+	beaconState, err := benchutil.PreGenState1Epoch()
 	if err != nil {
 		b.Fatal(err)
 	}
 	cleanStates := clonedStates(beaconState)
-	block, err := benchutil.PregenFullBlock()
+	block, err := benchutil.PreGenFullBlock()
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -61,12 +61,12 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 	featureconfig.Init(config)
 	benchutil.SetBenchmarkConfig()
 
-	beaconState, err := benchutil.PregenState1Epoch()
+	beaconState, err := benchutil.PreGenState1Epoch()
 	if err != nil {
 		b.Fatal(err)
 	}
 	cleanStates := clonedStates(beaconState)
-	block, err := benchutil.PregenFullBlock()
+	block, err := benchutil.PreGenFullBlock()
 	if err != nil {
 		b.Fatal(err)
 	}

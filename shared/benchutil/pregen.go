@@ -37,8 +37,8 @@ func filePath(path string) string {
 	return fmt.Sprintf("shared/benchutil/benchmark_files/%s", path)
 }
 
-// PregenState1Epoch unmarshals the pre-generated beacon state after 1 epoch of block processing and returns it.
-func PregenState1Epoch() (*pb.BeaconState, error) {
+// PreGenState1Epoch unmarshals the pre-generated beacon state after 1 epoch of block processing and returns it.
+func PreGenState1Epoch() (*pb.BeaconState, error) {
 	path, err := bazel.Runfile(filePath(BState1EpochFileName))
 	if err != nil {
 		return nil, err
@@ -54,7 +54,7 @@ func PregenState1Epoch() (*pb.BeaconState, error) {
 	return beaconState, nil
 }
 
-// PregenState2FullEpochs unmarshals the pre-generated beacon state after 2 epoch of full block processing and returns it.
+// PreGenState2FullEpochs unmarshals the pre-generated beacon state after 2 epoch of full block processing and returns it.
 func PreGenState2FullEpochs() (*pb.BeaconState, error) {
 	path, err := bazel.Runfile(filePath(BState2EpochFileName))
 	if err != nil {
@@ -71,8 +71,8 @@ func PreGenState2FullEpochs() (*pb.BeaconState, error) {
 	return beaconState, nil
 }
 
-// PregenFullBlock unmarshals the pre-generated signed beacon block containing an epochs worth of attestations and returns it.
-func PregenFullBlock() (*ethpb.SignedBeaconBlock, error) {
+// PreGenFullBlock unmarshals the pre-generated signed beacon block containing an epochs worth of attestations and returns it.
+func PreGenFullBlock() (*ethpb.SignedBeaconBlock, error) {
 	path, err := bazel.Runfile(filePath(FullBlockFileName))
 	if err != nil {
 		return nil, err

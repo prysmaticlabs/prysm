@@ -4,22 +4,22 @@ import (
 	"testing"
 )
 
-func TestPregenFullBlock(t *testing.T) {
-	_, err := PregenFullBlock()
+func TestPreGenFullBlock(t *testing.T) {
+	_, err := PreGenFullBlock()
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
-func TestPregenState1Epoch(t *testing.T) {
-	_, err := PregenFullBlock()
+func TestPreGenState1Epoch(t *testing.T) {
+	_, err := PreGenFullBlock()
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestPreGenState2FullEpochs(t *testing.T) {
-	_, err := PregenFullBlock()
+	_, err := PreGenFullBlock()
 	if err != nil {
 		t.Fatal(err)
 	}
