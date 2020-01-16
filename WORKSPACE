@@ -1473,3 +1473,10 @@ go_repository(
     commit = "d7df74196a9e781ede915320c11c378c1b2f3a1f",
     importpath = "github.com/cespare/xxhash",
 )
+
+go_repository(
+    name = "com_github_kevinms_leakybucket_go",
+    importpath = "github.com/kevinms/leakybucket-go",
+    sum = "h1:oq6BiN7v0MfWCRcJAxSV+hesVMAAV8COrQbTjYNnso4=",
+    version = "v0.0.0-20190611015032-8a3d0352aa79",
+)
