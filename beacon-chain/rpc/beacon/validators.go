@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strconv"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
+
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -450,6 +452,9 @@ func (bs *Server) GetValidatorParticipation(
 	}
 
 	p := bs.ParticipationFetcher.Participation(requestedEpoch)
+	if p == nil {
+		p = &precompute.Balance{}
+	}
 	participation := &ethpb.ValidatorParticipation{
 		EligibleEther:           p.PrevEpoch,
 		VotedEther:              p.PrevEpochTargetAttesters,
