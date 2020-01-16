@@ -115,7 +115,7 @@ func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
 	}
 	beaconState.Slot = currentSlot
 
-	b.N = 5
+	b.N = 10
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		// ProcessEpochPrecompute is the optimized version of process epoch. It's enabled by default

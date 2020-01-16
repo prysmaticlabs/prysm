@@ -5,8 +5,8 @@ import (
 	"io/ioutil"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -46,7 +46,7 @@ func PregenState1Epoch() (*pb.BeaconState, error) {
 		return nil, err
 	}
 	beaconState := &pb.BeaconState{}
-	if err := proto.Unmarshal(beaconBytes, beaconState); err != nil {
+	if err := ssz.Unmarshal(beaconBytes, beaconState); err != nil {
 		return nil, err
 	}
 	return beaconState, nil
@@ -62,13 +62,13 @@ func PreGenState2FullEpochs() (*pb.BeaconState, error) {
 		return nil, err
 	}
 	beaconState := &pb.BeaconState{}
-	if err := proto.Unmarshal(beaconBytes, beaconState); err != nil {
+	if err := ssz.Unmarshal(beaconBytes, beaconState); err != nil {
 		return nil, err
 	}
 	return beaconState, nil
 }
 
-func PregenFullBlock() (*ethpb.BeaconBlock, error) {
+func PregenFullBlock() (*ethpb.SignedBeaconBlock, error) {
 	path, err := bazel.Runfile(filePath(FullBlockFileName))
 	if err != nil {
 		return nil, err
@@ -77,8 +77,8 @@ func PregenFullBlock() (*ethpb.BeaconBlock, error) {
 	if err != nil {
 		return nil, err
 	}
-	beaconBlock := &ethpb.BeaconBlock{}
-	if err := proto.Unmarshal(blockBytes, beaconBlock); err != nil {
+	beaconBlock := &ethpb.SignedBeaconBlock{}
+	if err := ssz.Unmarshal(blockBytes, beaconBlock); err != nil {
 		return nil, err
 	}
 	return beaconBlock, nil

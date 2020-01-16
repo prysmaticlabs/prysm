@@ -2,11 +2,12 @@ package main
 
 import (
 	"context"
+	"flag"
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -19,12 +20,34 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
+var (
+	outputDir = flag.String("output-dir", "", "Directory to write SSZ files to")
+	overwrite  = flag.Bool("overwrite", false, "If SSZ files exist in the output directory, they will be overwritten")
+)
+
 func main() {
-	wd, err := os.Getwd()
-	if err != nil {
+	flag.Parse()
+	if *outputDir == "" {
+		log.Fatal("Please specify --output-dir to write SSZ files to")
+	}
+
+	if !*overwrite {
+		if _, err := os.Stat(path.Join(*outputDir, benchutil.BState1EpochFileName)); err == nil {
+			log.Fatal("The file exists. Use a different file name or the --overwrite flag")
+		}
+		if _, err := os.Stat(path.Join(*outputDir, benchutil.BState2EpochFileName)); err == nil {
+			log.Fatal("The file exists. Use a different file name or the --overwrite flag")
+		}
+		if _, err := os.Stat(path.Join(*outputDir, benchutil.FullBlockFileName)); err == nil {
+			log.Fatal("The file exists. Use a different file name or the --overwrite flag")
+		}
+	}
+
+	if err := os.MkdirAll(*outputDir, os.ModePerm); err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("Output dir is: %s", wd)
+
+	log.Printf("Output dir is: %s", *outputDir)
 	log.Println("Generating genesis state")
 	// Generating this for the 2 following states.
 	if err := generateGenesisBeaconState(); err != nil {
@@ -38,8 +61,8 @@ func main() {
 	if err := generate2FullEpochState(); err != nil {
 		log.Fatalf("Could not generate 2 full epoch state: %v", err)
 	}
-	// Removing this since its 10MB large and no longer needed.
-	if err := os.Remove(benchutil.GenesisFileName); err != nil {
+	// Removing the genesis state SSZ since its 10MB large and no longer needed.
+	if err := os.Remove(path.Join(*outputDir, benchutil.GenesisFileName)); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -49,11 +72,11 @@ func generateGenesisBeaconState() error {
 	if err != nil {
 		return err
 	}
-	beaconBytes, err := proto.Marshal(genesisState)
+	beaconBytes, err := ssz.Marshal(genesisState)
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(benchutil.GenesisFileName, beaconBytes, 0644); err != nil {
+	if err := ioutil.WriteFile(path.Join(*outputDir, benchutil.GenesisFileName), beaconBytes, 0644); err != nil {
 		return err
 	}
 	return nil
@@ -123,11 +146,11 @@ func generateMarshalledFullStateAndBlock() error {
 	block.Signature = privs[proposerIdx].Sign(blockRoot[:], domain).Marshal()
 	beaconState.Slot--
 
-	beaconBytes, err := proto.Marshal(beaconState)
+	beaconBytes, err := ssz.Marshal(beaconState)
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(benchutil.BState1EpochFileName, beaconBytes, 0644); err != nil {
+	if err := ioutil.WriteFile(path.Join(*outputDir, benchutil.BState1EpochFileName), beaconBytes, 0644); err != nil {
 		return err
 	}
 
@@ -137,11 +160,11 @@ func generateMarshalledFullStateAndBlock() error {
 		return err
 	}
 
-	blockBytes, err := proto.Marshal(block)
+	blockBytes, err := ssz.Marshal(block)
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(benchutil.FullBlockFileName, blockBytes, 0644); err != nil {
+	if err := ioutil.WriteFile(path.Join(*outputDir, benchutil.FullBlockFileName), blockBytes, 0644); err != nil {
 		return err
 	}
 	return nil
@@ -174,23 +197,23 @@ func generate2FullEpochState() error {
 		}
 	}
 
-	beaconBytes, err := proto.Marshal(beaconState)
+	beaconBytes, err := ssz.Marshal(beaconState)
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(benchutil.BState2EpochFileName, beaconBytes, 0644); err != nil {
+	if err := ioutil.WriteFile(path.Join(*outputDir, benchutil.BState2EpochFileName), beaconBytes, 0644); err != nil {
 		return err
 	}
 	return nil
 }
 
 func genesisBeaconState() (*pb.BeaconState, error) {
-	beaconBytes, err := ioutil.ReadFile(benchutil.GenesisFileName)
+	beaconBytes, err := ioutil.ReadFile(path.Join(*outputDir, benchutil.GenesisFileName))
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot read genesis state file")
 	}
 	genesisState := &pb.BeaconState{}
-	if err := proto.Unmarshal(beaconBytes, genesisState); err != nil {
+	if err := ssz.Unmarshal(beaconBytes, genesisState); err != nil {
 		return nil, errors.Wrap(err, "cannot unmarshal genesis state file")
 	}
 	return genesisState, nil

@@ -19,23 +19,23 @@ Bazel does not allow writing to the project directory, so running with `go run` 
 ## Running the benchmarks
 To run the ExecuteStateTransition benchmark:
 
-```bazel test //beacon-chain/core/state/benchmarks:go_default_test --test_filter=BenchmarkExecuteStateTransition_FullBlock --test_arg=-test.bench=BenchmarkExecuteStateTransition_FullBlock```
+```bazel test //beacon-chain/core/state:go_default_test --test_filter=BenchmarkExecuteStateTransition_FullBlock --test_arg=-test.bench=BenchmarkExecuteStateTransition_FullBlock```
 
 To run the ExecuteStateTransition (with cache) benchmark:
 
-```bazel test //beacon-chain/core/state/benchmarks:go_default_test --test_filter=BenchmarkExecuteStateTransition_WithCache --test_arg=-test.bench=BenchmarkExecuteStateTransition_WithCache```
+```bazel test //beacon-chain/core/state:go_default_test --test_filter=BenchmarkExecuteStateTransition_WithCache --test_arg=-test.bench=BenchmarkExecuteStateTransition_WithCache```
 
 To run the ProcessEpoch benchmark:
 
-```bazel test //beacon-chain/core/state/benchmarks:go_default_test --test_filter=BenchmarkProcessEpoch_2FullEpochs --test_arg=-test.bench=BenchmarkProcessEpoch_2FullEpochs```
+```bazel test //beacon-chain/core/state:go_default_test --test_filter=BenchmarkProcessEpoch_2FullEpochs --test_arg=-test.bench=BenchmarkProcessEpoch_2FullEpochs```
 
 To run the HashTreeRoot benchmark:
 
-```bazel test //beacon-chain/core/state/benchmarks:go_default_test --test_filter=BenchmarkHashTreeRoot_FullState --test_arg=-test.bench=BenchmarkHashTreeRoot_FullState```
+```bazel test //beacon-chain/core/state:go_default_test --test_filter=BenchmarkHashTreeRoot_FullState --test_arg=-test.bench=BenchmarkHashTreeRoot_FullState```
 
 To run the HashTreeRootState benchmark:
 
-```bazel test //beacon-chain/core/state/benchmarks:go_default_test --test_filter=BenchmarkHashTreeRootState_FullState --test_arg=-test.bench=BenchmarkHashTreeRootState_FullState```
+```bazel test //beacon-chain/core/state:go_default_test --test_filter=BenchmarkHashTreeRootState_FullState --test_arg=-test.bench=BenchmarkHashTreeRootState_FullState```
 
 Extra flags needed to benchmark properly:
 
@@ -43,9 +43,9 @@ Extra flags needed to benchmark properly:
 
 ## Current Results as of November 2019
 ```
-BenchmarkExecuteStateTransition-4             	      20	 33020593584 ns/op
-BenchmarkExecuteStateTransition_WithCache-4   	      20	 21272276477 ns/op
-BenchmarkProcessEpoch_2FullEpochs-4           	       5	158161708836 ns/op
+BenchmarkExecuteStateTransition_FullBlock-4           20	  8427250038 ns/op
+BenchmarkExecuteStateTransition_WithCache-4   	      20	  8063193001 ns/op
+BenchmarkProcessEpoch_2FullEpochs-4           	      10	158161708836 ns/op
 BenchmarkHashTreeRoot_FullState-4   	              50	  1509721280 ns/op
-BenchmarkHashTreeRootState_FullState-4                50        67622586 ns/op
+BenchmarkHashTreeRootState_FullState-4                50            67622586 ns/op
 ```
