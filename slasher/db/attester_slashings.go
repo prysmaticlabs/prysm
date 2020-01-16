@@ -148,7 +148,7 @@ func (db *Store) GetLatestEpochDetected() (uint64, error) {
 	var epoch uint64
 	err := db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
-		enc := b.Get([]byte(LatestEpochKey))
+		enc := b.Get([]byte(latestEpochKey))
 		if enc == nil {
 			epoch = 0
 			return nil
@@ -163,7 +163,7 @@ func (db *Store) GetLatestEpochDetected() (uint64, error) {
 func (db *Store) SetLatestEpochDetected(epoch uint64) error {
 	err := db.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
-		err := b.Put([]byte(LatestEpochKey), bytesutil.Bytes8(epoch))
+		err := b.Put([]byte(latestEpochKey), bytesutil.Bytes8(epoch))
 		return err
 	})
 	return err
