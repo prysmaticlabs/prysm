@@ -15,6 +15,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/forkchoice"
+	f "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/forkchoice/proto-array"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
@@ -29,6 +30,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/stateutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -44,6 +46,7 @@ type Service struct {
 	chainStartFetcher      powchain.ChainStartFetcher
 	attPool                attestations.Pool
 	forkChoiceStore        forkchoice.ForkChoicer
+	forkchoice             *f.ForkChoice
 	genesisTime            time.Time
 	p2p                    p2p.Broadcaster
 	maxRoutines            int64
@@ -133,6 +136,29 @@ func (s *Service) Start() {
 		if err := s.forkChoiceStore.GenesisStore(ctx, justifiedCheckpoint, finalizedCheckpoint); err != nil {
 			log.Fatalf("Could not start fork choice service: %v", err)
 		}
+
+		// Refactor this into its own function
+		s.forkchoice = f.New(
+			justifiedCheckpoint.Epoch,
+			finalizedCheckpoint.Epoch,
+			bytesutil.ToBytes32(finalizedCheckpoint.Root))
+		headBlock, err := s.beaconDB.HeadBlock(ctx)
+		if err != nil {
+			log.Fatalf("Could not get head block: %v", err)
+		}
+		headBlockRoot, err := ssz.HashTreeRoot(headBlock.Block)
+		if err != nil {
+			log.Fatalf("Could not tree hash head block: %v", err)
+		}
+		if err := s.forkchoice.ProcessBlock(
+			headBlock.Block.Slot,
+			headBlockRoot,
+			bytesutil.ToBytes32(headBlock.Block.ParentRoot),
+			finalizedCheckpoint.Epoch,
+			justifiedCheckpoint.Epoch); err != nil {
+			log.Fatalf("Could not process block for fork choice: %v", err)
+		}
+
 		s.stateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Initialized,
 			Data: &statefeed.InitializedData{
@@ -339,6 +365,19 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconSt
 	genesisCheckpoint := &ethpb.Checkpoint{Root: genesisBlkRoot[:]}
 	if err := s.forkChoiceStore.GenesisStore(ctx, genesisCheckpoint, genesisCheckpoint); err != nil {
 		return errors.Wrap(err, "Could not start fork choice service: %v")
+	}
+
+	s.forkchoice = f.New(
+		genesisCheckpoint.Epoch,
+		genesisCheckpoint.Epoch,
+		bytesutil.ToBytes32(genesisCheckpoint.Root))
+	if err := s.forkchoice.ProcessBlock(
+		genesisBlk.Block.Slot,
+		genesisBlkRoot,
+		params.BeaconConfig().ZeroHash, /* genesis block's parent root is zero hash */
+		genesisCheckpoint.Epoch,
+		genesisCheckpoint.Epoch); err != nil {
+		log.Fatalf("Could not process genesis block for fork choice: %v", err)
 	}
 
 	s.genesisRoot = genesisBlkRoot

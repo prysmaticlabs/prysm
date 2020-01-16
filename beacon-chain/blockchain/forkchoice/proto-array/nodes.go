@@ -9,9 +9,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// Insert registers a new block node to the fork choice store.
+// insert registers a new block node to the fork choice store.
 // It updates the new node's parent with best child and descendant node.
-func (s *Store) Insert(slot uint64, root [32]byte, parent [32]byte, justifiedEpoch uint64, finalizedEpoch uint64) error {
+func (s *Store) insert(slot uint64, root [32]byte, parent [32]byte, justifiedEpoch uint64, finalizedEpoch uint64) error {
 	s.nodeIndicesLock.Lock()
 	defer s.nodeIndicesLock.Unlock()
 
@@ -39,15 +39,15 @@ func (s *Store) Insert(slot uint64, root [32]byte, parent [32]byte, justifiedEpo
 	if n.parent == nonExistentNode {
 		return errors.New("invalid parent index")
 	}
-	if err := s.UpdateBestChildAndDescendant(parentIndex, uint64(index)); err != nil {
+	if err := s.updateBestChildAndDescendant(parentIndex, uint64(index)); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-// Head starts from justifiedRoot and then follows the best descendant links to find the best block for head.
-func (s *Store) Head(justifiedRoot [32]byte) ([32]byte, error) {
+// head starts from justifiedRoot and then follows the best descendant links to find the best block for head.
+func (s *Store) head(justifiedRoot [32]byte) ([32]byte, error) {
 	justifiedIndex, ok := s.nodeIndices[justifiedRoot]
 	if !ok {
 		return [32]byte{}, errors.New("unknown justified root")
@@ -63,14 +63,14 @@ func (s *Store) Head(justifiedRoot [32]byte) ([32]byte, error) {
 	}
 
 	bestNode := s.nodes[bestDescendantIndex]
-	if s.ViableForHead(&bestNode) {
+	if s.viableForHead(&bestNode) {
 		return [32]byte{}, errors.New("best node not viable for head")
 	}
 
 	return bestNode.root, nil
 }
 
-// UpdateBestChildAndDescendant updates parent node's best child and descendent.
+// updateBestChildAndDescendant updates parent node's best child and descendent.
 // It looks at parent node and child node and potentially modifies parent's best
 // child and best descendent values.
 // There are four outcomes:
@@ -78,11 +78,11 @@ func (s *Store) Head(justifiedRoot [32]byte) ([32]byte, error) {
 // - The child is already the best child and the parent is updated with the new best descendant.
 // - The child is not the best child but becomes the best child.
 // - The child is not the best child and does not become best child.
-func (s *Store) UpdateBestChildAndDescendant(parentIndex uint64, childIndex uint64) error {
+func (s *Store) updateBestChildAndDescendant(parentIndex uint64, childIndex uint64) error {
 	parent := s.nodes[parentIndex]
 	child := s.nodes[childIndex]
 
-	childLeadsToViableHead, err := s.LeadsToViableHead(&child)
+	childLeadsToViableHead, err := s.leadsToViableHead(&child)
 	if err != nil {
 		return err
 	}
@@ -110,7 +110,7 @@ func (s *Store) UpdateBestChildAndDescendant(parentIndex uint64, childIndex uint
 			newParentChild = changeToChild
 		} else {
 			bestChild := &s.nodes[parent.bestChild]
-			bestChildLeadsToViableHead, err := s.LeadsToViableHead(bestChild)
+			bestChildLeadsToViableHead, err := s.leadsToViableHead(bestChild)
 			if err != nil {
 				return err
 			}
@@ -154,7 +154,7 @@ func (s *Store) UpdateBestChildAndDescendant(parentIndex uint64, childIndex uint
 	return nil
 }
 
-// ApplyScoreChanges
+// applyScoreChanges
 
 /// Iterate backwards through the array, touching all nodes and their parents and potentially
 /// the best-child of each parent.
@@ -170,7 +170,7 @@ func (s *Store) UpdateBestChildAndDescendant(parentIndex uint64, childIndex uint
 /// should become the best child.
 /// - Update the parents best-descendant with the current node or its best-descendant, if
 /// required.
-func (s *Store) ApplyScoreChanges(justifiedEpoch uint64, finalizedEpoch uint64, delta []int) error {
+func (s *Store) applyScoreChanges(justifiedEpoch uint64, finalizedEpoch uint64, delta []int) error {
 	if len(s.nodeIndices) != len(delta) {
 		return fmt.Errorf("node indices length diff than delta length, %d != %d", len(s.nodeIndices), len(delta))
 	}
@@ -216,17 +216,17 @@ func (s *Store) ApplyScoreChanges(justifiedEpoch uint64, finalizedEpoch uint64, 
 				return errors.New("invalid parent index")
 			}
 			delta[n.parent] += nodeDelta
-			s.UpdateBestChildAndDescendant(n.parent, uint64(i))
+			s.updateBestChildAndDescendant(n.parent, uint64(i))
 		}
 	}
 
 	return nil
 }
 
-// PruneBeforeFinalized prunes the store with the new finalization information. The tree is only
+// pruneBeforeFinalized prunes the store with the new finalization information. The tree is only
 // pruned if the supplied finalized epoch and root are different than current store value and
 // the number of the nodes in store has met prune threshold.
-func (s *Store) PruneBeforeFinalized(finalizedRoot [32]byte, finalizedEpoch uint64) error {
+func (s *Store) pruneBeforeFinalized(finalizedRoot [32]byte, finalizedEpoch uint64) error {
 	s.nodeIndicesLock.Lock()
 	defer s.nodeIndicesLock.Unlock()
 
@@ -291,22 +291,22 @@ func (s *Store) PruneBeforeFinalized(finalizedRoot [32]byte, finalizedEpoch uint
 	return nil
 }
 
-// LeadsToViableHead returns true if the node or the best descendent of the node is viable for head.
+// leadsToViableHead returns true if the node or the best descendent of the node is viable for head.
 // Any node with diff finalized or justified epoch than the ones in fork choice store
 // should not be viable to head.
-func (s *Store) LeadsToViableHead(node *Node) (bool, error) {
+func (s *Store) leadsToViableHead(node *Node) (bool, error) {
 	bestDescendentIndex := node.bestDescendant
 	if bestDescendentIndex == nonExistentNode {
 		return false, errors.New("invalid best descendant index")
 	}
 	bestDescendentNode := &s.nodes[bestDescendentIndex]
-	return s.ViableForHead(bestDescendentNode) || s.ViableForHead(node), nil
+	return s.viableForHead(bestDescendentNode) || s.viableForHead(node), nil
 }
 
-// ViableForHead returns true if the node is viable to head.
+// viableForHead returns true if the node is viable to head.
 // Any node with diff finalized or justified epoch than the ones in fork choice store
 // should not be viable to head.
-func (s *Store) ViableForHead(node *Node) bool {
+func (s *Store) viableForHead(node *Node) bool {
 	justified := s.justifiedEpoch == node.justifiedEpoch || s.justifiedEpoch == 0
 	finalized := s.finalizedEpoch == node.finalizedEpoch || s.finalizedEpoch == 0
 	return justified && finalized
