@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"fmt"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
@@ -86,11 +87,38 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 		return errors.Wrap(err, "could not get head from fork choice service")
 	}
 
+	// New fork choice.
+	if err := s.forkchoice.ProcessBlock(
+		blockCopy.Block.Slot,
+		root,
+		bytesutil.ToBytes32(blockCopy.Block.ParentRoot),
+		s.FinalizedCheckpt().Epoch,
+		s.CurrentJustifiedCheckpt().Epoch); err != nil {
+		return errors.Wrap(err, "could not process block for new fork choice")
+	}
+	// Cache justified state balances.
+	js, err := s.beaconDB.State(ctx, bytesutil.ToBytes32(s.CurrentJustifiedCheckpt().Root))
+	if err != nil {
+		return errors.Wrap(err, "could not get justified state")
+	}
+	newForkChoiceHeadRoot, err := s.forkchoice.Head(
+		s.CurrentJustifiedCheckpt().Epoch,
+		s.FinalizedCheckpt().Epoch,
+		bytesutil.ToBytes32(s.CurrentJustifiedCheckpt().Root),
+		js.Balances)
+	if err != nil {
+		return err
+	}
 	// Only save head if it's different than the current head.
 	cachedHeadRoot, err := s.HeadRoot(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get head root from cache")
 	}
+
+	if newForkChoiceHeadRoot != bytesutil.ToBytes32(cachedHeadRoot) {
+		fmt.Printf("Fork Choice %v != %v", hex.EncodeToString(newForkChoiceHeadRoot[:]), hex.EncodeToString(cachedHeadRoot))
+	}
+
 	if !bytes.Equal(headRoot, cachedHeadRoot) {
 		signedHeadBlock, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
 		if err != nil {

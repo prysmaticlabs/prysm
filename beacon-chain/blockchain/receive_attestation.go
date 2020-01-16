@@ -32,9 +32,12 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	defer span.End()
 
 	// Update forkchoice store for the new attestation
-	if err := s.forkChoiceStore.OnAttestation(ctx, att); err != nil {
+	indices, err := s.forkChoiceStore.OnAttestation(ctx, att)
+	if err != nil {
 		return errors.Wrap(err, "could not process attestation from fork choice service")
 	}
+
+	s.forkchoice.ProcessAttestation(indices, bytesutil.ToBytes32(att.Data.BeaconBlockRoot), att.Data.Target.Epoch)
 
 	// Run fork choice for head block after updating fork choice store.
 	headRoot, err := s.forkChoiceStore.Head(ctx)

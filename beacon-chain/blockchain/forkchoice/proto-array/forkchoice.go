@@ -36,10 +36,12 @@ func (f *ForkChoice) Head(justifiedEpoch uint64, finalizedEpoch uint64, justifie
 }
 
 // ProcessAttestation processes attestation for vote accounting to be used for fork choice.
-func (f *ForkChoice) ProcessAttestation(validatorIndex uint64, blockRoot [32]byte, targetEpoch uint64) {
-	if targetEpoch > f.votes[validatorIndex].nextEpoch {
-		f.votes[validatorIndex].nextEpoch = targetEpoch
-		f.votes[validatorIndex].nextRoot = blockRoot
+func (f *ForkChoice) ProcessAttestation(validatorIndices []uint64, blockRoot [32]byte, targetEpoch uint64) {
+	for _, index := range validatorIndices {
+		if targetEpoch > f.votes[index].nextEpoch {
+			f.votes[index].nextEpoch = targetEpoch
+			f.votes[index].nextRoot = blockRoot
+		}
 	}
 }
 

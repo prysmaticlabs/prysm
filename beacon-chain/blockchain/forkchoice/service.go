@@ -30,7 +30,7 @@ type ForkChoicer interface {
 	OnBlock(ctx context.Context, b *ethpb.SignedBeaconBlock) error
 	OnBlockCacheFilteredTree(ctx context.Context, b *ethpb.SignedBeaconBlock) error
 	OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.SignedBeaconBlock) error
-	OnAttestation(ctx context.Context, a *ethpb.Attestation) error
+	OnAttestation(ctx context.Context, a *ethpb.Attestation) ([]uint64, error)
 	GenesisStore(ctx context.Context, justifiedCheckpoint *ethpb.Checkpoint, finalizedCheckpoint *ethpb.Checkpoint) error
 	FinalizedCheckpt() *ethpb.Checkpoint
 }
