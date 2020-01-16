@@ -6,30 +6,23 @@ import (
 
 	fuzz "github.com/google/gofuzz"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+func init() {
+	params.UseMinimalConfig()
+}
+
+func TestStateRootCacheFuzz_10(t *testing.T) {
+	fuzzStateRootCache(t, 0, 10)
+}
+
 func TestStateRootCacheFuzz_100(t *testing.T) {
-	fuzzStateRootCache(t, 0, 100)
+	fuzzStateRootCache(t, 1, 100)
 }
 
 func TestStateRootCacheFuzz_1000(t *testing.T) {
-	fuzzStateRootCache(t, 1, 1000)
-}
-
-func TestStateRootCacheFuzz_10000(t *testing.T) {
-	fuzzStateRootCache(t, 2, 10000)
-}
-
-func TestStateRootCacheFuzz_100000(t *testing.T) {
-	fuzzStateRootCache(t, 3, 100000)
-}
-
-func TestStateRootCacheFuzz_1000000(t *testing.T) {
-	fuzzStateRootCache(t, 4, 1000000)
-}
-
-func TestStateRootCacheFuzz_10000000(t *testing.T) {
-	fuzzStateRootCache(t, 5, 10000000)
+	fuzzStateRootCache(t, 2, 1000)
 }
 
 func fuzzStateRootCache(t *testing.T, seed int64, iterations uint64) {
@@ -42,9 +35,6 @@ func fuzzStateRootCache(t *testing.T, seed int64, iterations uint64) {
 	mismatch := 0
 	mismatchedIndices := make([]uint64, 0)
 	for i := uint64(0); i < iterations; i++ {
-		if i == 501 {
-			break
-		}
 		fuzzer.Fuzz(state)
 		var a, b [32]byte
 		func() {
