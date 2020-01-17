@@ -13,6 +13,13 @@ var (
 		Name:  "interop-write-ssz-state-transitions",
 		Usage: "Write ssz states to disk after attempted state transition",
 	}
+	// disableForkChoiceUnsafeFlag disables using the LMD-GHOST fork choice to update
+	// the head of the chain based on attestations and instead accepts any valid received block
+	// as the chain head. UNSAFE, use with caution.
+	disableForkChoiceUnsafeFlag = cli.BoolFlag{
+		Name:  "disable-fork-choice-unsafe",
+		Usage: "UNSAFE: disable fork choice for determining head of the beacon chain.",
+	}
 	// enableAttestationCacheFlag see https://github.com/prysmaticlabs/prysm/issues/3106.
 	enableAttestationCacheFlag = cli.BoolFlag{
 		Name:  "enable-attestation-cache",
@@ -198,6 +205,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	noGenesisDelayFlag,
 	minimalConfigFlag,
 	writeSSZStateTransitionsFlag,
+	disableForkChoiceUnsafeFlag,
 	enableSSZCache,
 	enableAttestationCacheFlag,
 	enableEth1DataVoteCacheFlag,
