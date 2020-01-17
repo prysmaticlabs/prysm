@@ -11,9 +11,9 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -27,9 +27,9 @@ import (
 func (bs *Server) ListBlocks(
 	ctx context.Context, req *ethpb.ListBlocksRequest,
 ) (*ethpb.ListBlocksResponse, error) {
-	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
+	if int(req.PageSize) > flags.Get().MaxPageSize {
 		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
-			req.PageSize, params.BeaconConfig().MaxPageSize)
+			req.PageSize, flags.Get().MaxPageSize)
 	}
 
 	switch q := req.QueryFilter.(type) {

@@ -65,6 +65,7 @@ type Service struct {
 	mockEth1Votes          bool
 	attestationsPool       attestations.Pool
 	syncService            sync.Checker
+	host                   string
 	port                   string
 	listener               net.Listener
 	withCert               string
@@ -88,6 +89,7 @@ type Service struct {
 
 // Config options for the beacon node RPC server.
 type Config struct {
+	Host                  string
 	Port                  string
 	CertFlag              string
 	KeyFlag               string
@@ -136,6 +138,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		mockEth1Votes:         cfg.MockEth1Votes,
 		attestationsPool:      cfg.AttestationsPool,
 		syncService:           cfg.SyncService,
+		host:                  cfg.Host,
 		port:                  cfg.Port,
 		withCert:              cfg.CertFlag,
 		withKey:               cfg.KeyFlag,
@@ -152,12 +155,13 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 
 // Start the gRPC server.
 func (s *Service) Start() {
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", s.port))
+	address := fmt.Sprintf("%s:%s", s.host, s.port)
+	lis, err := net.Listen("tcp", address)
 	if err != nil {
-		log.Errorf("Could not listen to port in Start() :%s: %v", s.port, err)
+		log.Errorf("Could not listen to port in Start() %s: %v", address, err)
 	}
 	s.listener = lis
-	log.WithField("port", fmt.Sprintf(":%s", s.port)).Info("RPC-API listening on port")
+	log.WithField("address", address).Info("RPC-API listening on port")
 
 	opts := []grpc.ServerOption{
 		grpc.StatsHandler(&ocgrpc.ServerHandler{}),

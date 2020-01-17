@@ -15,14 +15,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/sirupsen/logrus"
 )
-
-const statusInterval = 6 * time.Minute // 30 slots.
 
 // maintainPeerStatuses by infrequently polling peers for their latest status.
 func (r *Service) maintainPeerStatuses() {
-	ctx := context.Background()
-	runutil.RunEvery(r.ctx, statusInterval, func() {
+	// Run twice per epoch.
+	interval := time.Duration(params.BeaconConfig().SecondsPerSlot*params.BeaconConfig().SlotsPerEpoch/2) * time.Second
+	runutil.RunEvery(r.ctx, interval, func() {
 		for _, pid := range r.p2p.Peers().Connected() {
 			// If the status hasn't been updated in the recent interval time.
 			lastUpdated, err := r.p2p.Peers().ChainStateLastUpdated(pid)
@@ -30,18 +30,31 @@ func (r *Service) maintainPeerStatuses() {
 				// Peer has vanished; nothing to do
 				continue
 			}
-			if roughtime.Now().After(lastUpdated.Add(statusInterval)) {
-				if err := r.sendRPCStatusRequest(ctx, pid); err != nil {
+			if roughtime.Now().After(lastUpdated.Add(interval)) {
+				if err := r.sendRPCStatusRequest(r.ctx, pid); err != nil {
 					log.WithField("peer", pid).WithError(err).Error("Failed to request peer status")
 				}
 			}
 		}
-		// If our head slot is not in the latest epoch, check peers to determine if we need to
-		// resync with the network.
-		currentSlot := uint64(roughtime.Now().Unix()-r.chain.GenesisTime().Unix()) / params.BeaconConfig().SecondsPerSlot
-		for !r.initialSync.Syncing() && helpers.SlotToEpoch(r.chain.HeadSlot()) < helpers.SlotToEpoch(currentSlot) {
-			_, highestEpoch, _ := r.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(r.chain.HeadSlot()))
+	})
+}
+
+// resyncIfBehind checks periodically to see if we are in normal sync but have fallen behind our peers by more than an epoch,
+// in which case we attempt a resync using the initial sync method to catch up.
+func (r *Service) resyncIfBehind() {
+	// Run sixteen times per epoch.
+	interval := time.Duration(params.BeaconConfig().SecondsPerSlot*params.BeaconConfig().SlotsPerEpoch/16) * time.Second
+	runutil.RunEvery(r.ctx, interval, func() {
+		currentEpoch := uint64(roughtime.Now().Unix()-r.chain.GenesisTime().Unix()) / (params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch)
+		syncedEpoch := helpers.SlotToEpoch(r.chain.HeadSlot())
+		if !r.initialSync.Syncing() && syncedEpoch < currentEpoch-1 {
+			_, highestEpoch, _ := r.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, syncedEpoch)
 			if helpers.StartSlot(highestEpoch) > r.chain.HeadSlot() {
+				log.WithFields(logrus.Fields{
+					"currentEpoch": currentEpoch,
+					"syncedEpoch":  syncedEpoch,
+					"peersEpoch":   highestEpoch,
+				}).Info("Fallen behind peers; reverting to initial sync to catch up")
 				numberOfTimesResyncedCounter.Inc()
 				r.clearPendingSlots()
 				if err := r.initialSync.Resync(); err != nil {
