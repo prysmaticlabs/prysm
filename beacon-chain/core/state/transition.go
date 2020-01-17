@@ -171,7 +171,7 @@ func CalculateStateRoot(
 	}
 
 	// Execute per block transition.
-	stateCopy, err = computesStateRoot(ctx, stateCopy, signed)
+	stateCopy, err = computeStateRoot(ctx, stateCopy, signed)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not process block")
 	}
@@ -361,10 +361,6 @@ func ProcessBlock(
 // processBlockNoVerifyAttSigs creates a new, modified beacon state by applying block operation
 // transformations as defined in the Ethereum Serenity specification. It does not validate
 // block attestation signatures.
-//
-//
-// WARNING: This method does not verify proposer signature. This is used for proposer to compute state root
-// using a unsigned block.
 //
 // Spec pseudocode definition:
 //
@@ -617,9 +613,9 @@ func ProcessEpochPrecompute(ctx context.Context, state *pb.BeaconState) (*pb.Bea
 	return state, nil
 }
 
-// computesStateRoot computes the state root of the block without verifying proposer signature
+// computeStateRoot computes the state root of the block without verifying proposer signature
 // and randao.
-func computesStateRoot(
+func computeStateRoot(
 	ctx context.Context,
 	state *pb.BeaconState,
 	signed *ethpb.SignedBeaconBlock,
