@@ -54,8 +54,8 @@ func (s *store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.
 	return nil
 }
 
-func (s *store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
-	return nil
+func (s *store) OnAttestation(ctx context.Context, a *ethpb.Attestation) ([]uint64, error) {
+	return nil, nil
 }
 
 func (s *store) GenesisStore(ctx context.Context, justifiedCheckpoint *ethpb.Checkpoint, finalizedCheckpoint *ethpb.Checkpoint) error {

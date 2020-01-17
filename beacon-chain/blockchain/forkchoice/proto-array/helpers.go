@@ -1,6 +1,7 @@
 package protoarray
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -33,11 +34,17 @@ func computeDeltas(indices map[[32]byte]uint64, votes []Vote, oldBalances []uint
 			// Ignore the vote if it's not known in `indices`
 			nextDeltaIndex, ok := indices[vote.nextRoot]
 			if ok {
+				if int(nextDeltaIndex) >= len(deltas) {
+					return nil, errors.New("invalid next delta index")
+				}
 				deltas[nextDeltaIndex] += int(newBalance)
 			}
 
 			currentDeltaIndex, ok := indices[vote.currentRoot]
 			if ok {
+				if int(currentDeltaIndex) >= len(deltas) {
+					return nil, errors.New("invalid current delta index")
+				}
 				deltas[currentDeltaIndex] -= int(oldBalance)
 			}
 		}
