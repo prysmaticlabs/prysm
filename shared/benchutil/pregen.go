@@ -12,8 +12,8 @@ import (
 )
 
 // ValidatorCount is for declaring how many validators the benchmarks will be
-// performed with. Default is 65536 or 2M ETH staked.
-var ValidatorCount = uint64(65536)
+// performed with. Default is 16384 or 524K ETH staked.
+var ValidatorCount = uint64(16384)
 
 // AttestationsPerEpoch represents the requested amount attestations in an epoch.
 // This affects the amount of attestations in a fully attested for block and the amount
