@@ -10,10 +10,6 @@ func New(justifiedEpoch uint64, finalizedEpoch uint64, finalizedRoot [32]byte) *
 		nodeIndices:    make(map[[32]byte]uint64),
 	}
 
-	//if err := f.store.insert(finalizedSlot, finalizedRoot, params.BeaconConfig().ZeroHash, justifiedEpoch, finalizedEpoch); err != nil {
-	//	return err
-	//}
-
 	b := make([]uint64, 0)
 	v := make([]Vote, 0)
 

@@ -1,7 +1,7 @@
 package protoarray
 
 import (
-	"errors"
+	"fmt"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -15,9 +15,9 @@ func computeDeltas(indices map[[32]byte]uint64, votes []Vote, oldBalances []uint
 		oldBalance := uint64(0)
 		newBalance := uint64(0)
 
-		// Skip if validator has never voted or voted for zero hash (ie genesis block)
-		if vote.currentRoot == params.BeaconConfig().ZeroHash || vote.nextRoot == params.BeaconConfig().ZeroHash {
-			continue
+		// Skip if validator has never voted for current and next. The votes are zero hash (ie genesis block)
+		if vote.currentRoot == params.BeaconConfig().ZeroHash && vote.nextRoot == params.BeaconConfig().ZeroHash {
+			fmt.Println("skipped")
 		}
 
 		// If the validator did not exist in `old` or `new balance` list before, the balance is just 0.
@@ -32,16 +32,14 @@ func computeDeltas(indices map[[32]byte]uint64, votes []Vote, oldBalances []uint
 		if vote.currentRoot != vote.nextRoot || oldBalance != newBalance {
 			// Ignore the vote if it's not known in `indices`
 			nextDeltaIndex, ok := indices[vote.nextRoot]
-			if !ok {
-				return nil, errors.New("vote is not a key in indices")
+			if ok {
+				deltas[nextDeltaIndex] += int(newBalance)
 			}
-			deltas[nextDeltaIndex] += int(newBalance)
 
 			currentDeltaIndex, ok := indices[vote.currentRoot]
-			if !ok {
-				return nil, errors.New("vote is not a key in indices")
+			if ok {
+				deltas[currentDeltaIndex] -= int(oldBalance)
 			}
-			deltas[currentDeltaIndex] -= int(oldBalance)
 		}
 
 		vote.currentRoot = vote.nextRoot
