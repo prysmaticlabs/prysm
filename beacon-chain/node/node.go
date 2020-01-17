@@ -446,6 +446,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		chainStartFetcher = web3Service
 	}
 
+	host := ctx.GlobalString(flags.RPCHost.Name)
 	port := ctx.GlobalString(flags.RPCPort.Name)
 	cert := ctx.GlobalString(flags.CertFlag.Name)
 	key := ctx.GlobalString(flags.KeyFlag.Name)
@@ -454,6 +455,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 
 	mockEth1DataVotes := ctx.GlobalBool(flags.InteropMockEth1DataVotesFlag.Name)
 	rpcService := rpc.NewService(context.Background(), &rpc.Config{
+		Host:                  host,
 		Port:                  port,
 		CertFlag:              cert,
 		KeyFlag:               key,
