@@ -154,22 +154,10 @@ func (s *Store) updateBestChildAndDescendant(parentIndex uint64, childIndex uint
 	return nil
 }
 
-// applyScoreChanges
-
-/// Iterate backwards through the array, touching all nodes and their parents and potentially
-/// the best-child of each parent.
-///
-/// The structure of the `self.nodes` array ensures that the child of each node is always
-/// touched before it's parent.
-///
-/// For each node, the following is done:
-///
-/// - Update the nodes weight with the corresponding delta.
-/// - Back-propgrate each nodes delta to its parents delta.
-/// - Compare the current node with the parents best-child, updating it if the current node
-/// should become the best child.
-/// - Update the parents best-descendant with the current node or its best-descendant, if
-/// required.
+// applyScoreChanges iterates backwards through the stored nodes. It checks all nodes parents
+// and potential best child. For each node, it updates the weight with input delta and
+// back propagate each nodes delta to its parents delta. The best child is then updated
+// along with best descendant.
 func (s *Store) applyScoreChanges(justifiedEpoch uint64, finalizedEpoch uint64, delta []int) error {
 	if len(s.nodeIndices) != len(delta) {
 		return fmt.Errorf("node indices length diff than delta length, %d != %d", len(s.nodeIndices), len(delta))
