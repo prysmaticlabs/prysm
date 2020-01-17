@@ -425,27 +425,39 @@ func UpdateCommitteeCache(state *pb.BeaconState, epoch uint64) error {
 			return sortedIndices[i] < sortedIndices[j]
 		})
 
-		var proposerIndices []uint64
-		if featureconfig.Get().EnableProposerIndexCache {
-			// Given we can not pre-compute proposer indices of the next epoch, this limits
-			// proposer indices calculation to only the current epoch.
-			if e == epoch {
-				proposerIndices, err = precomputeProposerIndices(state, sortedIndices)
-				if err != nil {
-					return err
-				}
-			}
-		}
-
 		if err := committeeCache.AddCommitteeShuffledList(&cache.Committees{
 			ShuffledIndices: shuffledIndices,
 			CommitteeCount:  count * params.BeaconConfig().SlotsPerEpoch,
 			Seed:            seed,
 			SortedIndices:   sortedIndices,
-			ProposerIndices: proposerIndices,
 		}); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+// UpdateProposerIndicesInCache updates proposer indices entry of the committee cache.
+func UpdateProposerIndicesInCache(state *pb.BeaconState, epoch uint64) error {
+	if !featureconfig.Get().EnableProposerIndexCache {
+		return nil
+	}
+
+	indices, err := ActiveValidatorIndices(state, epoch)
+	if err != nil {
+		return nil
+	}
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return err
+	}
+	proposerIndices, err := precomputeProposerIndices(state, indices)
+	if err != nil {
+		return err
+	}
+	if err := committeeCache.AddProposerIndicesList(seed, proposerIndices); err != nil {
+		return err
 	}
 
 	return nil

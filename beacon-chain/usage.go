@@ -84,6 +84,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.Web3ProviderFlag,
 			flags.RPCHost,
 			flags.RPCPort,
+			flags.RPCMaxPageSize,
 			flags.CertFlag,
 			flags.KeyFlag,
 			flags.GRPCGatewayPort,

@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -467,9 +468,9 @@ func TestServer_ListAttestations_Pagination_OutOfRange(t *testing.T) {
 func TestServer_ListAttestations_Pagination_ExceedsMaxPageSize(t *testing.T) {
 	ctx := context.Background()
 	bs := &Server{}
-	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
+	exceedsMax := int32(flags.Get().MaxPageSize + 1)
 
-	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, params.BeaconConfig().MaxPageSize)
+	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, flags.Get().MaxPageSize)
 	req := &ethpb.ListAttestationsRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
 	if _, err := bs.ListAttestations(ctx, req); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)

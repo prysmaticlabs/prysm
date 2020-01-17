@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -26,6 +27,9 @@ import (
 func init() {
 	// Use minimal config to reduce test setup time.
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	flags.Init(&flags.GlobalFlags{
+		MaxPageSize: 250,
+	})
 }
 
 func TestServer_ListValidatorBalances_CannotRequestFutureEpoch(t *testing.T) {
@@ -212,12 +216,12 @@ func TestServer_ListValidatorBalances_PaginationOutOfRange(t *testing.T) {
 
 func TestServer_ListValidatorBalances_ExceedsMaxPageSize(t *testing.T) {
 	bs := &Server{}
-	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
+	exceedsMax := int32(flags.Get().MaxPageSize + 1)
 
 	wanted := fmt.Sprintf(
 		"Requested page size %d can not be greater than max size %d",
 		exceedsMax,
-		params.BeaconConfig().MaxPageSize,
+		flags.Get().MaxPageSize,
 	)
 	req := &ethpb.ListValidatorBalancesRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
 	if _, err := bs.ListValidatorBalances(context.Background(), req); err != nil && !strings.Contains(err.Error(), wanted) {
@@ -793,9 +797,9 @@ func TestServer_ListValidators_PaginationOutOfRange(t *testing.T) {
 
 func TestServer_ListValidators_ExceedsMaxPageSize(t *testing.T) {
 	bs := &Server{}
-	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
+	exceedsMax := int32(flags.Get().MaxPageSize + 1)
 
-	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, params.BeaconConfig().MaxPageSize)
+	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, flags.Get().MaxPageSize)
 	req := &ethpb.ListValidatorsRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
 	if _, err := bs.ListValidators(context.Background(), req); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected error %v, received %v", wanted, err)
@@ -1491,6 +1495,64 @@ func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 
 	if !reflect.DeepEqual(res.Participation, wanted) {
 		t.Error("Incorrect validator participation respond")
+	}
+}
+
+func TestServer_GetValidatorParticipation_DoesntExist(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	epoch := uint64(1)
+	validatorCount := uint64(100)
+
+	validators := make([]*ethpb.Validator, validatorCount)
+	balances := make([]uint64, validatorCount)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+		}
+		balances[i] = params.BeaconConfig().MaxEffectiveBalance
+	}
+
+	atts := []*pbp2p.PendingAttestation{{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{}}}}
+
+	s := &pbp2p.BeaconState{
+		Slot:                       epoch*params.BeaconConfig().SlotsPerEpoch + 1,
+		Validators:                 validators,
+		Balances:                   balances,
+		BlockRoots:                 make([][]byte, 128),
+		Slashings:                  []uint64{0, 1e9, 1e9},
+		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		CurrentEpochAttestations:   atts,
+		FinalizedCheckpoint:        &ethpb.Checkpoint{},
+		JustificationBits:          bitfield.Bitvector4{0x00},
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{},
+	}
+
+	m := &mock.ChainService{
+		State: s,
+	}
+	bs := &Server{
+		BeaconDB:             db,
+		HeadFetcher:          m,
+		ParticipationFetcher: m,
+	}
+
+	res, err := bs.GetValidatorParticipation(ctx, &ethpb.GetValidatorParticipationRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wanted := &ethpb.ValidatorParticipation{
+		GlobalParticipationRate: 0,
+		VotedEther:              0,
+		EligibleEther:           0,
+	}
+
+	if !reflect.DeepEqual(res.Participation, wanted) {
+		t.Errorf("Incorrect validator participation response, got %s", res.Participation.String())
 	}
 }
 

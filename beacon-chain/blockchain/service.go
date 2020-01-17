@@ -215,6 +215,9 @@ func (s *Service) initializeBeaconChain(
 	if err := helpers.UpdateCommitteeCache(genesisState, 0 /* genesis epoch */); err != nil {
 		return err
 	}
+	if err := helpers.UpdateProposerIndicesInCache(genesisState, 0 /* genesis epoch */); err != nil {
+		return err
+	}
 
 	return nil
 }
