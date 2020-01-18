@@ -526,7 +526,7 @@ func (s *Service) handleDelayTicker() {
 		log.Error(err)
 		return
 	}
-	// Reset the Status
+	// Reset the Status.
 	if s.runError != nil {
 		s.runError = nil
 	}
