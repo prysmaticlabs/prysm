@@ -75,7 +75,7 @@ func TestSaveAttestationHistory_OK(t *testing.T) {
 	if savedHistory == nil || !reflect.DeepEqual(history, savedHistory) {
 		t.Fatalf("Expected DB to keep object the same, received: %v", history)
 	}
-	if savedHistory.TargetToSource[epoch] == newMap[epoch]{
+	if savedHistory.TargetToSource[epoch] != newMap[epoch]{
 		t.Fatalf("Expected target epoch %d to have the same marked source epoch, received %d", epoch, savedHistory.TargetToSource[epoch])
 	}
 	if savedHistory.TargetToSource[epoch-1] != farFuture {
@@ -145,10 +145,10 @@ func TestSaveAttestationHistory_Overwrites(t *testing.T) {
 		if history == nil || !reflect.DeepEqual(history, tt.history) {
 			t.Fatalf("Expected DB to keep object the same, received: %v", history)
 		}
-		if history.TargetToSource[tt.epoch] == tt.epoch - 1 {
+		if history.TargetToSource[tt.epoch] != tt.epoch - 1 {
 			t.Fatalf("Expected target epoch %d to be marked with correct source epoch %d", tt.epoch, history.TargetToSource[tt.epoch])
 		}
-		if history.TargetToSource[tt.epoch - 1] == farFuture {
+		if history.TargetToSource[tt.epoch - 1] != farFuture {
 			t.Fatalf("Expected target epoch %d to not be marked as attested for, received %d", tt.epoch-1, history.TargetToSource[tt.epoch - 1])
 		}
 	}
