@@ -68,10 +68,6 @@ var (
 		Usage: "Enables connection to a slasher service in order to retrieve slashable events. Slasher is connected to the beacon node using gRPC and " +
 			"the slasher-provider flag can be used to pass its address.",
 	}
-	saveDepositDataFlag = cli.BoolFlag{
-		Name:  "save-deposit-data",
-		Usage: "Enable of the saving of deposit related data",
-	}
 	noGenesisDelayFlag = cli.BoolFlag{
 		Name: "no-genesis-delay",
 		Usage: "Start the genesis event right away using the eth1 block timestamp which " +
@@ -174,6 +170,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedSaveDepositDataFlag = cli.BoolFlag{
+		Name:  "save-deposit-data",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -192,6 +193,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedGenesisDelayFlag,
 	deprecatedNewCacheFlag,
 	deprecatedEnableShuffledIndexCacheFlag,
+	deprecatedSaveDepositDataFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -215,7 +217,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,
 	enableSkipSlotsCacheFlag,
-	saveDepositDataFlag,
 	enableSlasherFlag,
 	cacheFilteredBlockTreeFlag,
 	cacheProposerIndicesFlag,
