@@ -250,7 +250,8 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		for _, blk := range resp {
 			s.logSyncStatus(genesis, blk.Block, []peer.ID{pids[0]}, counter)
 			if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk); err != nil {
-				return err
+				log.WithError(err).Error("Failed to process block, exiting init sync")
+				return nil
 			}
 		}
 		if len(resp) == 0 {

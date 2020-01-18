@@ -293,6 +293,19 @@ func (p *Status) Inactive() []peer.ID {
 	return peers
 }
 
+// Bad returns the peers that are bad.
+func (p *Status) Bad() []peer.ID {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+	peers := make([]peer.ID, 0)
+	for pid, status := range p.status {
+		if status.badResponses >= p.maxBadResponses {
+			peers = append(peers, pid)
+		}
+	}
+	return peers
+}
+
 // All returns all the peers regardless of state.
 func (p *Status) All() []peer.ID {
 	p.lock.RLock()

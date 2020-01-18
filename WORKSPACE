@@ -194,9 +194,9 @@ http_archive(
 
 http_archive(
     name = "com_github_herumi_bls_eth_go_binary",
-    sha256 = "15a41ddb0bf7d142ebffae68337f19c16e747676cb56794c5d80dbe388ce004c",
-    strip_prefix = "bls-go-binary-ac038c7cb6d3185c4a46f3bca0c99ebf7b191e16",
-    url = "https://github.com/nisdas/bls-go-binary/archive/ac038c7cb6d3185c4a46f3bca0c99ebf7b191e16.zip",
+    sha256 = "b5628a95bd1e6ff84f73d87c134bb1e7e9c1a5a2a10b831867d9dad7d8defc3e",
+    strip_prefix = "bls-go-binary-8ee33d1a2e8ba8dcf0c3d0b459d75d42d163339d",
+    url = "https://github.com/nisdas/bls-go-binary/archive/8ee33d1a2e8ba8dcf0c3d0b459d75d42d163339d.zip",
 )
 
 load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_dependencies")
@@ -1255,7 +1255,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_ethereumapis",
-    commit = "87118fb893cc6f32b25793d819790fd3bcce3221",
+    commit = "8a785e129627db2be96339a35fb2317b200160b1",
     importpath = "github.com/prysmaticlabs/ethereumapis",
     patch_args = ["-p1"],
     patches = [

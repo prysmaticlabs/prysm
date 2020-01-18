@@ -27,11 +27,24 @@ var (
 		Name:  "deposit-contract",
 		Usage: "Deposit contract address. Beacon chain node will listen logs coming from the deposit contract to determine when validator is eligible to participate.",
 	}
+	// RPCHost defines the host on which the RPC server should listen.
+	RPCHost = cli.StringFlag{
+		Name:  "rpc-host",
+		Usage: "Host on which the RPC server should listen",
+		Value: "0.0.0.0",
+	}
 	// RPCPort defines a beacon node RPC port to open.
 	RPCPort = cli.IntFlag{
 		Name:  "rpc-port",
 		Usage: "RPC port exposed by a beacon node",
 		Value: 4000,
+	}
+	// RPCMaxPageSize defines the maximum numbers per page returned in RPC responses from this
+	// beacon node (default: 500).
+	RPCMaxPageSize = cli.IntFlag{
+		Name:  "rpc-max-page-size",
+		Usage: "Max number of items returned per page in RPC responses for paginated endpoints (default: 500)",
+		Value: 500,
 	}
 	// CertFlag defines a flag for the node's TLS certificate.
 	CertFlag = cli.StringFlag{

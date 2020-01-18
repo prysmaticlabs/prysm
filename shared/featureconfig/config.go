@@ -40,6 +40,7 @@ type Flags struct {
 
 	// Cache toggles.
 	EnableAttestationCache   bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
+	EnableSSZCache           bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
 	EnableEth1DataVoteCache  bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableSkipSlotsCache     bool // EnableSkipSlotsCache caches the state in skipped slots.
 	EnableSlasherConnection  bool // EnableSlasher enable retrieval of slashing events from a slasher instance.
@@ -82,6 +83,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(enableAttestationCacheFlag.Name) {
 		log.Warn("Enabled unsafe attestation cache")
 		cfg.EnableAttestationCache = true
+	}
+	if ctx.GlobalBool(enableSSZCache.Name) {
+		log.Warn("Enabled unsafe ssz cache")
+		cfg.EnableSSZCache = true
 	}
 	if ctx.GlobalBool(enableEth1DataVoteCacheFlag.Name) {
 		log.Warn("Enabled unsafe eth1 data vote cache")
