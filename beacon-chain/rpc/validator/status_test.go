@@ -1,8 +1,8 @@
 package validator
 
 import (
-	"math/big"
 	"context"
+	"math/big"
 	"testing"
 	"time"
 
