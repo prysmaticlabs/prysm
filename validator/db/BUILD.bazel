@@ -3,6 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "attestation_history.go",
         "db.go",
         "proposal_history.go",
         "schema.go",
@@ -26,6 +27,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "attestation_history_test.go",
         "proposal_history_test.go",
         "setup_db_test.go",
     ],
