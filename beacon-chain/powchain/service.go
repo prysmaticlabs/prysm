@@ -524,6 +524,11 @@ func (s *Service) handleDelayTicker() {
 	if err := s.requestBatchedLogs(context.Background()); err != nil {
 		s.runError = err
 		log.Error(err)
+		return
+	}
+	// Reset the Status
+	if s.runError != nil {
+		s.runError = nil
 	}
 }
 
@@ -581,7 +586,6 @@ func (s *Service) run(done <-chan struct{}) {
 				s.runError = err
 				return
 			}
-			s.runError = nil
 		case header, ok := <-s.headerChan:
 			if ok {
 				s.processSubscribedHeaders(header)
