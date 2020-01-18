@@ -30,11 +30,13 @@ func (r *Service) maintainPeerStatuses() {
 				// Peer has vanished; nothing to do
 				continue
 			}
-			if roughtime.Now().After(lastUpdated.Add(interval)) {
-				if err := r.sendRPCStatusRequest(r.ctx, pid); err != nil {
-					log.WithField("peer", pid).WithError(err).Error("Failed to request peer status")
+			go func() {
+				if roughtime.Now().After(lastUpdated.Add(interval)) {
+					if err := r.sendRPCStatusRequest(r.ctx, pid); err != nil {
+						log.WithField("peer", pid).WithError(err).Error("Failed to request peer status")
+					}
 				}
-			}
+			}()
 		}
 	})
 }
