@@ -24,19 +24,19 @@ func (r *Service) maintainPeerStatuses() {
 	interval := time.Duration(params.BeaconConfig().SecondsPerSlot*params.BeaconConfig().SlotsPerEpoch/2) * time.Second
 	runutil.RunEvery(r.ctx, interval, func() {
 		for _, pid := range r.p2p.Peers().Connected() {
-			go func() {
+			go func(id peer.ID) {
 				// If the status hasn't been updated in the recent interval time.
-				lastUpdated, err := r.p2p.Peers().ChainStateLastUpdated(pid)
+				lastUpdated, err := r.p2p.Peers().ChainStateLastUpdated(id)
 				if err != nil {
 					// Peer has vanished; nothing to do
 					return
 				}
 				if roughtime.Now().After(lastUpdated.Add(interval)) {
-					if err := r.sendRPCStatusRequest(r.ctx, pid); err != nil {
-						log.WithField("peer", pid).WithError(err).Error("Failed to request peer status")
+					if err := r.sendRPCStatusRequest(r.ctx, id); err != nil {
+						log.WithField("peer", id).WithError(err).Error("Failed to request peer status")
 					}
 				}
-			}()
+			}(pid)
 		}
 	})
 }
