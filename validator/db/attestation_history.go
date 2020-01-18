@@ -19,8 +19,8 @@ func unmarshalAttestationHistory(enc []byte) (*slashpb.AttestationHistory, error
 	return history, nil
 }
 
-// AttestationHistory accepts a validator public key and returns the corresponding proposal history.
-// Returns nil if there is no proposal history for the validator.
+// AttestationHistory accepts a validator public key and returns the corresponding attestation history.
+// Returns nil if there is no attestation history for the validator.
 func (db *Store) AttestationHistory(ctx context.Context, publicKey []byte) (*slashpb.AttestationHistory, error) {
 	ctx, span := trace.StartSpan(ctx, "Validator.AttestationHistory")
 	defer span.End()
@@ -39,14 +39,14 @@ func (db *Store) AttestationHistory(ctx context.Context, publicKey []byte) (*sla
 	return attestationHistory, err
 }
 
-// SaveAttestationHistory returns the proposal history for the requested validator public key.
+// SaveAttestationHistory returns the attestation history for the requested validator public key.
 func (db *Store) SaveAttestationHistory(ctx context.Context, pubKey []byte, attestationHistory *slashpb.AttestationHistory) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.SaveAttestationHistory")
 	defer span.End()
 
 	enc, err := proto.Marshal(attestationHistory)
 	if err != nil {
-		return errors.Wrap(err, "failed to encode proposal history")
+		return errors.Wrap(err, "failed to encode attestation history")
 	}
 
 	err = db.update(func(tx *bolt.Tx) error {
@@ -56,7 +56,7 @@ func (db *Store) SaveAttestationHistory(ctx context.Context, pubKey []byte, atte
 	return err
 }
 
-// DeleteAttestationHistory deletes the proposal history for the corresponding validator public key.
+// DeleteAttestationHistory deletes the attestation history for the corresponding validator public key.
 func (db *Store) DeleteAttestationHistory(ctx context.Context, pubkey []byte) error {
 	ctx, span := trace.StartSpan(ctx, "Validator.DeleteAttestationHistory")
 	defer span.End()
@@ -64,7 +64,7 @@ func (db *Store) DeleteAttestationHistory(ctx context.Context, pubkey []byte) er
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicAttestationsBucket)
 		if err := bucket.Delete(pubkey); err != nil {
-			return errors.Wrap(err, "failed to delete the proposal history")
+			return errors.Wrap(err, "failed to delete the attestation history")
 		}
 		return nil
 	})

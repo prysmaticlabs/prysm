@@ -26,7 +26,7 @@ func TestAttestationHistory_InitializesNewPubKeys(t *testing.T) {
 			TargetToSource: newMap,
 		}
 		if !reflect.DeepEqual(attestationHistory, clean) {
-			t.Fatalf("Expected proposal history epoch bits to be empty, received %v", attestationHistory)
+			t.Fatalf("Expected attestation history epoch bits to be empty, received %v", attestationHistory)
 		}
 	}
 }
@@ -135,11 +135,11 @@ func TestSaveAttestationHistory_Overwrites(t *testing.T) {
 
 	for _, tt := range tests {
 		if err := db.SaveAttestationHistory(context.Background(), tt.pubkey, tt.history); err != nil {
-			t.Fatalf("Saving proposal history failed: %v", err)
+			t.Fatalf("Saving attestation history failed: %v", err)
 		}
 		history, err := db.AttestationHistory(context.Background(), tt.pubkey)
 		if err != nil {
-			t.Fatalf("Failed to get proposal history: %v", err)
+			t.Fatalf("Failed to get attestation history: %v", err)
 		}
 
 		if history == nil || !reflect.DeepEqual(history, tt.history) {
@@ -168,12 +168,12 @@ func TestDeleteAttestationHistory_OK(t *testing.T) {
 	}
 
 	if err := db.SaveAttestationHistory(context.Background(), pubkey, history); err != nil {
-		t.Fatalf("Save proposal history failed: %v", err)
+		t.Fatalf("Save attestation history failed: %v", err)
 	}
 	// Making sure everything is saved.
 	savedHistory, err := db.AttestationHistory(context.Background(), pubkey)
 	if err != nil {
-		t.Fatalf("Failed to get proposal history: %v", err)
+		t.Fatalf("Failed to get attestation history: %v", err)
 	}
 	if savedHistory == nil || !reflect.DeepEqual(savedHistory, history) {
 		t.Fatalf("Expected DB to keep object the same, received: %v, expected %v", savedHistory, history)
@@ -185,9 +185,9 @@ func TestDeleteAttestationHistory_OK(t *testing.T) {
 	// Check after deleting from DB.
 	savedHistory, err = db.AttestationHistory(context.Background(), pubkey)
 	if err != nil {
-		t.Fatalf("Failed to get proposal history: %v", err)
+		t.Fatalf("Failed to get attestation history: %v", err)
 	}
 	if savedHistory != nil {
-		t.Fatalf("Expected proposal history to be nil, received %v", savedHistory)
+		t.Fatalf("Expected attestation history to be nil, received %v", savedHistory)
 	}
 }
