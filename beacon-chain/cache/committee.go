@@ -109,9 +109,38 @@ func (c *CommitteeCache) AddCommitteeShuffledList(committees *Committees) error 
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	if err := c.CommitteeCache.Add(committees); err != nil {
+	if err := c.CommitteeCache.AddIfNotPresent(committees); err != nil {
 		return err
 	}
+	trim(c.CommitteeCache, maxCommitteesCacheSize)
+	return nil
+}
+
+// AddProposerIndicesList updates the committee shuffled list with proposer indices.
+func (c *CommitteeCache) AddProposerIndicesList(seed [32]byte, indices []uint64) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	obj, exists, err := c.CommitteeCache.GetByKey(key(seed))
+	if err != nil {
+		return err
+	}
+	if !exists {
+		committees := &Committees{ProposerIndices: indices}
+		if err := c.CommitteeCache.Add(committees); err != nil {
+			return err
+		}
+	} else {
+		committees, ok := obj.(*Committees)
+		if !ok {
+			return ErrNotCommittee
+		}
+		committees.ProposerIndices = indices
+		if err := c.CommitteeCache.Add(committees); err != nil {
+			return err
+		}
+	}
+
 	trim(c.CommitteeCache, maxCommitteesCacheSize)
 	return nil
 }
