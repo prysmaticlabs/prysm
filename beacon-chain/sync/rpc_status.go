@@ -28,7 +28,7 @@ func (r *Service) maintainPeerStatuses() {
 				// If the status hasn't been updated in the recent interval time.
 				lastUpdated, err := r.p2p.Peers().ChainStateLastUpdated(id)
 				if err != nil {
-					// Peer has vanished; nothing to do
+					// Peer has vanished; nothing to do.
 					return
 				}
 				if roughtime.Now().After(lastUpdated.Add(interval)) {
