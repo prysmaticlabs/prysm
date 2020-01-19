@@ -4,12 +4,18 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/prysmaticlabs/go-ssz"
+
+	"github.com/sirupsen/logrus"
+
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"go.opencensus.io/trace"
 )
+
+var switchStatesKey = []byte("switch-states")
 
 // State returns the saved state using block's signing root,
 // this particular block was used to generate the state.
@@ -179,6 +185,53 @@ func (k *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 	})
 }
 
+// migrateStates migrates our saved states to the custom state that we have now
+// created.
+func (k *Store) migrateStates() error {
+	var isMigrated bool
+
+	err := k.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(migrationBucket)
+		v := bkt.Get(switchStatesKey)
+		isMigrated = len(v) == 1 && v[0] == 0x01
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	if isMigrated {
+		return nil
+	}
+
+	log := logrus.WithField("prefix", "kv")
+	log.Info("Converting states stored in db to new custom type, do not shut down the node...")
+
+	return k.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(stateBucket)
+		c := bucket.Cursor()
+		for key, val := c.First(); key != nil; key, val = c.Next() {
+			depState, err := createDeprecatedState(val)
+			if err != nil {
+				return err
+			}
+			newState, err := convertToNewState(depState)
+			if err != nil {
+				return err
+			}
+			enc, err := encode(newState)
+			if err != nil {
+				return err
+			}
+			if err := bucket.Put(key, enc); err != nil {
+				return err
+			}
+		}
+		migBkt := tx.Bucket(migrationBucket)
+		return migBkt.Put(switchStatesKey, []byte{0x01})
+	})
+}
+
 // creates state from marshaled proto state bytes.
 func createState(enc []byte) (*pb.BeaconState, error) {
 	protoState := &pb.BeaconState{}
@@ -187,4 +240,26 @@ func createState(enc []byte) (*pb.BeaconState, error) {
 		return nil, errors.Wrap(err, "failed to unmarshal encoding")
 	}
 	return protoState, nil
+}
+
+// creates state from marshaled proto state bytes.
+func createDeprecatedState(enc []byte) (*pb.DeprecatedState, error) {
+	protoState := &pb.DeprecatedState{}
+	err := decode(enc, protoState)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal encoding")
+	}
+	return protoState, nil
+}
+
+func convertToNewState(depState *pb.DeprecatedState) (*pb.BeaconState, error) {
+	enc, err := ssz.Marshal(depState)
+	if err != nil {
+		return nil, err
+	}
+	newState := &pb.BeaconState{}
+	if err := ssz.Unmarshal(enc, newState); err != nil {
+		return nil, err
+	}
+	return newState, nil
 }
