@@ -145,7 +145,7 @@ func (s *Service) Syncing() bool {
 func (s *Service) Resync() error {
 	// set it to false since we are syncing again
 	s.synced = false
-	defer func() { s.synced = true }()
+	defer func() { s.synced = true }() // Reset it at the end of the method.
 	headState, err := s.chain.HeadState(context.Background())
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve head state")
