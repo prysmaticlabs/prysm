@@ -145,6 +145,7 @@ func (s *Service) Syncing() bool {
 func (s *Service) Resync() error {
 	// set it to false since we are syncing again
 	s.synced = false
+	defer func() { s.synced = true }()
 	headState, err := s.chain.HeadState(context.Background())
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve head state")
@@ -153,12 +154,10 @@ func (s *Service) Resync() error {
 
 	s.waitForMinimumPeers()
 	err = s.roundRobinSync(genesis)
-	if err == nil {
-		s.synced = true
-	} else {
+	if err != nil {
 		log = log.WithError(err)
 	}
-	log.WithField("synced", s.synced).WithField("slot", s.chain.HeadSlot()).Info("Resync attempt complete")
+	log.WithField("slot", s.chain.HeadSlot()).Info("Resync attempt complete")
 
 	return nil
 }
