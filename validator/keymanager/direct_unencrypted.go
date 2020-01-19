@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
@@ -21,27 +20,34 @@ type unencryptedOpts struct {
 	Path string `json:"path"`
 }
 
+var unencryptedOptsHelp = `The unencrypted key manager stores keys in a local unencrypted store.  The options are:
+  - path This is the filesystem path to a file containing the unencrypted keys
+A sample set of options are:
+  {
+    "path": "/home/me/keys.json" // Access the keys in '/home/me/keys.json'
+  }`
+
 // NewUnencrypted creates a keymanager from a file of unencrypted keys.
-func NewUnencrypted(input string) (*Unencrypted, error) {
+func NewUnencrypted(input string) (*Unencrypted, string, error) {
 	opts := &unencryptedOpts{}
 	err := json.Unmarshal([]byte(input), opts)
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to parse options")
+		return nil, unencryptedOptsHelp, err
 	}
 
 	path, err := filepath.Abs(opts.Path)
 	if err != nil {
-		return nil, err
+		return nil, unencryptedOptsHelp, err
 	}
 	reader, err := os.Open(path)
 	if err != nil {
-		return nil, errors.Wrap(err, "Could not access unencrypted keyfile")
+		return nil, unencryptedOptsHelp, err
 	}
 	defer reader.Close()
 
 	keyMap, err := unencryptedKeysFromReader(reader)
 	if err != nil {
-		return nil, err
+		return nil, unencryptedOptsHelp, err
 	}
 	sks := make([]*bls.SecretKey, 0, len(keyMap))
 	for _, key := range keyMap {
@@ -60,7 +66,7 @@ func NewUnencrypted(input string) (*Unencrypted, error) {
 		km.publicKeys[pubKey] = pk
 		km.secretKeys[pubKey] = sks[i]
 	}
-	return km, nil
+	return km, "", nil
 }
 
 type unencryptedKeysContainer struct {

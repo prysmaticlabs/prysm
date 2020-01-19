@@ -9,7 +9,6 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
@@ -26,12 +25,21 @@ type keystoreOpts struct {
 	Passphrase string `json:"passphrase"`
 }
 
+var keystoreOptsHelp = `The keystore key manager generates keys and stores them in a local encrypted store.  The options are:
+  - path This is the filesystem path to where keys will be stored.  Defaults to the user's home directory if not supplied
+  - passphrase This is the passphrase used to encrypt keys.  Will be asked for if not supplied
+A sample set of options are:
+  {
+    "path":   "/home/me/keys", // Store the keys in '/home/me/keys'
+    "passphrase": "secret"     // Use the passphrase 'secret' to encrypt and decrypt keys
+  }`
+
 // NewKeystore creates a key manager populated with the keys from the keystore at the given path.
-func NewKeystore(input string) (KeyManager, error) {
+func NewKeystore(input string) (KeyManager, string, error) {
 	opts := &keystoreOpts{}
 	err := json.Unmarshal([]byte(input), opts)
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to parse options")
+		return nil, keystoreOptsHelp, err
 	}
 
 	if opts.Path == "" {
@@ -40,20 +48,20 @@ func NewKeystore(input string) (KeyManager, error) {
 
 	exists, err := accounts.Exists(opts.Path)
 	if err != nil {
-		return nil, err
+		return nil, keystoreOptsHelp, err
 	}
 	if !exists {
 		// If an account does not exist, we create a new one and start the node.
 		opts.Path, opts.Passphrase, err = accounts.CreateValidatorAccount(opts.Path, opts.Passphrase)
 		if err != nil {
-			return nil, err
+			return nil, keystoreOptsHelp, err
 		}
 	} else {
 		if opts.Passphrase == "" {
 			log.Info("Enter your validator account password:")
 			bytePassword, err := terminal.ReadPassword(syscall.Stdin)
 			if err != nil {
-				return nil, err
+				return nil, keystoreOptsHelp, err
 			}
 			text := string(bytePassword)
 			opts.Passphrase = strings.Replace(text, "\n", "", -1)
@@ -66,7 +74,7 @@ func NewKeystore(input string) (KeyManager, error) {
 
 	keyMap, err := accounts.DecryptKeysFromKeystore(opts.Path, opts.Passphrase)
 	if err != nil {
-		return nil, err
+		return nil, keystoreOptsHelp, err
 	}
 
 	km := &Unencrypted{
@@ -80,7 +88,7 @@ func NewKeystore(input string) (KeyManager, error) {
 		km.publicKeys[pubKey] = key.PublicKey
 		km.secretKeys[pubKey] = key.SecretKey
 	}
-	return km, nil
+	return km, "", nil
 }
 
 func homeDir() string {

@@ -3,7 +3,6 @@ package keymanager
 import (
 	"encoding/json"
 
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interop"
@@ -19,17 +18,26 @@ type interopOpts struct {
 	Offset uint64 `json:"offset"`
 }
 
+var interopOptsHelp = `The interop key manager generates keys according to the interop testnet specification.  The options are:
+  - keys This is the number of keys to generate
+  - offset This is the number of keys to skip before starting to generate keys
+A sample set of options are:
+  {
+    "keys":   5,   // Generate 5 keys
+    "offset": 1024 // Start with the 1024th key
+  }`
+
 // NewInterop creates a key manager using a number of interop keys at a given offset.
-func NewInterop(input string) (*Interop, error) {
+func NewInterop(input string) (*Interop, string, error) {
 	opts := &interopOpts{}
 	err := json.Unmarshal([]byte(input), opts)
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to parse options")
+		return nil, interopOptsHelp, err
 	}
 
 	sks, pks, err := interop.DeterministicallyGenerateKeys(opts.Offset, opts.Keys)
 	if err != nil {
-		return nil, err
+		return nil, interopOptsHelp, err
 	}
 
 	km := &Interop{
@@ -43,5 +51,5 @@ func NewInterop(input string) (*Interop, error) {
 		km.publicKeys[pubKey] = pks[i]
 		km.secretKeys[pubKey] = sks[i]
 	}
-	return km, nil
+	return km, "", nil
 }

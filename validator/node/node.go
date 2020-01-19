@@ -228,16 +228,25 @@ func selectKeyManager(ctx *cli.Context) (keymanager.KeyManager, error) {
 		}
 	}
 
+	var km keymanager.KeyManager
+	var help string
+	var err error
 	switch manager {
 	case "interop":
-		return keymanager.NewInterop(opts)
+		km, help, err = keymanager.NewInterop(opts)
 	case "unencrypted":
-		return keymanager.NewUnencrypted(opts)
+		km, help, err = keymanager.NewUnencrypted(opts)
 	case "keystore":
-		return keymanager.NewKeystore(opts)
+		km, help, err = keymanager.NewKeystore(opts)
 	default:
 		return nil, fmt.Errorf("unknown keymanager %q", manager)
 	}
+	if err != nil {
+		// Print help for the keymanager
+		fmt.Println(help)
+		return nil, err
+	}
+	return km, nil
 }
 
 func clearDB(dataDir string, pubkeys [][48]byte, force bool) error {
