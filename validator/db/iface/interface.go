@@ -17,4 +17,8 @@ type ValidatorDB interface {
 	ProposalHistory(ctx context.Context, publicKey []byte) (*slashpb.ProposalHistory, error)
 	SaveProposalHistory(ctx context.Context, publicKey []byte, history *slashpb.ProposalHistory) error
 	DeleteProposalHistory(ctx context.Context, publicKey []byte) error
+	// Attester protection related methods.
+	AttestationHistory(ctx context.Context, publicKey []byte) (*slashpb.AttestationHistory, error)
+	SaveAttestationHistory(ctx context.Context, publicKey []byte, history *slashpb.AttestationHistory) error
+	DeleteAttestationHistory(ctx context.Context, publicKey []byte) error
 }
