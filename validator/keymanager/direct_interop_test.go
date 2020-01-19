@@ -10,17 +10,29 @@ import (
 )
 
 func TestInteropListValidatingKeysZero(t *testing.T) {
-	_, err := keymanager.NewInterop(0, 0)
+	_, err := keymanager.NewInterop("")
 	if err == nil {
 		t.Fatal("Missing expected error")
 	}
-	if err.Error() != "failed to generate keys: input length must be greater than 0" {
-		t.Errorf("Incorrect value for error; expected \"failed to generate keys: input length must be greater than 0\", received %d", err)
+	expectedErr := "Failed to parse options: unexpected end of JSON input"
+	if err.Error() != expectedErr {
+		t.Errorf("Incorrect value for error; expected %q, received %v", expectedErr, err)
+	}
+}
+
+func TestInteropListValidatingKeysEmptyJSON(t *testing.T) {
+	_, err := keymanager.NewInterop("{}")
+	if err == nil {
+		t.Fatal("Missing expected error")
+	}
+	expectedErr := "failed to generate keys: input length must be greater than 0"
+	if err.Error() != expectedErr {
+		t.Errorf("Incorrect value for error; expected %q, received %v", expectedErr, err)
 	}
 }
 
 func TestInteropListValidatingKeysSingle(t *testing.T) {
-	direct, err := keymanager.NewInterop(1, 0)
+	direct, err := keymanager.NewInterop(`{"keys":1}`)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -46,7 +58,7 @@ func TestInteropListValidatingKeysSingle(t *testing.T) {
 }
 
 func TestInteropListValidatingKeysOffset(t *testing.T) {
-	direct, err := keymanager.NewInterop(1, 9)
+	direct, err := keymanager.NewInterop(`{"keys":1,"offset":9}`)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}

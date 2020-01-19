@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
@@ -14,8 +17,28 @@ type Unencrypted struct {
 	*Direct
 }
 
-// NewUnencrypted creates a keystore with the data supplied by the reader.
-func NewUnencrypted(reader io.Reader) (*Unencrypted, error) {
+type unencryptedOpts struct {
+	Path string `json:"path"`
+}
+
+// NewUnencrypted creates a keymanager from a file of unencrypted keys.
+func NewUnencrypted(input string) (*Unencrypted, error) {
+	opts := &unencryptedOpts{}
+	err := json.Unmarshal([]byte(input), opts)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to parse options")
+	}
+
+	path, err := filepath.Abs(opts.Path)
+	if err != nil {
+		return nil, err
+	}
+	reader, err := os.Open(path)
+	if err != nil {
+		return nil, errors.Wrap(err, "Could not access unencrypted keyfile")
+	}
+	defer reader.Close()
+
 	keyMap, err := unencryptedKeysFromReader(reader)
 	if err != nil {
 		return nil, err
