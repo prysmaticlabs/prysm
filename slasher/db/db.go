@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/dgraph-io/ristretto"
-
 	"github.com/urfave/cli"
 
 	"github.com/boltdb/bolt"
