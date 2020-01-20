@@ -183,7 +183,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			0,                    // remainder
 		)
 		if err != nil {
-			log.Errorf("Request failed: %v", err)
+			log.WithError(err).Error("Round robing sync request failed")
 			continue
 		}
 
