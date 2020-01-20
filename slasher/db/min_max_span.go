@@ -48,7 +48,7 @@ func createEpochSpanMap(enc []byte) (*slashpb.EpochSpanMap, error) {
 func (db *Store) ValidatorSpansMap(validatorIdx uint64) (*slashpb.EpochSpanMap, error) {
 	var sm *slashpb.EpochSpanMap
 	if db.ctx.GlobalBool(flags.UseSpanCacheFlag.Name) {
-		sm, ok := spanCache.Get(validatorIdx)
+		sm, ok := db.spanCache.Get(validatorIdx)
 		if ok {
 			return sm.(*slashpb.EpochSpanMap), nil
 		}
@@ -75,7 +75,7 @@ func (db *Store) SaveValidatorSpansMap(validatorIdx uint64, spanMap *slashpb.Epo
 		if validatorIdx > highestValidatorIdx {
 			highestValidatorIdx = validatorIdx
 		}
-		saved := spanCache.Set(validatorIdx, spanMap, 1)
+		saved := db.spanCache.Set(validatorIdx, spanMap, 1)
 		if !saved {
 			return fmt.Errorf("failed to save span map to cache")
 		}
@@ -103,7 +103,7 @@ func (db *Store) SaveCachedSpansMaps() error {
 		err := db.update(func(tx *bolt.Tx) error {
 			bucket := tx.Bucket(validatorsMinMaxSpanBucket)
 			for i := uint64(0); i <= highestValidatorIdx; i++ {
-				spanMap, ok := spanCache.Get(i)
+				spanMap, ok := db.spanCache.Get(i)
 				if ok {
 					key := bytesutil.Bytes4(i)
 					val, err := proto.Marshal(spanMap.(*slashpb.EpochSpanMap))
@@ -125,7 +125,7 @@ func (db *Store) SaveCachedSpansMaps() error {
 // DeleteValidatorSpanMap deletes a validator span map using a validator index as bucket key.
 func (db *Store) DeleteValidatorSpanMap(validatorIdx uint64) error {
 	if db.ctx.GlobalBool(flags.UseSpanCacheFlag.Name) {
-		spanCache.Del(validatorIdx)
+		db.spanCache.Del(validatorIdx)
 	}
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsMinMaxSpanBucket)
