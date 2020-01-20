@@ -6,13 +6,12 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
 
