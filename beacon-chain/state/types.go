@@ -9,7 +9,7 @@ import (
 )
 
 type BeaconState struct {
-	state        *pbp2p.BeaconState
+	state        pbp2p.BeaconState
 	lock         sync.RWMutex
 	merkleLayers [][][]byte
 }

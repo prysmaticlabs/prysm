@@ -7,8 +7,8 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-func (b *BeaconState) Clone() *pbp2p.BeaconState {
-	return proto.Clone(b.state).(*pbp2p.BeaconState)
+func (b *BeaconState) Clone() pbp2p.BeaconState {
+	return b.state
 }
 
 func (b *BeaconState) GenesisTime() uint64 {
