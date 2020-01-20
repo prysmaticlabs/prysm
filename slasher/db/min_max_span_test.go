@@ -254,7 +254,7 @@ func TestValidatorSpanMap_SaveCachedSpansMaps(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to save cached span maps to db: %v", err)
 	}
-	spanCache.Clear()
+	db.spanCache.Clear()
 	for _, tt := range spanTests {
 		sm, err := db.ValidatorSpansMap(tt.validatorIdx)
 		if err != nil {
