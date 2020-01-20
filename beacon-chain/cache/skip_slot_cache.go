@@ -131,4 +131,3 @@ func (c *SkipSlotCache) Put(ctx context.Context, slot uint64, state *pb.BeaconSt
 
 	return nil
 }
-
