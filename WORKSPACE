@@ -1473,9 +1473,3 @@ go_repository(
     commit = "d7df74196a9e781ede915320c11c378c1b2f3a1f",
     importpath = "github.com/cespare/xxhash",
 )
-
-go_repository(
-    name = "com_github_karlseguin_ccache",
-    commit = "ec06cd93a07565b373789b0078ba88fe697fddd9",  # v2.0.3
-    importpath = "github.com/karlseguin/ccache",
-)

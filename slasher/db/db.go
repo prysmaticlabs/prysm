@@ -15,9 +15,6 @@ import (
 )
 
 var log = logrus.WithField("prefix", "slasherDB")
-var cacheItems = int64(20000)
-var maxCacheSize = int64(2 << 30) //(2GB)
-var spanCache *ristretto.Cache
 var d *Store
 
 // Store defines an implementation of the Prysm Database interface
@@ -26,6 +23,9 @@ type Store struct {
 	db           *bolt.DB
 	databasePath string
 	ctx          *cli.Context
+	cacheItems   int64
+	maxCacheSize int64
+	spanCache    *ristretto.Cache
 }
 
 // Close closes the underlying boltdb database.
@@ -44,9 +44,9 @@ func (db *Store) view(fn func(*bolt.Tx) error) error {
 }
 
 // NewDB initializes a new DB.
-func NewDB(dirPath string, ctx *cli.Context) (*Store, error) {
+func NewDB(dirPath string, ctx *cli.Context, cacheItems int64, maxCacheSize int64) (*Store, error) {
 	var err error
-	d, err = NewKVStore(dirPath, ctx)
+	d, err = NewKVStore(dirPath, ctx, cacheItems, maxCacheSize)
 	return d, err
 }
 
@@ -75,7 +75,7 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 // NewKVStore initializes a new boltDB key-value store at the directory
 // path specified, creates the kv-buckets based on the schema, and stores
 // an open connection db object as a property of the Store struct.
-func NewKVStore(dirPath string, ctx *cli.Context) (*Store, error) {
+func NewKVStore(dirPath string, ctx *cli.Context, cacheItems int64, maxCacheSize int64) (*Store, error) {
 	if err := os.MkdirAll(dirPath, 0700); err != nil {
 		return nil, err
 	}
@@ -87,9 +87,13 @@ func NewKVStore(dirPath string, ctx *cli.Context) (*Store, error) {
 		}
 		return nil, err
 	}
-
-	kv := &Store{db: boltDB, databasePath: dirPath}
-	spanCache, err = ristretto.NewCache(&ristretto.Config{
+	if cacheItems == 0 {
+		cacheItems = 20000
+	}
+	if maxCacheSize == 0 {
+		maxCacheSize = 2 << 30 //(2GB)
+	}
+	spanCache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: cacheItems,   // number of keys to track frequency of (10M).
 		MaxCost:     maxCacheSize, // maximum cost of cache.
 		BufferItems: 64,           // number of keys per Get buffer.
@@ -99,6 +103,8 @@ func NewKVStore(dirPath string, ctx *cli.Context) (*Store, error) {
 		errors.Wrap(err, "failed to start span cache")
 		panic(err)
 	}
+	kv := &Store{db: boltDB, databasePath: dirPath, spanCache: spanCache}
+
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
 		return createBuckets(
 			tx,

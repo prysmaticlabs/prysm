@@ -14,7 +14,7 @@ import (
 var highestValidatorIdx uint64
 
 func saveToDB(validatorIdx uint64, _ uint64, value interface{}, cost int64) {
-	log.Infof("evicting span map fro validator id: %d", validatorIdx)
+	log.Tracef("evicting span map for validator id: %d", validatorIdx)
 
 	err := d.batch(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsMinMaxSpanBucket)
