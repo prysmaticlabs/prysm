@@ -5,25 +5,25 @@ import (
 	"sync"
 
 	"github.com/protolambda/zssz/merkle"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/go-ssz/types"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 var (
-	leavesCache = make(map[string][]bytesutil.Bytes32Array)
-	layersCache = make(map[string][][]bytesutil.Bytes32Array)
+	leavesCache = make(map[string][]types.Bytes32Array)
+	layersCache = make(map[string][][]types.Bytes32Array)
 	lock        sync.RWMutex
 )
 
-func (h *stateRootHasher) arraysRoot(input []bytesutil.Bytes32Array, length uint64, fieldName string) ([32]byte, error) {
+func (h *stateRootHasher) arraysRoot(input []types.Bytes32Array, length uint64, fieldName string) ([32]byte, error) {
 	lock.Lock()
 	if _, ok := layersCache[fieldName]; !ok && h.rootsCache != nil {
 		depth := merkle.GetDepth(length)
-		layersCache[fieldName] = make([][]bytesutil.Bytes32Array, depth+1)
+		layersCache[fieldName] = make([][]types.Bytes32Array, depth+1)
 	}
 	lock.Unlock()
 
-	leaves := make([]bytesutil.Bytes32Array, length)
+	leaves := make([]types.Bytes32Array, length)
 	copy(leaves, input)
 	bytesProcessed := 0
 	changedIndices := make([]int, 0)
@@ -80,7 +80,7 @@ func (h *stateRootHasher) arraysRoot(input []bytesutil.Bytes32Array, length uint
 	return res, nil
 }
 
-func (h *stateRootHasher) merkleizeWithCache(leaves []bytesutil.Bytes32Array, length uint64, fieldName string) [32]byte {
+func (h *stateRootHasher) merkleizeWithCache(leaves []types.Bytes32Array, length uint64, fieldName string) [32]byte {
 	lock.Lock()
 	defer lock.Unlock()
 	if len(leaves) == 1 {
@@ -89,7 +89,7 @@ func (h *stateRootHasher) merkleizeWithCache(leaves []bytesutil.Bytes32Array, le
 		return root
 	}
 	hashLayer := leaves
-	layers := make([][]bytesutil.Bytes32Array, merkle.GetDepth(length)+1)
+	layers := make([][]types.Bytes32Array, merkle.GetDepth(length)+1)
 	if items, ok := layersCache[fieldName]; ok && h.rootsCache != nil {
 		if len(items[0]) == len(leaves) {
 			layers = items
@@ -104,7 +104,7 @@ func (h *stateRootHasher) merkleizeWithCache(leaves []bytesutil.Bytes32Array, le
 	// [A]  [B]  [C]  [D] -> The bottom layer has length 4 (needs to be a power of two).
 	i := 1
 	for len(hashLayer) > 1 && i < len(layers) {
-		layer := make([]bytesutil.Bytes32Array, 0)
+		layer := make([]types.Bytes32Array, 0)
 		for i := 0; i < len(hashLayer); i += 2 {
 			hashedChunk := hashutil.Hash(append(hashLayer[i][:], hashLayer[i+1][:]...))
 			layer = append(layer, hashedChunk)
@@ -121,7 +121,7 @@ func (h *stateRootHasher) merkleizeWithCache(leaves []bytesutil.Bytes32Array, le
 	return root
 }
 
-func recomputeRoot(idx int, chunks []bytesutil.Bytes32Array, length uint64, fieldName string) ([32]byte, error) {
+func recomputeRoot(idx int, chunks []types.Bytes32Array, length uint64, fieldName string) ([32]byte, error) {
 	lock.Lock()
 	defer lock.Unlock()
 	items, ok := layersCache[fieldName]
@@ -143,7 +143,7 @@ func recomputeRoot(idx int, chunks []bytesutil.Bytes32Array, length uint64, fiel
 		isLeft := currentIndex%2 == 0
 		neighborIdx := currentIndex ^ 1
 
-		var neighbor bytesutil.Bytes32Array
+		var neighbor types.Bytes32Array
 		if layers[i] != nil && len(layers[i]) != 0 && neighborIdx < len(layers[i]) {
 			neighbor = layers[i][neighborIdx]
 		}

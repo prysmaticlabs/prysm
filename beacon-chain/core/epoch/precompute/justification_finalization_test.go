@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/go-ssz/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -16,7 +15,7 @@ import (
 func TestProcessJustificationAndFinalizationPreCompute_ConsecutiveEpochs(t *testing.T) {
 	e := params.BeaconConfig().FarFutureEpoch
 	a := params.BeaconConfig().MaxEffectiveBalance
-	blockRoots := make([]bytesutil.Bytes32Array, params.BeaconConfig().SlotsPerEpoch*2+1)
+	blockRoots := make([]types.Bytes32Array, params.BeaconConfig().SlotsPerEpoch*2+1)
 	for i := 0; i < len(blockRoots); i++ {
 		blockRoots[i] = [32]byte{byte(i)}
 	}
@@ -66,7 +65,7 @@ func TestProcessJustificationAndFinalizationPreCompute_ConsecutiveEpochs(t *test
 func TestProcessJustificationAndFinalizationPreCompute_JustifyCurrentEpoch(t *testing.T) {
 	e := params.BeaconConfig().FarFutureEpoch
 	a := params.BeaconConfig().MaxEffectiveBalance
-	blockRoots := make([]bytesutil.Bytes32Array, params.BeaconConfig().SlotsPerEpoch*2+1)
+	blockRoots := make([]types.Bytes32Array, params.BeaconConfig().SlotsPerEpoch*2+1)
 	for i := 0; i < len(blockRoots); i++ {
 		blockRoots[i] = [32]byte{byte(i)}
 	}
@@ -116,7 +115,7 @@ func TestProcessJustificationAndFinalizationPreCompute_JustifyCurrentEpoch(t *te
 func TestProcessJustificationAndFinalizationPreCompute_JustifyPrevEpoch(t *testing.T) {
 	e := params.BeaconConfig().FarFutureEpoch
 	a := params.BeaconConfig().MaxEffectiveBalance
-	blockRoots := make([]bytesutil.Bytes32Array, params.BeaconConfig().SlotsPerEpoch*2+1)
+	blockRoots := make([]types.Bytes32Array, params.BeaconConfig().SlotsPerEpoch*2+1)
 	for i := 0; i < len(blockRoots); i++ {
 		blockRoots[i] = [32]byte{byte(i)}
 	}

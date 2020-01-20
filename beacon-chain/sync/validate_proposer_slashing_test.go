@@ -8,12 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/go-ssz/types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -51,10 +50,10 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *pb.Beac
 			Epoch:           0,
 		},
 		Slashings:   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes: make([]types.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 
-		StateRoots:        make([]bytesutil.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot),
-		BlockRoots:        make([]bytesutil.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot),
+		StateRoots:        make([]types.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot),
+		BlockRoots:        make([]types.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot),
 		LatestBlockHeader: &ethpb.BeaconBlockHeader{},
 	}
 

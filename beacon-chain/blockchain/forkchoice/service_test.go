@@ -9,6 +9,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/go-ssz/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -156,7 +157,7 @@ func TestStore_LatestAttestingBalance(t *testing.T) {
 		validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
 	}
 
-	s := &pb.BeaconState{Validators: validators, RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector)}
+	s := &pb.BeaconState{Validators: validators, RandaoMixes: make([]types.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector)}
 	stateRoot, err := stateutil.HashTreeRootState(s)
 	if err != nil {
 		t.Fatal(err)
@@ -263,7 +264,7 @@ func TestStore_GetHead(t *testing.T) {
 		validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
 	}
 
-	s := &pb.BeaconState{Validators: validators, RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector)}
+	s := &pb.BeaconState{Validators: validators, RandaoMixes: make([]types.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector)}
 	stateRoot, err := stateutil.HashTreeRootState(s)
 	if err != nil {
 		t.Fatal(err)

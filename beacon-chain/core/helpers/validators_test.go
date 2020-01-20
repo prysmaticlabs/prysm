@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -129,7 +130,7 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	state := &pb.BeaconState{
 		Validators:  validators,
 		Slot:        0,
-		RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes: make([]types.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	tests := []struct {
@@ -206,7 +207,7 @@ func TestChurnLimit_OK(t *testing.T) {
 		beaconState := &pb.BeaconState{
 			Slot:        1,
 			Validators:  validators,
-			RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
+			RandaoMixes: make([]types.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 		}
 		validatorCount, err := ActiveValidatorCount(beaconState, CurrentEpoch(beaconState))
 		if err != nil {
@@ -267,7 +268,7 @@ func TestActiveValidatorIndices(t *testing.T) {
 			name: "all_active_epoch_10",
 			args: args{
 				state: &pb.BeaconState{
-					RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
+					RandaoMixes: make([]types.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 					Validators: []*ethpb.Validator{
 						{
 							ActivationEpoch: 0,
@@ -291,7 +292,7 @@ func TestActiveValidatorIndices(t *testing.T) {
 			name: "some_active_epoch_10",
 			args: args{
 				state: &pb.BeaconState{
-					RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
+					RandaoMixes: make([]types.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 					Validators: []*ethpb.Validator{
 						{
 							ActivationEpoch: 0,
@@ -315,7 +316,7 @@ func TestActiveValidatorIndices(t *testing.T) {
 			name: "some_active_with_recent_new_epoch_10",
 			args: args{
 				state: &pb.BeaconState{
-					RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
+					RandaoMixes: make([]types.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 					Validators: []*ethpb.Validator{
 						{
 							ActivationEpoch: 0,
@@ -343,7 +344,7 @@ func TestActiveValidatorIndices(t *testing.T) {
 			name: "some_active_with_recent_new_epoch_10",
 			args: args{
 				state: &pb.BeaconState{
-					RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
+					RandaoMixes: make([]types.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 					Validators: []*ethpb.Validator{
 						{
 							ActivationEpoch: 0,
@@ -371,7 +372,7 @@ func TestActiveValidatorIndices(t *testing.T) {
 			name: "some_active_with_recent_new_epoch_10",
 			args: args{
 				state: &pb.BeaconState{
-					RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
+					RandaoMixes: make([]types.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 					Validators: []*ethpb.Validator{
 						{
 							ActivationEpoch: 0,

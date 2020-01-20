@@ -4,9 +4,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -115,7 +114,7 @@ func TestSlashValidator_OK(t *testing.T) {
 	beaconState := &pb.BeaconState{
 		Validators:  registry,
 		Slashings:   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes: make([]types.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 		Balances:    balances,
 	}
 

@@ -6,11 +6,10 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/go-ssz/types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -66,7 +65,7 @@ func TestProposeAttestation_OK(t *testing.T) {
 	state := &pbp2p.BeaconState{
 		Slot:        params.BeaconConfig().SlotsPerEpoch + 1,
 		Validators:  validators,
-		RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes: make([]types.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	if err := db.SaveState(ctx, state, root); err != nil {
@@ -144,7 +143,7 @@ func TestGetAttestationData_OK(t *testing.T) {
 
 	beaconState := &pbp2p.BeaconState{
 		Slot:       3*params.BeaconConfig().SlotsPerEpoch + 1,
-		BlockRoots: make([]bytesutil.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot),
+		BlockRoots: make([]types.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot),
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{
 			Epoch: 2,
 			Root:  justifiedRoot[:],
@@ -250,7 +249,7 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 	}
 	beaconState := &pbp2p.BeaconState{
 		Slot:       10000,
-		BlockRoots: make([]bytesutil.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot),
+		BlockRoots: make([]types.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot),
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{
 			Epoch: helpers.SlotToEpoch(1500),
 			Root:  justifiedBlockRoot[:],

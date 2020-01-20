@@ -10,6 +10,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/go-ssz/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -106,7 +107,7 @@ func TestGetHeadFromYaml(t *testing.T) {
 			validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
 		}
 
-		s := &pb.BeaconState{Validators: validators, RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector)}
+		s := &pb.BeaconState{Validators: validators, RandaoMixes: make([]types.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector)}
 
 		if err := store.db.SaveState(ctx, s, bytesutil.ToBytes32(blksRoot[0])); err != nil {
 			t.Fatal(err)

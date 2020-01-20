@@ -10,6 +10,7 @@ import (
 	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -58,19 +59,19 @@ func CopyState2(state *pb.BeaconState) *pb.BeaconState {
 }
 
 func CopyState(state *pb.BeaconState) *pb.BeaconState {
-	blockRoots := make([]bytesutil.Bytes32Array, len(state.BlockRoots))
+	blockRoots := make([]types.Bytes32Array, len(state.BlockRoots))
 	for i, r := range state.BlockRoots {
 		blockRoots[i] = r
 	}
-	stateRoots := make([]bytesutil.Bytes32Array, len(state.StateRoots))
+	stateRoots := make([]types.Bytes32Array, len(state.StateRoots))
 	for i, r := range state.StateRoots {
 		stateRoots[i] = r
 	}
-	historicalRoots := make([]bytesutil.Bytes32Array, len(state.HistoricalRoots))
+	historicalRoots := make([]types.Bytes32Array, len(state.HistoricalRoots))
 	for i, r := range state.HistoricalRoots {
 		historicalRoots[i] = r
 	}
-	randaoMixes := make([]bytesutil.Bytes32Array, len(state.RandaoMixes))
+	randaoMixes := make([]types.Bytes32Array, len(state.RandaoMixes))
 	for i, r := range state.RandaoMixes {
 		randaoMixes[i] = r
 	}

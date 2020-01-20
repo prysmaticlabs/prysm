@@ -4,10 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/go-ssz/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -162,9 +161,9 @@ func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 		Slot:                        slot,
 		Balances:                    validatorBalances,
 		Validators:                  validators,
-		RandaoMixes:                 make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes:                 make([]types.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 		Slashings:                   make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector),
-		BlockRoots:                  make([]bytesutil.Bytes32Array, params.BeaconConfig().SlotsPerEpoch*10),
+		BlockRoots:                  make([]types.Bytes32Array, params.BeaconConfig().SlotsPerEpoch*10),
 		FinalizedCheckpoint:         &ethpb.Checkpoint{},
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{},
 		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{},

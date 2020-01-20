@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/go-ssz/types"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -218,7 +218,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			},
 		},
 	}
-	var blockRoots []bytesutil.Bytes32Array
+	var blockRoots []types.Bytes32Array
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
 		blockRoots = append(blockRoots, [32]byte{byte(i)})
 	}
@@ -372,7 +372,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		},
 	}
 
-	var blockRoots []bytesutil.Bytes32Array
+	var blockRoots []types.Bytes32Array
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
 		blockRoots = append(blockRoots, [32]byte{byte(i)})
 	}
@@ -483,9 +483,9 @@ func TestProcessEpochPrecompute_CanProcess(t *testing.T) {
 	slashing := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
 	newState, err := state.ProcessEpochPrecompute(context.Background(), &pb.BeaconState{
 		Slot:                       epoch*params.BeaconConfig().SlotsPerEpoch + 1,
-		BlockRoots:                 make([]bytesutil.Bytes32Array, 128),
+		BlockRoots:                 make([]types.Bytes32Array, 128),
 		Slashings:                  slashing,
-		RandaoMixes:                make([]bytesutil.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot),
+		RandaoMixes:                make([]types.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot),
 		CurrentEpochAttestations:   atts,
 		FinalizedCheckpoint:        &ethpb.Checkpoint{},
 		JustificationBits:          bitfield.Bitvector4{0x00},
@@ -519,7 +519,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 		validatorBalances[i] = params.BeaconConfig().MaxEffectiveBalance
 	}
 
-	randaoMixes := make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector)
+	randaoMixes := make([]types.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
 		randaoMixes[i] = params.BeaconConfig().ZeroHash
 	}
@@ -527,7 +527,7 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	s := &pb.BeaconState{
 		Slot:              20,
 		LatestBlockHeader: &ethpb.BeaconBlockHeader{},
-		BlockRoots:        make([]bytesutil.Bytes32Array, 254),
+		BlockRoots:        make([]types.Bytes32Array, 254),
 		RandaoMixes:       randaoMixes,
 		Validators:        validators,
 		Balances:          validatorBalances,

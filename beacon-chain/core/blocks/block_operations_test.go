@@ -10,12 +10,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/go-ssz/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
@@ -88,7 +87,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 			PreviousVersion: []byte{0, 0, 0, 0},
 			CurrentVersion:  []byte{0, 0, 0, 0},
 		},
-		RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes: make([]types.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	lbhsr, err := ssz.HashTreeRoot(state.LatestBlockHeader)
@@ -135,7 +134,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 			PreviousVersion: []byte{0, 0, 0, 0},
 			CurrentVersion:  []byte{0, 0, 0, 0},
 		},
-		RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes: make([]types.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	currentEpoch := helpers.CurrentEpoch(state)
@@ -178,7 +177,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 			PreviousVersion: []byte{0, 0, 0, 0},
 			CurrentVersion:  []byte{0, 0, 0, 0},
 		},
-		RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes: make([]types.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	parentRoot, err := ssz.HashTreeRoot(state.LatestBlockHeader)
@@ -225,7 +224,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 			PreviousVersion: []byte{0, 0, 0, 0},
 			CurrentVersion:  []byte{0, 0, 0, 0},
 		},
-		RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes: make([]types.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 
 	latestBlockSignedRoot, err := ssz.HashTreeRoot(state.LatestBlockHeader)
@@ -1148,7 +1147,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:        5,
 		Validators:  validators,
-		RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes: make([]types.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 	tests := []struct {
 		aggregationBitfield    bitfield.Bitlist
@@ -1218,7 +1217,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 		},
-		RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes: make([]types.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 	}
 	tests := []struct {
 		attestation *ethpb.IndexedAttestation

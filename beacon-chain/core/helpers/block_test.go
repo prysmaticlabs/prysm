@@ -5,15 +5,14 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
+	"github.com/prysmaticlabs/go-ssz/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
-	var blockRoots []bytesutil.Bytes32Array
+	var blockRoots []types.Bytes32Array
 
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
 		blockRoots = append(blockRoots, [32]byte{byte(i)})
@@ -77,7 +76,7 @@ func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
 }
 
 func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
-	var blockRoots []bytesutil.Bytes32Array
+	var blockRoots []types.Bytes32Array
 
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerHistoricalRoot; i++ {
 		blockRoots = append(blockRoots, [32]byte{byte(i)})

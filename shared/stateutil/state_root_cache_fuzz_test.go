@@ -4,9 +4,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	fuzz "github.com/google/gofuzz"
+	"github.com/prysmaticlabs/go-ssz/types"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -82,7 +81,7 @@ func TestHashTreeRootState_ElementsChanged_RecomputeBranch(t *testing.T) {
 	hasher := &stateRootHasher{}
 	hasherWithCache := cachedHasher
 	state := &ethereum_beacon_p2p_v1.BeaconState{}
-	initialRoots := make([]bytesutil.Bytes32Array, 5)
+	initialRoots := make([]types.Bytes32Array, 5)
 	for i := 0; i < len(initialRoots); i++ {
 		var someRt [32]byte
 		copy(someRt[:], "hello")
@@ -93,7 +92,7 @@ func TestHashTreeRootState_ElementsChanged_RecomputeBranch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	badRoots := make([]bytesutil.Bytes32Array, 5)
+	badRoots := make([]types.Bytes32Array, 5)
 	for i := 0; i < len(badRoots); i++ {
 		var someRt [32]byte
 		copy(someRt[:], strconv.Itoa(i))

@@ -9,11 +9,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/go-ssz/types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -55,7 +54,7 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 	bs := &Server{
 		BeaconDB: db,
 		HeadFetcher: &mock.ChainService{
-			State: &pbp2p.BeaconState{Slot: 0, RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector)},
+			State: &pbp2p.BeaconState{Slot: 0, RandaoMixes: make([]types.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector)},
 		},
 	}
 	wanted := &ethpb.ValidatorAssignments{
@@ -163,7 +162,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 
 	s := &pbp2p.BeaconState{
 		Validators:  validators,
-		RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot),
+		RandaoMixes: make([]types.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot),
 	}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
@@ -259,7 +258,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 	s := &pbp2p.BeaconState{
 		Validators:  validators,
 		Balances:    balances,
-		RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot),
+		RandaoMixes: make([]types.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot),
 	}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
@@ -361,7 +360,7 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 	}
 	s := &pbp2p.BeaconState{
 		Validators:  validators,
-		RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot),
+		RandaoMixes: make([]types.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot),
 	}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
@@ -443,7 +442,7 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 	}
 	s := &pbp2p.BeaconState{
 		Validators:  validators,
-		RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot),
+		RandaoMixes: make([]types.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot),
 	}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)

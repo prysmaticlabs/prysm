@@ -5,13 +5,14 @@ import (
 	"encoding/binary"
 	"testing"
 
+	"github.com/prysmaticlabs/go-ssz/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestRandaoMix_OK(t *testing.T) {
-	randaoMixes := make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector)
+	randaoMixes := make([]types.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
 		var intInBytes [32]byte
 		binary.LittleEndian.PutUint64(intInBytes[:], uint64(i))
@@ -46,7 +47,7 @@ func TestRandaoMix_OK(t *testing.T) {
 }
 
 func TestRandaoMix_CopyOK(t *testing.T) {
-	randaoMixes := make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector)
+	randaoMixes := make([]types.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
 		intInBytes := [32]byte{}
 		binary.LittleEndian.PutUint64(intInBytes[:], uint64(i))
@@ -87,7 +88,7 @@ func TestRandaoMix_CopyOK(t *testing.T) {
 }
 
 func TestGenerateSeed_OK(t *testing.T) {
-	randaoMixes := make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector)
+	randaoMixes := make([]types.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
 		intInBytes := [32]byte{}
 		binary.LittleEndian.PutUint64(intInBytes[:], uint64(i))

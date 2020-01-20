@@ -6,11 +6,10 @@ package state
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/go-ssz/types"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -103,7 +102,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, bState *pb.BeaconState, eth
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
 
-	randaoMixes := make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector)
+	randaoMixes := make([]types.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
 		var h [32]byte
 		copy(h[:], eth1Data.BlockHash)
@@ -117,12 +116,12 @@ func OptimizedGenesisBeaconState(genesisTime uint64, bState *pb.BeaconState, eth
 		activeIndexRoots[i] = zeroHash[:]
 	}
 
-	blockRoots := make([]bytesutil.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot)
+	blockRoots := make([]types.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot)
 	for i := 0; i < len(blockRoots); i++ {
 		blockRoots[i] = zeroHash
 	}
 
-	stateRoots := make([]bytesutil.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot)
+	stateRoots := make([]types.Bytes32Array, params.BeaconConfig().SlotsPerHistoricalRoot)
 	for i := 0; i < len(stateRoots); i++ {
 		stateRoots[i] = zeroHash
 	}
@@ -162,7 +161,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, bState *pb.BeaconState, eth
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
 
-		HistoricalRoots:           []bytesutil.Bytes32Array{},
+		HistoricalRoots:           []types.Bytes32Array{},
 		BlockRoots:                blockRoots,
 		StateRoots:                stateRoots,
 		Slashings:                 slashings,
@@ -204,7 +203,7 @@ func EmptyGenesisState() *pb.BeaconState {
 		Balances:   []uint64{},
 
 		JustificationBits:         []byte{0},
-		HistoricalRoots:           []bytesutil.Bytes32Array{},
+		HistoricalRoots:           []types.Bytes32Array{},
 		CurrentEpochAttestations:  []*pb.PendingAttestation{},
 		PreviousEpochAttestations: []*pb.PendingAttestation{},
 

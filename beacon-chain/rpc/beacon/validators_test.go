@@ -9,13 +9,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/go-ssz/types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -1462,9 +1461,9 @@ func TestServer_GetValidatorParticipation_PrevEpoch(t *testing.T) {
 		Slot:                       epoch*params.BeaconConfig().SlotsPerEpoch + 1,
 		Validators:                 validators,
 		Balances:                   balances,
-		BlockRoots:                 make([]bytesutil.Bytes32Array, 128),
+		BlockRoots:                 make([]types.Bytes32Array, 128),
 		Slashings:                  []uint64{0, 1e9, 1e9},
-		RandaoMixes:                make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
+		RandaoMixes:                make([]types.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 		CurrentEpochAttestations:   atts,
 		FinalizedCheckpoint:        &ethpb.Checkpoint{},
 		JustificationBits:          bitfield.Bitvector4{0x00},
@@ -1661,7 +1660,7 @@ func setupValidators(t testing.TB, db db.Database, count int) ([]*ethpb.Validato
 		&pbp2p.BeaconState{
 			Validators:  validators,
 			Balances:    balances,
-			RandaoMixes: make([]bytesutil.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
+			RandaoMixes: make([]types.Bytes32Array, params.BeaconConfig().EpochsPerHistoricalVector),
 		},
 		blockRoot,
 	); err != nil {
