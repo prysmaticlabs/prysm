@@ -10,7 +10,9 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -55,6 +57,19 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
+	if featureconfig.Get().ProtectAttester {
+		history, err := v.db.AttestationHistory(ctx, pubKey[:])
+		if err != nil {
+			log.Errorf("Could not get attestation history from DB: %v", err)
+			return
+		}
+		fmt.Printf("Slashable %t\n", IsNewAttSlashable(history, data.Source.Epoch, data.Target.Epoch))
+		if IsNewAttSlashable(history, data.Source.Epoch, data.Target.Epoch) {
+			log.WithField("targetEpoch", data.Target.Epoch).Error("Attempted to make a slashable attestation, rejected")
+			return
+		}
+	}
+
 	sig, err := v.signAtt(ctx, pubKey, data)
 	if err != nil {
 		log.Errorf("Could not sign attestation: %v", err)
@@ -73,6 +88,20 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	if err != nil {
 		log.Errorf("Could not submit attestation to beacon node: %v", err)
 		return
+	}
+
+	if featureconfig.Get().ProtectAttester {
+		history, err := v.db.AttestationHistory(ctx, pubKey[:])
+		if err != nil {
+			log.Errorf("Could not get attestation history from DB: %v", err)
+			return
+		}
+		history = MarkAttestationForTargetEpoch(history, data.Source.Epoch, data.Target.Epoch)
+		fmt.Printf("Slashable after %t\n", IsNewAttSlashable(history, data.Source.Epoch, data.Target.Epoch))
+		if err := v.db.SaveAttestationHistory(ctx, pubKey[:], history); err != nil {
+			log.Errorf("Could not save attestation history to DB: %v", err)
+			return
+		}
 	}
 
 	if err := v.saveAttesterIndexToData(data, validatorIndex); err != nil {
@@ -179,4 +208,63 @@ func (v *validator) saveAttesterIndexToData(data *ethpb.AttestationData, index u
 	v.attLogs[h] = &attSubmitted{data, append(v.attLogs[h].attesterIndices, index), []uint64{}}
 
 	return nil
+}
+
+
+// IsNewAttSlashable -
+func IsNewAttSlashable(history *slashpb.AttestationHistory, sourceEpoch uint64, targetEpoch uint64) bool {
+	farFuture := params.BeaconConfig().FarFutureEpoch
+	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
+
+	// Previously pruned, we should return false.
+	if int(targetEpoch) <= int(history.LatestEpochWritten)-int(wsPeriod) {
+		return false
+	}
+
+	fmt.Printf("At target %d, source %d\n", targetEpoch%wsPeriod, history.TargetToSource[targetEpoch%wsPeriod])
+
+	// Check if the new attestation would be surrounding another attestation.
+	for i := sourceEpoch; i <= history.LatestEpochWritten && i <= targetEpoch; i++ {
+		fmt.Printf("Loop: at target %d, source %d\n", i%wsPeriod, history.TargetToSource[i%wsPeriod])
+
+		// Unattested for epochs are marked as FAR_FUTURE_EPOCH.
+		if history.TargetToSource[i%wsPeriod] == farFuture {
+			continue
+		}
+		if history.TargetToSource[i%wsPeriod] > sourceEpoch {
+			return true
+		}
+	}
+
+	// Check if the new attestation is being surrounded.
+	for i := targetEpoch; i <= history.LatestEpochWritten; i++ {
+		if history.TargetToSource[i%wsPeriod] < sourceEpoch {
+			return true
+		}
+	}
+
+	// Check if there has already been a vote for this target epoch.
+	if targetEpoch <= history.LatestEpochWritten && history.TargetToSource[targetEpoch%wsPeriod] != farFuture {
+		return true
+	}
+
+	return false
+}
+
+// MarkAttestationForTargetEpoch -
+func MarkAttestationForTargetEpoch(history *slashpb.AttestationHistory, targetEpoch uint64, sourceEpoch uint64) *slashpb.AttestationHistory {
+	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
+
+	if targetEpoch > history.LatestEpochWritten {
+		// If the target epoch to mark is ahead of latest written epoch, override the old targets and mark the requested epoch.
+		// Limit the overwriting to one weak subjectivity period as further is not needed.
+		// TODO maybe default to FAR_FUTURE_EPOCH instead of 0?
+		maxToWrite := history.LatestEpochWritten + wsPeriod
+		for i := history.LatestEpochWritten + 1; i < targetEpoch && i <= maxToWrite; i++ {
+			history.TargetToSource[i%wsPeriod] = params.BeaconConfig().FarFutureEpoch
+		}
+		history.LatestEpochWritten = targetEpoch
+	}
+	history.TargetToSource[targetEpoch%wsPeriod] = sourceEpoch
+	return history
 }
