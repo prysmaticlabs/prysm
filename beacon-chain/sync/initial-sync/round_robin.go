@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
-
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/paulbellamy/ratecounter"
 	"github.com/pkg/errors"
