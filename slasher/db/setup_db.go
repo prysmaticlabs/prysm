@@ -28,7 +28,7 @@ func SetupSlasherDB(t testing.TB, ctx *cli.Context) *Store {
 	return db
 }
 
-// SetupSlasherDB instantiates and returns a SlasherDB instance.
+// SetupSlasherDBDiffCacheSize instantiates and returns a SlasherDB instance with non default cache size.
 func SetupSlasherDBDiffCacheSize(t testing.TB, ctx *cli.Context, cacheItems int64, maxCacheSize int64) *Store {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	if err != nil {
