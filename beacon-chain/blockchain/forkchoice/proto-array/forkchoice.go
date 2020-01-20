@@ -31,14 +31,17 @@ func New(justifiedEpoch uint64, finalizedEpoch uint64, finalizedRoot [32]byte) *
 // Head returns the head root from fork choice store.
 func (f *ForkChoice) Head(justifiedEpoch uint64, finalizedEpoch uint64, justifiedRoot [32]byte, justifiedStateBalances []uint64) ([32]byte, error) {
 	newBalances := justifiedStateBalances
-	deltas, err := computeDeltas(f.store.nodeIndices, f.votes, f.balances, newBalances)
+
+	deltas, newVotes, err := computeDeltas(f.store.nodeIndices, f.votes, f.balances, newBalances)
 	if err != nil {
 		return [32]byte{}, err
 	}
+	f.votes = newVotes
 
 	if err := f.store.applyScoreChanges(justifiedEpoch, finalizedEpoch, deltas); err != nil {
 		return [32]byte{}, err
 	}
+	f.balances = newBalances
 
 	return f.store.head(justifiedRoot)
 }

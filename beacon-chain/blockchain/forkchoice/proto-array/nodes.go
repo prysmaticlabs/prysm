@@ -88,7 +88,6 @@ func (s *Store) head(justifiedRoot [32]byte) ([32]byte, error) {
 func (s *Store) updateBestChildAndDescendant(parentIndex uint64, childIndex uint64) error {
 	parent := s.nodes[parentIndex]
 	child := s.nodes[childIndex]
-
 	childLeadsToViableHead, err := s.leadsToViableHead(&child)
 	if err != nil {
 		return err

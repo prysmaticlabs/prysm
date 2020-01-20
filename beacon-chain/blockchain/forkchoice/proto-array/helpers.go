@@ -2,14 +2,13 @@ package protoarray
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // This computes balance delta from votes. It returns a list of deltas that represents the difference
 // between old balances and new balances.
-func computeDeltas(indices map[[32]byte]uint64, votes []Vote, oldBalances []uint64, newBalances []uint64) ([]int, error) {
+func computeDeltas(indices map[[32]byte]uint64, votes []Vote, oldBalances []uint64, newBalances []uint64) ([]int, []Vote, error) {
 	deltas := make([]int, len(indices))
 
 	for validatorIndex, vote := range votes {
@@ -18,7 +17,7 @@ func computeDeltas(indices map[[32]byte]uint64, votes []Vote, oldBalances []uint
 
 		// Skip if validator has never voted for current and next. The votes are zero hash (ie genesis block)
 		if vote.currentRoot == params.BeaconConfig().ZeroHash && vote.nextRoot == params.BeaconConfig().ZeroHash {
-			fmt.Println("skipped")
+			continue
 		}
 
 		// If the validator did not exist in `old` or `new balance` list before, the balance is just 0.
@@ -35,7 +34,7 @@ func computeDeltas(indices map[[32]byte]uint64, votes []Vote, oldBalances []uint
 			nextDeltaIndex, ok := indices[vote.nextRoot]
 			if ok {
 				if int(nextDeltaIndex) >= len(deltas) {
-					return nil, errors.New("invalid next delta index")
+					return nil, nil, errors.New("invalid next delta index")
 				}
 				deltas[nextDeltaIndex] += int(newBalance)
 			}
@@ -43,14 +42,15 @@ func computeDeltas(indices map[[32]byte]uint64, votes []Vote, oldBalances []uint
 			currentDeltaIndex, ok := indices[vote.currentRoot]
 			if ok {
 				if int(currentDeltaIndex) >= len(deltas) {
-					return nil, errors.New("invalid current delta index")
+					return nil, nil, errors.New("invalid current delta index")
 				}
 				deltas[currentDeltaIndex] -= int(oldBalance)
 			}
 		}
 
 		vote.currentRoot = vote.nextRoot
+		votes[validatorIndex] = vote
 	}
 
-	return deltas, nil
+	return deltas, votes, nil
 }

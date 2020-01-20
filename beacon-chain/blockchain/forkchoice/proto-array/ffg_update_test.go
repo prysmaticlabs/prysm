@@ -7,7 +7,7 @@ import (
 )
 
 func TestFFGUpdates_OneBranch(t *testing.T) {
-	balances := []uint64{1, 2}
+	balances := []uint64{1, 1}
 
 	f := New(0, 0, params.BeaconConfig().ZeroHash)
 	// The head should always start at the finalized block.
@@ -87,7 +87,7 @@ func TestFFGUpdates_OneBranch(t *testing.T) {
 }
 
 func TestFFGUpdates_TwoBranches(t *testing.T) {
-	balances := []uint64{1, 2}
+	balances := []uint64{1, 1}
 
 	f := New(1, 1, params.BeaconConfig().ZeroHash)
 	r, err := f.Head(0, 0, params.BeaconConfig().ZeroHash, balances)
@@ -228,6 +228,14 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 		t.Fatal(err)
 	}
 	if r != indexToHash(10) {
+		t.Error("Incorrect head with justified epoch at 0")
+	}
+
+	r, err = f.Head(1, 0, indexToHash(1), balances)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r != indexToHash(7) {
 		t.Error("Incorrect head with justified epoch at 0")
 	}
 }
