@@ -57,6 +57,13 @@ func ComputeFieldRoots(state *pb.BeaconState) ([][]byte, error) {
 	return nocachedHasher.computeFieldRoots(state)
 }
 
+func ArraysRoot(vals [][]byte, length uint64, fieldName string) ([32]byte, error) {
+	if featureconfig.Get().EnableSSZCache {
+		return cachedHasher.arraysRoot(vals, length, fieldName)
+	}
+	return nocachedHasher.arraysRoot(vals, length, fieldName)
+}
+
 func (h *stateRootHasher) hashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	var fieldRoots [][]byte
 	var err error
@@ -89,14 +96,14 @@ func (h *stateRootHasher) computeFieldRoots(state *pb.BeaconState) ([][]byte, er
 	fieldRoots[1] = slotRoot[:]
 
 	// Fork data structure root.
-	forkHashTreeRoot, err := forkRoot(state.Fork)
+	forkHashTreeRoot, err := ForkRoot(state.Fork)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute fork merkleization")
 	}
 	fieldRoots[2] = forkHashTreeRoot[:]
 
 	// BeaconBlockHeader data structure root.
-	headerHashTreeRoot, err := blockHeaderRoot(state.LatestBlockHeader)
+	headerHashTreeRoot, err := BlockHeaderRoot(state.LatestBlockHeader)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute block header merkleization")
 	}
@@ -124,14 +131,14 @@ func (h *stateRootHasher) computeFieldRoots(state *pb.BeaconState) ([][]byte, er
 	fieldRoots[6] = historicalRootsRt[:]
 
 	// Eth1Data data structure root.
-	eth1HashTreeRoot, err := eth1Root(state.Eth1Data)
+	eth1HashTreeRoot, err := Eth1Root(state.Eth1Data)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute eth1data merkleization")
 	}
 	fieldRoots[7] = eth1HashTreeRoot[:]
 
 	// Eth1DataVotes slice root.
-	eth1VotesRoot, err := eth1DataVotesRoot(state.Eth1DataVotes)
+	eth1VotesRoot, err := Eth1DataVotesRoot(state.Eth1DataVotes)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute eth1data votes merkleization")
 	}
@@ -219,7 +226,7 @@ func Uint64Root(val uint64) [32]byte {
 	return root
 }
 
-func forkRoot(fork *pb.Fork) ([32]byte, error) {
+func ForkRoot(fork *pb.Fork) ([32]byte, error) {
 	fieldRoots := make([][]byte, 3)
 	if fork != nil {
 		prevRoot := bytesutil.ToBytes32(fork.PreviousVersion)

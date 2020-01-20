@@ -4,6 +4,8 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/stateutil"
 )
 
@@ -50,20 +52,56 @@ func (b *BeaconState) SetSlot(val uint64) {
 	b.lock.Unlock()
 }
 
-func (b *BeaconState) SetFork(val *pbp2p.Fork) {
+func (b *BeaconState) SetFork(val *pbp2p.Fork) error {
+	root, err := stateutil.ForkRoot(val)
+	if err != nil {
+		return err
+	}
 	b.state.Fork = val
+	b.lock.Lock()
+	b.merkleLayers[0][fork] = root[:]
+	b.recomputeRoot(int(fork))
+	b.lock.Unlock()
+	return nil
 }
 
-func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) {
+func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
+	root, err := stateutil.BlockHeaderRoot(val)
+	if err != nil {
+		return err
+	}
 	b.state.LatestBlockHeader = val
+	b.lock.Lock()
+	b.merkleLayers[0][latestBlockHeader] = root[:]
+	b.recomputeRoot(int(latestBlockHeader))
+	b.lock.Unlock()
+	return nil
 }
 
-func (b *BeaconState) SetBlockRoots(val [][]byte) {
+func (b *BeaconState) SetBlockRoots(val [][]byte) error {
+	root, err := stateutil.ArraysRoot(val, params.BeaconConfig().SlotsPerHistoricalRoot, "BlockRoots")
+	if err != nil {
+		return err
+	}
 	b.state.BlockRoots = val
+	b.lock.Lock()
+	b.merkleLayers[0][blockRoots] = root[:]
+	b.recomputeRoot(int(blockRoots))
+	b.lock.Unlock()
+	return nil
 }
 
-func (b *BeaconState) SetStateRoots(val [][]byte) {
+func (b *BeaconState) SetStateRoots(val [][]byte) error {
+	root, err := stateutil.ArraysRoot(val, params.BeaconConfig().SlotsPerHistoricalRoot, "StateRoots")
+	if err != nil {
+		return err
+	}
 	b.state.StateRoots = val
+	b.lock.Lock()
+	b.merkleLayers[0][stateRoots] = root[:]
+	b.recomputeRoot(int(stateRoots))
+	b.lock.Unlock()
+	return nil
 }
 
 func (b *BeaconState) SetHistoricalRoots(val [][]byte) {

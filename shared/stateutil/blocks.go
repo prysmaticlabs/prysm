@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func blockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
+func BlockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
 	fieldRoots := make([][]byte, 4)
 	if header != nil {
 		headerSlotBuf := make([]byte, 8)
@@ -24,7 +24,7 @@ func blockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
 	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
-func eth1Root(eth1Data *ethpb.Eth1Data) ([32]byte, error) {
+func Eth1Root(eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 	fieldRoots := make([][]byte, 3)
 	for i := 0; i < len(fieldRoots); i++ {
 		fieldRoots[i] = make([]byte, 32)
@@ -44,7 +44,7 @@ func eth1Root(eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
-func eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
+func Eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
 	eth1VotesRoots := make([][]byte, 0)
 	for i := 0; i < len(eth1DataVotes); i++ {
 		eth1, err := eth1Root(eth1DataVotes[i])
