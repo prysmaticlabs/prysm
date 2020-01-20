@@ -8,6 +8,31 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
+const (
+	slot fieldIndex = iota
+	genesisTime
+	fork
+	latestBlockHeader
+	blockRoots
+	stateRoots
+	historicalRoots
+	eth1Data
+	eth1DataVotes
+	eth1DepositIndex
+	validators
+	balances
+	randaoMixes
+	slashings
+	previousEpochAttestations
+	currentEpochAttestations
+	justificationBits
+	previousJustifiedCheckpoint
+	currentJustifiedCheckpoint
+	finalizedCheckpoint
+)
+
+type fieldIndex int
+
 type BeaconState struct {
 	state        pbp2p.BeaconState
 	lock         sync.RWMutex
