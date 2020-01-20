@@ -13,6 +13,18 @@ func New(justifiedEpoch uint64, finalizedEpoch uint64, finalizedRoot [32]byte) *
 	b := make([]uint64, 0)
 	v := make([]Vote, 0)
 
+	s.nodeIndices[finalizedRoot] = 0
+	s.nodes = append(s.nodes, Node{
+		slot:           0,
+		root:           finalizedRoot,
+		parent:         nonExistentNode,
+		justifiedEpoch: justifiedEpoch,
+		finalizedEpoch: finalizedEpoch,
+		bestChild:      nonExistentNode,
+		bestDescendant: nonExistentNode,
+		weight:         0,
+	})
+
 	return &ForkChoice{store: s, balances: b, votes: v}
 }
 
@@ -34,7 +46,14 @@ func (f *ForkChoice) Head(justifiedEpoch uint64, finalizedEpoch uint64, justifie
 // ProcessAttestation processes attestation for vote accounting to be used for fork choice.
 func (f *ForkChoice) ProcessAttestation(validatorIndices []uint64, blockRoot [32]byte, targetEpoch uint64) {
 	for _, index := range validatorIndices {
-		if targetEpoch > f.votes[index].nextEpoch {
+		// Validator indices will grow the votes cache on demand.
+		newIndex := false
+		for index >= uint64(len(f.votes)) {
+			f.votes = append(f.votes, Vote{})
+			newIndex = true
+		}
+
+		if targetEpoch > f.votes[index].nextEpoch || newIndex {
 			f.votes[index].nextEpoch = targetEpoch
 			f.votes[index].nextRoot = blockRoot
 		}
@@ -42,6 +61,6 @@ func (f *ForkChoice) ProcessAttestation(validatorIndices []uint64, blockRoot [32
 }
 
 // ProcessBlock processes block by inserting it to the fork choice store.
-func (f *ForkChoice) ProcessBlock(slot uint64, blockRoot [32]byte, parentRoot [32]byte, finalizedEpoch uint64, justifiedEpoch uint64) error {
+func (f *ForkChoice) ProcessBlock(slot uint64, blockRoot [32]byte, parentRoot [32]byte, justifiedEpoch uint64, finalizedEpoch uint64) error {
 	return f.store.insert(slot, blockRoot, parentRoot, justifiedEpoch, finalizedEpoch)
 }

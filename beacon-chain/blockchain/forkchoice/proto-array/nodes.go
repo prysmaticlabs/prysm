@@ -15,6 +15,11 @@ func (s *Store) insert(slot uint64, root [32]byte, parent [32]byte, justifiedEpo
 	s.nodeIndicesLock.Lock()
 	defer s.nodeIndicesLock.Unlock()
 
+	// Return if the block has previously been inserted.
+	if _, ok := s.nodeIndices[root]; ok {
+		return nil
+	}
+
 	index := len(s.nodes)
 	parentIndex, ok := s.nodeIndices[parent]
 	// Mark genesis block's parent as non existent.
@@ -36,11 +41,10 @@ func (s *Store) insert(slot uint64, root [32]byte, parent [32]byte, justifiedEpo
 	s.nodeIndices[root] = uint64(index)
 	s.nodes = append(s.nodes, n)
 
-	if n.parent == nonExistentNode {
-		return errors.New("invalid parent index")
-	}
-	if err := s.updateBestChildAndDescendant(parentIndex, uint64(index)); err != nil {
-		return err
+	if n.parent != nonExistentNode {
+		if err := s.updateBestChildAndDescendant(parentIndex, uint64(index)); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -58,12 +62,15 @@ func (s *Store) head(justifiedRoot [32]byte) ([32]byte, error) {
 
 	justifiedNode := s.nodes[justifiedIndex]
 	bestDescendantIndex := justifiedNode.bestDescendant
-	if int(bestDescendantIndex) >= len(s.nodes) {
+	if bestDescendantIndex == nonExistentNode {
+		bestDescendantIndex = justifiedIndex
+	}
+	if bestDescendantIndex >= uint64(len(s.nodes)) {
 		return [32]byte{}, errors.New("invalid best descendant index")
 	}
 
 	bestNode := s.nodes[bestDescendantIndex]
-	if s.viableForHead(&bestNode) {
+	if !s.viableForHead(&bestNode) {
 		return [32]byte{}, errors.New("best node not viable for head")
 	}
 
@@ -166,11 +173,10 @@ func (s *Store) applyScoreChanges(justifiedEpoch uint64, finalizedEpoch uint64, 
 		return fmt.Errorf("nodes length diff than delta length, %d != %d", len(s.nodes), len(delta))
 	}
 
-	if s.justifiedEpoch != justifiedEpoch {
+	if s.justifiedEpoch != justifiedEpoch || s.finalizedEpoch != finalizedEpoch {
 		s.justifiedEpoch = justifiedEpoch
-	}
-	if s.finalizedEpoch != finalizedEpoch {
 		s.finalizedEpoch = finalizedEpoch
+
 	}
 
 	// Iterate backwards through all indices store nodes.
@@ -183,8 +189,6 @@ func (s *Store) applyScoreChanges(justifiedEpoch uint64, finalizedEpoch uint64, 
 			continue
 		}
 
-		if i >= len(delta) {
-		}
 		nodeDelta := delta[i]
 
 		if nodeDelta < 0 {
@@ -196,6 +200,7 @@ func (s *Store) applyScoreChanges(justifiedEpoch uint64, finalizedEpoch uint64, 
 		} else {
 			n.weight += uint64(nodeDelta)
 		}
+		s.nodes[i] = n
 
 		// Update parent's best child and descendent if the node has a known parent.
 		if n.parent != nonExistentNode {
@@ -204,7 +209,9 @@ func (s *Store) applyScoreChanges(justifiedEpoch uint64, finalizedEpoch uint64, 
 				return errors.New("invalid parent index")
 			}
 			delta[n.parent] += nodeDelta
-			s.updateBestChildAndDescendant(n.parent, uint64(i))
+			if err := s.updateBestChildAndDescendant(n.parent, uint64(i)); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -283,12 +290,14 @@ func (s *Store) pruneBeforeFinalized(finalizedRoot [32]byte, finalizedEpoch uint
 // Any node with diff finalized or justified epoch than the ones in fork choice store
 // should not be viable to head.
 func (s *Store) leadsToViableHead(node *Node) (bool, error) {
+	var bestDescendentViable bool
 	bestDescendentIndex := node.bestDescendant
-	if bestDescendentIndex == nonExistentNode {
-		return false, errors.New("invalid best descendant index")
+	if bestDescendentIndex != nonExistentNode {
+		bestDescendentNode := &s.nodes[bestDescendentIndex]
+		bestDescendentViable = s.viableForHead(bestDescendentNode)
 	}
-	bestDescendentNode := &s.nodes[bestDescendentIndex]
-	return s.viableForHead(bestDescendentNode) || s.viableForHead(node), nil
+
+	return bestDescendentViable || s.viableForHead(node), nil
 }
 
 // viableForHead returns true if the node is viable to head.

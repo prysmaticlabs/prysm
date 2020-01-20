@@ -60,7 +60,7 @@ func TestSaveAttestationHistory_OK(t *testing.T) {
 	newMap[1] = farFuture
 	newMap[epoch] = 1
 	history := &slashpb.AttestationHistory{
-		TargetToSource:      newMap,
+		TargetToSource:     newMap,
 		LatestEpochWritten: 2,
 	}
 
@@ -75,7 +75,7 @@ func TestSaveAttestationHistory_OK(t *testing.T) {
 	if savedHistory == nil || !reflect.DeepEqual(history, savedHistory) {
 		t.Fatalf("Expected DB to keep object the same, received: %v", history)
 	}
-	if savedHistory.TargetToSource[epoch] != newMap[epoch]{
+	if savedHistory.TargetToSource[epoch] != newMap[epoch] {
 		t.Fatalf("Expected target epoch %d to have the same marked source epoch, received %d", epoch, savedHistory.TargetToSource[epoch])
 	}
 	if savedHistory.TargetToSource[epoch-1] != farFuture {
@@ -111,7 +111,7 @@ func TestSaveAttestationHistory_Overwrites(t *testing.T) {
 			pubkey: []byte{0},
 			epoch:  uint64(1),
 			history: &slashpb.AttestationHistory{
-				TargetToSource: newMap1,
+				TargetToSource:     newMap1,
 				LatestEpochWritten: 1,
 			},
 		},
@@ -119,7 +119,7 @@ func TestSaveAttestationHistory_Overwrites(t *testing.T) {
 			pubkey: []byte{0},
 			epoch:  uint64(2),
 			history: &slashpb.AttestationHistory{
-				TargetToSource: newMap2,
+				TargetToSource:     newMap2,
 				LatestEpochWritten: 2,
 			},
 		},
@@ -145,11 +145,11 @@ func TestSaveAttestationHistory_Overwrites(t *testing.T) {
 		if history == nil || !reflect.DeepEqual(history, tt.history) {
 			t.Fatalf("Expected DB to keep object the same, received: %v", history)
 		}
-		if history.TargetToSource[tt.epoch] != tt.epoch - 1 {
+		if history.TargetToSource[tt.epoch] != tt.epoch-1 {
 			t.Fatalf("Expected target epoch %d to be marked with correct source epoch %d", tt.epoch, history.TargetToSource[tt.epoch])
 		}
-		if history.TargetToSource[tt.epoch - 1] != farFuture {
-			t.Fatalf("Expected target epoch %d to not be marked as attested for, received %d", tt.epoch-1, history.TargetToSource[tt.epoch - 1])
+		if history.TargetToSource[tt.epoch-1] != farFuture {
+			t.Fatalf("Expected target epoch %d to not be marked as attested for, received %d", tt.epoch-1, history.TargetToSource[tt.epoch-1])
 		}
 	}
 }

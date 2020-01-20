@@ -164,7 +164,7 @@ var (
 		Hidden: true,
 	}
 	deprecatedSaveDepositDataFlag = cli.BoolFlag{
-		Name:  "save-deposit-data",
+		Name:   "save-deposit-data",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}

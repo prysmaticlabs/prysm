@@ -189,7 +189,7 @@ func TestComputeDelta_MoveOutOfTree(t *testing.T) {
 		t.Error("Incorrect length")
 	}
 
-	if delta[0] != 0 - 2 * int(balance){
+	if delta[0] != 0-2*int(balance) {
 		t.Error("Incorrect delta")
 	}
 
@@ -270,10 +270,10 @@ func TestComputeDelta_ValidatorAppear(t *testing.T) {
 		t.Error("Incorrect length")
 	}
 
-	if delta[0] != 0 - int(balance){
+	if delta[0] != 0-int(balance) {
 		t.Error("Incorrect delta")
 	}
-	if delta[1] != 2 * int(balance){
+	if delta[1] != 2*int(balance) {
 		t.Error("Incorrect delta")
 	}
 
@@ -306,10 +306,10 @@ func TestComputeDelta_ValidatorDisappears(t *testing.T) {
 		t.Error("Incorrect length")
 	}
 
-	if delta[0] != 0 - 2 * int(balance){
+	if delta[0] != 0-2*int(balance) {
 		t.Error("Incorrect delta")
 	}
-	if delta[1] != int(balance){
+	if delta[1] != int(balance) {
 		t.Error("Incorrect delta")
 	}
 
