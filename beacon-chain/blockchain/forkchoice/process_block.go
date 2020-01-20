@@ -194,7 +194,7 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, signed *e
 
 	log.WithField("slot", b.Slot).Debug("Executing state transition on block")
 
-	postState, err := state.ExecuteStateTransitionNoVerify(ctx, preState, signed)
+	postState, err := state.ExecuteStateTransitionNoVerifyAttSigs(ctx, preState, signed)
 	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")
 	}
