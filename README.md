@@ -104,7 +104,7 @@ Below are instructions for initialising a beacon node and connecting to the publ
 To start your beacon node, issue the following command:
 
 ```text
-docker run -it -v $HOME/prysm:/data -p 4000:4000 --name beacon-node \
+docker run -it -v $HOME/prysm:/data -p 4000:4000 -p 13000:13000 --name beacon-node \
   gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
   --datadir=/data
 ```
@@ -130,7 +130,7 @@ docker rm beacon-node
 To recreate a deleted container and refresh the chain database, issue the start command with an additional `--clear-db` parameter:
 
 ```text
-docker run -it -v $HOME/prysm:/data -p 4000:4000 --name beacon-node \
+docker run -it -v $HOME/prysm:/data -p 4000:4000 -p 13000:13000 --name beacon-node \
   gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
   --datadir=/data \
   --clear-db
@@ -148,7 +148,7 @@ docker run -it -v $HOME/prysm:/data -p 4000:4000 --name beacon-node \
 3. To run the beacon node, issue the following command:
 
 ```text
-docker run -it -v c:/prysm/:/data -p 4000:4000 gcr.io/prysmaticlabs/prysm/beacon-chain:latest --datadir=/data --clear-db
+docker run -it -v c:/prysm/:/data -p 4000:4000 -p 13000:13000 --name beacon-node gcr.io/prysmaticlabs/prysm/beacon-chain:latest --datadir=/data --clear-db
 ```
 
 ### Running via Bazel
