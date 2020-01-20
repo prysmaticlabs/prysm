@@ -49,7 +49,7 @@ func (r *Service) resyncIfBehind() {
 	runutil.RunEvery(r.ctx, interval, func() {
 		currentEpoch := uint64(roughtime.Now().Unix()-r.chain.GenesisTime().Unix()) / (params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch)
 		syncedEpoch := helpers.SlotToEpoch(r.chain.HeadSlot())
-		if !r.initialSync.Syncing() && syncedEpoch < currentEpoch-1 {
+		if r.initialSync != nil && !r.initialSync.Syncing() && syncedEpoch < currentEpoch-1 {
 			_, highestEpoch, _ := r.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, syncedEpoch)
 			if helpers.StartSlot(highestEpoch) > r.chain.HeadSlot() {
 				log.WithFields(logrus.Fields{
