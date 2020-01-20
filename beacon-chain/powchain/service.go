@@ -29,7 +29,6 @@ import (
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
@@ -200,20 +199,18 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		preGenesisState:         state.EmptyGenesisState(),
 	}
 
-	if featureconfig.Get().EnableSavingOfDepositData {
-		eth1Data, err := config.BeaconDB.PowchainData(ctx)
-		if err != nil {
-			return nil, errors.Wrap(err, "unable to retrieve eth1 data")
-		}
-		if eth1Data != nil {
-			s.depositTrie = trieutil.CreateTrieFromProto(eth1Data.Trie)
-			s.chainStartData = eth1Data.ChainstartData
-			s.preGenesisState = eth1Data.BeaconState
-			s.latestEth1Data = eth1Data.CurrentEth1Data
-			s.lastReceivedMerkleIndex = int64(len(s.depositTrie.Items()) - 1)
-			if err := s.initDepositCaches(ctx, eth1Data.DepositContainers); err != nil {
-				return nil, errors.Wrap(err, "could not initialize caches")
-			}
+	eth1Data, err := config.BeaconDB.PowchainData(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to retrieve eth1 data")
+	}
+	if eth1Data != nil {
+		s.depositTrie = trieutil.CreateTrieFromProto(eth1Data.Trie)
+		s.chainStartData = eth1Data.ChainstartData
+		s.preGenesisState = eth1Data.BeaconState
+		s.latestEth1Data = eth1Data.CurrentEth1Data
+		s.lastReceivedMerkleIndex = int64(len(s.depositTrie.Items()) - 1)
+		if err := s.initDepositCaches(ctx, eth1Data.DepositContainers); err != nil {
+			return nil, errors.Wrap(err, "could not initialize caches")
 		}
 	}
 	return s, nil
@@ -524,6 +521,11 @@ func (s *Service) handleDelayTicker() {
 	if err := s.requestBatchedLogs(context.Background()); err != nil {
 		s.runError = err
 		log.Error(err)
+		return
+	}
+	// Reset the Status.
+	if s.runError != nil {
+		s.runError = nil
 	}
 }
 
@@ -581,7 +583,6 @@ func (s *Service) run(done <-chan struct{}) {
 				s.runError = err
 				return
 			}
-			s.runError = nil
 		case header, ok := <-s.headerChan:
 			if ok {
 				s.processSubscribedHeaders(header)

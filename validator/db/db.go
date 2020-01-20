@@ -87,7 +87,7 @@ func NewKVStore(dirPath string, pubkeys [][48]byte) (*Store, error) {
 		return createBuckets(
 			tx,
 			historicProposalsBucket,
-			validatorsMinMaxSpanBucket,
+			historicAttestationsBucket,
 		)
 	}); err != nil {
 		return nil, err
@@ -95,11 +95,11 @@ func NewKVStore(dirPath string, pubkeys [][48]byte) (*Store, error) {
 
 	// Initialize the required pubkeys into the DB to ensure they're not empty.
 	for _, pubkey := range pubkeys {
-		history, err := kv.ProposalHistory(context.Background(), pubkey[:])
+		proHistory, err := kv.ProposalHistory(context.Background(), pubkey[:])
 		if err != nil {
 			return nil, err
 		}
-		if history == nil {
+		if proHistory == nil {
 			cleanHistory := &slashpb.ProposalHistory{
 				EpochBits: bitfield.NewBitlist(params.BeaconConfig().WeakSubjectivityPeriod),
 			}
@@ -107,6 +107,22 @@ func NewKVStore(dirPath string, pubkeys [][48]byte) (*Store, error) {
 				return nil, err
 			}
 		}
+
+		attHistory, err := kv.AttestationHistory(context.Background(), pubkey[:])
+		if err != nil {
+			return nil, err
+		}
+		if attHistory == nil {
+			newMap := make(map[uint64]uint64)
+			newMap[0] = params.BeaconConfig().FarFutureEpoch
+			cleanHistory := &slashpb.AttestationHistory{
+				TargetToSource: newMap,
+			}
+			if err := kv.SaveAttestationHistory(context.Background(), pubkey[:], cleanHistory); err != nil {
+				return nil, err
+			}
+		}
+
 	}
 
 	return kv, err

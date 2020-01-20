@@ -83,17 +83,14 @@ func (s *Service) ProcessLog(ctx context.Context, depositLog gethTypes.Log) erro
 		if err := s.ProcessDepositLog(ctx, depositLog); err != nil {
 			return errors.Wrap(err, "Could not process deposit log")
 		}
-		if featureconfig.Get().EnableSavingOfDepositData && s.lastReceivedMerkleIndex%eth1DataSavingInterval == 0 {
-			eth1Data := &protodb.ETH1ChainData{
-				CurrentEth1Data:   s.latestEth1Data,
-				ChainstartData:    s.chainStartData,
-				BeaconState:       s.preGenesisState,
-				Trie:              s.depositTrie.ToProto(),
-				DepositContainers: s.depositCache.AllDepositContainers(ctx),
-			}
-			return s.beaconDB.SavePowchainData(ctx, eth1Data)
+		eth1Data := &protodb.ETH1ChainData{
+			CurrentEth1Data:   s.latestEth1Data,
+			ChainstartData:    s.chainStartData,
+			BeaconState:       s.preGenesisState,
+			Trie:              s.depositTrie.ToProto(),
+			DepositContainers: s.depositCache.AllDepositContainers(ctx),
 		}
-		return nil
+		return s.beaconDB.SavePowchainData(ctx, eth1Data)
 	}
 	log.WithField("signature", fmt.Sprintf("%#x", depositLog.Topics[0])).Debug("Not a valid event signature")
 	return nil
