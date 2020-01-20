@@ -6,37 +6,25 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/stateutil"
 )
-
-const (
-	slot fieldIndex = iota
-	genesisTime
-	fork
-	latestBlockHeader
-	blockRoots
-	stateRoots
-	historicalRoots
-	eth1Data
-	eth1DataVotes
-	eth1DepositIndex
-	validators
-	balances
-	randaoMixes
-	slashings
-	previousEpochAttestations
-	currentEpochAttestations
-	justificationBits
-	previousJustifiedCheckpoint
-	currentJustifiedCheckpoint
-	finalizedCheckpoint
-)
-
-type fieldIndex int
 
 type BeaconState struct {
 	state        pbp2p.BeaconState
 	lock         sync.RWMutex
 	merkleLayers [][][]byte
+}
+
+func Initialize(st *pbp2p.BeaconState) (*BeaconState, error) {
+	fieldRoots, err := stateutil.ComputeFieldRoots(st)
+	if err != nil {
+		return nil, err
+	}
+	layers := merkleize(fieldRoots)
+	return &BeaconState{
+		state:        *st,
+		merkleLayers: layers,
+	}, nil
 }
 
 func (b *BeaconState) HashTreeRoot() [32]byte {
@@ -45,38 +33,10 @@ func (b *BeaconState) HashTreeRoot() [32]byte {
 	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0])
 }
 
-func (b *BeaconState) recomputeRoot(idx int) {
-	layers := b.merkleLayers
-	// The merkle tree structure looks as follows:
-	// [[r1, r2, r3, r4], [parent1, parent2], [root]]
-	// Using information about the index which changed, idx, we recompute
-	// only its branch up the tree.
-	currentIndex := idx
-	root := b.merkleLayers[0][idx]
-	for i := 0; i < len(layers)-1; i++ {
-		isLeft := currentIndex%2 == 0
-		neighborIdx := currentIndex ^ 1
-
-		neighbor := make([]byte, 32)
-		if layers[i] != nil && len(layers[i]) != 0 && neighborIdx < len(layers[i]) {
-			neighbor = layers[i][neighborIdx]
-		}
-		if isLeft {
-			parentHash := hashutil.Hash(append(root, neighbor...))
-			root = parentHash[:]
-		} else {
-			parentHash := hashutil.Hash(append(neighbor, root...))
-			root = parentHash[:]
-		}
-		parentIdx := currentIndex / 2
-		// Update the cached layers at the parent index.
-		layers[i+1][parentIdx] = root
-		currentIndex = parentIdx
-	}
-	b.merkleLayers = layers
-}
-
 func merkleize(leaves [][]byte) [][][]byte {
+	for len(leaves) != 32 {
+		leaves = append(leaves, make([]byte, 32))
+	}
 	currentLayer := leaves
 	layers := make([][][]byte, 5)
 	layers[0] = currentLayer
