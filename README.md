@@ -106,8 +106,7 @@ To start your beacon node, issue the following command:
 ```text
 docker run -it -v $HOME/prysm:/data -p 4000:4000 --name beacon-node \
   gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
-  --datadir=/data \
-  --init-sync-no-verify
+  --datadir=/data
 ```
 
 The beacon node can be halted by either using `Ctrl+c` or with the command:
@@ -149,7 +148,7 @@ docker run -it -v $HOME/prysm:/data -p 4000:4000 --name beacon-node \
 3. To run the beacon node, issue the following command:
 
 ```text
-docker run -it -v c:/prysm/:/data -p 4000:4000 gcr.io/prysmaticlabs/prysm/beacon-chain:latest --datadir=/data --init-sync-no-verify --clear-db
+docker run -it -v c:/prysm/:/data -p 4000:4000 gcr.io/prysmaticlabs/prysm/beacon-chain:latest --datadir=/data --clear-db
 ```
 
 ### Running via Bazel

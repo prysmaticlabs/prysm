@@ -9,13 +9,15 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 const bytesPerChunk = 32
 const cacheSize = 100000
 
-var globalHasher *stateRootHasher
+var nocachedHasher *stateRootHasher
+var cachedHasher *stateRootHasher
 
 func init() {
 	rootsCache, _ := ristretto.NewCache(&ristretto.Config{
@@ -25,9 +27,8 @@ func init() {
 		BufferItems: 64, // number of keys per Get buffer.
 	})
 	// Temporarily disable roots cache until cache issues can be resolved.
-	//globalHasher = &stateRootHasher{rootsCache: rootsCache}
-	_ = rootsCache
-	globalHasher = &stateRootHasher{}
+	cachedHasher = &stateRootHasher{rootsCache: rootsCache}
+	nocachedHasher = &stateRootHasher{}
 }
 
 type stateRootHasher struct {
@@ -40,7 +41,10 @@ type stateRootHasher struct {
 // at the expense of complete specificity (that is, this function can only be used
 // on the Prysm BeaconState data structure).
 func HashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
-	return globalHasher.hashTreeRootState(state)
+	if featureconfig.Get().EnableSSZCache {
+		return cachedHasher.hashTreeRootState(state)
+	}
+	return nocachedHasher.hashTreeRootState(state)
 }
 
 func (h *stateRootHasher) hashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
@@ -77,14 +81,14 @@ func (h *stateRootHasher) hashTreeRootState(state *pb.BeaconState) ([32]byte, er
 	fieldRoots[3] = headerHashTreeRoot[:]
 
 	// BlockRoots array root.
-	blockRootsRoot, err := h.arraysRoot(state.BlockRoots, "BlockRoots")
+	blockRootsRoot, err := h.arraysRoot(state.BlockRoots, params.BeaconConfig().SlotsPerHistoricalRoot, "BlockRoots")
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute block roots merkleization")
 	}
 	fieldRoots[4] = blockRootsRoot[:]
 
 	// StateRoots array root.
-	stateRootsRoot, err := h.arraysRoot(state.StateRoots, "StateRoots")
+	stateRootsRoot, err := h.arraysRoot(state.StateRoots, params.BeaconConfig().SlotsPerHistoricalRoot, "StateRoots")
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute state roots merkleization")
 	}
@@ -132,7 +136,7 @@ func (h *stateRootHasher) hashTreeRootState(state *pb.BeaconState) ([32]byte, er
 	fieldRoots[11] = balancesRoot[:]
 
 	// RandaoMixes array root.
-	randaoRootsRoot, err := h.arraysRoot(state.RandaoMixes, "RandaoMixes")
+	randaoRootsRoot, err := h.arraysRoot(state.RandaoMixes, params.BeaconConfig().EpochsPerHistoricalVector, "RandaoMixes")
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not compute randao roots merkleization")
 	}
