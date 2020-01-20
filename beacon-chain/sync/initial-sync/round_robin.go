@@ -46,9 +46,9 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	counter := ratecounter.NewRateCounter(counterSeconds * time.Second)
 	randGenerator := rand.New(rand.NewSource(time.Now().Unix()))
 	var lastEmptyRequests int
-	highestFinalizedEpoch := helpers.StartSlot(s.highestFinalizedEpoch() + 1)
+	highestFinalizedSlot := helpers.StartSlot(s.highestFinalizedEpoch() + 1)
 	// Step 1 - Sync to end of finalized epoch.
-	for s.chain.HeadSlot() < highestFinalizedEpoch {
+	for s.chain.HeadSlot() < highestFinalizedSlot {
 		root, finalizedEpoch, peers := s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(s.chain.HeadSlot()))
 		if len(peers) == 0 {
 			log.Warn("No peers; waiting for reconnect")
@@ -57,7 +57,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		}
 
 		if len(peers) >= flags.Get().MinimumSyncPeers {
-			highestFinalizedEpoch = finalizedEpoch
+			highestFinalizedSlot = helpers.StartSlot(finalizedEpoch + 1)
 		}
 
 		// shuffle peers to prevent a bad peer from
@@ -89,8 +89,8 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			}
 
 			// Short circuit start far exceeding the highest finalized epoch in some infinite loop.
-			if start > highestFinalizedEpoch {
-				return nil, errors.Errorf("attempted to ask for a start slot of %d which is greater than the next highest epoch of %d", start, s.highestFinalizedEpoch()+1)
+			if start > highestFinalizedSlot {
+				return nil, errors.Errorf("attempted to ask for a start slot of %d which is greater than the next highest slot of %d", start, highestFinalizedSlot)
 			}
 
 			atomic.AddInt32(&p2pRequestCount, int32(len(peers)))
