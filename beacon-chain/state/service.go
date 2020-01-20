@@ -16,6 +16,7 @@ type Service struct {
 
 // Start the service event loop.
 func (s *Service) Start() {
+	// TODO(Raul): Need to wait for state initialized event...
 }
 
 // Stop the service event loop.
