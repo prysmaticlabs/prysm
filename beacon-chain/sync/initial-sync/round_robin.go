@@ -150,6 +150,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 				select {
 				case err := <-errChan:
 					log.Error(err)
+					return unionRespBlocks, nil
 				case resp, ok := <-blocksChan:
 					if ok {
 						//  if this synchronization becomes a bottleneck:
