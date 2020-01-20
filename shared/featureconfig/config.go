@@ -35,7 +35,6 @@ type Flags struct {
 	EnableSnappyDBCompression bool   // EnableSnappyDBCompression in the database.
 	InitSyncCacheState        bool   // InitSyncCacheState caches state during initial sync.
 	KafkaBootstrapServers     string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
-	EnableSavingOfDepositData bool   // EnableSavingOfDepositData allows the saving of eth1 related data such as deposits,chain data to be saved.
 	ProtectProposer           bool   // ProtectProposer prevents the validator client from signing any proposals that would be considered a slashable offense.
 	ProtectAttester           bool   // ProtectAttester prevents the validator client from signing any attestations that would be considered a slashable offense.
 

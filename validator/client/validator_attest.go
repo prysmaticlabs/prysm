@@ -221,12 +221,8 @@ func IsNewAttSlashable(history *slashpb.AttestationHistory, sourceEpoch uint64, 
 		return false
 	}
 
-	fmt.Printf("At target %d, source %d\n", targetEpoch%wsPeriod, history.TargetToSource[targetEpoch%wsPeriod])
-
 	// Check if the new attestation would be surrounding another attestation.
 	for i := sourceEpoch; i <= history.LatestEpochWritten && i <= targetEpoch; i++ {
-		fmt.Printf("Loop: at target %d, source %d\n", i%wsPeriod, history.TargetToSource[i%wsPeriod])
-
 		// Unattested for epochs are marked as FAR_FUTURE_EPOCH.
 		if history.TargetToSource[i%wsPeriod] == farFuture {
 			continue
@@ -252,7 +248,7 @@ func IsNewAttSlashable(history *slashpb.AttestationHistory, sourceEpoch uint64, 
 }
 
 // MarkAttestationForTargetEpoch -
-func MarkAttestationForTargetEpoch(history *slashpb.AttestationHistory, targetEpoch uint64, sourceEpoch uint64) *slashpb.AttestationHistory {
+func MarkAttestationForTargetEpoch(history *slashpb.AttestationHistory, sourceEpoch uint64, targetEpoch uint64) *slashpb.AttestationHistory {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 
 	if targetEpoch > history.LatestEpochWritten {
