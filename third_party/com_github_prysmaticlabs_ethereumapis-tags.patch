@@ -1,8 +1,8 @@
 diff --git a/eth/v1alpha1/BUILD.bazel b/eth/v1alpha1/BUILD.bazel
-index f5596a6..e209e30 100644
+index da955b2..981daa5 100644
 --- a/eth/v1alpha1/BUILD.bazel
 +++ b/eth/v1alpha1/BUILD.bazel
-@@ -10,14 +10,13 @@ proto_library(
+@@ -10,15 +10,14 @@ proto_library(
          "beacon_chain.proto",
          "node.proto",
          "validator.proto",
@@ -12,13 +12,14 @@ index f5596a6..e209e30 100644
      deps = [
 -        "@grpc_ecosystem_grpc_gateway//protoc-gen-swagger/options:options_proto",
          "@com_google_protobuf//:empty_proto",
+         "@com_google_protobuf//:any_proto",
          "@com_google_protobuf//:timestamp_proto",
          "@go_googleapis//google/api:annotations_proto",
 +        "@gogo_special_proto//github.com/gogo/protobuf/gogoproto",
      ],
  )
  
-@@ -39,12 +38,30 @@ load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
+@@ -40,12 +39,30 @@ load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
  
  go_proto_library(
      name = "go_proto",
@@ -51,7 +52,7 @@ index f5596a6..e209e30 100644
          "@go_googleapis//google/api:annotations_go_proto",
      ],
  )
-@@ -55,29 +72,3 @@ go_library(
+@@ -56,29 +73,3 @@ go_library(
      importpath = "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1",
      visibility = ["//visibility:public"],
  )
@@ -293,7 +294,7 @@ index 2ce5c34..4cbb276 100644
 +    bytes signature = 3 [(gogoproto.moretags) = "ssz-size:\"96\""];
  }
 diff --git a/eth/v1alpha1/beacon_chain.proto b/eth/v1alpha1/beacon_chain.proto
-index 8586530..e1b08b3 100644
+index f060b0d..10bd8d0 100644
 --- a/eth/v1alpha1/beacon_chain.proto
 +++ b/eth/v1alpha1/beacon_chain.proto
 @@ -15,6 +15,7 @@ syntax = "proto3";
@@ -303,8 +304,8 @@ index 8586530..e1b08b3 100644
 +import "github.com/gogo/protobuf/gogoproto/gogo.proto";
  import "google/api/annotations.proto";
  import "google/protobuf/empty.proto";
- 
-@@ -84,9 +85,9 @@ service BeaconChain {
+ import "google/protobuf/any.proto";
+@@ -85,9 +86,9 @@ service BeaconChain {
          };
      }
  
@@ -317,7 +318,7 @@ index 8586530..e1b08b3 100644
      // This includes the head block slot and root as well as information about
      // the most recent finalized and justified slots.
      rpc StreamChainHead(google.protobuf.Empty) returns (stream ChainHead) {
-@@ -302,7 +303,7 @@ message ChainHead {
+@@ -310,7 +311,7 @@ message ChainHead {
      uint64 head_epoch = 2;
  
      // 32 byte merkle tree root of the canonical head block in the beacon node.
@@ -326,7 +327,7 @@ index 8586530..e1b08b3 100644
  
      // Most recent slot that contains the finalized block.
      uint64 finalized_slot = 4;
-@@ -311,7 +312,7 @@ message ChainHead {
+@@ -319,7 +320,7 @@ message ChainHead {
      uint64 finalized_epoch = 5;
      
      // Most recent 32 byte finalized block root.
@@ -335,7 +336,7 @@ index 8586530..e1b08b3 100644
  
      // Most recent slot that contains the justified block.
      uint64 justified_slot = 7;
-@@ -320,7 +321,7 @@ message ChainHead {
+@@ -328,7 +329,7 @@ message ChainHead {
      uint64 justified_epoch = 8;
      
      // Most recent 32 byte justified block root.
@@ -344,7 +345,7 @@ index 8586530..e1b08b3 100644
  
      // Most recent slot that contains the previous justified block.
      uint64 previous_justified_slot = 10;
-@@ -329,7 +330,7 @@ message ChainHead {
+@@ -337,7 +338,7 @@ message ChainHead {
      uint64 previous_justified_epoch = 11;
  
      // Previous 32 byte justified block root.
@@ -353,7 +354,7 @@ index 8586530..e1b08b3 100644
  }
  
  message ListCommitteesRequest {
-@@ -374,7 +375,7 @@ message ListValidatorBalancesRequest {
+@@ -382,7 +383,7 @@ message ListValidatorBalancesRequest {
  
      // Validator 48 byte BLS public keys to filter validators for the given
      // epoch.
@@ -362,7 +363,7 @@ index 8586530..e1b08b3 100644
          
      // Validator indices to filter validators for the given epoch.
      repeated uint64 indices = 4;
-@@ -395,7 +396,7 @@ message ValidatorBalances {
+@@ -403,7 +404,7 @@ message ValidatorBalances {
  
      message Balance {
          // Validator's 48 byte BLS public key.
@@ -371,7 +372,7 @@ index 8586530..e1b08b3 100644
  
          // Validator's index in the validator set.
          uint64 index = 2;
-@@ -444,7 +445,7 @@ message GetValidatorRequest {
+@@ -452,7 +453,7 @@ message GetValidatorRequest {
          uint64 index = 1;
  
          // 48 byte validator public key.
@@ -380,7 +381,7 @@ index 8586530..e1b08b3 100644
      }
  }
  
-@@ -486,26 +487,25 @@ message ActiveSetChanges {
+@@ -494,26 +495,25 @@ message ActiveSetChanges {
      uint64 epoch = 1;
  
      // 48 byte validator public keys that have been activated in the given epoch.
@@ -413,7 +414,7 @@ index 8586530..e1b08b3 100644
  
      // Indices of validators ejected in the given epoch.
      repeated uint64 ejected_indices = 9;
-@@ -541,11 +541,11 @@ message ValidatorQueue {
+@@ -549,11 +549,11 @@ message ValidatorQueue {
  
      // Ordered list of 48 byte public keys awaiting activation. 0th index is the
      // next key to be processed.
@@ -427,7 +428,7 @@ index 8586530..e1b08b3 100644
  }
  
  message ListValidatorAssignmentsRequest {
-@@ -557,7 +557,7 @@ message ListValidatorAssignmentsRequest {
+@@ -565,7 +565,7 @@ message ListValidatorAssignmentsRequest {
          bool genesis = 2;
      }
      // 48 byte validator public keys to filter assignments for the given epoch.
@@ -436,7 +437,7 @@ index 8586530..e1b08b3 100644
          
      // Validator indicies to filter assignments for the given epoch.
      repeated uint64 indices = 4;
-@@ -592,7 +592,7 @@ message ValidatorAssignments {
+@@ -600,7 +600,7 @@ message ValidatorAssignments {
          uint64 proposer_slot = 4;
  
          // 48 byte BLS public key.
@@ -446,7 +447,7 @@ index 8586530..e1b08b3 100644
  
      // The epoch for which this set of validator assignments is valid.
 diff --git a/eth/v1alpha1/validator.proto b/eth/v1alpha1/validator.proto
-index 599bd57..38e1553 100644
+index 8931b66..eee81a3 100644
 --- a/eth/v1alpha1/validator.proto
 +++ b/eth/v1alpha1/validator.proto
 @@ -15,6 +15,7 @@ syntax = "proto3";
