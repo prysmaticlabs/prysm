@@ -149,8 +149,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			for {
 				select {
 				case err := <-errChan:
-					log.Error(err)
-					return unionRespBlocks, nil
+					return nil, err
 				case resp, ok := <-blocksChan:
 					if ok {
 						//  if this synchronization becomes a bottleneck:
@@ -178,7 +177,8 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			0,                    // remainder
 		)
 		if err != nil {
-			return err
+			log.Errorf("Request failed: %v", err)
+			continue
 		}
 
 		// Since the block responses were appended to the list, we must sort them in order to
