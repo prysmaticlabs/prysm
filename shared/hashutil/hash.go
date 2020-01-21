@@ -16,7 +16,7 @@ import (
 var ErrNilProto = errors.New("cannot hash a nil protobuf message")
 
 // Hash defines a function that returns the sha256 checksum of the data passed in.
-// https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#appendix
+// https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/core/0_beacon-chain.md#hash
 func Hash(data []byte) [32]byte {
 	var hash [32]byte
 
