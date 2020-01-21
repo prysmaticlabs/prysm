@@ -104,7 +104,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 			if signedHeadBlock == nil || signedHeadBlock.Block == nil {
 				return errors.New("nil head block")
 			}
-			if err := s.saveHead(ctx, blockCopy, root); err != nil {
+			if err := s.saveHead(ctx, signedHeadBlock, bytesutil.ToBytes32(headRoot)); err != nil {
 				return errors.Wrap(err, "could not save head")
 			}
 			isCompetingBlock(root[:], blockCopy.Block.Slot, headRoot, signedHeadBlock.Block.Slot)
