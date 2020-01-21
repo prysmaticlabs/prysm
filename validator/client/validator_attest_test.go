@@ -406,7 +406,7 @@ func TestAttestationHistory_BlocksDoubleAttestation(t *testing.T) {
 	newMap := make(map[uint64]uint64)
 	newMap[0] = params.BeaconConfig().FarFutureEpoch
 	attestations := &slashpb.AttestationHistory{
-		TargetToSource: newMap,
+		TargetToSource:     newMap,
 		LatestEpochWritten: 0,
 	}
 
@@ -426,11 +426,52 @@ func TestAttestationHistory_BlocksDoubleAttestation(t *testing.T) {
 	}
 }
 
+func TestAttestationHistory_Prunes(t *testing.T) {
+	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
+	newMap := make(map[uint64]uint64)
+	newMap[0] = params.BeaconConfig().FarFutureEpoch
+	attestations := &slashpb.AttestationHistory{
+		TargetToSource:     newMap,
+		LatestEpochWritten: 0,
+	}
+
+	// Mark attestations spanning epochs 0 to 3 and 6 to 9.
+	prunedNewAttSource := uint64(0)
+	prunedNewAttTarget := uint64(3)
+	attestations = MarkAttestationForTargetEpoch(attestations, prunedNewAttSource, prunedNewAttTarget)
+	newAttSource := prunedNewAttSource + 6
+	newAttTarget := prunedNewAttTarget + 6
+	attestations = MarkAttestationForTargetEpoch(attestations, newAttSource, newAttTarget)
+	if attestations.LatestEpochWritten != newAttTarget {
+		t.Fatalf("Expected latest epoch written to be %d, received %d", newAttTarget, attestations.LatestEpochWritten)
+	}
+
+	// Mark an attestation spanning epochs 54000 to 54003.
+	farNewAttSource := newAttSource + wsPeriod
+	farNewAttTarget := newAttTarget + wsPeriod
+	attestations = MarkAttestationForTargetEpoch(attestations, farNewAttSource, farNewAttTarget)
+	if attestations.LatestEpochWritten != farNewAttTarget {
+		t.Fatalf("Expected latest epoch written to be %d, received %d", newAttTarget, attestations.LatestEpochWritten)
+	}
+
+	if safeTargetToSource(attestations, prunedNewAttTarget) != params.BeaconConfig().FarFutureEpoch {
+		t.Fatalf("Expected attestation at target epoch %d to not be marked", prunedNewAttTarget)
+	}
+
+	if safeTargetToSource(attestations, farNewAttTarget) != farNewAttSource {
+		t.Fatalf("Expected attestation at target epoch %d to not be marked", farNewAttSource)
+	}
+
+	if !IsNewAttSlashable(attestations, 0, farNewAttTarget+5) {
+		t.Fatalf("Expected attestation of source 0, target %d to be considered slashable", farNewAttTarget+5)
+	}
+}
+
 func TestAttestationHistory_BlocksSurroundedAttestation(t *testing.T) {
 	newMap := make(map[uint64]uint64)
 	newMap[0] = params.BeaconConfig().FarFutureEpoch
 	attestations := &slashpb.AttestationHistory{
-		TargetToSource: newMap,
+		TargetToSource:     newMap,
 		LatestEpochWritten: 0,
 	}
 
@@ -454,7 +495,7 @@ func TestAttestationHistory_BlocksSurroundingAttestation(t *testing.T) {
 	newMap := make(map[uint64]uint64)
 	newMap[0] = params.BeaconConfig().FarFutureEpoch
 	attestations := &slashpb.AttestationHistory{
-		TargetToSource: newMap,
+		TargetToSource:     newMap,
 		LatestEpochWritten: 0,
 	}
 

@@ -210,7 +210,6 @@ func (v *validator) saveAttesterIndexToData(data *ethpb.AttestationData, index u
 	return nil
 }
 
-
 // IsNewAttSlashable -
 func IsNewAttSlashable(history *slashpb.AttestationHistory, sourceEpoch uint64, targetEpoch uint64) bool {
 	farFuture := params.BeaconConfig().FarFutureEpoch
@@ -221,10 +220,15 @@ func IsNewAttSlashable(history *slashpb.AttestationHistory, sourceEpoch uint64, 
 		return false
 	}
 
+	// Check if there has already been a vote for this target epoch.
+	if safeTargetToSource(history, targetEpoch) != farFuture {
+		return true
+	}
+
 	// Check if the new attestation would be surrounding another attestation.
-	for i := sourceEpoch; i <= history.LatestEpochWritten && i <= targetEpoch; i++ {
+	for i := sourceEpoch; i <= targetEpoch; i++ {
 		// Unattested for epochs are marked as FAR_FUTURE_EPOCH.
-		if history.TargetToSource[i%wsPeriod] == farFuture {
+		if safeTargetToSource(history, i) == farFuture {
 			continue
 		}
 		if history.TargetToSource[i%wsPeriod] > sourceEpoch {
@@ -234,14 +238,9 @@ func IsNewAttSlashable(history *slashpb.AttestationHistory, sourceEpoch uint64, 
 
 	// Check if the new attestation is being surrounded.
 	for i := targetEpoch; i <= history.LatestEpochWritten; i++ {
-		if history.TargetToSource[i%wsPeriod] < sourceEpoch {
+		if safeTargetToSource(history, i) < sourceEpoch {
 			return true
 		}
-	}
-
-	// Check if there has already been a vote for this target epoch.
-	if targetEpoch <= history.LatestEpochWritten && history.TargetToSource[targetEpoch%wsPeriod] != farFuture {
-		return true
 	}
 
 	return false
@@ -263,4 +262,14 @@ func MarkAttestationForTargetEpoch(history *slashpb.AttestationHistory, sourceEp
 	}
 	history.TargetToSource[targetEpoch%wsPeriod] = sourceEpoch
 	return history
+}
+
+// safeTargetToSource makes sure the epoch accessed is within bounds, and if it's not it at
+// returns the "default" FAR_FUTURE_EPOCH value.
+func safeTargetToSource(history *slashpb.AttestationHistory, targetEpoch uint64) uint64 {
+	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
+	if targetEpoch > history.LatestEpochWritten || int(targetEpoch) < int(history.LatestEpochWritten)-int(wsPeriod) {
+		return params.BeaconConfig().FarFutureEpoch
+	}
+	return history.TargetToSource[targetEpoch%wsPeriod]
 }
