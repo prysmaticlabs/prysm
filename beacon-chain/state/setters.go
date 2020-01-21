@@ -93,7 +93,7 @@ func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
 // SetBlockRoots for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetBlockRoots(val [][]byte) error {
-	root, err := stateutil.ArraysRoot(val, params.BeaconConfig().SlotsPerHistoricalRoot, "BlockRoots")
+	root, err := stateutil.RootsArrayHashTreeRoot(val, params.BeaconConfig().SlotsPerHistoricalRoot, "BlockRoots")
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func (b *BeaconState) SetBlockRoots(val [][]byte) error {
 // SetStateRoots for the beacon state. This PR updates the entire
 // to a new value by overwriting the previous one.
 func (b *BeaconState) SetStateRoots(val [][]byte) error {
-	root, err := stateutil.ArraysRoot(val, params.BeaconConfig().SlotsPerHistoricalRoot, "StateRoots")
+	root, err := stateutil.RootsArrayHashTreeRoot(val, params.BeaconConfig().SlotsPerHistoricalRoot, "StateRoots")
 	if err != nil {
 		return err
 	}
@@ -208,7 +208,7 @@ func (b *BeaconState) SetBalances(val []uint64) error {
 // SetRandaoMixes for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
-	root, err := stateutil.ArraysRoot(val, params.BeaconConfig().EpochsPerHistoricalVector, "RandaoMixes")
+	root, err := stateutil.RootsArrayHashTreeRoot(val, params.BeaconConfig().EpochsPerHistoricalVector, "RandaoMixes")
 	if err != nil {
 		return err
 	}

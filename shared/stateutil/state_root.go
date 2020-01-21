@@ -211,7 +211,9 @@ func (h *stateRootHasher) computeFieldRoots(state *pb.BeaconState) ([][]byte, er
 	return fieldRoots, nil
 }
 
-// Uint64Root --
+// Uint64Root computes the HashTreeRoot Merkleization of
+// a simple uint64 value according to the eth2
+// Simple Serialize specification.
 func Uint64Root(val uint64) [32]byte {
 	buf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(buf, val)
@@ -219,7 +221,9 @@ func Uint64Root(val uint64) [32]byte {
 	return root
 }
 
-// ForkRoot --
+// ForkRoot computes the HashTreeRoot Merkleization of
+// a Fork struct value according to the eth2
+// Simple Serialize specification.
 func ForkRoot(fork *pb.Fork) ([32]byte, error) {
 	fieldRoots := make([][]byte, 3)
 	if fork != nil {
@@ -235,7 +239,9 @@ func ForkRoot(fork *pb.Fork) ([32]byte, error) {
 	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
-// CheckpointRoot --
+// CheckpointRoot computes the HashTreeRoot Merkleization of
+// a Checkpoint struct value according to the eth2
+// Simple Serialize specification.
 func CheckpointRoot(checkpoint *ethpb.Checkpoint) ([32]byte, error) {
 	fieldRoots := make([][]byte, 2)
 	if checkpoint != nil {
@@ -248,7 +254,9 @@ func CheckpointRoot(checkpoint *ethpb.Checkpoint) ([32]byte, error) {
 	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
-// HistoricalRootsRoot --
+// HistoricalRootsRoot computes the HashTreeRoot Merkleization of
+// a list of [32]byte historical block roots according to the eth2
+// Simple Serialize specification.
 func HistoricalRootsRoot(historicalRoots [][]byte) ([32]byte, error) {
 	result, err := bitwiseMerkleize(historicalRoots, uint64(len(historicalRoots)), params.BeaconConfig().HistoricalRootsLimit)
 	if err != nil {
@@ -265,7 +273,9 @@ func HistoricalRootsRoot(historicalRoots [][]byte) ([32]byte, error) {
 	return mixedLen, nil
 }
 
-// SlashingsRoot --
+// SlashingsRoot computes the HashTreeRoot Merkleization of
+// a list of uint64 slashing values according to the eth2
+// Simple Serialize specification.
 func SlashingsRoot(slashings []uint64) ([32]byte, error) {
 	slashingMarshaling := make([][]byte, params.BeaconConfig().EpochsPerSlashingsVector)
 	for i := 0; i < len(slashings) && i < len(slashingMarshaling); i++ {

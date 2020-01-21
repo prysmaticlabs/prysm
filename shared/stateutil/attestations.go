@@ -12,7 +12,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// EpochAttestationsRoot --
+// EpochAttestationsRoot computes the HashTreeRoot Merkleization of
+// a list of pending attestation values according to the eth2
+// Simple Serialize specification.
 func EpochAttestationsRoot(atts []*pb.PendingAttestation) ([32]byte, error) {
 	if featureconfig.Get().EnableSSZCache {
 		return cachedHasher.epochAttestationsRoot(atts)

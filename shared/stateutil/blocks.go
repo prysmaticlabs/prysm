@@ -10,7 +10,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// BlockHeaderRoot --
+// BlockHeaderRoot computes the HashTreeRoot Merkleization of
+// a BeaconBlockHeader struct according to the eth2
+// Simple Serialize specification.
 func BlockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
 	fieldRoots := make([][]byte, 4)
 	if header != nil {
@@ -25,7 +27,9 @@ func BlockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
 	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
-// Eth1Root --
+// Eth1Root computes the HashTreeRoot Merkleization of
+// a BeaconBlockHeader struct according to the eth2
+// Simple Serialize specification.
 func Eth1Root(eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 	fieldRoots := make([][]byte, 3)
 	for i := 0; i < len(fieldRoots); i++ {
@@ -46,7 +50,9 @@ func Eth1Root(eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
-// Eth1DataVotesRoot --
+// Eth1DataVotesRoot computes the HashTreeRoot Merkleization of
+// a list of Eth1Data structs according to the eth2
+// Simple Serialize specification.
 func Eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
 	eth1VotesRoots := make([][]byte, 0)
 	for i := 0; i < len(eth1DataVotes); i++ {
