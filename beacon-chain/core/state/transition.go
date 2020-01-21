@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -41,9 +42,9 @@ import (
 //    return state
 func ExecuteStateTransition(
 	ctx context.Context,
-	state *pb.BeaconState,
+	state *stateTrie.BeaconState,
 	signed *ethpb.SignedBeaconBlock,
-) (*pb.BeaconState, error) {
+) (*stateTrie.BeaconState, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -70,15 +71,11 @@ func ExecuteStateTransition(
 	interop.WriteBlockToDisk(signed, false)
 	interop.WriteStateToDisk(state)
 
-	postStateRoot, err := stateutil.HashTreeRootState(state)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not tree hash processed state")
-	}
+	postStateRoot := state.HashTreeRoot()
 	if !bytes.Equal(postStateRoot[:], signed.Block.StateRoot) {
 		return state, fmt.Errorf("validate state root failed, wanted: %#x, received: %#x",
 			postStateRoot[:], signed.Block.StateRoot)
 	}
-
 	return state, nil
 }
 
@@ -99,9 +96,9 @@ func ExecuteStateTransition(
 //    return state
 func ExecuteStateTransitionNoVerifyAttSigs(
 	ctx context.Context,
-	state *pb.BeaconState,
+	state *stateTrie.BeaconState,
 	signed *ethpb.SignedBeaconBlock,
-) (*pb.BeaconState, error) {
+) (*stateTrie.BeaconState, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -147,7 +144,7 @@ func ExecuteStateTransitionNoVerifyAttSigs(
 //    return state
 func CalculateStateRoot(
 	ctx context.Context,
-	state *pb.BeaconState,
+	state *stateTrie.BeaconState,
 	signed *ethpb.SignedBeaconBlock,
 ) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.CalculateStateRoot")
@@ -160,23 +157,22 @@ func CalculateStateRoot(
 		return [32]byte{}, errors.New("nil block")
 	}
 
-	stateCopy := proto.Clone(state).(*pb.BeaconState)
 	b.ClearEth1DataVoteCache()
 
 	var err error
 	// Execute per slots transition.
-	stateCopy, err = ProcessSlots(ctx, stateCopy, signed.Block.Slot)
+	state, err = ProcessSlots(ctx, state, signed.Block.Slot)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not process slot")
 	}
 
 	// Execute per block transition.
-	stateCopy, err = computeStateRoot(ctx, stateCopy, signed)
+	state, err = computeStateRoot(ctx, state, signed)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not process block")
 	}
 
-	return stateutil.HashTreeRootState(stateCopy)
+	return state.HashTreeRoot(), nil
 }
 
 // ProcessSlot happens every slot and focuses on the slot counter and block roots record updates.
@@ -195,30 +191,40 @@ func CalculateStateRoot(
 //    # Cache block root
 //    previous_block_root = signing_root(state.latest_block_header)
 //    state.block_roots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previous_block_root
-func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
+func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessSlot")
 	defer span.End()
-	span.AddAttributes(trace.Int64Attribute("slot", int64(state.Slot)))
+	span.AddAttributes(trace.Int64Attribute("slot", int64(state.Slot())))
 
-	prevStateRoot, err := stateutil.HashTreeRootState(state)
-	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, errors.Wrap(err, "could not tree hash prev state root")
+	prevStateRoot := state.HashTreeRoot()
+	if err := state.UpdateStateRootsAtIndex(
+		prevStateRoot[:],
+		state.Slot()%params.BeaconConfig().SlotsPerHistoricalRoot,
+	); err != nil {
+		return nil, err
 	}
-	state.StateRoots[state.Slot%params.BeaconConfig().SlotsPerHistoricalRoot] = prevStateRoot[:]
 
 	zeroHash := params.BeaconConfig().ZeroHash
 	// Cache latest block header state root.
-	if bytes.Equal(state.LatestBlockHeader.StateRoot, zeroHash[:]) {
-		state.LatestBlockHeader.StateRoot = prevStateRoot[:]
+	header := state.LatestBlockHeader()
+	if bytes.Equal(header.StateRoot, zeroHash[:]) {
+		header.StateRoot = prevStateRoot[:]
+		if err := state.SetLatestBlockHeader(header); err != nil {
+			return nil, err
+		}
 	}
-	prevBlockRoot, err := ssz.HashTreeRoot(state.LatestBlockHeader)
+	prevBlockRoot, err := stateutil.BlockHeaderRoot(state.LatestBlockHeader())
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not determine prev block root")
 	}
 	// Cache the block root.
-	state.BlockRoots[state.Slot%params.BeaconConfig().SlotsPerHistoricalRoot] = prevBlockRoot[:]
+	if err := state.UpdateBlockRootsAtIndex(
+		prevBlockRoot[:],
+		state.Slot()%params.BeaconConfig().SlotsPerHistoricalRoot,
+	); err != nil {
+		return nil, err
+	}
 	return state, nil
 }
 

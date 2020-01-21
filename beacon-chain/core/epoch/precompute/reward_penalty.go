@@ -2,9 +2,9 @@ package precompute
 
 import (
 	"github.com/pkg/errors"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -49,9 +49,10 @@ func ProcessRewardsAndPenaltiesPrecompute(
 
 // This computes the rewards and penalties differences for individual validators based on the
 // voting records.
-func attestationDeltas(state *pb.BeaconState, bp *Balance, vp []*Validator) ([]uint64, []uint64, error) {
-	rewards := make([]uint64, len(state.Validators))
-	penalties := make([]uint64, len(state.Validators))
+func attestationDeltas(state *stateTrie.BeaconState, bp *Balance, vp []*Validator) ([]uint64, []uint64, error) {
+	vals := state.Validators()
+	rewards := make([]uint64, len(vals))
+	penalties := make([]uint64, len(vals))
 
 	for i, v := range vp {
 		rewards[i], penalties[i] = attestationDelta(state, bp, v)

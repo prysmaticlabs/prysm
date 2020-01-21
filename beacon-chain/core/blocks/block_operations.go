@@ -235,7 +235,7 @@ func ProcessBlockHeader(
 func ProcessBlockHeaderNoVerify(
 	beaconState *stateTrie.BeaconState,
 	block *ethpb.BeaconBlock,
-) (*pb.BeaconState, error) {
+) (*stateTrie.BeaconState, error) {
 	if block == nil {
 		return nil, errors.New("nil block")
 	}
@@ -675,12 +675,16 @@ func ProcessAttestationNoVerify(
 		ffgSourceEpoch = beaconState.CurrentJustifiedCheckpoint().Epoch
 		ffgSourceRoot = beaconState.CurrentJustifiedCheckpoint().Root
 		ffgTargetEpoch = currEpoch
-		beaconState.CurrentEpochAttestations = append(beaconState.CurrentEpochAttestations(), pendingAtt)
+		if err := beaconState.AppendCurrentEpochAttestations(pendingAtt); err != nil {
+			return nil, err
+		}
 	} else {
 		ffgSourceEpoch = beaconState.PreviousJustifiedCheckpoint().Epoch
 		ffgSourceRoot = beaconState.PreviousJustifiedCheckpoint().Root
 		ffgTargetEpoch = prevEpoch
-		beaconState.PreviousEpochAttestations = append(beaconState.PreviousEpochAttestations(), pendingAtt)
+		if err := beaconState.AppendPreviousEpochAttestations(pendingAtt); err != nil {
+			return nil, err
+		}
 	}
 	if data.Source.Epoch != ffgSourceEpoch {
 		return nil, fmt.Errorf("expected source epoch %d, received %d", ffgSourceEpoch, data.Source.Epoch)
@@ -756,7 +760,7 @@ func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, commi
 //    ):
 //        return False
 //    return True
-func VerifyIndexedAttestation(ctx context.Context, beaconState *pb.BeaconState, indexedAtt *ethpb.IndexedAttestation) error {
+func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.BeaconState, indexedAtt *ethpb.IndexedAttestation) error {
 	ctx, span := trace.StartSpan(ctx, "core.VerifyIndexedAttestation")
 	defer span.End()
 
@@ -782,16 +786,17 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *pb.BeaconState, 
 		return errors.New("attesting indices is not uniquely sorted")
 	}
 
-	domain := helpers.Domain(beaconState.Fork, indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
+	domain := helpers.Domain(beaconState.Fork(), indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
 	var pubkey *bls.PublicKey
 	var err error
+	vals := beaconState.Validators()
 	if len(indices) > 0 {
-		pubkey, err = bls.PublicKeyFromBytes(beaconState.Validators[indices[0]].PublicKey)
+		pubkey, err = bls.PublicKeyFromBytes(vals[indices[0]].PublicKey)
 		if err != nil {
 			return errors.Wrap(err, "could not deserialize validator public key")
 		}
 		for _, i := range indices[1:] {
-			pk, err := bls.PublicKeyFromBytes(beaconState.Validators[i].PublicKey)
+			pk, err := bls.PublicKeyFromBytes(vals[i].PublicKey)
 			if err != nil {
 				return errors.Wrap(err, "could not deserialize validator public key")
 			}
@@ -944,6 +949,8 @@ func ProcessDeposit(
 	pubKey := deposit.Data.PublicKey
 	amount := deposit.Data.Amount
 	index, ok := valIndexMap[bytesutil.ToBytes48(pubKey)]
+	vals := beaconState.Validators()
+	numVals := len(vals)
 	if !ok {
 		domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
 		depositSig := deposit.Data.Signature
@@ -957,7 +964,7 @@ func ProcessDeposit(
 		if params.BeaconConfig().MaxEffectiveBalance < effectiveBalance {
 			effectiveBalance = params.BeaconConfig().MaxEffectiveBalance
 		}
-		beaconState.Validators = append(beaconState.Validators, &ethpb.Validator{
+		if err := beaconState.AppendValidators(&ethpb.Validator{
 			PublicKey:                  pubKey,
 			WithdrawalCredentials:      deposit.Data.WithdrawalCredentials,
 			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -965,11 +972,18 @@ func ProcessDeposit(
 			ExitEpoch:                  params.BeaconConfig().FarFutureEpoch,
 			WithdrawableEpoch:          params.BeaconConfig().FarFutureEpoch,
 			EffectiveBalance:           effectiveBalance,
-		})
-		beaconState.Balances = append(beaconState.Balances, amount)
-		valIndexMap[bytesutil.ToBytes48(pubKey)] = len(beaconState.Validators) - 1
+		}); err != nil {
+			return nil, err
+		}
+		if err := beaconState.AppendBalances(amount); err != nil {
+			return nil, err
+		}
+		numVals++
+		valIndexMap[bytesutil.ToBytes48(pubKey)] = numVals - 1
 	} else {
-		beaconState = helpers.IncreaseBalance(beaconState, uint64(index), amount)
+		if err := helpers.IncreaseBalance(beaconState, uint64(index), amount); err != nil {
+			return nil, err
+		}
 	}
 
 	return beaconState, nil
