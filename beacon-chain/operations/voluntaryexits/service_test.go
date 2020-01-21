@@ -382,10 +382,10 @@ func TestPool_PendingExits(t *testing.T) {
 			fields: fields{
 				pending: []*ethpb.SignedVoluntaryExit{
 					{Exit: &ethpb.VoluntaryExit{Epoch: 0}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 1}},
-					{Exit: &ethpb.VoluntaryExit{Epoch: 2}},
 					{Exit: &ethpb.VoluntaryExit{Epoch: 3}},
 					{Exit: &ethpb.VoluntaryExit{Epoch: 4}},
+					{Exit: &ethpb.VoluntaryExit{Epoch: 2}},
+					{Exit: &ethpb.VoluntaryExit{Epoch: 1}},
 				},
 			},
 			args: args{
@@ -393,8 +393,8 @@ func TestPool_PendingExits(t *testing.T) {
 			},
 			want: []*ethpb.SignedVoluntaryExit{
 				{Exit: &ethpb.VoluntaryExit{Epoch: 0}},
-				{Exit: &ethpb.VoluntaryExit{Epoch: 1}},
 				{Exit: &ethpb.VoluntaryExit{Epoch: 2}},
+				{Exit: &ethpb.VoluntaryExit{Epoch: 1}},
 			},
 		},
 	}

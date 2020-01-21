@@ -37,7 +37,7 @@ func (p *Pool) PendingExits(slot uint64) []*ethpb.SignedVoluntaryExit {
 	pending := make([]*ethpb.SignedVoluntaryExit, 0)
 	for _, e := range p.pending {
 		if e.Exit.Epoch > helpers.SlotToEpoch(slot) {
-			break
+			continue
 		}
 		pending = append(pending, e)
 	}
