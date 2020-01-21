@@ -8,7 +8,7 @@
 This is the core repository for Prysm, a [Golang](https://golang.org/) implementation of the Ethereum 2.0 client specifications developed by [Prysmatic Labs](https://prysmaticlabs.com).
 
 ### Need assistance?
-A more detailed set of installation and usage instructions as well as breakdowns of each individual component are available in the [official documentation portal](https://prysmaticlabs.gitbook.io/prysm/). If you still have questions, feel free to stop by either our [Discord](https://discord.gg/KSA7rPr) or [Gitter](https://gitter.im/prysmaticlabs/geth-sharding?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge) and a member of the team or our community will be happy to assist you.
+A more detailed set of installation and usage instructions as well as breakdowns of each individual component are available in the [official documentation portal](https://docs.prylabs.network). If you still have questions, feel free to stop by either our [Discord](https://discord.gg/KSA7rPr) or [Gitter](https://gitter.im/prysmaticlabs/geth-sharding?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge) and a member of the team or our community will be happy to assist you.
 
 ### Come join the testnet!
 Participation is now open to the public for our Ethereum 2.0 phase 0 testnet release. Visit [prylabs.net](https://prylabs.net) for more information on the project or to sign up as a validator on the network.
@@ -92,7 +92,7 @@ Bazel will automatically pull and install any dependencies as well, including Go
 
 ## Connecting to the testnet: running a beacon node
 
-Below are instructions for initialising a beacon node and connecting to the public testnet. To further understand the role that the beacon node plays in Prysm, see [this section of the documentation.](https://prysmaticlabs.gitbook.io/prysm/how-prysm-works/overview-technical)
+Below are instructions for initialising a beacon node and connecting to the public testnet. To further understand the role that the beacon node plays in Prysm, see [this section of the documentation.](https://docs.prylabs.network/docs/how-prysm-works/architecture-overview/)
 
 
 **NOTE:** It is recommended to open up port 13000 on your local router to improve connectivity and receive more peers from the network. To do so, navigate to `192.168.0.1` in your browser and login if required. Follow along with the interface to modify your routers firewall settings. When this task is completed, append the parameter`--p2p-host-ip=$(curl -s ident.me)` to your selected beacon startup command presented in this section to use the newly opened port.
@@ -104,7 +104,7 @@ Below are instructions for initialising a beacon node and connecting to the publ
 To start your beacon node, issue the following command:
 
 ```text
-docker run -it -v $HOME/prysm:/data -p 4000:4000 --name beacon-node \
+docker run -it -v $HOME/prysm:/data -p 4000:4000 -p 13000:13000 --name beacon-node \
   gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
   --datadir=/data
 ```
@@ -130,7 +130,7 @@ docker rm beacon-node
 To recreate a deleted container and refresh the chain database, issue the start command with an additional `--clear-db` parameter:
 
 ```text
-docker run -it -v $HOME/prysm:/data -p 4000:4000 --name beacon-node \
+docker run -it -v $HOME/prysm:/data -p 4000:4000 -p 13000:13000 --name beacon-node \
   gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
   --datadir=/data \
   --clear-db
@@ -148,7 +148,7 @@ docker run -it -v $HOME/prysm:/data -p 4000:4000 --name beacon-node \
 3. To run the beacon node, issue the following command:
 
 ```text
-docker run -it -v c:/prysm/:/data -p 4000:4000 gcr.io/prysmaticlabs/prysm/beacon-chain:latest --datadir=/data --clear-db
+docker run -it -v c:/prysm/:/data -p 4000:4000 -p 13000:13000 --name beacon-node gcr.io/prysmaticlabs/prysm/beacon-chain:latest --datadir=/data --clear-db
 ```
 
 ### Running via Bazel
@@ -229,7 +229,7 @@ golangci-lint run
 
 
 ## Contributing
-Want to get involved? Check out our [Contribution Guide](https://prysmaticlabs.gitbook.io/prysm/getting-involved/contribution-guidelines) to learn more!
+Want to get involved? Check out our [Contribution Guide](https://docs.prylabs.network/docs/contribute/contribution-guidelines/) to learn more!
 
 ## License
 [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html)
