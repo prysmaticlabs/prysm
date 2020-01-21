@@ -9,7 +9,28 @@ import (
 
 // Clone --
 func (b *BeaconState) Clone() *pbp2p.BeaconState {
-	return proto.Clone(b.state).(*pbp2p.BeaconState)
+	return &pbp2p.BeaconState{
+		GenesisTime:                 b.GenesisTime(),
+		Slot:                        b.Slot(),
+		Fork:                        b.Fork(),
+		LatestBlockHeader:           b.LatestBlockHeader(),
+		BlockRoots:                  b.BlockRoots(),
+		StateRoots:                  b.StateRoots(),
+		HistoricalRoots:             b.HistoricalRoots(),
+		Eth1Data:                    b.Eth1Data(),
+		Eth1DataVotes:               b.Eth1DataVotes(),
+		Eth1DepositIndex:            b.Eth1DepositIndex(),
+		Validators:                  b.Validators(),
+		Balances:                    b.Balances(),
+		RandaoMixes:                 b.RandaoMixes(),
+		Slashings:                   b.Slashings(),
+		PreviousEpochAttestations:   b.PreviousEpochAttestations(),
+		CurrentEpochAttestations:    b.CurrentEpochAttestations(),
+		JustificationBits:           b.JustificationBits(),
+		PreviousJustifiedCheckpoint: b.PreviousJustifiedCheckpoint(),
+		CurrentJustifiedCheckpoint:  b.CurrentJustifiedCheckpoint(),
+		FinalizedCheckpoint:         b.FinalizedCheckpoint(),
+	}
 }
 
 // GenesisTime --
