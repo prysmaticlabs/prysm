@@ -44,9 +44,13 @@ func (b *BeaconState) Slot() uint64 {
 
 // Fork version of the beacon chain.
 func (b *BeaconState) Fork() *pbp2p.Fork {
+	prevVersion := make([]byte, len(b.state.Fork.PreviousVersion))
+	copy(prevVersion, b.state.Fork.PreviousVersion)
+	currVersion := make([]byte, len(b.state.Fork.PreviousVersion))
+	copy(currVersion, b.state.Fork.PreviousVersion)
 	return &pbp2p.Fork{
-		PreviousVersion: b.state.Fork.PreviousVersion,
-		CurrentVersion:  b.state.Fork.CurrentVersion,
+		PreviousVersion: prevVersion,
+		CurrentVersion:  currVersion,
 		Epoch:           b.state.Fork.Epoch,
 	}
 }
@@ -151,9 +155,13 @@ func (b *BeaconState) Validators() []*ethpb.Validator {
 	res := make([]*ethpb.Validator, len(b.state.Validators))
 	for i := 0; i < len(res); i++ {
 		val := b.state.Validators[i]
+		var pubKey [48]byte
+		copy(pubKey[:], val.PublicKey)
+		var withdrawalCreds [32]byte
+		copy(withdrawalCreds[:], val.WithdrawalCredentials)
 		res[i] = &ethpb.Validator{
-			PublicKey:                  val.PublicKey,
-			WithdrawalCredentials:      val.WithdrawalCredentials,
+			PublicKey:                  pubKey[:],
+			WithdrawalCredentials:      withdrawalCreds[:],
 			EffectiveBalance:           val.EffectiveBalance,
 			Slashed:                    val.Slashed,
 			ActivationEligibilityEpoch: val.ActivationEligibilityEpoch,
