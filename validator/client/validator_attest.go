@@ -63,8 +63,8 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 			log.Errorf("Could not get attestation history from DB: %v", err)
 			return
 		}
-		fmt.Printf("Slashable %t\n", IsNewAttSlashable(history, data.Source.Epoch, data.Target.Epoch))
-		if IsNewAttSlashable(history, data.Source.Epoch, data.Target.Epoch) {
+		fmt.Printf("Slashable %t\n", isNewAttSlashable(history, data.Source.Epoch, data.Target.Epoch))
+		if isNewAttSlashable(history, data.Source.Epoch, data.Target.Epoch) {
 			log.WithField("targetEpoch", data.Target.Epoch).Error("Attempted to make a slashable attestation, rejected")
 			return
 		}
@@ -96,8 +96,8 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 			log.Errorf("Could not get attestation history from DB: %v", err)
 			return
 		}
-		history = MarkAttestationForTargetEpoch(history, data.Source.Epoch, data.Target.Epoch)
-		fmt.Printf("Slashable after %t\n", IsNewAttSlashable(history, data.Source.Epoch, data.Target.Epoch))
+		history = markAttestationForTargetEpoch(history, data.Source.Epoch, data.Target.Epoch)
+		fmt.Printf("Slashable after %t\n", isNewAttSlashable(history, data.Source.Epoch, data.Target.Epoch))
 		if err := v.db.SaveAttestationHistory(ctx, pubKey[:], history); err != nil {
 			log.Errorf("Could not save attestation history to DB: %v", err)
 			return

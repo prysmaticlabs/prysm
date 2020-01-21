@@ -413,7 +413,7 @@ func TestAttestationHistory_BlocksDoubleAttestation(t *testing.T) {
 	// Mark an attestation spanning epochs 0 to 3.
 	newAttSource := uint64(0)
 	newAttTarget := uint64(3)
-	attestations = MarkAttestationForTargetEpoch(attestations, newAttSource, newAttTarget)
+	attestations = markAttestationForTargetEpoch(attestations, newAttSource, newAttTarget)
 	if attestations.LatestEpochWritten != newAttTarget {
 		t.Fatalf("Expected latest epoch written to be %d, received %d", newAttTarget, attestations.LatestEpochWritten)
 	}
@@ -421,7 +421,7 @@ func TestAttestationHistory_BlocksDoubleAttestation(t *testing.T) {
 	// Try an attestation that should be slashable (double att) spanning epochs 1 to 3.
 	newAttSource = uint64(1)
 	newAttTarget = uint64(3)
-	if !IsNewAttSlashable(attestations, newAttSource, newAttTarget) {
+	if !isNewAttSlashable(attestations, newAttSource, newAttTarget) {
 		t.Fatalf("Expected attestation of source %d and target %d to be considered slashable", newAttSource, newAttTarget)
 	}
 }
@@ -436,17 +436,17 @@ func TestAttestationHistory_Prunes(t *testing.T) {
 	}
 
 	// Try an attestation on totally unmarked history, should not be slashable.
-	if IsNewAttSlashable(attestations, 0, wsPeriod+5) {
+	if isNewAttSlashable(attestations, 0, wsPeriod+5) {
 		t.Fatalf("Expected attestation of source 0, target %d to be considered slashable", wsPeriod+5)
 	}
 
 	// Mark attestations spanning epochs 0 to 3 and 6 to 9.
 	prunedNewAttSource := uint64(0)
 	prunedNewAttTarget := uint64(3)
-	attestations = MarkAttestationForTargetEpoch(attestations, prunedNewAttSource, prunedNewAttTarget)
+	attestations = markAttestationForTargetEpoch(attestations, prunedNewAttSource, prunedNewAttTarget)
 	newAttSource := prunedNewAttSource + 6
 	newAttTarget := prunedNewAttTarget + 6
-	attestations = MarkAttestationForTargetEpoch(attestations, newAttSource, newAttTarget)
+	attestations = markAttestationForTargetEpoch(attestations, newAttSource, newAttTarget)
 	if attestations.LatestEpochWritten != newAttTarget {
 		t.Fatalf("Expected latest epoch written to be %d, received %d", newAttTarget, attestations.LatestEpochWritten)
 	}
@@ -454,7 +454,7 @@ func TestAttestationHistory_Prunes(t *testing.T) {
 	// Mark an attestation spanning epochs 54000 to 54003.
 	farNewAttSource := newAttSource + wsPeriod
 	farNewAttTarget := newAttTarget + wsPeriod
-	attestations = MarkAttestationForTargetEpoch(attestations, farNewAttSource, farNewAttTarget)
+	attestations = markAttestationForTargetEpoch(attestations, farNewAttSource, farNewAttTarget)
 	if attestations.LatestEpochWritten != farNewAttTarget {
 		t.Fatalf("Expected latest epoch written to be %d, received %d", newAttTarget, attestations.LatestEpochWritten)
 	}
@@ -468,15 +468,15 @@ func TestAttestationHistory_Prunes(t *testing.T) {
 	}
 
 	// Try an attestation from existing source to outside prune, should slash.
-	if !IsNewAttSlashable(attestations, newAttSource, farNewAttTarget) {
+	if !isNewAttSlashable(attestations, newAttSource, farNewAttTarget) {
 		t.Fatalf("Expected attestation of source %d, target %d to be considered slashable", newAttSource, farNewAttTarget)
 	}
 	// Try an attestation from before existing target to outside prune, should slash.
-	if !IsNewAttSlashable(attestations, newAttTarget-1, farNewAttTarget) {
+	if !isNewAttSlashable(attestations, newAttTarget-1, farNewAttTarget) {
 		t.Fatalf("Expected attestation of source %d, target %d to be considered slashable", newAttTarget-1, farNewAttTarget)
 	}
 	// Try an attestation larger than pruning amount, should slash.
-	if !IsNewAttSlashable(attestations, 0, farNewAttTarget+5) {
+	if !isNewAttSlashable(attestations, 0, farNewAttTarget+5) {
 		t.Fatalf("Expected attestation of source 0, target %d to be considered slashable", farNewAttTarget+5)
 	}
 }
@@ -492,7 +492,7 @@ func TestAttestationHistory_BlocksSurroundedAttestation(t *testing.T) {
 	// Mark an attestation spanning epochs 0 to 3.
 	newAttSource := uint64(0)
 	newAttTarget := uint64(3)
-	attestations = MarkAttestationForTargetEpoch(attestations, newAttSource, newAttTarget)
+	attestations = markAttestationForTargetEpoch(attestations, newAttSource, newAttTarget)
 	if attestations.LatestEpochWritten != newAttTarget {
 		t.Fatalf("Expected latest epoch written to be %d, received %d", newAttTarget, attestations.LatestEpochWritten)
 	}
@@ -500,7 +500,7 @@ func TestAttestationHistory_BlocksSurroundedAttestation(t *testing.T) {
 	// Try an attestation that should be slashable (being surrounded) spanning epochs 1 to 2.
 	newAttSource = uint64(1)
 	newAttTarget = uint64(2)
-	if !IsNewAttSlashable(attestations, newAttSource, newAttTarget) {
+	if !isNewAttSlashable(attestations, newAttSource, newAttTarget) {
 		t.Fatalf("Expected attestation of source %d and target %d to be considered slashable", newAttSource, newAttTarget)
 	}
 }
@@ -516,7 +516,7 @@ func TestAttestationHistory_BlocksSurroundingAttestation(t *testing.T) {
 	// Mark an attestation spanning epochs 1 to 2.
 	newAttSource := uint64(1)
 	newAttTarget := uint64(2)
-	attestations = MarkAttestationForTargetEpoch(attestations, newAttSource, newAttTarget)
+	attestations = markAttestationForTargetEpoch(attestations, newAttSource, newAttTarget)
 	if attestations.LatestEpochWritten != newAttTarget {
 		t.Fatalf("Expected latest epoch written to be %d, received %d", newAttTarget, attestations.LatestEpochWritten)
 	}
@@ -527,7 +527,7 @@ func TestAttestationHistory_BlocksSurroundingAttestation(t *testing.T) {
 	// Try an attestation that should be slashable (surrounding) spanning epochs 0 to 3.
 	newAttSource = uint64(0)
 	newAttTarget = uint64(3)
-	if !IsNewAttSlashable(attestations, newAttSource, newAttTarget) {
+	if !isNewAttSlashable(attestations, newAttSource, newAttTarget) {
 		t.Fatalf("Expected attestation of source %d and target %d to be considered slashable", newAttSource, newAttTarget)
 	}
 }
