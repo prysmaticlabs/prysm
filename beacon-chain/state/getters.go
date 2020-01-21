@@ -216,24 +216,33 @@ func (b *BeaconState) JustificationBits() bitfield.Bitvector4 {
 
 // PreviousJustifiedCheckpoint --
 func (b *BeaconState) PreviousJustifiedCheckpoint() *ethpb.Checkpoint {
-	return &ethpb.Checkpoint{
+	cp := &ethpb.Checkpoint{
 		Epoch: b.state.PreviousJustifiedCheckpoint.Epoch,
-		Root:  b.state.PreviousJustifiedCheckpoint.Root,
 	}
+	var root [32]byte
+	copy(root[:], b.state.PreviousJustifiedCheckpoint.Root)
+	cp.Root = root[:]
+	return cp
 }
 
 // CurrentJustifiedCheckpoint --
 func (b *BeaconState) CurrentJustifiedCheckpoint() *ethpb.Checkpoint {
-	return &ethpb.Checkpoint{
+	cp := &ethpb.Checkpoint{
 		Epoch: b.state.CurrentJustifiedCheckpoint.Epoch,
-		Root:  b.state.CurrentJustifiedCheckpoint.Root,
 	}
+	var root [32]byte
+	copy(root[:], b.state.CurrentJustifiedCheckpoint.Root)
+	cp.Root = root[:]
+	return cp
 }
 
 // FinalizedCheckpoint --
 func (b *BeaconState) FinalizedCheckpoint() *ethpb.Checkpoint {
-	return &ethpb.Checkpoint{
+	cp := &ethpb.Checkpoint{
 		Epoch: b.state.FinalizedCheckpoint.Epoch,
-		Root:  b.state.FinalizedCheckpoint.Root,
 	}
+	var root [32]byte
+	copy(root[:], b.state.FinalizedCheckpoint.Root)
+	cp.Root = root[:]
+	return cp
 }
