@@ -106,7 +106,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	FarFutureEpoch:           1<<64 - 1,
 	BaseRewardsPerEpoch:      4,
 	DepositContractTreeDepth: 32,
-	MinGenesisDelay:          86400, // 1 day
+	MinGenesisDelay:          0, // 1 day
 
 	// Misc constant.
 	TargetCommitteeSize:            128,

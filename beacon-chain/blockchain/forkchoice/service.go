@@ -27,8 +27,8 @@ import (
 // to beacon blocks to compute head.
 type ForkChoicer interface {
 	Head(ctx context.Context) ([]byte, error)
-	OnBlock(ctx context.Context, b *ethpb.SignedBeaconBlock) error
-	OnBlockCacheFilteredTree(ctx context.Context, b *ethpb.SignedBeaconBlock) error
+	OnBlock(ctx context.Context, b *ethpb.SignedBeaconBlock) (*pb.BeaconState, error)
+	OnBlockCacheFilteredTree(ctx context.Context, b *ethpb.SignedBeaconBlock) (*pb.BeaconState, error)
 	OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.SignedBeaconBlock) error
 	OnAttestation(ctx context.Context, a *ethpb.Attestation) ([]uint64, error)
 	GenesisStore(ctx context.Context, justifiedCheckpoint *ethpb.Checkpoint, finalizedCheckpoint *ethpb.Checkpoint) error

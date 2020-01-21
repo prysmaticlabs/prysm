@@ -38,7 +38,7 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 		return errors.Wrap(err, "could not process attestation from fork choice service")
 	}
 
-	s.forkchoice.ProcessAttestation(nil, indices, bytesutil.ToBytes32(att.Data.BeaconBlockRoot), att.Data.Target.Epoch)
+	s.forkchoice.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(att.Data.BeaconBlockRoot), att.Data.Target.Epoch)
 
 	// Run fork choice for head block after updating fork choice store.
 	if !featureconfig.Get().DisableForkChoice {

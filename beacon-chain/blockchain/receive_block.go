@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
-	"fmt"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
@@ -71,7 +70,8 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 	blockCopy := proto.Clone(block).(*ethpb.SignedBeaconBlock)
 
 	// Apply state transition on the new block.
-	if err := s.forkChoiceStore.OnBlockCacheFilteredTree(ctx, blockCopy); err != nil {
+	postState, err := s.forkChoiceStore.OnBlockCacheFilteredTree(ctx, blockCopy)
+	if err != nil {
 		err := errors.Wrap(err, "could not process block from fork choice service")
 		traceutil.AnnotateError(span, err)
 		return err
@@ -86,11 +86,27 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 			return errors.Wrap(err, "could not save head")
 		}
 	} else {
+		if err := s.forkchoice.ProcessBlock(ctx, blockCopy.Block.Slot, root, bytesutil.ToBytes32(blockCopy.Block.ParentRoot), postState.CurrentJustifiedCheckpoint.Epoch, postState.FinalizedCheckpoint.Epoch); err != nil {
+			return errors.Wrap(err, "could not process block for proto array fork choice")
+		}
+
 		// Run fork choice after applying state transition on the new block.
 		headRoot, err := s.forkChoiceStore.Head(ctx)
 		if err != nil {
 			return errors.Wrap(err, "could not get head from fork choice service")
 		}
+
+		headRootProtoArray, err := s.forkchoice.Head(
+			ctx,
+			postState.FinalizedCheckpoint.Epoch,
+			bytesutil.ToBytes32(postState.CurrentJustifiedCheckpoint.Root),
+			postState.Balances,
+			postState.CurrentJustifiedCheckpoint.Epoch)
+		if err != nil {
+			return errors.Wrap(err, "could not process fork choice for proto array fork choice")
+		}
+		log.Info(hex.EncodeToString(bytesutil.Trunc(headRoot)))
+		log.Info(hex.EncodeToString(bytesutil.Trunc(headRootProtoArray[:])))
 
 		// Only save head if it's different than the current head.
 		cachedHeadRoot, err := s.HeadRoot(ctx)
@@ -152,7 +168,7 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 	blockCopy := proto.Clone(block).(*ethpb.SignedBeaconBlock)
 
 	// Apply state transition on the incoming newly received block.
-	if err := s.forkChoiceStore.OnBlock(ctx, blockCopy); err != nil {
+	if _, err := s.forkChoiceStore.OnBlock(ctx, blockCopy); err != nil {
 		err := errors.Wrap(err, "could not process block from fork choice service")
 		traceutil.AnnotateError(span, err)
 		return err
