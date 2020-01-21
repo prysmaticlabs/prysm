@@ -89,17 +89,18 @@ func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
 
 // PreviousJustifiedCheckpt returns the previous justified checkpoint from head state.
 func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
-	if s.headState == nil || s.headState.PreviousJustifiedCheckpoint == nil {
+	if s.headState == nil || s.headState.PreviousJustifiedCheckpoint() == nil {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
+	cpt := s.headState.PreviousJustifiedCheckpoint()
 	// If head state exists but there hasn't been a justified check point,
 	// the check point root should refer to genesis block root.
-	if bytes.Equal(s.headState.PreviousJustifiedCheckpoint.Root, params.BeaconConfig().ZeroHash[:]) {
+	if bytes.Equal(cpt.Root, params.BeaconConfig().ZeroHash[:]) {
 		return &ethpb.Checkpoint{Root: s.genesisRoot[:]}
 	}
 
-	return proto.Clone(s.headState.PreviousJustifiedCheckpoint).(*ethpb.Checkpoint)
+	return cpt
 }
 
 // HeadSlot returns the slot of the head of the chain.
@@ -188,7 +189,7 @@ func (s *Service) CurrentFork() *pb.Fork {
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		}
 	}
-	return proto.Clone(s.headState.Fork).(*pb.Fork)
+	return s.headState.Fork()
 }
 
 // Participation returns the participation stats of a given epoch.
