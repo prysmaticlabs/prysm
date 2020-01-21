@@ -10,6 +10,7 @@ type Config struct {
 	Discv5BootStrapAddr   []string
 	RelayNodeAddr         string
 	HostAddress           string
+	HostDNS               string
 	PrivateKey            string
 	DataDir               string
 	TCPPort               uint
