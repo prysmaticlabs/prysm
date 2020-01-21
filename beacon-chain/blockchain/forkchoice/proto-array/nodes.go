@@ -3,7 +3,6 @@ package protoarray
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"math"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -54,10 +53,10 @@ func (s *Store) insert(slot uint64, root [32]byte, parent [32]byte, justifiedEpo
 func (s *Store) head(justifiedRoot [32]byte) ([32]byte, error) {
 	justifiedIndex, ok := s.nodeIndices[justifiedRoot]
 	if !ok {
-		return [32]byte{}, errors.New("unknown justified root")
+		return [32]byte{}, unknownJustifiedRoot
 	}
-	if int(justifiedIndex) >= len(s.nodes) {
-		return [32]byte{}, errors.New("invalid justified index")
+	if justifiedIndex >= uint64(len(s.nodes)) {
+		return [32]byte{}, invalidJustifiedIndex
 	}
 
 	justifiedNode := s.nodes[justifiedIndex]
@@ -66,12 +65,12 @@ func (s *Store) head(justifiedRoot [32]byte) ([32]byte, error) {
 		bestDescendantIndex = justifiedIndex
 	}
 	if bestDescendantIndex >= uint64(len(s.nodes)) {
-		return [32]byte{}, errors.New("invalid best descendant index")
+		return [32]byte{}, invalidBestDescendantIndex
 	}
 
 	bestNode := s.nodes[bestDescendantIndex]
 	if !s.viableForHead(&bestNode) {
-		return [32]byte{}, errors.New("best node not viable for head")
+		return [32]byte{}, invalidBestNode
 	}
 
 	return bestNode.root, nil
@@ -86,8 +85,16 @@ func (s *Store) head(justifiedRoot [32]byte) ([32]byte, error) {
 // - The child is not the best child but becomes the best child.
 // - The child is not the best child and does not become best child.
 func (s *Store) updateBestChildAndDescendant(parentIndex uint64, childIndex uint64) error {
+	if parentIndex >= uint64(len(s.nodes)) {
+		return invalidNodeIndex
+	}
 	parent := s.nodes[parentIndex]
+
+	if childIndex >= uint64(len(s.nodes)) {
+		return invalidNodeIndex
+	}
 	child := s.nodes[childIndex]
+
 	childLeadsToViableHead, err := s.leadsToViableHead(&child)
 	if err != nil {
 		return err
@@ -115,6 +122,9 @@ func (s *Store) updateBestChildAndDescendant(parentIndex uint64, childIndex uint
 			// descendent of the parent is updated.
 			newParentChild = changeToChild
 		} else {
+			if parent.bestChild > uint64(len(s.nodes)) {
+				return invalidBestDescendantIndex
+			}
 			bestChild := &s.nodes[parent.bestChild]
 			bestChildLeadsToViableHead, err := s.leadsToViableHead(bestChild)
 			if err != nil {
@@ -166,10 +176,7 @@ func (s *Store) updateBestChildAndDescendant(parentIndex uint64, childIndex uint
 // along with best descendant.
 func (s *Store) applyScoreChanges(justifiedEpoch uint64, finalizedEpoch uint64, delta []int) error {
 	if len(s.nodeIndices) != len(delta) {
-		return fmt.Errorf("node indices length diff than delta length, %d != %d", len(s.nodeIndices), len(delta))
-	}
-	if len(s.nodes) != len(delta) {
-		return fmt.Errorf("nodes length diff than delta length, %d != %d", len(s.nodes), len(delta))
+		return invalidDeltaLength
 	}
 
 	if s.justifiedEpoch != justifiedEpoch || s.finalizedEpoch != finalizedEpoch {
@@ -188,6 +195,9 @@ func (s *Store) applyScoreChanges(justifiedEpoch uint64, finalizedEpoch uint64, 
 			continue
 		}
 
+		if i >= len(delta) {
+			return invalidNodeDelta
+		}
 		nodeDelta := delta[i]
 
 		if nodeDelta < 0 {
@@ -205,7 +215,7 @@ func (s *Store) applyScoreChanges(justifiedEpoch uint64, finalizedEpoch uint64, 
 		if n.parent != nonExistentNode {
 			// Back propagate the nodes delta to its parent.
 			if int(n.parent) >= len(delta) {
-				return errors.New("invalid parent index")
+				return invalidParentDelta
 			}
 
 			delta[n.parent] += nodeDelta
@@ -218,22 +228,16 @@ func (s *Store) applyScoreChanges(justifiedEpoch uint64, finalizedEpoch uint64, 
 	return nil
 }
 
-// pruneBeforeFinalized prunes the store with the new finalization information. The tree is only
+// prune prunes the store with the new finalization information. The tree is only
 // pruned if the supplied finalized epoch and root are different than current store value and
 // the number of the nodes in store has met prune threshold.
-func (s *Store) pruneBeforeFinalized(finalizedRoot [32]byte, finalizedEpoch uint64) error {
+func (s *Store) prune(finalizedRoot [32]byte, finalizedEpoch uint64) error {
 	s.nodeIndicesLock.Lock()
 	defer s.nodeIndicesLock.Unlock()
 
-	if finalizedEpoch < s.finalizedEpoch {
-		return fmt.Errorf("reverted finalized epoch %d <= %d", finalizedEpoch, s.finalizedEpoch)
-	} else if finalizedEpoch != s.finalizedEpoch {
-		s.finalizedEpoch = finalizedEpoch
-	}
-
 	finalizedIndex, ok := s.nodeIndices[finalizedRoot]
 	if !ok {
-		return errors.New("finalized node unknown")
+		return unknownFinalizedRoot
 	}
 
 	// The number of the nodes has not met the prune threshold.
@@ -245,7 +249,7 @@ func (s *Store) pruneBeforeFinalized(finalizedRoot [32]byte, finalizedEpoch uint
 	// Remove the key/values from indices mapping on to be deleted nodes.
 	for i := uint64(0); i < finalizedIndex; i++ {
 		if int(i) >= len(s.nodes) {
-			return errors.New("invalid node index")
+			return invalidNodeIndex
 		}
 		delete(s.nodeIndices, s.nodes[i].root)
 	}
@@ -296,6 +300,9 @@ func (s *Store) leadsToViableHead(node *Node) (bool, error) {
 	var bestDescendentViable bool
 	bestDescendentIndex := node.bestDescendant
 	if bestDescendentIndex != nonExistentNode {
+		if bestDescendentIndex > uint64(len(s.nodes)) {
+			return false, invalidBestDescendantIndex
+		}
 		bestDescendentNode := &s.nodes[bestDescendentIndex]
 		bestDescendentViable = s.viableForHead(bestDescendentNode)
 	}
