@@ -199,6 +199,9 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessSlot")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(state.Slot)))
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 
 	prevStateRoot, err := stateutil.HashTreeRootState(state)
 	if err != nil {
