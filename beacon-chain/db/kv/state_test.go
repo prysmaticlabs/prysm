@@ -20,7 +20,7 @@ func TestState_CanSaveRetrieve(t *testing.T) {
 	r := [32]byte{'A'}
 
 	if db.HasState(context.Background(), r) {
-		t.Fatal("wanted false")
+		t.Fatal("Wanted false")
 	}
 
 	st, err := state.InitializeFromProto(s)
@@ -33,7 +33,7 @@ func TestState_CanSaveRetrieve(t *testing.T) {
 	}
 
 	if !db.HasState(context.Background(), r) {
-		t.Fatal("wanted true")
+		t.Fatal("Wanted true")
 	}
 
 	savedS, err := db.State(context.Background(), r)
@@ -41,8 +41,8 @@ func TestState_CanSaveRetrieve(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(s, savedS) {
-		t.Error("did not retrieve saved state")
+	if !reflect.DeepEqual(st, savedS) {
+		t.Errorf("Did not retrieve saved state: %v != %v", s, savedS)
 	}
 
 	savedS, err = db.State(context.Background(), [32]byte{'B'})
@@ -51,7 +51,7 @@ func TestState_CanSaveRetrieve(t *testing.T) {
 	}
 
 	if savedS != nil {
-		t.Error("unsaved state should've been nil")
+		t.Error("Unsaved state should've been nil")
 	}
 }
 
@@ -80,7 +80,7 @@ func TestHeadState_CanSaveRetrieve(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(s, savedHeadS) {
+	if !reflect.DeepEqual(st, savedHeadS) {
 		t.Error("did not retrieve saved state")
 	}
 }
@@ -176,7 +176,7 @@ func TestStore_StatesBatchDelete(t *testing.T) {
 			continue
 		}
 		if s.Slot()%2 == 0 {
-			t.Errorf("State with slot %d should have been deleted", s.Slot)
+			t.Errorf("State with slot %d should have been deleted", s.Slot())
 		}
 	}
 }

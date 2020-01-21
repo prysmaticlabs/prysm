@@ -32,6 +32,9 @@ func (k *Store) State(ctx context.Context, blockRoot [32]byte) (*state.BeaconSta
 	if err != nil {
 		return nil, err
 	}
+	if s == nil {
+		return nil, nil
+	}
 	return state.InitializeFromProto(s)
 }
 
@@ -58,6 +61,9 @@ func (k *Store) HeadState(ctx context.Context) (*state.BeaconState, error) {
 	})
 	if err != nil {
 		return nil, err
+	}
+	if s == nil {
+		return nil, nil
 	}
 	span.AddAttributes(trace.BoolAttribute("exists", s != nil))
 	if s != nil {
@@ -89,6 +95,9 @@ func (k *Store) GenesisState(ctx context.Context) (*state.BeaconState, error) {
 	})
 	if err != nil {
 		return nil, err
+	}
+	if s == nil {
+		return nil, nil
 	}
 	return state.InitializeFromProto(s)
 }
