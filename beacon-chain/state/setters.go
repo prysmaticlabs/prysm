@@ -295,6 +295,21 @@ func (b *BeaconState) SetCurrentEpochAttestations(val []*pbp2p.PendingAttestatio
 	return nil
 }
 
+// AppendCurrentEpochAttestations for the beacon state. This PR appends the new value
+// to the the end of list.
+func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestation) error {
+	b.state.CurrentEpochAttestations = append(b.state.CurrentEpochAttestations, val)
+	root, err := stateutil.EpochAttestationsRoot(b.state.CurrentEpochAttestations)
+	if err != nil {
+		return err
+	}
+	b.lock.Lock()
+	b.merkleLayers[0][currentEpochAttestations] = root[:]
+	b.recomputeRoot(int(currentEpochAttestations))
+	b.lock.Unlock()
+	return nil
+}
+
 // SetJustificationBits for the beacon state.
 func (b *BeaconState) SetJustificationBits(val bitfield.Bitvector4) error {
 	root := bytesutil.ToBytes32(b.state.JustificationBits)
