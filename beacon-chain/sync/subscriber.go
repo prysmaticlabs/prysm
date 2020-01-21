@@ -179,6 +179,7 @@ func (r *Service) subscribeWithBase(base proto.Message, topic string, validator 
 func wrapAndReportValidation(topic string, v pubsub.Validator) (string, pubsub.Validator) {
 	return topic, func(ctx context.Context, pid peer.ID, msg *pubsub.Message) bool {
 		defer messagehandler.HandlePanic(ctx, msg)
+		ctx, _ = context.WithTimeout(ctx, pubsubMessageTimeout)
 		messageReceivedCounter.WithLabelValues(topic).Inc()
 		b := v(ctx, pid, msg)
 		if !b {
