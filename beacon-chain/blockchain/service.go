@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -49,7 +50,7 @@ type Service struct {
 	maxRoutines            int64
 	headSlot               uint64
 	headBlock              *ethpb.SignedBeaconBlock
-	headState              *pb.BeaconState
+	headState              *stateTrie.BeaconState
 	canonicalRoots         map[uint64][]byte
 	headLock               sync.RWMutex
 	stateNotifier          statefeed.Notifier
