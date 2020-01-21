@@ -13,10 +13,22 @@ var (
 		Name:  "interop-write-ssz-state-transitions",
 		Usage: "Write ssz states to disk after attempted state transition",
 	}
+	// disableForkChoiceUnsafeFlag disables using the LMD-GHOST fork choice to update
+	// the head of the chain based on attestations and instead accepts any valid received block
+	// as the chain head. UNSAFE, use with caution.
+	disableForkChoiceUnsafeFlag = cli.BoolFlag{
+		Name:  "disable-fork-choice-unsafe",
+		Usage: "UNSAFE: disable fork choice for determining head of the beacon chain.",
+	}
 	// enableAttestationCacheFlag see https://github.com/prysmaticlabs/prysm/issues/3106.
 	enableAttestationCacheFlag = cli.BoolFlag{
 		Name:  "enable-attestation-cache",
 		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
+	}
+	// enableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
+	enableSSZCache = cli.BoolFlag{
+		Name:  "enable-ssz-cache",
+		Usage: "Enable ssz state root cache mechanism.",
 	}
 	// enableEth1DataVoteCacheFlag see https://github.com/prysmaticlabs/prysm/issues/3106.
 	enableEth1DataVoteCacheFlag = cli.BoolFlag{
@@ -55,10 +67,6 @@ var (
 		Name: "enable-slasher",
 		Usage: "Enables connection to a slasher service in order to retrieve slashable events. Slasher is connected to the beacon node using gRPC and " +
 			"the slasher-provider flag can be used to pass its address.",
-	}
-	saveDepositDataFlag = cli.BoolFlag{
-		Name:  "save-deposit-data",
-		Usage: "Enable of the saving of deposit related data",
 	}
 	noGenesisDelayFlag = cli.BoolFlag{
 		Name: "no-genesis-delay",
@@ -162,6 +170,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedSaveDepositDataFlag = cli.BoolFlag{
+		Name:  "save-deposit-data",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -180,6 +193,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedGenesisDelayFlag,
 	deprecatedNewCacheFlag,
 	deprecatedEnableShuffledIndexCacheFlag,
+	deprecatedSaveDepositDataFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -193,6 +207,8 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	noGenesisDelayFlag,
 	minimalConfigFlag,
 	writeSSZStateTransitionsFlag,
+	disableForkChoiceUnsafeFlag,
+	enableSSZCache,
 	enableAttestationCacheFlag,
 	enableEth1DataVoteCacheFlag,
 	initSyncVerifyEverythingFlag,
@@ -201,7 +217,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,
 	enableSkipSlotsCacheFlag,
-	saveDepositDataFlag,
 	enableSlasherFlag,
 	cacheFilteredBlockTreeFlag,
 	cacheProposerIndicesFlag,

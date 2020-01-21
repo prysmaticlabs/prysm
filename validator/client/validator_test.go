@@ -441,7 +441,7 @@ func TestWaitSync_Syncing(t *testing.T) {
 	}
 }
 
-func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignments(t *testing.T) {
+func TestUpdateDuties_DoesNothingWhenNotEpochStart_AlreadyExistingAssignments(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
@@ -470,7 +470,7 @@ func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignm
 	}
 }
 
-func TestUpdateAssignments_ReturnsError(t *testing.T) {
+func TestUpdateDuties_ReturnsError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
@@ -502,7 +502,7 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 	}
 }
 
-func TestUpdateAssignments_OK(t *testing.T) {
+func TestUpdateDuties_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := internal.NewMockBeaconNodeValidatorClient(ctrl)
@@ -512,6 +512,7 @@ func TestUpdateAssignments_OK(t *testing.T) {
 		Duties: []*ethpb.DutiesResponse_Duty{
 			{
 				AttesterSlot:   params.BeaconConfig().SlotsPerEpoch,
+				ValidatorIndex: 200,
 				CommitteeIndex: 100,
 				Committee:      []uint64{0, 1, 2, 3},
 				PublicKey:      []byte("testPubKey_1"),
@@ -528,12 +529,6 @@ func TestUpdateAssignments_OK(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(resp, nil)
-
-	indexResp := &ethpb.ValidatorIndexResponse{Index: 100}
-	client.EXPECT().ValidatorIndex(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(indexResp, nil)
 
 	if err := v.UpdateDuties(context.Background(), slot); err != nil {
 		t.Fatalf("Could not update assignments: %v", err)
@@ -557,6 +552,13 @@ func TestUpdateAssignments_OK(t *testing.T) {
 			"Unexpected validator assignments. want=%v got=%v",
 			resp.Duties[0].CommitteeIndex,
 			v.duties.Duties[0].CommitteeIndex,
+		)
+	}
+	if v.duties.Duties[0].ValidatorIndex != resp.Duties[0].ValidatorIndex {
+		t.Errorf(
+			"Unexpected validator assignments. want=%v got=%v",
+			resp.Duties[0].ValidatorIndex,
+			v.duties.Duties[0].ValidatorIndex,
 		)
 	}
 }

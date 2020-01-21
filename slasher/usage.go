@@ -74,6 +74,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.RPCPort,
 			flags.UseSpanCacheFlag,
 			flags.RebuildSpanMapsFlag,
+			flags.BeaconRPCProviderFlag,
 		},
 	},
 }

@@ -202,9 +202,7 @@ func TestValidatorSpanMap_SaveOnEvict(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
 	ctx := cli.NewContext(app, set, nil)
-	cacheItems = 5
-	maxCacheSize = 5
-	db := SetupSlasherDB(t, ctx)
+	db := SetupSlasherDBDiffCacheSize(t, ctx, 5, 5)
 	defer TeardownSlasherDB(t, db)
 	tsm := &spanMapTestStruct{
 		validatorIdx: 1,
@@ -256,7 +254,7 @@ func TestValidatorSpanMap_SaveCachedSpansMaps(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to save cached span maps to db: %v", err)
 	}
-	spanCache.Clear()
+	db.spanCache.Clear()
 	for _, tt := range spanTests {
 		sm, err := db.ValidatorSpansMap(tt.validatorIdx)
 		if err != nil {

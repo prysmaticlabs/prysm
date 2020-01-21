@@ -286,7 +286,7 @@ func (s *Service) Status() (bool, error) {
 func (s *Service) startDB(ctx *cli.Context) error {
 	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
 	dbPath := path.Join(baseDir, slasherDBName)
-	d, err := db.NewDB(dbPath, ctx)
+	d, err := db.NewDB(dbPath, ctx, 0, 0)
 	if err != nil {
 		return err
 	}
@@ -294,7 +294,7 @@ func (s *Service) startDB(ctx *cli.Context) error {
 		if err := d.ClearDB(); err != nil {
 			return err
 		}
-		d, err = db.NewDB(dbPath, ctx)
+		d, err = db.NewDB(dbPath, ctx, 0, 0)
 		if err != nil {
 			return err
 		}

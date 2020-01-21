@@ -16,6 +16,7 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 		minimalConfig:  true,
 		epochsToRun:    5,
 		numBeaconNodes: 4,
+		enableSSZCache: true,
 		numValidators:  params.BeaconConfig().MinGenesisActiveValidatorCount,
 		evaluators: []ev.Evaluator{
 			ev.ValidatorsAreActive,

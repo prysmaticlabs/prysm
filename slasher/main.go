@@ -71,6 +71,7 @@ var appFlags = []cli.Flag{
 	flags.KeyFlag,
 	flags.UseSpanCacheFlag,
 	flags.RebuildSpanMapsFlag,
+	flags.BeaconRPCProviderFlag,
 }
 
 func init() {

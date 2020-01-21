@@ -109,9 +109,38 @@ func (c *CommitteeCache) AddCommitteeShuffledList(committees *Committees) error 
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	if err := c.CommitteeCache.Add(committees); err != nil {
+	if err := c.CommitteeCache.AddIfNotPresent(committees); err != nil {
 		return err
 	}
+	trim(c.CommitteeCache, maxCommitteesCacheSize)
+	return nil
+}
+
+// AddProposerIndicesList updates the committee shuffled list with proposer indices.
+func (c *CommitteeCache) AddProposerIndicesList(seed [32]byte, indices []uint64) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	obj, exists, err := c.CommitteeCache.GetByKey(key(seed))
+	if err != nil {
+		return err
+	}
+	if !exists {
+		committees := &Committees{ProposerIndices: indices}
+		if err := c.CommitteeCache.Add(committees); err != nil {
+			return err
+		}
+	} else {
+		committees, ok := obj.(*Committees)
+		if !ok {
+			return ErrNotCommittee
+		}
+		committees.ProposerIndices = indices
+		if err := c.CommitteeCache.Add(committees); err != nil {
+			return err
+		}
+	}
+
 	trim(c.CommitteeCache, maxCommitteesCacheSize)
 	return nil
 }
@@ -174,7 +203,7 @@ func startEndIndices(c *Committees, index uint64) (uint64, uint64) {
 // Using seed as source for key to handle reorgs in the same epoch.
 // The seed is derived from state's array of randao mixes and epoch value
 // hashed together. This avoids collisions on different validator set. Spec definition:
-// https://github.com/ethereum/eth2.0-specs/blob/v0.9.2/specs/core/0_beacon-chain.md#get_seed
+// https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/core/0_beacon-chain.md#get_seed
 func key(seed [32]byte) string {
 	return string(seed[:])
 }

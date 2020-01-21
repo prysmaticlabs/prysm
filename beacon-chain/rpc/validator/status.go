@@ -178,6 +178,7 @@ func (vs *Server) assignmentStatus(validatorIdx uint64, beaconState *pbp2p.Beaco
 }
 
 func (vs *Server) depositBlockSlot(ctx context.Context, eth1BlockNumBigInt *big.Int, beaconState *pbp2p.BeaconState) (uint64, error) {
+	var depositBlockSlot uint64
 	blockTimeStamp, err := vs.BlockFetcher.BlockTimeByHeight(ctx, eth1BlockNumBigInt)
 	if err != nil {
 		return 0, err
@@ -190,8 +191,13 @@ func (vs *Server) depositBlockSlot(ctx context.Context, eth1BlockNumBigInt *big.
 	timeToInclusion := eth1UnixTime.Add(votingPeriodSeconds)
 
 	eth2Genesis := time.Unix(int64(beaconState.GenesisTime), 0)
-	eth2TimeDifference := timeToInclusion.Sub(eth2Genesis).Seconds()
-	depositBlockSlot := uint64(eth2TimeDifference) / params.BeaconConfig().SecondsPerSlot
+
+	if eth2Genesis.After(timeToInclusion) {
+		depositBlockSlot = 0
+	} else {
+		eth2TimeDifference := timeToInclusion.Sub(eth2Genesis).Seconds()
+		depositBlockSlot = uint64(eth2TimeDifference) / params.BeaconConfig().SecondsPerSlot
+	}
 
 	return depositBlockSlot, nil
 }
