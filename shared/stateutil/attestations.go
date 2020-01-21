@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// EpochAttestationsRoot --
 func EpochAttestationsRoot(atts []*pb.PendingAttestation) ([32]byte, error) {
 	if featureconfig.Get().EnableSSZCache {
 		return cachedHasher.epochAttestationsRoot(atts)

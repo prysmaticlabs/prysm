@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// ValidatorRegistryRoot --
 func ValidatorRegistryRoot(vals []*ethpb.Validator) ([32]byte, error) {
 	if featureconfig.Get().EnableSSZCache {
 		return cachedHasher.validatorRegistryRoot(vals)
@@ -19,6 +20,7 @@ func ValidatorRegistryRoot(vals []*ethpb.Validator) ([32]byte, error) {
 	return nocachedHasher.validatorRegistryRoot(vals)
 }
 
+// ValidatorBalancesRoot --
 func ValidatorBalancesRoot(balances []uint64) ([32]byte, error) {
 	balancesMarshaling := make([][]byte, 0)
 	for i := 0; i < len(balances); i++ {

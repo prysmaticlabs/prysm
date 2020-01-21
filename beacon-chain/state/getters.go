@@ -154,6 +154,7 @@ func (b *BeaconState) JustificationBits() bitfield.Bitvector4 {
 	return res
 }
 
+// PreviousJustifiedCheckpoint --
 func (b *BeaconState) PreviousJustifiedCheckpoint() *ethpb.Checkpoint {
 	return &ethpb.Checkpoint{
 		Epoch: b.state.PreviousJustifiedCheckpoint.Epoch,
@@ -161,6 +162,7 @@ func (b *BeaconState) PreviousJustifiedCheckpoint() *ethpb.Checkpoint {
 	}
 }
 
+// CurrentJustifiedCheckpoint --
 func (b *BeaconState) CurrentJustifiedCheckpoint() *ethpb.Checkpoint {
 	return &ethpb.Checkpoint{
 		Epoch: b.state.CurrentJustifiedCheckpoint.Epoch,
@@ -168,6 +170,7 @@ func (b *BeaconState) CurrentJustifiedCheckpoint() *ethpb.Checkpoint {
 	}
 }
 
+// FinalizedCheckpoint --
 func (b *BeaconState) FinalizedCheckpoint() *ethpb.Checkpoint {
 	return &ethpb.Checkpoint{
 		Epoch: b.state.FinalizedCheckpoint.Epoch,

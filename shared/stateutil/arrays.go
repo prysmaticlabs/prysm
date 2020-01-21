@@ -17,6 +17,7 @@ var (
 	lock        sync.RWMutex
 )
 
+// ArraysRoot --
 func ArraysRoot(vals [][]byte, length uint64, fieldName string) ([32]byte, error) {
 	if featureconfig.Get().EnableSSZCache {
 		return cachedHasher.arraysRoot(vals, length, fieldName)

@@ -35,6 +35,7 @@ const (
 	finalizedCheckpoint
 )
 
+// SetGenesisTime --
 func (b *BeaconState) SetGenesisTime(val uint64) error {
 	b.state.GenesisTime = val
 	root := stateutil.Uint64Root(val)
@@ -45,6 +46,7 @@ func (b *BeaconState) SetGenesisTime(val uint64) error {
 	return nil
 }
 
+// SetSlot --
 func (b *BeaconState) SetSlot(val uint64) error {
 	b.state.Slot = val
 	root := stateutil.Uint64Root(val)
@@ -55,6 +57,7 @@ func (b *BeaconState) SetSlot(val uint64) error {
 	return nil
 }
 
+// SetFork --
 func (b *BeaconState) SetFork(val *pbp2p.Fork) error {
 	root, err := stateutil.ForkRoot(val)
 	if err != nil {
@@ -68,6 +71,7 @@ func (b *BeaconState) SetFork(val *pbp2p.Fork) error {
 	return nil
 }
 
+// SetLatestBlockHeader --
 func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
 	root, err := stateutil.BlockHeaderRoot(val)
 	if err != nil {
@@ -81,6 +85,7 @@ func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
 	return nil
 }
 
+// SetBlockRoots --
 func (b *BeaconState) SetBlockRoots(val [][]byte) error {
 	root, err := stateutil.ArraysRoot(val, params.BeaconConfig().SlotsPerHistoricalRoot, "BlockRoots")
 	if err != nil {
@@ -94,6 +99,7 @@ func (b *BeaconState) SetBlockRoots(val [][]byte) error {
 	return nil
 }
 
+// SetStateRoots --
 func (b *BeaconState) SetStateRoots(val [][]byte) error {
 	root, err := stateutil.ArraysRoot(val, params.BeaconConfig().SlotsPerHistoricalRoot, "StateRoots")
 	if err != nil {
@@ -107,6 +113,7 @@ func (b *BeaconState) SetStateRoots(val [][]byte) error {
 	return nil
 }
 
+// SetHistoricalRoots --
 func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
 	root, err := stateutil.HistoricalRootsRoot(b.state.HistoricalRoots)
 	if err != nil {
@@ -120,6 +127,7 @@ func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
 	return nil
 }
 
+// SetEth1Data --
 func (b *BeaconState) SetEth1Data(val *ethpb.Eth1Data) error {
 	root, err := stateutil.Eth1Root(b.state.Eth1Data)
 	if err != nil {
@@ -133,6 +141,7 @@ func (b *BeaconState) SetEth1Data(val *ethpb.Eth1Data) error {
 	return nil
 }
 
+// SetEth1DataVotes --
 func (b *BeaconState) SetEth1DataVotes(val []*ethpb.Eth1Data) error {
 	root, err := stateutil.Eth1DataVotesRoot(b.state.Eth1DataVotes)
 	if err != nil {
@@ -146,6 +155,7 @@ func (b *BeaconState) SetEth1DataVotes(val []*ethpb.Eth1Data) error {
 	return nil
 }
 
+// SetEth1DepositIndex --
 func (b *BeaconState) SetEth1DepositIndex(val uint64) error {
 	b.state.Eth1DepositIndex = val
 	root := stateutil.Uint64Root(val)
@@ -156,6 +166,7 @@ func (b *BeaconState) SetEth1DepositIndex(val uint64) error {
 	return nil
 }
 
+// SetValidators --
 func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 	root, err := stateutil.ValidatorRegistryRoot(b.state.Validators)
 	if err != nil {
@@ -169,6 +180,7 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 	return nil
 }
 
+// SetBalances --
 func (b *BeaconState) SetBalances(val []uint64) error {
 	root, err := stateutil.ValidatorBalancesRoot(b.state.Balances)
 	if err != nil {
@@ -182,6 +194,7 @@ func (b *BeaconState) SetBalances(val []uint64) error {
 	return nil
 }
 
+// SetRandaoMixes --
 func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
 	root, err := stateutil.ArraysRoot(val, params.BeaconConfig().EpochsPerHistoricalVector, "RandaoMixes")
 	if err != nil {
@@ -195,6 +208,7 @@ func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
 	return nil
 }
 
+// SetSlashings --
 func (b *BeaconState) SetSlashings(val []uint64) error {
 	root, err := stateutil.SlashingsRoot(b.state.Slashings)
 	if err != nil {
@@ -208,6 +222,7 @@ func (b *BeaconState) SetSlashings(val []uint64) error {
 	return nil
 }
 
+// SetPreviousEpochAttestations --
 func (b *BeaconState) SetPreviousEpochAttestations(val []*pbp2p.PendingAttestation) error {
 	root, err := stateutil.EpochAttestationsRoot(b.state.PreviousEpochAttestations)
 	if err != nil {
@@ -221,6 +236,7 @@ func (b *BeaconState) SetPreviousEpochAttestations(val []*pbp2p.PendingAttestati
 	return nil
 }
 
+// SetCurrentEpochAttestations --
 func (b *BeaconState) SetCurrentEpochAttestations(val []*pbp2p.PendingAttestation) error {
 	root, err := stateutil.EpochAttestationsRoot(b.state.CurrentEpochAttestations)
 	if err != nil {
@@ -234,6 +250,7 @@ func (b *BeaconState) SetCurrentEpochAttestations(val []*pbp2p.PendingAttestatio
 	return nil
 }
 
+// SetJustificationBits --
 func (b *BeaconState) SetJustificationBits(val bitfield.Bitvector4) error {
 	root := bytesutil.ToBytes32(b.state.JustificationBits)
 	b.state.JustificationBits = val
@@ -244,6 +261,7 @@ func (b *BeaconState) SetJustificationBits(val bitfield.Bitvector4) error {
 	return nil
 }
 
+// SetPreviousJustifiedCheckpoint --
 func (b *BeaconState) SetPreviousJustifiedCheckpoint(val *ethpb.Checkpoint) error {
 	root, err := stateutil.CheckpointRoot(b.state.PreviousJustifiedCheckpoint)
 	if err != nil {
@@ -257,6 +275,7 @@ func (b *BeaconState) SetPreviousJustifiedCheckpoint(val *ethpb.Checkpoint) erro
 	return nil
 }
 
+// SetCurrentJustifiedCheckpoint --
 func (b *BeaconState) SetCurrentJustifiedCheckpoint(val *ethpb.Checkpoint) error {
 	root, err := stateutil.CheckpointRoot(b.state.CurrentJustifiedCheckpoint)
 	if err != nil {
@@ -270,6 +289,7 @@ func (b *BeaconState) SetCurrentJustifiedCheckpoint(val *ethpb.Checkpoint) error
 	return nil
 }
 
+// SetFinalizedCheckpoint --
 func (b *BeaconState) SetFinalizedCheckpoint(val *ethpb.Checkpoint) error {
 	root, err := stateutil.CheckpointRoot(b.state.FinalizedCheckpoint)
 	if err != nil {

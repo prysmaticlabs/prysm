@@ -211,6 +211,7 @@ func (h *stateRootHasher) computeFieldRoots(state *pb.BeaconState) ([][]byte, er
 	return fieldRoots, nil
 }
 
+// Uint64Root --
 func Uint64Root(val uint64) [32]byte {
 	buf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(buf, val)
@@ -218,6 +219,7 @@ func Uint64Root(val uint64) [32]byte {
 	return root
 }
 
+// ForkRoot --
 func ForkRoot(fork *pb.Fork) ([32]byte, error) {
 	fieldRoots := make([][]byte, 3)
 	if fork != nil {
@@ -233,6 +235,7 @@ func ForkRoot(fork *pb.Fork) ([32]byte, error) {
 	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
+// CheckpointRoot --
 func CheckpointRoot(checkpoint *ethpb.Checkpoint) ([32]byte, error) {
 	fieldRoots := make([][]byte, 2)
 	if checkpoint != nil {
@@ -245,6 +248,7 @@ func CheckpointRoot(checkpoint *ethpb.Checkpoint) ([32]byte, error) {
 	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
+// HistoricalRootsRoot --
 func HistoricalRootsRoot(historicalRoots [][]byte) ([32]byte, error) {
 	result, err := bitwiseMerkleize(historicalRoots, uint64(len(historicalRoots)), params.BeaconConfig().HistoricalRootsLimit)
 	if err != nil {
@@ -261,6 +265,7 @@ func HistoricalRootsRoot(historicalRoots [][]byte) ([32]byte, error) {
 	return mixedLen, nil
 }
 
+// SlashingsRoot --
 func SlashingsRoot(slashings []uint64) ([32]byte, error) {
 	slashingMarshaling := make([][]byte, params.BeaconConfig().EpochsPerSlashingsVector)
 	for i := 0; i < len(slashings) && i < len(slashingMarshaling); i++ {
