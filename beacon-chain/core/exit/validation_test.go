@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/exit"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -96,6 +97,10 @@ func TestValidation(t *testing.T) {
 	if err != nil {
 		t.Fatal("Failed to obtain head state")
 	}
+	st, err := stateTrie.InitializeFromProto(headState)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -107,7 +112,7 @@ func TestValidation(t *testing.T) {
 				Signature: test.signature,
 			}
 
-			err := exit.ValidateVoluntaryExit(headState, genesisTime, req)
+			err := exit.ValidateVoluntaryExit(st, genesisTime, req)
 			if test.err == nil {
 				if err != nil {
 					t.Errorf("Unexpected error: received %v", err)

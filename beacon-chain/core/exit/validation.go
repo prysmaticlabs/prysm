@@ -8,7 +8,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -17,15 +17,16 @@ import (
 
 // ValidateVoluntaryExit validates the voluntary exit.
 // If it is invalid for some reason an error, if valid it will return no error.
-func ValidateVoluntaryExit(state *pb.BeaconState, genesisTime time.Time, signed *ethpb.SignedVoluntaryExit) error {
+func ValidateVoluntaryExit(state *stateTrie.BeaconState, genesisTime time.Time, signed *ethpb.SignedVoluntaryExit) error {
 	if signed == nil || signed.Exit == nil {
 		return errors.New("nil signed voluntary exit")
 	}
 	ve := signed.Exit
-	if ve.ValidatorIndex >= uint64(len(state.Validators)) {
+	vals := state.Validators()
+	if ve.ValidatorIndex >= uint64(len(vals)) {
 		return fmt.Errorf("unknown validator index %d", ve.ValidatorIndex)
 	}
-	validator := state.Validators[ve.ValidatorIndex]
+	validator := vals[ve.ValidatorIndex]
 
 	if !helpers.IsActiveValidator(validator, ve.Epoch) {
 		return fmt.Errorf("validator %d not active at epoch %d", ve.ValidatorIndex, ve.Epoch)

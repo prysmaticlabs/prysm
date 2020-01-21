@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -19,16 +20,17 @@ var Balances *Balance
 // it also tracks and updates epoch attesting balances.
 func ProcessAttestations(
 	ctx context.Context,
-	state *pb.BeaconState,
+	state *stateTrie.BeaconState,
 	vp []*Validator,
-	bp *Balance) ([]*Validator, *Balance, error) {
+	bp *Balance,
+) ([]*Validator, *Balance, error) {
 	ctx, span := trace.StartSpan(ctx, "precomputeEpoch.ProcessAttestations")
 	defer span.End()
 
 	v := &Validator{}
 	var err error
 
-	for _, a := range append(state.PreviousEpochAttestations, state.CurrentEpochAttestations...) {
+	for _, a := range append(state.PreviousEpochAttestations(), state.CurrentEpochAttestations()...) {
 		v.IsCurrentEpochAttester, v.IsCurrentEpochTargetAttester, err = AttestedCurrentEpoch(state, a)
 		if err != nil {
 			traceutil.AnnotateError(span, err)

@@ -164,6 +164,21 @@ func (b *BeaconState) SetEth1DataVotes(val []*ethpb.Eth1Data) error {
 	return nil
 }
 
+// AppendEth1DataVotes for the beacon state. This PR appends the new value
+// to the the end of list.
+func (b *BeaconState) AppendEth1DataVotes(val *ethpb.Eth1Data) error {
+	b.state.Eth1DataVotes = append(b.state.Eth1DataVotes, val)
+	root, err := stateutil.Eth1DataVotesRoot(b.state.Eth1DataVotes)
+	if err != nil {
+		return err
+	}
+	b.lock.Lock()
+	b.merkleLayers[0][eth1DataVotes] = root[:]
+	b.recomputeRoot(int(eth1DataVotes))
+	b.lock.Unlock()
+	return nil
+}
+
 // SetEth1DepositIndex for the beacon state.
 func (b *BeaconState) SetEth1DepositIndex(val uint64) error {
 	b.state.Eth1DepositIndex = val
@@ -213,6 +228,21 @@ func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
 		return err
 	}
 	b.state.RandaoMixes = val
+	b.lock.Lock()
+	b.merkleLayers[0][randaoMixes] = root[:]
+	b.recomputeRoot(int(randaoMixes))
+	b.lock.Unlock()
+	return nil
+}
+
+// UpdateRandaoMixesAtIndex for the beacon state. This PR updates the randao mixes
+// at a specific index to a new value.
+func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
+	b.state.RandaoMixes[idx] = val
+	root, err := stateutil.RootsArrayHashTreeRoot(b.state.RandaoMixes, params.BeaconConfig().EpochsPerHistoricalVector, "RandaoMixes")
+	if err != nil {
+		return err
+	}
 	b.lock.Lock()
 	b.merkleLayers[0][randaoMixes] = root[:]
 	b.recomputeRoot(int(randaoMixes))

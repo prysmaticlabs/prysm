@@ -1,7 +1,7 @@
 package helpers
 
 import (
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 )
 
 // TotalBalance returns the total amount at stake in Gwei
@@ -13,10 +13,11 @@ import (
 //    Return the combined effective balance of the ``indices``. (1 Gwei minimum to avoid divisions by zero.)
 //    """
 //    return Gwei(max(1, sum([state.validators[index].effective_balance for index in indices])))
-func TotalBalance(state *pb.BeaconState, indices []uint64) uint64 {
+func TotalBalance(state *stateTrie.BeaconState, indices []uint64) uint64 {
+	vals := state.Validators()
 	total := uint64(0)
 	for _, idx := range indices {
-		total += state.Validators[idx].EffectiveBalance
+		total += vals[idx].EffectiveBalance
 	}
 
 	// Return 1 Gwei minimum to avoid divisions by zero
@@ -36,11 +37,12 @@ func TotalBalance(state *pb.BeaconState, indices []uint64) uint64 {
 //    Return the combined effective balance of the active validators.
 //    """
 //    return get_total_balance(state, set(get_active_validator_indices(state, get_current_epoch(state))))
-func TotalActiveBalance(state *pb.BeaconState) (uint64, error) {
+func TotalActiveBalance(state *stateTrie.BeaconState) (uint64, error) {
+	vals := state.Validators()
 	total := uint64(0)
-	for i, v := range state.Validators {
-		if IsActiveValidator(v, CurrentEpoch(state)) {
-			total += state.Validators[i].EffectiveBalance
+	for i, v := range vals {
+		if IsActiveValidator(v, SlotToEpoch(state.Slot())) {
+			total += vals[i].EffectiveBalance
 		}
 	}
 	return total, nil
@@ -54,9 +56,9 @@ func TotalActiveBalance(state *pb.BeaconState) (uint64, error) {
 //    Increase the validator balance at index ``index`` by ``delta``.
 //    """
 //    state.balances[index] += delta
-func IncreaseBalance(state *pb.BeaconState, idx uint64, delta uint64) *pb.BeaconState {
-	state.Balances[idx] += delta
-	return state
+func IncreaseBalance(state *stateTrie.BeaconState, idx uint64, delta uint64) error {
+	balAtIdx := state.BalanceAtIndex(idx)
+	return state.UpdateBalancesAtIndex(balAtIdx+delta, idx)
 }
 
 // DecreaseBalance decreases validator with the given 'index' balance by 'delta' in Gwei.
@@ -67,11 +69,10 @@ func IncreaseBalance(state *pb.BeaconState, idx uint64, delta uint64) *pb.Beacon
 //    Decrease the validator balance at index ``index`` by ``delta``, with underflow protection.
 //    """
 //    state.balances[index] = 0 if delta > state.balances[index] else state.balances[index] - delta
-func DecreaseBalance(state *pb.BeaconState, idx uint64, delta uint64) *pb.BeaconState {
-	if delta > state.Balances[idx] {
-		state.Balances[idx] = 0
-		return state
+func DecreaseBalance(state *stateTrie.BeaconState, idx uint64, delta uint64) error {
+	balAtIdx := state.BalanceAtIndex(idx)
+	if delta > balAtIdx {
+		return state.UpdateBalancesAtIndex(0, idx)
 	}
-	state.Balances[idx] -= delta
-	return state
+	return state.UpdateBalancesAtIndex(balAtIdx-delta, idx)
 }
