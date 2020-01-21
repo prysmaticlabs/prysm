@@ -2,15 +2,20 @@ package protoarray
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"math"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
 )
 
 // insert registers a new block node to the fork choice store.
 // It updates the new node's parent with best child and descendant node.
-func (s *Store) insert(slot uint64, root [32]byte, parent [32]byte, justifiedEpoch uint64, finalizedEpoch uint64) error {
+func (s *Store) insert(ctx context.Context, slot uint64, root [32]byte, parent [32]byte, justifiedEpoch uint64, finalizedEpoch uint64) error {
+	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.insert")
+	defer span.End()
+
 	s.nodeIndicesLock.Lock()
 	defer s.nodeIndicesLock.Unlock()
 
@@ -41,7 +46,7 @@ func (s *Store) insert(slot uint64, root [32]byte, parent [32]byte, justifiedEpo
 	s.nodes = append(s.nodes, n)
 
 	if n.parent != nonExistentNode {
-		if err := s.updateBestChildAndDescendant(parentIndex, uint64(index)); err != nil {
+		if err := s.updateBestChildAndDescendant(ctx, parentIndex, uint64(index)); err != nil {
 			return err
 		}
 	}
@@ -50,7 +55,10 @@ func (s *Store) insert(slot uint64, root [32]byte, parent [32]byte, justifiedEpo
 }
 
 // head starts from justifiedRoot and then follows the best descendant links to find the best block for head.
-func (s *Store) head(justifiedRoot [32]byte) ([32]byte, error) {
+func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.head")
+	defer span.End()
+
 	justifiedIndex, ok := s.nodeIndices[justifiedRoot]
 	if !ok {
 		return [32]byte{}, unknownJustifiedRoot
@@ -69,7 +77,7 @@ func (s *Store) head(justifiedRoot [32]byte) ([32]byte, error) {
 	}
 
 	bestNode := s.nodes[bestDescendantIndex]
-	if !s.viableForHead(bestNode) {
+	if !s.viableForHead(ctx, bestNode) {
 		return [32]byte{}, invalidBestNode
 	}
 
@@ -84,7 +92,10 @@ func (s *Store) head(justifiedRoot [32]byte) ([32]byte, error) {
 // - The child is already the best child and the parent is updated with the new best descendant.
 // - The child is not the best child but becomes the best child.
 // - The child is not the best child and does not become best child.
-func (s *Store) updateBestChildAndDescendant(parentIndex uint64, childIndex uint64) error {
+func (s *Store) updateBestChildAndDescendant(ctx context.Context, parentIndex uint64, childIndex uint64) error {
+	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.updateBestChildAndDescendant")
+	defer span.End()
+
 	if parentIndex >= uint64(len(s.nodes)) {
 		return invalidNodeIndex
 	}
@@ -95,7 +106,7 @@ func (s *Store) updateBestChildAndDescendant(parentIndex uint64, childIndex uint
 	}
 	child := s.nodes[childIndex]
 
-	childLeadsToViableHead, err := s.leadsToViableHead(child)
+	childLeadsToViableHead, err := s.leadsToViableHead(ctx, child)
 	if err != nil {
 		return err
 	}
@@ -126,7 +137,7 @@ func (s *Store) updateBestChildAndDescendant(parentIndex uint64, childIndex uint
 				return invalidBestDescendantIndex
 			}
 			bestChild := s.nodes[parent.bestChild]
-			bestChildLeadsToViableHead, err := s.leadsToViableHead(bestChild)
+			bestChildLeadsToViableHead, err := s.leadsToViableHead(ctx, bestChild)
 			if err != nil {
 				return err
 			}
@@ -174,7 +185,10 @@ func (s *Store) updateBestChildAndDescendant(parentIndex uint64, childIndex uint
 // and potential best child. For each node, it updates the weight with input delta and
 // back propagate each nodes delta to its parents delta. The best child is then updated
 // along with best descendant.
-func (s *Store) applyScoreChanges(justifiedEpoch uint64, finalizedEpoch uint64, delta []int) error {
+func (s *Store) applyScoreChanges(ctx context.Context, justifiedEpoch uint64, finalizedEpoch uint64, delta []int) error {
+	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.applyScoreChanges")
+	defer span.End()
+
 	if len(s.nodeIndices) != len(delta) {
 		return invalidDeltaLength
 	}
@@ -219,7 +233,7 @@ func (s *Store) applyScoreChanges(justifiedEpoch uint64, finalizedEpoch uint64, 
 			}
 
 			delta[n.parent] += nodeDelta
-			if err := s.updateBestChildAndDescendant(n.parent, uint64(i)); err != nil {
+			if err := s.updateBestChildAndDescendant(ctx, n.parent, uint64(i)); err != nil {
 				return err
 			}
 		}
@@ -296,7 +310,10 @@ func (s *Store) prune(finalizedRoot [32]byte, finalizedEpoch uint64) error {
 // leadsToViableHead returns true if the node or the best descendent of the node is viable for head.
 // Any node with diff finalized or justified epoch than the ones in fork choice store
 // should not be viable to head.
-func (s *Store) leadsToViableHead(node *Node) (bool, error) {
+func (s *Store) leadsToViableHead(ctx context.Context, node *Node) (bool, error) {
+	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.leadsToViableHead")
+	defer span.End()
+
 	var bestDescendentViable bool
 	bestDescendentIndex := node.bestDescendant
 	if bestDescendentIndex != nonExistentNode {
@@ -304,16 +321,19 @@ func (s *Store) leadsToViableHead(node *Node) (bool, error) {
 			return false, invalidBestDescendantIndex
 		}
 		bestDescendentNode := s.nodes[bestDescendentIndex]
-		bestDescendentViable = s.viableForHead(bestDescendentNode)
+		bestDescendentViable = s.viableForHead(ctx, bestDescendentNode)
 	}
 
-	return bestDescendentViable || s.viableForHead(node), nil
+	return bestDescendentViable || s.viableForHead(ctx, node), nil
 }
 
 // viableForHead returns true if the node is viable to head.
 // Any node with diff finalized or justified epoch than the ones in fork choice store
 // should not be viable to head.
-func (s *Store) viableForHead(node *Node) bool {
+func (s *Store) viableForHead(ctx context.Context, node *Node) bool {
+	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.viableForHead")
+	defer span.End()
+
 	justified := s.justifiedEpoch == node.justifiedEpoch || s.justifiedEpoch == 0
 	finalized := s.finalizedEpoch == node.finalizedEpoch || s.finalizedEpoch == 0
 	return justified && finalized

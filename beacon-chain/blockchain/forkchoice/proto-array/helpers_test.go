@@ -1,6 +1,7 @@
 package protoarray
 
 import (
+	"context"
 	"encoding/binary"
 	"testing"
 
@@ -22,7 +23,7 @@ func TestComputeDelta_ZeroHash(t *testing.T) {
 		newBalances = append(newBalances, 0)
 	}
 
-	delta, _, err := computeDeltas(indices, votes, oldBalances, newBalances)
+	delta, _, err := computeDeltas(context.Background(), indices, votes, oldBalances, newBalances)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,7 +60,7 @@ func TestComputeDelta_AllVoteTheSame(t *testing.T) {
 		newBalances = append(newBalances, balance)
 	}
 
-	delta, _, err := computeDeltas(indices, votes, oldBalances, newBalances)
+	delta, _, err := computeDeltas(context.Background(), indices, votes, oldBalances, newBalances)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +102,7 @@ func TestComputeDelta_DifferentVotes(t *testing.T) {
 		newBalances = append(newBalances, balance)
 	}
 
-	delta, _, err := computeDeltas(indices, votes, oldBalances, newBalances)
+	delta, _, err := computeDeltas(context.Background(), indices, votes, oldBalances, newBalances)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,7 +139,7 @@ func TestComputeDelta_MovingVotes(t *testing.T) {
 		newBalances = append(newBalances, balance)
 	}
 
-	delta, _, err := computeDeltas(indices, votes, oldBalances, newBalances)
+	delta, _, err := computeDeltas(context.Background(), indices, votes, oldBalances, newBalances)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,7 +182,7 @@ func TestComputeDelta_MoveOutOfTree(t *testing.T) {
 	votes = append(votes, Vote{indexToHash(1), params.BeaconConfig().ZeroHash, 0})
 	votes = append(votes, Vote{indexToHash(1), [32]byte{'A'}, 0})
 
-	delta, _, err := computeDeltas(indices, votes, oldBalances, newBalances)
+	delta, _, err := computeDeltas(context.Background(), indices, votes, oldBalances, newBalances)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -218,7 +219,7 @@ func TestComputeDelta_ChangingBalances(t *testing.T) {
 		newBalances = append(newBalances, newBalance)
 	}
 
-	delta, _, err := computeDeltas(indices, votes, oldBalances, newBalances)
+	delta, _, err := computeDeltas(context.Background(), indices, votes, oldBalances, newBalances)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -261,7 +262,7 @@ func TestComputeDelta_ValidatorAppear(t *testing.T) {
 	votes = append(votes, Vote{indexToHash(1), indexToHash(2), 0})
 	votes = append(votes, Vote{indexToHash(1), indexToHash(2), 0})
 
-	delta, _, err := computeDeltas(indices, votes, oldBalances, newBalances)
+	delta, _, err := computeDeltas(context.Background(), indices, votes, oldBalances, newBalances)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -297,7 +298,7 @@ func TestComputeDelta_ValidatorDisappears(t *testing.T) {
 	votes = append(votes, Vote{indexToHash(1), indexToHash(2), 0})
 	votes = append(votes, Vote{indexToHash(1), indexToHash(2), 0})
 
-	delta, _, err := computeDeltas(indices, votes, oldBalances, newBalances)
+	delta, _, err := computeDeltas(context.Background(), indices, votes, oldBalances, newBalances)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,6 +1,7 @@
 package protoarray
 
 import (
+	"context"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -11,7 +12,7 @@ func TestFFGUpdates_OneBranch(t *testing.T) {
 
 	f := New(0, 0, params.BeaconConfig().ZeroHash)
 	// The head should always start at the finalized block.
-	r, err := f.Head(0, 0, params.BeaconConfig().ZeroHash, balances)
+	r, err := f.Head(context.Background(), 0, params.BeaconConfig().ZeroHash, balances, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -27,13 +28,13 @@ func TestFFGUpdates_OneBranch(t *testing.T) {
 	//            2 <- justified: 1, finalized: 0
 	//            |
 	//            3 <- justified: 2, finalized: 1
-	if err := f.ProcessBlock(1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0); err != nil {
+	if err := f.ProcessBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0); err != nil {
 		t.Fatal(err)
 	}
-	if err := f.ProcessBlock(2, indexToHash(2), indexToHash(1), 1, 0); err != nil {
+	if err := f.ProcessBlock(context.Background(), 2, indexToHash(2), indexToHash(1), 1, 0); err != nil {
 		t.Fatal(err)
 	}
-	if err := f.ProcessBlock(3, indexToHash(3), indexToHash(2), 2, 1); err != nil {
+	if err := f.ProcessBlock(context.Background(), 3, indexToHash(3), indexToHash(2), 2, 1); err != nil {
 		t.Fatal(err)
 	}
 
@@ -45,7 +46,7 @@ func TestFFGUpdates_OneBranch(t *testing.T) {
 	//            2
 	//            |
 	//            3 <- head
-	r, err = f.Head(0, 0, params.BeaconConfig().ZeroHash, balances)
+	r, err = f.Head(context.Background(), 0, params.BeaconConfig().ZeroHash, balances, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +62,7 @@ func TestFFGUpdates_OneBranch(t *testing.T) {
 	//            2 <- head
 	//            |
 	//            3
-	r, err = f.Head(1, 0, indexToHash(2), balances)
+	r, err = f.Head(context.Background(), 0, indexToHash(2), balances, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +78,7 @@ func TestFFGUpdates_OneBranch(t *testing.T) {
 	//            2 <- start
 	//            |
 	//            3 <- head
-	r, err = f.Head(2, 1, indexToHash(3), balances)
+	r, err = f.Head(context.Background(), 1, indexToHash(3), balances, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,7 +91,7 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 	balances := []uint64{1, 1}
 
 	f := New(1, 1, params.BeaconConfig().ZeroHash)
-	r, err := f.Head(0, 0, params.BeaconConfig().ZeroHash, balances)
+	r, err := f.Head(context.Background(), 0, params.BeaconConfig().ZeroHash, balances, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,35 +112,35 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 	//                              |   |
 	//  justified: 2, finalized: 0 -> 9  10 <- justified: 2, finalized: 0
 	// Left branch.
-	if err := f.ProcessBlock(1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0); err != nil {
+	if err := f.ProcessBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0); err != nil {
 		t.Fatal(err)
 	}
-	if err := f.ProcessBlock(2, indexToHash(3), indexToHash(1), 1, 0); err != nil {
+	if err := f.ProcessBlock(context.Background(), 2, indexToHash(3), indexToHash(1), 1, 0); err != nil {
 		t.Fatal(err)
 	}
-	if err := f.ProcessBlock(3, indexToHash(5), indexToHash(3), 1, 0); err != nil {
+	if err := f.ProcessBlock(context.Background(), 3, indexToHash(5), indexToHash(3), 1, 0); err != nil {
 		t.Fatal(err)
 	}
-	if err := f.ProcessBlock(4, indexToHash(7), indexToHash(5), 1, 0); err != nil {
+	if err := f.ProcessBlock(context.Background(), 4, indexToHash(7), indexToHash(5), 1, 0); err != nil {
 		t.Fatal(err)
 	}
-	if err := f.ProcessBlock(4, indexToHash(9), indexToHash(7), 2, 0); err != nil {
+	if err := f.ProcessBlock(context.Background(), 4, indexToHash(9), indexToHash(7), 2, 0); err != nil {
 		t.Fatal(err)
 	}
 	// Right branch.
-	if err := f.ProcessBlock(1, indexToHash(2), params.BeaconConfig().ZeroHash, 0, 0); err != nil {
+	if err := f.ProcessBlock(context.Background(), 1, indexToHash(2), params.BeaconConfig().ZeroHash, 0, 0); err != nil {
 		t.Fatal(err)
 	}
-	if err := f.ProcessBlock(2, indexToHash(4), indexToHash(2), 0, 0); err != nil {
+	if err := f.ProcessBlock(context.Background(), 2, indexToHash(4), indexToHash(2), 0, 0); err != nil {
 		t.Fatal(err)
 	}
-	if err := f.ProcessBlock(3, indexToHash(6), indexToHash(4), 0, 0); err != nil {
+	if err := f.ProcessBlock(context.Background(), 3, indexToHash(6), indexToHash(4), 0, 0); err != nil {
 		t.Fatal(err)
 	}
-	if err := f.ProcessBlock(4, indexToHash(8), indexToHash(6), 1, 0); err != nil {
+	if err := f.ProcessBlock(context.Background(), 4, indexToHash(8), indexToHash(6), 1, 0); err != nil {
 		t.Fatal(err)
 	}
-	if err := f.ProcessBlock(4, indexToHash(10), indexToHash(8), 2, 0); err != nil {
+	if err := f.ProcessBlock(context.Background(), 4, indexToHash(10), indexToHash(8), 2, 0); err != nil {
 		t.Fatal(err)
 	}
 
@@ -155,7 +156,7 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 	//         7   8
 	//         |   |
 	//         9  10 <-- head
-	r, err = f.Head(0, 0, params.BeaconConfig().ZeroHash, balances)
+	r, err = f.Head(context.Background(), 0, params.BeaconConfig().ZeroHash, balances, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -175,7 +176,7 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 	//               7   8
 	//               |   |
 	//               9  10
-	f.ProcessAttestation([]uint64{0}, indexToHash(1), 0)
+	f.ProcessAttestation(context.Background(), []uint64{0}, indexToHash(1), 0)
 
 	// With the additional vote to the left branch, the head should be 9:
 	//           0  <-- start
@@ -189,7 +190,7 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 	//         7   8
 	//         |   |
 	// head -> 9  10
-	r, err = f.Head(0, 0, params.BeaconConfig().ZeroHash, balances)
+	r, err = f.Head(context.Background(), 0, params.BeaconConfig().ZeroHash, balances, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,7 +210,7 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 	//               7   8
 	//               |   |
 	//               9  10
-	f.ProcessAttestation([]uint64{1}, indexToHash(2), 0)
+	f.ProcessAttestation(context.Background(), []uint64{1}, indexToHash(2), 0)
 
 	// With the additional vote to the right branch, the head should be 10:
 	//           0  <-- start
@@ -223,7 +224,7 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 	//         7   8
 	//         |   |
 	//         9  10 <-- head
-	r, err = f.Head(0, 0, params.BeaconConfig().ZeroHash, balances)
+	r, err = f.Head(context.Background(), 0, params.BeaconConfig().ZeroHash, balances, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -231,7 +232,7 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 		t.Error("Incorrect head with justified epoch at 0")
 	}
 
-	r, err = f.Head(1, 0, indexToHash(1), balances)
+	r, err = f.Head(context.Background(), 0, indexToHash(1), balances, 1)
 	if err != nil {
 		t.Fatal(err)
 	}

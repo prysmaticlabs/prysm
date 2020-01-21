@@ -1,6 +1,11 @@
 package protoarray
 
-import "github.com/pkg/errors"
+import (
+	"context"
+
+	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
+)
 
 // New initializes a new fork choice store.
 func New(justifiedEpoch uint64, finalizedEpoch uint64, finalizedRoot [32]byte) *ForkChoice {
@@ -16,7 +21,7 @@ func New(justifiedEpoch uint64, finalizedEpoch uint64, finalizedRoot [32]byte) *
 	v := make([]Vote, 0)
 
 	s.nodeIndices[finalizedRoot] = 0
-	s.nodes = append(s.nodes,& Node{
+	s.nodes = append(s.nodes, &Node{
 		slot:           0,
 		root:           finalizedRoot,
 		parent:         nonExistentNode,
@@ -31,25 +36,31 @@ func New(justifiedEpoch uint64, finalizedEpoch uint64, finalizedRoot [32]byte) *
 }
 
 // Head returns the head root from fork choice store.
-func (f *ForkChoice) Head(justifiedEpoch uint64, finalizedEpoch uint64, justifiedRoot [32]byte, justifiedStateBalances []uint64) ([32]byte, error) {
+func (f *ForkChoice) Head(ctx context.Context, finalizedEpoch uint64, justifiedRoot [32]byte, justifiedStateBalances []uint64, justifiedEpoch uint64) ([32]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.Head")
+	defer span.End()
+
 	newBalances := justifiedStateBalances
 
-	deltas, newVotes, err := computeDeltas(f.store.nodeIndices, f.votes, f.balances, newBalances)
+	deltas, newVotes, err := computeDeltas(ctx, f.store.nodeIndices, f.votes, f.balances, newBalances)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "Could not compute deltas")
 	}
 	f.votes = newVotes
 
-	if err := f.store.applyScoreChanges(justifiedEpoch, finalizedEpoch, deltas); err != nil {
+	if err := f.store.applyScoreChanges(ctx, justifiedEpoch, finalizedEpoch, deltas); err != nil {
 		return [32]byte{}, errors.Wrap(err, "Could not apply score changes")
 	}
 	f.balances = newBalances
 
-	return f.store.head(justifiedRoot)
+	return f.store.head(ctx, justifiedRoot)
 }
 
 // ProcessAttestation processes attestation for vote accounting to be used for fork choice.
-func (f *ForkChoice) ProcessAttestation(validatorIndices []uint64, blockRoot [32]byte, targetEpoch uint64) {
+func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []uint64, blockRoot [32]byte, targetEpoch uint64) {
+	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.ProcessAttestation")
+	defer span.End()
+
 	for _, index := range validatorIndices {
 		// Validator indices will grow the votes cache on demand.
 		newIndex := false
@@ -66,6 +77,9 @@ func (f *ForkChoice) ProcessAttestation(validatorIndices []uint64, blockRoot [32
 }
 
 // ProcessBlock processes block by inserting it to the fork choice store.
-func (f *ForkChoice) ProcessBlock(slot uint64, blockRoot [32]byte, parentRoot [32]byte, justifiedEpoch uint64, finalizedEpoch uint64) error {
-	return f.store.insert(slot, blockRoot, parentRoot, justifiedEpoch, finalizedEpoch)
+func (f *ForkChoice) ProcessBlock(ctx context.Context, slot uint64, blockRoot [32]byte, parentRoot [32]byte, justifiedEpoch uint64, finalizedEpoch uint64) error {
+	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.ProcessBlock")
+	defer span.End()
+
+	return f.store.insert(ctx, slot, blockRoot, parentRoot, justifiedEpoch, finalizedEpoch)
 }

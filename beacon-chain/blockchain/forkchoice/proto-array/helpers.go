@@ -1,12 +1,18 @@
 package protoarray
 
 import (
+	"context"
+
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
 )
 
 // This computes balance delta from votes. It returns a list of deltas that represents the difference
 // between old balances and new balances.
-func computeDeltas(indices map[[32]byte]uint64, votes []Vote, oldBalances []uint64, newBalances []uint64) ([]int, []Vote, error) {
+func computeDeltas(ctx context.Context, indices map[[32]byte]uint64, votes []Vote, oldBalances []uint64, newBalances []uint64) ([]int, []Vote, error) {
+	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.computeDeltas")
+	defer span.End()
+
 	deltas := make([]int, len(indices))
 
 	for validatorIndex, vote := range votes {
