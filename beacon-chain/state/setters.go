@@ -4,6 +4,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/stateutil"
@@ -34,22 +35,24 @@ const (
 	finalizedCheckpoint
 )
 
-func (b *BeaconState) SetGenesisTime(val uint64) {
+func (b *BeaconState) SetGenesisTime(val uint64) error {
 	b.state.GenesisTime = val
 	root := stateutil.Uint64Root(val)
 	b.lock.Lock()
 	b.merkleLayers[0][genesisTime] = root[:]
 	b.recomputeRoot(int(genesisTime))
 	b.lock.Unlock()
+	return nil
 }
 
-func (b *BeaconState) SetSlot(val uint64) {
+func (b *BeaconState) SetSlot(val uint64) error {
 	b.state.Slot = val
 	root := stateutil.Uint64Root(val)
 	b.lock.Lock()
 	b.merkleLayers[0][slot] = root[:]
 	b.recomputeRoot(int(slot))
 	b.lock.Unlock()
+	return nil
 }
 
 func (b *BeaconState) SetFork(val *pbp2p.Fork) error {
@@ -104,36 +107,96 @@ func (b *BeaconState) SetStateRoots(val [][]byte) error {
 	return nil
 }
 
-func (b *BeaconState) SetHistoricalRoots(val [][]byte) {
+func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
+	root, err := stateutil.HistoricalRootsRoot(b.state.HistoricalRoots)
+	if err != nil {
+		return err
+	}
 	b.state.HistoricalRoots = val
+	b.lock.Lock()
+	b.merkleLayers[0][historicalRoots] = root[:]
+	b.recomputeRoot(int(historicalRoots))
+	b.lock.Unlock()
+	return nil
 }
 
-func (b *BeaconState) SetEth1Data(val *ethpb.Eth1Data) {
+func (b *BeaconState) SetEth1Data(val *ethpb.Eth1Data) error {
+	root, err := stateutil.Eth1Root(b.state.Eth1Data)
+	if err != nil {
+		return err
+	}
 	b.state.Eth1Data = val
+	b.lock.Lock()
+	b.merkleLayers[0][eth1Data] = root[:]
+	b.recomputeRoot(int(eth1Data))
+	b.lock.Unlock()
+	return nil
 }
 
-func (b *BeaconState) SetEth1DataVotes(val []*ethpb.Eth1Data) {
+func (b *BeaconState) SetEth1DataVotes(val []*ethpb.Eth1Data) error {
+	root, err := stateutil.Eth1DataVotesRoot(b.state.Eth1DataVotes)
+	if err != nil {
+		return err
+	}
 	b.state.Eth1DataVotes = val
+	b.lock.Lock()
+	b.merkleLayers[0][eth1DataVotes] = root[:]
+	b.recomputeRoot(int(eth1DataVotes))
+	b.lock.Unlock()
+	return nil
 }
 
-func (b *BeaconState) SetEth1DepositIndex(val uint64) {
+func (b *BeaconState) SetEth1DepositIndex(val uint64) error {
 	b.state.Eth1DepositIndex = val
+	root := stateutil.Uint64Root(val)
+	b.lock.Lock()
+	b.merkleLayers[0][eth1DepositIndex] = root[:]
+	b.recomputeRoot(int(eth1DepositIndex))
+	b.lock.Unlock()
+	return nil
 }
 
 func (b *BeaconState) SetValidators(val []*ethpb.Validator) {
 	b.state.Validators = val
 }
 
-func (b *BeaconState) SetBalances(val []uint64) {
+func (b *BeaconState) SetBalances(val []uint64) error {
+	root, err := stateutil.ValidatorBalancesRoot(b.state.Balances)
+	if err != nil {
+		return err
+	}
 	b.state.Balances = val
+	b.lock.Lock()
+	b.merkleLayers[0][balances] = root[:]
+	b.recomputeRoot(int(balances))
+	b.lock.Unlock()
+	return nil
 }
 
-func (b *BeaconState) SetRandaoMixes(val [][]byte) {
+func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
+	root, err := stateutil.ArraysRoot(val, params.BeaconConfig().EpochsPerHistoricalVector, "RandaoMixes")
+	if err != nil {
+		return err
+	}
 	b.state.RandaoMixes = val
+	b.lock.Lock()
+	b.merkleLayers[0][randaoMixes] = root[:]
+	b.recomputeRoot(int(randaoMixes))
+	b.lock.Unlock()
+	return nil
 }
 
-func (b *BeaconState) SetSlashings(val []uint64) {
+func (b *BeaconState) SetSlashings(val []uint64) error {
+	root, err := stateutil.SlashingsRoot(b.state.Slashings)
+	if err != nil {
+		return err
+	}
 	b.state.Slashings = val
+	b.lock.Lock()
+	b.merkleLayers[0][slashings] = root[:]
+	b.recomputeRoot(int(slashings))
+	b.lock.Unlock()
+	return nil
 }
 
 func (b *BeaconState) SetPreviousEpochAttestations(val []*pbp2p.PendingAttestation) {
@@ -144,20 +207,52 @@ func (b *BeaconState) SetCurrentEpochAttestations(val []*pbp2p.PendingAttestatio
 	b.state.CurrentEpochAttestations = val
 }
 
-func (b *BeaconState) SetJustificationBits(val bitfield.Bitvector4) {
+func (b *BeaconState) SetJustificationBits(val bitfield.Bitvector4) error {
+	root := bytesutil.ToBytes32(b.state.JustificationBits)
 	b.state.JustificationBits = val
+	b.lock.Lock()
+	b.merkleLayers[0][justificationBits] = root[:]
+	b.recomputeRoot(int(justificationBits))
+	b.lock.Unlock()
 }
 
-func (b *BeaconState) SetPreviousJustifiedCheckpoint(val *ethpb.Checkpoint) {
+func (b *BeaconState) SetPreviousJustifiedCheckpoint(val *ethpb.Checkpoint) error {
+	root, err := stateutil.CheckpointRoot(b.state.PreviousJustifiedCheckpoint)
+	if err != nil {
+		return err
+	}
 	b.state.PreviousJustifiedCheckpoint = val
+	b.lock.Lock()
+	b.merkleLayers[0][previousJustifiedCheckpoint] = root[:]
+	b.recomputeRoot(int(previousJustifiedCheckpoint))
+	b.lock.Unlock()
+	return nil
 }
 
-func (b *BeaconState) SetCurrentJustifiedCheckpoint(val *ethpb.Checkpoint) {
+func (b *BeaconState) SetCurrentJustifiedCheckpoint(val *ethpb.Checkpoint) error {
+	root, err := stateutil.CheckpointRoot(b.state.CurrentJustifiedCheckpoint)
+	if err != nil {
+		return err
+	}
 	b.state.CurrentJustifiedCheckpoint = val
+	b.lock.Lock()
+	b.merkleLayers[0][currentJustifiedCheckpoint] = root[:]
+	b.recomputeRoot(int(currentJustifiedCheckpoint))
+	b.lock.Unlock()
+	return nil
 }
 
-func (b *BeaconState) SetFinalizedCheckpoint(val *ethpb.Checkpoint) {
+func (b *BeaconState) SetFinalizedCheckpoint(val *ethpb.Checkpoint) error {
+	root, err := stateutil.CheckpointRoot(b.state.FinalizedCheckpoint)
+	if err != nil {
+		return err
+	}
 	b.state.FinalizedCheckpoint = val
+	b.lock.Lock()
+	b.merkleLayers[0][finalizedCheckpoint] = root[:]
+	b.recomputeRoot(int(finalizedCheckpoint))
+	b.lock.Unlock()
+	return nil
 }
 
 func (b *BeaconState) recomputeRoot(idx int) {

@@ -10,7 +10,7 @@ import (
 )
 
 type BeaconState struct {
-	state        pbp2p.BeaconState
+	state        *pbp2p.BeaconState
 	lock         sync.RWMutex
 	merkleLayers [][][]byte
 }
@@ -22,7 +22,7 @@ func Initialize(st *pbp2p.BeaconState) (*BeaconState, error) {
 	}
 	layers := merkleize(fieldRoots)
 	return &BeaconState{
-		state:        *st,
+		state:        st,
 		merkleLayers: layers,
 	}, nil
 }

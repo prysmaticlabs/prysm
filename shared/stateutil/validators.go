@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func validatorBalancesRoot(balances []uint64) ([32]byte, error) {
+func ValidatorBalancesRoot(balances []uint64) ([32]byte, error) {
 	balancesMarshaling := make([][]byte, 0)
 	for i := 0; i < len(balances); i++ {
 		balanceBuf := make([]byte, 8)

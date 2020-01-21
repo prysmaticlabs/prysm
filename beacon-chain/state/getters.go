@@ -7,8 +7,8 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-func (b *BeaconState) Clone() pbp2p.BeaconState {
-	return b.state
+func (b *BeaconState) Clone() *pbp2p.BeaconState {
+	return proto.Clone(b.state).(*pbp2p.BeaconState)
 }
 
 func (b *BeaconState) GenesisTime() uint64 {
@@ -20,11 +20,20 @@ func (b *BeaconState) Slot() uint64 {
 }
 
 func (b *BeaconState) Fork() *pbp2p.Fork {
-	return proto.Clone(b.state.Fork).(*pbp2p.Fork)
+	return &pbp2p.Fork{
+		PreviousVersion: b.state.Fork.PreviousVersion,
+		CurrentVersion:  b.state.Fork.CurrentVersion,
+		Epoch:           b.state.Fork.Epoch,
+	}
 }
 
 func (b *BeaconState) LatestBlockHeader() *ethpb.BeaconBlockHeader {
-	return proto.Clone(b.state.LatestBlockHeader).(*ethpb.BeaconBlockHeader)
+	return &ethpb.BeaconBlockHeader{
+		Slot:       b.state.LatestBlockHeader.Slot,
+		ParentRoot: b.state.LatestBlockHeader.ParentRoot,
+		StateRoot:  b.state.LatestBlockHeader.StateRoot,
+		BodyRoot:   b.state.LatestBlockHeader.BodyRoot,
+	}
 }
 
 func (b *BeaconState) BlockRoots() [][]byte {
@@ -46,12 +55,23 @@ func (b *BeaconState) HistoricalRoots() [][]byte {
 }
 
 func (b *BeaconState) Eth1Data() *ethpb.Eth1Data {
-	return proto.Clone(b.state.Eth1Data).(*ethpb.Eth1Data)
+	return &ethpb.Eth1Data{
+		DepositRoot:  b.state.Eth1Data.DepositRoot,
+		DepositCount: b.state.Eth1Data.DepositCount,
+		BlockHash:    b.state.Eth1Data.BlockHash,
+	}
 }
 
 func (b *BeaconState) Eth1DataVotes() []*ethpb.Eth1Data {
-	// TODO: Clone this value.
-	return b.state.Eth1DataVotes
+	res := make([]*ethpb.Eth1Data, len(b.state.Eth1DataVotes))
+	for i := 0; i < len(res); i++ {
+		res[i] = &ethpb.Eth1Data{
+			DepositRoot:  b.state.Eth1DataVotes[i].DepositRoot,
+			DepositCount: b.state.Eth1DataVotes[i].DepositCount,
+			BlockHash:    b.state.Eth1DataVotes[i].BlockHash,
+		}
+	}
+	return res
 }
 
 func (b *BeaconState) Eth1DepositIndex() uint64 {
@@ -59,8 +79,21 @@ func (b *BeaconState) Eth1DepositIndex() uint64 {
 }
 
 func (b *BeaconState) Validators() []*ethpb.Validator {
-	// TODO: Clone this value.
-	return b.state.Validators
+	res := make([]*ethpb.Validator, len(b.state.Validators))
+	for i := 0; i < len(res); i++ {
+		val := b.state.Validators[i]
+		res[i] = &ethpb.Validator{
+			PublicKey:                  val.PublicKey,
+			WithdrawalCredentials:      val.WithdrawalCredentials,
+			EffectiveBalance:           val.EffectiveBalance,
+			Slashed:                    val.Slashed,
+			ActivationEligibilityEpoch: val.ActivationEligibilityEpoch,
+			ActivationEpoch:            val.ActivationEpoch,
+			ExitEpoch:                  val.ExitEpoch,
+			WithdrawableEpoch:          val.WithdrawableEpoch,
+		}
+	}
+	return res
 }
 
 func (b *BeaconState) Balances() []uint64 {
@@ -82,13 +115,19 @@ func (b *BeaconState) Slashings() []uint64 {
 }
 
 func (b *BeaconState) PreviousEpochAttestations() []*pbp2p.PendingAttestation {
-	// TODO: Clone this value.
-	return b.state.PreviousEpochAttestations
+	res := make([]*pbp2p.PendingAttestation, len(b.state.PreviousEpochAttestations))
+	for i := 0; i < len(res); i++ {
+		res[i] = proto.Clone(b.state.PreviousEpochAttestations[i]).(*pbp2p.PendingAttestation)
+	}
+	return res
 }
 
 func (b *BeaconState) CurrentEpochAttestations() []*pbp2p.PendingAttestation {
-	// TODO: Clone this value.
-	return b.state.CurrentEpochAttestations
+	res := make([]*pbp2p.PendingAttestation, len(b.state.CurrentEpochAttestations))
+	for i := 0; i < len(res); i++ {
+		res[i] = proto.Clone(b.state.CurrentEpochAttestations[i]).(*pbp2p.PendingAttestation)
+	}
+	return res
 }
 
 func (b *BeaconState) JustificationBits() bitfield.Bitvector4 {
