@@ -81,58 +81,35 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 		return errors.Wrap(err, "could not get signing root on received block")
 	}
 
-	// Run fork choice after applying state transition on the new block.
-	headRoot, err := s.forkChoiceStore.Head(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not get head from fork choice service")
-	}
-
-	// New fork choice.
-	if err := s.forkchoice.ProcessBlock(
-		blockCopy.Block.Slot,
-		root,
-		bytesutil.ToBytes32(blockCopy.Block.ParentRoot),
-		s.FinalizedCheckpt().Epoch,
-		s.CurrentJustifiedCheckpt().Epoch); err != nil {
-		return errors.Wrap(err, "could not process block for new fork choice")
-	}
-	// Cache justified state balances.
-	js, err := s.beaconDB.State(ctx, bytesutil.ToBytes32(s.CurrentJustifiedCheckpt().Root))
-	if err != nil {
-		return errors.Wrap(err, "could not get justified state")
-	}
-	newForkChoiceHeadRoot, err := s.forkchoice.Head(
-		s.CurrentJustifiedCheckpt().Epoch,
-		s.FinalizedCheckpt().Epoch,
-		bytesutil.ToBytes32(s.CurrentJustifiedCheckpt().Root),
-		js.Balances)
-	if err != nil {
-		return err
-	}
-	// Only save head if it's different than the current head.
-	cachedHeadRoot, err := s.HeadRoot(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not get head root from cache")
-	}
-
-	if newForkChoiceHeadRoot != bytesutil.ToBytes32(cachedHeadRoot) {
-		fmt.Printf("Fork Choice %v != %v", hex.EncodeToString(newForkChoiceHeadRoot[:]), hex.EncodeToString(cachedHeadRoot))
-	}
-
-	if !bytes.Equal(headRoot, cachedHeadRoot) {
-		signedHeadBlock, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
-		if err != nil {
-			return errors.Wrap(err, "could not compute state from block head")
-		}
-		if signedHeadBlock == nil || signedHeadBlock.Block == nil {
-			return errors.New("nil head block")
-		}
-
-		if err := s.saveHead(ctx, signedHeadBlock, bytesutil.ToBytes32(headRoot)); err != nil {
+	if featureconfig.Get().DisableForkChoice {
+		if err := s.saveHead(ctx, blockCopy, root); err != nil {
 			return errors.Wrap(err, "could not save head")
 		}
+	} else {
+		// Run fork choice after applying state transition on the new block.
+		headRoot, err := s.forkChoiceStore.Head(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not get head from fork choice service")
+		}
 
-		isCompetingBlock(root[:], blockCopy.Block.Slot, headRoot, signedHeadBlock.Block.Slot)
+		// Only save head if it's different than the current head.
+		cachedHeadRoot, err := s.HeadRoot(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not get head root from cache")
+		}
+		if !bytes.Equal(headRoot, cachedHeadRoot) {
+			signedHeadBlock, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
+			if err != nil {
+				return errors.Wrap(err, "could not compute state from block head")
+			}
+			if signedHeadBlock == nil || signedHeadBlock.Block == nil {
+				return errors.New("nil head block")
+			}
+			if err := s.saveHead(ctx, signedHeadBlock, bytesutil.ToBytes32(headRoot)); err != nil {
+				return errors.Wrap(err, "could not save head")
+			}
+			isCompetingBlock(root[:], blockCopy.Block.Slot, headRoot, signedHeadBlock.Block.Slot)
+		}
 	}
 
 	// Send notification of the processed block to the state feed.
