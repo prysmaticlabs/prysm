@@ -123,7 +123,7 @@ func (b *BeaconState) SetStateRoots(val [][]byte) error {
 // SetHistoricalRoots for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
-	root, err := stateutil.HistoricalRootsRoot(b.state.HistoricalRoots)
+	root, err := stateutil.HistoricalRootsRoot(val)
 	if err != nil {
 		return err
 	}
@@ -137,7 +137,7 @@ func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
 
 // SetEth1Data for the beacon state.
 func (b *BeaconState) SetEth1Data(val *ethpb.Eth1Data) error {
-	root, err := stateutil.Eth1Root(b.state.Eth1Data)
+	root, err := stateutil.Eth1Root(val)
 	if err != nil {
 		return err
 	}
@@ -152,7 +152,7 @@ func (b *BeaconState) SetEth1Data(val *ethpb.Eth1Data) error {
 // SetEth1DataVotes for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetEth1DataVotes(val []*ethpb.Eth1Data) error {
-	root, err := stateutil.Eth1DataVotesRoot(b.state.Eth1DataVotes)
+	root, err := stateutil.Eth1DataVotesRoot(val)
 	if err != nil {
 		return err
 	}
@@ -178,7 +178,7 @@ func (b *BeaconState) SetEth1DepositIndex(val uint64) error {
 // SetValidators for the beacon state. This PR updates the entire
 // to a new value by overwriting the previous one.
 func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
-	root, err := stateutil.ValidatorRegistryRoot(b.state.Validators)
+	root, err := stateutil.ValidatorRegistryRoot(val)
 	if err != nil {
 		return err
 	}
@@ -193,7 +193,7 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 // SetBalances for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetBalances(val []uint64) error {
-	root, err := stateutil.ValidatorBalancesRoot(b.state.Balances)
+	root, err := stateutil.ValidatorBalancesRoot(val)
 	if err != nil {
 		return err
 	}
@@ -223,7 +223,7 @@ func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
 // SetSlashings for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetSlashings(val []uint64) error {
-	root, err := stateutil.SlashingsRoot(b.state.Slashings)
+	root, err := stateutil.SlashingsRoot(val)
 	if err != nil {
 		return err
 	}
@@ -238,7 +238,7 @@ func (b *BeaconState) SetSlashings(val []uint64) error {
 // SetPreviousEpochAttestations for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetPreviousEpochAttestations(val []*pbp2p.PendingAttestation) error {
-	root, err := stateutil.EpochAttestationsRoot(b.state.PreviousEpochAttestations)
+	root, err := stateutil.EpochAttestationsRoot(val)
 	if err != nil {
 		return err
 	}
@@ -253,7 +253,7 @@ func (b *BeaconState) SetPreviousEpochAttestations(val []*pbp2p.PendingAttestati
 // SetCurrentEpochAttestations for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetCurrentEpochAttestations(val []*pbp2p.PendingAttestation) error {
-	root, err := stateutil.EpochAttestationsRoot(b.state.CurrentEpochAttestations)
+	root, err := stateutil.EpochAttestationsRoot(val)
 	if err != nil {
 		return err
 	}
@@ -278,7 +278,7 @@ func (b *BeaconState) SetJustificationBits(val bitfield.Bitvector4) error {
 
 // SetPreviousJustifiedCheckpoint for the beacon state.
 func (b *BeaconState) SetPreviousJustifiedCheckpoint(val *ethpb.Checkpoint) error {
-	root, err := stateutil.CheckpointRoot(b.state.PreviousJustifiedCheckpoint)
+	root, err := stateutil.CheckpointRoot(val)
 	if err != nil {
 		return err
 	}
@@ -292,7 +292,7 @@ func (b *BeaconState) SetPreviousJustifiedCheckpoint(val *ethpb.Checkpoint) erro
 
 // SetCurrentJustifiedCheckpoint for the beacon state.
 func (b *BeaconState) SetCurrentJustifiedCheckpoint(val *ethpb.Checkpoint) error {
-	root, err := stateutil.CheckpointRoot(b.state.CurrentJustifiedCheckpoint)
+	root, err := stateutil.CheckpointRoot(val)
 	if err != nil {
 		return err
 	}
@@ -306,7 +306,7 @@ func (b *BeaconState) SetCurrentJustifiedCheckpoint(val *ethpb.Checkpoint) error
 
 // SetFinalizedCheckpoint for the beacon state.
 func (b *BeaconState) SetFinalizedCheckpoint(val *ethpb.Checkpoint) error {
-	root, err := stateutil.CheckpointRoot(b.state.FinalizedCheckpoint)
+	root, err := stateutil.CheckpointRoot(val)
 	if err != nil {
 		return err
 	}
