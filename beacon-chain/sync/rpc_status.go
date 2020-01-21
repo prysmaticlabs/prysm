@@ -24,17 +24,19 @@ func (r *Service) maintainPeerStatuses() {
 	interval := time.Duration(params.BeaconConfig().SecondsPerSlot*params.BeaconConfig().SlotsPerEpoch/2) * time.Second
 	runutil.RunEvery(r.ctx, interval, func() {
 		for _, pid := range r.p2p.Peers().Connected() {
-			// If the status hasn't been updated in the recent interval time.
-			lastUpdated, err := r.p2p.Peers().ChainStateLastUpdated(pid)
-			if err != nil {
-				// Peer has vanished; nothing to do
-				continue
-			}
-			if roughtime.Now().After(lastUpdated.Add(interval)) {
-				if err := r.sendRPCStatusRequest(r.ctx, pid); err != nil {
-					log.WithField("peer", pid).WithError(err).Error("Failed to request peer status")
+			go func(id peer.ID) {
+				// If the status hasn't been updated in the recent interval time.
+				lastUpdated, err := r.p2p.Peers().ChainStateLastUpdated(id)
+				if err != nil {
+					// Peer has vanished; nothing to do.
+					return
 				}
-			}
+				if roughtime.Now().After(lastUpdated.Add(interval)) {
+					if err := r.sendRPCStatusRequest(r.ctx, id); err != nil {
+						log.WithField("peer", id).WithError(err).Error("Failed to request peer status")
+					}
+				}
+			}(pid)
 		}
 	})
 }
@@ -47,7 +49,7 @@ func (r *Service) resyncIfBehind() {
 	runutil.RunEvery(r.ctx, interval, func() {
 		currentEpoch := uint64(roughtime.Now().Unix()-r.chain.GenesisTime().Unix()) / (params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch)
 		syncedEpoch := helpers.SlotToEpoch(r.chain.HeadSlot())
-		if !r.initialSync.Syncing() && syncedEpoch < currentEpoch-1 {
+		if r.initialSync != nil && !r.initialSync.Syncing() && syncedEpoch < currentEpoch-1 {
 			_, highestEpoch, _ := r.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, syncedEpoch)
 			if helpers.StartSlot(highestEpoch) > r.chain.HeadSlot() {
 				log.WithFields(logrus.Fields{

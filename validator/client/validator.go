@@ -321,7 +321,7 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]pb
 }
 
 // isAggregator checks if a validator is an aggregator of a given slot, it uses the selection algorithm outlined in:
-// https://github.com/ethereum/eth2.0-specs/blob/v0.9.0/specs/validator/0_beacon-chain-validator.md#aggregation-selection
+// https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/validator/0_beacon-chain-validator.md#aggregation-selection
 func (v *validator) isAggregator(ctx context.Context, committee []uint64, slot uint64, pubKey [48]byte) (bool, error) {
 	modulo := uint64(1)
 	if len(committee)/int(params.BeaconConfig().TargetAggregatorsPerCommittee) > 1 {

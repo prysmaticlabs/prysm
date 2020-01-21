@@ -34,9 +34,9 @@ func TestProposalHistory_NilDB(t *testing.T) {
 	db := SetupDB(t, [][48]byte{})
 	defer TeardownDB(t, db)
 
-	balPubkey := []byte{1, 2, 3}
+	valPubkey := []byte{1, 2, 3}
 
-	proposalHistory, err := db.ProposalHistory(context.Background(), balPubkey)
+	proposalHistory, err := db.ProposalHistory(context.Background(), valPubkey)
 	if err != nil {
 		t.Fatal(err)
 	}
