@@ -54,12 +54,20 @@ func (b *BeaconState) Fork() *pbp2p.Fork {
 
 // LatestBlockHeader --
 func (b *BeaconState) LatestBlockHeader() *ethpb.BeaconBlockHeader {
-	return &ethpb.BeaconBlockHeader{
-		Slot:       b.state.LatestBlockHeader.Slot,
-		ParentRoot: b.state.LatestBlockHeader.ParentRoot,
-		StateRoot:  b.state.LatestBlockHeader.StateRoot,
-		BodyRoot:   b.state.LatestBlockHeader.BodyRoot,
+	hdr := &ethpb.BeaconBlockHeader{
+		Slot: b.state.LatestBlockHeader.Slot,
 	}
+	var parentRoot [32]byte
+	var bodyRoot [32]byte
+	var stateRoot [32]byte
+
+	copy(parentRoot[:], b.state.LatestBlockHeader.ParentRoot)
+	copy(bodyRoot[:], b.state.LatestBlockHeader.StateRoot)
+	copy(stateRoot[:], b.state.LatestBlockHeader.BodyRoot)
+	hdr.ParentRoot = parentRoot[:]
+	hdr.BodyRoot = bodyRoot[:]
+	hdr.StateRoot = stateRoot[:]
+	return hdr
 }
 
 // BlockRoots --
