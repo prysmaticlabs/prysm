@@ -100,9 +100,7 @@ func (c *SkipSlotCache) MarkInProgress(slot uint64) error {
 	if c.inProgress[slot] {
 		return ErrAlreadyInProgress
 	}
-	if featureconfig.Get().EnableSkipSlotsCache {
-		c.inProgress[slot] = true
-	}
+	c.inProgress[slot] = true
 	return nil
 }
 
