@@ -26,7 +26,7 @@ func (s *Store) insert(slot uint64, root [32]byte, parent [32]byte, justifiedEpo
 		parentIndex = nonExistentNode
 	}
 
-	n := Node{
+	n := &Node{
 		slot:           slot,
 		root:           root,
 		parent:         parentIndex,
@@ -69,7 +69,7 @@ func (s *Store) head(justifiedRoot [32]byte) ([32]byte, error) {
 	}
 
 	bestNode := s.nodes[bestDescendantIndex]
-	if !s.viableForHead(&bestNode) {
+	if !s.viableForHead(bestNode) {
 		return [32]byte{}, invalidBestNode
 	}
 
@@ -95,7 +95,7 @@ func (s *Store) updateBestChildAndDescendant(parentIndex uint64, childIndex uint
 	}
 	child := s.nodes[childIndex]
 
-	childLeadsToViableHead, err := s.leadsToViableHead(&child)
+	childLeadsToViableHead, err := s.leadsToViableHead(child)
 	if err != nil {
 		return err
 	}
@@ -125,7 +125,7 @@ func (s *Store) updateBestChildAndDescendant(parentIndex uint64, childIndex uint
 			if parent.bestChild > uint64(len(s.nodes)) {
 				return invalidBestDescendantIndex
 			}
-			bestChild := &s.nodes[parent.bestChild]
+			bestChild := s.nodes[parent.bestChild]
 			bestChildLeadsToViableHead, err := s.leadsToViableHead(bestChild)
 			if err != nil {
 				return err
@@ -303,7 +303,7 @@ func (s *Store) leadsToViableHead(node *Node) (bool, error) {
 		if bestDescendentIndex > uint64(len(s.nodes)) {
 			return false, invalidBestDescendantIndex
 		}
-		bestDescendentNode := &s.nodes[bestDescendentIndex]
+		bestDescendentNode := s.nodes[bestDescendentIndex]
 		bestDescendentViable = s.viableForHead(bestDescendentNode)
 	}
 

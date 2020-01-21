@@ -8,7 +8,7 @@ func New(justifiedEpoch uint64, finalizedEpoch uint64, finalizedRoot [32]byte) *
 		justifiedEpoch: justifiedEpoch,
 		finalizedEpoch: finalizedEpoch,
 		finalizedRoot:  finalizedRoot,
-		nodes:          make([]Node, 0),
+		nodes:          make([]*Node, 0),
 		nodeIndices:    make(map[[32]byte]uint64),
 	}
 
@@ -16,7 +16,7 @@ func New(justifiedEpoch uint64, finalizedEpoch uint64, finalizedRoot [32]byte) *
 	v := make([]Vote, 0)
 
 	s.nodeIndices[finalizedRoot] = 0
-	s.nodes = append(s.nodes, Node{
+	s.nodes = append(s.nodes,& Node{
 		slot:           0,
 		root:           finalizedRoot,
 		parent:         nonExistentNode,

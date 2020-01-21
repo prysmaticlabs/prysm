@@ -1,7 +1,6 @@
 package protoarray
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -112,8 +111,7 @@ func TestNoVote_CanFindHead(t *testing.T) {
 	//          |
 	//          5 <- starting from 5 with justified epoch 0 should error
 	r, err = f.Head(1, 1, indexToHash(5), balances)
-	wanted := "best node not viable for head"
-	if !strings.Contains(err.Error(), wanted) {
+	if err.Error() != invalidBestNode.Error() {
 		t.Fatal("Did not get wanted error")
 	}
 

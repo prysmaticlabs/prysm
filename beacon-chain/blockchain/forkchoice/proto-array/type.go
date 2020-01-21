@@ -16,7 +16,7 @@ type Store struct {
 	justifiedEpoch     uint64              // latest justified epoch in store.
 	finalizedEpoch     uint64              // latest finalized epoch in store.
 	finalizedRoot      [32]byte            // latest finalized root in store.
-	nodes              []Node              // list of block nodes, each node is a representation of one block.
+	nodes              []*Node              // list of block nodes, each node is a representation of one block.
 	nodeIndices        map[[32]byte]uint64 // the root of block node and the nodes index in the list.
 	nodeIndicesLock    sync.RWMutex
 }
