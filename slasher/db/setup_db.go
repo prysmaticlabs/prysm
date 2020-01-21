@@ -22,7 +22,7 @@ func SetupSlasherDB(t testing.TB, ctx *cli.Context) *Store {
 	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
-	cfg := &Config{cacheItems: 0, maxCacheSize: 0, spanCacheEnabled: ctx.GlobalBool(flags.UseSpanCacheFlag.Name)}
+	cfg := &Config{cacheItems: 0, maxCacheSize: 0, SpanCacheEnabled: ctx.GlobalBool(flags.UseSpanCacheFlag.Name)}
 	db, err := NewDB(p, cfg)
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
@@ -40,7 +40,7 @@ func SetupSlasherDBDiffCacheSize(t testing.TB, cacheItems int64, maxCacheSize in
 	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
-	cfg := &Config{cacheItems: cacheItems, maxCacheSize: maxCacheSize, spanCacheEnabled: true}
+	cfg := &Config{cacheItems: cacheItems, maxCacheSize: maxCacheSize, SpanCacheEnabled: true}
 	db, err := NewDB(p, cfg)
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)

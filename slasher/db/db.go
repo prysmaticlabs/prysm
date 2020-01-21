@@ -22,8 +22,11 @@ type Store struct {
 	spanCache        *ristretto.Cache
 	spanCacheEnabled bool
 }
+
+// Config options for the slasher db.
 type Config struct {
-	spanCacheEnabled bool
+	// SpanCacheEnabled use span cache to detect surround slashing.
+	SpanCacheEnabled bool
 	cacheItems       int64
 	maxCacheSize     int64
 }
@@ -101,9 +104,9 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 	})
 	if err != nil {
 		errors.Wrap(err, "failed to start span cache")
-		panic(err)
+		return nil, err
 	}
-	kv := &Store{db: boltDB, databasePath: dirPath, spanCache: spanCache, spanCacheEnabled: cfg.spanCacheEnabled}
+	kv := &Store{db: boltDB, databasePath: dirPath, spanCache: spanCache, spanCacheEnabled: cfg.SpanCacheEnabled}
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
 		return createBuckets(
