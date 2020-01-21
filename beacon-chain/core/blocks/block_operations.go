@@ -960,7 +960,10 @@ func ProcessVoluntaryExits(ctx context.Context, beaconState *pb.BeaconState, bod
 	exits := body.VoluntaryExits
 
 	for idx, exit := range exits {
-		if err := VerifyExit(beaconState, exit); err != nil {
+		if int(exit.Exit.ValidatorIndex) >= len(beaconState.Validators) {
+			return nil, fmt.Errorf("validator index out of bound %d > %d", exit.Exit.ValidatorIndex, len(beaconState.Validators))
+		}
+		if err := VerifyExit(beaconState.Validators[exit.Exit.ValidatorIndex], beaconState.Slot, beaconState.Fork, exit); err != nil {
 			return nil, errors.Wrapf(err, "could not verify exit %d", idx)
 		}
 		beaconState, err = v.InitiateValidatorExit(beaconState, exit.Exit.ValidatorIndex)
@@ -1008,18 +1011,14 @@ func ProcessVoluntaryExitsNoVerify(
 //    # Verify signature
 //    domain = get_domain(state, DOMAIN_VOLUNTARY_EXIT, exit.epoch)
 //    assert bls_verify(validator.pubkey, signing_root(exit), exit.signature, domain)
-func VerifyExit(beaconState *pb.BeaconState, signed *ethpb.SignedVoluntaryExit) error {
+func VerifyExit(validator *ethpb.Validator, slot uint64, fork *pb.Fork, signed *ethpb.SignedVoluntaryExit) error {
 	if signed == nil || signed.Exit == nil {
 		return errors.New("nil exit")
 	}
 
 	exit := signed.Exit
-	if int(exit.ValidatorIndex) >= len(beaconState.Validators) {
-		return fmt.Errorf("validator index out of bound %d > %d", exit.ValidatorIndex, len(beaconState.Validators))
-	}
 
-	validator := beaconState.Validators[exit.ValidatorIndex]
-	currentEpoch := helpers.CurrentEpoch(beaconState)
+	currentEpoch := helpers.SlotToEpoch(slot)
 	// Verify the validator is active.
 	if !helpers.IsActiveValidator(validator, currentEpoch) {
 		return errors.New("non-active validator cannot exit")
@@ -1040,7 +1039,7 @@ func VerifyExit(beaconState *pb.BeaconState, signed *ethpb.SignedVoluntaryExit) 
 			validator.ActivationEpoch+params.BeaconConfig().PersistentCommitteePeriod,
 		)
 	}
-	domain := helpers.Domain(beaconState.Fork, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit)
+	domain := helpers.Domain(fork, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit)
 	if err := verifySigningRoot(exit, validator.PublicKey, signed.Signature, domain); err != nil {
 		return ErrSigFailedToVerify
 	}
