@@ -253,7 +253,6 @@ func MarkAttestationForTargetEpoch(history *slashpb.AttestationHistory, sourceEp
 	if targetEpoch > history.LatestEpochWritten {
 		// If the target epoch to mark is ahead of latest written epoch, override the old targets and mark the requested epoch.
 		// Limit the overwriting to one weak subjectivity period as further is not needed.
-		// TODO maybe default to FAR_FUTURE_EPOCH instead of 0?
 		maxToWrite := history.LatestEpochWritten + wsPeriod
 		for i := history.LatestEpochWritten + 1; i < targetEpoch && i <= maxToWrite; i++ {
 			history.TargetToSource[i%wsPeriod] = params.BeaconConfig().FarFutureEpoch
