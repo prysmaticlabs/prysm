@@ -434,7 +434,7 @@ func (s *Service) checkHeaderRange(start uint64, end uint64,
 		if !s.chainStartData.Chainstarted {
 			h, ok := headersMap[i]
 			if !ok {
-				if err := requestHeaders(i, i+eth1HeaderReqLimit); err != nil {
+				if err := requestHeaders(i, end); err != nil {
 					return err
 				}
 				// Retry this block.
