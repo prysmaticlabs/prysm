@@ -24,10 +24,10 @@ func TestNoVote_CanFindHead(t *testing.T) {
 	//         0
 	//        /
 	//       2 <- head
-	if err := f.ProcessBlock(nil, 0, indexToHash(2), params.BeaconConfig().ZeroHash, 1, 1); err != nil {
+	if err := f.ProcessBlock(context.Background(), 0, indexToHash(2), params.BeaconConfig().ZeroHash, 1, 1); err != nil {
 		t.Fatal(err)
 	}
-	r, err = f.Head(nil, 1, params.BeaconConfig().ZeroHash, balances, 1)
+	r, err = f.Head(context.Background(), 1, params.BeaconConfig().ZeroHash, balances, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,10 +39,10 @@ func TestNoVote_CanFindHead(t *testing.T) {
 	//            0
 	//           / \
 	//  head -> 2  1
-	if err := f.ProcessBlock(nil, 0, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1); err != nil {
+	if err := f.ProcessBlock(context.Background(), 0, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1); err != nil {
 		t.Fatal(err)
 	}
-	r, err = f.Head(nil, 1, params.BeaconConfig().ZeroHash, balances, 1)
+	r, err = f.Head(context.Background(), 1, params.BeaconConfig().ZeroHash, balances, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,10 +56,10 @@ func TestNoVote_CanFindHead(t *testing.T) {
 	//  head -> 2  1
 	//             |
 	//             3
-	if err := f.ProcessBlock(nil, 0, indexToHash(3), indexToHash(1), 1, 1); err != nil {
+	if err := f.ProcessBlock(context.Background(), 0, indexToHash(3), indexToHash(1), 1, 1); err != nil {
 		t.Fatal(err)
 	}
-	r, err = f.Head(nil, 1, params.BeaconConfig().ZeroHash, balances, 1)
+	r, err = f.Head(context.Background(), 1, params.BeaconConfig().ZeroHash, balances, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,10 +73,10 @@ func TestNoVote_CanFindHead(t *testing.T) {
 	//          2  1
 	//          |  |
 	//  head -> 4  3
-	if err := f.ProcessBlock(nil, 0, indexToHash(4), indexToHash(2), 1, 1); err != nil {
+	if err := f.ProcessBlock(context.Background(), 0, indexToHash(4), indexToHash(2), 1, 1); err != nil {
 		t.Fatal(err)
 	}
-	r, err = f.Head(nil, 1, params.BeaconConfig().ZeroHash, balances, 1)
+	r, err = f.Head(context.Background(), 1, params.BeaconConfig().ZeroHash, balances, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,10 +92,10 @@ func TestNoVote_CanFindHead(t *testing.T) {
 	//  head -> 4  3
 	//          |
 	//          5 <- justified epoch = 2
-	if err := f.ProcessBlock(nil, 0, indexToHash(5), indexToHash(4), 2, 1); err != nil {
+	if err := f.ProcessBlock(context.Background(), 0, indexToHash(5), indexToHash(4), 2, 1); err != nil {
 		t.Fatal(err)
 	}
-	r, err = f.Head(nil, 1, params.BeaconConfig().ZeroHash, balances, 1)
+	r, err = f.Head(context.Background(), 1, params.BeaconConfig().ZeroHash, balances, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,7 +111,7 @@ func TestNoVote_CanFindHead(t *testing.T) {
 	//  head -> 4  3
 	//          |
 	//          5 <- starting from 5 with justified epoch 0 should error
-	r, err = f.Head(nil, 1, indexToHash(5), balances, 1)
+	r, err = f.Head(context.Background(), 1, indexToHash(5), balances, 1)
 	if err.Error() != invalidBestNode.Error() {
 		t.Fatal("Did not get wanted error")
 	}
@@ -124,7 +124,7 @@ func TestNoVote_CanFindHead(t *testing.T) {
 	//          4  3
 	//          |
 	//          5 <- head
-	r, err = f.Head(nil, 1, indexToHash(5), balances, 2)
+	r, err = f.Head(context.Background(), 1, indexToHash(5), balances, 2)
 	if err != nil {
 		t.Fatal(err)
 	}

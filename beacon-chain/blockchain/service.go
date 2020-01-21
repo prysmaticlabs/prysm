@@ -150,7 +150,7 @@ func (s *Service) Start() {
 		if err != nil {
 			log.Fatalf("Could not tree hash head block: %v", err)
 		}
-		if err := s.forkchoice.ProcessBlock(nil, headBlock.Block.Slot, headBlockRoot, bytesutil.ToBytes32(headBlock.Block.ParentRoot), finalizedCheckpoint.Epoch, justifiedCheckpoint.Epoch); err != nil {
+		if err := s.forkchoice.ProcessBlock(ctx, headBlock.Block.Slot, headBlockRoot, bytesutil.ToBytes32(headBlock.Block.ParentRoot), finalizedCheckpoint.Epoch, justifiedCheckpoint.Epoch); err != nil {
 			log.Fatalf("Could not process block for fork choice: %v", err)
 		}
 
@@ -363,10 +363,11 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconSt
 	}
 
 	s.forkchoice = f.New(
-		genesisCheckpoint.Epoch,
-		genesisCheckpoint.Epoch,
-		bytesutil.ToBytes32(genesisCheckpoint.Root))
-	if err := s.forkchoice.ProcessBlock(nil, genesisBlk.Block.Slot, genesisBlkRoot, params.BeaconConfig().ZeroHash, genesisCheckpoint.Epoch, genesisCheckpoint.Epoch); err != nil {
+		genesisState.CurrentJustifiedCheckpoint.Epoch,
+		genesisState.FinalizedCheckpoint.Epoch,
+		bytesutil.ToBytes32(genesisState.FinalizedCheckpoint.Root))
+
+	if err := s.forkchoice.ProcessBlock(ctx, genesisBlk.Block.Slot, genesisBlkRoot, params.BeaconConfig().ZeroHash, genesisCheckpoint.Epoch, genesisCheckpoint.Epoch); err != nil {
 		log.Fatalf("Could not process genesis block for fork choice: %v", err)
 	}
 

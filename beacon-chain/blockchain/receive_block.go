@@ -105,8 +105,8 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 		if err != nil {
 			return errors.Wrap(err, "could not process fork choice for proto array fork choice")
 		}
-		log.Info(hex.EncodeToString(bytesutil.Trunc(headRoot)))
-		log.Info(hex.EncodeToString(bytesutil.Trunc(headRootProtoArray[:])))
+		log.Infof("Head after old fork choice: %v", hex.EncodeToString(bytesutil.Trunc(headRoot)))
+		log.Infof("Head after new fork choice: %v", hex.EncodeToString(bytesutil.Trunc(headRootProtoArray[:])))
 
 		// Only save head if it's different than the current head.
 		cachedHeadRoot, err := s.HeadRoot(ctx)

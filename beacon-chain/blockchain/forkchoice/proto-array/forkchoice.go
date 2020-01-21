@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
 
@@ -63,13 +64,12 @@ func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []
 
 	for _, index := range validatorIndices {
 		// Validator indices will grow the votes cache on demand.
-		newIndex := false
 		for index >= uint64(len(f.votes)) {
-			f.votes = append(f.votes, Vote{})
-			newIndex = true
+			f.votes = append(f.votes, Vote{currentRoot: params.BeaconConfig().ZeroHash, nextRoot: params.BeaconConfig().ZeroHash})
 		}
 
-		if targetEpoch > f.votes[index].nextEpoch || newIndex {
+		newVote := f.votes[index].nextRoot == params.BeaconConfig().ZeroHash && f.votes[index].currentRoot == params.BeaconConfig().ZeroHash
+		if newVote || targetEpoch > f.votes[index].nextEpoch {
 			f.votes[index].nextEpoch = targetEpoch
 			f.votes[index].nextRoot = blockRoot
 		}
