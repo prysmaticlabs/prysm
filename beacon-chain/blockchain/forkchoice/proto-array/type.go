@@ -35,9 +35,9 @@ type Node struct {
 
 // Vote defines individual validator's vote.
 type Vote struct {
-	currentRoot [32]byte
-	nextRoot    [32]byte
-	nextEpoch   uint64
+	currentRoot [32]byte // current voting root.
+	nextRoot    [32]byte // next voting root.
+	nextEpoch   uint64   // epoch of next voting period.
 }
 
 const nonExistentNode = ^uint64(0)
