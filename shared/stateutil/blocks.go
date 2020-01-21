@@ -47,7 +47,7 @@ func Eth1Root(eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 func Eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
 	eth1VotesRoots := make([][]byte, 0)
 	for i := 0; i < len(eth1DataVotes); i++ {
-		eth1, err := eth1Root(eth1DataVotes[i])
+		eth1, err := Eth1Root(eth1DataVotes[i])
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not compute eth1data merkleization")
 		}

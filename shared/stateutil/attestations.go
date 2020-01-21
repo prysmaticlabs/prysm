@@ -75,14 +75,14 @@ func attestationDataRoot(data *ethpb.AttestationData) ([32]byte, error) {
 		fieldRoots[2] = data.BeaconBlockRoot
 
 		// Source
-		sourceRoot, err := checkpointRoot(data.Source)
+		sourceRoot, err := CheckpointRoot(data.Source)
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not compute source checkpoint merkleization")
 		}
 		fieldRoots[3] = sourceRoot[:]
 
 		// Target
-		targetRoot, err := checkpointRoot(data.Target)
+		targetRoot, err := CheckpointRoot(data.Target)
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not compute target checkpoint merkleization")
 		}

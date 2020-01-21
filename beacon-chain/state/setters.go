@@ -241,6 +241,7 @@ func (b *BeaconState) SetJustificationBits(val bitfield.Bitvector4) error {
 	b.merkleLayers[0][justificationBits] = root[:]
 	b.recomputeRoot(int(justificationBits))
 	b.lock.Unlock()
+	return nil
 }
 
 func (b *BeaconState) SetPreviousJustifiedCheckpoint(val *ethpb.Checkpoint) error {
