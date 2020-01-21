@@ -3,7 +3,6 @@ package rpc
 import (
 	"context"
 	"flag"
-	"github.com/urfave/cli"
 	"strconv"
 	"testing"
 
@@ -12,6 +11,7 @@ import (
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/slasher/db"
+	"github.com/urfave/cli"
 )
 
 func TestServer_IsSlashableBlock(t *testing.T) {
