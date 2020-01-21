@@ -6,10 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/slasher/flags"
-
 	"github.com/gogo/protobuf/proto"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/urfave/cli"
 )
 
@@ -198,11 +197,7 @@ func TestValidatorSpanMap_DeleteWithCache(t *testing.T) {
 }
 
 func TestValidatorSpanMap_SaveOnEvict(t *testing.T) {
-	app := cli.NewApp()
-	set := flag.NewFlagSet("test", 0)
-	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
-	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDBDiffCacheSize(t, ctx, 5, 5)
+	db := SetupSlasherDBDiffCacheSize(t, 5, 5)
 	defer TeardownSlasherDB(t, db)
 	tsm := &spanMapTestStruct{
 		validatorIdx: 1,

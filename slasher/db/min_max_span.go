@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/slasher/flags"
 )
 
 var highestValidatorIdx uint64
@@ -47,7 +46,7 @@ func createEpochSpanMap(enc []byte) (*slashpb.EpochSpanMap, error) {
 // Returns nil if the span map for this validator index does not exist.
 func (db *Store) ValidatorSpansMap(validatorIdx uint64) (*slashpb.EpochSpanMap, error) {
 	var sm *slashpb.EpochSpanMap
-	if db.ctx.GlobalBool(flags.UseSpanCacheFlag.Name) {
+	if db.spanCacheEnabled {
 		sm, ok := db.spanCache.Get(validatorIdx)
 		if ok {
 			return sm.(*slashpb.EpochSpanMap), nil
@@ -71,7 +70,7 @@ func (db *Store) ValidatorSpansMap(validatorIdx uint64) (*slashpb.EpochSpanMap, 
 
 // SaveValidatorSpansMap accepts a validator index and span map and writes it to disk.
 func (db *Store) SaveValidatorSpansMap(validatorIdx uint64, spanMap *slashpb.EpochSpanMap) error {
-	if db.ctx.GlobalBool(flags.UseSpanCacheFlag.Name) {
+	if db.spanCacheEnabled {
 		if validatorIdx > highestValidatorIdx {
 			highestValidatorIdx = validatorIdx
 		}
@@ -99,7 +98,7 @@ func (db *Store) SaveValidatorSpansMap(validatorIdx uint64, spanMap *slashpb.Epo
 // SaveCachedSpansMaps saves all span map from cache to disk
 // if no span maps are in db or cache is disabled it returns nil.
 func (db *Store) SaveCachedSpansMaps() error {
-	if db.ctx.GlobalBool(flags.UseSpanCacheFlag.Name) {
+	if db.spanCacheEnabled {
 		err := db.update(func(tx *bolt.Tx) error {
 			bucket := tx.Bucket(validatorsMinMaxSpanBucket)
 			for i := uint64(0); i <= highestValidatorIdx; i++ {
@@ -124,7 +123,7 @@ func (db *Store) SaveCachedSpansMaps() error {
 
 // DeleteValidatorSpanMap deletes a validator span map using a validator index as bucket key.
 func (db *Store) DeleteValidatorSpanMap(validatorIdx uint64) error {
-	if db.ctx.GlobalBool(flags.UseSpanCacheFlag.Name) {
+	if db.spanCacheEnabled {
 		db.spanCache.Del(validatorIdx)
 	}
 	return db.update(func(tx *bolt.Tx) error {

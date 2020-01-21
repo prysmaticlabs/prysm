@@ -8,6 +8,7 @@ import (
 	"path"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/urfave/cli"
 )
 
@@ -21,7 +22,8 @@ func SetupSlasherDB(t testing.TB, ctx *cli.Context) *Store {
 	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
-	db, err := NewDB(p, ctx, 0, 0)
+	cfg := &Config{cacheItems: 0, maxCacheSize: 0, spanCacheEnabled: ctx.GlobalBool(flags.UseSpanCacheFlag.Name)}
+	db, err := NewDB(p, cfg)
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
 	}
@@ -29,7 +31,7 @@ func SetupSlasherDB(t testing.TB, ctx *cli.Context) *Store {
 }
 
 // SetupSlasherDBDiffCacheSize instantiates and returns a SlasherDB instance with non default cache size.
-func SetupSlasherDBDiffCacheSize(t testing.TB, ctx *cli.Context, cacheItems int64, maxCacheSize int64) *Store {
+func SetupSlasherDBDiffCacheSize(t testing.TB, cacheItems int64, maxCacheSize int64) *Store {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	if err != nil {
 		t.Fatalf("Could not generate random file path: %v", err)
@@ -38,7 +40,8 @@ func SetupSlasherDBDiffCacheSize(t testing.TB, ctx *cli.Context, cacheItems int6
 	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
-	db, err := NewDB(p, ctx, cacheItems, maxCacheSize)
+	cfg := &Config{cacheItems: cacheItems, maxCacheSize: maxCacheSize, spanCacheEnabled: true}
+	db, err := NewDB(p, cfg)
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
 	}
