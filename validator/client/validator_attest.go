@@ -210,8 +210,9 @@ func (v *validator) saveAttesterIndexToData(data *ethpb.AttestationData, index u
 	return nil
 }
 
-// IsNewAttSlashable -
-func IsNewAttSlashable(history *slashpb.AttestationHistory, sourceEpoch uint64, targetEpoch uint64) bool {
+// isNewAttSlashable uses the attestation history to determine if an attestation of sourceEpoch
+// and targetEpoch would be slashable. It can detect double, surrounding, and surrounded votes.
+func isNewAttSlashable(history *slashpb.AttestationHistory, sourceEpoch uint64, targetEpoch uint64) bool {
 	farFuture := params.BeaconConfig().FarFutureEpoch
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 
@@ -246,8 +247,9 @@ func IsNewAttSlashable(history *slashpb.AttestationHistory, sourceEpoch uint64, 
 	return false
 }
 
-// MarkAttestationForTargetEpoch -
-func MarkAttestationForTargetEpoch(history *slashpb.AttestationHistory, sourceEpoch uint64, targetEpoch uint64) *slashpb.AttestationHistory {
+// markAttestationForTargetEpoch returns the modified attestation history with the passed-in epochs marked
+// as attested for. This is done to prevent the validator client from signing any slashable attestations.
+func markAttestationForTargetEpoch(history *slashpb.AttestationHistory, sourceEpoch uint64, targetEpoch uint64) *slashpb.AttestationHistory {
 	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
 
 	if targetEpoch > history.LatestEpochWritten {
