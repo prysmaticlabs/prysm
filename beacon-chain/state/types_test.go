@@ -27,6 +27,22 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 	if r1 != r2 {
 		t.Fatalf("Mismatched roots, custom HTR %#x != regular HTR %#x", r1, r2)
 	}
+
+	// We then write to the the state and compare hash tree roots again.
+	balances := genesis.Balances
+	balances[0] = 3823
+	if err := customState.SetBalances(balances); err != nil {
+		t.Fatal(err)
+	}
+	r1 = customState.HashTreeRoot()
+	genesis.Balances = balances
+	r2, err = stateutil.HashTreeRootState(genesis)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r1 != r2 {
+		t.Fatalf("Mismatched roots, custom HTR %#x != regular HTR %#x", r1, r2)
+	}
 }
 
 func setupGenesisState(tb testing.TB, count uint64) *pb.BeaconState {

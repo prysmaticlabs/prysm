@@ -3,18 +3,22 @@ package state
 import (
 	"sync"
 
+	"github.com/protolambda/zssz/merkle"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/stateutil"
 )
 
+// BeaconState defines a struct containing utilities for the eth2 chain state, defining
+// getters and setters for its respective values and helpful functions such as HashTreeRoot().
 type BeaconState struct {
 	state        *pbp2p.BeaconState
 	lock         sync.RWMutex
 	merkleLayers [][][]byte
 }
 
+// Initialize --
 func Initialize(st *pbp2p.BeaconState) (*BeaconState, error) {
 	fieldRoots, err := stateutil.ComputeFieldRoots(st)
 	if err != nil {
@@ -27,6 +31,7 @@ func Initialize(st *pbp2p.BeaconState) (*BeaconState, error) {
 	}, nil
 }
 
+// HashTreeRoot --
 func (b *BeaconState) HashTreeRoot() [32]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
@@ -34,11 +39,11 @@ func (b *BeaconState) HashTreeRoot() [32]byte {
 }
 
 func merkleize(leaves [][]byte) [][][]byte {
+	layers := make([][][]byte, merkle.GetDepth(uint64(len(leaves)))+1)
 	for len(leaves) != 32 {
 		leaves = append(leaves, make([]byte, 32))
 	}
 	currentLayer := leaves
-	layers := make([][][]byte, 5)
 	layers[0] = currentLayer
 
 	// We keep track of the hash layers of a Merkle trie until we reach
