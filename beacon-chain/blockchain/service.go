@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	bstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -49,7 +51,7 @@ type Service struct {
 	maxRoutines            int64
 	headSlot               uint64
 	headBlock              *ethpb.SignedBeaconBlock
-	headState              *pb.BeaconState
+	headState              *bstate.BeaconState
 	canonicalRoots         map[uint64][]byte
 	headLock               sync.RWMutex
 	stateNotifier          statefeed.Notifier
@@ -259,7 +261,10 @@ func (s *Service) saveHead(ctx context.Context, signed *ethpb.SignedBeaconBlock,
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve head state in DB")
 	}
-	s.headState = headState
+	s.headState, err = bstate.Initialize(headState)
+	if err != nil {
+		return err
+	}
 
 	log.WithFields(logrus.Fields{
 		"slot":     signed.Block.Slot,
@@ -285,7 +290,10 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve head state in DB")
 	}
-	s.headState = headState
+	s.headState, err = bstate.Initialize(headState)
+	if err != nil {
+		return err
+	}
 
 	log.WithFields(logrus.Fields{
 		"slot":     b.Block.Slot,
@@ -343,7 +351,10 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconSt
 
 	s.genesisRoot = genesisBlkRoot
 	s.headBlock = genesisBlk
-	s.headState = genesisState
+	s.headState, err = bstate.Initialize(genesisState)
+	if err != nil {
+		return err
+	}
 	s.canonicalRoots[genesisState.Slot] = genesisBlkRoot[:]
 
 	return nil
@@ -376,9 +387,13 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		// would be the genesis state and block.
 		return errors.New("no finalized epoch in the database")
 	}
-	s.headState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(finalized.Root))
+	hState, err := s.beaconDB.State(ctx, bytesutil.ToBytes32(finalized.Root))
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized state from db")
+	}
+	s.headState, err = bstate.Initialize(hState)
+	if err != nil {
+		return err
 	}
 	s.headBlock, err = s.beaconDB.Block(ctx, bytesutil.ToBytes32(finalized.Root))
 	if err != nil {
