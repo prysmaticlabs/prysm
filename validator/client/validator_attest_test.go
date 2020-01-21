@@ -435,6 +435,11 @@ func TestAttestationHistory_Prunes(t *testing.T) {
 		LatestEpochWritten: 0,
 	}
 
+	// Try an attestation on totally unmarked history, should not be slashable.
+	if IsNewAttSlashable(attestations, 0, wsPeriod+5) {
+		t.Fatalf("Expected attestation of source 0, target %d to be considered slashable", wsPeriod+5)
+	}
+
 	// Mark attestations spanning epochs 0 to 3 and 6 to 9.
 	prunedNewAttSource := uint64(0)
 	prunedNewAttTarget := uint64(3)
@@ -462,6 +467,15 @@ func TestAttestationHistory_Prunes(t *testing.T) {
 		t.Fatalf("Expected attestation at target epoch %d to not be marked", farNewAttSource)
 	}
 
+	// Try an attestation from existing source to outside prune, should slash.
+	if !IsNewAttSlashable(attestations, newAttSource, farNewAttTarget) {
+		t.Fatalf("Expected attestation of source %d, target %d to be considered slashable", newAttSource, farNewAttTarget)
+	}
+	// Try an attestation from before existing target to outside prune, should slash.
+	if !IsNewAttSlashable(attestations, newAttTarget-1, farNewAttTarget) {
+		t.Fatalf("Expected attestation of source %d, target %d to be considered slashable", newAttTarget-1, farNewAttTarget)
+	}
+	// Try an attestation larger than pruning amount, should slash.
 	if !IsNewAttSlashable(attestations, 0, farNewAttTarget+5) {
 		t.Fatalf("Expected attestation of source 0, target %d to be considered slashable", farNewAttTarget+5)
 	}
