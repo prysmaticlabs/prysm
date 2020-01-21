@@ -3,6 +3,7 @@ package state
 import (
 	"sync"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/protolambda/zssz/merkle"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -18,7 +19,7 @@ type BeaconState struct {
 	merkleLayers [][][]byte
 }
 
-// Initialize the beacon state from a protobuf representation.
+// InitializeFromProto the beacon state from a protobuf representation.
 func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
 	fieldRoots, err := stateutil.ComputeFieldRoots(st)
 	if err != nil {
@@ -26,7 +27,7 @@ func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
 	}
 	layers := merkleize(fieldRoots)
 	return &BeaconState{
-		state:        st,
+		state:        proto.Clone(st).(*pbp2p.BeaconState),
 		merkleLayers: layers,
 	}, nil
 }

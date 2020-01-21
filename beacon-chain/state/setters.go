@@ -318,6 +318,9 @@ func (b *BeaconState) SetFinalizedCheckpoint(val *ethpb.Checkpoint) error {
 	return nil
 }
 
+// Recomputes the branch up the index in the Merkle trie representation
+// of the beacon state. This method performs map reads and the caller MUST
+// hold the lock before calling this method.
 func (b *BeaconState) recomputeRoot(idx int) {
 	layers := b.merkleLayers
 	// The merkle tree structure looks as follows:
