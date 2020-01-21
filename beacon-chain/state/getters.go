@@ -72,32 +72,53 @@ func (b *BeaconState) LatestBlockHeader() *ethpb.BeaconBlockHeader {
 
 // BlockRoots --
 func (b *BeaconState) BlockRoots() [][]byte {
-	res := make([][]byte, len(b.state.BlockRoots))
-	copy(res, b.state.BlockRoots)
-	return res
+	roots := make([][]byte, len(b.state.BlockRoots))
+	for i, r := range b.state.BlockRoots {
+		tmpRt := [32]byte{}
+		copy(tmpRt[:], r)
+		roots[i] = tmpRt[:]
+	}
+	return roots
 }
 
 // StateRoots --
 func (b *BeaconState) StateRoots() [][]byte {
-	res := make([][]byte, len(b.state.StateRoots))
-	copy(res, b.state.StateRoots)
-	return res
+	roots := make([][]byte, len(b.state.StateRoots))
+	for i, r := range b.state.StateRoots {
+		tmpRt := [32]byte{}
+		copy(tmpRt[:], r)
+		roots[i] = tmpRt[:]
+	}
+	return roots
 }
 
 // HistoricalRoots --
 func (b *BeaconState) HistoricalRoots() [][]byte {
-	res := make([][]byte, len(b.state.HistoricalRoots))
-	copy(res, b.state.HistoricalRoots)
-	return res
+	roots := make([][]byte, len(b.state.HistoricalRoots))
+	for i, r := range b.state.HistoricalRoots {
+		tmpRt := [32]byte{}
+		copy(tmpRt[:], r)
+		roots[i] = tmpRt[:]
+	}
+	return roots
 }
 
 // Eth1Data --
 func (b *BeaconState) Eth1Data() *ethpb.Eth1Data {
-	return &ethpb.Eth1Data{
-		DepositRoot:  b.state.Eth1Data.DepositRoot,
+	eth1data := &ethpb.Eth1Data{
 		DepositCount: b.state.Eth1Data.DepositCount,
-		BlockHash:    b.state.Eth1Data.BlockHash,
 	}
+	var depositRoot [32]byte
+	var blockHash [32]byte
+
+	copy(depositRoot[:], b.state.Eth1Data.DepositRoot)
+	copy(blockHash[:], b.state.Eth1Data.BlockHash)
+
+	eth1data.DepositRoot = depositRoot[:]
+	eth1data.BlockHash = blockHash[:]
+
+	return eth1data
+
 }
 
 // Eth1DataVotes --
@@ -105,10 +126,16 @@ func (b *BeaconState) Eth1DataVotes() []*ethpb.Eth1Data {
 	res := make([]*ethpb.Eth1Data, len(b.state.Eth1DataVotes))
 	for i := 0; i < len(res); i++ {
 		res[i] = &ethpb.Eth1Data{
-			DepositRoot:  b.state.Eth1DataVotes[i].DepositRoot,
-			DepositCount: b.state.Eth1DataVotes[i].DepositCount,
-			BlockHash:    b.state.Eth1DataVotes[i].BlockHash,
+			DepositCount: b.state.Eth1Data.DepositCount,
 		}
+		var depositRoot [32]byte
+		var blockHash [32]byte
+
+		copy(depositRoot[:], b.state.Eth1DataVotes[i].DepositRoot)
+		copy(blockHash[:], b.state.Eth1DataVotes[i].BlockHash)
+
+		res[i].DepositRoot = depositRoot[:]
+		res[i].BlockHash = blockHash[:]
 	}
 	return res
 }
@@ -146,9 +173,13 @@ func (b *BeaconState) Balances() []uint64 {
 
 // RandaoMixes --
 func (b *BeaconState) RandaoMixes() [][]byte {
-	res := make([][]byte, len(b.state.RandaoMixes))
-	copy(res, b.state.RandaoMixes)
-	return res
+	mixes := make([][]byte, len(b.state.RandaoMixes))
+	for i, r := range b.state.RandaoMixes {
+		tmpRt := [32]byte{}
+		copy(tmpRt[:], r)
+		mixes[i] = tmpRt[:]
+	}
+	return mixes
 }
 
 // Slashings --
