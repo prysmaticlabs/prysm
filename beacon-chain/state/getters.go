@@ -1,7 +1,6 @@
 package state
 
 import (
-	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -195,7 +194,7 @@ func (b *BeaconState) Slashings() []uint64 {
 func (b *BeaconState) PreviousEpochAttestations() []*pbp2p.PendingAttestation {
 	res := make([]*pbp2p.PendingAttestation, len(b.state.PreviousEpochAttestations))
 	for i := 0; i < len(res); i++ {
-		res[i] = proto.Clone(b.state.PreviousEpochAttestations[i]).(*pbp2p.PendingAttestation)
+		res[i] = clonePendingAttestation(b.state.PreviousEpochAttestations[i])
 	}
 	return res
 }
@@ -204,7 +203,7 @@ func (b *BeaconState) PreviousEpochAttestations() []*pbp2p.PendingAttestation {
 func (b *BeaconState) CurrentEpochAttestations() []*pbp2p.PendingAttestation {
 	res := make([]*pbp2p.PendingAttestation, len(b.state.CurrentEpochAttestations))
 	for i := 0; i < len(res); i++ {
-		res[i] = proto.Clone(b.state.CurrentEpochAttestations[i]).(*pbp2p.PendingAttestation)
+		res[i] = clonePendingAttestation(b.state.CurrentEpochAttestations[i])
 	}
 	return res
 }
@@ -247,4 +246,36 @@ func (b *BeaconState) FinalizedCheckpoint() *ethpb.Checkpoint {
 	copy(root[:], b.state.FinalizedCheckpoint.Root)
 	cp.Root = root[:]
 	return cp
+}
+
+func clonePendingAttestation(att *pbp2p.PendingAttestation) *pbp2p.PendingAttestation {
+	var aggBits bitfield.Bitlist
+	copy(aggBits, att.AggregationBits)
+
+	var beaconRoot [32]byte
+	copy(beaconRoot[:], att.Data.BeaconBlockRoot)
+
+	var sourceRoot [32]byte
+	copy(sourceRoot[:], att.Data.Source.Root)
+
+	var targetRoot [32]byte
+	copy(targetRoot[:], att.Data.Target.Root)
+	return &pbp2p.PendingAttestation{
+		AggregationBits: aggBits,
+		Data: &ethpb.AttestationData{
+			Slot:            att.Data.Slot,
+			CommitteeIndex:  att.Data.CommitteeIndex,
+			BeaconBlockRoot: beaconRoot[:],
+			Source: &ethpb.Checkpoint{
+				Epoch: att.Data.Source.Epoch,
+				Root:  sourceRoot[:],
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: att.Data.Target.Epoch,
+				Root:  targetRoot[:],
+			},
+		},
+		InclusionDelay: att.InclusionDelay,
+		ProposerIndex:  att.ProposerIndex,
+	}
 }
