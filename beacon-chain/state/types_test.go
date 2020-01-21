@@ -7,7 +7,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/stateutil"
@@ -20,6 +19,12 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	cloned := proto.Clone(genesis).(*pb.BeaconState)
+	custom := customState.Clone()
+	if !proto.Equal(cloned, custom) {
+		t.Fatal("Cloned states did not match")
+	}
+
 	r1 := customState.HashTreeRoot()
 	r2, err := stateutil.HashTreeRootState(genesis)
 	if err != nil {
@@ -114,6 +119,30 @@ func BenchmarkCloneValidators_Manual(b *testing.B) {
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		cloneValidatorsManually(validators)
+	}
+}
+
+func BenchmarkStateClone_Proto(b *testing.B) {
+	b.StopTimer()
+	params.UseMinimalConfig()
+	genesis := setupGenesisState(b, 64)
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		_ = proto.Clone(genesis).(*pb.BeaconState)
+	}
+}
+
+func BenchmarkStateClone_Manual(b *testing.B) {
+	b.StopTimer()
+	params.UseMinimalConfig()
+	genesis := setupGenesisState(b, 64)
+	st, err := InitializeFromProto(genesis)
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		_ = st.Clone()
 	}
 }
 
