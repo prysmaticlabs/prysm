@@ -18,8 +18,8 @@ type BeaconState struct {
 	merkleLayers [][][]byte
 }
 
-// Initialize --
-func Initialize(st *pbp2p.BeaconState) (*BeaconState, error) {
+// Initialize the beacon state from a protobuf representation.
+func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
 	fieldRoots, err := stateutil.ComputeFieldRoots(st)
 	if err != nil {
 		return nil, err
@@ -31,13 +31,17 @@ func Initialize(st *pbp2p.BeaconState) (*BeaconState, error) {
 	}, nil
 }
 
-// HashTreeRoot --
+// HashTreeRoot of the beacon state retrieves the Merkle root of the trie
+// representation of the beacon state based on the eth2 Simple Serialize specification.
 func (b *BeaconState) HashTreeRoot() [32]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0])
 }
 
+// Merkleize 32-byte leaves into a Merkle trie for its adequate depth, returning
+// the resulting layers of the trie based on the appropriate depth. This function
+// pads the leaves to a power-of-two length.
 func merkleize(leaves [][]byte) [][][]byte {
 	layers := make([][][]byte, merkle.GetDepth(uint64(len(leaves)))+1)
 	for len(leaves) != 32 {

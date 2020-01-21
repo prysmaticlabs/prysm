@@ -15,7 +15,7 @@ import (
 func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 	params.UseMinimalConfig()
 	genesis := setupGenesisState(t, 64)
-	customState, err := Initialize(genesis)
+	customState, err := InitializeFromProto(genesis)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -7,7 +7,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-// Clone --
+// Clone the beacon state into a protobuf for usage.
 func (b *BeaconState) Clone() *pbp2p.BeaconState {
 	return &pbp2p.BeaconState{
 		GenesisTime:                 b.GenesisTime(),
@@ -33,17 +33,17 @@ func (b *BeaconState) Clone() *pbp2p.BeaconState {
 	}
 }
 
-// GenesisTime --
+// GenesisTime of the beacon state as a uint64.
 func (b *BeaconState) GenesisTime() uint64 {
 	return b.state.GenesisTime
 }
 
-// Slot --
+// Slot of the current beacon chain state.
 func (b *BeaconState) Slot() uint64 {
 	return b.state.Slot
 }
 
-// Fork --
+// Fork version of the beacon chain.
 func (b *BeaconState) Fork() *pbp2p.Fork {
 	return &pbp2p.Fork{
 		PreviousVersion: b.state.Fork.PreviousVersion,
@@ -52,7 +52,7 @@ func (b *BeaconState) Fork() *pbp2p.Fork {
 	}
 }
 
-// LatestBlockHeader --
+// LatestBlockHeader stored within the beacon state.
 func (b *BeaconState) LatestBlockHeader() *ethpb.BeaconBlockHeader {
 	hdr := &ethpb.BeaconBlockHeader{
 		Slot: b.state.LatestBlockHeader.Slot,
@@ -70,7 +70,7 @@ func (b *BeaconState) LatestBlockHeader() *ethpb.BeaconBlockHeader {
 	return hdr
 }
 
-// BlockRoots --
+// BlockRoots kept track of in the beacon state.
 func (b *BeaconState) BlockRoots() [][]byte {
 	roots := make([][]byte, len(b.state.BlockRoots))
 	for i, r := range b.state.BlockRoots {
@@ -81,7 +81,7 @@ func (b *BeaconState) BlockRoots() [][]byte {
 	return roots
 }
 
-// StateRoots --
+// StateRoots kept track of in the beacon state.
 func (b *BeaconState) StateRoots() [][]byte {
 	roots := make([][]byte, len(b.state.StateRoots))
 	for i, r := range b.state.StateRoots {
@@ -92,7 +92,7 @@ func (b *BeaconState) StateRoots() [][]byte {
 	return roots
 }
 
-// HistoricalRoots --
+// HistoricalRoots based on epochs stored in the beacon state.
 func (b *BeaconState) HistoricalRoots() [][]byte {
 	roots := make([][]byte, len(b.state.HistoricalRoots))
 	for i, r := range b.state.HistoricalRoots {
@@ -103,7 +103,7 @@ func (b *BeaconState) HistoricalRoots() [][]byte {
 	return roots
 }
 
-// Eth1Data --
+// Eth1Data corresponding to the proof-of-work chain information stored in the beacon state.
 func (b *BeaconState) Eth1Data() *ethpb.Eth1Data {
 	eth1data := &ethpb.Eth1Data{
 		DepositCount: b.state.Eth1Data.DepositCount,
@@ -121,7 +121,8 @@ func (b *BeaconState) Eth1Data() *ethpb.Eth1Data {
 
 }
 
-// Eth1DataVotes --
+// Eth1DataVotes corresponds to votes from eth2 on the canonical proof-of-work chain
+// data retrieved from eth1.
 func (b *BeaconState) Eth1DataVotes() []*ethpb.Eth1Data {
 	res := make([]*ethpb.Eth1Data, len(b.state.Eth1DataVotes))
 	for i := 0; i < len(res); i++ {
@@ -140,12 +141,13 @@ func (b *BeaconState) Eth1DataVotes() []*ethpb.Eth1Data {
 	return res
 }
 
-// Eth1DepositIndex --
+// Eth1DepositIndex corresponds to the index of the deposit made to the
+// validator deposit contract at the time of this state's eth1 data.
 func (b *BeaconState) Eth1DepositIndex() uint64 {
 	return b.state.Eth1DepositIndex
 }
 
-// Validators --
+// Validators participating in consensus on the beacon chain.
 func (b *BeaconState) Validators() []*ethpb.Validator {
 	res := make([]*ethpb.Validator, len(b.state.Validators))
 	for i := 0; i < len(res); i++ {
@@ -164,14 +166,14 @@ func (b *BeaconState) Validators() []*ethpb.Validator {
 	return res
 }
 
-// Balances --
+// Balances of validators participating in consensus on the beacon chain.
 func (b *BeaconState) Balances() []uint64 {
 	res := make([]uint64, len(b.state.Balances))
 	copy(res, b.state.Balances)
 	return res
 }
 
-// RandaoMixes --
+// RandaoMixes of block proposers on the beacon chain.
 func (b *BeaconState) RandaoMixes() [][]byte {
 	mixes := make([][]byte, len(b.state.RandaoMixes))
 	for i, r := range b.state.RandaoMixes {
@@ -182,14 +184,14 @@ func (b *BeaconState) RandaoMixes() [][]byte {
 	return mixes
 }
 
-// Slashings --
+// Slashings of validators on the beacon chain.
 func (b *BeaconState) Slashings() []uint64 {
 	res := make([]uint64, len(b.state.Slashings))
 	copy(res, b.state.Slashings)
 	return res
 }
 
-// PreviousEpochAttestations --
+// PreviousEpochAttestations corresponding to blocks on the beacon chain.
 func (b *BeaconState) PreviousEpochAttestations() []*pbp2p.PendingAttestation {
 	res := make([]*pbp2p.PendingAttestation, len(b.state.PreviousEpochAttestations))
 	for i := 0; i < len(res); i++ {
@@ -198,7 +200,7 @@ func (b *BeaconState) PreviousEpochAttestations() []*pbp2p.PendingAttestation {
 	return res
 }
 
-// CurrentEpochAttestations --
+// CurrentEpochAttestations corresponding to blocks on the beacon chain.
 func (b *BeaconState) CurrentEpochAttestations() []*pbp2p.PendingAttestation {
 	res := make([]*pbp2p.PendingAttestation, len(b.state.CurrentEpochAttestations))
 	for i := 0; i < len(res); i++ {
@@ -207,14 +209,14 @@ func (b *BeaconState) CurrentEpochAttestations() []*pbp2p.PendingAttestation {
 	return res
 }
 
-// JustificationBits --
+// JustificationBits marking which epochs have been justified in the beacon chain.
 func (b *BeaconState) JustificationBits() bitfield.Bitvector4 {
 	res := bitfield.Bitvector4{}
 	copy(res, b.state.JustificationBits)
 	return res
 }
 
-// PreviousJustifiedCheckpoint --
+// PreviousJustifiedCheckpoint denoting an epoch and block root.
 func (b *BeaconState) PreviousJustifiedCheckpoint() *ethpb.Checkpoint {
 	cp := &ethpb.Checkpoint{
 		Epoch: b.state.PreviousJustifiedCheckpoint.Epoch,
@@ -225,7 +227,7 @@ func (b *BeaconState) PreviousJustifiedCheckpoint() *ethpb.Checkpoint {
 	return cp
 }
 
-// CurrentJustifiedCheckpoint --
+// CurrentJustifiedCheckpoint denoting an epoch and block root.
 func (b *BeaconState) CurrentJustifiedCheckpoint() *ethpb.Checkpoint {
 	cp := &ethpb.Checkpoint{
 		Epoch: b.state.CurrentJustifiedCheckpoint.Epoch,
@@ -236,7 +238,7 @@ func (b *BeaconState) CurrentJustifiedCheckpoint() *ethpb.Checkpoint {
 	return cp
 }
 
-// FinalizedCheckpoint --
+// FinalizedCheckpoint denoting an epoch and block root.
 func (b *BeaconState) FinalizedCheckpoint() *ethpb.Checkpoint {
 	cp := &ethpb.Checkpoint{
 		Epoch: b.state.FinalizedCheckpoint.Epoch,
