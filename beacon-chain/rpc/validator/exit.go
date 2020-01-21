@@ -5,9 +5,10 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/exit"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -20,8 +21,10 @@ func (vs *Server) ProposeExit(ctx context.Context, req *ethpb.SignedVoluntaryExi
 	}
 
 	// Confirm the validator is eligible to exit with the parameters provided.
-	err = exit.ValidateVoluntaryExit(s, vs.GenesisTime, req)
-	if err != nil {
+	if int(req.Exit.ValidatorIndex) >= len(s.Validators) {
+		return nil, status.Error(codes.InvalidArgument, "validator index exceeds validator set length")
+	}
+	if err := blocks.VerifyExit(s.Validators[req.Exit.ValidatorIndex], helpers.StartSlot(req.Exit.Epoch), s.Fork, req); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
