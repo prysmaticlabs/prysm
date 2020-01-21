@@ -156,8 +156,17 @@ func (b *BeaconState) SetEth1DepositIndex(val uint64) error {
 	return nil
 }
 
-func (b *BeaconState) SetValidators(val []*ethpb.Validator) {
+func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
+	root, err := stateutil.ValidatorRegistryRoot(b.state.Validators)
+	if err != nil {
+		return err
+	}
 	b.state.Validators = val
+	b.lock.Lock()
+	b.merkleLayers[0][validators] = root[:]
+	b.recomputeRoot(int(validators))
+	b.lock.Unlock()
+	return nil
 }
 
 func (b *BeaconState) SetBalances(val []uint64) error {
@@ -199,12 +208,30 @@ func (b *BeaconState) SetSlashings(val []uint64) error {
 	return nil
 }
 
-func (b *BeaconState) SetPreviousEpochAttestations(val []*pbp2p.PendingAttestation) {
+func (b *BeaconState) SetPreviousEpochAttestations(val []*pbp2p.PendingAttestation) error {
+	root, err := stateutil.EpochAttestationsRoot(b.state.PreviousEpochAttestations)
+	if err != nil {
+		return err
+	}
 	b.state.PreviousEpochAttestations = val
+	b.lock.Lock()
+	b.merkleLayers[0][previousEpochAttestations] = root[:]
+	b.recomputeRoot(int(previousEpochAttestations))
+	b.lock.Unlock()
+	return nil
 }
 
-func (b *BeaconState) SetCurrentEpochAttestations(val []*pbp2p.PendingAttestation) {
+func (b *BeaconState) SetCurrentEpochAttestations(val []*pbp2p.PendingAttestation) error {
+	root, err := stateutil.EpochAttestationsRoot(b.state.CurrentEpochAttestations)
+	if err != nil {
+		return err
+	}
 	b.state.CurrentEpochAttestations = val
+	b.lock.Lock()
+	b.merkleLayers[0][currentEpochAttestations] = root[:]
+	b.recomputeRoot(int(currentEpochAttestations))
+	b.lock.Unlock()
+	return nil
 }
 
 func (b *BeaconState) SetJustificationBits(val bitfield.Bitvector4) error {

@@ -57,13 +57,6 @@ func ComputeFieldRoots(state *pb.BeaconState) ([][]byte, error) {
 	return nocachedHasher.computeFieldRoots(state)
 }
 
-func ArraysRoot(vals [][]byte, length uint64, fieldName string) ([32]byte, error) {
-	if featureconfig.Get().EnableSSZCache {
-		return cachedHasher.arraysRoot(vals, length, fieldName)
-	}
-	return nocachedHasher.arraysRoot(vals, length, fieldName)
-}
-
 func (h *stateRootHasher) hashTreeRootState(state *pb.BeaconState) ([32]byte, error) {
 	var fieldRoots [][]byte
 	var err error

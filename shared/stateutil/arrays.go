@@ -7,6 +7,7 @@ import (
 
 	"github.com/protolambda/zssz/merkle"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
@@ -15,6 +16,13 @@ var (
 	layersCache = make(map[string][][][]byte)
 	lock        sync.RWMutex
 )
+
+func ArraysRoot(vals [][]byte, length uint64, fieldName string) ([32]byte, error) {
+	if featureconfig.Get().EnableSSZCache {
+		return cachedHasher.arraysRoot(vals, length, fieldName)
+	}
+	return nocachedHasher.arraysRoot(vals, length, fieldName)
+}
 
 func (h *stateRootHasher) arraysRoot(input [][]byte, length uint64, fieldName string) ([32]byte, error) {
 	lock.Lock()

@@ -8,8 +8,16 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+func EpochAttestationsRoot(atts []*pb.PendingAttestation) ([32]byte, error) {
+	if featureconfig.Get().EnableSSZCache {
+		return cachedHasher.epochAttestationsRoot(atts)
+	}
+	return nocachedHasher.epochAttestationsRoot(atts)
+}
 
 func marshalAttestationData(data *ethpb.AttestationData) []byte {
 	enc := make([]byte, 128)
