@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
@@ -37,25 +38,27 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	}
 
 	// Run fork choice for head block after updating fork choice store.
-	headRoot, err := s.forkChoiceStore.Head(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not get head from fork choice service")
-	}
-	// Only save head if it's different than the current head.
-	cachedHeadRoot, err := s.HeadRoot(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not get head root from cache")
-	}
-	if !bytes.Equal(headRoot, cachedHeadRoot) {
-		signed, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
+	if !featureconfig.Get().DisableForkChoice {
+		headRoot, err := s.forkChoiceStore.Head(ctx)
 		if err != nil {
-			return errors.Wrap(err, "could not compute state from block head")
+			return errors.Wrap(err, "could not get head from fork choice service")
 		}
-		if signed == nil || signed.Block == nil {
-			return errors.New("nil head block")
+		// Only save head if it's different than the current head.
+		cachedHeadRoot, err := s.HeadRoot(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not get head root from cache")
 		}
-		if err := s.saveHead(ctx, signed, bytesutil.ToBytes32(headRoot)); err != nil {
-			return errors.Wrap(err, "could not save head")
+		if !bytes.Equal(headRoot, cachedHeadRoot) {
+			signed, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
+			if err != nil {
+				return errors.Wrap(err, "could not compute state from block head")
+			}
+			if signed == nil || signed.Block == nil {
+				return errors.New("nil head block")
+			}
+			if err := s.saveHead(ctx, signed, bytesutil.ToBytes32(headRoot)); err != nil {
+				return errors.Wrap(err, "could not save head")
+			}
 		}
 	}
 

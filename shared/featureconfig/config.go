@@ -38,6 +38,11 @@ type Flags struct {
 	ProtectProposer           bool   // ProtectProposer prevents the validator client from signing any proposals that would be considered a slashable offense.
 	ProtectAttester           bool   // ProtectAttester prevents the validator client from signing any attestations that would be considered a slashable offense.
 
+	// DisableForkChoice disables using LMD-GHOST fork choice to update
+	// the head of the chain based on attestations and instead accepts any valid received block
+	// as the chain head. UNSAFE, use with caution.
+	DisableForkChoice bool
+
 	// Cache toggles.
 	EnableAttestationCache   bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableSSZCache           bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
@@ -79,6 +84,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(writeSSZStateTransitionsFlag.Name) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
 		cfg.WriteSSZStateTransitions = true
+	}
+	if ctx.GlobalBool(disableForkChoiceUnsafeFlag.Name) {
+		log.Warn("UNSAFE: Disabled fork choice for updating chain head")
+		cfg.DisableForkChoice = true
 	}
 	if ctx.GlobalBool(enableAttestationCacheFlag.Name) {
 		log.Warn("Enabled unsafe attestation cache")
