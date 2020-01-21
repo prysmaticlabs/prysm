@@ -12,13 +12,13 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/stateutil"
@@ -250,40 +250,37 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 	}
 
 	highestSlot := state.Slot
-	var key [32]byte
-	var writeToCache bool
-	var err error
+	key := state.Slot
 
-	if featureconfig.Get().EnableSkipSlotsCache {
-		// Restart from cached value, if one exists.
-		key, err = cacheKey(state)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not create cache key")
-		}
-		cached, ok := skipSlotCache.Get(key)
-		// if cache key does not exist, we write it to the cache.
-		writeToCache = !ok
-		if ok {
-			// do not write to cache if state with higher slot exists.
-			writeToCache = cached.(*pb.BeaconState).Slot <= slot
-			if cached.(*pb.BeaconState).Slot <= slot {
-				state = proto.Clone(cached.(*pb.BeaconState)).(*pb.BeaconState)
-				highestSlot = state.Slot
-				skipSlotCacheHit.Inc()
-			} else {
-				skipSlotCacheMiss.Inc()
-			}
-		}
+	// Restart from cached value, if one exists.
+	cachedState, err := skipSlotCache.Get(ctx, key)
+	if err != nil {
+		return nil, err
 	}
+	if cachedState != nil && cachedState.Slot <= slot {
+		highestSlot = cachedState.Slot
+		state = cachedState
+	}
+	if err := skipSlotCache.MarkInProgress(key); err == cache.ErrAlreadyInProgress {
+		cachedState, err := skipSlotCache.Get(ctx, key)
+		if err != nil {
+			return nil, err
+		}
+		if cachedState != nil && cachedState.Slot <= slot {
+			highestSlot = cachedState.Slot
+			state = cachedState
+		}
+	} else if err != nil {
+		return nil, err
+	}
+	defer skipSlotCache.MarkNotInProgress(key)
 
 	for state.Slot < slot {
 		if ctx.Err() != nil {
 			traceutil.AnnotateError(span, ctx.Err())
-			if featureconfig.Get().EnableSkipSlotsCache {
-				// Cache last best value.
-				if highestSlot < state.Slot && writeToCache {
-					skipSlotCache.Add(key, proto.Clone(state).(*pb.BeaconState))
-				}
+			// Cache last best value.
+			if highestSlot < state.Slot {
+				skipSlotCache.Put(ctx, key, state)
 			}
 			return nil, ctx.Err()
 		}
@@ -302,11 +299,8 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 		state.Slot++
 	}
 
-	if featureconfig.Get().EnableSkipSlotsCache {
-		// Clone result state so that caches are not mutated.
-		if highestSlot < state.Slot && writeToCache {
-			skipSlotCache.Add(key, proto.Clone(state).(*pb.BeaconState))
-		}
+	if highestSlot < state.Slot {
+		skipSlotCache.Put(ctx, key, state)
 	}
 
 	return state, nil
