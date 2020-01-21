@@ -71,8 +71,8 @@ func (b *BeaconState) LatestBlockHeader() *ethpb.BeaconBlockHeader {
 	var stateRoot [32]byte
 
 	copy(parentRoot[:], b.state.LatestBlockHeader.ParentRoot)
-	copy(bodyRoot[:], b.state.LatestBlockHeader.StateRoot)
-	copy(stateRoot[:], b.state.LatestBlockHeader.BodyRoot)
+	copy(bodyRoot[:], b.state.LatestBlockHeader.BodyRoot)
+	copy(stateRoot[:], b.state.LatestBlockHeader.StateRoot)
 	hdr.ParentRoot = parentRoot[:]
 	hdr.BodyRoot = bodyRoot[:]
 	hdr.StateRoot = stateRoot[:]
@@ -259,8 +259,8 @@ func (b *BeaconState) JustificationBits() bitfield.Bitvector4 {
 	if b.state.JustificationBits == nil {
 		return nil
 	}
-	res := bitfield.Bitvector4{}
-	copy(res, b.state.JustificationBits)
+	res := make([]byte, len(b.state.JustificationBits.Bytes()))
+	copy(res, b.state.JustificationBits.Bytes())
 	return res
 }
 
