@@ -44,6 +44,9 @@ func (b *BeaconState) Slot() uint64 {
 
 // Fork version of the beacon chain.
 func (b *BeaconState) Fork() *pbp2p.Fork {
+	if b.state.Fork == nil {
+		return nil
+	}
 	prevVersion := make([]byte, len(b.state.Fork.PreviousVersion))
 	copy(prevVersion, b.state.Fork.PreviousVersion)
 	currVersion := make([]byte, len(b.state.Fork.PreviousVersion))
@@ -57,6 +60,9 @@ func (b *BeaconState) Fork() *pbp2p.Fork {
 
 // LatestBlockHeader stored within the beacon state.
 func (b *BeaconState) LatestBlockHeader() *ethpb.BeaconBlockHeader {
+	if b.state.LatestBlockHeader == nil {
+		return nil
+	}
 	hdr := &ethpb.BeaconBlockHeader{
 		Slot: b.state.LatestBlockHeader.Slot,
 	}
@@ -75,6 +81,9 @@ func (b *BeaconState) LatestBlockHeader() *ethpb.BeaconBlockHeader {
 
 // BlockRoots kept track of in the beacon state.
 func (b *BeaconState) BlockRoots() [][]byte {
+	if b.state.BlockRoots == nil {
+		return nil
+	}
 	roots := make([][]byte, len(b.state.BlockRoots))
 	for i, r := range b.state.BlockRoots {
 		tmpRt := [32]byte{}
@@ -86,6 +95,9 @@ func (b *BeaconState) BlockRoots() [][]byte {
 
 // StateRoots kept track of in the beacon state.
 func (b *BeaconState) StateRoots() [][]byte {
+	if b.state.StateRoots == nil {
+		return nil
+	}
 	roots := make([][]byte, len(b.state.StateRoots))
 	for i, r := range b.state.StateRoots {
 		tmpRt := [32]byte{}
@@ -97,6 +109,9 @@ func (b *BeaconState) StateRoots() [][]byte {
 
 // HistoricalRoots based on epochs stored in the beacon state.
 func (b *BeaconState) HistoricalRoots() [][]byte {
+	if b.state.HistoricalRoots == nil {
+		return nil
+	}
 	roots := make([][]byte, len(b.state.HistoricalRoots))
 	for i, r := range b.state.HistoricalRoots {
 		tmpRt := [32]byte{}
@@ -108,6 +123,9 @@ func (b *BeaconState) HistoricalRoots() [][]byte {
 
 // Eth1Data corresponding to the proof-of-work chain information stored in the beacon state.
 func (b *BeaconState) Eth1Data() *ethpb.Eth1Data {
+	if b.state.Eth1Data == nil {
+		return nil
+	}
 	eth1data := &ethpb.Eth1Data{
 		DepositCount: b.state.Eth1Data.DepositCount,
 	}
@@ -121,12 +139,14 @@ func (b *BeaconState) Eth1Data() *ethpb.Eth1Data {
 	eth1data.BlockHash = blockHash[:]
 
 	return eth1data
-
 }
 
 // Eth1DataVotes corresponds to votes from eth2 on the canonical proof-of-work chain
 // data retrieved from eth1.
 func (b *BeaconState) Eth1DataVotes() []*ethpb.Eth1Data {
+	if b.state.Eth1DataVotes == nil {
+		return nil
+	}
 	res := make([]*ethpb.Eth1Data, len(b.state.Eth1DataVotes))
 	for i := 0; i < len(res); i++ {
 		res[i] = &ethpb.Eth1Data{
@@ -152,6 +172,9 @@ func (b *BeaconState) Eth1DepositIndex() uint64 {
 
 // Validators participating in consensus on the beacon chain.
 func (b *BeaconState) Validators() []*ethpb.Validator {
+	if b.state.Validators == nil {
+		return nil
+	}
 	res := make([]*ethpb.Validator, len(b.state.Validators))
 	for i := 0; i < len(res); i++ {
 		val := b.state.Validators[i]
@@ -175,6 +198,9 @@ func (b *BeaconState) Validators() []*ethpb.Validator {
 
 // Balances of validators participating in consensus on the beacon chain.
 func (b *BeaconState) Balances() []uint64 {
+	if b.state.Balances == nil {
+		return nil
+	}
 	res := make([]uint64, len(b.state.Balances))
 	copy(res, b.state.Balances)
 	return res
@@ -182,6 +208,9 @@ func (b *BeaconState) Balances() []uint64 {
 
 // RandaoMixes of block proposers on the beacon chain.
 func (b *BeaconState) RandaoMixes() [][]byte {
+	if b.state.RandaoMixes == nil {
+		return nil
+	}
 	mixes := make([][]byte, len(b.state.RandaoMixes))
 	for i, r := range b.state.RandaoMixes {
 		tmpRt := [32]byte{}
@@ -193,6 +222,9 @@ func (b *BeaconState) RandaoMixes() [][]byte {
 
 // Slashings of validators on the beacon chain.
 func (b *BeaconState) Slashings() []uint64 {
+	if b.state.Slashings == nil {
+		return nil
+	}
 	res := make([]uint64, len(b.state.Slashings))
 	copy(res, b.state.Slashings)
 	return res
@@ -200,6 +232,9 @@ func (b *BeaconState) Slashings() []uint64 {
 
 // PreviousEpochAttestations corresponding to blocks on the beacon chain.
 func (b *BeaconState) PreviousEpochAttestations() []*pbp2p.PendingAttestation {
+	if b.state.PreviousEpochAttestations == nil {
+		return nil
+	}
 	res := make([]*pbp2p.PendingAttestation, len(b.state.PreviousEpochAttestations))
 	for i := 0; i < len(res); i++ {
 		res[i] = clonePendingAttestation(b.state.PreviousEpochAttestations[i])
@@ -209,6 +244,9 @@ func (b *BeaconState) PreviousEpochAttestations() []*pbp2p.PendingAttestation {
 
 // CurrentEpochAttestations corresponding to blocks on the beacon chain.
 func (b *BeaconState) CurrentEpochAttestations() []*pbp2p.PendingAttestation {
+	if b.state.CurrentEpochAttestations == nil {
+		return nil
+	}
 	res := make([]*pbp2p.PendingAttestation, len(b.state.CurrentEpochAttestations))
 	for i := 0; i < len(res); i++ {
 		res[i] = clonePendingAttestation(b.state.CurrentEpochAttestations[i])
@@ -218,6 +256,9 @@ func (b *BeaconState) CurrentEpochAttestations() []*pbp2p.PendingAttestation {
 
 // JustificationBits marking which epochs have been justified in the beacon chain.
 func (b *BeaconState) JustificationBits() bitfield.Bitvector4 {
+	if b.state.JustificationBits == nil {
+		return nil
+	}
 	res := bitfield.Bitvector4{}
 	copy(res, b.state.JustificationBits)
 	return res
@@ -225,6 +266,9 @@ func (b *BeaconState) JustificationBits() bitfield.Bitvector4 {
 
 // PreviousJustifiedCheckpoint denoting an epoch and block root.
 func (b *BeaconState) PreviousJustifiedCheckpoint() *ethpb.Checkpoint {
+	if b.state.PreviousJustifiedCheckpoint == nil {
+		return nil
+	}
 	cp := &ethpb.Checkpoint{
 		Epoch: b.state.PreviousJustifiedCheckpoint.Epoch,
 	}
@@ -236,6 +280,9 @@ func (b *BeaconState) PreviousJustifiedCheckpoint() *ethpb.Checkpoint {
 
 // CurrentJustifiedCheckpoint denoting an epoch and block root.
 func (b *BeaconState) CurrentJustifiedCheckpoint() *ethpb.Checkpoint {
+	if b.state.CurrentJustifiedCheckpoint == nil {
+		return nil
+	}
 	cp := &ethpb.Checkpoint{
 		Epoch: b.state.CurrentJustifiedCheckpoint.Epoch,
 	}
@@ -247,6 +294,9 @@ func (b *BeaconState) CurrentJustifiedCheckpoint() *ethpb.Checkpoint {
 
 // FinalizedCheckpoint denoting an epoch and block root.
 func (b *BeaconState) FinalizedCheckpoint() *ethpb.Checkpoint {
+	if b.state.FinalizedCheckpoint == nil {
+		return nil
+	}
 	cp := &ethpb.Checkpoint{
 		Epoch: b.state.FinalizedCheckpoint.Epoch,
 	}
@@ -260,17 +310,17 @@ func clonePendingAttestation(att *pbp2p.PendingAttestation) *pbp2p.PendingAttest
 	var aggBits bitfield.Bitlist
 	copy(aggBits, att.AggregationBits)
 
-	var beaconRoot [32]byte
-	copy(beaconRoot[:], att.Data.BeaconBlockRoot)
+	var attData *ethpb.AttestationData
+	if att.Data != nil {
+		var beaconRoot [32]byte
+		copy(beaconRoot[:], att.Data.BeaconBlockRoot)
 
-	var sourceRoot [32]byte
-	copy(sourceRoot[:], att.Data.Source.Root)
+		var sourceRoot [32]byte
+		copy(sourceRoot[:], att.Data.Source.Root)
 
-	var targetRoot [32]byte
-	copy(targetRoot[:], att.Data.Target.Root)
-	return &pbp2p.PendingAttestation{
-		AggregationBits: aggBits,
-		Data: &ethpb.AttestationData{
+		var targetRoot [32]byte
+		copy(targetRoot[:], att.Data.Target.Root)
+		attData = &ethpb.AttestationData{
 			Slot:            att.Data.Slot,
 			CommitteeIndex:  att.Data.CommitteeIndex,
 			BeaconBlockRoot: beaconRoot[:],
@@ -282,8 +332,12 @@ func clonePendingAttestation(att *pbp2p.PendingAttestation) *pbp2p.PendingAttest
 				Epoch: att.Data.Target.Epoch,
 				Root:  targetRoot[:],
 			},
-		},
-		InclusionDelay: att.InclusionDelay,
-		ProposerIndex:  att.ProposerIndex,
+		}
+	}
+	return &pbp2p.PendingAttestation{
+		AggregationBits: aggBits,
+		Data:            attData,
+		InclusionDelay:  att.InclusionDelay,
+		ProposerIndex:   att.ProposerIndex,
 	}
 }
