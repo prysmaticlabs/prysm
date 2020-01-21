@@ -207,6 +207,7 @@ func (s *Store) applyScoreChanges(justifiedEpoch uint64, finalizedEpoch uint64, 
 			if int(n.parent) >= len(delta) {
 				return errors.New("invalid parent index")
 			}
+
 			delta[n.parent] += nodeDelta
 			if err := s.updateBestChildAndDescendant(n.parent, uint64(i)); err != nil {
 				return err
@@ -253,7 +254,7 @@ func (s *Store) pruneBeforeFinalized(finalizedRoot [32]byte, finalizedEpoch uint
 	if int(finalizedIndex) >= len(s.nodes) {
 		return errors.New("invalid finalized index")
 	}
-	s.nodes = s.nodes[:finalizedIndex]
+	s.nodes = s.nodes[finalizedIndex:]
 
 	// Adjust indices to node mapping.
 	for k, v := range s.nodeIndices {
@@ -261,13 +262,20 @@ func (s *Store) pruneBeforeFinalized(finalizedRoot [32]byte, finalizedEpoch uint
 	}
 
 	// Iterate through existing nodes and adjust its parent/child indices with the new layout.
-	for _, node := range s.nodes {
+	for i, node := range s.nodes {
 		if node.parent != nonExistentNode {
 			// If the node's parent is less than finalized index, set it to non existent.
-			node.parent = nonExistentNode
-			if node.parent > finalizedIndex {
+			if node.parent >= finalizedIndex {
 				node.parent -= finalizedIndex
+			} else {
+				node.parent = nonExistentNode
 			}
+		}
+		if node.bestChild != nonExistentNode {
+			if node.bestChild < finalizedIndex {
+				return errors.New("invalid best child index")
+			}
+			node.bestChild -= finalizedIndex
 		}
 		if node.bestDescendant != nonExistentNode {
 			if node.bestDescendant < finalizedIndex {
@@ -275,12 +283,8 @@ func (s *Store) pruneBeforeFinalized(finalizedRoot [32]byte, finalizedEpoch uint
 			}
 			node.bestDescendant -= finalizedIndex
 		}
-		if node.bestChild != nonExistentNode {
-			if node.bestDescendant < finalizedIndex {
-				return errors.New("invalid best child index")
-			}
-			node.bestChild -= finalizedIndex
-		}
+
+		s.nodes[i] = node
 	}
 	return nil
 }

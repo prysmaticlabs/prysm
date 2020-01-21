@@ -1,5 +1,7 @@
 package protoarray
 
+import "github.com/pkg/errors"
+
 // New initializes a new fork choice store.
 func New(justifiedEpoch uint64, finalizedEpoch uint64, finalizedRoot [32]byte) *ForkChoice {
 	s := &Store{
@@ -34,12 +36,12 @@ func (f *ForkChoice) Head(justifiedEpoch uint64, finalizedEpoch uint64, justifie
 
 	deltas, newVotes, err := computeDeltas(f.store.nodeIndices, f.votes, f.balances, newBalances)
 	if err != nil {
-		return [32]byte{}, err
+		return [32]byte{}, errors.Wrap(err, "Could not compute deltas")
 	}
 	f.votes = newVotes
 
 	if err := f.store.applyScoreChanges(justifiedEpoch, finalizedEpoch, deltas); err != nil {
-		return [32]byte{}, err
+		return [32]byte{}, errors.Wrap(err, "Could not apply score changes")
 	}
 	f.balances = newBalances
 

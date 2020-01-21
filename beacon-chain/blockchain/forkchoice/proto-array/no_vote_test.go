@@ -19,6 +19,7 @@ func TestNoVote_CanFindHead(t *testing.T) {
 	if r != params.BeaconConfig().ZeroHash {
 		t.Errorf("Incorrect head with genesis")
 	}
+
 	// Insert block 2 into the tree and verify head is at 2:
 	//         0
 	//        /
