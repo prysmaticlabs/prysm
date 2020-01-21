@@ -3,6 +3,7 @@ package precompute
 import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -10,14 +11,20 @@ import (
 
 // ProcessRewardsAndPenaltiesPrecompute processes the rewards and penalties of individual validator.
 // This is an optimized version by passing in precomputed validator attesting records and and total epoch balances.
-func ProcessRewardsAndPenaltiesPrecompute(state *pb.BeaconState, bp *Balance, vp []*Validator) (*pb.BeaconState, error) {
+func ProcessRewardsAndPenaltiesPrecompute(
+	state *stateTrie.BeaconState,
+	bp *Balance,
+	vp []*Validator,
+) (*stateTrie.BeaconState, error) {
 	// Can't process rewards and penalties in genesis epoch.
 	if helpers.CurrentEpoch(state) == 0 {
 		return state, nil
 	}
 
+	vals := state.Validators()
+	bals := state.Balances()
 	// Guard against an out-of-bounds using validator balance precompute.
-	if len(vp) != len(state.Validators) || len(vp) != len(state.Balances) {
+	if len(vp) != len(vals) || len(vp) != len(bals) {
 		return state, errors.New("precomputed registries not the same length as state registries")
 	}
 
@@ -29,9 +36,13 @@ func ProcessRewardsAndPenaltiesPrecompute(state *pb.BeaconState, bp *Balance, vp
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get attestation delta")
 	}
-	for i := 0; i < len(state.Validators); i++ {
-		state = helpers.IncreaseBalance(state, uint64(i), attsRewards[i]+proposerRewards[i])
-		state = helpers.DecreaseBalance(state, uint64(i), attsPenalties[i])
+	for i := 0; i < len(vals); i++ {
+		if err := helpers.IncreaseBalance(state, uint64(i), attsRewards[i]+proposerRewards[i]); err != nil {
+			return nil, err
+		}
+		if err := helpers.DecreaseBalance(state, uint64(i), attsPenalties[i]); err != nil {
+			return nil, err
+		}
 	}
 	return state, nil
 }
@@ -48,7 +59,7 @@ func attestationDeltas(state *pb.BeaconState, bp *Balance, vp []*Validator) ([]u
 	return rewards, penalties, nil
 }
 
-func attestationDelta(state *pb.BeaconState, bp *Balance, v *Validator) (uint64, uint64) {
+func attestationDelta(state *stateTrie.BeaconState, bp *Balance, v *Validator) (uint64, uint64) {
 	eligible := v.IsActivePrevEpoch || (v.IsSlashed && !v.IsWithdrawableCurrentEpoch)
 	if !eligible {
 		return 0, 0
@@ -84,7 +95,11 @@ func attestationDelta(state *pb.BeaconState, bp *Balance, v *Validator) (uint64,
 	}
 
 	// Process finality delay penalty
-	finalityDelay := e - state.FinalizedCheckpoint.Epoch
+	var finalizedEpoch uint64
+	if state.FinalizedCheckpoint() != nil {
+		finalizedEpoch = state.FinalizedCheckpoint().Epoch
+	}
+	finalityDelay := e - finalizedEpoch
 	if finalityDelay > params.BeaconConfig().MinEpochsToInactivityPenalty {
 		p += params.BeaconConfig().BaseRewardsPerEpoch * br
 		if !v.IsPrevEpochTargetAttester {
@@ -96,8 +111,9 @@ func attestationDelta(state *pb.BeaconState, bp *Balance, v *Validator) (uint64,
 
 // This computes the rewards and penalties differences for individual validators based on the
 // proposer inclusion records.
-func proposerDeltaPrecompute(state *pb.BeaconState, bp *Balance, vp []*Validator) ([]uint64, error) {
-	rewards := make([]uint64, len(state.Validators))
+func proposerDeltaPrecompute(state *stateTrie.BeaconState, bp *Balance, vp []*Validator) ([]uint64, error) {
+	vals := state.Validators()
+	rewards := make([]uint64, len(vals))
 
 	totalBalance := bp.CurrentEpoch
 
