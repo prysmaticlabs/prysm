@@ -877,16 +877,21 @@ func ProcessPreGenesisDeposit(
 	if !ok {
 		return beaconState, nil
 	}
-	bals := beaconState.Balances()
-	vals := beaconState.Validators()
-	balance := bals[index]
-	vals[index].EffectiveBalance = mathutil.Min(balance-balance%params.BeaconConfig().EffectiveBalanceIncrement, params.BeaconConfig().MaxEffectiveBalance)
-	if vals[index].EffectiveBalance ==
-		params.BeaconConfig().MaxEffectiveBalance {
-		vals[index].ActivationEligibilityEpoch = 0
-		vals[index].ActivationEpoch = 0
+	balance, err := beaconState.BalanceAtIndex(index)
+	if err != nil {
+		return nil, err
 	}
-	if err := beaconState.SetValidators(vals); err != nil {
+	validator, err := beaconState.ValidatorAtIndex(uint64(index))
+	if err != nil {
+		return nil, err
+	}
+	validator.EffectiveBalance = mathutil.Min(balance-balance%params.BeaconConfig().EffectiveBalanceIncrement, params.BeaconConfig().MaxEffectiveBalance)
+	if validator.EffectiveBalance ==
+		params.BeaconConfig().MaxEffectiveBalance {
+		validator.ActivationEligibilityEpoch = 0
+		validator.ActivationEpoch = 0
+	}
+	if err := beaconState.UpdateValidatorAtIndex(uint64(index), validator); err != nil {
 		return nil, err
 	}
 	return beaconState, nil
