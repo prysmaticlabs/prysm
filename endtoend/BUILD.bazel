@@ -14,7 +14,7 @@ go_test(
         "@com_github_ethereum_go_ethereum//cmd/geth",
     ],
     embed = [":go_default_library"],
-    shard_count = 3,
+    shard_count = 2,
     tags = [
         "block-network",
         "e2e",
