@@ -2,7 +2,6 @@ package protoarray
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -11,7 +10,7 @@ import (
 
 // This defines the minimal number of block nodes has to be in in the tree
 // before getting pruned upon new finalization.
-const defaultPruneThreshold = 256
+const defaultPruneThreshold = 64
 
 // New initializes a new fork choice store.
 func New(justifiedEpoch uint64, finalizedEpoch uint64, finalizedRoot [32]byte) *ForkChoice {
@@ -47,10 +46,6 @@ func (f *ForkChoice) Head(ctx context.Context, finalizedEpoch uint64, justifiedR
 		return [32]byte{}, errors.Wrap(err, "Could not apply score changes")
 	}
 	f.balances = newBalances
-
-	for _, node := range f.store.nodes {
-		fmt.Println(node)
-	}
 
 	return f.store.head(ctx, justifiedRoot)
 }

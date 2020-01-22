@@ -109,7 +109,6 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 		log.Infof("Head after new fork choice: %v", hex.EncodeToString(bytesutil.Trunc(headRootProtoArray[:])))
 
 		if postState.FinalizedCheckpoint.Epoch > s.FinalizedCheckpt().Epoch {
-			log.Infof("New finalized check point for pruning! %d, %d", postState.FinalizedCheckpoint.Epoch, s.FinalizedCheckpt().Epoch)
 			if err := s.forkchoice.Prune(ctx, bytesutil.ToBytes32(postState.FinalizedCheckpoint.Root)); err != nil {
 				return errors.Wrap(err, "could not prune proto array fork choice")
 			}
@@ -175,7 +174,8 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 	blockCopy := proto.Clone(block).(*ethpb.SignedBeaconBlock)
 
 	// Apply state transition on the incoming newly received block.
-	if _, err := s.forkChoiceStore.OnBlock(ctx, blockCopy); err != nil {
+	postState, err := s.forkChoiceStore.OnBlock(ctx, blockCopy);
+	if err != nil {
 		err := errors.Wrap(err, "could not process block from fork choice service")
 		traceutil.AnnotateError(span, err)
 		return err
@@ -188,6 +188,11 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 	if err != nil {
 		return errors.Wrap(err, "could not get head root from cache")
 	}
+
+	if err := s.forkchoice.ProcessBlock(ctx, blockCopy.Block.Slot, root, bytesutil.ToBytes32(blockCopy.Block.ParentRoot), postState.CurrentJustifiedCheckpoint.Epoch, postState.FinalizedCheckpoint.Epoch); err != nil {
+		return errors.Wrap(err, "could not process block for proto array fork choice")
+	}
+
 	if !bytes.Equal(root[:], cachedHeadRoot) {
 		if err := s.saveHead(ctx, blockCopy, root); err != nil {
 			return errors.Wrap(err, "could not save head")
@@ -226,7 +231,8 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 	blockCopy := proto.Clone(block).(*ethpb.SignedBeaconBlock)
 
 	// Apply state transition on the incoming newly received blockCopy without verifying its BLS contents.
-	if err := s.forkChoiceStore.OnBlockInitialSyncStateTransition(ctx, blockCopy); err != nil {
+	postState, err := s.forkChoiceStore.OnBlockInitialSyncStateTransition(ctx, blockCopy);
+	if err != nil {
 		return errors.Wrap(err, "could not process blockCopy from fork choice service")
 	}
 	root, err := ssz.HashTreeRoot(blockCopy.Block)
@@ -237,6 +243,10 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 	cachedHeadRoot, err := s.HeadRoot(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get head root from cache")
+	}
+
+	if err := s.forkchoice.ProcessBlock(ctx, blockCopy.Block.Slot, root, bytesutil.ToBytes32(blockCopy.Block.ParentRoot), postState.CurrentJustifiedCheckpoint.Epoch, postState.FinalizedCheckpoint.Epoch); err != nil {
+		return errors.Wrap(err, "could not process block for proto array fork choice")
 	}
 
 	if featureconfig.Get().InitSyncCacheState {

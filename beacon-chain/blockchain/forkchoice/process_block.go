@@ -173,12 +173,12 @@ func (s *Store) OnBlockCacheFilteredTree(ctx context.Context, signed *ethpb.Sign
 // It runs state transition on the block and without any BLS verification. The BLS verification
 // includes proposer signature, randao and attestation's aggregated signature. It also does not save
 // attestations.
-func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, signed *ethpb.SignedBeaconBlock) error {
+func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, signed *ethpb.SignedBeaconBlock) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "forkchoice.onBlock")
 	defer span.End()
 
 	if signed == nil || signed.Block == nil {
-		return errors.New("nil block")
+		return nil, errors.New("nil block")
 	}
 
 	b := signed.Block
@@ -189,7 +189,7 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, signed *e
 	// Retrieve incoming block's pre state.
 	preState, err := s.cachedPreState(ctx, b)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	preStateValidatorCount := len(preState.Validators)
 
@@ -197,29 +197,29 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, signed *e
 
 	postState, err := state.ExecuteStateTransitionNoVerifyAttSigs(ctx, preState, signed)
 	if err != nil {
-		return errors.Wrap(err, "could not execute state transition")
+		return nil, errors.Wrap(err, "could not execute state transition")
 	}
 
 	if err := s.db.SaveBlock(ctx, signed); err != nil {
-		return errors.Wrapf(err, "could not save block from slot %d", b.Slot)
+		return nil, errors.Wrapf(err, "could not save block from slot %d", b.Slot)
 	}
 	root, err := ssz.HashTreeRoot(b)
 	if err != nil {
-		return errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
+		return nil, errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
 	}
 
 	if featureconfig.Get().InitSyncCacheState {
 		s.initSyncState[root] = postState
 	} else {
 		if err := s.db.SaveState(ctx, postState, root); err != nil {
-			return errors.Wrap(err, "could not save state")
+			return nil, errors.Wrap(err, "could not save state")
 		}
 	}
 
 	// Update justified check point.
 	if postState.CurrentJustifiedCheckpoint.Epoch > s.justifiedCheckpt.Epoch {
 		if err := s.updateJustified(ctx, postState); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -230,17 +230,17 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, signed *e
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 		if endSlot > startSlot {
 			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
-				return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
+				return nil, errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
 					startSlot, endSlot)
 			}
 		}
 
 		if err := s.saveInitState(ctx, postState); err != nil {
-			return errors.Wrap(err, "could not save init sync finalized state")
+			return nil, errors.Wrap(err, "could not save init sync finalized state")
 		}
 
 		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint); err != nil {
-			return errors.Wrap(err, "could not save finalized checkpoint")
+			return nil, errors.Wrap(err, "could not save finalized checkpoint")
 		}
 
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
@@ -249,13 +249,13 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, signed *e
 
 	// Update validator indices in database as needed.
 	if err := s.saveNewValidators(ctx, preStateValidatorCount, postState); err != nil {
-		return errors.Wrap(err, "could not save finalized checkpoint")
+		return nil, errors.Wrap(err, "could not save finalized checkpoint")
 	}
 
 	if flags.Get().EnableArchive {
 		// Save the unseen attestations from block to db.
 		if err := s.saveNewBlockAttestations(ctx, b.Body.Attestations); err != nil {
-			return errors.Wrap(err, "could not save attestations")
+			return nil, errors.Wrap(err, "could not save attestations")
 		}
 	}
 
@@ -266,7 +266,7 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, signed *e
 		s.nextEpochBoundarySlot = helpers.StartSlot(helpers.NextEpoch(postState))
 	}
 
-	return nil
+	return postState, nil
 }
 
 // getBlockPreState returns the pre state of an incoming block. It uses the parent root of the block

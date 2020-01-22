@@ -42,16 +42,17 @@ type store struct {
 	headRoot []byte
 }
 
-func (s *store) OnBlock(ctx context.Context, b *ethpb.SignedBeaconBlock) error {
-	return nil
+func (s *store) OnBlock(ctx context.Context, b *ethpb.SignedBeaconBlock) (*pb.BeaconState, error) {
+	return nil, nil
 }
 
-func (s *store) OnBlockCacheFilteredTree(ctx context.Context, b *ethpb.SignedBeaconBlock) error {
-	return nil
+func (s *store) OnBlockCacheFilteredTree(ctx context.Context, b *ethpb.SignedBeaconBlock) (*pb.BeaconState, error) {
+	return nil, nil
+
 }
 
-func (s *store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.SignedBeaconBlock) error {
-	return nil
+func (s *store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.SignedBeaconBlock) (*pb.BeaconState, error) {
+	return nil, nil
 }
 
 func (s *store) OnAttestation(ctx context.Context, a *ethpb.Attestation) ([]uint64, error) {

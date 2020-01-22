@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"math"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -78,7 +79,8 @@ func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, err
 
 	bestNode := s.nodes[bestDescendantIndex]
 	if !s.viableForHead(ctx, bestNode) {
-		return [32]byte{}, invalidBestNode
+		return [32]byte{}, fmt.Errorf("after tree filter, best node can't be head, finalized epochs %d != %d, justified epoch %d != %d",
+			bestNode.finalizedEpoch, s.finalizedEpoch, bestNode.justifiedEpoch, s.justifiedEpoch)
 	}
 
 	return bestNode.root, nil
