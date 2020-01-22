@@ -9,6 +9,7 @@ import (
 	"github.com/urfave/cli"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/urfave/cli"
 )
 
 func TestStore_ProposerSlashingNilBucket(t *testing.T) {

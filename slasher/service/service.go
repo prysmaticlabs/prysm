@@ -12,20 +12,18 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/pkg/errors"
-
-	"github.com/prysmaticlabs/prysm/slasher/flags"
-
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/slasher/db"
+	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/prysmaticlabs/prysm/slasher/rpc"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -198,19 +196,17 @@ func (s *Service) startSlasher() {
 func (s *Service) loadSpanMaps(err error, slasherServer rpc.Server) {
 	lt, err := slasherServer.SlasherDB.LatestIndexedAttestationsTargetEpoch()
 	if err != nil {
-		log.Errorf("Could not extract latest target epoch from indexed attestations store:%v", err)
+		log.Errorf("Could not extract latest target epoch from indexed attestations store: %v", err)
 	}
 	for i := uint64(0); i < lt; i++ {
 		ias, err := slasherServer.SlasherDB.IndexedAttestations(i)
 		if err != nil {
-			log.Errorf("Got error while trying to retrieve indexed attestations from db:%v", err)
+			log.Errorf("Got error while trying to retrieve indexed attestations from db: %v", err)
 		}
 		for _, ia := range ias {
 			slasherServer.UpdateSpanMaps(s.context, ia)
 		}
-		if i%5 == 0 {
-			log.Infof("update span maps for epoch: %d", i)
-		}
+		log.Infof("Update span maps for epoch: %d", i)
 	}
 }
 
@@ -273,7 +269,7 @@ func (s *Service) Close() {
 		log.Panicf("Could not stop the slasher service: %v", err)
 	}
 	if err := s.slasherDb.SaveCachedSpansMaps(); err != nil {
-		log.Fatal("didnt save span map cache to db. if span cache is enabled please restart with --%s", flags.RebuildSpanMapsFlag.Name)
+		log.Fatal("Didn't save span map cache to db. if span cache is enabled please restart with --%s", flags.RebuildSpanMapsFlag.Name)
 	}
 	if err := s.slasherDb.Close(); err != nil {
 		log.Errorf("Failed to close slasher database: %v", err)
@@ -297,7 +293,8 @@ func (s *Service) Status() (bool, error) {
 func (s *Service) startDB(ctx *cli.Context) error {
 	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
 	dbPath := path.Join(baseDir, slasherDBName)
-	d, err := db.NewDB(dbPath, ctx, 0, 0)
+	cfg := &db.Config{SpanCacheEnabled: ctx.GlobalBool(flags.UseSpanCacheFlag.Name)}
+	d, err := db.NewDB(dbPath, cfg)
 	if err != nil {
 		return err
 	}
@@ -305,7 +302,7 @@ func (s *Service) startDB(ctx *cli.Context) error {
 		if err := d.ClearDB(); err != nil {
 			return err
 		}
-		d, err = db.NewDB(dbPath, ctx, 0, 0)
+		d, err = db.NewDB(dbPath, cfg)
 		if err != nil {
 			return err
 		}
