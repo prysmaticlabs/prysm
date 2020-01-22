@@ -3,9 +3,8 @@ package forkchoice
 import (
 	"fmt"
 
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -14,11 +13,26 @@ var log = logrus.WithField("prefix", "forkchoice")
 
 // logs epoch related data during epoch boundary.
 func logEpochData(beaconState *stateTrie.BeaconState) {
+	var finalizedEpoch uint64
+	var prevJustifiedEpoch uint64
+	var currJustifiedEpoch uint64
+	finalizedCpt := beaconState.FinalizedCheckpoint()
+	if finalizedCpt != nil {
+		finalizedEpoch = finalizedCpt.Epoch
+	}
+	prevJustifiedCpt := beaconState.PreviousJustifiedCheckpoint()
+	if prevJustifiedCpt != nil {
+		prevJustifiedEpoch = prevJustifiedCpt.Epoch
+	}
+	currJustifiedCpt := beaconState.CurrentJustifiedCheckpoint()
+	if currJustifiedCpt != nil {
+		currJustifiedEpoch = currJustifiedCpt.Epoch
+	}
 	log.WithFields(logrus.Fields{
 		"epoch":                  helpers.CurrentEpoch(beaconState),
-		"finalizedEpoch":         beaconState.FinalizedCheckpoint().Epoch,
-		"justifiedEpoch":         beaconState.CurrentJustifiedCheckpoint().Epoch,
-		"previousJustifiedEpoch": beaconState.PreviousJustifiedCheckpoint().Epoch,
+		"finalizedEpoch":         finalizedEpoch,
+		"justifiedEpoch":         currJustifiedEpoch,
+		"previousJustifiedEpoch": prevJustifiedEpoch,
 	}).Info("Starting next epoch")
 	activeVals, err := helpers.ActiveValidatorIndices(beaconState, helpers.CurrentEpoch(beaconState))
 	if err != nil {
