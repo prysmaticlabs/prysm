@@ -115,8 +115,7 @@ func ExecuteStateTransitionNoVerifyAttSigs(
 	}
 
 	// Execute per block transition.
-	validators := state.Validators()
-	return processBlockNoVerifyAttSigs(ctx, state, validators, signed)
+	return processBlockNoVerifyAttSigs(ctx, state, state.Validators(), signed)
 }
 
 // CalculateStateRoot defines the procedure for a state transition function.
@@ -159,8 +158,9 @@ func CalculateStateRoot(
 		return [32]byte{}, errors.Wrap(err, "could not process slot")
 	}
 
+	validators := state.Validators()
 	// Execute per block transition.
-	if err = computeStateRoot(ctx, state, signed); err != nil {
+	if err = computeStateRoot(ctx, state, validators, signed); err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not process block")
 	}
 
@@ -183,7 +183,7 @@ func CalculateStateRoot(
 //    # Cache block root
 //    previous_block_root = signing_root(state.latest_block_header)
 //    state.block_roots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previous_block_root
-func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.BeaconState, error) {
+func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessSlot")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(state.Slot())))
@@ -193,7 +193,7 @@ func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.
 		state.Slot()%params.BeaconConfig().SlotsPerHistoricalRoot,
 		prevStateRoot,
 	); err != nil {
-		return nil, err
+		return err
 	}
 
 	zeroHash := params.BeaconConfig().ZeroHash
@@ -202,22 +202,19 @@ func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.
 	if bytes.Equal(header.StateRoot, zeroHash[:]) {
 		header.StateRoot = prevStateRoot[:]
 		if err := state.SetLatestBlockHeader(header); err != nil {
-			return nil, err
+			return err
 		}
 	}
 	prevBlockRoot, err := stateutil.BlockHeaderRoot(state.LatestBlockHeader())
 	if err != nil {
 		traceutil.AnnotateError(span, err)
-		return nil, errors.Wrap(err, "could not determine prev block root")
+		return errors.Wrap(err, "could not determine prev block root")
 	}
 	// Cache the block root.
-	if err := state.UpdateBlockRootAtIndex(
+	return state.UpdateBlockRootAtIndex(
 		state.Slot()%params.BeaconConfig().SlotsPerHistoricalRoot,
 		prevBlockRoot,
-	); err != nil {
-		return nil, err
-	}
-	return state, nil
+	)
 }
 
 // ProcessSlots process through skip skips and apply epoch transition when it's needed
@@ -424,25 +421,19 @@ func ProcessOperations(
 	if err := verifyOperationLengths(state, body); err != nil {
 		return errors.Wrap(err, "could not verify operation lengths")
 	}
-
-	state, err := b.ProcessProposerSlashings(ctx, state, body)
-	if err != nil {
+	if err := b.ProcessProposerSlashings(ctx, state, body); err != nil {
 		return errors.Wrap(err, "could not process block proposer slashings")
 	}
-	state, err = b.ProcessAttesterSlashings(ctx, state, body)
-	if err != nil {
+	if err := b.ProcessAttesterSlashings(ctx, state, body); err != nil {
 		return errors.Wrap(err, "could not process block attester slashings")
 	}
-	state, err = b.ProcessAttestations(ctx, state, body)
-	if err != nil {
+	if err := b.ProcessAttestations(ctx, state, body); err != nil {
 		return errors.Wrap(err, "could not process block attestations")
 	}
-	state, err = b.ProcessDeposits(ctx, state, body)
-	if err != nil {
+	if err := b.ProcessDeposits(ctx, state, body); err != nil {
 		return errors.Wrap(err, "could not process block validator deposits")
 	}
-	state, err = b.ProcessVoluntaryExits(ctx, state, body)
-	if err != nil {
+	if err := b.ProcessVoluntaryExits(ctx, state, body); err != nil {
 		return errors.Wrap(err, "could not process validator exits")
 	}
 	return nil
@@ -485,28 +476,23 @@ func processOperationsNoVerify(
 		return errors.Wrap(err, "could not verify operation lengths")
 	}
 
-	state, err := b.ProcessProposerSlashings(ctx, state, body)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process block proposer slashings")
+	if err := b.ProcessProposerSlashings(ctx, state, body); err != nil {
+		return errors.Wrap(err, "could not process block proposer slashings")
 	}
-	state, err = b.ProcessAttesterSlashings(ctx, state, body)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process block attester slashings")
+	if err := b.ProcessAttesterSlashings(ctx, state, body); err != nil {
+		return errors.Wrap(err, "could not process block attester slashings")
 	}
-	state, err = b.ProcessAttestationsNoVerify(ctx, state, body)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process block attestations")
+	if err := b.ProcessAttestationsNoVerify(ctx, state, body); err != nil {
+		return errors.Wrap(err, "could not process block attestations")
 	}
-	state, err = b.ProcessDeposits(ctx, state, body)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process block validator deposits")
+	if err := b.ProcessDeposits(ctx, state, body); err != nil {
+		return errors.Wrap(err, "could not process block validator deposits")
 	}
-	state, err = b.ProcessVoluntaryExitsNoVerify(state, body)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process validator exits")
+	if err := b.ProcessVoluntaryExitsNoVerify(state, body); err != nil {
+		return errors.Wrap(err, "could not process validator exits")
 	}
 
-	return state, nil
+	return nil
 }
 
 func verifyOperationLengths(state *stateTrie.BeaconState, body *ethpb.BeaconBlockBody) error {
@@ -609,34 +595,31 @@ func ProcessEpochPrecompute(ctx context.Context, state *stateTrie.BeaconState) (
 func computeStateRoot(
 	ctx context.Context,
 	state *stateTrie.BeaconState,
+	validators []*ethpb.Validator,
 	signed *ethpb.SignedBeaconBlock,
-) (*stateTrie.BeaconState, error) {
+) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
 	defer span.End()
 
-	state, err := b.ProcessBlockHeaderNoVerify(state, signed.Block)
-	if err != nil {
+	if err := b.ProcessBlockHeaderNoVerify(state, validators, signed.Block); err != nil {
 		traceutil.AnnotateError(span, err)
-		return nil, errors.Wrap(err, "could not process block header")
+		return errors.Wrap(err, "could not process block header")
 	}
 
-	state, err = b.ProcessRandaoNoVerify(state, signed.Block.Body)
-	if err != nil {
+	if err := b.ProcessRandaoNoVerify(state, signed.Block.Body); err != nil {
 		traceutil.AnnotateError(span, err)
-		return nil, errors.Wrap(err, "could not verify and process randao")
+		return errors.Wrap(err, "could not verify and process randao")
 	}
 
-	state, err = b.ProcessEth1DataInBlock(state, signed.Block)
-	if err != nil {
+	if err := b.ProcessEth1DataInBlock(state, signed.Block); err != nil {
 		traceutil.AnnotateError(span, err)
-		return nil, errors.Wrap(err, "could not process eth1 data")
+		return errors.Wrap(err, "could not process eth1 data")
 	}
 
-	state, err = processOperationsNoVerify(ctx, state, signed.Block.Body)
-	if err != nil {
+	if err := processOperationsNoVerify(ctx, state, signed.Block.Body); err != nil {
 		traceutil.AnnotateError(span, err)
-		return nil, errors.Wrap(err, "could not process block operation")
+		return errors.Wrap(err, "could not process block operation")
 	}
 
-	return state, nil
+	return nil
 }

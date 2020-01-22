@@ -110,7 +110,11 @@ func InitiateValidatorExit(state *stateTrie.BeaconState, idx uint64) (*stateTrie
 //    proposer_reward = Gwei(whistleblower_reward // PROPOSER_REWARD_QUOTIENT)
 //    increase_balance(state, proposer_index, proposer_reward)
 //    increase_balance(state, whistleblower_index, whistleblower_reward - proposer_reward)
-func SlashValidator(state *stateTrie.BeaconState, slashedIdx uint64, whistleBlowerIdx uint64) (*stateTrie.BeaconState, error) {
+func SlashValidator(
+	state *stateTrie.BeaconState,
+	slashedIdx uint64,
+	whistleBlowerIdx uint64,
+) (*stateTrie.BeaconState, error) {
 	state, err := InitiateValidatorExit(state, slashedIdx)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not initiate validator %d exit", slashedIdx)

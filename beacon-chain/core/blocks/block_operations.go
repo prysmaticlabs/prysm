@@ -368,42 +368,44 @@ func ProcessRandaoNoVerify(
 func ProcessProposerSlashings(
 	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
+	validators []*ethpb.Validator,
 	body *ethpb.BeaconBlockBody,
-) (*stateTrie.BeaconState, error) {
+) error {
 	var err error
-	vals := beaconState.Validators()
 	for idx, slashing := range body.ProposerSlashings {
-		if int(slashing.ProposerIndex) >= len(vals) {
-			return nil, fmt.Errorf("invalid proposer index given in slashing %d", slashing.ProposerIndex)
+		if int(slashing.ProposerIndex) >= len(validators) {
+			return fmt.Errorf("invalid proposer index given in slashing %d", slashing.ProposerIndex)
 		}
-		if err = VerifyProposerSlashing(beaconState, slashing); err != nil {
-			return nil, errors.Wrapf(err, "could not verify proposer slashing %d", idx)
+		if err = VerifyProposerSlashing(beaconState, validators, slashing); err != nil {
+			return errors.Wrapf(err, "could not verify proposer slashing %d", idx)
 		}
+		// TODO: EDIT to include validators list.
 		beaconState, err = v.SlashValidator(
-			beaconState, slashing.ProposerIndex, 0, /* proposer is whistleblower */
+			beaconState,
+			slashing.ProposerIndex,
+			0, /* proposer is whistleblower */
 		)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not slash proposer index %d", slashing.ProposerIndex)
+			return errors.Wrapf(err, "could not slash proposer index %d", slashing.ProposerIndex)
 		}
 	}
-	return beaconState, nil
+	return nil
 }
 
 // VerifyProposerSlashing verifies that the data provided fro slashing is valid.
 func VerifyProposerSlashing(
 	beaconState *stateTrie.BeaconState,
+	validators []*ethpb.Validator,
 	slashing *ethpb.ProposerSlashing,
 ) error {
-	vals := beaconState.Validators()
-	proposer := vals[slashing.ProposerIndex]
-
+	proposer := validators[slashing.ProposerIndex]
 	if slashing.Header_1.Header.Slot != slashing.Header_2.Header.Slot {
 		return fmt.Errorf("mismatched header slots, received %d == %d", slashing.Header_1.Header.Slot, slashing.Header_2.Header.Slot)
 	}
 	if proto.Equal(slashing.Header_1, slashing.Header_2) {
 		return errors.New("expected slashing headers to differ")
 	}
-	if !helpers.IsSlashableValidator(proposer, helpers.SlotToEpoch(beaconState.Slot())) {
+	if !helpers.IsSlashableValidator(proposer, helpers.CurrentEpoch(beaconState)) {
 		return fmt.Errorf("validator with key %#x is not slashable", proposer.PublicKey)
 	}
 	// Using headerEpoch1 here because both of the headers should have the same epoch.
