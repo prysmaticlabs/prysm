@@ -964,7 +964,7 @@ func ProcessDeposit(
 		if params.BeaconConfig().MaxEffectiveBalance < effectiveBalance {
 			effectiveBalance = params.BeaconConfig().MaxEffectiveBalance
 		}
-		if err := beaconState.AppendValidators(&ethpb.Validator{
+		if err := beaconState.AppendValidator(&ethpb.Validator{
 			PublicKey:                  pubKey,
 			WithdrawalCredentials:      deposit.Data.WithdrawalCredentials,
 			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -975,7 +975,7 @@ func ProcessDeposit(
 		}); err != nil {
 			return nil, err
 		}
-		if err := beaconState.AppendBalances(amount); err != nil {
+		if err := beaconState.AppendBalance(amount); err != nil {
 			return nil, err
 		}
 		numVals++

@@ -310,6 +310,51 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestati
 	return nil
 }
 
+// AppendPreviousEpochAttestations for the beacon state. This PR appends the new value
+// to the the end of list.
+func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestation) error {
+	b.state.PreviousEpochAttestations = append(b.state.PreviousEpochAttestations, val)
+	root, err := stateutil.EpochAttestationsRoot(b.state.PreviousEpochAttestations)
+	if err != nil {
+		return err
+	}
+	b.lock.Lock()
+	b.merkleLayers[0][previousEpochAttestations] = root[:]
+	b.recomputeRoot(int(previousEpochAttestations))
+	b.lock.Unlock()
+	return nil
+}
+
+// AppendValidator for the beacon state. This PR appends the new value
+// to the the end of list.
+func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
+	b.state.Validators = append(b.state.Validators, val)
+	root, err := stateutil.ValidatorRegistryRoot(b.state.Validators)
+	if err != nil {
+		return err
+	}
+	b.lock.Lock()
+	b.merkleLayers[0][validators] = root[:]
+	b.recomputeRoot(int(validators))
+	b.lock.Unlock()
+	return nil
+}
+
+// AppendBalance for the beacon state. This PR appends the new value
+// to the the end of list.
+func (b *BeaconState) AppendBalance(bal uint64) error {
+	b.state.Balances = append(b.state.Balances, bal)
+	root, err := stateutil.ValidatorBalancesRoot(b.state.Balances)
+	if err != nil {
+		return err
+	}
+	b.lock.Lock()
+	b.merkleLayers[0][balances] = root[:]
+	b.recomputeRoot(int(balances))
+	b.lock.Unlock()
+	return nil
+}
+
 // SetJustificationBits for the beacon state.
 func (b *BeaconState) SetJustificationBits(val bitfield.Bitvector4) error {
 	root := bytesutil.ToBytes32(b.state.JustificationBits)
