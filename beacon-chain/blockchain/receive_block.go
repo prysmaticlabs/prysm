@@ -86,31 +86,33 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 			return errors.Wrap(err, "could not save head")
 		}
 	} else {
-		if err := s.forkchoice.ProcessBlock(ctx, blockCopy.Block.Slot, root, bytesutil.ToBytes32(blockCopy.Block.ParentRoot), postState.CurrentJustifiedCheckpoint.Epoch, postState.FinalizedCheckpoint.Epoch); err != nil {
-			return errors.Wrap(err, "could not process block for proto array fork choice")
-		}
+		headRoot := make([]byte, 0)
+		if featureconfig.Get().ProtoArrayForkChoice {
+			if err := s.forkchoice.ProcessBlock(ctx, blockCopy.Block.Slot, root, bytesutil.ToBytes32(blockCopy.Block.ParentRoot), postState.CurrentJustifiedCheckpoint.Epoch, postState.FinalizedCheckpoint.Epoch); err != nil {
+				return errors.Wrap(err, "could not process block for proto array fork choice")
+			}
 
-		// Run fork choice after applying state transition on the new block.
-		headRoot, err := s.forkChoiceStore.Head(ctx)
-		if err != nil {
-			return errors.Wrap(err, "could not get head from fork choice service")
-		}
+			headRootProtoArray, err := s.forkchoice.Head(
+				ctx,
+				postState.FinalizedCheckpoint.Epoch,
+				bytesutil.ToBytes32(postState.CurrentJustifiedCheckpoint.Root),
+				postState.Balances,
+				postState.CurrentJustifiedCheckpoint.Epoch)
+			if err != nil {
+				return errors.Wrap(err, "could not process fork choice for proto array fork choice")
+			}
 
-		headRootProtoArray, err := s.forkchoice.Head(
-			ctx,
-			postState.FinalizedCheckpoint.Epoch,
-			bytesutil.ToBytes32(postState.CurrentJustifiedCheckpoint.Root),
-			postState.Balances,
-			postState.CurrentJustifiedCheckpoint.Epoch)
-		if err != nil {
-			return errors.Wrap(err, "could not process fork choice for proto array fork choice")
-		}
-		log.Infof("Head after old fork choice: %v", hex.EncodeToString(bytesutil.Trunc(headRoot)))
-		log.Infof("Head after new fork choice: %v", hex.EncodeToString(bytesutil.Trunc(headRootProtoArray[:])))
+			headRoot = headRootProtoArray[:]
 
-		if postState.FinalizedCheckpoint.Epoch > s.FinalizedCheckpt().Epoch {
-			if err := s.forkchoice.Prune(ctx, bytesutil.ToBytes32(postState.FinalizedCheckpoint.Root)); err != nil {
-				return errors.Wrap(err, "could not prune proto array fork choice")
+			if postState.FinalizedCheckpoint.Epoch > s.FinalizedCheckpt().Epoch {
+				if err := s.forkchoice.Prune(ctx, bytesutil.ToBytes32(postState.FinalizedCheckpoint.Root)); err != nil {
+					return errors.Wrap(err, "could not prune proto array fork choice")
+				}
+			}
+		} else {
+			headRoot, err = s.forkChoiceStore.Head(ctx)
+			if err != nil {
+				return errors.Wrap(err, "could not get head from fork choice service")
 			}
 		}
 
@@ -174,7 +176,7 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 	blockCopy := proto.Clone(block).(*ethpb.SignedBeaconBlock)
 
 	// Apply state transition on the incoming newly received block.
-	postState, err := s.forkChoiceStore.OnBlock(ctx, blockCopy);
+	postState, err := s.forkChoiceStore.OnBlock(ctx, blockCopy)
 	if err != nil {
 		err := errors.Wrap(err, "could not process block from fork choice service")
 		traceutil.AnnotateError(span, err)
@@ -231,7 +233,7 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 	blockCopy := proto.Clone(block).(*ethpb.SignedBeaconBlock)
 
 	// Apply state transition on the incoming newly received blockCopy without verifying its BLS contents.
-	postState, err := s.forkChoiceStore.OnBlockInitialSyncStateTransition(ctx, blockCopy);
+	postState, err := s.forkChoiceStore.OnBlockInitialSyncStateTransition(ctx, blockCopy)
 	if err != nil {
 		return errors.Wrap(err, "could not process blockCopy from fork choice service")
 	}

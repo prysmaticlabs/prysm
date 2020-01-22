@@ -41,7 +41,7 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	s.forkchoice.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(att.Data.BeaconBlockRoot), att.Data.Target.Epoch)
 
 	// Run fork choice for head block after updating fork choice store.
-	if !featureconfig.Get().DisableForkChoice {
+	if !featureconfig.Get().DisableForkChoice && !featureconfig.Get().ProtoArrayForkChoice {
 		headRoot, err := s.forkChoiceStore.Head(ctx)
 		if err != nil {
 			return errors.Wrap(err, "could not get head from fork choice service")

@@ -36,6 +36,7 @@ type Flags struct {
 	InitSyncCacheState        bool   // InitSyncCacheState caches state during initial sync.
 	KafkaBootstrapServers     string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
 	BlockDoubleProposals      bool   // BlockDoubleProposals prevents the validator client from signing any proposals that would be considered a slashable offense.
+	ProtoArrayForkChoice      bool   // ProtoArrayForkChoice enables proto array fork choice. It has significant improvements over the spec version.
 
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
@@ -137,6 +138,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(cacheProposerIndicesFlag.Name) {
 		log.Warn("Enabled proposer index caching.")
 		cfg.EnableProposerIndexCache = true
+	}
+	if ctx.GlobalBool(protoArrayForkChoice.Name) {
+		log.Warn("Enabled using proto array fork choice over spec fork choice.")
+		cfg.ProtoArrayForkChoice = true
 	}
 	Init(cfg)
 }

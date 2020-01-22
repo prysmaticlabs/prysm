@@ -88,6 +88,10 @@ var (
 		Usage: "Prevent the validator client from signing and broadcasting 2 different block " +
 			"proposals in the same epoch. Protects from slashing.",
 	}
+	protoArrayForkChoice = cli.BoolFlag{
+		Name:  "proto-array-forkchoice",
+		Usage: "Uses proto array fork choice over the spec fork choice. It's a better implementation in terms of mem usage and speed.",
+	}
 )
 
 // Deprecated flags list.
@@ -220,4 +224,5 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableSlasherFlag,
 	cacheFilteredBlockTreeFlag,
 	cacheProposerIndicesFlag,
+	protoArrayForkChoice,
 }...)
