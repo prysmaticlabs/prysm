@@ -93,7 +93,7 @@ func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) er
 	}
 
 	// Update justified check point.
-	if postState.CurrentJustifiedCheckpoint().Epoch > s.justifiedCheckpt.Epoch {
+	if cpt := postState.CurrentJustifiedCheckpoint(); cpt != nil && cpt.Epoch > s.justifiedCheckpt.Epoch {
 		if err := s.updateJustified(ctx, postState); err != nil {
 			return err
 		}
@@ -101,7 +101,7 @@ func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) er
 
 	// Update finalized check point.
 	// Prune the block cache and helper caches on every new finalized epoch.
-	if postState.FinalizedCheckpoint().Epoch > s.finalizedCheckpt.Epoch {
+	if postState.FinalizedCheckpoint() != nil && postState.FinalizedCheckpoint().Epoch > s.finalizedCheckpt.Epoch {
 		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint()); err != nil {
 			return errors.Wrap(err, "could not save finalized checkpoint")
 		}
@@ -215,7 +215,7 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, signed *e
 	}
 
 	// Update justified check point.
-	if postState.CurrentJustifiedCheckpoint().Epoch > s.justifiedCheckpt.Epoch {
+	if cpt := postState.CurrentJustifiedCheckpoint(); cpt != nil && cpt.Epoch > s.justifiedCheckpt.Epoch {
 		if err := s.updateJustified(ctx, postState); err != nil {
 			return err
 		}
@@ -223,7 +223,7 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, signed *e
 
 	// Update finalized check point.
 	// Prune the block cache and helper caches on every new finalized epoch.
-	if postState.FinalizedCheckpoint().Epoch > s.finalizedCheckpt.Epoch {
+	if cpt := postState.FinalizedCheckpoint(); cpt != nil && cpt.Epoch > s.finalizedCheckpt.Epoch {
 		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 		if endSlot > startSlot {
@@ -327,8 +327,13 @@ func (s *Store) verifyBlkDescendant(ctx context.Context, root [32]byte, slot uin
 		return errors.Wrap(err, "could not get finalized block root")
 	}
 	if !bytes.Equal(bFinalizedRoot, s.finalizedCheckpt.Root) {
-		err := fmt.Errorf("block from slot %d is not a descendent of the current finalized block slot %d, %#x != %#x",
-			slot, finalizedBlk.Slot, bytesutil.Trunc(bFinalizedRoot), bytesutil.Trunc(s.finalizedCheckpt.Root))
+		err := fmt.Errorf(
+			"block from slot %d is not a descendent of the current finalized block slot %d, %#x != %#x",
+			slot,
+			finalizedBlk.Slot,
+			bytesutil.Trunc(bFinalizedRoot),
+			bytesutil.Trunc(s.finalizedCheckpt.Root),
+		)
 		traceutil.AnnotateError(span, err)
 		return err
 	}
@@ -479,8 +484,8 @@ func (s *Store) shouldUpdateCurrentJustified(ctx context.Context, newJustifiedCh
 }
 
 func (s *Store) updateJustified(ctx context.Context, state *stateTrie.BeaconState) error {
-	if state.CurrentJustifiedCheckpoint().Epoch > s.bestJustifiedCheckpt.Epoch {
-		s.bestJustifiedCheckpt = state.CurrentJustifiedCheckpoint()
+	if cpt := state.CurrentJustifiedCheckpoint(); cpt != nil && cpt.Epoch > s.bestJustifiedCheckpt.Epoch {
+		s.bestJustifiedCheckpt = cpt
 	}
 	canUpdate, err := s.shouldUpdateCurrentJustified(ctx, state.CurrentJustifiedCheckpoint())
 	if err != nil {
@@ -490,7 +495,7 @@ func (s *Store) updateJustified(ctx context.Context, state *stateTrie.BeaconStat
 		s.justifiedCheckpt = state.CurrentJustifiedCheckpoint()
 	}
 
-	if featureconfig.Get().InitSyncCacheState {
+	if featureconfig.Get().InitSyncCacheState && state.CurrentJustifiedCheckpoint() != nil {
 		justifiedRoot := bytesutil.ToBytes32(state.CurrentJustifiedCheckpoint().Root)
 		justifiedState := s.initSyncState[justifiedRoot]
 		if err := s.db.SaveState(ctx, justifiedState, justifiedRoot); err != nil {
@@ -548,7 +553,7 @@ func (s *Store) cachedPreState(ctx context.Context, b *ethpb.BeaconBlock) (*stat
 // This saves every finalized state in DB during initial sync, needed as part of optimization to
 // use cache state during initial sync in case of restart.
 func (s *Store) saveInitState(ctx context.Context, state *stateTrie.BeaconState) error {
-	if !featureconfig.Get().InitSyncCacheState {
+	if !featureconfig.Get().InitSyncCacheState || state.FinalizedCheckpoint() == nil {
 		return nil
 	}
 	finalizedRoot := bytesutil.ToBytes32(state.FinalizedCheckpoint().Root)
