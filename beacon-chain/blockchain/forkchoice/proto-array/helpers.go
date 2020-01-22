@@ -38,7 +38,7 @@ func computeDeltas(ctx context.Context, indices map[[32]byte]uint64, votes []Vot
 			nextDeltaIndex, ok := indices[vote.nextRoot]
 			if ok {
 				if int(nextDeltaIndex) >= len(deltas) {
-					return nil, nil, invalidNodeDelta
+					return nil, nil, errInvalidNodeDelta
 				}
 				deltas[nextDeltaIndex] += int(newBalance)
 			}
@@ -46,7 +46,7 @@ func computeDeltas(ctx context.Context, indices map[[32]byte]uint64, votes []Vot
 			currentDeltaIndex, ok := indices[vote.currentRoot]
 			if ok {
 				if int(currentDeltaIndex) >= len(deltas) {
-					return nil, nil, invalidNodeDelta
+					return nil, nil, errInvalidNodeDelta
 				}
 				deltas[currentDeltaIndex] -= int(oldBalance)
 			}

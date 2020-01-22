@@ -2,6 +2,7 @@ package protoarray
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -112,7 +113,8 @@ func TestNoVote_CanFindHead(t *testing.T) {
 	//          |
 	//          5 <- starting from 5 with justified epoch 0 should error
 	r, err = f.Head(context.Background(), 1, indexToHash(5), balances, 1)
-	if err.Error() != invalidBestNode.Error() {
+	wanted := "after tree filter, best node can't be head,"
+	if !strings.Contains(err.Error(), wanted) {
 		t.Fatal("Did not get wanted error")
 	}
 

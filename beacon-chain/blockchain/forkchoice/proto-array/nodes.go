@@ -62,10 +62,10 @@ func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, err
 
 	justifiedIndex, ok := s.nodeIndices[justifiedRoot]
 	if !ok {
-		return [32]byte{}, unknownJustifiedRoot
+		return [32]byte{}, errUnknownJustifiedRoot
 	}
 	if justifiedIndex >= uint64(len(s.nodes)) {
-		return [32]byte{}, invalidJustifiedIndex
+		return [32]byte{}, errInvalidJustifiedIndex
 	}
 
 	justifiedNode := s.nodes[justifiedIndex]
@@ -74,7 +74,7 @@ func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, err
 		bestDescendantIndex = justifiedIndex
 	}
 	if bestDescendantIndex >= uint64(len(s.nodes)) {
-		return [32]byte{}, invalidBestDescendantIndex
+		return [32]byte{}, errInvalidBestDescendantIndex
 	}
 
 	bestNode := s.nodes[bestDescendantIndex]
@@ -99,12 +99,12 @@ func (s *Store) updateBestChildAndDescendant(ctx context.Context, parentIndex ui
 	defer span.End()
 
 	if parentIndex >= uint64(len(s.nodes)) {
-		return invalidNodeIndex
+		return errInvalidNodeIndex
 	}
 	parent := s.nodes[parentIndex]
 
 	if childIndex >= uint64(len(s.nodes)) {
-		return invalidNodeIndex
+		return errInvalidNodeIndex
 	}
 	child := s.nodes[childIndex]
 
@@ -136,7 +136,7 @@ func (s *Store) updateBestChildAndDescendant(ctx context.Context, parentIndex ui
 			newParentChild = changeToChild
 		} else {
 			if parent.bestChild > uint64(len(s.nodes)) {
-				return invalidBestDescendantIndex
+				return errInvalidBestDescendantIndex
 			}
 			bestChild := s.nodes[parent.bestChild]
 			bestChildLeadsToViableHead, err := s.leadsToViableHead(ctx, bestChild)
@@ -192,7 +192,7 @@ func (s *Store) applyScoreChanges(ctx context.Context, justifiedEpoch uint64, fi
 	defer span.End()
 
 	if len(s.nodeIndices) != len(delta) {
-		return invalidDeltaLength
+		return errInvalidDeltaLength
 	}
 
 	if s.justifiedEpoch != justifiedEpoch || s.finalizedEpoch != finalizedEpoch {
@@ -211,7 +211,7 @@ func (s *Store) applyScoreChanges(ctx context.Context, justifiedEpoch uint64, fi
 		}
 
 		if i >= len(delta) {
-			return invalidNodeDelta
+			return errInvalidNodeDelta
 		}
 		nodeDelta := delta[i]
 
@@ -230,7 +230,7 @@ func (s *Store) applyScoreChanges(ctx context.Context, justifiedEpoch uint64, fi
 		if n.parent != nonExistentNode {
 			// Back propagate the nodes delta to its parent.
 			if int(n.parent) >= len(delta) {
-				return invalidParentDelta
+				return errInvalidParentDelta
 			}
 
 			delta[n.parent] += nodeDelta
@@ -255,7 +255,7 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 
 	finalizedIndex, ok := s.nodeIndices[finalizedRoot]
 	if !ok {
-		return unknownFinalizedRoot
+		return errUnknownFinalizedRoot
 	}
 
 	// The number of the nodes has not met the prune threshold.
@@ -267,7 +267,7 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 	// Remove the key/values from indices mapping on to be deleted nodes.
 	for i := uint64(0); i < finalizedIndex; i++ {
 		if int(i) >= len(s.nodes) {
-			return invalidNodeIndex
+			return errInvalidNodeIndex
 		}
 		delete(s.nodeIndices, s.nodes[i].root)
 	}
@@ -322,7 +322,7 @@ func (s *Store) leadsToViableHead(ctx context.Context, node *Node) (bool, error)
 	bestDescendentIndex := node.bestDescendant
 	if bestDescendentIndex != nonExistentNode {
 		if bestDescendentIndex > uint64(len(s.nodes)) {
-			return false, invalidBestDescendantIndex
+			return false, errInvalidBestDescendantIndex
 		}
 		bestDescendentNode := s.nodes[bestDescendentIndex]
 		bestDescendentViable = s.viableForHead(ctx, bestDescendentNode)

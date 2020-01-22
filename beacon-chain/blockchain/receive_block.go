@@ -191,8 +191,10 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 		return errors.Wrap(err, "could not get head root from cache")
 	}
 
-	if err := s.forkchoice.ProcessBlock(ctx, blockCopy.Block.Slot, root, bytesutil.ToBytes32(blockCopy.Block.ParentRoot), postState.CurrentJustifiedCheckpoint.Epoch, postState.FinalizedCheckpoint.Epoch); err != nil {
-		return errors.Wrap(err, "could not process block for proto array fork choice")
+	if featureconfig.Get().ProtoArrayForkChoice {
+		if err := s.forkchoice.ProcessBlock(ctx, blockCopy.Block.Slot, root, bytesutil.ToBytes32(blockCopy.Block.ParentRoot), postState.CurrentJustifiedCheckpoint.Epoch, postState.FinalizedCheckpoint.Epoch); err != nil {
+			return errors.Wrap(err, "could not process block for proto array fork choice")
+		}
 	}
 
 	if !bytes.Equal(root[:], cachedHeadRoot) {
