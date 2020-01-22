@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"strconv"
 	"testing"
@@ -9,14 +10,27 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/slasher/db"
+	"github.com/prysmaticlabs/prysm/slasher/flags"
+	"github.com/urfave/cli"
 )
+
+var appFlags = []cli.Flag{
+	flags.CertFlag,
+	flags.RPCPort,
+	flags.KeyFlag,
+	flags.UseSpanCacheFlag,
+}
 
 func BenchmarkMinSpan(b *testing.B) {
 	diffs := []uint64{2, 10, 100, 1000, 10000, 53999}
-	dbs := db.SetupSlasherDB(b)
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
+	ctx := cli.NewContext(app, set, nil)
+	dbs := db.SetupSlasherDB(b, ctx)
 	defer db.TeardownSlasherDB(b, dbs)
 
-	ctx := context.Background()
+	context := context.Background()
 	slasherServer := &Server{
 		SlasherDB: dbs,
 	}
@@ -27,7 +41,7 @@ func BenchmarkMinSpan(b *testing.B) {
 				if err != nil {
 					b.Fatal(err)
 				}
-				_, _, err = slasherServer.DetectAndUpdateMinEpochSpan(ctx, i, i+diff, i%10, spanMap)
+				_, _, err = slasherServer.DetectAndUpdateMinEpochSpan(context, i, i+diff, i%10, spanMap)
 				if err != nil {
 					b.Fatal(err)
 				}
@@ -38,10 +52,14 @@ func BenchmarkMinSpan(b *testing.B) {
 
 func BenchmarkMaxSpan(b *testing.B) {
 	diffs := []uint64{2, 10, 100, 1000, 10000, 53999}
-	dbs := db.SetupSlasherDB(b)
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
+	ctx := cli.NewContext(app, set, nil)
+	dbs := db.SetupSlasherDB(b, ctx)
 	defer db.TeardownSlasherDB(b, dbs)
 
-	ctx := context.Background()
+	context := context.Background()
 	slasherServer := &Server{
 		SlasherDB: dbs,
 	}
@@ -52,7 +70,7 @@ func BenchmarkMaxSpan(b *testing.B) {
 				if err != nil {
 					b.Fatal(err)
 				}
-				_, _, err = slasherServer.DetectAndUpdateMaxEpochSpan(ctx, diff, diff+i, i%10, spanMap)
+				_, _, err = slasherServer.DetectAndUpdateMaxEpochSpan(context, diff, diff+i, i%10, spanMap)
 				if err != nil {
 					b.Fatal(err)
 				}
@@ -63,7 +81,11 @@ func BenchmarkMaxSpan(b *testing.B) {
 
 func BenchmarkDetectSpan(b *testing.B) {
 	diffs := []uint64{2, 10, 100, 1000, 10000, 53999}
-	dbs := db.SetupSlasherDB(b)
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
+	ctx := cli.NewContext(app, set, nil)
+	dbs := db.SetupSlasherDB(b, ctx)
 	defer db.TeardownSlasherDB(b, dbs)
 
 	slasherServer := &Server{
@@ -100,11 +122,15 @@ func BenchmarkDetectSpan(b *testing.B) {
 }
 
 func BenchmarkCheckAttestations(b *testing.B) {
-	dbs := db.SetupSlasherDB(b)
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
+	ctx := cli.NewContext(app, set, nil)
+	dbs := db.SetupSlasherDB(b, ctx)
 	defer db.TeardownSlasherDB(b, dbs)
-	ctx := context.Background()
+	context := context.Background()
 	slasherServer := &Server{
-		ctx:       ctx,
+		ctx:       context,
 		SlasherDB: dbs,
 	}
 	var cb []uint64
@@ -128,7 +154,7 @@ func BenchmarkCheckAttestations(b *testing.B) {
 		ia1.Data.Slot = (i + 1) * params.BeaconConfig().SlotsPerEpoch
 		root := []byte(strconv.Itoa(int(i)))
 		ia1.Data.BeaconBlockRoot = append(root, ia1.Data.BeaconBlockRoot[len(root):]...)
-		if _, err := slasherServer.IsSlashableAttestation(ctx, ia1); err != nil {
+		if _, err := slasherServer.IsSlashableAttestation(context, ia1); err != nil {
 			b.Errorf("Could not call RPC method: %v", err)
 		}
 	}
