@@ -20,6 +20,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/aggregator"
@@ -64,6 +65,7 @@ type Service struct {
 	chainStartFetcher      powchain.ChainStartFetcher
 	mockEth1Votes          bool
 	attestationsPool       attestations.Pool
+	exitPool               *voluntaryexits.Pool
 	syncService            sync.Checker
 	host                   string
 	port                   string
@@ -105,6 +107,7 @@ type Config struct {
 	GenesisTimeFetcher    blockchain.GenesisTimeFetcher
 	MockEth1Votes         bool
 	AttestationsPool      attestations.Pool
+	ExitPool              *voluntaryexits.Pool
 	SyncService           sync.Checker
 	Broadcaster           p2p.Broadcaster
 	PeersFetcher          p2p.PeersProvider
@@ -137,6 +140,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		chainStartFetcher:     cfg.ChainStartFetcher,
 		mockEth1Votes:         cfg.MockEth1Votes,
 		attestationsPool:      cfg.AttestationsPool,
+		exitPool:              cfg.ExitPool,
 		syncService:           cfg.SyncService,
 		host:                  cfg.Host,
 		port:                  cfg.Port,
@@ -202,6 +206,7 @@ func (s *Service) Start() {
 		BeaconDB:               s.beaconDB,
 		AttestationCache:       cache.NewAttestationCache(),
 		AttPool:                s.attestationsPool,
+		ExitPool:               s.exitPool,
 		HeadFetcher:            s.headFetcher,
 		ForkFetcher:            s.forkFetcher,
 		FinalizationFetcher:    s.finalizationFetcher,

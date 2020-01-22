@@ -94,6 +94,12 @@ var (
 		Usage: "The IP address advertised by libp2p. This may be used to advertise an external IP.",
 		Value: "",
 	}
+	// P2PHostDNS defines the host DNS to be used by libp2p.
+	P2PHostDNS = cli.StringFlag{
+		Name:  "p2p-host-dns",
+		Usage: "The DNS address advertised by libp2p. This may be used to advertise an external DNS.",
+		Value: "",
+	}
 	// P2PPrivKey defines a flag to specify the location of the private key file for libp2p.
 	P2PPrivKey = cli.StringFlag{
 		Name:  "p2p-priv-key",
