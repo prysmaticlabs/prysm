@@ -29,12 +29,12 @@ type beaconNodeInfo struct {
 }
 
 type end2EndConfig struct {
-	beaconConfig   string
+	beaconFlags    []string
+	validatorFlags []string
 	tmpPath        string
 	epochsToRun    uint64
 	numValidators  uint64
 	numBeaconNodes uint64
-	enableSSZCache bool
 	contractAddr   common.Address
 	evaluators     []ev.Evaluator
 }
@@ -86,15 +86,7 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 		fmt.Sprintf("--contract-deployment-block=%d", 0),
 		fmt.Sprintf("--rpc-max-page-size=%d", params.BeaconConfig().MinGenesisActiveValidatorCount),
 	}
-
-	if config.beaconConfig == "minimal" {
-		args = append(args, "--minimal-config")
-	} else if config.beaconConfig == "mainnet" {
-		args = append(args, "--no-custom-config")
-	}
-	if config.enableSSZCache {
-		args = append(args, "--enable-ssz-cache")
-	}
+	args = append(args, config.beaconFlags...)
 
 	// After the first node is made, have all following nodes connect to all previously made nodes.
 	if index >= 1 {
@@ -103,7 +95,7 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 		}
 	}
 
-	t.Logf("Starting beacon chain with flags: %s", strings.Join(args, " "))
+	t.Logf("Starting beacon chain %d with flags: %s", index, strings.Join(args, " "))
 	cmd := exec.Command(binaryPath, args...)
 	cmd.Stdout = stdOutFile
 	cmd.Stderr = stdOutFile

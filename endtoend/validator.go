@@ -62,15 +62,12 @@ func initializeValidators(
 			fmt.Sprintf("--datadir=%s/eth2-val-%d", tmpPath, n),
 			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", 4000+n),
 		}
-		if config.beaconConfig == "minimal" {
-			args = append(args, "--minimal-config")
-		} else if config.beaconConfig == "mainnet" {
-			args = append(args, "--no-custom-config")
-		}
+		args = append(args, config.validatorFlags...)
+
 		cmd := exec.Command(binaryPath, args...)
 		cmd.Stdout = file
 		cmd.Stderr = file
-		t.Logf("Starting validator client with flags: %s", strings.Join(args, " "))
+		t.Logf("Starting validator client %d with flags: %s", n, strings.Join(args, " "))
 		if err := cmd.Start(); err != nil {
 			t.Fatal(err)
 		}
