@@ -12,6 +12,8 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/pkg/errors"
+
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -104,9 +106,17 @@ func (s *Service) Start() {
 	s.context = context.Background()
 	s.startSlasher()
 	s.startBeaconClient()
-	s.slasherOldAtetstationFeeder()
-	go s.finalisedChangeUpdater()
 	stop := s.stop
+	err := s.slasherOldAtetstationFeeder()
+	if err != nil {
+		err = errors.Wrap(err, "couldn't start attestation feeder from archive endpoint. please use "+
+			"--beacon-rpc-provider flag value if you are not running a beacon chain service with "+
+			"--archive flag on the local machine.")
+		log.Errorf(err.Error())
+		s.failStatus = err
+		return
+	}
+	go s.finalisedChangeUpdater()
 	s.lock.Unlock()
 
 	go func() {

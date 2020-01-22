@@ -49,10 +49,14 @@ func (s *Service) finalisedChangeUpdater() error {
 }
 
 func (s *Service) slasherOldAtetstationFeeder() error {
+	if s.beaconClient == nil {
+		return fmt.Errorf("can't feed old attestations to slasher. beacon client has not been started")
+	}
 	ch, err := s.beaconClient.GetChainHead(s.context, &ptypes.Empty{})
 	if err != nil {
 		log.Error(err)
 		s.Stop()
+		return err
 	}
 	if ch.FinalizedEpoch < 2 {
 		return fmt.Errorf("archive node doesnt have historic data for slasher to proccess. finalized epoch: %d", ch.FinalizedEpoch)
@@ -113,6 +117,11 @@ func (s *Service) slasherOldAtetstationFeeder() error {
 			}
 		}
 		s.slasherDb.SetLatestEpochDetected(i)
+		ch, err = s.beaconClient.GetChainHead(s.context, &ptypes.Empty{})
+		if err != nil {
+			log.Error(err)
+			s.Stop()
+		}
 	}
 	errorWg.Wait()
 	close(errOut)
