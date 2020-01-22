@@ -90,7 +90,7 @@ func (s *Service) Start() {
 		}
 		stateSub.Unsubscribe()
 	} else {
-		genesis = time.Unix(int64(headState.GenesisTime), 0)
+		genesis = time.Unix(int64(headState.GenesisTime()), 0)
 	}
 
 	if genesis.After(roughtime.Now()) {
@@ -150,7 +150,7 @@ func (s *Service) Resync() error {
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve head state")
 	}
-	genesis := time.Unix(int64(headState.GenesisTime), 0)
+	genesis := time.Unix(int64(headState.GenesisTime()), 0)
 
 	s.waitForMinimumPeers()
 	err = s.roundRobinSync(genesis)

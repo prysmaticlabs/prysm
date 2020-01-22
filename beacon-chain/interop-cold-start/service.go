@@ -133,8 +133,8 @@ func (s *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 }
 
 // PreGenesisState returns an empty beacon state.
-func (s *Service) PreGenesisState() *pb.BeaconState {
-	return &pb.BeaconState{}
+func (s *Service) PreGenesisState() *stateTrie.BeaconState {
+	return &stateTrie.BeaconState{}
 }
 
 // DepositByPubkey mocks out the deposit cache functionality for interop.

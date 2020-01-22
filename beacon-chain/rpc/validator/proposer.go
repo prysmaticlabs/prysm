@@ -203,7 +203,7 @@ func (vs *Server) computeStateRoot(ctx context.Context, block *ethpb.SignedBeaco
 		block,
 	)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not calculate state root at slot %d", beaconState.Slot)
+		return nil, errors.Wrapf(err, "could not calculate state root at slot %d", beaconState.Slot())
 	}
 
 	log.WithField("beaconStateRoot", fmt.Sprintf("%#x", root)).Debugf("Computed state root")
