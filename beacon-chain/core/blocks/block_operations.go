@@ -192,7 +192,7 @@ func ProcessBlockHeader(
 		return err
 	}
 
-	idx, err := helpers.BeaconProposerIndex(beaconState)
+	idx, err := helpers.BeaconProposerIndex(beaconState, validators)
 	if err != nil {
 		return err
 	}
@@ -252,7 +252,7 @@ func ProcessBlockHeaderNoVerify(
 			block.ParentRoot, parentRoot)
 	}
 
-	idx, err := helpers.BeaconProposerIndex(beaconState)
+	idx, err := helpers.BeaconProposerIndex(beaconState, validators)
 	if err != nil {
 		return err
 	}
@@ -297,7 +297,7 @@ func ProcessRandao(
 	validators []*ethpb.Validator,
 	body *ethpb.BeaconBlockBody,
 ) error {
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, validators)
 	if err != nil {
 		return errors.Wrap(err, "could not get beacon proposer index")
 	}
@@ -379,13 +379,12 @@ func ProcessProposerSlashings(
 		if err = VerifyProposerSlashing(beaconState, validators, slashing); err != nil {
 			return errors.Wrapf(err, "could not verify proposer slashing %d", idx)
 		}
-		// TODO: EDIT to include validators list.
-		beaconState, err = v.SlashValidator(
+		if err := v.SlashValidator(
 			beaconState,
+			validators,
 			slashing.ProposerIndex,
 			0, /* proposer is whistleblower */
-		)
-		if err != nil {
+		); err != nil {
 			return errors.Wrapf(err, "could not slash proposer index %d", slashing.ProposerIndex)
 		}
 	}
@@ -441,39 +440,42 @@ func VerifyProposerSlashing(
 func ProcessAttesterSlashings(
 	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
+	validators []*ethpb.Validator,
 	body *ethpb.BeaconBlockBody,
-) (*stateTrie.BeaconState, error) {
-	vals := beaconState.Validators()
+) error {
 	for idx, slashing := range body.AttesterSlashings {
-		if err := VerifyAttesterSlashing(ctx, beaconState, slashing); err != nil {
-			return nil, errors.Wrapf(err, "could not verify attester slashing %d", idx)
+		if err := VerifyAttesterSlashing(ctx, beaconState, validators, slashing); err != nil {
+			return errors.Wrapf(err, "could not verify attester slashing %d", idx)
 		}
 		slashableIndices := slashableAttesterIndices(slashing)
 		sort.SliceStable(slashableIndices, func(i, j int) bool {
 			return slashableIndices[i] < slashableIndices[j]
 		})
-		currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
-		var err error
+		currentEpoch := helpers.CurrentEpoch(beaconState)
 		var slashedAny bool
 		for _, validatorIndex := range slashableIndices {
-			if helpers.IsSlashableValidator(vals[validatorIndex], currentEpoch) {
-				beaconState, err = v.SlashValidator(beaconState, validatorIndex, 0)
-				if err != nil {
-					return nil, errors.Wrapf(err, "could not slash validator index %d",
+			if helpers.IsSlashableValidator(validators[validatorIndex], currentEpoch) {
+				if err := v.SlashValidator(beaconState, validators, validatorIndex, 0); err != nil {
+					return errors.Wrapf(err, "could not slash validator index %d",
 						validatorIndex)
 				}
 				slashedAny = true
 			}
 		}
 		if !slashedAny {
-			return nil, errors.New("unable to slash any validator despite confirmed attester slashing")
+			return errors.New("unable to slash any validator despite confirmed attester slashing")
 		}
 	}
-	return beaconState, nil
+	return nil
 }
 
 // VerifyAttesterSlashing validates the attestation data in both attestations in the slashing object.
-func VerifyAttesterSlashing(ctx context.Context, beaconState *stateTrie.BeaconState, slashing *ethpb.AttesterSlashing) error {
+func VerifyAttesterSlashing(
+	ctx context.Context,
+	beaconState *stateTrie.BeaconState,
+	validators []*ethpb.Validator,
+	slashing *ethpb.AttesterSlashing,
+) error {
 	att1 := slashing.Attestation_1
 	att2 := slashing.Attestation_2
 	data1 := att1.Data
@@ -481,10 +483,10 @@ func VerifyAttesterSlashing(ctx context.Context, beaconState *stateTrie.BeaconSt
 	if !IsSlashableAttestationData(data1, data2) {
 		return errors.New("attestations are not slashable")
 	}
-	if err := VerifyIndexedAttestation(ctx, beaconState, att1); err != nil {
+	if err := VerifyIndexedAttestation(ctx, beaconState, validators, att1); err != nil {
 		return errors.Wrap(err, "could not validate indexed attestation")
 	}
-	if err := VerifyIndexedAttestation(ctx, beaconState, att2); err != nil {
+	if err := VerifyIndexedAttestation(ctx, beaconState, validators, att2); err != nil {
 		return errors.Wrap(err, "could not validate indexed attestation")
 	}
 	return nil
@@ -521,16 +523,15 @@ func slashableAttesterIndices(slashing *ethpb.AttesterSlashing) []uint64 {
 func ProcessAttestations(
 	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
+	validators []*ethpb.Validator,
 	body *ethpb.BeaconBlockBody,
-) (*stateTrie.BeaconState, error) {
-	var err error
+) error {
 	for idx, attestation := range body.Attestations {
-		beaconState, err = ProcessAttestation(ctx, beaconState, attestation)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not verify attestation at index %d in block", idx)
+		if err := ProcessAttestation(ctx, beaconState, validators, attestation); err != nil {
+			return errors.Wrapf(err, "could not verify attestation at index %d in block", idx)
 		}
 	}
-	return beaconState, nil
+	return nil
 }
 
 // ProcessAttestationsNoVerify applies processing operations to a block's inner attestation
@@ -538,16 +539,15 @@ func ProcessAttestations(
 func ProcessAttestationsNoVerify(
 	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
+	validators []*ethpb.Validator,
 	body *ethpb.BeaconBlockBody,
-) (*stateTrie.BeaconState, error) {
-	var err error
+) error {
 	for idx, attestation := range body.Attestations {
-		beaconState, err = ProcessAttestationNoVerify(ctx, beaconState, attestation)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not verify attestation at index %d in block", idx)
+		if err := ProcessAttestationNoVerify(ctx, beaconState, validators, attestation); err != nil {
+			return errors.Wrapf(err, "could not verify attestation at index %d in block", idx)
 		}
 	}
-	return beaconState, nil
+	return nil
 }
 
 // ProcessAttestation verifies an input attestation can pass through processing using the given beacon state.
@@ -582,13 +582,13 @@ func ProcessAttestationsNoVerify(
 func ProcessAttestation(
 	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
+	validators []*ethpb.Validator,
 	att *ethpb.Attestation,
-) (*stateTrie.BeaconState, error) {
-	beaconState, err := ProcessAttestationNoVerify(ctx, beaconState, att)
-	if err != nil {
-		return nil, err
+) error {
+	if err := ProcessAttestationNoVerify(ctx, beaconState, validators, att); err != nil {
+		return nil
 	}
-	return beaconState, VerifyAttestation(ctx, beaconState, att)
+	return VerifyAttestation(ctx, beaconState, validators, att)
 }
 
 // ProcessAttestationNoVerify processes the attestation without verifying the attestation signature. This
@@ -596,25 +596,21 @@ func ProcessAttestation(
 func ProcessAttestationNoVerify(
 	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
+	validators []*ethpb.Validator,
 	att *ethpb.Attestation,
-) (*stateTrie.BeaconState, error) {
+) error {
 	ctx, span := trace.StartSpan(ctx, "core.ProcessAttestationNoVerify")
 	defer span.End()
 
 	if att == nil || att.Data == nil || att.Data.Target == nil {
-		return nil, errors.New("nil attestation data target")
+		return errors.New("nil attestation data target")
 	}
 
-	currEpoch := helpers.SlotToEpoch(beaconState.Slot())
-	var prevEpoch uint64
-	if currEpoch == 0 {
-		prevEpoch = 0
-	} else {
-		prevEpoch = currEpoch - 1
-	}
+	currEpoch := helpers.CurrentEpoch(beaconState)
+	prevEpoch := helpers.PrevEpoch(beaconState)
 	data := att.Data
 	if data.Target.Epoch != prevEpoch && data.Target.Epoch != currEpoch {
-		return nil, fmt.Errorf(
+		return fmt.Errorf(
 			"expected target epoch (%d) to be the previous epoch (%d) or the current epoch (%d)",
 			data.Target.Epoch,
 			prevEpoch,
@@ -622,14 +618,18 @@ func ProcessAttestationNoVerify(
 		)
 	}
 	if helpers.SlotToEpoch(data.Slot) != data.Target.Epoch {
-		return nil, fmt.Errorf("data slot is not in the same epoch as target %d != %d", helpers.SlotToEpoch(data.Slot), data.Target.Epoch)
+		return fmt.Errorf(
+			"data slot is not in the same epoch as target %d != %d",
+			helpers.SlotToEpoch(data.Slot),
+			data.Target.Epoch,
+		)
 	}
 
 	s := att.Data.Slot
 	minInclusionCheck := s+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot()
 	epochInclusionCheck := beaconState.Slot() <= s+params.BeaconConfig().SlotsPerEpoch
 	if !minInclusionCheck {
-		return nil, fmt.Errorf(
+		return fmt.Errorf(
 			"attestation slot %d + inclusion delay %d > state slot %d",
 			s,
 			params.BeaconConfig().MinAttestationInclusionDelay,
@@ -637,7 +637,7 @@ func ProcessAttestationNoVerify(
 		)
 	}
 	if !epochInclusionCheck {
-		return nil, fmt.Errorf(
+		return fmt.Errorf(
 			"state slot %d > attestation slot %d + SLOTS_PER_EPOCH %d",
 			beaconState.Slot(),
 			s,
@@ -645,13 +645,13 @@ func ProcessAttestationNoVerify(
 		)
 	}
 
-	if err := helpers.VerifyAttestationBitfieldLengths(beaconState, att); err != nil {
-		return nil, errors.Wrap(err, "could not verify attestation bitfields")
+	if err := helpers.VerifyAttestationBitfieldLengths(beaconState, validators, att); err != nil {
+		return errors.Wrap(err, "could not verify attestation bitfields")
 	}
 
-	proposerIndex, err := helpers.BeaconProposerIndex(beaconState)
+	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, validators)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	pendingAtt := &pb.PendingAttestation{
 		Data:            data,
@@ -668,27 +668,26 @@ func ProcessAttestationNoVerify(
 		ffgSourceRoot = beaconState.CurrentJustifiedCheckpoint().Root
 		ffgTargetEpoch = currEpoch
 		if err := beaconState.AppendCurrentEpochAttestations(pendingAtt); err != nil {
-			return nil, err
+			return err
 		}
 	} else {
 		ffgSourceEpoch = beaconState.PreviousJustifiedCheckpoint().Epoch
 		ffgSourceRoot = beaconState.PreviousJustifiedCheckpoint().Root
 		ffgTargetEpoch = prevEpoch
 		if err := beaconState.AppendPreviousEpochAttestations(pendingAtt); err != nil {
-			return nil, err
+			return err
 		}
 	}
 	if data.Source.Epoch != ffgSourceEpoch {
-		return nil, fmt.Errorf("expected source epoch %d, received %d", ffgSourceEpoch, data.Source.Epoch)
+		return fmt.Errorf("expected source epoch %d, received %d", ffgSourceEpoch, data.Source.Epoch)
 	}
 	if !bytes.Equal(data.Source.Root, ffgSourceRoot) {
-		return nil, fmt.Errorf("expected source root %#x, received %#x", ffgSourceRoot, data.Source.Root)
+		return fmt.Errorf("expected source root %#x, received %#x", ffgSourceRoot, data.Source.Root)
 	}
 	if data.Target.Epoch != ffgTargetEpoch {
-		return nil, fmt.Errorf("expected target epoch %d, received %d", ffgTargetEpoch, data.Target.Epoch)
+		return fmt.Errorf("expected target epoch %d, received %d", ffgTargetEpoch, data.Target.Epoch)
 	}
-
-	return beaconState, nil
+	return nil
 }
 
 // ConvertToIndexed converts attestation to (almost) indexed-verifiable form.
@@ -752,7 +751,12 @@ func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, commi
 //    ):
 //        return False
 //    return True
-func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.BeaconState, indexedAtt *ethpb.IndexedAttestation) error {
+func VerifyIndexedAttestation(
+	ctx context.Context,
+	beaconState *stateTrie.BeaconState,
+	validators []*ethpb.Validator,
+	indexedAtt *ethpb.IndexedAttestation,
+) error {
 	ctx, span := trace.StartSpan(ctx, "core.VerifyIndexedAttestation")
 	defer span.End()
 
@@ -781,14 +785,13 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 	domain := helpers.Domain(beaconState.Fork(), indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
 	var pubkey *bls.PublicKey
 	var err error
-	vals := beaconState.Validators()
 	if len(indices) > 0 {
-		pubkey, err = bls.PublicKeyFromBytes(vals[indices[0]].PublicKey)
+		pubkey, err = bls.PublicKeyFromBytes(validators[indices[0]].PublicKey)
 		if err != nil {
 			return errors.Wrap(err, "could not deserialize validator public key")
 		}
 		for _, i := range indices[1:] {
-			pk, err := bls.PublicKeyFromBytes(vals[i].PublicKey)
+			pk, err := bls.PublicKeyFromBytes(validators[i].PublicKey)
 			if err != nil {
 				return errors.Wrap(err, "could not deserialize validator public key")
 			}
@@ -815,8 +818,13 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 
 // VerifyAttestation converts and attestation into an indexed attestation and verifies
 // the signature in that attestation.
-func VerifyAttestation(ctx context.Context, beaconState *stateTrie.BeaconState, att *ethpb.Attestation) error {
-	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
+func VerifyAttestation(
+	ctx context.Context,
+	beaconState *stateTrie.BeaconState,
+	validators []*ethpb.Validator,
+	att *ethpb.Attestation,
+) error {
+	committee, err := helpers.BeaconCommitteeFromState(beaconState, validators, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return err
 	}
@@ -824,7 +832,7 @@ func VerifyAttestation(ctx context.Context, beaconState *stateTrie.BeaconState, 
 	if err != nil {
 		return errors.Wrap(err, "could not convert to indexed attestation")
 	}
-	return VerifyIndexedAttestation(ctx, beaconState, indexedAtt)
+	return VerifyIndexedAttestation(ctx, beaconState, validators, indexedAtt)
 }
 
 // ProcessDeposits is one of the operations performed on each processed
@@ -837,56 +845,47 @@ func VerifyAttestation(ctx context.Context, beaconState *stateTrie.BeaconState, 
 func ProcessDeposits(
 	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
+	validators []*ethpb.Validator,
 	body *ethpb.BeaconBlockBody,
-) (*stateTrie.BeaconState, error) {
-	var err error
+) error {
 	deposits := body.Deposits
-
-	valIndexMap := stateutils.ValidatorIndexMap(beaconState)
+	valIndexMap := stateutils.ValidatorIndexMap(validators)
 	for _, deposit := range deposits {
-		beaconState, err = ProcessDeposit(beaconState, deposit, valIndexMap)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not process deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
+		if err := ProcessDeposit(beaconState, deposit, validators, valIndexMap); err != nil {
+			return errors.Wrapf(err, "could not process deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
 		}
 	}
-	return beaconState, nil
+	return nil
 }
 
 // ProcessPreGenesisDeposit processes a deposit for the beacon state before chainstart.
 func ProcessPreGenesisDeposit(
 	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
+	validators []*ethpb.Validator,
 	deposit *ethpb.Deposit,
 	validatorIndices map[[48]byte]int,
-) (*stateTrie.BeaconState, error) {
+) error {
 	var err error
-	beaconState, err = ProcessDeposit(beaconState, deposit, validatorIndices)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process deposit")
+	if err := ProcessDeposit(beaconState, deposit, validators, validatorIndices); err != nil {
+		return errors.Wrap(err, "could not process deposit")
 	}
 	pubkey := deposit.Data.PublicKey
 	index, ok := validatorIndices[bytesutil.ToBytes48(pubkey)]
 	if !ok {
-		return beaconState, nil
+		return nil
 	}
 	balance, err := beaconState.BalanceAtIndex(index)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	validator, err := beaconState.ValidatorAtIndex(uint64(index))
-	if err != nil {
-		return nil, err
-	}
-	validator.EffectiveBalance = mathutil.Min(balance-balance%params.BeaconConfig().EffectiveBalanceIncrement, params.BeaconConfig().MaxEffectiveBalance)
-	if validator.EffectiveBalance ==
+	validators[index].EffectiveBalance = mathutil.Min(balance-balance%params.BeaconConfig().EffectiveBalanceIncrement, params.BeaconConfig().MaxEffectiveBalance)
+	if validators[index].EffectiveBalance ==
 		params.BeaconConfig().MaxEffectiveBalance {
-		validator.ActivationEligibilityEpoch = 0
-		validator.ActivationEpoch = 0
+		validators[index].ActivationEligibilityEpoch = 0
+		validators[index].ActivationEpoch = 0
 	}
-	if err := beaconState.UpdateValidatorAtIndex(uint64(index), validator); err != nil {
-		return nil, err
-	}
-	return beaconState, nil
+	return nil
 }
 
 // ProcessDeposit takes in a deposit object and inserts it
@@ -935,33 +934,33 @@ func ProcessPreGenesisDeposit(
 func ProcessDeposit(
 	beaconState *stateTrie.BeaconState,
 	deposit *ethpb.Deposit,
+	validators []*ethpb.Validator,
 	valIndexMap map[[48]byte]int,
-) (*stateTrie.BeaconState, error) {
+) error {
 	if err := verifyDeposit(beaconState, deposit); err != nil {
-		return nil, errors.Wrapf(err, "could not verify deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
+		return errors.Wrapf(err, "could not verify deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
 	}
 	if err := beaconState.SetEth1DepositIndex(beaconState.Eth1DepositIndex() + 1); err != nil {
-		return nil, err
+		return err
 	}
 	pubKey := deposit.Data.PublicKey
 	amount := deposit.Data.Amount
 	index, ok := valIndexMap[bytesutil.ToBytes48(pubKey)]
-	vals := beaconState.Validators()
-	numVals := len(vals)
+	numVals := len(validators)
 	if !ok {
 		domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
 		depositSig := deposit.Data.Signature
 		if err := verifyDepositDataSigningRoot(deposit.Data, pubKey, depositSig, domain); err != nil {
 			// Ignore this error as in the spec pseudo code.
 			log.Errorf("Skipping deposit: could not verify deposit data signature: %v", err)
-			return beaconState, nil
+			return nil
 		}
 
 		effectiveBalance := amount - (amount % params.BeaconConfig().EffectiveBalanceIncrement)
 		if params.BeaconConfig().MaxEffectiveBalance < effectiveBalance {
 			effectiveBalance = params.BeaconConfig().MaxEffectiveBalance
 		}
-		if err := beaconState.AppendValidator(&ethpb.Validator{
+		validators = append(validators, &ethpb.Validator{
 			PublicKey:                  pubKey,
 			WithdrawalCredentials:      deposit.Data.WithdrawalCredentials,
 			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -969,21 +968,19 @@ func ProcessDeposit(
 			ExitEpoch:                  params.BeaconConfig().FarFutureEpoch,
 			WithdrawableEpoch:          params.BeaconConfig().FarFutureEpoch,
 			EffectiveBalance:           effectiveBalance,
-		}); err != nil {
-			return nil, err
-		}
+		})
 		if err := beaconState.AppendBalance(amount); err != nil {
-			return nil, err
+			return err
 		}
 		numVals++
 		valIndexMap[bytesutil.ToBytes48(pubKey)] = numVals - 1
 	} else {
 		if err := helpers.IncreaseBalance(beaconState, uint64(index), amount); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	return beaconState, nil
+	return nil
 }
 
 func verifyDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit) error {
@@ -1037,39 +1034,35 @@ func verifyDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit) e
 func ProcessVoluntaryExits(
 	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
+	validators []*ethpb.Validator,
 	body *ethpb.BeaconBlockBody,
-) (*stateTrie.BeaconState, error) {
-	var err error
+) error {
 	exits := body.VoluntaryExits
-
 	for idx, exit := range exits {
-		if err := VerifyExit(beaconState, exit); err != nil {
-			return nil, errors.Wrapf(err, "could not verify exit %d", idx)
+		if err := VerifyExit(beaconState, validators, exit); err != nil {
+			return errors.Wrapf(err, "could not verify exit %d", idx)
 		}
-		beaconState, err = v.InitiateValidatorExit(beaconState, exit.Exit.ValidatorIndex)
-		if err != nil {
-			return nil, err
+		if err := v.InitiateValidatorExit(beaconState, validators, exit.Exit.ValidatorIndex); err != nil {
+			return err
 		}
 	}
-	return beaconState, nil
+	return nil
 }
 
 // ProcessVoluntaryExitsNoVerify processes all the voluntary exits in
 // a block body, without verifying their BLS signatures.
 func ProcessVoluntaryExitsNoVerify(
 	beaconState *stateTrie.BeaconState,
+	validators []*ethpb.Validator,
 	body *ethpb.BeaconBlockBody,
-) (*stateTrie.BeaconState, error) {
-	var err error
+) error {
 	exits := body.VoluntaryExits
-
 	for idx, exit := range exits {
-		beaconState, err = v.InitiateValidatorExit(beaconState, exit.Exit.ValidatorIndex)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to process voluntary exit at index %d", idx)
+		if err := v.InitiateValidatorExit(beaconState, validators, exit.Exit.ValidatorIndex); err != nil {
+			return errors.Wrapf(err, "failed to process voluntary exit at index %d", idx)
 		}
 	}
-	return beaconState, nil
+	return nil
 }
 
 // VerifyExit implements the spec defined validation for voluntary exits.
@@ -1091,41 +1084,39 @@ func ProcessVoluntaryExitsNoVerify(
 //    # Verify signature
 //    domain = get_domain(state, DOMAIN_VOLUNTARY_EXIT, exit.epoch)
 //    assert bls_verify(validator.pubkey, signing_root(exit), exit.signature, domain)
-func VerifyExit(beaconState *stateTrie.BeaconState, signed *ethpb.SignedVoluntaryExit) error {
+func VerifyExit(beaconState *stateTrie.BeaconState, validators []*ethpb.Validator, signed *ethpb.SignedVoluntaryExit) error {
 	if signed == nil || signed.Exit == nil {
 		return errors.New("nil exit")
 	}
 
 	exit := signed.Exit
-	vals := beaconState.Validators()
-	if int(exit.ValidatorIndex) >= len(vals) {
-		return fmt.Errorf("validator index out of bound %d > %d", exit.ValidatorIndex, len(vals))
+	if int(exit.ValidatorIndex) >= len(validators) {
+		return fmt.Errorf("validator index out of bound %d > %d", exit.ValidatorIndex, len(validators))
 	}
 
-	validator := vals[exit.ValidatorIndex]
-	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
+	currentEpoch := helpers.CurrentEpoch(beaconState)
 	// Verify the validator is active.
-	if !helpers.IsActiveValidator(validator, currentEpoch) {
+	if !helpers.IsActiveValidator(validators[exit.ValidatorIndex], currentEpoch) {
 		return errors.New("non-active validator cannot exit")
 	}
 	// Verify the validator has not yet exited.
-	if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-		return fmt.Errorf("validator has already exited at epoch: %v", validator.ExitEpoch)
+	if validators[exit.ValidatorIndex].ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+		return fmt.Errorf("validator has already exited at epoch: %v", validators[exit.ValidatorIndex].ExitEpoch)
 	}
 	// Exits must specify an epoch when they become valid; they are not valid before then.
 	if currentEpoch < exit.Epoch {
 		return fmt.Errorf("expected current epoch >= exit epoch, received %d < %d", currentEpoch, exit.Epoch)
 	}
 	// Verify the validator has been active long enough.
-	if currentEpoch < validator.ActivationEpoch+params.BeaconConfig().PersistentCommitteePeriod {
+	if currentEpoch < validators[exit.ValidatorIndex].ActivationEpoch+params.BeaconConfig().PersistentCommitteePeriod {
 		return fmt.Errorf(
 			"validator has not been active long enough to exit, wanted epoch %d >= %d",
 			currentEpoch,
-			validator.ActivationEpoch+params.BeaconConfig().PersistentCommitteePeriod,
+			validators[exit.ValidatorIndex].ActivationEpoch+params.BeaconConfig().PersistentCommitteePeriod,
 		)
 	}
 	domain := helpers.Domain(beaconState.Fork(), exit.Epoch, params.BeaconConfig().DomainVoluntaryExit)
-	if err := verifySigningRoot(exit, validator.PublicKey, signed.Signature, domain); err != nil {
+	if err := verifySigningRoot(exit, validators[exit.ValidatorIndex].PublicKey, signed.Signature, domain); err != nil {
 		return ErrSigFailedToVerify
 	}
 	return nil

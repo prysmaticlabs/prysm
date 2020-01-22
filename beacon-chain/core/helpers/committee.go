@@ -67,7 +67,12 @@ func SlotCommitteeCount(activeValidatorCount uint64) uint64 {
 //        index=epoch_offset,
 //        count=committees_per_slot * SLOTS_PER_EPOCH,
 //    )
-func BeaconCommitteeFromState(state *stateTrie.BeaconState, slot uint64, committeeIndex uint64) ([]uint64, error) {
+func BeaconCommitteeFromState(
+	state *stateTrie.BeaconState,
+	validators []*ethpb.Validator,
+	slot uint64,
+	committeeIndex uint64,
+) ([]uint64, error) {
 	epoch := SlotToEpoch(slot)
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
@@ -82,7 +87,7 @@ func BeaconCommitteeFromState(state *stateTrie.BeaconState, slot uint64, committ
 		return indices, nil
 	}
 
-	activeIndices, err := ActiveValidatorIndices(state, epoch)
+	activeIndices, err := ActiveValidatorIndices(state, validators, epoch)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get active indices")
 	}
@@ -361,8 +366,12 @@ func VerifyBitfieldLength(bf bitfield.Bitfield, committeeSize uint64) error {
 
 // VerifyAttestationBitfieldLengths verifies that an attestations aggregation bitfields is
 // a valid length matching the size of the committee.
-func VerifyAttestationBitfieldLengths(state *stateTrie.BeaconState, att *ethpb.Attestation) error {
-	committee, err := BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
+func VerifyAttestationBitfieldLengths(
+	state *stateTrie.BeaconState,
+	validators []*ethpb.Validator,
+	att *ethpb.Attestation,
+) error {
+	committee, err := BeaconCommitteeFromState(state, validators, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve beacon committees")
 	}
@@ -445,12 +454,12 @@ func UpdateCommitteeCache(state *stateTrie.BeaconState, epoch uint64) error {
 }
 
 // UpdateProposerIndicesInCache updates proposer indices entry of the committee cache.
-func UpdateProposerIndicesInCache(state *stateTrie.BeaconState, epoch uint64) error {
+func UpdateProposerIndicesInCache(state *stateTrie.BeaconState, validators []*ethpb.Validator, epoch uint64) error {
 	if !featureconfig.Get().EnableProposerIndexCache {
 		return nil
 	}
 
-	indices, err := ActiveValidatorIndices(state, epoch)
+	indices, err := ActiveValidatorIndices(state, validators, epoch)
 	if err != nil {
 		return nil
 	}

@@ -57,7 +57,7 @@ func IsSlashableValidator(validator *ethpb.Validator, epoch uint64) bool {
 //    Return the sequence of active validator indices at ``epoch``.
 //    """
 //    return [ValidatorIndex(i) for i, v in enumerate(state.validators) if is_active_validator(v, epoch)]
-func ActiveValidatorIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint64, error) {
+func ActiveValidatorIndices(state *stateTrie.BeaconState, validators []*ethpb.Validator, epoch uint64) ([]uint64, error) {
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get seed")
@@ -69,9 +69,8 @@ func ActiveValidatorIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint6
 	if activeIndices != nil {
 		return activeIndices, nil
 	}
-	vals := state.Validators()
 	var indices []uint64
-	for i, v := range vals {
+	for i, v := range validators {
 		if IsActiveValidator(v, epoch) {
 			indices = append(indices, uint64(i))
 		}
@@ -140,7 +139,7 @@ func ValidatorChurnLimit(activeValidatorCount uint64) (uint64, error) {
 //    seed = hash(get_seed(state, epoch, DOMAIN_BEACON_PROPOSER) + int_to_bytes(state.slot, length=8))
 //    indices = get_active_validator_indices(state, epoch)
 //    return compute_proposer_index(state, indices, seed)
-func BeaconProposerIndex(state *stateTrie.BeaconState) (uint64, error) {
+func BeaconProposerIndex(state *stateTrie.BeaconState, validators []*ethpb.Validator) (uint64, error) {
 	e := CurrentEpoch(state)
 
 	if featureconfig.Get().EnableProposerIndexCache {
@@ -165,18 +164,18 @@ func BeaconProposerIndex(state *stateTrie.BeaconState) (uint64, error) {
 	seedWithSlot := append(seed[:], bytesutil.Bytes8(state.Slot())...)
 	seedWithSlotHash := hashutil.Hash(seedWithSlot)
 
-	indices, err := ActiveValidatorIndices(state, e)
+	indices, err := ActiveValidatorIndices(state, validators, e)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not get active indices")
 	}
 
 	if featureconfig.Get().EnableProposerIndexCache {
-		if err := UpdateProposerIndicesInCache(state, CurrentEpoch(state)); err != nil {
+		if err := UpdateProposerIndicesInCache(state, validators, CurrentEpoch(state)); err != nil {
 			return 0, errors.Wrap(err, "could not update committee cache")
 		}
 	}
 
-	return ComputeProposerIndex(state.Validators(), indices, seedWithSlotHash)
+	return ComputeProposerIndex(validators, indices, seedWithSlotHash)
 }
 
 // ComputeProposerIndex returns the index sampled by effective balance, which is used to calculate proposer.
