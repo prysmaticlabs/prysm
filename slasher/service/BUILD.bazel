@@ -15,6 +15,7 @@ go_library(
         "//shared/params:go_default_library",
         "//shared/version:go_default_library",
         "//slasher/db:go_default_library",
+        "//slasher/flags:go_default_library",
         "//slasher/rpc:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//:go_default_library",
