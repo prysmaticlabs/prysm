@@ -69,10 +69,9 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 	}
 
 	args := []string{
-		"--force-clear-db",
 		"--no-genesis-delay",
-		"--no-discovery",
 		"--force-clear-db",
+		"--no-discovery",
 		"--enable-skip-slots-cache",
 		"--enable-attestation-cache",
 		"--http-web3provider=http://127.0.0.1:8545",

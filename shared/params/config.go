@@ -97,8 +97,8 @@ type BeaconChainConfig struct {
 	MaxPeersToSync            int           // MaxPeersToSync describes the limit for number of peers in round robin sync.
 
 	// Slasher constants.
-	WeakSubjectivityPeriod    uint64 // WeakSubjectivityPeriod defines the time period in epochs where the slasher should validate block headers and attestations for slashable events.
-	PruneSlasherStoragePeriod uint64 // PruneSlasherStoragePeriod defines the time period in epochs where the slasher should prune its attestation and block header store.
+	WeakSubjectivityPeriod    uint64 // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
+	PruneSlasherStoragePeriod uint64 // PruneSlasherStoragePeriod defines the time period expressed in number of epochs were proof of stake network should prune attestation and block header store.
 }
 
 var defaultBeaconConfig = &BeaconChainConfig{
