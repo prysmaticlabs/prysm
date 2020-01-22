@@ -4,11 +4,10 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"k8s.io/client-go/tools/cache"
 )
@@ -35,7 +34,7 @@ var (
 // CheckpointState defines the active validator indices per epoch.
 type CheckpointState struct {
 	Checkpoint *ethpb.Checkpoint
-	State      *pb.BeaconState
+	State      *stateTrie.BeaconState
 }
 
 // CheckpointStateCache is a struct with 1 queue for looking up state by checkpoint.
@@ -67,7 +66,7 @@ func NewCheckpointStateCache() *CheckpointStateCache {
 
 // StateByCheckpoint fetches state by checkpoint. Returns true with a
 // reference to the CheckpointState info, if exists. Otherwise returns false, nil.
-func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (*pb.BeaconState, error) {
+func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (*stateTrie.BeaconState, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	h, err := hashutil.HashProto(cp)
@@ -92,7 +91,7 @@ func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (*pb.Beac
 		return nil, ErrNotCheckpointState
 	}
 
-	return proto.Clone(info.State).(*pb.BeaconState), nil
+	return info.State
 }
 
 // AddCheckpointState adds CheckpointState object to the cache. This method also trims the least

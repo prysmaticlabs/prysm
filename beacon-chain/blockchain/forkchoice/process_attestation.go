@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -15,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -203,30 +202,25 @@ func (s *Store) saveCheckpointState(ctx context.Context, baseState *stateTrie.Be
 		return nil, errors.Wrap(err, "could not get cached checkpoint state")
 	}
 	if cachedState != nil {
-		return stateTrie.InitializeFromProto(cachedState)
+		return cachedState, nil
 	}
 
 	// Advance slots only when it's higher than current state slot.
 	if helpers.StartSlot(c.Epoch) > baseState.Slot() {
-		stateCopy, err := stateTrie.InitializeFromProto(baseState.Clone())
-		if err != nil {
-			return nil, err
-		}
-		stateCopy, err = state.ProcessSlots(ctx, stateCopy, helpers.StartSlot(c.Epoch))
+		baseState, err = state.ProcessSlots(ctx, baseState, helpers.StartSlot(c.Epoch))
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
 		}
 
 		if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
 			Checkpoint: c,
-			State:      stateCopy.Clone(),
+			State:      baseState,
 		}); err != nil {
 			return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
 		}
 
-		return stateCopy, nil
+		return baseState, nil
 	}
-
 	return baseState, nil
 }
 
