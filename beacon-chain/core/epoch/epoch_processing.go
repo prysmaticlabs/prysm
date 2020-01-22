@@ -273,7 +273,10 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 			randaoMixLength,
 		)
 	}
-	mix := helpers.RandaoMix(state, currentEpoch)
+	mix, err := helpers.RandaoMix(state, currentEpoch)
+	if err != nil {
+		return nil, err
+	}
 	if err := state.UpdateRandaoMixesAtIndex(mix, nextEpoch%randaoMixLength); err != nil {
 		return nil, err
 	}
