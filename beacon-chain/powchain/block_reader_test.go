@@ -8,9 +8,12 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 var endpoint = "ws://127.0.0.1"
@@ -40,6 +43,8 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 	web3Service = setDefaultMocks(web3Service)
+	web3Service.rpcClient = &mockPOW.RPCClient{Backend: testAcc.Backend}
+
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
 	if err != nil {
 		t.Fatal(err)
@@ -62,37 +67,40 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 	web3Service.cancel()
 	exitRoutine <- true
 
-	if web3Service.blockHeight.Cmp(header.Number) != 0 {
-		t.Errorf("block number not set, expected %v, got %v", header.Number, web3Service.blockHeight)
+	if web3Service.latestEth1Data.BlockHeight != header.Number.Uint64() {
+		t.Errorf("block number not set, expected %v, got %v", header.Number, web3Service.latestEth1Data.BlockHeight)
 	}
 
-	if web3Service.blockHash.Hex() != header.Hash().Hex() {
-		t.Errorf("block hash not set, expected %v, got %v", header.Hash().Hex(), web3Service.blockHash.Hex())
+	if hexutil.Encode(web3Service.latestEth1Data.BlockHash) != header.Hash().Hex() {
+		t.Errorf("block hash not set, expected %v, got %#x", header.Hash().Hex(), web3Service.latestEth1Data.BlockHash)
 	}
 
-	if web3Service.blockTime != time.Unix(int64(header.Time), 0) {
-		t.Errorf("block time not set, expected %v, got %v", time.Unix(int64(header.Time), 0), web3Service.blockTime)
+	if web3Service.latestEth1Data.BlockTime != header.Time {
+		t.Errorf("block time not set, expected %v, got %v", time.Unix(int64(header.Time), 0), web3Service.latestEth1Data.BlockTime)
 	}
 
-	blockInfoExistsInCache, info, err := web3Service.blockCache.BlockInfoByHash(web3Service.blockHash)
+	blockInfoExistsInCache, info, err := web3Service.blockCache.BlockInfoByHash(bytesutil.ToBytes32(web3Service.latestEth1Data.BlockHash))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !blockInfoExistsInCache {
 		t.Error("Expected block info to exist in cache")
 	}
-	if info.Hash != web3Service.blockHash {
+	if info.Hash != bytesutil.ToBytes32(web3Service.latestEth1Data.BlockHash) {
 		t.Errorf(
 			"Expected block info hash to be %v, got %v",
-			web3Service.blockHash,
+			bytesutil.ToBytes32(web3Service.latestEth1Data.BlockHash),
 			info.Hash,
 		)
 	}
 }
 
 func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint: endpoint,
+		BeaconDB:     beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -130,8 +138,11 @@ func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 }
 
 func TestBlockExists_ValidHash(t *testing.T) {
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint: endpoint,
+		BeaconDB:     beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -169,8 +180,11 @@ func TestBlockExists_ValidHash(t *testing.T) {
 }
 
 func TestBlockExists_InvalidHash(t *testing.T) {
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint: endpoint,
+		BeaconDB:     beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -184,8 +198,11 @@ func TestBlockExists_InvalidHash(t *testing.T) {
 }
 
 func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint: endpoint,
+		BeaconDB:     beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -220,8 +237,11 @@ func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
 }
 
 func TestBlockNumberByTimestamp(t *testing.T) {
+	beaconDB := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, beaconDB)
 	web3Service, err := NewService(context.Background(), &Web3ServiceConfig{
 		ETH1Endpoint: endpoint,
+		BeaconDB:     beaconDB,
 	})
 	if err != nil {
 		t.Fatal(err)

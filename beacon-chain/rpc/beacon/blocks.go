@@ -11,9 +11,9 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -27,9 +27,9 @@ import (
 func (bs *Server) ListBlocks(
 	ctx context.Context, req *ethpb.ListBlocksRequest,
 ) (*ethpb.ListBlocksResponse, error) {
-	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
+	if int(req.PageSize) > flags.Get().MaxPageSize {
 		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
-			req.PageSize, params.BeaconConfig().MaxPageSize)
+			req.PageSize, flags.Get().MaxPageSize)
 	}
 
 	switch q := req.QueryFilter.(type) {
@@ -56,7 +56,7 @@ func (bs *Server) ListBlocks(
 		returnedBlks := blks[start:end]
 		containers := make([]*ethpb.BeaconBlockContainer, len(returnedBlks))
 		for i, b := range returnedBlks {
-			root, err := ssz.SigningRoot(b)
+			root, err := ssz.HashTreeRoot(b.Block)
 			if err != nil {
 				return nil, err
 			}
@@ -83,7 +83,7 @@ func (bs *Server) ListBlocks(
 				NextPageToken:   strconv.Itoa(0),
 			}, nil
 		}
-		root, err := ssz.SigningRoot(blk)
+		root, err := ssz.HashTreeRoot(blk.Block)
 		if err != nil {
 			return nil, err
 		}
@@ -119,7 +119,7 @@ func (bs *Server) ListBlocks(
 		returnedBlks := blks[start:end]
 		containers := make([]*ethpb.BeaconBlockContainer, len(returnedBlks))
 		for i, b := range returnedBlks {
-			root, err := ssz.SigningRoot(b)
+			root, err := ssz.HashTreeRoot(b.Block)
 			if err != nil {
 				return nil, err
 			}
@@ -146,7 +146,7 @@ func (bs *Server) ListBlocks(
 		if numBlks != 1 {
 			return nil, status.Error(codes.Internal, "Found more than 1 genesis block")
 		}
-		root, err := ssz.SigningRoot(blks[0])
+		root, err := ssz.HashTreeRoot(blks[0].Block)
 		if err != nil {
 			return nil, err
 		}
@@ -206,35 +206,35 @@ func (bs *Server) StreamChainHead(_ *ptypes.Empty, stream ethpb.BeaconChain_Stre
 // Retrieve chain head information from the DB and the current beacon state.
 func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, error) {
 	headBlock := bs.HeadFetcher.HeadBlock()
-	headBlockRoot, err := ssz.SigningRoot(headBlock)
+	headBlockRoot, err := ssz.HashTreeRoot(headBlock.Block)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head block root: %v", err)
 	}
 
 	finalizedCheckpoint := bs.FinalizationFetcher.FinalizedCheckpt()
 	b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(finalizedCheckpoint.Root))
-	if err != nil || b == nil {
+	if err != nil || b == nil || b.Block == nil {
 		return nil, status.Error(codes.Internal, "Could not get finalized block")
 	}
-	finalizedSlot := b.Slot
+	finalizedSlot := b.Block.Slot
 
 	justifiedCheckpoint := bs.FinalizationFetcher.CurrentJustifiedCheckpt()
 	b, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(justifiedCheckpoint.Root))
-	if err != nil || b == nil {
+	if err != nil || b == nil || b.Block == nil {
 		return nil, status.Error(codes.Internal, "Could not get justified block")
 	}
-	justifiedSlot := b.Slot
+	justifiedSlot := b.Block.Slot
 
 	prevJustifiedCheckpoint := bs.FinalizationFetcher.PreviousJustifiedCheckpt()
 	b, err = bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(prevJustifiedCheckpoint.Root))
-	if err != nil || b == nil {
+	if err != nil || b == nil || b.Block == nil {
 		return nil, status.Error(codes.Internal, "Could not get prev justified block")
 	}
-	prevJustifiedSlot := b.Slot
+	prevJustifiedSlot := b.Block.Slot
 
 	return &ethpb.ChainHead{
-		HeadSlot:                   headBlock.Slot,
-		HeadEpoch:                  helpers.SlotToEpoch(headBlock.Slot),
+		HeadSlot:                   headBlock.Block.Slot,
+		HeadEpoch:                  helpers.SlotToEpoch(headBlock.Block.Slot),
 		HeadBlockRoot:              headBlockRoot[:],
 		FinalizedSlot:              finalizedSlot,
 		FinalizedEpoch:             finalizedCheckpoint.Epoch,

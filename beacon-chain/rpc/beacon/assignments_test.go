@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -14,6 +15,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -51,7 +53,7 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 	bs := &Server{
 		BeaconDB: db,
 		HeadFetcher: &mock.ChainService{
-			State: &pbp2p.BeaconState{Slot: 0},
+			State: &pbp2p.BeaconState{Slot: 0, RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)},
 		},
 	}
 	wanted := &ethpb.ValidatorAssignments{
@@ -105,9 +107,9 @@ func TestServer_ListAssignments_Pagination_InputOutOfRange(t *testing.T) {
 
 func TestServer_ListAssignments_Pagination_ExceedsMaxPageSize(t *testing.T) {
 	bs := &Server{}
-	exceedsMax := int32(params.BeaconConfig().MaxPageSize + 1)
+	exceedsMax := int32(flags.Get().MaxPageSize + 1)
 
-	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, params.BeaconConfig().MaxPageSize)
+	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, flags.Get().MaxPageSize)
 	req := &ethpb.ListValidatorAssignmentsRequest{
 		PageToken: strconv.Itoa(0),
 		PageSize:  exceedsMax,
@@ -118,6 +120,7 @@ func TestServer_ListAssignments_Pagination_ExceedsMaxPageSize(t *testing.T) {
 }
 
 func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.T) {
+	helpers.ClearCache()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -125,22 +128,22 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 	count := 1000
 	validators := make([]*ethpb.Validator, 0, count)
 	for i := 0; i < count; i++ {
-		var pubKey [48]byte
-		copy(pubKey[:], strconv.Itoa(i))
+		pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
+		binary.LittleEndian.PutUint64(pubKey, uint64(i))
 		if err := db.SaveValidatorIndex(ctx, pubKey, uint64(i)); err != nil {
 			t.Fatal(err)
 		}
 		// Mark the validators with index divisible by 3 inactive.
 		if i%3 == 0 {
 			validators = append(validators, &ethpb.Validator{
-				PublicKey:        pubKey[:],
+				PublicKey:        pubKey,
 				ExitEpoch:        0,
 				ActivationEpoch:  0,
 				EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
 			})
 		} else {
 			validators = append(validators, &ethpb.Validator{
-				PublicKey:        pubKey[:],
+				PublicKey:        pubKey,
 				ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
 				EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
 				ActivationEpoch:  0,
@@ -151,7 +154,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 	blk := &ethpb.BeaconBlock{
 		Slot: 0,
 	}
-	blockRoot, err := ssz.SigningRoot(blk)
+	blockRoot, err := ssz.HashTreeRoot(blk)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -212,6 +215,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 }
 
 func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testing.T) {
+	helpers.ClearCache()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -220,21 +224,21 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 	validators := make([]*ethpb.Validator, 0, count)
 	balances := make([]uint64, count)
 	for i := 0; i < count; i++ {
-		var pubKey [48]byte
-		copy(pubKey[:], strconv.Itoa(i))
+		pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
+		binary.LittleEndian.PutUint64(pubKey, uint64(i))
 		if err := db.SaveValidatorIndex(ctx, pubKey, uint64(i)); err != nil {
 			t.Fatal(err)
 		}
 		// Mark the validators with index divisible by 3 inactive.
 		if i%3 == 0 {
 			validators = append(validators, &ethpb.Validator{
-				PublicKey:        pubKey[:],
+				PublicKey:        pubKey,
 				ExitEpoch:        0,
 				EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
 			})
 		} else {
 			validators = append(validators, &ethpb.Validator{
-				PublicKey:        pubKey[:],
+				PublicKey:        pubKey,
 				ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
 				EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
 			})
@@ -245,7 +249,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 	blk := &ethpb.BeaconBlock{
 		Slot: 0,
 	}
-	blockRoot, err := ssz.SigningRoot(blk)
+	blockRoot, err := ssz.HashTreeRoot(blk)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -329,6 +333,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 }
 
 func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) {
+	helpers.ClearCache()
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -336,16 +341,18 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 	count := 100
 	validators := make([]*ethpb.Validator, 0, count)
 	for i := 0; i < count; i++ {
-		if err := db.SaveValidatorIndex(ctx, [48]byte{byte(i)}, uint64(i)); err != nil {
+		pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
+		binary.LittleEndian.PutUint64(pubKey, uint64(i))
+		if err := db.SaveValidatorIndex(ctx, pubKey, uint64(i)); err != nil {
 			t.Fatal(err)
 		}
-		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}, ExitEpoch: params.BeaconConfig().FarFutureEpoch})
+		validators = append(validators, &ethpb.Validator{PublicKey: pubKey, ExitEpoch: params.BeaconConfig().FarFutureEpoch})
 	}
 
 	blk := &ethpb.BeaconBlock{
 		Slot: 0,
 	}
-	blockRoot, err := ssz.SigningRoot(blk)
+	blockRoot, err := ssz.HashTreeRoot(blk)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -371,7 +378,11 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 		},
 	}
 
-	req := &ethpb.ListValidatorAssignmentsRequest{PublicKeys: [][]byte{{1}, {2}}, Indices: []uint64{2, 3}}
+	pubKey1 := make([]byte, params.BeaconConfig().BLSPubkeyLength)
+	binary.LittleEndian.PutUint64(pubKey1, 1)
+	pubKey2 := make([]byte, params.BeaconConfig().BLSPubkeyLength)
+	binary.LittleEndian.PutUint64(pubKey2, 2)
+	req := &ethpb.ListValidatorAssignmentsRequest{PublicKeys: [][]byte{pubKey1, pubKey2}, Indices: []uint64{2, 3}}
 	res, err := bs.ListValidatorAssignments(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
@@ -411,16 +422,18 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 	count := 100
 	validators := make([]*ethpb.Validator, 0, count)
 	for i := 0; i < count; i++ {
-		if err := db.SaveValidatorIndex(ctx, [48]byte{byte(i)}, uint64(i)); err != nil {
+		pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
+		binary.LittleEndian.PutUint64(pubKey, uint64(i))
+		if err := db.SaveValidatorIndex(ctx, pubKey, uint64(i)); err != nil {
 			t.Fatal(err)
 		}
-		validators = append(validators, &ethpb.Validator{PublicKey: []byte{byte(i)}, ExitEpoch: params.BeaconConfig().FarFutureEpoch})
+		validators = append(validators, &ethpb.Validator{PublicKey: pubKey, ExitEpoch: params.BeaconConfig().FarFutureEpoch})
 	}
 
 	blk := &ethpb.BeaconBlock{
 		Slot: 0,
 	}
-	blockRoot, err := ssz.SigningRoot(blk)
+	blockRoot, err := ssz.HashTreeRoot(blk)
 	if err != nil {
 		t.Fatal(err)
 	}

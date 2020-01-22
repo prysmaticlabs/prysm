@@ -131,7 +131,7 @@ func (ks Store) JoinPath(filename string) string {
 
 // StoreRandomKey generates a key, encrypts with 'auth' and stores in the given directory
 func StoreRandomKey(dir, password string, scryptN, scryptP int) error {
-	err := storeNewRandomKey(Store{dir, scryptN, scryptP}, rand.Reader, password)
+	err := storeNewRandomKey(Store{dir, scryptN, scryptP}, password)
 	return err
 }
 
@@ -213,7 +213,7 @@ func DecryptKey(keyjson []byte, password string) (*Key, error) {
 	}
 
 	return &Key{
-		ID:        uuid.UUID(keyID),
+		ID:        keyID,
 		PublicKey: secretKey.PublicKey(),
 		SecretKey: secretKey,
 	}, nil

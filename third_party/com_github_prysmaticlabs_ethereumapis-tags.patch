@@ -1,8 +1,16 @@
 diff --git a/eth/v1alpha1/BUILD.bazel b/eth/v1alpha1/BUILD.bazel
-index a52dbad..33de299 100644
+index f5596a6..e209e30 100644
 --- a/eth/v1alpha1/BUILD.bazel
 +++ b/eth/v1alpha1/BUILD.bazel
-@@ -20,6 +20,7 @@ proto_library(
+@@ -10,14 +10,13 @@ proto_library(
+         "beacon_chain.proto",
+         "node.proto",
+         "validator.proto",
+-        ":generated_swagger_proto",
+     ],
+     visibility = ["//visibility:public"],
+     deps = [
+-        "@grpc_ecosystem_grpc_gateway//protoc-gen-swagger/options:options_proto",
          "@com_google_protobuf//:empty_proto",
          "@com_google_protobuf//:timestamp_proto",
          "@go_googleapis//google/api:annotations_proto",
@@ -10,7 +18,7 @@ index a52dbad..33de299 100644
      ],
  )
  
-@@ -46,12 +47,32 @@ load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
+@@ -39,12 +38,30 @@ load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
  
  go_proto_library(
      name = "go_proto",
@@ -20,7 +28,7 @@ index a52dbad..33de299 100644
      proto = ":proto",
      visibility = ["//visibility:public"],
      deps = [
-         "@grpc_ecosystem_grpc_gateway//protoc-gen-swagger/options:options_go_proto",
+-        "@grpc_ecosystem_grpc_gateway//protoc-gen-swagger/options:options_go_proto",
 +        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
 +        "@go_googleapis//google/api:annotations_go_proto",
 +    ],
@@ -36,7 +44,6 @@ index a52dbad..33de299 100644
 +    proto = ":proto",
 +    visibility = ["//visibility:public"],
 +    deps = [
-+        "@grpc_ecosystem_grpc_gateway//protoc-gen-swagger/options:options_go_proto",
 +        "@com_github_gogo_protobuf//gogoproto:go_default_library",
 +        "@com_github_golang_protobuf//descriptor:go_default_library",
 +        "@com_github_golang_protobuf//ptypes/empty:go_default_library",
@@ -44,15 +51,38 @@ index a52dbad..33de299 100644
          "@go_googleapis//google/api:annotations_go_proto",
      ],
  )
-@@ -74,4 +95,4 @@ protoc_gen_swagger(
+@@ -55,29 +72,3 @@ go_library(
+     importpath = "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1",
      visibility = ["//visibility:public"],
-     single_output = True,
-     json_names_for_fields = True,
+ )
+-
+-##############################################################################
+-# OpenAPI (Swagger) V2
+-##############################################################################
+-load("@grpc_ecosystem_grpc_gateway//protoc-gen-swagger:defs.bzl", "protoc_gen_swagger")
+-
+-protoc_gen_swagger(
+-    name = "swagger",
+-    proto = ":proto",
+-    visibility = ["//visibility:public"],
+-    single_output = True,
+-    json_names_for_fields = True,
 -)
-+)
-\ No newline at end of file
+-
+-# Genrule for template subsitution.
+-# See documentation in //tools/replacer.
+-genrule(
+-    name = "generated_swagger_proto",
+-    srcs = [
+-        "swagger.proto", # A go template compatibile file.
+-        "swagger_description.md", # Replacement for description. 
+-    ],
+-    outs = ["swagger_generated.proto"],
+-    cmd = "$(location //tools/replacer) $(location swagger.proto) description=$(location swagger_description.md) > $(@)",
+-    tools = ["//tools/replacer"],
+-)
 diff --git a/eth/v1alpha1/attestation.proto b/eth/v1alpha1/attestation.proto
-index 8453ef9..9a637ac 100644
+index b177b76..28b4b46 100644
 --- a/eth/v1alpha1/attestation.proto
 +++ b/eth/v1alpha1/attestation.proto
 @@ -15,6 +15,8 @@ syntax = "proto3";
@@ -64,45 +94,48 @@ index 8453ef9..9a637ac 100644
  option csharp_namespace = "Ethereum.Eth.v1alpha1";
  option go_package = "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1;eth";
  option java_multiple_files = true;
-@@ -25,17 +27,17 @@ option php_namespace = "Ethereum\\Eth\\v1alpha1";
+@@ -25,12 +27,12 @@ option php_namespace = "Ethereum\\Eth\\v1alpha1";
  message Attestation {
-   // A bitfield representation of validator indices that have voted exactly
-   // the same vote and have been aggregated into this attestation.
--  bytes aggregation_bits = 1;
-+  bytes aggregation_bits = 1 [(gogoproto.moretags) = "ssz-max:\"2048\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
+     // A bitfield representation of validator indices that have voted exactly
+     // the same vote and have been aggregated into this attestation.
+-    bytes aggregation_bits = 1;
++    bytes aggregation_bits = 1 [(gogoproto.moretags) = "ssz-max:\"2048\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
  
-   AttestationData data = 2;
+     AttestationData data = 2;
  
-   // Custody bits is used for proof of custody game to ensure validator has
-   // legitimately downloaded and verified shard data.
-   // Not used in phase 0.
--  bytes custody_bits = 3;
-+  bytes custody_bits = 3 [(gogoproto.moretags) = "ssz-max:\"2048\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
+     // 96 byte BLS aggregate signature.
+-    bytes signature = 3;
++    bytes signature = 3 [(gogoproto.moretags) = "ssz-size:\"96\""];
+ }
  
-   // 96 byte BLS aggregate signature.
--  bytes signature = 4;
-+  bytes signature = 4 [(gogoproto.moretags) = "ssz-size:\"96\""];
+ message AggregateAttestationAndProof {
+@@ -41,7 +43,7 @@ message AggregateAttestationAndProof {
+     Attestation aggregate = 3;
+ 
+     // 96 byte selection proof signed by the aggregator, which is the signature of the slot to aggregate.
+-    bytes selection_proof = 2;
++    bytes selection_proof = 2 [(gogoproto.moretags) = "ssz-size:\"96\""];
  }
  
  message AttestationData {
-@@ -49,7 +51,7 @@ message AttestationData {
-   uint64 committee_index = 2;
+@@ -55,7 +57,7 @@ message AttestationData {
+     uint64 committee_index = 2;
  
-   // 32 byte root of the LMD GHOST block vote.
--  bytes beacon_block_root = 3;
-+  bytes beacon_block_root = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
+     // 32 byte root of the LMD GHOST block vote.
+-    bytes beacon_block_root = 3;
++    bytes beacon_block_root = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
  
-   // the most recent justified checkpoint in the beacon state
-   Checkpoint source = 4;
-@@ -84,5 +86,5 @@ message Checkpoint {
-   // epoch of the check point reference to.
-   uint64 epoch = 1;
-   // block root of the check point reference to.
--  bytes root = 2;
-+  bytes root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
+     // The most recent justified checkpoint in the beacon state
+     Checkpoint source = 4;
+@@ -91,5 +93,5 @@ message Checkpoint {
+     uint64 epoch = 1;
+ 
+     // Block root of the checkpoint references.
+-    bytes root = 2;
++    bytes root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
  }
 diff --git a/eth/v1alpha1/beacon_block.proto b/eth/v1alpha1/beacon_block.proto
-index 69a148a..1b6ac18 100644
+index 2ce5c34..4cbb276 100644
 --- a/eth/v1alpha1/beacon_block.proto
 +++ b/eth/v1alpha1/beacon_block.proto
 @@ -15,6 +15,7 @@ syntax = "proto3";
@@ -113,7 +146,7 @@ index 69a148a..1b6ac18 100644
  import "eth/v1alpha1/attestation.proto";
  
  option csharp_namespace = "Ethereum.Eth.v1alpha1";
-@@ -30,47 +31,47 @@ message BeaconBlock {
+@@ -30,10 +31,10 @@ message BeaconBlock {
      uint64 slot = 1; 
  
      // 32 byte root of the parent block.
@@ -126,10 +159,12 @@ index 69a148a..1b6ac18 100644
  
      // The block body itself.
      BeaconBlockBody body = 4;
+@@ -45,38 +46,38 @@ message SignedBeaconBlock {
+     BeaconBlock block = 1;
  
      // 96 byte BLS signature from the validator that produced this block.
--    bytes signature = 5;
-+    bytes signature = 5 [(gogoproto.moretags) = "ssz-size:\"96\""];
+-    bytes signature = 2;
++    bytes signature = 2 [(gogoproto.moretags) = "ssz-size:\"96\""];
  }
  
  // The block body of an Ethereum 2.0 beacon block.
@@ -166,12 +201,12 @@ index 69a148a..1b6ac18 100644
 +    repeated Deposit deposits = 7 [(gogoproto.moretags) = "ssz-max:\"16\""];
  
      // At most MAX_VOLUNTARY_EXITS.
--    repeated VoluntaryExit voluntary_exits = 8;
-+    repeated VoluntaryExit voluntary_exits = 8 [(gogoproto.moretags) = "ssz-max:\"16\""];
+-    repeated SignedVoluntaryExit voluntary_exits = 8;
++    repeated SignedVoluntaryExit voluntary_exits = 8 [(gogoproto.moretags) = "ssz-max:\"16\""];
  }
  
  // Proposer slashings are proofs that a slashable offense has been committed by
-@@ -101,20 +102,20 @@ message AttesterSlashing {
+@@ -107,20 +108,20 @@ message AttesterSlashing {
  message Deposit {
      message Data {
          // 48 byte BLS public key of the validator.
@@ -196,12 +231,12 @@ index 69a148a..1b6ac18 100644
  
      Data data = 2;
  }
-@@ -129,14 +130,14 @@ message VoluntaryExit {
-     uint64 validator_index = 2;
+@@ -142,14 +143,14 @@ message SignedVoluntaryExit {
+     VoluntaryExit exit = 1;
  
      // Validator's 96 byte signature
--    bytes signature = 3;
-+    bytes signature = 3 [(gogoproto.moretags) = "ssz-size:\"96\""];
+-    bytes signature = 2;
++    bytes signature = 2 [(gogoproto.moretags) = "ssz-size:\"96\""];
  }
  
  // Eth1Data represents references to the Ethereum 1.x deposit contract.
@@ -213,7 +248,7 @@ index 69a148a..1b6ac18 100644
  
      // The total number of deposits included in the beacon chain since genesis
      // including the deposits in this block.
-@@ -144,7 +145,7 @@ message Eth1Data {
+@@ -157,7 +158,7 @@ message Eth1Data {
  
      // The 32 byte block hash of the Ethereum 1.x block considered for deposit
      // inclusion.
@@ -222,7 +257,7 @@ index 69a148a..1b6ac18 100644
  }
  
  // A beacon block header is essentially a beacon block with only a reference to
-@@ -155,24 +156,24 @@ message BeaconBlockHeader {
+@@ -169,13 +170,13 @@ message BeaconBlockHeader {
      uint64 slot = 1; 
  
      // 32 byte merkle tree root of the parent ssz encoded block.
@@ -236,26 +271,29 @@ index 69a148a..1b6ac18 100644
      // 32 byte merkle tree root of the ssz encoded block body.
 -    bytes body_root = 4;
 +    bytes body_root = 4 [(gogoproto.moretags) = "ssz-size:\"32\""];
+ }
  
-     // 96 byte BLS signature from the validator that produced this block.
--    bytes signature = 5;
-+    bytes signature = 5 [(gogoproto.moretags) = "ssz-size:\"96\""];
+ message SignedBeaconBlockHeader {
+@@ -183,14 +184,14 @@ message SignedBeaconBlockHeader {
+     BeaconBlockHeader header = 1;
+ 
+     // 96 byte BLS signature from the validator that produced this block header.
+-    bytes signature = 2;
++    bytes signature = 2 [(gogoproto.moretags) = "ssz-size:\"96\""];
  }
  
  message IndexedAttestation {
--    repeated uint64 custody_bit_0_indices = 1;
--    repeated uint64 custody_bit_1_indices = 2;
-+    repeated uint64 custody_bit_0_indices = 1 [(gogoproto.moretags) = "ssz-max:\"2048\""];
-+    repeated uint64 custody_bit_1_indices = 2 [(gogoproto.moretags) = "ssz-max:\"2048\""];
+-    repeated uint64 attesting_indices = 1;
++    repeated uint64 attesting_indices = 1 [(gogoproto.moretags) = "ssz-max:\"2048\""];
  
-     AttestationData data = 3;
+     AttestationData data = 2;
  
      // 96 bytes aggregate signature.
--    bytes signature = 4;
-+    bytes signature = 4 [(gogoproto.moretags) = "ssz-size:\"96\""];
+-    bytes signature = 3;
++    bytes signature = 3 [(gogoproto.moretags) = "ssz-size:\"96\""];
  }
 diff --git a/eth/v1alpha1/beacon_chain.proto b/eth/v1alpha1/beacon_chain.proto
-index b4d1638..4bf7ee9 100644
+index 8586530..e1b08b3 100644
 --- a/eth/v1alpha1/beacon_chain.proto
 +++ b/eth/v1alpha1/beacon_chain.proto
 @@ -15,6 +15,7 @@ syntax = "proto3";
@@ -279,7 +317,7 @@ index b4d1638..4bf7ee9 100644
      // This includes the head block slot and root as well as information about
      // the most recent finalized and justified slots.
      rpc StreamChainHead(google.protobuf.Empty) returns (stream ChainHead) {
-@@ -299,7 +300,7 @@ message ChainHead {
+@@ -302,7 +303,7 @@ message ChainHead {
      uint64 head_epoch = 2;
  
      // 32 byte merkle tree root of the canonical head block in the beacon node.
@@ -288,7 +326,7 @@ index b4d1638..4bf7ee9 100644
  
      // Most recent slot that contains the finalized block.
      uint64 finalized_slot = 4;
-@@ -308,7 +309,7 @@ message ChainHead {
+@@ -311,7 +312,7 @@ message ChainHead {
      uint64 finalized_epoch = 5;
      
      // Most recent 32 byte finalized block root.
@@ -297,7 +335,7 @@ index b4d1638..4bf7ee9 100644
  
      // Most recent slot that contains the justified block.
      uint64 justified_slot = 7;
-@@ -317,7 +318,7 @@ message ChainHead {
+@@ -320,7 +321,7 @@ message ChainHead {
      uint64 justified_epoch = 8;
      
      // Most recent 32 byte justified block root.
@@ -306,7 +344,7 @@ index b4d1638..4bf7ee9 100644
  
      // Most recent slot that contains the previous justified block.
      uint64 previous_justified_slot = 10;
-@@ -326,7 +327,7 @@ message ChainHead {
+@@ -329,7 +330,7 @@ message ChainHead {
      uint64 previous_justified_epoch = 11;
  
      // Previous 32 byte justified block root.
@@ -315,7 +353,7 @@ index b4d1638..4bf7ee9 100644
  }
  
  message ListCommitteesRequest {
-@@ -371,7 +372,7 @@ message ListValidatorBalancesRequest {
+@@ -374,7 +375,7 @@ message ListValidatorBalancesRequest {
  
      // Validator 48 byte BLS public keys to filter validators for the given
      // epoch.
@@ -324,7 +362,7 @@ index b4d1638..4bf7ee9 100644
          
      // Validator indices to filter validators for the given epoch.
      repeated uint64 indices = 4;
-@@ -392,7 +393,7 @@ message ValidatorBalances {
+@@ -395,7 +396,7 @@ message ValidatorBalances {
  
      message Balance {
          // Validator's 48 byte BLS public key.
@@ -333,7 +371,7 @@ index b4d1638..4bf7ee9 100644
  
          // Validator's index in the validator set.
          uint64 index = 2;
-@@ -441,7 +442,7 @@ message GetValidatorRequest {
+@@ -444,7 +445,7 @@ message GetValidatorRequest {
          uint64 index = 1;
  
          // 48 byte validator public key.
@@ -342,29 +380,40 @@ index b4d1638..4bf7ee9 100644
      }
  }
  
-@@ -478,17 +479,17 @@ message ActiveSetChanges {
+@@ -486,26 +487,25 @@ message ActiveSetChanges {
      uint64 epoch = 1;
  
-     // 48 byte validator public keys that have been activated in this epoch.
+     // 48 byte validator public keys that have been activated in the given epoch.
 -    repeated bytes activated_public_keys = 2;
 +    repeated bytes activated_public_keys = 2 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
  
-     // 48 byte validator public keys that have been voluntarily exited in this
-     // epoch.
--    repeated bytes exited_public_keys = 3;
-+    repeated bytes exited_public_keys = 3 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
+     // Indices of validators activated in the given epoch.
+     repeated uint64 activated_indices = 3;
  
-     // 48 byte validator public keys that have been slashed in this epoch.
--    repeated bytes slashed_public_keys = 4;
-+    repeated bytes slashed_public_keys = 4 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
+-    // 48 byte validator public keys that have been voluntarily exited in this
+-    // epoch.
+-    repeated bytes exited_public_keys = 4;
++    // 48 byte validator public keys that have been voluntarily exited in the given epoch.
++    repeated bytes exited_public_keys = 4 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
+ 
+     // Indices of validators exited in the given epoch.
+     repeated uint64 exited_indices = 5;
+ 
+-    // 48 byte validator public keys that have been slashed in this epoch.
+-    repeated bytes slashed_public_keys = 6;
++    // 48 byte validator public keys that have been slashed in the given epoch.
++    repeated bytes slashed_public_keys = 6 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
+ 
+     // Indices of validators slashed in the given epoch.
+     repeated uint64 slashed_indices = 7;
  
      // 48 byte validator public keys that have been involuntarily ejected in this epoch.
--    repeated bytes ejected_public_keys = 5;
-+    repeated bytes ejected_public_keys = 5 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
- }
+-    repeated bytes ejected_public_keys = 8;
++    repeated bytes ejected_public_keys = 8 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
  
- message ValidatorQueue {
-@@ -498,11 +499,11 @@ message ValidatorQueue {
+     // Indices of validators ejected in the given epoch.
+     repeated uint64 ejected_indices = 9;
+@@ -541,11 +541,11 @@ message ValidatorQueue {
  
      // Ordered list of 48 byte public keys awaiting activation. 0th index is the
      // next key to be processed.
@@ -378,7 +427,7 @@ index b4d1638..4bf7ee9 100644
  }
  
  message ListValidatorAssignmentsRequest {
-@@ -514,7 +515,7 @@ message ListValidatorAssignmentsRequest {
+@@ -557,7 +557,7 @@ message ListValidatorAssignmentsRequest {
          bool genesis = 2;
      }
      // 48 byte validator public keys to filter assignments for the given epoch.
@@ -387,7 +436,7 @@ index b4d1638..4bf7ee9 100644
          
      // Validator indicies to filter assignments for the given epoch.
      repeated uint64 indices = 4;
-@@ -549,7 +550,7 @@ message ValidatorAssignments {
+@@ -592,7 +592,7 @@ message ValidatorAssignments {
          uint64 proposer_slot = 4;
  
          // 48 byte BLS public key.
@@ -397,7 +446,7 @@ index b4d1638..4bf7ee9 100644
  
      // The epoch for which this set of validator assignments is valid.
 diff --git a/eth/v1alpha1/validator.proto b/eth/v1alpha1/validator.proto
-index 28a4f31..31e5ec0 100644
+index 599bd57..38e1553 100644
 --- a/eth/v1alpha1/validator.proto
 +++ b/eth/v1alpha1/validator.proto
 @@ -15,6 +15,7 @@ syntax = "proto3";
@@ -408,39 +457,79 @@ index 28a4f31..31e5ec0 100644
  import "google/api/annotations.proto";
  import "google/protobuf/empty.proto";
  import "eth/v1alpha1/beacon_block.proto";
-@@ -257,14 +258,14 @@ message DutiesRequest {
-     // Epoch at which validators should perform their duties.
+@@ -180,7 +181,7 @@ message DomainResponse {
+ 
+ message ValidatorActivationRequest {
+     // A list of 48 byte validator public keys.
+-    repeated bytes public_keys = 1;
++    repeated bytes public_keys = 1 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
+ }
+ 
+ message ValidatorActivationResponse {
+@@ -206,7 +207,7 @@ message ChainStartResponse {
+ 
+ message ValidatorIndexRequest {
+     // A 48 byte validator public key.
+-    bytes public_key = 1;
++    bytes public_key = 1 [(gogoproto.moretags) = "ssz-size:\"48\""];
+ }
+ 
+ message ValidatorIndexResponse {
+@@ -216,7 +217,7 @@ message ValidatorIndexResponse {
+ 
+ message ValidatorStatusRequest {
+     // A 48 byte validator public key.
+-    bytes public_key = 1;
++    bytes public_key = 1 [(gogoproto.moretags) = "ssz-size:\"48\""];
+ }
+ 
+ enum ValidatorStatus {
+@@ -255,7 +256,7 @@ message DutiesRequest {
      uint64 epoch = 1;
+ 
      // Array of byte encoded BLS public keys.
 -    repeated bytes public_keys = 2;
 +    repeated bytes public_keys = 2 [(gogoproto.moretags) = "ssz-size:\"?,48\""];
  }
  
  message DutiesResponse {
-     repeated Duty duties = 1;
-     message Duty {
-         // 48 byte BLS public key for the validator who's assigned to perform the following duty.
--        bytes public_key = 1;
-+        bytes public_key = 1 [(gogoproto.moretags) = "ssz-size:\"48\""];
-         // Slot at which a validator must attest.
-         uint64 attestation_slot = 2;
-         // Shard at which a validator must attest.
-@@ -280,10 +281,12 @@ message DutiesResponse {
- message BlockRequest {
-     // Slot for which the block should be proposed.
+@@ -274,7 +275,7 @@ message DutiesResponse {
+         uint64 proposer_slot = 4;
+ 
+         // 48 byte BLS public key for the validator who's assigned to perform a duty.
+-        bytes public_key = 5;
++        bytes public_key = 5 [(gogoproto.moretags) = "ssz-size:\"48\""];
+ 
+         // The current status of the validator assigned to perform the duty.
+         ValidatorStatus status = 6;
+@@ -289,15 +290,16 @@ message BlockRequest {
      uint64 slot = 1;
-+
+ 
      // Validator's 32 byte randao reveal secret of the current epoch.
 -    bytes randao_reveal = 2;
-+    bytes randao_reveal = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
-+
++    bytes randao_reveal = 2 [(gogoproto.moretags) = "ssz-size:\"48\""];
+ 
      // Validator's 32 byte graffiti message for the new block.
 -    bytes graffiti = 3;
 +    bytes graffiti = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
++
  }
  
  message ProposeResponse {
-@@ -309,10 +312,10 @@ message AttestResponse {
+     // The block root of the successfully proposed beacon block.
+-    bytes block_root = 1;
++    bytes block_root = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
+ }
+ 
+ message AttestationDataRequest {
+@@ -310,16 +312,16 @@ message AttestationDataRequest {
+ 
+ message AttestResponse {
+     // The root of the attestation data successfully submitted to the beacon node.
+-    bytes attestation_data_root = 1;
++    bytes attestation_data_root = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
+ }
+ 
  // An Ethereum 2.0 validator.
  message Validator {
      // 48 byte BLS public key used for the validator's activities.

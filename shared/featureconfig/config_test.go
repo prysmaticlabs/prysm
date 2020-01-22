@@ -1,30 +1,29 @@
-package featureconfig_test
+package featureconfig
 
 import (
 	"flag"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/urfave/cli"
 )
 
 func TestInitFeatureConfig(t *testing.T) {
-	cfg := &featureconfig.Flags{
-		GenesisDelay: true,
+	cfg := &Flags{
+		MinimalConfig: true,
 	}
-	featureconfig.Init(cfg)
-	if c := featureconfig.Get(); !c.GenesisDelay {
-		t.Errorf("GenesisDelay in FeatureFlags incorrect. Wanted true, got false")
+	Init(cfg)
+	if c := Get(); !c.MinimalConfig {
+		t.Errorf("MinimalConfig in FeatureFlags incorrect. Wanted true, got false")
 	}
 }
 
 func TestConfigureBeaconConfig(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	set.Bool(featureconfig.GenesisDelayFlag.Name, true, "enable attestation verification")
+	set.Bool(minimalConfigFlag.Name, true, "test")
 	context := cli.NewContext(app, set, nil)
-	featureconfig.ConfigureBeaconChain(context)
-	if c := featureconfig.Get(); !c.GenesisDelay {
-		t.Errorf("GenesisDelay in FeatureFlags incorrect. Wanted true, got false")
+	ConfigureBeaconChain(context)
+	if c := Get(); !c.MinimalConfig {
+		t.Errorf("MinimalConfig in FeatureFlags incorrect. Wanted true, got false")
 	}
 }

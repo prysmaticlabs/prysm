@@ -7,11 +7,25 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func validatorBalancesRoot(balances []uint64) ([32]byte, error) {
+// ValidatorRegistryRoot computes the HashTreeRoot Merkleization of
+// a list of validator structs according to the eth2
+// Simple Serialize specification.
+func ValidatorRegistryRoot(vals []*ethpb.Validator) ([32]byte, error) {
+	if featureconfig.Get().EnableSSZCache {
+		return cachedHasher.validatorRegistryRoot(vals)
+	}
+	return nocachedHasher.validatorRegistryRoot(vals)
+}
+
+// ValidatorBalancesRoot computes the HashTreeRoot Merkleization of
+// a list of validator uint64 balances according to the eth2
+// Simple Serialize specification.
+func ValidatorBalancesRoot(balances []uint64) ([32]byte, error) {
 	balancesMarshaling := make([][]byte, 0)
 	for i := 0; i < len(balances); i++ {
 		balanceBuf := make([]byte, 8)

@@ -46,6 +46,8 @@ var appHelpFlagGroups = []flagGroup{
 		Flags: []cli.Flag{
 			cmd.VerbosityFlag,
 			cmd.DataDirFlag,
+			cmd.ClearDB,
+			cmd.ForceClearDB,
 			cmd.EnableTracingFlag,
 			cmd.TracingProcessNameFlag,
 			cmd.TracingEndpointFlag,
@@ -79,6 +81,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.DisablePenaltyRewardLogFlag,
 			flags.UnencryptedKeysFlag,
 			flags.GraffitiFlag,
+			flags.GrpcMaxCallRecvMsgSizeFlag,
 		},
 	},
 	{

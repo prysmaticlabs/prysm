@@ -6,8 +6,13 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rpc"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -85,17 +90,38 @@ func (m *POWChain) ChainStartDeposits() []*ethpb.Deposit {
 	return []*ethpb.Deposit{}
 }
 
-// ChainStartDepositHashes --
-func (m *POWChain) ChainStartDepositHashes() ([][]byte, error) {
-	return [][]byte{}, nil
-}
-
 // ChainStartEth1Data --
 func (m *POWChain) ChainStartEth1Data() *ethpb.Eth1Data {
 	return m.Eth1Data
 }
 
+// PreGenesisState --
+func (m *POWChain) PreGenesisState() *pb.BeaconState {
+	return &pb.BeaconState{}
+}
+
 // IsConnectedToETH1 --
 func (m *POWChain) IsConnectedToETH1() bool {
 	return true
+}
+
+// RPCClient defines the mock rpc client.
+type RPCClient struct {
+	Backend *backends.SimulatedBackend
+}
+
+// BatchCall --
+func (r *RPCClient) BatchCall(b []rpc.BatchElem) error {
+	if r.Backend == nil {
+		return nil
+	}
+
+	for _, e := range b {
+		num, err := hexutil.DecodeBig(e.Args[0].(string))
+		if err != nil {
+			return err
+		}
+		e.Result.(*gethTypes.Header).Number = num
+	}
+	return nil
 }

@@ -2,7 +2,6 @@ package keystore_test
 
 import (
 	"bytes"
-	"crypto/rand"
 	"testing"
 
 	"github.com/prysmaticlabs/go-ssz"
@@ -13,11 +12,11 @@ import (
 )
 
 func TestDepositInput_GeneratesPb(t *testing.T) {
-	k1, err := keystore.NewKey(rand.Reader)
+	k1, err := keystore.NewKey()
 	if err != nil {
 		t.Fatal(err)
 	}
-	k2, err := keystore.NewKey(rand.Reader)
+	k2, err := keystore.NewKey()
 	if err != nil {
 		t.Fatal(err)
 	}

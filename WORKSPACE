@@ -149,8 +149,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "5c5b65a961b5e7251435efc9548648b45142a07993ad3e100850c240cb76e9af",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.9.0/general.tar.gz",
+    sha256 = "72c6ee3c20d19736b1203f364a6eb0ddee2c173073e20bee2beccd288fdc42be",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.9.4/general.tar.gz",
 )
 
 http_archive(
@@ -165,8 +165,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "3b5f0168af4331d09da52bebc26609def9d11be3e6c784ce7c3df3596617808d",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.9.0/minimal.tar.gz",
+    sha256 = "a3cc860a3679f6f62ee57b65677a9b48a65fdebb151cdcbf50f23852632845ef",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.9.4/minimal.tar.gz",
 )
 
 http_archive(
@@ -181,8 +181,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "f3ff68508dfe9696f23506daf0ca895cda955e30398741e00cffa33a01b0565c",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.9.0/mainnet.tar.gz",
+    sha256 = "8fc1b6220973ca30fa4ddc4ed24d66b1719abadca8bedb5e06c3bd9bc0df28e9",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.9.4/mainnet.tar.gz",
 )
 
 http_archive(
@@ -194,9 +194,9 @@ http_archive(
 
 http_archive(
     name = "com_github_herumi_bls_eth_go_binary",
-    sha256 = "15a41ddb0bf7d142ebffae68337f19c16e747676cb56794c5d80dbe388ce004c",
-    strip_prefix = "bls-go-binary-ac038c7cb6d3185c4a46f3bca0c99ebf7b191e16",
-    url = "https://github.com/nisdas/bls-go-binary/archive/ac038c7cb6d3185c4a46f3bca0c99ebf7b191e16.zip",
+    sha256 = "b5628a95bd1e6ff84f73d87c134bb1e7e9c1a5a2a10b831867d9dad7d8defc3e",
+    strip_prefix = "bls-go-binary-8ee33d1a2e8ba8dcf0c3d0b459d75d42d163339d",
+    url = "https://github.com/nisdas/bls-go-binary/archive/8ee33d1a2e8ba8dcf0c3d0b459d75d42d163339d.zip",
 )
 
 load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_dependencies")
@@ -259,7 +259,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_ssz",
-    commit = "142dfef39d12ed28360b7d2467b056b0578684f5",
+    commit = "e24db4d9e9637cf88ee9e4a779e339a1686a84ee",
     importpath = "github.com/prysmaticlabs/go-ssz",
 )
 
@@ -1255,7 +1255,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_ethereumapis",
-    commit = "2a889fed542ad00e4bd3caf723f871b6a4eff63d",
+    commit = "8a785e129627db2be96339a35fb2317b200160b1",
     importpath = "github.com/prysmaticlabs/ethereumapis",
     patch_args = ["-p1"],
     patches = [
@@ -1472,4 +1472,11 @@ go_repository(
     name = "com_github_cespare_xxhash",
     commit = "d7df74196a9e781ede915320c11c378c1b2f3a1f",
     importpath = "github.com/cespare/xxhash",
+)
+
+go_repository(
+    name = "com_github_kevinms_leakybucket_go",
+    importpath = "github.com/kevinms/leakybucket-go",
+    sum = "h1:oq6BiN7v0MfWCRcJAxSV+hesVMAAV8COrQbTjYNnso4=",
+    version = "v0.0.0-20190611015032-8a3d0352aa79",
 )

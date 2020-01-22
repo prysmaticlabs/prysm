@@ -4,23 +4,27 @@ import (
 	"context"
 	"sync"
 
+	"github.com/kevinms/leakybucket-go"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared"
 )
 
 var _ = shared.Service(&Service{})
 
+const allowedBlocksPerSecond = 32.0
+const allowedBlocksBurst = 10 * allowedBlocksPerSecond
+
 // Config to set up the regular sync service.
 type Config struct {
 	P2P           p2p.P2P
-	DB            db.Database
-	Operations    *operations.Service
+	DB            db.NoHeadAccessDatabase
+	AttPool       attestations.Pool
 	Chain         blockchainService
 	InitialSync   Checker
 	StateNotifier statefeed.Notifier
@@ -44,12 +48,13 @@ func NewRegularSync(cfg *Config) *Service {
 		cancel:              cancel,
 		db:                  cfg.DB,
 		p2p:                 cfg.P2P,
-		operations:          cfg.Operations,
+		attPool:             cfg.AttPool,
 		chain:               cfg.Chain,
 		initialSync:         cfg.InitialSync,
-		slotToPendingBlocks: make(map[uint64]*ethpb.BeaconBlock),
+		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 		stateNotifier:       cfg.StateNotifier,
+		blocksRateLimiter:   leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksBurst, false /* deleteEmptyBuckets */),
 	}
 
 	r.registerRPCHandlers()
@@ -64,16 +69,17 @@ type Service struct {
 	ctx                 context.Context
 	cancel              context.CancelFunc
 	p2p                 p2p.P2P
-	db                  db.Database
-	operations          *operations.Service
+	db                  db.NoHeadAccessDatabase
+	attPool             attestations.Pool
 	chain               blockchainService
-	slotToPendingBlocks map[uint64]*ethpb.BeaconBlock
+	slotToPendingBlocks map[uint64]*ethpb.SignedBeaconBlock
 	seenPendingBlocks   map[[32]byte]bool
 	pendingQueueLock    sync.RWMutex
 	chainStarted        bool
 	initialSync         Checker
 	validateBlockLock   sync.RWMutex
 	stateNotifier       statefeed.Notifier
+	blocksRateLimiter   *leakybucket.Collector
 }
 
 // Start the regular sync service.
@@ -82,6 +88,7 @@ func (r *Service) Start() {
 	r.p2p.AddDisconnectionHandler(r.removeDisconnectedPeerStatus)
 	r.processPendingBlocksQueue()
 	r.maintainPeerStatuses()
+	r.resyncIfBehind()
 }
 
 // Stop the regular sync service.

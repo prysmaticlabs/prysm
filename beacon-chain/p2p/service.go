@@ -3,6 +3,7 @@ package p2p
 import (
 	"context"
 	"crypto/ecdsa"
+	"strconv"
 	"strings"
 	"time"
 
@@ -30,7 +31,6 @@ import (
 var _ = shared.Service(&Service{})
 
 var pollingPeriod = 1 * time.Second
-var ttl = 1 * time.Hour
 
 const prysmProtocolPrefix = "/prysm/0.0.0"
 
@@ -94,7 +94,7 @@ func NewService(cfg *Config) (*Service, error) {
 		dopts := []dhtopts.Option{
 			dhtopts.Datastore(dsync.MutexWrap(ds.NewMapDatastore())),
 			dhtopts.Protocols(
-				protocol.ID(prysmProtocolPrefix + "/dht"),
+				prysmProtocolPrefix + "/dht",
 			),
 		}
 
@@ -189,7 +189,7 @@ func (s *Service) Start() {
 			s.host.ConnManager().Protect(peer.ID, "bootnode")
 		}
 		bcfg := kaddht.DefaultBootstrapConfig
-		bcfg.Period = time.Duration(30 * time.Second)
+		bcfg.Period = 30 * time.Second
 		if err := s.dht.BootstrapWithConfig(s.ctx, bcfg); err != nil {
 			log.WithError(err).Error("Failed to bootstrap DHT")
 		}
@@ -214,6 +214,10 @@ func (s *Service) Start() {
 
 	multiAddrs := s.host.Network().ListenAddresses()
 	logIP4Addr(s.host.ID(), multiAddrs...)
+
+	p2pHostAddress := s.cfg.HostAddress
+	p2pTCPPort := s.cfg.TCPPort
+	logExternalIP4Addr(s.host.ID(), p2pHostAddress, p2pTCPPort)
 }
 
 // Stop the p2p service and terminate all peer connections.
@@ -363,5 +367,16 @@ func logIP4Addr(id peer.ID, addrs ...ma.Multiaddr) {
 			"multiAddr",
 			correctAddr.String()+"/p2p/"+id.String(),
 		).Info("Node started p2p server")
+	}
+}
+
+func logExternalIP4Addr(id peer.ID, addr string, port uint) {
+	if addr != "" {
+		p := strconv.FormatUint(uint64(port), 10)
+
+		log.WithField(
+			"multiAddr",
+			"/ip4/"+addr+"/tcp/"+p+"/p2p/"+id.String(),
+		).Info("Node started external p2p server")
 	}
 }

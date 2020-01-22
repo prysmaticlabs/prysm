@@ -7,6 +7,7 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/proto/beacon/db"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -51,17 +52,17 @@ func (e Exporter) DeleteAttestations(ctx context.Context, attDataRoots [][32]byt
 }
 
 // Block -- passthrough.
-func (e Exporter) Block(ctx context.Context, blockRoot [32]byte) (*eth.BeaconBlock, error) {
+func (e Exporter) Block(ctx context.Context, blockRoot [32]byte) (*eth.SignedBeaconBlock, error) {
 	return e.db.Block(ctx, blockRoot)
 }
 
 // HeadBlock -- passthrough.
-func (e Exporter) HeadBlock(ctx context.Context) (*eth.BeaconBlock, error) {
+func (e Exporter) HeadBlock(ctx context.Context) (*eth.SignedBeaconBlock, error) {
 	return e.db.HeadBlock(ctx)
 }
 
 // Blocks -- passthrough.
-func (e Exporter) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*eth.BeaconBlock, error) {
+func (e Exporter) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*eth.SignedBeaconBlock, error) {
 	return e.db.Blocks(ctx, f)
 }
 
@@ -86,17 +87,17 @@ func (e Exporter) DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error
 }
 
 // ValidatorIndex -- passthrough.
-func (e Exporter) ValidatorIndex(ctx context.Context, publicKey [48]byte) (uint64, bool, error) {
+func (e Exporter) ValidatorIndex(ctx context.Context, publicKey []byte) (uint64, bool, error) {
 	return e.db.ValidatorIndex(ctx, publicKey)
 }
 
 // HasValidatorIndex -- passthrough.
-func (e Exporter) HasValidatorIndex(ctx context.Context, publicKey [48]byte) bool {
+func (e Exporter) HasValidatorIndex(ctx context.Context, publicKey []byte) bool {
 	return e.db.HasValidatorIndex(ctx, publicKey)
 }
 
 // DeleteValidatorIndex -- passthrough.
-func (e Exporter) DeleteValidatorIndex(ctx context.Context, publicKey [48]byte) error {
+func (e Exporter) DeleteValidatorIndex(ctx context.Context, publicKey []byte) error {
 	return e.db.DeleteValidatorIndex(ctx, publicKey)
 }
 
@@ -201,7 +202,7 @@ func (e Exporter) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) err
 }
 
 // GenesisBlock -- passthrough.
-func (e Exporter) GenesisBlock(ctx context.Context) (*ethpb.BeaconBlock, error) {
+func (e Exporter) GenesisBlock(ctx context.Context) (*ethpb.SignedBeaconBlock, error) {
 	return e.db.GenesisBlock(ctx)
 }
 
@@ -211,8 +212,13 @@ func (e Exporter) SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) 
 }
 
 // SaveValidatorIndex -- passthrough.
-func (e Exporter) SaveValidatorIndex(ctx context.Context, publicKey [48]byte, validatorIdx uint64) error {
+func (e Exporter) SaveValidatorIndex(ctx context.Context, publicKey []byte, validatorIdx uint64) error {
 	return e.db.SaveValidatorIndex(ctx, publicKey, validatorIdx)
+}
+
+// SaveValidatorIndices -- passthrough.
+func (e Exporter) SaveValidatorIndices(ctx context.Context, publicKeys [][]byte, validatorIndices []uint64) error {
+	return e.db.SaveValidatorIndices(ctx, publicKeys, validatorIndices)
 }
 
 // SaveState -- passthrough.
@@ -280,7 +286,22 @@ func (e Exporter) DeleteStates(ctx context.Context, blockRoots [][32]byte) error
 	return e.db.DeleteStates(ctx, blockRoots)
 }
 
+// HasState -- passthrough.
+func (e Exporter) HasState(ctx context.Context, blockRoot [32]byte) bool {
+	return e.db.HasState(ctx, blockRoot)
+}
+
 // IsFinalizedBlock -- passthrough.
 func (e Exporter) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool {
 	return e.db.IsFinalizedBlock(ctx, blockRoot)
+}
+
+// PowchainData -- passthrough
+func (e Exporter) PowchainData(ctx context.Context) (*db.ETH1ChainData, error) {
+	return e.db.PowchainData(ctx)
+}
+
+// SavePowchainData -- passthrough
+func (e Exporter) SavePowchainData(ctx context.Context, data *db.ETH1ChainData) error {
+	return e.db.SavePowchainData(ctx, data)
 }

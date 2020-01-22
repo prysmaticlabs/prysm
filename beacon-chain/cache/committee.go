@@ -6,7 +6,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"k8s.io/client-go/tools/cache"
@@ -40,6 +39,7 @@ type Committees struct {
 	Seed            [32]byte
 	ShuffledIndices []uint64
 	SortedIndices   []uint64
+	ProposerIndices []uint64
 }
 
 // CommitteeCache is a struct with 1 queue for looking up shuffled indices list by seed.
@@ -68,9 +68,6 @@ func NewCommitteesCache() *CommitteeCache {
 // Committee fetches the shuffled indices by slot and committee index. Every list of indices
 // represent one committee. Returns true if the list exists with slot and committee index. Otherwise returns false, nil.
 func (c *CommitteeCache) Committee(slot uint64, seed [32]byte, index uint64) ([]uint64, error) {
-	if !featureconfig.Get().EnableShuffledIndexCache && !featureconfig.Get().EnableNewCache {
-		return nil, nil
-	}
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
@@ -99,20 +96,49 @@ func (c *CommitteeCache) Committee(slot uint64, seed [32]byte, index uint64) ([]
 	indexOffSet := index + (slot%params.BeaconConfig().SlotsPerEpoch)*committeeCountPerSlot
 	start, end := startEndIndices(item, indexOffSet)
 
+	if int(end) > len(item.ShuffledIndices) {
+		return nil, errors.New("requested index out of bound")
+	}
+
 	return item.ShuffledIndices[start:end], nil
 }
 
 // AddCommitteeShuffledList adds Committee shuffled list object to the cache. T
 // his method also trims the least recently list if the cache size has ready the max cache size limit.
 func (c *CommitteeCache) AddCommitteeShuffledList(committees *Committees) error {
-	if !featureconfig.Get().EnableShuffledIndexCache && !featureconfig.Get().EnableNewCache {
-		return nil
-	}
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	if err := c.CommitteeCache.AddIfNotPresent(committees); err != nil {
 		return err
+	}
+	trim(c.CommitteeCache, maxCommitteesCacheSize)
+	return nil
+}
+
+// AddProposerIndicesList updates the committee shuffled list with proposer indices.
+func (c *CommitteeCache) AddProposerIndicesList(seed [32]byte, indices []uint64) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	obj, exists, err := c.CommitteeCache.GetByKey(key(seed))
+	if err != nil {
+		return err
+	}
+	if !exists {
+		committees := &Committees{ProposerIndices: indices}
+		if err := c.CommitteeCache.Add(committees); err != nil {
+			return err
+		}
+	} else {
+		committees, ok := obj.(*Committees)
+		if !ok {
+			return ErrNotCommittee
+		}
+		committees.ProposerIndices = indices
+		if err := c.CommitteeCache.Add(committees); err != nil {
+			return err
+		}
 	}
 
 	trim(c.CommitteeCache, maxCommitteesCacheSize)
@@ -121,10 +147,6 @@ func (c *CommitteeCache) AddCommitteeShuffledList(committees *Committees) error 
 
 // ActiveIndices returns the active indices of a given seed stored in cache.
 func (c *CommitteeCache) ActiveIndices(seed [32]byte) ([]uint64, error) {
-	if !featureconfig.Get().EnableShuffledIndexCache && !featureconfig.Get().EnableNewCache {
-		return nil, nil
-	}
-
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	obj, exists, err := c.CommitteeCache.GetByKey(key(seed))
@@ -147,6 +169,30 @@ func (c *CommitteeCache) ActiveIndices(seed [32]byte) ([]uint64, error) {
 	return item.SortedIndices, nil
 }
 
+// ProposerIndices returns the proposer indices of a given seed.
+func (c *CommitteeCache) ProposerIndices(seed [32]byte) ([]uint64, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	obj, exists, err := c.CommitteeCache.GetByKey(key(seed))
+	if err != nil {
+		return nil, err
+	}
+
+	if exists {
+		CommitteeCacheHit.Inc()
+	} else {
+		CommitteeCacheMiss.Inc()
+		return nil, nil
+	}
+
+	item, ok := obj.(*Committees)
+	if !ok {
+		return nil, ErrNotCommittee
+	}
+
+	return item.ProposerIndices, nil
+}
+
 func startEndIndices(c *Committees, index uint64) (uint64, uint64) {
 	validatorCount := uint64(len(c.ShuffledIndices))
 	start := sliceutil.SplitOffset(validatorCount, c.CommitteeCount, index)
@@ -157,7 +203,7 @@ func startEndIndices(c *Committees, index uint64) (uint64, uint64) {
 // Using seed as source for key to handle reorgs in the same epoch.
 // The seed is derived from state's array of randao mixes and epoch value
 // hashed together. This avoids collisions on different validator set. Spec definition:
-// https://github.com/ethereum/eth2.0-specs/blob/v0.9.2/specs/core/0_beacon-chain.md#get_seed
+// https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/core/0_beacon-chain.md#get_seed
 func key(seed [32]byte) string {
 	return string(seed[:])
 }

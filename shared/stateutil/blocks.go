@@ -10,8 +10,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func blockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
-	fieldRoots := make([][]byte, 5)
+// BlockHeaderRoot computes the HashTreeRoot Merkleization of
+// a BeaconBlockHeader struct according to the eth2
+// Simple Serialize specification.
+func BlockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
+	fieldRoots := make([][]byte, 4)
 	if header != nil {
 		headerSlotBuf := make([]byte, 8)
 		binary.LittleEndian.PutUint64(headerSlotBuf, header.Slot)
@@ -20,20 +23,14 @@ func blockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
 		fieldRoots[1] = header.ParentRoot
 		fieldRoots[2] = header.StateRoot
 		fieldRoots[3] = header.BodyRoot
-		signatureChunks, err := pack([][]byte{header.Signature})
-		if err != nil {
-			return [32]byte{}, err
-		}
-		sigRoot, err := bitwiseMerkleize(signatureChunks, uint64(len(signatureChunks)), uint64(len(signatureChunks)))
-		if err != nil {
-			return [32]byte{}, err
-		}
-		fieldRoots[4] = sigRoot[:]
 	}
 	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
-func eth1Root(eth1Data *ethpb.Eth1Data) ([32]byte, error) {
+// Eth1Root computes the HashTreeRoot Merkleization of
+// a BeaconBlockHeader struct according to the eth2
+// Simple Serialize specification.
+func Eth1Root(eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 	fieldRoots := make([][]byte, 3)
 	for i := 0; i < len(fieldRoots); i++ {
 		fieldRoots[i] = make([]byte, 32)
@@ -53,10 +50,13 @@ func eth1Root(eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
 
-func eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
+// Eth1DataVotesRoot computes the HashTreeRoot Merkleization of
+// a list of Eth1Data structs according to the eth2
+// Simple Serialize specification.
+func Eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
 	eth1VotesRoots := make([][]byte, 0)
 	for i := 0; i < len(eth1DataVotes); i++ {
-		eth1, err := eth1Root(eth1DataVotes[i])
+		eth1, err := Eth1Root(eth1DataVotes[i])
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not compute eth1data merkleization")
 		}

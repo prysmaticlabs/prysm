@@ -27,11 +27,24 @@ var (
 		Name:  "deposit-contract",
 		Usage: "Deposit contract address. Beacon chain node will listen logs coming from the deposit contract to determine when validator is eligible to participate.",
 	}
+	// RPCHost defines the host on which the RPC server should listen.
+	RPCHost = cli.StringFlag{
+		Name:  "rpc-host",
+		Usage: "Host on which the RPC server should listen",
+		Value: "0.0.0.0",
+	}
 	// RPCPort defines a beacon node RPC port to open.
 	RPCPort = cli.IntFlag{
 		Name:  "rpc-port",
 		Usage: "RPC port exposed by a beacon node",
 		Value: 4000,
+	}
+	// RPCMaxPageSize defines the maximum numbers per page returned in RPC responses from this
+	// beacon node (default: 500).
+	RPCMaxPageSize = cli.IntFlag{
+		Name:  "rpc-max-page-size",
+		Usage: "Max number of items returned per page in RPC responses for paginated endpoints (default: 500)",
+		Value: 500,
 	}
 	// CertFlag defines a flag for the node's TLS certificate.
 	CertFlag = cli.StringFlag{
@@ -48,12 +61,28 @@ var (
 		Name:  "grpc-gateway-port",
 		Usage: "Enable gRPC gateway for JSON requests",
 	}
-
 	// MinSyncPeers specifies the required number of successful peer handshakes in order
 	// to start syncing with external peers.
 	MinSyncPeers = cli.IntFlag{
 		Name:  "min-sync-peers",
 		Usage: "The required number of valid peers to connect with before syncing.",
 		Value: 3,
+	}
+	// ContractDeploymentBlock is the block in which the eth1 deposit contract was deployed.
+	ContractDeploymentBlock = cli.IntFlag{
+		Name:  "contract-deployment-block",
+		Usage: "The eth1 block in which the deposit contract was deployed.",
+		Value: 1960177,
+	}
+	// SlasherCertFlag defines a flag for the slasher TLS certificate.
+	SlasherCertFlag = cli.StringFlag{
+		Name:  "slasher-tls-cert",
+		Usage: "Certificate for secure slasher gRPC connection. Pass this in order to use slasher gRPC securely.",
+	}
+	// SlasherProviderFlag defines a flag for a slasher RPC provider.
+	SlasherProviderFlag = cli.StringFlag{
+		Name:  "slasher-provider",
+		Usage: "A slasher provider string endpoint. Can either be an grpc server endpoint.",
+		Value: "127.0.0.1:5000",
 	}
 )

@@ -16,6 +16,7 @@ go_library(
     visibility = [
         "//beacon-chain:__subpackages__",
         "//shared/testutil:__pkg__",
+        "//shared/benchutil/benchmark_files:__subpackages__",
         "//slasher:__subpackages__",
         "//tools:__subpackages__",
         "//validator:__subpackages__",
@@ -58,6 +59,7 @@ go_test(
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/featureconfig:go_default_library",
+        "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/sliceutil:go_default_library",
         "//shared/testutil:go_default_library",

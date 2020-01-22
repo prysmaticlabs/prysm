@@ -96,6 +96,53 @@ func TestCommitteeCache_ActiveIndices(t *testing.T) {
 	}
 }
 
+func TestCommitteeCache_AddProposerIndicesList(t *testing.T) {
+	cache := NewCommitteesCache()
+
+	seed := [32]byte{'A'}
+	indices := []uint64{1, 2, 3, 4, 5}
+	indices, err := cache.ProposerIndices(seed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if indices != nil {
+		t.Error("Expected committee count not to exist in empty cache")
+	}
+	if err := cache.AddProposerIndicesList(seed, indices); err != nil {
+		t.Fatal(err)
+	}
+	received, err := cache.ProposerIndices(seed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(indices, received) {
+		t.Error("Did not receive correct proposer indices from cache")
+	}
+
+	item := &Committees{Seed: [32]byte{'B'}, SortedIndices: []uint64{1, 2, 3, 4, 5, 6}}
+	if err := cache.AddCommitteeShuffledList(item); err != nil {
+		t.Fatal(err)
+	}
+	indices, err = cache.ProposerIndices(item.Seed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if indices != nil {
+		t.Error("Expected committee count not to exist in empty cache")
+	}
+	if err := cache.AddProposerIndicesList(item.Seed, indices); err != nil {
+		t.Fatal(err)
+	}
+	received, err = cache.ProposerIndices(item.Seed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(indices, received) {
+		t.Error("Did not receive correct proposer indices from cache")
+	}
+
+}
+
 func TestCommitteeCache_CanRotate(t *testing.T) {
 	cache := NewCommitteesCache()
 

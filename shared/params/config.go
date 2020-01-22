@@ -14,7 +14,7 @@ type BeaconChainConfig struct {
 	FarFutureEpoch           uint64 `yaml:"FAR_FUTURE_EPOCH"`            // FarFutureEpoch represents a epoch extremely far away in the future used as the default penalization slot for validators.
 	BaseRewardsPerEpoch      uint64 `yaml:"BASE_REWARDS_PER_EPOCH"`      // BaseRewardsPerEpoch is used to calculate the per epoch rewards.
 	DepositContractTreeDepth uint64 `yaml:"DEPOSIT_CONTRACT_TREE_DEPTH"` // Depth of the Merkle trie of deposits in the validator deposit contract on the PoW chain.
-	SecondsPerDay            uint64 `yaml:"SECONDS_PER_DAY"`             // SecondsPerDay number of seconds in day constant.
+	MinGenesisDelay          uint64 `yaml:"MIN_GENESIS_DELAY"`           // Minimum number of seconds to delay starting the ETH2 genesis. Must be at least 1 second.
 
 	// Misc constants.
 	TargetCommitteeSize            uint64 `yaml:"TARGET_COMMITTEE_SIZE"`        // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
@@ -24,7 +24,7 @@ type BeaconChainConfig struct {
 	ChurnLimitQuotient             uint64 `yaml:"CHURN_LIMIT_QUOTIENT"`               // ChurnLimitQuotient is used to determine the limit of how many validators can rotate per epoch.
 	ShuffleRoundCount              uint64 `yaml:"SHUFFLE_ROUND_COUNT"`                // ShuffleRoundCount is used for retrieving the permuted index.
 	MinGenesisActiveValidatorCount uint64 `yaml:"MIN_GENESIS_ACTIVE_VALIDATOR_COUNT"` // MinGenesisActiveValidatorCount defines how many validator deposits needed to kick off beacon chain.
-	MinGenesisTime                 uint64 `yaml:"MIN_GENESIS_TIME"`                   // MinGenesisTime is the time that needed to pass before kicking off beacon chain. Currently set to Jan/3/2020.
+	MinGenesisTime                 uint64 `yaml:"MIN_GENESIS_TIME"`                   // MinGenesisTime is the time that needed to pass before kicking off beacon chain.
 	TargetAggregatorsPerCommittee  uint64 // TargetAggregatorsPerCommittee defines the number of aggregators inside one committee.
 
 	// Gwei value constants.
@@ -42,13 +42,15 @@ type BeaconChainConfig struct {
 	SecondsPerSlot                   uint64 `yaml:"SECONDS_PER_SLOT"`                    // SecondsPerSlot is how many seconds are in a single slot.
 	SlotsPerEpoch                    uint64 `yaml:"SLOTS_PER_EPOCH"`                     // SlotsPerEpoch is the number of slots in an epoch.
 	MinSeedLookahead                 uint64 `yaml:"MIN_SEED_LOOKAHEAD"`                  // SeedLookahead is the duration of randao look ahead seed.
-	MaxSeedLookhead                  uint64 `yaml:"ACTIVATION_EXIT_DELAY"`               // MaxSeedLookhead is the duration a validator has to wait for entry and exit in epoch.
+	MaxSeedLookahead                 uint64 `yaml:"MAX_SEED_LOOKAHEAD"`                  // MaxSeedLookahead is the duration a validator has to wait for entry and exit in epoch.
 	SlotsPerEth1VotingPeriod         uint64 `yaml:"SLOTS_PER_ETH1_VOTING_PERIOD"`        // SlotsPerEth1VotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
 	SlotsPerHistoricalRoot           uint64 `yaml:"SLOTS_PER_HISTORICAL_ROOT"`           // SlotsPerHistoricalRoot defines how often the historical root is saved.
 	MinValidatorWithdrawabilityDelay uint64 `yaml:"MIN_VALIDATOR_WITHDRAWABILITY_DELAY"` // MinValidatorWithdrawabilityDelay is the shortest amount of time a validator has to wait to withdraw.
-	PersistentCommitteePeriod        uint64 `yaml:"PERSISTENT_COMMITTEE_PERIOD"`         // PersistentCommitteePeriod is the minimum amount of epochs a validator must participate before exitting.
+	PersistentCommitteePeriod        uint64 `yaml:"PERSISTENT_COMMITTEE_PERIOD"`         // PersistentCommitteePeriod is the minimum amount of epochs a validator must participate before exiting.
 	MinEpochsToInactivityPenalty     uint64 `yaml:"MIN_EPOCHS_TO_INACTIVITY_PENALTY"`    // MinEpochsToInactivityPenalty defines the minimum amount of epochs since finality to begin penalizing inactivity.
 	Eth1FollowDistance               uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
+	SafeSlotsToUpdateJustified       uint64 // SafeSlotsToUpdateJustified is the minimal slots needed to update justified check point.
+	AttestationPropagationSlotRange  uint64 // AttestationPropagationSlotRange is the maximum number of slots during which an attestation can be propagated.
 
 	// State list lengths
 	EpochsPerHistoricalVector uint64 `yaml:"EPOCHS_PER_HISTORICAL_VECTOR"` // EpochsPerHistoricalVector defines max length in epoch to store old historical stats in beacon state.
@@ -80,7 +82,7 @@ type BeaconChainConfig struct {
 	// Prysm constants.
 	GweiPerEth                uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
 	LogBlockDelay             int64         // Number of blocks to wait from the current head before processing logs from the deposit contract.
-	BLSSecretkeyLength        int           // BLSSecretkeyLength defines the expected length of BLS secret keys in bytes.
+	BLSSecretKeyLength        int           // BLSSecretKeyLength defines the expected length of BLS secret keys in bytes.
 	BLSPubkeyLength           int           // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
 	BLSSignatureLength        int           // BLSSignatureLength defines the expected length of BLS signatures in bytes.
 	DefaultBufferSize         int           // DefaultBufferSize for channels across the Prysm repository.
@@ -92,7 +94,6 @@ type BeaconChainConfig struct {
 	GenesisForkVersion        []byte        `yaml:"GENESIS_FORK_VERSION"` // GenesisForkVersion is used to track fork version between state transitions.
 	EmptySignature            [96]byte      // EmptySignature is used to represent a zeroed out BLS Signature.
 	DefaultPageSize           int           // DefaultPageSize defines the default page size for RPC server request.
-	MaxPageSize               int           // MaxPageSize defines the max page size for RPC server respond.
 	MaxPeersToSync            int           // MaxPeersToSync describes the limit for number of peers in round robin sync.
 
 	// Slasher constants.
@@ -105,7 +106,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	FarFutureEpoch:           1<<64 - 1,
 	BaseRewardsPerEpoch:      4,
 	DepositContractTreeDepth: 32,
-	SecondsPerDay:            86400,
+	MinGenesisDelay:          86400, // 1 day
 
 	// Misc constant.
 	TargetCommitteeSize:            128,
@@ -115,7 +116,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	ChurnLimitQuotient:             1 << 16,
 	ShuffleRoundCount:              90,
 	MinGenesisActiveValidatorCount: 16384,
-	MinGenesisTime:                 1578009600,
+	MinGenesisTime:                 0, // Zero until a proper time is decided.
 	TargetAggregatorsPerCommittee:  16,
 
 	// Gwei value constants.
@@ -133,13 +134,15 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	SecondsPerSlot:                   12,
 	SlotsPerEpoch:                    32,
 	MinSeedLookahead:                 1,
-	MaxSeedLookhead:                  4,
+	MaxSeedLookahead:                 4,
 	SlotsPerEth1VotingPeriod:         1024,
 	SlotsPerHistoricalRoot:           8192,
 	MinValidatorWithdrawabilityDelay: 256,
 	PersistentCommitteePeriod:        2048,
 	MinEpochsToInactivityPenalty:     4,
 	Eth1FollowDistance:               1024,
+	SafeSlotsToUpdateJustified:       8,
+	AttestationPropagationSlotRange:  32,
 
 	// State list length constants.
 	EpochsPerHistoricalVector: 65536,
@@ -170,8 +173,8 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// Prysm constants.
 	GweiPerEth:                1000000000,
-	LogBlockDelay:             2,
-	BLSSecretkeyLength:        32,
+	LogBlockDelay:             4,
+	BLSSecretKeyLength:        32,
 	BLSPubkeyLength:           48,
 	BLSSignatureLength:        96,
 	DefaultBufferSize:         10000,
@@ -182,7 +185,6 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	GenesisForkVersion:        []byte{0, 0, 0, 0},
 	EmptySignature:            [96]byte{},
 	DefaultPageSize:           250,
-	MaxPageSize:               500,
 	MaxPeersToSync:            15,
 
 	// Slasher related values.
@@ -206,23 +208,22 @@ func MainnetConfig() *BeaconChainConfig {
 	return defaultBeaconConfig
 }
 
-// DemoBeaconConfig retrieves the demo beacon chain config.
-// Notable changes from minimal config:
-//   - Max effective balance is 3.2 ETH
-//   - Ejection threshold is 3.175 ETH
-//   - Genesis threshold is disabled (minimum date to start the chain)
+// DemoBeaconConfig retrieves the demo beacon chain config. This is mainnet config with 1/10th of
+// mainnet deposit values.
 func DemoBeaconConfig() *BeaconChainConfig {
-	demoConfig := MinimalSpecConfig()
-	demoConfig.MinDepositAmount = 100
-	demoConfig.MaxEffectiveBalance = 3.2 * 1e9
-	demoConfig.EjectionBalance = 3 * 1e9
-	demoConfig.EffectiveBalanceIncrement = 0.1 * 1e9
-	demoConfig.Eth1FollowDistance = 16
+	demoConfig := *MainnetConfig()
+
+	demoConfig.MinDepositAmount /= 10
+	demoConfig.MaxEffectiveBalance /= 10
+	demoConfig.EjectionBalance /= 10
+	demoConfig.EffectiveBalanceIncrement /= 10
+
+	demoConfig.InactivityPenaltyQuotient /= 10
 
 	// Increment this number after a full testnet tear down.
-	demoConfig.GenesisForkVersion = []byte{0, 0, 0, 3}
+	demoConfig.GenesisForkVersion = []byte{0, 0, 0, 4}
 
-	return demoConfig
+	return &demoConfig
 }
 
 // MinimalSpecConfig retrieves the minimal config used in spec tests.
@@ -237,7 +238,8 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.ShuffleRoundCount = 10
 	minimalConfig.MinGenesisActiveValidatorCount = 64
 	minimalConfig.MinGenesisTime = 0
-	minimalConfig.TargetAggregatorsPerCommittee = 2
+	minimalConfig.MinGenesisDelay = 300 // 5 minutes
+	minimalConfig.TargetAggregatorsPerCommittee = 3
 
 	// Gwei values
 	minimalConfig.MinDepositAmount = 1e9
@@ -249,16 +251,17 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.BLSWithdrawalPrefixByte = byte(0)
 
 	// Time parameters
-	minimalConfig.SecondsPerSlot = 12
+	minimalConfig.SecondsPerSlot = 6
 	minimalConfig.MinAttestationInclusionDelay = 1
 	minimalConfig.SlotsPerEpoch = 8
 	minimalConfig.MinSeedLookahead = 1
-	minimalConfig.MaxSeedLookhead = 4
+	minimalConfig.MaxSeedLookahead = 4
 	minimalConfig.SlotsPerEth1VotingPeriod = 16
 	minimalConfig.SlotsPerHistoricalRoot = 64
 	minimalConfig.MinValidatorWithdrawabilityDelay = 256
 	minimalConfig.PersistentCommitteePeriod = 2048
 	minimalConfig.MinEpochsToInactivityPenalty = 4
+	minimalConfig.SafeSlotsToUpdateJustified = 2
 
 	// State vector lengths
 	minimalConfig.EpochsPerHistoricalVector = 64

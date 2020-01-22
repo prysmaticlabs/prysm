@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -35,17 +36,17 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 		blk := &ethpb.BeaconBlock{
 			Slot: uint64(i),
 		}
-		root, err := ssz.SigningRoot(blk)
+		root, err := ssz.HashTreeRoot(blk)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := d.SaveBlock(context.Background(), blk); err != nil {
+		if err := d.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: blk}); err != nil {
 			t.Fatal(err)
 		}
 		blkRoots = append(blkRoots, root)
 	}
 
-	r := &Service{p2p: p1, db: d}
+	r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(10000, 10000, false)}
 	pcl := protocol.ID("/testing")
 
 	var wg sync.WaitGroup
@@ -54,12 +55,12 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 		defer wg.Done()
 		for i := range blkRoots {
 			expectSuccess(t, r, stream)
-			res := &ethpb.BeaconBlock{}
+			res := &ethpb.SignedBeaconBlock{}
 			if err := r.p2p.Encoding().DecodeWithLength(stream, &res); err != nil {
 				t.Error(err)
 			}
-			if res.Slot != uint64(i+1) {
-				t.Errorf("Received unexpected block slot %d but wanted %d", res.Slot, i+1)
+			if res.Block.Slot != uint64(i+1) {
+				t.Errorf("Received unexpected block slot %d but wanted %d", res.Block.Slot, i+1)
 			}
 		}
 	})
@@ -84,14 +85,14 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 	p1.DelaySend = true
 
-	blockA := &ethpb.BeaconBlock{Slot: 111}
-	blockB := &ethpb.BeaconBlock{Slot: 40}
+	blockA := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 111}}
+	blockB := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 40}}
 	// Set up a head state with data we expect.
-	blockARoot, err := ssz.HashTreeRoot(blockA)
+	blockARoot, err := ssz.HashTreeRoot(blockA.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
-	blockBRoot, err := ssz.HashTreeRoot(blockB)
+	blockBRoot, err := ssz.HashTreeRoot(blockB.Block)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,9 +116,10 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 			FinalizedCheckPoint: finalizedCheckpt,
 			Root:                blockARoot[:],
 		},
-		slotToPendingBlocks: make(map[uint64]*ethpb.BeaconBlock),
+		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 		ctx:                 context.Background(),
+		blocksRateLimiter:   leakybucket.NewCollector(10000, 10000, false),
 	}
 
 	// Setup streams
@@ -133,7 +135,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 		if !reflect.DeepEqual(out, expectedRoots) {
 			t.Fatalf("Did not receive expected message. Got %+v wanted %+v", out, expectedRoots)
 		}
-		response := []*ethpb.BeaconBlock{blockB, blockA}
+		response := []*ethpb.SignedBeaconBlock{blockB, blockA}
 		for _, blk := range response {
 			if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 				t.Fatalf("Failed to write to stream: %v", err)

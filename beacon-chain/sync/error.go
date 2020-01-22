@@ -9,6 +9,7 @@ import (
 )
 
 const genericError = "internal service error"
+const rateLimitedError = "rate limited"
 
 var errWrongForkVersion = errors.New("wrong fork version")
 var errInvalidEpoch = errors.New("invalid epoch")
@@ -43,5 +44,5 @@ func ReadStatusCode(stream io.Reader, encoding encoder.NetworkEncoding) (uint8, 
 		return 0, "", err
 	}
 
-	return uint8(b[0]), string(msg), nil
+	return b[0], string(msg), nil
 }
