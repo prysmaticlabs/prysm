@@ -265,6 +265,21 @@ func (b *BeaconState) SetSlashings(val []uint64) error {
 	return nil
 }
 
+// UpdateSlashingsAtIndex for the beacon state. This PR updates the randao mixes
+// at a specific index to a new value.
+func (b *BeaconState) UpdateSlashingsAtIndex(idx uint64, val uint64) error {
+	b.state.Slashings[idx] = val
+	root, err := stateutil.SlashingsRoot(b.state.Slashings)
+	if err != nil {
+		return err
+	}
+	b.lock.Lock()
+	b.merkleLayers[0][slashings] = root[:]
+	b.recomputeRoot(int(slashings))
+	b.lock.Unlock()
+	return nil
+}
+
 // SetPreviousEpochAttestations for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetPreviousEpochAttestations(val []*pbp2p.PendingAttestation) error {
@@ -291,6 +306,21 @@ func (b *BeaconState) SetCurrentEpochAttestations(val []*pbp2p.PendingAttestatio
 	b.lock.Lock()
 	b.merkleLayers[0][currentEpochAttestations] = root[:]
 	b.recomputeRoot(int(currentEpochAttestations))
+	b.lock.Unlock()
+	return nil
+}
+
+// AppendHistoricalRoots for the beacon state. This PR appends the new value
+// to the the end of list.
+func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
+	b.state.HistoricalRoots = append(b.state.HistoricalRoots, root[:])
+	root, err := stateutil.HistoricalRootsRoot(b.state.HistoricalRoots)
+	if err != nil {
+		return err
+	}
+	b.lock.Lock()
+	b.merkleLayers[0][historicalRoots] = root[:]
+	b.recomputeRoot(int(historicalRoots))
 	b.lock.Unlock()
 	return nil
 }

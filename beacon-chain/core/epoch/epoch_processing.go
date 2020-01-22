@@ -28,10 +28,10 @@ type sortableIndices []uint64
 func (s sortableIndices) Len() int      { return len(s) }
 func (s sortableIndices) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 func (s sortableIndices) Less(i, j int) bool {
-	if epochState.Validators[s[i]].ActivationEligibilityEpoch == epochState.Validators[s[j]].ActivationEligibilityEpoch {
+	if epochState.Validators()[s[i]].ActivationEligibilityEpoch == epochState.Validators()[s[j]].ActivationEligibilityEpoch {
 		return s[i] < s[j]
 	}
-	return epochState.Validators[s[i]].ActivationEligibilityEpoch < epochState.Validators[s[j]].ActivationEligibilityEpoch
+	return epochState.Validators()[s[i]].ActivationEligibilityEpoch < epochState.Validators()[s[j]].ActivationEligibilityEpoch
 }
 
 // AttestingBalance returns the total balance from all the attesting indices.
@@ -233,7 +233,7 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 			return nil, fmt.Errorf("validator %d is nil in state", i)
 		}
 		if i >= len(bals) {
-			return nil, fmt.Errorf("validator index exceeds validator length in state %d >= %d", i, len(state.Balances))
+			return nil, fmt.Errorf("validator index exceeds validator length in state %d >= %d", i, len(state.Balances()))
 		}
 		balance := bals[i]
 		halfInc := params.BeaconConfig().EffectiveBalanceIncrement / 2
@@ -259,7 +259,7 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 			slashedExitLength,
 		)
 	}
-	if err := state.UpdateSlashingsAtIndex(0, slashedEpoch); err != nil {
+	if err := state.UpdateSlashingsAtIndex(0, uint64(slashedEpoch)); err != nil {
 		return nil, err
 	}
 
