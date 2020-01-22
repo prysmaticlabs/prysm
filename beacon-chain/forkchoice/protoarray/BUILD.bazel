@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "doc.go",
+        "errors.go",
         "types.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray",
