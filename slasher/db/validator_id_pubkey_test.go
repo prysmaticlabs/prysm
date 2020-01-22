@@ -2,7 +2,10 @@ package db
 
 import (
 	"bytes"
+	"flag"
 	"testing"
+
+	"github.com/urfave/cli"
 )
 
 type publicKeyTestStruct struct {
@@ -30,7 +33,10 @@ func init() {
 }
 
 func TestNilDBValidatorPublicKey(t *testing.T) {
-	db := SetupSlasherDB(t)
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	ctx := cli.NewContext(app, set, nil)
+	db := SetupSlasherDB(t, ctx)
 	defer TeardownSlasherDB(t, db)
 
 	validatorID := uint64(1)
@@ -46,7 +52,10 @@ func TestNilDBValidatorPublicKey(t *testing.T) {
 }
 
 func TestSavePubKey(t *testing.T) {
-	db := SetupSlasherDB(t)
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	ctx := cli.NewContext(app, set, nil)
+	db := SetupSlasherDB(t, ctx)
 	defer TeardownSlasherDB(t, db)
 
 	for _, tt := range pkTests {
@@ -68,7 +77,10 @@ func TestSavePubKey(t *testing.T) {
 }
 
 func TestDeletePublicKey(t *testing.T) {
-	db := SetupSlasherDB(t)
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	ctx := cli.NewContext(app, set, nil)
+	db := SetupSlasherDB(t, ctx)
 	defer TeardownSlasherDB(t, db)
 
 	for _, tt := range pkTests {
