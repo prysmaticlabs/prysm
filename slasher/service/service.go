@@ -105,7 +105,9 @@ func (s *Service) Start() {
 	}).Info("Starting hash slinging slasher node")
 	s.context = context.Background()
 	s.startSlasher()
-	s.startBeaconClient()
+	if s.beaconClient == nil {
+		s.startBeaconClient()
+	}
 	stop := s.stop
 	err := s.slasherOldAtetstationFeeder()
 	if err != nil {
@@ -114,7 +116,6 @@ func (s *Service) Start() {
 			"--archive flag on the local machine.")
 		log.Errorf(err.Error())
 		s.failStatus = err
-		return
 	}
 	go s.finalisedChangeUpdater()
 	s.lock.Unlock()

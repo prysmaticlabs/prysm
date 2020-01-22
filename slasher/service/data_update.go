@@ -55,11 +55,10 @@ func (s *Service) slasherOldAtetstationFeeder() error {
 	ch, err := s.beaconClient.GetChainHead(s.context, &ptypes.Empty{})
 	if err != nil {
 		log.Error(err)
-		s.Stop()
 		return err
 	}
 	if ch.FinalizedEpoch < 2 {
-		return fmt.Errorf("archive node doesnt have historic data for slasher to proccess. finalized epoch: %d", ch.FinalizedEpoch)
+		log.Info("archive node doesnt have historic data for slasher to proccess. finalized epoch: %d", ch.FinalizedEpoch)
 	}
 	errOut := make(chan error)
 	var errorWg sync.WaitGroup
@@ -67,6 +66,7 @@ func (s *Service) slasherOldAtetstationFeeder() error {
 	if err != nil {
 		log.Error(err)
 		s.Stop()
+		return err
 	}
 	for i := e; i < ch.FinalizedEpoch; i++ {
 		ats, err := s.beaconClient.ListAttestations(s.context, &ethpb.ListAttestationsRequest{
