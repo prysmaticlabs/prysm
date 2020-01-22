@@ -5,8 +5,13 @@ go_library(
     srcs = [
         "doc.go",
         "errors.go",
+        "helpers.go",
         "types.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray",
     visibility = ["//beacon-chain:__subpackages__"],
+    deps = [
+        "//shared/params:go_default_library",
+        "@io_opencensus_go//trace:go_default_library",
+    ],
 )
