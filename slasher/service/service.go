@@ -193,7 +193,7 @@ func (s *Service) loadSpanMaps(err error, slasherServer rpc.Server) {
 			slasherServer.UpdateSpanMaps(s.context, ia)
 		}
 		if i%5 == 0 {
-			log.Infof("update span maps for epoch: %d", i)
+			log.Infof("Update span maps for epoch: %d", i)
 		}
 	}
 }
