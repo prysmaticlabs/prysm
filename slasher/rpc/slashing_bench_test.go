@@ -7,10 +7,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/slasher/flags"
-
-	"github.com/urfave/cli"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/slasher/db"

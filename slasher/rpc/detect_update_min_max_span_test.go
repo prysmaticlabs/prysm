@@ -5,8 +5,6 @@ import (
 	"flag"
 	"testing"
 
-	"github.com/urfave/cli"
-
 	"github.com/gogo/protobuf/proto"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/params"
