@@ -1,6 +1,7 @@
 package state
 
 import (
+	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -105,6 +106,24 @@ func (b *BeaconState) SetBlockRoots(val [][]byte) error {
 	return nil
 }
 
+// UpdateBlockRootAtIndex for the beacon state. This PR updates the randao mixes
+// at a specific index to a new value.
+func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) error {
+	if len(b.state.BlockRoots) <= int(idx) {
+		return errors.Errorf("invalid index provided %d", idx)
+	}
+	b.state.BlockRoots[idx] = blockRoot[:]
+	root, err := stateutil.RootsArrayHashTreeRoot(b.state.BlockRoots, params.BeaconConfig().SlotsPerHistoricalRoot, "BlockRoots")
+	if err != nil {
+		return err
+	}
+	b.lock.Lock()
+	b.merkleLayers[0][blockRoots] = root[:]
+	b.recomputeRoot(int(blockRoots))
+	b.lock.Unlock()
+	return nil
+}
+
 // SetStateRoots for the beacon state. This PR updates the entire
 // to a new value by overwriting the previous one.
 func (b *BeaconState) SetStateRoots(val [][]byte) error {
@@ -113,6 +132,24 @@ func (b *BeaconState) SetStateRoots(val [][]byte) error {
 		return err
 	}
 	b.state.StateRoots = val
+	b.lock.Lock()
+	b.merkleLayers[0][stateRoots] = root[:]
+	b.recomputeRoot(int(stateRoots))
+	b.lock.Unlock()
+	return nil
+}
+
+// UpdateStateRootAtIndex for the beacon state. This PR updates the randao mixes
+// at a specific index to a new value.
+func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) error {
+	if len(b.state.StateRoots) <= int(idx) {
+		return errors.Errorf("invalid index provided %d", idx)
+	}
+	b.state.StateRoots[idx] = stateRoot[:]
+	root, err := stateutil.RootsArrayHashTreeRoot(b.state.StateRoots, params.BeaconConfig().SlotsPerHistoricalRoot, "StateRoots")
+	if err != nil {
+		return err
+	}
 	b.lock.Lock()
 	b.merkleLayers[0][stateRoots] = root[:]
 	b.recomputeRoot(int(stateRoots))
@@ -208,6 +245,9 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 // UpdateValidatorAtIndex for the beacon state. This PR updates the randao mixes
 // at a specific index to a new value.
 func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) error {
+	if len(b.state.Validators) <= int(idx) {
+		return errors.Errorf("invalid index provided %d", idx)
+	}
 	b.state.Validators[idx] = val
 	root, err := stateutil.ValidatorRegistryRoot(b.state.Validators)
 	if err != nil {
@@ -238,6 +278,9 @@ func (b *BeaconState) SetBalances(val []uint64) error {
 // UpdateBalancesAtIndex for the beacon state. This PR updates the randao mixes
 // at a specific index to a new value.
 func (b *BeaconState) UpdateBalancesAtIndex(idx uint64, val uint64) error {
+	if len(b.state.Balances) <= int(idx) {
+		return errors.Errorf("invalid index provided %d", idx)
+	}
 	b.state.Balances[idx] = val
 	root, err := stateutil.ValidatorBalancesRoot(b.state.Balances)
 	if err != nil {
@@ -268,6 +311,9 @@ func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
 // UpdateRandaoMixesAtIndex for the beacon state. This PR updates the randao mixes
 // at a specific index to a new value.
 func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
+	if len(b.state.RandaoMixes) <= int(idx) {
+		return errors.Errorf("invalid index provided %d", idx)
+	}
 	b.state.RandaoMixes[idx] = val
 	root, err := stateutil.RootsArrayHashTreeRoot(b.state.RandaoMixes, params.BeaconConfig().EpochsPerHistoricalVector, "RandaoMixes")
 	if err != nil {
@@ -298,6 +344,9 @@ func (b *BeaconState) SetSlashings(val []uint64) error {
 // UpdateSlashingsAtIndex for the beacon state. This PR updates the randao mixes
 // at a specific index to a new value.
 func (b *BeaconState) UpdateSlashingsAtIndex(idx uint64, val uint64) error {
+	if len(b.state.Slashings) <= int(idx) {
+		return errors.Errorf("invalid index provided %d", idx)
+	}
 	b.state.Slashings[idx] = val
 	root, err := stateutil.SlashingsRoot(b.state.Slashings)
 	if err != nil {
