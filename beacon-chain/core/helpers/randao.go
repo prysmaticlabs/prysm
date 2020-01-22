@@ -22,8 +22,10 @@ func Seed(state *stateTrie.BeaconState, epoch uint64, domain []byte) ([32]byte, 
 	lookAheadEpoch := epoch + params.BeaconConfig().EpochsPerHistoricalVector -
 		params.BeaconConfig().MinSeedLookahead - 1
 
-	randaoMix := RandaoMix(state, lookAheadEpoch)
-
+	randaoMix, err := RandaoMix(state, lookAheadEpoch)
+	if err != nil {
+		return [32]byte{}, err
+	}
 	seed := append(domain, bytesutil.Bytes8(epoch)...)
 	seed = append(seed, randaoMix...)
 
@@ -41,11 +43,13 @@ func Seed(state *stateTrie.BeaconState, epoch uint64, domain []byte) ([32]byte, 
 //    Return the randao mix at a recent ``epoch``.
 //    """
 //    return state.randao_mixes[epoch % EPOCHS_PER_HISTORICAL_VECTOR]
-func RandaoMix(state *stateTrie.BeaconState, epoch uint64) []byte {
-	mixes := state.RandaoMixes()
-	currMix := mixes[epoch%params.BeaconConfig().EpochsPerHistoricalVector]
+func RandaoMix(state *stateTrie.BeaconState, epoch uint64) ([]byte, error) {
+	currMix, err := state.RandaoMixAtIndex(epoch % params.BeaconConfig().EpochsPerHistoricalVector)
+	if err != nil {
+		return nil, err
+	}
 	newMixLength := len(currMix)
 	newMix := make([]byte, newMixLength)
 	copy(newMix, currMix)
-	return newMix
+	return newMix, nil
 }

@@ -1,6 +1,8 @@
 package state
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -110,7 +112,7 @@ func (b *BeaconState) SetBlockRoots(val [][]byte) error {
 // at a specific index to a new value.
 func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) error {
 	if len(b.state.BlockRoots) <= int(idx) {
-		return errors.Errorf("invalid index provided %d", idx)
+		return fmt.Errorf("invalid index provided %d", idx)
 	}
 	b.state.BlockRoots[idx] = blockRoot[:]
 	root, err := stateutil.RootsArrayHashTreeRoot(b.state.BlockRoots, params.BeaconConfig().SlotsPerHistoricalRoot, "BlockRoots")

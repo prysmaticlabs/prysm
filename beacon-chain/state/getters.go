@@ -97,6 +97,20 @@ func (b *BeaconState) BlockRoots() [][]byte {
 	return roots
 }
 
+// BlockRootAtIndex retrieves a specific block root based on an
+// input index value.
+func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
+	if b.state.BlockRoots == nil {
+		return nil, nil
+	}
+	if len(b.state.BlockRoots) <= int(idx) {
+		return nil, errors.New(fmt.Sprintf("index %d out of range", idx))
+	}
+	root := make([]byte, 32)
+	copy(root, b.state.BlockRoots[idx])
+	return root, nil
+}
+
 // StateRoots kept track of in the beacon state.
 func (b *BeaconState) StateRoots() [][]byte {
 	if b.state.StateRoots == nil {
@@ -206,7 +220,7 @@ func (b *BeaconState) ValidatorAtIndex(idx uint64) (*ethpb.Validator, error) {
 		return &ethpb.Validator{}, nil
 	}
 	if len(b.state.Validators) <= int(idx) {
-		return nil, errors.New(fmt.Sprintf("index of %d does not exist", idx))
+		return nil, fmt.Errorf("index %d out of range", idx)
 	}
 	val := b.state.Validators[idx]
 	var pubKey [48]byte
@@ -269,6 +283,20 @@ func (b *BeaconState) RandaoMixes() [][]byte {
 		mixes[i] = tmpRt[:]
 	}
 	return mixes
+}
+
+// RandaoMixAtIndex retrieves a specific block root based on an
+// input index value.
+func (b *BeaconState) RandaoMixAtIndex(idx uint64) ([]byte, error) {
+	if b.state.RandaoMixes == nil {
+		return nil, nil
+	}
+	if len(b.state.RandaoMixes) <= int(idx) {
+		return nil, errors.New(fmt.Sprintf("index %d out of range", idx))
+	}
+	root := make([]byte, 32)
+	copy(root, b.state.RandaoMixes[idx])
+	return root, nil
 }
 
 // Slashings of validators on the beacon chain.

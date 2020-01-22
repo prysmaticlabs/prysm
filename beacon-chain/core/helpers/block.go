@@ -20,9 +20,7 @@ func BlockRootAtSlot(state *stateTrie.BeaconState, slot uint64) ([]byte, error) 
 	if slot >= state.Slot() || state.Slot() > slot+params.BeaconConfig().SlotsPerHistoricalRoot {
 		return []byte{}, errors.Errorf("slot %d out of bounds", slot)
 	}
-	roots := state.BlockRoots()
-	// TODO(Raul): Create roots by index getter in the beacon state.
-	return roots[slot%params.BeaconConfig().SlotsPerHistoricalRoot], nil
+	return state.BlockRootAtIndex(slot % params.BeaconConfig().SlotsPerHistoricalRoot)
 }
 
 // BlockRoot returns the block root stored in the BeaconState for epoch start slot.

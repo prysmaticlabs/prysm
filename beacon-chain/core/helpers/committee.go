@@ -214,7 +214,7 @@ type CommitteeAssignmentContainer struct {
 // 3. Determine the attesting slot for each committee.
 // 4. Construct a map of validator indices pointing to the respective committees.
 func CommitteeAssignments(state *stateTrie.BeaconState, epoch uint64) (map[uint64]*CommitteeAssignmentContainer, map[uint64]uint64, error) {
-	nextEpoch := SlotToEpoch(state.Slot()) + 1
+	nextEpoch := NextEpoch(state)
 	if epoch > nextEpoch {
 		return nil, nil, fmt.Errorf(
 			"epoch %d can't be greater than next epoch %d",
@@ -305,7 +305,7 @@ func CommitteeAssignment(
 	epoch uint64,
 	validatorIndex uint64,
 ) ([]uint64, uint64, uint64, uint64, error) {
-	nextEpoch := SlotToEpoch(state.Slot()) + 1
+	nextEpoch := NextEpoch(state)
 	if epoch > nextEpoch {
 		return nil, 0, 0, 0, fmt.Errorf(
 			"epoch %d can't be greater than next epoch %d",
@@ -479,7 +479,7 @@ func ClearCache() {
 func precomputeProposerIndices(state *stateTrie.BeaconState, activeIndices []uint64) ([]uint64, error) {
 	proposerIndices := make([]uint64, params.BeaconConfig().SlotsPerEpoch)
 
-	e := SlotToEpoch(state.Slot())
+	e := CurrentEpoch(state)
 	seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconProposer)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate seed")
