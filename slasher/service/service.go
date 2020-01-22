@@ -187,7 +187,7 @@ func (s *Service) loadSpanMaps(err error, slasherServer rpc.Server) {
 	for i := uint64(0); i < lt; i++ {
 		ias, err := slasherServer.SlasherDB.IndexedAttestations(i)
 		if err != nil {
-			log.Errorf("Got error while trying to retrieve indexed attestations from db:%v", err)
+			log.Errorf("Got error while trying to retrieve indexed attestations from db: %v", err)
 		}
 		for _, ia := range ias {
 			slasherServer.UpdateSpanMaps(s.context, ia)
