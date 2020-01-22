@@ -52,7 +52,7 @@ type Server struct {
 	StateNotifier          statefeed.Notifier
 	P2P                    p2p.Broadcaster
 	AttPool                attestations.Pool
-	ExitPool			   *voluntaryexits.Pool
+	ExitPool               *voluntaryexits.Pool
 	BlockReceiver          blockchain.BlockReceiver
 	MockEth1Votes          bool
 	Eth1BlockFetcher       powchain.POWBlockFetcher
