@@ -248,7 +248,7 @@ func (b *BeaconState) Balances() []uint64 {
 }
 
 // Balance of validator with the provided index.
-func (b *BeaconState) BalanceAtIndex(idx uint64) (uint64, error) {
+func (b *BeaconState) BalanceAtIndex(idx int) (uint64, error) {
 	if b.state.Balances == nil {
 		return 0, nil
 	}

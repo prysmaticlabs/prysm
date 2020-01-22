@@ -3,8 +3,9 @@ package forkchoice
 import (
 	"fmt"
 
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -12,12 +13,12 @@ import (
 var log = logrus.WithField("prefix", "forkchoice")
 
 // logs epoch related data during epoch boundary.
-func logEpochData(beaconState *pb.BeaconState) {
+func logEpochData(beaconState *stateTrie.BeaconState) {
 	log.WithFields(logrus.Fields{
 		"epoch":                  helpers.CurrentEpoch(beaconState),
-		"finalizedEpoch":         beaconState.FinalizedCheckpoint.Epoch,
-		"justifiedEpoch":         beaconState.CurrentJustifiedCheckpoint.Epoch,
-		"previousJustifiedEpoch": beaconState.PreviousJustifiedCheckpoint.Epoch,
+		"finalizedEpoch":         beaconState.FinalizedCheckpoint().Epoch,
+		"justifiedEpoch":         beaconState.CurrentJustifiedCheckpoint().Epoch,
+		"previousJustifiedEpoch": beaconState.PreviousJustifiedCheckpoint().Epoch,
 	}).Info("Starting next epoch")
 	activeVals, err := helpers.ActiveValidatorIndices(beaconState, helpers.CurrentEpoch(beaconState))
 	if err != nil {
@@ -25,9 +26,9 @@ func logEpochData(beaconState *pb.BeaconState) {
 		return
 	}
 	log.WithFields(logrus.Fields{
-		"totalValidators":  len(beaconState.Validators),
+		"totalValidators":  beaconState.NumofValidators(),
 		"activeValidators": len(activeVals),
-		"averageBalance":   fmt.Sprintf("%.5f ETH", averageBalance(beaconState.Balances)),
+		"averageBalance":   fmt.Sprintf("%.5f ETH", averageBalance(beaconState.Balances())),
 	}).Info("Validator registry information")
 }
 

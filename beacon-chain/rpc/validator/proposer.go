@@ -6,6 +6,8 @@ import (
 	"math/big"
 	"math/rand"
 
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -14,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -165,7 +166,7 @@ func (vs *Server) mockETH1DataVote(ctx context.Context, slot uint64) (*ethpb.Eth
 	blockHash := hashutil.Hash(depRoot[:])
 	return &ethpb.Eth1Data{
 		DepositRoot:  depRoot[:],
-		DepositCount: headState.Eth1DepositIndex,
+		DepositCount: headState.Eth1DepositIndex(),
 		BlockHash:    blockHash[:],
 	}, nil
 }
@@ -183,7 +184,7 @@ func (vs *Server) randomETH1DataVote(ctx context.Context) (*ethpb.Eth1Data, erro
 	blockHash := hashutil.Hash(bytesutil.Bytes32(rand.Uint64()))
 	return &ethpb.Eth1Data{
 		DepositRoot:  depRoot[:],
-		DepositCount: headState.Eth1DepositIndex,
+		DepositCount: headState.Eth1DepositIndex(),
 		BlockHash:    blockHash[:],
 	}, nil
 }
@@ -255,7 +256,7 @@ func (vs *Server) deposits(ctx context.Context, currentVote *ethpb.Eth1Data) ([]
 	// deposits are sorted from lowest to highest.
 	var pendingDeps []*dbpb.DepositContainer
 	for _, dep := range allPendingContainers {
-		if uint64(dep.Index) >= headState.Eth1DepositIndex && uint64(dep.Index) < canonicalEth1Data.DepositCount {
+		if uint64(dep.Index) >= headState.Eth1DepositIndex() && uint64(dep.Index) < canonicalEth1Data.DepositCount {
 			pendingDeps = append(pendingDeps, dep)
 		}
 	}
@@ -279,11 +280,11 @@ func (vs *Server) deposits(ctx context.Context, currentVote *ethpb.Eth1Data) ([]
 }
 
 // canonicalEth1Data determines the canonical eth1data and eth1 block height to use for determining deposits.
-func (vs *Server) canonicalEth1Data(ctx context.Context, beaconState *pbp2p.BeaconState, currentVote *ethpb.Eth1Data) (*ethpb.Eth1Data, *big.Int, error) {
+func (vs *Server) canonicalEth1Data(ctx context.Context, beaconState *stateTrie.BeaconState, currentVote *ethpb.Eth1Data) (*ethpb.Eth1Data, *big.Int, error) {
 	var eth1BlockHash [32]byte
 
 	// Add in current vote, to get accurate vote tally
-	beaconState.Eth1DataVotes = append(beaconState.Eth1DataVotes, currentVote)
+	beaconState.AppendEth1DataVotes(currentVote)
 	hasSupport, err := blocks.Eth1DataHasEnoughSupport(beaconState, currentVote)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not determine if current eth1data vote has enough support")
@@ -293,8 +294,8 @@ func (vs *Server) canonicalEth1Data(ctx context.Context, beaconState *pbp2p.Beac
 		canonicalEth1Data = currentVote
 		eth1BlockHash = bytesutil.ToBytes32(currentVote.BlockHash)
 	} else {
-		canonicalEth1Data = beaconState.Eth1Data
-		eth1BlockHash = bytesutil.ToBytes32(beaconState.Eth1Data.BlockHash)
+		canonicalEth1Data = beaconState.Eth1Data()
+		eth1BlockHash = bytesutil.ToBytes32(beaconState.Eth1Data().BlockHash)
 	}
 	_, latestEth1DataHeight, err := vs.Eth1BlockFetcher.BlockExists(ctx, eth1BlockHash)
 	if err != nil {
@@ -339,7 +340,7 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, slot 
 		return nil, errors.New("could not head state from DB")
 	}
 
-	if bState.Slot < slot {
+	if bState.Slot() < slot {
 		bState, err = state.ProcessSlots(ctx, bState, slot)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process slots up to %d", slot)

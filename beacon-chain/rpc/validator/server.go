@@ -169,7 +169,7 @@ func (vs *Server) WaitForChainStart(req *ptypes.Empty, stream ethpb.BeaconNodeVa
 	if head != nil {
 		res := &ethpb.ChainStartResponse{
 			Started:     true,
-			GenesisTime: head.GenesisTime,
+			GenesisTime: head.GenesisTime(),
 		}
 		return stream.Send(res)
 	}
