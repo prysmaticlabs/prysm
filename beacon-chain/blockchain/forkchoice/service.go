@@ -130,9 +130,6 @@ func (s *Store) cacheGenesisState(ctx context.Context) error {
 		return err
 	}
 	stateRoot := genesisState.HashTreeRoot()
-	if err != nil {
-		return errors.Wrap(err, "could not tree hash genesis state")
-	}
 	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
 	genesisBlkRoot, err := ssz.HashTreeRoot(genesisBlk.Block)
 	if err != nil {

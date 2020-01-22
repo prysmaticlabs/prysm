@@ -232,7 +232,7 @@ func CommitteeAssignments(state *stateTrie.BeaconState, epoch uint64) (map[uint6
 		}
 		i, err := BeaconProposerIndex(state)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "could not check proposer at slot %d", state.Slot)
+			return nil, nil, errors.Wrapf(err, "could not check proposer at slot %d", state.Slot())
 		}
 		proposerIndexToSlot[i] = slot
 	}
@@ -321,7 +321,7 @@ func CommitteeAssignment(
 		}
 		i, err := BeaconProposerIndex(state)
 		if err != nil {
-			return nil, 0, 0, 0, errors.Wrapf(err, "could not check proposer at slot %d", state.Slot)
+			return nil, 0, 0, 0, errors.Wrapf(err, "could not check proposer at slot %d", state.Slot())
 		}
 		proposerIndexToSlot[i] = slot
 	}

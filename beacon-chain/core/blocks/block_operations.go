@@ -240,7 +240,7 @@ func ProcessBlockHeaderNoVerify(
 		return nil, errors.New("nil block")
 	}
 	if beaconState.Slot() != block.Slot {
-		return nil, fmt.Errorf("state slot: %d is different then block slot: %d", beaconState.Slot, block.Slot)
+		return nil, fmt.Errorf("state slot: %d is different then block slot: %d", beaconState.Slot(), block.Slot)
 	}
 
 	parentRoot, err := stateutil.BlockHeaderRoot(beaconState.LatestBlockHeader())
@@ -641,13 +641,13 @@ func ProcessAttestationNoVerify(
 			"attestation slot %d + inclusion delay %d > state slot %d",
 			s,
 			params.BeaconConfig().MinAttestationInclusionDelay,
-			beaconState.Slot,
+			beaconState.Slot(),
 		)
 	}
 	if !epochInclusionCheck {
 		return nil, fmt.Errorf(
 			"state slot %d > attestation slot %d + SLOTS_PER_EPOCH %d",
-			beaconState.Slot,
+			beaconState.Slot(),
 			s,
 			params.BeaconConfig().SlotsPerEpoch,
 		)

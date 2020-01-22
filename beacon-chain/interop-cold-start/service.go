@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"math/big"
 
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -15,7 +17,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/interop"
-	"github.com/prysmaticlabs/prysm/shared/stateutil"
 )
 
 var _ = shared.Service(&Service{})
@@ -71,7 +72,11 @@ func NewColdStartService(ctx context.Context, cfg *Config) *Service {
 		if err := ssz.Unmarshal(data, genesisState); err != nil {
 			log.Fatalf("Could not unmarshal pre-loaded state: %v", err)
 		}
-		if err := s.saveGenesisState(ctx, genesisState); err != nil {
+		genesisTrie, err := stateTrie.InitializeFromProto(genesisState)
+		if err != nil {
+			log.Fatalf("Could not get state trie: %v", err)
+		}
+		if err := s.saveGenesisState(ctx, genesisTrie); err != nil {
 			log.Fatalf("Could not save interop genesis state %v", err)
 		}
 		return s
@@ -82,11 +87,16 @@ func NewColdStartService(ctx context.Context, cfg *Config) *Service {
 	if err != nil {
 		log.Fatalf("Could not generate interop genesis state: %v", err)
 	}
+	genesisTrie, err := stateTrie.InitializeFromProto(genesisState)
+	if err != nil {
+		log.Fatalf("Could not get state trie: %v", err)
+	}
 	if s.genesisTime == 0 {
 		// Generated genesis time; fetch it
-		s.genesisTime = genesisState.GenesisTime
+		s.genesisTime = genesisTrie.GenesisTime()
 	}
-	if err := s.saveGenesisState(ctx, genesisState); err != nil {
+
+	if err := s.saveGenesisState(ctx, genesisTrie); err != nil {
 		log.Fatalf("Could not save interop genesis state %v", err)
 	}
 
@@ -137,12 +147,9 @@ func (s *Service) DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight
 	return 0, [32]byte{}
 }
 
-func (s *Service) saveGenesisState(ctx context.Context, genesisState *pb.BeaconState) error {
-	s.chainStartDeposits = make([]*ethpb.Deposit, len(genesisState.Validators))
-	stateRoot, err := stateutil.HashTreeRootState(genesisState)
-	if err != nil {
-		return errors.Wrap(err, "could not tree hash genesis state")
-	}
+func (s *Service) saveGenesisState(ctx context.Context, genesisState *stateTrie.BeaconState) error {
+	s.chainStartDeposits = make([]*ethpb.Deposit, genesisState.NumofValidators())
+	stateRoot := genesisState.HashTreeRoot()
 	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
 	genesisBlkRoot, err := ssz.HashTreeRoot(genesisBlk.Block)
 	if err != nil {
@@ -169,7 +176,8 @@ func (s *Service) saveGenesisState(ctx context.Context, genesisState *pb.BeaconS
 		return errors.Wrap(err, "could save finalized checkpoint")
 	}
 
-	for i, v := range genesisState.Validators {
+	vals := genesisState.Validators()
+	for i, v := range vals {
 		if err := s.beaconDB.SaveValidatorIndex(ctx, v.PublicKey, uint64(i)); err != nil {
 			return errors.Wrapf(err, "could not save validator index: %d", i)
 		}

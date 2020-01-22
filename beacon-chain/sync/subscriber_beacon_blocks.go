@@ -27,9 +27,9 @@ func (r *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 		return nil
 	}
 	// Ignore block older than last finalized checkpoint.
-	if block.Slot < helpers.StartSlot(headState.FinalizedCheckpoint.Epoch) {
+	if block.Slot < helpers.StartSlot(headState.FinalizedCheckpoint().Epoch) {
 		log.Debugf("Received a block older than finalized checkpoint, %d < %d",
-			block.Slot, helpers.StartSlot(headState.FinalizedCheckpoint.Epoch))
+			block.Slot, helpers.StartSlot(headState.FinalizedCheckpoint().Epoch))
 		return nil
 	}
 

@@ -142,21 +142,21 @@ func reportEpochMetrics(state *stateTrie.BeaconState) {
 	validatorsEffectiveBalance.WithLabelValues("Slashing").Set(float64(slashingEffectiveBalance))
 
 	// Last justified slot
-	if state.CurrentJustifiedCheckpoint != nil {
+	if state.CurrentJustifiedCheckpoint() != nil {
 		beaconCurrentJustifiedEpoch.Set(float64(state.CurrentJustifiedCheckpoint().Epoch))
 		beaconCurrentJustifiedRoot.Set(float64(bytesutil.ToLowInt64(state.CurrentJustifiedCheckpoint().Root)))
 	}
 	// Last previous justified slot
-	if state.PreviousJustifiedCheckpoint != nil {
+	if state.PreviousJustifiedCheckpoint() != nil {
 		beaconPrevJustifiedEpoch.Set(float64(state.PreviousJustifiedCheckpoint().Epoch))
 		beaconPrevJustifiedRoot.Set(float64(bytesutil.ToLowInt64(state.PreviousJustifiedCheckpoint().Root)))
 	}
 	// Last finalized slot
-	if state.FinalizedCheckpoint != nil {
+	if state.FinalizedCheckpoint() != nil {
 		beaconFinalizedEpoch.Set(float64(state.FinalizedCheckpoint().Epoch))
 		beaconFinalizedRoot.Set(float64(bytesutil.ToLowInt64(state.FinalizedCheckpoint().Root)))
 	}
-	if state.Eth1Data != nil {
+	if state.Eth1Data() != nil {
 		currentEth1DataDepositCount.Set(float64(state.Eth1Data().DepositCount))
 	}
 

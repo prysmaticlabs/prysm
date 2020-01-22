@@ -47,7 +47,7 @@ func (r *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 		return false
 	}
 	slashSlot := slashing.Attestation_1.Data.Target.Epoch * params.BeaconConfig().SlotsPerEpoch
-	if s.Slot < slashSlot {
+	if s.Slot() < slashSlot {
 		if ctx.Err() != nil {
 			return false
 		}

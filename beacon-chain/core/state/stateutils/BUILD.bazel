@@ -9,7 +9,7 @@ go_library(
         "//shared/testutil:__pkg__",
     ],
     deps = [
-        "//proto/beacon/p2p/v1:go_default_library",
+        "//beacon-chain/state:go_default_library",
         "//shared/bytesutil:go_default_library",
     ],
 )
