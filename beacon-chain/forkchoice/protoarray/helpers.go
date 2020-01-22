@@ -39,7 +39,7 @@ func computeDeltas(ctx context.Context, blockIndices map[[32]byte]uint64, votes 
 			// that means we have not seen the block before.
 			nextDeltaIndex, ok := blockIndices[vote.nextRoot]
 			if ok {
-				// Extra protection against out of bound, the `nextDeltaIndex` which defines
+				// Protection against out of bound, the `nextDeltaIndex` which defines
 				// the block location in the dag can not exceed the total `delta` length.
 				if int(nextDeltaIndex) >= len(deltas) {
 					return nil, nil, errInvalidNodeDelta
@@ -49,7 +49,7 @@ func computeDeltas(ctx context.Context, blockIndices map[[32]byte]uint64, votes 
 
 			currentDeltaIndex, ok := blockIndices[vote.currentRoot]
 			if ok {
-				// Extra protection against out of bound (same as above)
+				// Protection against out of bound (same as above)
 				if int(currentDeltaIndex) >= len(deltas) {
 					return nil, nil, errInvalidNodeDelta
 				}
