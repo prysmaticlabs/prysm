@@ -9,6 +9,7 @@ import (
 )
 
 func TestEndToEnd_DemoConfig(t *testing.T) {
+	t.Skip()
 	testutil.ResetCache()
 	params.UseDemoBeaconConfig()
 
