@@ -1,10 +1,12 @@
 package db
 
 import (
+	"flag"
 	"reflect"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/urfave/cli"
 )
 
 type testStruct struct {
@@ -37,7 +39,10 @@ func init() {
 }
 
 func TestNilDBHistoryIdxAtt(t *testing.T) {
-	db := SetupSlasherDB(t)
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	ctx := cli.NewContext(app, set, nil)
+	db := SetupSlasherDB(t, ctx)
 	defer TeardownSlasherDB(t, db)
 
 	epoch := uint64(1)
@@ -58,7 +63,10 @@ func TestNilDBHistoryIdxAtt(t *testing.T) {
 }
 
 func TestSaveIdxAtt(t *testing.T) {
-	db := SetupSlasherDB(t)
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	ctx := cli.NewContext(app, set, nil)
+	db := SetupSlasherDB(t, ctx)
 	defer TeardownSlasherDB(t, db)
 
 	for _, tt := range tests {
@@ -80,7 +88,10 @@ func TestSaveIdxAtt(t *testing.T) {
 }
 
 func TestDeleteHistoryIdxAtt(t *testing.T) {
-	db := SetupSlasherDB(t)
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	ctx := cli.NewContext(app, set, nil)
+	db := SetupSlasherDB(t, ctx)
 	defer TeardownSlasherDB(t, db)
 
 	for _, tt := range tests {
@@ -122,7 +133,10 @@ func TestDeleteHistoryIdxAtt(t *testing.T) {
 }
 
 func TestHasIdxAtt(t *testing.T) {
-	db := SetupSlasherDB(t)
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	ctx := cli.NewContext(app, set, nil)
+	db := SetupSlasherDB(t, ctx)
 	defer TeardownSlasherDB(t, db)
 
 	for _, tt := range tests {
@@ -144,7 +158,10 @@ func TestHasIdxAtt(t *testing.T) {
 }
 
 func TestPruneHistoryIdxAtt(t *testing.T) {
-	db := SetupSlasherDB(t)
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	ctx := cli.NewContext(app, set, nil)
+	db := SetupSlasherDB(t, ctx)
 	defer TeardownSlasherDB(t, db)
 
 	for _, tt := range tests {
