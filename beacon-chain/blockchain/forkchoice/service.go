@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"sync"
 
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -18,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -106,7 +105,7 @@ func (s *Store) GenesisStore(
 
 	if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
 		Checkpoint: s.justifiedCheckpt,
-		State:      justifiedState.Clone(),
+		State:      justifiedState,
 	}); err != nil {
 		return errors.Wrap(err, "could not save genesis state in check point cache")
 	}
@@ -197,20 +196,16 @@ func (s *Store) latestAttestingBalance(ctx context.Context, root []byte) (uint64
 	ctx, span := trace.StartSpan(ctx, "forkchoice.latestAttestingBalance")
 	defer span.End()
 
-	lastJustifiedState, err := s.checkpointState.StateByCheckpoint(s.JustifiedCheckpt())
+	justifiedState, err := s.checkpointState.StateByCheckpoint(s.JustifiedCheckpt())
 	if err != nil {
 		return 0, errors.Wrap(err, "could not retrieve cached state via last justified check point")
 	}
-	if lastJustifiedState == nil {
+	if justifiedState == nil {
 		return 0, errors.Wrapf(err, "could not get justified state at epoch %d", s.JustifiedCheckpt().Epoch)
 	}
-	justfiedState, err := stateTrie.InitializeFromProto(lastJustifiedState)
-	if err != nil {
-		return 0, err
-	}
 
-	lastJustifiedEpoch := helpers.CurrentEpoch(justfiedState)
-	activeIndices, err := helpers.ActiveValidatorIndices(justfiedState, lastJustifiedEpoch)
+	lastJustifiedEpoch := helpers.CurrentEpoch(justifiedState)
+	activeIndices, err := helpers.ActiveValidatorIndices(justifiedState, lastJustifiedEpoch)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not get active indices for last justified checkpoint")
 	}
@@ -225,6 +220,7 @@ func (s *Store) latestAttestingBalance(ctx context.Context, root []byte) (uint64
 	wantedBlk := wantedBlkSigned.Block
 
 	balances := uint64(0)
+	vals := justifiedState.Validators()
 	s.voteLock.RLock()
 	defer s.voteLock.RUnlock()
 	for _, i := range activeIndices {
@@ -238,7 +234,7 @@ func (s *Store) latestAttestingBalance(ctx context.Context, root []byte) (uint64
 			return 0, errors.Wrapf(err, "could not get ancestor root for slot %d", wantedBlk.Slot)
 		}
 		if bytes.Equal(wantedRoot, root) {
-			balances += lastJustifiedState.Validators[i].EffectiveBalance
+			balances += vals[i].EffectiveBalance
 		}
 	}
 	return balances, nil

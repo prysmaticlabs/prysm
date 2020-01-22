@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"github.com/pkg/errors"
-
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )

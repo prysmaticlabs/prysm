@@ -48,7 +48,7 @@ func InitiateValidatorExit(state *stateTrie.BeaconState, idx uint64) (*stateTrie
 			exitEpochs = append(exitEpochs, val.ExitEpoch)
 		}
 	}
-	exitEpochs = append(exitEpochs, helpers.DelayedActivationExitEpoch(helpers.SlotToEpoch(state.Slot())))
+	exitEpochs = append(exitEpochs, helpers.DelayedActivationExitEpoch(helpers.CurrentEpoch(state)))
 
 	// Obtain the exit queue epoch as the maximum number in the exit epochs array.
 	exitQueueEpoch := uint64(0)
@@ -65,7 +65,7 @@ func InitiateValidatorExit(state *stateTrie.BeaconState, idx uint64) (*stateTrie
 			exitQueueChurn++
 		}
 	}
-	activeValidatorCount, err := helpers.ActiveValidatorCount(state, helpers.SlotToEpoch(state.Slot()))
+	activeValidatorCount, err := helpers.ActiveValidatorCount(state, helpers.CurrentEpoch(state))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get active validator count")
 	}

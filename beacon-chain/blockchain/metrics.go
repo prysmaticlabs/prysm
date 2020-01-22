@@ -57,7 +57,10 @@ func (s *Service) reportSlotMetrics(currentSlot uint64) {
 	beaconSlot.Set(float64(currentSlot))
 	beaconHeadSlot.Set(float64(s.HeadSlot()))
 	if s.headState != nil {
-		headFinalizedEpoch.Set(float64(s.headState.FinalizedCheckpoint().Epoch))
-		headFinalizedRoot.Set(float64(bytesutil.ToLowInt64(s.headState.FinalizedCheckpoint().Root)))
+		finalizedCpt := s.headState.FinalizedCheckpoint()
+		if finalizedCpt != nil {
+			headFinalizedEpoch.Set(float64(finalizedCpt.Epoch))
+			headFinalizedRoot.Set(float64(bytesutil.ToLowInt64(finalizedCpt.Root)))
+		}
 	}
 }

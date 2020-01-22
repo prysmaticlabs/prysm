@@ -6,11 +6,10 @@ import (
 	"sync"
 	"time"
 
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
@@ -81,7 +80,7 @@ func (c *SkipSlotCache) Get(ctx context.Context, slot uint64) (*stateTrie.Beacon
 
 	if exists && item != nil {
 		skipSlotCacheHit.Inc()
-		return stateTrie.InitializeFromProto(item.(*stateTrie.BeaconState).Clone())
+		return item.(*stateTrie.BeaconState), nil
 	}
 	skipSlotCacheMiss.Inc()
 	return nil, nil
@@ -124,12 +123,8 @@ func (c *SkipSlotCache) Put(ctx context.Context, slot uint64, state *stateTrie.B
 		return nil
 	}
 
-	clonedState, err := stateTrie.InitializeFromProto(state.Clone())
-	if err != nil {
-		return err
-	}
 	// Clone state so cached value is not mutated.
-	c.cache.Add(slot, clonedState)
+	c.cache.Add(slot, state)
 
 	return nil
 }
