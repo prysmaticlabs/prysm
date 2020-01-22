@@ -61,7 +61,7 @@ func IncreaseBalance(state *stateTrie.BeaconState, idx uint64, delta uint64) err
 	if err != nil {
 		return err
 	}
-	return state.UpdateBalancesAtIndex(balAtIdx+delta, idx)
+	return state.UpdateBalancesAtIndex(idx, balAtIdx+delta)
 }
 
 // DecreaseBalance decreases validator with the given 'index' balance by 'delta' in Gwei.
@@ -80,5 +80,5 @@ func DecreaseBalance(state *stateTrie.BeaconState, idx uint64, delta uint64) err
 	if delta > balAtIdx {
 		return state.UpdateBalancesAtIndex(0, idx)
 	}
-	return state.UpdateBalancesAtIndex(balAtIdx-delta, idx)
+	return state.UpdateBalancesAtIndex(idx, balAtIdx-delta)
 }
