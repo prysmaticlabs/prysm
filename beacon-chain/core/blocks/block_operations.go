@@ -102,20 +102,20 @@ func verifySignature(signedData []byte, pub []byte, signature []byte, domain uin
 //    state.eth1_data_votes.append(body.eth1_data)
 //    if state.eth1_data_votes.count(body.eth1_data) * 2 > SLOTS_PER_ETH1_VOTING_PERIOD:
 //        state.latest_eth1_data = body.eth1_data
-func ProcessEth1DataInBlock(beaconState *stateTrie.BeaconState, block *ethpb.BeaconBlock) (*stateTrie.BeaconState, error) {
+func ProcessEth1DataInBlock(beaconState *stateTrie.BeaconState, block *ethpb.BeaconBlock) error {
 	if err := beaconState.AppendEth1DataVotes(block.Body.Eth1Data); err != nil {
-		return nil, err
+		return err
 	}
 	hasSupport, err := Eth1DataHasEnoughSupport(beaconState, block.Body.Eth1Data)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if hasSupport {
 		if err := beaconState.SetEth1Data(block.Body.Eth1Data); err != nil {
-			return nil, err
+			return err
 		}
 	}
-	return beaconState, nil
+	return nil
 }
 
 // Eth1DataHasEnoughSupport returns true when the given eth1data has more than 50% votes in the
@@ -185,28 +185,26 @@ func Eth1DataHasEnoughSupport(beaconState *stateTrie.BeaconState, data *ethpb.Et
 //    assert bls_verify(proposer.pubkey, signing_root(block), block.signature, get_domain(state, DOMAIN_BEACON_PROPOSER))
 func ProcessBlockHeader(
 	beaconState *stateTrie.BeaconState,
+	validators []*ethpb.Validator,
 	block *ethpb.SignedBeaconBlock,
-) (*stateTrie.BeaconState, error) {
-	beaconState, err := ProcessBlockHeaderNoVerify(beaconState, block.Block)
-	if err != nil {
-		return nil, err
+) error {
+	if err := ProcessBlockHeaderNoVerify(beaconState, validators, block.Block); err != nil {
+		return err
 	}
 
 	idx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	vals := beaconState.Validators()
-	proposer := vals[idx]
-
+	proposer := validators[idx]
 	// Verify proposer signature.
 	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
 	domain := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	if err := verifySigningRoot(block.Block, proposer.PublicKey, block.Signature, domain); err != nil {
-		return nil, ErrSigFailedToVerify
+		return ErrSigFailedToVerify
 	}
 
-	return beaconState, nil
+	return nil
 }
 
 // ProcessBlockHeaderNoVerify validates a block by its header but skips proposer
@@ -234,48 +232,45 @@ func ProcessBlockHeader(
 //    assert not proposer.slashed
 func ProcessBlockHeaderNoVerify(
 	beaconState *stateTrie.BeaconState,
+	validators []*ethpb.Validator,
 	block *ethpb.BeaconBlock,
-) (*stateTrie.BeaconState, error) {
+) error {
 	if block == nil {
-		return nil, errors.New("nil block")
+		return errors.New("nil block")
 	}
 	if beaconState.Slot() != block.Slot {
-		return nil, fmt.Errorf("state slot: %d is different then block slot: %d", beaconState.Slot(), block.Slot)
+		return fmt.Errorf("state slot: %d is different then block slot: %d", beaconState.Slot(), block.Slot)
 	}
 
 	parentRoot, err := stateutil.BlockHeaderRoot(beaconState.LatestBlockHeader())
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if !bytes.Equal(block.ParentRoot, parentRoot[:]) {
-		return nil, fmt.Errorf(
+		return fmt.Errorf(
 			"parent root %#x does not match the latest block header signing root in state %#x",
 			block.ParentRoot, parentRoot)
 	}
 
 	idx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	vals := beaconState.Validators()
-	proposer := vals[idx]
+	proposer := validators[idx]
 	if proposer.Slashed {
-		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
+		return fmt.Errorf("proposer at index %d was previously slashed", idx)
 	}
 
 	bodyRoot, err := ssz.HashTreeRoot(block.Body)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	if err := beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
+	return beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
 		Slot:       block.Slot,
 		ParentRoot: block.ParentRoot,
 		StateRoot:  params.BeaconConfig().ZeroHash[:],
 		BodyRoot:   bodyRoot[:],
-	}); err != nil {
-		return nil, err
-	}
-	return beaconState, nil
+	})
 }
 
 // ProcessRandao checks the block proposer's
@@ -299,14 +294,14 @@ func ProcessBlockHeaderNoVerify(
 //     )
 func ProcessRandao(
 	beaconState *stateTrie.BeaconState,
+	validators []*ethpb.Validator,
 	body *ethpb.BeaconBlockBody,
-) (*stateTrie.BeaconState, error) {
+) error {
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get beacon proposer index")
+		return errors.Wrap(err, "could not get beacon proposer index")
 	}
-	vals := beaconState.Validators()
-	proposerPub := vals[proposerIdx].PublicKey
+	proposerPub := validators[proposerIdx].PublicKey
 
 	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
 	buf := make([]byte, 32)
@@ -314,14 +309,10 @@ func ProcessRandao(
 
 	domain := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainRandao)
 	if err := verifySignature(buf, proposerPub, body.RandaoReveal, domain); err != nil {
-		return nil, errors.Wrap(err, "could not verify block randao")
+		return errors.Wrap(err, "could not verify block randao")
 	}
 
-	beaconState, err = ProcessRandaoNoVerify(beaconState, body)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process randao")
-	}
-	return beaconState, nil
+	return ProcessRandaoNoVerify(beaconState, body)
 }
 
 // ProcessRandaoNoVerify generates a new randao mix to update
@@ -336,21 +327,20 @@ func ProcessRandao(
 func ProcessRandaoNoVerify(
 	beaconState *stateTrie.BeaconState,
 	body *ethpb.BeaconBlockBody,
-) (*stateTrie.BeaconState, error) {
+) error {
 	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
 	// If block randao passed verification, we XOR the state's latest randao mix with the block's
 	// randao and update the state's corresponding latest randao mix value.
 	latestMixesLength := params.BeaconConfig().EpochsPerHistoricalVector
-	mixes := beaconState.RandaoMixes()
-	latestMixSlice := mixes[currentEpoch%latestMixesLength]
+	latestMixSlice, err := beaconState.RandaoMixAtIndex(currentEpoch % latestMixesLength)
+	if err != nil {
+		return err
+	}
 	blockRandaoReveal := hashutil.Hash(body.RandaoReveal)
 	for i, x := range blockRandaoReveal {
 		latestMixSlice[i] ^= x
 	}
-	if err := beaconState.UpdateRandaoMixesAtIndex(latestMixSlice, currentEpoch%latestMixesLength); err != nil {
-		return nil, err
-	}
-	return beaconState, nil
+	return beaconState.UpdateRandaoMixesAtIndex(latestMixSlice, currentEpoch%latestMixesLength)
 }
 
 // ProcessProposerSlashings is one of the operations performed
