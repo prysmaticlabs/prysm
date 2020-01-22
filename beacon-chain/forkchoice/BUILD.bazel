@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "doc.go",
-        "interface.go",
+        "interfaces.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice",
     visibility = ["//beacon-chain:__subpackages__"],
