@@ -17,7 +17,6 @@ go_library(
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/cache/depositcache:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
-        "//beacon-chain/core/exit:go_default_library",
         "//beacon-chain/core/feed:go_default_library",
         "//beacon-chain/core/feed/operation:go_default_library",
         "//beacon-chain/core/feed/state:go_default_library",
