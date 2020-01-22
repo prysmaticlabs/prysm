@@ -215,7 +215,15 @@ func (s *Service) Start() {
 
 	p2pHostAddress := s.cfg.HostAddress
 	p2pTCPPort := s.cfg.TCPPort
-	logExternalIP4Addr(s.host.ID(), p2pHostAddress, p2pTCPPort)
+
+	if p2pHostAddress != "" {
+		logExternalIP4Addr(s.host.ID(), p2pHostAddress, p2pTCPPort)
+	}
+
+	p2pHostDNS := s.cfg.HostDNS
+	if p2pHostDNS != "" {
+		logExternalDNSAddr(s.host.ID(), p2pHostDNS, p2pTCPPort)
+	}
 }
 
 // Stop the p2p service and terminate all peer connections.
@@ -375,6 +383,17 @@ func logExternalIP4Addr(id peer.ID, addr string, port uint) {
 		log.WithField(
 			"multiAddr",
 			"/ip4/"+addr+"/tcp/"+p+"/p2p/"+id.String(),
+		).Info("Node started external p2p server")
+	}
+}
+
+func logExternalDNSAddr(id peer.ID, addr string, port uint) {
+	if addr != "" {
+		p := strconv.FormatUint(uint64(port), 10)
+
+		log.WithField(
+			"multiAddr",
+			"/dns4/"+addr+"/tcp/"+p+"/p2p/"+id.String(),
 		).Info("Node started external p2p server")
 	}
 }
