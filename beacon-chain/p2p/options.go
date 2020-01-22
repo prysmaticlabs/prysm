@@ -45,6 +45,17 @@ func buildOptions(cfg *Config, ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 			return addrs
 		}))
 	}
+	if cfg.HostDNS != "" {
+		options = append(options, libp2p.AddrsFactory(func(addrs []multiaddr.Multiaddr) []multiaddr.Multiaddr {
+			external, err := multiaddr.NewMultiaddr(fmt.Sprintf("/dns4/%s/tcp/%d", cfg.HostDNS, cfg.TCPPort))
+			if err != nil {
+				log.WithError(err).Error("Unable to create external multiaddress")
+			} else {
+				addrs = append(addrs, external)
+			}
+			return addrs
+		}))
+	}
 	return options
 }
 
