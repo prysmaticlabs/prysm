@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -197,6 +199,42 @@ func (b *BeaconState) Validators() []*ethpb.Validator {
 		}
 	}
 	return res
+}
+
+//  ValidatorAtIndex is the validator at the provided index.
+func (b *BeaconState) ValidatorAtIndex(idx uint64) (*ethpb.Validator, error) {
+	if b.state.Validators == nil {
+		return &ethpb.Validator{}, nil
+	}
+	if len(b.state.Validators) <= int(idx) {
+		return nil, errors.New(fmt.Sprintf("index of %d does not exist", idx))
+	}
+	val := b.state.Validators[idx]
+	var pubKey [48]byte
+	copy(pubKey[:], val.PublicKey)
+	var withdrawalCreds [32]byte
+	copy(withdrawalCreds[:], val.WithdrawalCredentials)
+	return &ethpb.Validator{
+		PublicKey:                  pubKey[:],
+		WithdrawalCredentials:      withdrawalCreds[:],
+		EffectiveBalance:           val.EffectiveBalance,
+		Slashed:                    val.Slashed,
+		ActivationEligibilityEpoch: val.ActivationEligibilityEpoch,
+		ActivationEpoch:            val.ActivationEpoch,
+		ExitEpoch:                  val.ExitEpoch,
+		WithdrawableEpoch:          val.WithdrawableEpoch,
+	}, nil
+}
+
+// PubkeyAtIndex returns the pubkey at the given
+// validator index.
+func (b *BeaconState) PubkeyAtIndex(idx uint64) [48]byte {
+	return bytesutil.ToBytes48(b.state.Validators[idx].PublicKey)
+}
+
+// NumofValidators returns the size of the validator registry.
+func (b *BeaconState) NumofValidators() int {
+	return len(b.state.Validators)
 }
 
 // Balances of validators participating in consensus on the beacon chain.

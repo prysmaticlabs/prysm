@@ -74,7 +74,7 @@ type NoHeadAccessDatabase interface {
 	// Validator related methods.
 	DeleteValidatorIndex(ctx context.Context, publicKey []byte) error
 	SaveValidatorIndex(ctx context.Context, publicKey []byte, validatorIdx uint64) error
-	SaveValidatorIndices(ctx context.Context, publicKeys [][]byte, validatorIndices []uint64) error
+	SaveValidatorIndices(ctx context.Context, publicKeys [][48]byte, validatorIndices []uint64) error
 	// State related methods.
 	SaveState(ctx context.Context, state *state.BeaconState, blockRoot [32]byte) error
 	DeleteState(ctx context.Context, blockRoot [32]byte) error

@@ -27,10 +27,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/stateutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -119,7 +117,7 @@ func (s *Service) Start() {
 	// If the chain has already been initialized, simply start the block processing routine.
 	if beaconState != nil {
 		log.Info("Blockchain data already exists in DB, initializing...")
-		s.genesisTime = time.Unix(int64(beaconState.GenesisTime), 0)
+		s.genesisTime = time.Unix(int64(beaconState.GenesisTime()), 0)
 		if err := s.initializeChainInfo(ctx); err != nil {
 			log.Fatalf("Could not set up chain info: %v", err)
 		}
@@ -194,7 +192,7 @@ func (s *Service) processChainStartTime(ctx context.Context, genesisTime time.Ti
 func (s *Service) initializeBeaconChain(
 	ctx context.Context,
 	genesisTime time.Time,
-	preGenesisState *pb.BeaconState,
+	preGenesisState *stateTrie.BeaconState,
 	eth1data *ethpb.Eth1Data) error {
 	_, span := trace.StartSpan(context.Background(), "beacon-chain.Service.initializeBeaconChain")
 	defer span.End()
@@ -296,25 +294,23 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 }
 
 // This gets called when beacon chain is first initialized to save validator indices and pubkeys in db
-func (s *Service) saveGenesisValidators(ctx context.Context, state *pb.BeaconState) error {
-	pubkeys := make([][]byte, len(state.Validators))
-	indices := make([]uint64, len(state.Validators))
-	for i, v := range state.Validators {
-		pubkeys[i] = v.PublicKey
+func (s *Service) saveGenesisValidators(ctx context.Context, state *stateTrie.BeaconState) error {
+	pubkeys := make([][48]byte, state.NumofValidators())
+	indices := make([]uint64, state.NumofValidators())
+
+	for i := 0; i < state.NumofValidators(); i++ {
+		pubkeys[i] = state.PubkeyAtIndex(uint64(i))
 		indices[i] = uint64(i)
 	}
 	return s.beaconDB.SaveValidatorIndices(ctx, pubkeys, indices)
 }
 
 // This gets called when beacon chain is first initialized to save genesis data (state, block, and more) in db
-func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconState) error {
+func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.BeaconState) error {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
-	stateRoot, err := stateutil.HashTreeRootState(genesisState)
-	if err != nil {
-		return errors.Wrap(err, "could not tree hash genesis state")
-	}
+	stateRoot := genesisState.HashTreeRoot()
 	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
 	genesisBlkRoot, err := ssz.HashTreeRoot(genesisBlk.Block)
 	if err != nil {
@@ -345,7 +341,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconSt
 	s.genesisRoot = genesisBlkRoot
 	s.headBlock = genesisBlk
 	s.headState = genesisState
-	s.canonicalRoots[genesisState.Slot] = genesisBlkRoot[:]
+	s.canonicalRoots[genesisState.Slot()] = genesisBlkRoot[:]
 
 	return nil
 }

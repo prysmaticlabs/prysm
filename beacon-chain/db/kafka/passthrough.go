@@ -218,7 +218,7 @@ func (e Exporter) SaveValidatorIndex(ctx context.Context, publicKey []byte, vali
 }
 
 // SaveValidatorIndices -- passthrough.
-func (e Exporter) SaveValidatorIndices(ctx context.Context, publicKeys [][]byte, validatorIndices []uint64) error {
+func (e Exporter) SaveValidatorIndices(ctx context.Context, publicKeys [][48]byte, validatorIndices []uint64) error {
 	return e.db.SaveValidatorIndices(ctx, publicKeys, validatorIndices)
 }
 

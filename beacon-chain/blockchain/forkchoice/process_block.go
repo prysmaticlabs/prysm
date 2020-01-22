@@ -94,7 +94,7 @@ func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) er
 	}
 
 	// Update justified check point.
-	if postState.CurrentJustifiedCheckpoint.Epoch > s.justifiedCheckpt.Epoch {
+	if postState.CurrentJustifiedCheckpoint().Epoch > s.justifiedCheckpt.Epoch {
 		if err := s.updateJustified(ctx, postState); err != nil {
 			return err
 		}
@@ -102,7 +102,7 @@ func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) er
 
 	// Update finalized check point.
 	// Prune the block cache and helper caches on every new finalized epoch.
-	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
+	if postState.FinalizedCheckpoint().Epoch > s.finalizedCheckpt.Epoch {
 		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint); err != nil {
 			return errors.Wrap(err, "could not save finalized checkpoint")
 		}
