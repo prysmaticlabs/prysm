@@ -1,6 +1,9 @@
 package state
 
 import (
+	"errors"
+	"fmt"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -204,6 +207,17 @@ func (b *BeaconState) Balances() []uint64 {
 	res := make([]uint64, len(b.state.Balances))
 	copy(res, b.state.Balances)
 	return res
+}
+
+// Balance of validator with the provided index.
+func (b *BeaconState) BalanceAtIndex(idx uint64) (uint64, error) {
+	if b.state.Balances == nil {
+		return 0, nil
+	}
+	if len(b.state.Balances) <= int(idx) {
+		return 0, errors.New(fmt.Sprintf("index of %d does not exist", idx))
+	}
+	return b.state.Balances[idx], nil
 }
 
 // RandaoMixes of block proposers on the beacon chain.

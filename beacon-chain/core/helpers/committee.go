@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -229,7 +228,7 @@ func CommitteeAssignments(state *stateTrie.BeaconState, epoch uint64) (map[uint6
 	proposerIndexToSlot := make(map[uint64]uint64)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		if err := state.SetSlot(slot); err != nil {
-			return nil, 0, 0, 0, err
+			return nil, nil, err
 		}
 		i, err := BeaconProposerIndex(state)
 		if err != nil {

@@ -57,7 +57,10 @@ func TotalActiveBalance(state *stateTrie.BeaconState) (uint64, error) {
 //    """
 //    state.balances[index] += delta
 func IncreaseBalance(state *stateTrie.BeaconState, idx uint64, delta uint64) error {
-	balAtIdx := state.BalanceAtIndex(idx)
+	balAtIdx, err := state.BalanceAtIndex(idx)
+	if err != nil {
+		return err
+	}
 	return state.UpdateBalancesAtIndex(balAtIdx+delta, idx)
 }
 
@@ -70,7 +73,10 @@ func IncreaseBalance(state *stateTrie.BeaconState, idx uint64, delta uint64) err
 //    """
 //    state.balances[index] = 0 if delta > state.balances[index] else state.balances[index] - delta
 func DecreaseBalance(state *stateTrie.BeaconState, idx uint64, delta uint64) error {
-	balAtIdx := state.BalanceAtIndex(idx)
+	balAtIdx, err := state.BalanceAtIndex(idx)
+	if err != nil {
+		return err
+	}
 	if delta > balAtIdx {
 		return state.UpdateBalancesAtIndex(0, idx)
 	}

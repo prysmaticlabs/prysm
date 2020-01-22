@@ -205,6 +205,21 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 	return nil
 }
 
+// UpdateValidatorAtIndex for the beacon state. This PR updates the randao mixes
+// at a specific index to a new value.
+func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) error {
+	b.state.Validators[idx] = val
+	root, err := stateutil.ValidatorRegistryRoot(b.state.Validators)
+	if err != nil {
+		return err
+	}
+	b.lock.Lock()
+	b.merkleLayers[0][validators] = root[:]
+	b.recomputeRoot(int(validators))
+	b.lock.Unlock()
+	return nil
+}
+
 // SetBalances for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetBalances(val []uint64) error {
@@ -213,6 +228,21 @@ func (b *BeaconState) SetBalances(val []uint64) error {
 		return err
 	}
 	b.state.Balances = val
+	b.lock.Lock()
+	b.merkleLayers[0][balances] = root[:]
+	b.recomputeRoot(int(balances))
+	b.lock.Unlock()
+	return nil
+}
+
+// UpdateBalancesAtIndex for the beacon state. This PR updates the randao mixes
+// at a specific index to a new value.
+func (b *BeaconState) UpdateBalancesAtIndex(idx uint64, val uint64) error {
+	b.state.Balances[idx] = val
+	root, err := stateutil.ValidatorBalancesRoot(b.state.Balances)
+	if err != nil {
+		return err
+	}
 	b.lock.Lock()
 	b.merkleLayers[0][balances] = root[:]
 	b.recomputeRoot(int(balances))
