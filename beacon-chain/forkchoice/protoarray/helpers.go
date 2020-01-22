@@ -45,7 +45,6 @@ func computeDeltas(
 			// that means we have not seen the block before.
 			nextDeltaIndex, ok := blockIndices[vote.nextRoot]
 			if ok {
-
 				// Protection against out of bound, the `nextDeltaIndex` which defines
 				// the block location in the dag can not exceed the total `delta` length.
 				if int(nextDeltaIndex) >= len(deltas) {
