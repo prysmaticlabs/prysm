@@ -11,6 +11,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared"
 )
@@ -25,6 +26,7 @@ type Config struct {
 	P2P           p2p.P2P
 	DB            db.NoHeadAccessDatabase
 	AttPool       attestations.Pool
+	ExitPool      *voluntaryexits.Pool
 	Chain         blockchainService
 	InitialSync   Checker
 	StateNotifier statefeed.Notifier
@@ -49,6 +51,7 @@ func NewRegularSync(cfg *Config) *Service {
 		db:                  cfg.DB,
 		p2p:                 cfg.P2P,
 		attPool:             cfg.AttPool,
+		exitPool:            cfg.ExitPool,
 		chain:               cfg.Chain,
 		initialSync:         cfg.InitialSync,
 		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
@@ -71,6 +74,7 @@ type Service struct {
 	p2p                 p2p.P2P
 	db                  db.NoHeadAccessDatabase
 	attPool             attestations.Pool
+	exitPool            *voluntaryexits.Pool
 	chain               blockchainService
 	slotToPendingBlocks map[uint64]*ethpb.SignedBeaconBlock
 	seenPendingBlocks   map[[32]byte]bool
