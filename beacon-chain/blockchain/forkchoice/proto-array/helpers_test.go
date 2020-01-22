@@ -36,11 +36,8 @@ func TestComputeDelta_ZeroHash(t *testing.T) {
 		}
 	}
 	for _, vote := range votes {
-		if vote.currentRoot != params.BeaconConfig().ZeroHash {
-			t.Errorf("The vote shouldn't have been updated")
-		}
-		if vote.nextRoot != params.BeaconConfig().ZeroHash {
-			t.Errorf("The vote shouldn't have been updated")
+		if vote.currentRoot != vote.nextRoot {
+			t.Errorf("The vote should have changed")
 		}
 	}
 }

@@ -9,8 +9,8 @@ import (
 
 func TestFFGUpdates_OneBranch(t *testing.T) {
 	balances := []uint64{1, 1}
+	f := setup(0, 0)
 
-	f := New(0, 0, params.BeaconConfig().ZeroHash)
 	// The head should always start at the finalized block.
 	r, err := f.Head(context.Background(), 0, params.BeaconConfig().ZeroHash, balances, 0)
 	if err != nil {
@@ -89,8 +89,8 @@ func TestFFGUpdates_OneBranch(t *testing.T) {
 
 func TestFFGUpdates_TwoBranches(t *testing.T) {
 	balances := []uint64{1, 1}
+	f := setup(0, 0)
 
-	f := New(1, 1, params.BeaconConfig().ZeroHash)
 	r, err := f.Head(context.Background(), 0, params.BeaconConfig().ZeroHash, balances, 0)
 	if err != nil {
 		t.Fatal(err)
@@ -239,4 +239,20 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 	if r != indexToHash(7) {
 		t.Error("Incorrect head with justified epoch at 0")
 	}
+}
+
+func setup(justifiedEpoch uint64, finalizedEpoch uint64) *ForkChoice {
+	f := New(0, 0, params.BeaconConfig().ZeroHash)
+	f.store.nodeIndices[params.BeaconConfig().ZeroHash] = 0
+	f.store.nodes = append(f.store.nodes, &Node{
+		slot:           0,
+		root:           params.BeaconConfig().ZeroHash,
+		parent:         nonExistentNode,
+		justifiedEpoch: justifiedEpoch,
+		finalizedEpoch: finalizedEpoch,
+		bestChild:      nonExistentNode,
+		bestDescendant: nonExistentNode,
+		weight:         0,
+	})
+	return f
 }

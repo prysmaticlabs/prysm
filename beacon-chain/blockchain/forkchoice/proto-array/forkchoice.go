@@ -2,11 +2,16 @@ package protoarray
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
+
+// This defines the minimal number of block nodes has to be in in the tree
+// before getting pruned upon new finalization.
+const defaultPruneThreshold = 256
 
 // New initializes a new fork choice store.
 func New(justifiedEpoch uint64, finalizedEpoch uint64, finalizedRoot [32]byte) *ForkChoice {
@@ -16,22 +21,11 @@ func New(justifiedEpoch uint64, finalizedEpoch uint64, finalizedRoot [32]byte) *
 		finalizedRoot:  finalizedRoot,
 		nodes:          make([]*Node, 0),
 		nodeIndices:    make(map[[32]byte]uint64),
+		pruneThreshold: defaultPruneThreshold,
 	}
 
 	b := make([]uint64, 0)
 	v := make([]Vote, 0)
-
-	s.nodeIndices[finalizedRoot] = 0
-	s.nodes = append(s.nodes, &Node{
-		slot:           0,
-		root:           finalizedRoot,
-		parent:         nonExistentNode,
-		justifiedEpoch: justifiedEpoch,
-		finalizedEpoch: finalizedEpoch,
-		bestChild:      nonExistentNode,
-		bestDescendant: nonExistentNode,
-		weight:         0,
-	})
 
 	return &ForkChoice{store: s, balances: b, votes: v}
 }
@@ -53,6 +47,10 @@ func (f *ForkChoice) Head(ctx context.Context, finalizedEpoch uint64, justifiedR
 		return [32]byte{}, errors.Wrap(err, "Could not apply score changes")
 	}
 	f.balances = newBalances
+
+	for _, node := range f.store.nodes {
+		fmt.Println(node)
+	}
 
 	return f.store.head(ctx, justifiedRoot)
 }
@@ -82,4 +80,10 @@ func (f *ForkChoice) ProcessBlock(ctx context.Context, slot uint64, blockRoot [3
 	defer span.End()
 
 	return f.store.insert(ctx, slot, blockRoot, parentRoot, justifiedEpoch, finalizedEpoch)
+}
+
+// Prune prunes the fork choice store with the new finalized root. The store is only pruned if the input
+// root is different than the current store finalized root, and the number of the store has met prune threshold.
+func (f *ForkChoice) Prune(ctx context.Context, finalizedRoot [32]byte) error {
+	return f.store.prune(ctx, finalizedRoot)
 }

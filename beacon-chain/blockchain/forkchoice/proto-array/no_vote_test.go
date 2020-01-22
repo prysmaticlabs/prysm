@@ -9,10 +9,10 @@ import (
 
 func TestNoVote_CanFindHead(t *testing.T) {
 	balances := make([]uint64, 16)
+	f := setup(1, 1)
 
-	f := New(1, 1, params.BeaconConfig().ZeroHash)
 	// The head should always start at the finalized block.
-	r, err := f.Head(nil, 1, params.BeaconConfig().ZeroHash, balances, 1)
+	r, err := f.Head(context.Background(), 1, params.BeaconConfig().ZeroHash, balances, 1)
 	if err != nil {
 		t.Fatal(err)
 	}

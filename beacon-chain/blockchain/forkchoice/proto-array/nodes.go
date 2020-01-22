@@ -19,7 +19,7 @@ func (s *Store) insert(ctx context.Context, slot uint64, root [32]byte, parent [
 	s.nodeIndicesLock.Lock()
 	defer s.nodeIndicesLock.Unlock()
 
-	// Return if the block has previously been inserted.
+	// Return if the block has previously been inserted into the tree.
 	if _, ok := s.nodeIndices[root]; ok {
 		return nil
 	}
@@ -196,7 +196,6 @@ func (s *Store) applyScoreChanges(ctx context.Context, justifiedEpoch uint64, fi
 	if s.justifiedEpoch != justifiedEpoch || s.finalizedEpoch != finalizedEpoch {
 		s.justifiedEpoch = justifiedEpoch
 		s.finalizedEpoch = finalizedEpoch
-
 	}
 
 	// Iterate backwards through all indices store nodes.
@@ -245,7 +244,10 @@ func (s *Store) applyScoreChanges(ctx context.Context, justifiedEpoch uint64, fi
 // prune prunes the store with the new finalization information. The tree is only
 // pruned if the supplied finalized epoch and root are different than current store value and
 // the number of the nodes in store has met prune threshold.
-func (s *Store) prune(finalizedRoot [32]byte, finalizedEpoch uint64) error {
+func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.prune")
+	defer span.End()
+
 	s.nodeIndicesLock.Lock()
 	defer s.nodeIndicesLock.Unlock()
 

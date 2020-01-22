@@ -9,8 +9,8 @@ import (
 
 func TestVotes_CanFindHead(t *testing.T) {
 	balances := []uint64{1, 1}
+	f := setup(1, 1)
 
-	f := New(1, 1, params.BeaconConfig().ZeroHash)
 	// The head should always start at the finalized block.
 	r, err := f.Head(context.Background(), 1, params.BeaconConfig().ZeroHash, balances, 1)
 	if err != nil {
@@ -328,7 +328,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 
 	// Verify pruning below the prune threshold does not affect head.
 	f.store.pruneThreshold = 1000
-	if err := f.store.prune(indexToHash(5), 2); err != nil {
+	if err := f.store.prune(context.Background(), indexToHash(5)); err != nil {
 		t.Fatal(err)
 	}
 	if len(f.store.nodes) != 11 {
@@ -359,7 +359,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//         / \
 	//        9  10
 	f.store.pruneThreshold = 1
-	if err := f.store.prune(indexToHash(5), 2); err != nil {
+	if err := f.store.prune(context.Background(), indexToHash(5)); err != nil {
 		t.Fatal(err)
 	}
 	if len(f.store.nodes) != 6 {

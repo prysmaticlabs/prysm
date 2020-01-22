@@ -108,6 +108,13 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 		log.Infof("Head after old fork choice: %v", hex.EncodeToString(bytesutil.Trunc(headRoot)))
 		log.Infof("Head after new fork choice: %v", hex.EncodeToString(bytesutil.Trunc(headRootProtoArray[:])))
 
+		if postState.FinalizedCheckpoint.Epoch > s.FinalizedCheckpt().Epoch {
+			log.Infof("New finalized check point for pruning! %d, %d", postState.FinalizedCheckpoint.Epoch, s.FinalizedCheckpt().Epoch)
+			if err := s.forkchoice.Prune(ctx, bytesutil.ToBytes32(postState.FinalizedCheckpoint.Root)); err != nil {
+				return errors.Wrap(err, "could not prune proto array fork choice")
+			}
+		}
+
 		// Only save head if it's different than the current head.
 		cachedHeadRoot, err := s.HeadRoot(ctx)
 		if err != nil {
