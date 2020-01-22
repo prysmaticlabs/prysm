@@ -24,13 +24,8 @@ import (
 func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	tmpPath := bazel.TestTmpDir()
 	config.tmpPath = tmpPath
-<<<<<<< HEAD
-	t.Logf("Test Path: %s\n", tmpPath)
-	t.Logf("Starting time: %s\n", tmpPath)
-=======
 	t.Logf("Starting time: %s\n", time.Now().String())
 	t.Logf("Test Path: %s\n\n", tmpPath)
->>>>>>> abe679e90ed2057ca147348e483b177724948cba
 
 	contractAddr, keystorePath, eth1PID := startEth1(t, tmpPath)
 	config.contractAddr = contractAddr
@@ -60,8 +55,8 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := waitForTextInFile(beaconLogFile, "Sending genesis time notification"); err != nil {
-		t.Fatalf("failed to find genesis in logs, this means the chain did not start: %v", err)
+	if err := waitForTextInFile(beaconLogFile, "Chain started within the last epoch"); err != nil {
+		t.Fatalf("failed to find chain start in logs, this means the chain did not start: %v", err)
 	}
 
 	// Failing early in case chain doesn't start.
@@ -157,17 +152,6 @@ func killProcesses(t *testing.T, pIDs []int) {
 
 func logOutput(t *testing.T, tmpPath string, config *end2EndConfig) {
 	if t.Failed() {
-<<<<<<< HEAD
-		beacon0LogFile, err := os.Open(path.Join(tmpPath, "beacon-0.log"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		scanner := bufio.NewScanner(beacon0LogFile)
-		t.Log("Beacon chain node output:")
-		for scanner.Scan() {
-			currentLine := scanner.Text()
-			t.Log(currentLine)
-=======
 		// Log out errors from beacon chain nodes.
 		for i := uint64(0); i < config.numBeaconNodes; i++ {
 			beaconLogFile, err := os.Open(path.Join(tmpPath, fmt.Sprintf(beaconNodeLogFileName, i)))
@@ -193,7 +177,6 @@ func logErrorOutput(t *testing.T, file *os.File, title string, index uint64) {
 		currentLine := scanner.Text()
 		if strings.Contains(currentLine, "level=error") {
 			errorLines = append(errorLines, currentLine)
->>>>>>> abe679e90ed2057ca147348e483b177724948cba
 		}
 	}
 

@@ -44,7 +44,9 @@ func afterNthEpoch(afterEpoch uint64) func(uint64) bool {
 
 func validatorsAreActive(client eth.BeaconChainClient) error {
 	// Balances actually fluctuate but we just want to check initial balance.
-	validatorRequest := &eth.ListValidatorsRequest{}
+	validatorRequest := &eth.ListValidatorsRequest{
+		PageSize: int32(params.BeaconConfig().MinGenesisActiveValidatorCount),
+	}
 	validators, err := client.ListValidators(context.Background(), validatorRequest)
 	if err != nil {
 		return errors.Wrap(err, "failed to get validators")

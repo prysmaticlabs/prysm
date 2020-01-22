@@ -126,8 +126,7 @@ func initializeValidators(
 		t.Fatal(err)
 	}
 
-	// "Safe" amount of blocks to mine to make sure the deposits are seen.
-	if err := mineBlocks(web3, keystore, 20); err != nil {
+	if err := mineBlocks(web3, keystore, params.BeaconConfig().Eth1FollowDistance); err != nil {
 		t.Fatalf("failed to mine blocks %v", err)
 	}
 

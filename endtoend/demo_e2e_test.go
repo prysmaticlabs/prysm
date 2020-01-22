@@ -9,14 +9,13 @@ import (
 )
 
 func TestEndToEnd_DemoConfig(t *testing.T) {
-	t.Skip("Demo is essentially mainnet and too much to run in e2e at the moment")
 	testutil.ResetCache()
 	params.UseDemoBeaconConfig()
 
 	demoConfig := &end2EndConfig{
 		beaconConfig:   "demo",
 		epochsToRun:    5,
-		numBeaconNodes: 4,
+		numBeaconNodes: 1,
 		numValidators:  params.BeaconConfig().MinGenesisActiveValidatorCount,
 		evaluators: []ev.Evaluator{
 			ev.ValidatorsAreActive,

@@ -16,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	ev "github.com/prysmaticlabs/prysm/endtoend/evaluators"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 type beaconNodeInfo struct {
@@ -69,14 +70,9 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 
 	args := []string{
 		"--force-clear-db",
-		"--verbosity=debug",
 		"--no-genesis-delay",
 		"--no-discovery",
 		"--force-clear-db",
-		"--fast-assignments",
-		"--new-cache",
-		"--enable-bls-pubkey-cache",
-		"--enable-shuffled-index-cache",
 		"--enable-skip-slots-cache",
 		"--enable-attestation-cache",
 		"--http-web3provider=http://127.0.0.1:8545",
@@ -89,6 +85,7 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 		fmt.Sprintf("--monitoring-port=%d", 8080+index),
 		fmt.Sprintf("--grpc-gateway-port=%d", 3200+index),
 		fmt.Sprintf("--contract-deployment-block=%d", 0),
+		fmt.Sprintf("--rpc-max-page-size=%d", params.BeaconConfig().MinGenesisActiveValidatorCount),
 	}
 
 	if config.beaconConfig == "minimal" {
