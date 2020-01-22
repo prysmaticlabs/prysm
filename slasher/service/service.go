@@ -182,7 +182,7 @@ func (s *Service) startSlasher() {
 func (s *Service) loadSpanMaps(err error, slasherServer rpc.Server) {
 	lt, err := slasherServer.SlasherDB.LatestIndexedAttestationsTargetEpoch()
 	if err != nil {
-		log.Errorf("Could not extract latest target epoch from indexed attestations store:%v", err)
+		log.Errorf("Could not extract latest target epoch from indexed attestations store: %v", err)
 	}
 	for i := uint64(0); i < lt; i++ {
 		ias, err := slasherServer.SlasherDB.IndexedAttestations(i)
