@@ -156,22 +156,21 @@ func killProcesses(t *testing.T, pIDs []int) {
 }
 
 func logOutput(t *testing.T, tmpPath string, config *end2EndConfig) {
-	if t.Failed() {
-		// Log out errors from beacon chain nodes.
-		for i := uint64(0); i < config.numBeaconNodes; i++ {
-			beaconLogFile, err := os.Open(path.Join(tmpPath, fmt.Sprintf(beaconNodeLogFileName, i)))
-			if err != nil {
-				t.Fatal(err)
-			}
-			logErrorOutput(t, beaconLogFile, "beacon chain node", i)
-
-			validatorLogFile, err := os.Open(path.Join(tmpPath, fmt.Sprintf(validatorLogFileName, i)))
-			if err != nil {
-				t.Fatal(err)
-			}
-			logErrorOutput(t, validatorLogFile, "validator client", i)
+	// Log out errors from beacon chain nodes.
+	for i := uint64(0); i < config.numBeaconNodes; i++ {
+		beaconLogFile, err := os.Open(path.Join(tmpPath, fmt.Sprintf(beaconNodeLogFileName, i)))
+		if err != nil {
+			t.Fatal(err)
 		}
+		logErrorOutput(t, beaconLogFile, "beacon chain node", i)
+
+		validatorLogFile, err := os.Open(path.Join(tmpPath, fmt.Sprintf(validatorLogFileName, i)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		logErrorOutput(t, validatorLogFile, "validator client", i)
 	}
+	t.Logf("Ending time: %s\n", time.Now().String())
 }
 
 func logErrorOutput(t *testing.T, file *os.File, title string, index uint64) {

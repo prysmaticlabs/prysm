@@ -72,8 +72,6 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 		"--no-genesis-delay",
 		"--force-clear-db",
 		"--no-discovery",
-		"--enable-skip-slots-cache",
-		"--enable-attestation-cache",
 		"--http-web3provider=http://127.0.0.1:8545",
 		"--web3provider=ws://127.0.0.1:8546",
 		fmt.Sprintf("--datadir=%s/eth2-beacon-node-%d", tmpPath, index),
