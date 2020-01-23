@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -17,16 +16,14 @@ type Pool struct {
 	lock     sync.RWMutex
 	pending  []*ethpb.SignedVoluntaryExit
 	included map[uint64]bool
-	chain    blockchain.HeadFetcher
 }
 
 // NewPool accepts a head fetcher (for reading the validator set) and returns an initialized
 // voluntary exit pool.
-func NewPool(chain blockchain.HeadFetcher) *Pool {
+func NewPool() *Pool {
 	return &Pool{
 		pending:  make([]*ethpb.SignedVoluntaryExit, 0),
 		included: make(map[uint64]bool),
-		chain:    chain,
 	}
 }
 
@@ -46,7 +43,7 @@ func (p *Pool) PendingExits(slot uint64) []*ethpb.SignedVoluntaryExit {
 
 // InsertVoluntaryExit into the pool. This method is a no-op if the pending exit already exists,
 // has been included recently, or the validator is already exited.
-func (p *Pool) InsertVoluntaryExit(ctx context.Context, exit *ethpb.SignedVoluntaryExit) {
+func (p *Pool) InsertVoluntaryExit(ctx context.Context, validators []*ethpb.Validator, exit *ethpb.SignedVoluntaryExit) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -56,7 +53,7 @@ func (p *Pool) InsertVoluntaryExit(ctx context.Context, exit *ethpb.SignedVolunt
 	}
 
 	// Has the validator been exited already?
-	if h, _ := p.chain.HeadState(ctx); h == nil || len(h.Validators) <= int(exit.Exit.ValidatorIndex) || h.Validators[exit.Exit.ValidatorIndex].ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+	if len(validators) <= int(exit.Exit.ValidatorIndex) || validators[exit.Exit.ValidatorIndex].ExitEpoch != params.BeaconConfig().FarFutureEpoch {
 		return
 	}
 
