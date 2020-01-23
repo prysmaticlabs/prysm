@@ -1,13 +1,13 @@
 package state
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -114,7 +114,7 @@ func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
 		return nil, nil
 	}
 	if len(b.state.BlockRoots) <= int(idx) {
-		return nil, errors.New(fmt.Sprintf("index %d out of range", idx))
+		return nil, fmt.Errorf("index %d out of range", idx)
 	}
 	root := make([]byte, 32)
 	copy(root, b.state.BlockRoots[idx])
@@ -224,7 +224,7 @@ func (b *BeaconState) Validators() []*ethpb.Validator {
 	return res
 }
 
-//  ValidatorAtIndex is the validator at the provided index.
+// ValidatorAtIndex is the validator at the provided index.
 func (b *BeaconState) ValidatorAtIndex(idx uint64) (*ethpb.Validator, error) {
 	if b.state.Validators == nil {
 		return &ethpb.Validator{}, nil
@@ -270,13 +270,13 @@ func (b *BeaconState) Balances() []uint64 {
 	return res
 }
 
-// Balance of validator with the provided index.
+// BalanceAtIndex of validator with the provided index.
 func (b *BeaconState) BalanceAtIndex(idx int) (uint64, error) {
 	if b.state.Balances == nil {
 		return 0, nil
 	}
 	if len(b.state.Balances) <= int(idx) {
-		return 0, errors.New(fmt.Sprintf("index of %d does not exist", idx))
+		return 0, fmt.Errorf("index of %d does not exist", idx)
 	}
 	return b.state.Balances[idx], nil
 }
@@ -302,7 +302,7 @@ func (b *BeaconState) RandaoMixAtIndex(idx uint64) ([]byte, error) {
 		return nil, nil
 	}
 	if len(b.state.RandaoMixes) <= int(idx) {
-		return nil, errors.New(fmt.Sprintf("index %d out of range", idx))
+		return nil, fmt.Errorf("index %d out of range", idx)
 	}
 	root := make([]byte, 32)
 	copy(root, b.state.RandaoMixes[idx])
