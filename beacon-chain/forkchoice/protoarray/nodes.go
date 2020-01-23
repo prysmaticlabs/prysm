@@ -9,12 +9,12 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// applyScoreChanges iterates backwards through the nodes in store. It checks all nodes parent
+// applyWeightChanges iterates backwards through the nodes in store. It checks all nodes parent
 // and its best child. For each node, it updates the weight with input delta and
 // back propagate the nodes delta to its parents delta. After scoring changes,
 // the best child is then updated along with best descendant.
-func (s *Store) applyScoreChanges(ctx context.Context, justifiedEpoch uint64, finalizedEpoch uint64, delta []int) error {
-	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.applyScoreChanges")
+func (s *Store) applyWeightChanges(ctx context.Context, justifiedEpoch uint64, finalizedEpoch uint64, delta []int) error {
+	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.applyWeightChanges")
 	defer span.End()
 
 	// The length of the nodes can not be different than length of the delta.
