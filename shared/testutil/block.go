@@ -105,7 +105,10 @@ func GenerateFullBlock(
 	}
 
 	newHeader := bState.LatestBlockHeader()
-	prevStateRoot := bState.HashTreeRoot()
+	prevStateRoot, err := bState.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
 	newHeader.StateRoot = prevStateRoot[:]
 	parentRoot, err := ssz.HashTreeRoot(newHeader)
 	if err != nil {

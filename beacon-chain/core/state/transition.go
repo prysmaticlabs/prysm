@@ -68,7 +68,10 @@ func ExecuteStateTransition(
 	interop.WriteBlockToDisk(signed, false)
 	interop.WriteStateToDisk(state)
 
-	postStateRoot := state.HashTreeRoot()
+	postStateRoot, err := state.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
 	if !bytes.Equal(postStateRoot[:], signed.Block.StateRoot) {
 		return state, fmt.Errorf("validate state root failed, wanted: %#x, received: %#x",
 			postStateRoot[:], signed.Block.StateRoot)
@@ -169,7 +172,7 @@ func CalculateStateRoot(
 		return [32]byte{}, errors.Wrap(err, "could not process block")
 	}
 
-	return state.HashTreeRoot(), nil
+	return state.HashTreeRoot()
 }
 
 // ProcessSlot happens every slot and focuses on the slot counter and block roots record updates.
@@ -193,7 +196,10 @@ func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(state.Slot())))
 
-	prevStateRoot := state.HashTreeRoot()
+	prevStateRoot, err := state.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
 	if err := state.UpdateStateRootAtIndex(
 		state.Slot()%params.BeaconConfig().SlotsPerHistoricalRoot,
 		prevStateRoot,

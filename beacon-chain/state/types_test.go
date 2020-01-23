@@ -25,7 +25,10 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 		t.Fatal("Cloned states did not match")
 	}
 
-	r1 := customState.HashTreeRoot()
+	r1, err := customState.HashTreeRoot()
+	if err != nil {
+		t.Fatal(err)
+	}
 	r2, err := stateutil.HashTreeRootState(genesis)
 	if err != nil {
 		t.Fatal(err)
@@ -40,7 +43,10 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 	if err := customState.SetBalances(balances); err != nil {
 		t.Fatal(err)
 	}
-	r1 = customState.HashTreeRoot()
+	r1, err = customState.HashTreeRoot()
+	if err != nil {
+		t.Fatal(err)
+	}
 	genesis.Balances = balances
 	r2, err = stateutil.HashTreeRootState(genesis)
 	if err != nil {

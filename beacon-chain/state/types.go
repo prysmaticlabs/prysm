@@ -4,10 +4,12 @@ import (
 	"sync"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/pkg/errors"
 	"github.com/protolambda/zssz/merkle"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/stateutil"
 )
 
@@ -16,6 +18,7 @@ import (
 type BeaconState struct {
 	state        *pbp2p.BeaconState
 	lock         sync.RWMutex
+	dirtyFields  map[fieldIndex]interface{}
 	merkleLayers [][][]byte
 }
 
@@ -29,15 +32,25 @@ func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
 	return &BeaconState{
 		state:        proto.Clone(st).(*pbp2p.BeaconState),
 		merkleLayers: layers,
+		dirtyFields:  make(map[fieldIndex]interface{}),
 	}, nil
 }
 
 // HashTreeRoot of the beacon state retrieves the Merkle root of the trie
 // representation of the beacon state based on the eth2 Simple Serialize specification.
-func (b *BeaconState) HashTreeRoot() [32]byte {
+func (b *BeaconState) HashTreeRoot() ([32]byte, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
-	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0])
+	for field, _ := range b.dirtyFields {
+		root, err := b.rootSelector(field)
+		if err != nil {
+			return [32]byte{}, err
+		}
+		b.merkleLayers[0][field] = root[:]
+		b.recomputeRoot(int(field))
+		delete(b.dirtyFields, field)
+	}
+	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
 }
 
 // Merkleize 32-byte leaves into a Merkle trie for its adequate depth, returning
@@ -68,4 +81,50 @@ func merkleize(leaves [][]byte) [][][]byte {
 		i++
 	}
 	return layers
+}
+
+func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
+	switch field {
+	case genesisTime:
+		return stateutil.Uint64Root(b.state.GenesisTime), nil
+	case slot:
+		return stateutil.Uint64Root(b.state.Slot), nil
+	case eth1DepositIndex:
+		return stateutil.Uint64Root(b.state.Eth1DepositIndex), nil
+	case fork:
+		return stateutil.ForkRoot(b.state.Fork)
+	case latestBlockHeader:
+		return stateutil.BlockHeaderRoot(b.state.LatestBlockHeader)
+	case blockRoots:
+		return stateutil.RootsArrayHashTreeRoot(b.state.BlockRoots, params.BeaconConfig().SlotsPerHistoricalRoot, "BlockRoots")
+	case stateRoots:
+		return stateutil.RootsArrayHashTreeRoot(b.state.StateRoots, params.BeaconConfig().SlotsPerHistoricalRoot, "StateRoots")
+	case historicalRoots:
+		return stateutil.HistoricalRootsRoot(b.state.HistoricalRoots)
+	case eth1Data:
+		return stateutil.Eth1Root(b.state.Eth1Data)
+	case eth1DataVotes:
+		return stateutil.Eth1DataVotesRoot(b.state.Eth1DataVotes)
+	case validators:
+		return stateutil.ValidatorRegistryRoot(b.state.Validators)
+	case balances:
+		return stateutil.ValidatorBalancesRoot(b.state.Balances)
+	case randaoMixes:
+		return stateutil.RootsArrayHashTreeRoot(b.state.RandaoMixes, params.BeaconConfig().EpochsPerHistoricalVector, "RandaoMixes")
+	case slashings:
+		return stateutil.SlashingsRoot(b.state.Slashings)
+	case previousEpochAttestations:
+		return stateutil.EpochAttestationsRoot(b.state.PreviousEpochAttestations)
+	case currentEpochAttestations:
+		return stateutil.EpochAttestationsRoot(b.state.CurrentEpochAttestations)
+	case justificationBits:
+		return bytesutil.ToBytes32(b.state.JustificationBits), nil
+	case previousJustifiedCheckpoint:
+		return stateutil.CheckpointRoot(b.state.PreviousJustifiedCheckpoint)
+	case currentJustifiedCheckpoint:
+		return stateutil.CheckpointRoot(b.state.CurrentJustifiedCheckpoint)
+	case finalizedCheckpoint:
+		return stateutil.CheckpointRoot(b.state.FinalizedCheckpoint)
+	}
+	return [32]byte{}, errors.New("invalid field index provided")
 }

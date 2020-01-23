@@ -148,7 +148,10 @@ func (s *Service) DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight
 
 func (s *Service) saveGenesisState(ctx context.Context, genesisState *stateTrie.BeaconState) error {
 	s.chainStartDeposits = make([]*ethpb.Deposit, genesisState.NumofValidators())
-	stateRoot := genesisState.HashTreeRoot()
+	stateRoot, err := genesisState.HashTreeRoot()
+	if err != nil {
+		return err
+	}
 	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
 	genesisBlkRoot, err := ssz.HashTreeRoot(genesisBlk.Block)
 	if err != nil {

@@ -7,10 +7,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/stateutil"
 )
 
 type fieldIndex int
@@ -46,10 +43,8 @@ const (
 // SetGenesisTime for the beacon state.
 func (b *BeaconState) SetGenesisTime(val uint64) error {
 	b.state.GenesisTime = val
-	root := stateutil.Uint64Root(val)
 	b.lock.Lock()
-	b.merkleLayers[0][genesisTime] = root[:]
-	b.recomputeRoot(int(genesisTime))
+	b.markFieldAsDirty(genesisTime)
 	b.lock.Unlock()
 	return nil
 }
@@ -57,38 +52,26 @@ func (b *BeaconState) SetGenesisTime(val uint64) error {
 // SetSlot for the beacon state.
 func (b *BeaconState) SetSlot(val uint64) error {
 	b.state.Slot = val
-	root := stateutil.Uint64Root(val)
 	b.lock.Lock()
-	b.merkleLayers[0][slot] = root[:]
-	b.recomputeRoot(int(slot))
+	b.markFieldAsDirty(slot)
 	b.lock.Unlock()
 	return nil
 }
 
 // SetFork version for the beacon chain.
 func (b *BeaconState) SetFork(val *pbp2p.Fork) error {
-	root, err := stateutil.ForkRoot(val)
-	if err != nil {
-		return err
-	}
 	b.state.Fork = val
 	b.lock.Lock()
-	b.merkleLayers[0][fork] = root[:]
-	b.recomputeRoot(int(fork))
+	b.markFieldAsDirty(fork)
 	b.lock.Unlock()
 	return nil
 }
 
 // SetLatestBlockHeader in the beacon state.
 func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
-	root, err := stateutil.BlockHeaderRoot(val)
-	if err != nil {
-		return err
-	}
 	b.state.LatestBlockHeader = val
 	b.lock.Lock()
-	b.merkleLayers[0][latestBlockHeader] = root[:]
-	b.recomputeRoot(int(latestBlockHeader))
+	b.markFieldAsDirty(latestBlockHeader)
 	b.lock.Unlock()
 	return nil
 }
@@ -96,14 +79,9 @@ func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
 // SetBlockRoots for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetBlockRoots(val [][]byte) error {
-	root, err := stateutil.RootsArrayHashTreeRoot(val, params.BeaconConfig().SlotsPerHistoricalRoot, "BlockRoots")
-	if err != nil {
-		return err
-	}
 	b.state.BlockRoots = val
 	b.lock.Lock()
-	b.merkleLayers[0][blockRoots] = root[:]
-	b.recomputeRoot(int(blockRoots))
+	b.markFieldAsDirty(blockRoots)
 	b.lock.Unlock()
 	return nil
 }
@@ -115,13 +93,8 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 		return fmt.Errorf("invalid index provided %d", idx)
 	}
 	b.state.BlockRoots[idx] = blockRoot[:]
-	root, err := stateutil.RootsArrayHashTreeRoot(b.state.BlockRoots, params.BeaconConfig().SlotsPerHistoricalRoot, "BlockRoots")
-	if err != nil {
-		return err
-	}
 	b.lock.Lock()
-	b.merkleLayers[0][blockRoots] = root[:]
-	b.recomputeRoot(int(blockRoots))
+	b.markFieldAsDirty(blockRoots)
 	b.lock.Unlock()
 	return nil
 }
@@ -129,14 +102,9 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 // SetStateRoots for the beacon state. This PR updates the entire
 // to a new value by overwriting the previous one.
 func (b *BeaconState) SetStateRoots(val [][]byte) error {
-	root, err := stateutil.RootsArrayHashTreeRoot(val, params.BeaconConfig().SlotsPerHistoricalRoot, "StateRoots")
-	if err != nil {
-		return err
-	}
 	b.state.StateRoots = val
 	b.lock.Lock()
-	b.merkleLayers[0][stateRoots] = root[:]
-	b.recomputeRoot(int(stateRoots))
+	b.markFieldAsDirty(stateRoots)
 	b.lock.Unlock()
 	return nil
 }
@@ -148,13 +116,8 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 	b.state.StateRoots[idx] = stateRoot[:]
-	root, err := stateutil.RootsArrayHashTreeRoot(b.state.StateRoots, params.BeaconConfig().SlotsPerHistoricalRoot, "StateRoots")
-	if err != nil {
-		return err
-	}
 	b.lock.Lock()
-	b.merkleLayers[0][stateRoots] = root[:]
-	b.recomputeRoot(int(stateRoots))
+	b.markFieldAsDirty(stateRoots)
 	b.lock.Unlock()
 	return nil
 }
@@ -162,28 +125,18 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 // SetHistoricalRoots for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
-	root, err := stateutil.HistoricalRootsRoot(val)
-	if err != nil {
-		return err
-	}
 	b.state.HistoricalRoots = val
 	b.lock.Lock()
-	b.merkleLayers[0][historicalRoots] = root[:]
-	b.recomputeRoot(int(historicalRoots))
+	b.markFieldAsDirty(historicalRoots)
 	b.lock.Unlock()
 	return nil
 }
 
 // SetEth1Data for the beacon state.
 func (b *BeaconState) SetEth1Data(val *ethpb.Eth1Data) error {
-	root, err := stateutil.Eth1Root(val)
-	if err != nil {
-		return err
-	}
 	b.state.Eth1Data = val
 	b.lock.Lock()
-	b.merkleLayers[0][eth1Data] = root[:]
-	b.recomputeRoot(int(eth1Data))
+	b.markFieldAsDirty(eth1Data)
 	b.lock.Unlock()
 	return nil
 }
@@ -191,14 +144,9 @@ func (b *BeaconState) SetEth1Data(val *ethpb.Eth1Data) error {
 // SetEth1DataVotes for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetEth1DataVotes(val []*ethpb.Eth1Data) error {
-	root, err := stateutil.Eth1DataVotesRoot(val)
-	if err != nil {
-		return err
-	}
 	b.state.Eth1DataVotes = val
 	b.lock.Lock()
-	b.merkleLayers[0][eth1DataVotes] = root[:]
-	b.recomputeRoot(int(eth1DataVotes))
+	b.markFieldAsDirty(eth1DataVotes)
 	b.lock.Unlock()
 	return nil
 }
@@ -207,13 +155,8 @@ func (b *BeaconState) SetEth1DataVotes(val []*ethpb.Eth1Data) error {
 // to the the end of list.
 func (b *BeaconState) AppendEth1DataVotes(val *ethpb.Eth1Data) error {
 	b.state.Eth1DataVotes = append(b.state.Eth1DataVotes, val)
-	root, err := stateutil.Eth1DataVotesRoot(b.state.Eth1DataVotes)
-	if err != nil {
-		return err
-	}
 	b.lock.Lock()
-	b.merkleLayers[0][eth1DataVotes] = root[:]
-	b.recomputeRoot(int(eth1DataVotes))
+	b.markFieldAsDirty(eth1DataVotes)
 	b.lock.Unlock()
 	return nil
 }
@@ -221,10 +164,8 @@ func (b *BeaconState) AppendEth1DataVotes(val *ethpb.Eth1Data) error {
 // SetEth1DepositIndex for the beacon state.
 func (b *BeaconState) SetEth1DepositIndex(val uint64) error {
 	b.state.Eth1DepositIndex = val
-	root := stateutil.Uint64Root(val)
 	b.lock.Lock()
-	b.merkleLayers[0][eth1DepositIndex] = root[:]
-	b.recomputeRoot(int(eth1DepositIndex))
+	b.markFieldAsDirty(eth1DepositIndex)
 	b.lock.Unlock()
 	return nil
 }
@@ -232,14 +173,9 @@ func (b *BeaconState) SetEth1DepositIndex(val uint64) error {
 // SetValidators for the beacon state. This PR updates the entire
 // to a new value by overwriting the previous one.
 func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
-	root, err := stateutil.ValidatorRegistryRoot(val)
-	if err != nil {
-		return err
-	}
 	b.state.Validators = val
 	b.lock.Lock()
-	b.merkleLayers[0][validators] = root[:]
-	b.recomputeRoot(int(validators))
+	b.markFieldAsDirty(validators)
 	b.lock.Unlock()
 	return nil
 }
@@ -251,13 +187,8 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 	b.state.Validators[idx] = val
-	root, err := stateutil.ValidatorRegistryRoot(b.state.Validators)
-	if err != nil {
-		return err
-	}
 	b.lock.Lock()
-	b.merkleLayers[0][validators] = root[:]
-	b.recomputeRoot(int(validators))
+	b.markFieldAsDirty(validators)
 	b.lock.Unlock()
 	return nil
 }
@@ -265,14 +196,9 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 // SetBalances for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetBalances(val []uint64) error {
-	root, err := stateutil.ValidatorBalancesRoot(val)
-	if err != nil {
-		return err
-	}
 	b.state.Balances = val
 	b.lock.Lock()
-	b.merkleLayers[0][balances] = root[:]
-	b.recomputeRoot(int(balances))
+	b.markFieldAsDirty(balances)
 	b.lock.Unlock()
 	return nil
 }
@@ -284,13 +210,8 @@ func (b *BeaconState) UpdateBalancesAtIndex(idx uint64, val uint64) error {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 	b.state.Balances[idx] = val
-	root, err := stateutil.ValidatorBalancesRoot(b.state.Balances)
-	if err != nil {
-		return err
-	}
 	b.lock.Lock()
-	b.merkleLayers[0][balances] = root[:]
-	b.recomputeRoot(int(balances))
+	b.markFieldAsDirty(balances)
 	b.lock.Unlock()
 	return nil
 }
@@ -298,14 +219,9 @@ func (b *BeaconState) UpdateBalancesAtIndex(idx uint64, val uint64) error {
 // SetRandaoMixes for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
-	root, err := stateutil.RootsArrayHashTreeRoot(val, params.BeaconConfig().EpochsPerHistoricalVector, "RandaoMixes")
-	if err != nil {
-		return err
-	}
 	b.state.RandaoMixes = val
 	b.lock.Lock()
-	b.merkleLayers[0][randaoMixes] = root[:]
-	b.recomputeRoot(int(randaoMixes))
+	b.markFieldAsDirty(randaoMixes)
 	b.lock.Unlock()
 	return nil
 }
@@ -317,13 +233,8 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 	b.state.RandaoMixes[idx] = val
-	root, err := stateutil.RootsArrayHashTreeRoot(b.state.RandaoMixes, params.BeaconConfig().EpochsPerHistoricalVector, "RandaoMixes")
-	if err != nil {
-		return err
-	}
 	b.lock.Lock()
-	b.merkleLayers[0][randaoMixes] = root[:]
-	b.recomputeRoot(int(randaoMixes))
+	b.markFieldAsDirty(randaoMixes)
 	b.lock.Unlock()
 	return nil
 }
@@ -331,14 +242,9 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
 // SetSlashings for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetSlashings(val []uint64) error {
-	root, err := stateutil.SlashingsRoot(val)
-	if err != nil {
-		return err
-	}
 	b.state.Slashings = val
 	b.lock.Lock()
-	b.merkleLayers[0][slashings] = root[:]
-	b.recomputeRoot(int(slashings))
+	b.markFieldAsDirty(slashings)
 	b.lock.Unlock()
 	return nil
 }
@@ -350,13 +256,8 @@ func (b *BeaconState) UpdateSlashingsAtIndex(idx uint64, val uint64) error {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 	b.state.Slashings[idx] = val
-	root, err := stateutil.SlashingsRoot(b.state.Slashings)
-	if err != nil {
-		return err
-	}
 	b.lock.Lock()
-	b.merkleLayers[0][slashings] = root[:]
-	b.recomputeRoot(int(slashings))
+	b.markFieldAsDirty(slashings)
 	b.lock.Unlock()
 	return nil
 }
@@ -364,14 +265,9 @@ func (b *BeaconState) UpdateSlashingsAtIndex(idx uint64, val uint64) error {
 // SetPreviousEpochAttestations for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetPreviousEpochAttestations(val []*pbp2p.PendingAttestation) error {
-	root, err := stateutil.EpochAttestationsRoot(val)
-	if err != nil {
-		return err
-	}
 	b.state.PreviousEpochAttestations = val
 	b.lock.Lock()
-	b.merkleLayers[0][previousEpochAttestations] = root[:]
-	b.recomputeRoot(int(previousEpochAttestations))
+	b.markFieldAsDirty(previousEpochAttestations)
 	b.lock.Unlock()
 	return nil
 }
@@ -379,14 +275,9 @@ func (b *BeaconState) SetPreviousEpochAttestations(val []*pbp2p.PendingAttestati
 // SetCurrentEpochAttestations for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetCurrentEpochAttestations(val []*pbp2p.PendingAttestation) error {
-	root, err := stateutil.EpochAttestationsRoot(val)
-	if err != nil {
-		return err
-	}
 	b.state.CurrentEpochAttestations = val
 	b.lock.Lock()
-	b.merkleLayers[0][currentEpochAttestations] = root[:]
-	b.recomputeRoot(int(currentEpochAttestations))
+	b.markFieldAsDirty(currentEpochAttestations)
 	b.lock.Unlock()
 	return nil
 }
@@ -395,13 +286,8 @@ func (b *BeaconState) SetCurrentEpochAttestations(val []*pbp2p.PendingAttestatio
 // to the the end of list.
 func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 	b.state.HistoricalRoots = append(b.state.HistoricalRoots, root[:])
-	root, err := stateutil.HistoricalRootsRoot(b.state.HistoricalRoots)
-	if err != nil {
-		return err
-	}
 	b.lock.Lock()
-	b.merkleLayers[0][historicalRoots] = root[:]
-	b.recomputeRoot(int(historicalRoots))
+	b.markFieldAsDirty(historicalRoots)
 	b.lock.Unlock()
 	return nil
 }
@@ -410,13 +296,8 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 // to the the end of list.
 func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestation) error {
 	b.state.CurrentEpochAttestations = append(b.state.CurrentEpochAttestations, val)
-	root, err := stateutil.EpochAttestationsRoot(b.state.CurrentEpochAttestations)
-	if err != nil {
-		return err
-	}
 	b.lock.Lock()
-	b.merkleLayers[0][currentEpochAttestations] = root[:]
-	b.recomputeRoot(int(currentEpochAttestations))
+	b.markFieldAsDirty(currentEpochAttestations)
 	b.lock.Unlock()
 	return nil
 }
@@ -425,13 +306,8 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestati
 // to the the end of list.
 func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestation) error {
 	b.state.PreviousEpochAttestations = append(b.state.PreviousEpochAttestations, val)
-	root, err := stateutil.EpochAttestationsRoot(b.state.PreviousEpochAttestations)
-	if err != nil {
-		return err
-	}
 	b.lock.Lock()
-	b.merkleLayers[0][previousEpochAttestations] = root[:]
-	b.recomputeRoot(int(previousEpochAttestations))
+	b.markFieldAsDirty(previousEpochAttestations)
 	b.lock.Unlock()
 	return nil
 }
@@ -440,13 +316,8 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestat
 // to the the end of list.
 func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	b.state.Validators = append(b.state.Validators, val)
-	root, err := stateutil.ValidatorRegistryRoot(b.state.Validators)
-	if err != nil {
-		return err
-	}
 	b.lock.Lock()
-	b.merkleLayers[0][validators] = root[:]
-	b.recomputeRoot(int(validators))
+	b.markFieldAsDirty(validators)
 	b.lock.Unlock()
 	return nil
 }
@@ -455,66 +326,44 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 // to the the end of list.
 func (b *BeaconState) AppendBalance(bal uint64) error {
 	b.state.Balances = append(b.state.Balances, bal)
-	root, err := stateutil.ValidatorBalancesRoot(b.state.Balances)
-	if err != nil {
-		return err
-	}
 	b.lock.Lock()
-	b.merkleLayers[0][balances] = root[:]
-	b.recomputeRoot(int(balances))
+	b.markFieldAsDirty(balances)
 	b.lock.Unlock()
 	return nil
 }
 
 // SetJustificationBits for the beacon state.
 func (b *BeaconState) SetJustificationBits(val bitfield.Bitvector4) error {
-	root := bytesutil.ToBytes32(b.state.JustificationBits)
 	b.state.JustificationBits = val
 	b.lock.Lock()
-	b.merkleLayers[0][justificationBits] = root[:]
-	b.recomputeRoot(int(justificationBits))
+	b.markFieldAsDirty(justificationBits)
 	b.lock.Unlock()
 	return nil
 }
 
 // SetPreviousJustifiedCheckpoint for the beacon state.
 func (b *BeaconState) SetPreviousJustifiedCheckpoint(val *ethpb.Checkpoint) error {
-	root, err := stateutil.CheckpointRoot(val)
-	if err != nil {
-		return err
-	}
 	b.state.PreviousJustifiedCheckpoint = val
 	b.lock.Lock()
-	b.merkleLayers[0][previousJustifiedCheckpoint] = root[:]
-	b.recomputeRoot(int(previousJustifiedCheckpoint))
+	b.markFieldAsDirty(previousJustifiedCheckpoint)
 	b.lock.Unlock()
 	return nil
 }
 
 // SetCurrentJustifiedCheckpoint for the beacon state.
 func (b *BeaconState) SetCurrentJustifiedCheckpoint(val *ethpb.Checkpoint) error {
-	root, err := stateutil.CheckpointRoot(val)
-	if err != nil {
-		return err
-	}
 	b.state.CurrentJustifiedCheckpoint = val
 	b.lock.Lock()
-	b.merkleLayers[0][currentJustifiedCheckpoint] = root[:]
-	b.recomputeRoot(int(currentJustifiedCheckpoint))
+	b.markFieldAsDirty(currentJustifiedCheckpoint)
 	b.lock.Unlock()
 	return nil
 }
 
 // SetFinalizedCheckpoint for the beacon state.
 func (b *BeaconState) SetFinalizedCheckpoint(val *ethpb.Checkpoint) error {
-	root, err := stateutil.CheckpointRoot(val)
-	if err != nil {
-		return err
-	}
 	b.state.FinalizedCheckpoint = val
 	b.lock.Lock()
-	b.merkleLayers[0][finalizedCheckpoint] = root[:]
-	b.recomputeRoot(int(finalizedCheckpoint))
+	b.markFieldAsDirty(finalizedCheckpoint)
 	b.lock.Unlock()
 	return nil
 }
@@ -551,4 +400,12 @@ func (b *BeaconState) recomputeRoot(idx int) {
 		currentIndex = parentIdx
 	}
 	b.merkleLayers = layers
+}
+
+func (b *BeaconState) markFieldAsDirty(field fieldIndex) {
+	_, ok := b.dirtyFields[field]
+	if !ok {
+		b.dirtyFields[field] = true
+	}
+	// do nothing if field already exists
 }

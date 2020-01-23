@@ -128,7 +128,10 @@ func (s *Store) cacheGenesisState(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	stateRoot := genesisState.HashTreeRoot()
+	stateRoot, err := genesisState.HashTreeRoot()
+	if err != nil {
+		return err
+	}
 	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
 	genesisBlkRoot, err := ssz.HashTreeRoot(genesisBlk.Block)
 	if err != nil {
