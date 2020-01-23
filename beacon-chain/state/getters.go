@@ -13,6 +13,9 @@ import (
 
 // Clone the beacon state into a protobuf for usage.
 func (b *BeaconState) Clone() *pbp2p.BeaconState {
+	if b.state == nil {
+		return nil
+	}
 	return &pbp2p.BeaconState{
 		GenesisTime:                 b.GenesisTime(),
 		Slot:                        b.Slot(),
