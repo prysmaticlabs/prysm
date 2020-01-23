@@ -6,7 +6,6 @@ import (
 )
 
 func TestStore_leadsToViableHead(t *testing.T) {
-
 	tests := []struct {
 		n              *Node
 		justifiedEpoch uint64
@@ -37,7 +36,6 @@ func TestStore_leadsToViableHead(t *testing.T) {
 }
 
 func TestStore_viableForHead(t *testing.T) {
-
 	tests := []struct {
 		n              *Node
 		justifiedEpoch uint64

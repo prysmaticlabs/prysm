@@ -2,7 +2,6 @@ package protoarray
 
 import (
 	"context"
-	"fmt"
 
 	"go.opencensus.io/trace"
 )
@@ -27,7 +26,6 @@ func (s *Store) leadsToViableHead(ctx context.Context, node *Node) (bool, error)
 
 		bestDescendentNode := s.nodes[bestDescendentIndex]
 		bestDescendentViable = s.viableForHead(ctx, bestDescendentNode)
-		fmt.Println(bestDescendentViable)
 	}
 
 	// The node is viable as long as the best descendent is viable.
