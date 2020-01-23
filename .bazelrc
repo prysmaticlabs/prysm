@@ -24,3 +24,8 @@ build --define ssz=mainnet
 build --incompatible_strict_action_env
 test --incompatible_strict_action_env
 run --incompatible_strict_action_env
+
+# Disable kafka by default, it takes a long time to build...
+build --define kafka_enabled=false
+test --define kafka_enabled=false
+run --define kafka_enabled=false
