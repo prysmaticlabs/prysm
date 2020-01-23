@@ -22,12 +22,13 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-const ipLimit = 3
+const ipLimit = 5
 
 var fundingAmount = big.NewInt(3.5 * params.Ether)
 var funded = make(map[string]bool)
 var ipCounter = make(map[string]int)
 var fundingLock sync.Mutex
+var pruneDuration = time.Hour * 4
 
 type faucetServer struct {
 	r        recaptcha.Recaptcha
@@ -177,4 +178,17 @@ func (s *faucetServer) getPeer(ctx context.Context) (string, error) {
 	}
 	peer := md.Get("x-forwarded-for")[0]
 	return peer, nil
+}
+
+// reduce the counter for each ip every few hours.
+func counterWatcher() {
+	ticker := time.NewTicker(pruneDuration)
+	for {
+		<-ticker.C
+		fundingLock.Lock()
+		for ip, ctr := range ipCounter {
+			ipCounter[ip] = ctr - 1
+		}
+		fundingLock.Unlock()
+	}
 }
