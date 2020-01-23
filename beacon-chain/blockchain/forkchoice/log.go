@@ -34,7 +34,8 @@ func logEpochData(beaconState *stateTrie.BeaconState) {
 		"justifiedEpoch":         currJustifiedEpoch,
 		"previousJustifiedEpoch": prevJustifiedEpoch,
 	}).Info("Starting next epoch")
-	activeVals, err := helpers.ActiveValidatorIndices(beaconState, helpers.CurrentEpoch(beaconState))
+	vals := beaconState.Validators()
+	activeVals, err := helpers.ActiveValidatorIndices(beaconState, vals, helpers.CurrentEpoch(beaconState))
 	if err != nil {
 		log.WithError(err).Error("Could not get active validator indices")
 		return

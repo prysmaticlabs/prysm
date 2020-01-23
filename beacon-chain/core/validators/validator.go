@@ -63,7 +63,7 @@ func InitiateValidatorExit(state *stateTrie.BeaconState, validators []*ethpb.Val
 			exitQueueChurn++
 		}
 	}
-	activeValidatorCount, err := helpers.ActiveValidatorCount(state, helpers.CurrentEpoch(state))
+	activeValidatorCount, err := helpers.ActiveValidatorCount(validators, helpers.CurrentEpoch(state))
 	if err != nil {
 		return errors.Wrap(err, "could not get active validator count")
 	}
@@ -138,7 +138,7 @@ func SlashValidator(
 		return err
 	}
 
-	proposerIdx, err := helpers.BeaconProposerIndex(state)
+	proposerIdx, err := helpers.BeaconProposerIndex(state, validators)
 	if err != nil {
 		return errors.Wrap(err, "could not get proposer idx")
 	}

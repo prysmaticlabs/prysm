@@ -205,7 +205,8 @@ func (s *Store) latestAttestingBalance(ctx context.Context, root []byte) (uint64
 	}
 
 	lastJustifiedEpoch := helpers.CurrentEpoch(justifiedState)
-	activeIndices, err := helpers.ActiveValidatorIndices(justifiedState, lastJustifiedEpoch)
+	validators := justifiedState.Validators()
+	activeIndices, err := helpers.ActiveValidatorIndices(justifiedState, validators, lastJustifiedEpoch)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not get active indices for last justified checkpoint")
 	}

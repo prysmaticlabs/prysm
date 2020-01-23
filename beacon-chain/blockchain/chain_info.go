@@ -164,7 +164,7 @@ func (s *Service) HeadValidatorsIndices(epoch uint64) ([]uint64, error) {
 	if s.headState == nil {
 		return []uint64{}, nil
 	}
-	return helpers.ActiveValidatorIndices(s.headState, epoch)
+	return helpers.ActiveValidatorIndices(s.headState, s.headState.Validators(), epoch)
 }
 
 // HeadSeed returns the seed from the head view of a given epoch.

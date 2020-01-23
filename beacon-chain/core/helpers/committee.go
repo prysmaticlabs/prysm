@@ -118,9 +118,14 @@ func BeaconCommittee(validatorIndices []uint64, seed [32]byte, slot uint64, comm
 // BeaconCommitteeWithoutCache returns the crosslink committee of a given slot and committee index without the
 // usage of committee cache.
 // TODO(3603): Delete this function when issue 3603 closes.
-func BeaconCommitteeWithoutCache(state *stateTrie.BeaconState, slot uint64, index uint64) ([]uint64, error) {
+func BeaconCommitteeWithoutCache(
+	state *stateTrie.BeaconState,
+	validators []*ethpb.Validator,
+	slot uint64,
+	index uint64,
+) ([]uint64, error) {
 	epoch := SlotToEpoch(slot)
-	activeValidatorCount, err := ActiveValidatorCount(state, epoch)
+	activeValidatorCount, err := ActiveValidatorCount(validators, epoch)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +137,7 @@ func BeaconCommitteeWithoutCache(state *stateTrie.BeaconState, slot uint64, inde
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get seed")
 	}
-	indices, err := ActiveValidatorIndices(state, epoch)
+	indices, err := ActiveValidatorIndices(state, validators, epoch)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get active indices")
 	}
@@ -218,7 +223,11 @@ type CommitteeAssignmentContainer struct {
 // 2. Compute all committees.
 // 3. Determine the attesting slot for each committee.
 // 4. Construct a map of validator indices pointing to the respective committees.
-func CommitteeAssignments(state *stateTrie.BeaconState, epoch uint64) (map[uint64]*CommitteeAssignmentContainer, map[uint64]uint64, error) {
+func CommitteeAssignments(
+	state *stateTrie.BeaconState,
+	validators []*ethpb.Validator,
+	epoch uint64,
+) (map[uint64]*CommitteeAssignmentContainer, map[uint64]uint64, error) {
 	nextEpoch := NextEpoch(state)
 	if epoch > nextEpoch {
 		return nil, nil, fmt.Errorf(
@@ -235,14 +244,14 @@ func CommitteeAssignments(state *stateTrie.BeaconState, epoch uint64) (map[uint6
 		if err := state.SetSlot(slot); err != nil {
 			return nil, nil, err
 		}
-		i, err := BeaconProposerIndex(state)
+		i, err := BeaconProposerIndex(state, validators)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "could not check proposer at slot %d", state.Slot())
 		}
 		proposerIndexToSlot[i] = slot
 	}
 
-	activeValidatorIndices, err := ActiveValidatorIndices(state, epoch)
+	activeValidatorIndices, err := ActiveValidatorIndices(state, validators, epoch)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -256,7 +265,7 @@ func CommitteeAssignments(state *stateTrie.BeaconState, epoch uint64) (map[uint6
 		// Compute committees.
 		for j := uint64(0); j < numCommitteesPerSlot; j++ {
 			slot := startSlot + i
-			committee, err := BeaconCommitteeFromState(state, slot, j /*committee index*/)
+			committee, err := BeaconCommitteeFromState(state, validators, slot, j /*committee index*/)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -307,6 +316,7 @@ func CommitteeAssignments(state *stateTrie.BeaconState, epoch uint64) (map[uint6
 //    return None
 func CommitteeAssignment(
 	state *stateTrie.BeaconState,
+	validators []*ethpb.Validator,
 	epoch uint64,
 	validatorIndex uint64,
 ) ([]uint64, uint64, uint64, uint64, error) {
@@ -324,21 +334,21 @@ func CommitteeAssignment(
 		if err := state.SetSlot(slot); err != nil {
 			return nil, 0, 0, 0, err
 		}
-		i, err := BeaconProposerIndex(state)
+		i, err := BeaconProposerIndex(state, validators)
 		if err != nil {
 			return nil, 0, 0, 0, errors.Wrapf(err, "could not check proposer at slot %d", state.Slot())
 		}
 		proposerIndexToSlot[i] = slot
 	}
 
-	activeValidatorIndices, err := ActiveValidatorIndices(state, epoch)
+	activeValidatorIndices, err := ActiveValidatorIndices(state, validators, epoch)
 	if err != nil {
 		return nil, 0, 0, 0, err
 	}
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		countAtSlot := SlotCommitteeCount(uint64(len(activeValidatorIndices)))
 		for i := uint64(0); i < countAtSlot; i++ {
-			committee, err := BeaconCommitteeFromState(state, slot, i)
+			committee, err := BeaconCommitteeFromState(state, validators, slot, i)
 			if err != nil {
 				return nil, 0, 0, 0, errors.Wrapf(err, "could not get crosslink committee at slot %d", slot)
 			}
