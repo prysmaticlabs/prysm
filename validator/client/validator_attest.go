@@ -37,8 +37,6 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
-	indexInCommittee, validatorIndex := duty.CommitteeIndex, duty.ValidatorIndex
-
 	// As specified in the spec, an attester should wait until one-third of the way through the slot,
 	// then create and broadcast the attestation.
 	// https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/validator/0_beacon-chain-validator.md#attesting
@@ -75,6 +73,14 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
+	var indexInCommittee uint64
+	for i, vID := range duty.Committee {
+		if vID == duty.ValidatorIndex {
+			indexInCommittee = uint64(i)
+			break
+		}
+	}
+
 	aggregationBitfield := bitfield.NewBitlist(uint64(len(duty.Committee)))
 	aggregationBitfield.SetBitAt(indexInCommittee, true)
 	attestation := &ethpb.Attestation{
@@ -102,7 +108,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		}
 	}
 
-	if err := v.saveAttesterIndexToData(data, validatorIndex); err != nil {
+	if err := v.saveAttesterIndexToData(data, duty.ValidatorIndex); err != nil {
 		log.WithError(err).Error("Could not save validator index for logging")
 		return
 	}

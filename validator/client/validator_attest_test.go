@@ -40,6 +40,7 @@ func TestAttestToBlockHead_SubmitAttestationRequestFailure(t *testing.T) {
 			PublicKey:      validatorKey.PublicKey.Marshal(),
 			CommitteeIndex: 5,
 			Committee:      make([]uint64, 111),
+			ValidatorIndex: 0,
 		}}}
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
@@ -72,6 +73,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 			PublicKey:      validatorKey.PublicKey.Marshal(),
 			CommitteeIndex: 5,
 			Committee:      committee,
+			ValidatorIndex: validatorIndex,
 		}}}
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
@@ -98,7 +100,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
 
 	aggregationBitfield := bitfield.NewBitlist(uint64(len(committee)))
-	aggregationBitfield.SetBitAt(0, true)
+	aggregationBitfield.SetBitAt(4, true)
 	expectedAttestation := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: []byte("A"),
@@ -138,6 +140,7 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 			PublicKey:      validatorKey.PublicKey.Marshal(),
 			CommitteeIndex: 5,
 			Committee:      committee,
+			ValidatorIndex: validatorIndex,
 		}}}
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
@@ -178,6 +181,7 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 			PublicKey:      validatorKey.PublicKey.Marshal(),
 			CommitteeIndex: 5,
 			Committee:      committee,
+			ValidatorIndex: validatorIndex,
 		}}}
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
@@ -228,6 +232,7 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 			PublicKey:      validatorKey.PublicKey.Marshal(),
 			CommitteeIndex: 5,
 			Committee:      committee,
+			ValidatorIndex: validatorIndex,
 		}}}
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
@@ -305,6 +310,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 			PublicKey:      validatorKey.PublicKey.Marshal(),
 			CommitteeIndex: 5,
 			Committee:      committee,
+			ValidatorIndex: validatorIndex,
 		}}}
 
 	m.validatorClient.EXPECT().GetAttestationData(
@@ -341,6 +347,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 			PublicKey:      validatorKey.PublicKey.Marshal(),
 			CommitteeIndex: 5,
 			Committee:      committee,
+			ValidatorIndex: validatorIndex,
 		}}}
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
