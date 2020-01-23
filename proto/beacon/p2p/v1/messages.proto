@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package ethereum.beacon.p2p.v1;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+message Status {
+  bytes head_fork_version = 1 [(gogoproto.moretags) = "ssz-size:\"4\""];
+  bytes finalized_root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  uint64 finalized_epoch = 3;
+  bytes head_root = 4 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  uint64 head_slot = 5;
+}
+
+message BeaconBlocksByRangeRequest {
+  bytes head_block_root = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  uint64 start_slot = 2;
+  uint64 count = 3;
+  uint64 step = 4;
+}
