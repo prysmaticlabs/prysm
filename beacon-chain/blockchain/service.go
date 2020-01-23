@@ -310,7 +310,10 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
-	stateRoot := genesisState.HashTreeRoot()
+	stateRoot, err := genesisState.HashTreeRoot()
+	if err != nil {
+		return err
+	}
 	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
 	genesisBlkRoot, err := ssz.HashTreeRoot(genesisBlk.Block)
 	if err != nil {

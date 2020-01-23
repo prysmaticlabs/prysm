@@ -1,17 +1,27 @@
 package state
 
 import (
-	"errors"
 	"fmt"
 
+	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
+// InnerStateUnsafe returns the pointer value of the underlying
+// beacon state proto object, bypassing immutability. Use with care.
+func (b *BeaconState) InnerStateUnsafe() *pbp2p.BeaconState {
+	return b.state
+}
+
 // Clone the beacon state into a protobuf for usage.
 func (b *BeaconState) Clone() *pbp2p.BeaconState {
+	if b.state == nil {
+		return nil
+	}
 	return &pbp2p.BeaconState{
 		GenesisTime:                 b.GenesisTime(),
 		Slot:                        b.Slot(),
@@ -104,7 +114,7 @@ func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
 		return nil, nil
 	}
 	if len(b.state.BlockRoots) <= int(idx) {
-		return nil, errors.New(fmt.Sprintf("index %d out of range", idx))
+		return nil, fmt.Errorf("index %d out of range", idx)
 	}
 	root := make([]byte, 32)
 	copy(root, b.state.BlockRoots[idx])
@@ -168,7 +178,7 @@ func (b *BeaconState) Eth1DataVotes() []*ethpb.Eth1Data {
 	res := make([]*ethpb.Eth1Data, len(b.state.Eth1DataVotes))
 	for i := 0; i < len(res); i++ {
 		res[i] = &ethpb.Eth1Data{
-			DepositCount: b.state.Eth1Data.DepositCount,
+			DepositCount: b.state.Eth1DataVotes[i].DepositCount,
 		}
 		var depositRoot [32]byte
 		var blockHash [32]byte
@@ -214,7 +224,7 @@ func (b *BeaconState) Validators() []*ethpb.Validator {
 	return res
 }
 
-//  ValidatorAtIndex is the validator at the provided index.
+// ValidatorAtIndex is the validator at the provided index.
 func (b *BeaconState) ValidatorAtIndex(idx uint64) (*ethpb.Validator, error) {
 	if b.state.Validators == nil {
 		return &ethpb.Validator{}, nil
@@ -260,13 +270,13 @@ func (b *BeaconState) Balances() []uint64 {
 	return res
 }
 
-// Balance of validator with the provided index.
+// BalanceAtIndex of validator with the provided index.
 func (b *BeaconState) BalanceAtIndex(idx int) (uint64, error) {
 	if b.state.Balances == nil {
 		return 0, nil
 	}
 	if len(b.state.Balances) <= int(idx) {
-		return 0, errors.New(fmt.Sprintf("index of %d does not exist", idx))
+		return 0, fmt.Errorf("index of %d does not exist", idx)
 	}
 	return b.state.Balances[idx], nil
 }
@@ -292,7 +302,7 @@ func (b *BeaconState) RandaoMixAtIndex(idx uint64) ([]byte, error) {
 		return nil, nil
 	}
 	if len(b.state.RandaoMixes) <= int(idx) {
-		return nil, errors.New(fmt.Sprintf("index %d out of range", idx))
+		return nil, fmt.Errorf("index %d out of range", idx)
 	}
 	root := make([]byte, 32)
 	copy(root, b.state.RandaoMixes[idx])
@@ -316,7 +326,8 @@ func (b *BeaconState) PreviousEpochAttestations() []*pbp2p.PendingAttestation {
 	}
 	res := make([]*pbp2p.PendingAttestation, len(b.state.PreviousEpochAttestations))
 	for i := 0; i < len(res); i++ {
-		res[i] = clonePendingAttestation(b.state.PreviousEpochAttestations[i])
+		//res[i] = clonePendingAttestation(b.state.PreviousEpochAttestations[i])
+		res[i] = proto.Clone(b.state.PreviousEpochAttestations[i]).(*pbp2p.PendingAttestation)
 	}
 	return res
 }
@@ -328,7 +339,7 @@ func (b *BeaconState) CurrentEpochAttestations() []*pbp2p.PendingAttestation {
 	}
 	res := make([]*pbp2p.PendingAttestation, len(b.state.CurrentEpochAttestations))
 	for i := 0; i < len(res); i++ {
-		res[i] = clonePendingAttestation(b.state.CurrentEpochAttestations[i])
+		res[i] = proto.Clone(b.state.CurrentEpochAttestations[i]).(*pbp2p.PendingAttestation)
 	}
 	return res
 }
