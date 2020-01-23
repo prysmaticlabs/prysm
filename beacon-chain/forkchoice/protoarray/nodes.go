@@ -20,7 +20,7 @@ func (s *Store) leadsToViableHead(ctx context.Context, node *Node) (bool, error)
 	if bestDescendentIndex != nonExistentNode {
 		// Protection against out of bound, best descendent index can not be
 		// exceeds length of nodes list.
-		if bestDescendentIndex > uint64(len(s.nodes)) {
+		if bestDescendentIndex >= uint64(len(s.nodes)) {
 			return false, errInvalidBestDescendantIndex
 		}
 
