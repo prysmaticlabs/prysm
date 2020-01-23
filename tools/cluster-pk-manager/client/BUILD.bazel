@@ -9,8 +9,8 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/tools/cluster-pk-manager/client",
     visibility = ["//visibility:private"],
     deps = [
+        "//proto/cluster:go_default_library",
         "@com_github_bazelbuild_buildtools//file:go_default_library",
-        "@com_github_prysmaticlabs_prysm//proto/cluster:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
         "@org_uber_go_automaxprocs//:go_default_library",
     ],
