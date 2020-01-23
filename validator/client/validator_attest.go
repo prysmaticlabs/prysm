@@ -28,18 +28,18 @@ import (
 func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [48]byte) {
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitAttestation")
 	defer span.End()
-
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
 
+	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).WithField("slot", slot)
 	duty, err := v.duty(pubKey)
 	if err != nil {
-		log.Errorf("Could not fetch validator assignment: %v", err)
+		log.WithError(err).Error("Could not fetch validator assignment")
 		return
 	}
 
 	indexInCommittee, validatorIndex, err := v.indexInCommittee(pubKey, duty)
 	if err != nil {
-		log.Errorf("Could not get validator index in assignment: %v", err)
+		log.WithError(err).Error("Could not get validator index in assignment")
 		return
 	}
 
@@ -54,7 +54,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	}
 	data, err := v.validatorClient.GetAttestationData(ctx, req)
 	if err != nil {
-		log.Errorf("Could not request attestation to sign at slot %d: %v", slot, err)
+		log.WithError(err).Error("Could not request attestation to sign at slot")
 		return
 	}
 
@@ -75,7 +75,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 
 	sig, err := v.signAtt(ctx, pubKey, data)
 	if err != nil {
-		log.Errorf("Could not sign attestation: %v", err)
+		log.WithError(err).Error("Could not sign attestation")
 		return
 	}
 
@@ -89,7 +89,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 
 	attResp, err := v.validatorClient.ProposeAttestation(ctx, attestation)
 	if err != nil {
-		log.Errorf("Could not submit attestation to beacon node: %v", err)
+		log.WithError(err).Error("Could not submit attestation to beacon node")
 		return
 	}
 
@@ -107,7 +107,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	}
 
 	if err := v.saveAttesterIndexToData(data, validatorIndex); err != nil {
-		log.Errorf("Could not save validator index for logging: %v", err)
+		log.WithError(err).Error("Could not save validator index for logging")
 		return
 	}
 
