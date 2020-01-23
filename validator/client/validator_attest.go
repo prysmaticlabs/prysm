@@ -37,11 +37,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
-	indexInCommittee, validatorIndex, err := v.indexInCommittee(pubKey, duty)
-	if err != nil {
-		log.WithError(err).Error("Could not get validator index in assignment")
-		return
-	}
+	indexInCommittee, validatorIndex := duty.CommitteeIndex, duty.ValidatorIndex
 
 	// As specified in the spec, an attester should wait until one-third of the way through the slot,
 	// then create and broadcast the attestation.
@@ -152,22 +148,6 @@ func (v *validator) duty(pubKey [48]byte) (*ethpb.DutiesResponse_Duty, error) {
 	}
 
 	return nil, fmt.Errorf("pubkey %#x not in duties", bytesutil.Trunc(pubKey[:]))
-}
-
-// This returns the index of validator's position in a committee. It's used to construct aggregation and
-// custody bit fields.
-func (v *validator) indexInCommittee(pubKey [48]byte, duty *ethpb.DutiesResponse_Duty) (uint64, uint64, error) {
-	v.pubKeyToIDLock.RLock()
-	defer v.pubKeyToIDLock.RUnlock()
-
-	index := v.pubKeyToID[pubKey]
-	for i, validatorIndex := range duty.Committee {
-		if validatorIndex == index {
-			return uint64(i), index, nil
-		}
-	}
-
-	return 0, 0, fmt.Errorf("index %d not in committee", index)
 }
 
 // Given validator's public key, this returns the signature of an attestation data.
