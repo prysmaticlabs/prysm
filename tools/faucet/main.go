@@ -39,6 +39,7 @@ func main() {
 	)
 
 	reflection.Register(s)
+	go counterWatcher()
 
 	fmt.Printf("Serving gRPC requests on port %d\n", *port)
 	if err := s.Serve(lis); err != nil {
