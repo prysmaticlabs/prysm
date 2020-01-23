@@ -59,7 +59,7 @@ func (s *Service) slasherOldAtetstationFeeder() error {
 	if ch.FinalizedEpoch < 2 {
 		log.Info("archive node doesnt have historic data for slasher to proccess. finalized epoch: %d", ch.FinalizedEpoch)
 	}
-	log.Infof("Finalized epoch is currently: %d", ch.FinalizedEpoch)
+	log.Infof("current finalized epoch: %d", ch.FinalizedEpoch)
 	errOut := make(chan error)
 	var errorWg sync.WaitGroup
 	e, err := s.slasherDb.GetLatestEpochDetected()
