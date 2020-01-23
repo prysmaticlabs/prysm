@@ -49,6 +49,7 @@ var appFlags = []cli.Flag{
 	cmd.RelayNode,
 	cmd.P2PUDPPort,
 	cmd.P2PTCPPort,
+	cmd.P2PIP,
 	cmd.P2PHost,
 	cmd.P2PHostDNS,
 	cmd.P2PMaxPeers,
