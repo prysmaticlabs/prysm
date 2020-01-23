@@ -78,9 +78,8 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	// Small offset so evaluators perform in the middle of an epoch.
 	epochSeconds := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
 	genesisTime := time.Unix(genesis.GenesisTime.Seconds+int64(epochSeconds/2), 0)
-	currentEpoch := uint64(0)
 	ticker := GetEpochTicker(genesisTime, epochSeconds)
-	for c := range ticker.C() {
+	for currentEpoch := range ticker.C() {
 		for _, evaluator := range config.evaluators {
 			// Only run if the policy says so.
 			if !evaluator.Policy(currentEpoch) {
@@ -93,15 +92,14 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 			})
 		}
 
-		if t.Failed() || c >= config.epochsToRun {
+		if t.Failed() || currentEpoch >= config.epochsToRun {
+			if currentEpoch < config.epochsToRun {
+				t.Fatalf("Test ended prematurely, only reached epoch %d", currentEpoch)
+			}
+
 			ticker.Done()
 			break
 		}
-		currentEpoch++
-	}
-
-	if currentEpoch < config.epochsToRun {
-		t.Fatalf("Test ended prematurely, only reached epoch %d", currentEpoch)
 	}
 }
 

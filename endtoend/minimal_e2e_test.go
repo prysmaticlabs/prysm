@@ -19,7 +19,7 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 			"--cache-proposer-indices",
 			"--cache-filtered-block-tree",
 			"--enable-skip-slots-cache",
-			//"--enable-attestation-cache",
+			"--enable-attestation-cache",
 		},
 		validatorFlags:  []string{
 			"--minimal-config",

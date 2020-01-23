@@ -18,7 +18,7 @@ func TestEndToEnd_DemoConfig(t *testing.T) {
 			"--cache-proposer-indices",
 			"--cache-filtered-block-tree",
 			"--enable-skip-slots-cache",
-			//"--enable-attestation-cache",
+			"--enable-attestation-cache",
 		},
 		epochsToRun:    5,
 		numBeaconNodes: 2,
