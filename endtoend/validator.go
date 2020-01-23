@@ -58,9 +58,9 @@ func initializeValidators(
 			"--force-clear-db",
 			fmt.Sprintf("--interop-num-validators=%d", validatorsPerNode),
 			fmt.Sprintf("--interop-start-index=%d", validatorsPerNode*n),
-			fmt.Sprintf("--monitoring-port=%d", 9080+n),
+			fmt.Sprintf("--monitoring-port=%d", 9280+n),
 			fmt.Sprintf("--datadir=%s/eth2-val-%d", tmpPath, n),
-			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", 4000+n),
+			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", 4200+n),
 		}
 		args = append(args, config.validatorFlags...)
 
@@ -73,11 +73,11 @@ func initializeValidators(
 		}
 		valClients[n] = &validatorClientInfo{
 			processID:   cmd.Process.Pid,
-			monitorPort: 9080 + n,
+			monitorPort: 9280 + n,
 		}
 	}
 
-	client, err := rpc.DialHTTP("http://127.0.0.1:8545")
+	client, err := rpc.DialHTTP("http://127.0.0.1:8745")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -64,7 +64,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 		return
 	}
 
-	conn, err := grpc.Dial("127.0.0.1:4000", grpc.WithInsecure())
+	conn, err := grpc.Dial("127.0.0.1:4200", grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("Failed to dial: %v", err)
 	}
