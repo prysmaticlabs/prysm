@@ -178,6 +178,7 @@ func logErrorOutput(t *testing.T, file *os.File, title string, index uint64) {
 	}
 
 	if len(errorLines) < 1 {
+		t.Logf("No error logs detected for %s %d", title, index)
 		return
 	}
 
