@@ -5,6 +5,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -21,6 +22,7 @@ var Balances *Balance
 func ProcessAttestations(
 	ctx context.Context,
 	state *stateTrie.BeaconState,
+	validators []*ethpb.Validator,
 	vp []*Validator,
 	bp *Balance,
 ) ([]*Validator, *Balance, error) {
@@ -42,7 +44,7 @@ func ProcessAttestations(
 			return nil, nil, errors.Wrap(err, "could not check validator attested previous epoch")
 		}
 
-		committee, err := helpers.BeaconCommitteeFromState(state, a.Data.Slot, a.Data.CommitteeIndex)
+		committee, err := helpers.BeaconCommitteeFromState(state, validators, a.Data.Slot, a.Data.CommitteeIndex)
 		if err != nil {
 			return nil, nil, err
 		}

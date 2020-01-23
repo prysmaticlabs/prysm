@@ -85,15 +85,13 @@ func ActiveValidatorIndices(state *stateTrie.BeaconState, validators []*ethpb.Va
 
 // ActiveValidatorCount returns the number of active validators in the state
 // at the given epoch.
-func ActiveValidatorCount(state *stateTrie.BeaconState, epoch uint64) (uint64, error) {
-	vals := state.Validators()
+func ActiveValidatorCount(validators []*ethpb.Validator, epoch uint64) (uint64, error) {
 	count := uint64(0)
-	for _, v := range vals {
+	for _, v := range validators {
 		if IsActiveValidator(v, epoch) {
 			count++
 		}
 	}
-
 	return count, nil
 }
 

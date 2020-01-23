@@ -63,6 +63,9 @@ func ExecuteStateTransition(
 	if err = ProcessBlock(ctx, state, validators, signed); err != nil {
 		return errors.Wrapf(err, "could not process block in slot %d", signed.Block.Slot)
 	}
+	if err := state.SetValidators(validators); err != nil {
+		return err
+	}
 
 	interop.WriteBlockToDisk(signed, false)
 	interop.WriteStateToDisk(state)
@@ -113,7 +116,13 @@ func ExecuteStateTransitionNoVerifyAttSigs(
 	}
 
 	// Execute per block transition.
-	return processBlockNoVerifyAttSigs(ctx, state, validators, signed)
+	if err := processBlockNoVerifyAttSigs(ctx, state, validators, signed); err != nil {
+		return err
+	}
+	if err := state.SetValidators(validators); err != nil {
+		return err
+	}
+	return nil
 }
 
 // CalculateStateRoot defines the procedure for a state transition function.
@@ -159,6 +168,9 @@ func CalculateStateRoot(
 		return [32]byte{}, errors.Wrap(err, "could not process block")
 	}
 
+	if err := state.SetValidators(validators); err != nil {
+		return [32]byte{}, err
+	}
 	return state.HashTreeRoot(), nil
 }
 
@@ -557,34 +569,29 @@ func ProcessEpochPrecompute(
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("epoch", int64(helpers.CurrentEpoch(state))))
 
-	vp, bp := precompute.New(ctx, state)
-	vp, bp, err := precompute.ProcessAttestations(ctx, state, vp, bp)
+	vp, bp := precompute.New(ctx, state, validators)
+	vp, bp, err := precompute.ProcessAttestations(ctx, state, validators, vp, bp)
 	if err != nil {
 		return err
 	}
 
-	state, err = precompute.ProcessJustificationAndFinalizationPreCompute(state, bp)
-	if err != nil {
+	if err := precompute.ProcessJustificationAndFinalizationPreCompute(state, bp); err != nil {
 		return errors.Wrap(err, "could not process justification")
 	}
 
-	state, err = precompute.ProcessRewardsAndPenaltiesPrecompute(state, bp, vp)
-	if err != nil {
+	if err := precompute.ProcessRewardsAndPenaltiesPrecompute(state, bp, vp); err != nil {
 		return errors.Wrap(err, "could not process rewards and penalties")
 	}
 
-	state, err = e.ProcessRegistryUpdates(state)
-	if err != nil {
+	if err := e.ProcessRegistryUpdates(state, validators); err != nil {
 		return errors.Wrap(err, "could not process registry updates")
 	}
 
-	err = precompute.ProcessSlashingsPrecompute(state, bp)
-	if err != nil {
+	if err := precompute.ProcessSlashingsPrecompute(state, validators, bp); err != nil {
 		return err
 	}
 
-	state, err = e.ProcessFinalUpdates(state)
-	if err != nil {
+	if err := e.ProcessFinalUpdates(state, validators); err != nil {
 		return errors.Wrap(err, "could not process final updates")
 	}
 	return nil
