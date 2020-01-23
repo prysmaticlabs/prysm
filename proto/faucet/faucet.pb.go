@@ -8,9 +8,12 @@ import (
 	fmt "fmt"
 	io "io"
 	math "math"
+	math_bits "math/bits"
 
 	proto "github.com/gogo/protobuf/proto"
 	grpc "google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -22,7 +25,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 type FundingRequest struct {
 	WalletAddress        string   `protobuf:"bytes,1,opt,name=wallet_address,json=walletAddress,proto3" json:"wallet_address,omitempty"`
@@ -47,7 +50,7 @@ func (m *FundingRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, erro
 		return xxx_messageInfo_FundingRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -110,7 +113,7 @@ func (m *FundingResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return xxx_messageInfo_FundingResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -215,6 +218,14 @@ type FaucetServiceServer interface {
 	RequestFunds(context.Context, *FundingRequest) (*FundingResponse, error)
 }
 
+// UnimplementedFaucetServiceServer can be embedded to have forward compatible implementations.
+type UnimplementedFaucetServiceServer struct {
+}
+
+func (*UnimplementedFaucetServiceServer) RequestFunds(ctx context.Context, req *FundingRequest) (*FundingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RequestFunds not implemented")
+}
+
 func RegisterFaucetServiceServer(s *grpc.Server, srv FaucetServiceServer) {
 	s.RegisterService(&_FaucetService_serviceDesc, srv)
 }
@@ -253,7 +264,7 @@ var _FaucetService_serviceDesc = grpc.ServiceDesc{
 func (m *FundingRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -261,38 +272,47 @@ func (m *FundingRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *FundingRequest) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *FundingRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if len(m.WalletAddress) > 0 {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintFaucet(dAtA, i, uint64(len(m.WalletAddress)))
-		i += copy(dAtA[i:], m.WalletAddress)
-	}
-	if len(m.RecaptchaSiteKey) > 0 {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintFaucet(dAtA, i, uint64(len(m.RecaptchaSiteKey)))
-		i += copy(dAtA[i:], m.RecaptchaSiteKey)
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if len(m.RecaptchaResponse) > 0 {
-		dAtA[i] = 0x1a
-		i++
+		i -= len(m.RecaptchaResponse)
+		copy(dAtA[i:], m.RecaptchaResponse)
 		i = encodeVarintFaucet(dAtA, i, uint64(len(m.RecaptchaResponse)))
-		i += copy(dAtA[i:], m.RecaptchaResponse)
+		i--
+		dAtA[i] = 0x1a
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if len(m.RecaptchaSiteKey) > 0 {
+		i -= len(m.RecaptchaSiteKey)
+		copy(dAtA[i:], m.RecaptchaSiteKey)
+		i = encodeVarintFaucet(dAtA, i, uint64(len(m.RecaptchaSiteKey)))
+		i--
+		dAtA[i] = 0x12
 	}
-	return i, nil
+	if len(m.WalletAddress) > 0 {
+		i -= len(m.WalletAddress)
+		copy(dAtA[i:], m.WalletAddress)
+		i = encodeVarintFaucet(dAtA, i, uint64(len(m.WalletAddress)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
 }
 
 func (m *FundingResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -300,42 +320,53 @@ func (m *FundingResponse) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *FundingResponse) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *FundingResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if len(m.Error) > 0 {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintFaucet(dAtA, i, uint64(len(m.Error)))
-		i += copy(dAtA[i:], m.Error)
-	}
-	if len(m.Amount) > 0 {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintFaucet(dAtA, i, uint64(len(m.Amount)))
-		i += copy(dAtA[i:], m.Amount)
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if len(m.TransactionHash) > 0 {
-		dAtA[i] = 0x1a
-		i++
+		i -= len(m.TransactionHash)
+		copy(dAtA[i:], m.TransactionHash)
 		i = encodeVarintFaucet(dAtA, i, uint64(len(m.TransactionHash)))
-		i += copy(dAtA[i:], m.TransactionHash)
+		i--
+		dAtA[i] = 0x1a
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if len(m.Amount) > 0 {
+		i -= len(m.Amount)
+		copy(dAtA[i:], m.Amount)
+		i = encodeVarintFaucet(dAtA, i, uint64(len(m.Amount)))
+		i--
+		dAtA[i] = 0x12
 	}
-	return i, nil
+	if len(m.Error) > 0 {
+		i -= len(m.Error)
+		copy(dAtA[i:], m.Error)
+		i = encodeVarintFaucet(dAtA, i, uint64(len(m.Error)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
 }
 
 func encodeVarintFaucet(dAtA []byte, offset int, v uint64) int {
+	offset -= sovFaucet(v)
+	base := offset
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
 		offset++
 	}
 	dAtA[offset] = uint8(v)
-	return offset + 1
+	return base
 }
 func (m *FundingRequest) Size() (n int) {
 	if m == nil {
@@ -386,14 +417,7 @@ func (m *FundingResponse) Size() (n int) {
 }
 
 func sovFaucet(x uint64) (n int) {
-	for {
-		n++
-		x >>= 7
-		if x == 0 {
-			break
-		}
-	}
-	return n
+	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozFaucet(x uint64) (n int) {
 	return sovFaucet(uint64((x << 1) ^ uint64((int64(x) >> 63))))
