@@ -5,10 +5,10 @@ package db
 
 import (
 	fmt "fmt"
+	proto "github.com/gogo/protobuf/proto"
 	io "io"
 	math "math"
-
-	proto "github.com/gogo/protobuf/proto"
+	math_bits "math/bits"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -20,7 +20,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 type FinalizedBlockRootContainer struct {
 	ParentRoot           []byte   `protobuf:"bytes,1,opt,name=parent_root,json=parentRoot,proto3" json:"parent_root,omitempty"`
@@ -44,7 +44,7 @@ func (m *FinalizedBlockRootContainer) XXX_Marshal(b []byte, deterministic bool) 
 		return xxx_messageInfo_FinalizedBlockRootContainer.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -105,7 +105,7 @@ var fileDescriptor_f952363f5bc83b7b = []byte{
 func (m *FinalizedBlockRootContainer) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -113,36 +113,46 @@ func (m *FinalizedBlockRootContainer) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *FinalizedBlockRootContainer) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *FinalizedBlockRootContainer) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if len(m.ParentRoot) > 0 {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintFinalizedBlockRootContainer(dAtA, i, uint64(len(m.ParentRoot)))
-		i += copy(dAtA[i:], m.ParentRoot)
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if len(m.ChildRoot) > 0 {
-		dAtA[i] = 0x12
-		i++
+		i -= len(m.ChildRoot)
+		copy(dAtA[i:], m.ChildRoot)
 		i = encodeVarintFinalizedBlockRootContainer(dAtA, i, uint64(len(m.ChildRoot)))
-		i += copy(dAtA[i:], m.ChildRoot)
+		i--
+		dAtA[i] = 0x12
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if len(m.ParentRoot) > 0 {
+		i -= len(m.ParentRoot)
+		copy(dAtA[i:], m.ParentRoot)
+		i = encodeVarintFinalizedBlockRootContainer(dAtA, i, uint64(len(m.ParentRoot)))
+		i--
+		dAtA[i] = 0xa
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func encodeVarintFinalizedBlockRootContainer(dAtA []byte, offset int, v uint64) int {
+	offset -= sovFinalizedBlockRootContainer(v)
+	base := offset
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
 		offset++
 	}
 	dAtA[offset] = uint8(v)
-	return offset + 1
+	return base
 }
 func (m *FinalizedBlockRootContainer) Size() (n int) {
 	if m == nil {
@@ -165,14 +175,7 @@ func (m *FinalizedBlockRootContainer) Size() (n int) {
 }
 
 func sovFinalizedBlockRootContainer(x uint64) (n int) {
-	for {
-		n++
-		x >>= 7
-		if x == 0 {
-			break
-		}
-	}
-	return n
+	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozFinalizedBlockRootContainer(x uint64) (n int) {
 	return sovFinalizedBlockRootContainer(uint64((x << 1) ^ uint64((int64(x) >> 63))))
