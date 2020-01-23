@@ -81,7 +81,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	currentEpoch := uint64(0)
 	ticker := GetEpochTicker(genesisTime, epochSeconds)
 	for c := range ticker.C() {
-		if c >= config.epochsToRun || t.Failed() {
+		if c > config.epochsToRun || t.Failed() {
 			ticker.Done()
 			break
 		}
@@ -96,7 +96,8 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 					t.Fatalf("evaluation failed for epoch %d: %v", currentEpoch, err)
 				}
 			})
-			if t.Failed() {
+
+			if t.Failed() || c >= config.epochsToRun {
 				ticker.Done()
 				break
 			}
