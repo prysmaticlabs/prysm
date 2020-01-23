@@ -56,6 +56,17 @@ func buildOptions(cfg *Config, ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 			return addrs
 		}))
 	}
+	if cfg.LocalIP != "" {
+		if net.ParseIP(cfg.LocalIP) == nil {
+			log.Errorf("Invalid local ip provided: %s", cfg.LocalIP)
+			return options
+		}
+		listen, err = ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", cfg.LocalIP, cfg.TCPPort))
+		if err != nil {
+			log.Fatalf("Failed to p2p listen: %v", err)
+		}
+		options = append(options, libp2p.ListenAddrs(listen))
+	}
 	return options
 }
 

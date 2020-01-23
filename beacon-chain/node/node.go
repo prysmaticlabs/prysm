@@ -271,6 +271,7 @@ func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 		BootstrapNodeAddr: bootnodeAddrs,
 		RelayNodeAddr:     ctx.GlobalString(cmd.RelayNode.Name),
 		DataDir:           ctx.GlobalString(cmd.DataDirFlag.Name),
+		LocalIP:           ctx.GlobalString(cmd.P2PIP.Name),
 		HostAddress:       ctx.GlobalString(cmd.P2PHost.Name),
 		HostDNS:           ctx.GlobalString(cmd.P2PHostDNS.Name),
 		PrivateKey:        ctx.GlobalString(cmd.P2PPrivKey.Name),
