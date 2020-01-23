@@ -7,13 +7,15 @@ import (
 	context "context"
 	encoding_binary "encoding/binary"
 	fmt "fmt"
-	io "io"
-	math "math"
-
 	proto "github.com/gogo/protobuf/proto"
 	types "github.com/gogo/protobuf/types"
 	v1alpha1 "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	grpc "google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
+	io "io"
+	math "math"
+	math_bits "math/bits"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -25,7 +27,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 type ValidatorRole int32
 
@@ -104,6 +106,7 @@ func (ValidatorStatus) EnumDescriptor() ([]byte, []int) {
 type BlockRequest struct {
 	Slot                 uint64   `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty"`
 	RandaoReveal         []byte   `protobuf:"bytes,2,opt,name=randao_reveal,json=randaoReveal,proto3" json:"randao_reveal,omitempty"`
+	Graffiti             []byte   `protobuf:"bytes,3,opt,name=graffiti,proto3" json:"graffiti,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -123,7 +126,7 @@ func (m *BlockRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error)
 		return xxx_messageInfo_BlockRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -156,6 +159,13 @@ func (m *BlockRequest) GetRandaoReveal() []byte {
 	return nil
 }
 
+func (m *BlockRequest) GetGraffiti() []byte {
+	if m != nil {
+		return m.Graffiti
+	}
+	return nil
+}
+
 type ProposeResponse struct {
 	BlockRoot            []byte   `protobuf:"bytes,1,opt,name=block_root,json=blockRoot,proto3" json:"block_root,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -177,7 +187,7 @@ func (m *ProposeResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return xxx_messageInfo_ProposeResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -227,7 +237,7 @@ func (m *AttestationRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, 
 		return xxx_messageInfo_AttestationRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -295,7 +305,7 @@ func (m *AttestResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, erro
 		return xxx_messageInfo_AttestResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -345,7 +355,7 @@ func (m *AggregationRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, 
 		return xxx_messageInfo_AggregationRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -413,7 +423,7 @@ func (m *AggregationResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte,
 		return xxx_messageInfo_AggregationResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -461,7 +471,7 @@ func (m *ValidatorPerformanceRequest) XXX_Marshal(b []byte, deterministic bool) 
 		return xxx_messageInfo_ValidatorPerformanceRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -519,7 +529,7 @@ func (m *ValidatorPerformanceResponse) XXX_Marshal(b []byte, deterministic bool)
 		return xxx_messageInfo_ValidatorPerformanceResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -594,7 +604,7 @@ func (m *ValidatorActivationRequest) XXX_Marshal(b []byte, deterministic bool) (
 		return xxx_messageInfo_ValidatorActivationRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -642,7 +652,7 @@ func (m *ValidatorActivationResponse) XXX_Marshal(b []byte, deterministic bool) 
 		return xxx_messageInfo_ValidatorActivationResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -698,7 +708,7 @@ func (m *ValidatorActivationResponse_Status) XXX_Marshal(b []byte, deterministic
 		return xxx_messageInfo_ValidatorActivationResponse_Status.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -752,7 +762,7 @@ func (m *ExitedValidatorsRequest) XXX_Marshal(b []byte, deterministic bool) ([]b
 		return xxx_messageInfo_ExitedValidatorsRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -799,7 +809,7 @@ func (m *ExitedValidatorsResponse) XXX_Marshal(b []byte, deterministic bool) ([]
 		return xxx_messageInfo_ExitedValidatorsResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -847,7 +857,7 @@ func (m *ChainStartResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, 
 		return xxx_messageInfo_ChainStartResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -901,7 +911,7 @@ func (m *ValidatorIndexRequest) XXX_Marshal(b []byte, deterministic bool) ([]byt
 		return xxx_messageInfo_ValidatorIndexRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -948,7 +958,7 @@ func (m *ValidatorIndexResponse) XXX_Marshal(b []byte, deterministic bool) ([]by
 		return xxx_messageInfo_ValidatorIndexResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -996,7 +1006,7 @@ func (m *AssignmentRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 		return xxx_messageInfo_AssignmentRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -1050,7 +1060,7 @@ func (m *AssignmentResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, 
 		return xxx_messageInfo_AssignmentResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -1104,7 +1114,7 @@ func (m *AssignmentResponse_ValidatorAssignment) XXX_Marshal(b []byte, determini
 		return xxx_messageInfo_AssignmentResponse_ValidatorAssignment.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -1190,7 +1200,7 @@ func (m *ValidatorStatusResponse) XXX_Marshal(b []byte, deterministic bool) ([]b
 		return xxx_messageInfo_ValidatorStatusResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -1266,7 +1276,7 @@ func (m *DomainRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error
 		return xxx_messageInfo_DomainRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -1320,7 +1330,7 @@ func (m *DomainResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, erro
 		return xxx_messageInfo_DomainResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -1367,7 +1377,7 @@ func (m *BlockTreeResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 		return xxx_messageInfo_BlockTreeResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -1417,7 +1427,7 @@ func (m *BlockTreeResponse_TreeNode) XXX_Marshal(b []byte, deterministic bool) (
 		return xxx_messageInfo_BlockTreeResponse_TreeNode.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -1486,7 +1496,7 @@ func (m *TreeBlockSlotRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte
 		return xxx_messageInfo_TreeBlockSlotRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -1552,111 +1562,113 @@ func init() {
 func init() { proto.RegisterFile("proto/beacon/rpc/v1/services.proto", fileDescriptor_9eb4e94b85965285) }
 
 var fileDescriptor_9eb4e94b85965285 = []byte{
-	// 1653 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x58, 0x4f, 0x6f, 0xdb, 0x46,
-	0x16, 0x0f, 0x65, 0x59, 0x76, 0x9e, 0x64, 0x99, 0x1e, 0x3b, 0xb6, 0xa2, 0x24, 0x8e, 0x97, 0x49,
-	0x36, 0xb6, 0x17, 0x91, 0x6c, 0x25, 0x08, 0x76, 0x13, 0x64, 0x03, 0xd9, 0x62, 0x6c, 0x21, 0x81,
-	0xac, 0x50, 0x8a, 0x9d, 0x45, 0x0e, 0x04, 0x25, 0x8d, 0x25, 0x22, 0x12, 0x87, 0x26, 0x47, 0x42,
-	0x7c, 0x59, 0x60, 0x2f, 0x5b, 0xf4, 0xd6, 0x1e, 0x8a, 0x1e, 0x8b, 0x7e, 0x86, 0x1e, 0xfa, 0x15,
-	0x72, 0xec, 0x07, 0xe8, 0xa1, 0x08, 0xfa, 0x41, 0x0a, 0xce, 0x0c, 0x29, 0xea, 0x9f, 0x2d, 0xe7,
-	0xc6, 0x79, 0x7f, 0x7f, 0xf3, 0xde, 0x9b, 0x37, 0x6f, 0x08, 0x8a, 0xed, 0x10, 0x4a, 0xb2, 0x35,
-	0x6c, 0xd4, 0x89, 0x95, 0x75, 0xec, 0x7a, 0xb6, 0xb7, 0x9b, 0x75, 0xb1, 0xd3, 0x33, 0xeb, 0xd8,
-	0xcd, 0x30, 0x26, 0x5a, 0xc5, 0xb4, 0x85, 0x1d, 0xdc, 0xed, 0x64, 0xb8, 0x58, 0xc6, 0xb1, 0xeb,
-	0x99, 0xde, 0x6e, 0xfa, 0x56, 0x93, 0x90, 0x66, 0x1b, 0x67, 0x99, 0x54, 0xad, 0x7b, 0x9a, 0xc5,
-	0x1d, 0x9b, 0x9e, 0x73, 0xa5, 0xf4, 0x5d, 0x4c, 0x5b, 0xd9, 0xde, 0xae, 0xd1, 0xb6, 0x5b, 0xc6,
-	0xae, 0xb0, 0xaf, 0xd7, 0xda, 0xa4, 0xfe, 0x51, 0x08, 0xac, 0x0f, 0x08, 0x18, 0x94, 0x62, 0x97,
-	0x1a, 0xd4, 0x24, 0x16, 0xe7, 0x2b, 0x07, 0x90, 0xd8, 0xf3, 0xc4, 0x35, 0x7c, 0xd6, 0xc5, 0x2e,
-	0x45, 0x08, 0xa2, 0x6e, 0x9b, 0xd0, 0x94, 0xb4, 0x21, 0x6d, 0x46, 0x35, 0xf6, 0x8d, 0xee, 0xc1,
-	0x82, 0x63, 0x58, 0x0d, 0x83, 0xe8, 0x0e, 0xee, 0x61, 0xa3, 0x9d, 0x8a, 0x6c, 0x48, 0x9b, 0x09,
-	0x2d, 0xc1, 0x89, 0x1a, 0xa3, 0x29, 0x3b, 0xb0, 0x58, 0x76, 0x88, 0x4d, 0x5c, 0xac, 0x61, 0xd7,
-	0x26, 0x96, 0x8b, 0xd1, 0x1d, 0x00, 0x06, 0x45, 0x77, 0x88, 0xb0, 0x98, 0xd0, 0xae, 0x33, 0x8a,
-	0x46, 0x08, 0x55, 0xbe, 0x95, 0x00, 0xe5, 0xfb, 0x80, 0x7c, 0x04, 0x77, 0x00, 0xec, 0x6e, 0xad,
-	0x6d, 0xd6, 0xf5, 0x8f, 0xf8, 0xdc, 0xd7, 0xe2, 0x94, 0xd7, 0xf8, 0x1c, 0xad, 0xc1, 0x9c, 0x4d,
-	0xea, 0x7a, 0xcd, 0xa4, 0x02, 0x46, 0xcc, 0x26, 0xf5, 0x3d, 0xb3, 0x8f, 0x7c, 0x26, 0x84, 0xfc,
-	0x21, 0x2c, 0xd6, 0x49, 0xa7, 0x63, 0x52, 0x8a, 0xb1, 0x6e, 0x5a, 0x0d, 0xfc, 0x29, 0x15, 0x65,
-	0xec, 0x64, 0x40, 0x2e, 0x7a, 0x54, 0xe5, 0x3e, 0x24, 0x39, 0x94, 0x00, 0x3c, 0x82, 0x68, 0x08,
-	0x36, 0xfb, 0x56, 0x7e, 0xf4, 0x10, 0x37, 0x9b, 0x0e, 0x6e, 0x0e, 0x20, 0x1e, 0x17, 0xb3, 0x31,
-	0x9e, 0x23, 0xe3, 0x3c, 0x0f, 0x6d, 0x77, 0x66, 0x78, 0xbb, 0x0f, 0x20, 0xe9, 0xd9, 0xd3, 0x5d,
-	0xb3, 0x69, 0x19, 0xb4, 0xeb, 0x60, 0xb6, 0x81, 0x84, 0xb6, 0xe0, 0x51, 0x2b, 0x3e, 0x51, 0xd9,
-	0x82, 0xe5, 0x01, 0x60, 0x17, 0x6c, 0x42, 0x83, 0x5b, 0xc7, 0x46, 0xdb, 0x6c, 0x18, 0x94, 0x38,
-	0x65, 0xec, 0x9c, 0x12, 0xa7, 0x63, 0x58, 0x75, 0x7c, 0xd1, 0x66, 0xee, 0x42, 0xbc, 0x8f, 0xd1,
-	0x4d, 0x45, 0x36, 0x66, 0x36, 0x13, 0x1a, 0x04, 0x20, 0x5d, 0xe5, 0x87, 0x08, 0xdc, 0x1e, 0x6f,
-	0x54, 0x00, 0x49, 0xc3, 0x7c, 0xcd, 0x68, 0x7b, 0x24, 0x37, 0x25, 0x6d, 0xcc, 0x6c, 0x46, 0xb5,
-	0x60, 0x8d, 0xb6, 0x40, 0xa6, 0x84, 0x1a, 0x6d, 0xbd, 0xe7, 0x5b, 0x70, 0x45, 0xac, 0x16, 0x19,
-	0x3d, 0x30, 0xec, 0xa2, 0xa7, 0xb0, 0xc6, 0x45, 0x8d, 0x3a, 0x35, 0x7b, 0x38, 0xac, 0xc1, 0xd3,
-	0x7e, 0x83, 0xb1, 0xf3, 0x8c, 0x1b, 0xd2, 0x7b, 0x04, 0xa8, 0x63, 0xba, 0xae, 0x69, 0x35, 0xc3,
-	0x2a, 0x51, 0xb6, 0x8f, 0x25, 0xc1, 0x09, 0x89, 0x1f, 0xc0, 0x86, 0xd1, 0xc3, 0x8e, 0xd1, 0xc4,
-	0x23, 0x8e, 0x74, 0x01, 0x3b, 0x35, 0xbb, 0x21, 0x6d, 0x46, 0xb4, 0x3b, 0x42, 0x6e, 0xc8, 0xe3,
-	0x1e, 0x17, 0x52, 0x5e, 0x40, 0x3a, 0xa0, 0x31, 0x91, 0x81, 0xba, 0x19, 0x0a, 0xab, 0x34, 0x12,
-	0xd6, 0x9f, 0x22, 0xa1, 0x5c, 0x85, 0xf5, 0x45, 0x54, 0x9f, 0xc2, 0x0d, 0x83, 0x53, 0x71, 0x43,
-	0x1f, 0x31, 0xb5, 0x17, 0x49, 0x49, 0xda, 0x72, 0x20, 0x50, 0x0e, 0xec, 0xa2, 0x63, 0x98, 0xf7,
-	0x0e, 0x5d, 0xd7, 0xc5, 0x3c, 0x99, 0xf1, 0xdc, 0xb3, 0xcc, 0xf8, 0xee, 0x93, 0xb9, 0xc0, 0x7d,
-	0xa6, 0xc2, 0x6c, 0x68, 0x81, 0xad, 0xb4, 0x0d, 0x31, 0x4e, 0xbb, 0xec, 0x10, 0x1f, 0x40, 0x8c,
-	0x2b, 0xb1, 0x44, 0xc7, 0x73, 0xd9, 0x4b, 0xdd, 0x0b, 0x5f, 0xc2, 0xb5, 0x26, 0xd4, 0x95, 0x67,
-	0xb0, 0xa6, 0x7e, 0x32, 0x29, 0x6e, 0xf4, 0xb3, 0x37, 0x75, 0x74, 0x9f, 0x43, 0x6a, 0x54, 0x57,
-	0x44, 0xf6, 0x52, 0xe5, 0xb7, 0x80, 0xf6, 0x5b, 0x86, 0x69, 0x55, 0xa8, 0xe1, 0xf4, 0x9b, 0x46,
-	0x0a, 0xe6, 0x5c, 0x8f, 0x80, 0x1b, 0x6c, 0xcf, 0xf3, 0x9a, 0xbf, 0x44, 0x7f, 0x83, 0x44, 0x13,
-	0x5b, 0xd8, 0x35, 0x5d, 0x9d, 0x9a, 0x1d, 0x2c, 0x0a, 0x3c, 0x2e, 0x68, 0x55, 0xb3, 0x83, 0x95,
-	0xa7, 0x70, 0x23, 0x40, 0xc2, 0x7a, 0xc3, 0x74, 0x1d, 0x51, 0xc9, 0xc0, 0xea, 0xb0, 0x9e, 0x80,
-	0xb3, 0x02, 0xb3, 0xbc, 0xf5, 0xf0, 0xc3, 0xcc, 0x17, 0xca, 0x3b, 0x58, 0xca, 0xbb, 0x5e, 0x3f,
-	0xe9, 0x60, 0x8b, 0x86, 0xa2, 0x85, 0x6d, 0x52, 0x6f, 0xe9, 0x0c, 0xb0, 0x50, 0x00, 0x46, 0x62,
-	0x5b, 0xbc, 0xbc, 0x07, 0x7c, 0x37, 0x03, 0x28, 0x6c, 0x57, 0x60, 0x38, 0x83, 0x95, 0xfe, 0xe1,
-	0x31, 0x02, 0x3e, 0x0b, 0x69, 0x3c, 0xf7, 0xef, 0x49, 0x89, 0x1f, 0xb5, 0x14, 0x2a, 0xc5, 0x3e,
-	0x6f, 0xb9, 0x37, 0x4a, 0x4c, 0xff, 0x3f, 0x02, 0xcb, 0x63, 0x84, 0xd1, 0x6d, 0xb8, 0x1e, 0x34,
-	0x5f, 0xd1, 0x85, 0xfa, 0x84, 0xe9, 0x3b, 0xf6, 0x3d, 0x58, 0xe0, 0xf7, 0x28, 0x76, 0xf4, 0xd0,
-	0x8d, 0x93, 0xf0, 0x89, 0x15, 0x71, 0x67, 0xda, 0xfc, 0x3a, 0x14, 0x42, 0xfc, 0xde, 0x49, 0xf8,
-	0x44, 0x26, 0x34, 0x98, 0xd8, 0xd9, 0xe1, 0x53, 0xf2, 0x32, 0x38, 0x25, 0xb1, 0x0d, 0x69, 0x33,
-	0x99, 0x7b, 0x38, 0xed, 0x29, 0xf1, 0x4f, 0xc7, 0xaf, 0x11, 0x58, 0x9b, 0x70, 0x82, 0x42, 0xc6,
-	0xa5, 0xaf, 0x32, 0x8e, 0xfe, 0x05, 0x37, 0x31, 0x6d, 0xed, 0xea, 0x0d, 0x6c, 0x13, 0xd7, 0xa4,
-	0x7c, 0xea, 0xd0, 0xad, 0x6e, 0xa7, 0x86, 0x1d, 0x11, 0x39, 0x6f, 0xa4, 0xd9, 0x2d, 0x70, 0x3e,
-	0x9b, 0x32, 0x4a, 0x8c, 0x8b, 0x9e, 0xc0, 0xaa, 0xaf, 0x65, 0x5a, 0xf5, 0x76, 0xd7, 0x35, 0x89,
-	0x15, 0x0e, 0xe5, 0x8a, 0xe0, 0x16, 0x7d, 0x26, 0x8b, 0xd6, 0x16, 0xc8, 0x46, 0xd0, 0x84, 0x74,
-	0x56, 0x9a, 0x22, 0xaa, 0x8b, 0x7d, 0xba, 0xea, 0x91, 0xd1, 0x4b, 0xb8, 0xcd, 0x0c, 0x78, 0x82,
-	0xa6, 0xa5, 0x87, 0xd4, 0xce, 0xba, 0xb8, 0xcb, 0x9b, 0x77, 0x54, 0xbb, 0xe9, 0xcb, 0x14, 0xad,
-	0x7e, 0x77, 0x7b, 0xeb, 0x09, 0x28, 0x2f, 0x60, 0xa1, 0x40, 0x3a, 0x86, 0x19, 0xf4, 0xea, 0x15,
-	0x98, 0xe5, 0x1e, 0xc5, 0x51, 0x62, 0x0b, 0xb4, 0x0a, 0xb1, 0x06, 0x13, 0xf3, 0x67, 0x11, 0xbe,
-	0x52, 0x9e, 0x43, 0xd2, 0x57, 0x17, 0xe1, 0xde, 0x02, 0x39, 0xb8, 0xc2, 0x75, 0xa1, 0xc3, 0x4d,
-	0x2d, 0x06, 0x74, 0xae, 0xa2, 0x7c, 0x1f, 0x81, 0x25, 0x16, 0xad, 0xaa, 0x83, 0xfb, 0x37, 0xe8,
-	0x2b, 0x88, 0x52, 0x47, 0xd4, 0x6d, 0x3c, 0x97, 0x9b, 0x94, 0xad, 0x11, 0xc5, 0x8c, 0xb7, 0x28,
-	0x91, 0x06, 0xd6, 0x98, 0x7e, 0xfa, 0x17, 0x09, 0xe6, 0x7d, 0x12, 0xfa, 0x27, 0xcc, 0xb2, 0xb4,
-	0x31, 0x28, 0xf1, 0x9c, 0xd2, 0xb7, 0x8a, 0x69, 0x2b, 0xe3, 0x8f, 0x8d, 0x99, 0x3d, 0xe6, 0x82,
-	0xcf, 0x89, 0x5c, 0x61, 0x68, 0xb6, 0x8b, 0x0c, 0xcd, 0x76, 0xde, 0x85, 0x6b, 0x1b, 0x0e, 0x35,
-	0xeb, 0xa6, 0xcd, 0x2e, 0xa7, 0x1e, 0xa1, 0xd8, 0xbf, 0xa3, 0x97, 0xc2, 0x9c, 0x63, 0x8f, 0xe1,
-	0x35, 0x17, 0x31, 0x02, 0x30, 0x39, 0x9e, 0x55, 0xe0, 0xb7, 0xbf, 0x47, 0x51, 0xde, 0xc0, 0x8a,
-	0x07, 0x9a, 0x41, 0xf0, 0x8a, 0xc1, 0x4f, 0xcb, 0x2d, 0xb8, 0xce, 0xc6, 0xa3, 0x53, 0x87, 0x74,
-	0x44, 0x3c, 0xe7, 0x3d, 0xc2, 0x2b, 0x87, 0x74, 0xbc, 0x51, 0x91, 0x31, 0x29, 0x11, 0xf5, 0x18,
-	0xf3, 0x96, 0x55, 0xb2, 0x7d, 0x08, 0x0b, 0x41, 0x55, 0x6b, 0xa4, 0x8d, 0x51, 0x1c, 0xe6, 0xde,
-	0x95, 0x5e, 0x97, 0x8e, 0x4e, 0x4a, 0xf2, 0x35, 0x94, 0x80, 0xf9, 0x7c, 0xb5, 0xaa, 0x56, 0xaa,
-	0xaa, 0x26, 0x4b, 0xde, 0xaa, 0xac, 0x1d, 0x95, 0x8f, 0x2a, 0xaa, 0x26, 0x47, 0x50, 0x12, 0x20,
-	0x7f, 0x70, 0xa0, 0xa9, 0x07, 0xf9, 0xea, 0x91, 0x26, 0xcf, 0x6c, 0xff, 0x2c, 0xc1, 0xe2, 0xd0,
-	0x01, 0x41, 0x08, 0x92, 0xc2, 0x98, 0x5e, 0xa9, 0xe6, 0xab, 0xef, 0x2a, 0xf2, 0x35, 0xb4, 0x02,
-	0x72, 0x41, 0x2d, 0x1f, 0x55, 0x8a, 0x55, 0x5d, 0x53, 0xf7, 0xd5, 0xe2, 0xb1, 0x5a, 0x90, 0x25,
-	0x4f, 0xb2, 0xac, 0x96, 0x0a, 0xc5, 0xd2, 0x81, 0x9e, 0xdf, 0xaf, 0x16, 0x8f, 0x55, 0x39, 0x82,
-	0x00, 0x62, 0xe2, 0x7b, 0xc6, 0xe3, 0x17, 0x4b, 0xc5, 0x6a, 0x31, 0x5f, 0x55, 0x0b, 0xba, 0xfa,
-	0xbe, 0x58, 0x95, 0xa3, 0x48, 0x86, 0xc4, 0x49, 0xb1, 0x7a, 0x58, 0xd0, 0xf2, 0x27, 0xf9, 0xbd,
-	0x37, 0xaa, 0x3c, 0xeb, 0x69, 0x78, 0x3c, 0xb5, 0x20, 0xc7, 0x3c, 0x0d, 0xfe, 0xad, 0x57, 0xde,
-	0xe4, 0x2b, 0x87, 0x6a, 0x41, 0x9e, 0xcb, 0xfd, 0x2e, 0xc1, 0x62, 0xde, 0xef, 0x4d, 0xfc, 0xcd,
-	0x81, 0x5a, 0x80, 0x44, 0x08, 0x43, 0x13, 0x38, 0xda, 0x9e, 0xd8, 0x8d, 0x47, 0xc6, 0xf4, 0xf4,
-	0xdf, 0x27, 0xd4, 0x4a, 0x48, 0xb4, 0x60, 0x50, 0x03, 0xe9, 0xb0, 0x54, 0xe9, 0xd6, 0x3a, 0xe6,
-	0x80, 0x23, 0xe5, 0x72, 0xe5, 0xb0, 0x83, 0x71, 0x60, 0xfc, 0xfa, 0xce, 0x7d, 0x96, 0x82, 0x97,
-	0x47, 0xb0, 0xbd, 0xf7, 0x90, 0x10, 0x38, 0x59, 0xc5, 0xa0, 0xfb, 0x17, 0x1e, 0x17, 0x7f, 0x4b,
-	0x53, 0x94, 0x3f, 0xfa, 0x00, 0x09, 0xe1, 0x8c, 0xaf, 0xa7, 0xd0, 0x49, 0x4f, 0x6c, 0xad, 0x43,
-	0x0f, 0xa6, 0xdc, 0x37, 0x12, 0x2c, 0xf9, 0x63, 0x3c, 0x09, 0x36, 0xe3, 0xc0, 0x9a, 0x88, 0xa0,
-	0x60, 0xe1, 0xbc, 0xd5, 0x28, 0x3b, 0x84, 0x9c, 0x5e, 0x90, 0xb0, 0x91, 0x57, 0x4a, 0xfa, 0x1f,
-	0x53, 0xc9, 0x0a, 0x24, 0x7f, 0xce, 0x81, 0xdc, 0xaf, 0x6b, 0x01, 0xe4, 0x03, 0x00, 0x6f, 0x51,
-	0x2c, 0xb1, 0x0f, 0x26, 0xd9, 0x1b, 0x68, 0x9c, 0x93, 0xd3, 0x38, 0xd4, 0x20, 0xff, 0x0b, 0x4b,
-	0x27, 0x86, 0x49, 0x5f, 0x85, 0x27, 0x4d, 0x94, 0xbb, 0xd2, 0x58, 0xca, 0x1d, 0x3e, 0xfe, 0x8a,
-	0x51, 0x76, 0x47, 0x42, 0x04, 0x92, 0x83, 0x53, 0x14, 0x7a, 0x74, 0xa9, 0xa1, 0xf0, 0x94, 0x96,
-	0xce, 0x4c, 0x2b, 0x2e, 0x36, 0xdc, 0x86, 0xe5, 0x7d, 0x7f, 0xb0, 0x08, 0x0d, 0x29, 0x5b, 0xd3,
-	0x4c, 0x44, 0xdc, 0xe3, 0xf6, 0xf4, 0xc3, 0x13, 0x3a, 0x1b, 0xed, 0x53, 0x57, 0xdc, 0xdf, 0x55,
-	0x67, 0x74, 0xf4, 0x3f, 0x09, 0x56, 0xc6, 0x3d, 0x0a, 0xd1, 0xe5, 0x19, 0x1a, 0x7d, 0x97, 0xa6,
-	0x9f, 0x5c, 0x4d, 0x49, 0x60, 0xe8, 0x82, 0x3c, 0x3c, 0xe3, 0xa3, 0x89, 0x1b, 0x99, 0xf0, 0x92,
-	0x48, 0xef, 0x4c, 0xaf, 0x20, 0xdc, 0xfe, 0x27, 0x28, 0xe6, 0xfe, 0x23, 0x01, 0xad, 0x66, 0xf8,
-	0x9f, 0x9c, 0x8c, 0xff, 0x27, 0x27, 0xa3, 0x76, 0x6c, 0x7a, 0x3e, 0x39, 0x8d, 0xa3, 0x0f, 0x8c,
-	0x1d, 0x09, 0xbd, 0x86, 0x85, 0x7d, 0xc3, 0x22, 0x96, 0x59, 0x37, 0xda, 0x87, 0xd8, 0x68, 0x4c,
-	0x34, 0x3b, 0x45, 0x67, 0xda, 0x4b, 0x7c, 0xfe, 0xb2, 0x2e, 0xfd, 0xf6, 0x65, 0x5d, 0xfa, 0xe3,
-	0xcb, 0xba, 0x54, 0x8b, 0x31, 0x0b, 0x8f, 0xff, 0x0a, 0x00, 0x00, 0xff, 0xff, 0xc8, 0x3c, 0x79,
-	0x88, 0xae, 0x12, 0x00, 0x00,
+	// 1691 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x58, 0x4f, 0x6f, 0xe3, 0xc6,
+	0x15, 0x0f, 0x25, 0x59, 0xab, 0x7d, 0x92, 0x65, 0x7a, 0xec, 0xb5, 0x15, 0xed, 0x9f, 0xb8, 0x4c,
+	0xd2, 0xd8, 0x5b, 0x44, 0xb2, 0x95, 0x60, 0xd1, 0x26, 0x48, 0x03, 0xd9, 0xe2, 0xda, 0x82, 0x17,
+	0xb2, 0x42, 0x69, 0xed, 0x14, 0x39, 0x10, 0x23, 0x6a, 0x2c, 0x11, 0x91, 0x38, 0x34, 0x39, 0x12,
+	0xe2, 0x4b, 0x81, 0x5e, 0x5a, 0xf4, 0xd6, 0x1e, 0x8a, 0x1e, 0x8b, 0x7e, 0x84, 0xa2, 0x87, 0x7e,
+	0x85, 0x1c, 0xfb, 0x01, 0x7a, 0x28, 0xf6, 0x93, 0x04, 0x9c, 0x19, 0x52, 0xd4, 0x3f, 0x5b, 0xce,
+	0x8d, 0xf3, 0xde, 0xfb, 0xbd, 0xbf, 0x33, 0x6f, 0xde, 0x10, 0x34, 0xd7, 0xa3, 0x8c, 0x96, 0x3b,
+	0x04, 0x5b, 0xd4, 0x29, 0x7b, 0xae, 0x55, 0x1e, 0x1f, 0x95, 0x7d, 0xe2, 0x8d, 0x6d, 0x8b, 0xf8,
+	0x25, 0xce, 0x44, 0x3b, 0x84, 0xf5, 0x89, 0x47, 0x46, 0xc3, 0x92, 0x10, 0x2b, 0x79, 0xae, 0x55,
+	0x1a, 0x1f, 0x15, 0x9f, 0xf6, 0x28, 0xed, 0x0d, 0x48, 0x99, 0x4b, 0x75, 0x46, 0xd7, 0x65, 0x32,
+	0x74, 0xd9, 0xad, 0x00, 0x15, 0x3f, 0x20, 0xac, 0x5f, 0x1e, 0x1f, 0xe1, 0x81, 0xdb, 0xc7, 0x47,
+	0x52, 0xbf, 0xd9, 0x19, 0x50, 0xeb, 0x7b, 0x29, 0xf0, 0x62, 0x4a, 0x00, 0x33, 0x46, 0x7c, 0x86,
+	0x99, 0x4d, 0x1d, 0xc1, 0xd7, 0x2c, 0xc8, 0x1d, 0x07, 0xe2, 0x06, 0xb9, 0x19, 0x11, 0x9f, 0x21,
+	0x04, 0x29, 0x7f, 0x40, 0x59, 0x41, 0xd9, 0x53, 0xf6, 0x53, 0x06, 0xff, 0x46, 0x1f, 0xc2, 0xba,
+	0x87, 0x9d, 0x2e, 0xa6, 0xa6, 0x47, 0xc6, 0x04, 0x0f, 0x0a, 0x89, 0x3d, 0x65, 0x3f, 0x67, 0xe4,
+	0x04, 0xd1, 0xe0, 0x34, 0x54, 0x84, 0x4c, 0xcf, 0xc3, 0xd7, 0xd7, 0x36, 0xb3, 0x0b, 0x49, 0xce,
+	0x8f, 0xd6, 0xda, 0x21, 0x6c, 0x34, 0x3d, 0xea, 0x52, 0x9f, 0x18, 0xc4, 0x77, 0xa9, 0xe3, 0x13,
+	0xf4, 0x1c, 0x80, 0xbb, 0x69, 0x7a, 0x54, 0x5a, 0xcb, 0x19, 0x8f, 0x39, 0xc5, 0xa0, 0x94, 0x69,
+	0x7f, 0x56, 0x00, 0x55, 0x27, 0xce, 0x86, 0xde, 0x3d, 0x07, 0x70, 0x47, 0x9d, 0x81, 0x6d, 0x99,
+	0xdf, 0x93, 0xdb, 0x10, 0x25, 0x28, 0xe7, 0xe4, 0x16, 0xed, 0xc2, 0x23, 0x97, 0x5a, 0x66, 0xc7,
+	0x66, 0xd2, 0xc5, 0xb4, 0x4b, 0xad, 0x63, 0x7b, 0x12, 0x55, 0x32, 0x16, 0xd5, 0x27, 0xb0, 0x61,
+	0xd1, 0xe1, 0xd0, 0x66, 0x8c, 0x10, 0xd3, 0x76, 0xba, 0xe4, 0x87, 0x42, 0x8a, 0xb3, 0xf3, 0x11,
+	0xb9, 0x1e, 0x50, 0xb5, 0x8f, 0x20, 0x2f, 0x5c, 0x89, 0x9c, 0x47, 0x90, 0x8a, 0xb9, 0xcd, 0xbf,
+	0xb5, 0xbf, 0x07, 0x1e, 0xf7, 0x7a, 0x1e, 0xe9, 0x4d, 0x79, 0xbc, 0x28, 0x9f, 0x0b, 0x2c, 0x27,
+	0x16, 0x59, 0x9e, 0x09, 0x37, 0x39, 0x1b, 0xee, 0xc7, 0x90, 0x0f, 0xf4, 0x99, 0xbe, 0xdd, 0x73,
+	0x30, 0x1b, 0x79, 0x84, 0x07, 0x90, 0x33, 0xd6, 0x03, 0x6a, 0x2b, 0x24, 0x6a, 0x07, 0xb0, 0x35,
+	0xe5, 0xd8, 0x1d, 0x41, 0x18, 0xf0, 0xf4, 0x12, 0x0f, 0xec, 0x2e, 0x66, 0xd4, 0x6b, 0x12, 0xef,
+	0x9a, 0x7a, 0x43, 0xec, 0x58, 0xe4, 0xae, 0x60, 0x3e, 0x80, 0xec, 0xc4, 0x47, 0xbf, 0x90, 0xd8,
+	0x4b, 0xee, 0xe7, 0x0c, 0x88, 0x9c, 0xf4, 0xb5, 0xbf, 0x25, 0xe0, 0xd9, 0x62, 0xa5, 0xd2, 0x91,
+	0x22, 0x64, 0x3a, 0x78, 0x10, 0x90, 0xfc, 0x82, 0xb2, 0x97, 0xdc, 0x4f, 0x19, 0xd1, 0x1a, 0x1d,
+	0x80, 0xca, 0x28, 0xc3, 0x03, 0x73, 0x1c, 0x6a, 0xf0, 0x65, 0xae, 0x36, 0x38, 0x3d, 0x52, 0xec,
+	0xa3, 0x57, 0xb0, 0x2b, 0x44, 0xb1, 0xc5, 0xec, 0x31, 0x89, 0x23, 0x44, 0xd9, 0x9f, 0x70, 0x76,
+	0x95, 0x73, 0x63, 0xb8, 0x4f, 0x01, 0x0d, 0x6d, 0xdf, 0xb7, 0x9d, 0x5e, 0x1c, 0x92, 0xe2, 0x71,
+	0x6c, 0x4a, 0x4e, 0x4c, 0xfc, 0x14, 0xf6, 0xf0, 0x98, 0x78, 0xb8, 0x47, 0xe6, 0x0c, 0x99, 0xd2,
+	0xed, 0xc2, 0xda, 0x9e, 0xb2, 0x9f, 0x30, 0x9e, 0x4b, 0xb9, 0x19, 0x8b, 0xc7, 0x42, 0x48, 0xfb,
+	0x0a, 0x8a, 0x11, 0x8d, 0x8b, 0x4c, 0xed, 0x9b, 0x99, 0xb4, 0x2a, 0x73, 0x69, 0xfd, 0x47, 0x22,
+	0x56, 0xab, 0x38, 0x5e, 0x66, 0xf5, 0x15, 0x3c, 0xc1, 0x82, 0x4a, 0xba, 0xe6, 0x9c, 0xaa, 0xe3,
+	0x44, 0x41, 0x31, 0xb6, 0x22, 0x81, 0x66, 0xa4, 0x17, 0x5d, 0x42, 0x26, 0x38, 0x74, 0x23, 0x9f,
+	0x88, 0x62, 0x66, 0x2b, 0x5f, 0x94, 0x16, 0x77, 0xa6, 0xd2, 0x1d, 0xe6, 0x4b, 0x2d, 0xae, 0xc3,
+	0x88, 0x74, 0x15, 0x5d, 0x48, 0x0b, 0xda, 0x7d, 0x87, 0xf8, 0x14, 0xd2, 0x02, 0xc4, 0x0b, 0x9d,
+	0xad, 0x94, 0xef, 0x35, 0x2f, 0x6d, 0x49, 0xd3, 0x86, 0x84, 0x6b, 0x5f, 0xc0, 0xae, 0xfe, 0x83,
+	0xcd, 0x48, 0x77, 0x52, 0xbd, 0x95, 0xb3, 0xfb, 0x25, 0x14, 0xe6, 0xb1, 0x32, 0xb3, 0xf7, 0x82,
+	0xbf, 0x01, 0x74, 0xd2, 0xc7, 0xb6, 0xd3, 0x62, 0xd8, 0x9b, 0x34, 0x8d, 0x02, 0x3c, 0xf2, 0x03,
+	0x02, 0xe9, 0xf2, 0x98, 0x33, 0x46, 0xb8, 0x44, 0xbf, 0x80, 0x5c, 0x8f, 0x38, 0xc4, 0xb7, 0x7d,
+	0x93, 0xd9, 0x43, 0x22, 0x37, 0x78, 0x56, 0xd2, 0xda, 0xf6, 0x90, 0x68, 0xaf, 0xe0, 0x49, 0xe4,
+	0x09, 0xef, 0x0d, 0xab, 0x75, 0x44, 0xad, 0x04, 0x3b, 0xb3, 0x38, 0xe9, 0xce, 0x36, 0xac, 0x89,
+	0xd6, 0x23, 0x0e, 0xb3, 0x58, 0x68, 0x6f, 0x61, 0xb3, 0xea, 0x07, 0xfd, 0x64, 0x48, 0x1c, 0x16,
+	0xcb, 0x16, 0x71, 0xa9, 0xd5, 0x37, 0xb9, 0xc3, 0x12, 0x00, 0x9c, 0xc4, 0x43, 0xbc, 0xbf, 0x07,
+	0xfc, 0x25, 0x09, 0x28, 0xae, 0x57, 0xfa, 0x70, 0x03, 0xdb, 0x93, 0xc3, 0x83, 0x23, 0x3e, 0x4f,
+	0x69, 0xb6, 0xf2, 0xdb, 0x65, 0x85, 0x9f, 0xd7, 0x14, 0xdb, 0x8a, 0x13, 0xde, 0xd6, 0x78, 0x9e,
+	0x58, 0xfc, 0x63, 0x02, 0xb6, 0x16, 0x08, 0xa3, 0x67, 0xf0, 0x38, 0x6a, 0xbe, 0xb2, 0x0b, 0x4d,
+	0x08, 0xab, 0x77, 0xec, 0x0f, 0x61, 0x5d, 0xdc, 0xb1, 0xc4, 0x33, 0x63, 0x37, 0x4e, 0x2e, 0x24,
+	0xb6, 0xe4, 0x7d, 0xea, 0x8a, 0xeb, 0x50, 0x0a, 0x89, 0x7b, 0x27, 0x17, 0x12, 0xb9, 0xd0, 0x74,
+	0x61, 0xd7, 0x66, 0x4f, 0xc9, 0xd7, 0xd1, 0x29, 0x49, 0xef, 0x29, 0xfb, 0xf9, 0xca, 0x27, 0xab,
+	0x9e, 0x92, 0xf0, 0x74, 0xfc, 0x27, 0x01, 0xbb, 0x4b, 0x4e, 0x50, 0x4c, 0xb9, 0xf2, 0xb3, 0x94,
+	0xa3, 0xdf, 0xc0, 0xfb, 0x84, 0xf5, 0x8f, 0xcc, 0x2e, 0x71, 0xa9, 0x6f, 0x33, 0x31, 0x91, 0x98,
+	0xce, 0x68, 0xd8, 0x21, 0x9e, 0xcc, 0x5c, 0x30, 0xee, 0x1c, 0xd5, 0x04, 0x9f, 0x4f, 0x20, 0x0d,
+	0xce, 0x45, 0x9f, 0xc3, 0x4e, 0x88, 0xb2, 0x1d, 0x6b, 0x30, 0xf2, 0x6d, 0xea, 0xc4, 0x53, 0xb9,
+	0x2d, 0xb9, 0xf5, 0x90, 0xc9, 0xb3, 0x75, 0x00, 0x2a, 0x8e, 0x9a, 0x90, 0xc9, 0xb7, 0xa6, 0xcc,
+	0xea, 0xc6, 0x84, 0xae, 0x07, 0x64, 0xf4, 0x35, 0x3c, 0xe3, 0x0a, 0x02, 0x41, 0xdb, 0x31, 0x63,
+	0xb0, 0x9b, 0x11, 0x19, 0x89, 0xe6, 0x9d, 0x32, 0xde, 0x0f, 0x65, 0xea, 0xce, 0xa4, 0xbb, 0x7d,
+	0x13, 0x08, 0x68, 0x5f, 0xc1, 0x7a, 0x8d, 0x0e, 0xb1, 0x1d, 0xf5, 0xea, 0x6d, 0x58, 0x13, 0x16,
+	0xe5, 0x51, 0xe2, 0x0b, 0xb4, 0x03, 0xe9, 0x2e, 0x17, 0x0b, 0x67, 0x11, 0xb1, 0xd2, 0xbe, 0x84,
+	0x7c, 0x08, 0x97, 0xe9, 0x3e, 0x00, 0x35, 0xba, 0xc2, 0x4d, 0x89, 0x11, 0xaa, 0x36, 0x22, 0xba,
+	0x80, 0x68, 0x7f, 0x4d, 0xc0, 0x26, 0xcf, 0x56, 0xdb, 0x23, 0x93, 0x1b, 0xf4, 0x35, 0xa4, 0x98,
+	0x27, 0xf7, 0x6d, 0xb6, 0x52, 0x59, 0x56, 0xad, 0x39, 0x60, 0x29, 0x58, 0x34, 0x68, 0x97, 0x18,
+	0x1c, 0x5f, 0xfc, 0xb7, 0x02, 0x99, 0x90, 0x84, 0x7e, 0x0d, 0x6b, 0xbc, 0x6c, 0xdc, 0x95, 0x6c,
+	0x45, 0x9b, 0x68, 0x25, 0xac, 0x5f, 0x0a, 0x47, 0xca, 0xd2, 0x31, 0x37, 0x21, 0x66, 0x48, 0x01,
+	0x98, 0x99, 0xed, 0x12, 0x33, 0xb3, 0x5d, 0x70, 0xe1, 0xba, 0xd8, 0x63, 0xb6, 0x65, 0xbb, 0xfc,
+	0x72, 0x1a, 0x53, 0x46, 0xc2, 0x3b, 0x7a, 0x33, 0xce, 0xb9, 0x0c, 0x18, 0x41, 0x73, 0x91, 0x23,
+	0x00, 0x97, 0x13, 0x55, 0x05, 0x71, 0xfb, 0x07, 0x14, 0xed, 0x0d, 0x6c, 0x07, 0x4e, 0x73, 0x17,
+	0x82, 0xcd, 0x10, 0x96, 0xe5, 0x29, 0x3c, 0xe6, 0xe3, 0xd1, 0xb5, 0x47, 0x87, 0x32, 0x9f, 0x99,
+	0x80, 0xf0, 0xda, 0xa3, 0xc3, 0x60, 0x54, 0xe4, 0x4c, 0x46, 0xe5, 0x7e, 0x4c, 0x07, 0xcb, 0x36,
+	0x7d, 0x79, 0x06, 0xeb, 0xd1, 0xae, 0x36, 0xe8, 0x80, 0xa0, 0x2c, 0x3c, 0x7a, 0xdb, 0x38, 0x6f,
+	0x5c, 0x5c, 0x35, 0xd4, 0xf7, 0x50, 0x0e, 0x32, 0xd5, 0x76, 0x5b, 0x6f, 0xb5, 0x75, 0x43, 0x55,
+	0x82, 0x55, 0xd3, 0xb8, 0x68, 0x5e, 0xb4, 0x74, 0x43, 0x4d, 0xa0, 0x3c, 0x40, 0xf5, 0xf4, 0xd4,
+	0xd0, 0x4f, 0xab, 0xed, 0x0b, 0x43, 0x4d, 0xbe, 0xfc, 0xa7, 0x02, 0x1b, 0x33, 0x07, 0x04, 0x21,
+	0xc8, 0x4b, 0x65, 0x66, 0xab, 0x5d, 0x6d, 0xbf, 0x6d, 0xa9, 0xef, 0xa1, 0x6d, 0x50, 0x6b, 0x7a,
+	0xf3, 0xa2, 0x55, 0x6f, 0x9b, 0x86, 0x7e, 0xa2, 0xd7, 0x2f, 0xf5, 0x9a, 0xaa, 0x04, 0x92, 0x4d,
+	0xbd, 0x51, 0xab, 0x37, 0x4e, 0xcd, 0xea, 0x49, 0xbb, 0x7e, 0xa9, 0xab, 0x09, 0x04, 0x90, 0x96,
+	0xdf, 0xc9, 0x80, 0x5f, 0x6f, 0xd4, 0xdb, 0xf5, 0x6a, 0x5b, 0xaf, 0x99, 0xfa, 0xb7, 0xf5, 0xb6,
+	0x9a, 0x42, 0x2a, 0xe4, 0xae, 0xea, 0xed, 0xb3, 0x9a, 0x51, 0xbd, 0xaa, 0x1e, 0xbf, 0xd1, 0xd5,
+	0xb5, 0x00, 0x11, 0xf0, 0xf4, 0x9a, 0x9a, 0x0e, 0x10, 0xe2, 0xdb, 0x6c, 0xbd, 0xa9, 0xb6, 0xce,
+	0xf4, 0x9a, 0xfa, 0xa8, 0xf2, 0x3f, 0x05, 0x36, 0xaa, 0x61, 0x6f, 0x12, 0xef, 0x11, 0xd4, 0x07,
+	0x24, 0x53, 0x18, 0x9b, 0xc0, 0xd1, 0xcb, 0xa5, 0xdd, 0x78, 0x6e, 0x4c, 0x2f, 0xfe, 0x72, 0xc9,
+	0x5e, 0x89, 0x89, 0xd6, 0x30, 0xc3, 0xc8, 0x84, 0xcd, 0xd6, 0xa8, 0x33, 0xb4, 0xa7, 0x0c, 0x69,
+	0xf7, 0x83, 0xe3, 0x06, 0x16, 0x39, 0x13, 0xee, 0xef, 0xca, 0x8f, 0x4a, 0xf4, 0xf2, 0x88, 0xc2,
+	0xfb, 0x16, 0x72, 0xd2, 0x4f, 0xbe, 0x63, 0xd0, 0x47, 0x77, 0x1e, 0x97, 0x30, 0xa4, 0x15, 0xb6,
+	0x3f, 0xfa, 0x0e, 0x72, 0xd2, 0x98, 0x58, 0xaf, 0x80, 0x29, 0x2e, 0x6d, 0xad, 0x33, 0x0f, 0xa6,
+	0xca, 0x9f, 0x14, 0xd8, 0x0c, 0xc7, 0x78, 0x1a, 0x05, 0xe3, 0xc1, 0xae, 0xcc, 0xa0, 0x64, 0x91,
+	0xaa, 0xd3, 0x6d, 0x7a, 0x94, 0x5e, 0xdf, 0x51, 0xb0, 0xb9, 0x57, 0x4a, 0xf1, 0x57, 0x2b, 0xc9,
+	0x4a, 0x4f, 0xfe, 0x95, 0x01, 0x75, 0xb2, 0xaf, 0xa5, 0x23, 0xdf, 0x01, 0x88, 0x16, 0xc5, 0x0b,
+	0xfb, 0xf1, 0x32, 0x7d, 0x53, 0x8d, 0x73, 0x79, 0x19, 0x67, 0x1a, 0xe4, 0xef, 0x61, 0xf3, 0x0a,
+	0xdb, 0xec, 0x75, 0x7c, 0xd2, 0x44, 0x95, 0x07, 0x8d, 0xa5, 0xc2, 0xe0, 0x67, 0x3f, 0x63, 0x94,
+	0x3d, 0x54, 0x10, 0x85, 0xfc, 0xf4, 0x14, 0x85, 0x3e, 0xbd, 0x57, 0x51, 0x7c, 0x4a, 0x2b, 0x96,
+	0x56, 0x15, 0x97, 0x01, 0x0f, 0x60, 0xeb, 0x24, 0x1c, 0x2c, 0x62, 0x43, 0xca, 0xc1, 0x2a, 0x13,
+	0x91, 0xb0, 0xf8, 0x72, 0xf5, 0xe1, 0x09, 0xdd, 0xcc, 0xf7, 0xa9, 0x07, 0xc6, 0xf7, 0xd0, 0x19,
+	0x1d, 0xfd, 0x41, 0x81, 0xed, 0x45, 0x8f, 0x42, 0x74, 0x7f, 0x85, 0xe6, 0xdf, 0xa5, 0xc5, 0xcf,
+	0x1f, 0x06, 0x92, 0x3e, 0x8c, 0x40, 0x9d, 0x9d, 0xf1, 0xd1, 0xd2, 0x40, 0x96, 0xbc, 0x24, 0x8a,
+	0x87, 0xab, 0x03, 0xa4, 0xd9, 0xdf, 0x45, 0x9b, 0x79, 0xf2, 0x48, 0x40, 0x3b, 0x25, 0xf1, 0x97,
+	0xa7, 0x14, 0xfe, 0xe5, 0x29, 0xe9, 0x43, 0x97, 0xdd, 0x2e, 0x2f, 0xe3, 0xfc, 0x03, 0xe3, 0x50,
+	0x41, 0xe7, 0xb0, 0x7e, 0x82, 0x1d, 0xea, 0xd8, 0x16, 0x1e, 0x9c, 0x11, 0xdc, 0x5d, 0xaa, 0x76,
+	0x95, 0x6e, 0x76, 0x0e, 0x59, 0xd9, 0x83, 0x82, 0x50, 0xe2, 0x6d, 0x72, 0x0a, 0x72, 0x49, 0x07,
+	0x23, 0x87, 0x61, 0xef, 0x36, 0x90, 0x2a, 0x2e, 0x31, 0x78, 0x9c, 0xfb, 0xf1, 0xdd, 0x0b, 0xe5,
+	0xbf, 0xef, 0x5e, 0x28, 0xff, 0x7f, 0xf7, 0x42, 0xe9, 0xa4, 0x39, 0xf7, 0xb3, 0x9f, 0x02, 0x00,
+	0x00, 0xff, 0xff, 0xfd, 0x4f, 0x4f, 0xa7, 0x17, 0x13, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -1705,6 +1717,17 @@ func (c *attesterServiceClient) SubmitAttestation(ctx context.Context, in *v1alp
 type AttesterServiceServer interface {
 	RequestAttestation(context.Context, *AttestationRequest) (*v1alpha1.AttestationData, error)
 	SubmitAttestation(context.Context, *v1alpha1.Attestation) (*AttestResponse, error)
+}
+
+// UnimplementedAttesterServiceServer can be embedded to have forward compatible implementations.
+type UnimplementedAttesterServiceServer struct {
+}
+
+func (*UnimplementedAttesterServiceServer) RequestAttestation(ctx context.Context, req *AttestationRequest) (*v1alpha1.AttestationData, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RequestAttestation not implemented")
+}
+func (*UnimplementedAttesterServiceServer) SubmitAttestation(ctx context.Context, req *v1alpha1.Attestation) (*AttestResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SubmitAttestation not implemented")
 }
 
 func RegisterAttesterServiceServer(s *grpc.Server, srv AttesterServiceServer) {
@@ -1804,6 +1827,17 @@ type ProposerServiceServer interface {
 	ProposeBlock(context.Context, *v1alpha1.BeaconBlock) (*ProposeResponse, error)
 }
 
+// UnimplementedProposerServiceServer can be embedded to have forward compatible implementations.
+type UnimplementedProposerServiceServer struct {
+}
+
+func (*UnimplementedProposerServiceServer) RequestBlock(ctx context.Context, req *BlockRequest) (*v1alpha1.BeaconBlock, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RequestBlock not implemented")
+}
+func (*UnimplementedProposerServiceServer) ProposeBlock(ctx context.Context, req *v1alpha1.BeaconBlock) (*ProposeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ProposeBlock not implemented")
+}
+
 func RegisterProposerServiceServer(s *grpc.Server, srv ProposerServiceServer) {
 	s.RegisterService(&_ProposerService_serviceDesc, srv)
 }
@@ -1890,6 +1924,14 @@ type AggregatorServiceServer interface {
 	SubmitAggregateAndProof(context.Context, *AggregationRequest) (*AggregationResponse, error)
 }
 
+// UnimplementedAggregatorServiceServer can be embedded to have forward compatible implementations.
+type UnimplementedAggregatorServiceServer struct {
+}
+
+func (*UnimplementedAggregatorServiceServer) SubmitAggregateAndProof(ctx context.Context, req *AggregationRequest) (*AggregationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SubmitAggregateAndProof not implemented")
+}
+
 func RegisterAggregatorServiceServer(s *grpc.Server, srv AggregatorServiceServer) {
 	s.RegisterService(&_AggregatorService_serviceDesc, srv)
 }
@@ -1938,6 +1980,7 @@ type ValidatorServiceClient interface {
 	ExitedValidators(ctx context.Context, in *ExitedValidatorsRequest, opts ...grpc.CallOption) (*ExitedValidatorsResponse, error)
 	WaitForChainStart(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (ValidatorService_WaitForChainStartClient, error)
 	CanonicalHead(ctx context.Context, in *types.Empty, opts ...grpc.CallOption) (*v1alpha1.BeaconBlock, error)
+	ProposeExit(ctx context.Context, in *v1alpha1.VoluntaryExit, opts ...grpc.CallOption) (*types.Empty, error)
 }
 
 type validatorServiceClient struct {
@@ -2075,6 +2118,15 @@ func (c *validatorServiceClient) CanonicalHead(ctx context.Context, in *types.Em
 	return out, nil
 }
 
+func (c *validatorServiceClient) ProposeExit(ctx context.Context, in *v1alpha1.VoluntaryExit, opts ...grpc.CallOption) (*types.Empty, error) {
+	out := new(types.Empty)
+	err := c.cc.Invoke(ctx, "/ethereum.beacon.rpc.v1.ValidatorService/ProposeExit", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ValidatorServiceServer is the server API for ValidatorService service.
 type ValidatorServiceServer interface {
 	DomainData(context.Context, *DomainRequest) (*DomainResponse, error)
@@ -2086,6 +2138,42 @@ type ValidatorServiceServer interface {
 	ExitedValidators(context.Context, *ExitedValidatorsRequest) (*ExitedValidatorsResponse, error)
 	WaitForChainStart(*types.Empty, ValidatorService_WaitForChainStartServer) error
 	CanonicalHead(context.Context, *types.Empty) (*v1alpha1.BeaconBlock, error)
+	ProposeExit(context.Context, *v1alpha1.VoluntaryExit) (*types.Empty, error)
+}
+
+// UnimplementedValidatorServiceServer can be embedded to have forward compatible implementations.
+type UnimplementedValidatorServiceServer struct {
+}
+
+func (*UnimplementedValidatorServiceServer) DomainData(ctx context.Context, req *DomainRequest) (*DomainResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DomainData not implemented")
+}
+func (*UnimplementedValidatorServiceServer) WaitForActivation(req *ValidatorActivationRequest, srv ValidatorService_WaitForActivationServer) error {
+	return status.Errorf(codes.Unimplemented, "method WaitForActivation not implemented")
+}
+func (*UnimplementedValidatorServiceServer) ValidatorIndex(ctx context.Context, req *ValidatorIndexRequest) (*ValidatorIndexResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ValidatorIndex not implemented")
+}
+func (*UnimplementedValidatorServiceServer) CommitteeAssignment(ctx context.Context, req *AssignmentRequest) (*AssignmentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CommitteeAssignment not implemented")
+}
+func (*UnimplementedValidatorServiceServer) ValidatorStatus(ctx context.Context, req *ValidatorIndexRequest) (*ValidatorStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ValidatorStatus not implemented")
+}
+func (*UnimplementedValidatorServiceServer) ValidatorPerformance(ctx context.Context, req *ValidatorPerformanceRequest) (*ValidatorPerformanceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ValidatorPerformance not implemented")
+}
+func (*UnimplementedValidatorServiceServer) ExitedValidators(ctx context.Context, req *ExitedValidatorsRequest) (*ExitedValidatorsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ExitedValidators not implemented")
+}
+func (*UnimplementedValidatorServiceServer) WaitForChainStart(req *types.Empty, srv ValidatorService_WaitForChainStartServer) error {
+	return status.Errorf(codes.Unimplemented, "method WaitForChainStart not implemented")
+}
+func (*UnimplementedValidatorServiceServer) CanonicalHead(ctx context.Context, req *types.Empty) (*v1alpha1.BeaconBlock, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CanonicalHead not implemented")
+}
+func (*UnimplementedValidatorServiceServer) ProposeExit(ctx context.Context, req *v1alpha1.VoluntaryExit) (*types.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ProposeExit not implemented")
 }
 
 func RegisterValidatorServiceServer(s *grpc.Server, srv ValidatorServiceServer) {
@@ -2260,6 +2348,24 @@ func _ValidatorService_CanonicalHead_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ValidatorService_ProposeExit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1alpha1.VoluntaryExit)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ValidatorServiceServer).ProposeExit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.beacon.rpc.v1.ValidatorService/ProposeExit",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ValidatorServiceServer).ProposeExit(ctx, req.(*v1alpha1.VoluntaryExit))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _ValidatorService_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "ethereum.beacon.rpc.v1.ValidatorService",
 	HandlerType: (*ValidatorServiceServer)(nil),
@@ -2292,6 +2398,10 @@ var _ValidatorService_serviceDesc = grpc.ServiceDesc{
 			MethodName: "CanonicalHead",
 			Handler:    _ValidatorService_CanonicalHead_Handler,
 		},
+		{
+			MethodName: "ProposeExit",
+			Handler:    _ValidatorService_ProposeExit_Handler,
+		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
@@ -2311,7 +2421,7 @@ var _ValidatorService_serviceDesc = grpc.ServiceDesc{
 func (m *BlockRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2319,31 +2429,45 @@ func (m *BlockRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *BlockRequest) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *BlockRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.Slot != 0 {
-		dAtA[i] = 0x8
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(m.Slot))
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.Graffiti) > 0 {
+		i -= len(m.Graffiti)
+		copy(dAtA[i:], m.Graffiti)
+		i = encodeVarintServices(dAtA, i, uint64(len(m.Graffiti)))
+		i--
+		dAtA[i] = 0x1a
 	}
 	if len(m.RandaoReveal) > 0 {
-		dAtA[i] = 0x12
-		i++
+		i -= len(m.RandaoReveal)
+		copy(dAtA[i:], m.RandaoReveal)
 		i = encodeVarintServices(dAtA, i, uint64(len(m.RandaoReveal)))
-		i += copy(dAtA[i:], m.RandaoReveal)
+		i--
+		dAtA[i] = 0x12
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if m.Slot != 0 {
+		i = encodeVarintServices(dAtA, i, uint64(m.Slot))
+		i--
+		dAtA[i] = 0x8
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *ProposeResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2351,26 +2475,33 @@ func (m *ProposeResponse) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *ProposeResponse) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ProposeResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if len(m.BlockRoot) > 0 {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(len(m.BlockRoot)))
-		i += copy(dAtA[i:], m.BlockRoot)
-	}
 	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return i, nil
+	if len(m.BlockRoot) > 0 {
+		i -= len(m.BlockRoot)
+		copy(dAtA[i:], m.BlockRoot)
+		i = encodeVarintServices(dAtA, i, uint64(len(m.BlockRoot)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
 }
 
 func (m *AttestationRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2378,42 +2509,50 @@ func (m *AttestationRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *AttestationRequest) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AttestationRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if len(m.PublicKey) > 0 {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(len(m.PublicKey)))
-		i += copy(dAtA[i:], m.PublicKey)
-	}
-	if len(m.PocBit) > 0 {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(len(m.PocBit)))
-		i += copy(dAtA[i:], m.PocBit)
-	}
-	if m.Slot != 0 {
-		dAtA[i] = 0x18
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(m.Slot))
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if m.CommitteeIndex != 0 {
-		dAtA[i] = 0x20
-		i++
 		i = encodeVarintServices(dAtA, i, uint64(m.CommitteeIndex))
+		i--
+		dAtA[i] = 0x20
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if m.Slot != 0 {
+		i = encodeVarintServices(dAtA, i, uint64(m.Slot))
+		i--
+		dAtA[i] = 0x18
 	}
-	return i, nil
+	if len(m.PocBit) > 0 {
+		i -= len(m.PocBit)
+		copy(dAtA[i:], m.PocBit)
+		i = encodeVarintServices(dAtA, i, uint64(len(m.PocBit)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.PublicKey) > 0 {
+		i -= len(m.PublicKey)
+		copy(dAtA[i:], m.PublicKey)
+		i = encodeVarintServices(dAtA, i, uint64(len(m.PublicKey)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
 }
 
 func (m *AttestResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2421,26 +2560,33 @@ func (m *AttestResponse) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *AttestResponse) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AttestResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if len(m.Root) > 0 {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(len(m.Root)))
-		i += copy(dAtA[i:], m.Root)
-	}
 	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return i, nil
+	if len(m.Root) > 0 {
+		i -= len(m.Root)
+		copy(dAtA[i:], m.Root)
+		i = encodeVarintServices(dAtA, i, uint64(len(m.Root)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
 }
 
 func (m *AggregationRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2448,42 +2594,50 @@ func (m *AggregationRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *AggregationRequest) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AggregationRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.Slot != 0 {
-		dAtA[i] = 0x8
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(m.Slot))
-	}
-	if m.CommitteeIndex != 0 {
-		dAtA[i] = 0x10
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(m.CommitteeIndex))
-	}
-	if len(m.PublicKey) > 0 {
-		dAtA[i] = 0x1a
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(len(m.PublicKey)))
-		i += copy(dAtA[i:], m.PublicKey)
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if len(m.SlotSignature) > 0 {
-		dAtA[i] = 0x22
-		i++
+		i -= len(m.SlotSignature)
+		copy(dAtA[i:], m.SlotSignature)
 		i = encodeVarintServices(dAtA, i, uint64(len(m.SlotSignature)))
-		i += copy(dAtA[i:], m.SlotSignature)
+		i--
+		dAtA[i] = 0x22
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if len(m.PublicKey) > 0 {
+		i -= len(m.PublicKey)
+		copy(dAtA[i:], m.PublicKey)
+		i = encodeVarintServices(dAtA, i, uint64(len(m.PublicKey)))
+		i--
+		dAtA[i] = 0x1a
 	}
-	return i, nil
+	if m.CommitteeIndex != 0 {
+		i = encodeVarintServices(dAtA, i, uint64(m.CommitteeIndex))
+		i--
+		dAtA[i] = 0x10
+	}
+	if m.Slot != 0 {
+		i = encodeVarintServices(dAtA, i, uint64(m.Slot))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
 }
 
 func (m *AggregationResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2491,26 +2645,33 @@ func (m *AggregationResponse) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *AggregationResponse) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AggregationResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if len(m.Root) > 0 {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(len(m.Root)))
-		i += copy(dAtA[i:], m.Root)
-	}
 	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return i, nil
+	if len(m.Root) > 0 {
+		i -= len(m.Root)
+		copy(dAtA[i:], m.Root)
+		i = encodeVarintServices(dAtA, i, uint64(len(m.Root)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
 }
 
 func (m *ValidatorPerformanceRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2518,33 +2679,40 @@ func (m *ValidatorPerformanceRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *ValidatorPerformanceRequest) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ValidatorPerformanceRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.Slot != 0 {
-		dAtA[i] = 0x8
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(m.Slot))
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if len(m.PublicKeys) > 0 {
-		for _, b := range m.PublicKeys {
+		for iNdEx := len(m.PublicKeys) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.PublicKeys[iNdEx])
+			copy(dAtA[i:], m.PublicKeys[iNdEx])
+			i = encodeVarintServices(dAtA, i, uint64(len(m.PublicKeys[iNdEx])))
+			i--
 			dAtA[i] = 0x12
-			i++
-			i = encodeVarintServices(dAtA, i, uint64(len(b)))
-			i += copy(dAtA[i:], b)
 		}
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if m.Slot != 0 {
+		i = encodeVarintServices(dAtA, i, uint64(m.Slot))
+		i--
+		dAtA[i] = 0x8
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *ValidatorPerformanceResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2552,10 +2720,44 @@ func (m *ValidatorPerformanceResponse) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *ValidatorPerformanceResponse) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ValidatorPerformanceResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.AverageActiveValidatorBalance != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.AverageActiveValidatorBalance))))
+		i--
+		dAtA[i] = 0x2d
+	}
+	if len(m.MissingValidators) > 0 {
+		for iNdEx := len(m.MissingValidators) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.MissingValidators[iNdEx])
+			copy(dAtA[i:], m.MissingValidators[iNdEx])
+			i = encodeVarintServices(dAtA, i, uint64(len(m.MissingValidators[iNdEx])))
+			i--
+			dAtA[i] = 0x22
+		}
+	}
+	if m.TotalActiveValidators != 0 {
+		i = encodeVarintServices(dAtA, i, uint64(m.TotalActiveValidators))
+		i--
+		dAtA[i] = 0x18
+	}
+	if m.TotalValidators != 0 {
+		i = encodeVarintServices(dAtA, i, uint64(m.TotalValidators))
+		i--
+		dAtA[i] = 0x10
+	}
 	if len(m.Balances) > 0 {
 		dAtA2 := make([]byte, len(m.Balances)*10)
 		var j1 int
@@ -2568,45 +2770,19 @@ func (m *ValidatorPerformanceResponse) MarshalTo(dAtA []byte) (int, error) {
 			dAtA2[j1] = uint8(num)
 			j1++
 		}
-		dAtA[i] = 0xa
-		i++
+		i -= j1
+		copy(dAtA[i:], dAtA2[:j1])
 		i = encodeVarintServices(dAtA, i, uint64(j1))
-		i += copy(dAtA[i:], dAtA2[:j1])
+		i--
+		dAtA[i] = 0xa
 	}
-	if m.TotalValidators != 0 {
-		dAtA[i] = 0x10
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(m.TotalValidators))
-	}
-	if m.TotalActiveValidators != 0 {
-		dAtA[i] = 0x18
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(m.TotalActiveValidators))
-	}
-	if len(m.MissingValidators) > 0 {
-		for _, b := range m.MissingValidators {
-			dAtA[i] = 0x22
-			i++
-			i = encodeVarintServices(dAtA, i, uint64(len(b)))
-			i += copy(dAtA[i:], b)
-		}
-	}
-	if m.AverageActiveValidatorBalance != 0 {
-		dAtA[i] = 0x2d
-		i++
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.AverageActiveValidatorBalance))))
-		i += 4
-	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *ValidatorActivationRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2614,28 +2790,35 @@ func (m *ValidatorActivationRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *ValidatorActivationRequest) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ValidatorActivationRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.PublicKeys) > 0 {
-		for _, b := range m.PublicKeys {
+		for iNdEx := len(m.PublicKeys) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.PublicKeys[iNdEx])
+			copy(dAtA[i:], m.PublicKeys[iNdEx])
+			i = encodeVarintServices(dAtA, i, uint64(len(m.PublicKeys[iNdEx])))
+			i--
 			dAtA[i] = 0xa
-			i++
-			i = encodeVarintServices(dAtA, i, uint64(len(b)))
-			i += copy(dAtA[i:], b)
 		}
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *ValidatorActivationResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2643,40 +2826,49 @@ func (m *ValidatorActivationResponse) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *ValidatorActivationResponse) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ValidatorActivationResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if len(m.ActivatedPublicKeys) > 0 {
-		for _, b := range m.ActivatedPublicKeys {
-			dAtA[i] = 0xa
-			i++
-			i = encodeVarintServices(dAtA, i, uint64(len(b)))
-			i += copy(dAtA[i:], b)
-		}
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if len(m.Statuses) > 0 {
-		for _, msg := range m.Statuses {
-			dAtA[i] = 0x12
-			i++
-			i = encodeVarintServices(dAtA, i, uint64(msg.Size()))
-			n, err := msg.MarshalTo(dAtA[i:])
-			if err != nil {
-				return 0, err
+		for iNdEx := len(m.Statuses) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Statuses[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintServices(dAtA, i, uint64(size))
 			}
-			i += n
+			i--
+			dAtA[i] = 0x12
 		}
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if len(m.ActivatedPublicKeys) > 0 {
+		for iNdEx := len(m.ActivatedPublicKeys) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.ActivatedPublicKeys[iNdEx])
+			copy(dAtA[i:], m.ActivatedPublicKeys[iNdEx])
+			i = encodeVarintServices(dAtA, i, uint64(len(m.ActivatedPublicKeys[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+		}
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *ValidatorActivationResponse_Status) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2684,36 +2876,45 @@ func (m *ValidatorActivationResponse_Status) Marshal() (dAtA []byte, err error) 
 }
 
 func (m *ValidatorActivationResponse_Status) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ValidatorActivationResponse_Status) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if len(m.PublicKey) > 0 {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(len(m.PublicKey)))
-		i += copy(dAtA[i:], m.PublicKey)
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if m.Status != nil {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(m.Status.Size()))
-		n3, err := m.Status.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+		{
+			size, err := m.Status.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintServices(dAtA, i, uint64(size))
 		}
-		i += n3
+		i--
+		dAtA[i] = 0x12
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if len(m.PublicKey) > 0 {
+		i -= len(m.PublicKey)
+		copy(dAtA[i:], m.PublicKey)
+		i = encodeVarintServices(dAtA, i, uint64(len(m.PublicKey)))
+		i--
+		dAtA[i] = 0xa
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *ExitedValidatorsRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2721,28 +2922,35 @@ func (m *ExitedValidatorsRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *ExitedValidatorsRequest) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ExitedValidatorsRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.PublicKeys) > 0 {
-		for _, b := range m.PublicKeys {
+		for iNdEx := len(m.PublicKeys) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.PublicKeys[iNdEx])
+			copy(dAtA[i:], m.PublicKeys[iNdEx])
+			i = encodeVarintServices(dAtA, i, uint64(len(m.PublicKeys[iNdEx])))
+			i--
 			dAtA[i] = 0xa
-			i++
-			i = encodeVarintServices(dAtA, i, uint64(len(b)))
-			i += copy(dAtA[i:], b)
 		}
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *ExitedValidatorsResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2750,28 +2958,35 @@ func (m *ExitedValidatorsResponse) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *ExitedValidatorsResponse) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ExitedValidatorsResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.PublicKeys) > 0 {
-		for _, b := range m.PublicKeys {
+		for iNdEx := len(m.PublicKeys) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.PublicKeys[iNdEx])
+			copy(dAtA[i:], m.PublicKeys[iNdEx])
+			i = encodeVarintServices(dAtA, i, uint64(len(m.PublicKeys[iNdEx])))
+			i--
 			dAtA[i] = 0xa
-			i++
-			i = encodeVarintServices(dAtA, i, uint64(len(b)))
-			i += copy(dAtA[i:], b)
 		}
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *ChainStartResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2779,35 +2994,41 @@ func (m *ChainStartResponse) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *ChainStartResponse) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ChainStartResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.GenesisTime != 0 {
+		i = encodeVarintServices(dAtA, i, uint64(m.GenesisTime))
+		i--
+		dAtA[i] = 0x10
+	}
 	if m.Started {
-		dAtA[i] = 0x8
-		i++
+		i--
 		if m.Started {
 			dAtA[i] = 1
 		} else {
 			dAtA[i] = 0
 		}
-		i++
+		i--
+		dAtA[i] = 0x8
 	}
-	if m.GenesisTime != 0 {
-		dAtA[i] = 0x10
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(m.GenesisTime))
-	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *ValidatorIndexRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2815,26 +3036,33 @@ func (m *ValidatorIndexRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *ValidatorIndexRequest) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ValidatorIndexRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if len(m.PublicKey) > 0 {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(len(m.PublicKey)))
-		i += copy(dAtA[i:], m.PublicKey)
-	}
 	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return i, nil
+	if len(m.PublicKey) > 0 {
+		i -= len(m.PublicKey)
+		copy(dAtA[i:], m.PublicKey)
+		i = encodeVarintServices(dAtA, i, uint64(len(m.PublicKey)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
 }
 
 func (m *ValidatorIndexResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2842,25 +3070,31 @@ func (m *ValidatorIndexResponse) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *ValidatorIndexResponse) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ValidatorIndexResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.Index != 0 {
-		dAtA[i] = 0x8
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(m.Index))
-	}
 	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return i, nil
+	if m.Index != 0 {
+		i = encodeVarintServices(dAtA, i, uint64(m.Index))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
 }
 
 func (m *AssignmentRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2868,33 +3102,40 @@ func (m *AssignmentRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *AssignmentRequest) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AssignmentRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.EpochStart != 0 {
-		dAtA[i] = 0x8
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(m.EpochStart))
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if len(m.PublicKeys) > 0 {
-		for _, b := range m.PublicKeys {
+		for iNdEx := len(m.PublicKeys) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.PublicKeys[iNdEx])
+			copy(dAtA[i:], m.PublicKeys[iNdEx])
+			i = encodeVarintServices(dAtA, i, uint64(len(m.PublicKeys[iNdEx])))
+			i--
 			dAtA[i] = 0x12
-			i++
-			i = encodeVarintServices(dAtA, i, uint64(len(b)))
-			i += copy(dAtA[i:], b)
 		}
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if m.EpochStart != 0 {
+		i = encodeVarintServices(dAtA, i, uint64(m.EpochStart))
+		i--
+		dAtA[i] = 0x8
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *AssignmentResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2902,32 +3143,40 @@ func (m *AssignmentResponse) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *AssignmentResponse) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AssignmentResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.ValidatorAssignment) > 0 {
-		for _, msg := range m.ValidatorAssignment {
-			dAtA[i] = 0xa
-			i++
-			i = encodeVarintServices(dAtA, i, uint64(msg.Size()))
-			n, err := msg.MarshalTo(dAtA[i:])
-			if err != nil {
-				return 0, err
+		for iNdEx := len(m.ValidatorAssignment) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.ValidatorAssignment[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintServices(dAtA, i, uint64(size))
 			}
-			i += n
+			i--
+			dAtA[i] = 0xa
 		}
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *AssignmentResponse_ValidatorAssignment) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2935,10 +3184,46 @@ func (m *AssignmentResponse_ValidatorAssignment) Marshal() (dAtA []byte, err err
 }
 
 func (m *AssignmentResponse_ValidatorAssignment) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AssignmentResponse_ValidatorAssignment) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.Status != 0 {
+		i = encodeVarintServices(dAtA, i, uint64(m.Status))
+		i--
+		dAtA[i] = 0x30
+	}
+	if len(m.PublicKey) > 0 {
+		i -= len(m.PublicKey)
+		copy(dAtA[i:], m.PublicKey)
+		i = encodeVarintServices(dAtA, i, uint64(len(m.PublicKey)))
+		i--
+		dAtA[i] = 0x2a
+	}
+	if m.ProposerSlot != 0 {
+		i = encodeVarintServices(dAtA, i, uint64(m.ProposerSlot))
+		i--
+		dAtA[i] = 0x20
+	}
+	if m.AttesterSlot != 0 {
+		i = encodeVarintServices(dAtA, i, uint64(m.AttesterSlot))
+		i--
+		dAtA[i] = 0x18
+	}
+	if m.CommitteeIndex != 0 {
+		i = encodeVarintServices(dAtA, i, uint64(m.CommitteeIndex))
+		i--
+		dAtA[i] = 0x10
+	}
 	if len(m.Committee) > 0 {
 		dAtA5 := make([]byte, len(m.Committee)*10)
 		var j4 int
@@ -2951,47 +3236,19 @@ func (m *AssignmentResponse_ValidatorAssignment) MarshalTo(dAtA []byte) (int, er
 			dAtA5[j4] = uint8(num)
 			j4++
 		}
-		dAtA[i] = 0xa
-		i++
+		i -= j4
+		copy(dAtA[i:], dAtA5[:j4])
 		i = encodeVarintServices(dAtA, i, uint64(j4))
-		i += copy(dAtA[i:], dAtA5[:j4])
+		i--
+		dAtA[i] = 0xa
 	}
-	if m.CommitteeIndex != 0 {
-		dAtA[i] = 0x10
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(m.CommitteeIndex))
-	}
-	if m.AttesterSlot != 0 {
-		dAtA[i] = 0x18
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(m.AttesterSlot))
-	}
-	if m.ProposerSlot != 0 {
-		dAtA[i] = 0x20
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(m.ProposerSlot))
-	}
-	if len(m.PublicKey) > 0 {
-		dAtA[i] = 0x2a
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(len(m.PublicKey)))
-		i += copy(dAtA[i:], m.PublicKey)
-	}
-	if m.Status != 0 {
-		dAtA[i] = 0x30
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(m.Status))
-	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *ValidatorStatusResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -2999,45 +3256,51 @@ func (m *ValidatorStatusResponse) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *ValidatorStatusResponse) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ValidatorStatusResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.Status != 0 {
-		dAtA[i] = 0x8
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(m.Status))
-	}
-	if m.Eth1DepositBlockNumber != 0 {
-		dAtA[i] = 0x10
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(m.Eth1DepositBlockNumber))
-	}
-	if m.DepositInclusionSlot != 0 {
-		dAtA[i] = 0x18
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(m.DepositInclusionSlot))
-	}
-	if m.ActivationEpoch != 0 {
-		dAtA[i] = 0x20
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(m.ActivationEpoch))
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if m.PositionInActivationQueue != 0 {
-		dAtA[i] = 0x28
-		i++
 		i = encodeVarintServices(dAtA, i, uint64(m.PositionInActivationQueue))
+		i--
+		dAtA[i] = 0x28
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if m.ActivationEpoch != 0 {
+		i = encodeVarintServices(dAtA, i, uint64(m.ActivationEpoch))
+		i--
+		dAtA[i] = 0x20
 	}
-	return i, nil
+	if m.DepositInclusionSlot != 0 {
+		i = encodeVarintServices(dAtA, i, uint64(m.DepositInclusionSlot))
+		i--
+		dAtA[i] = 0x18
+	}
+	if m.Eth1DepositBlockNumber != 0 {
+		i = encodeVarintServices(dAtA, i, uint64(m.Eth1DepositBlockNumber))
+		i--
+		dAtA[i] = 0x10
+	}
+	if m.Status != 0 {
+		i = encodeVarintServices(dAtA, i, uint64(m.Status))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
 }
 
 func (m *DomainRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -3045,31 +3308,38 @@ func (m *DomainRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *DomainRequest) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *DomainRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.Epoch != 0 {
-		dAtA[i] = 0x8
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(m.Epoch))
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if len(m.Domain) > 0 {
-		dAtA[i] = 0x12
-		i++
+		i -= len(m.Domain)
+		copy(dAtA[i:], m.Domain)
 		i = encodeVarintServices(dAtA, i, uint64(len(m.Domain)))
-		i += copy(dAtA[i:], m.Domain)
+		i--
+		dAtA[i] = 0x12
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if m.Epoch != 0 {
+		i = encodeVarintServices(dAtA, i, uint64(m.Epoch))
+		i--
+		dAtA[i] = 0x8
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *DomainResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -3077,25 +3347,31 @@ func (m *DomainResponse) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *DomainResponse) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *DomainResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.SignatureDomain != 0 {
-		dAtA[i] = 0x8
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(m.SignatureDomain))
-	}
 	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return i, nil
+	if m.SignatureDomain != 0 {
+		i = encodeVarintServices(dAtA, i, uint64(m.SignatureDomain))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
 }
 
 func (m *BlockTreeResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -3103,32 +3379,40 @@ func (m *BlockTreeResponse) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *BlockTreeResponse) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *BlockTreeResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
 	if len(m.Tree) > 0 {
-		for _, msg := range m.Tree {
-			dAtA[i] = 0xa
-			i++
-			i = encodeVarintServices(dAtA, i, uint64(msg.Size()))
-			n, err := msg.MarshalTo(dAtA[i:])
-			if err != nil {
-				return 0, err
+		for iNdEx := len(m.Tree) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Tree[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintServices(dAtA, i, uint64(size))
 			}
-			i += n
+			i--
+			dAtA[i] = 0xa
 		}
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *BlockTreeResponse_TreeNode) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -3136,46 +3420,55 @@ func (m *BlockTreeResponse_TreeNode) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *BlockTreeResponse_TreeNode) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *BlockTreeResponse_TreeNode) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.Block != nil {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(m.Block.Size()))
-		n6, err := m.Block.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n6
-	}
-	if len(m.BlockRoot) > 0 {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(len(m.BlockRoot)))
-		i += copy(dAtA[i:], m.BlockRoot)
-	}
-	if m.ParticipatedVotes != 0 {
-		dAtA[i] = 0x18
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(m.ParticipatedVotes))
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if m.TotalVotes != 0 {
-		dAtA[i] = 0x20
-		i++
 		i = encodeVarintServices(dAtA, i, uint64(m.TotalVotes))
+		i--
+		dAtA[i] = 0x20
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if m.ParticipatedVotes != 0 {
+		i = encodeVarintServices(dAtA, i, uint64(m.ParticipatedVotes))
+		i--
+		dAtA[i] = 0x18
 	}
-	return i, nil
+	if len(m.BlockRoot) > 0 {
+		i -= len(m.BlockRoot)
+		copy(dAtA[i:], m.BlockRoot)
+		i = encodeVarintServices(dAtA, i, uint64(len(m.BlockRoot)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.Block != nil {
+		{
+			size, err := m.Block.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintServices(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
 }
 
 func (m *TreeBlockSlotRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -3183,34 +3476,42 @@ func (m *TreeBlockSlotRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *TreeBlockSlotRequest) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *TreeBlockSlotRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.SlotFrom != 0 {
-		dAtA[i] = 0x8
-		i++
-		i = encodeVarintServices(dAtA, i, uint64(m.SlotFrom))
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if m.SlotTo != 0 {
-		dAtA[i] = 0x10
-		i++
 		i = encodeVarintServices(dAtA, i, uint64(m.SlotTo))
+		i--
+		dAtA[i] = 0x10
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if m.SlotFrom != 0 {
+		i = encodeVarintServices(dAtA, i, uint64(m.SlotFrom))
+		i--
+		dAtA[i] = 0x8
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func encodeVarintServices(dAtA []byte, offset int, v uint64) int {
+	offset -= sovServices(v)
+	base := offset
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
 		offset++
 	}
 	dAtA[offset] = uint8(v)
-	return offset + 1
+	return base
 }
 func (m *BlockRequest) Size() (n int) {
 	if m == nil {
@@ -3222,6 +3523,10 @@ func (m *BlockRequest) Size() (n int) {
 		n += 1 + sovServices(uint64(m.Slot))
 	}
 	l = len(m.RandaoReveal)
+	if l > 0 {
+		n += 1 + l + sovServices(uint64(l))
+	}
+	l = len(m.Graffiti)
 	if l > 0 {
 		n += 1 + l + sovServices(uint64(l))
 	}
@@ -3731,14 +4036,7 @@ func (m *TreeBlockSlotRequest) Size() (n int) {
 }
 
 func sovServices(x uint64) (n int) {
-	for {
-		n++
-		x >>= 7
-		if x == 0 {
-			break
-		}
-	}
-	return n
+	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozServices(x uint64) (n int) {
 	return sovServices(uint64((x << 1) ^ uint64((int64(x) >> 63))))
@@ -3823,6 +4121,40 @@ func (m *BlockRequest) Unmarshal(dAtA []byte) error {
 			m.RandaoReveal = append(m.RandaoReveal[:0], dAtA[iNdEx:postIndex]...)
 			if m.RandaoReveal == nil {
 				m.RandaoReveal = []byte{}
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Graffiti", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowServices
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthServices
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthServices
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Graffiti = append(m.Graffiti[:0], dAtA[iNdEx:postIndex]...)
+			if m.Graffiti == nil {
+				m.Graffiti = []byte{}
 			}
 			iNdEx = postIndex
 		default:

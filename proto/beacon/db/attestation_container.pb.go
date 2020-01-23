@@ -5,13 +5,13 @@ package db
 
 import (
 	fmt "fmt"
-	io "io"
-	math "math"
-
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	v1alpha1 "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	github_com_prysmaticlabs_go_bitfield "github.com/prysmaticlabs/go-bitfield"
+	io "io"
+	math "math"
+	math_bits "math/bits"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -23,7 +23,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 type AttestationContainer struct {
 	Data                 *v1alpha1.AttestationData             `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
@@ -47,7 +47,7 @@ func (m *AttestationContainer) XXX_Marshal(b []byte, deterministic bool) ([]byte
 		return xxx_messageInfo_AttestationContainer.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -103,7 +103,7 @@ func (m *AttestationContainer_SignaturePair) XXX_Marshal(b []byte, deterministic
 		return xxx_messageInfo_AttestationContainer_SignaturePair.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -182,7 +182,7 @@ var fileDescriptor_29679516eb4218c9 = []byte{
 func (m *AttestationContainer) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -190,42 +190,52 @@ func (m *AttestationContainer) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *AttestationContainer) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AttestationContainer) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.Data != nil {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintAttestationContainer(dAtA, i, uint64(m.Data.Size()))
-		n1, err := m.Data.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n1
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if len(m.SignaturePairs) > 0 {
-		for _, msg := range m.SignaturePairs {
+		for iNdEx := len(m.SignaturePairs) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.SignaturePairs[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintAttestationContainer(dAtA, i, uint64(size))
+			}
+			i--
 			dAtA[i] = 0x12
-			i++
-			i = encodeVarintAttestationContainer(dAtA, i, uint64(msg.Size()))
-			n, err := msg.MarshalTo(dAtA[i:])
+		}
+	}
+	if m.Data != nil {
+		{
+			size, err := m.Data.MarshalToSizedBuffer(dAtA[:i])
 			if err != nil {
 				return 0, err
 			}
-			i += n
+			i -= size
+			i = encodeVarintAttestationContainer(dAtA, i, uint64(size))
 		}
+		i--
+		dAtA[i] = 0xa
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *AttestationContainer_SignaturePair) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -233,46 +243,56 @@ func (m *AttestationContainer_SignaturePair) Marshal() (dAtA []byte, err error) 
 }
 
 func (m *AttestationContainer_SignaturePair) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AttestationContainer_SignaturePair) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if len(m.AggregationBits) > 0 {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintAttestationContainer(dAtA, i, uint64(len(m.AggregationBits)))
-		i += copy(dAtA[i:], m.AggregationBits)
-	}
-	if len(m.Signature) > 0 {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintAttestationContainer(dAtA, i, uint64(len(m.Signature)))
-		i += copy(dAtA[i:], m.Signature)
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if m.VoteCounted {
-		dAtA[i] = 0x18
-		i++
+		i--
 		if m.VoteCounted {
 			dAtA[i] = 1
 		} else {
 			dAtA[i] = 0
 		}
-		i++
+		i--
+		dAtA[i] = 0x18
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if len(m.Signature) > 0 {
+		i -= len(m.Signature)
+		copy(dAtA[i:], m.Signature)
+		i = encodeVarintAttestationContainer(dAtA, i, uint64(len(m.Signature)))
+		i--
+		dAtA[i] = 0x12
 	}
-	return i, nil
+	if len(m.AggregationBits) > 0 {
+		i -= len(m.AggregationBits)
+		copy(dAtA[i:], m.AggregationBits)
+		i = encodeVarintAttestationContainer(dAtA, i, uint64(len(m.AggregationBits)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
 }
 
 func encodeVarintAttestationContainer(dAtA []byte, offset int, v uint64) int {
+	offset -= sovAttestationContainer(v)
+	base := offset
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
 		offset++
 	}
 	dAtA[offset] = uint8(v)
-	return offset + 1
+	return base
 }
 func (m *AttestationContainer) Size() (n int) {
 	if m == nil {
@@ -320,14 +340,7 @@ func (m *AttestationContainer_SignaturePair) Size() (n int) {
 }
 
 func sovAttestationContainer(x uint64) (n int) {
-	for {
-		n++
-		x >>= 7
-		if x == 0 {
-			break
-		}
-	}
-	return n
+	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozAttestationContainer(x uint64) (n int) {
 	return sovAttestationContainer(uint64((x << 1) ^ uint64((int64(x) >> 63))))
