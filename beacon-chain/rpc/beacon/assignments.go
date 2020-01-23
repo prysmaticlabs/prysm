@@ -78,7 +78,7 @@ func (bs *Server) ListValidatorAssignments(
 		}
 	}
 
-	activeIndices, err := helpers.ActiveValidatorIndices(headState, requestedEpoch)
+	activeIndices, err := helpers.ActiveValidatorIndices(headState, headState.Validators(), requestedEpoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve active validator indices: %v", err)
 	}
@@ -123,7 +123,7 @@ func (bs *Server) ListValidatorAssignments(
 			return nil, status.Errorf(codes.Internal, "Could not retrieve archived assignment for epoch %d: %v", requestedEpoch, err)
 		}
 	} else {
-		committeeAssignments, proposerIndexToSlot, err = helpers.CommitteeAssignments(headState, requestedEpoch)
+		committeeAssignments, proposerIndexToSlot, err = helpers.CommitteeAssignments(headState, headState.Validators(), requestedEpoch)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 		}
