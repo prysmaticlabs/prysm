@@ -17,8 +17,8 @@ func (s *Store) applyScoreChanges(ctx context.Context, justifiedEpoch uint64, fi
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.applyScoreChanges")
 	defer span.End()
 
-	// The length of the node indices can not be different than length of the delta.
-	if len(s.nodeIndices) != len(delta) {
+	// The length of the nodes can not be different than length of the delta.
+	if len(s.nodes) != len(delta) {
 		return errInvalidDeltaLength
 	}
 
@@ -38,10 +38,6 @@ func (s *Store) applyScoreChanges(ctx context.Context, justifiedEpoch uint64, fi
 			continue
 		}
 
-		// Protection against node index out of bound. This should not happen.
-		if i >= len(delta) {
-			return errInvalidNodeDelta
-		}
 		nodeDelta := delta[i]
 
 		if nodeDelta < 0 {
@@ -56,6 +52,7 @@ func (s *Store) applyScoreChanges(ctx context.Context, justifiedEpoch uint64, fi
 			// Add node's weight.
 			n.weight += uint64(nodeDelta)
 		}
+
 		s.nodes[i] = n
 
 		// Update parent's best child and descendent if the node has a known parent.

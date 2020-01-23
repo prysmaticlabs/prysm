@@ -5,6 +5,102 @@ import (
 	"testing"
 )
 
+func TestStore_ApplyScoreChanges_InvalidDeltaLength(t *testing.T) {
+	s := &Store{}
+
+	// This will fail because node indices has length of 0, and delta list has a length of 1.
+	if err := s.applyScoreChanges(context.Background(), 0, 0, []int{1}); err.Error() != errInvalidDeltaLength.Error() {
+		t.Error("Did not get wanted error")
+	}
+}
+
+func TestStore_ApplyScoreChanges_UpdateEpochs(t *testing.T) {
+	s := &Store{}
+
+	// The justified and finalized epochs in Store should be updated to 1 and 1 given the following input.
+	if err := s.applyScoreChanges(context.Background(), 1, 1, []int{}); err != nil {
+		t.Error("Did not get wanted error")
+	}
+
+	if s.justifiedEpoch != 1 {
+		t.Error("Did not update justified epoch")
+	}
+	if s.finalizedEpoch != 1 {
+		t.Error("Did not update justified epoch")
+	}
+}
+
+func TestStore_ApplyScoreChanges_UpdateWeightsPositiveDelta(t *testing.T) {
+	// Construct 3 nodes with weight 100 on each node. The 3 nodes linked to each other.
+	s := &Store{nodes: []*Node{
+		{root: [32]byte{'A'}, weight: 100},
+		{root: [32]byte{'A'}, weight: 100},
+		{parent: 1, root: [32]byte{'A'}, weight: 100}}}
+
+	// Each node gets one unique vote. The weight should look like 103 <- 102 <- 101 because
+	// they get propagated back.
+	if err := s.applyScoreChanges(context.Background(), 0, 0, []int{1, 1, 1}); err != nil {
+		t.Fatal(err)
+	}
+
+	if s.nodes[0].weight != 103 {
+		t.Error("Did not get correct weight")
+	}
+	if s.nodes[1].weight != 102 {
+		t.Error("Did not get correct weight")
+	}
+	if s.nodes[2].weight != 101 {
+		t.Error("Did not get correct weight")
+	}
+}
+
+func TestStore_ApplyScoreChanges_UpdateWeightsNegativeDelta(t *testing.T) {
+	// Construct 3 nodes with weight 100 on each node. The 3 nodes linked to each other.
+	s := &Store{nodes: []*Node{
+		{root: [32]byte{'A'}, weight: 100},
+		{root: [32]byte{'A'}, weight: 100},
+		{parent: 1, root: [32]byte{'A'}, weight: 100}}}
+
+	// Each node gets one unique vote which contributes to negative delta.
+	// The weight should look like 97 <- 98 <- 99 because they get propagated back.
+	if err := s.applyScoreChanges(context.Background(), 0, 0, []int{-1, -1, -1}); err != nil {
+		t.Fatal(err)
+	}
+
+	if s.nodes[0].weight != 97 {
+		t.Error("Did not get correct weight")
+	}
+	if s.nodes[1].weight != 98 {
+		t.Error("Did not get correct weight")
+	}
+	if s.nodes[2].weight != 99 {
+		t.Error("Did not get correct weight")
+	}
+}
+
+func TestStore_ApplyScoreChanges_UpdateWeightsMixedDelta(t *testing.T) {
+	// Construct 3 nodes with weight 100 on each node. The 3 nodes linked to each other.
+	s := &Store{nodes: []*Node{
+		{root: [32]byte{'A'}, weight: 100},
+		{root: [32]byte{'A'}, weight: 100},
+		{parent: 1, root: [32]byte{'A'}, weight: 100}}}
+
+	// Each node gets one mixed vote. The weight should look like 100 <- 200 <- 250.
+	if err := s.applyScoreChanges(context.Background(), 0, 0, []int{-100, -50, 150}); err != nil {
+		t.Fatal(err)
+	}
+
+	if s.nodes[0].weight != 100 {
+		t.Error("Did not get correct weight")
+	}
+	if s.nodes[1].weight != 200 {
+		t.Error("Did not get correct weight")
+	}
+	if s.nodes[2].weight != 250 {
+		t.Error("Did not get correct weight")
+	}
+}
+
 func TestStore_UpdateBestChildAndDescendant_RemoveChild(t *testing.T) {
 	// Make parent's best child equal's to input child index and child is not viable.
 	s := &Store{nodes: []*Node{{bestChild: 1}, {}}, justifiedEpoch: 1, finalizedEpoch: 1}
