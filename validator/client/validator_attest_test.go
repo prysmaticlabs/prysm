@@ -30,22 +30,6 @@ func TestRequestAttestation_ValidatorDutiesRequestFailure(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Could not fetch validator assignment")
 }
 
-func TestAttestToBlockHead_RequestAttestationFailure(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	validator, _, finish := setup(t)
-	defer finish()
-	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
-		{
-			PublicKey:      validatorKey.PublicKey.Marshal(),
-			CommitteeIndex: 5,
-		},
-	}}
-
-	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
-	testutil.AssertLogsContain(t, hook, "Could not get validator index in assignment")
-}
-
 func TestAttestToBlockHead_SubmitAttestationRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
 
