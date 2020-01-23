@@ -200,21 +200,10 @@ func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.
 	if err != nil {
 		return nil, err
 	}
-	if state.Slot() > 216 {
-		cloned := state.Clone()
-		fmt.Println("OLD HTR")
-		otherRoot, _ := stateutil.HashTreeRootState(cloned)
-		fmt.Printf("Old root: %#x, new root %#x\n", otherRoot, prevStateRoot)
-		if prevStateRoot != otherRoot {
-			fmt.Printf("In ProcessSlot, Different %#x and %#x\n", prevStateRoot, otherRoot)
-			fmt.Println("State leaves...")
-			leaves := state.Leaves()
-			for i := 0; i < len(leaves); i++ {
-				fmt.Printf("%#x and %d\n", leaves[i], i)
-			}
-			fmt.Println("Comparing eth1data votes...")
-		}
-	}
+	cloned := state.Clone()
+	fmt.Printf("OLD HTR Slot: %d\n", state.Slot())
+	otherRoot, _ := stateutil.HashTreeRootState(cloned)
+	fmt.Printf("Old root: %#x, new root %#x\n", otherRoot, prevStateRoot)
 
 	if err := state.UpdateStateRootAtIndex(
 		state.Slot()%params.BeaconConfig().SlotsPerHistoricalRoot,
