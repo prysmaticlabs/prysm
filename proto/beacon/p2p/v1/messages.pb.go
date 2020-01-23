@@ -7,6 +7,7 @@ import (
 	fmt "fmt"
 	io "io"
 	math "math"
+	math_bits "math/bits"
 
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
@@ -21,7 +22,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 type Status struct {
 	HeadForkVersion      []byte   `protobuf:"bytes,1,opt,name=head_fork_version,json=headForkVersion,proto3" json:"head_fork_version,omitempty" ssz-size:"4"`
@@ -48,7 +49,7 @@ func (m *Status) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return xxx_messageInfo_Status.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -126,7 +127,7 @@ func (m *BeaconBlocksByRangeRequest) XXX_Marshal(b []byte, deterministic bool) (
 		return xxx_messageInfo_BeaconBlocksByRangeRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -210,7 +211,7 @@ var fileDescriptor_a1d590cda035b632 = []byte{
 func (m *Status) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -218,48 +219,57 @@ func (m *Status) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *Status) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *Status) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if len(m.HeadForkVersion) > 0 {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintMessages(dAtA, i, uint64(len(m.HeadForkVersion)))
-		i += copy(dAtA[i:], m.HeadForkVersion)
-	}
-	if len(m.FinalizedRoot) > 0 {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintMessages(dAtA, i, uint64(len(m.FinalizedRoot)))
-		i += copy(dAtA[i:], m.FinalizedRoot)
-	}
-	if m.FinalizedEpoch != 0 {
-		dAtA[i] = 0x18
-		i++
-		i = encodeVarintMessages(dAtA, i, uint64(m.FinalizedEpoch))
-	}
-	if len(m.HeadRoot) > 0 {
-		dAtA[i] = 0x22
-		i++
-		i = encodeVarintMessages(dAtA, i, uint64(len(m.HeadRoot)))
-		i += copy(dAtA[i:], m.HeadRoot)
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if m.HeadSlot != 0 {
-		dAtA[i] = 0x28
-		i++
 		i = encodeVarintMessages(dAtA, i, uint64(m.HeadSlot))
+		i--
+		dAtA[i] = 0x28
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if len(m.HeadRoot) > 0 {
+		i -= len(m.HeadRoot)
+		copy(dAtA[i:], m.HeadRoot)
+		i = encodeVarintMessages(dAtA, i, uint64(len(m.HeadRoot)))
+		i--
+		dAtA[i] = 0x22
 	}
-	return i, nil
+	if m.FinalizedEpoch != 0 {
+		i = encodeVarintMessages(dAtA, i, uint64(m.FinalizedEpoch))
+		i--
+		dAtA[i] = 0x18
+	}
+	if len(m.FinalizedRoot) > 0 {
+		i -= len(m.FinalizedRoot)
+		copy(dAtA[i:], m.FinalizedRoot)
+		i = encodeVarintMessages(dAtA, i, uint64(len(m.FinalizedRoot)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.HeadForkVersion) > 0 {
+		i -= len(m.HeadForkVersion)
+		copy(dAtA[i:], m.HeadForkVersion)
+		i = encodeVarintMessages(dAtA, i, uint64(len(m.HeadForkVersion)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
 }
 
 func (m *BeaconBlocksByRangeRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -267,45 +277,54 @@ func (m *BeaconBlocksByRangeRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *BeaconBlocksByRangeRequest) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *BeaconBlocksByRangeRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if len(m.HeadBlockRoot) > 0 {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintMessages(dAtA, i, uint64(len(m.HeadBlockRoot)))
-		i += copy(dAtA[i:], m.HeadBlockRoot)
-	}
-	if m.StartSlot != 0 {
-		dAtA[i] = 0x10
-		i++
-		i = encodeVarintMessages(dAtA, i, uint64(m.StartSlot))
-	}
-	if m.Count != 0 {
-		dAtA[i] = 0x18
-		i++
-		i = encodeVarintMessages(dAtA, i, uint64(m.Count))
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if m.Step != 0 {
-		dAtA[i] = 0x20
-		i++
 		i = encodeVarintMessages(dAtA, i, uint64(m.Step))
+		i--
+		dAtA[i] = 0x20
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if m.Count != 0 {
+		i = encodeVarintMessages(dAtA, i, uint64(m.Count))
+		i--
+		dAtA[i] = 0x18
 	}
-	return i, nil
+	if m.StartSlot != 0 {
+		i = encodeVarintMessages(dAtA, i, uint64(m.StartSlot))
+		i--
+		dAtA[i] = 0x10
+	}
+	if len(m.HeadBlockRoot) > 0 {
+		i -= len(m.HeadBlockRoot)
+		copy(dAtA[i:], m.HeadBlockRoot)
+		i = encodeVarintMessages(dAtA, i, uint64(len(m.HeadBlockRoot)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
 }
 
 func encodeVarintMessages(dAtA []byte, offset int, v uint64) int {
+	offset -= sovMessages(v)
+	base := offset
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
 		offset++
 	}
 	dAtA[offset] = uint8(v)
-	return offset + 1
+	return base
 }
 func (m *Status) Size() (n int) {
 	if m == nil {
@@ -363,14 +382,7 @@ func (m *BeaconBlocksByRangeRequest) Size() (n int) {
 }
 
 func sovMessages(x uint64) (n int) {
-	for {
-		n++
-		x >>= 7
-		if x == 0 {
-			break
-		}
-	}
-	return n
+	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozMessages(x uint64) (n int) {
 	return sovMessages(uint64((x << 1) ^ uint64((int64(x) >> 63))))

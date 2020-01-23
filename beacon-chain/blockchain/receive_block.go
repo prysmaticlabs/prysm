@@ -125,6 +125,9 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 		log.Errorf("Could not save attestation for fork choice: %v", err)
 		return nil
 	}
+	for _, exit := range block.Block.Body.VoluntaryExits {
+		s.exitPool.MarkIncluded(exit)
+	}
 
 	// Reports on block and fork choice metrics.
 	s.reportSlotMetrics(blockCopy.Block.Slot)

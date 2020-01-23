@@ -1,0 +1,31 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "doc.go",
+        "errors.go",
+        "helpers.go",
+        "nodes.go",
+        "types.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray",
+    visibility = ["//beacon-chain:__subpackages__"],
+    deps = [
+        "//shared/params:go_default_library",
+        "@io_opencensus_go//trace:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "helpers_test.go",
+        "nodes_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+        "//shared/hashutil:go_default_library",
+        "//shared/params:go_default_library",
+    ],
+)

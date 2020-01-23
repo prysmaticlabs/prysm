@@ -114,7 +114,7 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 
 func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 	cfg := &featureconfig.Flags{
-		BlockDoubleProposals: true,
+		ProtectProposer: true,
 	}
 	featureconfig.Init(cfg)
 	hook := logTest.NewGlobal()
@@ -151,7 +151,7 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 
 func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 	cfg := &featureconfig.Flags{
-		BlockDoubleProposals: true,
+		ProtectProposer: true,
 	}
 	featureconfig.Init(cfg)
 	hook := logTest.NewGlobal()
@@ -189,7 +189,7 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 
 func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 	cfg := &featureconfig.Flags{
-		BlockDoubleProposals: true,
+		ProtectProposer: true,
 	}
 	featureconfig.Init(cfg)
 	hook := logTest.NewGlobal()
