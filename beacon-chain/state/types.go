@@ -36,6 +36,21 @@ func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
 	}, nil
 }
 
+// InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer
+// and sets it as the inner state of the BeaconState type.
+func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
+	fieldRoots, err := stateutil.ComputeFieldRoots(st)
+	if err != nil {
+		return nil, err
+	}
+	layers := merkleize(fieldRoots)
+	return &BeaconState{
+		state:        st,
+		merkleLayers: layers,
+		dirtyFields:  make(map[fieldIndex]interface{}),
+	}, nil
+}
+
 // HashTreeRoot of the beacon state retrieves the Merkle root of the trie
 // representation of the beacon state based on the eth2 Simple Serialize specification.
 func (b *BeaconState) HashTreeRoot() ([32]byte, error) {

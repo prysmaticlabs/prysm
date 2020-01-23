@@ -36,7 +36,7 @@ func (k *Store) State(ctx context.Context, blockRoot [32]byte) (*state.BeaconSta
 	if s == nil {
 		return nil, nil
 	}
-	return state.InitializeFromProto(s)
+	return state.InitializeFromProtoUnsafe(s)
 }
 
 // HeadState returns the latest canonical state in beacon chain.
@@ -70,7 +70,7 @@ func (k *Store) HeadState(ctx context.Context) (*state.BeaconState, error) {
 	if s != nil {
 		span.AddAttributes(trace.Int64Attribute("slot", int64(s.Slot)))
 	}
-	return state.InitializeFromProto(s)
+	return state.InitializeFromProtoUnsafe(s)
 }
 
 // GenesisState returns the genesis state in beacon chain.
@@ -100,14 +100,14 @@ func (k *Store) GenesisState(ctx context.Context) (*state.BeaconState, error) {
 	if s == nil {
 		return nil, nil
 	}
-	return state.InitializeFromProto(s)
+	return state.InitializeFromProtoUnsafe(s)
 }
 
 // SaveState stores a state to the db using block's signing root which was used to generate the state.
 func (k *Store) SaveState(ctx context.Context, state *state.BeaconState, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveState")
 	defer span.End()
-	enc, err := encode(state.Clone())
+	enc, err := encode(state.InnerStateUnsafe())
 	if err != nil {
 		return err
 	}

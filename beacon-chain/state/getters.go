@@ -11,6 +11,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
+// InnerStateUnsafe returns the pointer value of the underlying
+// beacon state proto object, bypassing immutability. Use with care.
+func (b *BeaconState) InnerStateUnsafe() *pbp2p.BeaconState {
+	return b.state
+}
+
 // Clone the beacon state into a protobuf for usage.
 func (b *BeaconState) Clone() *pbp2p.BeaconState {
 	if b.state == nil {
