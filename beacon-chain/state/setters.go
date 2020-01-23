@@ -2,11 +2,14 @@ package state
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"gopkg.in/d4l3k/messagediff.v1"
+
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
@@ -159,6 +162,14 @@ func (b *BeaconState) AppendEth1DataVotes(val *ethpb.Eth1Data) error {
 	b.markFieldAsDirty(eth1DataVotes)
 	b.lock.Unlock()
 	return nil
+}
+
+func (b *BeaconState) CompareEth1DataVotes(v2 []*ethpb.Eth1Data) {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+	if !reflect.DeepEqual(b.state.Eth1DataVotes, v2) {
+		fmt.Println(messagediff.PrettyDiff(b.state.Eth1DataVotes, v2))
+	}
 }
 
 // SetEth1DepositIndex for the beacon state.

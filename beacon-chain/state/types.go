@@ -5,8 +5,10 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
+	"github.com/protolambda/zssz/htr"
 	"github.com/protolambda/zssz/merkle"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -39,9 +41,9 @@ func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
 // HashTreeRoot of the beacon state retrieves the Merkle root of the trie
 // representation of the beacon state based on the eth2 Simple Serialize specification.
 func (b *BeaconState) HashTreeRoot() ([32]byte, error) {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-	for field, _ := range b.dirtyFields {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+	for field := range b.dirtyFields {
 		root, err := b.rootSelector(field)
 		if err != nil {
 			return [32]byte{}, err
@@ -50,7 +52,16 @@ func (b *BeaconState) HashTreeRoot() ([32]byte, error) {
 		b.recomputeRoot(int(field))
 		delete(b.dirtyFields, field)
 	}
-	return bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0]), nil
+	r1 := bytesutil.ToBytes32(b.merkleLayers[len(b.merkleLayers)-1][0])
+	//for i := 0; i < len(computed); i++ {
+	//	fmt.Printf("%#x and %d\n", computed[i], i)
+	//}
+	return r1, nil
+}
+
+// Leaves --
+func (b *BeaconState) Leaves() [][]byte {
+	return b.merkleLayers[0][:20]
 }
 
 // Merkleize 32-byte leaves into a Merkle trie for its adequate depth, returning
@@ -127,4 +138,15 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 		return stateutil.CheckpointRoot(b.state.FinalizedCheckpoint)
 	}
 	return [32]byte{}, errors.New("invalid field index provided")
+}
+
+func bitwiseMerkleize(chunks [][]byte, count uint64, limit uint64) ([32]byte, error) {
+	if count > limit {
+		return [32]byte{}, errors.New("merkleizing list that is too large, over limit")
+	}
+	hasher := htr.HashFn(hashutil.Hash)
+	leafIndexer := func(i uint64) []byte {
+		return chunks[i]
+	}
+	return merkle.Merkleize(hasher, count, limit, leafIndexer), nil
 }

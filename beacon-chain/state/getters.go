@@ -168,7 +168,7 @@ func (b *BeaconState) Eth1DataVotes() []*ethpb.Eth1Data {
 	res := make([]*ethpb.Eth1Data, len(b.state.Eth1DataVotes))
 	for i := 0; i < len(res); i++ {
 		res[i] = &ethpb.Eth1Data{
-			DepositCount: b.state.Eth1Data.DepositCount,
+			DepositCount: b.state.Eth1DataVotes[i].DepositCount,
 		}
 		var depositRoot [32]byte
 		var blockHash [32]byte

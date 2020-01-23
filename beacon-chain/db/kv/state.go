@@ -3,13 +3,16 @@ package kv
 import (
 	"bytes"
 	"context"
+	"fmt"
 
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"go.opencensus.io/trace"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/stateutil"
 )
 
 // State returns the saved state using block's signing root,
@@ -106,7 +109,21 @@ func (k *Store) GenesisState(ctx context.Context) (*state.BeaconState, error) {
 func (k *Store) SaveState(ctx context.Context, state *state.BeaconState, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveState")
 	defer span.End()
-	enc, err := encode(state.Clone())
+	cloned := state.Clone()
+	reg, _ := state.HashTreeRoot()
+	otherRoot, err := stateutil.HashTreeRootState(cloned)
+	fmt.Println(" ")
+	if reg != otherRoot {
+		fmt.Printf("In SaveState, Different %#x and %#x\n", reg, otherRoot)
+		fmt.Println("State leaves...")
+		leaves := state.Leaves()
+		for i := 0; i < len(leaves); i++ {
+			fmt.Printf("%#x and %d\n", leaves[i], i)
+		}
+		fmt.Println("Comparing eth1data votes...")
+		state.CompareEth1DataVotes(cloned.Eth1DataVotes)
+	}
+	enc, err := encode(cloned)
 	if err != nil {
 		return err
 	}
