@@ -354,7 +354,7 @@ func (bs *Server) GetValidatorActiveSetChanges(
 		slashedIndices = archivedChanges.Slashed
 		exitedIndices = archivedChanges.Exited
 	} else if requestedEpoch == currentEpoch {
-		activeValidatorCount, err := helpers.ActiveValidatorCount(headState.Validators(), helpers.PrevEpoch(headState))
+		activeValidatorCount, err := helpers.ActiveValidatorCount(headState, helpers.PrevEpoch(headState))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
 		}
@@ -516,7 +516,7 @@ func (bs *Server) GetValidatorQueue(
 
 	// Only activate just enough validators according to the activation churn limit.
 	activationQueueChurn := len(activationQ)
-	activeValidatorCount, err := helpers.ActiveValidatorCount(headState.Validators(), helpers.CurrentEpoch(headState))
+	activeValidatorCount, err := helpers.ActiveValidatorCount(headState, helpers.CurrentEpoch(headState))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
 	}
@@ -584,9 +584,9 @@ func (bs *Server) GetValidatorPerformance(
 	}
 
 	// Advance state with empty transitions up to the requested epoch start slot.
-	validators := headState.Validators()
 	if req.Slot > headState.Slot() {
-		if err = state.ProcessSlots(ctx, headState, validators, req.Slot); err != nil {
+		headState, err = state.ProcessSlots(ctx, headState, req.Slot)
+		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
 		}
 	}
@@ -606,7 +606,7 @@ func (bs *Server) GetValidatorPerformance(
 		}
 	}
 
-	activeCount, err := helpers.ActiveValidatorCount(headState.Validators(), helpers.SlotToEpoch(req.Slot))
+	activeCount, err := helpers.ActiveValidatorCount(headState, helpers.SlotToEpoch(req.Slot))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve active validator count: %v", err)
 	}

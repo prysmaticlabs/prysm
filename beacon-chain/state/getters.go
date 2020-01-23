@@ -250,11 +250,6 @@ func (b *BeaconState) NumofValidators() int {
 	return len(b.state.Validators)
 }
 
-// NumBalances returns the size of the validator balances list..
-func (b *BeaconState) NumBalances() int {
-	return len(b.state.Balances)
-}
-
 // Balances of validators participating in consensus on the beacon chain.
 func (b *BeaconState) Balances() []uint64 {
 	if b.state.Balances == nil {

@@ -9,8 +9,6 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	"go.opencensus.io/trace"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -20,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"go.opencensus.io/trace"
 )
 
 // validateAggregateAndProof verifies the aggregated signature and the selection proof is valid before forwarding to the
@@ -81,9 +80,9 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	}
 
 	// Only advance state if different epoch as the committee can only change on an epoch transition.
-	validators := s.Validators()
 	if helpers.SlotToEpoch(attSlot) > helpers.SlotToEpoch(s.Slot()) {
-		if err = state.ProcessSlots(ctx, s, validators, helpers.StartSlot(helpers.SlotToEpoch(attSlot))); err != nil {
+		s, err = state.ProcessSlots(ctx, s, helpers.StartSlot(helpers.SlotToEpoch(attSlot)))
+		if err != nil {
 			traceutil.AnnotateError(span, err)
 			return false
 		}
@@ -102,7 +101,7 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	}
 
 	// Verify aggregated attestation has a valid signature.
-	if err := blocks.VerifyAttestation(ctx, s, validators, m.Aggregate); err != nil {
+	if err := blocks.VerifyAttestation(ctx, s, m.Aggregate); err != nil {
 		traceutil.AnnotateError(span, err)
 		return false
 	}
@@ -117,7 +116,7 @@ func validateIndexInCommittee(ctx context.Context, s *stateTrie.BeaconState, a *
 	ctx, span := trace.StartSpan(ctx, "sync..validateIndexInCommittee")
 	defer span.End()
 
-	committee, err := helpers.BeaconCommitteeFromState(s, s.Validators(), a.Data.Slot, a.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(s, a.Data.Slot, a.Data.CommitteeIndex)
 	if err != nil {
 		return err
 	}
@@ -145,7 +144,7 @@ func validateSelection(ctx context.Context, s *stateTrie.BeaconState, data *ethp
 	_, span := trace.StartSpan(ctx, "sync.validateSelection")
 	defer span.End()
 
-	committee, err := helpers.BeaconCommitteeFromState(s, s.Validators(), data.Slot, data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(s, data.Slot, data.CommitteeIndex)
 	if err != nil {
 		return err
 	}

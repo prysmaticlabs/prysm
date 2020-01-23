@@ -66,11 +66,11 @@ func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) er
 	b := signed.Block
 
 	// Retrieve incoming block's pre state.
-	postState, err := s.getBlockPreState(ctx, b)
+	preState, err := s.getBlockPreState(ctx, b)
 	if err != nil {
 		return err
 	}
-	preStateValidatorCount := postState.NumofValidators()
+	preStateValidatorCount := preState.NumofValidators()
 
 	root, err := ssz.HashTreeRoot(b)
 	if err != nil {
@@ -80,7 +80,8 @@ func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) er
 		"slot": b.Slot,
 		"root": fmt.Sprintf("0x%s...", hex.EncodeToString(root[:])[:8]),
 	}).Info("Executing state transition on block")
-	if err := state.ExecuteStateTransition(ctx, postState, signed); err != nil {
+	postState, err := state.ExecuteStateTransition(ctx, preState, signed)
+	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")
 	}
 
@@ -136,7 +137,7 @@ func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) er
 		if err := helpers.UpdateCommitteeCache(postState, helpers.CurrentEpoch(postState)); err != nil {
 			return err
 		}
-		if err := helpers.UpdateProposerIndicesInCache(postState, postState.Validators(), helpers.CurrentEpoch(postState)); err != nil {
+		if err := helpers.UpdateProposerIndicesInCache(postState, helpers.CurrentEpoch(postState)); err != nil {
 			return err
 		}
 
@@ -184,15 +185,16 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, signed *e
 	defer s.initSyncStateLock.Unlock()
 
 	// Retrieve incoming block's pre state.
-	postState, err := s.cachedPreState(ctx, b)
+	preState, err := s.cachedPreState(ctx, b)
 	if err != nil {
 		return err
 	}
-	postStateValidatorCount := postState.NumofValidators()
+	preStateValidatorCount := preState.NumofValidators()
 
 	log.WithField("slot", b.Slot).Debug("Executing state transition on block")
 
-	if err := state.ExecuteStateTransitionNoVerifyAttSigs(ctx, postState, signed); err != nil {
+	postState, err := state.ExecuteStateTransitionNoVerifyAttSigs(ctx, preState, signed)
+	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")
 	}
 
@@ -244,7 +246,7 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, signed *e
 	}
 
 	// Update validator indices in database as needed.
-	if err := s.saveNewValidators(ctx, postStateValidatorCount, postState); err != nil {
+	if err := s.saveNewValidators(ctx, preStateValidatorCount, postState); err != nil {
 		return errors.Wrap(err, "could not save finalized checkpoint")
 	}
 

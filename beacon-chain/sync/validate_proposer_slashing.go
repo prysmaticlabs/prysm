@@ -47,18 +47,18 @@ func (r *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg
 		return false
 	}
 	slashSlot := slashing.Header_1.Header.Slot
-	validators := s.Validators()
 	if s.Slot() < slashSlot {
 		if ctx.Err() != nil {
 			return false
 		}
 		var err error
-		if err = state.ProcessSlots(ctx, s, validators, slashSlot); err != nil {
+		s, err = state.ProcessSlots(ctx, s, slashSlot)
+		if err != nil {
 			return false
 		}
 	}
 
-	if err := blocks.VerifyProposerSlashing(s, validators, slashing); err != nil {
+	if err := blocks.VerifyProposerSlashing(s, slashing); err != nil {
 		return false
 	}
 

@@ -204,10 +204,11 @@ func (s *Store) saveCheckpointState(ctx context.Context, baseState *stateTrie.Be
 	if cachedState != nil {
 		return cachedState, nil
 	}
-	validators := baseState.Validators()
+
 	// Advance slots only when it's higher than current state slot.
 	if helpers.StartSlot(c.Epoch) > baseState.Slot() {
-		if err := state.ProcessSlots(ctx, baseState, validators, helpers.StartSlot(c.Epoch)); err != nil {
+		baseState, err = state.ProcessSlots(ctx, baseState, helpers.StartSlot(c.Epoch))
+		if err != nil {
 			return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
 		}
 
@@ -225,8 +226,7 @@ func (s *Store) saveCheckpointState(ctx context.Context, baseState *stateTrie.Be
 
 // verifyAttestation validates input attestation is valid.
 func (s *Store) verifyAttestation(ctx context.Context, baseState *stateTrie.BeaconState, a *ethpb.Attestation) (*ethpb.IndexedAttestation, error) {
-	validators := baseState.Validators()
-	committee, err := helpers.BeaconCommitteeFromState(baseState, validators, a.Data.Slot, a.Data.CommitteeIndex)
+	committee, err := helpers.BeaconCommitteeFromState(baseState, a.Data.Slot, a.Data.CommitteeIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -235,14 +235,14 @@ func (s *Store) verifyAttestation(ctx context.Context, baseState *stateTrie.Beac
 		return nil, errors.Wrap(err, "could not convert attestation to indexed attestation")
 	}
 
-	if err := blocks.VerifyIndexedAttestation(ctx, baseState, validators, indexedAtt); err != nil {
+	if err := blocks.VerifyIndexedAttestation(ctx, baseState, indexedAtt); err != nil {
 
 		// TODO(3603): Delete the following signature verify fallback when issue 3603 closes.
 		// When signature fails to verify with committee cache enabled at run time,
 		// the following re-runs the same signature verify routine without cache in play.
 		// This provides extra assurance that committee cache can't break run time.
 		if err == blocks.ErrSigFailedToVerify {
-			committee, err = helpers.BeaconCommitteeWithoutCache(baseState, validators, a.Data.Slot, a.Data.CommitteeIndex)
+			committee, err = helpers.BeaconCommitteeWithoutCache(baseState, a.Data.Slot, a.Data.CommitteeIndex)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not convert attestation to indexed attestation without cache")
 			}
@@ -250,7 +250,7 @@ func (s *Store) verifyAttestation(ctx context.Context, baseState *stateTrie.Beac
 			if err != nil {
 				return nil, errors.Wrap(err, "could not convert attestation to indexed attestation")
 			}
-			if err := blocks.VerifyIndexedAttestation(ctx, baseState, validators, indexedAtt); err != nil {
+			if err := blocks.VerifyIndexedAttestation(ctx, baseState, indexedAtt); err != nil {
 				return nil, errors.Wrap(err, "could not verify indexed attestation without cache")
 			}
 			sigFailsToVerify.Inc()

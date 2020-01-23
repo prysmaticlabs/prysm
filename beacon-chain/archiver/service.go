@@ -97,7 +97,7 @@ func (s *Service) archiveActiveSetChanges(ctx context.Context, headState *state.
 	vals := headState.Validators()
 	activations := validators.ActivatedValidatorIndices(prevEpoch, vals)
 	slashings := validators.SlashedValidatorIndices(prevEpoch, vals)
-	activeValidatorCount, err := helpers.ActiveValidatorCount(vals, prevEpoch)
+	activeValidatorCount, err := helpers.ActiveValidatorCount(headState, prevEpoch)
 	if err != nil {
 		return errors.Wrap(err, "could not get active validator count")
 	}

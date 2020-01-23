@@ -339,9 +339,9 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, slot 
 		return nil, errors.New("could not head state from DB")
 	}
 
-	validators := bState.Validators()
 	if bState.Slot() < slot {
-		if err = state.ProcessSlots(ctx, bState, validators, slot); err != nil {
+		bState, err = state.ProcessSlots(ctx, bState, slot)
+		if err != nil {
 			return nil, errors.Wrapf(err, "could not process slots up to %d", slot)
 		}
 	}
@@ -352,7 +352,7 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, slot 
 			break
 		}
 
-		if err := blocks.ProcessAttestation(ctx, bState, validators, att); err != nil {
+		if _, err := blocks.ProcessAttestation(ctx, bState, att); err != nil {
 			inValidAtts = append(inValidAtts, att)
 			continue
 

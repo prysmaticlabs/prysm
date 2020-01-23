@@ -10,9 +10,9 @@ import (
 // ProcessJustificationAndFinalizationPreCompute processes justification and finalization during
 // epoch processing. This is where a beacon node can justify and finalize a new epoch.
 // Note: this is an optimized version by passing in precomputed total and attesting balances.
-func ProcessJustificationAndFinalizationPreCompute(state *stateTrie.BeaconState, p *Balance) error {
+func ProcessJustificationAndFinalizationPreCompute(state *stateTrie.BeaconState, p *Balance) (*stateTrie.BeaconState, error) {
 	if state.Slot() <= helpers.StartSlot(2) {
-		return nil
+		return state, nil
 	}
 
 	prevEpoch := helpers.PrevEpoch(state)
@@ -22,12 +22,12 @@ func ProcessJustificationAndFinalizationPreCompute(state *stateTrie.BeaconState,
 
 	// Process justifications
 	if err := state.SetPreviousJustifiedCheckpoint(state.CurrentJustifiedCheckpoint()); err != nil {
-		return err
+		return nil, err
 	}
 	newBits := state.JustificationBits()
 	newBits.Shift(1)
 	if err := state.SetJustificationBits(newBits); err != nil {
-		return err
+		return nil, err
 	}
 
 	// Note: the spec refers to the bit index position starting at 1 instead of starting at zero.
@@ -37,15 +37,15 @@ func ProcessJustificationAndFinalizationPreCompute(state *stateTrie.BeaconState,
 	if 3*p.PrevEpochTargetAttesters >= 2*p.CurrentEpoch {
 		blockRoot, err := helpers.BlockRoot(state, prevEpoch)
 		if err != nil {
-			return errors.Wrapf(err, "could not get block root for previous epoch %d", prevEpoch)
+			return nil, errors.Wrapf(err, "could not get block root for previous epoch %d", prevEpoch)
 		}
 		if err := state.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: prevEpoch, Root: blockRoot}); err != nil {
-			return err
+			return nil, err
 		}
 		newBits := state.JustificationBits()
 		newBits.SetBitAt(1, true)
 		if err := state.SetJustificationBits(newBits); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -53,15 +53,15 @@ func ProcessJustificationAndFinalizationPreCompute(state *stateTrie.BeaconState,
 	if 3*p.CurrentEpochTargetAttesters >= 2*p.CurrentEpoch {
 		blockRoot, err := helpers.BlockRoot(state, currentEpoch)
 		if err != nil {
-			return errors.Wrapf(err, "could not get block root for current epoch %d", prevEpoch)
+			return nil, errors.Wrapf(err, "could not get block root for current epoch %d", prevEpoch)
 		}
 		if err := state.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: currentEpoch, Root: blockRoot}); err != nil {
-			return err
+			return nil, err
 		}
 		newBits := state.JustificationBits()
 		newBits.SetBitAt(0, true)
 		if err := state.SetJustificationBits(newBits); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -71,30 +71,30 @@ func ProcessJustificationAndFinalizationPreCompute(state *stateTrie.BeaconState,
 	// 2nd/3rd/4th (0b1110) most recent epochs are justified, the 2nd using the 4th as source.
 	if justification&0x0E == 0x0E && (oldPrevJustifiedCheckpoint.Epoch+3) == currentEpoch {
 		if err := state.SetFinalizedCheckpoint(oldPrevJustifiedCheckpoint); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	// 2nd/3rd (0b0110) most recent epochs are justified, the 2nd using the 3rd as source.
 	if justification&0x06 == 0x06 && (oldPrevJustifiedCheckpoint.Epoch+2) == currentEpoch {
 		if err := state.SetFinalizedCheckpoint(oldPrevJustifiedCheckpoint); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	// 1st/2nd/3rd (0b0111) most recent epochs are justified, the 1st using the 3rd as source.
 	if justification&0x07 == 0x07 && (oldCurrJustifiedCheckpoint.Epoch+2) == currentEpoch {
 		if err := state.SetFinalizedCheckpoint(oldCurrJustifiedCheckpoint); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	// The 1st/2nd (0b0011) most recent epochs are justified, the 1st using the 2nd as source
 	if justification&0x03 == 0x03 && (oldCurrJustifiedCheckpoint.Epoch+1) == currentEpoch {
 		if err := state.SetFinalizedCheckpoint(oldCurrJustifiedCheckpoint); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	return nil
+	return state, nil
 }

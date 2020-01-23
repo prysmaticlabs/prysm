@@ -49,15 +49,15 @@ func (r *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 	}
 
 	exitedEpochSlot := exit.Exit.Epoch * params.BeaconConfig().SlotsPerEpoch
-	validators := s.Validators()
 	if s.Slot() < exitedEpochSlot {
 		var err error
-		if err = state.ProcessSlots(ctx, s, validators, exitedEpochSlot); err != nil {
+		s, err = state.ProcessSlots(ctx, s, exitedEpochSlot)
+		if err != nil {
 			return false
 		}
 	}
 
-	if err := blocks.VerifyExit(s, validators, exit); err != nil {
+	if err := blocks.VerifyExit(s, exit); err != nil {
 		return false
 	}
 

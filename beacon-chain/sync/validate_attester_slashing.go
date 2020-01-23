@@ -47,19 +47,19 @@ func (r *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 		return false
 	}
 	slashSlot := slashing.Attestation_1.Data.Target.Epoch * params.BeaconConfig().SlotsPerEpoch
-	validators := s.Validators()
 	if s.Slot() < slashSlot {
 		if ctx.Err() != nil {
 			return false
 		}
 
 		var err error
-		if err = state.ProcessSlots(ctx, s, validators, slashSlot); err != nil {
+		s, err = state.ProcessSlots(ctx, s, slashSlot)
+		if err != nil {
 			return false
 		}
 	}
 
-	if err := blocks.VerifyAttesterSlashing(ctx, s, validators, slashing); err != nil {
+	if err := blocks.VerifyAttesterSlashing(ctx, s, slashing); err != nil {
 		return false
 	}
 

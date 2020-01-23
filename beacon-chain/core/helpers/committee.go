@@ -67,12 +67,7 @@ func SlotCommitteeCount(activeValidatorCount uint64) uint64 {
 //        index=epoch_offset,
 //        count=committees_per_slot * SLOTS_PER_EPOCH,
 //    )
-func BeaconCommitteeFromState(
-	state *stateTrie.BeaconState,
-	validators []*ethpb.Validator,
-	slot uint64,
-	committeeIndex uint64,
-) ([]uint64, error) {
+func BeaconCommitteeFromState(state *stateTrie.BeaconState, slot uint64, committeeIndex uint64) ([]uint64, error) {
 	epoch := SlotToEpoch(slot)
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
@@ -87,7 +82,7 @@ func BeaconCommitteeFromState(
 		return indices, nil
 	}
 
-	activeIndices, err := ActiveValidatorIndices(state, validators, epoch)
+	activeIndices, err := ActiveValidatorIndices(state, epoch)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get active indices")
 	}
@@ -118,14 +113,9 @@ func BeaconCommittee(validatorIndices []uint64, seed [32]byte, slot uint64, comm
 // BeaconCommitteeWithoutCache returns the crosslink committee of a given slot and committee index without the
 // usage of committee cache.
 // TODO(3603): Delete this function when issue 3603 closes.
-func BeaconCommitteeWithoutCache(
-	state *stateTrie.BeaconState,
-	validators []*ethpb.Validator,
-	slot uint64,
-	index uint64,
-) ([]uint64, error) {
+func BeaconCommitteeWithoutCache(state *stateTrie.BeaconState, slot uint64, index uint64) ([]uint64, error) {
 	epoch := SlotToEpoch(slot)
-	activeValidatorCount, err := ActiveValidatorCount(validators, epoch)
+	activeValidatorCount, err := ActiveValidatorCount(state, epoch)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +127,7 @@ func BeaconCommitteeWithoutCache(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get seed")
 	}
-	indices, err := ActiveValidatorIndices(state, validators, epoch)
+	indices, err := ActiveValidatorIndices(state, epoch)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get active indices")
 	}
@@ -223,11 +213,7 @@ type CommitteeAssignmentContainer struct {
 // 2. Compute all committees.
 // 3. Determine the attesting slot for each committee.
 // 4. Construct a map of validator indices pointing to the respective committees.
-func CommitteeAssignments(
-	state *stateTrie.BeaconState,
-	validators []*ethpb.Validator,
-	epoch uint64,
-) (map[uint64]*CommitteeAssignmentContainer, map[uint64]uint64, error) {
+func CommitteeAssignments(state *stateTrie.BeaconState, epoch uint64) (map[uint64]*CommitteeAssignmentContainer, map[uint64]uint64, error) {
 	nextEpoch := NextEpoch(state)
 	if epoch > nextEpoch {
 		return nil, nil, fmt.Errorf(
@@ -244,14 +230,14 @@ func CommitteeAssignments(
 		if err := state.SetSlot(slot); err != nil {
 			return nil, nil, err
 		}
-		i, err := BeaconProposerIndex(state, validators)
+		i, err := BeaconProposerIndex(state)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "could not check proposer at slot %d", state.Slot())
 		}
 		proposerIndexToSlot[i] = slot
 	}
 
-	activeValidatorIndices, err := ActiveValidatorIndices(state, validators, epoch)
+	activeValidatorIndices, err := ActiveValidatorIndices(state, epoch)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -265,7 +251,7 @@ func CommitteeAssignments(
 		// Compute committees.
 		for j := uint64(0); j < numCommitteesPerSlot; j++ {
 			slot := startSlot + i
-			committee, err := BeaconCommitteeFromState(state, validators, slot, j /*committee index*/)
+			committee, err := BeaconCommitteeFromState(state, slot, j /*committee index*/)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -316,7 +302,6 @@ func CommitteeAssignments(
 //    return None
 func CommitteeAssignment(
 	state *stateTrie.BeaconState,
-	validators []*ethpb.Validator,
 	epoch uint64,
 	validatorIndex uint64,
 ) ([]uint64, uint64, uint64, uint64, error) {
@@ -334,21 +319,21 @@ func CommitteeAssignment(
 		if err := state.SetSlot(slot); err != nil {
 			return nil, 0, 0, 0, err
 		}
-		i, err := BeaconProposerIndex(state, validators)
+		i, err := BeaconProposerIndex(state)
 		if err != nil {
 			return nil, 0, 0, 0, errors.Wrapf(err, "could not check proposer at slot %d", state.Slot())
 		}
 		proposerIndexToSlot[i] = slot
 	}
 
-	activeValidatorIndices, err := ActiveValidatorIndices(state, validators, epoch)
+	activeValidatorIndices, err := ActiveValidatorIndices(state, epoch)
 	if err != nil {
 		return nil, 0, 0, 0, err
 	}
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		countAtSlot := SlotCommitteeCount(uint64(len(activeValidatorIndices)))
 		for i := uint64(0); i < countAtSlot; i++ {
-			committee, err := BeaconCommitteeFromState(state, validators, slot, i)
+			committee, err := BeaconCommitteeFromState(state, slot, i)
 			if err != nil {
 				return nil, 0, 0, 0, errors.Wrapf(err, "could not get crosslink committee at slot %d", slot)
 			}
@@ -376,12 +361,8 @@ func VerifyBitfieldLength(bf bitfield.Bitfield, committeeSize uint64) error {
 
 // VerifyAttestationBitfieldLengths verifies that an attestations aggregation bitfields is
 // a valid length matching the size of the committee.
-func VerifyAttestationBitfieldLengths(
-	state *stateTrie.BeaconState,
-	validators []*ethpb.Validator,
-	att *ethpb.Attestation,
-) error {
-	committee, err := BeaconCommitteeFromState(state, validators, att.Data.Slot, att.Data.CommitteeIndex)
+func VerifyAttestationBitfieldLengths(state *stateTrie.BeaconState, att *ethpb.Attestation) error {
+	committee, err := BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve beacon committees")
 	}
@@ -464,12 +445,12 @@ func UpdateCommitteeCache(state *stateTrie.BeaconState, epoch uint64) error {
 }
 
 // UpdateProposerIndicesInCache updates proposer indices entry of the committee cache.
-func UpdateProposerIndicesInCache(state *stateTrie.BeaconState, validators []*ethpb.Validator, epoch uint64) error {
+func UpdateProposerIndicesInCache(state *stateTrie.BeaconState, epoch uint64) error {
 	if !featureconfig.Get().EnableProposerIndexCache {
 		return nil
 	}
 
-	indices, err := ActiveValidatorIndices(state, validators, epoch)
+	indices, err := ActiveValidatorIndices(state, epoch)
 	if err != nil {
 		return nil
 	}

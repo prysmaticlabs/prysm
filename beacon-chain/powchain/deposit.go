@@ -9,10 +9,9 @@ import (
 )
 
 func (s *Service) processDeposit(eth1Data *ethpb.Eth1Data, deposit *ethpb.Deposit) error {
-	vals := s.preGenesisState.Validators()
-	valIndexMap := stateutils.ValidatorIndexMap(vals)
-	if err := s.preGenesisState.SetEth1Data(eth1Data); err != nil {
-		return err
-	}
-	return blocks.ProcessPreGenesisDeposit(context.Background(), s.preGenesisState, vals, deposit, valIndexMap)
+	var err error
+	valIndexMap := stateutils.ValidatorIndexMap(s.preGenesisState)
+	s.preGenesisState.SetEth1Data(eth1Data)
+	s.preGenesisState, err = blocks.ProcessPreGenesisDeposit(context.Background(), s.preGenesisState, deposit, valIndexMap)
+	return err
 }

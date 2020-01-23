@@ -3,7 +3,6 @@ package precompute
 import (
 	"context"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -13,17 +12,18 @@ import (
 // New gets called at the beginning of process epoch cycle to return
 // pre computed instances of validators attesting records and total
 // balances attested in an epoch.
-func New(ctx context.Context, state *stateTrie.BeaconState, validators []*ethpb.Validator) ([]*Validator, *Balance) {
+func New(ctx context.Context, state *stateTrie.BeaconState) ([]*Validator, *Balance) {
 	ctx, span := trace.StartSpan(ctx, "precomputeEpoch.New")
 	defer span.End()
 
-	vp := make([]*Validator, len(validators))
+	vals := state.Validators()
+	vp := make([]*Validator, len(vals))
 	bp := &Balance{}
 
 	currentEpoch := helpers.CurrentEpoch(state)
 	prevEpoch := helpers.PrevEpoch(state)
 
-	for i, v := range validators {
+	for i, v := range vals {
 		// Was validator withdrawable or slashed
 		withdrawable := currentEpoch >= v.WithdrawableEpoch
 		p := &Validator{
