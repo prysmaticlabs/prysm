@@ -7,6 +7,7 @@ import (
 	fmt "fmt"
 	io "io"
 	math "math"
+	math_bits "math/bits"
 
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
@@ -22,7 +23,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 type ArchivedActiveSetChanges struct {
 	Activated            []uint64                     `protobuf:"varint,1,rep,packed,name=activated,proto3" json:"activated,omitempty"`
@@ -50,7 +51,7 @@ func (m *ArchivedActiveSetChanges) XXX_Marshal(b []byte, deterministic bool) ([]
 		return xxx_messageInfo_ArchivedActiveSetChanges.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -133,7 +134,7 @@ func (m *ArchivedCommitteeInfo) XXX_Marshal(b []byte, deterministic bool) ([]byt
 		return xxx_messageInfo_ArchivedCommitteeInfo.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -205,7 +206,7 @@ var fileDescriptor_289929478e9672a3 = []byte{
 func (m *ArchivedActiveSetChanges) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -213,14 +214,65 @@ func (m *ArchivedActiveSetChanges) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *ArchivedActiveSetChanges) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ArchivedActiveSetChanges) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if len(m.Activated) > 0 {
-		dAtA2 := make([]byte, len(m.Activated)*10)
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.AttesterSlashings) > 0 {
+		for iNdEx := len(m.AttesterSlashings) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.AttesterSlashings[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintArchive(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x42
+		}
+	}
+	if len(m.ProposerSlashings) > 0 {
+		for iNdEx := len(m.ProposerSlashings) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.ProposerSlashings[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintArchive(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x3a
+		}
+	}
+	if len(m.VoluntaryExits) > 0 {
+		for iNdEx := len(m.VoluntaryExits) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.VoluntaryExits[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintArchive(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x32
+		}
+	}
+	if len(m.Slashed) > 0 {
+		dAtA2 := make([]byte, len(m.Slashed)*10)
 		var j1 int
-		for _, num := range m.Activated {
+		for _, num := range m.Slashed {
 			for num >= 1<<7 {
 				dAtA2[j1] = uint8(uint64(num)&0x7f | 0x80)
 				num >>= 7
@@ -229,10 +281,11 @@ func (m *ArchivedActiveSetChanges) MarshalTo(dAtA []byte) (int, error) {
 			dAtA2[j1] = uint8(num)
 			j1++
 		}
-		dAtA[i] = 0xa
-		i++
+		i -= j1
+		copy(dAtA[i:], dAtA2[:j1])
 		i = encodeVarintArchive(dAtA, i, uint64(j1))
-		i += copy(dAtA[i:], dAtA2[:j1])
+		i--
+		dAtA[i] = 0x22
 	}
 	if len(m.Exited) > 0 {
 		dAtA4 := make([]byte, len(m.Exited)*10)
@@ -246,15 +299,16 @@ func (m *ArchivedActiveSetChanges) MarshalTo(dAtA []byte) (int, error) {
 			dAtA4[j3] = uint8(num)
 			j3++
 		}
-		dAtA[i] = 0x12
-		i++
+		i -= j3
+		copy(dAtA[i:], dAtA4[:j3])
 		i = encodeVarintArchive(dAtA, i, uint64(j3))
-		i += copy(dAtA[i:], dAtA4[:j3])
+		i--
+		dAtA[i] = 0x12
 	}
-	if len(m.Slashed) > 0 {
-		dAtA6 := make([]byte, len(m.Slashed)*10)
+	if len(m.Activated) > 0 {
+		dAtA6 := make([]byte, len(m.Activated)*10)
 		var j5 int
-		for _, num := range m.Slashed {
+		for _, num := range m.Activated {
 			for num >= 1<<7 {
 				dAtA6[j5] = uint8(uint64(num)&0x7f | 0x80)
 				num >>= 7
@@ -263,57 +317,19 @@ func (m *ArchivedActiveSetChanges) MarshalTo(dAtA []byte) (int, error) {
 			dAtA6[j5] = uint8(num)
 			j5++
 		}
-		dAtA[i] = 0x22
-		i++
+		i -= j5
+		copy(dAtA[i:], dAtA6[:j5])
 		i = encodeVarintArchive(dAtA, i, uint64(j5))
-		i += copy(dAtA[i:], dAtA6[:j5])
+		i--
+		dAtA[i] = 0xa
 	}
-	if len(m.VoluntaryExits) > 0 {
-		for _, msg := range m.VoluntaryExits {
-			dAtA[i] = 0x32
-			i++
-			i = encodeVarintArchive(dAtA, i, uint64(msg.Size()))
-			n, err := msg.MarshalTo(dAtA[i:])
-			if err != nil {
-				return 0, err
-			}
-			i += n
-		}
-	}
-	if len(m.ProposerSlashings) > 0 {
-		for _, msg := range m.ProposerSlashings {
-			dAtA[i] = 0x3a
-			i++
-			i = encodeVarintArchive(dAtA, i, uint64(msg.Size()))
-			n, err := msg.MarshalTo(dAtA[i:])
-			if err != nil {
-				return 0, err
-			}
-			i += n
-		}
-	}
-	if len(m.AttesterSlashings) > 0 {
-		for _, msg := range m.AttesterSlashings {
-			dAtA[i] = 0x42
-			i++
-			i = encodeVarintArchive(dAtA, i, uint64(msg.Size()))
-			n, err := msg.MarshalTo(dAtA[i:])
-			if err != nil {
-				return 0, err
-			}
-			i += n
-		}
-	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *ArchivedCommitteeInfo) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -321,36 +337,46 @@ func (m *ArchivedCommitteeInfo) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *ArchivedCommitteeInfo) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ArchivedCommitteeInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if len(m.ProposerSeed) > 0 {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintArchive(dAtA, i, uint64(len(m.ProposerSeed)))
-		i += copy(dAtA[i:], m.ProposerSeed)
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if len(m.AttesterSeed) > 0 {
-		dAtA[i] = 0x12
-		i++
+		i -= len(m.AttesterSeed)
+		copy(dAtA[i:], m.AttesterSeed)
 		i = encodeVarintArchive(dAtA, i, uint64(len(m.AttesterSeed)))
-		i += copy(dAtA[i:], m.AttesterSeed)
+		i--
+		dAtA[i] = 0x12
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if len(m.ProposerSeed) > 0 {
+		i -= len(m.ProposerSeed)
+		copy(dAtA[i:], m.ProposerSeed)
+		i = encodeVarintArchive(dAtA, i, uint64(len(m.ProposerSeed)))
+		i--
+		dAtA[i] = 0xa
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func encodeVarintArchive(dAtA []byte, offset int, v uint64) int {
+	offset -= sovArchive(v)
+	base := offset
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
 		offset++
 	}
 	dAtA[offset] = uint8(v)
-	return offset + 1
+	return base
 }
 func (m *ArchivedActiveSetChanges) Size() (n int) {
 	if m == nil {
@@ -424,14 +450,7 @@ func (m *ArchivedCommitteeInfo) Size() (n int) {
 }
 
 func sovArchive(x uint64) (n int) {
-	for {
-		n++
-		x >>= 7
-		if x == 0 {
-			break
-		}
-	}
-	return n
+	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozArchive(x uint64) (n int) {
 	return sovArchive(uint64((x << 1) ^ uint64((int64(x) >> 63))))
