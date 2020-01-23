@@ -200,10 +200,6 @@ func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.
 	if err != nil {
 		return nil, err
 	}
-	cloned := state.Clone()
-	fmt.Printf("OLD HTR Slot: %d\n", state.Slot())
-	otherRoot, _ := stateutil.HashTreeRootState(cloned)
-	fmt.Printf("Old root: %#x, new root %#x\n", otherRoot, prevStateRoot)
 
 	if err := state.UpdateStateRootAtIndex(
 		state.Slot()%params.BeaconConfig().SlotsPerHistoricalRoot,
@@ -220,7 +216,6 @@ func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.
 		if err := state.SetLatestBlockHeader(header); err != nil {
 			return nil, err
 		}
-		fmt.Printf("Set the latest block header state root to %#x\n", header.StateRoot)
 	}
 	prevBlockRoot, err := stateutil.BlockHeaderRoot(state.LatestBlockHeader())
 	if err != nil {

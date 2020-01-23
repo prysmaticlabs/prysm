@@ -3,7 +3,6 @@ package stateutil
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 
 	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
@@ -69,9 +68,6 @@ func (h *stateRootHasher) hashTreeRootState(state *pb.BeaconState) ([32]byte, er
 	fieldRoots, err = nocachedHasher.computeFieldRoots(state)
 	if err != nil {
 		return [32]byte{}, err
-	}
-	for i := 0; i < len(fieldRoots); i++ {
-		fmt.Printf("%#x and %d\n", fieldRoots[i], i)
 	}
 	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }

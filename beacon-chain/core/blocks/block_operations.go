@@ -242,19 +242,11 @@ func ProcessBlockHeaderNoVerify(
 	if beaconState.Slot() != block.Slot {
 		return nil, fmt.Errorf("state slot: %d is different then block slot: %d", beaconState.Slot(), block.Slot)
 	}
-
-	fmt.Println("Latest block header")
-	header := beaconState.LatestBlockHeader()
-	fmt.Printf("Slot: %d\n", header.Slot)
-	fmt.Printf("Parent root: %#x\n", header.ParentRoot)
-	fmt.Printf("State root: %#x\n", header.StateRoot)
-	fmt.Printf("Body root: %#x\n", header.BodyRoot)
-	parentRoot, err := stateutil.BlockHeaderRoot(header)
+	parentRoot, err := stateutil.BlockHeaderRoot(beaconState.LatestBlockHeader())
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("TOTAL HEADER root: %#x\n", parentRoot)
-	if !bytes.Equal(block.ParentRoot, parentRoot[:]) || header.Slot == 217 {
+	if !bytes.Equal(block.ParentRoot, parentRoot[:]) {
 		return nil, fmt.Errorf(
 			"parent root %#x does not match the latest block header signing root in state %#x",
 			block.ParentRoot, parentRoot)

@@ -259,7 +259,7 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 			slashedExitLength,
 		)
 	}
-	if err := state.UpdateSlashingsAtIndex(0, uint64(slashedEpoch)); err != nil {
+	if err := state.UpdateSlashingsAtIndex(uint64(slashedEpoch) /* index */, 0 /* value */); err != nil {
 		return nil, err
 	}
 
