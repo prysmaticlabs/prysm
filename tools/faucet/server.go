@@ -187,6 +187,9 @@ func counterWatcher() {
 		<-ticker.C
 		fundingLock.Lock()
 		for ip, ctr := range ipCounter {
+			if ctr == 0 {
+				continue
+			}
 			ipCounter[ip] = ctr - 1
 		}
 		fundingLock.Unlock()
