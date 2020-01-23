@@ -9,7 +9,6 @@ import (
 )
 
 func TestEndToEnd_DemoConfig(t *testing.T) {
-	t.Skip()
 	testutil.ResetCache()
 	params.UseDemoBeaconConfig()
 
@@ -20,7 +19,7 @@ func TestEndToEnd_DemoConfig(t *testing.T) {
 			"--cache-filtered-block-tree",
 		},
 		epochsToRun:    5,
-		numBeaconNodes: 1,
+		numBeaconNodes: 2,
 		numValidators:  params.BeaconConfig().MinGenesisActiveValidatorCount,
 		evaluators: []ev.Evaluator{
 			ev.ValidatorsAreActive,

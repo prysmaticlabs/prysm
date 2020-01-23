@@ -96,6 +96,10 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 					t.Fatalf("evaluation failed for epoch %d: %v", currentEpoch, err)
 				}
 			})
+			if t.Failed() {
+				ticker.Done()
+				break
+			}
 		}
 		currentEpoch++
 	}
