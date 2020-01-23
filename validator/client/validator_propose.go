@@ -52,7 +52,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		return
 	}
 
-	if featureconfig.Get().BlockDoubleProposals {
+	if featureconfig.Get().ProtectProposer {
 		history, err := v.db.ProposalHistory(ctx, pubKey[:])
 		if err != nil {
 			log.WithError(err).Error("Failed to get proposal history")
@@ -83,7 +83,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		return
 	}
 
-	if featureconfig.Get().BlockDoubleProposals {
+	if featureconfig.Get().ProtectProposer {
 		history, err := v.db.ProposalHistory(ctx, pubKey[:])
 		if err != nil {
 			log.WithError(err).Error("Failed to get proposal history")

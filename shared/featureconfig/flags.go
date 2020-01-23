@@ -83,10 +83,15 @@ var (
 		Name:  "cache-proposer-indices",
 		Usage: "Cache proposer indices on per epoch basis.",
 	}
-	blockDoubleProposals = cli.BoolFlag{
-		Name: "block-double-proposals",
+	protectProposerFlag = cli.BoolFlag{
+		Name: "protect-proposer",
 		Usage: "Prevent the validator client from signing and broadcasting 2 different block " +
 			"proposals in the same epoch. Protects from slashing.",
+	}
+	protectAttesterFlag = cli.BoolFlag{
+		Name: "protect-attester",
+		Usage: "Prevent the validator client from signing and broadcasting 2 any slashable attestations. " +
+			"Protects from slashing.",
 	}
 )
 
@@ -199,7 +204,8 @@ var deprecatedFlags = []cli.Flag{
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	minimalConfigFlag,
-	blockDoubleProposals,
+	protectAttesterFlag,
+	protectProposerFlag,
 }...)
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
