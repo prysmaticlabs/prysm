@@ -25,16 +25,15 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
-
+	validators := s.Validators()
 	// Advance state with empty transitions up to the requested epoch start slot.
 	if epochStartSlot := helpers.StartSlot(req.Epoch); s.Slot() < epochStartSlot {
-		s, err = state.ProcessSlots(ctx, s, epochStartSlot)
-		if err != nil {
+		if err := state.ProcessSlots(ctx, s, validators, epochStartSlot); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", epochStartSlot, err)
 		}
 	}
 
-	committeeAssignments, proposerIndexToSlot, err := helpers.CommitteeAssignments(s, req.Epoch)
+	committeeAssignments, proposerIndexToSlot, err := helpers.CommitteeAssignments(s, validators, req.Epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
