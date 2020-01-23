@@ -200,7 +200,6 @@ func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.
 	if err != nil {
 		return nil, err
 	}
-
 	if err := state.UpdateStateRootAtIndex(
 		state.Slot()%params.BeaconConfig().SlotsPerHistoricalRoot,
 		prevStateRoot,

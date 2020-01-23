@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -316,7 +317,8 @@ func (b *BeaconState) PreviousEpochAttestations() []*pbp2p.PendingAttestation {
 	}
 	res := make([]*pbp2p.PendingAttestation, len(b.state.PreviousEpochAttestations))
 	for i := 0; i < len(res); i++ {
-		res[i] = clonePendingAttestation(b.state.PreviousEpochAttestations[i])
+		//res[i] = clonePendingAttestation(b.state.PreviousEpochAttestations[i])
+		res[i] = proto.Clone(b.state.PreviousEpochAttestations[i]).(*pbp2p.PendingAttestation)
 	}
 	return res
 }
@@ -328,7 +330,7 @@ func (b *BeaconState) CurrentEpochAttestations() []*pbp2p.PendingAttestation {
 	}
 	res := make([]*pbp2p.PendingAttestation, len(b.state.CurrentEpochAttestations))
 	for i := 0; i < len(res); i++ {
-		res[i] = clonePendingAttestation(b.state.CurrentEpochAttestations[i])
+		res[i] = proto.Clone(b.state.CurrentEpochAttestations[i]).(*pbp2p.PendingAttestation)
 	}
 	return res
 }

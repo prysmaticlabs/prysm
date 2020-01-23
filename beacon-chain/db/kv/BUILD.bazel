@@ -33,7 +33,6 @@ go_library(
         "//shared/bytesutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/sliceutil:go_default_library",
-        "//shared/stateutil:go_default_library",
         "//shared/traceutil:go_default_library",
         "@com_github_boltdb_bolt//:go_default_library",
         "@com_github_dgraph_io_ristretto//:go_default_library",
