@@ -1,0 +1,56 @@
+load("@rules_proto//proto:defs.bzl", "proto_library")
+
+# gazelle:ignore
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
+
+proto_library(
+    name = "db_proto",
+    srcs = [
+        "attestation_container.proto",
+        "finalized_block_root_container.proto",
+        "powchain.proto",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/beacon/p2p/v1:v1_proto",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:proto",
+        "@gogo_special_proto//github.com/gogo/protobuf/gogoproto",
+    ],
+)
+
+go_proto_library(
+    name = "db_go_proto",
+    compiler = "//:proto_compiler",
+    importpath = "github.com/prysmaticlabs/prysm/proto/beacon/db",
+    proto = ":db_proto",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/beacon/p2p/v1:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+    ],
+)
+
+go_library(
+    name = "go_default_library",
+    srcs = ["attestation_container_helper.go"],
+    embed = [":db_go_proto"],
+    importpath = "github.com/prysmaticlabs/prysm/proto/beacon/db",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    size = "small",
+    srcs = ["attestation_container_helper_test.go"],
+    deps = [
+        ":go_default_library",
+        "//shared/bls:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+    ],
+)
