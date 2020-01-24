@@ -22,8 +22,11 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "ffg_update_test.go",
         "helpers_test.go",
+        "no_vote_test.go",
         "nodes_test.go",
+        "vote_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
