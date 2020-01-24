@@ -31,7 +31,7 @@ func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
 		return nil, err
 	}
 	layers := merkleize(fieldRoots)
-	valMap := coreutils.ValidatorIndexMap(st)
+	valMap := coreutils.ValidatorIndexMap(st.Validators)
 	return &BeaconState{
 		state:        proto.Clone(st).(*pbp2p.BeaconState),
 		merkleLayers: layers,
@@ -48,7 +48,7 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 		return nil, err
 	}
 	layers := merkleize(fieldRoots)
-	valMap := coreutils.ValidatorIndexMap(st)
+	valMap := coreutils.ValidatorIndexMap(st.Validators)
 	return &BeaconState{
 		state:        st,
 		merkleLayers: layers,

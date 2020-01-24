@@ -1,4 +1,4 @@
-package state
+package state_test
 
 import (
 	"strconv"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -15,7 +16,7 @@ import (
 func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 	params.UseMinimalConfig()
 	genesis := setupGenesisState(t, 64)
-	customState, err := InitializeFromProto(genesis)
+	customState, err := stateTrie.InitializeFromProto(genesis)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +143,7 @@ func BenchmarkStateClone_Manual(b *testing.B) {
 	b.StopTimer()
 	params.UseMinimalConfig()
 	genesis := setupGenesisState(b, 64)
-	st, err := InitializeFromProto(genesis)
+	st, err := stateTrie.InitializeFromProto(genesis)
 	if err != nil {
 		b.Fatal(err)
 	}
