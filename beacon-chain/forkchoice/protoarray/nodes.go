@@ -277,13 +277,13 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 		}
 		if node.bestChild != nonExistentNode {
 			if node.bestChild < finalizedIndex {
-				return errors.New("invalid best child index")
+				return errInvalidBestChildIndex
 			}
 			node.bestChild -= finalizedIndex
 		}
 		if node.bestDescendant != nonExistentNode {
 			if node.bestDescendant < finalizedIndex {
-				return errors.New("invalid best descendant index")
+				return errInvalidBestDescendantIndex
 			}
 			node.bestDescendant -= finalizedIndex
 		}

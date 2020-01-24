@@ -329,6 +329,96 @@ func TestStore_UpdateBestChildAndDescendant_NoChangeAtLeaf(t *testing.T) {
 	}
 }
 
+func TestStore_Prune_LessThanThreshold(t *testing.T) {
+	// Define 100 nodes in store.
+	numOfNodes := 100
+	indices := make(map[[32]byte]uint64)
+	nodes := make([]*Node, 0)
+	for i := 0; i < numOfNodes; i++ {
+		indices[indexToHash(uint64(i))] = uint64(i)
+		nodes = append(nodes, &Node{slot: uint64(i)})
+	}
+
+	s := &Store{nodes: nodes, nodeIndices: indices, pruneThreshold: 100}
+
+	// Finalized root is at index 99 so everything before 99 should be pruned,
+	// but pruneThreshold is at 100 so nothing will be pruned.
+	if err := s.prune(context.Background(), indexToHash(99)); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(s.nodes) != 100 {
+		t.Fatal("Incorrect nodes count")
+	}
+	if len(s.nodeIndices) != 100 {
+		t.Fatal("Incorrect node indices count")
+	}
+}
+
+func TestStore_Prune_MoreThanThreshold(t *testing.T) {
+	// Define 100 nodes in store.
+	numOfNodes := 100
+	indices := make(map[[32]byte]uint64)
+	nodes := make([]*Node, 0)
+	for i := 0; i < numOfNodes; i++ {
+		indices[indexToHash(uint64(i))] = uint64(i)
+		nodes = append(nodes, &Node{slot: uint64(i), root: indexToHash(uint64(i)),
+			bestDescendant: nonExistentNode, bestChild: nonExistentNode})
+	}
+
+	s := &Store{nodes: nodes, nodeIndices: indices}
+
+	// Finalized root is at index 99 so everything before 99 should be pruned.
+	if err := s.prune(context.Background(), indexToHash(99)); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(s.nodes) != 1 {
+		t.Error("Incorrect nodes count")
+	}
+	if len(s.nodeIndices) != 1 {
+		t.Error("Incorrect node indices count")
+	}
+}
+
+func TestStore_Prune_MoreThanOnce(t *testing.T) {
+	// Define 100 nodes in store.
+	numOfNodes := 100
+	indices := make(map[[32]byte]uint64)
+	nodes := make([]*Node, 0)
+	for i := 0; i < numOfNodes; i++ {
+		indices[indexToHash(uint64(i))] = uint64(i)
+		nodes = append(nodes, &Node{slot: uint64(i), root: indexToHash(uint64(i)),
+			bestDescendant: nonExistentNode, bestChild: nonExistentNode})
+	}
+
+	s := &Store{nodes: nodes, nodeIndices: indices}
+
+	// Finalized root is at index 11 so everything before 11 should be pruned.
+	if err := s.prune(context.Background(), indexToHash(10)); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(s.nodes) != 90 {
+		t.Error("Incorrect nodes count")
+	}
+	if len(s.nodeIndices) != 90 {
+		t.Error("Incorrect node indices count")
+	}
+
+	// One more time.
+	if err := s.prune(context.Background(), indexToHash(20)); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(s.nodes) != 80 {
+		t.Log(len(s.nodes))
+		t.Error("Incorrect nodes count")
+	}
+	if len(s.nodeIndices) != 80 {
+		t.Error("Incorrect node indices count")
+	}
+}
 func TestStore_LeadsToViableHead(t *testing.T) {
 	tests := []struct {
 		n              *Node
