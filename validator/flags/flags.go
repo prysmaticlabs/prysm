@@ -1,11 +1,6 @@
 package flags
 
 import (
-	"os"
-	"os/user"
-	"path/filepath"
-	"runtime"
-
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/urfave/cli"
 )
@@ -31,13 +26,25 @@ var (
 	KeystorePathFlag = cmd.DirectoryFlag{
 		Name:  "keystore-path",
 		Usage: "Path to the desired keystore directory",
-		Value: cmd.DirectoryString{Value: defaultValidatorDir()},
+		Value: cmd.DirectoryString{Value: ""},
 	}
 	// UnencryptedKeysFlag specifies a file path of a JSON file of unencrypted validator keys as an
 	// alternative from launching the validator client from decrypting a keystore directory.
 	UnencryptedKeysFlag = cli.StringFlag{
 		Name:  "unencrypted-keys",
 		Usage: "Filepath to a JSON file of unencrypted validator keys for easier launching of the validator client",
+		Value: "",
+	}
+	// KeyManager specifies the key manager to use.
+	KeyManager = cli.StringFlag{
+		Name:  "keymanager",
+		Usage: "The keymanger to use (unencrypted, interop, keystore, wallet)",
+		Value: "",
+	}
+	// KeyManagerOpts specifies the key manager options.
+	KeyManagerOpts = cli.StringFlag{
+		Name:  "keymanageropts",
+		Usage: "The options for the keymanger, either a JSON string or path to same",
 		Value: "",
 	}
 	// PasswordFlag defines the password value for storing and retrieving validator private keys from the keystore.
@@ -61,29 +68,3 @@ var (
 		Usage: "Integer to define max recieve message call size (default: 52428800 (for 50Mb)).",
 	}
 )
-
-func homeDir() string {
-	if home := os.Getenv("HOME"); home != "" {
-		return home
-	}
-	if usr, err := user.Current(); err == nil {
-		return usr.HomeDir
-	}
-	return ""
-}
-
-func defaultValidatorDir() string {
-	// Try to place the data folder in the user's home dir
-	home := homeDir()
-	if home != "" {
-		if runtime.GOOS == "darwin" {
-			return filepath.Join(home, "Library", "Eth2Validators")
-		} else if runtime.GOOS == "windows" {
-			return filepath.Join(home, "AppData", "Roaming", "Eth2Validators")
-		} else {
-			return filepath.Join(home, ".eth2validators")
-		}
-	}
-	// As we cannot guess a stable location, return empty and handle later
-	return ""
-}

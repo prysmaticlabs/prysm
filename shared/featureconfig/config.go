@@ -35,7 +35,8 @@ type Flags struct {
 	EnableSnappyDBCompression bool   // EnableSnappyDBCompression in the database.
 	InitSyncCacheState        bool   // InitSyncCacheState caches state during initial sync.
 	KafkaBootstrapServers     string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
-	BlockDoubleProposals      bool   // BlockDoubleProposals prevents the validator client from signing any proposals that would be considered a slashable offense.
+	ProtectProposer           bool   // ProtectProposer prevents the validator client from signing any proposals that would be considered a slashable offense.
+	ProtectAttester           bool   // ProtectAttester prevents the validator client from signing any attestations that would be considered a slashable offense.
 
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
@@ -150,9 +151,13 @@ func ConfigureValidator(ctx *cli.Context) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
 	}
-	if ctx.GlobalBool(blockDoubleProposals.Name) {
-		log.Warn("Enabled validator double proposal slashing protection.")
-		cfg.BlockDoubleProposals = true
+	if ctx.GlobalBool(protectProposerFlag.Name) {
+		log.Warn("Enabled validator proposal slashing protection.")
+		cfg.ProtectProposer = true
+	}
+	if ctx.GlobalBool(protectAttesterFlag.Name) {
+		log.Warn("Enabled validator attestation slashing protection.")
+		cfg.ProtectAttester = true
 	}
 	Init(cfg)
 }

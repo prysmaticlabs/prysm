@@ -3,6 +3,7 @@ package keymanager_test
 import (
 	"bytes"
 	"encoding/hex"
+	"strings"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -10,17 +11,29 @@ import (
 )
 
 func TestInteropListValidatingKeysZero(t *testing.T) {
-	_, err := keymanager.NewInterop(0, 0)
+	_, _, err := keymanager.NewInterop("")
 	if err == nil {
 		t.Fatal("Missing expected error")
 	}
-	if err.Error() != "failed to generate keys: input length must be greater than 0" {
-		t.Errorf("Incorrect value for error; expected \"failed to generate keys: input length must be greater than 0\", received %d", err)
+	expectedErr := "unexpected end of JSON input"
+	if !strings.Contains(err.Error(), expectedErr) {
+		t.Errorf("Incorrect value for error; expected %q, received %v", expectedErr, err)
+	}
+}
+
+func TestInteropListValidatingKeysEmptyJSON(t *testing.T) {
+	_, _, err := keymanager.NewInterop("{}")
+	if err == nil {
+		t.Fatal("Missing expected error")
+	}
+	expectedErr := "input length must be greater than 0"
+	if !strings.Contains(err.Error(), expectedErr) {
+		t.Errorf("Incorrect value for error; expected %q, received %v", expectedErr, err)
 	}
 }
 
 func TestInteropListValidatingKeysSingle(t *testing.T) {
-	direct, err := keymanager.NewInterop(1, 0)
+	direct, _, err := keymanager.NewInterop(`{"keys":1}`)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -46,7 +59,7 @@ func TestInteropListValidatingKeysSingle(t *testing.T) {
 }
 
 func TestInteropListValidatingKeysOffset(t *testing.T) {
-	direct, err := keymanager.NewInterop(1, 9)
+	direct, _, err := keymanager.NewInterop(`{"keys":1,"offset":9}`)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}

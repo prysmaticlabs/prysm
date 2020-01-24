@@ -76,6 +76,8 @@ var appHelpFlagGroups = []flagGroup{
 			flags.NoCustomConfigFlag,
 			flags.BeaconRPCProviderFlag,
 			flags.CertFlag,
+			flags.KeyManager,
+			flags.KeyManagerOpts,
 			flags.KeystorePathFlag,
 			flags.PasswordFlag,
 			flags.DisablePenaltyRewardLogFlag,
