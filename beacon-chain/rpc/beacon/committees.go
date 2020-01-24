@@ -28,6 +28,9 @@ func (bs *Server) ListBeaconCommittees(
 		startSlot = helpers.StartSlot(q.Epoch)
 	case *ethpb.ListCommitteesRequest_Genesis:
 		requestingGenesis = q.Genesis
+		if !requestingGenesis {
+			startSlot = headSlot
+		}
 	default:
 		startSlot = headSlot
 	}
@@ -35,9 +38,10 @@ func (bs *Server) ListBeaconCommittees(
 	var attesterSeed [32]byte
 	var activeIndices []uint64
 	var err error
-	// This is the archival condition, if the requested epoch is < current epoch or if we are
-	// requesting data from the genesis epoch.
-	if requestingGenesis || helpers.SlotToEpoch(startSlot) < helpers.SlotToEpoch(headSlot) {
+	// This is the archival condition, if the requested epoch is < previous epoch.
+	headEpoch := helpers.SlotToEpoch(headSlot)
+	// Adding 1 here to prevent underflow on headEpoch.
+	if helpers.SlotToEpoch(startSlot)+1 < headEpoch {
 		activeIndices, err = bs.HeadFetcher.HeadValidatorsIndices(helpers.SlotToEpoch(startSlot))
 		if err != nil {
 			return nil, status.Errorf(
@@ -64,24 +68,24 @@ func (bs *Server) ListBeaconCommittees(
 			)
 		}
 		attesterSeed = bytesutil.ToBytes32(archivedCommitteeInfo.AttesterSeed)
-	} else if !requestingGenesis && helpers.SlotToEpoch(startSlot) == helpers.SlotToEpoch(headSlot) {
-		// Otherwise, we use data from the current epoch.
-		currentEpoch := helpers.SlotToEpoch(headSlot)
-		activeIndices, err = bs.HeadFetcher.HeadValidatorsIndices(currentEpoch)
+	} else if helpers.SlotToEpoch(startSlot)+1 == headEpoch || helpers.SlotToEpoch(startSlot) == headEpoch {
+		// Otherwise, we use current beacon state to calculate the committees.
+		requestedEpoch := helpers.SlotToEpoch(startSlot)
+		activeIndices, err = bs.HeadFetcher.HeadValidatorsIndices(requestedEpoch)
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
 				"Could not retrieve active indices for current epoch %d: %v",
-				currentEpoch,
+				requestedEpoch,
 				err,
 			)
 		}
-		attesterSeed, err = bs.HeadFetcher.HeadSeed(currentEpoch)
+		attesterSeed, err = bs.HeadFetcher.HeadSeed(requestedEpoch)
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
-				"Could not retrieve attester seed for current epoch %d: %v",
-				currentEpoch,
+				"Could not retrieve attester seed for requested epoch %d: %v",
+				requestedEpoch,
 				err,
 			)
 		}

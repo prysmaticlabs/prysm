@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestServer_ListBeaconCommittees(t *testing.T) {
+func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
@@ -27,6 +27,85 @@ func TestServer_ListBeaconCommittees(t *testing.T) {
 	for i := 0; i < len(headState.RandaoMixes); i++ {
 		headState.RandaoMixes[i] = make([]byte, 32)
 	}
+
+	bs := &Server{
+		HeadFetcher: &mock.ChainService{
+			State: headState,
+		},
+	}
+
+	activeIndices, err := helpers.ActiveValidatorIndices(headState, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	attesterSeed, err := helpers.Seed(headState, 0, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wanted := make(map[uint64]*ethpb.BeaconCommittees_CommitteesList)
+	for slot := uint64(0); slot < params.BeaconConfig().SlotsPerEpoch; slot++ {
+		var countAtSlot = uint64(numValidators) / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
+		if countAtSlot > params.BeaconConfig().MaxCommitteesPerSlot {
+			countAtSlot = params.BeaconConfig().MaxCommitteesPerSlot
+		}
+		if countAtSlot == 0 {
+			countAtSlot = 1
+		}
+		committeeItems := make([]*ethpb.BeaconCommittees_CommitteeItem, countAtSlot)
+		for i := uint64(0); i < countAtSlot; i++ {
+			epochOffset := i + (slot%params.BeaconConfig().SlotsPerEpoch)*countAtSlot
+			totalCount := countAtSlot * params.BeaconConfig().SlotsPerEpoch
+			committee, err := helpers.ComputeCommittee(activeIndices, attesterSeed, epochOffset, totalCount)
+			if err != nil {
+				t.Fatal(err)
+			}
+			committeeItems[i] = &ethpb.BeaconCommittees_CommitteeItem{
+				ValidatorIndices: committee,
+			}
+		}
+		wanted[slot] = &ethpb.BeaconCommittees_CommitteesList{
+			Committees: committeeItems,
+		}
+	}
+
+	tests := []struct {
+		req *ethpb.ListCommitteesRequest
+		res *ethpb.BeaconCommittees
+	}{
+		{
+			req: &ethpb.ListCommitteesRequest{
+				QueryFilter: &ethpb.ListCommitteesRequest_Genesis{Genesis: true},
+			},
+			res: &ethpb.BeaconCommittees{
+				Epoch:                0,
+				Committees:           wanted,
+				ActiveValidatorCount: uint64(numValidators),
+			},
+		},
+	}
+	for _, test := range tests {
+		res, err := bs.ListBeaconCommittees(context.Background(), test.req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !proto.Equal(res, test.res) {
+			t.Errorf("Expected %v, received %v", test.res, res)
+		}
+	}
+}
+
+func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	numValidators := 128
+	headState := setupActiveValidators(t, db, numValidators)
+
+	headState.RandaoMixes = make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	for i := 0; i < len(headState.RandaoMixes); i++ {
+		headState.RandaoMixes[i] = make([]byte, 32)
+	}
+	headState.Slot = params.BeaconConfig().SlotsPerEpoch * 1
 
 	bs := &Server{
 		HeadFetcher: &mock.ChainService{
