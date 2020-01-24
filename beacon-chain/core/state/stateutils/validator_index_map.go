@@ -1,15 +1,15 @@
 package stateutils
 
 import (
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 // ValidatorIndexMap builds a lookup map for quickly determining the index of
 // a validator by their public key.
-func ValidatorIndexMap(state *stateTrie.BeaconState) map[[48]byte]int {
+func ValidatorIndexMap(state *pb.BeaconState) map[[48]byte]int {
 	m := make(map[[48]byte]int)
-	vals := state.Validators()
+	vals := state.Validators
 	for idx, record := range vals {
 		key := bytesutil.ToBytes48(record.PublicKey)
 		m[key] = idx

@@ -3,6 +3,8 @@ package state
 import (
 	"sync"
 
+	coreutils "github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/protolambda/zssz/merkle"
@@ -19,6 +21,7 @@ type BeaconState struct {
 	state        *pbp2p.BeaconState
 	lock         sync.RWMutex
 	dirtyFields  map[fieldIndex]interface{}
+	valIdxMap    map[[48]byte]int
 	merkleLayers [][][]byte
 }
 
@@ -29,10 +32,12 @@ func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
 		return nil, err
 	}
 	layers := merkleize(fieldRoots)
+	valMap := coreutils.ValidatorIndexMap(st)
 	return &BeaconState{
 		state:        proto.Clone(st).(*pbp2p.BeaconState),
 		merkleLayers: layers,
 		dirtyFields:  make(map[fieldIndex]interface{}),
+		valIdxMap:    valMap,
 	}, nil
 }
 
@@ -44,10 +49,12 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 		return nil, err
 	}
 	layers := merkleize(fieldRoots)
+	valMap := coreutils.ValidatorIndexMap(st)
 	return &BeaconState{
 		state:        st,
 		merkleLayers: layers,
 		dirtyFields:  make(map[fieldIndex]interface{}),
+		valIdxMap:    valMap,
 	}, nil
 }
 

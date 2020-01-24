@@ -396,6 +396,11 @@ func (b *BeaconState) FinalizedCheckpoint() *ethpb.Checkpoint {
 	return cp
 }
 
+// ValidatorIndexMap returns the included validator index map.
+func (b *BeaconState) ValidatorIndexMap() map[[48]byte]int {
+	return b.valIdxMap
+}
+
 func clonePendingAttestation(att *pbp2p.PendingAttestation) *pbp2p.PendingAttestation {
 	var aggBits bitfield.Bitlist
 	copy(aggBits, att.AggregationBits)
