@@ -14,6 +14,8 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"gopkg.in/d4l3k/messagediff.v1"
+
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -188,7 +190,7 @@ func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
 		ActiveValidatorCount: uint64(numValidators),
 	}
 	if !reflect.DeepEqual(wantedRes, res1) {
-		t.Errorf("Wanted %v, received %v", wantedRes, res1)
+		t.Error(messagediff.PrettyDiff(wantedRes, res1))
 	}
 }
 
@@ -204,9 +206,10 @@ func setupActiveValidators(t *testing.T, db db.Database, count int) *stateTrie.B
 		}
 		balances[i] = uint64(i)
 		validators = append(validators, &ethpb.Validator{
-			PublicKey:       pubKey,
-			ActivationEpoch: 0,
-			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+			PublicKey:             pubKey,
+			ActivationEpoch:       0,
+			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+			WithdrawalCredentials: make([]byte, 32),
 		})
 	}
 	st, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{Validators: validators, Balances: balances})

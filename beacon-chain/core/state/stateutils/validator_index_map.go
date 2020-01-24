@@ -9,7 +9,13 @@ import (
 // a validator by their public key.
 func ValidatorIndexMap(validators []*ethpb.Validator) map[[48]byte]uint64 {
 	m := make(map[[48]byte]uint64)
+	if validators == nil {
+		return m
+	}
 	for idx, record := range validators {
+		if record == nil {
+			continue
+		}
 		key := bytesutil.ToBytes48(record.PublicKey)
 		m[key] = uint64(idx)
 	}
