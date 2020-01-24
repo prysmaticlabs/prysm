@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -82,6 +82,15 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 	keyManager, err := selectKeyManager(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	pubKeys, err := keyManager.FetchValidatingKeys()
+	if err != nil {
+		log.WithError(err).Error("Failed to obtain public keys for validation")
+	} else {
+		for _, key := range pubKeys {
+			log.WithField("pubKey", fmt.Sprintf("%#x", key)).Info("Validating for public key")
+		}
 	}
 
 	clearFlag := ctx.GlobalBool(cmd.ClearDB.Name)
@@ -186,27 +195,58 @@ func (s *ValidatorClient) registerClientService(ctx *cli.Context, keyManager key
 
 // selectKeyManager selects the key manager depending on the options provided by the user.
 func selectKeyManager(ctx *cli.Context) (keymanager.KeyManager, error) {
-	if unencryptedKeys := ctx.String(flags.UnencryptedKeysFlag.Name); unencryptedKeys != "" {
-		// Fetch keys from unencrypted store.
-		path, err := filepath.Abs(unencryptedKeys)
-		if err != nil {
-			return nil, err
-		}
-		r, err := os.Open(path)
-		if err != nil {
-			return nil, err
-		}
-		defer r.Close()
-		return keymanager.NewUnencrypted(r)
+	manager := strings.ToLower(ctx.String(flags.KeyManager.Name))
+	opts := ctx.String(flags.KeyManagerOpts.Name)
+	if opts == "" {
+		opts = "{}"
 	}
 
-	if numValidatorKeys := ctx.GlobalUint64(flags.InteropNumValidators.Name); numValidatorKeys > 0 {
-		// Generate keys from interop seed.
-		return keymanager.NewInterop(numValidatorKeys, ctx.GlobalUint64(flags.InteropStartIndex.Name))
+	if manager == "" {
+		// Attempt to work out keymanager from deprecated vars.
+		if unencryptedKeys := ctx.String(flags.UnencryptedKeysFlag.Name); unencryptedKeys != "" {
+			manager = "unencrypted"
+			opts = fmt.Sprintf(`{"path":%q}`, unencryptedKeys)
+			log.Warn(fmt.Sprintf("--unencrypted-keys flag is deprecated.  Please use --keymanager=unencrypted --keymanageropts='%s'", opts))
+		} else if numValidatorKeys := ctx.GlobalUint64(flags.InteropNumValidators.Name); numValidatorKeys > 0 {
+			manager = "interop"
+			opts = fmt.Sprintf(`{"keys":%d,"offset":%d}`, numValidatorKeys, ctx.GlobalUint64(flags.InteropStartIndex.Name))
+			log.Warn(fmt.Sprintf("--interop-num-validators and --interop-start-index flags are deprecated.  Please use --keymanager=interop --keymanageropts='%s'", opts))
+		} else if keystorePath := ctx.String(flags.KeystorePathFlag.Name); keystorePath != "" {
+			manager = "keystore"
+			opts = fmt.Sprintf(`{"path":%q,"passphrase":%q}`, keystorePath, ctx.String(flags.PasswordFlag.Name))
+			log.Warn(fmt.Sprintf("--keystore-path flag is deprecated.  Please use --keymanager=keystore --keymanageropts='%s'", opts))
+		} else {
+			// Default if no choice made
+			manager = "keystore"
+			passphrase := ctx.String(flags.PasswordFlag.Name)
+			if passphrase == "" {
+				log.Warn("Implicit selection of keymanager is deprecated.  Please use --keymanager=keystore or select a different keymanager")
+			} else {
+				opts = fmt.Sprintf(`{"passphrase":%q}`, passphrase)
+				log.Warn(`Implicit selection of keymanager is deprecated.  Please use --keymanager=keystore --keymanageropts='{"passphrase":"<password>"}' or select a different keymanager`)
+			}
+		}
 	}
 
-	// Fetch keys from keystore.
-	return keymanager.NewKeystore(ctx.String(flags.KeystorePathFlag.Name), ctx.String(flags.PasswordFlag.Name))
+	var km keymanager.KeyManager
+	var help string
+	var err error
+	switch manager {
+	case "interop":
+		km, help, err = keymanager.NewInterop(opts)
+	case "unencrypted":
+		km, help, err = keymanager.NewUnencrypted(opts)
+	case "keystore":
+		km, help, err = keymanager.NewKeystore(opts)
+	default:
+		return nil, fmt.Errorf("unknown keymanager %q", manager)
+	}
+	if err != nil {
+		// Print help for the keymanager
+		fmt.Println(help)
+		return nil, err
+	}
+	return km, nil
 }
 
 func clearDB(dataDir string, pubkeys [][48]byte, force bool) error {
