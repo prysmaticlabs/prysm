@@ -56,7 +56,7 @@ func (p *Pool) InsertVoluntaryExit(ctx context.Context, exit *ethpb.SignedVolunt
 	}
 
 	// Has the validator been exited already?
-	if h, _ := p.chain.HeadState(ctx); h == nil || len(h.Validators) <= int(exit.Exit.ValidatorIndex) || h.Validators[exit.Exit.ValidatorIndex].ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+	if h, _ := p.chain.HeadState(ctx); h == nil || h.NumofValidators() <= int(exit.Exit.ValidatorIndex) || h.ValidatorAtIndex(exit.Exit.ValidatorIndex).ExitEpoch != params.BeaconConfig().FarFutureEpoch {
 		return
 	}
 

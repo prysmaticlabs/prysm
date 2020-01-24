@@ -22,11 +22,10 @@ func ValidateVoluntaryExit(state *stateTrie.BeaconState, genesisTime time.Time, 
 		return errors.New("nil signed voluntary exit")
 	}
 	ve := signed.Exit
-	vals := state.Validators()
-	if ve.ValidatorIndex >= uint64(len(vals)) {
-		return fmt.Errorf("unknown validator index %d", ve.ValidatorIndex)
+	validator, err := state.ValidatorAtIndex(ve.ValidatorIndex)
+	if err != nil {
+		return err
 	}
-	validator := vals[ve.ValidatorIndex]
 
 	if !helpers.IsActiveValidator(validator, ve.Epoch) {
 		return fmt.Errorf("validator %d not active at epoch %d", ve.ValidatorIndex, ve.Epoch)

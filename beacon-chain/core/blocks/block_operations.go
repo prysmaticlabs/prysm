@@ -195,8 +195,10 @@ func ProcessBlockHeader(
 	if err != nil {
 		return nil, err
 	}
-	vals := beaconState.Validators()
-	proposer := vals[idx]
+	proposer, err := beaconState.ValidatorAtIndex(idx)
+	if err != nil {
+		return nil, err
+	}
 
 	// Verify proposer signature.
 	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
@@ -256,8 +258,10 @@ func ProcessBlockHeaderNoVerify(
 	if err != nil {
 		return nil, err
 	}
-	vals := beaconState.Validators()
-	proposer := vals[idx]
+	proposer, err := beaconState.ValidatorAtIndex(idx)
+	if err != nil {
+		return nil, err
+	}
 	if proposer.Slashed {
 		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
 	}
@@ -304,8 +308,11 @@ func ProcessRandao(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get beacon proposer index")
 	}
-	vals := beaconState.Validators()
-	proposerPub := vals[proposerIdx].PublicKey
+	proposer, err := beaconState.ValidatorAtIndex(proposerIdx)
+	if err != nil {
+		return nil, err
+	}
+	proposerPub := proposer.PublicKey
 
 	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
 	buf := make([]byte, 32)
@@ -380,9 +387,8 @@ func ProcessProposerSlashings(
 	body *ethpb.BeaconBlockBody,
 ) (*stateTrie.BeaconState, error) {
 	var err error
-	vals := beaconState.Validators()
 	for idx, slashing := range body.ProposerSlashings {
-		if int(slashing.ProposerIndex) >= len(vals) {
+		if int(slashing.ProposerIndex) >= beaconState.NumofValidators() {
 			return nil, fmt.Errorf("invalid proposer index given in slashing %d", slashing.ProposerIndex)
 		}
 		if err = VerifyProposerSlashing(beaconState, slashing); err != nil {
@@ -403,8 +409,10 @@ func VerifyProposerSlashing(
 	beaconState *stateTrie.BeaconState,
 	slashing *ethpb.ProposerSlashing,
 ) error {
-	vals := beaconState.Validators()
-	proposer := vals[slashing.ProposerIndex]
+	proposer, err := beaconState.ValidatorAtIndex(slashing.ProposerIndex)
+	if err != nil {
+		return err
+	}
 
 	if slashing.Header_1.Header.Slot != slashing.Header_2.Header.Slot {
 		return fmt.Errorf("mismatched header slots, received %d == %d", slashing.Header_1.Header.Slot, slashing.Header_2.Header.Slot)
@@ -450,7 +458,6 @@ func ProcessAttesterSlashings(
 	beaconState *stateTrie.BeaconState,
 	body *ethpb.BeaconBlockBody,
 ) (*stateTrie.BeaconState, error) {
-	vals := beaconState.Validators()
 	for idx, slashing := range body.AttesterSlashings {
 		if err := VerifyAttesterSlashing(ctx, beaconState, slashing); err != nil {
 			return nil, errors.Wrapf(err, "could not verify attester slashing %d", idx)
@@ -462,8 +469,13 @@ func ProcessAttesterSlashings(
 		currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
 		var err error
 		var slashedAny bool
+		var val *ethpb.Validator
 		for _, validatorIndex := range slashableIndices {
-			if helpers.IsSlashableValidator(vals[validatorIndex], currentEpoch) {
+			val, err = beaconState.ValidatorAtIndex(validatorIndex)
+			if err != nil {
+				return nil, err
+			}
+			if helpers.IsSlashableValidator(val, currentEpoch) {
 				beaconState, err = v.SlashValidator(beaconState, validatorIndex, 0)
 				if err != nil {
 					return nil, errors.Wrapf(err, "could not slash validator index %d",
@@ -788,14 +800,15 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 	domain := helpers.Domain(beaconState.Fork(), indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
 	var pubkey *bls.PublicKey
 	var err error
-	vals := beaconState.Validators()
 	if len(indices) > 0 {
-		pubkey, err = bls.PublicKeyFromBytes(vals[indices[0]].PublicKey)
+		pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[0])
+		pubkey, err = bls.PublicKeyFromBytes(pubkeyAtIdx[:])
 		if err != nil {
 			return errors.Wrap(err, "could not deserialize validator public key")
 		}
 		for _, i := range indices[1:] {
-			pk, err := bls.PublicKeyFromBytes(vals[i].PublicKey)
+			pubkeyAtIdx = beaconState.PubkeyAtIndex(indices[i])
+			pk, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
 			if err != nil {
 				return errors.Wrap(err, "could not deserialize validator public key")
 			}
@@ -1103,12 +1116,15 @@ func VerifyExit(beaconState *stateTrie.BeaconState, signed *ethpb.SignedVoluntar
 	}
 
 	exit := signed.Exit
-	vals := beaconState.Validators()
-	if int(exit.ValidatorIndex) >= len(vals) {
-		return fmt.Errorf("validator index out of bound %d > %d", exit.ValidatorIndex, len(vals))
+	numOfValidators := beaconState.NumofValidators()
+	if int(exit.ValidatorIndex) >= numOfValidators {
+		return fmt.Errorf("validator index out of bound %d > %d", exit.ValidatorIndex, numOfValidators)
 	}
 
-	validator := vals[exit.ValidatorIndex]
+	validator, err := beaconState.ValidatorAtIndex(exit.ValidatorIndex)
+	if err != nil {
+		return err
+	}
 	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
 	// Verify the validator is active.
 	if !helpers.IsActiveValidator(validator, currentEpoch) {

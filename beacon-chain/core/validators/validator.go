@@ -116,8 +116,10 @@ func SlashValidator(state *stateTrie.BeaconState, slashedIdx uint64, whistleBlow
 		return nil, errors.Wrapf(err, "could not initiate validator %d exit", slashedIdx)
 	}
 	currentEpoch := helpers.SlotToEpoch(state.Slot())
-	vals := state.Validators()
-	validator := vals[slashedIdx]
+	validator, err := state.ValidatorAtIndex(slashedIdx)
+	if err != nil {
+		return nil, err
+	}
 	validator.Slashed = true
 	maxWithdrawableEpoch := mathutil.Max(validator.WithdrawableEpoch, currentEpoch+params.BeaconConfig().EpochsPerSlashingsVector)
 	validator.WithdrawableEpoch = maxWithdrawableEpoch

@@ -369,8 +369,11 @@ func BaseReward(state *stateTrie.BeaconState, index uint64) (uint64, error) {
 	if err != nil {
 		return 0, errors.Wrap(err, "could not calculate active balance")
 	}
-	vals := state.Validators()
-	effectiveBalance := vals[index].EffectiveBalance
+	val, err := state.ValidatorAtIndex(index)
+	if err != nil {
+		return 0, err
+	}
+	effectiveBalance := val.EffectiveBalance
 	baseReward := effectiveBalance * params.BeaconConfig().BaseRewardFactor /
 		mathutil.IntegerSquareRoot(totalBalance) / params.BeaconConfig().BaseRewardsPerEpoch
 	return baseReward, nil
