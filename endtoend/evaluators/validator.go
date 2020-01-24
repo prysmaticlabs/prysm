@@ -38,7 +38,7 @@ func onGenesisEpoch(currentEpoch uint64) bool {
 // Not including first epoch because of issues with genesis.
 func afterNthEpoch(afterEpoch uint64) func(uint64) bool {
 	return func(currentEpoch uint64) bool {
-		return currentEpoch > afterEpoch
+		return currentEpoch >= afterEpoch
 	}
 }
 
@@ -58,24 +58,39 @@ func validatorsAreActive(client eth.BeaconChainClient) error {
 		return fmt.Errorf("expected validator count to be %d, recevied %d", expectedCount, receivedCount)
 	}
 
+	effBalanceLowCount := 0
+	activeEpochWrongCount := 0
+	exitEpochWrongCount := 0
+	withdrawEpochWrongCount := 0
 	for _, item := range validators.ValidatorList {
+		if item.Validator.EffectiveBalance < params.BeaconConfig().MaxEffectiveBalance {
+			effBalanceLowCount++
+		}
 		if item.Validator.ActivationEpoch != 0 {
-			return fmt.Errorf("expected genesis validator epoch to be 0, received %d", item.Validator.ActivationEpoch)
+			activeEpochWrongCount++
 		}
 		if item.Validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-			return fmt.Errorf("expected genesis validator exit epoch to be far future, received %d", item.Validator.ExitEpoch)
+			exitEpochWrongCount++
 		}
 		if item.Validator.WithdrawableEpoch != params.BeaconConfig().FarFutureEpoch {
-			return fmt.Errorf("expected genesis validator withdrawable epoch to be far future, received %d", item.Validator.WithdrawableEpoch)
-		}
-		if item.Validator.EffectiveBalance != params.BeaconConfig().MaxEffectiveBalance {
-			return fmt.Errorf(
-				"expected genesis validator effective balance to be %d, received %d",
-				params.BeaconConfig().MaxEffectiveBalance,
-				item.Validator.EffectiveBalance,
-			)
+			withdrawEpochWrongCount++
 		}
 	}
+
+	if effBalanceLowCount > 0 {
+		return fmt.Errorf(
+			"%d validators did not have genesis validator effective balance of %d",
+			effBalanceLowCount,
+			params.BeaconConfig().MaxEffectiveBalance,
+		)
+	} else if activeEpochWrongCount > 0 {
+		return fmt.Errorf("%d validators did not have genesis validator epoch of 0", activeEpochWrongCount)
+	} else if exitEpochWrongCount > 0 {
+		return fmt.Errorf("%d validators did not have genesis validator exit epoch of far future epoch", exitEpochWrongCount)
+	} else if activeEpochWrongCount > 0 {
+		return fmt.Errorf("%d validators did not have genesis validator withdrawable epoch of far future epoch", activeEpochWrongCount)
+	}
+
 	return nil
 }
 

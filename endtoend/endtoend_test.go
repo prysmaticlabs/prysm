@@ -87,16 +87,12 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 			}
 			t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
 				if err := evaluator.Evaluation(beaconClient); err != nil {
-					t.Fatalf("evaluation failed for epoch %d: %v", currentEpoch, err)
+					t.Errorf("evaluation failed for epoch %d: %v", currentEpoch, err)
 				}
 			})
 		}
 
 		if t.Failed() || currentEpoch >= config.epochsToRun {
-			if currentEpoch < config.epochsToRun {
-				t.Fatalf("Test ended prematurely, only reached epoch %d", currentEpoch)
-			}
-
 			ticker.Done()
 			break
 		}
