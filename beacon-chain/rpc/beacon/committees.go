@@ -75,7 +75,7 @@ func (bs *Server) ListBeaconCommittees(
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
-				"Could not retrieve active indices for current epoch %d: %v",
+				"Could not retrieve active indices for requested epoch %d: %v",
 				requestedEpoch,
 				err,
 			)
