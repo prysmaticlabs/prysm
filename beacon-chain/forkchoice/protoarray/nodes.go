@@ -4,11 +4,48 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"math"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
+
+// head starts from justifiedRoot and then follows the best descendant links
+// to find the best block for head.
+func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.head")
+	defer span.End()
+
+	// Justified index has to index and can not be out of bound.
+	justifiedIndex, ok := s.nodeIndices[justifiedRoot]
+	if !ok {
+		return [32]byte{}, errUnknownJustifiedRoot
+	}
+	if justifiedIndex >= uint64(len(s.nodes)) {
+		return [32]byte{}, errInvalidJustifiedIndex
+	}
+
+	justifiedNode := s.nodes[justifiedIndex]
+	bestDescendantIndex := justifiedNode.bestDescendant
+	// If the justified node doesn't have the best descendent,
+	// the best node is itself.
+	if bestDescendantIndex == nonExistentNode {
+		bestDescendantIndex = justifiedIndex
+	}
+	if bestDescendantIndex >= uint64(len(s.nodes)) {
+		return [32]byte{}, errInvalidBestDescendantIndex
+	}
+
+	bestNode := s.nodes[bestDescendantIndex]
+	//
+	if !s.viableForHead(ctx, bestNode) {
+		return [32]byte{}, fmt.Errorf("after tree filter, best node can't be head, finalized epochs %d != %d, justified epoch %d != %d",
+			bestNode.finalizedEpoch, s.finalizedEpoch, bestNode.justifiedEpoch, s.justifiedEpoch)
+	}
+
+	return bestNode.root, nil
+}
 
 // insert registers a new block node to the fork choice store's node list.
 // It then updates the new node's parent with best child and descendant node.
