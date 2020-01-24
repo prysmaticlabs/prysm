@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -23,9 +24,12 @@ func TestServer_ListBeaconCommittees(t *testing.T) {
 	numValidators := 128
 	headState := setupActiveValidators(t, db, numValidators)
 
-	headState.RandaoMixes = make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
-	for i := 0; i < len(headState.RandaoMixes); i++ {
-		headState.RandaoMixes[i] = make([]byte, 32)
+	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	for i := 0; i < len(randaoMixes); i++ {
+		randaoMixes[i] = make([]byte, 32)
+	}
+	if err := headState.SetRandaoMixes(randaoMixes); err != nil {
+		t.Fatal(err)
 	}
 
 	bs := &Server{
@@ -100,12 +104,17 @@ func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
 	numValidators := 128
 	headState := setupActiveValidators(t, db, numValidators)
 
-	headState.RandaoMixes = make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
-	for i := 0; i < len(headState.RandaoMixes); i++ {
-		headState.RandaoMixes[i] = make([]byte, 32)
+	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	for i := 0; i < len(randaoMixes); i++ {
+		randaoMixes[i] = make([]byte, 32)
+	}
+	if err := headState.SetRandaoMixes(randaoMixes); err != nil {
+		t.Fatal(err)
 	}
 
-	headState.Slot = params.BeaconConfig().SlotsPerEpoch * 10
+	if err := headState.SetSlot(params.BeaconConfig().SlotsPerEpoch * 10); err != nil {
+		t.Fatal(err)
+	}
 
 	// Store the genesis seed.
 	seed, err := helpers.Seed(headState, 0, params.BeaconConfig().DomainBeaconAttester)
@@ -183,7 +192,7 @@ func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
 	}
 }
 
-func setupActiveValidators(t *testing.T, db db.Database, count int) *pbp2p.BeaconState {
+func setupActiveValidators(t *testing.T, db db.Database, count int) *stateTrie.BeaconState {
 	ctx := context.Background()
 	balances := make([]uint64, count)
 	validators := make([]*ethpb.Validator, 0, count)
@@ -200,5 +209,9 @@ func setupActiveValidators(t *testing.T, db db.Database, count int) *pbp2p.Beaco
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 		})
 	}
-	return &pbp2p.BeaconState{Validators: validators, Balances: balances}
+	st, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{Validators: validators, Balances: balances})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return st
 }
