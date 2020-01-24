@@ -4,7 +4,6 @@ import (
 	"sync"
 
 	coreutils "github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/protolambda/zssz/merkle"
