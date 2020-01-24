@@ -274,6 +274,11 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 
 // requestBlocks by range to a specific peer.
 func (s *Service) requestBlocks(ctx context.Context, req *p2ppb.BeaconBlocksByRangeRequest, pid peer.ID) ([]*eth.SignedBeaconBlock, error) {
+	if s.blocksRateLimiter.Remaining(pid.String()) < int64(req.Count) {
+		log.WithField("peer", pid).Debug("Slowing down for rate limit")
+		time.Sleep(s.blocksRateLimiter.TillEmpty(pid.String()))
+	}
+	s.blocksRateLimiter.Add(pid.String(), int64(req.Count))
 	log.WithFields(logrus.Fields{
 		"peer":  pid,
 		"start": req.StartSlot,
