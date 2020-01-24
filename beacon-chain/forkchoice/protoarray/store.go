@@ -58,12 +58,16 @@ func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []
 	defer span.End()
 
 	for _, index := range validatorIndices {
-		// Validator indices will grow the votes cache on demand.
+		// Validator indices will grow the vote cache.
 		for index >= uint64(len(f.votes)) {
 			f.votes = append(f.votes, Vote{currentRoot: params.BeaconConfig().ZeroHash, nextRoot: params.BeaconConfig().ZeroHash})
 		}
 
-		newVote := f.votes[index].nextRoot == params.BeaconConfig().ZeroHash && f.votes[index].currentRoot == params.BeaconConfig().ZeroHash
+		// Newly allocated vote if the root fields are untouched.
+		newVote := f.votes[index].nextRoot == params.BeaconConfig().ZeroHash &&
+			f.votes[index].currentRoot == params.BeaconConfig().ZeroHash
+
+		// Vote gets updated if it's newly allocated or high target epoch.
 		if newVote || targetEpoch > f.votes[index].nextEpoch {
 			f.votes[index].nextEpoch = targetEpoch
 			f.votes[index].nextRoot = blockRoot
