@@ -5,6 +5,64 @@ import (
 	"testing"
 )
 
+func TestStore_Insert_UnknownParent(t *testing.T) {
+	// The new node does not have a parent.
+	s := &Store{nodeIndices: make(map[[32]byte]uint64)}
+	if err := s.insert(context.Background(), 100, [32]byte{'A'}, [32]byte{'B'}, 1, 1); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(s.nodes) != 1 {
+		t.Error("Did not insert block")
+	}
+	if len(s.nodeIndices) != 1 {
+		t.Error("Did not insert block")
+	}
+	if s.nodes[0].parent != nonExistentNode {
+		t.Error("Incorrect parent")
+	}
+	if s.nodes[0].justifiedEpoch != 1 {
+		t.Error("Incorrect justification")
+	}
+	if s.nodes[0].finalizedEpoch != 1 {
+		t.Error("Incorrect finalization")
+	}
+	if s.nodes[0].root != [32]byte{'A'} {
+		t.Error("Incorrect root")
+	}
+}
+
+func TestStore_Insert_KnownParent(t *testing.T) {
+	// Similar to UnknownParent test, but this time the new node has a valid parent already in store.
+	// The new node builds on top of the parent.
+	s := &Store{nodeIndices: make(map[[32]byte]uint64)}
+	s.nodes = []*Node{{}}
+	p := [32]byte{'B'}
+	s.nodeIndices[p] = 0
+	if err := s.insert(context.Background(), 100, [32]byte{'A'}, p, 1, 1); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(s.nodes) != 2 {
+		t.Error("Did not insert block")
+	}
+	if len(s.nodeIndices) != 2 {
+		t.Error("Did not insert block")
+	}
+	if s.nodes[1].parent != 0 {
+		t.Error("Incorrect parent")
+	}
+	if s.nodes[1].justifiedEpoch != 1 {
+		t.Error("Incorrect justification")
+	}
+	if s.nodes[1].finalizedEpoch != 1 {
+		t.Error("Incorrect finalization")
+	}
+	if s.nodes[1].root != [32]byte{'A'} {
+		t.Error("Incorrect root")
+	}
+}
+
 func TestStore_ApplyScoreChanges_InvalidDeltaLength(t *testing.T) {
 	s := &Store{}
 
@@ -271,6 +329,96 @@ func TestStore_UpdateBestChildAndDescendant_NoChangeAtLeaf(t *testing.T) {
 	}
 }
 
+func TestStore_Prune_LessThanThreshold(t *testing.T) {
+	// Define 100 nodes in store.
+	numOfNodes := 100
+	indices := make(map[[32]byte]uint64)
+	nodes := make([]*Node, 0)
+	for i := 0; i < numOfNodes; i++ {
+		indices[indexToHash(uint64(i))] = uint64(i)
+		nodes = append(nodes, &Node{slot: uint64(i)})
+	}
+
+	s := &Store{nodes: nodes, nodeIndices: indices, pruneThreshold: 100}
+
+	// Finalized root is at index 99 so everything before 99 should be pruned,
+	// but pruneThreshold is at 100 so nothing will be pruned.
+	if err := s.prune(context.Background(), indexToHash(99)); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(s.nodes) != 100 {
+		t.Fatal("Incorrect nodes count")
+	}
+	if len(s.nodeIndices) != 100 {
+		t.Fatal("Incorrect node indices count")
+	}
+}
+
+func TestStore_Prune_MoreThanThreshold(t *testing.T) {
+	// Define 100 nodes in store.
+	numOfNodes := 100
+	indices := make(map[[32]byte]uint64)
+	nodes := make([]*Node, 0)
+	for i := 0; i < numOfNodes; i++ {
+		indices[indexToHash(uint64(i))] = uint64(i)
+		nodes = append(nodes, &Node{slot: uint64(i), root: indexToHash(uint64(i)),
+			bestDescendant: nonExistentNode, bestChild: nonExistentNode})
+	}
+
+	s := &Store{nodes: nodes, nodeIndices: indices}
+
+	// Finalized root is at index 99 so everything before 99 should be pruned.
+	if err := s.prune(context.Background(), indexToHash(99)); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(s.nodes) != 1 {
+		t.Error("Incorrect nodes count")
+	}
+	if len(s.nodeIndices) != 1 {
+		t.Error("Incorrect node indices count")
+	}
+}
+
+func TestStore_Prune_MoreThanOnce(t *testing.T) {
+	// Define 100 nodes in store.
+	numOfNodes := 100
+	indices := make(map[[32]byte]uint64)
+	nodes := make([]*Node, 0)
+	for i := 0; i < numOfNodes; i++ {
+		indices[indexToHash(uint64(i))] = uint64(i)
+		nodes = append(nodes, &Node{slot: uint64(i), root: indexToHash(uint64(i)),
+			bestDescendant: nonExistentNode, bestChild: nonExistentNode})
+	}
+
+	s := &Store{nodes: nodes, nodeIndices: indices}
+
+	// Finalized root is at index 11 so everything before 11 should be pruned.
+	if err := s.prune(context.Background(), indexToHash(10)); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(s.nodes) != 90 {
+		t.Error("Incorrect nodes count")
+	}
+	if len(s.nodeIndices) != 90 {
+		t.Error("Incorrect node indices count")
+	}
+
+	// One more time.
+	if err := s.prune(context.Background(), indexToHash(20)); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(s.nodes) != 80 {
+		t.Log(len(s.nodes))
+		t.Error("Incorrect nodes count")
+	}
+	if len(s.nodeIndices) != 80 {
+		t.Error("Incorrect node indices count")
+	}
+}
 func TestStore_LeadsToViableHead(t *testing.T) {
 	tests := []struct {
 		n              *Node
