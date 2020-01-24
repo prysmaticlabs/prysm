@@ -30,22 +30,6 @@ func TestRequestAttestation_ValidatorDutiesRequestFailure(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Could not fetch validator assignment")
 }
 
-func TestAttestToBlockHead_RequestAttestationFailure(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	validator, _, finish := setup(t)
-	defer finish()
-	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
-		{
-			PublicKey:      validatorKey.PublicKey.Marshal(),
-			CommitteeIndex: 5,
-		},
-	}}
-
-	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
-	testutil.AssertLogsContain(t, hook, "Could not get validator index in assignment")
-}
-
 func TestAttestToBlockHead_SubmitAttestationRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
 
@@ -56,6 +40,7 @@ func TestAttestToBlockHead_SubmitAttestationRequestFailure(t *testing.T) {
 			PublicKey:      validatorKey.PublicKey.Marshal(),
 			CommitteeIndex: 5,
 			Committee:      make([]uint64, 111),
+			ValidatorIndex: 0,
 		}}}
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
@@ -88,6 +73,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 			PublicKey:      validatorKey.PublicKey.Marshal(),
 			CommitteeIndex: 5,
 			Committee:      committee,
+			ValidatorIndex: validatorIndex,
 		}}}
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
@@ -114,7 +100,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
 
 	aggregationBitfield := bitfield.NewBitlist(uint64(len(committee)))
-	aggregationBitfield.SetBitAt(0, true)
+	aggregationBitfield.SetBitAt(4, true)
 	expectedAttestation := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: []byte("A"),
@@ -154,6 +140,7 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 			PublicKey:      validatorKey.PublicKey.Marshal(),
 			CommitteeIndex: 5,
 			Committee:      committee,
+			ValidatorIndex: validatorIndex,
 		}}}
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
@@ -194,6 +181,7 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 			PublicKey:      validatorKey.PublicKey.Marshal(),
 			CommitteeIndex: 5,
 			Committee:      committee,
+			ValidatorIndex: validatorIndex,
 		}}}
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
@@ -244,6 +232,7 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 			PublicKey:      validatorKey.PublicKey.Marshal(),
 			CommitteeIndex: 5,
 			Committee:      committee,
+			ValidatorIndex: validatorIndex,
 		}}}
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
@@ -321,6 +310,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 			PublicKey:      validatorKey.PublicKey.Marshal(),
 			CommitteeIndex: 5,
 			Committee:      committee,
+			ValidatorIndex: validatorIndex,
 		}}}
 
 	m.validatorClient.EXPECT().GetAttestationData(
@@ -357,6 +347,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 			PublicKey:      validatorKey.PublicKey.Marshal(),
 			CommitteeIndex: 5,
 			Committee:      committee,
+			ValidatorIndex: validatorIndex,
 		}}}
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
