@@ -21,7 +21,6 @@ go_library(
         "//beacon-chain/core/feed/state:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
-        "//beacon-chain/core/state/stateutils:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/flags:go_default_library",
         "//beacon-chain/state:go_default_library",

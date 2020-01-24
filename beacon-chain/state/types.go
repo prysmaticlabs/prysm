@@ -6,6 +6,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/protolambda/zssz/merkle"
+	coreutils "github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -19,6 +20,7 @@ type BeaconState struct {
 	state        *pbp2p.BeaconState
 	lock         sync.RWMutex
 	dirtyFields  map[fieldIndex]interface{}
+	valIdxMap    map[[48]byte]uint64
 	merkleLayers [][][]byte
 }
 
@@ -29,10 +31,12 @@ func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
 		return nil, err
 	}
 	layers := merkleize(fieldRoots)
+	valMap := coreutils.ValidatorIndexMap(st)
 	return &BeaconState{
 		state:        proto.Clone(st).(*pbp2p.BeaconState),
 		merkleLayers: layers,
 		dirtyFields:  make(map[fieldIndex]interface{}),
+		valIdxMap:    valMap,
 	}, nil
 }
 
@@ -44,10 +48,12 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 		return nil, err
 	}
 	layers := merkleize(fieldRoots)
+	valMap := coreutils.ValidatorIndexMap(st)
 	return &BeaconState{
 		state:        st,
 		merkleLayers: layers,
 		dirtyFields:  make(map[fieldIndex]interface{}),
+		valIdxMap:    valMap,
 	}, nil
 }
 
@@ -72,6 +78,7 @@ func (b *BeaconState) HashTreeRoot() ([32]byte, error) {
 // the resulting layers of the trie based on the appropriate depth. This function
 // pads the leaves to a power-of-two length.
 func merkleize(leaves [][]byte) [][][]byte {
+	hashFunc := hashutil.CustomSHA256Hasher()
 	layers := make([][][]byte, merkle.GetDepth(uint64(len(leaves)))+1)
 	for len(leaves) != 32 {
 		leaves = append(leaves, make([]byte, 32))
@@ -88,7 +95,7 @@ func merkleize(leaves [][]byte) [][][]byte {
 	for len(currentLayer) > 1 && i < len(layers) {
 		layer := make([][]byte, 0)
 		for i := 0; i < len(currentLayer); i += 2 {
-			hashedChunk := hashutil.Hash(append(currentLayer[i], currentLayer[i+1]...))
+			hashedChunk := hashFunc(append(currentLayer[i], currentLayer[i+1]...))
 			layer = append(layer, hashedChunk[:])
 		}
 		currentLayer = layer

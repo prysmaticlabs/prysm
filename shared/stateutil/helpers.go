@@ -47,7 +47,7 @@ func bitwiseMerkleize(chunks [][]byte, count uint64, limit uint64) ([32]byte, er
 	if count > limit {
 		return [32]byte{}, errors.New("merkleizing list that is too large, over limit")
 	}
-	hasher := htr.HashFn(hashutil.Hash)
+	hasher := htr.HashFn(hashutil.CustomSHA256Hasher())
 	leafIndexer := func(i uint64) []byte {
 		return chunks[i]
 	}

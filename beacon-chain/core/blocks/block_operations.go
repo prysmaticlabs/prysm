@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -196,8 +195,10 @@ func ProcessBlockHeader(
 	if err != nil {
 		return nil, err
 	}
-	vals := beaconState.Validators()
-	proposer := vals[idx]
+	proposer, err := beaconState.ValidatorAtIndex(idx)
+	if err != nil {
+		return nil, err
+	}
 
 	// Verify proposer signature.
 	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
@@ -257,8 +258,10 @@ func ProcessBlockHeaderNoVerify(
 	if err != nil {
 		return nil, err
 	}
-	vals := beaconState.Validators()
-	proposer := vals[idx]
+	proposer, err := beaconState.ValidatorAtIndex(idx)
+	if err != nil {
+		return nil, err
+	}
 	if proposer.Slashed {
 		return nil, fmt.Errorf("proposer at index %d was previously slashed", idx)
 	}
@@ -305,8 +308,11 @@ func ProcessRandao(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get beacon proposer index")
 	}
-	vals := beaconState.Validators()
-	proposerPub := vals[proposerIdx].PublicKey
+	proposer, err := beaconState.ValidatorAtIndex(proposerIdx)
+	if err != nil {
+		return nil, err
+	}
+	proposerPub := proposer.PublicKey
 
 	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
 	buf := make([]byte, 32)
@@ -381,9 +387,8 @@ func ProcessProposerSlashings(
 	body *ethpb.BeaconBlockBody,
 ) (*stateTrie.BeaconState, error) {
 	var err error
-	vals := beaconState.Validators()
 	for idx, slashing := range body.ProposerSlashings {
-		if int(slashing.ProposerIndex) >= len(vals) {
+		if int(slashing.ProposerIndex) >= beaconState.NumofValidators() {
 			return nil, fmt.Errorf("invalid proposer index given in slashing %d", slashing.ProposerIndex)
 		}
 		if err = VerifyProposerSlashing(beaconState, slashing); err != nil {
@@ -404,8 +409,10 @@ func VerifyProposerSlashing(
 	beaconState *stateTrie.BeaconState,
 	slashing *ethpb.ProposerSlashing,
 ) error {
-	vals := beaconState.Validators()
-	proposer := vals[slashing.ProposerIndex]
+	proposer, err := beaconState.ValidatorAtIndex(slashing.ProposerIndex)
+	if err != nil {
+		return err
+	}
 
 	if slashing.Header_1.Header.Slot != slashing.Header_2.Header.Slot {
 		return fmt.Errorf("mismatched header slots, received %d == %d", slashing.Header_1.Header.Slot, slashing.Header_2.Header.Slot)
@@ -451,7 +458,6 @@ func ProcessAttesterSlashings(
 	beaconState *stateTrie.BeaconState,
 	body *ethpb.BeaconBlockBody,
 ) (*stateTrie.BeaconState, error) {
-	vals := beaconState.Validators()
 	for idx, slashing := range body.AttesterSlashings {
 		if err := VerifyAttesterSlashing(ctx, beaconState, slashing); err != nil {
 			return nil, errors.Wrapf(err, "could not verify attester slashing %d", idx)
@@ -463,8 +469,13 @@ func ProcessAttesterSlashings(
 		currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
 		var err error
 		var slashedAny bool
+		var val *ethpb.Validator
 		for _, validatorIndex := range slashableIndices {
-			if helpers.IsSlashableValidator(vals[validatorIndex], currentEpoch) {
+			val, err = beaconState.ValidatorAtIndex(validatorIndex)
+			if err != nil {
+				return nil, err
+			}
+			if helpers.IsSlashableValidator(val, currentEpoch) {
 				beaconState, err = v.SlashValidator(beaconState, validatorIndex, 0)
 				if err != nil {
 					return nil, errors.Wrapf(err, "could not slash validator index %d",
@@ -789,14 +800,15 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 	domain := helpers.Domain(beaconState.Fork(), indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
 	var pubkey *bls.PublicKey
 	var err error
-	vals := beaconState.Validators()
 	if len(indices) > 0 {
-		pubkey, err = bls.PublicKeyFromBytes(vals[indices[0]].PublicKey)
+		pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[0])
+		pubkey, err = bls.PublicKeyFromBytes(pubkeyAtIdx[:])
 		if err != nil {
 			return errors.Wrap(err, "could not deserialize validator public key")
 		}
 		for _, i := range indices[1:] {
-			pk, err := bls.PublicKeyFromBytes(vals[i].PublicKey)
+			pubkeyAtIdx = beaconState.PubkeyAtIndex(indices[i])
+			pk, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
 			if err != nil {
 				return errors.Wrap(err, "could not deserialize validator public key")
 			}
@@ -849,10 +861,8 @@ func ProcessDeposits(
 ) (*stateTrie.BeaconState, error) {
 	var err error
 	deposits := body.Deposits
-
-	valIndexMap := stateutils.ValidatorIndexMap(beaconState)
 	for _, deposit := range deposits {
-		beaconState, err = ProcessDeposit(beaconState, deposit, valIndexMap)
+		beaconState, err = ProcessDeposit(beaconState, deposit)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
 		}
@@ -865,15 +875,14 @@ func ProcessPreGenesisDeposit(
 	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
 	deposit *ethpb.Deposit,
-	validatorIndices map[[48]byte]int,
 ) (*stateTrie.BeaconState, error) {
 	var err error
-	beaconState, err = ProcessDeposit(beaconState, deposit, validatorIndices)
+	beaconState, err = ProcessDeposit(beaconState, deposit)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process deposit")
 	}
 	pubkey := deposit.Data.PublicKey
-	index, ok := validatorIndices[bytesutil.ToBytes48(pubkey)]
+	index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubkey))
 	if !ok {
 		return beaconState, nil
 	}
@@ -943,7 +952,6 @@ func ProcessPreGenesisDeposit(
 func ProcessDeposit(
 	beaconState *stateTrie.BeaconState,
 	deposit *ethpb.Deposit,
-	valIndexMap map[[48]byte]int,
 ) (*stateTrie.BeaconState, error) {
 	if err := verifyDeposit(beaconState, deposit); err != nil {
 		return nil, errors.Wrapf(err, "could not verify deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
@@ -953,9 +961,8 @@ func ProcessDeposit(
 	}
 	pubKey := deposit.Data.PublicKey
 	amount := deposit.Data.Amount
-	index, ok := valIndexMap[bytesutil.ToBytes48(pubKey)]
-	vals := beaconState.Validators()
-	numVals := len(vals)
+	index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
+	numVals := beaconState.NumofValidators()
 	if !ok {
 		domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
 		depositSig := deposit.Data.Signature
@@ -984,7 +991,7 @@ func ProcessDeposit(
 			return nil, err
 		}
 		numVals++
-		valIndexMap[bytesutil.ToBytes48(pubKey)] = numVals - 1
+		beaconState.SetValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey), uint64(numVals-1))
 	} else {
 		if err := helpers.IncreaseBalance(beaconState, uint64(index), amount); err != nil {
 			return nil, err

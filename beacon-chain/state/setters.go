@@ -193,6 +193,15 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 	return nil
 }
 
+// SetValidatorAtIndexByPubkey updates the validator index mapping maintained internally to
+// a given input 48-byte, public key.
+func (b *BeaconState) SetValidatorIndexByPubkey(pubKey [48]byte, validatorIdx uint64) {
+	b.lock.Lock()
+	b.valIdxMap[pubKey] = validatorIdx
+	b.markFieldAsDirty(validators)
+	b.lock.Unlock()
+}
+
 // SetBalances for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetBalances(val []uint64) error {
@@ -372,6 +381,7 @@ func (b *BeaconState) SetFinalizedCheckpoint(val *ethpb.Checkpoint) error {
 // of the beacon state. This method performs map reads and the caller MUST
 // hold the lock before calling this method.
 func (b *BeaconState) recomputeRoot(idx int) {
+	hashFunc := hashutil.CustomSHA256Hasher()
 	layers := b.merkleLayers
 	// The merkle tree structure looks as follows:
 	// [[r1, r2, r3, r4], [parent1, parent2], [root]]
@@ -388,10 +398,10 @@ func (b *BeaconState) recomputeRoot(idx int) {
 			neighbor = layers[i][neighborIdx]
 		}
 		if isLeft {
-			parentHash := hashutil.Hash(append(root, neighbor...))
+			parentHash := hashFunc(append(root, neighbor...))
 			root = parentHash[:]
 		} else {
-			parentHash := hashutil.Hash(append(neighbor, root...))
+			parentHash := hashFunc(append(neighbor, root...))
 			root = parentHash[:]
 		}
 		parentIdx := currentIndex / 2

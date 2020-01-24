@@ -85,7 +85,7 @@ func reportEpochMetrics(state *stateTrie.BeaconState) {
 
 	validators := state.Validators()
 	for i, validator := range validators {
-		valBalance, err := state.BalanceAtIndex(i)
+		valBalance, err := state.BalanceAtIndex(uint64(i))
 		if err != nil {
 			log.WithError(err).Error("could not get balance for validator")
 			return

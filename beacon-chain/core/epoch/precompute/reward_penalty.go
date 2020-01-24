@@ -21,10 +21,10 @@ func ProcessRewardsAndPenaltiesPrecompute(
 		return state, nil
 	}
 
-	vals := state.Validators()
+	numOfVals := state.NumofValidators()
 	bals := state.Balances()
 	// Guard against an out-of-bounds using validator balance precompute.
-	if len(vp) != len(vals) || len(vp) != len(bals) {
+	if len(vp) != numOfVals || len(vp) != len(bals) {
 		return state, errors.New("precomputed registries not the same length as state registries")
 	}
 
@@ -36,7 +36,7 @@ func ProcessRewardsAndPenaltiesPrecompute(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get attestation delta")
 	}
-	for i := 0; i < len(vals); i++ {
+	for i := 0; i < numOfVals; i++ {
 		if err := helpers.IncreaseBalance(state, uint64(i), attsRewards[i]+proposerRewards[i]); err != nil {
 			return nil, err
 		}
@@ -50,9 +50,9 @@ func ProcessRewardsAndPenaltiesPrecompute(
 // This computes the rewards and penalties differences for individual validators based on the
 // voting records.
 func attestationDeltas(state *stateTrie.BeaconState, bp *Balance, vp []*Validator) ([]uint64, []uint64, error) {
-	vals := state.Validators()
-	rewards := make([]uint64, len(vals))
-	penalties := make([]uint64, len(vals))
+	numOfVals := state.NumofValidators()
+	rewards := make([]uint64, numOfVals)
+	penalties := make([]uint64, numOfVals)
 
 	for i, v := range vp {
 		rewards[i], penalties[i] = attestationDelta(state, bp, v)
@@ -113,8 +113,8 @@ func attestationDelta(state *stateTrie.BeaconState, bp *Balance, v *Validator) (
 // This computes the rewards and penalties differences for individual validators based on the
 // proposer inclusion records.
 func proposerDeltaPrecompute(state *stateTrie.BeaconState, bp *Balance, vp []*Validator) ([]uint64, error) {
-	vals := state.Validators()
-	rewards := make([]uint64, len(vals))
+	numofVals := state.NumofValidators()
+	rewards := make([]uint64, numofVals)
 
 	totalBalance := bp.CurrentEpoch
 

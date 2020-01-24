@@ -249,6 +249,14 @@ func (b *BeaconState) ValidatorAtIndex(idx uint64) (*ethpb.Validator, error) {
 	}, nil
 }
 
+// ValidatorIndexByPubkey returns a given validator by its 48-byte public key.
+func (b *BeaconState) ValidatorIndexByPubkey(key [48]byte) (uint64, bool) {
+	b.lock.RLock()
+	b.lock.RUnlock()
+	idx, ok := b.valIdxMap[key]
+	return idx, ok
+}
+
 // PubkeyAtIndex returns the pubkey at the given
 // validator index.
 func (b *BeaconState) PubkeyAtIndex(idx uint64) [48]byte {
@@ -271,7 +279,7 @@ func (b *BeaconState) Balances() []uint64 {
 }
 
 // BalanceAtIndex of validator with the provided index.
-func (b *BeaconState) BalanceAtIndex(idx int) (uint64, error) {
+func (b *BeaconState) BalanceAtIndex(idx uint64) (uint64, error) {
 	if b.state.Balances == nil {
 		return 0, nil
 	}
@@ -394,40 +402,4 @@ func (b *BeaconState) FinalizedCheckpoint() *ethpb.Checkpoint {
 	copy(root[:], b.state.FinalizedCheckpoint.Root)
 	cp.Root = root[:]
 	return cp
-}
-
-func clonePendingAttestation(att *pbp2p.PendingAttestation) *pbp2p.PendingAttestation {
-	var aggBits bitfield.Bitlist
-	copy(aggBits, att.AggregationBits)
-
-	var attData *ethpb.AttestationData
-	if att.Data != nil {
-		var beaconRoot [32]byte
-		copy(beaconRoot[:], att.Data.BeaconBlockRoot)
-
-		var sourceRoot [32]byte
-		copy(sourceRoot[:], att.Data.Source.Root)
-
-		var targetRoot [32]byte
-		copy(targetRoot[:], att.Data.Target.Root)
-		attData = &ethpb.AttestationData{
-			Slot:            att.Data.Slot,
-			CommitteeIndex:  att.Data.CommitteeIndex,
-			BeaconBlockRoot: beaconRoot[:],
-			Source: &ethpb.Checkpoint{
-				Epoch: att.Data.Source.Epoch,
-				Root:  sourceRoot[:],
-			},
-			Target: &ethpb.Checkpoint{
-				Epoch: att.Data.Target.Epoch,
-				Root:  targetRoot[:],
-			},
-		}
-	}
-	return &pbp2p.PendingAttestation{
-		AggregationBits: aggBits,
-		Data:            attData,
-		InclusionDelay:  att.InclusionDelay,
-		ProposerIndex:   att.ProposerIndex,
-	}
 }

@@ -84,11 +84,14 @@ func ComputeShuffledIndex(index uint64, indexCount uint64, seed [32]byte, shuffl
 		round = rounds - 1
 	}
 	buf := make([]byte, totalSize, totalSize)
+	posBuffer := make([]byte, 8, 8)
+	hashfunc := hashutil.CustomSHA256Hasher()
+
 	// Seed is always the first 32 bytes of the hash input, we never have to change this part of the buffer.
 	copy(buf[:32], seed[:])
 	for {
 		buf[seedSize] = round
-		hash := hashutil.Hash(buf[:pivotViewSize])
+		hash := hashfunc(buf[:pivotViewSize])
 		hash8 := hash[:8]
 		hash8Int := bytesutil.FromBytes8(hash8)
 		pivot := hash8Int % indexCount
@@ -100,9 +103,9 @@ func ComputeShuffledIndex(index uint64, indexCount uint64, seed [32]byte, shuffl
 		}
 		// Add position except its last byte to []buf for randomness,
 		// it will be used later to select a bit from the resulting hash.
-		position4bytes := bytesutil.ToBytes(position>>8, 4)
-		copy(buf[pivotViewSize:], position4bytes[:])
-		source := hashutil.Hash(buf)
+		binary.LittleEndian.PutUint64(posBuffer[:8], position>>8)
+		copy(buf[pivotViewSize:], posBuffer[:4])
+		source := hashfunc(buf)
 		// Effectively keep the first 5 bits of the byte value of the position,
 		// and use it to retrieve one of the 32 (= 2^5) bytes of the hash.
 		byteV := source[(position&0xff)>>3]

@@ -600,7 +600,7 @@ func (bs *Server) GetValidatorPerformance(
 			balances[i] = 0
 			continue
 		}
-		balances[i], err = headState.BalanceAtIndex(int(index))
+		balances[i], err = headState.BalanceAtIndex(index)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get balance at index %d", i)
 		}

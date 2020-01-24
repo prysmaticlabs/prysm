@@ -477,6 +477,7 @@ func ClearCache() {
 // This computes proposer indices of the current epoch and returns a list of proposer indices,
 // the index of the list represents the slot number.
 func precomputeProposerIndices(state *stateTrie.BeaconState, activeIndices []uint64) ([]uint64, error) {
+	hashFunc := hashutil.CustomSHA256Hasher()
 	proposerIndices := make([]uint64, params.BeaconConfig().SlotsPerEpoch)
 
 	e := CurrentEpoch(state)
@@ -488,7 +489,7 @@ func precomputeProposerIndices(state *stateTrie.BeaconState, activeIndices []uin
 	vals := state.Validators()
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
 		seedWithSlot := append(seed[:], bytesutil.Bytes8(slot+i)...)
-		seedWithSlotHash := hashutil.Hash(seedWithSlot)
+		seedWithSlotHash := hashFunc(seedWithSlot)
 		index, err := ComputeProposerIndex(vals, activeIndices, seedWithSlotHash)
 		if err != nil {
 			return nil, err

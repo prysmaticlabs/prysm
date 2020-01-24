@@ -32,6 +32,27 @@ func Hash(data []byte) [32]byte {
 	return hash
 }
 
+// CustomSHA256Hasher returns a hash function that uses
+// an enclosed hasher. This is not safe for concurrent
+// use as the same hasher is being called throughout.
+func CustomSHA256Hasher() func([]byte) [32]byte {
+	hasher := sha256.New()
+	return func(data []byte) [32]byte {
+		var hash [32]byte
+
+		// The hash interface never returns an error, for that reason
+		// we are not handling the error below. For reference, it is
+		// stated here https://golang.org/pkg/hash/#Hash
+
+		// #nosec G104
+		hasher.Write(data)
+		hasher.Sum(hash[:0])
+		hasher.Reset()
+
+		return hash
+	}
+}
+
 // HashKeccak256 defines a function which returns the Keccak-256/SHA3
 // hash of the data passed in.
 func HashKeccak256(data []byte) [32]byte {

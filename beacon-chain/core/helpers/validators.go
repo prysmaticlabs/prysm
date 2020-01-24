@@ -205,6 +205,7 @@ func ComputeProposerIndex(validators []*ethpb.Validator, activeIndices []uint64,
 		return 0, errors.New("empty active indices list")
 	}
 	maxRandomByte := uint64(1<<8 - 1)
+	hashFunc := hashutil.CustomSHA256Hasher()
 
 	for i := uint64(0); ; i++ {
 		candidateIndex, err := ComputeShuffledIndex(i%length, length, seed, true /* shuffle */)
@@ -216,7 +217,7 @@ func ComputeProposerIndex(validators []*ethpb.Validator, activeIndices []uint64,
 			return 0, errors.New("active index out of range")
 		}
 		b := append(seed[:], bytesutil.Bytes8(i/32)...)
-		randomByte := hashutil.Hash(b)[i%32]
+		randomByte := hashFunc(b)[i%32]
 		v := validators[candidateIndex]
 		var effectiveBal uint64
 		if v != nil {
