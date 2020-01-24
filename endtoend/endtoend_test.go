@@ -38,7 +38,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	for _, bb := range beaconNodes {
 		processIDs = append(processIDs, bb.processID)
 	}
-	defer logOutput(t, tmpPath, config)
+	//defer logOutput(t, tmpPath, config)
 	defer killProcesses(t, processIDs)
 
 	if config.numBeaconNodes > 1 {
@@ -56,7 +56,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 		t.Fatal(err)
 	}
 	if err := waitForTextInFile(beaconLogFile, "Sending genesis time notification"); err != nil {
-		t.Fatalf("failed to find genesis in logs, this means the chain did not start: %v", err)
+		t.Fatalf("Failed to find genesis in logs, this means the chain did not start: %v", err)
 	}
 
 	// Failing early in case chain doesn't start.
@@ -93,7 +93,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 			}
 			t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
 				if err := evaluator.Evaluation(beaconClient); err != nil {
-					t.Fatalf("evaluation failed for epoch %d: %v", currentEpoch, err)
+					t.Fatalf("Evaluation failed for epoch %d: %v", currentEpoch, err)
 				}
 			})
 		}
@@ -103,6 +103,55 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	if currentEpoch < config.epochsToRun {
 		t.Fatalf("Test ended prematurely, only reached epoch %d", currentEpoch)
 	}
+
+	syncNodeInfo := startNewBeaconNode(t, config, beaconNodes)
+	index := uint64(len(beaconNodes))
+	time.Sleep(time.Minute)
+	syncLogFile, err := os.Open(path.Join(tmpPath, fmt.Sprintf(beaconNodeLogFileName, index)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := waitForTextInFile(syncLogFile, "Synced up to"); err != nil {
+		t.Fatalf("Failed to sync: %v", err)
+	}
+
+	if err := conn.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	syncConn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", syncNodeInfo.grpcPort), grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("Failed to dial: %v", err)
+	}
+	syncBeaconClient := eth.NewBeaconChainClient(syncConn)
+	syncNodeClient := eth.NewNodeClient(syncConn)
+
+	syncStatus, err := syncNodeClient.GetSyncStatus(context.Background(), &ptypes.Empty{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("node_finishes_sync", func(t *testing.T) {
+		if !syncStatus.Syncing {
+			t.Fatal("Expected node to have completed sync")
+		}
+	})
+
+	t.Run("synced_node_has_correct_head", func(t *testing.T) {
+		syncedChainHead, err := syncBeaconClient.GetChainHead(context.Background(), &ptypes.Empty{})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		chainHead, err := beaconClient.GetChainHead(context.Background(), &ptypes.Empty{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if chainHead.FinalizedBlockRoot
+	})
+
+
+	defer killProcesses(t, []int{syncNodeInfo.processID})
 }
 
 func peersConnect(port uint64, expectedPeers uint64) error {
@@ -175,9 +224,9 @@ func logErrorOutput(t *testing.T, file *os.File, title string, index uint64) {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		currentLine := scanner.Text()
-		if strings.Contains(currentLine, "level=error") {
+		//if strings.Contains(currentLine, "level=error") {
 			errorLines = append(errorLines, currentLine)
-		}
+		//}
 	}
 
 	if len(errorLines) < 1 {

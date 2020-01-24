@@ -18,7 +18,9 @@ import (
 	ev "github.com/prysmaticlabs/prysm/endtoend/evaluators"
 )
 
-type beaconNodeInfo struct {
+// BeaconNodeInfo contains the info of ports and other required information
+// needed to communicate with the beacon node it represents.
+type BeaconNodeInfo struct {
 	processID   int
 	datadir     string
 	rpcPort     uint64
@@ -41,10 +43,10 @@ type end2EndConfig struct {
 var beaconNodeLogFileName = "beacon-%d.log"
 
 // startBeaconNodes starts the requested amount of beacon nodes, passing in the deposit contract given.
-func startBeaconNodes(t *testing.T, config *end2EndConfig) []*beaconNodeInfo {
+func startBeaconNodes(t *testing.T, config *end2EndConfig) []*BeaconNodeInfo {
 	numNodes := config.numBeaconNodes
 
-	nodeInfo := []*beaconNodeInfo{}
+	nodeInfo := []*BeaconNodeInfo{}
 	for i := uint64(0); i < numNodes; i++ {
 		newNode := startNewBeaconNode(t, config, nodeInfo)
 		nodeInfo = append(nodeInfo, newNode)
@@ -53,7 +55,7 @@ func startBeaconNodes(t *testing.T, config *end2EndConfig) []*beaconNodeInfo {
 	return nodeInfo
 }
 
-func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beaconNodeInfo) *beaconNodeInfo {
+func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*BeaconNodeInfo) *BeaconNodeInfo {
 	tmpPath := config.tmpPath
 	index := len(beaconNodes)
 	binaryPath, found := bazel.FindBinary("beacon-chain", "beacon-chain")
@@ -69,7 +71,6 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 
 	args := []string{
 		"--no-genesis-delay",
-		"--verbosity=debug",
 		"--force-clear-db",
 		"--no-discovery",
 		"--new-cache",
@@ -119,7 +120,7 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 		t.Fatalf("could not get multiaddr for node %d: %v", index, err)
 	}
 
-	return &beaconNodeInfo{
+	return &BeaconNodeInfo{
 		processID:   cmd.Process.Pid,
 		datadir:     fmt.Sprintf("%s/eth2-beacon-node-%d", tmpPath, index),
 		rpcPort:     4000 + uint64(index),
