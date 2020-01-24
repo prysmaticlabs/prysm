@@ -3,6 +3,7 @@ package protoarray
 import (
 	"bytes"
 	"context"
+	"errors"
 	"math"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -217,6 +218,78 @@ func (s *Store) updateBestChildAndDescendant(ctx context.Context, parentIndex ui
 	parent.bestChild = newParentChild[0]
 	parent.bestDescendant = newParentChild[1]
 	s.nodes[parentIndex] = parent
+
+	return nil
+}
+
+// prune prunes the store with the new finalized root. The tree is only
+// pruned if the input finalized root are different than the one in stored and
+// the number of the nodes in store has met prune threshold.
+func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.prune")
+	defer span.End()
+
+	s.nodeIndicesLock.Lock()
+	defer s.nodeIndicesLock.Unlock()
+
+	// The node would have seen finalized root or else it'd
+	// be able to prune it.
+	finalizedIndex, ok := s.nodeIndices[finalizedRoot]
+	if !ok {
+		return errUnknownFinalizedRoot
+	}
+
+	// The number of the nodes has not met the prune threshold.
+	// Pruning at small numbers incurs more cost than benefit.
+	if finalizedIndex < s.pruneThreshold {
+		return nil
+	}
+
+	// Remove the key/values from indices mapping on to be pruned nodes.
+	// These nodes are before the finalized index.
+	for i := uint64(0); i < finalizedIndex; i++ {
+		if int(i) >= len(s.nodes) {
+			return errInvalidNodeIndex
+		}
+		delete(s.nodeIndices, s.nodes[i].root)
+	}
+
+	// Finalized index can not be greater than the length of the node.
+	if int(finalizedIndex) >= len(s.nodes) {
+		return errors.New("invalid finalized index")
+	}
+	s.nodes = s.nodes[finalizedIndex:]
+
+	// Adjust indices to node mapping.
+	for k, v := range s.nodeIndices {
+		s.nodeIndices[k] = v - finalizedIndex
+	}
+
+	// Iterate through existing nodes and adjust its parent/child indices with the newly pruned layout.
+	for i, node := range s.nodes {
+		if node.parent != nonExistentNode {
+			// If the node's parent is less than finalized index, set it to non existent.
+			if node.parent >= finalizedIndex {
+				node.parent -= finalizedIndex
+			} else {
+				node.parent = nonExistentNode
+			}
+		}
+		if node.bestChild != nonExistentNode {
+			if node.bestChild < finalizedIndex {
+				return errors.New("invalid best child index")
+			}
+			node.bestChild -= finalizedIndex
+		}
+		if node.bestDescendant != nonExistentNode {
+			if node.bestDescendant < finalizedIndex {
+				return errors.New("invalid best descendant index")
+			}
+			node.bestDescendant -= finalizedIndex
+		}
+
+		s.nodes[i] = node
+	}
 
 	return nil
 }
