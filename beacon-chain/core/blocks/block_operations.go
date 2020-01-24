@@ -953,8 +953,7 @@ func ProcessDeposit(
 	pubKey := deposit.Data.PublicKey
 	amount := deposit.Data.Amount
 	index, ok := valIndexMap[bytesutil.ToBytes48(pubKey)]
-	vals := beaconState.Validators()
-	numVals := len(vals)
+	numVals := beaconState.NumofValidators()
 	if !ok {
 		domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
 		depositSig := deposit.Data.Signature

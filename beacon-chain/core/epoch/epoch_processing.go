@@ -19,19 +19,20 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-var epochState *stateTrie.BeaconState
-
 // sortableIndices implements the Sort interface to sort newly activated validator indices
 // by activation epoch and by index number.
-type sortableIndices []uint64
+type sortableIndices struct {
+	indices    []uint64
+	validators []*ethpb.Validator
+}
 
-func (s sortableIndices) Len() int      { return len(s) }
-func (s sortableIndices) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+func (s sortableIndices) Len() int      { return len(s.indices) }
+func (s sortableIndices) Swap(i, j int) { s.indices[i], s.indices[j] = s.indices[j], s.indices[i] }
 func (s sortableIndices) Less(i, j int) bool {
-	if epochState.Validators()[s[i]].ActivationEligibilityEpoch == epochState.Validators()[s[j]].ActivationEligibilityEpoch {
-		return s[i] < s[j]
+	if s.validators[s.indices[i]].ActivationEligibilityEpoch == s.validators[s.indices[j]].ActivationEligibilityEpoch {
+		return s.indices[i] < s.indices[j]
 	}
-	return epochState.Validators()[s[i]].ActivationEligibilityEpoch < epochState.Validators()[s[j]].ActivationEligibilityEpoch
+	return s.validators[s.indices[i]].ActivationEligibilityEpoch < s.validators[s.indices[j]].ActivationEligibilityEpoch
 }
 
 // AttestingBalance returns the total balance from all the attesting indices.
@@ -103,8 +104,7 @@ func ProcessRegistryUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconStat
 		}
 	}
 
-	epochState = state
-	sort.Sort(sortableIndices(activationQ))
+	sort.Sort(sortableIndices{indices: activationQ, validators: vals})
 
 	// Only activate just enough validators according to the activation churn limit.
 	limit := len(activationQ)
