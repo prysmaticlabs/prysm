@@ -12,7 +12,11 @@ import (
 
 // insert registers a new block node to the fork choice store's node list.
 // It then updates the new node's parent with best child and descendant node.
-func (s *Store) insert(ctx context.Context, slot uint64, root [32]byte, parent [32]byte, justifiedEpoch uint64, finalizedEpoch uint64) error {
+func (s *Store) insert(ctx context.Context,
+	slot uint64,
+	root [32]byte,
+	parent [32]byte,
+	justifiedEpoch uint64, finalizedEpoch uint64) error {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.insert")
 	defer span.End()
 
