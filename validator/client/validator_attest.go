@@ -74,11 +74,17 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	}
 
 	var indexInCommittee uint64
+	var found bool
 	for i, vID := range duty.Committee {
 		if vID == duty.ValidatorIndex {
 			indexInCommittee = uint64(i)
+			found = true
 			break
 		}
+	}
+	if !found {
+		log.Errorf("Validator ID %d not found in committee of %v", duty.ValidatorIndex, duty.Committee)
+		return
 	}
 
 	aggregationBitfield := bitfield.NewBitlist(uint64(len(duty.Committee)))
