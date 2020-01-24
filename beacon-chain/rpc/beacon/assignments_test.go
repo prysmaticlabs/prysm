@@ -518,12 +518,16 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 		if err != nil {
 			t.Fatal(err)
 		}
+		val, err := s.ValidatorAtIndex(index)
+		if err != nil {
+			t.Fatal(err)
+		}
 		assignments = append(assignments, &ethpb.ValidatorAssignments_CommitteeAssignment{
 			BeaconCommittees: committee,
 			CommitteeIndex:   committeeIndex,
 			AttesterSlot:     attesterSlot,
 			ProposerSlot:     proposerSlot,
-			PublicKey:        s.Validators[index].PublicKey,
+			PublicKey:        val.PublicKey,
 		})
 	}
 
@@ -550,12 +554,16 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 		if err != nil {
 			t.Fatal(err)
 		}
+		val, err := s.ValidatorAtIndex(index)
+		if err != nil {
+			t.Fatal(err)
+		}
 		assignments = append(assignments, &ethpb.ValidatorAssignments_CommitteeAssignment{
 			BeaconCommittees: committee,
 			CommitteeIndex:   committeeIndex,
 			AttesterSlot:     attesterSlot,
 			ProposerSlot:     proposerSlot,
-			PublicKey:        s.Validators[index].PublicKey,
+			PublicKey:        val.PublicKey,
 		})
 	}
 
