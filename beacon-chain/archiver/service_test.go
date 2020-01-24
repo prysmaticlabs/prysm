@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -34,8 +35,14 @@ func TestArchiverService_ReceivesBlockProcessedEvent(t *testing.T) {
 	hook := logTest.NewGlobal()
 	svc, beaconDB := setupService(t)
 	defer dbutil.TeardownDB(t, beaconDB)
+	st, err := stateTrie.InitializeFromProto(&pb.BeaconState{
+		Slot: 1,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	svc.headFetcher = &mock.ChainService{
-		State: &pb.BeaconState{Slot: 1},
+		State: st,
 	}
 
 	event := &feed.Event{
@@ -55,8 +62,14 @@ func TestArchiverService_OnlyArchiveAtEpochEnd(t *testing.T) {
 	svc, beaconDB := setupService(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	// The head state is NOT an epoch end.
+	st, err := stateTrie.InitializeFromProto(&pb.BeaconState{
+		Slot: params.BeaconConfig().SlotsPerEpoch - 2,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	svc.headFetcher = &mock.ChainService{
-		State: &pb.BeaconState{Slot: params.BeaconConfig().SlotsPerEpoch - 2},
+		State: st,
 	}
 	event := &feed.Event{
 		Type: statefeed.BlockProcessed,
@@ -81,7 +94,10 @@ func TestArchiverService_ArchivesEvenThroughSkipSlot(t *testing.T) {
 	hook := logTest.NewGlobal()
 	svc, beaconDB := setupService(t)
 	validatorCount := uint64(100)
-	headState := setupState(validatorCount)
+	headState, err := setupState(validatorCount)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer dbutil.TeardownDB(t, beaconDB)
 	event := &feed.Event{
 		Type: statefeed.BlockProcessed,
@@ -99,7 +115,9 @@ func TestArchiverService_ArchivesEvenThroughSkipSlot(t *testing.T) {
 
 	// Send out an event every slot, skipping the end slot of the epoch.
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch+1; i++ {
-		headState.Slot = i
+		if err := headState.SetSlot(i); err != nil {
+			t.Fatal(err)
+		}
 		svc.headFetcher = &mock.ChainService{
 			State: headState,
 		}
@@ -130,7 +148,10 @@ func TestArchiverService_ArchivesEvenThroughSkipSlot(t *testing.T) {
 func TestArchiverService_ComputesAndSavesParticipation(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validatorCount := uint64(100)
-	headState := setupState(validatorCount)
+	headState, err := setupState(validatorCount)
+	if err != nil {
+		t.Fatal(err)
+	}
 	svc, beaconDB := setupService(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	svc.headFetcher = &mock.ChainService{
@@ -168,7 +189,10 @@ func TestArchiverService_ComputesAndSavesParticipation(t *testing.T) {
 func TestArchiverService_SavesIndicesAndBalances(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validatorCount := uint64(100)
-	headState := setupState(validatorCount)
+	headState, err := setupState(validatorCount)
+	if err != nil {
+		t.Fatal(err)
+	}
 	svc, beaconDB := setupService(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	svc.headFetcher = &mock.ChainService{
@@ -187,11 +211,11 @@ func TestArchiverService_SavesIndicesAndBalances(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(headState.Balances, retrieved) {
+	if !reflect.DeepEqual(headState.Balances(), retrieved) {
 		t.Errorf(
 			"Wanted balances for epoch %d %v, retrieved %v",
 			helpers.CurrentEpoch(headState),
-			headState.Balances,
+			headState.Balances(),
 			retrieved,
 		)
 	}
@@ -201,7 +225,10 @@ func TestArchiverService_SavesIndicesAndBalances(t *testing.T) {
 func TestArchiverService_SavesCommitteeInfo(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validatorCount := uint64(100)
-	headState := setupState(validatorCount)
+	headState, err := setupState(validatorCount)
+	if err != nil {
+		t.Fatal(err)
+	}
 	svc, beaconDB := setupService(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	svc.headFetcher = &mock.ChainService{
@@ -248,7 +275,10 @@ func TestArchiverService_SavesCommitteeInfo(t *testing.T) {
 func TestArchiverService_SavesActivatedValidatorChanges(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validatorCount := uint64(100)
-	headState := setupState(validatorCount)
+	headState, err := setupState(validatorCount)
+	if err != nil {
+		t.Fatal(err)
+	}
 	svc, beaconDB := setupService(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	svc.headFetcher = &mock.ChainService{
@@ -256,8 +286,22 @@ func TestArchiverService_SavesActivatedValidatorChanges(t *testing.T) {
 	}
 	prevEpoch := helpers.PrevEpoch(headState)
 	delayedActEpoch := helpers.DelayedActivationExitEpoch(prevEpoch)
-	headState.Validators[4].ActivationEpoch = delayedActEpoch
-	headState.Validators[5].ActivationEpoch = delayedActEpoch
+	val1, err := headState.ValidatorAtIndex(4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	val1.ActivationEpoch = delayedActEpoch
+	val2, err := headState.ValidatorAtIndex(5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	val2.ActivationEpoch = delayedActEpoch
+	if err := headState.UpdateValidatorAtIndex(4, val1); err != nil {
+		t.Fatal(err)
+	}
+	if err := headState.UpdateValidatorAtIndex(5, val1); err != nil {
+		t.Fatal(err)
+	}
 	event := &feed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
@@ -283,15 +327,32 @@ func TestArchiverService_SavesActivatedValidatorChanges(t *testing.T) {
 func TestArchiverService_SavesSlashedValidatorChanges(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validatorCount := uint64(100)
-	headState := setupState(validatorCount)
+	headState, err := setupState(validatorCount)
+	if err != nil {
+		t.Fatal(err)
+	}
 	svc, beaconDB := setupService(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	svc.headFetcher = &mock.ChainService{
 		State: headState,
 	}
 	prevEpoch := helpers.PrevEpoch(headState)
-	headState.Validators[95].Slashed = true
-	headState.Validators[96].Slashed = true
+	val1, err := headState.ValidatorAtIndex(95)
+	if err != nil {
+		t.Fatal(err)
+	}
+	val1.Slashed = true
+	val2, err := headState.ValidatorAtIndex(96)
+	if err != nil {
+		t.Fatal(err)
+	}
+	val2.Slashed = true
+	if err := headState.UpdateValidatorAtIndex(95, val1); err != nil {
+		t.Fatal(err)
+	}
+	if err := headState.UpdateValidatorAtIndex(96, val1); err != nil {
+		t.Fatal(err)
+	}
 	event := &feed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
@@ -317,15 +378,25 @@ func TestArchiverService_SavesSlashedValidatorChanges(t *testing.T) {
 func TestArchiverService_SavesExitedValidatorChanges(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validatorCount := uint64(100)
-	headState := setupState(validatorCount)
+	headState, err := setupState(validatorCount)
+	if err != nil {
+		t.Fatal(err)
+	}
 	svc, beaconDB := setupService(t)
 	defer dbutil.TeardownDB(t, beaconDB)
 	svc.headFetcher = &mock.ChainService{
 		State: headState,
 	}
 	prevEpoch := helpers.PrevEpoch(headState)
-	headState.Validators[95].ExitEpoch = prevEpoch
-	headState.Validators[95].WithdrawableEpoch = prevEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
+	val, err := headState.ValidatorAtIndex(95)
+	if err != nil {
+		t.Fatal(err)
+	}
+	val.ExitEpoch = prevEpoch
+	val.WithdrawableEpoch = prevEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
+	if err := headState.UpdateValidatorAtIndex(95, val); err != nil {
+		t.Fatal(err)
+	}
 	event := &feed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
@@ -347,7 +418,7 @@ func TestArchiverService_SavesExitedValidatorChanges(t *testing.T) {
 	}
 }
 
-func setupState(validatorCount uint64) *pb.BeaconState {
+func setupState(validatorCount uint64) (*stateTrie.BeaconState, error) {
 	validators := make([]*ethpb.Validator, validatorCount)
 	balances := make([]uint64, validatorCount)
 	for i := 0; i < len(validators); i++ {
@@ -363,7 +434,7 @@ func setupState(validatorCount uint64) *pb.BeaconState {
 
 	// We initialize a head state that has attestations from participated
 	// validators in a simulated fashion.
-	return &pb.BeaconState{
+	return stateTrie.InitializeFromProto(&pb.BeaconState{
 		Slot:                       (2 * params.BeaconConfig().SlotsPerEpoch) - 1,
 		Validators:                 validators,
 		Balances:                   balances,
@@ -374,7 +445,7 @@ func setupState(validatorCount uint64) *pb.BeaconState {
 		FinalizedCheckpoint:        &ethpb.Checkpoint{},
 		JustificationBits:          bitfield.Bitvector4{0x00},
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{},
-	}
+	})
 }
 
 func setupService(t *testing.T) (*Service, db.Database) {
