@@ -3,10 +3,10 @@ package state
 import (
 	"sync"
 
-	coreutils "github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/protolambda/zssz/merkle"
+	coreutils "github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -20,7 +20,7 @@ type BeaconState struct {
 	state        *pbp2p.BeaconState
 	lock         sync.RWMutex
 	dirtyFields  map[fieldIndex]interface{}
-	valIdxMap    map[[48]byte]int
+	valIdxMap    map[[48]byte]uint64
 	merkleLayers [][][]byte
 }
 

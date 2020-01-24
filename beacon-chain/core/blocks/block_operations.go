@@ -861,10 +861,8 @@ func ProcessDeposits(
 ) (*stateTrie.BeaconState, error) {
 	var err error
 	deposits := body.Deposits
-
-	valIndexMap := beaconState.ValidatorIndexMap()
 	for _, deposit := range deposits {
-		beaconState, err = ProcessDeposit(beaconState, deposit, valIndexMap)
+		beaconState, err = ProcessDeposit(beaconState, deposit)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
 		}
@@ -877,15 +875,14 @@ func ProcessPreGenesisDeposit(
 	ctx context.Context,
 	beaconState *stateTrie.BeaconState,
 	deposit *ethpb.Deposit,
-	validatorIndices map[[48]byte]int,
 ) (*stateTrie.BeaconState, error) {
 	var err error
-	beaconState, err = ProcessDeposit(beaconState, deposit, validatorIndices)
+	beaconState, err = ProcessDeposit(beaconState, deposit)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process deposit")
 	}
 	pubkey := deposit.Data.PublicKey
-	index, ok := validatorIndices[bytesutil.ToBytes48(pubkey)]
+	index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubkey))
 	if !ok {
 		return beaconState, nil
 	}
@@ -955,7 +952,6 @@ func ProcessPreGenesisDeposit(
 func ProcessDeposit(
 	beaconState *stateTrie.BeaconState,
 	deposit *ethpb.Deposit,
-	valIndexMap map[[48]byte]int,
 ) (*stateTrie.BeaconState, error) {
 	if err := verifyDeposit(beaconState, deposit); err != nil {
 		return nil, errors.Wrapf(err, "could not verify deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
@@ -965,7 +961,7 @@ func ProcessDeposit(
 	}
 	pubKey := deposit.Data.PublicKey
 	amount := deposit.Data.Amount
-	index, ok := valIndexMap[bytesutil.ToBytes48(pubKey)]
+	index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 	numVals := beaconState.NumofValidators()
 	if !ok {
 		domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
@@ -995,7 +991,7 @@ func ProcessDeposit(
 			return nil, err
 		}
 		numVals++
-		valIndexMap[bytesutil.ToBytes48(pubKey)] = numVals - 1
+		beaconState.SetValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey), uint64(numVals-1))
 	} else {
 		if err := helpers.IncreaseBalance(beaconState, uint64(index), amount); err != nil {
 			return nil, err

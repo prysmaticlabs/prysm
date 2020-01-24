@@ -193,6 +193,15 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 	return nil
 }
 
+// SetValidatorAtIndexByPubkey updates the validator index mapping maintained internally to
+// a given input 48-byte, public key.
+func (b *BeaconState) SetValidatorIndexByPubkey(pubKey [48]byte, validatorIdx uint64) {
+	b.lock.Lock()
+	b.valIdxMap[pubKey] = validatorIdx
+	b.markFieldAsDirty(validators)
+	b.lock.Unlock()
+}
+
 // SetBalances for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetBalances(val []uint64) error {

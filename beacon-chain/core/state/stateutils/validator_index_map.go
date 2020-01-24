@@ -7,12 +7,12 @@ import (
 
 // ValidatorIndexMap builds a lookup map for quickly determining the index of
 // a validator by their public key.
-func ValidatorIndexMap(state *pb.BeaconState) map[[48]byte]int {
-	m := make(map[[48]byte]int)
+func ValidatorIndexMap(state *pb.BeaconState) map[[48]byte]uint64 {
+	m := make(map[[48]byte]uint64)
 	vals := state.Validators
 	for idx, record := range vals {
 		key := bytesutil.ToBytes48(record.PublicKey)
-		m[key] = idx
+		m[key] = uint64(idx)
 	}
 	return m
 }

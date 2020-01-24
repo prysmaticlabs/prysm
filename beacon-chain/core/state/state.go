@@ -63,7 +63,6 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 		return nil, err
 	}
 	// Process initial deposits.
-	validatorMap := make(map[[48]byte]int)
 	leaves := [][]byte{}
 	for _, deposit := range deposits {
 		hash, err := ssz.HashTreeRoot(deposit.Data)
@@ -93,7 +92,7 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 	}
 
 	for i, deposit := range deposits {
-		state, err = b.ProcessPreGenesisDeposit(context.Background(), state, deposit, validatorMap)
+		state, err = b.ProcessPreGenesisDeposit(context.Background(), state, deposit)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process validator deposit %d", i)
 		}
