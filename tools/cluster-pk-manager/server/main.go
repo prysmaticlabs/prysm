@@ -24,6 +24,8 @@ var (
 	dbPath              = flag.String("db-path", "", "The file path for database storage")
 	disableWatchtower   = flag.Bool("disable-watchtower", false, "Disable kubernetes pod watcher. Useful for local testing")
 	verbose             = flag.Bool("verbose", false, "Enable debug logging")
+	ensureDeposited     = flag.Bool("ensure-deposited", false, "Ensure keys are deposited")
+	allowNewDeposits    = flag.Bool("allow-new-deposits", true, "Allow cluster PK manager to send new deposits or generate new keys")
 )
 
 func main() {
@@ -33,9 +35,15 @@ func main() {
 	}
 	// use demo-config for cluster deployments
 	params.UseDemoBeaconConfig()
+	if *ensureDeposited {
+		log.Warn("--ensure-deposited: Ensuring all keys are deposited or deleting them from database!")
+	}
+	if !*allowNewDeposits {
+		log.Warn("Disallowing new deposits")
+	}
 
 	db := newDB(*dbPath)
-	srv := newServer(db, *rpcPath, *depositContractAddr, *privateKey, *depositAmount)
+	srv := newServer(db, *rpcPath, *depositContractAddr, *privateKey, *depositAmount, *beaconRPCPath)
 	if !*disableWatchtower {
 		wt := newWatchtower(db)
 		go wt.WatchPods()
