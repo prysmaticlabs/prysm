@@ -9,6 +9,51 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// insert registers a new block node to the fork choice store's node list.
+// It then updates the new node's parent with best child and descendant node.
+func (s *Store) insert(ctx context.Context, slot uint64, root [32]byte, parent [32]byte, justifiedEpoch uint64, finalizedEpoch uint64) error {
+	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.insert")
+	defer span.End()
+
+	s.nodeIndicesLock.Lock()
+	defer s.nodeIndicesLock.Unlock()
+
+	// Return if the block has been inserted into Store before.
+	if _, ok := s.nodeIndices[root]; ok {
+		return nil
+	}
+
+	index := len(s.nodes)
+	parentIndex, ok := s.nodeIndices[parent]
+	// Mark genesis block's parent as non existent.
+	if !ok {
+		parentIndex = nonExistentNode
+	}
+
+	n := &Node{
+		slot:           slot,
+		root:           root,
+		parent:         parentIndex,
+		justifiedEpoch: justifiedEpoch,
+		finalizedEpoch: finalizedEpoch,
+		bestChild:      nonExistentNode,
+		bestDescendant: nonExistentNode,
+		weight:         0,
+	}
+
+	s.nodeIndices[root] = uint64(index)
+	s.nodes = append(s.nodes, n)
+
+	// Update parent with the best child and descendent only if it's available.
+	if n.parent != nonExistentNode {
+		if err := s.updateBestChildAndDescendant(ctx, parentIndex, uint64(index)); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // applyWeightChanges iterates backwards through the nodes in store. It checks all nodes parent
 // and its best child. For each node, it updates the weight with input delta and
 // back propagate the nodes delta to its parents delta. After scoring changes,
