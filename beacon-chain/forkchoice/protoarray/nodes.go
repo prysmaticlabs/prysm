@@ -3,9 +3,74 @@ package protoarray
 import (
 	"bytes"
 	"context"
+	"math"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
+
+// applyWeightChanges iterates backwards through the nodes in store. It checks all nodes parent
+// and its best child. For each node, it updates the weight with input delta and
+// back propagate the nodes delta to its parents delta. After scoring changes,
+// the best child is then updated along with best descendant.
+func (s *Store) applyWeightChanges(ctx context.Context, justifiedEpoch uint64, finalizedEpoch uint64, delta []int) error {
+	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.applyWeightChanges")
+	defer span.End()
+
+	// The length of the nodes can not be different than length of the delta.
+	if len(s.nodes) != len(delta) {
+		return errInvalidDeltaLength
+	}
+
+	// Update the justified / finalized epochs in store if necessary.
+	if s.justifiedEpoch != justifiedEpoch || s.finalizedEpoch != finalizedEpoch {
+		s.justifiedEpoch = justifiedEpoch
+		s.finalizedEpoch = finalizedEpoch
+	}
+
+	// Iterate backwards through all index to node in store.
+	for i := len(s.nodes) - 1; i >= 0; i-- {
+		n := s.nodes[i]
+
+		// There is no need to adjust the balances or manage parent of the zero hash, it
+		// is an alias to the genesis block.
+		if n.root == params.BeaconConfig().ZeroHash {
+			continue
+		}
+
+		nodeDelta := delta[i]
+
+		if nodeDelta < 0 {
+			// A node's weight can not be negative but the delta can be negative.
+			if int(n.weight)+nodeDelta < 0 {
+				n.weight = 0
+			} else {
+				// Subtract node's weight.
+				n.weight -= uint64(math.Abs(float64(nodeDelta)))
+			}
+		} else {
+			// Add node's weight.
+			n.weight += uint64(nodeDelta)
+		}
+
+		s.nodes[i] = n
+
+		// Update parent's best child and descendent if the node has a known parent.
+		if n.parent != nonExistentNode {
+			// Protection against node parent index out of bound. This should not happen.
+			if int(n.parent) >= len(delta) {
+				return errInvalidParentDelta
+			}
+			// Back propagate the nodes delta to its parent.
+			delta[n.parent] += nodeDelta
+			if err := s.updateBestChildAndDescendant(ctx, n.parent, uint64(i)); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
 
 // updateBestChildAndDescendant updates parent node's best child and descendent.
 // It looks at input parent node and input child node and potentially modifies parent's best
