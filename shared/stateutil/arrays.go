@@ -27,6 +27,7 @@ func RootsArrayHashTreeRoot(vals [][]byte, length uint64, fieldName string) ([32
 }
 
 func (h *stateRootHasher) arraysRoot(input [][]byte, length uint64, fieldName string) ([32]byte, error) {
+	hashFunc := hashutil.CustomSHA256Hasher()
 	lock.Lock()
 	if _, ok := layersCache[fieldName]; !ok && h.rootsCache != nil {
 		depth := merkle.GetDepth(length)
@@ -70,7 +71,7 @@ func (h *stateRootHasher) arraysRoot(input [][]byte, length uint64, fieldName st
 			changedIndices = append(changedIndices, maxChangedIndex+1)
 		}
 		for i := 0; i < len(changedIndices); i++ {
-			rt, err = recomputeRoot(changedIndices[i], chunks, length, fieldName)
+			rt, err = recomputeRoot(changedIndices[i], chunks, length, fieldName, hashFunc)
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -82,7 +83,7 @@ func (h *stateRootHasher) arraysRoot(input [][]byte, length uint64, fieldName st
 	}
 
 	var res [32]byte
-	res = h.merkleizeWithCache(leaves, length, fieldName)
+	res = h.merkleizeWithCache(leaves, length, fieldName, hashFunc)
 	if h.rootsCache != nil {
 		lock.Lock()
 		leavesCache[fieldName] = leaves
@@ -91,7 +92,8 @@ func (h *stateRootHasher) arraysRoot(input [][]byte, length uint64, fieldName st
 	return res, nil
 }
 
-func (h *stateRootHasher) merkleizeWithCache(leaves [][]byte, length uint64, fieldName string) [32]byte {
+func (h *stateRootHasher) merkleizeWithCache(leaves [][]byte, length uint64,
+	fieldName string, hasher func([]byte) [32]byte) [32]byte {
 	lock.Lock()
 	defer lock.Unlock()
 	if len(leaves) == 1 {
@@ -117,7 +119,7 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][]byte, length uint64, fie
 	for len(hashLayer) > 1 && i < len(layers) {
 		layer := make([][]byte, 0)
 		for i := 0; i < len(hashLayer); i += 2 {
-			hashedChunk := hashutil.Hash(append(hashLayer[i], hashLayer[i+1]...))
+			hashedChunk := hasher(append(hashLayer[i], hashLayer[i+1]...))
 			layer = append(layer, hashedChunk[:])
 		}
 		hashLayer = layer
@@ -132,7 +134,8 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][]byte, length uint64, fie
 	return root
 }
 
-func recomputeRoot(idx int, chunks [][]byte, length uint64, fieldName string) ([32]byte, error) {
+func recomputeRoot(idx int, chunks [][]byte, length uint64,
+	fieldName string, hasher func([]byte) [32]byte) ([32]byte, error) {
 	lock.Lock()
 	defer lock.Unlock()
 	items, ok := layersCache[fieldName]
@@ -159,10 +162,10 @@ func recomputeRoot(idx int, chunks [][]byte, length uint64, fieldName string) ([
 			neighbor = layers[i][neighborIdx]
 		}
 		if isLeft {
-			parentHash := hashutil.Hash(append(root, neighbor...))
+			parentHash := hasher(append(root, neighbor...))
 			root = parentHash[:]
 		} else {
-			parentHash := hashutil.Hash(append(neighbor, root...))
+			parentHash := hasher(append(neighbor, root...))
 			root = parentHash[:]
 		}
 		parentIdx := currentIndex / 2

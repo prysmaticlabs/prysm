@@ -79,6 +79,7 @@ func (b *BeaconState) HashTreeRoot() ([32]byte, error) {
 // the resulting layers of the trie based on the appropriate depth. This function
 // pads the leaves to a power-of-two length.
 func merkleize(leaves [][]byte) [][][]byte {
+	hashFunc := hashutil.CustomSHA256Hasher()
 	layers := make([][][]byte, merkle.GetDepth(uint64(len(leaves)))+1)
 	for len(leaves) != 32 {
 		leaves = append(leaves, make([]byte, 32))
@@ -95,7 +96,7 @@ func merkleize(leaves [][]byte) [][][]byte {
 	for len(currentLayer) > 1 && i < len(layers) {
 		layer := make([][]byte, 0)
 		for i := 0; i < len(currentLayer); i += 2 {
-			hashedChunk := hashutil.Hash(append(currentLayer[i], currentLayer[i+1]...))
+			hashedChunk := hashFunc(append(currentLayer[i], currentLayer[i+1]...))
 			layer = append(layer, hashedChunk[:])
 		}
 		currentLayer = layer

@@ -372,6 +372,7 @@ func (b *BeaconState) SetFinalizedCheckpoint(val *ethpb.Checkpoint) error {
 // of the beacon state. This method performs map reads and the caller MUST
 // hold the lock before calling this method.
 func (b *BeaconState) recomputeRoot(idx int) {
+	hashFunc := hashutil.CustomSHA256Hasher()
 	layers := b.merkleLayers
 	// The merkle tree structure looks as follows:
 	// [[r1, r2, r3, r4], [parent1, parent2], [root]]
@@ -388,10 +389,10 @@ func (b *BeaconState) recomputeRoot(idx int) {
 			neighbor = layers[i][neighborIdx]
 		}
 		if isLeft {
-			parentHash := hashutil.Hash(append(root, neighbor...))
+			parentHash := hashFunc(append(root, neighbor...))
 			root = parentHash[:]
 		} else {
-			parentHash := hashutil.Hash(append(neighbor, root...))
+			parentHash := hashFunc(append(neighbor, root...))
 			root = parentHash[:]
 		}
 		parentIdx := currentIndex / 2
