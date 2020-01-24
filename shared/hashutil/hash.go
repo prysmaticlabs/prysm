@@ -32,6 +32,9 @@ func Hash(data []byte) [32]byte {
 	return hash
 }
 
+// CustomSHA256Hasher returns a hash function that uses
+// an enclosed hasher. This is not safe for concurrent
+// use as the same hasher is being called throughout.
 func CustomSHA256Hasher() func([]byte) [32]byte {
 	hasher := sha256.New()
 	return func(data []byte) [32]byte {
