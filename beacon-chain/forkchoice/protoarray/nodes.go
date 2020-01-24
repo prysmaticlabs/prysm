@@ -11,13 +11,13 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// head starts from justifiedRoot and then follows the best descendant links
+// head starts from justified root and then follows the best descendant links
 // to find the best block for head.
 func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.head")
 	defer span.End()
 
-	// Justified index has to index and can not be out of bound.
+	// Justified index has to be valid in node indices map, and can not be out of bound.
 	justifiedIndex, ok := s.nodeIndices[justifiedRoot]
 	if !ok {
 		return [32]byte{}, errUnknownJustifiedRoot
@@ -28,7 +28,7 @@ func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, err
 
 	justifiedNode := s.nodes[justifiedIndex]
 	bestDescendantIndex := justifiedNode.bestDescendant
-	// If the justified node doesn't have the best descendent,
+	// If the justified node doesn't have a best descendent,
 	// the best node is itself.
 	if bestDescendantIndex == nonExistentNode {
 		bestDescendantIndex = justifiedIndex
