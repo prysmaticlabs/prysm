@@ -5,6 +5,62 @@ import (
 	"testing"
 )
 
+func TestStore_Head_UnknownJustifiedRoot(t *testing.T) {
+	s := &Store{nodeIndices: make(map[[32]byte]uint64)}
+
+	if _, err := s.head(context.Background(), [32]byte{}); err.Error() != errUnknownJustifiedRoot.Error() {
+		t.Fatal("Did not get wanted error")
+	}
+}
+
+func TestStore_Head_UnknownJustifiedIndex(t *testing.T) {
+	r := [32]byte{'A'}
+	indices := make(map[[32]byte]uint64)
+	indices[r] = 1
+	s := &Store{nodeIndices: indices}
+
+	if _, err := s.head(context.Background(), r); err.Error() != errInvalidJustifiedIndex.Error() {
+		t.Fatal("Did not get wanted error")
+	}
+}
+
+func TestStore_Head_Itself(t *testing.T) {
+	r := [32]byte{'A'}
+	indices := make(map[[32]byte]uint64)
+	indices[r] = 0
+
+	// Since the justified node does not have a best descendant so the best node
+	// is itself.
+	s := &Store{nodeIndices: indices, nodes: []*Node{{root: r, bestDescendant: nonExistentNode}}}
+	h, err := s.head(context.Background(), r)
+	if err != nil {
+		t.Fatal("Did not get wanted error")
+	}
+
+	if h != r {
+		t.Error("Did not get wanted head")
+	}
+}
+
+func TestStore_Head_BestDescendant(t *testing.T) {
+	r := [32]byte{'A'}
+	best := [32]byte{'B'}
+	indices := make(map[[32]byte]uint64)
+	indices[r] = 0
+
+	// Since the justified node's best descendent is at index 1 and it's root is `best`,
+	// the head should be `best`.
+	s := &Store{nodeIndices: indices, nodes: []*Node{{root: r, bestDescendant: 1}, {root: best}}}
+	h, err := s.head(context.Background(), r)
+	if err != nil {
+		t.Fatal("Did not get wanted error")
+	}
+
+	if h != best {
+		t.Error("Did not get wanted head")
+	}
+}
+
 func TestStore_Insert_UnknownParent(t *testing.T) {
 	// The new node does not have a parent.
 	s := &Store{nodeIndices: make(map[[32]byte]uint64)}

@@ -7,12 +7,14 @@ go_library(
         "errors.go",
         "helpers.go",
         "nodes.go",
+        "store.go",
         "types.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//shared/params:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
         "@io_opencensus_go//trace:go_default_library",
     ],
 )
@@ -20,8 +22,11 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "ffg_update_test.go",
         "helpers_test.go",
+        "no_vote_test.go",
         "nodes_test.go",
+        "vote_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
