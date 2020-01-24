@@ -198,9 +198,8 @@ func (vs *Server) depositBlockSlot(ctx context.Context, eth1BlockNumBigInt *big.
 	followTime := time.Duration(params.BeaconConfig().Eth1FollowDistance*params.BeaconConfig().GoerliBlockTime) * time.Second
 	eth1UnixTime := time.Unix(int64(blockTimeStamp), 0).Add(followTime)
 
-	votingPeriodSlots := helpers.StartSlot(params.BeaconConfig().SlotsPerEth1VotingPeriod / params.BeaconConfig().SlotsPerEpoch)
-	votingPeriodSeconds := time.Duration(votingPeriodSlots*params.BeaconConfig().SecondsPerSlot) * time.Second
-	timeToInclusion := eth1UnixTime.Add(votingPeriodSeconds)
+	votingPeriod := time.Duration(params.BeaconConfig().SlotsPerEth1VotingPeriod*params.BeaconConfig().SecondsPerSlot) * time.Second
+	timeToInclusion := eth1UnixTime.Add(votingPeriod)
 
 	eth2Genesis := time.Unix(int64(beaconState.GenesisTime()), 0)
 

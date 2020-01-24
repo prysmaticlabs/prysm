@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -42,6 +43,7 @@ type Service struct {
 	depositCache           *depositcache.DepositCache
 	chainStartFetcher      powchain.ChainStartFetcher
 	attPool                attestations.Pool
+	exitPool               *voluntaryexits.Pool
 	forkChoiceStore        forkchoice.ForkChoicer
 	genesisTime            time.Time
 	p2p                    p2p.Broadcaster
@@ -64,6 +66,7 @@ type Config struct {
 	BeaconDB          db.HeadAccessDatabase
 	DepositCache      *depositcache.DepositCache
 	AttPool           attestations.Pool
+	ExitPool          *voluntaryexits.Pool
 	P2p               p2p.Broadcaster
 	MaxRoutines       int64
 	StateNotifier     statefeed.Notifier
@@ -81,6 +84,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		depositCache:       cfg.DepositCache,
 		chainStartFetcher:  cfg.ChainStartFetcher,
 		attPool:            cfg.AttPool,
+		exitPool:           cfg.ExitPool,
 		forkChoiceStore:    store,
 		p2p:                cfg.P2p,
 		canonicalRoots:     make(map[uint64][]byte),
