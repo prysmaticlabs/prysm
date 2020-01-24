@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -160,16 +159,18 @@ func (ss *Server) IsSlashableBlock(ctx context.Context, psr *slashpb.ProposerSla
 	return pSlashingsResponse, nil
 }
 
-// SlashableProposals is a subscription to receive all slashable proposer slashing events found by the watchtower.
-func (ss *Server) SlashableProposals(req *types.Empty, server slashpb.Slasher_SlashableProposalsServer) error {
+// ProposerSlashings returns proposer slashings if slashing with the requested status are found in the db.
+func (ss *Server) ProposerSlashings(ctx context.Context, st *slashpb.SlashingStatusRequest) (*slashpb.ProposerSlashingResponse, error) {
 	//TODO(3133): implement stream provider for newly discovered listening to slashable proposals.
-	return status.Error(codes.Unimplemented, "not implemented")
+	pSlashingsResponse := &slashpb.ProposerSlashingResponse{}
+	pSlashingsResponse.ProposerSlashing = ss.SlasherDB.ProposalSlashingsByStatus(db.SlashingStatus(st.Status))
+	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
 // SlashableAttestations is a subscription to receive all slashable attester slashing events found by the watchtower.
-func (ss *Server) SlashableAttestations(req *types.Empty, server slashpb.Slasher_SlashableAttestationsServer) error {
+func (ss *Server) AttesterSlashings(ctx context.Context, st *slashpb.SlashingStatusRequest) (*slashpb.AttesterSlashingResponse, error) {
 	//TODO(3133): implement stream provider for newly discovered listening to slashable attestation.
-	return status.Error(codes.Unimplemented, "not implemented")
+	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
 // DetectSurroundVotes is a method used to return the attestation that were detected
