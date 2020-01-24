@@ -347,8 +347,10 @@ func ProcessRandaoNoVerify(
 	// If block randao passed verification, we XOR the state's latest randao mix with the block's
 	// randao and update the state's corresponding latest randao mix value.
 	latestMixesLength := params.BeaconConfig().EpochsPerHistoricalVector
-	mixes := beaconState.RandaoMixes()
-	latestMixSlice := mixes[currentEpoch%latestMixesLength]
+	latestMixSlice, err := beaconState.RandaoMixAtIndex(currentEpoch%latestMixesLength)
+	if err != nil {
+		return nil, err
+	}
 	blockRandaoReveal := hashutil.Hash(body.RandaoReveal)
 	for i, x := range blockRandaoReveal {
 		latestMixSlice[i] ^= x
