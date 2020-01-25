@@ -268,6 +268,18 @@ func (b *BeaconState) NumofValidators() int {
 	return len(b.state.Validators)
 }
 
+// ReadFromEveryValidator reads values from every validator and applies it to the provided function.
+// Warning: This method is potentially unsafe, as it exposes the actual validator registry.
+func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val *ethpb.Validator) error) error {
+	for i, v := range b.state.Validators {
+		err := f(i, v)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Balances of validators participating in consensus on the beacon chain.
 func (b *BeaconState) Balances() []uint64 {
 	if b.state.Balances == nil {

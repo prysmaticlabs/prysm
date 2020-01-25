@@ -156,25 +156,25 @@ func ProcessSlashings(state *stateTrie.BeaconState) (*stateTrie.BeaconState, err
 
 	// Compute the sum of state slashings
 	slashings := state.Slashings()
-	vals := state.Validators()
 	totalSlashing := uint64(0)
 	for _, slashing := range slashings {
 		totalSlashing += slashing
 	}
 
-	// Compute slashing for each validator.
-	for index, validator := range vals {
-		correctEpoch := (currentEpoch + exitLength/2) == validator.WithdrawableEpoch
-		if validator.Slashed && correctEpoch {
+	validatorFunc := func(idx int, val *ethpb.Validator) error {
+		correctEpoch := (currentEpoch + exitLength/2) == val.WithdrawableEpoch
+		if val.Slashed && correctEpoch {
 			minSlashing := mathutil.Min(totalSlashing*3, totalBalance)
 			increment := params.BeaconConfig().EffectiveBalanceIncrement
-			penaltyNumerator := validator.EffectiveBalance / increment * minSlashing
+			penaltyNumerator := val.EffectiveBalance / increment * minSlashing
 			penalty := penaltyNumerator / totalBalance * increment
-			if err := helpers.DecreaseBalance(state, uint64(index), penalty); err != nil {
-				return nil, err
+			if err := helpers.DecreaseBalance(state, uint64(idx), penalty); err != nil {
+				return err
 			}
 		}
+		return nil
 	}
+	err = state.ApplyToEveryValidator(validatorFunc)
 	return state, err
 }
 
@@ -225,26 +225,27 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 		}
 	}
 
-	vals := state.Validators()
 	bals := state.Balances()
 	// Update effective balances with hysteresis.
-	for i, v := range vals {
-		if v == nil {
-			return nil, fmt.Errorf("validator %d is nil in state", i)
+	validatorFunc := func(idx int, val *ethpb.Validator) error {
+		if val == nil {
+			return fmt.Errorf("validator %d is nil in state", idx)
 		}
-		if i >= len(bals) {
-			return nil, fmt.Errorf("validator index exceeds validator length in state %d >= %d", i, len(state.Balances()))
+		if idx >= len(bals) {
+			return fmt.Errorf("validator index exceeds validator length in state %d >= %d", idx, len(state.Balances()))
 		}
-		balance := bals[i]
+		balance := bals[idx]
 		halfInc := params.BeaconConfig().EffectiveBalanceIncrement / 2
-		if balance < v.EffectiveBalance || v.EffectiveBalance+3*halfInc < balance {
-			v.EffectiveBalance = params.BeaconConfig().MaxEffectiveBalance
-			if v.EffectiveBalance > balance-balance%params.BeaconConfig().EffectiveBalanceIncrement {
-				v.EffectiveBalance = balance - balance%params.BeaconConfig().EffectiveBalanceIncrement
+		if balance < val.EffectiveBalance || val.EffectiveBalance+3*halfInc < balance {
+			val.EffectiveBalance = params.BeaconConfig().MaxEffectiveBalance
+			if val.EffectiveBalance > balance-balance%params.BeaconConfig().EffectiveBalanceIncrement {
+				val.EffectiveBalance = balance - balance%params.BeaconConfig().EffectiveBalanceIncrement
 			}
 		}
+		return nil
 	}
-	if err := state.SetValidators(vals); err != nil {
+
+	if err := state.ApplyToEveryValidator(validatorFunc); err != nil {
 		return nil, err
 	}
 

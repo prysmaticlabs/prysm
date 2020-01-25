@@ -117,21 +117,17 @@ func BeaconCommittee(validatorIndices []uint64, seed [32]byte, slot uint64, comm
 // TODO(3603): Delete this function when issue 3603 closes.
 func BeaconCommitteeWithoutCache(state *stateTrie.BeaconState, slot uint64, index uint64) ([]uint64, error) {
 	epoch := SlotToEpoch(slot)
-	activeValidatorCount, err := ActiveValidatorCount(state, epoch)
+	indices, err := ActiveValidatorIndices(state, epoch)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get active indices")
 	}
-	committeesPerSlot := SlotCommitteeCount(activeValidatorCount)
+	committeesPerSlot := SlotCommitteeCount(uint64(len(indices)))
 	epochOffset := index + (slot%params.BeaconConfig().SlotsPerEpoch)*committeesPerSlot
 	count := committeesPerSlot * params.BeaconConfig().SlotsPerEpoch
 
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get seed")
-	}
-	indices, err := ActiveValidatorIndices(state, epoch)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get active indices")
 	}
 
 	return ComputeCommittee(indices, seed, epochOffset, count)
@@ -387,13 +383,15 @@ func ShuffledIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint64, erro
 		return nil, errors.Wrapf(err, "could not get seed for epoch %d", epoch)
 	}
 
-	vals := state.Validators()
-	indices := make([]uint64, 0, len(vals))
-	for i, v := range vals {
-		if IsActiveValidator(v, epoch) {
-			indices = append(indices, uint64(i))
+	indices := make([]uint64, 0, state.NumofValidators())
+	validatorFunc := func(idx int, val *ethpb.Validator) error {
+		if IsActiveValidator(val, epoch) {
+			indices = append(indices, uint64(idx))
 		}
+		return nil
 	}
+	// ignore error as no error is returned in above callback.
+	state.ReadFromEveryValidator(validatorFunc)
 
 	validatorCount := uint64(len(indices))
 	shuffledIndices := make([]uint64, validatorCount)

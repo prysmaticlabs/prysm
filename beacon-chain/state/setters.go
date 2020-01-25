@@ -180,6 +180,19 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 	return nil
 }
 
+func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator) error) error {
+	for i, val := range b.state.Validators {
+		err := f(i, val)
+		if err != nil {
+			return err
+		}
+	}
+	b.lock.Lock()
+	b.markFieldAsDirty(validators)
+	b.lock.Unlock()
+	return nil
+}
+
 // UpdateValidatorAtIndex for the beacon state. This PR updates the randao mixes
 // at a specific index to a new value.
 func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) error {

@@ -69,13 +69,15 @@ func ActiveValidatorIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint6
 	if activeIndices != nil {
 		return activeIndices, nil
 	}
-	vals := state.Validators()
 	var indices []uint64
-	for i, v := range vals {
-		if IsActiveValidator(v, epoch) {
-			indices = append(indices, uint64(i))
+	validatorFunc := func(idx int, val *ethpb.Validator) error {
+		if IsActiveValidator(val, epoch) {
+			indices = append(indices, uint64(idx))
 		}
+		return nil
 	}
+	// ignoring error as none is returned in the above callback
+	state.ReadFromEveryValidator(validatorFunc)
 
 	if err := UpdateCommitteeCache(state, epoch); err != nil {
 		return nil, errors.Wrap(err, "could not update committee cache")
@@ -87,15 +89,15 @@ func ActiveValidatorIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint6
 // ActiveValidatorCount returns the number of active validators in the state
 // at the given epoch.
 func ActiveValidatorCount(state *stateTrie.BeaconState, epoch uint64) (uint64, error) {
-	vals := state.Validators()
 	count := uint64(0)
-	for _, v := range vals {
-		if IsActiveValidator(v, epoch) {
+	validatorFunc := func(idx int, val *ethpb.Validator) error {
+		if IsActiveValidator(val, epoch) {
 			count++
 		}
+		return nil
 	}
-
-	return count, nil
+	err := state.ReadFromEveryValidator(validatorFunc)
+	return count, err
 }
 
 // DelayedActivationExitEpoch takes in epoch number and returns when
