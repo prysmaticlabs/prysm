@@ -38,10 +38,17 @@ func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, err
 	}
 
 	bestNode := s.nodes[bestDescendantIndex]
-	//
+
 	if !s.viableForHead(ctx, bestNode) {
-		return [32]byte{}, fmt.Errorf("after tree filter, best node can't be head, finalized epochs %d != %d, justified epoch %d != %d",
-			bestNode.finalizedEpoch, s.finalizedEpoch, bestNode.justifiedEpoch, s.justifiedEpoch)
+		return [32]byte{}, fmt.Errorf("head at slot %d with weight %d is not eligible, finalizedEpoch %d != %d, justifiedEpoch %d != %d",
+			bestNode.slot, bestNode.weight/10e9, bestNode.finalizedEpoch, s.finalizedEpoch, bestNode.justifiedEpoch, s.justifiedEpoch)
+	}
+
+	// Update metrics.
+	if bestNode.root != lastHeadRoot {
+		headChangesCount.Inc()
+		headSlotNumber.Set(float64(bestNode.slot))
+		nodeCount.Set(float64(len(s.nodes)))
 	}
 
 	return bestNode.root, nil
@@ -92,6 +99,8 @@ func (s *Store) insert(ctx context.Context,
 			return err
 		}
 	}
+
+	processedBlockCount.Inc()
 
 	return nil
 }
@@ -331,6 +340,8 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 
 		s.nodes[i] = node
 	}
+
+	prunedCount.Inc()
 
 	return nil
 }
