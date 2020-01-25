@@ -20,11 +20,12 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 			"--cache-filtered-block-tree",
 			"--enable-skip-slots-cache",
 			"--enable-attestation-cache",
+			//"--initial-sync-cache-state",
 		},
 		validatorFlags:  []string{
 			"--minimal-config",
 		},
-		epochsToRun:    5,
+		epochsToRun:    7,
 		numBeaconNodes: 4,
 		numValidators:  params.BeaconConfig().MinGenesisActiveValidatorCount,
 		evaluators: []ev.Evaluator{

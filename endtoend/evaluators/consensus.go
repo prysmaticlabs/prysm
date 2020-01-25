@@ -4,6 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"strconv"
+	"strings"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
@@ -11,7 +15,19 @@ import (
 	"google.golang.org/grpc"
 )
 
-func allChainsHaveSameHead(grpcPorts []uint64) error {
+// BeaconNodeInfo contains the info of ports and other required information
+// needed to communicate with the beacon node it represents.
+type BeaconNodeInfo struct {
+	ProcessID   int
+	Datadir     string
+	RpcPort     uint64
+	MonitorPort uint64
+	GrpcPort    uint64
+	MultiAddr   string
+}
+
+// AllChainsHaveSameHead
+func AllChainsHaveSameHead(grpcPorts []uint64) error {
 	chainHeadRoots := make([][]byte, len(grpcPorts))
 	justifiedRoots := make([][]byte, len(grpcPorts))
 	prevJustifiedRoots := make([][]byte, len(grpcPorts))
@@ -34,42 +50,98 @@ func allChainsHaveSameHead(grpcPorts []uint64) error {
 			return err
 		}
 	}
-	for _, root := range chainHeadRoots {
+
+	for i, root := range chainHeadRoots {
 		if !bytes.Equal(chainHeadRoots[0], root) {
 			return fmt.Errorf(
-				"received conflicting chain head block roots, expected %#x, received %#x",
+				"received conflicting chain head block roots on node %d, expected %#x, received %#x",
+				i,
 				chainHeadRoots[0],
 				root,
-				)
+			)
 		}
 	}
-	for _, root := range justifiedRoots {
+	for i, root := range justifiedRoots {
 		if !bytes.Equal(justifiedRoots[0], root) {
 			return fmt.Errorf(
-				"received conflicting justified block roots, expected %#x, received %#x",
+				"received conflicting justified block roots on node %d, expected %#x, received %#x",
+				i,
 				justifiedRoots[0],
 				root,
-				)
+			)
 		}
 	}
-	for _, root := range prevJustifiedRoots {
+	for i, root := range prevJustifiedRoots {
 		if !bytes.Equal(prevJustifiedRoots[0], root) {
 			return fmt.Errorf(
-				"received conflicting previous justified block roots, expected %#x, received %#x",
+				"received conflicting previous justified block roots on node %d, expected %#x, received %#x",
+				i,
 				prevJustifiedRoots[0],
 				root,
 			)
 		}
 	}
-	for _, root := range finalizedRoots {
+	for i, root := range finalizedRoots {
 		if !bytes.Equal(finalizedRoots[0], root) {
 			return fmt.Errorf(
-				"received conflicting finalized epoch roots, expected %#x, received %#x",
+				"received conflicting finalized epoch roots on node %d, expected %#x, received %#x",
+				i,
 				finalizedRoots[0],
 				root,
 			)
 		}
 	}
 
+	return nil
+}
+
+// FinishedSyncing --
+func FinishedSyncing(rpcPort uint64) error {
+	syncConn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", rpcPort), grpc.WithInsecure())
+	if err != nil {
+		return errors.Wrap(err, "failed to dial: %v")
+	}
+	syncNodeClient := eth.NewNodeClient(syncConn)
+	syncStatus, err := syncNodeClient.GetSyncStatus(context.Background(), &ptypes.Empty{})
+	if err != nil {
+		return err
+	}
+	if syncStatus.Syncing {
+		return errors.New("expected node to have completed sync")
+	}
+	return nil
+}
+
+// PeersConnect -
+func PeersConnect(beaconNodes []*BeaconNodeInfo) error {
+	for _, bNode := range beaconNodes {
+		response, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/p2p", bNode.MonitorPort))
+		if err != nil {
+			return errors.Wrap(err, "failed to reach p2p metrics page")
+		}
+		dataInBytes, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return err
+		}
+		pageContent := string(dataInBytes)
+		if err := response.Body.Close(); err != nil {
+			return err
+		}
+		// Subtracting by 2 here since the libp2p page has "3 peers" as text.
+		// With a starting index before the "p", going two characters back should give us
+		// the number we need.
+		startIdx := strings.Index(pageContent, "peers") - 2
+		if startIdx == -3 {
+			return fmt.Errorf("could not find needed text in %s", pageContent)
+		}
+		peerCount, err := strconv.Atoi(pageContent[startIdx : startIdx+1])
+		if err != nil {
+			return err
+		}
+		expectedPeers := uint64(len(beaconNodes)-1)
+		if expectedPeers != uint64(peerCount) {
+			return fmt.Errorf("unexpected amount of peers, expected %d, received %d", expectedPeers, peerCount)
+		}
+	}
 	return nil
 }
