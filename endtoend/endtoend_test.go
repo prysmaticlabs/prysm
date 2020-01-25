@@ -55,8 +55,8 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := waitForTextInFile(beaconLogFile, "Sending genesis time notification"); err != nil {
-		t.Fatalf("failed to find genesis in logs, this means the chain did not start: %v", err)
+	if err := waitForTextInFile(beaconLogFile, "Chain started within the last epoch"); err != nil {
+		t.Fatalf("failed to find chain start in logs, this means the chain did not start: %v", err)
 	}
 
 	// Failing early in case chain doesn't start.
@@ -64,7 +64,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 		return
 	}
 
-	conn, err := grpc.Dial("127.0.0.1:4000", grpc.WithInsecure())
+	conn, err := grpc.Dial("127.0.0.1:4200", grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("Failed to dial: %v", err)
 	}
@@ -78,14 +78,8 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	// Small offset so evaluators perform in the middle of an epoch.
 	epochSeconds := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
 	genesisTime := time.Unix(genesis.GenesisTime.Seconds+int64(epochSeconds/2), 0)
-	currentEpoch := uint64(0)
 	ticker := GetEpochTicker(genesisTime, epochSeconds)
-	for c := range ticker.C() {
-		if c >= config.epochsToRun || t.Failed() {
-			ticker.Done()
-			break
-		}
-
+	for currentEpoch := range ticker.C() {
 		for _, evaluator := range config.evaluators {
 			// Only run if the policy says so.
 			if !evaluator.Policy(currentEpoch) {
@@ -93,15 +87,15 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 			}
 			t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
 				if err := evaluator.Evaluation(beaconClient); err != nil {
-					t.Fatalf("evaluation failed for epoch %d: %v", currentEpoch, err)
+					t.Errorf("evaluation failed for epoch %d: %v", currentEpoch, err)
 				}
 			})
 		}
-		currentEpoch++
-	}
 
-	if currentEpoch < config.epochsToRun {
-		t.Fatalf("Test ended prematurely, only reached epoch %d", currentEpoch)
+		if t.Failed() || currentEpoch >= config.epochsToRun {
+			ticker.Done()
+			break
+		}
 	}
 }
 
@@ -151,22 +145,21 @@ func killProcesses(t *testing.T, pIDs []int) {
 }
 
 func logOutput(t *testing.T, tmpPath string, config *end2EndConfig) {
-	if t.Failed() {
-		// Log out errors from beacon chain nodes.
-		for i := uint64(0); i < config.numBeaconNodes; i++ {
-			beaconLogFile, err := os.Open(path.Join(tmpPath, fmt.Sprintf(beaconNodeLogFileName, i)))
-			if err != nil {
-				t.Fatal(err)
-			}
-			logErrorOutput(t, beaconLogFile, "beacon chain node", i)
-
-			validatorLogFile, err := os.Open(path.Join(tmpPath, fmt.Sprintf(validatorLogFileName, i)))
-			if err != nil {
-				t.Fatal(err)
-			}
-			logErrorOutput(t, validatorLogFile, "validator client", i)
+	// Log out errors from beacon chain nodes.
+	for i := uint64(0); i < config.numBeaconNodes; i++ {
+		beaconLogFile, err := os.Open(path.Join(tmpPath, fmt.Sprintf(beaconNodeLogFileName, i)))
+		if err != nil {
+			t.Fatal(err)
 		}
+		logErrorOutput(t, beaconLogFile, "beacon chain node", i)
+
+		validatorLogFile, err := os.Open(path.Join(tmpPath, fmt.Sprintf(validatorLogFileName, i)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		logErrorOutput(t, validatorLogFile, "validator client", i)
 	}
+	t.Logf("Ending time: %s\n", time.Now().String())
 }
 
 func logErrorOutput(t *testing.T, file *os.File, title string, index uint64) {
@@ -181,6 +174,7 @@ func logErrorOutput(t *testing.T, file *os.File, title string, index uint64) {
 	}
 
 	if len(errorLines) < 1 {
+		t.Logf("No error logs detected for %s %d", title, index)
 		return
 	}
 
