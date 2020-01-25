@@ -180,6 +180,8 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 	return nil
 }
 
+// ApplyToEveryValidator applies the provided callback function to each validator in the
+// validator registry.
 func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator) error) error {
 	for i, val := range b.state.Validators {
 		err := f(i, val)

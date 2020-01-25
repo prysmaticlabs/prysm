@@ -161,6 +161,8 @@ func ProcessSlashings(state *stateTrie.BeaconState) (*stateTrie.BeaconState, err
 		totalSlashing += slashing
 	}
 
+	// a callback is used here to apply the following actions  to all validators
+	// below equally.
 	validatorFunc := func(idx int, val *ethpb.Validator) error {
 		correctEpoch := (currentEpoch + exitLength/2) == val.WithdrawableEpoch
 		if val.Slashed && correctEpoch {
