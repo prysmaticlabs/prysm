@@ -100,10 +100,10 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*ev.B
 
 	return &ev.BeaconNodeInfo{
 		ProcessID:   cmd.Process.Pid,
-		Datadir:     fmt.Sprintf("%s/eth2-beacon-node-%d", tmpPath, index),
-		RpcPort:     4200 + uint64(index),
+		DataDir:     fmt.Sprintf("%s/eth2-beacon-node-%d", tmpPath, index),
+		RPCPort:     4200 + uint64(index),
 		MonitorPort: 8280 + uint64(index),
-		GrpcPort:    3400 + uint64(index),
+		GRPCPort:    3400 + uint64(index),
 		MultiAddr:   multiAddr,
 	}
 }

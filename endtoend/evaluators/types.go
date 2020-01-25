@@ -16,9 +16,9 @@ type Evaluator struct {
 // needed to communicate with the beacon node it represents.
 type BeaconNodeInfo struct {
 	ProcessID   int
-	Datadir     string
-	RpcPort     uint64
+	DataDir     string
+	RPCPort     uint64
 	MonitorPort uint64
-	GrpcPort    uint64
+	GRPCPort    uint64
 	MultiAddr   string
 }

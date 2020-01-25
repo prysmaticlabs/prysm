@@ -107,7 +107,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	}
 
 	t.Run("node_finishes_sync", func(t *testing.T) {
-		if err := ev.FinishedSyncing(beaconNodes[index].RpcPort); err != nil {
+		if err := ev.FinishedSyncing(beaconNodes[index].RPCPort); err != nil {
 			t.Fatal(err)
 		}
 	})

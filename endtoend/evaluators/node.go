@@ -74,7 +74,7 @@ func AllChainsHaveSameHead(beaconNodes []*BeaconNodeInfo) error {
 	prevJustifiedRoots := make([][]byte, len(beaconNodes))
 	finalizedRoots := make([][]byte, len(beaconNodes))
 	for i, bNode := range beaconNodes {
-		conn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", bNode.RpcPort), grpc.WithInsecure())
+		conn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", bNode.RPCPort), grpc.WithInsecure())
 		if err != nil {
 			return errors.Wrap(err, "Failed to dial")
 		}
