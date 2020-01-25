@@ -148,12 +148,13 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 				return nil
 			}
 
-			headRoot = headRootProtoArray[:]
-			if postState.FinalizedCheckpoint.Epoch > f.Epoch {
+			if postState.FinalizedCheckpoint.Epoch > s.FinalizedCheckpt().Epoch {
 				if err := s.forkChoiceStore.Prune(ctx, bytesutil.ToBytes32(postState.FinalizedCheckpoint.Root)); err != nil {
 					return errors.Wrap(err, "could not prune proto array fork choice")
 				}
 			}
+
+			headRoot = headRootProtoArray[:]
 		} else {
 			headRoot, err = s.forkChoiceStoreOld.Head(ctx)
 			if err != nil {
