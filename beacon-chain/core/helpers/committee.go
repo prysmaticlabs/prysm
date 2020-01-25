@@ -4,7 +4,6 @@ package helpers
 import (
 	"fmt"
 	"sort"
-	"sync"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -14,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/mputil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
@@ -159,15 +157,8 @@ func ComputeCommittee(
 
 	// Save the shuffled indices in cache, this is only needed once per epoch or once per new committee index.
 	shuffledIndices := make([]uint64, end-start)
-	for i := start; i < end; i++ {
-		permutedIndex, err := ShuffledIndex(i, validatorCount, seed)
-		if err != nil {
-			return []uint64{}, errors.Wrapf(err, "could not get shuffled index at index %d", i)
-		}
-		shuffledIndices[i-start] = indices[permutedIndex]
-	}
-
-	return shuffledIndices, nil
+	copy(shuffledIndices, indices[start:end])
+	return UnshuffleList(shuffledIndices, seed)
 }
 
 // AttestingIndices returns the attesting participants indices from the attestation data. The
@@ -393,30 +384,7 @@ func ShuffledIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint64, erro
 	// ignore error as no error is returned in above callback.
 	state.ReadFromEveryValidator(validatorFunc)
 
-	validatorCount := uint64(len(indices))
-	shuffledIndices := make([]uint64, validatorCount)
-
-	_, err = mputil.Scatter(int(validatorCount), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
-		err := shuffleMultipleIndices(uint64(offset), uint64(entries), validatorCount, seed, indices, shuffledIndices)
-		return nil, err
-	})
-	if err != nil {
-		return []uint64{}, err
-	}
-
-	return shuffledIndices, nil
-}
-
-func shuffleMultipleIndices(startIdx uint64, numOfVals uint64,
-	totalValidators uint64, seed [32]byte, indices []uint64, shuffledIndices []uint64) error {
-	for i := startIdx; i < (startIdx + numOfVals); i++ {
-		permutedIndex, err := ShuffledIndex(i, totalValidators, seed)
-		if err != nil {
-			return errors.Wrapf(err, "could not get shuffled index at index %d", i)
-		}
-		shuffledIndices[i] = indices[permutedIndex]
-	}
-	return nil
+	return UnshuffleList(indices, seed)
 }
 
 // UpdateCommitteeCache gets called at the beginning of every epoch to cache the committee shuffled indices
