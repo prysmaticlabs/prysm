@@ -43,6 +43,11 @@ func (s *Service) HeadsHandler(w http.ResponseWriter, _ *http.Request) {
 
 }
 
+// TreeHandler is a handler to serve /tree page in metrics.
+func (s *Service) TreeHandler(w http.ResponseWriter, _ *http.Request) {
+	s.forkChoiceStore.
+}
+
 // This returns the latest head slots in a slice and up to latestSlotCount
 func (s *Service) latestHeadSlots() []int {
 	slots := make([]int, 0, len(s.canonicalRoots))
