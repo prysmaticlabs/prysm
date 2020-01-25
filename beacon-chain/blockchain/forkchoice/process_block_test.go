@@ -103,7 +103,7 @@ func TestStore_OnBlock(t *testing.T) {
 			}
 			store.finalizedCheckpt.Root = roots[0]
 
-			err := store.OnBlock(ctx, &ethpb.SignedBeaconBlock{Block: tt.blk})
+			_, err := store.OnBlock(ctx, &ethpb.SignedBeaconBlock{Block: tt.blk})
 			if !strings.Contains(err.Error(), tt.wantErrString) {
 				t.Errorf("Store.OnBlock() error = %v, wantErr = %v", err, tt.wantErrString)
 			}
