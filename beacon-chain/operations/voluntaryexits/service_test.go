@@ -7,8 +7,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -193,22 +191,18 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 		},
 	}
 	ctx := context.Background()
-	chain := &mock.ChainService{
-		State: &pb.BeaconState{
-			Validators: []*ethpb.Validator{
-				{ // 0
-					ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-				},
-				{ // 1
-					ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-				},
-				{ // 2 - Already exited.
-					ExitEpoch: 15,
-				},
-				{ // 3
-					ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-				},
-			},
+	validators := []*ethpb.Validator{
+		{ // 0
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		},
+		{ // 1
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		},
+		{ // 2 - Already exited.
+			ExitEpoch: 15,
+		},
+		{ // 3
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 	}
 	for _, tt := range tests {
@@ -216,9 +210,8 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 			p := &Pool{
 				pending:  tt.fields.pending,
 				included: tt.fields.included,
-				chain:    chain,
 			}
-			p.InsertVoluntaryExit(ctx, tt.args.exit)
+			p.InsertVoluntaryExit(ctx, validators, tt.args.exit)
 			if len(p.pending) != len(tt.want) {
 				t.Fatalf("Mismatched lengths of pending list. Got %d, wanted %d.", len(p.pending), len(tt.want))
 			}

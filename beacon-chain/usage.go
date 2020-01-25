@@ -94,7 +94,9 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "p2p",
 		Flags: []cli.Flag{
+			cmd.P2PIP,
 			cmd.P2PHost,
+			cmd.P2PHostDNS,
 			cmd.P2PMaxPeers,
 			cmd.P2PPrivKey,
 			cmd.P2PWhitelist,
