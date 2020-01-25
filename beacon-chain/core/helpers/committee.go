@@ -185,7 +185,7 @@ func ComputeCommittee(
 //    return set(index for i, index in enumerate(committee) if bits[i])
 func AttestingIndices(bf bitfield.Bitfield, committee []uint64) ([]uint64, error) {
 	indices := make([]uint64, 0, len(committee))
-	indicesSet := make(map[uint64]bool)
+	indicesSet := make(map[uint64]bool, len(committee))
 	for i, idx := range committee {
 		if !indicesSet[idx] {
 			if bf.BitAt(uint64(i)) {
