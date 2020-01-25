@@ -105,7 +105,7 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	for i := 0; i < len(headState.RandaoMixes); i++ {
 		headState.RandaoMixes[i] = make([]byte, 32)
 	}
-	headState.Slot = params.BeaconConfig().SlotsPerEpoch * 1
+	headState.Slot = params.BeaconConfig().SlotsPerEpoch * 2
 
 	bs := &Server{
 		HeadFetcher: &mock.ChainService{
@@ -113,16 +113,17 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 		},
 	}
 
-	activeIndices, err := helpers.ActiveValidatorIndices(headState, 0)
+	activeIndices, err := helpers.ActiveValidatorIndices(headState, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	attesterSeed, err := helpers.Seed(headState, 0, params.BeaconConfig().DomainBeaconAttester)
+	attesterSeed, err := helpers.Seed(headState, 1, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		t.Fatal(err)
 	}
 	wanted := make(map[uint64]*ethpb.BeaconCommittees_CommitteesList)
-	for slot := uint64(0); slot < params.BeaconConfig().SlotsPerEpoch; slot++ {
+	startSlot := helpers.StartSlot(1)
+	for slot := startSlot; slot < startSlot + params.BeaconConfig().SlotsPerEpoch; slot++ {
 		var countAtSlot = uint64(numValidators) / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
 		if countAtSlot > params.BeaconConfig().MaxCommitteesPerSlot {
 			countAtSlot = params.BeaconConfig().MaxCommitteesPerSlot
@@ -152,9 +153,11 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 		res *ethpb.BeaconCommittees
 	}{
 		{
-			req: &ethpb.ListCommitteesRequest{},
+			req: &ethpb.ListCommitteesRequest{
+				QueryFilter: &ethpb.ListCommitteesRequest_Epoch{Epoch: 1},
+			},
 			res: &ethpb.BeaconCommittees{
-				Epoch:                0,
+				Epoch:                1,
 				Committees:           wanted,
 				ActiveValidatorCount: uint64(numValidators),
 			},
