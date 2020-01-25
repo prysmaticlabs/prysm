@@ -9,6 +9,7 @@ import (
 )
 
 func TestEndToEnd_DemoConfig(t *testing.T) {
+	t.Skip("Demo is essentially mainnet and too much to run in e2e at the moment")
 	testutil.ResetCache()
 	params.UseDemoBeaconConfig()
 
@@ -18,7 +19,7 @@ func TestEndToEnd_DemoConfig(t *testing.T) {
 			"--cache-proposer-indices",
 			"--cache-filtered-block-tree",
 			"--enable-skip-slots-cache",
-			//"--enable-attestation-cache",
+			"--enable-attestation-cache",
 		},
 		epochsToRun:    5,
 		numBeaconNodes: 2,

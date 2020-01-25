@@ -55,7 +55,6 @@ func initializeValidators(
 			t.Fatal(err)
 		}
 		args := []string{
-			"--verbosity=debug",
 			"--force-clear-db",
 			fmt.Sprintf("--interop-num-validators=%d", validatorsPerNode),
 			fmt.Sprintf("--interop-start-index=%d", validatorsPerNode*n),

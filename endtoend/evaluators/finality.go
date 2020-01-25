@@ -26,9 +26,6 @@ func finalizationOccurs(client eth.BeaconChainClient) error {
 	finalizedEpoch := chainHead.FinalizedEpoch
 
 	expectedFinalizedEpoch := currentEpoch - 2
-	if currentEpoch == 3 {
-		expectedFinalizedEpoch = 0
-	}
 	if expectedFinalizedEpoch != finalizedEpoch {
 		return fmt.Errorf(
 			"expected finalized epoch to be %d, received: %d",

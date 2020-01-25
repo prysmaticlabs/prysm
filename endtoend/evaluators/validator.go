@@ -38,7 +38,7 @@ func onGenesisEpoch(currentEpoch uint64) bool {
 // Not including first epoch because of issues with genesis.
 func afterNthEpoch(afterEpoch uint64) func(uint64) bool {
 	return func(currentEpoch uint64) bool {
-		return currentEpoch >= afterEpoch
+		return currentEpoch > afterEpoch
 	}
 }
 
