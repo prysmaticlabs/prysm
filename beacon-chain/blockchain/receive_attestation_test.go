@@ -21,7 +21,7 @@ func TestReceiveAttestationNoPubsub_ProcessCorrectly(t *testing.T) {
 
 	chainService := setupBeaconChain(t, db)
 	r, _ := ssz.HashTreeRoot(&ethpb.BeaconBlock{})
-	chainService.forkChoiceStore = &store{headRoot: r[:]}
+	chainService.forkChoiceStoreOld = &store{headRoot: r[:]}
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	if err := chainService.beaconDB.SaveBlock(ctx, b); err != nil {
