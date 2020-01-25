@@ -2,6 +2,7 @@ package forkchoice
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -200,7 +201,7 @@ func (s *Store) saveCheckpointState(ctx context.Context, baseState *pb.BeaconSta
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get cached checkpoint state")
 	}
-	if cachedState != nil {
+	if cachedState != nil && helpers.CurrentEpoch(cachedState) == c.Epoch {
 		return cachedState, nil
 	}
 
@@ -252,6 +253,7 @@ func (s *Store) verifyAttestation(ctx context.Context, baseState *pb.BeaconState
 				return nil, errors.Wrap(err, "could not convert attestation to indexed attestation")
 			}
 			if err := blocks.VerifyIndexedAttestation(ctx, baseState, indexedAtt); err != nil {
+				log.Info(baseState.Slot, indexedAtt.Data.Slot, indexedAtt.Data.CommitteeIndex, indexedAtt.Data.Target.Epoch, "  ", hex.EncodeToString(bytesutil.Trunc(indexedAtt.Data.Target.Root)), indexedAtt.AttestingIndices)
 				return nil, errors.Wrap(err, "could not verify indexed attestation without cache")
 			}
 			sigFailsToVerify.Inc()
