@@ -144,7 +144,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 				postState.Balances,
 				j.Epoch)
 			if err != nil {
-				log.Warnf("Skip head update for slot %d: %v",block.Block.Slot, err)
+				log.Warnf("Skip head update for slot %d: %v", block.Block.Slot, err)
 				return nil
 			}
 
