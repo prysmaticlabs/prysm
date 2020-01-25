@@ -12,6 +12,9 @@ import (
 // before getting pruned upon new finalization.
 const defaultPruneThreshold = 256
 
+// This tracks the last reported head root. Used for metrics.
+var lastHeadRoot [32]byte
+
 // New initializes a new fork choice store.
 func New(justifiedEpoch uint64, finalizedEpoch uint64, finalizedRoot [32]byte) *ForkChoice {
 	s := &Store{
@@ -34,6 +37,7 @@ func New(justifiedEpoch uint64, finalizedEpoch uint64, finalizedRoot [32]byte) *
 func (f *ForkChoice) Head(ctx context.Context, finalizedEpoch uint64, justifiedRoot [32]byte, justifiedStateBalances []uint64, justifiedEpoch uint64) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.Head")
 	defer span.End()
+	calledHeadCount.Inc()
 
 	newBalances := justifiedStateBalances
 
@@ -73,6 +77,8 @@ func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []
 			f.votes[index].nextRoot = blockRoot
 		}
 	}
+
+	processedAttestationCount.Inc()
 }
 
 // ProcessBlock processes a new block by inserting it to the fork choice store.
