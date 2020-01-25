@@ -283,6 +283,18 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 		if err := s.forkChoiceStore.ProcessBlock(ctx, blockCopy.Block.Slot, root, bytesutil.ToBytes32(blockCopy.Block.ParentRoot), postState.CurrentJustifiedCheckpoint.Epoch, postState.FinalizedCheckpoint.Epoch); err != nil {
 			return errors.Wrap(err, "could not process block for proto array fork choice")
 		}
+
+		for _, a := range blockCopy.Block.Body.Attestations {
+			committee, err := helpers.BeaconCommitteeFromState(postState, a.Data.Slot, a.Data.CommitteeIndex)
+			if err != nil {
+				return err
+			}
+			indices, err := helpers.AttestingIndices(a.AggregationBits, committee)
+			if err != nil {
+				return err
+			}
+			s.forkChoiceStore.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
+		}
 	}
 
 	if featureconfig.Get().InitSyncCacheState {
