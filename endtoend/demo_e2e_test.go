@@ -21,6 +21,10 @@ func TestEndToEnd_DemoConfig(t *testing.T) {
 			"--enable-skip-slots-cache",
 			"--enable-attestation-cache",
 		},
+		validatorFlags: []string{
+			"--protect-attester",
+			"--protect-proposer",
+		},
 		epochsToRun:    5,
 		numBeaconNodes: 2,
 		numValidators:  params.BeaconConfig().MinGenesisActiveValidatorCount,

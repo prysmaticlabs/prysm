@@ -33,7 +33,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	for _, bb := range beaconNodes {
 		processIDs = append(processIDs, bb.ProcessID)
 	}
-	//defer logOutput(t, tmpPath, config)
+	defer logOutput(t, tmpPath, config)
 	defer killProcesses(t, processIDs)
 
 	if config.numBeaconNodes > 1 {
@@ -68,9 +68,10 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	epochSeconds := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
 	// Small offset so evaluators perform in the middle of an epoch.
+	epochSeconds := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
 	genesisTime := time.Unix(genesis.GenesisTime.Seconds+int64(epochSeconds/2), 0)
+
 	ticker := GetEpochTicker(genesisTime, epochSeconds)
 	for currentEpoch := range ticker.C() {
 		for _, evaluator := range config.evaluators {
@@ -113,13 +114,11 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 
 	afterSyncSeconds := (config.epochsToRun+2)*epochSeconds
 	genesisTime.Add(time.Duration(afterSyncSeconds)*time.Second)
+	// Wait until middle of epoch to request to prevent conflicts.
 	time.Sleep(time.Until(genesisTime))
+
 	t.Run("all_nodes_have_correct_head", func(t *testing.T) {
-		ports := []uint64{}
-		for _, bNode := range beaconNodes {
-			ports = append(ports, bNode.RpcPort)
-		}
-		if err := ev.AllChainsHaveSameHead(ports); err != nil {
+		if err := ev.AllChainsHaveSameHead(beaconNodes); err != nil {
 			t.Fatal(err)
 		}
 	})

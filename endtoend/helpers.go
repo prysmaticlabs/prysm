@@ -2,22 +2,32 @@ package endtoend
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math/big"
 	"os"
 	"path"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/pkg/errors"
 )
+
+func killProcesses(t *testing.T, pIDs []int) {
+	for _, id := range pIDs {
+		process, err := os.FindProcess(id)
+		if err != nil {
+			t.Fatalf("Could not find process %d: %v", id, err)
+		}
+		if err := process.Kill(); err != nil {
+			t.Fatal(err)
+		}
+		if err := process.Release(); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
 
 func waitForTextInFile(file *os.File, text string) error {
 	wait := 0
@@ -47,57 +57,6 @@ func waitForTextInFile(file *os.File, text string) error {
 		return err
 	}
 	return fmt.Errorf("could not find requested text \"%s\" in logs:\n%s", text, string(contents))
-}
-
-func mineBlocks(web3 *ethclient.Client, keystore *keystore.Key, blocksToMake uint64) error {
-	nonce, err := web3.PendingNonceAt(context.Background(), keystore.Address)
-	if err != nil {
-		return err
-	}
-	chainID, err := web3.NetworkID(context.Background())
-	if err != nil {
-		return err
-	}
-	block, err := web3.BlockByNumber(context.Background(), nil)
-	if err != nil {
-		return err
-	}
-	finishBlock := block.NumberU64() + blocksToMake
-
-	for block.NumberU64() <= finishBlock {
-		spamTX := types.NewTransaction(nonce, keystore.Address, big.NewInt(0), 21000, big.NewInt(1e6), []byte{})
-		signed, err := types.SignTx(spamTX, types.NewEIP155Signer(chainID), keystore.PrivateKey)
-		if err != nil {
-			return err
-		}
-		if err := web3.SendTransaction(context.Background(), signed); err != nil {
-			return err
-		}
-		nonce++
-		time.Sleep(250 * time.Microsecond)
-		block, err = web3.BlockByNumber(context.Background(), nil)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-
-
-func killProcesses(t *testing.T, pIDs []int) {
-	for _, id := range pIDs {
-		process, err := os.FindProcess(id)
-		if err != nil {
-			t.Fatalf("Could not find process %d: %v", id, err)
-		}
-		if err := process.Kill(); err != nil {
-			t.Fatal(err)
-		}
-		if err := process.Release(); err != nil {
-			t.Fatal(err)
-		}
-	}
 }
 
 func logOutput(t *testing.T, tmpPath string, config *end2EndConfig) {
