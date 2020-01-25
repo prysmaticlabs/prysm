@@ -4,6 +4,11 @@ package helpers
 import (
 	"fmt"
 	"sort"
+	"sync"
+
+	"github.com/prysmaticlabs/prysm/shared/mputil"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -395,15 +400,30 @@ func ShuffledIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint64, erro
 
 	validatorCount := uint64(len(indices))
 	shuffledIndices := make([]uint64, validatorCount)
-	for i := 0; i < len(shuffledIndices); i++ {
-		permutedIndex, err := ShuffledIndex(uint64(i), validatorCount, seed)
+
+	mputil.Scatter(int(validatorCount), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
+		err := shuffleMultipleIndices(uint64(offset), uint64(entries), validatorCount, seed, indices, shuffledIndices)
 		if err != nil {
-			return []uint64{}, errors.Wrapf(err, "could not get shuffled index at index %d", i)
+			return nil, err
+		}
+		return []uint64{}, err
+	})
+
+	logrus.Errorf("Done with shuffled indices ")
+
+	return shuffledIndices, nil
+}
+
+func shuffleMultipleIndices(startIdx uint64, numOfVals uint64,
+	totalValidators uint64, seed [32]byte, indices []uint64, shuffledIndices []uint64) error {
+	for i := startIdx; i < (startIdx + numOfVals); i++ {
+		permutedIndex, err := ShuffledIndex(i, totalValidators, seed)
+		if err != nil {
+			return errors.Wrapf(err, "could not get shuffled index at index %d", i)
 		}
 		shuffledIndices[i] = indices[permutedIndex]
 	}
-
-	return shuffledIndices, nil
+	return nil
 }
 
 // UpdateCommitteeCache gets called at the beginning of every epoch to cache the committee shuffled indices
