@@ -14,9 +14,15 @@ func TestEndToEnd_DemoConfig(t *testing.T) {
 	params.UseDemoBeaconConfig()
 
 	demoConfig := &end2EndConfig{
-		minimalConfig:  false,
+		beaconFlags: []string{
+			"--enable-ssz-cache",
+			"--cache-proposer-indices",
+			"--cache-filtered-block-tree",
+			"--enable-skip-slots-cache",
+			"--enable-attestation-cache",
+		},
 		epochsToRun:    5,
-		numBeaconNodes: 4,
+		numBeaconNodes: 2,
 		numValidators:  params.BeaconConfig().MinGenesisActiveValidatorCount,
 		evaluators: []ev.Evaluator{
 			ev.ValidatorsAreActive,
