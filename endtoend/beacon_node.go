@@ -16,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	ev "github.com/prysmaticlabs/prysm/endtoend/evaluators"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 type beaconNodeInfo struct {
@@ -28,12 +29,12 @@ type beaconNodeInfo struct {
 }
 
 type end2EndConfig struct {
-	minimalConfig  bool
+	beaconFlags    []string
+	validatorFlags []string
 	tmpPath        string
 	epochsToRun    uint64
 	numValidators  uint64
 	numBeaconNodes uint64
-	enableSSZCache bool
 	contractAddr   common.Address
 	evaluators     []ev.Evaluator
 }
@@ -69,31 +70,21 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 
 	args := []string{
 		"--no-genesis-delay",
-		"--verbosity=debug",
 		"--force-clear-db",
 		"--no-discovery",
-		"--new-cache",
-		"--enable-shuffled-index-cache",
-		"--enable-skip-slots-cache",
-		"--enable-attestation-cache",
-		"--http-web3provider=http://127.0.0.1:8545",
-		"--web3provider=ws://127.0.0.1:8546",
+		"--http-web3provider=http://127.0.0.1:8745",
+		"--web3provider=ws://127.0.0.1:8746",
 		fmt.Sprintf("--datadir=%s/eth2-beacon-node-%d", tmpPath, index),
 		fmt.Sprintf("--deposit-contract=%s", config.contractAddr.Hex()),
-		fmt.Sprintf("--rpc-port=%d", 4000+index),
-		fmt.Sprintf("--p2p-udp-port=%d", 12000+index),
-		fmt.Sprintf("--p2p-tcp-port=%d", 13000+index),
-		fmt.Sprintf("--monitoring-port=%d", 8080+index),
-		fmt.Sprintf("--grpc-gateway-port=%d", 3200+index),
+		fmt.Sprintf("--rpc-port=%d", 4200+index),
+		fmt.Sprintf("--p2p-udp-port=%d", 12200+index),
+		fmt.Sprintf("--p2p-tcp-port=%d", 13200+index),
+		fmt.Sprintf("--monitoring-port=%d", 8280+index),
+		fmt.Sprintf("--grpc-gateway-port=%d", 3400+index),
 		fmt.Sprintf("--contract-deployment-block=%d", 0),
+		fmt.Sprintf("--rpc-max-page-size=%d", params.BeaconConfig().MinGenesisActiveValidatorCount),
 	}
-
-	if config.minimalConfig {
-		args = append(args, "--minimal-config")
-	}
-	if config.enableSSZCache {
-		args = append(args, "--enable-ssz-cache")
-	}
+	args = append(args, config.beaconFlags...)
 
 	// After the first node is made, have all following nodes connect to all previously made nodes.
 	if index >= 1 {
@@ -102,7 +93,7 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 		}
 	}
 
-	t.Logf("Starting beacon chain with flags: %s", strings.Join(args, " "))
+	t.Logf("Starting beacon chain %d with flags: %s", index, strings.Join(args, " "))
 	cmd := exec.Command(binaryPath, args...)
 	cmd.Stdout = stdOutFile
 	cmd.Stderr = stdOutFile
@@ -122,9 +113,9 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*beac
 	return &beaconNodeInfo{
 		processID:   cmd.Process.Pid,
 		datadir:     fmt.Sprintf("%s/eth2-beacon-node-%d", tmpPath, index),
-		rpcPort:     4000 + uint64(index),
-		monitorPort: 8080 + uint64(index),
-		grpcPort:    3200 + uint64(index),
+		rpcPort:     4200 + uint64(index),
+		monitorPort: 8280 + uint64(index),
+		grpcPort:    3400 + uint64(index),
 		multiAddr:   multiAddr,
 	}
 }
