@@ -66,6 +66,10 @@ func (s *store) FinalizedCheckpt() *ethpb.Checkpoint {
 	return nil
 }
 
+func (s *store) JustifiedCheckpt() *ethpb.Checkpoint {
+	return nil
+}
+
 func (s *store) Head(ctx context.Context) ([]byte, error) {
 	return s.headRoot, nil
 }
