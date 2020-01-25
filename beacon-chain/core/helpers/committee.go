@@ -8,8 +8,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/mputil"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -401,15 +399,13 @@ func ShuffledIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint64, erro
 	validatorCount := uint64(len(indices))
 	shuffledIndices := make([]uint64, validatorCount)
 
-	mputil.Scatter(int(validatorCount), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
+	_, err = mputil.Scatter(int(validatorCount), func(offset int, entries int, _ *sync.RWMutex) (interface{}, error) {
 		err := shuffleMultipleIndices(uint64(offset), uint64(entries), validatorCount, seed, indices, shuffledIndices)
-		if err != nil {
-			return nil, err
-		}
-		return []uint64{}, err
+		return nil, err
 	})
-
-	logrus.Errorf("Done with shuffled indices ")
+	if err != nil {
+		return []uint64{}, err
+	}
 
 	return shuffledIndices, nil
 }
