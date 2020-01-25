@@ -3,6 +3,7 @@ package evaluators
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
@@ -52,13 +53,27 @@ func allAttestationsReceived(client eth.BeaconChainClient) error {
 	for _, blkContainer := range blkResp.BlockContainers {
 		blkAtts := blkContainer.Block.Block.Body.Attestations
 		blockSlot := blkContainer.Block.Block.Slot
-		slotCommittees := committees.Committees[blockSlot].Committees
-		if blockSlot > 4 &&  len(slotCommittees) != len(blkAtts) {
+		if blockSlot == 0 {
+			continue
+		}
+		if len(blkAtts) == 0 {
+			continue
+		}
+		slotCommittees := committees.Committees[blockSlot-1]
+		if slotCommittees == nil {
+			continue
+		}
+		if blockSlot > 2 && len(slotCommittees.Committees) != len(blkAtts) {
+			atts := []string{}
+			for _, att := range blkAtts {
+				atts = append(atts, fmt.Sprintf("att at slot %d, index %d, bits - %08b", att.Data.Slot, att.Data.CommitteeIndex, att.AggregationBits))
+			}
 			return fmt.Errorf(
-				"expected block to have %d attestations, received %d for block slot %d",
-				len(slotCommittees),
+				"expected block to have %d attestations, received %d for block slot %d: %s",
+				len(slotCommittees.Committees),
 				len(blkAtts),
 				blockSlot,
+				strings.Join(atts, " "),
 			)
 		}
 	}

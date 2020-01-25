@@ -15,11 +15,11 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 	minimalConfig := &end2EndConfig{
 		beaconFlags:  []string{
 			"--minimal-config",
-			//"--enable-ssz-cache",
-			//"--cache-proposer-indices",
-			//"--cache-filtered-block-tree",
-			//"--enable-skip-slots-cache",
-			//"--enable-attestation-cache",
+			"--enable-ssz-cache",
+			"--cache-proposer-indices",
+			"--cache-filtered-block-tree",
+			"--enable-skip-slots-cache",
+			"--enable-attestation-cache",
 		},
 		validatorFlags:  []string{
 			"--minimal-config",
