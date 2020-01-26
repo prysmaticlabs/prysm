@@ -34,7 +34,11 @@ func waitForTextInFile(file *os.File, text string) error {
 	// Cap the wait in case there are issues starting.
 	maxWait := 36
 	for wait < maxWait {
-		time.Sleep(2 * time.Second)
+		if wait <= 8 {
+			time.Sleep(1 * time.Second)
+		} else {
+			time.Sleep(2 * time.Second)
+		}
 		// Rewind the file pointer to the start of the file so we can read it again.
 		_, err := file.Seek(0, io.SeekStart)
 		if err != nil {
