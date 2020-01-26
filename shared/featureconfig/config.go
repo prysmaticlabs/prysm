@@ -14,7 +14,7 @@ The process for implementing new features using this package is as follows:
 	}
 	featureconfig.Init(cfg)
 	6. Add the string for the flags that should be running within E2E to E2EValidatorFlags
-  and E2EBeaconChainFlags.
+	and E2EBeaconChainFlags.
 */
 package featureconfig
 
