@@ -10,8 +10,8 @@ In order to "evaluate" the state of the beacon chain while the E2E is running, t
 Evaluators have 3 parts, the name for it's test name, a `policy` which declares which epoch(s) the evaluator should run, and then the `evaluation` which uses the beacon chain API to determine if the beacon chain passes certain conditions like finality.
 
 ## Current end-to-end tests
-* Minimal Config - 4 beacon nodes, 64 validators, running for 5 epochs
-* Demo Config - 4 beacon nodes, 64 validators, running for 5 epochs
+* Minimal Config - 4 beacon nodes, 64 validators, running for 6 epochs
+* ~~Demo Config - 4 beacon nodes, 64 validators, running for 5 epochs~~ Disabled for now
 
 ## Instructions
 If you wish to run all the E2E tests, you can run them through bazel with:
