@@ -635,6 +635,12 @@ go_repository(
 )
 
 go_repository(
+    name = "com_github_emicklei_dot",
+    commit = "f4a04130244d60cef56086d2f649b4b55e9624aa",
+    importpath = "github.com/emicklei/dot",
+)
+
+go_repository(
     name = "com_github_libp2p_go_libp2p_blankhost",
     commit = "da3b45205dfce3ef3926054ffd5dee76f5903382",  # v0.1.4
     importpath = "github.com/libp2p/go-libp2p-blankhost",

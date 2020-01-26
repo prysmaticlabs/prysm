@@ -348,4 +348,3 @@ func (d *db) RemovePKFromPod(podName string, key []byte) error {
 		return tx.Bucket(assignedPkBucket).Put([]byte(podName), marshaled)
 	})
 }
-
