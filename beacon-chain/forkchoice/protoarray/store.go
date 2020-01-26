@@ -94,3 +94,10 @@ func (f *ForkChoice) ProcessBlock(ctx context.Context, slot uint64, blockRoot [3
 func (f *ForkChoice) Prune(ctx context.Context, finalizedRoot [32]byte) error {
 	return f.store.prune(ctx, finalizedRoot)
 }
+
+// Nodes returns the copied list of block nodes in the fork choice store.
+func (f *ForkChoice) Nodes() []*Node {
+	cpy := make([]*Node, len(f.store.nodes))
+	copy(cpy, f.store.nodes)
+	return cpy
+}
