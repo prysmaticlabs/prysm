@@ -26,8 +26,15 @@ func AggregateAttestations(atts []*ethpb.Attestation) ([]*ethpb.Attestation, err
 		return atts, nil
 	}
 
+	seenBit := make(map[[32]byte]bool)
+
 	// Naive aggregation. O(n^2) time.
 	for i, a := range atts {
+		h := hashutil.Hash(a.AggregationBits.Bytes())
+		if _, ok := seenBit[h]; ok {
+			continue
+		}
+		seenBit[h] = true
 		if i >= len(atts) {
 			break
 		}
@@ -49,6 +56,10 @@ func AggregateAttestations(atts []*ethpb.Attestation) ([]*ethpb.Attestation, err
 
 	// Naive deduplication of identical aggregations. O(n^2) time.
 	for i, a := range atts {
+		h := hashutil.Hash(a.AggregationBits.Bytes())
+		if _, ok := seenBit[h]; ok {
+			continue
+		}
 		for j := i + 1; j < len(atts); j++ {
 			b := atts[j]
 			if a.AggregationBits.Contains(b.AggregationBits) {
