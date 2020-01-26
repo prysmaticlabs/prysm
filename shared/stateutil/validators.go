@@ -129,7 +129,7 @@ func (h *stateRootHasher) validatorRoot(validator *ethpb.Validator) ([32]byte, e
 
 		withdrawalBuf := make([]byte, 8)
 		binary.LittleEndian.PutUint64(withdrawalBuf, validator.WithdrawableEpoch)
-		copy(enc[113:121], exitBuf)
+		copy(enc[113:121], withdrawalBuf)
 
 		// Check if it exists in cache:
 		if h.rootsCache != nil {
