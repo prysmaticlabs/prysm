@@ -127,7 +127,7 @@ func (s *Service) PreGenesisState() *pb.BeaconState {
 	return &pb.BeaconState{}
 }
 
-// ClearPreGenesisData--
+// ClearPreGenesisData --
 func (s *Service) ClearPreGenesisData() {
 	//no-op
 }
