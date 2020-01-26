@@ -245,14 +245,14 @@ func setup(justifiedEpoch uint64, finalizedEpoch uint64) *ForkChoice {
 	f := New(0, 0, params.BeaconConfig().ZeroHash)
 	f.store.nodeIndices[params.BeaconConfig().ZeroHash] = 0
 	f.store.nodes = append(f.store.nodes, &Node{
-		slot:           0,
+		Slot:           0,
 		root:           params.BeaconConfig().ZeroHash,
-		parent:         nonExistentNode,
+		Parent:         nonExistentNode,
 		justifiedEpoch: justifiedEpoch,
 		finalizedEpoch: finalizedEpoch,
 		bestChild:      nonExistentNode,
-		bestDescendant: nonExistentNode,
-		weight:         0,
+		BestDescendent: nonExistentNode,
+		Weight:         0,
 	})
 
 	return f

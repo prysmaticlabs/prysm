@@ -13,7 +13,7 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 	params.UseMinimalConfig()
 
 	minimalConfig := &end2EndConfig{
-		beaconFlags:  []string{
+		beaconFlags: []string{
 			"--minimal-config",
 			"--enable-ssz-cache",
 			"--cache-proposer-indices",
@@ -21,7 +21,7 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 			"--enable-skip-slots-cache",
 			"--enable-attestation-cache",
 		},
-		validatorFlags:  []string{
+		validatorFlags: []string{
 			"--minimal-config",
 		},
 		epochsToRun:    5,
