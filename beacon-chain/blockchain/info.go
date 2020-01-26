@@ -68,7 +68,7 @@ func (s *Service) TreeHandler(w http.ResponseWriter, _ *http.Request) {
 		dotNodes[i] = &dotN
 	}
 
-	for i := len(nodes) - 1; i >= 0; i--  {
+	for i := len(nodes) - 1; i >= 0; i-- {
 		if nodes[i].Parent != ^uint64(0) && nodes[i].Parent < uint64(len(dotNodes)) {
 			graph.Edge(*dotNodes[i], *dotNodes[nodes[i].Parent])
 		}

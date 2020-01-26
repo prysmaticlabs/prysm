@@ -295,8 +295,6 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 			}
 			s.forkChoiceStore.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
 		}
-
-		s.forkChoiceStore.Head()
 	}
 
 	if featureconfig.Get().InitSyncCacheState {

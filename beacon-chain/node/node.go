@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	interopcoldstart "github.com/prysmaticlabs/prysm/beacon-chain/interop-cold-start"
@@ -64,7 +65,7 @@ type BeaconNode struct {
 	depositCache    *depositcache.DepositCache
 	stateFeed       *event.Feed
 	opFeed          *event.Feed
-	forkChoiceStore protoarray.ForkChoice
+	forkChoiceStore forkchoice.ForkChoicer
 }
 
 // NewBeaconNode creates a new node instance, sets up configuration options, and registers
@@ -222,7 +223,7 @@ func (b *BeaconNode) Close() {
 
 func (b *BeaconNode) startForkChoice() {
 	f := protoarray.New(0, 0, params.BeaconConfig().ZeroHash)
-	b.forkChoiceStore = *f
+	b.forkChoiceStore = f
 }
 
 func (b *BeaconNode) startDB(ctx *cli.Context) error {
@@ -321,7 +322,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		P2p:               b.fetchP2P(ctx),
 		MaxRoutines:       maxRoutines,
 		StateNotifier:     b,
-		ForkChoiceStore:   &b.forkChoiceStore,
+		ForkChoiceStore:   b.forkChoiceStore,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
