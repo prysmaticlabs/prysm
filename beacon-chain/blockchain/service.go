@@ -23,6 +23,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	f "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -30,6 +32,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/stateutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -45,7 +48,7 @@ type Service struct {
 	chainStartFetcher      powchain.ChainStartFetcher
 	attPool                attestations.Pool
 	exitPool               *voluntaryexits.Pool
-	forkChoiceStore        forkchoice.ForkChoicer
+	forkChoiceStoreOld     forkchoice.ForkChoicer
 	genesisTime            time.Time
 	p2p                    p2p.Broadcaster
 	maxRoutines            int64
@@ -58,6 +61,7 @@ type Service struct {
 	genesisRoot            [32]byte
 	epochParticipation     map[uint64]*precompute.Balance
 	epochParticipationLock sync.RWMutex
+	forkChoiceStore        f.ForkChoicer
 }
 
 // Config options for the service.
@@ -71,6 +75,7 @@ type Config struct {
 	P2p               p2p.Broadcaster
 	MaxRoutines       int64
 	StateNotifier     statefeed.Notifier
+	ForkChoiceStore   f.ForkChoicer
 }
 
 // NewService instantiates a new block service instance that will
@@ -86,12 +91,13 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		chainStartFetcher:  cfg.ChainStartFetcher,
 		attPool:            cfg.AttPool,
 		exitPool:           cfg.ExitPool,
-		forkChoiceStore:    store,
+		forkChoiceStoreOld: store,
 		p2p:                cfg.P2p,
 		canonicalRoots:     make(map[uint64][]byte),
 		maxRoutines:        cfg.MaxRoutines,
 		stateNotifier:      cfg.StateNotifier,
 		epochParticipation: make(map[uint64]*precompute.Balance),
+		forkChoiceStore:    cfg.ForkChoiceStore,
 	}, nil
 }
 
@@ -134,8 +140,11 @@ func (s *Service) Start() {
 		if err != nil {
 			log.Fatalf("Could not get finalized checkpoint: %v", err)
 		}
-		if err := s.forkChoiceStore.GenesisStore(ctx, justifiedCheckpoint, finalizedCheckpoint); err != nil {
+		if err := s.forkChoiceStoreOld.GenesisStore(ctx, justifiedCheckpoint, finalizedCheckpoint); err != nil {
 			log.Fatalf("Could not start fork choice service: %v", err)
+		}
+		if err := s.resumeForkChoice(ctx, justifiedCheckpoint, finalizedCheckpoint); err != nil {
+			log.Fatalf("Could not resume fork choice: %v", err)
 		}
 		s.stateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Initialized,
@@ -344,8 +353,20 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconSt
 	}
 
 	genesisCheckpoint := &ethpb.Checkpoint{Root: genesisBlkRoot[:]}
-	if err := s.forkChoiceStore.GenesisStore(ctx, genesisCheckpoint, genesisCheckpoint); err != nil {
+	if err := s.forkChoiceStoreOld.GenesisStore(ctx, genesisCheckpoint, genesisCheckpoint); err != nil {
 		return errors.Wrap(err, "Could not start fork choice service: %v")
+	}
+
+	// Add the genesis block to the fork choice store.
+	if featureconfig.Get().ProtoArrayForkChoice {
+		if err := s.forkChoiceStore.ProcessBlock(ctx,
+			genesisBlk.Block.Slot,
+			genesisBlkRoot,
+			params.BeaconConfig().ZeroHash,
+			genesisCheckpoint.Epoch,
+			genesisCheckpoint.Epoch); err != nil {
+			log.Fatalf("Could not process genesis block for fork choice: %v", err)
+		}
 	}
 
 	s.genesisRoot = genesisBlkRoot
@@ -396,6 +417,39 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		s.headSlot = s.headBlock.Block.Slot
 	}
 	s.canonicalRoots[s.headSlot] = finalized.Root
+
+	return nil
+}
+
+// This is called when a client starts from non-genesis slot. This passes last justified and finalized
+// information to fork choice service to initializes fork choice store.
+func (s *Service) resumeForkChoice(
+	ctx context.Context,
+	justifiedCheckpoint *ethpb.Checkpoint,
+	finalizedCheckpoint *ethpb.Checkpoint) error {
+	store := protoarray.New(justifiedCheckpoint.Epoch, finalizedCheckpoint.Epoch, bytesutil.ToBytes32(finalizedCheckpoint.Root))
+	s.forkChoiceStore = store
+
+	headBlock, err := s.beaconDB.HeadBlock(ctx)
+	if err != nil {
+		return err
+	}
+	if headBlock == nil || headBlock.Block == nil {
+		return errors.New("head block is nil")
+	}
+	headBlockRoot, err := ssz.HashTreeRoot(headBlock.Block)
+	if err != nil {
+		return err
+	}
+	if err := s.forkChoiceStore.ProcessBlock(
+		ctx,
+		headBlock.Block.Slot,
+		headBlockRoot,
+		bytesutil.ToBytes32(headBlock.Block.ParentRoot),
+		finalizedCheckpoint.Epoch,
+		justifiedCheckpoint.Epoch); err != nil {
+		return err
+	}
 
 	return nil
 }

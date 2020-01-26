@@ -208,7 +208,7 @@ bazel run //beacon-chain -- \
 Wait a moment for the beacon chain to start. In the other terminal, issue the command:
 
 ```text
-bazel run //validator -- --interop-num-validators 64
+bazel run //validator -- --keymanager=interop --keymanageropts='{"keys":64}'
 ```
 
 This command will kickstart the system with your 64 validators performing their duties accordingly.
