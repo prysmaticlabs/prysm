@@ -68,7 +68,7 @@ func FinishedSyncing(rpcPort uint64) error {
 
 // AllChainsHaveSameHead connects to all RPC ports in the passed in array and ensures they have the same head epoch.
 // Checks finality and justification as well.
-// Not checking head block root as it may change for the validator connected nodes.
+// Not checking head block root as it may change irregularly for the validator connected nodes.
 func AllChainsHaveSameHead(beaconNodes []*BeaconNodeInfo) error {
 	headEpochs := make([]uint64, len(beaconNodes))
 	justifiedRoots := make([][]byte, len(beaconNodes))
