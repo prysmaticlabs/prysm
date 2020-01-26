@@ -59,16 +59,16 @@ func (s *Service) TreeHandler(w http.ResponseWriter, _ *http.Request) {
 		slot := strconv.Itoa(int(nodes[i].Slot))
 		weight := strconv.Itoa(int(nodes[i].Weight / 10e9))
 		bestDescendent := strconv.Itoa(int(nodes[i].BestDescendent))
-		parent := strconv.Itoa(int(nodes[i].Parent))
-		label := "slot: " + slot + "\n parent: " + parent + "\n bestDescendent: " + bestDescendent + "\n weight: " + weight
+		index := strconv.Itoa(int(i))
+		label := "slot: " + slot + "\n index: " + index + "\n bestDescendent: " + bestDescendent + "\n weight: " + weight
 		var dotN dot.Node
 		if nodes[i].Parent != ^uint64(0) {
-			dotN = graph.Node(strconv.Itoa(int(i))).Box().Attr("label", label)
+			dotN = graph.Node(index).Box().Attr("label", label)
 		}
 		dotNodes[i] = &dotN
 	}
 
-	for i := len(nodes) - 1; i >= 0; i-- {
+	for i := len(nodes) - 1; i >= 0; i--  {
 		if nodes[i].Parent != ^uint64(0) && nodes[i].Parent < uint64(len(dotNodes)) {
 			graph.Edge(*dotNodes[i], *dotNodes[nodes[i].Parent])
 		}

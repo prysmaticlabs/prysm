@@ -431,6 +431,9 @@ func (s *Service) resumeForkChoice(
 	if err != nil {
 		return err
 	}
+	if headBlock == nil || headBlock.Block == nil {
+		return errors.New("head block is nil")
+	}
 	headBlockRoot, err := ssz.HashTreeRoot(headBlock.Block)
 	if err != nil {
 		return err
