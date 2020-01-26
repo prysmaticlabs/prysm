@@ -123,7 +123,7 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	}
 	wanted := make(map[uint64]*ethpb.BeaconCommittees_CommitteesList)
 	startSlot := helpers.StartSlot(1)
-	for slot := startSlot; slot < startSlot + params.BeaconConfig().SlotsPerEpoch; slot++ {
+	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		var countAtSlot = uint64(numValidators) / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
 		if countAtSlot > params.BeaconConfig().MaxCommitteesPerSlot {
 			countAtSlot = params.BeaconConfig().MaxCommitteesPerSlot

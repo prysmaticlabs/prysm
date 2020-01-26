@@ -77,6 +77,11 @@ func (f *FaultyMockPOWChain) PreGenesisState() *pb.BeaconState {
 	return &pb.BeaconState{}
 }
 
+// ClearPreGenesisData --
+func (f *FaultyMockPOWChain) ClearPreGenesisData() {
+	//no-op
+}
+
 // IsConnectedToETH1 --
 func (f *FaultyMockPOWChain) IsConnectedToETH1() bool {
 	return true
