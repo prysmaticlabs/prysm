@@ -112,7 +112,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 		}
 	})
 
-	afterSyncSeconds := (config.epochsToRun+2)*epochSeconds + 1
+	afterSyncSeconds := (config.epochsToRun+2)*epochSeconds + params.BeaconConfig().SecondsPerSlot/2
 	genesisTime.Add(time.Duration(afterSyncSeconds) * time.Second)
 	// Wait until middle of epoch to request to prevent conflicts.
 	time.Sleep(time.Until(genesisTime))
