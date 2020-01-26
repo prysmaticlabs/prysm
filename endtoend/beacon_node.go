@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-
 type end2EndConfig struct {
 	beaconFlags    []string
 	validatorFlags []string

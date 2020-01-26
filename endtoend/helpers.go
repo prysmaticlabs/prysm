@@ -83,9 +83,9 @@ func logErrorOutput(t *testing.T, file *os.File, title string, index uint64) {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		currentLine := scanner.Text()
-		//if strings.Contains(currentLine, "level=error") {
-		errorLines = append(errorLines, currentLine)
-		//}
+		if strings.Contains(currentLine, "level=error") {
+			errorLines = append(errorLines, currentLine)
+		}
 	}
 
 	if len(errorLines) < 1 {

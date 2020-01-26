@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-
 // ValidatorsAreActive ensures the expected amount of validators are active.
 var ValidatorsAreActive = Evaluator{
 	Name:       "validators_active_epoch_%d",

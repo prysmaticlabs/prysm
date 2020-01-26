@@ -41,7 +41,7 @@ func PeersConnect(beaconNodes []*BeaconNodeInfo) error {
 		if err != nil {
 			return err
 		}
-		expectedPeers := uint64(len(beaconNodes)-1)
+		expectedPeers := uint64(len(beaconNodes) - 1)
 		if expectedPeers != uint64(peerCount) {
 			return fmt.Errorf("unexpected amount of peers, expected %d, received %d", expectedPeers, peerCount)
 		}

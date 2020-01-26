@@ -97,7 +97,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 
 	syncNodeInfo := startNewBeaconNode(t, config, beaconNodes)
 	beaconNodes = append(beaconNodes, syncNodeInfo)
-	index := len(beaconNodes)-1
+	index := len(beaconNodes) - 1
 	syncLogFile, err := os.Open(path.Join(tmpPath, fmt.Sprintf(beaconNodeLogFileName, index)))
 	if err != nil {
 		t.Fatal(err)
@@ -112,8 +112,8 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 		}
 	})
 
-	afterSyncSeconds := (config.epochsToRun+2)*epochSeconds
-	genesisTime.Add(time.Duration(afterSyncSeconds)*time.Second)
+	afterSyncSeconds := (config.epochsToRun+2)*epochSeconds + 1
+	genesisTime.Add(time.Duration(afterSyncSeconds) * time.Second)
 	// Wait until middle of epoch to request to prevent conflicts.
 	time.Sleep(time.Until(genesisTime))
 
