@@ -2,6 +2,7 @@ package forkchoice
 
 import (
 	"context"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 )
 
@@ -11,7 +12,7 @@ type ForkChoicer interface {
 	BlockProcessor       // to track new block for fork choice.
 	AttestationProcessor // to track new attestation for fork choice.
 	Pruner               // to clean old data for fork choice.
-	Getter               // to retrieve fork choice information
+	Getter               // to retrieve fork choice information.
 }
 
 // HeadRetriever retrieves head root of the current chain.
