@@ -23,14 +23,14 @@ type Store struct {
 // Node defines the individual block which includes its block parent, ancestor and how much weight accounted for it.
 // This is used as an array based stateful DAG for efficient fork choice look up.
 type Node struct {
-	slot           uint64   // slot of the block converted to the node.
+	Slot           uint64   // slot of the block converted to the node.
 	root           [32]byte // root of the block converted to the node.
-	parent         uint64   // the parent index of this node.
+	Parent         uint64   // the parent index of this node.
 	justifiedEpoch uint64   // justified epoch of this node.
 	finalizedEpoch uint64   // finalized epoch of this node.
-	weight         uint64   // weight of this node.
+	Weight         uint64   // weight of this node.
 	bestChild      uint64   // best child index of this node.
-	bestDescendant uint64   // head index of this node.
+	BestDescendent uint64   // head index of this node.
 }
 
 // Vote defines an individual validator's vote.
