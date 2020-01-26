@@ -392,7 +392,7 @@ func TestStore_Prune_LessThanThreshold(t *testing.T) {
 	nodes := make([]*Node, 0)
 	for i := 0; i < numOfNodes; i++ {
 		indices[indexToHash(uint64(i))] = uint64(i)
-		nodes = append(nodes, &Node{slot: uint64(i)})
+		nodes = append(nodes, &Node{Slot: uint64(i)})
 	}
 
 	s := &Store{nodes: nodes, nodeIndices: indices, pruneThreshold: 100}
@@ -418,7 +418,7 @@ func TestStore_Prune_MoreThanThreshold(t *testing.T) {
 	nodes := make([]*Node, 0)
 	for i := 0; i < numOfNodes; i++ {
 		indices[indexToHash(uint64(i))] = uint64(i)
-		nodes = append(nodes, &Node{slot: uint64(i), root: indexToHash(uint64(i)),
+		nodes = append(nodes, &Node{Slot: uint64(i), root: indexToHash(uint64(i)),
 			BestDescendent: nonExistentNode, bestChild: nonExistentNode})
 	}
 
@@ -444,7 +444,7 @@ func TestStore_Prune_MoreThanOnce(t *testing.T) {
 	nodes := make([]*Node, 0)
 	for i := 0; i < numOfNodes; i++ {
 		indices[indexToHash(uint64(i))] = uint64(i)
-		nodes = append(nodes, &Node{slot: uint64(i), root: indexToHash(uint64(i)),
+		nodes = append(nodes, &Node{Slot: uint64(i), root: indexToHash(uint64(i)),
 			BestDescendent: nonExistentNode, bestChild: nonExistentNode})
 	}
 
