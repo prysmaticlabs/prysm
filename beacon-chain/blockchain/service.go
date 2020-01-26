@@ -224,7 +224,7 @@ func (s *Service) initializeBeaconChain(
 
 	log.Info("Initialized beacon chain genesis state")
 
-	// clear out all pre-genesis data now that the state is initialized.
+	// Clear out all pre-genesis data now that the state is initialized.
 	s.chainStartFetcher.ClearPreGenesisData()
 
 	// Update committee shuffled indices for genesis epoch.
