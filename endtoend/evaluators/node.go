@@ -66,10 +66,11 @@ func FinishedSyncing(rpcPort uint64) error {
 	return nil
 }
 
-// AllChainsHaveSameHead connects to all RPC ports in the passed in array and ensures they have the same chain head.
+// AllChainsHaveSameHead connects to all RPC ports in the passed in array and ensures they have the same head epoch.
 // Checks finality and justification as well.
+// Not checking head block root as it may change for the validator connected nodes.
 func AllChainsHaveSameHead(beaconNodes []*BeaconNodeInfo) error {
-	chainHeadRoots := make([][]byte, len(beaconNodes))
+	headEpochs := make([]uint64, len(beaconNodes))
 	justifiedRoots := make([][]byte, len(beaconNodes))
 	prevJustifiedRoots := make([][]byte, len(beaconNodes))
 	finalizedRoots := make([][]byte, len(beaconNodes))
@@ -83,7 +84,7 @@ func AllChainsHaveSameHead(beaconNodes []*BeaconNodeInfo) error {
 		if err != nil {
 			return err
 		}
-		chainHeadRoots[i] = chainHead.HeadBlockRoot
+		headEpochs[i] = chainHead.HeadEpoch
 		justifiedRoots[i] = chainHead.JustifiedBlockRoot
 		prevJustifiedRoots[i] = chainHead.PreviousJustifiedBlockRoot
 		finalizedRoots[i] = chainHead.FinalizedBlockRoot
@@ -92,13 +93,13 @@ func AllChainsHaveSameHead(beaconNodes []*BeaconNodeInfo) error {
 		}
 	}
 
-	for i, root := range chainHeadRoots {
-		if !bytes.Equal(chainHeadRoots[0], root) {
+	for i, epoch := range headEpochs {
+		if headEpochs[0] != epoch {
 			return fmt.Errorf(
-				"received conflicting chain head block roots on node %d, expected %#x, received %#x",
+				"received conflicting head epochs on node %d, expected %d, received %d",
 				i,
-				chainHeadRoots[0],
-				root,
+				headEpochs[0],
+				epoch,
 			)
 		}
 	}
