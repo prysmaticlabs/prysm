@@ -127,6 +127,11 @@ func (s *Service) PreGenesisState() *pb.BeaconState {
 	return &pb.BeaconState{}
 }
 
+// ClearPreGenesisData --
+func (s *Service) ClearPreGenesisData() {
+	//no-op
+}
+
 // DepositByPubkey mocks out the deposit cache functionality for interop.
 func (s *Service) DepositByPubkey(ctx context.Context, pubKey []byte) (*ethpb.Deposit, *big.Int) {
 	return &ethpb.Deposit{}, big.NewInt(1)
