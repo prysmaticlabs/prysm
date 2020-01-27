@@ -1,6 +1,7 @@
 package stateutil
 
 import (
+	"bytes"
 	"errors"
 	"sync"
 
@@ -114,11 +115,16 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][32]byte, length uint64,
 	//    [E]       [F]   -> This layer has length 2.
 	// [A]  [B]  [C]  [D] -> The bottom layer has length 4 (needs to be a power of two).
 	i := 1
+	chunkBuffer := bytes.NewBuffer([]byte{})
+	chunkBuffer.Grow(64)
 	for len(hashLayer) > 1 && i < len(layers) {
-		layer := make([][32]byte, 0)
+		layer := make([][32]byte, len(hashLayer)/2, len(hashLayer)/2)
 		for i := 0; i < len(hashLayer); i += 2 {
-			hashedChunk := hasher(append(hashLayer[i][:], hashLayer[i+1][:]...))
-			layer = append(layer, hashedChunk)
+			chunkBuffer.Write(hashLayer[i][:])
+			chunkBuffer.Write(hashLayer[i+1][:])
+			hashedChunk := hasher(chunkBuffer.Bytes())
+			layer[i/2] = hashedChunk
+			chunkBuffer.Reset()
 		}
 		hashLayer = layer
 		layers[i] = hashLayer
