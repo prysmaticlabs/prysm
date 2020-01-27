@@ -2,6 +2,7 @@ package endtoend
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -10,10 +11,12 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
+const (
+	maxPollingWaitTime = 36 * time.Second
+	filePollingInterval = 1 * time.Second
+)
 func killProcesses(t *testing.T, pIDs []int) {
 	for _, id := range pIDs {
 		process, err := os.FindProcess(id)
@@ -29,38 +32,34 @@ func killProcesses(t *testing.T, pIDs []int) {
 	}
 }
 
-func waitForTextInFile(file *os.File, text string) error {
-	wait := 0
-	// Cap the wait in case there are issues starting.
-	maxWait := 36
-	for wait < maxWait {
-		if wait <= 8 {
-			time.Sleep(1 * time.Second)
-		} else {
-			time.Sleep(2 * time.Second)
-		}
-		// Rewind the file pointer to the start of the file so we can read it again.
-		_, err := file.Seek(0, io.SeekStart)
-		if err != nil {
-			return errors.Wrap(err, "could not rewind file to start")
-		}
+func waitForTextInFile(file io.Reader, text string) error {
+	d := time.Now().Add(maxPollingWaitTime)
+	ctx, cancel := context.WithDeadline(context.Background(), d)
+	defer cancel()
 
-		scanner := bufio.NewScanner(file)
-		for scanner.Scan() {
-			if strings.Contains(scanner.Text(), text) {
-				return nil
+	// Use a ticker with a deadline to poll a given file.
+	ticker := time.NewTicker(filePollingInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			contents, err := ioutil.ReadAll(file)
+			if err != nil {
+				return err
+			}
+			return fmt.Errorf("could not find requested text \"%s\" in logs:\n%s", text, string(contents))
+		case <-ticker.C:
+			fileScanner := bufio.NewScanner(file)
+			for fileScanner.Scan() {
+				if strings.Contains(fileScanner.Text(), text) {
+					return nil
+				}
+			}
+			if err := fileScanner.Err(); err != nil {
+				return err
 			}
 		}
-		if err := scanner.Err(); err != nil {
-			return err
-		}
-		wait += 2
 	}
-	contents, err := ioutil.ReadFile(file.Name())
-	if err != nil {
-		return err
-	}
-	return fmt.Errorf("could not find requested text \"%s\" in logs:\n%s", text, string(contents))
 }
 
 func logOutput(t *testing.T, tmpPath string, config *end2EndConfig) {
@@ -81,7 +80,7 @@ func logOutput(t *testing.T, tmpPath string, config *end2EndConfig) {
 	t.Logf("Ending time: %s\n", time.Now().String())
 }
 
-func logErrorOutput(t *testing.T, file *os.File, title string, index uint64) {
+func logErrorOutput(t *testing.T, file io.Reader, title string, index uint64) {
 	var errorLines []string
 
 	scanner := bufio.NewScanner(file)

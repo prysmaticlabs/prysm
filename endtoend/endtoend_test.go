@@ -98,6 +98,13 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	syncNodeInfo := startNewBeaconNode(t, config, beaconNodes)
 	beaconNodes = append(beaconNodes, syncNodeInfo)
 	index := len(beaconNodes) - 1
+
+	// Sleep until the next epoch to give time for the newly started node to sync.
+	nextEpochSeconds := (config.epochsToRun+2)*epochSeconds + epochSeconds/2
+	genesisTime.Add(time.Duration(nextEpochSeconds) * time.Second)
+	// Wait until middle of epoch to request to prevent conflicts.
+	time.Sleep(time.Until(genesisTime))
+
 	syncLogFile, err := os.Open(path.Join(tmpPath, fmt.Sprintf(beaconNodeLogFileName, index)))
 	if err != nil {
 		t.Fatal(err)
@@ -107,15 +114,10 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	}
 
 	t.Run("node_finishes_sync", func(t *testing.T) {
-		if err := ev.FinishedSyncing(beaconNodes[index].RPCPort); err != nil {
+		if err := ev.FinishedSyncing(syncNodeInfo.RPCPort); err != nil {
 			t.Fatal(err)
 		}
 	})
-
-	afterSyncSeconds := (config.epochsToRun+2)*epochSeconds + params.BeaconConfig().SecondsPerSlot/2
-	genesisTime.Add(time.Duration(afterSyncSeconds) * time.Second)
-	// Wait until middle of epoch to request to prevent conflicts.
-	time.Sleep(time.Until(genesisTime))
 
 	t.Run("all_nodes_have_correct_head", func(t *testing.T) {
 		if err := ev.AllChainsHaveSameHead(beaconNodes); err != nil {

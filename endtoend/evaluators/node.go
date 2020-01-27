@@ -26,18 +26,18 @@ func PeersConnect(beaconNodes []*BeaconNodeInfo) error {
 		if err != nil {
 			return err
 		}
-		pageContent := string(dataInBytes)
 		if err := response.Body.Close(); err != nil {
 			return err
 		}
+
 		// Subtracting by 2 here since the libp2p page has "3 peers" as text.
 		// With a starting index before the "p", going two characters back should give us
 		// the number we need.
-		startIdx := strings.Index(pageContent, "peers") - 2
+		startIdx := strings.Index(string(dataInBytes), "peers") - 2
 		if startIdx == -3 {
-			return fmt.Errorf("could not find needed text in %s", pageContent)
+			return fmt.Errorf("could not find needed text in %s", dataInBytes)
 		}
-		peerCount, err := strconv.Atoi(pageContent[startIdx : startIdx+1])
+		peerCount, err := strconv.Atoi(string(dataInBytes)[startIdx : startIdx+1])
 		if err != nil {
 			return err
 		}
