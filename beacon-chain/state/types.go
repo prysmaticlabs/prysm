@@ -3,6 +3,8 @@ package state
 import (
 	"sync"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/protolambda/zssz/merkle"
@@ -22,6 +24,10 @@ type BeaconState struct {
 	dirtyFields  map[fieldIndex]interface{}
 	valIdxMap    map[[48]byte]uint64
 	merkleLayers [][][]byte
+}
+
+type Validator struct {
+	validator *ethpb.Validator
 }
 
 // InitializeFromProto the beacon state from a protobuf representation.

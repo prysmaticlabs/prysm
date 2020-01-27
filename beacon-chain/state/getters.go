@@ -11,6 +11,42 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
+func (v *Validator) EffectiveBalance() uint64 {
+	return v.validator.EffectiveBalance
+}
+
+func (v *Validator) ActivationEligibilityEpoch() uint64 {
+	return v.validator.ActivationEligibilityEpoch
+}
+
+func (v *Validator) ActivationEpoch() uint64 {
+	return v.validator.ActivationEpoch
+}
+
+func (v *Validator) WithdrawableEpoch() uint64 {
+	return v.validator.WithdrawableEpoch
+}
+
+func (v *Validator) ExitEpoch() uint64 {
+	return v.validator.ExitEpoch
+}
+
+func (v *Validator) PublicKey() [48]byte {
+	var pubkey [48]byte
+	copy(pubkey[:], v.validator.PublicKey)
+	return pubkey
+}
+
+func (v *Validator) WithdrawalCredentials() []byte {
+	creds := make([]byte, len(v.validator.WithdrawalCredentials))
+	copy(creds[:], v.validator.WithdrawalCredentials)
+	return creds
+}
+
+func (v *Validator) Slashed() bool {
+	return v.validator.Slashed
+}
+
 // InnerStateUnsafe returns the pointer value of the underlying
 // beacon state proto object, bypassing immutability. Use with care.
 func (b *BeaconState) InnerStateUnsafe() *pbp2p.BeaconState {
@@ -224,6 +260,20 @@ func (b *BeaconState) Validators() []*ethpb.Validator {
 	return res
 }
 
+// ValidatorsNoClone returns validators participating in consensus on the beacon chain. This
+// method doesn't clone the respective validators.
+func (b *BeaconState) ValidatorsNoClone() []*Validator {
+	if b.state.Validators == nil {
+		return nil
+	}
+	res := make([]*Validator, len(b.state.Validators))
+	for i := 0; i < len(res); i++ {
+		val := b.state.Validators[i]
+		res[i] = &Validator{validator: val}
+	}
+	return res
+}
+
 // ValidatorAtIndex is the validator at the provided index.
 func (b *BeaconState) ValidatorAtIndex(idx uint64) (*ethpb.Validator, error) {
 	if b.state.Validators == nil {
@@ -249,6 +299,18 @@ func (b *BeaconState) ValidatorAtIndex(idx uint64) (*ethpb.Validator, error) {
 	}, nil
 }
 
+// ValidatorAtIndexNoClone is the validator at the provided index.This method
+// doesn't clone the validator.
+func (b *BeaconState) ValidatorAtIndexNoClone(idx uint64) (*Validator, error) {
+	if b.state.Validators == nil {
+		return &Validator{}, nil
+	}
+	if len(b.state.Validators) <= int(idx) {
+		return nil, fmt.Errorf("index %d out of range", idx)
+	}
+	return &Validator{b.state.Validators[idx]}, nil
+}
+
 // ValidatorIndexByPubkey returns a given validator by its 48-byte public key.
 func (b *BeaconState) ValidatorIndexByPubkey(key [48]byte) (uint64, bool) {
 	b.lock.RLock()
@@ -270,9 +332,9 @@ func (b *BeaconState) NumofValidators() int {
 
 // ReadFromEveryValidator reads values from every validator and applies it to the provided function.
 // Warning: This method is potentially unsafe, as it exposes the actual validator registry.
-func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val *ethpb.Validator) error) error {
+func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val *Validator) error) error {
 	for i, v := range b.state.Validators {
-		err := f(i, v)
+		err := f(i, &Validator{validator: v})
 		if err != nil {
 			return err
 		}

@@ -22,8 +22,15 @@ import (
 //    """
 //    return validator.activation_epoch <= epoch < validator.exit_epoch
 func IsActiveValidator(validator *ethpb.Validator, epoch uint64) bool {
-	return validator.ActivationEpoch <= epoch &&
-		epoch < validator.ExitEpoch
+	return checkValidatorActiveStatus(validator.ActivationEpoch, validator.ExitEpoch, epoch)
+}
+
+func IsActiveValidatorUsingTrie(validator *stateTrie.Validator, epoch uint64) bool {
+	return checkValidatorActiveStatus(validator.ActivationEpoch(), validator.ExitEpoch(), epoch)
+}
+
+func checkValidatorActiveStatus(activationEpoch uint64, exitEpoch uint64, epoch uint64) bool {
+	return activationEpoch <= epoch && epoch < exitEpoch
 }
 
 // IsSlashableValidator returns the boolean value on whether the validator
@@ -70,14 +77,13 @@ func ActiveValidatorIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint6
 		return activeIndices, nil
 	}
 	var indices []uint64
-	validatorFunc := func(idx int, val *ethpb.Validator) error {
-		if IsActiveValidator(val, epoch) {
+	// ignoring error as none is returned in the above callback
+	state.ReadFromEveryValidator(func(idx int, val *stateTrie.Validator) error {
+		if IsActiveValidatorUsingTrie(val, epoch) {
 			indices = append(indices, uint64(idx))
 		}
 		return nil
-	}
-	// ignoring error as none is returned in the above callback
-	state.ReadFromEveryValidator(validatorFunc)
+	})
 
 	if err := UpdateCommitteeCache(state, epoch); err != nil {
 		return nil, errors.Wrap(err, "could not update committee cache")
@@ -90,14 +96,13 @@ func ActiveValidatorIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint6
 // at the given epoch.
 func ActiveValidatorCount(state *stateTrie.BeaconState, epoch uint64) (uint64, error) {
 	count := uint64(0)
-	validatorFunc := func(idx int, val *ethpb.Validator) error {
-		if IsActiveValidator(val, epoch) {
+	state.ReadFromEveryValidator(func(idx int, val *stateTrie.Validator) error {
+		if IsActiveValidatorUsingTrie(val, epoch) {
 			count++
 		}
 		return nil
-	}
-	err := state.ReadFromEveryValidator(validatorFunc)
-	return count, err
+	})
+	return count, nil
 }
 
 // DelayedActivationExitEpoch takes in epoch number and returns when
