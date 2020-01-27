@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	ev "github.com/prysmaticlabs/prysm/endtoend/evaluators"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -13,17 +14,8 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 	params.UseMinimalConfig()
 
 	minimalConfig := &end2EndConfig{
-		beaconFlags: []string{
-			"--minimal-config",
-			"--enable-ssz-cache",
-			"--cache-proposer-indices",
-			"--cache-filtered-block-tree",
-			"--enable-skip-slots-cache",
-			"--enable-attestation-cache",
-		},
-		validatorFlags: []string{
-			"--minimal-config",
-		},
+		beaconFlags: append(featureconfig.E2EBeaconChainFlags, "--minimal-config"),
+		validatorFlags: append(featureconfig.E2EValidatorFlags, "--minimal-config"),
 		epochsToRun:    5,
 		numBeaconNodes: 4,
 		numValidators:  params.BeaconConfig().MinGenesisActiveValidatorCount,

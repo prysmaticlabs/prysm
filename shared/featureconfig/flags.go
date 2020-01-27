@@ -212,6 +212,12 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	protectProposerFlag,
 }...)
 
+// E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
+var E2EValidatorFlags = []string{
+	"--protect-attester",
+	"--protect-proposer",
+}
+
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	noGenesisDelayFlag,
@@ -232,3 +238,14 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	cacheProposerIndicesFlag,
 	protoArrayForkChoice,
 }...)
+
+// E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
+var E2EBeaconChainFlags = []string{
+	"--enable-ssz-cache",
+	"--enable-attestation-cache",
+	"--cache-proposer-indices",
+	"--cache-filtered-block-tree",
+	"--enable-skip-slots-cache",
+	"--enable-eth1-data-vote-cache",
+	"--proto-array-forkchoice",
+}
