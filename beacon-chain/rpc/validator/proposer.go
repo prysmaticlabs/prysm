@@ -75,7 +75,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 			// TODO(2766): Implement rest of the retrievals for beacon block operations
 			ProposerSlashings: []*ethpb.ProposerSlashing{},
 			AttesterSlashings: []*ethpb.AttesterSlashing{},
-			VoluntaryExits:    []*ethpb.SignedVoluntaryExit{},
+			VoluntaryExits:    vs.ExitPool.PendingExits(req.Slot),
 			Graffiti:          graffiti[:],
 		},
 	}
