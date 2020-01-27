@@ -27,7 +27,8 @@ func NewPool() *Pool {
 	}
 }
 
-// PendingExits returns exits that are ready for inclusion at the given slot.
+// PendingExits returns exits that are ready for inclusion at the given slot. This method will not
+// return more than the block enforced MaxVoluntaryExits.
 func (p *Pool) PendingExits(slot uint64) []*ethpb.SignedVoluntaryExit {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
@@ -37,6 +38,9 @@ func (p *Pool) PendingExits(slot uint64) []*ethpb.SignedVoluntaryExit {
 			continue
 		}
 		pending = append(pending, e)
+	}
+	if len(pending) > int(params.BeaconConfig().MaxVoluntaryExits) {
+		pending = pending[:params.BeaconConfig().MaxVoluntaryExits]
 	}
 	return pending
 }
