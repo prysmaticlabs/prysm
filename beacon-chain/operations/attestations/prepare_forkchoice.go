@@ -107,11 +107,12 @@ func (s *Service) seen(att *ethpb.Attestation) (bool, error) {
 		if !ok {
 			return false, errors.New("not a bit field")
 		}
-		if savedBitlist.Overlaps(att.AggregationBits) {
+		if savedBitlist.Contains(att.AggregationBits) {
 			return true, nil
 		}
 	}
 
 	s.forkChoiceProcessedRoots.Set(string(attRoot[:]), att.AggregationBits, 1 /*cost*/)
+
 	return false, nil
 }
