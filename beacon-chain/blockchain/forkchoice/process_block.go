@@ -155,7 +155,7 @@ func (s *Store) OnBlockCacheFilteredTree(ctx context.Context, signed *ethpb.Sign
 	if err != nil {
 		return nil, err
 	}
-	if featureconfig.Get().EnableBlockTreeCache && !featureconfig.Get().ProtoArrayForkChoice {
+	if !featureconfig.Get().DisableForkChoice && featureconfig.Get().EnableBlockTreeCache && !featureconfig.Get().ProtoArrayForkChoice {
 		tree, err := s.getFilterBlockTree(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not calculate filtered block tree")
