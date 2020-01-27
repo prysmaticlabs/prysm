@@ -220,7 +220,7 @@ func TestSeenAttestations_PresentInCache(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, Signature: []byte{'A'}, AggregationBits: bitfield.Bitlist{0x03}}
+	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, Signature: []byte{'A'}, AggregationBits: bitfield.Bitlist{0x13} /* 0b00010011 */}
 	got, err := s.seen(att1)
 	if err != nil {
 		t.Fatal(err)
@@ -231,8 +231,19 @@ func TestSeenAttestations_PresentInCache(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	att2 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, Signature: []byte{'A'}, AggregationBits: bitfield.Bitlist{0x03}}
+	att2 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, Signature: []byte{'A'}, AggregationBits: bitfield.Bitlist{0x17} /* 0b00010111 */}
 	got, err = s.seen(att2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got {
+		t.Error("Wanted false, got false")
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	att3 := &ethpb.Attestation{Data: &ethpb.AttestationData{}, Signature: []byte{'A'}, AggregationBits: bitfield.Bitlist{0x17} /* 0b00010111 */}
+	got, err = s.seen(att3)
 	if err != nil {
 		t.Fatal(err)
 	}
