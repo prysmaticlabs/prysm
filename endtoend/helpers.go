@@ -17,6 +17,7 @@ const (
 	maxPollingWaitTime = 36 * time.Second
 	filePollingInterval = 1 * time.Second
 )
+
 func killProcesses(t *testing.T, pIDs []int) {
 	for _, id := range pIDs {
 		process, err := os.FindProcess(id)
