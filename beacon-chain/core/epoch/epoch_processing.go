@@ -163,7 +163,7 @@ func ProcessSlashings(state *stateTrie.BeaconState) (*stateTrie.BeaconState, err
 
 	// a callback is used here to apply the following actions  to all validators
 	// below equally.
-	validatorFunc := func(idx int, val *ethpb.Validator) error {
+	err = state.ApplyToEveryValidator(func(idx int, val *ethpb.Validator) error {
 		correctEpoch := (currentEpoch + exitLength/2) == val.WithdrawableEpoch
 		if val.Slashed && correctEpoch {
 			minSlashing := mathutil.Min(totalSlashing*3, totalBalance)
@@ -175,8 +175,7 @@ func ProcessSlashings(state *stateTrie.BeaconState) (*stateTrie.BeaconState, err
 			}
 		}
 		return nil
-	}
-	err = state.ApplyToEveryValidator(validatorFunc)
+	})
 	return state, err
 }
 
