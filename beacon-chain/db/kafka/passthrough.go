@@ -227,6 +227,11 @@ func (e Exporter) SaveState(ctx context.Context, state *state.BeaconState, block
 	return e.db.SaveState(ctx, state, blockRoot)
 }
 
+// SaveRawState -- passthrough.
+func (e Exporter) SaveRawState(ctx context.Context, state *ethereum_beacon_p2p_v1.BeaconState, blockRoot [32]byte) error {
+	return e.db.SaveRawState(ctx, state, blockRoot)
+}
+
 // SaveProposerSlashing -- passthrough.
 func (e Exporter) SaveProposerSlashing(ctx context.Context, slashing *eth.ProposerSlashing) error {
 	return e.db.SaveProposerSlashing(ctx, slashing)

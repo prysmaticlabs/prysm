@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -50,7 +49,7 @@ type Store struct {
 	bestJustifiedCheckpt  *ethpb.Checkpoint
 	latestVoteMap         map[uint64]*pb.ValidatorLatestVote
 	voteLock              sync.RWMutex
-	initSyncState         map[[32]byte]*stateTrie.BeaconState
+	initSyncState         map[[32]byte]*pb.BeaconState
 	initSyncStateLock     sync.RWMutex
 	nextEpochBoundarySlot uint64
 	filteredBlockTree     map[[32]byte]*ethpb.BeaconBlock
@@ -67,7 +66,7 @@ func NewForkChoiceService(ctx context.Context, db db.HeadAccessDatabase) *Store 
 		db:              db,
 		checkpointState: cache.NewCheckpointStateCache(),
 		latestVoteMap:   make(map[uint64]*pb.ValidatorLatestVote),
-		initSyncState:   make(map[[32]byte]*stateTrie.BeaconState),
+		initSyncState:   make(map[[32]byte]*pb.BeaconState),
 	}
 }
 
@@ -137,7 +136,7 @@ func (s *Store) cacheGenesisState(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}
-	s.initSyncState[genesisBlkRoot] = genesisState
+	s.initSyncState[genesisBlkRoot] = genesisState.Clone()
 
 	return nil
 }

@@ -77,6 +77,7 @@ type NoHeadAccessDatabase interface {
 	SaveValidatorIndices(ctx context.Context, publicKeys [][48]byte, validatorIndices []uint64) error
 	// State related methods.
 	SaveState(ctx context.Context, state *state.BeaconState, blockRoot [32]byte) error
+	SaveRawState(ctx context.Context, state *ethereum_beacon_p2p_v1.BeaconState, blockRoot [32]byte) error
 	DeleteState(ctx context.Context, blockRoot [32]byte) error
 	DeleteStates(ctx context.Context, blockRoots [][32]byte) error
 	// Slashing operations.

@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"go.opencensus.io/trace"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 )
 
 // State returns the saved state using block's signing root,
@@ -59,6 +61,7 @@ func (k *Store) HeadState(ctx context.Context) (*state.BeaconState, error) {
 		s, err = createState(enc)
 		return err
 	})
+	logrus.Errorf("We have head state of slot %d", s.Slot)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +109,14 @@ func (k *Store) GenesisState(ctx context.Context) (*state.BeaconState, error) {
 func (k *Store) SaveState(ctx context.Context, state *state.BeaconState, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveState")
 	defer span.End()
-	enc, err := encode(state.InnerStateUnsafe())
+	return k.SaveRawState(ctx, state.InnerStateUnsafe(), blockRoot)
+}
+
+// SaveRawState stores a state to the db using block's signing root which was used to generate the state.
+func (k *Store) SaveRawState(ctx context.Context, state *pb.BeaconState, blockRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveRawState")
+	defer span.End()
+	enc, err := encode(state)
 	if err != nil {
 		return err
 	}
