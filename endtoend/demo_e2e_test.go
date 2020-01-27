@@ -10,7 +10,6 @@ import (
 )
 
 func TestEndToEnd_DemoConfig(t *testing.T) {
-	t.Skip("Demo is essentially mainnet and too much to run in e2e at the moment")
 	testutil.ResetCache()
 	params.UseDemoBeaconConfig()
 
