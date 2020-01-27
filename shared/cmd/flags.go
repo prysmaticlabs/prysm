@@ -88,10 +88,22 @@ var (
 		Usage: "The port used by libp2p.",
 		Value: 13000,
 	}
+	// P2PIP defines the local IP to be used by libp2p.
+	P2PIP = cli.StringFlag{
+		Name:  "p2p-local-ip",
+		Usage: "The local ip address to listen for incoming data.",
+		Value: "",
+	}
 	// P2PHost defines the host IP to be used by libp2p.
 	P2PHost = cli.StringFlag{
 		Name:  "p2p-host-ip",
 		Usage: "The IP address advertised by libp2p. This may be used to advertise an external IP.",
+		Value: "",
+	}
+	// P2PHostDNS defines the host DNS to be used by libp2p.
+	P2PHostDNS = cli.StringFlag{
+		Name:  "p2p-host-dns",
+		Usage: "The DNS address advertised by libp2p. This may be used to advertise an external DNS.",
 		Value: "",
 	}
 	// P2PPrivKey defines a flag to specify the location of the private key file for libp2p.

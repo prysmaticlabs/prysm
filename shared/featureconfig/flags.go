@@ -13,6 +13,13 @@ var (
 		Name:  "interop-write-ssz-state-transitions",
 		Usage: "Write ssz states to disk after attempted state transition",
 	}
+	// disableForkChoiceUnsafeFlag disables using the LMD-GHOST fork choice to update
+	// the head of the chain based on attestations and instead accepts any valid received block
+	// as the chain head. UNSAFE, use with caution.
+	disableForkChoiceUnsafeFlag = cli.BoolFlag{
+		Name:  "disable-fork-choice-unsafe",
+		Usage: "UNSAFE: disable fork choice for determining head of the beacon chain.",
+	}
 	// enableAttestationCacheFlag see https://github.com/prysmaticlabs/prysm/issues/3106.
 	enableAttestationCacheFlag = cli.BoolFlag{
 		Name:  "enable-attestation-cache",
@@ -76,10 +83,19 @@ var (
 		Name:  "cache-proposer-indices",
 		Usage: "Cache proposer indices on per epoch basis.",
 	}
-	blockDoubleProposals = cli.BoolFlag{
-		Name: "block-double-proposals",
+	protectProposerFlag = cli.BoolFlag{
+		Name: "protect-proposer",
 		Usage: "Prevent the validator client from signing and broadcasting 2 different block " +
 			"proposals in the same epoch. Protects from slashing.",
+	}
+	protectAttesterFlag = cli.BoolFlag{
+		Name: "protect-attester",
+		Usage: "Prevent the validator client from signing and broadcasting 2 any slashable attestations. " +
+			"Protects from slashing.",
+	}
+	protoArrayForkChoice = cli.BoolFlag{
+		Name:  "proto-array-forkchoice",
+		Usage: "Uses proto array fork choice over the naive spec fork choice. Better implementation in terms of mem usage and speed. ",
 	}
 )
 
@@ -164,7 +180,7 @@ var (
 		Hidden: true,
 	}
 	deprecatedSaveDepositDataFlag = cli.BoolFlag{
-		Name:  "save-deposit-data",
+		Name:   "save-deposit-data",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
@@ -192,14 +208,22 @@ var deprecatedFlags = []cli.Flag{
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	minimalConfigFlag,
-	blockDoubleProposals,
+	protectAttesterFlag,
+	protectProposerFlag,
 }...)
+
+// E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
+var E2EValidatorFlags = []string{
+	"--protect-attester",
+	"--protect-proposer",
+}
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	noGenesisDelayFlag,
 	minimalConfigFlag,
 	writeSSZStateTransitionsFlag,
+	disableForkChoiceUnsafeFlag,
 	enableSSZCache,
 	enableAttestationCacheFlag,
 	enableEth1DataVoteCacheFlag,
@@ -212,4 +236,16 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableSlasherFlag,
 	cacheFilteredBlockTreeFlag,
 	cacheProposerIndicesFlag,
+	protoArrayForkChoice,
 }...)
+
+// E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
+var E2EBeaconChainFlags = []string{
+	"--enable-ssz-cache",
+	"--enable-attestation-cache",
+	"--cache-proposer-indices",
+	"--cache-filtered-block-tree",
+	"--enable-skip-slots-cache",
+	"--enable-eth1-data-vote-cache",
+	"--proto-array-forkchoice",
+}

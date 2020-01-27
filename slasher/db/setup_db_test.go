@@ -1,12 +1,18 @@
 package db
 
 import (
+	"flag"
 	"os"
 	"testing"
+
+	"github.com/urfave/cli"
 )
 
 func TestClearDB(t *testing.T) {
-	slasherDB := SetupSlasherDB(t)
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	ctx := cli.NewContext(app, set, nil)
+	slasherDB := SetupSlasherDB(t, ctx)
 	defer TeardownSlasherDB(t, slasherDB)
 	if err := slasherDB.ClearDB(); err != nil {
 		t.Fatal(err)

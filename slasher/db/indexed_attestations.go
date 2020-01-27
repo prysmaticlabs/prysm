@@ -9,9 +9,9 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -68,6 +68,58 @@ func (db *Store) IndexedAttestation(targetEpoch uint64, validatorID uint64) ([]*
 	return iAtt, err
 }
 
+// IndexedAttestations accepts a target epoch and returns a list of
+// indexed attestations.
+// Returns nil if the indexed attestation does not exist with that target epoch.
+func (db *Store) IndexedAttestations(targetEpoch uint64) ([]*ethpb.IndexedAttestation, error) {
+	var iAtt []*ethpb.IndexedAttestation
+	key := bytesutil.Bytes8(targetEpoch)
+	err := db.view(func(tx *bolt.Tx) error {
+		c := tx.Bucket(historicIndexedAttestationsBucket).Cursor()
+		for k, enc := c.Seek(key); k != nil && bytes.Equal(k[:8], key); k, _ = c.Next() {
+			iA, err := createIndexedAttestation(enc)
+			if err != nil {
+				return err
+			}
+			iAtt = append(iAtt, iA)
+		}
+		return nil
+	})
+	return iAtt, err
+}
+
+// LatestIndexedAttestationsTargetEpoch returns latest target epoch in db
+// returns 0 if there is no indexed attestations in db.
+func (db *Store) LatestIndexedAttestationsTargetEpoch() (uint64, error) {
+	var lt uint64
+	err := db.view(func(tx *bolt.Tx) error {
+		c := tx.Bucket(historicIndexedAttestationsBucket).Cursor()
+		k, _ := c.Last()
+		if k == nil {
+			return nil
+		}
+		lt = bytesutil.FromBytes8(k[:8])
+		return nil
+	})
+	return lt, err
+}
+
+// LatestValidatorIdx returns latest validator id in db
+// returns 0 if there is no validators in db.
+func (db *Store) LatestValidatorIdx() (uint64, error) {
+	var lt uint64
+	err := db.view(func(tx *bolt.Tx) error {
+		c := tx.Bucket(indexedAttestationsIndicesBucket).Cursor()
+		k, _ := c.Last()
+		if k == nil {
+			return nil
+		}
+		lt = bytesutil.FromBytes8(k[:8])
+		return nil
+	})
+	return lt, err
+}
+
 // DoubleVotes looks up db for slashable attesting data that were preformed by the same validator.
 func (db *Store) DoubleVotes(targetEpoch uint64, validatorIdx uint64, dataRoot []byte, origAtt *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error) {
 	idxAttestations, err := db.IndexedAttestation(targetEpoch, validatorIdx)
@@ -76,7 +128,7 @@ func (db *Store) DoubleVotes(targetEpoch uint64, validatorIdx uint64, dataRoot [
 	}
 	var slashIdxAtt []*ethpb.IndexedAttestation
 	for _, at := range idxAttestations {
-		root, err := ssz.HashTreeRoot(at.Data)
+		root, err := hashutil.HashProto(at.Data)
 		if err != nil {
 			return nil, err
 		}
@@ -127,7 +179,6 @@ func (db *Store) SaveIndexedAttestation(idxAttestation *ethpb.IndexedAttestation
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal")
 	}
-
 	err = db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicIndexedAttestationsBucket)
 		//if data is in db skip put and index functions
@@ -152,7 +203,7 @@ func (db *Store) SaveIndexedAttestation(idxAttestation *ethpb.IndexedAttestation
 }
 
 func createIndexedAttestationIndicesFromData(idxAttestation *ethpb.IndexedAttestation, tx *bolt.Tx) error {
-	dataRoot, err := ssz.HashTreeRoot(idxAttestation.Data)
+	dataRoot, err := hashutil.HashProto(idxAttestation.Data)
 
 	if err != nil {
 		return errors.Wrap(err, "failed to hash indexed attestation data.")
@@ -163,7 +214,6 @@ func createIndexedAttestationIndicesFromData(idxAttestation *ethpb.IndexedAttest
 		DataRoot:  dataRoot[:],
 	}
 	key := bytesutil.Bytes8(idxAttestation.Data.Target.Epoch)
-
 	bucket := tx.Bucket(indexedAttestationsIndicesBucket)
 	enc := bucket.Get(key)
 	vIdxList, err := createValidatorIDsToIndexedAttestationList(enc)
@@ -200,7 +250,7 @@ func (db *Store) DeleteIndexedAttestation(idxAttestation *ethpb.IndexedAttestati
 }
 
 func removeIndexedAttestationIndicesFromData(idxAttestation *ethpb.IndexedAttestation, tx *bolt.Tx) error {
-	dataRoot, err := ssz.HashTreeRoot(idxAttestation.Data)
+	dataRoot, err := hashutil.HashProto(idxAttestation.Data)
 	protoIdxAtt := &slashpb.ValidatorIDToIdxAtt{
 		Signature: idxAttestation.Signature,
 		Indices:   idxAttestation.AttestingIndices,

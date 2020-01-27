@@ -39,8 +39,6 @@ type validator struct {
 	logValidatorBalances bool
 	attLogs              map[[32]byte]*attSubmitted
 	attLogsLock          sync.Mutex
-	pubKeyToID           map[[48]byte]uint64
-	pubKeyToIDLock       sync.RWMutex
 }
 
 // Done cleans up the validator.
@@ -254,13 +252,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	v.duties = resp
 	// Only log the full assignments output on epoch start to be less verbose.
 	if slot%params.BeaconConfig().SlotsPerEpoch == 0 {
-		v.pubKeyToIDLock.Lock()
-		defer v.pubKeyToIDLock.Unlock()
-
 		for _, duty := range v.duties.Duties {
-			if _, ok := v.pubKeyToID[bytesutil.ToBytes48(duty.PublicKey)]; !ok {
-				v.pubKeyToID[bytesutil.ToBytes48(duty.PublicKey)] = duty.ValidatorIndex
-			}
 			lFields := logrus.Fields{
 				"pubKey":         fmt.Sprintf("%#x", bytesutil.Trunc(duty.PublicKey)),
 				"validatorIndex": duty.ValidatorIndex,
@@ -321,7 +313,7 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]pb
 }
 
 // isAggregator checks if a validator is an aggregator of a given slot, it uses the selection algorithm outlined in:
-// https://github.com/ethereum/eth2.0-specs/blob/v0.9.0/specs/validator/0_beacon-chain-validator.md#aggregation-selection
+// https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/validator/0_beacon-chain-validator.md#aggregation-selection
 func (v *validator) isAggregator(ctx context.Context, committee []uint64, slot uint64, pubKey [48]byte) (bool, error) {
 	modulo := uint64(1)
 	if len(committee)/int(params.BeaconConfig().TargetAggregatorsPerCommittee) > 1 {

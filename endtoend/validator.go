@@ -58,27 +58,26 @@ func initializeValidators(
 			"--force-clear-db",
 			fmt.Sprintf("--interop-num-validators=%d", validatorsPerNode),
 			fmt.Sprintf("--interop-start-index=%d", validatorsPerNode*n),
-			fmt.Sprintf("--monitoring-port=%d", 9080+n),
+			fmt.Sprintf("--monitoring-port=%d", 9280+n),
 			fmt.Sprintf("--datadir=%s/eth2-val-%d", tmpPath, n),
-			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", 4000+n),
+			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", 4200+n),
 		}
-		if config.minimalConfig {
-			args = append(args, "--minimal-config")
-		}
+		args = append(args, config.validatorFlags...)
+
 		cmd := exec.Command(binaryPath, args...)
 		cmd.Stdout = file
 		cmd.Stderr = file
-		t.Logf("Starting validator client with flags: %s", strings.Join(args, " "))
+		t.Logf("Starting validator client %d with flags: %s", n, strings.Join(args, " "))
 		if err := cmd.Start(); err != nil {
 			t.Fatal(err)
 		}
 		valClients[n] = &validatorClientInfo{
 			processID:   cmd.Process.Pid,
-			monitorPort: 9080 + n,
+			monitorPort: 9280 + n,
 		}
 	}
 
-	client, err := rpc.DialHTTP("http://127.0.0.1:8545")
+	client, err := rpc.DialHTTP("http://127.0.0.1:8745")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,8 +123,7 @@ func initializeValidators(
 		t.Fatal(err)
 	}
 
-	// "Safe" amount of blocks to mine to make sure the deposits are seen.
-	if err := mineBlocks(web3, keystore, 20); err != nil {
+	if err := mineBlocks(web3, keystore, params.BeaconConfig().Eth1FollowDistance); err != nil {
 		t.Fatalf("failed to mine blocks %v", err)
 	}
 
