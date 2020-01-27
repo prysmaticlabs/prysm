@@ -16,37 +16,37 @@ func New(ctx context.Context, state *stateTrie.BeaconState) ([]*Validator, *Bala
 	ctx, span := trace.StartSpan(ctx, "precomputeEpoch.New")
 	defer span.End()
 
-	vals := state.Validators()
-	vp := make([]*Validator, len(vals))
+	vp := make([]*Validator, state.NumofValidators())
 	bp := &Balance{}
 
 	currentEpoch := helpers.CurrentEpoch(state)
 	prevEpoch := helpers.PrevEpoch(state)
 
-	for i, v := range vals {
+	state.ReadFromEveryValidator(func(idx int, val *stateTrie.Validator) error {
 		// Was validator withdrawable or slashed
-		withdrawable := currentEpoch >= v.WithdrawableEpoch
+		withdrawable := currentEpoch >= val.WithdrawableEpoch()
 		p := &Validator{
-			IsSlashed:                    v.Slashed,
+			IsSlashed:                    val.Slashed(),
 			IsWithdrawableCurrentEpoch:   withdrawable,
-			CurrentEpochEffectiveBalance: v.EffectiveBalance,
+			CurrentEpochEffectiveBalance: val.EffectiveBalance(),
 		}
 		// Was validator active current epoch
-		if helpers.IsActiveValidator(v, currentEpoch) {
+		if helpers.IsActiveValidatorUsingTrie(val, currentEpoch) {
 			p.IsActiveCurrentEpoch = true
-			bp.CurrentEpoch += v.EffectiveBalance
+			bp.CurrentEpoch += val.EffectiveBalance()
 		}
 		// Was validator active previous epoch
-		if helpers.IsActiveValidator(v, prevEpoch) {
+		if helpers.IsActiveValidatorUsingTrie(val, prevEpoch) {
 			p.IsActivePrevEpoch = true
-			bp.PrevEpoch += v.EffectiveBalance
+			bp.PrevEpoch += val.EffectiveBalance()
 		}
 		// Set inclusion slot and inclusion distance to be max, they will be compared and replaced
 		// with the lower values
 		p.InclusionSlot = params.BeaconConfig().FarFutureEpoch
 		p.InclusionDistance = params.BeaconConfig().FarFutureEpoch
 
-		vp[i] = p
-	}
+		vp[idx] = p
+		return nil
+	})
 	return vp, bp
 }
