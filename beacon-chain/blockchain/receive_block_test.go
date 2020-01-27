@@ -11,9 +11,9 @@ import (
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -27,7 +27,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	chainService := setupBeaconChain(t, db)
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
-	genesis, _ := testutil.GenerateFullBlock(beaconState, privKeys, nil, beaconState.Slot+1)
+	genesis, _ := testutil.GenerateFullBlock(beaconState, privKeys, nil, beaconState.Slot()+1)
 	beaconState, err := state.ExecuteStateTransition(ctx, beaconState, genesis)
 	if err != nil {
 		t.Fatal(err)
@@ -52,7 +52,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	slot := beaconState.Slot + 1
+	slot := beaconState.Slot() + 1
 	block, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, slot)
 	if err != nil {
 		t.Fatal(err)
@@ -82,7 +82,10 @@ func TestReceiveReceiveBlockNoPubsub_CanSaveHeadInfo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	head := &pb.BeaconState{Slot: 100, FinalizedCheckpoint: &ethpb.Checkpoint{Root: r[:]}}
+	head, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: 100, FinalizedCheckpoint: &ethpb.Checkpoint{Root: r[:]}})
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveState(ctx, head, r); err != nil {
 		t.Fatal(err)
 	}
@@ -154,12 +157,12 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 	chainService := setupBeaconChain(t, db)
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
-	block, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, beaconState.Slot)
+	block, err := testutil.GenerateFullBlock(beaconState, privKeys, nil, beaconState.Slot())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	stateRoot, err := stateutil.HashTreeRootState(beaconState)
+	stateRoot, err := beaconState.HashTreeRoot()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,7 +183,7 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 		t.Fatalf("Could not save block to db: %v", err)
 	}
 
-	block, err = testutil.GenerateFullBlock(beaconState, privKeys, nil, beaconState.Slot)
+	block, err = testutil.GenerateFullBlock(beaconState, privKeys, nil, beaconState.Slot())
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -14,11 +14,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/stateutil"
 )
 
 func TestStore_GenesisStoreOk(t *testing.T) {
@@ -29,8 +29,11 @@ func TestStore_GenesisStoreOk(t *testing.T) {
 	store := NewForkChoiceService(ctx, db)
 
 	genesisTime := time.Unix(9999, 0)
-	genesisState := &pb.BeaconState{GenesisTime: uint64(genesisTime.Unix())}
-	genesisStateRoot, err := stateutil.HashTreeRootState(genesisState)
+	genesisState, err := beaconstate.InitializeFromProto(&pb.BeaconState{GenesisTime: uint64(genesisTime.Unix())})
+	if err != nil {
+		t.Fatal(err)
+	}
+	genesisStateRoot, err := genesisState.HashTreeRoot()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,8 +159,11 @@ func TestStore_LatestAttestingBalance(t *testing.T) {
 		validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
 	}
 
-	s := &pb.BeaconState{Validators: validators, RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
-	stateRoot, err := stateutil.HashTreeRootState(s)
+	s, err := beaconstate.InitializeFromProto(&pb.BeaconState{Validators: validators, RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	stateRoot, err := s.HashTreeRoot()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -263,8 +269,11 @@ func TestStore_GetHead(t *testing.T) {
 		validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
 	}
 
-	s := &pb.BeaconState{Validators: validators, RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
-	stateRoot, err := stateutil.HashTreeRootState(s)
+	s, err := beaconstate.InitializeFromProto(&pb.BeaconState{Validators: validators, RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	stateRoot, err := s.HashTreeRoot()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -358,7 +367,10 @@ func TestCacheGenesisState_Correct(t *testing.T) {
 
 	b := &ethpb.BeaconBlock{Slot: 1}
 	r, _ := ssz.HashTreeRoot(b)
-	s := &pb.BeaconState{GenesisTime: 99}
+	s, err := beaconstate.InitializeFromProto(&pb.BeaconState{GenesisTime: 99})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	store.db.SaveState(ctx, s, r)
 	store.db.SaveGenesisBlockRoot(ctx, r)
@@ -386,8 +398,11 @@ func TestStore_GetFilterBlockTree_CorrectLeaf(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s := &pb.BeaconState{}
-	stateRoot, err := stateutil.HashTreeRootState(s)
+	s, err := beaconstate.InitializeFromProto(&pb.BeaconState{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	stateRoot, err := s.HashTreeRoot()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -449,8 +464,11 @@ func TestStore_GetFilterBlockTree_IncorrectLeaf(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s := &pb.BeaconState{}
-	stateRoot, err := stateutil.HashTreeRootState(s)
+	s, err := beaconstate.InitializeFromProto(&pb.BeaconState{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	stateRoot, err := s.HashTreeRoot()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -482,9 +500,9 @@ func TestStore_GetFilterBlockTree_IncorrectLeaf(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Filter for incorrect leaves for 1, 7 and 8
-	store.db.SaveState(ctx, &pb.BeaconState{CurrentJustifiedCheckpoint: &ethpb.Checkpoint{}}, bytesutil.ToBytes32(roots[1]))
-	store.db.SaveState(ctx, &pb.BeaconState{CurrentJustifiedCheckpoint: &ethpb.Checkpoint{}}, bytesutil.ToBytes32(roots[7]))
-	store.db.SaveState(ctx, &pb.BeaconState{CurrentJustifiedCheckpoint: &ethpb.Checkpoint{}}, bytesutil.ToBytes32(roots[8]))
+	store.db.SaveState(ctx, &beaconstate.BeaconState{}, bytesutil.ToBytes32(roots[1]))
+	store.db.SaveState(ctx, &beaconstate.BeaconState{}, bytesutil.ToBytes32(roots[7]))
+	store.db.SaveState(ctx, &beaconstate.BeaconState{}, bytesutil.ToBytes32(roots[8]))
 	store.justifiedCheckpt.Epoch = 1
 	tree, err := store.getFilterBlockTree(ctx)
 	if err != nil {
@@ -495,7 +513,11 @@ func TestStore_GetFilterBlockTree_IncorrectLeaf(t *testing.T) {
 	}
 
 	// Set leave 1 as correct
-	store.db.SaveState(ctx, &pb.BeaconState{CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 1, Root: store.justifiedCheckpt.Root}}, bytesutil.ToBytes32(roots[1]))
+	s, err = beaconstate.InitializeFromProto(&pb.BeaconState{CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 1, Root: store.justifiedCheckpt.Root}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	store.db.SaveState(ctx, s, bytesutil.ToBytes32(roots[1]))
 	tree, err = store.getFilterBlockTree(ctx)
 	if err != nil {
 		t.Fatal(err)

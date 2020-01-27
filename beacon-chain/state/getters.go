@@ -13,6 +13,9 @@ import (
 // InnerStateUnsafe returns the pointer value of the underlying
 // beacon state proto object, bypassing immutability. Use with care.
 func (b *BeaconState) InnerStateUnsafe() *pbp2p.BeaconState {
+	if b.state == nil {
+		return &pbp2p.BeaconState{}
+	}
 	return b.state
 }
 
