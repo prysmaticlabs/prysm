@@ -47,7 +47,7 @@ func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, err
 	// Update metrics.
 	if bestNode.root != lastHeadRoot {
 		headChangesCount.Inc()
-		headSlotNumber.Set(float64(bestNode.slot))
+		headSlotNumber.Set(float64(bestNode.Slot))
 	}
 
 	return bestNode.root, nil
