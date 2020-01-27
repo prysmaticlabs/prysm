@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -269,6 +270,9 @@ func (s *Store) updateAttVotes(
 	indexedAtt *ethpb.IndexedAttestation,
 	tgtRoot []byte,
 	tgtEpoch uint64) error {
+	if featureconfig.Get().DisableForkChoice {
+		return nil
+	}
 
 	indices := indexedAtt.AttestingIndices
 	s.voteLock.Lock()
