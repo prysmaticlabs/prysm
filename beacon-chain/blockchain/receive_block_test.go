@@ -36,6 +36,10 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if err := chainService.beaconDB.SaveGenesisBlockRoot(ctx, genesisBlkRoot); err != nil {
+		t.Fatal(err)
+	}
+
 	if err := db.SaveState(ctx, beaconState, genesisBlkRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -46,10 +50,6 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 
 	if err := chainService.beaconDB.SaveBlock(ctx, genesis); err != nil {
 		t.Fatalf("Could not save block to db: %v", err)
-	}
-
-	if err := db.SaveState(ctx, beaconState, genesisBlkRoot); err != nil {
-		t.Fatal(err)
 	}
 
 	slot := beaconState.Slot + 1
@@ -167,6 +167,9 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 	genesis := b.NewGenesisBlock(stateRoot[:])
 	parentRoot, err := ssz.HashTreeRoot(genesis.Block)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := chainService.beaconDB.SaveGenesisBlockRoot(ctx, parentRoot); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.SaveState(ctx, beaconState, parentRoot); err != nil {
