@@ -26,20 +26,26 @@ func AggregateAttestations(atts []*ethpb.Attestation) ([]*ethpb.Attestation, err
 		return atts, nil
 	}
 
+	// To discard duplicated attestations with the same bit fields but different signatures.
+	// This will take the first attestation and ignore the rest assuming same bit fields.
 	seenBit := make(map[[32]byte]bool)
-
-	// Naive aggregation. O(n^2) time.
-	for i, a := range atts {
-		h := hashutil.Hash(a.AggregationBits.Bytes())
+	toBeAggregated := make([]*ethpb.Attestation, 0)
+	for _, att := range atts {
+		h := hashutil.Hash(att.AggregationBits.Bytes())
 		if _, ok := seenBit[h]; ok {
 			continue
 		}
 		seenBit[h] = true
-		if i >= len(atts) {
+		toBeAggregated = append(toBeAggregated, att)
+	}
+
+	// Naive aggregation. O(n^2) time.
+	for i, a := range toBeAggregated {
+		if i >= len(toBeAggregated) {
 			break
 		}
-		for j := i + 1; j < len(atts); j++ {
-			b := atts[j]
+		for j := i + 1; j < len(toBeAggregated); j++ {
+			b := toBeAggregated[j]
 			if !a.AggregationBits.Overlaps(b.AggregationBits) {
 				var err error
 				a, err = AggregateAttestation(a, b)
@@ -47,36 +53,31 @@ func AggregateAttestations(atts []*ethpb.Attestation) ([]*ethpb.Attestation, err
 					return nil, err
 				}
 				// Delete b
-				atts = append(atts[:j], atts[j+1:]...)
+				toBeAggregated = append(toBeAggregated[:j], toBeAggregated[j+1:]...)
 				j--
-				atts[i] = a
+				toBeAggregated[i] = a
 			}
 		}
 	}
 
 	// Naive deduplication of identical aggregations. O(n^2) time.
-	for i, a := range atts {
-		h := hashutil.Hash(a.AggregationBits.Bytes())
-		if _, ok := seenBit[h]; ok {
-			continue
-		}
-		seenBit[h] = true
-		for j := i + 1; j < len(atts); j++ {
-			b := atts[j]
+	for i, a := range toBeAggregated {
+		for j := i + 1; j < len(toBeAggregated); j++ {
+			b := toBeAggregated[j]
 			if a.AggregationBits.Contains(b.AggregationBits) {
 				// If b is fully contained in a, then b can be removed.
-				atts = append(atts[:j], atts[j+1:]...)
+				toBeAggregated = append(toBeAggregated[:j], toBeAggregated[j+1:]...)
 				j--
 			} else if b.AggregationBits.Contains(a.AggregationBits) {
 				// if a is fully contained in b, then a can be removed.
-				atts = append(atts[:i], atts[i+1:]...)
+				toBeAggregated = append(toBeAggregated[:i], toBeAggregated[i+1:]...)
 				i--
 				break // Stop the inner loop, advance a.
 			}
 		}
 	}
 
-	return atts, nil
+	return toBeAggregated, nil
 }
 
 // BLS aggregate signature aliases for testing / benchmark substitution. These methods are
