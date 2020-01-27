@@ -237,7 +237,7 @@ func TestSeenAttestations_PresentInCache(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got {
-		t.Error("Wanted false, got false")
+		t.Error("Wanted false, got true")
 	}
 
 	time.Sleep(100 * time.Millisecond)
