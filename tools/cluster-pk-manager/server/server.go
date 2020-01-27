@@ -138,7 +138,7 @@ func (s *server) Request(ctx context.Context, req *pb.PrivateKeyRequest) (*pb.Pr
 				continue
 			}
 			pub := sk.PublicKey().Marshal()
-			req := &ethpb.ValidatorStatusRequest{PublicKey:pub}
+			req := &ethpb.ValidatorStatusRequest{PublicKey: pub}
 			res, err := s.beacon.ValidatorStatus(ctx, req)
 			if err != nil {
 				log.WithError(err).Error("Failed to get validator status")
