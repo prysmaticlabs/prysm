@@ -210,7 +210,7 @@ func (s *Service) loadSpanMaps(err error, slasherServer rpc.Server) {
 	}
 }
 
-func (s *Service) startBeaconClient() {
+func (s *Service) startBeaconClient() error {
 	var dialOpt grpc.DialOption
 
 	if s.beaconCert != "" {
@@ -237,13 +237,12 @@ func (s *Service) startBeaconClient() {
 	}
 	conn, err := grpc.DialContext(s.context, s.beaconProvider, beaconOpts...)
 	if err != nil {
-		log.Errorf("Could not dial endpoint: %s, %v", s.beaconProvider, err)
-		s.Stop()
-		return
+		return fmt.Errorf("could not dial endpoint: %s, %v", s.beaconProvider, err)
 	}
 	log.Info("Successfully started gRPC connection")
 	s.beaconConn = conn
 	s.beaconClient = eth.NewBeaconChainClient(s.beaconConn)
+	return nil
 }
 
 // Stop the service.
