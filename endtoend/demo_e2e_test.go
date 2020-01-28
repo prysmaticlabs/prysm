@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	ev "github.com/prysmaticlabs/prysm/endtoend/evaluators"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -14,9 +15,10 @@ func TestEndToEnd_DemoConfig(t *testing.T) {
 	params.UseDemoBeaconConfig()
 
 	demoConfig := &end2EndConfig{
-		minimalConfig:  false,
+		beaconFlags:    append(featureconfig.E2EBeaconChainFlags, "--custom-genesis-delay=60"),
+		validatorFlags: featureconfig.E2EValidatorFlags,
 		epochsToRun:    5,
-		numBeaconNodes: 4,
+		numBeaconNodes: 2,
 		numValidators:  params.BeaconConfig().MinGenesisActiveValidatorCount,
 		evaluators: []ev.Evaluator{
 			ev.ValidatorsAreActive,

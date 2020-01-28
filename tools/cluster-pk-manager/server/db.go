@@ -117,6 +117,20 @@ func (d *db) UnallocatedPKs(_ context.Context, numKeys uint64) (*pb.PrivateKeys,
 	return pks, nil
 }
 
+func (d *db) DeleteUnallocatedKey(_ context.Context, privateKey []byte) error {
+	return d.db.Update(func(tx *bolt.Tx) error {
+		if err := tx.Bucket(unassignedPkBucket).Delete(privateKey); err != nil {
+			return err
+		}
+		if err := tx.Bucket(deletedKeysBucket).Put(privateKey, dummyVal); err != nil {
+			return err
+		}
+		blacklistedPKCount.Inc()
+		allocatedPkCount.Dec()
+		return nil
+	})
+}
+
 // PodPK returns an assigned private key to the given pod name, if one exists.
 func (d *db) PodPKs(_ context.Context, podName string) (*pb.PrivateKeys, error) {
 	pks := &pb.PrivateKeys{}

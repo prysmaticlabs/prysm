@@ -8,8 +8,19 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+// EpochAttestationsRoot computes the HashTreeRoot Merkleization of
+// a list of pending attestation values according to the eth2
+// Simple Serialize specification.
+func EpochAttestationsRoot(atts []*pb.PendingAttestation) ([32]byte, error) {
+	if featureconfig.Get().EnableSSZCache {
+		return cachedHasher.epochAttestationsRoot(atts)
+	}
+	return nocachedHasher.epochAttestationsRoot(atts)
+}
 
 func marshalAttestationData(data *ethpb.AttestationData) []byte {
 	enc := make([]byte, 128)
@@ -67,14 +78,14 @@ func attestationDataRoot(data *ethpb.AttestationData) ([32]byte, error) {
 		fieldRoots[2] = data.BeaconBlockRoot
 
 		// Source
-		sourceRoot, err := checkpointRoot(data.Source)
+		sourceRoot, err := CheckpointRoot(data.Source)
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not compute source checkpoint merkleization")
 		}
 		fieldRoots[3] = sourceRoot[:]
 
 		// Target
-		targetRoot, err := checkpointRoot(data.Target)
+		targetRoot, err := CheckpointRoot(data.Target)
 		if err != nil {
 			return [32]byte{}, errors.Wrap(err, "could not compute target checkpoint merkleization")
 		}

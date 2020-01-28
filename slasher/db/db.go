@@ -6,17 +6,29 @@ import (
 	"time"
 
 	"github.com/boltdb/bolt"
+	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
 var log = logrus.WithField("prefix", "slasherDB")
+var d *Store
 
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
 type Store struct {
-	db           *bolt.DB
-	databasePath string
+	db               *bolt.DB
+	databasePath     string
+	spanCache        *ristretto.Cache
+	spanCacheEnabled bool
+}
+
+// Config options for the slasher db.
+type Config struct {
+	// SpanCacheEnabled use span cache to detect surround slashing.
+	SpanCacheEnabled bool
+	cacheItems       int64
+	maxCacheSize     int64
 }
 
 // Close closes the underlying boltdb database.
@@ -35,8 +47,10 @@ func (db *Store) view(fn func(*bolt.Tx) error) error {
 }
 
 // NewDB initializes a new DB.
-func NewDB(dirPath string) (*Store, error) {
-	return NewKVStore(dirPath)
+func NewDB(dirPath string, cfg *Config) (*Store, error) {
+	var err error
+	d, err = NewKVStore(dirPath, cfg)
+	return d, err
 }
 
 // ClearDB removes the previously stored directory at the data directory.
@@ -64,7 +78,7 @@ func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 // NewKVStore initializes a new boltDB key-value store at the directory
 // path specified, creates the kv-buckets based on the schema, and stores
 // an open connection db object as a property of the Store struct.
-func NewKVStore(dirPath string) (*Store, error) {
+func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 	if err := os.MkdirAll(dirPath, 0700); err != nil {
 		return nil, err
 	}
@@ -76,8 +90,23 @@ func NewKVStore(dirPath string) (*Store, error) {
 		}
 		return nil, err
 	}
-
-	kv := &Store{db: boltDB, databasePath: dirPath}
+	if cfg.cacheItems == 0 {
+		cfg.cacheItems = 20000
+	}
+	if cfg.maxCacheSize == 0 {
+		cfg.maxCacheSize = 2 << 30 //(2GB)
+	}
+	spanCache, err := ristretto.NewCache(&ristretto.Config{
+		NumCounters: cfg.cacheItems,   // number of keys to track frequency of (10M).
+		MaxCost:     cfg.maxCacheSize, // maximum cost of cache.
+		BufferItems: 64,               // number of keys per Get buffer.
+		OnEvict:     saveToDB,
+	})
+	if err != nil {
+		errors.Wrap(err, "failed to start span cache")
+		return nil, err
+	}
+	kv := &Store{db: boltDB, databasePath: dirPath, spanCache: spanCache, spanCacheEnabled: cfg.SpanCacheEnabled}
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
 		return createBuckets(
@@ -92,7 +121,6 @@ func NewKVStore(dirPath string) (*Store, error) {
 	}); err != nil {
 		return nil, err
 	}
-
 	return kv, err
 }
 

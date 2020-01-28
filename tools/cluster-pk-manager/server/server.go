@@ -15,9 +15,13 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/cluster"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
+	"go.opencensus.io/plugin/ocgrpc"
+	"google.golang.org/grpc"
 )
 
 var gasLimit = uint64(4000000)
@@ -29,6 +33,7 @@ type server struct {
 	depositAmount *big.Int
 	txPk          *ecdsa.PrivateKey
 	client        *ethclient.Client
+	beacon        ethpb.BeaconNodeValidatorClient
 
 	clientLock sync.Mutex
 }
@@ -39,6 +44,7 @@ func newServer(
 	depositContractAddr string,
 	funderPK string,
 	validatorDepositAmount int64,
+	beaconRPCAddr string,
 ) *server {
 	rpcClient, err := rpc.Dial(rpcAddr)
 	if err != nil {
@@ -58,12 +64,18 @@ func newServer(
 
 	depositAmount := big.NewInt(validatorDepositAmount)
 
+	conn, err := grpc.DialContext(context.Background(), beaconRPCAddr, grpc.WithInsecure(), grpc.WithStatsHandler(&ocgrpc.ClientHandler{}))
+	if err != nil {
+		log.Errorf("Could not dial endpoint: %s, %v", beaconRPCAddr, err)
+	}
+
 	return &server{
 		contract:      contract,
 		client:        client,
 		db:            db,
 		depositAmount: depositAmount,
 		txPk:          txPk,
+		beacon:        ethpb.NewBeaconNodeValidatorClient(conn),
 	}
 }
 
@@ -117,6 +129,33 @@ func (s *server) Request(ctx context.Context, req *pb.PrivateKeyRequest) (*pb.Pr
 
 	pks.PrivateKeys = append(pks.PrivateKeys, unallocated.PrivateKeys...)
 
+	if *ensureDeposited {
+		log.Debugf("Ensuring %d keys are deposited", len(pks.PrivateKeys))
+		ok := make([][]byte, 0, len(pks.PrivateKeys))
+		for _, pk := range pks.PrivateKeys {
+			sk, err := bls.SecretKeyFromBytes(pk)
+			if err != nil || sk == nil {
+				continue
+			}
+			pub := sk.PublicKey().Marshal()
+			req := &ethpb.ValidatorStatusRequest{PublicKey: pub}
+			res, err := s.beacon.ValidatorStatus(ctx, req)
+			if err != nil {
+				log.WithError(err).Error("Failed to get validator status")
+				continue
+			}
+			if res.Status == ethpb.ValidatorStatus_UNKNOWN_STATUS {
+				log.Warn("Deleting unknown deposit pubkey")
+				if err := s.db.DeleteUnallocatedKey(ctx, pk); err != nil {
+					log.WithError(err).Error("Failed to delete unallocated key")
+				}
+			} else {
+				ok = append(ok, pk)
+			}
+		}
+		pks.PrivateKeys = ok
+	}
+
 	if len(pks.PrivateKeys) < int(req.NumberOfKeys) {
 		c := int(req.NumberOfKeys) - len(pks.PrivateKeys)
 		newKeys, err := s.allocateNewKeys(ctx, req.PodName, c)
@@ -134,6 +173,9 @@ func (s *server) Request(ctx context.Context, req *pb.PrivateKeyRequest) (*pb.Pr
 }
 
 func (s *server) allocateNewKeys(ctx context.Context, podName string, numKeys int) (*pb.PrivateKeys, error) {
+	if !*allowNewDeposits {
+		return nil, errors.New("new deposits not allowed")
+	}
 	pks := make([][]byte, 0, numKeys)
 	txMap := make(map[*keystore.Key]*types.Transaction)
 

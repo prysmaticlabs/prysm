@@ -9,12 +9,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/paulbellamy/ratecounter"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -238,6 +238,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		root, _, pids = s.p2p.Peers().BestFinalized(1 /* maxPeers */, s.highestFinalizedEpoch())
 	}
 	best := pids[0]
+
 	for head := helpers.SlotsSince(genesis); s.chain.HeadSlot() < head; {
 		req := &p2ppb.BeaconBlocksByRangeRequest{
 			HeadBlockRoot: root,
@@ -272,6 +273,11 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 
 // requestBlocks by range to a specific peer.
 func (s *Service) requestBlocks(ctx context.Context, req *p2ppb.BeaconBlocksByRangeRequest, pid peer.ID) ([]*eth.SignedBeaconBlock, error) {
+	if s.blocksRateLimiter.Remaining(pid.String()) < int64(req.Count) {
+		log.WithField("peer", pid).Debug("Slowing down for rate limit")
+		time.Sleep(s.blocksRateLimiter.TillEmpty(pid.String()))
+	}
+	s.blocksRateLimiter.Add(pid.String(), int64(req.Count))
 	log.WithFields(logrus.Fields{
 		"peer":  pid,
 		"start": req.StartSlot,

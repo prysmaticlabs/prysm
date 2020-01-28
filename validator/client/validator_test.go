@@ -523,7 +523,6 @@ func TestUpdateDuties_OK(t *testing.T) {
 	v := validator{
 		keyManager:      testKeyManager,
 		validatorClient: client,
-		pubKeyToID:      make(map[[48]byte]uint64),
 	}
 	client.EXPECT().GetDuties(
 		gomock.Any(),
