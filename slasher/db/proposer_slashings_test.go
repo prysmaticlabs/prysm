@@ -142,9 +142,9 @@ func TestStore_SaveProposerSlashings(t *testing.T) {
 	db := SetupSlasherDB(t, ctx)
 	defer TeardownSlasherDB(t, db)
 	ps := []*ethpb.ProposerSlashing{
-		&ethpb.ProposerSlashing{ProposerIndex: 1},
-		&ethpb.ProposerSlashing{ProposerIndex: 2},
-		&ethpb.ProposerSlashing{ProposerIndex: 3},
+		{ProposerIndex: 1},
+		{ProposerIndex: 2},
+		{ProposerIndex: 3},
 	}
 	err := db.SaveProposeerSlashings(Active, ps)
 	if err != nil {

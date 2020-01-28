@@ -83,9 +83,9 @@ func TestStore_SaveAttesterSlashings(t *testing.T) {
 	db := SetupSlasherDB(t, ctx)
 	defer TeardownSlasherDB(t, db)
 	as := []*ethpb.AttesterSlashing{
-		&ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("1")}},
-		&ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("2")}},
-		&ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("3")}},
+		{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("1")}},
+		{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("2")}},
+		{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("3")}},
 	}
 	err := db.SaveAttesterSlashings(Active, as)
 	if err != nil {

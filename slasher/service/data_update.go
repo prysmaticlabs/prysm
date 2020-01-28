@@ -50,6 +50,7 @@ func (s *Service) finalisedChangeUpdater() error {
 func (s *Service) attestationFeeder() error {
 	as, err := s.beaconClient.StreamAttestations(s.context, &ptypes.Empty{})
 	if err != nil {
+		log.WithError(err).Errorf("failed to retrieve attestation stream")
 		return err
 	}
 	for {
@@ -62,6 +63,7 @@ func (s *Service) attestationFeeder() error {
 			}
 			at, err := as.Recv()
 			if err != nil {
+				log.WithError(err)
 				return err
 			}
 			bcs, err := s.beaconClient.ListBeaconCommittees(s.context, &ethpb.ListCommitteesRequest{
@@ -77,6 +79,7 @@ func (s *Service) attestationFeeder() error {
 			if err != nil {
 				continue
 			}
+			log.Info("detected attestation for target: %d", at.Data.Target)
 		case <-s.context.Done():
 			err := status.Error(codes.Canceled, "Stream context canceled")
 			log.WithError(err)
