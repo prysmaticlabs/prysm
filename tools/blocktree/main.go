@@ -16,7 +16,6 @@ import (
 	"strconv"
 
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
-
 	"github.com/emicklei/dot"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
