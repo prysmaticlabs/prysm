@@ -211,7 +211,14 @@ func TestAggregateAttestations(t *testing.T) {
 func TestSlotSignature_Verify(t *testing.T) {
 	priv := bls.RandKey()
 	pub := priv.PublicKey()
-	state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{Fork: &pb.Fork{CurrentVersion: params.BeaconConfig().GenesisForkVersion}, Slot: 100})
+	state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{
+		Fork: &pb.Fork{
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			Epoch:           0,
+		},
+		Slot: 100,
+	})
 	slot := uint64(101)
 
 	sig, err := helpers.SlotSignature(state, slot, priv)

@@ -3,6 +3,7 @@ package helpers
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -24,14 +25,20 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 	validators := make([]*ethpb.Validator, validatorCount)
 
 	for i := 0; i < len(validators); i++ {
+		k := make([]byte, 48)
+		copy(k, strconv.Itoa(i))
 		validators[i] = &ethpb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			PublicKey:             k,
+			WithdrawalCredentials: make([]byte, 32),
+			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 		}
 	}
 
 	state, err := beaconstate.InitializeFromProto(&pb.BeaconState{
 		Validators:  validators,
 		Slot:        200,
+		BlockRoots:  make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		StateRoots:  make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
 	if err != nil {

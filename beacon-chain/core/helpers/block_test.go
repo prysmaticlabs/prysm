@@ -24,35 +24,35 @@ func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
 	tests := []struct {
 		slot         uint64
 		stateSlot    uint64
-		expectedRoot []byte
+		expectedRoot [32]byte
 	}{
 		{
 			slot:         0,
 			stateSlot:    1,
-			expectedRoot: []byte{0},
+			expectedRoot: [32]byte{0},
 		},
 		{
 			slot:         2,
 			stateSlot:    5,
-			expectedRoot: []byte{2},
+			expectedRoot: [32]byte{2},
 		},
 		{
 			slot:         64,
 			stateSlot:    128,
-			expectedRoot: []byte{64},
+			expectedRoot: [32]byte{64},
 		}, {
 			slot:         2999,
 			stateSlot:    3000,
-			expectedRoot: []byte{183},
+			expectedRoot: [32]byte{183},
 		}, {
 			slot:         2873,
 			stateSlot:    3000,
-			expectedRoot: []byte{57},
+			expectedRoot: [32]byte{57},
 		},
 		{
 			slot:         0,
 			stateSlot:    params.BeaconConfig().SlotsPerHistoricalRoot,
-			expectedRoot: []byte{0},
+			expectedRoot: [32]byte{},
 		},
 	}
 	for i, tt := range tests {
@@ -65,7 +65,7 @@ func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
 				t.Fatalf("failed to get block root at slot %d: %v",
 					wantedSlot, err)
 			}
-			if !bytes.Equal(result, tt.expectedRoot) {
+			if !bytes.Equal(result, tt.expectedRoot[:]) {
 				t.Errorf(
 					"result block root was an unexpected value, wanted %v, got %v",
 					tt.expectedRoot,
