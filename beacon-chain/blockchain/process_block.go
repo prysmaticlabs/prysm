@@ -152,7 +152,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	defer s.initSyncStateLock.Unlock()
 
 	// Retrieve incoming block's pre state.
-	preState, err := s.cachedPreState(ctx, b)
+	preState, err := s.verifyBlkPreState(ctx, b)
 	if err != nil {
 		return nil, err
 	}

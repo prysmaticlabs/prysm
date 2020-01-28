@@ -248,4 +248,5 @@ var E2EBeaconChainFlags = []string{
 	"--enable-skip-slots-cache",
 	"--enable-eth1-data-vote-cache",
 	"--initial-sync-cache-state",
+	"--proto-array-forkchoice",
 }
