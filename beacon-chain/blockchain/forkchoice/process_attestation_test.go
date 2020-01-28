@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -40,7 +41,7 @@ func TestStore_OnAttestation(t *testing.T) {
 		t.Fatal(err)
 	}
 	BlkWithStateBadAttRoot, _ := ssz.HashTreeRoot(BlkWithStateBadAtt.Block)
-	if err := store.db.SaveState(ctx, &pb.BeaconState{}, BlkWithStateBadAttRoot); err != nil {
+	if err := store.db.SaveState(ctx, &beaconstate.BeaconState{}, BlkWithStateBadAttRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -49,14 +50,18 @@ func TestStore_OnAttestation(t *testing.T) {
 		t.Fatal(err)
 	}
 	BlkWithValidStateRoot, _ := ssz.HashTreeRoot(BlkWithValidState.Block)
-	if err := store.db.SaveState(ctx, &pb.BeaconState{
+	s, err := beaconstate.InitializeFromProto(&pb.BeaconState{
 		Fork: &pb.Fork{
 			Epoch:           0,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 		},
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}, BlkWithValidStateRoot); err != nil {
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveState(ctx, s, BlkWithValidStateRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -142,7 +147,11 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 		FinalizedCheckpoint: &ethpb.Checkpoint{},
 	}
 	r := [32]byte{'g'}
-	if err := store.db.SaveState(ctx, s, r); err != nil {
+	ss, err := beaconstate.InitializeFromProto(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.db.SaveState(ctx, ss, r); err != nil {
 		t.Fatal(err)
 	}
 	if err := store.GenesisStore(ctx, &ethpb.Checkpoint{Root: r[:]}, &ethpb.Checkpoint{Root: r[:]}); err != nil {
@@ -150,58 +159,67 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	}
 
 	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: []byte{'A'}}
-	s1, err := store.saveCheckpointState(ctx, s, cp1)
+	s1, err := beaconstate.InitializeFromProto(ss.Clone())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s1.Slot != 1*params.BeaconConfig().SlotsPerEpoch {
-		t.Errorf("Wanted state slot: %d, got: %d", 1*params.BeaconConfig().SlotsPerEpoch, s1.Slot)
+	s1, err = store.saveCheckpointState(ctx, s1, cp1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s1.Slot() != 1*params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Wanted state slot: %d, got: %d", 1*params.BeaconConfig().SlotsPerEpoch, s1.Slot())
 	}
 
 	cp2 := &ethpb.Checkpoint{Epoch: 2, Root: []byte{'B'}}
-	s2, err := store.saveCheckpointState(ctx, s, cp2)
+
+	s2, err := beaconstate.InitializeFromProto(ss.Clone())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s2.Slot != 2*params.BeaconConfig().SlotsPerEpoch {
-		t.Errorf("Wanted state slot: %d, got: %d", 2*params.BeaconConfig().SlotsPerEpoch, s2.Slot)
+	s2, err = store.saveCheckpointState(ctx, ss, cp2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s2.Slot() != 2*params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Wanted state slot: %d, got: %d", 2*params.BeaconConfig().SlotsPerEpoch, s2.Slot())
 	}
 
 	s1, err = store.saveCheckpointState(ctx, nil, cp1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s1.Slot != 1*params.BeaconConfig().SlotsPerEpoch {
-		t.Errorf("Wanted state slot: %d, got: %d", 1*params.BeaconConfig().SlotsPerEpoch, s1.Slot)
+	if s1.Slot() != 1*params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Wanted state slot: %d, got: %d", 1*params.BeaconConfig().SlotsPerEpoch, s1.Slot())
 	}
 
 	s1, err = store.checkpointState.StateByCheckpoint(cp1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s1.Slot != 1*params.BeaconConfig().SlotsPerEpoch {
-		t.Errorf("Wanted state slot: %d, got: %d", 1*params.BeaconConfig().SlotsPerEpoch, s1.Slot)
+	if s1.Slot() != 1*params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Wanted state slot: %d, got: %d", 1*params.BeaconConfig().SlotsPerEpoch, s1.Slot())
 	}
 
 	s2, err = store.checkpointState.StateByCheckpoint(cp2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s2.Slot != 2*params.BeaconConfig().SlotsPerEpoch {
-		t.Errorf("Wanted state slot: %d, got: %d", 2*params.BeaconConfig().SlotsPerEpoch, s2.Slot)
+	if s2.Slot() != 2*params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Wanted state slot: %d, got: %d", 2*params.BeaconConfig().SlotsPerEpoch, s2.Slot())
 	}
 
-	s.Slot = params.BeaconConfig().SlotsPerEpoch + 1
+	ss.SetSlot(params.BeaconConfig().SlotsPerEpoch + 1)
 	if err := store.GenesisStore(ctx, &ethpb.Checkpoint{Root: r[:]}, &ethpb.Checkpoint{Root: r[:]}); err != nil {
 		t.Fatal(err)
 	}
 	cp3 := &ethpb.Checkpoint{Epoch: 1, Root: []byte{'C'}}
-	s3, err := store.saveCheckpointState(ctx, s, cp3)
+	s3, err := store.saveCheckpointState(ctx, ss, cp3)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s3.Slot != s.Slot {
-		t.Errorf("Wanted state slot: %d, got: %d", s.Slot, s3.Slot)
+	if s3.Slot() != ss.Slot() {
+		t.Errorf("Wanted state slot: %d, got: %d", ss.Slot(), s3.Slot())
 	}
 }
 
@@ -237,7 +255,9 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 
 	epoch := uint64(1)
 	baseState, _ := testutil.DeterministicGenesisState(t, 1)
-	baseState.Slot = epoch * params.BeaconConfig().SlotsPerEpoch
+	if err := baseState.SetSlot(epoch * params.BeaconConfig().SlotsPerEpoch); err != nil {
+		t.Fatal(err)
+	}
 	checkpoint := &ethpb.Checkpoint{Epoch: epoch}
 	returned, err := store.saveCheckpointState(ctx, baseState, checkpoint)
 	if err != nil {

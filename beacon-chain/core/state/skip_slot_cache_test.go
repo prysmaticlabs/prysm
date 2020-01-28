@@ -4,10 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -15,7 +14,7 @@ import (
 
 func TestSkipSlotCache_OK(t *testing.T) {
 	bState, privs := testutil.DeterministicGenesisState(t, params.MinimalSpecConfig().MinGenesisActiveValidatorCount)
-	originalState := proto.Clone(bState).(*pb.BeaconState)
+	originalState, _ := beaconstate.InitializeFromProto(bState.Clone())
 
 	blkCfg := testutil.DefaultBlockGenConfig()
 	blkCfg.NumAttestations = 1
@@ -26,7 +25,7 @@ func TestSkipSlotCache_OK(t *testing.T) {
 
 	// First transition will be with an empty cache, so the cache becomes populated
 	// with the state
-	blk, err := testutil.GenerateFullBlock(bState, privs, blkCfg, originalState.Slot+10)
+	blk, err := testutil.GenerateFullBlock(bState, privs, blkCfg, originalState.Slot()+10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,5 +42,4 @@ func TestSkipSlotCache_OK(t *testing.T) {
 	if !ssz.DeepEqual(originalState, bState) {
 		t.Fatal("Skipped slots cache leads to different states")
 	}
-
 }

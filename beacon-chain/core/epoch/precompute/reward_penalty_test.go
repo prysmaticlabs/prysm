@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -15,7 +16,7 @@ import (
 func TestProcessRewardsAndPenaltiesPrecompute(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(2048)
-	state := buildState(e+3, validatorCount)
+	base := buildState(e+3, validatorCount)
 	atts := make([]*pb.PendingAttestation, 3)
 	for i := 0; i < len(atts); i++ {
 		atts[i] = &pb.PendingAttestation{
@@ -27,10 +28,15 @@ func TestProcessRewardsAndPenaltiesPrecompute(t *testing.T) {
 			InclusionDelay:  1,
 		}
 	}
-	state.PreviousEpochAttestations = atts
+	base.PreviousEpochAttestations = atts
+
+	state, err := state.InitializeFromProto(base)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	vp, bp := New(context.Background(), state)
-	vp, bp, err := ProcessAttestations(context.Background(), state, vp, bp)
+	vp, bp, err = ProcessAttestations(context.Background(), state, vp, bp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,23 +48,23 @@ func TestProcessRewardsAndPenaltiesPrecompute(t *testing.T) {
 
 	// Indices that voted everything except for head, lost a bit money
 	wanted := uint64(31999810265)
-	if state.Balances[4] != wanted {
+	if state.Balances()[4] != wanted {
 		t.Errorf("wanted balance: %d, got: %d",
-			wanted, state.Balances[4])
+			wanted, state.Balances()[4])
 	}
 
 	// Indices that did not vote, lost more money
 	wanted = uint64(31999873505)
-	if state.Balances[0] != wanted {
+	if state.Balances()[0] != wanted {
 		t.Errorf("wanted balance: %d, got: %d",
-			wanted, state.Balances[0])
+			wanted, state.Balances()[0])
 	}
 }
 
 func TestAttestationDeltaPrecompute(t *testing.T) {
 	e := params.BeaconConfig().SlotsPerEpoch
 	validatorCount := uint64(2048)
-	state := buildState(e+2, validatorCount)
+	base := buildState(e+2, validatorCount)
 	atts := make([]*pb.PendingAttestation, 3)
 	for i := 0; i < len(atts); i++ {
 		atts[i] = &pb.PendingAttestation{
@@ -70,10 +76,14 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 			InclusionDelay:  1,
 		}
 	}
-	state.PreviousEpochAttestations = atts
+	base.PreviousEpochAttestations = atts
+	state, err := state.InitializeFromProto(base)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	vp, bp := New(context.Background(), state)
-	vp, bp, err := ProcessAttestations(context.Background(), state, vp, bp)
+	vp, bp, err = ProcessAttestations(context.Background(), state, vp, bp)
 	if err != nil {
 		t.Fatal(err)
 	}

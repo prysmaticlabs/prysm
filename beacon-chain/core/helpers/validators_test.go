@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -126,11 +127,11 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 		}
 	}
 
-	state := &pb.BeaconState{
+	state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{
 		Validators:  validators,
 		Slot:        0,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}
+	})
 
 	tests := []struct {
 		slot  uint64
@@ -160,7 +161,7 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 
 	for _, tt := range tests {
 		ClearCache()
-		state.Slot = tt.slot
+		state.SetSlot(tt.slot)
 		result, err := BeaconProposerIndex(state)
 		if err != nil {
 			t.Errorf("Failed to get shard and committees at slot: %v", err)
@@ -203,11 +204,11 @@ func TestChurnLimit_OK(t *testing.T) {
 			}
 		}
 
-		beaconState := &pb.BeaconState{
+		beaconState, _ := beaconstate.InitializeFromProto(&pb.BeaconState{
 			Slot:        1,
 			Validators:  validators,
 			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		}
+		})
 		validatorCount, err := ActiveValidatorCount(beaconState, CurrentEpoch(beaconState))
 		if err != nil {
 			t.Fatal(err)
@@ -398,7 +399,8 @@ func TestActiveValidatorIndices(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ActiveValidatorIndices(tt.args.state, tt.args.epoch)
+			s, _ := beaconstate.InitializeFromProto(tt.args.state)
+			got, err := ActiveValidatorIndices(s, tt.args.epoch)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ActiveValidatorIndices() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -581,7 +583,8 @@ func TestIsIsEligibleForActivation(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := IsEligibleForActivation(tt.state, tt.validator); got != tt.want {
+			s, _ := beaconstate.InitializeFromProto(tt.state)
+			if got := IsEligibleForActivation(s, tt.validator); got != tt.want {
 				t.Errorf("IsEligibleForActivation() = %v, want %v", got, tt.want)
 			}
 		})

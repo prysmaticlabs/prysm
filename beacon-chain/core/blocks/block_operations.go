@@ -125,6 +125,7 @@ func Eth1DataHasEnoughSupport(beaconState *stateTrie.BeaconState, data *ethpb.Et
 	voteCount := uint64(0)
 	var eth1DataHash [32]byte
 	var err error
+	data = stateTrie.CopyETH1Data(data)
 	if featureconfig.Get().EnableEth1DataVoteCache {
 		eth1DataHash, err = hashutil.HashProto(data)
 		if err != nil {
@@ -347,8 +348,10 @@ func ProcessRandaoNoVerify(
 	// If block randao passed verification, we XOR the state's latest randao mix with the block's
 	// randao and update the state's corresponding latest randao mix value.
 	latestMixesLength := params.BeaconConfig().EpochsPerHistoricalVector
-	mixes := beaconState.RandaoMixes()
-	latestMixSlice := mixes[currentEpoch%latestMixesLength]
+	latestMixSlice, err := beaconState.RandaoMixAtIndex(currentEpoch % latestMixesLength)
+	if err != nil {
+		return nil, err
+	}
 	blockRandaoReveal := hashutil.Hash(body.RandaoReveal)
 	for i, x := range blockRandaoReveal {
 		latestMixSlice[i] ^= x
@@ -807,7 +810,7 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 			return errors.Wrap(err, "could not deserialize validator public key")
 		}
 		for _, i := range indices[1:] {
-			pubkeyAtIdx = beaconState.PubkeyAtIndex(indices[i])
+			pubkeyAtIdx = beaconState.PubkeyAtIndex(i)
 			pk, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
 			if err != nil {
 				return errors.Wrap(err, "could not deserialize validator public key")

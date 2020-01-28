@@ -7,7 +7,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"golang.org/x/net/context"
@@ -31,7 +31,7 @@ func TestReceiveAttestationNoPubsub_ProcessCorrectly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := chainService.beaconDB.SaveState(ctx, &pb.BeaconState{}, root); err != nil {
+	if err := chainService.beaconDB.SaveState(ctx, &beaconstate.BeaconState{}, root); err != nil {
 		t.Fatal(err)
 	}
 

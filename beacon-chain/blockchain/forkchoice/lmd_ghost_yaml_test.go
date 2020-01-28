@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -79,7 +80,7 @@ func TestGetHeadFromYaml(t *testing.T) {
 					t.Fatal(err)
 				}
 				blksRoot[slot] = root[:]
-				if err := db.SaveState(ctx, &pb.BeaconState{}, root); err != nil {
+				if err := db.SaveState(ctx, &state.BeaconState{}, root); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -106,7 +107,10 @@ func TestGetHeadFromYaml(t *testing.T) {
 			validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
 		}
 
-		s := &pb.BeaconState{Validators: validators, RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
+		s, err := state.InitializeFromProto(&pb.BeaconState{Validators: validators, RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)})
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		if err := store.db.SaveState(ctx, s, bytesutil.ToBytes32(blksRoot[0])); err != nil {
 			t.Fatal(err)

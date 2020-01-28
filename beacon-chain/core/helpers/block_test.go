@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -57,8 +58,9 @@ func TestBlockRootAtSlot_CorrectBlockRoot(t *testing.T) {
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			s.Slot = tt.stateSlot
+			state, _ := beaconstate.InitializeFromProto(s)
 			wantedSlot := tt.slot
-			result, err := helpers.BlockRootAtSlot(s, wantedSlot)
+			result, err := helpers.BlockRootAtSlot(state, wantedSlot)
 			if err != nil {
 				t.Fatalf("failed to get block root at slot %d: %v",
 					wantedSlot, err)
@@ -109,7 +111,8 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 	}
 	for _, tt := range tests {
 		state.Slot = tt.stateSlot
-		_, err := helpers.BlockRootAtSlot(state, tt.slot)
+		s, _ := beaconstate.InitializeFromProto(state)
+		_, err := helpers.BlockRootAtSlot(s, tt.slot)
 		if err == nil {
 			t.Errorf("Expected error %s, got nil", tt.expectedErr)
 		}

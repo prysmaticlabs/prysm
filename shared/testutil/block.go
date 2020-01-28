@@ -145,8 +145,12 @@ func GenerateFullBlock(
 	if err := bState.SetSlot(currentSlot); err != nil {
 		return nil, err
 	}
+	newState, err := stateTrie.InitializeFromProtoUnsafe(bState.Clone())
+	if err != nil {
+		return nil, err
+	}
 
-	signature, err := BlockSignature(bState, block, privs)
+	signature, err := BlockSignature(newState, block, privs)
 	if err != nil {
 		return nil, err
 	}

@@ -7,6 +7,7 @@ import (
 	fuzz "github.com/google/gofuzz"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -19,7 +20,8 @@ func TestFuzzProcessAttestation_10000(t *testing.T) {
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(att)
-		_, _ = blocks.ProcessAttestationNoVerify(ctx, state, att)
+		s, _ := beaconstate.InitializeFromProto(state)
+		_, _ = blocks.ProcessAttestationNoVerify(ctx, s, att)
 	}
 }
 
@@ -31,6 +33,8 @@ func TestFuzzProcessBlockHeader_10000(t *testing.T) {
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(block)
-		_, _ = blocks.ProcessBlockHeader(state, block)
+
+		s, _ := beaconstate.InitializeFromProto(state)
+		_, _ = blocks.ProcessBlockHeader(s, block)
 	}
 }

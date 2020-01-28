@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -32,9 +32,9 @@ func init() {
 
 func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
-	beaconState.LatestBlockHeader = &ethpb.BeaconBlockHeader{Slot: 9}
+	beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{Slot: 9})
 
-	lbhsr, err := ssz.HashTreeRoot(beaconState.LatestBlockHeader)
+	lbhsr, err := ssz.HashTreeRoot(beaconState.LatestBlockHeader())
 	if err != nil {
 		t.Error(err)
 	}
@@ -57,7 +57,7 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get signing root of block: %v", err)
 	}
-	dt := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconProposer)
+	dt := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer)
 	blockSig := privKeys[proposerIdx+1].Sign(signingRoot[:], dt)
 	block.Signature = blockSig.Marshal()[:]
 
@@ -78,7 +78,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 		}
 	}
 
-	state := &pb.BeaconState{
+	state, _ := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators:        validators,
 		Slot:              0,
 		LatestBlockHeader: &ethpb.BeaconBlockHeader{Slot: 9},
@@ -87,14 +87,14 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 			CurrentVersion:  []byte{0, 0, 0, 0},
 		},
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}
+	})
 
-	lbhsr, err := ssz.HashTreeRoot(state.LatestBlockHeader)
+	lbhsr, err := ssz.HashTreeRoot(state.LatestBlockHeader())
 	if err != nil {
 		t.Error(err)
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt := helpers.Domain(state.Fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	priv := bls.RandKey()
 	blockSig := priv.Sign([]byte("hello"), dt)
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
@@ -125,7 +125,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 		}
 	}
 
-	state := &pb.BeaconState{
+	state, _ := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators:        validators,
 		Slot:              0,
 		LatestBlockHeader: &ethpb.BeaconBlockHeader{Slot: 9},
@@ -134,10 +134,10 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 			CurrentVersion:  []byte{0, 0, 0, 0},
 		},
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}
+	})
 
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt := helpers.Domain(state.Fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	priv := bls.RandKey()
 	blockSig := priv.Sign([]byte("hello"), dt)
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
@@ -168,7 +168,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 		}
 	}
 
-	state := &pb.BeaconState{
+	state, _ := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators:        validators,
 		Slot:              0,
 		LatestBlockHeader: &ethpb.BeaconBlockHeader{Slot: 9},
@@ -177,14 +177,14 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 			CurrentVersion:  []byte{0, 0, 0, 0},
 		},
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}
+	})
 
-	parentRoot, err := ssz.HashTreeRoot(state.LatestBlockHeader)
+	parentRoot, err := ssz.HashTreeRoot(state.LatestBlockHeader())
 	if err != nil {
 		t.Error(err)
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt := helpers.Domain(state.Fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	priv := bls.RandKey()
 	blockSig := priv.Sign([]byte("hello"), dt)
 	validators[12683].PublicKey = priv.PublicKey().Marshal()
@@ -215,7 +215,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		}
 	}
 
-	state := &pb.BeaconState{
+	state, _ := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators:        validators,
 		Slot:              0,
 		LatestBlockHeader: &ethpb.BeaconBlockHeader{Slot: 9},
@@ -224,14 +224,14 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 			CurrentVersion:  []byte{0, 0, 0, 0},
 		},
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}
+	})
 
-	latestBlockSignedRoot, err := ssz.HashTreeRoot(state.LatestBlockHeader)
+	latestBlockSignedRoot, err := ssz.HashTreeRoot(state.LatestBlockHeader())
 	if err != nil {
 		t.Error(err)
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt := helpers.Domain(state.Fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	priv := bls.RandKey()
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
@@ -259,13 +259,17 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	}
 	validators[proposerIdx].Slashed = false
 	validators[proposerIdx].PublicKey = priv.PublicKey().Marshal()
+	err = state.UpdateValidatorAtIndex(proposerIdx, validators[proposerIdx])
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	newState, err := blocks.ProcessBlockHeader(state, block)
 	if err != nil {
 		t.Fatalf("Failed to process block header got: %v", err)
 	}
 	var zeroHash [32]byte
-	nsh := newState.LatestBlockHeader
+	nsh := newState.LatestBlockHeader()
 	expected := &ethpb.BeaconBlockHeader{
 		Slot:       block.Block.Slot,
 		ParentRoot: latestBlockSignedRoot[:],
@@ -287,7 +291,7 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	epoch := uint64(0)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := helpers.Domain(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
+	domain := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainRandao)
 
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx-1].Sign(buf, domain)
@@ -329,7 +333,7 @@ func TestProcessRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T)
 		t.Errorf("Unexpected error processing block randao: %v", err)
 	}
 	currentEpoch := helpers.CurrentEpoch(beaconState)
-	mix := newState.RandaoMixes[currentEpoch%params.BeaconConfig().EpochsPerHistoricalVector]
+	mix := newState.RandaoMixes()[currentEpoch%params.BeaconConfig().EpochsPerHistoricalVector]
 
 	if bytes.Equal(mix, params.BeaconConfig().ZeroHash[:]) {
 		t.Errorf(
@@ -340,9 +344,9 @@ func TestProcessRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T)
 }
 
 func TestProcessEth1Data_SetsCorrectly(t *testing.T) {
-	beaconState := &pb.BeaconState{
+	beaconState, _ := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Eth1DataVotes: []*ethpb.Eth1Data{},
-	}
+	})
 
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
@@ -360,20 +364,20 @@ func TestProcessEth1Data_SetsCorrectly(t *testing.T) {
 		}
 	}
 
-	newETH1DataVotes := beaconState.Eth1DataVotes
+	newETH1DataVotes := beaconState.Eth1DataVotes()
 	if len(newETH1DataVotes) <= 1 {
 		t.Error("Expected new ETH1 data votes to have length > 1")
 	}
-	if !proto.Equal(beaconState.Eth1Data, block.Body.Eth1Data) {
+	if !proto.Equal(beaconState.Eth1Data(), stateTrie.CopyETH1Data(block.Body.Eth1Data)) {
 		t.Errorf(
 			"Expected latest eth1 data to have been set to %v, received %v",
 			block.Body.Eth1Data,
-			beaconState.Eth1Data,
+			beaconState.Eth1Data(),
 		)
 	}
 }
 func TestProcessProposerSlashings_UnmatchedHeaderSlots(t *testing.T) {
-	registry := make([]*ethpb.Validator, 2)
+	beaconState, _ := testutil.DeterministicGenesisState(t, 20)
 	currentSlot := uint64(0)
 	slashings := []*ethpb.ProposerSlashing{
 		{
@@ -390,11 +394,8 @@ func TestProcessProposerSlashings_UnmatchedHeaderSlots(t *testing.T) {
 			},
 		},
 	}
+	beaconState.SetSlot(currentSlot)
 
-	beaconState := &pb.BeaconState{
-		Validators: registry,
-		Slot:       currentSlot,
-	}
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			ProposerSlashings: slashings,
@@ -407,7 +408,7 @@ func TestProcessProposerSlashings_UnmatchedHeaderSlots(t *testing.T) {
 }
 
 func TestProcessProposerSlashings_SameHeaders(t *testing.T) {
-	registry := make([]*ethpb.Validator, 2)
+	beaconState, _ := testutil.DeterministicGenesisState(t, 2)
 	currentSlot := uint64(0)
 	slashings := []*ethpb.ProposerSlashing{
 		{
@@ -425,10 +426,7 @@ func TestProcessProposerSlashings_SameHeaders(t *testing.T) {
 		},
 	}
 
-	beaconState := &pb.BeaconState{
-		Validators: registry,
-		Slot:       currentSlot,
-	}
+	beaconState.SetSlot(currentSlot)
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			ProposerSlashings: slashings,
@@ -468,10 +466,10 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 		},
 	}
 
-	beaconState := &pb.BeaconState{
+	beaconState, _ := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators: registry,
 		Slot:       currentSlot,
-	}
+	})
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			ProposerSlashings: slashings,
@@ -479,7 +477,7 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 	}
 	want := fmt.Sprintf(
 		"validator with key %#x is not slashable",
-		beaconState.Validators[0].PublicKey,
+		beaconState.Validators()[0].PublicKey,
 	)
 
 	if _, err := blocks.ProcessProposerSlashings(context.Background(), beaconState, block.Body); !strings.Contains(err.Error(), want) {
@@ -493,7 +491,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 	proposerIdx := uint64(1)
 
-	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconProposer)
+	domain := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer)
 	header1 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			Slot:      0,
@@ -537,10 +535,10 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		t.Fatalf("Unexpected error: %s", err)
 	}
 
-	newStateVals := newState.Validators
-	if newStateVals[1].ExitEpoch != beaconState.Validators[1].ExitEpoch {
+	newStateVals := newState.Validators()
+	if newStateVals[1].ExitEpoch != beaconState.Validators()[1].ExitEpoch {
 		t.Errorf("Proposer with index 1 did not correctly exit,"+"wanted slot:%d, got:%d",
-			newStateVals[1].ExitEpoch, beaconState.Validators[1].ExitEpoch)
+			newStateVals[1].ExitEpoch, beaconState.Validators()[1].ExitEpoch)
 	}
 }
 
@@ -584,10 +582,10 @@ func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
 	registry := []*ethpb.Validator{}
 	currentSlot := uint64(0)
 
-	beaconState := &pb.BeaconState{
+	beaconState, _ := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators: registry,
 		Slot:       currentSlot,
-	}
+	})
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			AttesterSlashings: slashings,
@@ -604,10 +602,10 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 	registry := []*ethpb.Validator{}
 	currentSlot := uint64(0)
 
-	beaconState := &pb.BeaconState{
+	beaconState, _ := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators: registry,
 		Slot:       currentSlot,
-	}
+	})
 
 	slashings := []*ethpb.AttesterSlashing{
 		{
@@ -642,7 +640,7 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 
 func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
-	for _, vv := range beaconState.Validators {
+	for _, vv := range beaconState.Validators() {
 		vv.WithdrawableEpoch = 1 * params.BeaconConfig().SlotsPerEpoch
 	}
 
@@ -657,7 +655,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
+	domain := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
 	sig0 := privKeys[0].Sign(hashTreeRoot[:], domain)
 	sig1 := privKeys[1].Sign(hashTreeRoot[:], domain)
 	aggregateSig := bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
@@ -687,7 +685,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 
 	currentSlot := 2 * params.BeaconConfig().SlotsPerEpoch
-	beaconState.Slot = currentSlot
+	beaconState.SetSlot(currentSlot)
 
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
@@ -699,17 +697,17 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	newRegistry := newState.Validators
+	newRegistry := newState.Validators()
 
 	// Given the intersection of slashable indices is [1], only validator
 	// at index 1 should be slashed and exited. We confirm this below.
-	if newRegistry[1].ExitEpoch != beaconState.Validators[1].ExitEpoch {
+	if newRegistry[1].ExitEpoch != beaconState.Validators()[1].ExitEpoch {
 		t.Errorf(
 			`
 			Expected validator at index 1's exit epoch to match
 			%d, received %d instead
 			`,
-			beaconState.Validators[1].ExitEpoch,
+			beaconState.Validators()[1].ExitEpoch,
 			newRegistry[1].ExitEpoch,
 		)
 	}
@@ -735,7 +733,7 @@ func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 		"attestation slot %d + inclusion delay %d > state slot %d",
 		attestations[0].Data.Slot,
 		params.BeaconConfig().MinAttestationInclusionDelay,
-		beaconState.Slot,
+		beaconState.Slot(),
 	)
 	if _, err := blocks.ProcessAttestations(context.Background(), beaconState, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
@@ -754,9 +752,11 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 		},
 	}
 	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
-	beaconState.Slot += params.BeaconConfig().SlotsPerEpoch*4 + params.BeaconConfig().MinAttestationInclusionDelay
-	beaconState.PreviousJustifiedCheckpoint.Root = []byte("hello-world")
-	beaconState.PreviousEpochAttestations = []*pb.PendingAttestation{}
+	beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().SlotsPerEpoch*4 + params.BeaconConfig().MinAttestationInclusionDelay)
+	pfc := beaconState.PreviousJustifiedCheckpoint()
+	pfc.Root = []byte("hello-world")
+	beaconState.SetPreviousJustifiedCheckpoint(pfc)
+	beaconState.SetPreviousEpochAttestations([]*pb.PendingAttestation{})
 
 	want := fmt.Sprintf(
 		"expected target epoch (%d) to be the previous epoch (%d) or the current epoch (%d)",
@@ -786,9 +786,11 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 		},
 	}
 	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
-	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
-	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
-	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
+	beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
+	cfc := beaconState.CurrentJustifiedCheckpoint()
+	cfc.Root = []byte("hello-world")
+	beaconState.SetCurrentJustifiedCheckpoint(cfc)
+	beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{})
 
 	want := fmt.Sprintf(
 		"expected source epoch %d, received %d",
@@ -804,7 +806,7 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 
 	want = fmt.Sprintf(
 		"expected source root %#x, received %#x",
-		beaconState.CurrentJustifiedCheckpoint.Root,
+		beaconState.CurrentJustifiedCheckpoint().Root,
 		attestations[0].Data.Source.Root,
 	)
 	if _, err := blocks.ProcessAttestations(context.Background(), beaconState, block.Body); !strings.Contains(err.Error(), want) {
@@ -833,9 +835,11 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 		},
 	}
 
-	beaconState.Slot += params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().MinAttestationInclusionDelay
-	beaconState.PreviousJustifiedCheckpoint.Root = []byte("hello-world")
-	beaconState.PreviousEpochAttestations = []*pb.PendingAttestation{}
+	beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().MinAttestationInclusionDelay)
+	pfc := beaconState.PreviousJustifiedCheckpoint()
+	pfc.Root = []byte("hello-world")
+	beaconState.SetPreviousJustifiedCheckpoint(pfc)
+	beaconState.SetPreviousEpochAttestations([]*pb.PendingAttestation{})
 
 	want := fmt.Sprintf(
 		"expected source epoch %d, received %d",
@@ -852,7 +856,7 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 
 	want = fmt.Sprintf(
 		"expected source root %#x, received %#x",
-		beaconState.CurrentJustifiedCheckpoint.Root,
+		beaconState.CurrentJustifiedCheckpoint().Root,
 		attestations[0].Data.Source.Root,
 	)
 	if _, err := blocks.ProcessAttestations(context.Background(), beaconState, block.Body); !strings.Contains(err.Error(), want) {
@@ -877,10 +881,12 @@ func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 		},
 	}
 
-	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
+	beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 
-	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
-	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
+	cfc := beaconState.CurrentJustifiedCheckpoint()
+	cfc.Root = []byte("hello-world")
+	beaconState.SetCurrentJustifiedCheckpoint(cfc)
+	beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{})
 
 	expected := "failed to verify aggregation bitfield: wanted participants bitfield length 3, got: 4"
 	_, err := blocks.ProcessAttestations(context.Background(), beaconState, block.Body)
@@ -894,16 +900,20 @@ func TestProcessAttestations_OK(t *testing.T) {
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(0, true)
+	var mockRoot [32]byte
+	copy(mockRoot[:], "hello-world")
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
-			Target: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+			Source: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
+			Target: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
 		},
 		AggregationBits: aggBits,
 	}
 
-	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
-	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
+	cfc := beaconState.CurrentJustifiedCheckpoint()
+	cfc.Root = mockRoot[:]
+	beaconState.SetCurrentJustifiedCheckpoint(cfc)
+	beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{})
 
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {
@@ -917,7 +927,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
+	domain := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
 	sigs := make([]*bls.Signature, len(attestingIndices))
 	for i, indice := range attestingIndices {
 		sig := privKeys[indice].Sign(hashTreeRoot[:], domain)
@@ -931,7 +941,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 		},
 	}
 
-	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
+	beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 
 	if _, err := blocks.ProcessAttestations(context.Background(), beaconState, block.Body); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -941,7 +951,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
-	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
+	domain := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
 	data := &ethpb.AttestationData{
 		Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 		Target: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
@@ -955,8 +965,10 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 		AggregationBits: aggBits1,
 	}
 
-	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
-	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
+	cfc := beaconState.CurrentJustifiedCheckpoint()
+	cfc.Root = []byte("hello-world")
+	beaconState.SetCurrentJustifiedCheckpoint(cfc)
+	beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{})
 
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
 	if err != nil {
@@ -1013,10 +1025,12 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 300)
 
-	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
+	domain := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	var mockRoot [32]byte
+	copy(mockRoot[:], "hello-world")
 	data := &ethpb.AttestationData{
-		Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
-		Target: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+		Source: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
+		Target: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
 	}
 	aggBits1 := bitfield.NewBitlist(9)
 	aggBits1.SetBitAt(0, true)
@@ -1026,8 +1040,10 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 		AggregationBits: aggBits1,
 	}
 
-	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
-	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
+	cfc := beaconState.CurrentJustifiedCheckpoint()
+	cfc.Root = mockRoot[:]
+	beaconState.SetCurrentJustifiedCheckpoint(cfc)
+	beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{})
 
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
 	if err != nil {
@@ -1085,7 +1101,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 		},
 	}
 
-	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
+	beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 
 	if _, err := blocks.ProcessAttestations(context.Background(), beaconState, block.Body); err != nil {
 		t.Error(err)
@@ -1114,9 +1130,11 @@ func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(1, true)
+	var mockRoot [32]byte
+	copy(mockRoot[:], "hello-world")
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+			Source: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
 			Target: &ethpb.Checkpoint{Epoch: 0},
 		},
 		AggregationBits: aggBits,
@@ -1125,9 +1143,11 @@ func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 	zeroSig := [96]byte{}
 	att.Signature = zeroSig[:]
 
-	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
-	beaconState.CurrentJustifiedCheckpoint.Root = []byte("hello-world")
-	beaconState.CurrentEpochAttestations = []*pb.PendingAttestation{}
+	beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
+	ckp := beaconState.CurrentJustifiedCheckpoint()
+	ckp.Root = []byte("hello-world")
+	beaconState.SetCurrentJustifiedCheckpoint(ckp)
+	beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{})
 
 	if _, err := blocks.ProcessAttestationNoVerify(context.TODO(), beaconState, att); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -1143,22 +1163,22 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		}
 	}
 
-	state := &pb.BeaconState{
+	state, _ := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Slot:        5,
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}
+	})
 	tests := []struct {
 		aggregationBitfield    bitfield.Bitlist
 		wantedAttestingIndices []uint64
 	}{
 		{
 			aggregationBitfield:    bitfield.Bitlist{0x07},
-			wantedAttestingIndices: []uint64{4, 30},
+			wantedAttestingIndices: []uint64{43, 47},
 		},
 		{
 			aggregationBitfield:    bitfield.Bitlist{0x03},
-			wantedAttestingIndices: []uint64{30},
+			wantedAttestingIndices: []uint64{47},
 		},
 		{
 			aggregationBitfield:    bitfield.Bitlist{0x01},
@@ -1166,8 +1186,10 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		},
 	}
 
+	var sig [96]byte
+	copy(sig[:], "signed")
 	attestation := &ethpb.Attestation{
-		Signature: []byte("signed"),
+		Signature: sig[:],
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0},
 			Target: &ethpb.Checkpoint{Epoch: 0},
@@ -1208,7 +1230,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 		}
 	}
 
-	state := &pb.BeaconState{
+	state, _ := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Slot:       5,
 		Validators: validators,
 		Fork: &pb.Fork{
@@ -1217,7 +1239,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 		},
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}
+	})
 	tests := []struct {
 		attestation *ethpb.IndexedAttestation
 	}{
@@ -1256,7 +1278,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		domain := helpers.Domain(state.Fork, tt.attestation.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
+		domain := helpers.Domain(state.Fork(), tt.attestation.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
 
 		root, err := ssz.HashTreeRoot(tt.attestation.Data)
 		if err != nil {
@@ -1290,7 +1312,7 @@ func TestValidateIndexedAttestation_AboveMaxLength(t *testing.T) {
 	}
 
 	want := "validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE"
-	if err := blocks.VerifyIndexedAttestation(context.Background(), &pb.BeaconState{}, indexedAtt1); !strings.Contains(err.Error(), want) {
+	if err := blocks.VerifyIndexedAttestation(context.Background(), &stateTrie.BeaconState{}, indexedAtt1); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected verification to fail return false, received: %v", err)
 	}
 }
@@ -1316,7 +1338,7 @@ func TestProcessDeposits_SameValidatorMultipleDepositsSameBlock(t *testing.T) {
 		},
 	}
 	balances := []uint64{0}
-	beaconState := &pb.BeaconState{
+	beaconState, _ := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data:   eth1Data,
@@ -1324,14 +1346,14 @@ func TestProcessDeposits_SameValidatorMultipleDepositsSameBlock(t *testing.T) {
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		},
-	}
+	})
 	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, block.Body)
 	if err != nil {
 		t.Fatalf("Expected block deposits to process correctly, received: %v", err)
 	}
 
-	if len(newState.Validators) != 2 {
-		t.Errorf("Incorrect validator count. Wanted %d, got %d", 2, len(newState.Validators))
+	if len(newState.Validators()) != 2 {
+		t.Errorf("Incorrect validator count. Wanted %d, got %d", 2, len(newState.Validators()))
 	}
 }
 
@@ -1363,12 +1385,12 @@ func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 			Deposits: []*ethpb.Deposit{deposit},
 		},
 	}
-	beaconState := &pb.BeaconState{
+	beaconState, _ := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			DepositRoot: []byte{0},
 			BlockHash:   []byte{1},
 		},
-	}
+	})
 	want := "deposit root did not verify"
 	if _, err := blocks.ProcessDeposits(context.Background(), beaconState, block.Body); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected error: %s, received %v", want, err)
@@ -1394,7 +1416,7 @@ func TestProcessDeposits_AddsNewValidatorDeposit(t *testing.T) {
 		},
 	}
 	balances := []uint64{0}
-	beaconState := &pb.BeaconState{
+	beaconState, _ := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data:   eth1Data,
@@ -1402,16 +1424,16 @@ func TestProcessDeposits_AddsNewValidatorDeposit(t *testing.T) {
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		},
-	}
+	})
 	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, block.Body)
 	if err != nil {
 		t.Fatalf("Expected block deposits to process correctly, received: %v", err)
 	}
-	if newState.Balances[1] != dep[0].Data.Amount {
+	if newState.Balances()[1] != dep[0].Data.Amount {
 		t.Errorf(
 			"Expected state validator balances index 0 to equal %d, received %d",
 			dep[0].Data.Amount,
-			newState.Balances[1],
+			newState.Balances()[1],
 		)
 	}
 }
@@ -1462,20 +1484,20 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 	}
 	balances := []uint64{0, 50}
 	root := depositTrie.Root()
-	beaconState := &pb.BeaconState{
+	beaconState, _ := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data: &ethpb.Eth1Data{
 			DepositRoot: root[:],
 			BlockHash:   root[:],
 		},
-	}
+	})
 	newState, err := blocks.ProcessDeposits(context.Background(), beaconState, block.Body)
 	if err != nil {
 		t.Fatalf("Process deposit failed: %v", err)
 	}
-	if newState.Balances[1] != 1000+50 {
-		t.Errorf("Expected balance at index 1 to be 1050, received %d", newState.Balances[1])
+	if newState.Balances()[1] != 1000+50 {
+		t.Errorf("Expected balance at index 1 to be 1050, received %d", newState.Balances()[1])
 	}
 }
 
@@ -1494,7 +1516,7 @@ func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
 		},
 	}
 	balances := []uint64{0}
-	beaconState := &pb.BeaconState{
+	beaconState, _ := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data:   eth1Data,
@@ -1502,26 +1524,25 @@ func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		},
-	}
+	})
 	newState, err := blocks.ProcessDeposit(
 		beaconState,
 		dep[0],
-		stateutils.ValidatorIndexMap(beaconState),
 	)
 	if err != nil {
 		t.Fatalf("Process deposit failed: %v", err)
 	}
-	if len(newState.Validators) != 2 {
-		t.Errorf("Expected validator list to have length 2, received: %v", len(newState.Validators))
+	if len(newState.Validators()) != 2 {
+		t.Errorf("Expected validator list to have length 2, received: %v", len(newState.Validators()))
 	}
-	if len(newState.Balances) != 2 {
-		t.Fatalf("Expected validator balances list to have length 2, received: %v", len(newState.Balances))
+	if len(newState.Balances()) != 2 {
+		t.Fatalf("Expected validator balances list to have length 2, received: %v", len(newState.Balances()))
 	}
-	if newState.Balances[1] != dep[0].Data.Amount {
+	if newState.Balances()[1] != dep[0].Data.Amount {
 		t.Errorf(
 			"Expected state validator balances index 1 to equal %d, received %d",
 			dep[0].Data.Amount,
-			newState.Balances[1],
+			newState.Balances()[1],
 		)
 	}
 }
@@ -1546,7 +1567,7 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 		},
 	}
 	balances := []uint64{0}
-	beaconState := &pb.BeaconState{
+	beaconState, _ := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data:   eth1Data,
@@ -1554,30 +1575,29 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		},
-	}
+	})
 	newState, err := blocks.ProcessDeposit(
 		beaconState,
 		dep[0],
-		stateutils.ValidatorIndexMap(beaconState),
 	)
 	if err != nil {
 		t.Fatalf("Expected invalid block deposit to be ignored without error, received: %v", err)
 	}
 
-	if newState.Eth1DepositIndex != 1 {
+	if newState.Eth1DepositIndex() != 1 {
 		t.Errorf(
 			"Expected Eth1DepositIndex to be increased by 1 after processing an invalid deposit, received change: %v",
-			newState.Eth1DepositIndex,
+			newState.Eth1DepositIndex(),
 		)
 	}
-	if len(newState.Validators) != 1 {
-		t.Errorf("Expected validator list to have length 1, received: %v", len(newState.Validators))
+	if len(newState.Validators()) != 1 {
+		t.Errorf("Expected validator list to have length 1, received: %v", len(newState.Validators()))
 	}
-	if len(newState.Balances) != 1 {
-		t.Errorf("Expected validator balances list to have length 1, received: %v", len(newState.Balances))
+	if len(newState.Balances()) != 1 {
+		t.Errorf("Expected validator balances list to have length 1, received: %v", len(newState.Balances()))
 	}
-	if newState.Balances[0] != 0 {
-		t.Errorf("Expected validator balance at index 0 to stay 0, received: %v", newState.Balances[0])
+	if newState.Balances()[0] != 0 {
+		t.Errorf("Expected validator balance at index 0 to stay 0, received: %v", newState.Balances()[0])
 	}
 }
 
@@ -1594,9 +1614,9 @@ func TestProcessVoluntaryExits_ValidatorNotActive(t *testing.T) {
 			ExitEpoch: 0,
 		},
 	}
-	state := &pb.BeaconState{
+	state, _ := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators: registry,
-	}
+	})
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			VoluntaryExits: exits,
@@ -1623,10 +1643,10 @@ func TestProcessVoluntaryExits_InvalidExitEpoch(t *testing.T) {
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 	}
-	state := &pb.BeaconState{
+	state, _ := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators: registry,
 		Slot:       0,
-	}
+	})
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			VoluntaryExits: exits,
@@ -1654,10 +1674,10 @@ func TestProcessVoluntaryExits_NotActiveLongEnoughToExit(t *testing.T) {
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 	}
-	state := &pb.BeaconState{
+	state, _ := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators: registry,
 		Slot:       10,
-	}
+	})
 	block := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{
 			VoluntaryExits: exits,
@@ -1685,23 +1705,23 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 			ActivationEpoch: 0,
 		},
 	}
-	state := &pb.BeaconState{
+	state, _ := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators: registry,
 		Fork: &pb.Fork{
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 		},
 		Slot: params.BeaconConfig().SlotsPerEpoch * 5,
-	}
-	state.Slot = state.Slot + (params.BeaconConfig().PersistentCommitteePeriod * params.BeaconConfig().SlotsPerEpoch)
+	})
+	state.SetSlot(state.Slot() + (params.BeaconConfig().PersistentCommitteePeriod * params.BeaconConfig().SlotsPerEpoch))
 
 	priv := bls.RandKey()
-	state.Validators[0].PublicKey = priv.PublicKey().Marshal()[:]
+	state.Validators()[0].PublicKey = priv.PublicKey().Marshal()[:]
 	signingRoot, err := ssz.HashTreeRoot(exits[0].Exit)
 	if err != nil {
 		t.Error(err)
 	}
-	domain := helpers.Domain(state.Fork, helpers.CurrentEpoch(state), params.BeaconConfig().DomainVoluntaryExit)
+	domain := helpers.Domain(state.Fork(), helpers.CurrentEpoch(state), params.BeaconConfig().DomainVoluntaryExit)
 	sig := priv.Sign(signingRoot[:], domain)
 	exits[0].Signature = sig.Marshal()
 	block := &ethpb.BeaconBlock{
@@ -1714,9 +1734,9 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not process exits: %v", err)
 	}
-	newRegistry := newState.Validators
-	if newRegistry[0].ExitEpoch != helpers.DelayedActivationExitEpoch(state.Slot/params.BeaconConfig().SlotsPerEpoch) {
+	newRegistry := newState.Validators()
+	if newRegistry[0].ExitEpoch != helpers.DelayedActivationExitEpoch(state.Slot()/params.BeaconConfig().SlotsPerEpoch) {
 		t.Errorf("Expected validator exit epoch to be %d, got %d",
-			helpers.DelayedActivationExitEpoch(state.Slot/params.BeaconConfig().SlotsPerEpoch), newRegistry[0].ExitEpoch)
+			helpers.DelayedActivationExitEpoch(state.Slot()/params.BeaconConfig().SlotsPerEpoch), newRegistry[0].ExitEpoch)
 	}
 }

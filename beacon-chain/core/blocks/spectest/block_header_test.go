@@ -11,6 +11,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -38,9 +39,13 @@ func runBlockHeaderTest(t *testing.T, config string) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			preBeaconState := &pb.BeaconState{}
-			if err := ssz.Unmarshal(preBeaconStateFile, preBeaconState); err != nil {
+			preBeaconStateBase := &pb.BeaconState{}
+			if err := ssz.Unmarshal(preBeaconStateFile, preBeaconStateBase); err != nil {
 				t.Fatalf("Failed to unmarshal: %v", err)
+			}
+			preBeaconState, err := beaconstate.InitializeFromProto(preBeaconStateBase)
+			if err != nil {
+				t.Fatal(err)
 			}
 
 			// If the post.ssz is not present, it means the test should fail on our end.
@@ -68,9 +73,8 @@ func runBlockHeaderTest(t *testing.T, config string) {
 				if err := ssz.Unmarshal(postBeaconStateFile, postBeaconState); err != nil {
 					t.Fatalf("Failed to unmarshal: %v", err)
 				}
-
-				if !proto.Equal(beaconState, postBeaconState) {
-					diff, _ := messagediff.PrettyDiff(beaconState, postBeaconState)
+				if !proto.Equal(beaconState.Clone(), postBeaconState) {
+					diff, _ := messagediff.PrettyDiff(beaconState.Clone(), postBeaconState)
 					t.Log(diff)
 					t.Fatal("Post state does not match expected")
 				}

@@ -69,6 +69,10 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 func (b *BeaconState) HashTreeRoot() ([32]byte, error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
+	if len(b.merkleLayers) == 0 {
+		return [32]byte{}, errors.New("state merkle layers not initialized")
+	}
+
 	for field := range b.dirtyFields {
 		root, err := b.rootSelector(field)
 		if err != nil {
