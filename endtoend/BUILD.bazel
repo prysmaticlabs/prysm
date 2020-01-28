@@ -8,6 +8,7 @@ go_test(
         "endtoend_test.go",
         "minimal_e2e_test.go",
     ],
+    args = ["-test.v"],
     data = [
         "//beacon-chain",
         "//validator",
@@ -28,7 +29,6 @@ go_test(
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
-        "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
@@ -42,6 +42,7 @@ go_library(
         "beacon_node.go",
         "epochTimer.go",
         "eth1.go",
+        "helpers.go",
         "validator.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/endtoend",
@@ -58,7 +59,6 @@ go_library(
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",
         "@com_github_ethereum_go_ethereum//ethclient:go_default_library",
         "@com_github_ethereum_go_ethereum//rpc:go_default_library",
-        "@com_github_pkg_errors//:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
 )
