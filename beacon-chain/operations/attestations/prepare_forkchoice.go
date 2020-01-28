@@ -107,7 +107,7 @@ func (s *Service) seen(att *ethpb.Attestation) (bool, error) {
 		if !ok {
 			return false, errors.New("not a bit field")
 		}
-		if savedBitlist.Overlaps(att.AggregationBits) {
+		if savedBitlist.Len() == att.AggregationBits.Len() && savedBitlist.Overlaps(att.AggregationBits) {
 			return true, nil
 		}
 	}

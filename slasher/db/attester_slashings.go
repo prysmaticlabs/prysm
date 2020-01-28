@@ -4,7 +4,6 @@ import (
 	"bytes"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
