@@ -240,6 +240,9 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 }
 
 func (s *Service) createGenesisTime(timeStamp uint64) uint64 {
+	if featureconfig.Get().CustomGenesisDelay == 0 {
+		return timeStamp
+	}
 	timeStampRdDown := timeStamp - timeStamp%featureconfig.Get().CustomGenesisDelay
 	// genesisTime will be set to the first second of the day, two days after it was triggered.
 	return timeStampRdDown + 2*featureconfig.Get().CustomGenesisDelay
