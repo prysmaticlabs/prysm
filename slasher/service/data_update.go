@@ -141,6 +141,7 @@ func (s *Service) getChainHead() (*ethpb.ChainHead, error) {
 	if ch.FinalizedEpoch < 2 {
 		log.Info("archive node doesnt have historic data for slasher to proccess. finalized epoch: %d", ch.FinalizedEpoch)
 	}
+
 	log.Infof("current finalized epoch: %d", ch.FinalizedEpoch)
 	return ch, nil
 }

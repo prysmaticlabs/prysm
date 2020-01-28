@@ -3,11 +3,11 @@ package db
 import (
 	"bytes"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
@@ -160,10 +160,9 @@ func (db *Store) GetLatestEpochDetected() (uint64, error) {
 
 // SetLatestEpochDetected returns the latest detected epoch from db.
 func (db *Store) SetLatestEpochDetected(epoch uint64) error {
-	err := db.update(func(tx *bolt.Tx) error {
+	return db.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
 		err := b.Put([]byte(latestEpochKey), bytesutil.Bytes8(epoch))
 		return err
 	})
-	return err
 }
