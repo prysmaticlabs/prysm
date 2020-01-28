@@ -900,16 +900,18 @@ func TestProcessAttestations_OK(t *testing.T) {
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(0, true)
+	var mockRoot [32]byte
+	copy(mockRoot[:], "hello-world")
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
-			Target: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+			Source: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
+			Target: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
 		},
 		AggregationBits: aggBits,
 	}
 
 	cfc := beaconState.CurrentJustifiedCheckpoint()
-	cfc.Root = []byte("hello-world")
+	cfc.Root = mockRoot[:]
 	beaconState.SetCurrentJustifiedCheckpoint(cfc)
 	beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{})
 
@@ -1024,9 +1026,11 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 300)
 
 	domain := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	var mockRoot [32]byte
+	copy(mockRoot[:], "hello-world")
 	data := &ethpb.AttestationData{
-		Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
-		Target: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+		Source: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
+		Target: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
 	}
 	aggBits1 := bitfield.NewBitlist(9)
 	aggBits1.SetBitAt(0, true)
@@ -1037,7 +1041,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	}
 
 	cfc := beaconState.CurrentJustifiedCheckpoint()
-	cfc.Root = []byte("hello-world")
+	cfc.Root = mockRoot[:]
 	beaconState.SetCurrentJustifiedCheckpoint(cfc)
 	beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{})
 
@@ -1126,9 +1130,11 @@ func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(1, true)
+	var mockRoot [32]byte
+	copy(mockRoot[:], "hello-world")
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
+			Source: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
 			Target: &ethpb.Checkpoint{Epoch: 0},
 		},
 		AggregationBits: aggBits,
@@ -1138,7 +1144,9 @@ func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 	att.Signature = zeroSig[:]
 
 	beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
-	beaconState.CurrentJustifiedCheckpoint().Root = []byte("hello-world")
+	ckp := beaconState.CurrentJustifiedCheckpoint()
+	ckp.Root = []byte("hello-world")
+	beaconState.SetCurrentJustifiedCheckpoint(ckp)
 	beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{})
 
 	if _, err := blocks.ProcessAttestationNoVerify(context.TODO(), beaconState, att); err != nil {
@@ -1166,11 +1174,11 @@ func TestConvertToIndexed_OK(t *testing.T) {
 	}{
 		{
 			aggregationBitfield:    bitfield.Bitlist{0x07},
-			wantedAttestingIndices: []uint64{4, 30},
+			wantedAttestingIndices: []uint64{43, 47},
 		},
 		{
 			aggregationBitfield:    bitfield.Bitlist{0x03},
-			wantedAttestingIndices: []uint64{30},
+			wantedAttestingIndices: []uint64{47},
 		},
 		{
 			aggregationBitfield:    bitfield.Bitlist{0x01},
@@ -1178,8 +1186,10 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		},
 	}
 
+	var sig [96]byte
+	copy(sig[:], "signed")
 	attestation := &ethpb.Attestation{
-		Signature: []byte("signed"),
+		Signature: sig[:],
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0},
 			Target: &ethpb.Checkpoint{Epoch: 0},
