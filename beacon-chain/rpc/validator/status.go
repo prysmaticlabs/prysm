@@ -141,14 +141,14 @@ func (vs *Server) retrieveStatusFromState(
 	headState *pbp2p.BeaconState,
 ) (ethpb.ValidatorStatus, uint64, error) {
 	if headState == nil {
-		return ethpb.ValidatorStatus(0), 0, errors.New("head state does not exist")
+		return ethpb.ValidatorStatus_UNKNOWN_STATUS, 0, errors.New("head state does not exist")
 	}
 	idx, ok, err := vs.BeaconDB.ValidatorIndex(ctx, pubKey)
 	if err != nil {
-		return ethpb.ValidatorStatus(0), 0, err
+		return ethpb.ValidatorStatus_UNKNOWN_STATUS, 0, err
 	}
 	if !ok || int(idx) >= len(headState.Validators) {
-		return ethpb.ValidatorStatus(0), 0, errPubkeyDoesNotExist
+		return ethpb.ValidatorStatus_UNKNOWN_STATUS, 0, errPubkeyDoesNotExist
 	}
 	return vs.assignmentStatus(idx, headState), idx, nil
 }
@@ -158,19 +158,25 @@ func (vs *Server) assignmentStatus(validatorIdx uint64, beaconState *pbp2p.Beaco
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 
-	if validator.ExitEpoch != farFutureEpoch && currentEpoch >= validator.ExitEpoch {
-		return ethpb.ValidatorStatus_EXITED
+	if validator == nil {
+		return ethpb.ValidatorStatus_UNKNOWN_STATUS
 	}
-	if validator.Slashed {
-		return ethpb.ValidatorStatus_SLASHING
-	}
-	if validator.ExitEpoch != farFutureEpoch {
-		return ethpb.ValidatorStatus_EXITING
+	if currentEpoch < validator.ActivationEligibilityEpoch {
+		return ethpb.ValidatorStatus_DEPOSITED
 	}
 	if currentEpoch < validator.ActivationEpoch {
 		return ethpb.ValidatorStatus_PENDING
 	}
-	return ethpb.ValidatorStatus_ACTIVE
+	if validator.ExitEpoch == farFutureEpoch {
+		return ethpb.ValidatorStatus_ACTIVE
+	}
+	if currentEpoch < validator.ExitEpoch {
+		if validator.Slashed {
+			return ethpb.ValidatorStatus_SLASHING
+		}
+		return ethpb.ValidatorStatus_EXITING
+	}
+	return ethpb.ValidatorStatus_EXITED
 }
 
 func (vs *Server) depositBlockSlot(ctx context.Context, eth1BlockNumBigInt *big.Int, beaconState *pbp2p.BeaconState) (uint64, error) {
