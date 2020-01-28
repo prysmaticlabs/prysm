@@ -33,7 +33,7 @@ func killProcesses(t *testing.T, pIDs []int) {
 	}
 }
 
-func waitForTextInFile(file io.Reader, text string) error {
+func waitForTextInFile(file *os.File, text string) error {
 	d := time.Now().Add(maxPollingWaitTime)
 	ctx, cancel := context.WithDeadline(context.Background(), d)
 	defer cancel()
@@ -50,15 +50,19 @@ func waitForTextInFile(file io.Reader, text string) error {
 			}
 			return fmt.Errorf("could not find requested text \"%s\" in logs:\n%s", text, string(contents))
 		case <-ticker.C:
-			fmt.Println("ddd")
-			// Checking the file for contents...
-			enc, err := ioutil.ReadAll(file)
+			_, err := file.Seek(0,io.SeekStart)
 			if err != nil {
 				return err
 			}
-			fmt.Println(enc)
-			if strings.Contains(string(enc), text) {
-				return nil
+			fileScanner := bufio.NewScanner(file)
+			for fileScanner.Scan() {
+				scanned := fileScanner.Text()
+				if strings.Contains(scanned, text) {
+					return nil
+				}
+			}
+			if err := fileScanner.Err(); err != nil {
+				return err
 			}
 		}
 	}
