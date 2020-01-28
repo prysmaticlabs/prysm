@@ -321,7 +321,7 @@ func TestCachedPreState_CanGetFromCache(t *testing.T) {
 	service.initSyncState[r] = s
 
 	wanted := "pre state of slot 1 does not exist"
-	if _, err := service.cachedPreState(ctx, b); !strings.Contains(err.Error(), wanted) {
+	if _, err := service.verifyBlkPreState(ctx, b); !strings.Contains(err.Error(), wanted) {
 		t.Fatal("Not expected error")
 	}
 }
@@ -346,7 +346,7 @@ func TestCachedPreState_CanGetFromCacheWithFeature(t *testing.T) {
 	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r[:]}
 	service.initSyncState[r] = s
 
-	received, err := service.cachedPreState(ctx, b)
+	received, err := service.verifyBlkPreState(ctx, b)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -369,7 +369,7 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 	r := [32]byte{'A'}
 	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r[:]}
 
-	_, err = service.cachedPreState(ctx, b)
+	_, err = service.verifyBlkPreState(ctx, b)
 	wanted := "pre state of slot 1 does not exist"
 	if err.Error() != wanted {
 		t.Error("Did not get wanted error")
@@ -378,7 +378,7 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 	s := &pb.BeaconState{Slot: 1}
 	service.beaconDB.SaveState(ctx, s, r)
 
-	received, err := service.cachedPreState(ctx, b)
+	received, err := service.verifyBlkPreState(ctx, b)
 	if err != nil {
 		t.Fatal(err)
 	}

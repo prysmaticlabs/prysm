@@ -240,6 +240,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		best = s.bestPeer()
 		root, _, _ = s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(s.chain.HeadSlot()))
 	}
+
 	for head := helpers.SlotsSince(genesis); s.chain.HeadSlot() < head; {
 		req := &p2ppb.BeaconBlocksByRangeRequest{
 			HeadBlockRoot: root,
