@@ -33,7 +33,6 @@ func (s *Service) finalisedChangeUpdater() error {
 			}
 			if ch != nil {
 				if ch.FinalizedEpoch > finalizedEpoch {
-					finalizedEpoch = ch.FinalizedEpoch
 					log.Infof("Finalized epoch %d", ch.FinalizedEpoch)
 				}
 				continue
@@ -42,6 +41,33 @@ func (s *Service) finalisedChangeUpdater() error {
 		case <-s.context.Done():
 			return status.Error(codes.Canceled, "Stream context canceled")
 
+		}
+	}
+}
+
+// attestationFeeder this is a stub for the comming PRs #3133
+// Store validator index to public key map Validate attestation signature.
+func (s *Service) attestationFeeder(ctx context.Context) error {
+	as, err := s.beaconClient.StreamAttestations(s.context, &ptypes.Empty{})
+	if err != nil {
+		return err
+	}
+	for {
+		at, err := as.Recv()
+		if err != nil {
+			return err
+		}
+		bcs, err := s.beaconClient.ListBeaconCommittees(s.context, &ethpb.ListCommitteesRequest{
+			QueryFilter: &ethpb.ListCommitteesRequest_Epoch{
+				Epoch: at.Data.Target.Epoch,
+			},
+		})
+		if err != nil {
+			return err
+		}
+		err = s.detectAttestation(at, bcs)
+		if err != nil {
+			continue
 		}
 	}
 }
@@ -64,31 +90,9 @@ func (s *Service) slasherOldAttestationFeeder() error {
 		}
 		log.Infof("detecting slashable events on: %v attestations from epoch: %v", len(ats.Attestations), ep)
 		for _, attestation := range ats.Attestations {
-			scs, ok := bcs.Committees[attestation.Data.Slot]
-			if !ok {
-				log.Errorf("committees doesnt contain the attestation slot: %d, actual first slot: %d , actual last slot: %d",
-					attestation.Data.Slot, bcs.Committees[0], bcs.Committees[uint64(len(bcs.Committees)-1)])
-				continue
-			}
-			if attestation.Data.CommitteeIndex > uint64(len(scs.Committees)) {
-				log.Errorf("committee index is out of range in slot wanted: %v, actual", attestation.Data.CommitteeIndex, len(scs.Committees))
-				continue
-			}
-			sc := scs.Committees[attestation.Data.CommitteeIndex]
-			c := sc.ValidatorIndices
-			ia, err := ConvertToIndexed(s.context, attestation, c)
+			err := s.detectAttestation(attestation, bcs)
 			if err != nil {
-				log.Error(err)
 				continue
-			}
-			sar, err := s.slasher.IsSlashableAttestation(s.context, ia)
-			if err != nil {
-				log.Error(err)
-				continue
-			}
-			s.slasherDb.SaveAttesterSlashings(db.Active, sar.AttesterSlashing)
-			if len(sar.AttesterSlashing) > 0 {
-				log.Infof("slashing response: %v", sar.AttesterSlashing)
 			}
 		}
 		s.slasherDb.SetLatestEpochDetected(ep)
@@ -97,6 +101,38 @@ func (s *Service) slasherOldAttestationFeeder() error {
 	close(errOut)
 	for err := range errOut {
 		log.Error(errors.Wrap(err, "error while writing to db in background"))
+	}
+	return nil
+}
+
+func (s *Service) detectAttestation(attestation *ethpb.Attestation, bcs *ethpb.BeaconCommittees) error {
+	scs, ok := bcs.Committees[attestation.Data.Slot]
+	if !ok {
+		err := fmt.Errorf("committees doesnt contain the attestation slot: %d, actual first slot: %d , actual last slot: %d",
+			attestation.Data.Slot, bcs.Committees[0], bcs.Committees[uint64(len(bcs.Committees)-1)])
+		log.WithError(err)
+		return err
+	}
+	if attestation.Data.CommitteeIndex > uint64(len(scs.Committees)) {
+		err := fmt.Errorf("committee index is out of range in slot wanted: %d, actual: %d", attestation.Data.CommitteeIndex, len(scs.Committees))
+		log.WithError(err)
+		return err
+	}
+	sc := scs.Committees[attestation.Data.CommitteeIndex]
+	c := sc.ValidatorIndices
+	ia, err := ConvertToIndexed(s.context, attestation, c)
+	if err != nil {
+		log.WithError(err)
+		return err
+	}
+	sar, err := s.slasher.IsSlashableAttestation(s.context, ia)
+	if err != nil {
+		log.WithError(err)
+		return err
+	}
+	s.slasherDb.SaveAttesterSlashings(db.Active, sar.AttesterSlashing)
+	if len(sar.AttesterSlashing) > 0 {
+		log.Infof("slashing response: %v", sar.AttesterSlashing)
 	}
 	return nil
 }
