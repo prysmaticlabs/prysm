@@ -584,13 +584,13 @@ func (s *Service) run(done <-chan struct{}) {
 			log.WithError(s.runError).Error("Subscription to new head notifier failed")
 			s.connectedETH1 = false
 			s.waitForConnection()
-			s.runError = nil
 			headSub, err = s.reader.SubscribeNewHead(s.ctx, s.headerChan)
 			if err != nil {
 				log.WithError(err).Error("Unable to re-subscribe to incoming ETH1.0 chain headers")
 				s.runError = err
 				return
 			}
+			s.runError = nil
 		case header, ok := <-s.headerChan:
 			if ok {
 				s.processSubscribedHeaders(header)
