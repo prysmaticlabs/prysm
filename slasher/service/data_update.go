@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
-
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
