@@ -28,7 +28,6 @@ import (
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 }
 
 func TestArchiverService_ReceivesBlockProcessedEvent(t *testing.T) {
@@ -438,7 +437,7 @@ func setupState(validatorCount uint64) (*stateTrie.BeaconState, error) {
 		Slot:                       (2 * params.BeaconConfig().SlotsPerEpoch) - 1,
 		Validators:                 validators,
 		Balances:                   balances,
-		BlockRoots:                 make([][]byte, 128),
+		BlockRoots:                 make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
 		Slashings:                  []uint64{0, 1e9, 1e9},
 		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		CurrentEpochAttestations:   atts,
