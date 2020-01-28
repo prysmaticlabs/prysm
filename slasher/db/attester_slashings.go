@@ -126,7 +126,7 @@ func (db *Store) SaveAttesterSlashings(status SlashingStatus, slashings []*ethpb
 		root := hashutil.Hash(enc[i])
 		key[i] = encodeTypeRoot(SlashingType(Attestation), root)
 	}
-	err = db.update(func(tx *bolt.Tx) error {
+	return db.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
 		for i := 0; i < len(enc); i++ {
 			e := b.Put(key[i], append([]byte{byte(status)}, enc[i]...))
@@ -136,10 +136,6 @@ func (db *Store) SaveAttesterSlashings(status SlashingStatus, slashings []*ethpb
 		}
 		return nil
 	})
-	if err != nil {
-		return err
-	}
-	return err
 }
 
 // GetLatestEpochDetected returns the latest detected epoch from db.
