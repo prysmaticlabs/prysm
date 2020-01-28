@@ -115,21 +115,17 @@ func BeaconCommittee(validatorIndices []uint64, seed [32]byte, slot uint64, comm
 // TODO(3603): Delete this function when issue 3603 closes.
 func BeaconCommitteeWithoutCache(state *stateTrie.BeaconState, slot uint64, index uint64) ([]uint64, error) {
 	epoch := SlotToEpoch(slot)
-	activeValidatorCount, err := ActiveValidatorCount(state, epoch)
+	indices, err := ActiveValidatorIndices(state, epoch)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get active indices")
 	}
-	committeesPerSlot := SlotCommitteeCount(activeValidatorCount)
+	committeesPerSlot := SlotCommitteeCount(uint64(len(indices)))
 	epochOffset := index + (slot%params.BeaconConfig().SlotsPerEpoch)*committeesPerSlot
 	count := committeesPerSlot * params.BeaconConfig().SlotsPerEpoch
 
 	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get seed")
-	}
-	indices, err := ActiveValidatorIndices(state, epoch)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get active indices")
 	}
 
 	return ComputeCommittee(indices, seed, epochOffset, count)
@@ -161,15 +157,8 @@ func ComputeCommittee(
 
 	// Save the shuffled indices in cache, this is only needed once per epoch or once per new committee index.
 	shuffledIndices := make([]uint64, end-start)
-	for i := start; i < end; i++ {
-		permutedIndex, err := ShuffledIndex(i, validatorCount, seed)
-		if err != nil {
-			return []uint64{}, errors.Wrapf(err, "could not get shuffled index at index %d", i)
-		}
-		shuffledIndices[i-start] = indices[permutedIndex]
-	}
-
-	return shuffledIndices, nil
+	copy(shuffledIndices, indices[start:end])
+	return UnshuffleList(shuffledIndices, seed)
 }
 
 // AttestingIndices returns the attesting participants indices from the attestation data. The
@@ -187,7 +176,7 @@ func ComputeCommittee(
 //    return set(index for i, index in enumerate(committee) if bits[i])
 func AttestingIndices(bf bitfield.Bitfield, committee []uint64) ([]uint64, error) {
 	indices := make([]uint64, 0, len(committee))
-	indicesSet := make(map[uint64]bool)
+	indicesSet := make(map[uint64]bool, len(committee))
 	for i, idx := range committee {
 		if !indicesSet[idx] {
 			if bf.BitAt(uint64(i)) {
@@ -385,25 +374,15 @@ func ShuffledIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint64, erro
 		return nil, errors.Wrapf(err, "could not get seed for epoch %d", epoch)
 	}
 
-	vals := state.Validators()
-	indices := make([]uint64, 0, len(vals))
-	for i, v := range vals {
-		if IsActiveValidator(v, epoch) {
-			indices = append(indices, uint64(i))
+	indices := make([]uint64, 0, state.NumofValidators())
+	state.ReadFromEveryValidator(func(idx int, val *stateTrie.ReadOnlyValidator) error {
+		if IsActiveValidatorUsingTrie(val, epoch) {
+			indices = append(indices, uint64(idx))
 		}
-	}
+		return nil
+	})
 
-	validatorCount := uint64(len(indices))
-	shuffledIndices := make([]uint64, validatorCount)
-	for i := 0; i < len(shuffledIndices); i++ {
-		permutedIndex, err := ShuffledIndex(uint64(i), validatorCount, seed)
-		if err != nil {
-			return []uint64{}, errors.Wrapf(err, "could not get shuffled index at index %d", i)
-		}
-		shuffledIndices[i] = indices[permutedIndex]
-	}
-
-	return shuffledIndices, nil
+	return UnshuffleList(indices, seed)
 }
 
 // UpdateCommitteeCache gets called at the beginning of every epoch to cache the committee shuffled indices

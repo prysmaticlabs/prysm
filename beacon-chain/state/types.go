@@ -6,6 +6,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/protolambda/zssz/merkle"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	coreutils "github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -22,6 +23,12 @@ type BeaconState struct {
 	dirtyFields  map[fieldIndex]interface{}
 	valIdxMap    map[[48]byte]uint64
 	merkleLayers [][][]byte
+}
+
+// ReadOnlyValidator returns a wrapper that only allows fields from a validator
+// to be read, and prevents any modification of internal validator fields.
+type ReadOnlyValidator struct {
+	validator *ethpb.Validator
 }
 
 // InitializeFromProto the beacon state from a protobuf representation.
