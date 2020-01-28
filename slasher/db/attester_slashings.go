@@ -11,8 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
-const latestEpochKey = "LATEST_EPOCH_DETECTED"
-
 func createAttesterSlashing(enc []byte) (*ethpb.AttesterSlashing, error) {
 	protoSlashing := &ethpb.AttesterSlashing{}
 	err := proto.Unmarshal(enc, protoSlashing)
