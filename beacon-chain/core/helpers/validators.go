@@ -25,6 +25,7 @@ func IsActiveValidator(validator *ethpb.Validator, epoch uint64) bool {
 	return checkValidatorActiveStatus(validator.ActivationEpoch, validator.ExitEpoch, epoch)
 }
 
+// IsActiveValidatorUsingTrie checks if a read only validator is active.
 func IsActiveValidatorUsingTrie(validator *stateTrie.ReadOnlyValidator, epoch uint64) bool {
 	return checkValidatorActiveStatus(validator.ActivationEpoch(), validator.ExitEpoch(), epoch)
 }
