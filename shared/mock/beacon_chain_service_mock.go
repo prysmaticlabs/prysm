@@ -77,6 +77,26 @@ func (mr *MockBeaconChainClientMockRecorder) GetChainHead(arg0, arg1 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetChainHead", reflect.TypeOf((*MockBeaconChainClient)(nil).GetChainHead), varargs...)
 }
 
+// GetBeaconConfig mocks base method
+func (m *MockBeaconChainClient) GetBeaconConfig(arg0 context.Context, arg1 *empty.Empty, arg2 ...grpc.CallOption) (*v1alpha1.BeaconConfig, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetBeaconConfig", varargs...)
+	ret0, _ := ret[0].(*v1alpha1.BeaconConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetBeaconConfig indicates an expected call of GetBeaconConfig
+func (mr *MockBeaconChainClientMockRecorder) GetBeaconConfig(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBeaconConfig", reflect.TypeOf((*MockBeaconChainClient)(nil).GetBeaconConfig), varargs...)
+}
+
 // GetValidator mocks base method
 func (m *MockBeaconChainClient) GetValidator(arg0 context.Context, arg1 *v1alpha1.GetValidatorRequest, arg2 ...grpc.CallOption) (*v1alpha1.Validator, error) {
 	m.ctrl.T.Helper()

@@ -20,12 +20,13 @@ var errPubkeyDoesNotExist = errors.New("pubkey does not exist")
 
 // ValidatorStatus returns the validator status of the current epoch.
 // The status response can be one of the following:
-//	PENDING_ACTIVE - validator is waiting to get activated.
-//	ACTIVE - validator is active.
-//	INITIATED_EXIT - validator has initiated an an exit request.
-//	WITHDRAWABLE - validator's deposit can be withdrawn after lock up period.
-//	EXITED - validator has exited, means the deposit has been withdrawn.
-//	EXITED_SLASHED - validator was forcefully exited due to slashing.
+//  DEPOSITED - validator's deposit has been recognized by Ethereum 1, not yet recognized by Ethereum 2.
+//  PENDING - validator is in Ethereum 2's activation queue.
+//  ACTIVE - validator is active.
+//  EXITING - validator has initiated an an exit request, or has dropped below the ejection balance and is being kicked out.
+//  EXITED - validator is no longer validating.
+//  SLASHING - validator has been kicked out due to meeting a slashing condition.
+//  UNKNOWN_STATUS - validator does not have a known status in the network.
 func (vs *Server) ValidatorStatus(
 	ctx context.Context,
 	req *ethpb.ValidatorStatusRequest) (*ethpb.ValidatorStatusResponse, error) {
@@ -99,7 +100,7 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 	}
 
 	if resp.Status == ethpb.ValidatorStatus_UNKNOWN_STATUS {
-		resp.Status = ethpb.ValidatorStatus_DEPOSIT_RECEIVED
+		resp.Status = ethpb.ValidatorStatus_DEPOSITED
 	}
 
 	resp.Eth1DepositBlockNumber = eth1BlockNumBigInt.Uint64()
@@ -115,7 +116,7 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 	//  we return the request early too. We only proceed if its status is pending active
 	//  Additionally, if idx is zero (default return value) then we know this
 	// validator cannot be in the queue either.
-	if resp.Status != ethpb.ValidatorStatus_PENDING_ACTIVE || idx == 0 {
+	if resp.Status != ethpb.ValidatorStatus_PENDING || idx == 0 {
 		return resp
 	}
 
@@ -153,28 +154,23 @@ func (vs *Server) retrieveStatusFromState(
 }
 
 func (vs *Server) assignmentStatus(validatorIdx uint64, beaconState *pbp2p.BeaconState) ethpb.ValidatorStatus {
-	var status ethpb.ValidatorStatus
-	v := beaconState.Validators[validatorIdx]
-	epoch := helpers.CurrentEpoch(beaconState)
+	validator := beaconState.Validators[validatorIdx]
+	currentEpoch := helpers.CurrentEpoch(beaconState)
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 
-	if epoch < v.ActivationEpoch {
-		status = ethpb.ValidatorStatus_PENDING_ACTIVE
-	} else if v.ExitEpoch == farFutureEpoch {
-		status = ethpb.ValidatorStatus_ACTIVE
-	} else if epoch >= v.WithdrawableEpoch {
-		status = ethpb.ValidatorStatus_WITHDRAWABLE
-	} else if v.Slashed && epoch >= v.ExitEpoch {
-		status = ethpb.ValidatorStatus_EXITED_SLASHED
-	} else if epoch >= v.ExitEpoch {
-		status = ethpb.ValidatorStatus_EXITED
-	} else if v.ExitEpoch != farFutureEpoch {
-		status = ethpb.ValidatorStatus_INITIATED_EXIT
-	} else {
-		status = ethpb.ValidatorStatus_UNKNOWN_STATUS
+	if validator.ExitEpoch != farFutureEpoch && currentEpoch >= validator.ExitEpoch {
+		return ethpb.ValidatorStatus_EXITED
 	}
-
-	return status
+	if validator.Slashed {
+		return ethpb.ValidatorStatus_SLASHING
+	}
+	if validator.ExitEpoch != farFutureEpoch {
+		return ethpb.ValidatorStatus_EXITING
+	}
+	if currentEpoch < validator.ActivationEpoch {
+		return ethpb.ValidatorStatus_PENDING
+	}
+	return ethpb.ValidatorStatus_ACTIVE
 }
 
 func (vs *Server) depositBlockSlot(ctx context.Context, eth1BlockNumBigInt *big.Int, beaconState *pbp2p.BeaconState) (uint64, error) {
