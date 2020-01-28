@@ -207,19 +207,7 @@ func (b *BeaconState) Eth1Data() *ethpb.Eth1Data {
 	if b.state.Eth1Data == nil {
 		return nil
 	}
-	eth1data := &ethpb.Eth1Data{
-		DepositCount: b.state.Eth1Data.DepositCount,
-	}
-	var depositRoot [32]byte
-	var blockHash [32]byte
-
-	copy(depositRoot[:], b.state.Eth1Data.DepositRoot)
-	copy(blockHash[:], b.state.Eth1Data.BlockHash)
-
-	eth1data.DepositRoot = depositRoot[:]
-	eth1data.BlockHash = blockHash[:]
-
-	return eth1data
+	return CopyETH1Data(b.state.Eth1Data)
 }
 
 // Eth1DataVotes corresponds to votes from eth2 on the canonical proof-of-work chain
@@ -230,17 +218,7 @@ func (b *BeaconState) Eth1DataVotes() []*ethpb.Eth1Data {
 	}
 	res := make([]*ethpb.Eth1Data, len(b.state.Eth1DataVotes))
 	for i := 0; i < len(res); i++ {
-		res[i] = &ethpb.Eth1Data{
-			DepositCount: b.state.Eth1DataVotes[i].DepositCount,
-		}
-		var depositRoot [32]byte
-		var blockHash [32]byte
-
-		copy(depositRoot[:], b.state.Eth1DataVotes[i].DepositRoot)
-		copy(blockHash[:], b.state.Eth1DataVotes[i].BlockHash)
-
-		res[i].DepositRoot = depositRoot[:]
-		res[i].BlockHash = blockHash[:]
+		res[i] = CopyETH1Data(b.state.Eth1DataVotes[i])
 	}
 	return res
 }
@@ -493,4 +471,21 @@ func (b *BeaconState) FinalizedCheckpoint() *ethpb.Checkpoint {
 	copy(root[:], b.state.FinalizedCheckpoint.Root)
 	cp.Root = root[:]
 	return cp
+}
+
+// CopyETH1Data copies the provided eth1data object.
+func CopyETH1Data(data *ethpb.Eth1Data) *ethpb.Eth1Data {
+	newETH1 := &ethpb.Eth1Data{
+		DepositCount: data.DepositCount,
+	}
+	var depositRoot [32]byte
+	var blockHash [32]byte
+
+	copy(depositRoot[:], data.DepositRoot)
+	copy(blockHash[:], data.BlockHash)
+
+	newETH1.DepositRoot = depositRoot[:]
+	newETH1.BlockHash = blockHash[:]
+
+	return newETH1
 }

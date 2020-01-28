@@ -125,6 +125,7 @@ func Eth1DataHasEnoughSupport(beaconState *stateTrie.BeaconState, data *ethpb.Et
 	voteCount := uint64(0)
 	var eth1DataHash [32]byte
 	var err error
+	data = stateTrie.CopyETH1Data(data)
 	if featureconfig.Get().EnableEth1DataVoteCache {
 		eth1DataHash, err = hashutil.HashProto(data)
 		if err != nil {
