@@ -13,8 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	log "github.com/sirupsen/logrus"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // Server defines a server implementation of the gRPC Slasher service,
@@ -161,16 +159,24 @@ func (ss *Server) IsSlashableBlock(ctx context.Context, psr *slashpb.ProposerSla
 
 // ProposerSlashings returns proposer slashings if slashing with the requested status are found in the db.
 func (ss *Server) ProposerSlashings(ctx context.Context, st *slashpb.SlashingStatusRequest) (*slashpb.ProposerSlashingResponse, error) {
-	//TODO(3133): implement stream provider for newly discovered listening to slashable proposals.
 	pSlashingsResponse := &slashpb.ProposerSlashingResponse{}
-	pSlashingsResponse.ProposerSlashing = ss.SlasherDB.ProposalSlashingsByStatus(db.SlashingStatus(st.Status))
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+	var err error
+	pSlashingsResponse.ProposerSlashing, err = ss.SlasherDB.ProposalSlashingsByStatus(db.SlashingStatus(st.Status))
+	if err != nil {
+		return nil, err
+	}
+	return pSlashingsResponse, nil
 }
 
-// SlashableAttestations is a subscription to receive all slashable attester slashing events found by the watchtower.
+// AttesterSlashings returns attester slashings if slashing with the requested status are found in the db.
 func (ss *Server) AttesterSlashings(ctx context.Context, st *slashpb.SlashingStatusRequest) (*slashpb.AttesterSlashingResponse, error) {
-	//TODO(3133): implement stream provider for newly discovered listening to slashable attestation.
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+	aSlashingsResponse := &slashpb.AttesterSlashingResponse{}
+	var err error
+	aSlashingsResponse.AttesterSlashing, err = ss.SlasherDB.AttesterSlashings(db.SlashingStatus(st.Status))
+	if err != nil {
+		return nil, err
+	}
+	return aSlashingsResponse, nil
 }
 
 // DetectSurroundVotes is a method used to return the attestation that were detected

@@ -195,6 +195,15 @@ func TestServer_SameSlotSlashable(t *testing.T) {
 		t.Errorf("wanted slashing proof: %v got: %v", want, sr.ProposerSlashing[0])
 
 	}
+	if err := slasherServer.SlasherDB.SaveProposerSlashing(db.Active, sr.ProposerSlashing[0]); err != nil {
+		t.Errorf("Could not call db method: %v", err)
+	}
+	if sr, err = slasherServer.ProposerSlashings(ctx, &slashpb.SlashingStatusRequest{Status: slashpb.SlashingStatusRequest_Active}); err != nil {
+		t.Errorf("Could not call RPC method: %v", err)
+	}
+	if !proto.Equal(sr.ProposerSlashing[0], want) {
+		t.Errorf("Wanted slashing proof: %v got: %v", want, sr.ProposerSlashing[0])
+	}
 }
 
 func TestServer_SlashDoubleAttestation(t *testing.T) {
@@ -559,6 +568,15 @@ func TestServer_SlashSurroundAttestation(t *testing.T) {
 	if !proto.Equal(sr.AttesterSlashing[0], want) {
 		t.Errorf("Wanted slashing proof: %v got: %v", want, sr.AttesterSlashing[0])
 
+	}
+	if err := slasherServer.SlasherDB.SaveAttesterSlashing(db.Active, sr.AttesterSlashing[0]); err != nil {
+		t.Errorf("Could not call db method: %v", err)
+	}
+	if sr, err = slasherServer.AttesterSlashings(ctx, &slashpb.SlashingStatusRequest{Status: slashpb.SlashingStatusRequest_Active}); err != nil {
+		t.Errorf("Could not call RPC method: %v", err)
+	}
+	if !proto.Equal(sr.AttesterSlashing[0], want) {
+		t.Errorf("Wanted slashing proof: %v got: %v", want, sr.AttesterSlashing[0])
 	}
 }
 
