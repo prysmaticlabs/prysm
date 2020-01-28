@@ -10,7 +10,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// AllAttestationsReceived -
+// AllAttestationsReceived is an evaluator for ensuring all the blocks in the beacon chain
+// contain the attestations needed, if a slot is skipped, those attestations will be expected
+// in the next block.
 var AllAttestationsReceived = Evaluator{
 	Name:       "att_attestations_received_%d",
 	Policy:     afterNthEpoch(0),
