@@ -17,7 +17,7 @@ func TotalBalance(state *stateTrie.BeaconState, indices []uint64) uint64 {
 	total := uint64(0)
 
 	for _, idx := range indices {
-		val, err := state.ValidatorAtIndexNoClone(idx)
+		val, err := state.ValidatorAtIndexReadOnly(idx)
 		if err != nil {
 			continue
 		}
@@ -43,7 +43,7 @@ func TotalBalance(state *stateTrie.BeaconState, indices []uint64) uint64 {
 //    return get_total_balance(state, set(get_active_validator_indices(state, get_current_epoch(state))))
 func TotalActiveBalance(state *stateTrie.BeaconState) (uint64, error) {
 	total := uint64(0)
-	state.ReadFromEveryValidator(func(idx int, val *stateTrie.Validator) error {
+	state.ReadFromEveryValidator(func(idx int, val *stateTrie.ReadOnlyValidator) error {
 		if IsActiveValidatorUsingTrie(val, SlotToEpoch(state.Slot())) {
 			total += val.EffectiveBalance()
 		}

@@ -11,39 +11,39 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
-func (v *Validator) EffectiveBalance() uint64 {
+func (v *ReadOnlyValidator) EffectiveBalance() uint64 {
 	return v.validator.EffectiveBalance
 }
 
-func (v *Validator) ActivationEligibilityEpoch() uint64 {
+func (v *ReadOnlyValidator) ActivationEligibilityEpoch() uint64 {
 	return v.validator.ActivationEligibilityEpoch
 }
 
-func (v *Validator) ActivationEpoch() uint64 {
+func (v *ReadOnlyValidator) ActivationEpoch() uint64 {
 	return v.validator.ActivationEpoch
 }
 
-func (v *Validator) WithdrawableEpoch() uint64 {
+func (v *ReadOnlyValidator) WithdrawableEpoch() uint64 {
 	return v.validator.WithdrawableEpoch
 }
 
-func (v *Validator) ExitEpoch() uint64 {
+func (v *ReadOnlyValidator) ExitEpoch() uint64 {
 	return v.validator.ExitEpoch
 }
 
-func (v *Validator) PublicKey() [48]byte {
+func (v *ReadOnlyValidator) PublicKey() [48]byte {
 	var pubkey [48]byte
 	copy(pubkey[:], v.validator.PublicKey)
 	return pubkey
 }
 
-func (v *Validator) WithdrawalCredentials() []byte {
+func (v *ReadOnlyValidator) WithdrawalCredentials() []byte {
 	creds := make([]byte, len(v.validator.WithdrawalCredentials))
 	copy(creds[:], v.validator.WithdrawalCredentials)
 	return creds
 }
 
-func (v *Validator) Slashed() bool {
+func (v *ReadOnlyValidator) Slashed() bool {
 	return v.validator.Slashed
 }
 
@@ -260,16 +260,16 @@ func (b *BeaconState) Validators() []*ethpb.Validator {
 	return res
 }
 
-// ValidatorsNoClone returns validators participating in consensus on the beacon chain. This
-// method doesn't clone the respective validators.
-func (b *BeaconState) ValidatorsNoClone() []*Validator {
+// ValidatorsReadOnly returns validators participating in consensus on the beacon chain. This
+// method doesn't clone the respective validators and returns read only references to the validators.
+func (b *BeaconState) ValidatorsReadOnly() []*ReadOnlyValidator {
 	if b.state.Validators == nil {
 		return nil
 	}
-	res := make([]*Validator, len(b.state.Validators))
+	res := make([]*ReadOnlyValidator, len(b.state.Validators))
 	for i := 0; i < len(res); i++ {
 		val := b.state.Validators[i]
-		res[i] = &Validator{validator: val}
+		res[i] = &ReadOnlyValidator{validator: val}
 	}
 	return res
 }
@@ -299,16 +299,16 @@ func (b *BeaconState) ValidatorAtIndex(idx uint64) (*ethpb.Validator, error) {
 	}, nil
 }
 
-// ValidatorAtIndexNoClone is the validator at the provided index.This method
+// ValidatorAtIndexReadOnly is the validator at the provided index.This method
 // doesn't clone the validator.
-func (b *BeaconState) ValidatorAtIndexNoClone(idx uint64) (*Validator, error) {
+func (b *BeaconState) ValidatorAtIndexReadOnly(idx uint64) (*ReadOnlyValidator, error) {
 	if b.state.Validators == nil {
-		return &Validator{}, nil
+		return &ReadOnlyValidator{}, nil
 	}
 	if len(b.state.Validators) <= int(idx) {
 		return nil, fmt.Errorf("index %d out of range", idx)
 	}
-	return &Validator{b.state.Validators[idx]}, nil
+	return &ReadOnlyValidator{b.state.Validators[idx]}, nil
 }
 
 // ValidatorIndexByPubkey returns a given validator by its 48-byte public key.
@@ -332,9 +332,9 @@ func (b *BeaconState) NumofValidators() int {
 
 // ReadFromEveryValidator reads values from every validator and applies it to the provided function.
 // Warning: This method is potentially unsafe, as it exposes the actual validator registry.
-func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val *Validator) error) error {
+func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val *ReadOnlyValidator) error) error {
 	for i, v := range b.state.Validators {
-		err := f(i, &Validator{validator: v})
+		err := f(i, &ReadOnlyValidator{validator: v})
 		if err != nil {
 			return err
 		}
