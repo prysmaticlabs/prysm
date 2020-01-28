@@ -48,7 +48,7 @@ import (
 //    if state.finalized_checkpoint.epoch > store.finalized_checkpoint.epoch:
 //        store.finalized_checkpoint = state.finalized_checkpoint
 func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) (*pb.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "forkchoice.onBlock")
+	ctx, span := trace.StartSpan(ctx, "blockchain.onBlock")
 	defer span.End()
 
 	if signed == nil || signed.Block == nil {
@@ -139,7 +139,7 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 // It runs state transition on the block and without any BLS verification. The excluded BLS verification
 // includes attestation's aggregated signature. It also does not save attestations.
 func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed *ethpb.SignedBeaconBlock) (*pb.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "forkchoice.onBlock")
+	ctx, span := trace.StartSpan(ctx, "blockchain.onBlock")
 	defer span.End()
 
 	if signed == nil || signed.Block == nil {
