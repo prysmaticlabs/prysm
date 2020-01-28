@@ -189,6 +189,7 @@ func TestGetAttestationData_OK(t *testing.T) {
 		},
 		Target: &ethpb.Checkpoint{
 			Epoch: 3,
+			Root:  make([]byte, 32),
 		},
 	}
 
@@ -207,7 +208,7 @@ func TestGetAttestationData_SyncNotReady(t *testing.T) {
 	}
 }
 
-func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
+func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	// Scenario:
 	//
 	// State slot = 10000
@@ -296,6 +297,7 @@ func TestAttestationDataAtSlot_handlesFarAwayJustifiedEpoch(t *testing.T) {
 		},
 		Target: &ethpb.Checkpoint{
 			Epoch: 312,
+			Root:  make([]byte, 32),
 		},
 	}
 

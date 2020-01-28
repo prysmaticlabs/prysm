@@ -164,17 +164,23 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 
 	var votes []*ethpb.Eth1Data
 
+	blockHash := make([]byte, 32)
+	copy(blockHash, "0x1")
 	vote := &ethpb.Eth1Data{
-		BlockHash:    []byte("0x1"),
+		DepositRoot:  make([]byte, 32),
+		BlockHash:    blockHash,
 		DepositCount: 3,
 	}
 	for i := 0; i <= int(params.BeaconConfig().SlotsPerEth1VotingPeriod/2); i++ {
 		votes = append(votes, vote)
 	}
 
+	blockHash = make([]byte, 32)
+	copy(blockHash, "0x0")
 	beaconState, _ := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
-			BlockHash:    []byte("0x0"),
+			DepositRoot:  make([]byte, 32),
+			BlockHash:    blockHash,
 			DepositCount: 2,
 		},
 		Eth1DepositIndex: 2,
@@ -964,15 +970,18 @@ func TestEth1Data_MockEnabled(t *testing.T) {
 	//   BlockHash = hash(hash(current_epoch + slot_in_voting_period)),
 	// )
 	ctx := context.Background()
+	headState, err := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
+		Eth1DepositIndex: 64,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	ps := &Server{
-		HeadFetcher:   &mock.ChainService{State: &beaconstate.BeaconState{}},
+		HeadFetcher:   &mock.ChainService{State: headState},
 		BeaconDB:      db,
 		MockEth1Votes: true,
 	}
 	headBlockRoot := [32]byte{1, 2, 3}
-	headState, _ := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
-		Eth1DepositIndex: 64,
-	})
 	if err := db.SaveState(ctx, headState, headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -993,8 +1002,9 @@ func TestEth1Data_MockEnabled(t *testing.T) {
 	depRoot := hashutil.Hash(enc)
 	blockHash := hashutil.Hash(depRoot[:])
 	want := &ethpb.Eth1Data{
-		DepositRoot: depRoot[:],
-		BlockHash:   blockHash[:],
+		DepositRoot:  depRoot[:],
+		BlockHash:    blockHash[:],
+		DepositCount: 64,
 	}
 	if !proto.Equal(eth1Data, want) {
 		t.Errorf("Wanted %v, received %v", want, eth1Data)
