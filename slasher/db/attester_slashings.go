@@ -148,7 +148,7 @@ func (db *Store) GetLatestEpochDetected() (uint64, error) {
 	return epoch, err
 }
 
-// SetLatestEpochDetected returns the latest detected epoch from db.
+// SetLatestEpochDetected sets the latest slashing detected epoch in db.
 func (db *Store) SetLatestEpochDetected(epoch uint64) error {
 	return db.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
