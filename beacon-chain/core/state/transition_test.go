@@ -93,7 +93,7 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 
 	sig, err := testutil.BlockSignature(beaconState, block.Block, privKeys)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	block.Signature = sig.Marshal()
 
@@ -295,6 +295,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
 		Slot:       genesisBlock.Block.Slot,
 		ParentRoot: genesisBlock.Block.ParentRoot,
+		StateRoot:  params.BeaconConfig().ZeroHash[:],
 		BodyRoot:   bodyRoot[:],
 	})
 	beaconState.SetSlashings(make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector))
@@ -473,10 +474,10 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 
 	beaconState, err = state.ProcessBlock(context.Background(), beaconState, block)
 	if err != nil {
-		t.Errorf("Expected block to pass processing conditions: %v", err)
+		t.Fatalf("Expected block to pass processing conditions: %v", err)
 	}
 
-	if v, _ := beaconState.ValidatorAtIndex(proposerSlashings[0].ProposerIndex); v.Slashed {
+	if v, _ := beaconState.ValidatorAtIndex(proposerSlashings[0].ProposerIndex); !v.Slashed {
 		t.Errorf("Expected validator at index %d to be slashed, received false", proposerSlashings[0].ProposerIndex)
 	}
 
@@ -738,7 +739,7 @@ func TestProcessBlk_AttsBasedOnValidatorCount(t *testing.T) {
 	}
 
 	epochSignature, _ := testutil.RandaoReveal(s, helpers.CurrentEpoch(s), privKeys)
-	parentRoot, _ := ssz.HashTreeRoot(s.LatestBlockHeader)
+	parentRoot, _ := ssz.HashTreeRoot(s.LatestBlockHeader())
 	blk := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			Slot:       s.Slot(),

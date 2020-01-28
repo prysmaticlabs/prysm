@@ -3,6 +3,7 @@ package state
 import (
 	"fmt"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -60,7 +61,7 @@ func (b *BeaconState) SetSlot(val uint64) error {
 
 // SetFork version for the beacon chain.
 func (b *BeaconState) SetFork(val *pbp2p.Fork) error {
-	b.state.Fork = val
+	b.state.Fork = proto.Clone(val).(*pbp2p.Fork)
 	b.lock.Lock()
 	b.markFieldAsDirty(fork)
 	b.lock.Unlock()
@@ -69,7 +70,7 @@ func (b *BeaconState) SetFork(val *pbp2p.Fork) error {
 
 // SetLatestBlockHeader in the beacon state.
 func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
-	b.state.LatestBlockHeader = val
+	b.state.LatestBlockHeader = proto.Clone(val).(*ethpb.BeaconBlockHeader)
 	b.lock.Lock()
 	b.markFieldAsDirty(latestBlockHeader)
 	b.lock.Unlock()

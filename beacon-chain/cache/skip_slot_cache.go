@@ -80,7 +80,7 @@ func (c *SkipSlotCache) Get(ctx context.Context, slot uint64) (*stateTrie.Beacon
 
 	if exists && item != nil {
 		skipSlotCacheHit.Inc()
-		return item.(*stateTrie.BeaconState), nil
+		return stateTrie.InitializeFromProto(item.(*stateTrie.BeaconState).Clone())
 	}
 	skipSlotCacheMiss.Inc()
 	return nil, nil

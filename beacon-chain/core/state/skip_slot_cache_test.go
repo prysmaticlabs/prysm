@@ -22,6 +22,10 @@ func TestSkipSlotCache_OK(t *testing.T) {
 	cfg := featureconfig.Get()
 	cfg.EnableSkipSlotsCache = true
 	featureconfig.Init(cfg)
+	defer func() {
+		cfg.EnableSkipSlotsCache = false
+		featureconfig.Init(cfg)
+	}()
 
 	// First transition will be with an empty cache, so the cache becomes populated
 	// with the state
@@ -39,7 +43,7 @@ func TestSkipSlotCache_OK(t *testing.T) {
 		t.Fatalf("Could not process state transition: %v", err)
 	}
 
-	if !ssz.DeepEqual(originalState, bState) {
+	if !ssz.DeepEqual(originalState.Clone(), bState.Clone()) {
 		t.Fatal("Skipped slots cache leads to different states")
 	}
 }

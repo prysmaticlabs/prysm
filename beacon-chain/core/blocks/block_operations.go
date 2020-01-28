@@ -24,7 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"github.com/prysmaticlabs/prysm/shared/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -244,7 +243,9 @@ func ProcessBlockHeaderNoVerify(
 	if beaconState.Slot() != block.Slot {
 		return nil, fmt.Errorf("state slot: %d is different then block slot: %d", beaconState.Slot(), block.Slot)
 	}
-	parentRoot, err := stateutil.BlockHeaderRoot(beaconState.LatestBlockHeader())
+	// TODO: Some test only pass with ssz.HashTreeRoot rather than stateutil.BlockHeaderRoot.
+	//parentRoot, err := stateutil.BlockHeaderRoot(beaconState.LatestBlockHeader())
+	parentRoot, err := ssz.HashTreeRoot(beaconState.LatestBlockHeader())
 	if err != nil {
 		return nil, err
 	}

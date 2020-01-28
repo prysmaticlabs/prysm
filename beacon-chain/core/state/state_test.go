@@ -101,13 +101,13 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	// Recent state checks.
-	if !reflect.DeepEqual(newState.Slashings, make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)) {
+	if !reflect.DeepEqual(newState.Slashings(), make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)) {
 		t.Error("Slashings was not correctly initialized")
 	}
-	if !reflect.DeepEqual(newState.CurrentEpochAttestations, []*pb.PendingAttestation{}) {
+	if !reflect.DeepEqual(newState.CurrentEpochAttestations(), []*pb.PendingAttestation{}) {
 		t.Error("CurrentEpochAttestations was not correctly initialized")
 	}
-	if !reflect.DeepEqual(newState.PreviousEpochAttestations, []*pb.PendingAttestation{}) {
+	if !reflect.DeepEqual(newState.PreviousEpochAttestations(), []*pb.PendingAttestation{}) {
 		t.Error("PreviousEpochAttestations was not correctly initialized")
 	}
 

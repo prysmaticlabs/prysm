@@ -157,9 +157,14 @@ func CalculateStateRoot(
 		return [32]byte{}, errors.New("nil block")
 	}
 
+	// Copy state to avoid mutating the state reference.
+	state, err := stateTrie.InitializeFromProto(state.Clone())
+	if err != nil {
+		return [32]byte{}, err
+	}
+
 	b.ClearEth1DataVoteCache()
 
-	var err error
 	// Execute per slots transition.
 	state, err = ProcessSlots(ctx, state, signed.Block.Slot)
 	if err != nil {
@@ -210,7 +215,7 @@ func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.
 	zeroHash := params.BeaconConfig().ZeroHash
 	// Cache latest block header state root.
 	header := state.LatestBlockHeader()
-	if bytes.Equal(header.StateRoot, zeroHash[:]) {
+	if header.StateRoot == nil || bytes.Equal(header.StateRoot, zeroHash[:]) {
 		header.StateRoot = prevStateRoot[:]
 		if err := state.SetLatestBlockHeader(header); err != nil {
 			return nil, err
