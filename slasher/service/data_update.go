@@ -39,35 +39,49 @@ func (s *Service) finalisedChangeUpdater() error {
 			}
 			log.Error("No chain head was returned by beacon chain.")
 		case <-s.context.Done():
-			return status.Error(codes.Canceled, "Stream context canceled")
+			err := status.Error(codes.Canceled, "Stream context canceled")
+			log.WithError(err)
+			return err
 
 		}
 	}
 }
 
-// attestationFeeder this is a stub for the comming PRs #3133
-// Store validator index to public key map Validate attestation signature.
-func (s *Service) attestationFeeder(ctx context.Context) error {
+// attestationFeeder feeds attestations that were received by archive endpoint.
+func (s *Service) attestationFeeder() error {
 	as, err := s.beaconClient.StreamAttestations(s.context, &ptypes.Empty{})
 	if err != nil {
 		return err
 	}
 	for {
-		at, err := as.Recv()
-		if err != nil {
+		select {
+		default:
+			if as == nil {
+				err := fmt.Errorf("attestation stream is nil. please check your archiver node status")
+				log.WithError(err)
+				return err
+			}
+			at, err := as.Recv()
+			if err != nil {
+				return err
+			}
+			bcs, err := s.beaconClient.ListBeaconCommittees(s.context, &ethpb.ListCommitteesRequest{
+				QueryFilter: &ethpb.ListCommitteesRequest_Epoch{
+					Epoch: at.Data.Target.Epoch,
+				},
+			})
+			if err != nil {
+				log.WithError(err)
+				return err
+			}
+			err = s.detectAttestation(at, bcs)
+			if err != nil {
+				continue
+			}
+		case <-s.context.Done():
+			err := status.Error(codes.Canceled, "Stream context canceled")
+			log.WithError(err)
 			return err
-		}
-		bcs, err := s.beaconClient.ListBeaconCommittees(s.context, &ethpb.ListCommitteesRequest{
-			QueryFilter: &ethpb.ListCommitteesRequest_Epoch{
-				Epoch: at.Data.Target.Epoch,
-			},
-		})
-		if err != nil {
-			return err
-		}
-		err = s.detectAttestation(at, bcs)
-		if err != nil {
-			continue
 		}
 	}
 }
@@ -108,8 +122,8 @@ func (s *Service) slasherOldAttestationFeeder() error {
 func (s *Service) detectAttestation(attestation *ethpb.Attestation, bcs *ethpb.BeaconCommittees) error {
 	scs, ok := bcs.Committees[attestation.Data.Slot]
 	if !ok {
-		err := fmt.Errorf("committees doesnt contain the attestation slot: %d, actual first slot: %d , actual last slot: %d",
-			attestation.Data.Slot, bcs.Committees[0], bcs.Committees[uint64(len(bcs.Committees)-1)])
+		err := fmt.Errorf("committees doesnt contain the attestation slot: %d, committees: %d",
+			attestation.Data.Slot, len(bcs.Committees))
 		log.WithError(err)
 		return err
 	}

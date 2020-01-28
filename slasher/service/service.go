@@ -120,6 +120,7 @@ func (s *Service) Start() {
 		s.failStatus = err
 		return
 	}
+	go s.attestationFeeder()
 	go s.finalisedChangeUpdater()
 	s.lock.Unlock()
 

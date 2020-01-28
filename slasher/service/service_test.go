@@ -42,6 +42,10 @@ func TestLifecycle_OK(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(&ethpb.ChainHead{HeadSlot: 1}, nil)
+	client.EXPECT().StreamAttestations(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(nil, nil)
 	waitForStarted(rpcService, t)
 	rpcService.Close()
 	testutil.AssertLogsContain(t, hook, "Starting service")
@@ -70,6 +74,10 @@ func TestRPC_BadEndpoint(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(&ethpb.ChainHead{HeadSlot: 1}, nil)
+	client.EXPECT().StreamAttestations(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(nil, nil)
 	testutil.AssertLogsDoNotContain(t, hook, "Could not listen to port in Start()")
 	testutil.AssertLogsDoNotContain(t, hook, "Could not load TLS keys")
 	testutil.AssertLogsDoNotContain(t, hook, "Could not serve gRPC")
@@ -111,6 +119,10 @@ func TestRPC_InsecureEndpoint(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(&ethpb.ChainHead{HeadSlot: 1}, nil)
+	client.EXPECT().StreamAttestations(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(nil, nil)
 	waitForStarted(rpcService, t)
 
 	testutil.AssertLogsContain(t, hook, "Starting service")
