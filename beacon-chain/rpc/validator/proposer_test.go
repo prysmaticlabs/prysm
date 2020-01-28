@@ -17,12 +17,12 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
@@ -83,7 +83,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
-	stateRoot, err := stateutil.HashTreeRootState(beaconState)
+	stateRoot, err := beaconState.HashTreeRoot()
 	if err != nil {
 		t.Fatalf("Could not hash genesis state: %v", err)
 	}
@@ -123,7 +123,7 @@ func TestComputeStateRoot_OK(t *testing.T) {
 			},
 		},
 	}
-	beaconState.Slot++
+	beaconState.SetSlot(beaconState.Slot() + 1)
 	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
 	if err != nil {
 		t.Error(err)
@@ -132,14 +132,14 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	beaconState.Slot--
+	beaconState.SetSlot(beaconState.Slot() - 1)
 	req.Block.Body.RandaoReveal = randaoReveal[:]
 	signingRoot, err := ssz.HashTreeRoot(req.Block)
 	if err != nil {
 		t.Error(err)
 	}
 	currentEpoch := helpers.CurrentEpoch(beaconState)
-	domain := helpers.Domain(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	domain := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	blockSig := privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()
 	req.Signature = blockSig[:]
 
@@ -172,14 +172,14 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 		votes = append(votes, vote)
 	}
 
-	beaconState := &pbp2p.BeaconState{
+	beaconState, _ := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			BlockHash:    []byte("0x0"),
 			DepositCount: 2,
 		},
 		Eth1DepositIndex: 2,
 		Eth1DataVotes:    votes,
-	}
+	})
 
 	blk := &ethpb.BeaconBlock{
 		Body: &ethpb.BeaconBlockBody{Eth1Data: &ethpb.Eth1Data{}},
@@ -214,7 +214,7 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if proto.Equal(newState.Eth1Data, vote) {
+	if proto.Equal(newState.Eth1Data(), vote) {
 		t.Errorf("eth1data in the state equal to vote, when not expected to"+
 			"have majority: Got %v", vote)
 	}
@@ -237,7 +237,7 @@ func TestPendingDeposits_Eth1DataVoteOK(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !proto.Equal(newState.Eth1Data, vote) {
+	if !proto.Equal(newState.Eth1Data(), vote) {
 		t.Errorf("eth1data in the state not of the expected kind: Got %v but wanted %v", newState.Eth1Data, vote)
 	}
 }
@@ -253,12 +253,12 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		},
 	}
 
-	beaconState := &pbp2p.BeaconState{
+	beaconState, _ := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			BlockHash: []byte("0x0"),
 		},
 		Eth1DepositIndex: 2,
-	}
+	})
 
 	var mockSig [96]byte
 	var mockCreds [32]byte
@@ -328,7 +328,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	}
 
 	blk := &ethpb.BeaconBlock{
-		Slot: beaconState.Slot,
+		Slot: beaconState.Slot(),
 	}
 
 	blkRoot, err := ssz.HashTreeRoot(blk)
@@ -393,16 +393,16 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 		votes = append(votes, vote)
 	}
 
-	beaconState := &pbp2p.BeaconState{
+	beaconState, _ := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			BlockHash:    []byte("0x0"),
 			DepositCount: 5,
 		},
 		Eth1DepositIndex: 1,
 		Eth1DataVotes:    votes,
-	}
+	})
 	blk := &ethpb.BeaconBlock{
-		Slot: beaconState.Slot,
+		Slot: beaconState.Slot(),
 	}
 
 	blkRoot, err := ssz.HashTreeRoot(blk)
@@ -522,15 +522,15 @@ func TestPendingDeposits_CantReturnBelowStateEth1DepositIndex(t *testing.T) {
 		},
 	}
 
-	beaconState := &pbp2p.BeaconState{
+	beaconState, _ := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			BlockHash:    []byte("0x0"),
 			DepositCount: 100,
 		},
 		Eth1DepositIndex: 10,
-	}
+	})
 	blk := &ethpb.BeaconBlock{
-		Slot: beaconState.Slot,
+		Slot: beaconState.Slot(),
 	}
 	blkRoot, err := ssz.HashTreeRoot(blk)
 	if err != nil {
@@ -629,15 +629,15 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 		},
 	}
 
-	beaconState := &pbp2p.BeaconState{
+	beaconState, _ := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			BlockHash:    []byte("0x0"),
 			DepositCount: 100,
 		},
 		Eth1DepositIndex: 2,
-	}
+	})
 	blk := &ethpb.BeaconBlock{
-		Slot: beaconState.Slot,
+		Slot: beaconState.Slot(),
 	}
 	blkRoot, err := ssz.HashTreeRoot(blk)
 	if err != nil {
@@ -733,15 +733,15 @@ func TestPendingDeposits_CantReturnMoreDepositCount(t *testing.T) {
 		},
 	}
 
-	beaconState := &pbp2p.BeaconState{
+	beaconState, _ := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			BlockHash:    []byte("0x0"),
 			DepositCount: 5,
 		},
 		Eth1DepositIndex: 2,
-	}
+	})
 	blk := &ethpb.BeaconBlock{
-		Slot: beaconState.Slot,
+		Slot: beaconState.Slot(),
 	}
 	blkRoot, err := ssz.HashTreeRoot(blk)
 	if err != nil {
@@ -827,12 +827,12 @@ func TestPendingDeposits_CantReturnMoreDepositCount(t *testing.T) {
 }
 
 func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
-	beaconState := &pbp2p.BeaconState{
+	beaconState, _ := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			BlockHash: []byte{'a'},
 		},
 		Eth1DataVotes: []*ethpb.Eth1Data{},
-	}
+	})
 	p := &mockPOW.FaultyMockPOWChain{
 		HashesByHeight: make(map[int][]byte),
 	}
@@ -844,7 +844,7 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 		HeadFetcher:       &mock.ChainService{State: beaconState},
 	}
 	want := "could not fetch ETH1_FOLLOW_DISTANCE ancestor"
-	if _, err := proposerServer.eth1Data(context.Background(), beaconState.Slot+1); !strings.Contains(err.Error(), want) {
+	if _, err := proposerServer.eth1Data(context.Background(), beaconState.Slot()+1); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected error %v, received %v", want, err)
 	}
 }
@@ -965,14 +965,14 @@ func TestEth1Data_MockEnabled(t *testing.T) {
 	// )
 	ctx := context.Background()
 	ps := &Server{
-		HeadFetcher:   &mock.ChainService{State: &pbp2p.BeaconState{}},
+		HeadFetcher:   &mock.ChainService{State: &beaconstate.BeaconState{}},
 		BeaconDB:      db,
 		MockEth1Votes: true,
 	}
 	headBlockRoot := [32]byte{1, 2, 3}
-	headState := &pbp2p.BeaconState{
+	headState, _ := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		Eth1DepositIndex: 64,
-	}
+	})
 	if err := db.SaveState(ctx, headState, headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -1063,7 +1063,7 @@ func TestFilterAttestation_OK(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		domain := helpers.Domain(state.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
+		domain := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
 
 		sigs := make([]*bls.Signature, len(attestingIndices))
 		zeroSig := [96]byte{}
@@ -1091,12 +1091,12 @@ func Benchmark_Eth1Data(b *testing.B) {
 
 	hashesByHeight := make(map[int][]byte)
 
-	beaconState := &pbp2p.BeaconState{
+	beaconState, _ := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		Eth1DataVotes: []*ethpb.Eth1Data{},
 		Eth1Data: &ethpb.Eth1Data{
 			BlockHash: []byte("stub"),
 		},
-	}
+	})
 	var mockSig [96]byte
 	var mockCreds [32]byte
 	deposits := []*dbpb.DepositContainer{
@@ -1130,16 +1130,16 @@ func Benchmark_Eth1Data(b *testing.B) {
 	for i := 0; i < numOfVotes; i++ {
 		blockhash := []byte{'b', 'l', 'o', 'c', 'k', byte(i)}
 		deposit := []byte{'d', 'e', 'p', 'o', 's', 'i', 't', byte(i)}
-		beaconState.Eth1DataVotes = append(beaconState.Eth1DataVotes, &ethpb.Eth1Data{
+		beaconState.SetEth1DataVotes(append(beaconState.Eth1DataVotes(), &ethpb.Eth1Data{
 			BlockHash:   blockhash,
 			DepositRoot: deposit,
-		})
+		}))
 		hashesByHeight[i] = blockhash
 	}
 	hashesByHeight[numOfVotes+1] = []byte("stub")
 
 	blk := &ethpb.BeaconBlock{
-		Slot: beaconState.Slot,
+		Slot: beaconState.Slot(),
 	}
 	blkRoot, err := ssz.HashTreeRoot(blk)
 	if err != nil {
@@ -1162,7 +1162,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := proposerServer.eth1Data(context.Background(), beaconState.Slot+1)
+		_, err := proposerServer.eth1Data(context.Background(), beaconState.Slot()+1)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -1181,14 +1181,14 @@ func TestDeposits_ReturnsEmptyList_IfLatestEth1DataEqGenesisEth1Block(t *testing
 		GenesisEth1Block: height,
 	}
 
-	beaconState := &pbp2p.BeaconState{
+	beaconState, _ := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		Eth1Data: &ethpb.Eth1Data{
 			BlockHash: []byte("0x0"),
 		},
 		Eth1DepositIndex: 2,
-	}
+	})
 	blk := &ethpb.BeaconBlock{
-		Slot: beaconState.Slot,
+		Slot: beaconState.Slot(),
 	}
 	blkRoot, err := ssz.HashTreeRoot(blk)
 	if err != nil {

@@ -66,13 +66,13 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 		t.Error(err)
 	}
 
-	beaconState.SetSlot(beaconState.Slot()+1)
+	beaconState.SetSlot(beaconState.Slot() + 1)
 	epoch := helpers.CurrentEpoch(beaconState)
 	randaoReveal, err := testutil.RandaoReveal(beaconState, epoch, privKeys)
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.SetSlot(beaconState.Slot()-1)
+	beaconState.SetSlot(beaconState.Slot() - 1)
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			Slot:       beaconState.Slot() + 1,
@@ -128,12 +128,12 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.SetSlot(beaconState.Slot()+1)
+	beaconState.SetSlot(beaconState.Slot() + 1)
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.SetSlot(beaconState.Slot()-1)
+	beaconState.SetSlot(beaconState.Slot() - 1)
 	domain := helpers.Domain(beaconState.Fork(), helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainBeaconProposer)
 	sig := privKeys[proposerIdx].Sign(blockRoot[:], domain)
 	block.Signature = sig.Marshal()
@@ -168,12 +168,12 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.SetSlot(beaconState.Slot()+1)
+	beaconState.SetSlot(beaconState.Slot() + 1)
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.SetSlot(beaconState.Slot()-1)
+	beaconState.SetSlot(beaconState.Slot() - 1)
 	domain := helpers.Domain(beaconState.Fork(), helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainBeaconProposer)
 	sig := privKeys[proposerIdx].Sign(blockRoot[:], domain)
 	block.Signature = sig.Marshal()
@@ -275,7 +275,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			},
 		},
 	}
-	beaconState.SetSlot(beaconState.Slot()+ params.BeaconConfig().MinAttestationInclusionDelay)
+	beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 	cp := beaconState.CurrentJustifiedCheckpoint()
 	cp.Root = []byte("hello-world")
 	beaconState.SetCurrentJustifiedCheckpoint(cp)

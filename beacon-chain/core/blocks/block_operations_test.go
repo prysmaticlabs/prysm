@@ -788,7 +788,7 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 		},
 	}
 	beaconState, _ := testutil.DeterministicGenesisState(t, 100)
-	beaconState.SetSlot(beaconState.Slot()+params.BeaconConfig().MinAttestationInclusionDelay)
+	beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 	cfc := beaconState.CurrentJustifiedCheckpoint()
 	cfc.Root = []byte("hello-world")
 	beaconState.SetCurrentJustifiedCheckpoint(cfc)
@@ -883,7 +883,7 @@ func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 		},
 	}
 
-	beaconState.SetSlot(beaconState.Slot()+ params.BeaconConfig().MinAttestationInclusionDelay)
+	beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 
 	cfc := beaconState.CurrentJustifiedCheckpoint()
 	cfc.Root = []byte("hello-world")
@@ -941,7 +941,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 		},
 	}
 
-	beaconState.SetSlot(beaconState.Slot()+params.BeaconConfig().MinAttestationInclusionDelay)
+	beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 
 	if _, err := blocks.ProcessAttestations(context.Background(), beaconState, block.Body); err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -1099,7 +1099,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 		},
 	}
 
-	beaconState.SetSlot(beaconState.Slot()+params.BeaconConfig().MinAttestationInclusionDelay)
+	beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 
 	if _, err := blocks.ProcessAttestations(context.Background(), beaconState, block.Body); err != nil {
 		t.Error(err)
@@ -1139,7 +1139,7 @@ func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 	zeroSig := [96]byte{}
 	att.Signature = zeroSig[:]
 
-	beaconState.SetSlot(beaconState.Slot()+params.BeaconConfig().MinAttestationInclusionDelay)
+	beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 	beaconState.CurrentJustifiedCheckpoint().Root = []byte("hello-world")
 	beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{})
 
@@ -1508,7 +1508,7 @@ func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
 		},
 	}
 	balances := []uint64{0}
-	beaconState, _:= beaconstate.InitializeFromProto(&pb.BeaconState{
+	beaconState, _ := beaconstate.InitializeFromProto(&pb.BeaconState{
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data:   eth1Data,

@@ -20,6 +20,7 @@ import (
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	internal "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -38,7 +39,7 @@ func TestValidatorIndex_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
-	if err := db.SaveState(ctx, &pbp2p.BeaconState{}, [32]byte{}); err != nil {
+	if err := db.SaveState(ctx, &beaconstate.BeaconState{}, [32]byte{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -64,10 +65,10 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	beaconState := &pbp2p.BeaconState{
+	beaconState, _ := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		Slot:       0,
 		Validators: []*ethpb.Validator{},
-	}
+	})
 	block := blk.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)

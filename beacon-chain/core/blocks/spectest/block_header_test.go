@@ -43,7 +43,7 @@ func runBlockHeaderTest(t *testing.T, config string) {
 			if err := ssz.Unmarshal(preBeaconStateFile, preBeaconStateBase); err != nil {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
-			preBeaconState,  err := beaconstate.InitializeFromProto(preBeaconStateBase)
+			preBeaconState, err := beaconstate.InitializeFromProto(preBeaconStateBase)
 			if err != nil {
 				t.Fatal(err)
 			}

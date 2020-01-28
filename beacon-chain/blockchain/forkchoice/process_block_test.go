@@ -221,7 +221,7 @@ func TestRemoveStateSinceLastFinalized(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		s, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot:uint64(i)})
+		s, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: uint64(i)})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -400,7 +400,7 @@ func TestUpdateJustifiedCheckpoint_NoUpdate(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			s, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot:uint64(i)})
+			s, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: uint64(i)})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -491,7 +491,7 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 		t.Error("Did not get wanted error")
 	}
 
-	s, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot:1})
+	s, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: 1})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -532,7 +532,7 @@ func TestSaveInitState_CanSaveDelete(t *testing.T) {
 	finalizedRoot, _ := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 32})
 	s, err := beaconstate.InitializeFromProto(&pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{
 		Epoch: 1,
-		Root: finalizedRoot[:],
+		Root:  finalizedRoot[:],
 	}})
 	if err != nil {
 		t.Fatal(err)
