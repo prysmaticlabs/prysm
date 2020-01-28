@@ -15,6 +15,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/forkchoice"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
@@ -70,6 +71,8 @@ type Service struct {
 	voteLock               sync.RWMutex
 	initSyncState          map[[32]byte]*pb.BeaconState
 	initSyncStateLock      sync.RWMutex
+	checkpointState        *cache.CheckpointStateCache
+	checkpointStateLock    sync.Mutex
 }
 
 // Config options for the service.
@@ -107,6 +110,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		epochParticipation: make(map[uint64]*precompute.Balance),
 		forkChoiceStore:    cfg.ForkChoiceStore,
 		initSyncState:      make(map[[32]byte]*pb.BeaconState),
+		checkpointState:    cache.NewCheckpointStateCache(),
 	}, nil
 }
 
