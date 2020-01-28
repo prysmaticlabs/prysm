@@ -313,6 +313,10 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
+	if b == nil || b.Block == nil {
+		return errors.New("cannot save nil head block")
+	}
+
 	s.headSlot = b.Block.Slot
 
 	s.canonicalRoots[b.Block.Slot] = r[:]

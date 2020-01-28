@@ -54,6 +54,21 @@ func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*
 
 // verifyBlkPreState validates input block has a valid pre-state.
 func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (*pb.BeaconState, error) {
+	if featureconfig.Get().InitSyncCacheState {
+		preState := s.initSyncState[bytesutil.ToBytes32(b.ParentRoot)]
+		var err error
+		if preState == nil {
+			preState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
+			}
+			if preState == nil {
+				return nil, fmt.Errorf("pre state of slot %d does not exist", b.Slot)
+			}
+		}
+		return proto.Clone(preState).(*pb.BeaconState), nil
+	}
+
 	preState, err := s.beaconDB.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
@@ -230,7 +245,13 @@ func (s *Service) updateJustified(ctx context.Context, state *pb.BeaconState) er
 
 	if featureconfig.Get().InitSyncCacheState {
 		justifiedRoot := bytesutil.ToBytes32(state.CurrentJustifiedCheckpoint.Root)
+
 		justifiedState := s.initSyncState[justifiedRoot]
+		// If justified state is nil, resume back to normal syncing process and save
+		// justified check point.
+		if justifiedState == nil {
+			return s.beaconDB.SaveJustifiedCheckpoint(ctx, state.CurrentJustifiedCheckpoint)
+		}
 		if err := s.beaconDB.SaveState(ctx, justifiedState, justifiedRoot); err != nil {
 			return errors.Wrap(err, "could not save justified state")
 		}
@@ -242,34 +263,6 @@ func (s *Service) updateJustified(ctx context.Context, state *pb.BeaconState) er
 // currentSlot returns the current slot based on time.
 func (s *Service) currentSlot() uint64 {
 	return uint64(time.Now().Unix()-s.genesisTime.Unix()) / params.BeaconConfig().SecondsPerSlot
-}
-
-// This receives cached state in memory for initial sync only during initial sync.
-func (s *Service) cachedPreState(ctx context.Context, b *ethpb.BeaconBlock) (*pb.BeaconState, error) {
-	if featureconfig.Get().InitSyncCacheState {
-		preState := s.initSyncState[bytesutil.ToBytes32(b.ParentRoot)]
-		var err error
-		if preState == nil {
-			preState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
-			}
-			if preState == nil {
-				return nil, fmt.Errorf("pre state of slot %d does not exist", b.Slot)
-			}
-		}
-		return proto.Clone(preState).(*pb.BeaconState), nil
-	}
-
-	preState, err := s.beaconDB.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
-	}
-	if preState == nil {
-		return nil, fmt.Errorf("pre state of slot %d does not exist", b.Slot)
-	}
-
-	return preState, nil
 }
 
 // This saves every finalized state in DB during initial sync, needed as part of optimization to
