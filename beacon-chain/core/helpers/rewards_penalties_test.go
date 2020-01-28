@@ -112,7 +112,7 @@ func TestIncreaseBalance_OK(t *testing.T) {
 	}
 }
 
-func TestDecreseBalance_OK(t *testing.T) {
+func TestDecreaseBalance_OK(t *testing.T) {
 	tests := []struct {
 		i  uint64
 		b  []uint64

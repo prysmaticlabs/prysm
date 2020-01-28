@@ -53,12 +53,15 @@ func GenerateFullBlock(
 	if currentSlot > slot {
 		return nil, fmt.Errorf("current slot in state is larger than given slot. %d > %d", currentSlot, slot)
 	}
+	bState, err := stateTrie.InitializeFromProto(bState.Clone())
+	if err != nil {
+		return nil, err
+	}
 
 	if conf == nil {
 		conf = &BlockGenConfig{}
 	}
 
-	var err error
 	pSlashings := []*ethpb.ProposerSlashing{}
 	numToGen := conf.NumProposerSlashings
 	if numToGen > 0 {
@@ -145,12 +148,8 @@ func GenerateFullBlock(
 	if err := bState.SetSlot(currentSlot); err != nil {
 		return nil, err
 	}
-	newState, err := stateTrie.InitializeFromProtoUnsafe(bState.Clone())
-	if err != nil {
-		return nil, err
-	}
 
-	signature, err := BlockSignature(newState, block, privs)
+	signature, err := BlockSignature(bState, block, privs)
 	if err != nil {
 		return nil, err
 	}

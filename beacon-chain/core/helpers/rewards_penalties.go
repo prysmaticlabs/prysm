@@ -82,7 +82,7 @@ func DecreaseBalance(state *stateTrie.BeaconState, idx uint64, delta uint64) err
 		return err
 	}
 	if delta > balAtIdx {
-		return state.UpdateBalancesAtIndex(0, idx)
+		return state.UpdateBalancesAtIndex(idx, 0)
 	}
 	return state.UpdateBalancesAtIndex(idx, balAtIdx-delta)
 }

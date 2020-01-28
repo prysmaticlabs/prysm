@@ -133,16 +133,17 @@ func (b *BeaconState) LatestBlockHeader() *ethpb.BeaconBlockHeader {
 	hdr := &ethpb.BeaconBlockHeader{
 		Slot: b.state.LatestBlockHeader.Slot,
 	}
-	var parentRoot [32]byte
-	var bodyRoot [32]byte
-	var stateRoot [32]byte
 
-	copy(parentRoot[:], b.state.LatestBlockHeader.ParentRoot)
-	copy(bodyRoot[:], b.state.LatestBlockHeader.BodyRoot)
-	copy(stateRoot[:], b.state.LatestBlockHeader.StateRoot)
-	hdr.ParentRoot = parentRoot[:]
-	hdr.BodyRoot = bodyRoot[:]
-	hdr.StateRoot = stateRoot[:]
+	parentRoot := make([]byte, len(b.state.LatestBlockHeader.ParentRoot))
+	bodyRoot := make([]byte, len(b.state.LatestBlockHeader.BodyRoot))
+	stateRoot := make([]byte, len(b.state.LatestBlockHeader.StateRoot))
+
+	copy(parentRoot, b.state.LatestBlockHeader.ParentRoot)
+	copy(bodyRoot, b.state.LatestBlockHeader.BodyRoot)
+	copy(stateRoot, b.state.LatestBlockHeader.StateRoot)
+	hdr.ParentRoot = parentRoot
+	hdr.BodyRoot = bodyRoot
+	hdr.StateRoot = stateRoot
 	return hdr
 }
 
@@ -153,9 +154,9 @@ func (b *BeaconState) BlockRoots() [][]byte {
 	}
 	roots := make([][]byte, len(b.state.BlockRoots))
 	for i, r := range b.state.BlockRoots {
-		tmpRt := [32]byte{}
-		copy(tmpRt[:], r)
-		roots[i] = tmpRt[:]
+		tmpRt := make([]byte, len(r))
+		copy(tmpRt, r)
+		roots[i] = tmpRt
 	}
 	return roots
 }
@@ -181,9 +182,9 @@ func (b *BeaconState) StateRoots() [][]byte {
 	}
 	roots := make([][]byte, len(b.state.StateRoots))
 	for i, r := range b.state.StateRoots {
-		tmpRt := [32]byte{}
-		copy(tmpRt[:], r)
-		roots[i] = tmpRt[:]
+		tmpRt := make([]byte, len(r))
+		copy(tmpRt, r)
+		roots[i] = tmpRt
 	}
 	return roots
 }
@@ -195,9 +196,9 @@ func (b *BeaconState) HistoricalRoots() [][]byte {
 	}
 	roots := make([][]byte, len(b.state.HistoricalRoots))
 	for i, r := range b.state.HistoricalRoots {
-		tmpRt := [32]byte{}
-		copy(tmpRt[:], r)
-		roots[i] = tmpRt[:]
+		tmpRt := make([]byte, len(r))
+		copy(tmpRt, r)
+		roots[i] = tmpRt
 	}
 	return roots
 }
@@ -237,13 +238,13 @@ func (b *BeaconState) Validators() []*ethpb.Validator {
 	res := make([]*ethpb.Validator, len(b.state.Validators))
 	for i := 0; i < len(res); i++ {
 		val := b.state.Validators[i]
-		var pubKey [48]byte
-		copy(pubKey[:], val.PublicKey)
-		var withdrawalCreds [32]byte
-		copy(withdrawalCreds[:], val.WithdrawalCredentials)
+		pubKey := make([]byte, len(val.PublicKey))
+		copy(pubKey, val.PublicKey)
+		withdrawalCreds := make([]byte, len(val.WithdrawalCredentials))
+		copy(withdrawalCreds, val.WithdrawalCredentials)
 		res[i] = &ethpb.Validator{
 			PublicKey:                  pubKey[:],
-			WithdrawalCredentials:      withdrawalCreds[:],
+			WithdrawalCredentials:      withdrawalCreds,
 			EffectiveBalance:           val.EffectiveBalance,
 			Slashed:                    val.Slashed,
 			ActivationEligibilityEpoch: val.ActivationEligibilityEpoch,
@@ -278,13 +279,13 @@ func (b *BeaconState) ValidatorAtIndex(idx uint64) (*ethpb.Validator, error) {
 		return nil, fmt.Errorf("index %d out of range", idx)
 	}
 	val := b.state.Validators[idx]
-	var pubKey [48]byte
-	copy(pubKey[:], val.PublicKey)
-	var withdrawalCreds [32]byte
-	copy(withdrawalCreds[:], val.WithdrawalCredentials)
+	pubKey := make([]byte, len(val.PublicKey))
+	copy(pubKey, val.PublicKey)
+ 	withdrawalCreds := make([]byte, len(val.WithdrawalCredentials))
+	copy(withdrawalCreds, val.WithdrawalCredentials)
 	return &ethpb.Validator{
-		PublicKey:                  pubKey[:],
-		WithdrawalCredentials:      withdrawalCreds[:],
+		PublicKey:                  pubKey,
+		WithdrawalCredentials:      withdrawalCreds,
 		EffectiveBalance:           val.EffectiveBalance,
 		Slashed:                    val.Slashed,
 		ActivationEligibilityEpoch: val.ActivationEligibilityEpoch,
@@ -365,9 +366,9 @@ func (b *BeaconState) RandaoMixes() [][]byte {
 	}
 	mixes := make([][]byte, len(b.state.RandaoMixes))
 	for i, r := range b.state.RandaoMixes {
-		tmpRt := [32]byte{}
-		copy(tmpRt[:], r)
-		mixes[i] = tmpRt[:]
+		tmpRt := make([]byte, len(r))
+		copy(tmpRt, r)
+		mixes[i] = tmpRt
 	}
 	return mixes
 }
@@ -403,7 +404,6 @@ func (b *BeaconState) PreviousEpochAttestations() []*pbp2p.PendingAttestation {
 	}
 	res := make([]*pbp2p.PendingAttestation, len(b.state.PreviousEpochAttestations))
 	for i := 0; i < len(res); i++ {
-		//res[i] = clonePendingAttestation(b.state.PreviousEpochAttestations[i])
 		res[i] = proto.Clone(b.state.PreviousEpochAttestations[i]).(*pbp2p.PendingAttestation)
 	}
 	return res
@@ -439,9 +439,9 @@ func (b *BeaconState) PreviousJustifiedCheckpoint() *ethpb.Checkpoint {
 	cp := &ethpb.Checkpoint{
 		Epoch: b.state.PreviousJustifiedCheckpoint.Epoch,
 	}
-	var root [32]byte
-	copy(root[:], b.state.PreviousJustifiedCheckpoint.Root)
-	cp.Root = root[:]
+	root := make([]byte, len(b.state.PreviousJustifiedCheckpoint.Root))
+	copy(root, b.state.PreviousJustifiedCheckpoint.Root)
+	cp.Root = root
 	return cp
 }
 
@@ -453,9 +453,9 @@ func (b *BeaconState) CurrentJustifiedCheckpoint() *ethpb.Checkpoint {
 	cp := &ethpb.Checkpoint{
 		Epoch: b.state.CurrentJustifiedCheckpoint.Epoch,
 	}
-	var root [32]byte
-	copy(root[:], b.state.CurrentJustifiedCheckpoint.Root)
-	cp.Root = root[:]
+	root := make([]byte, len(b.state.CurrentJustifiedCheckpoint.Root))
+	copy(root, b.state.CurrentJustifiedCheckpoint.Root)
+	cp.Root = root
 	return cp
 }
 
@@ -467,9 +467,9 @@ func (b *BeaconState) FinalizedCheckpoint() *ethpb.Checkpoint {
 	cp := &ethpb.Checkpoint{
 		Epoch: b.state.FinalizedCheckpoint.Epoch,
 	}
-	var root [32]byte
-	copy(root[:], b.state.FinalizedCheckpoint.Root)
-	cp.Root = root[:]
+	root := make([]byte, len(b.state.FinalizedCheckpoint.Root))
+	copy(root, b.state.FinalizedCheckpoint.Root)
+	cp.Root = root
 	return cp
 }
 
@@ -478,14 +478,14 @@ func CopyETH1Data(data *ethpb.Eth1Data) *ethpb.Eth1Data {
 	newETH1 := &ethpb.Eth1Data{
 		DepositCount: data.DepositCount,
 	}
-	var depositRoot [32]byte
-	var blockHash [32]byte
+	depositRoot := make([]byte, len(data.DepositRoot))
+	blockHash := make([]byte, len(data.BlockHash))
 
-	copy(depositRoot[:], data.DepositRoot)
-	copy(blockHash[:], data.BlockHash)
+	copy(depositRoot, data.DepositRoot)
+	copy(blockHash, data.BlockHash)
 
-	newETH1.DepositRoot = depositRoot[:]
-	newETH1.BlockHash = blockHash[:]
+	newETH1.DepositRoot = depositRoot
+	newETH1.BlockHash = blockHash
 
 	return newETH1
 }
