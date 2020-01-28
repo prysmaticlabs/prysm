@@ -7,6 +7,7 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -38,7 +39,7 @@ func filePath(path string) string {
 }
 
 // PreGenState1Epoch unmarshals the pre-generated beacon state after 1 epoch of block processing and returns it.
-func PreGenState1Epoch() (*pb.BeaconState, error) {
+func PreGenState1Epoch() (*beaconstate.BeaconState, error) {
 	path, err := bazel.Runfile(filePath(BState1EpochFileName))
 	if err != nil {
 		return nil, err
@@ -51,11 +52,11 @@ func PreGenState1Epoch() (*pb.BeaconState, error) {
 	if err := ssz.Unmarshal(beaconBytes, beaconState); err != nil {
 		return nil, err
 	}
-	return beaconState, nil
+	return beaconstate.InitializeFromProto(beaconState)
 }
 
 // PreGenState2FullEpochs unmarshals the pre-generated beacon state after 2 epoch of full block processing and returns it.
-func PreGenState2FullEpochs() (*pb.BeaconState, error) {
+func PreGenState2FullEpochs() (*beaconstate.BeaconState, error) {
 	path, err := bazel.Runfile(filePath(BState2EpochFileName))
 	if err != nil {
 		return nil, err
@@ -68,7 +69,7 @@ func PreGenState2FullEpochs() (*pb.BeaconState, error) {
 	if err := ssz.Unmarshal(beaconBytes, beaconState); err != nil {
 		return nil, err
 	}
-	return beaconState, nil
+	return beaconstate.InitializeFromProto(beaconState)
 }
 
 // PreGenFullBlock unmarshals the pre-generated signed beacon block containing an epochs worth of attestations and returns it.
