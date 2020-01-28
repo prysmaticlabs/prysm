@@ -2,14 +2,19 @@ package beacon
 
 import (
 	"context"
+	"reflect"
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // GetBeaconConfig retrieves the current configuration parameters of the beacon chain.
-func (bs *Server) GetBeaconConfig(ctx context.Context, req *ptypes.Empty) (*ethpb.BeaconConfig, error) {
-	conf := make(map[string]*ptypes.Any)
+func (bs *Server) GetBeaconConfig(ctx context.Context, _ *ptypes.Empty) (*ethpb.BeaconConfig, error) {
+	conf := params.BeaconConfig()
+	val := reflect.TypeOf(conf)
+	res := make(map[string]*ptypes.Any)
 	return &ethpb.BeaconConfig{
 		Config: conf,
 	}, nil
