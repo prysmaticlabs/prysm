@@ -104,7 +104,11 @@ func (s *Service) Start() {
 	s.context = context.Background()
 	s.startSlasher()
 	if s.beaconClient == nil {
-		s.startBeaconClient()
+		if err := s.startBeaconClient(); err != nil {
+			log.WithError(err).Errorf("failed to start beacon client")
+			s.failStatus = err
+			return
+		}
 	}
 	stop := s.stop
 	err := s.slasherOldAttestationFeeder()
@@ -112,8 +116,9 @@ func (s *Service) Start() {
 		err = errors.Wrap(err, "couldn't start attestation feeder from archive endpoint. please use "+
 			"--beacon-rpc-provider flag value if you are not running a beacon chain service with "+
 			"--archive flag on the local machine.")
-		log.Errorf(err.Error())
+		log.WithError(err)
 		s.failStatus = err
+		return
 	}
 	go s.finalisedChangeUpdater()
 	s.lock.Unlock()

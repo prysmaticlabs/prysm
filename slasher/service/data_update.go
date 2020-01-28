@@ -66,11 +66,8 @@ func (s *Service) slasherOldAttestationFeeder() error {
 		for _, attestation := range ats.Attestations {
 			scs, ok := bcs.Committees[attestation.Data.Slot]
 			if !ok {
-				var keys []uint64
-				for k := range bcs.Committees {
-					keys = append(keys, k)
-				}
-				log.Errorf("committees doesnt contain the attestation slot: %d, actual first slot: %v", attestation.Data.Slot, keys)
+				log.Errorf("committees doesnt contain the attestation slot: %d, actual first slot: %d , actual last slot: %d",
+					attestation.Data.Slot, bcs.Committees[0], bcs.Committees[uint64(len(bcs.Committees)-1)])
 				continue
 			}
 			if attestation.Data.CommitteeIndex > uint64(len(scs.Committees)) {
