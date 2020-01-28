@@ -123,6 +123,9 @@ func SlashValidator(state *stateTrie.BeaconState, slashedIdx uint64, whistleBlow
 	validator.Slashed = true
 	maxWithdrawableEpoch := mathutil.Max(validator.WithdrawableEpoch, currentEpoch+params.BeaconConfig().EpochsPerSlashingsVector)
 	validator.WithdrawableEpoch = maxWithdrawableEpoch
+	if err := state.UpdateValidatorAtIndex(slashedIdx, validator); err != nil {
+		return nil, err
+	}
 
 	slashings := state.Slashings()
 	currentSlashing := slashings[currentEpoch%params.BeaconConfig().EpochsPerSlashingsVector]
@@ -132,7 +135,9 @@ func SlashValidator(state *stateTrie.BeaconState, slashedIdx uint64, whistleBlow
 	); err != nil {
 		return nil, err
 	}
-	helpers.DecreaseBalance(state, slashedIdx, validator.EffectiveBalance/params.BeaconConfig().MinSlashingPenaltyQuotient)
+	if err := helpers.DecreaseBalance(state, slashedIdx, validator.EffectiveBalance/params.BeaconConfig().MinSlashingPenaltyQuotient); err != nil {
+		return nil, err
+	}
 
 	proposerIdx, err := helpers.BeaconProposerIndex(state)
 	if err != nil {
