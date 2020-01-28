@@ -16,7 +16,7 @@ func New(ctx context.Context, state *stateTrie.BeaconState) ([]*Validator, *Bala
 	ctx, span := trace.StartSpan(ctx, "precomputeEpoch.New")
 	defer span.End()
 
-	vp := make([]*Validator, state.NumofValidators())
+	vp := make([]*Validator, state.NumValidators())
 	bp := &Balance{}
 
 	currentEpoch := helpers.CurrentEpoch(state)

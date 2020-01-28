@@ -43,20 +43,20 @@ type store struct {
 	headRoot []byte
 }
 
-func (s *store) OnBlock(ctx context.Context, b *ethpb.SignedBeaconBlock) error {
-	return nil
+func (s *store) OnBlock(ctx context.Context, b *ethpb.SignedBeaconBlock) (*beaconstate.BeaconState, error) {
+	return nil, nil
 }
 
-func (s *store) OnBlockCacheFilteredTree(ctx context.Context, b *ethpb.SignedBeaconBlock) error {
-	return nil
+func (s *store) OnBlockCacheFilteredTree(ctx context.Context, b *ethpb.SignedBeaconBlock) (*beaconstate.BeaconState, error) {
+	return nil, nil
 }
 
-func (s *store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.SignedBeaconBlock) error {
-	return nil
+func (s *store) OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.SignedBeaconBlock) (*beaconstate.BeaconState, error) {
+	return nil, nil
 }
 
-func (s *store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
-	return nil
+func (s *store) OnAttestation(ctx context.Context, a *ethpb.Attestation) ([]uint64, error) {
+	return nil, nil
 }
 
 func (s *store) GenesisStore(ctx context.Context, justifiedCheckpoint *ethpb.Checkpoint, finalizedCheckpoint *ethpb.Checkpoint) error {
@@ -64,6 +64,10 @@ func (s *store) GenesisStore(ctx context.Context, justifiedCheckpoint *ethpb.Che
 }
 
 func (s *store) FinalizedCheckpt() *ethpb.Checkpoint {
+	return nil
+}
+
+func (s *store) JustifiedCheckpt() *ethpb.Checkpoint {
 	return nil
 }
 

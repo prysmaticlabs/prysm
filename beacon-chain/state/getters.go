@@ -321,8 +321,8 @@ func (b *BeaconState) PubkeyAtIndex(idx uint64) [48]byte {
 	return bytesutil.ToBytes48(b.state.Validators[idx].PublicKey)
 }
 
-// NumofValidators returns the size of the validator registry.
-func (b *BeaconState) NumofValidators() int {
+// NumValidators returns the size of the validator registry.
+func (b *BeaconState) NumValidators() int {
 	return len(b.state.Validators)
 }
 

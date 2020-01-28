@@ -4,11 +4,54 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"math"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
+
+// head starts from justified root and then follows the best descendant links
+// to find the best block for head.
+func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.head")
+	defer span.End()
+
+	// Justified index has to be valid in node indices map, and can not be out of bound.
+	justifiedIndex, ok := s.nodeIndices[justifiedRoot]
+	if !ok {
+		return [32]byte{}, errUnknownJustifiedRoot
+	}
+	if justifiedIndex >= uint64(len(s.nodes)) {
+		return [32]byte{}, errInvalidJustifiedIndex
+	}
+
+	justifiedNode := s.nodes[justifiedIndex]
+	bestDescendantIndex := justifiedNode.BestDescendent
+	// If the justified node doesn't have a best descendent,
+	// the best node is itself.
+	if bestDescendantIndex == nonExistentNode {
+		bestDescendantIndex = justifiedIndex
+	}
+	if bestDescendantIndex >= uint64(len(s.nodes)) {
+		return [32]byte{}, errInvalidBestDescendantIndex
+	}
+
+	bestNode := s.nodes[bestDescendantIndex]
+
+	if !s.viableForHead(ctx, bestNode) {
+		return [32]byte{}, fmt.Errorf("head at slot %d with weight %d is not eligible, finalizedEpoch %d != %d, justifiedEpoch %d != %d",
+			bestNode.Slot, bestNode.Weight/10e9, bestNode.finalizedEpoch, s.finalizedEpoch, bestNode.justifiedEpoch, s.justifiedEpoch)
+	}
+
+	// Update metrics.
+	if bestNode.root != lastHeadRoot {
+		headChangesCount.Inc()
+		headSlotNumber.Set(float64(bestNode.Slot))
+	}
+
+	return bestNode.root, nil
+}
 
 // insert registers a new block node to the fork choice store's node list.
 // It then updates the new node's parent with best child and descendant node.
@@ -36,25 +79,29 @@ func (s *Store) insert(ctx context.Context,
 	}
 
 	n := &Node{
-		slot:           slot,
+		Slot:           slot,
 		root:           root,
-		parent:         parentIndex,
+		Parent:         parentIndex,
 		justifiedEpoch: justifiedEpoch,
 		finalizedEpoch: finalizedEpoch,
 		bestChild:      nonExistentNode,
-		bestDescendant: nonExistentNode,
-		weight:         0,
+		BestDescendent: nonExistentNode,
+		Weight:         0,
 	}
 
 	s.nodeIndices[root] = uint64(index)
 	s.nodes = append(s.nodes, n)
 
 	// Update parent with the best child and descendent only if it's available.
-	if n.parent != nonExistentNode {
+	if n.Parent != nonExistentNode {
 		if err := s.updateBestChildAndDescendant(ctx, parentIndex, uint64(index)); err != nil {
 			return err
 		}
 	}
+
+	// Update metrics.
+	processedBlockCount.Inc()
+	nodeCount.Set(float64(len(s.nodes)))
 
 	return nil
 }
@@ -92,28 +139,28 @@ func (s *Store) applyWeightChanges(ctx context.Context, justifiedEpoch uint64, f
 
 		if nodeDelta < 0 {
 			// A node's weight can not be negative but the delta can be negative.
-			if int(n.weight)+nodeDelta < 0 {
-				n.weight = 0
+			if int(n.Weight)+nodeDelta < 0 {
+				n.Weight = 0
 			} else {
 				// Subtract node's weight.
-				n.weight -= uint64(math.Abs(float64(nodeDelta)))
+				n.Weight -= uint64(math.Abs(float64(nodeDelta)))
 			}
 		} else {
 			// Add node's weight.
-			n.weight += uint64(nodeDelta)
+			n.Weight += uint64(nodeDelta)
 		}
 
 		s.nodes[i] = n
 
 		// Update parent's best child and descendent if the node has a known parent.
-		if n.parent != nonExistentNode {
+		if n.Parent != nonExistentNode {
 			// Protection against node parent index out of bound. This should not happen.
-			if int(n.parent) >= len(delta) {
+			if int(n.Parent) >= len(delta) {
 				return errInvalidParentDelta
 			}
 			// Back propagate the nodes delta to its parent.
-			delta[n.parent] += nodeDelta
-			if err := s.updateBestChildAndDescendant(ctx, n.parent, uint64(i)); err != nil {
+			delta[n.Parent] += nodeDelta
+			if err := s.updateBestChildAndDescendant(ctx, n.Parent, uint64(i)); err != nil {
 				return err
 			}
 		}
@@ -156,12 +203,12 @@ func (s *Store) updateBestChildAndDescendant(ctx context.Context, parentIndex ui
 	// set `parent.bestChild` and `parent.bestDescendent` to. These
 	// aliases are to assist readability.
 	changeToNone := []uint64{nonExistentNode, nonExistentNode}
-	bestDescendant := child.bestDescendant
+	bestDescendant := child.BestDescendent
 	if bestDescendant == nonExistentNode {
 		bestDescendant = childIndex
 	}
 	changeToChild := []uint64{childIndex, bestDescendant}
-	noChange := []uint64{parent.bestChild, parent.bestDescendant}
+	noChange := []uint64{parent.bestChild, parent.BestDescendent}
 	newParentChild := make([]uint64, 0)
 
 	if parent.bestChild != nonExistentNode {
@@ -191,7 +238,7 @@ func (s *Store) updateBestChildAndDescendant(ctx context.Context, parentIndex ui
 			} else if !childLeadsToViableHead && bestChildLeadsToViableHead {
 				// The child doesn't lead to a viable head, the current parent's best child does.
 				newParentChild = noChange
-			} else if child.weight == bestChild.weight {
+			} else if child.Weight == bestChild.Weight {
 				// If both are viable, compare their weights.
 				// Tie-breaker of equal weights by root.
 				if bytes.Compare(child.root[:], bestChild.root[:]) > 0 {
@@ -201,7 +248,7 @@ func (s *Store) updateBestChildAndDescendant(ctx context.Context, parentIndex ui
 				}
 			} else {
 				// Choose winner by weight.
-				if child.weight > bestChild.weight {
+				if child.Weight > bestChild.Weight {
 					newParentChild = changeToChild
 				} else {
 					newParentChild = noChange
@@ -220,7 +267,7 @@ func (s *Store) updateBestChildAndDescendant(ctx context.Context, parentIndex ui
 
 	// Update parent with the outcome.
 	parent.bestChild = newParentChild[0]
-	parent.bestDescendant = newParentChild[1]
+	parent.BestDescendent = newParentChild[1]
 	s.nodes[parentIndex] = parent
 
 	return nil
@@ -271,12 +318,12 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 
 	// Iterate through existing nodes and adjust its parent/child indices with the newly pruned layout.
 	for i, node := range s.nodes {
-		if node.parent != nonExistentNode {
+		if node.Parent != nonExistentNode {
 			// If the node's parent is less than finalized index, set it to non existent.
-			if node.parent >= finalizedIndex {
-				node.parent -= finalizedIndex
+			if node.Parent >= finalizedIndex {
+				node.Parent -= finalizedIndex
 			} else {
-				node.parent = nonExistentNode
+				node.Parent = nonExistentNode
 			}
 		}
 		if node.bestChild != nonExistentNode {
@@ -285,15 +332,17 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 			}
 			node.bestChild -= finalizedIndex
 		}
-		if node.bestDescendant != nonExistentNode {
-			if node.bestDescendant < finalizedIndex {
+		if node.BestDescendent != nonExistentNode {
+			if node.BestDescendent < finalizedIndex {
 				return errInvalidBestDescendantIndex
 			}
-			node.bestDescendant -= finalizedIndex
+			node.BestDescendent -= finalizedIndex
 		}
 
 		s.nodes[i] = node
 	}
+
+	prunedCount.Inc()
 
 	return nil
 }
@@ -306,7 +355,7 @@ func (s *Store) leadsToViableHead(ctx context.Context, node *Node) (bool, error)
 	defer span.End()
 
 	var bestDescendentViable bool
-	bestDescendentIndex := node.bestDescendant
+	bestDescendentIndex := node.BestDescendent
 
 	// If the best descendant is not part of the leaves.
 	if bestDescendentIndex != nonExistentNode {

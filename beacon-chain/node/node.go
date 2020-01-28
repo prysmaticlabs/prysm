@@ -21,6 +21,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	interopcoldstart "github.com/prysmaticlabs/prysm/beacon-chain/interop-cold-start"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -63,6 +65,7 @@ type BeaconNode struct {
 	depositCache    *depositcache.DepositCache
 	stateFeed       *event.Feed
 	opFeed          *event.Feed
+	forkChoiceStore forkchoice.ForkChoicer
 }
 
 // NewBeaconNode creates a new node instance, sets up configuration options, and registers
@@ -125,6 +128,8 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	if err := beacon.registerInteropServices(ctx); err != nil {
 		return nil, err
 	}
+
+	beacon.startForkChoice()
 
 	if err := beacon.registerBlockchainService(ctx); err != nil {
 		return nil, err
@@ -214,6 +219,11 @@ func (b *BeaconNode) Close() {
 		log.Errorf("Failed to close database: %v", err)
 	}
 	close(b.stop)
+}
+
+func (b *BeaconNode) startForkChoice() {
+	f := protoarray.New(0, 0, params.BeaconConfig().ZeroHash)
+	b.forkChoiceStore = f
 }
 
 func (b *BeaconNode) startDB(ctx *cli.Context) error {
@@ -312,6 +322,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		P2p:               b.fetchP2P(ctx),
 		MaxRoutines:       maxRoutines,
 		StateNotifier:     b,
+		ForkChoiceStore:   b.forkChoiceStore,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
@@ -510,6 +521,8 @@ func (b *BeaconNode) registerPrometheusService(ctx *cli.Context) error {
 	if featureconfig.Get().EnableBackupWebhook {
 		additionalHandlers = append(additionalHandlers, prometheus.Handler{Path: "/db/backup", Handler: db.BackupHandler(b.db)})
 	}
+
+	additionalHandlers = append(additionalHandlers, prometheus.Handler{Path: "/tree", Handler: c.TreeHandler})
 
 	service := prometheus.NewPrometheusService(
 		fmt.Sprintf(":%d", ctx.GlobalInt64(cmd.MonitoringPortFlag.Name)),

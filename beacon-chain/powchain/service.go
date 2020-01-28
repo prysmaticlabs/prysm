@@ -65,6 +65,7 @@ type ChainStartFetcher interface {
 	ChainStartDeposits() []*ethpb.Deposit
 	ChainStartEth1Data() *ethpb.Eth1Data
 	PreGenesisState() *stateTrie.BeaconState
+	ClearPreGenesisData()
 }
 
 // ChainInfoFetcher retrieves information about eth1 metadata at the eth2 genesis time.
@@ -246,6 +247,12 @@ func (s *Service) Stop() error {
 // by the deposit contract and cached in the powchain service.
 func (s *Service) ChainStartDeposits() []*ethpb.Deposit {
 	return s.chainStartData.ChainstartDeposits
+}
+
+// ClearPreGenesisData clears out the stored chainstart deposits and beacon state.
+func (s *Service) ClearPreGenesisData() {
+	s.chainStartData.ChainstartDeposits = []*ethpb.Deposit{}
+	s.preGenesisState = &stateTrie.BeaconState{}
 }
 
 // ChainStartEth1Data returns the eth1 data at chainstart.
@@ -590,6 +597,7 @@ func (s *Service) run(done <-chan struct{}) {
 				s.runError = err
 				return
 			}
+			s.runError = nil
 		case header, ok := <-s.headerChan:
 			if ok {
 				s.processSubscribedHeaders(header)

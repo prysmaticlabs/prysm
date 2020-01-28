@@ -199,7 +199,7 @@ func (bs *Server) ListValidators(
 	}
 
 	validatorList := make([]*ethpb.Validators_ValidatorContainer, 0)
-	for i := 0; i < headState.NumofValidators(); i++ {
+	for i := 0; i < headState.NumValidators(); i++ {
 		val, err := headState.ValidatorAtIndex(uint64(i))
 		if err != nil {
 			return nil, status.Error(codes.Internal, "Could not get validator")
@@ -293,17 +293,17 @@ func (bs *Server) GetValidator(
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
 	if requestingIndex {
-		if index >= uint64(headState.NumofValidators()) {
+		if index >= uint64(headState.NumValidators()) {
 			return nil, status.Errorf(
 				codes.OutOfRange,
 				"Requesting index %d, but there are only %d validators",
 				index,
-				headState.NumofValidators(),
+				headState.NumValidators(),
 			)
 		}
 		return headState.ValidatorAtIndex(index)
 	}
-	for i := 0; i < headState.NumofValidators(); i++ {
+	for i := 0; i < headState.NumValidators(); i++ {
 		keyFromState := headState.PubkeyAtIndex(uint64(i))
 		if bytes.Equal(keyFromState[:], pubKey) {
 			return headState.ValidatorAtIndex(uint64(i))
@@ -621,7 +621,7 @@ func (bs *Server) GetValidatorPerformance(
 		Balances:                      balances,
 		AverageActiveValidatorBalance: avgBalance,
 		MissingValidators:             missingValidators,
-		TotalValidators:               uint64(headState.NumofValidators()),
+		TotalValidators:               uint64(headState.NumValidators()),
 		TotalActiveValidators:         activeCount,
 	}, nil
 }

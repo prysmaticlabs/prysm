@@ -374,7 +374,7 @@ func ShuffledIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint64, erro
 		return nil, errors.Wrapf(err, "could not get seed for epoch %d", epoch)
 	}
 
-	indices := make([]uint64, 0, state.NumofValidators())
+	indices := make([]uint64, 0, state.NumValidators())
 	state.ReadFromEveryValidator(func(idx int, val *stateTrie.ReadOnlyValidator) error {
 		if IsActiveValidatorUsingTrie(val, epoch) {
 			indices = append(indices, uint64(idx))

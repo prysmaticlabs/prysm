@@ -27,12 +27,13 @@ import (
 // to beacon blocks to compute head.
 type ForkChoicer interface {
 	Head(ctx context.Context) ([]byte, error)
-	OnBlock(ctx context.Context, b *ethpb.SignedBeaconBlock) error
-	OnBlockCacheFilteredTree(ctx context.Context, b *ethpb.SignedBeaconBlock) error
-	OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.SignedBeaconBlock) error
-	OnAttestation(ctx context.Context, a *ethpb.Attestation) error
+	OnBlock(ctx context.Context, b *ethpb.SignedBeaconBlock) (*stateTrie.BeaconState, error)
+	OnBlockCacheFilteredTree(ctx context.Context, b *ethpb.SignedBeaconBlock) (*stateTrie.BeaconState, error)
+	OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.SignedBeaconBlock) (*stateTrie.BeaconState, error)
+	OnAttestation(ctx context.Context, a *ethpb.Attestation) ([]uint64, error)
 	GenesisStore(ctx context.Context, justifiedCheckpoint *ethpb.Checkpoint, finalizedCheckpoint *ethpb.Checkpoint) error
 	FinalizedCheckpt() *ethpb.Checkpoint
+	JustifiedCheckpt() *ethpb.Checkpoint
 }
 
 // Store represents a service struct that handles the forkchoice

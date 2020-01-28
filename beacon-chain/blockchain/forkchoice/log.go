@@ -40,7 +40,7 @@ func logEpochData(beaconState *stateTrie.BeaconState) {
 		return
 	}
 	log.WithFields(logrus.Fields{
-		"totalValidators":  beaconState.NumofValidators(),
+		"totalValidators":  beaconState.NumValidators(),
 		"activeValidators": len(activeVals),
 		"averageBalance":   fmt.Sprintf("%.5f ETH", averageBalance(beaconState.Balances())),
 	}).Info("Validator registry information")

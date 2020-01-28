@@ -136,6 +136,11 @@ func (s *Service) PreGenesisState() *stateTrie.BeaconState {
 	return &stateTrie.BeaconState{}
 }
 
+// ClearPreGenesisData --
+func (s *Service) ClearPreGenesisData() {
+	//no-op
+}
+
 // DepositByPubkey mocks out the deposit cache functionality for interop.
 func (s *Service) DepositByPubkey(ctx context.Context, pubKey []byte) (*ethpb.Deposit, *big.Int) {
 	return &ethpb.Deposit{}, big.NewInt(1)
@@ -147,7 +152,7 @@ func (s *Service) DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight
 }
 
 func (s *Service) saveGenesisState(ctx context.Context, genesisState *stateTrie.BeaconState) error {
-	s.chainStartDeposits = make([]*ethpb.Deposit, genesisState.NumofValidators())
+	s.chainStartDeposits = make([]*ethpb.Deposit, genesisState.NumValidators())
 	stateRoot, err := genesisState.HashTreeRoot()
 	if err != nil {
 		return err

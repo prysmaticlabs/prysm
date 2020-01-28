@@ -130,9 +130,9 @@ func (bs *Server) ListValidatorAssignments(
 	}
 
 	for _, index := range filteredIndices[start:end] {
-		if int(index) >= headState.NumofValidators() {
+		if int(index) >= headState.NumValidators() {
 			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= validator count %d",
-				index, headState.NumofValidators())
+				index, headState.NumValidators())
 		}
 		if shouldFetchFromArchive {
 			assignment, ok := archivedAssignments[index]

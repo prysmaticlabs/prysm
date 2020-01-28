@@ -55,12 +55,12 @@ import (
 //    # Update finalized checkpoint
 //    if state.finalized_checkpoint.epoch > store.finalized_checkpoint.epoch:
 //        store.finalized_checkpoint = state.finalized_checkpoint
-func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) error {
+func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) (*stateTrie.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "forkchoice.onBlock")
 	defer span.End()
 
 	if signed == nil || signed.Block == nil {
-		return errors.New("nil block")
+		return nil, errors.New("nil block")
 	}
 
 	b := signed.Block
@@ -68,13 +68,13 @@ func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) er
 	// Retrieve incoming block's pre state.
 	preState, err := s.getBlockPreState(ctx, b)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	preStateValidatorCount := preState.NumofValidators()
+	preStateValidatorCount := preState.NumValidators()
 
 	root, err := ssz.HashTreeRoot(b)
 	if err != nil {
-		return errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
+		return nil, errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
 	}
 	log.WithFields(logrus.Fields{
 		"slot": b.Slot,
@@ -82,20 +82,20 @@ func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) er
 	}).Info("Executing state transition on block")
 	postState, err := state.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
-		return errors.Wrap(err, "could not execute state transition")
+		return nil, errors.Wrap(err, "could not execute state transition")
 	}
 
 	if err := s.db.SaveBlock(ctx, signed); err != nil {
-		return errors.Wrapf(err, "could not save block from slot %d", b.Slot)
+		return nil, errors.Wrapf(err, "could not save block from slot %d", b.Slot)
 	}
 	if err := s.db.SaveState(ctx, postState, root); err != nil {
-		return errors.Wrap(err, "could not save state")
+		return nil, errors.Wrap(err, "could not save state")
 	}
 
 	// Update justified check point.
 	if cpt := postState.CurrentJustifiedCheckpoint(); cpt != nil && cpt.Epoch > s.justifiedCheckpt.Epoch {
 		if err := s.updateJustified(ctx, postState); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -103,14 +103,14 @@ func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) er
 	// Prune the block cache and helper caches on every new finalized epoch.
 	if postState.FinalizedCheckpoint() != nil && postState.FinalizedCheckpoint().Epoch > s.finalizedCheckpt.Epoch {
 		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint()); err != nil {
-			return errors.Wrap(err, "could not save finalized checkpoint")
+			return nil, errors.Wrap(err, "could not save finalized checkpoint")
 		}
 
 		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 		if endSlot > startSlot {
 			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
-				return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
+				return nil, errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
 					startSlot, endSlot)
 			}
 		}
@@ -121,11 +121,11 @@ func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) er
 
 	// Update validator indices in database as needed.
 	if err := s.saveNewValidators(ctx, preStateValidatorCount, postState); err != nil {
-		return errors.Wrap(err, "could not save finalized checkpoint")
+		return nil, errors.Wrap(err, "could not save finalized checkpoint")
 	}
 	// Save the unseen attestations from block to db.
 	if err := s.saveNewBlockAttestations(ctx, b.Body.Attestations); err != nil {
-		return errors.Wrap(err, "could not save attestations")
+		return nil, errors.Wrap(err, "could not save attestations")
 	}
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.
@@ -135,48 +135,48 @@ func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) er
 
 		// Update committees cache at epoch boundary slot.
 		if err := helpers.UpdateCommitteeCache(postState, helpers.CurrentEpoch(postState)); err != nil {
-			return err
+			return nil, err
 		}
 		if err := helpers.UpdateProposerIndicesInCache(postState, helpers.CurrentEpoch(postState)); err != nil {
-			return err
+			return nil, err
 		}
 
 		s.nextEpochBoundarySlot = helpers.StartSlot(helpers.NextEpoch(postState))
 	}
 
-	return nil
+	return postState, nil
 }
 
 // OnBlockCacheFilteredTree calls OnBlock with additional of caching of filtered block tree
 // for efficient fork choice processing.
-func (s *Store) OnBlockCacheFilteredTree(ctx context.Context, signed *ethpb.SignedBeaconBlock) error {
-	if err := s.OnBlock(ctx, signed); err != nil {
-		return err
+func (s *Store) OnBlockCacheFilteredTree(ctx context.Context, signed *ethpb.SignedBeaconBlock) (*stateTrie.BeaconState, error) {
+	state, err := s.OnBlock(ctx, signed)
+	if err != nil {
+		return nil, err
 	}
-
-	if featureconfig.Get().EnableBlockTreeCache {
+	if !featureconfig.Get().DisableForkChoice && featureconfig.Get().EnableBlockTreeCache && !featureconfig.Get().ProtoArrayForkChoice {
 		tree, err := s.getFilterBlockTree(ctx)
 		if err != nil {
-			return errors.Wrap(err, "could not calculate filtered block tree")
+			return nil, errors.Wrap(err, "could not calculate filtered block tree")
 		}
 		s.filteredBlockTreeLock.Lock()
 		s.filteredBlockTree = tree
 		s.filteredBlockTreeLock.Unlock()
 	}
 
-	return nil
+	return state, nil
 }
 
 // OnBlockInitialSyncStateTransition is called when an initial sync block is received.
 // It runs state transition on the block and without any BLS verification. The BLS verification
 // includes proposer signature, randao and attestation's aggregated signature. It also does not save
 // attestations.
-func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, signed *ethpb.SignedBeaconBlock) error {
+func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, signed *ethpb.SignedBeaconBlock) (*stateTrie.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "forkchoice.onBlock")
 	defer span.End()
 
 	if signed == nil || signed.Block == nil {
-		return errors.New("nil block")
+		return nil, errors.New("nil block")
 	}
 
 	b := signed.Block
@@ -185,39 +185,39 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, signed *e
 	defer s.initSyncStateLock.Unlock()
 
 	// Retrieve incoming block's pre state.
-	preState, err := s.cachedPreState(ctx, b)
+	preState, err := s.verifyBlkPreState(ctx, b)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	preStateValidatorCount := preState.NumofValidators()
+	preStateValidatorCount := preState.NumValidators()
 
 	log.WithField("slot", b.Slot).Debug("Executing state transition on block")
 
 	postState, err := state.ExecuteStateTransitionNoVerifyAttSigs(ctx, preState, signed)
 	if err != nil {
-		return errors.Wrap(err, "could not execute state transition")
+		return nil, errors.Wrap(err, "could not execute state transition")
 	}
 
 	if err := s.db.SaveBlock(ctx, signed); err != nil {
-		return errors.Wrapf(err, "could not save block from slot %d", b.Slot)
+		return nil, errors.Wrapf(err, "could not save block from slot %d", b.Slot)
 	}
 	root, err := ssz.HashTreeRoot(b)
 	if err != nil {
-		return errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
+		return nil, errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
 	}
 
 	if featureconfig.Get().InitSyncCacheState {
 		s.initSyncState[root] = postState
 	} else {
 		if err := s.db.SaveState(ctx, postState, root); err != nil {
-			return errors.Wrap(err, "could not save state")
+			return nil, errors.Wrap(err, "could not save state")
 		}
 	}
 
 	// Update justified check point.
 	if cpt := postState.CurrentJustifiedCheckpoint(); cpt != nil && cpt.Epoch > s.justifiedCheckpt.Epoch {
 		if err := s.updateJustified(ctx, postState); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -228,17 +228,17 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, signed *e
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 		if endSlot > startSlot {
 			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
-				return errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
+				return nil, errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
 					startSlot, endSlot)
 			}
 		}
 
 		if err := s.saveInitState(ctx, postState); err != nil {
-			return errors.Wrap(err, "could not save init sync finalized state")
+			return nil, errors.Wrap(err, "could not save init sync finalized state")
 		}
 
 		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint()); err != nil {
-			return errors.Wrap(err, "could not save finalized checkpoint")
+			return nil, errors.Wrap(err, "could not save finalized checkpoint")
 		}
 
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
@@ -247,13 +247,13 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, signed *e
 
 	// Update validator indices in database as needed.
 	if err := s.saveNewValidators(ctx, preStateValidatorCount, postState); err != nil {
-		return errors.Wrap(err, "could not save finalized checkpoint")
+		return nil, errors.Wrap(err, "could not save finalized checkpoint")
 	}
 
 	if flags.Get().EnableArchive {
 		// Save the unseen attestations from block to db.
 		if err := s.saveNewBlockAttestations(ctx, b.Body.Attestations); err != nil {
-			return errors.Wrap(err, "could not save attestations")
+			return nil, errors.Wrap(err, "could not save attestations")
 		}
 	}
 
@@ -264,7 +264,7 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, signed *e
 		s.nextEpochBoundarySlot = helpers.StartSlot(helpers.NextEpoch(postState))
 	}
 
-	return nil
+	return postState, nil
 }
 
 // getBlockPreState returns the pre state of an incoming block. It uses the parent root of the block
@@ -300,6 +300,20 @@ func (s *Store) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*st
 
 // verifyBlkPreState validates input block has a valid pre-state.
 func (s *Store) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (*stateTrie.BeaconState, error) {
+	if featureconfig.Get().InitSyncCacheState {
+		preState := s.initSyncState[bytesutil.ToBytes32(b.ParentRoot)]
+		var err error
+		if preState == nil {
+			preState, err = s.db.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
+			}
+			if preState == nil {
+				return nil, fmt.Errorf("pre state of slot %d does not exist", b.Slot)
+			}
+		}
+		return stateTrie.InitializeFromProto(preState.Clone())
+	}
 	preState, err := s.db.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
@@ -353,7 +367,7 @@ func (s *Store) verifyBlkFinalizedSlot(b *ethpb.BeaconBlock) error {
 // saveNewValidators saves newly added validator indices from the state to db.
 // Does nothing if validator count has not changed.
 func (s *Store) saveNewValidators(ctx context.Context, preStateValidatorCount int, postState *stateTrie.BeaconState) error {
-	postStateValidatorCount := postState.NumofValidators()
+	postStateValidatorCount := postState.NumValidators()
 	if preStateValidatorCount != postStateValidatorCount {
 		indices := make([]uint64, 0)
 		pubKeys := make([][48]byte, 0)
@@ -498,6 +512,11 @@ func (s *Store) updateJustified(ctx context.Context, state *stateTrie.BeaconStat
 	if featureconfig.Get().InitSyncCacheState && state.CurrentJustifiedCheckpoint() != nil {
 		justifiedRoot := bytesutil.ToBytes32(state.CurrentJustifiedCheckpoint().Root)
 		justifiedState := s.initSyncState[justifiedRoot]
+		// If justified state is nil, resume back to normal syncing process and save
+		// justified check point.
+		if justifiedState == nil {
+			return s.db.SaveJustifiedCheckpoint(ctx, state.CurrentJustifiedCheckpoint())
+		}
 		if err := s.db.SaveState(ctx, justifiedState, justifiedRoot); err != nil {
 			return errors.Wrap(err, "could not save justified state")
 		}
@@ -520,34 +539,6 @@ func (s *Store) updateJustifiedCheckpoint() {
 	if s.bestJustifiedCheckpt.Epoch > s.justifiedCheckpt.Epoch {
 		s.justifiedCheckpt = s.bestJustifiedCheckpt
 	}
-}
-
-// This receives cached state in memory for initial sync only during initial sync.
-func (s *Store) cachedPreState(ctx context.Context, b *ethpb.BeaconBlock) (*stateTrie.BeaconState, error) {
-	if featureconfig.Get().InitSyncCacheState {
-		preState := s.initSyncState[bytesutil.ToBytes32(b.ParentRoot)]
-		var err error
-		if preState == nil {
-			preState, err = s.db.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
-			}
-			if preState == nil {
-				return nil, fmt.Errorf("pre state of slot %d does not exist", b.Slot)
-			}
-		}
-		return preState, nil
-	}
-
-	preState, err := s.db.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
-	}
-	if preState == nil {
-		return nil, fmt.Errorf("pre state of slot %d does not exist", b.Slot)
-	}
-
-	return preState, nil
 }
 
 // This saves every finalized state in DB during initial sync, needed as part of optimization to

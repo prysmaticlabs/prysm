@@ -125,7 +125,7 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 	}
 
 	var lastActivatedValidatorIdx uint64
-	for j := headState.NumofValidators() - 1; j >= 0; j-- {
+	for j := headState.NumValidators() - 1; j >= 0; j-- {
 		val, err := headState.ValidatorAtIndex(uint64(j))
 		if err != nil {
 			return resp
@@ -155,7 +155,7 @@ func (vs *Server) retrieveStatusFromState(
 	if err != nil {
 		return ethpb.ValidatorStatus(0), 0, err
 	}
-	if !ok || int(idx) >= headState.NumofValidators() {
+	if !ok || int(idx) >= headState.NumValidators() {
 		return ethpb.ValidatorStatus(0), 0, errPubkeyDoesNotExist
 	}
 	return vs.assignmentStatus(idx, headState), idx, nil

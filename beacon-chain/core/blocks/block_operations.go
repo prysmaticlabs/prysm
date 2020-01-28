@@ -392,7 +392,7 @@ func ProcessProposerSlashings(
 ) (*stateTrie.BeaconState, error) {
 	var err error
 	for idx, slashing := range body.ProposerSlashings {
-		if int(slashing.ProposerIndex) >= beaconState.NumofValidators() {
+		if int(slashing.ProposerIndex) >= beaconState.NumValidators() {
 			return nil, fmt.Errorf("invalid proposer index given in slashing %d", slashing.ProposerIndex)
 		}
 		if err = VerifyProposerSlashing(beaconState, slashing); err != nil {
@@ -966,7 +966,7 @@ func ProcessDeposit(
 	pubKey := deposit.Data.PublicKey
 	amount := deposit.Data.Amount
 	index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
-	numVals := beaconState.NumofValidators()
+	numVals := beaconState.NumValidators()
 	if !ok {
 		domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
 		depositSig := deposit.Data.Signature
@@ -1060,11 +1060,11 @@ func ProcessVoluntaryExits(
 ) (*stateTrie.BeaconState, error) {
 	exits := body.VoluntaryExits
 	for idx, exit := range exits {
-		if int(exit.Exit.ValidatorIndex) >= beaconState.NumofValidators() {
+		if int(exit.Exit.ValidatorIndex) >= beaconState.NumValidators() {
 			return nil, fmt.Errorf(
 				"validator index out of bound %d > %d",
 				exit.Exit.ValidatorIndex,
-				beaconState.NumofValidators(),
+				beaconState.NumValidators(),
 			)
 		}
 		val, err := beaconState.ValidatorAtIndex(exit.Exit.ValidatorIndex)
