@@ -118,22 +118,22 @@ func (s *Service) slasherOldAttestationFeeder() error {
 	return nil
 }
 
-func (s *Service) detectAttestation(attestation *ethpb.Attestation, bcs *ethpb.BeaconCommittees) error {
-	scs, ok := bcs.Committees[attestation.Data.Slot]
-	if !ok {
-		err := fmt.Errorf("committees doesnt contain the attestation slot: %d, number of committees: %d",
-			attestation.Data.Slot, len(bcs.Committees))
+func (s *Service) detectAttestation(attestation *ethpb.Attestation, beaconCommitteesAtEpoch *ethpb.BeaconCommittees) error {
+	slotCommittees, ok := beaconCommitteesAtEpoch.Committees[attestation.Data.Slot]
+	if !ok || slotCommittees == nil {
+		err := fmt.Errorf("beacon committees object doesnt contain the attestation slot: %d, number of committees: %d",
+			attestation.Data.Slot, len(beaconCommitteesAtEpoch.Committees))
 		log.WithError(err)
 		return err
 	}
-	if attestation.Data.CommitteeIndex > uint64(len(scs.Committees)) {
-		err := fmt.Errorf("committee index is out of range in slot wanted: %d, actual: %d", attestation.Data.CommitteeIndex, len(scs.Committees))
+	if attestation.Data.CommitteeIndex > uint64(len(slotCommittees.Committees)) {
+		err := fmt.Errorf("committee index is out of range in slot wanted: %d, actual: %d", attestation.Data.CommitteeIndex, len(slotCommittees.Committees))
 		log.WithError(err)
 		return err
 	}
-	sc := scs.Committees[attestation.Data.CommitteeIndex]
-	c := sc.ValidatorIndices
-	ia, err := attestationutil.ConvertToIndexed(s.context, attestation, c)
+	attesterCommittee := slotCommittees.Committees[attestation.Data.CommitteeIndex]
+	validatorIndices := attesterCommittee.ValidatorIndices
+	ia, err := attestationutil.ConvertToIndexed(s.context, attestation, validatorIndices)
 	if err != nil {
 		log.WithError(err)
 		return err
