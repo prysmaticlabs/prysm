@@ -20,6 +20,7 @@ import (
 func TestServer_ListBeaconCommittees(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
+	helpers.ClearCache()
 
 	numValidators := 128
 	headState := setupActiveValidators(t, db, numValidators)
@@ -57,9 +58,7 @@ func TestServer_ListBeaconCommittees(t *testing.T) {
 		}
 		committeeItems := make([]*ethpb.BeaconCommittees_CommitteeItem, countAtSlot)
 		for i := uint64(0); i < countAtSlot; i++ {
-			epochOffset := i + (slot%params.BeaconConfig().SlotsPerEpoch)*countAtSlot
-			totalCount := countAtSlot * params.BeaconConfig().SlotsPerEpoch
-			committee, err := helpers.ComputeCommittee(activeIndices, attesterSeed, epochOffset, totalCount)
+			committee, err := helpers.BeaconCommittee(activeIndices, attesterSeed, slot, i)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -99,10 +98,30 @@ func TestServer_ListBeaconCommittees(t *testing.T) {
 func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
+	helpers.ClearCache()
 	ctx := context.Background()
 
 	numValidators := 128
-	headState := setupActiveValidators(t, db, numValidators)
+	balances := make([]uint64, numValidators)
+	validators := make([]*ethpb.Validator, 0, numValidators)
+	for i := 0; i < numValidators; i++ {
+		pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
+		binary.LittleEndian.PutUint64(pubKey, uint64(i))
+		if err := db.SaveValidatorIndex(ctx, pubKey, uint64(i)); err != nil {
+			t.Fatal(err)
+		}
+		balances[i] = uint64(i)
+		validators = append(validators, &ethpb.Validator{
+			PublicKey:             pubKey,
+			ActivationEpoch:       0,
+			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+			WithdrawalCredentials: make([]byte, 32),
+		})
+	}
+	headState, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{Validators: validators, Balances: balances})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := 0; i < len(randaoMixes); i++ {
@@ -138,6 +157,7 @@ func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	wanted := make(map[uint64]*ethpb.BeaconCommittees_CommitteesList)
 	for slot := uint64(0); slot < params.BeaconConfig().SlotsPerEpoch; slot++ {
 		var countAtSlot = uint64(numValidators) / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
@@ -149,9 +169,7 @@ func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
 		}
 		committeeItems := make([]*ethpb.BeaconCommittees_CommitteeItem, countAtSlot)
 		for i := uint64(0); i < countAtSlot; i++ {
-			epochOffset := i + (slot%params.BeaconConfig().SlotsPerEpoch)*countAtSlot
-			totalCount := countAtSlot * params.BeaconConfig().SlotsPerEpoch
-			committee, err := helpers.ComputeCommittee(activeIndices, seed, epochOffset, totalCount)
+			committee, err := helpers.BeaconCommittee(activeIndices, seed, slot, i)
 			if err != nil {
 				t.Fatal(err)
 			}
