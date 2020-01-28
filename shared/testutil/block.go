@@ -8,7 +8,6 @@ import (
 	"math/rand"
 
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
-
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
