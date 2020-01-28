@@ -139,7 +139,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 		},
 		RandaoMixes:         make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		StateRoots:          make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		StateRoots:          make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
 		BlockRoots:          make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
 		LatestBlockHeader:   &ethpb.BeaconBlockHeader{},
 		JustificationBits:   []byte{0},

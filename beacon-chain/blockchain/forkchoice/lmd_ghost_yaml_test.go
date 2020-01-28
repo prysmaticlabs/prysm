@@ -53,7 +53,12 @@ func TestGetHeadFromYaml(t *testing.T) {
 		for _, blk := range test.Blocks {
 			// genesis block condition
 			if blk.ID == blk.Parent {
-				b := &ethpb.BeaconBlock{Slot: 0, ParentRoot: []byte{'g'}}
+				rt := make([]byte, 32)
+				copy(rt, "g")
+				b := &ethpb.BeaconBlock{
+					Slot:       0,
+					ParentRoot: rt,
+				}
 				if err := db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: b}); err != nil {
 					t.Fatal(err)
 				}
@@ -107,7 +112,12 @@ func TestGetHeadFromYaml(t *testing.T) {
 			validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
 		}
 
-		s, err := state.InitializeFromProto(&pb.BeaconState{Validators: validators, RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)})
+		s, err := state.InitializeFromProto(&pb.BeaconState{
+			Validators:  validators,
+			BlockRoots:  make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+			StateRoots:  make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
