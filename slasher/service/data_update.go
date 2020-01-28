@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"google.golang.org/grpc/codes"
@@ -87,6 +87,10 @@ func (s *Service) attestationFeeder() error {
 	}
 }
 
+// slasherOldAttestationFeeder a function to kick start slashing detection
+// after all the included attestations in the canonical chain have been
+// slashing detected. latest epoch is being updated after each iteration
+// in case it changed during the detection process.
 func (s *Service) slasherOldAttestationFeeder() error {
 	ch, err := s.getChainHead()
 	if err != nil {
@@ -120,11 +124,11 @@ func (s *Service) slasherOldAttestationFeeder() error {
 	return nil
 }
 
-func (s *Service) detectAttestation(attestation *ethpb.Attestation, beaconCommitteesAtEpoch *ethpb.BeaconCommittees) error {
-	slotCommittees, ok := beaconCommitteesAtEpoch.Committees[attestation.Data.Slot]
+func (s *Service) detectAttestation(attestation *ethpb.Attestation, beaconCommittee *ethpb.BeaconCommittees) error {
+	slotCommittees, ok := beaconCommittee.Committees[attestation.Data.Slot]
 	if !ok || slotCommittees == nil {
 		err := fmt.Errorf("beacon committees object doesnt contain the attestation slot: %d, number of committees: %d",
-			attestation.Data.Slot, len(beaconCommitteesAtEpoch.Committees))
+			attestation.Data.Slot, len(beaconCommittee.Committees))
 		log.WithError(err)
 		return err
 	}
