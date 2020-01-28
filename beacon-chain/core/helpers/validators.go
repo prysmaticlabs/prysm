@@ -22,8 +22,16 @@ import (
 //    """
 //    return validator.activation_epoch <= epoch < validator.exit_epoch
 func IsActiveValidator(validator *ethpb.Validator, epoch uint64) bool {
-	return validator.ActivationEpoch <= epoch &&
-		epoch < validator.ExitEpoch
+	return checkValidatorActiveStatus(validator.ActivationEpoch, validator.ExitEpoch, epoch)
+}
+
+// IsActiveValidatorUsingTrie checks if a read only validator is active.
+func IsActiveValidatorUsingTrie(validator *stateTrie.ReadOnlyValidator, epoch uint64) bool {
+	return checkValidatorActiveStatus(validator.ActivationEpoch(), validator.ExitEpoch(), epoch)
+}
+
+func checkValidatorActiveStatus(activationEpoch uint64, exitEpoch uint64, epoch uint64) bool {
+	return activationEpoch <= epoch && epoch < exitEpoch
 }
 
 // IsSlashableValidator returns the boolean value on whether the validator
@@ -69,13 +77,13 @@ func ActiveValidatorIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint6
 	if activeIndices != nil {
 		return activeIndices, nil
 	}
-	vals := state.Validators()
 	var indices []uint64
-	for i, v := range vals {
-		if IsActiveValidator(v, epoch) {
-			indices = append(indices, uint64(i))
+	state.ReadFromEveryValidator(func(idx int, val *stateTrie.ReadOnlyValidator) error {
+		if IsActiveValidatorUsingTrie(val, epoch) {
+			indices = append(indices, uint64(idx))
 		}
-	}
+		return nil
+	})
 
 	if err := UpdateCommitteeCache(state, epoch); err != nil {
 		return nil, errors.Wrap(err, "could not update committee cache")
@@ -87,14 +95,13 @@ func ActiveValidatorIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint6
 // ActiveValidatorCount returns the number of active validators in the state
 // at the given epoch.
 func ActiveValidatorCount(state *stateTrie.BeaconState, epoch uint64) (uint64, error) {
-	vals := state.Validators()
 	count := uint64(0)
-	for _, v := range vals {
-		if IsActiveValidator(v, epoch) {
+	state.ReadFromEveryValidator(func(idx int, val *stateTrie.ReadOnlyValidator) error {
+		if IsActiveValidatorUsingTrie(val, epoch) {
 			count++
 		}
-	}
-
+		return nil
+	})
 	return count, nil
 }
 

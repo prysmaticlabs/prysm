@@ -37,9 +37,9 @@ func Hash(data []byte) [32]byte {
 // use as the same hasher is being called throughout.
 func CustomSHA256Hasher() func([]byte) [32]byte {
 	hasher := sha256.New()
-	return func(data []byte) [32]byte {
-		var hash [32]byte
+	var hash [32]byte
 
+	return func(data []byte) [32]byte {
 		// The hash interface never returns an error, for that reason
 		// we are not handling the error below. For reference, it is
 		// stated here https://golang.org/pkg/hash/#Hash
