@@ -17,7 +17,7 @@ import (
 // beacon database.
 var ErrTargetRootNotInDB = errors.New("target root does not exist in db")
 
-// OnAttestation is called whenever an attestation is received, verifies the attestation is valid and saves
+// onAttestation is called whenever an attestation is received, verifies the attestation is valid and saves
 /// it to the DB.
 //
 // Spec pseudocode definition:
@@ -66,7 +66,7 @@ var ErrTargetRootNotInDB = errors.New("target root does not exist in db")
 //    for i in indexed_attestation.attesting_indices:
 //        if i not in store.latest_messages or target.epoch > store.latest_messages[i].epoch:
 //            store.latest_messages[i] = LatestMessage(epoch=target.epoch, root=attestation.data.beacon_block_root)
-func (s *Service) OnAttestation(ctx context.Context, a *ethpb.Attestation) ([]uint64, error) {
+func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "blockchain.onAttestation")
 	defer span.End()
 

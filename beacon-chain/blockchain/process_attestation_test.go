@@ -103,10 +103,10 @@ func TestStore_OnAttestation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := service.OnAttestation(ctx, tt.a)
+			_, err := service.onAttestation(ctx, tt.a)
 			if tt.wantErr {
 				if !strings.Contains(err.Error(), tt.wantErrString) {
-					t.Errorf("Store.OnAttestation() error = %v, wantErr = %v", err, tt.wantErrString)
+					t.Errorf("Store.onAttestation() error = %v, wantErr = %v", err, tt.wantErrString)
 				}
 			} else {
 				t.Error(err)
