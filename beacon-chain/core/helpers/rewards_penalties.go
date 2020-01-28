@@ -14,10 +14,14 @@ import (
 //    """
 //    return Gwei(max(1, sum([state.validators[index].effective_balance for index in indices])))
 func TotalBalance(state *stateTrie.BeaconState, indices []uint64) uint64 {
-	vals := state.Validators()
 	total := uint64(0)
+
 	for _, idx := range indices {
-		total += vals[idx].EffectiveBalance
+		val, err := state.ValidatorAtIndexReadOnly(idx)
+		if err != nil {
+			continue
+		}
+		total += val.EffectiveBalance()
 	}
 
 	// Return 1 Gwei minimum to avoid divisions by zero
@@ -38,13 +42,13 @@ func TotalBalance(state *stateTrie.BeaconState, indices []uint64) uint64 {
 //    """
 //    return get_total_balance(state, set(get_active_validator_indices(state, get_current_epoch(state))))
 func TotalActiveBalance(state *stateTrie.BeaconState) (uint64, error) {
-	vals := state.Validators()
 	total := uint64(0)
-	for i, v := range vals {
-		if IsActiveValidator(v, SlotToEpoch(state.Slot())) {
-			total += vals[i].EffectiveBalance
+	state.ReadFromEveryValidator(func(idx int, val *stateTrie.ReadOnlyValidator) error {
+		if IsActiveValidatorUsingTrie(val, SlotToEpoch(state.Slot())) {
+			total += val.EffectiveBalance()
 		}
-	}
+		return nil
+	})
 	return total, nil
 }
 
