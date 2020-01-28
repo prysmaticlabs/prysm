@@ -8,7 +8,11 @@ go_library(
         "types.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//shared/benchutil:__pkg__",
+        "//shared/testutil:__pkg__",
+    ],
     deps = [
         "//beacon-chain/core/state/stateutils:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
