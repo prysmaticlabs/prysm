@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -290,7 +292,7 @@ func unslashedAttestingIndices(state *pb.BeaconState, atts []*pb.PendingAttestat
 		if err != nil {
 			return nil, err
 		}
-		attestingIndices, err := helpers.AttestingIndices(att.AggregationBits, committee)
+		attestingIndices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get attester indices")
 		}

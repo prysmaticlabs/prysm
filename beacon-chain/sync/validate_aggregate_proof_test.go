@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
+
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -43,7 +45,7 @@ func TestVerifyIndexInCommittee_CanVerify(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	indices, err := helpers.AttestingIndices(att.AggregationBits, committee)
+	indices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -313,7 +315,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	attestingIndices, err := helpers.AttestingIndices(att.AggregationBits, committee)
+	attestingIndices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
 	if err != nil {
 		t.Error(err)
 	}

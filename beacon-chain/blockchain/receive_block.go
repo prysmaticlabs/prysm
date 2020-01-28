@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/hex"
 
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -140,7 +142,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 				if err != nil {
 					return err
 				}
-				indices, err := helpers.AttestingIndices(a.AggregationBits, committee)
+				indices, err := attestationutil.AttestingIndices(a.AggregationBits, committee)
 				if err != nil {
 					return err
 				}
@@ -248,7 +250,7 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 			if err != nil {
 				return err
 			}
-			indices, err := helpers.AttestingIndices(a.AggregationBits, committee)
+			indices, err := attestationutil.AttestingIndices(a.AggregationBits, committee)
 			if err != nil {
 				return err
 			}
@@ -324,7 +326,7 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 			if err != nil {
 				return err
 			}
-			indices, err := helpers.AttestingIndices(a.AggregationBits, committee)
+			indices, err := attestationutil.AttestingIndices(a.AggregationBits, committee)
 			if err != nil {
 				return err
 			}

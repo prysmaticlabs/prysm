@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
@@ -220,7 +222,7 @@ func generateAtt(state *pbp2p.BeaconState, index uint64, privKeys []*bls.SecretK
 		AggregationBits: aggBits,
 	}
 	committee, _ := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
-	attestingIndices, _ := helpers.AttestingIndices(att.AggregationBits, committee)
+	attestingIndices, _ := attestationutil.AttestingIndices(att.AggregationBits, committee)
 	domain := helpers.Domain(state.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 
 	sigs := make([]*bls.Signature, len(attestingIndices))

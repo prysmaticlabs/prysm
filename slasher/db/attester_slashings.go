@@ -102,15 +102,11 @@ func (db *Store) SaveAttesterSlashing(status SlashingStatus, slashing *ethpb.Att
 	}
 	root := hashutil.Hash(enc)
 	key := encodeTypeRoot(SlashingType(Attestation), root)
-	err = db.update(func(tx *bolt.Tx) error {
+	return db.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
 		e := b.Put(key, append([]byte{byte(status)}, enc...))
 		return e
 	})
-	if err != nil {
-		return err
-	}
-	return err
 }
 
 // SaveAttesterSlashings accepts a slice of slashing proof and its status and writes it to disk.

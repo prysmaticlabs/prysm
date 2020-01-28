@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
+
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
@@ -120,7 +122,7 @@ func validateIndexInCommittee(ctx context.Context, s *pb.BeaconState, a *ethpb.A
 	if err != nil {
 		return err
 	}
-	attestingIndices, err := helpers.AttestingIndices(a.AggregationBits, committee)
+	attestingIndices, err := attestationutil.AttestingIndices(a.AggregationBits, committee)
 	if err != nil {
 		return err
 	}

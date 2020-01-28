@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
+
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -123,7 +125,7 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		result, err := AttestingIndices(tt.bitfield, committee)
+		result, err := attestationutil.AttestingIndices(tt.bitfield, committee)
 		if err != nil {
 			t.Errorf("Failed to get attestation participants: %v", err)
 		}
@@ -184,7 +186,7 @@ func TestAttestingIndicesWithBeaconCommitteeWithoutCache_Ok(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		result, err := AttestingIndices(tt.bitfield, committee)
+		result, err := attestationutil.AttestingIndices(tt.bitfield, committee)
 		if err != nil {
 			t.Errorf("Failed to get attestation participants: %v", err)
 		}
@@ -217,7 +219,7 @@ func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	indices, err := AttestingIndices(bitfield.NewBitlist(128), committee)
+	indices, err := attestationutil.AttestingIndices(bitfield.NewBitlist(128), committee)
 	if err != nil {
 		t.Fatalf("attesting indices failed: %v", err)
 	}

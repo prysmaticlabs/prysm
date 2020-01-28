@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
+
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -1059,7 +1061,7 @@ func TestFilterAttestation_OK(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		attestingIndices, err := helpers.AttestingIndices(atts[i].AggregationBits, committee)
+		attestingIndices, err := attestationutil.AttestingIndices(atts[i].AggregationBits, committee)
 		if err != nil {
 			t.Error(err)
 		}

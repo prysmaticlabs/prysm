@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
+
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -909,7 +911,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	attestingIndices, err := helpers.AttestingIndices(att.AggregationBits, committee)
+	attestingIndices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
 	if err != nil {
 		t.Error(err)
 	}
@@ -962,7 +964,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	attestingIndices1, err := helpers.AttestingIndices(att1.AggregationBits, committee)
+	attestingIndices1, err := attestationutil.AttestingIndices(att1.AggregationBits, committee)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -990,7 +992,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	attestingIndices2, err := helpers.AttestingIndices(att2.AggregationBits, committee)
+	attestingIndices2, err := attestationutil.AttestingIndices(att2.AggregationBits, committee)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1033,7 +1035,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	attestingIndices1, err := helpers.AttestingIndices(att1.AggregationBits, committee)
+	attestingIndices1, err := attestationutil.AttestingIndices(att1.AggregationBits, committee)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1060,7 +1062,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	attestingIndices2, err := helpers.AttestingIndices(att2.AggregationBits, committee)
+	attestingIndices2, err := attestationutil.AttestingIndices(att2.AggregationBits, committee)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1185,7 +1187,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		ia, err := blocks.ConvertToIndexed(context.Background(), attestation, committee)
+		ia, err := attestationutil.ConvertToIndexed(context.Background(), attestation, committee)
 		if err != nil {
 			t.Errorf("failed to convert attestation to indexed attestation: %v", err)
 		}

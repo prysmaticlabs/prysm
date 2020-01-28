@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -232,7 +234,7 @@ func (s *Store) verifyAttestation(ctx context.Context, baseState *pb.BeaconState
 	if err != nil {
 		return nil, err
 	}
-	indexedAtt, err := blocks.ConvertToIndexed(ctx, a, committee)
+	indexedAtt, err := attestationutil.ConvertToIndexed(ctx, a, committee)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert attestation to indexed attestation")
 	}
@@ -248,7 +250,7 @@ func (s *Store) verifyAttestation(ctx context.Context, baseState *pb.BeaconState
 			if err != nil {
 				return nil, errors.Wrap(err, "could not convert attestation to indexed attestation without cache")
 			}
-			indexedAtt, err = blocks.ConvertToIndexed(ctx, a, committee)
+			indexedAtt, err = attestationutil.ConvertToIndexed(ctx, a, committee)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not convert attestation to indexed attestation")
 			}

@@ -15,6 +15,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
+
 	"github.com/emicklei/dot"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -99,7 +101,7 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
-			indices, err := helpers.AttestingIndices(att.AggregationBits, committee)
+			indices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
 			if err != nil {
 				panic(err)
 			}

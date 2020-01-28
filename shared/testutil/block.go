@@ -7,12 +7,13 @@ import (
 	"math"
 	"math/rand"
 
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -264,11 +265,11 @@ func generateAttesterSlashings(
 		sig = privs[valIndex].Sign(dataRoot[:], domain)
 		att2.Signature = bls.AggregateSignatures([]*bls.Signature{sig}).Marshal()
 
-		indexedAtt1, err := blocks.ConvertToIndexed(context.Background(), att1, committee)
+		indexedAtt1, err := attestationutil.ConvertToIndexed(context.Background(), att1, committee)
 		if err != nil {
 			return nil, err
 		}
-		indexedAtt2, err := blocks.ConvertToIndexed(context.Background(), att2, committee)
+		indexedAtt2, err := attestationutil.ConvertToIndexed(context.Background(), att2, committee)
 		if err != nil {
 			return nil, err
 		}

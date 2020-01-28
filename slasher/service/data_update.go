@@ -1,15 +1,14 @@
 package service
 
 import (
-	"context"
 	"fmt"
-	"sort"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"google.golang.org/grpc/codes"
@@ -71,7 +70,7 @@ func (s *Service) attestationFeeder() error {
 				},
 			})
 			if err != nil {
-				log.WithError(err)
+				log.WithError(err).Errorf("Could not list beacon committees for epoch %d", at.Data.Target.Epoch)
 				return err
 			}
 			err = s.detectAttestation(at, bcs)
@@ -122,7 +121,7 @@ func (s *Service) slasherOldAttestationFeeder() error {
 func (s *Service) detectAttestation(attestation *ethpb.Attestation, bcs *ethpb.BeaconCommittees) error {
 	scs, ok := bcs.Committees[attestation.Data.Slot]
 	if !ok {
-		err := fmt.Errorf("committees doesnt contain the attestation slot: %d, committees: %d",
+		err := fmt.Errorf("committees doesnt contain the attestation slot: %d, number of committees: %d",
 			attestation.Data.Slot, len(bcs.Committees))
 		log.WithError(err)
 		return err
@@ -134,7 +133,7 @@ func (s *Service) detectAttestation(attestation *ethpb.Attestation, bcs *ethpb.B
 	}
 	sc := scs.Committees[attestation.Data.CommitteeIndex]
 	c := sc.ValidatorIndices
-	ia, err := ConvertToIndexed(s.context, attestation, c)
+	ia, err := attestationutil.ConvertToIndexed(s.context, attestation, c)
 	if err != nil {
 		log.WithError(err)
 		return err
@@ -146,23 +145,28 @@ func (s *Service) detectAttestation(attestation *ethpb.Attestation, bcs *ethpb.B
 	}
 	s.slasherDb.SaveAttesterSlashings(db.Active, sar.AttesterSlashing)
 	if len(sar.AttesterSlashing) > 0 {
-		log.Infof("slashing response: %v", sar.AttesterSlashing)
+		for _, as := range sar.AttesterSlashing {
+			log.WithField("attesterSlashing", as).Info("detected slashing offence")
+		}
 	}
 	return nil
 }
 
-func (s *Service) getDataForDetection(i uint64) (*ethpb.ListAttestationsResponse, *ethpb.BeaconCommittees, error) {
+func (s *Service) getDataForDetection(epoch uint64) (*ethpb.ListAttestationsResponse, *ethpb.BeaconCommittees, error) {
 	ats, err := s.beaconClient.ListAttestations(s.context, &ethpb.ListAttestationsRequest{
-		QueryFilter: &ethpb.ListAttestationsRequest_TargetEpoch{TargetEpoch: i},
+		QueryFilter: &ethpb.ListAttestationsRequest_TargetEpoch{TargetEpoch: epoch},
 	})
 	if err != nil {
-		log.Error(err)
+		log.WithError(err).Errorf("Could not list attestations for epoch: %d", epoch)
 	}
 	bcs, err := s.beaconClient.ListBeaconCommittees(s.context, &ethpb.ListCommitteesRequest{
 		QueryFilter: &ethpb.ListCommitteesRequest_Epoch{
-			Epoch: i,
+			Epoch: epoch,
 		},
 	})
+	if err != nil {
+		log.WithError(err).Errorf("Could not list beacon committees for epoch: %d", epoch)
+	}
 	return ats, bcs, err
 }
 
@@ -188,54 +192,6 @@ func (s *Service) getChainHead() (*ethpb.ChainHead, error) {
 	if ch.FinalizedEpoch < 2 {
 		log.Info("archive node doesnt have historic data for slasher to proccess. finalized epoch: %d", ch.FinalizedEpoch)
 	}
-
-	log.Infof("current finalized epoch: %d", ch.FinalizedEpoch)
+	log.WithField("finalizedEpoch", ch.FinalizedEpoch).Info("current finalized epoch on archive node")
 	return ch, nil
-}
-
-// ConvertToIndexed converts attestation to (almost) indexed-verifiable form.
-//
-// Note about spec pseudocode definition. The state was used by get_attesting_indices to determine
-// the attestation committee. Now that we provide this as an argument, we no longer need to provide
-// a state.
-//
-// Spec pseudocode definition:
-//   def get_indexed_attestation(state: BeaconState, attestation: Attestation) -> IndexedAttestation:
-//    """
-//    Return the indexed attestation corresponding to ``attestation``.
-//    """
-//    attesting_indices = get_attesting_indices(state, attestation.data, attestation.aggregation_bits)
-//    custody_bit_1_indices = get_attesting_indices(state, attestation.data, attestation.custody_bits)
-//    assert custody_bit_1_indices.issubset(attesting_indices)
-//    custody_bit_0_indices = attesting_indices.difference(custody_bit_1_indices)
-//
-//    return IndexedAttestation(
-//        custody_bit_0_indices=sorted(custody_bit_0_indices),
-//        custody_bit_1_indices=sorted(custody_bit_1_indices),
-//        data=attestation.data,
-//        signature=attestation.signature,
-//    )
-func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, committee []uint64) (*ethpb.IndexedAttestation, error) {
-	if attestation.Data == nil {
-		return nil, fmt.Errorf("cant hash nil data in indexed attestation")
-	}
-	attIndices, err := helpers.AttestingIndices(attestation.AggregationBits, committee)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get attesting indices")
-	}
-	cb0i := []uint64{}
-	for _, idx := range attIndices {
-		cb0i = append(cb0i, idx)
-	}
-	sort.Slice(cb0i, func(i, j int) bool {
-		return cb0i[i] < cb0i[j]
-	})
-
-	inAtt := &ethpb.IndexedAttestation{
-		Data:             attestation.Data,
-		Signature:        attestation.Signature,
-		AttestingIndices: cb0i,
-	}
-	return inAtt, nil
-
 }

@@ -1,0 +1,14 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["attestation_utils.go"],
+    importpath = "github.com/prysmaticlabs/prysm/shared/attestationutil",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_pkg_errors//:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
+        "@io_opencensus_go//trace:go_default_library",
+    ],
+)
