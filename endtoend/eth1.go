@@ -118,6 +118,11 @@ func startEth1(t *testing.T, tmpPath string) (common.Address, string, int) {
 		time.Sleep(100 * time.Millisecond)
 	}
 
+	// Advancing the blocks another eth1follow distance to prevent issues reading the chain.
+	if err := mineBlocks(web3, keystore, params.BeaconConfig().Eth1FollowDistance); err != nil {
+		t.Fatalf("Unable to advance chain: %v", err)
+	}
+
 	return contractAddr, keystorePath, cmd.Process.Pid
 }
 
