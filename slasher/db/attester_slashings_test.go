@@ -27,10 +27,10 @@ func TestStore_AttesterSlashingNilBucket(t *testing.T) {
 
 	p, err := db.AttesterSlashings(SlashingStatus(Active))
 	if err != nil {
-		t.Fatalf("failed to get attester slashing: %v", err)
+		t.Fatalf("Failed to get attester slashing: %v", err)
 	}
 	if p == nil || len(p) != 0 {
-		t.Fatalf("get should return empty attester slashing array for a non existent key")
+		t.Fatalf("Get should return empty attester slashing array for a non existent key")
 	}
 }
 
@@ -99,7 +99,7 @@ func TestStore_SaveAttesterSlashings(t *testing.T) {
 		return attesterSlashings[i].Attestation_1.Signature[0] < attesterSlashings[j].Attestation_1.Signature[0]
 	})
 	if attesterSlashings == nil || !reflect.DeepEqual(attesterSlashings, as) {
-		t.Fatalf("attester slashing: %v should be part of attester slashings response: %v", as, attesterSlashings)
+		t.Fatalf("Attester slashing: %v should be part of attester slashings response: %v", as, attesterSlashings)
 	}
 }
 
@@ -137,25 +137,25 @@ func TestStore_UpdateAttesterSlashingStatus(t *testing.T) {
 	for _, tt := range tests {
 		has, st, err := db.HasAttesterSlashing(tt.as)
 		if err != nil {
-			t.Fatalf("failed to get attester slashing: %v", err)
+			t.Fatalf("Failed to get attester slashing: %v", err)
 		}
 		if !has {
-			t.Fatalf("failed to find attester slashing: %v", tt.as)
+			t.Fatalf("Failed to find attester slashing: %v", tt.as)
 		}
 		if st != tt.ss {
-			t.Fatalf("failed to find attester slashing with the correct status: %v", tt.as)
+			t.Fatalf("Failed to find attester slashing with the correct status: %v", tt.as)
 		}
 
 		err = db.SaveAttesterSlashing(SlashingStatus(Included), tt.as)
 		has, st, err = db.HasAttesterSlashing(tt.as)
 		if err != nil {
-			t.Fatalf("failed to get attester slashing: %v", err)
+			t.Fatalf("Failed to get attester slashing: %v", err)
 		}
 		if !has {
-			t.Fatalf("failed to find attester slashing: %v", tt.as)
+			t.Fatalf("Failed to find attester slashing: %v", tt.as)
 		}
 		if st != Included {
-			t.Fatalf("failed to find attester slashing with the correct status: %v", tt.as)
+			t.Fatalf("Failed to find attester slashing with the correct status: %v", tt.as)
 		}
 
 	}
@@ -170,22 +170,21 @@ func TestStore_LatestEpochDetected(t *testing.T) {
 	defer TeardownSlasherDB(t, db)
 	e, err := db.GetLatestEpochDetected()
 	if err != nil {
-		t.Fatalf("get latest epoch detected failed: %v", err)
+		t.Fatalf("Get latest epoch detected failed: %v", err)
 	}
 	if e != 0 {
-		t.Fatalf("latest epoch detected should have been 0 before setting got: %d", e)
+		t.Fatalf("Latest epoch detected should have been 0 before setting got: %d", e)
 	}
 	epoch := uint64(1)
 	err = db.SetLatestEpochDetected(epoch)
 	if err != nil {
-		t.Fatalf("set latest epoch detected failed: %v", err)
+		t.Fatalf("Set latest epoch detected failed: %v", err)
 	}
 	e, err = db.GetLatestEpochDetected()
 	if err != nil {
-		t.Fatalf("get latest epoch detected failed: %v", err)
+		t.Fatalf("Get latest epoch detected failed: %v", err)
 	}
 	if e != epoch {
-		t.Fatalf("latest epoch detected should have been: %d got: %d", epoch, e)
+		t.Fatalf("Latest epoch detected should have been: %d got: %d", epoch, e)
 	}
-
 }

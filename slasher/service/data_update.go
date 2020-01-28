@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"sync"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -47,44 +46,23 @@ func (s *Service) finalisedChangeUpdater() error {
 	}
 }
 
-func (s *Service) slasherOldAtetstationFeeder() error {
-	if s.beaconClient == nil {
-		return fmt.Errorf("can't feed old attestations to slasher. beacon client has not been started")
-	}
-	ch, err := s.beaconClient.GetChainHead(s.context, &ptypes.Empty{})
+func (s *Service) slasherOldAttestationFeeder() error {
+	ch, err := s.getChainHead()
 	if err != nil {
-		log.Error(err)
 		return err
 	}
-	if ch.FinalizedEpoch < 2 {
-		log.Info("archive node doesnt have historic data for slasher to proccess. finalized epoch: %d", ch.FinalizedEpoch)
-	}
-	log.Infof("current finalized epoch: %d", ch.FinalizedEpoch)
 	errOut := make(chan error)
-	var errorWg sync.WaitGroup
-	e, err := s.slasherDb.GetLatestEpochDetected()
+	startFromEpoch, err := s.getLatestDetectedEpoch(err)
 	if err != nil {
-		log.Error(err)
-		s.Stop()
 		return err
 	}
-	for i := e; i < ch.FinalizedEpoch; i++ {
-		ats, err := s.beaconClient.ListAttestations(s.context, &ethpb.ListAttestationsRequest{
-			QueryFilter: &ethpb.ListAttestationsRequest_TargetEpoch{TargetEpoch: i},
-		})
-		if err != nil {
-			log.Error(err)
-		}
-		bcs, err := s.beaconClient.ListBeaconCommittees(s.context, &ethpb.ListCommitteesRequest{
-			QueryFilter: &ethpb.ListCommitteesRequest_Epoch{
-				Epoch: i,
-			},
-		})
+	for ep := startFromEpoch; ep < ch.FinalizedEpoch; ep++ {
+		ats, bcs, err := s.getDataForDetection(ep)
 		if err != nil || bcs == nil {
 			log.Error(err)
 			continue
 		}
-		log.Infof("detecting slashable events on: %v attestations from epoch: %v", len(ats.Attestations), i)
+		log.Infof("detecting slashable events on: %v attestations from epoch: %v", len(ats.Attestations), ep)
 		for _, attestation := range ats.Attestations {
 			scs, ok := bcs.Committees[attestation.Data.Slot]
 			if !ok {
@@ -116,19 +94,55 @@ func (s *Service) slasherOldAtetstationFeeder() error {
 				log.Infof("slashing response: %v", sar.AttesterSlashing)
 			}
 		}
-		s.slasherDb.SetLatestEpochDetected(i)
-		ch, err = s.beaconClient.GetChainHead(s.context, &ptypes.Empty{})
-		if err != nil {
-			log.Error(err)
-			s.Stop()
-		}
+		s.slasherDb.SetLatestEpochDetected(ep)
+		s.getChainHead()
 	}
-	errorWg.Wait()
 	close(errOut)
 	for err := range errOut {
 		log.Error(errors.Wrap(err, "error while writing to db in background"))
 	}
 	return nil
+}
+
+func (s *Service) getDataForDetection(i uint64) (*ethpb.ListAttestationsResponse, *ethpb.BeaconCommittees, error) {
+	ats, err := s.beaconClient.ListAttestations(s.context, &ethpb.ListAttestationsRequest{
+		QueryFilter: &ethpb.ListAttestationsRequest_TargetEpoch{TargetEpoch: i},
+	})
+	if err != nil {
+		log.Error(err)
+	}
+	bcs, err := s.beaconClient.ListBeaconCommittees(s.context, &ethpb.ListCommitteesRequest{
+		QueryFilter: &ethpb.ListCommitteesRequest_Epoch{
+			Epoch: i,
+		},
+	})
+	return ats, bcs, err
+}
+
+func (s *Service) getLatestDetectedEpoch(err error) (uint64, error) {
+	e, err := s.slasherDb.GetLatestEpochDetected()
+	if err != nil {
+		log.Error(err)
+		s.Stop()
+		return 0, err
+	}
+	return e, nil
+}
+
+func (s *Service) getChainHead() (*ethpb.ChainHead, error) {
+	if s.beaconClient == nil {
+		return nil, fmt.Errorf("can't feed old attestations to slasher. beacon client has not been started")
+	}
+	ch, err := s.beaconClient.GetChainHead(s.context, &ptypes.Empty{})
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+	if ch.FinalizedEpoch < 2 {
+		log.Info("archive node doesnt have historic data for slasher to proccess. finalized epoch: %d", ch.FinalizedEpoch)
+	}
+	log.Infof("current finalized epoch: %d", ch.FinalizedEpoch)
+	return ch, nil
 }
 
 // ConvertToIndexed converts attestation to (almost) indexed-verifiable form.

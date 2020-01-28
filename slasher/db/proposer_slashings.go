@@ -154,15 +154,11 @@ func (db *Store) SaveProposerSlashing(status SlashingStatus, slashing *ethpb.Pro
 	}
 	root := hashutil.Hash(enc)
 	key := encodeTypeRoot(SlashingType(Proposal), root)
-	err = db.update(func(tx *bolt.Tx) error {
+	return db.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
 		e := b.Put(key, append([]byte{byte(status)}, enc...))
 		return e
 	})
-	if err != nil {
-		return err
-	}
-	return err
 }
 
 // SaveProposeerSlashings accepts a slice of slashing proof and its status and writes it to disk.
@@ -178,7 +174,7 @@ func (db *Store) SaveProposeerSlashings(status SlashingStatus, slashings []*ethp
 		root := hashutil.Hash(enc[i])
 		key[i] = encodeTypeRoot(SlashingType(Proposal), root)
 	}
-	err = db.update(func(tx *bolt.Tx) error {
+	return db.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
 		for i := 0; i < len(enc); i++ {
 			e := b.Put(key[i], append([]byte{byte(status)}, enc[i]...))
@@ -188,8 +184,4 @@ func (db *Store) SaveProposeerSlashings(status SlashingStatus, slashings []*ethp
 		}
 		return nil
 	})
-	if err != nil {
-		return err
-	}
-	return err
 }
