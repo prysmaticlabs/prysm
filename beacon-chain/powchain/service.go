@@ -590,6 +590,7 @@ func (s *Service) run(done <-chan struct{}) {
 				s.runError = err
 				return
 			}
+			s.runError = nil
 		case header, ok := <-s.headerChan:
 			if ok {
 				s.processSubscribedHeaders(header)

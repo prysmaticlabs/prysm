@@ -16,7 +16,7 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 	minimalConfig := &end2EndConfig{
 		beaconFlags:    append(featureconfig.E2EBeaconChainFlags, "--minimal-config", "--custom-genesis-delay=15"),
 		validatorFlags: append(featureconfig.E2EValidatorFlags, "--minimal-config"),
-		epochsToRun:    5,
+		epochsToRun:    6,
 		numBeaconNodes: 4,
 		numValidators:  params.BeaconConfig().MinGenesisActiveValidatorCount,
 		evaluators: []ev.Evaluator{
