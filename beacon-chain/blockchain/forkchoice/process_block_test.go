@@ -103,7 +103,7 @@ func TestStore_OnBlock(t *testing.T) {
 			}
 			store.finalizedCheckpt.Root = roots[0]
 
-			err := store.OnBlock(ctx, &ethpb.SignedBeaconBlock{Block: tt.blk})
+			_, err := store.OnBlock(ctx, &ethpb.SignedBeaconBlock{Block: tt.blk})
 			if !strings.Contains(err.Error(), tt.wantErrString) {
 				t.Errorf("Store.OnBlock() error = %v, wantErr = %v", err, tt.wantErrString)
 			}
@@ -429,7 +429,7 @@ func TestCachedPreState_CanGetFromCache(t *testing.T) {
 	store.initSyncState[r] = s
 
 	wanted := "pre state of slot 1 does not exist"
-	if _, err := store.cachedPreState(ctx, b); !strings.Contains(err.Error(), wanted) {
+	if _, err := store.verifyBlkPreState(ctx, b); !strings.Contains(err.Error(), wanted) {
 		t.Fatal("Not expected error")
 	}
 }
@@ -449,7 +449,7 @@ func TestCachedPreState_CanGetFromCacheWithFeature(t *testing.T) {
 	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r[:]}
 	store.initSyncState[r] = s
 
-	received, err := store.cachedPreState(ctx, b)
+	received, err := store.verifyBlkPreState(ctx, b)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -467,7 +467,7 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 	r := [32]byte{'A'}
 	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r[:]}
 
-	_, err := store.cachedPreState(ctx, b)
+	_, err := store.verifyBlkPreState(ctx, b)
 	wanted := "pre state of slot 1 does not exist"
 	if err.Error() != wanted {
 		t.Error("Did not get wanted error")
@@ -476,7 +476,7 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 	s := &pb.BeaconState{Slot: 1}
 	store.db.SaveState(ctx, s, r)
 
-	received, err := store.cachedPreState(ctx, b)
+	received, err := store.verifyBlkPreState(ctx, b)
 	if err != nil {
 		t.Fatal(err)
 	}

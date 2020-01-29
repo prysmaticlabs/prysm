@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/kevinms/leakybucket-go"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -27,6 +28,8 @@ type blockchainService interface {
 
 const (
 	handshakePollingInterval = 5 * time.Second // Polling interval for checking the number of received handshakes.
+
+	allowedBlocksPerSecond = 32.0
 )
 
 // Config to set up the initial sync service.
@@ -39,24 +42,26 @@ type Config struct {
 
 // Service service.
 type Service struct {
-	ctx           context.Context
-	chain         blockchainService
-	p2p           p2p.P2P
-	db            db.ReadOnlyDatabase
-	synced        bool
-	chainStarted  bool
-	stateNotifier statefeed.Notifier
+	ctx               context.Context
+	chain             blockchainService
+	p2p               p2p.P2P
+	db                db.ReadOnlyDatabase
+	synced            bool
+	chainStarted      bool
+	stateNotifier     statefeed.Notifier
+	blocksRateLimiter *leakybucket.Collector
 }
 
 // NewInitialSync configures the initial sync service responsible for bringing the node up to the
 // latest head of the blockchain.
 func NewInitialSync(cfg *Config) *Service {
 	return &Service{
-		ctx:           context.Background(),
-		chain:         cfg.Chain,
-		p2p:           cfg.P2P,
-		db:            cfg.DB,
-		stateNotifier: cfg.StateNotifier,
+		ctx:               context.Background(),
+		chain:             cfg.Chain,
+		p2p:               cfg.P2P,
+		db:                cfg.DB,
+		stateNotifier:     cfg.StateNotifier,
+		blocksRateLimiter: leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksPerSecond, false /* deleteEmptyBuckets */),
 	}
 }
 

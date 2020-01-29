@@ -9,7 +9,9 @@ type Config struct {
 	KademliaBootStrapAddr []string
 	Discv5BootStrapAddr   []string
 	RelayNodeAddr         string
+	LocalIP               string
 	HostAddress           string
+	HostDNS               string
 	PrivateKey            string
 	DataDir               string
 	TCPPort               uint

@@ -60,6 +60,7 @@ var appFlags = []cli.Flag{
 	cmd.MonitoringPortFlag,
 	cmd.LogFileName,
 	cmd.LogFormat,
+	cmd.ClearDB,
 	debug.PProfFlag,
 	debug.PProfAddrFlag,
 	debug.PProfPortFlag,
@@ -69,6 +70,9 @@ var appFlags = []cli.Flag{
 	flags.CertFlag,
 	flags.RPCPort,
 	flags.KeyFlag,
+	flags.UseSpanCacheFlag,
+	flags.RebuildSpanMapsFlag,
+	flags.BeaconRPCProviderFlag,
 }
 
 func init() {

@@ -100,6 +100,11 @@ func (m *POWChain) PreGenesisState() *pb.BeaconState {
 	return &pb.BeaconState{}
 }
 
+// ClearPreGenesisData --
+func (m *POWChain) ClearPreGenesisData() {
+	//no-op
+}
+
 // IsConnectedToETH1 --
 func (m *POWChain) IsConnectedToETH1() bool {
 	return true

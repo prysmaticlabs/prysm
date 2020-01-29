@@ -13,10 +13,13 @@ The process for implementing new features using this package is as follows:
 		VerifyAttestationSigs: true,
 	}
 	featureconfig.Init(cfg)
+	6. Add the string for the flags that should be running within E2E to E2EValidatorFlags
+	and E2EBeaconChainFlags.
 */
 package featureconfig
 
 import (
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -25,7 +28,7 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
-	NoGenesisDelay            bool   // NoGenesisDelay signals to start the chain as quickly as possible.
+	CustomGenesisDelay        uint64 // CustomGenesisDelay signals how long of a delay to set to start the chain.
 	MinimalConfig             bool   // MinimalConfig as defined in the spec.
 	WriteSSZStateTransitions  bool   // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify          bool   // InitSyncNoVerify when initial syncing w/o verifying block's contents.
@@ -35,7 +38,9 @@ type Flags struct {
 	EnableSnappyDBCompression bool   // EnableSnappyDBCompression in the database.
 	InitSyncCacheState        bool   // InitSyncCacheState caches state during initial sync.
 	KafkaBootstrapServers     string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
-	BlockDoubleProposals      bool   // BlockDoubleProposals prevents the validator client from signing any proposals that would be considered a slashable offense.
+	ProtectProposer           bool   // ProtectProposer prevents the validator client from signing any proposals that would be considered a slashable offense.
+	ProtectAttester           bool   // ProtectAttester prevents the validator client from signing any attestations that would be considered a slashable offense.
+	ProtoArrayForkChoice      bool   // ProtoArrayForkChoice enables proto array fork choice. Significant improvements over the spec version.
 
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
@@ -72,9 +77,10 @@ func Init(c *Flags) {
 func ConfigureBeaconChain(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	if ctx.GlobalBool(noGenesisDelayFlag.Name) {
-		log.Warn("Starting ETH2 with no genesis delay")
-		cfg.NoGenesisDelay = true
+	if ctx.GlobalUint64(customGenesisDelayFlag.Name) != params.BeaconConfig().MinGenesisDelay {
+		delay := ctx.GlobalUint64(customGenesisDelayFlag.Name)
+		log.Warnf("Starting ETH2 with genesis delay of %d seconds", delay)
+		cfg.CustomGenesisDelay = delay
 	}
 	if ctx.GlobalBool(minimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
@@ -138,6 +144,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabled proposer index caching.")
 		cfg.EnableProposerIndexCache = true
 	}
+	if ctx.GlobalBool(protoArrayForkChoice.Name) {
+		log.Warn("Enabled using proto array fork choice over spec fork choice.")
+		cfg.ProtoArrayForkChoice = true
+	}
 	Init(cfg)
 }
 
@@ -150,9 +160,13 @@ func ConfigureValidator(ctx *cli.Context) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
 	}
-	if ctx.GlobalBool(blockDoubleProposals.Name) {
-		log.Warn("Enabled validator double proposal slashing protection.")
-		cfg.BlockDoubleProposals = true
+	if ctx.GlobalBool(protectProposerFlag.Name) {
+		log.Warn("Enabled validator proposal slashing protection.")
+		cfg.ProtectProposer = true
+	}
+	if ctx.GlobalBool(protectAttesterFlag.Name) {
+		log.Warn("Enabled validator attestation slashing protection.")
+		cfg.ProtectAttester = true
 	}
 	Init(cfg)
 }

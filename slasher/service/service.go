@@ -16,12 +16,14 @@ import (
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/slasher/db"
+	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/prysmaticlabs/prysm/slasher/rpc"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -43,6 +45,7 @@ func init() {
 type Service struct {
 	slasherDb       *db.Store
 	grpcServer      *grpc.Server
+	slasher         *rpc.Server
 	port            int
 	withCert        string
 	withKey         string
@@ -86,7 +89,9 @@ func NewRPCService(cfg *Config, ctx *cli.Context) (*Service, error) {
 	if err := s.startDB(s.ctx); err != nil {
 		return nil, err
 	}
-
+	s.slasher = &rpc.Server{
+		SlasherDB: s.slasherDb,
+	}
 	return s, nil
 }
 
@@ -98,9 +103,25 @@ func (s *Service) Start() {
 	}).Info("Starting hash slinging slasher node")
 	s.context = context.Background()
 	s.startSlasher()
-	s.startBeaconClient()
-	go s.finalisedChangeUpdater()
+	if s.beaconClient == nil {
+		if err := s.startBeaconClient(); err != nil {
+			log.WithError(err).Errorf("failed to start beacon client")
+			s.failStatus = err
+			return
+		}
+	}
 	stop := s.stop
+	err := s.slasherOldAttestationFeeder()
+	if err != nil {
+		err = errors.Wrap(err, "couldn't start attestation feeder from archive endpoint. please use "+
+			"--beacon-rpc-provider flag value if you are not running a beacon chain service with "+
+			"--archive flag on the local machine.")
+		log.WithError(err)
+		s.failStatus = err
+		return
+	}
+	go s.attestationFeeder()
+	go s.finalisedChangeUpdater()
 	s.lock.Unlock()
 
 	go func() {
@@ -161,7 +182,9 @@ func (s *Service) startSlasher() {
 	slasherServer := rpc.Server{
 		SlasherDB: s.slasherDb,
 	}
-
+	if s.ctx.GlobalBool(flags.RebuildSpanMapsFlag.Name) {
+		s.loadSpanMaps(err, slasherServer)
+	}
 	slashpb.RegisterSlasherServer(s.grpcServer, &slasherServer)
 
 	// Register reflection service on gRPC server.
@@ -176,7 +199,24 @@ func (s *Service) startSlasher() {
 	}()
 }
 
-func (s *Service) startBeaconClient() {
+func (s *Service) loadSpanMaps(err error, slasherServer rpc.Server) {
+	lt, err := slasherServer.SlasherDB.LatestIndexedAttestationsTargetEpoch()
+	if err != nil {
+		log.Errorf("Could not extract latest target epoch from indexed attestations store: %v", err)
+	}
+	for i := uint64(0); i < lt; i++ {
+		ias, err := slasherServer.SlasherDB.IndexedAttestations(i)
+		if err != nil {
+			log.Errorf("Got error while trying to retrieve indexed attestations from db: %v", err)
+		}
+		for _, ia := range ias {
+			slasherServer.UpdateSpanMaps(s.context, ia)
+		}
+		log.Infof("Update span maps for epoch: %d", i)
+	}
+}
+
+func (s *Service) startBeaconClient() error {
 	var dialOpt grpc.DialOption
 
 	if s.beaconCert != "" {
@@ -203,12 +243,12 @@ func (s *Service) startBeaconClient() {
 	}
 	conn, err := grpc.DialContext(s.context, s.beaconProvider, beaconOpts...)
 	if err != nil {
-		log.Errorf("Could not dial endpoint: %s, %v", s.beaconProvider, err)
-		return
+		return fmt.Errorf("could not dial endpoint: %s, %v", s.beaconProvider, err)
 	}
 	log.Info("Successfully started gRPC connection")
 	s.beaconConn = conn
 	s.beaconClient = eth.NewBeaconChainClient(s.beaconConn)
+	return nil
 }
 
 // Stop the service.
@@ -233,6 +273,9 @@ func (s *Service) Close() {
 	if err != nil {
 		log.Panicf("Could not stop the slasher service: %v", err)
 	}
+	if err := s.slasherDb.SaveCachedSpansMaps(); err != nil {
+		log.Fatal("Didn't save span map cache to db. if span cache is enabled please restart with --%s", flags.RebuildSpanMapsFlag.Name)
+	}
 	if err := s.slasherDb.Close(); err != nil {
 		log.Errorf("Failed to close slasher database: %v", err)
 	}
@@ -255,7 +298,8 @@ func (s *Service) Status() (bool, error) {
 func (s *Service) startDB(ctx *cli.Context) error {
 	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
 	dbPath := path.Join(baseDir, slasherDBName)
-	d, err := db.NewDB(dbPath)
+	cfg := &db.Config{SpanCacheEnabled: ctx.GlobalBool(flags.UseSpanCacheFlag.Name)}
+	d, err := db.NewDB(dbPath, cfg)
 	if err != nil {
 		return err
 	}
@@ -263,7 +307,7 @@ func (s *Service) startDB(ctx *cli.Context) error {
 		if err := d.ClearDB(); err != nil {
 			return err
 		}
-		d, err = db.NewDB(dbPath)
+		d, err = db.NewDB(dbPath, cfg)
 		if err != nil {
 			return err
 		}

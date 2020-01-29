@@ -39,8 +39,6 @@ type validator struct {
 	logValidatorBalances bool
 	attLogs              map[[32]byte]*attSubmitted
 	attLogsLock          sync.Mutex
-	pubKeyToID           map[[48]byte]uint64
-	pubKeyToIDLock       sync.RWMutex
 }
 
 // Done cleans up the validator.
@@ -254,13 +252,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	v.duties = resp
 	// Only log the full assignments output on epoch start to be less verbose.
 	if slot%params.BeaconConfig().SlotsPerEpoch == 0 {
-		v.pubKeyToIDLock.Lock()
-		defer v.pubKeyToIDLock.Unlock()
-
 		for _, duty := range v.duties.Duties {
-			if _, ok := v.pubKeyToID[bytesutil.ToBytes48(duty.PublicKey)]; !ok {
-				v.pubKeyToID[bytesutil.ToBytes48(duty.PublicKey)] = duty.ValidatorIndex
-			}
 			lFields := logrus.Fields{
 				"pubKey":         fmt.Sprintf("%#x", bytesutil.Trunc(duty.PublicKey)),
 				"validatorIndex": duty.ValidatorIndex,
@@ -294,7 +286,7 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]pb
 		if duty == nil {
 			continue
 		}
-		if duty.ProposerSlot == slot {
+		if duty.ProposerSlot > 0 && duty.ProposerSlot == slot {
 			roles = append(roles, pb.ValidatorRole_PROPOSER)
 		}
 		if duty.AttesterSlot == slot {

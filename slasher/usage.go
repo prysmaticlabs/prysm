@@ -53,6 +53,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.MonitoringPortFlag,
 			cmd.LogFormat,
 			cmd.LogFileName,
+			cmd.ClearDB,
 		},
 	},
 	{
@@ -72,6 +73,9 @@ var appHelpFlagGroups = []flagGroup{
 			flags.CertFlag,
 			flags.KeyFlag,
 			flags.RPCPort,
+			flags.UseSpanCacheFlag,
+			flags.RebuildSpanMapsFlag,
+			flags.BeaconRPCProviderFlag,
 		},
 	},
 }

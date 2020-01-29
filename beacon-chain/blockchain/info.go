@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strconv"
 
+	"github.com/emicklei/dot"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
 )
@@ -41,6 +43,41 @@ func (s *Service) HeadsHandler(w http.ResponseWriter, _ *http.Request) {
 		log.WithError(err).Error("Failed to render chain heads page")
 	}
 
+}
+
+// TreeHandler is a handler to serve /tree page in metrics.
+func (s *Service) TreeHandler(w http.ResponseWriter, _ *http.Request) {
+	nodes := s.forkChoiceStore.Nodes()
+
+	graph := dot.NewGraph(dot.Directed)
+	graph.Attr("rankdir", "RL")
+	graph.Attr("labeljust", "l")
+
+	dotNodes := make([]*dot.Node, len(nodes))
+	for i := len(nodes) - 1; i >= 0; i-- {
+		// Construct label for each node.
+		slot := strconv.Itoa(int(nodes[i].Slot))
+		weight := strconv.Itoa(int(nodes[i].Weight / 10e9))
+		bestDescendent := strconv.Itoa(int(nodes[i].BestDescendent))
+		index := strconv.Itoa(int(i))
+		label := "slot: " + slot + "\n index: " + index + "\n bestDescendent: " + bestDescendent + "\n weight: " + weight
+		var dotN dot.Node
+		if nodes[i].Parent != ^uint64(0) {
+			dotN = graph.Node(index).Box().Attr("label", label)
+		}
+		dotNodes[i] = &dotN
+	}
+
+	for i := len(nodes) - 1; i >= 0; i-- {
+		if nodes[i].Parent != ^uint64(0) && nodes[i].Parent < uint64(len(dotNodes)) {
+			graph.Edge(*dotNodes[i], *dotNodes[nodes[i].Parent])
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+	if _, err := w.Write([]byte(graph.String())); err != nil {
+		log.WithError(err).Error("Failed to render p2p info page")
+	}
 }
 
 // This returns the latest head slots in a slice and up to latestSlotCount

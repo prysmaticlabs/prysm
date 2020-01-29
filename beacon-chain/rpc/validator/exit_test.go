@@ -13,6 +13,8 @@ import (
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
+	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -46,6 +48,8 @@ func TestSub(t *testing.T) {
 		GenesisTime:       genesisTime,
 		StateNotifier:     mockChainService.StateNotifier(),
 		OperationNotifier: mockChainService.OperationNotifier(),
+		ExitPool:          voluntaryexits.NewPool(),
+		P2P:               mockp2p.NewTestP2P(t),
 	}
 
 	// Subscribe to operation notifications.

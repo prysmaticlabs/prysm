@@ -14,7 +14,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -73,7 +75,7 @@ var ErrTargetRootNotInDB = errors.New("target root does not exist in db")
 //    for i in indexed_attestation.attesting_indices:
 //        if i not in store.latest_messages or target.epoch > store.latest_messages[i].epoch:
 //            store.latest_messages[i] = LatestMessage(epoch=target.epoch, root=attestation.data.beacon_block_root)
-func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
+func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) ([]uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "forkchoice.onAttestation")
 	defer span.End()
 
@@ -81,59 +83,59 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 	tgtSlot := helpers.StartSlot(tgt.Epoch)
 
 	if helpers.SlotToEpoch(a.Data.Slot) != a.Data.Target.Epoch {
-		return fmt.Errorf("data slot is not in the same epoch as target %d != %d", helpers.SlotToEpoch(a.Data.Slot), a.Data.Target.Epoch)
+		return nil, fmt.Errorf("data slot is not in the same epoch as target %d != %d", helpers.SlotToEpoch(a.Data.Slot), a.Data.Target.Epoch)
 	}
 
 	// Verify beacon node has seen the target block before.
 	if !s.db.HasBlock(ctx, bytesutil.ToBytes32(tgt.Root)) {
-		return ErrTargetRootNotInDB
+		return nil, ErrTargetRootNotInDB
 	}
 
 	// Verify attestation target has had a valid pre state produced by the target block.
 	baseState, err := s.verifyAttPreState(ctx, tgt)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Verify attestation target is from current epoch or previous epoch.
 	if err := s.verifyAttTargetEpoch(ctx, baseState.GenesisTime, uint64(time.Now().Unix()), tgt); err != nil {
-		return err
+		return nil, err
 	}
 
 	// Verify Attestations cannot be from future epochs.
 	if err := helpers.VerifySlotTime(baseState.GenesisTime, tgtSlot); err != nil {
-		return errors.Wrap(err, "could not verify attestation target slot")
+		return nil, errors.Wrap(err, "could not verify attestation target slot")
 	}
 
 	// Verify attestation beacon block is known and not from the future.
 	if err := s.verifyBeaconBlock(ctx, a.Data); err != nil {
-		return errors.Wrap(err, "could not verify attestation beacon block")
+		return nil, errors.Wrap(err, "could not verify attestation beacon block")
 	}
 
 	// Store target checkpoint state if not yet seen.
 	baseState, err = s.saveCheckpointState(ctx, baseState, tgt)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Verify attestations can only affect the fork choice of subsequent slots.
 	if err := helpers.VerifySlotTime(baseState.GenesisTime, a.Data.Slot+1); err != nil {
-		return err
+		return nil, err
 	}
 
 	// Use the target state to to validate attestation and calculate the committees.
 	indexedAtt, err := s.verifyAttestation(ctx, baseState, a)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Update every validator's latest vote.
 	if err := s.updateAttVotes(ctx, indexedAtt, tgt.Root, tgt.Epoch); err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := s.db.SaveAttestation(ctx, a); err != nil {
-		return err
+		return nil, err
 	}
 
 	log := log.WithFields(logrus.Fields{
@@ -144,7 +146,7 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) error {
 	})
 	log.Debug("Updated latest votes")
 
-	return nil
+	return indexedAtt.AttestingIndices, nil
 }
 
 // verifyAttPreState validates input attested check point has a valid pre-state.
@@ -231,7 +233,7 @@ func (s *Store) verifyAttestation(ctx context.Context, baseState *pb.BeaconState
 	if err != nil {
 		return nil, err
 	}
-	indexedAtt, err := blocks.ConvertToIndexed(ctx, a, committee)
+	indexedAtt, err := attestationutil.ConvertToIndexed(ctx, a, committee)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert attestation to indexed attestation")
 	}
@@ -247,7 +249,7 @@ func (s *Store) verifyAttestation(ctx context.Context, baseState *pb.BeaconState
 			if err != nil {
 				return nil, errors.Wrap(err, "could not convert attestation to indexed attestation without cache")
 			}
-			indexedAtt, err = blocks.ConvertToIndexed(ctx, a, committee)
+			indexedAtt, err = attestationutil.ConvertToIndexed(ctx, a, committee)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not convert attestation to indexed attestation")
 			}
@@ -269,6 +271,9 @@ func (s *Store) updateAttVotes(
 	indexedAtt *ethpb.IndexedAttestation,
 	tgtRoot []byte,
 	tgtEpoch uint64) error {
+	if featureconfig.Get().DisableForkChoice {
+		return nil
+	}
 
 	indices := indexedAtt.AttestingIndices
 	s.voteLock.Lock()
