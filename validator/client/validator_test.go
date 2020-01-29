@@ -633,7 +633,6 @@ func TestRolesAt_OK(t *testing.T) {
 	}
 }
 
-
 func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 	v, m, finish := setup(t)
 	defer finish()
