@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -909,7 +910,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	attestingIndices, err := helpers.AttestingIndices(att.AggregationBits, committee)
+	attestingIndices, err := attestationutil.AttestingIndices(att.AggregationBits, committee)
 	if err != nil {
 		t.Error(err)
 	}
@@ -962,7 +963,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	attestingIndices1, err := helpers.AttestingIndices(att1.AggregationBits, committee)
+	attestingIndices1, err := attestationutil.AttestingIndices(att1.AggregationBits, committee)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -990,7 +991,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	attestingIndices2, err := helpers.AttestingIndices(att2.AggregationBits, committee)
+	attestingIndices2, err := attestationutil.AttestingIndices(att2.AggregationBits, committee)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1033,7 +1034,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	attestingIndices1, err := helpers.AttestingIndices(att1.AggregationBits, committee)
+	attestingIndices1, err := attestationutil.AttestingIndices(att1.AggregationBits, committee)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1060,7 +1061,7 @@ func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	attestingIndices2, err := helpers.AttestingIndices(att2.AggregationBits, committee)
+	attestingIndices2, err := attestationutil.AttestingIndices(att2.AggregationBits, committee)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1185,7 +1186,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		ia, err := blocks.ConvertToIndexed(context.Background(), attestation, committee)
+		ia, err := attestationutil.ConvertToIndexed(context.Background(), attestation, committee)
 		if err != nil {
 			t.Errorf("failed to convert attestation to indexed attestation: %v", err)
 		}

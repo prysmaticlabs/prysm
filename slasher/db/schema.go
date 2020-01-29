@@ -4,6 +4,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
+const latestEpochKey = "LATEST_EPOCH_DETECTED"
+
 var (
 	// Slasher
 	historicIndexedAttestationsBucket = []byte("historic-indexed-attestations-bucket")

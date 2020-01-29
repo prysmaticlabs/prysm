@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -650,44 +651,6 @@ func ProcessAttestationNoVerify(ctx context.Context, beaconState *pb.BeaconState
 	return beaconState, nil
 }
 
-// ConvertToIndexed converts attestation to (almost) indexed-verifiable form.
-//
-// Note about spec pseudocode definition. The state was used by get_attesting_indices to determine
-// the attestation committee. Now that we provide this as an argument, we no longer need to provide
-// a state.
-//
-// Spec pseudocode definition:
-//   def get_indexed_attestation(state: BeaconState, attestation: Attestation) -> IndexedAttestation:
-//    """
-//    Return the indexed attestation corresponding to ``attestation``.
-//    """
-//    attesting_indices = get_attesting_indices(state, attestation.data, attestation.aggregation_bits)
-//
-//    return IndexedAttestation(
-//        attesting_indices=sorted(attesting_indices),
-//        data=attestation.data,
-//        signature=attestation.signature,
-//    )
-func ConvertToIndexed(ctx context.Context, attestation *ethpb.Attestation, committee []uint64) (*ethpb.IndexedAttestation, error) {
-	ctx, span := trace.StartSpan(ctx, "core.ConvertToIndexed")
-	defer span.End()
-
-	attIndices, err := helpers.AttestingIndices(attestation.AggregationBits, committee)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get attesting indices")
-	}
-
-	sort.Slice(attIndices, func(i, j int) bool {
-		return attIndices[i] < attIndices[j]
-	})
-	inAtt := &ethpb.IndexedAttestation{
-		Data:             attestation.Data,
-		Signature:        attestation.Signature,
-		AttestingIndices: attIndices,
-	}
-	return inAtt, nil
-}
-
 // VerifyIndexedAttestation determines the validity of an indexed attestation.
 //
 // Spec pseudocode definition:
@@ -778,7 +741,7 @@ func VerifyAttestation(ctx context.Context, beaconState *pb.BeaconState, att *et
 	if err != nil {
 		return err
 	}
-	indexedAtt, err := ConvertToIndexed(ctx, att, committee)
+	indexedAtt, err := attestationutil.ConvertToIndexed(ctx, att, committee)
 	if err != nil {
 		return errors.Wrap(err, "could not convert to indexed attestation")
 	}
