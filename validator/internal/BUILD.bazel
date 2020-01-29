@@ -5,7 +5,6 @@ go_library(
     testonly = True,
     srcs = [
         "aggregator_service_mock.go",
-        "beacon_chain_service_mock.go",
         "beacon_node_validator_service_mock.go",
         "node_mock.go",
         "validator_service_mock.go",

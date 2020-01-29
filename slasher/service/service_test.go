@@ -8,11 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/urfave/cli"
-
+	"github.com/golang/mock/gomock"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/urfave/cli"
 )
 
 func init() {
@@ -24,6 +26,9 @@ func TestLifecycle_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	context := cli.NewContext(app, set, nil)
 	rpcService, err := NewRPCService(&Config{
 		Port: 7348,
@@ -31,6 +36,16 @@ func TestLifecycle_OK(t *testing.T) {
 	if err != nil {
 		t.Error("gRPC Service fail to initialize:", err)
 	}
+	client := mock.NewMockBeaconChainClient(ctrl)
+	rpcService.beaconClient = client
+	client.EXPECT().GetChainHead(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&ethpb.ChainHead{HeadSlot: 1}, nil)
+	client.EXPECT().StreamAttestations(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(nil, nil)
 	waitForStarted(rpcService, t)
 	rpcService.Close()
 	testutil.AssertLogsContain(t, hook, "Starting service")
@@ -43,6 +58,9 @@ func TestRPC_BadEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	context := cli.NewContext(app, set, nil)
 	rpcService, err := NewRPCService(&Config{
 		Port: 99999999,
@@ -50,6 +68,16 @@ func TestRPC_BadEndpoint(t *testing.T) {
 	if err != nil {
 		t.Error("gRPC Service fail to initialize:", err)
 	}
+	client := mock.NewMockBeaconChainClient(ctrl)
+	rpcService.beaconClient = client
+	client.EXPECT().GetChainHead(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&ethpb.ChainHead{HeadSlot: 1}, nil)
+	client.EXPECT().StreamAttestations(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(nil, nil)
 	testutil.AssertLogsDoNotContain(t, hook, "Could not listen to port in Start()")
 	testutil.AssertLogsDoNotContain(t, hook, "Could not load TLS keys")
 	testutil.AssertLogsDoNotContain(t, hook, "Could not serve gRPC")
@@ -76,12 +104,25 @@ func TestRPC_InsecureEndpoint(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	context := cli.NewContext(app, set, nil)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	rpcService, err := NewRPCService(&Config{
 		Port: 5555,
 	}, context)
 	if err != nil {
 		t.Error("gRPC Service fail to initialize:", err)
 	}
+	client := mock.NewMockBeaconChainClient(ctrl)
+	rpcService.beaconClient = client
+	client.EXPECT().GetChainHead(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&ethpb.ChainHead{HeadSlot: 1}, nil)
+	client.EXPECT().StreamAttestations(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(nil, nil)
 	waitForStarted(rpcService, t)
 
 	testutil.AssertLogsContain(t, hook, "Starting service")

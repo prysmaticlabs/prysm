@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -232,7 +233,7 @@ func (s *Store) verifyAttestation(ctx context.Context, baseState *pb.BeaconState
 	if err != nil {
 		return nil, err
 	}
-	indexedAtt, err := blocks.ConvertToIndexed(ctx, a, committee)
+	indexedAtt, err := attestationutil.ConvertToIndexed(ctx, a, committee)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert attestation to indexed attestation")
 	}
@@ -248,7 +249,7 @@ func (s *Store) verifyAttestation(ctx context.Context, baseState *pb.BeaconState
 			if err != nil {
 				return nil, errors.Wrap(err, "could not convert attestation to indexed attestation without cache")
 			}
-			indexedAtt, err = blocks.ConvertToIndexed(ctx, a, committee)
+			indexedAtt, err = attestationutil.ConvertToIndexed(ctx, a, committee)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not convert attestation to indexed attestation")
 			}

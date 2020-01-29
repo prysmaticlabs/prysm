@@ -2,7 +2,7 @@
 // Source: github.com/prysmaticlabs/ethereumapis/eth/v1alpha1 (interfaces: BeaconChainClient)
 
 // Package internal is a generated GoMock package.
-package internal
+package mock
 
 import (
 	context "context"
