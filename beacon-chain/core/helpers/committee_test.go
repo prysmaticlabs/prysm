@@ -253,6 +253,7 @@ func TestVerifyBitfieldLength_OK(t *testing.T) {
 }
 
 func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
+	ClearCache()
 	// Initialize test with 128 validators, each slot and each index gets 2 validators.
 	validators := make([]*ethpb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
@@ -276,23 +277,23 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 	}{
 		{
 			index:          0,
-			slot:           92,
-			committee:      []uint64{46, 0},
+			slot:           78,
+			committee:      []uint64{0, 38},
 			committeeIndex: 0,
 			isProposer:     false,
 		},
 		{
 			index:          1,
-			slot:           70,
-			committee:      []uint64{1, 58},
+			slot:           71,
+			committee:      []uint64{1, 4},
 			committeeIndex: 0,
 			isProposer:     true,
-			proposerSlot:   91,
+			proposerSlot:   79,
 		},
 		{
 			index:          11,
-			slot:           64,
-			committee:      []uint64{30, 11},
+			slot:           90,
+			committee:      []uint64{31, 11},
 			committeeIndex: 0,
 			isProposer:     false,
 		},
