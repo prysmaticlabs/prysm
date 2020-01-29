@@ -56,6 +56,7 @@ go_test(
     shard_count = 2,
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/attestationutil:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/featureconfig:go_default_library",

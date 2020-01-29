@@ -64,7 +64,7 @@ func (s *SlotTicker) start(
 
 		var nextTickTime time.Time
 		var slot uint64
-		if sinceGenesis < 0 {
+		if sinceGenesis < d {
 			// Handle when the current time is before the genesis time.
 			nextTickTime = genesisTime
 			slot = 0

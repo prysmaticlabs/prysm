@@ -60,6 +60,7 @@ var appFlags = []cli.Flag{
 	cmd.MonitoringPortFlag,
 	cmd.LogFileName,
 	cmd.LogFormat,
+	cmd.ClearDB,
 	debug.PProfFlag,
 	debug.PProfAddrFlag,
 	debug.PProfPortFlag,
