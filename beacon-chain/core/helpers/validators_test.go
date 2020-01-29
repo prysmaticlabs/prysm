@@ -117,6 +117,7 @@ func TestIsSlashableValidator_InactiveSlashed(t *testing.T) {
 }
 
 func TestBeaconProposerIndex_OK(t *testing.T) {
+	ClearCache()
 	c := params.BeaconConfig()
 	c.MinGenesisActiveValidatorCount = 16384
 	params.OverrideBeaconConfig(c)
@@ -139,23 +140,23 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	}{
 		{
 			slot:  1,
-			index: 505,
+			index: 2039,
 		},
 		{
 			slot:  5,
-			index: 798,
+			index: 1895,
 		},
 		{
 			slot:  19,
-			index: 1956,
+			index: 1947,
 		},
 		{
 			slot:  30,
-			index: 991,
+			index: 369,
 		},
 		{
 			slot:  43,
-			index: 1751,
+			index: 464,
 		},
 	}
 
