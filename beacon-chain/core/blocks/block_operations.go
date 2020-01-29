@@ -244,8 +244,6 @@ func ProcessBlockHeaderNoVerify(
 	if beaconState.Slot() != block.Slot {
 		return nil, fmt.Errorf("state slot: %d is different then block slot: %d", beaconState.Slot(), block.Slot)
 	}
-	// TODO: Some test only pass with ssz.HashTreeRoot rather than stateutil.BlockHeaderRoot.
-	//parentRoot, err := stateutil.BlockHeaderRoot(beaconState.LatestBlockHeader())
 	parentRoot, err := ssz.HashTreeRoot(beaconState.LatestBlockHeader())
 	if err != nil {
 		return nil, err
