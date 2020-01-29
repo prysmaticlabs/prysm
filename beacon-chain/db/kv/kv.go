@@ -1,7 +1,6 @@
 package kv
 
 import (
-	"context"
 	"os"
 	"path"
 	"time"
@@ -109,10 +108,6 @@ func NewKVStore(dirPath string) (*Store, error) {
 			migrationBucket,
 		)
 	}); err != nil {
-		return nil, err
-	}
-
-	if err := kv.pruneStates(context.TODO()); err != nil {
 		return nil, err
 	}
 
