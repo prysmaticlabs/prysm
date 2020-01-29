@@ -178,7 +178,7 @@ func RunEpochOperationTest(
 		}
 
 		if !proto.Equal(beaconState.Clone(), postBeaconState) {
-			diff, _ := messagediff.PrettyDiff(beaconState, postBeaconState)
+			diff, _ := messagediff.PrettyDiff(beaconState.Clone(), postBeaconState)
 			t.Log(diff)
 			t.Fatal("Post state does not match expected")
 		}
