@@ -66,11 +66,17 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 	validatorCount := uint64(2048)
 	base := buildState(e+2, validatorCount)
 	atts := make([]*pb.PendingAttestation, 3)
+	var emptyRoot [32]byte
 	for i := 0; i < len(atts); i++ {
 		atts[i] = &pb.PendingAttestation{
 			Data: &ethpb.AttestationData{
-				Target: &ethpb.Checkpoint{},
-				Source: &ethpb.Checkpoint{},
+				Target: &ethpb.Checkpoint{
+					Root: emptyRoot[:],
+				},
+				Source: &ethpb.Checkpoint{
+					Root: emptyRoot[:],
+				},
+				BeaconBlockRoot: emptyRoot[:],
 			},
 			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
 			InclusionDelay:  1,
@@ -101,7 +107,7 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	attestedIndices := []uint64{100, 106, 196, 641, 654, 1606}
+	attestedIndices := []uint64{55, 1339, 1746, 1811, 1569, 1413}
 	for _, i := range attestedIndices {
 		base, err := epoch.BaseReward(state, i)
 		if err != nil {
@@ -114,7 +120,7 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 		proposerReward := base / params.BeaconConfig().ProposerRewardQuotient
 		wanted += (base - proposerReward) * params.BeaconConfig().MinAttestationInclusionDelay
 		if rewards[i] != wanted {
-			t.Errorf("Wanted reward balance %d, got %d", wanted, rewards[i])
+			t.Errorf("Wanted reward balance %d, got %d for validator with index %d", wanted, rewards[i], i)
 		}
 		// Since all these validators attested, they shouldn't get penalized.
 		if penalties[i] != 0 {
@@ -122,7 +128,7 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 		}
 	}
 
-	nonAttestedIndices := []uint64{12, 23, 45, 79}
+	nonAttestedIndices := []uint64{434, 677, 872, 791}
 	for _, i := range nonAttestedIndices {
 		base, err := epoch.BaseReward(state, i)
 		if err != nil {
