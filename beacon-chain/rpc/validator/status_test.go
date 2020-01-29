@@ -845,7 +845,7 @@ func TestDepositBlockSlotAfterGenesisTime(t *testing.T) {
 		t.Fatalf("Could not get the deposit block slot %v", err)
 	}
 
-	expected := uint64(2405)
+	expected := uint64(53)
 
 	if resp != expected {
 		t.Errorf("Wanted %v, got %v", expected, resp)
