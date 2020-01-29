@@ -53,15 +53,13 @@ func GenerateFullBlock(
 	if currentSlot > slot {
 		return nil, fmt.Errorf("current slot in state is larger than given slot. %d > %d", currentSlot, slot)
 	}
-	bState, err := stateTrie.InitializeFromProto(bState.Clone())
-	if err != nil {
-		return nil, err
-	}
+	bState = bState.Copy()
 
 	if conf == nil {
 		conf = &BlockGenConfig{}
 	}
 
+	var err error
 	pSlashings := []*ethpb.ProposerSlashing{}
 	numToGen := conf.NumProposerSlashings
 	if numToGen > 0 {
@@ -302,7 +300,7 @@ func GenerateAttestations(
 	currentEpoch := helpers.SlotToEpoch(slot)
 	attestations := []*ethpb.Attestation{}
 	generateHeadState := false
-	bState, err := stateTrie.InitializeFromProtoUnsafe(bState.Clone())
+	bState, err := stateTrie.InitializeFromProtoUnsafe(bState.CloneInnerState())
 	if err != nil {
 		return nil, err
 	}
@@ -316,7 +314,7 @@ func GenerateAttestations(
 	headRoot := make([]byte, 32)
 	// Only calculate head state if its an attestation for the current slot or future slot.
 	if generateHeadState || slot == bState.Slot() {
-		headState, err := stateTrie.InitializeFromProtoUnsafe(bState.Clone())
+		headState, err := stateTrie.InitializeFromProtoUnsafe(bState.CloneInnerState())
 		if err != nil {
 			return nil, err
 		}

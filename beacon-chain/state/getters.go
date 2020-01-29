@@ -70,8 +70,8 @@ func (b *BeaconState) InnerStateUnsafe() *pbp2p.BeaconState {
 	return b.state
 }
 
-// Clone the beacon state into a protobuf for usage.
-func (b *BeaconState) Clone() *pbp2p.BeaconState {
+// CloneInnerState the beacon state into a protobuf for usage.
+func (b *BeaconState) CloneInnerState() *pbp2p.BeaconState {
 	if b.state == nil {
 		return nil
 	}

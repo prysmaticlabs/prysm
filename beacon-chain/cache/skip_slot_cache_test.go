@@ -31,7 +31,7 @@ func TestSkipSlotCache_RoundTrip(t *testing.T) {
 		t.Error(err)
 	}
 
-	state, err = stateTrie.InitializeFromProto(&pb.BeaconState{
+	state, err = stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{
 		Slot: 10,
 	})
 	if err != nil {
@@ -51,7 +51,7 @@ func TestSkipSlotCache_RoundTrip(t *testing.T) {
 		t.Error(err)
 	}
 
-	if !reflect.DeepEqual(state, res) {
+	if !reflect.DeepEqual(state.InnerStateUnsafe(), res.InnerStateUnsafe()) {
 		t.Error("Expected equal protos to return from cache")
 	}
 }

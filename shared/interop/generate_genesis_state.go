@@ -56,7 +56,7 @@ func GenerateGenesisState(genesisTime, numValidators uint64) (*pb.BeaconState, [
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not generate genesis state")
 	}
-	return beaconState.Clone(), deposits, nil
+	return beaconState.CloneInnerState(), deposits, nil
 }
 
 // GenerateDepositsFromData a list of deposit items by creating proofs for each of them from a sparse Merkle trie.

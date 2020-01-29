@@ -14,7 +14,7 @@ import (
 
 func TestSkipSlotCache_OK(t *testing.T) {
 	bState, privs := testutil.DeterministicGenesisState(t, params.MinimalSpecConfig().MinGenesisActiveValidatorCount)
-	originalState, _ := beaconstate.InitializeFromProto(bState.Clone())
+	originalState, _ := beaconstate.InitializeFromProto(bState.CloneInnerState())
 
 	blkCfg := testutil.DefaultBlockGenConfig()
 	blkCfg.NumAttestations = 1
@@ -43,7 +43,7 @@ func TestSkipSlotCache_OK(t *testing.T) {
 		t.Fatalf("Could not process state transition: %v", err)
 	}
 
-	if !ssz.DeepEqual(originalState.Clone(), bState.Clone()) {
+	if !ssz.DeepEqual(originalState.CloneInnerState(), bState.CloneInnerState()) {
 		t.Fatal("Skipped slots cache leads to different states")
 	}
 }

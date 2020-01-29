@@ -140,8 +140,8 @@ func TestGenesisState_HashEquality(t *testing.T) {
 		t.Error(err)
 	}
 
-	root1, err1 := hashutil.HashProto(state1.Clone())
-	root2, err2 := hashutil.HashProto(state2.Clone())
+	root1, err1 := hashutil.HashProto(state1.CloneInnerState())
+	root2, err2 := hashutil.HashProto(state2.CloneInnerState())
 
 	if err1 != nil || err2 != nil {
 		t.Fatalf("Failed to marshal state to bytes: %v %v", err1, err2)

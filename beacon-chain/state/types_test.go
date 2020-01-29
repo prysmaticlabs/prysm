@@ -21,7 +21,7 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 		t.Fatal(err)
 	}
 	cloned := proto.Clone(genesis).(*pb.BeaconState)
-	custom := customState.Clone()
+	custom := customState.CloneInnerState()
 	if !proto.Equal(cloned, custom) {
 		t.Fatal("Cloned states did not match")
 	}
@@ -149,7 +149,7 @@ func BenchmarkStateClone_Manual(b *testing.B) {
 	}
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		_ = st.Clone()
+		_ = st.CloneInnerState()
 	}
 }
 
