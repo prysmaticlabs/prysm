@@ -159,7 +159,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	}
 
 	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: []byte{'A'}}
-	s1, err := beaconstate.InitializeFromProto(ss.Clone())
+	s1, err := beaconstate.InitializeFromProto(ss.CloneInnerState())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,7 +173,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 
 	cp2 := &ethpb.Checkpoint{Epoch: 2, Root: []byte{'B'}}
 
-	s2, err := beaconstate.InitializeFromProto(ss.Clone())
+	s2, err := beaconstate.InitializeFromProto(ss.CloneInnerState())
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -158,15 +158,12 @@ func CalculateStateRoot(
 	}
 
 	// Copy state to avoid mutating the state reference.
-	state, err := stateTrie.InitializeFromProto(state.Clone())
-	if err != nil {
-		return [32]byte{}, err
-	}
+	state = state.Copy()
 
 	b.ClearEth1DataVoteCache()
 
 	// Execute per slots transition.
-	state, err = ProcessSlots(ctx, state, signed.Block.Slot)
+	state, err := ProcessSlots(ctx, state, signed.Block.Slot)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not process slot")
 	}

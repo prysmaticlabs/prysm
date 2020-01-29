@@ -368,7 +368,7 @@ func TestCommitteeAssignments_AgreesWithSpecDefinitionMethod(t *testing.T) {
 	})
 	// Test for 2 epochs.
 	for epoch := uint64(0); epoch < 2; epoch++ {
-		state, _ := beaconstate.InitializeFromProto(state.Clone())
+		state, _ := beaconstate.InitializeFromProto(state.CloneInnerState())
 		assignments, proposers, err := CommitteeAssignments(state, epoch)
 		if err != nil {
 			t.Fatal(err)
