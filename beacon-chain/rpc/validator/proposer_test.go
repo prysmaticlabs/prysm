@@ -274,7 +274,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	readyDeposits := []*dbpb.DepositContainer{
 		{
 			Index:           0,
-			Eth1BlockHeight: 100,
+			Eth1BlockHeight: 2,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
 					PublicKey:             []byte("a"),
@@ -284,7 +284,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		},
 		{
 			Index:           1,
-			Eth1BlockHeight: 1001,
+			Eth1BlockHeight: 8,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
 					PublicKey:             []byte("b"),
@@ -297,7 +297,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	recentDeposits := []*dbpb.DepositContainer{
 		{
 			Index:           2,
-			Eth1BlockHeight: 4000,
+			Eth1BlockHeight: 400,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
 					PublicKey:             []byte("c"),
@@ -307,7 +307,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		},
 		{
 			Index:           3,
-			Eth1BlockHeight: 5000,
+			Eth1BlockHeight: 600,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
 					PublicKey:             []byte("d"),
@@ -424,7 +424,7 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 	readyDeposits := []*dbpb.DepositContainer{
 		{
 			Index:           0,
-			Eth1BlockHeight: 1000,
+			Eth1BlockHeight: 8,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
 					PublicKey:             []byte("a"),
@@ -434,7 +434,7 @@ func TestPendingDeposits_FollowsCorrectEth1Block(t *testing.T) {
 		},
 		{
 			Index:           1,
-			Eth1BlockHeight: 1010,
+			Eth1BlockHeight: 14,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
 					PublicKey:             []byte("b"),
@@ -698,10 +698,10 @@ func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 		}
 
 		depositTrie.Insert(depositHash[:], int(dp.Index))
-		depositCache.InsertDeposit(ctx, dp.Deposit, uint64(dp.Index), dp.Index, depositTrie.Root())
+		depositCache.InsertDeposit(ctx, dp.Deposit, height.Uint64(), dp.Index, depositTrie.Root())
 	}
 	for _, dp := range recentDeposits {
-		depositCache.InsertPendingDeposit(ctx, dp.Deposit, uint64(dp.Index), dp.Index, depositTrie.Root())
+		depositCache.InsertPendingDeposit(ctx, dp.Deposit, height.Uint64(), dp.Index, depositTrie.Root())
 	}
 
 	bs := &Server{
@@ -863,7 +863,7 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 	deps := []*dbpb.DepositContainer{
 		{
 			Index:           0,
-			Eth1BlockHeight: 1000,
+			Eth1BlockHeight: 8,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
 					PublicKey:             []byte("a"),
@@ -873,7 +873,7 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 		},
 		{
 			Index:           1,
-			Eth1BlockHeight: 1200,
+			Eth1BlockHeight: 14,
 			Deposit: &ethpb.Deposit{
 				Data: &ethpb.Deposit_Data{
 					PublicKey:             []byte("b"),
@@ -895,7 +895,7 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 		LatestBlockNumber: height,
 		HashesByHeight: map[int][]byte{
 			0:   []byte("hash0"),
-			476: []byte("hash1024"),
+			12: []byte("hash12"),
 		},
 	}
 	proposerServer := &Server{
@@ -914,7 +914,7 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 
 	p.Eth1Data = defEth1Data
 
-	result, err := proposerServer.defaultEth1DataResponse(ctx, big.NewInt(1500))
+	result, err := proposerServer.defaultEth1DataResponse(ctx, big.NewInt(16))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -926,7 +926,6 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 
 // TODO(2312): Add more tests for edge cases and better coverage.
 func TestEth1Data(t *testing.T) {
-
 	slot := uint64(10000)
 
 	p := &mockPOW.POWChain{
@@ -934,7 +933,7 @@ func TestEth1Data(t *testing.T) {
 			slot * params.BeaconConfig().SecondsPerSlot: big.NewInt(4096),
 		},
 		HashesByHeight: map[int][]byte{
-			3072: []byte("3072"),
+			4080: []byte("4080"),
 		},
 		Eth1Data: &ethpb.Eth1Data{
 			DepositCount: 55,
