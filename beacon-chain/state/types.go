@@ -52,7 +52,7 @@ func (b *BeaconState) Copy() *BeaconState {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 	dst := &BeaconState{
-		state:       proto.Clone(b.state).(*pbp2p.BeaconState),
+		state:       b.CloneInnerState(),
 		dirtyFields: make(map[fieldIndex]interface{}),
 		valIdxMap:   make(map[[48]byte]uint64),
 	}
