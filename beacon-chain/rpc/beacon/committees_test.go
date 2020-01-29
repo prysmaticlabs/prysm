@@ -15,6 +15,7 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
@@ -125,6 +126,7 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	helpers.ClearCache()
 	wanted := make(map[uint64]*ethpb.BeaconCommittees_CommitteesList)
 	startSlot := helpers.StartSlot(1)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
@@ -167,13 +169,15 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 			},
 		},
 	}
-	for _, test := range tests {
+	helpers.ClearCache()
+	for i, test := range tests {
 		res, err := bs.ListBeaconCommittees(context.Background(), test.req)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if !proto.Equal(res, test.res) {
-			t.Errorf("Expected %v, received %v", test.res, res)
+			diff, _ := messagediff.PrettyDiff(res, test.res)
+			t.Errorf("%d/ Diff between responses %s", i, diff)
 		}
 	}
 }
