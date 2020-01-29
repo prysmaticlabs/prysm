@@ -54,9 +54,9 @@ func allAttestationsReceived(client eth.BeaconChainClient) error {
 			continue
 		}
 
-		expectedAtts := len(slotCommittees.Committees)
 		// If the amount of atts are not equal already, expect double the attestations.
 		// This is to account for skipped slots.
+		expectedAtts := len(slotCommittees.Committees)
 		if expectedAtts != len(blkAtts) {
 			expectedAtts *= 2
 		}
