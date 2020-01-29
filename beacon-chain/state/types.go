@@ -58,7 +58,7 @@ func (b *BeaconState) Copy() *BeaconState {
 	}
 
 	for i := range b.dirtyFields {
-		dst.markFieldAsDirty(i)
+		dst.dirtyFields[i] = true
 	}
 
 	for i := range b.valIdxMap {
