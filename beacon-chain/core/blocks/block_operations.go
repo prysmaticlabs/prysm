@@ -309,18 +309,14 @@ func ProcessRandao(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get beacon proposer index")
 	}
-	proposer, err := beaconState.ValidatorAtIndex(proposerIdx)
-	if err != nil {
-		return nil, err
-	}
-	proposerPub := proposer.PublicKey
+	proposerPub := beaconState.PubkeyAtIndex(proposerIdx)
 
 	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, currentEpoch)
 
 	domain := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainRandao)
-	if err := verifySignature(buf, proposerPub, body.RandaoReveal, domain); err != nil {
+	if err := verifySignature(buf, proposerPub[:], body.RandaoReveal, domain); err != nil {
 		return nil, errors.Wrap(err, "could not verify block randao")
 	}
 
@@ -855,7 +851,7 @@ func ProcessPreGenesisDeposit(
 	if err != nil {
 		return nil, err
 	}
-	validator, err := beaconState.ValidatorAtIndex(uint64(index))
+	validator, err := beaconState.ValidatorAtIndex(index)
 	if err != nil {
 		return nil, err
 	}

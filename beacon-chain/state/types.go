@@ -33,18 +33,7 @@ type ReadOnlyValidator struct {
 
 // InitializeFromProto the beacon state from a protobuf representation.
 func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
-	fieldRoots, err := stateutil.ComputeFieldRoots(st)
-	if err != nil {
-		return nil, err
-	}
-	layers := merkleize(fieldRoots)
-	valMap := coreutils.ValidatorIndexMap(st.Validators)
-	return &BeaconState{
-		state:        proto.Clone(st).(*pbp2p.BeaconState),
-		merkleLayers: layers,
-		dirtyFields:  make(map[fieldIndex]interface{}),
-		valIdxMap:    valMap,
-	}, nil
+	return InitializeFromProtoUnsafe(proto.Clone(st).(*pbp2p.BeaconState))
 }
 
 // InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer

@@ -14,7 +14,7 @@ func TestFuzzFinalUpdates_10000(t *testing.T) {
 
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(base)
-		s, err := beaconstate.InitializeFromProto(base)
+		s, err := beaconstate.InitializeFromProtoUnsafe(base)
 		if err != nil {
 			t.Fatal(err)
 		}

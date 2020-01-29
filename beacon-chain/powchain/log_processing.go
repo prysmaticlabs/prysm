@@ -87,7 +87,7 @@ func (s *Service) ProcessLog(ctx context.Context, depositLog gethTypes.Log) erro
 			eth1Data := &protodb.ETH1ChainData{
 				CurrentEth1Data:   s.latestEth1Data,
 				ChainstartData:    s.chainStartData,
-				BeaconState:       s.preGenesisState.Clone(),
+				BeaconState:       s.preGenesisState.InnerStateUnsafe(), // I promise not to mutate it!
 				Trie:              s.depositTrie.ToProto(),
 				DepositContainers: s.depositCache.AllDepositContainers(ctx),
 			}

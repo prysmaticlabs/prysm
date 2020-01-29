@@ -352,9 +352,8 @@ func unslashedAttestingIndices(state *stateTrie.BeaconState, atts []*pb.PendingA
 	// Sort the attesting set indices by increasing order.
 	sort.Slice(setIndices, func(i, j int) bool { return setIndices[i] < setIndices[j] })
 	// Remove the slashed validator indices.
-	vals := state.Validators()
 	for i := 0; i < len(setIndices); i++ {
-		if vals[setIndices[i]].Slashed {
+		if v, _ := state.ValidatorAtIndex(setIndices[i]); v != nil && v.Slashed {
 			setIndices = append(setIndices[:i], setIndices[i+1:]...)
 		}
 	}

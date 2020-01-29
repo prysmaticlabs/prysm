@@ -101,8 +101,8 @@ func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) (*
 
 	// Update finalized check point.
 	// Prune the block cache and helper caches on every new finalized epoch.
-	if postState.FinalizedCheckpoint() != nil && postState.FinalizedCheckpoint().Epoch > s.finalizedCheckpt.Epoch {
-		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint()); err != nil {
+	if cpt := postState.FinalizedCheckpoint(); cpt != nil && cpt.Epoch > s.finalizedCheckpt.Epoch {
+		if err := s.db.SaveFinalizedCheckpoint(ctx, cpt); err != nil {
 			return nil, errors.Wrap(err, "could not save finalized checkpoint")
 		}
 
@@ -116,7 +116,7 @@ func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) (*
 		}
 
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
-		s.finalizedCheckpt = postState.FinalizedCheckpoint()
+		s.finalizedCheckpt = cpt
 	}
 
 	// Update validator indices in database as needed.
@@ -237,12 +237,12 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, signed *e
 			return nil, errors.Wrap(err, "could not save init sync finalized state")
 		}
 
-		if err := s.db.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint()); err != nil {
+		if err := s.db.SaveFinalizedCheckpoint(ctx, cpt); err != nil {
 			return nil, errors.Wrap(err, "could not save finalized checkpoint")
 		}
 
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
-		s.finalizedCheckpt = postState.FinalizedCheckpoint()
+		s.finalizedCheckpt = cpt
 	}
 
 	// Update validator indices in database as needed.
@@ -508,21 +508,21 @@ func (s *Store) updateJustified(ctx context.Context, state *stateTrie.BeaconStat
 	if canUpdate {
 		s.justifiedCheckpt = state.CurrentJustifiedCheckpoint()
 	}
-
-	if featureconfig.Get().InitSyncCacheState && state.CurrentJustifiedCheckpoint() != nil {
-		justifiedRoot := bytesutil.ToBytes32(state.CurrentJustifiedCheckpoint().Root)
+	cpt := state.CurrentJustifiedCheckpoint()
+	if cpt != nil && featureconfig.Get().InitSyncCacheState {
+		justifiedRoot := bytesutil.ToBytes32(cpt.Root)
 		justifiedState := s.initSyncState[justifiedRoot]
 		// If justified state is nil, resume back to normal syncing process and save
 		// justified check point.
 		if justifiedState == nil {
-			return s.db.SaveJustifiedCheckpoint(ctx, state.CurrentJustifiedCheckpoint())
+			return s.db.SaveJustifiedCheckpoint(ctx, cpt)
 		}
 		if err := s.db.SaveState(ctx, justifiedState, justifiedRoot); err != nil {
 			return errors.Wrap(err, "could not save justified state")
 		}
 	}
 
-	return s.db.SaveJustifiedCheckpoint(ctx, state.CurrentJustifiedCheckpoint())
+	return s.db.SaveJustifiedCheckpoint(ctx, cpt)
 }
 
 // currentSlot returns the current slot based on time.
@@ -544,17 +544,18 @@ func (s *Store) updateJustifiedCheckpoint() {
 // This saves every finalized state in DB during initial sync, needed as part of optimization to
 // use cache state during initial sync in case of restart.
 func (s *Store) saveInitState(ctx context.Context, state *stateTrie.BeaconState) error {
-	if !featureconfig.Get().InitSyncCacheState || state.FinalizedCheckpoint() == nil {
+	cpt := state.FinalizedCheckpoint()
+	if !featureconfig.Get().InitSyncCacheState || cpt == nil {
 		return nil
 	}
-	finalizedRoot := bytesutil.ToBytes32(state.FinalizedCheckpoint().Root)
+	finalizedRoot := bytesutil.ToBytes32(cpt.Root)
 	fs := s.initSyncState[finalizedRoot]
 
 	if err := s.db.SaveState(ctx, fs, finalizedRoot); err != nil {
 		return errors.Wrap(err, "could not save state")
 	}
 	for r, oldState := range s.initSyncState {
-		if oldState.Slot() < state.FinalizedCheckpoint().Epoch*params.BeaconConfig().SlotsPerEpoch {
+		if oldState.Slot() < cpt.Epoch*params.BeaconConfig().SlotsPerEpoch {
 			delete(s.initSyncState, r)
 		}
 	}

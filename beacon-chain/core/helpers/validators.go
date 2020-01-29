@@ -293,6 +293,6 @@ func IsEligibleForActivation(state *stateTrie.BeaconState, validator *ethpb.Vali
 	if cpt == nil {
 		return false
 	}
-	return validator.ActivationEligibilityEpoch <= state.FinalizedCheckpoint().Epoch &&
+	return validator.ActivationEligibilityEpoch <= cpt.Epoch &&
 		validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch
 }

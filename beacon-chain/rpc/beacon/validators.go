@@ -1,7 +1,6 @@
 package beacon
 
 import (
-	"bytes"
 	"context"
 	"sort"
 	"strconv"
@@ -13,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
@@ -303,9 +303,10 @@ func (bs *Server) GetValidator(
 		}
 		return headState.ValidatorAtIndex(index)
 	}
+	pk48 := bytesutil.ToBytes48(pubKey)
 	for i := 0; i < headState.NumValidators(); i++ {
 		keyFromState := headState.PubkeyAtIndex(uint64(i))
-		if bytes.Equal(keyFromState[:], pubKey) {
+		if keyFromState == pk48 {
 			return headState.ValidatorAtIndex(uint64(i))
 		}
 	}

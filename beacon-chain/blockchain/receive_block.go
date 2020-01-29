@@ -161,8 +161,8 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 				return nil
 			}
 
-			if postState.FinalizedCheckpoint().Epoch > f.Epoch {
-				if err := s.forkChoiceStore.Prune(ctx, bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)); err != nil {
+			if cpt := postState.FinalizedCheckpoint(); cpt.Epoch > f.Epoch {
+				if err := s.forkChoiceStore.Prune(ctx, bytesutil.ToBytes32(cpt.Root)); err != nil {
 					return errors.Wrap(err, "could not prune proto array fork choice")
 				}
 			}

@@ -89,6 +89,7 @@ func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
 
 // PreviousJustifiedCheckpt returns the previous justified checkpoint from head state.
 func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
+
 	if s.headState == nil || s.headState.PreviousJustifiedCheckpoint() == nil {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}

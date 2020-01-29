@@ -122,11 +122,7 @@ func (s *Service) saveNewValidators(ctx context.Context, preStateValidatorCount 
 		pubKeys := make([][48]byte, 0)
 		for i := preStateValidatorCount; i < postStateValidatorCount; i++ {
 			indices = append(indices, uint64(i))
-			v, err := postState.ValidatorAtIndex(uint64(i))
-			if err != nil {
-				return err
-			}
-			pubKeys = append(pubKeys, bytesutil.ToBytes48(v.PublicKey))
+			pubKeys = append(pubKeys, postState.PubkeyAtIndex(uint64(i)))
 		}
 		if err := s.beaconDB.SaveValidatorIndices(ctx, pubKeys, indices); err != nil {
 			return errors.Wrapf(err, "could not save activated validators: %v", indices)
@@ -235,32 +231,33 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 }
 
 func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconState) error {
-	if state.CurrentJustifiedCheckpoint().Epoch > s.bestJustifiedCheckpt.Epoch {
-		s.bestJustifiedCheckpt = state.CurrentJustifiedCheckpoint()
+	cpt := state.CurrentJustifiedCheckpoint()
+	if cpt.Epoch > s.bestJustifiedCheckpt.Epoch {
+		s.bestJustifiedCheckpt = cpt
 	}
-	canUpdate, err := s.shouldUpdateCurrentJustified(ctx, state.CurrentJustifiedCheckpoint())
+	canUpdate, err := s.shouldUpdateCurrentJustified(ctx, cpt)
 	if err != nil {
 		return err
 	}
 	if canUpdate {
-		s.justifiedCheckpt = state.CurrentJustifiedCheckpoint()
+		s.justifiedCheckpt = cpt
 	}
 
 	if featureconfig.Get().InitSyncCacheState {
-		justifiedRoot := bytesutil.ToBytes32(state.CurrentJustifiedCheckpoint().Root)
+		justifiedRoot := bytesutil.ToBytes32(cpt.Root)
 
 		justifiedState := s.initSyncState[justifiedRoot]
 		// If justified state is nil, resume back to normal syncing process and save
 		// justified check point.
 		if justifiedState == nil {
-			return s.beaconDB.SaveJustifiedCheckpoint(ctx, state.CurrentJustifiedCheckpoint())
+			return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
 		}
 		if err := s.beaconDB.SaveState(ctx, justifiedState, justifiedRoot); err != nil {
 			return errors.Wrap(err, "could not save justified state")
 		}
 	}
 
-	return s.beaconDB.SaveJustifiedCheckpoint(ctx, state.CurrentJustifiedCheckpoint())
+	return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
 }
 
 // currentSlot returns the current slot based on time.
@@ -274,14 +271,15 @@ func (s *Service) saveInitState(ctx context.Context, state *stateTrie.BeaconStat
 	if !featureconfig.Get().InitSyncCacheState {
 		return nil
 	}
-	finalizedRoot := bytesutil.ToBytes32(state.FinalizedCheckpoint().Root)
+	cpt := state.FinalizedCheckpoint()
+	finalizedRoot := bytesutil.ToBytes32(cpt.Root)
 	fs := s.initSyncState[finalizedRoot]
 
 	if err := s.beaconDB.SaveState(ctx, fs, finalizedRoot); err != nil {
 		return errors.Wrap(err, "could not save state")
 	}
 	for r, oldState := range s.initSyncState {
-		if oldState.Slot() < state.FinalizedCheckpoint().Epoch*params.BeaconConfig().SlotsPerEpoch {
+		if oldState.Slot() < cpt.Epoch*params.BeaconConfig().SlotsPerEpoch {
 			delete(s.initSyncState, r)
 		}
 	}

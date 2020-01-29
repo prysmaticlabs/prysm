@@ -88,13 +88,15 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 		return nil, err
 	}
 
+	genesisTime := baseState.GenesisTime()
+
 	// Verify attestation target is from current epoch or previous epoch.
-	if err := s.verifyAttTargetEpoch(ctx, baseState.GenesisTime(), uint64(time.Now().Unix()), tgt); err != nil {
+	if err := s.verifyAttTargetEpoch(ctx, genesisTime, uint64(time.Now().Unix()), tgt); err != nil {
 		return nil, err
 	}
 
 	// Verify Attestations cannot be from future epochs.
-	if err := helpers.VerifySlotTime(baseState.GenesisTime(), tgtSlot); err != nil {
+	if err := helpers.VerifySlotTime(genesisTime, tgtSlot); err != nil {
 		return nil, errors.Wrap(err, "could not verify attestation target slot")
 	}
 
@@ -110,7 +112,7 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 	}
 
 	// Verify attestations can only affect the fork choice of subsequent slots.
-	if err := helpers.VerifySlotTime(baseState.GenesisTime(), a.Data.Slot+1); err != nil {
+	if err := helpers.VerifySlotTime(genesisTime, a.Data.Slot+1); err != nil {
 		return nil, err
 	}
 

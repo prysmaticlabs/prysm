@@ -20,7 +20,7 @@ func TestFuzzProcessAttestation_10000(t *testing.T) {
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(att)
-		s, _ := beaconstate.InitializeFromProto(state)
+		s, _ := beaconstate.InitializeFromProtoUnsafe(state)
 		_, _ = blocks.ProcessAttestationNoVerify(ctx, s, att)
 	}
 }
@@ -34,7 +34,7 @@ func TestFuzzProcessBlockHeader_10000(t *testing.T) {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(block)
 
-		s, _ := beaconstate.InitializeFromProto(state)
+		s, _ := beaconstate.InitializeFromProtoUnsafe(state)
 		_, _ = blocks.ProcessBlockHeader(s, block)
 	}
 }
