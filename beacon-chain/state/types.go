@@ -41,7 +41,7 @@ func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
 func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 	b := &BeaconState{
 		state:       st,
-		dirtyFields: make(map[fieldIndex]interface{}),
+		dirtyFields: make(map[fieldIndex]interface{}, 20),
 		valIdxMap:   coreutils.ValidatorIndexMap(st.Validators),
 	}
 	return b, nil
@@ -53,8 +53,8 @@ func (b *BeaconState) Copy() *BeaconState {
 	defer b.lock.RUnlock()
 	dst := &BeaconState{
 		state:       b.CloneInnerState(),
-		dirtyFields: make(map[fieldIndex]interface{}),
-		valIdxMap:   make(map[[48]byte]uint64),
+		dirtyFields: make(map[fieldIndex]interface{}, 20),
+		valIdxMap:   make(map[[48]byte]uint64, len(b.valIdxMap)),
 	}
 
 	for i := range b.dirtyFields {
