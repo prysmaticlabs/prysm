@@ -2,6 +2,7 @@ package db
 
 import (
 	"bytes"
+	"fmt"
 	"reflect"
 	"sort"
 
@@ -126,9 +127,15 @@ func (db *Store) DoubleVotes(targetEpoch uint64, validatorIdx uint64, dataRoot [
 	if err != nil {
 		return nil, err
 	}
+	if idxAttestations == nil || len(idxAttestations) == 0 {
+		return nil, fmt.Errorf("can't check nil indexed attestation for double vote")
+	}
 	var slashIdxAtt []*ethpb.IndexedAttestation
 	for _, at := range idxAttestations {
 		root, err := hashutil.HashProto(at.Data)
+		if at.Data == nil {
+			continue
+		}
 		if err != nil {
 			return nil, err
 		}
