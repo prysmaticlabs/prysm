@@ -45,7 +45,8 @@ func TestProcessJustificationAndFinalizationPreCompute_ConsecutiveEpochs(t *test
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(newState.CurrentJustifiedCheckpoint().Root, []byte{byte(64)}) {
+	rt := [32]byte{byte(64)}
+	if !bytes.Equal(newState.CurrentJustifiedCheckpoint().Root, rt[:]) {
 		t.Errorf("Wanted current justified root: %v, got: %v",
 			[]byte{byte(64)}, newState.CurrentJustifiedCheckpoint().Root)
 	}
@@ -99,7 +100,8 @@ func TestProcessJustificationAndFinalizationPreCompute_JustifyCurrentEpoch(t *te
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(newState.CurrentJustifiedCheckpoint().Root, []byte{byte(64)}) {
+	rt := [32]byte{byte(64)}
+	if !bytes.Equal(newState.CurrentJustifiedCheckpoint().Root, rt[:]) {
 		t.Errorf("Wanted current justified root: %v, got: %v",
 			[]byte{byte(64)}, newState.CurrentJustifiedCheckpoint().Root)
 	}
@@ -152,7 +154,8 @@ func TestProcessJustificationAndFinalizationPreCompute_JustifyPrevEpoch(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(newState.CurrentJustifiedCheckpoint().Root, []byte{byte(64)}) {
+	rt := [32]byte{byte(64)}
+	if !bytes.Equal(newState.CurrentJustifiedCheckpoint().Root, rt[:]) {
 		t.Errorf("Wanted current justified root: %v, got: %v",
 			[]byte{byte(64)}, newState.CurrentJustifiedCheckpoint().Root)
 	}
