@@ -316,7 +316,11 @@ func GenerateAttestations(
 	headRoot := make([]byte, 32)
 	// Only calculate head state if its an attestation for the current slot or future slot.
 	if generateHeadState || slot == bState.Slot() {
-		headState, err := state.ProcessSlots(context.Background(), bState, slot+1)
+		headState, err := stateTrie.InitializeFromProtoUnsafe(bState.Clone())
+		if err != nil {
+			return nil, err
+		}
+		headState, err = state.ProcessSlots(context.Background(), headState, slot+1)
 		if err != nil {
 			return nil, err
 		}
@@ -366,6 +370,7 @@ func GenerateAttestations(
 	}
 
 	domain := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester)
+	fmt.Printf("Justified: %d\n", bState.CurrentJustifiedCheckpoint().Epoch)
 	for c := uint64(0); c < committeesPerSlot && c < numToGen; c++ {
 		committee, err := helpers.BeaconCommitteeFromState(bState, slot, c)
 		if err != nil {
