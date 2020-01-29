@@ -5,6 +5,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"strings"
@@ -204,6 +205,12 @@ func selectKeyManager(ctx *cli.Context) (keymanager.KeyManager, error) {
 	opts := ctx.String(flags.KeyManagerOpts.Name)
 	if opts == "" {
 		opts = "{}"
+	} else if !strings.HasPrefix(opts, "{") {
+		fileopts, err := ioutil.ReadFile(opts)
+		if err != nil {
+			return nil, errors.Wrap(err, "Failed to read keymanager options file")
+		}
+		opts = string(fileopts)
 	}
 
 	if manager == "" {
