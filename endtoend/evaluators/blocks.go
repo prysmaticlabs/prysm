@@ -50,7 +50,7 @@ func allAttestationsReceived(client eth.BeaconChainClient) error {
 		blockSlot := blkContainer.Block.Block.Slot
 		slotCommittees := committees.Committees[blockSlot-1]
 		blkAtts := blkContainer.Block.Block.Body.Attestations
-		if blockSlot <= 1 || slotCommittees == nil {
+		if blockSlot < 1 || slotCommittees == nil {
 			continue
 		}
 

@@ -12,7 +12,7 @@ import (
 // ValidatorsAreActive ensures the expected amount of validators are active.
 var ValidatorsAreActive = Evaluator{
 	Name:       "validators_active_epoch_%d",
-	Policy:     onGenesisEpoch,
+	Policy:     afterNthEpoch(0),
 	Evaluation: validatorsAreActive,
 }
 
@@ -21,10 +21,6 @@ var ValidatorsParticipating = Evaluator{
 	Name:       "validators_participating_epoch_%d",
 	Policy:     afterNthEpoch(3),
 	Evaluation: validatorsParticipating,
-}
-
-func onGenesisEpoch(currentEpoch uint64) bool {
-	return currentEpoch < 2
 }
 
 // Not including first epoch because of issues with genesis.
