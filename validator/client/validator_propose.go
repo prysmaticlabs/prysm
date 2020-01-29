@@ -24,7 +24,7 @@ import (
 // sent back to the beacon node for broadcasting.
 func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte) {
 	if slot == 0 {
-		log.Info("Assigned to genesis slot, skipping proposal")
+		log.Debug("Assigned to genesis slot, skipping proposal")
 		return
 	}
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")

@@ -286,7 +286,7 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]pb
 		if duty == nil {
 			continue
 		}
-		if duty.ProposerSlot == slot {
+		if duty.ProposerSlot > 0 && duty.ProposerSlot == slot {
 			roles = append(roles, pb.ValidatorRole_PROPOSER)
 		}
 		if duty.AttesterSlot == slot {

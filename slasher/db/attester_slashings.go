@@ -7,6 +7,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
@@ -99,16 +100,59 @@ func (db *Store) SaveAttesterSlashing(status SlashingStatus, slashing *ethpb.Att
 	}
 	root := hashutil.Hash(enc)
 	key := encodeTypeRoot(SlashingType(Attestation), root)
-	err = db.update(func(tx *bolt.Tx) error {
+	return db.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
 		e := b.Put(key, append([]byte{byte(status)}, enc...))
-		if e != nil {
+		return e
+	})
+}
+
+// SaveAttesterSlashings accepts a slice of slashing proof and its status and writes it to disk.
+func (db *Store) SaveAttesterSlashings(status SlashingStatus, slashings []*ethpb.AttesterSlashing) error {
+	enc := make([][]byte, len(slashings))
+	key := make([][]byte, len(slashings))
+	var err error
+	for i, slashing := range slashings {
+		enc[i], err = proto.Marshal(slashing)
+		if err != nil {
+			return errors.Wrap(err, "failed to marshal")
+		}
+		root := hashutil.Hash(enc[i])
+		key[i] = encodeTypeRoot(SlashingType(Attestation), root)
+	}
+	return db.update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(slashingBucket)
+		for i := 0; i < len(enc); i++ {
+			e := b.Put(key[i], append([]byte{byte(status)}, enc[i]...))
+			if e != nil {
+				return e
+			}
+		}
+		return nil
+	})
+}
+
+// GetLatestEpochDetected returns the latest detected epoch from db.
+func (db *Store) GetLatestEpochDetected() (uint64, error) {
+	var epoch uint64
+	err := db.view(func(tx *bolt.Tx) error {
+		b := tx.Bucket(slashingBucket)
+		enc := b.Get([]byte(latestEpochKey))
+		if enc == nil {
+			epoch = 0
 			return nil
 		}
+		epoch = bytesutil.FromBytes8(enc)
+		return nil
+	})
+	return epoch, err
+}
+
+// SetLatestEpochDetected sets the latest slashing detected epoch in db.
+func (db *Store) SetLatestEpochDetected(epoch uint64) error {
+	return db.update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(slashingBucket)
+		err := b.Put([]byte(latestEpochKey), bytesutil.Bytes8(epoch))
 		return err
 	})
-	if err != nil {
-		return err
-	}
-	return err
 }

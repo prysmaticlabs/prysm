@@ -14,6 +14,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/internal"
@@ -276,7 +277,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconChainClient(ctrl)
+	client := mock.NewMockBeaconChainClient(ctrl)
 	v := validator{
 		keyManager:   testKeyManager,
 		beaconClient: client,
@@ -294,7 +295,7 @@ func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
 func TestCanonicalHeadSlot_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockBeaconChainClient(ctrl)
+	client := mock.NewMockBeaconChainClient(ctrl)
 	v := validator{
 		keyManager:   testKeyManager,
 		beaconClient: client,
@@ -629,5 +630,58 @@ func TestRolesAt_OK(t *testing.T) {
 	}
 	if roleMap[bytesutil.ToBytes48(sks[3].PublicKey().Marshal())][2] != pb.ValidatorRole_AGGREGATOR {
 		t.Errorf("Unexpected validator role. want: ValidatorRole_AGGREGATOR")
+	}
+}
+
+func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
+	v, m, finish := setup(t)
+	defer finish()
+
+	sks := make([]*bls.SecretKey, 3)
+	sks[0] = bls.RandKey()
+	sks[1] = bls.RandKey()
+	sks[2] = bls.RandKey()
+	v.keyManager = keymanager.NewDirect(sks)
+	v.duties = &ethpb.DutiesResponse{
+		Duties: []*ethpb.DutiesResponse_Duty{
+			{
+				CommitteeIndex: 1,
+				AttesterSlot:   0,
+				ProposerSlot:   0,
+				PublicKey:      sks[0].PublicKey().Marshal(),
+			},
+			{
+				CommitteeIndex: 2,
+				AttesterSlot:   4,
+				ProposerSlot:   0,
+				PublicKey:      sks[1].PublicKey().Marshal(),
+			},
+			{
+				CommitteeIndex: 1,
+				AttesterSlot:   3,
+				ProposerSlot:   0,
+				PublicKey:      sks[2].PublicKey().Marshal(),
+			},
+		},
+	}
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+
+	roleMap, err := v.RolesAt(context.Background(), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if roleMap[bytesutil.ToBytes48(sks[0].PublicKey().Marshal())][0] != pb.ValidatorRole_ATTESTER {
+		t.Errorf("Unexpected validator role. want: ValidatorRole_PROPOSER")
+	}
+	if roleMap[bytesutil.ToBytes48(sks[1].PublicKey().Marshal())][0] != pb.ValidatorRole_UNKNOWN {
+		t.Errorf("Unexpected validator role. want: ValidatorRole_ATTESTER")
+	}
+	if roleMap[bytesutil.ToBytes48(sks[2].PublicKey().Marshal())][0] != pb.ValidatorRole_UNKNOWN {
+		t.Errorf("Unexpected validator role. want: UNKNOWN")
 	}
 }

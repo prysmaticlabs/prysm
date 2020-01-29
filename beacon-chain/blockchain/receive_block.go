@@ -14,6 +14,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -140,7 +141,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 				if err != nil {
 					return err
 				}
-				indices, err := helpers.AttestingIndices(a.AggregationBits, committee)
+				indices, err := attestationutil.AttestingIndices(a.AggregationBits, committee)
 				if err != nil {
 					return err
 				}
@@ -248,7 +249,7 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 			if err != nil {
 				return err
 			}
-			indices, err := helpers.AttestingIndices(a.AggregationBits, committee)
+			indices, err := attestationutil.AttestingIndices(a.AggregationBits, committee)
 			if err != nil {
 				return err
 			}
@@ -324,7 +325,7 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 			if err != nil {
 				return err
 			}
-			indices, err := helpers.AttestingIndices(a.AggregationBits, committee)
+			indices, err := attestationutil.AttestingIndices(a.AggregationBits, committee)
 			if err != nil {
 				return err
 			}
