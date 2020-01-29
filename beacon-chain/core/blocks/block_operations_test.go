@@ -1132,7 +1132,7 @@ func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(1, true)
 	var mockRoot [32]byte
-	copy(mockRoot[:], "hello-world-00000000000000000000")
+	copy(mockRoot[:], "hello-world")
 	att := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot[:]},
@@ -1146,7 +1146,7 @@ func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 
 	beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 	ckp := beaconState.CurrentJustifiedCheckpoint()
-	ckp.Root = []byte("hello-world-00000000000000000000")
+	copy(ckp.Root, "hello-world")
 	beaconState.SetCurrentJustifiedCheckpoint(ckp)
 	beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{})
 
