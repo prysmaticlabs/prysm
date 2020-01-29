@@ -93,7 +93,6 @@ func run(ctx context.Context, v Validator) {
 			for id, roles := range allRoles {
 				wg.Add(1)
 				go func(roles []pb.ValidatorRole, id [48]byte) {
-
 					for _, role := range roles {
 						switch role {
 						case pb.ValidatorRole_ATTESTER:
