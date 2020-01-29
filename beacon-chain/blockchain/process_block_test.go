@@ -31,10 +31,7 @@ func TestStore_OnBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	genesisStateRoot, err := (&stateTrie.BeaconState{}).HashTreeRoot()
-	if err != nil {
-		t.Error(err)
-	}
+	genesisStateRoot := [32]byte{}
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
 	if err := db.SaveBlock(ctx, genesis); err != nil {
 		t.Error(err)
@@ -406,7 +403,7 @@ func TestSaveInitState_CanSaveDelete(t *testing.T) {
 
 	for i := uint64(0); i < 64; i++ {
 		b := &ethpb.BeaconBlock{Slot: i}
-		s,  _ := stateTrie.InitializeFromProto(&pb.BeaconState{Slot: i})
+		s, _ := stateTrie.InitializeFromProto(&pb.BeaconState{Slot: i})
 		r, _ := ssz.HashTreeRoot(b)
 		service.initSyncState[r] = s
 	}
@@ -462,7 +459,7 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 	}
 
 	// Could update
-	s , _:= stateTrie.InitializeFromProto(&pb.BeaconState{CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 1, Root: r[:]}})
+	s, _ := stateTrie.InitializeFromProto(&pb.BeaconState{CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 1, Root: r[:]}})
 	if err := service.updateJustified(context.Background(), s); err != nil {
 		t.Fatal(err)
 	}
