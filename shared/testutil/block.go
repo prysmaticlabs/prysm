@@ -302,13 +302,16 @@ func GenerateAttestations(
 	currentEpoch := helpers.SlotToEpoch(slot)
 	attestations := []*ethpb.Attestation{}
 	generateHeadState := false
+	bState, err := stateTrie.InitializeFromProtoUnsafe(bState.Clone())
+	if err != nil {
+		return nil, err
+	}
 	if slot > bState.Slot() {
 		// Going back a slot here so there's no inclusion delay issues.
 		slot--
 		generateHeadState = true
 	}
 
-	var err error
 	targetRoot := make([]byte, 32)
 	headRoot := make([]byte, 32)
 	// Only calculate head state if its an attestation for the current slot or future slot.
