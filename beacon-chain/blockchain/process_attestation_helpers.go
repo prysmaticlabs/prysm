@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -103,7 +104,7 @@ func (s *Service) verifyAttestation(ctx context.Context, baseState *stateTrie.Be
 	if err != nil {
 		return nil, err
 	}
-	indexedAtt, err := blocks.ConvertToIndexed(ctx, a, committee)
+	indexedAtt, err := attestationutil.ConvertToIndexed(ctx, a, committee)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert attestation to indexed attestation")
 	}
@@ -119,7 +120,7 @@ func (s *Service) verifyAttestation(ctx context.Context, baseState *stateTrie.Be
 			if err != nil {
 				return nil, errors.Wrap(err, "could not convert attestation to indexed attestation without cache")
 			}
-			indexedAtt, err = blocks.ConvertToIndexed(ctx, a, committee)
+			indexedAtt, err = attestationutil.ConvertToIndexed(ctx, a, committee)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not convert attestation to indexed attestation")
 			}

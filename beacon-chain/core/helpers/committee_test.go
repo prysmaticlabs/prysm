@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -133,7 +134,7 @@ func TestAttestationParticipants_NoCommitteeCache(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		result, err := AttestingIndices(tt.bitfield, committee)
+		result, err := attestationutil.AttestingIndices(tt.bitfield, committee)
 		if err != nil {
 			t.Errorf("Failed to get attestation participants: %v", err)
 		}
@@ -194,7 +195,7 @@ func TestAttestingIndicesWithBeaconCommitteeWithoutCache_Ok(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		result, err := AttestingIndices(tt.bitfield, committee)
+		result, err := attestationutil.AttestingIndices(tt.bitfield, committee)
 		if err != nil {
 			t.Errorf("Failed to get attestation participants: %v", err)
 		}
@@ -227,7 +228,7 @@ func TestAttestationParticipants_EmptyBitfield(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	indices, err := AttestingIndices(bitfield.NewBitlist(128), committee)
+	indices, err := attestationutil.AttestingIndices(bitfield.NewBitlist(128), committee)
 	if err != nil {
 		t.Fatalf("attesting indices failed: %v", err)
 	}

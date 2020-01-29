@@ -35,6 +35,7 @@ go_test(
         "//beacon-chain/sync/initial-sync/testing:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/beacon/rpc/v1:go_default_library",
+        "//shared/attestationutil:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",

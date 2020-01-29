@@ -65,6 +65,7 @@ go_test(
         "//shared/bytesutil:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/keystore:go_default_library",
+        "//shared/mock:go_default_library",
         "//shared/params:go_default_library",
         "//shared/roughtime:go_default_library",
         "//shared/testutil:go_default_library",

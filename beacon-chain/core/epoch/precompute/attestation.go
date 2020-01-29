@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -46,7 +47,7 @@ func ProcessAttestations(
 		if err != nil {
 			return nil, nil, err
 		}
-		indices, err := helpers.AttestingIndices(a.AggregationBits, committee)
+		indices, err := attestationutil.AttestingIndices(a.AggregationBits, committee)
 		if err != nil {
 			return nil, nil, err
 		}
