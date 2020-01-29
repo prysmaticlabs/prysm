@@ -1146,7 +1146,7 @@ func TestProcessAttestationsNoVerify_OK(t *testing.T) {
 
 	beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 	ckp := beaconState.CurrentJustifiedCheckpoint()
-	ckp.Root = []byte("hello-world")
+	copy(ckp.Root, "hello-world")
 	beaconState.SetCurrentJustifiedCheckpoint(ckp)
 	beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{})
 
@@ -1717,7 +1717,12 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 	state.SetSlot(state.Slot() + (params.BeaconConfig().PersistentCommitteePeriod * params.BeaconConfig().SlotsPerEpoch))
 
 	priv := bls.RandKey()
-	state.Validators()[0].PublicKey = priv.PublicKey().Marshal()[:]
+	val, err := state.ValidatorAtIndex(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	val.PublicKey = priv.PublicKey().Marshal()[:]
+	state.UpdateValidatorAtIndex(0, val)
 	signingRoot, err := ssz.HashTreeRoot(exits[0].Exit)
 	if err != nil {
 		t.Error(err)
