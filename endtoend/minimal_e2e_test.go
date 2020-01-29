@@ -22,7 +22,6 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 		evaluators: []ev.Evaluator{
 			ev.ValidatorsAreActive,
 			ev.ValidatorsParticipating,
-			ev.AllAttestationsReceived,
 			ev.FinalizationOccurs,
 		},
 	}
