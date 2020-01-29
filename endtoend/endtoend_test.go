@@ -91,7 +91,10 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 				t.Fatal(err)
 			}
 			ticker.Done()
-			return
+			if t.Failed() {
+				return
+			}
+			break
 		}
 	}
 
