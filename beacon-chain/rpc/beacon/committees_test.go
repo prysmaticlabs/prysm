@@ -101,6 +101,7 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
+	helpers.ClearCache()
 
 	numValidators := 128
 	headState := setupActiveValidators(t, db, numValidators)
@@ -126,7 +127,6 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	helpers.ClearCache()
 	wanted := make(map[uint64]*ethpb.BeaconCommittees_CommitteesList)
 	startSlot := helpers.StartSlot(1)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
