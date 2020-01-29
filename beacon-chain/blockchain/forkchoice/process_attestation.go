@@ -151,6 +151,16 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) ([]uint
 
 // verifyAttPreState validates input attested check point has a valid pre-state.
 func (s *Store) verifyAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*pb.BeaconState, error) {
+	s.checkpointStateLock.Lock()
+	defer s.checkpointStateLock.Unlock()
+	cachedState, err := s.checkpointState.StateByCheckpoint(c)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get cached checkpoint state")
+	}
+	if cachedState != nil {
+		return cachedState, nil
+	}
+
 	baseState, err := s.db.State(ctx, bytesutil.ToBytes32(c.Root))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get pre state for slot %d", helpers.StartSlot(c.Epoch))
@@ -158,6 +168,14 @@ func (s *Store) verifyAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*pb
 	if baseState == nil {
 		return nil, fmt.Errorf("pre state of target block %d does not exist", helpers.StartSlot(c.Epoch))
 	}
+
+	if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
+		Checkpoint: c,
+		State:      baseState,
+	}); err != nil {
+		return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
+	}
+
 	return baseState, nil
 }
 
@@ -196,20 +214,10 @@ func (s *Store) saveCheckpointState(ctx context.Context, baseState *pb.BeaconSta
 	ctx, span := trace.StartSpan(ctx, "forkchoice.saveCheckpointState")
 	defer span.End()
 
-	s.checkpointStateLock.Lock()
-	defer s.checkpointStateLock.Unlock()
-	cachedState, err := s.checkpointState.StateByCheckpoint(c)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get cached checkpoint state")
-	}
-	if cachedState != nil {
-		return cachedState, nil
-	}
-
 	// Advance slots only when it's higher than current state slot.
 	if helpers.StartSlot(c.Epoch) > baseState.Slot {
 		stateCopy := proto.Clone(baseState).(*pb.BeaconState)
-		stateCopy, err = state.ProcessSlots(ctx, stateCopy, helpers.StartSlot(c.Epoch))
+		stateCopy, err := state.ProcessSlots(ctx, stateCopy, helpers.StartSlot(c.Epoch))
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
 		}
