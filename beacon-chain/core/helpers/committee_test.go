@@ -174,17 +174,17 @@ func TestAttestingIndicesWithBeaconCommitteeWithoutCache_Ok(t *testing.T) {
 		{
 			attestationSlot: 3,
 			bitfield:        bitfield.Bitlist{0x07},
-			wanted:          []uint64{355, 416},
+			wanted:          []uint64{344, 221},
 		},
 		{
 			attestationSlot: 2,
 			bitfield:        bitfield.Bitlist{0x05},
-			wanted:          []uint64{447},
+			wanted:          []uint64{207},
 		},
 		{
 			attestationSlot: 11,
 			bitfield:        bitfield.Bitlist{0x07},
-			wanted:          []uint64{67, 508},
+			wanted:          []uint64{409, 213},
 		},
 	}
 
@@ -424,29 +424,29 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 	}{
 		{
 			index:          0,
-			slot:           92,
-			committee:      []uint64{46, 0},
+			slot:           78,
+			committee:      []uint64{0, 38},
 			committeeIndex: 0,
 			isProposer:     false,
 		},
 		{
 			index:          1,
-			slot:           70,
-			committee:      []uint64{1, 58},
+			slot:           71,
+			committee:      []uint64{1, 4},
 			committeeIndex: 0,
 			isProposer:     true,
-			proposerSlot:   91,
+			proposerSlot:   79,
 		},
 		{
 			index:          11,
-			slot:           64,
-			committee:      []uint64{30, 11},
+			slot:           90,
+			committee:      []uint64{31, 11},
 			committeeIndex: 0,
 			isProposer:     false,
 		}, {
 			index:          2,
-			slot:           114, // 3rd epoch has more active validators
-			committee:      []uint64{2, 6, 35, 31},
+			slot:           127, // 3rd epoch has more active validators
+			committee:      []uint64{89, 2, 81, 5},
 			committeeIndex: 0,
 			isProposer:     false,
 		},

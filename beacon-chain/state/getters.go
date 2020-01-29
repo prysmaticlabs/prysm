@@ -281,7 +281,7 @@ func (b *BeaconState) ValidatorAtIndex(idx uint64) (*ethpb.Validator, error) {
 	val := b.state.Validators[idx]
 	pubKey := make([]byte, len(val.PublicKey))
 	copy(pubKey, val.PublicKey)
- 	withdrawalCreds := make([]byte, len(val.WithdrawalCredentials))
+	withdrawalCreds := make([]byte, len(val.WithdrawalCredentials))
 	copy(withdrawalCreds, val.WithdrawalCredentials)
 	return &ethpb.Validator{
 		PublicKey:                  pubKey,

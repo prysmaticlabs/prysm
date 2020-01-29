@@ -156,9 +156,10 @@ func ComputeCommittee(
 	end := sliceutil.SplitOffset(validatorCount, count, index+1)
 
 	// Save the shuffled indices in cache, this is only needed once per epoch or once per new committee index.
-	shuffledIndices := make([]uint64, end-start)
-	copy(shuffledIndices, indices[start:end])
-	return UnshuffleList(shuffledIndices, seed)
+	shuffledIndices := make([]uint64, len(indices))
+	copy(shuffledIndices, indices)
+	shuffledList, err := UnshuffleList(shuffledIndices, seed)
+	return shuffledList[start:end], err
 }
 
 // AttestingIndices returns the attesting participants indices from the attestation data. The
