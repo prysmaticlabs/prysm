@@ -85,6 +85,9 @@ func ProcessRegistryUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconStat
 		if helpers.IsEligibleForActivationQueue(validator) {
 			validator.ActivationEligibilityEpoch = helpers.CurrentEpoch(state) + 1
 		}
+		if err := state.UpdateValidatorAtIndex(uint64(idx), validator); err != nil {
+			return nil, err
+		}
 
 		// Process the validators for ejection.
 		isActive := helpers.IsActiveValidator(validator, currentEpoch)
@@ -125,11 +128,14 @@ func ProcessRegistryUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconStat
 	}
 
 	for _, index := range activationQ[:limit] {
-		validator := vals[index]
+		validator, err := state.ValidatorAtIndex(index)
+		if err != nil {
+			return nil, err
+		}
 		validator.ActivationEpoch = helpers.DelayedActivationExitEpoch(currentEpoch)
-	}
-	if err := state.SetValidators(vals); err != nil {
-		return nil, err
+		if err := state.UpdateValidatorAtIndex(index, validator); err != nil {
+			return nil, err
+		}
 	}
 	return state, nil
 }
