@@ -12,7 +12,7 @@ import (
 // ValidatorsAreActive ensures the expected amount of validators are active.
 var ValidatorsAreActive = Evaluator{
 	Name:       "validators_active_epoch_%d",
-	Policy:     afterNthEpoch(0),
+	Policy:     afterNthEpoch(1),
 	Evaluation: validatorsAreActive,
 }
 

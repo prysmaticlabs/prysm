@@ -15,7 +15,7 @@ import (
 // in the next block.
 var AllAttestationsReceived = Evaluator{
 	Name:       "att_attestations_received_%d",
-	Policy:     afterNthEpoch(0),
+	Policy:     afterNthEpoch(1),
 	Evaluation: allAttestationsReceived,
 }
 
@@ -60,7 +60,6 @@ func allAttestationsReceived(client eth.BeaconChainClient) error {
 		if expectedAtts != len(blkAtts) {
 			expectedAtts *= 2
 		}
-		fmt.Printf("Block %d has %d attesations\n", blockSlot, len(blkAtts))
 		if expectedAtts != len(blkAtts) {
 			return fmt.Errorf(
 				"expected block slot %d to have %d attestations, received %d",
