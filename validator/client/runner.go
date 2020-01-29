@@ -58,7 +58,6 @@ func run(ctx context.Context, v Validator) {
 	if err := v.UpdateDuties(ctx, headSlot); err != nil {
 		handleAssignmentError(err, headSlot)
 	}
-
 	for {
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
 

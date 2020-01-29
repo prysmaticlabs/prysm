@@ -19,7 +19,7 @@ var ValidatorsAreActive = Evaluator{
 // ValidatorsParticipating ensures the expected amount of validators are active.
 var ValidatorsParticipating = Evaluator{
 	Name:       "validators_participating_epoch_%d",
-	Policy:     afterNthEpoch(3),
+	Policy:     afterNthEpoch(2),
 	Evaluation: validatorsParticipating,
 }
 
