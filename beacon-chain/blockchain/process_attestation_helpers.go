@@ -44,7 +44,6 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*pb.
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
 		}
-
 	}
 
 	if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{

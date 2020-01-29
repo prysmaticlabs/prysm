@@ -82,7 +82,8 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 		return nil, ErrTargetRootNotInDB
 	}
 
-	// Verify attestation target has had a valid pre state produced by the target block.
+	// Retrieve attestation's data beacon block pre state. Advance pre state to latest epoch if necessary and
+	// save it to the cache.
 	baseState, err := s.getAttPreState(ctx, tgt)
 	if err != nil {
 		return nil, err
