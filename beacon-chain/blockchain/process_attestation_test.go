@@ -201,7 +201,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	service.finalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 	service.prevFinalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 	cp3 := &ethpb.Checkpoint{Epoch: 1, Root: []byte{'C'}}
-
+	service.beaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'C'}))
 	s3, err := service.getAttPreState(ctx, cp3)
 	if err != nil {
 		t.Fatal(err)
