@@ -125,11 +125,14 @@ func ProcessRegistryUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconStat
 	}
 
 	for _, index := range activationQ[:limit] {
-		validator := vals[index]
+		validator, err := state.ValidatorAtIndex(index)
+		if err != nil {
+			return nil, err
+		}
 		validator.ActivationEpoch = helpers.DelayedActivationExitEpoch(currentEpoch)
-	}
-	if err := state.SetValidators(vals); err != nil {
-		return nil, err
+		if err := state.UpdateValidatorAtIndex(index, validator); err != nil {
+			return nil, err
+		}
 	}
 	return state, nil
 }
