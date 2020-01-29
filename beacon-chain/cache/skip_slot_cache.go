@@ -80,7 +80,7 @@ func (c *SkipSlotCache) Get(ctx context.Context, slot uint64) (*stateTrie.Beacon
 
 	if exists && item != nil {
 		skipSlotCacheHit.Inc()
-		return stateTrie.InitializeFromProto(item.(*stateTrie.BeaconState).Clone())
+		return item.(*stateTrie.BeaconState).Copy(), nil
 	}
 	skipSlotCacheMiss.Inc()
 	return nil, nil
@@ -123,7 +123,7 @@ func (c *SkipSlotCache) Put(ctx context.Context, slot uint64, state *stateTrie.B
 		return nil
 	}
 
-	// Clone state so cached value is not mutated.
+	// CloneInnerState state so cached value is not mutated.
 	c.cache.Add(slot, state)
 
 	return nil

@@ -39,18 +39,42 @@ func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
 // InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer
 // and sets it as the inner state of the BeaconState type.
 func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
-	fieldRoots, err := stateutil.ComputeFieldRoots(st)
-	if err != nil {
-		return nil, err
+	b := &BeaconState{
+		state:       st,
+		dirtyFields: make(map[fieldIndex]interface{}),
+		valIdxMap:   coreutils.ValidatorIndexMap(st.Validators),
 	}
-	layers := merkleize(fieldRoots)
-	valMap := coreutils.ValidatorIndexMap(st.Validators)
-	return &BeaconState{
-		state:        st,
-		merkleLayers: layers,
-		dirtyFields:  make(map[fieldIndex]interface{}),
-		valIdxMap:    valMap,
-	}, nil
+	return b, nil
+}
+
+// Copy returns a deep copy of the beacon state.
+func (b *BeaconState) Copy() *BeaconState {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+	dst := &BeaconState{
+		state:       proto.Clone(b.state).(*pbp2p.BeaconState),
+		dirtyFields: make(map[fieldIndex]interface{}),
+		valIdxMap:   make(map[[48]byte]uint64),
+	}
+
+	for i := range b.dirtyFields {
+		dst.markFieldAsDirty(i)
+	}
+
+	for i := range b.valIdxMap {
+		dst.valIdxMap[i] = b.valIdxMap[i]
+	}
+
+	dst.merkleLayers = make([][][]byte, len(b.merkleLayers))
+	for i, layer := range b.merkleLayers {
+		dst.merkleLayers[i] = make([][]byte, len(layer))
+		for j, content := range layer {
+			dst.merkleLayers[i][j] = make([]byte, len(content))
+			copy(dst.merkleLayers[i][j], content)
+		}
+	}
+
+	return dst
 }
 
 // HashTreeRoot of the beacon state retrieves the Merkle root of the trie
@@ -58,8 +82,15 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 func (b *BeaconState) HashTreeRoot() ([32]byte, error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
-	if len(b.merkleLayers) == 0 {
-		return [32]byte{}, errors.New("state merkle layers not initialized")
+
+	if b.merkleLayers == nil || len(b.merkleLayers) == 0 {
+		fieldRoots, err := stateutil.ComputeFieldRoots(b.state)
+		if err != nil {
+			return [32]byte{}, err
+		}
+		layers := merkleize(fieldRoots)
+		b.merkleLayers = layers
+		b.dirtyFields = make(map[fieldIndex]interface{})
 	}
 
 	for field := range b.dirtyFields {

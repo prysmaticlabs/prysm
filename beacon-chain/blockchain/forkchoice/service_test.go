@@ -65,7 +65,7 @@ func TestStore_GenesisStoreOk(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(cachedState, genesisState) {
+	if !reflect.DeepEqual(cachedState.InnerStateUnsafe(), genesisState.InnerStateUnsafe()) {
 		t.Error("Incorrect genesis state cached")
 	}
 }
@@ -380,7 +380,7 @@ func TestCacheGenesisState_Correct(t *testing.T) {
 	}
 
 	for _, state := range store.initSyncState {
-		if !reflect.DeepEqual(s, state) {
+		if !reflect.DeepEqual(s.InnerStateUnsafe(), state.InnerStateUnsafe()) {
 			t.Error("Did not get wanted state")
 		}
 	}

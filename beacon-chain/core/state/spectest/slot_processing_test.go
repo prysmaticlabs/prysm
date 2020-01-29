@@ -60,7 +60,7 @@ func runSlotProcessingTests(t *testing.T, config string) {
 				t.Fatal(err)
 			}
 
-			if !proto.Equal(postState.Clone(), postBeaconState) {
+			if !proto.Equal(postState.CloneInnerState(), postBeaconState) {
 				diff, _ := messagediff.PrettyDiff(beaconState, postBeaconState)
 				t.Fatalf("Post state does not match expected. Diff between states %s", diff)
 			}

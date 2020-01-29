@@ -163,7 +163,7 @@ func BenchmarkHashTreeRootState_FullState(b *testing.B) {
 func clonedStates(beaconState *beaconstate.BeaconState) []*beaconstate.BeaconState {
 	clonedStates := make([]*beaconstate.BeaconState, runAmount)
 	for i := 0; i < runAmount; i++ {
-		c, err := beaconstate.InitializeFromProto(beaconState.Clone())
+		c, err := beaconstate.InitializeFromProto(beaconState.CloneInnerState())
 		if err != nil {
 			panic(err)
 		}

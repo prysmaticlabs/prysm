@@ -311,8 +311,9 @@ func (s *Store) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (*s
 			if preState == nil {
 				return nil, fmt.Errorf("pre state of slot %d does not exist", b.Slot)
 			}
+			return preState, nil // No copy needed from newly hydrated DB object.
 		}
-		return stateTrie.InitializeFromProto(preState.Clone())
+		return preState.Copy(), nil
 	}
 	preState, err := s.db.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
 	if err != nil {

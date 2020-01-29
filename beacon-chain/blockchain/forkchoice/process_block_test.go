@@ -471,7 +471,7 @@ func TestCachedPreState_CanGetFromCacheWithFeature(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(s, received) {
+	if !reflect.DeepEqual(s.InnerStateUnsafe(), received.InnerStateUnsafe()) {
 		t.Error("cached state not the same")
 	}
 }

@@ -76,10 +76,7 @@ func (s *Service) saveCheckpointState(ctx context.Context, baseState *stateTrie.
 
 	// Advance slots only when it's higher than current state slot.
 	if helpers.StartSlot(c.Epoch) > baseState.Slot() {
-		stateCopy, err := stateTrie.InitializeFromProto(baseState.Clone())
-		if err != nil {
-			return nil, err
-		}
+		stateCopy := baseState.Copy()
 		stateCopy, err = state.ProcessSlots(ctx, stateCopy, helpers.StartSlot(c.Epoch))
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
