@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -105,6 +106,10 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 				return nil, errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
 					startSlot, endSlot)
 			}
+		}
+
+		if featureconfig.Get().ProtoArrayForkChoice {
+			s.forkChoiceStore.Prune(ctx, bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root))
 		}
 
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
