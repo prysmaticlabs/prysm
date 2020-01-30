@@ -10,6 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -75,12 +77,23 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 	targetEpoch := helpers.CurrentEpoch(headState)
 	epochStartSlot := helpers.StartSlot(targetEpoch)
 	targetRoot := make([]byte, 32)
-	if req.Slot == 0 || epochStartSlot == headState.Slot() {
+	if epochStartSlot == headState.Slot() {
 		targetRoot = headRoot[:]
 	} else {
 		targetRoot, err = helpers.BlockRootAtSlot(headState, epochStartSlot)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get target block for slot %d: %v", epochStartSlot, err)
+		}
+		if bytesutil.ToBytes32(targetRoot) == params.BeaconConfig().ZeroHash {
+			b, err := vs.BeaconDB.HeadBlock(ctx)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not get head block: %v", err)
+			}
+			r, err := ssz.HashTreeRoot(b.Block)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not hash head block: %v", err)
+			}
+			targetRoot = r[:]
 		}
 	}
 
