@@ -165,6 +165,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	}
 
 	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: []byte{'A'}}
+
 	store.db.SaveState(ctx, ss, bytesutil.ToBytes32([]byte{'A'}))
 	s1, err := store.getAttPreState(ctx, cp1)
 	if err != nil {
@@ -264,6 +265,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if baseState.Slot() != returned.Slot() {
 		t.Error("Incorrectly returned base state")
 	}
