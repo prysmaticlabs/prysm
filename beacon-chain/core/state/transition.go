@@ -268,7 +268,8 @@ func ProcessSlots(ctx context.Context, state *stateTrie.BeaconState, slot uint64
 	if err != nil {
 		return nil, err
 	}
-	if cachedState != nil && cachedState.Slot() <= slot {
+
+	if cachedState != nil && cachedState.Slot() < slot {
 		highestSlot = cachedState.Slot()
 		state = cachedState
 	}
