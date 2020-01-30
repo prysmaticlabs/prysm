@@ -68,8 +68,8 @@ func TestValidatorStatus_Deposited(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get validator status %v", err)
 	}
-	if resp.Status != ethpb.ValidatorStatus_DEPOSIT_RECEIVED {
-		t.Errorf("Wanted %v, got %v", ethpb.ValidatorStatus_DEPOSIT_RECEIVED, resp.Status)
+	if resp.Status != ethpb.ValidatorStatus_DEPOSITED {
+		t.Errorf("Wanted %v, got %v", ethpb.ValidatorStatus_DEPOSITED, resp.Status)
 	}
 }
 
@@ -146,8 +146,8 @@ func TestValidatorStatus_Pending(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get validator status %v", err)
 	}
-	if resp.Status != ethpb.ValidatorStatus_PENDING_ACTIVE {
-		t.Errorf("Wanted %v, got %v", ethpb.ValidatorStatus_PENDING_ACTIVE, resp.Status)
+	if resp.Status != ethpb.ValidatorStatus_PENDING {
+		t.Errorf("Wanted %v, got %v", ethpb.ValidatorStatus_PENDING, resp.Status)
 	}
 }
 
@@ -310,12 +310,12 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get validator status %v", err)
 	}
-	if resp.Status != ethpb.ValidatorStatus_INITIATED_EXIT {
-		t.Errorf("Wanted %v, got %v", ethpb.ValidatorStatus_INITIATED_EXIT, resp.Status)
+	if resp.Status != ethpb.ValidatorStatus_EXITING {
+		t.Errorf("Wanted %v, got %v", ethpb.ValidatorStatus_EXITING, resp.Status)
 	}
 }
 
-func TestValidatorStatus_Exited_Slashed(t *testing.T) {
+func TestValidatorStatus_Slashing(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
@@ -585,7 +585,7 @@ func TestMultipleValidatorStatus_OK(t *testing.T) {
 			response[1].PublicKey)
 	}
 
-	if response[2].Status.Status != ethpb.ValidatorStatus_DEPOSIT_RECEIVED {
+	if response[2].Status.Status != ethpb.ValidatorStatus_DEPOSITED {
 		t.Errorf("Validator with pubkey %#x is not activated and instead has this status: %s",
 			response[2].PublicKey, response[2].Status.Status.String())
 	}
@@ -702,8 +702,8 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get validator status %v", err)
 	}
-	if resp.Status != ethpb.ValidatorStatus_PENDING_ACTIVE {
-		t.Errorf("Wanted %v, got %v", ethpb.ValidatorStatus_PENDING_ACTIVE, resp.Status)
+	if resp.Status != ethpb.ValidatorStatus_PENDING {
+		t.Errorf("Wanted %v, got %v", ethpb.ValidatorStatus_PENDING, resp.Status)
 	}
 	if resp.PositionInActivationQueue != 2 {
 		t.Errorf("Expected Position in activation queue of %d but instead got %d", 2, resp.PositionInActivationQueue)
