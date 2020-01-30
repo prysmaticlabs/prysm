@@ -4,7 +4,6 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -92,7 +91,7 @@ func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (*pb.Beac
 		return nil, ErrNotCheckpointState
 	}
 
-	return proto.Clone(info.State).(*pb.BeaconState), nil
+	return info.State, nil
 }
 
 // AddCheckpointState adds CheckpointState object to the cache. This method also trims the least
