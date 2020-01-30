@@ -243,54 +243,53 @@ func TestSeenAttestations_PresentInCache(t *testing.T) {
 
 func TestService_seen(t *testing.T) {
 	// Attestation are checked in order of this list.
-	tests := []struct{
-		att *ethpb.Attestation
+	tests := []struct {
+		att  *ethpb.Attestation
 		want bool
 	}{
 		{
 			att: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0b11011},
-				Data:            &ethpb.AttestationData{Slot:1},
+				Data:            &ethpb.AttestationData{Slot: 1},
 			},
 			want: false,
 		},
 		{
 			att: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0b11011},
-				Data:            &ethpb.AttestationData{Slot:1},
+				Data:            &ethpb.AttestationData{Slot: 1},
 			},
 			want: true, // Exact same attestation should return true
 		},
 		{
 			att: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0b10101},
-				Data:            &ethpb.AttestationData{Slot:1},
+				Data:            &ethpb.AttestationData{Slot: 1},
 			},
 			want: false, // Haven't seen the bit at index 2 yet.
 		},
 		{
 			att: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0b11111},
-				Data:            &ethpb.AttestationData{Slot:1},
+				Data:            &ethpb.AttestationData{Slot: 1},
 			},
 			want: true, // We've full committee at this point.
 		},
 		{
 			att: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0b11111},
-				Data:            &ethpb.AttestationData{Slot:2},
+				Data:            &ethpb.AttestationData{Slot: 2},
 			},
 			want: false, // Different root is different bitlist.
 		},
 		{
 			att: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0b11111001},
-				Data:            &ethpb.AttestationData{Slot:1},
+				Data:            &ethpb.AttestationData{Slot: 1},
 			},
 			want: false, // Sanity test that an attestation of different lengths does not panic.
 		},
 	}
-
 
 	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
 	if err != nil {
