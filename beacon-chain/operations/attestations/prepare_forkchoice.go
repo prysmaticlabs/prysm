@@ -3,7 +3,6 @@ package attestations
 import (
 	"context"
 	"errors"
-	"sort"
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -102,40 +101,23 @@ func (s *Service) seen(att *ethpb.Attestation) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	savedBits, hasRoot := s.forkChoiceProcessedRoots.Get(string(attRoot[:]))
-	savedBitLists, ok := savedBits.([]*bitfield.Bitlist)
-
-	if hasRoot {
-		// If we have already see the att data root before, and the cached list of aggregation bit fields
-		// present in the cache.
+	incomingBits := att.AggregationBits
+	savedBits, ok := s.forkChoiceProcessedRoots.Get(string(attRoot[:]))
+	if ok {
+		savedBitlist, ok := savedBits.(bitfield.Bitlist)
 		if !ok {
-			return false, errors.New("not bit fields")
+			return false, errors.New("not a bit field")
 		}
-		// Loop through every bit lists in the cached list, if one of them contains the new bit list and
-		// has the same length.
-		for _, bitList := range savedBitLists {
-			if bitList.Len() == att.AggregationBits.Len() && bitList.Contains(att.AggregationBits) {
+		if savedBitlist.Len() == incomingBits.Len() {
+			// Returns true if the node has seen all the bits in the new bit field of the incoming attestation.
+			if savedBitlist.Contains(incomingBits) {
 				return true, nil
 			}
+			// Update the bit fields by Or'ing them with the new ones.
+			incomingBits = incomingBits.Or(savedBitlist)
 		}
-	} else {
-		// If we have not seen the att data root before, we can be sure the cached list is empty and start
-		// a new cache list.
-		savedBitLists := make([]*bitfield.Bitlist, 0)
-		savedBitLists = append(savedBitLists, &att.AggregationBits)
-		s.forkChoiceProcessedRoots.Set(string(attRoot[:]), savedBitLists, 1 /*cost*/)
-
-		return false, nil
 	}
 
-	// If it was a miss, save the new bit list and sort the cached list with bit count, this can give
-	// faster hit time next time around.
-	savedBitLists = append(savedBitLists, &att.AggregationBits)
-	sort.Slice(savedBitLists, func(i, j int) bool {
-		return savedBitLists[i].Count() < savedBitLists[j].Count()
-	})
-
-	s.forkChoiceProcessedRoots.Set(string(attRoot[:]), savedBitLists, 1 /*cost*/)
-
+	s.forkChoiceProcessedRoots.Set(string(attRoot[:]), incomingBits, 1 /*cost*/)
 	return false, nil
 }
