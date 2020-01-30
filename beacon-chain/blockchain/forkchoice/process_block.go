@@ -313,7 +313,7 @@ func (s *Store) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (*s
 			}
 			return preState, nil // No copy needed from newly hydrated DB object.
 		}
-		return preState.Copy(), nil
+		return preState, nil
 	}
 	preState, err := s.db.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
 	if err != nil {
