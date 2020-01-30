@@ -175,7 +175,7 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 			log.Info("Validator exited")
 			continue
 		}
-		if status.Status.Status == ethpb.ValidatorStatus_DEPOSIT_RECEIVED {
+		if status.Status.Status == ethpb.ValidatorStatus_DEPOSITED {
 			log.WithField("expectedInclusionSlot", status.Status.DepositInclusionSlot).Info(
 				"Deposit for validator received but not processed into state")
 			continue
