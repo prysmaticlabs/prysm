@@ -15,6 +15,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/forkchoice"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
@@ -62,6 +63,16 @@ type Service struct {
 	epochParticipation     map[uint64]*precompute.Balance
 	epochParticipationLock sync.RWMutex
 	forkChoiceStore        f.ForkChoicer
+	justifiedCheckpt       *ethpb.Checkpoint
+	bestJustifiedCheckpt   *ethpb.Checkpoint
+	finalizedCheckpt       *ethpb.Checkpoint
+	prevFinalizedCheckpt   *ethpb.Checkpoint
+	nextEpochBoundarySlot  uint64
+	voteLock               sync.RWMutex
+	initSyncState          map[[32]byte]*pb.BeaconState
+	initSyncStateLock      sync.RWMutex
+	checkpointState        *cache.CheckpointStateCache
+	checkpointStateLock    sync.Mutex
 }
 
 // Config options for the service.
@@ -98,6 +109,8 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		stateNotifier:      cfg.StateNotifier,
 		epochParticipation: make(map[uint64]*precompute.Balance),
 		forkChoiceStore:    cfg.ForkChoiceStore,
+		initSyncState:      make(map[[32]byte]*pb.BeaconState),
+		checkpointState:    cache.NewCheckpointStateCache(),
 	}, nil
 }
 
@@ -143,9 +156,18 @@ func (s *Service) Start() {
 		if err := s.forkChoiceStoreOld.GenesisStore(ctx, justifiedCheckpoint, finalizedCheckpoint); err != nil {
 			log.Fatalf("Could not start fork choice service: %v", err)
 		}
-		if err := s.resumeForkChoice(ctx, justifiedCheckpoint, finalizedCheckpoint); err != nil {
-			log.Fatalf("Could not resume fork choice: %v", err)
+
+		if featureconfig.Get().ProtoArrayForkChoice {
+			s.justifiedCheckpt = proto.Clone(justifiedCheckpoint).(*ethpb.Checkpoint)
+			s.bestJustifiedCheckpt = proto.Clone(justifiedCheckpoint).(*ethpb.Checkpoint)
+			s.finalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
+			s.prevFinalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
+
+			if err := s.resumeForkChoice(ctx, justifiedCheckpoint, finalizedCheckpoint); err != nil {
+				log.Fatalf("Could not resume fork choice: %v", err)
+			}
 		}
+
 		s.stateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.Initialized,
 			Data: &statefeed.InitializedData{
@@ -291,6 +313,10 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
+	if b == nil || b.Block == nil {
+		return errors.New("cannot save nil head block")
+	}
+
 	s.headSlot = b.Block.Slot
 
 	s.canonicalRoots[b.Block.Slot] = r[:]
@@ -359,6 +385,11 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconSt
 
 	// Add the genesis block to the fork choice store.
 	if featureconfig.Get().ProtoArrayForkChoice {
+		s.justifiedCheckpt = proto.Clone(genesisCheckpoint).(*ethpb.Checkpoint)
+		s.bestJustifiedCheckpt = proto.Clone(genesisCheckpoint).(*ethpb.Checkpoint)
+		s.finalizedCheckpt = proto.Clone(genesisCheckpoint).(*ethpb.Checkpoint)
+		s.prevFinalizedCheckpt = proto.Clone(genesisCheckpoint).(*ethpb.Checkpoint)
+
 		if err := s.forkChoiceStore.ProcessBlock(ctx,
 			genesisBlk.Block.Slot,
 			genesisBlkRoot,

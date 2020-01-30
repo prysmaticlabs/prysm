@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -90,8 +91,9 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) ([]uint
 		return nil, ErrTargetRootNotInDB
 	}
 
-	// Verify attestation target has had a valid pre state produced by the target block.
-	baseState, err := s.verifyAttPreState(ctx, tgt)
+	// Retrieve attestation's data beacon block pre state. Advance pre state to latest epoch if necessary and
+	// save it to the cache.
+	baseState, err := s.getAttPreState(ctx, tgt)
 	if err != nil {
 		return nil, err
 	}
@@ -109,12 +111,6 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) ([]uint
 	// Verify attestation beacon block is known and not from the future.
 	if err := s.verifyBeaconBlock(ctx, a.Data); err != nil {
 		return nil, errors.Wrap(err, "could not verify attestation beacon block")
-	}
-
-	// Store target checkpoint state if not yet seen.
-	baseState, err = s.saveCheckpointState(ctx, baseState, tgt)
-	if err != nil {
-		return nil, err
 	}
 
 	// Verify attestations can only affect the fork choice of subsequent slots.
@@ -148,8 +144,19 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) ([]uint
 	return indexedAtt.AttestingIndices, nil
 }
 
-// verifyAttPreState validates input attested check point has a valid pre-state.
-func (s *Store) verifyAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*pb.BeaconState, error) {
+// getAttPreState retrieves the att pre state by either from the cache or the DB.
+func (s *Store) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*pb.BeaconState, error) {
+	s.checkpointStateLock.Lock()
+	defer s.checkpointStateLock.Unlock()
+
+	cachedState, err := s.checkpointState.StateByCheckpoint(c)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get cached checkpoint state")
+	}
+	if cachedState != nil {
+		return cachedState, nil
+	}
+
 	baseState, err := s.db.State(ctx, bytesutil.ToBytes32(c.Root))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get pre state for slot %d", helpers.StartSlot(c.Epoch))
@@ -157,7 +164,25 @@ func (s *Store) verifyAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*pb
 	if baseState == nil {
 		return nil, fmt.Errorf("pre state of target block %d does not exist", helpers.StartSlot(c.Epoch))
 	}
-	return baseState, nil
+
+	stateCopy := proto.Clone(baseState).(*pb.BeaconState)
+
+	if helpers.StartSlot(c.Epoch) > stateCopy.Slot {
+		stateCopy, err = state.ProcessSlots(ctx, stateCopy, helpers.StartSlot(c.Epoch))
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
+		}
+
+	}
+
+	if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
+		Checkpoint: c,
+		State:      stateCopy,
+	}); err != nil {
+		return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
+	}
+
+	return stateCopy, nil
 }
 
 // verifyAttTargetEpoch validates attestation is from the current or previous epoch.
@@ -190,49 +215,13 @@ func (s *Store) verifyBeaconBlock(ctx context.Context, data *ethpb.AttestationDa
 	return nil
 }
 
-// saveCheckpointState saves and returns the processed state with the associated check point.
-func (s *Store) saveCheckpointState(ctx context.Context, baseState *pb.BeaconState, c *ethpb.Checkpoint) (*pb.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "forkchoice.saveCheckpointState")
-	defer span.End()
-
-	s.checkpointStateLock.Lock()
-	defer s.checkpointStateLock.Unlock()
-	cachedState, err := s.checkpointState.StateByCheckpoint(c)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get cached checkpoint state")
-	}
-	if cachedState != nil {
-		return cachedState, nil
-	}
-
-	// Advance slots only when it's higher than current state slot.
-	if helpers.StartSlot(c.Epoch) > baseState.Slot {
-		stateCopy := proto.Clone(baseState).(*pb.BeaconState)
-		stateCopy, err = state.ProcessSlots(ctx, stateCopy, helpers.StartSlot(c.Epoch))
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
-		}
-
-		if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
-			Checkpoint: c,
-			State:      stateCopy,
-		}); err != nil {
-			return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
-		}
-
-		return stateCopy, nil
-	}
-
-	return baseState, nil
-}
-
 // verifyAttestation validates input attestation is valid.
 func (s *Store) verifyAttestation(ctx context.Context, baseState *pb.BeaconState, a *ethpb.Attestation) (*ethpb.IndexedAttestation, error) {
 	committee, err := helpers.BeaconCommitteeFromState(baseState, a.Data.Slot, a.Data.CommitteeIndex)
 	if err != nil {
 		return nil, err
 	}
-	indexedAtt, err := blocks.ConvertToIndexed(ctx, a, committee)
+	indexedAtt, err := attestationutil.ConvertToIndexed(ctx, a, committee)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert attestation to indexed attestation")
 	}
@@ -248,7 +237,7 @@ func (s *Store) verifyAttestation(ctx context.Context, baseState *pb.BeaconState
 			if err != nil {
 				return nil, errors.Wrap(err, "could not convert attestation to indexed attestation without cache")
 			}
-			indexedAtt, err = blocks.ConvertToIndexed(ctx, a, committee)
+			indexedAtt, err = attestationutil.ConvertToIndexed(ctx, a, committee)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not convert attestation to indexed attestation")
 			}

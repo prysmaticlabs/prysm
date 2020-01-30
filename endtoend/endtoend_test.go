@@ -1,22 +1,17 @@
 package endtoend
 
 import (
-	"bufio"
 	"context"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"os"
 	"path"
-	"strconv"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	ptypes "github.com/gogo/protobuf/types"
-	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	ev "github.com/prysmaticlabs/prysm/endtoend/evaluators"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc"
 )
@@ -36,17 +31,15 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 		processIDs = append(processIDs, vv.processID)
 	}
 	for _, bb := range beaconNodes {
-		processIDs = append(processIDs, bb.processID)
+		processIDs = append(processIDs, bb.ProcessID)
 	}
 	defer logOutput(t, tmpPath, config)
 	defer killProcesses(t, processIDs)
 
 	if config.numBeaconNodes > 1 {
 		t.Run("all_peers_connect", func(t *testing.T) {
-			for _, bNode := range beaconNodes {
-				if err := peersConnect(bNode.monitorPort, config.numBeaconNodes-1); err != nil {
-					t.Fatalf("Failed to connect to peers: %v", err)
-				}
+			if err := ev.PeersConnect(beaconNodes); err != nil {
+				t.Fatalf("Failed to connect to peers: %v", err)
 			}
 		})
 	}
@@ -78,6 +71,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	// Small offset so evaluators perform in the middle of an epoch.
 	epochSeconds := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
 	genesisTime := time.Unix(genesis.GenesisTime.Seconds+int64(epochSeconds/2), 0)
+
 	ticker := GetEpochTicker(genesisTime, epochSeconds)
 	for currentEpoch := range ticker.C() {
 		for _, evaluator := range config.evaluators {
@@ -93,98 +87,46 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 		}
 
 		if t.Failed() || currentEpoch >= config.epochsToRun {
+			if err := conn.Close(); err != nil {
+				t.Fatal(err)
+			}
 			ticker.Done()
+			if t.Failed() {
+				return
+			}
 			break
 		}
 	}
-}
 
-func peersConnect(port uint64, expectedPeers uint64) error {
-	response, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/p2p", port))
+	syncNodeInfo := startNewBeaconNode(t, config, beaconNodes)
+	beaconNodes = append(beaconNodes, syncNodeInfo)
+	index := len(beaconNodes) - 1
+
+	// Sleep until the next epoch to give time for the newly started node to sync.
+	nextEpochSeconds := (config.epochsToRun+2)*epochSeconds + epochSeconds/2
+	genesisTime.Add(time.Duration(nextEpochSeconds) * time.Second)
+	// Wait until middle of epoch to request to prevent conflicts.
+	time.Sleep(time.Until(genesisTime))
+
+	syncLogFile, err := os.Open(path.Join(tmpPath, fmt.Sprintf(beaconNodeLogFileName, index)))
 	if err != nil {
-		return errors.Wrap(err, "failed to reach p2p metrics page")
+		t.Fatal(err)
 	}
-	dataInBytes, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return err
+	if err := waitForTextInFile(syncLogFile, "Synced up to"); err != nil {
+		t.Fatalf("Failed to sync: %v", err)
 	}
-	pageContent := string(dataInBytes)
-	if err := response.Body.Close(); err != nil {
-		return err
-	}
-	// Subtracting by 2 here since the libp2p page has "3 peers" as text.
-	// With a starting index before the "p", going two characters back should give us
-	// the number we need.
-	startIdx := strings.Index(pageContent, "peers") - 2
-	if startIdx == -3 {
-		return fmt.Errorf("could not find needed text in %s", pageContent)
-	}
-	peerCount, err := strconv.Atoi(pageContent[startIdx : startIdx+1])
-	if err != nil {
-		return err
-	}
-	if expectedPeers != uint64(peerCount) {
-		return fmt.Errorf("unexpected amount of peers, expected %d, received %d", expectedPeers, peerCount)
-	}
-	return nil
-}
 
-func killProcesses(t *testing.T, pIDs []int) {
-	for _, id := range pIDs {
-		process, err := os.FindProcess(id)
-		if err != nil {
-			t.Fatalf("Could not find process %d: %v", id, err)
-		}
-		if err := process.Kill(); err != nil {
+	t.Run("node_finishes_sync", func(t *testing.T) {
+		if err := ev.FinishedSyncing(syncNodeInfo.RPCPort); err != nil {
 			t.Fatal(err)
 		}
-		if err := process.Release(); err != nil {
+	})
+
+	t.Run("all_nodes_have_correct_head", func(t *testing.T) {
+		if err := ev.AllChainsHaveSameHead(beaconNodes); err != nil {
 			t.Fatal(err)
 		}
-	}
-}
+	})
 
-func logOutput(t *testing.T, tmpPath string, config *end2EndConfig) {
-	// Log out errors from beacon chain nodes.
-	for i := uint64(0); i < config.numBeaconNodes; i++ {
-		beaconLogFile, err := os.Open(path.Join(tmpPath, fmt.Sprintf(beaconNodeLogFileName, i)))
-		if err != nil {
-			t.Fatal(err)
-		}
-		logErrorOutput(t, beaconLogFile, "beacon chain node", i)
-
-		validatorLogFile, err := os.Open(path.Join(tmpPath, fmt.Sprintf(validatorLogFileName, i)))
-		if err != nil {
-			t.Fatal(err)
-		}
-		logErrorOutput(t, validatorLogFile, "validator client", i)
-	}
-	t.Logf("Ending time: %s\n", time.Now().String())
-}
-
-func logErrorOutput(t *testing.T, file *os.File, title string, index uint64) {
-	var errorLines []string
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		currentLine := scanner.Text()
-		if strings.Contains(currentLine, "level=error") {
-			errorLines = append(errorLines, currentLine)
-		}
-	}
-
-	if len(errorLines) < 1 {
-		t.Logf("No error logs detected for %s %d", title, index)
-		return
-	}
-
-	t.Log("===================================================================")
-	t.Logf("Start of %s %d error output:\n", title, index)
-
-	for _, err := range errorLines {
-		t.Log(err)
-	}
-
-	t.Logf("\nEnd of %s %d error output:", title, index)
-	t.Log("===================================================================")
+	defer killProcesses(t, []int{syncNodeInfo.ProcessID})
 }

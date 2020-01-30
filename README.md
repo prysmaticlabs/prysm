@@ -197,7 +197,7 @@ Open up two terminal windows. In the first, issue the command:
 
 ```text
 bazel run //beacon-chain -- \
---no-genesis-delay \
+--custom-genesis-delay=0 \
 --bootstrap-node= \
 --deposit-contract $(curl https://prylabs.net/contract) \
 --clear-db \
