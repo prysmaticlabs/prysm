@@ -11,5 +11,5 @@ import (
 
 // GetBeaconConfig returns the configuration of the beacon chain as understood by this node.
 func (bs *Server) GetBeaconConfig(ctx context.Context, _ *ptypes.Empty) (*ethpb.BeaconConfig, error) {
-	return nil, status.Error(codes.Internal, "Not implemented")
+	return nil, status.Error(codes.Internal, "not implemented")
 }
