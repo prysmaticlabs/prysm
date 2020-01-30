@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	maxPollingWaitTime = 36 * time.Second
+	maxPollingWaitTime  = 36 * time.Second
 	filePollingInterval = 1 * time.Second
 )
 
@@ -50,7 +50,7 @@ func waitForTextInFile(file *os.File, text string) error {
 			}
 			return fmt.Errorf("could not find requested text \"%s\" in logs:\n%s", text, string(contents))
 		case <-ticker.C:
-			_, err := file.Seek(0,io.SeekStart)
+			_, err := file.Seek(0, io.SeekStart)
 			if err != nil {
 				return err
 			}
