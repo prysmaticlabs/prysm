@@ -101,17 +101,21 @@ func (s *Service) seen(att *ethpb.Attestation) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	incomingBits := att.AggregationBits
 	savedBits, ok := s.forkChoiceProcessedRoots.Get(string(attRoot[:]))
 	if ok {
 		savedBitlist, ok := savedBits.(bitfield.Bitlist)
 		if !ok {
 			return false, errors.New("not a bit field")
 		}
-		if savedBitlist.Len() == att.AggregationBits.Len() && savedBitlist.Overlaps(att.AggregationBits) {
-			return true, nil
+		if savedBitlist.Len() == incomingBits.Len() {
+			if savedBitlist.Contains(incomingBits) {
+				return true, nil
+			}
+			incomingBits = incomingBits.Or(savedBitlist)
 		}
 	}
 
-	s.forkChoiceProcessedRoots.Set(string(attRoot[:]), att.AggregationBits, 1 /*cost*/)
+	s.forkChoiceProcessedRoots.Set(string(attRoot[:]), incomingBits, 1 /*cost*/)
 	return false, nil
 }
