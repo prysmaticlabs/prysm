@@ -189,7 +189,7 @@ func TestGetAttestationData_OK(t *testing.T) {
 		},
 		Target: &ethpb.Checkpoint{
 			Epoch: 3,
-			Root:  make([]byte, 32),
+			Root:  blockRoot[:],
 		},
 	}
 
@@ -297,7 +297,7 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 		},
 		Target: &ethpb.Checkpoint{
 			Epoch: 312,
-			Root:  make([]byte, 32),
+			Root:  blockRoot[:],
 		},
 	}
 
