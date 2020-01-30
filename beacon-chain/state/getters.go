@@ -99,6 +99,12 @@ func (b *BeaconState) CloneInnerState() *pbp2p.BeaconState {
 	}
 }
 
+// HasInnerState detects if the internal reference to the state data structure
+// is populated correctly. Returns false if nil.
+func (b *BeaconState) HasInnerState() bool {
+	return b.state != nil
+}
+
 // GenesisTime of the beacon state as a uint64.
 func (b *BeaconState) GenesisTime() uint64 {
 	return b.state.GenesisTime

@@ -579,7 +579,9 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 	}
 
 	// Could update
-	s, err := beaconstate.InitializeFromProto(&pb.BeaconState{CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 1, Root: r[:]}})
+	s, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 1, Root: r[:]},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

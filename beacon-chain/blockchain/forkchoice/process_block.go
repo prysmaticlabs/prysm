@@ -207,7 +207,7 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, signed *e
 	}
 
 	if featureconfig.Get().InitSyncCacheState {
-		s.initSyncState[root] = postState
+		s.initSyncState[root] = postState.Copy()
 	} else {
 		if err := s.db.SaveState(ctx, postState, root); err != nil {
 			return nil, errors.Wrap(err, "could not save state")
@@ -313,7 +313,7 @@ func (s *Store) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (*s
 			}
 			return preState, nil // No copy needed from newly hydrated DB object.
 		}
-		return preState, nil
+		return preState.Copy(), nil
 	}
 	preState, err := s.db.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
 	if err != nil {
@@ -521,6 +521,12 @@ func (s *Store) updateJustified(ctx context.Context, state *stateTrie.BeaconStat
 		if err := s.db.SaveState(ctx, justifiedState, justifiedRoot); err != nil {
 			return errors.Wrap(err, "could not save justified state")
 		}
+		for r, st := range s.initSyncState {
+			if st != nil && st.HasInnerState() && state.Slot() > st.Slot()+8 {
+				delete(s.initSyncState, r)
+			}
+		}
+
 	}
 
 	return s.db.SaveJustifiedCheckpoint(ctx, cpt)
@@ -549,11 +555,21 @@ func (s *Store) saveInitState(ctx context.Context, state *stateTrie.BeaconState)
 	if !featureconfig.Get().InitSyncCacheState || cpt == nil {
 		return nil
 	}
+	var err error
 	finalizedRoot := bytesutil.ToBytes32(cpt.Root)
 	fs := s.initSyncState[finalizedRoot]
-
-	if err := s.db.SaveState(ctx, fs, finalizedRoot); err != nil {
-		return errors.Wrap(err, "could not save state")
+	if fs == nil {
+		fs, err = s.db.State(ctx, finalizedRoot)
+		if err != nil {
+			return err
+		}
+		if fs == nil {
+			return errors.Errorf("state with root %#x doesnt exist", finalizedRoot)
+		}
+	} else {
+		if err := s.db.SaveState(ctx, fs, finalizedRoot); err != nil {
+			return errors.Wrap(err, "could not save state")
+		}
 	}
 	for r, oldState := range s.initSyncState {
 		if oldState.Slot() < cpt.Epoch*params.BeaconConfig().SlotsPerEpoch {
