@@ -60,6 +60,7 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*ev.B
 		"--no-discovery",
 		"--http-web3provider=http://127.0.0.1:8745",
 		"--web3provider=ws://127.0.0.1:8746",
+		fmt.Sprintf("--min-sync-peers=%d", config.numBeaconNodes),
 		fmt.Sprintf("--datadir=%s/eth2-beacon-node-%d", tmpPath, index),
 		fmt.Sprintf("--deposit-contract=%s", config.contractAddr.Hex()),
 		fmt.Sprintf("--rpc-port=%d", 4200+index),
