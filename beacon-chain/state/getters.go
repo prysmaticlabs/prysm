@@ -7,6 +7,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -97,6 +98,12 @@ func (b *BeaconState) CloneInnerState() *pbp2p.BeaconState {
 		CurrentJustifiedCheckpoint:  b.CurrentJustifiedCheckpoint(),
 		FinalizedCheckpoint:         b.FinalizedCheckpoint(),
 	}
+}
+
+// HasInnerState detects if the internal reference to the state data structure
+// is populated correctly. Returns false if nil.
+func (b *BeaconState) HasInnerState() bool {
+	return b.state != nil
 }
 
 // GenesisTime of the beacon state as a uint64.

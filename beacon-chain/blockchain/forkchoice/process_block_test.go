@@ -11,11 +11,12 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -579,21 +580,24 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 	}
 
 	// Could update
-	s, err := beaconstate.InitializeFromProto(&pb.BeaconState{CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 1, Root: r[:]}})
+	s, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 1, Root: r[:]},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := store.updateJustified(context.Background(), s); err != nil {
+	copyState := s.Copy()
+	if err := store.updateJustified(context.Background(), copyState); err != nil {
 		t.Fatal(err)
 	}
 
-	if store.bestJustifiedCheckpt.Epoch != s.CurrentJustifiedCheckpoint().Epoch {
+	if store.bestJustifiedCheckpt.Epoch != copyState.CurrentJustifiedCheckpoint().Epoch {
 		t.Error("Incorrect justified epoch in store")
 	}
 
 	// Could not update
 	store.bestJustifiedCheckpt.Epoch = 2
-	if err := store.updateJustified(context.Background(), s); err != nil {
+	if err := store.updateJustified(context.Background(), copyState); err != nil {
 		t.Fatal(err)
 	}
 

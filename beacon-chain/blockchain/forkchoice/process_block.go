@@ -10,6 +10,9 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
@@ -19,8 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
-	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 )
 
 // OnBlock is called when a gossip block is received. It runs regular state transition on the block and
@@ -521,8 +522,8 @@ func (s *Store) updateJustified(ctx context.Context, state *stateTrie.BeaconStat
 		if err := s.db.SaveState(ctx, justifiedState, justifiedRoot); err != nil {
 			return errors.Wrap(err, "could not save justified state")
 		}
-		for r, stateTrie := range s.initSyncState {
-			if state.Slot() > stateTrie.Slot()+8 {
+		for r, st := range s.initSyncState {
+			if st != nil && st.HasInnerState() && state.Slot() > st.Slot()+8 {
 				delete(s.initSyncState, r)
 			}
 		}
