@@ -229,7 +229,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	}
 }
 
-func TestValidatorStatus_InitiatedExit(t *testing.T) {
+func TestValidatorStatus_Exiting(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
@@ -303,7 +303,7 @@ func TestValidatorStatus_InitiatedExit(t *testing.T) {
 	}
 }
 
-func TestValidatorStatus_ExitedSlashed(t *testing.T) {
+func TestValidatorStatus_Exited_Slashed(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
