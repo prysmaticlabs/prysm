@@ -82,8 +82,9 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 		return nil, ErrTargetRootNotInDB
 	}
 
-	// Verify attestation target has had a valid pre state produced by the target block.
-	baseState, err := s.verifyAttPreState(ctx, tgt)
+	// Retrieve attestation's data beacon block pre state. Advance pre state to latest epoch if necessary and
+	// save it to the cache.
+	baseState, err := s.getAttPreState(ctx, tgt)
 	if err != nil {
 		return nil, err
 	}
@@ -101,12 +102,6 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 	// Verify attestation beacon block is known and not from the future.
 	if err := s.verifyBeaconBlock(ctx, a.Data); err != nil {
 		return nil, errors.Wrap(err, "could not verify attestation beacon block")
-	}
-
-	// Service target checkpoint state if not yet seen.
-	baseState, err = s.saveCheckpointState(ctx, baseState, tgt)
-	if err != nil {
-		return nil, err
 	}
 
 	// Verify attestations can only affect the fork choice of subsequent slots.
