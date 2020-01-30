@@ -7,6 +7,7 @@ go_library(
         "attestations.go",
         "blocks.go",
         "committees.go",
+        "config.go",
         "server.go",
         "validators.go",
     ],
