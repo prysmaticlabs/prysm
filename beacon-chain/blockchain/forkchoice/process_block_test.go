@@ -585,18 +585,17 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	copyState := s.Copy()
-	if err := store.updateJustified(context.Background(), copyState); err != nil {
+	if err := store.updateJustified(context.Background(), s); err != nil {
 		t.Fatal(err)
 	}
 
-	if store.bestJustifiedCheckpt.Epoch != copyState.CurrentJustifiedCheckpoint().Epoch {
+	if store.bestJustifiedCheckpt.Epoch != s.CurrentJustifiedCheckpoint().Epoch {
 		t.Error("Incorrect justified epoch in store")
 	}
 
 	// Could not update
 	store.bestJustifiedCheckpt.Epoch = 2
-	if err := store.updateJustified(context.Background(), copyState); err != nil {
+	if err := store.updateJustified(context.Background(), s); err != nil {
 		t.Fatal(err)
 	}
 
