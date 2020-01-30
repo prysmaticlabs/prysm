@@ -275,7 +275,13 @@ func TestService_seen(t *testing.T) {
 			},
 			want: true, // We've full committee at this point.
 		},
-
+		{
+			att: &ethpb.Attestation{
+				AggregationBits: bitfield.Bitlist{0b11111},
+				Data:            &ethpb.AttestationData{Slot:2},
+			},
+			want: false, // Different root is different bitlist.
+		},
 		{
 			att: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0b11111001},
