@@ -123,8 +123,8 @@ func (c *SkipSlotCache) Put(ctx context.Context, slot uint64, state *stateTrie.B
 		return nil
 	}
 
-	// CloneInnerState state so cached value is not mutated.
-	c.cache.Add(slot, state)
+	// Copy state so cached value is not mutated.
+	c.cache.Add(slot, state.Copy())
 
 	return nil
 }
