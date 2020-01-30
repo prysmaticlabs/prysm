@@ -24,7 +24,7 @@ import (
 // sent back to the beacon node for broadcasting.
 func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte) {
 	if slot == 0 {
-		log.Info("Assigned to genesis slot, skipping proposal")
+		log.Debug("Assigned to genesis slot, skipping proposal")
 		return
 	}
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")
@@ -102,15 +102,12 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		trace.Int64Attribute("numAttestations", int64(len(b.Body.Attestations))),
 	)
 
-	v.pubKeyToIDLock.RLock()
-	defer v.pubKeyToIDLock.RUnlock()
 	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
 	log.WithFields(logrus.Fields{
 		"slot":            b.Slot,
 		"blockRoot":       blkRoot,
 		"numAttestations": len(b.Body.Attestations),
 		"numDeposits":     len(b.Body.Deposits),
-		"proposerIndex":   v.pubKeyToID[pubKey],
 	}).Info("Submitted new block")
 }
 

@@ -18,6 +18,7 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -220,7 +221,7 @@ func generateAtt(state *pbp2p.BeaconState, index uint64, privKeys []*bls.SecretK
 		AggregationBits: aggBits,
 	}
 	committee, _ := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
-	attestingIndices, _ := helpers.AttestingIndices(att.AggregationBits, committee)
+	attestingIndices, _ := attestationutil.AttestingIndices(att.AggregationBits, committee)
 	domain := helpers.Domain(state.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
 
 	sigs := make([]*bls.Signature, len(attestingIndices))

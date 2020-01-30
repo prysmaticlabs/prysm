@@ -240,6 +240,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		best = s.bestPeer()
 		root, _, _ = s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(s.chain.HeadSlot()))
 	}
+
 	for head := helpers.SlotsSince(genesis); s.chain.HeadSlot() < head; {
 		req := &p2ppb.BeaconBlocksByRangeRequest{
 			HeadBlockRoot: root,
@@ -274,6 +275,11 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 
 // requestBlocks by range to a specific peer.
 func (s *Service) requestBlocks(ctx context.Context, req *p2ppb.BeaconBlocksByRangeRequest, pid peer.ID) ([]*eth.SignedBeaconBlock, error) {
+	if s.blocksRateLimiter.Remaining(pid.String()) < int64(req.Count) {
+		log.WithField("peer", pid).Debug("Slowing down for rate limit")
+		time.Sleep(s.blocksRateLimiter.TillEmpty(pid.String()))
+	}
+	s.blocksRateLimiter.Add(pid.String(), int64(req.Count))
 	log.WithFields(logrus.Fields{
 		"peer":  pid,
 		"start": req.StartSlot,

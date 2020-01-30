@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -204,7 +205,7 @@ func TestProcessAttestations(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	indices, _ := helpers.AttestingIndices(att1.AggregationBits, committee)
+	indices, _ := attestationutil.AttestingIndices(att1.AggregationBits, committee)
 	for _, i := range indices {
 		if !vp[i].IsPrevEpochAttester {
 			t.Error("Not a prev epoch attester")
@@ -214,7 +215,7 @@ func TestProcessAttestations(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	indices, _ = helpers.AttestingIndices(att2.AggregationBits, committee)
+	indices, _ = attestationutil.AttestingIndices(att2.AggregationBits, committee)
 	for _, i := range indices {
 		if !vp[i].IsPrevEpochAttester {
 			t.Error("Not a prev epoch attester")

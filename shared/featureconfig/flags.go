@@ -1,6 +1,7 @@
 package featureconfig
 
 import (
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/urfave/cli"
 )
 
@@ -68,11 +69,11 @@ var (
 		Usage: "Enables connection to a slasher service in order to retrieve slashable events. Slasher is connected to the beacon node using gRPC and " +
 			"the slasher-provider flag can be used to pass its address.",
 	}
-	noGenesisDelayFlag = cli.BoolFlag{
-		Name: "no-genesis-delay",
-		Usage: "Start the genesis event right away using the eth1 block timestamp which " +
-			"triggered the genesis as the genesis time. This flag should be used for local " +
-			"development and testing only.",
+	customGenesisDelayFlag = cli.Uint64Flag{
+		Name: "custom-genesis-delay",
+		Usage: "Start the genesis event with the configured genesis delay in seconds. " +
+			"This flag should be used for local development and testing only.",
+		Value: params.BeaconConfig().MinGenesisDelay,
 	}
 	cacheFilteredBlockTreeFlag = cli.BoolFlag{
 		Name: "cache-filtered-block-tree",
@@ -92,6 +93,10 @@ var (
 		Name: "protect-attester",
 		Usage: "Prevent the validator client from signing and broadcasting 2 any slashable attestations. " +
 			"Protects from slashing.",
+	}
+	protoArrayForkChoice = cli.BoolFlag{
+		Name:  "proto-array-forkchoice",
+		Usage: "Uses proto array fork choice over the naive spec fork choice. Better implementation in terms of mem usage and speed. ",
 	}
 )
 
@@ -208,9 +213,15 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	protectProposerFlag,
 }...)
 
+// E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
+var E2EValidatorFlags = []string{
+	"--protect-attester",
+	"--protect-proposer",
+}
+
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
-	noGenesisDelayFlag,
+	customGenesisDelayFlag,
 	minimalConfigFlag,
 	writeSSZStateTransitionsFlag,
 	disableForkChoiceUnsafeFlag,
@@ -226,4 +237,17 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableSlasherFlag,
 	cacheFilteredBlockTreeFlag,
 	cacheProposerIndicesFlag,
+	protoArrayForkChoice,
 }...)
+
+// E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
+var E2EBeaconChainFlags = []string{
+	"--enable-ssz-cache",
+	"--enable-attestation-cache",
+	"--cache-proposer-indices",
+	"--cache-filtered-block-tree",
+	"--enable-skip-slots-cache",
+	"--enable-eth1-data-vote-cache",
+	"--initial-sync-cache-state",
+	"--proto-array-forkchoice",
+}
