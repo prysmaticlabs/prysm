@@ -1273,13 +1273,13 @@ func TestServer_GetValidatorQueue_ExitedValidatorLeavesQueue(t *testing.T) {
 
 	// Now, we move the state.slot past the exit epoch of the validator, and now
 	// the validator should no longer exist in the queue.
-	headState.Slot = headState.Validators[1].ExitEpoch + 1
+	headState.Slot = helpers.StartSlot(headState.Validators[1].ExitEpoch + 1)
 	res, err = bs.GetValidatorQueue(context.Background(), &ptypes.Empty{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(res.ExitPublicKeys, wanted) {
-		t.Errorf("Wanted %v, received %v", wanted, res.ExitPublicKeys)
+	if len(res.ExitPublicKeys) != 0 {
+		t.Errorf("Wanted empty exit queue, received %v", res.ExitPublicKeys)
 	}
 }
 
