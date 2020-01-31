@@ -170,7 +170,7 @@ func (s *Service) Start() {
 		}
 
 		if err := s.pruneGarbageState(ctx, helpers.StartSlot(finalizedCheckpoint.Epoch)-params.BeaconConfig().SlotsPerEpoch); err != nil {
-			log.Fatalf("Could prune garbaged state: %v", err)
+			log.Fatalf("Could not prune garbaged state: %v", err)
 		}
 
 		s.stateNotifier.StateFeed().Send(&feed.Event{
