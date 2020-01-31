@@ -82,19 +82,22 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 		return nil, ErrTargetRootNotInDB
 	}
 
-	// Verify attestation target has had a valid pre state produced by the target block.
-	baseState, err := s.verifyAttPreState(ctx, tgt)
+	// Retrieve attestation's data beacon block pre state. Advance pre state to latest epoch if necessary and
+	// save it to the cache.
+	baseState, err := s.getAttPreState(ctx, tgt)
 	if err != nil {
 		return nil, err
 	}
 
+	genesisTime := baseState.GenesisTime()
+
 	// Verify attestation target is from current epoch or previous epoch.
-	if err := s.verifyAttTargetEpoch(ctx, baseState.GenesisTime, uint64(time.Now().Unix()), tgt); err != nil {
+	if err := s.verifyAttTargetEpoch(ctx, genesisTime, uint64(time.Now().Unix()), tgt); err != nil {
 		return nil, err
 	}
 
 	// Verify Attestations cannot be from future epochs.
-	if err := helpers.VerifySlotTime(baseState.GenesisTime, tgtSlot); err != nil {
+	if err := helpers.VerifySlotTime(genesisTime, tgtSlot); err != nil {
 		return nil, errors.Wrap(err, "could not verify attestation target slot")
 	}
 
@@ -103,14 +106,8 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 		return nil, errors.Wrap(err, "could not verify attestation beacon block")
 	}
 
-	// Service target checkpoint state if not yet seen.
-	baseState, err = s.saveCheckpointState(ctx, baseState, tgt)
-	if err != nil {
-		return nil, err
-	}
-
 	// Verify attestations can only affect the fork choice of subsequent slots.
-	if err := helpers.VerifySlotTime(baseState.GenesisTime, a.Data.Slot+1); err != nil {
+	if err := helpers.VerifySlotTime(genesisTime, a.Data.Slot+1); err != nil {
 		return nil, err
 	}
 

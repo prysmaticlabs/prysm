@@ -87,7 +87,7 @@ func (s *Service) ProcessLog(ctx context.Context, depositLog gethTypes.Log) erro
 			eth1Data := &protodb.ETH1ChainData{
 				CurrentEth1Data:   s.latestEth1Data,
 				ChainstartData:    s.chainStartData,
-				BeaconState:       s.preGenesisState,
+				BeaconState:       s.preGenesisState.InnerStateUnsafe(), // I promise not to mutate it!
 				Trie:              s.depositTrie.ToProto(),
 				DepositContainers: s.depositCache.AllDepositContainers(ctx),
 			}
@@ -336,8 +336,8 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		return errors.Wrap(err, "could not get head state")
 	}
 
-	if currentState != nil && currentState.Eth1DepositIndex > 0 {
-		s.depositCache.PrunePendingDeposits(ctx, int(currentState.Eth1DepositIndex))
+	if currentState != nil && currentState.Eth1DepositIndex() > 0 {
+		s.depositCache.PrunePendingDeposits(ctx, int(currentState.Eth1DepositIndex()))
 	}
 
 	return nil

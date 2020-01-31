@@ -100,8 +100,12 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	genesisState.Slot = 111
-	genesisState.BlockRoots[111%params.BeaconConfig().SlotsPerHistoricalRoot] = blockARoot[:]
+	if err := genesisState.SetSlot(111); err != nil {
+		t.Fatal(err)
+	}
+	if err := genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot, blockARoot); err != nil {
+		t.Fatal(err)
+	}
 	finalizedCheckpt := &ethpb.Checkpoint{
 		Epoch: 5,
 		Root:  blockBRoot[:],
