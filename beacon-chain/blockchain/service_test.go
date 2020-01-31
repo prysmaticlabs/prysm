@@ -401,7 +401,11 @@ func TestChainService_PruneOldStates(t *testing.T) {
 			t.Fatal(err)
 		}
 		state := &pb.BeaconState{Slot: uint64(i)}
-		if err := s.beaconDB.SaveState(ctx, state, r); err != nil {
+		newState, err := beaconstate.InitializeFromProto(state)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := s.beaconDB.SaveState(ctx, newState, r); err != nil {
 			t.Fatal(err)
 		}
 	}
