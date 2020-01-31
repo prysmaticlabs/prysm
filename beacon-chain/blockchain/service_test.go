@@ -395,7 +395,7 @@ func TestChainService_PruneOldStates(t *testing.T) {
 		}
 	}
 
-	// Delete half of the states
+	// Delete half of the states.
 	if err := s.pruneGarbageState(ctx, 50); err != nil {
 		t.Fatal(err)
 	}

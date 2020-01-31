@@ -457,8 +457,8 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	return nil
 }
 
-// This is called when a client starts from non-genesis slot. It removes the garbage state
-// from slot 1 to last finalized slot.
+// This is called when a client starts from non-genesis slot. It deletes the states in DB
+// from slot 1 (avoid genesis state) to `slot`.
 func (s *Service) pruneGarbageState(ctx context.Context, slot uint64) error {
 
 	filter := filters.NewFilter().SetStartSlot(1).SetEndSlot(slot)
