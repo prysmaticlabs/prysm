@@ -34,10 +34,10 @@ func (r *Service) processPendingAtts(ctx context.Context) error {
 	for bRoot, attestations := range r.blkRootToPendingAtts {
 		if r.db.HasBlock(ctx, bRoot) {
 			for _, att := range attestations {
-				if helpers.IsAggregated(att) {
-
+				if helpers.IsAggregated(att.Aggregate) {
+					r.validateAtt()
 				} else {
-
+					r.validateCommitteeIndexBeaconAttestation()
 				}
 			}
 
@@ -48,15 +48,15 @@ func (r *Service) processPendingAtts(ctx context.Context) error {
 	}
 }
 
-func (r *Service) savePendingAtt(att *ethpb.Attestation) {
+func (r *Service) savePendingAtt(att *ethpb.AggregateAttestationAndProof) {
 	r.pendingAttsLock.Lock()
 	defer r.pendingAttsLock.Unlock()
 
-	r32 := bytesutil.ToBytes32(att.Data.BeaconBlockRoot)
+	r32 := bytesutil.ToBytes32(att.Aggregate.Data.BeaconBlockRoot)
 
 	_, ok := r.blkRootToPendingAtts[r32]
 	if !ok {
-		r.blkRootToPendingAtts[r32] = []*ethpb.Attestation{att}
+		r.blkRootToPendingAtts[r32] = []*ethpb.AggregateAttestationAndProof{att}
 	} else {
 		r.blkRootToPendingAtts[r32] = append(r.blkRootToPendingAtts[r32], att)
 	}
@@ -68,7 +68,7 @@ func (r *Service) validatePendingAtts(slot uint64) {
 
 	for bRoot, atts := range r.blkRootToPendingAtts {
 		for i, att := range atts {
-			if slot >= att.Data.Slot+params.BeaconConfig().SlotsPerEpoch {
+			if slot >= att.Aggregate.Data.Slot+params.BeaconConfig().SlotsPerEpoch {
 				atts[len(atts)-1], atts[i] = atts[i], atts[len(atts)-1]
 				atts = atts[:len(atts)-1]
 			}
