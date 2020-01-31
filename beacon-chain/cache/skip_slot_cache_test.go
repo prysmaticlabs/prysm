@@ -2,10 +2,11 @@ package cache_test
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
@@ -30,7 +31,12 @@ func TestSkipSlotCache_RoundTrip(t *testing.T) {
 		t.Error(err)
 	}
 
-	state = &pb.BeaconState{Slot: 10}
+	state, err = stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{
+		Slot: 10,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if err = c.Put(ctx, 5, state); err != nil {
 		t.Error(err)
@@ -45,7 +51,7 @@ func TestSkipSlotCache_RoundTrip(t *testing.T) {
 		t.Error(err)
 	}
 
-	if !proto.Equal(state, res) {
+	if !reflect.DeepEqual(state.InnerStateUnsafe(), res.InnerStateUnsafe()) {
 		t.Error("Expected equal protos to return from cache")
 	}
 }

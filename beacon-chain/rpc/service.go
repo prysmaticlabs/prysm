@@ -53,7 +53,7 @@ func init() {
 type Service struct {
 	ctx                    context.Context
 	cancel                 context.CancelFunc
-	beaconDB               db.ReadOnlyDatabase
+	beaconDB               db.HeadAccessDatabase
 	headFetcher            blockchain.HeadFetcher
 	forkFetcher            blockchain.ForkFetcher
 	finalizationFetcher    blockchain.FinalizationFetcher
@@ -95,7 +95,7 @@ type Config struct {
 	Port                  string
 	CertFlag              string
 	KeyFlag               string
-	BeaconDB              db.ReadOnlyDatabase
+	BeaconDB              db.HeadAccessDatabase
 	HeadFetcher           blockchain.HeadFetcher
 	ForkFetcher           blockchain.ForkFetcher
 	FinalizationFetcher   blockchain.FinalizationFetcher

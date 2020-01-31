@@ -12,7 +12,7 @@ func (r *Service) voluntaryExitSubscriber(ctx context.Context, msg proto.Message
 	if err != nil {
 		return err
 	}
-	r.exitPool.InsertVoluntaryExit(ctx, s.Validators, msg.(*ethpb.SignedVoluntaryExit))
+	r.exitPool.InsertVoluntaryExit(ctx, s.Validators(), msg.(*ethpb.SignedVoluntaryExit))
 	return nil
 }
 

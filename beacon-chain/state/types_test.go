@@ -1,4 +1,4 @@
-package state
+package state_test
 
 import (
 	"strconv"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -15,17 +16,20 @@ import (
 func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 	params.UseMinimalConfig()
 	genesis := setupGenesisState(t, 64)
-	customState, err := InitializeFromProto(genesis)
+	customState, err := stateTrie.InitializeFromProto(genesis)
 	if err != nil {
 		t.Fatal(err)
 	}
 	cloned := proto.Clone(genesis).(*pb.BeaconState)
-	custom := customState.Clone()
+	custom := customState.CloneInnerState()
 	if !proto.Equal(cloned, custom) {
 		t.Fatal("Cloned states did not match")
 	}
 
-	r1 := customState.HashTreeRoot()
+	r1, err := customState.HashTreeRoot()
+	if err != nil {
+		t.Fatal(err)
+	}
 	r2, err := stateutil.HashTreeRootState(genesis)
 	if err != nil {
 		t.Fatal(err)
@@ -40,7 +44,10 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 	if err := customState.SetBalances(balances); err != nil {
 		t.Fatal(err)
 	}
-	r1 = customState.HashTreeRoot()
+	r1, err = customState.HashTreeRoot()
+	if err != nil {
+		t.Fatal(err)
+	}
 	genesis.Balances = balances
 	r2, err = stateutil.HashTreeRootState(genesis)
 	if err != nil {
@@ -136,13 +143,13 @@ func BenchmarkStateClone_Manual(b *testing.B) {
 	b.StopTimer()
 	params.UseMinimalConfig()
 	genesis := setupGenesisState(b, 64)
-	st, err := InitializeFromProto(genesis)
+	st, err := stateTrie.InitializeFromProto(genesis)
 	if err != nil {
 		b.Fatal(err)
 	}
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		_ = st.Clone()
+		_ = st.CloneInnerState()
 	}
 }
 

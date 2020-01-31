@@ -7,13 +7,14 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestNew(t *testing.T) {
 	ffe := params.BeaconConfig().FarFutureEpoch
-	s := &pb.BeaconState{
+	s, err := beaconstate.InitializeFromProto(&pb.BeaconState{
 		Slot: params.BeaconConfig().SlotsPerEpoch,
 		// Validator 0 is slashed
 		// Validator 1 is withdrawable
@@ -25,6 +26,9 @@ func TestNew(t *testing.T) {
 			{WithdrawableEpoch: ffe, ExitEpoch: ffe, EffectiveBalance: 100},
 			{WithdrawableEpoch: ffe, ExitEpoch: 1, EffectiveBalance: 100},
 		},
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 	e := params.BeaconConfig().FarFutureEpoch
 	v, b := precompute.New(context.Background(), s)

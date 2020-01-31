@@ -7,13 +7,14 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"go.opencensus.io/trace"
 )
 
 // State returns the saved state using block's signing root,
 // this particular block was used to generate the state.
-func (k *Store) State(ctx context.Context, blockRoot [32]byte) (*pb.BeaconState, error) {
+func (k *Store) State(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.State")
 	defer span.End()
 	var s *pb.BeaconState
@@ -28,11 +29,17 @@ func (k *Store) State(ctx context.Context, blockRoot [32]byte) (*pb.BeaconState,
 		s, err = createState(enc)
 		return err
 	})
-	return s, err
+	if err != nil {
+		return nil, err
+	}
+	if s == nil {
+		return nil, nil
+	}
+	return state.InitializeFromProtoUnsafe(s)
 }
 
 // HeadState returns the latest canonical state in beacon chain.
-func (k *Store) HeadState(ctx context.Context) (*pb.BeaconState, error) {
+func (k *Store) HeadState(ctx context.Context) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HeadState")
 	defer span.End()
 	var s *pb.BeaconState
@@ -52,15 +59,21 @@ func (k *Store) HeadState(ctx context.Context) (*pb.BeaconState, error) {
 		s, err = createState(enc)
 		return err
 	})
+	if err != nil {
+		return nil, err
+	}
+	if s == nil {
+		return nil, nil
+	}
 	span.AddAttributes(trace.BoolAttribute("exists", s != nil))
 	if s != nil {
 		span.AddAttributes(trace.Int64Attribute("slot", int64(s.Slot)))
 	}
-	return s, err
+	return state.InitializeFromProtoUnsafe(s)
 }
 
 // GenesisState returns the genesis state in beacon chain.
-func (k *Store) GenesisState(ctx context.Context) (*pb.BeaconState, error) {
+func (k *Store) GenesisState(ctx context.Context) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.GenesisState")
 	defer span.End()
 	var s *pb.BeaconState
@@ -80,14 +93,20 @@ func (k *Store) GenesisState(ctx context.Context) (*pb.BeaconState, error) {
 		s, err = createState(enc)
 		return err
 	})
-	return s, err
+	if err != nil {
+		return nil, err
+	}
+	if s == nil {
+		return nil, nil
+	}
+	return state.InitializeFromProtoUnsafe(s)
 }
 
 // SaveState stores a state to the db using block's signing root which was used to generate the state.
-func (k *Store) SaveState(ctx context.Context, state *pb.BeaconState, blockRoot [32]byte) error {
+func (k *Store) SaveState(ctx context.Context, state *state.BeaconState, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveState")
 	defer span.End()
-	enc, err := encode(state)
+	enc, err := encode(state.InnerStateUnsafe())
 	if err != nil {
 		return err
 	}
