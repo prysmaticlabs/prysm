@@ -7,6 +7,7 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/proto/beacon/db"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
@@ -102,17 +103,17 @@ func (e Exporter) DeleteValidatorIndex(ctx context.Context, publicKey []byte) er
 }
 
 // State -- passthrough.
-func (e Exporter) State(ctx context.Context, blockRoot [32]byte) (*ethereum_beacon_p2p_v1.BeaconState, error) {
+func (e Exporter) State(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
 	return e.db.State(ctx, blockRoot)
 }
 
 // HeadState -- passthrough.
-func (e Exporter) HeadState(ctx context.Context) (*ethereum_beacon_p2p_v1.BeaconState, error) {
+func (e Exporter) HeadState(ctx context.Context) (*state.BeaconState, error) {
 	return e.db.HeadState(ctx)
 }
 
 // GenesisState -- passthrough.
-func (e Exporter) GenesisState(ctx context.Context) (*ethereum_beacon_p2p_v1.BeaconState, error) {
+func (e Exporter) GenesisState(ctx context.Context) (*state.BeaconState, error) {
 	return e.db.GenesisState(ctx)
 }
 
@@ -217,12 +218,12 @@ func (e Exporter) SaveValidatorIndex(ctx context.Context, publicKey []byte, vali
 }
 
 // SaveValidatorIndices -- passthrough.
-func (e Exporter) SaveValidatorIndices(ctx context.Context, publicKeys [][]byte, validatorIndices []uint64) error {
+func (e Exporter) SaveValidatorIndices(ctx context.Context, publicKeys [][48]byte, validatorIndices []uint64) error {
 	return e.db.SaveValidatorIndices(ctx, publicKeys, validatorIndices)
 }
 
 // SaveState -- passthrough.
-func (e Exporter) SaveState(ctx context.Context, state *ethereum_beacon_p2p_v1.BeaconState, blockRoot [32]byte) error {
+func (e Exporter) SaveState(ctx context.Context, state *state.BeaconState, blockRoot [32]byte) error {
 	return e.db.SaveState(ctx, state, blockRoot)
 }
 

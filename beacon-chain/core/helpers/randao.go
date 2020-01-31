@@ -1,7 +1,7 @@
 package helpers
 
 import (
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -16,14 +16,16 @@ import (
 //    """
 //    mix = get_randao_mix(state, Epoch(epoch + EPOCHS_PER_HISTORICAL_VECTOR - MIN_SEED_LOOKAHEAD - 1))  # Avoid underflow
 //    return hash(domain_type + int_to_bytes(epoch, length=8) + mix)
-func Seed(state *pb.BeaconState, epoch uint64, domain []byte) ([32]byte, error) {
+func Seed(state *stateTrie.BeaconState, epoch uint64, domain []byte) ([32]byte, error) {
 	// See https://github.com/ethereum/eth2.0-specs/pull/1296 for
 	// rationale on why offset has to look down by 1.
 	lookAheadEpoch := epoch + params.BeaconConfig().EpochsPerHistoricalVector -
 		params.BeaconConfig().MinSeedLookahead - 1
 
-	randaoMix := RandaoMix(state, lookAheadEpoch)
-
+	randaoMix, err := RandaoMix(state, lookAheadEpoch)
+	if err != nil {
+		return [32]byte{}, err
+	}
 	seed := append(domain, bytesutil.Bytes8(epoch)...)
 	seed = append(seed, randaoMix...)
 
@@ -41,9 +43,13 @@ func Seed(state *pb.BeaconState, epoch uint64, domain []byte) ([32]byte, error) 
 //    Return the randao mix at a recent ``epoch``.
 //    """
 //    return state.randao_mixes[epoch % EPOCHS_PER_HISTORICAL_VECTOR]
-func RandaoMix(state *pb.BeaconState, epoch uint64) []byte {
-	newMixLength := len(state.RandaoMixes[epoch%params.BeaconConfig().EpochsPerHistoricalVector])
+func RandaoMix(state *stateTrie.BeaconState, epoch uint64) ([]byte, error) {
+	currMix, err := state.RandaoMixAtIndex(epoch % params.BeaconConfig().EpochsPerHistoricalVector)
+	if err != nil {
+		return nil, err
+	}
+	newMixLength := len(currMix)
 	newMix := make([]byte, newMixLength)
-	copy(newMix, state.RandaoMixes[epoch%params.BeaconConfig().EpochsPerHistoricalVector])
-	return newMix
+	copy(newMix, currMix)
+	return newMix, nil
 }

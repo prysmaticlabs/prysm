@@ -6,13 +6,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -24,7 +23,7 @@ import (
 // getBlockPreState returns the pre state of an incoming block. It uses the parent root of the block
 // to retrieve the state in DB. It verifies the pre state's validity and the incoming block
 // is in the correct time window.
-func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*pb.BeaconState, error) {
+func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*stateTrie.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "forkchoice.getBlockPreState")
 	defer span.End()
 
@@ -35,7 +34,7 @@ func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*
 	}
 
 	// Verify block slot time is not from the feature.
-	if err := helpers.VerifySlotTime(preState.GenesisTime, b.Slot); err != nil {
+	if err := helpers.VerifySlotTime(preState.GenesisTime(), b.Slot); err != nil {
 		return nil, err
 	}
 
@@ -53,7 +52,7 @@ func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*
 }
 
 // verifyBlkPreState validates input block has a valid pre-state.
-func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (*pb.BeaconState, error) {
+func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (*stateTrie.BeaconState, error) {
 	if featureconfig.Get().InitSyncCacheState {
 		preState := s.initSyncState[bytesutil.ToBytes32(b.ParentRoot)]
 		var err error
@@ -65,8 +64,9 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (
 			if preState == nil {
 				return nil, fmt.Errorf("pre state of slot %d does not exist", b.Slot)
 			}
+			return preState, nil // No copy needed from newly hydrated DB object.
 		}
-		return proto.Clone(preState).(*pb.BeaconState), nil
+		return preState.Copy(), nil
 	}
 
 	preState, err := s.beaconDB.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
@@ -116,14 +116,14 @@ func (s *Service) verifyBlkFinalizedSlot(b *ethpb.BeaconBlock) error {
 
 // saveNewValidators saves newly added validator indices from the state to db.
 // Does nothing if validator count has not changed.
-func (s *Service) saveNewValidators(ctx context.Context, preStateValidatorCount int, postState *pb.BeaconState) error {
-	postStateValidatorCount := len(postState.Validators)
+func (s *Service) saveNewValidators(ctx context.Context, preStateValidatorCount int, postState *stateTrie.BeaconState) error {
+	postStateValidatorCount := postState.NumValidators()
 	if preStateValidatorCount != postStateValidatorCount {
 		indices := make([]uint64, 0)
-		pubKeys := make([][]byte, 0)
+		pubKeys := make([][48]byte, 0)
 		for i := preStateValidatorCount; i < postStateValidatorCount; i++ {
 			indices = append(indices, uint64(i))
-			pubKeys = append(pubKeys, postState.Validators[i].PublicKey)
+			pubKeys = append(pubKeys, postState.PubkeyAtIndex(uint64(i)))
 		}
 		if err := s.beaconDB.SaveValidatorIndices(ctx, pubKeys, indices); err != nil {
 			return errors.Wrapf(err, "could not save activated validators: %v", indices)
@@ -231,33 +231,34 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 	return true, nil
 }
 
-func (s *Service) updateJustified(ctx context.Context, state *pb.BeaconState) error {
-	if state.CurrentJustifiedCheckpoint.Epoch > s.bestJustifiedCheckpt.Epoch {
-		s.bestJustifiedCheckpt = state.CurrentJustifiedCheckpoint
+func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconState) error {
+	cpt := state.CurrentJustifiedCheckpoint()
+	if cpt.Epoch > s.bestJustifiedCheckpt.Epoch {
+		s.bestJustifiedCheckpt = cpt
 	}
-	canUpdate, err := s.shouldUpdateCurrentJustified(ctx, state.CurrentJustifiedCheckpoint)
+	canUpdate, err := s.shouldUpdateCurrentJustified(ctx, cpt)
 	if err != nil {
 		return err
 	}
 	if canUpdate {
-		s.justifiedCheckpt = state.CurrentJustifiedCheckpoint
+		s.justifiedCheckpt = cpt
 	}
 
 	if featureconfig.Get().InitSyncCacheState {
-		justifiedRoot := bytesutil.ToBytes32(state.CurrentJustifiedCheckpoint.Root)
+		justifiedRoot := bytesutil.ToBytes32(cpt.Root)
 
 		justifiedState := s.initSyncState[justifiedRoot]
 		// If justified state is nil, resume back to normal syncing process and save
 		// justified check point.
 		if justifiedState == nil {
-			return s.beaconDB.SaveJustifiedCheckpoint(ctx, state.CurrentJustifiedCheckpoint)
+			return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
 		}
 		if err := s.beaconDB.SaveState(ctx, justifiedState, justifiedRoot); err != nil {
 			return errors.Wrap(err, "could not save justified state")
 		}
 	}
 
-	return s.beaconDB.SaveJustifiedCheckpoint(ctx, state.CurrentJustifiedCheckpoint)
+	return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
 }
 
 // currentSlot returns the current slot based on time.
@@ -267,18 +268,19 @@ func (s *Service) currentSlot() uint64 {
 
 // This saves every finalized state in DB during initial sync, needed as part of optimization to
 // use cache state during initial sync in case of restart.
-func (s *Service) saveInitState(ctx context.Context, state *pb.BeaconState) error {
+func (s *Service) saveInitState(ctx context.Context, state *stateTrie.BeaconState) error {
 	if !featureconfig.Get().InitSyncCacheState {
 		return nil
 	}
-	finalizedRoot := bytesutil.ToBytes32(state.FinalizedCheckpoint.Root)
+	cpt := state.FinalizedCheckpoint()
+	finalizedRoot := bytesutil.ToBytes32(cpt.Root)
 	fs := s.initSyncState[finalizedRoot]
 
 	if err := s.beaconDB.SaveState(ctx, fs, finalizedRoot); err != nil {
 		return errors.Wrap(err, "could not save state")
 	}
 	for r, oldState := range s.initSyncState {
-		if oldState.Slot < state.FinalizedCheckpoint.Epoch*params.BeaconConfig().SlotsPerEpoch {
+		if oldState.Slot() < cpt.Epoch*params.BeaconConfig().SlotsPerEpoch {
 			delete(s.initSyncState, r)
 		}
 	}
@@ -297,7 +299,7 @@ func (s *Service) filterBlockRoots(ctx context.Context, roots [][32]byte) ([][32
 	if err != nil {
 		return nil, err
 	}
-	hRoot, err := ssz.SigningRoot(h)
+	hRoot, err := ssz.HashTreeRoot(h.Block)
 	if err != nil {
 		return nil, err
 	}

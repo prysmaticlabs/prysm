@@ -80,7 +80,7 @@ func (k *Store) SaveValidatorIndex(ctx context.Context, publicKey []byte, valida
 }
 
 // SaveValidatorIndices by public keys to the DB.
-func (k *Store) SaveValidatorIndices(ctx context.Context, publicKeys [][]byte, validatorIndices []uint64) error {
+func (k *Store) SaveValidatorIndices(ctx context.Context, publicKeys [][48]byte, validatorIndices []uint64) error {
 	if len(publicKeys) != len(validatorIndices) {
 		return fmt.Errorf(
 			"expected same number of public keys and validator indices, received %d != %d",
@@ -94,12 +94,9 @@ func (k *Store) SaveValidatorIndices(ctx context.Context, publicKeys [][]byte, v
 		bucket := tx.Bucket(validatorsBucket)
 		var err error
 		for i := 0; i < len(publicKeys); i++ {
-			if len(publicKeys[i]) != params.BeaconConfig().BLSPubkeyLength {
-				return errors.New("incorrect key length")
-			}
 			buf := uint64ToBytes(validatorIndices[i])
-			k.validatorIndexCache.Set(string(publicKeys[i]), validatorIndices[i], int64(len(buf)))
-			err = bucket.Put(publicKeys[i], buf)
+			k.validatorIndexCache.Set(string(publicKeys[i][:]), validatorIndices[i], int64(len(buf)))
+			err = bucket.Put(publicKeys[i][:], buf)
 		}
 		return err
 	})

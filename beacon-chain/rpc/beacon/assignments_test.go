@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -25,10 +26,16 @@ func TestServer_ListAssignments_CannotRequestFutureEpoch(t *testing.T) {
 	defer dbTest.TeardownDB(t, db)
 
 	ctx := context.Background()
+	st, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
+		Slot: 0,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	bs := &Server{
 		BeaconDB: db,
 		HeadFetcher: &mock.ChainService{
-			State: &pbp2p.BeaconState{Slot: 0},
+			State: st,
 		},
 	}
 
@@ -50,10 +57,17 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 	defer dbTest.TeardownDB(t, db)
 
 	ctx := context.Background()
+	st, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
+		Slot:        0,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	bs := &Server{
 		BeaconDB: db,
 		HeadFetcher: &mock.ChainService{
-			State: &pbp2p.BeaconState{Slot: 0, RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)},
+			State: st,
 		},
 	}
 	wanted := &ethpb.ValidatorAssignments{
@@ -159,9 +173,13 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 		t.Fatal(err)
 	}
 
-	s := &pbp2p.BeaconState{
+	s, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Validators:  validators,
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -200,12 +218,16 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 		if err != nil {
 			t.Fatal(err)
 		}
+		val, err := s.ValidatorAtIndex(index)
+		if err != nil {
+			t.Fatal(err)
+		}
 		wanted = append(wanted, &ethpb.ValidatorAssignments_CommitteeAssignment{
 			BeaconCommittees: committee,
 			CommitteeIndex:   committeeIndex,
 			AttesterSlot:     attesterSlot,
 			ProposerSlot:     proposerSlot,
-			PublicKey:        s.Validators[index].PublicKey,
+			PublicKey:        val.PublicKey,
 		})
 	}
 
@@ -253,10 +275,13 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := &pbp2p.BeaconState{
+	s, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Validators:  validators,
 		Balances:    balances,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
@@ -311,12 +336,16 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_FromArchive(t *testin
 		if err != nil {
 			t.Fatal(err)
 		}
+		val, err := s.ValidatorAtIndex(index)
+		if err != nil {
+			t.Fatal(err)
+		}
 		assign := &ethpb.ValidatorAssignments_CommitteeAssignment{
 			BeaconCommittees: committee,
 			CommitteeIndex:   committeeIndex,
 			AttesterSlot:     attesterSlot,
 			ProposerSlot:     proposerSlot,
-			PublicKey:        s.Validators[index].PublicKey,
+			PublicKey:        val.PublicKey,
 		}
 		wanted = append(wanted, assign)
 	}
@@ -356,9 +385,13 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := &pbp2p.BeaconState{
+	s, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Validators:  validators,
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -400,12 +433,16 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 		if err != nil {
 			t.Fatal(err)
 		}
+		val, err := s.ValidatorAtIndex(index)
+		if err != nil {
+			t.Fatal(err)
+		}
 		wanted = append(wanted, &ethpb.ValidatorAssignments_CommitteeAssignment{
 			BeaconCommittees: committee,
 			CommitteeIndex:   committeeIndex,
 			AttesterSlot:     attesterSlot,
 			ProposerSlot:     proposerSlot,
-			PublicKey:        s.Validators[index].PublicKey,
+			PublicKey:        val.PublicKey,
 		})
 	}
 
@@ -437,9 +474,13 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := &pbp2p.BeaconState{
+	s, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Validators:  validators,
-		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)}
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
 	}
@@ -477,12 +518,16 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 		if err != nil {
 			t.Fatal(err)
 		}
+		val, err := s.ValidatorAtIndex(index)
+		if err != nil {
+			t.Fatal(err)
+		}
 		assignments = append(assignments, &ethpb.ValidatorAssignments_CommitteeAssignment{
 			BeaconCommittees: committee,
 			CommitteeIndex:   committeeIndex,
 			AttesterSlot:     attesterSlot,
 			ProposerSlot:     proposerSlot,
-			PublicKey:        s.Validators[index].PublicKey,
+			PublicKey:        val.PublicKey,
 		})
 	}
 
@@ -509,12 +554,16 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 		if err != nil {
 			t.Fatal(err)
 		}
+		val, err := s.ValidatorAtIndex(index)
+		if err != nil {
+			t.Fatal(err)
+		}
 		assignments = append(assignments, &ethpb.ValidatorAssignments_CommitteeAssignment{
 			BeaconCommittees: committee,
 			CommitteeIndex:   committeeIndex,
 			AttesterSlot:     attesterSlot,
 			ProposerSlot:     proposerSlot,
-			PublicKey:        s.Validators[index].PublicKey,
+			PublicKey:        val.PublicKey,
 		})
 	}
 

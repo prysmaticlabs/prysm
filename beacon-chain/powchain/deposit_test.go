@@ -313,8 +313,16 @@ func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 		if valCount != uint64(i+1) {
 			t.Errorf("Did not get correct active validator count received %d, but wanted %d", valCount, uint64(i+1))
 		}
-		if web3Service.preGenesisState.Validators[i].EffectiveBalance != params.BeaconConfig().MaxEffectiveBalance {
-			t.Errorf("Wanted a full deposit of %d but got %d", params.BeaconConfig().MaxEffectiveBalance, web3Service.preGenesisState.Validators[i].EffectiveBalance)
+		val, err := web3Service.preGenesisState.ValidatorAtIndex(uint64(i))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if val.EffectiveBalance != params.BeaconConfig().MaxEffectiveBalance {
+			t.Errorf(
+				"Wanted a full deposit of %d but got %d",
+				params.BeaconConfig().MaxEffectiveBalance,
+				val.EffectiveBalance,
+			)
 		}
 	}
 }

@@ -7,6 +7,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
@@ -28,7 +29,10 @@ func BenchmarkForkChoiceTree1(b *testing.B) {
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
 	}
-	s := &pb.BeaconState{Validators: validators}
+	s, err := state.InitializeFromProto(&pb.BeaconState{Validators: validators})
+	if err != nil {
+		b.Fatal(err)
+	}
 
 	if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
 		b.Fatal(err)
@@ -84,7 +88,11 @@ func BenchmarkForkChoiceTree2(b *testing.B) {
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
 	}
-	s := &pb.BeaconState{Validators: validators}
+
+	s, err := state.InitializeFromProto(&pb.BeaconState{Validators: validators})
+	if err != nil {
+		b.Fatal(err)
+	}
 	if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
 		b.Fatal(err)
 	}
@@ -136,7 +144,10 @@ func BenchmarkForkChoiceTree3(b *testing.B) {
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{ExitEpoch: 2, EffectiveBalance: 1e9}
 	}
-	s := &pb.BeaconState{Validators: validators}
+	s, err := state.InitializeFromProto(&pb.BeaconState{Validators: validators})
+	if err != nil {
+		b.Fatal(err)
+	}
 	if err := store.GenesisStore(ctx, &ethpb.Checkpoint{}, &ethpb.Checkpoint{}); err != nil {
 		b.Fatal(err)
 	}

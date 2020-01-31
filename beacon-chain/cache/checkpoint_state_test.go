@@ -5,15 +5,22 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 func TestCheckpointStateCacheKeyFn_OK(t *testing.T) {
 	cp := &ethpb.Checkpoint{Epoch: 1, Root: []byte{'A'}}
+	st, err := stateTrie.InitializeFromProto(&pb.BeaconState{
+		Slot: 64,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	info := &CheckpointState{
 		Checkpoint: cp,
-		State:      &pb.BeaconState{Slot: 64},
+		State:      st,
 	}
 	key, err := checkpointState(info)
 	if err != nil {
@@ -39,9 +46,15 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 	cache := NewCheckpointStateCache()
 
 	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: []byte{'A'}}
+	st, err := stateTrie.InitializeFromProto(&pb.BeaconState{
+		Slot: 64,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	info1 := &CheckpointState{
 		Checkpoint: cp1,
-		State:      &pb.BeaconState{Slot: 64},
+		State:      st,
 	}
 	state, err := cache.StateByCheckpoint(cp1)
 	if err != nil {
@@ -63,9 +76,15 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 	}
 
 	cp2 := &ethpb.Checkpoint{Epoch: 2, Root: []byte{'B'}}
+	st2, err := stateTrie.InitializeFromProto(&pb.BeaconState{
+		Slot: 128,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	info2 := &CheckpointState{
 		Checkpoint: cp2,
-		State:      &pb.BeaconState{Slot: 128},
+		State:      st2,
 	}
 	if err := cache.AddCheckpointState(info2); err != nil {
 		t.Fatal(err)
@@ -87,13 +106,21 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 	}
 }
 
-func TestCheckpointStateCache__MaxSize(t *testing.T) {
+func TestCheckpointStateCache_MaxSize(t *testing.T) {
 	c := NewCheckpointStateCache()
-
+	st, err := stateTrie.InitializeFromProto(&pb.BeaconState{
+		Slot: 0,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	for i := 0; i < maxCheckpointStateSize+100; i++ {
+		if err := st.SetSlot(uint64(i)); err != nil {
+			t.Fatal(err)
+		}
 		info := &CheckpointState{
 			Checkpoint: &ethpb.Checkpoint{Epoch: uint64(i)},
-			State:      &pb.BeaconState{Slot: uint64(i)},
+			State:      st,
 		}
 		if err := c.AddCheckpointState(info); err != nil {
 			t.Fatal(err)

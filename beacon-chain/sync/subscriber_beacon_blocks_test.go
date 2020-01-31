@@ -12,6 +12,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -28,7 +29,12 @@ func TestRegularSyncBeaconBlockSubscriber_FilterByFinalizedEpoch(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	defer dbtest.TeardownDB(t, db)
 
-	s := &pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 1}}
+	s, err := stateTrie.InitializeFromProto(&pb.BeaconState{
+		FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 1},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	parent := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	if err := db.SaveBlock(context.Background(), parent); err != nil {
 		t.Fatal(err)

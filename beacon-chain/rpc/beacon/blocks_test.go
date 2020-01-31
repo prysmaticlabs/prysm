@@ -20,6 +20,7 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -321,20 +322,23 @@ func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 
-	s := &pbp2p.BeaconState{
+	s, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Slot:                        1,
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 3, Root: []byte{'A'}},
 		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Epoch: 2, Root: []byte{'B'}},
 		FinalizedCheckpoint:         &ethpb.Checkpoint{Epoch: 1, Root: []byte{'C'}},
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	bs := &Server{
 		BeaconDB:    db,
 		HeadFetcher: &mock.ChainService{Block: &ethpb.SignedBeaconBlock{}, State: s},
 		FinalizationFetcher: &mock.ChainService{
-			FinalizedCheckPoint:         s.FinalizedCheckpoint,
-			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint,
-			PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint},
+			FinalizedCheckPoint:         s.FinalizedCheckpoint(),
+			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
+			PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint()},
 	}
 
 	if _, err := bs.GetChainHead(context.Background(), nil); !strings.Contains(err.Error(), "Could not get finalized block") {
@@ -356,21 +360,24 @@ func TestServer_GetChainHead(t *testing.T) {
 	db.SaveBlock(context.Background(), prevJustifiedBlock)
 	pjRoot, _ := ssz.HashTreeRoot(prevJustifiedBlock.Block)
 
-	s := &pbp2p.BeaconState{
+	s, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Slot:                        1,
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 3, Root: pjRoot[:]},
 		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Epoch: 2, Root: jRoot[:]},
 		FinalizedCheckpoint:         &ethpb.Checkpoint{Epoch: 1, Root: fRoot[:]},
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.PreviousJustifiedCheckpoint.Epoch*params.BeaconConfig().SlotsPerEpoch + 1}}
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.PreviousJustifiedCheckpoint().Epoch*params.BeaconConfig().SlotsPerEpoch + 1}}
 	bs := &Server{
 		BeaconDB:    db,
 		HeadFetcher: &mock.ChainService{Block: b, State: s},
 		FinalizationFetcher: &mock.ChainService{
-			FinalizedCheckPoint:         s.FinalizedCheckpoint,
-			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint,
-			PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint},
+			FinalizedCheckPoint:         s.FinalizedCheckpoint(),
+			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
+			PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint()},
 	}
 
 	head, err := bs.GetChainHead(context.Background(), nil)
@@ -457,13 +464,17 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	db.SaveBlock(context.Background(), prevJustifiedBlock)
 	pjRoot, _ := ssz.HashTreeRoot(prevJustifiedBlock.Block)
 
-	s := &pbp2p.BeaconState{
+	s, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Slot:                        1,
 		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 3, Root: pjRoot[:]},
 		CurrentJustifiedCheckpoint:  &ethpb.Checkpoint{Epoch: 2, Root: jRoot[:]},
 		FinalizedCheckpoint:         &ethpb.Checkpoint{Epoch: 1, Root: fRoot[:]},
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
-	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.PreviousJustifiedCheckpoint.Epoch*params.BeaconConfig().SlotsPerEpoch + 1}}
+
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.PreviousJustifiedCheckpoint().Epoch*params.BeaconConfig().SlotsPerEpoch + 1}}
 	hRoot, _ := ssz.HashTreeRoot(b.Block)
 
 	chainService := &mock.ChainService{}
@@ -474,9 +485,9 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 		BeaconDB:      db,
 		StateNotifier: chainService.StateNotifier(),
 		FinalizationFetcher: &mock.ChainService{
-			FinalizedCheckPoint:         s.FinalizedCheckpoint,
-			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint,
-			PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint},
+			FinalizedCheckPoint:         s.FinalizedCheckpoint(),
+			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
+			PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint()},
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
