@@ -5,6 +5,7 @@ import (
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -32,7 +33,15 @@ func (r *Service) processPendingAtts(ctx context.Context) error {
 
 	for bRoot, attestations := range r.blkRootToPendingAtts {
 		if r.db.HasBlock(ctx, bRoot) {
+			for _, att := range attestations {
+				if helpers.IsAggregated(att) {
 
+				} else {
+
+				}
+			}
+
+			delete(r.blkRootToPendingAtts, bRoot)
 		} else {
 			req := [][32]byte{bRoot}
 		}
