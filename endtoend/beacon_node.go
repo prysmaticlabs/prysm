@@ -3,9 +3,7 @@ package endtoend
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 	"os/exec"
-	"path"
 	"strings"
 	"testing"
 
@@ -50,7 +48,7 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*ev.B
 		t.Fatal("beacon chain binary not found")
 	}
 
-	stdOutFile, err := os.Create(path.Join(tmpPath, fmt.Sprintf(beaconNodeLogFileName, index)))
+	stdOutFile, err := deleteAndCreateFile(tmpPath, fmt.Sprintf(beaconNodeLogFileName, index))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,6 +68,7 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*ev.B
 		fmt.Sprintf("--grpc-gateway-port=%d", 3400+index),
 		fmt.Sprintf("--contract-deployment-block=%d", 0),
 		fmt.Sprintf("--rpc-max-page-size=%d", params.BeaconConfig().MinGenesisActiveValidatorCount),
+		fmt.Sprintf("--log-file=%s", stdOutFile.Name()),
 	}
 	args = append(args, config.beaconFlags...)
 
@@ -82,8 +81,6 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*ev.B
 
 	t.Logf("Starting beacon chain %d with flags: %s", index, strings.Join(args, " "))
 	cmd := exec.Command(binaryPath, args...)
-	cmd.Stdout = stdOutFile
-	cmd.Stderr = stdOutFile
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("Failed to start beacon node: %v", err)
 	}
