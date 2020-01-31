@@ -203,7 +203,7 @@ func TestBeaconState_ImmutabilityWithSharedResources(t *testing.T) {
 	if !reflect.DeepEqual(a.Validators(), b.Validators()) {
 		t.Fatal("Test precondition failed, fields are not equal")
 	}
-	a.UpdateValidatorAtIndex(1, &ethpb.Validator{Slashed:true})
+	a.UpdateValidatorAtIndex(1, &ethpb.Validator{Slashed: true})
 	if reflect.DeepEqual(a.Validators(), b.Validators()) {
 		t.Error("Expect a.Validators() to be different from b.Validators()")
 	}
