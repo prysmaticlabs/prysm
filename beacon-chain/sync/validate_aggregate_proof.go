@@ -63,6 +63,7 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 
 	// Verify the block being voted for passes validation. The block should have passed validation if it's in the DB.
 	if !r.db.HasBlock(ctx, bytesutil.ToBytes32(m.Aggregate.Data.BeaconBlockRoot)) {
+		r.savePendingAtt(m.Aggregate)
 		return false
 	}
 

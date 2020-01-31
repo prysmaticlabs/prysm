@@ -46,18 +46,19 @@ type blockchainService interface {
 func NewRegularSync(cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &Service{
-		ctx:                 ctx,
-		cancel:              cancel,
-		db:                  cfg.DB,
-		p2p:                 cfg.P2P,
-		attPool:             cfg.AttPool,
-		exitPool:            cfg.ExitPool,
-		chain:               cfg.Chain,
-		initialSync:         cfg.InitialSync,
-		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
-		seenPendingBlocks:   make(map[[32]byte]bool),
-		stateNotifier:       cfg.StateNotifier,
-		blocksRateLimiter:   leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksBurst, false /* deleteEmptyBuckets */),
+		ctx:                  ctx,
+		cancel:               cancel,
+		db:                   cfg.DB,
+		p2p:                  cfg.P2P,
+		attPool:              cfg.AttPool,
+		exitPool:             cfg.ExitPool,
+		chain:                cfg.Chain,
+		initialSync:          cfg.InitialSync,
+		slotToPendingBlocks:  make(map[uint64]*ethpb.SignedBeaconBlock),
+		seenPendingBlocks:    make(map[[32]byte]bool),
+		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.Attestation),
+		stateNotifier:        cfg.StateNotifier,
+		blocksRateLimiter:    leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksBurst, false /* deleteEmptyBuckets */),
 	}
 
 	r.registerRPCHandlers()
@@ -69,21 +70,23 @@ func NewRegularSync(cfg *Config) *Service {
 // Service is responsible for handling all run time p2p related operations as the
 // main entry point for network messages.
 type Service struct {
-	ctx                 context.Context
-	cancel              context.CancelFunc
-	p2p                 p2p.P2P
-	db                  db.NoHeadAccessDatabase
-	attPool             attestations.Pool
-	exitPool            *voluntaryexits.Pool
-	chain               blockchainService
-	slotToPendingBlocks map[uint64]*ethpb.SignedBeaconBlock
-	seenPendingBlocks   map[[32]byte]bool
-	pendingQueueLock    sync.RWMutex
-	chainStarted        bool
-	initialSync         Checker
-	validateBlockLock   sync.RWMutex
-	stateNotifier       statefeed.Notifier
-	blocksRateLimiter   *leakybucket.Collector
+	ctx                  context.Context
+	cancel               context.CancelFunc
+	p2p                  p2p.P2P
+	db                   db.NoHeadAccessDatabase
+	attPool              attestations.Pool
+	exitPool             *voluntaryexits.Pool
+	chain                blockchainService
+	slotToPendingBlocks  map[uint64]*ethpb.SignedBeaconBlock
+	seenPendingBlocks    map[[32]byte]bool
+	blkRootToPendingAtts map[[32]byte][]*ethpb.Attestation
+	pendingAttsLock      sync.RWMutex
+	pendingQueueLock     sync.RWMutex
+	chainStarted         bool
+	initialSync          Checker
+	validateBlockLock    sync.RWMutex
+	stateNotifier        statefeed.Notifier
+	blocksRateLimiter    *leakybucket.Collector
 }
 
 // Start the regular sync service.
