@@ -42,7 +42,6 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-
 	if cfg := featureconfig.Get(); cfg.EnableSkipSlotsCache {
 		cfg.EnableSkipSlotsCache = false
 		featureconfig.Init(cfg)
