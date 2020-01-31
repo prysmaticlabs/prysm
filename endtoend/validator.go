@@ -59,7 +59,7 @@ func initializeValidators(
 			fmt.Sprintf("--monitoring-port=%d", 9280+n),
 			fmt.Sprintf("--datadir=%s/eth2-val-%d", tmpPath, n),
 			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", 4200+n),
-			fmt.Sprintf("--log-file=%s",file.Name()),
+			fmt.Sprintf("--log-file=%s", file.Name()),
 		}
 		args = append(args, config.validatorFlags...)
 
