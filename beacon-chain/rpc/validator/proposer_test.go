@@ -888,7 +888,7 @@ func TestDefaultEth1Data_NoBlockExists(t *testing.T) {
 	p := &mockPOW.POWChain{
 		LatestBlockNumber: height,
 		HashesByHeight: map[int][]byte{
-			0:   []byte("hash0"),
+			0:  []byte("hash0"),
 			12: []byte("hash12"),
 		},
 	}

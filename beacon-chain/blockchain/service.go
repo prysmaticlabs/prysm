@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	f "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -166,6 +167,10 @@ func (s *Service) Start() {
 			if err := s.resumeForkChoice(ctx, justifiedCheckpoint, finalizedCheckpoint); err != nil {
 				log.Fatalf("Could not resume fork choice: %v", err)
 			}
+		}
+
+		if err := s.pruneGarbageState(ctx, helpers.StartSlot(finalizedCheckpoint.Epoch)-params.BeaconConfig().SlotsPerEpoch); err != nil {
+			log.Fatalf("Could prune garbaged state: %v", err)
 		}
 
 		s.stateNotifier.StateFeed().Send(&feed.Event{
@@ -448,6 +453,22 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		s.headSlot = s.headBlock.Block.Slot
 	}
 	s.canonicalRoots[s.headSlot] = finalized.Root
+
+	return nil
+}
+
+// This is called when a client starts from non-genesis slot. It removes the garbage state
+// from slot 1 to last finalized slot.
+func (s *Service) pruneGarbageState(ctx context.Context, slot uint64) error {
+
+	filter := filters.NewFilter().SetStartSlot(1).SetEndSlot(slot)
+	roots, err := s.beaconDB.BlockRoots(ctx, filter)
+	if err != nil {
+		return err
+	}
+	if err := s.beaconDB.DeleteStates(ctx, roots); err != nil {
+		return err
+	}
 
 	return nil
 }
