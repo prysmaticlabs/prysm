@@ -168,7 +168,8 @@ func (db *Store) SaveProposerSlashings(status SlashingStatus, slashings []*ethpb
 		root := hashutil.Hash(encSlashings[i])
 		keys[i] = encodeTypeRoot(SlashingType(Proposal), root)
 	}
-	return db.batch(func(tx *bolt.Tx) error {
+
+	return db.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
 		for i := 0; i < len(encSlashings); i++ {
 			e := b.Put(keys[i], append([]byte{byte(status)}, encSlashings[i]...))

@@ -80,7 +80,7 @@ func (db *Store) SaveValidatorSpansMap(validatorIdx uint64, spanMap *slashpb.Epo
 		}
 		return nil
 	}
-	err := db.update(func(tx *bolt.Tx) error {
+	err := db.batch(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsMinMaxSpanBucket)
 		key := bytesutil.Bytes4(validatorIdx)
 		val, err := proto.Marshal(spanMap)
