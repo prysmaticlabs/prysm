@@ -1334,25 +1334,26 @@ func TestServer_GetValidatorQueue_PendingActivation(t *testing.T) {
 }
 
 func TestServer_GetValidatorQueue_ExitedValidatorLeavesQueue(t *testing.T) {
-	headState := &pbp2p.BeaconState{
-		Validators: []*ethpb.Validator{
-			{
-				ActivationEpoch:   0,
-				ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
-				WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
-				PublicKey:         []byte("1"),
-			},
-			{
-				ActivationEpoch:   0,
-				ExitEpoch:         4,
-				WithdrawableEpoch: 6,
-				PublicKey:         []byte("2"),
-			},
+	validators := []*ethpb.Validator{
+		{
+			ActivationEpoch:   0,
+			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+			PublicKey:         []byte("1"),
 		},
+		{
+			ActivationEpoch:   0,
+			ExitEpoch:         4,
+			WithdrawableEpoch: 6,
+			PublicKey:         []byte("2"),
+		},
+	}
+	headState, _ := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
+		Validators: validators,
 		FinalizedCheckpoint: &ethpb.Checkpoint{
 			Epoch: 0,
 		},
-	}
+	})
 	bs := &Server{
 		HeadFetcher: &mock.ChainService{
 			State: headState,
@@ -1384,7 +1385,9 @@ func TestServer_GetValidatorQueue_ExitedValidatorLeavesQueue(t *testing.T) {
 
 	// Now, we move the state.slot past the exit epoch of the validator, and now
 	// the validator should no longer exist in the queue.
-	headState.Slot = helpers.StartSlot(headState.Validators[1].ExitEpoch + 1)
+	if err := headState.SetSlot(helpers.StartSlot(validators[1].ExitEpoch + 1)); err != nil {
+		t.Fatal(err)
+	}
 	res, err = bs.GetValidatorQueue(context.Background(), &ptypes.Empty{})
 	if err != nil {
 		t.Fatal(err)
