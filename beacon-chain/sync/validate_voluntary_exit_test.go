@@ -15,13 +15,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func setupValidExit(t *testing.T) (*ethpb.SignedVoluntaryExit, *pb.BeaconState) {
+func setupValidExit(t *testing.T) (*ethpb.SignedVoluntaryExit, *stateTrie.BeaconState) {
 	exit := &ethpb.SignedVoluntaryExit{
 		Exit: &ethpb.VoluntaryExit{
 			ValidatorIndex: 0,
@@ -34,25 +35,40 @@ func setupValidExit(t *testing.T) (*ethpb.SignedVoluntaryExit, *pb.BeaconState) 
 			ActivationEpoch: 0,
 		},
 	}
-	state := &pb.BeaconState{
+	state, err := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators: registry,
 		Fork: &pb.Fork{
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 		},
 		Slot: params.BeaconConfig().SlotsPerEpoch * 5,
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
-	state.Slot = state.Slot + (params.BeaconConfig().PersistentCommitteePeriod * params.BeaconConfig().SlotsPerEpoch)
+	if err := state.SetSlot(
+		state.Slot() + (params.BeaconConfig().PersistentCommitteePeriod * params.BeaconConfig().SlotsPerEpoch),
+	); err != nil {
+		t.Fatal(err)
+	}
 	signingRoot, err := ssz.HashTreeRoot(exit.Exit)
 	if err != nil {
 		t.Error(err)
 	}
-	domain := helpers.Domain(state.Fork, helpers.CurrentEpoch(state), params.BeaconConfig().DomainVoluntaryExit)
+	domain := helpers.Domain(state.Fork(), helpers.CurrentEpoch(state), params.BeaconConfig().DomainVoluntaryExit)
 	priv := bls.RandKey()
 
 	sig := priv.Sign(signingRoot[:], domain)
 	exit.Signature = sig.Marshal()
-	state.Validators[0].PublicKey = priv.PublicKey().Marshal()[:]
+
+	val, err := state.ValidatorAtIndex(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	val.PublicKey = priv.PublicKey().Marshal()[:]
+	if err := state.UpdateValidatorAtIndex(0, val); err != nil {
+		t.Fatal(err)
+	}
 
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {

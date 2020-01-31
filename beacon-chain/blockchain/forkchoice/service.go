@@ -16,10 +16,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/stateutil"
 	"go.opencensus.io/trace"
 )
 
@@ -27,9 +27,9 @@ import (
 // to beacon blocks to compute head.
 type ForkChoicer interface {
 	Head(ctx context.Context) ([]byte, error)
-	OnBlock(ctx context.Context, b *ethpb.SignedBeaconBlock) (*pb.BeaconState, error)
-	OnBlockCacheFilteredTree(ctx context.Context, b *ethpb.SignedBeaconBlock) (*pb.BeaconState, error)
-	OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.SignedBeaconBlock) (*pb.BeaconState, error)
+	OnBlock(ctx context.Context, b *ethpb.SignedBeaconBlock) (*stateTrie.BeaconState, error)
+	OnBlockCacheFilteredTree(ctx context.Context, b *ethpb.SignedBeaconBlock) (*stateTrie.BeaconState, error)
+	OnBlockInitialSyncStateTransition(ctx context.Context, b *ethpb.SignedBeaconBlock) (*stateTrie.BeaconState, error)
 	OnAttestation(ctx context.Context, a *ethpb.Attestation) ([]uint64, error)
 	GenesisStore(ctx context.Context, justifiedCheckpoint *ethpb.Checkpoint, finalizedCheckpoint *ethpb.Checkpoint) error
 	FinalizedCheckpt() *ethpb.Checkpoint
@@ -51,7 +51,7 @@ type Store struct {
 	bestJustifiedCheckpt  *ethpb.Checkpoint
 	latestVoteMap         map[uint64]*pb.ValidatorLatestVote
 	voteLock              sync.RWMutex
-	initSyncState         map[[32]byte]*pb.BeaconState
+	initSyncState         map[[32]byte]*stateTrie.BeaconState
 	initSyncStateLock     sync.RWMutex
 	nextEpochBoundarySlot uint64
 	filteredBlockTree     map[[32]byte]*ethpb.BeaconBlock
@@ -68,7 +68,7 @@ func NewForkChoiceService(ctx context.Context, db db.HeadAccessDatabase) *Store 
 		db:              db,
 		checkpointState: cache.NewCheckpointStateCache(),
 		latestVoteMap:   make(map[uint64]*pb.ValidatorLatestVote),
-		initSyncState:   make(map[[32]byte]*pb.BeaconState),
+		initSyncState:   make(map[[32]byte]*stateTrie.BeaconState),
 	}
 }
 
@@ -111,7 +111,7 @@ func (s *Store) GenesisStore(
 		return errors.Wrap(err, "could not save genesis state in check point cache")
 	}
 
-	s.genesisTime = justifiedState.GenesisTime
+	s.genesisTime = justifiedState.GenesisTime()
 	if err := s.cacheGenesisState(ctx); err != nil {
 		return errors.Wrap(err, "could not cache initial sync state")
 	}
@@ -129,9 +129,9 @@ func (s *Store) cacheGenesisState(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	stateRoot, err := stateutil.HashTreeRootState(genesisState)
+	stateRoot, err := genesisState.HashTreeRoot()
 	if err != nil {
-		return errors.Wrap(err, "could not tree hash genesis state")
+		return err
 	}
 	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
 	genesisBlkRoot, err := ssz.HashTreeRoot(genesisBlk.Block)
@@ -200,16 +200,16 @@ func (s *Store) latestAttestingBalance(ctx context.Context, root []byte) (uint64
 	ctx, span := trace.StartSpan(ctx, "forkchoice.latestAttestingBalance")
 	defer span.End()
 
-	lastJustifiedState, err := s.checkpointState.StateByCheckpoint(s.JustifiedCheckpt())
+	justifiedState, err := s.checkpointState.StateByCheckpoint(s.JustifiedCheckpt())
 	if err != nil {
 		return 0, errors.Wrap(err, "could not retrieve cached state via last justified check point")
 	}
-	if lastJustifiedState == nil {
+	if justifiedState == nil {
 		return 0, errors.Wrapf(err, "could not get justified state at epoch %d", s.JustifiedCheckpt().Epoch)
 	}
 
-	lastJustifiedEpoch := helpers.CurrentEpoch(lastJustifiedState)
-	activeIndices, err := helpers.ActiveValidatorIndices(lastJustifiedState, lastJustifiedEpoch)
+	lastJustifiedEpoch := helpers.CurrentEpoch(justifiedState)
+	activeIndices, err := helpers.ActiveValidatorIndices(justifiedState, lastJustifiedEpoch)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not get active indices for last justified checkpoint")
 	}
@@ -224,6 +224,7 @@ func (s *Store) latestAttestingBalance(ctx context.Context, root []byte) (uint64
 	wantedBlk := wantedBlkSigned.Block
 
 	balances := uint64(0)
+	vals := justifiedState.Validators()
 	s.voteLock.RLock()
 	defer s.voteLock.RUnlock()
 	for _, i := range activeIndices {
@@ -237,7 +238,7 @@ func (s *Store) latestAttestingBalance(ctx context.Context, root []byte) (uint64
 			return 0, errors.Wrapf(err, "could not get ancestor root for slot %d", wantedBlk.Slot)
 		}
 		if bytes.Equal(wantedRoot, root) {
-			balances += lastJustifiedState.Validators[i].EffectiveBalance
+			balances += vals[i].EffectiveBalance
 		}
 	}
 	return balances, nil
@@ -427,9 +428,9 @@ func (s *Store) filterBlockTree(ctx context.Context, blockRoot [32]byte, filtere
 	}
 
 	correctJustified := s.justifiedCheckpt.Epoch == 0 ||
-		proto.Equal(s.justifiedCheckpt, headState.CurrentJustifiedCheckpoint)
+		proto.Equal(s.justifiedCheckpt, headState.CurrentJustifiedCheckpoint())
 	correctFinalized := s.finalizedCheckpt.Epoch == 0 ||
-		proto.Equal(s.finalizedCheckpt, headState.FinalizedCheckpoint)
+		proto.Equal(s.finalizedCheckpt, headState.FinalizedCheckpoint())
 	if correctJustified && correctFinalized {
 		filteredBlocks[blockRoot] = block
 		return true, nil

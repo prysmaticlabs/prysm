@@ -15,6 +15,7 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -41,7 +42,7 @@ func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	s := &pbp2p.BeaconState{}
+	s := &beaconstate.BeaconState{}
 
 	aggregatorServer := &Server{
 		HeadFetcher: &mock.ChainService{State: s},
@@ -61,9 +62,9 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	s := &pbp2p.BeaconState{
+	s, _ := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}
+	})
 
 	aggregatorServer := &Server{
 		HeadFetcher: &mock.ChainService{State: s},
@@ -85,9 +86,9 @@ func TestSubmitAggregateAndProof_IsAggregator(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	s := &pbp2p.BeaconState{
+	s, _ := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}
+	})
 
 	aggregatorServer := &Server{
 		HeadFetcher: &mock.ChainService{State: s},
@@ -124,7 +125,7 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 	att0 := generateAtt(beaconState, 0, privKeys)
 	att1 := generateAtt(beaconState, 1, privKeys)
 
-	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
+	beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 
 	aggregatorServer := &Server{
 		HeadFetcher: &mock.ChainService{State: beaconState},
@@ -177,7 +178,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
 	att0 := generateAtt(beaconState, 0, privKeys)
 
-	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
+	beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 
 	aggregatorServer := &Server{
 		HeadFetcher: &mock.ChainService{State: beaconState},
@@ -209,7 +210,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	}
 }
 
-func generateAtt(state *pbp2p.BeaconState, index uint64, privKeys []*bls.SecretKey) *ethpb.Attestation {
+func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []*bls.SecretKey) *ethpb.Attestation {
 	aggBits := bitfield.NewBitlist(4)
 	aggBits.SetBitAt(index, true)
 	att := &ethpb.Attestation{
@@ -222,7 +223,7 @@ func generateAtt(state *pbp2p.BeaconState, index uint64, privKeys []*bls.SecretK
 	}
 	committee, _ := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
 	attestingIndices, _ := attestationutil.AttestingIndices(att.AggregationBits, committee)
-	domain := helpers.Domain(state.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
+	domain := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
 
 	sigs := make([]*bls.Signature, len(attestingIndices))
 	zeroSig := [96]byte{}

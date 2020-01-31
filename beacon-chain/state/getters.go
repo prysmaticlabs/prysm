@@ -1,13 +1,80 @@
 package state
 
 import (
+	"fmt"
+
+	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
-// Clone the beacon state into a protobuf for usage.
-func (b *BeaconState) Clone() *pbp2p.BeaconState {
+// EffectiveBalance returns the effective balance of the
+// read only validator.
+func (v *ReadOnlyValidator) EffectiveBalance() uint64 {
+	return v.validator.EffectiveBalance
+}
+
+// ActivationEligibilityEpoch returns the activation eligibility epoch of the
+// read only validator.
+func (v *ReadOnlyValidator) ActivationEligibilityEpoch() uint64 {
+	return v.validator.ActivationEligibilityEpoch
+}
+
+// ActivationEpoch returns the activation epoch of the
+// read only validator.
+func (v *ReadOnlyValidator) ActivationEpoch() uint64 {
+	return v.validator.ActivationEpoch
+}
+
+// WithdrawableEpoch returns the withdrawable epoch of the
+// read only validator.
+func (v *ReadOnlyValidator) WithdrawableEpoch() uint64 {
+	return v.validator.WithdrawableEpoch
+}
+
+// ExitEpoch returns the exit epoch of the
+// read only validator.
+func (v *ReadOnlyValidator) ExitEpoch() uint64 {
+	return v.validator.ExitEpoch
+}
+
+// PublicKey returns the public key of the
+// read only validator.
+func (v *ReadOnlyValidator) PublicKey() [48]byte {
+	var pubkey [48]byte
+	copy(pubkey[:], v.validator.PublicKey)
+	return pubkey
+}
+
+// WithdrawalCredentials returns the withdrawal credentials of the
+// read only validator.
+func (v *ReadOnlyValidator) WithdrawalCredentials() []byte {
+	creds := make([]byte, len(v.validator.WithdrawalCredentials))
+	copy(creds[:], v.validator.WithdrawalCredentials)
+	return creds
+}
+
+// Slashed returns the read only validator is slashed.
+func (v *ReadOnlyValidator) Slashed() bool {
+	return v.validator.Slashed
+}
+
+// InnerStateUnsafe returns the pointer value of the underlying
+// beacon state proto object, bypassing immutability. Use with care.
+func (b *BeaconState) InnerStateUnsafe() *pbp2p.BeaconState {
+	if b.state == nil {
+		return &pbp2p.BeaconState{}
+	}
+	return b.state
+}
+
+// CloneInnerState the beacon state into a protobuf for usage.
+func (b *BeaconState) CloneInnerState() *pbp2p.BeaconState {
+	if b.state == nil {
+		return nil
+	}
 	return &pbp2p.BeaconState{
 		GenesisTime:                 b.GenesisTime(),
 		Slot:                        b.Slot(),
@@ -30,6 +97,12 @@ func (b *BeaconState) Clone() *pbp2p.BeaconState {
 		CurrentJustifiedCheckpoint:  b.CurrentJustifiedCheckpoint(),
 		FinalizedCheckpoint:         b.FinalizedCheckpoint(),
 	}
+}
+
+// HasInnerState detects if the internal reference to the state data structure
+// is populated correctly. Returns false if nil.
+func (b *BeaconState) HasInnerState() bool {
+	return b.state != nil
 }
 
 // GenesisTime of the beacon state as a uint64.
@@ -66,16 +139,17 @@ func (b *BeaconState) LatestBlockHeader() *ethpb.BeaconBlockHeader {
 	hdr := &ethpb.BeaconBlockHeader{
 		Slot: b.state.LatestBlockHeader.Slot,
 	}
-	var parentRoot [32]byte
-	var bodyRoot [32]byte
-	var stateRoot [32]byte
 
-	copy(parentRoot[:], b.state.LatestBlockHeader.ParentRoot)
-	copy(bodyRoot[:], b.state.LatestBlockHeader.BodyRoot)
-	copy(stateRoot[:], b.state.LatestBlockHeader.StateRoot)
-	hdr.ParentRoot = parentRoot[:]
-	hdr.BodyRoot = bodyRoot[:]
-	hdr.StateRoot = stateRoot[:]
+	parentRoot := make([]byte, len(b.state.LatestBlockHeader.ParentRoot))
+	bodyRoot := make([]byte, len(b.state.LatestBlockHeader.BodyRoot))
+	stateRoot := make([]byte, len(b.state.LatestBlockHeader.StateRoot))
+
+	copy(parentRoot, b.state.LatestBlockHeader.ParentRoot)
+	copy(bodyRoot, b.state.LatestBlockHeader.BodyRoot)
+	copy(stateRoot, b.state.LatestBlockHeader.StateRoot)
+	hdr.ParentRoot = parentRoot
+	hdr.BodyRoot = bodyRoot
+	hdr.StateRoot = stateRoot
 	return hdr
 }
 
@@ -86,11 +160,25 @@ func (b *BeaconState) BlockRoots() [][]byte {
 	}
 	roots := make([][]byte, len(b.state.BlockRoots))
 	for i, r := range b.state.BlockRoots {
-		tmpRt := [32]byte{}
-		copy(tmpRt[:], r)
-		roots[i] = tmpRt[:]
+		tmpRt := make([]byte, len(r))
+		copy(tmpRt, r)
+		roots[i] = tmpRt
 	}
 	return roots
+}
+
+// BlockRootAtIndex retrieves a specific block root based on an
+// input index value.
+func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
+	if b.state.BlockRoots == nil {
+		return nil, nil
+	}
+	if len(b.state.BlockRoots) <= int(idx) {
+		return nil, fmt.Errorf("index %d out of range", idx)
+	}
+	root := make([]byte, 32)
+	copy(root, b.state.BlockRoots[idx])
+	return root, nil
 }
 
 // StateRoots kept track of in the beacon state.
@@ -100,9 +188,9 @@ func (b *BeaconState) StateRoots() [][]byte {
 	}
 	roots := make([][]byte, len(b.state.StateRoots))
 	for i, r := range b.state.StateRoots {
-		tmpRt := [32]byte{}
-		copy(tmpRt[:], r)
-		roots[i] = tmpRt[:]
+		tmpRt := make([]byte, len(r))
+		copy(tmpRt, r)
+		roots[i] = tmpRt
 	}
 	return roots
 }
@@ -114,9 +202,9 @@ func (b *BeaconState) HistoricalRoots() [][]byte {
 	}
 	roots := make([][]byte, len(b.state.HistoricalRoots))
 	for i, r := range b.state.HistoricalRoots {
-		tmpRt := [32]byte{}
-		copy(tmpRt[:], r)
-		roots[i] = tmpRt[:]
+		tmpRt := make([]byte, len(r))
+		copy(tmpRt, r)
+		roots[i] = tmpRt
 	}
 	return roots
 }
@@ -126,19 +214,7 @@ func (b *BeaconState) Eth1Data() *ethpb.Eth1Data {
 	if b.state.Eth1Data == nil {
 		return nil
 	}
-	eth1data := &ethpb.Eth1Data{
-		DepositCount: b.state.Eth1Data.DepositCount,
-	}
-	var depositRoot [32]byte
-	var blockHash [32]byte
-
-	copy(depositRoot[:], b.state.Eth1Data.DepositRoot)
-	copy(blockHash[:], b.state.Eth1Data.BlockHash)
-
-	eth1data.DepositRoot = depositRoot[:]
-	eth1data.BlockHash = blockHash[:]
-
-	return eth1data
+	return CopyETH1Data(b.state.Eth1Data)
 }
 
 // Eth1DataVotes corresponds to votes from eth2 on the canonical proof-of-work chain
@@ -149,17 +225,7 @@ func (b *BeaconState) Eth1DataVotes() []*ethpb.Eth1Data {
 	}
 	res := make([]*ethpb.Eth1Data, len(b.state.Eth1DataVotes))
 	for i := 0; i < len(res); i++ {
-		res[i] = &ethpb.Eth1Data{
-			DepositCount: b.state.Eth1Data.DepositCount,
-		}
-		var depositRoot [32]byte
-		var blockHash [32]byte
-
-		copy(depositRoot[:], b.state.Eth1DataVotes[i].DepositRoot)
-		copy(blockHash[:], b.state.Eth1DataVotes[i].BlockHash)
-
-		res[i].DepositRoot = depositRoot[:]
-		res[i].BlockHash = blockHash[:]
+		res[i] = CopyETH1Data(b.state.Eth1DataVotes[i])
 	}
 	return res
 }
@@ -178,13 +244,13 @@ func (b *BeaconState) Validators() []*ethpb.Validator {
 	res := make([]*ethpb.Validator, len(b.state.Validators))
 	for i := 0; i < len(res); i++ {
 		val := b.state.Validators[i]
-		var pubKey [48]byte
-		copy(pubKey[:], val.PublicKey)
-		var withdrawalCreds [32]byte
-		copy(withdrawalCreds[:], val.WithdrawalCredentials)
+		pubKey := make([]byte, len(val.PublicKey))
+		copy(pubKey, val.PublicKey)
+		withdrawalCreds := make([]byte, len(val.WithdrawalCredentials))
+		copy(withdrawalCreds, val.WithdrawalCredentials)
 		res[i] = &ethpb.Validator{
 			PublicKey:                  pubKey[:],
-			WithdrawalCredentials:      withdrawalCreds[:],
+			WithdrawalCredentials:      withdrawalCreds,
 			EffectiveBalance:           val.EffectiveBalance,
 			Slashed:                    val.Slashed,
 			ActivationEligibilityEpoch: val.ActivationEligibilityEpoch,
@@ -194,6 +260,88 @@ func (b *BeaconState) Validators() []*ethpb.Validator {
 		}
 	}
 	return res
+}
+
+// ValidatorsReadOnly returns validators participating in consensus on the beacon chain. This
+// method doesn't clone the respective validators and returns read only references to the validators.
+func (b *BeaconState) ValidatorsReadOnly() []*ReadOnlyValidator {
+	if b.state.Validators == nil {
+		return nil
+	}
+	res := make([]*ReadOnlyValidator, len(b.state.Validators))
+	for i := 0; i < len(res); i++ {
+		val := b.state.Validators[i]
+		res[i] = &ReadOnlyValidator{validator: val}
+	}
+	return res
+}
+
+// ValidatorAtIndex is the validator at the provided index.
+func (b *BeaconState) ValidatorAtIndex(idx uint64) (*ethpb.Validator, error) {
+	if b.state.Validators == nil {
+		return &ethpb.Validator{}, nil
+	}
+	if len(b.state.Validators) <= int(idx) {
+		return nil, fmt.Errorf("index %d out of range", idx)
+	}
+	val := b.state.Validators[idx]
+	pubKey := make([]byte, len(val.PublicKey))
+	copy(pubKey, val.PublicKey)
+	withdrawalCreds := make([]byte, len(val.WithdrawalCredentials))
+	copy(withdrawalCreds, val.WithdrawalCredentials)
+	return &ethpb.Validator{
+		PublicKey:                  pubKey,
+		WithdrawalCredentials:      withdrawalCreds,
+		EffectiveBalance:           val.EffectiveBalance,
+		Slashed:                    val.Slashed,
+		ActivationEligibilityEpoch: val.ActivationEligibilityEpoch,
+		ActivationEpoch:            val.ActivationEpoch,
+		ExitEpoch:                  val.ExitEpoch,
+		WithdrawableEpoch:          val.WithdrawableEpoch,
+	}, nil
+}
+
+// ValidatorAtIndexReadOnly is the validator at the provided index.This method
+// doesn't clone the validator.
+func (b *BeaconState) ValidatorAtIndexReadOnly(idx uint64) (*ReadOnlyValidator, error) {
+	if b.state.Validators == nil {
+		return &ReadOnlyValidator{}, nil
+	}
+	if len(b.state.Validators) <= int(idx) {
+		return nil, fmt.Errorf("index %d out of range", idx)
+	}
+	return &ReadOnlyValidator{b.state.Validators[idx]}, nil
+}
+
+// ValidatorIndexByPubkey returns a given validator by its 48-byte public key.
+func (b *BeaconState) ValidatorIndexByPubkey(key [48]byte) (uint64, bool) {
+	b.lock.RLock()
+	b.lock.RUnlock()
+	idx, ok := b.valIdxMap[key]
+	return idx, ok
+}
+
+// PubkeyAtIndex returns the pubkey at the given
+// validator index.
+func (b *BeaconState) PubkeyAtIndex(idx uint64) [48]byte {
+	return bytesutil.ToBytes48(b.state.Validators[idx].PublicKey)
+}
+
+// NumValidators returns the size of the validator registry.
+func (b *BeaconState) NumValidators() int {
+	return len(b.state.Validators)
+}
+
+// ReadFromEveryValidator reads values from every validator and applies it to the provided function.
+// Warning: This method is potentially unsafe, as it exposes the actual validator registry.
+func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val *ReadOnlyValidator) error) error {
+	for i, v := range b.state.Validators {
+		err := f(i, &ReadOnlyValidator{validator: v})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Balances of validators participating in consensus on the beacon chain.
@@ -206,6 +354,17 @@ func (b *BeaconState) Balances() []uint64 {
 	return res
 }
 
+// BalanceAtIndex of validator with the provided index.
+func (b *BeaconState) BalanceAtIndex(idx uint64) (uint64, error) {
+	if b.state.Balances == nil {
+		return 0, nil
+	}
+	if len(b.state.Balances) <= int(idx) {
+		return 0, fmt.Errorf("index of %d does not exist", idx)
+	}
+	return b.state.Balances[idx], nil
+}
+
 // RandaoMixes of block proposers on the beacon chain.
 func (b *BeaconState) RandaoMixes() [][]byte {
 	if b.state.RandaoMixes == nil {
@@ -213,11 +372,25 @@ func (b *BeaconState) RandaoMixes() [][]byte {
 	}
 	mixes := make([][]byte, len(b.state.RandaoMixes))
 	for i, r := range b.state.RandaoMixes {
-		tmpRt := [32]byte{}
-		copy(tmpRt[:], r)
-		mixes[i] = tmpRt[:]
+		tmpRt := make([]byte, len(r))
+		copy(tmpRt, r)
+		mixes[i] = tmpRt
 	}
 	return mixes
+}
+
+// RandaoMixAtIndex retrieves a specific block root based on an
+// input index value.
+func (b *BeaconState) RandaoMixAtIndex(idx uint64) ([]byte, error) {
+	if b.state.RandaoMixes == nil {
+		return nil, nil
+	}
+	if len(b.state.RandaoMixes) <= int(idx) {
+		return nil, fmt.Errorf("index %d out of range", idx)
+	}
+	root := make([]byte, 32)
+	copy(root, b.state.RandaoMixes[idx])
+	return root, nil
 }
 
 // Slashings of validators on the beacon chain.
@@ -237,7 +410,7 @@ func (b *BeaconState) PreviousEpochAttestations() []*pbp2p.PendingAttestation {
 	}
 	res := make([]*pbp2p.PendingAttestation, len(b.state.PreviousEpochAttestations))
 	for i := 0; i < len(res); i++ {
-		res[i] = clonePendingAttestation(b.state.PreviousEpochAttestations[i])
+		res[i] = proto.Clone(b.state.PreviousEpochAttestations[i]).(*pbp2p.PendingAttestation)
 	}
 	return res
 }
@@ -249,7 +422,7 @@ func (b *BeaconState) CurrentEpochAttestations() []*pbp2p.PendingAttestation {
 	}
 	res := make([]*pbp2p.PendingAttestation, len(b.state.CurrentEpochAttestations))
 	for i := 0; i < len(res); i++ {
-		res[i] = clonePendingAttestation(b.state.CurrentEpochAttestations[i])
+		res[i] = proto.Clone(b.state.CurrentEpochAttestations[i]).(*pbp2p.PendingAttestation)
 	}
 	return res
 }
@@ -272,9 +445,9 @@ func (b *BeaconState) PreviousJustifiedCheckpoint() *ethpb.Checkpoint {
 	cp := &ethpb.Checkpoint{
 		Epoch: b.state.PreviousJustifiedCheckpoint.Epoch,
 	}
-	var root [32]byte
-	copy(root[:], b.state.PreviousJustifiedCheckpoint.Root)
-	cp.Root = root[:]
+	root := make([]byte, len(b.state.PreviousJustifiedCheckpoint.Root))
+	copy(root, b.state.PreviousJustifiedCheckpoint.Root)
+	cp.Root = root
 	return cp
 }
 
@@ -286,9 +459,9 @@ func (b *BeaconState) CurrentJustifiedCheckpoint() *ethpb.Checkpoint {
 	cp := &ethpb.Checkpoint{
 		Epoch: b.state.CurrentJustifiedCheckpoint.Epoch,
 	}
-	var root [32]byte
-	copy(root[:], b.state.CurrentJustifiedCheckpoint.Root)
-	cp.Root = root[:]
+	root := make([]byte, len(b.state.CurrentJustifiedCheckpoint.Root))
+	copy(root, b.state.CurrentJustifiedCheckpoint.Root)
+	cp.Root = root
 	return cp
 }
 
@@ -300,44 +473,25 @@ func (b *BeaconState) FinalizedCheckpoint() *ethpb.Checkpoint {
 	cp := &ethpb.Checkpoint{
 		Epoch: b.state.FinalizedCheckpoint.Epoch,
 	}
-	var root [32]byte
-	copy(root[:], b.state.FinalizedCheckpoint.Root)
-	cp.Root = root[:]
+	root := make([]byte, len(b.state.FinalizedCheckpoint.Root))
+	copy(root, b.state.FinalizedCheckpoint.Root)
+	cp.Root = root
 	return cp
 }
 
-func clonePendingAttestation(att *pbp2p.PendingAttestation) *pbp2p.PendingAttestation {
-	var aggBits bitfield.Bitlist
-	copy(aggBits, att.AggregationBits)
-
-	var attData *ethpb.AttestationData
-	if att.Data != nil {
-		var beaconRoot [32]byte
-		copy(beaconRoot[:], att.Data.BeaconBlockRoot)
-
-		var sourceRoot [32]byte
-		copy(sourceRoot[:], att.Data.Source.Root)
-
-		var targetRoot [32]byte
-		copy(targetRoot[:], att.Data.Target.Root)
-		attData = &ethpb.AttestationData{
-			Slot:            att.Data.Slot,
-			CommitteeIndex:  att.Data.CommitteeIndex,
-			BeaconBlockRoot: beaconRoot[:],
-			Source: &ethpb.Checkpoint{
-				Epoch: att.Data.Source.Epoch,
-				Root:  sourceRoot[:],
-			},
-			Target: &ethpb.Checkpoint{
-				Epoch: att.Data.Target.Epoch,
-				Root:  targetRoot[:],
-			},
-		}
+// CopyETH1Data copies the provided eth1data object.
+func CopyETH1Data(data *ethpb.Eth1Data) *ethpb.Eth1Data {
+	newETH1 := &ethpb.Eth1Data{
+		DepositCount: data.DepositCount,
 	}
-	return &pbp2p.PendingAttestation{
-		AggregationBits: aggBits,
-		Data:            attData,
-		InclusionDelay:  att.InclusionDelay,
-		ProposerIndex:   att.ProposerIndex,
-	}
+	depositRoot := make([]byte, len(data.DepositRoot))
+	blockHash := make([]byte, len(data.BlockHash))
+
+	copy(depositRoot, data.DepositRoot)
+	copy(blockHash, data.BlockHash)
+
+	newETH1.DepositRoot = depositRoot
+	newETH1.BlockHash = blockHash
+
+	return newETH1
 }

@@ -4,7 +4,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -120,13 +120,16 @@ func (s *Service) reportSlotMetrics(currentSlot uint64) {
 	beaconSlot.Set(float64(currentSlot))
 	beaconHeadSlot.Set(float64(s.HeadSlot()))
 	if s.headState != nil {
-		headFinalizedEpoch.Set(float64(s.headState.FinalizedCheckpoint.Epoch))
-		headFinalizedRoot.Set(float64(bytesutil.ToLowInt64(s.headState.FinalizedCheckpoint.Root)))
+		finalizedCpt := s.headState.FinalizedCheckpoint()
+		if finalizedCpt != nil {
+			headFinalizedEpoch.Set(float64(finalizedCpt.Epoch))
+			headFinalizedRoot.Set(float64(bytesutil.ToLowInt64(finalizedCpt.Root)))
+		}
 	}
 }
 
-func reportEpochMetrics(state *pb.BeaconState) {
-	currentEpoch := state.Slot / params.BeaconConfig().SlotsPerEpoch
+func reportEpochMetrics(state *stateTrie.BeaconState) {
+	currentEpoch := state.Slot() / params.BeaconConfig().SlotsPerEpoch
 
 	// Validator instances
 	pendingInstances := 0
@@ -144,11 +147,15 @@ func reportEpochMetrics(state *pb.BeaconState) {
 	slashingBalance := uint64(0)
 	slashingEffectiveBalance := uint64(0)
 
-	for i, validator := range state.Validators {
+	for i, validator := range state.Validators() {
+		bal, err := state.BalanceAtIndex(uint64(i))
+		if err != nil {
+			continue
+		}
 		if validator.Slashed {
 			if currentEpoch < validator.ExitEpoch {
 				slashingInstances++
-				slashingBalance += state.Balances[i]
+				slashingBalance += bal
 				slashingEffectiveBalance += validator.EffectiveBalance
 			} else {
 				slashedInstances++
@@ -158,7 +165,7 @@ func reportEpochMetrics(state *pb.BeaconState) {
 		if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
 			if currentEpoch < validator.ExitEpoch {
 				exitingInstances++
-				exitingBalance += state.Balances[i]
+				exitingBalance += bal
 				exitingEffectiveBalance += validator.EffectiveBalance
 			} else {
 				exitedInstances++
@@ -167,11 +174,11 @@ func reportEpochMetrics(state *pb.BeaconState) {
 		}
 		if currentEpoch < validator.ActivationEpoch {
 			pendingInstances++
-			pendingBalance += state.Balances[i]
+			pendingBalance += bal
 			continue
 		}
 		activeInstances++
-		activeBalance += state.Balances[i]
+		activeBalance += bal
 		activeEffectiveBalance += validator.EffectiveBalance
 	}
 	validatorsCount.WithLabelValues("Pending").Set(float64(pendingInstances))
@@ -189,23 +196,18 @@ func reportEpochMetrics(state *pb.BeaconState) {
 	validatorsEffectiveBalance.WithLabelValues("Slashing").Set(float64(slashingEffectiveBalance))
 
 	// Last justified slot
-	if state.CurrentJustifiedCheckpoint != nil {
-		beaconCurrentJustifiedEpoch.Set(float64(state.CurrentJustifiedCheckpoint.Epoch))
-		beaconCurrentJustifiedRoot.Set(float64(bytesutil.ToLowInt64(state.CurrentJustifiedCheckpoint.Root)))
-	}
+	beaconCurrentJustifiedEpoch.Set(float64(state.CurrentJustifiedCheckpoint().Epoch))
+	beaconCurrentJustifiedRoot.Set(float64(bytesutil.ToLowInt64(state.CurrentJustifiedCheckpoint().Root)))
+
 	// Last previous justified slot
-	if state.PreviousJustifiedCheckpoint != nil {
-		beaconPrevJustifiedEpoch.Set(float64(state.PreviousJustifiedCheckpoint.Epoch))
-		beaconPrevJustifiedRoot.Set(float64(bytesutil.ToLowInt64(state.PreviousJustifiedCheckpoint.Root)))
-	}
+	beaconPrevJustifiedEpoch.Set(float64(state.PreviousJustifiedCheckpoint().Epoch))
+	beaconPrevJustifiedRoot.Set(float64(bytesutil.ToLowInt64(state.PreviousJustifiedCheckpoint().Root)))
+
 	// Last finalized slot
-	if state.FinalizedCheckpoint != nil {
-		beaconFinalizedEpoch.Set(float64(state.FinalizedCheckpoint.Epoch))
-		beaconFinalizedRoot.Set(float64(bytesutil.ToLowInt64(state.FinalizedCheckpoint.Root)))
-	}
-	if state.Eth1Data != nil {
-		currentEth1DataDepositCount.Set(float64(state.Eth1Data.DepositCount))
-	}
+	beaconFinalizedEpoch.Set(float64(state.FinalizedCheckpoint().Epoch))
+	beaconFinalizedRoot.Set(float64(bytesutil.ToLowInt64(state.FinalizedCheckpoint().Root)))
+
+	currentEth1DataDepositCount.Set(float64(state.Eth1Data().DepositCount))
 
 	if precompute.Balances != nil {
 		totalEligibleBalances.Set(float64(precompute.Balances.PrevEpoch))

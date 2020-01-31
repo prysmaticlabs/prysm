@@ -8,7 +8,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -70,7 +70,7 @@ func (vs *Server) multipleValidatorStatus(
 	return activeValidatorExists, statusResponses, nil
 }
 
-func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState *pbp2p.BeaconState) *ethpb.ValidatorStatusResponse {
+func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState *stateTrie.BeaconState) *ethpb.ValidatorStatusResponse {
 	ctx, span := trace.StartSpan(ctx, "validatorServer.validatorStatus")
 	defer span.End()
 
@@ -85,7 +85,12 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 	}
 	resp.Status = vStatus
 	if err != errPubkeyDoesNotExist {
-		resp.ActivationEpoch = int64(headState.Validators[idx].ActivationEpoch)
+		val, err := headState.ValidatorAtIndex(idx)
+		if err != nil {
+			traceutil.AnnotateError(span, err)
+			return resp
+		}
+		resp.ActivationEpoch = int64(val.ActivationEpoch)
 	}
 
 	// If no connection to ETH1, the deposit block number or position in queue cannot be determined.
@@ -121,8 +126,12 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 	}
 
 	var lastActivatedValidatorIdx uint64
-	for j := len(headState.Validators) - 1; j >= 0; j-- {
-		if helpers.IsActiveValidator(headState.Validators[j], helpers.CurrentEpoch(headState)) {
+	for j := headState.NumValidators() - 1; j >= 0; j-- {
+		val, err := headState.ValidatorAtIndex(uint64(j))
+		if err != nil {
+			return resp
+		}
+		if helpers.IsActiveValidator(val, helpers.CurrentEpoch(headState)) {
 			lastActivatedValidatorIdx = uint64(j)
 			break
 		}
@@ -138,7 +147,7 @@ func (vs *Server) validatorStatus(ctx context.Context, pubKey []byte, headState 
 func (vs *Server) retrieveStatusFromState(
 	ctx context.Context,
 	pubKey []byte,
-	headState *pbp2p.BeaconState,
+	headState *stateTrie.BeaconState,
 ) (ethpb.ValidatorStatus, uint64, error) {
 	if headState == nil {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS, 0, errors.New("head state does not exist")
@@ -147,14 +156,17 @@ func (vs *Server) retrieveStatusFromState(
 	if err != nil {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS, 0, err
 	}
-	if !ok || int(idx) >= len(headState.Validators) {
+	if !ok || int(idx) >= headState.NumValidators() {
 		return ethpb.ValidatorStatus_UNKNOWN_STATUS, 0, errPubkeyDoesNotExist
 	}
 	return vs.assignmentStatus(idx, headState), idx, nil
 }
 
-func (vs *Server) assignmentStatus(validatorIdx uint64, beaconState *pbp2p.BeaconState) ethpb.ValidatorStatus {
-	validator := beaconState.Validators[validatorIdx]
+func (vs *Server) assignmentStatus(validatorIdx uint64, beaconState *stateTrie.BeaconState) ethpb.ValidatorStatus {
+	validator, err := beaconState.ValidatorAtIndex(validatorIdx)
+	if err != nil {
+		return ethpb.ValidatorStatus_UNKNOWN_STATUS
+	}
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 
@@ -179,7 +191,7 @@ func (vs *Server) assignmentStatus(validatorIdx uint64, beaconState *pbp2p.Beaco
 	return ethpb.ValidatorStatus_EXITED
 }
 
-func (vs *Server) depositBlockSlot(ctx context.Context, eth1BlockNumBigInt *big.Int, beaconState *pbp2p.BeaconState) (uint64, error) {
+func (vs *Server) depositBlockSlot(ctx context.Context, eth1BlockNumBigInt *big.Int, beaconState *stateTrie.BeaconState) (uint64, error) {
 	var depositBlockSlot uint64
 	blockTimeStamp, err := vs.BlockFetcher.BlockTimeByHeight(ctx, eth1BlockNumBigInt)
 	if err != nil {
@@ -191,7 +203,7 @@ func (vs *Server) depositBlockSlot(ctx context.Context, eth1BlockNumBigInt *big.
 	votingPeriod := time.Duration(params.BeaconConfig().SlotsPerEth1VotingPeriod*params.BeaconConfig().SecondsPerSlot) * time.Second
 	timeToInclusion := eth1UnixTime.Add(votingPeriod)
 
-	eth2Genesis := time.Unix(int64(beaconState.GenesisTime), 0)
+	eth2Genesis := time.Unix(int64(beaconState.GenesisTime()), 0)
 
 	if eth2Genesis.After(timeToInclusion) {
 		depositBlockSlot = 0
