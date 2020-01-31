@@ -552,7 +552,9 @@ func (bs *Server) GetValidatorQueue(
 	minEpoch := exitQueueEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
 	exitQueueIndices := make([]uint64, 0)
 	for _, valIdx := range awaitingExit {
-		if vals[valIdx].WithdrawableEpoch < minEpoch {
+		val := vals[valIdx]
+		// Ensure the validator has not yet exited before adding its index to the exit queue.
+		if val.WithdrawableEpoch < minEpoch && !validatorHasExited(val, helpers.CurrentEpoch(headState)) {
 			exitQueueIndices = append(exitQueueIndices, valIdx)
 		}
 	}
@@ -625,4 +627,25 @@ func (bs *Server) GetValidatorPerformance(
 		TotalValidators:               uint64(headState.NumValidators()),
 		TotalActiveValidators:         activeCount,
 	}, nil
+}
+
+// Determines whether a validator has already exited.
+func validatorHasExited(validator *ethpb.Validator, currentEpoch uint64) bool {
+	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
+	if currentEpoch < validator.ActivationEligibilityEpoch {
+		return false
+	}
+	if currentEpoch < validator.ActivationEpoch {
+		return false
+	}
+	if validator.ExitEpoch == farFutureEpoch {
+		return false
+	}
+	if currentEpoch < validator.ExitEpoch {
+		if validator.Slashed {
+			return false
+		}
+		return false
+	}
+	return true
 }
