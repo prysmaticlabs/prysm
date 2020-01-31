@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -40,7 +41,7 @@ func TestStore_OnAttestation(t *testing.T) {
 		t.Fatal(err)
 	}
 	BlkWithStateBadAttRoot, _ := ssz.HashTreeRoot(BlkWithStateBadAtt.Block)
-	if err := store.db.SaveState(ctx, &pb.BeaconState{}, BlkWithStateBadAttRoot); err != nil {
+	if err := store.db.SaveState(ctx, &pb.BeaconState{Slot: 100 * params.BeaconConfig().SlotsPerEpoch}, BlkWithStateBadAttRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -150,7 +151,8 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	}
 
 	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: []byte{'A'}}
-	s1, err := store.saveCheckpointState(ctx, s, cp1)
+	store.db.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'A'}))
+	s1, err := store.getAttPreState(ctx, cp1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,7 +161,8 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	}
 
 	cp2 := &ethpb.Checkpoint{Epoch: 2, Root: []byte{'B'}}
-	s2, err := store.saveCheckpointState(ctx, s, cp2)
+	store.db.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'B'}))
+	s2, err := store.getAttPreState(ctx, cp2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,7 +170,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 		t.Errorf("Wanted state slot: %d, got: %d", 2*params.BeaconConfig().SlotsPerEpoch, s2.Slot)
 	}
 
-	s1, err = store.saveCheckpointState(ctx, nil, cp1)
+	s1, err = store.getAttPreState(ctx, cp1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -196,7 +199,8 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 		t.Fatal(err)
 	}
 	cp3 := &ethpb.Checkpoint{Epoch: 1, Root: []byte{'C'}}
-	s3, err := store.saveCheckpointState(ctx, s, cp3)
+	store.db.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'C'}))
+	s3, err := store.getAttPreState(ctx, cp3)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -239,11 +243,12 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	baseState, _ := testutil.DeterministicGenesisState(t, 1)
 	baseState.Slot = epoch * params.BeaconConfig().SlotsPerEpoch
 	checkpoint := &ethpb.Checkpoint{Epoch: epoch}
-	returned, err := store.saveCheckpointState(ctx, baseState, checkpoint)
+	store.db.SaveState(ctx, baseState, bytesutil.ToBytes32(checkpoint.Root))
+	returned, err := store.getAttPreState(ctx, checkpoint)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(baseState, returned) {
+	if baseState.Slot != returned.Slot {
 		t.Error("Incorrectly returned base state")
 	}
 
@@ -251,13 +256,14 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cached != nil {
-		t.Error("State shouldn't have been cached")
+	if cached == nil {
+		t.Error("State should have been cached")
 	}
 
 	epoch = uint64(2)
 	newCheckpoint := &ethpb.Checkpoint{Epoch: epoch}
-	returned, err = store.saveCheckpointState(ctx, baseState, newCheckpoint)
+	store.db.SaveState(ctx, baseState, bytesutil.ToBytes32(newCheckpoint.Root))
+	returned, err = store.getAttPreState(ctx, newCheckpoint)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -265,7 +271,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(baseState, returned) {
+	if baseState.Slot != returned.Slot {
 		t.Error("Incorrectly returned base state")
 	}
 
