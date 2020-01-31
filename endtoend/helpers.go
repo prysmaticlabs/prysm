@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	maxPollingWaitTime  = 36 * time.Second
+	maxPollingWaitTime  = 60 * time.Second
 	filePollingInterval = 1 * time.Second
 )
 
@@ -33,6 +33,20 @@ func killProcesses(t *testing.T, pIDs []int) {
 	}
 }
 
+func deleteAndCreateFile(tmpPath string, fileName string) (*os.File, error) {
+	filePath := path.Join(tmpPath, fileName)
+	if _, err := os.Stat(filePath); os.IsExist(err) {
+		if err := os.Remove(filePath); err != nil {
+			return nil, err
+		}
+	}
+	newFile, err := os.Create(path.Join(tmpPath, fileName))
+	if err != nil {
+		return nil, err
+	}
+	return newFile, nil
+}
+
 func waitForTextInFile(file *os.File, text string) error {
 	d := time.Now().Add(maxPollingWaitTime)
 	ctx, cancel := context.WithDeadline(context.Background(), d)
@@ -48,12 +62,8 @@ func waitForTextInFile(file *os.File, text string) error {
 			if err != nil {
 				return err
 			}
-			return fmt.Errorf("could not find requested text \"%s\" in logs:\n%s", text, string(contents))
+			return fmt.Errorf("could not find requested text \"%s\" in logs:\n%s", text, contents)
 		case <-ticker.C:
-			_, err := file.Seek(0, io.SeekStart)
-			if err != nil {
-				return err
-			}
 			fileScanner := bufio.NewScanner(file)
 			for fileScanner.Scan() {
 				scanned := fileScanner.Text()
@@ -62,6 +72,10 @@ func waitForTextInFile(file *os.File, text string) error {
 				}
 			}
 			if err := fileScanner.Err(); err != nil {
+				return err
+			}
+			_, err := file.Seek(0, io.SeekStart)
+			if err != nil {
 				return err
 			}
 		}
