@@ -78,15 +78,11 @@ func AttestingBalance(state *stateTrie.BeaconState, atts []*pb.PendingAttestatio
 //        validator.activation_epoch = compute_activation_exit_epoch(get_current_epoch(state))
 func ProcessRegistryUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
-	vals := state.Validators()
 	var err error
-	for idx, validator := range vals {
+	if err := state.ApplyToEveryValidator(func(idx int, validator *ethpb.Validator) error {
 		// Process the validators for activation eligibility.
 		if helpers.IsEligibleForActivationQueue(validator) {
 			validator.ActivationEligibilityEpoch = helpers.CurrentEpoch(state) + 1
-		}
-		if err := state.UpdateValidatorAtIndex(uint64(idx), validator); err != nil {
-			return nil, err
 		}
 
 		// Process the validators for ejection.
@@ -95,11 +91,15 @@ func ProcessRegistryUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconStat
 		if isActive && belowEjectionBalance {
 			state, err = validators.InitiateValidatorExit(state, uint64(idx))
 			if err != nil {
-				return nil, errors.Wrapf(err, "could not initiate exit for validator %d", idx)
+				return errors.Wrapf(err, "could not initiate exit for validator %d", idx)
 			}
 		}
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 
+	vals := state.Validators()
 	// Queue validators eligible for activation and not yet dequeued for activation.
 	var activationQ []uint64
 	for idx, validator := range vals {
