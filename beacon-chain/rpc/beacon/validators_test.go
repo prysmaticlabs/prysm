@@ -1222,6 +1222,67 @@ func TestServer_GetValidatorQueue_PendingActivation(t *testing.T) {
 	}
 }
 
+func TestServer_GetValidatorQueue_ExitedValidatorLeavesQueue(t *testing.T) {
+	headState := &pbp2p.BeaconState{
+		Validators: []*ethpb.Validator{
+			{
+				ActivationEpoch:   0,
+				ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+				WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+				PublicKey:         []byte("1"),
+			},
+			{
+				ActivationEpoch:   0,
+				ExitEpoch:         4,
+				WithdrawableEpoch: 6,
+				PublicKey:         []byte("2"),
+			},
+		},
+		FinalizedCheckpoint: &ethpb.Checkpoint{
+			Epoch: 0,
+		},
+	}
+	bs := &Server{
+		HeadFetcher: &mock.ChainService{
+			State: headState,
+		},
+	}
+
+	// First we check if validator with index 1 is in the exit queue.
+	res, err := bs.GetValidatorQueue(context.Background(), &ptypes.Empty{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wanted := [][]byte{
+		[]byte("2"),
+	}
+	activeValidatorCount, err := helpers.ActiveValidatorCount(headState, helpers.CurrentEpoch(headState))
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantChurn, err := helpers.ValidatorChurnLimit(activeValidatorCount)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.ChurnLimit != wantChurn {
+		t.Errorf("Wanted churn %d, received %d", wantChurn, res.ChurnLimit)
+	}
+	if !reflect.DeepEqual(res.ExitPublicKeys, wanted) {
+		t.Errorf("Wanted %v, received %v", wanted, res.ExitPublicKeys)
+	}
+
+	// Now, we move the state.slot past the exit epoch of the validator, and now
+	// the validator should no longer exist in the queue.
+	headState.Slot = helpers.StartSlot(headState.Validators[1].ExitEpoch + 1)
+	res, err = bs.GetValidatorQueue(context.Background(), &ptypes.Empty{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.ExitPublicKeys) != 0 {
+		t.Errorf("Wanted empty exit queue, received %v", res.ExitPublicKeys)
+	}
+}
+
 func TestServer_GetValidatorQueue_PendingExit(t *testing.T) {
 	headState := &pbp2p.BeaconState{
 		Validators: []*ethpb.Validator{
