@@ -244,6 +244,9 @@ func (b *BeaconState) Validators() []*ethpb.Validator {
 	res := make([]*ethpb.Validator, len(b.state.Validators))
 	for i := 0; i < len(res); i++ {
 		val := b.state.Validators[i]
+		if val == nil {
+			continue
+		}
 		pubKey := make([]byte, len(val.PublicKey))
 		copy(pubKey, val.PublicKey)
 		withdrawalCreds := make([]byte, len(val.WithdrawalCredentials))
