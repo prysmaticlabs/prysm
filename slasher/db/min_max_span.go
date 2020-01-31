@@ -15,7 +15,7 @@ var highestValidatorIdx uint64
 func saveToDB(validatorIdx uint64, _ uint64, value interface{}, cost int64) {
 	log.Tracef("evicting span map for validator id: %d", validatorIdx)
 
-	err := d.batch(func(tx *bolt.Tx) error {
+	err := d.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsMinMaxSpanBucket)
 		key := bytesutil.Bytes4(validatorIdx)
 		val, err := proto.Marshal(value.(*slashpb.EpochSpanMap))
@@ -80,7 +80,7 @@ func (db *Store) SaveValidatorSpansMap(validatorIdx uint64, spanMap *slashpb.Epo
 		}
 		return nil
 	}
-	err := db.batch(func(tx *bolt.Tx) error {
+	err := db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsMinMaxSpanBucket)
 		key := bytesutil.Bytes4(validatorIdx)
 		val, err := proto.Marshal(spanMap)
@@ -90,7 +90,7 @@ func (db *Store) SaveValidatorSpansMap(validatorIdx uint64, spanMap *slashpb.Epo
 		if err := bucket.Put(key, val); err != nil {
 			return errors.Wrapf(err, "failed to delete validator id: %d from validators min max span bucket", validatorIdx)
 		}
-		return err
+		return nil
 	})
 	return err
 }
