@@ -200,19 +200,21 @@ func (s *Service) startSlasher() {
 }
 
 func (s *Service) loadSpanMaps(err error, slasherServer rpc.Server) {
-	lt, err := slasherServer.SlasherDB.LatestIndexedAttestationsTargetEpoch()
+	latestTargetEpoch, err := slasherServer.SlasherDB.LatestIndexedAttestationsTargetEpoch()
 	if err != nil {
 		log.Errorf("Could not extract latest target epoch from indexed attestations store: %v", err)
 	}
-	for i := uint64(0); i < lt; i++ {
-		ias, err := slasherServer.SlasherDB.IndexedAttestations(i)
+	for epoch := uint64(0); epoch < latestTargetEpoch; epoch++ {
+		idxAtts, err := slasherServer.SlasherDB.IdxAttsForTarget(epoch)
 		if err != nil {
 			log.Errorf("Got error while trying to retrieve indexed attestations from db: %v", err)
 		}
-		for _, ia := range ias {
-			slasherServer.UpdateSpanMaps(s.context, ia)
+		for _, ia := range idxAtts {
+			if err := slasherServer.UpdateSpanMaps(s.context, ia); err != nil {
+				log.Errorf("Unexpected error updating span maps: %v", err)
+			}
 		}
-		log.Infof("Update span maps for epoch: %d", i)
+		log.Infof("Update span maps for epoch: %d", epoch)
 	}
 }
 

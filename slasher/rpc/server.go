@@ -184,22 +184,23 @@ func (ss *Server) SlashableAttestations(req *types.Empty, server slashpb.Slasher
 func (ss *Server) DetectSurroundVotes(ctx context.Context, validatorIdx uint64, req *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error) {
 	spanMap, err := ss.SlasherDB.ValidatorSpansMap(validatorIdx)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to get validator spans map")
 	}
 	minTargetEpoch, spanMap, err := ss.DetectAndUpdateMinEpochSpan(ctx, req.Data.Source.Epoch, req.Data.Target.Epoch, validatorIdx, spanMap)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to update min spans")
 	}
 	maxTargetEpoch, spanMap, err := ss.DetectAndUpdateMaxEpochSpan(ctx, req.Data.Source.Epoch, req.Data.Target.Epoch, validatorIdx, spanMap)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to update max spans")
 	}
 	if err := ss.SlasherDB.SaveValidatorSpansMap(validatorIdx, spanMap); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to save validator spans map")
 	}
+
 	var as []*ethpb.AttesterSlashing
 	if minTargetEpoch > 0 {
-		attestations, err := ss.SlasherDB.IndexedAttestation(minTargetEpoch, validatorIdx)
+		attestations, err := ss.SlasherDB.IdxAttsForTargetFromID(minTargetEpoch, validatorIdx)
 		if err != nil {
 			return nil, err
 		}
@@ -216,7 +217,7 @@ func (ss *Server) DetectSurroundVotes(ctx context.Context, validatorIdx uint64, 
 		}
 	}
 	if maxTargetEpoch > 0 {
-		attestations, err := ss.SlasherDB.IndexedAttestation(maxTargetEpoch, validatorIdx)
+		attestations, err := ss.SlasherDB.IdxAttsForTargetFromID(maxTargetEpoch, validatorIdx)
 		if err != nil {
 			return nil, err
 		}

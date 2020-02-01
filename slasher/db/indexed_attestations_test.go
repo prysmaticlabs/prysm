@@ -56,11 +56,11 @@ func TestNilDBHistoryIdxAtt(t *testing.T) {
 		t.Fatal("HasIndexedAttestation should return false")
 	}
 
-	idxAtt, err := db.IndexedAttestation(epoch, validatorID)
+	idxAtts, err := db.IdxAttsForTargetFromID(epoch, validatorID)
 	if err != nil {
 		t.Fatalf("failed to get indexed attestation: %v", err)
 	}
-	if idxAtt != nil {
+	if idxAtts != nil {
 		t.Fatalf("get should return nil for a non existent key")
 	}
 }
@@ -78,13 +78,13 @@ func TestSaveIdxAtt(t *testing.T) {
 			t.Fatalf("save indexed attestation failed: %v", err)
 		}
 
-		idxAttarray, err := db.IndexedAttestation(tt.idxAtt.Data.Target.Epoch, tt.idxAtt.AttestingIndices[0])
+		idxAtts, err := db.IdxAttsForTargetFromID(tt.idxAtt.Data.Target.Epoch, tt.idxAtt.AttestingIndices[0])
 		if err != nil {
 			t.Fatalf("failed to get indexed attestation: %v", err)
 		}
 
-		if idxAttarray == nil || !reflect.DeepEqual(idxAttarray[0], tt.idxAtt) {
-			t.Fatalf("get should return indexed attestation: %v", idxAttarray)
+		if idxAtts == nil || !reflect.DeepEqual(idxAtts[0], tt.idxAtt) {
+			t.Fatalf("get should return indexed attestation: %v", idxAtts)
 		}
 	}
 
@@ -106,20 +106,20 @@ func TestDeleteHistoryIdxAtt(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		idxAttarray, err := db.IndexedAttestation(tt.idxAtt.Data.Target.Epoch, tt.idxAtt.AttestingIndices[0])
+		idxAtts, err := db.IdxAttsForTargetFromID(tt.idxAtt.Data.Target.Epoch, tt.idxAtt.AttestingIndices[0])
 		if err != nil {
 			t.Fatalf("failed to get index attestation: %v", err)
 		}
 
-		if idxAttarray == nil || !reflect.DeepEqual(idxAttarray[0], tt.idxAtt) {
-			t.Fatalf("get should return indexed attestation: %v", idxAttarray)
+		if idxAtts == nil || !reflect.DeepEqual(idxAtts[0], tt.idxAtt) {
+			t.Fatalf("get should return indexed attestation: %v", idxAtts)
 		}
 		err = db.DeleteIndexedAttestation(tt.idxAtt)
 		if err != nil {
 			t.Fatalf("delete index attestation failed: %v", err)
 		}
 
-		idxAttarray, err = db.IndexedAttestation(tt.idxAtt.Data.Target.Epoch, tt.idxAtt.AttestingIndices[0])
+		idxAtts, err = db.IdxAttsForTargetFromID(tt.idxAtt.Data.Target.Epoch, tt.idxAtt.AttestingIndices[0])
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -127,8 +127,8 @@ func TestDeleteHistoryIdxAtt(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(idxAttarray) != 0 {
-			t.Errorf("Expected index attestation to have been deleted, received: %v", idxAttarray)
+		if len(idxAtts) != 0 {
+			t.Errorf("Expected index attestation to have been deleted, received: %v", idxAtts)
 		}
 		if hasA {
 			t.Errorf("Expected indexed attestation indexes list to be deleted, received: %v", hasA)
@@ -182,13 +182,13 @@ func TestPruneHistoryIdxAtt(t *testing.T) {
 			t.Fatalf("save indexed attestation failed: %v", err)
 		}
 
-		idxAttarray, err := db.IndexedAttestation(tt.idxAtt.Data.Target.Epoch, tt.idxAtt.AttestingIndices[0])
+		idxAtts, err := db.IdxAttsForTargetFromID(tt.idxAtt.Data.Target.Epoch, tt.idxAtt.AttestingIndices[0])
 		if err != nil {
 			t.Fatalf("failed to get indexed attestation: %v", err)
 		}
 
-		if idxAttarray == nil || !reflect.DeepEqual(idxAttarray[0], tt.idxAtt) {
-			t.Fatalf("get should return bh: %v", idxAttarray)
+		if idxAtts == nil || !reflect.DeepEqual(idxAtts[0], tt.idxAtt) {
+			t.Fatalf("get should return bh: %v", idxAtts)
 		}
 	}
 	currentEpoch := uint64(3)
@@ -199,7 +199,7 @@ func TestPruneHistoryIdxAtt(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		idxAttarray, err := db.IndexedAttestation(tt.idxAtt.Data.Target.Epoch, tt.idxAtt.AttestingIndices[0])
+		idxAtts, err := db.IdxAttsForTargetFromID(tt.idxAtt.Data.Target.Epoch, tt.idxAtt.AttestingIndices[0])
 		if err != nil {
 			t.Fatalf("failed to get indexed attestation: %v", err)
 		}
@@ -209,15 +209,15 @@ func TestPruneHistoryIdxAtt(t *testing.T) {
 		}
 
 		if tt.idxAtt.Data.Source.Epoch > currentEpoch-historyToKeep {
-			if idxAttarray == nil || !reflect.DeepEqual(idxAttarray[0], tt.idxAtt) {
-				t.Fatalf("get should return indexed attestation: %v", idxAttarray)
+			if idxAtts == nil || !reflect.DeepEqual(idxAtts[0], tt.idxAtt) {
+				t.Fatalf("get should return indexed attestation: %v", idxAtts)
 			}
 			if !exists {
-				t.Fatalf("get should have indexed attestation for epoch: %v", idxAttarray)
+				t.Fatalf("get should have indexed attestation for epoch: %v", idxAtts)
 			}
 		} else {
-			if idxAttarray != nil || exists {
-				t.Fatalf("indexed attestation should have been pruned: %v has attestation: %t", idxAttarray, exists)
+			if idxAtts != nil || exists {
+				t.Fatalf("indexed attestation should have been pruned: %v has attestation: %t", idxAtts, exists)
 			}
 		}
 	}
