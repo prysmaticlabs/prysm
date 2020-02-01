@@ -84,9 +84,9 @@ func ProcessRegistryUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconStat
 		// Process the validators for activation eligibility.
 		if helpers.IsEligibleForActivationQueue(validator) {
 			validator.ActivationEligibilityEpoch = helpers.CurrentEpoch(state) + 1
-		}
-		if err := state.UpdateValidatorAtIndex(uint64(idx), validator); err != nil {
-			return nil, err
+			if err := state.UpdateValidatorAtIndex(uint64(idx), validator); err != nil {
+				return nil, err
+			}
 		}
 
 		// Process the validators for ejection.
