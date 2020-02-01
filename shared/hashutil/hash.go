@@ -36,7 +36,7 @@ func Hash(data []byte) [32]byte {
 
 	// #nosec G104
 	h.Write(data)
-	h.Sum(b[:0])
+	h.Sum(b[:])
 
 	return b
 }
@@ -46,6 +46,7 @@ func Hash(data []byte) [32]byte {
 // use as the same hasher is being called throughout.
 func CustomSHA256Hasher() func([]byte) [32]byte {
 	hasher := sha256Pool.Get().(hash.Hash)
+	hasher.Reset()
 	var hash [32]byte
 
 	return func(data []byte) [32]byte {
