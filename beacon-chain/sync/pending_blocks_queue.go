@@ -109,9 +109,12 @@ func (r *Service) processPendingBlocks(ctx context.Context) error {
 		delete(r.seenPendingBlocks, blkRoot)
 		r.pendingQueueLock.Unlock()
 
-		log.Infof("Processed ancestor block with slot %d root 0x%s... and cleared pending block cache", s,
-			hex.EncodeToString(bytesutil.Trunc(blkRoot[:])))
+		log.WithFields(logrus.Fields{
+			"slot":      s,
+			"blockRoot": hex.EncodeToString(bytesutil.Trunc(blkRoot[:])),
+		}).Info("Processed pending block and cleared pending block in cache")
 	}
+
 	return nil
 }
 

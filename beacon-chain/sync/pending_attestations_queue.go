@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"golang.org/x/exp/rand"
 )
@@ -71,15 +72,16 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 					numberOfAttsRecovered.Inc()
 				}
 			}
-			log.Infof("Verified and saved %d pending attestations that voted 0x%s to the pool",
-				len(attestations), hex.EncodeToString(bytesutil.Trunc(bRoot[:])))
+			log.WithFields(logrus.Fields{
+				"blockRoot":        hex.EncodeToString(bytesutil.Trunc(bRoot[:])),
+				"pendingAttsCount": len(attestations),
+			}).Info("Verified and saved pending attestations to pool")
 
 			// Delete the missing block root key from pending attestation queue, a node will not request for the block again.
 			delete(s.blkRootToPendingAtts, bRoot)
 		} else {
 			// The pending attestation's missing block has not arrived yet.
-			req := [][32]byte{bRoot}
-			log.Infof("Requesting block 0x%s to process pending attestation", hex.EncodeToString(bytesutil.Trunc(bRoot[:])))
+			log.WithField("blockRoot", hex.EncodeToString(bytesutil.Trunc(bRoot[:]))).Info("Requesting block for pending attestation")
 
 			// Start with a random peer to query, but choose the first peer in our unsorted list that claims to
 			// have a head slot newer than the pending attestation's target boundary slot.
@@ -92,6 +94,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 				}
 			}
 
+			req := [][32]byte{bRoot}
 			if err := s.sendRecentBeaconBlocksRequest(ctx, req, pid); err != nil {
 				traceutil.AnnotateError(span, err)
 				log.Errorf("Could not send recent block request: %v", err)
