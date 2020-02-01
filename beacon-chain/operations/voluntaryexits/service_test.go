@@ -7,6 +7,8 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -211,7 +213,11 @@ func TestPool_InsertVoluntaryExit(t *testing.T) {
 				pending:  tt.fields.pending,
 				included: tt.fields.included,
 			}
-			p.InsertVoluntaryExit(ctx, validators, tt.args.exit)
+			s, err := beaconstate.InitializeFromProtoUnsafe(&p2ppb.BeaconState{Validators: validators})
+			if err != nil {
+				t.Fatal(err)
+			}
+			p.InsertVoluntaryExit(ctx, s, tt.args.exit)
 			if len(p.pending) != len(tt.want) {
 				t.Fatalf("Mismatched lengths of pending list. Got %d, wanted %d.", len(p.pending), len(tt.want))
 			}
@@ -444,7 +450,11 @@ func TestPool_PendingExits(t *testing.T) {
 			p := &Pool{
 				pending: tt.fields.pending,
 			}
-			if got := p.PendingExits(tt.args.slot); !reflect.DeepEqual(got, tt.want) {
+			s, err := beaconstate.InitializeFromProtoUnsafe(&p2ppb.BeaconState{Validators: []*ethpb.Validator{{ExitEpoch: params.BeaconConfig().FarFutureEpoch}}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := p.PendingExits(s, tt.args.slot); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("PendingExits() = %v, want %v", got, tt.want)
 			}
 		})
