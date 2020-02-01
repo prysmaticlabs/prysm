@@ -36,7 +36,7 @@ func Hash(data []byte) [32]byte {
 
 	// #nosec G104
 	h.Write(data)
-	h.Sum(b[:])
+	h.Sum(b[:0])
 
 	return b
 }
