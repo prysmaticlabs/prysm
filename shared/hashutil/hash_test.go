@@ -56,6 +56,12 @@ func TestHashKeccak256(t *testing.T) {
 	}
 }
 
+func BenchmarkHashKeccak256(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		hashutil.HashKeccak256([]byte("abc"))
+	}
+}
+
 func TestHashProto(t *testing.T) {
 	msg1 := &pb.Puzzle{
 		Challenge: "hello",

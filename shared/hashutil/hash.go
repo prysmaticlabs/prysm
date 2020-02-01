@@ -2,7 +2,9 @@ package hashutil
 
 import (
 	"errors"
+	"hash"
 	"reflect"
+	"sync"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/minio/highwayhash"
@@ -42,12 +44,18 @@ func CustomSHA256Hasher() func([]byte) [32]byte {
 	}
 }
 
+
+var keccak256Pool = sync.Pool{New: func() interface{} {
+	return sha3.NewLegacyKeccak256()
+}}
+
 // HashKeccak256 defines a function which returns the Keccak-256/SHA3
 // hash of the data passed in.
 func HashKeccak256(data []byte) [32]byte {
-	var hash [32]byte
+	var b [32]byte
 
-	h := sha3.NewLegacyKeccak256()
+	h := keccak256Pool.Get().(hash.Hash)
+	h.Reset()
 
 	// The hash interface never returns an error, for that reason
 	// we are not handling the error below. For reference, it is
@@ -55,9 +63,11 @@ func HashKeccak256(data []byte) [32]byte {
 
 	// #nosec G104
 	h.Write(data)
-	h.Sum(hash[:0])
+	h.Sum(b[:0])
 
-	return hash
+	keccak256Pool.Put(h)
+
+	return b
 }
 
 // RepeatHash applies the sha256 hash function repeatedly
