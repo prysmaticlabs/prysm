@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -12,12 +12,27 @@ import (
 var log = logrus.WithField("prefix", "forkchoice")
 
 // logs epoch related data during epoch boundary.
-func logEpochData(beaconState *pb.BeaconState) {
+func logEpochData(beaconState *stateTrie.BeaconState) {
+	var finalizedEpoch uint64
+	var prevJustifiedEpoch uint64
+	var currJustifiedEpoch uint64
+	finalizedCpt := beaconState.FinalizedCheckpoint()
+	if finalizedCpt != nil {
+		finalizedEpoch = finalizedCpt.Epoch
+	}
+	prevJustifiedCpt := beaconState.PreviousJustifiedCheckpoint()
+	if prevJustifiedCpt != nil {
+		prevJustifiedEpoch = prevJustifiedCpt.Epoch
+	}
+	currJustifiedCpt := beaconState.CurrentJustifiedCheckpoint()
+	if currJustifiedCpt != nil {
+		currJustifiedEpoch = currJustifiedCpt.Epoch
+	}
 	log.WithFields(logrus.Fields{
 		"epoch":                  helpers.CurrentEpoch(beaconState),
-		"finalizedEpoch":         beaconState.FinalizedCheckpoint.Epoch,
-		"justifiedEpoch":         beaconState.CurrentJustifiedCheckpoint.Epoch,
-		"previousJustifiedEpoch": beaconState.PreviousJustifiedCheckpoint.Epoch,
+		"finalizedEpoch":         finalizedEpoch,
+		"justifiedEpoch":         currJustifiedEpoch,
+		"previousJustifiedEpoch": prevJustifiedEpoch,
 	}).Info("Starting next epoch")
 	activeVals, err := helpers.ActiveValidatorIndices(beaconState, helpers.CurrentEpoch(beaconState))
 	if err != nil {
@@ -25,9 +40,9 @@ func logEpochData(beaconState *pb.BeaconState) {
 		return
 	}
 	log.WithFields(logrus.Fields{
-		"totalValidators":  len(beaconState.Validators),
+		"totalValidators":  beaconState.NumValidators(),
 		"activeValidators": len(activeVals),
-		"averageBalance":   fmt.Sprintf("%.5f ETH", averageBalance(beaconState.Balances)),
+		"averageBalance":   fmt.Sprintf("%.5f ETH", averageBalance(beaconState.Balances())),
 	}).Info("Validator registry information")
 }
 

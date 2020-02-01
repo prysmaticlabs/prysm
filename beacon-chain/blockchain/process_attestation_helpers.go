@@ -4,21 +4,20 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // getAttPreState retrieves the att pre state by either from the cache or the DB.
-func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*pb.BeaconState, error) {
+func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*stateTrie.BeaconState, error) {
 	s.checkpointStateLock.Lock()
 	defer s.checkpointStateLock.Unlock()
 	cachedState, err := s.checkpointState.StateByCheckpoint(c)
@@ -37,9 +36,9 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*pb.
 		return nil, fmt.Errorf("pre state of target block %d does not exist", helpers.StartSlot(c.Epoch))
 	}
 
-	stateCopy := proto.Clone(baseState).(*pb.BeaconState)
+	stateCopy := baseState.Copy()
 
-	if helpers.StartSlot(c.Epoch) > stateCopy.Slot {
+	if helpers.StartSlot(c.Epoch) > stateCopy.Slot() {
 		stateCopy, err = state.ProcessSlots(ctx, stateCopy, helpers.StartSlot(c.Epoch))
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
@@ -87,7 +86,7 @@ func (s *Service) verifyBeaconBlock(ctx context.Context, data *ethpb.Attestation
 }
 
 // verifyAttestation validates input attestation is valid.
-func (s *Service) verifyAttestation(ctx context.Context, baseState *pb.BeaconState, a *ethpb.Attestation) (*ethpb.IndexedAttestation, error) {
+func (s *Service) verifyAttestation(ctx context.Context, baseState *stateTrie.BeaconState, a *ethpb.Attestation) (*ethpb.IndexedAttestation, error) {
 	committee, err := helpers.BeaconCommitteeFromState(baseState, a.Data.Slot, a.Data.CommitteeIndex)
 	if err != nil {
 		return nil, err

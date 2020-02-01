@@ -6,11 +6,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
@@ -47,7 +46,7 @@ func NewSkipSlotCache() *SkipSlotCache {
 
 // Get waits for any in progress calculation to complete before returning a
 // cached response, if any.
-func (c *SkipSlotCache) Get(ctx context.Context, slot uint64) (*pb.BeaconState, error) {
+func (c *SkipSlotCache) Get(ctx context.Context, slot uint64) (*stateTrie.BeaconState, error) {
 	if !featureconfig.Get().EnableSkipSlotsCache {
 		// Return a miss result if cache is not enabled.
 		skipSlotCacheMiss.Inc()
@@ -81,7 +80,7 @@ func (c *SkipSlotCache) Get(ctx context.Context, slot uint64) (*pb.BeaconState, 
 
 	if exists && item != nil {
 		skipSlotCacheHit.Inc()
-		return proto.Clone(item.(*pb.BeaconState)).(*pb.BeaconState), nil
+		return item.(*stateTrie.BeaconState).Copy(), nil
 	}
 	skipSlotCacheMiss.Inc()
 	return nil, nil
@@ -119,13 +118,13 @@ func (c *SkipSlotCache) MarkNotInProgress(slot uint64) error {
 }
 
 // Put the response in the cache.
-func (c *SkipSlotCache) Put(ctx context.Context, slot uint64, state *pb.BeaconState) error {
+func (c *SkipSlotCache) Put(ctx context.Context, slot uint64, state *stateTrie.BeaconState) error {
 	if !featureconfig.Get().EnableSkipSlotsCache {
 		return nil
 	}
 
-	// Clone state so cached value is not mutated.
-	c.cache.Add(slot, proto.Clone(state).(*pb.BeaconState))
+	// Copy state so cached value is not mutated.
+	c.cache.Add(slot, state.Copy())
 
 	return nil
 }

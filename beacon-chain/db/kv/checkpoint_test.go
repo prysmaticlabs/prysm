@@ -7,6 +7,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
@@ -20,8 +21,11 @@ func TestStore_JustifiedCheckpoint_CanSaveRetrieve(t *testing.T) {
 		Epoch: 10,
 		Root:  root[:],
 	}
-
-	if err := db.SaveState(ctx, &pb.BeaconState{Slot: 1}, root); err != nil {
+	st, err := state.InitializeFromProto(&pb.BeaconState{Slot: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, st, root); err != nil {
 		t.Fatal(err)
 	}
 
@@ -69,9 +73,12 @@ func TestStore_FinalizedCheckpoint_CanSaveRetrieve(t *testing.T) {
 	if err := db.SaveBlock(ctx, blk); err != nil {
 		t.Fatal(err)
 	}
-
+	st, err := state.InitializeFromProto(&pb.BeaconState{Slot: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
 	// a state is required to save checkpoint
-	if err := db.SaveState(ctx, &pb.BeaconState{}, root); err != nil {
+	if err := db.SaveState(ctx, st, root); err != nil {
 		t.Fatal(err)
 	}
 

@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -17,6 +18,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
+
+var errPointsToBlockNotInDatabase = errors.New("attestation points to a block which is not in the database")
 
 // Validation
 // - The attestation's committee index (attestation.data.index) is for the correct subnet.

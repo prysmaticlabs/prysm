@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
@@ -30,8 +30,8 @@ func SlotToEpoch(slot uint64) uint64 {
 //    Return the current epoch.
 //    """
 //    return compute_epoch_of_slot(state.slot)
-func CurrentEpoch(state *pb.BeaconState) uint64 {
-	return SlotToEpoch(state.Slot)
+func CurrentEpoch(state *stateTrie.BeaconState) uint64 {
+	return SlotToEpoch(state.Slot())
 }
 
 // PrevEpoch returns the previous epoch number calculated from
@@ -45,7 +45,7 @@ func CurrentEpoch(state *pb.BeaconState) uint64 {
 //    """
 //    current_epoch = get_current_epoch(state)
 //    return GENESIS_EPOCH if current_epoch == GENESIS_EPOCH else Epoch(current_epoch - 1)
-func PrevEpoch(state *pb.BeaconState) uint64 {
+func PrevEpoch(state *stateTrie.BeaconState) uint64 {
 	currentEpoch := CurrentEpoch(state)
 	if currentEpoch == 0 {
 		return 0
@@ -55,8 +55,8 @@ func PrevEpoch(state *pb.BeaconState) uint64 {
 
 // NextEpoch returns the next epoch number calculated form
 // the slot number stored in beacon state.
-func NextEpoch(state *pb.BeaconState) uint64 {
-	return SlotToEpoch(state.Slot) + 1
+func NextEpoch(state *stateTrie.BeaconState) uint64 {
+	return SlotToEpoch(state.Slot()) + 1
 }
 
 // StartSlot returns the first slot number of the

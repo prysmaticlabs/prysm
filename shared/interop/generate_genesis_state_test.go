@@ -40,13 +40,13 @@ func TestGenerateGenesisState(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := int(numValidators)
-	if len(genesisState.Validators) != want {
-		t.Errorf("Wanted %d validators, received %d", want, len(genesisState.Validators))
+	if genesisState.NumValidators() != want {
+		t.Errorf("Wanted %d validators, received %d", want, genesisState.NumValidators())
 	}
-	if len(genesisState.Validators) != want {
-		t.Errorf("Wanted %d validators, received %v", want, len(genesisState.Validators))
+	if genesisState.NumValidators() != want {
+		t.Errorf("Wanted %d validators, received %v", want, genesisState.NumValidators())
 	}
-	if genesisState.GenesisTime != 0 {
-		t.Errorf("Wanted genesis time 0, received %d", genesisState.GenesisTime)
+	if genesisState.GenesisTime() != 0 {
+		t.Errorf("Wanted genesis time 0, received %d", genesisState.GenesisTime())
 	}
 }

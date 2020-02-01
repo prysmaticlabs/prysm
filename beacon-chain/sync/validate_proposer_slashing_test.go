@@ -16,13 +16,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *pb.BeaconState) {
+func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *stateTrie.BeaconState) {
 	validators := make([]*ethpb.Validator, 100)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &ethpb.Validator{
@@ -39,7 +40,7 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *pb.Beac
 	}
 
 	currentSlot := uint64(0)
-	state := &pb.BeaconState{
+	state, err := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Validators: validators,
 		Slot:       currentSlot,
 		Balances:   validatorBalances,
@@ -54,10 +55,13 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *pb.Beac
 		StateRoots:        make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
 		BlockRoots:        make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
 		LatestBlockHeader: &ethpb.BeaconBlockHeader{},
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	domain := helpers.Domain(
-		state.Fork,
+		state.Fork(),
 		helpers.CurrentEpoch(state),
 		params.BeaconConfig().DomainBeaconProposer,
 	)
@@ -98,8 +102,14 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *pb.Beac
 		Header_1:      header1,
 		Header_2:      header2,
 	}
-
-	state.Validators[1].PublicKey = privKey.PublicKey().Marshal()[:]
+	val, err := state.ValidatorAtIndex(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	val.PublicKey = privKey.PublicKey().Marshal()[:]
+	if err := state.UpdateValidatorAtIndex(1, val); err != nil {
+		t.Fatal(err)
+	}
 
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
