@@ -1,6 +1,7 @@
 package state_test
 
 import (
+	"reflect"
 	"strconv"
 	"testing"
 
@@ -8,6 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/stateutil"
@@ -177,4 +179,50 @@ func cloneValidatorsManually(vals []*ethpb.Validator) []*ethpb.Validator {
 		}
 	}
 	return res
+}
+
+func TestBeaconState_ImmutabilityWithSharedResources(t *testing.T) {
+	params.UseMinimalConfig()
+	genesis := setupGenesisState(t, 64)
+	a, err := stateTrie.InitializeFromProto(genesis)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := a.Copy()
+
+	// Randao mixes
+	if !reflect.DeepEqual(a.RandaoMixes(), b.RandaoMixes()) {
+		t.Fatal("Test precondition failed, fields are not equal")
+	}
+	a.UpdateRandaoMixesAtIndex([]byte("foo"), 1)
+	if reflect.DeepEqual(a.RandaoMixes(), b.RandaoMixes()) {
+		t.Error("Expect a.RandaoMixes() to be different from b.RandaoMixes()")
+	}
+
+	// Validators
+	if !reflect.DeepEqual(a.Validators(), b.Validators()) {
+		t.Fatal("Test precondition failed, fields are not equal")
+	}
+	a.UpdateValidatorAtIndex(1, &ethpb.Validator{Slashed: true})
+	if reflect.DeepEqual(a.Validators(), b.Validators()) {
+		t.Error("Expect a.Validators() to be different from b.Validators()")
+	}
+
+	// State Roots
+	if !reflect.DeepEqual(a.StateRoots(), b.StateRoots()) {
+		t.Fatal("Test precondition failed, fields are not equal")
+	}
+	a.UpdateStateRootAtIndex(1, bytesutil.ToBytes32([]byte("foo")))
+	if reflect.DeepEqual(a.StateRoots(), b.StateRoots()) {
+		t.Fatal("Expected a.StateRoots() to be different from b.StateRoots()")
+	}
+
+	// Block Roots
+	if !reflect.DeepEqual(a.BlockRoots(), b.BlockRoots()) {
+		t.Fatal("Test precondition failed, fields are not equal")
+	}
+	a.UpdateBlockRootAtIndex(1, bytesutil.ToBytes32([]byte("foo")))
+	if reflect.DeepEqual(a.BlockRoots(), b.BlockRoots()) {
+		t.Fatal("Expected a.BlockRoots() to be different from b.BlockRoots()")
+	}
 }

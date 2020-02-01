@@ -52,7 +52,37 @@ func (b *BeaconState) Copy() *BeaconState {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 	dst := &BeaconState{
-		state:       b.CloneInnerState(),
+		state: &pbp2p.BeaconState{
+			// Primitive types, safe to copy.
+			GenesisTime:      b.state.GenesisTime,
+			Slot:             b.state.Slot,
+			Eth1DepositIndex: b.state.Eth1DepositIndex,
+
+			// Large arrays, infrequently changed, constant size.
+			RandaoMixes: b.state.RandaoMixes,
+			StateRoots:  b.state.StateRoots,
+			BlockRoots:  b.state.BlockRoots,
+
+			// Large arrays, increases over time.
+			Validators: b.state.Validators,
+
+			// Potential candidates for copy-on-write.
+			Balances:                  b.Balances(),
+			HistoricalRoots:           b.HistoricalRoots(),
+			PreviousEpochAttestations: b.PreviousEpochAttestations(),
+			CurrentEpochAttestations:  b.CurrentEpochAttestations(),
+			Slashings:                 b.Slashings(),
+			Eth1DataVotes:             b.Eth1DataVotes(),
+
+			// Everything else, too small to be concerned about, constant size.
+			Fork:                        b.Fork(),
+			LatestBlockHeader:           b.LatestBlockHeader(),
+			Eth1Data:                    b.Eth1Data(),
+			JustificationBits:           b.JustificationBits(),
+			PreviousJustifiedCheckpoint: b.PreviousJustifiedCheckpoint(),
+			CurrentJustifiedCheckpoint:  b.CurrentJustifiedCheckpoint(),
+			FinalizedCheckpoint:         b.FinalizedCheckpoint(),
+		},
 		dirtyFields: make(map[fieldIndex]interface{}, 20),
 		valIdxMap:   make(map[[48]byte]uint64, len(b.valIdxMap)),
 	}
