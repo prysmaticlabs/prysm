@@ -74,29 +74,28 @@ func (db *Store) SaveBlockHeader(epoch uint64, validatorID uint64, blockHeader *
 		return err
 	})
 
-	// prune history to max size every 10th epoch
+	// Prune block header history every 10th epoch.
 	if epoch%params.BeaconConfig().PruneSlasherStoragePeriod == 0 {
-		err = db.PruneHistory(epoch, params.BeaconConfig().WeakSubjectivityPeriod)
+		err = db.pruneBlockHistory(epoch, params.BeaconConfig().WeakSubjectivityPeriod)
 	}
 	return err
 }
 
 // DeleteBlockHeader deletes a block header using the epoch and validator id.
 func (db *Store) DeleteBlockHeader(epoch uint64, validatorID uint64, blockHeader *ethpb.SignedBeaconBlockHeader) error {
-
 	key := encodeEpochValidatorIDSig(epoch, validatorID, blockHeader.Signature)
 
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicBlockHeadersBucket)
 		if err := bucket.Delete(key); err != nil {
-			return errors.Wrap(err, "failed to delete the block header from historic block header bucket")
+			return errors.Wrap(err, "failed to delete the block header from historical bucket")
 		}
 		return bucket.Delete(key)
 	})
 }
 
-// PruneHistory leaves only records younger then history size.
-func (db *Store) PruneHistory(currentEpoch uint64, historySize uint64) error {
+// pruneBlockHistory leaves only records younger then history size.
+func (db *Store) pruneBlockHistory(currentEpoch uint64, historySize uint64) error {
 	pruneTill := int64(currentEpoch) - int64(historySize)
 	if pruneTill <= 0 {
 		return nil
