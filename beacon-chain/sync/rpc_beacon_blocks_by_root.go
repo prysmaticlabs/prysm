@@ -30,12 +30,13 @@ func (r *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 			log.WithError(err).Error("Unable to retrieve block from stream")
 			return err
 		}
-		r.pendingQueueLock.Lock()
-		r.slotToPendingBlocks[blk.Block.Slot] = blk
+
 		blkRoot, err := ssz.HashTreeRoot(blk.Block)
 		if err != nil {
 			return err
 		}
+		r.pendingQueueLock.Lock()
+		r.slotToPendingBlocks[blk.Block.Slot] = blk
 		r.seenPendingBlocks[blkRoot] = true
 		r.pendingQueueLock.Unlock()
 
