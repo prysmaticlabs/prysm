@@ -142,13 +142,10 @@ func (s *Service) validatePendingAtts(ctx context.Context, slot uint64) {
 	defer span.End()
 
 	for bRoot, atts := range s.blkRootToPendingAtts {
-		for i, att := range atts {
-			if slot >= att.Aggregate.Data.Slot+params.BeaconConfig().SlotsPerEpoch {
+		for i := len(atts) - 1; i >= 0; i-- {
+			if slot >= atts[i].Aggregate.Data.Slot+params.BeaconConfig().SlotsPerEpoch {
 				// Remove the pending attestation from the list in place.
-				if len(atts) > 1 {
-					atts[len(atts)-1], atts[i] = atts[i], atts[len(atts)-1]
-				}
-				atts = atts[:len(atts)-1]
+				atts = append(atts[:i], atts[i+1:]...)
 				numberOfAttsNotRecovered.Inc()
 			}
 		}
