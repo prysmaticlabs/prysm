@@ -84,7 +84,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 			log.WithField("blockRoot", hex.EncodeToString(bytesutil.Trunc(bRoot[:]))).Info("Requesting block for pending attestation")
 
 			// Start with a random peer to query, but choose the first peer in our unsorted list that claims to
-			// have a head slot newer than the pending attestation's target boundary slot.
+			// have a head slot newer or equal to the pending attestation's target boundary slot.
 			pid := pids[rand.Int()%len(pids)]
 			targetSlot := helpers.SlotToEpoch(attestations[0].Aggregate.Data.Target.Epoch)
 			for _, p := range pids {
