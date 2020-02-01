@@ -76,7 +76,7 @@ func (r *Service) validateAtt(ctx context.Context, a *ethpb.AggregateAttestation
 
 	// Verify the block being voted for passes validation. The block should have passed validation if it's in the DB.
 	if !r.db.HasBlock(ctx, bytesutil.ToBytes32(a.Aggregate.Data.BeaconBlockRoot)) {
-		r.savePendingAtt(a.Aggregate)
+		r.savePendingAtt(a)
 		return false
 	}
 

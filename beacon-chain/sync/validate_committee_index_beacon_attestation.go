@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -18,8 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
-
-var errPointsToBlockNotInDatabase = errors.New("attestation points to a block which is not in the database")
 
 // Validation
 // - The attestation's committee index (attestation.data.index) is for the correct subnet.
@@ -78,11 +75,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 
 	// Attestation's block must exist in database (only valid blocks are stored).
 	if !s.db.HasBlock(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot)) {
-		log.WithField(
-			"blockRoot",
-			fmt.Sprintf("%#x", att.Data.BeaconBlockRoot),
-		).WithError(errPointsToBlockNotInDatabase).Debug("Ignored incoming attestation that points to a block which is not in the database")
-		traceutil.AnnotateError(span, errPointsToBlockNotInDatabase)
+		s.savePendingAtt(&eth.AggregateAttestationAndProof{Aggregate:att})
 		return false
 	}
 
