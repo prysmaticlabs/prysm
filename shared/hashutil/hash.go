@@ -45,7 +45,7 @@ func Hash(data []byte) [32]byte {
 // an enclosed hasher. This is not safe for concurrent
 // use as the same hasher is being called throughout.
 func CustomSHA256Hasher() func([]byte) [32]byte {
-	hasher := sha256.New()
+	hasher := sha256Pool.Get().(hash.Hash)
 	var hash [32]byte
 
 	return func(data []byte) [32]byte {
