@@ -93,7 +93,12 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 	if len(b.state.BlockRoots) <= int(idx) {
 		return fmt.Errorf("invalid index provided %d", idx)
 	}
-	b.state.BlockRoots[idx] = blockRoot[:]
+
+	// Copy on write since this is a shared array.
+	r := b.BlockRoots()
+	r[idx] = blockRoot[:]
+	b.state.BlockRoots = r
+
 	b.lock.Lock()
 	b.markFieldAsDirty(blockRoots)
 	b.lock.Unlock()
@@ -116,7 +121,12 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 	if len(b.state.StateRoots) <= int(idx) {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
-	b.state.StateRoots[idx] = stateRoot[:]
+
+	// Copy on write since this is a shared array.
+	r := b.StateRoots()
+	r[idx] = stateRoot[:]
+	b.state.StateRoots = r
+
 	b.lock.Lock()
 	b.markFieldAsDirty(stateRoots)
 	b.lock.Unlock()
@@ -184,12 +194,15 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 // ApplyToEveryValidator applies the provided callback function to each validator in the
 // validator registry.
 func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator) error) error {
-	for i, val := range b.state.Validators {
+	// Copy on write since this is a shared array.
+	v := b.Validators()
+	for i, val := range v {
 		err := f(i, val)
 		if err != nil {
 			return err
 		}
 	}
+	b.state.Validators = v
 	b.lock.Lock()
 	b.markFieldAsDirty(validators)
 	b.lock.Unlock()
@@ -202,7 +215,10 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 	if len(b.state.Validators) <= int(idx) {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
-	b.state.Validators[idx] = val
+	// Copy on write since this is a shared array.
+	v := b.Validators()
+	v[idx] = val
+	b.state.Validators = v
 	b.lock.Lock()
 	b.markFieldAsDirty(validators)
 	b.lock.Unlock()
@@ -257,7 +273,12 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
 	if len(b.state.RandaoMixes) <= int(idx) {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
-	b.state.RandaoMixes[idx] = val
+
+	// Copy on write since this is a shared array.
+	mixes := b.RandaoMixes()
+	mixes[idx] = val
+	b.state.RandaoMixes = mixes
+
 	b.lock.Lock()
 	b.markFieldAsDirty(randaoMixes)
 	b.lock.Unlock()

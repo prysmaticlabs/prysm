@@ -63,6 +63,11 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 
 	graffiti := bytesutil.ToBytes32(req.Graffiti)
 
+	head, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state %v", err)
+	}
+
 	blk := &ethpb.BeaconBlock{
 		Slot:       req.Slot,
 		ParentRoot: parentRoot[:],
@@ -75,7 +80,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 			// TODO(2766): Implement rest of the retrievals for beacon block operations
 			ProposerSlashings: []*ethpb.ProposerSlashing{},
 			AttesterSlashings: []*ethpb.AttesterSlashing{},
-			VoluntaryExits:    vs.ExitPool.PendingExits(req.Slot),
+			VoluntaryExits:    vs.ExitPool.PendingExits(head, req.Slot),
 			Graffiti:          graffiti[:],
 		},
 	}
