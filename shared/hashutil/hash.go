@@ -17,10 +17,28 @@ import (
 // or has nil objects within lists.
 var ErrNilProto = errors.New("cannot hash a nil protobuf message")
 
+var sha256Pool = sync.Pool{New: func() interface{} {
+	return sha256.New()
+}}
+
 // Hash defines a function that returns the sha256 checksum of the data passed in.
 // https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/core/0_beacon-chain.md#hash
 func Hash(data []byte) [32]byte {
-	return CustomSHA256Hasher()(data)
+	h := sha256Pool.Get().(hash.Hash)
+	defer sha256Pool.Put(h)
+	h.Reset()
+
+	var b [32]byte
+
+	// The hash interface never returns an error, for that reason
+	// we are not handling the error below. For reference, it is
+	// stated here https://golang.org/pkg/hash/#Hash
+
+	// #nosec G104
+	h.Write(data)
+	h.Sum(b[:0])
+
+	return b
 }
 
 // CustomSHA256Hasher returns a hash function that uses
@@ -44,7 +62,6 @@ func CustomSHA256Hasher() func([]byte) [32]byte {
 	}
 }
 
-
 var keccak256Pool = sync.Pool{New: func() interface{} {
 	return sha3.NewLegacyKeccak256()
 }}
@@ -55,6 +72,7 @@ func HashKeccak256(data []byte) [32]byte {
 	var b [32]byte
 
 	h := keccak256Pool.Get().(hash.Hash)
+	defer keccak256Pool.Put(h)
 	h.Reset()
 
 	// The hash interface never returns an error, for that reason
@@ -64,8 +82,6 @@ func HashKeccak256(data []byte) [32]byte {
 	// #nosec G104
 	h.Write(data)
 	h.Sum(b[:0])
-
-	keccak256Pool.Put(h)
 
 	return b
 }
