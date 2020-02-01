@@ -94,6 +94,7 @@ func (r *Service) Start() {
 	r.p2p.AddConnectionHandler(r.sendRPCStatusRequest)
 	r.p2p.AddDisconnectionHandler(r.removeDisconnectedPeerStatus)
 	r.processPendingBlocksQueue()
+	r.processPendingAttsQueue()
 	r.maintainPeerStatuses()
 	r.resyncIfBehind()
 }

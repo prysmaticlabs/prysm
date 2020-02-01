@@ -59,7 +59,7 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 
-	if !r.validateAtt(ctx, m) {
+	if !r.validateAggregatedAtt(ctx, m) {
 		return false
 	}
 
@@ -68,14 +68,15 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	return true
 }
 
-func (r *Service) validateAtt(ctx context.Context, a *ethpb.AggregateAttestationAndProof) bool {
-	ctx, span := trace.StartSpan(ctx, "sync.validateAtt")
+func (r *Service) validateAggregatedAtt(ctx context.Context, a *ethpb.AggregateAttestationAndProof) bool {
+	ctx, span := trace.StartSpan(ctx, "sync.validateAggregatedAtt")
 	defer span.End()
 
 	attSlot := a.Aggregate.Data.Slot
 
-	// Verify the block being voted for passes validation. The block should have passed validation if it's in the DB.
+	// Verify the block being voted is in DB. The block should have passed validation if it's in the DB.
 	if !r.db.HasBlock(ctx, bytesutil.ToBytes32(a.Aggregate.Data.BeaconBlockRoot)) {
+		// A node doesn't have the block, it'll request from peer while saving the pending attestation to a queue.
 		r.savePendingAtt(a)
 		return false
 	}

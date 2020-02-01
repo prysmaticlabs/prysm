@@ -33,4 +33,28 @@ var (
 			Help: "Count the number of times a node resyncs.",
 		},
 	)
+	numberOfBlocksRecoveredFromAtt = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "number_of_blocks_recovered_from_attestation",
+			Help: "Count the number of times a missing block recovered from attestation vote.",
+		},
+	)
+	numberOfBlocksNotRecoveredFromAtt = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "number_of_blocks_not_recovered_from_attestation",
+			Help: "Count the number of times a missing block not recovered from attestation vote, before pruning",
+		},
+	)
+	numberOfAttsRecovered = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "number_of_atts_recovered",
+			Help: "Count the number of times attestation recovered because of missing block",
+		},
+	)
+	numberOfAttsNotRecovered = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "number_of_atts_not_recovered",
+			Help: "Count the number of times attestation not recovered because of missing block",
+		},
+	)
 )
