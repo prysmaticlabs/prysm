@@ -5,6 +5,8 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/prysmaticlabs/prysm/shared/memorypool"
+
 	"github.com/protolambda/zssz/merkle"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -34,7 +36,7 @@ func (h *stateRootHasher) arraysRoot(input [][]byte, length uint64, fieldName st
 	}
 	lock.Unlock()
 
-	leaves := make([][32]byte, length)
+	leaves := memorypool.GetSliceByteArray(int(length))
 	for i, chunk := range input {
 		copy(leaves[i][:], chunk)
 	}
@@ -42,6 +44,11 @@ func (h *stateRootHasher) arraysRoot(input [][]byte, length uint64, fieldName st
 	changedIndices := make([]int, 0)
 	lock.RLock()
 	prevLeaves, ok := leavesCache[fieldName]
+	defer func() {
+		if ok {
+			memorypool.SliceArrayPool.Put(prevLeaves)
+		}
+	}()
 	lock.RUnlock()
 	if len(prevLeaves) == 0 || h.rootsCache == nil {
 		prevLeaves = leaves
@@ -96,7 +103,7 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][32]byte, length uint64,
 	lock.Lock()
 	defer lock.Unlock()
 	if len(leaves) == 1 {
-		var root [32]byte
+		root := memorypool.GetByteArray()
 		root = leaves[0]
 		return root
 	}
@@ -130,8 +137,7 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][32]byte, length uint64,
 		layers[i] = hashLayer
 		i++
 	}
-	var root [32]byte
-	root = hashLayer[0]
+	root := hashLayer[0]
 	if h.rootsCache != nil {
 		layersCache[fieldName] = layers
 	}
@@ -151,6 +157,9 @@ func recomputeRoot(idx int, chunks [][32]byte, length uint64,
 	}
 	layers := items
 	root := chunks[idx]
+	defer func() {
+		memorypool.ArrayPool.Put(root)
+	}()
 	layers[0] = chunks
 	// The merkle tree structure looks as follows:
 	// [[r1, r2, r3, r4], [parent1, parent2], [root]]

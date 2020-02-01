@@ -526,7 +526,6 @@ func (s *Store) updateJustified(ctx context.Context, state *stateTrie.BeaconStat
 				delete(s.initSyncState, r)
 			}
 		}
-
 	}
 
 	return s.db.SaveJustifiedCheckpoint(ctx, cpt)

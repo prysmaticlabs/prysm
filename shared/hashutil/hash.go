@@ -4,6 +4,8 @@ import (
 	"errors"
 	"reflect"
 
+	"github.com/prysmaticlabs/prysm/shared/memorypool"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/minio/highwayhash"
 	"github.com/minio/sha256-simd"
@@ -26,7 +28,7 @@ func Hash(data []byte) [32]byte {
 // use as the same hasher is being called throughout.
 func CustomSHA256Hasher() func([]byte) [32]byte {
 	hasher := sha256.New()
-	var hash [32]byte
+	hash := memorypool.GetByteArray()
 
 	return func(data []byte) [32]byte {
 		// The hash interface never returns an error, for that reason

@@ -3,7 +3,8 @@ package state
 import (
 	"fmt"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/shared/memorypool"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -413,7 +414,7 @@ func (b *BeaconState) PreviousEpochAttestations() []*pbp2p.PendingAttestation {
 	}
 	res := make([]*pbp2p.PendingAttestation, len(b.state.PreviousEpochAttestations))
 	for i := 0; i < len(res); i++ {
-		res[i] = proto.Clone(b.state.PreviousEpochAttestations[i]).(*pbp2p.PendingAttestation)
+		res[i] = CopyPendingAttestation(b.state.PreviousEpochAttestations[i])
 	}
 	return res
 }
@@ -425,7 +426,7 @@ func (b *BeaconState) CurrentEpochAttestations() []*pbp2p.PendingAttestation {
 	}
 	res := make([]*pbp2p.PendingAttestation, len(b.state.CurrentEpochAttestations))
 	for i := 0; i < len(res); i++ {
-		res[i] = proto.Clone(b.state.CurrentEpochAttestations[i]).(*pbp2p.PendingAttestation)
+		res[i] = CopyPendingAttestation(b.state.CurrentEpochAttestations[i])
 	}
 	return res
 }
@@ -497,4 +498,35 @@ func CopyETH1Data(data *ethpb.Eth1Data) *ethpb.Eth1Data {
 	newETH1.BlockHash = blockHash
 
 	return newETH1
+}
+
+func CopyPendingAttestation(att *pbp2p.PendingAttestation) *pbp2p.PendingAttestation {
+	aggBytes := []byte(att.AggregationBits)
+	newBitlist := make([]byte, len(aggBytes))
+	copy(newBitlist, aggBytes)
+	blockRoot := memorypool.GetByteArray()
+	copy(blockRoot[:], att.Data.BeaconBlockRoot)
+	data := &ethpb.AttestationData{
+		Slot:            att.Data.Slot,
+		CommitteeIndex:  att.Data.CommitteeIndex,
+		BeaconBlockRoot: blockRoot[:],
+		Source:          CopyCheckpoint(att.Data.Source),
+		Target:          CopyCheckpoint(att.Data.Target),
+	}
+	return &pbp2p.PendingAttestation{
+		AggregationBits: newBitlist,
+		Data:            data,
+		InclusionDelay:  att.InclusionDelay,
+		ProposerIndex:   att.ProposerIndex,
+	}
+}
+
+func CopyCheckpoint(cp *ethpb.Checkpoint) *ethpb.Checkpoint {
+	root := memorypool.GetByteArray()
+	copy(root[:], cp.Root)
+
+	return &ethpb.Checkpoint{
+		Epoch: cp.Epoch,
+		Root:  root[:],
+	}
 }

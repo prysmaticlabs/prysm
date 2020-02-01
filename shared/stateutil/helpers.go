@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/binary"
 
+	"github.com/prysmaticlabs/prysm/shared/memorypool"
+
 	"github.com/minio/sha256-simd"
 	"github.com/pkg/errors"
 	"github.com/protolambda/zssz/htr"
@@ -111,7 +113,10 @@ func pack(serializedItems [][]byte) ([][]byte, error) {
 }
 
 func mixInLength(root [32]byte, length []byte) [32]byte {
-	var hash [32]byte
+	hash := memorypool.GetByteArray()
+	defer func() {
+		memorypool.ArrayPool.Put(hash)
+	}()
 	h := sha256.New()
 	h.Write(root[:])
 	h.Write(length)

@@ -278,7 +278,6 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
 	mixes := b.RandaoMixes()
 	mixes[idx] = val
 	b.state.RandaoMixes = mixes
-
 	b.lock.Lock()
 	b.markFieldAsDirty(randaoMixes)
 	b.lock.Unlock()
