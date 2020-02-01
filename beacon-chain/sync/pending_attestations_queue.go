@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
@@ -42,7 +41,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 	// Before a node processes pending attestations queue, it verifies
 	// the attestations in the queue are still valid. Attestations will
 	// be deleted from the queue if invalid (ie. getting staled from falling too many slots behind).
-	s.validatePendingAtts(ctx, s.currentSlot())
+	s.validatePendingAtts(ctx, s.chain.CurrentSlot())
 
 	for bRoot, attestations := range s.blkRootToPendingAtts {
 		// Has the pending attestation's missing block arrived yet?
@@ -152,9 +151,4 @@ func (s *Service) validatePendingAtts(ctx context.Context, slot uint64) {
 			numberOfBlocksNotRecoveredFromAtt.Inc()
 		}
 	}
-}
-
-// This returns the current slot based on the time now.
-func (s *Service) currentSlot() uint64 {
-	return uint64(roughtime.Now().Unix()-s.chain.GenesisTime().Unix()) / params.BeaconConfig().SecondsPerSlot
 }

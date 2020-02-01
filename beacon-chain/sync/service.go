@@ -39,7 +39,7 @@ type blockchainService interface {
 	blockchain.FinalizationFetcher
 	blockchain.ForkFetcher
 	blockchain.AttestationReceiver
-	blockchain.GenesisTimeFetcher
+	blockchain.TimeFetcher
 }
 
 // NewRegularSync service.
