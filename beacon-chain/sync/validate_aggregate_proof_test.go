@@ -33,7 +33,9 @@ func TestVerifyIndexInCommittee_CanVerify(t *testing.T) {
 
 	validators := uint64(64)
 	s, _ := testutil.DeterministicGenesisState(t, validators)
-	s.Slot = params.BeaconConfig().SlotsPerEpoch
+	if err := s.SetSlot(params.BeaconConfig().SlotsPerEpoch); err != nil {
+		t.Fatal(err)
+	}
 
 	bf := []byte{0xff}
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
@@ -99,7 +101,7 @@ func TestVerifySelection_CanVerify(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
+	domain := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
 	sig := privKeys[0].Sign(slotRoot[:], domain)
 
 	if err := validateSelection(ctx, beaconState, data, 0, sig.Marshal()); err != nil {
@@ -179,7 +181,9 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 		Aggregate: att,
 	}
 
-	beaconState.GenesisTime = uint64(time.Now().Unix())
+	if err := beaconState.SetGenesisTime(uint64(time.Now().Unix())); err != nil {
+		t.Fatal(err)
+	}
 	r := &Service{
 		p2p:         p,
 		db:          db,
@@ -255,7 +259,9 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 		Aggregate: att,
 	}
 
-	beaconState.GenesisTime = uint64(time.Now().Unix())
+	if err := beaconState.SetGenesisTime(uint64(time.Now().Unix())); err != nil {
+		t.Fatal(err)
+	}
 	r := &Service{
 		attPool:     attestations.NewPool(),
 		p2p:         p,
@@ -322,7 +328,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	domain := helpers.Domain(beaconState.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
+	domain := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
 	sigs := make([]*bls.Signature, len(attestingIndices))
 	for i, indice := range attestingIndices {
 		sig := privKeys[indice].Sign(hashTreeRoot[:], domain)
@@ -342,7 +348,9 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 		AggregatorIndex: 154,
 	}
 
-	beaconState.GenesisTime = uint64(time.Now().Unix())
+	if err := beaconState.SetGenesisTime(uint64(time.Now().Unix())); err != nil {
+		t.Fatal(err)
+	}
 	r := &Service{
 		p2p:         p,
 		db:          db,

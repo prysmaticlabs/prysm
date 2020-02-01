@@ -24,10 +24,11 @@ func (vs *Server) ProposeExit(ctx context.Context, req *ethpb.SignedVoluntaryExi
 	}
 
 	// Confirm the validator is eligible to exit with the parameters provided.
-	if int(req.Exit.ValidatorIndex) >= len(s.Validators) {
+	val, err := s.ValidatorAtIndex(req.Exit.ValidatorIndex)
+	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "validator index exceeds validator set length")
 	}
-	if err := blocks.VerifyExit(s.Validators[req.Exit.ValidatorIndex], helpers.StartSlot(req.Exit.Epoch), s.Fork, req); err != nil {
+	if err := blocks.VerifyExit(val, helpers.StartSlot(req.Exit.Epoch), s.Fork(), req); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
@@ -39,7 +40,7 @@ func (vs *Server) ProposeExit(ctx context.Context, req *ethpb.SignedVoluntaryExi
 		},
 	})
 
-	vs.ExitPool.InsertVoluntaryExit(ctx, s.Validators, req)
+	vs.ExitPool.InsertVoluntaryExit(ctx, s.Validators(), req)
 
 	return &ptypes.Empty{}, vs.P2P.Broadcast(ctx, req)
 }

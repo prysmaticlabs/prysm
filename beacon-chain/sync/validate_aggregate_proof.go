@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -95,7 +95,7 @@ func (r *Service) validateAtt(ctx context.Context, a *ethpb.AggregateAttestation
 	}
 
 	// Only advance state if different epoch as the committee can only change on an epoch transition.
-	if helpers.SlotToEpoch(attSlot) > helpers.SlotToEpoch(s.Slot) {
+	if helpers.SlotToEpoch(attSlot) > helpers.SlotToEpoch(s.Slot()) {
 		s, err = state.ProcessSlots(ctx, s, helpers.StartSlot(helpers.SlotToEpoch(attSlot)))
 		if err != nil {
 			traceutil.AnnotateError(span, err)
@@ -125,7 +125,7 @@ func (r *Service) validateAtt(ctx context.Context, a *ethpb.AggregateAttestation
 }
 
 // This validates the aggregator's index in state is within the attesting indices of the attestation.
-func validateIndexInCommittee(ctx context.Context, s *pb.BeaconState, a *ethpb.Attestation, validatorIndex uint64) error {
+func validateIndexInCommittee(ctx context.Context, s *stateTrie.BeaconState, a *ethpb.Attestation, validatorIndex uint64) error {
 	ctx, span := trace.StartSpan(ctx, "sync..validateIndexInCommittee")
 	defer span.End()
 
@@ -153,7 +153,7 @@ func validateIndexInCommittee(ctx context.Context, s *pb.BeaconState, a *ethpb.A
 
 // This validates selection proof by validating it's from the correct validator index of the slot and selection
 // proof is a valid signature.
-func validateSelection(ctx context.Context, s *pb.BeaconState, data *ethpb.AttestationData, validatorIndex uint64, proof []byte) error {
+func validateSelection(ctx context.Context, s *stateTrie.BeaconState, data *ethpb.AttestationData, validatorIndex uint64, proof []byte) error {
 	_, span := trace.StartSpan(ctx, "sync.validateSelection")
 	defer span.End()
 
@@ -161,7 +161,7 @@ func validateSelection(ctx context.Context, s *pb.BeaconState, data *ethpb.Attes
 	if err != nil {
 		return err
 	}
-	aggregator, err := helpers.IsAggregator(uint64(len(committee)), data.Slot, data.CommitteeIndex, proof)
+	aggregator, err := helpers.IsAggregator(uint64(len(committee)), proof)
 	if err != nil {
 		return err
 	}
@@ -169,12 +169,13 @@ func validateSelection(ctx context.Context, s *pb.BeaconState, data *ethpb.Attes
 		return fmt.Errorf("validator is not an aggregator for slot %d", data.Slot)
 	}
 
-	domain := helpers.Domain(s.Fork, helpers.SlotToEpoch(data.Slot), params.BeaconConfig().DomainBeaconAttester)
+	domain := helpers.Domain(s.Fork(), helpers.SlotToEpoch(data.Slot), params.BeaconConfig().DomainBeaconAttester)
 	slotMsg, err := ssz.HashTreeRoot(data.Slot)
 	if err != nil {
 		return err
 	}
-	pubKey, err := bls.PublicKeyFromBytes(s.Validators[validatorIndex].PublicKey)
+	pubkeyState := s.PubkeyAtIndex(validatorIndex)
+	pubKey, err := bls.PublicKeyFromBytes(pubkeyState[:])
 	if err != nil {
 		return err
 	}

@@ -8,17 +8,15 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/interop"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/stateutil"
@@ -41,9 +39,9 @@ import (
 //    return state
 func ExecuteStateTransition(
 	ctx context.Context,
-	state *pb.BeaconState,
+	state *stateTrie.BeaconState,
 	signed *ethpb.SignedBeaconBlock,
-) (*pb.BeaconState, error) {
+) (*stateTrie.BeaconState, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -70,15 +68,14 @@ func ExecuteStateTransition(
 	interop.WriteBlockToDisk(signed, false)
 	interop.WriteStateToDisk(state)
 
-	postStateRoot, err := stateutil.HashTreeRootState(state)
+	postStateRoot, err := state.HashTreeRoot()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not tree hash processed state")
+		return nil, err
 	}
 	if !bytes.Equal(postStateRoot[:], signed.Block.StateRoot) {
 		return state, fmt.Errorf("validate state root failed, wanted: %#x, received: %#x",
 			postStateRoot[:], signed.Block.StateRoot)
 	}
-
 	return state, nil
 }
 
@@ -99,9 +96,9 @@ func ExecuteStateTransition(
 //    return state
 func ExecuteStateTransitionNoVerifyAttSigs(
 	ctx context.Context,
-	state *pb.BeaconState,
+	state *stateTrie.BeaconState,
 	signed *ethpb.SignedBeaconBlock,
-) (*pb.BeaconState, error) {
+) (*stateTrie.BeaconState, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -147,7 +144,7 @@ func ExecuteStateTransitionNoVerifyAttSigs(
 //    return state
 func CalculateStateRoot(
 	ctx context.Context,
-	state *pb.BeaconState,
+	state *stateTrie.BeaconState,
 	signed *ethpb.SignedBeaconBlock,
 ) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.CalculateStateRoot")
@@ -160,23 +157,24 @@ func CalculateStateRoot(
 		return [32]byte{}, errors.New("nil block")
 	}
 
-	stateCopy := proto.Clone(state).(*pb.BeaconState)
+	// Copy state to avoid mutating the state reference.
+	state = state.Copy()
+
 	b.ClearEth1DataVoteCache()
 
-	var err error
 	// Execute per slots transition.
-	stateCopy, err = ProcessSlots(ctx, stateCopy, signed.Block.Slot)
+	state, err := ProcessSlots(ctx, state, signed.Block.Slot)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not process slot")
 	}
 
 	// Execute per block transition.
-	stateCopy, err = computeStateRoot(ctx, stateCopy, signed)
+	state, err = computeStateRoot(ctx, state, signed)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not process block")
 	}
 
-	return stateutil.HashTreeRootState(stateCopy)
+	return state.HashTreeRoot()
 }
 
 // ProcessSlot happens every slot and focuses on the slot counter and block roots record updates.
@@ -195,30 +193,43 @@ func CalculateStateRoot(
 //    # Cache block root
 //    previous_block_root = signing_root(state.latest_block_header)
 //    state.block_roots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previous_block_root
-func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
+func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessSlot")
 	defer span.End()
-	span.AddAttributes(trace.Int64Attribute("slot", int64(state.Slot)))
+	span.AddAttributes(trace.Int64Attribute("slot", int64(state.Slot())))
 
-	prevStateRoot, err := stateutil.HashTreeRootState(state)
+	prevStateRoot, err := state.HashTreeRoot()
 	if err != nil {
-		traceutil.AnnotateError(span, err)
-		return nil, errors.Wrap(err, "could not tree hash prev state root")
+		return nil, err
 	}
-	state.StateRoots[state.Slot%params.BeaconConfig().SlotsPerHistoricalRoot] = prevStateRoot[:]
+	if err := state.UpdateStateRootAtIndex(
+		state.Slot()%params.BeaconConfig().SlotsPerHistoricalRoot,
+		prevStateRoot,
+	); err != nil {
+		return nil, err
+	}
 
 	zeroHash := params.BeaconConfig().ZeroHash
 	// Cache latest block header state root.
-	if bytes.Equal(state.LatestBlockHeader.StateRoot, zeroHash[:]) {
-		state.LatestBlockHeader.StateRoot = prevStateRoot[:]
+	header := state.LatestBlockHeader()
+	if header.StateRoot == nil || bytes.Equal(header.StateRoot, zeroHash[:]) {
+		header.StateRoot = prevStateRoot[:]
+		if err := state.SetLatestBlockHeader(header); err != nil {
+			return nil, err
+		}
 	}
-	prevBlockRoot, err := ssz.HashTreeRoot(state.LatestBlockHeader)
+	prevBlockRoot, err := stateutil.BlockHeaderRoot(state.LatestBlockHeader())
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not determine prev block root")
 	}
 	// Cache the block root.
-	state.BlockRoots[state.Slot%params.BeaconConfig().SlotsPerHistoricalRoot] = prevBlockRoot[:]
+	if err := state.UpdateBlockRootAtIndex(
+		state.Slot()%params.BeaconConfig().SlotsPerHistoricalRoot,
+		prevBlockRoot,
+	); err != nil {
+		return nil, err
+	}
 	return state, nil
 }
 
@@ -234,40 +245,41 @@ func ProcessSlot(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, e
 //            process_epoch(state)
 //        state.slot += 1
 //    ]
-func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.BeaconState, error) {
+func ProcessSlots(ctx context.Context, state *stateTrie.BeaconState, slot uint64) (*stateTrie.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ProcessSlots")
 	defer span.End()
-	span.AddAttributes(trace.Int64Attribute("slots", int64(slot)-int64(state.Slot)))
+	span.AddAttributes(trace.Int64Attribute("slots", int64(slot)-int64(state.Slot())))
 
-	if state.Slot > slot {
-		err := fmt.Errorf("expected state.slot %d < slot %d", state.Slot, slot)
+	if state.Slot() > slot {
+		err := fmt.Errorf("expected state.slot %d < slot %d", state.Slot(), slot)
 		traceutil.AnnotateError(span, err)
 		return nil, err
 	}
 
-	if state.Slot == slot {
+	if state.Slot() == slot {
 		return state, nil
 	}
 
-	highestSlot := state.Slot
-	key := state.Slot
+	highestSlot := state.Slot()
+	key := state.Slot()
 
 	// Restart from cached value, if one exists.
 	cachedState, err := skipSlotCache.Get(ctx, key)
 	if err != nil {
 		return nil, err
 	}
-	if cachedState != nil && cachedState.Slot <= slot {
-		highestSlot = cachedState.Slot
+
+	if cachedState != nil && cachedState.Slot() < slot {
+		highestSlot = cachedState.Slot()
 		state = cachedState
 	}
 	if err := skipSlotCache.MarkInProgress(key); err == cache.ErrAlreadyInProgress {
-		cachedState, err := skipSlotCache.Get(ctx, key)
+		cachedState, err = skipSlotCache.Get(ctx, key)
 		if err != nil {
 			return nil, err
 		}
-		if cachedState != nil && cachedState.Slot <= slot {
-			highestSlot = cachedState.Slot
+		if cachedState != nil && cachedState.Slot() < slot {
+			highestSlot = cachedState.Slot()
 			state = cachedState
 		}
 	} else if err != nil {
@@ -275,16 +287,16 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 	}
 	defer skipSlotCache.MarkNotInProgress(key)
 
-	for state.Slot < slot {
+	for state.Slot() < slot {
 		if ctx.Err() != nil {
 			traceutil.AnnotateError(span, ctx.Err())
 			// Cache last best value.
-			if highestSlot < state.Slot {
+			if highestSlot < state.Slot() {
 				skipSlotCache.Put(ctx, key, state)
 			}
 			return nil, ctx.Err()
 		}
-		state, err := ProcessSlot(ctx, state)
+		state, err = ProcessSlot(ctx, state)
 		if err != nil {
 			traceutil.AnnotateError(span, err)
 			return nil, errors.Wrap(err, "could not process slot")
@@ -296,10 +308,10 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 				return nil, errors.Wrap(err, "could not process epoch with optimizations")
 			}
 		}
-		state.Slot++
+		state.SetSlot(state.Slot() + 1)
 	}
 
-	if highestSlot < state.Slot {
+	if highestSlot < state.Slot() {
 		skipSlotCache.Put(ctx, key, state)
 	}
 
@@ -319,9 +331,9 @@ func ProcessSlots(ctx context.Context, state *pb.BeaconState, slot uint64) (*pb.
 //    process_operations(state, block.body)
 func ProcessBlock(
 	ctx context.Context,
-	state *pb.BeaconState,
+	state *stateTrie.BeaconState,
 	signed *ethpb.SignedBeaconBlock,
-) (*pb.BeaconState, error) {
+) (*stateTrie.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
 	defer span.End()
 
@@ -365,9 +377,9 @@ func ProcessBlock(
 //    process_operations(state, block.body)
 func processBlockNoVerifyAttSigs(
 	ctx context.Context,
-	state *pb.BeaconState,
+	state *stateTrie.BeaconState,
 	signed *ethpb.SignedBeaconBlock,
-) (*pb.BeaconState, error) {
+) (*stateTrie.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
 	defer span.End()
 
@@ -422,8 +434,8 @@ func processBlockNoVerifyAttSigs(
 //            function(state, operation)
 func ProcessOperations(
 	ctx context.Context,
-	state *pb.BeaconState,
-	body *ethpb.BeaconBlockBody) (*pb.BeaconState, error) {
+	state *stateTrie.BeaconState,
+	body *ethpb.BeaconBlockBody) (*stateTrie.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessOperations")
 	defer span.End()
 
@@ -482,8 +494,8 @@ func ProcessOperations(
 //            function(state, operation)
 func processOperationsNoVerify(
 	ctx context.Context,
-	state *pb.BeaconState,
-	body *ethpb.BeaconBlockBody) (*pb.BeaconState, error) {
+	state *stateTrie.BeaconState,
+	body *ethpb.BeaconBlockBody) (*stateTrie.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessOperations")
 	defer span.End()
 
@@ -515,7 +527,7 @@ func processOperationsNoVerify(
 	return state, nil
 }
 
-func verifyOperationLengths(state *pb.BeaconState, body *ethpb.BeaconBlockBody) error {
+func verifyOperationLengths(state *stateTrie.BeaconState, body *ethpb.BeaconBlockBody) error {
 	if uint64(len(body.ProposerSlashings)) > params.BeaconConfig().MaxProposerSlashings {
 		return fmt.Errorf(
 			"number of proposer slashings (%d) in block body exceeds allowed threshold of %d",
@@ -548,10 +560,10 @@ func verifyOperationLengths(state *pb.BeaconState, body *ethpb.BeaconBlockBody) 
 		)
 	}
 
-	if state.Eth1DepositIndex > state.Eth1Data.DepositCount {
-		return fmt.Errorf("expected state.deposit_index %d <= eth1data.deposit_count %d", state.Eth1DepositIndex, state.Eth1Data.DepositCount)
+	if state.Eth1DepositIndex() > state.Eth1Data().DepositCount {
+		return fmt.Errorf("expected state.deposit_index %d <= eth1data.deposit_count %d", state.Eth1DepositIndex(), state.Eth1Data().DepositCount)
 	}
-	maxDeposits := mathutil.Min(params.BeaconConfig().MaxDeposits, state.Eth1Data.DepositCount-state.Eth1DepositIndex)
+	maxDeposits := mathutil.Min(params.BeaconConfig().MaxDeposits, state.Eth1Data().DepositCount-state.Eth1DepositIndex())
 	// Verify outstanding deposits are processed up to max number of deposits
 	if len(body.Deposits) != int(maxDeposits) {
 		return fmt.Errorf("incorrect outstanding deposits in block body, wanted: %d, got: %d",
@@ -566,13 +578,13 @@ func verifyOperationLengths(state *pb.BeaconState, body *ethpb.BeaconBlockBody) 
 //
 // Spec pseudocode definition:
 //    If (state.slot + 1) % SLOTS_PER_EPOCH == 0:
-func CanProcessEpoch(state *pb.BeaconState) bool {
-	return (state.Slot+1)%params.BeaconConfig().SlotsPerEpoch == 0
+func CanProcessEpoch(state *stateTrie.BeaconState) bool {
+	return (state.Slot()+1)%params.BeaconConfig().SlotsPerEpoch == 0
 }
 
 // ProcessEpochPrecompute describes the per epoch operations that are performed on the beacon state.
 // It's optimized by pre computing validator attested info and epoch total/attested balances upfront.
-func ProcessEpochPrecompute(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
+func ProcessEpochPrecompute(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("epoch", int64(helpers.CurrentEpoch(state))))
@@ -598,7 +610,10 @@ func ProcessEpochPrecompute(ctx context.Context, state *pb.BeaconState) (*pb.Bea
 		return nil, errors.Wrap(err, "could not process registry updates")
 	}
 
-	state = precompute.ProcessSlashingsPrecompute(state, bp)
+	err = precompute.ProcessSlashingsPrecompute(state, bp)
+	if err != nil {
+		return nil, err
+	}
 
 	state, err = e.ProcessFinalUpdates(state)
 	if err != nil {
@@ -611,9 +626,9 @@ func ProcessEpochPrecompute(ctx context.Context, state *pb.BeaconState) (*pb.Bea
 // and randao.
 func computeStateRoot(
 	ctx context.Context,
-	state *pb.BeaconState,
+	state *stateTrie.BeaconState,
 	signed *ethpb.SignedBeaconBlock,
-) (*pb.BeaconState, error) {
+) (*stateTrie.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
 	defer span.End()
 

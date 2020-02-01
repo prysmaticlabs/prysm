@@ -66,7 +66,7 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 	}
 
 	// Check if the validator is an aggregator
-	isAggregator, err := helpers.IsAggregator(uint64(len(committee)), req.Slot, req.CommitteeIndex, req.SlotSignature)
+	isAggregator, err := helpers.IsAggregator(uint64(len(committee)), req.SlotSignature)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get aggregator status: %v", err)
 	}
