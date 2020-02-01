@@ -10,7 +10,8 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -47,7 +48,7 @@ import (
 //    # Update finalized checkpoint
 //    if state.finalized_checkpoint.epoch > store.finalized_checkpoint.epoch:
 //        store.finalized_checkpoint = state.finalized_checkpoint
-func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) (*pb.BeaconState, error) {
+func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) (*stateTrie.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "blockchain.onBlock")
 	defer span.End()
 
@@ -62,7 +63,7 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 	if err != nil {
 		return nil, err
 	}
-	preStateValidatorCount := len(preState.Validators)
+	preStateValidatorCount := preState.NumValidators()
 
 	root, err := ssz.HashTreeRoot(b)
 	if err != nil {
@@ -86,15 +87,15 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 	}
 
 	// Update justified check point.
-	if postState.CurrentJustifiedCheckpoint.Epoch > s.justifiedCheckpt.Epoch {
+	if postState.CurrentJustifiedCheckpoint().Epoch > s.justifiedCheckpt.Epoch {
 		if err := s.updateJustified(ctx, postState); err != nil {
 			return nil, err
 		}
 	}
 
 	// Update finalized check point. Prune the block cache and helper caches on every new finalized epoch.
-	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
-		if err := s.beaconDB.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint); err != nil {
+	if postState.FinalizedCheckpoint().Epoch > s.finalizedCheckpt.Epoch {
+		if err := s.beaconDB.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint()); err != nil {
 			return nil, errors.Wrap(err, "could not save finalized checkpoint")
 		}
 
@@ -107,8 +108,12 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 			}
 		}
 
+		if featureconfig.Get().ProtoArrayForkChoice {
+			s.forkChoiceStore.Prune(ctx, bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root))
+		}
+
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
-		s.finalizedCheckpt = postState.FinalizedCheckpoint
+		s.finalizedCheckpt = postState.FinalizedCheckpoint()
 	}
 
 	// Update validator indices in database as needed.
@@ -117,7 +122,7 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 	}
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.
-	if postState.Slot >= s.nextEpochBoundarySlot {
+	if postState.Slot() >= s.nextEpochBoundarySlot {
 		logEpochData(postState)
 		reportEpochMetrics(postState)
 
@@ -138,7 +143,7 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 // onBlockInitialSyncStateTransition is called when an initial sync block is received.
 // It runs state transition on the block and without any BLS verification. The excluded BLS verification
 // includes attestation's aggregated signature. It also does not save attestations.
-func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed *ethpb.SignedBeaconBlock) (*pb.BeaconState, error) {
+func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed *ethpb.SignedBeaconBlock) (*stateTrie.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "blockchain.onBlock")
 	defer span.End()
 
@@ -156,7 +161,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	if err != nil {
 		return nil, err
 	}
-	preStateValidatorCount := len(preState.Validators)
+	preStateValidatorCount := preState.NumValidators()
 
 	postState, err := state.ExecuteStateTransitionNoVerifyAttSigs(ctx, preState, signed)
 	if err != nil {
@@ -180,14 +185,14 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	}
 
 	// Update justified check point.
-	if postState.CurrentJustifiedCheckpoint.Epoch > s.justifiedCheckpt.Epoch {
+	if postState.CurrentJustifiedCheckpoint().Epoch > s.justifiedCheckpt.Epoch {
 		if err := s.updateJustified(ctx, postState); err != nil {
 			return nil, err
 		}
 	}
 
 	// Update finalized check point. Prune the block cache and helper caches on every new finalized epoch.
-	if postState.FinalizedCheckpoint.Epoch > s.finalizedCheckpt.Epoch {
+	if postState.FinalizedCheckpoint().Epoch > s.finalizedCheckpt.Epoch {
 		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 		if endSlot > startSlot {
@@ -201,12 +206,12 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 			return nil, errors.Wrap(err, "could not save init sync finalized state")
 		}
 
-		if err := s.beaconDB.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint); err != nil {
+		if err := s.beaconDB.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint()); err != nil {
 			return nil, errors.Wrap(err, "could not save finalized checkpoint")
 		}
 
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
-		s.finalizedCheckpt = postState.FinalizedCheckpoint
+		s.finalizedCheckpt = postState.FinalizedCheckpoint()
 	}
 
 	// Update validator indices in database as needed.
@@ -215,7 +220,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	}
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.
-	if postState.Slot >= s.nextEpochBoundarySlot {
+	if postState.Slot() >= s.nextEpochBoundarySlot {
 		reportEpochMetrics(postState)
 		s.nextEpochBoundarySlot = helpers.StartSlot(helpers.NextEpoch(postState))
 

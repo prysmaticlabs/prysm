@@ -38,7 +38,7 @@ func init() {
 // and more.
 type Server struct {
 	Ctx                    context.Context
-	BeaconDB               db.ReadOnlyDatabase
+	BeaconDB               db.HeadAccessDatabase
 	AttestationCache       *cache.AttestationCache
 	HeadFetcher            blockchain.HeadFetcher
 	ForkFetcher            blockchain.ForkFetcher
@@ -169,7 +169,7 @@ func (vs *Server) WaitForChainStart(req *ptypes.Empty, stream ethpb.BeaconNodeVa
 	if head != nil {
 		res := &ethpb.ChainStartResponse{
 			Started:     true,
-			GenesisTime: head.GenesisTime,
+			GenesisTime: head.GenesisTime(),
 		}
 		return stream.Send(res)
 	}

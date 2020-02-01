@@ -18,18 +18,28 @@ var ErrNilProto = errors.New("cannot hash a nil protobuf message")
 // Hash defines a function that returns the sha256 checksum of the data passed in.
 // https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/core/0_beacon-chain.md#hash
 func Hash(data []byte) [32]byte {
+	return CustomSHA256Hasher()(data)
+}
+
+// CustomSHA256Hasher returns a hash function that uses
+// an enclosed hasher. This is not safe for concurrent
+// use as the same hasher is being called throughout.
+func CustomSHA256Hasher() func([]byte) [32]byte {
+	hasher := sha256.New()
 	var hash [32]byte
 
-	h := sha256.New()
-	// The hash interface never returns an error, for that reason
-	// we are not handling the error below. For reference, it is
-	// stated here https://golang.org/pkg/hash/#Hash
+	return func(data []byte) [32]byte {
+		// The hash interface never returns an error, for that reason
+		// we are not handling the error below. For reference, it is
+		// stated here https://golang.org/pkg/hash/#Hash
 
-	// #nosec G104
-	h.Write(data)
-	h.Sum(hash[:0])
+		// #nosec G104
+		hasher.Write(data)
+		hasher.Sum(hash[:0])
+		hasher.Reset()
 
-	return hash
+		return hash
+	}
 }
 
 // HashKeccak256 defines a function which returns the Keccak-256/SHA3

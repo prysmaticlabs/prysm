@@ -84,11 +84,14 @@ func ComputeShuffledIndex(index uint64, indexCount uint64, seed [32]byte, shuffl
 		round = rounds - 1
 	}
 	buf := make([]byte, totalSize, totalSize)
+	posBuffer := make([]byte, 8, 8)
+	hashfunc := hashutil.CustomSHA256Hasher()
+
 	// Seed is always the first 32 bytes of the hash input, we never have to change this part of the buffer.
 	copy(buf[:32], seed[:])
 	for {
 		buf[seedSize] = round
-		hash := hashutil.Hash(buf[:pivotViewSize])
+		hash := hashfunc(buf[:pivotViewSize])
 		hash8 := hash[:8]
 		hash8Int := bytesutil.FromBytes8(hash8)
 		pivot := hash8Int % indexCount
@@ -100,9 +103,9 @@ func ComputeShuffledIndex(index uint64, indexCount uint64, seed [32]byte, shuffl
 		}
 		// Add position except its last byte to []buf for randomness,
 		// it will be used later to select a bit from the resulting hash.
-		position4bytes := bytesutil.ToBytes(position>>8, 4)
-		copy(buf[pivotViewSize:], position4bytes[:])
-		source := hashutil.Hash(buf)
+		binary.LittleEndian.PutUint64(posBuffer[:8], position>>8)
+		copy(buf[pivotViewSize:], posBuffer[:4])
+		source := hashfunc(buf)
 		// Effectively keep the first 5 bits of the byte value of the position,
 		// and use it to retrieve one of the 32 (= 2^5) bytes of the hash.
 		byteV := source[(position&0xff)>>3]
@@ -160,6 +163,7 @@ func innerShuffleList(input []uint64, seed [32]byte, shuffle bool) ([]uint64, er
 			len(input))
 	}
 	rounds := uint8(params.BeaconConfig().ShuffleRoundCount)
+	hashfunc := hashutil.CustomSHA256Hasher()
 	if rounds == 0 {
 		return input, nil
 	}
@@ -172,23 +176,23 @@ func innerShuffleList(input []uint64, seed [32]byte, shuffle bool) ([]uint64, er
 	copy(buf[:seedSize], seed[:])
 	for {
 		buf[seedSize] = r
-		ph := hashutil.Hash(buf[:pivotViewSize])
+		ph := hashfunc(buf[:pivotViewSize])
 		pivot := bytesutil.FromBytes8(ph[:8]) % listSize
 		mirror := (pivot + 1) >> 1
 		binary.LittleEndian.PutUint32(buf[pivotViewSize:], uint32(pivot>>8))
-		source := hashutil.Hash(buf)
+		source := hashfunc(buf)
 		byteV := source[(pivot&0xff)>>3]
 		for i, j := uint64(0), pivot; i < mirror; i, j = i+1, j-1 {
-			byteV, source = swapOrNot(buf, byteV, i, input, j, source)
+			byteV, source = swapOrNot(buf, byteV, i, input, j, source, hashfunc)
 		}
 		// Now repeat, but for the part after the pivot.
 		mirror = (pivot + listSize + 1) >> 1
 		end := listSize - 1
 		binary.LittleEndian.PutUint32(buf[pivotViewSize:], uint32(end>>8))
-		source = hashutil.Hash(buf)
+		source = hashfunc(buf)
 		byteV = source[(end&0xff)>>3]
 		for i, j := pivot+1, end; i < mirror; i, j = i+1, j-1 {
-			byteV, source = swapOrNot(buf, byteV, i, input, j, source)
+			byteV, source = swapOrNot(buf, byteV, i, input, j, source, hashfunc)
 		}
 		if shuffle {
 			r++
@@ -207,11 +211,12 @@ func innerShuffleList(input []uint64, seed [32]byte, shuffle bool) ([]uint64, er
 
 // swapOrNot describes the main algorithm behind the shuffle where we swap bytes in the inputted value
 // depending on if the conditions are met.
-func swapOrNot(buf []byte, byteV byte, i uint64, input []uint64, j uint64, source [32]byte) (byte, [32]byte) {
+func swapOrNot(buf []byte, byteV byte, i uint64, input []uint64,
+	j uint64, source [32]byte, hashFunc func([]byte) [32]byte) (byte, [32]byte) {
 	if j&0xff == 0xff {
 		// just overwrite the last part of the buffer, reuse the start (seed, round)
 		binary.LittleEndian.PutUint32(buf[pivotViewSize:], uint32(j>>8))
-		source = hashutil.Hash(buf)
+		source = hashFunc(buf)
 	}
 	if j&0x7 == 0x7 {
 		byteV = source[(j&0xff)>>3]

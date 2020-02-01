@@ -8,6 +8,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -27,9 +28,13 @@ func runSlotProcessingTests(t *testing.T, config string) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			beaconState := &pb.BeaconState{}
-			if err := ssz.Unmarshal(preBeaconStateFile, beaconState); err != nil {
+			base := &pb.BeaconState{}
+			if err := ssz.Unmarshal(preBeaconStateFile, base); err != nil {
 				t.Fatalf("Failed to unmarshal: %v", err)
+			}
+			beaconState, err := beaconstate.InitializeFromProto(base)
+			if err != nil {
+				t.Fatal(err)
 			}
 
 			file, err := testutil.BazelFileBytes(testsFolderPath, folder.Name(), "slots.yaml")
@@ -50,12 +55,12 @@ func runSlotProcessingTests(t *testing.T, config string) {
 			if err := ssz.Unmarshal(postBeaconStateFile, postBeaconState); err != nil {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
-			postState, err := state.ProcessSlots(context.Background(), beaconState, beaconState.Slot+uint64(slotsCount))
+			postState, err := state.ProcessSlots(context.Background(), beaconState, beaconState.Slot()+uint64(slotsCount))
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			if !proto.Equal(postState, postBeaconState) {
+			if !proto.Equal(postState.CloneInnerState(), postBeaconState) {
 				diff, _ := messagediff.PrettyDiff(beaconState, postBeaconState)
 				t.Fatalf("Post state does not match expected. Diff between states %s", diff)
 			}
