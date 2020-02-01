@@ -229,6 +229,11 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 // a given input 48-byte, public key.
 func (b *BeaconState) SetValidatorIndexByPubkey(pubKey [48]byte, validatorIdx uint64) {
 	b.lock.Lock()
+	newMap := make(map[[48]byte]uint64, len(b.valIdxMap))
+	for i := range b.valIdxMap {
+		newMap[i] = b.valIdxMap[i]
+	}
+	b.valIdxMap = newMap
 	b.valIdxMap[pubKey] = validatorIdx
 	b.markFieldAsDirty(validators)
 	b.lock.Unlock()

@@ -8,6 +8,8 @@ var ArrayPool = new(sync.Pool)
 
 var SliceArrayPool = new(sync.Pool)
 
+var TwoDimensionSlicePool = new(sync.Pool)
+
 func GetByteArray() [32]byte {
 	obj := ArrayPool.Get()
 	if obj == nil {
