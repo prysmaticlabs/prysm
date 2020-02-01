@@ -58,6 +58,11 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 							return err
 						}
 						numberOfAttsRecovered.Inc()
+
+						// Broadcasting the attestation again once a node is able to process it.
+						if err := s.p2p.Broadcast(ctx, att); err != nil {
+							log.WithError(err).Error("Failed to broadcast")
+						}
 					}
 				} else {
 					// Save the pending unaggregated attestation to the pool if the BLS signature is
@@ -69,6 +74,11 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 						return err
 					}
 					numberOfAttsRecovered.Inc()
+
+					// Broadcasting the attestation again once a node is able to process it.
+					if err := s.p2p.Broadcast(ctx, att); err != nil {
+						log.WithError(err).Error("Failed to broadcast")
+					}
 				}
 			}
 			log.WithFields(logrus.Fields{
