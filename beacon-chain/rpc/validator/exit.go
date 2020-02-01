@@ -40,7 +40,7 @@ func (vs *Server) ProposeExit(ctx context.Context, req *ethpb.SignedVoluntaryExi
 		},
 	})
 
-	vs.ExitPool.InsertVoluntaryExit(ctx, s.Validators(), req)
+	vs.ExitPool.InsertVoluntaryExit(ctx, s, req)
 
 	return &ptypes.Empty{}, vs.P2P.Broadcast(ctx, req)
 }

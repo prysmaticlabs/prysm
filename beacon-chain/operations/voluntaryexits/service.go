@@ -7,6 +7,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -29,7 +30,7 @@ func NewPool() *Pool {
 
 // PendingExits returns exits that are ready for inclusion at the given slot. This method will not
 // return more than the block enforced MaxVoluntaryExits.
-func (p *Pool) PendingExits(slot uint64) []*ethpb.SignedVoluntaryExit {
+func (p *Pool) PendingExits(state *beaconstate.BeaconState, slot uint64) []*ethpb.SignedVoluntaryExit {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 	pending := make([]*ethpb.SignedVoluntaryExit, 0)
@@ -37,7 +38,9 @@ func (p *Pool) PendingExits(slot uint64) []*ethpb.SignedVoluntaryExit {
 		if e.Exit.Epoch > helpers.SlotToEpoch(slot) {
 			continue
 		}
-		pending = append(pending, e)
+		if v, err := state.ValidatorAtIndexReadOnly(e.Exit.ValidatorIndex); err == nil && v.ExitEpoch() == params.BeaconConfig().FarFutureEpoch {
+			pending = append(pending, e)
+		}
 	}
 	if len(pending) > int(params.BeaconConfig().MaxVoluntaryExits) {
 		pending = pending[:params.BeaconConfig().MaxVoluntaryExits]
@@ -47,7 +50,7 @@ func (p *Pool) PendingExits(slot uint64) []*ethpb.SignedVoluntaryExit {
 
 // InsertVoluntaryExit into the pool. This method is a no-op if the pending exit already exists,
 // has been included recently, or the validator is already exited.
-func (p *Pool) InsertVoluntaryExit(ctx context.Context, validators []*ethpb.Validator, exit *ethpb.SignedVoluntaryExit) {
+func (p *Pool) InsertVoluntaryExit(ctx context.Context, state *beaconstate.BeaconState, exit *ethpb.SignedVoluntaryExit) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -57,7 +60,7 @@ func (p *Pool) InsertVoluntaryExit(ctx context.Context, validators []*ethpb.Vali
 	}
 
 	// Has the validator been exited already?
-	if len(validators) <= int(exit.Exit.ValidatorIndex) || validators[exit.Exit.ValidatorIndex].ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+	if v, err := state.ValidatorAtIndexReadOnly(exit.Exit.ValidatorIndex); err != nil || v.ExitEpoch() != params.BeaconConfig().FarFutureEpoch {
 		return
 	}
 
