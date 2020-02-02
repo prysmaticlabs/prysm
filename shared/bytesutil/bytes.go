@@ -122,6 +122,15 @@ func ToBytes48(x []byte) [48]byte {
 	return y
 }
 
+// ToBytes64 is a convenience method for converting a byte slice to a fix
+// sized 64 byte array. This method will truncate the input if it is larger
+// than 64 bytes.
+func ToBytes64(x []byte) [64]byte {
+	var y [64]byte
+	copy(y[:], x)
+	return y
+}
+
 // FromBytes32 is a convenience method for converting a fixed-size byte array
 // to a byte slice.
 func FromBytes32(x [32]byte) []byte {
