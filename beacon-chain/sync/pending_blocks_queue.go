@@ -68,7 +68,7 @@ func (r *Service) processPendingBlocks(ctx context.Context) error {
 		if !inPendingQueue && !inDB && hasPeer {
 			log.WithFields(logrus.Fields{
 				"currentSlot": b.Block.Slot,
-				"parentRoot":  hex.EncodeToString(b.Block.ParentRoot),
+				"parentRoot":  hex.EncodeToString(bytesutil.Trunc(b.Block.ParentRoot)),
 			}).Info("Requesting parent block")
 			req := [][32]byte{bytesutil.ToBytes32(b.Block.ParentRoot)}
 
@@ -112,10 +112,14 @@ func (r *Service) processPendingBlocks(ctx context.Context) error {
 		delete(r.seenPendingBlocks, blkRoot)
 		r.pendingQueueLock.Unlock()
 
-		log.Infof("Processed ancestor block with slot %d and cleared pending block cache", s)
+		log.WithFields(logrus.Fields{
+			"slot":      s,
+			"blockRoot": hex.EncodeToString(bytesutil.Trunc(blkRoot[:])),
+		}).Info("Processed pending block and cleared it in cache")
 
 		span.End()
 	}
+
 	return nil
 }
 

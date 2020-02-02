@@ -22,9 +22,10 @@ type ChainInfoFetcher interface {
 	FinalizationFetcher
 }
 
-// GenesisTimeFetcher retrieves the Eth2 genesis timestamp.
-type GenesisTimeFetcher interface {
+// TimeFetcher retrieves the Eth2 data that's related to time.
+type TimeFetcher interface {
 	GenesisTime() time.Time
+	CurrentSlot() uint64
 }
 
 // HeadFetcher defines a common interface for methods in blockchain service which

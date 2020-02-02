@@ -31,6 +31,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 		chain: &mockChain.ChainService{
 			Genesis: time.Now().Add(time.Duration(-64*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second), // 64 slots ago
 		},
+		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.AggregateAttestationAndProof),
 	}
 
 	blk := &ethpb.SignedBeaconBlock{
