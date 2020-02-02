@@ -47,7 +47,8 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 		// Has the pending attestation's missing block arrived yet?
 		beaconRoot := bytesutil.ToBytes32(bRoot[:32])
 		targetRoot := bytesutil.ToBytes32(bRoot[32:])
-		if s.db.HasBlock(ctx, beaconRoot) && s.db.HasBlock(ctx, targetRoot) {
+		if s.db.HasBlock(ctx, beaconRoot) &&
+			(targetRoot != params.BeaconConfig().ZeroHash || s.db.HasBlock(ctx, targetRoot)) {
 			numberOfBlocksRecoveredFromAtt.Inc()
 			for _, att := range attestations {
 				// The pending attestations can arrive in both aggregated and unaggregated forms,
