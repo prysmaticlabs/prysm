@@ -25,7 +25,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 		return nil, errors.Wrap(err, "could not get cached checkpoint state")
 	}
 	if cachedState != nil {
-		return cachedState.Copy(), nil
+		return cachedState, nil
 	}
 
 	baseState, err := s.beaconDB.State(ctx, bytesutil.ToBytes32(c.Root))

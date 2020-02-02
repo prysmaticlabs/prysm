@@ -106,7 +106,7 @@ func (s *Store) GenesisStore(
 
 	if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
 		Checkpoint: s.justifiedCheckpt,
-		State:      justifiedState,
+		State:      justifiedState.Copy(),
 	}); err != nil {
 		return errors.Wrap(err, "could not save genesis state in check point cache")
 	}
