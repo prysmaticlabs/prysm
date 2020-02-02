@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -26,9 +25,7 @@ var (
 		},
 		[]string{
 			// validator pubkey
-			"pubKey",
-			// slot for this metric
-			"slot",
+			"pkey",
 		},
 	)
 	validatorAggFailVec = promauto.NewCounterVec(
@@ -38,9 +35,7 @@ var (
 		},
 		[]string{
 			// validator pubkey
-			"pubKey",
-			// slot for this metric
-			"slot",
+			"pkey",
 		},
 	)
 )
@@ -59,14 +54,14 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 	duty, err := v.duty(pubKey)
 	if err != nil {
 		log.Errorf("Could not fetch validator assignment: %v", err)
-		validatorAggFailVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
+		validatorAggFailVec.WithLabelValues(fmtKey).Inc()
 		return
 	}
 
 	slotSig, err := v.signSlot(ctx, pubKey, slot)
 	if err != nil {
 		log.Errorf("Could not sign slot: %v", err)
-		validatorAggFailVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
+		validatorAggFailVec.WithLabelValues(fmtKey).Inc()
 		return
 	}
 
@@ -83,16 +78,16 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 	})
 	if err != nil {
 		log.Errorf("Could not submit slot signature to beacon node: %v", err)
-		validatorAggFailVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
+		validatorAggFailVec.WithLabelValues().Inc()
 		return
 	}
 
 	if err := v.addIndicesToLog(duty); err != nil {
 		log.Errorf("Could not add aggregator indices to logs: %v", err)
-		validatorAggFailVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
+		validatorAggFailVec.WithLabelValues(fmtKey).Inc()
 		return
 	}
-	validatorAggSuccessVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
+	validatorAggSuccessVec.WithLabelValues(fmtKey).Inc()
 
 }
 

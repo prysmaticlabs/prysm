@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"strconv"
 
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -28,9 +27,7 @@ var (
 		},
 		[]string{
 			// validator pubkey
-			"pubKey",
-			// slot for this metric
-			"slot",
+			"pkey",
 		},
 	)
 	validatorProposeFailVec = promauto.NewCounterVec(
@@ -40,9 +37,7 @@ var (
 		},
 		[]string{
 			// validator pubkey
-			"pubKey",
-			// slot for this metric
-			"slot",
+			"pkey",
 		},
 	)
 )
@@ -69,7 +64,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	randaoReveal, err := v.signRandaoReveal(ctx, pubKey, epoch)
 	if err != nil {
 		log.WithError(err).Error("Failed to sign randao reveal")
-		validatorProposeFailVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
+		validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		return
 	}
 
@@ -81,7 +76,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	})
 	if err != nil {
 		log.WithError(err).Error("Failed to request block from beacon node")
-		validatorProposeFailVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
+		validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		return
 	}
 
@@ -89,13 +84,13 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		history, err := v.db.ProposalHistory(ctx, pubKey[:])
 		if err != nil {
 			log.WithError(err).Error("Failed to get proposal history")
-			validatorProposeFailVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
+			validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 			return
 		}
 
 		if HasProposedForEpoch(history, epoch) {
 			log.WithField("epoch", epoch).Warn("Tried to sign a double proposal, rejected")
-			validatorProposeFailVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
+			validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 			return
 		}
 	}
@@ -104,7 +99,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	sig, err := v.signBlock(ctx, pubKey, epoch, b)
 	if err != nil {
 		log.WithError(err).Error("Failed to sign block")
-		validatorProposeFailVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
+		validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		return
 	}
 	blk := &ethpb.SignedBeaconBlock{
@@ -116,7 +111,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	blkResp, err := v.validatorClient.ProposeBlock(ctx, blk)
 	if err != nil {
 		log.WithError(err).Error("Failed to propose block")
-		validatorProposeFailVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
+		validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		return
 	}
 
@@ -124,18 +119,18 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		history, err := v.db.ProposalHistory(ctx, pubKey[:])
 		if err != nil {
 			log.WithError(err).Error("Failed to get proposal history")
-			validatorProposeFailVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
+			validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 			return
 		}
 		history = SetProposedForEpoch(history, epoch)
 		if err := v.db.SaveProposalHistory(ctx, pubKey[:], history); err != nil {
 			log.WithError(err).Error("Failed to save updated proposal history")
-			validatorProposeFailVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
+			validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 			return
 		}
 	}
 
-	validatorProposeSuccessVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
+	validatorProposeSuccessVec.WithLabelValues(fmtKey).Inc()
 
 	span.AddAttributes(
 		trace.StringAttribute("blockRoot", fmt.Sprintf("%#x", blkResp.BlockRoot)),

@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -32,9 +31,7 @@ var (
 		},
 		[]string{
 			// validator pubkey
-			"pubKey",
-			// slot for this metric
-			"slot",
+			"pkey",
 		},
 	)
 	validatorAttestFailVec = promauto.NewCounterVec(
@@ -44,9 +41,7 @@ var (
 		},
 		[]string{
 			// validator pubkey
-			"pubKey",
-			// slot for this metric
-			"slot",
+			"pey",
 		},
 	)
 )
@@ -65,7 +60,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	duty, err := v.duty(pubKey)
 	if err != nil {
 		log.WithError(err).Error("Could not fetch validator assignment")
-		validatorAttestFailVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
+		validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		return
 	}
 
@@ -81,7 +76,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	data, err := v.validatorClient.GetAttestationData(ctx, req)
 	if err != nil {
 		log.WithError(err).Error("Could not request attestation to sign at slot")
-		validatorAttestFailVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
+		validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		return
 	}
 
@@ -89,7 +84,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		history, err := v.db.AttestationHistory(ctx, pubKey[:])
 		if err != nil {
 			log.Errorf("Could not get attestation history from DB: %v", err)
-			validatorAttestFailVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
+			validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 			return
 		}
 		if isNewAttSlashable(history, data.Source.Epoch, data.Target.Epoch) {
@@ -97,7 +92,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 				"sourceEpoch": data.Source.Epoch,
 				"targetEpoch": data.Target.Epoch,
 			}).Error("Attempted to make a slashable attestation, rejected")
-			validatorAttestFailVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
+			validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 			return
 		}
 	}
@@ -105,7 +100,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	sig, err := v.signAtt(ctx, pubKey, data)
 	if err != nil {
 		log.WithError(err).Error("Could not sign attestation")
-		validatorAttestFailVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
+		validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		return
 	}
 
@@ -120,7 +115,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	}
 	if !found {
 		log.Errorf("Validator ID %d not found in committee of %v", duty.ValidatorIndex, duty.Committee)
-		validatorAttestFailVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
+		validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		return
 	}
 
@@ -135,7 +130,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	attResp, err := v.validatorClient.ProposeAttestation(ctx, attestation)
 	if err != nil {
 		log.WithError(err).Error("Could not submit attestation to beacon node")
-		validatorAttestFailVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
+		validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		return
 	}
 
@@ -143,24 +138,24 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		history, err := v.db.AttestationHistory(ctx, pubKey[:])
 		if err != nil {
 			log.Errorf("Could not get attestation history from DB: %v", err)
-			validatorAttestFailVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
+			validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 			return
 		}
 		history = markAttestationForTargetEpoch(history, data.Source.Epoch, data.Target.Epoch)
 		if err := v.db.SaveAttestationHistory(ctx, pubKey[:], history); err != nil {
 			log.Errorf("Could not save attestation history to DB: %v", err)
-			validatorAttestFailVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
+			validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 			return
 		}
 	}
 
 	if err := v.saveAttesterIndexToData(data, duty.ValidatorIndex); err != nil {
 		log.WithError(err).Error("Could not save validator index for logging")
-		validatorAttestFailVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
+		validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
 		return
 	}
 
-	validatorAttestSuccessVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
+	validatorAttestSuccessVec.WithLabelValues(fmtKey).Inc()
 
 	span.AddAttributes(
 		trace.Int64Attribute("slot", int64(slot)),
