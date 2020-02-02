@@ -465,6 +465,9 @@ func (b *BeaconState) FinalizedCheckpoint() *ethpb.Checkpoint {
 
 // CopyETH1Data copies the provided eth1data object.
 func CopyETH1Data(data *ethpb.Eth1Data) *ethpb.Eth1Data {
+	if data == nil {
+		return &ethpb.Eth1Data{}
+	}
 	newETH1 := &ethpb.Eth1Data{
 		DepositCount: data.DepositCount,
 	}
@@ -482,6 +485,9 @@ func CopyETH1Data(data *ethpb.Eth1Data) *ethpb.Eth1Data {
 
 // CopyPendingAttestation copies the provided pending attestation object.
 func CopyPendingAttestation(att *pbp2p.PendingAttestation) *pbp2p.PendingAttestation {
+	if att == nil {
+		return &pbp2p.PendingAttestation{}
+	}
 	aggBytes := []byte(att.AggregationBits)
 	newBitlist := make([]byte, len(aggBytes))
 	copy(newBitlist, aggBytes)
@@ -504,6 +510,9 @@ func CopyPendingAttestation(att *pbp2p.PendingAttestation) *pbp2p.PendingAttesta
 
 // CopyCheckpoint copies the provided checkpoint.
 func CopyCheckpoint(cp *ethpb.Checkpoint) *ethpb.Checkpoint {
+	if cp == nil {
+		return &ethpb.Checkpoint{}
+	}
 	root := [32]byte{}
 	copy(root[:], cp.Root)
 
