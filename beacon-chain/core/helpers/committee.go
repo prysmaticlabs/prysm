@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -426,9 +425,6 @@ func UpdateCommitteeCache(state *stateTrie.BeaconState, epoch uint64) error {
 
 // UpdateProposerIndicesInCache updates proposer indices entry of the committee cache.
 func UpdateProposerIndicesInCache(state *stateTrie.BeaconState, epoch uint64) error {
-	if !featureconfig.Get().EnableProposerIndexCache {
-		return nil
-	}
 
 	indices, err := ActiveValidatorIndices(state, epoch)
 	if err != nil {
