@@ -84,15 +84,13 @@ func (b *BeaconState) Copy() *BeaconState {
 			FinalizedCheckpoint:         b.FinalizedCheckpoint(),
 		},
 		dirtyFields: make(map[fieldIndex]interface{}, 20),
-		valIdxMap:   make(map[[48]byte]uint64, len(b.valIdxMap)),
+
+		// Copy on write validator index map.
+		valIdxMap:   b.valIdxMap,
 	}
 
 	for i := range b.dirtyFields {
 		dst.dirtyFields[i] = true
-	}
-
-	for i := range b.valIdxMap {
-		dst.valIdxMap[i] = b.valIdxMap[i]
 	}
 
 	dst.merkleLayers = make([][][]byte, len(b.merkleLayers))
