@@ -20,6 +20,11 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// CurrentSlot returns the current slot based on time.
+func (s *Service) CurrentSlot() uint64 {
+	return uint64(time.Now().Unix()-s.genesisTime.Unix()) / params.BeaconConfig().SecondsPerSlot
+}
+
 // getBlockPreState returns the pre state of an incoming block. It uses the parent root of the block
 // to retrieve the state in DB. It verifies the pre state's validity and the incoming block
 // is in the correct time window.
@@ -199,7 +204,7 @@ func (s *Service) rmStatesOlderThanLastFinalized(ctx context.Context, startSlot 
 // Otherwise, delay incorporation of new justified checkpoint until next epoch boundary.
 // See https://ethresear.ch/t/prevention-of-bouncing-attack-on-ffg/6114 for more detailed analysis and discussion.
 func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustifiedCheckpt *ethpb.Checkpoint) (bool, error) {
-	if helpers.SlotsSinceEpochStarts(s.currentSlot()) < params.BeaconConfig().SafeSlotsToUpdateJustified {
+	if helpers.SlotsSinceEpochStarts(s.CurrentSlot()) < params.BeaconConfig().SafeSlotsToUpdateJustified {
 		return true, nil
 	}
 	newJustifiedBlockSigned, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(newJustifiedCheckpt.Root))
@@ -259,11 +264,6 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 	}
 
 	return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
-}
-
-// currentSlot returns the current slot based on time.
-func (s *Service) currentSlot() uint64 {
-	return uint64(time.Now().Unix()-s.genesisTime.Unix()) / params.BeaconConfig().SecondsPerSlot
 }
 
 // This saves every finalized state in DB during initial sync, needed as part of optimization to

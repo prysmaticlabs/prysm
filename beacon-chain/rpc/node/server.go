@@ -26,7 +26,7 @@ type Server struct {
 	Server             *grpc.Server
 	BeaconDB           db.ReadOnlyDatabase
 	PeersFetcher       p2p.PeersProvider
-	GenesisTimeFetcher blockchain.GenesisTimeFetcher
+	GenesisTimeFetcher blockchain.TimeFetcher
 }
 
 // GetSyncStatus checks the current network sync status of the node.

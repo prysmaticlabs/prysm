@@ -193,6 +193,11 @@ func (ms *ChainService) GenesisTime() time.Time {
 	return ms.Genesis
 }
 
+// CurrentSlot mocks the same method in the chain service.
+func (ms *ChainService) CurrentSlot() uint64 {
+	return 0
+}
+
 // Participation mocks the same method in the chain service.
 func (ms *ChainService) Participation(epoch uint64) *precompute.Balance {
 	return ms.Balance
