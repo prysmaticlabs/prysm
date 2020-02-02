@@ -71,7 +71,7 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(state, info1.State) {
+	if !reflect.DeepEqual(state.InnerStateUnsafe(), info1.State.InnerStateUnsafe()) {
 		t.Error("incorrectly cached state")
 	}
 
@@ -93,7 +93,7 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(state, info2.State) {
+	if !reflect.DeepEqual(state.InnerStateUnsafe(), info2.State.InnerStateUnsafe()) {
 		t.Error("incorrectly cached state")
 	}
 
@@ -101,7 +101,7 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(state, info1.State) {
+	if !reflect.DeepEqual(state.InnerStateUnsafe(), info1.State.InnerStateUnsafe()) {
 		t.Error("incorrectly cached state")
 	}
 }
