@@ -3,8 +3,11 @@ package client
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -15,25 +18,55 @@ import (
 	"go.opencensus.io/trace"
 )
 
+var (
+	validatorAggSuccessVec = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "validator",
+			Name:      "successful_attestations",
+		},
+		[]string{
+			// validator pubkey
+			"pubKey",
+			// slot for this metric
+			"slot",
+		},
+	)
+	validatorAggFailVec = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "validator",
+			Name:      "failed_attestations",
+		},
+		[]string{
+			// validator pubkey
+			"pubKey",
+			// slot for this metric
+			"slot",
+		},
+	)
+)
+
 // SubmitAggregateAndProof submits the validator's signed slot signature to the beacon node
 // via gRPC. Beacon node will verify the slot signature and determine if the validator is also
 // an aggregator. If yes, then beacon node will broadcast aggregated signature and
-// proof on the validator's behave.
+// proof on the validator's behalf.
 func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pubKey [48]byte) {
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitAggregateAndProof")
 	defer span.End()
 
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
+	fmtKey := fmt.Sprintf("%#x", pubKey[:8])
 
 	duty, err := v.duty(pubKey)
 	if err != nil {
 		log.Errorf("Could not fetch validator assignment: %v", err)
+		validatorAggFailVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
 		return
 	}
 
 	slotSig, err := v.signSlot(ctx, pubKey, slot)
 	if err != nil {
 		log.Errorf("Could not sign slot: %v", err)
+		validatorAggFailVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
 		return
 	}
 
@@ -50,13 +83,17 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 	})
 	if err != nil {
 		log.Errorf("Could not submit slot signature to beacon node: %v", err)
+		validatorAggFailVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
 		return
 	}
 
 	if err := v.addIndicesToLog(duty); err != nil {
 		log.Errorf("Could not add aggregator indices to logs: %v", err)
+		validatorAggFailVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
 		return
 	}
+	validatorAggSuccessVec.WithLabelValues(fmtKey, strconv.FormatUint(slot, 10)).Inc()
+
 }
 
 // This implements selection logic outlined in:

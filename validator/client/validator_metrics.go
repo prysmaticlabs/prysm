@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -20,7 +21,7 @@ var validatorBalancesGaugeVec = promauto.NewGaugeVec(
 	},
 	[]string{
 		// validator pubkey
-		"pkey",
+		"pubKey",
 		// slot for this metric
 		"slot",
 	},
@@ -64,7 +65,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		log := log.WithField("pubKey", pubKey)
 		if missingValidators[bytesutil.ToBytes48(pkey)] {
 			log.Info("Validator not in beacon chain")
-			validatorBalancesGaugeVec.WithLabelValues(pubKey, slot).Set(0)
+			validatorBalancesGaugeVec.WithLabelValues(pubKey, strconv.FormatUint(slot, 10)).Set(0)
 			continue
 		}
 		if slot < params.BeaconConfig().SlotsPerEpoch {
@@ -81,7 +82,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 				"newBalance":    newBalance,
 				"percentChange": fmt.Sprintf("%.5f%%", percentNet*100),
 			}).Info("New Balance")
-			validatorBalancesGaugeVec.WithLabelValues(pubKey, slot).Set(newBalance)
+			validatorBalancesGaugeVec.WithLabelValues(pubKey, strconv.FormatUint(slot, 10)).Set(newBalance)
 
 		}
 		v.prevBalance[bytesutil.ToBytes48(pkey)] = resp.Balances[i]
