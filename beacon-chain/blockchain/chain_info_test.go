@@ -18,7 +18,7 @@ import (
 
 // Ensure Service implements chain info interface.
 var _ = ChainInfoFetcher(&Service{})
-var _ = GenesisTimeFetcher(&Service{})
+var _ = TimeFetcher(&Service{})
 var _ = ForkFetcher(&Service{})
 
 func TestFinalizedCheckpt_Nil(t *testing.T) {

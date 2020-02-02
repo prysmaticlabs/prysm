@@ -58,7 +58,7 @@ type Service struct {
 	forkFetcher            blockchain.ForkFetcher
 	finalizationFetcher    blockchain.FinalizationFetcher
 	participationFetcher   blockchain.ParticipationFetcher
-	genesisTimeFetcher     blockchain.GenesisTimeFetcher
+	genesisTimeFetcher     blockchain.TimeFetcher
 	attestationReceiver    blockchain.AttestationReceiver
 	blockReceiver          blockchain.BlockReceiver
 	powChainService        powchain.Chain
@@ -104,7 +104,7 @@ type Config struct {
 	BlockReceiver         blockchain.BlockReceiver
 	POWChainService       powchain.Chain
 	ChainStartFetcher     powchain.ChainStartFetcher
-	GenesisTimeFetcher    blockchain.GenesisTimeFetcher
+	GenesisTimeFetcher    blockchain.TimeFetcher
 	MockEth1Votes         bool
 	AttestationsPool      attestations.Pool
 	ExitPool              *voluntaryexits.Pool
