@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -65,6 +66,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 						}
 					}
 				} else {
+					fmt.Println("aggregated")
 					// Save the pending unaggregated attestation to the pool if the BLS signature is
 					// valid.
 					if _, err := bls.SignatureFromBytes(att.Aggregate.Signature); err != nil {
