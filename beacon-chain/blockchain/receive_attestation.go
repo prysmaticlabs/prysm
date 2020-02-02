@@ -96,7 +96,7 @@ func (s *Service) processAttestation() {
 			ctx := context.Background()
 			atts := s.attPool.ForkchoiceAttestations()
 			for _, a := range atts {
-				hasState := s.beaconDB.HasState(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
+				hasState := s.beaconDB.HasState(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot)) && s.beaconDB.HasState(ctx, bytesutil.ToBytes32(a.Data.Target.Root))
 				hasBlock := s.beaconDB.HasBlock(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
 				if !(hasState && hasBlock) {
 					continue
