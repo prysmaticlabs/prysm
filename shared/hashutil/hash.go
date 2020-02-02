@@ -44,6 +44,9 @@ func Hash(data []byte) [32]byte {
 // CustomSHA256Hasher returns a hash function that uses
 // an enclosed hasher. This is not safe for concurrent
 // use as the same hasher is being called throughout.
+//
+// Note: that this method is only more performant over
+// hashutil.Hash if the callback is used more than 5 times.
 func CustomSHA256Hasher() func([]byte) [32]byte {
 	hasher := sha256Pool.Get().(hash.Hash)
 	hasher.Reset()
