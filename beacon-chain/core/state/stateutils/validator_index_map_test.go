@@ -5,12 +5,13 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 func TestValidatorIndexMap_OK(t *testing.T) {
-	state := &pb.BeaconState{
+	base := &pb.BeaconState{
 		Validators: []*ethpb.Validator{
 			{
 				PublicKey: []byte("zero"),
@@ -20,10 +21,14 @@ func TestValidatorIndexMap_OK(t *testing.T) {
 			},
 		},
 	}
+	state, err := beaconstate.InitializeFromProto(base)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	tests := []struct {
 		key [48]byte
-		val int
+		val uint64
 		ok  bool
 	}{
 		{
@@ -41,7 +46,7 @@ func TestValidatorIndexMap_OK(t *testing.T) {
 		},
 	}
 
-	m := stateutils.ValidatorIndexMap(state)
+	m := stateutils.ValidatorIndexMap(state.Validators())
 	for _, tt := range tests {
 		result, ok := m[tt.key]
 		if result != tt.val {

@@ -7,8 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -16,7 +18,7 @@ import (
 
 // Ensure Service implements chain info interface.
 var _ = ChainInfoFetcher(&Service{})
-var _ = GenesisTimeFetcher(&Service{})
+var _ = TimeFetcher(&Service{})
 var _ = ForkFetcher(&Service{})
 
 func TestFinalizedCheckpt_Nil(t *testing.T) {
@@ -46,9 +48,9 @@ func TestFinalizedCheckpt_CanRetrieve(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	cp := &ethpb.Checkpoint{Epoch: 5}
+	cp := &ethpb.Checkpoint{Epoch: 5, Root: []byte("foo")}
 	c := setupBeaconChain(t, db)
-	c.headState = &pb.BeaconState{FinalizedCheckpoint: cp}
+	c.headState, _ = state.InitializeFromProto(&pb.BeaconState{FinalizedCheckpoint: cp})
 
 	if c.FinalizedCheckpt().Epoch != cp.Epoch {
 		t.Errorf("Finalized epoch at genesis should be %d, got: %d", cp.Epoch, c.FinalizedCheckpt().Epoch)
@@ -61,7 +63,7 @@ func TestFinalizedCheckpt_GenesisRootOk(t *testing.T) {
 
 	cp := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	c := setupBeaconChain(t, db)
-	c.headState = &pb.BeaconState{FinalizedCheckpoint: cp}
+	c.headState, _ = state.InitializeFromProto(&pb.BeaconState{FinalizedCheckpoint: cp})
 	c.genesisRoot = [32]byte{'A'}
 
 	if !bytes.Equal(c.FinalizedCheckpt().Root, c.genesisRoot[:]) {
@@ -73,9 +75,9 @@ func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	cp := &ethpb.Checkpoint{Epoch: 6}
+	cp := &ethpb.Checkpoint{Epoch: 6, Root: []byte("foo")}
 	c := setupBeaconChain(t, db)
-	c.headState = &pb.BeaconState{CurrentJustifiedCheckpoint: cp}
+	c.headState, _ = state.InitializeFromProto(&pb.BeaconState{CurrentJustifiedCheckpoint: cp})
 
 	if c.CurrentJustifiedCheckpt().Epoch != cp.Epoch {
 		t.Errorf("Current Justifiied epoch at genesis should be %d, got: %d", cp.Epoch, c.CurrentJustifiedCheckpt().Epoch)
@@ -88,7 +90,7 @@ func TestJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 
 	cp := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	c := setupBeaconChain(t, db)
-	c.headState = &pb.BeaconState{CurrentJustifiedCheckpoint: cp}
+	c.headState, _ = state.InitializeFromProto(&pb.BeaconState{CurrentJustifiedCheckpoint: cp})
 	c.genesisRoot = [32]byte{'B'}
 
 	if !bytes.Equal(c.CurrentJustifiedCheckpt().Root, c.genesisRoot[:]) {
@@ -100,9 +102,9 @@ func TestPreviousJustifiedCheckpt_CanRetrieve(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	cp := &ethpb.Checkpoint{Epoch: 7}
+	cp := &ethpb.Checkpoint{Epoch: 7, Root: []byte("foo")}
 	c := setupBeaconChain(t, db)
-	c.headState = &pb.BeaconState{PreviousJustifiedCheckpoint: cp}
+	c.headState, _ = state.InitializeFromProto(&pb.BeaconState{PreviousJustifiedCheckpoint: cp})
 
 	if c.PreviousJustifiedCheckpt().Epoch != cp.Epoch {
 		t.Errorf("Previous Justifiied epoch at genesis should be %d, got: %d", cp.Epoch, c.PreviousJustifiedCheckpt().Epoch)
@@ -115,7 +117,7 @@ func TestPrevJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 
 	cp := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	c := setupBeaconChain(t, db)
-	c.headState = &pb.BeaconState{PreviousJustifiedCheckpoint: cp}
+	c.headState, _ = state.InitializeFromProto(&pb.BeaconState{PreviousJustifiedCheckpoint: cp})
 	c.genesisRoot = [32]byte{'C'}
 
 	if !bytes.Equal(c.PreviousJustifiedCheckpt().Root, c.genesisRoot[:]) {
@@ -153,13 +155,16 @@ func TestHeadBlock_CanRetrieve(t *testing.T) {
 }
 
 func TestHeadState_CanRetrieve(t *testing.T) {
-	s := &pb.BeaconState{Slot: 2}
+	s, err := state.InitializeFromProto(&pb.BeaconState{Slot: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
 	c := &Service{headState: s}
 	headState, err := c.HeadState(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(s, headState) {
+	if !reflect.DeepEqual(s.InnerStateUnsafe(), headState.InnerStateUnsafe()) {
 		t.Error("incorrect head state received")
 	}
 }
@@ -174,9 +179,12 @@ func TestGenesisTime_CanRetrieve(t *testing.T) {
 
 func TestCurrentFork_CanRetrieve(t *testing.T) {
 	f := &pb.Fork{Epoch: 999}
-	s := &pb.BeaconState{Fork: f}
+	s, err := state.InitializeFromProto(&pb.BeaconState{Fork: f})
+	if err != nil {
+		t.Fatal(err)
+	}
 	c := &Service{headState: s}
-	if !reflect.DeepEqual(c.CurrentFork(), f) {
-		t.Error("Recieved incorrect fork version")
+	if !proto.Equal(c.CurrentFork(), f) {
+		t.Error("Received incorrect fork version")
 	}
 }

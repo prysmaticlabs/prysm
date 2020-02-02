@@ -46,12 +46,12 @@ func TestStore_SaveValidatorIndices(t *testing.T) {
 
 	numVals := 10
 	indices := make([]uint64, numVals)
-	keys := make([][]byte, numVals)
+	keys := make([][48]byte, numVals)
 	for i := 0; i < numVals; i++ {
 		indices[i] = uint64(i)
 		pub := [48]byte{}
 		copy(pub[:], strconv.Itoa(i))
-		keys[i] = pub[:]
+		keys[i] = pub
 	}
 	ctx := context.Background()
 	if err := db.SaveValidatorIndices(ctx, keys, indices); err != nil {
@@ -61,7 +61,7 @@ func TestStore_SaveValidatorIndices(t *testing.T) {
 		t.Error("Expected error when saving different number of keys and indices, received nil")
 	}
 	for i := 0; i < numVals; i++ {
-		if !db.HasValidatorIndex(ctx, keys[i]) {
+		if !db.HasValidatorIndex(ctx, keys[i][:]) {
 			t.Errorf("Expected validator index %d to have been saved to the db", i)
 		}
 	}
