@@ -301,7 +301,9 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	})
 	beaconState.SetSlashings(make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector))
 	cp := beaconState.CurrentJustifiedCheckpoint()
-	cp.Root = []byte("hello-world")
+	mockRoot := [32]byte{}
+	copy(mockRoot[:], "hello-world")
+	cp.Root = mockRoot[:]
 	beaconState.SetCurrentJustifiedCheckpoint(cp)
 	beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{})
 
@@ -351,9 +353,10 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	validators[proposerSlashIdx].PublicKey = privKeys[proposerSlashIdx].PublicKey().Marshal()[:]
 	beaconState.SetValidators(validators)
 
+	mockRoot2 := [32]byte{'A'}
 	att1 := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte{'A'}},
+			Source: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot2[:]},
 			Target: &ethpb.Checkpoint{Epoch: 0}},
 		AttestingIndices: []uint64{0, 1},
 	}
@@ -367,9 +370,10 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	aggregateSig := bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
 	att1.Signature = aggregateSig.Marshal()[:]
 
+	mockRoot3 := [32]byte{'B'}
 	att2 := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte{'B'}},
+			Source: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot3[:]},
 			Target: &ethpb.Checkpoint{Epoch: 0}},
 		AttestingIndices: []uint64{0, 1},
 	}
@@ -403,7 +407,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			Target: &ethpb.Checkpoint{Epoch: helpers.CurrentEpoch(beaconState)},
 			Source: &ethpb.Checkpoint{
 				Epoch: 0,
-				Root:  []byte("hello-world"),
+				Root:  mockRoot[:],
 			}},
 		AggregationBits: aggBits,
 	}
