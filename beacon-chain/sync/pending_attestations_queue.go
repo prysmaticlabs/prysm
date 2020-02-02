@@ -125,9 +125,10 @@ func (s *Service) savePendingAtt(att *ethpb.AggregateAttestationAndProof) {
 	_, ok := s.blkRootToPendingAtts[root]
 	if !ok {
 		s.blkRootToPendingAtts[root] = []*ethpb.AggregateAttestationAndProof{att}
-	} else {
-		s.blkRootToPendingAtts[root] = append(s.blkRootToPendingAtts[root], att)
+		return
 	}
+
+	s.blkRootToPendingAtts[root] = append(s.blkRootToPendingAtts[root], att)
 }
 
 // This validates the pending attestations in the queue are still valid.
