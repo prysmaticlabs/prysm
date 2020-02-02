@@ -324,6 +324,15 @@ func (b *BeaconState) ValidatorIndexByPubkey(key [48]byte) (uint64, bool) {
 	return idx, ok
 }
 
+func (b *BeaconState) validatorIndexMap() map[[48]byte]uint64 {
+	m := make(map[[48]byte]uint64, len(b.valIdxMap))
+
+	for k, v := range b.valIdxMap {
+		m[k] = v
+	}
+	return m
+}
+
 // PubkeyAtIndex returns the pubkey at the given
 // validator index.
 func (b *BeaconState) PubkeyAtIndex(idx uint64) [48]byte {
