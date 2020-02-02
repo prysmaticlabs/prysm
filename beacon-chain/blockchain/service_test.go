@@ -342,7 +342,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(s, headState) {
+	if !reflect.DeepEqual(s.InnerStateUnsafe(), headState.InnerStateUnsafe()) {
 		t.Error("head state incorrect")
 	}
 	if headBlock.Block.Slot != c.HeadSlot() {

@@ -164,7 +164,7 @@ func TestHeadState_CanRetrieve(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(s, headState) {
+	if !reflect.DeepEqual(s.InnerStateUnsafe(), headState.InnerStateUnsafe()) {
 		t.Error("incorrect head state received")
 	}
 }
