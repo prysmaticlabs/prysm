@@ -498,6 +498,7 @@ func CopyETH1Data(data *ethpb.Eth1Data) *ethpb.Eth1Data {
 	return newETH1
 }
 
+// CopyPendingAttestation copies the provided pending attestation object.
 func CopyPendingAttestation(att *pbp2p.PendingAttestation) *pbp2p.PendingAttestation {
 	aggBytes := []byte(att.AggregationBits)
 	newBitlist := make([]byte, len(aggBytes))
@@ -519,6 +520,7 @@ func CopyPendingAttestation(att *pbp2p.PendingAttestation) *pbp2p.PendingAttesta
 	}
 }
 
+// CopyCheckpoint copies the provided checkpoint.
 func CopyCheckpoint(cp *ethpb.Checkpoint) *ethpb.Checkpoint {
 	root := [32]byte{}
 	copy(root[:], cp.Root)
