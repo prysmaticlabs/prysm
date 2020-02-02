@@ -53,10 +53,12 @@ func (r *Service) processPendingBlocks(ctx context.Context) error {
 		b := r.slotToPendingBlocks[uint64(s)]
 		// Skip if block does not exist.
 		if b == nil || b.Block == nil {
+			r.pendingQueueLock.RUnlock()
+			span.End()
 			continue
 		}
-		inPendingQueue := r.seenPendingBlocks[bytesutil.ToBytes32(b.Block.ParentRoot)]
 		r.pendingQueueLock.RUnlock()
+		inPendingQueue := r.seenPendingBlocks[bytesutil.ToBytes32(b.Block.ParentRoot)]
 
 		inDB := r.db.HasBlock(ctx, bytesutil.ToBytes32(b.Block.ParentRoot))
 		hasPeer := len(pids) != 0
@@ -98,14 +100,15 @@ func (r *Service) processPendingBlocks(ctx context.Context) error {
 			traceutil.AnnotateError(span, err)
 		}
 
-		r.pendingQueueLock.Lock()
-		delete(r.slotToPendingBlocks, uint64(s))
 		blkRoot, err := ssz.HashTreeRoot(b.Block)
 		if err != nil {
 			traceutil.AnnotateError(span, err)
 			span.End()
 			return err
 		}
+
+		r.pendingQueueLock.Lock()
+		delete(r.slotToPendingBlocks, uint64(s))
 		delete(r.seenPendingBlocks, blkRoot)
 		r.pendingQueueLock.Unlock()
 
@@ -113,6 +116,8 @@ func (r *Service) processPendingBlocks(ctx context.Context) error {
 			"slot":      s,
 			"blockRoot": hex.EncodeToString(bytesutil.Trunc(blkRoot[:])),
 		}).Info("Processed pending block and cleared it in cache")
+
+		span.End()
 	}
 
 	return nil
@@ -134,8 +139,8 @@ func (r *Service) sortedPendingSlots() []int {
 // by their slot. If they are before the current finalized
 // checkpoint, these blocks are removed from the queue.
 func (r *Service) validatePendingSlots() error {
-	r.pendingQueueLock.RLock()
-	defer r.pendingQueueLock.RUnlock()
+	r.pendingQueueLock.Lock()
+	defer r.pendingQueueLock.Unlock()
 	oldBlockRoots := make(map[[32]byte]bool)
 
 	finalizedEpoch := r.chain.FinalizedCheckpt().Epoch
@@ -163,7 +168,6 @@ func (r *Service) validatePendingSlots() error {
 			delete(r.seenPendingBlocks, blkRoot)
 		}
 	}
-	oldBlockRoots = nil
 	return nil
 }
 
