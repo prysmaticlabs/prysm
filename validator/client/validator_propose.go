@@ -24,7 +24,7 @@ var (
 	validatorProposeSuccessVec = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: "validator",
-			Name:      "successful_attestations",
+			Name:      "successful_proposals",
 		},
 		[]string{
 			// validator pubkey
@@ -36,7 +36,7 @@ var (
 	validatorProposeFailVec = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: "validator",
-			Name:      "failed_attestations",
+			Name:      "failed_proposals",
 		},
 		[]string{
 			// validator pubkey
