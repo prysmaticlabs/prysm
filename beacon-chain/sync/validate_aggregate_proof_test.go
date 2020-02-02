@@ -128,10 +128,11 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 	}
 
 	r := &Service{
-		p2p:         p,
-		db:          db,
-		initialSync: &mockSync.Sync{IsSyncing: false},
-		attPool:     attestations.NewPool(),
+		p2p:                  p,
+		db:                   db,
+		initialSync:          &mockSync.Sync{IsSyncing: false},
+		attPool:              attestations.NewPool(),
+		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.AggregateAttestationAndProof),
 	}
 
 	buf := new(bytes.Buffer)
