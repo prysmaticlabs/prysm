@@ -444,13 +444,7 @@ func (b *BeaconState) PreviousJustifiedCheckpoint() *ethpb.Checkpoint {
 	if b.state.PreviousJustifiedCheckpoint == nil {
 		return nil
 	}
-	cp := &ethpb.Checkpoint{
-		Epoch: b.state.PreviousJustifiedCheckpoint.Epoch,
-	}
-	root := make([]byte, len(b.state.PreviousJustifiedCheckpoint.Root))
-	copy(root, b.state.PreviousJustifiedCheckpoint.Root)
-	cp.Root = root
-	return cp
+	return CopyCheckpoint(b.state.PreviousJustifiedCheckpoint)
 }
 
 // CurrentJustifiedCheckpoint denoting an epoch and block root.
@@ -458,13 +452,7 @@ func (b *BeaconState) CurrentJustifiedCheckpoint() *ethpb.Checkpoint {
 	if b.state.CurrentJustifiedCheckpoint == nil {
 		return nil
 	}
-	cp := &ethpb.Checkpoint{
-		Epoch: b.state.CurrentJustifiedCheckpoint.Epoch,
-	}
-	root := make([]byte, len(b.state.CurrentJustifiedCheckpoint.Root))
-	copy(root, b.state.CurrentJustifiedCheckpoint.Root)
-	cp.Root = root
-	return cp
+	return CopyCheckpoint(b.state.CurrentJustifiedCheckpoint)
 }
 
 // FinalizedCheckpoint denoting an epoch and block root.
@@ -472,13 +460,7 @@ func (b *BeaconState) FinalizedCheckpoint() *ethpb.Checkpoint {
 	if b.state.FinalizedCheckpoint == nil {
 		return nil
 	}
-	cp := &ethpb.Checkpoint{
-		Epoch: b.state.FinalizedCheckpoint.Epoch,
-	}
-	root := make([]byte, len(b.state.FinalizedCheckpoint.Root))
-	copy(root, b.state.FinalizedCheckpoint.Root)
-	cp.Root = root
-	return cp
+	return CopyCheckpoint(b.state.FinalizedCheckpoint)
 }
 
 // CopyETH1Data copies the provided eth1data object.
