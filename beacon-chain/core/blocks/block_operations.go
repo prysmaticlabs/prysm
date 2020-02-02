@@ -117,6 +117,12 @@ func ProcessEth1DataInBlock(beaconState *stateTrie.BeaconState, block *ethpb.Bea
 	return beaconState, nil
 }
 
+func areEth1DataEqual(a, b *ethpb.Eth1Data) bool {
+	return a.DepositCount == b.DepositCount &&
+		bytes.Equal(a.BlockHash, b.BlockHash) &&
+		bytes.Equal(a.DepositRoot, b.DepositRoot)
+}
+
 // Eth1DataHasEnoughSupport returns true when the given eth1data has more than 50% votes in the
 // eth1 voting period. A vote is cast by including eth1data in a block and part of state processing
 // appends eth1data to the state in the Eth1DataVotes list. Iterating through this list checks the
@@ -139,7 +145,7 @@ func Eth1DataHasEnoughSupport(beaconState *stateTrie.BeaconState, data *ethpb.Et
 	}
 	if voteCount == 0 {
 		for _, vote := range beaconState.Eth1DataVotes() {
-			if proto.Equal(vote, data) {
+			if areEth1DataEqual(vote, data) {
 				voteCount++
 			}
 		}
