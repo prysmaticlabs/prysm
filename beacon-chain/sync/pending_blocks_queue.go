@@ -100,6 +100,11 @@ func (r *Service) processPendingBlocks(ctx context.Context) error {
 			traceutil.AnnotateError(span, err)
 		}
 
+		// Broadcasting the block again once a node is able to process it.
+		if err := r.p2p.Broadcast(ctx, b); err != nil {
+			log.WithError(err).Error("Failed to broadcast block")
+		}
+
 		blkRoot, err := ssz.HashTreeRoot(b.Block)
 		if err != nil {
 			traceutil.AnnotateError(span, err)
