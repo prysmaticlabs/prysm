@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -14,8 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	log "github.com/sirupsen/logrus"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // Server defines a server implementation of the gRPC Slasher service,
@@ -166,16 +163,26 @@ func (ss *Server) IsSlashableBlock(ctx context.Context, psr *slashpb.ProposerSla
 	return pSlashingsResponse, nil
 }
 
-// SlashableProposals is a subscription to receive all slashable proposer slashing events found by the watchtower.
-func (ss *Server) SlashableProposals(req *types.Empty, server slashpb.Slasher_SlashableProposalsServer) error {
-	//TODO(3133): implement stream provider for newly discovered listening to slashable proposals.
-	return status.Error(codes.Unimplemented, "not implemented")
+// ProposerSlashings returns proposer slashings if slashing with the requested status are found in the db.
+func (ss *Server) ProposerSlashings(ctx context.Context, st *slashpb.SlashingStatusRequest) (*slashpb.ProposerSlashingResponse, error) {
+	pSlashingsResponse := &slashpb.ProposerSlashingResponse{}
+	var err error
+	pSlashingsResponse.ProposerSlashing, err = ss.SlasherDB.ProposalSlashingsByStatus(db.SlashingStatus(st.Status))
+	if err != nil {
+		return nil, err
+	}
+	return pSlashingsResponse, nil
 }
 
-// SlashableAttestations is a subscription to receive all slashable attester slashing events found by the watchtower.
-func (ss *Server) SlashableAttestations(req *types.Empty, server slashpb.Slasher_SlashableAttestationsServer) error {
-	//TODO(3133): implement stream provider for newly discovered listening to slashable attestation.
-	return status.Error(codes.Unimplemented, "not implemented")
+// AttesterSlashings returns attester slashings if slashing with the requested status are found in the db.
+func (ss *Server) AttesterSlashings(ctx context.Context, st *slashpb.SlashingStatusRequest) (*slashpb.AttesterSlashingResponse, error) {
+	aSlashingsResponse := &slashpb.AttesterSlashingResponse{}
+	var err error
+	aSlashingsResponse.AttesterSlashing, err = ss.SlasherDB.AttesterSlashings(db.SlashingStatus(st.Status))
+	if err != nil {
+		return nil, err
+	}
+	return aSlashingsResponse, nil
 }
 
 // DetectSurroundVotes is a method used to return the attestation that were detected

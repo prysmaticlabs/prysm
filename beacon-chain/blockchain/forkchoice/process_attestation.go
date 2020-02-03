@@ -166,10 +166,8 @@ func (s *Store) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*state
 		return nil, fmt.Errorf("pre state of target block %d does not exist", helpers.StartSlot(c.Epoch))
 	}
 
-	stateCopy := baseState.Copy()
-
-	if helpers.StartSlot(c.Epoch) > stateCopy.Slot() {
-		stateCopy, err = state.ProcessSlots(ctx, stateCopy, helpers.StartSlot(c.Epoch))
+	if helpers.StartSlot(c.Epoch) > baseState.Slot() {
+		baseState, err = state.ProcessSlots(ctx, baseState, helpers.StartSlot(c.Epoch))
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process slots up to %d", helpers.StartSlot(c.Epoch))
 		}
@@ -178,12 +176,12 @@ func (s *Store) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*state
 
 	if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
 		Checkpoint: c,
-		State:      stateCopy,
+		State:      baseState.Copy(),
 	}); err != nil {
 		return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
 	}
 
-	return stateCopy, nil
+	return baseState, nil
 }
 
 // verifyAttTargetEpoch validates attestation is from the current or previous epoch.

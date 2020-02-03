@@ -22,9 +22,10 @@ type ChainInfoFetcher interface {
 	FinalizationFetcher
 }
 
-// GenesisTimeFetcher retrieves the Eth2 genesis timestamp.
-type GenesisTimeFetcher interface {
+// TimeFetcher retrieves the Eth2 data that's related to time.
+type TimeFetcher interface {
 	GenesisTime() time.Time
+	CurrentSlot() uint64
 }
 
 // HeadFetcher defines a common interface for methods in blockchain service which
@@ -157,7 +158,7 @@ func (s *Service) HeadState(ctx context.Context) (*state.BeaconState, error) {
 		return s.beaconDB.HeadState(ctx)
 	}
 
-	return s.headState, nil
+	return s.headState.Copy(), nil
 }
 
 // HeadValidatorsIndices returns a list of active validator indices from the head view of a given epoch.
