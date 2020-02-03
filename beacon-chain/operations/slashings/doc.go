@@ -1,2 +1,2 @@
-// Package voluntaryexits defines the operations management of voluntary exits.
+// Package slashings defines the operations management of slashings.
 package slashings
