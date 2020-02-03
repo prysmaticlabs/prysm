@@ -423,6 +423,9 @@ func (s *Service) initDataFromContract() error {
 }
 
 func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.DepositContainer) error {
+	if ctrs == nil || len(ctrs) == 0 {
+		return nil
+	}
 	s.depositCache.InsertDepositContainers(ctx, ctrs)
 	currentState, err := s.beaconDB.HeadState(ctx)
 	if err != nil {
