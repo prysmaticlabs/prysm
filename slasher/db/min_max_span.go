@@ -12,7 +12,7 @@ import (
 
 var highestValidatorIdx uint64
 
-func saveToDB(validatorIdx uint64, _ uint64, value interface{}) {
+func saveToDB(validatorIdx uint64, _ uint64, value interface{}, cost int64) {
 	log.Tracef("evicting span map for validator id: %d", validatorIdx)
 
 	err := d.update(func(tx *bolt.Tx) error {
