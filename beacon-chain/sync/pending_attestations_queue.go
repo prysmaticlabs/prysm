@@ -95,7 +95,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 				"attSlot":     attestations[0].Aggregate.Data.Slot,
 				"attCount":    len(attestations),
 				"blockRoot":   hex.EncodeToString(bytesutil.Trunc(bRoot[:])),
-			}).Info("Requesting block for pending attestation")
+			}).Debug("Requesting block for pending attestation")
 
 			// Start with a random peer to query, but choose the first peer in our unsorted list that claims to
 			// have a head slot newer or equal to the pending attestation's target boundary slot.
