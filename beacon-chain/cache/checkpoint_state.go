@@ -91,7 +91,7 @@ func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (*stateTr
 		return nil, ErrNotCheckpointState
 	}
 
-	return info.State, nil
+	return info.State.Copy(), nil
 }
 
 // AddCheckpointState adds CheckpointState object to the cache. This method also trims the least
