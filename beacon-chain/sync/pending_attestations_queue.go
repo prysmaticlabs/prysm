@@ -90,7 +90,12 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 			delete(s.blkRootToPendingAtts, bRoot)
 		} else {
 			// Pending attestation's missing block has not arrived yet.
-			log.WithField("blockRoot", hex.EncodeToString(bytesutil.Trunc(bRoot[:]))).Info("Requesting block for pending attestation")
+			log.WithFields(logrus.Fields{
+				"currentSlot": s.chain.CurrentSlot(),
+				"attSlot":     attestations[0].Aggregate.Data.Slot,
+				"attCount":    len(attestations),
+				"blockRoot":   hex.EncodeToString(bytesutil.Trunc(bRoot[:])),
+			}).Info("Requesting block for pending attestation")
 
 			// Start with a random peer to query, but choose the first peer in our unsorted list that claims to
 			// have a head slot newer or equal to the pending attestation's target boundary slot.
