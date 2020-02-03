@@ -51,6 +51,7 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 func (b *BeaconState) Copy() *BeaconState {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
+
 	dst := &BeaconState{
 		state: &pbp2p.BeaconState{
 			// Primitive types, safe to copy.
