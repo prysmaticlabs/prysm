@@ -125,7 +125,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 
 	processedBlkNoPubsub.Inc()
 
-	if featureconfig.Get().DisableForkChoice {
+	if featureconfig.Get().DisableForkChoice && block.Block.Slot > s.headSlot {
 		if err := s.saveHead(ctx, blockCopy, root); err != nil {
 			return errors.Wrap(err, "could not save head")
 		}
