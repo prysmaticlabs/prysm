@@ -121,21 +121,13 @@ func (s *Service) savePendingAtt(att *ethpb.AggregateAttestationAndProof) {
 	defer s.pendingAttsLock.Unlock()
 
 	root := bytesutil.ToBytes32(att.Aggregate.Data.BeaconBlockRoot)
-	targetRoot := params.BeaconConfig().ZeroHash
-	if !s.db.HasBlock(context.Background(), bytesutil.ToBytes32(att.Aggregate.Data.Target.Root)) {
-		targetRoot = bytesutil.ToBytes32(att.Aggregate.Data.Target.Root)
-	}
-
-	root := make([]byte, 96)
-	copy(root[:32], root[:])
-	copy(root[32:], targetRoot[:])
-	_, ok := s.blkRootToPendingAtts[r]
+	_, ok := s.blkRootToPendingAtts[root]
 	if !ok {
-		s.blkRootToPendingAtts[r] = []*ethpb.AggregateAttestationAndProof{att}
+		s.blkRootToPendingAtts[root] = []*ethpb.AggregateAttestationAndProof{att}
 		return
 	}
 
-	s.blkRootToPendingAtts[r] = append(s.blkRootToPendingAtts[r], att)
+	s.blkRootToPendingAtts[root] = append(s.blkRootToPendingAtts[root], att)
 }
 
 // This validates the pending attestations in the queue are still valid.
