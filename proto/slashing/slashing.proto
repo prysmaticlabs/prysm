@@ -95,7 +95,7 @@ message SlashingStatusRequest {
         // Active slashing proof hasn't been included yet.
         Active = 1;
         // Included slashing proof that has been included in a block.
-        Included=2;
+        Included = 2;
         // Reverted slashing proof that has been reverted and therefore is relevant again.
         Reverted=3; //relevant again
     }
