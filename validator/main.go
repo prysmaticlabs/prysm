@@ -47,6 +47,7 @@ var appFlags = []cli.Flag{
 	flags.GrpcMaxCallRecvMsgSizeFlag,
 	flags.KeyManager,
 	flags.KeyManagerOpts,
+	flags.AccountMetricsFlag,
 	cmd.VerbosityFlag,
 	cmd.DataDirFlag,
 	cmd.ClearDB,
