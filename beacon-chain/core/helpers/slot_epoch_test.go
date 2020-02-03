@@ -3,6 +3,7 @@ package helpers
 import (
 	"testing"
 
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -37,9 +38,9 @@ func TestCurrentEpoch_OK(t *testing.T) {
 		{slot: 200, epoch: 6},
 	}
 	for _, tt := range tests {
-		state := &pb.BeaconState{Slot: tt.slot}
+		state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: tt.slot})
 		if tt.epoch != CurrentEpoch(state) {
-			t.Errorf("CurrentEpoch(%d) = %d, wanted: %d", state.Slot, CurrentEpoch(state), tt.epoch)
+			t.Errorf("CurrentEpoch(%d) = %d, wanted: %d", state.Slot(), CurrentEpoch(state), tt.epoch)
 		}
 	}
 }
@@ -54,9 +55,9 @@ func TestPrevEpoch_OK(t *testing.T) {
 		{slot: 2 * params.BeaconConfig().SlotsPerEpoch, epoch: 1},
 	}
 	for _, tt := range tests {
-		state := &pb.BeaconState{Slot: tt.slot}
+		state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: tt.slot})
 		if tt.epoch != PrevEpoch(state) {
-			t.Errorf("PrevEpoch(%d) = %d, wanted: %d", state.Slot, PrevEpoch(state), tt.epoch)
+			t.Errorf("PrevEpoch(%d) = %d, wanted: %d", state.Slot(), PrevEpoch(state), tt.epoch)
 		}
 	}
 }
@@ -73,9 +74,9 @@ func TestNextEpoch_OK(t *testing.T) {
 		{slot: 200, epoch: 200/params.BeaconConfig().SlotsPerEpoch + 1},
 	}
 	for _, tt := range tests {
-		state := &pb.BeaconState{Slot: tt.slot}
+		state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: tt.slot})
 		if tt.epoch != NextEpoch(state) {
-			t.Errorf("NextEpoch(%d) = %d, wanted: %d", state.Slot, NextEpoch(state), tt.epoch)
+			t.Errorf("NextEpoch(%d) = %d, wanted: %d", state.Slot(), NextEpoch(state), tt.epoch)
 		}
 	}
 }

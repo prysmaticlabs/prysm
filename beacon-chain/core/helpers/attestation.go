@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -112,8 +112,8 @@ func AggregateAttestation(a1 *ethpb.Attestation, a2 *ethpb.Attestation) (*ethpb.
 //   def get_slot_signature(state: BeaconState, slot: Slot, privkey: int) -> BLSSignature:
 //    domain = get_domain(state, DOMAIN_BEACON_ATTESTER, compute_epoch_at_slot(slot))
 //    return bls_sign(privkey, hash_tree_root(slot), domain)
-func SlotSignature(state *pb.BeaconState, slot uint64, privKey *bls.SecretKey) (*bls.Signature, error) {
-	d := Domain(state.Fork, CurrentEpoch(state), params.BeaconConfig().DomainBeaconAttester)
+func SlotSignature(state *stateTrie.BeaconState, slot uint64, privKey *bls.SecretKey) (*bls.Signature, error) {
+	d := Domain(state.Fork(), CurrentEpoch(state), params.BeaconConfig().DomainBeaconAttester)
 	s, err := ssz.HashTreeRoot(slot)
 	if err != nil {
 		return nil, err
@@ -130,7 +130,7 @@ func SlotSignature(state *pb.BeaconState, slot uint64, privKey *bls.SecretKey) (
 //    committee = get_beacon_committee(state, slot, index)
 //    modulo = max(1, len(committee) // TARGET_AGGREGATORS_PER_COMMITTEE)
 //    return bytes_to_int(hash(slot_signature)[0:8]) % modulo == 0
-func IsAggregator(committeeCount uint64, slot uint64, index uint64, slotSig []byte) (bool, error) {
+func IsAggregator(committeeCount uint64, slotSig []byte) (bool, error) {
 	modulo := uint64(1)
 	if committeeCount/params.BeaconConfig().TargetAggregatorsPerCommittee > 1 {
 		modulo = committeeCount / params.BeaconConfig().TargetAggregatorsPerCommittee

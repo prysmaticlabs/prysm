@@ -9,30 +9,18 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// Evaluator defines the structure of the evaluators used to
-// conduct the current beacon state during the E2E.
-type Evaluator struct {
-	Name       string
-	Policy     func(currentEpoch uint64) bool
-	Evaluation func(client eth.BeaconChainClient) error
-}
-
 // ValidatorsAreActive ensures the expected amount of validators are active.
 var ValidatorsAreActive = Evaluator{
 	Name:       "validators_active_epoch_%d",
-	Policy:     onGenesisEpoch,
+	Policy:     afterNthEpoch(1),
 	Evaluation: validatorsAreActive,
 }
 
 // ValidatorsParticipating ensures the expected amount of validators are active.
 var ValidatorsParticipating = Evaluator{
 	Name:       "validators_participating_epoch_%d",
-	Policy:     afterNthEpoch(3),
+	Policy:     afterNthEpoch(2),
 	Evaluation: validatorsParticipating,
-}
-
-func onGenesisEpoch(currentEpoch uint64) bool {
-	return currentEpoch < 2
 }
 
 // Not including first epoch because of issues with genesis.

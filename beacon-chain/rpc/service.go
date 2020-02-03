@@ -53,12 +53,12 @@ func init() {
 type Service struct {
 	ctx                    context.Context
 	cancel                 context.CancelFunc
-	beaconDB               db.ReadOnlyDatabase
+	beaconDB               db.HeadAccessDatabase
 	headFetcher            blockchain.HeadFetcher
 	forkFetcher            blockchain.ForkFetcher
 	finalizationFetcher    blockchain.FinalizationFetcher
 	participationFetcher   blockchain.ParticipationFetcher
-	genesisTimeFetcher     blockchain.GenesisTimeFetcher
+	genesisTimeFetcher     blockchain.TimeFetcher
 	attestationReceiver    blockchain.AttestationReceiver
 	blockReceiver          blockchain.BlockReceiver
 	powChainService        powchain.Chain
@@ -95,7 +95,7 @@ type Config struct {
 	Port                  string
 	CertFlag              string
 	KeyFlag               string
-	BeaconDB              db.ReadOnlyDatabase
+	BeaconDB              db.HeadAccessDatabase
 	HeadFetcher           blockchain.HeadFetcher
 	ForkFetcher           blockchain.ForkFetcher
 	FinalizationFetcher   blockchain.FinalizationFetcher
@@ -104,7 +104,7 @@ type Config struct {
 	BlockReceiver         blockchain.BlockReceiver
 	POWChainService       powchain.Chain
 	ChainStartFetcher     powchain.ChainStartFetcher
-	GenesisTimeFetcher    blockchain.GenesisTimeFetcher
+	GenesisTimeFetcher    blockchain.TimeFetcher
 	MockEth1Votes         bool
 	AttestationsPool      attestations.Pool
 	ExitPool              *voluntaryexits.Pool

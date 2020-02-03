@@ -24,17 +24,17 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	f "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/stateutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -55,7 +55,7 @@ type Service struct {
 	maxRoutines            int64
 	headSlot               uint64
 	headBlock              *ethpb.SignedBeaconBlock
-	headState              *pb.BeaconState
+	headState              *stateTrie.BeaconState
 	canonicalRoots         map[uint64][]byte
 	headLock               sync.RWMutex
 	stateNotifier          statefeed.Notifier
@@ -69,7 +69,7 @@ type Service struct {
 	prevFinalizedCheckpt   *ethpb.Checkpoint
 	nextEpochBoundarySlot  uint64
 	voteLock               sync.RWMutex
-	initSyncState          map[[32]byte]*pb.BeaconState
+	initSyncState          map[[32]byte]*stateTrie.BeaconState
 	initSyncStateLock      sync.RWMutex
 	checkpointState        *cache.CheckpointStateCache
 	checkpointStateLock    sync.Mutex
@@ -109,7 +109,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		stateNotifier:      cfg.StateNotifier,
 		epochParticipation: make(map[uint64]*precompute.Balance),
 		forkChoiceStore:    cfg.ForkChoiceStore,
-		initSyncState:      make(map[[32]byte]*pb.BeaconState),
+		initSyncState:      make(map[[32]byte]*stateTrie.BeaconState),
 		checkpointState:    cache.NewCheckpointStateCache(),
 	}, nil
 }
@@ -141,7 +141,7 @@ func (s *Service) Start() {
 	// If the chain has already been initialized, simply start the block processing routine.
 	if beaconState != nil {
 		log.Info("Blockchain data already exists in DB, initializing...")
-		s.genesisTime = time.Unix(int64(beaconState.GenesisTime), 0)
+		s.genesisTime = time.Unix(int64(beaconState.GenesisTime()), 0)
 		if err := s.initializeChainInfo(ctx); err != nil {
 			log.Fatalf("Could not set up chain info: %v", err)
 		}
@@ -165,6 +165,12 @@ func (s *Service) Start() {
 
 			if err := s.resumeForkChoice(ctx, justifiedCheckpoint, finalizedCheckpoint); err != nil {
 				log.Fatalf("Could not resume fork choice: %v", err)
+			}
+		}
+
+		if finalizedCheckpoint.Epoch > 1 {
+			if err := s.pruneGarbageState(ctx, helpers.StartSlot(finalizedCheckpoint.Epoch)-params.BeaconConfig().SlotsPerEpoch); err != nil {
+				log.WithError(err).Warn("Could not prune old states")
 			}
 		}
 
@@ -228,7 +234,7 @@ func (s *Service) processChainStartTime(ctx context.Context, genesisTime time.Ti
 func (s *Service) initializeBeaconChain(
 	ctx context.Context,
 	genesisTime time.Time,
-	preGenesisState *pb.BeaconState,
+	preGenesisState *stateTrie.BeaconState,
 	eth1data *ethpb.Eth1Data) error {
 	_, span := trace.StartSpan(context.Background(), "beacon-chain.Service.initializeBeaconChain")
 	defer span.End()
@@ -313,6 +319,10 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
+	if b == nil || b.Block == nil {
+		return errors.New("cannot save nil head block")
+	}
+
 	s.headSlot = b.Block.Slot
 
 	s.canonicalRoots[b.Block.Slot] = r[:]
@@ -333,24 +343,25 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 }
 
 // This gets called when beacon chain is first initialized to save validator indices and pubkeys in db
-func (s *Service) saveGenesisValidators(ctx context.Context, state *pb.BeaconState) error {
-	pubkeys := make([][]byte, len(state.Validators))
-	indices := make([]uint64, len(state.Validators))
-	for i, v := range state.Validators {
-		pubkeys[i] = v.PublicKey
+func (s *Service) saveGenesisValidators(ctx context.Context, state *stateTrie.BeaconState) error {
+	pubkeys := make([][48]byte, state.NumValidators())
+	indices := make([]uint64, state.NumValidators())
+
+	for i := 0; i < state.NumValidators(); i++ {
+		pubkeys[i] = state.PubkeyAtIndex(uint64(i))
 		indices[i] = uint64(i)
 	}
 	return s.beaconDB.SaveValidatorIndices(ctx, pubkeys, indices)
 }
 
 // This gets called when beacon chain is first initialized to save genesis data (state, block, and more) in db
-func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconState) error {
+func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.BeaconState) error {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
-	stateRoot, err := stateutil.HashTreeRootState(genesisState)
+	stateRoot, err := genesisState.HashTreeRoot()
 	if err != nil {
-		return errors.Wrap(err, "could not tree hash genesis state")
+		return err
 	}
 	genesisBlk := blocks.NewGenesisBlock(stateRoot[:])
 	genesisBlkRoot, err := ssz.HashTreeRoot(genesisBlk.Block)
@@ -399,7 +410,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *pb.BeaconSt
 	s.genesisRoot = genesisBlkRoot
 	s.headBlock = genesisBlk
 	s.headState = genesisState
-	s.canonicalRoots[genesisState.Slot] = genesisBlkRoot[:]
+	s.canonicalRoots[genesisState.Slot()] = genesisBlkRoot[:]
 
 	return nil
 }
@@ -444,6 +455,21 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		s.headSlot = s.headBlock.Block.Slot
 	}
 	s.canonicalRoots[s.headSlot] = finalized.Root
+
+	return nil
+}
+
+// This is called when a client starts from a non-genesis slot. It deletes the states in DB
+// from slot 1 (avoid genesis state) to `slot`.
+func (s *Service) pruneGarbageState(ctx context.Context, slot uint64) error {
+	filter := filters.NewFilter().SetStartSlot(1).SetEndSlot(slot)
+	roots, err := s.beaconDB.BlockRoots(ctx, filter)
+	if err != nil {
+		return err
+	}
+	if err := s.beaconDB.DeleteStates(ctx, roots); err != nil {
+		return err
+	}
 
 	return nil
 }

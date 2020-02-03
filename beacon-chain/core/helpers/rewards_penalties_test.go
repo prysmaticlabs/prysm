@@ -4,19 +4,20 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestTotalBalance_OK(t *testing.T) {
-	state := &pb.BeaconState{Validators: []*ethpb.Validator{
+	state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{
 		{EffectiveBalance: 27 * 1e9}, {EffectiveBalance: 28 * 1e9},
 		{EffectiveBalance: 32 * 1e9}, {EffectiveBalance: 40 * 1e9},
-	}}
+	}})
 
 	balance := TotalBalance(state, []uint64{0, 1, 2, 3})
-	wanted := state.Validators[0].EffectiveBalance + state.Validators[1].EffectiveBalance +
-		state.Validators[2].EffectiveBalance + state.Validators[3].EffectiveBalance
+	wanted := state.Validators()[0].EffectiveBalance + state.Validators()[1].EffectiveBalance +
+		state.Validators()[2].EffectiveBalance + state.Validators()[3].EffectiveBalance
 
 	if balance != wanted {
 		t.Errorf("Incorrect TotalBalance. Wanted: %d, got: %d", wanted, balance)
@@ -24,7 +25,7 @@ func TestTotalBalance_OK(t *testing.T) {
 }
 
 func TestTotalBalance_ReturnsOne(t *testing.T) {
-	state := &pb.BeaconState{Validators: []*ethpb.Validator{}}
+	state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{}})
 
 	balance := TotalBalance(state, []uint64{})
 	wanted := uint64(1)
@@ -35,7 +36,7 @@ func TestTotalBalance_ReturnsOne(t *testing.T) {
 }
 
 func TestTotalActiveBalance_OK(t *testing.T) {
-	state := &pb.BeaconState{Validators: []*ethpb.Validator{
+	state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{
 		{
 			EffectiveBalance: 32 * 1e9,
 			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
@@ -52,14 +53,14 @@ func TestTotalActiveBalance_OK(t *testing.T) {
 			EffectiveBalance: 32 * 1e9,
 			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
 		},
-	}}
+	}})
 
 	balance, err := TotalActiveBalance(state)
 	if err != nil {
 		t.Error(err)
 	}
-	wanted := state.Validators[0].EffectiveBalance + state.Validators[1].EffectiveBalance +
-		state.Validators[2].EffectiveBalance + state.Validators[3].EffectiveBalance
+	wanted := state.Validators()[0].EffectiveBalance + state.Validators()[1].EffectiveBalance +
+		state.Validators()[2].EffectiveBalance + state.Validators()[3].EffectiveBalance
 
 	if balance != wanted {
 		t.Errorf("Incorrect TotalActiveBalance. Wanted: %d, got: %d", wanted, balance)
@@ -78,9 +79,9 @@ func TestGetBalance_OK(t *testing.T) {
 		{i: 2, b: []uint64{0, 0, 0}},
 	}
 	for _, test := range tests {
-		state := &pb.BeaconState{Balances: test.b}
-		if state.Balances[test.i] != test.b[test.i] {
-			t.Errorf("Incorrect Validator balance. Wanted: %d, got: %d", test.b[test.i], state.Balances[test.i])
+		state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{Balances: test.b})
+		if state.Balances()[test.i] != test.b[test.i] {
+			t.Errorf("Incorrect Validator balance. Wanted: %d, got: %d", test.b[test.i], state.Balances()[test.i])
 		}
 	}
 }
@@ -97,19 +98,21 @@ func TestIncreaseBalance_OK(t *testing.T) {
 		{i: 2, b: []uint64{27 * 1e9, 28 * 1e9, 32 * 1e9}, nb: 33 * 1e9, eb: 65 * 1e9},
 	}
 	for _, test := range tests {
-		state := &pb.BeaconState{
+		state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{
 			Validators: []*ethpb.Validator{
 				{EffectiveBalance: 4}, {EffectiveBalance: 4}, {EffectiveBalance: 4}},
 			Balances: test.b,
+		})
+		if err := IncreaseBalance(state, test.i, test.nb); err != nil {
+			t.Fatal(err)
 		}
-		state = IncreaseBalance(state, test.i, test.nb)
-		if state.Balances[test.i] != test.eb {
-			t.Errorf("Incorrect Validator balance. Wanted: %d, got: %d", test.eb, state.Balances[test.i])
+		if state.Balances()[test.i] != test.eb {
+			t.Errorf("Incorrect Validator balance. Wanted: %d, got: %d", test.eb, state.Balances()[test.i])
 		}
 	}
 }
 
-func TestDecreseBalance_OK(t *testing.T) {
+func TestDecreaseBalance_OK(t *testing.T) {
 	tests := []struct {
 		i  uint64
 		b  []uint64
@@ -122,14 +125,16 @@ func TestDecreseBalance_OK(t *testing.T) {
 		{i: 3, b: []uint64{27 * 1e9, 28 * 1e9, 1, 28 * 1e9}, nb: 28 * 1e9, eb: 0},
 	}
 	for _, test := range tests {
-		state := &pb.BeaconState{
+		state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{
 			Validators: []*ethpb.Validator{
 				{EffectiveBalance: 4}, {EffectiveBalance: 4}, {EffectiveBalance: 4}, {EffectiveBalance: 3}},
 			Balances: test.b,
+		})
+		if err := DecreaseBalance(state, test.i, test.nb); err != nil {
+			t.Fatal(err)
 		}
-		state = DecreaseBalance(state, test.i, test.nb)
-		if state.Balances[test.i] != test.eb {
-			t.Errorf("Incorrect Validator balance. Wanted: %d, got: %d", test.eb, state.Balances[test.i])
+		if state.Balances()[test.i] != test.eb {
+			t.Errorf("Incorrect Validator balance. Wanted: %d, got: %d", test.eb, state.Balances()[test.i])
 		}
 	}
 }

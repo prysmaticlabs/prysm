@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -322,6 +323,10 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 }
 
 func TestProcessETH2GenesisLog(t *testing.T) {
+	config := &featureconfig.Flags{
+		CustomGenesisDelay: 0,
+	}
+	featureconfig.Init(config)
 	hook := logTest.NewGlobal()
 	testAcc, err := contracts.Setup()
 	if err != nil {
@@ -611,8 +616,14 @@ func TestWeb3ServiceProcessDepositLog_RequestMissedDeposits(t *testing.T) {
 
 	web3Service.lastReceivedMerkleIndex = -1
 	web3Service.latestEth1Data.LastRequestedBlock = 0
-	web3Service.preGenesisState = state.EmptyGenesisState()
-	web3Service.preGenesisState.Eth1Data = &ethpb.Eth1Data{}
+	genSt, err := state.EmptyGenesisState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	web3Service.preGenesisState = genSt
+	if err := web3Service.preGenesisState.SetEth1Data(&ethpb.Eth1Data{}); err != nil {
+		t.Fatal(err)
+	}
 	web3Service.chainStartData.ChainstartDeposits = []*ethpb.Deposit{}
 	web3Service.depositTrie, err = trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {

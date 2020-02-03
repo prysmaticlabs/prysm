@@ -13,6 +13,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -21,7 +22,7 @@ import (
 
 // ChainService defines the mock interface for testing
 type ChainService struct {
-	State                       *pb.BeaconState
+	State                       *stateTrie.BeaconState
 	Root                        []byte
 	Block                       *ethpb.SignedBeaconBlock
 	FinalizedCheckPoint         *ethpb.Checkpoint
@@ -96,12 +97,14 @@ func (ms *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.S
 // ReceiveBlockNoPubsubForkchoice mocks ReceiveBlockNoPubsubForkchoice method in chain service.
 func (ms *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.SignedBeaconBlock) error {
 	if ms.State == nil {
-		ms.State = &pb.BeaconState{}
+		ms.State = &stateTrie.BeaconState{}
 	}
 	if !bytes.Equal(ms.Root, block.Block.ParentRoot) {
 		return errors.Errorf("wanted %#x but got %#x", ms.Root, block.Block.ParentRoot)
 	}
-	ms.State.Slot = block.Block.Slot
+	if err := ms.State.SetSlot(block.Block.Slot); err != nil {
+		return err
+	}
 	ms.BlocksReceived = append(ms.BlocksReceived, block)
 	signingRoot, err := ssz.HashTreeRoot(block.Block)
 	if err != nil {
@@ -123,8 +126,7 @@ func (ms *ChainService) HeadSlot() uint64 {
 	if ms.State == nil {
 		return 0
 	}
-	return ms.State.Slot
-
+	return ms.State.Slot()
 }
 
 // HeadRoot mocks HeadRoot method in chain service.
@@ -139,7 +141,7 @@ func (ms *ChainService) HeadBlock() *ethpb.SignedBeaconBlock {
 }
 
 // HeadState mocks HeadState method in chain service.
-func (ms *ChainService) HeadState(context.Context) (*pb.BeaconState, error) {
+func (ms *ChainService) HeadState(context.Context) (*stateTrie.BeaconState, error) {
 	return ms.State, nil
 }
 
@@ -189,6 +191,11 @@ func (ms *ChainService) HeadSeed(epoch uint64) ([32]byte, error) {
 // GenesisTime mocks the same method in the chain service.
 func (ms *ChainService) GenesisTime() time.Time {
 	return ms.Genesis
+}
+
+// CurrentSlot mocks the same method in the chain service.
+func (ms *ChainService) CurrentSlot() uint64 {
+	return 0
 }
 
 // Participation mocks the same method in the chain service.

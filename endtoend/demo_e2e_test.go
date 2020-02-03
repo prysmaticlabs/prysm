@@ -15,7 +15,7 @@ func TestEndToEnd_DemoConfig(t *testing.T) {
 	params.UseDemoBeaconConfig()
 
 	demoConfig := &end2EndConfig{
-		beaconFlags:    featureconfig.E2EBeaconChainFlags,
+		beaconFlags:    append(featureconfig.E2EBeaconChainFlags, "--custom-genesis-delay=60"),
 		validatorFlags: featureconfig.E2EValidatorFlags,
 		epochsToRun:    5,
 		numBeaconNodes: 2,

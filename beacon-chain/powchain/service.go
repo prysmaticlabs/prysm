@@ -25,9 +25,9 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -64,7 +64,7 @@ type Reader interface {
 type ChainStartFetcher interface {
 	ChainStartDeposits() []*ethpb.Deposit
 	ChainStartEth1Data() *ethpb.Eth1Data
-	PreGenesisState() *pb.BeaconState
+	PreGenesisState() *stateTrie.BeaconState
 	ClearPreGenesisData()
 }
 
@@ -142,7 +142,7 @@ type Service struct {
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	isRunning               bool
 	runError                error
-	preGenesisState         *pb.BeaconState
+	preGenesisState         *stateTrie.BeaconState
 	processingLock          sync.RWMutex
 	requestingOldLogs       bool
 	connectedETH1           bool
@@ -173,6 +173,10 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		cancel()
 		return nil, errors.Wrap(err, "could not setup deposit trie")
 	}
+	genState, err := state.EmptyGenesisState()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not setup genesis state")
+	}
 
 	s := &Service{
 		ctx:          ctx,
@@ -197,7 +201,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 		beaconDB:                config.BeaconDB,
 		depositCache:            config.DepositCache,
 		lastReceivedMerkleIndex: -1,
-		preGenesisState:         state.EmptyGenesisState(),
+		preGenesisState:         genState,
 	}
 
 	eth1Data, err := config.BeaconDB.PowchainData(ctx)
@@ -207,7 +211,10 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 	if eth1Data != nil {
 		s.depositTrie = trieutil.CreateTrieFromProto(eth1Data.Trie)
 		s.chainStartData = eth1Data.ChainstartData
-		s.preGenesisState = eth1Data.BeaconState
+		s.preGenesisState, err = stateTrie.InitializeFromProto(eth1Data.BeaconState)
+		if err != nil {
+			return nil, errors.Wrap(err, "Could not initialize state trie")
+		}
 		s.latestEth1Data = eth1Data.CurrentEth1Data
 		s.lastReceivedMerkleIndex = int64(len(s.depositTrie.Items()) - 1)
 		if err := s.initDepositCaches(ctx, eth1Data.DepositContainers); err != nil {
@@ -245,7 +252,7 @@ func (s *Service) ChainStartDeposits() []*ethpb.Deposit {
 // ClearPreGenesisData clears out the stored chainstart deposits and beacon state.
 func (s *Service) ClearPreGenesisData() {
 	s.chainStartData.ChainstartDeposits = []*ethpb.Deposit{}
-	s.preGenesisState = &pb.BeaconState{}
+	s.preGenesisState = &stateTrie.BeaconState{}
 }
 
 // ChainStartEth1Data returns the eth1 data at chainstart.
@@ -255,7 +262,7 @@ func (s *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 
 // PreGenesisState returns a state that contains
 // pre-chainstart deposits.
-func (s *Service) PreGenesisState() *pb.BeaconState {
+func (s *Service) PreGenesisState() *stateTrie.BeaconState {
 	return s.preGenesisState
 }
 
@@ -416,6 +423,9 @@ func (s *Service) initDataFromContract() error {
 }
 
 func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.DepositContainer) error {
+	if ctrs == nil || len(ctrs) == 0 {
+		return nil
+	}
 	s.depositCache.InsertDepositContainers(ctx, ctrs)
 	currentState, err := s.beaconDB.HeadState(ctx)
 	if err != nil {
@@ -424,10 +434,10 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.Deposit
 	// do not add to pending cache
 	// if no state exists.
 	if currentState == nil {
-		validDepositsCount.Add(float64(s.preGenesisState.Eth1DepositIndex + 1))
+		validDepositsCount.Add(float64(s.preGenesisState.Eth1DepositIndex() + 1))
 		return nil
 	}
-	currIndex := currentState.Eth1DepositIndex
+	currIndex := currentState.Eth1DepositIndex()
 	validDepositsCount.Add(float64(currIndex + 1))
 
 	// Only add pending deposits if the container slice length

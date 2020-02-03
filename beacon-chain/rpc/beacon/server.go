@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"

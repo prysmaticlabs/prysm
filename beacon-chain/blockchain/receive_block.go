@@ -13,7 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -71,7 +72,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 	blockCopy := proto.Clone(block).(*ethpb.SignedBeaconBlock)
 
 	// Apply state transition on the new block.
-	var postState *pb.BeaconState
+	var postState *stateTrie.BeaconState
 	var err error
 	if featureconfig.Get().ProtoArrayForkChoice {
 		postState, err = s.onBlock(ctx, blockCopy)
@@ -124,14 +125,14 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 
 	processedBlkNoPubsub.Inc()
 
-	if featureconfig.Get().DisableForkChoice {
+	if featureconfig.Get().DisableForkChoice && block.Block.Slot > s.headSlot {
 		if err := s.saveHead(ctx, blockCopy, root); err != nil {
 			return errors.Wrap(err, "could not save head")
 		}
 	} else {
 		headRoot := make([]byte, 0)
 		if featureconfig.Get().ProtoArrayForkChoice {
-			if err := s.forkChoiceStore.ProcessBlock(ctx, blockCopy.Block.Slot, root, bytesutil.ToBytes32(blockCopy.Block.ParentRoot), postState.CurrentJustifiedCheckpoint.Epoch, postState.FinalizedCheckpoint.Epoch); err != nil {
+			if err := s.forkChoiceStore.ProcessBlock(ctx, blockCopy.Block.Slot, root, bytesutil.ToBytes32(blockCopy.Block.ParentRoot), postState.CurrentJustifiedCheckpoint().Epoch, postState.FinalizedCheckpoint().Epoch); err != nil {
 				return errors.Wrap(err, "could not process block for proto array fork choice")
 			}
 
@@ -140,7 +141,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 				if err != nil {
 					return err
 				}
-				indices, err := helpers.AttestingIndices(a.AggregationBits, committee)
+				indices, err := attestationutil.AttestingIndices(a.AggregationBits, committee)
 				if err != nil {
 					return err
 				}
@@ -153,17 +154,11 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 				ctx,
 				f.Epoch,
 				bytesutil.ToBytes32(j.Root),
-				postState.Balances,
+				postState.Balances(),
 				j.Epoch)
 			if err != nil {
 				log.Warnf("Skip head update for slot %d: %v", block.Block.Slot, err)
 				return nil
-			}
-
-			if postState.FinalizedCheckpoint.Epoch > f.Epoch {
-				if err := s.forkChoiceStore.Prune(ctx, bytesutil.ToBytes32(postState.FinalizedCheckpoint.Root)); err != nil {
-					return errors.Wrap(err, "could not prune proto array fork choice")
-				}
 			}
 
 			headRoot = headRootProtoArray[:]
@@ -206,7 +201,7 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 	blockCopy := proto.Clone(block).(*ethpb.SignedBeaconBlock)
 
 	// Apply state transition on the new block.
-	var postState *pb.BeaconState
+	var postState *stateTrie.BeaconState
 	var err error
 	if featureconfig.Get().ProtoArrayForkChoice {
 		postState, err = s.onBlock(ctx, blockCopy)
@@ -239,7 +234,7 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 	}
 
 	if featureconfig.Get().ProtoArrayForkChoice {
-		if err := s.forkChoiceStore.ProcessBlock(ctx, blockCopy.Block.Slot, root, bytesutil.ToBytes32(blockCopy.Block.ParentRoot), postState.CurrentJustifiedCheckpoint.Epoch, postState.FinalizedCheckpoint.Epoch); err != nil {
+		if err := s.forkChoiceStore.ProcessBlock(ctx, blockCopy.Block.Slot, root, bytesutil.ToBytes32(blockCopy.Block.ParentRoot), postState.CurrentJustifiedCheckpoint().Epoch, postState.FinalizedCheckpoint().Epoch); err != nil {
 			return errors.Wrap(err, "could not process block for proto array fork choice")
 		}
 
@@ -248,7 +243,7 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 			if err != nil {
 				return err
 			}
-			indices, err := helpers.AttestingIndices(a.AggregationBits, committee)
+			indices, err := attestationutil.AttestingIndices(a.AggregationBits, committee)
 			if err != nil {
 				return err
 			}
@@ -288,7 +283,7 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 	blockCopy := proto.Clone(block).(*ethpb.SignedBeaconBlock)
 
 	// Apply state transition on the incoming newly received blockCopy without verifying its BLS contents.
-	var postState *pb.BeaconState
+	var postState *stateTrie.BeaconState
 	var err error
 	if featureconfig.Get().ProtoArrayForkChoice {
 		postState, err = s.onBlockInitialSyncStateTransition(ctx, blockCopy)
@@ -315,7 +310,7 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 	}
 
 	if featureconfig.Get().ProtoArrayForkChoice {
-		if err := s.forkChoiceStore.ProcessBlock(ctx, blockCopy.Block.Slot, root, bytesutil.ToBytes32(blockCopy.Block.ParentRoot), postState.CurrentJustifiedCheckpoint.Epoch, postState.FinalizedCheckpoint.Epoch); err != nil {
+		if err := s.forkChoiceStore.ProcessBlock(ctx, blockCopy.Block.Slot, root, bytesutil.ToBytes32(blockCopy.Block.ParentRoot), postState.CurrentJustifiedCheckpoint().Epoch, postState.FinalizedCheckpoint().Epoch); err != nil {
 			return errors.Wrap(err, "could not process block for proto array fork choice")
 		}
 
@@ -324,7 +319,7 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 			if err != nil {
 				return err
 			}
-			indices, err := helpers.AttestingIndices(a.AggregationBits, committee)
+			indices, err := attestationutil.AttestingIndices(a.AggregationBits, committee)
 			if err != nil {
 				return err
 			}

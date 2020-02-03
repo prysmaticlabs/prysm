@@ -64,6 +64,7 @@ go_test(
         "//beacon-chain/flags:go_default_library",
         "//beacon-chain/operations/attestations:go_default_library",
         "//beacon-chain/rpc/testing:go_default_library",
+        "//beacon-chain/state:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/params:go_default_library",
         "//shared/slotutil/testing:go_default_library",
@@ -73,5 +74,6 @@ go_test(
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
+        "@in_gopkg_d4l3k_messagediff_v1//:go_default_library",
     ],
 )

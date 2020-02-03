@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/big"
-	"os"
 	"os/exec"
-	"path"
 	"strings"
 	"testing"
 
@@ -50,7 +48,7 @@ func initializeValidators(
 	valClients := make([]*validatorClientInfo, beaconNodeNum)
 	validatorsPerNode := validatorNum / beaconNodeNum
 	for n := uint64(0); n < beaconNodeNum; n++ {
-		file, err := os.Create(path.Join(tmpPath, fmt.Sprintf(validatorLogFileName, n)))
+		file, err := deleteAndCreateFile(tmpPath, fmt.Sprintf(validatorLogFileName, n))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -61,12 +59,11 @@ func initializeValidators(
 			fmt.Sprintf("--monitoring-port=%d", 9280+n),
 			fmt.Sprintf("--datadir=%s/eth2-val-%d", tmpPath, n),
 			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", 4200+n),
+			fmt.Sprintf("--log-file=%s", file.Name()),
 		}
 		args = append(args, config.validatorFlags...)
 
 		cmd := exec.Command(binaryPath, args...)
-		cmd.Stdout = file
-		cmd.Stderr = file
 		t.Logf("Starting validator client %d with flags: %s", n, strings.Join(args, " "))
 		if err := cmd.Start(); err != nil {
 			t.Fatal(err)

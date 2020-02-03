@@ -4,14 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/benchutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/stateutil"
 )
 
 var runAmount = 25
@@ -55,8 +53,7 @@ func BenchmarkExecuteStateTransition_FullBlock(b *testing.B) {
 
 func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 	config := &featureconfig.Flags{
-		EnableProposerIndexCache: true,
-		EnableAttestationCache:   true,
+		EnableAttestationCache: true,
 	}
 	featureconfig.Init(config)
 	benchutil.SetBenchmarkConfig()
@@ -73,12 +70,12 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 
 	// We have to reset slot back to last epoch to hydrate cache. Since
 	// some attestations in block are from previous epoch
-	currentSlot := beaconState.Slot
-	beaconState.Slot -= params.BeaconConfig().SlotsPerEpoch
+	currentSlot := beaconState.Slot()
+	beaconState.SetSlot(beaconState.Slot() - params.BeaconConfig().SlotsPerEpoch)
 	if err := helpers.UpdateCommitteeCache(beaconState, helpers.CurrentEpoch(beaconState)); err != nil {
 		b.Fatal(err)
 	}
-	beaconState.Slot = currentSlot
+	beaconState.SetSlot(currentSlot)
 	// Run the state transition once to populate the cache.
 	if _, err := ExecuteStateTransition(context.Background(), beaconState, block); err != nil {
 		b.Fatalf("failed to process block, benchmarks will fail: %v", err)
@@ -95,8 +92,7 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 
 func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
 	config := &featureconfig.Flags{
-		EnableProposerIndexCache: true,
-		EnableAttestationCache:   true,
+		EnableAttestationCache: true,
 	}
 	featureconfig.Init(config)
 	benchutil.SetBenchmarkConfig()
@@ -108,12 +104,12 @@ func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
 
 	// We have to reset slot back to last epoch to hydrate cache. Since
 	// some attestations in block are from previous epoch
-	currentSlot := beaconState.Slot
-	beaconState.Slot -= params.BeaconConfig().SlotsPerEpoch
+	currentSlot := beaconState.Slot()
+	beaconState.SetSlot(beaconState.Slot() - params.BeaconConfig().SlotsPerEpoch)
 	if err := helpers.UpdateCommitteeCache(beaconState, helpers.CurrentEpoch(beaconState)); err != nil {
 		b.Fatal(err)
 	}
-	beaconState.Slot = currentSlot
+	beaconState.SetSlot(currentSlot)
 
 	b.N = 5
 	b.ResetTimer()
@@ -149,23 +145,27 @@ func BenchmarkHashTreeRootState_FullState(b *testing.B) {
 	}
 
 	// Hydrate the HashTreeRootState cache.
-	if _, err := stateutil.HashTreeRootState(beaconState); err != nil {
+	if _, err := beaconState.HashTreeRoot(); err != nil {
 		b.Fatal(err)
 	}
 
 	b.N = 50
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := stateutil.HashTreeRootState(beaconState); err != nil {
+		if _, err := beaconState.HashTreeRoot(); err != nil {
 			b.Fatal(err)
 		}
 	}
 }
 
-func clonedStates(beaconState *pb.BeaconState) []*pb.BeaconState {
-	clonedStates := make([]*pb.BeaconState, runAmount)
+func clonedStates(beaconState *beaconstate.BeaconState) []*beaconstate.BeaconState {
+	clonedStates := make([]*beaconstate.BeaconState, runAmount)
 	for i := 0; i < runAmount; i++ {
-		clonedStates[i] = proto.Clone(beaconState).(*pb.BeaconState)
+		c, err := beaconstate.InitializeFromProto(beaconState.CloneInnerState())
+		if err != nil {
+			panic(err)
+		}
+		clonedStates[i] = c
 	}
 	return clonedStates
 }

@@ -87,7 +87,7 @@ func (s *Service) ProcessLog(ctx context.Context, depositLog gethTypes.Log) erro
 			eth1Data := &protodb.ETH1ChainData{
 				CurrentEth1Data:   s.latestEth1Data,
 				ChainstartData:    s.chainStartData,
-				BeaconState:       s.preGenesisState,
+				BeaconState:       s.preGenesisState.InnerStateUnsafe(), // I promise not to mutate it!
 				Trie:              s.depositTrie.ToProto(),
 				DepositContainers: s.depositCache.AllDepositContainers(ctx),
 			}
@@ -240,12 +240,12 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 }
 
 func (s *Service) createGenesisTime(timeStamp uint64) uint64 {
-	if featureconfig.Get().NoGenesisDelay {
+	if featureconfig.Get().CustomGenesisDelay == 0 {
 		return timeStamp
 	}
-	timeStampRdDown := timeStamp - timeStamp%params.BeaconConfig().MinGenesisDelay
+	timeStampRdDown := timeStamp - timeStamp%featureconfig.Get().CustomGenesisDelay
 	// genesisTime will be set to the first second of the day, two days after it was triggered.
-	return timeStampRdDown + 2*params.BeaconConfig().MinGenesisDelay
+	return timeStampRdDown + 2*featureconfig.Get().CustomGenesisDelay
 }
 
 // processPastLogs processes all the past logs from the deposit contract and
@@ -336,8 +336,8 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		return errors.Wrap(err, "could not get head state")
 	}
 
-	if currentState != nil && currentState.Eth1DepositIndex > 0 {
-		s.depositCache.PrunePendingDeposits(ctx, int(currentState.Eth1DepositIndex))
+	if currentState != nil && currentState.Eth1DepositIndex() > 0 {
+		s.depositCache.PrunePendingDeposits(ctx, int(currentState.Eth1DepositIndex()))
 	}
 
 	return nil

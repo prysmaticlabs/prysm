@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -93,8 +94,12 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	genesisState.Slot = 111
-	genesisState.BlockRoots[111%params.BeaconConfig().SlotsPerHistoricalRoot] = headRoot[:]
+	if err := genesisState.SetSlot(111); err != nil {
+		t.Fatal(err)
+	}
+	if err := genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot, headRoot); err != nil {
+		t.Fatal(err)
+	}
 	finalizedCheckpt := &ethpb.Checkpoint{
 		Epoch: 5,
 		Root:  finalizedRoot[:],
@@ -126,7 +131,7 @@ func TestHelloRPCHandler_ReturnsHelloMessage(t *testing.T) {
 		}
 		expected := &pb.Status{
 			HeadForkVersion: params.BeaconConfig().GenesisForkVersion,
-			HeadSlot:        genesisState.Slot,
+			HeadSlot:        genesisState.Slot(),
 			HeadRoot:        headRoot[:],
 			FinalizedEpoch:  5,
 			FinalizedRoot:   finalizedRoot[:],
@@ -156,10 +161,16 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 
+	st, err := stateTrie.InitializeFromProto(&pb.BeaconState{
+		Slot: 5,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	r := &Service{
 		p2p: p1,
 		chain: &mock.ChainService{
-			State:               &pb.BeaconState{Slot: 5},
+			State:               st,
 			FinalizedCheckPoint: &ethpb.Checkpoint{},
 			Fork: &pb.Fork{
 				PreviousVersion: params.BeaconConfig().GenesisForkVersion,
@@ -253,8 +264,12 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	genesisState.Slot = 111
-	genesisState.BlockRoots[111%params.BeaconConfig().SlotsPerHistoricalRoot] = headRoot[:]
+	if err := genesisState.SetSlot(111); err != nil {
+		t.Fatal(err)
+	}
+	if err := genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot, headRoot); err != nil {
+		t.Fatal(err)
+	}
 	finalizedCheckpt := &ethpb.Checkpoint{
 		Epoch: 5,
 		Root:  finalizedRoot[:],
@@ -286,7 +301,7 @@ func TestStatusRPCRequest_RequestSent(t *testing.T) {
 		}
 		expected := &pb.Status{
 			HeadForkVersion: params.BeaconConfig().GenesisForkVersion,
-			HeadSlot:        genesisState.Slot,
+			HeadSlot:        genesisState.Slot(),
 			HeadRoot:        headRoot[:],
 			FinalizedEpoch:  5,
 			FinalizedRoot:   finalizedRoot[:],
@@ -325,8 +340,12 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	genesisState.Slot = 111
-	genesisState.BlockRoots[111%params.BeaconConfig().SlotsPerHistoricalRoot] = headRoot[:]
+	if err := genesisState.SetSlot(111); err != nil {
+		t.Fatal(err)
+	}
+	if err := genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot, headRoot); err != nil {
+		t.Fatal(err)
+	}
 	finalizedCheckpt := &ethpb.Checkpoint{
 		Epoch: 5,
 		Root:  finalizedRoot[:],
@@ -360,7 +379,7 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 		}
 		expected := &pb.Status{
 			HeadForkVersion: []byte{1, 1, 1, 1},
-			HeadSlot:        genesisState.Slot,
+			HeadSlot:        genesisState.Slot(),
 			HeadRoot:        headRoot[:],
 			FinalizedEpoch:  5,
 			FinalizedRoot:   finalizedRoot[:],

@@ -7,18 +7,16 @@ import (
 	"math"
 	"math/rand"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/stateutil"
 )
 
 // BlockGenConfig is used to define the requested conditions
@@ -46,15 +44,16 @@ func DefaultBlockGenConfig() *BlockGenConfig {
 // GenerateFullBlock generates a fully valid block with the requested parameters.
 // Use BlockGenConfig to declare the conditions you would like the block generated under.
 func GenerateFullBlock(
-	bState *pb.BeaconState,
+	bState *stateTrie.BeaconState,
 	privs []*bls.SecretKey,
 	conf *BlockGenConfig,
 	slot uint64,
 ) (*ethpb.SignedBeaconBlock, error) {
-	currentSlot := bState.Slot
+	currentSlot := bState.Slot()
 	if currentSlot > slot {
 		return nil, fmt.Errorf("current slot in state is larger than given slot. %d > %d", currentSlot, slot)
 	}
+	bState = bState.Copy()
 
 	if conf == nil {
 		conf = &BlockGenConfig{}
@@ -89,7 +88,7 @@ func GenerateFullBlock(
 	}
 
 	numToGen = conf.NumDeposits
-	newDeposits, eth1Data := []*ethpb.Deposit{}, bState.Eth1Data
+	newDeposits, eth1Data := []*ethpb.Deposit{}, bState.Eth1Data()
 	if numToGen > 0 {
 		newDeposits, eth1Data, err = generateDepositsAndEth1Data(bState, numToGen)
 		if err != nil {
@@ -106,8 +105,8 @@ func GenerateFullBlock(
 		}
 	}
 
-	newHeader := proto.Clone(bState.LatestBlockHeader).(*ethpb.BeaconBlockHeader)
-	prevStateRoot, err := stateutil.HashTreeRootState(bState)
+	newHeader := bState.LatestBlockHeader()
+	prevStateRoot, err := bState.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +122,9 @@ func GenerateFullBlock(
 
 	// Temporarily incrementing the beacon state slot here since BeaconProposerIndex is a
 	// function deterministic on beacon state slot.
-	bState.Slot = slot
+	if err := bState.SetSlot(slot); err != nil {
+		return nil, err
+	}
 	reveal, err := RandaoReveal(bState, helpers.CurrentEpoch(bState), privs)
 	if err != nil {
 		return nil, err
@@ -142,7 +143,9 @@ func GenerateFullBlock(
 			Deposits:          newDeposits,
 		},
 	}
-	bState.Slot = currentSlot
+	if err := bState.SetSlot(currentSlot); err != nil {
+		return nil, err
+	}
 
 	signature, err := BlockSignature(bState, block, privs)
 	if err != nil {
@@ -153,7 +156,7 @@ func GenerateFullBlock(
 }
 
 func generateProposerSlashings(
-	bState *pb.BeaconState,
+	bState *stateTrie.BeaconState,
 	privs []*bls.SecretKey,
 	numSlashings uint64,
 ) ([]*ethpb.ProposerSlashing, error) {
@@ -167,7 +170,7 @@ func generateProposerSlashings(
 		}
 		header1 := &ethpb.SignedBeaconBlockHeader{
 			Header: &ethpb.BeaconBlockHeader{
-				Slot:     bState.Slot,
+				Slot:     bState.Slot(),
 				BodyRoot: []byte{0, 1, 0},
 			},
 		}
@@ -175,12 +178,12 @@ func generateProposerSlashings(
 		if err != nil {
 			return nil, err
 		}
-		domain := helpers.Domain(bState.Fork, currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+		domain := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 		header1.Signature = privs[proposerIndex].Sign(root[:], domain).Marshal()
 
 		header2 := &ethpb.SignedBeaconBlockHeader{
 			Header: &ethpb.BeaconBlockHeader{
-				Slot:     bState.Slot,
+				Slot:     bState.Slot(),
 				BodyRoot: []byte{0, 2, 0},
 			},
 		}
@@ -201,7 +204,7 @@ func generateProposerSlashings(
 }
 
 func generateAttesterSlashings(
-	bState *pb.BeaconState,
+	bState *stateTrie.BeaconState,
 	privs []*bls.SecretKey,
 	numSlashings uint64,
 ) ([]*ethpb.AttesterSlashing, error) {
@@ -209,7 +212,7 @@ func generateAttesterSlashings(
 	attesterSlashings := make([]*ethpb.AttesterSlashing, numSlashings)
 	for i := uint64(0); i < numSlashings; i++ {
 		committeeIndex := rand.Uint64() % params.BeaconConfig().MaxCommitteesPerSlot
-		committee, err := helpers.BeaconCommitteeFromState(bState, bState.Slot, committeeIndex)
+		committee, err := helpers.BeaconCommitteeFromState(bState, bState.Slot(), committeeIndex)
 		if err != nil {
 			return nil, err
 		}
@@ -221,7 +224,7 @@ func generateAttesterSlashings(
 		aggregationBits.SetBitAt(randIndex, true)
 		att1 := &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
-				Slot:           bState.Slot,
+				Slot:           bState.Slot(),
 				CommitteeIndex: committeeIndex,
 				Target: &ethpb.Checkpoint{
 					Epoch: currentEpoch,
@@ -238,13 +241,13 @@ func generateAttesterSlashings(
 		if err != nil {
 			return nil, err
 		}
-		domain := helpers.Domain(bState.Fork, i, params.BeaconConfig().DomainBeaconAttester)
+		domain := helpers.Domain(bState.Fork(), i, params.BeaconConfig().DomainBeaconAttester)
 		sig := privs[valIndex].Sign(dataRoot[:], domain)
 		att1.Signature = bls.AggregateSignatures([]*bls.Signature{sig}).Marshal()
 
 		att2 := &ethpb.Attestation{
 			Data: &ethpb.AttestationData{
-				Slot:           bState.Slot,
+				Slot:           bState.Slot(),
 				CommitteeIndex: committeeIndex,
 				Target: &ethpb.Checkpoint{
 					Epoch: currentEpoch,
@@ -264,11 +267,11 @@ func generateAttesterSlashings(
 		sig = privs[valIndex].Sign(dataRoot[:], domain)
 		att2.Signature = bls.AggregateSignatures([]*bls.Signature{sig}).Marshal()
 
-		indexedAtt1, err := blocks.ConvertToIndexed(context.Background(), att1, committee)
+		indexedAtt1, err := attestationutil.ConvertToIndexed(context.Background(), att1, committee)
 		if err != nil {
 			return nil, err
 		}
-		indexedAtt2, err := blocks.ConvertToIndexed(context.Background(), att2, committee)
+		indexedAtt2, err := attestationutil.ConvertToIndexed(context.Background(), att2, committee)
 		if err != nil {
 			return nil, err
 		}
@@ -289,7 +292,7 @@ func generateAttesterSlashings(
 //
 // If you request 4 attestations, but there are 8 committees, you will get 4 fully aggregated attestations.
 func GenerateAttestations(
-	bState *pb.BeaconState,
+	bState *stateTrie.BeaconState,
 	privs []*bls.SecretKey,
 	numToGen uint64,
 	slot uint64,
@@ -297,19 +300,25 @@ func GenerateAttestations(
 	currentEpoch := helpers.SlotToEpoch(slot)
 	attestations := []*ethpb.Attestation{}
 	generateHeadState := false
-	if slot > bState.Slot {
+	bState, err := stateTrie.InitializeFromProtoUnsafe(bState.CloneInnerState())
+	if err != nil {
+		return nil, err
+	}
+	if slot > bState.Slot() {
 		// Going back a slot here so there's no inclusion delay issues.
 		slot--
 		generateHeadState = true
 	}
 
-	var err error
 	targetRoot := make([]byte, 32)
 	headRoot := make([]byte, 32)
 	// Only calculate head state if its an attestation for the current slot or future slot.
-	if generateHeadState || slot == bState.Slot {
-		headState := proto.Clone(bState).(*pb.BeaconState)
-		headState, err := state.ProcessSlots(context.Background(), headState, slot+1)
+	if generateHeadState || slot == bState.Slot() {
+		headState, err := stateTrie.InitializeFromProtoUnsafe(bState.CloneInnerState())
+		if err != nil {
+			return nil, err
+		}
+		headState, err = state.ProcessSlots(context.Background(), headState, slot+1)
 		if err != nil {
 			return nil, err
 		}
@@ -358,7 +367,8 @@ func GenerateAttestations(
 		)
 	}
 
-	domain := helpers.Domain(bState.Fork, currentEpoch, params.BeaconConfig().DomainBeaconAttester)
+	domain := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester)
+	fmt.Printf("Justified: %d\n", bState.CurrentJustifiedCheckpoint().Epoch)
 	for c := uint64(0); c < committeesPerSlot && c < numToGen; c++ {
 		committee, err := helpers.BeaconCommitteeFromState(bState, slot, c)
 		if err != nil {
@@ -369,7 +379,7 @@ func GenerateAttestations(
 			Slot:            slot,
 			CommitteeIndex:  c,
 			BeaconBlockRoot: headRoot,
-			Source:          bState.CurrentJustifiedCheckpoint,
+			Source:          bState.CurrentJustifiedCheckpoint(),
 			Target: &ethpb.Checkpoint{
 				Epoch: currentEpoch,
 				Root:  targetRoot,
@@ -403,14 +413,14 @@ func GenerateAttestations(
 }
 
 func generateDepositsAndEth1Data(
-	bState *pb.BeaconState,
+	bState *stateTrie.BeaconState,
 	numDeposits uint64,
 ) (
 	[]*ethpb.Deposit,
 	*ethpb.Eth1Data,
 	error,
 ) {
-	previousDepsLen := bState.Eth1DepositIndex
+	previousDepsLen := bState.Eth1DepositIndex()
 	currentDeposits, _, err := DeterministicDepositsAndKeys(previousDepsLen + numDeposits)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not get deposits")
@@ -423,7 +433,7 @@ func generateDepositsAndEth1Data(
 }
 
 func generateVoluntaryExits(
-	bState *pb.BeaconState,
+	bState *stateTrie.BeaconState,
 	privs []*bls.SecretKey,
 	numExits uint64,
 ) ([]*ethpb.SignedVoluntaryExit, error) {
@@ -445,14 +455,14 @@ func generateVoluntaryExits(
 		if err != nil {
 			return nil, err
 		}
-		domain := helpers.Domain(bState.Fork, currentEpoch, params.BeaconConfig().DomainVoluntaryExit)
+		domain := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainVoluntaryExit)
 		exit.Signature = privs[valIndex].Sign(root[:], domain).Marshal()
 		voluntaryExits[i] = exit
 	}
 	return voluntaryExits, nil
 }
 
-func randValIndex(bState *pb.BeaconState) (uint64, error) {
+func randValIndex(bState *stateTrie.BeaconState) (uint64, error) {
 	activeCount, err := helpers.ActiveValidatorCount(bState, helpers.CurrentEpoch(bState))
 	if err != nil {
 		return 0, err

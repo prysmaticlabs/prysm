@@ -130,26 +130,28 @@ func (bs *Server) ListValidatorAssignments(
 	}
 
 	for _, index := range filteredIndices[start:end] {
-		if int(index) >= len(headState.Validators) {
+		if int(index) >= headState.NumValidators() {
 			return nil, status.Errorf(codes.OutOfRange, "Validator index %d >= validator count %d",
-				index, len(headState.Validators))
+				index, headState.NumValidators())
 		}
 		if shouldFetchFromArchive {
 			assignment, ok := archivedAssignments[index]
 			if !ok {
 				return nil, status.Errorf(codes.Internal, "Could not get archived committee assignment for index %d", index)
 			}
-			assignment.PublicKey = headState.Validators[index].PublicKey
+			pubkey := headState.PubkeyAtIndex(index)
+			assignment.PublicKey = pubkey[:]
 			res = append(res, assignment)
 			continue
 		}
 		comAssignment := committeeAssignments[index]
+		pubkey := headState.PubkeyAtIndex(index)
 		assign := &ethpb.ValidatorAssignments_CommitteeAssignment{
 			BeaconCommittees: comAssignment.Committee,
 			CommitteeIndex:   comAssignment.CommitteeIndex,
 			AttesterSlot:     comAssignment.AttesterSlot,
 			ProposerSlot:     proposerIndexToSlot[index],
-			PublicKey:        headState.Validators[index].PublicKey,
+			PublicKey:        pubkey[:],
 		}
 		res = append(res, assign)
 	}

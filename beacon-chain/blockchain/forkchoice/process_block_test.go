@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -40,7 +41,7 @@ func TestStore_OnBlock(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if err := store.db.SaveState(ctx, &pb.BeaconState{}, validGenesisRoot); err != nil {
+	if err := store.db.SaveState(ctx, &beaconstate.BeaconState{}, validGenesisRoot); err != nil {
 		t.Fatal(err)
 	}
 	roots, err := blockTree1(db, validGenesisRoot[:])
@@ -55,11 +56,11 @@ func TestStore_OnBlock(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if err := store.db.SaveState(ctx, &pb.BeaconState{}, randomParentRoot); err != nil {
+	if err := store.db.SaveState(ctx, &beaconstate.BeaconState{}, randomParentRoot); err != nil {
 		t.Fatal(err)
 	}
 	randomParentRoot2 := roots[1]
-	if err := store.db.SaveState(ctx, &pb.BeaconState{}, bytesutil.ToBytes32(randomParentRoot2)); err != nil {
+	if err := store.db.SaveState(ctx, &beaconstate.BeaconState{}, bytesutil.ToBytes32(randomParentRoot2)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -118,12 +119,15 @@ func TestStore_SaveNewValidators(t *testing.T) {
 
 	store := NewForkChoiceService(ctx, db)
 	preCount := 2 // validators 0 and validators 1
-	s := &pb.BeaconState{Validators: []*ethpb.Validator{
+	s, err := beaconstate.InitializeFromProto(&pb.BeaconState{Validators: []*ethpb.Validator{
 		{PublicKey: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
 		{PublicKey: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}},
 		{PublicKey: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}},
 		{PublicKey: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3}},
-	}}
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := store.saveNewValidators(ctx, preCount, s); err != nil {
 		t.Fatal(err)
 	}
@@ -217,7 +221,11 @@ func TestRemoveStateSinceLastFinalized(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := store.db.SaveState(ctx, &pb.BeaconState{Slot: uint64(i)}, r); err != nil {
+		s, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: uint64(i)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := store.db.SaveState(ctx, s, r); err != nil {
 			t.Fatal(err)
 		}
 		if err := store.db.SaveBlock(ctx, totalBlocks[i]); err != nil {
@@ -242,8 +250,8 @@ func TestRemoveStateSinceLastFinalized(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Also verifies genesis state didnt get deleted
-		if s != nil && s.Slot != finalizedSlot && s.Slot != 0 && s.Slot < endSlot {
-			t.Errorf("State with slot %d should not be in DB", s.Slot)
+		if s != nil && s.Slot() != finalizedSlot && s.Slot() != 0 && s.Slot() < endSlot {
+			t.Errorf("State with slot %d should not be in DB", s.Slot())
 		}
 	}
 
@@ -260,8 +268,8 @@ func TestRemoveStateSinceLastFinalized(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Also verifies genesis state didnt get deleted
-		if s != nil && s.Slot != newFinalizedSlot && s.Slot != finalizedSlot && s.Slot != 0 && s.Slot < endSlot {
-			t.Errorf("State with slot %d should not be in DB", s.Slot)
+		if s != nil && s.Slot() != newFinalizedSlot && s.Slot() != finalizedSlot && s.Slot() != 0 && s.Slot() < endSlot {
+			t.Errorf("State with slot %d should not be in DB", s.Slot())
 		}
 	}
 }
@@ -392,7 +400,11 @@ func TestUpdateJustifiedCheckpoint_NoUpdate(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err := store.db.SaveState(ctx, &pb.BeaconState{Slot: uint64(i)}, r); err != nil {
+			s, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: uint64(i)})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := store.db.SaveState(ctx, s, r); err != nil {
 				t.Fatal(err)
 			}
 			if err := store.db.SaveBlock(ctx, totalBlocks[i]); err != nil {
@@ -423,13 +435,16 @@ func TestCachedPreState_CanGetFromCache(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 
 	store := NewForkChoiceService(ctx, db)
-	s := &pb.BeaconState{Slot: 1}
+	s, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
 	r := [32]byte{'A'}
 	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r[:]}
 	store.initSyncState[r] = s
 
 	wanted := "pre state of slot 1 does not exist"
-	if _, err := store.cachedPreState(ctx, b); !strings.Contains(err.Error(), wanted) {
+	if _, err := store.verifyBlkPreState(ctx, b); !strings.Contains(err.Error(), wanted) {
 		t.Fatal("Not expected error")
 	}
 }
@@ -444,16 +459,19 @@ func TestCachedPreState_CanGetFromCacheWithFeature(t *testing.T) {
 	featureconfig.Init(config)
 
 	store := NewForkChoiceService(ctx, db)
-	s := &pb.BeaconState{Slot: 1}
+	s, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
 	r := [32]byte{'A'}
 	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r[:]}
 	store.initSyncState[r] = s
 
-	received, err := store.cachedPreState(ctx, b)
+	received, err := store.verifyBlkPreState(ctx, b)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(s, received) {
+	if !reflect.DeepEqual(s.InnerStateUnsafe(), received.InnerStateUnsafe()) {
 		t.Error("cached state not the same")
 	}
 }
@@ -467,16 +485,19 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 	r := [32]byte{'A'}
 	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r[:]}
 
-	_, err := store.cachedPreState(ctx, b)
+	_, err := store.verifyBlkPreState(ctx, b)
 	wanted := "pre state of slot 1 does not exist"
 	if err.Error() != wanted {
 		t.Error("Did not get wanted error")
 	}
 
-	s := &pb.BeaconState{Slot: 1}
+	s, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
 	store.db.SaveState(ctx, s, r)
 
-	received, err := store.cachedPreState(ctx, b)
+	received, err := store.verifyBlkPreState(ctx, b)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -499,16 +520,25 @@ func TestSaveInitState_CanSaveDelete(t *testing.T) {
 
 	for i := uint64(0); i < 64; i++ {
 		b := &ethpb.BeaconBlock{Slot: i}
-		s := &pb.BeaconState{Slot: i}
+		s, err := beaconstate.InitializeFromProto(&pb.BeaconState{Slot: i})
+		if err != nil {
+			t.Fatal(err)
+		}
 		r, _ := ssz.HashTreeRoot(b)
 		store.initSyncState[r] = s
 	}
 
 	// Set finalized root as slot 32
 	finalizedRoot, _ := ssz.HashTreeRoot(&ethpb.BeaconBlock{Slot: 32})
+	s, err := beaconstate.InitializeFromProto(&pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{
+		Epoch: 1,
+		Root:  finalizedRoot[:],
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	if err := store.saveInitState(ctx, &pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{
-		Epoch: 1, Root: finalizedRoot[:]}}); err != nil {
+	if err := store.saveInitState(ctx, s); err != nil {
 		t.Fatal(err)
 	}
 
@@ -543,18 +573,23 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 	}
 	store.justifiedCheckpt = &ethpb.Checkpoint{Root: []byte{'A'}}
 	store.bestJustifiedCheckpt = &ethpb.Checkpoint{Root: []byte{'A'}}
-	store.initSyncState[r] = &pb.BeaconState{}
-	if err := db.SaveState(ctx, &pb.BeaconState{}, r); err != nil {
+	store.initSyncState[r] = &beaconstate.BeaconState{}
+	if err := db.SaveState(ctx, &beaconstate.BeaconState{}, r); err != nil {
 		t.Fatal(err)
 	}
 
 	// Could update
-	s := &pb.BeaconState{CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 1, Root: r[:]}}
+	s, err := beaconstate.InitializeFromProto(&pb.BeaconState{
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 1, Root: r[:]},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := store.updateJustified(context.Background(), s); err != nil {
 		t.Fatal(err)
 	}
 
-	if store.bestJustifiedCheckpt.Epoch != s.CurrentJustifiedCheckpoint.Epoch {
+	if store.bestJustifiedCheckpt.Epoch != s.CurrentJustifiedCheckpoint().Epoch {
 		t.Error("Incorrect justified epoch in store")
 	}
 
@@ -582,7 +617,7 @@ func TestFilterBlockRoots_CanFilter(t *testing.T) {
 	if err := store.db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: fBlock}); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.db.SaveState(ctx, &pb.BeaconState{}, fRoot); err != nil {
+	if err := store.db.SaveState(ctx, &beaconstate.BeaconState{}, fRoot); err != nil {
 		t.Fatal(err)
 	}
 	if err := store.db.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: fRoot[:]}); err != nil {
@@ -591,7 +626,7 @@ func TestFilterBlockRoots_CanFilter(t *testing.T) {
 	if err := store.db.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: hBlock}); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.db.SaveState(ctx, &pb.BeaconState{}, headRoot); err != nil {
+	if err := store.db.SaveState(ctx, &beaconstate.BeaconState{}, headRoot); err != nil {
 		t.Fatal(err)
 	}
 	if err := store.db.SaveHeadBlockRoot(ctx, headRoot); err != nil {

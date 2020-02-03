@@ -28,6 +28,12 @@ func TestHash(t *testing.T) {
 	}
 }
 
+func BenchmarkHash(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		hashutil.Hash([]byte("abc"))
+	}
+}
+
 func TestHashKeccak256(t *testing.T) {
 	hashOf0 := [32]byte{188, 54, 120, 158, 122, 30, 40, 20, 54, 70, 66, 41, 130, 143, 129, 125, 102, 18, 247, 180, 119, 214, 101, 145, 255, 150, 169, 224, 100, 188, 201, 138}
 	hash := hashutil.HashKeccak256([]byte{0})
@@ -53,6 +59,12 @@ func TestHashKeccak256(t *testing.T) {
 
 	if hash != h {
 		t.Fatalf("expected hash and computed hash are not equal %d, %d", hash, h)
+	}
+}
+
+func BenchmarkHashKeccak256(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		hashutil.HashKeccak256([]byte("abc"))
 	}
 }
 

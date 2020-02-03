@@ -10,7 +10,7 @@ import (
 )
 
 func TestAttestationHistory_InitializesNewPubKeys(t *testing.T) {
-	pubkeys := [][48]byte{[48]byte{30}, [48]byte{25}, [48]byte{20}}
+	pubkeys := [][48]byte{{30}, {25}, {20}}
 	db := SetupDB(t, pubkeys)
 	defer TeardownDB(t, db)
 

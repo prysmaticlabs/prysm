@@ -19,6 +19,7 @@ The process for implementing new features using this package is as follows:
 package featureconfig
 
 import (
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -27,7 +28,7 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
-	NoGenesisDelay            bool   // NoGenesisDelay signals to start the chain as quickly as possible.
+	CustomGenesisDelay        uint64 // CustomGenesisDelay signals how long of a delay to set to start the chain.
 	MinimalConfig             bool   // MinimalConfig as defined in the spec.
 	WriteSSZStateTransitions  bool   // WriteSSZStateTransitions to tmp directory.
 	InitSyncNoVerify          bool   // InitSyncNoVerify when initial syncing w/o verifying block's contents.
@@ -47,13 +48,12 @@ type Flags struct {
 	DisableForkChoice bool
 
 	// Cache toggles.
-	EnableAttestationCache   bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableSSZCache           bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
-	EnableEth1DataVoteCache  bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableSkipSlotsCache     bool // EnableSkipSlotsCache caches the state in skipped slots.
-	EnableSlasherConnection  bool // EnableSlasher enable retrieval of slashing events from a slasher instance.
-	EnableBlockTreeCache     bool // EnableBlockTreeCache enable fork choice service to maintain latest filtered block tree.
-	EnableProposerIndexCache bool // EnableProposerIndexCache enable caching of proposer index.
+	EnableAttestationCache  bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
+	EnableSSZCache          bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
+	EnableEth1DataVoteCache bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
+	EnableSkipSlotsCache    bool // EnableSkipSlotsCache caches the state in skipped slots.
+	EnableSlasherConnection bool // EnableSlasher enable retrieval of slashing events from a slasher instance.
+	EnableBlockTreeCache    bool // EnableBlockTreeCache enable fork choice service to maintain latest filtered block tree.
 }
 
 var featureConfig *Flags
@@ -76,10 +76,11 @@ func Init(c *Flags) {
 func ConfigureBeaconChain(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	if ctx.GlobalBool(noGenesisDelayFlag.Name) {
-		log.Warn("Starting ETH2 with no genesis delay")
-		cfg.NoGenesisDelay = true
+	delay := ctx.GlobalUint64(customGenesisDelayFlag.Name)
+	if delay != params.BeaconConfig().MinGenesisDelay {
+		log.Warnf("Starting ETH2 with genesis delay of %d seconds", delay)
 	}
+	cfg.CustomGenesisDelay = delay
 	if ctx.GlobalBool(minimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
@@ -137,10 +138,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(cacheFilteredBlockTreeFlag.Name) {
 		log.Warn("Enabled filtered block tree cache for fork choice.")
 		cfg.EnableBlockTreeCache = true
-	}
-	if ctx.GlobalBool(cacheProposerIndicesFlag.Name) {
-		log.Warn("Enabled proposer index caching.")
-		cfg.EnableProposerIndexCache = true
 	}
 	if ctx.GlobalBool(protoArrayForkChoice.Name) {
 		log.Warn("Enabled using proto array fork choice over spec fork choice.")
