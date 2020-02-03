@@ -57,9 +57,6 @@ func (db *Store) ValidatorSpansMap(validatorIdx uint64) (*slashpb.EpochSpanMap, 
 	err = db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(validatorsMinMaxSpanBucket)
 		enc := b.Get(bytesutil.Bytes4(validatorIdx))
-		if enc == nil {
-			return nil
-		}
 		spanMap, err = unmarshalEpochSpanMap(enc)
 		if err != nil {
 			return err
