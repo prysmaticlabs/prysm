@@ -99,12 +99,13 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 		return fmt.Errorf("invalid index provided %d", idx)
 	}
 
+	// Copy on write since this is a shared array.
+	r := b.BlockRoots()
 
+	// Must secure lock after copy or hit a deadlock.
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	// Copy on write since this is a shared array.
-	r := b.BlockRoots()
 	r[idx] = blockRoot[:]
 	b.state.BlockRoots = r
 
@@ -130,11 +131,13 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 
+	// Copy on write since this is a shared array.
+	r := b.StateRoots()
+
+	// Must secure lock after copy or hit a deadlock.
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	// Copy on write since this is a shared array.
-	r := b.StateRoots()
 	r[idx] = stateRoot[:]
 	b.state.StateRoots = r
 
@@ -209,11 +212,12 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 // ApplyToEveryValidator applies the provided callback function to each validator in the
 // validator registry.
 func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator) error) error {
+	// Copy on write since this is a shared array.
+	v := b.Validators()
+
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	// Copy on write since this is a shared array.
-	v := b.Validators()
 	for i, val := range v {
 		err := f(i, val)
 		if err != nil {
@@ -231,10 +235,12 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 	if len(b.state.Validators) <= int(idx) {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
-	b.lock.Lock()
-	defer b.lock.Unlock()
 	// Copy on write since this is a shared array.
 	v := b.Validators()
+
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
 	v[idx] = val
 	b.state.Validators = v
 	b.markFieldAsDirty(validators)
@@ -246,6 +252,10 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 func (b *BeaconState) SetValidatorIndexByPubkey(pubKey [48]byte, validatorIdx uint64) {
 	// Copy on write since this is a shared map.
 	m := b.validatorIndexMap()
+
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
 	m[pubKey] = validatorIdx
 	b.valIdxMap = m
 }
@@ -255,6 +265,7 @@ func (b *BeaconState) SetValidatorIndexByPubkey(pubKey [48]byte, validatorIdx ui
 func (b *BeaconState) SetBalances(val []uint64) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
+
 	b.state.Balances = val
 	b.markFieldAsDirty(balances)
 	return nil
@@ -268,6 +279,7 @@ func (b *BeaconState) UpdateBalancesAtIndex(idx uint64, val uint64) error {
 	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
+
 	b.state.Balances[idx] = val
 	b.markFieldAsDirty(balances)
 	return nil
@@ -278,6 +290,7 @@ func (b *BeaconState) UpdateBalancesAtIndex(idx uint64, val uint64) error {
 func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
+
 	b.state.RandaoMixes = val
 	b.markFieldAsDirty(randaoMixes)
 	return nil
@@ -290,11 +303,12 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 
+	// Copy on write since this is a shared array.
+	mixes := b.RandaoMixes()
+
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	// Copy on write since this is a shared array.
-	mixes := b.RandaoMixes()
 	mixes[idx] = val
 	b.state.RandaoMixes = mixes
 
