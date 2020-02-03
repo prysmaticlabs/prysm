@@ -401,6 +401,9 @@ func UpdateCommitteeCache(state *stateTrie.BeaconState, epoch uint64) error {
 		if err != nil {
 			return err
 		}
+		if _, exists, err := committeeCache.CommitteeCache.GetByKey(string(seed[:])); err == nil && exists {
+			return nil
+		}
 
 		// Store the sorted indices as well as shuffled indices. In current spec,
 		// sorted indices is required to retrieve proposer index. This is also

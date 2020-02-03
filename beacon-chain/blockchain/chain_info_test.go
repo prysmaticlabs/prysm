@@ -18,7 +18,7 @@ import (
 
 // Ensure Service implements chain info interface.
 var _ = ChainInfoFetcher(&Service{})
-var _ = GenesisTimeFetcher(&Service{})
+var _ = TimeFetcher(&Service{})
 var _ = ForkFetcher(&Service{})
 
 func TestFinalizedCheckpt_Nil(t *testing.T) {
@@ -164,7 +164,7 @@ func TestHeadState_CanRetrieve(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(s, headState) {
+	if !reflect.DeepEqual(s.InnerStateUnsafe(), headState.InnerStateUnsafe()) {
 		t.Error("incorrect head state received")
 	}
 }
