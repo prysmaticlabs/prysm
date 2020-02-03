@@ -195,6 +195,29 @@ func TestServer_SameSlotSlashable(t *testing.T) {
 		t.Errorf("wanted slashing proof: %v got: %v", want, sr.ProposerSlashing[0])
 
 	}
+	if err := slasherServer.SlasherDB.SaveProposerSlashing(db.Active, sr.ProposerSlashing[0]); err != nil {
+		t.Errorf("Could not call db method: %v", err)
+	}
+	if sr, err = slasherServer.ProposerSlashings(ctx, &slashpb.SlashingStatusRequest{Status: slashpb.SlashingStatusRequest_Active}); err != nil {
+		t.Errorf("Could not call RPC method: %v", err)
+	}
+	ar, err := slasherServer.AttesterSlashings(ctx, &slashpb.SlashingStatusRequest{Status: slashpb.SlashingStatusRequest_Active})
+	if err != nil {
+		t.Errorf("Could not call RPC method: %v", err)
+	}
+	if len(ar.AttesterSlashing) > 0 {
+		t.Errorf("Attester slashings with status 'active' should not be present in db.")
+	}
+	emptySlashingResponse, err := slasherServer.ProposerSlashings(ctx, &slashpb.SlashingStatusRequest{Status: slashpb.SlashingStatusRequest_Included})
+	if err != nil {
+		t.Errorf("Could not call RPC method: %v", err)
+	}
+	if len(emptySlashingResponse.ProposerSlashing) > 0 {
+		t.Error("Proposer slashings with status 'included' should not be present in db")
+	}
+	if !proto.Equal(sr.ProposerSlashing[0], want) {
+		t.Errorf("Wanted slashing proof: %v got: %v", want, sr.ProposerSlashing[0])
+	}
 }
 
 func TestServer_SlashDoubleAttestation(t *testing.T) {
@@ -559,6 +582,29 @@ func TestServer_SlashSurroundAttestation(t *testing.T) {
 	if !proto.Equal(sr.AttesterSlashing[0], want) {
 		t.Errorf("Wanted slashing proof: %v got: %v", want, sr.AttesterSlashing[0])
 
+	}
+	if err := slasherServer.SlasherDB.SaveAttesterSlashing(db.Active, sr.AttesterSlashing[0]); err != nil {
+		t.Errorf("Could not call db method: %v", err)
+	}
+	pr, err := slasherServer.ProposerSlashings(ctx, &slashpb.SlashingStatusRequest{Status: slashpb.SlashingStatusRequest_Active})
+	if err != nil {
+		t.Errorf("Could not call RPC method: %v", err)
+	}
+	if len(pr.ProposerSlashing) > 0 {
+		t.Errorf("Attester slashings with status 'active' should not be present in db.")
+	}
+	if sr, err = slasherServer.AttesterSlashings(ctx, &slashpb.SlashingStatusRequest{Status: slashpb.SlashingStatusRequest_Active}); err != nil {
+		t.Errorf("Could not call RPC method: %v", err)
+	}
+	emptySlashingResponse, err := slasherServer.AttesterSlashings(ctx, &slashpb.SlashingStatusRequest{Status: slashpb.SlashingStatusRequest_Included})
+	if err != nil {
+		t.Errorf("Could not call RPC method: %v", err)
+	}
+	if len(emptySlashingResponse.AttesterSlashing) > 0 {
+		t.Error("Attester slashings with status 'included' should not be present in db")
+	}
+	if !proto.Equal(sr.AttesterSlashing[0], want) {
+		t.Errorf("Wanted slashing proof: %v got: %v", want, sr.AttesterSlashing[0])
 	}
 }
 
