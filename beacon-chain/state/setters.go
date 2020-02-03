@@ -215,15 +215,16 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 	// Copy on write since this is a shared array.
 	v := b.Validators()
 
-	b.lock.Lock()
-	defer b.lock.Unlock()
-
 	for i, val := range v {
 		err := f(i, val)
 		if err != nil {
 			return err
 		}
 	}
+
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
 	b.state.Validators = v
 	b.markFieldAsDirty(validators)
 	return nil
