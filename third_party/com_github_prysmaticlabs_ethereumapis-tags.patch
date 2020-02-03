@@ -1,8 +1,8 @@
 diff --git a/eth/v1alpha1/BUILD.bazel b/eth/v1alpha1/BUILD.bazel
-index da955b2..981daa5 100644
+index c0fbe31..ae4ff87 100644
 --- a/eth/v1alpha1/BUILD.bazel
 +++ b/eth/v1alpha1/BUILD.bazel
-@@ -10,15 +10,14 @@ proto_library(
+@@ -25,7 +25,6 @@ proto_library(
          "beacon_chain.proto",
          "node.proto",
          "validator.proto",
@@ -10,16 +10,15 @@ index da955b2..981daa5 100644
      ],
      visibility = ["//visibility:public"],
      deps = [
--        "@grpc_ecosystem_grpc_gateway//protoc-gen-swagger/options:options_proto",
-         "@com_google_protobuf//:empty_proto",
+@@ -33,6 +32,7 @@ proto_library(
          "@com_google_protobuf//:any_proto",
          "@com_google_protobuf//:timestamp_proto",
          "@go_googleapis//google/api:annotations_proto",
 +        "@gogo_special_proto//github.com/gogo/protobuf/gogoproto",
+         "@grpc_ecosystem_grpc_gateway//protoc-gen-swagger/options:options_proto",
      ],
  )
- 
-@@ -40,12 +39,30 @@ load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
+@@ -48,11 +48,30 @@ java_proto_library(
  
  go_proto_library(
      name = "go_proto",
@@ -29,7 +28,6 @@ index da955b2..981daa5 100644
      proto = ":proto",
      visibility = ["//visibility:public"],
      deps = [
--        "@grpc_ecosystem_grpc_gateway//protoc-gen-swagger/options:options_go_proto",
 +        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
 +        "@go_googleapis//google/api:annotations_go_proto",
 +    ],
@@ -50,38 +48,8 @@ index da955b2..981daa5 100644
 +        "@com_github_golang_protobuf//ptypes/empty:go_default_library",
 +        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
          "@go_googleapis//google/api:annotations_go_proto",
+         "@grpc_ecosystem_grpc_gateway//protoc-gen-swagger/options:options_go_proto",
      ],
- )
-@@ -56,29 +73,3 @@ go_library(
-     importpath = "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1",
-     visibility = ["//visibility:public"],
- )
--
--##############################################################################
--# OpenAPI (Swagger) V2
--##############################################################################
--load("@grpc_ecosystem_grpc_gateway//protoc-gen-swagger:defs.bzl", "protoc_gen_swagger")
--
--protoc_gen_swagger(
--    name = "swagger",
--    proto = ":proto",
--    visibility = ["//visibility:public"],
--    single_output = True,
--    json_names_for_fields = True,
--)
--
--# Genrule for template subsitution.
--# See documentation in //tools/replacer.
--genrule(
--    name = "generated_swagger_proto",
--    srcs = [
--        "swagger.proto", # A go template compatibile file.
--        "swagger_description.md", # Replacement for description. 
--    ],
--    outs = ["swagger_generated.proto"],
--    cmd = "$(location //tools/replacer) $(location swagger.proto) description=$(location swagger_description.md) > $(@)",
--    tools = ["//tools/replacer"],
--)
 diff --git a/eth/v1alpha1/attestation.proto b/eth/v1alpha1/attestation.proto
 index b177b76..28b4b46 100644
 --- a/eth/v1alpha1/attestation.proto
@@ -294,7 +262,7 @@ index 2ce5c34..4cbb276 100644
 +    bytes signature = 3 [(gogoproto.moretags) = "ssz-size:\"96\""];
  }
 diff --git a/eth/v1alpha1/beacon_chain.proto b/eth/v1alpha1/beacon_chain.proto
-index f060b0d..10bd8d0 100644
+index 111b867..183bc28 100644
 --- a/eth/v1alpha1/beacon_chain.proto
 +++ b/eth/v1alpha1/beacon_chain.proto
 @@ -15,6 +15,7 @@ syntax = "proto3";

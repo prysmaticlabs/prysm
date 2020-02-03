@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -14,11 +15,9 @@ func (bs *Server) GetBeaconConfig(ctx context.Context, _ *ptypes.Empty) (*ethpb.
 	conf := params.BeaconConfig()
 	val := reflect.ValueOf(conf).Elem()
 	numFields := val.Type().NumField()
-	res := make(map[string]*ptypes.Any, numFields)
+	res := make(map[string]string, numFields)
 	for i := 0; i < numFields; i++ {
-		res[val.Type().Field(i).Name] = &ptypes.Any{
-			TypeUrl: "",
-		}
+		res[val.Type().Field(i).Name] = fmt.Sprintf("%v", val.Field(i).Interface())
 	}
 	return &ethpb.BeaconConfig{
 		Config: res,
