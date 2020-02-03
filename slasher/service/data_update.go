@@ -193,7 +193,7 @@ func (s *Service) getLatestDetectedEpoch() (uint64, error) {
 
 func (s *Service) getChainHead() (*ethpb.ChainHead, error) {
 	if s.beaconClient == nil {
-		return nil, errors.New("Cannot feed old attestations to slasher, beacon client has not been started")
+		return nil, errors.New("cannot feed old attestations to slasher, beacon client has not been started")
 	}
 	ch, err := s.beaconClient.GetChainHead(s.context, &ptypes.Empty{})
 	if err != nil {
@@ -201,8 +201,8 @@ func (s *Service) getChainHead() (*ethpb.ChainHead, error) {
 		return nil, err
 	}
 	if ch.FinalizedEpoch < 2 {
-		log.Info("Archive node does not have historic data for slasher to process")
+		log.Info("archive node does not have historic data for slasher to process")
 	}
-	log.WithField("finalizedEpoch", ch.FinalizedEpoch).Info("Current finalized epoch on archive node")
+	log.WithField("finalizedEpoch", ch.FinalizedEpoch).Info("current finalized epoch on archive node")
 	return ch, nil
 }
