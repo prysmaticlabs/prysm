@@ -9,6 +9,9 @@ import (
 // ErrNoSuchKey is returned whenever a request is made for a key of which a key manager is unaware.
 var ErrNoSuchKey = errors.New("no such key")
 
+// ErrCannotSign is returned whenever a signing attempt fails.
+var ErrCannotSign = errors.New("cannot sign")
+
 // KeyManager controls access to private keys by the validator.
 type KeyManager interface {
 	// FetchValidatingKeys fetches the list of public keys that should be used to validate with.
