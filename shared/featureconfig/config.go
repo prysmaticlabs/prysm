@@ -48,13 +48,12 @@ type Flags struct {
 	DisableForkChoice bool
 
 	// Cache toggles.
-	EnableAttestationCache   bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableSSZCache           bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
-	EnableEth1DataVoteCache  bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableSkipSlotsCache     bool // EnableSkipSlotsCache caches the state in skipped slots.
-	EnableSlasherConnection  bool // EnableSlasher enable retrieval of slashing events from a slasher instance.
-	EnableBlockTreeCache     bool // EnableBlockTreeCache enable fork choice service to maintain latest filtered block tree.
-	EnableProposerIndexCache bool // EnableProposerIndexCache enable caching of proposer index.
+	EnableAttestationCache  bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
+	EnableSSZCache          bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
+	EnableEth1DataVoteCache bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
+	EnableSkipSlotsCache    bool // EnableSkipSlotsCache caches the state in skipped slots.
+	EnableSlasherConnection bool // EnableSlasher enable retrieval of slashing events from a slasher instance.
+	EnableBlockTreeCache    bool // EnableBlockTreeCache enable fork choice service to maintain latest filtered block tree.
 }
 
 var featureConfig *Flags
@@ -139,10 +138,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(cacheFilteredBlockTreeFlag.Name) {
 		log.Warn("Enabled filtered block tree cache for fork choice.")
 		cfg.EnableBlockTreeCache = true
-	}
-	if ctx.GlobalBool(cacheProposerIndicesFlag.Name) {
-		log.Warn("Enabled proposer index caching.")
-		cfg.EnableProposerIndexCache = true
 	}
 	if ctx.GlobalBool(protoArrayForkChoice.Name) {
 		log.Warn("Enabled using proto array fork choice over spec fork choice.")
