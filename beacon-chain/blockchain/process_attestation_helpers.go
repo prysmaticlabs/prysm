@@ -36,7 +36,6 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 		return nil, fmt.Errorf("pre state of target block %d does not exist", helpers.StartSlot(c.Epoch))
 	}
 
-
 	if helpers.StartSlot(c.Epoch) > baseState.Slot() {
 		baseState, err = state.ProcessSlots(ctx, baseState, helpers.StartSlot(c.Epoch))
 		if err != nil {
