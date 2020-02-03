@@ -2,7 +2,7 @@ package helpers
 
 import (
 	"github.com/pkg/errors"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -16,11 +16,11 @@ import (
 //    """
 //    assert slot < state.slot <= slot + SLOTS_PER_HISTORICAL_ROOT
 //    return state.block_roots[slot % SLOTS_PER_HISTORICAL_ROOT]
-func BlockRootAtSlot(state *pb.BeaconState, slot uint64) ([]byte, error) {
-	if slot >= state.Slot || state.Slot > slot+params.BeaconConfig().SlotsPerHistoricalRoot {
+func BlockRootAtSlot(state *stateTrie.BeaconState, slot uint64) ([]byte, error) {
+	if slot >= state.Slot() || state.Slot() > slot+params.BeaconConfig().SlotsPerHistoricalRoot {
 		return []byte{}, errors.Errorf("slot %d out of bounds", slot)
 	}
-	return state.BlockRoots[slot%params.BeaconConfig().SlotsPerHistoricalRoot], nil
+	return state.BlockRootAtIndex(slot % params.BeaconConfig().SlotsPerHistoricalRoot)
 }
 
 // BlockRoot returns the block root stored in the BeaconState for epoch start slot.
@@ -31,6 +31,6 @@ func BlockRootAtSlot(state *pb.BeaconState, slot uint64) ([]byte, error) {
 //    Return the block root at the start of a recent ``epoch``.
 //    """
 //    return get_block_root_at_slot(state, compute_start_slot_of_epoch(epoch))
-func BlockRoot(state *pb.BeaconState, epoch uint64) ([]byte, error) {
+func BlockRoot(state *stateTrie.BeaconState, epoch uint64) ([]byte, error) {
 	return BlockRootAtSlot(state, StartSlot(epoch))
 }

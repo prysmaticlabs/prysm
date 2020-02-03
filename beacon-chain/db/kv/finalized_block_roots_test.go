@@ -6,6 +6,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -38,8 +39,12 @@ func TestStore_IsFinalizedBlock(t *testing.T) {
 		Root:  root[:],
 	}
 
+	st, err := state.InitializeFromProto(&pb.BeaconState{})
+	if err != nil {
+		t.Fatal(err)
+	}
 	// a state is required to save checkpoint
-	if err := db.SaveState(ctx, &pb.BeaconState{}, root); err != nil {
+	if err := db.SaveState(ctx, st, root); err != nil {
 		t.Fatal(err)
 	}
 
@@ -109,8 +114,13 @@ func TestStore_IsFinalized_ForkEdgeCase(t *testing.T) {
 		Root:  sszRootOrDie(t, blocks1[0]),
 		Epoch: 1,
 	}
+
+	st, err := state.InitializeFromProto(&pb.BeaconState{})
+	if err != nil {
+		t.Fatal(err)
+	}
 	// A state is required to save checkpoint
-	if err := db.SaveState(ctx, &pb.BeaconState{}, bytesutil.ToBytes32(checkpoint1.Root)); err != nil {
+	if err := db.SaveState(ctx, st, bytesutil.ToBytes32(checkpoint1.Root)); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.SaveFinalizedCheckpoint(ctx, checkpoint1); err != nil {
@@ -130,7 +140,7 @@ func TestStore_IsFinalized_ForkEdgeCase(t *testing.T) {
 		Epoch: 2,
 	}
 	// A state is required to save checkpoint
-	if err := db.SaveState(ctx, &pb.BeaconState{}, bytesutil.ToBytes32(checkpoint2.Root)); err != nil {
+	if err := db.SaveState(ctx, st, bytesutil.ToBytes32(checkpoint2.Root)); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.SaveFinalizedCheckpoint(ctx, checkpoint2); err != nil {

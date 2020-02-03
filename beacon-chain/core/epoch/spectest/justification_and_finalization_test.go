@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -26,7 +26,7 @@ func runJustificationAndFinalizationTests(t *testing.T, config string) {
 	}
 }
 
-func processJustificationAndFinalizationPrecomputeWrapper(t *testing.T, state *pb.BeaconState) (*pb.BeaconState, error) {
+func processJustificationAndFinalizationPrecomputeWrapper(t *testing.T, state *state.BeaconState) (*state.BeaconState, error) {
 	ctx := context.Background()
 	vp, bp := precompute.New(ctx, state)
 	_, bp, err := precompute.ProcessAttestations(ctx, state, vp, bp)

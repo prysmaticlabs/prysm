@@ -16,6 +16,7 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -250,8 +251,12 @@ func TestRoundRobinSync(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			st, err := stateTrie.InitializeFromProto(&p2ppb.BeaconState{})
+			if err != nil {
+				t.Fatal(err)
+			}
 			mc := &mock.ChainService{
-				State: &p2ppb.BeaconState{},
+				State: st,
 				Root:  genesisRoot[:],
 				DB:    beaconDB,
 			} // no-op mock

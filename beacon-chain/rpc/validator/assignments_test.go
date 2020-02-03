@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -110,7 +111,12 @@ func TestGetDuties_OK(t *testing.T) {
 		pubKeys[i] = deposits[i].Data.PublicKey
 		indices[i] = uint64(i)
 	}
-	if err := db.SaveValidatorIndices(ctx, pubKeys, indices); err != nil {
+
+	pubkeysAs48ByteType := make([][48]byte, len(pubKeys))
+	for i, pk := range pubKeys {
+		pubkeysAs48ByteType[i] = bytesutil.ToBytes48(pk)
+	}
+	if err := db.SaveValidatorIndices(ctx, pubkeysAs48ByteType, indices); err != nil {
 		t.Fatal(err)
 	}
 
@@ -129,9 +135,9 @@ func TestGetDuties_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not call epoch committee assignment %v", err)
 	}
-	if res.Duties[0].AttesterSlot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
+	if res.Duties[0].AttesterSlot > state.Slot()+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
-			res.Duties[0].AttesterSlot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
+			res.Duties[0].AttesterSlot, state.Slot()+params.BeaconConfig().SlotsPerEpoch)
 	}
 
 	// Test the last validator in registry.
@@ -144,9 +150,9 @@ func TestGetDuties_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not call epoch committee assignment %v", err)
 	}
-	if res.Duties[0].AttesterSlot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
+	if res.Duties[0].AttesterSlot > state.Slot()+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
-			res.Duties[0].AttesterSlot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
+			res.Duties[0].AttesterSlot, state.Slot()+params.BeaconConfig().SlotsPerEpoch)
 	}
 
 	// We request for duties for all validators.
@@ -181,17 +187,17 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}
-	bState.Slot = 5 // Set state to non-epoch start slot.
+	bState.SetSlot(5) // Set state to non-epoch start slot.
 
 	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
 
-	pubKeys := make([][]byte, len(deposits))
+	pubKeys := make([][48]byte, len(deposits))
 	indices := make([]uint64, len(deposits))
 	for i := 0; i < len(deposits); i++ {
-		pubKeys[i] = deposits[i].Data.PublicKey
+		pubKeys[i] = bytesutil.ToBytes48(deposits[i].Data.PublicKey)
 		indices[i] = uint64(i)
 	}
 	if err := db.SaveValidatorIndices(ctx, pubKeys, indices); err != nil {
@@ -239,10 +245,10 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 		t.Fatalf("Could not get signing root %v", err)
 	}
 
-	pubKeys := make([][]byte, len(deposits))
+	pubKeys := make([][48]byte, len(deposits))
 	indices := make([]uint64, len(deposits))
 	for i := 0; i < len(deposits); i++ {
-		pubKeys[i] = deposits[i].Data.PublicKey
+		pubKeys[i] = bytesutil.ToBytes48(deposits[i].Data.PublicKey)
 		indices[i] = uint64(i)
 	}
 	if err := db.SaveValidatorIndices(ctx, pubKeys, indices); err != nil {
@@ -310,10 +316,10 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 		b.Fatalf("Could not get signing root %v", err)
 	}
 
-	pubKeys := make([][]byte, len(deposits))
+	pubKeys := make([][48]byte, len(deposits))
 	indices := make([]uint64, len(deposits))
 	for i := 0; i < len(deposits); i++ {
-		pubKeys[i] = deposits[i].Data.PublicKey
+		pubKeys[i] = bytesutil.ToBytes48(deposits[i].Data.PublicKey)
 		indices[i] = uint64(i)
 	}
 	if err := db.SaveValidatorIndices(ctx, pubKeys, indices); err != nil {

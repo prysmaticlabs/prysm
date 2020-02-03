@@ -9,6 +9,7 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/proto/beacon/db"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
@@ -30,8 +31,8 @@ type ReadOnlyDatabase interface {
 	ValidatorIndex(ctx context.Context, publicKey []byte) (uint64, bool, error)
 	HasValidatorIndex(ctx context.Context, publicKey []byte) bool
 	// State related methods.
-	State(ctx context.Context, blockRoot [32]byte) (*ethereum_beacon_p2p_v1.BeaconState, error)
-	GenesisState(ctx context.Context) (*ethereum_beacon_p2p_v1.BeaconState, error)
+	State(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error)
+	GenesisState(ctx context.Context) (*state.BeaconState, error)
 	HasState(ctx context.Context, blockRoot [32]byte) bool
 	// Slashing operations.
 	ProposerSlashing(ctx context.Context, slashingRoot [32]byte) (*eth.ProposerSlashing, error)
@@ -73,9 +74,9 @@ type NoHeadAccessDatabase interface {
 	// Validator related methods.
 	DeleteValidatorIndex(ctx context.Context, publicKey []byte) error
 	SaveValidatorIndex(ctx context.Context, publicKey []byte, validatorIdx uint64) error
-	SaveValidatorIndices(ctx context.Context, publicKeys [][]byte, validatorIndices []uint64) error
+	SaveValidatorIndices(ctx context.Context, publicKeys [][48]byte, validatorIndices []uint64) error
 	// State related methods.
-	SaveState(ctx context.Context, state *ethereum_beacon_p2p_v1.BeaconState, blockRoot [32]byte) error
+	SaveState(ctx context.Context, state *state.BeaconState, blockRoot [32]byte) error
 	DeleteState(ctx context.Context, blockRoot [32]byte) error
 	DeleteStates(ctx context.Context, blockRoots [][32]byte) error
 	// Slashing operations.
@@ -108,7 +109,7 @@ type HeadAccessDatabase interface {
 	HeadBlock(ctx context.Context) (*eth.SignedBeaconBlock, error)
 	SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	// State related methods.
-	HeadState(ctx context.Context) (*ethereum_beacon_p2p_v1.BeaconState, error)
+	HeadState(ctx context.Context) (*state.BeaconState, error)
 }
 
 // Database -- See github.com/prysmaticlabs/prysm/beacon-chain/db.Database

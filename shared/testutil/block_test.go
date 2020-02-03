@@ -15,7 +15,7 @@ func TestGenerateFullBlock_PassesStateTransition(t *testing.T) {
 	conf := &BlockGenConfig{
 		NumAttestations: 1,
 	}
-	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot)
+	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,7 +32,7 @@ func TestGenerateFullBlock_ThousandValidators(t *testing.T) {
 	conf := &BlockGenConfig{
 		NumAttestations: 4,
 	}
-	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot)
+	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +53,7 @@ func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
 	}
 	finalSlot := params.BeaconConfig().SlotsPerEpoch*4 + 3
 	for i := 0; i < int(finalSlot); i++ {
-		block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot)
+		block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -64,14 +64,14 @@ func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
 	}
 
 	// Blocks are one slot ahead of beacon state.
-	if finalSlot != beaconState.Slot {
-		t.Fatalf("expected output slot to be %d, received %d", finalSlot, beaconState.Slot)
+	if finalSlot != beaconState.Slot() {
+		t.Fatalf("expected output slot to be %d, received %d", finalSlot, beaconState.Slot())
 	}
-	if beaconState.CurrentJustifiedCheckpoint.Epoch != 3 {
-		t.Fatalf("expected justified epoch to change to 3, received %d", beaconState.CurrentJustifiedCheckpoint.Epoch)
+	if beaconState.CurrentJustifiedCheckpoint().Epoch != 3 {
+		t.Fatalf("expected justified epoch to change to 3, received %d", beaconState.CurrentJustifiedCheckpoint().Epoch)
 	}
-	if beaconState.FinalizedCheckpoint.Epoch != 2 {
-		t.Fatalf("expected finalized epoch to change to 2, received %d", beaconState.CurrentJustifiedCheckpoint.Epoch)
+	if beaconState.FinalizedCheckpoint().Epoch != 2 {
+		t.Fatalf("expected finalized epoch to change to 2, received %d", beaconState.CurrentJustifiedCheckpoint().Epoch)
 	}
 }
 
@@ -82,7 +82,7 @@ func TestGenerateFullBlock_ValidProposerSlashings(t *testing.T) {
 	conf := &BlockGenConfig{
 		NumProposerSlashings: 1,
 	}
-	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot+1)
+	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot()+1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +92,10 @@ func TestGenerateFullBlock_ValidProposerSlashings(t *testing.T) {
 	}
 
 	slashableIndice := block.Block.Body.ProposerSlashings[0].ProposerIndex
-	if !beaconState.Validators[slashableIndice].Slashed {
+	if val, err := beaconState.ValidatorAtIndexReadOnly(slashableIndice); err != nil || !val.Slashed() {
+		if err != nil {
+			t.Fatal(err)
+		}
 		t.Fatal("expected validator to be slashed")
 	}
 }
@@ -104,7 +107,7 @@ func TestGenerateFullBlock_ValidAttesterSlashings(t *testing.T) {
 	conf := &BlockGenConfig{
 		NumAttesterSlashings: 1,
 	}
-	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot)
+	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +117,10 @@ func TestGenerateFullBlock_ValidAttesterSlashings(t *testing.T) {
 	}
 
 	slashableIndices := block.Block.Body.AttesterSlashings[0].Attestation_1.AttestingIndices
-	if !beaconState.Validators[slashableIndices[0]].Slashed {
+	if val, err := beaconState.ValidatorAtIndexReadOnly(slashableIndices[0]); err != nil || !val.Slashed() {
+		if err != nil {
+			t.Fatal(err)
+		}
 		t.Fatal("expected validator to be slashed")
 	}
 }
@@ -127,7 +133,7 @@ func TestGenerateFullBlock_ValidAttestations(t *testing.T) {
 	conf := &BlockGenConfig{
 		NumAttestations: 4,
 	}
-	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot)
+	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,7 +141,7 @@ func TestGenerateFullBlock_ValidAttestations(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(beaconState.CurrentEpochAttestations) != 4 {
+	if len(beaconState.CurrentEpochAttestations()) != 4 {
 		t.Fatal("expected 4 attestations to be saved to the beacon state")
 	}
 }
@@ -150,11 +156,11 @@ func TestGenerateFullBlock_ValidDeposits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	beaconState.Eth1Data = eth1Data
+	beaconState.SetEth1Data(eth1Data)
 	conf := &BlockGenConfig{
 		NumDeposits: 1,
 	}
-	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot)
+	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,12 +170,16 @@ func TestGenerateFullBlock_ValidDeposits(t *testing.T) {
 	}
 
 	depositedPubkey := block.Block.Body.Deposits[0].Data.PublicKey
-	valIndexMap := stateutils.ValidatorIndexMap(beaconState)
+	valIndexMap := stateutils.ValidatorIndexMap(beaconState.Validators())
 	index := valIndexMap[bytesutil.ToBytes48(depositedPubkey)]
-	if beaconState.Validators[index].EffectiveBalance != params.BeaconConfig().MaxEffectiveBalance {
+	val, err := beaconState.ValidatorAtIndexReadOnly(index)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if val.EffectiveBalance() != params.BeaconConfig().MaxEffectiveBalance {
 		t.Fatalf(
 			"expected validator balance to be max effective balance, received %d",
-			beaconState.Validators[index].EffectiveBalance,
+			val.EffectiveBalance(),
 		)
 	}
 }
@@ -177,11 +187,11 @@ func TestGenerateFullBlock_ValidDeposits(t *testing.T) {
 func TestGenerateFullBlock_ValidVoluntaryExits(t *testing.T) {
 	beaconState, privs := DeterministicGenesisState(t, 256)
 	// Moving the state 2048 epochs forward due to PERSISTENT_COMMITTEE_PERIOD.
-	beaconState.Slot = 3 + params.BeaconConfig().PersistentCommitteePeriod*params.BeaconConfig().SlotsPerEpoch
+	beaconState.SetSlot(3 + params.BeaconConfig().PersistentCommitteePeriod*params.BeaconConfig().SlotsPerEpoch)
 	conf := &BlockGenConfig{
 		NumVoluntaryExits: 1,
 	}
-	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot)
+	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,7 +201,8 @@ func TestGenerateFullBlock_ValidVoluntaryExits(t *testing.T) {
 	}
 
 	exitedIndex := block.Block.Body.VoluntaryExits[0].Exit.ValidatorIndex
-	if beaconState.Validators[exitedIndex].ExitEpoch == params.BeaconConfig().FarFutureEpoch {
+
+	if val, _ := beaconState.ValidatorAtIndexReadOnly(exitedIndex); val.ExitEpoch() == params.BeaconConfig().FarFutureEpoch {
 		t.Fatal("expected exiting validator index to be marked as exiting")
 	}
 }

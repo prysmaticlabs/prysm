@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -20,16 +21,17 @@ var Balances *Balance
 // it also tracks and updates epoch attesting balances.
 func ProcessAttestations(
 	ctx context.Context,
-	state *pb.BeaconState,
+	state *stateTrie.BeaconState,
 	vp []*Validator,
-	bp *Balance) ([]*Validator, *Balance, error) {
+	bp *Balance,
+) ([]*Validator, *Balance, error) {
 	ctx, span := trace.StartSpan(ctx, "precomputeEpoch.ProcessAttestations")
 	defer span.End()
 
 	v := &Validator{}
 	var err error
 
-	for _, a := range append(state.PreviousEpochAttestations, state.CurrentEpochAttestations...) {
+	for _, a := range append(state.PreviousEpochAttestations(), state.CurrentEpochAttestations()...) {
 		v.IsCurrentEpochAttester, v.IsCurrentEpochTargetAttester, err = AttestedCurrentEpoch(state, a)
 		if err != nil {
 			traceutil.AnnotateError(span, err)
@@ -59,7 +61,7 @@ func ProcessAttestations(
 }
 
 // AttestedCurrentEpoch returns true if attestation `a` attested once in current epoch and/or epoch boundary block.
-func AttestedCurrentEpoch(s *pb.BeaconState, a *pb.PendingAttestation) (bool, bool, error) {
+func AttestedCurrentEpoch(s *stateTrie.BeaconState, a *pb.PendingAttestation) (bool, bool, error) {
 	currentEpoch := helpers.CurrentEpoch(s)
 	var votedCurrentEpoch, votedTarget bool
 	// Did validator vote current epoch.
@@ -77,7 +79,7 @@ func AttestedCurrentEpoch(s *pb.BeaconState, a *pb.PendingAttestation) (bool, bo
 }
 
 // AttestedPrevEpoch returns true if attestation `a` attested once in previous epoch and epoch boundary block and/or the same head.
-func AttestedPrevEpoch(s *pb.BeaconState, a *pb.PendingAttestation) (bool, bool, bool, error) {
+func AttestedPrevEpoch(s *stateTrie.BeaconState, a *pb.PendingAttestation) (bool, bool, bool, error) {
 	prevEpoch := helpers.PrevEpoch(s)
 	var votedPrevEpoch, votedTarget, votedHead bool
 	// Did validator vote previous epoch.
@@ -103,7 +105,7 @@ func AttestedPrevEpoch(s *pb.BeaconState, a *pb.PendingAttestation) (bool, bool,
 }
 
 // SameTarget returns true if attestation `a` attested to the same target block in state.
-func SameTarget(state *pb.BeaconState, a *pb.PendingAttestation, e uint64) (bool, error) {
+func SameTarget(state *stateTrie.BeaconState, a *pb.PendingAttestation, e uint64) (bool, error) {
 	r, err := helpers.BlockRoot(state, e)
 	if err != nil {
 		return false, err
@@ -115,7 +117,7 @@ func SameTarget(state *pb.BeaconState, a *pb.PendingAttestation, e uint64) (bool
 }
 
 // SameHead returns true if attestation `a` attested to the same block by attestation slot in state.
-func SameHead(state *pb.BeaconState, a *pb.PendingAttestation) (bool, error) {
+func SameHead(state *stateTrie.BeaconState, a *pb.PendingAttestation) (bool, error) {
 	r, err := helpers.BlockRootAtSlot(state, a.Data.Slot)
 	if err != nil {
 		return false, err

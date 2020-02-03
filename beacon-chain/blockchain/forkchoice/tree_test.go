@@ -6,7 +6,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -36,17 +36,17 @@ func blockTree1(db db.Database, genesisRoot []byte) ([][]byte, error) {
 		if err := db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b}); err != nil {
 			return nil, err
 		}
-		if err := db.SaveState(context.Background(), &pb.BeaconState{}, bytesutil.ToBytes32(b.ParentRoot)); err != nil {
+		if err := db.SaveState(context.Background(), &beaconstate.BeaconState{}, bytesutil.ToBytes32(b.ParentRoot)); err != nil {
 			return nil, err
 		}
 	}
-	if err := db.SaveState(context.Background(), &pb.BeaconState{}, r1); err != nil {
+	if err := db.SaveState(context.Background(), &beaconstate.BeaconState{}, r1); err != nil {
 		return nil, err
 	}
-	if err := db.SaveState(context.Background(), &pb.BeaconState{}, r7); err != nil {
+	if err := db.SaveState(context.Background(), &beaconstate.BeaconState{}, r7); err != nil {
 		return nil, err
 	}
-	if err := db.SaveState(context.Background(), &pb.BeaconState{}, r8); err != nil {
+	if err := db.SaveState(context.Background(), &beaconstate.BeaconState{}, r8); err != nil {
 		return nil, err
 	}
 	return [][]byte{r0[:], r1[:], nil, r3[:], r4[:], r5[:], r6[:], r7[:], r8[:]}, nil
@@ -116,7 +116,7 @@ func blockTree2(db db.Database) ([][]byte, error) {
 		if err := db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b}); err != nil {
 			return nil, err
 		}
-		if err := db.SaveState(context.Background(), &pb.BeaconState{}, bytesutil.ToBytes32(b.ParentRoot)); err != nil {
+		if err := db.SaveState(context.Background(), &beaconstate.BeaconState{}, bytesutil.ToBytes32(b.ParentRoot)); err != nil {
 			return nil, err
 		}
 	}
@@ -145,7 +145,7 @@ func blockTree3(db db.Database) ([][]byte, error) {
 		if err := db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b}); err != nil {
 			return nil, err
 		}
-		if err := db.SaveState(context.Background(), &pb.BeaconState{}, bytesutil.ToBytes32(b.ParentRoot)); err != nil {
+		if err := db.SaveState(context.Background(), &beaconstate.BeaconState{}, bytesutil.ToBytes32(b.ParentRoot)); err != nil {
 			return nil, err
 		}
 	}

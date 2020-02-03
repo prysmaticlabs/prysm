@@ -8,6 +8,8 @@ import (
 	"os"
 	"path"
 
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -120,7 +122,7 @@ func generateMarshalledFullStateAndBlock() error {
 		atts = append(atts, attsForSlot...)
 	}
 
-	block, err = testutil.GenerateFullBlock(beaconState, privs, attConfig, beaconState.Slot)
+	block, err = testutil.GenerateFullBlock(beaconState, privs, attConfig, beaconState.Slot())
 	if err != nil {
 		return errors.Wrap(err, "could not generate full block")
 	}
@@ -137,14 +139,14 @@ func generateMarshalledFullStateAndBlock() error {
 	}
 	// Temporarily incrementing the beacon state slot here since BeaconProposerIndex is a
 	// function deterministic on beacon state slot.
-	beaconState.Slot++
+	beaconState.SetSlot(beaconState.Slot() + 1)
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState)
 	if err != nil {
 		return err
 	}
-	domain := helpers.Domain(beaconState.Fork, helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainBeaconProposer)
+	domain := helpers.Domain(beaconState.Fork(), helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainBeaconProposer)
 	block.Signature = privs[proposerIdx].Sign(blockRoot[:], domain).Marshal()
-	beaconState.Slot--
+	beaconState.SetSlot(beaconState.Slot() - 1)
 
 	beaconBytes, err := ssz.Marshal(beaconState)
 	if err != nil {
@@ -187,7 +189,7 @@ func generate2FullEpochState() error {
 	}
 
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch*2-1; i++ {
-		block, err := testutil.GenerateFullBlock(beaconState, privs, attConfig, beaconState.Slot)
+		block, err := testutil.GenerateFullBlock(beaconState, privs, attConfig, beaconState.Slot())
 		if err != nil {
 			return err
 		}
@@ -207,7 +209,7 @@ func generate2FullEpochState() error {
 	return nil
 }
 
-func genesisBeaconState() (*pb.BeaconState, error) {
+func genesisBeaconState() (*stateTrie.BeaconState, error) {
 	beaconBytes, err := ioutil.ReadFile(path.Join(*outputDir, benchutil.GenesisFileName))
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot read genesis state file")
@@ -216,5 +218,5 @@ func genesisBeaconState() (*pb.BeaconState, error) {
 	if err := ssz.Unmarshal(beaconBytes, genesisState); err != nil {
 		return nil, errors.Wrap(err, "cannot unmarshal genesis state file")
 	}
-	return genesisState, nil
+	return stateTrie.InitializeFromProtoUnsafe(genesisState)
 }
