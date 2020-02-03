@@ -121,6 +121,7 @@ func (s *Service) savePendingAtt(att *ethpb.AggregateAttestationAndProof) {
 	defer s.pendingAttsLock.Unlock()
 
 	root := bytesutil.ToBytes32(att.Aggregate.Data.BeaconBlockRoot)
+
 	_, ok := s.blkRootToPendingAtts[root]
 	if !ok {
 		s.blkRootToPendingAtts[root] = []*ethpb.AggregateAttestationAndProof{att}

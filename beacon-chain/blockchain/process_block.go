@@ -246,14 +246,22 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	return postState, nil
 }
 
+// This feeds in the block and block's attestations to fork choice store. It's allows fork choice store
+// to gain information on the most current chain.
 func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk *ethpb.BeaconBlock, root [32]byte, state *stateTrie.BeaconState) error {
 	if !featureconfig.Get().ProtoArrayForkChoice {
 		return nil
 	}
-	if err := s.forkChoiceStore.ProcessBlock(ctx, blk.Slot, root, bytesutil.ToBytes32(blk.ParentRoot), state.CurrentJustifiedCheckpoint().Epoch, state.FinalizedCheckpoint().Epoch); err != nil {
+
+	// Feed in block to fork choice store.
+	if err := s.forkChoiceStore.ProcessBlock(ctx,
+		blk.Slot, root, bytesutil.ToBytes32(blk.ParentRoot),
+		state.CurrentJustifiedCheckpoint().Epoch,
+		state.FinalizedCheckpoint().Epoch); err != nil {
 		return errors.Wrap(err, "could not process block for proto array fork choice")
 	}
 
+	// Feed in block's attestations to fork choice store.
 	for _, a := range blk.Body.Attestations {
 		committee, err := helpers.BeaconCommitteeFromState(state, a.Data.Slot, a.Data.CommitteeIndex)
 		if err != nil {
