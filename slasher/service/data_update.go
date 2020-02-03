@@ -31,11 +31,11 @@ func (s *Service) finalisedChangeUpdater() error {
 			}
 			if ch != nil {
 				if ch.FinalizedEpoch > finalizedEpoch {
-					log.Infof("Finalized epoch %d", ch.FinalizedEpoch)
+					log.Infof("finalized epoch %d", ch.FinalizedEpoch)
 				}
 				continue
 			}
-			log.Error("No chain head was returned by beacon chain.")
+			log.Error("no chain head was returned by beacon chain.")
 		case <-s.context.Done():
 			err := status.Error(codes.Canceled, "Stream context canceled")
 			log.WithError(err)
