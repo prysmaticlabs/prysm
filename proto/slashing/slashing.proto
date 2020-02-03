@@ -93,7 +93,7 @@ message SlashingStatusRequest {
         // Unknown default status in case it is not set
         Unknown = 0;
         // Active slashing proof hasn't been included yet.
-        Active=1;
+        Active = 1;
         // Included slashing proof that has been included in a block.
         Included=2;
         // Reverted slashing proof that has been reverted and therefore is relevant again.
@@ -101,4 +101,3 @@ message SlashingStatusRequest {
     }
     SlashingStatus status = 1;
 }
-
