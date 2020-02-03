@@ -121,13 +121,14 @@ func (db *Store) DeleteProposerSlashing(slashing *ethpb.ProposerSlashing) error 
 
 // HasProposerSlashing returns the slashing key if it is found in db.
 func (db *Store) HasProposerSlashing(slashing *ethpb.ProposerSlashing) (bool, SlashingStatus, error) {
-	root, err := hashutil.HashProto(slashing)
-	key := encodeTypeRoot(SlashingType(Proposal), root)
 	var status SlashingStatus
 	var found bool
+	root, err := hashutil.HashProto(slashing)
 	if err != nil {
 		return found, status, errors.Wrap(err, "failed to get hash root of proposerSlashing")
 	}
+	key := encodeTypeRoot(SlashingType(Proposal), root)
+
 	err = db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
 		enc := b.Get(key)
@@ -171,10 +172,10 @@ func (db *Store) SaveProposerSlashings(status SlashingStatus, slashings []*ethpb
 
 	return db.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
-		for i := 0; i < len(encSlashings); i++ {
-			e := b.Put(keys[i], append([]byte{byte(status)}, encSlashings[i]...))
-			if e != nil {
-				return e
+		for i := 0; i < len(keys); i++ {
+			err := b.Put(keys[i], append([]byte{byte(status)}, encSlashings[i]...))
+			if err != nil {
+				return err
 			}
 		}
 		return nil

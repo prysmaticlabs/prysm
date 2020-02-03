@@ -73,13 +73,13 @@ func (db *Store) DeleteAttesterSlashing(attesterSlashing *ethpb.AttesterSlashing
 
 // HasAttesterSlashing returns true and slashing status if a slashing is found in the db.
 func (db *Store) HasAttesterSlashing(slashing *ethpb.AttesterSlashing) (bool, SlashingStatus, error) {
-	root, err := hashutil.HashProto(slashing)
 	var status SlashingStatus
 	var found bool
-	key := encodeTypeRoot(SlashingType(Attestation), root)
+	root, err := hashutil.HashProto(slashing)
 	if err != nil {
 		return found, status, errors.Wrap(err, "failed to get hash root of attesterSlashing")
 	}
+	key := encodeTypeRoot(SlashingType(Attestation), root)
 	err = db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(slashingBucket)
 		enc := b.Get(key)

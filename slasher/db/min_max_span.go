@@ -12,7 +12,7 @@ import (
 
 var highestValidatorIdx uint64
 
-func saveToDB(validatorIdx uint64, _ uint64, value interface{}, cost int64) {
+func saveToDB(validatorIdx uint64, _ uint64, value interface{}) {
 	log.Tracef("evicting span map for validator id: %d", validatorIdx)
 
 	err := d.update(func(tx *bolt.Tx) error {
@@ -23,20 +23,20 @@ func saveToDB(validatorIdx uint64, _ uint64, value interface{}, cost int64) {
 			return errors.Wrap(err, "failed to marshal span map")
 		}
 		if err := bucket.Put(key, val); err != nil {
-			return errors.Wrapf(err, "failed to delete validator id: %d from validators min max span bucket", validatorIdx)
+			return errors.Wrapf(err, "failed to delete validator id: %d from min max span bucket", validatorIdx)
 		}
 		return err
 	})
 	if err != nil {
-		log.Errorf("failed to save spanmap to db on cache eviction: %v", err)
+		log.Errorf("failed to save span map to db on cache eviction: %v", err)
 	}
 }
 
-func createEpochSpanMap(enc []byte) (*slashpb.EpochSpanMap, error) {
+func unmarshalEpochSpanMap(enc []byte) (*slashpb.EpochSpanMap, error) {
 	epochSpanMap := &slashpb.EpochSpanMap{}
 	err := proto.Unmarshal(enc, epochSpanMap)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal encoding")
+		return nil, errors.Wrap(err, "failed to unmarshal epoch span map")
 	}
 	return epochSpanMap, nil
 }
@@ -45,27 +45,31 @@ func createEpochSpanMap(enc []byte) (*slashpb.EpochSpanMap, error) {
 // map for slashing detection.
 // Returns nil if the span map for this validator index does not exist.
 func (db *Store) ValidatorSpansMap(validatorIdx uint64) (*slashpb.EpochSpanMap, error) {
-	var sm *slashpb.EpochSpanMap
+	var err error
+	var spanMap *slashpb.EpochSpanMap
 	if db.spanCacheEnabled {
-		sm, ok := db.spanCache.Get(validatorIdx)
+		spanMap, ok := db.spanCache.Get(validatorIdx)
 		if ok {
-			return sm.(*slashpb.EpochSpanMap), nil
+			return spanMap.(*slashpb.EpochSpanMap), nil
 		}
 	}
-	err := db.view(func(tx *bolt.Tx) error {
+
+	err = db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(validatorsMinMaxSpanBucket)
 		enc := b.Get(bytesutil.Bytes4(validatorIdx))
-		var err error
-		sm, err = createEpochSpanMap(enc)
+		if enc == nil {
+			return nil
+		}
+		spanMap, err = unmarshalEpochSpanMap(enc)
 		if err != nil {
 			return err
 		}
 		return nil
 	})
-	if sm.EpochSpanMap == nil {
-		sm.EpochSpanMap = make(map[uint64]*slashpb.MinMaxEpochSpan)
+	if spanMap.EpochSpanMap == nil {
+		spanMap.EpochSpanMap = make(map[uint64]*slashpb.MinMaxEpochSpan)
 	}
-	return sm, err
+	return spanMap, err
 }
 
 // SaveValidatorSpansMap accepts a validator index and span map and writes it to disk.
@@ -88,7 +92,7 @@ func (db *Store) SaveValidatorSpansMap(validatorIdx uint64, spanMap *slashpb.Epo
 			return errors.Wrap(err, "failed to marshal span map")
 		}
 		if err := bucket.Put(key, val); err != nil {
-			return errors.Wrapf(err, "failed to delete validator id: %d from validators min max span bucket", validatorIdx)
+			return errors.Wrapf(err, "failed to delete validator id: %d from min max span bucket", validatorIdx)
 		}
 		return nil
 	})
@@ -135,7 +139,7 @@ func (db *Store) DeleteValidatorSpanMap(validatorIdx uint64) error {
 		}
 		if err := bucket.Delete(key); err != nil {
 			tx.Rollback()
-			return errors.Wrapf(err, "failed to delete the span map for validator idx: %v from validators min max span bucket", validatorIdx)
+			return errors.Wrapf(err, "failed to delete the span map for validator idx: %v from min max span bucket", validatorIdx)
 		}
 		return nil
 	})

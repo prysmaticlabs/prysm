@@ -43,6 +43,9 @@ func (db *Store) IdxAttsForTargetFromID(targetEpoch uint64, validatorID uint64) 
 	err := db.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(indexedAttestationsIndicesBucket)
 		enc := bucket.Get(bytesutil.Bytes8(targetEpoch))
+		if enc == nil {
+			return nil
+		}
 		idToIdxAttsList, err := unmarshalValIDsToIdxAttList(enc)
 		if err != nil {
 			return err

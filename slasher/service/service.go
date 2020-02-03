@@ -257,7 +257,9 @@ func (s *Service) startBeaconClient() error {
 func (s *Service) Stop() error {
 	log.Info("Stopping service")
 	if s.slasherDb != nil {
-		s.slasherDb.Close()
+		if err := s.slasherDb.Close(); err != nil {
+			return err
+		}
 	}
 	if s.listener != nil {
 		s.grpcServer.GracefulStop()
@@ -271,8 +273,7 @@ func (s *Service) Close() {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	log.Info("Stopping hash slinging slasher")
-	err := s.Stop()
-	if err != nil {
+	if err := s.Stop(); err != nil {
 		log.Panicf("Could not stop the slasher service: %v", err)
 	}
 	if err := s.slasherDb.SaveCachedSpansMaps(); err != nil {

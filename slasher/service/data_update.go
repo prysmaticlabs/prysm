@@ -65,16 +65,17 @@ func (s *Service) attestationFeeder() error {
 				log.WithError(err)
 				return err
 			}
-			bcs, err := s.beaconClient.ListBeaconCommittees(s.context, &ethpb.ListCommitteesRequest{
+			committeeReq := &ethpb.ListCommitteesRequest{
 				QueryFilter: &ethpb.ListCommitteesRequest_Epoch{
 					Epoch: at.Data.Target.Epoch,
 				},
-			})
+			}
+			bCommittees, err := s.beaconClient.ListBeaconCommittees(s.context, committeeReq)
 			if err != nil {
 				log.WithError(err).Errorf("Could not list beacon committees for epoch %d", at.Data.Target.Epoch)
 				return err
 			}
-			err = s.detectAttestation(at, bcs)
+			err = s.detectAttestation(at, bCommittees)
 			if err != nil {
 				continue
 			}
@@ -185,7 +186,6 @@ func (s *Service) getLatestDetectedEpoch() (uint64, error) {
 	e, err := s.slasherDb.GetLatestEpochDetected()
 	if err != nil {
 		log.Error(err)
-		s.Stop()
 		return 0, err
 	}
 	return e, nil
