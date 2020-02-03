@@ -14,7 +14,6 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -125,29 +124,13 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 
 	processedBlkNoPubsub.Inc()
 
-	if featureconfig.Get().DisableForkChoice {
+	if featureconfig.Get().DisableForkChoice && block.Block.Slot > s.headSlot {
 		if err := s.saveHead(ctx, blockCopy, root); err != nil {
 			return errors.Wrap(err, "could not save head")
 		}
 	} else {
 		headRoot := make([]byte, 0)
 		if featureconfig.Get().ProtoArrayForkChoice {
-			if err := s.forkChoiceStore.ProcessBlock(ctx, blockCopy.Block.Slot, root, bytesutil.ToBytes32(blockCopy.Block.ParentRoot), postState.CurrentJustifiedCheckpoint().Epoch, postState.FinalizedCheckpoint().Epoch); err != nil {
-				return errors.Wrap(err, "could not process block for proto array fork choice")
-			}
-
-			for _, a := range blockCopy.Block.Body.Attestations {
-				committee, err := helpers.BeaconCommitteeFromState(postState, a.Data.Slot, a.Data.CommitteeIndex)
-				if err != nil {
-					return err
-				}
-				indices, err := attestationutil.AttestingIndices(a.AggregationBits, committee)
-				if err != nil {
-					return err
-				}
-				s.forkChoiceStore.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
-			}
-
 			f := s.finalizedCheckpt
 			j := s.justifiedCheckpt
 			headRootProtoArray, err := s.forkChoiceStore.Head(
@@ -201,17 +184,16 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 	blockCopy := proto.Clone(block).(*ethpb.SignedBeaconBlock)
 
 	// Apply state transition on the new block.
-	var postState *stateTrie.BeaconState
 	var err error
 	if featureconfig.Get().ProtoArrayForkChoice {
-		postState, err = s.onBlock(ctx, blockCopy)
+		_, err = s.onBlock(ctx, blockCopy)
 		if err != nil {
 			err := errors.Wrap(err, "could not process block")
 			traceutil.AnnotateError(span, err)
 			return err
 		}
 	} else {
-		postState, err = s.forkChoiceStoreOld.OnBlock(ctx, blockCopy)
+		_, err = s.forkChoiceStoreOld.OnBlock(ctx, blockCopy)
 		if err != nil {
 			err := errors.Wrap(err, "could not process block from fork choice service")
 			traceutil.AnnotateError(span, err)
@@ -233,23 +215,6 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 		}
 	}
 
-	if featureconfig.Get().ProtoArrayForkChoice {
-		if err := s.forkChoiceStore.ProcessBlock(ctx, blockCopy.Block.Slot, root, bytesutil.ToBytes32(blockCopy.Block.ParentRoot), postState.CurrentJustifiedCheckpoint().Epoch, postState.FinalizedCheckpoint().Epoch); err != nil {
-			return errors.Wrap(err, "could not process block for proto array fork choice")
-		}
-
-		for _, a := range blockCopy.Block.Body.Attestations {
-			committee, err := helpers.BeaconCommitteeFromState(postState, a.Data.Slot, a.Data.CommitteeIndex)
-			if err != nil {
-				return err
-			}
-			indices, err := attestationutil.AttestingIndices(a.AggregationBits, committee)
-			if err != nil {
-				return err
-			}
-			s.forkChoiceStore.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
-		}
-	}
 
 	// Send notification of the processed block to the state feed.
 	s.stateNotifier.StateFeed().Send(&feed.Event{
@@ -283,17 +248,16 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 	blockCopy := proto.Clone(block).(*ethpb.SignedBeaconBlock)
 
 	// Apply state transition on the incoming newly received blockCopy without verifying its BLS contents.
-	var postState *stateTrie.BeaconState
 	var err error
 	if featureconfig.Get().ProtoArrayForkChoice {
-		postState, err = s.onBlockInitialSyncStateTransition(ctx, blockCopy)
+		_, err = s.onBlockInitialSyncStateTransition(ctx, blockCopy)
 		if err != nil {
 			err := errors.Wrap(err, "could not process block")
 			traceutil.AnnotateError(span, err)
 			return err
 		}
 	} else {
-		postState, err = s.forkChoiceStoreOld.OnBlockInitialSyncStateTransition(ctx, blockCopy)
+		_, err = s.forkChoiceStoreOld.OnBlockInitialSyncStateTransition(ctx, blockCopy)
 		if err != nil {
 			return errors.Wrap(err, "could not process blockCopy from fork choice service")
 		}
@@ -307,24 +271,6 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 	cachedHeadRoot, err := s.HeadRoot(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get head root from cache")
-	}
-
-	if featureconfig.Get().ProtoArrayForkChoice {
-		if err := s.forkChoiceStore.ProcessBlock(ctx, blockCopy.Block.Slot, root, bytesutil.ToBytes32(blockCopy.Block.ParentRoot), postState.CurrentJustifiedCheckpoint().Epoch, postState.FinalizedCheckpoint().Epoch); err != nil {
-			return errors.Wrap(err, "could not process block for proto array fork choice")
-		}
-
-		for _, a := range blockCopy.Block.Body.Attestations {
-			committee, err := helpers.BeaconCommitteeFromState(postState, a.Data.Slot, a.Data.CommitteeIndex)
-			if err != nil {
-				return err
-			}
-			indices, err := attestationutil.AttestingIndices(a.AggregationBits, committee)
-			if err != nil {
-				return err
-			}
-			s.forkChoiceStore.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
-		}
 	}
 
 	if featureconfig.Get().InitSyncCacheState {

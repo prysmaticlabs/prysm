@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/sirupsen/logrus"
@@ -82,6 +83,11 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 	if err := s.beaconDB.SaveBlock(ctx, signed); err != nil {
 		return nil, errors.Wrapf(err, "could not save block from slot %d", b.Slot)
 	}
+
+	if err := s.insertBlockToForkChoiceStore(ctx, b, root, postState); err != nil {
+		return nil, errors.Wrapf(err, "could not insert block %d to fork choice store", b.Slot)
+	}
+
 	if err := s.beaconDB.SaveState(ctx, postState, root); err != nil {
 		return nil, errors.Wrap(err, "could not save state")
 	}
@@ -176,6 +182,10 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		return nil, errors.Wrapf(err, "could not get signing root of block %d", b.Slot)
 	}
 
+	if err := s.insertBlockToForkChoiceStore(ctx, b, root, postState); err != nil {
+		return nil, errors.Wrapf(err, "could not insert block %d to fork choice store", b.Slot)
+	}
+
 	if featureconfig.Get().InitSyncCacheState {
 		s.initSyncState[root] = postState
 	} else {
@@ -234,4 +244,27 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	}
 
 	return postState, nil
+}
+
+func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk *ethpb.BeaconBlock, root [32]byte, state *stateTrie.BeaconState) error {
+	if !featureconfig.Get().ProtoArrayForkChoice {
+		return nil
+	}
+	if err := s.forkChoiceStore.ProcessBlock(ctx, blk.Slot, root, bytesutil.ToBytes32(blk.ParentRoot), state.CurrentJustifiedCheckpoint().Epoch, state.FinalizedCheckpoint().Epoch); err != nil {
+		return errors.Wrap(err, "could not process block for proto array fork choice")
+	}
+
+	for _, a := range blk.Body.Attestations {
+		committee, err := helpers.BeaconCommitteeFromState(state, a.Data.Slot, a.Data.CommitteeIndex)
+		if err != nil {
+			return err
+		}
+		indices, err := attestationutil.AttestingIndices(a.AggregationBits, committee)
+		if err != nil {
+			return err
+		}
+		s.forkChoiceStore.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
+	}
+
+	return nil
 }
