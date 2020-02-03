@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package ethereum.slashing;
 
-import "google/protobuf/empty.proto";
 import "eth/v1alpha1/beacon_block.proto";
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
@@ -21,11 +20,11 @@ service Slasher {
     // was received produces a slashable event.
     rpc IsSlashableBlock(ProposerSlashingRequest) returns (ProposerSlashingResponse);
 
-    // Subscription to receive all slashable proposer slashing events found by the watchtower.
-    rpc SlashableProposals(google.protobuf.Empty) returns (stream ethereum.eth.v1alpha1.ProposerSlashing);
+    // Gets ProposerSlashingResponse container if slashing with the requested status are found in the db.
+    rpc ProposerSlashings(SlashingStatusRequest) returns (ProposerSlashingResponse);
 
-    // Subscription to receive all slashable attester slashing events found by the watchtower.
-    rpc SlashableAttestations(google.protobuf.Empty) returns (stream ethereum.eth.v1alpha1.AttesterSlashing);
+    // Gets AttesterSlashingResponse container if slashing with the requested status are found in the db.
+    rpc AttesterSlashings(SlashingStatusRequest) returns (AttesterSlashingResponse);
 }
 
 message ValidatorIDToIdxAtt {
@@ -87,4 +86,18 @@ message ProposalHistory {
 message AttestationHistory {
     map<uint64, uint64> target_to_source = 1;
     uint64 latest_epoch_written = 2;
+}
+
+message SlashingStatusRequest {
+    enum SlashingStatus {
+        // Unknown default status in case it is not set
+        Unknown = 0;
+        // Active slashing proof hasn't been included yet.
+        Active = 1;
+        // Included slashing proof that has been included in a block.
+        Included = 2;
+        // Reverted slashing proof that has been reverted and therefore is relevant again.
+        Reverted = 3; 
+    }
+    SlashingStatus status = 1;
 }
