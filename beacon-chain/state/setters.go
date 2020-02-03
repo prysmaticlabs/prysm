@@ -43,47 +43,52 @@ const (
 
 // SetGenesisTime for the beacon state.
 func (b *BeaconState) SetGenesisTime(val uint64) error {
-	b.state.GenesisTime = val
 	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.GenesisTime = val
 	b.markFieldAsDirty(genesisTime)
-	b.lock.Unlock()
 	return nil
 }
 
 // SetSlot for the beacon state.
 func (b *BeaconState) SetSlot(val uint64) error {
-	b.state.Slot = val
 	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.Slot = val
 	b.markFieldAsDirty(slot)
-	b.lock.Unlock()
 	return nil
 }
 
 // SetFork version for the beacon chain.
 func (b *BeaconState) SetFork(val *pbp2p.Fork) error {
-	b.state.Fork = proto.Clone(val).(*pbp2p.Fork)
 	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.Fork = proto.Clone(val).(*pbp2p.Fork)
 	b.markFieldAsDirty(fork)
-	b.lock.Unlock()
 	return nil
 }
 
 // SetLatestBlockHeader in the beacon state.
 func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
-	b.state.LatestBlockHeader = proto.Clone(val).(*ethpb.BeaconBlockHeader)
 	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.LatestBlockHeader = proto.Clone(val).(*ethpb.BeaconBlockHeader)
 	b.markFieldAsDirty(latestBlockHeader)
-	b.lock.Unlock()
 	return nil
 }
 
 // SetBlockRoots for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetBlockRoots(val [][]byte) error {
-	b.state.BlockRoots = val
 	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.BlockRoots = val
 	b.markFieldAsDirty(blockRoots)
-	b.lock.Unlock()
 	return nil
 }
 
@@ -94,24 +99,27 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 		return fmt.Errorf("invalid index provided %d", idx)
 	}
 
+
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
 	// Copy on write since this is a shared array.
 	r := b.BlockRoots()
 	r[idx] = blockRoot[:]
 	b.state.BlockRoots = r
 
-	b.lock.Lock()
 	b.markFieldAsDirty(blockRoots)
-	b.lock.Unlock()
 	return nil
 }
 
 // SetStateRoots for the beacon state. This PR updates the entire
 // to a new value by overwriting the previous one.
 func (b *BeaconState) SetStateRoots(val [][]byte) error {
-	b.state.StateRoots = val
 	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.StateRoots = val
 	b.markFieldAsDirty(stateRoots)
-	b.lock.Unlock()
 	return nil
 }
 
@@ -122,78 +130,88 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
 	// Copy on write since this is a shared array.
 	r := b.StateRoots()
 	r[idx] = stateRoot[:]
 	b.state.StateRoots = r
 
-	b.lock.Lock()
 	b.markFieldAsDirty(stateRoots)
-	b.lock.Unlock()
 	return nil
 }
 
 // SetHistoricalRoots for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
-	b.state.HistoricalRoots = val
 	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.HistoricalRoots = val
 	b.markFieldAsDirty(historicalRoots)
-	b.lock.Unlock()
 	return nil
 }
 
 // SetEth1Data for the beacon state.
 func (b *BeaconState) SetEth1Data(val *ethpb.Eth1Data) error {
-	b.state.Eth1Data = val
 	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.Eth1Data = val
 	b.markFieldAsDirty(eth1Data)
-	b.lock.Unlock()
 	return nil
 }
 
 // SetEth1DataVotes for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetEth1DataVotes(val []*ethpb.Eth1Data) error {
-	b.state.Eth1DataVotes = val
 	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.Eth1DataVotes = val
 	b.markFieldAsDirty(eth1DataVotes)
-	b.lock.Unlock()
 	return nil
 }
 
 // AppendEth1DataVotes for the beacon state. This PR appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendEth1DataVotes(val *ethpb.Eth1Data) error {
-	b.state.Eth1DataVotes = append(b.state.Eth1DataVotes, val)
 	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.Eth1DataVotes = append(b.state.Eth1DataVotes, val)
 	b.markFieldAsDirty(eth1DataVotes)
-	b.lock.Unlock()
 	return nil
 }
 
 // SetEth1DepositIndex for the beacon state.
 func (b *BeaconState) SetEth1DepositIndex(val uint64) error {
-	b.state.Eth1DepositIndex = val
 	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.Eth1DepositIndex = val
 	b.markFieldAsDirty(eth1DepositIndex)
-	b.lock.Unlock()
 	return nil
 }
 
 // SetValidators for the beacon state. This PR updates the entire
 // to a new value by overwriting the previous one.
 func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
-	b.state.Validators = val
 	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.Validators = val
 	b.markFieldAsDirty(validators)
-	b.lock.Unlock()
 	return nil
 }
 
 // ApplyToEveryValidator applies the provided callback function to each validator in the
 // validator registry.
 func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator) error) error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
 	// Copy on write since this is a shared array.
 	v := b.Validators()
 	for i, val := range v {
@@ -203,9 +221,7 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 		}
 	}
 	b.state.Validators = v
-	b.lock.Lock()
 	b.markFieldAsDirty(validators)
-	b.lock.Unlock()
 	return nil
 }
 
@@ -215,13 +231,13 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 	if len(b.state.Validators) <= int(idx) {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
+	b.lock.Lock()
+	defer b.lock.Unlock()
 	// Copy on write since this is a shared array.
 	v := b.Validators()
 	v[idx] = val
 	b.state.Validators = v
-	b.lock.Lock()
 	b.markFieldAsDirty(validators)
-	b.lock.Unlock()
 	return nil
 }
 
@@ -237,10 +253,10 @@ func (b *BeaconState) SetValidatorIndexByPubkey(pubKey [48]byte, validatorIdx ui
 // SetBalances for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetBalances(val []uint64) error {
-	b.state.Balances = val
 	b.lock.Lock()
+	defer b.lock.Unlock()
+	b.state.Balances = val
 	b.markFieldAsDirty(balances)
-	b.lock.Unlock()
 	return nil
 }
 
@@ -250,20 +266,20 @@ func (b *BeaconState) UpdateBalancesAtIndex(idx uint64, val uint64) error {
 	if len(b.state.Balances) <= int(idx) {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
-	b.state.Balances[idx] = val
 	b.lock.Lock()
+	defer b.lock.Unlock()
+	b.state.Balances[idx] = val
 	b.markFieldAsDirty(balances)
-	b.lock.Unlock()
 	return nil
 }
 
 // SetRandaoMixes for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
-	b.state.RandaoMixes = val
 	b.lock.Lock()
+	defer b.lock.Unlock()
+	b.state.RandaoMixes = val
 	b.markFieldAsDirty(randaoMixes)
-	b.lock.Unlock()
 	return nil
 }
 
@@ -274,24 +290,26 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
 	// Copy on write since this is a shared array.
 	mixes := b.RandaoMixes()
 	mixes[idx] = val
 	b.state.RandaoMixes = mixes
 
-	b.lock.Lock()
 	b.markFieldAsDirty(randaoMixes)
-	b.lock.Unlock()
 	return nil
 }
 
 // SetSlashings for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetSlashings(val []uint64) error {
-	b.state.Slashings = val
 	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.Slashings = val
 	b.markFieldAsDirty(slashings)
-	b.lock.Unlock()
 	return nil
 }
 
@@ -301,116 +319,128 @@ func (b *BeaconState) UpdateSlashingsAtIndex(idx uint64, val uint64) error {
 	if len(b.state.Slashings) <= int(idx) {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
-	b.state.Slashings[idx] = val
 	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.Slashings[idx] = val
 	b.markFieldAsDirty(slashings)
-	b.lock.Unlock()
 	return nil
 }
 
 // SetPreviousEpochAttestations for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetPreviousEpochAttestations(val []*pbp2p.PendingAttestation) error {
-	b.state.PreviousEpochAttestations = val
 	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.PreviousEpochAttestations = val
 	b.markFieldAsDirty(previousEpochAttestations)
-	b.lock.Unlock()
 	return nil
 }
 
 // SetCurrentEpochAttestations for the beacon state. This PR updates the entire
 // list to a new value by overwriting the previous one.
 func (b *BeaconState) SetCurrentEpochAttestations(val []*pbp2p.PendingAttestation) error {
-	b.state.CurrentEpochAttestations = val
 	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.CurrentEpochAttestations = val
 	b.markFieldAsDirty(currentEpochAttestations)
-	b.lock.Unlock()
 	return nil
 }
 
 // AppendHistoricalRoots for the beacon state. This PR appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
-	b.state.HistoricalRoots = append(b.state.HistoricalRoots, root[:])
 	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.HistoricalRoots = append(b.state.HistoricalRoots, root[:])
 	b.markFieldAsDirty(historicalRoots)
-	b.lock.Unlock()
 	return nil
 }
 
 // AppendCurrentEpochAttestations for the beacon state. This PR appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestation) error {
-	b.state.CurrentEpochAttestations = append(b.state.CurrentEpochAttestations, val)
 	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.CurrentEpochAttestations = append(b.state.CurrentEpochAttestations, val)
 	b.markFieldAsDirty(currentEpochAttestations)
-	b.lock.Unlock()
 	return nil
 }
 
 // AppendPreviousEpochAttestations for the beacon state. This PR appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestation) error {
-	b.state.PreviousEpochAttestations = append(b.state.PreviousEpochAttestations, val)
 	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.PreviousEpochAttestations = append(b.state.PreviousEpochAttestations, val)
 	b.markFieldAsDirty(previousEpochAttestations)
-	b.lock.Unlock()
 	return nil
 }
 
 // AppendValidator for the beacon state. This PR appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
-	b.state.Validators = append(b.state.Validators, val)
 	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.Validators = append(b.state.Validators, val)
 	b.markFieldAsDirty(validators)
-	b.lock.Unlock()
 	return nil
 }
 
 // AppendBalance for the beacon state. This PR appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendBalance(bal uint64) error {
-	b.state.Balances = append(b.state.Balances, bal)
 	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.Balances = append(b.state.Balances, bal)
 	b.markFieldAsDirty(balances)
-	b.lock.Unlock()
 	return nil
 }
 
 // SetJustificationBits for the beacon state.
 func (b *BeaconState) SetJustificationBits(val bitfield.Bitvector4) error {
-	b.state.JustificationBits = val
 	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.JustificationBits = val
 	b.markFieldAsDirty(justificationBits)
-	b.lock.Unlock()
 	return nil
 }
 
 // SetPreviousJustifiedCheckpoint for the beacon state.
 func (b *BeaconState) SetPreviousJustifiedCheckpoint(val *ethpb.Checkpoint) error {
-	b.state.PreviousJustifiedCheckpoint = val
 	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.PreviousJustifiedCheckpoint = val
 	b.markFieldAsDirty(previousJustifiedCheckpoint)
-	b.lock.Unlock()
 	return nil
 }
 
 // SetCurrentJustifiedCheckpoint for the beacon state.
 func (b *BeaconState) SetCurrentJustifiedCheckpoint(val *ethpb.Checkpoint) error {
-	b.state.CurrentJustifiedCheckpoint = val
 	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.CurrentJustifiedCheckpoint = val
 	b.markFieldAsDirty(currentJustifiedCheckpoint)
-	b.lock.Unlock()
 	return nil
 }
 
 // SetFinalizedCheckpoint for the beacon state.
 func (b *BeaconState) SetFinalizedCheckpoint(val *ethpb.Checkpoint) error {
-	b.state.FinalizedCheckpoint = val
 	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.state.FinalizedCheckpoint = val
 	b.markFieldAsDirty(finalizedCheckpoint)
-	b.lock.Unlock()
 	return nil
 }
 
