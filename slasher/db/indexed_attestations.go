@@ -50,9 +50,9 @@ func (db *Store) IdxAttsForTargetFromID(targetEpoch uint64, validatorID uint64) 
 
 		for _, idxAtt := range idToIdxAttsList.IndicesList {
 			i := sort.Search(len(idxAtt.Indices), func(i int) bool {
-				return idxAtt.Indices[i] == validatorID
+				return idxAtt.Indices[i] >= validatorID
 			})
-			if i < len(idxAtt.Indices) {
+			if i < len(idxAtt.Indices) && idxAtt.Indices[i] == validatorID {
 				idxAttBucket := tx.Bucket(historicIndexedAttestationsBucket)
 				key := encodeEpochSig(targetEpoch, idxAtt.Signature)
 				enc = idxAttBucket.Get(key)
@@ -125,8 +125,8 @@ func (db *Store) LatestValidatorIdx() (uint64, error) {
 }
 
 // DoubleVotes looks up db for slashable attesting data that were preformed by the same validator.
-func (db *Store) DoubleVotes(targetEpoch uint64, validatorIdx uint64, dataRoot []byte, origAtt *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error) {
-	idxAtts, err := db.IdxAttsForTargetFromID(targetEpoch, validatorIdx)
+func (db *Store) DoubleVotes(validatorIdx uint64, dataRoot []byte, origAtt *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error) {
+	idxAtts, err := db.IdxAttsForTargetFromID(origAtt.Data.Target.Epoch, validatorIdx)
 	if err != nil {
 		return nil, err
 	}
@@ -175,9 +175,9 @@ func (db *Store) HasIndexedAttestation(targetEpoch uint64, validatorID uint64) (
 		}
 		for _, idxAtt := range iList.IndicesList {
 			i := sort.Search(len(idxAtt.Indices), func(i int) bool {
-				return idxAtt.Indices[i] == validatorID
+				return idxAtt.Indices[i] >= validatorID
 			})
-			if i < len(idxAtt.Indices) {
+			if i < len(idxAtt.Indices) && idxAtt.Indices[i] == validatorID {
 				hasAttestation = true
 				return nil
 			}
@@ -202,7 +202,7 @@ func (db *Store) SaveIndexedAttestation(idxAttestation *ethpb.IndexedAttestation
 		if val != nil {
 			return nil
 		}
-		if err := saveIndicesFromIdxAttToDB(idxAttestation, tx); err != nil {
+		if err := saveIdxAttIndicesByEpochToDB(idxAttestation, tx); err != nil {
 			return errors.Wrap(err, "failed to save indices from indexed attestation")
 		}
 		if err := bucket.Put(key, enc); err != nil {
@@ -222,7 +222,7 @@ func (db *Store) SaveIndexedAttestation(idxAttestation *ethpb.IndexedAttestation
 	return err
 }
 
-func saveIndicesFromIdxAttToDB(idxAttestation *ethpb.IndexedAttestation, tx *bolt.Tx) error {
+func saveIdxAttIndicesByEpochToDB(idxAttestation *ethpb.IndexedAttestation, tx *bolt.Tx) error {
 	dataRoot, err := hashutil.HashProto(idxAttestation.Data)
 	if err != nil {
 		return errors.Wrap(err, "failed to hash indexed attestation data.")
@@ -236,9 +236,6 @@ func saveIndicesFromIdxAttToDB(idxAttestation *ethpb.IndexedAttestation, tx *bol
 	key := bytesutil.Bytes8(idxAttestation.Data.Target.Epoch)
 	bucket := tx.Bucket(indexedAttestationsIndicesBucket)
 	enc := bucket.Get(key)
-	if enc == nil {
-		return errors.New("requested to delete data that is not present")
-	}
 	vIdxList, err := unmarshalValIDsToIdxAttList(enc)
 	if err != nil {
 		return errors.Wrap(err, "failed to decode value into ValidatorIDToIndexedAttestationList")
@@ -263,18 +260,20 @@ func (db *Store) DeleteIndexedAttestation(idxAttestation *ethpb.IndexedAttestati
 		if enc == nil {
 			return nil
 		}
-		if err := removeIndicesOfIdxAttFromDB(idxAttestation, tx); err != nil {
+		if err := removeIdxAttIndicesByEpochFromDB(idxAttestation, tx); err != nil {
 			return err
 		}
 		if err := bucket.Delete(key); err != nil {
-			tx.Rollback()
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				return errors.Wrapf(rollbackErr, "failed to rollback after %v", err)
+			}
 			return errors.Wrap(err, "failed to delete indexed attestation from historical bucket")
 		}
 		return nil
 	})
 }
 
-func removeIndicesOfIdxAttFromDB(idxAttestation *ethpb.IndexedAttestation, tx *bolt.Tx) error {
+func removeIdxAttIndicesByEpochFromDB(idxAttestation *ethpb.IndexedAttestation, tx *bolt.Tx) error {
 	dataRoot, err := hashutil.HashProto(idxAttestation.Data)
 	if err != nil {
 		return err
@@ -307,7 +306,7 @@ func removeIndicesOfIdxAttFromDB(idxAttestation *ethpb.IndexedAttestation, tx *b
 		return errors.Wrap(err, "failed to marshal")
 	}
 	if err := bucket.Put(key, enc); err != nil {
-		return errors.Wrap(err, "failed to include the indexed attestation in the historic indexed attestation bucket")
+		return errors.Wrap(err, "failed to include indexed attestation in the historical bucket")
 	}
 	return nil
 }
@@ -324,7 +323,7 @@ func (db *Store) pruneAttHistory(currentEpoch uint64, historySize uint64) error 
 		max := bytesutil.Bytes8(uint64(pruneFromEpoch))
 		for k, _ := c.First(); k != nil && bytes.Compare(k[:8], max) <= 0; k, _ = c.Next() {
 			if err := attBucket.Delete(k); err != nil {
-				return errors.Wrap(err, "failed to delete the indexed attestation from historic indexed attestation bucket")
+				return errors.Wrap(err, "failed to delete indexed attestation from historical bucket")
 			}
 		}
 
@@ -332,7 +331,7 @@ func (db *Store) pruneAttHistory(currentEpoch uint64, historySize uint64) error 
 		c = tx.Bucket(indexedAttestationsIndicesBucket).Cursor()
 		for k, _ := c.First(); k != nil && bytes.Compare(k[:8], max) <= 0; k, _ = c.Next() {
 			if err := idxBucket.Delete(k); err != nil {
-				return errors.Wrap(err, "failed to delete the indexed attestation from indexed attestation indexes bucket")
+				return errors.Wrap(err, "failed to delete indexed attestation from historical bucket")
 			}
 		}
 		return nil

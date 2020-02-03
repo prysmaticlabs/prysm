@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func createBlockHeader(enc []byte) (*ethpb.SignedBeaconBlockHeader, error) {
+func unmarshalBlockHeader(enc []byte) (*ethpb.SignedBeaconBlockHeader, error) {
 	protoBlockHeader := &ethpb.SignedBeaconBlockHeader{}
 	err := proto.Unmarshal(enc, protoBlockHeader)
 	if err != nil {
@@ -28,7 +28,7 @@ func (db *Store) BlockHeader(epoch uint64, validatorID uint64) ([]*ethpb.SignedB
 		c := tx.Bucket(historicBlockHeadersBucket).Cursor()
 		prefix := encodeEpochValidatorID(epoch, validatorID)
 		for k, v := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, v = c.Next() {
-			bh, err := createBlockHeader(v)
+			bh, err := unmarshalBlockHeader(v)
 			if err != nil {
 				return err
 			}
@@ -68,7 +68,7 @@ func (db *Store) SaveBlockHeader(epoch uint64, validatorID uint64, blockHeader *
 	err = db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicBlockHeadersBucket)
 		if err := bucket.Put(key, enc); err != nil {
-			return errors.Wrap(err, "failed to include the block header in the historic block header bucket")
+			return errors.Wrap(err, "failed to include block header in the historical bucket")
 		}
 
 		return err
@@ -105,7 +105,7 @@ func (db *Store) pruneBlockHistory(currentEpoch uint64, historySize uint64) erro
 		c := tx.Bucket(historicBlockHeadersBucket).Cursor()
 		for k, _ := c.First(); k != nil && bytesutil.FromBytes8(k[:8]) <= uint64(pruneTill); k, _ = c.Next() {
 			if err := bucket.Delete(k); err != nil {
-				return errors.Wrap(err, "failed to delete the block header from historic block header bucket")
+				return errors.Wrap(err, "failed to delete the block header from historical bucket")
 			}
 		}
 		return nil

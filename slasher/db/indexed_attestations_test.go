@@ -138,7 +138,7 @@ func TestDeleteHistoryIdxAtt(t *testing.T) {
 
 }
 
-func TestHasIdxAtt(t *testing.T) {
+func TestHasIndexedAttestation(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
@@ -158,6 +158,7 @@ func TestHasIdxAtt(t *testing.T) {
 			t.Fatalf("save indexed attestation failed: %v", err)
 		}
 	}
+
 	for _, tt := range tests {
 		exists, err := db.HasIndexedAttestation(tt.idxAtt.Data.Target.Epoch, tt.idxAtt.AttestingIndices[0])
 		if err != nil {

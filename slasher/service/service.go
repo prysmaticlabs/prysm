@@ -183,7 +183,7 @@ func (s *Service) startSlasher() {
 		SlasherDB: s.slasherDb,
 	}
 	if s.ctx.GlobalBool(flags.RebuildSpanMapsFlag.Name) {
-		s.loadSpanMaps(err, slasherServer)
+		s.loadSpanMaps(slasherServer)
 	}
 	slashpb.RegisterSlasherServer(s.grpcServer, &slasherServer)
 
@@ -199,7 +199,7 @@ func (s *Service) startSlasher() {
 	}()
 }
 
-func (s *Service) loadSpanMaps(err error, slasherServer rpc.Server) {
+func (s *Service) loadSpanMaps(slasherServer rpc.Server) {
 	latestTargetEpoch, err := slasherServer.SlasherDB.LatestIndexedAttestationsTargetEpoch()
 	if err != nil {
 		log.Errorf("Could not extract latest target epoch from indexed attestations store: %v", err)

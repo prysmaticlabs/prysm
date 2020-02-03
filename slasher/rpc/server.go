@@ -35,15 +35,14 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 	if err := ss.SlasherDB.SaveIndexedAttestation(req); err != nil {
 		return nil, err
 	}
-	tEpoch := req.Data.Target.Epoch
 	indices := req.AttestingIndices
 	root, err := hashutil.HashProto(req.Data)
 	if err != nil {
 		return nil, err
 	}
-	atsSlashinngRes := &slashpb.AttesterSlashingResponse{}
-	at := make(chan []*ethpb.AttesterSlashing, len(indices))
-	er := make(chan error, len(indices))
+	attSlashingResp := &slashpb.AttesterSlashingResponse{}
+	attSlashings := make(chan []*ethpb.AttesterSlashing, len(indices))
+	errorChans := make(chan error, len(indices))
 	var wg sync.WaitGroup
 	lastIdx := int64(-1)
 	for _, idx := range indices {
@@ -52,42 +51,42 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 		}
 		wg.Add(1)
 		go func(idx uint64, root [32]byte, req *ethpb.IndexedAttestation) {
-			atts, err := ss.SlasherDB.DoubleVotes(tEpoch, idx, root[:], req)
+			atts, err := ss.SlasherDB.DoubleVotes(idx, root[:], req)
 			if err != nil {
-				er <- err
+				errorChans <- err
 				wg.Done()
 				return
 			}
 			if atts != nil && len(atts) > 0 {
-				at <- atts
+				attSlashings <- atts
 			}
 			atts, err = ss.DetectSurroundVotes(ctx, idx, req)
 			if err != nil {
-				er <- err
+				errorChans <- err
 				wg.Done()
 				return
 			}
 			if atts != nil && len(atts) > 0 {
-				at <- atts
+				attSlashings <- atts
 			}
 			wg.Done()
 			return
 		}(idx, root, req)
 	}
 	wg.Wait()
-	close(er)
-	close(at)
-	for e := range er {
+	close(errorChans)
+	close(attSlashings)
+	for e := range errorChans {
 		if err != nil {
 			err = fmt.Errorf(err.Error() + " : " + e.Error())
 			continue
 		}
 		err = e
 	}
-	for atts := range at {
-		atsSlashinngRes.AttesterSlashing = append(atsSlashinngRes.AttesterSlashing, atts...)
+	for atts := range attSlashings {
+		attSlashingResp.AttesterSlashing = append(attSlashingResp.AttesterSlashing, atts...)
 	}
-	return atsSlashinngRes, err
+	return attSlashingResp, err
 }
 
 // UpdateSpanMaps updates and load all span maps from db.

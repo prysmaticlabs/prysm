@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// finalisedChangeUpdater this is a stub for the comming PRs #3133
+// finalisedChangeUpdater this is a stub for the coming PRs #3133
 // Store validator index to public key map Validate attestation signature.
 func (s *Service) finalisedChangeUpdater() error {
 	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
@@ -97,25 +97,27 @@ func (s *Service) slasherOldAttestationFeeder() error {
 		return err
 	}
 	errOut := make(chan error)
-	startFromEpoch, err := s.getLatestDetectedEpoch(err)
+	startFromEpoch, err := s.getLatestDetectedEpoch()
 	if err != nil {
 		return err
 	}
-	for ep := startFromEpoch; ep < ch.FinalizedEpoch; ep++ {
-		ats, bcs, err := s.getDataForDetection(ep)
+
+	for epoch := startFromEpoch; epoch < ch.FinalizedEpoch; epoch++ {
+		ats, bcs, err := s.getDataForDetection(epoch)
 		if err != nil || bcs == nil {
 			log.Error(err)
 			continue
 		}
-		log.Infof("detecting slashable events on: %v attestations from epoch: %v", len(ats.Attestations), ep)
+		log.Infof("Detecting slashable events on: %v attestations from epoch: %v", len(ats.Attestations), epoch)
 		for _, attestation := range ats.Attestations {
-			err := s.detectAttestation(attestation, bcs)
-			if err != nil {
+			if err := s.detectAttestation(attestation, bcs); err != nil {
 				continue
 			}
 		}
-		s.slasherDb.SetLatestEpochDetected(ep)
-		s.getChainHead()
+		if err := s.slasherDb.SetLatestEpochDetected(epoch); err != nil {
+			log.Error(err)
+			continue
+		}
 	}
 	close(errOut)
 	for err := range errOut {
@@ -149,7 +151,10 @@ func (s *Service) detectAttestation(attestation *ethpb.Attestation, beaconCommit
 		log.WithError(err)
 		return err
 	}
-	s.slasherDb.SaveAttesterSlashings(db.Active, sar.AttesterSlashing)
+	if err := s.slasherDb.SaveAttesterSlashings(db.Active, sar.AttesterSlashing); err != nil {
+		log.WithError(err)
+		return err
+	}
 	if len(sar.AttesterSlashing) > 0 {
 		for _, as := range sar.AttesterSlashing {
 			log.WithField("attesterSlashing", as).Info("detected slashing offence")
@@ -176,7 +181,7 @@ func (s *Service) getDataForDetection(epoch uint64) (*ethpb.ListAttestationsResp
 	return ats, bcs, err
 }
 
-func (s *Service) getLatestDetectedEpoch(err error) (uint64, error) {
+func (s *Service) getLatestDetectedEpoch() (uint64, error) {
 	e, err := s.slasherDb.GetLatestEpochDetected()
 	if err != nil {
 		log.Error(err)
@@ -188,7 +193,7 @@ func (s *Service) getLatestDetectedEpoch(err error) (uint64, error) {
 
 func (s *Service) getChainHead() (*ethpb.ChainHead, error) {
 	if s.beaconClient == nil {
-		return nil, fmt.Errorf("can't feed old attestations to slasher. beacon client has not been started")
+		return nil, errors.New("Cannot feed old attestations to slasher, beacon client has not been started")
 	}
 	ch, err := s.beaconClient.GetChainHead(s.context, &ptypes.Empty{})
 	if err != nil {
@@ -196,7 +201,7 @@ func (s *Service) getChainHead() (*ethpb.ChainHead, error) {
 		return nil, err
 	}
 	if ch.FinalizedEpoch < 2 {
-		log.Info("archive node doesnt have historic data for slasher to proccess. finalized epoch: %d", ch.FinalizedEpoch)
+		log.Info("Archive node does not have historic data for slasher to process")
 	}
 	log.WithField("finalizedEpoch", ch.FinalizedEpoch).Info("Current finalized epoch on archive node")
 	return ch, nil
