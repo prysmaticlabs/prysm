@@ -81,11 +81,6 @@ func (r *Service) validateAggregatedAtt(ctx context.Context, a *ethpb.AggregateA
 		return false
 	}
 
-	if !r.db.HasBlock(ctx, bytesutil.ToBytes32(a.Aggregate.Data.Target.Root)) {
-		r.savePendingAtt(a)
-		return false
-	}
-
 	// Verify attestation slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots.
 	currentSlot := uint64(roughtime.Now().Unix()-r.chain.GenesisTime().Unix()) / params.BeaconConfig().SecondsPerSlot
 	if attSlot > currentSlot || currentSlot > attSlot+params.BeaconConfig().AttestationPropagationSlotRange {

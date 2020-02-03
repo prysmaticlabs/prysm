@@ -45,9 +45,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 
 	for bRoot, attestations := range s.blkRootToPendingAtts {
 		// Has the pending attestation's missing block arrived yet?
-		beaconRoot := bytesutil.ToBytes32(bRoot[:32])
-		targetRoot := bytesutil.ToBytes32(bRoot[32:])
-		if s.db.HasBlock(ctx, beaconRoot) && s.db.HasBlock(ctx, targetRoot) {
+		if s.db.HasBlock(ctx, bRoot) {
 			numberOfBlocksRecoveredFromAtt.Inc()
 			for _, att := range attestations {
 				// The pending attestations can arrive in both aggregated and unaggregated forms,
@@ -105,20 +103,10 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 				}
 			}
 
-			if !s.db.HasBlock(ctx, beaconRoot) {
-				req := [][32]byte{beaconRoot}
-				if err := s.sendRecentBeaconBlocksRequest(ctx, req, pid); err != nil {
-					traceutil.AnnotateError(span, err)
-					log.Errorf("Could not send recent block request: %v", err)
-				}
-			}
-
-			if !s.db.HasBlock(ctx, targetRoot) {
-				req := [][32]byte{targetRoot}
-				if err := s.sendRecentBeaconBlocksRequest(ctx, req, pid); err != nil {
-					traceutil.AnnotateError(span, err)
-					log.Errorf("Could not send recent block request: %v", err)
-				}
+			req := [][32]byte{bRoot}
+			if err := s.sendRecentBeaconBlocksRequest(ctx, req, pid); err != nil {
+				traceutil.AnnotateError(span, err)
+				log.Errorf("Could not send recent block request: %v", err)
 			}
 		}
 	}
@@ -133,23 +121,14 @@ func (s *Service) savePendingAtt(att *ethpb.AggregateAttestationAndProof) {
 	defer s.pendingAttsLock.Unlock()
 
 	root := bytesutil.ToBytes32(att.Aggregate.Data.BeaconBlockRoot)
-	targetRoot := params.BeaconConfig().ZeroHash
-	if !s.db.HasBlock(context.Background(), bytesutil.ToBytes32(att.Aggregate.Data.Target.Root)) {
-		targetRoot = bytesutil.ToBytes32(att.Aggregate.Data.Target.Root)
-	}
 
-	roots := make([]byte, 64)
-	copy(root[:32], root[:])
-	copy(root[32:], targetRoot[:])
-	roots64 := bytesutil.ToBytes64(roots)
-
-	_, ok := s.blkRootToPendingAtts[roots64]
+	_, ok := s.blkRootToPendingAtts[root]
 	if !ok {
-		s.blkRootToPendingAtts[roots64] = []*ethpb.AggregateAttestationAndProof{att}
+		s.blkRootToPendingAtts[root] = []*ethpb.AggregateAttestationAndProof{att}
 		return
 	}
 
-	s.blkRootToPendingAtts[roots64] = append(s.blkRootToPendingAtts[roots64], att)
+	s.blkRootToPendingAtts[root] = append(s.blkRootToPendingAtts[root], att)
 }
 
 // This validates the pending attestations in the queue are still valid.

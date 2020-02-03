@@ -86,7 +86,7 @@ func (b *BeaconState) Copy() *BeaconState {
 		dirtyFields: make(map[fieldIndex]interface{}, 20),
 
 		// Copy on write validator index map.
-		valIdxMap: b.valIdxMap,
+		valIdxMap:   b.valIdxMap,
 	}
 
 	for i := range b.dirtyFields {
