@@ -46,6 +46,9 @@ func (bs *Server) ListAttestations(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not genesis block: %v", err)
 		}
+		if genBlk == nil {
+			return nil, status.Error(codes.Internal, "Could not find genesis block")
+		}
 		genesisRoot, err := ssz.HashTreeRoot(genBlk.Block)
 		if err != nil {
 			return nil, err

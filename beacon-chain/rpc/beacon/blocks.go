@@ -139,6 +139,9 @@ func (bs *Server) ListBlocks(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for genesis slot: %v", err)
 		}
+		if genBlk == nil {
+			return nil, status.Error(codes.Internal, "Could not find genesis block")
+		}
 		root, err := ssz.HashTreeRoot(genBlk.Block)
 		if err != nil {
 			return nil, err
