@@ -206,7 +206,7 @@ func (bs *Server) StreamChainHead(_ *ptypes.Empty, stream ethpb.BeaconChain_Stre
 // Retrieve chain head information from the DB and the current beacon state.
 func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, error) {
 	headBlock := bs.HeadFetcher.HeadBlock()
-	if headBlock != nil {
+	if headBlock == nil {
 		return nil, status.Error(codes.Internal, "Head block of chain was nil")
 	}
 	headBlockRoot, err := ssz.HashTreeRoot(headBlock.Block)
