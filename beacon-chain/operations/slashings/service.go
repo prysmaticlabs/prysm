@@ -51,8 +51,8 @@ func (p *Pool) PendingAttesterSlashings() []*ethpb.AttesterSlashing {
 	return pending
 }
 
-// PendingProposerSlashings returns exits that are ready for inclusion at the given slot. This method will not
-// return more than the block enforced MaxProposerSlashings.
+// PendingProposerSlashings returns proposer slashings that are ready for inclusion at the given slot.
+// This method will not return more than the block enforced MaxProposerSlashings.
 func (p *Pool) PendingProposerSlashings() []*ethpb.ProposerSlashing {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
@@ -117,8 +117,8 @@ func (p *Pool) InsertAttesterSlashing(ctx context.Context, state *beaconstate.Be
 	}
 }
 
-// InsertProposerSlashing into the pool. This method is a no-op if the pending exit already exists,
-// has been included recently, or the validator is already exited.
+// InsertProposerSlashing into the pool. This method is a no-op if the pending slashing already exists,
+// has been included recently, the validator is already exited, or the validator was already slashed.
 func (p *Pool) InsertProposerSlashing(ctx context.Context, state *beaconstate.BeaconState, slashing *ethpb.ProposerSlashing) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -156,9 +156,9 @@ func (p *Pool) InsertProposerSlashing(ctx context.Context, state *beaconstate.Be
 
 }
 
-// MarkIncludedAttesterSlashing is used when an proposer slashing has been included in a beacon block.
-// Every block seen by this node that contains proposer slashing should call this method to include
-// the proposer slashing.
+// MarkIncludedAttesterSlashing is used when an attester slashing has been included in a beacon block.
+// Every block seen by this node that contains proposer slashings should call this method to include
+// the proposer slashings.
 func (p *Pool) MarkIncludedAttesterSlashing(as *ethpb.AttesterSlashing) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -178,8 +178,8 @@ func (p *Pool) MarkIncludedAttesterSlashing(as *ethpb.AttesterSlashing) {
 }
 
 // MarkIncludedProposerSlashing is used when an proposer slashing has been included in a beacon block.
-// Every block seen by this node that contains proposer slashing should call this method to include
-// the proposer slashing.
+// Every block seen by this node that contains proposer slashings should call this method to include
+// the proposer slashings.
 func (p *Pool) MarkIncludedProposerSlashing(ps *ethpb.ProposerSlashing) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
