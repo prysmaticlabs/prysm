@@ -12,6 +12,17 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+func attesterSlashingForValIdx(valIdx uint64) *ethpb.AttesterSlashing {
+	return &ethpb.AttesterSlashing{
+		Attestation_1: &ethpb.IndexedAttestation{
+			AttestingIndices: []uint64{valIdx},
+		},
+		Attestation_2: &ethpb.IndexedAttestation{
+			AttestingIndices: []uint64{valIdx},
+		},
+	}
+}
+
 func TestPool_InsertAttesterSlashing(t *testing.T) {
 	type fields struct {
 		pending  []*PendingAttesterSlashing
@@ -143,39 +154,18 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 			fields: fields{
 				pending: []*PendingAttesterSlashing{
 					{
-						attesterSlashing: &ethpb.AttesterSlashing{
-							Attestation_1: &ethpb.IndexedAttestation{
-								AttestingIndices: []uint64{1},
-							},
-							Attestation_2: &ethpb.IndexedAttestation{
-								AttestingIndices: []uint64{1},
-							},
-						},
+						attesterSlashing: attesterSlashingForValIdx(1),
 						validatorToSlash: 1,
 					},
 				},
 				included: make(map[uint64]bool),
 			},
 			args: args{
-				slashings: &ethpb.AttesterSlashing{
-					Attestation_1: &ethpb.IndexedAttestation{
-						AttestingIndices: []uint64{1},
-					},
-					Attestation_2: &ethpb.IndexedAttestation{
-						AttestingIndices: []uint64{1},
-					},
-				},
+				slashings: attesterSlashingForValIdx(1),
 			},
 			want: []*PendingAttesterSlashing{
 				{
-					attesterSlashing: &ethpb.AttesterSlashing{
-						Attestation_1: &ethpb.IndexedAttestation{
-							AttestingIndices: []uint64{1},
-						},
-						Attestation_2: &ethpb.IndexedAttestation{
-							AttestingIndices: []uint64{1},
-						},
-					},
+					attesterSlashing: attesterSlashingForValIdx(1),
 					validatorToSlash: 1,
 				},
 			},
@@ -187,14 +177,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 				included: make(map[uint64]bool),
 			},
 			args: args{
-				slashings: &ethpb.AttesterSlashing{
-					Attestation_1: &ethpb.IndexedAttestation{
-						AttestingIndices: []uint64{2},
-					},
-					Attestation_2: &ethpb.IndexedAttestation{
-						AttestingIndices: []uint64{2},
-					},
-				},
+				slashings: attesterSlashingForValIdx(2),
 			},
 			want: []*PendingAttesterSlashing{},
 		},
@@ -205,25 +188,11 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 				included: make(map[uint64]bool),
 			},
 			args: args{
-				slashings: &ethpb.AttesterSlashing{
-					Attestation_1: &ethpb.IndexedAttestation{
-						AttestingIndices: []uint64{4},
-					},
-					Attestation_2: &ethpb.IndexedAttestation{
-						AttestingIndices: []uint64{4},
-					},
-				},
+				slashings: attesterSlashingForValIdx(4),
 			},
 			want: []*PendingAttesterSlashing{
 				{
-					attesterSlashing: &ethpb.AttesterSlashing{
-						Attestation_1: &ethpb.IndexedAttestation{
-							AttestingIndices: []uint64{4},
-						},
-						Attestation_2: &ethpb.IndexedAttestation{
-							AttestingIndices: []uint64{4},
-						},
-					},
+					attesterSlashing: attesterSlashingForValIdx(4),
 					validatorToSlash: 4,
 				},
 			},
@@ -235,14 +204,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 				included: make(map[uint64]bool),
 			},
 			args: args{
-				slashings: &ethpb.AttesterSlashing{
-					Attestation_1: &ethpb.IndexedAttestation{
-						AttestingIndices: []uint64{5},
-					},
-					Attestation_2: &ethpb.IndexedAttestation{
-						AttestingIndices: []uint64{5},
-					},
-				},
+				slashings: attesterSlashingForValIdx(5),
 			},
 			want: []*PendingAttesterSlashing{},
 		},
@@ -255,14 +217,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 				},
 			},
 			args: args{
-				slashings: &ethpb.AttesterSlashing{
-					Attestation_1: &ethpb.IndexedAttestation{
-						AttestingIndices: []uint64{1},
-					},
-					Attestation_2: &ethpb.IndexedAttestation{
-						AttestingIndices: []uint64{1},
-					},
-				},
+				slashings: attesterSlashingForValIdx(1),
 			},
 			want: []*PendingAttesterSlashing{},
 		},
@@ -275,14 +230,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 				},
 			},
 			args: args{
-				slashings: &ethpb.AttesterSlashing{
-					Attestation_1: &ethpb.IndexedAttestation{
-						AttestingIndices: []uint64{1},
-					},
-					Attestation_2: &ethpb.IndexedAttestation{
-						AttestingIndices: []uint64{1},
-					},
-				},
+				slashings: attesterSlashingForValIdx(1),
 			},
 			want: []*PendingAttesterSlashing{},
 		},
@@ -295,83 +243,56 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 				},
 			},
 			args: args{
-				slashings: &ethpb.AttesterSlashing{
-					Attestation_1: &ethpb.IndexedAttestation{
-						AttestingIndices: []uint64{1},
-					},
-					Attestation_2: &ethpb.IndexedAttestation{
-						AttestingIndices: []uint64{1},
-					},
-				},
+				slashings: attesterSlashingForValIdx(1),
 			},
 			want: []*PendingAttesterSlashing{},
 		},
-		//	{
-		//		name: "Maintains sorted order",
-		//		fields: fields{
-		//			pending: []*ethpb.SignedVoluntaryExit{
-		//				{
-		//					Exit: &ethpb.VoluntaryExit{
-		//						Epoch:          12,
-		//						ValidatorIndex: 0,
-		//					},
-		//				},
-		//				{
-		//					Exit: &ethpb.VoluntaryExit{
-		//						Epoch:          12,
-		//						ValidatorIndex: 2,
-		//					},
-		//				},
-		//			},
-		//			included: make(map[uint64]bool),
-		//		},
-		//		args: args{
-		//			exit: &ethpb.SignedVoluntaryExit{
-		//				Exit: &ethpb.VoluntaryExit{
-		//					Epoch:          10,
-		//					ValidatorIndex: 1,
-		//				},
-		//			},
-		//		},
-		//		want: []*ethpb.SignedVoluntaryExit{
-		//			{
-		//				Exit: &ethpb.VoluntaryExit{
-		//					Epoch:          12,
-		//					ValidatorIndex: 0,
-		//				},
-		//			},
-		//			{
-		//				Exit: &ethpb.VoluntaryExit{
-		//					Epoch:          10,
-		//					ValidatorIndex: 1,
-		//				},
-		//			},
-		//			{
-		//				Exit: &ethpb.VoluntaryExit{
-		//					Epoch:          12,
-		//					ValidatorIndex: 2,
-		//				},
-		//			},
-		//		},
-		//	},
-		//	{
-		//		name: "Already included",
-		//		fields: fields{
-		//			pending: make([]*ethpb.SignedVoluntaryExit, 0),
-		//			included: map[uint64]bool{
-		//				1: true,
-		//			},
-		//		},
-		//		args: args{
-		//			exit: &ethpb.SignedVoluntaryExit{
-		//				Exit: &ethpb.VoluntaryExit{
-		//					Epoch:          12,
-		//					ValidatorIndex: 1,
-		//				},
-		//			},
-		//		},
-		//		want: []*ethpb.SignedVoluntaryExit{},
-		//	},
+		{
+			name: "Maintains sorted order",
+			fields: fields{
+				pending: []*PendingAttesterSlashing{
+					{
+						attesterSlashing: attesterSlashingForValIdx(0),
+						validatorToSlash: 0,
+					},
+					{
+						attesterSlashing: attesterSlashingForValIdx(2),
+						validatorToSlash: 2,
+					},
+				},
+				included: make(map[uint64]bool),
+			},
+			args: args{
+				slashings: attesterSlashingForValIdx(1),
+			},
+			want: []*PendingAttesterSlashing{
+				{
+					attesterSlashing: attesterSlashingForValIdx(0),
+					validatorToSlash: 0,
+				},
+				{
+					attesterSlashing: attesterSlashingForValIdx(1),
+					validatorToSlash: 1,
+				},
+				{
+					attesterSlashing: attesterSlashingForValIdx(2),
+					validatorToSlash: 2,
+				},
+			},
+		},
+		{
+			name: "Already included",
+			fields: fields{
+				pending: make([]*PendingAttesterSlashing, 0),
+				included: map[uint64]bool{
+					1: true,
+				},
+			},
+			args: args{
+				slashings: attesterSlashingForValIdx(1),
+			},
+			want: []*PendingAttesterSlashing{},
+		},
 	}
 	ctx := context.Background()
 	validators := []*ethpb.Validator{
@@ -441,40 +362,19 @@ func TestPool_MarkIncludedAttesterSlashing(t *testing.T) {
 			fields: fields{
 				pending: []*PendingAttesterSlashing{
 					{
-						attesterSlashing: &ethpb.AttesterSlashing{
-							Attestation_1: &ethpb.IndexedAttestation{
-								AttestingIndices: []uint64{1},
-							},
-							Attestation_2: &ethpb.IndexedAttestation{
-								AttestingIndices: []uint64{1},
-							},
-						},
+						attesterSlashing: attesterSlashingForValIdx(1),
 						validatorToSlash: 1,
 					},
 				},
 				included: make(map[uint64]bool),
 			},
 			args: args{
-				slashing: &ethpb.AttesterSlashing{
-					Attestation_1: &ethpb.IndexedAttestation{
-						AttestingIndices: []uint64{3},
-					},
-					Attestation_2: &ethpb.IndexedAttestation{
-						AttestingIndices: []uint64{3},
-					},
-				},
+				slashing: attesterSlashingForValIdx(3),
 			},
 			want: fields{
 				pending: []*PendingAttesterSlashing{
 					{
-						attesterSlashing: &ethpb.AttesterSlashing{
-							Attestation_1: &ethpb.IndexedAttestation{
-								AttestingIndices: []uint64{1},
-							},
-							Attestation_2: &ethpb.IndexedAttestation{
-								AttestingIndices: []uint64{1},
-							},
-						},
+						attesterSlashing: attesterSlashingForValIdx(1),
 						validatorToSlash: 1,
 					},
 				},
@@ -488,36 +388,15 @@ func TestPool_MarkIncludedAttesterSlashing(t *testing.T) {
 			fields: fields{
 				pending: []*PendingAttesterSlashing{
 					{
-						attesterSlashing: &ethpb.AttesterSlashing{
-							Attestation_1: &ethpb.IndexedAttestation{
-								AttestingIndices: []uint64{1},
-							},
-							Attestation_2: &ethpb.IndexedAttestation{
-								AttestingIndices: []uint64{1},
-							},
-						},
+						attesterSlashing: attesterSlashingForValIdx(1),
 						validatorToSlash: 1,
 					},
 					{
-						attesterSlashing: &ethpb.AttesterSlashing{
-							Attestation_1: &ethpb.IndexedAttestation{
-								AttestingIndices: []uint64{2},
-							},
-							Attestation_2: &ethpb.IndexedAttestation{
-								AttestingIndices: []uint64{2},
-							},
-						},
+						attesterSlashing: attesterSlashingForValIdx(2),
 						validatorToSlash: 2,
 					},
 					{
-						attesterSlashing: &ethpb.AttesterSlashing{
-							Attestation_1: &ethpb.IndexedAttestation{
-								AttestingIndices: []uint64{3},
-							},
-							Attestation_2: &ethpb.IndexedAttestation{
-								AttestingIndices: []uint64{3},
-							},
-						},
+						attesterSlashing: attesterSlashingForValIdx(3),
 						validatorToSlash: 3,
 					},
 				},
@@ -526,37 +405,16 @@ func TestPool_MarkIncludedAttesterSlashing(t *testing.T) {
 				},
 			},
 			args: args{
-				slashing: &ethpb.AttesterSlashing{
-					Attestation_1: &ethpb.IndexedAttestation{
-						AttestingIndices: []uint64{2},
-					},
-					Attestation_2: &ethpb.IndexedAttestation{
-						AttestingIndices: []uint64{2},
-					},
-				},
+				slashing: attesterSlashingForValIdx(2),
 			},
 			want: fields{
 				pending: []*PendingAttesterSlashing{
 					{
-						attesterSlashing: &ethpb.AttesterSlashing{
-							Attestation_1: &ethpb.IndexedAttestation{
-								AttestingIndices: []uint64{1},
-							},
-							Attestation_2: &ethpb.IndexedAttestation{
-								AttestingIndices: []uint64{1},
-							},
-						},
+						attesterSlashing: attesterSlashingForValIdx(1),
 						validatorToSlash: 1,
 					},
 					{
-						attesterSlashing: &ethpb.AttesterSlashing{
-							Attestation_1: &ethpb.IndexedAttestation{
-								AttestingIndices: []uint64{3},
-							},
-							Attestation_2: &ethpb.IndexedAttestation{
-								AttestingIndices: []uint64{3},
-							},
-						},
+						attesterSlashing: attesterSlashingForValIdx(3),
 						validatorToSlash: 3,
 					},
 				},
