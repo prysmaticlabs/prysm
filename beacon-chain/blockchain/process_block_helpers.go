@@ -366,7 +366,7 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byt
 //            or get_ancestor(store, store.justified_checkpoint.root, finalized_slot) != store.finalized_checkpoint.root
 //        ):
 //            store.justified_checkpoint = state.current_justified_checkpoint
-func (s *Service) finalizedNewJustified(ctx context.Context, state *stateTrie.BeaconState) error {
+func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state *stateTrie.BeaconState) error {
 	finalizedBlkSigned, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root))
 	if err != nil || finalizedBlkSigned == nil || finalizedBlkSigned.Block == nil {
 		return errors.Wrap(err, "could not get finalized block")
