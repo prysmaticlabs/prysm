@@ -44,6 +44,11 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 		dirtyFields: make(map[fieldIndex]interface{}, 20),
 		valIdxMap:   coreutils.ValidatorIndexMap(st.Validators),
 	}
+
+	for i := 0; i < 20; i++ {
+		b.dirtyFields[fieldIndex(i)] = true
+	}
+
 	return b, nil
 }
 
@@ -94,12 +99,14 @@ func (b *BeaconState) Copy() *BeaconState {
 		dst.dirtyFields[i] = true
 	}
 
-	dst.merkleLayers = make([][][]byte, len(b.merkleLayers))
-	for i, layer := range b.merkleLayers {
-		dst.merkleLayers[i] = make([][]byte, len(layer))
-		for j, content := range layer {
-			dst.merkleLayers[i][j] = make([]byte, len(content))
-			copy(dst.merkleLayers[i][j], content)
+	if b.merkleLayers != nil {
+		dst.merkleLayers = make([][][]byte, len(b.merkleLayers))
+		for i, layer := range b.merkleLayers {
+			dst.merkleLayers[i] = make([][]byte, len(layer))
+			for j, content := range layer {
+				dst.merkleLayers[i][j] = make([]byte, len(content))
+				copy(dst.merkleLayers[i][j], content)
+			}
 		}
 	}
 
