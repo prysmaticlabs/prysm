@@ -5,6 +5,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"strings"
@@ -88,8 +89,13 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 	if err != nil {
 		log.WithError(err).Error("Failed to obtain public keys for validation")
 	} else {
-		for _, key := range pubKeys {
-			log.WithField("pubKey", fmt.Sprintf("%#x", key)).Info("Validating for public key")
+		if len(pubKeys) == 0 {
+			log.Warn("No keys found; nothing to validate")
+		} else {
+			log.WithField("validators", len(pubKeys)).Info("Found validator keys")
+			for _, key := range pubKeys {
+				log.WithField("pubKey", fmt.Sprintf("%#x", key)).Info("Validating for public key")
+			}
 		}
 	}
 
@@ -201,6 +207,12 @@ func selectKeyManager(ctx *cli.Context) (keymanager.KeyManager, error) {
 	opts := ctx.String(flags.KeyManagerOpts.Name)
 	if opts == "" {
 		opts = "{}"
+	} else if !strings.HasPrefix(opts, "{") {
+		fileopts, err := ioutil.ReadFile(opts)
+		if err != nil {
+			return nil, errors.Wrap(err, "Failed to read keymanager options file")
+		}
+		opts = string(fileopts)
 	}
 
 	if manager == "" {
@@ -240,6 +252,8 @@ func selectKeyManager(ctx *cli.Context) (keymanager.KeyManager, error) {
 		km, help, err = keymanager.NewUnencrypted(opts)
 	case "keystore":
 		km, help, err = keymanager.NewKeystore(opts)
+	case "wallet":
+		km, help, err = keymanager.NewWallet(opts)
 	default:
 		return nil, fmt.Errorf("unknown keymanager %q", manager)
 	}

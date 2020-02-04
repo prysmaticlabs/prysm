@@ -80,10 +80,6 @@ var (
 		Usage: "Cache filtered block tree by maintaining it rather than continually recalculating on the fly, " +
 			"this is used for fork choice.",
 	}
-	cacheProposerIndicesFlag = cli.BoolFlag{
-		Name:  "cache-proposer-indices",
-		Usage: "Cache proposer indices on per epoch basis.",
-	}
 	protectProposerFlag = cli.BoolFlag{
 		Name: "protect-proposer",
 		Usage: "Prevent the validator client from signing and broadcasting 2 different block " +
@@ -185,6 +181,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedCacheProposerIndicesFlag = cli.BoolFlag{
+		Name:   "cache-proposer-indices",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -204,6 +205,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedNewCacheFlag,
 	deprecatedEnableShuffledIndexCacheFlag,
 	deprecatedSaveDepositDataFlag,
+	deprecatedCacheProposerIndicesFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -236,7 +238,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableSkipSlotsCacheFlag,
 	enableSlasherFlag,
 	cacheFilteredBlockTreeFlag,
-	cacheProposerIndicesFlag,
 	protoArrayForkChoice,
 }...)
 
