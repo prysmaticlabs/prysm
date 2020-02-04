@@ -120,6 +120,10 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
 		s.finalizedCheckpt = postState.FinalizedCheckpoint()
+
+		if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
+			return nil, errors.Wrap(err, "could not save new justified")
+		}
 	}
 
 	// Update validator indices in database as needed.
@@ -222,6 +226,10 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
 		s.finalizedCheckpt = postState.FinalizedCheckpoint()
+
+		if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
+			return nil, errors.Wrap(err, "could not save new justified")
+		}
 	}
 
 	// Update validator indices in database as needed.
