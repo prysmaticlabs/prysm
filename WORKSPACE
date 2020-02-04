@@ -876,7 +876,7 @@ go_repository(
 go_repository(
     name = "io_k8s_apimachinery",
     build_file_proto_mode = "disable_global",
-    commit = "79c2a76c473a20cdc4ce59cae4b72529b5d9d16b",  # v0.17.2
+    commit = "bfcf53abc9f82bad3e534fcb1c36599d3c989ebf",
     importpath = "k8s.io/apimachinery",
 )
 
@@ -1216,7 +1216,7 @@ go_repository(
 
 go_repository(
     name = "com_github_google_go_cmp",
-    commit = "2d0692c2e9617365a95b295612ac0d4415ba4627",  # v0.3.1
+    commit = "5a6f75716e1203a923a78c9efb94089d857df0f6",  # v0.4.0
     importpath = "github.com/google/go-cmp",
 )
 
@@ -1450,7 +1450,7 @@ go_repository(
 
 go_repository(
     name = "com_github_dgraph_io_ristretto",
-    commit = "99d1bbbf28e64530eb246be0568fc7709a35ebdd",
+    commit = "99d1bbbf28e64530eb246be0568fc7709a35ebdd",  # v0.0.1
     importpath = "github.com/dgraph-io/ristretto",
 )
 
