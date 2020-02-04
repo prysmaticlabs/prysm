@@ -1042,7 +1042,7 @@ go_repository(
 
 go_repository(
     name = "com_github_apache_thrift",
-    commit = "384647d290e2e4a55a14b1b7ef1b7e66293a2c33",  # v0.12.0
+    commit = "cecee50308fc7e6f77f55b3fd906c1c6c471fa2f",  # v0.13.0
     importpath = "github.com/apache/thrift",
 )
 
