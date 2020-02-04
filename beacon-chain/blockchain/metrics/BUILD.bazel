@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = ["metrics.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/metrics",
-    visibility = ["//visibility:public"],
+    visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/core/epoch/precompute:go_default_library",
         "//beacon-chain/state:go_default_library",
