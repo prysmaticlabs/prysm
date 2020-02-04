@@ -446,7 +446,7 @@ go_repository(
 
 go_repository(
     name = "com_github_jbenet_goprocess",
-    commit = "1dc239722b2ba3784472fb5301f62640fa5a8bc3",  # v0.1.3
+    commit = "7f9d9ed286badffcf2122cfeb383ec37daf92508",
     importpath = "github.com/jbenet/goprocess",
 )
 
@@ -482,7 +482,7 @@ go_repository(
 
 go_repository(
     name = "com_github_mattn_go_isatty",
-    commit = "e1f7b56ace729e4a73a29a6b4fac6cd5fcda7ab3",  # v0.0.9
+    commit = "7b513a986450394f7bbf1476909911b3aa3a55ce",
     importpath = "github.com/mattn/go-isatty",
 )
 
@@ -632,7 +632,7 @@ go_repository(
 
 go_repository(
     name = "com_github_emicklei_dot",
-    commit = "f4a04130244d60cef56086d2f649b4b55e9624aa",
+    commit = "5810de2f2ab7aac98cd7bcbd59147a7ca6071768",
     importpath = "github.com/emicklei/dot",
 )
 
@@ -695,19 +695,19 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_client_model",
-    commit = "fd36f4220a901265f90734c3183c5f0c91daa0b8",
+    commit = "7bc5445566f0fe75b15de23e6b93886e982d7bf9",
     importpath = "github.com/prometheus/client_model",
 )
 
 go_repository(
     name = "com_github_prometheus_common",
-    commit = "287d3e634a1e550c9e463dd7e5a75a422c614505",  # v0.7.0
+    commit = "d978bcb1309602d68bb4ba69cf3f8ed900e07308",
     importpath = "github.com/prometheus/common",
 )
 
 go_repository(
     name = "com_github_prometheus_procfs",
-    commit = "499c85531f756d1129edd26485a5f73871eeb308",  # v0.0.5
+    commit = "6d489fc7f1d9cd890a250f3ea3431b1744b9623f",
     importpath = "github.com/prometheus/procfs",
 )
 
