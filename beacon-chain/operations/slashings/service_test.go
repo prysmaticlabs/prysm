@@ -23,6 +23,32 @@ func attesterSlashingForValIdx(valIdx uint64) *ethpb.AttesterSlashing {
 	}
 }
 
+func pendingSlashingForValIdx(valIdx uint64) *PendingAttesterSlashing {
+	return &PendingAttesterSlashing{
+		attesterSlashing: attesterSlashingForValIdx(valIdx),
+		validatorToSlash: valIdx,
+	}
+}
+
+func generate0ToNSlashings(n uint64) []*ethpb.AttesterSlashing {
+	attesterSlashings := make([]*ethpb.AttesterSlashing, n)
+	for i := uint64(0); i < n; i++ {
+		attesterSlashings[i] = attesterSlashingForValIdx(i)
+	}
+	return attesterSlashings
+}
+
+func generate0ToNPendingSlashings(n uint64) []*PendingAttesterSlashing {
+	pendingAttSlashings := make([]*PendingAttesterSlashing, n)
+	for i := uint64(0); i < n; i++ {
+		pendingAttSlashings[i] = &PendingAttesterSlashing{
+			attesterSlashing: attesterSlashingForValIdx(i),
+			validatorToSlash: i,
+		}
+	}
+	return pendingAttSlashings
+}
+
 func TestPool_InsertAttesterSlashing(t *testing.T) {
 	type fields struct {
 		pending  []*PendingAttesterSlashing
@@ -44,25 +70,11 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 				included: make(map[uint64]bool),
 			},
 			args: args{
-				slashings: &ethpb.AttesterSlashing{
-					Attestation_1: &ethpb.IndexedAttestation{
-						AttestingIndices: []uint64{1},
-					},
-					Attestation_2: &ethpb.IndexedAttestation{
-						AttestingIndices: []uint64{1},
-					},
-				},
+				slashings: attesterSlashingForValIdx(1),
 			},
 			want: []*PendingAttesterSlashing{
 				{
-					attesterSlashing: &ethpb.AttesterSlashing{
-						Attestation_1: &ethpb.IndexedAttestation{
-							AttestingIndices: []uint64{1},
-						},
-						Attestation_2: &ethpb.IndexedAttestation{
-							AttestingIndices: []uint64{1},
-						},
-					},
+					attesterSlashing: attesterSlashingForValIdx(1),
 					validatorToSlash: 1,
 				},
 			},
@@ -265,20 +277,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 			args: args{
 				slashings: attesterSlashingForValIdx(1),
 			},
-			want: []*PendingAttesterSlashing{
-				{
-					attesterSlashing: attesterSlashingForValIdx(0),
-					validatorToSlash: 0,
-				},
-				{
-					attesterSlashing: attesterSlashingForValIdx(1),
-					validatorToSlash: 1,
-				},
-				{
-					attesterSlashing: attesterSlashingForValIdx(2),
-					validatorToSlash: 2,
-				},
-			},
+			want: generate0ToNPendingSlashings(3),
 		},
 		{
 			name: "Already included",
@@ -451,129 +450,48 @@ func TestPool_MarkIncludedAttesterSlashing(t *testing.T) {
 	}
 }
 
-//
-//func TestPool_PendingAttesterSlashings(t *testing.T) {
-//	type fields struct {
-//		pending []*ethpb.SignedVoluntaryExit
-//	}
-//	type args struct {
-//		slot uint64
-//	}
-//	tests := []struct {
-//		name   string
-//		fields fields
-//		args   args
-//		want   []*ethpb.SignedVoluntaryExit
-//	}{
-//		{
-//			name: "Empty list",
-//			fields: fields{
-//				pending: []*ethpb.SignedVoluntaryExit{},
-//			},
-//			args: args{
-//				slot: 100000,
-//			},
-//			want: []*ethpb.SignedVoluntaryExit{},
-//		},
-//		{
-//			name: "All eligible",
-//			fields: fields{
-//				pending: []*ethpb.SignedVoluntaryExit{
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 0}},
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 1}},
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 2}},
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 3}},
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 4}},
-//				},
-//			},
-//			args: args{
-//				slot: 1000000,
-//			},
-//			want: []*ethpb.SignedVoluntaryExit{
-//				{Exit: &ethpb.VoluntaryExit{Epoch: 0}},
-//				{Exit: &ethpb.VoluntaryExit{Epoch: 1}},
-//				{Exit: &ethpb.VoluntaryExit{Epoch: 2}},
-//				{Exit: &ethpb.VoluntaryExit{Epoch: 3}},
-//				{Exit: &ethpb.VoluntaryExit{Epoch: 4}},
-//			},
-//		},
-//		{
-//			name: "All eligible, more than max",
-//			fields: fields{
-//				pending: []*ethpb.SignedVoluntaryExit{
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 0}},
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 1}},
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 2}},
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 3}},
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 4}},
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 5}},
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 6}},
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 7}},
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 8}},
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 9}},
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 10}},
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 11}},
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 12}},
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 13}},
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 14}},
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 15}},
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 16}},
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 17}},
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 18}},
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 19}},
-//				},
-//			},
-//			args: args{
-//				slot: 1000000,
-//			},
-//			want: []*ethpb.SignedVoluntaryExit{
-//				{Exit: &ethpb.VoluntaryExit{Epoch: 0}},
-//				{Exit: &ethpb.VoluntaryExit{Epoch: 1}},
-//				{Exit: &ethpb.VoluntaryExit{Epoch: 2}},
-//				{Exit: &ethpb.VoluntaryExit{Epoch: 3}},
-//				{Exit: &ethpb.VoluntaryExit{Epoch: 4}},
-//				{Exit: &ethpb.VoluntaryExit{Epoch: 5}},
-//				{Exit: &ethpb.VoluntaryExit{Epoch: 6}},
-//				{Exit: &ethpb.VoluntaryExit{Epoch: 7}},
-//				{Exit: &ethpb.VoluntaryExit{Epoch: 8}},
-//				{Exit: &ethpb.VoluntaryExit{Epoch: 9}},
-//				{Exit: &ethpb.VoluntaryExit{Epoch: 10}},
-//				{Exit: &ethpb.VoluntaryExit{Epoch: 11}},
-//				{Exit: &ethpb.VoluntaryExit{Epoch: 12}},
-//				{Exit: &ethpb.VoluntaryExit{Epoch: 13}},
-//				{Exit: &ethpb.VoluntaryExit{Epoch: 14}},
-//				{Exit: &ethpb.VoluntaryExit{Epoch: 15}},
-//			},
-//		},
-//		{
-//			name: "Some eligible",
-//			fields: fields{
-//				pending: []*ethpb.SignedVoluntaryExit{
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 0}},
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 3}},
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 4}},
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 2}},
-//					{Exit: &ethpb.VoluntaryExit{Epoch: 1}},
-//				},
-//			},
-//			args: args{
-//				slot: 2 * params.BeaconConfig().SlotsPerEpoch,
-//			},
-//			want: []*ethpb.SignedVoluntaryExit{
-//				{Exit: &ethpb.VoluntaryExit{Epoch: 0}},
-//				{Exit: &ethpb.VoluntaryExit{Epoch: 2}},
-//				{Exit: &ethpb.VoluntaryExit{Epoch: 1}},
-//			},
-//		},
-//	}
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			p := &Pool{
-//				pending: tt.fields.pending,
-//			}
-//			if got := p.PendingExits(tt.args.slot); !reflect.DeepEqual(got, tt.want) {
-//				t.Errorf("PendingExits() = %v, want %v", got, tt.want)
-//			}
-//		})
-//	}
-//}
+func TestPool_PendingAttesterSlashings(t *testing.T) {
+	type fields struct {
+		pending []*PendingAttesterSlashing
+	}
+	type args struct {
+		validatorToSlash uint64
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   []*PendingAttesterSlashing
+	}{
+		{
+			name: "Empty list",
+			fields: fields{
+				pending: []*PendingAttesterSlashing{},
+			},
+			want: []*PendingAttesterSlashing{},
+		},
+		{
+			name: "All eligible",
+			fields: fields{
+				pending: generate0ToNPendingSlashings(6),
+			},
+			want: generate0ToNPendingSlashings(6),
+		},
+		{
+			name: "All eligible, more than max",
+			fields: fields{
+				pending: generate0ToNPendingSlashings(16),
+			},
+			want: generate0ToNPendingSlashings(16),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := &Pool{
+				pendingAttesterSlashing: tt.fields.pending,
+			}
+			if got := p.PendingAttesterSlashings(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("PendingExits() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
