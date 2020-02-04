@@ -423,6 +423,9 @@ func (s *Service) initDataFromContract() error {
 }
 
 func (s *Service) initDepositCaches(ctx context.Context, ctrs []*protodb.DepositContainer) error {
+	if ctrs == nil || len(ctrs) == 0 {
+		return nil
+	}
 	s.depositCache.InsertDepositContainers(ctx, ctrs)
 	currentState, err := s.beaconDB.HeadState(ctx)
 	if err != nil {
@@ -588,7 +591,7 @@ func (s *Service) run(done <-chan struct{}) {
 			log.Debug("Context closed, exiting goroutine")
 			return
 		case s.runError = <-headSub.Err():
-			log.WithError(s.runError).Error("Subscription to new head notifier failed")
+			log.WithError(s.runError).Warn("Subscription to new head notifier failed")
 			s.connectedETH1 = false
 			s.waitForConnection()
 			headSub, err = s.reader.SubscribeNewHead(s.ctx, s.headerChan)

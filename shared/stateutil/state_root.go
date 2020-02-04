@@ -64,10 +64,11 @@ func (h *stateRootHasher) hashTreeRootState(state *pb.BeaconState) ([32]byte, er
 		if err != nil {
 			return [32]byte{}, err
 		}
-	}
-	fieldRoots, err = nocachedHasher.computeFieldRoots(state)
-	if err != nil {
-		return [32]byte{}, err
+	} else {
+		fieldRoots, err = nocachedHasher.computeFieldRoots(state)
+		if err != nil {
+			return [32]byte{}, err
+		}
 	}
 	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }

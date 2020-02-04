@@ -1261,7 +1261,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_ethereumapis",
-    commit = "e1e8777cb75e9dd568c1a8e096b0497bfe37d631",
+    commit = "c2c488463094ba91ed5d8f147a0abbabb1220d10",
     importpath = "github.com/prysmaticlabs/ethereumapis",
     patch_args = ["-p1"],
     patches = [
@@ -1485,4 +1485,82 @@ go_repository(
     importpath = "github.com/kevinms/leakybucket-go",
     sum = "h1:oq6BiN7v0MfWCRcJAxSV+hesVMAAV8COrQbTjYNnso4=",
     version = "v0.0.0-20190611015032-8a3d0352aa79",
+)
+
+go_repository(
+    name = "com_github_wealdtech_go_eth2_wallet",
+    commit = "6970d62e60d86fdae3c3e510e800e8a60d755a7d",
+    importpath = "github.com/wealdtech/go-eth2-wallet",
+)
+
+go_repository(
+    name = "com_github_wealdtech_go_eth2_wallet_hd",
+    commit = "ce0a252a01c621687e9786a64899cfbfe802ba73",
+    importpath = "github.com/wealdtech/go-eth2-wallet-hd",
+)
+
+go_repository(
+    name = "com_github_wealdtech_go_eth2_wallet_nd",
+    commit = "12c8c41cdbd16797ff292e27f58e126bb89e9706",
+    importpath = "github.com/wealdtech/go-eth2-wallet-nd",
+)
+
+go_repository(
+    name = "com_github_wealdtech_go_eth2_wallet_store_filesystem",
+    commit = "1eea6a48d75380047d2ebe7c8c4bd8985bcfdeca",
+    importpath = "github.com/wealdtech/go-eth2-wallet-store-filesystem",
+)
+
+go_repository(
+    name = "com_github_wealdtech_go_eth2_wallet_store_s3",
+    commit = "1c821b5161f7bb0b3efa2030eff687eea5e70e53",
+    importpath = "github.com/wealdtech/go-eth2-wallet-store-s3",
+)
+
+go_repository(
+    name = "com_github_wealdtech_go_eth2_wallet_encryptor_keystorev4",
+    commit = "0c11c07b9544eb662210fadded94f40f309d8c8f",
+    importpath = "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4",
+)
+
+go_repository(
+    name = "com_github_wealdtech_go_eth2_wallet_types",
+    commit = "af67d8101be61e7c4dd8126d2b3eba20cff5dab2",
+    importpath = "github.com/wealdtech/go-eth2-wallet-types",
+)
+
+go_repository(
+    name = "com_github_wealdtech_go_eth2_types",
+    commit = "f9c31ddf180537dd5712d5998a3d56c45864d71f",
+    importpath = "github.com/wealdtech/go-eth2-types",
+)
+
+go_repository(
+    name = "com_github_wealdtech_go_eth2_util",
+    commit = "326ebb1755651131bb8f4506ea9a23be6d9ad1dd",
+    importpath = "github.com/wealdtech/go-eth2-util",
+)
+
+go_repository(
+    name = "com_github_wealdtech_go_ecodec",
+    commit = "7473d835445a3490e61a5fcf48fe4e9755a37957",
+    importpath = "github.com/wealdtech/go-ecodec",
+)
+
+go_repository(
+    name = "com_github_wealdtech_go_bytesutil",
+    commit = "e564d0ade555b9f97494f0f669196ddcc6bc531d",
+    importpath = "github.com/wealdtech/go-bytesutil",
+)
+
+go_repository(
+    name = "com_github_wealdtech_go_indexer",
+    commit = "334862c32b1e3a5c6738a2618f5c0a8ebeb8cd51",
+    importpath = "github.com/wealdtech/go-indexer",
+)
+
+go_repository(
+    name = "com_github_shibukawa_configdir",
+    commit = "e180dbdc8da04c4fa04272e875ce64949f38bd3e",
+    importpath = "github.com/shibukawa/configdir",
 )
