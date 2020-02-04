@@ -48,6 +48,7 @@ go_test(
         "attestations_test.go",
         "blocks_test.go",
         "committees_test.go",
+        "config_test.go",
         "validators_test.go",
     ],
     embed = [":go_default_library"],

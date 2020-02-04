@@ -356,3 +356,32 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byt
 
 	return s.ancestor(ctx, b.ParentRoot, slot)
 }
+
+// This updates justified check point in store, if the new justified is later than stored justified or
+// the store's justified is not in chain with finalized check point.
+//
+// Spec definition:
+//   if (
+//            state.current_justified_checkpoint.epoch > store.justified_checkpoint.epoch
+//            or get_ancestor(store, store.justified_checkpoint.root, finalized_slot) != store.finalized_checkpoint.root
+//        ):
+//            store.justified_checkpoint = state.current_justified_checkpoint
+func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state *stateTrie.BeaconState) error {
+	finalizedBlkSigned, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root))
+	if err != nil || finalizedBlkSigned == nil || finalizedBlkSigned.Block == nil {
+		return errors.Wrap(err, "could not get finalized block")
+	}
+	finalizedBlk := finalizedBlkSigned.Block
+
+	anc, err := s.ancestor(ctx, s.justifiedCheckpt.Root, finalizedBlk.Slot)
+	if err != nil {
+		return err
+	}
+
+	// Either the new justified is later than stored justified or not in chain with finalized check pint.
+	if cpt := state.CurrentJustifiedCheckpoint(); cpt != nil && cpt.Epoch > s.justifiedCheckpt.Epoch || !bytes.Equal(anc, s.finalizedCheckpt.Root) {
+		s.justifiedCheckpt = state.CurrentJustifiedCheckpoint()
+	}
+
+	return nil
+}

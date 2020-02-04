@@ -119,6 +119,10 @@ func (b *BeaconState) Fork() *pbp2p.Fork {
 	if b.state.Fork == nil {
 		return nil
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	prevVersion := make([]byte, len(b.state.Fork.PreviousVersion))
 	copy(prevVersion, b.state.Fork.PreviousVersion)
 	currVersion := make([]byte, len(b.state.Fork.PreviousVersion))
@@ -135,6 +139,10 @@ func (b *BeaconState) LatestBlockHeader() *ethpb.BeaconBlockHeader {
 	if b.state.LatestBlockHeader == nil {
 		return nil
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	hdr := &ethpb.BeaconBlockHeader{
 		Slot: b.state.LatestBlockHeader.Slot,
 	}
@@ -154,6 +162,9 @@ func (b *BeaconState) LatestBlockHeader() *ethpb.BeaconBlockHeader {
 
 // BlockRoots kept track of in the beacon state.
 func (b *BeaconState) BlockRoots() [][]byte {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	if b.state.BlockRoots == nil {
 		return nil
 	}
@@ -172,6 +183,10 @@ func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
 	if b.state.BlockRoots == nil {
 		return nil, nil
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	if len(b.state.BlockRoots) <= int(idx) {
 		return nil, fmt.Errorf("index %d out of range", idx)
 	}
@@ -185,6 +200,10 @@ func (b *BeaconState) StateRoots() [][]byte {
 	if b.state.StateRoots == nil {
 		return nil
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	roots := make([][]byte, len(b.state.StateRoots))
 	for i, r := range b.state.StateRoots {
 		tmpRt := make([]byte, len(r))
@@ -199,6 +218,10 @@ func (b *BeaconState) HistoricalRoots() [][]byte {
 	if b.state.HistoricalRoots == nil {
 		return nil
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	roots := make([][]byte, len(b.state.HistoricalRoots))
 	for i, r := range b.state.HistoricalRoots {
 		tmpRt := make([]byte, len(r))
@@ -240,6 +263,10 @@ func (b *BeaconState) Validators() []*ethpb.Validator {
 	if b.state.Validators == nil {
 		return nil
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	res := make([]*ethpb.Validator, len(b.state.Validators))
 	for i := 0; i < len(res); i++ {
 		val := b.state.Validators[i]
@@ -270,6 +297,10 @@ func (b *BeaconState) ValidatorsReadOnly() []*ReadOnlyValidator {
 	if b.state.Validators == nil {
 		return nil
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	res := make([]*ReadOnlyValidator, len(b.state.Validators))
 	for i := 0; i < len(res); i++ {
 		val := b.state.Validators[i]
@@ -286,6 +317,10 @@ func (b *BeaconState) ValidatorAtIndex(idx uint64) (*ethpb.Validator, error) {
 	if len(b.state.Validators) <= int(idx) {
 		return nil, fmt.Errorf("index %d out of range", idx)
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	val := b.state.Validators[idx]
 	pubKey := make([]byte, len(val.PublicKey))
 	copy(pubKey, val.PublicKey)
@@ -309,6 +344,10 @@ func (b *BeaconState) ValidatorAtIndexReadOnly(idx uint64) (*ReadOnlyValidator, 
 	if b.state.Validators == nil {
 		return &ReadOnlyValidator{}, nil
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	if len(b.state.Validators) <= int(idx) {
 		return nil, fmt.Errorf("index %d out of range", idx)
 	}
@@ -324,6 +363,9 @@ func (b *BeaconState) ValidatorIndexByPubkey(key [48]byte) (uint64, bool) {
 }
 
 func (b *BeaconState) validatorIndexMap() map[[48]byte]uint64 {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	m := make(map[[48]byte]uint64, len(b.valIdxMap))
 
 	for k, v := range b.valIdxMap {
@@ -335,6 +377,9 @@ func (b *BeaconState) validatorIndexMap() map[[48]byte]uint64 {
 // PubkeyAtIndex returns the pubkey at the given
 // validator index.
 func (b *BeaconState) PubkeyAtIndex(idx uint64) [48]byte {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	return bytesutil.ToBytes48(b.state.Validators[idx].PublicKey)
 }
 
@@ -346,6 +391,9 @@ func (b *BeaconState) NumValidators() int {
 // ReadFromEveryValidator reads values from every validator and applies it to the provided function.
 // Warning: This method is potentially unsafe, as it exposes the actual validator registry.
 func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val *ReadOnlyValidator) error) error {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	for i, v := range b.state.Validators {
 		err := f(i, &ReadOnlyValidator{validator: v})
 		if err != nil {
@@ -360,6 +408,9 @@ func (b *BeaconState) Balances() []uint64 {
 	if b.state.Balances == nil {
 		return nil
 	}
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	res := make([]uint64, len(b.state.Balances))
 	copy(res, b.state.Balances)
 	return res
@@ -370,6 +421,10 @@ func (b *BeaconState) BalanceAtIndex(idx uint64) (uint64, error) {
 	if b.state.Balances == nil {
 		return 0, nil
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	if len(b.state.Balances) <= int(idx) {
 		return 0, fmt.Errorf("index of %d does not exist", idx)
 	}
@@ -381,6 +436,10 @@ func (b *BeaconState) RandaoMixes() [][]byte {
 	if b.state.RandaoMixes == nil {
 		return nil
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	mixes := make([][]byte, len(b.state.RandaoMixes))
 	for i, r := range b.state.RandaoMixes {
 		tmpRt := make([]byte, len(r))
@@ -396,6 +455,10 @@ func (b *BeaconState) RandaoMixAtIndex(idx uint64) ([]byte, error) {
 	if b.state.RandaoMixes == nil {
 		return nil, nil
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	if len(b.state.RandaoMixes) <= int(idx) {
 		return nil, fmt.Errorf("index %d out of range", idx)
 	}
@@ -409,6 +472,10 @@ func (b *BeaconState) Slashings() []uint64 {
 	if b.state.Slashings == nil {
 		return nil
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	res := make([]uint64, len(b.state.Slashings))
 	copy(res, b.state.Slashings)
 	return res
@@ -419,6 +486,10 @@ func (b *BeaconState) PreviousEpochAttestations() []*pbp2p.PendingAttestation {
 	if b.state.PreviousEpochAttestations == nil {
 		return nil
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	res := make([]*pbp2p.PendingAttestation, len(b.state.PreviousEpochAttestations))
 	for i := 0; i < len(res); i++ {
 		res[i] = CopyPendingAttestation(b.state.PreviousEpochAttestations[i])
@@ -431,6 +502,10 @@ func (b *BeaconState) CurrentEpochAttestations() []*pbp2p.PendingAttestation {
 	if b.state.CurrentEpochAttestations == nil {
 		return nil
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	res := make([]*pbp2p.PendingAttestation, len(b.state.CurrentEpochAttestations))
 	for i := 0; i < len(res); i++ {
 		res[i] = CopyPendingAttestation(b.state.CurrentEpochAttestations[i])
@@ -443,6 +518,10 @@ func (b *BeaconState) JustificationBits() bitfield.Bitvector4 {
 	if b.state.JustificationBits == nil {
 		return nil
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	res := make([]byte, len(b.state.JustificationBits.Bytes()))
 	copy(res, b.state.JustificationBits.Bytes())
 	return res
@@ -453,6 +532,10 @@ func (b *BeaconState) PreviousJustifiedCheckpoint() *ethpb.Checkpoint {
 	if b.state.PreviousJustifiedCheckpoint == nil {
 		return nil
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	return CopyCheckpoint(b.state.PreviousJustifiedCheckpoint)
 }
 
@@ -461,6 +544,10 @@ func (b *BeaconState) CurrentJustifiedCheckpoint() *ethpb.Checkpoint {
 	if b.state.CurrentJustifiedCheckpoint == nil {
 		return nil
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	return CopyCheckpoint(b.state.CurrentJustifiedCheckpoint)
 }
 
@@ -469,6 +556,10 @@ func (b *BeaconState) FinalizedCheckpoint() *ethpb.Checkpoint {
 	if b.state.FinalizedCheckpoint == nil {
 		return nil
 	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	return CopyCheckpoint(b.state.FinalizedCheckpoint)
 }
 
@@ -477,6 +568,7 @@ func CopyETH1Data(data *ethpb.Eth1Data) *ethpb.Eth1Data {
 	if data == nil {
 		return &ethpb.Eth1Data{}
 	}
+
 	newETH1 := &ethpb.Eth1Data{
 		DepositCount: data.DepositCount,
 	}
