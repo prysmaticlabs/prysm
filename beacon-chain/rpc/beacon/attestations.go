@@ -43,11 +43,11 @@ func (bs *Server) ListAttestations(
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListAttestationsRequest_Genesis:
 		genBlk, err := bs.BeaconDB.GenesisBlock(ctx)
-		if genBlk == nil {
-			return nil, status.Error(codes.Internal, "Could not find genesis block")
-		}
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not genesis block: %v", err)
+		}
+		if genBlk == nil {
+			return nil, status.Error(codes.Internal, "Could not find genesis block")
 		}
 		genesisRoot, err := ssz.HashTreeRoot(genBlk.Block)
 		if err != nil {
