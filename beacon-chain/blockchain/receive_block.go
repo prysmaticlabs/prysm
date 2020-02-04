@@ -131,6 +131,10 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 	} else {
 		headRoot := make([]byte, 0)
 		if featureconfig.Get().ProtoArrayForkChoice {
+			if s.bestJustifiedCheckpt.Epoch > s.justifiedCheckpt.Epoch {
+				s.justifiedCheckpt = s.bestJustifiedCheckpt
+			}
+
 			f := s.finalizedCheckpt
 			j := s.justifiedCheckpt
 			headRootProtoArray, err := s.forkChoiceStore.Head(
