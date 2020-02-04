@@ -75,7 +75,6 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 		}
 	}
 
-	processedAttNoPubsub.Inc()
 	return nil
 }
 
