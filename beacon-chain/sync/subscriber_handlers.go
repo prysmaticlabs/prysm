@@ -17,11 +17,19 @@ func (r *Service) voluntaryExitSubscriber(ctx context.Context, msg proto.Message
 }
 
 func (r *Service) attesterSlashingSubscriber(ctx context.Context, msg proto.Message) error {
-	// TODO(#3259): Requires handlers in operations service to be implemented.
+	s, err := r.chain.HeadState(ctx)
+	if err != nil {
+		return err
+	}
+	r.slashingPool.InsertAttesterSlashing(ctx, s, msg.(*ethpb.AttesterSlashing))
 	return nil
 }
 
 func (r *Service) proposerSlashingSubscriber(ctx context.Context, msg proto.Message) error {
-	// TODO(#3259): Requires handlers in operations service to be implemented.
+	s, err := r.chain.HeadState(ctx)
+	if err != nil {
+		return err
+	}
+	r.slashingPool.InsertProposerSlashing(ctx, s, msg.(*ethpb.ProposerSlashing))
 	return nil
 }

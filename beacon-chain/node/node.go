@@ -14,6 +14,8 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/archiver"
@@ -62,6 +64,7 @@ type BeaconNode struct {
 	db              db.Database
 	attestationPool attestations.Pool
 	exitPool        *voluntaryexits.Pool
+	slashingPool    *slashings.Pool
 	depositCache    *depositcache.DepositCache
 	stateFeed       *event.Feed
 	opFeed          *event.Feed
@@ -107,6 +110,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		opFeed:          new(event.Feed),
 		attestationPool: attestations.NewPool(),
 		exitPool:        voluntaryexits.NewPool(),
+		slashingPool:    slashings.NewPool(),
 	}
 
 	if err := beacon.startDB(ctx); err != nil {
@@ -319,6 +323,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		ChainStartFetcher: web3Service,
 		AttPool:           b.attestationPool,
 		ExitPool:          b.exitPool,
+		SlashingPool:      b.slashingPool,
 		P2p:               b.fetchP2P(ctx),
 		MaxRoutines:       maxRoutines,
 		StateNotifier:     b,
@@ -409,6 +414,7 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 		StateNotifier: b,
 		AttPool:       b.attestationPool,
 		ExitPool:      b.exitPool,
+		SlashingPool:  b.slashingPool,
 	})
 
 	return b.services.RegisterService(rs)

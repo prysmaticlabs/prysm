@@ -30,11 +30,9 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.RequestBlock")
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
-
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
-
 	// Retrieve the parent block as the current head of the canonical chain.
 	parentRoot, err := vs.HeadFetcher.HeadRoot(ctx)
 	if err != nil {
@@ -73,13 +71,12 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 		ParentRoot: parentRoot[:],
 		StateRoot:  stateRoot,
 		Body: &ethpb.BeaconBlockBody{
-			Eth1Data:     eth1Data,
-			Deposits:     deposits,
-			Attestations: atts,
-			RandaoReveal: req.RandaoReveal,
-			// TODO(2766): Implement rest of the retrievals for beacon block operations
-			ProposerSlashings: []*ethpb.ProposerSlashing{},
-			AttesterSlashings: []*ethpb.AttesterSlashing{},
+			Eth1Data:          eth1Data,
+			Deposits:          deposits,
+			Attestations:      atts,
+			RandaoReveal:      req.RandaoReveal,
+			ProposerSlashings: vs.SlashingPool.PendingProposerSlashings(),
+			AttesterSlashings: vs.SlashingPool.PendingAttesterSlashings(),
 			VoluntaryExits:    vs.ExitPool.PendingExits(head, req.Slot),
 			Graffiti:          graffiti[:],
 		},

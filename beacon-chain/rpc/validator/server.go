@@ -4,6 +4,10 @@ import (
 	"context"
 	"time"
 
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
+
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -53,6 +57,8 @@ type Server struct {
 	P2P                    p2p.Broadcaster
 	AttPool                attestations.Pool
 	ExitPool               *voluntaryexits.Pool
+	SlashingPool           *slashings.Pool
+	SlasherClient          *slashpb.SlasherClient
 	BlockReceiver          blockchain.BlockReceiver
 	MockEth1Votes          bool
 	Eth1BlockFetcher       powchain.POWBlockFetcher

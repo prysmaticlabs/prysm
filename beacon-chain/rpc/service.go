@@ -8,6 +8,8 @@ import (
 	"net"
 	"os"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
+
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -66,6 +68,7 @@ type Service struct {
 	mockEth1Votes          bool
 	attestationsPool       attestations.Pool
 	exitPool               *voluntaryexits.Pool
+	slashingPool           *slashings.Pool
 	syncService            sync.Checker
 	host                   string
 	port                   string
@@ -86,7 +89,7 @@ type Service struct {
 	slasherProvider        string
 	slasherCert            string
 	slasherCredentialError error
-	slasherClient          slashpb.SlasherClient
+	slasherClient          *slashpb.SlasherClient
 }
 
 // Config options for the beacon node RPC server.
@@ -108,6 +111,7 @@ type Config struct {
 	MockEth1Votes         bool
 	AttestationsPool      attestations.Pool
 	ExitPool              *voluntaryexits.Pool
+	SlashingPool          *slashings.Pool
 	SyncService           sync.Checker
 	Broadcaster           p2p.Broadcaster
 	PeersFetcher          p2p.PeersProvider
@@ -207,6 +211,8 @@ func (s *Service) Start() {
 		AttestationCache:       cache.NewAttestationCache(),
 		AttPool:                s.attestationsPool,
 		ExitPool:               s.exitPool,
+		SlashingPool:           s.slashingPool,
+		SlasherClient:          s.slasherClient,
 		HeadFetcher:            s.headFetcher,
 		ForkFetcher:            s.forkFetcher,
 		FinalizationFetcher:    s.finalizationFetcher,

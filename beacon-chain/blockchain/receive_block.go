@@ -112,6 +112,12 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 	for _, exit := range block.Block.Body.VoluntaryExits {
 		s.exitPool.MarkIncluded(exit)
 	}
+	for _, pSlashing := range block.Block.Body.ProposerSlashings {
+		s.slashingPool.MarkIncludedProposerSlashing(pSlashing)
+	}
+	for _, aSlashing := range block.Block.Body.AttesterSlashings {
+		s.slashingPool.MarkIncludedAttesterSlashing(aSlashing)
+	}
 
 	// Reports on block and fork choice metrics.
 	s.reportSlotMetrics(blockCopy.Block.Slot)

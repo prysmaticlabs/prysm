@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -49,6 +51,7 @@ type Service struct {
 	chainStartFetcher      powchain.ChainStartFetcher
 	attPool                attestations.Pool
 	exitPool               *voluntaryexits.Pool
+	slashingPool           *slashings.Pool
 	forkChoiceStoreOld     forkchoice.ForkChoicer
 	genesisTime            time.Time
 	p2p                    p2p.Broadcaster
@@ -83,6 +86,7 @@ type Config struct {
 	DepositCache      *depositcache.DepositCache
 	AttPool           attestations.Pool
 	ExitPool          *voluntaryexits.Pool
+	SlashingPool      *slashings.Pool
 	P2p               p2p.Broadcaster
 	MaxRoutines       int64
 	StateNotifier     statefeed.Notifier
@@ -102,6 +106,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		chainStartFetcher:  cfg.ChainStartFetcher,
 		attPool:            cfg.AttPool,
 		exitPool:           cfg.ExitPool,
+		slashingPool:       cfg.SlashingPool,
 		forkChoiceStoreOld: store,
 		p2p:                cfg.P2p,
 		canonicalRoots:     make(map[uint64][]byte),
