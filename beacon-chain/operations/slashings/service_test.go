@@ -2,6 +2,7 @@ package slashings
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -421,106 +422,177 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 	}
 }
 
-//func TestPool_MarkIncludedAttesterSlashing(t *testing.T) {
-//	type fields struct {
-//		pending  []*ethpb.SignedVoluntaryExit
-//		included map[uint64]bool
-//	}
-//	type args struct {
-//		exit *ethpb.SignedVoluntaryExit
-//	}
-//	tests := []struct {
-//		name   string
-//		fields fields
-//		args   args
-//		want   fields
-//	}{
-//		{
-//			name: "Included, does not exist in pending",
-//			fields: fields{
-//				pending: []*ethpb.SignedVoluntaryExit{
-//					{
-//						Exit: &ethpb.VoluntaryExit{ValidatorIndex: 2},
-//					},
-//				},
-//				included: make(map[uint64]bool),
-//			},
-//			args: args{
-//				exit: &ethpb.SignedVoluntaryExit{
-//					Exit: &ethpb.VoluntaryExit{ValidatorIndex: 3},
-//				},
-//			},
-//			want: fields{
-//				pending: []*ethpb.SignedVoluntaryExit{
-//					{
-//						Exit: &ethpb.VoluntaryExit{ValidatorIndex: 2},
-//					},
-//				},
-//				included: map[uint64]bool{
-//					3: true,
-//				},
-//			},
-//		},
-//		{
-//			name: "Removes from pending list",
-//			fields: fields{
-//				pending: []*ethpb.SignedVoluntaryExit{
-//					{
-//						Exit: &ethpb.VoluntaryExit{ValidatorIndex: 1},
-//					},
-//					{
-//						Exit: &ethpb.VoluntaryExit{ValidatorIndex: 2},
-//					},
-//					{
-//						Exit: &ethpb.VoluntaryExit{ValidatorIndex: 3},
-//					},
-//				},
-//				included: map[uint64]bool{
-//					0: true,
-//				},
-//			},
-//			args: args{
-//				exit: &ethpb.SignedVoluntaryExit{
-//					Exit: &ethpb.VoluntaryExit{ValidatorIndex: 2},
-//				},
-//			},
-//			want: fields{
-//				pending: []*ethpb.SignedVoluntaryExit{
-//					{
-//						Exit: &ethpb.VoluntaryExit{ValidatorIndex: 1},
-//					},
-//					{
-//						Exit: &ethpb.VoluntaryExit{ValidatorIndex: 3},
-//					},
-//				},
-//				included: map[uint64]bool{
-//					0: true,
-//					2: true,
-//				},
-//			},
-//		},
-//	}
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			p := &Pool{
-//				pending:  tt.fields.pending,
-//				included: tt.fields.included,
-//			}
-//			p.MarkIncluded(tt.args.exit)
-//			if len(p.pending) != len(tt.want.pending) {
-//				t.Fatalf("Mismatched lengths of pending list. Got %d, wanted %d.", len(p.pending), len(tt.want.pending))
-//			}
-//			for i := range p.pending {
-//				if !proto.Equal(p.pending[i], tt.want.pending[i]) {
-//					t.Errorf("Pending exit at index %d does not match expected. Got=%v wanted=%v", i, p.pending[i], tt.want.pending[i])
-//				}
-//			}
-//			if !reflect.DeepEqual(p.included, tt.want.included) {
-//				t.Errorf("Included map is not as expected. Got=%v wanted=%v", p.included, tt.want.included)
-//			}
-//		})
-//	}
-//}
+func TestPool_MarkIncludedAttesterSlashing(t *testing.T) {
+	type fields struct {
+		pending  []*PendingAttesterSlashing
+		included map[uint64]bool
+	}
+	type args struct {
+		slashing *ethpb.AttesterSlashing
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   fields
+	}{
+		{
+			name: "Included, does not exist in pending",
+			fields: fields{
+				pending: []*PendingAttesterSlashing{
+					{
+						attesterSlashing: &ethpb.AttesterSlashing{
+							Attestation_1: &ethpb.IndexedAttestation{
+								AttestingIndices: []uint64{1},
+							},
+							Attestation_2: &ethpb.IndexedAttestation{
+								AttestingIndices: []uint64{1},
+							},
+						},
+						validatorToSlash: 1,
+					},
+				},
+				included: make(map[uint64]bool),
+			},
+			args: args{
+				slashing: &ethpb.AttesterSlashing{
+					Attestation_1: &ethpb.IndexedAttestation{
+						AttestingIndices: []uint64{3},
+					},
+					Attestation_2: &ethpb.IndexedAttestation{
+						AttestingIndices: []uint64{3},
+					},
+				},
+			},
+			want: fields{
+				pending: []*PendingAttesterSlashing{
+					{
+						attesterSlashing: &ethpb.AttesterSlashing{
+							Attestation_1: &ethpb.IndexedAttestation{
+								AttestingIndices: []uint64{1},
+							},
+							Attestation_2: &ethpb.IndexedAttestation{
+								AttestingIndices: []uint64{1},
+							},
+						},
+						validatorToSlash: 1,
+					},
+				},
+				included: map[uint64]bool{
+					3: true,
+				},
+			},
+		},
+		{
+			name: "Removes from pending list",
+			fields: fields{
+				pending: []*PendingAttesterSlashing{
+					{
+						attesterSlashing: &ethpb.AttesterSlashing{
+							Attestation_1: &ethpb.IndexedAttestation{
+								AttestingIndices: []uint64{1},
+							},
+							Attestation_2: &ethpb.IndexedAttestation{
+								AttestingIndices: []uint64{1},
+							},
+						},
+						validatorToSlash: 1,
+					},
+					{
+						attesterSlashing: &ethpb.AttesterSlashing{
+							Attestation_1: &ethpb.IndexedAttestation{
+								AttestingIndices: []uint64{2},
+							},
+							Attestation_2: &ethpb.IndexedAttestation{
+								AttestingIndices: []uint64{2},
+							},
+						},
+						validatorToSlash: 2,
+					},
+					{
+						attesterSlashing: &ethpb.AttesterSlashing{
+							Attestation_1: &ethpb.IndexedAttestation{
+								AttestingIndices: []uint64{3},
+							},
+							Attestation_2: &ethpb.IndexedAttestation{
+								AttestingIndices: []uint64{3},
+							},
+						},
+						validatorToSlash: 3,
+					},
+				},
+				included: map[uint64]bool{
+					0: true,
+				},
+			},
+			args: args{
+				slashing: &ethpb.AttesterSlashing{
+					Attestation_1: &ethpb.IndexedAttestation{
+						AttestingIndices: []uint64{2},
+					},
+					Attestation_2: &ethpb.IndexedAttestation{
+						AttestingIndices: []uint64{2},
+					},
+				},
+			},
+			want: fields{
+				pending: []*PendingAttesterSlashing{
+					{
+						attesterSlashing: &ethpb.AttesterSlashing{
+							Attestation_1: &ethpb.IndexedAttestation{
+								AttestingIndices: []uint64{1},
+							},
+							Attestation_2: &ethpb.IndexedAttestation{
+								AttestingIndices: []uint64{1},
+							},
+						},
+						validatorToSlash: 1,
+					},
+					{
+						attesterSlashing: &ethpb.AttesterSlashing{
+							Attestation_1: &ethpb.IndexedAttestation{
+								AttestingIndices: []uint64{3},
+							},
+							Attestation_2: &ethpb.IndexedAttestation{
+								AttestingIndices: []uint64{3},
+							},
+						},
+						validatorToSlash: 3,
+					},
+				},
+				included: map[uint64]bool{
+					0: true,
+					2: true,
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := &Pool{
+				pendingAttesterSlashing: tt.fields.pending,
+				included:                tt.fields.included,
+			}
+			p.MarkIncludedAttesterSlashing(tt.args.slashing)
+			if len(p.pendingAttesterSlashing) != len(tt.want.pending) {
+				t.Fatalf(
+					"Mismatched lengths of pending list. Got %d, wanted %d.",
+					len(p.pendingAttesterSlashing),
+					len(tt.want.pending),
+				)
+			}
+			for i := range p.pendingAttesterSlashing {
+				if !reflect.DeepEqual(p.pendingAttesterSlashing[i], tt.want.pending[i]) {
+					t.Errorf("Pending exit at index %d does not match expected. Got=%v wanted=%v", i, p.pendingAttesterSlashing[i], tt.want.pending[i])
+				}
+			}
+			if !reflect.DeepEqual(p.included, tt.want.included) {
+				t.Errorf("Included map is not as expected. Got=%v wanted=%v", p.included, tt.want.included)
+			}
+		})
+	}
+}
+
 //
 //func TestPool_PendingAttesterSlashings(t *testing.T) {
 //	type fields struct {
