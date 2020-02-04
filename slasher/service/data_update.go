@@ -14,9 +14,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// finalisedChangeUpdater this is a stub for the coming PRs #3133
+// finalizedChangeUpdater this is a stub for the coming PRs #3133
 // Store validator index to public key map Validate attestation signature.
-func (s *Service) finalisedChangeUpdater() error {
+func (s *Service) finalizedChangeUpdater() error {
 	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
 	d := time.Duration(secondsPerSlot) * time.Second
 	tick := time.Tick(d)

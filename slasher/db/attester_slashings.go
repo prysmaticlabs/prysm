@@ -117,8 +117,8 @@ func (db *Store) SaveAttesterSlashings(status SlashingStatus, slashings []*ethpb
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal")
 		}
-		root := hashutil.Hash(enc[i])
-		key[i] = encodeTypeRoot(SlashingType(Attestation), root)
+		encHash := hashutil.Hash(enc[i])
+		key[i] = encodeTypeRoot(SlashingType(Attestation), encHash)
 	}
 
 	return db.update(func(tx *bolt.Tx) error {

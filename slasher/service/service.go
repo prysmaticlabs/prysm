@@ -121,7 +121,7 @@ func (s *Service) Start() {
 		return
 	}
 	go s.attestationFeeder()
-	go s.finalisedChangeUpdater()
+	go s.finalizedChangeUpdater()
 	s.lock.Unlock()
 
 	go func() {

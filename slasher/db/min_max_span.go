@@ -15,7 +15,7 @@ var highestValidatorIdx uint64
 func saveToDB(validatorIdx uint64, _ uint64, value interface{}, cost int64) {
 	log.Tracef("evicting span map for validator id: %d", validatorIdx)
 
-	err := d.update(func(tx *bolt.Tx) error {
+	err := d.batch(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsMinMaxSpanBucket)
 		key := bytesutil.Bytes4(validatorIdx)
 		val, err := proto.Marshal(value.(*slashpb.EpochSpanMap))
