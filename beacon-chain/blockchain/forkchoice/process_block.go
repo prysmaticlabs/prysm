@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/metrics"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
@@ -131,7 +132,7 @@ func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) (*
 	// Epoch boundary bookkeeping such as logging epoch summaries.
 	if postState.Slot() >= s.nextEpochBoundarySlot {
 		logEpochData(postState)
-		reportEpochMetrics(postState)
+		metrics.ReportEpochMetrics(postState)
 
 		// Update committees cache at epoch boundary slot.
 		if err := helpers.UpdateCommitteeCache(postState, helpers.CurrentEpoch(postState)); err != nil {
@@ -259,7 +260,7 @@ func (s *Store) OnBlockInitialSyncStateTransition(ctx context.Context, signed *e
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.
 	if postState.Slot() >= s.nextEpochBoundarySlot {
-		reportEpochMetrics(postState)
+		metrics.ReportEpochMetrics(postState)
 
 		s.nextEpochBoundarySlot = helpers.StartSlot(helpers.NextEpoch(postState))
 	}

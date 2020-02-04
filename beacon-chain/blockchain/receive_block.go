@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/metrics"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -56,7 +57,6 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 		return err
 	}
 
-	processedBlk.Inc()
 	return nil
 }
 
@@ -113,7 +113,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 	}
 
 	// Reports on block and fork choice metrics.
-	s.reportSlotMetrics(blockCopy.Block.Slot)
+	metrics.ReportSlotMetrics(blockCopy.Block.Slot, s.headSlot, s.headState)
 
 	// Log state transition data.
 	logStateTransitionData(blockCopy.Block)
@@ -121,8 +121,6 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 	s.epochParticipationLock.Lock()
 	defer s.epochParticipationLock.Unlock()
 	s.epochParticipation[helpers.SlotToEpoch(blockCopy.Block.Slot)] = precompute.Balances
-
-	processedBlkNoPubsub.Inc()
 
 	if featureconfig.Get().DisableForkChoice && block.Block.Slot > s.headSlot {
 		if err := s.saveHead(ctx, blockCopy, root); err != nil {
@@ -229,7 +227,7 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 	})
 
 	// Reports on block and fork choice metrics.
-	s.reportSlotMetrics(blockCopy.Block.Slot)
+	metrics.ReportSlotMetrics(blockCopy.Block.Slot, s.headSlot, s.headState)
 
 	// Log state transition data.
 	logStateTransitionData(blockCopy.Block)
@@ -238,7 +236,6 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 	defer s.epochParticipationLock.Unlock()
 	s.epochParticipation[helpers.SlotToEpoch(blockCopy.Block.Slot)] = precompute.Balances
 
-	processedBlkNoPubsubForkchoice.Inc()
 	return nil
 }
 
@@ -304,7 +301,7 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 	})
 
 	// Reports on blockCopy and fork choice metrics.
-	s.reportSlotMetrics(blockCopy.Block.Slot)
+	metrics.ReportSlotMetrics(blockCopy.Block.Slot, s.headSlot, s.headState)
 
 	// Log state transition data.
 	log.WithFields(logrus.Fields{
@@ -329,6 +326,6 @@ func isCompetingBlock(root []byte, slot uint64, headRoot []byte, headSlot uint64
 			"headSlot": headSlot,
 			"headRoot": hex.EncodeToString(headRoot),
 		}).Warn("Calculated head diffs from new block")
-		competingBlks.Inc()
+		metrics.CompetingBlks.Inc()
 	}
 }
