@@ -42,7 +42,7 @@ func (bs *Server) ListAttestations(
 	var err error
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListAttestationsRequest_Genesis:
-		blks, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(0).SetEndSlot(0))
+		blks, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(0).SetEndSlot(1))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not genesis block: %v", err)
 		}
