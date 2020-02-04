@@ -1120,6 +1120,12 @@ go_repository(
 )
 
 go_repository(
+    name = "com_github_multiformats_go_varint",
+    commit = "0aa688902217dff2cba0f678c7e4a0f547b4983e",
+    importpath = "github.com/multiformats/go-varint",
+)
+
+go_repository(
     name = "com_github_libp2p_go_yamux",
     commit = "663972181d409e7263040f0b668462f87c85e1bd",  # v1.2.3
     importpath = "github.com/libp2p/go-yamux",
