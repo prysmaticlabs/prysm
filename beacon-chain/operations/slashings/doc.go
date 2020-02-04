@@ -1,2 +1,2 @@
-// Package slashings defines the operations management of slashings.
+// Package slashing defines the operations management of slashing.
 package slashings

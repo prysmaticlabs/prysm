@@ -157,8 +157,8 @@ func (p *Pool) InsertProposerSlashing(ctx context.Context, state *beaconstate.Be
 }
 
 // MarkIncludedAttesterSlashing is used when an proposer slashing has been included in a beacon block.
-// Every block seen by this node that contains proposer slashings should call this method to include
-// the proposer slashings.
+// Every block seen by this node that contains proposer slashing should call this method to include
+// the proposer slashing.
 func (p *Pool) MarkIncludedAttesterSlashing(as *ethpb.AttesterSlashing) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -178,8 +178,8 @@ func (p *Pool) MarkIncludedAttesterSlashing(as *ethpb.AttesterSlashing) {
 }
 
 // MarkIncludedProposerSlashing is used when an proposer slashing has been included in a beacon block.
-// Every block seen by this node that contains proposer slashings should call this method to include
-// the proposer slashings.
+// Every block seen by this node that contains proposer slashing should call this method to include
+// the proposer slashing.
 func (p *Pool) MarkIncludedProposerSlashing(ps *ethpb.ProposerSlashing) {
 	p.lock.Lock()
 	defer p.lock.Unlock()

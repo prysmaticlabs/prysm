@@ -30,15 +30,7 @@ func pendingSlashingForValIdx(valIdx uint64) *PendingAttesterSlashing {
 	}
 }
 
-func generate0ToNSlashings(n uint64) []*ethpb.AttesterSlashing {
-	attesterSlashings := make([]*ethpb.AttesterSlashing, n)
-	for i := uint64(0); i < n; i++ {
-		attesterSlashings[i] = attesterSlashingForValIdx(i)
-	}
-	return attesterSlashings
-}
-
-func generate0ToNPendingSlashings(n uint64) []*PendingAttesterSlashing {
+func generateNPendingSlashings(n uint64) []*PendingAttesterSlashing {
 	pendingAttSlashings := make([]*PendingAttesterSlashing, n)
 	for i := uint64(0); i < n; i++ {
 		pendingAttSlashings[i] = &PendingAttesterSlashing{
@@ -55,7 +47,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 		included map[uint64]bool
 	}
 	type args struct {
-		slashings *ethpb.AttesterSlashing
+		slashing *ethpb.AttesterSlashing
 	}
 	tests := []struct {
 		name   string
@@ -70,7 +62,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 				included: make(map[uint64]bool),
 			},
 			args: args{
-				slashings: attesterSlashingForValIdx(1),
+				slashing: attesterSlashingForValIdx(1),
 			},
 			want: []*PendingAttesterSlashing{
 				{
@@ -86,7 +78,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 				included: make(map[uint64]bool),
 			},
 			args: args{
-				slashings: &ethpb.AttesterSlashing{
+				slashing: &ethpb.AttesterSlashing{
 					Attestation_1: &ethpb.IndexedAttestation{
 						AttestingIndices: []uint64{1, 2},
 					},
@@ -127,7 +119,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 				included: make(map[uint64]bool),
 			},
 			args: args{
-				slashings: &ethpb.AttesterSlashing{
+				slashing: &ethpb.AttesterSlashing{
 					Attestation_1: &ethpb.IndexedAttestation{
 						AttestingIndices: []uint64{1, 2, 3},
 					},
@@ -165,21 +157,17 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 			name: "Duplicate identical slashing",
 			fields: fields{
 				pending: []*PendingAttesterSlashing{
-					{
-						attesterSlashing: attesterSlashingForValIdx(1),
-						validatorToSlash: 1,
-					},
+
+					pendingSlashingForValIdx(1),
 				},
 				included: make(map[uint64]bool),
 			},
 			args: args{
-				slashings: attesterSlashingForValIdx(1),
+				slashing: attesterSlashingForValIdx(1),
 			},
 			want: []*PendingAttesterSlashing{
-				{
-					attesterSlashing: attesterSlashingForValIdx(1),
-					validatorToSlash: 1,
-				},
+
+				pendingSlashingForValIdx(1),
 			},
 		},
 		{
@@ -189,7 +177,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 				included: make(map[uint64]bool),
 			},
 			args: args{
-				slashings: attesterSlashingForValIdx(2),
+				slashing: attesterSlashingForValIdx(2),
 			},
 			want: []*PendingAttesterSlashing{},
 		},
@@ -200,13 +188,10 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 				included: make(map[uint64]bool),
 			},
 			args: args{
-				slashings: attesterSlashingForValIdx(4),
+				slashing: attesterSlashingForValIdx(4),
 			},
 			want: []*PendingAttesterSlashing{
-				{
-					attesterSlashing: attesterSlashingForValIdx(4),
-					validatorToSlash: 4,
-				},
+				pendingSlashingForValIdx(4),
 			},
 		},
 		{
@@ -216,7 +201,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 				included: make(map[uint64]bool),
 			},
 			args: args{
-				slashings: attesterSlashingForValIdx(5),
+				slashing: attesterSlashingForValIdx(5),
 			},
 			want: []*PendingAttesterSlashing{},
 		},
@@ -229,33 +214,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 				},
 			},
 			args: args{
-				slashings: attesterSlashingForValIdx(1),
-			},
-			want: []*PendingAttesterSlashing{},
-		},
-		{
-			name: "Already included",
-			fields: fields{
-				pending: []*PendingAttesterSlashing{},
-				included: map[uint64]bool{
-					1: true,
-				},
-			},
-			args: args{
-				slashings: attesterSlashingForValIdx(1),
-			},
-			want: []*PendingAttesterSlashing{},
-		},
-		{
-			name: "Already included",
-			fields: fields{
-				pending: []*PendingAttesterSlashing{},
-				included: map[uint64]bool{
-					1: true,
-				},
-			},
-			args: args{
-				slashings: attesterSlashingForValIdx(1),
+				slashing: attesterSlashingForValIdx(1),
 			},
 			want: []*PendingAttesterSlashing{},
 		},
@@ -263,34 +222,15 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 			name: "Maintains sorted order",
 			fields: fields{
 				pending: []*PendingAttesterSlashing{
-					{
-						attesterSlashing: attesterSlashingForValIdx(0),
-						validatorToSlash: 0,
-					},
-					{
-						attesterSlashing: attesterSlashingForValIdx(2),
-						validatorToSlash: 2,
-					},
+					pendingSlashingForValIdx(0),
+					pendingSlashingForValIdx(2),
 				},
 				included: make(map[uint64]bool),
 			},
 			args: args{
-				slashings: attesterSlashingForValIdx(1),
+				slashing: attesterSlashingForValIdx(1),
 			},
-			want: generate0ToNPendingSlashings(3),
-		},
-		{
-			name: "Already included",
-			fields: fields{
-				pending: make([]*PendingAttesterSlashing, 0),
-				included: map[uint64]bool{
-					1: true,
-				},
-			},
-			args: args{
-				slashings: attesterSlashingForValIdx(1),
-			},
-			want: []*PendingAttesterSlashing{},
+			want: generateNPendingSlashings(3),
 		},
 	}
 	ctx := context.Background()
@@ -326,16 +266,26 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 			}
 			s.SetSlot(16 * params.BeaconConfig().SlotsPerEpoch)
 			s.SetSlashings([]uint64{5})
-			p.InsertAttesterSlashing(ctx, s, tt.args.slashings)
+			p.InsertAttesterSlashing(ctx, s, tt.args.slashing)
 			if len(p.pendingAttesterSlashing) != len(tt.want) {
 				t.Fatalf("Mismatched lengths of pending list. Got %d, wanted %d.", len(p.pendingAttesterSlashing), len(tt.want))
 			}
 			for i := range p.pendingAttesterSlashing {
 				if p.pendingAttesterSlashing[i].validatorToSlash != tt.want[i].validatorToSlash {
-					t.Errorf("Pending attester to slash at index %d does not match expected. Got=%v wanted=%v", i, p.pendingAttesterSlashing[i].validatorToSlash, tt.want[i].validatorToSlash)
+					t.Errorf(
+						"Pending attester to slash at index %d does not match expected. Got=%v wanted=%v",
+						i,
+						p.pendingAttesterSlashing[i].validatorToSlash,
+						tt.want[i].validatorToSlash,
+					)
 				}
 				if !proto.Equal(p.pendingAttesterSlashing[i].attesterSlashing, tt.want[i].attesterSlashing) {
-					t.Errorf("Pending attester slashings at index %d does not match expected. Got=%v wanted=%v", i, p.pendingAttesterSlashing[i], tt.want[i])
+					t.Errorf(
+						"Pending attester slashing at index %d does not match expected. Got=%v wanted=%v",
+						i,
+						p.pendingAttesterSlashing[i],
+						tt.want[i],
+					)
 				}
 			}
 		})
@@ -372,10 +322,7 @@ func TestPool_MarkIncludedAttesterSlashing(t *testing.T) {
 			},
 			want: fields{
 				pending: []*PendingAttesterSlashing{
-					{
-						attesterSlashing: attesterSlashingForValIdx(1),
-						validatorToSlash: 1,
-					},
+					pendingSlashingForValIdx(1),
 				},
 				included: map[uint64]bool{
 					3: true,
@@ -386,18 +333,9 @@ func TestPool_MarkIncludedAttesterSlashing(t *testing.T) {
 			name: "Removes from pending list",
 			fields: fields{
 				pending: []*PendingAttesterSlashing{
-					{
-						attesterSlashing: attesterSlashingForValIdx(1),
-						validatorToSlash: 1,
-					},
-					{
-						attesterSlashing: attesterSlashingForValIdx(2),
-						validatorToSlash: 2,
-					},
-					{
-						attesterSlashing: attesterSlashingForValIdx(3),
-						validatorToSlash: 3,
-					},
+					pendingSlashingForValIdx(1),
+					pendingSlashingForValIdx(2),
+					pendingSlashingForValIdx(3),
 				},
 				included: map[uint64]bool{
 					0: true,
@@ -408,14 +346,8 @@ func TestPool_MarkIncludedAttesterSlashing(t *testing.T) {
 			},
 			want: fields{
 				pending: []*PendingAttesterSlashing{
-					{
-						attesterSlashing: attesterSlashingForValIdx(1),
-						validatorToSlash: 1,
-					},
-					{
-						attesterSlashing: attesterSlashingForValIdx(3),
-						validatorToSlash: 3,
-					},
+					pendingSlashingForValIdx(1),
+					pendingSlashingForValIdx(3),
 				},
 				included: map[uint64]bool{
 					0: true,
@@ -440,7 +372,12 @@ func TestPool_MarkIncludedAttesterSlashing(t *testing.T) {
 			}
 			for i := range p.pendingAttesterSlashing {
 				if !reflect.DeepEqual(p.pendingAttesterSlashing[i], tt.want.pending[i]) {
-					t.Errorf("Pending exit at index %d does not match expected. Got=%v wanted=%v", i, p.pendingAttesterSlashing[i], tt.want.pending[i])
+					t.Errorf(
+						"Pending attester slashing at index %d does not match expected. Got=%v wanted=%v",
+						i,
+						p.pendingAttesterSlashing[i],
+						tt.want.pending[i],
+					)
 				}
 			}
 			if !reflect.DeepEqual(p.included, tt.want.included) {
@@ -453,9 +390,6 @@ func TestPool_MarkIncludedAttesterSlashing(t *testing.T) {
 func TestPool_PendingAttesterSlashings(t *testing.T) {
 	type fields struct {
 		pending []*PendingAttesterSlashing
-	}
-	type args struct {
-		validatorToSlash uint64
 	}
 	tests := []struct {
 		name   string
@@ -472,16 +406,16 @@ func TestPool_PendingAttesterSlashings(t *testing.T) {
 		{
 			name: "All eligible",
 			fields: fields{
-				pending: generate0ToNPendingSlashings(6),
+				pending: generateNPendingSlashings(6),
 			},
-			want: generate0ToNPendingSlashings(6),
+			want: generateNPendingSlashings(6),
 		},
 		{
 			name: "All eligible, more than max",
 			fields: fields{
-				pending: generate0ToNPendingSlashings(16),
+				pending: generateNPendingSlashings(16),
 			},
-			want: generate0ToNPendingSlashings(16),
+			want: generateNPendingSlashings(16),
 		},
 	}
 	for _, tt := range tests {
@@ -490,7 +424,7 @@ func TestPool_PendingAttesterSlashings(t *testing.T) {
 				pendingAttesterSlashing: tt.fields.pending,
 			}
 			if got := p.PendingAttesterSlashings(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("PendingExits() = %v, want %v", got, tt.want)
+				t.Errorf("PendingAttesterSlashings() = %v, want %v", got, tt.want)
 			}
 		})
 	}
