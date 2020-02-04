@@ -876,7 +876,7 @@ go_repository(
 go_repository(
     name = "io_k8s_apimachinery",
     build_file_proto_mode = "disable_global",
-    commit = "bfcf53abc9f82bad3e534fcb1c36599d3c989ebf",
+    commit = "79c2a76c473a20cdc4ce59cae4b72529b5d9d16b",  # v0.17.2
     importpath = "k8s.io/apimachinery",
 )
 
@@ -1191,8 +1191,14 @@ go_repository(
 )
 
 go_repository(
+    name = "in_gopkg_natefinch_npipe_v2",
+    commit = "c1b8fa8bdccecb0b8db834ee0b92fdbcfa606dd6",
+    importpath = "gopkg.in/natefinch/npipe.v2"
+)
+
+go_repository(
     name = "com_github_googleapis_gnostic",
-    commit = "ab0dd09aa10e2952b28e12ecd35681b20463ebab",  # v0.3.1
+    commit = "896953e6749863beec38e27029c804e88c3144b8",  # v0.4.1
     importpath = "github.com/googleapis/gnostic",
 )
 
