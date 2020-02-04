@@ -896,7 +896,7 @@ go_repository(
 go_repository(
     name = "io_k8s_api",
     build_file_proto_mode = "disable_global",
-    commit = "7ea599edc7fd1198238be103353ca78eef24ae63",  # v0.17.2
+    commit = "3043179095b6baa0087e8735d796bd6dfa881f8e",
     importpath = "k8s.io/api",
 )
 
