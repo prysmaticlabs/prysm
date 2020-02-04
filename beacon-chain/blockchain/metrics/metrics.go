@@ -18,6 +18,7 @@ var (
 		Name: "beacon_head_slot",
 		Help: "Slot of the head block of the beacon chain",
 	})
+	// CompetingBlks is the number of the competing blocks happened over time.
 	CompetingBlks = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "competing_blocks",
 		Help: "The # of blocks received and processed from a competing chain",
@@ -80,6 +81,7 @@ var (
 	})
 )
 
+// ReportSlotMetrics reports slot related metrics.
 func ReportSlotMetrics(currentSlot uint64, headSlot uint64, headState *stateTrie.BeaconState) {
 	beaconSlot.Set(float64(currentSlot))
 	beaconHeadSlot.Set(float64(headSlot))
@@ -92,6 +94,7 @@ func ReportSlotMetrics(currentSlot uint64, headSlot uint64, headState *stateTrie
 	}
 }
 
+// ReportEpochMetrics reports epoch related metrics.
 func ReportEpochMetrics(state *stateTrie.BeaconState) {
 	currentEpoch := state.Slot() / params.BeaconConfig().SlotsPerEpoch
 
