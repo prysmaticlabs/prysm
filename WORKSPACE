@@ -59,8 +59,7 @@ git_repository(
 # https://github.com/gogo/protobuf/pull/582 is merged.
 git_repository(
     name = "com_github_gogo_protobuf",
-    # v1.3.0 (latest) as of 2019-10-05
-    commit = "0ca988a254f991240804bf9821f3450d87ccbb1b",
+    commit = "5628607bb4c51c3157aacc3a50f0ab707582b805",
     patch_args = ["-p1"],
     patches = [
         "@io_bazel_rules_go//third_party:com_github_gogo_protobuf-gazelle.patch",
@@ -125,16 +124,16 @@ proto_library(
   srcs = ["src/proto/faucet.proto"],
   visibility = ["//visibility:public"],
 )""",
-    sha256 = "1184e44a7a9b8b172e68e82c02cc3b15a80122340e05a92bd1edeafe5e68debe",
-    strip_prefix = "prysm-testnet-site-ec6a4a4e421bf4445845969167d06e93ee8d7acc",
-    url = "https://github.com/prestonvanloon/prysm-testnet-site/archive/ec6a4a4e421bf4445845969167d06e93ee8d7acc.tar.gz",
+    sha256 = "29742136ff9faf47343073c4569a7cf21b8ed138f726929e09e3c38ab83544f7",
+    strip_prefix = "prysm-testnet-site-5c711600f0a77fc553b18cf37b880eaffef4afdb",
+    url = "https://github.com/prestonvanloon/prysm-testnet-site/archive/5c711600f0a77fc553b18cf37b880eaffef4afdb.tar.gz",
 )
 
 http_archive(
     name = "io_kubernetes_build",
-    sha256 = "5ab110312cd7665a1940ba0523b67b9fbb6053beb9dd4e147643867bebd7e809",
-    strip_prefix = "repo-infra-db6ceb5f992254db76af7c25db2edc5469b5ea82",
-    url = "https://github.com/kubernetes/repo-infra/archive/db6ceb5f992254db76af7c25db2edc5469b5ea82.tar.gz",
+    sha256 = "b84fbd1173acee9d02a7d3698ad269fdf4f7aa081e9cecd40e012ad0ad8cfa2a",
+    strip_prefix = "repo-infra-6537f2101fb432b679f3d103ee729dd8ac5d30a0",
+    url = "https://github.com/kubernetes/repo-infra/archive/6537f2101fb432b679f3d103ee729dd8ac5d30a0.tar.gz",
 )
 
 http_archive(
@@ -211,7 +210,7 @@ go_repository(
 
 git_repository(
     name = "com_google_protobuf",
-    commit = "d09d649aea36f02c03f8396ba39a8d4db8a607e4",
+    commit = "4cf5bfee9546101d98754d23ff378ff718ba8438",
     remote = "https://github.com/protocolbuffers/protobuf",
     shallow_since = "1558721209 -0700",
 )
