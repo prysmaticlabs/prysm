@@ -18,10 +18,6 @@ var (
 		Name: "beacon_head_slot",
 		Help: "Slot of the head block of the beacon chain",
 	})
-	competingAtts = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "competing_attestations",
-		Help: "The # of attestations received and processed from a competing chain",
-	})
 	competingBlks = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "competing_blocks",
 		Help: "The # of blocks received and processed from a competing chain",
@@ -42,10 +38,6 @@ var (
 		Name: "processed_no_pubsub_attestation_counter",
 		Help: "The # of processed attestation without pubsub, this usually means the attestations from sync",
 	})
-	processedAtt = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "processed_attestation_counter",
-		Help: "The # of processed attestation with pubsub and fork choice, this ususally means attestations from rpc",
-	})
 	headFinalizedEpoch = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "chain_service_head_finalized_epoch",
 		Help: "Last finalized epoch of the head state",
@@ -62,14 +54,6 @@ var (
 		Name: "chain_service_beacon_finalized_root",
 		Help: "Last finalized root of the processed state",
 	})
-	cacheFinalizedEpoch = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "chain_service_cache_finalized_epoch",
-		Help: "Last cached finalized epoch",
-	})
-	cacheFinalizedRoot = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "chain_service_cache_finalized_root",
-		Help: "Last cached finalized root",
-	})
 	beaconCurrentJustifiedEpoch = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "chain_service_beacon_current_justified_epoch",
 		Help: "Current justified epoch of the processed state",
@@ -85,10 +69,6 @@ var (
 	beaconPrevJustifiedRoot = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "chain_service_beacon_previous_justified_root",
 		Help: "Previous justified root of the processed state",
-	})
-	sigFailsToVerify = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "chain_service_att_signature_failed_to_verify_with_cache",
-		Help: "Number of attestation signatures that failed to verify with cache on, but succeeded without cache",
 	})
 	validatorsCount = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "chain_service_validator_count",

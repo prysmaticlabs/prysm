@@ -132,7 +132,6 @@ func startKademliaDHT(privKey crypto.PrivKey) {
 	}
 
 	fmt.Printf("Running Kademlia DHT bootnode: /ip4/%s/tcp/%d/p2p/%s\n", *externalIP, *kademliaPort, host.ID().Pretty())
-
 }
 
 func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv5 {
