@@ -21,6 +21,8 @@ type Pool struct {
 	included                map[uint64]bool
 }
 
+// PendingAttesterSlashing represents an attester slashing in the operation pool.
+// Allows for easy binary searching of included validator indexes.
 type PendingAttesterSlashing struct {
 	attesterSlashing *ethpb.AttesterSlashing
 	validatorToSlash uint64
