@@ -12,56 +12,52 @@ import (
 
 var (
 	beaconFinalizedEpoch = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "beacon_finalized_epoch",
-		Help: "Last finalized epoch of the processed state",
+		Name: "beacon_finalized_epoch_with_naive_forkchoice",
+		Help: "Last finalized epoch of the processed state using naive fork choice.",
 	})
 	beaconFinalizedRoot = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "beacon_finalized_root",
-		Help: "Last finalized root of the processed state",
+		Name: "beacon_finalized_root_with_naive_forkchoice",
+		Help: "Last finalized root of the processed state using naive fork choice.",
 	})
 	beaconCurrentJustifiedEpoch = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "beacon_current_justified_epoch",
-		Help: "Current justified epoch of the processed state",
+		Name: "beacon_current_justified_epoch_with_naive_forkchoice",
+		Help: "Current justified epoch of the processed state using naive fork choice.",
 	})
 	beaconCurrentJustifiedRoot = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "beacon_current_justified_root",
-		Help: "Current justified root of the processed state",
+		Name: "beacon_current_justified_root_with_naive_forkchoice",
+		Help: "Current justified root of the processed state using naive fork choice.",
 	})
 	beaconPrevJustifiedEpoch = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "beacon_previous_justified_epoch",
-		Help: "Previous justified epoch of the processed state",
+		Name: "beacon_previous_justified_epoch_with_naive_forkchoice",
+		Help: "Previous justified epoch of the processed state using naive fork choice.",
 	})
 	beaconPrevJustifiedRoot = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "beacon_previous_justified_root",
-		Help: "Previous justified root of the processed state",
-	})
-	sigFailsToVerify = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "att_signature_failed_to_verify_with_cache",
-		Help: "Number of attestation signatures that failed to verify with cache on, but succeeded without cache",
+		Name: "beacon_previous_justified_root_with_naive_forkchoice",
+		Help: "Previous justified root of the processed state using naive fork choice.",
 	})
 	validatorsCount = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "validator_count",
-		Help: "The total number of validators",
+		Name: "validator_count_with_naive_forkchoice using naive fork choice",
+		Help: "The total number of validators.",
 	}, []string{"state"})
 	validatorsBalance = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "validators_total_balance",
-		Help: "The total balance of validators, in GWei",
+		Name: "validators_total_balance_with_naive_forkchoice",
+		Help: "The total balance of validators, in GWei.",
 	}, []string{"state"})
 	validatorsEffectiveBalance = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "validators_total_effective_balance",
-		Help: "The total effective balance of validators, in GWei",
+		Name: "validators_total_effective_balance_with_naive_forkchoice",
+		Help: "The total effective balance of validators, in GWei.",
 	}, []string{"state"})
 	currentEth1DataDepositCount = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "current_eth1_data_deposit_count",
+		Name: "current_eth1_data_deposit_count_with_naive_forkchoice",
 		Help: "The current eth1 deposit count in the last processed state eth1data field.",
 	})
 	totalEligibleBalances = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "total_eligible_balances",
-		Help: "The total amount of ether, in gwei, that has been used in voting attestation target of previous epoch",
+		Name: "total_eligible_balances_with_naive_forkchoice",
+		Help: "The total amount of ether, in gwei, that has been used in voting attestation target of previous epoch using naive fork choice.",
 	})
 	totalVotedTargetBalances = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "total_voted_target_balances",
-		Help: "The total amount of ether, in gwei, that is eligible for voting of previous epoch",
+		Name: "total_voted_target_balances_with_naive_forkchoice",
+		Help: "The total amount of ether, in gwei, that is eligible for voting of previous epoch using naive fork choice.",
 	})
 )
 

@@ -39,59 +39,59 @@ var (
 		Help: "The # of processed attestation without pubsub, this usually means the attestations from sync",
 	})
 	headFinalizedEpoch = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "chain_service_head_finalized_epoch",
+		Name: "head_finalized_epoch",
 		Help: "Last finalized epoch of the head state",
 	})
 	headFinalizedRoot = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "chain_service_head_finalized_root",
+		Name: "head_finalized_root",
 		Help: "Last finalized root of the head state",
 	})
 	beaconFinalizedEpoch = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "chain_service_beacon_finalized_epoch",
+		Name: "beacon_finalized_epoch",
 		Help: "Last finalized epoch of the processed state",
 	})
 	beaconFinalizedRoot = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "chain_service_beacon_finalized_root",
+		Name: "beacon_finalized_root",
 		Help: "Last finalized root of the processed state",
 	})
 	beaconCurrentJustifiedEpoch = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "chain_service_beacon_current_justified_epoch",
+		Name: "beacon_current_justified_epoch",
 		Help: "Current justified epoch of the processed state",
 	})
 	beaconCurrentJustifiedRoot = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "chain_service_beacon_current_justified_root",
+		Name: "beacon_current_justified_root",
 		Help: "Current justified root of the processed state",
 	})
 	beaconPrevJustifiedEpoch = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "chain_service_beacon_previous_justified_epoch",
+		Name: "beacon_previous_justified_epoch",
 		Help: "Previous justified epoch of the processed state",
 	})
 	beaconPrevJustifiedRoot = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "chain_service_beacon_previous_justified_root",
+		Name: "beacon_previous_justified_root",
 		Help: "Previous justified root of the processed state",
 	})
 	validatorsCount = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "chain_service_validator_count",
+		Name: "validator_count",
 		Help: "The total number of validators",
 	}, []string{"state"})
 	validatorsBalance = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "chain_service_validators_total_balance",
+		Name: "validators_total_balance",
 		Help: "The total balance of validators, in GWei",
 	}, []string{"state"})
 	validatorsEffectiveBalance = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "chain_service_validators_total_effective_balance",
+		Name: "validators_total_effective_balance",
 		Help: "The total effective balance of validators, in GWei",
 	}, []string{"state"})
 	currentEth1DataDepositCount = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "chain_service_current_eth1_data_deposit_count",
+		Name: "current_eth1_data_deposit_count",
 		Help: "The current eth1 deposit count in the last processed state eth1data field.",
 	})
 	totalEligibleBalances = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "chain_service_total_eligible_balances",
+		Name: "total_eligible_balances",
 		Help: "The total amount of ether, in gwei, that has been used in voting attestation target of previous epoch",
 	})
 	totalVotedTargetBalances = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "chain_service_total_voted_target_balances",
+		Name: "total_voted_target_balances",
 		Help: "The total amount of ether, in gwei, that is eligible for voting of previous epoch",
 	})
 )
