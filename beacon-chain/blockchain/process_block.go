@@ -188,10 +188,10 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 
 	if featureconfig.Get().InitSyncCacheState {
 		s.initSyncState[root] = postState
-	} else {
-		if err := s.beaconDB.SaveState(ctx, postState, root); err != nil {
-			return nil, errors.Wrap(err, "could not save state")
-		}
+	}
+
+	if err := s.beaconDB.SaveState(ctx, postState, root); err != nil {
+		return nil, errors.Wrap(err, "could not save state")
 	}
 
 	// Update justified check point.
