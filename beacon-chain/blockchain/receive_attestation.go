@@ -112,10 +112,10 @@ func (s *Service) processAttestation() {
 
 				if err := s.ReceiveAttestationNoPubsub(ctx, a); err != nil {
 					log.WithFields(logrus.Fields{
-						"slot": a.Data.Slot,
-						"committeeIndex": a.Data.CommitteeIndex,
-						"beaconBlockRoot": fmt.Sprintf("%#x", bytesutil.Trunc(a.Data.BeaconBlockRoot)),
-						"targetRoot": fmt.Sprintf("%#x", bytesutil.Trunc(a.Data.Target.Root)),
+						"slot":             a.Data.Slot,
+						"committeeIndex":   a.Data.CommitteeIndex,
+						"beaconBlockRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(a.Data.BeaconBlockRoot)),
+						"targetRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(a.Data.Target.Root)),
 						"aggregationCount": a.AggregationBits.Count(),
 					}).WithError(err).Error("Could not receive attestation in chain service")
 				}

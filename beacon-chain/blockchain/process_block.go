@@ -241,6 +241,14 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		if err := helpers.UpdateProposerIndicesInCache(postState, helpers.CurrentEpoch(postState)); err != nil {
 			return nil, err
 		}
+
+		if featureconfig.Get().InitSyncCacheState {
+			if helpers.IsEpochStart(postState.Slot()) {
+				if err := s.beaconDB.SaveState(ctx, postState, root); err != nil {
+					return nil, errors.Wrap(err, "could not save state")
+				}
+			}
+		}
 	}
 
 	return postState, nil
