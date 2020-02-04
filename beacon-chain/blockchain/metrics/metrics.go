@@ -1,4 +1,4 @@
-package blockchain
+package metrics
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
@@ -18,25 +18,9 @@ var (
 		Name: "beacon_head_slot",
 		Help: "Slot of the head block of the beacon chain",
 	})
-	competingBlks = promauto.NewCounter(prometheus.CounterOpts{
+	CompetingBlks = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "competing_blocks",
 		Help: "The # of blocks received and processed from a competing chain",
-	})
-	processedBlkNoPubsub = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "processed_no_pubsub_block_counter",
-		Help: "The # of processed block without pubsub, this usually means the blocks from sync",
-	})
-	processedBlkNoPubsubForkchoice = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "processed_no_pubsub_forkchoice_block_counter",
-		Help: "The # of processed block without pubsub and forkchoice, this means indicate blocks from initial sync",
-	})
-	processedBlk = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "processed_block_counter",
-		Help: "The # of total processed in block chain service, with fork choice and pubsub",
-	})
-	processedAttNoPubsub = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "processed_no_pubsub_attestation_counter",
-		Help: "The # of processed attestation without pubsub, this usually means the attestations from sync",
 	})
 	headFinalizedEpoch = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "head_finalized_epoch",
@@ -96,11 +80,11 @@ var (
 	})
 )
 
-func (s *Service) reportSlotMetrics(currentSlot uint64) {
+func ReportSlotMetrics(currentSlot uint64, headSlot uint64, headState *stateTrie.BeaconState) {
 	beaconSlot.Set(float64(currentSlot))
-	beaconHeadSlot.Set(float64(s.HeadSlot()))
-	if s.headState != nil {
-		finalizedCpt := s.headState.FinalizedCheckpoint()
+	beaconHeadSlot.Set(float64(headSlot))
+	if headState != nil {
+		finalizedCpt := headState.FinalizedCheckpoint()
 		if finalizedCpt != nil {
 			headFinalizedEpoch.Set(float64(finalizedCpt.Epoch))
 			headFinalizedRoot.Set(float64(bytesutil.ToLowInt64(finalizedCpt.Root)))
@@ -108,7 +92,7 @@ func (s *Service) reportSlotMetrics(currentSlot uint64) {
 	}
 }
 
-func reportEpochMetrics(state *stateTrie.BeaconState) {
+func ReportEpochMetrics(state *stateTrie.BeaconState) {
 	currentEpoch := state.Slot() / params.BeaconConfig().SlotsPerEpoch
 
 	// Validator instances
