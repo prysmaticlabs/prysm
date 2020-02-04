@@ -831,7 +831,7 @@ go_repository(
 
 go_repository(
     name = "com_github_hashicorp_golang_lru",
-    commit = "7f827b33c0f158ec5dfbba01bb0b14a4541fd81d",  # v0.5.3
+    commit = "14eae340515388ca95aa8e7b86f0de668e981f54",  # v0.5.4
     importpath = "github.com/hashicorp/golang-lru",
 )
 
@@ -876,7 +876,7 @@ go_repository(
 go_repository(
     name = "io_k8s_apimachinery",
     build_file_proto_mode = "disable_global",
-    commit = "bfcf53abc9f82bad3e534fcb1c36599d3c989ebf",
+    commit = "79c2a76c473a20cdc4ce59cae4b72529b5d9d16b",  # v0.17.2
     importpath = "k8s.io/apimachinery",
 )
 
@@ -896,7 +896,7 @@ go_repository(
 go_repository(
     name = "io_k8s_api",
     build_file_proto_mode = "disable_global",
-    commit = "3043179095b6baa0087e8735d796bd6dfa881f8e",
+    commit = "7ea599edc7fd1198238be103353ca78eef24ae63",  # v0.17.2
     importpath = "k8s.io/api",
 )
 
@@ -958,7 +958,7 @@ go_repository(
 
 go_repository(
     name = "com_google_cloud_go",
-    commit = "264def2dd949cdb8a803bb9f50fa29a67b798a6a",  # v0.46.3
+    commit = "6daa679260d92196ffca2362d652c924fdcb7a22",  # v0.52.0
     importpath = "cloud.google.com/go",
 )
 
@@ -1000,7 +1000,7 @@ go_repository(
 
 go_repository(
     name = "com_github_pkg_errors",
-    commit = "ba968bfe8b2f7e042a574c888954fccecfa385b4",  # v0.8.1
+    commit = "614d223910a179a466c1767a985424175c39b465",  # v0.9.1
     importpath = "github.com/pkg/errors",
 )
 
