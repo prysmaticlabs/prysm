@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -104,6 +105,25 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	ctx := context.Background()
 	var web3Service *powchain.Service
 	var err error
+	bState, _ := testutil.DeterministicGenesisState(t, 10)
+	err = beaconDB.SavePowchainData(ctx, &protodb.ETH1ChainData{
+		BeaconState: bState.InnerStateUnsafe(),
+		Trie:        &protodb.SparseMerkleTrie{},
+		CurrentEth1Data: &protodb.LatestETH1Data{
+			BlockHash: make([]byte, 32),
+		},
+		ChainstartData: &protodb.ChainStartData{
+			Eth1Data: &ethpb.Eth1Data{
+				DepositRoot:  make([]byte, 32),
+				DepositCount: 0,
+				BlockHash:    make([]byte, 32),
+			},
+		},
+		DepositContainers: []*protodb.DepositContainer{},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	web3Service, err = powchain.NewService(ctx, &powchain.Web3ServiceConfig{
 		BeaconDB:        beaconDB,
 		ETH1Endpoint:    endpoint,
