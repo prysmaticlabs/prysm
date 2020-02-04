@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"fmt"
@@ -120,6 +121,19 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
 		s.finalizedCheckpt = postState.FinalizedCheckpoint()
+
+		finalizedBlkSigned, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root))
+		if err != nil || finalizedBlkSigned == nil || finalizedBlkSigned.Block == nil {
+			return nil, errors.Wrap(err, "could not get finalized block")
+		}
+		finalizedBlk := finalizedBlkSigned.Block
+		anc, err := s.ancestor(ctx, s.justifiedCheckpt.Root, finalizedBlk.Slot)
+		if err != nil {
+			return nil, err
+		}
+		if cpt := postState.CurrentJustifiedCheckpoint(); cpt != nil && cpt.Epoch > s.justifiedCheckpt.Epoch || !bytes.Equal(anc, s.finalizedCheckpt.Root) {
+			s.justifiedCheckpt = postState.CurrentJustifiedCheckpoint()
+		}
 	}
 
 	// Update validator indices in database as needed.
@@ -222,6 +236,19 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
 		s.finalizedCheckpt = postState.FinalizedCheckpoint()
+
+		finalizedBlkSigned, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root))
+		if err != nil || finalizedBlkSigned == nil || finalizedBlkSigned.Block == nil {
+			return nil, errors.Wrap(err, "could not get finalized block")
+		}
+		finalizedBlk := finalizedBlkSigned.Block
+		anc, err := s.ancestor(ctx, s.justifiedCheckpt.Root, finalizedBlk.Slot)
+		if err != nil {
+			return nil, err
+		}
+		if cpt := postState.CurrentJustifiedCheckpoint(); cpt != nil && cpt.Epoch > s.justifiedCheckpt.Epoch || !bytes.Equal(anc, s.finalizedCheckpt.Root) {
+			s.justifiedCheckpt = postState.CurrentJustifiedCheckpoint()
+		}
 	}
 
 	// Update validator indices in database as needed.
