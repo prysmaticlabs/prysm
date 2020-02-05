@@ -77,6 +77,50 @@ func TestProposeBlock_OK(t *testing.T) {
 	}
 }
 
+func TestProposeBlock_IncludesSlashing(t *testing.T) {
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
+	ctx := context.Background()
+
+	genesis := b.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(context.Background(), genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+
+	numDeposits := params.BeaconConfig().MinGenesisActiveValidatorCount
+	beaconState, _ := testutil.DeterministicGenesisState(t, numDeposits)
+
+	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, beaconState, genesisRoot); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+
+	proposerServer := &Server{
+		BeaconDB:          db,
+		ChainStartFetcher: &mockPOW.POWChain{},
+		Eth1InfoFetcher:   &mockPOW.POWChain{},
+		Eth1BlockFetcher:  &mockPOW.POWChain{},
+		BlockReceiver:     &mock.ChainService{},
+		HeadFetcher:       &mock.ChainService{},
+	}
+	req := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Slot:       5,
+			ParentRoot: []byte("parent-hash"),
+			Body:       &ethpb.BeaconBlockBody{},
+		},
+	}
+	if err := db.SaveBlock(ctx, req); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := proposerServer.ProposeBlock(context.Background(), req); err != nil {
+		t.Errorf("Could not propose block correctly: %v", err)
+	}
+}
+
 func TestComputeStateRoot_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
