@@ -41,7 +41,7 @@ var (
 		},
 		[]string{
 			// validator pubkey
-			"pey",
+			"pkey",
 		},
 	)
 )
