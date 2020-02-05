@@ -5,13 +5,11 @@ import (
 	"sort"
 	"sync"
 
-	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
-
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
 // Pool implements a struct to maintain pending and recently included voluntary exits. This pool
@@ -23,6 +21,8 @@ type Pool struct {
 	included                map[uint64]bool
 }
 
+// PendingAttesterSlashing represents an attester slashing in the operation pool.
+// Allows for easy binary searching of included validator indexes.
 type PendingAttesterSlashing struct {
 	attesterSlashing *ethpb.AttesterSlashing
 	validatorToSlash uint64
@@ -43,9 +43,18 @@ func NewPool() *Pool {
 func (p *Pool) PendingAttesterSlashings() []*ethpb.AttesterSlashing {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
+
+	var included []uint64
 	pending := make([]*ethpb.AttesterSlashing, 0)
-	for _, e := range p.pendingAttesterSlashing {
-		pending = append(pending, e.attesterSlashing)
+	for _, slashing := range p.pendingAttesterSlashing {
+		if sliceutil.IsInUint64(slashing.validatorToSlash, included) {
+			continue
+		}
+		attSlashing := slashing.attesterSlashing
+		slashedVal := sliceutil.IntersectionUint64(attSlashing.Attestation_1.AttestingIndices, attSlashing.Attestation_2.AttestingIndices)
+		// Doesn't need to be sorted.
+		included = append(included, slashedVal...)
+		pending = append(pending, attSlashing)
 	}
 	if len(pending) > int(params.BeaconConfig().MaxAttesterSlashings) {
 		pending = pending[:params.BeaconConfig().MaxAttesterSlashings]
@@ -59,8 +68,8 @@ func (p *Pool) PendingProposerSlashings() []*ethpb.ProposerSlashing {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 	pending := make([]*ethpb.ProposerSlashing, 0)
-	for _, e := range p.pendingProposerSlashing {
-		pending = append(pending, e)
+	for _, slashing := range p.pendingProposerSlashing {
+		pending = append(pending, slashing)
 	}
 	if len(pending) > int(params.BeaconConfig().MaxProposerSlashings) {
 		pending = pending[:params.BeaconConfig().MaxProposerSlashings]
@@ -84,7 +93,7 @@ func (p *Pool) InsertAttesterSlashing(ctx context.Context, state *beaconstate.Be
 			slashedVal = append(slashedVal[:i], slashedVal[i+1:]...)
 		}
 		stateValidators := state.Validators()
-		// Has the validators been exited already?
+		// Has the validator been exited already?
 		if len(stateValidators) <= int(val) || stateValidators[val].ExitEpoch < helpers.CurrentEpoch(state) {
 			{
 				slashedVal = append(slashedVal[:i], slashedVal[i+1:]...)
@@ -105,14 +114,18 @@ func (p *Pool) InsertAttesterSlashing(ctx context.Context, state *beaconstate.Be
 
 		// Does this validator exist in the list already? Use binary search to find the answer.
 		if found := sort.Search(len(p.pendingAttesterSlashing), func(i int) bool {
-			e := p.pendingAttesterSlashing[i]
-			return e.validatorToSlash == val
+			return p.pendingAttesterSlashing[i].validatorToSlash == val
 		}); found != len(p.pendingAttesterSlashing) {
 			return
 		}
 
+		pendingSlashing := &PendingAttesterSlashing{
+			attesterSlashing: slashing,
+			validatorToSlash: val,
+		}
+
 		// Insert into pending list and sort again.
-		p.pendingAttesterSlashing = append(p.pendingAttesterSlashing, &PendingAttesterSlashing{slashing, val})
+		p.pendingAttesterSlashing = append(p.pendingAttesterSlashing, pendingSlashing)
 		sort.Slice(p.pendingAttesterSlashing, func(i, j int) bool {
 			return p.pendingAttesterSlashing[i].validatorToSlash < p.pendingAttesterSlashing[j].validatorToSlash
 		})
@@ -134,7 +147,7 @@ func (p *Pool) InsertProposerSlashing(ctx context.Context, state *beaconstate.Be
 	if len(stateValidators) <= int(slashing.ProposerIndex) || stateValidators[slashing.ProposerIndex].ExitEpoch < helpers.CurrentEpoch(state) {
 		return
 	}
-	//Has the validator been slashed already?
+	// Has the validator been slashed already?
 	slashedValidators := state.Slashings()
 	if found := sort.Search(len(slashedValidators), func(i int) bool {
 		return slashedValidators[i] == slashing.ProposerIndex
@@ -144,9 +157,8 @@ func (p *Pool) InsertProposerSlashing(ctx context.Context, state *beaconstate.Be
 
 	// Does this validator exist in the list already? Use binary search to find the answer.
 	if found := sort.Search(len(p.pendingProposerSlashing), func(i int) bool {
-		e := p.pendingProposerSlashing[i]
-		return e.ProposerIndex == slashing.ProposerIndex
-	}); found != len(p.pendingAttesterSlashing) {
+		return p.pendingProposerSlashing[i].ProposerIndex == slashing.ProposerIndex
+	}); found != len(p.pendingProposerSlashing) {
 		return
 	}
 
@@ -155,22 +167,6 @@ func (p *Pool) InsertProposerSlashing(ctx context.Context, state *beaconstate.Be
 	sort.Slice(p.pendingProposerSlashing, func(i, j int) bool {
 		return p.pendingProposerSlashing[i].ProposerIndex < p.pendingProposerSlashing[j].ProposerIndex
 	})
-
-}
-
-// MarkIncludedProposerSlashing is used when an proposer slashing has been included in a beacon block.
-// Every block seen by this node that contains proposer slashings should call this method to include
-// the proposer slashings.
-func (p *Pool) MarkIncludedProposerSlashing(ps *ethpb.ProposerSlashing) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-	i := sort.Search(len(p.pendingProposerSlashing), func(i int) bool {
-		return p.pendingProposerSlashing[i].ProposerIndex == ps.ProposerIndex
-	})
-	if i != len(p.pendingProposerSlashing) {
-		p.pendingProposerSlashing = append(p.pendingProposerSlashing[:i], p.pendingProposerSlashing[i+1:]...)
-	}
-	p.included[ps.ProposerIndex] = true
 }
 
 // MarkIncludedAttesterSlashing is used when an attester slashing has been included in a beacon block.
@@ -187,9 +183,24 @@ func (p *Pool) MarkIncludedAttesterSlashing(as *ethpb.AttesterSlashing) {
 		i := sort.Search(len(p.pendingAttesterSlashing), func(i int) bool {
 			return p.pendingAttesterSlashing[i].validatorToSlash == val
 		})
-		if i != len(p.pendingProposerSlashing) {
-			p.pendingProposerSlashing = append(p.pendingProposerSlashing[:i], p.pendingProposerSlashing[i+1:]...)
+		if i != len(p.pendingAttesterSlashing) {
+			p.pendingAttesterSlashing = append(p.pendingAttesterSlashing[:i], p.pendingAttesterSlashing[i+1:]...)
 		}
 		p.included[val] = true
 	}
+}
+
+// MarkIncludedProposerSlashing is used when an proposer slashing has been included in a beacon block.
+// Every block seen by this node that contains proposer slashings should call this method to include
+// the proposer slashings.
+func (p *Pool) MarkIncludedProposerSlashing(ps *ethpb.ProposerSlashing) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	i := sort.Search(len(p.pendingProposerSlashing), func(i int) bool {
+		return p.pendingProposerSlashing[i].ProposerIndex == ps.ProposerIndex
+	})
+	if i != len(p.pendingProposerSlashing) {
+		p.pendingProposerSlashing = append(p.pendingProposerSlashing[:i], p.pendingProposerSlashing[i+1:]...)
+	}
+	p.included[ps.ProposerIndex] = true
 }

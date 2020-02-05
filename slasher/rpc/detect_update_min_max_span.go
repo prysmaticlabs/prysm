@@ -16,8 +16,8 @@ type detectFn = func(attestationEpochSpan uint64, recorderEpochSpan *slashpb.Min
 func detectMax(
 	attestationEpochSpan uint64,
 	recorderEpochSpan *slashpb.MinMaxEpochSpan,
-	attestationSourceEpoch uint64) uint64 {
-
+	attestationSourceEpoch uint64,
+) uint64 {
 	maxSpan := uint64(recorderEpochSpan.MaxEpochSpan)
 	if maxSpan > attestationEpochSpan {
 		return maxSpan + attestationSourceEpoch
@@ -26,12 +26,12 @@ func detectMax(
 }
 
 // detectMin is a function for minDetecter used to detect surrounded attestations.
-func detectMin(attestationEpochSpan uint64,
+func detectMin(
+	attestationEpochSpan uint64,
 	recorderEpochSpan *slashpb.MinMaxEpochSpan,
-	attestationSourceEpoch uint64) uint64 {
-
+	attestationSourceEpoch uint64,
+) uint64 {
 	minSpan := uint64(recorderEpochSpan.MinEpochSpan)
-
 	if minSpan > 0 && minSpan < attestationEpochSpan {
 		return minSpan + attestationSourceEpoch
 	}
@@ -65,6 +65,7 @@ func (ss *Server) DetectAndUpdateMaxEpochSpan(
 	if targetEpoch > 0 {
 		return targetEpoch, spanMap, nil
 	}
+
 	for i := uint64(1); i < target-source; i++ {
 		val := uint32(span - i)
 		if _, ok := spanMap.EpochSpanMap[source+i]; !ok {
@@ -113,6 +114,7 @@ func (ss *Server) DetectAndUpdateMinEpochSpan(
 	if source == 0 {
 		return 0, spanMap, nil
 	}
+
 	for i := source - 1; i > 0; i-- {
 		val := uint32(target - (i))
 		if _, ok := spanMap.EpochSpanMap[i]; !ok {

@@ -210,13 +210,13 @@ func TestValidatorSpanMap_SaveOnEvict(t *testing.T) {
 		},
 	}
 	for i := uint64(0); i < 6; i++ {
-
 		err := db.SaveValidatorSpansMap(i, tsm.spanMap)
 		if err != nil {
 			t.Fatalf("Save validator span map failed: %v", err)
 		}
 	}
-	// wait for value to pass through cache buffers
+
+	// Wait for value to pass through cache buffers.
 	time.Sleep(time.Millisecond * 1000)
 	for i := uint64(0); i < 6; i++ {
 		sm, err := db.ValidatorSpansMap(i)

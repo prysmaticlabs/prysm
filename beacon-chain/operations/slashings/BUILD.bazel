@@ -20,7 +20,10 @@ go_library(
 go_test(
     name = "go_default_test",
     size = "small",
-    srcs = ["service_test.go"],
+    srcs = [
+        "service_attester_test.go",
+        "service_proposer_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/state:go_default_library",

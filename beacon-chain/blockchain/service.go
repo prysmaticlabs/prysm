@@ -10,8 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -30,6 +28,7 @@ import (
 	f "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -168,9 +167,7 @@ func (s *Service) Start() {
 			s.finalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
 			s.prevFinalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
 
-			if err := s.resumeForkChoice(ctx, justifiedCheckpoint, finalizedCheckpoint); err != nil {
-				log.Fatalf("Could not resume fork choice: %v", err)
-			}
+			s.resumeForkChoice(justifiedCheckpoint, finalizedCheckpoint)
 		}
 
 		if finalizedCheckpoint.Epoch > 1 {
@@ -481,33 +478,7 @@ func (s *Service) pruneGarbageState(ctx context.Context, slot uint64) error {
 
 // This is called when a client starts from non-genesis slot. This passes last justified and finalized
 // information to fork choice service to initializes fork choice store.
-func (s *Service) resumeForkChoice(
-	ctx context.Context,
-	justifiedCheckpoint *ethpb.Checkpoint,
-	finalizedCheckpoint *ethpb.Checkpoint) error {
+func (s *Service) resumeForkChoice(justifiedCheckpoint *ethpb.Checkpoint, finalizedCheckpoint *ethpb.Checkpoint) {
 	store := protoarray.New(justifiedCheckpoint.Epoch, finalizedCheckpoint.Epoch, bytesutil.ToBytes32(finalizedCheckpoint.Root))
 	s.forkChoiceStore = store
-
-	headBlock, err := s.beaconDB.HeadBlock(ctx)
-	if err != nil {
-		return err
-	}
-	if headBlock == nil || headBlock.Block == nil {
-		return errors.New("head block is nil")
-	}
-	headBlockRoot, err := ssz.HashTreeRoot(headBlock.Block)
-	if err != nil {
-		return err
-	}
-	if err := s.forkChoiceStore.ProcessBlock(
-		ctx,
-		headBlock.Block.Slot,
-		headBlockRoot,
-		bytesutil.ToBytes32(headBlock.Block.ParentRoot),
-		finalizedCheckpoint.Epoch,
-		justifiedCheckpoint.Epoch); err != nil {
-		return err
-	}
-
-	return nil
 }
