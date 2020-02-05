@@ -2,7 +2,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["server.go"],
+    srcs = ["client.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/slasher",
     visibility = ["//visibility:public"],
     deps = [
@@ -20,7 +20,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["server_test.go"],
+    srcs = ["client_test.go"],
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/blockchain/testing:go_default_library",

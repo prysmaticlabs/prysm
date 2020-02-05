@@ -26,9 +26,10 @@ func init() {
 
 // Client defines a client implementation of the gRPC slasher service.
 type Client struct {
-	HeadFetcher     blockchain.HeadFetcher
-	SlashingPool    *slashings.Pool
-	SlasherClient   slashpb.SlasherClient
+	HeadFetcher   blockchain.HeadFetcher
+	SlashingPool  *slashings.Pool
+	SlasherClient slashpb.SlasherClient
+	//P2p Will later be used to send slashing on pub sub
 	P2p             p2p.Broadcaster
 	ShouldBroadcast bool
 }
@@ -42,11 +43,9 @@ func (s *Client) SlashingPoolFeeder(ctx context.Context) error {
 	for {
 		select {
 		case <-tick:
-			state, err := s.HeadFetcher.HeadState(ctx)
-			if err != nil {
-				return status.Errorf(codes.Internal, "Could not get head state: %v", err)
+			if err := s.updatePool(ctx); err != nil {
+				return err
 			}
-			s.updateSlashingPool(ctx, state)
 		case <-ctx.Done():
 			err := status.Error(codes.Canceled, "Stream context canceled")
 			log.WithError(err)
@@ -54,6 +53,21 @@ func (s *Client) SlashingPoolFeeder(ctx context.Context) error {
 
 		}
 	}
+}
+
+func (s *Client) updatePool(ctx context.Context) error {
+	state, err := s.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+	if s.SlasherClient != nil {
+		s.updateSlashingPool(ctx, state)
+	} else {
+		err := status.Error(codes.Internal, "Slasher server has not been started")
+		log.WithError(err)
+		return err
+	}
+	return nil
 }
 
 func (s *Client) updateSlashingPool(ctx context.Context, state *st.BeaconState) error {
