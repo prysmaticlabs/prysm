@@ -56,7 +56,7 @@ type Server struct {
 	AttPool                attestations.Pool
 	ExitPool               *voluntaryexits.Pool
 	SlashingPool           *slashings.Pool
-	SlasherClient          *slashpb.SlasherClient
+	SlasherClient          slashpb.SlasherClient
 	BlockReceiver          blockchain.BlockReceiver
 	MockEth1Votes          bool
 	Eth1BlockFetcher       powchain.POWBlockFetcher
