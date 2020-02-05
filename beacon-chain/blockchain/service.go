@@ -34,7 +34,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -294,10 +293,6 @@ func (s *Service) saveHead(ctx context.Context, signed *ethpb.SignedBeaconBlock,
 	}
 	s.headState = headState
 
-	log.WithFields(logrus.Fields{
-		"slot":     signed.Block.Slot,
-		"headRoot": fmt.Sprintf("%#x", r),
-	}).Debug("Saved new head info")
 	return nil
 }
 
@@ -324,14 +319,10 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 	}
 	s.headState = headState
 
-	log.WithFields(logrus.Fields{
-		"slot":     b.Block.Slot,
-		"headRoot": fmt.Sprintf("%#x", r),
-	}).Debug("Saved new head info")
 	return nil
 }
 
-// This gets called when beacon chain is first initialized to save validator indices and pubkeys in db
+// This gets called when beacon chain is first initialized to save validator indices and public keys in db.
 func (s *Service) saveGenesisValidators(ctx context.Context, state *stateTrie.BeaconState) error {
 	pubkeys := make([][48]byte, state.NumValidators())
 	indices := make([]uint64, state.NumValidators())
@@ -343,7 +334,7 @@ func (s *Service) saveGenesisValidators(ctx context.Context, state *stateTrie.Be
 	return s.beaconDB.SaveValidatorIndices(ctx, pubkeys, indices)
 }
 
-// This gets called when beacon chain is first initialized to save genesis data (state, block, and more) in db
+// This gets called when beacon chain is first initialized to save genesis data (state, block, and more) in db.
 func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.BeaconState) error {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
