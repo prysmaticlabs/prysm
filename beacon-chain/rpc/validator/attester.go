@@ -85,11 +85,7 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 			return nil, status.Errorf(codes.Internal, "Could not get target block for slot %d: %v", epochStartSlot, err)
 		}
 		if bytesutil.ToBytes32(targetRoot) == params.BeaconConfig().ZeroHash {
-			r, err := vs.HeadFetcher.HeadRoot(ctx)
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not get head block root: %v", err)
-			}
-			targetRoot = r[:]
+			targetRoot = headRoot
 		}
 	}
 
