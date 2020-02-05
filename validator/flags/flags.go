@@ -67,4 +67,9 @@ var (
 		Name:  "grpc-max-msg-size",
 		Usage: "Integer to define max recieve message call size (default: 52428800 (for 50Mb)).",
 	}
+	// AccountMetricsFlag defines the graffiti value included in proposed blocks, default false.
+	AccountMetricsFlag = cli.BoolFlag{
+		Name:  "enable-account-metrics",
+		Usage: "Enable prometheus metrics for validator accounts",
+	}
 )
