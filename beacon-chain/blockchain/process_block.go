@@ -172,6 +172,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("Verifying pre state ", b.Slot, preState.Slot())
 	preStateValidatorCount := preState.NumValidators()
 
 	postState, err := state.ExecuteStateTransitionNoVerifyAttSigs(ctx, preState, signed)

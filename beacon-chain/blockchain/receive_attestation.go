@@ -1,7 +1,6 @@
 package blockchain
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -43,36 +42,6 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 
 		s.forkChoiceStore.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(att.Data.BeaconBlockRoot), att.Data.Target.Epoch)
 
-	} else {
-		indices, err = s.forkChoiceStoreOld.OnAttestation(ctx, att)
-		if err != nil {
-			return errors.Wrap(err, "could not process attestation from fork choice service")
-		}
-	}
-
-	// Run fork choice for head block after updating fork choice store.
-	if !featureconfig.Get().DisableForkChoice && !featureconfig.Get().ProtoArrayForkChoice {
-		headRoot, err := s.forkChoiceStoreOld.Head(ctx)
-		if err != nil {
-			return errors.Wrap(err, "could not get head from fork choice service")
-		}
-		// Only save head if it's different than the current head.
-		cachedHeadRoot, err := s.HeadRoot(ctx)
-		if err != nil {
-			return errors.Wrap(err, "could not get head root from cache")
-		}
-		if !bytes.Equal(headRoot, cachedHeadRoot) {
-			signed, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
-			if err != nil {
-				return errors.Wrap(err, "could not compute state from block head")
-			}
-			if signed == nil || signed.Block == nil {
-				return errors.New("nil head block")
-			}
-			if err := s.saveHead(ctx, signed, bytesutil.ToBytes32(headRoot)); err != nil {
-				return errors.Wrap(err, "could not save head")
-			}
-		}
 	}
 
 	return nil

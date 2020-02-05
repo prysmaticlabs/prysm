@@ -80,13 +80,6 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 			traceutil.AnnotateError(span, err)
 			return err
 		}
-	} else {
-		postState, err = s.forkChoiceStoreOld.OnBlockCacheFilteredTree(ctx, blockCopy)
-		if err != nil {
-			err := errors.Wrap(err, "could not process block from fork choice service")
-			traceutil.AnnotateError(span, err)
-			return err
-		}
 	}
 
 	root, err := ssz.HashTreeRoot(blockCopy.Block)
@@ -147,12 +140,8 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 			}
 
 			headRoot = headRootProtoArray[:]
-		} else {
-			headRoot, err = s.forkChoiceStoreOld.Head(ctx)
-			if err != nil {
-				return errors.Wrap(err, "could not get head from fork choice service")
-			}
 		}
+
 		// Only save head if it's different than the current head.
 		cachedHeadRoot, err := s.HeadRoot(ctx)
 		if err != nil {
@@ -191,13 +180,6 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 		_, err = s.onBlock(ctx, blockCopy)
 		if err != nil {
 			err := errors.Wrap(err, "could not process block")
-			traceutil.AnnotateError(span, err)
-			return err
-		}
-	} else {
-		_, err = s.forkChoiceStoreOld.OnBlock(ctx, blockCopy)
-		if err != nil {
-			err := errors.Wrap(err, "could not process block from fork choice service")
 			traceutil.AnnotateError(span, err)
 			return err
 		}
@@ -255,11 +237,6 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 			err := errors.Wrap(err, "could not process block")
 			traceutil.AnnotateError(span, err)
 			return err
-		}
-	} else {
-		_, err = s.forkChoiceStoreOld.OnBlockInitialSyncStateTransition(ctx, blockCopy)
-		if err != nil {
-			return errors.Wrap(err, "could not process blockCopy from fork choice service")
 		}
 	}
 

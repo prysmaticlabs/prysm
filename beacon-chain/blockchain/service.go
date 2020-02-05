@@ -14,7 +14,6 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -49,7 +48,6 @@ type Service struct {
 	chainStartFetcher      powchain.ChainStartFetcher
 	attPool                attestations.Pool
 	exitPool               *voluntaryexits.Pool
-	forkChoiceStoreOld     forkchoice.ForkChoicer
 	genesisTime            time.Time
 	p2p                    p2p.Broadcaster
 	maxRoutines            int64
@@ -93,7 +91,6 @@ type Config struct {
 // be registered into a running beacon node.
 func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	store := forkchoice.NewForkChoiceService(ctx, cfg.BeaconDB)
 	return &Service{
 		ctx:                ctx,
 		cancel:             cancel,
@@ -102,7 +99,6 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		chainStartFetcher:  cfg.ChainStartFetcher,
 		attPool:            cfg.AttPool,
 		exitPool:           cfg.ExitPool,
-		forkChoiceStoreOld: store,
 		p2p:                cfg.P2p,
 		canonicalRoots:     make(map[uint64][]byte),
 		maxRoutines:        cfg.MaxRoutines,
@@ -152,9 +148,6 @@ func (s *Service) Start() {
 		finalizedCheckpoint, err := s.beaconDB.FinalizedCheckpoint(ctx)
 		if err != nil {
 			log.Fatalf("Could not get finalized checkpoint: %v", err)
-		}
-		if err := s.forkChoiceStoreOld.GenesisStore(ctx, justifiedCheckpoint, finalizedCheckpoint); err != nil {
-			log.Fatalf("Could not start fork choice service: %v", err)
 		}
 
 		if featureconfig.Get().ProtoArrayForkChoice {
@@ -386,9 +379,6 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 	}
 
 	genesisCheckpoint := &ethpb.Checkpoint{Root: genesisBlkRoot[:]}
-	if err := s.forkChoiceStoreOld.GenesisStore(ctx, genesisCheckpoint, genesisCheckpoint); err != nil {
-		return errors.Wrap(err, "Could not start fork choice service: %v")
-	}
 
 	// Add the genesis block to the fork choice store.
 	if featureconfig.Get().ProtoArrayForkChoice {
@@ -482,27 +472,6 @@ func (s *Service) resumeForkChoice(
 	finalizedCheckpoint *ethpb.Checkpoint) error {
 	store := protoarray.New(justifiedCheckpoint.Epoch, finalizedCheckpoint.Epoch, bytesutil.ToBytes32(finalizedCheckpoint.Root))
 	s.forkChoiceStore = store
-
-	headBlock, err := s.beaconDB.HeadBlock(ctx)
-	if err != nil {
-		return err
-	}
-	if headBlock == nil || headBlock.Block == nil {
-		return errors.New("head block is nil")
-	}
-	headBlockRoot, err := ssz.HashTreeRoot(headBlock.Block)
-	if err != nil {
-		return err
-	}
-	if err := s.forkChoiceStore.ProcessBlock(
-		ctx,
-		headBlock.Block.Slot,
-		headBlockRoot,
-		bytesutil.ToBytes32(headBlock.Block.ParentRoot),
-		finalizedCheckpoint.Epoch,
-		justifiedCheckpoint.Epoch); err != nil {
-		return err
-	}
 
 	return nil
 }
