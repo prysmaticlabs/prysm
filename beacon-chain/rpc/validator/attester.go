@@ -120,8 +120,6 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 	if _, err := bls.SignatureFromBytes(att.Signature); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "Incorrect attestation signature")
 	}
-	go vs.SlashingPool.InsertProposerSlashing(vs.SlasherClient.ProposerSlashings(ctx))
-	go vs.SlashingPool.InsertAttesterSlashing(vs.SlasherClient.SlashableAttestations())
 	root, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not tree hash attestation: %v", err)

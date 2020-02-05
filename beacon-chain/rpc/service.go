@@ -89,7 +89,7 @@ type Service struct {
 	slasherProvider        string
 	slasherCert            string
 	slasherCredentialError error
-	slasherClient          *slashpb.SlasherClient
+	slasherClient          slashpb.SlasherClient
 }
 
 // Config options for the beacon node RPC server.
