@@ -47,7 +47,7 @@ func TestStore_AttestationCRUD(t *testing.T) {
 	if !proto.Equal(att, retrievedAtts[0]) {
 		t.Errorf("Wanted %v, received %v", att, retrievedAtts[0])
 	}
-	if err := db.DeleteAttestation(ctx, attDataRoot); err != nil {
+	if err := db.DeleteAttestations(ctx, [][32]byte{attDataRoot}); err != nil {
 		t.Fatal(err)
 	}
 	if db.HasAttestation(ctx, attDataRoot) {
@@ -153,7 +153,7 @@ func TestStore_BoltDontPanic(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err := db.DeleteAttestation(ctx, attDataRoot); err != nil {
+			if err := db.DeleteAttestations(ctx, [][32]byte{attDataRoot}); err != nil {
 				t.Fatal(err)
 			}
 			if db.HasAttestation(ctx, attDataRoot) {

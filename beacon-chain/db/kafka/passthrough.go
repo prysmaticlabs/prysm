@@ -42,11 +42,6 @@ func (e Exporter) HasAttestation(ctx context.Context, attDataRoot [32]byte) bool
 	return e.db.HasAttestation(ctx, attDataRoot)
 }
 
-// DeleteAttestation -- passthrough.
-func (e Exporter) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) error {
-	return e.db.DeleteAttestation(ctx, attDataRoot)
-}
-
 // DeleteAttestations -- passthrough.
 func (e Exporter) DeleteAttestations(ctx context.Context, attDataRoots [][32]byte) error {
 	return e.db.DeleteAttestations(ctx, attDataRoots)
@@ -75,16 +70,6 @@ func (e Exporter) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32
 // HasBlock -- passthrough.
 func (e Exporter) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 	return e.db.HasBlock(ctx, blockRoot)
-}
-
-// DeleteBlock -- passthrough.
-func (e Exporter) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
-	return e.db.DeleteBlock(ctx, blockRoot)
-}
-
-// DeleteBlocks -- passthrough.
-func (e Exporter) DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
-	return e.db.DeleteBlocks(ctx, blockRoots)
 }
 
 // ValidatorIndex -- passthrough.
@@ -275,11 +260,6 @@ func (e Exporter) SaveArchivedValidatorParticipation(ctx context.Context, epoch 
 // SaveDepositContractAddress -- passthrough.
 func (e Exporter) SaveDepositContractAddress(ctx context.Context, addr common.Address) error {
 	return e.db.SaveDepositContractAddress(ctx, addr)
-}
-
-// DeleteState -- passthrough.
-func (e Exporter) DeleteState(ctx context.Context, blockRoot [32]byte) error {
-	return e.db.DeleteState(ctx, blockRoot)
 }
 
 // DeleteStates -- passthrough.

@@ -131,43 +131,12 @@ func (k *Store) HasState(ctx context.Context, blockRoot [32]byte) bool {
 	return exists
 }
 
-// DeleteState by block root.
-func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteState")
-	defer span.End()
-
-	return k.db.Batch(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(blocksBucket)
-		genesisBlockRoot := bkt.Get(genesisBlockRootKey)
-
-		bkt = tx.Bucket(checkpointBucket)
-		enc := bkt.Get(finalizedCheckpointKey)
-		checkpoint := &ethpb.Checkpoint{}
-		if enc == nil {
-			checkpoint = &ethpb.Checkpoint{Root: genesisBlockRoot}
-		} else if err := decode(enc, checkpoint); err != nil {
-			return err
-		}
-
-		bkt = tx.Bucket(blocksBucket)
-		headBlkRoot := bkt.Get(headBlockRootKey)
-
-		// Safe guard against deleting genesis, finalized, head state.
-		if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], headBlkRoot) {
-			return errors.New("cannot delete genesis, finalized, or head state")
-		}
-
-		bkt = tx.Bucket(stateBucket)
-		return bkt.Delete(blockRoot[:])
-	})
-}
-
 // DeleteStates by block roots.
 func (k *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteStates")
 	defer span.End()
 
-	return k.db.Batch(func(tx *bolt.Tx) error {
+	return k.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		genesisBlockRoot := bkt.Get(genesisBlockRootKey)
 

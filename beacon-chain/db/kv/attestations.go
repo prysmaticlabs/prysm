@@ -91,28 +91,6 @@ func (k *Store) HasAttestation(ctx context.Context, attDataRoot [32]byte) bool {
 	return exists
 }
 
-// DeleteAttestation by attestation data root.
-func (k *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteAttestation")
-	defer span.End()
-	return k.db.Batch(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(attestationsBucket)
-		enc := bkt.Get(attDataRoot[:])
-		if enc == nil {
-			return nil
-		}
-		ac := &dbpb.AttestationContainer{}
-		if err := decode(enc, ac); err != nil {
-			return err
-		}
-		indicesByBucket := createAttestationIndicesFromData(ac.Data)
-		if err := deleteValueForIndices(indicesByBucket, attDataRoot[:], tx); err != nil {
-			return errors.Wrap(err, "could not delete root for DB indices")
-		}
-		return bkt.Delete(attDataRoot[:])
-	})
-}
-
 // DeleteAttestations by attestation data roots.
 func (k *Store) DeleteAttestations(ctx context.Context, attDataRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteAttestations")

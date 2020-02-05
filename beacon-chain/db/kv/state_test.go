@@ -199,7 +199,7 @@ func TestStore_DeleteGenesisState(t *testing.T) {
 		t.Fatal(err)
 	}
 	wantedErr := "cannot delete genesis, finalized, or head state"
-	if err := db.DeleteState(ctx, genesisBlockRoot); err.Error() != wantedErr {
+	if err := db.DeleteStates(ctx, [][32]byte{genesisBlockRoot}); err.Error() != wantedErr {
 		t.Error("Did not receive wanted error")
 	}
 }
@@ -241,7 +241,7 @@ func TestStore_DeleteFinalizedState(t *testing.T) {
 		t.Fatal(err)
 	}
 	wantedErr := "cannot delete genesis, finalized, or head state"
-	if err := db.DeleteState(ctx, finalizedBlockRoot); err.Error() != wantedErr {
+	if err := db.DeleteStates(ctx, [][32]byte{finalizedBlockRoot}); err.Error() != wantedErr {
 		t.Error("Did not receive wanted error")
 	}
 }
@@ -282,7 +282,7 @@ func TestStore_DeleteHeadState(t *testing.T) {
 		t.Fatal(err)
 	}
 	wantedErr := "cannot delete genesis, finalized, or head state"
-	if err := db.DeleteState(ctx, headBlockRoot); err.Error() != wantedErr {
+	if err := db.DeleteStates(ctx, [][32]byte{headBlockRoot}); err.Error() != wantedErr {
 		t.Error("Did not receive wanted error")
 	}
 }

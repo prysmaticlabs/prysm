@@ -61,13 +61,10 @@ type NoHeadAccessDatabase interface {
 	ReadOnlyDatabase
 
 	// Attestation related methods.
-	DeleteAttestation(ctx context.Context, attDataRoot [32]byte) error
 	DeleteAttestations(ctx context.Context, attDataRoots [][32]byte) error
 	SaveAttestation(ctx context.Context, att *eth.Attestation) error
 	SaveAttestations(ctx context.Context, atts []*eth.Attestation) error
 	// Block related methods.
-	DeleteBlock(ctx context.Context, blockRoot [32]byte) error
-	DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error
 	SaveBlock(ctx context.Context, block *eth.SignedBeaconBlock) error
 	SaveBlocks(ctx context.Context, blocks []*eth.SignedBeaconBlock) error
 	SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error
@@ -77,7 +74,6 @@ type NoHeadAccessDatabase interface {
 	SaveValidatorIndices(ctx context.Context, publicKeys [][48]byte, validatorIndices []uint64) error
 	// State related methods.
 	SaveState(ctx context.Context, state *state.BeaconState, blockRoot [32]byte) error
-	DeleteState(ctx context.Context, blockRoot [32]byte) error
 	DeleteStates(ctx context.Context, blockRoots [][32]byte) error
 	// Slashing operations.
 	SaveProposerSlashing(ctx context.Context, slashing *eth.ProposerSlashing) error

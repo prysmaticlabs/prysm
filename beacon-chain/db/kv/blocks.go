@@ -202,58 +202,6 @@ func (k *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 	return exists
 }
 
-// DeleteBlock by block root.
-func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlock")
-	defer span.End()
-	return k.db.Batch(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(blocksBucket)
-		enc := bkt.Get(blockRoot[:])
-		if enc == nil {
-			return nil
-		}
-		block := &ethpb.SignedBeaconBlock{}
-		if err := decode(enc, block); err != nil {
-			return err
-		}
-		indicesByBucket := createBlockIndicesFromBlock(block.Block)
-		if err := deleteValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
-			return errors.Wrap(err, "could not delete root for DB indices")
-		}
-		k.blockCache.Del(string(blockRoot[:]))
-		return bkt.Delete(blockRoot[:])
-	})
-}
-
-// DeleteBlocks by block roots.
-func (k *Store) DeleteBlocks(ctx context.Context, blockRoots [][32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlocks")
-	defer span.End()
-
-	return k.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(blocksBucket)
-		for _, blockRoot := range blockRoots {
-			enc := bkt.Get(blockRoot[:])
-			if enc == nil {
-				return nil
-			}
-			block := &ethpb.SignedBeaconBlock{}
-			if err := decode(enc, block); err != nil {
-				return err
-			}
-			indicesByBucket := createBlockIndicesFromBlock(block.Block)
-			if err := deleteValueForIndices(indicesByBucket, blockRoot[:], tx); err != nil {
-				return errors.Wrap(err, "could not delete root for DB indices")
-			}
-			k.blockCache.Del(string(blockRoot[:]))
-			if err := bkt.Delete(blockRoot[:]); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-}
-
 // SaveBlock to the db.
 func (k *Store) SaveBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlock")
