@@ -10,8 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -30,6 +28,7 @@ import (
 	f "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
