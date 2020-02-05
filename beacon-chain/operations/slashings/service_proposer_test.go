@@ -21,7 +21,7 @@ func proposerSlashingForValIdx(valIdx uint64) *ethpb.ProposerSlashing {
 func generateNProposerSlashings(n uint64) []*ethpb.ProposerSlashing {
 	proposerSlashings := make([]*ethpb.ProposerSlashing, n)
 	for i := uint64(0); i < n; i++ {
-		proposerSlashings[i] = proposerSlashingForValIdx(n)
+		proposerSlashings[i] = proposerSlashingForValIdx(i)
 	}
 	return proposerSlashings
 }
@@ -47,9 +47,9 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 				included: make(map[uint64]bool),
 			},
 			args: args{
-				slashing: proposerSlashingForValIdx(1),
+				slashing: proposerSlashingForValIdx(0),
 			},
-			want: generateNProposerSlashings(2),
+			want: generateNProposerSlashings(1),
 		},
 		{
 			name: "Duplicate identical slashing",
@@ -58,7 +58,7 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 				included: make(map[uint64]bool),
 			},
 			args: args{
-				slashing: proposerSlashingForValIdx(1),
+				slashing: proposerSlashingForValIdx(0),
 			},
 			want: generateNProposerSlashings(1),
 		},
@@ -115,14 +115,18 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 			fields: fields{
 				pending: []*ethpb.ProposerSlashing{
 					proposerSlashingForValIdx(0),
-					proposerSlashingForValIdx(2),
+					proposerSlashingForValIdx(4),
 				},
 				included: make(map[uint64]bool),
 			},
 			args: args{
 				slashing: proposerSlashingForValIdx(1),
 			},
-			want: generateNProposerSlashings(3),
+			want: []*ethpb.ProposerSlashing{
+				proposerSlashingForValIdx(0),
+				proposerSlashingForValIdx(1),
+				proposerSlashingForValIdx(4),
+			},
 		},
 	}
 	ctx := context.Background()
@@ -152,13 +156,13 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 				pendingProposerSlashing: tt.fields.pending,
 				included:                tt.fields.included,
 			}
-			s, err := beaconstate.InitializeFromProtoUnsafe(&p2ppb.BeaconState{Validators: validators})
+			beaconState, err := beaconstate.InitializeFromProtoUnsafe(&p2ppb.BeaconState{Validators: validators})
 			if err != nil {
 				t.Fatal(err)
 			}
-			s.SetSlot(16 * params.BeaconConfig().SlotsPerEpoch)
-			s.SetSlashings([]uint64{5})
-			p.InsertProposerSlashing(ctx, s, tt.args.slashing)
+			beaconState.SetSlot(16 * params.BeaconConfig().SlotsPerEpoch)
+			beaconState.SetSlashings([]uint64{5})
+			p.InsertProposerSlashing(ctx, beaconState, tt.args.slashing)
 			if len(p.pendingProposerSlashing) != len(tt.want) {
 				t.Fatalf("Mismatched lengths of pending list. Got %d, wanted %d.", len(p.pendingProposerSlashing), len(tt.want))
 			}
@@ -300,7 +304,7 @@ func TestPool_PendingProposerSlashings(t *testing.T) {
 		{
 			name: "All eligible, more than max",
 			fields: fields{
-				pending: generateNProposerSlashings(16),
+				pending: generateNProposerSlashings(24),
 			},
 			want: generateNProposerSlashings(16),
 		},

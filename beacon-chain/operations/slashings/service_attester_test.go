@@ -41,6 +41,14 @@ func generateNPendingSlashings(n uint64) []*PendingAttesterSlashing {
 	return pendingAttSlashings
 }
 
+func generateNAttSlashings(n uint64) []*ethpb.AttesterSlashing {
+	attSlashings := make([]*ethpb.AttesterSlashing, n)
+	for i := uint64(0); i < n; i++ {
+		attSlashings[i] = attesterSlashingForValIdx(i)
+	}
+	return attSlashings
+}
+
 func TestPool_InsertAttesterSlashing(t *testing.T) {
 	type fields struct {
 		pending  []*PendingAttesterSlashing
@@ -394,28 +402,28 @@ func TestPool_PendingAttesterSlashings(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   []*PendingAttesterSlashing
+		want   []*ethpb.AttesterSlashing
 	}{
 		{
 			name: "Empty list",
 			fields: fields{
 				pending: []*PendingAttesterSlashing{},
 			},
-			want: []*PendingAttesterSlashing{},
+			want: []*ethpb.AttesterSlashing{},
 		},
 		{
 			name: "All eligible",
 			fields: fields{
-				pending: generateNPendingSlashings(6),
+				pending: generateNPendingSlashings(1),
 			},
-			want: generateNPendingSlashings(6),
+			want: generateNAttSlashings(1),
 		},
 		{
 			name: "All eligible, more than max",
 			fields: fields{
 				pending: generateNPendingSlashings(16),
 			},
-			want: generateNPendingSlashings(16),
+			want: generateNAttSlashings(1),
 		},
 	}
 	for _, tt := range tests {
@@ -423,8 +431,8 @@ func TestPool_PendingAttesterSlashings(t *testing.T) {
 			p := &Pool{
 				pendingAttesterSlashing: tt.fields.pending,
 			}
-			if got := p.PendingAttesterSlashings(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("PendingAttesterSlashings() = %v, want %v", got, tt.want)
+			if got := p.PendingAttesterSlashings(); !reflect.DeepEqual(tt.want, got) {
+				t.Errorf("Unexpected return from PendingAttesterSlashings, wanted %v, received %v", tt.want, got)
 			}
 		})
 	}

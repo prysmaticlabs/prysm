@@ -105,8 +105,7 @@ func (p *Pool) InsertAttesterSlashing(ctx context.Context, state *beaconstate.Be
 
 		// Does this validator exist in the list already? Use binary search to find the answer.
 		if found := sort.Search(len(p.pendingAttesterSlashing), func(i int) bool {
-			e := p.pendingAttesterSlashing[i]
-			return e.validatorToSlash == val
+			return p.pendingAttesterSlashing[i].validatorToSlash == val
 		}); found != len(p.pendingAttesterSlashing) {
 			return
 		}
@@ -134,7 +133,7 @@ func (p *Pool) InsertProposerSlashing(ctx context.Context, state *beaconstate.Be
 	if len(stateValidators) <= int(slashing.ProposerIndex) || stateValidators[slashing.ProposerIndex].ExitEpoch < helpers.CurrentEpoch(state) {
 		return
 	}
-	//Has the validator been slashed already?
+	// Has the validator been slashed already?
 	slashedValidators := state.Slashings()
 	if found := sort.Search(len(slashedValidators), func(i int) bool {
 		return slashedValidators[i] == slashing.ProposerIndex
@@ -144,9 +143,8 @@ func (p *Pool) InsertProposerSlashing(ctx context.Context, state *beaconstate.Be
 
 	// Does this validator exist in the list already? Use binary search to find the answer.
 	if found := sort.Search(len(p.pendingProposerSlashing), func(i int) bool {
-		e := p.pendingProposerSlashing[i]
-		return e.ProposerIndex == slashing.ProposerIndex
-	}); found != len(p.pendingAttesterSlashing) {
+		return p.pendingProposerSlashing[i].ProposerIndex == slashing.ProposerIndex
+	}); found != len(p.pendingProposerSlashing) {
 		return
 	}
 
@@ -155,7 +153,6 @@ func (p *Pool) InsertProposerSlashing(ctx context.Context, state *beaconstate.Be
 	sort.Slice(p.pendingProposerSlashing, func(i, j int) bool {
 		return p.pendingProposerSlashing[i].ProposerIndex < p.pendingProposerSlashing[j].ProposerIndex
 	})
-
 }
 
 // MarkIncludedAttesterSlashing is used when an attester slashing has been included in a beacon block.
