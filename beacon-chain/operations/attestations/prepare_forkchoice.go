@@ -5,11 +5,11 @@ import (
 	"errors"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -85,7 +85,7 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 func (s *Service) aggregateAndSaveForkChoiceAtts(atts []*ethpb.Attestation) error {
 	clonedAtts := make([]*ethpb.Attestation, len(atts))
 	for i, a := range atts {
-		clonedAtts[i] = proto.Clone(a).(*ethpb.Attestation)
+		clonedAtts[i] = stateTrie.CopyAttestation(a)
 	}
 	aggregatedAtts, err := helpers.AggregateAttestations(clonedAtts)
 	if err != nil {
