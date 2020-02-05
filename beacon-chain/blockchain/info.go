@@ -45,6 +45,31 @@ func (s *Service) HeadsHandler(w http.ResponseWriter, _ *http.Request) {
 
 }
 
+const template = `<html>
+<head>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/viz.js/2.1.2/viz.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/viz.js/2.1.2/full.render.js"></script>
+<body>
+    <script type="application/javascript">
+        var graph = ` + "`%s`;" + `
+        var viz = new Viz();
+
+        viz.renderSVGElement(graph) // reading the graph.
+            .then(function(element) {
+                document.body.appendChild(element); // appends to document.
+            })
+            .catch(error => {
+                // Create a new Viz instance (@see Caveats page for more info)
+                viz = new Viz();
+
+                // Possibly display the error
+                console.error(error);
+            });
+    </script>
+</head>
+</body>
+</html>`
+
 // TreeHandler is a handler to serve /tree page in metrics.
 func (s *Service) TreeHandler(w http.ResponseWriter, _ *http.Request) {
 	nodes := s.forkChoiceStore.Nodes()
@@ -75,7 +100,8 @@ func (s *Service) TreeHandler(w http.ResponseWriter, _ *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	if _, err := w.Write([]byte(graph.String())); err != nil {
+	w.Header().Set("Content-Type", "text/html")
+	if _, err := fmt.Fprintf(w, template, graph.String()); err != nil {
 		log.WithError(err).Error("Failed to render p2p info page")
 	}
 }

@@ -146,7 +146,7 @@ func TestStore_SaveProposerSlashings(t *testing.T) {
 		{ProposerIndex: 2},
 		{ProposerIndex: 3},
 	}
-	err := db.SaveProposeerSlashings(Active, ps)
+	err := db.SaveProposerSlashings(Active, ps)
 	if err != nil {
 		t.Fatalf("Save proposer slashings failed: %v", err)
 	}
