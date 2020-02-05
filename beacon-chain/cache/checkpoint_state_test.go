@@ -43,7 +43,6 @@ func TestCheckpointStateCacheKeyFn_InvalidObj(t *testing.T) {
 }
 
 func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
-	t.Skip("TODO")
 	cache := NewCheckpointStateCache()
 
 	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: []byte{'A'}}
