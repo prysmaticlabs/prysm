@@ -5,6 +5,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
@@ -82,7 +84,11 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 // This aggregates a list of attestations using the aggregation algorithm defined in AggregateAttestations
 // and saves the attestations for fork choice.
 func (s *Service) aggregateAndSaveForkChoiceAtts(atts []*ethpb.Attestation) error {
-	aggregatedAtts, err := helpers.AggregateAttestations(atts)
+	clonedAtts := make([]*ethpb.Attestation, len(atts))
+	for i, a := range atts {
+		clonedAtts[i] = proto.Clone(a).(*ethpb.Attestation)
+	}
+	aggregatedAtts, err := helpers.AggregateAttestations(clonedAtts)
 	if err != nil {
 		return err
 	}
