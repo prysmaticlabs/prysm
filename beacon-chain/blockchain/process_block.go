@@ -270,6 +270,10 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk *ethpb.B
 		return nil
 	}
 
+	if err := s.fillInForkChoiceMissingBlocks(ctx, blk, state); err != nil {
+		return err
+	}
+
 	// Feed in block to fork choice store.
 	if err := s.forkChoiceStore.ProcessBlock(ctx,
 		blk.Slot, root, bytesutil.ToBytes32(blk.ParentRoot),

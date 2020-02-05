@@ -32,6 +32,7 @@ type ValidatorService struct {
 	dataDir              string
 	keyManager           keymanager.KeyManager
 	logValidatorBalances bool
+	emitAccountMetrics   bool
 	maxCallRecvMsgSize   int
 }
 
@@ -43,6 +44,7 @@ type Config struct {
 	GraffitiFlag               string
 	KeyManager                 keymanager.KeyManager
 	LogValidatorBalances       bool
+	EmitAccountMetrics         bool
 	GrpcMaxCallRecvMsgSizeFlag int
 }
 
@@ -59,6 +61,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		graffiti:             []byte(cfg.GraffitiFlag),
 		keyManager:           cfg.KeyManager,
 		logValidatorBalances: cfg.LogValidatorBalances,
+		emitAccountMetrics:   cfg.EmitAccountMetrics,
 		maxCallRecvMsgSize:   cfg.GrpcMaxCallRecvMsgSizeFlag,
 	}, nil
 }
@@ -131,6 +134,7 @@ func (v *ValidatorService) Start() {
 		keyManager:           v.keyManager,
 		graffiti:             v.graffiti,
 		logValidatorBalances: v.logValidatorBalances,
+		emitAccountMetrics:   v.emitAccountMetrics,
 		prevBalance:          make(map[[48]byte]uint64),
 		attLogs:              make(map[[32]byte]*attSubmitted),
 	}
