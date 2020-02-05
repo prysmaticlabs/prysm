@@ -43,9 +43,18 @@ func NewPool() *Pool {
 func (p *Pool) PendingAttesterSlashings() []*ethpb.AttesterSlashing {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
+
+	var included []uint64
 	pending := make([]*ethpb.AttesterSlashing, 0)
-	for _, e := range p.pendingAttesterSlashing {
-		pending = append(pending, e.attesterSlashing)
+	for _, slashing := range p.pendingAttesterSlashing {
+		if sliceutil.IsInUint64(slashing.validatorToSlash, included) {
+			continue
+		}
+		attSlashing := slashing.attesterSlashing
+		slashedVal := sliceutil.IntersectionUint64(attSlashing.Attestation_1.AttestingIndices, attSlashing.Attestation_2.AttestingIndices)
+		// Doesn't need to be sorted.
+		included = append(included, slashedVal...)
+		pending = append(pending, attSlashing)
 	}
 	if len(pending) > int(params.BeaconConfig().MaxAttesterSlashings) {
 		pending = pending[:params.BeaconConfig().MaxAttesterSlashings]
@@ -59,8 +68,8 @@ func (p *Pool) PendingProposerSlashings() []*ethpb.ProposerSlashing {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 	pending := make([]*ethpb.ProposerSlashing, 0)
-	for _, e := range p.pendingProposerSlashing {
-		pending = append(pending, e)
+	for _, slashing := range p.pendingProposerSlashing {
+		pending = append(pending, slashing)
 	}
 	if len(pending) > int(params.BeaconConfig().MaxProposerSlashings) {
 		pending = pending[:params.BeaconConfig().MaxProposerSlashings]
@@ -110,8 +119,13 @@ func (p *Pool) InsertAttesterSlashing(ctx context.Context, state *beaconstate.Be
 			return
 		}
 
+		pendingSlashing := &PendingAttesterSlashing{
+			attesterSlashing: slashing,
+			validatorToSlash: val,
+		}
+
 		// Insert into pending list and sort again.
-		p.pendingAttesterSlashing = append(p.pendingAttesterSlashing, &PendingAttesterSlashing{slashing, val})
+		p.pendingAttesterSlashing = append(p.pendingAttesterSlashing, pendingSlashing)
 		sort.Slice(p.pendingAttesterSlashing, func(i, j int) bool {
 			return p.pendingAttesterSlashing[i].validatorToSlash < p.pendingAttesterSlashing[j].validatorToSlash
 		})

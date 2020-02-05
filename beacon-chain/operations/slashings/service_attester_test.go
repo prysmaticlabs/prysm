@@ -12,13 +12,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func attesterSlashingForValIdx(valIdx uint64) *ethpb.AttesterSlashing {
+func attesterSlashingForValIdx(valIdx ...uint64) *ethpb.AttesterSlashing {
 	return &ethpb.AttesterSlashing{
 		Attestation_1: &ethpb.IndexedAttestation{
-			AttestingIndices: []uint64{valIdx},
+			AttestingIndices: valIdx,
 		},
 		Attestation_2: &ethpb.IndexedAttestation{
-			AttestingIndices: []uint64{valIdx},
+			AttestingIndices: valIdx,
 		},
 	}
 }
@@ -419,7 +419,48 @@ func TestPool_PendingAttesterSlashings(t *testing.T) {
 			want: generateNAttSlashings(1),
 		},
 		{
-			name: "All eligible, more than max",
+			name: "No duplicates with grouped att slashings",
+			fields: fields{
+				pending: []*PendingAttesterSlashing{
+					{
+						attesterSlashing: attesterSlashingForValIdx(4, 12, 40),
+						validatorToSlash: 4,
+					},
+					{
+						attesterSlashing: attesterSlashingForValIdx(6, 8, 24),
+						validatorToSlash: 6,
+					},
+					{
+						attesterSlashing: attesterSlashingForValIdx(6, 8, 24),
+						validatorToSlash: 8,
+					},
+					{
+						attesterSlashing: attesterSlashingForValIdx(4, 12, 40),
+						validatorToSlash: 12,
+					},
+					{
+						attesterSlashing: attesterSlashingForValIdx(6, 8, 24),
+						validatorToSlash: 24,
+					},
+					{
+						attesterSlashing: attesterSlashingForValIdx(4, 12, 40),
+						validatorToSlash: 40,
+					},
+				},
+			},
+			want: []*ethpb.AttesterSlashing{
+				attesterSlashingForValIdx(4, 12, 40),
+			},
+		},
+		{
+			name: "All eligible, over max",
+			fields: fields{
+				pending: generateNPendingSlashings(6),
+			},
+			want: generateNAttSlashings(1),
+		},
+		{
+			name: "No duplicate slashings for grouped",
 			fields: fields{
 				pending: generateNPendingSlashings(16),
 			},
