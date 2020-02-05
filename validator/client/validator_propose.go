@@ -7,6 +7,8 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
@@ -15,6 +17,29 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+)
+
+var (
+	validatorProposeSuccessVec = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "validator",
+			Name:      "successful_proposals",
+		},
+		[]string{
+			// validator pubkey
+			"pkey",
+		},
+	)
+	validatorProposeFailVec = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "validator",
+			Name:      "failed_proposals",
+		},
+		[]string{
+			// validator pubkey
+			"pkey",
+		},
+	)
 )
 
 // ProposeBlock A new beacon block for a given slot. This method collects the
@@ -29,6 +54,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	}
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")
 	defer span.End()
+	fmtKey := fmt.Sprintf("%#x", pubKey[:8])
 
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
 	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
@@ -38,6 +64,9 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	randaoReveal, err := v.signRandaoReveal(ctx, pubKey, epoch)
 	if err != nil {
 		log.WithError(err).Error("Failed to sign randao reveal")
+		if v.emitAccountMetrics {
+			validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
 		return
 	}
 
@@ -49,6 +78,9 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	})
 	if err != nil {
 		log.WithError(err).Error("Failed to request block from beacon node")
+		if v.emitAccountMetrics {
+			validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
 		return
 	}
 
@@ -56,11 +88,17 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		history, err := v.db.ProposalHistory(ctx, pubKey[:])
 		if err != nil {
 			log.WithError(err).Error("Failed to get proposal history")
+			if v.emitAccountMetrics {
+				validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+			}
 			return
 		}
 
 		if HasProposedForEpoch(history, epoch) {
 			log.WithField("epoch", epoch).Warn("Tried to sign a double proposal, rejected")
+			if v.emitAccountMetrics {
+				validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+			}
 			return
 		}
 	}
@@ -69,6 +107,9 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	sig, err := v.signBlock(ctx, pubKey, epoch, b)
 	if err != nil {
 		log.WithError(err).Error("Failed to sign block")
+		if v.emitAccountMetrics {
+			validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
 		return
 	}
 	blk := &ethpb.SignedBeaconBlock{
@@ -80,6 +121,9 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	blkResp, err := v.validatorClient.ProposeBlock(ctx, blk)
 	if err != nil {
 		log.WithError(err).Error("Failed to propose block")
+		if v.emitAccountMetrics {
+			validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+		}
 		return
 	}
 
@@ -87,13 +131,23 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 		history, err := v.db.ProposalHistory(ctx, pubKey[:])
 		if err != nil {
 			log.WithError(err).Error("Failed to get proposal history")
+			if v.emitAccountMetrics {
+				validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+			}
 			return
 		}
 		history = SetProposedForEpoch(history, epoch)
 		if err := v.db.SaveProposalHistory(ctx, pubKey[:], history); err != nil {
 			log.WithError(err).Error("Failed to save updated proposal history")
+			if v.emitAccountMetrics {
+				validatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+			}
 			return
 		}
+	}
+
+	if v.emitAccountMetrics {
+		validatorProposeSuccessVec.WithLabelValues(fmtKey).Inc()
 	}
 
 	span.AddAttributes(
