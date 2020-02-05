@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -14,8 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	log "github.com/sirupsen/logrus"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // Server defines a server implementation of the gRPC Slasher service,
@@ -35,15 +32,14 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 	if err := ss.SlasherDB.SaveIndexedAttestation(req); err != nil {
 		return nil, err
 	}
-	tEpoch := req.Data.Target.Epoch
 	indices := req.AttestingIndices
 	root, err := hashutil.HashProto(req.Data)
 	if err != nil {
 		return nil, err
 	}
-	atsSlashinngRes := &slashpb.AttesterSlashingResponse{}
-	at := make(chan []*ethpb.AttesterSlashing, len(indices))
-	er := make(chan error, len(indices))
+	attSlashingResp := &slashpb.AttesterSlashingResponse{}
+	attSlashings := make(chan []*ethpb.AttesterSlashing, len(indices))
+	errorChans := make(chan error, len(indices))
 	var wg sync.WaitGroup
 	lastIdx := int64(-1)
 	for _, idx := range indices {
@@ -52,42 +48,42 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 		}
 		wg.Add(1)
 		go func(idx uint64, root [32]byte, req *ethpb.IndexedAttestation) {
-			atts, err := ss.SlasherDB.DoubleVotes(tEpoch, idx, root[:], req)
+			atts, err := ss.SlasherDB.DoubleVotes(idx, root[:], req)
 			if err != nil {
-				er <- err
+				errorChans <- err
 				wg.Done()
 				return
 			}
 			if atts != nil && len(atts) > 0 {
-				at <- atts
+				attSlashings <- atts
 			}
 			atts, err = ss.DetectSurroundVotes(ctx, idx, req)
 			if err != nil {
-				er <- err
+				errorChans <- err
 				wg.Done()
 				return
 			}
 			if atts != nil && len(atts) > 0 {
-				at <- atts
+				attSlashings <- atts
 			}
 			wg.Done()
 			return
 		}(idx, root, req)
 	}
 	wg.Wait()
-	close(er)
-	close(at)
-	for e := range er {
+	close(errorChans)
+	close(attSlashings)
+	for e := range errorChans {
 		if err != nil {
 			err = fmt.Errorf(err.Error() + " : " + e.Error())
 			continue
 		}
 		err = e
 	}
-	for atts := range at {
-		atsSlashinngRes.AttesterSlashing = append(atsSlashinngRes.AttesterSlashing, atts...)
+	for atts := range attSlashings {
+		attSlashingResp.AttesterSlashing = append(attSlashingResp.AttesterSlashing, atts...)
 	}
-	return atsSlashinngRes, err
+	return attSlashingResp, err
 }
 
 // UpdateSpanMaps updates and load all span maps from db.
@@ -167,16 +163,26 @@ func (ss *Server) IsSlashableBlock(ctx context.Context, psr *slashpb.ProposerSla
 	return pSlashingsResponse, nil
 }
 
-// SlashableProposals is a subscription to receive all slashable proposer slashing events found by the watchtower.
-func (ss *Server) SlashableProposals(req *types.Empty, server slashpb.Slasher_SlashableProposalsServer) error {
-	//TODO(3133): implement stream provider for newly discovered listening to slashable proposals.
-	return status.Error(codes.Unimplemented, "not implemented")
+// ProposerSlashings returns proposer slashings if slashing with the requested status are found in the db.
+func (ss *Server) ProposerSlashings(ctx context.Context, st *slashpb.SlashingStatusRequest) (*slashpb.ProposerSlashingResponse, error) {
+	pSlashingsResponse := &slashpb.ProposerSlashingResponse{}
+	var err error
+	pSlashingsResponse.ProposerSlashing, err = ss.SlasherDB.ProposalSlashingsByStatus(db.SlashingStatus(st.Status))
+	if err != nil {
+		return nil, err
+	}
+	return pSlashingsResponse, nil
 }
 
-// SlashableAttestations is a subscription to receive all slashable attester slashing events found by the watchtower.
-func (ss *Server) SlashableAttestations(req *types.Empty, server slashpb.Slasher_SlashableAttestationsServer) error {
-	//TODO(3133): implement stream provider for newly discovered listening to slashable attestation.
-	return status.Error(codes.Unimplemented, "not implemented")
+// AttesterSlashings returns attester slashings if slashing with the requested status are found in the db.
+func (ss *Server) AttesterSlashings(ctx context.Context, st *slashpb.SlashingStatusRequest) (*slashpb.AttesterSlashingResponse, error) {
+	aSlashingsResponse := &slashpb.AttesterSlashingResponse{}
+	var err error
+	aSlashingsResponse.AttesterSlashing, err = ss.SlasherDB.AttesterSlashings(db.SlashingStatus(st.Status))
+	if err != nil {
+		return nil, err
+	}
+	return aSlashingsResponse, nil
 }
 
 // DetectSurroundVotes is a method used to return the attestation that were detected
@@ -184,22 +190,23 @@ func (ss *Server) SlashableAttestations(req *types.Empty, server slashpb.Slasher
 func (ss *Server) DetectSurroundVotes(ctx context.Context, validatorIdx uint64, req *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error) {
 	spanMap, err := ss.SlasherDB.ValidatorSpansMap(validatorIdx)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to get validator spans map")
 	}
 	minTargetEpoch, spanMap, err := ss.DetectAndUpdateMinEpochSpan(ctx, req.Data.Source.Epoch, req.Data.Target.Epoch, validatorIdx, spanMap)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to update min spans")
 	}
 	maxTargetEpoch, spanMap, err := ss.DetectAndUpdateMaxEpochSpan(ctx, req.Data.Source.Epoch, req.Data.Target.Epoch, validatorIdx, spanMap)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to update max spans")
 	}
 	if err := ss.SlasherDB.SaveValidatorSpansMap(validatorIdx, spanMap); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to save validator spans map")
 	}
+
 	var as []*ethpb.AttesterSlashing
 	if minTargetEpoch > 0 {
-		attestations, err := ss.SlasherDB.IndexedAttestation(minTargetEpoch, validatorIdx)
+		attestations, err := ss.SlasherDB.IdxAttsForTargetFromID(minTargetEpoch, validatorIdx)
 		if err != nil {
 			return nil, err
 		}
@@ -216,7 +223,7 @@ func (ss *Server) DetectSurroundVotes(ctx context.Context, validatorIdx uint64, 
 		}
 	}
 	if maxTargetEpoch > 0 {
-		attestations, err := ss.SlasherDB.IndexedAttestation(maxTargetEpoch, validatorIdx)
+		attestations, err := ss.SlasherDB.IdxAttsForTargetFromID(maxTargetEpoch, validatorIdx)
 		if err != nil {
 			return nil, err
 		}

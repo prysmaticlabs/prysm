@@ -24,7 +24,7 @@ func init() {
 	bls12.SetETHserialization(true)
 }
 
-var maxKeys = int64(10000)
+var maxKeys = int64(100000)
 var pubkeyCache, _ = ristretto.NewCache(&ristretto.Config{
 	NumCounters: maxKeys,
 	MaxCost:     1 << 19, // 500 kb is cache max size

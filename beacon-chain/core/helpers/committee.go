@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
@@ -108,27 +107,6 @@ func BeaconCommittee(validatorIndices []uint64, seed [32]byte, slot uint64, comm
 	count := committeesPerSlot * params.BeaconConfig().SlotsPerEpoch
 
 	return ComputeCommittee(validatorIndices, seed, epochOffset, count)
-}
-
-// BeaconCommitteeWithoutCache returns the crosslink committee of a given slot and committee index without the
-// usage of committee cache.
-// TODO(3603): Delete this function when issue 3603 closes.
-func BeaconCommitteeWithoutCache(state *stateTrie.BeaconState, slot uint64, index uint64) ([]uint64, error) {
-	epoch := SlotToEpoch(slot)
-	indices, err := ActiveValidatorIndices(state, epoch)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get active indices")
-	}
-	committeesPerSlot := SlotCommitteeCount(uint64(len(indices)))
-	epochOffset := index + (slot%params.BeaconConfig().SlotsPerEpoch)*committeesPerSlot
-	count := committeesPerSlot * params.BeaconConfig().SlotsPerEpoch
-
-	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get seed")
-	}
-
-	return ComputeCommittee(indices, seed, epochOffset, count)
 }
 
 // ComputeCommittee returns the requested shuffled committee out of the total committees using
@@ -401,6 +379,9 @@ func UpdateCommitteeCache(state *stateTrie.BeaconState, epoch uint64) error {
 		if err != nil {
 			return err
 		}
+		if _, exists, err := committeeCache.CommitteeCache.GetByKey(string(seed[:])); err == nil && exists {
+			return nil
+		}
 
 		// Store the sorted indices as well as shuffled indices. In current spec,
 		// sorted indices is required to retrieve proposer index. This is also
@@ -426,9 +407,6 @@ func UpdateCommitteeCache(state *stateTrie.BeaconState, epoch uint64) error {
 
 // UpdateProposerIndicesInCache updates proposer indices entry of the committee cache.
 func UpdateProposerIndicesInCache(state *stateTrie.BeaconState, epoch uint64) error {
-	if !featureconfig.Get().EnableProposerIndexCache {
-		return nil
-	}
 
 	indices, err := ActiveValidatorIndices(state, epoch)
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -24,8 +25,11 @@ var processPendingBlocksPeriod = time.Duration(params.BeaconConfig().SecondsPerS
 // processes pending blocks queue on every processPendingBlocksPeriod
 func (r *Service) processPendingBlocksQueue() {
 	ctx := context.Background()
+	locker := new(sync.Mutex)
 	runutil.RunEvery(r.ctx, processPendingBlocksPeriod, func() {
+		locker.Lock()
 		r.processPendingBlocks(ctx)
+		locker.Unlock()
 	})
 }
 
