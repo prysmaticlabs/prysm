@@ -1,4 +1,4 @@
-package blockchain
+package metrics
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
@@ -18,89 +18,75 @@ var (
 		Name: "beacon_head_slot",
 		Help: "Slot of the head block of the beacon chain",
 	})
-	competingBlks = promauto.NewCounter(prometheus.CounterOpts{
+	// CompetingBlks is the number of the competing blocks happened over time.
+	CompetingBlks = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "competing_blocks",
 		Help: "The # of blocks received and processed from a competing chain",
 	})
-	processedBlkNoPubsub = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "processed_no_pubsub_block_counter",
-		Help: "The # of processed block without pubsub, this usually means the blocks from sync",
-	})
-	processedBlkNoPubsubForkchoice = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "processed_no_pubsub_forkchoice_block_counter",
-		Help: "The # of processed block without pubsub and forkchoice, this means indicate blocks from initial sync",
-	})
-	processedBlk = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "processed_block_counter",
-		Help: "The # of total processed in block chain service, with fork choice and pubsub",
-	})
-	processedAttNoPubsub = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "processed_no_pubsub_attestation_counter",
-		Help: "The # of processed attestation without pubsub, this usually means the attestations from sync",
-	})
 	headFinalizedEpoch = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "chain_service_head_finalized_epoch",
+		Name: "head_finalized_epoch",
 		Help: "Last finalized epoch of the head state",
 	})
 	headFinalizedRoot = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "chain_service_head_finalized_root",
+		Name: "head_finalized_root",
 		Help: "Last finalized root of the head state",
 	})
 	beaconFinalizedEpoch = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "chain_service_beacon_finalized_epoch",
+		Name: "beacon_finalized_epoch",
 		Help: "Last finalized epoch of the processed state",
 	})
 	beaconFinalizedRoot = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "chain_service_beacon_finalized_root",
+		Name: "beacon_finalized_root",
 		Help: "Last finalized root of the processed state",
 	})
 	beaconCurrentJustifiedEpoch = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "chain_service_beacon_current_justified_epoch",
+		Name: "beacon_current_justified_epoch",
 		Help: "Current justified epoch of the processed state",
 	})
 	beaconCurrentJustifiedRoot = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "chain_service_beacon_current_justified_root",
+		Name: "beacon_current_justified_root",
 		Help: "Current justified root of the processed state",
 	})
 	beaconPrevJustifiedEpoch = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "chain_service_beacon_previous_justified_epoch",
+		Name: "beacon_previous_justified_epoch",
 		Help: "Previous justified epoch of the processed state",
 	})
 	beaconPrevJustifiedRoot = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "chain_service_beacon_previous_justified_root",
+		Name: "beacon_previous_justified_root",
 		Help: "Previous justified root of the processed state",
 	})
 	validatorsCount = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "chain_service_validator_count",
+		Name: "validator_count",
 		Help: "The total number of validators",
 	}, []string{"state"})
 	validatorsBalance = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "chain_service_validators_total_balance",
+		Name: "validators_total_balance",
 		Help: "The total balance of validators, in GWei",
 	}, []string{"state"})
 	validatorsEffectiveBalance = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "chain_service_validators_total_effective_balance",
+		Name: "validators_total_effective_balance",
 		Help: "The total effective balance of validators, in GWei",
 	}, []string{"state"})
 	currentEth1DataDepositCount = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "chain_service_current_eth1_data_deposit_count",
+		Name: "current_eth1_data_deposit_count",
 		Help: "The current eth1 deposit count in the last processed state eth1data field.",
 	})
 	totalEligibleBalances = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "chain_service_total_eligible_balances",
+		Name: "total_eligible_balances",
 		Help: "The total amount of ether, in gwei, that has been used in voting attestation target of previous epoch",
 	})
 	totalVotedTargetBalances = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "chain_service_total_voted_target_balances",
+		Name: "total_voted_target_balances",
 		Help: "The total amount of ether, in gwei, that is eligible for voting of previous epoch",
 	})
 )
 
-func (s *Service) reportSlotMetrics(currentSlot uint64) {
+// ReportSlotMetrics reports slot related metrics.
+func ReportSlotMetrics(currentSlot uint64, headSlot uint64, headState *stateTrie.BeaconState) {
 	beaconSlot.Set(float64(currentSlot))
-	beaconHeadSlot.Set(float64(s.HeadSlot()))
-	if s.headState != nil {
-		finalizedCpt := s.headState.FinalizedCheckpoint()
+	beaconHeadSlot.Set(float64(headSlot))
+	if headState != nil {
+		finalizedCpt := headState.FinalizedCheckpoint()
 		if finalizedCpt != nil {
 			headFinalizedEpoch.Set(float64(finalizedCpt.Epoch))
 			headFinalizedRoot.Set(float64(bytesutil.ToLowInt64(finalizedCpt.Root)))
@@ -108,7 +94,8 @@ func (s *Service) reportSlotMetrics(currentSlot uint64) {
 	}
 }
 
-func reportEpochMetrics(state *stateTrie.BeaconState) {
+// ReportEpochMetrics reports epoch related metrics.
+func ReportEpochMetrics(state *stateTrie.BeaconState) {
 	currentEpoch := state.Slot() / params.BeaconConfig().SlotsPerEpoch
 
 	// Validator instances

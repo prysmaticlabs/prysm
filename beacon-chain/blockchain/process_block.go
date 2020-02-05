@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/metrics"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -120,6 +121,10 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
 		s.finalizedCheckpt = postState.FinalizedCheckpoint()
+
+		if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
+			return nil, errors.Wrap(err, "could not save new justified")
+		}
 	}
 
 	// Update validator indices in database as needed.
@@ -130,7 +135,7 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 	// Epoch boundary bookkeeping such as logging epoch summaries.
 	if postState.Slot() >= s.nextEpochBoundarySlot {
 		logEpochData(postState)
-		reportEpochMetrics(postState)
+		metrics.ReportEpochMetrics(postState)
 
 		// Update committees cache at epoch boundary slot.
 		if err := helpers.UpdateCommitteeCache(postState, helpers.CurrentEpoch(postState)); err != nil {
@@ -222,6 +227,10 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
 		s.finalizedCheckpt = postState.FinalizedCheckpoint()
+
+		if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
+			return nil, errors.Wrap(err, "could not save new justified")
+		}
 	}
 
 	// Update validator indices in database as needed.
@@ -231,7 +240,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.
 	if postState.Slot() >= s.nextEpochBoundarySlot {
-		reportEpochMetrics(postState)
+		metrics.ReportEpochMetrics(postState)
 		s.nextEpochBoundarySlot = helpers.StartSlot(helpers.NextEpoch(postState))
 
 		// Update committees cache at epoch boundary slot.
@@ -259,6 +268,10 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk *ethpb.BeaconBlock, root [32]byte, state *stateTrie.BeaconState) error {
 	if !featureconfig.Get().ProtoArrayForkChoice {
 		return nil
+	}
+
+	if err := s.fillInForkChoiceMissingBlocks(ctx, blk, state); err != nil {
+		return err
 	}
 
 	// Feed in block to fork choice store.

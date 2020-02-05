@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func createBlockHeader(enc []byte) (*ethpb.SignedBeaconBlockHeader, error) {
+func unmarshalBlockHeader(enc []byte) (*ethpb.SignedBeaconBlockHeader, error) {
 	protoBlockHeader := &ethpb.SignedBeaconBlockHeader{}
 	err := proto.Unmarshal(enc, protoBlockHeader)
 	if err != nil {
@@ -28,7 +28,7 @@ func (db *Store) BlockHeader(epoch uint64, validatorID uint64) ([]*ethpb.SignedB
 		c := tx.Bucket(historicBlockHeadersBucket).Cursor()
 		prefix := encodeEpochValidatorID(epoch, validatorID)
 		for k, v := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, v = c.Next() {
-			bh, err := createBlockHeader(v)
+			bh, err := unmarshalBlockHeader(v)
 			if err != nil {
 				return err
 			}
@@ -68,35 +68,34 @@ func (db *Store) SaveBlockHeader(epoch uint64, validatorID uint64, blockHeader *
 	err = db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicBlockHeadersBucket)
 		if err := bucket.Put(key, enc); err != nil {
-			return errors.Wrap(err, "failed to include the block header in the historic block header bucket")
+			return errors.Wrap(err, "failed to include block header in the historical bucket")
 		}
 
 		return err
 	})
 
-	// prune history to max size every 10th epoch
+	// Prune block header history every 10th epoch.
 	if epoch%params.BeaconConfig().PruneSlasherStoragePeriod == 0 {
-		err = db.PruneHistory(epoch, params.BeaconConfig().WeakSubjectivityPeriod)
+		err = db.pruneBlockHistory(epoch, params.BeaconConfig().WeakSubjectivityPeriod)
 	}
 	return err
 }
 
 // DeleteBlockHeader deletes a block header using the epoch and validator id.
 func (db *Store) DeleteBlockHeader(epoch uint64, validatorID uint64, blockHeader *ethpb.SignedBeaconBlockHeader) error {
-
 	key := encodeEpochValidatorIDSig(epoch, validatorID, blockHeader.Signature)
 
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicBlockHeadersBucket)
 		if err := bucket.Delete(key); err != nil {
-			return errors.Wrap(err, "failed to delete the block header from historic block header bucket")
+			return errors.Wrap(err, "failed to delete the block header from historical bucket")
 		}
 		return bucket.Delete(key)
 	})
 }
 
-// PruneHistory leaves only records younger then history size.
-func (db *Store) PruneHistory(currentEpoch uint64, historySize uint64) error {
+// pruneBlockHistory leaves only records younger then history size.
+func (db *Store) pruneBlockHistory(currentEpoch uint64, historySize uint64) error {
 	pruneTill := int64(currentEpoch) - int64(historySize)
 	if pruneTill <= 0 {
 		return nil
@@ -106,7 +105,7 @@ func (db *Store) PruneHistory(currentEpoch uint64, historySize uint64) error {
 		c := tx.Bucket(historicBlockHeadersBucket).Cursor()
 		for k, _ := c.First(); k != nil && bytesutil.FromBytes8(k[:8]) <= uint64(pruneTill); k, _ = c.Next() {
 			if err := bucket.Delete(k); err != nil {
-				return errors.Wrap(err, "failed to delete the block header from historic block header bucket")
+				return errors.Wrap(err, "failed to delete the block header from historical bucket")
 			}
 		}
 		return nil
