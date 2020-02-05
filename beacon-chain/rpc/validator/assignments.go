@@ -6,8 +6,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	st "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -71,28 +69,7 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 
 		validatorAssignments = append(validatorAssignments, assignment)
 	}
-	if vs.SlasherClient != nil {
-		go vs.updateSlashingPool(ctx, s)
-	}
 	return &ethpb.DutiesResponse{
 		Duties: validatorAssignments,
 	}, nil
-}
-
-func (vs *Server) updateSlashingPool(ctx context.Context, state *st.BeaconState) error {
-	psr, err := vs.SlasherClient.ProposerSlashings(ctx, &slashpb.SlashingStatusRequest{Status: slashpb.SlashingStatusRequest_Active})
-	if err != nil {
-		return status.Errorf(codes.Internal, "Could not retrieve proposer slashings: %v", err)
-	}
-	asr, err := vs.SlasherClient.AttesterSlashings(ctx, &slashpb.SlashingStatusRequest{Status: slashpb.SlashingStatusRequest_Active})
-	if err != nil {
-		return status.Errorf(codes.Internal, "Could not retrieve attester slashings: %v", err)
-	}
-	for _, ps := range psr.ProposerSlashing {
-		vs.SlashingPool.InsertProposerSlashing(ctx, state, ps)
-	}
-	for _, as := range asr.AttesterSlashing {
-		vs.SlashingPool.InsertAttesterSlashing(ctx, state, as)
-	}
-	return nil
 }

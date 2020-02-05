@@ -8,6 +8,8 @@ import (
 	"net"
 	"os"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/slasher"
+
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -144,6 +146,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		mockEth1Votes:         cfg.MockEth1Votes,
 		attestationsPool:      cfg.AttestationsPool,
 		exitPool:              cfg.ExitPool,
+		slashingPool:          cfg.SlashingPool,
 		syncService:           cfg.SyncService,
 		host:                  cfg.Host,
 		port:                  cfg.Port,
@@ -210,8 +213,6 @@ func (s *Service) Start() {
 		AttestationCache:       cache.NewAttestationCache(),
 		AttPool:                s.attestationsPool,
 		ExitPool:               s.exitPool,
-		SlashingPool:           s.slashingPool,
-		SlasherClient:          s.slasherClient,
 		HeadFetcher:            s.headFetcher,
 		ForkFetcher:            s.forkFetcher,
 		FinalizationFetcher:    s.finalizationFetcher,
@@ -256,6 +257,14 @@ func (s *Service) Start() {
 		AttPool:     s.attestationsPool,
 		P2p:         s.p2p,
 	}
+	slasher := &slasher.Client{
+		HeadFetcher:     s.headFetcher,
+		SlashingPool:    s.slashingPool,
+		SlasherClient:   s.slasherClient,
+		P2p:             s.p2p,
+		ShouldBroadcast: false,
+	}
+
 	pb.RegisterAggregatorServiceServer(s.grpcServer, aggregatorServer)
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
@@ -273,6 +282,7 @@ func (s *Service) Start() {
 	}()
 	if featureconfig.Get().EnableSlasherConnection {
 		s.startSlasherClient()
+		go slasher.SlashingPoolFeeder(s.ctx)
 	}
 }
 
