@@ -106,6 +106,9 @@ func (k *Store) GenesisState(ctx context.Context) (*state.BeaconState, error) {
 func (k *Store) SaveState(ctx context.Context, state *state.BeaconState, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveState")
 	defer span.End()
+	if state == nil {
+		return errors.New("nil state")
+	}
 	enc, err := encode(state.InnerStateUnsafe())
 	if err != nil {
 		return err
