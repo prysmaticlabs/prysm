@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -387,41 +386,6 @@ func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state *state
 	return nil
 }
 
-// This feeds in the beacon block and block's attestations to fork choice store. It's allows fork choice store
-// to gain information on the most current chain.
-func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk *ethpb.BeaconBlock, root [32]byte, state *stateTrie.BeaconState) error {
-	if !featureconfig.Get().ProtoArrayForkChoice {
-		return nil
-	}
-
-	if err := s.fillInForkChoiceMissingBlocks(ctx, blk, state); err != nil {
-		return err
-	}
-
-	// Feed in block to fork choice store.
-	if err := s.forkChoiceStore.ProcessBlock(ctx,
-		blk.Slot, root, bytesutil.ToBytes32(blk.ParentRoot),
-		state.CurrentJustifiedCheckpoint().Epoch,
-		state.FinalizedCheckpoint().Epoch); err != nil {
-		return errors.Wrap(err, "could not process block for proto array fork choice")
-	}
-
-	// Feed in block's attestations to fork choice store.
-	for _, a := range blk.Body.Attestations {
-		committee, err := helpers.BeaconCommitteeFromState(state, a.Data.Slot, a.Data.CommitteeIndex)
-		if err != nil {
-			return err
-		}
-		indices, err := attestationutil.AttestingIndices(a.AggregationBits, committee)
-		if err != nil {
-			return err
-		}
-		s.forkChoiceStore.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
-	}
-
-	return nil
-}
-
 // This retrieves missing blocks from DB (ie. the blocks that couldn't received over sync) and inserts them to fork choice store.
 // This is useful for block tree visualizer and additional vote accounting.
 func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.BeaconBlock, state *stateTrie.BeaconState) error {
@@ -435,7 +399,9 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.
 	// Fork choice only matters from last finalized slot.
 	higherThanFinalized := slot > helpers.StartSlot(s.finalizedCheckpt.Epoch)
 	// As long as parent node is not in fork choice store, and parent node is in DB.
+	fmt.Println(!s.forkChoiceStore.HasNode(parentRoot), s.beaconDB.HasBlock(ctx, parentRoot), higherThanFinalized)
 	for !s.forkChoiceStore.HasNode(parentRoot) && s.beaconDB.HasBlock(ctx, parentRoot) && higherThanFinalized {
+		fmt.Println(!s.forkChoiceStore.HasNode(parentRoot), s.beaconDB.HasBlock(ctx, parentRoot), higherThanFinalized)
 		b, err := s.beaconDB.Block(ctx, parentRoot)
 		if err != nil {
 			return err
