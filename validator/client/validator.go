@@ -37,6 +37,7 @@ type validator struct {
 	keyManager           keymanager.KeyManager
 	prevBalance          map[[48]byte]uint64
 	logValidatorBalances bool
+	emitAccountMetrics   bool
 	attLogs              map[[32]byte]*attSubmitted
 	attLogsLock          sync.Mutex
 }
