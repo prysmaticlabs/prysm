@@ -631,7 +631,7 @@ func (bs *Server) GetValidatorPerformance(
 
 // StreamValidatorsInfo streams out important validator information and metadata
 // each epoch.
-func (bs *Server) StreamValidatorsInfo(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamValidatorsInfoServer) error {
+func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidatorsInfoServer) error {
 	return status.Error(codes.Unimplemented, "Unimplemented")
 }
 
