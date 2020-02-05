@@ -23,10 +23,10 @@ func attesterSlashingForValIdx(valIdx ...uint64) *ethpb.AttesterSlashing {
 	}
 }
 
-func pendingSlashingForValIdx(valIdx uint64) *PendingAttesterSlashing {
+func pendingSlashingForValIdx(valIdx ...uint64) *PendingAttesterSlashing {
 	return &PendingAttesterSlashing{
-		attesterSlashing: attesterSlashingForValIdx(valIdx),
-		validatorToSlash: valIdx,
+		attesterSlashing: attesterSlashingForValIdx(valIdx...),
+		validatorToSlash: valIdx[0],
 	}
 }
 
@@ -419,6 +419,57 @@ func TestPool_PendingAttesterSlashings(t *testing.T) {
 			want: generateNAttSlashings(1),
 		},
 		{
+			name: "Multiple indices",
+			fields: fields{
+				pending: []*PendingAttesterSlashing{
+					pendingSlashingForValIdx(1, 5, 8),
+				},
+			},
+			want: []*ethpb.AttesterSlashing{
+				attesterSlashingForValIdx(1, 5, 8),
+			},
+		},
+		{
+			name: "All eligible, over max",
+			fields: fields{
+				pending: generateNPendingSlashings(6),
+			},
+			want: generateNAttSlashings(1),
+		},
+		{
+			name: "No duplicate slashings for grouped",
+			fields: fields{
+				pending: generateNPendingSlashings(16),
+			},
+			want: generateNAttSlashings(1),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := &Pool{
+				pendingAttesterSlashing: tt.fields.pending,
+			}
+			if got := p.PendingAttesterSlashings(); !reflect.DeepEqual(tt.want, got) {
+				t.Errorf("Unexpected return from PendingAttesterSlashings, wanted %v, received %v", tt.want, got)
+			}
+		})
+	}
+}
+
+func TestPool_PendingAttesterSlashings_2Max(t *testing.T) {
+	conf := params.BeaconConfig()
+	conf.MaxAttesterSlashings = 2
+	params.OverrideBeaconConfig(conf)
+
+	type fields struct {
+		pending []*PendingAttesterSlashing
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   []*ethpb.AttesterSlashing
+	}{
+		{
 			name: "No duplicates with grouped att slashings",
 			fields: fields{
 				pending: []*PendingAttesterSlashing{
@@ -450,21 +501,8 @@ func TestPool_PendingAttesterSlashings(t *testing.T) {
 			},
 			want: []*ethpb.AttesterSlashing{
 				attesterSlashingForValIdx(4, 12, 40),
+				attesterSlashingForValIdx(6, 8, 24),
 			},
-		},
-		{
-			name: "All eligible, over max",
-			fields: fields{
-				pending: generateNPendingSlashings(6),
-			},
-			want: generateNAttSlashings(1),
-		},
-		{
-			name: "No duplicate slashings for grouped",
-			fields: fields{
-				pending: generateNPendingSlashings(16),
-			},
-			want: generateNAttSlashings(1),
 		},
 	}
 	for _, tt := range tests {
