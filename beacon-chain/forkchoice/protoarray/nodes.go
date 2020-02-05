@@ -3,12 +3,10 @@ package protoarray
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -79,7 +77,7 @@ func (s *Store) insert(ctx context.Context,
 	if !ok {
 		parentIndex = nonExistentNode
 	}
-	fmt.Println(slot, index, parentIndex, " ", hex.EncodeToString(bytesutil.Trunc(root[:])), " ", hex.EncodeToString(bytesutil.Trunc(parent[:])))
+
 	n := &Node{
 		Slot:           slot,
 		root:           root,

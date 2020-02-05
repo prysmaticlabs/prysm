@@ -172,7 +172,6 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("Verifying pre state ", b.Slot, preState.Slot())
 	preStateValidatorCount := preState.NumValidators()
 
 	postState, err := state.ExecuteStateTransitionNoVerifyAttSigs(ctx, preState, signed)
@@ -269,6 +268,10 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk *ethpb.BeaconBlock, root [32]byte, state *stateTrie.BeaconState) error {
 	if !featureconfig.Get().ProtoArrayForkChoice {
 		return nil
+	}
+
+	if err := s.fillInForkChoiceMissingBlocks(ctx, blk, state); err != nil {
+		return err
 	}
 
 	// Feed in block to fork choice store.

@@ -13,11 +13,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestStore_OnBlock(t *testing.T) {
@@ -523,6 +525,57 @@ func TestFilterBlockRoots_CanFilter(t *testing.T) {
 
 	if !reflect.DeepEqual(wanted, received) {
 		t.Error("Did not filter correctly")
+	}
+}
+
+func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	cfg := &Config{BeaconDB: db}
+	service, err := NewService(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	service.forkChoiceStore = protoarray.New(0, 0, [32]byte{'A'})
+	service.finalizedCheckpt = &ethpb.Checkpoint{}
+
+	genesisStateRoot := [32]byte{}
+	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
+	if err := db.SaveBlock(ctx, genesis); err != nil {
+		t.Error(err)
+	}
+	validGenesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	if err != nil {
+		t.Error(err)
+	}
+	if err := service.beaconDB.SaveState(ctx, &stateTrie.BeaconState{}, validGenesisRoot); err != nil {
+		t.Fatal(err)
+	}
+	roots, err := blockTree1(db, validGenesisRoot[:])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	block := &ethpb.BeaconBlock{Slot: 9, ParentRoot: roots[8]}
+	if err := service.fillInForkChoiceMissingBlocks(context.Background(), block, beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(service.forkChoiceStore.Nodes()) != 6 {
+		t.Error("Miss match nodes")
+	}
+
+	if !service.forkChoiceStore.HasNode(bytesutil.ToBytes32(roots[4])) {
+		t.Error("Didn't save node")
+	}
+	if !service.forkChoiceStore.HasNode(bytesutil.ToBytes32(roots[6])) {
+		t.Error("Didn't save node")
+	}
+	if !service.forkChoiceStore.HasNode(bytesutil.ToBytes32(roots[8])) {
+		t.Error("Didn't save node")
 	}
 }
 

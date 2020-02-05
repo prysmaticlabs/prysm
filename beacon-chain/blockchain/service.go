@@ -156,9 +156,7 @@ func (s *Service) Start() {
 			s.finalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
 			s.prevFinalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
 
-			if err := s.resumeForkChoice(ctx, justifiedCheckpoint, finalizedCheckpoint); err != nil {
-				log.Fatalf("Could not resume fork choice: %v", err)
-			}
+			s.resumeForkChoice(justifiedCheckpoint, finalizedCheckpoint)
 		}
 
 		if finalizedCheckpoint.Epoch > 1 {
@@ -466,12 +464,7 @@ func (s *Service) pruneGarbageState(ctx context.Context, slot uint64) error {
 
 // This is called when a client starts from non-genesis slot. This passes last justified and finalized
 // information to fork choice service to initializes fork choice store.
-func (s *Service) resumeForkChoice(
-	ctx context.Context,
-	justifiedCheckpoint *ethpb.Checkpoint,
-	finalizedCheckpoint *ethpb.Checkpoint) error {
+func (s *Service) resumeForkChoice(justifiedCheckpoint *ethpb.Checkpoint, finalizedCheckpoint *ethpb.Checkpoint) {
 	store := protoarray.New(justifiedCheckpoint.Epoch, finalizedCheckpoint.Epoch, bytesutil.ToBytes32(finalizedCheckpoint.Root))
 	s.forkChoiceStore = store
-
-	return nil
 }
