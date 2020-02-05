@@ -564,7 +564,8 @@ func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(service.forkChoiceStore.Nodes()) != 6 {
+	// 5 nodes from the block tree 1. B0 - B3 - B4 - B6 - B8
+	if len(service.forkChoiceStore.Nodes()) != 5 {
 		t.Error("Miss match nodes")
 	}
 
