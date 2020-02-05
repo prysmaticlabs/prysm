@@ -51,7 +51,7 @@ func TestSkipSlotCache_RoundTrip(t *testing.T) {
 		t.Error(err)
 	}
 
-	if !reflect.DeepEqual(state.InnerStateUnsafe(), res.InnerStateUnsafe()) {
+	if !reflect.DeepEqual(state.CloneInnerState(), res.CloneInnerState()) {
 		t.Error("Expected equal protos to return from cache")
 	}
 }
