@@ -529,11 +529,6 @@ func TestFilterBlockRoots_CanFilter(t *testing.T) {
 }
 
 func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
-	config := &featureconfig.Flags{
-		ProtoArrayForkChoice: true,
-	}
-	featureconfig.Init(config)
-
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)

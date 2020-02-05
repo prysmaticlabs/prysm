@@ -389,23 +389,19 @@ func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state *state
 // This retrieves missing blocks from DB (ie. the blocks that couldn't received over sync) and inserts them to fork choice store.
 // This is useful for block tree visualizer and additional vote accounting.
 func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.BeaconBlock, state *stateTrie.BeaconState) error {
-	if !featureconfig.Get().ProtoArrayForkChoice {
-		return nil
-	}
-
 	pendingNodes := make([]*ethpb.BeaconBlock, 0)
+
 	parentRoot := bytesutil.ToBytes32(blk.ParentRoot)
 	slot := blk.Slot
 	// Fork choice only matters from last finalized slot.
 	higherThanFinalized := slot > helpers.StartSlot(s.finalizedCheckpt.Epoch)
 	// As long as parent node is not in fork choice store, and parent node is in DB.
-	fmt.Println(!s.forkChoiceStore.HasNode(parentRoot), s.beaconDB.HasBlock(ctx, parentRoot), higherThanFinalized)
 	for !s.forkChoiceStore.HasNode(parentRoot) && s.beaconDB.HasBlock(ctx, parentRoot) && higherThanFinalized {
-		fmt.Println(!s.forkChoiceStore.HasNode(parentRoot), s.beaconDB.HasBlock(ctx, parentRoot), higherThanFinalized)
 		b, err := s.beaconDB.Block(ctx, parentRoot)
 		if err != nil {
 			return err
 		}
+
 		pendingNodes = append(pendingNodes, b.Block)
 		parentRoot = bytesutil.ToBytes32(b.Block.ParentRoot)
 		slot = b.Block.Slot
