@@ -31,7 +31,7 @@ go_test(
     size = "small",
     srcs = [
         "attestation_data_test.go",
-        "checkpoint_state_test.go",
+#        "checkpoint_state_test.go",
         "committee_fuzz_test.go",
         "committee_test.go",
         "eth1_data_test.go",
