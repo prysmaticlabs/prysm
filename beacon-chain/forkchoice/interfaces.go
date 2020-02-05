@@ -38,4 +38,5 @@ type Pruner interface {
 // Getter returns fork choice related information.
 type Getter interface {
 	Nodes() []*protoarray.Node
+	HasNode([32]byte) bool
 }

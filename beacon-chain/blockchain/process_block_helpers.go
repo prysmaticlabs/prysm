@@ -385,3 +385,44 @@ func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state *state
 
 	return nil
 }
+
+// This retrieves missing blocks from DB (ie. the blocks that couldn't received over sync) and inserts them to fork choice store.
+// This is useful for block tree visualizer and additional vote accounting.
+func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.BeaconBlock, state *stateTrie.BeaconState) error {
+	pendingNodes := make([]*ethpb.BeaconBlock, 0)
+
+	parentRoot := bytesutil.ToBytes32(blk.ParentRoot)
+	slot := blk.Slot
+	// Fork choice only matters from last finalized slot.
+	higherThanFinalized := slot > helpers.StartSlot(s.finalizedCheckpt.Epoch)
+	// As long as parent node is not in fork choice store, and parent node is in DB.
+	for !s.forkChoiceStore.HasNode(parentRoot) && s.beaconDB.HasBlock(ctx, parentRoot) && higherThanFinalized {
+		b, err := s.beaconDB.Block(ctx, parentRoot)
+		if err != nil {
+			return err
+		}
+
+		pendingNodes = append(pendingNodes, b.Block)
+		parentRoot = bytesutil.ToBytes32(b.Block.ParentRoot)
+		slot = b.Block.Slot
+	}
+
+	// Insert parent nodes to fork choice store in reverse order.
+	// Lower slots should be at the end of the list.
+	for i := len(pendingNodes) - 1; i >= 0; i-- {
+		b := pendingNodes[i]
+		r, err := ssz.HashTreeRoot(b)
+		if err != nil {
+			return err
+		}
+
+		if err := s.forkChoiceStore.ProcessBlock(ctx,
+			b.Slot, r, bytesutil.ToBytes32(b.ParentRoot),
+			state.CurrentJustifiedCheckpoint().Epoch,
+			state.FinalizedCheckpoint().Epoch); err != nil {
+			return errors.Wrap(err, "could not process block for proto array fork choice")
+		}
+	}
+
+	return nil
+}
