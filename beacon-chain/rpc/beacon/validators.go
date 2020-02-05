@@ -629,6 +629,12 @@ func (bs *Server) GetValidatorPerformance(
 	}, nil
 }
 
+// StreamValidatorsInfo streams out important validator information and metadata
+// each epoch.
+func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidatorsInfoServer) error {
+	return status.Error(codes.Unimplemented, "Unimplemented")
+}
+
 // Determines whether a validator has already exited.
 func validatorHasExited(validator *ethpb.Validator, currentEpoch uint64) bool {
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
