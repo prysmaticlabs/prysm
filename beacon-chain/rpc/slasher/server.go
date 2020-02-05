@@ -24,7 +24,7 @@ func init() {
 	log = logrus.WithField("prefix", "rpc/aggregator")
 }
 
-// Server defines a server implementation of the gRPC aggregator service.
+// Client defines a client implementation of the gRPC slasher service.
 type Client struct {
 	HeadFetcher     blockchain.HeadFetcher
 	SlashingPool    *slashings.Pool
