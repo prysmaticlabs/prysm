@@ -629,9 +629,10 @@ func (bs *Server) GetValidatorPerformance(
 	}, nil
 }
 
-// StreamValidatorsInfo --
+// StreamValidatorsInfo streams out important validator information and metadata
+// each epoch.
 func (bs *Server) StreamValidatorsInfo(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamValidatorsInfoServer) error {
-	return nil
+	return status.Error(codes.Unimplemented, "Unimplemented")
 }
 
 // Determines whether a validator has already exited.
