@@ -105,7 +105,6 @@ func TestGetBlock_OK(t *testing.T) {
 	if !bytes.Equal(block.Body.Graffiti, req.Graffiti) {
 		t.Fatal("Expected block to have correct graffiti")
 	}
-
 }
 
 func TestProposeBlock_OK(t *testing.T) {
