@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -381,6 +382,84 @@ func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state *state
 	// Either the new justified is later than stored justified or not in chain with finalized check pint.
 	if cpt := state.CurrentJustifiedCheckpoint(); cpt != nil && cpt.Epoch > s.justifiedCheckpt.Epoch || !bytes.Equal(anc, s.finalizedCheckpt.Root) {
 		s.justifiedCheckpt = state.CurrentJustifiedCheckpoint()
+	}
+
+	return nil
+}
+
+// This feeds in the beacon block and block's attestations to fork choice store. It's allows fork choice store
+// to gain information on the most current chain.
+func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk *ethpb.BeaconBlock, root [32]byte, state *stateTrie.BeaconState) error {
+	if !featureconfig.Get().ProtoArrayForkChoice {
+		return nil
+	}
+
+	if err := s.fillInForkChoiceMissingBlocks(ctx, blk, state); err != nil {
+		return err
+	}
+
+	// Feed in block to fork choice store.
+	if err := s.forkChoiceStore.ProcessBlock(ctx,
+		blk.Slot, root, bytesutil.ToBytes32(blk.ParentRoot),
+		state.CurrentJustifiedCheckpoint().Epoch,
+		state.FinalizedCheckpoint().Epoch); err != nil {
+		return errors.Wrap(err, "could not process block for proto array fork choice")
+	}
+
+	// Feed in block's attestations to fork choice store.
+	for _, a := range blk.Body.Attestations {
+		committee, err := helpers.BeaconCommitteeFromState(state, a.Data.Slot, a.Data.CommitteeIndex)
+		if err != nil {
+			return err
+		}
+		indices, err := attestationutil.AttestingIndices(a.AggregationBits, committee)
+		if err != nil {
+			return err
+		}
+		s.forkChoiceStore.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
+	}
+
+	return nil
+}
+
+// This retrieves missing blocks from DB (ie. the blocks that couldn't received over sync) and inserts them to fork choice store.
+// This is useful for block tree visualizer and additional vote accounting.
+func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.BeaconBlock, state *stateTrie.BeaconState) error {
+	if !featureconfig.Get().ProtoArrayForkChoice {
+		return nil
+	}
+
+	pendingNodes := make([]*ethpb.BeaconBlock, 0)
+	parentRoot := bytesutil.ToBytes32(blk.ParentRoot)
+	slot := blk.Slot
+	// Fork choice only matters from last finalized slot.
+	higherThanFinalized := slot > helpers.StartSlot(s.finalizedCheckpt.Epoch)
+	// As long as parent node is not in fork choice store, and parent node is in DB.
+	for !s.forkChoiceStore.HasNode(parentRoot) && s.beaconDB.HasBlock(ctx, parentRoot) && higherThanFinalized {
+		b, err := s.beaconDB.Block(ctx, parentRoot)
+		if err != nil {
+			return err
+		}
+		pendingNodes = append(pendingNodes, b.Block)
+		parentRoot = bytesutil.ToBytes32(b.Block.ParentRoot)
+		slot = b.Block.Slot
+	}
+
+	// Insert parent nodes to fork choice store in reverse order.
+	// Lower slots should be at the end of the list.
+	for i := len(pendingNodes) - 1; i >= 0; i-- {
+		b := pendingNodes[i]
+		r, err := ssz.HashTreeRoot(b)
+		if err != nil {
+			return err
+		}
+
+		if err := s.forkChoiceStore.ProcessBlock(ctx,
+			b.Slot, r, bytesutil.ToBytes32(b.ParentRoot),
+			state.CurrentJustifiedCheckpoint().Epoch,
+			state.FinalizedCheckpoint().Epoch); err != nil {
+			return errors.Wrap(err, "could not process block for proto array fork choice")
+		}
 	}
 
 	return nil
