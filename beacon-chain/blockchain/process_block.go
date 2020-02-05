@@ -270,6 +270,10 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk *ethpb.B
 		return nil
 	}
 
+	if err := s.fillInForkChoiceMissingBlocks(ctx, blk, state); err != nil {
+		return err
+	}
+
 	// Feed in block to fork choice store.
 	if err := s.forkChoiceStore.ProcessBlock(ctx,
 		blk.Slot, root, bytesutil.ToBytes32(blk.ParentRoot),
@@ -289,6 +293,43 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk *ethpb.B
 			return err
 		}
 		s.forkChoiceStore.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
+	}
+
+	return nil
+}
+
+func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.BeaconBlock, state *stateTrie.BeaconState) error {
+	if !featureconfig.Get().ProtoArrayForkChoice {
+		return nil
+	}
+
+	pendingNodes := make([]*ethpb.BeaconBlock, 0)
+	parentRoot := bytesutil.ToBytes32(blk.ParentRoot)
+	slot := blk.Slot
+	for !s.forkChoiceStore.HasNode(parentRoot) && s.beaconDB.HasBlock(ctx, parentRoot) && slot > helpers.StartSlot(s.finalizedCheckpt.Epoch) {
+		fmt.Println(!s.forkChoiceStore.HasNode(parentRoot), s.beaconDB.HasBlock(ctx, parentRoot), slot > helpers.StartSlot(s.finalizedCheckpt.Epoch))
+		b, err := s.beaconDB.Block(ctx, parentRoot)
+		if err != nil {
+			return err
+		}
+		pendingNodes = append(pendingNodes, b.Block)
+		parentRoot = bytesutil.ToBytes32(b.Block.ParentRoot)
+		slot = b.Block.Slot
+	}
+
+	for i := len(pendingNodes) - 1; i >= 0; i-- {
+		b := pendingNodes[i]
+		r, err := ssz.HashTreeRoot(b)
+		if err != nil {
+			return err
+		}
+
+		if err := s.forkChoiceStore.ProcessBlock(ctx,
+			b.Slot, r, bytesutil.ToBytes32(b.ParentRoot),
+			state.CurrentJustifiedCheckpoint().Epoch,
+			state.FinalizedCheckpoint().Epoch); err != nil {
+			return errors.Wrap(err, "could not process block for proto array fork choice")
+		}
 	}
 
 	return nil
