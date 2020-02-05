@@ -16,16 +16,16 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func createIndexedAttestation(enc []byte) (*ethpb.IndexedAttestation, error) {
+func unmarshalIdxAtt(enc []byte) (*ethpb.IndexedAttestation, error) {
 	protoIdxAtt := &ethpb.IndexedAttestation{}
 	err := proto.Unmarshal(enc, protoIdxAtt)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal encoding")
+		return nil, errors.Wrap(err, "failed to unmarshal encoded indexed attestation")
 	}
 	return protoIdxAtt, nil
 }
 
-func createValidatorIDsToIndexedAttestationList(enc []byte) (*slashpb.ValidatorIDToIdxAttList, error) {
+func unmarshalValIDsToIdxAttList(enc []byte) (*slashpb.ValidatorIDToIdxAttList, error) {
 	protoIdxAtt := &slashpb.ValidatorIDToIdxAttList{}
 	err := proto.Unmarshal(enc, protoIdxAtt)
 	if err != nil {
@@ -34,59 +34,65 @@ func createValidatorIDsToIndexedAttestationList(enc []byte) (*slashpb.ValidatorI
 	return protoIdxAtt, nil
 }
 
-// IndexedAttestation accepts a epoch and validator index and returns a list of
-// indexed attestations.
+// IdxAttsForTargetFromID accepts a epoch and validator index and returns a list of
+// indexed attestations from that validator for the given target epoch.
 // Returns nil if the indexed attestation does not exist.
-func (db *Store) IndexedAttestation(targetEpoch uint64, validatorID uint64) ([]*ethpb.IndexedAttestation, error) {
-	var iAtt []*ethpb.IndexedAttestation
-	key := bytesutil.Bytes8(targetEpoch)
+func (db *Store) IdxAttsForTargetFromID(targetEpoch uint64, validatorID uint64) ([]*ethpb.IndexedAttestation, error) {
+	var idxAtts []*ethpb.IndexedAttestation
+
 	err := db.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(indexedAttestationsIndicesBucket)
-		enc := bucket.Get(key)
-		iList, err := createValidatorIDsToIndexedAttestationList(enc)
+		enc := bucket.Get(bytesutil.Bytes8(targetEpoch))
+		if enc == nil {
+			return nil
+		}
+		idToIdxAttsList, err := unmarshalValIDsToIdxAttList(enc)
 		if err != nil {
 			return err
 		}
-		for _, a := range iList.IndicesList {
-			i := sort.Search(len(a.Indices), func(i int) bool { return a.Indices[i] >= validatorID })
-			if i < len(a.Indices) && a.Indices[i] == validatorID {
-				iaBucket := tx.Bucket(historicIndexedAttestationsBucket)
-				key := encodeEpochSig(targetEpoch, a.Signature)
-				enc = iaBucket.Get(key)
-				if len(enc) == 0 {
+
+		for _, idxAtt := range idToIdxAttsList.IndicesList {
+			i := sort.Search(len(idxAtt.Indices), func(i int) bool {
+				return idxAtt.Indices[i] >= validatorID
+			})
+			if i < len(idxAtt.Indices) && idxAtt.Indices[i] == validatorID {
+				idxAttBucket := tx.Bucket(historicIndexedAttestationsBucket)
+				key := encodeEpochSig(targetEpoch, idxAtt.Signature)
+				enc = idxAttBucket.Get(key)
+				if enc == nil {
 					continue
 				}
-				iA, err := createIndexedAttestation(enc)
+				att, err := unmarshalIdxAtt(enc)
 				if err != nil {
 					return err
 				}
-				iAtt = append(iAtt, iA)
+				idxAtts = append(idxAtts, att)
 			}
 		}
 		return nil
 	})
 
-	return iAtt, err
+	return idxAtts, err
 }
 
-// IndexedAttestations accepts a target epoch and returns a list of
+// IdxAttsForTarget accepts a target epoch and returns a list of
 // indexed attestations.
 // Returns nil if the indexed attestation does not exist with that target epoch.
-func (db *Store) IndexedAttestations(targetEpoch uint64) ([]*ethpb.IndexedAttestation, error) {
-	var iAtt []*ethpb.IndexedAttestation
+func (db *Store) IdxAttsForTarget(targetEpoch uint64) ([]*ethpb.IndexedAttestation, error) {
+	var idxAtts []*ethpb.IndexedAttestation
 	key := bytesutil.Bytes8(targetEpoch)
 	err := db.view(func(tx *bolt.Tx) error {
 		c := tx.Bucket(historicIndexedAttestationsBucket).Cursor()
 		for k, enc := c.Seek(key); k != nil && bytes.Equal(k[:8], key); k, _ = c.Next() {
-			iA, err := createIndexedAttestation(enc)
+			idxAtt, err := unmarshalIdxAtt(enc)
 			if err != nil {
 				return err
 			}
-			iAtt = append(iAtt, iA)
+			idxAtts = append(idxAtts, idxAtt)
 		}
 		return nil
 	})
-	return iAtt, err
+	return idxAtts, err
 }
 
 // LatestIndexedAttestationsTargetEpoch returns latest target epoch in db
@@ -122,61 +128,67 @@ func (db *Store) LatestValidatorIdx() (uint64, error) {
 }
 
 // DoubleVotes looks up db for slashable attesting data that were preformed by the same validator.
-func (db *Store) DoubleVotes(targetEpoch uint64, validatorIdx uint64, dataRoot []byte, origAtt *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error) {
-	idxAttestations, err := db.IndexedAttestation(targetEpoch, validatorIdx)
+func (db *Store) DoubleVotes(validatorIdx uint64, dataRoot []byte, origAtt *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error) {
+	idxAtts, err := db.IdxAttsForTargetFromID(origAtt.Data.Target.Epoch, validatorIdx)
 	if err != nil {
 		return nil, err
 	}
-	if idxAttestations == nil || len(idxAttestations) == 0 {
+	if idxAtts == nil || len(idxAtts) == 0 {
 		return nil, fmt.Errorf("can't check nil indexed attestation for double vote")
 	}
-	var slashIdxAtt []*ethpb.IndexedAttestation
-	for _, at := range idxAttestations {
-		root, err := hashutil.HashProto(at.Data)
-		if at.Data == nil {
+
+	var idxAttsToSlash []*ethpb.IndexedAttestation
+	for _, att := range idxAtts {
+		if att.Data == nil {
 			continue
 		}
+		root, err := hashutil.HashProto(att.Data)
 		if err != nil {
 			return nil, err
 		}
 		if !bytes.Equal(root[:], dataRoot) {
-			slashIdxAtt = append(slashIdxAtt, at)
+			idxAttsToSlash = append(idxAttsToSlash, att)
 		}
 	}
+
 	var as []*ethpb.AttesterSlashing
-	for _, ia := range slashIdxAtt {
+	for _, idxAtt := range idxAttsToSlash {
 		as = append(as, &ethpb.AttesterSlashing{
 			Attestation_1: origAtt,
-			Attestation_2: ia,
+			Attestation_2: idxAtt,
 		})
 	}
 	return as, nil
 }
 
 // HasIndexedAttestation accepts an epoch and validator id and returns true if the indexed attestation exists.
-func (db *Store) HasIndexedAttestation(targetEpoch uint64, validatorID uint64) bool {
+func (db *Store) HasIndexedAttestation(targetEpoch uint64, validatorID uint64) (bool, error) {
 	key := bytesutil.Bytes8(targetEpoch)
 	var hasAttestation bool
 	// #nosec G104
-	_ = db.view(func(tx *bolt.Tx) error {
+	err := db.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(indexedAttestationsIndicesBucket)
 		enc := bucket.Get(key)
-		iList, err := createValidatorIDsToIndexedAttestationList(enc)
+		if enc == nil {
+			return nil
+		}
+		iList, err := unmarshalValIDsToIdxAttList(enc)
 		if err != nil {
 			return err
 		}
-		for _, a := range iList.IndicesList {
-			i := sort.Search(len(a.Indices), func(i int) bool { return a.Indices[i] >= validatorID })
-			if i < len(a.Indices) && a.Indices[i] == validatorID {
+		for _, idxAtt := range iList.IndicesList {
+			i := sort.Search(len(idxAtt.Indices), func(i int) bool {
+				return idxAtt.Indices[i] >= validatorID
+			})
+			if i < len(idxAtt.Indices) && idxAtt.Indices[i] == validatorID {
 				hasAttestation = true
 				return nil
 			}
 		}
-		hasAttestation = false
 		return nil
 	})
 
-	return hasAttestation
+	return hasAttestation, err
 }
 
 // SaveIndexedAttestation accepts epoch and indexed attestation and writes it to disk.
@@ -193,25 +205,28 @@ func (db *Store) SaveIndexedAttestation(idxAttestation *ethpb.IndexedAttestation
 		if val != nil {
 			return nil
 		}
-		createIndexedAttestationIndicesFromData(idxAttestation, tx)
+		if err := saveIdxAttIndicesByEpochToDB(idxAttestation, tx); err != nil {
+			return errors.Wrap(err, "failed to save indices from indexed attestation")
+		}
 		if err := bucket.Put(key, enc); err != nil {
-			return errors.Wrap(err, "failed to include the indexed attestation in the historic indexed attestation bucket")
+			return errors.Wrap(err, "failed to save indexed attestation into historical bucket")
 		}
 
 		return err
 	})
 
-	// prune history to max size every PruneSlasherStoragePeriod epoch
+	// Prune history to max size every PruneSlasherStoragePeriod epoch.
 	if idxAttestation.Data.Source.Epoch%params.BeaconConfig().PruneSlasherStoragePeriod == 0 {
-		weakSubjectivityPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-		err = db.PruneHistory(idxAttestation.Data.Source.Epoch, weakSubjectivityPeriod)
+		wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
+		if err = db.pruneAttHistory(idxAttestation.Data.Source.Epoch, wsPeriod); err != nil {
+			return err
+		}
 	}
 	return err
 }
 
-func createIndexedAttestationIndicesFromData(idxAttestation *ethpb.IndexedAttestation, tx *bolt.Tx) error {
+func saveIdxAttIndicesByEpochToDB(idxAttestation *ethpb.IndexedAttestation, tx *bolt.Tx) error {
 	dataRoot, err := hashutil.HashProto(idxAttestation.Data)
-
 	if err != nil {
 		return errors.Wrap(err, "failed to hash indexed attestation data.")
 	}
@@ -220,10 +235,11 @@ func createIndexedAttestationIndicesFromData(idxAttestation *ethpb.IndexedAttest
 		Indices:   idxAttestation.AttestingIndices,
 		DataRoot:  dataRoot[:],
 	}
+
 	key := bytesutil.Bytes8(idxAttestation.Data.Target.Epoch)
 	bucket := tx.Bucket(indexedAttestationsIndicesBucket)
 	enc := bucket.Get(key)
-	vIdxList, err := createValidatorIDsToIndexedAttestationList(enc)
+	vIdxList, err := unmarshalValIDsToIdxAttList(enc)
 	if err != nil {
 		return errors.Wrap(err, "failed to decode value into ValidatorIDToIndexedAttestationList")
 	}
@@ -233,7 +249,7 @@ func createIndexedAttestationIndicesFromData(idxAttestation *ethpb.IndexedAttest
 		return errors.Wrap(err, "failed to marshal")
 	}
 	if err := bucket.Put(key, enc); err != nil {
-		return errors.Wrap(err, "failed to include the indexed attestation in the historic indexed attestation bucket")
+		return errors.Wrap(err, "failed to save indexed attestation into historical bucket")
 	}
 	return nil
 }
@@ -247,17 +263,24 @@ func (db *Store) DeleteIndexedAttestation(idxAttestation *ethpb.IndexedAttestati
 		if enc == nil {
 			return nil
 		}
-		removeIndexedAttestationIndicesFromData(idxAttestation, tx)
+		if err := removeIdxAttIndicesByEpochFromDB(idxAttestation, tx); err != nil {
+			return err
+		}
 		if err := bucket.Delete(key); err != nil {
-			tx.Rollback()
-			return errors.Wrap(err, "failed to delete the indexed attestation from historic indexed attestation bucket")
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				return errors.Wrapf(rollbackErr, "failed to rollback after %v", err)
+			}
+			return errors.Wrap(err, "failed to delete indexed attestation from historical bucket")
 		}
 		return nil
 	})
 }
 
-func removeIndexedAttestationIndicesFromData(idxAttestation *ethpb.IndexedAttestation, tx *bolt.Tx) error {
+func removeIdxAttIndicesByEpochFromDB(idxAttestation *ethpb.IndexedAttestation, tx *bolt.Tx) error {
 	dataRoot, err := hashutil.HashProto(idxAttestation.Data)
+	if err != nil {
+		return err
+	}
 	protoIdxAtt := &slashpb.ValidatorIDToIdxAtt{
 		Signature: idxAttestation.Signature,
 		Indices:   idxAttestation.AttestingIndices,
@@ -266,12 +289,15 @@ func removeIndexedAttestationIndicesFromData(idxAttestation *ethpb.IndexedAttest
 	key := bytesutil.Bytes8(idxAttestation.Data.Target.Epoch)
 	bucket := tx.Bucket(indexedAttestationsIndicesBucket)
 	enc := bucket.Get(key)
-	vIdxList, err := createValidatorIDsToIndexedAttestationList(enc)
+	if enc == nil {
+		return errors.New("requested to delete data that is not present")
+	}
+	vIdxList, err := unmarshalValIDsToIdxAttList(enc)
 	if err != nil {
 		return errors.Wrap(err, "failed to decode value into ValidatorIDToIndexedAttestationList")
 	}
-	for i, v := range vIdxList.IndicesList {
-		if reflect.DeepEqual(v, protoIdxAtt) {
+	for i, attIdx := range vIdxList.IndicesList {
+		if reflect.DeepEqual(attIdx, protoIdxAtt) {
 			copy(vIdxList.IndicesList[i:], vIdxList.IndicesList[i+1:])
 			vIdxList.IndicesList[len(vIdxList.IndicesList)-1] = nil // or the zero value of T
 			vIdxList.IndicesList = vIdxList.IndicesList[:len(vIdxList.IndicesList)-1]
@@ -283,30 +309,32 @@ func removeIndexedAttestationIndicesFromData(idxAttestation *ethpb.IndexedAttest
 		return errors.Wrap(err, "failed to marshal")
 	}
 	if err := bucket.Put(key, enc); err != nil {
-		return errors.Wrap(err, "failed to include the indexed attestation in the historic indexed attestation bucket")
+		return errors.Wrap(err, "failed to include indexed attestation in the historical bucket")
 	}
 	return nil
 }
 
 func (db *Store) pruneAttHistory(currentEpoch uint64, historySize uint64) error {
-	pruneTill := int64(currentEpoch) - int64(historySize)
-	if pruneTill <= 0 {
+	pruneFromEpoch := int64(currentEpoch) - int64(historySize)
+	if pruneFromEpoch <= 0 {
 		return nil
 	}
+
 	return db.update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(historicIndexedAttestationsBucket)
+		attBucket := tx.Bucket(historicIndexedAttestationsBucket)
 		c := tx.Bucket(historicIndexedAttestationsBucket).Cursor()
-		max := bytesutil.Bytes8(uint64(pruneTill))
+		max := bytesutil.Bytes8(uint64(pruneFromEpoch))
 		for k, _ := c.First(); k != nil && bytes.Compare(k[:8], max) <= 0; k, _ = c.Next() {
-			if err := bucket.Delete(k); err != nil {
-				return errors.Wrap(err, "failed to delete the indexed attestation from historic indexed attestation bucket")
+			if err := attBucket.Delete(k); err != nil {
+				return errors.Wrap(err, "failed to delete indexed attestation from historical bucket")
 			}
 		}
+
 		idxBucket := tx.Bucket(indexedAttestationsIndicesBucket)
 		c = tx.Bucket(indexedAttestationsIndicesBucket).Cursor()
 		for k, _ := c.First(); k != nil && bytes.Compare(k[:8], max) <= 0; k, _ = c.Next() {
 			if err := idxBucket.Delete(k); err != nil {
-				return errors.Wrap(err, "failed to delete the indexed attestation from indexed attestation indexes bucket")
+				return errors.Wrap(err, "failed to delete indexed attestation from historical bucket")
 			}
 		}
 		return nil
