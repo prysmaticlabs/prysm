@@ -88,7 +88,7 @@ func (b *BeaconState) SetBlockRoots(val [][]byte) error {
 	defer b.lock.Unlock()
 
 	b.sharedFieldReferences[blockRoots].refs--
-	b.sharedFieldReferences[blockRoots] = &reference{refs:1}
+	b.sharedFieldReferences[blockRoots] = &reference{refs: 1}
 
 	b.state.BlockRoots = val
 	b.markFieldAsDirty(blockRoots)
@@ -102,14 +102,16 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 		return fmt.Errorf("invalid index provided %d", idx)
 	}
 
+	b.lock.RLock()
 	r := b.state.BlockRoots
 	if ref := b.sharedFieldReferences[blockRoots]; ref.refs > 1 {
 		ref.refs--
-		b.sharedFieldReferences[blockRoots] = &reference{refs:1}
+		b.sharedFieldReferences[blockRoots] = &reference{refs: 1}
 
 		// Copy on write since this is a shared array.
 		r = b.BlockRoots()
 	}
+	b.lock.RUnlock()
 
 	// Must secure lock after copy or hit a deadlock.
 	b.lock.Lock()
@@ -129,7 +131,7 @@ func (b *BeaconState) SetStateRoots(val [][]byte) error {
 	defer b.lock.Unlock()
 
 	b.sharedFieldReferences[stateRoots].refs--
-	b.sharedFieldReferences[stateRoots] = &reference{refs:1}
+	b.sharedFieldReferences[stateRoots] = &reference{refs: 1}
 
 	b.state.StateRoots = val
 	b.markFieldAsDirty(stateRoots)
@@ -143,15 +145,16 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 
+	b.lock.RLock()
 	r := b.state.StateRoots
 	if ref := b.sharedFieldReferences[stateRoots]; ref.refs > 1 {
 
 		// Copy on write since this is a shared array.
 		r = b.StateRoots()
 		ref.refs--
-		b.sharedFieldReferences[stateRoots] = &reference{refs:1}
+		b.sharedFieldReferences[stateRoots] = &reference{refs: 1}
 	}
-
+	b.lock.RUnlock()
 
 	// Must secure lock after copy or hit a deadlock.
 	b.lock.Lock()
@@ -225,7 +228,7 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 
 	b.state.Validators = val
 	b.sharedFieldReferences[validators].refs--
-	b.sharedFieldReferences[validators] = &reference{refs:1}
+	b.sharedFieldReferences[validators] = &reference{refs: 1}
 	b.markFieldAsDirty(validators)
 	return nil
 }
@@ -233,7 +236,7 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 // ApplyToEveryValidator applies the provided callback function to each validator in the
 // validator registry.
 func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator) error) error {
-	// TODO: RLock
+	b.lock.RLock()
 	v := b.state.Validators
 	if ref := b.sharedFieldReferences[validators]; ref.refs > 1 {
 		// Copy on write since this is a shared array.
@@ -244,6 +247,7 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 			refs: 1,
 		}
 	}
+	b.lock.RUnlock()
 
 	for i, val := range v {
 		err := f(i, val)
@@ -267,7 +271,7 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 
-	// TODO: RLock
+	b.lock.RLock()
 	v := b.state.Validators
 	if ref := b.sharedFieldReferences[validators]; ref.refs > 1 {
 		// Copy on write since this is a shared array.
@@ -278,6 +282,7 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 			refs: 1,
 		}
 	}
+	b.lock.RUnlock()
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
@@ -333,7 +338,7 @@ func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
 	defer b.lock.Unlock()
 
 	b.sharedFieldReferences[randaoMixes].refs--
-	b.sharedFieldReferences[randaoMixes] = &reference{refs:1}
+	b.sharedFieldReferences[randaoMixes] = &reference{refs: 1}
 
 	b.state.RandaoMixes = val
 	b.markFieldAsDirty(randaoMixes)
@@ -347,7 +352,7 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 
-	// TODO: RLock
+	b.lock.RLock()
 	mixes := b.state.RandaoMixes
 	if refs := b.sharedFieldReferences[randaoMixes].refs; refs > 1 {
 		mixes = b.RandaoMixes()
@@ -357,6 +362,7 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
 			ptr:  dataRefSlice(mixes),
 		}
 	}
+	b.lock.RUnlock()
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
