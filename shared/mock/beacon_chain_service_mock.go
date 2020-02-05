@@ -6,8 +6,8 @@ package mock
 
 import (
 	context "context"
-	gomock "github.com/golang/mock/gomock"
-	empty "github.com/golang/protobuf/ptypes/empty"
+	gomock "github.com/gogo/mock/gomock"
+	empty "github.com/gogo/protobuf/ptypes/empty"
 	v1alpha1 "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	grpc "google.golang.org/grpc"
 	metadata "google.golang.org/grpc/metadata"
