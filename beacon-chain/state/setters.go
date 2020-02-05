@@ -87,6 +87,9 @@ func (b *BeaconState) SetBlockRoots(val [][]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
+	b.sharedFieldReferences[blockRoots].refs--
+	b.sharedFieldReferences[blockRoots] = &reference{refs:1}
+
 	b.state.BlockRoots = val
 	b.markFieldAsDirty(blockRoots)
 	return nil
@@ -99,8 +102,14 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 		return fmt.Errorf("invalid index provided %d", idx)
 	}
 
-	// Copy on write since this is a shared array.
-	r := b.BlockRoots()
+	r := b.state.BlockRoots
+	if ref := b.sharedFieldReferences[blockRoots]; ref.refs > 1 {
+		ref.refs--
+		b.sharedFieldReferences[blockRoots] = &reference{refs:1}
+
+		// Copy on write since this is a shared array.
+		r = b.BlockRoots()
+	}
 
 	// Must secure lock after copy or hit a deadlock.
 	b.lock.Lock()
@@ -119,6 +128,9 @@ func (b *BeaconState) SetStateRoots(val [][]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
+	b.sharedFieldReferences[stateRoots].refs--
+	b.sharedFieldReferences[stateRoots] = &reference{refs:1}
+
 	b.state.StateRoots = val
 	b.markFieldAsDirty(stateRoots)
 	return nil
@@ -131,8 +143,15 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 
-	// Copy on write since this is a shared array.
-	r := b.StateRoots()
+	r := b.state.StateRoots
+	if ref := b.sharedFieldReferences[stateRoots]; ref.refs > 1 {
+
+		// Copy on write since this is a shared array.
+		r = b.StateRoots()
+		ref.refs--
+		b.sharedFieldReferences[stateRoots] = &reference{refs:1}
+	}
+
 
 	// Must secure lock after copy or hit a deadlock.
 	b.lock.Lock()
@@ -205,6 +224,8 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 	defer b.lock.Unlock()
 
 	b.state.Validators = val
+	b.sharedFieldReferences[validators].refs--
+	b.sharedFieldReferences[validators] = &reference{refs:1}
 	b.markFieldAsDirty(validators)
 	return nil
 }
@@ -212,8 +233,17 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 // ApplyToEveryValidator applies the provided callback function to each validator in the
 // validator registry.
 func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator) error) error {
-	// Copy on write since this is a shared array.
-	v := b.Validators()
+	// TODO: RLock
+	v := b.state.Validators
+	if ref := b.sharedFieldReferences[validators]; ref.refs > 1 {
+		// Copy on write since this is a shared array.
+		v = b.Validators()
+
+		ref.refs--
+		b.sharedFieldReferences[validators] = &reference{
+			refs: 1,
+		}
+	}
 
 	for i, val := range v {
 		err := f(i, val)
@@ -236,8 +266,18 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 	if len(b.state.Validators) <= int(idx) {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
-	// Copy on write since this is a shared array.
-	v := b.Validators()
+
+	// TODO: RLock
+	v := b.state.Validators
+	if ref := b.sharedFieldReferences[validators]; ref.refs > 1 {
+		// Copy on write since this is a shared array.
+		v = b.Validators()
+
+		ref.refs--
+		b.sharedFieldReferences[validators] = &reference{
+			refs: 1,
+		}
+	}
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
@@ -292,6 +332,9 @@ func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
+	b.sharedFieldReferences[randaoMixes].refs--
+	b.sharedFieldReferences[randaoMixes] = &reference{refs:1}
+
 	b.state.RandaoMixes = val
 	b.markFieldAsDirty(randaoMixes)
 	return nil
@@ -304,15 +347,22 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 
-	// Copy on write since this is a shared array.
-	mixes := b.RandaoMixes()
+	// TODO: RLock
+	mixes := b.state.RandaoMixes
+	if refs := b.sharedFieldReferences[randaoMixes].refs; refs > 1 {
+		mixes = b.RandaoMixes()
+		b.sharedFieldReferences[randaoMixes].refs--
+		b.sharedFieldReferences[randaoMixes] = &reference{
+			refs: 1,
+			ptr:  dataRefSlice(mixes),
+		}
+	}
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	mixes[idx] = val
 	b.state.RandaoMixes = mixes
-
 	b.markFieldAsDirty(randaoMixes)
 	return nil
 }
