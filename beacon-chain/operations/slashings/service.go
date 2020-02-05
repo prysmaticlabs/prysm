@@ -46,7 +46,10 @@ func (p *Pool) PendingAttesterSlashings() []*ethpb.AttesterSlashing {
 
 	var included []uint64
 	pending := make([]*ethpb.AttesterSlashing, 0)
-	for _, slashing := range p.pendingAttesterSlashing {
+	for i, slashing := range p.pendingAttesterSlashing {
+		if i >= int(params.BeaconConfig().MaxAttesterSlashings) {
+			break
+		}
 		if sliceutil.IsInUint64(slashing.validatorToSlash, included) {
 			continue
 		}
@@ -56,9 +59,7 @@ func (p *Pool) PendingAttesterSlashings() []*ethpb.AttesterSlashing {
 		included = append(included, slashedVal...)
 		pending = append(pending, attSlashing)
 	}
-	if len(pending) > int(params.BeaconConfig().MaxAttesterSlashings) {
-		pending = pending[:params.BeaconConfig().MaxAttesterSlashings]
-	}
+
 	return pending
 }
 
@@ -68,11 +69,11 @@ func (p *Pool) PendingProposerSlashings() []*ethpb.ProposerSlashing {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 	pending := make([]*ethpb.ProposerSlashing, 0)
-	for _, slashing := range p.pendingProposerSlashing {
+	for i, slashing := range p.pendingProposerSlashing {
+		if i >= int(params.BeaconConfig().MaxProposerSlashings) {
+			break
+		}
 		pending = append(pending, slashing)
-	}
-	if len(pending) > int(params.BeaconConfig().MaxProposerSlashings) {
-		pending = pending[:params.BeaconConfig().MaxProposerSlashings]
 	}
 	return pending
 }
