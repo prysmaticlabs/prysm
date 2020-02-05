@@ -564,7 +564,8 @@ func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(service.forkChoiceStore.Nodes()) != 6 {
+	// 5 nodes from the block tree 1. B0 - B3 - B4 - B6 - B8
+	if len(service.forkChoiceStore.Nodes()) != 5 {
 		t.Error("Miss match nodes")
 	}
 
@@ -575,6 +576,65 @@ func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
 		t.Error("Didn't save node")
 	}
 	if !service.forkChoiceStore.HasNode(bytesutil.ToBytes32(roots[8])) {
+		t.Error("Didn't save node")
+	}
+}
+
+func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	cfg := &Config{BeaconDB: db}
+	service, err := NewService(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	service.forkChoiceStore = protoarray.New(0, 0, [32]byte{'A'})
+	// Set finalized epoch to 1.
+	service.finalizedCheckpt = &ethpb.Checkpoint{Epoch: 1}
+
+	genesisStateRoot := [32]byte{}
+	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
+	if err := db.SaveBlock(ctx, genesis); err != nil {
+		t.Error(err)
+	}
+	validGenesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	if err != nil {
+		t.Error(err)
+	}
+	if err := service.beaconDB.SaveState(ctx, &stateTrie.BeaconState{}, validGenesisRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	// Define a tree branch, slot 63 <- 64 <- 65
+	b63 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 63}}
+	if err := service.beaconDB.SaveBlock(ctx, b63); err != nil {
+		t.Fatal(err)
+	}
+	r63, _ := ssz.HashTreeRoot(b63.Block)
+	b64 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 64, ParentRoot: r63[:]}}
+	if err := service.beaconDB.SaveBlock(ctx, b64); err != nil {
+		t.Fatal(err)
+	}
+	r64, _ := ssz.HashTreeRoot(b64.Block)
+	b65 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 65, ParentRoot: r64[:]}}
+	if err := service.beaconDB.SaveBlock(ctx, b65); err != nil {
+		t.Fatal(err)
+	}
+
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	if err := service.fillInForkChoiceMissingBlocks(context.Background(), b65.Block, beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	// There should be 2 nodes, block 65 and block 64.
+	if len(service.forkChoiceStore.Nodes()) != 2 {
+		t.Error("Miss match nodes")
+	}
+
+	// Block with slot 63 should be in fork choice because it's less than finalized epoch 1.
+	if !service.forkChoiceStore.HasNode(r63) {
 		t.Error("Didn't save node")
 	}
 }
