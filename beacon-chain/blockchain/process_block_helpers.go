@@ -405,6 +405,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.
 		pendingNodes = append(pendingNodes, b.Block)
 		parentRoot = bytesutil.ToBytes32(b.Block.ParentRoot)
 		slot = b.Block.Slot
+		higherThanFinalized = slot > helpers.StartSlot(s.finalizedCheckpt.Epoch)
 	}
 
 	// Insert parent nodes to fork choice store in reverse order.
