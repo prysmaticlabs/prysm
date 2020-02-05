@@ -150,14 +150,12 @@ func (s *Service) Start() {
 			log.Fatalf("Could not get finalized checkpoint: %v", err)
 		}
 
-		if featureconfig.Get().ProtoArrayForkChoice {
-			s.justifiedCheckpt = proto.Clone(justifiedCheckpoint).(*ethpb.Checkpoint)
-			s.bestJustifiedCheckpt = proto.Clone(justifiedCheckpoint).(*ethpb.Checkpoint)
-			s.finalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
-			s.prevFinalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
-
-			s.resumeForkChoice(justifiedCheckpoint, finalizedCheckpoint)
-		}
+		// Resume fork choice.
+		s.justifiedCheckpt = proto.Clone(justifiedCheckpoint).(*ethpb.Checkpoint)
+		s.bestJustifiedCheckpt = proto.Clone(justifiedCheckpoint).(*ethpb.Checkpoint)
+		s.finalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
+		s.prevFinalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
+		s.resumeForkChoice(justifiedCheckpoint, finalizedCheckpoint)
 
 		if finalizedCheckpoint.Epoch > 1 {
 			if err := s.pruneGarbageState(ctx, helpers.StartSlot(finalizedCheckpoint.Epoch)-params.BeaconConfig().SlotsPerEpoch); err != nil {
@@ -379,20 +377,18 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 	genesisCheckpoint := &ethpb.Checkpoint{Root: genesisBlkRoot[:]}
 
 	// Add the genesis block to the fork choice store.
-	if featureconfig.Get().ProtoArrayForkChoice {
-		s.justifiedCheckpt = proto.Clone(genesisCheckpoint).(*ethpb.Checkpoint)
-		s.bestJustifiedCheckpt = proto.Clone(genesisCheckpoint).(*ethpb.Checkpoint)
-		s.finalizedCheckpt = proto.Clone(genesisCheckpoint).(*ethpb.Checkpoint)
-		s.prevFinalizedCheckpt = proto.Clone(genesisCheckpoint).(*ethpb.Checkpoint)
+	s.justifiedCheckpt = proto.Clone(genesisCheckpoint).(*ethpb.Checkpoint)
+	s.bestJustifiedCheckpt = proto.Clone(genesisCheckpoint).(*ethpb.Checkpoint)
+	s.finalizedCheckpt = proto.Clone(genesisCheckpoint).(*ethpb.Checkpoint)
+	s.prevFinalizedCheckpt = proto.Clone(genesisCheckpoint).(*ethpb.Checkpoint)
 
-		if err := s.forkChoiceStore.ProcessBlock(ctx,
-			genesisBlk.Block.Slot,
-			genesisBlkRoot,
-			params.BeaconConfig().ZeroHash,
-			genesisCheckpoint.Epoch,
-			genesisCheckpoint.Epoch); err != nil {
-			log.Fatalf("Could not process genesis block for fork choice: %v", err)
-		}
+	if err := s.forkChoiceStore.ProcessBlock(ctx,
+		genesisBlk.Block.Slot,
+		genesisBlkRoot,
+		params.BeaconConfig().ZeroHash,
+		genesisCheckpoint.Epoch,
+		genesisCheckpoint.Epoch); err != nil {
+		log.Fatalf("Could not process genesis block for fork choice: %v", err)
 	}
 
 	s.genesisRoot = genesisBlkRoot

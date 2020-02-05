@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
@@ -31,18 +30,13 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveAttestationNoPubsub")
 	defer span.End()
 
-	// Update forkchoice store for the new attestation
-	indices := make([]uint64, 0)
-	var err error
-	if featureconfig.Get().ProtoArrayForkChoice {
-		indices, err = s.onAttestation(ctx, att)
-		if err != nil {
-			return errors.Wrap(err, "could not process attestation from fork choice service")
-		}
-
-		s.forkChoiceStore.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(att.Data.BeaconBlockRoot), att.Data.Target.Epoch)
-
+	// Update forkchoice store with the new attestation for updating weight.
+	indices, err := s.onAttestation(ctx, att)
+	if err != nil {
+		return errors.Wrap(err, "could not process attestation from fork choice service")
 	}
+
+	s.forkChoiceStore.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(att.Data.BeaconBlockRoot), att.Data.Target.Epoch)
 
 	return nil
 }

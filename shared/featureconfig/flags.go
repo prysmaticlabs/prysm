@@ -90,10 +90,6 @@ var (
 		Usage: "Prevent the validator client from signing and broadcasting 2 any slashable attestations. " +
 			"Protects from slashing.",
 	}
-	protoArrayForkChoice = cli.BoolFlag{
-		Name:  "proto-array-forkchoice",
-		Usage: "Uses proto array fork choice over the naive spec fork choice. Better implementation in terms of mem usage and speed. ",
-	}
 )
 
 // Deprecated flags list.
@@ -186,6 +182,10 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedprotoArrayForkChoice = cli.BoolFlag{
+		Name:   "proto-array-forkchoice",
+		Usage:  deprecatedUsage,
+		Hidden: true}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -206,6 +206,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableShuffledIndexCacheFlag,
 	deprecatedSaveDepositDataFlag,
 	deprecatedCacheProposerIndicesFlag,
+	deprecatedprotoArrayForkChoice,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -238,7 +239,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableSkipSlotsCacheFlag,
 	enableSlasherFlag,
 	cacheFilteredBlockTreeFlag,
-	protoArrayForkChoice,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
