@@ -1,10 +1,8 @@
 package state
 
 import (
-	"reflect"
 	"runtime"
 	"sync"
-	"unsafe"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
@@ -18,9 +16,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/stateutil"
 )
 
+// Reference structs are shared across BeaconState copies to understand when the state must use
+// copy-on-write for shared fields or may modify a field in place when it holds the only reference
+// to the field value. References are tracked in a map of fieldIndex -> *reference. Whenever a state
+// releases their reference to the field value, they must decrement the refs. Likewise whenever a
+// copy is performed then the state must increment the refs counter.
 type reference struct {
 	refs uint
-	ptr  uintptr // TODO: I don't think we'll ever use this...
 }
 
 // BeaconState defines a struct containing utilities for the eth2 chain state, defining
@@ -61,28 +63,12 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 	}
 
 	// Initialize field reference tracking for shared data.
-	b.sharedFieldReferences[randaoMixes] = &reference{
-		refs: 1,
-		ptr:  dataRefSlice(b.state.RandaoMixes),
-	}
-	b.sharedFieldReferences[validators] = &reference{
-		refs: 1,
-		ptr:  dataRefSlice(b.state.Validators),
-	}
-	b.sharedFieldReferences[stateRoots] = &reference{
-		refs: 1,
-		ptr:  dataRefSlice(b.state.StateRoots),
-	}
-	b.sharedFieldReferences[blockRoots] = &reference{
-		refs: 1,
-		ptr:  dataRefSlice(b.state.BlockRoots),
-	}
+	b.sharedFieldReferences[randaoMixes] = &reference{refs: 1}
+	b.sharedFieldReferences[stateRoots] = &reference{refs: 1}
+	b.sharedFieldReferences[blockRoots] = &reference{refs: 1}
+	b.sharedFieldReferences[validators] = &reference{refs: 1}
 
 	return b, nil
-}
-
-func dataRefSlice(i interface{}) uintptr {
-	return (*reflect.SliceHeader)(unsafe.Pointer(&i)).Data
 }
 
 // Copy returns a deep copy of the beacon state.
@@ -149,6 +135,7 @@ func (b *BeaconState) Copy() *BeaconState {
 		}
 	}
 
+	// Finalizer runs when dst is being destroyed in garbage collection.
 	runtime.SetFinalizer(dst, func(b *BeaconState) {
 		for _, v := range b.sharedFieldReferences {
 			v.refs--

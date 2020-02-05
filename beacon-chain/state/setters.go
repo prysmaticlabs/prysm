@@ -146,10 +146,10 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 	}
 
 	b.lock.RLock()
+	// Check if we hold the only reference to the shared state roots slice.
 	r := b.state.StateRoots
 	if ref := b.sharedFieldReferences[stateRoots]; ref.refs > 1 {
-
-		// Copy on write since this is a shared array.
+		// Perform a copy since this is a shared reference and we don't want to mutate others.
 		r = b.StateRoots()
 		ref.refs--
 		b.sharedFieldReferences[stateRoots] = &reference{refs: 1}
@@ -239,13 +239,11 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 	b.lock.RLock()
 	v := b.state.Validators
 	if ref := b.sharedFieldReferences[validators]; ref.refs > 1 {
-		// Copy on write since this is a shared array.
+		// Perform a copy since this is a shared reference and we don't want to mutate others.
 		v = b.Validators()
 
 		ref.refs--
-		b.sharedFieldReferences[validators] = &reference{
-			refs: 1,
-		}
+		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
 
@@ -274,7 +272,7 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 	b.lock.RLock()
 	v := b.state.Validators
 	if ref := b.sharedFieldReferences[validators]; ref.refs > 1 {
-		// Copy on write since this is a shared array.
+		// Perform a copy since this is a shared reference and we don't want to mutate others.
 		v = b.Validators()
 
 		ref.refs--
@@ -317,7 +315,7 @@ func (b *BeaconState) SetBalances(val []uint64) error {
 	return nil
 }
 
-// UpdateBalancesAtIndex for the beacon state. This PR updates the randao mixes
+// UpdateBalancesAtIndex for the beacon state. This method updates the balance
 // at a specific index to a new value.
 func (b *BeaconState) UpdateBalancesAtIndex(idx uint64, val uint64) error {
 	if len(b.state.Balances) <= int(idx) {
@@ -357,10 +355,7 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
 	if refs := b.sharedFieldReferences[randaoMixes].refs; refs > 1 {
 		mixes = b.RandaoMixes()
 		b.sharedFieldReferences[randaoMixes].refs--
-		b.sharedFieldReferences[randaoMixes] = &reference{
-			refs: 1,
-			ptr:  dataRefSlice(mixes),
-		}
+		b.sharedFieldReferences[randaoMixes] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
 
