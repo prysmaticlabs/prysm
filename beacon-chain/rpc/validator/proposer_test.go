@@ -25,6 +25,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -82,10 +83,11 @@ func TestGetBlock_OK(t *testing.T) {
 		t.Error(err)
 	}
 
+	graffiti := bytesutil.ToBytes32([]byte("eth2"))
 	req := &ethpb.BlockRequest{
 		Slot:         1,
 		RandaoReveal: randaoReveal,
-		Graffiti:     []byte("eth2"),
+		Graffiti:     graffiti[:],
 	}
 
 	block, err := proposerServer.GetBlock(ctx, req)
