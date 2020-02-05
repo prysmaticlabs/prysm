@@ -139,7 +139,7 @@ func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteState")
 	defer span.End()
 
-	return k.db.Batch(func(tx *bolt.Tx) error {
+	return k.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		genesisBlockRoot := bkt.Get(genesisBlockRootKey)
 
@@ -170,7 +170,7 @@ func (k *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteStates")
 	defer span.End()
 
-	return k.db.Batch(func(tx *bolt.Tx) error {
+	return k.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		genesisBlockRoot := bkt.Get(genesisBlockRootKey)
 
