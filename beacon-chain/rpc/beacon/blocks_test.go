@@ -106,6 +106,9 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 	if err := db.SaveBlock(ctx, blk); err != nil {
 		t.Fatal(err)
 	}
+	if err := db.SaveGenesisBlockRoot(ctx, root); err != nil {
+		t.Fatal(err)
+	}
 	wanted := &ethpb.ListBlocksResponse{
 		BlockContainers: []*ethpb.BeaconBlockContainer{
 			{
@@ -121,7 +124,7 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 			Genesis: true,
 		},
 	})
-	if err := db.SaveGenesisBlockRoot(ctx, res.Block); err != nil {
+	if err != nil {
 		t.Fatal(err)
 	}
 	if !proto.Equal(wanted, res) {

@@ -98,6 +98,9 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 	if err := db.SaveBlock(ctx, blk); err != nil {
 		t.Fatal(err)
 	}
+	if err := db.SaveGenesisBlockRoot(ctx, root); err != nil {
+		t.Fatal(err)
+	}
 	att := &ethpb.Attestation{
 		AggregationBits: bitfield.Bitlist{0b11},
 		Data: &ethpb.AttestationData{
@@ -119,7 +122,7 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 			Genesis: true,
 		},
 	})
-	if err := db.SaveGenesisBlockRoot(ctx, res.Block); err != nil {
+	if err != nil {
 		t.Fatal(err)
 	}
 	if !proto.Equal(wanted, res) {
