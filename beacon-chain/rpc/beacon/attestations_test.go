@@ -119,7 +119,7 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 			Genesis: true,
 		},
 	})
-	if err != nil {
+	if err := db.SaveGenesisBlockRoot(ctx, res.Block); err != nil {
 		t.Fatal(err)
 	}
 	if !proto.Equal(wanted, res) {
