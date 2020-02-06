@@ -31,7 +31,10 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["types_test.go"],
+    srcs = [
+        "references_test.go",
+        "types_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
