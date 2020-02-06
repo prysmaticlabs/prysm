@@ -38,7 +38,7 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	if featureconfig.Get().ProtoArrayForkChoice {
 		indices, err = s.onAttestation(ctx, att)
 		if err != nil {
-			return errors.Wrap(err, "could not process attestation from fork choice service")
+			return errors.Wrap(err, "could not process attestation")
 		}
 
 		s.forkChoiceStore.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(att.Data.BeaconBlockRoot), att.Data.Target.Epoch)
