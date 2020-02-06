@@ -8,6 +8,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
@@ -135,24 +136,20 @@ func (bs *Server) ListBlocks(
 			NextPageToken:   nextPageToken,
 		}, nil
 	case *ethpb.ListBlocksRequest_Genesis:
-		blks, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(0).SetEndSlot(0))
+		genBlk, err := bs.BeaconDB.GenesisBlock(ctx)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for genesis slot: %v", err)
 		}
-		numBlks := len(blks)
-		if numBlks == 0 {
+		if genBlk == nil {
 			return nil, status.Error(codes.Internal, "Could not find genesis block")
 		}
-		if numBlks != 1 {
-			return nil, status.Error(codes.Internal, "Found more than 1 genesis block")
-		}
-		root, err := ssz.HashTreeRoot(blks[0].Block)
+		root, err := ssz.HashTreeRoot(genBlk.Block)
 		if err != nil {
 			return nil, err
 		}
 		containers := []*ethpb.BeaconBlockContainer{
 			{
-				Block:     blks[0],
+				Block:     genBlk,
 				BlockRoot: root[:],
 			},
 		}
@@ -178,7 +175,37 @@ func (bs *Server) GetChainHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.Cha
 
 // StreamBlocks to clients every single time a block is received by the beacon node.
 func (bs *Server) StreamBlocks(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamBlocksServer) error {
-	return status.Error(codes.Unimplemented, "Unimplemented")
+	blocksChannel := make(chan *feed.Event, 1)
+	blockSub := bs.BlockNotifier.BlockFeed().Subscribe(blocksChannel)
+	defer blockSub.Unsubscribe()
+	for {
+		select {
+		case event := <-blocksChannel:
+			if event.Type == blockfeed.ReceivedBlock {
+				data, ok := event.Data.(*blockfeed.ReceivedBlockData)
+				if !ok {
+					return status.Errorf(
+						codes.FailedPrecondition,
+						"Could not subscribe to block feed, received bad data: %v",
+						data,
+					)
+				}
+				if data.SignedBlock == nil {
+					// One nil block shouldn't stop the stream.
+					continue
+				}
+				if err := stream.Send(data.SignedBlock.Block); err != nil {
+					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+				}
+			}
+		case <-blockSub.Err():
+			return status.Error(codes.Aborted, "Subscriber closed, exiting goroutine")
+		case <-bs.Ctx.Done():
+			return status.Error(codes.Canceled, "Context canceled")
+		case <-stream.Context().Done():
+			return status.Error(codes.Canceled, "Context canceled")
+		}
+	}
 }
 
 // StreamChainHead to clients every single time the head block and state of the chain change.

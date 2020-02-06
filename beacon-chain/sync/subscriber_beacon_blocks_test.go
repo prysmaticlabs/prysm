@@ -40,10 +40,12 @@ func TestRegularSyncBeaconBlockSubscriber_FilterByFinalizedEpoch(t *testing.T) {
 		t.Fatal(err)
 	}
 	parentRoot, _ := ssz.HashTreeRoot(parent.Block)
+	chain := &mock.ChainService{State: s}
 	r := &Service{
-		db:      db,
-		chain:   &mock.ChainService{State: s},
-		attPool: attestations.NewPool(),
+		db:            db,
+		chain:         chain,
+		blockNotifier: chain.BlockNotifier(),
+		attPool:       attestations.NewPool(),
 	}
 
 	b := &ethpb.SignedBeaconBlock{

@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -106,6 +107,9 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 	if err := db.SaveBlock(ctx, blk); err != nil {
 		t.Fatal(err)
 	}
+	if err := db.SaveGenesisBlockRoot(ctx, root); err != nil {
+		t.Fatal(err)
+	}
 	wanted := &ethpb.ListBlocksResponse{
 		BlockContainers: []*ethpb.BeaconBlockContainer{
 			{
@@ -127,17 +131,61 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 	if !proto.Equal(wanted, res) {
 		t.Errorf("Wanted %v, received %v", wanted, res)
 	}
+}
 
-	// Should throw an error if there is more than 1 block
-	// for the genesis slot.
+func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	bs := &Server{
+		BeaconDB: db,
+	}
+	// Should return the proper genesis block if it exists.
+	parentRoot := [32]byte{1, 2, 3}
+	blk := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Slot:       0,
+			ParentRoot: parentRoot[:],
+		},
+	}
+	root, err := ssz.HashTreeRoot(blk.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := db.SaveBlock(ctx, blk); err != nil {
 		t.Fatal(err)
 	}
+	if err := db.SaveGenesisBlockRoot(ctx, root); err != nil {
+		t.Fatal(err)
+	}
+
+	count := uint64(100)
+	blks := make([]*ethpb.SignedBeaconBlock, count)
+	blkContainers := make([]*ethpb.BeaconBlockContainer, count)
+	for i := uint64(0); i < count; i++ {
+		b := &ethpb.SignedBeaconBlock{
+			Block: &ethpb.BeaconBlock{
+				Slot: i,
+			},
+		}
+		root, err := ssz.HashTreeRoot(b.Block)
+		if err != nil {
+			t.Fatal(err)
+		}
+		blks[i] = b
+		blkContainers[i] = &ethpb.BeaconBlockContainer{Block: b, BlockRoot: root[:]}
+	}
+	if err := db.SaveBlocks(ctx, blks); err != nil {
+		t.Fatal(err)
+	}
+
+	// Should throw an error if more than one blk returned.
 	if _, err := bs.ListBlocks(ctx, &ethpb.ListBlocksRequest{
 		QueryFilter: &ethpb.ListBlocksRequest_Genesis{
 			Genesis: true,
 		},
-	}); err != nil && !strings.Contains(err.Error(), "Found more than 1") {
+	}); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -538,6 +586,75 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 		sent = server.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.BlockProcessed,
 			Data: &statefeed.BlockProcessedData{},
+		})
+	}
+	<-exitRoutine
+}
+
+func TestServer_StreamBlocks_ContextCanceled(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+	ctx := context.Background()
+
+	chainService := &mock.ChainService{}
+	ctx, cancel := context.WithCancel(ctx)
+	server := &Server{
+		Ctx:           ctx,
+		BlockNotifier: chainService.BlockNotifier(),
+		BeaconDB:      db,
+	}
+
+	exitRoutine := make(chan bool)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := mockRPC.NewMockBeaconChain_StreamBlocksServer(ctrl)
+	mockStream.EXPECT().Context().Return(ctx)
+	go func(tt *testing.T) {
+		if err := server.StreamBlocks(&ptypes.Empty{}, mockStream); !strings.Contains(err.Error(), "Context canceled") {
+			tt.Errorf("Could not call RPC method: %v", err)
+		}
+		<-exitRoutine
+	}(t)
+	cancel()
+	exitRoutine <- true
+}
+
+func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	b := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Slot: 1,
+		},
+	}
+
+	chainService := &mock.ChainService{}
+	ctx := context.Background()
+	server := &Server{
+		Ctx:           ctx,
+		BlockNotifier: chainService.BlockNotifier(),
+	}
+	exitRoutine := make(chan bool)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := mockRPC.NewMockBeaconChain_StreamBlocksServer(ctrl)
+	mockStream.EXPECT().Send(b.Block).Do(func(arg0 interface{}) {
+		exitRoutine <- true
+	})
+	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
+
+	go func(tt *testing.T) {
+		if err := server.StreamBlocks(&ptypes.Empty{}, mockStream); err != nil {
+			tt.Errorf("Could not call RPC method: %v", err)
+		}
+	}(t)
+
+	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
+	for sent := 0; sent == 0; {
+		sent = server.BlockNotifier.BlockFeed().Send(&feed.Event{
+			Type: blockfeed.ReceivedBlock,
+			Data: &blockfeed.ReceivedBlockData{SignedBlock: b},
 		})
 	}
 	<-exitRoutine

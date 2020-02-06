@@ -40,7 +40,7 @@ type Flags struct {
 	KafkaBootstrapServers                      string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
 	ProtectProposer                            bool   // ProtectProposer prevents the validator client from signing any proposals that would be considered a slashable offense.
 	ProtectAttester                            bool   // ProtectAttester prevents the validator client from signing any attestations that would be considered a slashable offense.
-	ProtoArrayForkChoice                       bool   // ProtoArrayForkChoice enables proto array fork choice. Significant improvements over the spec version.
+
 	ForkchoiceAggregateAttestations            bool   // ForkchoiceAggregateAttestations attempts to aggregate attestations before processing in fork choice.
 	DisableStrictAttestationPubsubVerification bool   // DisableStrictAttestationPubsubVerification will disabling strict signature verification in pubsub.
 
@@ -140,10 +140,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(cacheFilteredBlockTreeFlag.Name) {
 		log.Warn("Enabled filtered block tree cache for fork choice.")
 		cfg.EnableBlockTreeCache = true
-	}
-	if ctx.GlobalBool(protoArrayForkChoice.Name) {
-		log.Warn("Enabled using proto array fork choice over spec fork choice.")
-		cfg.ProtoArrayForkChoice = true
 	}
 	if ctx.GlobalBool(forkchoiceAggregateAttestations.Name) {
 		log.Warn("Enabled fork choice aggregation pre-processing of attestations")

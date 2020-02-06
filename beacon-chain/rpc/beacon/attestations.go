@@ -42,17 +42,14 @@ func (bs *Server) ListAttestations(
 	var err error
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListAttestationsRequest_Genesis:
-		blks, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(0).SetEndSlot(0))
+		genBlk, err := bs.BeaconDB.GenesisBlock(ctx)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not genesis block: %v", err)
 		}
-		if len(blks) == 0 {
+		if genBlk == nil {
 			return nil, status.Error(codes.Internal, "Could not find genesis block")
 		}
-		if len(blks) != 1 {
-			return nil, status.Error(codes.Internal, "Found more than 1 genesis block")
-		}
-		genesisRoot, err := ssz.HashTreeRoot(blks[0].Block)
+		genesisRoot, err := ssz.HashTreeRoot(genBlk.Block)
 		if err != nil {
 			return nil, err
 		}
