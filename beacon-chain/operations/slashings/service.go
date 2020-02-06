@@ -1,7 +1,6 @@
 package slashings
 
 import (
-	"fmt"
 	"sort"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -95,7 +94,7 @@ func (p *Pool) InsertAttesterSlashing(state *beaconstate.BeaconState, slashing *
 			return p.pendingAttesterSlashing[i].validatorToSlash == val
 		})
 		if found != len(p.pendingAttesterSlashing) {
-			return fmt.Errorf("could not find validator at index %d in state", val)
+			continue
 		}
 
 		pendingSlashing := &PendingAttesterSlashing{
