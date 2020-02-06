@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/params"
 
 	st "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -80,10 +81,16 @@ func (s *Client) updateSlashingPool(ctx context.Context, state *st.BeaconState) 
 		return status.Errorf(codes.Internal, "Could not retrieve attester slashings: %v", err)
 	}
 	for _, ps := range psr.ProposerSlashing {
-		s.SlashingPool.InsertProposerSlashing(ctx, state, ps)
+		if err := s.SlashingPool.InsertProposerSlashing(state, ps); err != nil {
+			log.WithError(errors.Wrap(err, "could not insert proposer slashing into pool"))
+			continue
+		}
 	}
 	for _, as := range asr.AttesterSlashing {
-		s.SlashingPool.InsertAttesterSlashing(ctx, state, as)
+		if err := s.SlashingPool.InsertAttesterSlashing(state, as); err != nil {
+			log.WithError(errors.Wrap(err, "could not insert attester slashing into pool"))
+			continue
+		}
 	}
 	return nil
 }

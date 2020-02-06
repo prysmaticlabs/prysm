@@ -77,6 +77,7 @@ func TestGetBlock_OK(t *testing.T) {
 		MockEth1Votes:     true,
 		AttPool:           attestations.NewPool(),
 		ExitPool:          voluntaryexits.NewPool(),
+		SlashingPool:      slashings.NewPool(),
 	}
 
 	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
@@ -221,8 +222,8 @@ func TestGetBlock_IncludesSlashings(t *testing.T) {
 		Attestation_1: att1,
 		Attestation_2: att2,
 	}
-	proposerServer.SlashingPool.InsertProposerSlashing(context.Background(), beaconState, proposerSlashing)
-	proposerServer.SlashingPool.InsertAttesterSlashing(context.Background(), beaconState, attSlashing)
+	proposerServer.SlashingPool.InsertProposerSlashing(beaconState, proposerSlashing)
+	proposerServer.SlashingPool.InsertAttesterSlashing(beaconState, attSlashing)
 
 	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
 	if err != nil {

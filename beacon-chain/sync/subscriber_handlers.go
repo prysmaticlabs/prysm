@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
@@ -21,7 +22,9 @@ func (r *Service) attesterSlashingSubscriber(ctx context.Context, msg proto.Mess
 	if err != nil {
 		return err
 	}
-	r.slashingPool.InsertAttesterSlashing(ctx, s, msg.(*ethpb.AttesterSlashing))
+	if err := r.slashingPool.InsertAttesterSlashing(s, msg.(*ethpb.AttesterSlashing)); err != nil {
+		return errors.Wrap(err, "could not insert attester slashing into pool")
+	}
 	return nil
 }
 
@@ -30,6 +33,8 @@ func (r *Service) proposerSlashingSubscriber(ctx context.Context, msg proto.Mess
 	if err != nil {
 		return err
 	}
-	r.slashingPool.InsertProposerSlashing(ctx, s, msg.(*ethpb.ProposerSlashing))
+	if err := r.slashingPool.InsertProposerSlashing(s, msg.(*ethpb.ProposerSlashing)); err != nil {
+		return errors.Wrap(err, "could not insert proposer slashing into pool")
+	}
 	return nil
 }
