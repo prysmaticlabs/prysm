@@ -16,6 +16,7 @@ func computeDeltas(
 	oldBalances []uint64,
 	newBalances []uint64,
 ) ([]int, []Vote, error) {
+
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.computeDeltas")
 	defer span.End()
 
