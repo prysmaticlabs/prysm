@@ -130,18 +130,56 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 	if !proto.Equal(wanted, res) {
 		t.Errorf("Wanted %v, received %v", wanted, res)
 	}
+}
 
-	// Should throw an error if there is more than 1 block
-	// for the genesis slot.
-	if err := db.SaveBlock(ctx, blk); err != nil {
-		t.Fatal(err)
+func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+
+	ctx := context.Background()
+	bs := &Server{
+		BeaconDB: db,
 	}
+
+	// Should throw an error if no genesis block is found.
 	if _, err := bs.ListBlocks(ctx, &ethpb.ListBlocksRequest{
 		QueryFilter: &ethpb.ListBlocksRequest_Genesis{
 			Genesis: true,
 		},
-	}); err != nil && !strings.Contains(err.Error(), "Found more than 1") {
+	}); err != nil && !strings.Contains(err.Error(), "Could not find genesis") {
 		t.Fatal(err)
+	}
+
+	// Should return the proper genesis block if it exists.
+	parentRoot := [32]byte{1, 2, 3}
+	blk := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Slot:       0,
+			ParentRoot: parentRoot[:],
+		},
+	}
+	root, err := ssz.HashTreeRoot(blk.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveBlock(ctx, blk); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveGenesisBlockRoot(ctx, root); err != nil {
+		t.Fatal(err)
+	}
+	// Should throw an error if no genesis block is found.
+	genBlk, err := bs.ListBlocks(ctx, &ethpb.ListBlocksRequest{
+		QueryFilter: &ethpb.ListBlocksRequest_Genesis{
+			Genesis: true,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(genBlk.BlockContainers) > 1 {
+		t.Fatal("More than one block returned for Genesis block.")
 	}
 }
 
