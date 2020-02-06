@@ -85,5 +85,7 @@ func (s *Client) updateSlashingPool(ctx context.Context, state *st.BeaconState) 
 	for _, as := range asr.AttesterSlashing {
 		s.SlashingPool.InsertAttesterSlashing(ctx, state, as)
 	}
+	log.Infof("updating slashing pool with %d attestations", len(asr.AttesterSlashing))
+
 	return nil
 }
