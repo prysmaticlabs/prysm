@@ -195,10 +195,8 @@ func (bs *Server) StreamBlocks(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamB
 					)
 				}
 				if data.SignedBlock == nil {
-					return status.Error(
-						codes.FailedPrecondition,
-						"Received nil data over block feed",
-					)
+					// One nil block shouldn't stop the stream.
+					continue
 				}
 				if err := stream.Send(data.SignedBlock.Block); err != nil {
 					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
