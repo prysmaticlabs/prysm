@@ -9,7 +9,7 @@ const (
 	BlockReceived = iota + 1
 )
 
-// BlockReceivedData is the data sent with BlockProcessed events.
+// BlockReceivedData is the data sent with BlockReceived events.
 type BlockReceivedData struct {
 	SignedBlock *ethpb.SignedBeaconBlock
 }
