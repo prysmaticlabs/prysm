@@ -43,6 +43,7 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	return nil
 }
 
+// IsValidAttestation returns true if the attestation can be verified against its pre-state.
 func (s *Service) IsValidAttestation(ctx context.Context, att *ethpb.Attestation) bool {
 	baseState, err := s.getAttPreState(ctx, att.Data.Target)
 	if err != nil {
