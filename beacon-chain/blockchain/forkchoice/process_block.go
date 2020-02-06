@@ -125,8 +125,11 @@ func (s *Store) OnBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) (*
 		return nil, errors.Wrap(err, "could not save finalized checkpoint")
 	}
 	// Save the unseen attestations from block to db.
-	if err := s.saveNewBlockAttestations(ctx, b.Body.Attestations); err != nil {
-		return nil, errors.Wrap(err, "could not save attestations")
+	// Only save attestation in DB for archival node.
+	if flags.Get().EnableArchive {
+		if err := s.saveNewBlockAttestations(ctx, b.Body.Attestations); err != nil {
+			return nil, errors.Wrap(err, "could not save attestations")
+		}
 	}
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.

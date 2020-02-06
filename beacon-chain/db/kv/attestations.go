@@ -95,7 +95,7 @@ func (k *Store) HasAttestation(ctx context.Context, attDataRoot [32]byte) bool {
 func (k *Store) DeleteAttestation(ctx context.Context, attDataRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteAttestation")
 	defer span.End()
-	return k.db.Batch(func(tx *bolt.Tx) error {
+	return k.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(attestationsBucket)
 		enc := bkt.Get(attDataRoot[:])
 		if enc == nil {
@@ -151,7 +151,7 @@ func (k *Store) SaveAttestation(ctx context.Context, att *ethpb.Attestation) err
 		return err
 	}
 
-	err := k.db.Batch(func(tx *bolt.Tx) error {
+	err := k.db.Update(func(tx *bolt.Tx) error {
 		attDataRoot, err := ssz.HashTreeRoot(att.Data)
 		if err != nil {
 			return err
