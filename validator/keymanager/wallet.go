@@ -10,23 +10,32 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	e2wallet "github.com/wealdtech/go-eth2-wallet"
+	filesystem "github.com/wealdtech/go-eth2-wallet-store-filesystem"
 	e2wtypes "github.com/wealdtech/go-eth2-wallet-types"
 )
 
 type walletOpts struct {
+	Location    string   `json:"location"`
 	Accounts    []string `json:"accounts"`
 	Passphrases []string `json:"passphrases"`
 }
 
 var walletOptsHelp = `The wallet key manager stores keys in a local encrypted store.  The options are:
+  - location This is the location to look for wallets.  If not supplied it will
+    use the standard (operating system-dependent) path.
   - accounts This is a list of account specifiers.  An account specifier is of
     the form <wallet name>/[account name],  where the account name can be a
-	regular expression.  If the account specifier is just <wallet name> all
-	accounts in that wallet will be used.  Multiple account specifiers can be
-	supplied if required.
+    regular expression.  If the account specifier is just <wallet name> all
+    accounts in that wallet will be used.  Multiple account specifiers can be
+    supplied if required.
   - passphrase This is the passphrase used to encrypt the accounts when they
     were created.  Multiple passphrases can be supplied if required.
+
+An sample keymanager options file (with annotations; these should be removed if
+using this as a template) is:
+
   {
+    "location":    "/wallets",               // Look for wallets in the directory '/wallets'
     "accounts":    ["Validators/Account.*"], // Use all accounts in the 'Validators' wallet starting with 'Account'
     "passphrases": ["secret1","secret2"]     // Use the passphrases 'secret1' and 'secret2' to decrypt accounts
   }`
@@ -51,12 +60,18 @@ func NewWallet(input string) (KeyManager, string, error) {
 		accounts: make(map[[48]byte]e2wtypes.Account),
 	}
 
+	var store e2wtypes.Store
+	if opts.Location == "" {
+		store = filesystem.New()
+	} else {
+		store = filesystem.New(filesystem.WithLocation(opts.Location))
+	}
 	for _, path := range opts.Accounts {
 		parts := strings.Split(path, "/")
 		if len(parts[0]) == 0 {
 			return nil, walletOptsHelp, fmt.Errorf("did not understand account specifier %q", path)
 		}
-		wallet, err := e2wallet.OpenWallet(parts[0])
+		wallet, err := e2wallet.OpenWallet(parts[0], e2wallet.WithStore(store))
 		if err != nil {
 			return nil, walletOptsHelp, err
 		}
