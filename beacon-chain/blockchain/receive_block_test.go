@@ -43,10 +43,6 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	if err := db.SaveState(ctx, beaconState, genesisBlkRoot); err != nil {
 		t.Fatal(err)
 	}
-	cp := &ethpb.Checkpoint{Root: genesisBlkRoot[:]}
-	if err := chainService.forkChoiceStoreOld.GenesisStore(ctx, cp, cp); err != nil {
-		t.Fatal(err)
-	}
 
 	if err := chainService.beaconDB.SaveBlock(ctx, genesis); err != nil {
 		t.Fatalf("Could not save block to db: %v", err)
@@ -89,7 +85,6 @@ func TestReceiveReceiveBlockNoPubsub_CanSaveHeadInfo(t *testing.T) {
 	if err := db.SaveState(ctx, head, r); err != nil {
 		t.Fatal(err)
 	}
-	chainService.forkChoiceStoreOld = &store{headRoot: r[:]}
 
 	if err := chainService.ReceiveBlockNoPubsub(ctx, &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
@@ -138,7 +133,6 @@ func TestReceiveReceiveBlockNoPubsub_SameHead(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	chainService.forkChoiceStoreOld = &store{headRoot: newRoot[:]}
 	chainService.canonicalRoots[0] = newRoot[:]
 
 	if err := chainService.ReceiveBlockNoPubsub(ctx, newBlk); err != nil {
@@ -176,9 +170,6 @@ func TestReceiveBlockNoPubsubForkchoice_ProcessCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := db.SaveState(ctx, beaconState, parentRoot); err != nil {
-		t.Fatal(err)
-	}
-	if err := chainService.forkChoiceStoreOld.GenesisStore(ctx, &ethpb.Checkpoint{Root: parentRoot[:]}, &ethpb.Checkpoint{Root: parentRoot[:]}); err != nil {
 		t.Fatal(err)
 	}
 

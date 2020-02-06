@@ -6,8 +6,10 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"golang.org/x/net/context"
@@ -20,8 +22,6 @@ func TestReceiveAttestationNoPubsub_ProcessCorrectly(t *testing.T) {
 	ctx := context.Background()
 
 	chainService := setupBeaconChain(t, db)
-	r, _ := ssz.HashTreeRoot(&ethpb.BeaconBlock{})
-	chainService.forkChoiceStoreOld = &store{headRoot: r[:]}
 
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	if err := chainService.beaconDB.SaveBlock(ctx, b); err != nil {
@@ -35,8 +35,10 @@ func TestReceiveAttestationNoPubsub_ProcessCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	slot := uint64(time.Now().Unix()) / params.BeaconConfig().SlotsPerEpoch
+	epoch := helpers.SlotToEpoch(slot)
 	a := &ethpb.Attestation{Data: &ethpb.AttestationData{
-		Target: &ethpb.Checkpoint{Root: root[:]},
+		Slot: slot, Target: &ethpb.Checkpoint{Root: root[:], Epoch: epoch},
 	}}
 	if err := chainService.ReceiveAttestationNoPubsub(ctx, a); err != nil {
 		t.Fatal(err)
