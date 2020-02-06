@@ -69,28 +69,20 @@ func (p *Pool) InsertAttesterSlashing(state *beaconstate.BeaconState, slashing *
 	slashedVal := sliceutil.IntersectionUint64(slashing.Attestation_1.AttestingIndices, slashing.Attestation_2.AttestingIndices)
 	for _, val := range slashedVal {
 		// Has this validator index been included recently?
-		if p.included[val] {
-			continue
-		}
-		validator, err := state.ValidatorAtIndexReadOnly(val)
+		ok, err := p.validatorSlashingPreconditionCheck(state, val)
 		if err != nil {
 			return err
 		}
-		// Has the validator been exited already?
-		if validator.ExitEpoch() < helpers.CurrentEpoch(state) {
-			continue
-		}
-		// Checking if the validator has already been slashed.
-		slashedValidators := state.Slashings()
-		found := sort.Search(len(slashedValidators), func(i int) bool {
-			return slashedValidators[i] == val
-		})
-		if found != len(slashedValidators) {
-			continue
+		// If the validator has already exited, has already been slashed, or if its index
+		// has been recently included in the pool of slashings, do not process this new
+		// slashing.
+		if !ok {
+			return nil
 		}
 
-		// Does this validator exist in the pending list already? Use binary search to find the answer.
-		found = sort.Search(len(p.pendingAttesterSlashing), func(i int) bool {
+		// Check if the validator already exists in the list of slashings.
+		// Use binary search to find the answer.
+		found := sort.Search(len(p.pendingAttesterSlashing), func(i int) bool {
 			return p.pendingAttesterSlashing[i].validatorToSlash == val
 		})
 		if found != len(p.pendingAttesterSlashing) {
@@ -117,32 +109,20 @@ func (p *Pool) InsertProposerSlashing(state *beaconstate.BeaconState, slashing *
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	idx := slashing.ProposerIndex
-
-	// Check if this validator index been included recently.
-	if p.included[idx] {
-		return nil
-	}
-
-	validator, err := state.ValidatorAtIndexReadOnly(idx)
+	ok, err := p.validatorSlashingPreconditionCheck(state, idx)
 	if err != nil {
 		return err
 	}
-	// Check if the validator has already exited.
-	if validator.ExitEpoch() < helpers.CurrentEpoch(state) {
+	// If the validator has already exited, has already been slashed, or if its index
+	// has been recently included in the pool of slashings, do not process this new
+	// slashing.
+	if !ok {
 		return nil
 	}
 
-	// Check if the validator has already been slashed.
-	slashedValidators := state.Slashings()
-	found := sort.Search(len(slashedValidators), func(i int) bool {
-		return slashedValidators[i] == idx
-	})
-	if found != len(slashedValidators) {
-		return nil
-	}
-
-	// Does this validator exist in the list already? Use binary search to find the answer.
-	found = sort.Search(len(p.pendingProposerSlashing), func(i int) bool {
+	// Check if the validator already exists in the list of slashings.
+	// Use binary search to find the answer.
+	found := sort.Search(len(p.pendingProposerSlashing), func(i int) bool {
 		return p.pendingProposerSlashing[i].ProposerIndex == slashing.ProposerIndex
 	})
 	if found != len(p.pendingProposerSlashing) {
@@ -191,4 +171,35 @@ func (p *Pool) MarkIncludedProposerSlashing(ps *ethpb.ProposerSlashing) {
 		p.pendingProposerSlashing = append(p.pendingProposerSlashing[:i], p.pendingProposerSlashing[i+1:]...)
 	}
 	p.included[ps.ProposerIndex] = true
+}
+
+// this function checks a few items about a validator before proceeding with inserting
+// a proposer/attester slashing into the pool. First, it checks if the validator
+// has been recently included in the pool, then it checks if the validator has exited,
+// finally, it ensures the validator has not yet been slashed.
+func (p *Pool) validatorSlashingPreconditionCheck(
+	state *beaconstate.BeaconState,
+	valIdx uint64,
+) (bool, error) {
+	// Check if the validator index has been included recently.
+	if p.included[valIdx] {
+		return false, nil
+	}
+	validator, err := state.ValidatorAtIndexReadOnly(valIdx)
+	if err != nil {
+		return false, err
+	}
+	// Checking if the validator has already exited.
+	if validator.ExitEpoch() < helpers.CurrentEpoch(state) {
+		return false, nil
+	}
+	// Checking if the validator has already been slashed.
+	slashedValidators := state.Slashings()
+	found := sort.Search(len(slashedValidators), func(i int) bool {
+		return slashedValidators[i] == valIdx
+	})
+	if found != len(slashedValidators) {
+		return false, nil
+	}
+	return true, nil
 }
