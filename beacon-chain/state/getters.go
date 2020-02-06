@@ -563,6 +563,7 @@ func (b *BeaconState) FinalizedCheckpoint() *ethpb.Checkpoint {
 	return CopyCheckpoint(b.state.FinalizedCheckpoint)
 }
 
+// FinalizedCheckpointEpoch returns the epoch value of the finalized checkpoint.
 func (b *BeaconState) FinalizedCheckpointEpoch() uint64 {
 	if b.state.FinalizedCheckpoint == nil {
 		return 0
