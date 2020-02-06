@@ -431,6 +431,18 @@ func (b *BeaconState) BalanceAtIndex(idx uint64) (uint64, error) {
 	return b.state.Balances[idx], nil
 }
 
+// BalancesLength returns the length of the balances slice.
+func (b *BeaconState) BalancesLength() int {
+	if b.state.Balances == nil {
+		return 0
+	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return len(b.state.Balances)
+}
+
 // RandaoMixes of block proposers on the beacon chain.
 func (b *BeaconState) RandaoMixes() [][]byte {
 	if b.state.RandaoMixes == nil {
@@ -465,6 +477,18 @@ func (b *BeaconState) RandaoMixAtIndex(idx uint64) ([]byte, error) {
 	root := make([]byte, 32)
 	copy(root, b.state.RandaoMixes[idx])
 	return root, nil
+}
+
+// RandaoMixesLength returns the length of the randao mixes slice.
+func (b *BeaconState) RandaoMixesLength() int {
+	if b.state.RandaoMixes == nil {
+		return 0
+	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return len(b.state.RandaoMixes)
 }
 
 // Slashings of validators on the beacon chain.
