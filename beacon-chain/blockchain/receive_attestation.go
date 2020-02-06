@@ -81,13 +81,9 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 }
 
 func (s *Service) IsValidAttestation(ctx context.Context, att *ethpb.Attestation) bool {
-	baseState, err := s.checkpointState.StateByCheckpoint(att.Data.Target)
+	baseState, err := s.getAttPreState(ctx, att.Data.Target)
 	if err != nil {
 		log.WithError(err).Error("Failed to validate attestation")
-		return false
-	}
-	if baseState == nil {
-		// TODO: This happens a lot. Can it be better?
 		return false
 	}
 
