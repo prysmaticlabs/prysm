@@ -244,6 +244,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableSlasherFlag,
 	cacheFilteredBlockTreeFlag,
 	protoArrayForkChoice,
+	forkchoiceAggregateAttestations,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
