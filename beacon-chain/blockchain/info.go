@@ -79,7 +79,10 @@ func (s *Service) TreeHandler(w http.ResponseWriter, _ *http.Request) {
 	graph.Attr("labeljust", "l")
 
 	dotNodes := make([]*dot.Node, len(nodes))
+<<<<<<< HEAD
 	headSlot := s.headSlot
+=======
+>>>>>>> ebd4541dcd25b4ccbc452e47aaebc5a62d31a6b9
 	avgBalance := uint64(averageBalance(s.headState.Balances()))
 
 	for i := len(nodes) - 1; i >= 0; i-- {
@@ -95,7 +98,7 @@ func (s *Service) TreeHandler(w http.ResponseWriter, _ *http.Request) {
 			dotN = graph.Node(index).Box().Attr("label", label)
 		}
 
-		if nodes[i].Slot == headSlot {
+		if nodes[i].Slot == s.headSlot {
 			dotN = dotN.Attr("color", "green")
 		}
 

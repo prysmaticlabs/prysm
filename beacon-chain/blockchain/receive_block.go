@@ -100,12 +100,6 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 		s.exitPool.MarkIncluded(exit)
 	}
 
-	// Reports on block and fork choice metrics.
-	metrics.ReportSlotMetrics(blockCopy.Block.Slot, s.headSlot, s.headState)
-
-	// Log state transition data.
-	logStateTransitionData(blockCopy.Block)
-
 	s.epochParticipationLock.Lock()
 	defer s.epochParticipationLock.Unlock()
 	s.epochParticipation[helpers.SlotToEpoch(blockCopy.Block.Slot)] = precompute.Balances
@@ -154,6 +148,12 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 			isCompetingBlock(root[:], blockCopy.Block.Slot, headRoot, signedHeadBlock.Block.Slot)
 		}
 	}
+
+	// Reports on block and fork choice metrics.
+	metrics.ReportSlotMetrics(blockCopy.Block.Slot, s.headSlot, s.headState)
+
+	// Log state transition data.
+	logStateTransitionData(blockCopy.Block)
 
 	return nil
 }

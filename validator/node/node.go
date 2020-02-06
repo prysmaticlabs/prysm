@@ -181,6 +181,7 @@ func (s *ValidatorClient) registerClientService(ctx *cli.Context, keyManager key
 	endpoint := ctx.GlobalString(flags.BeaconRPCProviderFlag.Name)
 	dataDir := ctx.GlobalString(cmd.DataDirFlag.Name)
 	logValidatorBalances := !ctx.GlobalBool(flags.DisablePenaltyRewardLogFlag.Name)
+	emitAccountMetrics := ctx.GlobalBool(flags.AccountMetricsFlag.Name)
 	cert := ctx.GlobalString(flags.CertFlag.Name)
 	graffiti := ctx.GlobalString(flags.GraffitiFlag.Name)
 	maxCallRecvMsgSize := ctx.GlobalInt(flags.GrpcMaxCallRecvMsgSizeFlag.Name)
@@ -189,6 +190,7 @@ func (s *ValidatorClient) registerClientService(ctx *cli.Context, keyManager key
 		DataDir:                    dataDir,
 		KeyManager:                 keyManager,
 		LogValidatorBalances:       logValidatorBalances,
+		EmitAccountMetrics:         emitAccountMetrics,
 		CertFlag:                   cert,
 		GraffitiFlag:               graffiti,
 		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
