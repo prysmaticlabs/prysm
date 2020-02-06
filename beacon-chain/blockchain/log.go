@@ -24,7 +24,7 @@ func logStateTransitionData(b *ethpb.BeaconBlock) {
 func logEpochData(beaconState *stateTrie.BeaconState) {
 	log.WithFields(logrus.Fields{
 		"epoch":                  helpers.CurrentEpoch(beaconState),
-		"finalizedEpoch":         beaconState.FinalizedCheckpoint().Epoch,
+		"finalizedEpoch":         beaconState.FinalizedCheckpointEpoch(),
 		"justifiedEpoch":         beaconState.CurrentJustifiedCheckpoint().Epoch,
 		"previousJustifiedEpoch": beaconState.PreviousJustifiedCheckpoint().Epoch,
 	}).Info("Starting next epoch")
