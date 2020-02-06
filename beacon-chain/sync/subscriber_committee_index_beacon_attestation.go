@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
 func (r *Service) committeeIndexBeaconAttestationSubscriber(ctx context.Context, msg proto.Message) error {
@@ -16,10 +17,14 @@ func (r *Service) committeeIndexBeaconAttestationSubscriber(ctx context.Context,
 		return fmt.Errorf("message was not type *eth.Attestation, type=%T", msg)
 	}
 
-	if !r.chain.IsValidAttestation(ctx, a) {
-		// TODO: metrics!
+	if exists, _  := r.attPool.HasAggregatedAttestation(a); exists {
+		return nil
+	}
+
+	if !featureconfig.Get().DisableStrictAttestationPubsubVerification && !r.chain.IsValidAttestation(ctx, a) {
 		return errors.New("invalid attestation")
 	}
+
 	return r.attPool.SaveUnaggregatedAttestation(a)
 }
 
