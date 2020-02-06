@@ -132,7 +132,7 @@ func (p *Pool) InsertProposerSlashing(state *beaconstate.BeaconState, slashing *
 		return nil
 	}
 
-	// Has the validator been slashed already?
+	// Check if the validator has already been slashed.
 	slashedValidators := state.Slashings()
 	found := sort.Search(len(slashedValidators), func(i int) bool {
 		return slashedValidators[i] == idx
