@@ -62,8 +62,8 @@ func TestProcessJustificationAndFinalizationPreCompute_ConsecutiveEpochs(t *test
 		t.Errorf("Wanted current finalized root: %v, got: %v",
 			params.BeaconConfig().ZeroHash, newState.FinalizedCheckpoint().Root)
 	}
-	if newState.FinalizedCheckpoint().Epoch != 0 {
-		t.Errorf("Wanted finalized epoch: 0, got: %d", newState.FinalizedCheckpoint().Epoch)
+	if newState.FinalizedCheckpointEpoch() != 0 {
+		t.Errorf("Wanted finalized epoch: 0, got: %d", newState.FinalizedCheckpointEpoch())
 	}
 }
 
@@ -117,8 +117,8 @@ func TestProcessJustificationAndFinalizationPreCompute_JustifyCurrentEpoch(t *te
 		t.Errorf("Wanted current finalized root: %v, got: %v",
 			params.BeaconConfig().ZeroHash, newState.FinalizedCheckpoint().Root)
 	}
-	if newState.FinalizedCheckpoint().Epoch != 0 {
-		t.Errorf("Wanted finalized epoch: 0, got: %d", newState.FinalizedCheckpoint().Epoch)
+	if newState.FinalizedCheckpointEpoch() != 0 {
+		t.Errorf("Wanted finalized epoch: 0, got: %d", newState.FinalizedCheckpointEpoch())
 	}
 }
 
@@ -171,7 +171,7 @@ func TestProcessJustificationAndFinalizationPreCompute_JustifyPrevEpoch(t *testi
 		t.Errorf("Wanted current finalized root: %v, got: %v",
 			params.BeaconConfig().ZeroHash, newState.FinalizedCheckpoint().Root)
 	}
-	if newState.FinalizedCheckpoint().Epoch != 0 {
-		t.Errorf("Wanted finalized epoch: 0, got: %d", newState.FinalizedCheckpoint().Epoch)
+	if newState.FinalizedCheckpointEpoch() != 0 {
+		t.Errorf("Wanted finalized epoch: 0, got: %d", newState.FinalizedCheckpointEpoch())
 	}
 }

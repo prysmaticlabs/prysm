@@ -93,7 +93,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if newState.CurrentJustifiedCheckpoint().Epoch != genesisEpochNumber {
 		t.Error("JustifiedEpoch was not correctly initialized")
 	}
-	if newState.FinalizedCheckpoint().Epoch != genesisEpochNumber {
+	if newState.FinalizedCheckpointEpoch() != genesisEpochNumber {
 		t.Error("FinalizedSlot was not correctly initialized")
 	}
 	if newState.JustificationBits()[0] != 0x00 {
