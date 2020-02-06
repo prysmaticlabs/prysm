@@ -127,7 +127,7 @@ func (p *Pool) InsertProposerSlashing(state *beaconstate.BeaconState, slashing *
 	if err != nil {
 		return err
 	}
-	// Has the validator been exited already?
+	// Check if the validator has already exited.
 	if validator.ExitEpoch() < helpers.CurrentEpoch(state) {
 		return nil
 	}
