@@ -135,24 +135,20 @@ func (bs *Server) ListBlocks(
 			NextPageToken:   nextPageToken,
 		}, nil
 	case *ethpb.ListBlocksRequest_Genesis:
-		blks, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartSlot(0).SetEndSlot(0))
+		genBlk, err := bs.BeaconDB.GenesisBlock(ctx)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for genesis slot: %v", err)
 		}
-		numBlks := len(blks)
-		if numBlks == 0 {
+		if genBlk == nil {
 			return nil, status.Error(codes.Internal, "Could not find genesis block")
 		}
-		if numBlks != 1 {
-			return nil, status.Error(codes.Internal, "Found more than 1 genesis block")
-		}
-		root, err := ssz.HashTreeRoot(blks[0].Block)
+		root, err := ssz.HashTreeRoot(genBlk.Block)
 		if err != nil {
 			return nil, err
 		}
 		containers := []*ethpb.BeaconBlockContainer{
 			{
-				Block:     blks[0],
+				Block:     genBlk,
 				BlockRoot: root[:],
 			},
 		}
