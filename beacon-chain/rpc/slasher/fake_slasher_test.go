@@ -1,83 +1,38 @@
-package client
+package slasher
 
 import (
 	"context"
-	"time"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1_gateway"
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 )
 
-var _ = Validator(&fakeSlasher{})
+var _ = slashpb.SlasherClient(&fakeSlasher{})
 
 type fakeSlasher struct {
-	DoneCalled              bool
-	WaitForActivationCalled bool
-	WaitForSyncCalled       bool
+	DoneCalled                   bool
+	IsSlashableBlockCalled       bool
+	IsSlashableAttestationCalled bool
+	ProposerSlashingsCalled      bool
+	AttesterSlashingsCalled      bool
 }
 
-func (fv *fakeSlasher) Done() {
-	fv.DoneCalled = true
+func (fs *fakeSlasher) Done() {
+	fs.DoneCalled = true
 }
-
-func (fv *fakeSlasher) WaitForChainStart(_ context.Context) error {
-	fv.WaitForChainStartCalled = true
-	return nil
+func (fs *fakeSlasher) IsSlashableAttestation(ctx context.Context, in *ethpb.IndexedAttestation) (*slashpb.AttesterSlashingResponse, error) {
+	fs.IsSlashableAttestationCalled = true
+	return nil, nil
 }
-
-func (fv *fakeSlasher) WaitForActivation(_ context.Context) error {
-	fv.WaitForActivationCalled = true
-	return nil
+func (fs *fakeSlasher) IsSlashableBlock(ctx context.Context, in *slashpb.ProposerSlashingRequest) (*slashpb.ProposerSlashingResponse, error) {
+	fs.IsSlashableBlockCalled = true
+	return nil, nil
 }
-
-func (fv *fakeSlasher) WaitForSync(_ context.Context) error {
-	fv.WaitForSyncCalled = true
-	return nil
+func (fs *fakeSlasher) ProposerSlashings(ctx context.Context, in *slashpb.SlashingStatusRequest) (*slashpb.ProposerSlashingResponse, error) {
+	fs.ProposerSlashingsCalled = true
+	return nil, nil
 }
-
-func (fv *fakeSlasher) CanonicalHeadSlot(_ context.Context) (uint64, error) {
-	fv.CanonicalHeadSlotCalled = true
-	return 0, nil
+func (fs *fakeSlasher) AttesterSlashings(ctx context.Context, in *slashpb.SlashingStatusRequest) (*slashpb.AttesterSlashingResponse, error) {
+	fs.AttesterSlashingsCalled = true
+	return nil, nil
 }
-
-func (fv *fakeSlasher) SlotDeadline(_ uint64) time.Time {
-	fv.SlotDeadlineCalled = true
-	return time.Now()
-}
-
-func (fv *fakeSlasher) NextSlot() <-chan uint64 {
-	fv.NextSlotCalled = true
-	return fv.NextSlotRet
-}
-
-func (fv *fakeSlasher) UpdateDuties(_ context.Context, slot uint64) error {
-	fv.UpdateDutiesCalled = true
-	fv.UpdateDutiesArg1 = slot
-	return fv.UpdateDutiesRet
-}
-
-func (fv *fakeSlasher) LogValidatorGainsAndLosses(_ context.Context, slot uint64) error {
-	fv.LogValidatorGainsAndLossesCalled = true
-	return nil
-}
-
-func (fv *fakeSlasher) RolesAt(_ context.Context, slot uint64) (map[[48]byte][]pb.ValidatorRole, error) {
-	fv.RoleAtCalled = true
-	fv.RoleAtArg1 = slot
-	vr := make(map[[48]byte][]pb.ValidatorRole)
-	vr[[48]byte{1}] = fv.RolesAtRet
-	return vr, nil
-}
-
-func (fv *fakeSlasher) SubmitAttestation(_ context.Context, slot uint64, pubKey [48]byte) {
-	fv.AttestToBlockHeadCalled = true
-	fv.AttestToBlockHeadArg1 = slot
-}
-
-func (fv *fakeSlasher) ProposeBlock(_ context.Context, slot uint64, pubKey [48]byte) {
-	fv.ProposeBlockCalled = true
-	fv.ProposeBlockArg1 = slot
-}
-
-func (fv *fakeSlasher) SubmitAggregateAndProof(_ context.Context, slot uint64, pubKey [48]byte) {}
-
-func (fv *fakeSlasher) LogAttestationsSubmitted() {}
