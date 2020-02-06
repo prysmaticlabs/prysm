@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
@@ -15,10 +14,6 @@ func (r *Service) beaconAggregateProofSubscriber(ctx context.Context, msg proto.
 	a, ok := msg.(*ethpb.AggregateAttestationAndProof)
 	if !ok {
 		return fmt.Errorf("message was not type *eth.AggregateAttestationAndProof, type=%T", msg)
-	}
-
-	if !r.chain.IsValidAttestation(ctx, a.Aggregate) {
-		return errors.New("invalid attestation")
 	}
 
 	return r.attPool.SaveAggregatedAttestation(a.Aggregate)
