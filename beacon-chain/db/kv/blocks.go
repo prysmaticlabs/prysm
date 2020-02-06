@@ -206,7 +206,7 @@ func (k *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlock")
 	defer span.End()
-	return k.db.Batch(func(tx *bolt.Tx) error {
+	return k.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		enc := bkt.Get(blockRoot[:])
 		if enc == nil {
