@@ -275,6 +275,11 @@ func (s *Service) saveInitState(ctx context.Context, state *stateTrie.BeaconStat
 	cpt := state.FinalizedCheckpoint()
 	finalizedRoot := bytesutil.ToBytes32(cpt.Root)
 	fs := s.initSyncState[finalizedRoot]
+	if fs == nil {
+		// This might happen if the client was in sync and is now re-syncing for whatever reason.
+		log.Warn("Initial sync cache did not have finalized state root cached")
+		return nil
+	}
 
 	if err := s.beaconDB.SaveState(ctx, fs, finalizedRoot); err != nil {
 		return errors.Wrap(err, "could not save state")
