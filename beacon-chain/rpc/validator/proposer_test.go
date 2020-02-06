@@ -110,7 +110,7 @@ func TestGetBlock_OK(t *testing.T) {
 	}
 }
 
-func TestGetBlock_IncludesSlashing(t *testing.T) {
+func TestGetBlock_IncludesSlashings(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
