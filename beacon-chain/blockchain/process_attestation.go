@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"go.opencensus.io/trace"
 )
@@ -117,8 +118,11 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 		return nil, err
 	}
 
-	if err := s.beaconDB.SaveAttestation(ctx, a); err != nil {
-		return nil, err
+	// Only save attestation in DB for archival node.
+	if flags.Get().EnableArchive {
+		if err := s.beaconDB.SaveAttestation(ctx, a); err != nil {
+			return nil, err
+		}
 	}
 
 	return indexedAtt.AttestingIndices, nil
