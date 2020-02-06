@@ -46,6 +46,7 @@ func (p *AttCaches) UnaggregatedAttestations() []*ethpb.Attestation {
 		att, ok := i.Object.(*ethpb.Attestation)
 		if !ok {
 			p.unAggregatedAtt.Delete(s)
+			continue
 		}
 
 		atts = append(atts, att)
