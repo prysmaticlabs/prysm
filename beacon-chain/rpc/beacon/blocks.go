@@ -185,8 +185,8 @@ func (bs *Server) StreamBlocks(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamB
 	for {
 		select {
 		case event := <-blocksChannel:
-			if event.Type == blockfeed.BlockReceived {
-				data, ok := event.Data.(*blockfeed.BlockReceivedData)
+			if event.Type == blockfeed.ReceivedBlock {
+				data, ok := event.Data.(*blockfeed.ReceivedBlockData)
 				if !ok {
 					return status.Errorf(
 						codes.FailedPrecondition,

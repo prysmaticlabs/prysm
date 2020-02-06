@@ -5,11 +5,11 @@ import (
 )
 
 const (
-	// BlockReceived is sent after a block has been received by the beacon node via p2p or RPC.
-	BlockReceived = iota + 1
+	// ReceivedBlock is sent after a block has been received by the beacon node via p2p or RPC.
+	ReceivedBlock = iota + 1
 )
 
-// BlockReceivedData is the data sent with BlockReceived events.
-type BlockReceivedData struct {
+// ReceivedBlockData is the data sent with ReceivedBlock events.
+type ReceivedBlockData struct {
 	SignedBlock *ethpb.SignedBeaconBlock
 }

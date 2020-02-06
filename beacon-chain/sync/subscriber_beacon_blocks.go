@@ -57,8 +57,8 @@ func (r *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 	// Broadcast the block on a feed to notify other services in the beacon node
 	// of a received block (even if it does not process correctly through a state transition).
 	r.blockNotifier.BlockFeed().Send(&feed.Event{
-		Type: blockfeed.BlockReceived,
-		Data: &blockfeed.BlockReceivedData{
+		Type: blockfeed.ReceivedBlock,
+		Data: &blockfeed.ReceivedBlockData{
 			SignedBlock: signed,
 		},
 	})

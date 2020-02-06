@@ -606,8 +606,8 @@ func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
 	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
 	for sent := 0; sent == 0; {
 		sent = server.BlockNotifier.BlockFeed().Send(&feed.Event{
-			Type: blockfeed.BlockReceived,
-			Data: &blockfeed.BlockReceivedData{SignedBlock: b},
+			Type: blockfeed.ReceivedBlock,
+			Data: &blockfeed.ReceivedBlockData{SignedBlock: b},
 		})
 	}
 	<-exitRoutine

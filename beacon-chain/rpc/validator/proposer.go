@@ -108,8 +108,8 @@ func (vs *Server) ProposeBlock(ctx context.Context, blk *ethpb.SignedBeaconBlock
 	log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
 		"Block proposal received via RPC")
 	vs.BlockNotifier.BlockFeed().Send(&feed.Event{
-		Type: blockfeed.BlockReceived,
-		Data: blockfeed.BlockReceivedData{SignedBlock: blk},
+		Type: blockfeed.ReceivedBlock,
+		Data: blockfeed.ReceivedBlockData{SignedBlock: blk},
 	})
 	if err := vs.BlockReceiver.ReceiveBlock(ctx, blk); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
