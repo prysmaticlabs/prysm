@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"bytes"
 	"context"
 	"math/big"
 	"strings"
@@ -16,12 +17,15 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	dbpb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -31,6 +35,78 @@ import (
 func init() {
 	// Use minimal config to reduce test setup time.
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+}
+
+func TestGetBlock_OK(t *testing.T) {
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
+	ctx := context.Background()
+
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
+
+	stateRoot, err := beaconState.HashTreeRoot()
+	if err != nil {
+		t.Fatalf("Could not hash genesis state: %v", err)
+	}
+
+	genesis := b.NewGenesisBlock(stateRoot[:])
+	if err := db.SaveBlock(ctx, genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+
+	parentRoot, err := ssz.HashTreeRoot(genesis.Block)
+	if err != nil {
+		t.Fatalf("Could not get signing root %v", err)
+	}
+	if err := db.SaveState(ctx, beaconState, parentRoot); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, parentRoot); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+
+	proposerServer := &Server{
+		BeaconDB:          db,
+		HeadFetcher:       &mock.ChainService{State: beaconState, Root: parentRoot[:]},
+		SyncChecker:       &mockSync.Sync{IsSyncing: false},
+		BlockReceiver:     &mock.ChainService{},
+		ChainStartFetcher: &mockPOW.POWChain{},
+		Eth1InfoFetcher:   &mockPOW.POWChain{},
+		Eth1BlockFetcher:  &mockPOW.POWChain{},
+		MockEth1Votes:     true,
+		AttPool:           attestations.NewPool(),
+		ExitPool:          voluntaryexits.NewPool(),
+	}
+
+	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
+
+	graffiti := bytesutil.ToBytes32([]byte("eth2"))
+	req := &ethpb.BlockRequest{
+		Slot:         1,
+		RandaoReveal: randaoReveal,
+		Graffiti:     graffiti[:],
+	}
+
+	block, err := proposerServer.GetBlock(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if block.Slot != req.Slot {
+		t.Fatal("Expected block to have slot of 1")
+	}
+	if !bytes.Equal(block.ParentRoot, parentRoot[:]) {
+		t.Fatal("Expected block to have correct parent root")
+	}
+	if !bytes.Equal(block.Body.RandaoReveal, randaoReveal) {
+		t.Fatal("Expected block to have correct randao reveal")
+	}
+	if !bytes.Equal(block.Body.Graffiti, req.Graffiti) {
+		t.Fatal("Expected block to have correct graffiti")
+	}
 }
 
 func TestProposeBlock_OK(t *testing.T) {

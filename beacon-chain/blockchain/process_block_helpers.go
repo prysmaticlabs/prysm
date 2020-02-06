@@ -356,3 +356,74 @@ func (s *Service) ancestor(ctx context.Context, root []byte, slot uint64) ([]byt
 
 	return s.ancestor(ctx, b.ParentRoot, slot)
 }
+
+// This updates justified check point in store, if the new justified is later than stored justified or
+// the store's justified is not in chain with finalized check point.
+//
+// Spec definition:
+//   if (
+//            state.current_justified_checkpoint.epoch > store.justified_checkpoint.epoch
+//            or get_ancestor(store, store.justified_checkpoint.root, finalized_slot) != store.finalized_checkpoint.root
+//        ):
+//            store.justified_checkpoint = state.current_justified_checkpoint
+func (s *Service) finalizedImpliesNewJustified(ctx context.Context, state *stateTrie.BeaconState) error {
+	finalizedBlkSigned, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root))
+	if err != nil || finalizedBlkSigned == nil || finalizedBlkSigned.Block == nil {
+		return errors.Wrap(err, "could not get finalized block")
+	}
+	finalizedBlk := finalizedBlkSigned.Block
+
+	anc, err := s.ancestor(ctx, s.justifiedCheckpt.Root, finalizedBlk.Slot)
+	if err != nil {
+		return err
+	}
+
+	// Either the new justified is later than stored justified or not in chain with finalized check pint.
+	if cpt := state.CurrentJustifiedCheckpoint(); cpt != nil && cpt.Epoch > s.justifiedCheckpt.Epoch || !bytes.Equal(anc, s.finalizedCheckpt.Root) {
+		s.justifiedCheckpt = state.CurrentJustifiedCheckpoint()
+	}
+
+	return nil
+}
+
+// This retrieves missing blocks from DB (ie. the blocks that couldn't received over sync) and inserts them to fork choice store.
+// This is useful for block tree visualizer and additional vote accounting.
+func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.BeaconBlock, state *stateTrie.BeaconState) error {
+	pendingNodes := make([]*ethpb.BeaconBlock, 0)
+
+	parentRoot := bytesutil.ToBytes32(blk.ParentRoot)
+	slot := blk.Slot
+	// Fork choice only matters from last finalized slot.
+	higherThanFinalized := slot > helpers.StartSlot(s.finalizedCheckpt.Epoch)
+	// As long as parent node is not in fork choice store, and parent node is in DB.
+	for !s.forkChoiceStore.HasNode(parentRoot) && s.beaconDB.HasBlock(ctx, parentRoot) && higherThanFinalized {
+		b, err := s.beaconDB.Block(ctx, parentRoot)
+		if err != nil {
+			return err
+		}
+
+		pendingNodes = append(pendingNodes, b.Block)
+		parentRoot = bytesutil.ToBytes32(b.Block.ParentRoot)
+		slot = b.Block.Slot
+		higherThanFinalized = slot > helpers.StartSlot(s.finalizedCheckpt.Epoch)
+	}
+
+	// Insert parent nodes to fork choice store in reverse order.
+	// Lower slots should be at the end of the list.
+	for i := len(pendingNodes) - 1; i >= 0; i-- {
+		b := pendingNodes[i]
+		r, err := ssz.HashTreeRoot(b)
+		if err != nil {
+			return err
+		}
+
+		if err := s.forkChoiceStore.ProcessBlock(ctx,
+			b.Slot, r, bytesutil.ToBytes32(b.ParentRoot),
+			state.CurrentJustifiedCheckpoint().Epoch,
+			state.FinalizedCheckpointEpoch()); err != nil {
+			return errors.Wrap(err, "could not process block for proto array fork choice")
+		}
+	}
+
+	return nil
+}

@@ -121,7 +121,7 @@ func (s *Service) Start() {
 		return
 	}
 	go s.attestationFeeder()
-	go s.finalisedChangeUpdater()
+	go s.finalizedChangeUpdater()
 	s.lock.Unlock()
 
 	go func() {
@@ -183,7 +183,7 @@ func (s *Service) startSlasher() {
 		SlasherDB: s.slasherDb,
 	}
 	if s.ctx.GlobalBool(flags.RebuildSpanMapsFlag.Name) {
-		s.loadSpanMaps(err, slasherServer)
+		s.loadSpanMaps(slasherServer)
 	}
 	slashpb.RegisterSlasherServer(s.grpcServer, &slasherServer)
 
@@ -199,20 +199,22 @@ func (s *Service) startSlasher() {
 	}()
 }
 
-func (s *Service) loadSpanMaps(err error, slasherServer rpc.Server) {
-	lt, err := slasherServer.SlasherDB.LatestIndexedAttestationsTargetEpoch()
+func (s *Service) loadSpanMaps(slasherServer rpc.Server) {
+	latestTargetEpoch, err := slasherServer.SlasherDB.LatestIndexedAttestationsTargetEpoch()
 	if err != nil {
 		log.Errorf("Could not extract latest target epoch from indexed attestations store: %v", err)
 	}
-	for i := uint64(0); i < lt; i++ {
-		ias, err := slasherServer.SlasherDB.IndexedAttestations(i)
+	for epoch := uint64(0); epoch < latestTargetEpoch; epoch++ {
+		idxAtts, err := slasherServer.SlasherDB.IdxAttsForTarget(epoch)
 		if err != nil {
 			log.Errorf("Got error while trying to retrieve indexed attestations from db: %v", err)
 		}
-		for _, ia := range ias {
-			slasherServer.UpdateSpanMaps(s.context, ia)
+		for _, ia := range idxAtts {
+			if err := slasherServer.UpdateSpanMaps(s.context, ia); err != nil {
+				log.Errorf("Unexpected error updating span maps: %v", err)
+			}
 		}
-		log.Infof("Update span maps for epoch: %d", i)
+		log.Infof("Update span maps for epoch: %d", epoch)
 	}
 }
 
@@ -255,7 +257,9 @@ func (s *Service) startBeaconClient() error {
 func (s *Service) Stop() error {
 	log.Info("Stopping service")
 	if s.slasherDb != nil {
-		s.slasherDb.Close()
+		if err := s.slasherDb.Close(); err != nil {
+			return err
+		}
 	}
 	if s.listener != nil {
 		s.grpcServer.GracefulStop()
@@ -269,8 +273,7 @@ func (s *Service) Close() {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	log.Info("Stopping hash slinging slasher")
-	err := s.Stop()
-	if err != nil {
+	if err := s.Stop(); err != nil {
 		log.Panicf("Could not stop the slasher service: %v", err)
 	}
 	if err := s.slasherDb.SaveCachedSpansMaps(); err != nil {

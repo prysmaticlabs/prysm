@@ -563,6 +563,17 @@ func (b *BeaconState) FinalizedCheckpoint() *ethpb.Checkpoint {
 	return CopyCheckpoint(b.state.FinalizedCheckpoint)
 }
 
+// FinalizedCheckpointEpoch returns the epoch value of the finalized checkpoint.
+func (b *BeaconState) FinalizedCheckpointEpoch() uint64 {
+	if b.state.FinalizedCheckpoint == nil {
+		return 0
+	}
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.state.FinalizedCheckpoint.Epoch
+}
+
 // CopyETH1Data copies the provided eth1data object.
 func CopyETH1Data(data *ethpb.Eth1Data) *ethpb.Eth1Data {
 	if data == nil {
@@ -606,6 +617,32 @@ func CopyPendingAttestation(att *pbp2p.PendingAttestation) *pbp2p.PendingAttesta
 		Data:            data,
 		InclusionDelay:  att.InclusionDelay,
 		ProposerIndex:   att.ProposerIndex,
+	}
+}
+
+// CopyAttestation copies the provided attestation object.
+func CopyAttestation(att *ethpb.Attestation) *ethpb.Attestation {
+	if att == nil {
+		return &ethpb.Attestation{}
+	}
+	aggBytes := []byte(att.AggregationBits)
+	newBitlist := make([]byte, len(aggBytes))
+	copy(newBitlist, aggBytes)
+	blockRoot := [32]byte{}
+	copy(blockRoot[:], att.Data.BeaconBlockRoot)
+	sig := [96]byte{}
+	copy(sig[:], att.Signature)
+	data := &ethpb.AttestationData{
+		Slot:            att.Data.Slot,
+		CommitteeIndex:  att.Data.CommitteeIndex,
+		BeaconBlockRoot: blockRoot[:],
+		Source:          CopyCheckpoint(att.Data.Source),
+		Target:          CopyCheckpoint(att.Data.Target),
+	}
+	return &ethpb.Attestation{
+		AggregationBits: newBitlist,
+		Data:            data,
+		Signature:       sig[:],
 	}
 }
 

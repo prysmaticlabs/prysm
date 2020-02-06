@@ -349,6 +349,20 @@ func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
 	}
 }
 
+func TestServer_GetChainHead_NoHeadBlock(t *testing.T) {
+	bs := &Server{
+		HeadFetcher: &mock.ChainService{Block: nil},
+	}
+	if _, err := bs.GetChainHead(context.Background(), nil); err != nil && !strings.Contains(
+		err.Error(),
+		"Head block of chain was nil",
+	) {
+		t.Fatal("Did not get wanted error")
+	} else if err == nil {
+		t.Error("Expected error, received nil")
+	}
+}
+
 func TestServer_GetChainHead(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
