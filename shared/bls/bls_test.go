@@ -278,3 +278,15 @@ func TestSignatureFromBytes(t *testing.T) {
 		})
 	}
 }
+
+func TestPublicKey_Copy(t *testing.T) {
+	pubkeyA := bls.RandKey().PublicKey()
+	pubkeyBytes := pubkeyA.Marshal()
+
+	pubkeyB, _ := pubkeyA.Copy()
+	pubkeyB.Aggregate(bls.RandKey().PublicKey())
+
+	if !bytes.Equal(pubkeyA.Marshal(), pubkeyBytes) {
+		t.Fatal("Pubkey was mutated after copy")
+	}
+}

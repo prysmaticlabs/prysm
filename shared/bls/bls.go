@@ -153,10 +153,8 @@ func (p *PublicKey) Marshal() []byte {
 
 // Copy the public key to a new pointer reference.
 func (p *PublicKey) Copy() (*PublicKey, error) {
-	rawBytes := p.p.Serialize()
-	newKey := &bls12.PublicKey{}
-	err := newKey.Deserialize(rawBytes)
-	return &PublicKey{p: newKey}, err
+	np := *p.p
+	return &PublicKey{p: &np}, nil
 }
 
 // Aggregate two public keys.
