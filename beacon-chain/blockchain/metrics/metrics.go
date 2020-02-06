@@ -171,7 +171,7 @@ func ReportEpochMetrics(state *stateTrie.BeaconState) {
 	beaconPrevJustifiedRoot.Set(float64(bytesutil.ToLowInt64(state.PreviousJustifiedCheckpoint().Root)))
 
 	// Last finalized slot
-	beaconFinalizedEpoch.Set(float64(state.FinalizedCheckpoint().Epoch))
+	beaconFinalizedEpoch.Set(float64(state.FinalizedCheckpointEpoch()))
 	beaconFinalizedRoot.Set(float64(bytesutil.ToLowInt64(state.FinalizedCheckpoint().Root)))
 
 	currentEth1DataDepositCount.Set(float64(state.Eth1Data().DepositCount))
