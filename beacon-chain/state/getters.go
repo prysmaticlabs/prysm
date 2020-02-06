@@ -431,7 +431,7 @@ func (b *BeaconState) BalanceAtIndex(idx uint64) (uint64, error) {
 	return b.state.Balances[idx], nil
 }
 
-// BalancesLength returns the length the balances slice.
+// BalancesLength returns the length of the balances slice.
 func (b *BeaconState) BalancesLength() int {
 	if b.state.Balances == nil {
 		return 0
