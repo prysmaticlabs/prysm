@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "doc.go",
         "service.go",
+        "types.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings",
     visibility = ["//beacon-chain:__subpackages__"],
