@@ -17,7 +17,6 @@ func (r *Service) committeeIndexBeaconAttestationSubscriber(ctx context.Context,
 	}
 
 	if !r.chain.IsValidAttestation(ctx, a) {
-		// TODO: metrics!
 		return errors.New("invalid attestation")
 	}
 	return r.attPool.SaveUnaggregatedAttestation(a)
