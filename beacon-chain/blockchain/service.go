@@ -14,7 +14,6 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -35,7 +34,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -49,7 +47,6 @@ type Service struct {
 	chainStartFetcher      powchain.ChainStartFetcher
 	attPool                attestations.Pool
 	exitPool               *voluntaryexits.Pool
-	forkChoiceStoreOld     forkchoice.ForkChoicer
 	genesisTime            time.Time
 	p2p                    p2p.Broadcaster
 	maxRoutines            int64
@@ -93,7 +90,6 @@ type Config struct {
 // be registered into a running beacon node.
 func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	store := forkchoice.NewForkChoiceService(ctx, cfg.BeaconDB)
 	return &Service{
 		ctx:                ctx,
 		cancel:             cancel,
@@ -102,7 +98,6 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		chainStartFetcher:  cfg.ChainStartFetcher,
 		attPool:            cfg.AttPool,
 		exitPool:           cfg.ExitPool,
-		forkChoiceStoreOld: store,
 		p2p:                cfg.P2p,
 		canonicalRoots:     make(map[uint64][]byte),
 		maxRoutines:        cfg.MaxRoutines,
@@ -153,18 +148,13 @@ func (s *Service) Start() {
 		if err != nil {
 			log.Fatalf("Could not get finalized checkpoint: %v", err)
 		}
-		if err := s.forkChoiceStoreOld.GenesisStore(ctx, justifiedCheckpoint, finalizedCheckpoint); err != nil {
-			log.Fatalf("Could not start fork choice service: %v", err)
-		}
 
-		if featureconfig.Get().ProtoArrayForkChoice {
-			s.justifiedCheckpt = proto.Clone(justifiedCheckpoint).(*ethpb.Checkpoint)
-			s.bestJustifiedCheckpt = proto.Clone(justifiedCheckpoint).(*ethpb.Checkpoint)
-			s.finalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
-			s.prevFinalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
-
-			s.resumeForkChoice(justifiedCheckpoint, finalizedCheckpoint)
-		}
+		// Resume fork choice.
+		s.justifiedCheckpt = proto.Clone(justifiedCheckpoint).(*ethpb.Checkpoint)
+		s.bestJustifiedCheckpt = proto.Clone(justifiedCheckpoint).(*ethpb.Checkpoint)
+		s.finalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
+		s.prevFinalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
+		s.resumeForkChoice(justifiedCheckpoint, finalizedCheckpoint)
 
 		if finalizedCheckpoint.Epoch > 1 {
 			if err := s.pruneGarbageState(ctx, helpers.StartSlot(finalizedCheckpoint.Epoch)-params.BeaconConfig().SlotsPerEpoch); err != nil {
@@ -303,10 +293,6 @@ func (s *Service) saveHead(ctx context.Context, signed *ethpb.SignedBeaconBlock,
 	}
 	s.headState = headState
 
-	log.WithFields(logrus.Fields{
-		"slot":     signed.Block.Slot,
-		"headRoot": fmt.Sprintf("%#x", r),
-	}).Debug("Saved new head info")
 	return nil
 }
 
@@ -333,14 +319,10 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 	}
 	s.headState = headState
 
-	log.WithFields(logrus.Fields{
-		"slot":     b.Block.Slot,
-		"headRoot": fmt.Sprintf("%#x", r),
-	}).Debug("Saved new head info")
 	return nil
 }
 
-// This gets called when beacon chain is first initialized to save validator indices and pubkeys in db
+// This gets called when beacon chain is first initialized to save validator indices and public keys in db.
 func (s *Service) saveGenesisValidators(ctx context.Context, state *stateTrie.BeaconState) error {
 	pubkeys := make([][48]byte, state.NumValidators())
 	indices := make([]uint64, state.NumValidators())
@@ -352,7 +334,7 @@ func (s *Service) saveGenesisValidators(ctx context.Context, state *stateTrie.Be
 	return s.beaconDB.SaveValidatorIndices(ctx, pubkeys, indices)
 }
 
-// This gets called when beacon chain is first initialized to save genesis data (state, block, and more) in db
+// This gets called when beacon chain is first initialized to save genesis data (state, block, and more) in db.
 func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.BeaconState) error {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
@@ -384,25 +366,20 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 	}
 
 	genesisCheckpoint := &ethpb.Checkpoint{Root: genesisBlkRoot[:]}
-	if err := s.forkChoiceStoreOld.GenesisStore(ctx, genesisCheckpoint, genesisCheckpoint); err != nil {
-		return errors.Wrap(err, "Could not start fork choice service: %v")
-	}
 
 	// Add the genesis block to the fork choice store.
-	if featureconfig.Get().ProtoArrayForkChoice {
-		s.justifiedCheckpt = proto.Clone(genesisCheckpoint).(*ethpb.Checkpoint)
-		s.bestJustifiedCheckpt = proto.Clone(genesisCheckpoint).(*ethpb.Checkpoint)
-		s.finalizedCheckpt = proto.Clone(genesisCheckpoint).(*ethpb.Checkpoint)
-		s.prevFinalizedCheckpt = proto.Clone(genesisCheckpoint).(*ethpb.Checkpoint)
+	s.justifiedCheckpt = proto.Clone(genesisCheckpoint).(*ethpb.Checkpoint)
+	s.bestJustifiedCheckpt = proto.Clone(genesisCheckpoint).(*ethpb.Checkpoint)
+	s.finalizedCheckpt = proto.Clone(genesisCheckpoint).(*ethpb.Checkpoint)
+	s.prevFinalizedCheckpt = proto.Clone(genesisCheckpoint).(*ethpb.Checkpoint)
 
-		if err := s.forkChoiceStore.ProcessBlock(ctx,
-			genesisBlk.Block.Slot,
-			genesisBlkRoot,
-			params.BeaconConfig().ZeroHash,
-			genesisCheckpoint.Epoch,
-			genesisCheckpoint.Epoch); err != nil {
-			log.Fatalf("Could not process genesis block for fork choice: %v", err)
-		}
+	if err := s.forkChoiceStore.ProcessBlock(ctx,
+		genesisBlk.Block.Slot,
+		genesisBlkRoot,
+		params.BeaconConfig().ZeroHash,
+		genesisCheckpoint.Epoch,
+		genesisCheckpoint.Epoch); err != nil {
+		log.Fatalf("Could not process genesis block for fork choice: %v", err)
 	}
 
 	s.genesisRoot = genesisBlkRoot
