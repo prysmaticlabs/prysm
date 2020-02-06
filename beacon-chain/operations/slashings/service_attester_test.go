@@ -1,7 +1,6 @@
 package slashings
 
 import (
-	"context"
 	"reflect"
 	"testing"
 
@@ -62,6 +61,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 		fields fields
 		args   args
 		want   []*PendingAttesterSlashing
+		err    string
 	}{
 		{
 			name: "Empty list",
@@ -88,10 +88,10 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 			args: args{
 				slashing: &ethpb.AttesterSlashing{
 					Attestation_1: &ethpb.IndexedAttestation{
-						AttestingIndices: []uint64{1, 2},
+						AttestingIndices: []uint64{0, 1},
 					},
 					Attestation_2: &ethpb.IndexedAttestation{
-						AttestingIndices: []uint64{1, 2},
+						AttestingIndices: []uint64{0, 1},
 					},
 				},
 			},
@@ -99,29 +99,29 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 				{
 					attesterSlashing: &ethpb.AttesterSlashing{
 						Attestation_1: &ethpb.IndexedAttestation{
-							AttestingIndices: []uint64{1, 2},
+							AttestingIndices: []uint64{0, 1},
 						},
 						Attestation_2: &ethpb.IndexedAttestation{
-							AttestingIndices: []uint64{1, 2},
+							AttestingIndices: []uint64{0, 1},
 						},
 					},
-					validatorToSlash: 1,
+					validatorToSlash: 0,
 				},
 				{
 					attesterSlashing: &ethpb.AttesterSlashing{
 						Attestation_1: &ethpb.IndexedAttestation{
-							AttestingIndices: []uint64{1, 2},
+							AttestingIndices: []uint64{0, 1},
 						},
 						Attestation_2: &ethpb.IndexedAttestation{
-							AttestingIndices: []uint64{1, 2},
+							AttestingIndices: []uint64{0, 1},
 						},
 					},
-					validatorToSlash: 2,
+					validatorToSlash: 1,
 				},
 			},
 		},
 		{
-			name: "Empty list two validators slashed out od three",
+			name: "Empty list two validators slashed out of three",
 			fields: fields{
 				pending:  make([]*PendingAttesterSlashing, 0),
 				included: make(map[uint64]bool),
@@ -241,7 +241,6 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 			want: generateNPendingSlashings(3),
 		},
 	}
-	ctx := context.Background()
 	validators := []*ethpb.Validator{
 		{ // 0
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -274,7 +273,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 			}
 			s.SetSlot(16 * params.BeaconConfig().SlotsPerEpoch)
 			s.SetSlashings([]uint64{5})
-			p.InsertAttesterSlashing(ctx, s, tt.args.slashing)
+			p.InsertAttesterSlashing(s, tt.args.slashing)
 			if len(p.pendingAttesterSlashing) != len(tt.want) {
 				t.Fatalf("Mismatched lengths of pending list. Got %d, wanted %d.", len(p.pendingAttesterSlashing), len(tt.want))
 			}

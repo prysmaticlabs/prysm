@@ -1,6 +1,7 @@
 package state
 
 import (
+	"runtime"
 	"sync"
 
 	"github.com/gogo/protobuf/proto"
@@ -15,6 +16,15 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/stateutil"
 )
 
+// Reference structs are shared across BeaconState copies to understand when the state must use
+// copy-on-write for shared fields or may modify a field in place when it holds the only reference
+// to the field value. References are tracked in a map of fieldIndex -> *reference. Whenever a state
+// releases their reference to the field value, they must decrement the refs. Likewise whenever a
+// copy is performed then the state must increment the refs counter.
+type reference struct {
+	refs uint
+}
+
 // BeaconState defines a struct containing utilities for the eth2 chain state, defining
 // getters and setters for its respective values and helpful functions such as HashTreeRoot().
 type BeaconState struct {
@@ -23,6 +33,8 @@ type BeaconState struct {
 	dirtyFields  map[fieldIndex]interface{}
 	valIdxMap    map[[48]byte]uint64
 	merkleLayers [][][]byte
+
+	sharedFieldReferences map[fieldIndex]*reference
 }
 
 // ReadOnlyValidator returns a wrapper that only allows fields from a validator
@@ -40,14 +52,21 @@ func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
 // and sets it as the inner state of the BeaconState type.
 func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 	b := &BeaconState{
-		state:       st,
-		dirtyFields: make(map[fieldIndex]interface{}, 20),
-		valIdxMap:   coreutils.ValidatorIndexMap(st.Validators),
+		state:                 st,
+		dirtyFields:           make(map[fieldIndex]interface{}, 20),
+		sharedFieldReferences: make(map[fieldIndex]*reference, 4),
+		valIdxMap:             coreutils.ValidatorIndexMap(st.Validators),
 	}
 
 	for i := 0; i < 20; i++ {
 		b.dirtyFields[fieldIndex(i)] = true
 	}
+
+	// Initialize field reference tracking for shared data.
+	b.sharedFieldReferences[randaoMixes] = &reference{refs: 1}
+	b.sharedFieldReferences[stateRoots] = &reference{refs: 1}
+	b.sharedFieldReferences[blockRoots] = &reference{refs: 1}
+	b.sharedFieldReferences[validators] = &reference{refs: 1}
 
 	return b, nil
 }
@@ -89,10 +108,16 @@ func (b *BeaconState) Copy() *BeaconState {
 			CurrentJustifiedCheckpoint:  b.CurrentJustifiedCheckpoint(),
 			FinalizedCheckpoint:         b.FinalizedCheckpoint(),
 		},
-		dirtyFields: make(map[fieldIndex]interface{}, 20),
+		dirtyFields:           make(map[fieldIndex]interface{}, 20),
+		sharedFieldReferences: make(map[fieldIndex]*reference, 4),
 
 		// Copy on write validator index map.
 		valIdxMap: b.valIdxMap,
+	}
+
+	for field, ref := range b.sharedFieldReferences {
+		ref.refs++
+		dst.sharedFieldReferences[field] = ref
 	}
 
 	for i := range b.dirtyFields {
@@ -109,6 +134,13 @@ func (b *BeaconState) Copy() *BeaconState {
 			}
 		}
 	}
+
+	// Finalizer runs when dst is being destroyed in garbage collection.
+	runtime.SetFinalizer(dst, func(b *BeaconState) {
+		for _, v := range b.sharedFieldReferences {
+			v.refs--
+		}
+	})
 
 	return dst
 }

@@ -28,19 +28,20 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
-	CustomGenesisDelay        uint64 // CustomGenesisDelay signals how long of a delay to set to start the chain.
-	MinimalConfig             bool   // MinimalConfig as defined in the spec.
-	WriteSSZStateTransitions  bool   // WriteSSZStateTransitions to tmp directory.
-	InitSyncNoVerify          bool   // InitSyncNoVerify when initial syncing w/o verifying block's contents.
-	SkipBLSVerify             bool   // Skips BLS verification across the runtime.
-	EnableBackupWebhook       bool   // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
-	PruneEpochBoundaryStates  bool   // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
-	EnableSnappyDBCompression bool   // EnableSnappyDBCompression in the database.
-	InitSyncCacheState        bool   // InitSyncCacheState caches state during initial sync.
-	KafkaBootstrapServers     string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
-	ProtectProposer           bool   // ProtectProposer prevents the validator client from signing any proposals that would be considered a slashable offense.
-	ProtectAttester           bool   // ProtectAttester prevents the validator client from signing any attestations that would be considered a slashable offense.
-	ProtoArrayForkChoice      bool   // ProtoArrayForkChoice enables proto array fork choice. Significant improvements over the spec version.
+	CustomGenesisDelay              uint64 // CustomGenesisDelay signals how long of a delay to set to start the chain.
+	MinimalConfig                   bool   // MinimalConfig as defined in the spec.
+	WriteSSZStateTransitions        bool   // WriteSSZStateTransitions to tmp directory.
+	InitSyncNoVerify                bool   // InitSyncNoVerify when initial syncing w/o verifying block's contents.
+	SkipBLSVerify                   bool   // Skips BLS verification across the runtime.
+	EnableBackupWebhook             bool   // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
+	PruneEpochBoundaryStates        bool   // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
+	EnableSnappyDBCompression       bool   // EnableSnappyDBCompression in the database.
+	InitSyncCacheState              bool   // InitSyncCacheState caches state during initial sync.
+	KafkaBootstrapServers           string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
+	ProtectProposer                 bool   // ProtectProposer prevents the validator client from signing any proposals that would be considered a slashable offense.
+	ProtectAttester                 bool   // ProtectAttester prevents the validator client from signing any attestations that would be considered a slashable offense.
+	ProtoArrayForkChoice            bool   // ProtoArrayForkChoice enables proto array fork choice. Significant improvements over the spec version.
+	ForkchoiceAggregateAttestations bool   // ForkchoiceAggregateAttestations attempts to aggregate attestations before processing in fork choice.
 
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
@@ -142,6 +143,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(protoArrayForkChoice.Name) {
 		log.Warn("Enabled using proto array fork choice over spec fork choice.")
 		cfg.ProtoArrayForkChoice = true
+	}
+	if ctx.GlobalBool(forkchoiceAggregateAttestations.Name) {
+		log.Warn("Enabled fork choice aggregation pre-processing of attestations")
+		cfg.ForkchoiceAggregateAttestations = true
 	}
 	Init(cfg)
 }

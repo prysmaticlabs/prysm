@@ -1,7 +1,6 @@
 package slashings
 
 import (
-	"context"
 	"reflect"
 	"testing"
 
@@ -129,7 +128,6 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 			},
 		},
 	}
-	ctx := context.Background()
 	validators := []*ethpb.Validator{
 		{ // 0
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -162,7 +160,7 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 			}
 			beaconState.SetSlot(16 * params.BeaconConfig().SlotsPerEpoch)
 			beaconState.SetSlashings([]uint64{5})
-			p.InsertProposerSlashing(ctx, beaconState, tt.args.slashing)
+			p.InsertProposerSlashing(beaconState, tt.args.slashing)
 			if len(p.pendingProposerSlashing) != len(tt.want) {
 				t.Fatalf("Mismatched lengths of pending list. Got %d, wanted %d.", len(p.pendingProposerSlashing), len(tt.want))
 			}

@@ -59,6 +59,7 @@ func (p *AttCaches) BlockAttestations() []*ethpb.Attestation {
 		att, ok := i.Object.([]*ethpb.Attestation)
 		if !ok {
 			p.blockAtt.Delete(s)
+			continue
 		}
 		atts = append(atts, att...)
 	}
