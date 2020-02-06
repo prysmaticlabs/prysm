@@ -225,3 +225,7 @@ func (ms *ChainService) CurrentSlot() uint64 {
 func (ms *ChainService) Participation(epoch uint64) *precompute.Balance {
 	return ms.Balance
 }
+
+func (ms *ChainService) IsValidAttestation(ctx context.Context, att *ethpb.Attestation) bool {
+	return true
+}
