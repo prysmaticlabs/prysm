@@ -80,7 +80,7 @@ func (p *Pool) InsertAttesterSlashing(state *beaconstate.BeaconState, slashing *
 		if validator.ExitEpoch() < helpers.CurrentEpoch(state) {
 			continue
 		}
-		//Has the validator been slashed already?
+		// Checking if the validator has already been slashed.
 		slashedValidators := state.Slashings()
 		found := sort.Search(len(slashedValidators), func(i int) bool {
 			return slashedValidators[i] == val
