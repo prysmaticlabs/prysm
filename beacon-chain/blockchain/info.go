@@ -53,7 +53,6 @@ const template = `<html>
     <script type="application/javascript">
         var graph = ` + "`%s`;" + `
         var viz = new Viz();
-
         viz.renderSVGElement(graph) // reading the graph.
             .then(function(element) {
                 document.body.appendChild(element); // appends to document.
@@ -61,7 +60,6 @@ const template = `<html>
             .catch(error => {
                 // Create a new Viz instance (@see Caveats page for more info)
                 viz = new Viz();
-
                 // Possibly display the error
                 console.error(error);
             });
