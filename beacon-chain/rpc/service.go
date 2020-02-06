@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
+	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -81,6 +82,7 @@ type Service struct {
 	depositFetcher         depositcache.DepositFetcher
 	pendingDepositFetcher  depositcache.PendingDepositsFetcher
 	stateNotifier          statefeed.Notifier
+	blockNotifier          blockfeed.Notifier
 	operationNotifier      opfeed.Notifier
 	slasherConn            *grpc.ClientConn
 	slasherProvider        string
@@ -116,6 +118,7 @@ type Config struct {
 	SlasherProvider       string
 	SlasherCert           string
 	StateNotifier         statefeed.Notifier
+	BlockNotifier         blockfeed.Notifier
 	OperationNotifier     opfeed.Notifier
 }
 
@@ -151,6 +154,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		canonicalStateChan:    make(chan *pbp2p.BeaconState, params.BeaconConfig().DefaultBufferSize),
 		incomingAttestation:   make(chan *ethpb.Attestation, params.BeaconConfig().DefaultBufferSize),
 		stateNotifier:         cfg.StateNotifier,
+		blockNotifier:         cfg.BlockNotifier,
 		operationNotifier:     cfg.OperationNotifier,
 		slasherProvider:       cfg.SlasherProvider,
 		slasherCert:           cfg.SlasherCert,
@@ -242,6 +246,7 @@ func (s *Service) Start() {
 		ChainStartFetcher:    s.chainStartFetcher,
 		CanonicalStateChan:   s.canonicalStateChan,
 		StateNotifier:        s.stateNotifier,
+		BlockNotifier:        s.blockNotifier,
 		SlotTicker:           ticker,
 	}
 	aggregatorServer := &aggregator.Server{
