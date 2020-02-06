@@ -4,6 +4,7 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -99,7 +100,10 @@ func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (*stateTr
 func (c *CheckpointStateCache) AddCheckpointState(cp *CheckpointState) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	if err := c.cache.AddIfNotPresent(cp); err != nil {
+	if err := c.cache.AddIfNotPresent(&CheckpointState{
+		Checkpoint: proto.Clone(cp.Checkpoint).(*ethpb.Checkpoint),
+		State:      cp.State.Copy(),
+	}); err != nil {
 		return err
 	}
 
