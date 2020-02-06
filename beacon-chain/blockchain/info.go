@@ -53,7 +53,6 @@ const template = `<html>
     <script type="application/javascript">
         var graph = ` + "`%s`;" + `
         var viz = new Viz();
-
         viz.renderSVGElement(graph) // reading the graph.
             .then(function(element) {
                 document.body.appendChild(element); // appends to document.
@@ -61,7 +60,6 @@ const template = `<html>
             .catch(error => {
                 // Create a new Viz instance (@see Caveats page for more info)
                 viz = new Viz();
-
                 // Possibly display the error
                 console.error(error);
             });
@@ -79,10 +77,6 @@ func (s *Service) TreeHandler(w http.ResponseWriter, _ *http.Request) {
 	graph.Attr("labeljust", "l")
 
 	dotNodes := make([]*dot.Node, len(nodes))
-<<<<<<< HEAD
-	headSlot := s.headSlot
-=======
->>>>>>> ebd4541dcd25b4ccbc452e47aaebc5a62d31a6b9
 	avgBalance := uint64(averageBalance(s.headState.Balances()))
 
 	for i := len(nodes) - 1; i >= 0; i-- {
