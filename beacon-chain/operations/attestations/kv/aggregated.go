@@ -62,6 +62,7 @@ func (p *AttCaches) AggregatedAttestations() []*ethpb.Attestation {
 		a, ok := i.Object.([]*ethpb.Attestation)
 		if !ok {
 			p.aggregatedAtt.Delete(s)
+			continue
 		}
 		atts = append(atts, a...)
 	}
@@ -79,6 +80,7 @@ func (p *AttCaches) AggregatedAttestationsBySlotIndex(slot uint64, committeeInde
 		a, ok := i.Object.([]*ethpb.Attestation)
 		if !ok {
 			p.aggregatedAtt.Delete(s)
+			continue
 		}
 
 		if slot == a[0].Data.Slot && committeeIndex == a[0].Data.CommitteeIndex {
