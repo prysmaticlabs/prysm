@@ -118,7 +118,7 @@ func (p *Pool) InsertProposerSlashing(state *beaconstate.BeaconState, slashing *
 	defer p.lock.Unlock()
 	idx := slashing.ProposerIndex
 
-	// Has this validator index been included recently?
+	// Check if this validator index been included recently.
 	if p.included[idx] {
 		return nil
 	}
