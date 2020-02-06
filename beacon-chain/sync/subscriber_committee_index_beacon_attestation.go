@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 )
@@ -13,6 +14,11 @@ func (r *Service) committeeIndexBeaconAttestationSubscriber(ctx context.Context,
 	a, ok := msg.(*eth.Attestation)
 	if !ok {
 		return fmt.Errorf("message was not type *eth.Attestation, type=%T", msg)
+	}
+
+	if !r.chain.IsValidAttestation(ctx, a) {
+		// TODO: metrics!
+		return errors.New("invalid attestation")
 	}
 	return r.attPool.SaveUnaggregatedAttestation(a)
 }
