@@ -100,7 +100,6 @@ func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	cleanStates := clonedStates(beaconState)
 
 	// We have to reset slot back to last epoch to hydrate cache. Since
 	// some attestations in block are from previous epoch
@@ -111,13 +110,11 @@ func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
 	}
 	beaconState.SetSlot(currentSlot)
 
-	b.N = 5
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		// ProcessEpochPrecompute is the optimized version of process epoch. It's enabled by default
 		// at run time.
-		b.Log(i)
-		if _, err := ProcessEpochPrecompute(context.Background(), cleanStates[i]); err != nil {
+		if _, err := ProcessEpochPrecompute(context.Background(), beaconState.Copy()); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -161,11 +158,7 @@ func BenchmarkHashTreeRootState_FullState(b *testing.B) {
 func clonedStates(beaconState *beaconstate.BeaconState) []*beaconstate.BeaconState {
 	clonedStates := make([]*beaconstate.BeaconState, runAmount)
 	for i := 0; i < runAmount; i++ {
-		c, err := beaconstate.InitializeFromProto(beaconState.CloneInnerState())
-		if err != nil {
-			panic(err)
-		}
-		clonedStates[i] = c
+		clonedStates[i] = beaconState.Copy()
 	}
 	return clonedStates
 }

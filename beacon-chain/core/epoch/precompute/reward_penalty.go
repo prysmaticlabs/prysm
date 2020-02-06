@@ -96,10 +96,7 @@ func attestationDelta(state *stateTrie.BeaconState, bp *Balance, v *Validator) (
 	}
 
 	// Process finality delay penalty
-	var finalizedEpoch uint64
-	if state.FinalizedCheckpoint() != nil {
-		finalizedEpoch = state.FinalizedCheckpoint().Epoch
-	}
+	finalizedEpoch := state.FinalizedCheckpointEpoch()
 	finalityDelay := e - finalizedEpoch
 	if finalityDelay > params.BeaconConfig().MinEpochsToInactivityPenalty {
 		p += params.BeaconConfig().BaseRewardsPerEpoch * br
