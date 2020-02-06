@@ -101,7 +101,7 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 	}
 
 	// Update finalized check point. Prune the block cache and helper caches on every new finalized epoch.
-	if postState.FinalizedCheckpoint().Epoch > s.finalizedCheckpt.Epoch {
+	if postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch {
 		if err := s.beaconDB.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint()); err != nil {
 			return nil, errors.Wrap(err, "could not save finalized checkpoint")
 		}
@@ -207,7 +207,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	}
 
 	// Update finalized check point. Prune the block cache and helper caches on every new finalized epoch.
-	if postState.FinalizedCheckpoint().Epoch > s.finalizedCheckpt.Epoch {
+	if postState.FinalizedCheckpointEpoch() > s.finalizedCheckpt.Epoch {
 		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
 		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
 		if endSlot > startSlot {
@@ -278,7 +278,7 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk *ethpb.B
 	if err := s.forkChoiceStore.ProcessBlock(ctx,
 		blk.Slot, root, bytesutil.ToBytes32(blk.ParentRoot),
 		state.CurrentJustifiedCheckpoint().Epoch,
-		state.FinalizedCheckpoint().Epoch); err != nil {
+		state.FinalizedCheckpointEpoch()); err != nil {
 		return errors.Wrap(err, "could not process block for proto array fork choice")
 	}
 
