@@ -90,6 +90,10 @@ var (
 		Usage: "Prevent the validator client from signing and broadcasting 2 any slashable attestations. " +
 			"Protects from slashing.",
 	}
+	forkchoiceAggregateAttestations = cli.BoolFlag{
+		Name:  "forkchoice-aggregate-attestations",
+		Usage: "Preprocess attestations by aggregation before running fork choice.",
+	}
 )
 
 // Deprecated flags list.
@@ -239,6 +243,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableSkipSlotsCacheFlag,
 	enableSlasherFlag,
 	cacheFilteredBlockTreeFlag,
+	forkchoiceAggregateAttestations,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

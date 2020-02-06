@@ -274,11 +274,10 @@ func ProcessFinalUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconState, 
 
 	// Set RANDAO mix.
 	randaoMixLength := params.BeaconConfig().EpochsPerHistoricalVector
-	mixes := state.RandaoMixes()
-	if len(mixes) != int(randaoMixLength) {
+	if state.RandaoMixesLength() != int(randaoMixLength) {
 		return nil, fmt.Errorf(
 			"state randao length %d different than EpochsPerHistoricalVector %d",
-			len(mixes),
+			state.RandaoMixesLength(),
 			randaoMixLength,
 		)
 	}
