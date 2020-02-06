@@ -77,6 +77,7 @@ func TestGetBlock_OK(t *testing.T) {
 		MockEth1Votes:     true,
 		AttPool:           attestations.NewPool(),
 		ExitPool:          voluntaryexits.NewPool(),
+		SlashingPool:      slashings.NewPool(),
 	}
 
 	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
