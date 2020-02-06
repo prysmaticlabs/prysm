@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -30,6 +31,7 @@ type Config struct {
 	Chain         blockchainService
 	InitialSync   Checker
 	StateNotifier statefeed.Notifier
+	BlockNotifier blockfeed.Notifier
 }
 
 // This defines the interface for interacting with block chain service
@@ -58,6 +60,7 @@ func NewRegularSync(cfg *Config) *Service {
 		seenPendingBlocks:    make(map[[32]byte]bool),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.AggregateAttestationAndProof),
 		stateNotifier:        cfg.StateNotifier,
+		blockNotifier:        cfg.BlockNotifier,
 		blocksRateLimiter:    leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksBurst, false /* deleteEmptyBuckets */),
 	}
 
@@ -86,6 +89,7 @@ type Service struct {
 	initialSync          Checker
 	validateBlockLock    sync.RWMutex
 	stateNotifier        statefeed.Notifier
+	blockNotifier        blockfeed.Notifier
 	blocksRateLimiter    *leakybucket.Collector
 }
 
