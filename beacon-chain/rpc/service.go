@@ -221,6 +221,7 @@ func (s *Service) Start() {
 		Eth1InfoFetcher:        s.powChainService,
 		SyncChecker:            s.syncService,
 		StateNotifier:          s.stateNotifier,
+		BlockNotifier:          s.blockNotifier,
 		OperationNotifier:      s.operationNotifier,
 		P2P:                    s.p2p,
 		BlockReceiver:          s.blockReceiver,
