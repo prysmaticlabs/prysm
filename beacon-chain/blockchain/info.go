@@ -72,6 +72,12 @@ const template = `<html>
 
 // TreeHandler is a handler to serve /tree page in metrics.
 func (s *Service) TreeHandler(w http.ResponseWriter, _ *http.Request) {
+	if s.headState == nil {
+		if _, err := w.Write([]byte("Unavailable during initial syncing")); err != nil {
+			log.WithError(err).Error("Failed to render p2p info page")
+		}
+	}
+
 	nodes := s.forkChoiceStore.Nodes()
 
 	graph := dot.NewGraph(dot.Directed)
@@ -94,7 +100,8 @@ func (s *Service) TreeHandler(w http.ResponseWriter, _ *http.Request) {
 			dotN = graph.Node(index).Box().Attr("label", label)
 		}
 
-		if nodes[i].Slot == s.headSlot {
+		if nodes[i].Slot == s.headSlot &&
+			nodes[i].BestDescendent == ^uint64(0) {
 			dotN = dotN.Attr("color", "green")
 		}
 
