@@ -21,11 +21,16 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["client_test.go"],
+    srcs = [
+        "client_test.go",
+        "fake_slasher_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/blockchain/testing:go_default_library",
         "//beacon-chain/state:go_default_library",
+        "//proto/slashing:go_default_library",
         "//shared/params:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1_gateway:go_default_library",
     ],
 )

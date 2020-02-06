@@ -8,8 +8,6 @@ import (
 	"net"
 	"os"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/slasher"
-
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -29,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/aggregator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beacon"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/node"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/slasher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
