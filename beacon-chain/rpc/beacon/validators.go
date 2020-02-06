@@ -441,7 +441,7 @@ func (bs *Server) GetValidatorParticipation(
 		}
 		return &ethpb.ValidatorParticipationResponse{
 			Epoch:         requestedEpoch,
-			Finalized:     requestedEpoch <= headState.FinalizedCheckpoint().Epoch,
+			Finalized:     requestedEpoch <= headState.FinalizedCheckpointEpoch(),
 			Participation: participation,
 		}, nil
 	} else if requestedEpoch == currentEpoch {
@@ -478,7 +478,7 @@ func (bs *Server) GetValidatorParticipation(
 
 	return &ethpb.ValidatorParticipationResponse{
 		Epoch:         requestedEpoch,
-		Finalized:     requestedEpoch <= headState.FinalizedCheckpoint().Epoch,
+		Finalized:     requestedEpoch <= headState.FinalizedCheckpointEpoch(),
 		Participation: participation,
 	}, nil
 }
@@ -499,7 +499,7 @@ func (bs *Server) GetValidatorQueue(
 	vals := headState.Validators()
 	for idx, validator := range vals {
 		eligibleActivated := validator.ActivationEligibilityEpoch != params.BeaconConfig().FarFutureEpoch
-		canBeActive := validator.ActivationEpoch >= helpers.DelayedActivationExitEpoch(headState.FinalizedCheckpoint().Epoch)
+		canBeActive := validator.ActivationEpoch >= helpers.DelayedActivationExitEpoch(headState.FinalizedCheckpointEpoch())
 		if eligibleActivated && canBeActive {
 			activationQ = append(activationQ, uint64(idx))
 		}
@@ -627,6 +627,12 @@ func (bs *Server) GetValidatorPerformance(
 		TotalValidators:               uint64(headState.NumValidators()),
 		TotalActiveValidators:         activeCount,
 	}, nil
+}
+
+// StreamValidatorsInfo streams out important validator information and metadata
+// each epoch.
+func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidatorsInfoServer) error {
+	return status.Error(codes.Unimplemented, "Unimplemented")
 }
 
 // Determines whether a validator has already exited.

@@ -176,6 +176,11 @@ func (bs *Server) GetChainHead(ctx context.Context, _ *ptypes.Empty) (*ethpb.Cha
 	return bs.chainHeadRetrieval(ctx)
 }
 
+// StreamBlocks to clients every single time a block is received by the beacon node.
+func (bs *Server) StreamBlocks(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamBlocksServer) error {
+	return status.Error(codes.Unimplemented, "Unimplemented")
+}
+
 // StreamChainHead to clients every single time the head block and state of the chain change.
 func (bs *Server) StreamChainHead(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamChainHeadServer) error {
 	stateChannel := make(chan *feed.Event, 1)

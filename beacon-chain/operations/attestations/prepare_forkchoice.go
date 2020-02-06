@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -82,7 +83,11 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 // This aggregates a list of attestations using the aggregation algorithm defined in AggregateAttestations
 // and saves the attestations for fork choice.
 func (s *Service) aggregateAndSaveForkChoiceAtts(atts []*ethpb.Attestation) error {
-	aggregatedAtts, err := helpers.AggregateAttestations(atts)
+	clonedAtts := make([]*ethpb.Attestation, len(atts))
+	for i, a := range atts {
+		clonedAtts[i] = stateTrie.CopyAttestation(a)
+	}
+	aggregatedAtts, err := helpers.AggregateAttestations(clonedAtts)
 	if err != nil {
 		return err
 	}

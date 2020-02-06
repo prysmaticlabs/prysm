@@ -13,13 +13,9 @@ var log = logrus.WithField("prefix", "forkchoice")
 
 // logs epoch related data during epoch boundary.
 func logEpochData(beaconState *stateTrie.BeaconState) {
-	var finalizedEpoch uint64
 	var prevJustifiedEpoch uint64
 	var currJustifiedEpoch uint64
-	finalizedCpt := beaconState.FinalizedCheckpoint()
-	if finalizedCpt != nil {
-		finalizedEpoch = finalizedCpt.Epoch
-	}
+	finalizedEpoch := beaconState.FinalizedCheckpointEpoch()
 	prevJustifiedCpt := beaconState.PreviousJustifiedCheckpoint()
 	if prevJustifiedCpt != nil {
 		prevJustifiedEpoch = prevJustifiedCpt.Epoch

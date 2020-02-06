@@ -405,6 +405,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.
 		pendingNodes = append(pendingNodes, b.Block)
 		parentRoot = bytesutil.ToBytes32(b.Block.ParentRoot)
 		slot = b.Block.Slot
+		higherThanFinalized = slot > helpers.StartSlot(s.finalizedCheckpt.Epoch)
 	}
 
 	// Insert parent nodes to fork choice store in reverse order.
@@ -419,7 +420,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.
 		if err := s.forkChoiceStore.ProcessBlock(ctx,
 			b.Slot, r, bytesutil.ToBytes32(b.ParentRoot),
 			state.CurrentJustifiedCheckpoint().Epoch,
-			state.FinalizedCheckpoint().Epoch); err != nil {
+			state.FinalizedCheckpointEpoch()); err != nil {
 			return errors.Wrap(err, "could not process block for proto array fork choice")
 		}
 	}
