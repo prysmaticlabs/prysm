@@ -94,6 +94,11 @@ var (
 		Name:  "proto-array-forkchoice",
 		Usage: "Uses proto array fork choice over the naive spec fork choice. Better implementation in terms of mem usage and speed. ",
 	}
+	forkchoiceAggregateAttestations = cli.BoolFlag{
+		Name: "forkchoice-aggregate-attestations",
+		Usage: "Preprocess attestations by aggregation before running fork choice.",
+	}
+
 )
 
 // Deprecated flags list.
