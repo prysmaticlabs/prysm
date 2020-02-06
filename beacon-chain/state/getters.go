@@ -620,6 +620,32 @@ func CopyPendingAttestation(att *pbp2p.PendingAttestation) *pbp2p.PendingAttesta
 	}
 }
 
+// CopyAttestation copies the provided attestation object.
+func CopyAttestation(att *ethpb.Attestation) *ethpb.Attestation {
+	if att == nil {
+		return &ethpb.Attestation{}
+	}
+	aggBytes := []byte(att.AggregationBits)
+	newBitlist := make([]byte, len(aggBytes))
+	copy(newBitlist, aggBytes)
+	blockRoot := [32]byte{}
+	copy(blockRoot[:], att.Data.BeaconBlockRoot)
+	sig := [96]byte{}
+	copy(sig[:], att.Signature)
+	data := &ethpb.AttestationData{
+		Slot:            att.Data.Slot,
+		CommitteeIndex:  att.Data.CommitteeIndex,
+		BeaconBlockRoot: blockRoot[:],
+		Source:          CopyCheckpoint(att.Data.Source),
+		Target:          CopyCheckpoint(att.Data.Target),
+	}
+	return &ethpb.Attestation{
+		AggregationBits: newBitlist,
+		Data:            data,
+		Signature:       sig[:],
+	}
+}
+
 // CopyCheckpoint copies the provided checkpoint.
 func CopyCheckpoint(cp *ethpb.Checkpoint) *ethpb.Checkpoint {
 	if cp == nil {

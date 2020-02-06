@@ -40,6 +40,7 @@ func (p *AttCaches) ForkchoiceAttestations() []*ethpb.Attestation {
 		att, ok := i.Object.(*ethpb.Attestation)
 		if !ok {
 			p.forkchoiceAtt.Delete(s)
+			continue
 		}
 		atts = append(atts, att)
 	}
