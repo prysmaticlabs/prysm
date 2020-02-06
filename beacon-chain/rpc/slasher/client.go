@@ -35,7 +35,7 @@ type Client struct {
 	ShouldBroadcast bool
 }
 
-// finalizedChangeUpdater this is a stub for the coming PRs #3133
+// SlashingPoolFeeder this is a stub for the coming PRs #3133
 // Store validator index to public key map Validate attestation signature.
 func (s *Client) SlashingPoolFeeder(ctx context.Context) error {
 	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
@@ -92,5 +92,7 @@ func (s *Client) updateSlashingPool(ctx context.Context, state *st.BeaconState) 
 			continue
 		}
 	}
+	log.Infof("updating slashing pool with %d attestations", len(asr.AttesterSlashing))
+
 	return nil
 }

@@ -77,6 +77,8 @@ var appFlags = []cli.Flag{
 	debug.TraceFlag,
 	cmd.LogFileName,
 	cmd.EnableUPnPFlag,
+	flags.SlasherCertFlag,
+	flags.SlasherProviderFlag,
 }
 
 func init() {
