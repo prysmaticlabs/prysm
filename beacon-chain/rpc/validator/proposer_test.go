@@ -130,13 +130,15 @@ func TestProposeBlock_OK(t *testing.T) {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
+	c := &mock.ChainService{}
 	proposerServer := &Server{
 		BeaconDB:          db,
 		ChainStartFetcher: &mockPOW.POWChain{},
 		Eth1InfoFetcher:   &mockPOW.POWChain{},
 		Eth1BlockFetcher:  &mockPOW.POWChain{},
-		BlockReceiver:     &mock.ChainService{},
-		HeadFetcher:       &mock.ChainService{},
+		BlockReceiver:     c,
+		HeadFetcher:       c,
+		BlockNotifier:     c.BlockNotifier(),
 	}
 	req := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{

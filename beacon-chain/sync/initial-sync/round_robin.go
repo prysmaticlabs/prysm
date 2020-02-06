@@ -13,6 +13,8 @@ import (
 	"github.com/paulbellamy/ratecounter"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
@@ -210,6 +212,10 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 				log.Debugf("Beacon node doesn't have a block in db with root %#x", blk.Block.ParentRoot)
 				continue
 			}
+			s.blockNotifier.BlockFeed().Send(&feed.Event{
+				Type: blockfeed.ReceivedBlock,
+				Data: blockfeed.ReceivedBlockData{SignedBlock: blk},
+			})
 			if featureconfig.Get().InitSyncNoVerify {
 				if err := s.chain.ReceiveBlockNoVerify(ctx, blk); err != nil {
 					return err
