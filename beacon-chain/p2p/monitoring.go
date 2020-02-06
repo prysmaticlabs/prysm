@@ -19,8 +19,8 @@ var (
 )
 
 func (s *Service) updateMetrics() {
-	for topic := range GossipTopicMappings {
-		topic += s.Encoding().ProtocolSuffix()
+	p2pTopicPeerCount.Reset()
+	for _, topic := range s.pubsub.GetTopics() {
 		p2pTopicPeerCount.WithLabelValues(topic).Set(float64(len(s.pubsub.ListPeers(topic))))
 	}
 	p2pPeerCount.WithLabelValues("Connected").Set(float64(len(s.peers.Connected())))

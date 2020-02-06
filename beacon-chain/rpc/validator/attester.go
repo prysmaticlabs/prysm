@@ -27,6 +27,8 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 		trace.Int64Attribute("committeeIndex", int64(req.CommitteeIndex)),
 	)
 
+	cache.TrackedCommitteeIndices.AddIndices([]uint64{req.CommitteeIndex}, helpers.SlotToEpoch(req.Slot))
+
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
