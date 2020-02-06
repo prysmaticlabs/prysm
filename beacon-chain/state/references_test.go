@@ -15,7 +15,7 @@ func TestStateReferenceSharing_Finalizer(t *testing.T) {
 		t.Error("Expected a single reference for Randao mixes")
 	}
 
-	func () {
+	func() {
 		// Create object in a different scope for GC
 		b := a.Copy()
 		if a.sharedFieldReferences[randaoMixes].refs != 2 {
