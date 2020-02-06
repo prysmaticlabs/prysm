@@ -105,11 +105,11 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 	b.lock.RLock()
 	r := b.state.BlockRoots
 	if ref := b.sharedFieldReferences[blockRoots]; ref.refs > 1 {
-		ref.refs--
-		b.sharedFieldReferences[blockRoots] = &reference{refs: 1}
-
 		// Copy on write since this is a shared array.
 		r = b.BlockRoots()
+
+		ref.refs--
+		b.sharedFieldReferences[blockRoots] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
 
@@ -151,6 +151,7 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 	if ref := b.sharedFieldReferences[stateRoots]; ref.refs > 1 {
 		// Perform a copy since this is a shared reference and we don't want to mutate others.
 		r = b.StateRoots()
+
 		ref.refs--
 		b.sharedFieldReferences[stateRoots] = &reference{refs: 1}
 	}
@@ -276,9 +277,7 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 		v = b.Validators()
 
 		ref.refs--
-		b.sharedFieldReferences[validators] = &reference{
-			refs: 1,
-		}
+		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
 
