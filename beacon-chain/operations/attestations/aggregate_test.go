@@ -7,11 +7,11 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
 func init() {

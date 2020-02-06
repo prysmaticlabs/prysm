@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -71,22 +70,11 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 	blockCopy := proto.Clone(block).(*ethpb.SignedBeaconBlock)
 
 	// Apply state transition on the new block.
-	var postState *stateTrie.BeaconState
-	var err error
-	if featureconfig.Get().ProtoArrayForkChoice {
-		postState, err = s.onBlock(ctx, blockCopy)
-		if err != nil {
-			err := errors.Wrap(err, "could not process block")
-			traceutil.AnnotateError(span, err)
-			return err
-		}
-	} else {
-		postState, err = s.forkChoiceStoreOld.OnBlockCacheFilteredTree(ctx, blockCopy)
-		if err != nil {
-			err := errors.Wrap(err, "could not process block from fork choice service")
-			traceutil.AnnotateError(span, err)
-			return err
-		}
+	postState, err := s.onBlock(ctx, blockCopy)
+	if err != nil {
+		err := errors.Wrap(err, "could not process block")
+		traceutil.AnnotateError(span, err)
+		return err
 	}
 
 	root, err := ssz.HashTreeRoot(blockCopy.Block)
@@ -122,31 +110,25 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 		}
 	} else {
 		headRoot := make([]byte, 0)
-		if featureconfig.Get().ProtoArrayForkChoice {
-			if s.bestJustifiedCheckpt.Epoch > s.justifiedCheckpt.Epoch {
-				s.justifiedCheckpt = s.bestJustifiedCheckpt
-			}
-
-			f := s.finalizedCheckpt
-			j := s.justifiedCheckpt
-			headRootProtoArray, err := s.forkChoiceStore.Head(
-				ctx,
-				f.Epoch,
-				bytesutil.ToBytes32(j.Root),
-				postState.Balances(),
-				j.Epoch)
-			if err != nil {
-				log.Warnf("Skip head update for slot %d: %v", block.Block.Slot, err)
-				return nil
-			}
-
-			headRoot = headRootProtoArray[:]
-		} else {
-			headRoot, err = s.forkChoiceStoreOld.Head(ctx)
-			if err != nil {
-				return errors.Wrap(err, "could not get head from fork choice service")
-			}
+		if s.bestJustifiedCheckpt.Epoch > s.justifiedCheckpt.Epoch {
+			s.justifiedCheckpt = s.bestJustifiedCheckpt
 		}
+
+		f := s.finalizedCheckpt
+		j := s.justifiedCheckpt
+		headRootProtoArray, err := s.forkChoiceStore.Head(
+			ctx,
+			f.Epoch,
+			bytesutil.ToBytes32(j.Root),
+			postState.Balances(),
+			j.Epoch)
+		if err != nil {
+			log.Warnf("Skip head update for slot %d: %v", block.Block.Slot, err)
+			return nil
+		}
+
+		headRoot = headRootProtoArray[:]
+
 		// Only save head if it's different than the current head.
 		cachedHeadRoot, err := s.HeadRoot(ctx)
 		if err != nil {
@@ -186,21 +168,11 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 	blockCopy := proto.Clone(block).(*ethpb.SignedBeaconBlock)
 
 	// Apply state transition on the new block.
-	var err error
-	if featureconfig.Get().ProtoArrayForkChoice {
-		_, err = s.onBlock(ctx, blockCopy)
-		if err != nil {
-			err := errors.Wrap(err, "could not process block")
-			traceutil.AnnotateError(span, err)
-			return err
-		}
-	} else {
-		_, err = s.forkChoiceStoreOld.OnBlock(ctx, blockCopy)
-		if err != nil {
-			err := errors.Wrap(err, "could not process block from fork choice service")
-			traceutil.AnnotateError(span, err)
-			return err
-		}
+	_, err := s.onBlock(ctx, blockCopy)
+	if err != nil {
+		err := errors.Wrap(err, "could not process block")
+		traceutil.AnnotateError(span, err)
+		return err
 	}
 
 	root, err := ssz.HashTreeRoot(blockCopy.Block)
@@ -248,19 +220,10 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 	blockCopy := proto.Clone(block).(*ethpb.SignedBeaconBlock)
 
 	// Apply state transition on the incoming newly received blockCopy without verifying its BLS contents.
-	var err error
-	if featureconfig.Get().ProtoArrayForkChoice {
-		_, err = s.onBlockInitialSyncStateTransition(ctx, blockCopy)
-		if err != nil {
-			err := errors.Wrap(err, "could not process block")
-			traceutil.AnnotateError(span, err)
-			return err
-		}
-	} else {
-		_, err = s.forkChoiceStoreOld.OnBlockInitialSyncStateTransition(ctx, blockCopy)
-		if err != nil {
-			return errors.Wrap(err, "could not process blockCopy from fork choice service")
-		}
+	if err := s.onBlockInitialSyncStateTransition(ctx, blockCopy); err != nil {
+		err := errors.Wrap(err, "could not process block")
+		traceutil.AnnotateError(span, err)
+		return err
 	}
 
 	root, err := ssz.HashTreeRoot(blockCopy.Block)
