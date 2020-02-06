@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
@@ -130,8 +131,11 @@ func (s *Store) OnAttestation(ctx context.Context, a *ethpb.Attestation) ([]uint
 		return nil, err
 	}
 
-	if err := s.db.SaveAttestation(ctx, a); err != nil {
-		return nil, err
+	// Only save attestation in DB for archival node.
+	if flags.Get().EnableArchive {
+		if err := s.db.SaveAttestation(ctx, a); err != nil {
+			return nil, err
+		}
 	}
 
 	log := log.WithFields(logrus.Fields{
