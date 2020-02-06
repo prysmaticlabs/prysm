@@ -71,6 +71,7 @@ go_test(
         "process_block_test.go",
         "receive_attestation_test.go",
         "service_test.go",
+        "head_test.go"
     ],
     embed = [":go_default_library"],
     deps = [

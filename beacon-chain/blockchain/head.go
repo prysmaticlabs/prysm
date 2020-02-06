@@ -35,8 +35,8 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 	return s.saveHead(ctx, headRoot)
 }
 
-// This saves head info to the local service cache, it also saves head
-// to the DB.
+// This saves head info to the local service cache, it also saves the
+// new head root to the DB.
 func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockchain.saveHead")
 	defer span.End()
@@ -49,9 +49,6 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	if headRoot == bytesutil.ToBytes32(cachedHeadRoot) {
 		return nil
 	}
-
-	s.headLock.Lock()
-	defer s.headLock.Unlock()
 
 	// Get the new head block from DB.
 	newHead, err := s.beaconDB.Block(ctx, headRoot)
@@ -68,6 +65,8 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 		return errors.Wrap(err, "could not retrieve head state in DB")
 	}
 
+	s.headLock.Lock()
+	defer s.headLock.Unlock()
 	// Cache the new head info.
 	s.headSlot = newHead.Block.Slot
 	s.canonicalRoots[newHead.Block.Slot] = headRoot[:]
