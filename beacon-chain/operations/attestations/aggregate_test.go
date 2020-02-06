@@ -2,16 +2,23 @@ package attestations
 
 import (
 	"context"
-	"github.com/gogo/protobuf/proto"
 	"reflect"
 	"sort"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 )
+
+func init() {
+	fc := featureconfig.Get()
+	fc.ForkchoiceAggregateAttestations = true
+	featureconfig.Init(fc)
+}
 
 func TestAggregateAttestations_SingleAttestation(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
