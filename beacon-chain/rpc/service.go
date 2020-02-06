@@ -212,6 +212,7 @@ func (s *Service) Start() {
 		BeaconDB:               s.beaconDB,
 		AttestationCache:       cache.NewAttestationCache(),
 		AttPool:                s.attestationsPool,
+		SlashingPool:           s.slashingPool,
 		ExitPool:               s.exitPool,
 		HeadFetcher:            s.headFetcher,
 		ForkFetcher:            s.forkFetcher,

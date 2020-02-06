@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -109,51 +110,152 @@ func TestGetBlock_OK(t *testing.T) {
 	}
 }
 
-func TestProposeBlock_OK(t *testing.T) {
+func TestGetBlock_IncludesSlashing(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	genesis := b.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(context.Background(), genesis); err != nil {
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
+
+	stateRoot, err := beaconState.HashTreeRoot()
+	if err != nil {
+		t.Fatalf("Could not hash genesis state: %v", err)
+	}
+
+	genesis := b.NewGenesisBlock(stateRoot[:])
+	if err := db.SaveBlock(ctx, genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	numDeposits := params.BeaconConfig().MinGenesisActiveValidatorCount
-	beaconState, _ := testutil.DeterministicGenesisState(t, numDeposits)
-
-	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
+	parentRoot, err := ssz.HashTreeRoot(genesis.Block)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Could not get signing root %v", err)
 	}
-	if err := db.SaveState(ctx, beaconState, genesisRoot); err != nil {
+	if err := db.SaveState(ctx, beaconState, parentRoot); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, parentRoot); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
 	proposerServer := &Server{
 		BeaconDB:          db,
+		HeadFetcher:       &mock.ChainService{State: beaconState, Root: parentRoot[:]},
+		SyncChecker:       &mockSync.Sync{IsSyncing: false},
+		BlockReceiver:     &mock.ChainService{},
 		ChainStartFetcher: &mockPOW.POWChain{},
 		Eth1InfoFetcher:   &mockPOW.POWChain{},
 		Eth1BlockFetcher:  &mockPOW.POWChain{},
-		BlockReceiver:     &mock.ChainService{},
-		HeadFetcher:       &mock.ChainService{},
+		MockEth1Votes:     true,
+		AttPool:           attestations.NewPool(),
+		ExitPool:          voluntaryexits.NewPool(),
+		SlashingPool:      slashings.NewPool(),
 	}
-	req := &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot:       5,
-			ParentRoot: []byte("parent-hash"),
-			Body:       &ethpb.BeaconBlockBody{},
+	proposerIdx := uint64(1)
+
+	domain := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer)
+	bHeader1 := &ethpb.SignedBeaconBlockHeader{
+		Header: &ethpb.BeaconBlockHeader{
+			Slot:      0,
+			StateRoot: []byte("A"),
 		},
 	}
-	if err := db.SaveBlock(ctx, req); err != nil {
+	signingRoot, err := ssz.HashTreeRoot(bHeader1.Header)
+	if err != nil {
+		t.Errorf("Could not get signing root of beacon block header: %v", err)
+	}
+	bHeader1.Signature = privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()[:]
+
+	bHeader2 := &ethpb.SignedBeaconBlockHeader{
+		Header: &ethpb.BeaconBlockHeader{
+			Slot:      0,
+			StateRoot: []byte("B"),
+		},
+	}
+	signingRoot, err = ssz.HashTreeRoot(bHeader2.Header)
+	if err != nil {
+		t.Errorf("Could not get signing root of beacon block header: %v", err)
+	}
+	bHeader2.Signature = privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()[:]
+
+	proposerSlashing := &ethpb.ProposerSlashing{
+		ProposerIndex: proposerIdx,
+		Header_1:      bHeader1,
+		Header_2:      bHeader2,
+	}
+
+	att1 := &ethpb.IndexedAttestation{
+		Data: &ethpb.AttestationData{
+			Source: &ethpb.Checkpoint{Epoch: 1},
+			Target: &ethpb.Checkpoint{Epoch: 0},
+		},
+		AttestingIndices: []uint64{0, 1},
+	}
+	hashTreeRoot, err := ssz.HashTreeRoot(att1.Data)
+	if err != nil {
+		t.Error(err)
+	}
+	domain = helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	sig0 := privKeys[0].Sign(hashTreeRoot[:], domain)
+	sig1 := privKeys[1].Sign(hashTreeRoot[:], domain)
+	aggregateSig := bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
+	att1.Signature = aggregateSig.Marshal()[:]
+
+	att2 := &ethpb.IndexedAttestation{
+		Data: &ethpb.AttestationData{
+			Source: &ethpb.Checkpoint{Epoch: 0},
+			Target: &ethpb.Checkpoint{Epoch: 0},
+		},
+		AttestingIndices: []uint64{0, 1},
+	}
+	hashTreeRoot, err = ssz.HashTreeRoot(att2.Data)
+	if err != nil {
+		t.Error(err)
+	}
+	sig0 = privKeys[0].Sign(hashTreeRoot[:], domain)
+	sig1 = privKeys[1].Sign(hashTreeRoot[:], domain)
+	aggregateSig = bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
+	att2.Signature = aggregateSig.Marshal()[:]
+
+	attSlashing := &ethpb.AttesterSlashing{
+		Attestation_1: att1,
+		Attestation_2: att2,
+	}
+	proposerServer.SlashingPool.InsertProposerSlashing(context.Background(), beaconState, proposerSlashing)
+	proposerServer.SlashingPool.InsertAttesterSlashing(context.Background(), beaconState, attSlashing)
+
+	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
+
+	graffiti := bytesutil.ToBytes32([]byte("eth2"))
+	req := &ethpb.BlockRequest{
+		Slot:         1,
+		RandaoReveal: randaoReveal,
+		Graffiti:     graffiti[:],
+	}
+
+	block, err := proposerServer.GetBlock(ctx, req)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := proposerServer.ProposeBlock(context.Background(), req); err != nil {
-		t.Errorf("Could not propose block correctly: %v", err)
+
+	if len(block.Body.AttesterSlashings) != 1 {
+		t.Fatalf("Expected 1 attester slashing in block, received %d", len(block.Body.AttesterSlashings))
+	}
+	if !proto.Equal(block.Body.AttesterSlashings[0], attSlashing) {
+		t.Fatal("Expected attester slashing to not be changed")
+	}
+	if len(block.Body.ProposerSlashings) != 1 {
+		t.Fatalf("Expected 1 proposer slashing in block, received %d", len(block.Body.ProposerSlashings))
+	}
+	if !proto.Equal(block.Body.ProposerSlashings[0], proposerSlashing) {
+		t.Fatal("Expected proposer slashing to not be changed")
 	}
 }
 
-func TestProposeBlock_IncludesSlashing(t *testing.T) {
+func TestProposeBlock_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()

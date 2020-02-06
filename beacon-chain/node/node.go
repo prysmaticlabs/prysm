@@ -495,6 +495,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		GenesisTimeFetcher:    chainService,
 		AttestationsPool:      b.attestationPool,
 		ExitPool:              b.exitPool,
+		SlashingPool:          b.slashingPool,
 		POWChainService:       web3Service,
 		ChainStartFetcher:     chainStartFetcher,
 		MockEth1Votes:         mockEth1DataVotes,
