@@ -107,7 +107,6 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 }
 
 func TestCheckpointStateCache_MaxSize(t *testing.T) {
-	t.Skip("TODO")
 	c := NewCheckpointStateCache()
 	st, err := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Slot: 0,

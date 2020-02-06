@@ -40,7 +40,6 @@ go_test(
         "skip_slot_cache_test.go",
     ],
     embed = [":go_default_library"],
-    race = "on",
     deps = [
         "//beacon-chain/state:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
