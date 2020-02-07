@@ -254,7 +254,7 @@ func Domain(fork *pb.Fork, epoch uint64, domainType []byte) uint64 {
 }
 
 // IsEligibleForActivationQueue checks if the validator is eligible to
-// be places into the activation queue.
+// be placed into the activation queue.
 //
 // Spec pseudocode definition:
 //  def is_eligible_for_activation_queue(validator: Validator) -> bool:
@@ -268,6 +268,13 @@ func Domain(fork *pb.Fork, epoch uint64, domainType []byte) uint64 {
 func IsEligibleForActivationQueue(validator *ethpb.Validator) bool {
 	return validator.ActivationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch &&
 		validator.EffectiveBalance == params.BeaconConfig().MaxEffectiveBalance
+}
+
+// IsEligibleForActivationQueueUsingTrie checks if the read-only validator is eligible to
+// be placed into the activation queue.
+func IsEligibleForActivationQueueUsingTrie(validator *stateTrie.ReadOnlyValidator) bool {
+	return validator.ActivationEligibilityEpoch() == params.BeaconConfig().FarFutureEpoch &&
+		validator.EffectiveBalance() == params.BeaconConfig().MaxEffectiveBalance
 }
 
 // IsEligibleForActivation checks if the validator is eligible for activation.
@@ -287,4 +294,14 @@ func IsEligibleForActivation(state *stateTrie.BeaconState, validator *ethpb.Vali
 	finalizedEpoch := state.FinalizedCheckpointEpoch()
 	return validator.ActivationEligibilityEpoch <= finalizedEpoch &&
 		validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch
+}
+
+// IsEligibleForActivationUsingTrie checks if the validator is eligible for activation.
+func IsEligibleForActivationUsingTrie(state *stateTrie.BeaconState, validator *stateTrie.ReadOnlyValidator) bool {
+	cpt := state.FinalizedCheckpoint()
+	if cpt == nil {
+		return false
+	}
+	return validator.ActivationEligibilityEpoch() <= cpt.Epoch &&
+		validator.ActivationEpoch() == params.BeaconConfig().FarFutureEpoch
 }
