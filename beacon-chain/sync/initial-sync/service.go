@@ -25,6 +25,7 @@ var _ = shared.Service(&Service{})
 type blockchainService interface {
 	blockchain.BlockReceiver
 	blockchain.HeadFetcher
+	blockchain.ChainCleaner
 }
 
 const (
@@ -129,6 +130,7 @@ func (s *Service) Start() {
 	}
 	log.Infof("Synced up to slot %d", s.chain.HeadSlot())
 	s.synced = true
+	s.chain.ClearCachedStates()
 }
 
 // Stop initial sync.
@@ -167,6 +169,7 @@ func (s *Service) Resync() error {
 		log = log.WithError(err)
 	}
 	log.WithField("slot", s.chain.HeadSlot()).Info("Resync attempt complete")
+	s.chain.ClearCachedStates()
 
 	return nil
 }
