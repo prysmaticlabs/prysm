@@ -269,6 +269,12 @@ func (s *Service) Status() error {
 	return nil
 }
 
+// ClearCachedStates removes all stored caches states. This is done after the node
+// is synced.
+func (s *Service) ClearCachedStates() {
+	s.initSyncState = map[[32]byte]*stateTrie.BeaconState{}
+}
+
 // This gets called to update canonical root mapping. It does not save head block
 // root in DB. With the inception of inital-sync-cache-state flag, it uses finalized
 // check point as anchors to resume sync therefore head is no longer needed to be saved on per slot basis.
