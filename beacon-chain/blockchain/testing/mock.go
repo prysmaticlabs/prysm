@@ -37,6 +37,7 @@ type ChainService struct {
 	stateNotifier               statefeed.Notifier
 	blockNotifier               blockfeed.Notifier
 	opNotifier                  opfeed.Notifier
+	ValidAttestation bool
 }
 
 // StateNotifier mocks the same method in the chain service.
@@ -228,5 +229,5 @@ func (ms *ChainService) Participation(epoch uint64) *precompute.Balance {
 
 // IsValidAttestation always returns true..
 func (ms *ChainService) IsValidAttestation(ctx context.Context, att *ethpb.Attestation) bool {
-	return true
+	return ms.ValidAttestation
 }

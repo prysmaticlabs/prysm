@@ -44,6 +44,7 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 		chain: &mock.ChainService{
 			State:   s,
 			Genesis: time.Now(),
+			ValidAttestation: true,
 		},
 		chainStarted:  true,
 		p2p:           p,

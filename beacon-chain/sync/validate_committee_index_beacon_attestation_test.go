@@ -15,7 +15,6 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -24,13 +23,15 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 	db := dbtest.SetupDB(t)
 	defer dbtest.TeardownDB(t, db)
+	chain := &mockChain.ChainService{
+		Genesis: time.Now().Add(time.Duration(-64*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second), // 64 slots ago
+		ValidAttestation: true,
+	}
 	s := &Service{
 		initialSync: &mockSync.Sync{IsSyncing: false},
 		p2p:         p,
 		db:          db,
-		chain: &mockChain.ChainService{
-			Genesis: time.Now().Add(time.Duration(-64*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second), // 64 slots ago
-		},
+		chain: chain,
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.AggregateAttestationAndProof),
 	}
 
@@ -48,16 +49,15 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	validSig := bls.RandKey().Sign([]byte("foo"), 0).Marshal()
-
 	tests := []struct {
-		name  string
-		msg   *ethpb.Attestation
-		topic string
-		want  bool
+		name                      string
+		msg                       *ethpb.Attestation
+		topic                     string
+		validAttestationSignature bool
+		want                      bool
 	}{
 		{
-			name: "valid",
+			name: "validAttestationSignature",
 			msg: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0b1010},
 				Data: &ethpb.AttestationData{
@@ -65,10 +65,10 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 					CommitteeIndex:  1,
 					Slot:            63,
 				},
-				Signature: validSig,
 			},
-			topic: "/eth2/committee_index1_beacon_attestation",
-			want:  true,
+			topic:                     "/eth2/committee_index1_beacon_attestation",
+			validAttestationSignature: true,
+			want:                      true,
 		},
 		{
 			name: "wrong committee index",
@@ -79,10 +79,10 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 					CommitteeIndex:  2,
 					Slot:            63,
 				},
-				Signature: validSig,
 			},
-			topic: "/eth2/committee_index3_beacon_attestation",
-			want:  false,
+			topic:                     "/eth2/committee_index3_beacon_attestation",
+			validAttestationSignature: true,
+			want:                      false,
 		},
 		{
 			name: "already aggregated",
@@ -93,10 +93,10 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 					CommitteeIndex:  1,
 					Slot:            63,
 				},
-				Signature: validSig,
 			},
-			topic: "/eth2/committee_index1_beacon_attestation",
-			want:  false,
+			topic:                     "/eth2/committee_index1_beacon_attestation",
+			validAttestationSignature: true,
+			want:                      false,
 		},
 		{
 			name: "missing block",
@@ -107,13 +107,13 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 					CommitteeIndex:  1,
 					Slot:            63,
 				},
-				Signature: validSig,
 			},
-			topic: "/eth2/committee_index1_beacon_attestation",
-			want:  false,
+			topic:                     "/eth2/committee_index1_beacon_attestation",
+			validAttestationSignature: true,
+			want:                      false,
 		},
 		{
-			name: "invalid sig",
+			name: "invalid attestation",
 			msg: &ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0b1010},
 				Data: &ethpb.AttestationData{
@@ -121,10 +121,10 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 					CommitteeIndex:  1,
 					Slot:            63,
 				},
-				Signature: []byte("bad"),
 			},
-			topic: "/eth2/committee_index1_beacon_attestation",
-			want:  false,
+			topic:                     "/eth2/committee_index1_beacon_attestation",
+			validAttestationSignature: false,
+			want:                      false,
 		},
 	}
 
@@ -141,6 +141,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 					TopicIDs: []string{tt.topic},
 				},
 			}
+			chain.ValidAttestation = tt.validAttestationSignature
 			if s.validateCommitteeIndexBeaconAttestation(ctx, "" /*peerID*/, m) != tt.want {
 				t.Errorf("Did not received wanted validation. Got %v, wanted %v", !tt.want, tt.want)
 			}
