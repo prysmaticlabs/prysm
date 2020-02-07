@@ -263,7 +263,7 @@ func (s *Service) Start() {
 		AttPool:     s.attestationsPool,
 		P2p:         s.p2p,
 	}
-	slasher := &slasher.Client{
+	slasherClient := &slasher.Client{
 		HeadFetcher:     s.headFetcher,
 		SlashingPool:    s.slashingPool,
 		SlasherClient:   s.slasherClient,
@@ -288,7 +288,11 @@ func (s *Service) Start() {
 	}()
 	if featureconfig.Get().EnableSlasherConnection {
 		s.startSlasherClient()
-		go slasher.SlashingPoolFeeder(s.ctx)
+		go func() {
+			if err := slasherClient.SlashingPoolFeeder(s.ctx); err != nil {
+				log.Errorf("could not run pool feeder: %v", err)
+			}
+		}()
 	}
 }
 
@@ -335,7 +339,10 @@ func (s *Service) Stop() error {
 		log.Debug("Initiated graceful stop of gRPC server")
 	}
 	if s.slasherConn != nil {
-		s.slasherConn.Close()
+		if err := s.slasherConn.Close(); err != nil {
+			log.Error(err)
+			return err
+		}
 	}
 	return nil
 }

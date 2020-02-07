@@ -24,11 +24,10 @@ func init() {
 
 // Client defines a client implementation of the gRPC slasher service.
 type Client struct {
-	HeadFetcher   blockchain.HeadFetcher
-	SlashingPool  *slashings.Pool
-	SlasherClient slashpb.SlasherClient
-	//P2p Will later be used to send slashing on pub sub
-	P2p             p2p.Broadcaster
+	HeadFetcher     blockchain.HeadFetcher
+	SlashingPool    *slashings.Pool
+	SlasherClient   slashpb.SlasherClient
+	P2p             p2p.Broadcaster //P2p Will later be used to send slashing on pub sub.
 	ShouldBroadcast bool
 }
 
@@ -42,7 +41,7 @@ func (s *Client) SlashingPoolFeeder(ctx context.Context) error {
 		select {
 		case <-tick:
 			if err := s.updatePool(ctx); err != nil {
-				return err
+				return errors.Wrap(err, "failed to update slashing pool")
 			}
 		case <-ctx.Done():
 			err := status.Error(codes.Canceled, "Stream context canceled")
@@ -59,7 +58,10 @@ func (s *Client) updatePool(ctx context.Context) error {
 		return status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 	if s.SlasherClient != nil {
-		s.updateSlashingPool(ctx, state)
+		if err := s.updateSlashingPool(ctx, state); err != nil {
+			log.WithError(err)
+			return err
+		}
 	} else {
 		err := status.Error(codes.Internal, "Slasher server has not been started")
 		log.WithError(err)
