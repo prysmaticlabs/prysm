@@ -115,6 +115,8 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 		return nil, status.Error(codes.InvalidArgument, "Incorrect attestation signature")
 	}
 
+	cache.TrackedCommitteeIndices.AddIndices([]uint64{att.Data.CommitteeIndex}, helpers.SlotToEpoch(att.Data.Slot))
+
 	root, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not tree hash attestation: %v", err)
