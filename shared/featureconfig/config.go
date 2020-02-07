@@ -40,7 +40,6 @@ type Flags struct {
 	KafkaBootstrapServers                      string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
 	ProtectProposer                            bool   // ProtectProposer prevents the validator client from signing any proposals that would be considered a slashable offense.
 	ProtectAttester                            bool   // ProtectAttester prevents the validator client from signing any attestations that would be considered a slashable offense.
-
 	ForkchoiceAggregateAttestations            bool   // ForkchoiceAggregateAttestations attempts to aggregate attestations before processing in fork choice.
 	DisableStrictAttestationPubsubVerification bool   // DisableStrictAttestationPubsubVerification will disabling strict signature verification in pubsub.
 
