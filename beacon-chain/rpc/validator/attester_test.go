@@ -370,29 +370,33 @@ func TestAttestationDataSlot_handlesInProgressRequest(t *testing.T) {
 	wg.Wait()
 }
 
-func TestWaitForSlotOneThird_WaitCorrectly(t *testing.T) {
+func TestWaitForSlotOneThird_WaitedCorrectly(t *testing.T) {
 	currentTime := uint64(time.Now().Unix())
 	numOfSlots := uint64(4)
 	genesisTime := currentTime - (numOfSlots * params.BeaconConfig().SecondsPerSlot)
 
+	chainService := &mock.ChainService{
+		Genesis: time.Now(),
+	}
 	server := &Server{
 		AttestationCache:   cache.NewAttestationCache(),
 		HeadFetcher:        &mock.ChainService{},
 		SyncChecker:        &mockSync.Sync{IsSyncing: false},
 		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Unix(int64(genesisTime), 0)},
+		StateNotifier:      chainService.StateNotifier(),
 	}
 
 	timeToSleep := params.BeaconConfig().SecondsPerSlot / 3
 	oneThird := currentTime + timeToSleep
 	server.waitToOneThird(context.Background(), numOfSlots)
 
-	currentTime = uint64(time.Now().Unix()) - 1
+	currentTime = uint64(time.Now().Unix())
 	if currentTime != oneThird {
 		t.Errorf("Wanted %d time for slot one third but got %d", oneThird, currentTime)
 	}
 }
 
-func TestWaitForSlotOneThird_HeadIsHere(t *testing.T) {
+func TestWaitForSlotOneThird_HeadIsHereNoWait(t *testing.T) {
 	currentTime := uint64(time.Now().Unix())
 	numOfSlots := uint64(4)
 	genesisTime := currentTime - (numOfSlots * params.BeaconConfig().SecondsPerSlot)

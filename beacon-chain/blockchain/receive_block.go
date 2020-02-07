@@ -86,6 +86,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 	s.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
+			Slot:      blockCopy.Block.Slot,
 			BlockRoot: root,
 			Verified:  true,
 		},
@@ -193,6 +194,7 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 	s.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
+			Slot:      blockCopy.Block.Slot,
 			BlockRoot: root,
 			Verified:  true,
 		},
@@ -258,6 +260,7 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 	s.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
+			Slot:      blockCopy.Block.Slot,
 			BlockRoot: root,
 			Verified:  false,
 		},

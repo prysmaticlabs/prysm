@@ -8,6 +8,8 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -149,23 +151,34 @@ func (vs *Server) waitToOneThird(ctx context.Context, slot uint64) {
 	_, span := trace.StartSpan(ctx, "validator.waitToOneThird")
 	defer span.End()
 
-	s := params.BeaconConfig().SecondsPerSlot / 3
-	oneThird := time.Duration(s) * time.Second
+	// Don't need to wait if head slot is already the same as requested slot.
+	if slot == vs.HeadFetcher.HeadSlot() {
+		return
+	}
 
+	// Set time out to be at start slot time + one-third of slot duration.
 	slotStartTime := slotutil.SlotStartTime(uint64(vs.GenesisTimeFetcher.GenesisTime().Unix()), slot)
-	slotOneThirdTime := slotStartTime.Add(oneThird)
+	slotOneThirdTime := slotStartTime.Unix() + int64(params.BeaconConfig().SecondsPerSlot/3)
+	waitDuration := slotOneThirdTime - time.Now().Unix()
+	timeOut := time.After(time.Duration(waitDuration) * time.Second)
+
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := vs.StateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
 
 	for {
-		// Done waiting if input slot is already at head.
-		if slot == vs.HeadFetcher.HeadSlot() {
-			break
-		}
-		// Done waiting if one-third of the slot has transpired.
-		if time.Now().Unix() > slotOneThirdTime.Unix() {
-			break
-		}
+		select {
+		case event := <-stateChannel:
+			// Node processed a block, check if the processed block is the same as input slot.
+			if event.Type == statefeed.BlockProcessed {
+				d := event.Data.(*statefeed.BlockProcessedData)
+				if slot == d.Slot {
+					return
+				}
+			}
 
-		// Retry every half second.
-		time.Sleep(500 * time.Microsecond)
+		case <-timeOut:
+			return
+		}
 	}
 }
