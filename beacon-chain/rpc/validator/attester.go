@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -12,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -30,6 +32,10 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
+
+	// Attester will either wait until there's a valid block from the expected block proposer of for the assigned input slot
+	// or one third of the slot has transpired. Whichever comes first.
+	vs.waitToOneThird(ctx, req.Slot)
 
 	res, err := vs.AttestationCache.Get(ctx, req)
 	if err != nil {
@@ -135,4 +141,31 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 	return &ethpb.AttestResponse{
 		AttestationDataRoot: root[:],
 	}, nil
+}
+
+// waitToOneThird waits until one-third of the way through the slot
+// or the head slot equals to the input slot.
+func (vs *Server) waitToOneThird(ctx context.Context, slot uint64) {
+	_, span := trace.StartSpan(ctx, "validator.waitToOneThird")
+	defer span.End()
+
+	s := params.BeaconConfig().SecondsPerSlot / 3
+	oneThird := time.Duration(s) * time.Second
+
+	slotStartTime := slotutil.SlotStartTime(uint64(vs.GenesisTimeFetcher.GenesisTime().Unix()), slot)
+	slotOneThirdTime := slotStartTime.Add(oneThird)
+
+	for ; ; {
+			// Done waiting if input slot is already at head.
+			if slot == vs.HeadFetcher.HeadSlot() {
+				break
+			}
+			// Done waiting if one-third of the slot has transpired.
+			if time.Now().Unix() > slotOneThirdTime.Unix() {
+				break
+			}
+
+		// Retry every half second.
+		time.Sleep(500 * time.Microsecond)
+	}
 }
