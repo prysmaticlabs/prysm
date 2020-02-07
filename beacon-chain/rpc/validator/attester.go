@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -159,7 +160,7 @@ func (vs *Server) waitToOneThird(ctx context.Context, slot uint64) {
 	// Set time out to be at start slot time + one-third of slot duration.
 	slotStartTime := slotutil.SlotStartTime(uint64(vs.GenesisTimeFetcher.GenesisTime().Unix()), slot)
 	slotOneThirdTime := slotStartTime.Unix() + int64(params.BeaconConfig().SecondsPerSlot/3)
-	waitDuration := slotOneThirdTime - time.Now().Unix()
+	waitDuration := slotOneThirdTime - roughtime.Now().Unix()
 	timeOut := time.After(time.Duration(waitDuration) * time.Second)
 
 	stateChannel := make(chan *feed.Event, 1)

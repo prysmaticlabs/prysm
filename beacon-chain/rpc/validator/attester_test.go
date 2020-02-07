@@ -321,11 +321,15 @@ func TestAttestationDataSlot_handlesInProgressRequest(t *testing.T) {
 	s := &pbp2p.BeaconState{Slot: 100}
 	state, _ := beaconstate.InitializeFromProto(s)
 	ctx := context.Background()
+	chainService := &mock.ChainService{
+		Genesis: time.Now(),
+	}
 	server := &Server{
 		HeadFetcher:        &mock.ChainService{State: state},
 		AttestationCache:   cache.NewAttestationCache(),
 		SyncChecker:        &mockSync.Sync{IsSyncing: false},
 		GenesisTimeFetcher: &mock.ChainService{},
+		StateNotifier:      chainService.StateNotifier(),
 	}
 
 	req := &ethpb.AttestationDataRequest{
