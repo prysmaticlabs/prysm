@@ -103,7 +103,6 @@ func (b *BeaconState) Copy() *BeaconState {
 			Balances:        b.state.Balances,
 			HistoricalRoots: b.state.HistoricalRoots,
 
-
 			// Everything else, too small to be concerned about, constant size.
 			Fork:                        b.Fork(),
 			LatestBlockHeader:           b.LatestBlockHeader(),

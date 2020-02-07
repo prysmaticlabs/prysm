@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
@@ -60,6 +61,10 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	}
 
 	if !r.validateAggregatedAtt(ctx, m) {
+		return false
+	}
+
+	if !featureconfig.Get().DisableStrictAttestationPubsubVerification && !r.chain.IsValidAttestation(ctx, m.Aggregate) {
 		return false
 	}
 
