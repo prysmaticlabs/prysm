@@ -133,7 +133,7 @@ contract in order to activate the validator client`,
 							log.WithError(err).Fatalf("Failed to decrypt keystore keys at path %s", ctx.String(flags.KeystorePathFlag.Name))
 						}
 						for _, v := range keystores {
-							fmt.Printf("Validator %#x has private key %#x\n", v.PublicKey.Marshal(), v.SecretKey.Marshal())
+							fmt.Printf("Public key: %#x private key: %#x\n", v.PublicKey.Marshal(), v.SecretKey.Marshal())
 						}
 					},
 				},
