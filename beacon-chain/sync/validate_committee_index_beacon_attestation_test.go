@@ -24,14 +24,14 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	defer dbtest.TeardownDB(t, db)
 	chain := &mockChain.ChainService{
-		Genesis: time.Now().Add(time.Duration(-64*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second), // 64 slots ago
+		Genesis:          time.Now().Add(time.Duration(-64*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second), // 64 slots ago
 		ValidAttestation: true,
 	}
 	s := &Service{
-		initialSync: &mockSync.Sync{IsSyncing: false},
-		p2p:         p,
-		db:          db,
-		chain: chain,
+		initialSync:          &mockSync.Sync{IsSyncing: false},
+		p2p:                  p,
+		db:                   db,
+		chain:                chain,
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.AggregateAttestationAndProof),
 	}
 
