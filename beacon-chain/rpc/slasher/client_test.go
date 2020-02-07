@@ -58,7 +58,7 @@ func TestClient_SlashingPoolFeeder_NoSlasher(t *testing.T) {
 	}
 }
 
-func TestClient_UpdatePool(t *testing.T) {
+func TestClient_UpdatePool_OK(t *testing.T) {
 	ctx := context.Background()
 	s := &beaconstate.BeaconState{}
 
@@ -76,9 +76,9 @@ func TestClient_UpdatePool(t *testing.T) {
 	}
 
 	if !slasherClient.ProposerSlashingsCalled {
-		t.Fatal("fuck")
+		t.Fatal("Expected ProposerSlashings() to be called")
 	}
 	if !slasherClient.AttesterSlashingsCalled {
-		t.Fatal("fuck")
+		t.Fatal("Expected AttesterSlashings() to be called")
 	}
 }
