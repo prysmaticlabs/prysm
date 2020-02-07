@@ -262,6 +262,7 @@ func TestRoundRobinSync(t *testing.T) {
 			} // no-op mock
 			s := &Service{
 				chain:             mc,
+				blockNotifier:     mc.BlockNotifier(),
 				p2p:               p,
 				db:                beaconDB,
 				synced:            false,
