@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -19,6 +20,7 @@ import (
 // AttestationReceiver interface defines the methods of chain service receive and processing new attestations.
 type AttestationReceiver interface {
 	ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Attestation) error
+	IsValidAttestation(ctx context.Context, att *ethpb.Attestation) bool
 }
 
 // ReceiveAttestationNoPubsub is a function that defines the operations that are preformed on
@@ -39,6 +41,22 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	s.forkChoiceStore.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(att.Data.BeaconBlockRoot), att.Data.Target.Epoch)
 
 	return nil
+}
+
+// IsValidAttestation returns true if the attestation can be verified against its pre-state.
+func (s *Service) IsValidAttestation(ctx context.Context, att *ethpb.Attestation) bool {
+	baseState, err := s.getAttPreState(ctx, att.Data.Target)
+	if err != nil {
+		log.WithError(err).Error("Failed to validate attestation")
+		return false
+	}
+
+	if err := blocks.VerifyAttestation(ctx, baseState, att); err != nil {
+		log.WithError(err).Error("Failed to validate attestation")
+		return false
+	}
+
+	return true
 }
 
 // This processes attestations from the attestation pool to account for validator votes and fork choice.

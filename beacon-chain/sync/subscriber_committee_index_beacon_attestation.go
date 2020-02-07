@@ -14,6 +14,11 @@ func (r *Service) committeeIndexBeaconAttestationSubscriber(ctx context.Context,
 	if !ok {
 		return fmt.Errorf("message was not type *eth.Attestation, type=%T", msg)
 	}
+
+	if exists, _ := r.attPool.HasAggregatedAttestation(a); exists {
+		return nil
+	}
+
 	return r.attPool.SaveUnaggregatedAttestation(a)
 }
 

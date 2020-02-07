@@ -325,7 +325,7 @@ func (b *BeaconState) SetBalances(val []uint64) error {
 	defer b.lock.Unlock()
 
 	b.sharedFieldReferences[balances].refs--
-	b.sharedFieldReferences[balances] = &reference{refs:1}
+	b.sharedFieldReferences[balances] = &reference{refs: 1}
 
 	b.state.Balances = val
 	b.markFieldAsDirty(balances)
@@ -457,7 +457,6 @@ func (b *BeaconState) SetCurrentEpochAttestations(val []*pbp2p.PendingAttestatio
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-
 	b.sharedFieldReferences[currentEpochAttestations].refs--
 	b.sharedFieldReferences[currentEpochAttestations] = &reference{refs: 1}
 
@@ -515,7 +514,7 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestat
 	if b.sharedFieldReferences[previousEpochAttestations].refs > 1 {
 		atts = b.PreviousEpochAttestations()
 		b.sharedFieldReferences[previousEpochAttestations].refs--
-		b.sharedFieldReferences[previousEpochAttestations] = &reference{refs:1}
+		b.sharedFieldReferences[previousEpochAttestations] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
 
@@ -535,7 +534,7 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	if b.sharedFieldReferences[validators].refs > 1 {
 		vals = b.Validators()
 		b.sharedFieldReferences[validators].refs--
-		b.sharedFieldReferences[validators] = &reference{refs:1}
+		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
 
@@ -556,7 +555,7 @@ func (b *BeaconState) AppendBalance(bal uint64) error {
 	if b.sharedFieldReferences[balances].refs > 1 {
 		bals = b.Balances()
 		b.sharedFieldReferences[balances].refs--
-		b.sharedFieldReferences[balances] = &reference{refs:1}
+		b.sharedFieldReferences[balances] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
 
