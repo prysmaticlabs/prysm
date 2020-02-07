@@ -22,12 +22,6 @@ type ChainInfoFetcher interface {
 	FinalizationFetcher
 }
 
-// ChainCleaner describes an interface to clean obsolete data
-// stored in the blockchain service.
-type ChainCleaner interface {
-	ClearCachedStates()
-}
-
 // TimeFetcher retrieves the Eth2 data that's related to time.
 type TimeFetcher interface {
 	GenesisTime() time.Time

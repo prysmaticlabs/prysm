@@ -269,12 +269,6 @@ func (s *Service) Status() error {
 	return nil
 }
 
-// ClearCachedStates removes all stored caches states. This is done after the node
-// is synced.
-func (s *Service) ClearCachedStates() {
-	s.initSyncState = map[[32]byte]*stateTrie.BeaconState{}
-}
-
 // This gets called to update canonical root mapping.
 func (s *Service) saveHead(ctx context.Context, signed *ethpb.SignedBeaconBlock, r [32]byte) error {
 	s.headLock.Lock()
