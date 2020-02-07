@@ -7,6 +7,7 @@ import (
 	"time"
 
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -54,5 +55,30 @@ func TestClient_SlashingPoolFeeder_NoSlasher(t *testing.T) {
 	time.Sleep(time.Second * 9)
 	if !strings.Contains(err.Error(), wanted) {
 		t.Error("Did not receive wanted error")
+	}
+}
+
+func TestClient_UpdatePool(t *testing.T) {
+	ctx := context.Background()
+	s := &beaconstate.BeaconState{}
+
+	slasherClient := &fakeSlasher{}
+
+	client := &Client{
+		HeadFetcher:     &mock.ChainService{State: s},
+		SlashingPool:    slashings.NewPool(),
+		SlasherClient:   slasherClient,
+		ShouldBroadcast: false,
+	}
+
+	if err := client.updatePool(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	if !slasherClient.ProposerSlashingsCalled {
+		t.Fatal("fuck")
+	}
+	if !slasherClient.AttesterSlashingsCalled {
+		t.Fatal("fuck")
 	}
 }

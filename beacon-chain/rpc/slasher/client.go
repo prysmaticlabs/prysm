@@ -47,7 +47,6 @@ func (s *Client) SlashingPoolFeeder(ctx context.Context) error {
 			err := status.Error(codes.Canceled, "Stream context canceled")
 			log.WithError(err)
 			return err
-
 		}
 	}
 }
