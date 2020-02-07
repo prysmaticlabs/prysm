@@ -37,7 +37,7 @@ type ChainService struct {
 	stateNotifier               statefeed.Notifier
 	blockNotifier               blockfeed.Notifier
 	opNotifier                  opfeed.Notifier
-	ValidAttestation bool
+	ValidAttestation            bool
 }
 
 // StateNotifier mocks the same method in the chain service.

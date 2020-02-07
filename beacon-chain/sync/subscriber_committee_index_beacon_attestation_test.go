@@ -42,8 +42,8 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 	r := &Service{
 		attPool: attestations.NewPool(),
 		chain: &mock.ChainService{
-			State:   s,
-			Genesis: time.Now(),
+			State:            s,
+			Genesis:          time.Now(),
 			ValidAttestation: true,
 		},
 		chainStarted:  true,
