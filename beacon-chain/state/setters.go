@@ -106,7 +106,9 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 	r := b.state.BlockRoots
 	if ref := b.sharedFieldReferences[blockRoots]; ref.refs > 1 {
 		// Copy on write since this is a shared array.
-		r = b.BlockRoots()
+		newRoots := make([][]byte, len(r))
+		copy(newRoots, r)
+		r = newRoots
 
 		ref.refs--
 		b.sharedFieldReferences[blockRoots] = &reference{refs: 1}
@@ -150,7 +152,9 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 	r := b.state.StateRoots
 	if ref := b.sharedFieldReferences[stateRoots]; ref.refs > 1 {
 		// Perform a copy since this is a shared reference and we don't want to mutate others.
-		r = b.StateRoots()
+		newRoots := make([][]byte, len(r))
+		copy(newRoots, r)
+		r = newRoots
 
 		ref.refs--
 		b.sharedFieldReferences[stateRoots] = &reference{refs: 1}
@@ -289,8 +293,9 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 	v := b.state.Validators
 	if ref := b.sharedFieldReferences[validators]; ref.refs > 1 {
 		// Perform a copy since this is a shared reference and we don't want to mutate others.
-		v = b.Validators()
-
+		newVals := make([]*ethpb.Validator, len(v))
+		copy(newVals, v)
+		v = newVals
 		ref.refs--
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}
@@ -381,7 +386,9 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
 	b.lock.RLock()
 	mixes := b.state.RandaoMixes
 	if refs := b.sharedFieldReferences[randaoMixes].refs; refs > 1 {
-		mixes = b.RandaoMixes()
+		newSlice := make([][]byte, len(mixes))
+		copy(newSlice, mixes)
+		mixes = newSlice
 		b.sharedFieldReferences[randaoMixes].refs--
 		b.sharedFieldReferences[randaoMixes] = &reference{refs: 1}
 	}
