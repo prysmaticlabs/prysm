@@ -155,15 +155,15 @@ func (vs *Server) waitToOneThird(ctx context.Context, slot uint64) {
 	slotStartTime := slotutil.SlotStartTime(uint64(vs.GenesisTimeFetcher.GenesisTime().Unix()), slot)
 	slotOneThirdTime := slotStartTime.Add(oneThird)
 
-	for ; ; {
-			// Done waiting if input slot is already at head.
-			if slot == vs.HeadFetcher.HeadSlot() {
-				break
-			}
-			// Done waiting if one-third of the slot has transpired.
-			if time.Now().Unix() > slotOneThirdTime.Unix() {
-				break
-			}
+	for {
+		// Done waiting if input slot is already at head.
+		if slot == vs.HeadFetcher.HeadSlot() {
+			break
+		}
+		// Done waiting if one-third of the slot has transpired.
+		if time.Now().Unix() > slotOneThirdTime.Unix() {
+			break
+		}
 
 		// Retry every half second.
 		time.Sleep(500 * time.Microsecond)

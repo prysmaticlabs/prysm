@@ -161,6 +161,7 @@ func TestGetAttestationData_OK(t *testing.T) {
 		AttestationCache:    cache.NewAttestationCache(),
 		HeadFetcher:         &mock.ChainService{State: s, Root: blockRoot[:]},
 		FinalizationFetcher: &mock.ChainService{CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint},
+		GenesisTimeFetcher:  &mock.ChainService{},
 	}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
@@ -269,6 +270,7 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 		HeadFetcher:         &mock.ChainService{State: s, Root: blockRoot[:]},
 		FinalizationFetcher: &mock.ChainService{CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint},
 		SyncChecker:         &mockSync.Sync{IsSyncing: false},
+		GenesisTimeFetcher:  &mock.ChainService{},
 	}
 	if err := db.SaveState(ctx, s, blockRoot); err != nil {
 		t.Fatal(err)
@@ -316,10 +318,14 @@ func TestAttestationDataSlot_handlesInProgressRequest(t *testing.T) {
 		featureconfig.Init(nil)
 	}()
 
+	s := &pbp2p.BeaconState{Slot: 100}
+	state, _ := beaconstate.InitializeFromProto(s)
 	ctx := context.Background()
 	server := &Server{
-		AttestationCache: cache.NewAttestationCache(),
-		SyncChecker:      &mockSync.Sync{IsSyncing: false},
+		HeadFetcher:        &mock.ChainService{State: state},
+		AttestationCache:   cache.NewAttestationCache(),
+		SyncChecker:        &mockSync.Sync{IsSyncing: false},
+		GenesisTimeFetcher: &mock.ChainService{},
 	}
 
 	req := &ethpb.AttestationDataRequest{
@@ -370,17 +376,17 @@ func TestWaitForSlotOneThird_WaitCorrectly(t *testing.T) {
 	genesisTime := currentTime - (numOfSlots * params.BeaconConfig().SecondsPerSlot)
 
 	server := &Server{
-		AttestationCache: cache.NewAttestationCache(),
-		HeadFetcher: &mock.ChainService{},
-		SyncChecker:      &mockSync.Sync{IsSyncing: false},
-		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Unix(int64(genesisTime),0)},
+		AttestationCache:   cache.NewAttestationCache(),
+		HeadFetcher:        &mock.ChainService{},
+		SyncChecker:        &mockSync.Sync{IsSyncing: false},
+		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Unix(int64(genesisTime), 0)},
 	}
 
 	timeToSleep := params.BeaconConfig().SecondsPerSlot / 3
 	oneThird := currentTime + timeToSleep
 	server.waitToOneThird(context.Background(), numOfSlots)
 
-	currentTime = uint64(time.Now().Unix())-1
+	currentTime = uint64(time.Now().Unix()) - 1
 	if currentTime != oneThird {
 		t.Errorf("Wanted %d time for slot one third but got %d", oneThird, currentTime)
 	}
@@ -391,13 +397,13 @@ func TestWaitForSlotOneThird_HeadIsHere(t *testing.T) {
 	numOfSlots := uint64(4)
 	genesisTime := currentTime - (numOfSlots * params.BeaconConfig().SecondsPerSlot)
 
-	s := &pbp2p.BeaconState{Slot:100}
+	s := &pbp2p.BeaconState{Slot: 100}
 	state, _ := beaconstate.InitializeFromProto(s)
 	server := &Server{
-		AttestationCache: cache.NewAttestationCache(),
-		HeadFetcher: &mock.ChainService{State: state},
-		SyncChecker:      &mockSync.Sync{IsSyncing: false},
-		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Unix(int64(genesisTime),0)},
+		AttestationCache:   cache.NewAttestationCache(),
+		HeadFetcher:        &mock.ChainService{State: state},
+		SyncChecker:        &mockSync.Sync{IsSyncing: false},
+		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Unix(int64(genesisTime), 0)},
 	}
 
 	server.waitToOneThird(context.Background(), s.Slot)
