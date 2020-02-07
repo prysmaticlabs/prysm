@@ -231,3 +231,8 @@ func (ms *ChainService) Participation(epoch uint64) *precompute.Balance {
 func (ms *ChainService) IsValidAttestation(ctx context.Context, att *ethpb.Attestation) bool {
 	return ms.ValidAttestation
 }
+
+// ClearCachedStates is a no-op.
+func (ms *ChainService) ClearCachedStates() {
+	// no-op
+}
