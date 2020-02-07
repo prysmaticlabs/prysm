@@ -211,7 +211,7 @@ func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() i
 				stateSub.Unsubscribe()
 				return
 			case <-stateChannel:
-				if r.initialSync.Syncing() {
+				if r.chainStarted && r.initialSync.Syncing() {
 					continue
 				}
 				// Update topic count.
