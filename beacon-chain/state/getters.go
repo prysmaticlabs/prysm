@@ -63,7 +63,7 @@ func (v *ReadOnlyValidator) Slashed() bool {
 // InnerStateUnsafe returns the pointer value of the underlying
 // beacon state proto object, bypassing immutability. Use with care.
 func (b *BeaconState) InnerStateUnsafe() *pbp2p.BeaconState {
-	if b.state == nil {
+	if b == nil || b.state == nil {
 		return &pbp2p.BeaconState{}
 	}
 	return b.state
@@ -653,15 +653,23 @@ func CopyAttestation(att *ethpb.Attestation) *ethpb.Attestation {
 	newBitlist := make([]byte, len(aggBytes))
 	copy(newBitlist, aggBytes)
 	blockRoot := [32]byte{}
-	copy(blockRoot[:], att.Data.BeaconBlockRoot)
+	var dataPtr *ethpb.AttestationData
+
+	if att.Data != nil {
+		dataPtr = att.Data
+	} else {
+		dataPtr = &ethpb.AttestationData{}
+	}
 	sig := [96]byte{}
-	copy(sig[:], att.Signature)
+	if att.Signature != nil {
+		copy(sig[:], att.Signature)
+	}
 	data := &ethpb.AttestationData{
-		Slot:            att.Data.Slot,
-		CommitteeIndex:  att.Data.CommitteeIndex,
+		Slot:            dataPtr.Slot,
+		CommitteeIndex:  dataPtr.CommitteeIndex,
 		BeaconBlockRoot: blockRoot[:],
-		Source:          CopyCheckpoint(att.Data.Source),
-		Target:          CopyCheckpoint(att.Data.Target),
+		Source:          dataPtr.Source,
+		Target:          dataPtr.Target,
 	}
 	return &ethpb.Attestation{
 		AggregationBits: newBitlist,

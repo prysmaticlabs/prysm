@@ -3,9 +3,9 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -72,7 +72,7 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 	ctx, span := trace.StartSpan(ctx, "blockchain.onAttestation")
 	defer span.End()
 
-	tgt := proto.Clone(a.Data.Target).(*ethpb.Checkpoint)
+	tgt := stateTrie.CopyCheckpoint(a.Data.Target)
 	tgtSlot := helpers.StartSlot(tgt.Epoch)
 
 	if helpers.SlotToEpoch(a.Data.Slot) != a.Data.Target.Epoch {

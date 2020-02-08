@@ -138,6 +138,8 @@ func TestBatchAttestations_Single(t *testing.T) {
 	sig := sk.Sign([]byte("dummy_test_data"), 0 /*domain*/)
 	mockRoot := [32]byte{}
 	d := &ethpb.AttestationData{
+		Slot:            0,
+		CommitteeIndex:  0,
 		BeaconBlockRoot: mockRoot[:],
 		Source:          &ethpb.Checkpoint{Root: mockRoot[:]},
 		Target:          &ethpb.Checkpoint{Root: mockRoot[:]},
