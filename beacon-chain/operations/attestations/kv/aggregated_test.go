@@ -279,3 +279,27 @@ func TestKV_HasAggregatedAttestation(t *testing.T) {
 		})
 	}
 }
+
+func TestKV_Aggregated_AggregatesAttestations(t *testing.T) {
+	cache := NewAttCaches()
+
+	att1 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}}
+	att2 := &ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1111}}
+	atts := []*ethpb.Attestation{att1, att2}
+
+	for _, att := range atts {
+		if err := cache.SaveAggregatedAttestation(att); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	returned := cache.AggregatedAttestations()
+
+	sort.Slice(returned, func(i, j int) bool {
+		return returned[i].Data.Slot < returned[j].Data.Slot
+	})
+
+	if !reflect.DeepEqual(atts[1:], returned) {
+		t.Error("Did not receive correct aggregated atts")
+	}
+}
