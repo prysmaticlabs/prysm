@@ -60,26 +60,26 @@ func (s *Service) attestationFeeder() error {
 				log.WithError(err)
 				return err
 			}
-			at, err := as.Recv()
+			att, err := as.Recv()
 			if err != nil {
 				log.WithError(err)
 				return err
 			}
 			committeeReq := &ethpb.ListCommitteesRequest{
 				QueryFilter: &ethpb.ListCommitteesRequest_Epoch{
-					Epoch: at.Data.Target.Epoch,
+					Epoch: att.Data.Target.Epoch,
 				},
 			}
 			bCommittees, err := s.beaconClient.ListBeaconCommittees(s.context, committeeReq)
 			if err != nil {
-				log.WithError(err).Errorf("Could not list beacon committees for epoch %d", at.Data.Target.Epoch)
+				log.WithError(err).Errorf("Could not list beacon committees for epoch %d", att.Data.Target.Epoch)
 				return err
 			}
-			err = s.detectAttestation(at, bCommittees)
+			err = s.detectSlashingsFromAtt(att, bCommittees)
 			if err != nil {
 				continue
 			}
-			log.Info("detected attestation for target: %d", at.Data.Target)
+			log.Info("detected attestation for target: %d", att.Data.Target)
 		case <-s.context.Done():
 			err := status.Error(codes.Canceled, "Stream context canceled")
 			log.WithError(err)
@@ -88,11 +88,11 @@ func (s *Service) attestationFeeder() error {
 	}
 }
 
-// slasherOldAttestationFeeder a function to kick start slashing detection
+// historicalAttestationFeeder a function to kick start slashing detection
 // after all the included attestations in the canonical chain have been
 // slashing detected. latest epoch is being updated after each iteration
 // in case it changed during the detection process.
-func (s *Service) slasherOldAttestationFeeder() error {
+func (s *Service) historicalAttestationFeeder() error {
 	ch, err := s.getChainHead()
 	if err != nil {
 		return err
@@ -104,14 +104,15 @@ func (s *Service) slasherOldAttestationFeeder() error {
 	}
 
 	for epoch := startFromEpoch; epoch < ch.FinalizedEpoch; epoch++ {
-		ats, bcs, err := s.getDataForDetection(epoch)
-		if err != nil || bcs == nil {
+		atts, bCommittees, err := s.attsAndCommitteesForEpoch(epoch)
+		if err != nil || bCommittees == nil {
 			log.Error(err)
 			continue
 		}
-		log.Infof("Detecting slashable events on: %v attestations from epoch: %v", len(ats.Attestations), epoch)
-		for _, attestation := range ats.Attestations {
-			if err := s.detectAttestation(attestation, bcs); err != nil {
+		log.Infof("Detecting slashable events on: %v attestations from epoch: %v", len(atts), epoch)
+		for _, attestation := range atts {
+			if err := s.detectSlashingsFromAtt(attestation, bCommittees); err != nil {
+				log.Error(err)
 				continue
 			}
 		}
@@ -127,7 +128,7 @@ func (s *Service) slasherOldAttestationFeeder() error {
 	return nil
 }
 
-func (s *Service) detectAttestation(attestation *ethpb.Attestation, beaconCommittee *ethpb.BeaconCommittees) error {
+func (s *Service) detectSlashingsFromAtt(attestation *ethpb.Attestation, beaconCommittee *ethpb.BeaconCommittees) error {
 	slotCommittees, ok := beaconCommittee.Committees[attestation.Data.Slot]
 	if !ok || slotCommittees == nil {
 		err := fmt.Errorf("beacon committees object doesnt contain the attestation slot: %d, number of committees: %d",
@@ -147,31 +148,31 @@ func (s *Service) detectAttestation(attestation *ethpb.Attestation, beaconCommit
 		log.WithError(err)
 		return err
 	}
-	sar, err := s.slasher.IsSlashableAttestation(s.context, ia)
+	attSlashingResp, err := s.slasher.IsSlashableAttestation(s.context, ia)
 	if err != nil {
 		log.WithError(err)
 		return err
 	}
-	if err := s.slasherDb.SaveAttesterSlashings(db.Active, sar.AttesterSlashing); err != nil {
+	if err := s.slasherDb.SaveAttesterSlashings(db.Active, attSlashingResp.AttesterSlashing); err != nil {
 		log.WithError(err)
 		return err
 	}
-	if len(sar.AttesterSlashing) > 0 {
-		for _, as := range sar.AttesterSlashing {
+	if len(attSlashingResp.AttesterSlashing) > 0 {
+		for _, as := range attSlashingResp.AttesterSlashing {
 			log.WithField("attesterSlashing", as).Info("detected slashing offence")
 		}
 	}
 	return nil
 }
 
-func (s *Service) getDataForDetection(epoch uint64) (*ethpb.ListAttestationsResponse, *ethpb.BeaconCommittees, error) {
-	ats, err := s.beaconClient.ListAttestations(s.context, &ethpb.ListAttestationsRequest{
+func (s *Service) attsAndCommitteesForEpoch(epoch uint64) ([]*ethpb.Attestation, *ethpb.BeaconCommittees, error) {
+	attResp, err := s.beaconClient.ListAttestations(s.context, &ethpb.ListAttestationsRequest{
 		QueryFilter: &ethpb.ListAttestationsRequest_TargetEpoch{TargetEpoch: epoch},
 	})
 	if err != nil {
 		log.WithError(err).Errorf("Could not list attestations for epoch: %d", epoch)
 	}
-	bcs, err := s.beaconClient.ListBeaconCommittees(s.context, &ethpb.ListCommitteesRequest{
+	bCommittees, err := s.beaconClient.ListBeaconCommittees(s.context, &ethpb.ListCommitteesRequest{
 		QueryFilter: &ethpb.ListCommitteesRequest_Epoch{
 			Epoch: epoch,
 		},
@@ -179,7 +180,7 @@ func (s *Service) getDataForDetection(epoch uint64) (*ethpb.ListAttestationsResp
 	if err != nil {
 		log.WithError(err).Errorf("Could not list beacon committees for epoch: %d", epoch)
 	}
-	return ats, bcs, err
+	return attResp.Attestations, bCommittees, err
 }
 
 func (s *Service) getLatestDetectedEpoch() (uint64, error) {

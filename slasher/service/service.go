@@ -95,6 +95,29 @@ func NewRPCService(cfg *Config, ctx *cli.Context) (*Service, error) {
 	return s, nil
 }
 
+func (s *Service) startDB(ctx *cli.Context) error {
+	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
+	dbPath := path.Join(baseDir, slasherDBName)
+	cfg := &db.Config{SpanCacheEnabled: ctx.GlobalBool(flags.UseSpanCacheFlag.Name)}
+	d, err := db.NewDB(dbPath, cfg)
+	if err != nil {
+		return err
+	}
+	if s.ctx.GlobalBool(cmd.ClearDB.Name) {
+		if err := d.ClearDB(); err != nil {
+			return err
+		}
+		d, err = db.NewDB(dbPath, cfg)
+		if err != nil {
+			return err
+		}
+	}
+
+	log.WithField("path", dbPath).Info("Checking db")
+	s.slasherDb = d
+	return nil
+}
+
 // Start the gRPC server.
 func (s *Service) Start() {
 	s.lock.Lock()
@@ -111,8 +134,7 @@ func (s *Service) Start() {
 		}
 	}
 	stop := s.stop
-	err := s.slasherOldAttestationFeeder()
-	if err != nil {
+	if err := s.historicalAttestationFeeder(); err != nil {
 		err = errors.Wrap(err, "couldn't start attestation feeder from archive endpoint. please use "+
 			"--beacon-rpc-provider flag value if you are not running a beacon chain service with "+
 			"--archive flag on the local machine.")
@@ -120,8 +142,16 @@ func (s *Service) Start() {
 		s.failStatus = err
 		return
 	}
-	go s.attestationFeeder()
-	go s.finalizedChangeUpdater()
+	go func() {
+		if err := s.attestationFeeder(); err != nil {
+			log.WithError(err)
+		}
+	}()
+	go func() {
+		if err := s.finalizedChangeUpdater(); err != nil {
+			log.WithError(err)
+		}
+	}()
 	s.lock.Unlock()
 
 	go func() {
@@ -143,7 +173,6 @@ func (s *Service) Start() {
 	s.started = true
 	// Wait for stop channel to be closed.
 	<-stop
-
 }
 
 func (s *Service) startSlasher() {
@@ -199,25 +228,6 @@ func (s *Service) startSlasher() {
 	}()
 }
 
-func (s *Service) loadSpanMaps(slasherServer rpc.Server) {
-	latestTargetEpoch, err := slasherServer.SlasherDB.LatestIndexedAttestationsTargetEpoch()
-	if err != nil {
-		log.Errorf("Could not extract latest target epoch from indexed attestations store: %v", err)
-	}
-	for epoch := uint64(0); epoch < latestTargetEpoch; epoch++ {
-		idxAtts, err := slasherServer.SlasherDB.IdxAttsForTarget(epoch)
-		if err != nil {
-			log.Errorf("Got error while trying to retrieve indexed attestations from db: %v", err)
-		}
-		for _, ia := range idxAtts {
-			if err := slasherServer.UpdateSpanMaps(s.context, ia); err != nil {
-				log.Errorf("Unexpected error updating span maps: %v", err)
-			}
-		}
-		log.Infof("Update span maps for epoch: %d", epoch)
-	}
-}
-
 func (s *Service) startBeaconClient() error {
 	var dialOpt grpc.DialOption
 
@@ -251,6 +261,25 @@ func (s *Service) startBeaconClient() error {
 	s.beaconConn = conn
 	s.beaconClient = eth.NewBeaconChainClient(s.beaconConn)
 	return nil
+}
+
+func (s *Service) loadSpanMaps(slasherServer rpc.Server) {
+	latestTargetEpoch, err := slasherServer.SlasherDB.LatestIndexedAttestationsTargetEpoch()
+	if err != nil {
+		log.Errorf("Could not extract latest target epoch from indexed attestations store: %v", err)
+	}
+	for epoch := uint64(0); epoch < latestTargetEpoch; epoch++ {
+		idxAtts, err := slasherServer.SlasherDB.IdxAttsForTarget(epoch)
+		if err != nil {
+			log.Errorf("Got error while trying to retrieve indexed attestations from db: %v", err)
+		}
+		for _, ia := range idxAtts {
+			if err := slasherServer.UpdateSpanMaps(s.context, ia); err != nil {
+				log.Errorf("Unexpected error updating span maps: %v", err)
+			}
+		}
+		log.Infof("Update span maps for epoch: %d", epoch)
+	}
 }
 
 // Stop the service.
@@ -295,28 +324,4 @@ func (s *Service) Status() (bool, error) {
 		return false, s.failStatus
 	}
 	return s.started, nil
-
-}
-
-func (s *Service) startDB(ctx *cli.Context) error {
-	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
-	dbPath := path.Join(baseDir, slasherDBName)
-	cfg := &db.Config{SpanCacheEnabled: ctx.GlobalBool(flags.UseSpanCacheFlag.Name)}
-	d, err := db.NewDB(dbPath, cfg)
-	if err != nil {
-		return err
-	}
-	if s.ctx.GlobalBool(cmd.ClearDB.Name) {
-		if err := d.ClearDB(); err != nil {
-			return err
-		}
-		d, err = db.NewDB(dbPath, cfg)
-		if err != nil {
-			return err
-		}
-	}
-
-	log.WithField("path", dbPath).Info("Checking db")
-	s.slasherDb = d
-	return nil
 }
