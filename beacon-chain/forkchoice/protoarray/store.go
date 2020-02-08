@@ -34,7 +34,7 @@ func New(justifiedEpoch uint64, finalizedEpoch uint64, finalizedRoot [32]byte) *
 
 // Head returns the head root from fork choice store.
 // It firsts computes validator's balance changes then recalculates block tree from leaves to root.
-func (f *ForkChoice) Head(ctx context.Context, finalizedEpoch uint64, justifiedRoot [32]byte, justifiedStateBalances []uint64, justifiedEpoch uint64) ([32]byte, error) {
+func (f *ForkChoice) Head(ctx context.Context, justifiedEpoch uint64, justifiedRoot [32]byte, justifiedStateBalances []uint64, finalizedEpoch uint64) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.Head")
 	defer span.End()
 	calledHeadCount.Inc()
