@@ -2,7 +2,6 @@ package beacon
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"math/big"
 	"sort"
@@ -204,8 +203,7 @@ func (bs *Server) generateValidatorInfo(ctx context.Context, pubKeys [][]byte) (
 				res = append(res, info)
 				continue
 			}
-
-			return nil, status.Error(codes.NotFound, fmt.Sprintf("Unknown validator with public key %#x", pubKey))
+			// We haven't found it; ignore this as it may be a deposit that hasn't been processed in Ethereum 1 yet.
 		}
 		validator := headState.ValidatorsReadOnly()[info.Index]
 
