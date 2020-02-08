@@ -136,7 +136,7 @@ func (s *Service) saveNewValidators(ctx context.Context, preStateValidatorCount 
 		log.WithFields(logrus.Fields{
 			"indices":             indices,
 			"totalValidatorCount": postStateValidatorCount - preStateValidatorCount,
-		}).Info("Validator indices saved in DB")
+		}).Trace("Validator indices saved in DB")
 	}
 	return nil
 }
