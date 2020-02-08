@@ -21,7 +21,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	bls12.SetETHserialization(true)
+	bls12.SetETHmode(1)
 }
 
 var maxKeys = int64(100000)
