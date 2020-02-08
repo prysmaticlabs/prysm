@@ -8,7 +8,9 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
@@ -30,6 +32,7 @@ type Config struct {
 	Chain         blockchainService
 	InitialSync   Checker
 	StateNotifier statefeed.Notifier
+	BlockNotifier blockfeed.Notifier
 }
 
 // This defines the interface for interacting with block chain service
@@ -58,6 +61,7 @@ func NewRegularSync(cfg *Config) *Service {
 		seenPendingBlocks:    make(map[[32]byte]bool),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.AggregateAttestationAndProof),
 		stateNotifier:        cfg.StateNotifier,
+		blockNotifier:        cfg.BlockNotifier,
 		blocksRateLimiter:    leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksBurst, false /* deleteEmptyBuckets */),
 	}
 
@@ -86,6 +90,7 @@ type Service struct {
 	initialSync          Checker
 	validateBlockLock    sync.RWMutex
 	stateNotifier        statefeed.Notifier
+	blockNotifier        blockfeed.Notifier
 	blocksRateLimiter    *leakybucket.Collector
 }
 
@@ -107,8 +112,16 @@ func (r *Service) Stop() error {
 
 // Status of the currently running regular sync service.
 func (r *Service) Status() error {
-	if r.chainStarted && r.initialSync.Syncing() {
-		return errors.New("waiting for initial sync")
+	if r.chainStarted {
+		if r.initialSync.Syncing() {
+			return errors.New("waiting for initial sync")
+		}
+		// If our head slot is on a previous epoch and our peers are reporting their head block are
+		// in the most recent epoch, then we might be out of sync.
+		if headEpoch := helpers.SlotToEpoch(r.chain.HeadSlot()); headEpoch < helpers.SlotToEpoch(r.chain.CurrentSlot())-1 &&
+			headEpoch < r.p2p.Peers().CurrentEpoch()-1 {
+			return errors.New("out of sync")
+		}
 	}
 	return nil
 }

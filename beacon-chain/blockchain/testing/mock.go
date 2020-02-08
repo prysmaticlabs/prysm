@@ -9,6 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
+	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -34,7 +35,9 @@ type ChainService struct {
 	Fork                        *pb.Fork
 	DB                          db.Database
 	stateNotifier               statefeed.Notifier
+	blockNotifier               blockfeed.Notifier
 	opNotifier                  opfeed.Notifier
+	ValidAttestation            bool
 }
 
 // StateNotifier mocks the same method in the chain service.
@@ -43,6 +46,27 @@ func (ms *ChainService) StateNotifier() statefeed.Notifier {
 		ms.stateNotifier = &MockStateNotifier{}
 	}
 	return ms.stateNotifier
+}
+
+// BlockNotifier mocks the same method in the chain service.
+func (ms *ChainService) BlockNotifier() blockfeed.Notifier {
+	if ms.blockNotifier == nil {
+		ms.blockNotifier = &MockBlockNotifier{}
+	}
+	return ms.blockNotifier
+}
+
+// MockBlockNotifier mocks the block notifier.
+type MockBlockNotifier struct {
+	feed *event.Feed
+}
+
+// BlockFeed returns a block feed.
+func (msn *MockBlockNotifier) BlockFeed() *event.Feed {
+	if msn.feed == nil {
+		msn.feed = new(event.Feed)
+	}
+	return msn.feed
 }
 
 // MockStateNotifier mocks the state notifier.
@@ -201,4 +225,9 @@ func (ms *ChainService) CurrentSlot() uint64 {
 // Participation mocks the same method in the chain service.
 func (ms *ChainService) Participation(epoch uint64) *precompute.Balance {
 	return ms.Balance
+}
+
+// IsValidAttestation always returns true.
+func (ms *ChainService) IsValidAttestation(ctx context.Context, att *ethpb.Attestation) bool {
+	return ms.ValidAttestation
 }

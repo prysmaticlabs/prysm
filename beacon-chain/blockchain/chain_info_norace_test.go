@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 )
 
@@ -18,7 +17,6 @@ func TestHeadSlot_DataRace(t *testing.T) {
 	go func() {
 		s.saveHead(
 			context.Background(),
-			&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 777}},
 			[32]byte{},
 		)
 	}()
@@ -35,7 +33,6 @@ func TestHeadRoot_DataRace(t *testing.T) {
 	go func() {
 		s.saveHead(
 			context.Background(),
-			&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 777}},
 			[32]byte{},
 		)
 	}()
@@ -54,7 +51,6 @@ func TestHeadBlock_DataRace(t *testing.T) {
 	go func() {
 		s.saveHead(
 			context.Background(),
-			&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 777}},
 			[32]byte{},
 		)
 	}()
@@ -71,7 +67,6 @@ func TestHeadState_DataRace(t *testing.T) {
 	go func() {
 		s.saveHead(
 			context.Background(),
-			&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 777}},
 			[32]byte{},
 		)
 	}()

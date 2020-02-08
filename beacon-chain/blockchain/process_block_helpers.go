@@ -136,7 +136,7 @@ func (s *Service) saveNewValidators(ctx context.Context, preStateValidatorCount 
 		log.WithFields(logrus.Fields{
 			"indices":             indices,
 			"totalValidatorCount": postStateValidatorCount - preStateValidatorCount,
-		}).Info("Validator indices saved in DB")
+		}).Trace("Validator indices saved in DB")
 	}
 	return nil
 }
@@ -275,6 +275,11 @@ func (s *Service) saveInitState(ctx context.Context, state *stateTrie.BeaconStat
 	cpt := state.FinalizedCheckpoint()
 	finalizedRoot := bytesutil.ToBytes32(cpt.Root)
 	fs := s.initSyncState[finalizedRoot]
+	if fs == nil {
+		// This might happen if the client was in sync and is now re-syncing for whatever reason.
+		log.Warn("Initial sync cache did not have finalized state root cached")
+		return nil
+	}
 
 	if err := s.beaconDB.SaveState(ctx, fs, finalizedRoot); err != nil {
 		return errors.Wrap(err, "could not save state")
@@ -420,7 +425,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.
 		if err := s.forkChoiceStore.ProcessBlock(ctx,
 			b.Slot, r, bytesutil.ToBytes32(b.ParentRoot),
 			state.CurrentJustifiedCheckpoint().Epoch,
-			state.FinalizedCheckpoint().Epoch); err != nil {
+			state.FinalizedCheckpointEpoch()); err != nil {
 			return errors.Wrap(err, "could not process block for proto array fork choice")
 		}
 	}

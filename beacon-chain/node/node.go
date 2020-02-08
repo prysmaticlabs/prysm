@@ -64,6 +64,7 @@ type BeaconNode struct {
 	exitPool        *voluntaryexits.Pool
 	depositCache    *depositcache.DepositCache
 	stateFeed       *event.Feed
+	blockFeed       *event.Feed
 	opFeed          *event.Feed
 	forkChoiceStore forkchoice.ForkChoicer
 }
@@ -104,6 +105,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		services:        registry,
 		stop:            make(chan struct{}),
 		stateFeed:       new(event.Feed),
+		blockFeed:       new(event.Feed),
 		opFeed:          new(event.Feed),
 		attestationPool: attestations.NewPool(),
 		exitPool:        voluntaryexits.NewPool(),
@@ -167,6 +169,11 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 // StateFeed implements statefeed.Notifier.
 func (b *BeaconNode) StateFeed() *event.Feed {
 	return b.stateFeed
+}
+
+// BlockFeed implements blockfeed.Notifier.
+func (b *BeaconNode) BlockFeed() *event.Feed {
+	return b.blockFeed
 }
 
 // OperationFeed implements opfeed.Notifier.
@@ -407,6 +414,7 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 		Chain:         chainService,
 		InitialSync:   initSync,
 		StateNotifier: b,
+		BlockNotifier: b,
 		AttPool:       b.attestationPool,
 		ExitPool:      b.exitPool,
 	})
@@ -415,7 +423,6 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerInitialSyncService(ctx *cli.Context) error {
-
 	var chainService *blockchain.Service
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err
@@ -426,6 +433,7 @@ func (b *BeaconNode) registerInitialSyncService(ctx *cli.Context) error {
 		Chain:         chainService,
 		P2P:           b.fetchP2P(ctx),
 		StateNotifier: b,
+		BlockNotifier: b,
 	})
 
 	return b.services.RegisterService(is)
@@ -495,6 +503,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		SyncService:           syncService,
 		DepositFetcher:        depositFetcher,
 		PendingDepositFetcher: b.depositCache,
+		BlockNotifier:         b,
 		StateNotifier:         b,
 		OperationNotifier:     b,
 		SlasherCert:           slasherCert,

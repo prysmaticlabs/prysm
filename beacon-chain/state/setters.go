@@ -87,6 +87,9 @@ func (b *BeaconState) SetBlockRoots(val [][]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
+	b.sharedFieldReferences[blockRoots].refs--
+	b.sharedFieldReferences[blockRoots] = &reference{refs: 1}
+
 	b.state.BlockRoots = val
 	b.markFieldAsDirty(blockRoots)
 	return nil
@@ -99,8 +102,16 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 		return fmt.Errorf("invalid index provided %d", idx)
 	}
 
-	// Copy on write since this is a shared array.
-	r := b.BlockRoots()
+	b.lock.RLock()
+	r := b.state.BlockRoots
+	if ref := b.sharedFieldReferences[blockRoots]; ref.refs > 1 {
+		// Copy on write since this is a shared array.
+		r = b.BlockRoots()
+
+		ref.refs--
+		b.sharedFieldReferences[blockRoots] = &reference{refs: 1}
+	}
+	b.lock.RUnlock()
 
 	// Must secure lock after copy or hit a deadlock.
 	b.lock.Lock()
@@ -119,6 +130,9 @@ func (b *BeaconState) SetStateRoots(val [][]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
+	b.sharedFieldReferences[stateRoots].refs--
+	b.sharedFieldReferences[stateRoots] = &reference{refs: 1}
+
 	b.state.StateRoots = val
 	b.markFieldAsDirty(stateRoots)
 	return nil
@@ -131,8 +145,17 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 
-	// Copy on write since this is a shared array.
-	r := b.StateRoots()
+	b.lock.RLock()
+	// Check if we hold the only reference to the shared state roots slice.
+	r := b.state.StateRoots
+	if ref := b.sharedFieldReferences[stateRoots]; ref.refs > 1 {
+		// Perform a copy since this is a shared reference and we don't want to mutate others.
+		r = b.StateRoots()
+
+		ref.refs--
+		b.sharedFieldReferences[stateRoots] = &reference{refs: 1}
+	}
+	b.lock.RUnlock()
 
 	// Must secure lock after copy or hit a deadlock.
 	b.lock.Lock()
@@ -150,6 +173,9 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 func (b *BeaconState) SetHistoricalRoots(val [][]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
+
+	b.sharedFieldReferences[historicalRoots].refs--
+	b.sharedFieldReferences[historicalRoots] = &reference{refs: 1}
 
 	b.state.HistoricalRoots = val
 	b.markFieldAsDirty(historicalRoots)
@@ -172,6 +198,9 @@ func (b *BeaconState) SetEth1DataVotes(val []*ethpb.Eth1Data) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
+	b.sharedFieldReferences[eth1DataVotes].refs--
+	b.sharedFieldReferences[eth1DataVotes] = &reference{refs: 1}
+
 	b.state.Eth1DataVotes = val
 	b.markFieldAsDirty(eth1DataVotes)
 	return nil
@@ -180,10 +209,19 @@ func (b *BeaconState) SetEth1DataVotes(val []*ethpb.Eth1Data) error {
 // AppendEth1DataVotes for the beacon state. This PR appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendEth1DataVotes(val *ethpb.Eth1Data) error {
+	b.lock.RLock()
+	votes := b.state.Eth1DataVotes
+	if b.sharedFieldReferences[eth1DataVotes].refs > 1 {
+		votes = b.Eth1DataVotes()
+		b.sharedFieldReferences[eth1DataVotes].refs--
+		b.sharedFieldReferences[eth1DataVotes] = &reference{refs: 1}
+	}
+	b.lock.RUnlock()
+
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.Eth1DataVotes = append(b.state.Eth1DataVotes, val)
+	b.state.Eth1DataVotes = append(votes, val)
 	b.markFieldAsDirty(eth1DataVotes)
 	return nil
 }
@@ -205,6 +243,8 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 	defer b.lock.Unlock()
 
 	b.state.Validators = val
+	b.sharedFieldReferences[validators].refs--
+	b.sharedFieldReferences[validators] = &reference{refs: 1}
 	b.markFieldAsDirty(validators)
 	return nil
 }
@@ -212,8 +252,16 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 // ApplyToEveryValidator applies the provided callback function to each validator in the
 // validator registry.
 func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator) error) error {
-	// Copy on write since this is a shared array.
-	v := b.Validators()
+	b.lock.RLock()
+	v := b.state.Validators
+	if ref := b.sharedFieldReferences[validators]; ref.refs > 1 {
+		// Perform a copy since this is a shared reference and we don't want to mutate others.
+		v = b.Validators()
+
+		ref.refs--
+		b.sharedFieldReferences[validators] = &reference{refs: 1}
+	}
+	b.lock.RUnlock()
 
 	for i, val := range v {
 		err := f(i, val)
@@ -236,8 +284,17 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 	if len(b.state.Validators) <= int(idx) {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
-	// Copy on write since this is a shared array.
-	v := b.Validators()
+
+	b.lock.RLock()
+	v := b.state.Validators
+	if ref := b.sharedFieldReferences[validators]; ref.refs > 1 {
+		// Perform a copy since this is a shared reference and we don't want to mutate others.
+		v = b.Validators()
+
+		ref.refs--
+		b.sharedFieldReferences[validators] = &reference{refs: 1}
+	}
+	b.lock.RUnlock()
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
@@ -267,21 +324,35 @@ func (b *BeaconState) SetBalances(val []uint64) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
+	b.sharedFieldReferences[balances].refs--
+	b.sharedFieldReferences[balances] = &reference{refs: 1}
+
 	b.state.Balances = val
 	b.markFieldAsDirty(balances)
 	return nil
 }
 
-// UpdateBalancesAtIndex for the beacon state. This PR updates the randao mixes
+// UpdateBalancesAtIndex for the beacon state. This method updates the balance
 // at a specific index to a new value.
 func (b *BeaconState) UpdateBalancesAtIndex(idx uint64, val uint64) error {
 	if len(b.state.Balances) <= int(idx) {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
+
+	b.lock.RLock()
+	bals := b.state.Balances
+	if b.sharedFieldReferences[balances].refs > 1 {
+		bals = b.Balances()
+		b.sharedFieldReferences[balances].refs--
+		b.sharedFieldReferences[balances] = &reference{refs: 1}
+	}
+	b.lock.RUnlock()
+
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.Balances[idx] = val
+	bals[idx] = val
+	b.state.Balances = bals
 	b.markFieldAsDirty(balances)
 	return nil
 }
@@ -291,6 +362,9 @@ func (b *BeaconState) UpdateBalancesAtIndex(idx uint64, val uint64) error {
 func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
+
+	b.sharedFieldReferences[randaoMixes].refs--
+	b.sharedFieldReferences[randaoMixes] = &reference{refs: 1}
 
 	b.state.RandaoMixes = val
 	b.markFieldAsDirty(randaoMixes)
@@ -304,15 +378,20 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 
-	// Copy on write since this is a shared array.
-	mixes := b.RandaoMixes()
+	b.lock.RLock()
+	mixes := b.state.RandaoMixes
+	if refs := b.sharedFieldReferences[randaoMixes].refs; refs > 1 {
+		mixes = b.RandaoMixes()
+		b.sharedFieldReferences[randaoMixes].refs--
+		b.sharedFieldReferences[randaoMixes] = &reference{refs: 1}
+	}
+	b.lock.RUnlock()
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	mixes[idx] = val
 	b.state.RandaoMixes = mixes
-
 	b.markFieldAsDirty(randaoMixes)
 	return nil
 }
@@ -322,6 +401,9 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
 func (b *BeaconState) SetSlashings(val []uint64) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
+
+	b.sharedFieldReferences[slashings].refs--
+	b.sharedFieldReferences[slashings] = &reference{refs: 1}
 
 	b.state.Slashings = val
 	b.markFieldAsDirty(slashings)
@@ -334,10 +416,23 @@ func (b *BeaconState) UpdateSlashingsAtIndex(idx uint64, val uint64) error {
 	if len(b.state.Slashings) <= int(idx) {
 		return errors.Errorf("invalid index provided %d", idx)
 	}
+	b.lock.RLock()
+	s := b.state.Slashings
+
+	if b.sharedFieldReferences[slashings].refs > 1 {
+		s = b.Slashings()
+		b.sharedFieldReferences[slashings].refs--
+		b.sharedFieldReferences[slashings] = &reference{refs: 1}
+	}
+	b.lock.RUnlock()
+
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.Slashings[idx] = val
+	s[idx] = val
+
+	b.state.Slashings = s
+
 	b.markFieldAsDirty(slashings)
 	return nil
 }
@@ -347,6 +442,9 @@ func (b *BeaconState) UpdateSlashingsAtIndex(idx uint64, val uint64) error {
 func (b *BeaconState) SetPreviousEpochAttestations(val []*pbp2p.PendingAttestation) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
+
+	b.sharedFieldReferences[previousEpochAttestations].refs--
+	b.sharedFieldReferences[previousEpochAttestations] = &reference{refs: 1}
 
 	b.state.PreviousEpochAttestations = val
 	b.markFieldAsDirty(previousEpochAttestations)
@@ -359,6 +457,9 @@ func (b *BeaconState) SetCurrentEpochAttestations(val []*pbp2p.PendingAttestatio
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
+	b.sharedFieldReferences[currentEpochAttestations].refs--
+	b.sharedFieldReferences[currentEpochAttestations] = &reference{refs: 1}
+
 	b.state.CurrentEpochAttestations = val
 	b.markFieldAsDirty(currentEpochAttestations)
 	return nil
@@ -367,10 +468,19 @@ func (b *BeaconState) SetCurrentEpochAttestations(val []*pbp2p.PendingAttestatio
 // AppendHistoricalRoots for the beacon state. This PR appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
+	b.lock.RLock()
+	roots := b.state.HistoricalRoots
+	if b.sharedFieldReferences[historicalRoots].refs > 1 {
+		roots = b.HistoricalRoots()
+		b.sharedFieldReferences[historicalRoots].refs--
+		b.sharedFieldReferences[historicalRoots] = &reference{refs: 1}
+	}
+	b.lock.RUnlock()
+
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.HistoricalRoots = append(b.state.HistoricalRoots, root[:])
+	b.state.HistoricalRoots = append(roots, root[:])
 	b.markFieldAsDirty(historicalRoots)
 	return nil
 }
@@ -378,10 +488,20 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 // AppendCurrentEpochAttestations for the beacon state. This PR appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestation) error {
+	b.lock.RLock()
+
+	atts := b.state.CurrentEpochAttestations
+	if b.sharedFieldReferences[currentEpochAttestations].refs > 1 {
+		atts = b.CurrentEpochAttestations()
+		b.sharedFieldReferences[currentEpochAttestations].refs--
+		b.sharedFieldReferences[currentEpochAttestations] = &reference{refs: 1}
+	}
+	b.lock.RUnlock()
+
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.CurrentEpochAttestations = append(b.state.CurrentEpochAttestations, val)
+	b.state.CurrentEpochAttestations = append(atts, val)
 	b.markFieldAsDirty(currentEpochAttestations)
 	return nil
 }
@@ -389,10 +509,19 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestati
 // AppendPreviousEpochAttestations for the beacon state. This PR appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestation) error {
+	b.lock.RLock()
+	atts := b.state.PreviousEpochAttestations
+	if b.sharedFieldReferences[previousEpochAttestations].refs > 1 {
+		atts = b.PreviousEpochAttestations()
+		b.sharedFieldReferences[previousEpochAttestations].refs--
+		b.sharedFieldReferences[previousEpochAttestations] = &reference{refs: 1}
+	}
+	b.lock.RUnlock()
+
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.PreviousEpochAttestations = append(b.state.PreviousEpochAttestations, val)
+	b.state.PreviousEpochAttestations = append(atts, val)
 	b.markFieldAsDirty(previousEpochAttestations)
 	return nil
 }
@@ -400,10 +529,19 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestat
 // AppendValidator for the beacon state. This PR appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
+	b.lock.RLock()
+	vals := b.state.Validators
+	if b.sharedFieldReferences[validators].refs > 1 {
+		vals = b.Validators()
+		b.sharedFieldReferences[validators].refs--
+		b.sharedFieldReferences[validators] = &reference{refs: 1}
+	}
+	b.lock.RUnlock()
+
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.Validators = append(b.state.Validators, val)
+	b.state.Validators = append(vals, val)
 	b.markFieldAsDirty(validators)
 	return nil
 }
@@ -411,10 +549,20 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 // AppendBalance for the beacon state. This PR appends the new value
 // to the the end of list.
 func (b *BeaconState) AppendBalance(bal uint64) error {
+	b.lock.RLock()
+
+	bals := b.state.Balances
+	if b.sharedFieldReferences[balances].refs > 1 {
+		bals = b.Balances()
+		b.sharedFieldReferences[balances].refs--
+		b.sharedFieldReferences[balances] = &reference{refs: 1}
+	}
+	b.lock.RUnlock()
+
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.Balances = append(b.state.Balances, bal)
+	b.state.Balances = append(bals, bal)
 	b.markFieldAsDirty(balances)
 	return nil
 }

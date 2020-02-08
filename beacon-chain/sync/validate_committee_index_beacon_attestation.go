@@ -11,8 +11,8 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -80,8 +80,8 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return false
 	}
 
-	// Attestation's signature is a valid BLS signature.
-	if _, err := bls.SignatureFromBytes(att.Signature); err != nil {
+	// Attestation's signature is a valid BLS signature and belongs to correct public key..
+	if !featureconfig.Get().DisableStrictAttestationPubsubVerification && !s.chain.IsValidAttestation(ctx, att) {
 		return false
 	}
 

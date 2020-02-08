@@ -1,17 +1,16 @@
 package blockchain
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
@@ -21,6 +20,7 @@ import (
 // AttestationReceiver interface defines the methods of chain service receive and processing new attestations.
 type AttestationReceiver interface {
 	ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Attestation) error
+	IsValidAttestation(ctx context.Context, att *ethpb.Attestation) bool
 }
 
 // ReceiveAttestationNoPubsub is a function that defines the operations that are preformed on
@@ -32,50 +32,28 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveAttestationNoPubsub")
 	defer span.End()
 
-	// Update forkchoice store for the new attestation
-	indices := make([]uint64, 0)
-	var err error
-	if featureconfig.Get().ProtoArrayForkChoice {
-		indices, err = s.onAttestation(ctx, att)
-		if err != nil {
-			return errors.Wrap(err, "could not process attestation from fork choice service")
-		}
-
-		s.forkChoiceStore.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(att.Data.BeaconBlockRoot), att.Data.Target.Epoch)
-
-	} else {
-		indices, err = s.forkChoiceStoreOld.OnAttestation(ctx, att)
-		if err != nil {
-			return errors.Wrap(err, "could not process attestation from fork choice service")
-		}
-	}
-
-	// Run fork choice for head block after updating fork choice store.
-	if !featureconfig.Get().DisableForkChoice && !featureconfig.Get().ProtoArrayForkChoice {
-		headRoot, err := s.forkChoiceStoreOld.Head(ctx)
-		if err != nil {
-			return errors.Wrap(err, "could not get head from fork choice service")
-		}
-		// Only save head if it's different than the current head.
-		cachedHeadRoot, err := s.HeadRoot(ctx)
-		if err != nil {
-			return errors.Wrap(err, "could not get head root from cache")
-		}
-		if !bytes.Equal(headRoot, cachedHeadRoot) {
-			signed, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
-			if err != nil {
-				return errors.Wrap(err, "could not compute state from block head")
-			}
-			if signed == nil || signed.Block == nil {
-				return errors.New("nil head block")
-			}
-			if err := s.saveHead(ctx, signed, bytesutil.ToBytes32(headRoot)); err != nil {
-				return errors.Wrap(err, "could not save head")
-			}
-		}
+	_, err := s.onAttestation(ctx, att)
+	if err != nil {
+		return errors.Wrap(err, "could not process attestation")
 	}
 
 	return nil
+}
+
+// IsValidAttestation returns true if the attestation can be verified against its pre-state.
+func (s *Service) IsValidAttestation(ctx context.Context, att *ethpb.Attestation) bool {
+	baseState, err := s.getAttPreState(ctx, att.Data.Target)
+	if err != nil {
+		log.WithError(err).Error("Failed to validate attestation")
+		return false
+	}
+
+	if err := blocks.VerifyAttestation(ctx, baseState, att); err != nil {
+		log.WithError(err).Error("Failed to validate attestation")
+		return false
+	}
+
+	return true
 }
 
 // This processes attestations from the attestation pool to account for validator votes and fork choice.

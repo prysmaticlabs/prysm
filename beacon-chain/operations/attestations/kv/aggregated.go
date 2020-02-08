@@ -29,13 +29,10 @@ func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
 		}
 	}
 
-	// Ensure that this attestation is not already fully contained in an existing attestation.
-	for _, a := range atts {
-		if a.AggregationBits.Contains(att.AggregationBits) {
-			return nil
-		}
+	atts, err = helpers.AggregateAttestations(append(atts, att))
+	if err != nil {
+		return err
 	}
-	atts = append(atts, att)
 
 	// DefaultExpiration is set to what was given to New(). In this case
 	// it's one epoch.
@@ -62,6 +59,7 @@ func (p *AttCaches) AggregatedAttestations() []*ethpb.Attestation {
 		a, ok := i.Object.([]*ethpb.Attestation)
 		if !ok {
 			p.aggregatedAtt.Delete(s)
+			continue
 		}
 		atts = append(atts, a...)
 	}
@@ -79,6 +77,7 @@ func (p *AttCaches) AggregatedAttestationsBySlotIndex(slot uint64, committeeInde
 		a, ok := i.Object.([]*ethpb.Attestation)
 		if !ok {
 			p.aggregatedAtt.Delete(s)
+			continue
 		}
 
 		if slot == a[0].Data.Slot && committeeIndex == a[0].Data.CommitteeIndex {
