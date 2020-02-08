@@ -27,15 +27,15 @@ service Slasher {
     rpc AttesterSlashings(SlashingStatusRequest) returns (AttesterSlashingResponse);
 }
 
-message ValidatorIDToIdxAtt {
+message CompressedIdxAtt {
     repeated uint64 indices = 1 ;
     bytes data_root = 2;
     // 96 bytes aggregate signature.
     bytes signature = 3;
 }
 
-message ValidatorIDToIdxAttList {
-    repeated ValidatorIDToIdxAtt indicesList = 1 ;
+message CompressedIdxAttList {
+    repeated CompressedIdxAtt list = 1;
 }
 
 message ProposerSlashingRequest {
@@ -97,7 +97,7 @@ message SlashingStatusRequest {
         // Included slashing proof that has been included in a block.
         Included = 2;
         // Reverted slashing proof that has been reverted and therefore is relevant again.
-        Reverted = 3; 
+        Reverted = 3;
     }
     SlashingStatus status = 1;
 }

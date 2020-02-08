@@ -3,6 +3,7 @@ package db
 import (
 	"os"
 	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/boltdb/bolt"
@@ -12,6 +13,9 @@ import (
 )
 
 var log = logrus.WithField("prefix", "slasherDB")
+
+var databaseFileName = "slasher.db"
+
 var d *Store
 
 // Store defines an implementation of the Prysm Database interface
@@ -53,12 +57,12 @@ func NewDB(dirPath string, cfg *Config) (*Store, error) {
 	return d, err
 }
 
-// ClearDB removes the previously stored directory at the data directory.
+// ClearDB removes any previously stored data at the configured data directory.
 func (db *Store) ClearDB() error {
 	if _, err := os.Stat(db.databasePath); os.IsNotExist(err) {
 		return nil
 	}
-	return os.RemoveAll(db.databasePath)
+	return os.Remove(filepath.Join(db.databasePath, databaseFileName))
 }
 
 // DatabasePath at which this database writes files.
@@ -82,7 +86,7 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 	if err := os.MkdirAll(dirPath, 0700); err != nil {
 		return nil, err
 	}
-	datafile := path.Join(dirPath, "slasher.db")
+	datafile := path.Join(dirPath, databaseFileName)
 	boltDB, err := bolt.Open(datafile, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		if err == bolt.ErrTimeout {
@@ -103,8 +107,7 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 		OnEvict:     saveToDB,
 	})
 	if err != nil {
-		errors.Wrap(err, "failed to start span cache")
-		return nil, err
+		return nil, errors.Wrap(err, "failed to start span cache")
 	}
 	kv := &Store{db: boltDB, databasePath: dirPath, spanCache: spanCache, spanCacheEnabled: cfg.SpanCacheEnabled}
 
@@ -113,7 +116,7 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 			tx,
 			historicIndexedAttestationsBucket,
 			historicBlockHeadersBucket,
-			indexedAttestationsIndicesBucket,
+			compressedIdxAttsBucket,
 			validatorsPublicKeysBucket,
 			validatorsMinMaxSpanBucket,
 			slashingBucket,
