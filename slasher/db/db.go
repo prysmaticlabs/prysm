@@ -3,7 +3,6 @@ package db
 import (
 	"os"
 	"path"
-	"path/filepath"
 	"time"
 
 	"github.com/boltdb/bolt"
@@ -62,7 +61,7 @@ func (db *Store) ClearDB() error {
 	if _, err := os.Stat(db.databasePath); os.IsNotExist(err) {
 		return nil
 	}
-	return os.Remove(filepath.Join(db.databasePath, databaseFileName))
+	return os.Remove(db.databasePath)
 }
 
 // DatabasePath at which this database writes files.
@@ -109,7 +108,7 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to start span cache")
 	}
-	kv := &Store{db: boltDB, databasePath: dirPath, spanCache: spanCache, spanCacheEnabled: cfg.SpanCacheEnabled}
+	kv := &Store{db: boltDB, databasePath: datafile, spanCache: spanCache, spanCacheEnabled: cfg.SpanCacheEnabled}
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
 		return createBuckets(
