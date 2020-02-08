@@ -652,29 +652,37 @@ func CopyAttestation(att *ethpb.Attestation) *ethpb.Attestation {
 	aggBytes := []byte(att.AggregationBits)
 	newBitlist := make([]byte, len(aggBytes))
 	copy(newBitlist, aggBytes)
-	blockRoot := [32]byte{}
-	var dataPtr *ethpb.AttestationData
 
-	if att.Data != nil {
-		dataPtr = att.Data
-	} else {
-		dataPtr = &ethpb.AttestationData{}
-	}
 	sig := [96]byte{}
 	if att.Signature != nil {
 		copy(sig[:], att.Signature)
 	}
-	data := &ethpb.AttestationData{
+
+	return &ethpb.Attestation{
+		AggregationBits: newBitlist,
+		Data:            CopyAttestationData(att.Data),
+		Signature:       sig[:],
+	}
+}
+
+func CopyAttestationData(attData *ethpb.AttestationData) *ethpb.AttestationData {
+	var dataPtr *ethpb.AttestationData
+	if attData != nil {
+		dataPtr = attData
+	} else {
+		dataPtr = &ethpb.AttestationData{}
+	}
+	blockRoot := [32]byte{}
+	if attData.BeaconBlockRoot != nil {
+		copy(blockRoot[:], attData.BeaconBlockRoot)
+	}
+
+	return &ethpb.AttestationData{
 		Slot:            dataPtr.Slot,
 		CommitteeIndex:  dataPtr.CommitteeIndex,
 		BeaconBlockRoot: blockRoot[:],
 		Source:          dataPtr.Source,
 		Target:          dataPtr.Target,
-	}
-	return &ethpb.Attestation{
-		AggregationBits: newBitlist,
-		Data:            data,
-		Signature:       sig[:],
 	}
 }
 
@@ -684,10 +692,264 @@ func CopyCheckpoint(cp *ethpb.Checkpoint) *ethpb.Checkpoint {
 		return &ethpb.Checkpoint{}
 	}
 	root := [32]byte{}
-	copy(root[:], cp.Root)
+	if cp.Root != nil {
+		copy(root[:], cp.Root)
+	}
 
 	return &ethpb.Checkpoint{
 		Epoch: cp.Epoch,
 		Root:  root[:],
+	}
+}
+
+// CopySignedBeaconBlock copies the provided SignedBeaconBlock
+func CopySignedBeaconBlock(sigBlock *ethpb.SignedBeaconBlock) *ethpb.SignedBeaconBlock {
+	if sigBlock == nil {
+		return &ethpb.SignedBeaconBlock{}
+	}
+	sig := [96]byte{}
+	if sigBlock.Signature != nil {
+		copy(sig[:], sigBlock.Signature)
+	}
+	return &ethpb.SignedBeaconBlock{
+		Block: 		CopyBeaconBlock(sigBlock.Block),
+		Signature: 	sig[:],
+	}
+}
+
+// CopyBeaconBlock copies the provided BeaconBlock
+func CopyBeaconBlock(block *ethpb.BeaconBlock) *ethpb.BeaconBlock {
+	if block == nil {
+		return &ethpb.BeaconBlock{}
+	}
+	parentRoot := [32]byte{}
+	stateRoot := [32]byte{}
+	if block.ParentRoot != nil {
+		copy(parentRoot[:], block.ParentRoot)
+	}
+	if block.StateRoot != nil {
+		copy(stateRoot[:], block.StateRoot)
+	}
+	return &ethpb.BeaconBlock{
+		Slot:                 block.Slot,
+		ParentRoot:           parentRoot[:],
+		StateRoot:            stateRoot[:],
+		Body:                 CopyBeaconBlockBody(block.Body),
+	}
+}
+
+// CopyBeaconBlockBody copies the provided BeaconBlockBody
+func CopyBeaconBlockBody(body *ethpb.BeaconBlockBody) *ethpb.BeaconBlockBody {
+	if body == nil {
+		return &ethpb.BeaconBlockBody{}
+	}
+
+	randaoReveal := [96]byte{}
+	graffiti := [32]byte{}
+
+	if body.RandaoReveal != nil {
+		copy(randaoReveal[:], body.RandaoReveal)
+	}
+	if body.Graffiti != nil {
+		copy(graffiti[:], body.Graffiti)
+	}
+
+	return &ethpb.BeaconBlockBody{
+		RandaoReveal: 		  randaoReveal[:],
+		Eth1Data:             CopyETH1Data(body.Eth1Data),
+		Graffiti:             graffiti[:],
+		ProposerSlashings:    CopyProposerSlashings(body.ProposerSlashings),
+		AttesterSlashings:    CopyAttesterSlashings(body.AttesterSlashings),
+		Attestations:         CopyAttestations(body.Attestations),
+		Deposits:             CopyDeposits(body.Deposits),
+		VoluntaryExits:       CopySignedVoluntaryExits(body.VoluntaryExits),
+	}
+}
+
+// CopyProposerSlashing copies the provided ProposerSlashing array
+func CopyProposerSlashings(slashings []*ethpb.ProposerSlashing) []*ethpb.ProposerSlashing {
+	if slashings == nil {
+		return slashings
+	}
+	newSlashings := [16]*ethpb.ProposerSlashing{}
+	for i, att := range slashings {
+		newSlashings[i] = CopyProposerSlashing(att)
+	}
+	return newSlashings[:]
+}
+
+// CopyProposerSlashing copies the provided ProposerSlashing
+func CopyProposerSlashing(slashing *ethpb.ProposerSlashing) *ethpb.ProposerSlashing {
+	if slashing == nil {
+		return slashing
+	}
+	return &ethpb.ProposerSlashing{
+		ProposerIndex:        slashing.ProposerIndex,
+		Header_1:             CopySignedBeaconBlockHeader(slashing.Header_1),
+		Header_2:             CopySignedBeaconBlockHeader(slashing.Header_2),
+	}
+}
+
+// CopySignedBeaconBlockHeader copies the provided SignedBeaconBlockHeader
+func CopySignedBeaconBlockHeader(header *ethpb.SignedBeaconBlockHeader) *ethpb.SignedBeaconBlockHeader {
+	if header == nil {
+		return header
+	}
+	sig := [96]byte{}
+	if header.Signature != nil {
+		copy(sig[:], header.Signature)
+	}
+	return &ethpb.SignedBeaconBlockHeader{
+		Header:               CopyBeaconBlockHeader(header.Header),
+		Signature:            sig[:],
+	}
+}
+
+// CopyBeaconBlockHeader copies the provided BeaconBlockHeader
+func CopyBeaconBlockHeader(header *ethpb.BeaconBlockHeader) *ethpb.BeaconBlockHeader {
+	if header == nil {
+		return header
+	}
+	parentRoot := [32]byte{}
+	stateRoot := [32]byte{}
+	bodyRoot := [32]byte{}
+
+	if header.ParentRoot != nil {
+		copy(parentRoot[:], header.ParentRoot)
+	}
+	if header.StateRoot != nil {
+
+		copy(stateRoot[:], header.StateRoot)
+	}
+	if header.BodyRoot != nil {
+		copy(bodyRoot[:], header.BodyRoot)
+	}
+
+	return &ethpb.BeaconBlockHeader{
+		Slot:                 header.Slot,
+		ParentRoot:           parentRoot[:],
+		StateRoot:            stateRoot[:],
+		BodyRoot:             bodyRoot[:],
+	}
+}
+
+// CopyAttesterSlashings copies the provided AttesterSlashings array (of size 1)
+func CopyAttesterSlashings(slashings []*ethpb.AttesterSlashing) []*ethpb.AttesterSlashing {
+	if slashings == nil {
+		return slashings
+	}
+	newSlashings := [1]*ethpb.AttesterSlashing{}
+	newSlashings[0] = &ethpb.AttesterSlashing{
+		Attestation_1:        CopyIndexedAttestation(slashings[0].Attestation_1),
+		Attestation_2:        CopyIndexedAttestation(slashings[0].Attestation_2),
+	}
+	return newSlashings[:]
+}
+
+// CopyIndexedAttestation copies the provided IndexedAttestation
+func CopyIndexedAttestation(indexedAtt *ethpb.IndexedAttestation) *ethpb.IndexedAttestation {
+	if indexedAtt == nil {
+		return indexedAtt
+	}
+	indices := [2048]uint64{}
+	if indexedAtt.AttestingIndices != nil {
+		copy(indices[:], indexedAtt.AttestingIndices)
+	}
+	return &ethpb.IndexedAttestation{
+		AttestingIndices:     indices[:],
+		Data:                 CopyAttestationData(indexedAtt.Data),
+		Signature:            nil,
+	}
+
+}
+
+// CopyAttestation copies the provided Attestation array
+func CopyAttestations(attestations []*ethpb.Attestation) []*ethpb.Attestation {
+	if attestations == nil {
+		return attestations
+	}
+	newAttestations := [128]*ethpb.Attestation{}
+	for i, att := range attestations {
+		newAttestations[i] = CopyAttestation(att)
+	}
+	return newAttestations[:]
+}
+
+func CopyDeposits(deposits []*ethpb.Deposit) []*ethpb.Deposit {
+	if deposits == nil {
+		return deposits
+	}
+	newDeposits := [16]*ethpb.Deposit{}
+	for i, dep := range deposits {
+		newDeposits[i] = CopyDeposit(dep)
+	}
+	return newDeposits[:]
+}
+
+func CopyDeposit(deposit *ethpb.Deposit) *ethpb.Deposit{
+	if deposit == nil {
+		return deposit
+	}
+	var depData *ethpb.Deposit_Data
+	if deposit.Data == nil {
+		depData = &ethpb.Deposit_Data{}
+	} else {
+		pubKey := [48]byte{}
+		creds := [32]byte{}
+		sig := [96]byte{}
+		if deposit.Data.PublicKey != nil {
+			copy(pubKey[:], deposit.Data.PublicKey)
+		}
+		if deposit.Data.WithdrawalCredentials != nil {
+			copy(creds[:], deposit.Data.WithdrawalCredentials)
+		}
+		if deposit.Data.Signature != nil {
+			copy(sig[:], deposit.Data.Signature)
+		}
+		depData = &ethpb.Deposit_Data{
+			PublicKey:             pubKey[:],
+			WithdrawalCredentials: creds[:],
+			Amount:                0,
+			Signature:             sig[:],
+		}
+	}
+
+	return &ethpb.Deposit{
+		Proof:                deposit.Proof,
+		Data:                 depData,
+	}
+}
+
+func CopySignedVoluntaryExits(exits []*ethpb.SignedVoluntaryExit) []*ethpb.SignedVoluntaryExit {
+
+	if exits == nil {
+		return exits
+	}
+	newExits := [16]*ethpb.SignedVoluntaryExit{}
+	for i, exit := range exits {
+		newExits[i] = CopySignedVoluntaryExit(exit)
+	}
+	return newExits[:]
+}
+func CopySignedVoluntaryExit(exit *ethpb.SignedVoluntaryExit) *ethpb.SignedVoluntaryExit {
+	if exit == nil {
+		return nil
+	}
+	sig := [96]byte{}
+	copy(sig[:], exit.Signature)
+
+	return &ethpb.SignedVoluntaryExit{
+		Exit:                 CopyVoluntaryExit(exit.Exit),
+		Signature:            sig[:],
+	}
+}
+
+func CopyVoluntaryExit(exit *ethpb.VoluntaryExit) *ethpb.VoluntaryExit {
+	if exit == nil {
+		return nil
+	}
+	return &ethpb.VoluntaryExit{
+		Epoch:                exit.Epoch,
+		ValidatorIndex:       exit.ValidatorIndex,
 	}
 }

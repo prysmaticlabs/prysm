@@ -2,10 +2,9 @@ package blockchain
 
 import (
 	"context"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -100,7 +99,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	// Cache the new head info.
 	s.headSlot = newHead.Block.Slot
 	s.canonicalRoots[newHead.Block.Slot] = headRoot[:]
-	s.headBlock = proto.Clone(newHead).(*ethpb.SignedBeaconBlock)
+	s.headBlock = stateTrie.CopySignedBeaconBlock(newHead)
 	s.headState = headState
 
 	// Save the new head root to DB.
