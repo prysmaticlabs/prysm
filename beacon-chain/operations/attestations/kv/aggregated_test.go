@@ -295,11 +295,8 @@ func TestKV_Aggregated_AggregatesAttestations(t *testing.T) {
 
 	returned := cache.AggregatedAttestations()
 
-	sort.Slice(returned, func(i, j int) bool {
-		return returned[i].Data.Slot < returned[j].Data.Slot
-	})
-
-	if !reflect.DeepEqual(atts[1:], returned) {
+	// It should have only returned att2.
+	if !reflect.DeepEqual(att2, returned[0]) || len(returned) != 1 {
 		t.Error("Did not receive correct aggregated atts")
 	}
 }
