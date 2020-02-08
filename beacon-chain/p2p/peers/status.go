@@ -28,6 +28,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	ma "github.com/multiformats/go-multiaddr"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
@@ -391,4 +392,17 @@ func (p *Status) fetch(pid peer.ID) *peerStatus {
 		p.status[pid] = &peerStatus{}
 	}
 	return p.status[pid]
+}
+
+// CurrentEpoch returns the highest reported epoch amongst peers.
+func (p *Status) CurrentEpoch() uint64 {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+	var highestSlot uint64
+	for _, ps := range p.status {
+		if ps.chainState.HeadSlot > highestSlot {
+			highestSlot = ps.chainState.HeadSlot
+		}
+	}
+	return helpers.SlotToEpoch(highestSlot)
 }
