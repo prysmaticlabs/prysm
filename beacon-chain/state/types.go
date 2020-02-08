@@ -54,7 +54,7 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 	b := &BeaconState{
 		state:                 st,
 		dirtyFields:           make(map[fieldIndex]interface{}, 20),
-		sharedFieldReferences: make(map[fieldIndex]*reference, 4),
+		sharedFieldReferences: make(map[fieldIndex]*reference, 10),
 		valIdxMap:             coreutils.ValidatorIndexMap(st.Validators),
 	}
 
@@ -66,7 +66,13 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 	b.sharedFieldReferences[randaoMixes] = &reference{refs: 1}
 	b.sharedFieldReferences[stateRoots] = &reference{refs: 1}
 	b.sharedFieldReferences[blockRoots] = &reference{refs: 1}
+	b.sharedFieldReferences[previousEpochAttestations] = &reference{refs: 1}
+	b.sharedFieldReferences[currentEpochAttestations] = &reference{refs: 1}
+	b.sharedFieldReferences[slashings] = &reference{refs: 1}
+	b.sharedFieldReferences[eth1DataVotes] = &reference{refs: 1}
 	b.sharedFieldReferences[validators] = &reference{refs: 1}
+	b.sharedFieldReferences[balances] = &reference{refs: 1}
+	b.sharedFieldReferences[historicalRoots] = &reference{refs: 1}
 
 	return b, nil
 }
@@ -84,20 +90,18 @@ func (b *BeaconState) Copy() *BeaconState {
 			Eth1DepositIndex: b.state.Eth1DepositIndex,
 
 			// Large arrays, infrequently changed, constant size.
-			RandaoMixes: b.state.RandaoMixes,
-			StateRoots:  b.state.StateRoots,
-			BlockRoots:  b.state.BlockRoots,
+			RandaoMixes:               b.state.RandaoMixes,
+			StateRoots:                b.state.StateRoots,
+			BlockRoots:                b.state.BlockRoots,
+			PreviousEpochAttestations: b.state.PreviousEpochAttestations,
+			CurrentEpochAttestations:  b.state.CurrentEpochAttestations,
+			Slashings:                 b.state.Slashings,
+			Eth1DataVotes:             b.state.Eth1DataVotes,
 
 			// Large arrays, increases over time.
-			Validators: b.state.Validators,
-
-			// Potential candidates for copy-on-write.
-			Balances:                  b.Balances(),
-			HistoricalRoots:           b.HistoricalRoots(),
-			PreviousEpochAttestations: b.PreviousEpochAttestations(),
-			CurrentEpochAttestations:  b.CurrentEpochAttestations(),
-			Slashings:                 b.Slashings(),
-			Eth1DataVotes:             b.Eth1DataVotes(),
+			Validators:      b.state.Validators,
+			Balances:        b.state.Balances,
+			HistoricalRoots: b.state.HistoricalRoots,
 
 			// Everything else, too small to be concerned about, constant size.
 			Fork:                        b.Fork(),
@@ -109,7 +113,7 @@ func (b *BeaconState) Copy() *BeaconState {
 			FinalizedCheckpoint:         b.FinalizedCheckpoint(),
 		},
 		dirtyFields:           make(map[fieldIndex]interface{}, 20),
-		sharedFieldReferences: make(map[fieldIndex]*reference, 4),
+		sharedFieldReferences: make(map[fieldIndex]*reference, 10),
 
 		// Copy on write validator index map.
 		valIdxMap: b.valIdxMap,
