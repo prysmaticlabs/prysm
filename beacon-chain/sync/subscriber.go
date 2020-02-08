@@ -212,6 +212,9 @@ func (r *Service) subscribeDynamic(topicFormat string, determineSubIndices func(
 				stateSub.Unsubscribe()
 				return
 			case <-stateChannel:
+				if r.chainStarted && r.initialSync.Syncing() {
+					continue
+				}
 				// Update desired topic indices.
 				wantedSubs := determineSubIndices()
 				// Resize as appropriate.
