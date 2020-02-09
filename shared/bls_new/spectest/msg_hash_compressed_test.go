@@ -8,7 +8,7 @@ import (
 
 	"github.com/ghodss/yaml"
 	bls2 "github.com/herumi/bls-eth-go-binary/bls"
-	"github.com/prysmaticlabs/prysm/shared/bls"
+	bls "github.com/prysmaticlabs/prysm/shared/bls_new"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )

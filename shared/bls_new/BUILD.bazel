@@ -1,9 +1,10 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
+# gazelle:ignore
 go_library(
     name = "go_default_library",
     srcs = ["bls.go"],
-    importpath = "github.com/prysmaticlabs/prysm/shared/bls",
+    importpath = "github.com/prysmaticlabs/prysm/shared/bls_new",
     visibility = ["//visibility:public"],
     deps = [
         "//shared/bytesutil:go_default_library",

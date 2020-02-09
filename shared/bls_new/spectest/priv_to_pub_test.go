@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/ghodss/yaml"
-	"github.com/prysmaticlabs/prysm/shared/bls"
+	bls "github.com/prysmaticlabs/prysm/shared/bls_new"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
