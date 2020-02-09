@@ -4,9 +4,14 @@ go_library(
     name = "go_default_library",
     srcs = [
         "doc.go",
+        "getter.go",
         "service.go",
+        "setter.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state-gen",
-    visibility = ["//visibility:public"],
-    deps = ["//beacon-chain/db:go_default_library"],
+    visibility = ["//beacon-chain:__subpackages__"],
+    deps = [
+        "//beacon-chain/db:go_default_library",
+        "//beacon-chain/state:go_default_library",
+    ],
 )
