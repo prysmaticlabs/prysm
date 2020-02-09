@@ -155,7 +155,12 @@ func (s *Service) HeadState(ctx context.Context) (*state.BeaconState, error) {
 	defer s.headLock.RUnlock()
 
 	if s.headState == nil {
-		return s.beaconDB.HeadState(ctx)
+		headState, err := s.beaconDB.HeadState(ctx)
+		if err != nil {
+			return nil, err
+		}
+		s.headState = headState
+		return headState, nil
 	}
 
 	return s.headState.Copy(), nil
