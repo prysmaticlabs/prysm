@@ -137,7 +137,7 @@ http_archive(
 )
 
 http_archive(
-    name = "eth2_spec_tests_general",
+    name = "eth2_spec_tests_general_old",
     build_file_content = """
 filegroup(
     name = "test_data",
@@ -153,7 +153,7 @@ filegroup(
 )
 
 http_archive(
-    name = "eth2_spec_tests_minimal",
+    name = "eth2_spec_tests_minimal_old",
     build_file_content = """
 filegroup(
     name = "test_data",
@@ -169,7 +169,7 @@ filegroup(
 )
 
 http_archive(
-    name = "eth2_spec_tests_mainnet",
+    name = "eth2_spec_tests_mainnet_old",
     build_file_content = """
 filegroup(
     name = "test_data",
@@ -182,6 +182,54 @@ filegroup(
     """,
     sha256 = "8fc1b6220973ca30fa4ddc4ed24d66b1719abadca8bedb5e06c3bd9bc0df28e9",
     url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.9.4/mainnet.tar.gz",
+)
+
+http_archive(
+    name = "eth2_spec_tests_general",
+    build_file_content = """
+filegroup(
+    name = "test_data",
+    srcs = glob([
+        "**/*.ssz",
+        "**/*.yaml",
+    ]),
+    visibility = ["//visibility:public"],
+)
+    """,
+    # sha256 = "72c6ee3c20d19736b1203f364a6eb0ddee2c173073e20bee2beccd288fdc42be",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.10.1/general.tar.gz",
+)
+
+http_archive(
+    name = "eth2_spec_tests_minimal",
+    build_file_content = """
+filegroup(
+    name = "test_data",
+    srcs = glob([
+        "**/*.ssz",
+        "**/*.yaml",
+    ]),
+    visibility = ["//visibility:public"],
+)
+    """,
+    # sha256 = "a3cc860a3679f6f62ee57b65677a9b48a65fdebb151cdcbf50f23852632845ef",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.10.1/minimal.tar.gz",
+)
+
+http_archive(
+    name = "eth2_spec_tests_mainnet",
+    build_file_content = """
+filegroup(
+    name = "test_data",
+    srcs = glob([
+        "**/*.ssz",
+        "**/*.yaml",
+    ]),
+    visibility = ["//visibility:public"],
+)
+    """,
+    #sha256 = "8fc1b6220973ca30fa4ddc4ed24d66b1719abadca8bedb5e06c3bd9bc0df28e9",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.10.1/mainnet.tar.gz",
 )
 
 http_archive(
