@@ -171,7 +171,7 @@ func (s *Signature) Verify(msg []byte, pub *PublicKey) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
 	}
-	return s.s.VerifyHashWithDomain(pub.p, msg)
+	return s.s.VerifyHash(pub.p, msg)
 }
 
 // VerifyAggregate verifies each public key against its respective message.

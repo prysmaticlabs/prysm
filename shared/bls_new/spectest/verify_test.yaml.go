@@ -5,9 +5,9 @@ package spectest
 
 type VerifyMsgTest struct {
 	Input struct {
-		Privkey   string `json:"privkey"`
+		Pubkey    string `json:"pubkey"`
 		Message   string `json:"message"`
-		Signature string `json: "signature"`
+		Signature string `json:"signature"`
 	} `json:"input"`
-	Output string `json:"output"`
+	Output bool `json:"output"`
 }
