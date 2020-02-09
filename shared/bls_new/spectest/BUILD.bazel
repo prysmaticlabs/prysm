@@ -10,6 +10,7 @@ go_library(
         "msg_hash_uncompressed_test.yaml.go",
         "priv_to_pub_test.yaml.go",
         "sign_test.yaml.go",
+        "verify_test.yaml.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/bls_new/spectest",
     visibility = ["//visibility:public"],
@@ -25,6 +26,7 @@ go_test(
         "msg_hash_uncompressed_test.go",
         "priv_to_pub_test.go",
         "sign_test.go",
+        "verify_test.go",
     ],
     data = [
         "@eth2_spec_tests_general_new//:test_data",
