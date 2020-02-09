@@ -91,6 +91,9 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 			return errors.New("cannot save nil head state")
 		}
 	}
+	if headState == nil {
+		return errors.New("cannot save nil head state")
+	}
 
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
