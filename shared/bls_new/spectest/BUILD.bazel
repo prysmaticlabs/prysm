@@ -11,7 +11,7 @@ go_library(
         "priv_to_pub_test.yaml.go",
         "sign_msg_test.yaml.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/shared/bls/spectest",
+    importpath = "github.com/prysmaticlabs/prysm/shared/bls_new/spectest",
     visibility = ["//visibility:public"],
 )
 
@@ -32,7 +32,7 @@ go_test(
     embed = [":go_default_library"],
     tags = ["spectest"],
     deps = [
-        "//shared/bls:go_default_library",
+        "//shared/bls_new:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",

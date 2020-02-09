@@ -127,11 +127,11 @@ func concatMsgAndDomain(msg []byte, domain uint64) []byte {
 }
 
 // Sign a message using a secret key - in a beacon/validator client.
-func (s *SecretKey) Sign(msg []byte, domain uint64) *Signature {
+func (s *SecretKey) Sign(msg []byte) *Signature {
 	if featureconfig.Get().SkipBLSVerify {
 		return &Signature{}
 	}
-	signature := s.p.SignHashWithDomain(concatMsgAndDomain(msg, domain))
+	signature := s.p.SignHash(msg)
 	return &Signature{s: signature}
 }
 
@@ -177,7 +177,7 @@ func (s *Signature) Verify(msg []byte, pub *PublicKey, domain uint64) bool {
 // VerifyAggregate verifies each public key against its respective message.
 // This is vulnerable to rogue public-key attack. Each user must
 // provide a proof-of-knowledge of the public key.
-func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg [][32]byte, domain uint64) bool {
+func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg [][32]byte) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
 	}
@@ -188,21 +188,19 @@ func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg [][32]byte, domain
 	if size != len(msg) {
 		return false
 	}
-	b := [8]byte{}
-	binary.LittleEndian.PutUint64(b[:], domain)
-	hashWithDomains := make([]byte, 0, size*concatMsgDomainSize)
+	hashes := make([][]byte, 0, len(msg))
 	var rawKeys []bls12.PublicKey
 	for i := 0; i < size; i++ {
-		hashWithDomains = append(hashWithDomains, concatMsgAndDomain(msg[i][:], domain)...)
+		hashes = append(hashes, msg[i][:])
 		rawKeys = append(rawKeys, *pubKeys[i].p)
 	}
-	return s.s.VerifyAggregateHashWithDomain(rawKeys, hashWithDomains)
+	return s.s.VerifyAggregateHashes(rawKeys, hashes)
 }
 
 // VerifyAggregateCommon verifies each public key against its respective message.
 // This is vulnerable to rogue public-key attack. Each user must
 // provide a proof-of-knowledge of the public key.
-func (s *Signature) VerifyAggregateCommon(pubKeys []*PublicKey, msg [32]byte, domain uint64) bool {
+func (s *Signature) VerifyAggregateCommon(pubKeys []*PublicKey, msg [32]byte) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
 	}
@@ -216,7 +214,7 @@ func (s *Signature) VerifyAggregateCommon(pubKeys []*PublicKey, msg [32]byte, do
 		aggregated.p.Add(pubKeys[i].p)
 	}
 
-	return s.s.VerifyHashWithDomain(aggregated.p, concatMsgAndDomain(msg[:], domain))
+	return s.s.VerifyHash(aggregated.p, msg[:])
 }
 
 // NewAggregateSignature creates a blank aggregate signature.
