@@ -27,7 +27,7 @@ func (r *Service) goodbyeRPCHandler(ctx context.Context, msg interface{}, stream
 	defer cancel()
 	setRPCStreamDeadlines(stream)
 
-	m, ok:= msg.(uint64)
+	m, ok := msg.(uint64)
 	if !ok {
 		return fmt.Errorf("wrong message type for goodbye, got %T, wanted uint64", msg)
 	}
