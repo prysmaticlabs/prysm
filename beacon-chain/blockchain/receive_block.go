@@ -76,21 +76,6 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 		return err
 	}
 
-	root, err := ssz.HashTreeRoot(blockCopy.Block)
-	if err != nil {
-		return errors.Wrap(err, "could not get signing root on received block")
-	}
-
-	// Send notification of the processed block to the state feed.
-	s.stateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.BlockProcessed,
-		Data: &statefeed.BlockProcessedData{
-			Slot:      blockCopy.Block.Slot,
-			BlockRoot: root,
-			Verified:  true,
-		},
-	})
-
 	// Add attestations from the block to the pool for fork choice.
 	if err := s.attPool.SaveBlockAttestations(blockCopy.Block.Body.Attestations); err != nil {
 		log.Errorf("Could not save attestation for fork choice: %v", err)
@@ -104,6 +89,11 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 	defer s.epochParticipationLock.Unlock()
 	s.epochParticipation[helpers.SlotToEpoch(blockCopy.Block.Slot)] = precompute.Balances
 
+	root, err := ssz.HashTreeRoot(blockCopy.Block)
+	if err != nil {
+		return errors.Wrap(err, "could not get signing root on received block")
+	}
+
 	if featureconfig.Get().DisableForkChoice && block.Block.Slot > s.headSlot {
 		if err := s.saveHead(ctx, root); err != nil {
 			return errors.Wrap(err, "could not save head")
@@ -113,6 +103,16 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 			return errors.Wrap(err, "could not save head")
 		}
 	}
+
+	// Send notification of the processed block to the state feed.
+	s.stateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.BlockProcessed,
+		Data: &statefeed.BlockProcessedData{
+			Slot:      blockCopy.Block.Slot,
+			BlockRoot: root,
+			Verified:  true,
+		},
+	})
 
 	// Reports on block and fork choice metrics.
 	metrics.ReportSlotMetrics(blockCopy.Block.Slot, s.headSlot, s.headState)
