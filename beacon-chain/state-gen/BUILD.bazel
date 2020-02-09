@@ -5,6 +5,8 @@ go_library(
     srcs = [
         "doc.go",
         "getter.go",
+        "migrate.go",
+        "replay.go",
         "service.go",
         "setter.go",
     ],
@@ -13,5 +15,6 @@ go_library(
     deps = [
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/state:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
     ],
 )
