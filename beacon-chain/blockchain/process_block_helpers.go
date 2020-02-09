@@ -433,7 +433,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.
 	return nil
 }
 
-// The deletes input from the attestation pool, so proposers don't include them in a block for the future.
+// The deletes input attestations from the attestation pool, so proposers don't include them in a block for the future.
 func (s *Service) deletePoolAtts(atts []*ethpb.Attestation) error {
 	for _, att := range atts {
 		if helpers.IsAggregated(att) {
