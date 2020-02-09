@@ -64,6 +64,9 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve head state in DB")
 	}
+	if headState == nil {
+		return errors.New("cannot save nil head state")
+	}
 
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
