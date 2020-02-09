@@ -7,7 +7,6 @@ type SignMsgTest struct {
 	Input struct {
 		Privkey string `json:"privkey"`
 		Message string `json:"message"`
-		Domain  string `json:"domain"`
 	} `json:"input"`
 	Output string `json:"output"`
 }

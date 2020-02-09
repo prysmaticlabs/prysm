@@ -167,11 +167,11 @@ func (p *PublicKey) Aggregate(p2 *PublicKey) *PublicKey {
 }
 
 // Verify a bls signature given a public key, a message, and a domain.
-func (s *Signature) Verify(msg []byte, pub *PublicKey, domain uint64) bool {
+func (s *Signature) Verify(msg []byte, pub *PublicKey) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
 	}
-	return s.s.VerifyHashWithDomain(pub.p, concatMsgAndDomain(msg, domain))
+	return s.s.VerifyHashWithDomain(pub.p, msg)
 }
 
 // VerifyAggregate verifies each public key against its respective message.

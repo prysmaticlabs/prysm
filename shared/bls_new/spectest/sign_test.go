@@ -2,7 +2,6 @@ package spectest
 
 import (
 	"bytes"
-	"encoding/binary"
 	"encoding/hex"
 	"path"
 	"testing"
@@ -13,7 +12,7 @@ import (
 )
 
 func TestSignMessageYaml(t *testing.T) {
-	testFolders, testFolderPath := testutil.TestFolders(t, "general", "bls/sign_msg/small")
+	testFolders, testFolderPath := testutil.TestFolders(t, "general", "bls/sign/small")
 
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
@@ -39,23 +38,17 @@ func TestSignMessageYaml(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Cannot decode string to bytes: %v", err)
 			}
-			domain, err := hex.DecodeString(test.Input.Domain[2:])
-			if err != nil {
-				t.Fatalf("Cannot decode string to bytes: %v", err)
-			}
-			num := binary.LittleEndian.Uint64(domain)
-			sig := sk.Sign(msgBytes, num)
+			sig := sk.Sign(msgBytes)
 
 			outputBytes, err := hex.DecodeString(test.Output[2:])
 			if err != nil {
 				t.Fatalf("Cannot decode string to bytes: %v", err)
 			}
 			if !bytes.Equal(outputBytes, sig.Marshal()) {
-				t.Logf("Domain=%d", domain)
 				t.Fatalf("Signature does not match the expected output. "+
 					"Expected %#x but received %#x", outputBytes, sig.Marshal())
 			}
-			t.Logf("Success. Domain=%d", domain)
+			t.Log("Success")
 		})
 	}
 }
