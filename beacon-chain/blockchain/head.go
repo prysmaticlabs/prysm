@@ -55,7 +55,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	// If the head state is not available, just return nil.
 	// There's nothing to cache
 	_, cached := s.initSyncState[headRoot]
-	if !s.beaconDB.HasState(ctx, headRoot) && !cached {
+	if !cached && !s.beaconDB.HasState(ctx, headRoot) {
 		return nil
 	}
 
