@@ -27,7 +27,7 @@ go_test(
         "sign_msg_test.go",
     ],
     data = [
-        "@eth2_spec_tests_general_old//:test_data",
+        "@eth2_spec_tests_general//:test_data",
     ],
     embed = [":go_default_library"],
     tags = ["spectest"],

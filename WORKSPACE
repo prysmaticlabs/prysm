@@ -137,7 +137,7 @@ http_archive(
 )
 
 http_archive(
-    name = "eth2_spec_tests_general_old",
+    name = "eth2_spec_tests_general",
     build_file_content = """
 filegroup(
     name = "test_data",
@@ -153,7 +153,7 @@ filegroup(
 )
 
 http_archive(
-    name = "eth2_spec_tests_minimal_old",
+    name = "eth2_spec_tests_minimal",
     build_file_content = """
 filegroup(
     name = "test_data",
@@ -169,7 +169,7 @@ filegroup(
 )
 
 http_archive(
-    name = "eth2_spec_tests_mainnet_old",
+    name = "eth2_spec_tests_mainnet",
     build_file_content = """
 filegroup(
     name = "test_data",
@@ -185,7 +185,7 @@ filegroup(
 )
 
 http_archive(
-    name = "eth2_spec_tests_general",
+    name = "eth2_spec_tests_general_new",
     build_file_content = """
 filegroup(
     name = "test_data",
@@ -201,7 +201,7 @@ filegroup(
 )
 
 http_archive(
-    name = "eth2_spec_tests_minimal",
+    name = "eth2_spec_tests_minimal_new",
     build_file_content = """
 filegroup(
     name = "test_data",
@@ -217,7 +217,7 @@ filegroup(
 )
 
 http_archive(
-    name = "eth2_spec_tests_mainnet",
+    name = "eth2_spec_tests_mainnet_new",
     build_file_content = """
 filegroup(
     name = "test_data",
