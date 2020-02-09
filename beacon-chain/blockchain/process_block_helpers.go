@@ -432,3 +432,20 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.
 
 	return nil
 }
+
+// The deletes input attestations from the attestation pool, so proposers don't include them in a block for the future.
+func (s *Service) deletePoolAtts(atts []*ethpb.Attestation) error {
+	for _, att := range atts {
+		if helpers.IsAggregated(att) {
+			if err := s.attPool.DeleteAggregatedAttestation(att); err != nil {
+				return err
+			}
+		} else {
+			if err := s.attPool.DeleteUnaggregatedAttestation(att); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
