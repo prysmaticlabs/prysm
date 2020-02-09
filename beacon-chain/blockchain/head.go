@@ -52,6 +52,13 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 		return nil
 	}
 
+	// If the head state is not available, just return nil.
+	// There's nothing to cache
+	_, cached := s.initSyncState[headRoot]
+	if !s.beaconDB.HasState(ctx, headRoot) && !cached {
+		return nil
+	}
+
 	// Get the new head block from DB.
 	newHead, err := s.beaconDB.Block(ctx, headRoot)
 	if err != nil {
@@ -65,9 +72,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	var headState *state.BeaconState
 	var exists bool
 	if featureconfig.Get().InitSyncCacheState {
-		s.initSyncStateLock.RLock()
 		headState, exists = s.initSyncState[headRoot]
-		s.initSyncStateLock.RUnlock()
 		if !exists {
 			headState, err = s.beaconDB.State(ctx, headRoot)
 			if err != nil {
