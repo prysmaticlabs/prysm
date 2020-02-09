@@ -11,6 +11,7 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestStatus(t *testing.T) {
@@ -455,6 +456,30 @@ func TestBestFinalized_returnsMaxValue(t *testing.T) {
 	_, _, pids := p.BestFinalized(maxPeers, 0)
 	if len(pids) != maxPeers {
 		t.Fatalf("returned wrong number of peers, wanted %d, got %d", maxPeers, len(pids))
+	}
+}
+
+func TestStatus_CurrentEpoch(t *testing.T) {
+	maxBadResponses := 2
+	p := peers.NewStatus(maxBadResponses)
+	// Peer 1
+	pid1 := addPeer(t, p, peers.PeerConnected)
+	p.SetChainState(pid1, &pb.Status{
+		HeadSlot: params.BeaconConfig().SlotsPerEpoch * 4,
+	})
+	// Peer 2
+	pid2 := addPeer(t, p, peers.PeerConnected)
+	p.SetChainState(pid2, &pb.Status{
+		HeadSlot: params.BeaconConfig().SlotsPerEpoch * 5,
+	})
+	// Peer 3
+	pid3 := addPeer(t, p, peers.PeerConnected)
+	p.SetChainState(pid3, &pb.Status{
+		HeadSlot: params.BeaconConfig().SlotsPerEpoch * 4,
+	})
+
+	if p.CurrentEpoch() != 5 {
+		t.Fatalf("Expected current epoch to be 5, got %d", p.CurrentEpoch())
 	}
 }
 
