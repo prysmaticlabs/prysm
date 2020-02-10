@@ -203,17 +203,6 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 			},
 		},
 		{
-			name: "Slashing for slashed validator ",
-			fields: fields{
-				pending:  []*PendingAttesterSlashing{},
-				included: make(map[uint64]bool),
-			},
-			args: args{
-				slashing: attesterSlashingForValIdx(5),
-			},
-			want: []*PendingAttesterSlashing{},
-		},
-		{
 			name: "Already included",
 			fields: fields{
 				pending: []*PendingAttesterSlashing{},
@@ -257,9 +246,6 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 		{ // 4 - Will be exited.
 			ExitEpoch: 17,
 		},
-		{ // 5 - Slashed.
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -272,7 +258,6 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 				t.Fatal(err)
 			}
 			s.SetSlot(16 * params.BeaconConfig().SlotsPerEpoch)
-			s.SetSlashings([]uint64{5})
 			p.InsertAttesterSlashing(s, tt.args.slashing)
 			if len(p.pendingAttesterSlashing) != len(tt.want) {
 				t.Fatalf("Mismatched lengths of pending list. Got %d, wanted %d.", len(p.pendingAttesterSlashing), len(tt.want))
