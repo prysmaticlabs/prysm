@@ -70,3 +70,24 @@ func computeDeltas(
 
 	return deltas, votes, nil
 }
+
+// This return a copy of the proto array node object.
+func copyNode(node *Node) *Node {
+	if node == nil {
+		return &Node{}
+	}
+
+	copiedRoot := [32]byte{}
+	copy(copiedRoot[:], node.root[:])
+
+	return &Node{
+		Slot:           node.Slot,
+		root:           copiedRoot,
+		Parent:         node.Parent,
+		justifiedEpoch: node.justifiedEpoch,
+		finalizedEpoch: node.finalizedEpoch,
+		Weight:         node.Weight,
+		bestChild:      node.bestChild,
+		BestDescendent: node.BestDescendent,
+	}
+}
