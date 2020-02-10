@@ -114,6 +114,29 @@ contract in order to activate the validator client`,
 						}
 					},
 				},
+				cli.Command{
+					Name:        "keys",
+					Description: `lists the private keys for 'keystore' keymanager keys`,
+					Flags: []cli.Flag{
+						flags.KeystorePathFlag,
+						flags.PasswordFlag,
+					},
+					Action: func(ctx *cli.Context) {
+						if ctx.String(flags.KeystorePathFlag.Name) == "" {
+							log.Fatalf("%s is required", flags.KeystorePathFlag.Name)
+						}
+						if ctx.String(flags.PasswordFlag.Name) == "" {
+							log.Fatalf("%s is required", flags.PasswordFlag.Name)
+						}
+						keystores, err := accounts.DecryptKeysFromKeystore(ctx.String(flags.KeystorePathFlag.Name), ctx.String(flags.PasswordFlag.Name))
+						if err != nil {
+							log.WithError(err).Fatalf("Failed to decrypt keystore keys at path %s", ctx.String(flags.KeystorePathFlag.Name))
+						}
+						for _, v := range keystores {
+							fmt.Printf("Public key: %#x private key: %#x\n", v.PublicKey.Marshal(), v.SecretKey.Marshal())
+						}
+					},
+				},
 			},
 		},
 	}
