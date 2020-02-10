@@ -74,7 +74,7 @@ func (s *Service) attestationFeeder() error {
 			if err != nil {
 				continue
 			}
-			log.Info("detected attestation for target: %d", at.Data.Target)
+			log.Infof("detected attestation for target: %d", at.Data.Target.Epoch)
 		case <-s.context.Done():
 			err := status.Error(codes.Canceled, "Stream context canceled")
 			log.WithError(err)
@@ -127,7 +127,7 @@ func (s *Service) slasherOldAttestationFeeder() error {
 			log.Error(err)
 			continue
 		}
-		log.Infof("Detecting slashable events on: %v attestations from epoch: %v", len(ats.Attestations), epoch)
+		log.Infof("Detecting slashable events on: %d attestations from epoch: %v", len(ats.Attestations), epoch)
 		for _, attestation := range ats.Attestations {
 			if err := s.detectAttestation(attestation, bcs); err != nil {
 				continue
