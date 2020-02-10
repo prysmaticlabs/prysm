@@ -62,7 +62,7 @@ func TestClient_SlashingPoolFeeder_NoSlasher(t *testing.T) {
 	}
 }
 
-func TestClient_UpdatePool_OK(t *testing.T) {
+func TestClient_UpdatePool_FullCycle(t *testing.T) {
 	ctx := context.Background()
 	// Generate validators and state for the 2 attestations.
 	validatorCount := 10
