@@ -5,44 +5,34 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/slasher/cache"
 )
 
 func TestCommitteesCache_RoundTrip(t *testing.T) {
 	ctx := context.Background()
 	c := cache.NewCommitteesCache()
-	fc := featureconfig.Get()
-	fc.EnableCommitteesCache = true
-	featureconfig.Init(fc)
+	numValidators := 64
+	wanted := make(map[uint64]*ethpb.BeaconCommittees_CommitteesList)
+	committeeItems := make([]*ethpb.BeaconCommittees_CommitteeItem, 1)
+	committeeItems[0] = &ethpb.BeaconCommittees_CommitteeItem{ValidatorIndices: []uint64{1, 2, 3}}
+	wanted[0] = &ethpb.BeaconCommittees_CommitteesList{Committees: committeeItems}
+	wantedRes := &ethpb.BeaconCommittees{
+		Epoch:                5,
+		Committees:           wanted,
+		ActiveValidatorCount: uint64(numValidators),
+	}
 
-	state, err := c.Get(ctx, 5)
+	committees, err := c.Get(ctx, 5)
 	if err != nil {
 		t.Error(err)
 	}
 
-	if state != nil {
-		t.Errorf("Empty cache returned an object: %v", state)
+	if committees != nil {
+		t.Errorf("Empty cache returned an object: %v", committees)
 	}
 
-	if err := c.MarkInProgress(5); err != nil {
-		t.Error(err)
-	}
-
-	state, err = stateTrie.InitializeFromProto(&pb.BeaconState{
-		Slot: 10,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err = c.Put(ctx, 5, state); err != nil {
-		t.Error(err)
-	}
-
-	if err := c.MarkNotInProgress(5); err != nil {
+	if err = c.Put(ctx, 5, wantedRes); err != nil {
 		t.Error(err)
 	}
 
@@ -51,7 +41,7 @@ func TestCommitteesCache_RoundTrip(t *testing.T) {
 		t.Error(err)
 	}
 
-	if !reflect.DeepEqual(state.CloneInnerState(), res.CloneInnerState()) {
+	if !reflect.DeepEqual(wantedRes, res) {
 		t.Error("Expected equal protos to return from cache")
 	}
 }
