@@ -86,17 +86,6 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 			},
 		},
 		{
-			name: "Slashing for slashed validator",
-			fields: fields{
-				pending:  []*ethpb.ProposerSlashing{},
-				included: make(map[uint64]bool),
-			},
-			args: args{
-				slashing: proposerSlashingForValIdx(5),
-			},
-			want: []*ethpb.ProposerSlashing{},
-		},
-		{
 			name: "Already included",
 			fields: fields{
 				pending: []*ethpb.ProposerSlashing{},
@@ -143,9 +132,6 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 		},
 		{ // 4 - Will be exited.
 			ExitEpoch: 17,
-		},
-		{ // 5 - Slashed.
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 	}
 	for _, tt := range tests {
