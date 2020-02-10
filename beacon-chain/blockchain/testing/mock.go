@@ -232,4 +232,5 @@ func (ms *ChainService) IsValidAttestation(ctx context.Context, att *ethpb.Attes
 	return ms.ValidAttestation
 }
 
+// ClearCachedStates does nothing.
 func (ms *ChainService) ClearCachedStates() {}
