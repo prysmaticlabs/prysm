@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/memorypool"
 )
 
 type fieldIndex int
@@ -389,7 +390,9 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
 	b.lock.RLock()
 	mixes := b.state.RandaoMixes
 	if refs := b.sharedFieldReferences[randaoMixes].refs; refs > 1 {
-		mixes = b.RandaoMixes()
+		newMixes := memorypool.GetDoubleByteSlice(len(mixes))
+		copy(newMixes, mixes)
+		mixes = newMixes
 		b.sharedFieldReferences[randaoMixes].refs--
 		b.sharedFieldReferences[randaoMixes] = &reference{refs: 1}
 	}
@@ -500,7 +503,9 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestati
 
 	atts := b.state.CurrentEpochAttestations
 	if b.sharedFieldReferences[currentEpochAttestations].refs > 1 {
-		atts = b.CurrentEpochAttestations()
+		copiedAtts := make([]*pbp2p.PendingAttestation, len(atts), len(atts)+1)
+		copy(copiedAtts, atts)
+		atts = copiedAtts
 		b.sharedFieldReferences[currentEpochAttestations].refs--
 		b.sharedFieldReferences[currentEpochAttestations] = &reference{refs: 1}
 	}
@@ -520,7 +525,9 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestat
 	b.lock.RLock()
 	atts := b.state.PreviousEpochAttestations
 	if b.sharedFieldReferences[previousEpochAttestations].refs > 1 {
-		atts = b.PreviousEpochAttestations()
+		copiedAtts := make([]*pbp2p.PendingAttestation, len(atts), len(atts)+1)
+		copy(copiedAtts, atts)
+		atts = copiedAtts
 		b.sharedFieldReferences[previousEpochAttestations].refs--
 		b.sharedFieldReferences[previousEpochAttestations] = &reference{refs: 1}
 	}
