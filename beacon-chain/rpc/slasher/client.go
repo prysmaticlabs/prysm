@@ -19,7 +19,7 @@ import (
 var log logrus.FieldLogger
 
 func init() {
-	log = logrus.WithField("prefix", "rpc/aggregator")
+	log = logrus.WithField("prefix", "rpc/slasher")
 }
 
 // Client defines a client implementation of the gRPC slasher service.
@@ -37,9 +37,15 @@ func (s *Client) SlashingPoolFeeder(ctx context.Context) error {
 	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch
 	d := time.Duration(secondsPerEpoch) * time.Second
 	tick := time.Tick(d)
+	log.Infof("started slasher ticker %v", d)
+	log.Info("updating slashing pool on start")
+	if err := s.updatePool(ctx); err != nil {
+		return errors.Wrap(err, "failed to update slashing pool")
+	}
 	for {
 		select {
 		case <-tick:
+			log.Info("updating slashing pool on epoch")
 			if err := s.updatePool(ctx); err != nil {
 				return errors.Wrap(err, "failed to update slashing pool")
 			}
@@ -56,6 +62,7 @@ func (s *Client) updatePool(ctx context.Context) error {
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
+
 	if s.SlasherClient != nil {
 		if err := s.updateSlashingPool(ctx, state); err != nil {
 			log.WithError(err)

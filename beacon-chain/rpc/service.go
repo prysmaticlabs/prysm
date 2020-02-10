@@ -263,6 +263,9 @@ func (s *Service) Start() {
 		AttPool:     s.attestationsPool,
 		P2p:         s.p2p,
 	}
+	if featureconfig.Get().EnableSlasherConnection {
+		s.startSlasherClient()
+	}
 	slasherClient := &slasher.Client{
 		HeadFetcher:     s.headFetcher,
 		SlashingPool:    s.slashingPool,
@@ -287,7 +290,6 @@ func (s *Service) Start() {
 		}
 	}()
 	if featureconfig.Get().EnableSlasherConnection {
-		s.startSlasherClient()
 		go func() {
 			if err := slasherClient.SlashingPoolFeeder(s.ctx); err != nil {
 				log.Errorf("could not run pool feeder: %v", err)
