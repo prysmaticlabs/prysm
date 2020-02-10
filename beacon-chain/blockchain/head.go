@@ -6,7 +6,9 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"go.opencensus.io/trace"
 )
 
@@ -50,6 +52,13 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 		return nil
 	}
 
+	// If the head state is not available, just return nil.
+	// There's nothing to cache
+	_, cached := s.initSyncState[headRoot]
+	if !cached && !s.beaconDB.HasState(ctx, headRoot) {
+		return nil
+	}
+
 	// Get the new head block from DB.
 	newHead, err := s.beaconDB.Block(ctx, headRoot)
 	if err != nil {
@@ -59,10 +68,28 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 		return errors.New("cannot save nil head block")
 	}
 
-	// Get the new head state from DB.
-	headState, err := s.beaconDB.State(ctx, headRoot)
-	if err != nil {
-		return errors.Wrap(err, "could not retrieve head state in DB")
+	// Get the new head state from cached state or DB.
+	var headState *state.BeaconState
+	var exists bool
+	if featureconfig.Get().InitSyncCacheState {
+		headState, exists = s.initSyncState[headRoot]
+		if !exists {
+			headState, err = s.beaconDB.State(ctx, headRoot)
+			if err != nil {
+				return errors.Wrap(err, "could not retrieve head state in DB")
+			}
+			if headState == nil {
+				return errors.New("cannot save nil head state")
+			}
+		}
+	} else {
+		headState, err = s.beaconDB.State(ctx, headRoot)
+		if err != nil {
+			return errors.Wrap(err, "could not retrieve head state in DB")
+		}
+		if headState == nil {
+			return errors.New("cannot save nil head state")
+		}
 	}
 	if headState == nil {
 		return errors.New("cannot save nil head state")
