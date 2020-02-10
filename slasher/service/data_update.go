@@ -90,8 +90,7 @@ func (s *Service) attestationFeeder() error {
 	}
 }
 
-// finalizedChangeUpdater this is a stub for the coming PRs #3133
-// Store validator index to public key map Validate attestation signature.
+// finalizedChangeUpdater this is a stub for the coming PRs #3133.
 func (s *Service) finalizedChangeUpdater() error {
 	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
 	d := time.Duration(secondsPerSlot) * time.Second
@@ -160,8 +159,8 @@ func convertToIndexed(ctx context.Context, att *ethpb.Attestation, bCommittee *e
 			len(slotCommittees.Committees),
 		)
 	}
-	attesterCommittee := slotCommittees.Committees[att.Data.CommitteeIndex]
-	validatorIndices := attesterCommittee.ValidatorIndices
+	attCommittee := slotCommittees.Committees[att.Data.CommitteeIndex]
+	validatorIndices := attCommittee.ValidatorIndices
 	idxAtt, err := attestationutil.ConvertToIndexed(ctx, att, validatorIndices)
 	if err != nil {
 		return nil, err
