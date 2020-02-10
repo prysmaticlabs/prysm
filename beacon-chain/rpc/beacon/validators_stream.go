@@ -24,9 +24,11 @@ import (
 // Validators are supplied dynamically by the client, and can be added, removed and reset at any time.
 func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidatorsInfoServer) error {
 	pubKeys := make([][]byte, 0)
-	mutex := sync.RWMutex{}
+	pubKeysMutex := sync.RWMutex{}
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := bs.StateNotifier.StateFeed().Subscribe(stateChannel)
+	depositBlocks := make(map[[48]byte]*big.Int)
+	depositMutex := &sync.RWMutex{}
 	defer stateSub.Unsubscribe()
 
 	// Fetch our current epoch.
@@ -62,7 +64,7 @@ func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidators
 			}
 			switch msg.Action {
 			case ethpb.SetAction_ADD_VALIDATOR_KEYS:
-				mutex.Lock()
+				pubKeysMutex.Lock()
 				// Create existence map to ensure we don't duplicate keys.
 				pubKeysMap := make(map[[48]byte]bool)
 				for _, pubKey := range pubKeys {
@@ -75,9 +77,9 @@ func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidators
 						addedPubKeys = append(addedPubKeys, pubKey)
 					}
 				}
-				mutex.Unlock()
+				pubKeysMutex.Unlock()
 				// Send current info for the added public keys.
-				if validators, err := bs.generateValidatorInfo(bs.Ctx, addedPubKeys); err == nil {
+				if validators, err := bs.generateValidatorInfo(bs.Ctx, addedPubKeys, depositBlocks, depositMutex); err == nil {
 					for _, validator := range validators {
 						if err := stream.Send(validator); err != nil {
 							stream.Context().Done()
@@ -90,7 +92,7 @@ func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidators
 				for _, pubKey := range msg.PublicKeys {
 					msgPubKeysMap[bytesutil.ToBytes48(pubKey)] = true
 				}
-				mutex.Lock()
+				pubKeysMutex.Lock()
 				max := len(pubKeys)
 				for i := 0; i < max; i++ {
 					if _, exists := msgPubKeysMap[bytesutil.ToBytes48(pubKeys[i])]; exists {
@@ -100,15 +102,15 @@ func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidators
 						max--
 					}
 				}
-				mutex.Unlock()
+				pubKeysMutex.Unlock()
 			case ethpb.SetAction_SET_VALIDATOR_KEYS:
-				mutex.Lock()
+				pubKeysMutex.Lock()
 				pubKeys = make([][]byte, 0, len(msg.PublicKeys))
 				for _, pubKey := range msg.PublicKeys {
 					pubKeys = append(pubKeys, pubKey)
 				}
-				mutex.Unlock()
-				if validators, err := bs.generateValidatorInfo(bs.Ctx, msg.PublicKeys); err == nil {
+				pubKeysMutex.Unlock()
+				if validators, err := bs.generateValidatorInfo(bs.Ctx, msg.PublicKeys, depositBlocks, depositMutex); err == nil {
 					for _, validator := range validators {
 						if err := stream.Send(validator); err != nil {
 							stream.Context().Done()
@@ -124,30 +126,35 @@ func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidators
 		select {
 		case event := <-stateChannel:
 			if event.Type == statefeed.BlockProcessed {
-				headState, err := bs.HeadFetcher.HeadState(bs.Ctx)
-				if err != nil {
-					return status.Error(codes.Internal, "Could not access head state")
-				}
-				if headState == nil {
-					return status.Error(codes.Internal, "Not ready to serve information")
-				}
-				blockEpoch := headState.Slot() / params.BeaconConfig().SlotsPerEpoch
-				if blockEpoch == currentEpoch {
-					// Epoch hasn't changed, nothing to report yet.
-					continue
-				}
-				currentEpoch = blockEpoch
-				mutex.RLock()
-				validators, err := bs.generateValidatorInfo(bs.Ctx, pubKeys)
-				mutex.RUnlock()
-				if err != nil {
-					return status.Errorf(codes.Internal, "Could not generate response: %v", err)
-				}
-				for _, validator := range validators {
-					if err := stream.Send(validator); err != nil {
-						return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+				go func() {
+					headState, err := bs.HeadFetcher.HeadState(bs.Ctx)
+					if err != nil {
+						log.Warn("Could not access head state for infostream")
+						return
 					}
-				}
+					if headState == nil {
+						// We aren't ready to serve information
+						return
+					}
+					blockEpoch := headState.Slot() / params.BeaconConfig().SlotsPerEpoch
+					if blockEpoch == currentEpoch {
+						// Epoch hasn't changed, nothing to report yet.
+						return
+					}
+					currentEpoch = blockEpoch
+					pubKeysMutex.RLock()
+					validators, err := bs.generateValidatorInfo(bs.Ctx, pubKeys, depositBlocks, depositMutex)
+					pubKeysMutex.RUnlock()
+					if err != nil {
+						log.WithError(err).Warn("Failed to generate infostream response")
+					}
+					for _, validator := range validators {
+						if err := stream.Send(validator); err != nil {
+							// Client probably disconnected.
+							log.WithError(err).Debug("Failed to send infostream response")
+						}
+					}
+				}()
 			}
 		case <-stateSub.Err():
 			return status.Error(codes.Aborted, "Subscriber closed")
@@ -159,7 +166,7 @@ func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidators
 	}
 }
 
-func (bs *Server) generateValidatorInfo(ctx context.Context, pubKeys [][]byte) ([]*ethpb.ValidatorInfo, error) {
+func (bs *Server) generateValidatorInfo(ctx context.Context, pubKeys [][]byte, depositBlocks map[[48]byte]*big.Int, depositMutex *sync.RWMutex) ([]*ethpb.ValidatorInfo, error) {
 	headState, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not access head state")
@@ -177,6 +184,8 @@ func (bs *Server) generateValidatorInfo(ctx context.Context, pubKeys [][]byte) (
 
 	// pendingValidatorsMap is map from the validator pubkey to the index in our return array
 	pendingValidatorsMap := make(map[[48]byte]int)
+	genesisTime := headState.GenesisTime()
+	validators := headState.ValidatorsReadOnly()
 	res := make([]*ethpb.ValidatorInfo, 0)
 	for _, pubKey := range pubKeys {
 		info := &ethpb.ValidatorInfo{
@@ -192,11 +201,21 @@ func (bs *Server) generateValidatorInfo(ctx context.Context, pubKeys [][]byte) (
 		}
 		if !ok {
 			// We don't know of this validator; perhaps it's a pending deposit?
-			_, eth1BlockNumber := bs.DepositFetcher.DepositByPubkey(bs.Ctx, info.PublicKey)
+			var eth1BlockNumber *big.Int
+			pubKey48 := bytesutil.ToBytes48(info.PublicKey)
+			depositMutex.Lock()
+			if cached, exists := depositBlocks[pubKey48]; exists {
+				eth1BlockNumber = cached
+			} else {
+				_, fetched := bs.DepositFetcher.DepositByPubkey(bs.Ctx, info.PublicKey)
+				depositBlocks[pubKey48] = fetched
+				eth1BlockNumber = fetched
+			}
+			depositMutex.Unlock()
 			if eth1BlockNumber != nil {
 				info.Status = ethpb.ValidatorStatus_DEPOSITED
-				if queueTimestamp, err := bs.depositQueueTimestamp(bs.Ctx, eth1BlockNumber, headState.GenesisTime()); err != nil {
-					log.WithError(err).Error("Failed to obtain queueactivation timestamp")
+				if queueTimestamp, err := bs.depositQueueTimestamp(bs.Ctx, eth1BlockNumber, genesisTime); err != nil {
+					log.WithError(err).Error("Failed to obtain queue activation timestamp")
 				} else {
 					info.TransitionTimestamp = queueTimestamp
 				}
@@ -205,10 +224,10 @@ func (bs *Server) generateValidatorInfo(ctx context.Context, pubKeys [][]byte) (
 			}
 			// We haven't found it; ignore this as it may be a deposit that hasn't been processed in Ethereum 1 yet.
 		}
-		validator := headState.ValidatorsReadOnly()[info.Index]
+		validator := validators[info.Index]
 
 		// Status and progression timestamp
-		info.Status, info.TransitionTimestamp = bs.calculateStatusAndTransition(validator, headState)
+		info.Status, info.TransitionTimestamp = bs.calculateStatusAndTransition(validator, headState, genesisTime)
 
 		// TODO status timestamp
 		// validator.StatusTimestamp
@@ -244,7 +263,6 @@ func (bs *Server) generateValidatorInfo(ctx context.Context, pubKeys [][]byte) (
 	if len(pendingValidatorsMap) > 0 {
 		numAttestingValidators := uint64(0)
 		// Fetch the list of pending validators; count the number of attesting validators.
-		validators := headState.ValidatorsReadOnly()
 		pendingValidators := make([]uint64, 0, len(validators))
 		for _, validator := range validators {
 			if helpers.IsEligibleForActivationUsingTrie(headState, validator) {
@@ -276,7 +294,7 @@ func (bs *Server) generateValidatorInfo(ctx context.Context, pubKeys [][]byte) (
 			for i := uint64(0); i < toProcess; i++ {
 				validator := validators[sortedIndices[i]]
 				if index, exists := pendingValidatorsMap[validator.PublicKey()]; exists {
-					res[index].TransitionTimestamp = epochToTimestamp(helpers.DelayedActivationExitEpoch(curEpoch), headState)
+					res[index].TransitionTimestamp = epochToTimestamp(genesisTime, helpers.DelayedActivationExitEpoch(curEpoch))
 					delete(pendingValidatorsMap, validator.PublicKey())
 				}
 				numAttestingValidators++
@@ -302,7 +320,7 @@ func (s indicesSorter) Less(i, j int) bool {
 	return s.validators[s.indices[i]].ActivationEligibilityEpoch() < s.validators[s.indices[j]].ActivationEligibilityEpoch()
 }
 
-func (bs *Server) calculateStatusAndTransition(validator *state.ReadOnlyValidator, beaconState *state.BeaconState) (ethpb.ValidatorStatus, uint64) {
+func (bs *Server) calculateStatusAndTransition(validator *state.ReadOnlyValidator, beaconState *state.BeaconState, genesisTime uint64) (ethpb.ValidatorStatus, uint64) {
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
 
@@ -312,28 +330,28 @@ func (bs *Server) calculateStatusAndTransition(validator *state.ReadOnlyValidato
 
 	if currentEpoch < validator.ActivationEligibilityEpoch() {
 		if helpers.IsEligibleForActivationQueueUsingTrie(validator) {
-			return ethpb.ValidatorStatus_DEPOSITED, epochToTimestamp(validator.ActivationEligibilityEpoch(), beaconState)
+			return ethpb.ValidatorStatus_DEPOSITED, epochToTimestamp(genesisTime, validator.ActivationEligibilityEpoch())
 		}
 		return ethpb.ValidatorStatus_DEPOSITED, 0
 	}
 	if currentEpoch < validator.ActivationEpoch() {
-		return ethpb.ValidatorStatus_PENDING, epochToTimestamp(validator.ActivationEpoch(), beaconState)
+		return ethpb.ValidatorStatus_PENDING, epochToTimestamp(genesisTime, validator.ActivationEpoch())
 	}
 	if validator.ExitEpoch() == farFutureEpoch {
 		return ethpb.ValidatorStatus_ACTIVE, 0
 	}
 	if currentEpoch < validator.ExitEpoch() {
 		if validator.Slashed() {
-			return ethpb.ValidatorStatus_SLASHING, epochToTimestamp(validator.ExitEpoch(), beaconState)
+			return ethpb.ValidatorStatus_SLASHING, epochToTimestamp(genesisTime, validator.ExitEpoch())
 		}
-		return ethpb.ValidatorStatus_EXITING, epochToTimestamp(validator.ExitEpoch(), beaconState)
+		return ethpb.ValidatorStatus_EXITING, epochToTimestamp(genesisTime, validator.ExitEpoch())
 	}
-	return ethpb.ValidatorStatus_EXITED, epochToTimestamp(validator.WithdrawableEpoch(), beaconState)
+	return ethpb.ValidatorStatus_EXITED, epochToTimestamp(genesisTime, validator.WithdrawableEpoch())
 }
 
 // epochToTimestamp converts an epoch number to a timestamp.
-func epochToTimestamp(epoch uint64, beaconState *state.BeaconState) uint64 {
-	return beaconState.GenesisTime() + epoch*params.BeaconConfig().SecondsPerSlot*params.BeaconConfig().SlotsPerEpoch
+func epochToTimestamp(genesisTime uint64, epoch uint64) uint64 {
+	return genesisTime + epoch*params.BeaconConfig().SecondsPerSlot*params.BeaconConfig().SlotsPerEpoch
 }
 
 // depositQueueTimestamp calculates the timestamp for exit of the validator from the deposit queue.
