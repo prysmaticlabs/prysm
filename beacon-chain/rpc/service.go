@@ -220,6 +220,7 @@ func (s *Service) Start() {
 		HeadFetcher:            s.headFetcher,
 		ForkFetcher:            s.forkFetcher,
 		FinalizationFetcher:    s.finalizationFetcher,
+		GenesisTimeFetcher:     s.genesisTimeFetcher,
 		CanonicalStateChan:     s.canonicalStateChan,
 		BlockFetcher:           s.powChainService,
 		DepositFetcher:         s.depositFetcher,

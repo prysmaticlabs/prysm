@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -17,8 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -65,11 +62,6 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		}
 		return
 	}
-
-	// As specified in the spec, an attester should wait until one-third of the way through the slot,
-	// then create and broadcast the attestation.
-	// https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/validator/0_beacon-chain-validator.md#attesting
-	v.waitToOneThird(ctx, slot)
 
 	req := &ethpb.AttestationDataRequest{
 		Slot:           slot,
@@ -188,23 +180,6 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		trace.Int64Attribute("targetEpoch", int64(data.Target.Epoch)),
 		trace.StringAttribute("bitfield", fmt.Sprintf("%#x", aggregationBitfield)),
 	)
-}
-
-// waitToOneThird waits until one-third of the way through the slot
-// such that any blocks from this slot have time to reach the beacon node
-// before creating the attestation.
-func (v *validator) waitToOneThird(ctx context.Context, slot uint64) {
-	_, span := trace.StartSpan(ctx, "validator.waitToOneThird")
-	defer span.End()
-
-	oneThird := params.BeaconConfig().SecondsPerSlot / 3
-	delay := time.Duration(oneThird) * time.Second
-	if oneThird == 0 {
-		delay = 500 * time.Millisecond
-	}
-	startTime := slotutil.SlotStartTime(v.genesisTime, slot)
-	timeToBroadcast := startTime.Add(delay)
-	time.Sleep(roughtime.Until(timeToBroadcast))
 }
 
 // Given the validator public key, this gets the validator assignment.
