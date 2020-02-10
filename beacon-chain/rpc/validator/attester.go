@@ -2,16 +2,21 @@ package validator
 
 import (
 	"context"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -32,6 +37,10 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
+
+	// Attester will either wait until there's a valid block from the expected block proposer of for the assigned input slot
+	// or one third of the slot has transpired. Whichever comes first.
+	vs.waitToOneThird(ctx, req.Slot)
 
 	res, err := vs.AttestationCache.Get(ctx, req)
 	if err != nil {
@@ -139,4 +148,42 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 	return &ethpb.AttestResponse{
 		AttestationDataRoot: root[:],
 	}, nil
+}
+
+// waitToOneThird waits until one-third of the way through the slot
+// or the head slot equals to the input slot.
+func (vs *Server) waitToOneThird(ctx context.Context, slot uint64) {
+	_, span := trace.StartSpan(ctx, "validator.waitToOneThird")
+	defer span.End()
+
+	// Don't need to wait if head slot is already the same as requested slot.
+	if slot == vs.HeadFetcher.HeadSlot() {
+		return
+	}
+
+	// Set time out to be at start slot time + one-third of slot duration.
+	slotStartTime := slotutil.SlotStartTime(uint64(vs.GenesisTimeFetcher.GenesisTime().Unix()), slot)
+	slotOneThirdTime := slotStartTime.Unix() + int64(params.BeaconConfig().SecondsPerSlot/3)
+	waitDuration := slotOneThirdTime - roughtime.Now().Unix()
+	timeOut := time.After(time.Duration(waitDuration) * time.Second)
+
+	stateChannel := make(chan *feed.Event, 1)
+	stateSub := vs.StateNotifier.StateFeed().Subscribe(stateChannel)
+	defer stateSub.Unsubscribe()
+
+	for {
+		select {
+		case event := <-stateChannel:
+			// Node processed a block, check if the processed block is the same as input slot.
+			if event.Type == statefeed.BlockProcessed {
+				d := event.Data.(*statefeed.BlockProcessedData)
+				if slot == d.Slot {
+					return
+				}
+			}
+
+		case <-timeOut:
+			return
+		}
+	}
 }
