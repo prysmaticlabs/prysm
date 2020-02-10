@@ -43,6 +43,7 @@ const refreshTime = 6 * time.Second
 func (s *Service) roundRobinSync(genesis time.Time) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	defer s.chain.ClearCachedStates()
 
 	if cfg := featureconfig.Get(); cfg.EnableSkipSlotsCache {
 		cfg.EnableSkipSlotsCache = false
