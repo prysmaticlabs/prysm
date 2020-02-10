@@ -171,6 +171,12 @@ func (b *BeaconState) HashTreeRoot() ([32]byte, error) {
 	}
 
 	for field := range b.dirtyFields {
+		// do not compute root for field
+		// thats not part of the state.
+		if field == validatorIdxMap {
+			delete(b.dirtyFields, field)
+			continue
+		}
 		root, err := b.rootSelector(field)
 		if err != nil {
 			return [32]byte{}, err

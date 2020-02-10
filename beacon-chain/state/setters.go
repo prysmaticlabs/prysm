@@ -40,6 +40,8 @@ const (
 	previousJustifiedCheckpoint
 	currentJustifiedCheckpoint
 	finalizedCheckpoint
+	// validatorIdxMap is not part of the state, but is used so as to be able to keep
+	// track of references to it to allow for efficient copy on write.
 	validatorIdxMap
 )
 
