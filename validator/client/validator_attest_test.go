@@ -377,22 +377,6 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 	}
 }
 
-func TestWaitForSlotOneThird_WaitCorrectly(t *testing.T) {
-	validator, _, finish := setup(t)
-	defer finish()
-	currentTime := uint64(time.Now().Unix())
-	numOfSlots := uint64(4)
-	validator.genesisTime = currentTime - (numOfSlots * params.BeaconConfig().SecondsPerSlot)
-	timeToSleep := params.BeaconConfig().SecondsPerSlot / 3
-	oneThird := currentTime + timeToSleep
-	validator.waitToOneThird(context.Background(), numOfSlots)
-
-	currentTime = uint64(time.Now().Unix())
-	if currentTime != oneThird {
-		t.Errorf("Wanted %d time for slot one-third but got %d", oneThird, currentTime)
-	}
-}
-
 func TestAttestationHistory_BlocksDoubleAttestation(t *testing.T) {
 	newMap := make(map[uint64]uint64)
 	newMap[0] = params.BeaconConfig().FarFutureEpoch
