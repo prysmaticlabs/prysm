@@ -39,6 +39,7 @@ const (
 	previousJustifiedCheckpoint
 	currentJustifiedCheckpoint
 	finalizedCheckpoint
+	validatorIdxMap
 )
 
 // SetGenesisTime for the beacon state.
@@ -308,14 +309,21 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 // SetValidatorIndexByPubkey updates the validator index mapping maintained internally to
 // a given input 48-byte, public key.
 func (b *BeaconState) SetValidatorIndexByPubkey(pubKey [48]byte, validatorIdx uint64) {
-	// Copy on write since this is a shared map.
-	m := b.validatorIndexMap()
+	idxMap := b.valIdxMap
+	b.lock.RLock()
+	if b.sharedFieldReferences[validatorIdxMap].refs > 1 {
+		// copy-on-write for idx map
+		idxMap = b.validatorIndexMap()
+		b.sharedFieldReferences[validatorIdxMap].refs--
+		b.sharedFieldReferences[validatorIdxMap] = &reference{refs: 1}
+	}
+	b.lock.RUnlock()
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	m[pubKey] = validatorIdx
-	b.valIdxMap = m
+	idxMap[pubKey] = validatorIdx
+	b.valIdxMap = idxMap
 }
 
 // SetBalances for the beacon state. This PR updates the entire
@@ -532,7 +540,9 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	b.lock.RLock()
 	vals := b.state.Validators
 	if b.sharedFieldReferences[validators].refs > 1 {
-		vals = b.Validators()
+		copiedVals := make([]*ethpb.Validator, len(b.state.Validators), len(b.state.Validators)+1)
+		copy(copiedVals, b.state.Validators)
+		vals = copiedVals
 		b.sharedFieldReferences[validators].refs--
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}
