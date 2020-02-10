@@ -39,8 +39,7 @@ func NewCommitteesCache() *CommitteesCache {
 	}
 }
 
-// Get waits for any in progress calculation to complete before returning a
-// cached response, if any.
+// Get returns the cached response.
 func (c *CommitteesCache) Get(ctx context.Context, epoch uint64) (*ethpb.BeaconCommittees, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
