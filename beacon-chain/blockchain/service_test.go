@@ -453,3 +453,75 @@ func TestChainService_PruneOldStates(t *testing.T) {
 		}
 	}
 }
+
+func TestHasBlock_ForkChoiceAndDB(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	s := &Service{
+		forkChoiceStore:  protoarray.New(0, 0, [32]byte{}),
+		finalizedCheckpt: &ethpb.Checkpoint{},
+		beaconDB:         db,
+	}
+	block := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}}
+	r, _ := ssz.HashTreeRoot(block.Block)
+	bs := &pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{}, CurrentJustifiedCheckpoint: &ethpb.Checkpoint{}}
+	state, _ := beaconstate.InitializeFromProto(bs)
+	if err := s.insertBlockToForkChoiceStore(ctx, block.Block, r, state); err != nil {
+		t.Fatal(err)
+	}
+
+	if s.hasBlock(ctx, [32]byte{}) {
+		t.Error("Should not have block")
+	}
+
+	if !s.hasBlock(ctx, r) {
+		t.Error("Should have block")
+	}
+}
+
+func BenchmarkHasBlockDB(b *testing.B) {
+	db := testDB.SetupDB(b)
+	defer testDB.TeardownDB(b, db)
+	ctx := context.Background()
+	s := &Service{
+		beaconDB: db,
+	}
+	block := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	if err := s.beaconDB.SaveBlock(ctx, block); err != nil {
+		b.Fatal(err)
+	}
+	r, _ := ssz.HashTreeRoot(block.Block)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if !s.beaconDB.HasBlock(ctx, r) {
+			b.Fatal("Block is not in DB")
+		}
+	}
+}
+
+func BenchmarkHasBlockForkChoiceStore(b *testing.B) {
+	ctx := context.Background()
+	db := testDB.SetupDB(b)
+	defer testDB.TeardownDB(b, db)
+	s := &Service{
+		forkChoiceStore:  protoarray.New(0, 0, [32]byte{}),
+		finalizedCheckpt: &ethpb.Checkpoint{},
+		beaconDB:         db,
+	}
+	block := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}}
+	r, _ := ssz.HashTreeRoot(block.Block)
+	bs := &pb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{}, CurrentJustifiedCheckpoint: &ethpb.Checkpoint{}}
+	state, _ := beaconstate.InitializeFromProto(bs)
+	if err := s.insertBlockToForkChoiceStore(ctx, block.Block, r, state); err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if !s.forkChoiceStore.HasNode(r) {
+			b.Fatal("Block is not in fork choice store")
+		}
+	}
+}
