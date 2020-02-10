@@ -126,7 +126,7 @@ func TestNoVote_CanFindHead(t *testing.T) {
 	//          4  3
 	//          |
 	//          5 <- head
-	r, err = f.Head(context.Background(), 1, indexToHash(5), balances, 2)
+	r, err = f.Head(context.Background(), 2, indexToHash(5), balances, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,7 +147,7 @@ func TestNoVote_CanFindHead(t *testing.T) {
 	if err := f.ProcessBlock(context.Background(), 0, indexToHash(6), indexToHash(5), 2, 1); err != nil {
 		t.Fatal(err)
 	}
-	r, err = f.Head(context.Background(), 1, indexToHash(5), balances, 2)
+	r, err = f.Head(context.Background(), 2, indexToHash(5), balances, 1)
 	if err != nil {
 		t.Fatal(err)
 	}

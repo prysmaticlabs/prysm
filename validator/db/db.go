@@ -43,7 +43,7 @@ func (db *Store) view(fn func(*bolt.Tx) error) error {
 	return db.db.View(fn)
 }
 
-// ClearDB removes the previously stored directory at the data directory.
+// ClearDB removes any previously stored data at the configured data directory.
 func (db *Store) ClearDB() error {
 	if _, err := os.Stat(db.databasePath); os.IsNotExist(err) {
 		return nil

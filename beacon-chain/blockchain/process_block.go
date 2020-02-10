@@ -148,6 +148,11 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 		s.nextEpochBoundarySlot = helpers.StartSlot(helpers.NextEpoch(postState))
 	}
 
+	// Delete the processed block attestations from attestation pool.
+	if err := s.deletePoolAtts(b.Body.Attestations); err != nil {
+		return nil, err
+	}
+
 	return postState, nil
 }
 

@@ -273,31 +273,10 @@ func (s *Service) Status() error {
 	return nil
 }
 
-// This gets called to update canonical root mapping.
-func (s *Service) saveHead(ctx context.Context, signed *ethpb.SignedBeaconBlock, r [32]byte) error {
-	s.headLock.Lock()
-	defer s.headLock.Unlock()
-
-	if signed == nil || signed.Block == nil {
-		return errors.New("cannot save nil head block")
-	}
-
-	s.headSlot = signed.Block.Slot
-
-	s.canonicalRoots[signed.Block.Slot] = r[:]
-
-	if err := s.beaconDB.SaveHeadBlockRoot(ctx, r); err != nil {
-		return errors.Wrap(err, "could not save head root in DB")
-	}
-	s.headBlock = proto.Clone(signed).(*ethpb.SignedBeaconBlock)
-
-	headState, err := s.beaconDB.State(ctx, r)
-	if err != nil {
-		return errors.Wrap(err, "could not retrieve head state in DB")
-	}
-	s.headState = headState
-
-	return nil
+// ClearCachedStates removes all stored caches states. This is done after the node
+// is synced.
+func (s *Service) ClearCachedStates() {
+	s.initSyncState = map[[32]byte]*stateTrie.BeaconState{}
 }
 
 // This gets called to update canonical root mapping. It does not save head block

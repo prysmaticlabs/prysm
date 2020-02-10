@@ -39,7 +39,7 @@ func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, err
 
 	bestNode := s.nodes[bestDescendantIndex]
 
-	if !s.viableForHead(ctx, bestNode) {
+	if !s.viableForHead(bestNode) {
 		return [32]byte{}, fmt.Errorf("head at slot %d with weight %d is not eligible, finalizedEpoch %d != %d, justifiedEpoch %d != %d",
 			bestNode.Slot, bestNode.Weight/10e9, bestNode.finalizedEpoch, s.finalizedEpoch, bestNode.justifiedEpoch, s.justifiedEpoch)
 	}
@@ -48,6 +48,7 @@ func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, err
 	if bestNode.root != lastHeadRoot {
 		headChangesCount.Inc()
 		headSlotNumber.Set(float64(bestNode.Slot))
+		lastHeadRoot = bestNode.root
 	}
 
 	return bestNode.root, nil
@@ -94,7 +95,7 @@ func (s *Store) insert(ctx context.Context,
 
 	// Update parent with the best child and descendent only if it's available.
 	if n.Parent != nonExistentNode {
-		if err := s.updateBestChildAndDescendant(ctx, parentIndex, uint64(index)); err != nil {
+		if err := s.updateBestChildAndDescendant(parentIndex, uint64(index)); err != nil {
 			return err
 		}
 	}
@@ -160,7 +161,7 @@ func (s *Store) applyWeightChanges(ctx context.Context, justifiedEpoch uint64, f
 			}
 			// Back propagate the nodes delta to its parent.
 			delta[n.Parent] += nodeDelta
-			if err := s.updateBestChildAndDescendant(ctx, n.Parent, uint64(i)); err != nil {
+			if err := s.updateBestChildAndDescendant(n.Parent, uint64(i)); err != nil {
 				return err
 			}
 		}
@@ -177,10 +178,7 @@ func (s *Store) applyWeightChanges(ctx context.Context, justifiedEpoch uint64, f
 // 2.)  The child is already the best child and the parent is updated with the new best descendant.
 // 3.)  The child is not the best child but becomes the best child.
 // 4.)  The child is not the best child and does not become best child.
-func (s *Store) updateBestChildAndDescendant(ctx context.Context, parentIndex uint64, childIndex uint64) error {
-	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.updateBestChildAndDescendant")
-	defer span.End()
-
+func (s *Store) updateBestChildAndDescendant(parentIndex uint64, childIndex uint64) error {
 	// Protection against parent index out of bound, this should not happen.
 	if parentIndex >= uint64(len(s.nodes)) {
 		return errInvalidNodeIndex
@@ -194,7 +192,7 @@ func (s *Store) updateBestChildAndDescendant(ctx context.Context, parentIndex ui
 	child := s.nodes[childIndex]
 
 	// Is the child viable to become head? Based on justification and finalization rules.
-	childLeadsToViableHead, err := s.leadsToViableHead(ctx, child)
+	childLeadsToViableHead, err := s.leadsToViableHead(child)
 	if err != nil {
 		return err
 	}
@@ -227,7 +225,7 @@ func (s *Store) updateBestChildAndDescendant(ctx context.Context, parentIndex ui
 			}
 			bestChild := s.nodes[parent.bestChild]
 			// Is current parent's best child viable to be head? Based on justification and finalization rules.
-			bestChildLeadsToViableHead, err := s.leadsToViableHead(ctx, bestChild)
+			bestChildLeadsToViableHead, err := s.leadsToViableHead(bestChild)
 			if err != nil {
 				return err
 			}
@@ -350,10 +348,7 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 // leadsToViableHead returns true if the node or the best descendent of the node is viable for head.
 // Any node with diff finalized or justified epoch than the ones in fork choice store
 // should not be viable to head.
-func (s *Store) leadsToViableHead(ctx context.Context, node *Node) (bool, error) {
-	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.leadsToViableHead")
-	defer span.End()
-
+func (s *Store) leadsToViableHead(node *Node) (bool, error) {
 	var bestDescendentViable bool
 	bestDescendentIndex := node.BestDescendent
 
@@ -366,20 +361,17 @@ func (s *Store) leadsToViableHead(ctx context.Context, node *Node) (bool, error)
 		}
 
 		bestDescendentNode := s.nodes[bestDescendentIndex]
-		bestDescendentViable = s.viableForHead(ctx, bestDescendentNode)
+		bestDescendentViable = s.viableForHead(bestDescendentNode)
 	}
 
 	// The node is viable as long as the best descendent is viable.
-	return bestDescendentViable || s.viableForHead(ctx, node), nil
+	return bestDescendentViable || s.viableForHead(node), nil
 }
 
 // viableForHead returns true if the node is viable to head.
 // Any node with diff finalized or justified epoch than the ones in fork choice store
 // should not be viable to head.
-func (s *Store) viableForHead(ctx context.Context, node *Node) bool {
-	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.viableForHead")
-	defer span.End()
-
+func (s *Store) viableForHead(node *Node) bool {
 	// `node` is viable if its justified epoch and finalized epoch are the same as the one in `Store`.
 	// It's also viable if we are in genesis epoch.
 	justified := s.justifiedEpoch == node.justifiedEpoch || s.justifiedEpoch == 0

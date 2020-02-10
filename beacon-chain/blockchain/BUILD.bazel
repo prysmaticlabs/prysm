@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "chain_info.go",
+        "head.go",
         "info.go",
         "log.go",
         "process_attestation.go",
@@ -67,6 +68,7 @@ go_test(
     size = "medium",
     srcs = [
         "chain_info_test.go",
+        "head_test.go",
         "process_attestation_test.go",
         "process_block_test.go",
         "receive_attestation_test.go",

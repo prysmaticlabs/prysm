@@ -1513,8 +1513,9 @@ func TestDeleteAttsInPool_Aggregated(t *testing.T) {
 		AttPool: attestations.NewPool(),
 	}
 
-	aggregatedAtts := []*ethpb.Attestation{{AggregationBits: bitfield.Bitlist{0b10101}}, {AggregationBits: bitfield.Bitlist{0b11010}}}
-	unaggregatedAtts := []*ethpb.Attestation{{AggregationBits: bitfield.Bitlist{0b1001}}, {AggregationBits: bitfield.Bitlist{0b0001}}}
+	sig := bls.RandKey().Sign([]byte("foo"), 0).Marshal()
+	aggregatedAtts := []*ethpb.Attestation{{AggregationBits: bitfield.Bitlist{0b10101}, Signature: sig}, {AggregationBits: bitfield.Bitlist{0b11010}, Signature: sig}}
+	unaggregatedAtts := []*ethpb.Attestation{{AggregationBits: bitfield.Bitlist{0b1001}, Signature: sig}, {AggregationBits: bitfield.Bitlist{0b0001}, Signature: sig}}
 
 	if err := s.AttPool.SaveAggregatedAttestations(aggregatedAtts); err != nil {
 		t.Fatal(err)
@@ -1523,7 +1524,11 @@ func TestDeleteAttsInPool_Aggregated(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := s.deleteAttsInPool(append(aggregatedAtts, unaggregatedAtts...)); err != nil {
+	aa, err := helpers.AggregateAttestations(aggregatedAtts)
+	if err != nil {
+		t.Error(err)
+	}
+	if err := s.deleteAttsInPool(append(aa, unaggregatedAtts...)); err != nil {
 		t.Fatal(err)
 	}
 	if len(s.AttPool.AggregatedAttestations()) != 0 {

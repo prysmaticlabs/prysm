@@ -95,8 +95,12 @@ var (
 		Usage: "Preprocess attestations by aggregation before running fork choice.",
 	}
 	disableStrictAttestationPubsubVerificationFlag = cli.BoolFlag{
-		Name: "disable-strict-attestation-pubsub-verification",
+		Name:  "disable-strict-attestation-pubsub-verification",
 		Usage: "Disable strict signature verification of attestations in pubsub. See PR 4782 for details.",
+	}
+	disableUpdateHeadPerAttestation = cli.BoolFlag{
+		Name:  "disable-update-head-attestation",
+		Usage: "Disable update fork choice head on per attestation. See PR 4802 for details.",
 	}
 )
 
@@ -249,6 +253,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	cacheFilteredBlockTreeFlag,
 	forkchoiceAggregateAttestations,
 	disableStrictAttestationPubsubVerificationFlag,
+	disableUpdateHeadPerAttestation,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
