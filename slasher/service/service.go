@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/version"
+	"github.com/prysmaticlabs/prysm/slasher/cache"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/prysmaticlabs/prysm/slasher/rpc"
@@ -36,6 +37,8 @@ import (
 var log logrus.FieldLogger
 
 const slasherDBName = "slasherdata"
+
+var committeesCache = cache.NewCommitteesCache()
 
 func init() {
 	log = logrus.WithField("prefix", "slasherRPC")
@@ -134,7 +137,7 @@ func (s *Service) Start() {
 		}
 	}
 	stop := s.stop
-	if err := s.historicalAttestationFeeder(); err != nil {
+	if err := s.historicalAttestationFeeder(s.context); err != nil {
 		err = errors.Wrap(err, "couldn't start attestation feeder from archive endpoint. please use "+
 			"--beacon-rpc-provider flag value if you are not running a beacon chain service with "+
 			"--archive flag on the local machine.")
@@ -143,12 +146,12 @@ func (s *Service) Start() {
 		return
 	}
 	go func() {
-		if err := s.attestationFeeder(); err != nil {
+		if err := s.attestationFeeder(s.context); err != nil {
 			log.Error(err)
 		}
 	}()
 	go func() {
-		if err := s.finalizedChangeUpdater(); err != nil {
+		if err := s.finalizedChangeUpdater(s.context); err != nil {
 			log.Error(err)
 		}
 	}()
