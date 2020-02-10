@@ -106,6 +106,19 @@ func (f *ForkChoice) Nodes() []*Node {
 	return cpy
 }
 
+// Node returns the copied node in the fork choice store.
+func (f *ForkChoice) Node(root [32]byte) *Node {
+	f.store.nodeIndicesLock.RLock()
+	defer f.store.nodeIndicesLock.RUnlock()
+
+	index, ok := f.store.nodeIndices[root]
+	if !ok {
+		return nil
+	}
+
+	return f.store.nodes[index]
+}
+
 // HasNode returns true if the node exists in fork choice store,
 // false else wise.
 func (f *ForkChoice) HasNode(root [32]byte) bool {
@@ -115,3 +128,4 @@ func (f *ForkChoice) HasNode(root [32]byte) bool {
 	_, ok := f.store.nodeIndices[root]
 	return ok
 }
+

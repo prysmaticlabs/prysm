@@ -379,3 +379,23 @@ func (s *Store) viableForHead(node *Node) bool {
 
 	return justified && finalized
 }
+
+func copyNode(node *Node) *Node {
+	if node == nil {
+		return &Node{}
+	}
+
+	blockRoot := [32]byte{}
+	copy(blockRoot[:], att.Data.BeaconBlockRoot)
+
+	return &Node{
+		Slot:           node.Slot,
+		root:           [32]byte{},
+		Parent:         node.Parent,
+		justifiedEpoch: node.justifiedEpoch,
+		finalizedEpoch: node.finalizedEpoch,
+		Weight:         node.Weight,
+		bestChild:      node.bestChild,
+		BestDescendent: node.BestDescendent,
+	}
+}
