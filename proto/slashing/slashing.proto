@@ -27,6 +27,8 @@ service Slasher {
     rpc AttesterSlashings(SlashingStatusRequest) returns (AttesterSlashingResponse);
 }
 
+// CompressedIdxAtt is an indexed attestation with the []byte data root
+// in place of its AttestationData.
 message CompressedIdxAtt {
     repeated uint64 indices = 1 ;
     bytes data_root = 2;
@@ -34,6 +36,8 @@ message CompressedIdxAtt {
     bytes signature = 3;
 }
 
+// CompressedIdxAttList is a list of CompressedIdxAtts used for
+// accessing an array from the DB.
 message CompressedIdxAttList {
     repeated CompressedIdxAtt list = 1;
 }
