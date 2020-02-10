@@ -38,14 +38,10 @@ func (s *Client) SlashingPoolFeeder(ctx context.Context) error {
 	d := time.Duration(secondsPerEpoch) * time.Second
 	tick := time.Tick(d)
 	log.Infof("started slasher ticker %v", d)
-	log.Info("updating slashing pool on start")
-	if err := s.updatePool(ctx); err != nil {
-		return errors.Wrap(err, "failed to update slashing pool")
-	}
 	for {
 		select {
 		case <-tick:
-			log.Info("updating slashing pool on epoch")
+			log.Info("updating slashing pool...")
 			if err := s.updatePool(ctx); err != nil {
 				return errors.Wrap(err, "failed to update slashing pool")
 			}
