@@ -22,7 +22,7 @@ var (
 	})
 )
 
-// SkipSlotCache is used to store the cached results of processing continues in state.ProcessSlots.
+// CommitteesCache is used to store the cached results of committees for epoch.
 type CommitteesCache struct {
 	cache *lru.Cache
 	lock  sync.RWMutex
