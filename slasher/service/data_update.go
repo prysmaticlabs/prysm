@@ -10,41 +10,47 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-// finalizedChangeUpdater this is a stub for the coming PRs #3133
-// Store validator index to public key map Validate attestation signature.
-func (s *Service) finalizedChangeUpdater() error {
-	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
-	d := time.Duration(secondsPerSlot) * time.Second
-	tick := time.Tick(d)
-	var finalizedEpoch uint64
-	for {
-		select {
-		case <-tick:
-			ch, err := s.beaconClient.GetChainHead(s.context, &ptypes.Empty{})
-			if err != nil {
+// historicalAttestationFeeder starts performing slashing detection
+// on all historical attestations made until the current head.
+// The latest epoch is updated after each iteration in case the long
+// process is interrupted.
+func (s *Service) historicalAttestationFeeder() error {
+	startFromEpoch, err := s.getLatestDetectedEpoch()
+	if err != nil {
+		return errors.Wrap(err, "failed to latest detected epoch")
+	}
+	ch, err := s.getChainHead()
+	if err != nil {
+		return errors.Wrap(err, "failed to get chain head")
+	}
+
+	for epoch := startFromEpoch; epoch < ch.FinalizedEpoch; epoch++ {
+		atts, bCommittees, err := s.attsAndCommitteesForEpoch(epoch)
+		if err != nil || bCommittees == nil {
+			log.Error(err)
+			continue
+		}
+		log.Infof("Checking %v attestations from epoch %v for slashable events", len(atts), epoch)
+		for _, attestation := range atts {
+			idxAtt, err := convertToIndexed(s.context, attestation, bCommittees)
+			if err = s.detectSlashings(idxAtt); err != nil {
 				log.Error(err)
 				continue
 			}
-			if ch != nil {
-				if ch.FinalizedEpoch > finalizedEpoch {
-					log.Infof("finalized epoch %d", ch.FinalizedEpoch)
-				}
-				continue
-			}
-			log.Error("no chain head was returned by beacon chain.")
-		case <-s.context.Done():
-			err := status.Error(codes.Canceled, "Stream context canceled")
-			log.WithError(err)
-			return err
-
+		}
+		if err := s.slasherDb.SetLatestEpochDetected(epoch); err != nil {
+			log.Error(err)
+			continue
 		}
 	}
+	return nil
 }
 
 // attestationFeeder feeds attestations that were received by archive endpoint.
@@ -84,40 +90,34 @@ func (s *Service) attestationFeeder() error {
 	}
 }
 
-// historicalAttestationFeeder starts performing slashing detection
-// on all historical attestations made until the current head.
-// The latest epoch is updated after each iteration in case the long
-// process is interrupted.
-func (s *Service) historicalAttestationFeeder() error {
-	startFromEpoch, err := s.getLatestDetectedEpoch()
-	if err != nil {
-		return errors.Wrap(err, "failed to latest detected epoch")
-	}
-	ch, err := s.getChainHead()
-	if err != nil {
-		return errors.Wrap(err, "failed to get chain head")
-	}
-
-	for epoch := startFromEpoch; epoch < ch.FinalizedEpoch; epoch++ {
-		atts, bCommittees, err := s.attsAndCommitteesForEpoch(epoch)
-		if err != nil || bCommittees == nil {
-			log.Error(err)
-			continue
-		}
-		log.Infof("Checking %v attestations from epoch %v for slashable events", len(atts), epoch)
-		for _, attestation := range atts {
-			idxAtt, err := convertToIndexed(s.context, attestation, bCommittees)
-			if err = s.detectSlashings(idxAtt); err != nil {
+// finalizedChangeUpdater this is a stub for the coming PRs #3133
+// Store validator index to public key map Validate attestation signature.
+func (s *Service) finalizedChangeUpdater() error {
+	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
+	d := time.Duration(secondsPerSlot) * time.Second
+	tick := time.Tick(d)
+	var finalizedEpoch uint64
+	for {
+		select {
+		case <-tick:
+			ch, err := s.beaconClient.GetChainHead(s.context, &ptypes.Empty{})
+			if err != nil {
 				log.Error(err)
 				continue
 			}
-		}
-		if err := s.slasherDb.SetLatestEpochDetected(epoch); err != nil {
-			log.Error(err)
-			continue
+			if ch != nil {
+				if ch.FinalizedEpoch > finalizedEpoch {
+					log.Infof("finalized epoch %d", ch.FinalizedEpoch)
+				}
+				continue
+			}
+			log.Error("no chain head was returned by beacon chain.")
+		case <-s.context.Done():
+			err := status.Error(codes.Canceled, "Stream context canceled")
+			log.WithError(err)
+			return err
 		}
 	}
-	return nil
 }
 
 func (s *Service) detectSlashings(idxAtt *ethpb.IndexedAttestation) error {
@@ -131,14 +131,14 @@ func (s *Service) detectSlashings(idxAtt *ethpb.IndexedAttestation) error {
 			return errors.Wrap(err, "failed to save attester slashings")
 		}
 		for _, as := range attSlashingResp.AttesterSlashing {
+			slashableIndices := sliceutil.IntersectionUint64(as.Attestation_1.AttestingIndices, as.Attestation_2.AttestingIndices)
 			log.WithFields(logrus.Fields{
-				"target1":     as.Attestation_1.Data.Target.Epoch,
-				"source1":     as.Attestation_1.Data.Target.Epoch,
-				"target2":     as.Attestation_2.Data.Target.Epoch,
-				"source2":     as.Attestation_2.Data.Target.Epoch,
-				"att1Indices": as.Attestation_1.AttestingIndices,
-				"att2Indices": as.Attestation_2.AttestingIndices,
-			}).Info("detected slashing offence")
+				"target1":          as.Attestation_1.Data.Target.Epoch,
+				"source1":          as.Attestation_1.Data.Target.Epoch,
+				"target2":          as.Attestation_2.Data.Target.Epoch,
+				"source2":          as.Attestation_2.Data.Target.Epoch,
+				"slashableIndices": slashableIndices,
+			}).Info("Detected slashing offence")
 		}
 	}
 	return nil
