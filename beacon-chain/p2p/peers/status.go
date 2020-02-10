@@ -400,7 +400,7 @@ func (p *Status) CurrentEpoch() uint64 {
 	defer p.lock.RUnlock()
 	var highestSlot uint64
 	for _, ps := range p.status {
-		if ps.chainState.HeadSlot > highestSlot {
+		if ps != nil && ps.chainState != nil && ps.chainState.HeadSlot > highestSlot {
 			highestSlot = ps.chainState.HeadSlot
 		}
 	}
