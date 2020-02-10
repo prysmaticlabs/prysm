@@ -193,13 +193,5 @@ func (p *Pool) validatorSlashingPreconditionCheck(
 	if validator.ExitEpoch() < helpers.CurrentEpoch(state) {
 		return false, nil
 	}
-	// Checking if the validator has already been slashed.
-	slashedValidators := state.Slashings()
-	found := sort.Search(len(slashedValidators), func(i int) bool {
-		return slashedValidators[i] == valIdx
-	})
-	if found != len(slashedValidators) {
-		return false, nil
-	}
 	return true, nil
 }
