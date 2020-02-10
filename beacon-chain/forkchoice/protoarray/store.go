@@ -116,7 +116,7 @@ func (f *ForkChoice) Node(root [32]byte) *Node {
 		return nil
 	}
 
-	return f.store.nodes[index]
+	return copyNode(f.store.nodes[index])
 }
 
 // HasNode returns true if the node exists in fork choice store,
@@ -128,4 +128,3 @@ func (f *ForkChoice) HasNode(root [32]byte) bool {
 	_, ok := f.store.nodeIndices[root]
 	return ok
 }
-
