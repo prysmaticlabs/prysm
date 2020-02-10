@@ -131,7 +131,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState *stateTrie.BeaconS
 		stateRoots[i] = zeroHash
 	}
 
-	slashings := make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector)
+	slashings := make([]uint64, 0)
 
 	state := &pb.BeaconState{
 		// Misc fields.
