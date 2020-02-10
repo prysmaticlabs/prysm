@@ -65,15 +65,10 @@ func (s *Service) attestationFeeder() error {
 				log.WithError(err)
 				return err
 			}
-			committeeReq := &ethpb.ListCommitteesRequest{
-				QueryFilter: &ethpb.ListCommitteesRequest_Epoch{
-					Epoch: at.Data.Target.Epoch,
-				},
-			}
-			bCommittees, err := s.beaconClient.ListBeaconCommittees(s.context, committeeReq)
+			bCommittees, err := s.getCommittees(at)
 			if err != nil {
-				log.WithError(err).Errorf("Could not list beacon committees for epoch %d", at.Data.Target.Epoch)
-				return err
+				log.WithError(err)
+				continue
 			}
 			err = s.detectAttestation(at, bCommittees)
 			if err != nil {
@@ -86,6 +81,29 @@ func (s *Service) attestationFeeder() error {
 			return err
 		}
 	}
+}
+
+func (s *Service) getCommittees(at *ethpb.Attestation) (*ethpb.BeaconCommittees, error) {
+	epoch := at.Data.Target.Epoch
+	committees, err := committeesCache.Get(s.context, epoch)
+	if err != nil {
+		return nil, err
+	}
+	if committees != nil {
+		return committees, nil
+	}
+	committeeReq := &ethpb.ListCommitteesRequest{
+		QueryFilter: &ethpb.ListCommitteesRequest_Epoch{
+			Epoch: epoch,
+		},
+	}
+	bCommittees, err := s.beaconClient.ListBeaconCommittees(s.context, committeeReq)
+	if err != nil {
+		log.WithError(err).Errorf("Could not list beacon committees for epoch %d", at.Data.Target.Epoch)
+		return nil, err
+	}
+	committeesCache.Put(s.context, epoch, bCommittees)
+	return bCommittees, nil
 }
 
 // slasherOldAttestationFeeder a function to kick start slashing detection

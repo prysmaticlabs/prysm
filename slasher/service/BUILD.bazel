@@ -15,6 +15,7 @@ go_library(
         "//shared/debug:go_default_library",
         "//shared/params:go_default_library",
         "//shared/version:go_default_library",
+        "//slasher/cache:go_default_library",
         "//slasher/db:go_default_library",
         "//slasher/flags:go_default_library",
         "//slasher/rpc:go_default_library",

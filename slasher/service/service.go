@@ -12,6 +12,8 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/prysmaticlabs/prysm/slasher/cache"
+
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -36,6 +38,8 @@ import (
 var log logrus.FieldLogger
 
 const slasherDBName = "slasherdata"
+
+var committeesCache = cache.NewCommitteesCache()
 
 func init() {
 	log = logrus.WithField("prefix", "slasherRPC")

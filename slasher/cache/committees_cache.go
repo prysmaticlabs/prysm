@@ -13,16 +13,16 @@ import (
 var (
 	// Metrics
 	committeesCacheHit = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "skip_slot_cache_hit",
-		Help: "The total number of cache hits on the skip slot cache.",
+		Name: "committees_cache_hit",
+		Help: "The total number of cache hits on the committees cache.",
 	})
 	committeesCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "skip_slot_cache_miss",
-		Help: "The total number of cache misses on the skip slot cache.",
+		Name: "committees_cache_miss",
+		Help: "The total number of cache misses on the committees cache.",
 	})
 )
 
-// SkipSlotCache is used to store the cached results of processing skip slots in state.ProcessSlots.
+// SkipSlotCache is used to store the cached results of processing continues in state.ProcessSlots.
 type CommitteesCache struct {
 	cache *lru.Cache
 	lock  sync.RWMutex
@@ -41,13 +41,13 @@ func NewCommitteesCache() *CommitteesCache {
 
 // Get waits for any in progress calculation to complete before returning a
 // cached response, if any.
-func (c *CommitteesCache) Get(ctx context.Context, slot uint64) (*ethpb.BeaconCommittees, error) {
+func (c *CommitteesCache) Get(ctx context.Context, epoch uint64) (*ethpb.BeaconCommittees, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
 	c.lock.RLock()
 
-	item, exists := c.cache.Get(slot)
+	item, exists := c.cache.Get(epoch)
 
 	if exists && item != nil {
 		committeesCacheHit.Inc()
