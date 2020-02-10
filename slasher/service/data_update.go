@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/slasher/db"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -103,7 +104,7 @@ func (s *Service) historicalAttestationFeeder() error {
 			log.Error(err)
 			continue
 		}
-		log.Infof("Detecting slashable events on: %v attestations from epoch: %v", len(atts), epoch)
+		log.Infof("Checking %v attestations from epoch %v for slashable events", len(atts), epoch)
 		for _, attestation := range atts {
 			idxAtt, err := convertToIndexed(s.context, attestation, bCommittees)
 			if err = s.detectSlashings(idxAtt); err != nil {
@@ -130,7 +131,14 @@ func (s *Service) detectSlashings(idxAtt *ethpb.IndexedAttestation) error {
 			return errors.Wrap(err, "failed to save attester slashings")
 		}
 		for _, as := range attSlashingResp.AttesterSlashing {
-			log.WithField("attesterSlashing", as).Info("detected slashing offence")
+			log.WithFields(logrus.Fields{
+				"target1":     as.Attestation_1.Data.Target.Epoch,
+				"source1":     as.Attestation_1.Data.Target.Epoch,
+				"target2":     as.Attestation_2.Data.Target.Epoch,
+				"source2":     as.Attestation_2.Data.Target.Epoch,
+				"att1Indices": as.Attestation_1.AttestingIndices,
+				"att2Indices": as.Attestation_2.AttestingIndices,
+			}).Info("detected slashing offence")
 		}
 	}
 	return nil
