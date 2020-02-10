@@ -11,14 +11,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
-
-func init() {
-	fc := featureconfig.Get()
-	fc.ForkchoiceAggregateAttestations = true
-	featureconfig.Init(fc)
-}
 
 func TestAggregateAttestations_SingleAttestation(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
