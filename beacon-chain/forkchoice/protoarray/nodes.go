@@ -379,4 +379,3 @@ func (s *Store) viableForHead(node *Node) bool {
 
 	return justified && finalized
 }
-
