@@ -24,7 +24,7 @@ func TestNilDBHistoryBlkHdr(t *testing.T) {
 		t.Fatal("HasBlockHeader should return false")
 	}
 
-	bPrime, err := db.BlockHeader(epoch, validatorID)
+	bPrime, err := db.BlockHeaders(epoch, validatorID)
 	if err != nil {
 		t.Fatalf("failed to get block: %v", err)
 	}
@@ -67,7 +67,7 @@ func TestSaveHistoryBlkHdr(t *testing.T) {
 			t.Fatalf("save block failed: %v", err)
 		}
 
-		bha, err := db.BlockHeader(tt.epoch, tt.vID)
+		bha, err := db.BlockHeaders(tt.epoch, tt.vID)
 		if err != nil {
 			t.Fatalf("failed to get block: %v", err)
 		}
@@ -115,7 +115,7 @@ func TestDeleteHistoryBlkHdr(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		bha, err := db.BlockHeader(tt.epoch, tt.vID)
+		bha, err := db.BlockHeaders(tt.epoch, tt.vID)
 		if err != nil {
 			t.Fatalf("failed to get block: %v", err)
 		}
@@ -127,7 +127,7 @@ func TestDeleteHistoryBlkHdr(t *testing.T) {
 		if err != nil {
 			t.Fatalf("save block failed: %v", err)
 		}
-		bh, err := db.BlockHeader(tt.epoch, tt.vID)
+		bh, err := db.BlockHeaders(tt.epoch, tt.vID)
 
 		if err != nil {
 			t.Fatal(err)
@@ -236,7 +236,7 @@ func TestPruneHistoryBlkHdr(t *testing.T) {
 			t.Fatalf("save block header failed: %v", err)
 		}
 
-		bha, err := db.BlockHeader(tt.epoch, tt.vID)
+		bha, err := db.BlockHeaders(tt.epoch, tt.vID)
 		if err != nil {
 			t.Fatalf("failed to get block header: %v", err)
 		}
@@ -253,7 +253,7 @@ func TestPruneHistoryBlkHdr(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		bha, err := db.BlockHeader(tt.epoch, tt.vID)
+		bha, err := db.BlockHeaders(tt.epoch, tt.vID)
 		if err != nil {
 			t.Fatalf("failed to get block header: %v", err)
 		}
