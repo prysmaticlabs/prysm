@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -51,30 +50,24 @@ func (s *Service) batchForkChoiceAtts(ctx context.Context) error {
 	atts = append(atts, s.pool.ForkchoiceAttestations()...)
 
 	// Consolidate attestations by aggregating them by similar data root.
-	if featureconfig.Get().ForkchoiceAggregateAttestations {
-		for _, att := range atts {
-			seen, err := s.seen(att)
-			if err != nil {
-				return err
-			}
-			if seen {
-				continue
-			}
-
-			attDataRoot, err := ssz.HashTreeRoot(att.Data)
-			if err != nil {
-				return err
-			}
-			attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
+	for _, att := range atts {
+		seen, err := s.seen(att)
+		if err != nil {
+			return err
+		}
+		if seen {
+			continue
 		}
 
-		for _, atts := range attsByDataRoot {
-			if err := s.aggregateAndSaveForkChoiceAtts(atts); err != nil {
-				return err
-			}
+		attDataRoot, err := ssz.HashTreeRoot(att.Data)
+		if err != nil {
+			return err
 		}
-	} else {
-		if err := s.pool.SaveForkchoiceAttestations(atts); err != nil {
+		attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
+	}
+
+	for _, atts := range attsByDataRoot {
+		if err := s.aggregateAndSaveForkChoiceAtts(atts); err != nil {
 			return err
 		}
 	}
