@@ -80,7 +80,7 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 	}
 
 	// Verify beacon node has seen the target block before.
-	if !s.beaconDB.HasBlock(ctx, bytesutil.ToBytes32(tgt.Root)) {
+	if !s.hasBlock(ctx, bytesutil.ToBytes32(tgt.Root)) {
 		return nil, ErrTargetRootNotInDB
 	}
 
