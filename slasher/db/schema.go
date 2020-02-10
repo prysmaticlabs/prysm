@@ -11,7 +11,7 @@ var (
 	historicIndexedAttestationsBucket = []byte("historic-indexed-attestations-bucket")
 	historicBlockHeadersBucket        = []byte("historic-block-headers-bucket")
 	slashingBucket                    = []byte("slashing-bucket")
-	indexedAttestationsIndicesBucket  = []byte("indexed-attestations-indices-bucket")
+	compressedIdxAttsBucket           = []byte("compressed-idx-atts-bucket")
 	validatorsPublicKeysBucket        = []byte("validators-public-keys-bucket")
 	// In order to quickly detect surround and surrounded attestations we need to store
 	// the min and max span for each validator for each epoch.
