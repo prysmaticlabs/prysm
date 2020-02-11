@@ -2,6 +2,7 @@ package state
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
@@ -390,6 +391,8 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
 	}
 
 	b.lock.RLock()
+	b.sharedFieldMutexes[randaoMixes].Lock()
+	defer b.sharedFieldMutexes[randaoMixes].Unlock()
 	mixes := b.state.RandaoMixes
 	if refs := b.sharedFieldReferences[randaoMixes].refs; refs > 1 {
 		newMixes := memorypool.GetDoubleByteSlice(len(mixes))
@@ -397,6 +400,7 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
 		mixes = newMixes
 		b.sharedFieldReferences[randaoMixes].refs--
 		b.sharedFieldReferences[randaoMixes] = &reference{refs: 1}
+		b.sharedFieldMutexes[randaoMixes] = new(sync.RWMutex)
 	}
 	b.lock.RUnlock()
 

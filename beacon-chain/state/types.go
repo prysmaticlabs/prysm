@@ -36,6 +36,7 @@ type BeaconState struct {
 	merkleLayers [][][]byte
 
 	sharedFieldReferences map[fieldIndex]*reference
+	sharedFieldMutexes    map[fieldIndex]*sync.RWMutex
 }
 
 // ReadOnlyValidator returns a wrapper that only allows fields from a validator
@@ -75,6 +76,9 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 	b.sharedFieldReferences[balances] = &reference{refs: 1}
 	b.sharedFieldReferences[historicalRoots] = &reference{refs: 1}
 	b.sharedFieldReferences[validatorIdxMap] = &reference{refs: 1}
+
+	// Initialize field shared mutexes
+	b.sharedFieldMutexes[randaoMixes] = new(sync.RWMutex)
 
 	return b, nil
 }
@@ -124,6 +128,10 @@ func (b *BeaconState) Copy() *BeaconState {
 	for field, ref := range b.sharedFieldReferences {
 		ref.refs++
 		dst.sharedFieldReferences[field] = ref
+	}
+
+	for field, mut := range b.sharedFieldMutexes {
+		dst.sharedFieldMutexes[field] = mut
 	}
 
 	for i := range b.dirtyFields {
