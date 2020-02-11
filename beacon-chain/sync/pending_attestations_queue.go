@@ -45,8 +45,8 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 	// be deleted from the queue if invalid (ie. getting staled from falling too many slots behind).
 	s.validatePendingAtts(ctx, s.chain.CurrentSlot())
 
-	s.pendingAttsLock.Lock()
-	defer s.pendingAttsLock.Lock()
+	s.pendingAttsLock.RLock()
+	defer s.pendingAttsLock.RUnlock()
 	for bRoot, attestations := range s.blkRootToPendingAtts {
 		// Has the pending attestation's missing block arrived yet?
 		if s.db.HasBlock(ctx, bRoot) {
