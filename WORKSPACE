@@ -12,33 +12,33 @@ http_archive(
 
 http_archive(
     name = "bazel_gazelle",
-    sha256 = "86c6d481b3f7aedc1d60c1c211c6f76da282ae197c3b3160f54bd3a8f847896f",
+    sha256 = "d8c45ee70ec39a57e7a05e5027c32b1576cc7f16d9dd37135b0eddde45cf1b10",
     urls = [
-        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/bazel-gazelle/releases/download/v0.19.1/bazel-gazelle-v0.19.1.tar.gz",
-        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.19.1/bazel-gazelle-v0.19.1.tar.gz",
+        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/bazel-gazelle/releases/download/v0.20.0/bazel-gazelle-v0.20.0.tar.gz",
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.20.0/bazel-gazelle-v0.20.0.tar.gz",
     ],
 )
 
 http_archive(
     name = "com_github_atlassian_bazel_tools",
-    sha256 = "60821f298a7399450b51b9020394904bbad477c18718d2ad6c789f231e5b8b45",
-    strip_prefix = "bazel-tools-a2138311856f55add11cd7009a5abc8d4fd6f163",
-    urls = ["https://github.com/atlassian/bazel-tools/archive/a2138311856f55add11cd7009a5abc8d4fd6f163.tar.gz"],
+    sha256 = "9527449ff22cf19446250bab0d4542400a531c048a0af2c08da356e31976ac24",
+    strip_prefix = "bazel-tools-b05c89cea96b66b5fa9f7814b7f29d069c5c282d",
+    urls = ["https://github.com/atlassian/bazel-tools/archive/b05c89cea96b66b5fa9f7814b7f29d069c5c282d.tar.gz"],
 )
 
 http_archive(
     name = "io_bazel_rules_docker",
-    #    sha256 = "9ff889216e28c918811b77999257d4ac001c26c1f7c7fb17a79bc28abf74182e",
-    strip_prefix = "rules_docker-0.12.1",
-    url = "https://github.com/bazelbuild/rules_docker/archive/v0.12.1.tar.gz",
+    #    sha256 = "dc97fccceacd4c6be14e800b2a00693d5e8d07f69ee187babfd04a80a9f8e250",
+    strip_prefix = "rules_docker-0.14.1",
+    url = "https://github.com/bazelbuild/rules_docker/archive/v0.14.1.tar.gz",
 )
 
 http_archive(
     name = "io_bazel_rules_go",
-    sha256 = "e88471aea3a3a4f19ec1310a55ba94772d087e9ce46e41ae38ecebe17935de7b",
+    sha256 = "f99a9d76e972e0c8f935b2fe6d0d9d778f67c760c6d2400e23fc2e469016e2bd",
     urls = [
-        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/rules_go/releases/download/v0.20.3/rules_go-v0.20.3.tar.gz",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.20.3/rules_go-v0.20.3.tar.gz",
+        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/rules_go/releases/download/v0.21.2/rules_go-v0.21.2.tar.gz",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.21.2/rules_go-v0.21.2.tar.gz",
     ],
 )
 
@@ -50,7 +50,7 @@ http_archive(
 
 git_repository(
     name = "graknlabs_bazel_distribution",
-    commit = "962f3a7e56942430c0ec120c24f9e9f2a9c2ce1a",
+    commit = "01973c5e50eadf7a64273d72d0158d58012f977c",
     remote = "https://github.com/graknlabs/bazel-distribution",
     shallow_since = "1563544980 +0300",
 )
@@ -131,9 +131,9 @@ proto_library(
 
 http_archive(
     name = "io_kubernetes_build",
-    sha256 = "b84fbd1173acee9d02a7d3698ad269fdf4f7aa081e9cecd40e012ad0ad8cfa2a",
-    strip_prefix = "repo-infra-6537f2101fb432b679f3d103ee729dd8ac5d30a0",
-    url = "https://github.com/kubernetes/repo-infra/archive/6537f2101fb432b679f3d103ee729dd8ac5d30a0.tar.gz",
+    sha256 = "8e2a4611250c08c8969f62976ddfc5a8136196721ce3d650f83b25ab9d510187",
+    strip_prefix = "repo-infra-00247c0f5aab427b826760f4d076839de400b27c",
+    url = "https://github.com/kubernetes/repo-infra/archive/00247c0f5aab427b826760f4d076839de400b27c.tar.gz",
 )
 
 http_archive(
@@ -146,6 +146,10 @@ filegroup(
         "**/*.yaml",
     ]),
     visibility = ["//visibility:public"],
+)
+    """,
+    sha256 = "abba615d62ff895774fb354e99ea7fb11bd442760b3d1d2cd57e605a58be566c",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.10.1/general.tar.gz",
 )
     """,
     sha256 = "72c6ee3c20d19736b1203f364a6eb0ddee2c173073e20bee2beccd288fdc42be",
@@ -164,6 +168,10 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
+    sha256 = "f5fc250f1b73f14d9ebdb7f47371cae2ef9aa2175e37a69ab2e44ffa4baa16c4",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.10.1/minimal.tar.gz",
+)
+    """,
     sha256 = "a3cc860a3679f6f62ee57b65677a9b48a65fdebb151cdcbf50f23852632845ef",
     url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.9.4/minimal.tar.gz",
 )
@@ -178,6 +186,10 @@ filegroup(
         "**/*.yaml",
     ]),
     visibility = ["//visibility:public"],
+)
+    """,
+    sha256 = "dbafe15d00ff6d75b7cb32a2ca7dc45ded786db8db7100e027e443f75469cfcf",
+    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.10.1/mainnet.tar.gz",
 )
     """,
     sha256 = "8fc1b6220973ca30fa4ddc4ed24d66b1719abadca8bedb5e06c3bd9bc0df28e9",
@@ -210,7 +222,7 @@ go_repository(
 
 git_repository(
     name = "com_google_protobuf",
-    commit = "4cf5bfee9546101d98754d23ff378ff718ba8438",
+    commit = "f20be839276cfc1129c12d89924164624ef3796d",
     remote = "https://github.com/protocolbuffers/protobuf",
     shallow_since = "1558721209 -0700",
 )
@@ -391,7 +403,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr_net",
-    commit = "c9acf9f27c5020e78925937dc3de142d2d393cd1",  # v0.1.1
+    commit = "07114b1ba02bec25ef00db88f42e6e424a027e07",  # v0.1.2
     importpath = "github.com/multiformats/go-multiaddr-net",
 )
 
@@ -446,13 +458,13 @@ go_repository(
 
 go_repository(
     name = "com_github_jbenet_goprocess",
-    commit = "7f9d9ed286badffcf2122cfeb383ec37daf92508",
+    commit = "7f9d9ed286badffcf2122cfeb383ec37daf92508",  # v0.1.3
     importpath = "github.com/jbenet/goprocess",
 )
 
 go_repository(
     name = "com_github_multiformats_go_multistream",
-    commit = "039807e4901c4b2041f40a0e4aa32d72939608aa",  # v0.1.0
+    commit = "bd94c78329f9d3cd394f09e53af6138dd5b4db89",  # v0.1.1
     importpath = "github.com/multiformats/go-multistream",
 )
 
@@ -482,7 +494,7 @@ go_repository(
 
 go_repository(
     name = "com_github_mattn_go_isatty",
-    commit = "7b513a986450394f7bbf1476909911b3aa3a55ce",
+    commit = "7b513a986450394f7bbf1476909911b3aa3a55ce",  # v0.0.12
     importpath = "github.com/mattn/go-isatty",
 )
 
@@ -632,7 +644,7 @@ go_repository(
 
 go_repository(
     name = "com_github_emicklei_dot",
-    commit = "5810de2f2ab7aac98cd7bcbd59147a7ca6071768",
+    commit = "5810de2f2ab7aac98cd7bcbd59147a7ca6071768",  # v0.10.2
     importpath = "github.com/emicklei/dot",
 )
 
@@ -695,19 +707,19 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_client_model",
-    commit = "7bc5445566f0fe75b15de23e6b93886e982d7bf9",
+    commit = "7bc5445566f0fe75b15de23e6b93886e982d7bf9",  # v0.2.0
     importpath = "github.com/prometheus/client_model",
 )
 
 go_repository(
     name = "com_github_prometheus_common",
-    commit = "d978bcb1309602d68bb4ba69cf3f8ed900e07308",
+    commit = "d978bcb1309602d68bb4ba69cf3f8ed900e07308",  # v0.9.1
     importpath = "github.com/prometheus/common",
 )
 
 go_repository(
     name = "com_github_prometheus_procfs",
-    commit = "6d489fc7f1d9cd890a250f3ea3431b1744b9623f",
+    commit = "6d489fc7f1d9cd890a250f3ea3431b1744b9623f",  # v0.0.8
     importpath = "github.com/prometheus/procfs",
 )
 
@@ -770,13 +782,13 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_kad_dht",
     build_file_proto_mode = "disable_global",
-    commit = "e216d3cf6cfadfc91b8c3bec6ac9492ea40908d0",  # v0.2.1
+    commit = "95964c0eac86887e54559a689f7e8f68b4a0f69f",  # v0.5.0
     importpath = "github.com/libp2p/go-libp2p-kad-dht",
 )
 
 go_repository(
     name = "com_github_ipfs_go_datastore",
-    commit = "e7a498916ccca1b0b40fb08630659cd4d68a01e8",  # v0.3.1
+    commit = "b72ac7e0b127ecaceda650a806107024cfbb6b64",  # v0.4.0
     importpath = "github.com/ipfs/go-datastore",
 )
 
@@ -788,7 +800,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_cid",
-    commit = "3da5bbbe45260437a44f777e6b2e5effa2606901",  # v0.0.4
+    commit = "72cd3d39d7fe1b2ab7abac0854a1bcb046a8d009",  # v0.0.5
     importpath = "github.com/ipfs/go-cid",
 )
 
@@ -896,7 +908,7 @@ go_repository(
 go_repository(
     name = "io_k8s_api",
     build_file_proto_mode = "disable_global",
-    commit = "3043179095b6baa0087e8735d796bd6dfa881f8e",
+    commit = "7ea599edc7fd1198238be103353ca78eef24ae63",  # v0.17.2
     importpath = "k8s.io/api",
 )
 
@@ -1121,7 +1133,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_varint",
-    commit = "0aa688902217dff2cba0f678c7e4a0f547b4983e",
+    commit = "99465703c4a9cf53a0235e52608cb055e9d39c29",  # v0.0.5
     importpath = "github.com/multiformats/go-varint",
 )
 
@@ -1429,7 +1441,7 @@ go_repository(
 
 go_repository(
     name = "com_github_protolambda_zssz",
-    commit = "632f11e5e281660402bd0ac58f76090f3503def0",
+    commit = "e75b2308441f098eb0d9a1b0fbf4409f89a518d7",  # v0.1.4
     importpath = "github.com/protolambda/zssz",
 )
 
