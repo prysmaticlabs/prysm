@@ -5,7 +5,6 @@ go_library(
     srcs = ["memorypool.go"],
     importpath = "github.com/prysmaticlabs/prysm/shared/memorypool",
     visibility = ["//visibility:public"],
-    deps = ["//shared/featureconfig:go_default_library"],
 )
 
 go_test(
