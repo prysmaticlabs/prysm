@@ -1,4 +1,4 @@
-package state_gen
+package stategen
 
 import "github.com/prysmaticlabs/prysm/beacon-chain/db"
 

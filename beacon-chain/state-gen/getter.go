@@ -1,4 +1,4 @@
-package state_gen
+package stategen
 
 import (
 	"context"
