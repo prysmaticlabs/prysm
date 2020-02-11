@@ -12,7 +12,6 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/memorypool"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/stateutil"
 )
@@ -74,7 +73,6 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 	b.sharedFieldReferences[validators] = &reference{refs: 1}
 	b.sharedFieldReferences[balances] = &reference{refs: 1}
 	b.sharedFieldReferences[historicalRoots] = &reference{refs: 1}
-	b.sharedFieldReferences[validatorIdxMap] = &reference{refs: 1}
 
 	return b, nil
 }
@@ -143,11 +141,8 @@ func (b *BeaconState) Copy() *BeaconState {
 
 	// Finalizer runs when dst is being destroyed in garbage collection.
 	runtime.SetFinalizer(dst, func(b *BeaconState) {
-		for i, v := range b.sharedFieldReferences {
+		for _, v := range b.sharedFieldReferences {
 			v.refs--
-			if i == randaoMixes && v.refs == 0 {
-				memorypool.PutDoubleByteSlice(b.state.RandaoMixes)
-			}
 		}
 	})
 
@@ -171,12 +166,6 @@ func (b *BeaconState) HashTreeRoot() ([32]byte, error) {
 	}
 
 	for field := range b.dirtyFields {
-		// do not compute root for field
-		// thats not part of the state.
-		if field == validatorIdxMap {
-			delete(b.dirtyFields, field)
-			continue
-		}
 		root, err := b.rootSelector(field)
 		if err != nil {
 			return [32]byte{}, err
