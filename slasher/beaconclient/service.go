@@ -1,4 +1,4 @@
-/**
+/*
 Package beaconclient defines a service that interacts with a beacon
 node via a gRPC client to listen for streamed blocks, attestations, and to
 submit proposer/attester slashings to the node in case they are detected.

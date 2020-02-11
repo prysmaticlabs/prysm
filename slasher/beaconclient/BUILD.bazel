@@ -7,7 +7,7 @@ go_library(
         "service.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/slasher/beaconclient",
-    visibility = ["//visibility:public"],
+    visibility = ["//slasher:__subpackages__"],
     deps = [
         "//shared/event:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
