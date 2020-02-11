@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/memorypool"
 )
 
 type fieldIndex int
@@ -40,9 +39,6 @@ const (
 	previousJustifiedCheckpoint
 	currentJustifiedCheckpoint
 	finalizedCheckpoint
-	// validatorIdxMap is not part of the state, but is used so as to be able to keep
-	// track of references to it to allow for efficient copy on write.
-	validatorIdxMap
 )
 
 // SetGenesisTime for the beacon state.
@@ -312,21 +308,14 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 // SetValidatorIndexByPubkey updates the validator index mapping maintained internally to
 // a given input 48-byte, public key.
 func (b *BeaconState) SetValidatorIndexByPubkey(pubKey [48]byte, validatorIdx uint64) {
-	idxMap := b.valIdxMap
-	b.lock.RLock()
-	if b.sharedFieldReferences[validatorIdxMap].refs > 1 {
-		// copy-on-write for idx map
-		idxMap = b.validatorIndexMap()
-		b.sharedFieldReferences[validatorIdxMap].refs--
-		b.sharedFieldReferences[validatorIdxMap] = &reference{refs: 1}
-	}
-	b.lock.RUnlock()
+	// Copy on write since this is a shared map.
+	m := b.validatorIndexMap()
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	idxMap[pubKey] = validatorIdx
-	b.valIdxMap = idxMap
+	m[pubKey] = validatorIdx
+	b.valIdxMap = m
 }
 
 // SetBalances for the beacon state. This PR updates the entire
@@ -392,9 +381,7 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
 	b.lock.RLock()
 	mixes := b.state.RandaoMixes
 	if refs := b.sharedFieldReferences[randaoMixes].refs; refs > 1 {
-		newMixes := memorypool.GetDoubleByteSlice(len(mixes))
-		copy(newMixes, mixes)
-		mixes = newMixes
+		mixes = b.RandaoMixes()
 		b.sharedFieldReferences[randaoMixes].refs--
 		b.sharedFieldReferences[randaoMixes] = &reference{refs: 1}
 	}
@@ -505,9 +492,7 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestati
 
 	atts := b.state.CurrentEpochAttestations
 	if b.sharedFieldReferences[currentEpochAttestations].refs > 1 {
-		copiedAtts := make([]*pbp2p.PendingAttestation, len(atts), len(atts)+1)
-		copy(copiedAtts, atts)
-		atts = copiedAtts
+		atts = b.CurrentEpochAttestations()
 		b.sharedFieldReferences[currentEpochAttestations].refs--
 		b.sharedFieldReferences[currentEpochAttestations] = &reference{refs: 1}
 	}
@@ -527,9 +512,7 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestat
 	b.lock.RLock()
 	atts := b.state.PreviousEpochAttestations
 	if b.sharedFieldReferences[previousEpochAttestations].refs > 1 {
-		copiedAtts := make([]*pbp2p.PendingAttestation, len(atts), len(atts)+1)
-		copy(copiedAtts, atts)
-		atts = copiedAtts
+		atts = b.PreviousEpochAttestations()
 		b.sharedFieldReferences[previousEpochAttestations].refs--
 		b.sharedFieldReferences[previousEpochAttestations] = &reference{refs: 1}
 	}
@@ -549,9 +532,7 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	b.lock.RLock()
 	vals := b.state.Validators
 	if b.sharedFieldReferences[validators].refs > 1 {
-		copiedVals := make([]*ethpb.Validator, len(b.state.Validators), len(b.state.Validators)+1)
-		copy(copiedVals, b.state.Validators)
-		vals = copiedVals
+		vals = b.Validators()
 		b.sharedFieldReferences[validators].refs--
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}
