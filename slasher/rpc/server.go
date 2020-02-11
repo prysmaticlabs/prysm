@@ -48,6 +48,7 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 			errorChans <- err
 		}
 		wg.Done()
+		return
 	}(req)
 
 	lastIdx := int64(-1)
