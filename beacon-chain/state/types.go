@@ -80,6 +80,9 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 
 	// Initialize field shared mutexes
 	b.sharedFieldMutexes[randaoMixes] = new(sync.RWMutex)
+	b.sharedFieldMutexes[validators] = new(sync.RWMutex)
+	b.sharedFieldMutexes[previousEpochAttestations] = new(sync.RWMutex)
+	b.sharedFieldMutexes[currentEpochAttestations] = new(sync.RWMutex)
 
 	return b, nil
 }

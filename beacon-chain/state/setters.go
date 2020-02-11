@@ -250,6 +250,7 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 	b.state.Validators = val
 	b.sharedFieldReferences[validators].refs--
 	b.sharedFieldReferences[validators] = &reference{refs: 1}
+	b.sharedFieldMutexes[validators] = new(sync.RWMutex)
 	b.markFieldAsDirty(validators)
 	return nil
 }
@@ -377,6 +378,7 @@ func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
 
 	b.sharedFieldReferences[randaoMixes].refs--
 	b.sharedFieldReferences[randaoMixes] = &reference{refs: 1}
+	b.sharedFieldMutexes[randaoMixes] = new(sync.RWMutex)
 
 	b.state.RandaoMixes = val
 	b.markFieldAsDirty(randaoMixes)
@@ -462,6 +464,7 @@ func (b *BeaconState) SetPreviousEpochAttestations(val []*pbp2p.PendingAttestati
 
 	b.sharedFieldReferences[previousEpochAttestations].refs--
 	b.sharedFieldReferences[previousEpochAttestations] = &reference{refs: 1}
+	b.sharedFieldMutexes[previousEpochAttestations] = new(sync.RWMutex)
 
 	b.state.PreviousEpochAttestations = val
 	b.markFieldAsDirty(previousEpochAttestations)
@@ -476,6 +479,7 @@ func (b *BeaconState) SetCurrentEpochAttestations(val []*pbp2p.PendingAttestatio
 
 	b.sharedFieldReferences[currentEpochAttestations].refs--
 	b.sharedFieldReferences[currentEpochAttestations] = &reference{refs: 1}
+	b.sharedFieldMutexes[currentEpochAttestations] = new(sync.RWMutex)
 
 	b.state.CurrentEpochAttestations = val
 	b.markFieldAsDirty(currentEpochAttestations)
@@ -507,6 +511,8 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestation) error {
 	b.lock.RLock()
 
+	b.sharedFieldMutexes[currentEpochAttestations].Lock()
+	defer b.sharedFieldMutexes[currentEpochAttestations].Unlock()
 	atts := b.state.CurrentEpochAttestations
 	if b.sharedFieldReferences[currentEpochAttestations].refs > 1 {
 		copiedAtts := make([]*pbp2p.PendingAttestation, len(atts), len(atts)+1)
@@ -514,6 +520,7 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestati
 		atts = copiedAtts
 		b.sharedFieldReferences[currentEpochAttestations].refs--
 		b.sharedFieldReferences[currentEpochAttestations] = &reference{refs: 1}
+		b.sharedFieldMutexes[currentEpochAttestations] = new(sync.RWMutex)
 	}
 	b.lock.RUnlock()
 
@@ -529,6 +536,8 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestati
 // to the the end of list.
 func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestation) error {
 	b.lock.RLock()
+	b.sharedFieldMutexes[previousEpochAttestations].Lock()
+	defer b.sharedFieldMutexes[previousEpochAttestations].Unlock()
 	atts := b.state.PreviousEpochAttestations
 	if b.sharedFieldReferences[previousEpochAttestations].refs > 1 {
 		copiedAtts := make([]*pbp2p.PendingAttestation, len(atts), len(atts)+1)
@@ -536,6 +545,7 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestat
 		atts = copiedAtts
 		b.sharedFieldReferences[previousEpochAttestations].refs--
 		b.sharedFieldReferences[previousEpochAttestations] = &reference{refs: 1}
+		b.sharedFieldMutexes[previousEpochAttestations] = new(sync.RWMutex)
 	}
 	b.lock.RUnlock()
 
@@ -551,6 +561,8 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestat
 // to the the end of list.
 func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	b.lock.RLock()
+	b.sharedFieldMutexes[validators].Lock()
+	defer b.sharedFieldMutexes[validators].Unlock()
 	vals := b.state.Validators
 	if b.sharedFieldReferences[validators].refs > 1 {
 		copiedVals := make([]*ethpb.Validator, len(b.state.Validators), len(b.state.Validators)+1)
@@ -558,6 +570,7 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 		vals = copiedVals
 		b.sharedFieldReferences[validators].refs--
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
+		b.sharedFieldMutexes[validators] = new(sync.RWMutex)
 	}
 	b.lock.RUnlock()
 
