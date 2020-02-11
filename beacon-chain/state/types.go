@@ -57,6 +57,7 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 		state:                 st,
 		dirtyFields:           make(map[fieldIndex]interface{}, 20),
 		sharedFieldReferences: make(map[fieldIndex]*reference, 10),
+		sharedFieldMutexes:    make(map[fieldIndex]*sync.RWMutex),
 		valIdxMap:             coreutils.ValidatorIndexMap(st.Validators),
 	}
 
@@ -120,6 +121,7 @@ func (b *BeaconState) Copy() *BeaconState {
 		},
 		dirtyFields:           make(map[fieldIndex]interface{}, 20),
 		sharedFieldReferences: make(map[fieldIndex]*reference, 10),
+		sharedFieldMutexes:    make(map[fieldIndex]*sync.RWMutex),
 
 		// Copy on write validator index map.
 		valIdxMap: b.valIdxMap,
