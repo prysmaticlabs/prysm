@@ -1,11 +1,13 @@
 package beaconclient
 
 import (
+	"context"
 	"testing"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
-
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 )
 
@@ -15,27 +17,54 @@ func TestService_ReceiveBlocks(t *testing.T) {
 	client := mock.NewMockBeaconChainClient(ctrl)
 
 	bs := Service{
-		client: client,
+		client:    client,
+		blockFeed: new(event.Feed),
 	}
 	stream := mock.NewMockBeaconChain_StreamBlocksClient(ctrl)
+	ctx, cancel := context.WithCancel(context.Background())
+	block := &ethpb.BeaconBlock{
+		Slot: 5,
+	}
 	client.EXPECT().StreamBlocks(
 		gomock.Any(),
 		&ptypes.Empty{},
 	).Return(stream, nil)
+	stream.EXPECT().Context().Return(ctx).AnyTimes()
 	stream.EXPECT().Recv().Return(
-		&ethpb.ChainStartResponse{
-			Started:     true,
-			GenesisTime: genesis,
-		},
+		block,
 		nil,
-	)
-	if err := v.WaitForChainStart(context.Background()); err != nil {
-		t.Fatal(err)
+	).Do(func() {
+		cancel()
+	})
+	bs.receiveBlocks(ctx)
+}
+
+func TestService_ReceiveAttestations(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := mock.NewMockBeaconChainClient(ctrl)
+
+	bs := Service{
+		client:    client,
+		blockFeed: new(event.Feed),
 	}
-	if v.genesisTime != genesis {
-		t.Errorf("Expected chain start time to equal %d, received %d", genesis, v.genesisTime)
+	stream := mock.NewMockBeaconChain_StreamAttestationsClient(ctrl)
+	ctx, cancel := context.WithCancel(context.Background())
+	att := &ethpb.Attestation{
+		Data: &ethpb.AttestationData{
+			Slot: 5,
+		},
 	}
-	if v.ticker == nil {
-		t.Error("Expected ticker to be set, received nil")
-	}
+	client.EXPECT().StreamAttestations(
+		gomock.Any(),
+		&ptypes.Empty{},
+	).Return(stream, nil)
+	stream.EXPECT().Context().Return(ctx).AnyTimes()
+	stream.EXPECT().Recv().Return(
+		att,
+		nil,
+	).Do(func() {
+		cancel()
+	})
+	bs.receiveAttestations(ctx)
 }

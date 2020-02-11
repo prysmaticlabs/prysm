@@ -8,12 +8,11 @@ import (
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-
-	"github.com/prysmaticlabs/prysm/shared/event"
 )
 
 var log = logrus.WithField("prefix", "beaconclient")
@@ -28,6 +27,16 @@ type Service struct {
 	client          ethpb.BeaconChainClient
 	blockFeed       *event.Feed
 	attestationFeed *event.Feed
+}
+
+// BlockFeed --
+func (bs *Service) BlockFeed() *event.Feed {
+	return bs.blockFeed
+}
+
+// AttestationFeed --
+func (bs *Service) AttestationFeed() *event.Feed {
+	return bs.attestationFeed
 }
 
 // Stop the beacon client service.
@@ -58,7 +67,9 @@ func (bs *Service) Start() {
 		dialOpt = grpc.WithTransportCredentials(creds)
 	} else {
 		dialOpt = grpc.WithInsecure()
-		log.Warn("You are using an insecure gRPC connection to beacon chain! Please provide a certificate and key to use a secure connection.")
+		log.Warn(
+			"You are using an insecure gRPC connection to beacon chain! Please provide a certificate and key to use a secure connection",
+		)
 	}
 	beaconOpts := []grpc.DialOption{
 		dialOpt,
@@ -79,4 +90,7 @@ func (bs *Service) Start() {
 	log.Info("Successfully started gRPC connection")
 	bs.conn = conn
 	bs.client = ethpb.NewBeaconChainClient(bs.conn)
+
+	go bs.receiveBlocks(bs.context)
+	go bs.receiveAttestations(bs.context)
 }
