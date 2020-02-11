@@ -187,7 +187,7 @@ func convertToIndexed(ctx context.Context, att *ethpb.Attestation, bCommittee *e
 			len(bCommittee.Committees),
 		)
 	}
-	if att.Data.CommitteeIndex > uint64(len(slotCommittees.Committees)) {
+	if att.Data.CommitteeIndex >= uint64(len(slotCommittees.Committees)) {
 		return nil, fmt.Errorf(
 			"committee index is out of range in slot wanted: %d, actual: %d",
 			att.Data.CommitteeIndex,
