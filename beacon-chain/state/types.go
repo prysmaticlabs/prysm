@@ -78,8 +78,11 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 	b.sharedFieldReferences[historicalRoots] = &reference{refs: 1}
 	b.sharedFieldReferences[validatorIdxMap] = &reference{refs: 1}
 
-	// Initialize field shared mutexes
+	// Initialize field shared mutexes, these are for fields
+	// in which we are not practicing copy on write.
 	b.sharedFieldMutexes[randaoMixes] = new(sync.RWMutex)
+	b.sharedFieldMutexes[blockRoots] = new(sync.RWMutex)
+	b.sharedFieldMutexes[stateRoots] = new(sync.RWMutex)
 	b.sharedFieldMutexes[validators] = new(sync.RWMutex)
 	b.sharedFieldMutexes[previousEpochAttestations] = new(sync.RWMutex)
 	b.sharedFieldMutexes[currentEpochAttestations] = new(sync.RWMutex)

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -94,6 +96,7 @@ func (b *BeaconState) SetBlockRoots(val [][]byte) error {
 
 	b.sharedFieldReferences[blockRoots].refs--
 	b.sharedFieldReferences[blockRoots] = &reference{refs: 1}
+	b.sharedFieldMutexes[blockRoots] = new(sync.RWMutex)
 
 	b.state.BlockRoots = val
 	b.markFieldAsDirty(blockRoots)
@@ -106,15 +109,19 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 	if len(b.state.BlockRoots) <= int(idx) {
 		return fmt.Errorf("invalid index provided %d", idx)
 	}
+	b.sharedFieldMutexes[blockRoots].Lock()
+	defer b.sharedFieldMutexes[blockRoots].Unlock()
 
 	b.lock.RLock()
 	r := b.state.BlockRoots
 	if ref := b.sharedFieldReferences[blockRoots]; ref.refs > 1 {
-		// Copy on write since this is a shared array.
-		r = b.BlockRoots()
+		roots := make([][]byte, len(r))
+		copy(roots, r)
+		r = roots
 
 		ref.refs--
 		b.sharedFieldReferences[blockRoots] = &reference{refs: 1}
+		b.sharedFieldMutexes[blockRoots] = new(sync.RWMutex)
 	}
 	b.lock.RUnlock()
 
@@ -122,7 +129,7 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	r[idx] = blockRoot[:]
+	r[idx] = bytesutil.Copy(blockRoot[:])
 	b.state.BlockRoots = r
 
 	b.markFieldAsDirty(blockRoots)
@@ -137,6 +144,7 @@ func (b *BeaconState) SetStateRoots(val [][]byte) error {
 
 	b.sharedFieldReferences[stateRoots].refs--
 	b.sharedFieldReferences[stateRoots] = &reference{refs: 1}
+	b.sharedFieldMutexes[stateRoots] = new(sync.RWMutex)
 
 	b.state.StateRoots = val
 	b.markFieldAsDirty(stateRoots)
@@ -150,23 +158,27 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 
+	b.sharedFieldMutexes[stateRoots].Lock()
+	defer b.sharedFieldMutexes[stateRoots].Unlock()
+
 	b.lock.RLock()
 	// Check if we hold the only reference to the shared state roots slice.
 	r := b.state.StateRoots
 	if ref := b.sharedFieldReferences[stateRoots]; ref.refs > 1 {
-		// Perform a copy since this is a shared reference and we don't want to mutate others.
-		r = b.StateRoots()
+		roots := make([][]byte, len(r))
+		copy(roots, r)
+		r = roots
 
 		ref.refs--
 		b.sharedFieldReferences[stateRoots] = &reference{refs: 1}
+		b.sharedFieldMutexes[stateRoots] = new(sync.RWMutex)
 	}
 	b.lock.RUnlock()
 
 	// Must secure lock after copy or hit a deadlock.
 	b.lock.Lock()
 	defer b.lock.Unlock()
-
-	r[idx] = stateRoot[:]
+	r[idx] = bytesutil.Copy(stateRoot[:])
 	b.state.StateRoots = r
 
 	b.markFieldAsDirty(stateRoots)
@@ -292,20 +304,23 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 	}
 
 	b.lock.RLock()
+	b.sharedFieldMutexes[validators].Lock()
+	defer b.sharedFieldMutexes[validators].Unlock()
 	v := b.state.Validators
-	if ref := b.sharedFieldReferences[validators]; ref.refs > 1 {
-		// Perform a copy since this is a shared reference and we don't want to mutate others.
-		v = b.Validators()
-
-		ref.refs--
+	if b.sharedFieldReferences[validators].refs > 1 {
+		copiedVals := make([]*ethpb.Validator, len(v), len(v)+1)
+		copy(copiedVals, v)
+		v = copiedVals
+		b.sharedFieldReferences[validators].refs--
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
+		b.sharedFieldMutexes[validators] = new(sync.RWMutex)
 	}
 	b.lock.RUnlock()
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	v[idx] = val
+	v[idx] = proto.Clone(val).(*ethpb.Validator)
 	b.state.Validators = v
 	b.markFieldAsDirty(validators)
 	return nil
@@ -409,7 +424,7 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	mixes[idx] = val
+	mixes[idx] = bytesutil.Copy(val)
 	b.state.RandaoMixes = mixes
 	b.markFieldAsDirty(randaoMixes)
 	return nil
@@ -527,7 +542,7 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestati
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.CurrentEpochAttestations = append(atts, val)
+	b.state.CurrentEpochAttestations = append(atts, CopyPendingAttestation(val))
 	b.markFieldAsDirty(currentEpochAttestations)
 	return nil
 }
@@ -552,7 +567,7 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestat
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.PreviousEpochAttestations = append(atts, val)
+	b.state.PreviousEpochAttestations = append(atts, CopyPendingAttestation(val))
 	b.markFieldAsDirty(previousEpochAttestations)
 	return nil
 }
@@ -577,7 +592,7 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.Validators = append(vals, val)
+	b.state.Validators = append(vals, proto.Clone(val).(*ethpb.Validator))
 	b.markFieldAsDirty(validators)
 	return nil
 }

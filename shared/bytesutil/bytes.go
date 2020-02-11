@@ -5,6 +5,14 @@ import (
 	"encoding/binary"
 )
 
+// Copy copies a byte slice into a newly
+// allocated slice.
+func Copy(x []byte) []byte {
+	newSlice := make([]byte, len(x))
+	copy(newSlice, x)
+	return newSlice
+}
+
 // ToBytes returns integer x to bytes in little-endian format at the specified length.
 // Spec pseudocode definition:
 //   def int_to_bytes(integer: int, length: int) -> bytes:
