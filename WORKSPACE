@@ -264,7 +264,7 @@ go_repository(
 
 go_repository(
     name = "com_github_urfave_cli",
-    commit = "aa1b27192cfe441ec1468207f66b6e121dbd81c2",  # v2.1.1
+    commit = "e6cf83ec39f6e1158ced1927d4ed14578fda8edb",  # v1.21.0
     importpath = "github.com/urfave/cli",
 )
 
@@ -319,7 +319,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_log",
-    commit = "03771230abae228f5c9a049173de35d673608842",  # v2.0.2
+    commit = "91b837264c0f35dd4e2be341d711316b91d3573d",  # v0.0.1
     importpath = "github.com/ipfs/go-log",
 )
 
@@ -689,7 +689,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_client_golang",
-    commit = "913f67ef0627596efc752f02d4014308e7345dbf",  # v1.4.1
+    commit = "4ab88e80c249ed361d3299e2930427d9ac43ef8d",  # v1.0.0
     importpath = "github.com/prometheus/client_golang",
 )
 
