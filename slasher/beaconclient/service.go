@@ -4,23 +4,30 @@ import (
 	"context"
 	"errors"
 
+	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+
+	"github.com/prysmaticlabs/prysm/shared/event"
 )
 
 var log = logrus.WithField("prefix", "beaconclient")
 
 // Service --
 type Service struct {
-	context  context.Context
-	cancel   context.CancelFunc
-	cert     string
-	conn     *grpc.ClientConn
-	provider string
-	client   eth.BeaconChainClient
+	context         context.Context
+	cancel          context.CancelFunc
+	cert            string
+	conn            *grpc.ClientConn
+	provider        string
+	client          ethpb.BeaconChainClient
+	blockFeed       *event.Feed
+	attestationFeed *event.Feed
 }
 
 // Stop the beacon client service.
@@ -43,7 +50,6 @@ func (bs *Service) Status() error {
 
 func (bs *Service) Start() {
 	var dialOpt grpc.DialOption
-
 	if bs.cert != "" {
 		creds, err := credentials.NewClientTLSFromFile(bs.cert, "")
 		if err != nil {
@@ -66,11 +72,11 @@ func (bs *Service) Start() {
 			grpc_prometheus.UnaryClientInterceptor,
 		)),
 	}
-	conn, err := grpc.DialContext(s.context, bs.provider, beaconOpts...)
+	conn, err := grpc.DialContext(bs.context, bs.provider, beaconOpts...)
 	if err != nil {
-		return fmt.Errorf("could not dial endpoint: %s, %v", bs.provider, err)
+		log.Fatalf("Could not dial endpoint: %s, %v", bs.provider, err)
 	}
 	log.Info("Successfully started gRPC connection")
-	s.beaconConn = conn
-	s.beaconClient = eth.NewBeaconChainClient(bs.conn)
+	bs.conn = conn
+	bs.client = ethpb.NewBeaconChainClient(bs.conn)
 }
