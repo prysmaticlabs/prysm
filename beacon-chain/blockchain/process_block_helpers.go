@@ -136,7 +136,7 @@ func (s *Service) saveNewValidators(ctx context.Context, preStateValidatorCount 
 		log.WithFields(logrus.Fields{
 			"indices":             indices,
 			"totalValidatorCount": postStateValidatorCount - preStateValidatorCount,
-		}).Info("Validator indices saved in DB")
+		}).Trace("Validator indices saved in DB")
 	}
 	return nil
 }
@@ -427,6 +427,23 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk *ethpb.
 			state.CurrentJustifiedCheckpoint().Epoch,
 			state.FinalizedCheckpointEpoch()); err != nil {
 			return errors.Wrap(err, "could not process block for proto array fork choice")
+		}
+	}
+
+	return nil
+}
+
+// The deletes input attestations from the attestation pool, so proposers don't include them in a block for the future.
+func (s *Service) deletePoolAtts(atts []*ethpb.Attestation) error {
+	for _, att := range atts {
+		if helpers.IsAggregated(att) {
+			if err := s.attPool.DeleteAggregatedAttestation(att); err != nil {
+				return err
+			}
+		} else {
+			if err := s.attPool.DeleteUnaggregatedAttestation(att); err != nil {
+				return err
+			}
 		}
 	}
 

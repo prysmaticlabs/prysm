@@ -62,7 +62,7 @@ func TestFFGUpdates_OneBranch(t *testing.T) {
 	//            2 <- head
 	//            |
 	//            3
-	r, err = f.Head(context.Background(), 0, indexToHash(2), balances, 1)
+	r, err = f.Head(context.Background(), 1, indexToHash(2), balances, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +78,7 @@ func TestFFGUpdates_OneBranch(t *testing.T) {
 	//            2 <- start
 	//            |
 	//            3 <- head
-	r, err = f.Head(context.Background(), 1, indexToHash(3), balances, 2)
+	r, err = f.Head(context.Background(), 2, indexToHash(3), balances, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -232,7 +232,7 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 		t.Error("Incorrect head with justified epoch at 0")
 	}
 
-	r, err = f.Head(context.Background(), 0, indexToHash(1), balances, 1)
+	r, err = f.Head(context.Background(), 1, indexToHash(1), balances, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

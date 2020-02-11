@@ -20,9 +20,9 @@ func unmarshalBlockHeader(enc []byte) (*ethpb.SignedBeaconBlockHeader, error) {
 	return protoBlockHeader, nil
 }
 
-// BlockHeader accepts an epoch and validator id and returns the corresponding block header array.
+// BlockHeaders accepts an epoch and validator id and returns the corresponding block header array.
 // Returns nil if the block header for those values does not exist.
-func (db *Store) BlockHeader(epoch uint64, validatorID uint64) ([]*ethpb.SignedBeaconBlockHeader, error) {
+func (db *Store) BlockHeaders(epoch uint64, validatorID uint64) ([]*ethpb.SignedBeaconBlockHeader, error) {
 	var blockHeaders []*ethpb.SignedBeaconBlockHeader
 	err := db.view(func(tx *bolt.Tx) error {
 		c := tx.Bucket(historicBlockHeadersBucket).Cursor()

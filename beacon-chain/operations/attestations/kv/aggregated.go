@@ -29,13 +29,10 @@ func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
 		}
 	}
 
-	// Ensure that this attestation is not already fully contained in an existing attestation.
-	for _, a := range atts {
-		if a.AggregationBits.Contains(att.AggregationBits) {
-			return nil
-		}
+	atts, err = helpers.AggregateAttestations(append(atts, att))
+	if err != nil {
+		return err
 	}
-	atts = append(atts, att)
 
 	// DefaultExpiration is set to what was given to New(). In this case
 	// it's one epoch.

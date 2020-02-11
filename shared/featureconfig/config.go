@@ -40,8 +40,8 @@ type Flags struct {
 	KafkaBootstrapServers                      string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
 	ProtectProposer                            bool   // ProtectProposer prevents the validator client from signing any proposals that would be considered a slashable offense.
 	ProtectAttester                            bool   // ProtectAttester prevents the validator client from signing any attestations that would be considered a slashable offense.
-	ForkchoiceAggregateAttestations            bool   // ForkchoiceAggregateAttestations attempts to aggregate attestations before processing in fork choice.
 	DisableStrictAttestationPubsubVerification bool   // DisableStrictAttestationPubsubVerification will disabling strict signature verification in pubsub.
+	DisableUpdateHeadPerAttestation            bool   // DisableUpdateHeadPerAttestation will disabling update head on per attestation basis.
 
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
@@ -140,13 +140,13 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabled filtered block tree cache for fork choice.")
 		cfg.EnableBlockTreeCache = true
 	}
-	if ctx.GlobalBool(forkchoiceAggregateAttestations.Name) {
-		log.Warn("Enabled fork choice aggregation pre-processing of attestations")
-		cfg.ForkchoiceAggregateAttestations = true
-	}
 	if ctx.GlobalBool(disableStrictAttestationPubsubVerificationFlag.Name) {
 		log.Warn("Disabled strict attestation signature verification in pubsub")
 		cfg.DisableStrictAttestationPubsubVerification = true
+	}
+	if ctx.GlobalBool(disableUpdateHeadPerAttestation.Name) {
+		log.Warn("Disabled update head on per attestation basis")
+		cfg.DisableUpdateHeadPerAttestation = true
 	}
 
 	Init(cfg)

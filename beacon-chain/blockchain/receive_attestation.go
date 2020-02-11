@@ -32,13 +32,10 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveAttestationNoPubsub")
 	defer span.End()
 
-	// Update forkchoice store with the new attestation for updating weight.
-	indices, err := s.onAttestation(ctx, att)
+	_, err := s.onAttestation(ctx, att)
 	if err != nil {
 		return errors.Wrap(err, "could not process attestation")
 	}
-
-	s.forkChoiceStore.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(att.Data.BeaconBlockRoot), att.Data.Target.Epoch)
 
 	return nil
 }
@@ -77,7 +74,7 @@ func (s *Service) processAttestation() {
 			atts := s.attPool.ForkchoiceAttestations()
 			for _, a := range atts {
 				hasState := s.beaconDB.HasState(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot)) && s.beaconDB.HasState(ctx, bytesutil.ToBytes32(a.Data.Target.Root))
-				hasBlock := s.beaconDB.HasBlock(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
+				hasBlock := s.hasBlock(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
 				if !(hasState && hasBlock) {
 					continue
 				}

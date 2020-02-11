@@ -44,11 +44,13 @@ type Server struct {
 	HeadFetcher            blockchain.HeadFetcher
 	ForkFetcher            blockchain.ForkFetcher
 	FinalizationFetcher    blockchain.FinalizationFetcher
+	TimeFetcher            blockchain.TimeFetcher
 	CanonicalStateChan     chan *pbp2p.BeaconState
 	BlockFetcher           powchain.POWBlockFetcher
 	DepositFetcher         depositcache.DepositFetcher
 	ChainStartFetcher      powchain.ChainStartFetcher
 	Eth1InfoFetcher        powchain.ChainInfoFetcher
+	GenesisTimeFetcher     blockchain.TimeFetcher
 	SyncChecker            sync.Checker
 	StateNotifier          statefeed.Notifier
 	BlockNotifier          blockfeed.Notifier

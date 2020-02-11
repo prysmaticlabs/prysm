@@ -90,13 +90,13 @@ var (
 		Usage: "Prevent the validator client from signing and broadcasting 2 any slashable attestations. " +
 			"Protects from slashing.",
 	}
-	forkchoiceAggregateAttestations = cli.BoolFlag{
-		Name:  "forkchoice-aggregate-attestations",
-		Usage: "Preprocess attestations by aggregation before running fork choice.",
-	}
 	disableStrictAttestationPubsubVerificationFlag = cli.BoolFlag{
-		Name: "disable-strict-attestation-pubsub-verification",
+		Name:  "disable-strict-attestation-pubsub-verification",
 		Usage: "Disable strict signature verification of attestations in pubsub. See PR 4782 for details.",
+	}
+	disableUpdateHeadPerAttestation = cli.BoolFlag{
+		Name:  "disable-update-head-attestation",
+		Usage: "Disable update fork choice head on per attestation. See PR 4802 for details.",
 	}
 )
 
@@ -193,7 +193,13 @@ var (
 	deprecatedprotoArrayForkChoice = cli.BoolFlag{
 		Name:   "proto-array-forkchoice",
 		Usage:  deprecatedUsage,
-		Hidden: true}
+		Hidden: true,
+	}
+	deprecatedForkchoiceAggregateAttestations = cli.BoolFlag{
+		Name:  "forkchoice-aggregate-attestations",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -215,6 +221,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedSaveDepositDataFlag,
 	deprecatedCacheProposerIndicesFlag,
 	deprecatedprotoArrayForkChoice,
+	deprecatedForkchoiceAggregateAttestations,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -247,8 +254,8 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableSkipSlotsCacheFlag,
 	enableSlasherFlag,
 	cacheFilteredBlockTreeFlag,
-	forkchoiceAggregateAttestations,
 	disableStrictAttestationPubsubVerificationFlag,
+	disableUpdateHeadPerAttestation,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
