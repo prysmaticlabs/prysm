@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/urfave/cli"
 )
@@ -14,23 +16,29 @@ type testStruct struct {
 }
 
 var tests []testStruct
+var sig1 = make([]byte, params.BeaconConfig().BLSSignatureLength)
+var sig2 = make([]byte, params.BeaconConfig().BLSSignatureLength)
+var sig3 = make([]byte, params.BeaconConfig().BLSSignatureLength)
 
 func init() {
+	copy(sig1, "let me in")
+	copy(sig2, "let me in 2nd")
+	copy(sig3, "let me in 3rd")
 	tests = []testStruct{
 		{
-			idxAtt: &ethpb.IndexedAttestation{Signature: []byte("let me in"), AttestingIndices: []uint64{0}, Data: &ethpb.AttestationData{
+			idxAtt: &ethpb.IndexedAttestation{Signature: sig1, AttestingIndices: []uint64{0}, Data: &ethpb.AttestationData{
 				Source: &ethpb.Checkpoint{Epoch: 0},
 				Target: &ethpb.Checkpoint{Epoch: 1},
 			}},
 		},
 		{
-			idxAtt: &ethpb.IndexedAttestation{Signature: []byte("let me in 2nd"), AttestingIndices: []uint64{1, 2}, Data: &ethpb.AttestationData{
+			idxAtt: &ethpb.IndexedAttestation{Signature: sig2, AttestingIndices: []uint64{1, 2}, Data: &ethpb.AttestationData{
 				Source: &ethpb.Checkpoint{Epoch: 0},
 				Target: &ethpb.Checkpoint{Epoch: 2},
 			}},
 		},
 		{
-			idxAtt: &ethpb.IndexedAttestation{Signature: []byte("let me in 3rd"), AttestingIndices: []uint64{0}, Data: &ethpb.AttestationData{
+			idxAtt: &ethpb.IndexedAttestation{Signature: sig3, AttestingIndices: []uint64{0}, Data: &ethpb.AttestationData{
 				Source: &ethpb.Checkpoint{Epoch: 1},
 				Target: &ethpb.Checkpoint{Epoch: 2},
 			}},

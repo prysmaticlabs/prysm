@@ -3,14 +3,11 @@ package db
 import (
 	"bytes"
 	"fmt"
-	"reflect"
-	"sort"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -25,13 +22,17 @@ func unmarshalIdxAtt(enc []byte) (*ethpb.IndexedAttestation, error) {
 	return protoIdxAtt, nil
 }
 
-func unmarshalCompressedIdxAttList(enc []byte) (*slashpb.CompressedIdxAttList, error) {
-	protoIdxAtt := &slashpb.CompressedIdxAttList{}
-	err := proto.Unmarshal(enc, protoIdxAtt)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal encoding")
+func unmarshalIdxAttKeys(enc []byte) ([][]byte, error) {
+	uint64Length := 8
+	keyLength := params.BeaconConfig().BLSSignatureLength + uint64Length
+	if len(enc)%keyLength != 0 {
+		return nil, fmt.Errorf("data length in keys array: %d is not a multiple of keys length: %d ", len(enc), keyLength)
 	}
-	return protoIdxAtt, nil
+	keys := make([][]byte, len(enc)/keyLength)
+	for i, _ := range keys {
+		keys[i] = enc[i*keyLength : (i+1)*keyLength]
+	}
+	return keys, nil
 }
 
 // IdxAttsForTargetFromID accepts a epoch and validator index and returns a list of
@@ -41,37 +42,31 @@ func (db *Store) IdxAttsForTargetFromID(targetEpoch uint64, validatorID uint64) 
 	var idxAtts []*ethpb.IndexedAttestation
 
 	err := db.view(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(compressedIdxAttsBucket)
-		enc := bucket.Get(bytesutil.Bytes8(targetEpoch))
+		bucket := tx.Bucket(epochValidatorIdxAttsBucket)
+		key := encodeEpochValidatorID(targetEpoch, validatorID)
+		enc := bucket.Get(key)
 		if enc == nil {
 			return nil
 		}
-		idToIdxAttsList, err := unmarshalCompressedIdxAttList(enc)
+		IdxAttsList, err := unmarshalIdxAttKeys(enc)
 		if err != nil {
 			return err
 		}
 
-		for _, idxAtt := range idToIdxAttsList.List {
-			i := sort.Search(len(idxAtt.Indices), func(i int) bool {
-				return idxAtt.Indices[i] >= validatorID
-			})
-			if i < len(idxAtt.Indices) && idxAtt.Indices[i] == validatorID {
-				idxAttBucket := tx.Bucket(historicIndexedAttestationsBucket)
-				key := encodeEpochSig(targetEpoch, idxAtt.Signature)
-				enc = idxAttBucket.Get(key)
-				if enc == nil {
-					continue
-				}
-				att, err := unmarshalIdxAtt(enc)
-				if err != nil {
-					return err
-				}
-				idxAtts = append(idxAtts, att)
+		for _, key := range IdxAttsList {
+			idxAttBucket := tx.Bucket(historicIndexedAttestationsBucket)
+			enc = idxAttBucket.Get(key)
+			if enc == nil {
+				continue
 			}
+			att, err := unmarshalIdxAtt(enc)
+			if err != nil {
+				return err
+			}
+			idxAtts = append(idxAtts, att)
 		}
 		return nil
 	})
-
 	return idxAtts, err
 }
 
@@ -116,7 +111,7 @@ func (db *Store) LatestIndexedAttestationsTargetEpoch() (uint64, error) {
 func (db *Store) LatestValidatorIdx() (uint64, error) {
 	var lt uint64
 	err := db.view(func(tx *bolt.Tx) error {
-		c := tx.Bucket(compressedIdxAttsBucket).Cursor()
+		c := tx.Bucket(epochValidatorIdxAttsBucket).Cursor()
 		k, _ := c.Last()
 		if k == nil {
 			return nil
@@ -163,31 +158,18 @@ func (db *Store) DoubleVotes(validatorIdx uint64, dataRoot []byte, origAtt *ethp
 
 // HasIndexedAttestation accepts an epoch and validator id and returns true if the indexed attestation exists.
 func (db *Store) HasIndexedAttestation(targetEpoch uint64, validatorID uint64) (bool, error) {
-	key := bytesutil.Bytes8(targetEpoch)
+	key := encodeEpochValidatorID(targetEpoch, validatorID)
 	var hasAttestation bool
 	// #nosec G104
 	err := db.view(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(compressedIdxAttsBucket)
+		bucket := tx.Bucket(epochValidatorIdxAttsBucket)
 		enc := bucket.Get(key)
-		if enc == nil {
+		if enc == nil || len(enc) == 0 {
 			return nil
 		}
-		iList, err := unmarshalCompressedIdxAttList(enc)
-		if err != nil {
-			return err
-		}
-		for _, idxAtt := range iList.List {
-			i := sort.Search(len(idxAtt.Indices), func(i int) bool {
-				return idxAtt.Indices[i] >= validatorID
-			})
-			if i < len(idxAtt.Indices) && idxAtt.Indices[i] == validatorID {
-				hasAttestation = true
-				return nil
-			}
-		}
+		hasAttestation = true
 		return nil
 	})
-
 	return hasAttestation, err
 }
 
@@ -205,7 +187,7 @@ func (db *Store) SaveIndexedAttestation(idxAttestation *ethpb.IndexedAttestation
 		if val != nil {
 			return nil
 		}
-		if err := saveCompressedIdxAttToEpochList(idxAttestation, tx); err != nil {
+		if err := saveEpochValidatorIdxAttList(idxAttestation, tx); err != nil {
 			return errors.Wrap(err, "failed to save indices from indexed attestation")
 		}
 		if err := bucket.Put(key, enc); err != nil {
@@ -225,31 +207,29 @@ func (db *Store) SaveIndexedAttestation(idxAttestation *ethpb.IndexedAttestation
 	return err
 }
 
-func saveCompressedIdxAttToEpochList(idxAttestation *ethpb.IndexedAttestation, tx *bolt.Tx) error {
-	dataRoot, err := hashutil.HashProto(idxAttestation.Data)
-	if err != nil {
-		return errors.Wrap(err, "failed to hash indexed attestation data.")
-	}
-	protoIdxAtt := &slashpb.CompressedIdxAtt{
-		Signature: idxAttestation.Signature,
-		Indices:   idxAttestation.AttestingIndices,
-		DataRoot:  dataRoot[:],
-	}
-
-	key := bytesutil.Bytes8(idxAttestation.Data.Target.Epoch)
-	bucket := tx.Bucket(compressedIdxAttsBucket)
-	enc := bucket.Get(key)
-	compressedIdxAttList, err := unmarshalCompressedIdxAttList(enc)
-	if err != nil {
-		return errors.Wrap(err, "failed to decode value into CompressedIdxAtt")
-	}
-	compressedIdxAttList.List = append(compressedIdxAttList.List, protoIdxAtt)
-	enc, err = proto.Marshal(compressedIdxAttList)
-	if err != nil {
-		return errors.Wrap(err, "failed to marshal")
-	}
-	if err := bucket.Put(key, enc); err != nil {
-		return errors.Wrap(err, "failed to save indexed attestation into historical bucket")
+func saveEpochValidatorIdxAttList(idxAttestation *ethpb.IndexedAttestation, tx *bolt.Tx) error {
+	bucket := tx.Bucket(epochValidatorIdxAttsBucket)
+	idxAttKey := encodeEpochSig(idxAttestation.Data.Target.Epoch, idxAttestation.Signature)
+	for _, valIdx := range idxAttestation.AttestingIndices {
+		key := encodeEpochValidatorID(idxAttestation.Data.Target.Epoch, valIdx)
+		enc := bucket.Get(key)
+		if enc == nil {
+			if err := bucket.Put(key, idxAttKey); err != nil {
+				return errors.Wrap(err, "failed to save indexed attestation into historical bucket")
+			}
+		}
+		keys, err := unmarshalIdxAttKeys(enc)
+		if err != nil {
+			return errors.Wrap(err, "failed to marshal")
+		}
+		for _, k := range keys {
+			if bytes.Equal(k, idxAttKey) {
+				return nil
+			}
+		}
+		if err := bucket.Put(key, append(enc, idxAttKey...)); err != nil {
+			return errors.Wrap(err, "failed to save indexed attestation into historical bucket")
+		}
 	}
 	return nil
 }
@@ -263,7 +243,7 @@ func (db *Store) DeleteIndexedAttestation(idxAttestation *ethpb.IndexedAttestati
 		if enc == nil {
 			return nil
 		}
-		if err := removeIdxAttIndicesByEpochFromDB(idxAttestation, tx); err != nil {
+		if err := removeEpochValidatorIdxAttList(idxAttestation, tx); err != nil {
 			return err
 		}
 		if err := bucket.Delete(key); err != nil {
@@ -276,40 +256,28 @@ func (db *Store) DeleteIndexedAttestation(idxAttestation *ethpb.IndexedAttestati
 	})
 }
 
-func removeIdxAttIndicesByEpochFromDB(idxAttestation *ethpb.IndexedAttestation, tx *bolt.Tx) error {
-	dataRoot, err := hashutil.HashProto(idxAttestation.Data)
-	if err != nil {
-		return err
-	}
-	protoIdxAtt := &slashpb.CompressedIdxAtt{
-		Signature: idxAttestation.Signature,
-		Indices:   idxAttestation.AttestingIndices,
-		DataRoot:  dataRoot[:],
-	}
-	key := bytesutil.Bytes8(idxAttestation.Data.Target.Epoch)
-	bucket := tx.Bucket(compressedIdxAttsBucket)
-	enc := bucket.Get(key)
-	if enc == nil {
-		return errors.New("requested to delete data that is not present")
-	}
-	vIdxList, err := unmarshalCompressedIdxAttList(enc)
-	if err != nil {
-		return errors.Wrap(err, "failed to decode value into ValidatorIDToIndexedAttestationList")
-	}
-	for i, attIdx := range vIdxList.List {
-		if reflect.DeepEqual(attIdx, protoIdxAtt) {
-			copy(vIdxList.List[i:], vIdxList.List[i+1:])
-			vIdxList.List[len(vIdxList.List)-1] = nil // or the zero value of T
-			vIdxList.List = vIdxList.List[:len(vIdxList.List)-1]
-			break
+func removeEpochValidatorIdxAttList(idxAttestation *ethpb.IndexedAttestation, tx *bolt.Tx) error {
+	idxAttKey := encodeEpochSig(idxAttestation.Data.Target.Epoch, idxAttestation.Signature)
+	bucket := tx.Bucket(epochValidatorIdxAttsBucket)
+
+	for _, valIdx := range idxAttestation.AttestingIndices {
+		key := encodeEpochValidatorID(idxAttestation.Data.Target.Epoch, valIdx)
+		enc := bucket.Get(key)
+		if enc == nil {
+			continue
 		}
-	}
-	enc, err = proto.Marshal(vIdxList)
-	if err != nil {
-		return errors.Wrap(err, "failed to marshal")
-	}
-	if err := bucket.Put(key, enc); err != nil {
-		return errors.Wrap(err, "failed to include indexed attestation in the historical bucket")
+		keys, err := unmarshalIdxAttKeys(enc)
+		if err != nil {
+			return errors.Wrap(err, "failed to marshal")
+		}
+		for i, k := range keys {
+			if bytes.Equal(k, idxAttKey) {
+				keys = append(keys[:i], keys[i+1:]...)
+				if err := bucket.Put(key, bytes.Join(keys, []byte{})); err != nil {
+					return errors.Wrap(err, "failed to delete indexed attestation from historical bucket")
+				}
+			}
+		}
 	}
 	return nil
 }
@@ -330,11 +298,11 @@ func (db *Store) pruneAttHistory(currentEpoch uint64, historySize uint64) error 
 			}
 		}
 
-		idxBucket := tx.Bucket(compressedIdxAttsBucket)
-		c = tx.Bucket(compressedIdxAttsBucket).Cursor()
+		idxBucket := tx.Bucket(epochValidatorIdxAttsBucket)
+		c = tx.Bucket(epochValidatorIdxAttsBucket).Cursor()
 		for k, _ := c.First(); k != nil && bytes.Compare(k[:8], max) <= 0; k, _ = c.Next() {
 			if err := idxBucket.Delete(k); err != nil {
-				return errors.Wrap(err, "failed to delete indexed attestation from historical bucket")
+				return errors.Wrap(err, "failed to delete indexed attestation from epoch validatorID bucket")
 			}
 		}
 		return nil
