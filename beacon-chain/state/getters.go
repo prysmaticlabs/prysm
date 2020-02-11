@@ -190,9 +190,7 @@ func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
 	if len(b.state.BlockRoots) <= int(idx) {
 		return nil, fmt.Errorf("index %d out of range", idx)
 	}
-	root := make([]byte, 32)
-	copy(root, b.state.BlockRoots[idx])
-	return root, nil
+	return bytesutil.Copy(b.state.BlockRoots[idx]), nil
 }
 
 // StateRoots kept track of in the beacon state.

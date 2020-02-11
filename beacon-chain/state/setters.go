@@ -96,7 +96,6 @@ func (b *BeaconState) SetBlockRoots(val [][]byte) error {
 
 	b.sharedFieldReferences[blockRoots].refs--
 	b.sharedFieldReferences[blockRoots] = &reference{refs: 1}
-	b.sharedFieldMutexes[blockRoots] = new(sync.RWMutex)
 
 	b.state.BlockRoots = val
 	b.markFieldAsDirty(blockRoots)
@@ -109,19 +108,15 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 	if len(b.state.BlockRoots) <= int(idx) {
 		return fmt.Errorf("invalid index provided %d", idx)
 	}
-	b.sharedFieldMutexes[blockRoots].Lock()
-	defer b.sharedFieldMutexes[blockRoots].Unlock()
 
 	b.lock.RLock()
 	r := b.state.BlockRoots
 	if ref := b.sharedFieldReferences[blockRoots]; ref.refs > 1 {
-		roots := make([][]byte, len(r))
-		copy(roots, r)
-		r = roots
+		// Copy on write since this is a shared array.
+		r = b.BlockRoots()
 
 		ref.refs--
 		b.sharedFieldReferences[blockRoots] = &reference{refs: 1}
-		b.sharedFieldMutexes[blockRoots] = new(sync.RWMutex)
 	}
 	b.lock.RUnlock()
 
@@ -144,7 +139,6 @@ func (b *BeaconState) SetStateRoots(val [][]byte) error {
 
 	b.sharedFieldReferences[stateRoots].refs--
 	b.sharedFieldReferences[stateRoots] = &reference{refs: 1}
-	b.sharedFieldMutexes[stateRoots] = new(sync.RWMutex)
 
 	b.state.StateRoots = val
 	b.markFieldAsDirty(stateRoots)
@@ -158,20 +152,15 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 		return errors.Errorf("invalid index provided %d", idx)
 	}
 
-	b.sharedFieldMutexes[stateRoots].Lock()
-	defer b.sharedFieldMutexes[stateRoots].Unlock()
-
 	b.lock.RLock()
 	// Check if we hold the only reference to the shared state roots slice.
 	r := b.state.StateRoots
 	if ref := b.sharedFieldReferences[stateRoots]; ref.refs > 1 {
-		roots := make([][]byte, len(r))
-		copy(roots, r)
-		r = roots
+		//copy-on wrote as it is a shared reference
+		r = b.StateRoots()
 
 		ref.refs--
 		b.sharedFieldReferences[stateRoots] = &reference{refs: 1}
-		b.sharedFieldMutexes[stateRoots] = new(sync.RWMutex)
 	}
 	b.lock.RUnlock()
 
@@ -308,7 +297,7 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 	defer b.sharedFieldMutexes[validators].Unlock()
 	v := b.state.Validators
 	if b.sharedFieldReferences[validators].refs > 1 {
-		copiedVals := make([]*ethpb.Validator, len(v), len(v)+1)
+		copiedVals := make([]*ethpb.Validator, len(v))
 		copy(copiedVals, v)
 		v = copiedVals
 		b.sharedFieldReferences[validators].refs--

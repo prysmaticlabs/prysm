@@ -81,8 +81,6 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 	// Initialize field shared mutexes, these are for fields
 	// in which we are not practicing copy on write.
 	b.sharedFieldMutexes[randaoMixes] = new(sync.RWMutex)
-	b.sharedFieldMutexes[blockRoots] = new(sync.RWMutex)
-	b.sharedFieldMutexes[stateRoots] = new(sync.RWMutex)
 	b.sharedFieldMutexes[validators] = new(sync.RWMutex)
 	b.sharedFieldMutexes[previousEpochAttestations] = new(sync.RWMutex)
 	b.sharedFieldMutexes[currentEpochAttestations] = new(sync.RWMutex)
