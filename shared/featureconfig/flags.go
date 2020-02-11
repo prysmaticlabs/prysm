@@ -98,10 +98,6 @@ var (
 		Name:  "disable-update-head-attestation",
 		Usage: "Disable update fork choice head on per attestation. See PR 4802 for details.",
 	}
-	enableByteMempool = cli.BoolFlag{
-		Name: "enable-byte-mempool",
-		Usage: "Enable use of sync.Pool for certain byte arrays in the beacon state",
-	}
 )
 
 // Deprecated flags list.
@@ -260,7 +256,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	cacheFilteredBlockTreeFlag,
 	disableStrictAttestationPubsubVerificationFlag,
 	disableUpdateHeadPerAttestation,
-	enableByteMempool,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -273,5 +268,4 @@ var E2EBeaconChainFlags = []string{
 	"--enable-eth1-data-vote-cache",
 	"--initial-sync-cache-state",
 	"--proto-array-forkchoice",
-	"--enable-byte-mempool",
 }
