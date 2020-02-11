@@ -25,7 +25,7 @@ func (s *Service) processPendingAttsQueue() {
 	ctx := context.Background()
 	runutil.RunEvery(s.ctx, processPendingAttsPeriod, func() {
 		if err := s.processPendingAtts(ctx); err != nil {
-			log.WithError(err).Errorf("Could not process pending attestation: %v")
+			log.WithError(err).Errorf("Could not process pending attestation: %v", err)
 		}
 	})
 }
