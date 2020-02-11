@@ -24,7 +24,9 @@ var processPendingAttsPeriod = time.Duration(params.BeaconConfig().SecondsPerSlo
 func (s *Service) processPendingAttsQueue() {
 	ctx := context.Background()
 	runutil.RunEvery(s.ctx, processPendingAttsPeriod, func() {
-		s.processPendingAtts(ctx)
+		if err := s.processPendingAtts(ctx); err != nil {
+			log.WithError(err).Errorf("Could not process pending attestation: %v")
+		}
 	})
 }
 
@@ -43,6 +45,8 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 	// be deleted from the queue if invalid (ie. getting staled from falling too many slots behind).
 	s.validatePendingAtts(ctx, s.chain.CurrentSlot())
 
+	s.pendingAttsLock.Lock()
+	defer s.pendingAttsLock.Lock()
 	for bRoot, attestations := range s.blkRootToPendingAtts {
 		// Has the pending attestation's missing block arrived yet?
 		if s.db.HasBlock(ctx, bRoot) {
