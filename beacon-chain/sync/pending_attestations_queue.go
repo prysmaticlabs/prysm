@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"time"
-	"math"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -102,17 +101,17 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 			// Start with a random peer to query, but choose the first peer in our unsorted list that claims to
 			// have a head slot newer or equal to the pending attestation's target boundary slot.
 			
-			func checkPidOverflow(in int32) (int32, error){
-				if in > 0{
-					if in > math.MaxInt32 {
-						return log.Errorf("is Overflow: %v", error)
+			func randCheck(in int32) (int32, error){
+				if in > 0 {
+					if in > len(pids) {
+						return log.Errorf("this number out range: %v", error)
 					} else{
 						return in
 					}
 				}
 			}
 
-			pid := checkPidOverflow(pids[rand.Int()%len(pids)])
+			pid := pids[randCheck(rand.Int()%len(pids))]
 			targetSlot := helpers.SlotToEpoch(attestations[0].Aggregate.Data.Target.Epoch)
 			for _, p := range pids {
 				if cs, _ := s.p2p.Peers().ChainState(p); cs != nil && cs.HeadSlot >= targetSlot {
