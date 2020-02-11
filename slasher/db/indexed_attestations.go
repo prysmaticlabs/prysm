@@ -29,7 +29,7 @@ func unmarshalIdxAttKeys(enc []byte) ([][]byte, error) {
 		return nil, fmt.Errorf("data length in keys array: %d is not a multiple of keys length: %d ", len(enc), keyLength)
 	}
 	keys := make([][]byte, len(enc)/keyLength)
-	for i, _ := range keys {
+	for i := range keys {
 		keys[i] = enc[i*keyLength : (i+1)*keyLength]
 	}
 	return keys, nil
