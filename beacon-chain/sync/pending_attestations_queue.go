@@ -24,7 +24,9 @@ var processPendingAttsPeriod = time.Duration(params.BeaconConfig().SecondsPerSlo
 func (s *Service) processPendingAttsQueue() {
 	ctx := context.Background()
 	runutil.RunEvery(s.ctx, processPendingAttsPeriod, func() {
-		s.processPendingAtts(ctx)
+		if err := s.processPendingAtts(ctx); err != nil {
+			log.WithError(err).Errorf("Could not process pending attestation: %v", err)
+		}
 	})
 }
 
@@ -33,6 +35,8 @@ func (s *Service) processPendingAttsQueue() {
 // 2. Check if pending attestations can be processed when the block has arrived.
 // 3. Request block from a random peer if unable to proceed step 2.
 func (s *Service) processPendingAtts(ctx context.Context) error {
+	s.pendingAttsLock.Lock()
+	defer s.pendingAttsLock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "processPendingAtts")
 	defer span.End()
 
@@ -122,9 +126,6 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 // root of the missing block. The value is the list of pending attestations
 // that voted for that block root.
 func (s *Service) savePendingAtt(att *ethpb.AggregateAttestationAndProof) {
-	s.pendingAttsLock.Lock()
-	defer s.pendingAttsLock.Unlock()
-
 	root := bytesutil.ToBytes32(att.Aggregate.Data.BeaconBlockRoot)
 
 	_, ok := s.blkRootToPendingAtts[root]
@@ -141,9 +142,6 @@ func (s *Service) savePendingAtt(att *ethpb.AggregateAttestationAndProof) {
 // check specifies the pending attestation could not fall one epoch behind
 // of the current slot.
 func (s *Service) validatePendingAtts(ctx context.Context, slot uint64) {
-	s.pendingAttsLock.Lock()
-	defer s.pendingAttsLock.Unlock()
-
 	ctx, span := trace.StartSpan(ctx, "validatePendingAtts")
 	defer span.End()
 
