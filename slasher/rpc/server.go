@@ -42,8 +42,8 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 	attSlashings := make(chan []*ethpb.AttesterSlashing, len(indices))
 	errorChans := make(chan error, len(indices))
 	var wg sync.WaitGroup
+	wg.Add(1)
 	go func(req *ethpb.IndexedAttestation) {
-		wg.Add(1)
 		if err := ss.SlasherDB.SaveIndexedAttestation(req); err != nil {
 			errorChans <- err
 		}
