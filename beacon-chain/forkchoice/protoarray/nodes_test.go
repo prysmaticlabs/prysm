@@ -219,7 +219,7 @@ func TestStore_UpdateBestChildAndDescendant_RemoveChild(t *testing.T) {
 	// Make parent's best child equal's to input child index and child is not viable.
 	s := &Store{nodes: []*Node{{bestChild: 1}, {}}, justifiedEpoch: 1, finalizedEpoch: 1}
 
-	if err := s.updateBestChildAndDescendant(context.Background(), 0, 1); err != nil {
+	if err := s.updateBestChildAndDescendant(0, 1); err != nil {
 		t.Fatal(err)
 	}
 
@@ -236,7 +236,7 @@ func TestStore_UpdateBestChildAndDescendant_UpdateDescendant(t *testing.T) {
 	// Make parent's best child equal to child index and child is viable.
 	s := &Store{nodes: []*Node{{bestChild: 1}, {BestDescendent: nonExistentNode}}}
 
-	if err := s.updateBestChildAndDescendant(context.Background(), 0, 1); err != nil {
+	if err := s.updateBestChildAndDescendant(0, 1); err != nil {
 		t.Fatal(err)
 	}
 
@@ -259,7 +259,7 @@ func TestStore_UpdateBestChildAndDescendant_ChangeChildByViability(t *testing.T)
 			{BestDescendent: nonExistentNode},
 			{BestDescendent: nonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1}}}
 
-	if err := s.updateBestChildAndDescendant(context.Background(), 0, 2); err != nil {
+	if err := s.updateBestChildAndDescendant(0, 2); err != nil {
 		t.Fatal(err)
 	}
 
@@ -282,7 +282,7 @@ func TestStore_UpdateBestChildAndDescendant_ChangeChildByWeight(t *testing.T) {
 			{BestDescendent: nonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1},
 			{BestDescendent: nonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1, Weight: 1}}}
 
-	if err := s.updateBestChildAndDescendant(context.Background(), 0, 2); err != nil {
+	if err := s.updateBestChildAndDescendant(0, 2); err != nil {
 		t.Fatal(err)
 	}
 
@@ -304,7 +304,7 @@ func TestStore_UpdateBestChildAndDescendant_ChangeChildAtLeaf(t *testing.T) {
 			{BestDescendent: nonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1},
 			{BestDescendent: nonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1}}}
 
-	if err := s.updateBestChildAndDescendant(context.Background(), 0, 2); err != nil {
+	if err := s.updateBestChildAndDescendant(0, 2); err != nil {
 		t.Fatal(err)
 	}
 
@@ -327,7 +327,7 @@ func TestStore_UpdateBestChildAndDescendant_NoChangeByViability(t *testing.T) {
 			{BestDescendent: nonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1},
 			{BestDescendent: nonExistentNode}}}
 
-	if err := s.updateBestChildAndDescendant(context.Background(), 0, 2); err != nil {
+	if err := s.updateBestChildAndDescendant(0, 2); err != nil {
 		t.Fatal(err)
 	}
 
@@ -350,7 +350,7 @@ func TestStore_UpdateBestChildAndDescendant_NoChangeByWeight(t *testing.T) {
 			{BestDescendent: nonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1, Weight: 1},
 			{BestDescendent: nonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1}}}
 
-	if err := s.updateBestChildAndDescendant(context.Background(), 0, 2); err != nil {
+	if err := s.updateBestChildAndDescendant(0, 2); err != nil {
 		t.Fatal(err)
 	}
 
@@ -372,7 +372,7 @@ func TestStore_UpdateBestChildAndDescendant_NoChangeAtLeaf(t *testing.T) {
 			{BestDescendent: nonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1},
 			{BestDescendent: nonExistentNode}}}
 
-	if err := s.updateBestChildAndDescendant(context.Background(), 0, 2); err != nil {
+	if err := s.updateBestChildAndDescendant(0, 2); err != nil {
 		t.Fatal(err)
 	}
 
@@ -495,7 +495,7 @@ func TestStore_LeadsToViableHead(t *testing.T) {
 			finalizedEpoch: tc.finalizedEpoch,
 			nodes:          []*Node{tc.n},
 		}
-		got, err := s.leadsToViableHead(context.Background(), tc.n)
+		got, err := s.leadsToViableHead(tc.n)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -524,7 +524,7 @@ func TestStore_ViableForHead(t *testing.T) {
 			justifiedEpoch: tc.justifiedEpoch,
 			finalizedEpoch: tc.finalizedEpoch,
 		}
-		if got := s.viableForHead(context.Background(), tc.n); got != tc.want {
+		if got := s.viableForHead(tc.n); got != tc.want {
 			t.Errorf("viableForHead() = %v, want %v", got, tc.want)
 		}
 	}
