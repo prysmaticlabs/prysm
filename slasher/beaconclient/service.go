@@ -1,3 +1,8 @@
+/**
+Package beaconclient defines a service that interacts with a beacon
+node via a gRPC client to listen for streamed blocks, attestations, and to
+submit proposer/attester slashings to the node in case they are detected.
+*/
 package beaconclient
 
 import (
@@ -17,7 +22,7 @@ import (
 
 var log = logrus.WithField("prefix", "beaconclient")
 
-// Service --
+// Service struct for the beaconclient service of the slasher.
 type Service struct {
 	context         context.Context
 	cancel          context.CancelFunc
@@ -29,17 +34,19 @@ type Service struct {
 	attestationFeed *event.Feed
 }
 
-// BlockFeed --
+// BlockFeed returns a feed other services in slasher can subscribe to
+// blocks received via the beacon node through gRPC.
 func (bs *Service) BlockFeed() *event.Feed {
 	return bs.blockFeed
 }
 
-// AttestationFeed --
+// AttestationFeed returns a feed other services in slasher can subscribe to
+// attestations received via the beacon node through gRPC.
 func (bs *Service) AttestationFeed() *event.Feed {
 	return bs.attestationFeed
 }
 
-// Stop the beacon client service.
+// Stop the beacon client service by closing the gRPC connection.
 func (bs *Service) Stop() error {
 	bs.cancel()
 	log.Info("Stopping service")
@@ -49,7 +56,8 @@ func (bs *Service) Stop() error {
 	return nil
 }
 
-// Status --
+// Status returns an error if there exists a gRPC connection error
+// in the service.
 func (bs *Service) Status() error {
 	if bs.conn == nil {
 		return errors.New("no connection to beacon RPC")
@@ -57,6 +65,10 @@ func (bs *Service) Status() error {
 	return nil
 }
 
+// Start the main runtime of the beaconclient service, initializing
+// a gRPC client connection with a beacon node, listening for
+// streamed blocks/attestations, and submitting slashing operations
+// after they are detected by other services in the slasher.
 func (bs *Service) Start() {
 	var dialOpt grpc.DialOption
 	if bs.cert != "" {

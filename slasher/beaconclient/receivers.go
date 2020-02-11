@@ -8,6 +8,9 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// receiveBlocks starts a gRPC client stream listener to obtain
+// blocks from the beacon node. Upon receiving a block, the service
+// broadcasts it to a feed for other services in slasher to subscribe to.
 func (bs *Service) receiveBlocks(ctx context.Context) {
 	ctx, span := trace.StartSpan(ctx, "beaconclient.receiveBlocks")
 	defer span.End()
@@ -35,6 +38,9 @@ func (bs *Service) receiveBlocks(ctx context.Context) {
 	}
 }
 
+// receiveAttestations starts a gRPC client stream listener to obtain
+// attestations from the beacon node. Upon receiving an attestation, the service
+// broadcasts it to a feed for other services in slasher to subscribe to.
 func (bs *Service) receiveAttestations(ctx context.Context) {
 	ctx, span := trace.StartSpan(ctx, "beaconclient.receiveAttestations")
 	defer span.End()
