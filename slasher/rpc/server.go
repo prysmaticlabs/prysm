@@ -32,9 +32,7 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 	if req.Data == nil {
 		return nil, fmt.Errorf("cant hash nil data in indexed attestation")
 	}
-	if err := ss.SlasherDB.SaveIndexedAttestation(req); err != nil {
-		return nil, err
-	}
+
 	indices := req.AttestingIndices
 	root, err := hashutil.HashProto(req.Data)
 	if err != nil {
@@ -44,6 +42,14 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 	attSlashings := make(chan []*ethpb.AttesterSlashing, len(indices))
 	errorChans := make(chan error, len(indices))
 	var wg sync.WaitGroup
+	go func(req *ethpb.IndexedAttestation) {
+		wg.Add(1)
+		if err := ss.SlasherDB.SaveIndexedAttestation(req); err != nil {
+			errorChans <- err
+		}
+		wg.Done()
+	}(req)
+
 	lastIdx := int64(-1)
 	for _, idx := range indices {
 		if int64(idx) <= lastIdx {

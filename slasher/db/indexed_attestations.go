@@ -129,7 +129,7 @@ func (db *Store) DoubleVotes(validatorIdx uint64, dataRoot []byte, origAtt *ethp
 		return nil, err
 	}
 	if idxAtts == nil || len(idxAtts) == 0 {
-		return nil, fmt.Errorf("can't check nil indexed attestation for double vote")
+		return nil, nil
 	}
 
 	var idxAttsToSlash []*ethpb.IndexedAttestation
