@@ -23,7 +23,6 @@ func TestVerifyMessageYaml(t *testing.T) {
 			if err := yaml.Unmarshal(file, test); err != nil {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
-			t.Errorf("output %v and idx %d", test.Output, i)
 
 			pkBytes, err := hex.DecodeString(test.Input.Pubkey[2:])
 			if err != nil {

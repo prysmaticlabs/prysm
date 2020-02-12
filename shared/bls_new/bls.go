@@ -22,7 +22,6 @@ func init() {
 		panic(err)
 	}
 	bls12.SetETHmode(1)
-
 }
 
 var maxKeys = int64(100000)
@@ -223,7 +222,7 @@ func (s *Signature) VerifyAggregateCommon(pubKeys []*PublicKey, msg [32]byte) bo
 		aggregated.p.Add(pubKeys[i].p)
 	}
 
-	return s.s.VerifyHash(aggregated.p, msg[:])
+	return s.s.VerifyByte(aggregated.p, msg[:])
 }
 
 func (s *Signature) RawSignature() *bls12.Sign {
