@@ -40,15 +40,14 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 	}
 	attSlashingResp := &slashpb.AttesterSlashingResponse{}
 	attSlashings := make(chan []*ethpb.AttesterSlashing, len(indices))
-	errorChans := make(chan error, len(indices))
+	errorChans := make(chan error, len(indices)+1)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func(req *ethpb.IndexedAttestation) {
+		defer wg.Done()
 		if err := ss.SlasherDB.SaveIndexedAttestation(req); err != nil {
 			errorChans <- err
 		}
-		wg.Done()
-		return
 	}(req)
 
 	lastIdx := int64(-1)
@@ -58,10 +57,11 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 		}
 		wg.Add(1)
 		go func(idx uint64, root [32]byte, req *ethpb.IndexedAttestation) {
+			defer wg.Done()
+
 			atts, err := ss.SlasherDB.DoubleVotes(idx, root[:], req)
 			if err != nil {
 				errorChans <- err
-				wg.Done()
 				return
 			}
 			if atts != nil && len(atts) > 0 {
@@ -70,13 +70,11 @@ func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.Indexed
 			atts, err = ss.DetectSurroundVotes(ctx, idx, req)
 			if err != nil {
 				errorChans <- err
-				wg.Done()
 				return
 			}
 			if atts != nil && len(atts) > 0 {
 				attSlashings <- atts
 			}
-			wg.Done()
 			return
 		}(idx, root, req)
 	}

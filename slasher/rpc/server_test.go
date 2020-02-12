@@ -14,6 +14,17 @@ import (
 	"github.com/urfave/cli"
 )
 
+var sig1 = make([]byte, params.BeaconConfig().BLSSignatureLength)
+var sig2 = make([]byte, params.BeaconConfig().BLSSignatureLength)
+var sig3 = make([]byte, params.BeaconConfig().BLSSignatureLength)
+
+func init() {
+	copy(sig1, "let me in")
+	copy(sig2, "let me in 2nd")
+	copy(sig3, "let me in 3rd")
+
+}
+
 func TestServer_IsSlashableBlock(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
@@ -231,9 +242,10 @@ func TestServer_SlashDoubleAttestation(t *testing.T) {
 		ctx:       ctx,
 		SlasherDB: dbs,
 	}
+
 	ia1 := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0},
-		Signature:        []byte("sig2"),
+		Signature:        sig1,
 		Data: &ethpb.AttestationData{
 			Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex:  0,
@@ -244,7 +256,7 @@ func TestServer_SlashDoubleAttestation(t *testing.T) {
 	}
 	ia2 := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0},
-		Signature:        []byte("sig1"),
+		Signature:        sig2,
 		Data: &ethpb.AttestationData{
 			Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex:  0,
@@ -267,7 +279,7 @@ func TestServer_SlashDoubleAttestation(t *testing.T) {
 	}
 
 	if len(sr.AttesterSlashing) != 1 {
-		t.Errorf("Should return 1 slashing proof: %v", sr)
+		t.Fatalf("Should return 1 slashing proof: %v", sr)
 	}
 	if !proto.Equal(sr.AttesterSlashing[0], want) {
 		t.Errorf("Wanted slashing proof: %v got: %v", want, sr.AttesterSlashing[0])
@@ -288,7 +300,7 @@ func TestServer_SlashTripleAttestation(t *testing.T) {
 	}
 	ia1 := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0},
-		Signature:        []byte("sig1"),
+		Signature:        sig1,
 		Data: &ethpb.AttestationData{
 			Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex:  0,
@@ -299,7 +311,7 @@ func TestServer_SlashTripleAttestation(t *testing.T) {
 	}
 	ia2 := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0},
-		Signature:        []byte("sig2"),
+		Signature:        sig2,
 		Data: &ethpb.AttestationData{
 			Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex:  0,
@@ -310,7 +322,7 @@ func TestServer_SlashTripleAttestation(t *testing.T) {
 	}
 	ia3 := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0},
-		Signature:        []byte("sig3"),
+		Signature:        sig3,
 		Data: &ethpb.AttestationData{
 			Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex:  0,
@@ -365,7 +377,7 @@ func TestServer_DontSlashSameAttestation(t *testing.T) {
 	}
 	ia1 := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0},
-		Signature:        []byte("sig1"),
+		Signature:        sig1,
 		Data: &ethpb.AttestationData{
 			Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex:  0,
@@ -401,7 +413,7 @@ func TestServer_DontSlashDifferentTargetAttestation(t *testing.T) {
 	}
 	ia1 := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0},
-		Signature:        []byte("sig2"),
+		Signature:        sig2,
 		Data: &ethpb.AttestationData{
 			Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex:  0,
@@ -412,7 +424,7 @@ func TestServer_DontSlashDifferentTargetAttestation(t *testing.T) {
 	}
 	ia2 := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0},
-		Signature:        []byte("sig1"),
+		Signature:        sig1,
 		Data: &ethpb.AttestationData{
 			Slot:            4*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex:  0,
@@ -455,12 +467,12 @@ func TestServer_DontSlashSameAttestationData(t *testing.T) {
 	}
 	ia1 := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0},
-		Signature:        []byte("sig2"),
+		Signature:        sig2,
 		Data:             ad,
 	}
 	ia2 := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0},
-		Signature:        []byte("sig1"),
+		Signature:        sig1,
 		Data:             ad,
 	}
 
@@ -490,7 +502,7 @@ func TestServer_SlashSurroundedAttestation(t *testing.T) {
 	}
 	ia1 := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0},
-		Signature:        []byte("sig2"),
+		Signature:        sig2,
 		Data: &ethpb.AttestationData{
 			Slot:            4*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex:  0,
@@ -501,7 +513,7 @@ func TestServer_SlashSurroundedAttestation(t *testing.T) {
 	}
 	ia2 := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0},
-		Signature:        []byte("sig1"),
+		Signature:        sig1,
 		Data: &ethpb.AttestationData{
 			Slot:            4*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex:  0,
@@ -544,7 +556,7 @@ func TestServer_SlashSurroundAttestation(t *testing.T) {
 	}
 	ia1 := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0},
-		Signature:        []byte("sig2"),
+		Signature:        sig1,
 		Data: &ethpb.AttestationData{
 			Slot:            4*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex:  0,
@@ -555,7 +567,7 @@ func TestServer_SlashSurroundAttestation(t *testing.T) {
 	}
 	ia2 := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0},
-		Signature:        []byte("sig1"),
+		Signature:        sig2,
 		Data: &ethpb.AttestationData{
 			Slot:            4*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex:  0,
@@ -621,7 +633,7 @@ func TestServer_DontSlashValidAttestations(t *testing.T) {
 	}
 	ia1 := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0},
-		Signature:        []byte("sig2"),
+		Signature:        sig2,
 		Data: &ethpb.AttestationData{
 			Slot:            5*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex:  0,
@@ -632,7 +644,7 @@ func TestServer_DontSlashValidAttestations(t *testing.T) {
 	}
 	ia2 := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0},
-		Signature:        []byte("sig1"),
+		Signature:        sig1,
 		Data: &ethpb.AttestationData{
 			Slot:            5*params.BeaconConfig().SlotsPerEpoch + 1,
 			CommitteeIndex:  0,
@@ -671,6 +683,7 @@ func TestServer_Store_100_Attestations(t *testing.T) {
 	}
 	ia1 := &ethpb.IndexedAttestation{
 		AttestingIndices: cb,
+		Signature:        sig1,
 		Data: &ethpb.AttestationData{
 			CommitteeIndex:  0,
 			BeaconBlockRoot: make([]byte, 32),
