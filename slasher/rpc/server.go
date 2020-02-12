@@ -12,6 +12,7 @@ import (
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/slasher/db"
+	"github.com/prysmaticlabs/prysm/slasher/db/types"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -167,7 +168,7 @@ func (ss *Server) IsSlashableBlock(ctx context.Context, psr *slashpb.ProposerSla
 func (ss *Server) ProposerSlashings(ctx context.Context, st *slashpb.SlashingStatusRequest) (*slashpb.ProposerSlashingResponse, error) {
 	pSlashingsResponse := &slashpb.ProposerSlashingResponse{}
 	var err error
-	pSlashingsResponse.ProposerSlashing, err = ss.SlasherDB.ProposalSlashingsByStatus(db.SlashingStatus(st.Status))
+	pSlashingsResponse.ProposerSlashing, err = ss.SlasherDB.ProposalSlashingsByStatus(types.SlashingStatus(st.Status))
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +179,7 @@ func (ss *Server) ProposerSlashings(ctx context.Context, st *slashpb.SlashingSta
 func (ss *Server) AttesterSlashings(ctx context.Context, st *slashpb.SlashingStatusRequest) (*slashpb.AttesterSlashingResponse, error) {
 	aSlashingsResponse := &slashpb.AttesterSlashingResponse{}
 	var err error
-	aSlashingsResponse.AttesterSlashing, err = ss.SlasherDB.AttesterSlashings(db.SlashingStatus(st.Status))
+	aSlashingsResponse.AttesterSlashing, err = ss.SlasherDB.AttesterSlashings(types.SlashingStatus(st.Status))
 	if err != nil {
 		return nil, err
 	}

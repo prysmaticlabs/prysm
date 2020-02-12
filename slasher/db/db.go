@@ -8,10 +8,13 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/slasher/db/iface"
 	"github.com/sirupsen/logrus"
 )
 
 var log = logrus.WithField("prefix", "slasherDB")
+
+var _ = iface.SlasherDB(&Store{})
 
 var databaseFileName = "slasher.db"
 
