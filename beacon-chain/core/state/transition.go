@@ -24,6 +24,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
+var ValidatorSummary []*precompute.Validator
+
 // ExecuteStateTransition defines the procedure for a state transition function.
 //
 // Spec pseudocode definition:
@@ -594,6 +596,8 @@ func ProcessEpochPrecompute(ctx context.Context, state *stateTrie.BeaconState) (
 	if err != nil {
 		return nil, err
 	}
+
+	ValidatorSummary = vp
 
 	state, err = precompute.ProcessJustificationAndFinalizationPreCompute(state, bp)
 	if err != nil {
