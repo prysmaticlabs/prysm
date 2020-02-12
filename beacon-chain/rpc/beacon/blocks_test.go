@@ -639,7 +639,7 @@ func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockStream := mockRPC.NewMockBeaconChain_StreamBlocksServer(ctrl)
-	mockStream.EXPECT().Send(b.Block).Do(func(arg0 interface{}) {
+	mockStream.EXPECT().Send(b).Do(func(arg0 interface{}) {
 		exitRoutine <- true
 	})
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
