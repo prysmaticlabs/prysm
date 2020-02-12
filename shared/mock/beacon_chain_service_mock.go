@@ -587,10 +587,10 @@ func (mr *MockBeaconChain_StreamBlocksClientMockRecorder) Header() *gomock.Call 
 }
 
 // Recv mocks base method
-func (m *MockBeaconChain_StreamBlocksClient) Recv() (*v1alpha1.BeaconBlock, error) {
+func (m *MockBeaconChain_StreamBlocksClient) Recv() (*v1alpha1.SignedBeaconBlock, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Recv")
-	ret0, _ := ret[0].(*v1alpha1.BeaconBlock)
+	ret0, _ := ret[0].(*v1alpha1.SignedBeaconBlock)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
