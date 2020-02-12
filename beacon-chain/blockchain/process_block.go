@@ -251,7 +251,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		numOfStates := len(s.initSyncState)
 		if numOfStates > initialSyncCacheSize {
 			stateSlice := make([][32]byte, 0, numOfStates)
-			for rt, _ := range s.initSyncState {
+			for rt := range s.initSyncState {
 				stateSlice = append(stateSlice, rt)
 			}
 			sort.Slice(stateSlice, func(i int, j int) bool {
