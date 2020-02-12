@@ -379,6 +379,10 @@ func (vs *Server) filterAttestationsForBlockInclusion(ctx context.Context, slot 
 		validAtts = append(validAtts, att)
 	}
 
+	if err := vs.deleteAttsInPool(inValidAtts); err != nil {
+		return nil, err
+	}
+
 	return validAtts, nil
 }
 
