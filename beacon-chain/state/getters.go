@@ -655,10 +655,9 @@ func CopyCheckpoint(cp *ethpb.Checkpoint) *ethpb.Checkpoint {
 	if cp == nil {
 		return nil
 	}
-	root := safeCopyBytes(cp.Root)
 	return &ethpb.Checkpoint{
 		Epoch: cp.Epoch,
-		Root:  root,
+		Root:  safeCopyBytes(cp.Root),
 	}
 }
 
@@ -667,10 +666,10 @@ func CopySignedBeaconBlock(sigBlock *ethpb.SignedBeaconBlock) *ethpb.SignedBeaco
 	if sigBlock == nil {
 		return nil
 	}
-	sig := safeCopyBytes(sigBlock.Signature)
+
 	return &ethpb.SignedBeaconBlock{
 		Block: 		CopyBeaconBlock(sigBlock.Block),
-		Signature: 	sig[:],
+		Signature: 	safeCopyBytes(sigBlock.Signature),
 	}
 }
 
@@ -679,12 +678,10 @@ func CopyBeaconBlock(block *ethpb.BeaconBlock) *ethpb.BeaconBlock {
 	if block == nil {
 		return nil
 	}
-	parentRoot := safeCopyBytes(block.ParentRoot)
-	stateRoot := safeCopyBytes(block.StateRoot)
 	return &ethpb.BeaconBlock{
 		Slot:                 block.Slot,
-		ParentRoot:           parentRoot[:],
-		StateRoot:            stateRoot[:],
+		ParentRoot:           safeCopyBytes(block.ParentRoot),
+		StateRoot:            safeCopyBytes(block.StateRoot),
 		Body:                 CopyBeaconBlockBody(block.Body),
 	}
 }
@@ -695,12 +692,12 @@ func CopyBeaconBlockBody(body *ethpb.BeaconBlockBody) *ethpb.BeaconBlockBody {
 		return nil
 	}
 
-	randaoReveal := safeCopyBytes(body.RandaoReveal)
-	graffiti :=safeCopyBytes(body.Graffiti)
+
+
 	return &ethpb.BeaconBlockBody{
-		RandaoReveal: 		  randaoReveal[:],
+		RandaoReveal: 		  safeCopyBytes(body.RandaoReveal),
 		Eth1Data:             CopyETH1Data(body.Eth1Data),
-		Graffiti:             graffiti[:],
+		Graffiti:             safeCopyBytes(body.Graffiti),
 		ProposerSlashings:    CopyProposerSlashings(body.ProposerSlashings),
 		AttesterSlashings:    CopyAttesterSlashings(body.AttesterSlashings),
 		Attestations:         CopyAttestations(body.Attestations),
@@ -824,7 +821,7 @@ func CopyDeposit(deposit *ethpb.Deposit) *ethpb.Deposit{
 		return nil
 	}
 	return &ethpb.Deposit{
-		Proof:  deposit.Proof,
+		Proof:  copy2dBytes(deposit.Proof),
 		Data:   CopyDepositData(deposit.Data),
 	}
 }
@@ -883,4 +880,16 @@ func safeCopyBytes(cp []byte) []byte {
 		return new
 	}
 	return nil
+}
+
+func copy2dBytes(ary [][]byte) [][]byte {
+	copy := make([][]byte, len(ary))
+
+	for i := 0 ; i < len(ary) ; i++ {
+		copy[i] = make([]byte, len(ary[i]))
+		for j := 0 ; j < len(ary[i]) ; j++ {
+			copy[i][j] = ary[i][j]
+		}
+	}
+	return copy
 }
