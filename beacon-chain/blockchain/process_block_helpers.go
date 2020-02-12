@@ -80,6 +80,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (
 	if bytes.Equal(headRoot, b.ParentRoot) {
 		return s.HeadState(ctx)
 	}
+
 	preState, err := s.beaconDB.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)

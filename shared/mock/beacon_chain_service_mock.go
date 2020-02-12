@@ -38,7 +38,7 @@ func (m *MockBeaconChainClient) EXPECT() *MockBeaconChainClientMockRecorder {
 }
 
 // AttestationPool mocks base method
-func (m *MockBeaconChainClient) AttestationPool(arg0 context.Context, arg1 *empty.Empty, arg2 ...grpc.CallOption) (*v1alpha1.AttestationPoolResponse, error) {
+func (m *MockBeaconChainClient) AttestationPool(arg0 context.Context, arg1 *v1alpha1.AttestationPoolRequest, arg2 ...grpc.CallOption) (*v1alpha1.AttestationPoolResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {

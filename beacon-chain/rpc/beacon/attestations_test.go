@@ -536,6 +536,143 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 	}
 }
 
+func TestServer_AttestationPool_Pagination_ExceedsMaxPageSize(t *testing.T) {
+	ctx := context.Background()
+	bs := &Server{}
+	exceedsMax := int32(flags.Get().MaxPageSize + 1)
+
+	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, flags.Get().MaxPageSize)
+	req := &ethpb.AttestationPoolRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
+	if _, err := bs.AttestationPool(ctx, req); err != nil && !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+}
+
+func TestServer_AttestationPool_Pagination_OutOfRange(t *testing.T) {
+	ctx := context.Background()
+	bs := &Server{
+		Pool: attestations.NewPool(),
+	}
+
+	atts := []*ethpb.Attestation{
+		{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}},
+		{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1101}},
+		{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b1101}},
+	}
+	if err := bs.Pool.SaveAggregatedAttestations(atts); err != nil {
+		t.Fatal(err)
+	}
+
+	req := &ethpb.AttestationPoolRequest{
+		PageToken: strconv.Itoa(1),
+		PageSize:  100,
+	}
+	wanted := fmt.Sprintf("page start %d >= list %d", req.PageSize, len(atts))
+	if _, err := bs.AttestationPool(ctx, req); err != nil && !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected error %v, received %v", wanted, err)
+	}
+}
+
+func TestServer_AttestationPool_Pagination_DefaultPageSize(t *testing.T) {
+	ctx := context.Background()
+	bs := &Server{
+		Pool: attestations.NewPool(),
+	}
+
+	atts := make([]*ethpb.Attestation, params.BeaconConfig().DefaultPageSize+1)
+	for i := 0; i < len(atts); i++ {
+		atts[i] = &ethpb.Attestation{
+			Data:            &ethpb.AttestationData{Slot: uint64(i)},
+			AggregationBits: bitfield.Bitlist{0b1101},
+		}
+	}
+	if err := bs.Pool.SaveAggregatedAttestations(atts); err != nil {
+		t.Fatal(err)
+	}
+
+	req := &ethpb.AttestationPoolRequest{}
+	res, err := bs.AttestationPool(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Attestations) != params.BeaconConfig().DefaultPageSize {
+		t.Errorf(
+			"Wanted %d attestations in response, received %d",
+			params.BeaconConfig().DefaultPageSize,
+			len(res.Attestations),
+		)
+	}
+	if int(res.TotalSize) != params.BeaconConfig().DefaultPageSize+1 {
+		t.Errorf("Wanted total size %d, received %d", params.BeaconConfig().DefaultPageSize+1, res.TotalSize)
+	}
+}
+
+func TestServer_AttestationPool_Pagination_CustomPageSize(t *testing.T) {
+	ctx := context.Background()
+	bs := &Server{
+		Pool: attestations.NewPool(),
+	}
+
+	numAtts := 100
+	atts := make([]*ethpb.Attestation, numAtts)
+	for i := 0; i < len(atts); i++ {
+		atts[i] = &ethpb.Attestation{
+			Data:            &ethpb.AttestationData{Slot: uint64(i)},
+			AggregationBits: bitfield.Bitlist{0b1101},
+		}
+	}
+	if err := bs.Pool.SaveAggregatedAttestations(atts); err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		req *ethpb.AttestationPoolRequest
+		res *ethpb.AttestationPoolResponse
+	}{
+		{
+			req: &ethpb.AttestationPoolRequest{
+				PageToken: strconv.Itoa(1),
+				PageSize:  3,
+			},
+			res: &ethpb.AttestationPoolResponse{
+				NextPageToken: "2",
+				TotalSize:     int32(numAtts),
+			},
+		},
+		{
+			req: &ethpb.AttestationPoolRequest{
+				PageToken: strconv.Itoa(3),
+				PageSize:  30,
+			},
+			res: &ethpb.AttestationPoolResponse{
+				NextPageToken: "",
+				TotalSize:     int32(numAtts),
+			},
+		},
+		{
+			req: &ethpb.AttestationPoolRequest{
+				PageToken: strconv.Itoa(0),
+				PageSize:  int32(numAtts),
+			},
+			res: &ethpb.AttestationPoolResponse{
+				NextPageToken: "1",
+				TotalSize:     int32(numAtts),
+			},
+		},
+	}
+	for _, tt := range tests {
+		res, err := bs.AttestationPool(ctx, tt.req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if res.TotalSize != tt.res.TotalSize {
+			t.Errorf("Wanted total size %d, received %d", tt.res.TotalSize, res.TotalSize)
+		}
+		if res.NextPageToken != tt.res.NextPageToken {
+			t.Errorf("Wanted next page token %s, received %s", tt.res.NextPageToken, res.NextPageToken)
+		}
+	}
+}
+
 func TestServer_StreamAttestations_ContextCanceled(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)

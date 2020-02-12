@@ -434,3 +434,15 @@ func (s *Service) resumeForkChoice(justifiedCheckpoint *ethpb.Checkpoint, finali
 	store := protoarray.New(justifiedCheckpoint.Epoch, finalizedCheckpoint.Epoch, bytesutil.ToBytes32(finalizedCheckpoint.Root))
 	s.forkChoiceStore = store
 }
+
+// This returns true if block has been processed before. Two ways to verify the block has been processed:
+// 1.) Check fork choice store.
+// 2.) Check DB.
+// Checking 1.) is ten times faster than checking 2.)
+func (s *Service) hasBlock(ctx context.Context, root [32]byte) bool {
+	if s.forkChoiceStore.HasNode(root) {
+		return true
+	}
+
+	return s.beaconDB.HasBlock(ctx, root)
+}
