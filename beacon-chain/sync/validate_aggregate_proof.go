@@ -59,10 +59,14 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	if seen {
 		return false
 	}
-
+	r.pendingAttsLock.Lock()
 	if !r.validateAggregatedAtt(ctx, m) {
+		r.pendingAttsLock.Unlock()
 		return false
 	}
+	// defer is not used as  r.chain.IsValidAttestation
+	// is an expensive check
+	r.pendingAttsLock.Unlock()
 
 	if !featureconfig.Get().DisableStrictAttestationPubsubVerification && !r.chain.IsValidAttestation(ctx, m.Aggregate) {
 		return false
