@@ -34,7 +34,25 @@ func (k *Store) Backup(ctx context.Context) error {
 	}
 	backupPath := path.Join(backupsDir, fmt.Sprintf("prysm_beacondb_at_slot_%07d.backup", head.Block.Slot))
 	logrus.WithField("prefix", "db").WithField("backup", backupPath).Info("Writing backup database.")
+
+	copyDB, err := bolt.Open(backupPath, 0666, nil)
+	if err != nil {
+		panic(err)
+	}
+	defer copyDB.Close()
+
 	return k.db.View(func(tx *bolt.Tx) error {
-		return tx.CopyFile(backupPath, 0666)
+		return tx.ForEach(func(name []byte, b *bolt.Bucket) error {
+			logrus.Debugf("Copying bucket %s\n", name)
+			return copyDB.Update(func(tx2 *bolt.Tx) error {
+				b2, err := tx2.CreateBucketIfNotExists(name)
+				if err != nil {
+					return err
+				}
+				return b.ForEach(func(k []byte, v []byte) error {
+					return b2.Put(k, v)
+				})
+			})
+		})
 	})
 }
