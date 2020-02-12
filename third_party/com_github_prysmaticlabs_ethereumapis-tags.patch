@@ -262,7 +262,7 @@ index 2ce5c34..4cbb276 100644
 +    bytes signature = 3 [(gogoproto.moretags) = "ssz-size:\"96\""];
  }
 diff --git a/eth/v1alpha1/beacon_chain.proto b/eth/v1alpha1/beacon_chain.proto
-index 8de1adb..ffcc8f4 100644
+index 731fa45..3a9092c 100644
 --- a/eth/v1alpha1/beacon_chain.proto
 +++ b/eth/v1alpha1/beacon_chain.proto
 @@ -15,6 +15,7 @@ syntax = "proto3";
@@ -369,7 +369,7 @@ index 8de1adb..ffcc8f4 100644
  
      // Indices of validators ejected in the given epoch.
      repeated uint64 ejected_indices = 9;
-@@ -583,11 +583,11 @@ message ValidatorQueue {
+@@ -591,11 +591,11 @@ message ValidatorQueue {
  
      // Ordered list of 48 byte public keys awaiting activation. 0th index is the
      // next key to be processed.
@@ -383,7 +383,7 @@ index 8de1adb..ffcc8f4 100644
  }
  
  message ListValidatorAssignmentsRequest {
-@@ -599,7 +599,7 @@ message ListValidatorAssignmentsRequest {
+@@ -607,7 +607,7 @@ message ListValidatorAssignmentsRequest {
          bool genesis = 2;
      }
      // 48 byte validator public keys to filter assignments for the given epoch.
@@ -392,7 +392,7 @@ index 8de1adb..ffcc8f4 100644
          
      // Validator indicies to filter assignments for the given epoch.
      repeated uint64 indices = 4;
-@@ -634,7 +634,7 @@ message ValidatorAssignments {
+@@ -642,7 +642,7 @@ message ValidatorAssignments {
          uint64 proposer_slot = 4;
  
          // 48 byte BLS public key.
