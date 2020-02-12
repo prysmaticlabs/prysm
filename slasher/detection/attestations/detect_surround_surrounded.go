@@ -1,19 +1,22 @@
-package rpc
+package attestations
 
 import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// Detector is a function type used to implement the slashable surrounding/surrounded
+// SlashingDetector is a function type used to implement the slashable surrounding/surrounded
 // vote detection methods.
 type detectFn = func(attestationEpochSpan uint64, recorderEpochSpan *slashpb.MinMaxEpochSpan, sourceEpoch uint64) uint64
 
-// detectMax is a function for maxDetector used to detect surrounding attestations.
-func detectMax(
+// detectSurroundedAtt is a function for maxDetector used to detect surrounding attestations.
+func detectSurroundedAtt(
 	attestationEpochSpan uint64,
 	recorderEpochSpan *slashpb.MinMaxEpochSpan,
 	attestationSourceEpoch uint64,
@@ -25,8 +28,8 @@ func detectMax(
 	return 0
 }
 
-// detectMin is a function for minDetecter used to detect surrounded attestations.
-func detectMin(
+// detectSurroundAtt is a function for minDetecter used to detect surrounded attestations.
+func detectSurroundAtt(
 	attestationEpochSpan uint64,
 	recorderEpochSpan *slashpb.MinMaxEpochSpan,
 	attestationSourceEpoch uint64,
@@ -38,13 +41,13 @@ func detectMin(
 	return 0
 }
 
-// DetectAndUpdateMaxEpochSpan is used to detect and update the max span of an incoming attestation.
+// DetectSurroundedAttestations is used to detect and update the max span of an incoming attestation.
 // This is used for detecting surrounding votes.
 // The max span is the span between the current attestation's source epoch and the furthest attestation's
 // target epoch that has a lower (earlier) source epoch.
 // Logic for this detection method was designed by https://github.com/protolambda
 // Detailed here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
-func (ss *Server) DetectAndUpdateMaxEpochSpan(
+func (d *AttDetector) DetectSurroundedAttestations(
 	ctx context.Context,
 	source uint64,
 	target uint64,
@@ -58,7 +61,7 @@ func (ss *Server) DetectAndUpdateMaxEpochSpan(
 			source,
 		)
 	}
-	targetEpoch, span, spanMap, err := ss.detectSlashingByEpochSpan(source, target, spanMap, detectMax)
+	targetEpoch, span, spanMap, err := d.detectSlashingByEpochSpan(source, target, spanMap, detectSurroundedAtt)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -77,20 +80,20 @@ func (ss *Server) DetectAndUpdateMaxEpochSpan(
 			break
 		}
 	}
-	if err := ss.SlasherDB.SaveValidatorSpansMap(validatorIdx, spanMap); err != nil {
+	if err := d.slashingDetector.SlasherDB.SaveValidatorSpansMap(validatorIdx, spanMap); err != nil {
 		return 0, nil, err
 	}
 	return 0, spanMap, nil
 }
 
-// DetectAndUpdateMinEpochSpan is used to detect surrounded votes and update the min epoch span
+// DetectSurroundAttestation is used to detect surrounded votes and update the min epoch span
 // of an incoming attestation.
 // The min span is the span between the current attestations target epoch and the
 // closest attestation's target distance.
 //
 // Logic is following the detection method designed by https://github.com/protolambda
 // Detailed here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
-func (ss *Server) DetectAndUpdateMinEpochSpan(
+func (d *AttDetector) DetectSurroundAttestation(
 	ctx context.Context,
 	source uint64,
 	target uint64,
@@ -104,7 +107,7 @@ func (ss *Server) DetectAndUpdateMinEpochSpan(
 			source,
 		)
 	}
-	targetEpoch, _, spanMap, err := ss.detectSlashingByEpochSpan(source, target, spanMap, detectMin)
+	targetEpoch, _, spanMap, err := d.detectSlashingByEpochSpan(source, target, spanMap, detectSurroundAtt)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -133,7 +136,7 @@ func (ss *Server) DetectAndUpdateMinEpochSpan(
 // in the db by checking either the closest attestation target or the furthest
 // attestation target. This method receives a detector function in order to be used
 // for both surrounding and surrounded vote cases.
-func (ss *Server) detectSlashingByEpochSpan(
+func (d *AttDetector) detectSlashingByEpochSpan(
 	source,
 	target uint64,
 	spanMap *slashpb.EpochSpanMap,
@@ -150,4 +153,58 @@ func (ss *Server) detectSlashingByEpochSpan(
 		return detector(span, spanMap.EpochSpanMap[source], source), span, spanMap, nil
 	}
 	return 0, span, spanMap, nil
+}
+
+// DetectSurroundVotes is a method used to return the attestation that were detected
+// by min max surround detection method.
+func (d *AttDetector) DetectSurroundVotes(ctx context.Context, validatorIdx uint64, req *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error) {
+	spanMap, err := d.slashingDetector.SlasherDB.ValidatorSpansMap(validatorIdx)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get validator spans map")
+	}
+	minTargetEpoch, spanMap, err := d.DetectSurroundedAttestations(ctx, req.Data.Source.Epoch, req.Data.Target.Epoch, validatorIdx, spanMap)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to update min spans")
+	}
+	maxTargetEpoch, spanMap, err := d.DetectSurroundAttestation(ctx, req.Data.Source.Epoch, req.Data.Target.Epoch, validatorIdx, spanMap)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to update max spans")
+	}
+	if err := d.slashingDetector.SlasherDB.SaveValidatorSpansMap(validatorIdx, spanMap); err != nil {
+		return nil, errors.Wrap(err, "failed to save validator spans map")
+	}
+
+	var as []*ethpb.AttesterSlashing
+	if minTargetEpoch > 0 {
+		attestations, err := d.slashingDetector.SlasherDB.IdxAttsForTargetFromID(minTargetEpoch, validatorIdx)
+		if err != nil {
+			return nil, err
+		}
+		for _, ia := range attestations {
+			if ia.Data == nil {
+				continue
+			}
+			if ia.Data.Source.Epoch > req.Data.Source.Epoch && ia.Data.Target.Epoch < req.Data.Target.Epoch {
+				as = append(as, &ethpb.AttesterSlashing{
+					Attestation_1: req,
+					Attestation_2: ia,
+				})
+			}
+		}
+	}
+	if maxTargetEpoch > 0 {
+		attestations, err := d.slashingDetector.SlasherDB.IdxAttsForTargetFromID(maxTargetEpoch, validatorIdx)
+		if err != nil {
+			return nil, err
+		}
+		for _, ia := range attestations {
+			if ia.Data.Source.Epoch < req.Data.Source.Epoch && ia.Data.Target.Epoch > req.Data.Target.Epoch {
+				as = append(as, &ethpb.AttesterSlashing{
+					Attestation_1: req,
+					Attestation_2: ia,
+				})
+			}
+		}
+	}
+	return as, nil
 }

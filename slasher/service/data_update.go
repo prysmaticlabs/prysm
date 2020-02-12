@@ -126,7 +126,10 @@ func (s *Service) finalizedChangeUpdater(ctx context.Context) error {
 func (s *Service) detectSlashings(ctx context.Context, idxAtt *ethpb.IndexedAttestation) error {
 	ctx, span := trace.StartSpan(ctx, "Slasher.Service.detectSlashings")
 	defer span.End()
-	attSlashingResp, err := s.slasher.IsSlashableAttestation(ctx, idxAtt)
+	if err := s.slasherDb.SaveIndexedAttestation(idxAtt); err != nil {
+		return err
+	}
+	attSlashingResp, err := s.attDetector.IsSlashableAttestation(ctx, idxAtt)
 	if err != nil {
 		return errors.Wrap(err, "failed to check attestation")
 	}

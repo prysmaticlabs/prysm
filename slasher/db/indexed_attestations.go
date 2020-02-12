@@ -2,7 +2,6 @@ package db
 
 import (
 	"bytes"
-	"fmt"
 	"reflect"
 	"sort"
 
@@ -125,40 +124,6 @@ func (db *Store) LatestValidatorIdx() (uint64, error) {
 		return nil
 	})
 	return lt, err
-}
-
-// DoubleVotes looks up db for slashable attesting data that were preformed by the same validator.
-func (db *Store) DoubleVotes(validatorIdx uint64, dataRoot []byte, origAtt *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error) {
-	idxAtts, err := db.IdxAttsForTargetFromID(origAtt.Data.Target.Epoch, validatorIdx)
-	if err != nil {
-		return nil, err
-	}
-	if idxAtts == nil || len(idxAtts) == 0 {
-		return nil, fmt.Errorf("can't check nil indexed attestation for double vote")
-	}
-
-	var idxAttsToSlash []*ethpb.IndexedAttestation
-	for _, att := range idxAtts {
-		if att.Data == nil {
-			continue
-		}
-		root, err := hashutil.HashProto(att.Data)
-		if err != nil {
-			return nil, err
-		}
-		if !bytes.Equal(root[:], dataRoot) {
-			idxAttsToSlash = append(idxAttsToSlash, att)
-		}
-	}
-
-	var as []*ethpb.AttesterSlashing
-	for _, idxAtt := range idxAttsToSlash {
-		as = append(as, &ethpb.AttesterSlashing{
-			Attestation_1: origAtt,
-			Attestation_2: idxAtt,
-		})
-	}
-	return as, nil
 }
 
 // HasIndexedAttestation accepts an epoch and validator id and returns true if the indexed attestation exists.
