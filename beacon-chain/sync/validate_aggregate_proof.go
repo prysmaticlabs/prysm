@@ -60,13 +60,16 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return false
 	}
 	r.pendingAttsLock.Lock()
-	if !r.validateAggregatedAtt(ctx, m) {
+	if !r.validateBlockInAttestation(ctx, m) {
 		r.pendingAttsLock.Unlock()
 		return false
 	}
-	// defer is not used as  r.chain.IsValidAttestation
-	// is an expensive check
+	// we dont defer here as the rest of the validation is expensive
 	r.pendingAttsLock.Unlock()
+
+	if !r.validateAggregatedAtt(ctx, m) {
+		return false
+	}
 
 	if !featureconfig.Get().DisableStrictAttestationPubsubVerification && !r.chain.IsValidAttestation(ctx, m.Aggregate) {
 		return false
@@ -82,13 +85,6 @@ func (r *Service) validateAggregatedAtt(ctx context.Context, a *ethpb.AggregateA
 	defer span.End()
 
 	attSlot := a.Aggregate.Data.Slot
-
-	// Verify the block being voted is in DB. The block should have passed validation if it's in the DB.
-	if !r.db.HasBlock(ctx, bytesutil.ToBytes32(a.Aggregate.Data.BeaconBlockRoot)) {
-		// A node doesn't have the block, it'll request from peer while saving the pending attestation to a queue.
-		r.savePendingAtt(a)
-		return false
-	}
 
 	// Verify attestation slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots.
 	currentSlot := uint64(roughtime.Now().Unix()-r.chain.GenesisTime().Unix()) / params.BeaconConfig().SecondsPerSlot
@@ -131,6 +127,16 @@ func (r *Service) validateAggregatedAtt(ctx context.Context, a *ethpb.AggregateA
 		return false
 	}
 
+	return true
+}
+
+func (r *Service) validateBlockInAttestation(ctx context.Context, a *ethpb.AggregateAttestationAndProof) bool {
+	// Verify the block being voted is in DB. The block should have passed validation if it's in the DB.
+	if !r.db.HasBlock(ctx, bytesutil.ToBytes32(a.Aggregate.Data.BeaconBlockRoot)) {
+		// A node doesn't have the block, it'll request from peer while saving the pending attestation to a queue.
+		r.savePendingAtt(a)
+		return false
+	}
 	return true
 }
 
