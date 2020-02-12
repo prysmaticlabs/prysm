@@ -24,6 +24,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// ValidatorSummary tracks validator's attesting summary on per epoch basis. This
+// gets updated during epoch transition.
 var ValidatorSummary []*precompute.Validator
 
 // ExecuteStateTransition defines the procedure for a state transition function.
