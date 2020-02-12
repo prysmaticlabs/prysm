@@ -22,16 +22,13 @@ func TestService_ReceiveBlocks(t *testing.T) {
 	}
 	stream := mock.NewMockBeaconChain_StreamBlocksClient(ctrl)
 	ctx, cancel := context.WithCancel(context.Background())
-	block := &ethpb.BeaconBlock{
-		Slot: 5,
-	}
 	client.EXPECT().StreamBlocks(
 		gomock.Any(),
 		&ptypes.Empty{},
 	).Return(stream, nil)
 	stream.EXPECT().Context().Return(ctx).AnyTimes()
 	stream.EXPECT().Recv().Return(
-		block,
+		&ethpb.SignedBeaconBlock{},
 		nil,
 	).Do(func() {
 		cancel()
