@@ -597,7 +597,7 @@ func (bs *Server) GetValidatorPerformance(
 	for _, key := range req.PublicKeys {
 		idx, ok, err := bs.BeaconDB.ValidatorIndex(ctx, key)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not fetch validator idx for public key %#x: %v", pubKey, err)
+			return nil, status.Errorf(codes.Internal, "Could not fetch validator idx for public key %#x: %v", key, err)
 		}
 		if !ok {
 			missingValidators = append(missingValidators, key)
