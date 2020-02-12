@@ -45,7 +45,6 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 	pubKeys := bytesutil.FromBytes48Array(pks)
 
 	req := &ethpb.ValidatorPerformanceRequest{
-		Slot:       slot,
 		PublicKeys: pubKeys,
 	}
 	resp, err := v.beaconClient.GetValidatorPerformance(ctx, req)
@@ -77,10 +76,15 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 			percentNet := (newBalance - prevBalance) / prevBalance
 			log.WithFields(logrus.Fields{
 				"epoch":         (slot / params.BeaconConfig().SlotsPerEpoch) - 1,
+				"correctlyVotedSource": resp.CorrectlyVotedSource[i],
+				"correctlyVotedTarget": resp.CorrectlyVotedTarget[i],
+				"correctlyVotedHead": resp.CorrectlyVotedHead[i],
+				"inclusionSlot": resp.InclusionDistances[i],
+				"inclusionDistance": resp.InclusionSlots[i],
 				"prevBalance":   prevBalance,
 				"newBalance":    newBalance,
 				"percentChange": fmt.Sprintf("%.5f%%", percentNet*100),
-			}).Info("New Balance")
+			}).Info("Previous epoch voting summary")
 			if v.emitAccountMetrics {
 				validatorBalancesGaugeVec.WithLabelValues(pubKey).Set(newBalance)
 			}
