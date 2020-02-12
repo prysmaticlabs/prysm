@@ -13,7 +13,7 @@ import (
 func TestVerifyMessageYaml(t *testing.T) {
 	testFolders, testFolderPath := testutil.TestFolders(t, "general", "bls/verify/small")
 
-	for _, folder := range testFolders {
+	for i, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			file, err := testutil.BazelFileBytes(path.Join(testFolderPath, folder.Name(), "data.yaml"))
 			if err != nil {
@@ -23,6 +23,7 @@ func TestVerifyMessageYaml(t *testing.T) {
 			if err := yaml.Unmarshal(file, test); err != nil {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
+			t.Errorf("output %v and idx %d", test.Output, i)
 
 			pkBytes, err := hex.DecodeString(test.Input.Pubkey[2:])
 			if err != nil {
@@ -53,7 +54,7 @@ func TestVerifyMessageYaml(t *testing.T) {
 			verified := sig.Verify(msgBytes, pk)
 			if verified != test.Output {
 				t.Fatalf("Signature does not match the expected verification output. "+
-					"Expected %#v but received %#v", test.Output, verified)
+					"Expected %#v but received %#v for test case %d", test.Output, verified, i)
 			}
 			t.Log("Success")
 		})

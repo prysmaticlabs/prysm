@@ -14,7 +14,7 @@ import (
 func TestSignMessageYaml(t *testing.T) {
 	testFolders, testFolderPath := testutil.TestFolders(t, "general", "bls/sign/small")
 
-	for _, folder := range testFolders {
+	for i, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			file, err := testutil.BazelFileBytes(path.Join(testFolderPath, folder.Name(), "data.yaml"))
 			if err != nil {
@@ -40,13 +40,18 @@ func TestSignMessageYaml(t *testing.T) {
 			}
 			sig := sk.Sign(msgBytes)
 
+			if !sig.Verify(msgBytes, sk.PublicKey()) {
+				t.Fatal("could not verify signature")
+			}
+
 			outputBytes, err := hex.DecodeString(test.Output[2:])
 			if err != nil {
 				t.Fatalf("Cannot decode string to bytes: %v", err)
 			}
+
 			if !bytes.Equal(outputBytes, sig.Marshal()) {
-				t.Fatalf("Signature does not match the expected output. "+
-					"Expected %#x but received %#x", outputBytes, sig.Marshal())
+				t.Fatalf("Test Case %d: Signature does not match the expected output. "+
+					"Expected %#x but received %#x", i, outputBytes, sig.Marshal())
 			}
 			t.Log("Success")
 		})

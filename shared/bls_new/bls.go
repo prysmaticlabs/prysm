@@ -22,6 +22,7 @@ func init() {
 		panic(err)
 	}
 	bls12.SetETHmode(1)
+
 }
 
 var maxKeys = int64(100000)
@@ -131,7 +132,7 @@ func (s *SecretKey) Sign(msg []byte) *Signature {
 	if featureconfig.Get().SkipBLSVerify {
 		return &Signature{}
 	}
-	signature := s.p.SignHash(msg)
+	signature := s.p.SignByte(msg)
 	return &Signature{s: signature}
 }
 
@@ -143,6 +144,10 @@ func (s *SecretKey) Marshal() []byte {
 		keyBytes = append(emptyBytes, keyBytes...)
 	}
 	return keyBytes
+}
+
+func (s *SecretKey) RawSecretKey() *bls12.SecretKey {
+	return s.p
 }
 
 // Marshal a public key into a LittleEndian byte slice.
@@ -157,6 +162,10 @@ func (p *PublicKey) Copy() (*PublicKey, error) {
 	return &PublicKey{p: &np}, nil
 }
 
+func (p *PublicKey) RawPublicKey() *bls12.PublicKey {
+	return p.p
+}
+
 // Aggregate two public keys.
 func (p *PublicKey) Aggregate(p2 *PublicKey) *PublicKey {
 	if featureconfig.Get().SkipBLSVerify {
@@ -166,12 +175,12 @@ func (p *PublicKey) Aggregate(p2 *PublicKey) *PublicKey {
 	return p
 }
 
-// Verify a bls signature given a public key, a message, and a domain.
+// Verify a bls signature given a public key, a message.
 func (s *Signature) Verify(msg []byte, pub *PublicKey) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
 	}
-	return s.s.VerifyHash(pub.p, msg)
+	return s.s.VerifyByte(pub.p, msg)
 }
 
 // VerifyAggregate verifies each public key against its respective message.
@@ -215,6 +224,10 @@ func (s *Signature) VerifyAggregateCommon(pubKeys []*PublicKey, msg [32]byte) bo
 	}
 
 	return s.s.VerifyHash(aggregated.p, msg[:])
+}
+
+func (s *Signature) RawSignature() *bls12.Sign {
+	return s.s
 }
 
 // NewAggregateSignature creates a blank aggregate signature.
