@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"sort"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -18,6 +19,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
+
+const initialSyncCacheSize = 180
+const minimumCacheSize = initialSyncCacheSize / 3
 
 // onBlock is called when a gossip block is received. It runs regular state transition on the block.
 //
@@ -241,6 +245,26 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	// Update validator indices in database as needed.
 	if err := s.saveNewValidators(ctx, preStateValidatorCount, postState); err != nil {
 		return errors.Wrap(err, "could not save finalized checkpoint")
+	}
+
+	if featureconfig.Get().InitSyncCacheState {
+		numOfStates := len(s.initSyncState)
+		if numOfStates > initialSyncCacheSize {
+			stateSlice := make([][32]byte, 0, numOfStates)
+			for rt, _ := range s.initSyncState {
+				stateSlice = append(stateSlice, rt)
+			}
+			sort.Slice(stateSlice, func(i int, j int) bool {
+				return s.initSyncState[stateSlice[i]].Slot() < s.initSyncState[stateSlice[j]].Slot()
+			})
+
+			for _, rt := range stateSlice[:numOfStates-minimumCacheSize] {
+				if err := s.beaconDB.SaveState(ctx, s.initSyncState[rt], rt); err != nil {
+					return err
+				}
+				delete(s.initSyncState, rt)
+			}
+		}
 	}
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.
