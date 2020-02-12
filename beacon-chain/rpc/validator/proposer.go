@@ -59,6 +59,8 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not filter attestations: %v", err)
 	}
+
+	// If there is any room left in the block, consider unaggregated attestations as well.
 	if len(atts) < int(params.BeaconConfig().MaxAttestations) {
 		uAtts := vs.AttPool.UnaggregatedAttestations()
 		uAtts, err = vs.filterAttestationsForBlockInclusion(ctx, req.Slot, uAtts)
