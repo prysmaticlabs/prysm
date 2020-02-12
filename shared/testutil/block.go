@@ -81,7 +81,7 @@ func GenerateFullBlock(
 	numToGen = conf.NumAttestations
 	atts := []*ethpb.Attestation{}
 	if numToGen > 0 {
-		atts, err = GenerateAttestations(bState, privs, numToGen, slot, false)
+		atts, err = GenerateAttestations(bState, privs, numToGen, slot)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed generating %d attestations:", numToGen)
 		}
@@ -291,11 +291,19 @@ func generateAttesterSlashings(
 // for the same data with their aggregation bits split uniformly.
 //
 // If you request 4 attestations, but there are 8 committees, you will get 4 fully aggregated attestations.
-func GenerateAttestations(bState *stateTrie.BeaconState, privs []*bls.SecretKey, numToGen uint64, slot uint64, randomRoot bool, ) ([]*ethpb.Attestation, error) {
+func GenerateAttestations(
+	bState *stateTrie.BeaconState,
+	privs []*bls.SecretKey,
+	numToGen uint64,
+	slot uint64,
+) ([]*ethpb.Attestation, error) {
 	currentEpoch := helpers.SlotToEpoch(slot)
 	attestations := []*ethpb.Attestation{}
 	generateHeadState := false
-	bState = bState.Copy()
+	bState, err := stateTrie.InitializeFromProtoUnsafe(bState.CloneInnerState())
+	if err != nil {
+		return nil, err
+	}
 	if slot > bState.Slot() {
 		// Going back a slot here so there's no inclusion delay issues.
 		slot--
@@ -304,7 +312,6 @@ func GenerateAttestations(bState *stateTrie.BeaconState, privs []*bls.SecretKey,
 
 	targetRoot := make([]byte, 32)
 	headRoot := make([]byte, 32)
-	var err error
 	// Only calculate head state if its an attestation for the current slot or future slot.
 	if generateHeadState || slot == bState.Slot() {
 		headState, err := stateTrie.InitializeFromProtoUnsafe(bState.CloneInnerState())
@@ -328,14 +335,6 @@ func GenerateAttestations(bState *stateTrie.BeaconState, privs []*bls.SecretKey,
 		if err != nil {
 			return nil, err
 		}
-	}
-	if randomRoot {
-		b := make([]byte, 32)
-		_, err := rand.Read(b)
-		if err != nil {
-			return nil, err
-		}
-		headRoot = b
 	}
 
 	activeValidatorCount, err := helpers.ActiveValidatorCount(bState, currentEpoch)
@@ -400,11 +399,6 @@ func GenerateAttestations(bState *stateTrie.BeaconState, privs []*bls.SecretKey,
 			for b := i; b < i+bitsPerAtt; b++ {
 				aggregationBits.SetBitAt(b, true)
 				sigs = append(sigs, privs[committee[b]].Sign(dataRoot[:], domain))
-			}
-
-			// bls.AggregateSignatures will return nil if sigs is 0.
-			if len(sigs) == 0 {
-				continue
 			}
 
 			att := &ethpb.Attestation{
