@@ -17,6 +17,7 @@ go_library(
         "schema.go",
         "slashings.go",
         "state.go",
+        "state_summary.go",
         "utils.go",
         "validators.go",
     ],
