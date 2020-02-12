@@ -23,15 +23,15 @@ func TestAggregateAttestation(t *testing.T) {
 		a2   *ethpb.Attestation
 		want *ethpb.Attestation
 	}{
-		{a1: beaconstate.CopyAttestation(&ethpb.Attestation{AggregationBits: []byte{}}),
-			a2:   beaconstate.CopyAttestation(&ethpb.Attestation{AggregationBits: []byte{}}),
-			want: beaconstate.CopyAttestation(&ethpb.Attestation{AggregationBits: []byte{}})},
-		{a1: beaconstate.CopyAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x03}}),
-			a2:   beaconstate.CopyAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x02}}),
-			want: beaconstate.CopyAttestation(&ethpb.Attestation{AggregationBits: []byte{0x03}})},
-		{a1: beaconstate.CopyAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x02}}),
-			a2:   beaconstate.CopyAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x03}}),
-			want: beaconstate.CopyAttestation(&ethpb.Attestation{AggregationBits: []byte{0x03}})},
+		{a1: &ethpb.Attestation{AggregationBits: []byte{}},
+			a2:   &ethpb.Attestation{AggregationBits: []byte{}},
+			want: &ethpb.Attestation{AggregationBits: []byte{}}},
+		{a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x03}},
+			a2:   &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x02}},
+			want: &ethpb.Attestation{AggregationBits: []byte{0x03}}},
+		{a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x02}},
+			a2:   &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x03}},
+			want: &ethpb.Attestation{AggregationBits: []byte{0x03}}},
 	}
 	for _, tt := range tests {
 		got, err := helpers.AggregateAttestation(tt.a1, tt.a2)

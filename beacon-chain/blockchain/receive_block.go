@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"github.com/golang/protobuf/proto"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 
 	"github.com/pkg/errors"
@@ -183,7 +184,7 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlockNoVerify")
 	defer span.End()
-	blockCopy := stateTrie.CopySignedBeaconBlock(block)
+	blockCopy := proto.Clone(block).(*ethpb.SignedBeaconBlock) //stateTrie.CopySignedBeaconBlock(block)
 
 	// Apply state transition on the incoming newly received blockCopy without verifying its BLS contents.
 	if err := s.onBlockInitialSyncStateTransition(ctx, blockCopy); err != nil {

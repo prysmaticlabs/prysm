@@ -45,7 +45,7 @@ func TestCheckpointStateCacheKeyFn_InvalidObj(t *testing.T) {
 func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 	cache := NewCheckpointStateCache()
 
-	cp1 := stateTrie.CopyCheckpoint(&ethpb.Checkpoint{Epoch: 1, Root: []byte{'A'}})
+	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: []byte{'A'}}
 	st, err := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Slot: 64,
 	})
@@ -75,7 +75,7 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 		t.Error("incorrectly cached state")
 	}
 
-	cp2 := stateTrie.CopyCheckpoint(&ethpb.Checkpoint{Epoch: 2, Root: []byte{'B'}})
+	cp2 := &ethpb.Checkpoint{Epoch: 2, Root: []byte{'B'}}
 	st2, err := stateTrie.InitializeFromProto(&pb.BeaconState{
 		Slot: 128,
 	})

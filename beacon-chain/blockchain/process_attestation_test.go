@@ -155,12 +155,12 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	if err := service.beaconDB.SaveState(ctx, s, r); err != nil {
 		t.Fatal(err)
 	}
-	service.justifiedCheckpt = stateTrie.CopyCheckpoint(&ethpb.Checkpoint{Root: r[:]})
-	service.bestJustifiedCheckpt = stateTrie.CopyCheckpoint(&ethpb.Checkpoint{Root: r[:]})
-	service.finalizedCheckpt = stateTrie.CopyCheckpoint(&ethpb.Checkpoint{Root: r[:]})
-	service.prevFinalizedCheckpt = stateTrie.CopyCheckpoint(&ethpb.Checkpoint{Root: r[:]})
+	service.justifiedCheckpt = &ethpb.Checkpoint{Root: r[:]}
+	service.bestJustifiedCheckpt = &ethpb.Checkpoint{Root: r[:]}
+	service.finalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
+	service.prevFinalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 
-	cp1 := stateTrie.CopyCheckpoint(&ethpb.Checkpoint{Epoch: 1, Root: []byte{'A'}})
+	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: []byte{'A'}}
 	service.beaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'A'}))
 	s1, err := service.getAttPreState(ctx, cp1)
 	if err != nil {
@@ -170,7 +170,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 		t.Errorf("Wanted state slot: %d, got: %d", 1*params.BeaconConfig().SlotsPerEpoch, s1.Slot())
 	}
 
-	cp2 := stateTrie.CopyCheckpoint(&ethpb.Checkpoint{Epoch: 2, Root: []byte{'B'}})
+	cp2 := &ethpb.Checkpoint{Epoch: 2, Root: []byte{'B'}}
 	service.beaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'B'}))
 	s2, err := service.getAttPreState(ctx, cp2)
 	if err != nil {
@@ -234,7 +234,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	epoch := uint64(1)
 	baseState, _ := testutil.DeterministicGenesisState(t, 1)
 	baseState.SetSlot(epoch * params.BeaconConfig().SlotsPerEpoch)
-	checkpoint := stateTrie.CopyCheckpoint(&ethpb.Checkpoint{Epoch: epoch})
+	checkpoint := &ethpb.Checkpoint{Epoch: epoch}
 	service.beaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(checkpoint.Root))
 	returned, err := service.getAttPreState(ctx, checkpoint)
 	if err != nil {
@@ -253,7 +253,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	}
 
 	epoch = uint64(2)
-	newCheckpoint := stateTrie.CopyCheckpoint(&ethpb.Checkpoint{Epoch: epoch})
+	newCheckpoint := &ethpb.Checkpoint{Epoch: epoch}
 	service.beaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(newCheckpoint.Root))
 	returned, err = service.getAttPreState(ctx, newCheckpoint)
 	if err != nil {
