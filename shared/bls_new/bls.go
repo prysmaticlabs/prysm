@@ -21,7 +21,10 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	bls12.SetETHmode(1)
+	err = bls12.SetETHmode(1)
+	if err != nil {
+		panic(err)
+	}
 }
 
 var maxKeys = int64(100000)
