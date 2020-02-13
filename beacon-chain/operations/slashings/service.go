@@ -1,6 +1,7 @@
 package slashings
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 
@@ -127,7 +128,7 @@ func (p *Pool) InsertProposerSlashing(state *beaconstate.BeaconState, slashing *
 		return p.pendingProposerSlashing[i].ProposerIndex == slashing.ProposerIndex
 	})
 	if found != len(p.pendingProposerSlashing) {
-		return nil
+		return errors.New("slashing object already exists in pending proposer slashings")
 	}
 
 	// Insert into pending list and sort again.
