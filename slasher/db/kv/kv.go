@@ -94,16 +94,17 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 	if cfg.MaxCacheSize == 0 {
 		cfg.MaxCacheSize = 2 << 30 //(2GB)
 	}
+	kv := &Store{db: boltDB, databasePath: datafile, spanCacheEnabled: cfg.SpanCacheEnabled}
 	spanCache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: cfg.CacheItems,   // number of keys to track frequency of (10M).
 		MaxCost:     cfg.MaxCacheSize, // maximum cost of cache.
 		BufferItems: 64,               // number of keys per Get buffer.
-		OnEvict:     saveToDB,
+		OnEvict:     saveToDB(kv),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to start span cache")
 	}
-	kv := &Store{db: boltDB, databasePath: datafile, spanCache: spanCache, spanCacheEnabled: cfg.SpanCacheEnabled}
+	kv.spanCache = spanCache
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
 		return createBuckets(
