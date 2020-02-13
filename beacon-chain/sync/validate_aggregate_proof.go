@@ -59,13 +59,9 @@ func (r *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	if seen {
 		return false
 	}
-	r.pendingAttsLock.Lock()
 	if !r.validateBlockInAttestation(ctx, m) {
-		r.pendingAttsLock.Unlock()
 		return false
 	}
-	// we dont defer here as the rest of the validation is expensive
-	r.pendingAttsLock.Unlock()
 
 	if !r.validateAggregatedAtt(ctx, m) {
 		return false
