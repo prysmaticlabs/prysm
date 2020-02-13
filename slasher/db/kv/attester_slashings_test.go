@@ -1,4 +1,4 @@
-package db
+package kv
 
 import (
 	"context"
@@ -15,8 +15,8 @@ import (
 func TestStore_AttesterSlashingNilBucket(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	db := SetupSlasherDB(t, cli.NewContext(app, set, nil))
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, cli.NewContext(app, set, nil))
+	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	as := &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("hello")}}
@@ -40,8 +40,8 @@ func TestStore_AttesterSlashingNilBucket(t *testing.T) {
 func TestStore_SaveAttesterSlashing(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	db := SetupSlasherDB(t, cli.NewContext(app, set, nil))
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, cli.NewContext(app, set, nil))
+	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -83,8 +83,8 @@ func TestStore_SaveAttesterSlashing(t *testing.T) {
 func TestStore_SaveAttesterSlashings(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	db := SetupSlasherDB(t, cli.NewContext(app, set, nil))
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, cli.NewContext(app, set, nil))
+	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	as := []*ethpb.AttesterSlashing{
@@ -111,8 +111,8 @@ func TestStore_SaveAttesterSlashings(t *testing.T) {
 func TestStore_UpdateAttesterSlashingStatus(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	db := SetupSlasherDB(t, cli.NewContext(app, set, nil))
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, cli.NewContext(app, set, nil))
+	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -169,8 +169,8 @@ func TestStore_UpdateAttesterSlashingStatus(t *testing.T) {
 func TestStore_LatestEpochDetected(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	db := SetupSlasherDB(t, cli.NewContext(app, set, nil))
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, cli.NewContext(app, set, nil))
+	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	e, err := db.GetLatestEpochDetected(ctx)

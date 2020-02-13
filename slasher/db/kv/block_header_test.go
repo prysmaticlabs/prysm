@@ -1,4 +1,4 @@
-package db
+package kv
 
 import (
 	"context"
@@ -13,8 +13,8 @@ import (
 func TestNilDBHistoryBlkHdr(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	db := SetupSlasherDB(t, cli.NewContext(app, set, nil))
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, cli.NewContext(app, set, nil))
+	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	epoch := uint64(1)
@@ -37,7 +37,7 @@ func TestNilDBHistoryBlkHdr(t *testing.T) {
 func TestSaveHistoryBlkHdr(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	db := SetupSlasherDB(t, cli.NewContext(app, set, nil))
+	db := setupDB(t, cli.NewContext(app, set, nil))
 	ctx := context.Background()
 
 	tests := []struct {
@@ -83,8 +83,8 @@ func TestSaveHistoryBlkHdr(t *testing.T) {
 func TestDeleteHistoryBlkHdr(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	db := SetupSlasherDB(t, cli.NewContext(app, set, nil))
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, cli.NewContext(app, set, nil))
+	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -145,8 +145,8 @@ func TestDeleteHistoryBlkHdr(t *testing.T) {
 func TestHasHistoryBlkHdr(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	db := SetupSlasherDB(t, cli.NewContext(app, set, nil))
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, cli.NewContext(app, set, nil))
+	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -198,8 +198,8 @@ func TestHasHistoryBlkHdr(t *testing.T) {
 func TestPruneHistoryBlkHdr(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	db := SetupSlasherDB(t, cli.NewContext(app, set, nil))
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, cli.NewContext(app, set, nil))
+	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	tests := []struct {

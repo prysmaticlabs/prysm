@@ -1,4 +1,4 @@
-package db
+package kv
 
 import (
 	"context"
@@ -42,8 +42,8 @@ func init() {
 func TestNilDBHistoryIdxAtt(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	db := SetupSlasherDB(t, cli.NewContext(app, set, nil))
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, cli.NewContext(app, set, nil))
+	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	epoch := uint64(1)
@@ -69,8 +69,8 @@ func TestNilDBHistoryIdxAtt(t *testing.T) {
 func TestSaveIdxAtt(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	db := SetupSlasherDB(t, cli.NewContext(app, set, nil))
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, cli.NewContext(app, set, nil))
+	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	for _, tt := range tests {
@@ -94,8 +94,8 @@ func TestSaveIdxAtt(t *testing.T) {
 func TestDeleteHistoryIdxAtt(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	db := SetupSlasherDB(t, cli.NewContext(app, set, nil))
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, cli.NewContext(app, set, nil))
+	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	for _, tt := range tests {
@@ -142,8 +142,8 @@ func TestDeleteHistoryIdxAtt(t *testing.T) {
 func TestHasIndexedAttestation(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	db := SetupSlasherDB(t, cli.NewContext(app, set, nil))
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, cli.NewContext(app, set, nil))
+	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	for _, tt := range tests {
@@ -174,8 +174,8 @@ func TestHasIndexedAttestation(t *testing.T) {
 func TestPruneHistoryIdxAtt(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	db := SetupSlasherDB(t, cli.NewContext(app, set, nil))
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, cli.NewContext(app, set, nil))
+	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	for _, tt := range tests {

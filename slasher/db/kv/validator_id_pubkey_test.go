@@ -1,4 +1,4 @@
-package db
+package kv
 
 import (
 	"bytes"
@@ -36,8 +36,8 @@ func init() {
 func TestNilDBValidatorPublicKey(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	db := SetupSlasherDB(t, cli.NewContext(app, set, nil))
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, cli.NewContext(app, set, nil))
+	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	validatorID := uint64(1)
@@ -55,8 +55,8 @@ func TestNilDBValidatorPublicKey(t *testing.T) {
 func TestSavePubKey(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	db := SetupSlasherDB(t, cli.NewContext(app, set, nil))
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, cli.NewContext(app, set, nil))
+	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	for _, tt := range pkTests {
@@ -80,8 +80,8 @@ func TestSavePubKey(t *testing.T) {
 func TestDeletePublicKey(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	db := SetupSlasherDB(t, cli.NewContext(app, set, nil))
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, cli.NewContext(app, set, nil))
+	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	for _, tt := range pkTests {

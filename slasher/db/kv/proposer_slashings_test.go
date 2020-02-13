@@ -1,4 +1,4 @@
-package db
+package kv
 
 import (
 	"context"
@@ -15,8 +15,8 @@ import (
 func TestStore_ProposerSlashingNilBucket(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	db := SetupSlasherDB(t, cli.NewContext(app, set, nil))
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, cli.NewContext(app, set, nil))
+	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	ps := &ethpb.ProposerSlashing{ProposerIndex: 1}
@@ -40,8 +40,8 @@ func TestStore_ProposerSlashingNilBucket(t *testing.T) {
 func TestStore_SaveProposerSlashing(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	db := SetupSlasherDB(t, cli.NewContext(app, set, nil))
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, cli.NewContext(app, set, nil))
+	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -83,8 +83,8 @@ func TestStore_SaveProposerSlashing(t *testing.T) {
 func TestStore_UpdateProposerSlashingStatus(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	db := SetupSlasherDB(t, cli.NewContext(app, set, nil))
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, cli.NewContext(app, set, nil))
+	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	tests := []struct {
@@ -143,8 +143,8 @@ func TestStore_UpdateProposerSlashingStatus(t *testing.T) {
 func TestStore_SaveProposerSlashings(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	db := SetupSlasherDB(t, cli.NewContext(app, set, nil))
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, cli.NewContext(app, set, nil))
+	defer teardownDB(t, db)
 	ctx := context.Background()
 
 	ps := []*ethpb.ProposerSlashing{
