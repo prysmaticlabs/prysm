@@ -48,14 +48,29 @@ func (s *Service) loadHotState(ctx context.Context, blockRoot [32]byte) (*state.
 	if err != nil {
 		return nil, err
 	}
+	targetSlot := summary.Slot
 
-	state, err := s.beaconDB.State(ctx, bytesutil.ToBytes32(summary.BoundaryRoot))
+	boundaryState, err := s.beaconDB.State(ctx, bytesutil.ToBytes32(summary.BoundaryRoot))
 	if err != nil {
 		return nil, err
 	}
 
 	// Don't need to replay the blocks if we're already on an epoch boundary.
-	if
+	var hotState *state.BeaconState
+	if helpers.IsEpochStart(targetSlot) {
+		hotState = boundaryState
+	} else {
+		blks, err := s.loadBlocks(ctx, boundaryState.Slot(), targetSlot, bytesutil.ToBytes32(summary.LatestRoot))
+		if err != nil {
+			return nil, err
+		}
+		hotState, err = s.replayBlocks(ctx, boundaryState, blks, targetSlot)
+		if err != nil {
+			return nil, err
+		}
+	}
 
-	return nil
+	// Save the cache
+
+	return hotState, nil
 }
