@@ -12,10 +12,10 @@ import (
 )
 
 // This replays the input blocks on the input state until the target slot is reached.
-func (s *Service)replayBlocks(ctx context.Context, state *state.BeaconState, signed []*ethpb.SignedBeaconBlock, targetSlot uint64) (*state.BeaconState, error) {
+func (s *Service) replayBlocks(ctx context.Context, state *state.BeaconState, signed []*ethpb.SignedBeaconBlock, targetSlot uint64) (*state.BeaconState, error) {
 	var err error
 	// The input block list is sorted in decreasing slots order.
-	for i:=len(signed) - 1; i >= 0 ; i--  {
+	for i := len(signed) - 1; i >= 0; i-- {
 		// If there is skip slot.
 		for state.Slot() < signed[i].Block.Slot {
 			state, err = transition.ProcessSlot(ctx, state)
@@ -42,7 +42,7 @@ func (s *Service)replayBlocks(ctx context.Context, state *state.BeaconState, sig
 
 // This loads the blocks between start slot and end slot by recursively fetching from end block root.
 // The Blocks are returned in slot-descending order.
-func (s *Service)loadBlocks(ctx context.Context, startSlot uint64, endSlot uint64, endBlockRoot [32]byte) ([]*ethpb.SignedBeaconBlock, error) {
+func (s *Service) loadBlocks(ctx context.Context, startSlot uint64, endSlot uint64, endBlockRoot [32]byte) ([]*ethpb.SignedBeaconBlock, error) {
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
 	blocks, err := s.beaconDB.Blocks(ctx, filter)
 	if err != nil {
@@ -59,14 +59,14 @@ func (s *Service)loadBlocks(ctx context.Context, startSlot uint64, endSlot uint6
 
 	// The last retrieved block root has to match input end block root.
 	length := len(blocks)
-	if blockRoots[length - 1] != endBlockRoot {
+	if blockRoots[length-1] != endBlockRoot {
 		return nil, errors.New("end block roots don't match")
 	}
 
-	filteredBlocks :=[]*ethpb.SignedBeaconBlock{blocks[length-1]}
+	filteredBlocks := []*ethpb.SignedBeaconBlock{blocks[length-1]}
 	// Starting from second to last index because the last block is already in the filtered block list.
-	for i:=length-2; i >= 0; i--  {
-		b := filteredBlocks[len(filteredBlocks) - 1]
+	for i := length - 2; i >= 0; i-- {
+		b := filteredBlocks[len(filteredBlocks)-1]
 		if bytesutil.ToBytes32(b.Block.ParentRoot) != blockRoots[i] {
 			continue
 		}

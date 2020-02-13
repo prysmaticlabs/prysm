@@ -21,7 +21,7 @@ func (s *Service) saveHotState(ctx context.Context, blockRoot [32]byte, state *s
 			return err
 		}
 		log.WithFields(logrus.Fields{
-			"slot": state.Slot(),
+			"slot":      state.Slot(),
 			"blockRoot": hex.EncodeToString(bytesutil.Trunc(blockRoot[:]))}).Debug("Saved full state on epoch boundary")
 	}
 
