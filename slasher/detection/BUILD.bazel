@@ -5,5 +5,5 @@ go_library(
     srcs = ["detector.go"],
     importpath = "github.com/prysmaticlabs/prysm/slasher/detection",
     visibility = ["//slasher:__subpackages__"],
-    deps = ["//slasher/db:go_default_library"],
+    deps = ["//slasher/db/kv:go_default_library"],
 )

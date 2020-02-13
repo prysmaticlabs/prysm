@@ -63,7 +63,7 @@ func BenchmarkMaxSpan(b *testing.B) {
 
 	context := context.Background()
 	detector := AttDetector{&detection.SlashingDetector{
-		SlasherDB: dbs,
+		SlasherDB: db,
 	}}
 	for _, diff := range diffs {
 		b.Run(fmt.Sprintf("MaxSpan_diff_%d", diff), func(ib *testing.B) {
@@ -91,7 +91,7 @@ func BenchmarkDetectSpan(b *testing.B) {
 	defer testDB.TeardownSlasherDB(b, db)
 
 	detector := AttDetector{&detection.SlashingDetector{
-		SlasherDB: dbs,
+		SlasherDB: db,
 	}}
 	for _, diff := range diffs {
 		b.Run(fmt.Sprintf("Detect_MaxSpan_diff_%d", diff), func(ib *testing.B) {

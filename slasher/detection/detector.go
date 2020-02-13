@@ -3,7 +3,7 @@ package detection
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/slasher/db"
+	"github.com/prysmaticlabs/prysm/slasher/db/kv"
 )
 
 // SlashingDetector defines a server implementation of the gRPC Slasher service,
