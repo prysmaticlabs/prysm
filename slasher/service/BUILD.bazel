@@ -9,6 +9,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/slasher/service",
     visibility = ["//visibility:public"],
     deps = [
+        "//proto/slashing:go_default_library",
         "//shared/attestationutil:go_default_library",
         "//shared/cmd:go_default_library",
         "//shared/debug:go_default_library",
@@ -22,6 +23,7 @@ go_library(
         "//slasher/rpc:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//:go_default_library",
+        "@com_github_grpc_ecosystem_go_grpc_middleware//recovery:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//tracing/opentracing:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_prometheus//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
@@ -33,6 +35,7 @@ go_library(
         "@org_golang_google_grpc//:go_default_library",
         "@org_golang_google_grpc//codes:go_default_library",
         "@org_golang_google_grpc//credentials:go_default_library",
+        "@org_golang_google_grpc//reflection:go_default_library",
         "@org_golang_google_grpc//status:go_default_library",
     ],
 )
