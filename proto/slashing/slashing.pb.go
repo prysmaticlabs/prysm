@@ -681,7 +681,7 @@ func NewSlasherClient(cc *grpc.ClientConn) SlasherClient {
 
 func (c *slasherClient) IsSlashableAttestation(ctx context.Context, in *v1alpha1.IndexedAttestation, opts ...grpc.CallOption) (*AttesterSlashingResponse, error) {
 	out := new(AttesterSlashingResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.slashing.Slasher/DetectAttestationForSlashings", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/ethereum.slashing.Slasher/IsSlashableAttestation", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -728,7 +728,7 @@ type UnimplementedSlasherServer struct {
 }
 
 func (*UnimplementedSlasherServer) IsSlashableAttestation(ctx context.Context, req *v1alpha1.IndexedAttestation) (*AttesterSlashingResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DetectAttestationForSlashings not implemented")
+	return nil, status.Errorf(codes.Unimplemented, "method IsSlashableAttestation not implemented")
 }
 func (*UnimplementedSlasherServer) IsSlashableBlock(ctx context.Context, req *ProposerSlashingRequest) (*ProposerSlashingResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method IsSlashableBlock not implemented")
@@ -754,7 +754,7 @@ func _Slasher_IsSlashableAttestation_Handler(srv interface{}, ctx context.Contex
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/ethereum.slashing.Slasher/DetectAttestationForSlashings",
+		FullMethod: "/ethereum.slashing.Slasher/IsSlashableAttestation",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SlasherServer).IsSlashableAttestation(ctx, req.(*v1alpha1.IndexedAttestation))
@@ -821,7 +821,7 @@ var _Slasher_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*SlasherServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "DetectAttestationForSlashings",
+			MethodName: "IsSlashableAttestation",
 			Handler:    _Slasher_IsSlashableAttestation_Handler,
 		},
 		{
