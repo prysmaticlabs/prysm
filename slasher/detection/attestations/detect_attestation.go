@@ -2,6 +2,7 @@ package attestations
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -30,31 +31,33 @@ func (d *AttDetector) DetectAttestationForSlashings(ctx context.Context, req *et
 	lastIdx := int64(-1)
 	for _, idx := range indices {
 		if int64(idx) <= lastIdx {
-			return nil, fmt.Errorf("indexed attestation contains repeated or non sorted ids")
+			return nil, errors.New("indexed attestation contains repeated or non sorted ids")
 		}
 		wg.Add(1)
 		go func(idx uint64, root [32]byte, req *ethpb.IndexedAttestation) {
+			defer wg.Done()
 			atts, err := d.DoubleVotes(idx, root[:], req)
 			if err != nil {
 				errorChans <- err
-				wg.Done()
 				return
 			}
 			if atts != nil && len(atts) > 0 {
 				attSlashings <- atts
 			}
-			atts, err = d.DetectSurroundVotes(ctx, idx, req)
+		}(idx, root, req)
+
+		go func(idx uint64, req *ethpb.IndexedAttestation) {
+			atts, err := d.DetectSurroundVotes(ctx, idx, req)
 			if err != nil {
 				errorChans <- err
-				wg.Done()
 				return
 			}
 			if atts != nil && len(atts) > 0 {
 				attSlashings <- atts
 			}
-			wg.Done()
 			return
-		}(idx, root, req)
+		}(idx, req)
+
 	}
 	wg.Wait()
 	close(errorChans)
@@ -84,32 +87,28 @@ func (d *AttDetector) UpdateSpanMaps(ctx context.Context, req *ethpb.IndexedAtte
 		}
 		wg.Add(1)
 		go func(i uint64) {
+			defer wg.Done()
 			spanMap, err := d.slashingDetector.SlasherDB.ValidatorSpansMap(i)
 			if err != nil {
 				er <- err
-				wg.Done()
 				return
 			}
 			if req.Data == nil {
 				log.Trace("Got indexed attestation with no data")
-				wg.Done()
 				return
 			}
 			_, spanMap, err = d.DetectSurroundingAttestation(ctx, req.Data.Source.Epoch, req.Data.Target.Epoch, i, spanMap)
 			if err != nil {
 				er <- err
-				wg.Done()
 				return
 			}
 			_, spanMap, err = d.DetectSurroundedAttestations(ctx, req.Data.Source.Epoch, req.Data.Target.Epoch, i, spanMap)
 			if err != nil {
 				er <- err
-				wg.Done()
 				return
 			}
 			if err := d.slashingDetector.SlasherDB.SaveValidatorSpansMap(i, spanMap); err != nil {
 				er <- err
-				wg.Done()
 				return
 			}
 		}(idx)
