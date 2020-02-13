@@ -24,7 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/slasher/cache"
 	"github.com/prysmaticlabs/prysm/slasher/db"
-	"github.com/prysmaticlabs/prysm/slasher/db/kv"
+	"github.com/prysmaticlabs/prysm/slasher/detection/attestations"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/prysmaticlabs/prysm/slasher/rpc"
 	"github.com/sirupsen/logrus"
@@ -47,9 +47,10 @@ func init() {
 
 // Service defining an RPC server for the slasher service.
 type Service struct {
-	slasherDb       *kv.Store
+	slasherDb       db.Database
 	grpcServer      *grpc.Server
 	slasher         *rpc.Server
+	attDetector     *attestations.AttDetector
 	port            int
 	withCert        string
 	withKey         string
@@ -72,7 +73,7 @@ type Config struct {
 	Port           int
 	CertFlag       string
 	KeyFlag        string
-	SlasherDb      *kv.Store
+	SlasherDb      db.Database
 	BeaconProvider string
 	BeaconCert     string
 }
@@ -90,36 +91,10 @@ func NewRPCService(cfg *Config, ctx *cli.Context) (*Service, error) {
 		beaconProvider: cfg.BeaconProvider,
 		beaconCert:     cfg.BeaconCert,
 	}
-	if err := s.startDB(s.ctx); err != nil {
-		return nil, err
-	}
 	s.slasher = &rpc.Server{
 		SlasherDB: s.slasherDb,
 	}
 	return s, nil
-}
-
-func (s *Service) startDB(ctx *cli.Context) error {
-	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
-	dbPath := path.Join(baseDir, slasherDBName)
-	cfg := &kv.Config{SpanCacheEnabled: ctx.GlobalBool(flags.UseSpanCacheFlag.Name)}
-	slasherDB, err := db.NewDB(dbPath, cfg)
-	if err != nil {
-		return err
-	}
-	if s.ctx.GlobalBool(cmd.ClearDB.Name) {
-		if err := slasherDB.ClearDB(); err != nil {
-			return err
-		}
-		slasherDB, err = db.NewDB(dbPath, cfg)
-		if err != nil {
-			return err
-		}
-	}
-
-	log.WithField("path", dbPath).Info("Checking db")
-	s.slasherDb = slasherDB
-	return nil
 }
 
 // Start the gRPC server.
@@ -278,7 +253,7 @@ func (s *Service) loadSpanMaps(slasherServer rpc.Server) {
 			log.Errorf("Got error while trying to retrieve indexed attestations from db: %v", err)
 		}
 		for _, ia := range idxAtts {
-			if err := slasherServer.UpdateSpanMaps(s.context, ia); err != nil {
+			if err := s.attDetector.UpdateSpanMaps(s.context, ia); err != nil {
 				log.Errorf("Unexpected error updating span maps: %v", err)
 			}
 		}
