@@ -50,10 +50,10 @@ type Service struct {
 	genesisTime            time.Time
 	p2p                    p2p.Broadcaster
 	maxRoutines            int64
-	headSlot               uint64
+	headIdentifier         [40]byte
 	headBlock              *ethpb.SignedBeaconBlock
 	headState              *stateTrie.BeaconState
-	canonicalRoots         map[uint64][]byte
+	canonicalRoots         map[[40]byte]bool
 	headLock               sync.RWMutex
 	stateNotifier          statefeed.Notifier
 	genesisRoot            [32]byte
@@ -99,7 +99,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		attPool:            cfg.AttPool,
 		exitPool:           cfg.ExitPool,
 		p2p:                cfg.P2p,
-		canonicalRoots:     make(map[uint64][]byte),
+		canonicalRoots:     make(map[[40]byte]bool),
 		maxRoutines:        cfg.MaxRoutines,
 		stateNotifier:      cfg.StateNotifier,
 		epochParticipation: make(map[uint64]*precompute.Balance),
@@ -286,10 +286,12 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 		return errors.New("cannot save nil head block")
 	}
 
-	s.headSlot = b.Block.Slot
+	// copy the head slot into the identifier
+	copy(s.headIdentifier[:8], bytesutil.Bytes8(b.Block.Slot))
+	// copy the head root into it
+	copy(s.headIdentifier[8:], r[:])
 
-	s.canonicalRoots[b.Block.Slot] = r[:]
-
+	s.canonicalRoots[s.headIdentifier] = true
 	s.headBlock = proto.Clone(b).(*ethpb.SignedBeaconBlock)
 
 	headState, err := s.beaconDB.State(ctx, r)
@@ -364,7 +366,10 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 	s.genesisRoot = genesisBlkRoot
 	s.headBlock = genesisBlk
 	s.headState = genesisState
-	s.canonicalRoots[genesisState.Slot()] = genesisBlkRoot[:]
+	genesisIdentifier := [40]byte{}
+	copy(genesisIdentifier[:8], bytesutil.Bytes8(genesisState.Slot()))
+	copy(genesisIdentifier[8:], genesisBlkRoot[:])
+	s.canonicalRoots[genesisIdentifier] = true
 
 	return nil
 }
@@ -406,9 +411,10 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	}
 
 	if s.headBlock != nil && s.headBlock.Block != nil {
-		s.headSlot = s.headBlock.Block.Slot
+		copy(s.headIdentifier[:8], bytesutil.Bytes8(s.headBlock.Block.Slot))
+		copy(s.headIdentifier[8:], finalized.Root)
 	}
-	s.canonicalRoots[s.headSlot] = finalized.Root
+	s.canonicalRoots[s.headIdentifier] = true
 
 	return nil
 }

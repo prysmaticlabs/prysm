@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -127,22 +129,29 @@ func TestPrevJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 
 func TestHeadSlot_CanRetrieve(t *testing.T) {
 	c := &Service{}
-	c.headSlot = 100
+	identifier := [40]byte{}
+	copy(identifier[:8], bytesutil.Bytes8(100))
+	copy(identifier[8:], []byte{'A'})
+	c.headIdentifier = identifier
 	if c.HeadSlot() != 100 {
 		t.Errorf("Wanted head slot: %d, got: %d", 100, c.HeadSlot())
 	}
 }
 
 func TestHeadRoot_CanRetrieve(t *testing.T) {
-	c := &Service{canonicalRoots: make(map[uint64][]byte)}
-	c.headSlot = 100
-	c.canonicalRoots[c.headSlot] = []byte{'A'}
+	c := &Service{canonicalRoots: make(map[[40]byte]bool)}
+	identifier := [40]byte{}
+	root := [32]byte{'A'}
+	copy(identifier[:8], bytesutil.Bytes8(100))
+	copy(identifier[8:], root[:])
+	c.canonicalRoots[identifier] = true
+	c.headIdentifier = identifier
 	headRoot, err := c.HeadRoot(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal([]byte{'A'}, headRoot) {
-		t.Errorf("Wanted head root: %v, got: %d", []byte{'A'}, headRoot)
+	if !bytes.Equal(root[:], headRoot) {
+		t.Errorf("Wanted head root: %v, got: %d", root[:], headRoot)
 	}
 }
 

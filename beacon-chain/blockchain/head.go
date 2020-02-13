@@ -98,8 +98,9 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 	// Cache the new head info.
-	s.headSlot = newHead.Block.Slot
-	s.canonicalRoots[newHead.Block.Slot] = headRoot[:]
+	copy(s.headIdentifier[:8], bytesutil.Bytes8(newHead.Block.Slot))
+	copy(s.headIdentifier[8:], headRoot[:])
+	s.canonicalRoots[s.headIdentifier] = true
 	s.headBlock = proto.Clone(newHead).(*ethpb.SignedBeaconBlock)
 	s.headState = headState
 

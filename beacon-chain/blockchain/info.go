@@ -29,10 +29,10 @@ func (s *Service) HeadsHandler(w http.ResponseWriter, _ *http.Request) {
 		return
 	}
 
-	slots := s.latestHeadSlots()
-	for _, slot := range slots {
-		r := hex.EncodeToString(bytesutil.Trunc(s.canonicalRoots[uint64(slot)]))
-		if _, err := fmt.Fprintf(w, "\n %d\t\t%s\t", slot, r); err != nil {
+	identifiers := s.latestHeadIdentifiers()
+	for _, identifier := range identifiers {
+		r := hex.EncodeToString(bytesutil.Trunc(identifier[8:]))
+		if _, err := fmt.Fprintf(w, "\n %d\t\t%s\t", bytesutil.FromBytes8(identifier[:8]), r); err != nil {
 			logrus.WithError(err).Error("Failed to render chain heads page")
 			return
 		}
@@ -98,7 +98,7 @@ func (s *Service) TreeHandler(w http.ResponseWriter, _ *http.Request) {
 			dotN = graph.Node(index).Box().Attr("label", label)
 		}
 
-		if nodes[i].Slot == s.headSlot &&
+		if nodes[i].Slot == s.HeadSlot() &&
 			nodes[i].BestDescendent == ^uint64(0) {
 			dotN = dotN.Attr("color", "green")
 		}
@@ -119,15 +119,17 @@ func (s *Service) TreeHandler(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-// This returns the latest head slots in a slice and up to latestSlotCount
-func (s *Service) latestHeadSlots() []int {
-	slots := make([]int, 0, len(s.canonicalRoots))
+// This returns the latest head identifiers in a slice and up to latestSlotCount
+func (s *Service) latestHeadIdentifiers() [][40]byte {
+	identifiers := make([][40]byte, 0, len(s.canonicalRoots))
 	for k := range s.canonicalRoots {
-		slots = append(slots, int(k))
+		identifiers = append(identifiers, k)
 	}
-	sort.Ints(slots)
-	if (len(slots)) > latestSlotCount {
-		return slots[len(slots)-latestSlotCount:]
+	sort.Slice(identifiers, func(i int, j int) bool {
+		return bytesutil.FromBytes8(identifiers[i][:8]) < bytesutil.FromBytes8(identifiers[j][:8])
+	})
+	if (len(identifiers)) > latestSlotCount {
+		return identifiers[len(identifiers)-latestSlotCount:]
 	}
-	return slots
+	return identifiers
 }

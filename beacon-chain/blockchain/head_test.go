@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -18,15 +20,19 @@ func TestSaveHead_Same(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	service := setupBeaconChain(t, db)
 
-	service.headSlot = 0
+	identifier := [40]byte{}
 	r := [32]byte{'A'}
-	service.canonicalRoots[0] = r[:]
+
+	copy(identifier[:8], bytesutil.Bytes8(0))
+	copy(identifier[8:], r[:])
+	service.canonicalRoots[identifier] = true
+	service.headIdentifier = identifier
 
 	if err := service.saveHead(context.Background(), r); err != nil {
 		t.Fatal(err)
 	}
 
-	if service.headSlot != 0 {
+	if bytesutil.FromBytes8(service.headIdentifier[:8]) != 0 {
 		t.Error("Head did not stay the same")
 	}
 
@@ -44,9 +50,11 @@ func TestSaveHead_Different(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	service := setupBeaconChain(t, db)
 
-	service.headSlot = 0
 	oldRoot := [32]byte{'A'}
-	service.canonicalRoots[0] = oldRoot[:]
+	identifier := [40]byte{}
+	copy(identifier[:8], bytesutil.Bytes8(0))
+	copy(identifier[32:], oldRoot[:])
+	service.canonicalRoots[identifier] = true
 
 	newHeadBlock := &ethpb.BeaconBlock{Slot: 1}
 	newHeadSignedBlock := &ethpb.SignedBeaconBlock{Block: newHeadBlock}
@@ -58,7 +66,7 @@ func TestSaveHead_Different(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if service.headSlot != 1 {
+	if bytesutil.FromBytes8(service.headIdentifier[:8]) != 1 {
 		t.Error("Head did not change")
 	}
 

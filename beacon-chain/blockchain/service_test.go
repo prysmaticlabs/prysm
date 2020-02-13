@@ -292,7 +292,15 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s, err := bc.beaconDB.State(ctx, bytesutil.ToBytes32(bc.canonicalRoots[0]))
+	genesisIdentifier := [40]byte{}
+
+	for identifier := range bc.canonicalRoots {
+		if bytesutil.FromBytes8(identifier[:8]) == 0 {
+			copy(genesisIdentifier[:], identifier[:])
+		}
+	}
+
+	s, err := bc.beaconDB.State(ctx, bytesutil.ToBytes32(genesisIdentifier[8:]))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -309,7 +317,7 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 	if bc.HeadBlock() == nil {
 		t.Error("Head state can't be nil after initialize beacon chain")
 	}
-	if bc.canonicalRoots[0] == nil {
+	if genesisIdentifier == [40]byte{} {
 		t.Error("Canonical root for slot 0 can't be nil after initialize beacon chain")
 	}
 }
@@ -353,7 +361,7 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	if err := db.SaveBlock(ctx, headBlock); err != nil {
 		t.Fatal(err)
 	}
-	c := &Service{beaconDB: db, canonicalRoots: make(map[uint64][]byte)}
+	c := &Service{beaconDB: db, canonicalRoots: make(map[[40]byte]bool)}
 	if err := c.initializeChainInfo(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -388,7 +396,7 @@ func TestChainService_SaveHeadNoDB(t *testing.T) {
 	ctx := context.Background()
 	s := &Service{
 		beaconDB:       db,
-		canonicalRoots: make(map[uint64][]byte),
+		canonicalRoots: make(map[[40]byte]bool),
 	}
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
 	r, _ := ssz.HashTreeRoot(b)

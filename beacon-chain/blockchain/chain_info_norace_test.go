@@ -12,7 +12,7 @@ func TestHeadSlot_DataRace(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	s := &Service{
 		beaconDB:       db,
-		canonicalRoots: make(map[uint64][]byte),
+		canonicalRoots: make(map[[40]byte]bool),
 	}
 	go func() {
 		s.saveHead(
@@ -28,7 +28,7 @@ func TestHeadRoot_DataRace(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	s := &Service{
 		beaconDB:       db,
-		canonicalRoots: make(map[uint64][]byte),
+		canonicalRoots: make(map[[40]byte]bool),
 	}
 	go func() {
 		s.saveHead(
@@ -46,7 +46,7 @@ func TestHeadBlock_DataRace(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	s := &Service{
 		beaconDB:       db,
-		canonicalRoots: make(map[uint64][]byte),
+		canonicalRoots: make(map[[40]byte]bool),
 	}
 	go func() {
 		s.saveHead(
@@ -62,7 +62,7 @@ func TestHeadState_DataRace(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	s := &Service{
 		beaconDB:       db,
-		canonicalRoots: make(map[uint64][]byte),
+		canonicalRoots: make(map[[40]byte]bool),
 	}
 	go func() {
 		s.saveHead(

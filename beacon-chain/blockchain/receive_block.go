@@ -94,7 +94,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 		return errors.Wrap(err, "could not get signing root on received block")
 	}
 
-	if featureconfig.Get().DisableForkChoice && block.Block.Slot > s.headSlot {
+	if featureconfig.Get().DisableForkChoice && block.Block.Slot > s.HeadSlot() {
 		if err := s.saveHead(ctx, root); err != nil {
 			return errors.Wrap(err, "could not save head")
 		}
@@ -115,7 +115,7 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 	})
 
 	// Reports on block and fork choice metrics.
-	metrics.ReportSlotMetrics(blockCopy.Block.Slot, s.headSlot, s.headState)
+	metrics.ReportSlotMetrics(blockCopy.Block.Slot, s.HeadSlot(), s.headState)
 
 	// Log state transition data.
 	logStateTransitionData(blockCopy.Block)
@@ -165,7 +165,7 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 	})
 
 	// Reports on block and fork choice metrics.
-	metrics.ReportSlotMetrics(blockCopy.Block.Slot, s.headSlot, s.headState)
+	metrics.ReportSlotMetrics(blockCopy.Block.Slot, s.HeadSlot(), s.headState)
 
 	// Log state transition data.
 	logStateTransitionData(blockCopy.Block)
@@ -231,7 +231,7 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 	})
 
 	// Reports on blockCopy and fork choice metrics.
-	metrics.ReportSlotMetrics(blockCopy.Block.Slot, s.headSlot, s.headState)
+	metrics.ReportSlotMetrics(blockCopy.Block.Slot, s.HeadSlot(), s.headState)
 
 	// Log state transition data.
 	log.WithFields(logrus.Fields{

@@ -5,6 +5,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -110,7 +112,7 @@ func (s *Service) HeadSlot() uint64 {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
-	return s.headSlot
+	return bytesutil.FromBytes8(s.headIdentifier[:8])
 }
 
 // HeadRoot returns the root of the head of the chain.
@@ -118,9 +120,8 @@ func (s *Service) HeadRoot(ctx context.Context) ([]byte, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
-	root := s.canonicalRoots[s.headSlot]
-	if len(root) != 0 {
-		return root, nil
+	if s.headIdentifier != [40]byte{} {
+		return s.headIdentifier[8:], nil
 	}
 
 	b, err := s.beaconDB.HeadBlock(ctx)
