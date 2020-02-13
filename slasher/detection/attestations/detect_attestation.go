@@ -12,6 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
+// IsSlashableAttestation returns an attester slashing if the attestation submitted
+// is a slashable vote.
 func (d *AttDetector) IsSlashableAttestation(ctx context.Context, req *ethpb.IndexedAttestation) (*slashpb.AttesterSlashingResponse, error) {
 	//TODO(#3133): add signature validation
 	if req.Data == nil {
