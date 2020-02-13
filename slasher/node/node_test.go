@@ -16,7 +16,9 @@ func TestNodeClose_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	tmp := fmt.Sprintf("%s/datadirtest2", testutil.TempDir())
-	os.RemoveAll(tmp)
+	if err := os.RemoveAll(tmp); err != nil {
+		t.Fatal(err)
+	}
 
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
@@ -34,5 +36,7 @@ func TestNodeClose_OK(t *testing.T) {
 
 	testutil.AssertLogsContain(t, hook, "Stopping slasher node")
 
-	os.RemoveAll(tmp)
+	if err := os.RemoveAll(tmp); err != nil {
+		t.Fatal(err)
+	}
 }
