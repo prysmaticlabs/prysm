@@ -276,13 +276,6 @@ func (s *Service) Status() error {
 	if s.runError != nil {
 		return s.runError
 	}
-	// use a 5 minutes timeout for block time, because the max mining time is 278 sec (block 7208027)
-	// (analyzed the time of the block from 2018-09-01 to 2019-02-13)
-	fiveMinutesTimeout := time.Now().Add(-5 * time.Minute)
-	// check that web3 client is syncing
-	if time.Unix(int64(s.latestEth1Data.BlockTime), 0).Before(fiveMinutesTimeout) {
-		log.Warn("eth1 client is not syncing")
-	}
 	return nil
 }
 
@@ -522,6 +515,14 @@ func safelyHandlePanic() {
 
 func (s *Service) handleDelayTicker() {
 	defer safelyHandlePanic()
+
+	// use a 5 minutes timeout for block time, because the max mining time is 278 sec (block 7208027)
+	// (analyzed the time of the block from 2018-09-01 to 2019-02-13)
+	fiveMinutesTimeout := time.Now().Add(-5 * time.Minute)
+	// check that web3 client is syncing
+	if time.Unix(int64(s.latestEth1Data.BlockTime), 0).Before(fiveMinutesTimeout) {
+		log.Warn("eth1 client is not syncing")
+	}
 	if !s.chainStartData.Chainstarted {
 		if err := s.checkBlockNumberForChainStart(context.Background(), big.NewInt(int64(s.latestEth1Data.LastRequestedBlock))); err != nil {
 			s.runError = err
