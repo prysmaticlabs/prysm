@@ -78,7 +78,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		newBalance := float64(resp.BalancesAfterEpochTransition[i]) / float64(params.BeaconConfig().GweiPerEth)
 
 		if v.prevBalance[bytesutil.ToBytes48(pkey)] > 0 {
-			prevBalance := float64(resp.BalancesAfterEpochTransition[i]) / float64(params.BeaconConfig().GweiPerEth)
+			prevBalance := float64(resp.BalancesBeforeEpochTransition[i]) / float64(params.BeaconConfig().GweiPerEth)
 			percentNet := (newBalance - prevBalance) / prevBalance
 			log.WithFields(logrus.Fields{
 				"epoch":                (slot / params.BeaconConfig().SlotsPerEpoch) - 1,
