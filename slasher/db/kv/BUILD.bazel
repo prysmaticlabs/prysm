@@ -3,6 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "att_keys.go",
         "attester_slashings.go",
         "block_header.go",
         "indexed_attestations.go",
@@ -44,6 +45,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//proto/slashing:go_default_library",
+        "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
         "//slasher/db/types:go_default_library",
         "//slasher/flags:go_default_library",

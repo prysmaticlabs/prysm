@@ -56,12 +56,12 @@ func TestNilDBHistoryIdxAtt(t *testing.T) {
 	epoch := uint64(1)
 	validatorID := uint64(1)
 
-	hasIdxAtt, err := db.HasIndexedAttestation(ctx, epoch, validatorID)
+	attKeys, err := db.AttKeysFromValIDForEpoch(ctx, epoch, validatorID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if hasIdxAtt {
-		t.Fatal("HasIndexedAttestation should return false")
+	if len(attKeys) > 0 {
+		t.Fatal("AttKeysFromValIDForEpoch should return an empty array")
 	}
 
 	idxAtts, err := db.IdxAttsForTargetFromID(ctx, epoch, validatorID)
@@ -131,22 +131,22 @@ func TestDeleteHistoryIdxAtt(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		hasA, err := db.HasIndexedAttestation(ctx, tt.idxAtt.Data.Target.Epoch, tt.idxAtt.AttestingIndices[0])
+		attKeys, err := db.AttKeysFromValIDForEpoch(ctx, tt.idxAtt.Data.Target.Epoch, tt.idxAtt.AttestingIndices[0])
 		if err != nil {
 			t.Fatal(err)
 		}
 		if len(idxAtts) != 0 {
 			t.Errorf("Expected index attestation to have been deleted, received: %v", idxAtts)
 		}
-		if hasA {
-			t.Errorf("Expected indexed attestation indexes list to be deleted, received: %v", hasA)
+		if len(attKeys) > 1 {
+			t.Errorf("Expected attestation key list to be deleted, received %d DB keys", len(attKeys))
 		}
 
 	}
 
 }
 
-func TestHasIndexedAttestation(t *testing.T) {
+func TestAttKeysFromValIDForEpoch(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	db := setupDB(t, cli.NewContext(app, set, nil))
@@ -154,12 +154,12 @@ func TestHasIndexedAttestation(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tt := range tests {
-		exists, err := db.HasIndexedAttestation(ctx, tt.idxAtt.Data.Target.Epoch, tt.idxAtt.AttestingIndices[0])
+		attKeys, err := db.AttKeysFromValIDForEpoch(ctx, tt.idxAtt.Data.Target.Epoch, tt.idxAtt.AttestingIndices[0])
 		if err != nil {
 			t.Fatal(err)
 		}
-		if exists {
-			t.Fatal("has indexed attestation should return false for indexed attestations that are not in db")
+		if len(attKeys) > 0 {
+			t.Fatal("AttKeysFromValIDForEpoch should return no att DB keys")
 		}
 
 		if err := db.SaveIndexedAttestation(ctx, tt.idxAtt); err != nil {
@@ -168,12 +168,12 @@ func TestHasIndexedAttestation(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		exists, err := db.HasIndexedAttestation(ctx, tt.idxAtt.Data.Target.Epoch, tt.idxAtt.AttestingIndices[0])
+		attKeys, err := db.AttKeysFromValIDForEpoch(ctx, tt.idxAtt.Data.Target.Epoch, tt.idxAtt.AttestingIndices[0])
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !exists {
-			t.Fatal("has indexed attestation should return true")
+		if len(attKeys) < 1 {
+			t.Fatal("AttKeysFromValIDForEpoch should return the attestation DB key")
 		}
 	}
 }
@@ -212,7 +212,7 @@ func TestPruneHistoryIdxAtt(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to get indexed attestation: %v", err)
 		}
-		exists, err := db.HasIndexedAttestation(ctx, tt.idxAtt.Data.Target.Epoch, tt.idxAtt.AttestingIndices[0])
+		attKeys, err := db.AttKeysFromValIDForEpoch(ctx, tt.idxAtt.Data.Target.Epoch, tt.idxAtt.AttestingIndices[0])
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -221,12 +221,12 @@ func TestPruneHistoryIdxAtt(t *testing.T) {
 			if idxAtts == nil || !reflect.DeepEqual(idxAtts[0], tt.idxAtt) {
 				t.Fatalf("get should return indexed attestation: %v", idxAtts)
 			}
-			if !exists {
-				t.Fatalf("get should have indexed attestation for epoch: %v", idxAtts)
+			if len(attKeys) < 1 {
+				t.Fatalf("AttKeysFromValIDForEpoch should not  for epoch: %v", idxAtts)
 			}
 		} else {
-			if idxAtts != nil || exists {
-				t.Fatalf("indexed attestation should have been pruned: %v has attestation: %t", idxAtts, exists)
+			if idxAtts != nil || len(attKeys) > 0 {
+				t.Fatalf("indexed attestation should have been pruned, found %d attestations", len(attKeys))
 			}
 		}
 	}

@@ -150,7 +150,6 @@ func (db *Store) DeleteValidatorSpanMap(ctx context.Context, validatorIdx uint64
 			return nil
 		}
 		if err := bucket.Delete(key); err != nil {
-			tx.Rollback()
 			return errors.Wrapf(err, "failed to delete the span map for validator idx: %v from min max span bucket", validatorIdx)
 		}
 		return nil

@@ -27,7 +27,7 @@ type ReadOnlyDatabase interface {
 	LatestIndexedAttestationsTargetEpoch(ctx context.Context) (uint64, error)
 	LatestValidatorIdx(ctx context.Context) (uint64, error)
 	DoubleVotes(ctx context.Context, validatorIdx uint64, dataRoot []byte, origAtt *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error)
-	HasIndexedAttestation(ctx context.Context, targetEpoch uint64, validatorID uint64) (bool, error)
+	AttKeysFromValIDForEpoch(ctx context.Context, targetEpoch uint64, validatorID uint64) ([][]byte, error)
 
 	// MinMaxSpan related methods.
 	ValidatorSpansMap(ctx context.Context, validatorIdx uint64) (*slashpb.EpochSpanMap, error)
