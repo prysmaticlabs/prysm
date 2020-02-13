@@ -142,7 +142,7 @@ func TestHeadRoot_CanRetrieve(t *testing.T) {
 	c := &Service{canonicalRoots: make(map[[40]byte]bool)}
 	identifier := [40]byte{}
 	root := [32]byte{'A'}
-        slot := 100
+	slot := uint64(100)
 	copy(identifier[:8], bytesutil.Bytes8(slot))
 	copy(identifier[8:], root[:])
 	c.canonicalRoots[identifier] = true
