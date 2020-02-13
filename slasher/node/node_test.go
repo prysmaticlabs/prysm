@@ -34,7 +34,7 @@ func TestNodeClose_OK(t *testing.T) {
 
 	node.Close()
 
-	testutil.AssertLogsContain(t, hook, "Stopping slasher node")
+	testutil.AssertLogsContain(t, hook, "Stopping hash slinging slasher")
 
 	if err := os.RemoveAll(tmp); err != nil {
 		t.Fatal(err)
