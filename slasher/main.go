@@ -46,6 +46,7 @@ var appFlags = []cli.Flag{
 	cmd.LogFileName,
 	cmd.LogFormat,
 	cmd.ClearDB,
+	cmd.ForceClearDB,
 	debug.PProfFlag,
 	debug.PProfAddrFlag,
 	debug.PProfPortFlag,

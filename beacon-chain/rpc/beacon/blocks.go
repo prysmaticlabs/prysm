@@ -2,6 +2,8 @@ package beacon
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 	"strconv"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -182,7 +184,8 @@ func (bs *Server) StreamBlocks(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamB
 		select {
 		case event := <-blocksChannel:
 			if event.Type == blockfeed.ReceivedBlock {
-				data, ok := event.Data.(*blockfeed.ReceivedBlockData)
+				fmt.Println(reflect.TypeOf(event.Data))
+				data, ok := event.Data.(blockfeed.ReceivedBlockData)
 				if !ok {
 					return status.Errorf(
 						codes.FailedPrecondition,

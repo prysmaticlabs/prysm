@@ -44,10 +44,12 @@ type Config struct {
 func NewBeaconClient(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		cert:     cfg.BeaconCert,
-		ctx:      ctx,
-		cancel:   cancel,
-		provider: cfg.BeaconProvider,
+		cert:            cfg.BeaconCert,
+		ctx:             ctx,
+		cancel:          cancel,
+		provider:        cfg.BeaconProvider,
+		blockFeed:       new(event.Feed),
+		attestationFeed: new(event.Feed),
 	}
 }
 

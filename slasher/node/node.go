@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
-	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	"github.com/prysmaticlabs/prysm/slasher/db"
@@ -29,13 +28,11 @@ const slasherDBName = "slasherdata"
 // for eth2. It handles the lifecycle of the entire system and registers
 // services to a service registry.
 type SlasherNode struct {
-	ctx             *cli.Context
-	lock            sync.RWMutex
-	services        *shared.ServiceRegistry
-	stop            chan struct{} // Channel to wait for termination notifications.
-	db              db.Database
-	attestationFeed *event.Feed
-	blockFeed       *event.Feed
+	ctx      *cli.Context
+	lock     sync.RWMutex
+	services *shared.ServiceRegistry
+	stop     chan struct{} // Channel to wait for termination notifications.
+	db       db.Database
 }
 
 // NewSlasherNode creates a new node instance, sets up configuration options,
@@ -53,16 +50,19 @@ func NewSlasherNode(ctx *cli.Context) (*SlasherNode, error) {
 	registry := shared.NewServiceRegistry()
 
 	slasher := &SlasherNode{
-		ctx:             ctx,
-		services:        registry,
-		stop:            make(chan struct{}),
-		attestationFeed: new(event.Feed),
-		blockFeed:       new(event.Feed),
+		ctx:      ctx,
+		services: registry,
+		stop:     make(chan struct{}),
 	}
 
 	if err := slasher.startDB(ctx); err != nil {
 		return nil, err
 	}
+
+	if err := slasher.registerBeaconClientService(ctx); err != nil {
+		return nil, err
+	}
+
 	return slasher, nil
 }
 
