@@ -281,7 +281,7 @@ func (s *Service) Status() error {
 	fiveMinutesTimeout := time.Now().Add(-5 * time.Minute)
 	// check that web3 client is syncing
 	if time.Unix(int64(s.latestEth1Data.BlockTime), 0).Before(fiveMinutesTimeout) {
-		return errors.New("eth1 client is not syncing")
+		log.Warn("eth1 client is not syncing")
 	}
 	return nil
 }
