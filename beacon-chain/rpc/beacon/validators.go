@@ -584,6 +584,8 @@ func (bs *Server) GetValidatorPerformance(
 
 	validatorSummary := state.ValidatorSummary
 
+	beforeTransitionBalances := make([]uint64, 0)
+	afterTransitionBalances := make([]uint64, 0)
 	effectiveBalances := make([]uint64, 0)
 	inclusionSlots := make([]uint64, 0)
 	inclusionDistances := make([]uint64, 0)
@@ -605,6 +607,8 @@ func (bs *Server) GetValidatorPerformance(
 		}
 
 		effectiveBalances = append(effectiveBalances, validatorSummary[idx].CurrentEpochEffectiveBalance)
+		beforeTransitionBalances = append(beforeTransitionBalances, validatorSummary[idx].BeforeEpochTransitionBalance)
+		afterTransitionBalances = append(afterTransitionBalances, validatorSummary[idx].AfterEpochTransitionBalance)
 		inclusionSlots = append(inclusionSlots, validatorSummary[idx].InclusionSlot)
 		inclusionDistances = append(inclusionDistances, validatorSummary[idx].InclusionDistance)
 		correctlyVotedSource = append(correctlyVotedSource, validatorSummary[idx].IsPrevEpochAttester)
@@ -613,13 +617,15 @@ func (bs *Server) GetValidatorPerformance(
 	}
 
 	return &ethpb.ValidatorPerformanceResponse{
-		InclusionSlots:       inclusionSlots,
-		InclusionDistances:   inclusionDistances,
-		CorrectlyVotedSource: correctlyVotedSource,
-		CorrectlyVotedTarget: correctlyVotedTarget,
-		CorrectlyVotedHead:   correctlyVotedHead,
-		Balances:             effectiveBalances,
-		MissingValidators:    missingValidators,
+		InclusionSlots:                inclusionSlots,
+		InclusionDistances:            inclusionDistances,
+		CorrectlyVotedSource:          correctlyVotedSource,
+		CorrectlyVotedTarget:          correctlyVotedTarget,
+		CorrectlyVotedHead:            correctlyVotedHead,
+		CurrentEffectiveBalances:      effectiveBalances,
+		BalancesBeforeEpochTransition: beforeTransitionBalances,
+		BalancesAfterEpochTransition:  afterTransitionBalances,
+		MissingValidators:             missingValidators,
 	}, nil
 }
 
