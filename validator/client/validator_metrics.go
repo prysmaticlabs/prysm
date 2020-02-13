@@ -78,6 +78,8 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		newBalance := float64(resp.BalancesAfterEpochTransition[i]) / float64(params.BeaconConfig().GweiPerEth)
 
 		if v.prevBalance[bytesutil.ToBytes48(pkey)] > 0 {
+			prevBalance := float64(resp.BalancesAfterEpochTransition[i]) / float64(params.BeaconConfig().GweiPerEth)
+			percentNet := (newBalance - prevBalance) / prevBalance
 			log.WithFields(logrus.Fields{
 				"epoch":                (slot / params.BeaconConfig().SlotsPerEpoch) - 1,
 				"correctlyVotedSource": resp.CorrectlyVotedSource[i],
@@ -85,8 +87,9 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 				"correctlyVotedHead":   resp.CorrectlyVotedHead[i],
 				"inclusionSlot":        resp.InclusionSlots[i],
 				"inclusionDistance":    resp.InclusionDistances[i],
-				"oldBalance":           resp.BalancesBeforeEpochTransition[i],
-				"newBalance":           resp.BalancesAfterEpochTransition[i],
+				"oldBalance":           prevBalance,
+				"newBalance":           newBalance,
+				"percentChange":        fmt.Sprintf("%.5f%%", percentNet*100),
 			}).Info("Previous epoch voting summary")
 			if v.emitAccountMetrics {
 				validatorBalancesGaugeVec.WithLabelValues(pubKey).Set(newBalance)
