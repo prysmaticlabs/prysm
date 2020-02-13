@@ -150,7 +150,6 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 		ExitPool:          voluntaryexits.NewPool(),
 	}
 
-
 	// Generate a bunch of random attestations at slot. These would be considered double votes, but
 	// we don't care for the purpose of this test.
 	var atts []*ethpb.Attestation
