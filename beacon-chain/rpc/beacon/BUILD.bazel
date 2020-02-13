@@ -9,6 +9,7 @@ go_library(
         "committees.go",
         "config.go",
         "server.go",
+        "slashings.go",
         "validators.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/beacon",
