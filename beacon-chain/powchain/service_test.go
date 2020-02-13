@@ -337,8 +337,7 @@ func TestStatus(t *testing.T) {
 		{isRunning: false, latestEth1Data: &protodb.LatestETH1Data{BlockTime: beforeFiveMinutesAgo}}: "",
 		{isRunning: false, runError: errors.New("test runError")}:                                    "",
 		// "status is error" cases
-		{isRunning: true, latestEth1Data: &protodb.LatestETH1Data{BlockTime: beforeFiveMinutesAgo}}: "eth1 client is not syncing",
-		{isRunning: true, runError: errors.New("test runError")}:                                    "test runError",
+		{isRunning: true, runError: errors.New("test runError")}: "test runError",
 	}
 
 	for web3ServiceState, wantedErrorText := range testCases {
