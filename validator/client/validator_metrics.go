@@ -75,7 +75,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		if slot < params.BeaconConfig().SlotsPerEpoch {
 			v.prevBalance[bytesutil.ToBytes48(pkey)] = params.BeaconConfig().MaxEffectiveBalance
 		}
-		newBalance := float64(resp.Balances[i]) / float64(params.BeaconConfig().GweiPerEth)
+		newBalance := float64(resp.BalancesAfterEpochTransition[i]) / float64(params.BeaconConfig().GweiPerEth)
 
 		if v.prevBalance[bytesutil.ToBytes48(pkey)] > 0 {
 			log.WithFields(logrus.Fields{
@@ -85,6 +85,8 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 				"correctlyVotedHead":   resp.CorrectlyVotedHead[i],
 				"inclusionSlot":        resp.InclusionSlots[i],
 				"inclusionDistance":    resp.InclusionDistances[i],
+				"oldBalance":           resp.BalancesBeforeEpochTransition[i],
+				"newBalance":           resp.BalancesAfterEpochTransition[i],
 			}).Info("Previous epoch voting summary")
 			if v.emitAccountMetrics {
 				validatorBalancesGaugeVec.WithLabelValues(pubKey).Set(newBalance)
@@ -103,7 +105,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		if resp.CorrectlyVotedHead[i] {
 			votedHead++
 		}
-		v.prevBalance[bytesutil.ToBytes48(pkey)] = resp.Balances[i]
+		v.prevBalance[bytesutil.ToBytes48(pkey)] = resp.BalancesBeforeEpochTransition[i]
 	}
 
 	log.WithFields(logrus.Fields{
