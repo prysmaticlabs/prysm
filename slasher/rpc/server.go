@@ -22,7 +22,7 @@ type Server struct {
 	ctx       context.Context
 }
 
-// IsSlashableAttestation returns an attester slashing if the attestation submitted
+// DetectAttestationForSlashings returns an attester slashing if the attestation submitted
 // is a slashable vote.
 func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.IndexedAttestation) (*slashpb.AttesterSlashingResponse, error) {
 	//TODO(#3133): add signature validation

@@ -129,16 +129,16 @@ func (s *Service) detectSlashings(ctx context.Context, idxAtt *ethpb.IndexedAtte
 	if err := s.slasherDb.SaveIndexedAttestation(idxAtt); err != nil {
 		return err
 	}
-	attSlashingResp, err := s.attDetector.IsSlashableAttestation(ctx, idxAtt)
+	attSlashingResp, err := s.attDetector.DetectAttestationForSlashings(ctx, idxAtt)
 	if err != nil {
 		return errors.Wrap(err, "failed to check attestation")
 	}
 
-	if len(attSlashingResp.AttesterSlashing) > 0 {
-		if err := s.slasherDb.SaveAttesterSlashings(db.Active, attSlashingResp.AttesterSlashing); err != nil {
+	if len(attSlashingResp) > 0 {
+		if err := s.slasherDb.SaveAttesterSlashings(db.Active, attSlashingResp); err != nil {
 			return errors.Wrap(err, "failed to save attester slashings")
 		}
-		for _, as := range attSlashingResp.AttesterSlashing {
+		for _, as := range attSlashingResp {
 			slashableIndices := sliceutil.IntersectionUint64(as.Attestation_1.AttestingIndices, as.Attestation_2.AttestingIndices)
 			log.WithFields(logrus.Fields{
 				"target1":          as.Attestation_1.Data.Target.Epoch,

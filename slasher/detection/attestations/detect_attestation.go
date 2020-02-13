@@ -8,13 +8,12 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
-// IsSlashableAttestation returns an attester slashing if the attestation submitted
+// DetectAttestationForSlashings returns an attester slashing if the attestation submitted
 // is a slashable vote.
-func (d *AttDetector) IsSlashableAttestation(ctx context.Context, req *ethpb.IndexedAttestation) (*slashpb.AttesterSlashingResponse, error) {
+func (d *AttDetector) DetectAttestationForSlashings(ctx context.Context, req *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error) {
 	//TODO(#3133): add signature validation
 	if req.Data == nil {
 		return nil, fmt.Errorf("cant hash nil data in indexed attestation")
@@ -24,7 +23,7 @@ func (d *AttDetector) IsSlashableAttestation(ctx context.Context, req *ethpb.Ind
 	if err != nil {
 		return nil, err
 	}
-	attSlashingResp := &slashpb.AttesterSlashingResponse{}
+	var attSlashingResp []*ethpb.AttesterSlashing
 	attSlashings := make(chan []*ethpb.AttesterSlashing, len(indices))
 	errorChans := make(chan error, len(indices))
 	var wg sync.WaitGroup
@@ -68,7 +67,7 @@ func (d *AttDetector) IsSlashableAttestation(ctx context.Context, req *ethpb.Ind
 		err = e
 	}
 	for atts := range attSlashings {
-		attSlashingResp.AttesterSlashing = append(attSlashingResp.AttesterSlashing, atts...)
+		attSlashingResp = append(attSlashingResp, atts...)
 	}
 	return attSlashingResp, err
 }

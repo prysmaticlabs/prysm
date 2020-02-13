@@ -3,8 +3,6 @@ package attestations
 import (
 	"context"
 
-	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 
 	"github.com/prysmaticlabs/prysm/slasher/detection"
@@ -27,7 +25,7 @@ type AttSlashingDetector interface {
 	// DetectSurroundVotes is a method used to return the attestation that were detected
 	// by min max surround detection method.
 	DetectSurroundVotes(ctx context.Context, validatorIdx uint64, req *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error)
-	// IsSlashableAttestation returns an attester slashing if the attestation submitted
+	// DetectAttestationForSlashings returns an attester slashing if the attestation submitted
 	// is a slashable vote.
-	IsSlashableAttestation(ctx context.Context, req *ethpb.IndexedAttestation) (*slashpb.AttesterSlashingResponse, error)
+	DetectAttestationForSlashings(ctx context.Context, req *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error)
 }
