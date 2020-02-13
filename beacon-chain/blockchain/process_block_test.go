@@ -42,7 +42,11 @@ func TestStore_OnBlock(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if err := service.beaconDB.SaveState(ctx, &stateTrie.BeaconState{}, validGenesisRoot); err != nil {
+	st, err := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveState(ctx, st.Copy(), validGenesisRoot); err != nil {
 		t.Fatal(err)
 	}
 	roots, err := blockTree1(db, validGenesisRoot[:])
@@ -57,11 +61,11 @@ func TestStore_OnBlock(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if err := service.beaconDB.SaveState(ctx, &stateTrie.BeaconState{}, randomParentRoot); err != nil {
+	if err := service.beaconDB.SaveState(ctx, st.Copy(), randomParentRoot); err != nil {
 		t.Fatal(err)
 	}
 	randomParentRoot2 := roots[1]
-	if err := service.beaconDB.SaveState(ctx, &stateTrie.BeaconState{}, bytesutil.ToBytes32(randomParentRoot2)); err != nil {
+	if err := service.beaconDB.SaveState(ctx, st.Copy(), bytesutil.ToBytes32(randomParentRoot2)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -75,25 +79,25 @@ func TestStore_OnBlock(t *testing.T) {
 		{
 			name:          "parent block root does not have a state",
 			blk:           &ethpb.BeaconBlock{},
-			s:             &stateTrie.BeaconState{},
+			s:             st.Copy(),
 			wantErrString: "pre state of slot 0 does not exist",
 		},
 		{
 			name:          "block is from the feature",
 			blk:           &ethpb.BeaconBlock{ParentRoot: randomParentRoot[:], Slot: params.BeaconConfig().FarFutureEpoch},
-			s:             &stateTrie.BeaconState{},
+			s:             st.Copy(),
 			wantErrString: "could not process slot from the future",
 		},
 		{
 			name:          "could not get finalized block",
 			blk:           &ethpb.BeaconBlock{ParentRoot: randomParentRoot[:]},
-			s:             &stateTrie.BeaconState{},
+			s:             st.Copy(),
 			wantErrString: "block from slot 0 is not a descendent of the current finalized block",
 		},
 		{
 			name:          "same slot as finalized block",
 			blk:           &ethpb.BeaconBlock{Slot: 0, ParentRoot: randomParentRoot2},
-			s:             &stateTrie.BeaconState{},
+			s:             st.Copy(),
 			wantErrString: "block is equal or earlier than finalized block, slot 0 < slot 0",
 		},
 	}
@@ -455,8 +459,12 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 	}
 	service.justifiedCheckpt = &ethpb.Checkpoint{Root: []byte{'A'}}
 	service.bestJustifiedCheckpt = &ethpb.Checkpoint{Root: []byte{'A'}}
-	service.initSyncState[r] = &stateTrie.BeaconState{}
-	if err := db.SaveState(ctx, &stateTrie.BeaconState{}, r); err != nil {
+	st, err := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	service.initSyncState[r] = st.Copy()
+	if err := db.SaveState(ctx, st.Copy(), r); err != nil {
 		t.Fatal(err)
 	}
 
@@ -496,10 +504,11 @@ func TestFilterBlockRoots_CanFilter(t *testing.T) {
 	fRoot, _ := ssz.HashTreeRoot(fBlock)
 	hBlock := &ethpb.BeaconBlock{Slot: 1}
 	headRoot, _ := ssz.HashTreeRoot(hBlock)
+	st, _ := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
 	if err := service.beaconDB.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: fBlock}); err != nil {
 		t.Fatal(err)
 	}
-	if err := service.beaconDB.SaveState(ctx, &stateTrie.BeaconState{}, fRoot); err != nil {
+	if err := service.beaconDB.SaveState(ctx, st.Copy(), fRoot); err != nil {
 		t.Fatal(err)
 	}
 	if err := service.beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: fRoot[:]}); err != nil {
@@ -508,7 +517,7 @@ func TestFilterBlockRoots_CanFilter(t *testing.T) {
 	if err := service.beaconDB.SaveBlock(ctx, &ethpb.SignedBeaconBlock{Block: hBlock}); err != nil {
 		t.Fatal(err)
 	}
-	if err := service.beaconDB.SaveState(ctx, &stateTrie.BeaconState{}, headRoot); err != nil {
+	if err := service.beaconDB.SaveState(ctx, st.Copy(), headRoot); err != nil {
 		t.Fatal(err)
 	}
 	if err := service.beaconDB.SaveHeadBlockRoot(ctx, headRoot); err != nil {
@@ -550,7 +559,8 @@ func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if err := service.beaconDB.SaveState(ctx, &stateTrie.BeaconState{}, validGenesisRoot); err != nil {
+	st, _ := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
+	if err := service.beaconDB.SaveState(ctx, st.Copy(), validGenesisRoot); err != nil {
 		t.Fatal(err)
 	}
 	roots, err := blockTree1(db, validGenesisRoot[:])
@@ -603,7 +613,8 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if err := service.beaconDB.SaveState(ctx, &stateTrie.BeaconState{}, validGenesisRoot); err != nil {
+	st, _ := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
+	if err := service.beaconDB.SaveState(ctx, st.Copy(), validGenesisRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -661,21 +672,25 @@ func blockTree1(db db.Database, genesisRoot []byte) ([][]byte, error) {
 	r7, _ := ssz.HashTreeRoot(b7)
 	b8 := &ethpb.BeaconBlock{Slot: 8, ParentRoot: r6[:]}
 	r8, _ := ssz.HashTreeRoot(b8)
+	st, err := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
+	if err != nil {
+		return nil, err
+	}
 	for _, b := range []*ethpb.BeaconBlock{b0, b1, b3, b4, b5, b6, b7, b8} {
 		if err := db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b}); err != nil {
 			return nil, err
 		}
-		if err := db.SaveState(context.Background(), &stateTrie.BeaconState{}, bytesutil.ToBytes32(b.ParentRoot)); err != nil {
+		if err := db.SaveState(context.Background(), st.Copy(), bytesutil.ToBytes32(b.ParentRoot)); err != nil {
 			return nil, err
 		}
 	}
-	if err := db.SaveState(context.Background(), &stateTrie.BeaconState{}, r1); err != nil {
+	if err := db.SaveState(context.Background(), st.Copy(), r1); err != nil {
 		return nil, err
 	}
-	if err := db.SaveState(context.Background(), &stateTrie.BeaconState{}, r7); err != nil {
+	if err := db.SaveState(context.Background(), st.Copy(), r7); err != nil {
 		return nil, err
 	}
-	if err := db.SaveState(context.Background(), &stateTrie.BeaconState{}, r8); err != nil {
+	if err := db.SaveState(context.Background(), st.Copy(), r8); err != nil {
 		return nil, err
 	}
 	return [][]byte{r0[:], r1[:], nil, r3[:], r4[:], r5[:], r6[:], r7[:], r8[:]}, nil
