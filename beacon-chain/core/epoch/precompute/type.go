@@ -31,6 +31,10 @@ type Validator struct {
 	InclusionDistance uint64
 	// ProposerIndex is the index of proposer at slot where this validator's attestation was included.
 	ProposerIndex uint64
+	// BeforeEpochTransitionBalance is the validator balance prior to epoch transition.
+	BeforeEpochTransitionBalance uint64
+	// AfterEpochTransitionBalance is the validator balance after epoch transition.
+	AfterEpochTransitionBalance uint64
 }
 
 // Balance stores the pre computation of the total participated balances for a given epoch
