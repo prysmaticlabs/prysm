@@ -105,7 +105,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 			// Delete the missing block root key from pending attestation queue so a node will not request for the block again.
 			s.pendingAttsLock.Lock()
 			delete(s.blkRootToPendingAtts, bRoot)
-			s.pendingAttsLock.RUnlock()
+			s.pendingAttsLock.Unlock()
 		} else {
 			// Pending attestation's missing block has not arrived yet.
 			log.WithFields(logrus.Fields{
