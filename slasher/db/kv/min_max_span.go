@@ -1,4 +1,4 @@
-package db
+package kv
 
 import (
 	"fmt"
@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	log "github.com/sirupsen/logrus"
 )
 
 var highestValidatorIdx uint64

@@ -18,6 +18,7 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
@@ -46,7 +47,7 @@ func init() {
 
 // Service defining an RPC server for the slasher service.
 type Service struct {
-	slasherDb       *db.Store
+	slasherDb       *kv.Store
 	grpcServer      *grpc.Server
 	slasher         *rpc.Server
 	port            int
@@ -71,7 +72,7 @@ type Config struct {
 	Port           int
 	CertFlag       string
 	KeyFlag        string
-	SlasherDb      *db.Store
+	SlasherDb      *kv.Store
 	BeaconProvider string
 	BeaconCert     string
 }
@@ -101,8 +102,8 @@ func NewRPCService(cfg *Config, ctx *cli.Context) (*Service, error) {
 func (s *Service) startDB(ctx *cli.Context) error {
 	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
 	dbPath := path.Join(baseDir, slasherDBName)
-	cfg := &db.Config{SpanCacheEnabled: ctx.GlobalBool(flags.UseSpanCacheFlag.Name)}
-	d, err := db.NewDB(dbPath, cfg)
+	cfg := &kv.Config{SpanCacheEnabled: ctx.GlobalBool(flags.UseSpanCacheFlag.Name)}
+	d, err := db.New(dbPath, cfg)
 	if err != nil {
 		return err
 	}

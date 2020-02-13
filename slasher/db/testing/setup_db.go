@@ -1,4 +1,4 @@
-package db
+package testing
 
 import (
 	"crypto/rand"
@@ -8,12 +8,14 @@ import (
 	"path"
 	"testing"
 
+	slasherDB "github.com/prysmaticlabs/prysm/slasher/db"
+	"github.com/prysmaticlabs/prysm/slasher/db/kv"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/urfave/cli"
 )
 
 // SetupSlasherDB instantiates and returns a SlasherDB instance.
-func SetupSlasherDB(t testing.TB, ctx *cli.Context) *Store {
+func SetupSlasherDB(t testing.TB, ctx *cli.Context) *kv.Store {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	if err != nil {
 		t.Fatalf("Could not generate random file path: %v", err)
@@ -22,8 +24,8 @@ func SetupSlasherDB(t testing.TB, ctx *cli.Context) *Store {
 	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
-	cfg := &Config{cacheItems: 0, maxCacheSize: 0, SpanCacheEnabled: ctx.GlobalBool(flags.UseSpanCacheFlag.Name)}
-	db, err := NewDB(p, cfg)
+	cfg := &kv.Config{CacheItems: 0, MaxCacheSize: 0, SpanCacheEnabled: ctx.GlobalBool(flags.UseSpanCacheFlag.Name)}
+	db, err := slasherDB.New(p, cfg)
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
 	}
@@ -31,7 +33,7 @@ func SetupSlasherDB(t testing.TB, ctx *cli.Context) *Store {
 }
 
 // SetupSlasherDBDiffCacheSize instantiates and returns a SlasherDB instance with non default cache size.
-func SetupSlasherDBDiffCacheSize(t testing.TB, cacheItems int64, maxCacheSize int64) *Store {
+func SetupSlasherDBDiffCacheSize(t testing.TB, cacheItems int64, maxCacheSize int64) *kv.Store {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	if err != nil {
 		t.Fatalf("Could not generate random file path: %v", err)
@@ -40,12 +42,12 @@ func SetupSlasherDBDiffCacheSize(t testing.TB, cacheItems int64, maxCacheSize in
 	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
-	cfg := &Config{cacheItems: cacheItems, maxCacheSize: maxCacheSize, SpanCacheEnabled: true}
-	db, err := NewDB(p, cfg)
+	cfg := &kv.Config{CacheItems: cacheItems, MaxCacheSize: maxCacheSize, SpanCacheEnabled: true}
+	newDB, err := slasherDB.NewSlasherDB(p, cfg)
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
 	}
-	return db
+	return newDB
 }
 
 // TempDir returns a directory path for temporary test storage.
@@ -59,7 +61,7 @@ func TempDir() string {
 }
 
 // TeardownSlasherDB cleans up a test BeaconDB instance.
-func TeardownSlasherDB(t testing.TB, db *Store) {
+func TeardownSlasherDB(t testing.TB, db *kv.Store) {
 	if err := db.Close(); err != nil {
 		t.Fatalf("Failed to close database: %v", err)
 	}

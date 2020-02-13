@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/slasher/db"
+	"github.com/prysmaticlabs/prysm/slasher/db/kv"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
 	log "github.com/sirupsen/logrus"
 )
@@ -19,7 +19,7 @@ import (
 // Server defines a server implementation of the gRPC Slasher service,
 // providing RPC endpoints for retrieving slashing proofs for malicious validators.
 type Server struct {
-	SlasherDB *db.Store
+	SlasherDB *kv.Store
 	ctx       context.Context
 }
 

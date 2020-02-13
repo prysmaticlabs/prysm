@@ -1,0 +1,21 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["setup_db.go"],
+    importpath = "github.com/prysmaticlabs/prysm/slasher/db/testing",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//slasher/db:go_default_library",
+        "//slasher/db/kv:go_default_library",
+        "//slasher/flags:go_default_library",
+        "@com_github_urfave_cli//:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["setup_db_test.go"],
+    embed = [":go_default_library"],
+    deps = ["@com_github_urfave_cli//:go_default_library"],
+)

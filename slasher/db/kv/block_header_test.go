@@ -1,4 +1,4 @@
-package db
+package kv
 
 import (
 	"flag"
@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	"github.com/urfave/cli"
 )
 
@@ -13,8 +14,8 @@ func TestNilDBHistoryBlkHdr(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
-	defer TeardownSlasherDB(t, db)
+	db := testDB.SetupSlasherDB(t, ctx)
+	defer testDB.TeardownSlasherDB(t, db)
 
 	epoch := uint64(1)
 	validatorID := uint64(1)
@@ -37,8 +38,8 @@ func TestSaveHistoryBlkHdr(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
-	defer TeardownSlasherDB(t, db)
+	db := testDB.SetupSlasherDB(t, ctx)
+	defer testDB.TeardownSlasherDB(t, db)
 	tests := []struct {
 		epoch uint64
 		vID   uint64
@@ -83,8 +84,8 @@ func TestDeleteHistoryBlkHdr(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
-	defer TeardownSlasherDB(t, db)
+	db := testDB.SetupSlasherDB(t, ctx)
+	defer testDB.TeardownSlasherDB(t, db)
 	tests := []struct {
 		epoch uint64
 		vID   uint64
@@ -144,8 +145,8 @@ func TestHasHistoryBlkHdr(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
-	defer TeardownSlasherDB(t, db)
+	db := testDB.SetupSlasherDB(t, ctx)
+	defer testDB.TeardownSlasherDB(t, db)
 	tests := []struct {
 		epoch uint64
 		vID   uint64
@@ -196,8 +197,8 @@ func TestPruneHistoryBlkHdr(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
-	defer TeardownSlasherDB(t, db)
+	db := testDB.SetupSlasherDB(t, ctx)
+	defer testDB.TeardownSlasherDB(t, db)
 	tests := []struct {
 		epoch uint64
 		vID   uint64

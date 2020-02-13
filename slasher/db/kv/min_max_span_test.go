@@ -1,4 +1,4 @@
-package db
+package kv
 
 import (
 	"flag"
@@ -8,6 +8,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/urfave/cli"
 )
@@ -58,8 +59,8 @@ func TestValidatorSpanMap_NilDB(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
-	defer TeardownSlasherDB(t, db)
+	db := testDB.SetupSlasherDB(t, ctx)
+	defer testDB.TeardownSlasherDB(t, db)
 
 	validatorIdx := uint64(1)
 	vsm, err := db.ValidatorSpansMap(validatorIdx)
@@ -75,8 +76,8 @@ func TestValidatorSpanMap_Save(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
-	defer TeardownSlasherDB(t, db)
+	db := testDB.SetupSlasherDB(t, ctx)
+	defer testDB.TeardownSlasherDB(t, db)
 
 	for _, tt := range spanTests {
 		err := db.SaveValidatorSpansMap(tt.validatorIdx, tt.spanMap)
@@ -99,8 +100,8 @@ func TestValidatorSpanMap_SaveWithCache(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
 	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
-	defer TeardownSlasherDB(t, db)
+	db := testDB.SetupSlasherDB(t, ctx)
+	defer testDB.TeardownSlasherDB(t, db)
 
 	for _, tt := range spanTests {
 		err := db.SaveValidatorSpansMap(tt.validatorIdx, tt.spanMap)
@@ -124,8 +125,8 @@ func TestValidatorSpanMap_Delete(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
-	defer TeardownSlasherDB(t, db)
+	db := testDB.SetupSlasherDB(t, ctx)
+	defer testDB.TeardownSlasherDB(t, db)
 
 	for _, tt := range spanTests {
 		err := db.SaveValidatorSpansMap(tt.validatorIdx, tt.spanMap)
@@ -161,8 +162,8 @@ func TestValidatorSpanMap_DeleteWithCache(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
 	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
-	defer TeardownSlasherDB(t, db)
+	db := testDB.SetupSlasherDB(t, ctx)
+	defer testDB.TeardownSlasherDB(t, db)
 
 	for _, tt := range spanTests {
 		err := db.SaveValidatorSpansMap(tt.validatorIdx, tt.spanMap)
@@ -197,8 +198,8 @@ func TestValidatorSpanMap_DeleteWithCache(t *testing.T) {
 }
 
 func TestValidatorSpanMap_SaveOnEvict(t *testing.T) {
-	db := SetupSlasherDBDiffCacheSize(t, 5, 5)
-	defer TeardownSlasherDB(t, db)
+	db := testDB.SetupSlasherDBDiffCacheSize(t, 5, 5)
+	defer testDB.TeardownSlasherDB(t, db)
 	tsm := &spanMapTestStruct{
 		validatorIdx: 1,
 		spanMap: &slashpb.EpochSpanMap{
@@ -234,8 +235,8 @@ func TestValidatorSpanMap_SaveCachedSpansMaps(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
 	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
-	defer TeardownSlasherDB(t, db)
+	db := testDB.SetupSlasherDB(t, ctx)
+	defer testDB.TeardownSlasherDB(t, db)
 
 	for _, tt := range spanTests {
 		err := db.SaveValidatorSpansMap(tt.validatorIdx, tt.spanMap)

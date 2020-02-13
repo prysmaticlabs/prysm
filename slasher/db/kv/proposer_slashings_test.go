@@ -1,4 +1,4 @@
-package db
+package kv
 
 import (
 	"flag"
@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
 	"github.com/urfave/cli"
 )
@@ -15,8 +16,8 @@ func TestStore_ProposerSlashingNilBucket(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
-	defer TeardownSlasherDB(t, db)
+	db := testDB.SetupSlasherDB(t, ctx)
+	defer testDB.TeardownSlasherDB(t, db)
 	ps := &ethpb.ProposerSlashing{ProposerIndex: 1}
 	has, _, err := db.HasProposerSlashing(ps)
 	if err != nil {
@@ -39,8 +40,8 @@ func TestStore_SaveProposerSlashing(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
-	defer TeardownSlasherDB(t, db)
+	db := testDB.SetupSlasherDB(t, ctx)
+	defer testDB.TeardownSlasherDB(t, db)
 	tests := []struct {
 		ss types.SlashingStatus
 		ps *ethpb.ProposerSlashing
@@ -81,8 +82,8 @@ func TestStore_UpdateProposerSlashingStatus(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
-	defer TeardownSlasherDB(t, db)
+	db := testDB.SetupSlasherDB(t, ctx)
+	defer testDB.TeardownSlasherDB(t, db)
 	tests := []struct {
 		ss types.SlashingStatus
 		ps *ethpb.ProposerSlashing
@@ -140,8 +141,8 @@ func TestStore_SaveProposerSlashings(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
-	defer TeardownSlasherDB(t, db)
+	db := testDB.SetupSlasherDB(t, ctx)
+	defer testDB.TeardownSlasherDB(t, db)
 	ps := []*ethpb.ProposerSlashing{
 		{ProposerIndex: 1},
 		{ProposerIndex: 2},
