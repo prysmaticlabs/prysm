@@ -1,7 +1,8 @@
-package db
+package kv
 
 import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/slasher/db/types"
 )
 
 const latestEpochKey = "LATEST_EPOCH_DETECTED"
@@ -30,9 +31,9 @@ func encodeEpochValidatorIDSig(epoch uint64, validatorID uint64, sig []byte) []b
 func encodeEpochSig(targetEpoch uint64, sig []byte) []byte {
 	return append(bytesutil.Bytes8(targetEpoch), sig...)
 }
-func encodeType(st SlashingType) []byte {
+func encodeType(st types.SlashingType) []byte {
 	return []byte{byte(st)}
 }
-func encodeTypeRoot(st SlashingType, root [32]byte) []byte {
+func encodeTypeRoot(st types.SlashingType, root [32]byte) []byte {
 	return append([]byte{byte(st)}, root[:]...)
 }
