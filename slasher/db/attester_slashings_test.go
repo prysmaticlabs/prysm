@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"flag"
 	"reflect"
 	"sort"
@@ -14,11 +15,12 @@ import (
 func TestStore_AttesterSlashingNilBucket(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
+	db := SetupSlasherDB(t, cli.NewContext(app, set, nil))
 	defer TeardownSlasherDB(t, db)
+	ctx := context.Background()
+
 	as := &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("hello")}}
-	has, _, err := db.HasAttesterSlashing(as)
+	has, _, err := db.HasAttesterSlashing(ctx, as)
 	if err != nil {
 		t.Fatalf("HasAttesterSlashing should not return error: %v", err)
 	}
@@ -26,7 +28,7 @@ func TestStore_AttesterSlashingNilBucket(t *testing.T) {
 		t.Fatal("HasAttesterSlashing should return false")
 	}
 
-	p, err := db.AttesterSlashings(types.SlashingStatus(types.Active))
+	p, err := db.AttesterSlashings(ctx, types.SlashingStatus(types.Active))
 	if err != nil {
 		t.Fatalf("Failed to get attester slashing: %v", err)
 	}
@@ -38,9 +40,10 @@ func TestStore_AttesterSlashingNilBucket(t *testing.T) {
 func TestStore_SaveAttesterSlashing(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
+	db := SetupSlasherDB(t, cli.NewContext(app, set, nil))
 	defer TeardownSlasherDB(t, db)
+	ctx := context.Background()
+
 	tests := []struct {
 		ss types.SlashingStatus
 		as *ethpb.AttesterSlashing
@@ -60,12 +63,12 @@ func TestStore_SaveAttesterSlashing(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		err := db.SaveAttesterSlashing(tt.ss, tt.as)
+		err := db.SaveAttesterSlashing(ctx, tt.ss, tt.as)
 		if err != nil {
 			t.Fatalf("save attester slashing failed: %v", err)
 		}
 
-		attesterSlashings, err := db.AttesterSlashings(tt.ss)
+		attesterSlashings, err := db.AttesterSlashings(ctx, tt.ss)
 		if err != nil {
 			t.Fatalf("failed to get attester slashings: %v", err)
 		}
@@ -80,19 +83,20 @@ func TestStore_SaveAttesterSlashing(t *testing.T) {
 func TestStore_SaveAttesterSlashings(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
+	db := SetupSlasherDB(t, cli.NewContext(app, set, nil))
 	defer TeardownSlasherDB(t, db)
+	ctx := context.Background()
+
 	as := []*ethpb.AttesterSlashing{
 		{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("1")}},
 		{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("2")}},
 		{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("3")}},
 	}
-	err := db.SaveAttesterSlashings(types.Active, as)
+	err := db.SaveAttesterSlashings(ctx, types.Active, as)
 	if err != nil {
 		t.Fatalf("save attester slashing failed: %v", err)
 	}
-	attesterSlashings, err := db.AttesterSlashings(types.Active)
+	attesterSlashings, err := db.AttesterSlashings(ctx, types.Active)
 	if err != nil {
 		t.Fatalf("failed to get attester slashings: %v", err)
 	}
@@ -107,9 +111,10 @@ func TestStore_SaveAttesterSlashings(t *testing.T) {
 func TestStore_UpdateAttesterSlashingStatus(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
+	db := SetupSlasherDB(t, cli.NewContext(app, set, nil))
 	defer TeardownSlasherDB(t, db)
+	ctx := context.Background()
+
 	tests := []struct {
 		ss types.SlashingStatus
 		as *ethpb.AttesterSlashing
@@ -129,14 +134,14 @@ func TestStore_UpdateAttesterSlashingStatus(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		err := db.SaveAttesterSlashing(tt.ss, tt.as)
+		err := db.SaveAttesterSlashing(ctx, tt.ss, tt.as)
 		if err != nil {
 			t.Fatalf("save attester slashing failed: %v", err)
 		}
 	}
 
 	for _, tt := range tests {
-		has, st, err := db.HasAttesterSlashing(tt.as)
+		has, st, err := db.HasAttesterSlashing(ctx, tt.as)
 		if err != nil {
 			t.Fatalf("Failed to get attester slashing: %v", err)
 		}
@@ -147,8 +152,8 @@ func TestStore_UpdateAttesterSlashingStatus(t *testing.T) {
 			t.Fatalf("Failed to find attester slashing with the correct status: %v", tt.as)
 		}
 
-		err = db.SaveAttesterSlashing(types.SlashingStatus(types.Included), tt.as)
-		has, st, err = db.HasAttesterSlashing(tt.as)
+		err = db.SaveAttesterSlashing(ctx, types.SlashingStatus(types.Included), tt.as)
+		has, st, err = db.HasAttesterSlashing(ctx, tt.as)
 		if err != nil {
 			t.Fatalf("Failed to get attester slashing: %v", err)
 		}
@@ -158,18 +163,17 @@ func TestStore_UpdateAttesterSlashingStatus(t *testing.T) {
 		if st != types.Included {
 			t.Fatalf("Failed to find attester slashing with the correct status: %v", tt.as)
 		}
-
 	}
-
 }
 
 func TestStore_LatestEpochDetected(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
+	db := SetupSlasherDB(t, cli.NewContext(app, set, nil))
 	defer TeardownSlasherDB(t, db)
-	e, err := db.GetLatestEpochDetected()
+	ctx := context.Background()
+
+	e, err := db.GetLatestEpochDetected(ctx)
 	if err != nil {
 		t.Fatalf("Get latest epoch detected failed: %v", err)
 	}
@@ -177,11 +181,11 @@ func TestStore_LatestEpochDetected(t *testing.T) {
 		t.Fatalf("Latest epoch detected should have been 0 before setting got: %d", e)
 	}
 	epoch := uint64(1)
-	err = db.SetLatestEpochDetected(epoch)
+	err = db.SetLatestEpochDetected(ctx, epoch)
 	if err != nil {
 		t.Fatalf("Set latest epoch detected failed: %v", err)
 	}
-	e, err = db.GetLatestEpochDetected()
+	e, err = db.GetLatestEpochDetected(ctx)
 	if err != nil {
 		t.Fatalf("Get latest epoch detected failed: %v", err)
 	}

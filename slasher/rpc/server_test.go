@@ -153,6 +153,7 @@ func TestServer_SameSlotSlashable(t *testing.T) {
 	dbs := db.SetupSlasherDB(t, c)
 	defer db.TeardownSlasherDB(t, dbs)
 	ctx := context.Background()
+
 	slasherServer := &Server{
 		ctx:       ctx,
 		SlasherDB: dbs,
@@ -196,7 +197,7 @@ func TestServer_SameSlotSlashable(t *testing.T) {
 		t.Errorf("wanted slashing proof: %v got: %v", want, sr.ProposerSlashing[0])
 
 	}
-	if err := slasherServer.SlasherDB.SaveProposerSlashing(types.Active, sr.ProposerSlashing[0]); err != nil {
+	if err := slasherServer.SlasherDB.SaveProposerSlashing(ctx, types.Active, sr.ProposerSlashing[0]); err != nil {
 		t.Errorf("Could not call db method: %v", err)
 	}
 	if sr, err = slasherServer.ProposerSlashings(ctx, &slashpb.SlashingStatusRequest{Status: slashpb.SlashingStatusRequest_Active}); err != nil {
@@ -228,6 +229,7 @@ func TestServer_SlashDoubleAttestation(t *testing.T) {
 	dbs := db.SetupSlasherDB(t, c)
 	defer db.TeardownSlasherDB(t, dbs)
 	ctx := context.Background()
+
 	slasherServer := &Server{
 		ctx:       ctx,
 		SlasherDB: dbs,
@@ -584,7 +586,7 @@ func TestServer_SlashSurroundAttestation(t *testing.T) {
 		t.Errorf("Wanted slashing proof: %v got: %v", want, sr.AttesterSlashing[0])
 
 	}
-	if err := slasherServer.SlasherDB.SaveAttesterSlashing(types.Active, sr.AttesterSlashing[0]); err != nil {
+	if err := slasherServer.SlasherDB.SaveAttesterSlashing(ctx, types.Active, sr.AttesterSlashing[0]); err != nil {
 		t.Errorf("Could not call db method: %v", err)
 	}
 	pr, err := slasherServer.ProposerSlashings(ctx, &slashpb.SlashingStatusRequest{Status: slashpb.SlashingStatusRequest_Active})

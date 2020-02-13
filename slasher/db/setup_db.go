@@ -58,7 +58,7 @@ func TempDir() string {
 	return d
 }
 
-// TeardownSlasherDB cleans up a test BeaconDB instance.
+// TeardownSlasherDB cleans up a test SlasherDB instance.
 func TeardownSlasherDB(t testing.TB, db *Store) {
 	if err := db.Close(); err != nil {
 		t.Fatalf("Failed to close database: %v", err)

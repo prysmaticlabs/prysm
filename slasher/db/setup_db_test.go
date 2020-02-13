@@ -11,8 +11,7 @@ import (
 func TestClearDB(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	ctx := cli.NewContext(app, set, nil)
-	slasherDB := SetupSlasherDB(t, ctx)
+	slasherDB := SetupSlasherDB(t, cli.NewContext(app, set, nil))
 	defer TeardownSlasherDB(t, slasherDB)
 	if err := slasherDB.ClearDB(); err != nil {
 		t.Fatal(err)
