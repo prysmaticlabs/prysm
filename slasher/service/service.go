@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/slasher/cache"
 	"github.com/prysmaticlabs/prysm/slasher/db"
+	"github.com/prysmaticlabs/prysm/slasher/db/kv"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/prysmaticlabs/prysm/slasher/rpc"
 	"github.com/sirupsen/logrus"
@@ -46,7 +47,7 @@ func init() {
 
 // Service defining an RPC server for the slasher service.
 type Service struct {
-	slasherDb       *db.Store
+	slasherDb       *kv.Store
 	grpcServer      *grpc.Server
 	slasher         *rpc.Server
 	port            int
@@ -71,7 +72,7 @@ type Config struct {
 	Port           int
 	CertFlag       string
 	KeyFlag        string
-	SlasherDb      *db.Store
+	SlasherDb      *kv.Store
 	BeaconProvider string
 	BeaconCert     string
 }
@@ -101,23 +102,23 @@ func NewRPCService(cfg *Config, ctx *cli.Context) (*Service, error) {
 func (s *Service) startDB(ctx *cli.Context) error {
 	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
 	dbPath := path.Join(baseDir, slasherDBName)
-	cfg := &db.Config{SpanCacheEnabled: ctx.GlobalBool(flags.UseSpanCacheFlag.Name)}
-	d, err := db.NewDB(dbPath, cfg)
+	cfg := &kv.Config{SpanCacheEnabled: ctx.GlobalBool(flags.UseSpanCacheFlag.Name)}
+	slasherDB, err := db.NewDB(dbPath, cfg)
 	if err != nil {
 		return err
 	}
 	if s.ctx.GlobalBool(cmd.ClearDB.Name) {
-		if err := d.ClearDB(); err != nil {
+		if err := slasherDB.ClearDB(); err != nil {
 			return err
 		}
-		d, err = db.NewDB(dbPath, cfg)
+		slasherDB, err = db.NewDB(dbPath, cfg)
 		if err != nil {
 			return err
 		}
 	}
 
 	log.WithField("path", dbPath).Info("Checking db")
-	s.slasherDb = d
+	s.slasherDb = slasherDB
 	return nil
 }
 

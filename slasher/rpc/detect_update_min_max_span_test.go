@@ -8,7 +8,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/slasher/db"
+	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	"github.com/urfave/cli"
 )
 
@@ -197,11 +197,11 @@ func TestServer_UpdateMaxEpochSpan(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	c := cli.NewContext(app, set, nil)
-	dbs := db.SetupSlasherDB(t, c)
-	defer db.TeardownSlasherDB(t, dbs)
+	db := testDB.SetupSlasherDB(t, c)
+	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
 	slasherServer := &Server{
-		SlasherDB: dbs,
+		SlasherDB: db,
 	}
 	for _, tt := range spanTestsMax {
 		spanMap, err := slasherServer.SlasherDB.ValidatorSpansMap(tt.validatorIdx)
@@ -232,11 +232,11 @@ func TestServer_UpdateMinEpochSpan(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	c := cli.NewContext(app, set, nil)
-	dbs := db.SetupSlasherDB(t, c)
-	defer db.TeardownSlasherDB(t, dbs)
+	db := testDB.SetupSlasherDB(t, c)
+	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
 	slasherServer := &Server{
-		SlasherDB: dbs,
+		SlasherDB: db,
 	}
 	for _, tt := range spanTestsMin {
 		spanMap, err := slasherServer.SlasherDB.ValidatorSpansMap(tt.validatorIdx)
@@ -267,11 +267,11 @@ func TestServer_FailToUpdate(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	c := cli.NewContext(app, set, nil)
-	dbs := db.SetupSlasherDB(t, c)
-	defer db.TeardownSlasherDB(t, dbs)
+	db := testDB.SetupSlasherDB(t, c)
+	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
 	slasherServer := &Server{
-		SlasherDB: dbs,
+		SlasherDB: db,
 	}
 	spanTestsFail := spanMapTestStruct{
 		validatorIdx:        0,
