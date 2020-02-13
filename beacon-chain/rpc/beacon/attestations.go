@@ -153,7 +153,7 @@ func (bs *Server) AttestationPool(
 			flags.Get().MaxPageSize,
 		)
 	}
-	atts := bs.Pool.AggregatedAttestations()
+	atts := bs.AttestationsPool.AggregatedAttestations()
 	numAtts := len(atts)
 	if numAtts == 0 {
 		return &ethpb.AttestationPoolResponse{
