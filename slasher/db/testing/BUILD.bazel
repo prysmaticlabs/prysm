@@ -5,7 +5,7 @@ go_library(
     testonly = True,
     srcs = ["setup_db.go"],
     importpath = "github.com/prysmaticlabs/prysm/slasher/db/testing",
-    visibility = ["//visibility:public"],
+    visibility = ["//slasher:__subpackages__"],
     deps = [
         "//shared/testutil:go_default_library",
         "//slasher/db:go_default_library",
