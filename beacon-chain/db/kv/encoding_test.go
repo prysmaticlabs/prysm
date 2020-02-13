@@ -7,7 +7,7 @@ import (
 )
 
 func Test_encode_handlesNilFromFunction(t *testing.T) {
-	foo := func () *testpb.Puzzle {
+	foo := func() *testpb.Puzzle {
 		return nil
 	}
 	_, err := encode(foo())
