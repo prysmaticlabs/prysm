@@ -1,6 +1,7 @@
 package node
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"path"
@@ -12,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
+	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/db/kv"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
@@ -58,9 +60,9 @@ func NewSlasherNode(ctx *cli.Context) (*SlasherNode, error) {
 		blockFeed:       new(event.Feed),
 	}
 
-	//if err := slasher.startDB(ctx); err != nil {
-	//	return nil, err
-	//}
+	if err := slasher.startDB(ctx); err != nil {
+		return nil, err
+	}
 	return slasher, nil
 }
 
@@ -138,4 +140,17 @@ func (s *SlasherNode) startDB(ctx *cli.Context) error {
 	log.WithField("database-path", baseDir).Info("Checking DB")
 	s.db = d
 	return nil
+}
+
+func (s *SlasherNode) registerBeaconClientService(ctx *cli.Context) error {
+	beaconCert := ctx.GlobalString(flags.BeaconCertFlag.Name)
+	beaconProvider := ctx.GlobalString(flags.BeaconRPCProviderFlag.Name)
+	if beaconProvider == "" {
+		beaconProvider = flags.BeaconRPCProviderFlag.Value
+	}
+	bs := beaconclient.NewBeaconClient(context.Background(), &beaconclient.Config{
+		BeaconCert:     beaconCert,
+		BeaconProvider: beaconProvider,
+	})
+	return s.services.RegisterService(bs)
 }

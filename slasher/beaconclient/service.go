@@ -24,7 +24,7 @@ var log = logrus.WithField("prefix", "beaconclient")
 
 // Service struct for the beaconclient service of the slasher.
 type Service struct {
-	context         context.Context
+	ctx             context.Context
 	cancel          context.CancelFunc
 	cert            string
 	conn            *grpc.ClientConn
@@ -32,6 +32,23 @@ type Service struct {
 	client          ethpb.BeaconChainClient
 	blockFeed       *event.Feed
 	attestationFeed *event.Feed
+}
+
+// Config options for the beaconclient service.
+type Config struct {
+	BeaconProvider string
+	BeaconCert     string
+}
+
+// NewBeaconClient creates a new instance of a beacon client service.
+func NewBeaconClient(ctx context.Context, cfg *Config) *Service {
+	ctx, cancel := context.WithCancel(ctx)
+	return &Service{
+		cert:     cfg.BeaconCert,
+		ctx:      ctx,
+		cancel:   cancel,
+		provider: cfg.BeaconProvider,
+	}
 }
 
 // BlockFeed returns a feed other services in slasher can subscribe to
@@ -95,7 +112,7 @@ func (bs *Service) Start() {
 			grpc_prometheus.UnaryClientInterceptor,
 		)),
 	}
-	conn, err := grpc.DialContext(bs.context, bs.provider, beaconOpts...)
+	conn, err := grpc.DialContext(bs.ctx, bs.provider, beaconOpts...)
 	if err != nil {
 		log.Fatalf("Could not dial endpoint: %s, %v", bs.provider, err)
 	}
@@ -103,6 +120,6 @@ func (bs *Service) Start() {
 	bs.conn = conn
 	bs.client = ethpb.NewBeaconChainClient(bs.conn)
 
-	go bs.receiveBlocks(bs.context)
-	go bs.receiveAttestations(bs.context)
+	go bs.receiveBlocks(bs.ctx)
+	go bs.receiveAttestations(bs.ctx)
 }
