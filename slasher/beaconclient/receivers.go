@@ -33,7 +33,7 @@ func (bs *Service) receiveBlocks(ctx context.Context) {
 		if err != nil {
 			log.WithError(err).Error("Could not receive block from beacon node")
 		}
-		log.WithField("slot", res.Slot).Debug("Received block from beacon node")
+		log.WithField("slot", res.Block.Slot).Debug("Received block from beacon node")
 		// We send the received block over the block feed.
 		bs.blockFeed.Send(res)
 	}
