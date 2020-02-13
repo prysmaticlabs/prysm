@@ -2,7 +2,6 @@ package attestations
 
 import (
 	"bytes"
-	"fmt"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -19,7 +18,7 @@ func (d *AttDetector) DoubleVotes(
 		return nil, err
 	}
 	if idxAtts == nil || len(idxAtts) == 0 {
-		return nil, fmt.Errorf("can't check nil indexed attestation for double vote")
+		return nil, nil
 	}
 
 	var idxAttsToSlash []*ethpb.IndexedAttestation

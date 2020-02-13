@@ -3,7 +3,10 @@ package attestations
 import (
 	"context"
 	"flag"
+	"strconv"
 	"testing"
+
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 
 	"github.com/gogo/protobuf/proto"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
@@ -296,5 +299,478 @@ func TestServer_FailToUpdate(t *testing.T) {
 	if _, _, err := detector.DetectSurroundedAttestations(ctx, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch, spanTestsFail.validatorIdx, spanMap); err == nil {
 		t.Fatalf("Update should not support diff greater then weak subjectivity period: %v ", params.BeaconConfig().WeakSubjectivityPeriod)
 	}
+
+}
+
+func TestServer_SlashDoubleAttestation(t *testing.T) {
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	c := cli.NewContext(app, set, nil)
+	dbs := db.SetupSlasherDB(t, c)
+	defer db.TeardownSlasherDB(t, dbs)
+	ctx := context.Background()
+	detector := AttDetector{&detection.SlashingDetector{
+		SlasherDB: dbs,
+	}}
+	ia1 := &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig2"),
+		Data: &ethpb.AttestationData{
+			Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
+			CommitteeIndex:  0,
+			BeaconBlockRoot: []byte("block1"),
+			Source:          &ethpb.Checkpoint{Epoch: 2},
+			Target:          &ethpb.Checkpoint{Epoch: 3},
+		},
+	}
+	ia2 := &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig1"),
+		Data: &ethpb.AttestationData{
+			Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
+			CommitteeIndex:  0,
+			BeaconBlockRoot: []byte("block2"),
+			Source:          &ethpb.Checkpoint{Epoch: 2},
+			Target:          &ethpb.Checkpoint{Epoch: 3},
+		},
+	}
+	want := &ethpb.AttesterSlashing{
+		Attestation_1: ia2,
+		Attestation_2: ia1,
+	}
+
+	if _, err := detector.DetectAttestationForSlashings(ctx, ia1); err != nil {
+		t.Errorf("Could not call RPC method: %v", err)
+	}
+	if err := detector.slashingDetector.SlasherDB.SaveIndexedAttestation(ia1); err != nil {
+		t.Fatalf("Save indexed attestation failed: %v", err)
+	}
+	sr, err := detector.DetectAttestationForSlashings(ctx, ia2)
+	if err != nil {
+		t.Errorf("Could not call RPC method: %v", err)
+	}
+
+	if len(sr) != 1 {
+		t.Errorf("Should return 1 slashing proof: %v", sr)
+	}
+	if !proto.Equal(sr[0], want) {
+		t.Errorf("Wanted slashing proof: %v got: %v", want, sr[0])
+
+	}
+}
+
+func TestServer_SlashTripleAttestation(t *testing.T) {
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	c := cli.NewContext(app, set, nil)
+	dbs := db.SetupSlasherDB(t, c)
+	defer db.TeardownSlasherDB(t, dbs)
+	ctx := context.Background()
+	detector := AttDetector{&detection.SlashingDetector{
+		SlasherDB: dbs,
+	}}
+	ia1 := &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig1"),
+		Data: &ethpb.AttestationData{
+			Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
+			CommitteeIndex:  0,
+			BeaconBlockRoot: []byte("block1"),
+			Source:          &ethpb.Checkpoint{Epoch: 2},
+			Target:          &ethpb.Checkpoint{Epoch: 3},
+		},
+	}
+	ia2 := &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig2"),
+		Data: &ethpb.AttestationData{
+			Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
+			CommitteeIndex:  0,
+			BeaconBlockRoot: []byte("block2"),
+			Source:          &ethpb.Checkpoint{Epoch: 2},
+			Target:          &ethpb.Checkpoint{Epoch: 3},
+		},
+	}
+	ia3 := &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig3"),
+		Data: &ethpb.AttestationData{
+			Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
+			CommitteeIndex:  0,
+			BeaconBlockRoot: []byte("block3"),
+			Source:          &ethpb.Checkpoint{Epoch: 2},
+			Target:          &ethpb.Checkpoint{Epoch: 3},
+		},
+	}
+	want1 := &ethpb.AttesterSlashing{
+		Attestation_1: ia3,
+		Attestation_2: ia1,
+	}
+	want2 := &ethpb.AttesterSlashing{
+		Attestation_1: ia3,
+		Attestation_2: ia2,
+	}
+
+	if _, err := detector.DetectAttestationForSlashings(ctx, ia1); err != nil {
+		t.Errorf("Could not call RPC method: %v", err)
+	}
+	if err := detector.slashingDetector.SlasherDB.SaveIndexedAttestation(ia1); err != nil {
+		t.Fatalf("Save indexed attestation failed: %v", err)
+	}
+	_, err := detector.DetectAttestationForSlashings(ctx, ia2)
+	if err != nil {
+		t.Errorf("Could not call RPC method: %v", err)
+	}
+	if err := detector.slashingDetector.SlasherDB.SaveIndexedAttestation(ia2); err != nil {
+		t.Fatalf("Save indexed attestation failed: %v", err)
+	}
+	sr, err := detector.DetectAttestationForSlashings(ctx, ia3)
+	if err != nil {
+		t.Errorf("Could not call RPC method: %v", err)
+	}
+	if len(sr) != 2 {
+		t.Errorf("Should return 1 slashing proof: %v", sr)
+	}
+	if !proto.Equal(sr[0], want1) {
+		t.Errorf("Wanted slashing proof: %v got: %v", want1, sr[0])
+
+	}
+	if !proto.Equal(sr[1], want2) {
+		t.Errorf("Wanted slashing proof: %v got: %v", want2, sr[0])
+
+	}
+}
+
+func TestServer_DontSlashSameAttestation(t *testing.T) {
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	c := cli.NewContext(app, set, nil)
+	dbs := db.SetupSlasherDB(t, c)
+	defer db.TeardownSlasherDB(t, dbs)
+	ctx := context.Background()
+	detector := AttDetector{&detection.SlashingDetector{
+		SlasherDB: dbs,
+	}}
+	ia1 := &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig1"),
+		Data: &ethpb.AttestationData{
+			Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
+			CommitteeIndex:  0,
+			BeaconBlockRoot: []byte("block1"),
+			Source:          &ethpb.Checkpoint{Epoch: 2},
+			Target:          &ethpb.Checkpoint{Epoch: 3},
+		},
+	}
+
+	if _, err := detector.DetectAttestationForSlashings(ctx, ia1); err != nil {
+		t.Errorf("Could not call RPC method: %v", err)
+	}
+	if err := detector.slashingDetector.SlasherDB.SaveIndexedAttestation(ia1); err != nil {
+		t.Fatalf("Save indexed attestation failed: %v", err)
+	}
+	sr, err := detector.DetectAttestationForSlashings(ctx, ia1)
+	if err != nil {
+		t.Errorf("Could not call RPC method: %v", err)
+	}
+
+	if len(sr) != 0 {
+		t.Errorf("Should not return slashing proof for same attestation: %v", sr)
+	}
+}
+
+func TestServer_DontSlashDifferentTargetAttestation(t *testing.T) {
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	c := cli.NewContext(app, set, nil)
+	dbs := db.SetupSlasherDB(t, c)
+	defer db.TeardownSlasherDB(t, dbs)
+	ctx := context.Background()
+	detector := AttDetector{&detection.SlashingDetector{
+		SlasherDB: dbs,
+	}}
+	ia1 := &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig2"),
+		Data: &ethpb.AttestationData{
+			Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
+			CommitteeIndex:  0,
+			BeaconBlockRoot: []byte("block1"),
+			Source:          &ethpb.Checkpoint{Epoch: 2},
+			Target:          &ethpb.Checkpoint{Epoch: 3},
+		},
+	}
+	ia2 := &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig1"),
+		Data: &ethpb.AttestationData{
+			Slot:            4*params.BeaconConfig().SlotsPerEpoch + 1,
+			CommitteeIndex:  0,
+			BeaconBlockRoot: []byte("block2"),
+			Source:          &ethpb.Checkpoint{Epoch: 3},
+			Target:          &ethpb.Checkpoint{Epoch: 4},
+		},
+	}
+
+	if _, err := detector.DetectAttestationForSlashings(ctx, ia1); err != nil {
+		t.Errorf("Could not call RPC method: %v", err)
+	}
+	if err := detector.slashingDetector.SlasherDB.SaveIndexedAttestation(ia1); err != nil {
+		t.Fatalf("Save indexed attestation failed: %v", err)
+	}
+	sr, err := detector.DetectAttestationForSlashings(ctx, ia2)
+	if err != nil {
+		t.Errorf("Could not call RPC method: %v", err)
+	}
+
+	if len(sr) != 0 {
+		t.Errorf("Should not return slashing proof for different epoch attestation: %v", sr)
+	}
+}
+
+func TestServer_DontSlashSameAttestationData(t *testing.T) {
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	c := cli.NewContext(app, set, nil)
+	dbs := db.SetupSlasherDB(t, c)
+	defer db.TeardownSlasherDB(t, dbs)
+	ctx := context.Background()
+	detector := AttDetector{&detection.SlashingDetector{
+		SlasherDB: dbs,
+	}}
+	ad := &ethpb.AttestationData{
+		Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
+		CommitteeIndex:  0,
+		BeaconBlockRoot: []byte("block1"),
+		Source:          &ethpb.Checkpoint{Epoch: 2},
+		Target:          &ethpb.Checkpoint{Epoch: 3},
+	}
+	ia1 := &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig2"),
+		Data:             ad,
+	}
+	ia2 := &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig1"),
+		Data:             ad,
+	}
+
+	if _, err := detector.DetectAttestationForSlashings(ctx, ia1); err != nil {
+		t.Errorf("Could not call RPC method: %v", err)
+	}
+	if err := detector.slashingDetector.SlasherDB.SaveIndexedAttestation(ia1); err != nil {
+		t.Fatalf("Save indexed attestation failed: %v", err)
+	}
+	sr, err := detector.DetectAttestationForSlashings(ctx, ia2)
+	if err != nil {
+		t.Errorf("Could not call RPC method: %v", err)
+	}
+
+	if len(sr) != 0 {
+		t.Errorf("Should not return slashing proof for same data: %v", sr)
+	}
+}
+
+func TestServer_SlashSurroundedAttestation(t *testing.T) {
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	c := cli.NewContext(app, set, nil)
+	dbs := db.SetupSlasherDB(t, c)
+	defer db.TeardownSlasherDB(t, dbs)
+	ctx := context.Background()
+	detector := AttDetector{&detection.SlashingDetector{
+		SlasherDB: dbs,
+	}}
+	ia1 := &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig2"),
+		Data: &ethpb.AttestationData{
+			Slot:            4*params.BeaconConfig().SlotsPerEpoch + 1,
+			CommitteeIndex:  0,
+			BeaconBlockRoot: []byte("block1"),
+			Source:          &ethpb.Checkpoint{Epoch: 1},
+			Target:          &ethpb.Checkpoint{Epoch: 4},
+		},
+	}
+	ia2 := &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig1"),
+		Data: &ethpb.AttestationData{
+			Slot:            4*params.BeaconConfig().SlotsPerEpoch + 1,
+			CommitteeIndex:  0,
+			BeaconBlockRoot: []byte("block2"),
+			Source:          &ethpb.Checkpoint{Epoch: 2},
+			Target:          &ethpb.Checkpoint{Epoch: 3},
+		},
+	}
+	want := &ethpb.AttesterSlashing{
+		Attestation_1: ia2,
+		Attestation_2: ia1,
+	}
+
+	if _, err := detector.DetectAttestationForSlashings(ctx, ia1); err != nil {
+		t.Errorf("Could not call RPC method: %v", err)
+	}
+	if err := detector.slashingDetector.SlasherDB.SaveIndexedAttestation(ia1); err != nil {
+		t.Fatalf("Save indexed attestation failed: %v", err)
+	}
+	sr, err := detector.DetectAttestationForSlashings(ctx, ia2)
+	if err != nil {
+		t.Errorf("Could not call RPC method: %v", err)
+	}
+	if len(sr) != 1 {
+		t.Fatalf("Should return 1 slashing proof: %v", sr)
+	}
+	if !proto.Equal(sr[0], want) {
+		t.Errorf("Wanted slashing proof: %v got: %v", want, sr[0])
+
+	}
+}
+
+func TestServer_SlashSurroundAttestation(t *testing.T) {
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	c := cli.NewContext(app, set, nil)
+	dbs := db.SetupSlasherDB(t, c)
+	defer db.TeardownSlasherDB(t, dbs)
+	ctx := context.Background()
+	detector := AttDetector{&detection.SlashingDetector{
+		SlasherDB: dbs,
+	}}
+	ia1 := &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig2"),
+		Data: &ethpb.AttestationData{
+			Slot:            4*params.BeaconConfig().SlotsPerEpoch + 1,
+			CommitteeIndex:  0,
+			BeaconBlockRoot: []byte("block1"),
+			Source:          &ethpb.Checkpoint{Epoch: 2},
+			Target:          &ethpb.Checkpoint{Epoch: 3},
+		},
+	}
+	ia2 := &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig1"),
+		Data: &ethpb.AttestationData{
+			Slot:            4*params.BeaconConfig().SlotsPerEpoch + 1,
+			CommitteeIndex:  0,
+			BeaconBlockRoot: []byte("block2"),
+			Source:          &ethpb.Checkpoint{Epoch: 1},
+			Target:          &ethpb.Checkpoint{Epoch: 4},
+		},
+	}
+	want := &ethpb.AttesterSlashing{
+		Attestation_1: ia2,
+		Attestation_2: ia1,
+	}
+
+	if _, err := detector.DetectAttestationForSlashings(ctx, ia1); err != nil {
+		t.Errorf("Could not call RPC method: %v", err)
+	}
+	if err := detector.slashingDetector.SlasherDB.SaveIndexedAttestation(ia1); err != nil {
+		t.Fatalf("Save indexed attestation failed: %v", err)
+	}
+	sr, err := detector.DetectAttestationForSlashings(ctx, ia2)
+	if err != nil {
+		t.Errorf("Could not call RPC method: %v", err)
+	}
+	if len(sr) != 1 {
+		t.Fatalf("Should return 1 slashing proof: %v", sr)
+	}
+	if !proto.Equal(sr[0], want) {
+		t.Errorf("Wanted slashing proof: %v got: %v", want, sr[0])
+
+	}
+}
+
+func TestServer_DontSlashValidAttestations(t *testing.T) {
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	c := cli.NewContext(app, set, nil)
+	dbs := db.SetupSlasherDB(t, c)
+	defer db.TeardownSlasherDB(t, dbs)
+	ctx := context.Background()
+	detector := AttDetector{&detection.SlashingDetector{
+		SlasherDB: dbs,
+	}}
+	ia1 := &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig2"),
+		Data: &ethpb.AttestationData{
+			Slot:            5*params.BeaconConfig().SlotsPerEpoch + 1,
+			CommitteeIndex:  0,
+			BeaconBlockRoot: []byte("block1"),
+			Source:          &ethpb.Checkpoint{Epoch: 2},
+			Target:          &ethpb.Checkpoint{Epoch: 4},
+		},
+	}
+	ia2 := &ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{0},
+		Signature:        []byte("sig1"),
+		Data: &ethpb.AttestationData{
+			Slot:            5*params.BeaconConfig().SlotsPerEpoch + 1,
+			CommitteeIndex:  0,
+			BeaconBlockRoot: []byte("block2"),
+			Source:          &ethpb.Checkpoint{Epoch: 3},
+			Target:          &ethpb.Checkpoint{Epoch: 5},
+		},
+	}
+
+	if _, err := detector.DetectAttestationForSlashings(ctx, ia1); err != nil {
+		t.Errorf("Could not call RPC method: %v", err)
+	}
+	if err := detector.slashingDetector.SlasherDB.SaveIndexedAttestation(ia1); err != nil {
+		t.Fatalf("Save indexed attestation failed: %v", err)
+	}
+	sr, err := detector.DetectAttestationForSlashings(ctx, ia2)
+	if err != nil {
+		t.Errorf("Could not call RPC method: %v", err)
+	}
+	if len(sr) != 0 {
+		t.Errorf("Should not return slashing proof for same data: %v", sr)
+	}
+}
+
+func TestServer_Store_100_Attestations(t *testing.T) {
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	c := cli.NewContext(app, set, nil)
+	dbs := db.SetupSlasherDB(t, c)
+	defer db.TeardownSlasherDB(t, dbs)
+	ctx := context.Background()
+	detector := AttDetector{&detection.SlashingDetector{
+		SlasherDB: dbs,
+	}}
+	var cb []uint64
+	for i := uint64(0); i < 100; i++ {
+		cb = append(cb, i)
+	}
+	ia1 := &ethpb.IndexedAttestation{
+		AttestingIndices: cb,
+		Data: &ethpb.AttestationData{
+			CommitteeIndex:  0,
+			BeaconBlockRoot: make([]byte, 32),
+			Source:          &ethpb.Checkpoint{Epoch: 2},
+			Target:          &ethpb.Checkpoint{Epoch: 4},
+		},
+	}
+	for i := uint64(0); i < 100; i++ {
+		ia1.Data.Target.Epoch = i + 1
+		ia1.Data.Source.Epoch = i
+		t.Logf("In Loop: %d", i)
+		ia1.Data.Slot = (i + 1) * params.BeaconConfig().SlotsPerEpoch
+		root := []byte(strconv.Itoa(int(i)))
+		ia1.Data.BeaconBlockRoot = append(root, ia1.Data.BeaconBlockRoot[len(root):]...)
+		if _, err := detector.DetectAttestationForSlashings(ctx, ia1); err != nil {
+			t.Errorf("Could not call RPC method: %v", err)
+		}
+	}
+
+	s, err := dbs.Size()
+	if err != nil {
+		t.Error(err)
+	}
+	t.Logf("DB size is: %d", s)
 
 }

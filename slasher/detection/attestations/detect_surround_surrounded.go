@@ -162,11 +162,11 @@ func (d *AttDetector) DetectSurroundVotes(ctx context.Context, validatorIdx uint
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get validator spans map")
 	}
-	minTargetEpoch, spanMap, err := d.DetectSurroundedAttestations(ctx, req.Data.Source.Epoch, req.Data.Target.Epoch, validatorIdx, spanMap)
+	minTargetEpoch, spanMap, err := d.DetectSurroundAttestation(ctx, req.Data.Source.Epoch, req.Data.Target.Epoch, validatorIdx, spanMap)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to update min spans")
 	}
-	maxTargetEpoch, spanMap, err := d.DetectSurroundAttestation(ctx, req.Data.Source.Epoch, req.Data.Target.Epoch, validatorIdx, spanMap)
+	maxTargetEpoch, spanMap, err := d.DetectSurroundedAttestations(ctx, req.Data.Source.Epoch, req.Data.Target.Epoch, validatorIdx, spanMap)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to update max spans")
 	}
