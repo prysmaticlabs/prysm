@@ -12,7 +12,7 @@ import (
 
 var databaseFileName = "slasher.db"
 
-// Store defines an implementation of the Prysm Database interface
+// Store defines an implementation of the slasher Database interface
 // using BoltDB as the underlying persistent kv-store for eth2.
 type Store struct {
 	db               *bolt.DB
