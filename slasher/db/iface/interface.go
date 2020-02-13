@@ -1,6 +1,7 @@
 package iface
 
 import (
+	"context"
 	"io"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -11,64 +12,64 @@ import (
 // ReadOnlyDatabase represents a read only database with functions that do not modify the DB.
 type ReadOnlyDatabase interface {
 	// AttesterSlashing related methods.
-	AttesterSlashings(status types.SlashingStatus) ([]*ethpb.AttesterSlashing, error)
-	DeleteAttesterSlashing(attesterSlashing *ethpb.AttesterSlashing) error
-	HasAttesterSlashing(slashing *ethpb.AttesterSlashing) (bool, types.SlashingStatus, error)
-	GetLatestEpochDetected() (uint64, error)
+	AttesterSlashings(ctx context.Context, status types.SlashingStatus) ([]*ethpb.AttesterSlashing, error)
+	DeleteAttesterSlashing(ctx context.Context, attesterSlashing *ethpb.AttesterSlashing) error
+	HasAttesterSlashing(ctx context.Context, slashing *ethpb.AttesterSlashing) (bool, types.SlashingStatus, error)
+	GetLatestEpochDetected(ctx context.Context) (uint64, error)
 
 	// BlockHeader related methods.
-	BlockHeaders(epoch uint64, validatorID uint64) ([]*ethpb.SignedBeaconBlockHeader, error)
-	HasBlockHeader(epoch uint64, validatorID uint64) bool
+	BlockHeaders(ctx context.Context, epoch uint64, validatorID uint64) ([]*ethpb.SignedBeaconBlockHeader, error)
+	HasBlockHeader(ctx context.Context, epoch uint64, validatorID uint64) bool
 
 	// IndexedAttestations related methods.
-	IdxAttsForTargetFromID(targetEpoch uint64, validatorID uint64) ([]*ethpb.IndexedAttestation, error)
-	IdxAttsForTarget(targetEpoch uint64) ([]*ethpb.IndexedAttestation, error)
-	LatestIndexedAttestationsTargetEpoch() (uint64, error)
-	LatestValidatorIdx() (uint64, error)
-	DoubleVotes(validatorIdx uint64, dataRoot []byte, origAtt *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error)
-	HasIndexedAttestation(targetEpoch uint64, validatorID uint64) (bool, error)
+	IdxAttsForTargetFromID(ctx context.Context, targetEpoch uint64, validatorID uint64) ([]*ethpb.IndexedAttestation, error)
+	IdxAttsForTarget(ctx context.Context, targetEpoch uint64) ([]*ethpb.IndexedAttestation, error)
+	LatestIndexedAttestationsTargetEpoch(ctx context.Context) (uint64, error)
+	LatestValidatorIdx(ctx context.Context) (uint64, error)
+	DoubleVotes(ctx context.Context, validatorIdx uint64, dataRoot []byte, origAtt *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error)
+	HasIndexedAttestation(ctx context.Context, targetEpoch uint64, validatorID uint64) (bool, error)
 
 	// MinMaxSpan related methods.
-	ValidatorSpansMap(validatorIdx uint64) (*slashpb.EpochSpanMap, error)
+	ValidatorSpansMap(ctx context.Context, validatorIdx uint64) (*slashpb.EpochSpanMap, error)
 
 	// ProposerSlashing related methods.
-	ProposalSlashingsByStatus(status types.SlashingStatus) ([]*ethpb.ProposerSlashing, error)
-	HasProposerSlashing(slashing *ethpb.ProposerSlashing) (bool, types.SlashingStatus, error)
+	ProposalSlashingsByStatus(ctx context.Context, status types.SlashingStatus) ([]*ethpb.ProposerSlashing, error)
+	HasProposerSlashing(ctx context.Context, slashing *ethpb.ProposerSlashing) (bool, types.SlashingStatus, error)
 
 	// Validator Index -> Pubkey related methods.
-	ValidatorPubKey(validatorID uint64) ([]byte, error)
+	ValidatorPubKey(ctx context.Context, validatorID uint64) ([]byte, error)
 }
 
 // WriteAccessDatabase represents a write access database with only functions that can modify the DB.
 type WriteAccessDatabase interface {
 	// AttesterSlashing related methods.
-	SaveAttesterSlashing(status types.SlashingStatus, slashing *ethpb.AttesterSlashing) error
-	SaveAttesterSlashings(status types.SlashingStatus, slashings []*ethpb.AttesterSlashing) error
-	SetLatestEpochDetected(epoch uint64) error
+	SaveAttesterSlashing(ctx context.Context, status types.SlashingStatus, slashing *ethpb.AttesterSlashing) error
+	SaveAttesterSlashings(ctx context.Context, status types.SlashingStatus, slashings []*ethpb.AttesterSlashing) error
+	SetLatestEpochDetected(ctx context.Context, epoch uint64) error
 
 	// BlockHeader related methods.
-	SaveBlockHeader(epoch uint64, validatorID uint64, blockHeader *ethpb.SignedBeaconBlockHeader) error
-	DeleteBlockHeader(epoch uint64, validatorID uint64, blockHeader *ethpb.SignedBeaconBlockHeader) error
-	PruneBlockHistory(currentEpoch uint64, pruningEpochAge uint64) error
+	SaveBlockHeader(ctx context.Context, epoch uint64, validatorID uint64, blockHeader *ethpb.SignedBeaconBlockHeader) error
+	DeleteBlockHeader(ctx context.Context, epoch uint64, validatorID uint64, blockHeader *ethpb.SignedBeaconBlockHeader) error
+	PruneBlockHistory(ctx context.Context, currentEpoch uint64, pruningEpochAge uint64) error
 
 	// IndexedAttestations related methods.
-	SaveIndexedAttestation(idxAttestation *ethpb.IndexedAttestation) error
-	DeleteIndexedAttestation(idxAttestation *ethpb.IndexedAttestation) error
-	PruneAttHistory(currentEpoch uint64, pruningEpochAge uint64) error
+	SaveIndexedAttestation(ctx context.Context, idxAttestation *ethpb.IndexedAttestation) error
+	DeleteIndexedAttestation(ctx context.Context, idxAttestation *ethpb.IndexedAttestation) error
+	PruneAttHistory(ctx context.Context, currentEpoch uint64, pruningEpochAge uint64) error
 
 	// MinMaxSpan related methods.
-	SaveValidatorSpansMap(validatorIdx uint64, spanMap *slashpb.EpochSpanMap) error
-	SaveCachedSpansMaps() error
-	DeleteValidatorSpanMap(validatorIdx uint64) error
+	SaveValidatorSpansMap(ctx context.Context, validatorIdx uint64, spanMap *slashpb.EpochSpanMap) error
+	SaveCachedSpansMaps(ctx context.Context) error
+	DeleteValidatorSpanMap(ctx context.Context, validatorIdx uint64) error
 
 	// ProposerSlashing related methods.
-	DeleteProposerSlashing(slashing *ethpb.ProposerSlashing) error
-	SaveProposerSlashing(status types.SlashingStatus, slashing *ethpb.ProposerSlashing) error
-	SaveProposerSlashings(status types.SlashingStatus, slashings []*ethpb.ProposerSlashing) error
+	DeleteProposerSlashing(ctx context.Context, slashing *ethpb.ProposerSlashing) error
+	SaveProposerSlashing(ctx context.Context, status types.SlashingStatus, slashing *ethpb.ProposerSlashing) error
+	SaveProposerSlashings(ctx context.Context, status types.SlashingStatus, slashings []*ethpb.ProposerSlashing) error
 
 	// Validator Index -> Pubkey related methods.
-	SavePubKey(validatorID uint64, pubKey []byte) error
-	DeletePubKey(validatorID uint64) error
+	SavePubKey(ctx context.Context, validatorID uint64, pubKey []byte) error
+	DeletePubKey(ctx context.Context, validatorID uint64) error
 }
 
 // FullAccessDatabase represents a full access database with only DB interaction functions.

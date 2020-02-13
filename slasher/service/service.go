@@ -268,12 +268,12 @@ func (s *Service) startBeaconClient() error {
 }
 
 func (s *Service) loadSpanMaps(slasherServer rpc.Server) {
-	latestTargetEpoch, err := slasherServer.SlasherDB.LatestIndexedAttestationsTargetEpoch()
+	latestTargetEpoch, err := slasherServer.SlasherDB.LatestIndexedAttestationsTargetEpoch(s.context)
 	if err != nil {
 		log.Errorf("Could not extract latest target epoch from indexed attestations store: %v", err)
 	}
 	for epoch := uint64(0); epoch < latestTargetEpoch; epoch++ {
-		idxAtts, err := slasherServer.SlasherDB.IdxAttsForTarget(epoch)
+		idxAtts, err := slasherServer.SlasherDB.IdxAttsForTarget(s.context, epoch)
 		if err != nil {
 			log.Errorf("Got error while trying to retrieve indexed attestations from db: %v", err)
 		}
@@ -309,7 +309,7 @@ func (s *Service) Close() {
 	if err := s.Stop(); err != nil {
 		log.Panicf("Could not stop the slasher service: %v", err)
 	}
-	if err := s.slasherDb.SaveCachedSpansMaps(); err != nil {
+	if err := s.slasherDb.SaveCachedSpansMaps(s.context); err != nil {
 		log.Fatal("Didn't save span map cache to db. if span cache is enabled please restart with --%s", flags.RebuildSpanMapsFlag.Name)
 	}
 	if err := s.slasherDb.Close(); err != nil {
