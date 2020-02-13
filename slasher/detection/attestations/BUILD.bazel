@@ -9,7 +9,7 @@ go_library(
         "double_vote.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/slasher/detection/attestations",
-    visibility = ["//visibility:public"],
+    visibility = ["//slasher:__subpackages__"],
     deps = [
         "//proto/slashing:go_default_library",
         "//shared/hashutil:go_default_library",
