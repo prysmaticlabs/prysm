@@ -2,22 +2,22 @@ package rpc
 
 import (
 	"context"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
-	"github.com/prysmaticlabs/prysm/slasher/db/kv"
-	"github.com/prysmaticlabs/prysm/slasher/db/types"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/slasher/db"
+	"github.com/prysmaticlabs/prysm/slasher/db/types"
 )
 
 // Server defines a server implementation of the gRPC Slasher service,
 // providing RPC endpoints for retrieving slashing proofs for malicious validators.
 type Server struct {
-	SlasherDB *kv.Store
+	SlasherDB db.Database
 	ctx       context.Context
 }
 

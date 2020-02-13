@@ -9,6 +9,6 @@ import (
 // SlashingDetector defines a server implementation of the gRPC Slasher service,
 // providing RPC endpoints for retrieving slashing proofs for malicious validators.
 type SlashingDetector struct {
-	SlasherDB *kv.Store
+	SlasherDB db.Database
 	Ctx       context.Context
 }

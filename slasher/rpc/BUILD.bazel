@@ -8,7 +8,7 @@ go_library(
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//proto/slashing:go_default_library",
-        "//slasher/db/kv:go_default_library",
+        "//slasher/db:go_default_library",
         "//slasher/db/types:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

@@ -18,7 +18,6 @@ go_library(
         "//shared/version:go_default_library",
         "//slasher/cache:go_default_library",
         "//slasher/db:go_default_library",
-        "//slasher/db/kv:go_default_library",
         "//slasher/db/types:go_default_library",
         "//slasher/detection/attestations:go_default_library",
         "//slasher/flags:go_default_library",
