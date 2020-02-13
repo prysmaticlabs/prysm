@@ -119,7 +119,7 @@ func (bs *Server) StreamAttestations(
 	for {
 		select {
 		case <-bs.SlotTicker.C():
-			atts := bs.Pool.AggregatedAttestations()
+			atts := bs.AttestationsPool.AggregatedAttestations()
 			for i := 0; i < len(atts); i++ {
 				if err := stream.Send(atts[i]); err != nil {
 					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
