@@ -8,7 +8,8 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
-	"github.com/prysmaticlabs/prysm/slasher/db"
+	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
+	"github.com/prysmaticlabs/prysm/slasher/db/types"
 	"github.com/urfave/cli"
 )
 
@@ -16,11 +17,11 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	c := cli.NewContext(app, set, nil)
-	dbs := db.SetupSlasherDB(t, c)
-	defer db.TeardownSlasherDB(t, dbs)
+	db := testDB.SetupSlasherDB(t, c)
+	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
 	slasherServer := &Server{
-		SlasherDB: dbs,
+		SlasherDB: db,
 	}
 	psr := &slashpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.SignedBeaconBlockHeader{
@@ -68,11 +69,11 @@ func TestServer_IsNotSlashableBlock(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	c := cli.NewContext(app, set, nil)
-	dbs := db.SetupSlasherDB(t, c)
-	defer db.TeardownSlasherDB(t, dbs)
+	db := testDB.SetupSlasherDB(t, c)
+	defer testDB.TeardownSlasherDB(t, db)
 
 	slasherServer := &Server{
-		SlasherDB: dbs,
+		SlasherDB: db,
 	}
 	psr := &slashpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.SignedBeaconBlockHeader{
@@ -112,12 +113,12 @@ func TestServer_DoubleBlock(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	c := cli.NewContext(app, set, nil)
-	dbs := db.SetupSlasherDB(t, c)
-	defer db.TeardownSlasherDB(t, dbs)
+	db := testDB.SetupSlasherDB(t, c)
+	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
 	slasherServer := &Server{
 		ctx:       ctx,
-		SlasherDB: dbs,
+		SlasherDB: db,
 	}
 	psr := &slashpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.SignedBeaconBlockHeader{
@@ -147,12 +148,12 @@ func TestServer_SameSlotSlashable(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	c := cli.NewContext(app, set, nil)
-	dbs := db.SetupSlasherDB(t, c)
-	defer db.TeardownSlasherDB(t, dbs)
+	db := testDB.SetupSlasherDB(t, c)
+	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
 	slasherServer := &Server{
 		ctx:       ctx,
-		SlasherDB: dbs,
+		SlasherDB: db,
 	}
 	psr := &slashpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.SignedBeaconBlockHeader{
@@ -193,7 +194,7 @@ func TestServer_SameSlotSlashable(t *testing.T) {
 		t.Errorf("wanted slashing proof: %v got: %v", want, sr.ProposerSlashing[0])
 
 	}
-	if err := slasherServer.SlasherDB.SaveProposerSlashing(db.Active, sr.ProposerSlashing[0]); err != nil {
+	if err := slasherServer.SlasherDB.SaveProposerSlashing(types.Active, sr.ProposerSlashing[0]); err != nil {
 		t.Errorf("Could not call db method: %v", err)
 	}
 	if sr, err = slasherServer.ProposerSlashings(ctx, &slashpb.SlashingStatusRequest{Status: slashpb.SlashingStatusRequest_Active}); err != nil {
@@ -204,7 +205,7 @@ func TestServer_SameSlotSlashable(t *testing.T) {
 		t.Errorf("Could not call RPC method: %v", err)
 	}
 	if len(ar.AttesterSlashing) > 0 {
-		t.Errorf("Attester slashings with status 'active' should not be present in db.")
+		t.Errorf("Attester slashings with status 'active' should not be present in testDB.")
 	}
 	emptySlashingResponse, err := slasherServer.ProposerSlashings(ctx, &slashpb.SlashingStatusRequest{Status: slashpb.SlashingStatusRequest_Included})
 	if err != nil {

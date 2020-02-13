@@ -1,4 +1,4 @@
-package db
+package kv
 
 import (
 	"flag"
@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/slasher/db/types"
 	"github.com/urfave/cli"
 )
 
@@ -14,8 +15,8 @@ func TestStore_AttesterSlashingNilBucket(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, ctx)
+	defer teardownDB(t, db)
 	as := &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("hello")}}
 	has, _, err := db.HasAttesterSlashing(as)
 	if err != nil {
@@ -25,7 +26,7 @@ func TestStore_AttesterSlashingNilBucket(t *testing.T) {
 		t.Fatal("HasAttesterSlashing should return false")
 	}
 
-	p, err := db.AttesterSlashings(SlashingStatus(Active))
+	p, err := db.AttesterSlashings(types.SlashingStatus(types.Active))
 	if err != nil {
 		t.Fatalf("Failed to get attester slashing: %v", err)
 	}
@@ -38,22 +39,22 @@ func TestStore_SaveAttesterSlashing(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, ctx)
+	defer teardownDB(t, db)
 	tests := []struct {
-		ss SlashingStatus
+		ss types.SlashingStatus
 		as *ethpb.AttesterSlashing
 	}{
 		{
-			ss: Active,
+			ss: types.Active,
 			as: &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("hello")}},
 		},
 		{
-			ss: Included,
+			ss: types.Included,
 			as: &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("hello2")}},
 		},
 		{
-			ss: Reverted,
+			ss: types.Reverted,
 			as: &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("hello3")}},
 		},
 	}
@@ -80,18 +81,18 @@ func TestStore_SaveAttesterSlashings(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, ctx)
+	defer teardownDB(t, db)
 	as := []*ethpb.AttesterSlashing{
 		{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("1")}},
 		{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("2")}},
 		{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("3")}},
 	}
-	err := db.SaveAttesterSlashings(Active, as)
+	err := db.SaveAttesterSlashings(types.Active, as)
 	if err != nil {
 		t.Fatalf("save attester slashing failed: %v", err)
 	}
-	attesterSlashings, err := db.AttesterSlashings(Active)
+	attesterSlashings, err := db.AttesterSlashings(types.Active)
 	if err != nil {
 		t.Fatalf("failed to get attester slashings: %v", err)
 	}
@@ -107,22 +108,22 @@ func TestStore_UpdateAttesterSlashingStatus(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, ctx)
+	defer teardownDB(t, db)
 	tests := []struct {
-		ss SlashingStatus
+		ss types.SlashingStatus
 		as *ethpb.AttesterSlashing
 	}{
 		{
-			ss: Active,
+			ss: types.Active,
 			as: &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("hello")}},
 		},
 		{
-			ss: Active,
+			ss: types.Active,
 			as: &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("hello2")}},
 		},
 		{
-			ss: Active,
+			ss: types.Active,
 			as: &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("hello3")}},
 		},
 	}
@@ -146,7 +147,7 @@ func TestStore_UpdateAttesterSlashingStatus(t *testing.T) {
 			t.Fatalf("Failed to find attester slashing with the correct status: %v", tt.as)
 		}
 
-		err = db.SaveAttesterSlashing(SlashingStatus(Included), tt.as)
+		err = db.SaveAttesterSlashing(types.SlashingStatus(types.Included), tt.as)
 		has, st, err = db.HasAttesterSlashing(tt.as)
 		if err != nil {
 			t.Fatalf("Failed to get attester slashing: %v", err)
@@ -154,7 +155,7 @@ func TestStore_UpdateAttesterSlashingStatus(t *testing.T) {
 		if !has {
 			t.Fatalf("Failed to find attester slashing: %v", tt.as)
 		}
-		if st != Included {
+		if st != types.Included {
 			t.Fatalf("Failed to find attester slashing with the correct status: %v", tt.as)
 		}
 
@@ -166,8 +167,8 @@ func TestStore_LatestEpochDetected(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, ctx)
+	defer teardownDB(t, db)
 	e, err := db.GetLatestEpochDetected()
 	if err != nil {
 		t.Fatalf("Get latest epoch detected failed: %v", err)

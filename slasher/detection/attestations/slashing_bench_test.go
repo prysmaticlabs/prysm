@@ -9,7 +9,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/slasher/db"
+	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	"github.com/prysmaticlabs/prysm/slasher/detection"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/urfave/cli"
@@ -28,8 +28,8 @@ func BenchmarkMinSpan(b *testing.B) {
 	set := flag.NewFlagSet("test", 0)
 	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
 	ctx := cli.NewContext(app, set, nil)
-	dbs := db.SetupSlasherDB(b, ctx)
-	defer db.TeardownSlasherDB(b, dbs)
+	dbs := testDB.SetupSlasherDB(b, ctx)
+	defer testDB.TeardownSlasherDB(b, dbs)
 
 	context := context.Background()
 	detector := AttDetector{&detection.SlashingDetector{
@@ -57,12 +57,12 @@ func BenchmarkMaxSpan(b *testing.B) {
 	set := flag.NewFlagSet("test", 0)
 	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
 	ctx := cli.NewContext(app, set, nil)
-	dbs := db.SetupSlasherDB(b, ctx)
-	defer db.TeardownSlasherDB(b, dbs)
+	db := testDB.SetupSlasherDB(b, ctx)
+	defer testDB.TeardownSlasherDB(b, db)
 
 	context := context.Background()
 	detector := AttDetector{&detection.SlashingDetector{
-		SlasherDB: dbs,
+		SlasherDB: db,
 	}}
 	for _, diff := range diffs {
 		b.Run(fmt.Sprintf("MaxSpan_diff_%d", diff), func(ib *testing.B) {
@@ -86,11 +86,11 @@ func BenchmarkDetectSpan(b *testing.B) {
 	set := flag.NewFlagSet("test", 0)
 	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
 	ctx := cli.NewContext(app, set, nil)
-	dbs := db.SetupSlasherDB(b, ctx)
-	defer db.TeardownSlasherDB(b, dbs)
+	db := testDB.SetupSlasherDB(b, ctx)
+	defer testDB.TeardownSlasherDB(b, db)
 
 	detector := AttDetector{&detection.SlashingDetector{
-		SlasherDB: dbs,
+		SlasherDB: db,
 	}}
 	for _, diff := range diffs {
 		b.Run(fmt.Sprintf("Detect_MaxSpan_diff_%d", diff), func(ib *testing.B) {
@@ -127,8 +127,8 @@ func BenchmarkCheckAttestations(b *testing.B) {
 	set := flag.NewFlagSet("test", 0)
 	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
 	ctx := cli.NewContext(app, set, nil)
-	dbs := db.SetupSlasherDB(b, ctx)
-	defer db.TeardownSlasherDB(b, dbs)
+	dbs := testDB.SetupSlasherDB(b, ctx)
+	defer testDB.TeardownSlasherDB(b, dbs)
 	context := context.Background()
 	detector := AttDetector{&detection.SlashingDetector{
 		Ctx:       context,

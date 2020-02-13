@@ -303,7 +303,7 @@ func (mr *MockBeaconChain_StreamBlocksServerMockRecorder) RecvMsg(arg0 interface
 }
 
 // Send mocks base method
-func (m *MockBeaconChain_StreamBlocksServer) Send(arg0 *v1alpha1.BeaconBlock) error {
+func (m *MockBeaconChain_StreamBlocksServer) Send(arg0 *v1alpha1.SignedBeaconBlock) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Send", arg0)
 	ret0, _ := ret[0].(error)
