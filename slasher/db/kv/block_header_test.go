@@ -1,4 +1,4 @@
-package db
+package kv
 
 import (
 	"flag"
@@ -13,8 +13,8 @@ func TestNilDBHistoryBlkHdr(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, ctx)
+	defer teardownDB(t, db)
 
 	epoch := uint64(1)
 	validatorID := uint64(1)
@@ -37,8 +37,8 @@ func TestSaveHistoryBlkHdr(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, ctx)
+	defer teardownDB(t, db)
 	tests := []struct {
 		epoch uint64
 		vID   uint64
@@ -83,8 +83,8 @@ func TestDeleteHistoryBlkHdr(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, ctx)
+	defer teardownDB(t, db)
 	tests := []struct {
 		epoch uint64
 		vID   uint64
@@ -144,8 +144,8 @@ func TestHasHistoryBlkHdr(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, ctx)
+	defer teardownDB(t, db)
 	tests := []struct {
 		epoch uint64
 		vID   uint64
@@ -196,8 +196,8 @@ func TestPruneHistoryBlkHdr(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, ctx)
+	defer teardownDB(t, db)
 	tests := []struct {
 		epoch uint64
 		vID   uint64
@@ -247,7 +247,7 @@ func TestPruneHistoryBlkHdr(t *testing.T) {
 	}
 	currentEpoch := uint64(3)
 	historyToKeep := uint64(2)
-	err := db.pruneBlockHistory(currentEpoch, historyToKeep)
+	err := db.PruneBlockHistory(currentEpoch, historyToKeep)
 	if err != nil {
 		t.Fatalf("failed to prune: %v", err)
 	}
