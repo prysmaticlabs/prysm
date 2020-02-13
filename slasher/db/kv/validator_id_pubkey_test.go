@@ -1,7 +1,8 @@
-package db
+package kv
 
 import (
 	"bytes"
+	"context"
 	"flag"
 	"testing"
 
@@ -35,13 +36,13 @@ func init() {
 func TestNilDBValidatorPublicKey(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, cli.NewContext(app, set, nil))
+	defer teardownDB(t, db)
+	ctx := context.Background()
 
 	validatorID := uint64(1)
 
-	pk, err := db.ValidatorPubKey(validatorID)
+	pk, err := db.ValidatorPubKey(ctx, validatorID)
 	if err != nil {
 		t.Fatal("nil ValidatorPubKey should not return error")
 	}
@@ -54,17 +55,17 @@ func TestNilDBValidatorPublicKey(t *testing.T) {
 func TestSavePubKey(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, cli.NewContext(app, set, nil))
+	defer teardownDB(t, db)
+	ctx := context.Background()
 
 	for _, tt := range pkTests {
-		err := db.SavePubKey(tt.validatorID, tt.pk)
+		err := db.SavePubKey(ctx, tt.validatorID, tt.pk)
 		if err != nil {
 			t.Fatalf("save validator public key failed: %v", err)
 		}
 
-		pk, err := db.ValidatorPubKey(tt.validatorID)
+		pk, err := db.ValidatorPubKey(ctx, tt.validatorID)
 		if err != nil {
 			t.Fatalf("failed to get validator public key: %v", err)
 		}
@@ -79,20 +80,20 @@ func TestSavePubKey(t *testing.T) {
 func TestDeletePublicKey(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	ctx := cli.NewContext(app, set, nil)
-	db := SetupSlasherDB(t, ctx)
-	defer TeardownSlasherDB(t, db)
+	db := setupDB(t, cli.NewContext(app, set, nil))
+	defer teardownDB(t, db)
+	ctx := context.Background()
 
 	for _, tt := range pkTests {
 
-		err := db.SavePubKey(tt.validatorID, tt.pk)
+		err := db.SavePubKey(ctx, tt.validatorID, tt.pk)
 		if err != nil {
 			t.Fatalf("save validator public key failed: %v", err)
 		}
 	}
 
 	for _, tt := range pkTests {
-		pk, err := db.ValidatorPubKey(tt.validatorID)
+		pk, err := db.ValidatorPubKey(ctx, tt.validatorID)
 		if err != nil {
 			t.Fatalf("failed to get validator public key: %v", err)
 		}
@@ -100,11 +101,11 @@ func TestDeletePublicKey(t *testing.T) {
 		if pk == nil || !bytes.Equal(pk, tt.pk) {
 			t.Fatalf("get should return validator public key: %v", pk)
 		}
-		err = db.DeletePubKey(tt.validatorID)
+		err = db.DeletePubKey(ctx, tt.validatorID)
 		if err != nil {
 			t.Fatalf("delete validator public key: %v", err)
 		}
-		pk, err = db.ValidatorPubKey(tt.validatorID)
+		pk, err = db.ValidatorPubKey(ctx, tt.validatorID)
 		if err != nil {
 			t.Fatal(err)
 		}

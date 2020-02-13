@@ -6,13 +6,12 @@ package mock
 
 import (
 	context "context"
-	reflect "reflect"
-
 	empty "github.com/gogo/protobuf/types"
 	gomock "github.com/golang/mock/gomock"
 	v1alpha1 "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	grpc "google.golang.org/grpc"
 	metadata "google.golang.org/grpc/metadata"
+	reflect "reflect"
 )
 
 // MockBeaconChainClient is a mock of BeaconChainClient interface
@@ -39,7 +38,7 @@ func (m *MockBeaconChainClient) EXPECT() *MockBeaconChainClientMockRecorder {
 }
 
 // AttestationPool mocks base method
-func (m *MockBeaconChainClient) AttestationPool(arg0 context.Context, arg1 *empty.Empty, arg2 ...grpc.CallOption) (*v1alpha1.AttestationPoolResponse, error) {
+func (m *MockBeaconChainClient) AttestationPool(arg0 context.Context, arg1 *v1alpha1.AttestationPoolRequest, arg2 ...grpc.CallOption) (*v1alpha1.AttestationPoolResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -588,10 +587,10 @@ func (mr *MockBeaconChain_StreamBlocksClientMockRecorder) Header() *gomock.Call 
 }
 
 // Recv mocks base method
-func (m *MockBeaconChain_StreamBlocksClient) Recv() (*v1alpha1.BeaconBlock, error) {
+func (m *MockBeaconChain_StreamBlocksClient) Recv() (*v1alpha1.SignedBeaconBlock, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Recv")
-	ret0, _ := ret[0].(*v1alpha1.BeaconBlock)
+	ret0, _ := ret[0].(*v1alpha1.SignedBeaconBlock)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

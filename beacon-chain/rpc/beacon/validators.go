@@ -581,51 +581,51 @@ func (bs *Server) GetValidatorQueue(
 func (bs *Server) GetValidatorPerformance(
 	ctx context.Context, req *ethpb.ValidatorPerformanceRequest,
 ) (*ethpb.ValidatorPerformanceResponse, error) {
-	headState, err := bs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get head state")
-	}
 
-	// Advance state with empty transitions up to the requested epoch start slot.
-	if req.Slot > headState.Slot() {
-		headState, err = state.ProcessSlots(ctx, headState, req.Slot)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
-		}
-	}
+	validatorSummary := state.ValidatorSummary
 
-	balances := make([]uint64, len(req.PublicKeys))
+	beforeTransitionBalances := make([]uint64, 0)
+	afterTransitionBalances := make([]uint64, 0)
+	effectiveBalances := make([]uint64, 0)
+	inclusionSlots := make([]uint64, 0)
+	inclusionDistances := make([]uint64, 0)
+	correctlyVotedSource := make([]bool, 0)
+	correctlyVotedTarget := make([]bool, 0)
+	correctlyVotedHead := make([]bool, 0)
 	missingValidators := make([][]byte, 0)
-	for i, key := range req.PublicKeys {
-		index, ok, err := bs.BeaconDB.ValidatorIndex(ctx, key)
-		if err != nil || !ok {
+
+	// Convert the list of validator public keys to list of validator indices.
+	// Also track missing validators using public keys.
+	for _, key := range req.PublicKeys {
+		idx, ok, err := bs.BeaconDB.ValidatorIndex(ctx, key)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not fetch validator idx for public key %#x: %v", key, err)
+		}
+		if !ok {
 			missingValidators = append(missingValidators, key)
-			balances[i] = 0
 			continue
 		}
-		balances[i], err = headState.BalanceAtIndex(index)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get balance at index %d", i)
-		}
+
+		effectiveBalances = append(effectiveBalances, validatorSummary[idx].CurrentEpochEffectiveBalance)
+		beforeTransitionBalances = append(beforeTransitionBalances, validatorSummary[idx].BeforeEpochTransitionBalance)
+		afterTransitionBalances = append(afterTransitionBalances, validatorSummary[idx].AfterEpochTransitionBalance)
+		inclusionSlots = append(inclusionSlots, validatorSummary[idx].InclusionSlot)
+		inclusionDistances = append(inclusionDistances, validatorSummary[idx].InclusionDistance)
+		correctlyVotedSource = append(correctlyVotedSource, validatorSummary[idx].IsPrevEpochAttester)
+		correctlyVotedTarget = append(correctlyVotedTarget, validatorSummary[idx].IsPrevEpochTargetAttester)
+		correctlyVotedHead = append(correctlyVotedHead, validatorSummary[idx].IsPrevEpochHeadAttester)
 	}
 
-	activeCount, err := helpers.ActiveValidatorCount(headState, helpers.SlotToEpoch(req.Slot))
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not retrieve active validator count: %v", err)
-	}
-
-	totalActiveBalance, err := helpers.TotalActiveBalance(headState)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not retrieve total active balance: %v", err)
-	}
-
-	avgBalance := float32(totalActiveBalance / activeCount)
 	return &ethpb.ValidatorPerformanceResponse{
-		Balances:                      balances,
-		AverageActiveValidatorBalance: avgBalance,
+		InclusionSlots:                inclusionSlots,
+		InclusionDistances:            inclusionDistances,
+		CorrectlyVotedSource:          correctlyVotedSource,
+		CorrectlyVotedTarget:          correctlyVotedTarget,
+		CorrectlyVotedHead:            correctlyVotedHead,
+		CurrentEffectiveBalances:      effectiveBalances,
+		BalancesBeforeEpochTransition: beforeTransitionBalances,
+		BalancesAfterEpochTransition:  afterTransitionBalances,
 		MissingValidators:             missingValidators,
-		TotalValidators:               uint64(headState.NumValidators()),
-		TotalActiveValidators:         activeCount,
 	}, nil
 }
 

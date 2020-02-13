@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"encoding/hex"
+	"sync"
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -23,8 +24,13 @@ var processPendingAttsPeriod = time.Duration(params.BeaconConfig().SecondsPerSlo
 // This processes pending attestation queues on every `processPendingAttsPeriod`.
 func (s *Service) processPendingAttsQueue() {
 	ctx := context.Background()
+	mutex := new(sync.Mutex)
 	runutil.RunEvery(s.ctx, processPendingAttsPeriod, func() {
-		s.processPendingAtts(ctx)
+		mutex.Lock()
+		if err := s.processPendingAtts(ctx); err != nil {
+			log.WithError(err).Errorf("Could not process pending attestation: %v", err)
+		}
+		mutex.Unlock()
 	})
 }
 
@@ -43,7 +49,17 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 	// be deleted from the queue if invalid (ie. getting staled from falling too many slots behind).
 	s.validatePendingAtts(ctx, s.chain.CurrentSlot())
 
-	for bRoot, attestations := range s.blkRootToPendingAtts {
+	roots := make([][32]byte, 0, len(s.blkRootToPendingAtts))
+	s.pendingAttsLock.RLock()
+	for br := range s.blkRootToPendingAtts {
+		roots = append(roots, br)
+	}
+	s.pendingAttsLock.RUnlock()
+
+	for _, bRoot := range roots {
+		s.pendingAttsLock.RLock()
+		attestations := s.blkRootToPendingAtts[bRoot]
+		s.pendingAttsLock.RUnlock()
 		// Has the pending attestation's missing block arrived yet?
 		if s.db.HasBlock(ctx, bRoot) {
 			numberOfBlocksRecoveredFromAtt.Inc()
@@ -53,7 +69,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 				if helpers.IsAggregated(att.Aggregate) {
 					// Save the pending aggregated attestation to the pool if it passes the aggregated
 					// validation steps.
-					if s.validateAggregatedAtt(ctx, att) {
+					if s.validateBlockInAttestation(ctx, att) && s.validateAggregatedAtt(ctx, att) {
 						if err := s.attPool.SaveAggregatedAttestation(att.Aggregate); err != nil {
 							return err
 						}
@@ -87,7 +103,9 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 			}).Info("Verified and saved pending attestations to pool")
 
 			// Delete the missing block root key from pending attestation queue so a node will not request for the block again.
+			s.pendingAttsLock.Lock()
 			delete(s.blkRootToPendingAtts, bRoot)
+			s.pendingAttsLock.Unlock()
 		} else {
 			// Pending attestation's missing block has not arrived yet.
 			log.WithFields(logrus.Fields{
@@ -122,11 +140,10 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 // root of the missing block. The value is the list of pending attestations
 // that voted for that block root.
 func (s *Service) savePendingAtt(att *ethpb.AggregateAttestationAndProof) {
-	s.pendingAttsLock.Lock()
-	defer s.pendingAttsLock.Unlock()
-
 	root := bytesutil.ToBytes32(att.Aggregate.Data.BeaconBlockRoot)
 
+	s.pendingAttsLock.Lock()
+	defer s.pendingAttsLock.Unlock()
 	_, ok := s.blkRootToPendingAtts[root]
 	if !ok {
 		s.blkRootToPendingAtts[root] = []*ethpb.AggregateAttestationAndProof{att}
@@ -141,11 +158,11 @@ func (s *Service) savePendingAtt(att *ethpb.AggregateAttestationAndProof) {
 // check specifies the pending attestation could not fall one epoch behind
 // of the current slot.
 func (s *Service) validatePendingAtts(ctx context.Context, slot uint64) {
-	s.pendingAttsLock.Lock()
-	defer s.pendingAttsLock.Unlock()
-
 	ctx, span := trace.StartSpan(ctx, "validatePendingAtts")
 	defer span.End()
+
+	s.pendingAttsLock.Lock()
+	defer s.pendingAttsLock.Unlock()
 
 	for bRoot, atts := range s.blkRootToPendingAtts {
 		for i := len(atts) - 1; i >= 0; i-- {

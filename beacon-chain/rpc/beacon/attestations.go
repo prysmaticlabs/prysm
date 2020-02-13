@@ -143,10 +143,32 @@ func (bs *Server) StreamAttestations(
 // attestations are processed and when they are no longer valid.
 // https://github.com/ethereum/eth2.0-specs/blob/dev/specs/core/0_beacon-chain.md#attestations
 func (bs *Server) AttestationPool(
-	ctx context.Context, _ *ptypes.Empty,
+	ctx context.Context, req *ethpb.AttestationPoolRequest,
 ) (*ethpb.AttestationPoolResponse, error) {
+	if int(req.PageSize) > flags.Get().MaxPageSize {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"Requested page size %d can not be greater than max size %d",
+			req.PageSize,
+			flags.Get().MaxPageSize,
+		)
+	}
 	atts := bs.Pool.AggregatedAttestations()
+	numAtts := len(atts)
+	if numAtts == 0 {
+		return &ethpb.AttestationPoolResponse{
+			Attestations:  make([]*ethpb.Attestation, 0),
+			TotalSize:     int32(0),
+			NextPageToken: strconv.Itoa(0),
+		}, nil
+	}
+	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numAtts)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not paginate attestations: %v", err)
+	}
 	return &ethpb.AttestationPoolResponse{
-		Attestations: atts,
+		Attestations:  atts[start:end],
+		TotalSize:     int32(numAtts),
+		NextPageToken: nextPageToken,
 	}, nil
 }
