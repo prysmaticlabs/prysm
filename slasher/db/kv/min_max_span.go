@@ -14,6 +14,7 @@ import (
 var highestValidatorIdx uint64
 
 func saveToDB(db *Store) func(uint64, uint64, interface{}, int64) {
+	// Returning the function here so we can access the DB properly from the OnEvict.
 	return func(validatorIdx uint64, _ uint64, value interface{}, cost int64) {
 		log.Tracef("evicting span map for validator id: %d", validatorIdx)
 		err := db.batch(func(tx *bolt.Tx) error {
