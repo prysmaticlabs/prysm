@@ -7,10 +7,10 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/slasher/detection"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/slasher/db"
+	"github.com/prysmaticlabs/prysm/slasher/detection"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/urfave/cli"
 )
@@ -71,7 +71,7 @@ func BenchmarkMaxSpan(b *testing.B) {
 				if err != nil {
 					b.Fatal(err)
 				}
-				_, _, err = detector.DetectSurroundAttestation(context, diff, diff+i, i%10, spanMap)
+				_, _, err = detector.DetectSurroundingAttestation(context, diff, diff+i, i%10, spanMap)
 				if err != nil {
 					b.Fatal(err)
 				}

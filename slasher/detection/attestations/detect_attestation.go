@@ -95,7 +95,7 @@ func (d *AttDetector) UpdateSpanMaps(ctx context.Context, req *ethpb.IndexedAtte
 				wg.Done()
 				return
 			}
-			_, spanMap, err = d.DetectSurroundAttestation(ctx, req.Data.Source.Epoch, req.Data.Target.Epoch, i, spanMap)
+			_, spanMap, err = d.DetectSurroundingAttestation(ctx, req.Data.Source.Epoch, req.Data.Target.Epoch, i, spanMap)
 			if err != nil {
 				er <- err
 				wg.Done()

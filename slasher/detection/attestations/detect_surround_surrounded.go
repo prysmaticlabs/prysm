@@ -85,14 +85,14 @@ func (d *AttDetector) DetectSurroundedAttestations(
 	return 0, spanMap, nil
 }
 
-// DetectSurroundAttestation is used to detect surrounded votes and update the min epoch span
+// DetectSurroundingAttestation is used to detect surrounded votes and update the min epoch span
 // of an incoming attestation.
 // The min span is the span between the current attestations target epoch and the
 // closest attestation's target distance.
 //
 // Logic is following the detection method designed by https://github.com/protolambda
 // Detailed here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
-func (d *AttDetector) DetectSurroundAttestation(
+func (d *AttDetector) DetectSurroundingAttestation(
 	ctx context.Context,
 	source uint64,
 	target uint64,
@@ -161,7 +161,7 @@ func (d *AttDetector) DetectSurroundVotes(ctx context.Context, validatorIdx uint
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get validator spans map")
 	}
-	minTargetEpoch, spanMap, err := d.DetectSurroundAttestation(ctx, req.Data.Source.Epoch, req.Data.Target.Epoch, validatorIdx, spanMap)
+	minTargetEpoch, spanMap, err := d.DetectSurroundingAttestation(ctx, req.Data.Source.Epoch, req.Data.Target.Epoch, validatorIdx, spanMap)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to update min spans")
 	}

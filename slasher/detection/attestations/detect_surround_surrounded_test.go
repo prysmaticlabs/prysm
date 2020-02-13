@@ -247,7 +247,7 @@ func TestServer_UpdateMinEpochSpan(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		st, spanMap, err := detector.DetectSurroundAttestation(ctx, tt.sourceEpoch, tt.targetEpoch, tt.validatorIdx, spanMap)
+		st, spanMap, err := detector.DetectSurroundingAttestation(ctx, tt.sourceEpoch, tt.targetEpoch, tt.validatorIdx, spanMap)
 		if err != nil {
 			t.Fatalf("Failed to update span: %v", err)
 		}
@@ -293,7 +293,7 @@ func TestServer_FailToUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := detector.DetectSurroundAttestation(ctx, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch, spanTestsFail.validatorIdx, spanMap); err == nil {
+	if _, _, err := detector.DetectSurroundingAttestation(ctx, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch, spanTestsFail.validatorIdx, spanMap); err == nil {
 		t.Fatalf("Update should not support diff greater then weak subjectivity period: %v ", params.BeaconConfig().WeakSubjectivityPeriod)
 	}
 	if _, _, err := detector.DetectSurroundedAttestations(ctx, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch, spanTestsFail.validatorIdx, spanMap); err == nil {
