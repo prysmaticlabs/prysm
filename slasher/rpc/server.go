@@ -2,6 +2,10 @@ package rpc
 
 import (
 	"context"
+	"fmt"
+	"sync"
+
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
@@ -16,6 +20,70 @@ import (
 type Server struct {
 	SlasherDB *db.Store
 	ctx       context.Context
+}
+
+// IsSlashableAttestation returns an attester slashing if the attestation submitted
+// is a slashable vote.
+func (ss *Server) IsSlashableAttestation(ctx context.Context, req *ethpb.IndexedAttestation) (*slashpb.AttesterSlashingResponse, error) {
+	//TODO(#3133): add signature validation
+	if req.Data == nil {
+		return nil, fmt.Errorf("cant hash nil data in indexed attestation")
+	}
+	if err := ss.SlasherDB.SaveIndexedAttestation(req); err != nil {
+		return nil, err
+	}
+	indices := req.AttestingIndices
+	root, err := hashutil.HashProto(req.Data)
+	if err != nil {
+		return nil, err
+	}
+	attSlashingResp := &slashpb.AttesterSlashingResponse{}
+	attSlashings := make(chan []*ethpb.AttesterSlashing, len(indices))
+	errorChans := make(chan error, len(indices))
+	var wg sync.WaitGroup
+	lastIdx := int64(-1)
+	for _, idx := range indices {
+		if int64(idx) <= lastIdx {
+			return nil, fmt.Errorf("indexed attestation contains repeated or non sorted ids")
+		}
+		wg.Add(1)
+		go func(idx uint64, root [32]byte, req *ethpb.IndexedAttestation) {
+			atts, err := ss.SlasherDB.DoubleVotes(idx, root[:], req)
+			if err != nil {
+				errorChans <- err
+				wg.Done()
+				return
+			}
+			if atts != nil && len(atts) > 0 {
+				attSlashings <- atts
+			}
+			atts, err = ss.DetectSurroundVotes(ctx, idx, req)
+			if err != nil {
+				errorChans <- err
+				wg.Done()
+				return
+			}
+			if atts != nil && len(atts) > 0 {
+				attSlashings <- atts
+			}
+			wg.Done()
+			return
+		}(idx, root, req)
+	}
+	wg.Wait()
+	close(errorChans)
+	close(attSlashings)
+	for e := range errorChans {
+		if err != nil {
+			err = fmt.Errorf(err.Error() + " : " + e.Error())
+			continue
+		}
+		err = e
+	}
+	for atts := range attSlashings {
+		attSlashingResp.AttesterSlashing = append(attSlashingResp.AttesterSlashing, atts...)
+	}
+	return attSlashingResp, err
 }
 
 // IsSlashableBlock returns a proposer slashing if the block header submitted is

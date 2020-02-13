@@ -5,6 +5,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"os/signal"
 	"path"
@@ -12,10 +13,12 @@ import (
 	"syscall"
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/version"
@@ -29,6 +32,7 @@ import (
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/reflection"
 )
 
 var log logrus.FieldLogger
@@ -44,10 +48,13 @@ func init() {
 // Service defining an RPC server for the slasher service.
 type Service struct {
 	slasherDb       *db.Store
+	grpcServer      *grpc.Server
+	slasher         *rpc.Server
 	attDetector     *attestations.AttDetector
 	port            int
 	withCert        string
 	withKey         string
+	listener        net.Listener
 	credentialError error
 	failStatus      error
 	ctx             *cli.Context
@@ -87,6 +94,9 @@ func NewRPCService(cfg *Config, ctx *cli.Context) (*Service, error) {
 	if err := s.startDB(s.ctx); err != nil {
 		return nil, err
 	}
+	s.slasher = &rpc.Server{
+		SlasherDB: s.slasherDb,
+	}
 	return s, nil
 }
 
@@ -120,6 +130,7 @@ func (s *Service) Start() {
 		"version": version.GetVersion(),
 	}).Info("Starting hash slinging slasher node")
 	s.context = context.Background()
+	s.startSlasher()
 	if s.beaconClient == nil {
 		if err := s.startBeaconClient(); err != nil {
 			log.WithError(err).Errorf("failed to start beacon client")
@@ -170,7 +181,56 @@ func (s *Service) Start() {
 }
 
 func (s *Service) startSlasher() {
+	log.Info("Starting service on port: ", s.port)
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", s.port))
+	if err != nil {
+		log.Errorf("Could not listen to port in Start() :%d: %v", s.port, err)
+	}
+	s.listener = lis
+	log.WithField("port", s.port).Info("Listening on port")
 
+	opts := []grpc.ServerOption{
+		grpc.StatsHandler(&ocgrpc.ServerHandler{}),
+		grpc.StreamInterceptor(middleware.ChainStreamServer(
+			recovery.StreamServerInterceptor(),
+			grpc_prometheus.StreamServerInterceptor,
+		)),
+		grpc.UnaryInterceptor(middleware.ChainUnaryServer(
+			recovery.UnaryServerInterceptor(),
+			grpc_prometheus.UnaryServerInterceptor,
+		)),
+	}
+	// TODO(#791): Utilize a certificate for secure connections
+	// between beacon nodes and validator clients.
+	if s.withCert != "" && s.withKey != "" {
+		creds, err := credentials.NewServerTLSFromFile(s.withCert, s.withKey)
+		if err != nil {
+			log.Errorf("Could not load TLS keys: %s", err)
+			s.credentialError = err
+		}
+		opts = append(opts, grpc.Creds(creds))
+	} else {
+		log.Warn("You are using an insecure gRPC connection! Provide a certificate and key to connect securely")
+	}
+	s.grpcServer = grpc.NewServer(opts...)
+	slasherServer := rpc.Server{
+		SlasherDB: s.slasherDb,
+	}
+	if s.ctx.GlobalBool(flags.RebuildSpanMapsFlag.Name) {
+		s.loadSpanMaps(slasherServer)
+	}
+	slashpb.RegisterSlasherServer(s.grpcServer, &slasherServer)
+
+	// Register reflection service on gRPC server.
+	reflection.Register(s.grpcServer)
+
+	go func() {
+		if s.listener != nil {
+			if err := s.grpcServer.Serve(s.listener); err != nil {
+				log.Errorf("Could not serve gRPC: %v", err)
+			}
+		}
+	}()
 }
 
 func (s *Service) startBeaconClient() error {
@@ -219,7 +279,7 @@ func (s *Service) loadSpanMaps(slasherServer rpc.Server) {
 			log.Errorf("Got error while trying to retrieve indexed attestations from db: %v", err)
 		}
 		for _, ia := range idxAtts {
-			if err := slasherServer.UpdateSpanMaps(s.context, ia); err != nil {
+			if err := s.attDetector.UpdateSpanMaps(s.context, ia); err != nil {
 				log.Errorf("Unexpected error updating span maps: %v", err)
 			}
 		}
@@ -234,6 +294,10 @@ func (s *Service) Stop() error {
 		if err := s.slasherDb.Close(); err != nil {
 			return err
 		}
+	}
+	if s.listener != nil {
+		s.grpcServer.GracefulStop()
+		log.Debug("Initiated graceful stop of gRPC server")
 	}
 	return nil
 }
