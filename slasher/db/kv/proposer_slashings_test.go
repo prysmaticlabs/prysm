@@ -1,6 +1,7 @@
 package kv
 
 import (
+	"context"
 	"flag"
 	"reflect"
 	"sort"
@@ -14,11 +15,12 @@ import (
 func TestStore_ProposerSlashingNilBucket(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	ctx := cli.NewContext(app, set, nil)
-	db := setupDB(t, ctx)
+	db := setupDB(t, cli.NewContext(app, set, nil))
 	defer teardownDB(t, db)
+	ctx := context.Background()
+
 	ps := &ethpb.ProposerSlashing{ProposerIndex: 1}
-	has, _, err := db.HasProposerSlashing(ps)
+	has, _, err := db.HasProposerSlashing(ctx, ps)
 	if err != nil {
 		t.Fatalf("HasProposerSlashing should not return error: %v", err)
 	}
@@ -26,7 +28,7 @@ func TestStore_ProposerSlashingNilBucket(t *testing.T) {
 		t.Fatal("HasProposerSlashing should return false")
 	}
 
-	p, err := db.ProposalSlashingsByStatus(types.SlashingStatus(types.Active))
+	p, err := db.ProposalSlashingsByStatus(ctx, types.SlashingStatus(types.Active))
 	if err != nil {
 		t.Fatalf("Failed to get proposer slashing: %v", err)
 	}
@@ -38,9 +40,10 @@ func TestStore_ProposerSlashingNilBucket(t *testing.T) {
 func TestStore_SaveProposerSlashing(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	ctx := cli.NewContext(app, set, nil)
-	db := setupDB(t, ctx)
+	db := setupDB(t, cli.NewContext(app, set, nil))
 	defer teardownDB(t, db)
+	ctx := context.Background()
+
 	tests := []struct {
 		ss types.SlashingStatus
 		ps *ethpb.ProposerSlashing
@@ -60,12 +63,12 @@ func TestStore_SaveProposerSlashing(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		err := db.SaveProposerSlashing(tt.ss, tt.ps)
+		err := db.SaveProposerSlashing(ctx, tt.ss, tt.ps)
 		if err != nil {
 			t.Fatalf("Save proposer slashing failed: %v", err)
 		}
 
-		proposerSlashings, err := db.ProposalSlashingsByStatus(tt.ss)
+		proposerSlashings, err := db.ProposalSlashingsByStatus(ctx, tt.ss)
 		if err != nil {
 			t.Fatalf("Failed to get proposer slashings: %v", err)
 		}
@@ -80,9 +83,10 @@ func TestStore_SaveProposerSlashing(t *testing.T) {
 func TestStore_UpdateProposerSlashingStatus(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	ctx := cli.NewContext(app, set, nil)
-	db := setupDB(t, ctx)
+	db := setupDB(t, cli.NewContext(app, set, nil))
 	defer teardownDB(t, db)
+	ctx := context.Background()
+
 	tests := []struct {
 		ss types.SlashingStatus
 		ps *ethpb.ProposerSlashing
@@ -102,14 +106,14 @@ func TestStore_UpdateProposerSlashingStatus(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		err := db.SaveProposerSlashing(tt.ss, tt.ps)
+		err := db.SaveProposerSlashing(ctx, tt.ss, tt.ps)
 		if err != nil {
 			t.Fatalf("Save proposer slashing failed: %v", err)
 		}
 	}
 
 	for _, tt := range tests {
-		has, st, err := db.HasProposerSlashing(tt.ps)
+		has, st, err := db.HasProposerSlashing(ctx, tt.ps)
 		if err != nil {
 			t.Fatalf("Failed to get proposer slashing: %v", err)
 		}
@@ -120,8 +124,8 @@ func TestStore_UpdateProposerSlashingStatus(t *testing.T) {
 			t.Fatalf("Failed to find proposer slashing with the correct status: %v", tt.ps)
 		}
 
-		err = db.SaveProposerSlashing(types.SlashingStatus(types.Included), tt.ps)
-		has, st, err = db.HasProposerSlashing(tt.ps)
+		err = db.SaveProposerSlashing(ctx, types.SlashingStatus(types.Included), tt.ps)
+		has, st, err = db.HasProposerSlashing(ctx, tt.ps)
 		if err != nil {
 			t.Fatalf("Failed to get proposer slashing: %v", err)
 		}
@@ -139,19 +143,20 @@ func TestStore_UpdateProposerSlashingStatus(t *testing.T) {
 func TestStore_SaveProposerSlashings(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	ctx := cli.NewContext(app, set, nil)
-	db := setupDB(t, ctx)
+	db := setupDB(t, cli.NewContext(app, set, nil))
 	defer teardownDB(t, db)
+	ctx := context.Background()
+
 	ps := []*ethpb.ProposerSlashing{
 		{ProposerIndex: 1},
 		{ProposerIndex: 2},
 		{ProposerIndex: 3},
 	}
-	err := db.SaveProposerSlashings(types.Active, ps)
+	err := db.SaveProposerSlashings(ctx, types.Active, ps)
 	if err != nil {
 		t.Fatalf("Save proposer slashings failed: %v", err)
 	}
-	proposerSlashings, err := db.ProposalSlashingsByStatus(types.Active)
+	proposerSlashings, err := db.ProposalSlashingsByStatus(ctx, types.Active)
 	if err != nil {
 		t.Fatalf("Failed to get proposer slashings: %v", err)
 	}
