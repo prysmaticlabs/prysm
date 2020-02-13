@@ -36,13 +36,24 @@ func ProcessRewardsAndPenaltiesPrecompute(
 		return nil, errors.Wrap(err, "could not get attestation delta")
 	}
 	for i := 0; i < numOfVals; i++ {
+		vp[i].BeforeEpochTransitionBalance, err = state.BalanceAtIndex(uint64(i))
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get validator balance before epoch")
+		}
+
 		if err := helpers.IncreaseBalance(state, uint64(i), attsRewards[i]+proposerRewards[i]); err != nil {
 			return nil, err
 		}
 		if err := helpers.DecreaseBalance(state, uint64(i), attsPenalties[i]); err != nil {
 			return nil, err
 		}
+
+		vp[i].AfterEpochTransitionBalance, err = state.BalanceAtIndex(uint64(i))
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get validator balance after epoch")
+		}
 	}
+
 	return state, nil
 }
 
