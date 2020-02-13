@@ -3,26 +3,25 @@ package node
 import (
 	"os"
 	"os/signal"
+	"path"
 	"sync"
 	"syscall"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/slasher/db"
+	"github.com/prysmaticlabs/prysm/slasher/db/kv"
+	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
 var log = logrus.WithField("prefix", "node")
 
-const beaconChainDBName = "beaconchaindata"
-const testSkipPowFlag = "test-skip-pow"
+const slasherDBName = "slasherdata"
 
 // SlasherNode defines a struct that handles the services running a slashing detector
 // for eth2. It handles the lifecycle of the entire system and registers
@@ -50,21 +49,6 @@ func NewSlasherNode(ctx *cli.Context) (*SlasherNode, error) {
 		return nil, err
 	}
 	registry := shared.NewServiceRegistry()
-
-	// Use custom config values if the --no-custom-config flag is not set.
-	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
-		if featureconfig.Get().MinimalConfig {
-			log.WithField(
-				"config", "minimal-spec",
-			).Info("Using custom chain parameters")
-			params.UseMinimalConfig()
-		} else {
-			log.WithField(
-				"config", "demo",
-			).Info("Using custom chain parameters")
-			params.UseDemoBeaconConfig()
-		}
-	}
 
 	slasher := &SlasherNode{
 		ctx:             ctx,
@@ -119,4 +103,39 @@ func (s *SlasherNode) Close() {
 		log.Errorf("Failed to close database: %v", err)
 	}
 	close(s.stop)
+}
+
+func (s *SlasherNode) startDB(ctx *cli.Context) error {
+	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
+	clearDB := ctx.GlobalBool(cmd.ClearDB.Name)
+	forceClearDB := ctx.GlobalBool(cmd.ForceClearDB.Name)
+	dbPath := path.Join(baseDir, slasherDBName)
+	cfg := &kv.Config{SpanCacheEnabled: ctx.GlobalBool(flags.UseSpanCacheFlag.Name)}
+	d, err := db.NewDB(dbPath, cfg)
+	if err != nil {
+		return err
+	}
+	clearDBConfirmed := false
+	if clearDB && !forceClearDB {
+		actionText := "This will delete your slasher database stored in your data directory. " +
+			"Your database backups will not be removed - do you want to proceed? (Y/N)"
+		deniedText := "Database will not be deleted. No changes have been made."
+		clearDBConfirmed, err = cmd.ConfirmAction(actionText, deniedText)
+		if err != nil {
+			return err
+		}
+	}
+	if clearDBConfirmed || forceClearDB {
+		log.Warning("Removing database")
+		if err := d.ClearDB(); err != nil {
+			return err
+		}
+		d, err = db.NewDB(dbPath, cfg)
+		if err != nil {
+			return err
+		}
+	}
+	log.WithField("database-path", baseDir).Info("Checking DB")
+	s.db = d
+	return nil
 }
