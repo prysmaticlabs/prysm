@@ -1,6 +1,7 @@
 package kv
 
 import (
+	"context"
 	"flag"
 	"reflect"
 	"testing"
@@ -12,19 +13,19 @@ import (
 func TestNilDBHistoryBlkHdr(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	ctx := cli.NewContext(app, set, nil)
-	db := setupDB(t, ctx)
+	db := setupDB(t, cli.NewContext(app, set, nil))
 	defer teardownDB(t, db)
+	ctx := context.Background()
 
 	epoch := uint64(1)
 	validatorID := uint64(1)
 
-	hasBlockHeader := db.HasBlockHeader(epoch, validatorID)
+	hasBlockHeader := db.HasBlockHeader(ctx, epoch, validatorID)
 	if hasBlockHeader {
 		t.Fatal("HasBlockHeader should return false")
 	}
 
-	bPrime, err := db.BlockHeaders(epoch, validatorID)
+	bPrime, err := db.BlockHeaders(ctx, epoch, validatorID)
 	if err != nil {
 		t.Fatalf("failed to get block: %v", err)
 	}
@@ -36,9 +37,9 @@ func TestNilDBHistoryBlkHdr(t *testing.T) {
 func TestSaveHistoryBlkHdr(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	ctx := cli.NewContext(app, set, nil)
-	db := setupDB(t, ctx)
-	defer teardownDB(t, db)
+	db := setupDB(t, cli.NewContext(app, set, nil))
+	ctx := context.Background()
+
 	tests := []struct {
 		epoch uint64
 		vID   uint64
@@ -62,12 +63,12 @@ func TestSaveHistoryBlkHdr(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		err := db.SaveBlockHeader(tt.epoch, tt.vID, tt.bh)
+		err := db.SaveBlockHeader(ctx, tt.epoch, tt.vID, tt.bh)
 		if err != nil {
 			t.Fatalf("save block failed: %v", err)
 		}
 
-		bha, err := db.BlockHeaders(tt.epoch, tt.vID)
+		bha, err := db.BlockHeaders(ctx, tt.epoch, tt.vID)
 		if err != nil {
 			t.Fatalf("failed to get block: %v", err)
 		}
@@ -82,9 +83,10 @@ func TestSaveHistoryBlkHdr(t *testing.T) {
 func TestDeleteHistoryBlkHdr(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	ctx := cli.NewContext(app, set, nil)
-	db := setupDB(t, ctx)
+	db := setupDB(t, cli.NewContext(app, set, nil))
 	defer teardownDB(t, db)
+	ctx := context.Background()
+
 	tests := []struct {
 		epoch uint64
 		vID   uint64
@@ -108,14 +110,14 @@ func TestDeleteHistoryBlkHdr(t *testing.T) {
 	}
 	for _, tt := range tests {
 
-		err := db.SaveBlockHeader(tt.epoch, tt.vID, tt.bh)
+		err := db.SaveBlockHeader(ctx, tt.epoch, tt.vID, tt.bh)
 		if err != nil {
 			t.Fatalf("save block failed: %v", err)
 		}
 	}
 
 	for _, tt := range tests {
-		bha, err := db.BlockHeaders(tt.epoch, tt.vID)
+		bha, err := db.BlockHeaders(ctx, tt.epoch, tt.vID)
 		if err != nil {
 			t.Fatalf("failed to get block: %v", err)
 		}
@@ -123,11 +125,11 @@ func TestDeleteHistoryBlkHdr(t *testing.T) {
 		if bha == nil || !reflect.DeepEqual(bha[0], tt.bh) {
 			t.Fatalf("get should return bh: %v", bha)
 		}
-		err = db.DeleteBlockHeader(tt.epoch, tt.vID, tt.bh)
+		err = db.DeleteBlockHeader(ctx, tt.epoch, tt.vID, tt.bh)
 		if err != nil {
 			t.Fatalf("save block failed: %v", err)
 		}
-		bh, err := db.BlockHeaders(tt.epoch, tt.vID)
+		bh, err := db.BlockHeaders(ctx, tt.epoch, tt.vID)
 
 		if err != nil {
 			t.Fatal(err)
@@ -143,9 +145,10 @@ func TestDeleteHistoryBlkHdr(t *testing.T) {
 func TestHasHistoryBlkHdr(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	ctx := cli.NewContext(app, set, nil)
-	db := setupDB(t, ctx)
+	db := setupDB(t, cli.NewContext(app, set, nil))
 	defer teardownDB(t, db)
+	ctx := context.Background()
+
 	tests := []struct {
 		epoch uint64
 		vID   uint64
@@ -169,22 +172,22 @@ func TestHasHistoryBlkHdr(t *testing.T) {
 	}
 	for _, tt := range tests {
 
-		found := db.HasBlockHeader(tt.epoch, tt.vID)
+		found := db.HasBlockHeader(ctx, tt.epoch, tt.vID)
 		if found {
 			t.Fatal("has block header should return false for block headers that are not in db")
 		}
-		err := db.SaveBlockHeader(tt.epoch, tt.vID, tt.bh)
+		err := db.SaveBlockHeader(ctx, tt.epoch, tt.vID, tt.bh)
 		if err != nil {
 			t.Fatalf("save block failed: %v", err)
 		}
 	}
 	for _, tt := range tests {
-		err := db.SaveBlockHeader(tt.epoch, tt.vID, tt.bh)
+		err := db.SaveBlockHeader(ctx, tt.epoch, tt.vID, tt.bh)
 		if err != nil {
 			t.Fatalf("save block failed: %v", err)
 		}
 
-		found := db.HasBlockHeader(tt.epoch, tt.vID)
+		found := db.HasBlockHeader(ctx, tt.epoch, tt.vID)
 
 		if !found {
 			t.Fatal("has block header should return true")
@@ -195,9 +198,10 @@ func TestHasHistoryBlkHdr(t *testing.T) {
 func TestPruneHistoryBlkHdr(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	ctx := cli.NewContext(app, set, nil)
-	db := setupDB(t, ctx)
+	db := setupDB(t, cli.NewContext(app, set, nil))
 	defer teardownDB(t, db)
+	ctx := context.Background()
+
 	tests := []struct {
 		epoch uint64
 		vID   uint64
@@ -231,12 +235,12 @@ func TestPruneHistoryBlkHdr(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		err := db.SaveBlockHeader(tt.epoch, tt.vID, tt.bh)
+		err := db.SaveBlockHeader(ctx, tt.epoch, tt.vID, tt.bh)
 		if err != nil {
 			t.Fatalf("save block header failed: %v", err)
 		}
 
-		bha, err := db.BlockHeaders(tt.epoch, tt.vID)
+		bha, err := db.BlockHeaders(ctx, tt.epoch, tt.vID)
 		if err != nil {
 			t.Fatalf("failed to get block header: %v", err)
 		}
@@ -247,13 +251,13 @@ func TestPruneHistoryBlkHdr(t *testing.T) {
 	}
 	currentEpoch := uint64(3)
 	historyToKeep := uint64(2)
-	err := db.PruneBlockHistory(currentEpoch, historyToKeep)
+	err := db.PruneBlockHistory(ctx, currentEpoch, historyToKeep)
 	if err != nil {
 		t.Fatalf("failed to prune: %v", err)
 	}
 
 	for _, tt := range tests {
-		bha, err := db.BlockHeaders(tt.epoch, tt.vID)
+		bha, err := db.BlockHeaders(ctx, tt.epoch, tt.vID)
 		if err != nil {
 			t.Fatalf("failed to get block header: %v", err)
 		}
@@ -266,6 +270,5 @@ func TestPruneHistoryBlkHdr(t *testing.T) {
 				t.Fatalf("block header should have been pruned: %v", bha)
 			}
 		}
-
 	}
 }
