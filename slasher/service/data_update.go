@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"github.com/prysmaticlabs/prysm/slasher/db"
+	"github.com/prysmaticlabs/prysm/slasher/db/types"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -132,7 +132,7 @@ func (s *Service) detectSlashings(ctx context.Context, idxAtt *ethpb.IndexedAtte
 	}
 
 	if len(attSlashingResp.AttesterSlashing) > 0 {
-		if err := s.slasherDb.SaveAttesterSlashings(db.Active, attSlashingResp.AttesterSlashing); err != nil {
+		if err := s.slasherDb.SaveAttesterSlashings(types.Active, attSlashingResp.AttesterSlashing); err != nil {
 			return errors.Wrap(err, "failed to save attester slashings")
 		}
 		for _, as := range attSlashingResp.AttesterSlashing {
