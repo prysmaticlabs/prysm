@@ -251,7 +251,7 @@ func TestPruneHistoryBlkHdr(t *testing.T) {
 	}
 	currentEpoch := uint64(3)
 	historyToKeep := uint64(2)
-	err := db.pruneBlockHistory(ctx, currentEpoch, historyToKeep)
+	err := db.PruneBlockHistory(ctx, currentEpoch, historyToKeep)
 	if err != nil {
 		t.Fatalf("failed to prune: %v", err)
 	}
