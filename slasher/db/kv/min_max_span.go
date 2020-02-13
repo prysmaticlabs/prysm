@@ -1,4 +1,4 @@
-package db
+package kv
 
 import (
 	"context"
@@ -9,28 +9,31 @@ import (
 	"github.com/pkg/errors"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
 var highestValidatorIdx uint64
 
-func saveSpansToDB(validatorIdx uint64, _ uint64, value interface{}, cost int64) {
-	log.Tracef("evicting span map for validator id: %d", validatorIdx)
-
-	err := d.batch(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(validatorsMinMaxSpanBucket)
-		key := bytesutil.Bytes4(validatorIdx)
-		val, err := proto.Marshal(value.(*slashpb.EpochSpanMap))
+func saveToDB(db *Store) func(uint64, uint64, interface{}, int64) {
+	// Returning the function here so we can access the DB properly from the OnEvict.
+	return func(validatorIdx uint64, _ uint64, value interface{}, cost int64) {
+		log.Tracef("evicting span map for validator id: %d", validatorIdx)
+		err := db.batch(func(tx *bolt.Tx) error {
+			bucket := tx.Bucket(validatorsMinMaxSpanBucket)
+			key := bytesutil.Bytes4(validatorIdx)
+			val, err := proto.Marshal(value.(*slashpb.EpochSpanMap))
+			if err != nil {
+				return errors.Wrap(err, "failed to marshal span map")
+			}
+			if err := bucket.Put(key, val); err != nil {
+				return errors.Wrapf(err, "failed to delete validator id: %d from min max span bucket", validatorIdx)
+			}
+			return err
+		})
 		if err != nil {
-			return errors.Wrap(err, "failed to marshal span map")
+			log.Errorf("failed to save span map to db on cache eviction: %v", err)
 		}
-		if err := bucket.Put(key, val); err != nil {
-			return errors.Wrapf(err, "failed to delete validator id: %d from min max span bucket", validatorIdx)
-		}
-		return err
-	})
-	if err != nil {
-		log.Errorf("failed to save span map to db on cache eviction: %v", err)
 	}
 }
 

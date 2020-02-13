@@ -1,4 +1,4 @@
-package db
+package kv
 
 import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"

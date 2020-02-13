@@ -1,4 +1,4 @@
-package db
+package kv
 
 import (
 	"bytes"
@@ -83,12 +83,15 @@ func (db *Store) SaveBlockHeader(ctx context.Context, epoch uint64, validatorID 
 
 		return err
 	})
+	if err != nil {
+		return err
+	}
 
 	// Prune block header history every 10th epoch.
 	if epoch%params.BeaconConfig().PruneSlasherStoragePeriod == 0 {
-		err = db.pruneBlockHistory(ctx, epoch, params.BeaconConfig().WeakSubjectivityPeriod)
+		return db.PruneBlockHistory(ctx, epoch, params.BeaconConfig().WeakSubjectivityPeriod)
 	}
-	return err
+	return nil
 }
 
 // DeleteBlockHeader deletes a block header using the epoch and validator id.
@@ -105,11 +108,11 @@ func (db *Store) DeleteBlockHeader(ctx context.Context, epoch uint64, validatorI
 	})
 }
 
-// pruneBlockHistory leaves only records younger then history size.
-func (db *Store) pruneBlockHistory(ctx context.Context, currentEpoch uint64, historySize uint64) error {
+// PruneBlockHistory leaves only records younger then history size.
+func (db *Store) PruneBlockHistory(ctx context.Context, currentEpoch uint64, pruningEpochAge uint64) error {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.pruneBlockHistory")
 	defer span.End()
-	pruneTill := int64(currentEpoch) - int64(historySize)
+	pruneTill := int64(currentEpoch) - int64(pruningEpochAge)
 	if pruneTill <= 0 {
 		return nil
 	}

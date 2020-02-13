@@ -40,7 +40,7 @@ const (
 	Attestation
 )
 
-// String returns the string representation of the status SlashingType .
+// String returns the string representation of the status SlashingType.
 func (status SlashingType) String() string {
 	names := [...]string{
 		"Proposal",

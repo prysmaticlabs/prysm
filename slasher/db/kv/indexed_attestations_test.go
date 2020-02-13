@@ -195,7 +195,7 @@ func TestPruneHistoryIdxAtt(t *testing.T) {
 	}
 	currentEpoch := uint64(3)
 	historyToKeep := uint64(1)
-	err := db.pruneAttHistory(ctx, currentEpoch, historyToKeep)
+	err := db.PruneAttHistory(ctx, currentEpoch, historyToKeep)
 	if err != nil {
 		t.Fatalf("failed to prune: %v", err)
 	}
