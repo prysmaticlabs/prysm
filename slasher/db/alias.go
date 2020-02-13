@@ -8,7 +8,7 @@ type ReadOnlyDatabase = iface.ReadOnlyDatabase
 // WriteAccessDatabase exposes the Slasher's DB writing functions for all slasher related buckets.
 type WriteAccessDatabase = iface.WriteAccessDatabase
 
-// HeadAccessDatabase exposes Slasher's DB write and read functions for all slasher related buckets.
+// FullAccessDatabase exposes Slasher's DB write and read functions for all slasher related buckets.
 type FullAccessDatabase = iface.FullAccessDatabase
 
 // Database defines the necessary methods for the Slasher's DB which may be implemented by any

@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
 )
 
-// ReadOnlyDatabase -- represents a read only database with functions that do not modify the DB.
+// ReadOnlyDatabase represents a read only database with functions that do not modify the DB.
 type ReadOnlyDatabase interface {
 	// AttesterSlashing related methods.
 	AttesterSlashings(status types.SlashingStatus) ([]*ethpb.AttesterSlashing, error)
@@ -39,7 +39,7 @@ type ReadOnlyDatabase interface {
 	ValidatorPubKey(validatorID uint64) ([]byte, error)
 }
 
-// WriteAccessDatabase -- represents a write access database with only functions that can modify the DB.
+// WriteAccessDatabase represents a write access database with only functions that can modify the DB.
 type WriteAccessDatabase interface {
 	// AttesterSlashing related methods.
 	SaveAttesterSlashing(status types.SlashingStatus, slashing *ethpb.AttesterSlashing) error
@@ -71,7 +71,7 @@ type WriteAccessDatabase interface {
 	DeletePubKey(validatorID uint64) error
 }
 
-// FullAccessDatabase -- represents a full access database with only DB interaction functions.
+// FullAccessDatabase represents a full access database with only DB interaction functions.
 type FullAccessDatabase interface {
 	ReadOnlyDatabase
 	WriteAccessDatabase
