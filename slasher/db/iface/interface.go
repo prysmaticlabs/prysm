@@ -53,10 +53,12 @@ type WriteAccessDatabase interface {
 	// BlockHeader related methods.
 	SaveBlockHeader(epoch uint64, validatorID uint64, blockHeader *ethpb.SignedBeaconBlockHeader) error
 	DeleteBlockHeader(epoch uint64, validatorID uint64, blockHeader *ethpb.SignedBeaconBlockHeader) error
+	PruneBlockHistory(currentEpoch uint64, pruningEpochAge uint64) error
 
 	// IndexedAttestations related methods.
 	SaveIndexedAttestation(idxAttestation *ethpb.IndexedAttestation) error
 	DeleteIndexedAttestation(idxAttestation *ethpb.IndexedAttestation) error
+	PruneAttHistory(currentEpoch uint64, pruningEpochAge uint64) error
 
 	// MinMaxSpan related methods.
 	SaveValidatorSpansMap(validatorIdx uint64, spanMap *slashpb.EpochSpanMap) error

@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
 	"github.com/urfave/cli"
 )
@@ -16,8 +15,8 @@ func TestStore_AttesterSlashingNilBucket(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := testDB.SetupSlasherDB(t, ctx)
-	defer testDB.TeardownSlasherDB(t, db)
+	db := setupDB(t, ctx)
+	defer teardownDB(t, db)
 	as := &ethpb.AttesterSlashing{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("hello")}}
 	has, _, err := db.HasAttesterSlashing(as)
 	if err != nil {
@@ -40,8 +39,8 @@ func TestStore_SaveAttesterSlashing(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := testDB.SetupSlasherDB(t, ctx)
-	defer testDB.TeardownSlasherDB(t, db)
+	db := setupDB(t, ctx)
+	defer teardownDB(t, db)
 	tests := []struct {
 		ss types.SlashingStatus
 		as *ethpb.AttesterSlashing
@@ -82,8 +81,8 @@ func TestStore_SaveAttesterSlashings(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := testDB.SetupSlasherDB(t, ctx)
-	defer testDB.TeardownSlasherDB(t, db)
+	db := setupDB(t, ctx)
+	defer teardownDB(t, db)
 	as := []*ethpb.AttesterSlashing{
 		{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("1")}},
 		{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte("2")}},
@@ -109,8 +108,8 @@ func TestStore_UpdateAttesterSlashingStatus(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := testDB.SetupSlasherDB(t, ctx)
-	defer testDB.TeardownSlasherDB(t, db)
+	db := setupDB(t, ctx)
+	defer teardownDB(t, db)
 	tests := []struct {
 		ss types.SlashingStatus
 		as *ethpb.AttesterSlashing
@@ -168,8 +167,8 @@ func TestStore_LatestEpochDetected(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := testDB.SetupSlasherDB(t, ctx)
-	defer testDB.TeardownSlasherDB(t, db)
+	db := setupDB(t, ctx)
+	defer teardownDB(t, db)
 	e, err := db.GetLatestEpochDetected()
 	if err != nil {
 		t.Fatalf("Get latest epoch detected failed: %v", err)

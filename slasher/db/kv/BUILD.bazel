@@ -35,6 +35,7 @@ go_test(
         "attester_slashings_test.go",
         "block_header_test.go",
         "indexed_attestations_test.go",
+        "kv_test.go",
         "min_max_span_test.go",
         "proposer_slashings_test.go",
         "validator_id_pubkey_test.go",
@@ -42,7 +43,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//proto/slashing:go_default_library",
-        "//slasher/db/testing:go_default_library",
+        "//shared/testutil:go_default_library",
         "//slasher/db/types:go_default_library",
         "//slasher/flags:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",

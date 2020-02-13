@@ -18,13 +18,13 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/slasher/cache"
 	"github.com/prysmaticlabs/prysm/slasher/db"
+	"github.com/prysmaticlabs/prysm/slasher/db/kv"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/prysmaticlabs/prysm/slasher/rpc"
 	"github.com/sirupsen/logrus"
@@ -103,22 +103,22 @@ func (s *Service) startDB(ctx *cli.Context) error {
 	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
 	dbPath := path.Join(baseDir, slasherDBName)
 	cfg := &kv.Config{SpanCacheEnabled: ctx.GlobalBool(flags.UseSpanCacheFlag.Name)}
-	d, err := db.New(dbPath, cfg)
+	slasherDB, err := db.NewDB(dbPath, cfg)
 	if err != nil {
 		return err
 	}
 	if s.ctx.GlobalBool(cmd.ClearDB.Name) {
-		if err := d.ClearDB(); err != nil {
+		if err := slasherDB.ClearDB(); err != nil {
 			return err
 		}
-		d, err = db.NewDB(dbPath, cfg)
+		slasherDB, err = db.NewDB(dbPath, cfg)
 		if err != nil {
 			return err
 		}
 	}
 
 	log.WithField("path", dbPath).Info("Checking db")
-	s.slasherDb = d
+	s.slasherDb = slasherDB
 	return nil
 }
 

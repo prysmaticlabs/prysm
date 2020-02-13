@@ -2,10 +2,12 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
+    testonly = True,
     srcs = ["setup_db.go"],
     importpath = "github.com/prysmaticlabs/prysm/slasher/db/testing",
     visibility = ["//visibility:public"],
     deps = [
+        "//shared/testutil:go_default_library",
         "//slasher/db:go_default_library",
         "//slasher/db/kv:go_default_library",
         "//slasher/flags:go_default_library",

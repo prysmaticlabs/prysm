@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	"github.com/urfave/cli"
 )
 
@@ -43,8 +42,8 @@ func TestNilDBHistoryIdxAtt(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := testDB.SetupSlasherDB(t, ctx)
-	defer testDB.TeardownSlasherDB(t, db)
+	db := setupDB(t, ctx)
+	defer teardownDB(t, db)
 
 	epoch := uint64(1)
 	validatorID := uint64(1)
@@ -70,8 +69,8 @@ func TestSaveIdxAtt(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := testDB.SetupSlasherDB(t, ctx)
-	defer testDB.TeardownSlasherDB(t, db)
+	db := setupDB(t, ctx)
+	defer teardownDB(t, db)
 
 	for _, tt := range tests {
 		err := db.SaveIndexedAttestation(tt.idxAtt)
@@ -95,8 +94,8 @@ func TestDeleteHistoryIdxAtt(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := testDB.SetupSlasherDB(t, ctx)
-	defer testDB.TeardownSlasherDB(t, db)
+	db := setupDB(t, ctx)
+	defer teardownDB(t, db)
 
 	for _, tt := range tests {
 
@@ -143,8 +142,8 @@ func TestHasIndexedAttestation(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := testDB.SetupSlasherDB(t, ctx)
-	defer testDB.TeardownSlasherDB(t, db)
+	db := setupDB(t, ctx)
+	defer teardownDB(t, db)
 
 	for _, tt := range tests {
 		exists, err := db.HasIndexedAttestation(tt.idxAtt.Data.Target.Epoch, tt.idxAtt.AttestingIndices[0])
@@ -175,8 +174,8 @@ func TestPruneHistoryIdxAtt(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	ctx := cli.NewContext(app, set, nil)
-	db := testDB.SetupSlasherDB(t, ctx)
-	defer testDB.TeardownSlasherDB(t, db)
+	db := setupDB(t, ctx)
+	defer teardownDB(t, db)
 
 	for _, tt := range tests {
 		err := db.SaveIndexedAttestation(tt.idxAtt)
@@ -195,7 +194,7 @@ func TestPruneHistoryIdxAtt(t *testing.T) {
 	}
 	currentEpoch := uint64(3)
 	historyToKeep := uint64(1)
-	err := db.pruneAttHistory(currentEpoch, historyToKeep)
+	err := db.PruneAttHistory(currentEpoch, historyToKeep)
 	if err != nil {
 		t.Fatalf("failed to prune: %v", err)
 	}

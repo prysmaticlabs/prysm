@@ -1,4 +1,4 @@
-package testing
+package kv
 
 import (
 	"crypto/rand"
@@ -9,14 +9,11 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	slasherDB "github.com/prysmaticlabs/prysm/slasher/db"
-	"github.com/prysmaticlabs/prysm/slasher/db/kv"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/urfave/cli"
 )
 
-// SetupSlasherDB instantiates and returns a SlasherDB instance.
-func SetupSlasherDB(t testing.TB, ctx *cli.Context) *kv.Store {
+func setupDB(t testing.TB, ctx *cli.Context) *Store {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	if err != nil {
 		t.Fatalf("Could not generate random file path: %v", err)
@@ -25,16 +22,15 @@ func SetupSlasherDB(t testing.TB, ctx *cli.Context) *kv.Store {
 	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
-	cfg := &kv.Config{CacheItems: 0, MaxCacheSize: 0, SpanCacheEnabled: ctx.GlobalBool(flags.UseSpanCacheFlag.Name)}
-	db, err := slasherDB.NewDB(p, cfg)
+	cfg := &Config{CacheItems: 0, MaxCacheSize: 0, SpanCacheEnabled: ctx.GlobalBool(flags.UseSpanCacheFlag.Name)}
+	db, err := NewKVStore(p, cfg)
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
 	}
 	return db
 }
 
-// SetupSlasherDBDiffCacheSize instantiates and returns a SlasherDB instance with non default cache size.
-func SetupSlasherDBDiffCacheSize(t testing.TB, cacheItems int64, maxCacheSize int64) *kv.Store {
+func setupDBDiffCacheSize(t testing.TB, cacheItems int64, maxCacheSize int64) *Store {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	if err != nil {
 		t.Fatalf("Could not generate random file path: %v", err)
@@ -43,16 +39,15 @@ func SetupSlasherDBDiffCacheSize(t testing.TB, cacheItems int64, maxCacheSize in
 	if err := os.RemoveAll(p); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}
-	cfg := &kv.Config{CacheItems: cacheItems, MaxCacheSize: maxCacheSize, SpanCacheEnabled: true}
-	newDB, err := slasherDB.NewDB(p, cfg)
+	cfg := &Config{CacheItems: cacheItems, MaxCacheSize: maxCacheSize, SpanCacheEnabled: true}
+	newDB, err := NewKVStore(p, cfg)
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
 	}
 	return newDB
 }
 
-// TeardownSlasherDB cleans up a test BeaconDB instance.
-func TeardownSlasherDB(t testing.TB, db *kv.Store) {
+func teardownDB(t testing.TB, db *Store) {
 	if err := db.Close(); err != nil {
 		t.Fatalf("Failed to close database: %v", err)
 	}

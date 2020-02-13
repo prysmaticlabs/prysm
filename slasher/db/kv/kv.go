@@ -25,7 +25,7 @@ type Store struct {
 
 // Config options for the slasher db.
 type Config struct {
-	// SpanCacheEnabled use span cache to detect surround slashing.
+	// SpanCacheEnabled uses span cache to detect surround slashing.
 	SpanCacheEnabled bool
 	CacheItems       int64
 	MaxCacheSize     int64
@@ -34,6 +34,11 @@ type Config struct {
 // Close closes the underlying boltdb database.
 func (db *Store) Close() error {
 	return db.db.Close()
+}
+
+// ClearSpanCache clears the MinMaxSpans cache.
+func (db *Store) ClearSpanCache() {
+	db.spanCache.Clear()
 }
 
 func (db *Store) update(fn func(*bolt.Tx) error) error {

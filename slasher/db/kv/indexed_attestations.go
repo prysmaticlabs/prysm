@@ -218,7 +218,7 @@ func (db *Store) SaveIndexedAttestation(idxAttestation *ethpb.IndexedAttestation
 	// Prune history to max size every PruneSlasherStoragePeriod epoch.
 	if idxAttestation.Data.Source.Epoch%params.BeaconConfig().PruneSlasherStoragePeriod == 0 {
 		wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-		if err = db.pruneAttHistory(idxAttestation.Data.Source.Epoch, wsPeriod); err != nil {
+		if err = db.PruneAttHistory(idxAttestation.Data.Source.Epoch, wsPeriod); err != nil {
 			return err
 		}
 	}
@@ -314,8 +314,9 @@ func removeIdxAttIndicesByEpochFromDB(idxAttestation *ethpb.IndexedAttestation, 
 	return nil
 }
 
-func (db *Store) pruneAttHistory(currentEpoch uint64, historySize uint64) error {
-	pruneFromEpoch := int64(currentEpoch) - int64(historySize)
+// PruneAttHistory removes all attestations from the DB older than the pruning epoch age.
+func (db *Store) PruneAttHistory(currentEpoch uint64, pruningEpochAge uint64) error {
+	pruneFromEpoch := int64(currentEpoch) - int64(pruningEpochAge)
 	if pruneFromEpoch <= 0 {
 		return nil
 	}

@@ -76,7 +76,7 @@ func (db *Store) SaveBlockHeader(epoch uint64, validatorID uint64, blockHeader *
 
 	// Prune block header history every 10th epoch.
 	if epoch%params.BeaconConfig().PruneSlasherStoragePeriod == 0 {
-		err = db.pruneBlockHistory(epoch, params.BeaconConfig().WeakSubjectivityPeriod)
+		err = db.PruneBlockHistory(epoch, params.BeaconConfig().WeakSubjectivityPeriod)
 	}
 	return err
 }
@@ -94,9 +94,9 @@ func (db *Store) DeleteBlockHeader(epoch uint64, validatorID uint64, blockHeader
 	})
 }
 
-// pruneBlockHistory leaves only records younger then history size.
-func (db *Store) pruneBlockHistory(currentEpoch uint64, historySize uint64) error {
-	pruneTill := int64(currentEpoch) - int64(historySize)
+// PruneBlockHistory removes all blocks from the DB older than the pruning epoch age.
+func (db *Store) PruneBlockHistory(currentEpoch uint64, pruningEpochAge uint64) error {
+	pruneTill := int64(currentEpoch) - int64(pruningEpochAge)
 	if pruneTill <= 0 {
 		return nil
 	}
