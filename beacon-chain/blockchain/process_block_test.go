@@ -528,6 +528,22 @@ func TestFilterBlockRoots_CanFilter(t *testing.T) {
 	}
 }
 
+func TestPersistCache(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	cfg := &Config{BeaconDB: db}
+	service, err := NewService(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	st,_ := testutil.DeterministicGenesisState(t,10)
+
+
+	for i := 0
+}
+
 func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)

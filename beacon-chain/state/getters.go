@@ -3,6 +3,8 @@ package state
 import (
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/shared/memorypool"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -452,7 +454,7 @@ func (b *BeaconState) RandaoMixes() [][]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	mixes := make([][]byte, len(b.state.RandaoMixes))
+	mixes := memorypool.GetDoubleByteSlice(len(b.state.RandaoMixes))
 	for i, r := range b.state.RandaoMixes {
 		tmpRt := make([]byte, len(r))
 		copy(tmpRt, r)

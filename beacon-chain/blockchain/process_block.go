@@ -250,19 +250,8 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	if featureconfig.Get().InitSyncCacheState {
 		numOfStates := len(s.initSyncState)
 		if numOfStates > initialSyncCacheSize {
-			stateSlice := make([][32]byte, 0, numOfStates)
-			for rt := range s.initSyncState {
-				stateSlice = append(stateSlice, rt)
-			}
-			sort.Slice(stateSlice, func(i int, j int) bool {
-				return s.initSyncState[stateSlice[i]].Slot() < s.initSyncState[stateSlice[j]].Slot()
-			})
-
-			for _, rt := range stateSlice[:numOfStates-minimumCacheSize] {
-				if err := s.beaconDB.SaveState(ctx, s.initSyncState[rt], rt); err != nil {
-					return err
-				}
-				delete(s.initSyncState, rt)
+			if err = s.persistCachedStates(ctx, numOfStates); err != nil {
+				return err
 			}
 		}
 	}
@@ -320,5 +309,29 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk *ethpb.B
 		s.forkChoiceStore.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
 	}
 
+	return nil
+}
+
+func (s *Service) persistCachedStates(ctx context.Context, numOfStates int) error {
+	stateSlice := make([][32]byte, 0, numOfStates)
+	oldStates := make([]*stateTrie.BeaconState, 0, numOfStates)
+	for rt := range s.initSyncState {
+		stateSlice = append(stateSlice, rt)
+	}
+	sort.Slice(stateSlice, func(i int, j int) bool {
+		return s.initSyncState[stateSlice[i]].Slot() < s.initSyncState[stateSlice[j]].Slot()
+	})
+
+	for _, rt := range stateSlice {
+		oldStates = append(oldStates, s.initSyncState[rt])
+	}
+
+	err := s.beaconDB.SaveStates(ctx, oldStates[:numOfStates-minimumCacheSize], stateSlice[:numOfStates-minimumCacheSize])
+	if err != nil {
+		return err
+	}
+	for _, rt := range stateSlice[:numOfStates-minimumCacheSize] {
+		delete(s.initSyncState, rt)
+	}
 	return nil
 }

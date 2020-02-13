@@ -4,6 +4,8 @@ import (
 	"runtime"
 	"sync"
 
+	"github.com/prysmaticlabs/prysm/shared/memorypool"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/protolambda/zssz/merkle"
@@ -141,8 +143,11 @@ func (b *BeaconState) Copy() *BeaconState {
 
 	// Finalizer runs when dst is being destroyed in garbage collection.
 	runtime.SetFinalizer(dst, func(b *BeaconState) {
-		for _, v := range b.sharedFieldReferences {
+		for field, v := range b.sharedFieldReferences {
 			v.refs--
+			if field == randaoMixes && v.refs == 0 {
+				memorypool.PutDoubleByteSlice(b.state.RandaoMixes)
+			}
 		}
 	})
 
