@@ -41,6 +41,8 @@ func DetectAndUpdateSpans(
 	att *ethpb.IndexedAttestation,
 	spanMap *slashpb.EpochSpanMap,
 ) (*slashpb.EpochSpanMap, uint64, uint64, error) {
+	ctx, span := trace.StartSpan(ctx, "Detection.DetectAndUpdateSpans")
+	defer span.End()
 	minTargetEpoch, spanMap, err := DetectAndUpdateMinEpochSpan(ctx, att.Data.Source.Epoch, att.Data.Target.Epoch, spanMap)
 	if err != nil {
 		return nil, 0, 0, errors.Wrap(err, "failed to update min spans")
@@ -64,7 +66,7 @@ func DetectAndUpdateMaxEpochSpan(
 	target uint64,
 	spanMap *slashpb.EpochSpanMap,
 ) (uint64, *slashpb.EpochSpanMap, error) {
-	ctx, span := trace.StartSpan(ctx, "Detection.detectAndUpdateMaxEpochSpan")
+	ctx, span := trace.StartSpan(ctx, "Detection.DetectAndUpdateMaxEpochSpan")
 	defer span.End()
 	if target < source {
 		return 0, nil, fmt.Errorf("target: %d < source: %d ", target, source)
@@ -104,7 +106,7 @@ func DetectAndUpdateMinEpochSpan(
 	target uint64,
 	spanMap *slashpb.EpochSpanMap,
 ) (uint64, *slashpb.EpochSpanMap, error) {
-	ctx, span := trace.StartSpan(ctx, "Detection.detectAndUpdateMinEpochSpan")
+	ctx, span := trace.StartSpan(ctx, "Detection.DetectAndUpdateMinEpochSpan")
 	defer span.End()
 	if target < source {
 		return 0, nil, fmt.Errorf(
@@ -149,7 +151,7 @@ func detectSlashingByEpochSpan(
 	spanMap *slashpb.EpochSpanMap,
 	detector detectFn,
 ) (uint64, uint64, *slashpb.EpochSpanMap, error) {
-	ctx, span := trace.StartSpan(ctx, "Detection.DetectAndUpdateMinEpochSpan")
+	ctx, span := trace.StartSpan(ctx, "Detection.detectSlashingByEpochSpan")
 	defer span.End()
 	minMaxSpan := target - source
 	if minMaxSpan > params.BeaconConfig().WeakSubjectivityPeriod {
