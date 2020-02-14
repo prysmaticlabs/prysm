@@ -8,12 +8,14 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/slasher/db/kv"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
-	"github.com/prysmaticlabs/prysm/slasher/detection"
+	"github.com/prysmaticlabs/prysm/slasher/detection/attestations"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -111,7 +113,7 @@ func (ss *Server) UpdateSpanMaps(ctx context.Context, req *ethpb.IndexedAttestat
 				wg.Done()
 				return
 			}
-			spanMap, _, _, err = detection.DetectAndUpdateSpans(ctx, req, spanMap)
+			spanMap, _, _, err = attestations.DetectAndUpdateSpans(ctx, req, spanMap)
 			if err != nil {
 				er <- err
 				wg.Done()
@@ -188,7 +190,7 @@ func (ss *Server) DetectSurroundVotes(ctx context.Context, validatorIdx uint64, 
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get validator spans map")
 	}
-	spanMap, minTargetEpoch, maxTargetEpoch, err := detection.DetectAndUpdateSpans(ctx, req, spanMap)
+	spanMap, minTargetEpoch, maxTargetEpoch, err := attestations.DetectAndUpdateSpans(ctx, req, spanMap)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to update spans")
 	}
