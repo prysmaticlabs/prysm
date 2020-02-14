@@ -17,6 +17,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
+	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -212,7 +213,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 	if eth1Data != nil {
 		s.depositTrie = trieutil.CreateTrieFromProto(eth1Data.Trie)
 		s.chainStartData = eth1Data.ChainstartData
-		if eth1Data.BeaconState != new(pbp2p.BeaconState) {
+		if !proto.Equal(eth1Data.BeaconState, new(pbp2p.BeaconState)) {
 			s.preGenesisState, err = stateTrie.InitializeFromProto(eth1Data.BeaconState)
 			if err != nil {
 				return nil, errors.Wrap(err, "Could not initialize state trie")
