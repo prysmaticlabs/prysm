@@ -203,13 +203,13 @@ func (k *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 
 // SaveArchivePoint saves an archive point to the DB. This is used for cold state management.
 // An archive point index is `slot / slots_per_archive_point`
-func (k *Store) SaveArchivePoint(ctx context.Context, blockRoot []byte, index uint64) error {
+func (k *Store) SaveArchivePoint(ctx context.Context, blockRoot [32]byte, index uint64) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivePoint")
 	defer span.End()
 
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(coldStateSummaryBucket)
-		return bucket.Put(uint64ToBytes(index), blockRoot)
+		return bucket.Put(uint64ToBytes(index), blockRoot[:])
 	})
 }
 
