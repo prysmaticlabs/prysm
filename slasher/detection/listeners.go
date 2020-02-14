@@ -1,3 +1,9 @@
+/*
+Package detection defines a service that reacts to incoming blocks/attestations
+by running slashing detection for double proposals, double votes, and surround votes
+according to the eth2 specification. As soon as slashing objects are found, they are
+sent over a feed for the beaconclient service to submit to a beacon node via gRPC.
+*/
 package detection
 
 import (
