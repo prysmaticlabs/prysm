@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	interopcoldstart "github.com/prysmaticlabs/prysm/beacon-chain/interop-cold-start"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -62,6 +63,7 @@ type BeaconNode struct {
 	db              db.Database
 	attestationPool attestations.Pool
 	exitPool        *voluntaryexits.Pool
+	slashingsPool   *slashings.Pool
 	depositCache    *depositcache.DepositCache
 	stateFeed       *event.Feed
 	blockFeed       *event.Feed
@@ -109,6 +111,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		opFeed:          new(event.Feed),
 		attestationPool: attestations.NewPool(),
 		exitPool:        voluntaryexits.NewPool(),
+		slashingsPool:   slashings.NewPool(),
 	}
 
 	if err := beacon.startDB(ctx); err != nil {
@@ -497,6 +500,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		GenesisTimeFetcher:    chainService,
 		AttestationsPool:      b.attestationPool,
 		ExitPool:              b.exitPool,
+		SlashingsPool:         b.slashingsPool,
 		POWChainService:       web3Service,
 		ChainStartFetcher:     chainStartFetcher,
 		MockEth1Votes:         mockEth1DataVotes,
