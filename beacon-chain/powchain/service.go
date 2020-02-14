@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"reflect"
 	"runtime/debug"
 	"strings"
 	"sync"
@@ -211,9 +212,11 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 	if eth1Data != nil {
 		s.depositTrie = trieutil.CreateTrieFromProto(eth1Data.Trie)
 		s.chainStartData = eth1Data.ChainstartData
-		s.preGenesisState, err = stateTrie.InitializeFromProto(eth1Data.BeaconState)
-		if err != nil {
-			return nil, errors.Wrap(err, "Could not initialize state trie")
+		if !reflect.ValueOf(eth1Data.BeaconState).IsZero() {
+			s.preGenesisState, err = stateTrie.InitializeFromProto(eth1Data.BeaconState)
+			if err != nil {
+				return nil, errors.Wrap(err, "Could not initialize state trie")
+			}
 		}
 		s.latestEth1Data = eth1Data.CurrentEth1Data
 		s.lastReceivedMerkleIndex = int64(len(s.depositTrie.Items()) - 1)
