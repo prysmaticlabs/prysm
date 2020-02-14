@@ -9,6 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"go.opencensus.io/trace"
 )
 
@@ -215,7 +216,7 @@ func (k *Store) SaveArchivePoint(ctx context.Context, blockRoot [32]byte, index 
 
 // ArchivePoint returns the block root of an archive point from the DB.
 // This is used for cold state management and to restore a cold state.
-func (k *Store) ArchivePoint(ctx context.Context, index uint64) []byte {
+func (k *Store) ArchivePoint(ctx context.Context, index uint64) [32]byte {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.ArchivePoint")
 	defer span.End()
 
@@ -227,7 +228,7 @@ func (k *Store) ArchivePoint(ctx context.Context, index uint64) []byte {
 		return nil
 	})
 
-	return blockRoot
+	return bytesutil.ToBytes32(blockRoot)
 }
 
 // creates state from marshaled proto state bytes.

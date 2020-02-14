@@ -16,6 +16,11 @@ func (s *State) replayBlocks(ctx context.Context, state *state.BeaconState, sign
 	var err error
 	// The input block list is sorted in decreasing slots order.
 	for i := len(signed) - 1; i >= 0; i-- {
+		// Exit early if target slot is already reached.
+		if state.Slot() >= targetSlot {
+			break
+		}
+
 		// If there is skip slot.
 		for state.Slot() < signed[i].Block.Slot {
 			state, err = transition.ProcessSlot(ctx, state)

@@ -36,7 +36,7 @@ type ReadOnlyDatabase interface {
 	HasState(ctx context.Context, blockRoot [32]byte) bool
 	HotStateSummary(ctx context.Context, blockRoot []byte) (*ethereum_beacon_p2p_v1.HotStateSummary, error)
 	ColdStateSummary(ctx context.Context, blockRoot []byte) (*ethereum_beacon_p2p_v1.ColdStateSummary, error)
-	ArchivePoint(ctx context.Context, index uint64) []byte
+	ArchivePoint(ctx context.Context, index uint64) [32]byte
 	// Slashing operations.
 	ProposerSlashing(ctx context.Context, slashingRoot [32]byte) (*eth.ProposerSlashing, error)
 	AttesterSlashing(ctx context.Context, slashingRoot [32]byte) (*eth.AttesterSlashing, error)
