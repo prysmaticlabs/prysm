@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/db/kv"
+	"github.com/prysmaticlabs/prysm/slasher/detection"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -65,6 +66,10 @@ func NewSlasherNode(ctx *cli.Context) (*SlasherNode, error) {
 	}
 
 	if err := slasher.registerBeaconClientService(ctx); err != nil {
+		return nil, err
+	}
+
+	if err := slasher.registerDetectionService(); err != nil {
 		return nil, err
 	}
 
@@ -153,11 +158,25 @@ func (s *SlasherNode) registerBeaconClientService(ctx *cli.Context) error {
 	if beaconProvider == "" {
 		beaconProvider = flags.BeaconRPCProviderFlag.Value
 	}
-	bs := beaconclient.NewBeaconClient(context.Background(), &beaconclient.Config{
+
+	bs := beaconclient.NewBeaconClientService(context.Background(), &beaconclient.Config{
 		BeaconCert:            beaconCert,
 		BeaconProvider:        beaconProvider,
 		AttesterSlashingsFeed: s.attesterSlashingsFeed,
 		ProposerSlashingsFeed: s.proposerSlashingsFeed,
 	})
 	return s.services.RegisterService(bs)
+}
+
+func (s *SlasherNode) registerDetectionService() error {
+	var bs *beaconclient.Service
+	if err := s.services.FetchService(&bs); err != nil {
+		panic(err)
+	}
+	ds := detection.NewDetectionService(context.Background(), &detection.Config{
+		Notifier:              bs,
+		AttesterSlashingsFeed: s.attesterSlashingsFeed,
+		ProposerSlashingsFeed: s.proposerSlashingsFeed,
+	})
+	return s.services.RegisterService(ds)
 }
