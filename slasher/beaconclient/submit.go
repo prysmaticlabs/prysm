@@ -4,31 +4,56 @@ import (
 	"context"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
-// submitProposerSlashings subscribes to an event feed for
+// subscribeDetectedProposerSlashings subscribes to an event feed for
 // slashing objects from the slasher runtime. Upon receiving
 // a proposer slashing from the feed, we submit the object to the
 // connected beacon node via a client RPC.
-func (bs *Service) submitProposerSlashings(ctx context.Context) {
+func (bs *Service) subscribeDetectedProposerSlashings(ctx context.Context, ch chan *ethpb.ProposerSlashing) {
 	ctx, span := trace.StartSpan(ctx, "beaconclient.submitProposerSlashing")
 	defer span.End()
-	item := &ethpb.ProposerSlashing{}
-	if _, err := bs.client.SubmitProposerSlashing(ctx, item); err != nil {
-		log.Error(err)
+	stateSub := bs.proposerSlashingsFeed.Subscribe(ch)
+	defer stateSub.Unsubscribe()
+	for {
+		select {
+		case slashing := <-ch:
+			if _, err := bs.client.SubmitProposerSlashing(ctx, slashing); err != nil {
+				log.Error(err)
+			}
+		case <-stateSub.Err():
+			logrus.Error("Subscriber closed, exiting goroutine")
+			return
+		case <-ctx.Done():
+			logrus.Error("Context canceled")
+			return
+		}
 	}
 }
 
-// submitAttesterSlashings subscribes to an event feed for
+// subscribeDetectedAttesterSlashings subscribes to an event feed for
 // slashing objects from the slasher runtime. Upon receiving an
 // attester slashing from the feed, we submit the object to the
 // connected beacon node via a client RPC.
-func (bs *Service) submitAttesterSlashings(ctx context.Context) {
+func (bs *Service) subscribeDetectedAttesterSlashings(ctx context.Context, ch chan *ethpb.AttesterSlashing) {
 	ctx, span := trace.StartSpan(ctx, "beaconclient.submitAttesterSlashing")
 	defer span.End()
-	item := &ethpb.AttesterSlashing{}
-	if _, err := bs.client.SubmitAttesterSlashing(ctx, item); err != nil {
-		log.Error(err)
+	stateSub := bs.attesterSlashingsFeed.Subscribe(ch)
+	defer stateSub.Unsubscribe()
+	for {
+		select {
+		case slashing := <-ch:
+			if _, err := bs.client.SubmitAttesterSlashing(ctx, slashing); err != nil {
+				log.Error(err)
+			}
+		case <-stateSub.Err():
+			logrus.Error("Subscriber closed, exiting goroutine")
+			return
+		case <-ctx.Done():
+			logrus.Error("Context canceled")
+			return
+		}
 	}
 }

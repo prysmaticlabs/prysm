@@ -24,32 +24,42 @@ var log = logrus.WithField("prefix", "beaconclient")
 
 // Service struct for the beaconclient service of the slasher.
 type Service struct {
-	ctx             context.Context
-	cancel          context.CancelFunc
-	cert            string
-	conn            *grpc.ClientConn
-	provider        string
-	client          ethpb.BeaconChainClient
-	blockFeed       *event.Feed
-	attestationFeed *event.Feed
+	ctx                   context.Context
+	cancel                context.CancelFunc
+	cert                  string
+	conn                  *grpc.ClientConn
+	provider              string
+	client                ethpb.BeaconChainClient
+	blockFeed             *event.Feed
+	attestationFeed       *event.Feed
+	proposerSlashingsChan chan *ethpb.ProposerSlashing
+	attesterSlashingsChan chan *ethpb.AttesterSlashing
+	attesterSlashingsFeed *event.Feed
+	proposerSlashingsFeed *event.Feed
 }
 
 // Config options for the beaconclient service.
 type Config struct {
-	BeaconProvider string
-	BeaconCert     string
+	BeaconProvider        string
+	BeaconCert            string
+	ProposerSlashingsFeed *event.Feed
+	AttesterSlashingsFeed *event.Feed
 }
 
 // NewBeaconClient creates a new instance of a beacon client service.
 func NewBeaconClient(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		cert:            cfg.BeaconCert,
-		ctx:             ctx,
-		cancel:          cancel,
-		provider:        cfg.BeaconProvider,
-		blockFeed:       new(event.Feed),
-		attestationFeed: new(event.Feed),
+		cert:                  cfg.BeaconCert,
+		ctx:                   ctx,
+		cancel:                cancel,
+		provider:              cfg.BeaconProvider,
+		blockFeed:             new(event.Feed),
+		attestationFeed:       new(event.Feed),
+		proposerSlashingsChan: make(chan *ethpb.ProposerSlashing, 1),
+		attesterSlashingsChan: make(chan *ethpb.AttesterSlashing, 1),
+		attesterSlashingsFeed: cfg.AttesterSlashingsFeed,
+		proposerSlashingsFeed: cfg.ProposerSlashingsFeed,
 	}
 }
 
@@ -124,6 +134,6 @@ func (bs *Service) Start() {
 
 	go bs.receiveBlocks(bs.ctx)
 	go bs.receiveAttestations(bs.ctx)
-	go bs.submitProposerSlashings(bs.ctx)
-	go bs.submitAttesterSlashings(bs.ctx)
+	go bs.subscribeDetectedProposerSlashings(bs.ctx, bs.proposerSlashingsChan)
+	go bs.subscribeDetectedAttesterSlashings(bs.ctx, bs.attesterSlashingsChan)
 }
