@@ -19,7 +19,6 @@ func TestChainService_SaveHead_DataRace(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	s := &Service{
 		beaconDB:       db,
-		canonicalRoots: make(map[uint64][]byte),
 	}
 	go func() {
 		s.saveHead(
