@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -150,10 +149,10 @@ func (s *Service) Start() {
 		}
 
 		// Resume fork choice.
-		s.justifiedCheckpt = proto.Clone(justifiedCheckpoint).(*ethpb.Checkpoint)
-		s.bestJustifiedCheckpt = proto.Clone(justifiedCheckpoint).(*ethpb.Checkpoint)
-		s.finalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
-		s.prevFinalizedCheckpt = proto.Clone(finalizedCheckpoint).(*ethpb.Checkpoint)
+		s.justifiedCheckpt = stateTrie.CopyCheckpoint(justifiedCheckpoint)
+		s.bestJustifiedCheckpt = stateTrie.CopyCheckpoint(justifiedCheckpoint)
+		s.finalizedCheckpt = stateTrie.CopyCheckpoint(finalizedCheckpoint)
+		s.prevFinalizedCheckpt = stateTrie.CopyCheckpoint(finalizedCheckpoint)
 		s.resumeForkChoice(justifiedCheckpoint, finalizedCheckpoint)
 
 		if finalizedCheckpoint.Epoch > 1 {
@@ -290,7 +289,7 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 
 	s.canonicalRoots[b.Block.Slot] = r[:]
 
-	s.headBlock = proto.Clone(b).(*ethpb.SignedBeaconBlock)
+	s.headBlock = stateTrie.CopySignedBeaconBlock(b)
 
 	headState, err := s.beaconDB.State(ctx, r)
 	if err != nil {
@@ -347,10 +346,10 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 	genesisCheckpoint := &ethpb.Checkpoint{Root: genesisBlkRoot[:]}
 
 	// Add the genesis block to the fork choice store.
-	s.justifiedCheckpt = proto.Clone(genesisCheckpoint).(*ethpb.Checkpoint)
-	s.bestJustifiedCheckpt = proto.Clone(genesisCheckpoint).(*ethpb.Checkpoint)
-	s.finalizedCheckpt = proto.Clone(genesisCheckpoint).(*ethpb.Checkpoint)
-	s.prevFinalizedCheckpt = proto.Clone(genesisCheckpoint).(*ethpb.Checkpoint)
+	s.justifiedCheckpt = stateTrie.CopyCheckpoint(genesisCheckpoint)
+	s.bestJustifiedCheckpt = stateTrie.CopyCheckpoint(genesisCheckpoint)
+	s.finalizedCheckpt = stateTrie.CopyCheckpoint(genesisCheckpoint)
+	s.prevFinalizedCheckpt = stateTrie.CopyCheckpoint(genesisCheckpoint)
 
 	if err := s.forkChoiceStore.ProcessBlock(ctx,
 		genesisBlk.Block.Slot,
