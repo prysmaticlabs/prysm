@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -211,9 +213,11 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 	if eth1Data != nil {
 		s.depositTrie = trieutil.CreateTrieFromProto(eth1Data.Trie)
 		s.chainStartData = eth1Data.ChainstartData
-		s.preGenesisState, err = stateTrie.InitializeFromProto(eth1Data.BeaconState)
-		if err != nil {
-			return nil, errors.Wrap(err, "Could not initialize state trie")
+		if eth1Data.BeaconState != new(pbp2p.BeaconState) {
+			s.preGenesisState, err = stateTrie.InitializeFromProto(eth1Data.BeaconState)
+			if err != nil {
+				return nil, errors.Wrap(err, "Could not initialize state trie")
+			}
 		}
 		s.latestEth1Data = eth1Data.CurrentEth1Data
 		s.lastReceivedMerkleIndex = int64(len(s.depositTrie.Items()) - 1)

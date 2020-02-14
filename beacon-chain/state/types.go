@@ -55,10 +55,7 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 		state:                 st,
 		dirtyFields:           make(map[fieldIndex]interface{}, 20),
 		sharedFieldReferences: make(map[fieldIndex]*reference, 10),
-	}
-
-	if st != new(pbp2p.BeaconState) && st.Validators != nil {
-		b.valIdxMap = coreutils.ValidatorIndexMap(st.Validators)
+		valIdxMap:             coreutils.ValidatorIndexMap(st.Validators),
 	}
 
 	for i := 0; i < 20; i++ {
