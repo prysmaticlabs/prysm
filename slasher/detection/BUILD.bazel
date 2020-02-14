@@ -19,7 +19,7 @@ go_test(
     testonly = True,
     srcs = [
         "attestation_test.go",
-        "spans_detection_bench_test.go",
+        "attestations_bench_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
