@@ -15,10 +15,10 @@ import (
 
 // This defines the current chain service's view of head.
 type head struct {
-	slot  uint64 // current head slot.
-	root  [32]byte // current head root.
+	slot  uint64                   // current head slot.
+	root  [32]byte                 // current head root.
 	block *ethpb.SignedBeaconBlock // current head block.
-	state *state.BeaconState // current head state.
+	state *state.BeaconState       // current head state.
 }
 
 // This gets head from the fork choice service and saves head related items
