@@ -43,30 +43,30 @@ func DetectAndUpdateSpans(
 ) (*slashpb.EpochSpanMap, uint64, uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "Detection.DetectAndUpdateSpans")
 	defer span.End()
-	minTargetEpoch, spanMap, err := DetectAndUpdateMinEpochSpan(ctx, att.Data.Source.Epoch, att.Data.Target.Epoch, spanMap)
+	minTargetEpoch, spanMap, err := detectAndUpdateMinEpochSpan(ctx, att.Data.Source.Epoch, att.Data.Target.Epoch, spanMap)
 	if err != nil {
 		return nil, 0, 0, errors.Wrap(err, "failed to update min spans")
 	}
-	maxTargetEpoch, spanMap, err := DetectAndUpdateMaxEpochSpan(ctx, att.Data.Source.Epoch, att.Data.Target.Epoch, spanMap)
+	maxTargetEpoch, spanMap, err := detectAndUpdateMaxEpochSpan(ctx, att.Data.Source.Epoch, att.Data.Target.Epoch, spanMap)
 	if err != nil {
 		return nil, 0, 0, errors.Wrap(err, "failed to update max spans")
 	}
 	return spanMap, minTargetEpoch, maxTargetEpoch, nil
 }
 
-// DetectAndUpdateMaxEpochSpan is used to detect and update the max span of an incoming attestation.
+// detectAndUpdateMaxEpochSpan is used to detect and update the max span of an incoming attestation.
 // This is used for detecting surrounding votes.
 // The max span is the span between the current attestation's source epoch and the furthest attestation's
 // target epoch that has a lower (earlier) source epoch.
 // Logic for this detection method was designed by https://github.com/protolambda
 // Detailed here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
-func DetectAndUpdateMaxEpochSpan(
+func detectAndUpdateMaxEpochSpan(
 	ctx context.Context,
 	source uint64,
 	target uint64,
 	spanMap *slashpb.EpochSpanMap,
 ) (uint64, *slashpb.EpochSpanMap, error) {
-	ctx, span := trace.StartSpan(ctx, "Detection.DetectAndUpdateMaxEpochSpan")
+	ctx, span := trace.StartSpan(ctx, "Detection.detectAndUpdateMaxEpochSpan")
 	defer span.End()
 	if target < source {
 		return 0, nil, fmt.Errorf("target: %d < source: %d ", target, source)
@@ -93,20 +93,20 @@ func DetectAndUpdateMaxEpochSpan(
 	return 0, spanMap, nil
 }
 
-// DetectAndUpdateMinEpochSpan is used to detect surrounded votes and update the min epoch span
+// detectAndUpdateMinEpochSpan is used to detect surrounded votes and update the min epoch span
 // of an incoming attestation.
 // The min span is the span between the current attestations target epoch and the
 // closest attestation's target distance.
 //
 // Logic is following the detection method designed by https://github.com/protolambda
 // Detailed here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
-func DetectAndUpdateMinEpochSpan(
+func detectAndUpdateMinEpochSpan(
 	ctx context.Context,
 	source uint64,
 	target uint64,
 	spanMap *slashpb.EpochSpanMap,
 ) (uint64, *slashpb.EpochSpanMap, error) {
-	ctx, span := trace.StartSpan(ctx, "Detection.DetectAndUpdateMinEpochSpan")
+	ctx, span := trace.StartSpan(ctx, "Detection.detectAndUpdateMinEpochSpan")
 	defer span.End()
 	if target < source {
 		return 0, nil, fmt.Errorf(

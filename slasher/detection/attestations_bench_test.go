@@ -27,7 +27,7 @@ func BenchmarkMinSpan(b *testing.B) {
 				if err != nil {
 					b.Fatal(err)
 				}
-				_, _, err = DetectAndUpdateMinEpochSpan(ctx, i, i+diff, spanMap)
+				_, _, err = detectAndUpdateMinEpochSpan(ctx, i, i+diff, spanMap)
 				if err != nil {
 					b.Fatal(err)
 				}
@@ -52,7 +52,7 @@ func BenchmarkMaxSpan(b *testing.B) {
 				if err != nil {
 					b.Fatal(err)
 				}
-				_, _, err = DetectAndUpdateMaxEpochSpan(ctx, diff, diff+i, spanMap)
+				_, _, err = detectAndUpdateMaxEpochSpan(ctx, diff, diff+i, spanMap)
 				if err != nil {
 					b.Fatal(err)
 				}
