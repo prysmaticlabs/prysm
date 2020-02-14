@@ -20,7 +20,7 @@ func (ds *Service) detectIncomingBlocks(ctx context.Context, ch chan *ethpb.Sign
 		select {
 		case <-ch:
 			log.Infof("Running detection on block...")
-			// TODO(Raul): Run detection function for proposer slashings.
+			// TODO(#4836): Run detection function for proposer slashings.
 		case <-sub.Err():
 			log.Error("Subscriber closed, exiting goroutine")
 			return
@@ -44,8 +44,8 @@ func (ds *Service) detectIncomingAttestations(ctx context.Context, ch chan *ethp
 		select {
 		case <-ch:
 			log.Infof("Running detection on attestation...")
-			// TODO(Raul): Run detection function for attester double voting.
-			// TODO(Raul): Run detection function for attester surround voting.
+			// TODO(#4836): Run detection function for attester double voting.
+			// TODO(#4836): Run detection function for attester surround voting.
 		case <-sub.Err():
 			log.Error("Subscriber closed, exiting goroutine")
 			return
