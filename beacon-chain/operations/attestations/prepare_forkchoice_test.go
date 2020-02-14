@@ -183,7 +183,7 @@ func TestBatchAttestations_Single(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(wanted, s.pool.ForkchoiceAttestations()) {
-		t.Error("Did not aggregation and save for batch")
+		t.Error("Did not aggregate and save for batch")
 	}
 }
 
