@@ -10,7 +10,8 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/slasher/db"
+	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
+	"github.com/prysmaticlabs/prysm/slasher/db/types"
 	"github.com/urfave/cli"
 )
 
@@ -18,11 +19,11 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	c := cli.NewContext(app, set, nil)
-	dbs := db.SetupSlasherDB(t, c)
-	defer db.TeardownSlasherDB(t, dbs)
+	db := testDB.SetupSlasherDB(t, c)
+	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
 	slasherServer := &Server{
-		SlasherDB: dbs,
+		SlasherDB: db,
 	}
 	psr := &slashpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.SignedBeaconBlockHeader{
@@ -70,11 +71,11 @@ func TestServer_IsNotSlashableBlock(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	c := cli.NewContext(app, set, nil)
-	dbs := db.SetupSlasherDB(t, c)
-	defer db.TeardownSlasherDB(t, dbs)
+	db := testDB.SetupSlasherDB(t, c)
+	defer testDB.TeardownSlasherDB(t, db)
 
 	slasherServer := &Server{
-		SlasherDB: dbs,
+		SlasherDB: db,
 	}
 	psr := &slashpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.SignedBeaconBlockHeader{
@@ -114,12 +115,12 @@ func TestServer_DoubleBlock(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	c := cli.NewContext(app, set, nil)
-	dbs := db.SetupSlasherDB(t, c)
-	defer db.TeardownSlasherDB(t, dbs)
+	db := testDB.SetupSlasherDB(t, c)
+	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
 	slasherServer := &Server{
 		ctx:       ctx,
-		SlasherDB: dbs,
+		SlasherDB: db,
 	}
 	psr := &slashpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.SignedBeaconBlockHeader{
@@ -149,12 +150,13 @@ func TestServer_SameSlotSlashable(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	c := cli.NewContext(app, set, nil)
-	dbs := db.SetupSlasherDB(t, c)
-	defer db.TeardownSlasherDB(t, dbs)
+	db := testDB.SetupSlasherDB(t, c)
+	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
+
 	slasherServer := &Server{
 		ctx:       ctx,
-		SlasherDB: dbs,
+		SlasherDB: db,
 	}
 	psr := &slashpb.ProposerSlashingRequest{
 		BlockHeader: &ethpb.SignedBeaconBlockHeader{
@@ -195,7 +197,7 @@ func TestServer_SameSlotSlashable(t *testing.T) {
 		t.Errorf("wanted slashing proof: %v got: %v", want, sr.ProposerSlashing[0])
 
 	}
-	if err := slasherServer.SlasherDB.SaveProposerSlashing(db.Active, sr.ProposerSlashing[0]); err != nil {
+	if err := slasherServer.SlasherDB.SaveProposerSlashing(ctx, types.Active, sr.ProposerSlashing[0]); err != nil {
 		t.Errorf("Could not call db method: %v", err)
 	}
 	if sr, err = slasherServer.ProposerSlashings(ctx, &slashpb.SlashingStatusRequest{Status: slashpb.SlashingStatusRequest_Active}); err != nil {
@@ -206,7 +208,7 @@ func TestServer_SameSlotSlashable(t *testing.T) {
 		t.Errorf("Could not call RPC method: %v", err)
 	}
 	if len(ar.AttesterSlashing) > 0 {
-		t.Errorf("Attester slashings with status 'active' should not be present in db.")
+		t.Errorf("Attester slashings with status 'active' should not be present in testDB.")
 	}
 	emptySlashingResponse, err := slasherServer.ProposerSlashings(ctx, &slashpb.SlashingStatusRequest{Status: slashpb.SlashingStatusRequest_Included})
 	if err != nil {
@@ -224,12 +226,13 @@ func TestServer_SlashDoubleAttestation(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	c := cli.NewContext(app, set, nil)
-	dbs := db.SetupSlasherDB(t, c)
-	defer db.TeardownSlasherDB(t, dbs)
+	db := testDB.SetupSlasherDB(t, c)
+	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
+
 	slasherServer := &Server{
 		ctx:       ctx,
-		SlasherDB: dbs,
+		SlasherDB: db,
 	}
 	ia1 := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0},
@@ -279,12 +282,12 @@ func TestServer_SlashTripleAttestation(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	c := cli.NewContext(app, set, nil)
-	dbs := db.SetupSlasherDB(t, c)
-	defer db.TeardownSlasherDB(t, dbs)
+	db := testDB.SetupSlasherDB(t, c)
+	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
 	slasherServer := &Server{
 		ctx:       ctx,
-		SlasherDB: dbs,
+		SlasherDB: db,
 	}
 	ia1 := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0},
@@ -356,12 +359,12 @@ func TestServer_DontSlashSameAttestation(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	c := cli.NewContext(app, set, nil)
-	dbs := db.SetupSlasherDB(t, c)
-	defer db.TeardownSlasherDB(t, dbs)
+	db := testDB.SetupSlasherDB(t, c)
+	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
 	slasherServer := &Server{
 		ctx:       ctx,
-		SlasherDB: dbs,
+		SlasherDB: db,
 	}
 	ia1 := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0},
@@ -392,12 +395,12 @@ func TestServer_DontSlashDifferentTargetAttestation(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	c := cli.NewContext(app, set, nil)
-	dbs := db.SetupSlasherDB(t, c)
-	defer db.TeardownSlasherDB(t, dbs)
+	db := testDB.SetupSlasherDB(t, c)
+	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
 	slasherServer := &Server{
 		ctx:       ctx,
-		SlasherDB: dbs,
+		SlasherDB: db,
 	}
 	ia1 := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0},
@@ -439,12 +442,12 @@ func TestServer_DontSlashSameAttestationData(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	c := cli.NewContext(app, set, nil)
-	dbs := db.SetupSlasherDB(t, c)
-	defer db.TeardownSlasherDB(t, dbs)
+	db := testDB.SetupSlasherDB(t, c)
+	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
 	slasherServer := &Server{
 		ctx:       ctx,
-		SlasherDB: dbs,
+		SlasherDB: db,
 	}
 	ad := &ethpb.AttestationData{
 		Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
@@ -481,12 +484,12 @@ func TestServer_SlashSurroundedAttestation(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	c := cli.NewContext(app, set, nil)
-	dbs := db.SetupSlasherDB(t, c)
-	defer db.TeardownSlasherDB(t, dbs)
+	db := testDB.SetupSlasherDB(t, c)
+	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
 	slasherServer := &Server{
 		ctx:       ctx,
-		SlasherDB: dbs,
+		SlasherDB: db,
 	}
 	ia1 := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0},
@@ -535,12 +538,12 @@ func TestServer_SlashSurroundAttestation(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	c := cli.NewContext(app, set, nil)
-	dbs := db.SetupSlasherDB(t, c)
-	defer db.TeardownSlasherDB(t, dbs)
+	db := testDB.SetupSlasherDB(t, c)
+	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
 	slasherServer := &Server{
 		ctx:       ctx,
-		SlasherDB: dbs,
+		SlasherDB: db,
 	}
 	ia1 := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0},
@@ -583,7 +586,7 @@ func TestServer_SlashSurroundAttestation(t *testing.T) {
 		t.Errorf("Wanted slashing proof: %v got: %v", want, sr.AttesterSlashing[0])
 
 	}
-	if err := slasherServer.SlasherDB.SaveAttesterSlashing(db.Active, sr.AttesterSlashing[0]); err != nil {
+	if err := slasherServer.SlasherDB.SaveAttesterSlashing(ctx, types.Active, sr.AttesterSlashing[0]); err != nil {
 		t.Errorf("Could not call db method: %v", err)
 	}
 	pr, err := slasherServer.ProposerSlashings(ctx, &slashpb.SlashingStatusRequest{Status: slashpb.SlashingStatusRequest_Active})
@@ -591,7 +594,7 @@ func TestServer_SlashSurroundAttestation(t *testing.T) {
 		t.Errorf("Could not call RPC method: %v", err)
 	}
 	if len(pr.ProposerSlashing) > 0 {
-		t.Errorf("Attester slashings with status 'active' should not be present in db.")
+		t.Errorf("Attester slashings with status 'active' should not be present in testDB.")
 	}
 	if sr, err = slasherServer.AttesterSlashings(ctx, &slashpb.SlashingStatusRequest{Status: slashpb.SlashingStatusRequest_Active}); err != nil {
 		t.Errorf("Could not call RPC method: %v", err)
@@ -612,12 +615,12 @@ func TestServer_DontSlashValidAttestations(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	c := cli.NewContext(app, set, nil)
-	dbs := db.SetupSlasherDB(t, c)
-	defer db.TeardownSlasherDB(t, dbs)
+	db := testDB.SetupSlasherDB(t, c)
+	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
 	slasherServer := &Server{
 		ctx:       ctx,
-		SlasherDB: dbs,
+		SlasherDB: db,
 	}
 	ia1 := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0},
@@ -658,12 +661,12 @@ func TestServer_Store_100_Attestations(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	c := cli.NewContext(app, set, nil)
-	dbs := db.SetupSlasherDB(t, c)
-	defer db.TeardownSlasherDB(t, dbs)
+	db := testDB.SetupSlasherDB(t, c)
+	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
 	slasherServer := &Server{
 		ctx:       ctx,
-		SlasherDB: dbs,
+		SlasherDB: db,
 	}
 	var cb []uint64
 	for i := uint64(0); i < 100; i++ {
@@ -690,7 +693,7 @@ func TestServer_Store_100_Attestations(t *testing.T) {
 		}
 	}
 
-	s, err := dbs.Size()
+	s, err := db.Size()
 	if err != nil {
 		t.Error(err)
 	}

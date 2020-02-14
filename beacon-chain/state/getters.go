@@ -2,9 +2,9 @@ package state
 
 import (
 	"fmt"
+	"github.com/prysmaticlabs/go-bitfield"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
@@ -63,15 +63,15 @@ func (v *ReadOnlyValidator) Slashed() bool {
 // InnerStateUnsafe returns the pointer value of the underlying
 // beacon state proto object, bypassing immutability. Use with care.
 func (b *BeaconState) InnerStateUnsafe() *pbp2p.BeaconState {
-	if b.state == nil {
-		return &pbp2p.BeaconState{}
+	if b == nil {
+		return nil
 	}
 	return b.state
 }
 
 // CloneInnerState the beacon state into a protobuf for usage.
 func (b *BeaconState) CloneInnerState() *pbp2p.BeaconState {
-	if b.state == nil {
+	if b == nil || b.state == nil {
 		return nil
 	}
 	return &pbp2p.BeaconState{
@@ -596,90 +596,4 @@ func (b *BeaconState) FinalizedCheckpointEpoch() uint64 {
 	defer b.lock.RUnlock()
 
 	return b.state.FinalizedCheckpoint.Epoch
-}
-
-// CopyETH1Data copies the provided eth1data object.
-func CopyETH1Data(data *ethpb.Eth1Data) *ethpb.Eth1Data {
-	if data == nil {
-		return &ethpb.Eth1Data{}
-	}
-
-	newETH1 := &ethpb.Eth1Data{
-		DepositCount: data.DepositCount,
-	}
-	depositRoot := make([]byte, len(data.DepositRoot))
-	blockHash := make([]byte, len(data.BlockHash))
-
-	copy(depositRoot, data.DepositRoot)
-	copy(blockHash, data.BlockHash)
-
-	newETH1.DepositRoot = depositRoot
-	newETH1.BlockHash = blockHash
-
-	return newETH1
-}
-
-// CopyPendingAttestation copies the provided pending attestation object.
-func CopyPendingAttestation(att *pbp2p.PendingAttestation) *pbp2p.PendingAttestation {
-	if att == nil {
-		return &pbp2p.PendingAttestation{}
-	}
-	aggBytes := []byte(att.AggregationBits)
-	newBitlist := make([]byte, len(aggBytes))
-	copy(newBitlist, aggBytes)
-	blockRoot := [32]byte{}
-	copy(blockRoot[:], att.Data.BeaconBlockRoot)
-	data := &ethpb.AttestationData{
-		Slot:            att.Data.Slot,
-		CommitteeIndex:  att.Data.CommitteeIndex,
-		BeaconBlockRoot: blockRoot[:],
-		Source:          CopyCheckpoint(att.Data.Source),
-		Target:          CopyCheckpoint(att.Data.Target),
-	}
-	return &pbp2p.PendingAttestation{
-		AggregationBits: newBitlist,
-		Data:            data,
-		InclusionDelay:  att.InclusionDelay,
-		ProposerIndex:   att.ProposerIndex,
-	}
-}
-
-// CopyAttestation copies the provided attestation object.
-func CopyAttestation(att *ethpb.Attestation) *ethpb.Attestation {
-	if att == nil {
-		return &ethpb.Attestation{}
-	}
-	aggBytes := []byte(att.AggregationBits)
-	newBitlist := make([]byte, len(aggBytes))
-	copy(newBitlist, aggBytes)
-	blockRoot := [32]byte{}
-	copy(blockRoot[:], att.Data.BeaconBlockRoot)
-	sig := [96]byte{}
-	copy(sig[:], att.Signature)
-	data := &ethpb.AttestationData{
-		Slot:            att.Data.Slot,
-		CommitteeIndex:  att.Data.CommitteeIndex,
-		BeaconBlockRoot: blockRoot[:],
-		Source:          CopyCheckpoint(att.Data.Source),
-		Target:          CopyCheckpoint(att.Data.Target),
-	}
-	return &ethpb.Attestation{
-		AggregationBits: newBitlist,
-		Data:            data,
-		Signature:       sig[:],
-	}
-}
-
-// CopyCheckpoint copies the provided checkpoint.
-func CopyCheckpoint(cp *ethpb.Checkpoint) *ethpb.Checkpoint {
-	if cp == nil {
-		return &ethpb.Checkpoint{}
-	}
-	root := [32]byte{}
-	copy(root[:], cp.Root)
-
-	return &ethpb.Checkpoint{
-		Epoch: cp.Epoch,
-		Root:  root[:],
-	}
 }

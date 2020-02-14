@@ -21,6 +21,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -67,6 +68,7 @@ type Service struct {
 	mockEth1Votes          bool
 	attestationsPool       attestations.Pool
 	exitPool               *voluntaryexits.Pool
+	slashingsPool          *slashings.Pool
 	syncService            sync.Checker
 	host                   string
 	port                   string
@@ -110,6 +112,7 @@ type Config struct {
 	MockEth1Votes         bool
 	AttestationsPool      attestations.Pool
 	ExitPool              *voluntaryexits.Pool
+	SlashingsPool         *slashings.Pool
 	SyncService           sync.Checker
 	Broadcaster           p2p.Broadcaster
 	PeersFetcher          p2p.PeersProvider
@@ -144,6 +147,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		mockEth1Votes:         cfg.MockEth1Votes,
 		attestationsPool:      cfg.AttestationsPool,
 		exitPool:              cfg.ExitPool,
+		slashingsPool:         cfg.SlashingsPool,
 		syncService:           cfg.SyncService,
 		host:                  cfg.Host,
 		port:                  cfg.Port,
@@ -241,7 +245,8 @@ func (s *Service) Start() {
 	beaconChainServer := &beacon.Server{
 		Ctx:                  s.ctx,
 		BeaconDB:             s.beaconDB,
-		Pool:                 s.attestationsPool,
+		AttestationsPool:     s.attestationsPool,
+		SlashingsPool:        s.slashingsPool,
 		HeadFetcher:          s.headFetcher,
 		FinalizationFetcher:  s.finalizationFetcher,
 		ParticipationFetcher: s.participationFetcher,

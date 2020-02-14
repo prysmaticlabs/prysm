@@ -76,7 +76,7 @@ func (b *BeaconState) SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.state.LatestBlockHeader = proto.Clone(val).(*ethpb.BeaconBlockHeader)
+	b.state.LatestBlockHeader = CopyBeaconBlockHeader(val)
 	b.markFieldAsDirty(latestBlockHeader)
 	return nil
 }
