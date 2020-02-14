@@ -284,9 +284,6 @@ func (s *Service) saveGenesisValidators(ctx context.Context, state *stateTrie.Be
 
 // This gets called when beacon chain is first initialized to save genesis data (state, block, and more) in db.
 func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.BeaconState) error {
-	s.headLock.Lock()
-	defer s.headLock.Unlock()
-
 	stateRoot, err := genesisState.HashTreeRoot()
 	if err != nil {
 		return err
@@ -337,9 +334,6 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 
 // This gets called to initialize chain info variables using the finalized checkpoint stored in DB
 func (s *Service) initializeChainInfo(ctx context.Context) error {
-	s.headLock.Lock()
-	defer s.headLock.Unlock()
-
 	genesisBlock, err := s.beaconDB.GenesisBlock(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block from db")

@@ -117,9 +117,6 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 // root in DB. With the inception of inital-sync-cache-state flag, it uses finalized
 // check point as anchors to resume sync therefore head is no longer needed to be saved on per slot basis.
 func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, r [32]byte) error {
-	s.headLock.Lock()
-	defer s.headLock.Unlock()
-
 	if b == nil || b.Block == nil {
 		return errors.New("cannot save nil head block")
 	}
@@ -127,6 +124,18 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 	headState, err := s.beaconDB.State(ctx, r)
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve head state in DB")
+	}
+	if headState == nil {
+		s.initSyncStateLock.RLock()
+		cachedHeadState, ok := s.initSyncState[r]
+		if ok {
+			headState = cachedHeadState
+		}
+		s.initSyncStateLock.RUnlock()
+	}
+
+	if headState == nil {
+		return errors.New("nil head state")
 	}
 
 	s.setHead(headState.Slot(), r, stateTrie.CopySignedBeaconBlock(b), headState)
@@ -187,5 +196,8 @@ func (s *Service) headState() *state.BeaconState {
 
 // This checks whether head state is nil
 func (s *Service) hasHeadState() bool {
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+
 	return !(s.head == nil) && !(s.head.state == nil)
 }
