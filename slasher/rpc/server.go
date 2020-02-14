@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/slasher/db/kv"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
+	"github.com/prysmaticlabs/prysm/slasher/detection/attestations"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -110,13 +111,7 @@ func (ss *Server) UpdateSpanMaps(ctx context.Context, req *ethpb.IndexedAttestat
 				wg.Done()
 				return
 			}
-			_, spanMap, err = ss.DetectAndUpdateMinEpochSpan(ctx, req.Data.Source.Epoch, req.Data.Target.Epoch, i, spanMap)
-			if err != nil {
-				er <- err
-				wg.Done()
-				return
-			}
-			_, spanMap, err = ss.DetectAndUpdateMaxEpochSpan(ctx, req.Data.Source.Epoch, req.Data.Target.Epoch, i, spanMap)
+			spanMap, _, _, err = attestations.DetectAndUpdateSpans(ctx, req, spanMap)
 			if err != nil {
 				er <- err
 				wg.Done()
@@ -193,13 +188,9 @@ func (ss *Server) DetectSurroundVotes(ctx context.Context, validatorIdx uint64, 
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get validator spans map")
 	}
-	minTargetEpoch, spanMap, err := ss.DetectAndUpdateMinEpochSpan(ctx, req.Data.Source.Epoch, req.Data.Target.Epoch, validatorIdx, spanMap)
+	spanMap, minTargetEpoch, maxTargetEpoch, err := attestations.DetectAndUpdateSpans(ctx, req, spanMap)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to update min spans")
-	}
-	maxTargetEpoch, spanMap, err := ss.DetectAndUpdateMaxEpochSpan(ctx, req.Data.Source.Epoch, req.Data.Target.Epoch, validatorIdx, spanMap)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to update max spans")
+		return nil, errors.Wrap(err, "failed to update spans")
 	}
 	if err := ss.SlasherDB.SaveValidatorSpansMap(ctx, validatorIdx, spanMap); err != nil {
 		return nil, errors.Wrap(err, "failed to save validator spans map")
