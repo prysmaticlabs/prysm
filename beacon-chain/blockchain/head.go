@@ -4,12 +4,20 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"go.opencensus.io/trace"
 )
+
+type head struct {
+	slot  uint64
+	root  [32]byte
+	block *ethpb.SignedBeaconBlock
+	state *state.BeaconState
+}
 
 // This gets head from the fork choice service and saves head related items
 // (ie root, block, state) to the local service cache.
@@ -59,48 +67,43 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	}
 
 	// Get the new head block from DB.
-	newHead, err := s.beaconDB.Block(ctx, headRoot)
+	newHeadBlock, err := s.beaconDB.Block(ctx, headRoot)
 	if err != nil {
 		return err
 	}
-	if newHead == nil || newHead.Block == nil {
+	if newHeadBlock == nil || newHeadBlock.Block == nil {
 		return errors.New("cannot save nil head block")
 	}
 
 	// Get the new head state from cached state or DB.
-	var headState *state.BeaconState
+	var newHeadState *state.BeaconState
 	var exists bool
 	if featureconfig.Get().InitSyncCacheState {
-		headState, exists = s.initSyncState[headRoot]
+		newHeadState, exists = s.initSyncState[headRoot]
 		if !exists {
-			headState, err = s.beaconDB.State(ctx, headRoot)
+			newHeadState, err = s.beaconDB.State(ctx, headRoot)
 			if err != nil {
 				return errors.Wrap(err, "could not retrieve head state in DB")
 			}
-			if headState == nil {
+			if newHeadState == nil {
 				return errors.New("cannot save nil head state")
 			}
 		}
 	} else {
-		headState, err = s.beaconDB.State(ctx, headRoot)
+		newHeadState, err = s.beaconDB.State(ctx, headRoot)
 		if err != nil {
 			return errors.Wrap(err, "could not retrieve head state in DB")
 		}
-		if headState == nil {
+		if newHeadState == nil {
 			return errors.New("cannot save nil head state")
 		}
 	}
-	if headState == nil {
+	if newHeadState == nil {
 		return errors.New("cannot save nil head state")
 	}
 
-	s.headLock.Lock()
-	defer s.headLock.Unlock()
 	// Cache the new head info.
-	s.headSlot = newHead.Block.Slot
-	s.canonicalRoots[newHead.Block.Slot] = headRoot[:]
-	s.headBlock = stateTrie.CopySignedBeaconBlock(newHead)
-	s.headState = headState
+	s.setHead(newHeadState.Slot(), headRoot, newHeadBlock, newHeadState)
 
 	// Save the new head root to DB.
 	if err := s.beaconDB.SaveHeadBlockRoot(ctx, headRoot); err != nil {
@@ -108,4 +111,81 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	}
 
 	return nil
+}
+
+// This gets called to update canonical root mapping. It does not save head block
+// root in DB. With the inception of inital-sync-cache-state flag, it uses finalized
+// check point as anchors to resume sync therefore head is no longer needed to be saved on per slot basis.
+func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, r [32]byte) error {
+	s.headLock.Lock()
+	defer s.headLock.Unlock()
+
+	if b == nil || b.Block == nil {
+		return errors.New("cannot save nil head block")
+	}
+
+	headState, err := s.beaconDB.State(ctx, r)
+	if err != nil {
+		return errors.Wrap(err, "could not retrieve head state in DB")
+	}
+
+	s.setHead(headState.Slot(), r, stateTrie.CopySignedBeaconBlock(b), headState)
+
+	return nil
+}
+
+// This sets head object which is used to track the head slot, root, block and state.
+func (s *Service) setHead(slot uint64, root [32]byte, block *ethpb.SignedBeaconBlock, state *state.BeaconState) {
+	s.headLock.Lock()
+	defer s.headLock.Unlock()
+
+	s.head = &head{
+		slot:  slot,
+		root:  root,
+		block: block,
+		state: state,
+	}
+}
+
+// This returns the head slot.
+func (s *Service) headSlot() uint64 {
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+
+	return s.head.slot
+}
+
+// This returns the head root.
+// This does a full copy of head root for immutability.
+func (s *Service) headRoot() [32]byte {
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+
+	root := make([]byte, 32)
+	copy(root, s.head.root[:])
+
+	return bytesutil.ToBytes32(root)
+}
+
+// This returns the head block.
+// This does a full copy of head block for immutability.
+func (s *Service) headBlock() *ethpb.SignedBeaconBlock {
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+
+	return stateTrie.CopySignedBeaconBlock(s.head.block)
+}
+
+// This returns the head state.
+// This does a full copy of state for immutability.
+func (s *Service) headState() *state.BeaconState {
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+
+	return s.head.state.Copy()
+}
+
+// This checks whether head state is nil
+func (s *Service) hasHeadState() bool {
+	return !(s.head == nil) && !(s.head.state == nil)
 }
