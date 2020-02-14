@@ -11,6 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mock"
 )
 
+var _ = Notifier(&Service{})
+
 func TestService_ReceiveBlocks(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
