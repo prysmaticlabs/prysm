@@ -119,7 +119,7 @@ func (bs *Server) StreamAttestations(
 	for {
 		select {
 		case <-bs.SlotTicker.C():
-			atts := bs.Pool.AggregatedAttestations()
+			atts := bs.AttestationsPool.AggregatedAttestations()
 			for i := 0; i < len(atts); i++ {
 				if err := stream.Send(atts[i]); err != nil {
 					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
@@ -153,7 +153,7 @@ func (bs *Server) AttestationPool(
 			flags.Get().MaxPageSize,
 		)
 	}
-	atts := bs.Pool.AggregatedAttestations()
+	atts := bs.AttestationsPool.AggregatedAttestations()
 	numAtts := len(atts)
 	if numAtts == 0 {
 		return &ethpb.AttestationPoolResponse{
