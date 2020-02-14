@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -104,8 +105,10 @@ func (h *stateRootHasher) validatorRoot(validator *ethpb.Validator) ([32]byte, e
 	fieldRoots := make([][32]byte, 2, 8)
 
 	if validator != nil {
-		copy(enc[0:48], validator.PublicKey)
-		copy(enc[48:80], validator.WithdrawalCredentials)
+		pubkey := bytesutil.ToBytes48(validator.PublicKey)
+		copy(enc[0:48], pubkey[:])
+		withdrawCreds := bytesutil.ToBytes32(validator.WithdrawalCredentials)
+		copy(enc[48:80], withdrawCreds[:])
 		effectiveBalanceBuf := [32]byte{}
 		binary.LittleEndian.PutUint64(effectiveBalanceBuf[:8], validator.EffectiveBalance)
 		copy(enc[80:88], effectiveBalanceBuf[:8])
@@ -138,7 +141,7 @@ func (h *stateRootHasher) validatorRoot(validator *ethpb.Validator) ([32]byte, e
 		}
 
 		// Public key.
-		pubKeyChunks, err := pack([][]byte{validator.PublicKey})
+		pubKeyChunks, err := pack([][]byte{pubkey[:]})
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -149,7 +152,7 @@ func (h *stateRootHasher) validatorRoot(validator *ethpb.Validator) ([32]byte, e
 		fieldRoots[0] = pubKeyRoot
 
 		// Withdrawal credentials.
-		copy(fieldRoots[1][:], validator.WithdrawalCredentials)
+		copy(fieldRoots[1][:], withdrawCreds[:])
 
 		// Effective balance.
 		fieldRoots = append(fieldRoots, effectiveBalanceBuf)
