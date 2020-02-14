@@ -159,7 +159,7 @@ func (s *SlasherNode) registerBeaconClientService(ctx *cli.Context) error {
 		beaconProvider = flags.BeaconRPCProviderFlag.Value
 	}
 
-	bs := beaconclient.NewBeaconClient(context.Background(), &beaconclient.Config{
+	bs := beaconclient.NewBeaconClientService(context.Background(), &beaconclient.Config{
 		BeaconCert:            beaconCert,
 		BeaconProvider:        beaconProvider,
 		AttesterSlashingsFeed: s.attesterSlashingsFeed,
@@ -174,7 +174,9 @@ func (s *SlasherNode) registerDetectionService() error {
 		panic(err)
 	}
 	ds := detection.NewDetectionService(context.Background(), &detection.Config{
-		Notifier: bs,
+		Notifier:              bs,
+		AttesterSlashingsFeed: s.attesterSlashingsFeed,
+		ProposerSlashingsFeed: s.proposerSlashingsFeed,
 	})
 	return s.services.RegisterService(ds)
 }
