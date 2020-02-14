@@ -2,6 +2,7 @@ package slashings
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -27,6 +28,8 @@ func generateNProposerSlashings(n uint64) []*ethpb.ProposerSlashing {
 
 func TestPool_InsertProposerSlashing(t *testing.T) {
 	type fields struct {
+		wantErr  bool
+		err      string
 		pending  []*ethpb.ProposerSlashing
 		included map[uint64]bool
 	}
@@ -90,6 +93,8 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 			fields: fields{
 				pending:  []*ethpb.ProposerSlashing{},
 				included: make(map[uint64]bool),
+				wantErr:  true,
+				err:      "cannot be slashed",
 			},
 			args: args{
 				slashing: proposerSlashingForValIdx(5),
@@ -103,6 +108,8 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 				included: map[uint64]bool{
 					1: true,
 				},
+				wantErr: true,
+				err:     "cannot be slashed",
 			},
 			args: args{
 				slashing: proposerSlashingForValIdx(1),
@@ -146,6 +153,7 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 		},
 		{ // 5 - Slashed.
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			Slashed:   true,
 		},
 	}
 	for _, tt := range tests {
@@ -154,13 +162,17 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 				pendingProposerSlashing: tt.fields.pending,
 				included:                tt.fields.included,
 			}
-			beaconState, err := beaconstate.InitializeFromProtoUnsafe(&p2ppb.BeaconState{Validators: validators})
+			beaconState, err := beaconstate.InitializeFromProtoUnsafe(&p2ppb.BeaconState{
+				Slot:       16 * params.BeaconConfig().SlotsPerEpoch,
+				Validators: validators,
+			})
 			if err != nil {
 				t.Fatal(err)
 			}
-			beaconState.SetSlot(16 * params.BeaconConfig().SlotsPerEpoch)
-			beaconState.SetSlashings([]uint64{5})
-			p.InsertProposerSlashing(beaconState, tt.args.slashing)
+			err = p.InsertProposerSlashing(beaconState, tt.args.slashing)
+			if err != nil && tt.fields.wantErr && !strings.Contains(err.Error(), tt.fields.err) {
+				t.Fatalf("Wanted err: %v, received %v", tt.fields.err, err)
+			}
 			if len(p.pendingProposerSlashing) != len(tt.want) {
 				t.Fatalf("Mismatched lengths of pending list. Got %d, wanted %d.", len(p.pendingProposerSlashing), len(tt.want))
 			}
