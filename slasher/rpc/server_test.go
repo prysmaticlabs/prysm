@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
+	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/urfave/cli"
 )
 
@@ -698,5 +699,44 @@ func TestServer_Store_100_Attestations(t *testing.T) {
 		t.Error(err)
 	}
 	t.Logf("DB size is: %d", s)
+}
 
+func BenchmarkCheckAttestations(b *testing.B) {
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
+	ctx := cli.NewContext(app, set, nil)
+	db := testDB.SetupSlasherDB(b, ctx)
+	defer testDB.TeardownSlasherDB(b, db)
+	context := context.Background()
+
+	slasherServer := &Server{
+		ctx:       context,
+		SlasherDB: db,
+	}
+	var cb []uint64
+	for i := uint64(0); i < 100; i++ {
+		cb = append(cb, i)
+	}
+	ia1 := &ethpb.IndexedAttestation{
+		AttestingIndices: cb,
+		Signature:        make([]byte, 96),
+		Data: &ethpb.AttestationData{
+			CommitteeIndex:  0,
+			BeaconBlockRoot: make([]byte, 32),
+			Source:          &ethpb.Checkpoint{Epoch: 2},
+			Target:          &ethpb.Checkpoint{Epoch: 4},
+		},
+	}
+	b.ResetTimer()
+	for i := uint64(0); i < uint64(b.N); i++ {
+		ia1.Data.Target.Epoch = i + 1
+		ia1.Data.Source.Epoch = i
+		ia1.Data.Slot = (i + 1) * params.BeaconConfig().SlotsPerEpoch
+		root := []byte(strconv.Itoa(int(i)))
+		ia1.Data.BeaconBlockRoot = append(root, ia1.Data.BeaconBlockRoot[len(root):]...)
+		if _, err := slasherServer.IsSlashableAttestation(context, ia1); err != nil {
+			b.Errorf("Could not call RPC method: %v", err)
+		}
+	}
 }
