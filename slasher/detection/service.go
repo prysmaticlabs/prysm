@@ -46,5 +46,4 @@ func (ds *Service) Status() error {
 
 // Start the detection service runtime.
 func (ds *Service) Start() {
-
 }
