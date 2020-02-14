@@ -1,6 +1,8 @@
 package slashings
 
 import (
+	"errors"
+	"fmt"
 	"sort"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -77,7 +79,7 @@ func (p *Pool) InsertAttesterSlashing(state *beaconstate.BeaconState, slashing *
 		// has been recently included in the pool of slashings, do not process this new
 		// slashing.
 		if !ok {
-			return nil
+			return fmt.Errorf("validator at index %d cannot be slashed", val)
 		}
 
 		// Check if the validator already exists in the list of slashings.
@@ -117,7 +119,7 @@ func (p *Pool) InsertProposerSlashing(state *beaconstate.BeaconState, slashing *
 	// has been recently included in the pool of slashings, do not process this new
 	// slashing.
 	if !ok {
-		return nil
+		return fmt.Errorf("validator at index %d cannot be slashed", idx)
 	}
 
 	// Check if the validator already exists in the list of slashings.
@@ -126,7 +128,7 @@ func (p *Pool) InsertProposerSlashing(state *beaconstate.BeaconState, slashing *
 		return p.pendingProposerSlashing[i].ProposerIndex == slashing.ProposerIndex
 	})
 	if found != len(p.pendingProposerSlashing) {
-		return nil
+		return errors.New("slashing object already exists in pending proposer slashings")
 	}
 
 	// Insert into pending list and sort again.
@@ -194,11 +196,7 @@ func (p *Pool) validatorSlashingPreconditionCheck(
 		return false, nil
 	}
 	// Checking if the validator has already been slashed.
-	slashedValidators := state.Slashings()
-	found := sort.Search(len(slashedValidators), func(i int) bool {
-		return slashedValidators[i] == valIdx
-	})
-	if found != len(slashedValidators) {
+	if validator.Slashed() {
 		return false, nil
 	}
 	return true, nil
