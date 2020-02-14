@@ -1,4 +1,4 @@
-package detection
+package attestations
 
 import (
 	"context"
