@@ -124,4 +124,6 @@ func (bs *Service) Start() {
 
 	go bs.receiveBlocks(bs.ctx)
 	go bs.receiveAttestations(bs.ctx)
+	go bs.submitProposerSlashings(bs.ctx)
+	go bs.submitAttesterSlashings(bs.ctx)
 }

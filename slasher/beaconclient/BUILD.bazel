@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "receivers.go",
         "service.go",
+        "submit.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/slasher/beaconclient",
     visibility = ["//slasher:__subpackages__"],
