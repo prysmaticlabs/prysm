@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -17,7 +19,6 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
-	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -29,7 +30,6 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -213,7 +213,7 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 	if eth1Data != nil {
 		s.depositTrie = trieutil.CreateTrieFromProto(eth1Data.Trie)
 		s.chainStartData = eth1Data.ChainstartData
-		if !proto.Equal(eth1Data.BeaconState, new(pbp2p.BeaconState)) {
+		if eth1Data.BeaconState != new(pbp2p.BeaconState) {
 			s.preGenesisState, err = stateTrie.InitializeFromProto(eth1Data.BeaconState)
 			if err != nil {
 				return nil, errors.Wrap(err, "Could not initialize state trie")
