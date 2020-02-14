@@ -503,7 +503,7 @@ func TestServer_StreamChainHead_ContextCanceled(t *testing.T) {
 	mockStream := mockRPC.NewMockBeaconChain_StreamChainHeadServer(ctrl)
 	mockStream.EXPECT().Context().Return(ctx)
 	go func(tt *testing.T) {
-		if err := server.StreamChainHead(&ptypes.Empty{}, mockStream); !strings.Contains(err.Error(), "Context canceled") {
+		if err := server.StreamChainHead(&ptypes.Empty{}, mockStream); !strings.Contains(err.Error(), "ctx canceled") {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
 		<-exitRoutine
@@ -610,7 +610,7 @@ func TestServer_StreamBlocks_ContextCanceled(t *testing.T) {
 	mockStream := mockRPC.NewMockBeaconChain_StreamBlocksServer(ctrl)
 	mockStream.EXPECT().Context().Return(ctx)
 	go func(tt *testing.T) {
-		if err := server.StreamBlocks(&ptypes.Empty{}, mockStream); !strings.Contains(err.Error(), "Context canceled") {
+		if err := server.StreamBlocks(&ptypes.Empty{}, mockStream); !strings.Contains(err.Error(), "ctx canceled") {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
 		<-exitRoutine

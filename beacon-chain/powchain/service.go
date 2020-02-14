@@ -589,7 +589,7 @@ func (s *Service) run(done <-chan struct{}) {
 			s.isRunning = false
 			s.runError = nil
 			s.connectedETH1 = false
-			log.Debug("Context closed, exiting goroutine")
+			log.Debug("ctx closed, exiting goroutine")
 			return
 		case s.runError = <-headSub.Err():
 			log.WithError(s.runError).Warn("Subscription to new head notifier failed")

@@ -30,7 +30,7 @@ func (s *Service) prepareForkChoiceAtts() {
 				log.WithError(err).Error("Could not prepare attestations for fork choice")
 			}
 		case <-s.ctx.Done():
-			log.Debug("Context closed, exiting routine")
+			log.Debug("ctx closed, exiting routine")
 			return
 		}
 	}

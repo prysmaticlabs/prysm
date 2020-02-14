@@ -205,7 +205,7 @@ func TestChainStartStop_Uninitialized(t *testing.T) {
 	}
 	// The context should have been canceled.
 	if chainService.ctx.Err() != context.Canceled {
-		t.Error("Context was not canceled")
+		t.Error("ctx was not canceled")
 	}
 	testutil.AssertLogsContain(t, hook, "Waiting")
 	testutil.AssertLogsContain(t, hook, "Initialized beacon chain genesis state")

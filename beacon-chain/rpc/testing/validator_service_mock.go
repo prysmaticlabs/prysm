@@ -194,18 +194,18 @@ func (m *MockValidatorService_WaitForActivationServer) EXPECT() *MockValidatorSe
 	return m.recorder
 }
 
-// Context mocks base method
+// ctx mocks base method
 func (m *MockValidatorService_WaitForActivationServer) Context() context.Context {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Context")
+	ret := m.ctrl.Call(m, "ctx")
 	ret0, _ := ret[0].(context.Context)
 	return ret0
 }
 
-// Context indicates an expected call of Context
+// ctx indicates an expected call of ctx
 func (mr *MockValidatorService_WaitForActivationServerMockRecorder) Context() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockValidatorService_WaitForActivationServer)(nil).Context))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ctx", reflect.TypeOf((*MockValidatorService_WaitForActivationServer)(nil).Context))
 }
 
 // RecvMsg mocks base method
@@ -313,18 +313,18 @@ func (m *MockValidatorService_WaitForChainStartServer) EXPECT() *MockValidatorSe
 	return m.recorder
 }
 
-// Context mocks base method
+// ctx mocks base method
 func (m *MockValidatorService_WaitForChainStartServer) Context() context.Context {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Context")
+	ret := m.ctrl.Call(m, "ctx")
 	ret0, _ := ret[0].(context.Context)
 	return ret0
 }
 
-// Context indicates an expected call of Context
+// ctx indicates an expected call of ctx
 func (mr *MockValidatorService_WaitForChainStartServerMockRecorder) Context() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockValidatorService_WaitForChainStartServer)(nil).Context))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ctx", reflect.TypeOf((*MockValidatorService_WaitForChainStartServer)(nil).Context))
 }
 
 // RecvMsg mocks base method
