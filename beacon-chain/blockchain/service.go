@@ -57,6 +57,7 @@ type Service struct {
 	epochParticipationLock sync.RWMutex
 	forkChoiceStore        f.ForkChoicer
 	justifiedCheckpt       *ethpb.Checkpoint
+	prevJustifiedCheckpt   *ethpb.Checkpoint
 	bestJustifiedCheckpt   *ethpb.Checkpoint
 	finalizedCheckpt       *ethpb.Checkpoint
 	prevFinalizedCheckpt   *ethpb.Checkpoint

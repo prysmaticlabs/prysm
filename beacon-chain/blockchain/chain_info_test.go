@@ -104,7 +104,7 @@ func TestPreviousJustifiedCheckpt_CanRetrieve(t *testing.T) {
 
 	cp := &ethpb.Checkpoint{Epoch: 7, Root: []byte("foo")}
 	c := setupBeaconChain(t, db)
-	c.prevFinalizedCheckpt = cp
+	c.prevJustifiedCheckpt = cp
 
 	if c.PreviousJustifiedCheckpt().Epoch != cp.Epoch {
 		t.Errorf("Previous Justifiied epoch at genesis should be %d, got: %d", cp.Epoch, c.PreviousJustifiedCheckpt().Epoch)
@@ -118,7 +118,7 @@ func TestPrevJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 	genesisRoot := [32]byte{'C'}
 	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
 	c := setupBeaconChain(t, db)
-	c.prevFinalizedCheckpt = cp
+	c.prevJustifiedCheckpt = cp
 	c.genesisRoot = genesisRoot
 
 	if !bytes.Equal(c.PreviousJustifiedCheckpt().Root, c.genesisRoot[:]) {

@@ -91,11 +91,11 @@ func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
 
 // PreviousJustifiedCheckpt returns the previous justified checkpoint from head state.
 func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
-	if s.prevFinalizedCheckpt == nil {
+	if s.prevJustifiedCheckpt == nil {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
-	cpt := state.CopyCheckpoint(s.prevFinalizedCheckpt)
+	cpt := state.CopyCheckpoint(s.prevJustifiedCheckpt)
 	// If head state exists but there hasn't been a justified check point,
 	// the check point root should refer to genesis block root.
 	if bytes.Equal(cpt.Root, params.BeaconConfig().ZeroHash[:]) {

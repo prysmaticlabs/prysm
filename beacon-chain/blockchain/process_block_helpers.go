@@ -246,6 +246,7 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 		return err
 	}
 	if canUpdate {
+		s.prevJustifiedCheckpt = s.justifiedCheckpt
 		s.justifiedCheckpt = cpt
 	}
 

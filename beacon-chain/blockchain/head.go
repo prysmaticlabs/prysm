@@ -201,5 +201,5 @@ func (s *Service) hasHeadState() bool {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
-	return !(s.head == nil) && !(s.head.state == nil)
+	return s.head != nil && s.head.state != nil
 }
