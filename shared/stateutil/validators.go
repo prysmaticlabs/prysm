@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -138,7 +139,8 @@ func (h *stateRootHasher) validatorRoot(validator *ethpb.Validator) ([32]byte, e
 		}
 
 		// Public key.
-		pubKeyChunks, err := pack([][]byte{validator.PublicKey})
+		pubkey := bytesutil.ToBytes48(validator.PublicKey)
+		pubKeyChunks, err := pack([][]byte{pubkey[:]})
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -149,7 +151,8 @@ func (h *stateRootHasher) validatorRoot(validator *ethpb.Validator) ([32]byte, e
 		fieldRoots[0] = pubKeyRoot
 
 		// Withdrawal credentials.
-		copy(fieldRoots[1][:], validator.WithdrawalCredentials)
+		withdrawCreds := bytesutil.ToBytes32(validator.WithdrawalCredentials)
+		copy(fieldRoots[1][:], withdrawCreds[:])
 
 		// Effective balance.
 		fieldRoots = append(fieldRoots, effectiveBalanceBuf)
