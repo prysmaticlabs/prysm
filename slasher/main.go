@@ -53,11 +53,11 @@ var appFlags = []cli.Flag{
 	debug.MemProfileRateFlag,
 	debug.CPUProfileFlag,
 	debug.TraceFlag,
-	flags.CertFlag,
 	flags.RPCPort,
 	flags.KeyFlag,
 	flags.UseSpanCacheFlag,
 	flags.RebuildSpanMapsFlag,
+	flags.BeaconCertFlag,
 	flags.BeaconRPCProviderFlag,
 }
 
