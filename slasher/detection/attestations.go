@@ -33,6 +33,9 @@ func detectMin(attEpochSpan uint64, recorderEpochSpan *slashpb.MinMaxEpochSpan, 
 	return 0
 }
 
+// DetectAndUpdateSpans runs detection and updating for both min and max epoch spans, this is used for
+// attestation slashing detection.
+// Detailed here: https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
 func DetectAndUpdateSpans(
 	ctx context.Context,
 	att *ethpb.IndexedAttestation,
