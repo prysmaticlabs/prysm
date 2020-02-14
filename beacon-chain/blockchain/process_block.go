@@ -20,7 +20,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-const initialSyncCacheSize = 180
+const initialSyncCacheSize = 90
 const minimumCacheSize = initialSyncCacheSize / 3
 
 // onBlock is called when a gossip block is received. It runs regular state transition on the block.
