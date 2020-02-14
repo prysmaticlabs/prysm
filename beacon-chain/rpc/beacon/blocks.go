@@ -201,9 +201,9 @@ func (bs *Server) StreamBlocks(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamB
 		case <-blockSub.Err():
 			return status.Error(codes.Aborted, "Subscriber closed, exiting goroutine")
 		case <-bs.Ctx.Done():
-			return status.Error(codes.Canceled, "Contextcanceled")
+			return status.Error(codes.Canceled, "ctx canceled")
 		case <-stream.Context().Done():
-			return status.Error(codes.Canceled, "Contextcanceled")
+			return status.Error(codes.Canceled, "ctx canceled")
 		}
 	}
 }
@@ -228,9 +228,9 @@ func (bs *Server) StreamChainHead(_ *ptypes.Empty, stream ethpb.BeaconChain_Stre
 		case <-stateSub.Err():
 			return status.Error(codes.Aborted, "Subscriber closed, exiting goroutine")
 		case <-bs.Ctx.Done():
-			return status.Error(codes.Canceled, "Contextcanceled")
+			return status.Error(codes.Canceled, "ctx canceled")
 		case <-stream.Context().Done():
-			return status.Error(codes.Canceled, "Contextcanceled")
+			return status.Error(codes.Canceled, "ctx canceled")
 		}
 	}
 }

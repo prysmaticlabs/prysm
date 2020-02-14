@@ -696,7 +696,7 @@ func TestServer_StreamAttestations_ContextCanceled(t *testing.T) {
 		if err := server.StreamAttestations(
 			&ptypes.Empty{},
 			mockStream,
-		); !strings.Contains(err.Error(), "Contextcanceled") {
+		); !strings.Contains(err.Error(), "ctx canceled") {
 			tt.Errorf("Expected context canceled error got: %v", err)
 		}
 		<-exitRoutine

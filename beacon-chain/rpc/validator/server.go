@@ -197,7 +197,7 @@ func (vs *Server) WaitForChainStart(req *ptypes.Empty, stream ethpb.BeaconNodeVa
 		case <-stateSub.Err():
 			return status.Error(codes.Aborted, "Subscriber closed, exiting goroutine")
 		case <-vs.Ctx.Done():
-			return status.Error(codes.Canceled, "Contextcanceled")
+			return status.Error(codes.Canceled, "ctx canceled")
 		}
 	}
 }
