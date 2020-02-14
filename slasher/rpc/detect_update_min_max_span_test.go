@@ -200,11 +200,12 @@ func TestServer_UpdateMaxEpochSpan(t *testing.T) {
 	db := testDB.SetupSlasherDB(t, c)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
+
 	slasherServer := &Server{
 		SlasherDB: db,
 	}
 	for _, tt := range spanTestsMax {
-		spanMap, err := slasherServer.SlasherDB.ValidatorSpansMap(tt.validatorIdx)
+		spanMap, err := slasherServer.SlasherDB.ValidatorSpansMap(ctx, tt.validatorIdx)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -212,13 +213,13 @@ func TestServer_UpdateMaxEpochSpan(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to update span: %v", err)
 		}
-		if err := slasherServer.SlasherDB.SaveValidatorSpansMap(tt.validatorIdx, spanMap); err != nil {
+		if err := slasherServer.SlasherDB.SaveValidatorSpansMap(ctx, tt.validatorIdx, spanMap); err != nil {
 			t.Fatalf("Couldnt save span map for validator id: %d", tt.validatorIdx)
 		}
 		if st != tt.slashingTargetEpoch {
 			t.Fatalf("Expected slashing target: %d got: %d", tt.slashingTargetEpoch, st)
 		}
-		sm, err := slasherServer.SlasherDB.ValidatorSpansMap(tt.validatorIdx)
+		sm, err := slasherServer.SlasherDB.ValidatorSpansMap(ctx, tt.validatorIdx)
 		if err != nil {
 			t.Fatalf("Failed to retrieve span: %v", err)
 		}
@@ -239,7 +240,7 @@ func TestServer_UpdateMinEpochSpan(t *testing.T) {
 		SlasherDB: db,
 	}
 	for _, tt := range spanTestsMin {
-		spanMap, err := slasherServer.SlasherDB.ValidatorSpansMap(tt.validatorIdx)
+		spanMap, err := slasherServer.SlasherDB.ValidatorSpansMap(ctx, tt.validatorIdx)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -247,13 +248,13 @@ func TestServer_UpdateMinEpochSpan(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to update span: %v", err)
 		}
-		if err := slasherServer.SlasherDB.SaveValidatorSpansMap(tt.validatorIdx, spanMap); err != nil {
+		if err := slasherServer.SlasherDB.SaveValidatorSpansMap(ctx, tt.validatorIdx, spanMap); err != nil {
 			t.Fatalf("Couldnt save span map for validator id: %d", tt.validatorIdx)
 		}
 		if st != tt.slashingTargetEpoch {
 			t.Fatalf("Expected slashing target: %d got: %d", tt.slashingTargetEpoch, st)
 		}
-		sm, err := slasherServer.SlasherDB.ValidatorSpansMap(tt.validatorIdx)
+		sm, err := slasherServer.SlasherDB.ValidatorSpansMap(ctx, tt.validatorIdx)
 		if err != nil {
 			t.Fatalf("Failed to retrieve span: %v", err)
 		}
@@ -285,7 +286,7 @@ func TestServer_FailToUpdate(t *testing.T) {
 			},
 		},
 	}
-	spanMap, err := slasherServer.SlasherDB.ValidatorSpansMap(spanTestsFail.validatorIdx)
+	spanMap, err := slasherServer.SlasherDB.ValidatorSpansMap(ctx, spanTestsFail.validatorIdx)
 	if err != nil {
 		t.Fatal(err)
 	}

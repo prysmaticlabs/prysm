@@ -63,15 +63,15 @@ func (v *ReadOnlyValidator) Slashed() bool {
 // InnerStateUnsafe returns the pointer value of the underlying
 // beacon state proto object, bypassing immutability. Use with care.
 func (b *BeaconState) InnerStateUnsafe() *pbp2p.BeaconState {
-	if b == nil || b.state == nil {
-		return &pbp2p.BeaconState{}
+	if b == nil {
+		return nil
 	}
 	return b.state
 }
 
 // CloneInnerState the beacon state into a protobuf for usage.
 func (b *BeaconState) CloneInnerState() *pbp2p.BeaconState {
-	if b.state == nil {
+	if b == nil || b.state == nil {
 		return nil
 	}
 	return &pbp2p.BeaconState{
