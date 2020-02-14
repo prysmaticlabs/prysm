@@ -20,9 +20,12 @@ func BlockHeaderRoot(header *ethpb.BeaconBlockHeader) ([32]byte, error) {
 		binary.LittleEndian.PutUint64(headerSlotBuf, header.Slot)
 		headerSlotRoot := bytesutil.ToBytes32(headerSlotBuf)
 		fieldRoots[0] = headerSlotRoot[:]
-		fieldRoots[1] = header.ParentRoot
-		fieldRoots[2] = header.StateRoot
-		fieldRoots[3] = header.BodyRoot
+		parentRoot := bytesutil.ToBytes32(header.ParentRoot)
+		fieldRoots[1] = parentRoot[:]
+		stateRoot := bytesutil.ToBytes32(header.StateRoot)
+		fieldRoots[2] = stateRoot[:]
+		bodyRoot := bytesutil.ToBytes32(header.BodyRoot)
+		fieldRoots[3] = bodyRoot[:]
 	}
 	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
