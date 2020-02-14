@@ -54,7 +54,7 @@ func (r *Service) registerSubscribers() {
 					r.chainStarted = true
 				}
 			case <-r.ctx.Done():
-				log.Debug("ctx closed, exiting goroutine")
+				log.Debug("Contextclosed, exiting goroutine")
 				return
 			case err := <-stateSub.Err():
 				log.WithError(err).Error("Subscription to state notifier failed")

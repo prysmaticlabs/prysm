@@ -27,7 +27,7 @@ func (bs *Service) receiveBlocks(ctx context.Context) {
 		}
 		// If context is canceled we stop the loop.
 		if ctx.Err() == context.Canceled {
-			log.WithError(ctx.Err()).Error("ctx canceled - shutting down blocks receiver")
+			log.WithError(ctx.Err()).Error("Contextcanceled - shutting down blocks receiver")
 			return
 		}
 		if err != nil {
@@ -57,7 +57,7 @@ func (bs *Service) receiveAttestations(ctx context.Context) {
 		}
 		// If context is canceled we stop the loop.
 		if ctx.Err() == context.Canceled {
-			log.WithError(ctx.Err()).Error("ctx canceled - shutting down attestations receiver")
+			log.WithError(ctx.Err()).Error("Contextcanceled - shutting down attestations receiver")
 			return
 		}
 		if err != nil {
