@@ -7,6 +7,8 @@ import (
 	runtimeDebug "runtime/debug"
 	"sort"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -21,7 +23,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-const initialSyncCacheSize = 110
+const initialSyncCacheSize = 180
 const minimumCacheSize = initialSyncCacheSize / 3
 
 // onBlock is called when a gossip block is received. It runs regular state transition on the block.
@@ -314,20 +316,46 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk *ethpb.B
 }
 
 func (s *Service) persistCachedStates(ctx context.Context, numOfStates int) error {
+	log.Error("persist cache triggered")
 	stateSlice := make([][32]byte, 0, numOfStates)
 	oldStates := make([]*stateTrie.BeaconState, 0, numOfStates)
+	oldRoots := make([][32]byte, 0, numOfStates)
+
+	// add slots to map and add epoch boundary states
+	// to the slice
 	for rt := range s.initSyncState {
 		stateSlice = append(stateSlice, rt)
 	}
+
 	sort.Slice(stateSlice, func(i int, j int) bool {
 		return s.initSyncState[stateSlice[i]].Slot() < s.initSyncState[stateSlice[j]].Slot()
 	})
 
-	for _, rt := range stateSlice {
-		oldStates = append(oldStates, s.initSyncState[rt])
+	prevIndex := 0
+	for i, rt := range stateSlice {
+		if helpers.IsEpochStart(s.initSyncState[rt].Slot()) {
+			if len(oldRoots) > 0 {
+				previousBoundaryRoot := oldRoots[len(oldRoots)-1]
+				previousSlot := s.initSyncState[previousBoundaryRoot].Slot()
+				if s.initSyncState[rt].Slot()-previousSlot > params.BeaconConfig().SlotsPerEpoch {
+					for j := i; j > prevIndex; j-- {
+						if s.initSyncState[stateSlice[j]].Slot() > s.initSyncState[rt].Slot()-params.BeaconConfig().SlotsPerEpoch {
+							continue
+						}
+						oldRoots = append(oldRoots, stateSlice[j])
+						oldStates = append(oldStates, s.initSyncState[stateSlice[j]])
+						break
+					}
+
+				}
+			}
+			prevIndex = i
+			oldRoots = append(oldRoots, rt)
+			oldStates = append(oldStates, s.initSyncState[rt])
+		}
 	}
 
-	err := s.beaconDB.SaveStates(ctx, oldStates[:numOfStates-minimumCacheSize], stateSlice[:numOfStates-minimumCacheSize])
+	err := s.beaconDB.SaveStates(ctx, oldStates, oldRoots)
 	if err != nil {
 		return err
 	}
