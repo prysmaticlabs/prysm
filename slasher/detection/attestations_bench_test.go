@@ -11,13 +11,6 @@ import (
 	"github.com/urfave/cli"
 )
 
-var appFlags = []cli.Flag{
-	flags.CertFlag,
-	flags.RPCPort,
-	flags.KeyFlag,
-	flags.UseSpanCacheFlag,
-}
-
 func BenchmarkMinSpan(b *testing.B) {
 	diffs := []uint64{2, 10, 100, 1000, 10000, 53999}
 	app := cli.NewApp()
