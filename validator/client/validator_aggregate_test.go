@@ -36,12 +36,12 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 	}
 
 	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
+		gomock.Any(), // Context
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{}, nil /*err*/)
 
 	m.aggregatorClient.EXPECT().SubmitAggregateAndProof(
-		gomock.Any(), // ctx
+		gomock.Any(), // Context
 		gomock.AssignableToTypeOf(&pb.AggregationRequest{}),
 	).Return(&pb.AggregationResponse{}, nil)
 

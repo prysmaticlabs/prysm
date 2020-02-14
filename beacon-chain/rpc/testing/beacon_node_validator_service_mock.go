@@ -36,7 +36,7 @@ func (m *MockBeaconNodeValidator_WaitForActivationServer) EXPECT() *MockBeaconNo
 	return m.recorder
 }
 
-// ctx mocks base method
+// Context mocks base method
 func (m *MockBeaconNodeValidator_WaitForActivationServer) Context() context.Context {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ctx")
@@ -44,7 +44,7 @@ func (m *MockBeaconNodeValidator_WaitForActivationServer) Context() context.Cont
 	return ret0
 }
 
-// ctx indicates an expected call of ctx
+// Context indicates an expected call of ctx
 func (mr *MockBeaconNodeValidator_WaitForActivationServerMockRecorder) Context() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ctx", reflect.TypeOf((*MockBeaconNodeValidator_WaitForActivationServer)(nil).Context))
@@ -155,7 +155,7 @@ func (m *MockBeaconNodeValidator_WaitForChainStartServer) EXPECT() *MockBeaconNo
 	return m.recorder
 }
 
-// ctx mocks base method
+// Context mocks base method
 func (m *MockBeaconNodeValidator_WaitForChainStartServer) Context() context.Context {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ctx")
@@ -163,7 +163,7 @@ func (m *MockBeaconNodeValidator_WaitForChainStartServer) Context() context.Cont
 	return ret0
 }
 
-// ctx indicates an expected call of ctx
+// Context indicates an expected call of ctx
 func (mr *MockBeaconNodeValidator_WaitForChainStartServerMockRecorder) Context() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ctx", reflect.TypeOf((*MockBeaconNodeValidator_WaitForChainStartServer)(nil).Context))

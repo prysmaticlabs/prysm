@@ -600,11 +600,11 @@ func TestRolesAt_OK(t *testing.T) {
 	}
 
 	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
+		gomock.Any(), // Context
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{}, nil /*err*/)
 	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
+		gomock.Any(), // Context
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{}, nil /*err*/)
 
@@ -666,7 +666,7 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 	}
 
 	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
+		gomock.Any(), // Context
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{}, nil /*err*/)
 
