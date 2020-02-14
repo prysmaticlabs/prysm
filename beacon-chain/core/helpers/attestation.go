@@ -3,7 +3,6 @@ package helpers
 import (
 	"encoding/binary"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -79,8 +78,8 @@ func AggregateAttestation(a1 *ethpb.Attestation, a2 *ethpb.Attestation) (*ethpb.
 		return nil, ErrAttestationAggregationBitsOverlap
 	}
 
-	baseAtt := proto.Clone(a1).(*ethpb.Attestation)
-	newAtt := proto.Clone(a2).(*ethpb.Attestation)
+	baseAtt := stateTrie.CopyAttestation(a1)
+	newAtt := stateTrie.CopyAttestation(a2)
 	if newAtt.AggregationBits.Count() > baseAtt.AggregationBits.Count() {
 		baseAtt, newAtt = newAtt, baseAtt
 	}
