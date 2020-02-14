@@ -60,7 +60,7 @@ func (m *MockBeaconNodeValidator_WaitForActivationClient) Context() context.Cont
 	return ret0
 }
 
-// Context indicates an expected call of ctx
+// Context indicates an expected call of Context
 func (mr *MockBeaconNodeValidator_WaitForActivationClientMockRecorder) Context() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockBeaconNodeValidator_WaitForActivationClient)(nil).Context))
@@ -183,7 +183,7 @@ func (m *MockBeaconNodeValidator_WaitForChainStartClient) Context() context.Cont
 	return ret0
 }
 
-// Context indicates an expected call of ctx
+// Context indicates an expected call of Context
 func (mr *MockBeaconNodeValidator_WaitForChainStartClientMockRecorder) Context() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockBeaconNodeValidator_WaitForChainStartClient)(nil).Context))

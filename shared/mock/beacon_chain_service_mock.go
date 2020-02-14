@@ -442,7 +442,7 @@ func (m *MockBeaconChain_StreamChainHeadClient) Context() context.Context {
 	return ret0
 }
 
-// Context indicates an expected call of ctx
+// Context indicates an expected call of Context
 func (mr *MockBeaconChain_StreamChainHeadClientMockRecorder) Context() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockBeaconChain_StreamChainHeadClient)(nil).Context))
@@ -565,7 +565,7 @@ func (m *MockBeaconChain_StreamBlocksClient) Context() context.Context {
 	return ret0
 }
 
-// Context indicates an expected call of ctx
+// Context indicates an expected call of Context
 func (mr *MockBeaconChain_StreamBlocksClientMockRecorder) Context() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockBeaconChain_StreamBlocksClient)(nil).Context))
@@ -688,7 +688,7 @@ func (m *MockBeaconChain_StreamAttestationsClient) Context() context.Context {
 	return ret0
 }
 
-// Context indicates an expected call of ctx
+// Context indicates an expected call of Context
 func (mr *MockBeaconChain_StreamAttestationsClientMockRecorder) Context() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockBeaconChain_StreamAttestationsClient)(nil).Context))
@@ -811,7 +811,7 @@ func (m *MockBeaconChain_StreamValidatorsInfoClient) Context() context.Context {
 	return ret0
 }
 
-// Context indicates an expected call of ctx
+// Context indicates an expected call of Context
 func (mr *MockBeaconChain_StreamValidatorsInfoClientMockRecorder) Context() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockBeaconChain_StreamValidatorsInfoClient)(nil).Context))
