@@ -109,6 +109,127 @@ func TestGetBlock_OK(t *testing.T) {
 	}
 }
 
+func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
+	db := dbutil.SetupDB(t)
+	defer dbutil.TeardownDB(t, db)
+	ctx := context.Background()
+
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
+
+	stateRoot, err := beaconState.HashTreeRoot()
+	if err != nil {
+		t.Fatalf("Could not hash genesis state: %v", err)
+	}
+
+	genesis := b.NewGenesisBlock(stateRoot[:])
+	if err := db.SaveBlock(ctx, genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+
+	parentRoot, err := ssz.HashTreeRoot(genesis.Block)
+	if err != nil {
+		t.Fatalf("Could not get signing root %v", err)
+	}
+	if err := db.SaveState(ctx, beaconState, parentRoot); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+	if err := db.SaveHeadBlockRoot(ctx, parentRoot); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+
+	proposerServer := &Server{
+		BeaconDB:          db,
+		HeadFetcher:       &mock.ChainService{State: beaconState, Root: parentRoot[:]},
+		SyncChecker:       &mockSync.Sync{IsSyncing: false},
+		BlockReceiver:     &mock.ChainService{},
+		ChainStartFetcher: &mockPOW.POWChain{},
+		Eth1InfoFetcher:   &mockPOW.POWChain{},
+		Eth1BlockFetcher:  &mockPOW.POWChain{},
+		MockEth1Votes:     true,
+		AttPool:           attestations.NewPool(),
+		ExitPool:          voluntaryexits.NewPool(),
+	}
+
+	// Generate a bunch of random attestations at slot. These would be considered double votes, but
+	// we don't care for the purpose of this test.
+	var atts []*ethpb.Attestation
+	for i := uint64(0); len(atts) < int(params.BeaconConfig().MaxAttestations); i++ {
+		a, err := testutil.GenerateAttestations(beaconState, privKeys, 2, 1, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		atts = append(atts, a...)
+	}
+	// Max attestations minus one so we can almost fill the block and then include 1 unaggregated
+	// att to maximize inclusion.
+	atts = atts[:params.BeaconConfig().MaxAttestations-1]
+	if err := proposerServer.AttPool.SaveAggregatedAttestations(atts); err != nil {
+		t.Fatal(err)
+	}
+
+	// Generate some more random attestations with a larger spread so that we can capture at least
+	// one unaggregated attestation.
+	if atts, err := testutil.GenerateAttestations(beaconState, privKeys, 8, 1, true); err != nil {
+		t.Fatal(err)
+	} else {
+		found := false
+		for _, a := range atts {
+			if !helpers.IsAggregated(a) {
+				found = true
+				if err := proposerServer.AttPool.SaveUnaggregatedAttestation(a); err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+		if !found {
+			t.Fatal("No unaggregated attestations were generated")
+		}
+	}
+
+	randaoReveal, err := testutil.RandaoReveal(beaconState, 0, privKeys)
+	if err != nil {
+		t.Error(err)
+	}
+
+	graffiti := bytesutil.ToBytes32([]byte("eth2"))
+	req := &ethpb.BlockRequest{
+		Slot:         1,
+		RandaoReveal: randaoReveal,
+		Graffiti:     graffiti[:],
+	}
+
+	block, err := proposerServer.GetBlock(ctx, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if block.Slot != req.Slot {
+		t.Fatal("Expected block to have slot of 1")
+	}
+	if !bytes.Equal(block.ParentRoot, parentRoot[:]) {
+		t.Fatal("Expected block to have correct parent root")
+	}
+	if !bytes.Equal(block.Body.RandaoReveal, randaoReveal) {
+		t.Fatal("Expected block to have correct randao reveal")
+	}
+	if !bytes.Equal(block.Body.Graffiti, req.Graffiti) {
+		t.Fatal("Expected block to have correct graffiti")
+	}
+	if len(block.Body.Attestations) != int(params.BeaconConfig().MaxAttestations) {
+		t.Fatalf("Expected a full block of attestations, only received %d", len(block.Body.Attestations))
+	}
+	hasUnaggregatedAtt := false
+	for _, a := range block.Body.Attestations {
+		if !helpers.IsAggregated(a) {
+			hasUnaggregatedAtt = true
+			break
+		}
+	}
+	if !hasUnaggregatedAtt {
+		t.Fatal("Expected block to contain at least one unaggregated attestation")
+	}
+}
+
 func TestProposeBlock_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)

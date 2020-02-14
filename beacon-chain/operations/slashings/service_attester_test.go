@@ -2,6 +2,7 @@ package slashings
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -52,6 +53,8 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 	type fields struct {
 		pending  []*PendingAttesterSlashing
 		included map[uint64]bool
+		wantErr  bool
+		err      string
 	}
 	type args struct {
 		slashing *ethpb.AttesterSlashing
@@ -179,7 +182,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 			},
 		},
 		{
-			name: "Slashing for exited validator ",
+			name: "Slashing for exited validator",
 			fields: fields{
 				pending:  []*PendingAttesterSlashing{},
 				included: make(map[uint64]bool),
@@ -190,7 +193,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 			want: []*PendingAttesterSlashing{},
 		},
 		{
-			name: "Slashing for futuristic exited validator ",
+			name: "Slashing for futuristic exited validator",
 			fields: fields{
 				pending:  []*PendingAttesterSlashing{},
 				included: make(map[uint64]bool),
@@ -203,10 +206,12 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 			},
 		},
 		{
-			name: "Slashing for slashed validator ",
+			name: "Slashing for slashed validator",
 			fields: fields{
 				pending:  []*PendingAttesterSlashing{},
 				included: make(map[uint64]bool),
+				wantErr:  true,
+				err:      "cannot be slashed",
 			},
 			args: args{
 				slashing: attesterSlashingForValIdx(5),
@@ -259,6 +264,7 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 		},
 		{ // 5 - Slashed.
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			Slashed:   true,
 		},
 	}
 	for _, tt := range tests {
@@ -267,13 +273,17 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 				pendingAttesterSlashing: tt.fields.pending,
 				included:                tt.fields.included,
 			}
-			s, err := beaconstate.InitializeFromProtoUnsafe(&p2ppb.BeaconState{Validators: validators})
+			s, err := beaconstate.InitializeFromProtoUnsafe(&p2ppb.BeaconState{
+				Slot:       16 * params.BeaconConfig().SlotsPerEpoch,
+				Validators: validators,
+			})
 			if err != nil {
 				t.Fatal(err)
 			}
-			s.SetSlot(16 * params.BeaconConfig().SlotsPerEpoch)
-			s.SetSlashings([]uint64{5})
-			p.InsertAttesterSlashing(s, tt.args.slashing)
+			err = p.InsertAttesterSlashing(s, tt.args.slashing)
+			if err != nil && tt.fields.wantErr && !strings.Contains(err.Error(), tt.fields.err) {
+				t.Fatalf("Wanted err: %v, received %v", tt.fields.err, err)
+			}
 			if len(p.pendingAttesterSlashing) != len(tt.want) {
 				t.Fatalf("Mismatched lengths of pending list. Got %d, wanted %d.", len(p.pendingAttesterSlashing), len(tt.want))
 			}

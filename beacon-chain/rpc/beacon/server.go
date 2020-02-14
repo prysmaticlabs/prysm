@@ -10,6 +10,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -27,7 +28,8 @@ type Server struct {
 	ParticipationFetcher blockchain.ParticipationFetcher
 	StateNotifier        statefeed.Notifier
 	BlockNotifier        blockfeed.Notifier
-	Pool                 attestations.Pool
+	AttestationsPool     attestations.Pool
+	SlashingsPool        *slashings.Pool
 	IncomingAttestation  chan *ethpb.Attestation
 	CanonicalStateChan   chan *pbp2p.BeaconState
 	ChainStartChan       chan time.Time

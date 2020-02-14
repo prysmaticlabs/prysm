@@ -196,7 +196,7 @@ var (
 		Hidden: true,
 	}
 	deprecatedForkchoiceAggregateAttestations = cli.BoolFlag{
-		Name:  "forkchoice-aggregate-attestations",
+		Name:   "forkchoice-aggregate-attestations",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}

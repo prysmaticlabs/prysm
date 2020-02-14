@@ -182,7 +182,7 @@ func (bs *Server) StreamBlocks(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamB
 		select {
 		case event := <-blocksChannel:
 			if event.Type == blockfeed.ReceivedBlock {
-				data, ok := event.Data.(*blockfeed.ReceivedBlockData)
+				data, ok := event.Data.(blockfeed.ReceivedBlockData)
 				if !ok {
 					return status.Errorf(
 						codes.FailedPrecondition,
@@ -194,7 +194,7 @@ func (bs *Server) StreamBlocks(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamB
 					// One nil block shouldn't stop the stream.
 					continue
 				}
-				if err := stream.Send(data.SignedBlock.Block); err != nil {
+				if err := stream.Send(data.SignedBlock); err != nil {
 					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
 				}
 			}

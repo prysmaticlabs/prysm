@@ -9,7 +9,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/slasher/db"
+	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/urfave/cli"
 )
@@ -26,22 +26,21 @@ func BenchmarkMinSpan(b *testing.B) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
-	ctx := cli.NewContext(app, set, nil)
-	dbs := db.SetupSlasherDB(b, ctx)
-	defer db.TeardownSlasherDB(b, dbs)
+	db := testDB.SetupSlasherDB(b, cli.NewContext(app, set, nil))
+	defer testDB.TeardownSlasherDB(b, db)
+	ctx := context.Background()
 
-	context := context.Background()
 	slasherServer := &Server{
-		SlasherDB: dbs,
+		SlasherDB: db,
 	}
 	for _, diff := range diffs {
 		b.Run(fmt.Sprintf("MinSpan_diff_%d", diff), func(ib *testing.B) {
 			for i := uint64(0); i < uint64(ib.N); i++ {
-				spanMap, err := slasherServer.SlasherDB.ValidatorSpansMap(i % 10)
+				spanMap, err := slasherServer.SlasherDB.ValidatorSpansMap(ctx, i%10)
 				if err != nil {
 					b.Fatal(err)
 				}
-				_, _, err = slasherServer.DetectAndUpdateMinEpochSpan(context, i, i+diff, i%10, spanMap)
+				_, _, err = slasherServer.DetectAndUpdateMinEpochSpan(ctx, i, i+diff, i%10, spanMap)
 				if err != nil {
 					b.Fatal(err)
 				}
@@ -55,22 +54,21 @@ func BenchmarkMaxSpan(b *testing.B) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
-	ctx := cli.NewContext(app, set, nil)
-	dbs := db.SetupSlasherDB(b, ctx)
-	defer db.TeardownSlasherDB(b, dbs)
+	db := testDB.SetupSlasherDB(b, cli.NewContext(app, set, nil))
+	defer testDB.TeardownSlasherDB(b, db)
+	ctx := context.Background()
 
-	context := context.Background()
 	slasherServer := &Server{
-		SlasherDB: dbs,
+		SlasherDB: db,
 	}
 	for _, diff := range diffs {
 		b.Run(fmt.Sprintf("MaxSpan_diff_%d", diff), func(ib *testing.B) {
 			for i := uint64(0); i < uint64(ib.N); i++ {
-				spanMap, err := slasherServer.SlasherDB.ValidatorSpansMap(i % 10)
+				spanMap, err := slasherServer.SlasherDB.ValidatorSpansMap(ctx, i%10)
 				if err != nil {
 					b.Fatal(err)
 				}
-				_, _, err = slasherServer.DetectAndUpdateMaxEpochSpan(context, diff, diff+i, i%10, spanMap)
+				_, _, err = slasherServer.DetectAndUpdateMaxEpochSpan(ctx, diff, diff+i, i%10, spanMap)
 				if err != nil {
 					b.Fatal(err)
 				}
@@ -84,17 +82,17 @@ func BenchmarkDetectSpan(b *testing.B) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
-	ctx := cli.NewContext(app, set, nil)
-	dbs := db.SetupSlasherDB(b, ctx)
-	defer db.TeardownSlasherDB(b, dbs)
+	db := testDB.SetupSlasherDB(b, cli.NewContext(app, set, nil))
+	defer testDB.TeardownSlasherDB(b, db)
+	ctx := context.Background()
 
 	slasherServer := &Server{
-		SlasherDB: dbs,
+		SlasherDB: db,
 	}
 	for _, diff := range diffs {
 		b.Run(fmt.Sprintf("Detect_MaxSpan_diff_%d", diff), func(ib *testing.B) {
 			for i := uint64(0); i < uint64(ib.N); i++ {
-				spanMap, err := slasherServer.SlasherDB.ValidatorSpansMap(i % 10)
+				spanMap, err := slasherServer.SlasherDB.ValidatorSpansMap(ctx, i%10)
 				if err != nil {
 					b.Fatal(err)
 				}
@@ -108,7 +106,7 @@ func BenchmarkDetectSpan(b *testing.B) {
 	for _, diff := range diffs {
 		b.Run(fmt.Sprintf("Detect_MinSpan_diff_%d", diff), func(ib *testing.B) {
 			for i := uint64(0); i < uint64(ib.N); i++ {
-				spanMap, err := slasherServer.SlasherDB.ValidatorSpansMap(i % 10)
+				spanMap, err := slasherServer.SlasherDB.ValidatorSpansMap(ctx, i%10)
 				if err != nil {
 					b.Fatal(err)
 				}
@@ -126,12 +124,12 @@ func BenchmarkCheckAttestations(b *testing.B) {
 	set := flag.NewFlagSet("test", 0)
 	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
 	ctx := cli.NewContext(app, set, nil)
-	dbs := db.SetupSlasherDB(b, ctx)
-	defer db.TeardownSlasherDB(b, dbs)
+	db := testDB.SetupSlasherDB(b, ctx)
+	defer testDB.TeardownSlasherDB(b, db)
 	context := context.Background()
 	slasherServer := &Server{
 		ctx:       context,
-		SlasherDB: dbs,
+		SlasherDB: db,
 	}
 	var cb []uint64
 	for i := uint64(0); i < 100; i++ {

@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
-	"github.com/prysmaticlabs/prysm/slasher/service"
+	"github.com/prysmaticlabs/prysm/slasher/node"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
@@ -26,22 +26,7 @@ func startSlasher(ctx *cli.Context) error {
 		return err
 	}
 	logrus.SetLevel(level)
-	port := ctx.GlobalInt(flags.RPCPort.Name)
-	cert := ctx.GlobalString(flags.CertFlag.Name)
-	key := ctx.GlobalString(flags.KeyFlag.Name)
-	beaconCert := ctx.GlobalString(flags.BeaconCertFlag.Name)
-	beaconProvider := ctx.GlobalString(flags.BeaconRPCProviderFlag.Name)
-	if beaconProvider == "" {
-		beaconProvider = flags.BeaconRPCProviderFlag.Value
-	}
-	cfg := service.Config{
-		Port:           port,
-		CertFlag:       cert,
-		KeyFlag:        key,
-		BeaconCert:     beaconCert,
-		BeaconProvider: beaconProvider,
-	}
-	slasher, err := service.NewRPCService(&cfg, ctx)
+	slasher, err := node.NewSlasherNode(ctx)
 	if err != nil {
 		return err
 	}
@@ -61,22 +46,19 @@ var appFlags = []cli.Flag{
 	cmd.LogFileName,
 	cmd.LogFormat,
 	cmd.ClearDB,
+	cmd.ForceClearDB,
 	debug.PProfFlag,
 	debug.PProfAddrFlag,
 	debug.PProfPortFlag,
 	debug.MemProfileRateFlag,
 	debug.CPUProfileFlag,
 	debug.TraceFlag,
-	flags.CertFlag,
 	flags.RPCPort,
 	flags.KeyFlag,
 	flags.UseSpanCacheFlag,
 	flags.RebuildSpanMapsFlag,
+	flags.BeaconCertFlag,
 	flags.BeaconRPCProviderFlag,
-}
-
-func init() {
-
 }
 
 func main() {
