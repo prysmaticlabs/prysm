@@ -91,7 +91,7 @@ func (s *Service) Start() {
 					genesisSet = true
 				}
 			case <-s.ctx.Done():
-				log.Debug("ctx closed, exiting goroutine")
+				log.Debug("Context closed, exiting goroutine")
 				return
 			case err := <-stateSub.Err():
 				log.WithError(err).Error("Subscription to state notifier failed")

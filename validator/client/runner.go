@@ -63,7 +63,7 @@ func run(ctx context.Context, v Validator) {
 
 		select {
 		case <-ctx.Done():
-			log.Info("ctx canceled, stopping validator")
+			log.Info("Context canceled, stopping validator")
 			return // Exit if context is canceled.
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))

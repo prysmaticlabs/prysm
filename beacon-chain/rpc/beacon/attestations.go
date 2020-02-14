@@ -126,9 +126,9 @@ func (bs *Server) StreamAttestations(
 				}
 			}
 		case <-bs.Ctx.Done():
-			return status.Error(codes.Canceled, "ctx canceled")
+			return status.Error(codes.Canceled, "Context canceled")
 		case <-stream.Context().Done():
-			return status.Error(codes.Canceled, "ctx canceled")
+			return status.Error(codes.Canceled, "Context canceled")
 		}
 	}
 }

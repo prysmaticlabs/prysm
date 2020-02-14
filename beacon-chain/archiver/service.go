@@ -186,7 +186,7 @@ func (s *Service) run(ctx context.Context) {
 				s.lastArchivedEpoch = epochToArchive
 			}
 		case <-s.ctx.Done():
-			log.Debug("ctx closed, exiting goroutine")
+			log.Debug("Context closed, exiting goroutine")
 			return
 		case err := <-stateSub.Err():
 			log.WithError(err).Error("Subscription to state feed notifier failed")

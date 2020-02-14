@@ -242,7 +242,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	defer ctrl.Finish()
 	mockStream := mockRPC.NewMockBeaconNodeValidator_WaitForChainStartServer(ctrl)
 	go func(tt *testing.T) {
-		if err := Server.WaitForChainStart(&ptypes.Empty{}, mockStream); !strings.Contains(err.Error(), "ctx canceled") {
+		if err := Server.WaitForChainStart(&ptypes.Empty{}, mockStream); !strings.Contains(err.Error(), "Context canceled") {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
 		<-exitRoutine
