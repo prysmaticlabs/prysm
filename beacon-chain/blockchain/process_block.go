@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	runtimeDebug "runtime/debug"
 	"sort"
 
 	"github.com/pkg/errors"
@@ -333,5 +334,6 @@ func (s *Service) persistCachedStates(ctx context.Context, numOfStates int) erro
 	for _, rt := range stateSlice[:numOfStates-minimumCacheSize] {
 		delete(s.initSyncState, rt)
 	}
+	runtimeDebug.FreeOSMemory()
 	return nil
 }
