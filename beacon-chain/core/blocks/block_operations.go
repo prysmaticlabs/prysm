@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"sort"
 
+	"github.com/prysmaticlabs/prysm/shared/stateutil"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -250,7 +252,7 @@ func ProcessBlockHeaderNoVerify(
 	if beaconState.Slot() != block.Slot {
 		return nil, fmt.Errorf("state slot: %d is different then block slot: %d", beaconState.Slot(), block.Slot)
 	}
-	parentRoot, err := ssz.HashTreeRoot(beaconState.LatestBlockHeader())
+	parentRoot, err := stateutil.BlockHeaderRoot(beaconState.LatestBlockHeader())
 	if err != nil {
 		return nil, err
 	}
