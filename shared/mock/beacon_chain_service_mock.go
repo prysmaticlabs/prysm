@@ -437,7 +437,7 @@ func (mr *MockBeaconChain_StreamChainHeadClientMockRecorder) CloseSend() *gomock
 // Context mocks base method
 func (m *MockBeaconChain_StreamChainHeadClient) Context() context.Context {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ctx")
+	ret := m.ctrl.Call(m, "Context")
 	ret0, _ := ret[0].(context.Context)
 	return ret0
 }
@@ -445,7 +445,7 @@ func (m *MockBeaconChain_StreamChainHeadClient) Context() context.Context {
 // Context indicates an expected call of ctx
 func (mr *MockBeaconChain_StreamChainHeadClientMockRecorder) Context() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ctx", reflect.TypeOf((*MockBeaconChain_StreamChainHeadClient)(nil).Context))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockBeaconChain_StreamChainHeadClient)(nil).Context))
 }
 
 // Header mocks base method
@@ -560,7 +560,7 @@ func (mr *MockBeaconChain_StreamBlocksClientMockRecorder) CloseSend() *gomock.Ca
 // Context mocks base method
 func (m *MockBeaconChain_StreamBlocksClient) Context() context.Context {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ctx")
+	ret := m.ctrl.Call(m, "Context")
 	ret0, _ := ret[0].(context.Context)
 	return ret0
 }
@@ -568,7 +568,7 @@ func (m *MockBeaconChain_StreamBlocksClient) Context() context.Context {
 // Context indicates an expected call of ctx
 func (mr *MockBeaconChain_StreamBlocksClientMockRecorder) Context() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ctx", reflect.TypeOf((*MockBeaconChain_StreamBlocksClient)(nil).Context))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockBeaconChain_StreamBlocksClient)(nil).Context))
 }
 
 // Header mocks base method
@@ -683,7 +683,7 @@ func (mr *MockBeaconChain_StreamAttestationsClientMockRecorder) CloseSend() *gom
 // Context mocks base method
 func (m *MockBeaconChain_StreamAttestationsClient) Context() context.Context {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ctx")
+	ret := m.ctrl.Call(m, "Context")
 	ret0, _ := ret[0].(context.Context)
 	return ret0
 }
@@ -691,7 +691,7 @@ func (m *MockBeaconChain_StreamAttestationsClient) Context() context.Context {
 // Context indicates an expected call of ctx
 func (mr *MockBeaconChain_StreamAttestationsClientMockRecorder) Context() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ctx", reflect.TypeOf((*MockBeaconChain_StreamAttestationsClient)(nil).Context))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockBeaconChain_StreamAttestationsClient)(nil).Context))
 }
 
 // Header mocks base method
@@ -806,7 +806,7 @@ func (mr *MockBeaconChain_StreamValidatorsInfoClientMockRecorder) CloseSend() *g
 // Context mocks base method
 func (m *MockBeaconChain_StreamValidatorsInfoClient) Context() context.Context {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ctx")
+	ret := m.ctrl.Call(m, "Context")
 	ret0, _ := ret[0].(context.Context)
 	return ret0
 }
@@ -814,7 +814,7 @@ func (m *MockBeaconChain_StreamValidatorsInfoClient) Context() context.Context {
 // Context indicates an expected call of ctx
 func (mr *MockBeaconChain_StreamValidatorsInfoClientMockRecorder) Context() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ctx", reflect.TypeOf((*MockBeaconChain_StreamValidatorsInfoClient)(nil).Context))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockBeaconChain_StreamValidatorsInfoClient)(nil).Context))
 }
 
 // Header mocks base method
