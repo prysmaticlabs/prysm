@@ -22,6 +22,13 @@ import (
 
 var log = logrus.WithField("prefix", "beaconclient")
 
+// Notifier defines a struct which exposes event feeds
+// for beacon blocks and attestations received from a beacon node.
+type Notifier interface {
+	BlockFeed() *event.Feed
+	AttestationFeed() *event.Feed
+}
+
 // Service struct for the beaconclient service of the slasher.
 type Service struct {
 	ctx             context.Context
@@ -40,8 +47,8 @@ type Config struct {
 	BeaconCert     string
 }
 
-// NewBeaconClient creates a new instance of a beacon client service.
-func NewBeaconClient(ctx context.Context, cfg *Config) *Service {
+// NewBeaconClientService instantiation.
+func NewBeaconClientService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		cert:            cfg.BeaconCert,
