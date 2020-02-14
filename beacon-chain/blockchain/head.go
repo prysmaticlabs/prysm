@@ -13,11 +13,12 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// This defines the current chain service's view of head.
 type head struct {
-	slot  uint64
-	root  [32]byte
-	block *ethpb.SignedBeaconBlock
-	state *state.BeaconState
+	slot  uint64 // current head slot.
+	root  [32]byte // current head root.
+	block *ethpb.SignedBeaconBlock // current head block.
+	state *state.BeaconState // current head state.
 }
 
 // This gets head from the fork choice service and saves head related items
@@ -140,7 +141,7 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 	return nil
 }
 
-// This sets head object which is used to track the head slot, root, block and state.
+// This sets head view object which is used to track the head slot, root, block and state.
 func (s *Service) setHead(slot uint64, root [32]byte, block *ethpb.SignedBeaconBlock, state *state.BeaconState) {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
@@ -162,7 +163,7 @@ func (s *Service) headSlot() uint64 {
 }
 
 // This returns the head root.
-// This does a full copy of head root for immutability.
+// It does a full copy on head root for immutability.
 func (s *Service) headRoot() [32]byte {
 	if s.head == nil {
 		return params.BeaconConfig().ZeroHash
@@ -178,7 +179,7 @@ func (s *Service) headRoot() [32]byte {
 }
 
 // This returns the head block.
-// This does a full copy of head block for immutability.
+// It does a full copy on head block for immutability.
 func (s *Service) headBlock() *ethpb.SignedBeaconBlock {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
@@ -187,7 +188,7 @@ func (s *Service) headBlock() *ethpb.SignedBeaconBlock {
 }
 
 // This returns the head state.
-// This does a full copy of state for immutability.
+// It does a full copy on head state for immutability.
 func (s *Service) headState() *state.BeaconState {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
@@ -195,7 +196,7 @@ func (s *Service) headState() *state.BeaconState {
 	return s.head.state.Copy()
 }
 
-// This checks whether head state is nil
+// Returns true if head state exists.
 func (s *Service) hasHeadState() bool {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
