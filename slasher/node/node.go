@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	"github.com/prysmaticlabs/prysm/slasher/db"
@@ -29,11 +30,13 @@ const slasherDBName = "slasherdata"
 // for eth2. It handles the lifecycle of the entire system and registers
 // services to a service registry.
 type SlasherNode struct {
-	ctx      *cli.Context
-	lock     sync.RWMutex
-	services *shared.ServiceRegistry
-	stop     chan struct{} // Channel to wait for termination notifications.
-	db       db.Database
+	ctx                   *cli.Context
+	lock                  sync.RWMutex
+	services              *shared.ServiceRegistry
+	proposerSlashingsFeed *event.Feed
+	attesterSlashingsFeed *event.Feed
+	stop                  chan struct{} // Channel to wait for termination notifications.
+	db                    db.Database
 }
 
 // NewSlasherNode creates a new node instance, sets up configuration options,
@@ -51,9 +54,11 @@ func NewSlasherNode(ctx *cli.Context) (*SlasherNode, error) {
 	registry := shared.NewServiceRegistry()
 
 	slasher := &SlasherNode{
-		ctx:      ctx,
-		services: registry,
-		stop:     make(chan struct{}),
+		ctx:                   ctx,
+		proposerSlashingsFeed: new(event.Feed),
+		attesterSlashingsFeed: new(event.Feed),
+		services:              registry,
+		stop:                  make(chan struct{}),
 	}
 
 	if err := slasher.startDB(ctx); err != nil {
@@ -153,9 +158,12 @@ func (s *SlasherNode) registerBeaconClientService(ctx *cli.Context) error {
 	if beaconProvider == "" {
 		beaconProvider = flags.BeaconRPCProviderFlag.Value
 	}
-	bs := beaconclient.NewBeaconClientService(context.Background(), &beaconclient.Config{
-		BeaconCert:     beaconCert,
-		BeaconProvider: beaconProvider,
+
+	bs := beaconclient.NewBeaconClient(context.Background(), &beaconclient.Config{
+		BeaconCert:            beaconCert,
+		BeaconProvider:        beaconProvider,
+		AttesterSlashingsFeed: s.attesterSlashingsFeed,
+		ProposerSlashingsFeed: s.proposerSlashingsFeed,
 	})
 	return s.services.RegisterService(bs)
 }
