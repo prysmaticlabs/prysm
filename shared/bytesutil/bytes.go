@@ -172,3 +172,25 @@ func ToLowInt64(x []byte) int64 {
 	}
 	return int64(binary.LittleEndian.Uint64(x))
 }
+
+// SafeCopyBytes will copy and return a non-nil byte array, otherwise it returns nil.
+func SafeCopyBytes(cp []byte) []byte {
+	if cp != nil {
+		copied := make([]byte, len(cp))
+		copy(copied, cp)
+		return copied
+	}
+	return nil
+}
+
+// Copy2dBytes will copy and return a non-nil 2d byte array, otherwise it returns nil.
+func Copy2dBytes(ary [][]byte) [][]byte {
+	if ary != nil {
+		copied := make([][]byte, len(ary))
+		for i, a := range ary {
+			copied[i] = SafeCopyBytes(a)
+		}
+		return copied
+	}
+	return nil
+}
