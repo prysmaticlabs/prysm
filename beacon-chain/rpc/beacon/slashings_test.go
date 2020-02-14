@@ -101,9 +101,6 @@ func TestServer_SubmitAttesterSlashing(t *testing.T) {
 			Slashed:               false,
 		}
 	}
-	bs := &Server{
-		SlashingsPool: slashings.NewPool(),
-	}
 	// We mark the validators at index 5, 6, 7 as already slashed.
 	vals[5].Slashed = true
 	vals[6].Slashed = true

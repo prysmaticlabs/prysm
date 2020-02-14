@@ -79,7 +79,7 @@ func (p *Pool) InsertAttesterSlashing(state *beaconstate.BeaconState, slashing *
 		// has been recently included in the pool of slashings, do not process this new
 		// slashing.
 		if !ok {
-			return nil
+			return fmt.Errorf("validator at index %d cannot be slashed", val)
 		}
 
 		// Check if the validator already exists in the list of slashings.
