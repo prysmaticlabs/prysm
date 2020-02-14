@@ -75,7 +75,8 @@ func attestationDataRoot(data *ethpb.AttestationData) ([32]byte, error) {
 		fieldRoots[1] = interRoot[:]
 
 		// Beacon block root.
-		fieldRoots[2] = data.BeaconBlockRoot
+		blockRoot := bytesutil.ToBytes32(data.BeaconBlockRoot)
+		fieldRoots[2] = blockRoot[:]
 
 		// Source
 		sourceRoot, err := CheckpointRoot(data.Source)
