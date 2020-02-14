@@ -201,6 +201,35 @@ func (k *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 	})
 }
 
+// SaveArchivePoint saves an archive point to the DB. This is used for cold state management.
+// An archive point index is `slot / slots_per_archive_point`
+func (k *Store) SaveArchivePoint(ctx context.Context, blockRoot []byte, index uint64) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivePoint")
+	defer span.End()
+
+	return k.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(coldStateSummaryBucket)
+		return bucket.Put(uint64ToBytes(index), blockRoot)
+	})
+}
+
+// ArchivePoint returns the block root of an archive point from the DB.
+// This is used for cold state management and to restore a cold state.
+func (k *Store) ArchivePoint(ctx context.Context, index uint64) []byte {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.ArchivePoint")
+	defer span.End()
+
+	var blockRoot []byte
+	// #nosec G104. Always returns nil.
+	k.db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(coldStateSummaryBucket)
+		blockRoot = bucket.Get(uint64ToBytes(index))
+		return nil
+	})
+
+	return blockRoot
+}
+
 // creates state from marshaled proto state bytes.
 func createState(enc []byte) (*pb.BeaconState, error) {
 	protoState := &pb.BeaconState{}

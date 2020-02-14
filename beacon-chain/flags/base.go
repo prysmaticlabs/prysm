@@ -85,4 +85,11 @@ var (
 		Usage: "A slasher provider string endpoint. Can either be an grpc server endpoint.",
 		Value: "127.0.0.1:5000",
 	}
+	// SlotsPerArchivePoint specifies the number of slots between the archive points, to save beacon state in the cold
+	// section of DB.
+	SlotsPerArchivePoint = cli.IntFlag{
+		Name:  "slots-per-archive-point",
+		Usage: "The required number of valid peers to connect with before syncing.",
+		Value: 64,
+	}
 )

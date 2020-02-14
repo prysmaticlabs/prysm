@@ -16,6 +16,7 @@ type GlobalFlags struct {
 	MinimumSyncPeers                  int
 	MaxPageSize                       int
 	DeploymentBlock                   int
+	SlotsPerArchivePoint              int
 }
 
 var globalConfig *GlobalFlags
@@ -51,6 +52,7 @@ func ConfigureGlobalFlags(ctx *cli.Context) {
 	}
 	cfg.MaxPageSize = ctx.GlobalInt(RPCMaxPageSize.Name)
 	cfg.DeploymentBlock = ctx.GlobalInt(ContractDeploymentBlock.Name)
+	cfg.SlotsPerArchivePoint = ctx.GlobalInt(SlotsPerArchivePoint.Name)
 	configureMinimumPeers(ctx, cfg)
 
 	Init(cfg)

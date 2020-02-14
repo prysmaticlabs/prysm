@@ -17,7 +17,7 @@ func TestLoadBlocks_FirstBranch(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
-	s := &Service{
+	s := &State{
 		beaconDB: db,
 	}
 
@@ -48,7 +48,7 @@ func TestLoadBlocks_SecondBranch(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
-	s := &Service{
+	s := &State{
 		beaconDB: db,
 	}
 
@@ -77,7 +77,7 @@ func TestLoadBlocks_ThirdBranch(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
-	s := &Service{
+	s := &State{
 		beaconDB: db,
 	}
 
@@ -108,7 +108,7 @@ func TestLoadBlocks_SameSlots(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
-	s := &Service{
+	s := &State{
 		beaconDB: db,
 	}
 
@@ -137,7 +137,7 @@ func TestLoadBlocks_BadStart(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
-	s := &Service{
+	s := &State{
 		beaconDB: db,
 	}
 

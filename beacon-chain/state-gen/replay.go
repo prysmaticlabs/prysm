@@ -12,7 +12,7 @@ import (
 )
 
 // This replays the input blocks on the input state until the target slot is reached.
-func (s *Service) replayBlocks(ctx context.Context, state *state.BeaconState, signed []*ethpb.SignedBeaconBlock, targetSlot uint64) (*state.BeaconState, error) {
+func (s *State) replayBlocks(ctx context.Context, state *state.BeaconState, signed []*ethpb.SignedBeaconBlock, targetSlot uint64) (*state.BeaconState, error) {
 	var err error
 	// The input block list is sorted in decreasing slots order.
 	for i := len(signed) - 1; i >= 0; i-- {
@@ -42,7 +42,7 @@ func (s *Service) replayBlocks(ctx context.Context, state *state.BeaconState, si
 
 // This loads the blocks between start slot and end slot by recursively fetching from end block root.
 // The Blocks are returned in slot-descending order.
-func (s *Service) loadBlocks(ctx context.Context, startSlot uint64, endSlot uint64, endBlockRoot [32]byte) ([]*ethpb.SignedBeaconBlock, error) {
+func (s *State) loadBlocks(ctx context.Context, startSlot uint64, endSlot uint64, endBlockRoot [32]byte) ([]*ethpb.SignedBeaconBlock, error) {
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
 	blocks, err := s.beaconDB.Blocks(ctx, filter)
 	if err != nil {
