@@ -328,7 +328,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 		log.Fatalf("Could not process genesis block for fork choice: %v", err)
 	}
 
-	s.setHead(genesisState.Slot(), genesisBlkRoot, genesisBlk, genesisState)
+	s.setHead(genesisBlkRoot, genesisBlk, genesisState)
 
 	return nil
 }
@@ -370,7 +370,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		return errors.New("finalized state and block can't be nil")
 	}
 
-	s.setHead(finalizedState.Slot(), bytesutil.ToBytes32(finalized.Root), finalizedBlock, finalizedState)
+	s.setHead(bytesutil.ToBytes32(finalized.Root), finalizedBlock, finalizedState)
 
 	return nil
 }

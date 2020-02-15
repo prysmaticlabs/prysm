@@ -101,7 +101,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	}
 
 	// Cache the new head info.
-	s.setHead(newHeadState.Slot(), headRoot, newHeadBlock, newHeadState)
+	s.setHead(headRoot, newHeadBlock, newHeadState)
 
 	// Save the new head root to DB.
 	if err := s.beaconDB.SaveHeadBlockRoot(ctx, headRoot); err != nil {
@@ -136,21 +136,22 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 		return errors.New("nil head state")
 	}
 
-	s.setHead(headState.Slot(), r, stateTrie.CopySignedBeaconBlock(b), headState)
+	s.setHead(r, stateTrie.CopySignedBeaconBlock(b), headState)
 
 	return nil
 }
 
 // This sets head view object which is used to track the head slot, root, block and state.
-func (s *Service) setHead(slot uint64, root [32]byte, block *ethpb.SignedBeaconBlock, state *state.BeaconState) {
+func (s *Service) setHead(root [32]byte, block *ethpb.SignedBeaconBlock, state *state.BeaconState) {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
+	// This does a full copy of the block and state.
 	s.head = &head{
-		slot:  slot,
+		slot:  block.Block.Slot,
 		root:  root,
-		block: block,
-		state: state,
+		block: stateTrie.CopySignedBeaconBlock(block),
+		state: state.Copy(),
 	}
 }
 
@@ -172,10 +173,7 @@ func (s *Service) headRoot() [32]byte {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
-	root := make([]byte, 32)
-	copy(root, s.head.root[:])
-
-	return bytesutil.ToBytes32(root)
+	return s.head.root
 }
 
 // This returns the head block.
