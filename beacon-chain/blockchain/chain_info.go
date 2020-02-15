@@ -63,14 +63,13 @@ func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
-	cpt := state.CopyCheckpoint(s.finalizedCheckpt)
 	// If head state exists but there hasn't been a finalized check point,
 	// the check point's root should refer to genesis block root.
-	if bytes.Equal(cpt.Root, params.BeaconConfig().ZeroHash[:]) {
+	if bytes.Equal(s.finalizedCheckpt.Root, params.BeaconConfig().ZeroHash[:]) {
 		return &ethpb.Checkpoint{Root: s.genesisRoot[:]}
 	}
 
-	return cpt
+	return state.CopyCheckpoint(s.finalizedCheckpt)
 }
 
 // CurrentJustifiedCheckpt returns the current justified checkpoint from head state.
@@ -79,14 +78,13 @@ func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
-	cpt := state.CopyCheckpoint(s.justifiedCheckpt)
 	// If head state exists but there hasn't been a justified check point,
 	// the check point root should refer to genesis block root.
-	if bytes.Equal(cpt.Root, params.BeaconConfig().ZeroHash[:]) {
+	if bytes.Equal(s.justifiedCheckpt.Root, params.BeaconConfig().ZeroHash[:]) {
 		return &ethpb.Checkpoint{Root: s.genesisRoot[:]}
 	}
 
-	return cpt
+	return state.CopyCheckpoint(s.justifiedCheckpt)
 }
 
 // PreviousJustifiedCheckpt returns the previous justified checkpoint from head state.
@@ -95,14 +93,13 @@ func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
-	cpt := state.CopyCheckpoint(s.prevJustifiedCheckpt)
 	// If head state exists but there hasn't been a justified check point,
 	// the check point root should refer to genesis block root.
-	if bytes.Equal(cpt.Root, params.BeaconConfig().ZeroHash[:]) {
+	if bytes.Equal(s.prevJustifiedCheckpt.Root, params.BeaconConfig().ZeroHash[:]) {
 		return &ethpb.Checkpoint{Root: s.genesisRoot[:]}
 	}
 
-	return cpt
+	return state.CopyCheckpoint(s.prevJustifiedCheckpt)
 }
 
 // HeadSlot returns the slot of the head of the chain.
