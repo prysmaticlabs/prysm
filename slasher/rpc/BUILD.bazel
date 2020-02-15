@@ -2,19 +2,16 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = [
-        "detect_update_min_max_span.go",
-        "server.go",
-    ],
+    srcs = ["server.go"],
     importpath = "github.com/prysmaticlabs/prysm/slasher/rpc",
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
         "//proto/slashing:go_default_library",
         "//shared/hashutil:go_default_library",
-        "//shared/params:go_default_library",
         "//slasher/db/kv:go_default_library",
         "//slasher/db/types:go_default_library",
+        "//slasher/detection/attestations:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
@@ -24,11 +21,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = [
-        "detect_update_min_max_span_test.go",
-        "server_test.go",
-        "slashing_bench_test.go",
-    ],
+    srcs = ["server_test.go"],
     embed = [":go_default_library"],
     deps = [
         "//proto/slashing:go_default_library",

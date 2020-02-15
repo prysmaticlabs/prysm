@@ -410,6 +410,7 @@ func (bs *Server) GetValidatorParticipation(
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
+
 	currentEpoch := helpers.CurrentEpoch(headState)
 	prevEpoch := helpers.PrevEpoch(headState)
 
@@ -581,7 +582,6 @@ func (bs *Server) GetValidatorQueue(
 func (bs *Server) GetValidatorPerformance(
 	ctx context.Context, req *ethpb.ValidatorPerformanceRequest,
 ) (*ethpb.ValidatorPerformanceResponse, error) {
-
 	validatorSummary := state.ValidatorSummary
 
 	beforeTransitionBalances := make([]uint64, 0)

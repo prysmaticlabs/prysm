@@ -22,16 +22,52 @@ import (
 
 var log = logrus.WithField("prefix", "beaconclient")
 
+// Notifier defines a struct which exposes event feeds
+// for beacon blocks and attestations received from a beacon node.
+type Notifier interface {
+	BlockFeed() *event.Feed
+	AttestationFeed() *event.Feed
+}
+
 // Service struct for the beaconclient service of the slasher.
 type Service struct {
-	context         context.Context
-	cancel          context.CancelFunc
-	cert            string
-	conn            *grpc.ClientConn
-	provider        string
-	client          ethpb.BeaconChainClient
-	blockFeed       *event.Feed
-	attestationFeed *event.Feed
+	ctx                   context.Context
+	cancel                context.CancelFunc
+	cert                  string
+	conn                  *grpc.ClientConn
+	provider              string
+	client                ethpb.BeaconChainClient
+	blockFeed             *event.Feed
+	attestationFeed       *event.Feed
+	proposerSlashingsChan chan *ethpb.ProposerSlashing
+	attesterSlashingsChan chan *ethpb.AttesterSlashing
+	attesterSlashingsFeed *event.Feed
+	proposerSlashingsFeed *event.Feed
+}
+
+// Config options for the beaconclient service.
+type Config struct {
+	BeaconProvider        string
+	BeaconCert            string
+	ProposerSlashingsFeed *event.Feed
+	AttesterSlashingsFeed *event.Feed
+}
+
+// NewBeaconClientService instantiation.
+func NewBeaconClientService(ctx context.Context, cfg *Config) *Service {
+	ctx, cancel := context.WithCancel(ctx)
+	return &Service{
+		cert:                  cfg.BeaconCert,
+		ctx:                   ctx,
+		cancel:                cancel,
+		provider:              cfg.BeaconProvider,
+		blockFeed:             new(event.Feed),
+		attestationFeed:       new(event.Feed),
+		proposerSlashingsChan: make(chan *ethpb.ProposerSlashing, 1),
+		attesterSlashingsChan: make(chan *ethpb.AttesterSlashing, 1),
+		attesterSlashingsFeed: cfg.AttesterSlashingsFeed,
+		proposerSlashingsFeed: cfg.ProposerSlashingsFeed,
+	}
 }
 
 // BlockFeed returns a feed other services in slasher can subscribe to
@@ -95,7 +131,7 @@ func (bs *Service) Start() {
 			grpc_prometheus.UnaryClientInterceptor,
 		)),
 	}
-	conn, err := grpc.DialContext(bs.context, bs.provider, beaconOpts...)
+	conn, err := grpc.DialContext(bs.ctx, bs.provider, beaconOpts...)
 	if err != nil {
 		log.Fatalf("Could not dial endpoint: %s, %v", bs.provider, err)
 	}
@@ -103,6 +139,8 @@ func (bs *Service) Start() {
 	bs.conn = conn
 	bs.client = ethpb.NewBeaconChainClient(bs.conn)
 
-	go bs.receiveBlocks(bs.context)
-	go bs.receiveAttestations(bs.context)
+	go bs.receiveBlocks(bs.ctx)
+	go bs.receiveAttestations(bs.ctx)
+	go bs.subscribeDetectedProposerSlashings(bs.ctx, bs.proposerSlashingsChan)
+	go bs.subscribeDetectedAttesterSlashings(bs.ctx, bs.attesterSlashingsChan)
 }

@@ -551,7 +551,7 @@ func TestServer_AttestationPool_Pagination_ExceedsMaxPageSize(t *testing.T) {
 func TestServer_AttestationPool_Pagination_OutOfRange(t *testing.T) {
 	ctx := context.Background()
 	bs := &Server{
-		Pool: attestations.NewPool(),
+		AttestationsPool: attestations.NewPool(),
 	}
 
 	atts := []*ethpb.Attestation{
@@ -559,7 +559,7 @@ func TestServer_AttestationPool_Pagination_OutOfRange(t *testing.T) {
 		{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1101}},
 		{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b1101}},
 	}
-	if err := bs.Pool.SaveAggregatedAttestations(atts); err != nil {
+	if err := bs.AttestationsPool.SaveAggregatedAttestations(atts); err != nil {
 		t.Fatal(err)
 	}
 
@@ -576,7 +576,7 @@ func TestServer_AttestationPool_Pagination_OutOfRange(t *testing.T) {
 func TestServer_AttestationPool_Pagination_DefaultPageSize(t *testing.T) {
 	ctx := context.Background()
 	bs := &Server{
-		Pool: attestations.NewPool(),
+		AttestationsPool: attestations.NewPool(),
 	}
 
 	atts := make([]*ethpb.Attestation, params.BeaconConfig().DefaultPageSize+1)
@@ -586,7 +586,7 @@ func TestServer_AttestationPool_Pagination_DefaultPageSize(t *testing.T) {
 			AggregationBits: bitfield.Bitlist{0b1101},
 		}
 	}
-	if err := bs.Pool.SaveAggregatedAttestations(atts); err != nil {
+	if err := bs.AttestationsPool.SaveAggregatedAttestations(atts); err != nil {
 		t.Fatal(err)
 	}
 
@@ -610,7 +610,7 @@ func TestServer_AttestationPool_Pagination_DefaultPageSize(t *testing.T) {
 func TestServer_AttestationPool_Pagination_CustomPageSize(t *testing.T) {
 	ctx := context.Background()
 	bs := &Server{
-		Pool: attestations.NewPool(),
+		AttestationsPool: attestations.NewPool(),
 	}
 
 	numAtts := 100
@@ -621,7 +621,7 @@ func TestServer_AttestationPool_Pagination_CustomPageSize(t *testing.T) {
 			AggregationBits: bitfield.Bitlist{0b1101},
 		}
 	}
-	if err := bs.Pool.SaveAggregatedAttestations(atts); err != nil {
+	if err := bs.AttestationsPool.SaveAggregatedAttestations(atts); err != nil {
 		t.Fatal(err)
 	}
 	tests := []struct {
@@ -716,9 +716,9 @@ func TestServer_StreamAttestations_OnSlotTick(t *testing.T) {
 		Channel: make(chan uint64),
 	}
 	server := &Server{
-		Ctx:        ctx,
-		SlotTicker: ticker,
-		Pool:       attestations.NewPool(),
+		Ctx:              ctx,
+		SlotTicker:       ticker,
+		AttestationsPool: attestations.NewPool(),
 	}
 
 	atts := []*ethpb.Attestation{
@@ -726,7 +726,7 @@ func TestServer_StreamAttestations_OnSlotTick(t *testing.T) {
 		{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1101}},
 		{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b1101}},
 	}
-	if err := server.Pool.SaveAggregatedAttestations(atts); err != nil {
+	if err := server.AttestationsPool.SaveAggregatedAttestations(atts); err != nil {
 		t.Fatal(err)
 	}
 

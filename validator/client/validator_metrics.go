@@ -29,8 +29,7 @@ var validatorBalancesGaugeVec = promauto.NewGaugeVec(
 // and penalties over time, percentage gain/loss, and gives the end user a better idea
 // of how the validator performs with respect to the rest.
 func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error {
-
-	if slot%params.BeaconConfig().SlotsPerEpoch != 0 || slot < params.BeaconConfig().SlotsPerEpoch {
+	if slot%params.BeaconConfig().SlotsPerEpoch != 0 || slot <= params.BeaconConfig().SlotsPerEpoch {
 		// Do nothing if we are not at the start of a new epoch and before the first epoch.
 		return nil
 	}
@@ -75,9 +74,9 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		if slot < params.BeaconConfig().SlotsPerEpoch {
 			v.prevBalance[bytesutil.ToBytes48(pkey)] = params.BeaconConfig().MaxEffectiveBalance
 		}
-		newBalance := float64(resp.BalancesAfterEpochTransition[i]) / float64(params.BeaconConfig().GweiPerEth)
 
-		if v.prevBalance[bytesutil.ToBytes48(pkey)] > 0 {
+		if v.prevBalance[bytesutil.ToBytes48(pkey)] > 0 && len(resp.BalancesAfterEpochTransition) > i {
+			newBalance := float64(resp.BalancesAfterEpochTransition[i]) / float64(params.BeaconConfig().GweiPerEth)
 			prevBalance := float64(resp.BalancesBeforeEpochTransition[i]) / float64(params.BeaconConfig().GweiPerEth)
 			percentNet := (newBalance - prevBalance) / prevBalance
 			log.WithFields(logrus.Fields{

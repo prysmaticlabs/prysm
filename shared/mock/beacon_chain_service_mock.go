@@ -397,6 +397,46 @@ func (mr *MockBeaconChainClientMockRecorder) StreamValidatorsInfo(arg0 interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamValidatorsInfo", reflect.TypeOf((*MockBeaconChainClient)(nil).StreamValidatorsInfo), varargs...)
 }
 
+// SubmitAttesterSlashing mocks base method
+func (m *MockBeaconChainClient) SubmitAttesterSlashing(arg0 context.Context, arg1 *v1alpha1.AttesterSlashing, arg2 ...grpc.CallOption) (*v1alpha1.SubmitSlashingResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SubmitAttesterSlashing", varargs...)
+	ret0, _ := ret[0].(*v1alpha1.SubmitSlashingResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SubmitAttesterSlashing indicates an expected call of SubmitAttesterSlashing
+func (mr *MockBeaconChainClientMockRecorder) SubmitAttesterSlashing(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitAttesterSlashing", reflect.TypeOf((*MockBeaconChainClient)(nil).SubmitAttesterSlashing), varargs...)
+}
+
+// SubmitProposerSlashing mocks base method
+func (m *MockBeaconChainClient) SubmitProposerSlashing(arg0 context.Context, arg1 *v1alpha1.ProposerSlashing, arg2 ...grpc.CallOption) (*v1alpha1.SubmitSlashingResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SubmitProposerSlashing", varargs...)
+	ret0, _ := ret[0].(*v1alpha1.SubmitSlashingResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SubmitProposerSlashing indicates an expected call of SubmitProposerSlashing
+func (mr *MockBeaconChainClientMockRecorder) SubmitProposerSlashing(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitProposerSlashing", reflect.TypeOf((*MockBeaconChainClient)(nil).SubmitProposerSlashing), varargs...)
+}
+
 // MockBeaconChain_StreamChainHeadClient is a mock of BeaconChain_StreamChainHeadClient interface
 type MockBeaconChain_StreamChainHeadClient struct {
 	ctrl     *gomock.Controller

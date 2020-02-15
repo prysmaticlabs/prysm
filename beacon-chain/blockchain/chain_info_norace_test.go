@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 )
 
@@ -11,8 +12,7 @@ func TestHeadSlot_DataRace(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 	s := &Service{
-		beaconDB:       db,
-		canonicalRoots: make(map[uint64][]byte),
+		beaconDB: db,
 	}
 	go func() {
 		s.saveHead(
@@ -27,8 +27,8 @@ func TestHeadRoot_DataRace(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 	s := &Service{
-		beaconDB:       db,
-		canonicalRoots: make(map[uint64][]byte),
+		beaconDB: db,
+		head:     &head{root: [32]byte{'A'}},
 	}
 	go func() {
 		s.saveHead(
@@ -45,8 +45,8 @@ func TestHeadBlock_DataRace(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 	s := &Service{
-		beaconDB:       db,
-		canonicalRoots: make(map[uint64][]byte),
+		beaconDB: db,
+		head:     &head{block: &ethpb.SignedBeaconBlock{}},
 	}
 	go func() {
 		s.saveHead(
@@ -61,8 +61,7 @@ func TestHeadState_DataRace(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 	s := &Service{
-		beaconDB:       db,
-		canonicalRoots: make(map[uint64][]byte),
+		beaconDB: db,
 	}
 	go func() {
 		s.saveHead(
