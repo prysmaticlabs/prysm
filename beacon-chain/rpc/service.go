@@ -252,6 +252,7 @@ func (s *Service) Start() {
 		ParticipationFetcher: s.participationFetcher,
 		ChainStartFetcher:    s.chainStartFetcher,
 		CanonicalStateChan:   s.canonicalStateChan,
+		GenesisTimeFetcher:   s.genesisTimeFetcher,
 		StateNotifier:        s.stateNotifier,
 		BlockNotifier:        s.blockNotifier,
 		SlotTicker:           ticker,

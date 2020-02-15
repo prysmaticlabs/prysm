@@ -4,9 +4,9 @@ import (
 	"context"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
 // SubmitProposerSlashing receives a proposer slashing object via
