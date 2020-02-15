@@ -27,7 +27,8 @@ func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidators
 	pubKeysMutex := sync.RWMutex{}
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := bs.StateNotifier.StateFeed().Subscribe(stateChannel)
-	depositBlocks := make(map[[48]byte]*big.Int)
+	eth1DepositData := make(map[[48]byte]*ethpb.Deposit_Data)
+	eth1DepositBlocks := make(map[[48]byte]*big.Int)
 	depositMutex := &sync.RWMutex{}
 	defer stateSub.Unsubscribe()
 
@@ -79,7 +80,7 @@ func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidators
 				}
 				pubKeysMutex.Unlock()
 				// Send current info for the added public keys.
-				if validators, err := bs.generateValidatorInfo(bs.Ctx, addedPubKeys, depositBlocks, depositMutex); err == nil {
+				if validators, err := bs.generateValidatorInfo(bs.Ctx, addedPubKeys, eth1DepositData, eth1DepositBlocks, depositMutex); err == nil {
 					for _, validator := range validators {
 						if err := stream.Send(validator); err != nil {
 							stream.Context().Done()
@@ -110,7 +111,7 @@ func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidators
 					pubKeys = append(pubKeys, pubKey)
 				}
 				pubKeysMutex.Unlock()
-				if validators, err := bs.generateValidatorInfo(bs.Ctx, msg.PublicKeys, depositBlocks, depositMutex); err == nil {
+				if validators, err := bs.generateValidatorInfo(bs.Ctx, msg.PublicKeys, eth1DepositData, eth1DepositBlocks, depositMutex); err == nil {
 					for _, validator := range validators {
 						if err := stream.Send(validator); err != nil {
 							stream.Context().Done()
@@ -143,7 +144,7 @@ func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidators
 					}
 					currentEpoch = blockEpoch
 					pubKeysMutex.RLock()
-					validators, err := bs.generateValidatorInfo(bs.Ctx, pubKeys, depositBlocks, depositMutex)
+					validators, err := bs.generateValidatorInfo(bs.Ctx, pubKeys, eth1DepositData, eth1DepositBlocks, depositMutex)
 					pubKeysMutex.RUnlock()
 					if err != nil {
 						log.WithError(err).Warn("Failed to generate infostream response")
@@ -166,7 +167,7 @@ func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidators
 	}
 }
 
-func (bs *Server) generateValidatorInfo(ctx context.Context, pubKeys [][]byte, depositBlocks map[[48]byte]*big.Int, depositMutex *sync.RWMutex) ([]*ethpb.ValidatorInfo, error) {
+func (bs *Server) generateValidatorInfo(ctx context.Context, pubKeys [][]byte, eth1DepositData map[[48]byte]*ethpb.Deposit_Data, eth1DepositBlocks map[[48]byte]*big.Int, depositMutex *sync.RWMutex) ([]*ethpb.ValidatorInfo, error) {
 	headState, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not access head state")
@@ -191,6 +192,7 @@ func (bs *Server) generateValidatorInfo(ctx context.Context, pubKeys [][]byte, d
 		info := &ethpb.ValidatorInfo{
 			PublicKey: pubKey,
 			Epoch:     epoch,
+			Status:    ethpb.ValidatorStatus_UNKNOWN_STATUS,
 		}
 
 		// Index
@@ -204,11 +206,12 @@ func (bs *Server) generateValidatorInfo(ctx context.Context, pubKeys [][]byte, d
 			var eth1BlockNumber *big.Int
 			pubKey48 := bytesutil.ToBytes48(info.PublicKey)
 			depositMutex.Lock()
-			if cached, exists := depositBlocks[pubKey48]; exists {
+			if cached, exists := eth1DepositBlocks[pubKey48]; exists {
 				eth1BlockNumber = cached
 			} else {
-				_, fetched := bs.DepositFetcher.DepositByPubkey(bs.Ctx, info.PublicKey)
-				depositBlocks[pubKey48] = fetched
+				deposit, fetched := bs.DepositFetcher.DepositByPubkey(bs.Ctx, info.PublicKey)
+				eth1DepositData[pubKey48] = deposit.Data
+				eth1DepositBlocks[pubKey48] = fetched
 				eth1BlockNumber = fetched
 			}
 			depositMutex.Unlock()
@@ -219,18 +222,15 @@ func (bs *Server) generateValidatorInfo(ctx context.Context, pubKeys [][]byte, d
 				} else {
 					info.TransitionTimestamp = queueTimestamp
 				}
-				res = append(res, info)
-				continue
+				info.Balance = eth1DepositData[pubKey48].Amount
 			}
-			// We haven't found it; ignore this as it may be a deposit that hasn't been processed in Ethereum 1 yet.
+			res = append(res, info)
+			continue
 		}
 		validator := validators[info.Index]
 
 		// Status and progression timestamp
 		info.Status, info.TransitionTimestamp = bs.calculateStatusAndTransition(validator, headState, genesisTime)
-
-		// TODO status timestamp
-		// validator.StatusTimestamp
 
 		// Balance
 		info.Balance = headState.Balances()[info.Index]
@@ -241,15 +241,6 @@ func (bs *Server) generateValidatorInfo(ctx context.Context, pubKeys [][]byte, d
 			info.Status == ethpb.ValidatorStatus_EXITING {
 			info.EffectiveBalance = validator.EffectiveBalance()
 		}
-
-		// TODO Last attested slot
-		// validator.LastAttestedSlot
-		// TODO Next attesting slot
-		// validator.NextAttestingSlot
-		// TODO Last proposed slot
-		// validator.LastProposedSlot
-		// TODO Next proposing slot
-		// validator.LastProposingSlot
 
 		res = append(res, info)
 
