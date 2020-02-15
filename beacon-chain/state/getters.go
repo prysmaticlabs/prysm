@@ -2,6 +2,7 @@ package state
 
 import (
 	"fmt"
+
 	"github.com/prysmaticlabs/go-bitfield"
 
 	"github.com/prysmaticlabs/prysm/shared/memorypool"

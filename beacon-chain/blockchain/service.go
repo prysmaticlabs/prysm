@@ -66,6 +66,7 @@ type Service struct {
 	nextEpochBoundarySlot  uint64
 	voteLock               sync.RWMutex
 	initSyncState          map[[32]byte]*stateTrie.BeaconState
+	boundaryRoots          [][32]byte
 	initSyncStateLock      sync.RWMutex
 	checkpointState        *cache.CheckpointStateCache
 	checkpointStateLock    sync.Mutex
@@ -104,6 +105,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		epochParticipation: make(map[uint64]*precompute.Balance),
 		forkChoiceStore:    cfg.ForkChoiceStore,
 		initSyncState:      make(map[[32]byte]*stateTrie.BeaconState),
+		boundaryRoots:      [][32]byte{},
 		checkpointState:    cache.NewCheckpointStateCache(),
 	}, nil
 }

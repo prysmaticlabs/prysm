@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	runtimeDebug "runtime/debug"
 	"sort"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -204,7 +203,8 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	}
 
 	if featureconfig.Get().InitSyncCacheState {
-		s.initSyncState[root] = postState
+		s.initSyncState[root] = postState.Copy()
+		s.pruneNonBoundaryStates(ctx, root, postState)
 	} else {
 		if err := s.beaconDB.SaveState(ctx, postState, root); err != nil {
 			return errors.Wrap(err, "could not save state")
@@ -317,10 +317,29 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk *ethpb.B
 
 func (s *Service) persistCachedStates(ctx context.Context, numOfStates int) error {
 	log.Error("persist cache triggered")
-	stateSlice := make([][32]byte, 0, numOfStates)
 	oldStates := make([]*stateTrie.BeaconState, 0, numOfStates)
-	oldRoots := make([][32]byte, 0, numOfStates)
 
+	// add slots to map and add epoch boundary states
+	// to the slice
+	for _, rt := range s.boundaryRoots {
+		oldStates = append(oldStates, s.initSyncState[rt])
+	}
+
+	err := s.beaconDB.SaveStates(ctx, oldStates[:numOfStates-minimumCacheSize], s.boundaryRoots[:numOfStates-minimumCacheSize])
+	if err != nil {
+		return err
+	}
+	for _, rt := range s.boundaryRoots[:numOfStates-minimumCacheSize] {
+		delete(s.initSyncState, rt)
+	}
+	s.boundaryRoots = s.boundaryRoots[:numOfStates-minimumCacheSize]
+	//runtimeDebug.FreeOSMemory()
+	return nil
+}
+
+func (s *Service) pruneNonBoundaryStates(ctx context.Context, root [32]byte, postState *stateTrie.BeaconState) error {
+
+	stateSlice := make([][32]byte, 0, len(s.initSyncState))
 	// add slots to map and add epoch boundary states
 	// to the slice
 	for rt := range s.initSyncState {
@@ -331,37 +350,43 @@ func (s *Service) persistCachedStates(ctx context.Context, numOfStates int) erro
 		return s.initSyncState[stateSlice[i]].Slot() < s.initSyncState[stateSlice[j]].Slot()
 	})
 
-	prevIndex := 0
-	for i, rt := range stateSlice {
-		if helpers.IsEpochStart(s.initSyncState[rt].Slot()) {
-			if len(oldRoots) > 0 {
-				previousBoundaryRoot := oldRoots[len(oldRoots)-1]
-				previousSlot := s.initSyncState[previousBoundaryRoot].Slot()
-				if s.initSyncState[rt].Slot()-previousSlot > params.BeaconConfig().SlotsPerEpoch {
-					for j := i; j > prevIndex; j-- {
-						if s.initSyncState[stateSlice[j]].Slot() > s.initSyncState[rt].Slot()-params.BeaconConfig().SlotsPerEpoch {
-							continue
-						}
-						oldRoots = append(oldRoots, stateSlice[j])
-						oldStates = append(oldStates, s.initSyncState[stateSlice[j]])
-						break
+	if helpers.IsEpochStart(postState.Slot()) {
+		if len(s.boundaryRoots) > 0 {
+			previousBoundaryRoot := s.boundaryRoots[len(s.boundaryRoots)-1]
+			previousSlot := s.initSyncState[previousBoundaryRoot].Slot()
+			if postState.Slot()-previousSlot > params.BeaconConfig().SlotsPerEpoch {
+				targetSlot := postState.Slot()
+				tempRoots := [][32]byte{}
+				for i := len(stateSlice) - 1; stateSlice[i] != previousBoundaryRoot; i-- {
+					currentSlot := s.initSyncState[stateSlice[i]].Slot()
+					if currentSlot > targetSlot-params.BeaconConfig().SlotsPerEpoch {
+						continue
 					}
-
+					tempRoots = append(tempRoots, stateSlice[i])
+					if currentSlot > previousSlot+params.BeaconConfig().SlotsPerEpoch {
+						targetSlot = currentSlot
+						continue
+					}
+					break
 				}
+				for i, j := 0, len(tempRoots)-1; i < j; i, j = i+1, j-1 {
+					tempRoots[i], tempRoots[j] = tempRoots[j], tempRoots[i]
+				}
+				s.boundaryRoots = append(s.boundaryRoots, tempRoots...)
 			}
-			prevIndex = i
-			oldRoots = append(oldRoots, rt)
-			oldStates = append(oldStates, s.initSyncState[rt])
+		}
+		s.boundaryRoots = append(s.boundaryRoots, root)
+		boundaryMap := make(map[[32]byte]bool)
+
+		for i := range s.boundaryRoots {
+			boundaryMap[s.boundaryRoots[i]] = true
+		}
+
+		for rt := range s.initSyncState {
+			if !boundaryMap[rt] {
+				delete(s.initSyncState, rt)
+			}
 		}
 	}
-
-	err := s.beaconDB.SaveStates(ctx, oldStates, oldRoots)
-	if err != nil {
-		return err
-	}
-	for _, rt := range stateSlice[:numOfStates-minimumCacheSize] {
-		delete(s.initSyncState, rt)
-	}
-	runtimeDebug.FreeOSMemory()
 	return nil
 }
