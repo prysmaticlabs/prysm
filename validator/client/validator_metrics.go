@@ -29,8 +29,7 @@ var validatorBalancesGaugeVec = promauto.NewGaugeVec(
 // and penalties over time, percentage gain/loss, and gives the end user a better idea
 // of how the validator performs with respect to the rest.
 func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error {
-
-	if slot%params.BeaconConfig().SlotsPerEpoch != 0 || slot < params.BeaconConfig().SlotsPerEpoch {
+	if slot%params.BeaconConfig().SlotsPerEpoch != 0 || slot <= params.BeaconConfig().SlotsPerEpoch {
 		// Do nothing if we are not at the start of a new epoch and before the first epoch.
 		return nil
 	}
@@ -96,19 +95,21 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 			}
 		}
 
-		if resp.InclusionSlots[i] != ^uint64(0) {
+		if i < len(resp.InclusionSlots) && resp.InclusionSlots[i] != ^uint64(0) {
 			included++
 		}
-		if resp.CorrectlyVotedSource[i] {
+		if i < len(resp.CorrectlyVotedSource) && resp.CorrectlyVotedSource[i] {
 			votedSource++
 		}
-		if resp.CorrectlyVotedTarget[i] {
+		if i < len(resp.CorrectlyVotedTarget) && resp.CorrectlyVotedTarget[i] {
 			votedTarget++
 		}
-		if resp.CorrectlyVotedHead[i] {
+		if i < len(resp.CorrectlyVotedHead) && resp.CorrectlyVotedHead[i] {
 			votedHead++
 		}
-		v.prevBalance[bytesutil.ToBytes48(pkey)] = resp.BalancesBeforeEpochTransition[i]
+		if i < len(resp.BalancesAfterEpochTransition) {
+			v.prevBalance[bytesutil.ToBytes48(pkey)] = resp.BalancesBeforeEpochTransition[i]
+		}
 	}
 
 	log.WithFields(logrus.Fields{

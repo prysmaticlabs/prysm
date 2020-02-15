@@ -26,6 +26,7 @@ type Server struct {
 	HeadFetcher          blockchain.HeadFetcher
 	FinalizationFetcher  blockchain.FinalizationFetcher
 	ParticipationFetcher blockchain.ParticipationFetcher
+	GenesisTimeFetcher   blockchain.TimeFetcher
 	StateNotifier        statefeed.Notifier
 	BlockNotifier        blockfeed.Notifier
 	AttestationsPool     attestations.Pool
