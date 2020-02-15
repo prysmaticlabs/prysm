@@ -147,6 +147,7 @@ func (s *Service) Start() {
 
 		// Resume fork choice.
 		s.justifiedCheckpt = stateTrie.CopyCheckpoint(justifiedCheckpoint)
+		s.prevJustifiedCheckpt = stateTrie.CopyCheckpoint(justifiedCheckpoint)
 		s.bestJustifiedCheckpt = stateTrie.CopyCheckpoint(justifiedCheckpoint)
 		s.finalizedCheckpt = stateTrie.CopyCheckpoint(finalizedCheckpoint)
 		s.prevFinalizedCheckpt = stateTrie.CopyCheckpoint(finalizedCheckpoint)
@@ -315,6 +316,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 
 	// Add the genesis block to the fork choice store.
 	s.justifiedCheckpt = stateTrie.CopyCheckpoint(genesisCheckpoint)
+	s.prevJustifiedCheckpt = stateTrie.CopyCheckpoint(genesisCheckpoint)
 	s.bestJustifiedCheckpt = stateTrie.CopyCheckpoint(genesisCheckpoint)
 	s.finalizedCheckpt = stateTrie.CopyCheckpoint(genesisCheckpoint)
 	s.prevFinalizedCheckpt = stateTrie.CopyCheckpoint(genesisCheckpoint)
