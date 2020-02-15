@@ -95,19 +95,21 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 			}
 		}
 
-		if resp.InclusionSlots[i] != ^uint64(0) {
+		if i < len(resp.InclusionSlots) && resp.InclusionSlots[i] != ^uint64(0) {
 			included++
 		}
-		if resp.CorrectlyVotedSource[i] {
+		if i < len(resp.CorrectlyVotedSource) && resp.CorrectlyVotedSource[i] {
 			votedSource++
 		}
-		if resp.CorrectlyVotedTarget[i] {
+		if i < len(resp.CorrectlyVotedTarget) && resp.CorrectlyVotedTarget[i] {
 			votedTarget++
 		}
-		if resp.CorrectlyVotedHead[i] {
+		if i < len(resp.CorrectlyVotedHead) && resp.CorrectlyVotedHead[i] {
 			votedHead++
 		}
-		v.prevBalance[bytesutil.ToBytes48(pkey)] = resp.BalancesBeforeEpochTransition[i]
+		if i < len(resp.BalancesAfterEpochTransition) {
+			v.prevBalance[bytesutil.ToBytes48(pkey)] = resp.BalancesBeforeEpochTransition[i]
+		}
 	}
 
 	log.WithFields(logrus.Fields{
