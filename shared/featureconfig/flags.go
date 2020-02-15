@@ -22,10 +22,6 @@ var (
 		Usage: "UNSAFE: disable fork choice for determining head of the beacon chain.",
 	}
 	// enableAttestationCacheFlag see https://github.com/prysmaticlabs/prysm/issues/3106.
-	enableAttestationCacheFlag = cli.BoolFlag{
-		Name:  "enable-attestation-cache",
-		Usage: "Enable unsafe cache mechanism. See https://github.com/prysmaticlabs/prysm/issues/3106",
-	}
 	// enableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
 	enableSSZCache = cli.BoolFlag{
 		Name:  "enable-ssz-cache",
@@ -200,6 +196,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableAttestationCacheFlag = cli.BoolFlag{
+		Name:  "enable-attestation-cache",
+		Usage: deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -222,6 +223,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedCacheProposerIndicesFlag,
 	deprecatedprotoArrayForkChoice,
 	deprecatedForkchoiceAggregateAttestations,
+	deprecatedEnableAttestationCacheFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -244,7 +246,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	writeSSZStateTransitionsFlag,
 	disableForkChoiceUnsafeFlag,
 	enableSSZCache,
-	enableAttestationCacheFlag,
 	enableEth1DataVoteCacheFlag,
 	initSyncVerifyEverythingFlag,
 	initSyncCacheStateFlag,
@@ -261,7 +262,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
 var E2EBeaconChainFlags = []string{
 	"--enable-ssz-cache",
-	"--enable-attestation-cache",
 	"--cache-proposer-indices",
 	"--cache-filtered-block-tree",
 	"--enable-skip-slots-cache",
