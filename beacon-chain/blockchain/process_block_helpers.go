@@ -100,6 +100,10 @@ func (s *Service) verifyBlkDescendant(ctx context.Context, root [32]byte, slot u
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized block root")
 	}
+	if bFinalizedRoot == nil {
+		return fmt.Errorf("no finalized block known for block from slot %d", slot)
+	}
+
 	if !bytes.Equal(bFinalizedRoot, s.finalizedCheckpt.Root) {
 		err := fmt.Errorf("block from slot %d is not a descendent of the current finalized block slot %d, %#x != %#x",
 			slot, finalizedBlk.Slot, bytesutil.Trunc(bFinalizedRoot), bytesutil.Trunc(s.finalizedCheckpt.Root))
