@@ -354,10 +354,7 @@ func (s *Service) filterBoundaryCandidates(ctx context.Context, root [32]byte, p
 			previousBoundaryRoot := s.boundaryRoots[len(s.boundaryRoots)-1]
 			log.Errorf("prev boundary root %#x", previousBoundaryRoot)
 			previousSlot := s.initSyncState[previousBoundaryRoot].Slot()
-			if previousSlot%params.BeaconConfig().SlotsPerEpoch != 0 {
-				previousSlot -= previousSlot % params.BeaconConfig().SlotsPerEpoch
-				previousSlot += params.BeaconConfig().SlotsPerEpoch
-			}
+			previousSlot = helpers.RoundToNearestEpoch(previousSlot)
 			if postState.Slot()-previousSlot > params.BeaconConfig().SlotsPerEpoch {
 				targetSlot := postState.Slot()
 				tempRoots := [][32]byte{}
@@ -376,14 +373,15 @@ func (s *Service) filterBoundaryCandidates(ctx context.Context, root [32]byte, p
 					log.Errorf("adding root %#x with slot %d", stateSlice[i], currentSlot)
 					tempRoots = append(tempRoots, stateSlice[i])
 					if currentSlot > previousSlot+params.BeaconConfig().SlotsPerEpoch {
-						currentSlot -= currentSlot % params.BeaconConfig().SlotsPerEpoch
-						currentSlot += params.BeaconConfig().SlotsPerEpoch
+						currentSlot = helpers.RoundToNearestEpoch(currentSlot)
 						log.Errorf("changing to target slot %d", currentSlot)
 						targetSlot = currentSlot
 						continue
 					}
 					break
 				}
+				// reverse to append the roots in ascending order corresponding
+				// to the respective slots.
 				tempRoots = bytesutil.ReverseBytes32Slice(tempRoots)
 				if len(tempRoots) > 0 {
 					log.Errorf("saving temp roots %v", tempRoots)

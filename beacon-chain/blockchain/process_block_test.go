@@ -691,6 +691,40 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
 	}
 }
 
+func TestFilterBoundaryCandidates_FilterCorrect(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	cfg := &Config{BeaconDB: db}
+	service, err := NewService(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	st, _ := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
+
+	for i := uint64(0); i < 2000; i++ {
+		st.SetSlot(i)
+		root := [32]byte{}
+		copy(root[:], bytesutil.Bytes32(i))
+		service.initSyncState[root] = st.Copy()
+		if helpers.IsEpochStart(i) {
+			service.boundaryRoots = append(service.boundaryRoots, root)
+		}
+	}
+	service.pruneNonBoundaryStates()
+	for _, rt := range service.boundaryRoots {
+		st, ok := service.initSyncState[rt]
+		if !ok {
+			t.Error("Root doen't exist in cache map")
+			continue
+		}
+		if !helpers.IsEpochStart(st.Slot()) {
+			t.Errorf("Non boundary state with slot %d still exists and not pruned", st.Slot())
+		}
+	}
+}
+
 func TestPruneOldStates_AlreadyFinalized(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
