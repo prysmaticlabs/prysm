@@ -197,8 +197,8 @@ var (
 		Hidden: true,
 	}
 	deprecatedEnableAttestationCacheFlag = cli.BoolFlag{
-		Name:  "enable-attestation-cache",
-		Usage: deprecatedUsage,
+		Name:   "enable-attestation-cache",
+		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
 )

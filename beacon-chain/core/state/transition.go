@@ -122,7 +122,7 @@ func ExecuteStateTransitionNoVerifyAttSigs(
 	}
 
 	// Execute per block transition.
-	state, err = processBlockNoVerifyAttSigs(ctx, state, signed)
+	state, err = ProcessBlockNoVerifyAttSigs(ctx, state, signed)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block")
 	}
@@ -368,7 +368,7 @@ func ProcessBlock(
 	return state, nil
 }
 
-// processBlockNoVerifyAttSigs creates a new, modified beacon state by applying block operation
+// ProcessBlockNoVerifyAttSigs creates a new, modified beacon state by applying block operation
 // transformations as defined in the Ethereum Serenity specification. It does not validate
 // block attestation signatures.
 //
@@ -379,7 +379,7 @@ func ProcessBlock(
 //    process_randao(state, block.body)
 //    process_eth1_data(state, block.body)
 //    process_operations(state, block.body)
-func processBlockNoVerifyAttSigs(
+func ProcessBlockNoVerifyAttSigs(
 	ctx context.Context,
 	state *stateTrie.BeaconState,
 	signed *ethpb.SignedBeaconBlock,
