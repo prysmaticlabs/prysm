@@ -7,7 +7,7 @@ import (
 // State represents a management object that handles the internal
 // logic of maintaining both hot and cold states in DB.
 type State struct {
-	beaconDB  db.NoHeadAccessDatabase
+	beaconDB db.NoHeadAccessDatabase
 }
 
 // New returns a new state management object.
