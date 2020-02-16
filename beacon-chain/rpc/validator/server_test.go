@@ -39,7 +39,8 @@ func TestValidatorIndex_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
-	if err := db.SaveState(ctx, &stateTrie.BeaconState{}, [32]byte{}); err != nil {
+	st, _ := stateTrie.InitializeFromProtoUnsafe(&pbp2p.BeaconState{})
+	if err := db.SaveState(ctx, st.Copy(), [32]byte{}); err != nil {
 		t.Fatal(err)
 	}
 

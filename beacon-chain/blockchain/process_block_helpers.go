@@ -73,13 +73,6 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (
 		}
 		return preState.Copy(), nil
 	}
-	headRoot, err := s.HeadRoot(ctx)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not get head root")
-	}
-	if bytes.Equal(headRoot, b.ParentRoot) {
-		return s.HeadState(ctx)
-	}
 
 	preState, err := s.beaconDB.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
 	if err != nil {
@@ -107,6 +100,10 @@ func (s *Service) verifyBlkDescendant(ctx context.Context, root [32]byte, slot u
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized block root")
 	}
+	if bFinalizedRoot == nil {
+		return fmt.Errorf("no finalized block known for block from slot %d", slot)
+	}
+
 	if !bytes.Equal(bFinalizedRoot, s.finalizedCheckpt.Root) {
 		err := fmt.Errorf("block from slot %d is not a descendent of the current finalized block slot %d, %#x != %#x",
 			slot, finalizedBlk.Slot, bytesutil.Trunc(bFinalizedRoot), bytesutil.Trunc(s.finalizedCheckpt.Root))
@@ -253,6 +250,7 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 		return err
 	}
 	if canUpdate {
+		s.prevJustifiedCheckpt = s.justifiedCheckpt
 		s.justifiedCheckpt = cpt
 	}
 

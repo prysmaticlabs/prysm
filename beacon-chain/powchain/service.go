@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"reflect"
 	"runtime/debug"
 	"strings"
 	"sync"
@@ -211,9 +212,11 @@ func NewService(ctx context.Context, config *Web3ServiceConfig) (*Service, error
 	if eth1Data != nil {
 		s.depositTrie = trieutil.CreateTrieFromProto(eth1Data.Trie)
 		s.chainStartData = eth1Data.ChainstartData
-		s.preGenesisState, err = stateTrie.InitializeFromProto(eth1Data.BeaconState)
-		if err != nil {
-			return nil, errors.Wrap(err, "Could not initialize state trie")
+		if !reflect.ValueOf(eth1Data.BeaconState).IsZero() {
+			s.preGenesisState, err = stateTrie.InitializeFromProto(eth1Data.BeaconState)
+			if err != nil {
+				return nil, errors.Wrap(err, "Could not initialize state trie")
+			}
 		}
 		s.latestEth1Data = eth1Data.CurrentEth1Data
 		s.lastReceivedMerkleIndex = int64(len(s.depositTrie.Items()) - 1)
@@ -275,13 +278,6 @@ func (s *Service) Status() error {
 	// get error from run function
 	if s.runError != nil {
 		return s.runError
-	}
-	// use a 5 minutes timeout for block time, because the max mining time is 278 sec (block 7208027)
-	// (analyzed the time of the block from 2018-09-01 to 2019-02-13)
-	fiveMinutesTimeout := time.Now().Add(-5 * time.Minute)
-	// check that web3 client is syncing
-	if time.Unix(int64(s.latestEth1Data.BlockTime), 0).Before(fiveMinutesTimeout) {
-		return errors.New("eth1 client is not syncing")
 	}
 	return nil
 }
@@ -522,6 +518,14 @@ func safelyHandlePanic() {
 
 func (s *Service) handleDelayTicker() {
 	defer safelyHandlePanic()
+
+	// use a 5 minutes timeout for block time, because the max mining time is 278 sec (block 7208027)
+	// (analyzed the time of the block from 2018-09-01 to 2019-02-13)
+	fiveMinutesTimeout := time.Now().Add(-5 * time.Minute)
+	// check that web3 client is syncing
+	if time.Unix(int64(s.latestEth1Data.BlockTime), 0).Before(fiveMinutesTimeout) {
+		log.Warn("eth1 client is not syncing")
+	}
 	if !s.chainStartData.Chainstarted {
 		if err := s.checkBlockNumberForChainStart(context.Background(), big.NewInt(int64(s.latestEth1Data.LastRequestedBlock))); err != nil {
 			s.runError = err

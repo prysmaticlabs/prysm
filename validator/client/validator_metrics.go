@@ -29,8 +29,7 @@ var validatorBalancesGaugeVec = promauto.NewGaugeVec(
 // and penalties over time, percentage gain/loss, and gives the end user a better idea
 // of how the validator performs with respect to the rest.
 func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error {
-
-	if slot%params.BeaconConfig().SlotsPerEpoch != 0 || slot < params.BeaconConfig().SlotsPerEpoch {
+	if slot%params.BeaconConfig().SlotsPerEpoch != 0 || slot <= params.BeaconConfig().SlotsPerEpoch {
 		// Do nothing if we are not at the start of a new epoch and before the first epoch.
 		return nil
 	}
@@ -45,7 +44,6 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 	pubKeys := bytesutil.FromBytes48Array(pks)
 
 	req := &ethpb.ValidatorPerformanceRequest{
-		Slot:       slot,
 		PublicKeys: pubKeys,
 	}
 	resp, err := v.beaconClient.GetValidatorPerformance(ctx, req)
@@ -57,6 +55,12 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 	for _, val := range resp.MissingValidators {
 		missingValidators[bytesutil.ToBytes48(val)] = true
 	}
+
+	included := 0
+	votedSource := 0
+	votedTarget := 0
+	votedHead := 0
+
 	for i, pkey := range pubKeys {
 		pubKey := fmt.Sprintf("%#x", pkey[:8])
 		log := log.WithField("pubKey", pubKey)
@@ -70,23 +74,51 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		if slot < params.BeaconConfig().SlotsPerEpoch {
 			v.prevBalance[bytesutil.ToBytes48(pkey)] = params.BeaconConfig().MaxEffectiveBalance
 		}
-		newBalance := float64(resp.Balances[i]) / float64(params.BeaconConfig().GweiPerEth)
 
-		if v.prevBalance[bytesutil.ToBytes48(pkey)] > 0 {
-			prevBalance := float64(v.prevBalance[bytesutil.ToBytes48(pkey)]) / float64(params.BeaconConfig().GweiPerEth)
+		if v.prevBalance[bytesutil.ToBytes48(pkey)] > 0 && len(resp.BalancesAfterEpochTransition) > i {
+			newBalance := float64(resp.BalancesAfterEpochTransition[i]) / float64(params.BeaconConfig().GweiPerEth)
+			prevBalance := float64(resp.BalancesBeforeEpochTransition[i]) / float64(params.BeaconConfig().GweiPerEth)
 			percentNet := (newBalance - prevBalance) / prevBalance
 			log.WithFields(logrus.Fields{
-				"epoch":         (slot / params.BeaconConfig().SlotsPerEpoch) - 1,
-				"prevBalance":   prevBalance,
-				"newBalance":    newBalance,
-				"percentChange": fmt.Sprintf("%.5f%%", percentNet*100),
-			}).Info("New Balance")
+				"epoch":                (slot / params.BeaconConfig().SlotsPerEpoch) - 1,
+				"correctlyVotedSource": resp.CorrectlyVotedSource[i],
+				"correctlyVotedTarget": resp.CorrectlyVotedTarget[i],
+				"correctlyVotedHead":   resp.CorrectlyVotedHead[i],
+				"inclusionSlot":        resp.InclusionSlots[i],
+				"inclusionDistance":    resp.InclusionDistances[i],
+				"oldBalance":           prevBalance,
+				"newBalance":           newBalance,
+				"percentChange":        fmt.Sprintf("%.5f%%", percentNet*100),
+			}).Info("Previous epoch voting summary")
 			if v.emitAccountMetrics {
 				validatorBalancesGaugeVec.WithLabelValues(pubKey).Set(newBalance)
 			}
-
 		}
-		v.prevBalance[bytesutil.ToBytes48(pkey)] = resp.Balances[i]
+
+		if i < len(resp.InclusionSlots) && resp.InclusionSlots[i] != ^uint64(0) {
+			included++
+		}
+		if i < len(resp.CorrectlyVotedSource) && resp.CorrectlyVotedSource[i] {
+			votedSource++
+		}
+		if i < len(resp.CorrectlyVotedTarget) && resp.CorrectlyVotedTarget[i] {
+			votedTarget++
+		}
+		if i < len(resp.CorrectlyVotedHead) && resp.CorrectlyVotedHead[i] {
+			votedHead++
+		}
+		if i < len(resp.BalancesAfterEpochTransition) {
+			v.prevBalance[bytesutil.ToBytes48(pkey)] = resp.BalancesBeforeEpochTransition[i]
+		}
 	}
+
+	log.WithFields(logrus.Fields{
+		"epoch":                          (slot / params.BeaconConfig().SlotsPerEpoch) - 1,
+		"attestationInclusionPercentage": fmt.Sprintf("%.2f", float64(included)/float64(len(resp.InclusionSlots))),
+		"correctlyVotedSourcePercentage": fmt.Sprintf("%.2f", float64(votedSource)/float64(len(resp.CorrectlyVotedSource))),
+		"correctlyVotedTargetPercentage": fmt.Sprintf("%.2f", float64(votedTarget)/float64(len(resp.CorrectlyVotedTarget))),
+		"correctlyVotedHeadPercentage":   fmt.Sprintf("%.2f", float64(votedHead)/float64(len(resp.CorrectlyVotedHead))),
+	}).Info("Previous epoch aggregated voting summary")
+
 	return nil
 }

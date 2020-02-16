@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "receivers.go",
         "service.go",
+        "submit.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/slasher/beaconclient",
     visibility = ["//slasher:__subpackages__"],
@@ -25,13 +26,18 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["receivers_test.go"],
+    srcs = [
+        "receivers_test.go",
+        "submit_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//shared/event:go_default_library",
         "//shared/mock:go_default_library",
+        "//shared/testutil:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@com_github_sirupsen_logrus//hooks/test:go_default_library",
     ],
 )

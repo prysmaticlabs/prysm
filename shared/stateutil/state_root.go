@@ -250,7 +250,8 @@ func CheckpointRoot(checkpoint *ethpb.Checkpoint) ([32]byte, error) {
 		binary.LittleEndian.PutUint64(epochBuf, checkpoint.Epoch)
 		epochRoot := bytesutil.ToBytes32(epochBuf)
 		fieldRoots[0] = epochRoot[:]
-		fieldRoots[1] = checkpoint.Root
+		ckpRoot := bytesutil.ToBytes32(checkpoint.Root)
+		fieldRoots[1] = ckpRoot[:]
 	}
 	return bitwiseMerkleize(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
 }
