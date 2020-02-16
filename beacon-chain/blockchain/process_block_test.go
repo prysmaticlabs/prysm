@@ -431,11 +431,6 @@ func TestSaveInitState_CanSaveDelete(t *testing.T) {
 	if finalizedState == nil {
 		t.Error("finalized state can't be nil")
 	}
-
-	// Verify cached state is properly pruned
-	if len(service.initSyncState) != int(params.BeaconConfig().SlotsPerEpoch) {
-		t.Errorf("wanted: %d, got: %d", len(service.initSyncState), params.BeaconConfig().SlotsPerEpoch)
-	}
 }
 
 func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
