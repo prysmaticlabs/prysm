@@ -318,8 +318,7 @@ func (s *Service) persistCachedStates(ctx context.Context, numOfStates int) erro
 	log.Error("persist cache triggered")
 	oldStates := make([]*stateTrie.BeaconState, 0, numOfStates)
 
-	// add slots to map and add epoch boundary states
-	// to the slice
+	// Add slots to the map and add epoch boundary states to the slice.
 	for _, rt := range s.boundaryRoots[:numOfStates-minimumCacheSize] {
 		oldStates = append(oldStates, s.initSyncState[rt])
 	}
@@ -338,8 +337,7 @@ func (s *Service) persistCachedStates(ctx context.Context, numOfStates int) erro
 // filter out boundary candidates from our currently processed batch of states.
 func (s *Service) filterBoundaryCandidates(ctx context.Context, root [32]byte, postState *stateTrie.BeaconState) {
 	stateSlice := make([][32]byte, 0, len(s.initSyncState))
-	// add slots to map and add epoch boundary states
-	// to the slice
+	// Add slots to the map and add epoch boundary states to the slice.
 	for rt := range s.initSyncState {
 		stateSlice = append(stateSlice, rt)
 	}
@@ -349,10 +347,10 @@ func (s *Service) filterBoundaryCandidates(ctx context.Context, root [32]byte, p
 	})
 	epochLength := params.BeaconConfig().SlotsPerEpoch
 
-	// only trigger on epoch start
+	// Only trigger on epoch start.
 	if helpers.IsEpochStart(postState.Slot()) {
 		if len(s.boundaryRoots) > 0 {
-			// retrieve previous boundary root
+			// Retrieve previous boundary root.
 			previousBoundaryRoot := s.boundaryRoots[len(s.boundaryRoots)-1]
 			previousSlot := s.initSyncState[previousBoundaryRoot].Slot()
 
@@ -362,24 +360,24 @@ func (s *Service) filterBoundaryCandidates(ctx context.Context, root [32]byte, p
 				targetSlot := postState.Slot()
 				tempRoots := [][32]byte{}
 
-				// loop through current states to filter for valid boundary states
+				// Loop through current states to filter for valid boundary states.
 				for i := len(stateSlice) - 1; stateSlice[i] != previousBoundaryRoot && i >= 0; i-- {
 					currentSlot := s.initSyncState[stateSlice[i]].Slot()
-					// store states from the start/end of epochs
+					// Store states from the start/end of epochs.
 					if currentSlot-1 == targetSlot-epochLength ||
 						currentSlot+1 == targetSlot-epochLength {
 						tempRoots = append(tempRoots, stateSlice[i])
 						continue
 					}
-					// skip if the current slot is larger than the previous epoch
-					// boundary
+					// Skip if the current slot is larger than the previous epoch
+					// boundary.
 					if currentSlot > targetSlot-epochLength {
 						continue
 					}
 					tempRoots = append(tempRoots, stateSlice[i])
 
-					// switch target slot if the current slot is more than
-					// 1 epoch boundary from the previously saved boundary slot
+					// Switch target slot if the current slot is greater than
+					// 1 epoch boundary from the previously saved boundary slot.
 					if currentSlot > previousSlot+epochLength {
 						currentSlot = helpers.RoundUpToNearestEpoch(currentSlot)
 						targetSlot = currentSlot
@@ -387,7 +385,7 @@ func (s *Service) filterBoundaryCandidates(ctx context.Context, root [32]byte, p
 					}
 					break
 				}
-				// reverse to append the roots in ascending order corresponding
+				// Reverse to append the roots in ascending order corresponding
 				// to the respective slots.
 				tempRoots = bytesutil.ReverseBytes32Slice(tempRoots)
 				s.boundaryRoots = append(s.boundaryRoots, tempRoots...)
