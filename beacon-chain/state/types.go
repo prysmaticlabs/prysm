@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"github.com/prysmaticlabs/prysm/shared/memorypool"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/protolambda/zssz/merkle"

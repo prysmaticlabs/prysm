@@ -570,7 +570,6 @@ func TestPersistCache_CanSave(t *testing.T) {
 			t.Errorf("Incorrect slot retrieved. Wanted %d but got %d", i, state.Slot())
 		}
 	}
-
 }
 
 func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
@@ -714,7 +713,7 @@ func TestFilterBoundaryCandidates_FilterCorrect(t *testing.T) {
 		copy(root[:], bytesutil.Bytes32(i))
 		service.initSyncState[root] = st.Copy()
 	}
-	// set current state
+	// Set current state.
 	latestSlot := helpers.RoundUpToNearestEpoch(2000)
 	st.SetSlot(latestSlot)
 	lastRoot := [32]byte{}
@@ -772,7 +771,7 @@ func TestFilterBoundaryCandidates_HandleSkippedSlots(t *testing.T) {
 			service.initSyncState[root] = st.Copy()
 		}
 	}
-	// set current state
+	// Set current state.
 	latestSlot := helpers.RoundUpToNearestEpoch(2000)
 	st.SetSlot(latestSlot)
 	lastRoot := [32]byte{}
@@ -794,7 +793,7 @@ func TestFilterBoundaryCandidates_HandleSkippedSlots(t *testing.T) {
 			continue
 		}
 		if st.Slot() >= 500 {
-			// ignore head boundary root
+			// Ignore head boundary root.
 			if st.Slot() == 2016 {
 				continue
 			}
