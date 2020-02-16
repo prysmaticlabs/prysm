@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
@@ -174,11 +175,15 @@ func tree1(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.BeaconBlock
 	r7, _ := ssz.HashTreeRoot(b7)
 	b8 := &ethpb.BeaconBlock{Slot: 8, ParentRoot: r6[:]}
 	r8, _ := ssz.HashTreeRoot(b8)
+	st, err := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
+	if err != nil {
+		return nil, nil, err
+	}
 	for _, b := range []*ethpb.BeaconBlock{b0, b1, b2, b3, b4, b5, b6, b7, b8} {
 		if err := db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b}); err != nil {
 			return nil, nil, err
 		}
-		if err := db.SaveState(context.Background(), &stateTrie.BeaconState{}, bytesutil.ToBytes32(b.ParentRoot)); err != nil {
+		if err := db.SaveState(context.Background(), st.Copy(), bytesutil.ToBytes32(b.ParentRoot)); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -206,12 +211,16 @@ func tree2(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.BeaconBlock
 	r24, _ := ssz.HashTreeRoot(b24)
 	b3 := &ethpb.BeaconBlock{Slot: 3, ParentRoot: r24[:]}
 	r3, _ := ssz.HashTreeRoot(b3)
+	st, err := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
+	if err != nil {
+		return nil, nil, err
+	}
 
 	for _, b := range []*ethpb.BeaconBlock{b0, b1, b21, b22, b23, b24, b3} {
 		if err := db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b}); err != nil {
 			return nil, nil, err
 		}
-		if err := db.SaveState(context.Background(), &stateTrie.BeaconState{}, bytesutil.ToBytes32(b.ParentRoot)); err != nil {
+		if err := db.SaveState(context.Background(), st.Copy(), bytesutil.ToBytes32(b.ParentRoot)); err != nil {
 			return nil, nil, err
 		}
 	}
