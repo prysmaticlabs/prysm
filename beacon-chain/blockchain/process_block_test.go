@@ -547,10 +547,35 @@ func TestPersistCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	st,_ := testutil.DeterministicGenesisState(t,10)
+	st, _ := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
 
+	for i := uint64(0); i < initialSyncCacheSize; i++ {
+		st.SetSlot(i)
+		root := [32]byte{}
+		copy(root[:], bytesutil.Bytes32(i))
+		service.initSyncState[root] = st.Copy()
+		service.boundaryRoots = append(service.boundaryRoots, root)
+	}
 
-	for i := 0
+	if err = service.persistCachedStates(ctx, initialSyncCacheSize); err != nil {
+		t.Fatal(err)
+	}
+
+	for i := uint64(0); i < initialSyncCacheSize-minimumCacheSize; i++ {
+		root := [32]byte{}
+		copy(root[:], bytesutil.Bytes32(i))
+		state, err := db.State(context.Background(), root)
+		if err != nil {
+			t.Errorf("State with root of %#x , could not be retrieved: %v", root, err)
+		}
+		if state == nil {
+			t.Errorf("State with root of %#x , does not exist", root)
+		}
+		if state.Slot() != i {
+			t.Errorf("Incorrect slot retrieved. Wanted %d but got %d", i, state.Slot())
+		}
+	}
+
 }
 
 func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {

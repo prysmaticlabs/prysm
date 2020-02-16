@@ -22,7 +22,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-const initialSyncCacheSize = 180
+const initialSyncCacheSize = 60
 const minimumCacheSize = initialSyncCacheSize / 3
 
 // onBlock is called when a gossip block is received. It runs regular state transition on the block.
@@ -321,19 +321,18 @@ func (s *Service) persistCachedStates(ctx context.Context, numOfStates int) erro
 
 	// add slots to map and add epoch boundary states
 	// to the slice
-	for _, rt := range s.boundaryRoots {
+	for _, rt := range s.boundaryRoots[:numOfStates-minimumCacheSize] {
 		oldStates = append(oldStates, s.initSyncState[rt])
 	}
 
-	err := s.beaconDB.SaveStates(ctx, oldStates[:numOfStates-minimumCacheSize], s.boundaryRoots[:numOfStates-minimumCacheSize])
+	err := s.beaconDB.SaveStates(ctx, oldStates, s.boundaryRoots[:numOfStates-minimumCacheSize])
 	if err != nil {
 		return err
 	}
 	for _, rt := range s.boundaryRoots[:numOfStates-minimumCacheSize] {
 		delete(s.initSyncState, rt)
 	}
-	s.boundaryRoots = s.boundaryRoots[:numOfStates-minimumCacheSize]
-	//runtimeDebug.FreeOSMemory()
+	s.boundaryRoots = s.boundaryRoots[numOfStates-minimumCacheSize:]
 	return nil
 }
 
