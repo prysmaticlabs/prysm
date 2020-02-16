@@ -353,31 +353,31 @@ func TestTrimmedOrderedPeers(t *testing.T) {
 	pid1 := addPeer(t, p, peers.PeerConnected)
 	p.SetChainState(pid1, &pb.Status{
 		FinalizedEpoch: 3,
-		FinalizedRoot: mockroot3[:],
+		FinalizedRoot:  mockroot3[:],
 	})
 	// Peer 2
 	pid2 := addPeer(t, p, peers.PeerConnected)
 	p.SetChainState(pid2, &pb.Status{
 		FinalizedEpoch: 4,
-		FinalizedRoot: mockroot4[:],
+		FinalizedRoot:  mockroot4[:],
 	})
 	// Peer 3
 	pid3 := addPeer(t, p, peers.PeerConnected)
 	p.SetChainState(pid3, &pb.Status{
 		FinalizedEpoch: 5,
-		FinalizedRoot: mockroot5[:],
+		FinalizedRoot:  mockroot5[:],
 	})
 	// Peer 4
 	pid4 := addPeer(t, p, peers.PeerConnected)
 	p.SetChainState(pid4, &pb.Status{
 		FinalizedEpoch: 2,
-		FinalizedRoot: mockroot2[:],
+		FinalizedRoot:  mockroot2[:],
 	})
 	// Peer 5
 	pid5 := addPeer(t, p, peers.PeerConnected)
 	p.SetChainState(pid5, &pb.Status{
 		FinalizedEpoch: 2,
-		FinalizedRoot: mockroot2[:],
+		FinalizedRoot:  mockroot2[:],
 	})
 
 	_, target, pids := p.BestFinalized(maxPeers, 0)

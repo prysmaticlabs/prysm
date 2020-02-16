@@ -3,6 +3,7 @@ package metrics
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -82,15 +83,12 @@ var (
 )
 
 // ReportSlotMetrics reports slot related metrics.
-func ReportSlotMetrics(currentSlot uint64, headSlot uint64, headState *stateTrie.BeaconState) {
+func ReportSlotMetrics(currentSlot uint64, headSlot uint64, finalizedCheckpoint *ethpb.Checkpoint) {
 	beaconSlot.Set(float64(currentSlot))
 	beaconHeadSlot.Set(float64(headSlot))
-	if headState != nil {
-		finalizedCpt := headState.FinalizedCheckpoint()
-		if finalizedCpt != nil {
-			headFinalizedEpoch.Set(float64(finalizedCpt.Epoch))
-			headFinalizedRoot.Set(float64(bytesutil.ToLowInt64(finalizedCpt.Root)))
-		}
+	if finalizedCheckpoint != nil {
+		headFinalizedEpoch.Set(float64(finalizedCheckpoint.Epoch))
+		headFinalizedRoot.Set(float64(bytesutil.ToLowInt64(finalizedCheckpoint.Root)))
 	}
 }
 

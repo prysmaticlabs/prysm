@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/benchutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -52,10 +51,6 @@ func BenchmarkExecuteStateTransition_FullBlock(b *testing.B) {
 }
 
 func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
-	config := &featureconfig.Flags{
-		EnableAttestationCache: true,
-	}
-	featureconfig.Init(config)
 	benchutil.SetBenchmarkConfig()
 
 	beaconState, err := benchutil.PreGenState1Epoch()
@@ -91,10 +86,6 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 }
 
 func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
-	config := &featureconfig.Flags{
-		EnableAttestationCache: true,
-	}
-	featureconfig.Init(config)
 	benchutil.SetBenchmarkConfig()
 	beaconState, err := benchutil.PreGenState2FullEpochs()
 	if err != nil {

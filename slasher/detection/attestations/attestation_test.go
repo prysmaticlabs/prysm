@@ -1,4 +1,4 @@
-package rpc
+package attestations
 
 import (
 	"context"
@@ -201,25 +201,22 @@ func TestServer_UpdateMaxEpochSpan(t *testing.T) {
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
 
-	slasherServer := &Server{
-		SlasherDB: db,
-	}
 	for _, tt := range spanTestsMax {
-		spanMap, err := slasherServer.SlasherDB.ValidatorSpansMap(ctx, tt.validatorIdx)
+		spanMap, err := db.ValidatorSpansMap(ctx, tt.validatorIdx)
 		if err != nil {
 			t.Fatal(err)
 		}
-		st, spanMap, err := slasherServer.DetectAndUpdateMaxEpochSpan(ctx, tt.sourceEpoch, tt.targetEpoch, tt.validatorIdx, spanMap)
+		st, spanMap, err := detectAndUpdateMaxEpochSpan(ctx, tt.sourceEpoch, tt.targetEpoch, spanMap)
 		if err != nil {
 			t.Fatalf("Failed to update span: %v", err)
 		}
-		if err := slasherServer.SlasherDB.SaveValidatorSpansMap(ctx, tt.validatorIdx, spanMap); err != nil {
+		if err := db.SaveValidatorSpansMap(ctx, tt.validatorIdx, spanMap); err != nil {
 			t.Fatalf("Couldnt save span map for validator id: %d", tt.validatorIdx)
 		}
 		if st != tt.slashingTargetEpoch {
 			t.Fatalf("Expected slashing target: %d got: %d", tt.slashingTargetEpoch, st)
 		}
-		sm, err := slasherServer.SlasherDB.ValidatorSpansMap(ctx, tt.validatorIdx)
+		sm, err := db.ValidatorSpansMap(ctx, tt.validatorIdx)
 		if err != nil {
 			t.Fatalf("Failed to retrieve span: %v", err)
 		}
@@ -236,25 +233,23 @@ func TestServer_UpdateMinEpochSpan(t *testing.T) {
 	db := testDB.SetupSlasherDB(t, c)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
-	slasherServer := &Server{
-		SlasherDB: db,
-	}
+
 	for _, tt := range spanTestsMin {
-		spanMap, err := slasherServer.SlasherDB.ValidatorSpansMap(ctx, tt.validatorIdx)
+		spanMap, err := db.ValidatorSpansMap(ctx, tt.validatorIdx)
 		if err != nil {
 			t.Fatal(err)
 		}
-		st, spanMap, err := slasherServer.DetectAndUpdateMinEpochSpan(ctx, tt.sourceEpoch, tt.targetEpoch, tt.validatorIdx, spanMap)
+		st, spanMap, err := detectAndUpdateMinEpochSpan(ctx, tt.sourceEpoch, tt.targetEpoch, spanMap)
 		if err != nil {
 			t.Fatalf("Failed to update span: %v", err)
 		}
-		if err := slasherServer.SlasherDB.SaveValidatorSpansMap(ctx, tt.validatorIdx, spanMap); err != nil {
+		if err := db.SaveValidatorSpansMap(ctx, tt.validatorIdx, spanMap); err != nil {
 			t.Fatalf("Couldnt save span map for validator id: %d", tt.validatorIdx)
 		}
 		if st != tt.slashingTargetEpoch {
 			t.Fatalf("Expected slashing target: %d got: %d", tt.slashingTargetEpoch, st)
 		}
-		sm, err := slasherServer.SlasherDB.ValidatorSpansMap(ctx, tt.validatorIdx)
+		sm, err := db.ValidatorSpansMap(ctx, tt.validatorIdx)
 		if err != nil {
 			t.Fatalf("Failed to retrieve span: %v", err)
 		}
@@ -271,11 +266,8 @@ func TestServer_FailToUpdate(t *testing.T) {
 	db := testDB.SetupSlasherDB(t, c)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
-	slasherServer := &Server{
-		SlasherDB: db,
-	}
+
 	spanTestsFail := spanMapTestStruct{
-		validatorIdx:        0,
 		sourceEpoch:         0,
 		slashingTargetEpoch: 0,
 		targetEpoch:         params.BeaconConfig().WeakSubjectivityPeriod + 1,
@@ -286,14 +278,14 @@ func TestServer_FailToUpdate(t *testing.T) {
 			},
 		},
 	}
-	spanMap, err := slasherServer.SlasherDB.ValidatorSpansMap(ctx, spanTestsFail.validatorIdx)
+	spanMap, err := db.ValidatorSpansMap(ctx, spanTestsFail.validatorIdx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := slasherServer.DetectAndUpdateMinEpochSpan(ctx, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch, spanTestsFail.validatorIdx, spanMap); err == nil {
+	if _, _, err := detectAndUpdateMinEpochSpan(ctx, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch, spanMap); err == nil {
 		t.Fatalf("Update should not support diff greater then weak subjectivity period: %v ", params.BeaconConfig().WeakSubjectivityPeriod)
 	}
-	if _, _, err := slasherServer.DetectAndUpdateMaxEpochSpan(ctx, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch, spanTestsFail.validatorIdx, spanMap); err == nil {
+	if _, _, err := detectAndUpdateMaxEpochSpan(ctx, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch, spanMap); err == nil {
 		t.Fatalf("Update should not support diff greater then weak subjectivity period: %v ", params.BeaconConfig().WeakSubjectivityPeriod)
 	}
 

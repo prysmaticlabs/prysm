@@ -49,7 +49,6 @@ type Flags struct {
 	DisableForkChoice bool
 
 	// Cache toggles.
-	EnableAttestationCache  bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableSSZCache          bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
 	EnableEth1DataVoteCache bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
 	EnableSkipSlotsCache    bool // EnableSkipSlotsCache caches the state in skipped slots.
@@ -93,10 +92,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(disableForkChoiceUnsafeFlag.Name) {
 		log.Warn("UNSAFE: Disabled fork choice for updating chain head")
 		cfg.DisableForkChoice = true
-	}
-	if ctx.GlobalBool(enableAttestationCacheFlag.Name) {
-		log.Warn("Enabled unsafe attestation cache")
-		cfg.EnableAttestationCache = true
 	}
 	if ctx.GlobalBool(enableSSZCache.Name) {
 		log.Warn("Enabled unsafe ssz cache")

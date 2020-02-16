@@ -11,7 +11,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -59,12 +58,6 @@ func NewAttestationCache() *AttestationCache {
 // Get waits for any in progress calculation to complete before returning a
 // cached response, if any.
 func (c *AttestationCache) Get(ctx context.Context, req *ethpb.AttestationDataRequest) (*ethpb.AttestationData, error) {
-	if !featureconfig.Get().EnableAttestationCache {
-		// Return a miss result if cache is not enabled.
-		attestationCacheMiss.Inc()
-		return nil, nil
-	}
-
 	if req == nil {
 		return nil, errors.New("nil attestation data request")
 	}
@@ -113,10 +106,6 @@ func (c *AttestationCache) Get(ctx context.Context, req *ethpb.AttestationDataRe
 // MarkInProgress a request so that any other similar requests will block on
 // Get until MarkNotInProgress is called.
 func (c *AttestationCache) MarkInProgress(req *ethpb.AttestationDataRequest) error {
-	if !featureconfig.Get().EnableAttestationCache {
-		return nil
-	}
-
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	s, e := reqToKey(req)
@@ -126,19 +115,13 @@ func (c *AttestationCache) MarkInProgress(req *ethpb.AttestationDataRequest) err
 	if c.inProgress[s] {
 		return ErrAlreadyInProgress
 	}
-	if featureconfig.Get().EnableAttestationCache {
-		c.inProgress[s] = true
-	}
+	c.inProgress[s] = true
 	return nil
 }
 
 // MarkNotInProgress will release the lock on a given request. This should be
 // called after put.
 func (c *AttestationCache) MarkNotInProgress(req *ethpb.AttestationDataRequest) error {
-	if !featureconfig.Get().EnableAttestationCache {
-		return nil
-	}
-
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	s, e := reqToKey(req)
@@ -151,10 +134,6 @@ func (c *AttestationCache) MarkNotInProgress(req *ethpb.AttestationDataRequest) 
 
 // Put the response in the cache.
 func (c *AttestationCache) Put(ctx context.Context, req *ethpb.AttestationDataRequest, res *ethpb.AttestationData) error {
-	if !featureconfig.Get().EnableAttestationCache {
-		return nil
-	}
-
 	data := &attestationReqResWrapper{
 		req,
 		res,
