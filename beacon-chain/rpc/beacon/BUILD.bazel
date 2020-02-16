@@ -40,6 +40,7 @@ go_library(
         "//shared/sliceutil:go_default_library",
         "//shared/slotutil:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",
+        "@com_github_patrickmn_go_cache//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",

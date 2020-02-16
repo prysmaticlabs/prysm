@@ -2,12 +2,14 @@ package beacon
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"math/big"
 	"sort"
 	"sync"
 	"time"
 
+	cache "github.com/patrickmn/go-cache"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -20,6 +22,12 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// eth1Deposit contains information about a deposit made on the Ethereum 1 chain.
+type eth1Deposit struct {
+	block *big.Int
+	data  *ethpb.Deposit_Data
+}
+
 // StreamValidatorsInfo returns a stream of information for given validators.
 // Validators are supplied dynamically by the client, and can be added, removed and reset at any time.
 func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidatorsInfoServer) error {
@@ -27,8 +35,7 @@ func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidators
 	pubKeysMutex := sync.RWMutex{}
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := bs.StateNotifier.StateFeed().Subscribe(stateChannel)
-	eth1DepositData := make(map[[48]byte]*ethpb.Deposit_Data)
-	eth1DepositBlocks := make(map[[48]byte]*big.Int)
+	eth1Deposits := cache.New(time.Duration(params.BeaconConfig().SecondsPerSlot*params.BeaconConfig().SlotsPerEpoch)*time.Second, 12*time.Minute)
 	depositMutex := &sync.RWMutex{}
 	defer stateSub.Unsubscribe()
 
@@ -80,7 +87,7 @@ func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidators
 				}
 				pubKeysMutex.Unlock()
 				// Send current info for the added public keys.
-				if validators, err := bs.generateValidatorInfo(bs.Ctx, addedPubKeys, eth1DepositData, eth1DepositBlocks, depositMutex); err == nil {
+				if validators, err := bs.generateValidatorInfo(bs.Ctx, addedPubKeys, eth1Deposits, depositMutex); err == nil {
 					for _, validator := range validators {
 						if err := stream.Send(validator); err != nil {
 							stream.Context().Done()
@@ -111,7 +118,7 @@ func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidators
 					pubKeys = append(pubKeys, pubKey)
 				}
 				pubKeysMutex.Unlock()
-				if validators, err := bs.generateValidatorInfo(bs.Ctx, msg.PublicKeys, eth1DepositData, eth1DepositBlocks, depositMutex); err == nil {
+				if validators, err := bs.generateValidatorInfo(bs.Ctx, msg.PublicKeys, eth1Deposits, depositMutex); err == nil {
 					for _, validator := range validators {
 						if err := stream.Send(validator); err != nil {
 							stream.Context().Done()
@@ -144,7 +151,7 @@ func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidators
 					}
 					currentEpoch = blockEpoch
 					pubKeysMutex.RLock()
-					validators, err := bs.generateValidatorInfo(bs.Ctx, pubKeys, eth1DepositData, eth1DepositBlocks, depositMutex)
+					validators, err := bs.generateValidatorInfo(bs.Ctx, pubKeys, eth1Deposits, depositMutex)
 					pubKeysMutex.RUnlock()
 					if err != nil {
 						log.WithError(err).Warn("Failed to generate infostream response")
@@ -167,7 +174,7 @@ func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidators
 	}
 }
 
-func (bs *Server) generateValidatorInfo(ctx context.Context, pubKeys [][]byte, eth1DepositData map[[48]byte]*ethpb.Deposit_Data, eth1DepositBlocks map[[48]byte]*big.Int, depositMutex *sync.RWMutex) ([]*ethpb.ValidatorInfo, error) {
+func (bs *Server) generateValidatorInfo(ctx context.Context, pubKeys [][]byte, eth1Deposits *cache.Cache, depositMutex *sync.RWMutex) ([]*ethpb.ValidatorInfo, error) {
 	headState, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not access head state")
@@ -203,26 +210,33 @@ func (bs *Server) generateValidatorInfo(ctx context.Context, pubKeys [][]byte, e
 		}
 		if !ok {
 			// We don't know of this validator; perhaps it's a pending deposit?
-			var eth1BlockNumber *big.Int
-			pubKey48 := bytesutil.ToBytes48(info.PublicKey)
+			key := fmt.Sprintf("%s", pubKey)
+			var deposit *eth1Deposit
 			depositMutex.Lock()
-			if cached, exists := eth1DepositBlocks[pubKey48]; exists {
-				eth1BlockNumber = cached
+			if fetchedDeposit, exists := eth1Deposits.Get(key); exists {
+				deposit = fetchedDeposit.(*eth1Deposit)
 			} else {
-				deposit, fetched := bs.DepositFetcher.DepositByPubkey(bs.Ctx, info.PublicKey)
-				eth1DepositData[pubKey48] = deposit.Data
-				eth1DepositBlocks[pubKey48] = fetched
-				eth1BlockNumber = fetched
+				fetchedDeposit, eth1BlockNumber := bs.DepositFetcher.DepositByPubkey(bs.Ctx, info.PublicKey)
+				if fetchedDeposit == nil {
+					deposit = &eth1Deposit{}
+					eth1Deposits.Set(key, deposit, cache.DefaultExpiration)
+				} else {
+					deposit = &eth1Deposit{
+						block: eth1BlockNumber,
+						data:  fetchedDeposit.Data,
+					}
+					eth1Deposits.Set(key, deposit, cache.DefaultExpiration)
+				}
 			}
 			depositMutex.Unlock()
-			if eth1BlockNumber != nil {
+			if deposit.block != nil {
 				info.Status = ethpb.ValidatorStatus_DEPOSITED
-				if queueTimestamp, err := bs.depositQueueTimestamp(bs.Ctx, eth1BlockNumber, genesisTime); err != nil {
+				if queueTimestamp, err := bs.depositQueueTimestamp(bs.Ctx, deposit.block, genesisTime); err != nil {
 					log.WithError(err).Error("Failed to obtain queue activation timestamp")
 				} else {
 					info.TransitionTimestamp = queueTimestamp
 				}
-				info.Balance = eth1DepositData[pubKey48].Amount
+				info.Balance = deposit.data.Amount
 			}
 			res = append(res, info)
 			continue
