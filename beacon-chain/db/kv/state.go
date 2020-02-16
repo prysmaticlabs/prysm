@@ -120,7 +120,7 @@ func (k *Store) SaveState(ctx context.Context, state *state.BeaconState, blockRo
 	})
 }
 
-// SaveStates stores multiple states to the db using the block's signing root which was used to generate the state.
+// SaveStates stores multiple states to the db using the provided corresponding roots.
 func (k *Store) SaveStates(ctx context.Context, states []*state.BeaconState, blockRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStates")
 	defer span.End()
