@@ -15,7 +15,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"golang.org/x/exp/rand"
-
 )
 
 // This defines how often a node cleans up and processes pending attestations in the queue.
