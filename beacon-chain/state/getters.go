@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/go-bitfield"
-
 	"github.com/prysmaticlabs/prysm/shared/memorypool"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
