@@ -348,54 +348,55 @@ func (s *Service) filterBoundaryCandidates(ctx context.Context, root [32]byte, p
 	epochLength := params.BeaconConfig().SlotsPerEpoch
 
 	// Only trigger on epoch start.
-	if helpers.IsEpochStart(postState.Slot()) {
-		if len(s.boundaryRoots) > 0 {
-			// Retrieve previous boundary root.
-			previousBoundaryRoot := s.boundaryRoots[len(s.boundaryRoots)-1]
-			previousSlot := s.initSyncState[previousBoundaryRoot].Slot()
-
-			// Round up slot number to account for skipped slots.
-			previousSlot = helpers.RoundUpToNearestEpoch(previousSlot)
-			if postState.Slot()-previousSlot > epochLength {
-				targetSlot := postState.Slot()
-				tempRoots := [][32]byte{}
-
-				// Loop through current states to filter for valid boundary states.
-				for i := len(stateSlice) - 1; stateSlice[i] != previousBoundaryRoot && i >= 0; i-- {
-					currentSlot := s.initSyncState[stateSlice[i]].Slot()
-					// Store states from the start/end of epochs.
-					if currentSlot-1 == targetSlot-epochLength ||
-						currentSlot+1 == targetSlot-epochLength {
-						tempRoots = append(tempRoots, stateSlice[i])
-						continue
-					}
-					// Skip if the current slot is larger than the previous epoch
-					// boundary.
-					if currentSlot > targetSlot-epochLength {
-						continue
-					}
-					tempRoots = append(tempRoots, stateSlice[i])
-
-					// Switch target slot if the current slot is greater than
-					// 1 epoch boundary from the previously saved boundary slot.
-					if currentSlot > previousSlot+epochLength {
-						currentSlot = helpers.RoundUpToNearestEpoch(currentSlot)
-						targetSlot = currentSlot
-						continue
-					}
-					break
-				}
-				// Reverse to append the roots in ascending order corresponding
-				// to the respective slots.
-				tempRoots = bytesutil.ReverseBytes32Slice(tempRoots)
-				s.boundaryRoots = append(s.boundaryRoots, tempRoots...)
-			}
-		}
-		s.boundaryRoots = append(s.boundaryRoots, root)
-		s.pruneOldStates()
-		s.pruneNonBoundaryStates()
-
+	if !helpers.IsEpochStart(postState.Slot()) {
+		return
 	}
+	if len(s.boundaryRoots) > 0 {
+		// Retrieve previous boundary root.
+		previousBoundaryRoot := s.boundaryRoots[len(s.boundaryRoots)-1]
+		previousSlot := s.initSyncState[previousBoundaryRoot].Slot()
+
+		// Round up slot number to account for skipped slots.
+		previousSlot = helpers.RoundUpToNearestEpoch(previousSlot)
+		if postState.Slot()-previousSlot > epochLength {
+			targetSlot := postState.Slot()
+			tempRoots := [][32]byte{}
+
+			// Loop through current states to filter for valid boundary states.
+			for i := len(stateSlice) - 1; stateSlice[i] != previousBoundaryRoot && i >= 0; i-- {
+				currentSlot := s.initSyncState[stateSlice[i]].Slot()
+				// Store states from the start/end of epochs.
+				if currentSlot-1 == targetSlot-epochLength ||
+					currentSlot+1 == targetSlot-epochLength {
+					tempRoots = append(tempRoots, stateSlice[i])
+					continue
+				}
+				// Skip if the current slot is larger than the previous epoch
+				// boundary.
+				if currentSlot > targetSlot-epochLength {
+					continue
+				}
+				tempRoots = append(tempRoots, stateSlice[i])
+
+				// Switch target slot if the current slot is greater than
+				// 1 epoch boundary from the previously saved boundary slot.
+				if currentSlot > previousSlot+epochLength {
+					currentSlot = helpers.RoundUpToNearestEpoch(currentSlot)
+					targetSlot = currentSlot
+					continue
+				}
+				break
+			}
+			// Reverse to append the roots in ascending order corresponding
+			// to the respective slots.
+			tempRoots = bytesutil.ReverseBytes32Slice(tempRoots)
+			s.boundaryRoots = append(s.boundaryRoots, tempRoots...)
+		}
+	}
+	s.boundaryRoots = append(s.boundaryRoots, root)
+	s.pruneOldStates()
+	s.pruneNonBoundaryStates()
+
 }
 
 // prune for states past the current finalized checkpoint.
