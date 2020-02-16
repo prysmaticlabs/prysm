@@ -315,7 +315,6 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk *ethpb.B
 }
 
 func (s *Service) persistCachedStates(ctx context.Context, numOfStates int) error {
-	log.Error("persist cache triggered")
 	oldStates := make([]*stateTrie.BeaconState, 0, numOfStates)
 
 	// Add slots to the map and add epoch boundary states to the slice.
