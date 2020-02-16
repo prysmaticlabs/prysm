@@ -23,7 +23,7 @@ func (s *State) replayBlocks(ctx context.Context, state *state.BeaconState, sign
 				return nil, err
 			}
 		}
-		state, err = transition.ProcessBlock(ctx, state, signed[i])
+		state, err = transition.ProcessBlockNoVerifyAttSigs(ctx, state, signed[i])
 		if err != nil {
 			return nil, err
 		}
