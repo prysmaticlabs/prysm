@@ -296,19 +296,6 @@ func (s *Service) saveInitState(ctx context.Context, state *stateTrie.BeaconStat
 	if err := s.beaconDB.SaveState(ctx, fs, finalizedRoot); err != nil {
 		return errors.Wrap(err, "could not save state")
 	}
-	if len(s.boundaryRoots) > 2 { /*
-			prunedBoundaryRoots := [][32]byte{}
-			removedLength := len(s.boundaryRoots) - 2
-			for _, root := range s.boundaryRoots[:removedLength] {
-				if s.initSyncState[root].Slot() < cpt.Epoch*params.BeaconConfig().SlotsPerEpoch {
-					log.Errorf("Also deleting state with root %#x and slot %d", root, s.initSyncState[root].Slot())
-					delete(s.initSyncState, root)
-					continue
-				}
-				prunedBoundaryRoots = append(prunedBoundaryRoots, root)
-			}
-			s.boundaryRoots = append(prunedBoundaryRoots, s.boundaryRoots[:removedLength]...)*/
-	}
 	return nil
 }
 
