@@ -13,7 +13,7 @@ import (
 // This saves a pre finalized beacon state in the cold section of the DB. The returns an error
 // and not store anything if the state does not lie on an archive point boundary.
 func (s *State) saveColdState(ctx context.Context, blockRoot [32]byte, state *state.BeaconState) error {
-	if state.Slot() % s.slotsPerArchivePoint != 0 {
+	if state.Slot()%s.slotsPerArchivePoint != 0 {
 		return errors.New("unable to store non archive point state in cold")
 	}
 
@@ -47,7 +47,7 @@ func (s *State) loadColdIntermediateState(ctx context.Context, slot uint64) (*st
 
 	// If the high archive point is outside of the split, it uses the split state as the
 	// high archive point.
-	if highArchivePointIdx * s.slotsPerArchivePoint >= s.splitSlot {
+	if highArchivePointIdx*s.slotsPerArchivePoint >= s.splitSlot {
 
 	} else {
 
