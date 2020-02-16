@@ -62,6 +62,22 @@ func TestAggregateAttestation_OverlapFails(t *testing.T) {
 	}
 }
 
+func TestAggregateAttestation_DiffLengthFails(t *testing.T) {
+	tests := []struct {
+		a1 *ethpb.Attestation
+		a2 *ethpb.Attestation
+	}{
+		{a1: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x0F}},
+			a2: &ethpb.Attestation{AggregationBits: bitfield.Bitlist{0x11}}},
+	}
+	for _, tt := range tests {
+		_, err := helpers.AggregateAttestation(tt.a1, tt.a2)
+		if err != helpers.ErrAttestationAggregationBitsDifferentLen {
+			t.Error("Did not receive wanted error")
+		}
+	}
+}
+
 func bitlistWithAllBitsSet(length uint64) bitfield.Bitlist {
 	b := bitfield.NewBitlist(length)
 	for i := uint64(0); i < length; i++ {
@@ -165,6 +181,19 @@ func TestAggregateAttestations(t *testing.T) {
 			},
 			want: []bitfield.Bitlist{
 				{0b00000011, 0b1},
+			},
+		},
+		{
+			name: "attestations with different bitlist lengths",
+			inputs: []bitfield.Bitlist{
+				{0b00000011, 0b10},
+				{0b00000111, 0b100},
+				{0b00000100, 0b1},
+			},
+			want: []bitfield.Bitlist{
+				{0b00000011, 0b10},
+				{0b00000111, 0b100},
+				{0b00000100, 0b1},
 			},
 		},
 	}
