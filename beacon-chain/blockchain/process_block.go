@@ -204,7 +204,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 
 	if featureconfig.Get().InitSyncCacheState {
 		s.initSyncState[root] = postState.Copy()
-		s.pruneNonBoundaryStates(ctx, root, postState)
+		s.filterBoundaryCandidates(ctx, root, postState)
 	} else {
 		if err := s.beaconDB.SaveState(ctx, postState, root); err != nil {
 			return errors.Wrap(err, "could not save state")
@@ -384,9 +384,7 @@ func (s *Service) filterBoundaryCandidates(ctx context.Context, root [32]byte, p
 					}
 					break
 				}
-				for i, j := 0, len(tempRoots)-1; i < j; i, j = i+1, j-1 {
-					tempRoots[i], tempRoots[j] = tempRoots[j], tempRoots[i]
-				}
+				tempRoots = bytesutil.ReverseBytes32Slice(tempRoots)
 				if len(tempRoots) > 0 {
 					log.Errorf("saving temp roots %v", tempRoots)
 				}
@@ -395,13 +393,14 @@ func (s *Service) filterBoundaryCandidates(ctx context.Context, root [32]byte, p
 		}
 		log.Errorf("saving root %#x", root)
 		s.boundaryRoots = append(s.boundaryRoots, root)
-		s.pruneNonBoundaryStates2()
+		s.pruneOldStates()
+		s.pruneNonBoundaryStates()
 
 	}
 	return nil
 }
 
-func (s *Service) pruneNonBoundaryStates2() {
+func (s *Service) pruneOldStates() {
 	prunedBoundaryRoots := [][32]byte{}
 	for _, rt := range s.boundaryRoots {
 		if s.initSyncState[rt].Slot() < s.finalizedCheckpt.Epoch*params.BeaconConfig().SlotsPerEpoch {
@@ -412,8 +411,10 @@ func (s *Service) pruneNonBoundaryStates2() {
 		prunedBoundaryRoots = append(prunedBoundaryRoots, rt)
 	}
 	s.boundaryRoots = prunedBoundaryRoots
-	boundaryMap := make(map[[32]byte]bool)
+}
 
+func (s *Service) pruneNonBoundaryStates() {
+	boundaryMap := make(map[[32]byte]bool)
 	for i := range s.boundaryRoots {
 		boundaryMap[s.boundaryRoots[i]] = true
 	}

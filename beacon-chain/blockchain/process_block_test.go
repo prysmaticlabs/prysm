@@ -537,7 +537,7 @@ func TestFilterBlockRoots_CanFilter(t *testing.T) {
 	}
 }
 
-func TestPersistCache(t *testing.T) {
+func TestPersistCache_CanSave(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
@@ -688,6 +688,74 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized(t *testing.T) {
 	// Block with slot 63 should be in fork choice because it's less than finalized epoch 1.
 	if !service.forkChoiceStore.HasNode(r63) {
 		t.Error("Didn't save node")
+	}
+}
+
+func TestPruneOldStates_AlreadyFinalized(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	cfg := &Config{BeaconDB: db}
+	service, err := NewService(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	st, _ := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
+
+	for i := uint64(100); i < 200; i++ {
+		st.SetSlot(i)
+		root := [32]byte{}
+		copy(root[:], bytesutil.Bytes32(i))
+		service.initSyncState[root] = st.Copy()
+		service.boundaryRoots = append(service.boundaryRoots, root)
+	}
+	finalizedEpoch := uint64(5)
+	service.finalizedCheckpt = &ethpb.Checkpoint{Epoch: finalizedEpoch}
+	service.pruneOldStates()
+	for _, rt := range service.boundaryRoots {
+		st, ok := service.initSyncState[rt]
+		if !ok {
+			t.Error("Root doen't exist in cache map")
+			continue
+		}
+		if st.Slot() < helpers.StartSlot(finalizedEpoch) {
+			t.Errorf("State with slot %d still exists and not pruned", st.Slot())
+		}
+	}
+}
+
+func TestPruneNonBoundary_CanPrune(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	cfg := &Config{BeaconDB: db}
+	service, err := NewService(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	st, _ := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
+
+	for i := uint64(0); i < 2000; i++ {
+		st.SetSlot(i)
+		root := [32]byte{}
+		copy(root[:], bytesutil.Bytes32(i))
+		service.initSyncState[root] = st.Copy()
+		if helpers.IsEpochStart(i) {
+			service.boundaryRoots = append(service.boundaryRoots, root)
+		}
+	}
+	service.pruneNonBoundaryStates()
+	for _, rt := range service.boundaryRoots {
+		st, ok := service.initSyncState[rt]
+		if !ok {
+			t.Error("Root doen't exist in cache map")
+			continue
+		}
+		if !helpers.IsEpochStart(st.Slot()) {
+			t.Errorf("Non boundary state with slot %d still exists and not pruned", st.Slot())
+		}
 	}
 }
 
