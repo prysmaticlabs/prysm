@@ -7,13 +7,13 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v2"
 )
 
 func TestNilDBHistoryBlkHdr(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(app, set, nil))
+	db := setupDB(t, cli.NewContext(&app, set, nil))
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
@@ -35,9 +35,9 @@ func TestNilDBHistoryBlkHdr(t *testing.T) {
 }
 
 func TestSaveHistoryBlkHdr(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(app, set, nil))
+	db := setupDB(t, cli.NewContext(&app, set, nil))
 	ctx := context.Background()
 
 	tests := []struct {
@@ -81,9 +81,9 @@ func TestSaveHistoryBlkHdr(t *testing.T) {
 }
 
 func TestDeleteHistoryBlkHdr(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(app, set, nil))
+	db := setupDB(t, cli.NewContext(&app, set, nil))
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
@@ -143,9 +143,9 @@ func TestDeleteHistoryBlkHdr(t *testing.T) {
 }
 
 func TestHasHistoryBlkHdr(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(app, set, nil))
+	db := setupDB(t, cli.NewContext(&app, set, nil))
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
@@ -196,9 +196,9 @@ func TestHasHistoryBlkHdr(t *testing.T) {
 }
 
 func TestPruneHistoryBlkHdr(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(app, set, nil))
+	db := setupDB(t, cli.NewContext(&app, set, nil))
 	defer teardownDB(t, db)
 	ctx := context.Background()
 

@@ -263,12 +263,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_urfave_cli",
-    commit = "e6cf83ec39f6e1158ced1927d4ed14578fda8edb",  # v1.21.0
-    importpath = "github.com/urfave/cli",
-)
-
-go_repository(
     name = "com_github_go_yaml_yaml",
     commit = "f221b8435cfb71e54062f6c6e99e9ade30b124d5",  # v2.2.4
     importpath = "github.com/go-yaml/yaml",
@@ -1574,4 +1568,39 @@ go_repository(
     name = "com_github_shibukawa_configdir",
     commit = "e180dbdc8da04c4fa04272e875ce64949f38bd3e",
     importpath = "github.com/shibukawa/configdir",
+)
+
+go_repository(
+    name = "com_github_burntsushi_toml",
+    importpath = "github.com/BurntSushi/toml",
+    sum = "h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ=",
+    version = "v0.3.1",
+)
+
+go_repository(
+    name = "com_github_cpuguy83_go_md2man_v2",
+    importpath = "github.com/cpuguy83/go-md2man/v2",
+    sum = "h1:EoUDS0afbrsXAZ9YQ9jdu/mZ2sXgT1/2yyNng4PGlyM=",
+    version = "v2.0.0",
+)
+
+go_repository(
+    name = "com_github_russross_blackfriday_v2",
+    importpath = "github.com/russross/blackfriday/v2",
+    sum = "h1:lPqVAte+HuHNfhJ/0LC98ESWRz8afy9tM/0RK8m9o+Q=",
+    version = "v2.0.1",
+)
+
+go_repository(
+    name = "com_github_shurcool_sanitized_anchor_name",
+    importpath = "github.com/shurcooL/sanitized_anchor_name",
+    sum = "h1:PdmoCO6wvbs+7yrJyMORt4/BmY5IYyJwS/kOiWx8mHo=",
+    version = "v1.0.0",
+)
+
+go_repository(
+    name = "in_gopkg_urfave_cli_v2",
+    importpath = "gopkg.in/urfave/cli.v2",
+    sum = "h1:OvXt/p4cdwNl+mwcWMq/AxaKFkhdxcjx+tx+qf4EOvY=",
+    version = "v2.0.0-20190806201727-b62605953717",
 )

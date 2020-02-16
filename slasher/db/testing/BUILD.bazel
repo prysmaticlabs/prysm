@@ -11,7 +11,7 @@ go_library(
         "//slasher/db:go_default_library",
         "//slasher/db/kv:go_default_library",
         "//slasher/flags:go_default_library",
-        "@com_github_urfave_cli//:go_default_library",
+        "@in_gopkg_urfave_cli_v2//:go_default_library",
     ],
 )
 
@@ -19,5 +19,5 @@ go_test(
     name = "go_default_test",
     srcs = ["setup_db_test.go"],
     embed = [":go_default_library"],
-    deps = ["@com_github_urfave_cli//:go_default_library"],
+    deps = ["@in_gopkg_urfave_cli_v2//:go_default_library"],
 )

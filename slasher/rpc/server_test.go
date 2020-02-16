@@ -13,13 +13,13 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v2"
 )
 
 func TestServer_IsSlashableBlock(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	c := cli.NewContext(app, set, nil)
+	c := cli.NewContext(&app, set, nil)
 	db := testDB.SetupSlasherDB(t, c)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
@@ -69,9 +69,9 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 }
 
 func TestServer_IsNotSlashableBlock(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	c := cli.NewContext(app, set, nil)
+	c := cli.NewContext(&app, set, nil)
 	db := testDB.SetupSlasherDB(t, c)
 	defer testDB.TeardownSlasherDB(t, db)
 
@@ -113,9 +113,9 @@ func TestServer_IsNotSlashableBlock(t *testing.T) {
 }
 
 func TestServer_DoubleBlock(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	c := cli.NewContext(app, set, nil)
+	c := cli.NewContext(&app, set, nil)
 	db := testDB.SetupSlasherDB(t, c)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
@@ -148,9 +148,9 @@ func TestServer_DoubleBlock(t *testing.T) {
 }
 
 func TestServer_SameSlotSlashable(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	c := cli.NewContext(app, set, nil)
+	c := cli.NewContext(&app, set, nil)
 	db := testDB.SetupSlasherDB(t, c)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
@@ -224,9 +224,9 @@ func TestServer_SameSlotSlashable(t *testing.T) {
 }
 
 func TestServer_SlashDoubleAttestation(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	c := cli.NewContext(app, set, nil)
+	c := cli.NewContext(&app, set, nil)
 	db := testDB.SetupSlasherDB(t, c)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
@@ -280,9 +280,9 @@ func TestServer_SlashDoubleAttestation(t *testing.T) {
 }
 
 func TestServer_SlashTripleAttestation(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	c := cli.NewContext(app, set, nil)
+	c := cli.NewContext(&app, set, nil)
 	db := testDB.SetupSlasherDB(t, c)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
@@ -357,9 +357,9 @@ func TestServer_SlashTripleAttestation(t *testing.T) {
 }
 
 func TestServer_DontSlashSameAttestation(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	c := cli.NewContext(app, set, nil)
+	c := cli.NewContext(&app, set, nil)
 	db := testDB.SetupSlasherDB(t, c)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
@@ -393,9 +393,9 @@ func TestServer_DontSlashSameAttestation(t *testing.T) {
 }
 
 func TestServer_DontSlashDifferentTargetAttestation(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	c := cli.NewContext(app, set, nil)
+	c := cli.NewContext(&app, set, nil)
 	db := testDB.SetupSlasherDB(t, c)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
@@ -440,9 +440,9 @@ func TestServer_DontSlashDifferentTargetAttestation(t *testing.T) {
 }
 
 func TestServer_DontSlashSameAttestationData(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	c := cli.NewContext(app, set, nil)
+	c := cli.NewContext(&app, set, nil)
 	db := testDB.SetupSlasherDB(t, c)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
@@ -482,9 +482,9 @@ func TestServer_DontSlashSameAttestationData(t *testing.T) {
 }
 
 func TestServer_SlashSurroundedAttestation(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	c := cli.NewContext(app, set, nil)
+	c := cli.NewContext(&app, set, nil)
 	db := testDB.SetupSlasherDB(t, c)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
@@ -536,9 +536,9 @@ func TestServer_SlashSurroundedAttestation(t *testing.T) {
 }
 
 func TestServer_SlashSurroundAttestation(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	c := cli.NewContext(app, set, nil)
+	c := cli.NewContext(&app, set, nil)
 	db := testDB.SetupSlasherDB(t, c)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
@@ -613,9 +613,9 @@ func TestServer_SlashSurroundAttestation(t *testing.T) {
 }
 
 func TestServer_DontSlashValidAttestations(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	c := cli.NewContext(app, set, nil)
+	c := cli.NewContext(&app, set, nil)
 	db := testDB.SetupSlasherDB(t, c)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
@@ -659,9 +659,9 @@ func TestServer_DontSlashValidAttestations(t *testing.T) {
 }
 
 func TestServer_Store_100_Attestations(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	c := cli.NewContext(app, set, nil)
+	c := cli.NewContext(&app, set, nil)
 	db := testDB.SetupSlasherDB(t, c)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
@@ -702,10 +702,10 @@ func TestServer_Store_100_Attestations(t *testing.T) {
 }
 
 func BenchmarkCheckAttestations(b *testing.B) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
-	ctx := cli.NewContext(app, set, nil)
+	ctx := cli.NewContext(&app, set, nil)
 	db := testDB.SetupSlasherDB(b, ctx)
 	defer testDB.TeardownSlasherDB(b, db)
 	context := context.Background()

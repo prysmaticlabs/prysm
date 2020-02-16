@@ -36,7 +36,7 @@ import (
 
 	"github.com/fjl/memsize/memsizeui"
 	log "github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v2"
 )
 
 // Handler is the global debugging handler.
@@ -46,35 +46,35 @@ var Handler = new(HandlerT)
 var Memsize memsizeui.Handler
 var (
 	// PProfFlag to enable pprof HTTP server.
-	PProfFlag = cli.BoolFlag{
+	PProfFlag = &cli.BoolFlag{
 		Name:  "pprof",
 		Usage: "Enable the pprof HTTP server",
 	}
 	// PProfPortFlag to specify HTTP server listening port.
-	PProfPortFlag = cli.IntFlag{
+	PProfPortFlag = &cli.IntFlag{
 		Name:  "pprofport",
 		Usage: "pprof HTTP server listening port",
 		Value: 6060,
 	}
 	// PProfAddrFlag to specify HTTP server address.
-	PProfAddrFlag = cli.StringFlag{
+	PProfAddrFlag = &cli.StringFlag{
 		Name:  "pprofaddr",
 		Usage: "pprof HTTP server listening interface",
 		Value: "127.0.0.1",
 	}
 	// MemProfileRateFlag to specify the mem profiling rate.
-	MemProfileRateFlag = cli.IntFlag{
+	MemProfileRateFlag = &cli.IntFlag{
 		Name:  "memprofilerate",
 		Usage: "Turn on memory profiling with the given rate",
 		Value: runtime.MemProfileRate,
 	}
 	// CPUProfileFlag to specify where to write the CPU profile.
-	CPUProfileFlag = cli.StringFlag{
+	CPUProfileFlag = &cli.StringFlag{
 		Name:  "cpuprofile",
 		Usage: "Write CPU profile to the given file",
 	}
 	// TraceFlag to specify where to write the trace execution profile.
-	TraceFlag = cli.StringFlag{
+	TraceFlag = &cli.StringFlag{
 		Name:  "trace",
 		Usage: "Write execution trace to the given file",
 	}
@@ -318,7 +318,7 @@ func MigrateFlags(action func(ctx *cli.Context) error) func(*cli.Context) error 
 	return func(ctx *cli.Context) error {
 		for _, name := range ctx.FlagNames() {
 			if ctx.IsSet(name) {
-				if err := ctx.GlobalSet(name, ctx.String(name)); err != nil {
+				if err := ctx.Set(name, ctx.String(name)); err != nil {
 					return err
 				}
 			}
@@ -333,21 +333,21 @@ func MigrateFlags(action func(ctx *cli.Context) error) func(*cli.Context) error 
 // It should be called as early as possible in the program.
 func Setup(ctx *cli.Context) error {
 	// profiling, tracing
-	runtime.MemProfileRate = ctx.GlobalInt(MemProfileRateFlag.Name)
-	if traceFile := ctx.GlobalString(TraceFlag.Name); traceFile != "" {
+	runtime.MemProfileRate = ctx.Int(MemProfileRateFlag.Name)
+	if traceFile := ctx.String(TraceFlag.Name); traceFile != "" {
 		if err := Handler.StartGoTrace(TraceFlag.Name); err != nil {
 			return err
 		}
 	}
-	if cpuFile := ctx.GlobalString(CPUProfileFlag.Name); cpuFile != "" {
+	if cpuFile := ctx.String(CPUProfileFlag.Name); cpuFile != "" {
 		if err := Handler.StartCPUProfile(cpuFile); err != nil {
 			return err
 		}
 	}
 
 	// pprof server
-	if ctx.GlobalBool(PProfFlag.Name) {
-		address := fmt.Sprintf("%s:%d", ctx.GlobalString(PProfAddrFlag.Name), ctx.GlobalInt(PProfPortFlag.Name))
+	if ctx.Bool(PProfFlag.Name) {
+		address := fmt.Sprintf("%s:%d", ctx.String(PProfAddrFlag.Name), ctx.Int(PProfPortFlag.Name))
 		startPProf(address)
 	}
 	return nil
@@ -366,12 +366,12 @@ func startPProf(address string) {
 // Exit stops all running profiles, flushing their output to the
 // respective file.
 func Exit(ctx *cli.Context) {
-	if traceFile := ctx.GlobalString(TraceFlag.Name); traceFile != "" {
+	if traceFile := ctx.String(TraceFlag.Name); traceFile != "" {
 		if err := Handler.StopGoTrace(); err != nil {
 			log.Errorf("Failed to stop go tracing: %v", err)
 		}
 	}
-	if cpuFile := ctx.GlobalString(CPUProfileFlag.Name); cpuFile != "" {
+	if cpuFile := ctx.String(CPUProfileFlag.Name); cpuFile != "" {
 		if err := Handler.StopCPUProfile(); err != nil {
 			log.Errorf("Failed to stop CPU profiling: %v", err)
 		}

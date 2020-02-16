@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v2"
 )
 
 type testStruct struct {
@@ -40,9 +40,9 @@ func init() {
 }
 
 func TestNilDBHistoryIdxAtt(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(app, set, nil))
+	db := setupDB(t, cli.NewContext(&app, set, nil))
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
@@ -67,9 +67,9 @@ func TestNilDBHistoryIdxAtt(t *testing.T) {
 }
 
 func TestSaveIdxAtt(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(app, set, nil))
+	db := setupDB(t, cli.NewContext(&app, set, nil))
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
@@ -92,9 +92,9 @@ func TestSaveIdxAtt(t *testing.T) {
 }
 
 func TestDeleteHistoryIdxAtt(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(app, set, nil))
+	db := setupDB(t, cli.NewContext(&app, set, nil))
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
@@ -140,9 +140,9 @@ func TestDeleteHistoryIdxAtt(t *testing.T) {
 }
 
 func TestHasIndexedAttestation(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(app, set, nil))
+	db := setupDB(t, cli.NewContext(&app, set, nil))
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
@@ -172,9 +172,9 @@ func TestHasIndexedAttestation(t *testing.T) {
 }
 
 func TestPruneHistoryIdxAtt(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	db := setupDB(t, cli.NewContext(app, set, nil))
+	db := setupDB(t, cli.NewContext(&app, set, nil))
 	defer teardownDB(t, db)
 	ctx := context.Background()
 

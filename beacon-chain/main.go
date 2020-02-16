@@ -17,10 +17,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/logutil"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v2"
 	gologging "github.com/whyrusleeping/go-logging"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	_ "go.uber.org/automaxprocs"
+	"gopkg.in/urfave/cli.v2/altsrc"
 )
 
 var appFlags = []cli.Flag{
@@ -77,15 +78,16 @@ var appFlags = []cli.Flag{
 	debug.TraceFlag,
 	cmd.LogFileName,
 	cmd.EnableUPnPFlag,
+	cmd.ConfigFileFlag,
 }
 
 func init() {
-	appFlags = append(appFlags, featureconfig.BeaconChainFlags...)
+	appFlags = cmd.WrapFlags(append(appFlags, featureconfig.BeaconChainFlags...))
 }
 
 func main() {
 	log := logrus.WithField("prefix", "main")
-	app := cli.NewApp()
+	app := cli.App{}
 	app.Name = "beacon-chain"
 	app.Usage = "this is a beacon chain implementation for Ethereum 2.0"
 	app.Action = startNode
@@ -94,7 +96,12 @@ func main() {
 	app.Flags = appFlags
 
 	app.Before = func(ctx *cli.Context) error {
-		format := ctx.GlobalString(cmd.LogFormat.Name)
+		// Load any flags from file, if specified.
+		if err := altsrc.InitInputSourceWithContext(appFlags, altsrc.NewYamlSourceFromFlagFunc(cmd.ConfigFileFlag.Name))(ctx); err != nil {
+			return err
+		}
+
+		format := ctx.String(cmd.LogFormat.Name)
 		switch format {
 		case "text":
 			formatter := new(prefixed.TextFormatter)
@@ -102,7 +109,7 @@ func main() {
 			formatter.FullTimestamp = true
 			// If persistent log files are written - we disable the log messages coloring because
 			// the colors are ANSI codes and seen as gibberish in the log files.
-			formatter.DisableColors = ctx.GlobalString(cmd.LogFileName.Name) != ""
+			formatter.DisableColors = ctx.String(cmd.LogFileName.Name) != ""
 			logrus.SetFormatter(formatter)
 			break
 		case "fluentd":
@@ -119,7 +126,7 @@ func main() {
 			return fmt.Errorf("unknown log format %s", format)
 		}
 
-		logFileName := ctx.GlobalString(cmd.LogFileName.Name)
+		logFileName := ctx.String(cmd.LogFileName.Name)
 		if logFileName != "" {
 			if err := logutil.ConfigurePersistentLogging(logFileName); err != nil {
 				log.WithError(err).Error("Failed to configuring logging to disk.")
@@ -144,7 +151,7 @@ func main() {
 }
 
 func startNode(ctx *cli.Context) error {
-	verbosity := ctx.GlobalString(cmd.VerbosityFlag.Name)
+	verbosity := ctx.String(cmd.VerbosityFlag.Name)
 	level, err := logrus.ParseLevel(verbosity)
 	if err != nil {
 		return err

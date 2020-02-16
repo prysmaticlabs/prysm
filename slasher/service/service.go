@@ -28,7 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/prysmaticlabs/prysm/slasher/rpc"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v2"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -100,14 +100,14 @@ func NewRPCService(cfg *Config, ctx *cli.Context) (*Service, error) {
 }
 
 func (s *Service) startDB(ctx *cli.Context) error {
-	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
+	baseDir := ctx.String(cmd.DataDirFlag.Name)
 	dbPath := path.Join(baseDir, slasherDBName)
-	cfg := &kv.Config{SpanCacheEnabled: ctx.GlobalBool(flags.UseSpanCacheFlag.Name)}
+	cfg := &kv.Config{SpanCacheEnabled: ctx.Bool(flags.UseSpanCacheFlag.Name)}
 	slasherDB, err := db.NewDB(dbPath, cfg)
 	if err != nil {
 		return err
 	}
-	if s.ctx.GlobalBool(cmd.ClearDB.Name) {
+	if s.ctx.Bool(cmd.ClearDB.Name) {
 		if err := slasherDB.ClearDB(); err != nil {
 			return err
 		}
@@ -215,7 +215,7 @@ func (s *Service) startSlasher() {
 	slasherServer := rpc.Server{
 		SlasherDB: s.slasherDb,
 	}
-	if s.ctx.GlobalBool(flags.RebuildSpanMapsFlag.Name) {
+	if s.ctx.Bool(flags.RebuildSpanMapsFlag.Name) {
 		s.loadSpanMaps(slasherServer)
 	}
 	slashpb.RegisterSlasherServer(s.grpcServer, &slasherServer)

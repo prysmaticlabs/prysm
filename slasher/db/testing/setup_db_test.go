@@ -5,13 +5,13 @@ import (
 	"os"
 	"testing"
 
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v2"
 )
 
 func TestClearDB(t *testing.T) {
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	slasherDB := SetupSlasherDB(t, cli.NewContext(app, set, nil))
+	slasherDB := SetupSlasherDB(t, cli.NewContext(&app, set, nil))
 	defer TeardownSlasherDB(t, slasherDB)
 	if err := slasherDB.ClearDB(); err != nil {
 		t.Fatal(err)

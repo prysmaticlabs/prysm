@@ -26,7 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v2"
 )
 
 var log = logrus.WithField("prefix", "node")
@@ -45,15 +45,15 @@ type ValidatorClient struct {
 func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 	if err := tracing.Setup(
 		"validator", // service name
-		ctx.GlobalString(cmd.TracingProcessNameFlag.Name),
-		ctx.GlobalString(cmd.TracingEndpointFlag.Name),
-		ctx.GlobalFloat64(cmd.TraceSampleFractionFlag.Name),
-		ctx.GlobalBool(cmd.EnableTracingFlag.Name),
+		ctx.String(cmd.TracingProcessNameFlag.Name),
+		ctx.String(cmd.TracingEndpointFlag.Name),
+		ctx.Float64(cmd.TraceSampleFractionFlag.Name),
+		ctx.Bool(cmd.EnableTracingFlag.Name),
 	); err != nil {
 		return nil, err
 	}
 
-	verbosity := ctx.GlobalString(cmd.VerbosityFlag.Name)
+	verbosity := ctx.String(cmd.VerbosityFlag.Name)
 	level, err := logrus.ParseLevel(verbosity)
 	if err != nil {
 		return nil, err
@@ -69,7 +69,7 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 
 	featureconfig.ConfigureValidator(ctx)
 	// Use custom config values if the --no-custom-config flag is set.
-	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
+	if !ctx.Bool(flags.NoCustomConfigFlag.Name) {
 		log.Info("Using custom parameter configuration")
 		if featureconfig.Get().MinimalConfig {
 			log.Warn("Using Minimal Config")
@@ -99,14 +99,14 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 		}
 	}
 
-	clearFlag := ctx.GlobalBool(cmd.ClearDB.Name)
-	forceClearFlag := ctx.GlobalBool(cmd.ForceClearDB.Name)
+	clearFlag := ctx.Bool(cmd.ClearDB.Name)
+	forceClearFlag := ctx.Bool(cmd.ForceClearDB.Name)
 	if clearFlag || forceClearFlag {
 		pubkeys, err := keyManager.FetchValidatingKeys()
 		if err != nil {
 			return nil, err
 		}
-		dataDir := ctx.GlobalString(cmd.DataDirFlag.Name)
+		dataDir := ctx.String(cmd.DataDirFlag.Name)
 		if err := clearDB(dataDir, pubkeys, forceClearFlag); err != nil {
 			return nil, err
 		}
@@ -170,7 +170,7 @@ func (s *ValidatorClient) Close() {
 
 func (s *ValidatorClient) registerPrometheusService(ctx *cli.Context) error {
 	service := prometheus.NewPrometheusService(
-		fmt.Sprintf(":%d", ctx.GlobalInt64(cmd.MonitoringPortFlag.Name)),
+		fmt.Sprintf(":%d", ctx.Int64(cmd.MonitoringPortFlag.Name)),
 		s.services,
 	)
 	logrus.AddHook(prometheus.NewLogrusCollector())
@@ -178,13 +178,13 @@ func (s *ValidatorClient) registerPrometheusService(ctx *cli.Context) error {
 }
 
 func (s *ValidatorClient) registerClientService(ctx *cli.Context, keyManager keymanager.KeyManager) error {
-	endpoint := ctx.GlobalString(flags.BeaconRPCProviderFlag.Name)
-	dataDir := ctx.GlobalString(cmd.DataDirFlag.Name)
-	logValidatorBalances := !ctx.GlobalBool(flags.DisablePenaltyRewardLogFlag.Name)
-	emitAccountMetrics := ctx.GlobalBool(flags.AccountMetricsFlag.Name)
-	cert := ctx.GlobalString(flags.CertFlag.Name)
-	graffiti := ctx.GlobalString(flags.GraffitiFlag.Name)
-	maxCallRecvMsgSize := ctx.GlobalInt(flags.GrpcMaxCallRecvMsgSizeFlag.Name)
+	endpoint := ctx.String(flags.BeaconRPCProviderFlag.Name)
+	dataDir := ctx.String(cmd.DataDirFlag.Name)
+	logValidatorBalances := !ctx.Bool(flags.DisablePenaltyRewardLogFlag.Name)
+	emitAccountMetrics := ctx.Bool(flags.AccountMetricsFlag.Name)
+	cert := ctx.String(flags.CertFlag.Name)
+	graffiti := ctx.String(flags.GraffitiFlag.Name)
+	maxCallRecvMsgSize := ctx.Int(flags.GrpcMaxCallRecvMsgSizeFlag.Name)
 	v, err := client.NewValidatorService(context.Background(), &client.Config{
 		Endpoint:                   endpoint,
 		DataDir:                    dataDir,
@@ -221,9 +221,9 @@ func selectKeyManager(ctx *cli.Context) (keymanager.KeyManager, error) {
 			manager = "unencrypted"
 			opts = fmt.Sprintf(`{"path":%q}`, unencryptedKeys)
 			log.Warn(fmt.Sprintf("--unencrypted-keys flag is deprecated.  Please use --keymanager=unencrypted --keymanageropts='%s'", opts))
-		} else if numValidatorKeys := ctx.GlobalUint64(flags.InteropNumValidators.Name); numValidatorKeys > 0 {
+		} else if numValidatorKeys := ctx.Uint64(flags.InteropNumValidators.Name); numValidatorKeys > 0 {
 			manager = "interop"
-			opts = fmt.Sprintf(`{"keys":%d,"offset":%d}`, numValidatorKeys, ctx.GlobalUint64(flags.InteropStartIndex.Name))
+			opts = fmt.Sprintf(`{"keys":%d,"offset":%d}`, numValidatorKeys, ctx.Uint64(flags.InteropStartIndex.Name))
 			log.Warn(fmt.Sprintf("--interop-num-validators and --interop-start-index flags are deprecated.  Please use --keymanager=interop --keymanageropts='%s'", opts))
 		} else if keystorePath := ctx.String(flags.KeystorePathFlag.Name); keystorePath != "" {
 			manager = "keystore"

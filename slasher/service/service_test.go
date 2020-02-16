@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v2"
 )
 
 func init() {
@@ -24,12 +24,12 @@ func init() {
 
 func TestLifecycle_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	context := cli.NewContext(app, set, nil)
+	context := cli.NewContext(&app, set, nil)
 	rpcService, err := NewRPCService(&Config{
 		Port: 7348,
 	}, context)
@@ -56,12 +56,12 @@ func TestLifecycle_OK(t *testing.T) {
 
 func TestRPC_BadEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	context := cli.NewContext(app, set, nil)
+	context := cli.NewContext(&app, set, nil)
 	rpcService, err := NewRPCService(&Config{
 		Port: 99999999,
 	}, context)
@@ -101,9 +101,9 @@ func TestStatus_CredentialError(t *testing.T) {
 
 func TestRPC_InsecureEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
-	app := cli.NewApp()
+	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	context := cli.NewContext(app, set, nil)
+	context := cli.NewContext(&app, set, nil)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
