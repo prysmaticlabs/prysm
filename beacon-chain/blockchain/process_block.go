@@ -336,7 +336,7 @@ func (s *Service) persistCachedStates(ctx context.Context, numOfStates int) erro
 	return nil
 }
 
-func (s *Service) pruneNonBoundaryStates(ctx context.Context, root [32]byte, postState *stateTrie.BeaconState) error {
+func (s *Service) filterBoundaryCandidates(ctx context.Context, root [32]byte, postState *stateTrie.BeaconState) error {
 
 	stateSlice := make([][32]byte, 0, len(s.initSyncState))
 	// add slots to map and add epoch boundary states
