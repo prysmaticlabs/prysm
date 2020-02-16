@@ -254,6 +254,7 @@ func (s *Service) Start() {
 		DepositFetcher:       s.depositFetcher,
 		BlockFetcher:         s.powChainService,
 		CanonicalStateChan:   s.canonicalStateChan,
+		GenesisTimeFetcher:   s.genesisTimeFetcher,
 		StateNotifier:        s.stateNotifier,
 		BlockNotifier:        s.blockNotifier,
 		SlotTicker:           ticker,

@@ -5,7 +5,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
@@ -60,67 +59,63 @@ type ParticipationFetcher interface {
 
 // FinalizedCheckpt returns the latest finalized checkpoint from head state.
 func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
-	if s.headState == nil || s.headState.FinalizedCheckpoint() == nil {
+	if s.finalizedCheckpt == nil {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
-	cpt := s.headState.FinalizedCheckpoint()
+
 	// If head state exists but there hasn't been a finalized check point,
 	// the check point's root should refer to genesis block root.
-	if bytes.Equal(cpt.Root, params.BeaconConfig().ZeroHash[:]) {
+	if bytes.Equal(s.finalizedCheckpt.Root, params.BeaconConfig().ZeroHash[:]) {
 		return &ethpb.Checkpoint{Root: s.genesisRoot[:]}
 	}
-	return cpt
+
+	return state.CopyCheckpoint(s.finalizedCheckpt)
 }
 
 // CurrentJustifiedCheckpt returns the current justified checkpoint from head state.
 func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
-	if s.headState == nil || s.headState.CurrentJustifiedCheckpoint() == nil {
+	if s.justifiedCheckpt == nil {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
-	cpt := s.headState.CurrentJustifiedCheckpoint()
 	// If head state exists but there hasn't been a justified check point,
 	// the check point root should refer to genesis block root.
-	if bytes.Equal(cpt.Root, params.BeaconConfig().ZeroHash[:]) {
+	if bytes.Equal(s.justifiedCheckpt.Root, params.BeaconConfig().ZeroHash[:]) {
 		return &ethpb.Checkpoint{Root: s.genesisRoot[:]}
 	}
 
-	return cpt
+	return state.CopyCheckpoint(s.justifiedCheckpt)
 }
 
 // PreviousJustifiedCheckpt returns the previous justified checkpoint from head state.
 func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
-
-	if s.headState == nil || s.headState.PreviousJustifiedCheckpoint() == nil {
+	if s.prevJustifiedCheckpt == nil {
 		return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	}
 
-	cpt := s.headState.PreviousJustifiedCheckpoint()
 	// If head state exists but there hasn't been a justified check point,
 	// the check point root should refer to genesis block root.
-	if bytes.Equal(cpt.Root, params.BeaconConfig().ZeroHash[:]) {
+	if bytes.Equal(s.prevJustifiedCheckpt.Root, params.BeaconConfig().ZeroHash[:]) {
 		return &ethpb.Checkpoint{Root: s.genesisRoot[:]}
 	}
 
-	return cpt
+	return state.CopyCheckpoint(s.prevJustifiedCheckpt)
 }
 
 // HeadSlot returns the slot of the head of the chain.
 func (s *Service) HeadSlot() uint64 {
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
+	if !s.hasHeadState() {
+		return 0
+	}
 
-	return s.headSlot
+	return s.headSlot()
 }
 
 // HeadRoot returns the root of the head of the chain.
 func (s *Service) HeadRoot(ctx context.Context) ([]byte, error) {
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
-
-	root := s.canonicalRoots[s.headSlot]
-	if len(root) != 0 {
-		return root, nil
+	if s.headRoot() != params.BeaconConfig().ZeroHash {
+		r := s.headRoot()
+		return r[:], nil
 	}
 
 	b, err := s.beaconDB.HeadBlock(ctx)
@@ -141,46 +136,39 @@ func (s *Service) HeadRoot(ctx context.Context) ([]byte, error) {
 
 // HeadBlock returns the head block of the chain.
 func (s *Service) HeadBlock() *ethpb.SignedBeaconBlock {
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
-
-	return proto.Clone(s.headBlock).(*ethpb.SignedBeaconBlock)
+	return s.headBlock()
 }
 
 // HeadState returns the head state of the chain.
 // If the head state is nil from service struct,
 // it will attempt to get from DB and error if nil again.
 func (s *Service) HeadState(ctx context.Context) (*state.BeaconState, error) {
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
-
-	if s.headState == nil {
-		headState, err := s.beaconDB.HeadState(ctx)
-		if err != nil {
-			return nil, err
-		}
-		s.headState = headState
-		return headState, nil
+	if s.hasHeadState() {
+		return s.headState(), nil
 	}
 
-	return s.headState.Copy(), nil
+	headState, err := s.beaconDB.HeadState(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return headState, nil
 }
 
 // HeadValidatorsIndices returns a list of active validator indices from the head view of a given epoch.
 func (s *Service) HeadValidatorsIndices(epoch uint64) ([]uint64, error) {
-	if s.headState == nil {
+	if !s.hasHeadState() {
 		return []uint64{}, nil
 	}
-	return helpers.ActiveValidatorIndices(s.headState, epoch)
+	return helpers.ActiveValidatorIndices(s.headState(), epoch)
 }
 
 // HeadSeed returns the seed from the head view of a given epoch.
 func (s *Service) HeadSeed(epoch uint64) ([32]byte, error) {
-	if s.headState == nil {
+	if !s.hasHeadState() {
 		return [32]byte{}, nil
 	}
 
-	return helpers.Seed(s.headState, epoch, params.BeaconConfig().DomainBeaconAttester)
+	return helpers.Seed(s.headState(), epoch, params.BeaconConfig().DomainBeaconAttester)
 }
 
 // GenesisTime returns the genesis time of beacon chain.
@@ -190,13 +178,13 @@ func (s *Service) GenesisTime() time.Time {
 
 // CurrentFork retrieves the latest fork information of the beacon chain.
 func (s *Service) CurrentFork() *pb.Fork {
-	if s.headState == nil {
+	if !s.hasHeadState() {
 		return &pb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		}
 	}
-	return s.headState.Fork()
+	return s.headState().Fork()
 }
 
 // Participation returns the participation stats of a given epoch.

@@ -29,6 +29,7 @@ type Server struct {
 	ParticipationFetcher blockchain.ParticipationFetcher
 	DepositFetcher       depositcache.DepositFetcher
 	BlockFetcher         powchain.POWBlockFetcher
+	GenesisTimeFetcher   blockchain.TimeFetcher
 	StateNotifier        statefeed.Notifier
 	BlockNotifier        blockfeed.Notifier
 	AttestationsPool     attestations.Pool
