@@ -184,13 +184,15 @@ func TestAggregateAttestations(t *testing.T) {
 			},
 		},
 		{
-			name: "two attestations with different bitlist lengths",
+			name: "attestations with different bitlist lengths",
 			inputs: []bitfield.Bitlist{
 				{0b00000011, 0b10},
+				{0b00000111, 0b100},
 				{0b00000100, 0b1},
 			},
 			want: []bitfield.Bitlist{
 				{0b00000011, 0b10},
+				{0b00000111, 0b100},
 				{0b00000100, 0b1},
 			},
 		},
