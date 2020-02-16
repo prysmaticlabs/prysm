@@ -354,7 +354,7 @@ func (s *Service) filterBoundaryCandidates(ctx context.Context, root [32]byte, p
 			previousBoundaryRoot := s.boundaryRoots[len(s.boundaryRoots)-1]
 			previousSlot := s.initSyncState[previousBoundaryRoot].Slot()
 
-			// round up slot number to account for skipped slots
+			// Round up slot number to account for skipped slots.
 			previousSlot = helpers.RoundUpToNearestEpoch(previousSlot)
 			if postState.Slot()-previousSlot > epochLength {
 				targetSlot := postState.Slot()

@@ -128,7 +128,6 @@ func main() {
 		}
 
 		runtimeDebug.SetGCPercent(ctx.GlobalInt(flags.SetGCPercent.Name))
-
 		runtime.GOMAXPROCS(runtime.NumCPU())
 		return debug.Setup(ctx)
 	}
