@@ -75,11 +75,11 @@ func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidators
 			case ethpb.SetAction_ADD_VALIDATOR_KEYS:
 				pubKeysMutex.Lock()
 				// Create existence map to ensure we don't duplicate keys.
-				pubKeysMap := make(map[[48]byte]bool)
+				pubKeysMap := make(map[[48]byte]bool, len(msg.PublicKeys))
 				for _, pubKey := range pubKeys {
 					pubKeysMap[bytesutil.ToBytes48(pubKey)] = true
 				}
-				addedPubKeys := make([][]byte, 0)
+				addedPubKeys := make([][]byte, 0, len(msg.PublicKeys))
 				for _, pubKey := range msg.PublicKeys {
 					if _, exists := pubKeysMap[bytesutil.ToBytes48(pubKey)]; !exists {
 						pubKeys = append(pubKeys, pubKey)
@@ -97,7 +97,7 @@ func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidators
 					}
 				}
 			case ethpb.SetAction_REMOVE_VALIDATOR_KEYS:
-				msgPubKeysMap := make(map[[48]byte]bool)
+				msgPubKeysMap := make(map[[48]byte]bool, len(msg.PublicKeys))
 				for _, pubKey := range msg.PublicKeys {
 					msgPubKeysMap[bytesutil.ToBytes48(pubKey)] = true
 				}
@@ -195,7 +195,7 @@ func (bs *Server) generateValidatorInfo(ctx context.Context, pubKeys [][]byte, e
 	pendingValidatorsMap := make(map[[48]byte]int)
 	genesisTime := headState.GenesisTime()
 	validators := headState.ValidatorsReadOnly()
-	res := make([]*ethpb.ValidatorInfo, 0)
+	res := make([]*ethpb.ValidatorInfo, 0, len(pubKeys))
 	for _, pubKey := range pubKeys {
 		info := &ethpb.ValidatorInfo{
 			PublicKey: pubKey,
