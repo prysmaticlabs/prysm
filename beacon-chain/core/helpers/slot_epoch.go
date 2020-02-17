@@ -107,7 +107,7 @@ func SlotsSince(time time.Time) uint64 {
 	return uint64(roughtime.Since(time).Seconds()) / params.BeaconConfig().SecondsPerSlot
 }
 
-// RoundUpToNearestEpoch rounds up the provided slot value to the nearest epoch
+// RoundUpToNearestEpoch rounds up the provided slot value to the nearest epoch.
 func RoundUpToNearestEpoch(slot uint64) uint64 {
 	if slot%params.BeaconConfig().SlotsPerEpoch != 0 {
 		slot -= slot % params.BeaconConfig().SlotsPerEpoch
