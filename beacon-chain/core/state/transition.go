@@ -157,6 +157,9 @@ func CalculateStateRoot(
 		traceutil.AnnotateError(span, ctx.Err())
 		return [32]byte{}, ctx.Err()
 	}
+	if state == nil {
+		return [32]byte{}, errors.New("nil state")
+	}
 	if signed == nil || signed.Block == nil {
 		return [32]byte{}, errors.New("nil block")
 	}
@@ -252,6 +255,9 @@ func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.
 func ProcessSlots(ctx context.Context, state *stateTrie.BeaconState, slot uint64) (*stateTrie.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ProcessSlots")
 	defer span.End()
+	if state == nil {
+		return nil, errors.New("nil state")
+	}
 	span.AddAttributes(trace.Int64Attribute("slots", int64(slot)-int64(state.Slot())))
 
 	if state.Slot() > slot {
@@ -563,7 +569,9 @@ func verifyOperationLengths(state *stateTrie.BeaconState, body *ethpb.BeaconBloc
 			params.BeaconConfig().MaxVoluntaryExits,
 		)
 	}
-
+	if state.Eth1Data() == nil {
+		return errors.New("nil eth1data in state")
+	}
 	if state.Eth1DepositIndex() > state.Eth1Data().DepositCount {
 		return fmt.Errorf("expected state.deposit_index %d <= eth1data.deposit_count %d", state.Eth1DepositIndex(), state.Eth1Data().DepositCount)
 	}
@@ -593,6 +601,9 @@ func ProcessEpochPrecompute(ctx context.Context, state *stateTrie.BeaconState) (
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("epoch", int64(helpers.CurrentEpoch(state))))
 
+	if state == nil {
+		return nil, errors.New("nil state")
+	}
 	vp, bp := precompute.New(ctx, state)
 	vp, bp, err := precompute.ProcessAttestations(ctx, state, vp, bp)
 	if err != nil {

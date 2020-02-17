@@ -252,6 +252,9 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 // ApplyToEveryValidator applies the provided callback function to each validator in the
 // validator registry.
 func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator) error) error {
+	if !b.HasInnerState() {
+		return errors.New("nil inner state")
+	}
 	b.lock.RLock()
 	v := b.state.Validators
 	if ref := b.sharedFieldReferences[validators]; ref.refs > 1 {
