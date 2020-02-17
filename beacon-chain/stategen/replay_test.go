@@ -7,12 +7,87 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
+
+func TestReplayBlocks_AllSkipSlots(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	genesisBlock := blocks.NewGenesisBlock([]byte{})
+	bodyRoot, err := ssz.HashTreeRoot(genesisBlock.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
+		Slot:       genesisBlock.Block.Slot,
+		ParentRoot: genesisBlock.Block.ParentRoot,
+		StateRoot:  params.BeaconConfig().ZeroHash[:],
+		BodyRoot:   bodyRoot[:],
+	})
+	beaconState.SetSlashings(make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector))
+	cp := beaconState.CurrentJustifiedCheckpoint()
+	mockRoot := [32]byte{}
+	copy(mockRoot[:], "hello-world")
+	cp.Root = mockRoot[:]
+	beaconState.SetCurrentJustifiedCheckpoint(cp)
+	beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{})
+
+	service := New(db)
+	targetSlot := params.BeaconConfig().SlotsPerEpoch - 1
+	newState, err := service.replayBlocks(context.Background(), beaconState, []*ethpb.SignedBeaconBlock{}, targetSlot)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if newState.Slot() != targetSlot {
+		t.Error("Did not advance slots")
+	}
+}
+
+func TestReplayBlocks_SameSlot(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	genesisBlock := blocks.NewGenesisBlock([]byte{})
+	bodyRoot, err := ssz.HashTreeRoot(genesisBlock.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{
+		Slot:       genesisBlock.Block.Slot,
+		ParentRoot: genesisBlock.Block.ParentRoot,
+		StateRoot:  params.BeaconConfig().ZeroHash[:],
+		BodyRoot:   bodyRoot[:],
+	})
+	beaconState.SetSlashings(make([]uint64, params.BeaconConfig().EpochsPerSlashingsVector))
+	cp := beaconState.CurrentJustifiedCheckpoint()
+	mockRoot := [32]byte{}
+	copy(mockRoot[:], "hello-world")
+	cp.Root = mockRoot[:]
+	beaconState.SetCurrentJustifiedCheckpoint(cp)
+	beaconState.SetCurrentEpochAttestations([]*pb.PendingAttestation{})
+
+	service := New(db)
+	targetSlot := beaconState.Slot()
+	newState, err := service.replayBlocks(context.Background(), beaconState, []*ethpb.SignedBeaconBlock{}, targetSlot)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if newState.Slot() != targetSlot {
+		t.Error("Did not advance slots")
+	}
+}
 
 func TestLoadBlocks_FirstBranch(t *testing.T) {
 	db := testDB.SetupDB(t)
