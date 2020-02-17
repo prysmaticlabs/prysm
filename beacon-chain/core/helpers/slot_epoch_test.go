@@ -178,17 +178,16 @@ func TestSlotsSinceEpochStarts(t *testing.T) {
 
 func TestRoundUpToNearestEpoch_OK(t *testing.T) {
 	tests := []struct {
-		epoch     uint64
-		startSlot uint64
+		startSlot     uint64
+		roundedUpSlot uint64
 	}{
-		{epoch: 0, startSlot: 0 * params.BeaconConfig().SlotsPerEpoch},
-		{epoch: 1, startSlot: 1 * params.BeaconConfig().SlotsPerEpoch},
-		{epoch: 10, startSlot: 10 * params.BeaconConfig().SlotsPerEpoch},
+		{startSlot: 0 * params.BeaconConfig().SlotsPerEpoch, roundedUpSlot: 0},
+		{startSlot: 1*params.BeaconConfig().SlotsPerEpoch - 10, roundedUpSlot: 1 * params.BeaconConfig().SlotsPerEpoch},
+		{startSlot: 10*params.BeaconConfig().SlotsPerEpoch - (params.BeaconConfig().SlotsPerEpoch - 1), roundedUpSlot: 10 * params.BeaconConfig().SlotsPerEpoch},
 	}
 	for _, tt := range tests {
-		state := &pb.BeaconState{Slot: tt.epoch}
-		if tt.startSlot != StartSlot(tt.epoch) {
-			t.Errorf("StartSlot(%d) = %d, wanted: %d", state.Slot, StartSlot(tt.epoch), tt.startSlot)
+		if tt.roundedUpSlot != RoundUpToNearestEpoch(tt.startSlot) {
+			t.Errorf("RoundUpToNearestEpoch(%d) = %d, wanted: %d", tt.startSlot, RoundUpToNearestEpoch(tt.startSlot), tt.roundedUpSlot)
 		}
 	}
 }
