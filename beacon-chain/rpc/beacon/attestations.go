@@ -8,9 +8,13 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -119,7 +123,74 @@ func (bs *Server) ListAttestations(
 func (bs *Server) ListIndexedAttestations(
 	ctx context.Context, req *ethpb.ListAttestationsRequest,
 ) (*ethpb.ListIndexedAttestationsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "Unimplemented")
+	atts := make([]*ethpb.Attestation, 0)
+	var err error
+	epoch := helpers.SlotToEpoch(bs.HeadFetcher.HeadSlot())
+	switch q := req.QueryFilter.(type) {
+	case *ethpb.ListAttestationsRequest_TargetEpoch:
+		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetTargetEpoch(q.TargetEpoch))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
+		}
+		epoch = q.TargetEpoch
+	case *ethpb.ListAttestationsRequest_Genesis:
+		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetTargetEpoch(0))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
+		}
+		epoch = 0
+	default:
+		return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching attestations")
+	}
+	// We sort attestations according to the Sortable interface.
+	sort.Sort(sortableAttestations(atts))
+	numAttestations := len(atts)
+
+	// If there are no attestations, we simply return a response specifying this.
+	// Otherwise, attempting to paginate 0 attestations below would result in an error.
+	if numAttestations == 0 {
+		return &ethpb.ListIndexedAttestationsResponse{
+			IndexedAttestations: make([]*ethpb.IndexedAttestation, 0),
+			TotalSize:           int32(0),
+			NextPageToken:       strconv.Itoa(0),
+		}, nil
+	}
+
+	committeesBySlot, _, err := bs.retrieveCommitteesForEpoch(ctx, epoch)
+	if err != nil {
+		return nil, status.Errorf(
+			codes.Internal,
+			"Could not retrieve committees for epoch %d: %v",
+			epoch,
+			err,
+		)
+	}
+
+	indexedAtts := make([]*ethpb.IndexedAttestation, numAttestations, numAttestations)
+	for i := 0; i < len(indexedAtts); i++ {
+		att := atts[i]
+		committee := committeesBySlot[att.Data.Slot].Committees[att.Data.CommitteeIndex]
+		idxAtt, err := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
+		if err != nil {
+			return nil, status.Errorf(
+				codes.Internal,
+				"Could not convert attestation with slot %d to indexed form: %v",
+				att.Data.Slot,
+				err,
+			)
+		}
+		indexedAtts[i] = idxAtt
+	}
+
+	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numAttestations)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not paginate attestations: %v", err)
+	}
+	return &ethpb.ListIndexedAttestationsResponse{
+		IndexedAttestations: indexedAtts[start:end],
+		TotalSize:           int32(numAttestations),
+		NextPageToken:       nextPageToken,
+	}, nil
 }
 
 // StreamAttestations to clients at the end of every slot. This method retrieves the

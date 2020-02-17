@@ -34,17 +34,35 @@ func (bs *Server) ListBeaconCommittees(
 	default:
 		startSlot = headSlot
 	}
+	committees, activeIndices, err := bs.retrieveCommitteesForEpoch(ctx, helpers.SlotToEpoch(startSlot))
+	if err != nil {
+		return nil, status.Errorf(
+			codes.Internal,
+			"Could not retrieve committees for epoch %d: %v",
+			helpers.SlotToEpoch(startSlot),
+			err,
+		)
+	}
+	return &ethpb.BeaconCommittees{
+		Epoch:                helpers.SlotToEpoch(startSlot),
+		Committees:           committees,
+		ActiveValidatorCount: uint64(len(activeIndices)),
+	}, nil
+}
 
+func (bs *Server) retrieveCommitteesForEpoch(
+	ctx context.Context,
+	epoch uint64,
+) (map[uint64]*ethpb.BeaconCommittees_CommitteesList, []uint64, error) {
 	var attesterSeed [32]byte
 	var activeIndices []uint64
 	var err error
-	// This is the archival condition, if the requested epoch is < previous epoch.
-	headEpoch := helpers.SlotToEpoch(headSlot)
-	// Adding 1 here to prevent underflow on headEpoch.
+	startSlot := helpers.StartSlot(epoch)
+	headEpoch := helpers.SlotToEpoch(bs.HeadFetcher.HeadSlot())
 	if helpers.SlotToEpoch(startSlot)+1 < headEpoch {
 		activeIndices, err = bs.HeadFetcher.HeadValidatorsIndices(helpers.SlotToEpoch(startSlot))
 		if err != nil {
-			return nil, status.Errorf(
+			return nil, nil, status.Errorf(
 				codes.Internal,
 				"Could not retrieve active indices for epoch %d: %v",
 				helpers.SlotToEpoch(startSlot),
@@ -53,7 +71,7 @@ func (bs *Server) ListBeaconCommittees(
 		}
 		archivedCommitteeInfo, err := bs.BeaconDB.ArchivedCommitteeInfo(ctx, helpers.SlotToEpoch(startSlot))
 		if err != nil {
-			return nil, status.Errorf(
+			return nil, nil, status.Errorf(
 				codes.Internal,
 				"Could not request archival data for epoch %d: %v",
 				helpers.SlotToEpoch(startSlot),
@@ -61,7 +79,7 @@ func (bs *Server) ListBeaconCommittees(
 			)
 		}
 		if archivedCommitteeInfo == nil {
-			return nil, status.Errorf(
+			return nil, nil, status.Errorf(
 				codes.NotFound,
 				"Could not retrieve data for epoch %d, perhaps --archive in the running beacon node is disabled",
 				helpers.SlotToEpoch(startSlot),
@@ -73,7 +91,7 @@ func (bs *Server) ListBeaconCommittees(
 		requestedEpoch := helpers.SlotToEpoch(startSlot)
 		activeIndices, err = bs.HeadFetcher.HeadValidatorsIndices(requestedEpoch)
 		if err != nil {
-			return nil, status.Errorf(
+			return nil, nil, status.Errorf(
 				codes.Internal,
 				"Could not retrieve active indices for requested epoch %d: %v",
 				requestedEpoch,
@@ -82,7 +100,7 @@ func (bs *Server) ListBeaconCommittees(
 		}
 		attesterSeed, err = bs.HeadFetcher.HeadSeed(requestedEpoch)
 		if err != nil {
-			return nil, status.Errorf(
+			return nil, nil, status.Errorf(
 				codes.Internal,
 				"Could not retrieve attester seed for requested epoch %d: %v",
 				requestedEpoch,
@@ -91,15 +109,15 @@ func (bs *Server) ListBeaconCommittees(
 		}
 	} else {
 		// Otherwise, we are requesting data from the future and we return an error.
-		return nil, status.Errorf(
+		return nil, nil, status.Errorf(
 			codes.InvalidArgument,
 			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
-			helpers.SlotToEpoch(headSlot),
+			headEpoch,
 			helpers.SlotToEpoch(startSlot),
 		)
 	}
 
-	committeesList := make(map[uint64]*ethpb.BeaconCommittees_CommitteesList)
+	committeesListsBySlot := make(map[uint64]*ethpb.BeaconCommittees_CommitteesList)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		var countAtSlot = uint64(len(activeIndices)) / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
 		if countAtSlot > params.BeaconConfig().MaxCommitteesPerSlot {
@@ -112,7 +130,7 @@ func (bs *Server) ListBeaconCommittees(
 		for committeeIndex := uint64(0); committeeIndex < countAtSlot; committeeIndex++ {
 			committee, err := helpers.BeaconCommittee(activeIndices, attesterSeed, slot, committeeIndex)
 			if err != nil {
-				return nil, status.Errorf(
+				return nil, nil, status.Errorf(
 					codes.Internal,
 					"Could not compute committee for slot %d: %v",
 					slot,
@@ -123,14 +141,9 @@ func (bs *Server) ListBeaconCommittees(
 				ValidatorIndices: committee,
 			}
 		}
-		committeesList[slot] = &ethpb.BeaconCommittees_CommitteesList{
+		committeesListsBySlot[slot] = &ethpb.BeaconCommittees_CommitteesList{
 			Committees: committeeItems,
 		}
 	}
-
-	return &ethpb.BeaconCommittees{
-		Epoch:                helpers.SlotToEpoch(startSlot),
-		Committees:           committeesList,
-		ActiveValidatorCount: uint64(len(activeIndices)),
-	}, nil
+	return committeesListsBySlot, activeIndices, nil
 }
