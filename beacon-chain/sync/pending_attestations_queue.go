@@ -117,6 +117,9 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 
 			// Start with a random peer to query, but choose the first peer in our unsorted list that claims to
 			// have a head slot newer or equal to the pending attestation's target boundary slot.
+			if len(pids) == 0 {
+				return nil
+			}
 			pid := pids[rand.Int()%len(pids)]
 			targetSlot := helpers.SlotToEpoch(attestations[0].Aggregate.Data.Target.Epoch)
 			for _, p := range pids {
