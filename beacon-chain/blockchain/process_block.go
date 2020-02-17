@@ -86,13 +86,6 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 		return nil, errors.Wrapf(err, "could not save block from slot %d", b.Slot)
 	}
 
-	if flags.Get().EnableArchive {
-		atts := signed.Block.Body.Attestations
-		if err := s.beaconDB.SaveAttestations(ctx, atts); err != nil {
-			return nil, errors.Wrapf(err, "could not save block attestations from slot %d", b.Slot)
-		}
-	}
-
 	if err := s.insertBlockToForkChoiceStore(ctx, b, root, postState); err != nil {
 		return nil, errors.Wrapf(err, "could not insert block %d to fork choice store", b.Slot)
 	}
@@ -209,6 +202,13 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	} else {
 		if err := s.beaconDB.SaveState(ctx, postState, root); err != nil {
 			return errors.Wrap(err, "could not save state")
+		}
+	}
+
+	if flags.Get().EnableArchive {
+		atts := signed.Block.Body.Attestations
+		if err := s.beaconDB.SaveAttestations(ctx, atts); err != nil {
+			return errors.Wrapf(err, "could not save block attestations from slot %d", b.Slot)
 		}
 	}
 
