@@ -123,7 +123,7 @@ func (bs *Server) ListIndexedAttestations(
 ) (*ethpb.ListIndexedAttestationsResponse, error) {
 	atts := make([]*ethpb.Attestation, 0)
 	var err error
-	epoch := helpers.SlotToEpoch(bs.HeadFetcher.HeadSlot())
+	epoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListIndexedAttestationsRequest_TargetEpoch:
 		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetTargetEpoch(q.TargetEpoch))
@@ -164,6 +164,8 @@ func (bs *Server) ListIndexedAttestations(
 		)
 	}
 
+	// We use the retrieved committees for the epoch to convert all attestations
+	// into indexed form effectively.
 	indexedAtts := make([]*ethpb.IndexedAttestation, numAttestations, numAttestations)
 	for i := 0; i < len(indexedAtts); i++ {
 		att := atts[i]
@@ -180,13 +182,13 @@ func (bs *Server) ListIndexedAttestations(
 		indexedAtts[i] = idxAtt
 	}
 
-	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), numAttestations)
+	start, end, nextPageToken, err := pagination.StartAndEndPage(req.PageToken, int(req.PageSize), len(indexedAtts))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not paginate attestations: %v", err)
 	}
 	return &ethpb.ListIndexedAttestationsResponse{
 		IndexedAttestations: indexedAtts[start:end],
-		TotalSize:           int32(numAttestations),
+		TotalSize:           int32(len(indexedAtts)),
 		NextPageToken:       nextPageToken,
 	}, nil
 }

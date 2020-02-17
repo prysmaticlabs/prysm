@@ -536,6 +536,50 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 	}
 }
 
+func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+	ctx := context.Background()
+
+	count := uint64(10)
+	atts := make([]*ethpb.Attestation, 0, count)
+	for i := uint64(0); i < count; i++ {
+		attExample := &ethpb.Attestation{
+			Data: &ethpb.AttestationData{
+				BeaconBlockRoot: []byte("root"),
+				Slot:            i,
+				CommitteeIndex:  0,
+			},
+			AggregationBits: bitfield.Bitlist{0b11},
+		}
+		atts = append(atts, attExample)
+	}
+	if err := db.SaveAttestations(ctx, atts); err != nil {
+		t.Fatal(err)
+	}
+
+	bs := &Server{
+		BeaconDB: db,
+	}
+
+	received, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
+		QueryFilter: &ethpb.ListIndexedAttestationsRequest_GenesisEpoch{
+			GenesisEpoch: true,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(atts, received.IndexedAttestations) {
+		t.Fatalf(
+			"Incorrect attestations response: wanted %v, received %v",
+			atts,
+			received.IndexedAttestations,
+		)
+	}
+}
+
 func TestServer_AttestationPool_Pagination_ExceedsMaxPageSize(t *testing.T) {
 	ctx := context.Background()
 	bs := &Server{}

@@ -117,6 +117,25 @@ func (bs *Server) retrieveCommitteesForEpoch(
 		)
 	}
 
+	committeesListsBySlot, err := computeCommittees(startSlot, activeIndices, attesterSeed)
+	if err != nil {
+		return nil, nil, status.Errorf(
+			codes.InvalidArgument,
+			"Could not compute committees for epoch %d: %v",
+			helpers.SlotToEpoch(startSlot),
+			err,
+		)
+	}
+	return committeesListsBySlot, activeIndices, nil
+}
+
+// Compute committees given a start slot, active validator indices, and
+// the attester seeds value.
+func computeCommittees(
+	startSlot uint64,
+	activeIndices []uint64,
+	attesterSeed [32]byte,
+) (map[uint64]*ethpb.BeaconCommittees_CommitteesList, error) {
 	committeesListsBySlot := make(map[uint64]*ethpb.BeaconCommittees_CommitteesList)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		var countAtSlot = uint64(len(activeIndices)) / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
@@ -130,7 +149,7 @@ func (bs *Server) retrieveCommitteesForEpoch(
 		for committeeIndex := uint64(0); committeeIndex < countAtSlot; committeeIndex++ {
 			committee, err := helpers.BeaconCommittee(activeIndices, attesterSeed, slot, committeeIndex)
 			if err != nil {
-				return nil, nil, status.Errorf(
+				return nil, status.Errorf(
 					codes.Internal,
 					"Could not compute committee for slot %d: %v",
 					slot,
@@ -145,5 +164,5 @@ func (bs *Server) retrieveCommitteesForEpoch(
 			Committees: committeeItems,
 		}
 	}
-	return committeesListsBySlot, activeIndices, nil
+	return committeesListsBySlot, nil
 }
