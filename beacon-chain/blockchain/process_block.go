@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/metrics"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -83,6 +84,13 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 
 	if err := s.beaconDB.SaveBlock(ctx, signed); err != nil {
 		return nil, errors.Wrapf(err, "could not save block from slot %d", b.Slot)
+	}
+
+	if flags.Get().EnableArchive {
+		atts := signed.Block.Body.Attestations
+		if err := s.beaconDB.SaveAttestations(ctx, atts); err != nil {
+			return nil, errors.Wrapf(err, "could not save block attestations from slot %d", b.Slot)
+		}
 	}
 
 	if err := s.insertBlockToForkChoiceStore(ctx, b, root, postState); err != nil {
