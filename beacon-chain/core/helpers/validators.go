@@ -266,15 +266,19 @@ func Domain(fork *pb.Fork, epoch uint64, domainType []byte) uint64 {
 //        and validator.effective_balance == MAX_EFFECTIVE_BALANCE
 //    )
 func IsEligibleForActivationQueue(validator *ethpb.Validator) bool {
-	return validator.ActivationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch &&
-		validator.EffectiveBalance == params.BeaconConfig().MaxEffectiveBalance
+	return isEligibileForActivationQueue(validator.ActivationEligibilityEpoch, validator.EffectiveBalance)
 }
 
 // IsEligibleForActivationQueueUsingTrie checks if the read-only validator is eligible to
 // be placed into the activation queue.
 func IsEligibleForActivationQueueUsingTrie(validator *stateTrie.ReadOnlyValidator) bool {
-	return validator.ActivationEligibilityEpoch() == params.BeaconConfig().FarFutureEpoch &&
-		validator.EffectiveBalance() == params.BeaconConfig().MaxEffectiveBalance
+	return isEligibileForActivationQueue(validator.ActivationEligibilityEpoch(), validator.EffectiveBalance())
+}
+
+// isEligibleForActivationQueue carries out the logic for IsEligibleForActivationQueue*
+func isEligibileForActivationQueue(activationEligibilityEpoch uint64, effectiveBalance uint64) bool {
+	return activationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch &&
+		effectiveBalance == params.BeaconConfig().MaxEffectiveBalance
 }
 
 // IsEligibleForActivation checks if the validator is eligible for activation.
@@ -292,8 +296,7 @@ func IsEligibleForActivationQueueUsingTrie(validator *stateTrie.ReadOnlyValidato
 //    )
 func IsEligibleForActivation(state *stateTrie.BeaconState, validator *ethpb.Validator) bool {
 	finalizedEpoch := state.FinalizedCheckpointEpoch()
-	return validator.ActivationEligibilityEpoch <= finalizedEpoch &&
-		validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch
+	return isEligibileForActivation(validator.ActivationEligibilityEpoch, validator.ActivationEpoch, finalizedEpoch)
 }
 
 // IsEligibleForActivationUsingTrie checks if the validator is eligible for activation.
@@ -302,6 +305,11 @@ func IsEligibleForActivationUsingTrie(state *stateTrie.BeaconState, validator *s
 	if cpt == nil {
 		return false
 	}
-	return validator.ActivationEligibilityEpoch() <= cpt.Epoch &&
-		validator.ActivationEpoch() == params.BeaconConfig().FarFutureEpoch
+	return isEligibileForActivation(validator.ActivationEligibilityEpoch(), validator.ActivationEpoch(), cpt.Epoch)
+}
+
+// isEligibleForActivation carries out the logic for IsEligibleForActivation*
+func isEligibileForActivation(activationEligibilityEpoch uint64, activationEpoch uint64, finalizedEpoch uint64) bool {
+	return activationEligibilityEpoch <= finalizedEpoch &&
+		activationEpoch == params.BeaconConfig().FarFutureEpoch
 }
