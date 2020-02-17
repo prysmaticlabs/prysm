@@ -101,7 +101,7 @@ func (s *Service) pruneOldStates() {
 	prunedBoundaryRoots := [][32]byte{}
 	for _, rt := range s.boundaryRoots {
 		st, ok := s.initSyncState[rt]
-		// skip non-existent roots
+		// Skip non-existent roots.
 		if !ok {
 			continue
 		}
