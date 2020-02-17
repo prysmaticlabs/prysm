@@ -13,8 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
-	"github.com/prysmaticlabs/prysm/shared/params"
-
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
