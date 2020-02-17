@@ -25,6 +25,8 @@ type reference struct {
 	refs uint
 }
 
+// ErrNilInnerState returns when the inner state is nil and no copy set or get
+// operations can be performed on state.
 var ErrNilInnerState = errors.New("nil inner state")
 
 // BeaconState defines a struct containing utilities for the eth2 chain state, defining
