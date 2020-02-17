@@ -1,7 +1,6 @@
 package state
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/prysmaticlabs/go-bitfield"
@@ -198,7 +197,7 @@ func (b *BeaconState) BlockRoots() [][]byte {
 // input index value.
 func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
 	if !b.HasInnerState() {
-		return nil, errors.New("nil inner state")
+		return nil, ErrNilInnerState
 	}
 	if b.state.BlockRoots == nil {
 		return nil, nil
@@ -353,7 +352,7 @@ func (b *BeaconState) ValidatorsReadOnly() []*ReadOnlyValidator {
 // ValidatorAtIndex is the validator at the provided index.
 func (b *BeaconState) ValidatorAtIndex(idx uint64) (*ethpb.Validator, error) {
 	if !b.HasInnerState() {
-		return nil, errors.New("nil inner state")
+		return nil, ErrNilInnerState
 	}
 	if b.state.Validators == nil {
 		return &ethpb.Validator{}, nil
@@ -386,7 +385,7 @@ func (b *BeaconState) ValidatorAtIndex(idx uint64) (*ethpb.Validator, error) {
 // doesn't clone the validator.
 func (b *BeaconState) ValidatorAtIndexReadOnly(idx uint64) (*ReadOnlyValidator, error) {
 	if !b.HasInnerState() {
-		return nil, errors.New("nil inner state")
+		return nil, ErrNilInnerState
 	}
 	if b.state.Validators == nil {
 		return &ReadOnlyValidator{}, nil
@@ -445,7 +444,7 @@ func (b *BeaconState) NumValidators() int {
 // Warning: This method is potentially unsafe, as it exposes the actual validator registry.
 func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val *ReadOnlyValidator) error) error {
 	if !b.HasInnerState() {
-		return errors.New("nil inner state")
+		return ErrNilInnerState
 	}
 	b.lock.RLock()
 	defer b.lock.RUnlock()
@@ -478,7 +477,7 @@ func (b *BeaconState) Balances() []uint64 {
 // BalanceAtIndex of validator with the provided index.
 func (b *BeaconState) BalanceAtIndex(idx uint64) (uint64, error) {
 	if !b.HasInnerState() {
-		return 0, errors.New("nil inner state")
+		return 0, ErrNilInnerState
 	}
 	if b.state.Balances == nil {
 		return 0, nil
@@ -533,7 +532,7 @@ func (b *BeaconState) RandaoMixes() [][]byte {
 // input index value.
 func (b *BeaconState) RandaoMixAtIndex(idx uint64) ([]byte, error) {
 	if !b.HasInnerState() {
-		return nil, errors.New("nil inner state")
+		return nil, ErrNilInnerState
 	}
 	if b.state.RandaoMixes == nil {
 		return nil, nil

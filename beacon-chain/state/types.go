@@ -25,6 +25,8 @@ type reference struct {
 	refs uint
 }
 
+var ErrNilInnerState = errors.New("nil inner state")
+
 // BeaconState defines a struct containing utilities for the eth2 chain state, defining
 // getters and setters for its respective values and helpful functions such as HashTreeRoot().
 type BeaconState struct {
