@@ -119,19 +119,19 @@ func (bs *Server) ListAttestations(
 // filter criteria. This RPC should not return NOT_FOUND. Only one filter
 // criteria should be used.
 func (bs *Server) ListIndexedAttestations(
-	ctx context.Context, req *ethpb.ListAttestationsRequest,
+	ctx context.Context, req *ethpb.ListIndexedAttestationsRequest,
 ) (*ethpb.ListIndexedAttestationsResponse, error) {
 	atts := make([]*ethpb.Attestation, 0)
 	var err error
 	epoch := helpers.SlotToEpoch(bs.HeadFetcher.HeadSlot())
 	switch q := req.QueryFilter.(type) {
-	case *ethpb.ListAttestationsRequest_TargetEpoch:
+	case *ethpb.ListIndexedAttestationsRequest_TargetEpoch:
 		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetTargetEpoch(q.TargetEpoch))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
 		}
 		epoch = q.TargetEpoch
-	case *ethpb.ListAttestationsRequest_Genesis:
+	case *ethpb.ListIndexedAttestationsRequest_GenesisEpoch:
 		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetTargetEpoch(0))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
