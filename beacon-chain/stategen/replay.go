@@ -51,7 +51,17 @@ func (s *State) loadBlocks(ctx context.Context, startSlot uint64, endSlot uint64
 	}
 
 	// The last retrieved block root has to match input end block root.
+	// Covers the edge case if there's multiple blocks on the same end slot,
+	// the end root may not be the last index in `blockRoots`.
 	length := len(blocks)
+	for blocks[length-1].Block.Slot == blocks[length-2].Block.Slot && blockRoots[length-1] != endBlockRoot {
+		length--
+		if blockRoots[length-2] == endBlockRoot {
+			length--
+			break
+		}
+	}
+
 	if blockRoots[length-1] != endBlockRoot {
 		return nil, errors.New("end block roots don't match")
 	}
