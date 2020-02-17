@@ -35,7 +35,8 @@ func (bs *Server) StreamValidatorsInfo(stream ethpb.BeaconChain_StreamValidators
 	pubKeysMutex := sync.RWMutex{}
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := bs.StateNotifier.StateFeed().Subscribe(stateChannel)
-	eth1Deposits := cache.New(time.Duration(params.BeaconConfig().SecondsPerSlot*params.BeaconConfig().SlotsPerEpoch)*time.Second, 12*time.Minute)
+	epochDuration := time.Duration(params.BeaconConfig().SecondsPerSlot*params.BeaconConfig().SlotsPerEpoch) * time.Second
+	eth1Deposits := cache.New(epochDuration, epochDuration*2)
 	depositMutex := &sync.RWMutex{}
 	defer stateSub.Unsubscribe()
 
