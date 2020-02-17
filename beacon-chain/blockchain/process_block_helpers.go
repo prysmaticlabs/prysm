@@ -489,7 +489,7 @@ func (s *Service) generateState(ctx context.Context, startRoot [32]byte, endRoot
 
 	postState, err := stGen.GenerateState(ctx, preState, endBlock)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "could not generate state")
 	}
 	return postState, nil
 }

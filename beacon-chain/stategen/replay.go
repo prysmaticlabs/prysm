@@ -16,22 +16,15 @@ func (s *State) ReplayBlocks(ctx context.Context, state *state.BeaconState, sign
 	var err error
 	// The input block list is sorted in decreasing slots order.
 	for i := len(signed) - 1; i >= 0; i-- {
-		// If there is skip slot.
-		for state.Slot() < signed[i].Block.Slot {
-			state, err = transition.ProcessSlot(ctx, state)
-			if err != nil {
-				return nil, err
-			}
-		}
-		state, err = transition.ProcessBlockNoVerifyAttSigs(ctx, state, signed[i])
+		state, err = transition.ExecuteStateTransitionNoVerifyAttSigs(ctx, state, signed[i])
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	// If there is skip slots at the end.
-	for state.Slot() < targetSlot {
-		state, err = transition.ProcessSlot(ctx, state)
+	if state.Slot() < targetSlot {
+		state, err = transition.ProcessSlots(ctx, state, targetSlot)
 		if err != nil {
 			return nil, err
 		}

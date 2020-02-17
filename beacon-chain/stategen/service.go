@@ -25,11 +25,11 @@ func New(db db.NoHeadAccessDatabase) *State {
 
 func (s *State) GenerateState(ctx context.Context, preState *stateTrie.BeaconState, endBlock *ethpb.SignedBeaconBlock) (*stateTrie.BeaconState, error) {
 	preState = preState.Copy()
-	root, err := ssz.HashTreeRoot(endBlock)
+	root, err := ssz.HashTreeRoot(endBlock.Block)
 	if err != nil {
 		return nil, err
 	}
-	blocks, err := s.LoadBlocks(ctx, preState.Slot(), endBlock.Block.Slot, root)
+	blocks, err := s.LoadBlocks(ctx, preState.Slot()+1, endBlock.Block.Slot, root)
 	if err != nil {
 		return nil, err
 	}
