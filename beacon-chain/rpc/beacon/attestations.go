@@ -110,6 +110,18 @@ func (bs *Server) ListAttestations(
 	}, nil
 }
 
+// ListIndexedAttestations retrieves indexed attestations by block root, slot, or epoch.
+// Attestations are sorted by data slot by default.
+//
+// The server may return an empty list when no attestations match the given
+// filter criteria. This RPC should not return NOT_FOUND. Only one filter
+// criteria should be used.
+func (bs *Server) ListIndexedAttestations(
+	ctx context.Context, req *ethpb.ListAttestationsRequest,
+) (*ethpb.ListIndexedAttestationsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "Unimplemented")
+}
+
 // StreamAttestations to clients at the end of every slot. This method retrieves the
 // aggregated attestations currently in the pool at the start of a slot and sends
 // them over a gRPC stream.
@@ -131,6 +143,15 @@ func (bs *Server) StreamAttestations(
 			return status.Error(codes.Canceled, "Context canceled")
 		}
 	}
+}
+
+// StreamIndexedAttestations to clients at the end of every slot. This method retrieves the
+// aggregated attestations currently in the pool, converts them into indexed form, and
+// sends them over a gRPC stream.
+func (bs *Server) StreamIndexedAttestations(
+	_ *ptypes.Empty, stream ethpb.BeaconChain_StreamIndexedAttestationsServer,
+) error {
+	return status.Error(codes.Unimplemented, "Unimplemented")
 }
 
 // AttestationPool retrieves pending attestations.
