@@ -113,8 +113,9 @@ func (bs *Server) ListAttestations(
 	}, nil
 }
 
-// ListIndexedAttestations retrieves indexed attestations by block root, slot, or epoch.
-// Attestations are sorted by data slot by default.
+// ListIndexedAttestations retrieves indexed attestations by target epoch.
+// IndexedAttestations are sorted by data slot by default. Either a target epoch filter
+// or a boolean filter specifying a request for genesis epoch attestations may be used.
 //
 // The server may return an empty list when no attestations match the given
 // filter criteria. This RPC should not return NOT_FOUND. Only one filter
