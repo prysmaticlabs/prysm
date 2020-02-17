@@ -15,17 +15,19 @@ import (
 func (s *State) replayBlocks(ctx context.Context, state *state.BeaconState, signed []*ethpb.SignedBeaconBlock, targetSlot uint64) (*state.BeaconState, error) {
 	var err error
 	// The input block list is sorted in decreasing slots order.
-	for i := len(signed) - 1; i >= 0; i-- {
-		// If there is skip slot.
-		for state.Slot() < signed[i].Block.Slot {
-			state, err = transition.ProcessSlot(ctx, state)
+	if len(signed) > 0 {
+		for i := len(signed) - 1; i >= 0; i-- {
+			// If there is skip slot.
+			for state.Slot() < signed[i].Block.Slot {
+				state, err = transition.ProcessSlot(ctx, state)
+				if err != nil {
+					return nil, err
+				}
+			}
+			state, err = transition.ProcessBlockNoVerifyAttSigs(ctx, state, signed[i])
 			if err != nil {
 				return nil, err
 			}
-		}
-		state, err = transition.ProcessBlockNoVerifyAttSigs(ctx, state, signed[i])
-		if err != nil {
-			return nil, err
 		}
 	}
 
@@ -35,6 +37,7 @@ func (s *State) replayBlocks(ctx context.Context, state *state.BeaconState, sign
 		if err != nil {
 			return nil, err
 		}
+		state.SetSlot(state.Slot() + 1)
 	}
 
 	return state, nil
