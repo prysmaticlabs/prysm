@@ -21,7 +21,7 @@ func GetDoubleByteSlice(size int) [][]byte {
 }
 
 // PutDoubleByteSlice places the provided 2d byte slice
-// in the memory pool
+// in the memory pool.
 func PutDoubleByteSlice(data [][]byte) {
 	DoubleByteSlicePool.Put(data)
 }
