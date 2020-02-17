@@ -335,8 +335,13 @@ func (s *Service) persistCachedStates(ctx context.Context, numOfStates int) erro
 
 // filter out boundary candidates from our currently processed batch of states.
 func (s *Service) filterBoundaryCandidates(ctx context.Context, root [32]byte, postState *stateTrie.BeaconState) {
+	// Only trigger on epoch start.
+	if !helpers.IsEpochStart(postState.Slot()) {
+		return
+	}
+
 	stateSlice := make([][32]byte, 0, len(s.initSyncState))
-	// Add slots to the map and add epoch boundary states to the slice.
+	// Add epoch boundary roots to slice.
 	for rt := range s.initSyncState {
 		stateSlice = append(stateSlice, rt)
 	}
@@ -346,10 +351,6 @@ func (s *Service) filterBoundaryCandidates(ctx context.Context, root [32]byte, p
 	})
 	epochLength := params.BeaconConfig().SlotsPerEpoch
 
-	// Only trigger on epoch start.
-	if !helpers.IsEpochStart(postState.Slot()) {
-		return
-	}
 	if len(s.boundaryRoots) > 0 {
 		// Retrieve previous boundary root.
 		previousBoundaryRoot := s.boundaryRoots[len(s.boundaryRoots)-1]
@@ -396,7 +397,12 @@ func (s *Service) filterBoundaryCandidates(ctx context.Context, root [32]byte, p
 func (s *Service) pruneOldStates() {
 	prunedBoundaryRoots := [][32]byte{}
 	for _, rt := range s.boundaryRoots {
-		if s.initSyncState[rt].Slot() < helpers.StartSlot(s.FinalizedCheckpt().Epoch) {
+		st, ok := s.initSyncState[rt]
+		// skip non-existent roots
+		if !ok {
+			continue
+		}
+		if st.Slot() < helpers.StartSlot(s.FinalizedCheckpt().Epoch) {
 			delete(s.initSyncState, rt)
 			continue
 		}

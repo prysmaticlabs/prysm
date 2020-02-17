@@ -175,3 +175,20 @@ func TestSlotsSinceEpochStarts(t *testing.T) {
 		}
 	}
 }
+
+func TestRoundUpToNearestEpoch_OK(t *testing.T) {
+	tests := []struct {
+		epoch     uint64
+		startSlot uint64
+	}{
+		{epoch: 0, startSlot: 0 * params.BeaconConfig().SlotsPerEpoch},
+		{epoch: 1, startSlot: 1 * params.BeaconConfig().SlotsPerEpoch},
+		{epoch: 10, startSlot: 10 * params.BeaconConfig().SlotsPerEpoch},
+	}
+	for _, tt := range tests {
+		state := &pb.BeaconState{Slot: tt.epoch}
+		if tt.startSlot != StartSlot(tt.epoch) {
+			t.Errorf("StartSlot(%d) = %d, wanted: %d", state.Slot, StartSlot(tt.epoch), tt.startSlot)
+		}
+	}
+}
