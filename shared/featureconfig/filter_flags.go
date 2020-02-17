@@ -9,7 +9,7 @@ import (
 
 // ActiveFlags returns all of the flags that are not Hidden.
 func ActiveFlags(flags []cli.Flag) []cli.Flag {
-	visible := []cli.Flag{}
+	visible := make([]cli.Flag, 0, len(flags))
 	for _, flag := range flags {
 		field := flagValue(flag).FieldByName("Hidden")
 		if !field.IsValid() || !field.Bool() {
