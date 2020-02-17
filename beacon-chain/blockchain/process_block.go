@@ -251,6 +251,9 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 				return err
 			}
 		}
+		if len(s.initSyncState) > maxCacheSize {
+			s.pruneOldNonFinalizedStates()
+		}
 	}
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.

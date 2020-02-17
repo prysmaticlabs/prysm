@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+const maxCacheSize = 70
 const initialSyncCacheSize = 45
 const minimumCacheSize = initialSyncCacheSize / 3
 
@@ -123,6 +124,30 @@ func (s *Service) pruneNonBoundaryStates() {
 		if !boundaryMap[rt] {
 			delete(s.initSyncState, rt)
 		}
+	}
+}
+
+func (s *Service) pruneOldNonFinalizedStates() {
+	stateSlice := make([][32]byte, 0, len(s.initSyncState))
+	// Add epoch boundary roots to slice.
+	for rt := range s.initSyncState {
+		stateSlice = append(stateSlice, rt)
+	}
+
+	// Sort by slots.
+	sort.Slice(stateSlice, func(i int, j int) bool {
+		return s.initSyncState[stateSlice[i]].Slot() < s.initSyncState[stateSlice[j]].Slot()
+	})
+
+	boundaryMap := make(map[[32]byte]bool)
+	for i := range s.boundaryRoots {
+		boundaryMap[s.boundaryRoots[i]] = true
+	}
+	for _, rt := range stateSlice[:initialSyncCacheSize] {
+		if boundaryMap[rt] {
+			continue
+		}
+		delete(s.initSyncState, rt)
 	}
 }
 
