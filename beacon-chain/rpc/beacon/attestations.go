@@ -172,6 +172,10 @@ func (bs *Server) ListIndexedAttestations(
 	endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch
 	for i := 0; i < len(indexedAtts); i++ {
 		att := atts[i]
+		// Out of range check, the attestation slot cannot be greater
+		// the last slot of the requested epoch or smaller than its start slot
+		// given committees are accessed as a map of slot -> commitees list, where there are
+		// SLOTS_PER_EPOCH keys in the map.
 		if att.Data.Slot < startSlot || att.Data.Slot > endSlot {
 			return nil, status.Errorf(
 				codes.Internal,
