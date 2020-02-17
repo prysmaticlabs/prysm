@@ -145,10 +145,16 @@ func TestHeadRoot_CanRetrieve(t *testing.T) {
 
 func TestHeadBlock_CanRetrieve(t *testing.T) {
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
+	s, _ := state.InitializeFromProto(&pb.BeaconState{})
 	c := &Service{}
-	c.head = &head{block: b}
+	c.head = &head{block: b, state: s}
 
-	if !reflect.DeepEqual(b, c.HeadBlock()) {
+	recevied, err := c.HeadBlock(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(b, recevied) {
 		t.Error("incorrect head block received")
 	}
 }
