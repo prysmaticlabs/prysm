@@ -232,7 +232,7 @@ func TestLoadBlocks_SameEndSlots(t *testing.T) {
 		{Block: savedBlocks[1]},
 		{Block: savedBlocks[0]},
 	}
-	if !reflect.DeepEqual(filteredBlocks, wanted) {
+	if !reflect.DeepEqual(filteredBlocks, wanted) {:wq:wq
 		t.Error("Did not get wanted blocks")
 	}
 }
