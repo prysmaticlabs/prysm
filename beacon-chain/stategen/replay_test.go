@@ -209,6 +209,61 @@ func TestLoadBlocks_SameSlots(t *testing.T) {
 	}
 }
 
+func TestLoadBlocks_SameEndSlots(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	ctx := context.Background()
+	s := &State{
+		beaconDB: db,
+	}
+
+	roots, savedBlocks, err := tree3(db, []byte{'A'})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	filteredBlocks, err := s.loadBlocks(ctx, 0, 2, roots[2])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wanted := []*ethpb.SignedBeaconBlock{
+		{Block: savedBlocks[2]},
+		{Block: savedBlocks[1]},
+		{Block: savedBlocks[0]},
+	}
+	if !reflect.DeepEqual(filteredBlocks, wanted) {
+		t.Error("Did not get wanted blocks")
+	}
+}
+
+func TestLoadBlocks_SameEndSlotsWith2blocks(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	ctx := context.Background()
+	s := &State{
+		beaconDB: db,
+	}
+
+	roots, savedBlocks, err := tree4(db, []byte{'A'})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	filteredBlocks, err := s.loadBlocks(ctx, 0, 2, roots[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wanted := []*ethpb.SignedBeaconBlock{
+		{Block: savedBlocks[1]},
+		{Block: savedBlocks[0]},
+	}
+	if !reflect.DeepEqual(filteredBlocks, wanted) {
+		t.Error("Did not get wanted blocks")
+	}
+}
+
 func TestLoadBlocks_BadStart(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
@@ -300,4 +355,74 @@ func tree2(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.BeaconBlock
 		}
 	}
 	return [][32]byte{r0, r1, r21, r22, r23, r24, r3}, []*ethpb.BeaconBlock{b0, b1, b21, b22, b23, b24, b3}, nil
+}
+
+// tree3 constructs the following tree:
+// B0 - B1
+//        \- B2
+//        \- B2
+//        \- B2
+//        \- B2
+func tree3(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.BeaconBlock, error) {
+	b0 := &ethpb.BeaconBlock{Slot: 0, ParentRoot: genesisRoot}
+	r0, _ := ssz.HashTreeRoot(b0)
+	b1 := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r0[:]}
+	r1, _ := ssz.HashTreeRoot(b1)
+	b21 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r1[:], StateRoot: []byte{'A'}}
+	r21, _ := ssz.HashTreeRoot(b21)
+	b22 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r1[:], StateRoot: []byte{'B'}}
+	r22, _ := ssz.HashTreeRoot(b22)
+	b23 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r1[:], StateRoot: []byte{'C'}}
+	r23, _ := ssz.HashTreeRoot(b23)
+	b24 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r1[:], StateRoot: []byte{'D'}}
+	r24, _ := ssz.HashTreeRoot(b24)
+	st, err := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for _, b := range []*ethpb.BeaconBlock{b0, b1, b21, b22, b23, b24} {
+		if err := db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b}); err != nil {
+			return nil, nil, err
+		}
+		if err := db.SaveState(context.Background(), st.Copy(), bytesutil.ToBytes32(b.ParentRoot)); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	return [][32]byte{r0, r1, r21, r22, r23, r24}, []*ethpb.BeaconBlock{b0, b1, b21, b22, b23, b24}, nil
+}
+
+// tree4 constructs the following tree:
+// B0
+//   \- B2
+//   \- B2
+//   \- B2
+//   \- B2
+func tree4(db db.Database, genesisRoot []byte) ([][32]byte, []*ethpb.BeaconBlock, error) {
+	b0 := &ethpb.BeaconBlock{Slot: 0, ParentRoot: genesisRoot}
+	r0, _ := ssz.HashTreeRoot(b0)
+	b21 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r0[:], StateRoot: []byte{'A'}}
+	r21, _ := ssz.HashTreeRoot(b21)
+	b22 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r0[:], StateRoot: []byte{'B'}}
+	r22, _ := ssz.HashTreeRoot(b22)
+	b23 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r0[:], StateRoot: []byte{'C'}}
+	r23, _ := ssz.HashTreeRoot(b23)
+	b24 := &ethpb.BeaconBlock{Slot: 2, ParentRoot: r0[:], StateRoot: []byte{'D'}}
+	r24, _ := ssz.HashTreeRoot(b24)
+	st, err := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for _, b := range []*ethpb.BeaconBlock{b0, b21, b22, b23, b24} {
+		if err := db.SaveBlock(context.Background(), &ethpb.SignedBeaconBlock{Block: b}); err != nil {
+			return nil, nil, err
+		}
+		if err := db.SaveState(context.Background(), st.Copy(), bytesutil.ToBytes32(b.ParentRoot)); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	return [][32]byte{r0, r21, r22, r23, r24}, []*ethpb.BeaconBlock{b0, b21, b22, b23, b24}, nil
 }
