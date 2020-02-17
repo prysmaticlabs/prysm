@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
@@ -544,7 +545,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	helpers.ClearCache()
 	ctx := context.Background()
 
-	count := uint64(10)
+	count := params.BeaconConfig().SlotsPerEpoch
 	atts := make([]*ethpb.Attestation, 0, count)
 	for i := uint64(0); i < count; i++ {
 		attExample := &ethpb.Attestation{
@@ -552,6 +553,10 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 				BeaconBlockRoot: []byte("root"),
 				Slot:            i,
 				CommitteeIndex:  0,
+				Target: &ethpb.Checkpoint{
+					Epoch: 0,
+					Root:  make([]byte, 32),
+				},
 			},
 			AggregationBits: bitfield.Bitlist{0b11},
 		}
@@ -602,6 +607,9 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		BeaconDB: db,
 		HeadFetcher: &mock.ChainService{
 			State: headState,
+		},
+		GenesisTimeFetcher: &mock.ChainService{
+			Genesis: time.Now(),
 		},
 	}
 

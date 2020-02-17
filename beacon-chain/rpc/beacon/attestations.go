@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -167,8 +168,17 @@ func (bs *Server) ListIndexedAttestations(
 	// We use the retrieved committees for the epoch to convert all attestations
 	// into indexed form effectively.
 	indexedAtts := make([]*ethpb.IndexedAttestation, numAttestations, numAttestations)
+	startSlot := helpers.StartSlot(epoch)
+	endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch
 	for i := 0; i < len(indexedAtts); i++ {
 		att := atts[i]
+		if att.Data.Slot < startSlot || att.Data.Slot > endSlot {
+			return nil, status.Errorf(
+				codes.Internal,
+				"Attestation with slot %d out of range of committee slots",
+				att.Data.Slot,
+			)
+		}
 		committee := committeesBySlot[att.Data.Slot].Committees[att.Data.CommitteeIndex]
 		idxAtt, err := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
 		if err != nil {
