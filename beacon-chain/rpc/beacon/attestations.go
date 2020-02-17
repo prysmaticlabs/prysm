@@ -178,11 +178,7 @@ func (bs *Server) ListIndexedAttestations(
 		// given committees are accessed as a map of slot -> commitees list, where there are
 		// SLOTS_PER_EPOCH keys in the map.
 		if att.Data.Slot < startSlot || att.Data.Slot > endSlot {
-			return nil, status.Errorf(
-				codes.Internal,
-				"Attestation with slot %d out of range of committee slots",
-				att.Data.Slot,
-			)
+			continue
 		}
 		committee := committeesBySlot[att.Data.Slot].Committees[att.Data.CommitteeIndex]
 		idxAtt, err := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
