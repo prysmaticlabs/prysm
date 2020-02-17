@@ -54,7 +54,7 @@ func TestHeadBlock_DataRace(t *testing.T) {
 			[32]byte{},
 		)
 	}()
-	s.HeadBlock()
+	s.HeadBlock(context.Background())
 }
 
 func TestHeadState_DataRace(t *testing.T) {
