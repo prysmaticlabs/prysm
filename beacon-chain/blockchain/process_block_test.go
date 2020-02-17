@@ -373,6 +373,13 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 	r := [32]byte{'A'}
 	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r[:]}
 
+	service.finalizedCheckpt.Root = r[:]
+	_, err = service.verifyBlkPreState(ctx, b)
+	wanted := "pre state of slot 1 does not exist"
+	if err.Error() != wanted {
+		t.Error("Did not get wanted error")
+	}
+
 	s, _ := stateTrie.InitializeFromProto(&pb.BeaconState{Slot: 1})
 	service.beaconDB.SaveState(ctx, s, r)
 
