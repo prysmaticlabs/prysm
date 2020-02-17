@@ -15,12 +15,14 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	mocktick "github.com/prysmaticlabs/prysm/shared/slotutil/testing"
 )
@@ -539,6 +541,7 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
+	helpers.ClearCache()
 	ctx := context.Background()
 
 	count := uint64(10)
@@ -558,11 +561,51 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bs := &Server{
-		BeaconDB: db,
+	// We setup 128 validators.
+	numValidators := 128
+	headState := setupActiveValidators(t, db, numValidators)
+
+	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	for i := 0; i < len(randaoMixes); i++ {
+		randaoMixes[i] = make([]byte, 32)
+	}
+	if err := headState.SetRandaoMixes(randaoMixes); err != nil {
+		t.Fatal(err)
 	}
 
-	received, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
+	activeIndices, err := helpers.ActiveValidatorIndices(headState, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	attesterSeed, err := helpers.Seed(headState, 0, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		t.Fatal(err)
+	}
+	committees, err := computeCommittees(0, activeIndices, attesterSeed)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Next up we convert the test attestations to indexed form:
+	indexedAtts := make([]*ethpb.IndexedAttestation, len(atts), len(atts))
+	for i := 0; i < len(indexedAtts); i++ {
+		att := atts[i]
+		committee := committees[att.Data.Slot].Committees[att.Data.CommitteeIndex]
+		idxAtt, err := attestationutil.ConvertToIndexed(ctx, atts[i], committee.ValidatorIndices)
+		if err != nil {
+			t.Fatalf("Could not convert attestation to indexed: %v", err)
+		}
+		indexedAtts[i] = idxAtt
+	}
+
+	bs := &Server{
+		BeaconDB: db,
+		HeadFetcher: &mock.ChainService{
+			State: headState,
+		},
+	}
+
+	res, err := bs.ListIndexedAttestations(ctx, &ethpb.ListIndexedAttestationsRequest{
 		QueryFilter: &ethpb.ListIndexedAttestationsRequest_GenesisEpoch{
 			GenesisEpoch: true,
 		},
@@ -571,11 +614,11 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(atts, received.IndexedAttestations) {
+	if !reflect.DeepEqual(indexedAtts, res.IndexedAttestations) {
 		t.Fatalf(
-			"Incorrect attestations response: wanted %v, received %v",
-			atts,
-			received.IndexedAttestations,
+			"Incorrect list indexed attestations response: wanted %v, received %v",
+			indexedAtts,
+			res.IndexedAttestations,
 		)
 	}
 }

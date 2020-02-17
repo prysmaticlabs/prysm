@@ -48,34 +48,24 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wanted, err := computeCommittees(0, activeIndices, attesterSeed)
+	committees, err := computeCommittees(0, activeIndices, attesterSeed)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	tests := []struct {
-		req *ethpb.ListCommitteesRequest
-		res *ethpb.BeaconCommittees
-	}{
-		{
-			req: &ethpb.ListCommitteesRequest{
-				QueryFilter: &ethpb.ListCommitteesRequest_Genesis{Genesis: true},
-			},
-			res: &ethpb.BeaconCommittees{
-				Epoch:                0,
-				Committees:           wanted,
-				ActiveValidatorCount: uint64(numValidators),
-			},
-		},
+	wanted := &ethpb.BeaconCommittees{
+		Epoch:                0,
+		Committees:           committees,
+		ActiveValidatorCount: uint64(numValidators),
 	}
-	for _, test := range tests {
-		res, err := bs.ListBeaconCommittees(context.Background(), test.req)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !proto.Equal(res, test.res) {
-			t.Errorf("Expected %v, received %v", test.res, res)
-		}
+	res, err := bs.ListBeaconCommittees(context.Background(), &ethpb.ListCommitteesRequest{
+		QueryFilter: &ethpb.ListCommitteesRequest_Genesis{Genesis: true},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(res, wanted) {
+		t.Errorf("Expected %v, received %v", wanted, res)
 	}
 }
 
