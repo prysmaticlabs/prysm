@@ -52,11 +52,9 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.TracingProcessNameFlag,
 			cmd.TracingEndpointFlag,
 			cmd.TraceSampleFractionFlag,
-			cmd.BootstrapNode,
 			cmd.MonitoringPortFlag,
 			cmd.LogFormat,
 			cmd.LogFileName,
-			cmd.EnableUPnPFlag,
 		},
 	},
 	{
@@ -89,7 +87,7 @@ var appHelpFlagGroups = []flagGroup{
 	},
 	{
 		Name:  "features",
-		Flags: featureconfig.ValidatorFlags,
+		Flags: featureconfig.ActiveFlags(featureconfig.ValidatorFlags),
 	},
 	{
 		Name: "interop",

@@ -115,7 +115,7 @@ var appHelpFlagGroups = []flagGroup{
 	},
 	{
 		Name:  "features",
-		Flags: featureconfig.BeaconChainFlags,
+		Flags: featureconfig.ActiveFlags(featureconfig.BeaconChainFlags),
 	},
 	{
 		Name: "interop",
