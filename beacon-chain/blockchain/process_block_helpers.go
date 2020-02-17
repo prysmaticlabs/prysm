@@ -67,6 +67,9 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (
 				return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
 			}
 			if preState == nil {
+				if bytes.Equal(s.finalizedCheckpt.Root, b.ParentRoot) {
+					return nil, fmt.Errorf("pre state of slot %d does not exist", b.Slot)
+				}
 				preState, err = s.generateState(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root), bytesutil.ToBytes32(b.ParentRoot))
 				if err != nil {
 					return nil, err
