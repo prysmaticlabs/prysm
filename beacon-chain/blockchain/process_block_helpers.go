@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/stategen"
-
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -467,29 +465,4 @@ func (s *Service) deletePoolAtts(atts []*ethpb.Attestation) error {
 	}
 
 	return nil
-}
-
-func (s *Service) generateState(ctx context.Context, startRoot [32]byte, endRoot [32]byte) (*stateTrie.BeaconState, error) {
-	log.Errorf("generating state from root %#x and root %#x", startRoot, endRoot)
-	preState, err := s.beaconDB.State(ctx, startRoot)
-	if err != nil {
-		return nil, err
-	}
-	if preState == nil {
-		return nil, errors.New("finalized state does not exist in db")
-	}
-	endBlock, err := s.beaconDB.Block(ctx, endRoot)
-	if err != nil {
-		return nil, err
-	}
-	if endBlock == nil {
-		return nil, errors.New("provided block root does not have block saved in the db")
-	}
-	stGen := stategen.New(s.beaconDB)
-
-	postState, err := stGen.GenerateState(ctx, preState, endBlock)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not generate state")
-	}
-	return postState, nil
 }
