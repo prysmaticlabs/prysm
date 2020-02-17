@@ -3,7 +3,7 @@ package memorypool
 import "sync"
 
 // DoubleByteSlicePool represents the memory pool
-// for 2d byte slices
+// for 2d byte slices.
 var DoubleByteSlicePool = new(sync.Pool)
 
 // GetDoubleByteSlice retrieves the 2d byte slice of
