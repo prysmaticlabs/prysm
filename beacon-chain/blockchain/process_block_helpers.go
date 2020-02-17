@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/stategen"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -67,7 +69,10 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (
 				return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
 			}
 			if preState == nil {
-				return nil, fmt.Errorf("pre state of slot %d does not exist", b.Slot)
+				preState, err = s.generateState(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root), bytesutil.ToBytes32(b.ParentRoot))
+				if err != nil {
+					return nil, err
+				}
 			}
 			return preState, nil // No copy needed from newly hydrated DB object.
 		}
@@ -261,7 +266,11 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 		// If justified state is nil, resume back to normal syncing process and save
 		// justified check point.
 		if justifiedState == nil {
-			return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
+			justifiedState, err = s.generateState(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root), justifiedRoot)
+			if err != nil {
+				log.Error(err)
+				return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
+			}
 		}
 		if err := s.beaconDB.SaveState(ctx, justifiedState, justifiedRoot); err != nil {
 			return errors.Wrap(err, "could not save justified state")
@@ -287,9 +296,12 @@ func (s *Service) saveInitState(ctx context.Context, state *stateTrie.BeaconStat
 			return err
 		}
 		if fs == nil {
-			// This might happen if the client was in sync and is now re-syncing for whatever reason.
-			log.Warn("Initial sync cache did not have finalized state root cached")
-			return nil
+			fs, err = s.generateState(ctx, bytesutil.ToBytes32(s.prevFinalizedCheckpt.Root), finalizedRoot)
+			if err != nil {
+				// This might happen if the client was in sync and is now re-syncing for whatever reason.
+				log.Warn("Initial sync cache did not have finalized state root cached")
+				return err
+			}
 		}
 	}
 
@@ -455,4 +467,29 @@ func (s *Service) deletePoolAtts(atts []*ethpb.Attestation) error {
 	}
 
 	return nil
+}
+
+func (s *Service) generateState(ctx context.Context, startRoot [32]byte, endRoot [32]byte) (*stateTrie.BeaconState, error) {
+	log.Errorf("generating state from root %#x and root %#x", startRoot, endRoot)
+	preState, err := s.beaconDB.State(ctx, startRoot)
+	if err != nil {
+		return nil, err
+	}
+	if preState == nil {
+		return nil, errors.New("finalized state does not exist in db")
+	}
+	endBlock, err := s.beaconDB.Block(ctx, endRoot)
+	if err != nil {
+		return nil, err
+	}
+	if endBlock == nil {
+		return nil, errors.New("provided block root does not have block saved in the db")
+	}
+	stGen := stategen.New(s.beaconDB)
+
+	postState, err := stGen.GenerateState(ctx, preState, endBlock)
+	if err != nil {
+		return nil, err
+	}
+	return postState, nil
 }

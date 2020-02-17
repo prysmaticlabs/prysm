@@ -11,8 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
-// This replays the input blocks on the input state until the target slot is reached.
-func (s *State) replayBlocks(ctx context.Context, state *state.BeaconState, signed []*ethpb.SignedBeaconBlock, targetSlot uint64) (*state.BeaconState, error) {
+// ReplayBlocks replays the input blocks on the input state until the target slot is reached.
+func (s *State) ReplayBlocks(ctx context.Context, state *state.BeaconState, signed []*ethpb.SignedBeaconBlock, targetSlot uint64) (*state.BeaconState, error) {
 	var err error
 	// The input block list is sorted in decreasing slots order.
 	for i := len(signed) - 1; i >= 0; i-- {
@@ -40,9 +40,9 @@ func (s *State) replayBlocks(ctx context.Context, state *state.BeaconState, sign
 	return state, nil
 }
 
-// This loads the blocks between start slot and end slot by recursively fetching from end block root.
+// LoadBlocks loads the blocks between start slot and end slot by recursively fetching from end block root.
 // The Blocks are returned in slot-descending order.
-func (s *State) loadBlocks(ctx context.Context, startSlot uint64, endSlot uint64, endBlockRoot [32]byte) ([]*ethpb.SignedBeaconBlock, error) {
+func (s *State) LoadBlocks(ctx context.Context, startSlot uint64, endSlot uint64, endBlockRoot [32]byte) ([]*ethpb.SignedBeaconBlock, error) {
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
 	blocks, err := s.beaconDB.Blocks(ctx, filter)
 	if err != nil {

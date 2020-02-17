@@ -364,12 +364,6 @@ func (s *Service) filterBoundaryCandidates(ctx context.Context, root [32]byte, p
 			// Loop through current states to filter for valid boundary states.
 			for i := len(stateSlice) - 1; stateSlice[i] != previousBoundaryRoot && i >= 0; i-- {
 				currentSlot := s.initSyncState[stateSlice[i]].Slot()
-				// Store states from the start/end of epochs.
-				if currentSlot-1 == targetSlot-epochLength ||
-					currentSlot+1 == targetSlot-epochLength {
-					tempRoots = append(tempRoots, stateSlice[i])
-					continue
-				}
 				// Skip if the current slot is larger than the previous epoch
 				// boundary.
 				if currentSlot > targetSlot-epochLength {
