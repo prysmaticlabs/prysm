@@ -93,7 +93,6 @@ func (s *Service) filterBoundaryCandidates(ctx context.Context, root [32]byte, p
 	s.boundaryRoots = append(s.boundaryRoots, root)
 	s.pruneOldStates()
 	s.pruneNonBoundaryStates()
-
 }
 
 // prune for states past the current finalized checkpoint.
