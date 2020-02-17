@@ -582,11 +582,12 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	attesterSeed, err := helpers.Seed(headState, 0, params.BeaconConfig().DomainBeaconAttester)
+	epoch := uint64(0)
+	attesterSeed, err := helpers.Seed(headState, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		t.Fatal(err)
 	}
-	committees, err := computeCommittees(0, activeIndices, attesterSeed)
+	committees, err := computeCommittees(helpers.StartSlot(epoch), activeIndices, attesterSeed)
 	if err != nil {
 		t.Fatal(err)
 	}
