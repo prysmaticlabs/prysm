@@ -48,53 +48,24 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wanted := make(map[uint64]*ethpb.BeaconCommittees_CommitteesList)
-	for slot := uint64(0); slot < params.BeaconConfig().SlotsPerEpoch; slot++ {
-		var countAtSlot = uint64(numValidators) / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
-		if countAtSlot > params.BeaconConfig().MaxCommitteesPerSlot {
-			countAtSlot = params.BeaconConfig().MaxCommitteesPerSlot
-		}
-		if countAtSlot == 0 {
-			countAtSlot = 1
-		}
-		committeeItems := make([]*ethpb.BeaconCommittees_CommitteeItem, countAtSlot)
-		for i := uint64(0); i < countAtSlot; i++ {
-			committee, err := helpers.BeaconCommittee(activeIndices, attesterSeed, slot, i)
-			if err != nil {
-				t.Fatal(err)
-			}
-			committeeItems[i] = &ethpb.BeaconCommittees_CommitteeItem{
-				ValidatorIndices: committee,
-			}
-		}
-		wanted[slot] = &ethpb.BeaconCommittees_CommitteesList{
-			Committees: committeeItems,
-		}
+	committees, err := computeCommittees(0, activeIndices, attesterSeed)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	tests := []struct {
-		req *ethpb.ListCommitteesRequest
-		res *ethpb.BeaconCommittees
-	}{
-		{
-			req: &ethpb.ListCommitteesRequest{
-				QueryFilter: &ethpb.ListCommitteesRequest_Genesis{Genesis: true},
-			},
-			res: &ethpb.BeaconCommittees{
-				Epoch:                0,
-				Committees:           wanted,
-				ActiveValidatorCount: uint64(numValidators),
-			},
-		},
+	wanted := &ethpb.BeaconCommittees{
+		Epoch:                0,
+		Committees:           committees,
+		ActiveValidatorCount: uint64(numValidators),
 	}
-	for _, test := range tests {
-		res, err := bs.ListBeaconCommittees(context.Background(), test.req)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !proto.Equal(res, test.res) {
-			t.Errorf("Expected %v, received %v", test.res, res)
-		}
+	res, err := bs.ListBeaconCommittees(context.Background(), &ethpb.ListCommitteesRequest{
+		QueryFilter: &ethpb.ListCommitteesRequest_Genesis{Genesis: true},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(res, wanted) {
+		t.Errorf("Expected %v, received %v", wanted, res)
 	}
 }
 
@@ -127,31 +98,10 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wanted := make(map[uint64]*ethpb.BeaconCommittees_CommitteesList)
 	startSlot := helpers.StartSlot(1)
-	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
-		var countAtSlot = uint64(numValidators) / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
-		if countAtSlot > params.BeaconConfig().MaxCommitteesPerSlot {
-			countAtSlot = params.BeaconConfig().MaxCommitteesPerSlot
-		}
-		if countAtSlot == 0 {
-			countAtSlot = 1
-		}
-		committeeItems := make([]*ethpb.BeaconCommittees_CommitteeItem, countAtSlot)
-		for i := uint64(0); i < countAtSlot; i++ {
-			epochOffset := i + (slot%params.BeaconConfig().SlotsPerEpoch)*countAtSlot
-			totalCount := countAtSlot * params.BeaconConfig().SlotsPerEpoch
-			committee, err := helpers.ComputeCommittee(activeIndices, attesterSeed, epochOffset, totalCount)
-			if err != nil {
-				t.Fatal(err)
-			}
-			committeeItems[i] = &ethpb.BeaconCommittees_CommitteeItem{
-				ValidatorIndices: committee,
-			}
-		}
-		wanted[slot] = &ethpb.BeaconCommittees_CommitteesList{
-			Committees: committeeItems,
-		}
+	wanted, err := computeCommittees(startSlot, activeIndices, attesterSeed)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	tests := []struct {
@@ -245,28 +195,9 @@ func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wanted := make(map[uint64]*ethpb.BeaconCommittees_CommitteesList)
-	for slot := uint64(0); slot < params.BeaconConfig().SlotsPerEpoch; slot++ {
-		var countAtSlot = uint64(numValidators) / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
-		if countAtSlot > params.BeaconConfig().MaxCommitteesPerSlot {
-			countAtSlot = params.BeaconConfig().MaxCommitteesPerSlot
-		}
-		if countAtSlot == 0 {
-			countAtSlot = 1
-		}
-		committeeItems := make([]*ethpb.BeaconCommittees_CommitteeItem, countAtSlot)
-		for i := uint64(0); i < countAtSlot; i++ {
-			committee, err := helpers.BeaconCommittee(activeIndices, seed, slot, i)
-			if err != nil {
-				t.Fatal(err)
-			}
-			committeeItems[i] = &ethpb.BeaconCommittees_CommitteeItem{
-				ValidatorIndices: committee,
-			}
-		}
-		wanted[slot] = &ethpb.BeaconCommittees_CommitteesList{
-			Committees: committeeItems,
-		}
+	wanted, err := computeCommittees(0, activeIndices, seed)
+	if err != nil {
+		t.Fatal(err)
 	}
 	res1, err := bs.ListBeaconCommittees(context.Background(), &ethpb.ListCommitteesRequest{
 		QueryFilter: &ethpb.ListCommitteesRequest_Genesis{
