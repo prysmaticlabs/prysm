@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"math/big"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -75,6 +77,7 @@ func TestGetBlock_OK(t *testing.T) {
 		Eth1BlockFetcher:  &mockPOW.POWChain{},
 		MockEth1Votes:     true,
 		AttPool:           attestations.NewPool(),
+		SlashingsPool:     slashings.NewPool(),
 		ExitPool:          voluntaryexits.NewPool(),
 	}
 
@@ -88,6 +91,26 @@ func TestGetBlock_OK(t *testing.T) {
 		Slot:         1,
 		RandaoReveal: randaoReveal,
 		Graffiti:     graffiti[:],
+	}
+
+	// We include max proposer slashings in the pool.
+	proposerSlashing, err := testutil.GenerateProposerSlashingForValidator(
+		beaconState,
+		privKeys[0],
+		0, /* validator index */
+	)
+	if err := proposerServer.SlashingsPool.InsertProposerSlashing(beaconState, proposerSlashing); err != nil {
+		t.Fatal(err)
+	}
+
+	// We include max attester slashings in the pool.
+	attesterSlashing, err := testutil.GenerateAttesterSlashingForValidator(
+		beaconState,
+		privKeys[1],
+		1, /* validator index */
+	)
+	if err := proposerServer.SlashingsPool.InsertAttesterSlashing(beaconState, attesterSlashing); err != nil {
+		t.Fatal(err)
 	}
 
 	block, err := proposerServer.GetBlock(ctx, req)
@@ -106,6 +129,18 @@ func TestGetBlock_OK(t *testing.T) {
 	}
 	if !bytes.Equal(block.Body.Graffiti, req.Graffiti) {
 		t.Fatal("Expected block to have correct graffiti")
+	}
+	if len(block.Body.ProposerSlashings) != 1 {
+		t.Fatalf("Wanted %d proposer slashings, got %d", 1, len(block.Body.ProposerSlashings))
+	}
+	if !reflect.DeepEqual(block.Body.ProposerSlashings[0], proposerSlashing) {
+		t.Errorf("Wanted proposer slashing %v, got %v", proposerSlashing, block.Body.ProposerSlashings[0])
+	}
+	if len(block.Body.AttesterSlashings) != 1 {
+		t.Fatalf("Wanted %d attester slashings, got %d", 1, len(block.Body.AttesterSlashings))
+	}
+	if !reflect.DeepEqual(block.Body.AttesterSlashings[0], attesterSlashing) {
+		t.Errorf("Wanted attester slashing %v, got %v", attesterSlashing, block.Body.AttesterSlashings)
 	}
 }
 
