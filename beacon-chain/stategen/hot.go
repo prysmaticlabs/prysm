@@ -14,7 +14,7 @@ import (
 // This saves a post finalized beacon state in the hot section of the DB. On the epoch boundary,
 // it saves a full state. On an intermediate slot, it saves a back pointer to the
 // nearest epoch boundary state.
-func (s *stategen.State) saveHotState(ctx context.Context, blockRoot [32]byte, state *state.BeaconState) error {
+func (s *State) saveHotState(ctx context.Context, blockRoot [32]byte, state *state.BeaconState) error {
 	// On an epoch boundary, saves the whole state.
 	if helpers.IsEpochStart(state.Slot()) {
 		if err := s.beaconDB.SaveState(ctx, state, blockRoot); err != nil {
@@ -41,10 +41,10 @@ func (s *stategen.State) saveHotState(ctx context.Context, blockRoot [32]byte, s
 
 // This loads a post finalized beacon state from the hot section of the DB. If necessary it will
 // replay blocks from the nearest epoch boundary.
-func (s *stategen.State) loadHotState(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
+func (s *State) loadHotState(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
 	// Load the cache
 
-	summary, err := s.beaconDB.HotStateSummary(ctx, blockRoot[:])
+	summary, err := s.beaconDB.HotStateSummary(ctx, blockRoot)
 	if err != nil {
 		return nil, err
 	}

@@ -33,11 +33,36 @@ func (s *State) saveColdState(ctx context.Context, blockRoot [32]byte, state *st
 	return nil
 }
 
-// This loads a cold state that lies between the archive point.
-func (s *State) loadColdIntermediateState(ctx context.Context, slot uint64) (*state.BeaconState, error) {
+// This loads the cold state by deciding whether to load from archive point (faster) or
+// somewhere between archive points (slower) since it requires replaying blocks.
+func (s *State) loadColdState(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
+	summary, err := s.beaconDB.ColdStateSummary(ctx, blockRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	if summary.Slot%s.slotsPerArchivePoint == 0 {
+		archivePoint := summary.Slot / s.slotsPerArchivePoint
+		s, err := s.loadColdStateByArchivalPoint(ctx, archivePoint)
+		if err != nil {
+			return nil, err
+		}
+		return s, nil
+	}
+
+	return s.loadColdIntermediateState(ctx, summary.Slot, blockRoot)
+}
+
+// This loads the cold state for the certain archive point.
+func (s *State) loadColdStateByArchivalPoint(ctx context.Context, archivePoint uint64) (*state.BeaconState, error) {
+	root := s.beaconDB.ArchivePoint(ctx, archivePoint)
+	return s.beaconDB.State(ctx, root)
+}
+
+// This loads a cold state by slot and block root that lies between the archive point.
+func (s *State) loadColdIntermediateState(ctx context.Context, slot uint64, blockRoot [32]byte) (*state.BeaconState, error) {
 	// Load the archive point for lower and high side of the intermediate state.
 	lowArchivePointIdx := slot / s.slotsPerArchivePoint
-	highArchivePointIdx := lowArchivePointIdx + 1
 
 	// Acquire the read lock so the split can't change while this is happening.
 	lowArchivePointState, err := s.loadArchivePointByIndex(ctx, lowArchivePointIdx)
@@ -45,18 +70,12 @@ func (s *State) loadColdIntermediateState(ctx context.Context, slot uint64) (*st
 		return nil, err
 	}
 
-	// If the high archive point is outside of the split, it uses the split state as the
-	// high archive point.
-	if highArchivePointIdx*s.slotsPerArchivePoint >= s.splitSlot {
-
-	} else {
-
+	replayBlks, err := s.loadBlocks(ctx, lowArchivePointState.Slot(), slot, blockRoot)
+	if err != nil {
+		return nil, err
 	}
 
-	// Load the blocks from low archive point to input slot.
-	s.beaconDB.Col
-
-	return nil
+	return s.replayBlocks(ctx, lowArchivePointState, replayBlks, slot)
 }
 
 // Given the archive index, this returns the state in the DB.

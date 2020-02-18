@@ -24,14 +24,14 @@ func (k *Store) SaveHotStateSummary(ctx context.Context, summary *pb.HotStateSum
 }
 
 // HotStateSummary returns the hot state summary using input block root from DB.
-func (k *Store) HotStateSummary(ctx context.Context, blockRoot []byte) (*pb.HotStateSummary, error) {
+func (k *Store) HotStateSummary(ctx context.Context, blockRoot [32]byte) (*pb.HotStateSummary, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HotStateSummary")
 	defer span.End()
 
 	var summary *pb.HotStateSummary
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(hotStateSummaryBucket)
-		enc := bucket.Get(blockRoot)
+		enc := bucket.Get(blockRoot[:])
 		if enc == nil {
 			return nil
 		}
@@ -58,14 +58,14 @@ func (k *Store) SaveColdStateSummary(ctx context.Context, blockRoot []byte, summ
 }
 
 // ColdStateSummary returns the cold state summary using input block root from DB.
-func (k *Store) ColdStateSummary(ctx context.Context, blockRoot []byte) (*pb.ColdStateSummary, error) {
+func (k *Store) ColdStateSummary(ctx context.Context, blockRoot [32]byte) (*pb.ColdStateSummary, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.ColdStateSummary")
 	defer span.End()
 
 	var summary *pb.ColdStateSummary
 	err := k.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(coldStateSummaryBucket)
-		enc := bucket.Get(blockRoot)
+		enc := bucket.Get(blockRoot[:])
 		if enc == nil {
 			return nil
 		}
@@ -74,4 +74,18 @@ func (k *Store) ColdStateSummary(ctx context.Context, blockRoot []byte) (*pb.Col
 	})
 
 	return summary, err
+}
+
+// HasColdStateSummary returns true if a cold state summary exists in DB.
+func (k *Store) HasColdStateSummary(ctx context.Context, blockRoot [32]byte) bool {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasColdStateSummary")
+	defer span.End()
+	var exists bool
+	// #nosec G104. Always returns nil.
+	k.db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(coldStateSummaryBucket)
+		exists = bucket.Get(blockRoot[:]) != nil
+		return nil
+	})
+	return exists
 }

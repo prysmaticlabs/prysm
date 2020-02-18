@@ -7,11 +7,12 @@ import (
 )
 
 // StateByRoot retrieves the state from DB using input root.
-func StateByRoot(ctx context.Context, root [32]byte) (*state.BeaconState, error) {
-	return nil, nil
-}
+// It retrieves state from the cold section if the cold state
+// summary exists in DB by default.
+func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
+	if s.beaconDB.HasColdStateSummary(ctx, blockRoot) {
+		return s.loadColdState(ctx, blockRoot)
+	}
 
-// StateBySlot retrieves the state from DB using input slot.
-func StateBySlot(ctx context.Context, slot uint64) (*state.BeaconState, error) {
-	return nil, nil
+	return s.loadHotState(ctx, blockRoot)
 }
