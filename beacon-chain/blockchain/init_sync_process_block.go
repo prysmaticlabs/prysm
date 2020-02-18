@@ -55,11 +55,17 @@ func (s *Service) filterBoundaryCandidates(ctx context.Context, root [32]byte, p
 	if len(s.boundaryRoots) > 0 {
 		// Retrieve previous boundary root.
 		previousBoundaryRoot := s.boundaryRoots[len(s.boundaryRoots)-1]
-		previousSlot := s.initSyncState[previousBoundaryRoot].Slot()
+		previousState, ok := s.initSyncState[previousBoundaryRoot]
+		if !ok {
+			// remove the non-existent root and exit filtering.
+			s.boundaryRoots = s.boundaryRoots[:len(s.boundaryRoots)-1]
+			return
+		}
+		previousSlot := previousState.Slot()
 
 		// Round up slot number to account for skipped slots.
 		previousSlot = helpers.RoundUpToNearestEpoch(previousSlot)
-		if postState.Slot()-previousSlot > epochLength {
+		if postState.Slot()-previousSlot >= epochLength {
 			targetSlot := postState.Slot()
 			tempRoots := s.loopThroughCandidates(stateSlice, previousBoundaryRoot, previousSlot, targetSlot)
 			s.boundaryRoots = append(s.boundaryRoots, tempRoots...)
