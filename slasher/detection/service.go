@@ -30,6 +30,7 @@ type Service struct {
 // Config options for the detection service.
 type Config struct {
 	Notifier              beaconclient.Notifier
+	SlasherDB             db.Database
 	ChainFetcher          beaconclient.ChainFetcher
 	HistoricalDataFetcher beaconclient.HistoricalFetcher
 	AttesterSlashingsFeed *event.Feed
@@ -44,6 +45,7 @@ func NewDetectionService(ctx context.Context, cfg *Config) *Service {
 		cancel:                cancel,
 		notifier:              cfg.Notifier,
 		chainFetcher:          cfg.ChainFetcher,
+		slasherDB:             cfg.SlasherDB,
 		historicalDataFetcher: cfg.HistoricalDataFetcher,
 		blocksChan:            make(chan *ethpb.SignedBeaconBlock, 1),
 		attsChan:              make(chan *ethpb.Attestation, 1),
