@@ -1,5 +1,6 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
+# gazelle:ignore
 go_library(
     name = "go_default_library",
     testonly = True,
@@ -9,7 +10,8 @@ go_library(
         "msg_hash_compressed_test.yaml.go",
         "msg_hash_uncompressed_test.yaml.go",
         "priv_to_pub_test.yaml.go",
-        "sign_msg_test.yaml.go",
+        "sign_test.yaml.go",
+        "verify_test.yaml.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/bls/spectest",
     visibility = ["//visibility:public"],
@@ -24,18 +26,19 @@ go_test(
         "msg_hash_compressed_test.go",
         "msg_hash_uncompressed_test.go",
         "priv_to_pub_test.go",
-        "sign_msg_test.go",
+        "sign_test.go",
+        "verify_test.go",
     ],
     data = [
-        "@eth2_spec_tests_general//:test_data",
+        "@eth2_spec_tests_general_new//:test_data",
     ],
     embed = [":go_default_library"],
     tags = ["spectest"],
     deps = [
-        "//shared/bls:go_default_library",
+        "//shared/bls_new:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",
-        "@com_github_herumi_bls_eth_go_binary//bls:go_default_library",
+        "@com_github_herumi_bls_eth_go_binary_new//bls:go_default_library",
     ],
 )

@@ -21,7 +21,10 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	bls12.SetETHserialization(true)
+	err = bls12.SetETHmode(1)
+	if err != nil {
+		panic(err)
+	}
 }
 
 var maxKeys = int64(100000)
@@ -127,11 +130,11 @@ func concatMsgAndDomain(msg []byte, domain uint64) []byte {
 }
 
 // Sign a message using a secret key - in a beacon/validator client.
-func (s *SecretKey) Sign(msg []byte, domain uint64) *Signature {
+func (s *SecretKey) Sign(msg []byte) *Signature {
 	if featureconfig.Get().SkipBLSVerify {
 		return &Signature{}
 	}
-	signature := s.p.SignHashWithDomain(concatMsgAndDomain(msg, domain))
+	signature := s.p.SignByte(msg)
 	return &Signature{s: signature}
 }
 
@@ -143,6 +146,10 @@ func (s *SecretKey) Marshal() []byte {
 		keyBytes = append(emptyBytes, keyBytes...)
 	}
 	return keyBytes
+}
+
+func (s *SecretKey) RawSecretKey() *bls12.SecretKey {
+	return s.p
 }
 
 // Marshal a public key into a LittleEndian byte slice.
@@ -157,6 +164,10 @@ func (p *PublicKey) Copy() (*PublicKey, error) {
 	return &PublicKey{p: &np}, nil
 }
 
+func (p *PublicKey) RawPublicKey() *bls12.PublicKey {
+	return p.p
+}
+
 // Aggregate two public keys.
 func (p *PublicKey) Aggregate(p2 *PublicKey) *PublicKey {
 	if featureconfig.Get().SkipBLSVerify {
@@ -166,18 +177,18 @@ func (p *PublicKey) Aggregate(p2 *PublicKey) *PublicKey {
 	return p
 }
 
-// Verify a bls signature given a public key, a message, and a domain.
-func (s *Signature) Verify(msg []byte, pub *PublicKey, domain uint64) bool {
+// Verify a bls signature given a public key, a message.
+func (s *Signature) Verify(msg []byte, pub *PublicKey) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
 	}
-	return s.s.VerifyHashWithDomain(pub.p, concatMsgAndDomain(msg, domain))
+	return s.s.VerifyByte(pub.p, msg)
 }
 
 // VerifyAggregate verifies each public key against its respective message.
 // This is vulnerable to rogue public-key attack. Each user must
 // provide a proof-of-knowledge of the public key.
-func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg [][32]byte, domain uint64) bool {
+func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg [][32]byte) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
 	}
@@ -188,21 +199,19 @@ func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg [][32]byte, domain
 	if size != len(msg) {
 		return false
 	}
-	b := [8]byte{}
-	binary.LittleEndian.PutUint64(b[:], domain)
-	hashWithDomains := make([]byte, 0, size*concatMsgDomainSize)
+	hashes := make([][]byte, 0, len(msg))
 	var rawKeys []bls12.PublicKey
 	for i := 0; i < size; i++ {
-		hashWithDomains = append(hashWithDomains, concatMsgAndDomain(msg[i][:], domain)...)
+		hashes = append(hashes, msg[i][:])
 		rawKeys = append(rawKeys, *pubKeys[i].p)
 	}
-	return s.s.VerifyAggregateHashWithDomain(rawKeys, hashWithDomains)
+	return s.s.VerifyAggregateHashes(rawKeys, hashes)
 }
 
 // VerifyAggregateCommon verifies each public key against its respective message.
 // This is vulnerable to rogue public-key attack. Each user must
 // provide a proof-of-knowledge of the public key.
-func (s *Signature) VerifyAggregateCommon(pubKeys []*PublicKey, msg [32]byte, domain uint64) bool {
+func (s *Signature) VerifyAggregateCommon(pubKeys []*PublicKey, msg [32]byte) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
 	}
@@ -216,7 +225,11 @@ func (s *Signature) VerifyAggregateCommon(pubKeys []*PublicKey, msg [32]byte, do
 		aggregated.p.Add(pubKeys[i].p)
 	}
 
-	return s.s.VerifyHashWithDomain(aggregated.p, concatMsgAndDomain(msg[:], domain))
+	return s.s.VerifyByte(aggregated.p, msg[:])
+}
+
+func (s *Signature) RawSignature() *bls12.Sign {
+	return s.s
 }
 
 // NewAggregateSignature creates a blank aggregate signature.
