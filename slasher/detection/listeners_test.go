@@ -20,6 +20,10 @@ func (m *mockNotifier) AttestationFeed() *event.Feed {
 	return new(event.Feed)
 }
 
+func (m *mockNotifier) ClientReadyFeed() *event.Feed {
+	return new(event.Feed)
+}
+
 func TestService_DetectIncomingBlocks(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ds := Service{
