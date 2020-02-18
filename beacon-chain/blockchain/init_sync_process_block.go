@@ -5,9 +5,9 @@ import (
 	"sort"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/stategen"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -71,6 +71,7 @@ func (s *Service) filterBoundaryCandidates(ctx context.Context, root [32]byte, p
 	s.pruneNonBoundaryStates()
 }
 
+// loop-through the provided candidate roots to filter out which would be appropriate boundary roots.
 func (s *Service) loopThroughCandidates(stateSlice [][32]byte, previousBoundaryRoot [32]byte,
 	previousSlot uint64, targetSlot uint64) [][32]byte {
 	tempRoots := [][32]byte{}
