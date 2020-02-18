@@ -7,7 +7,6 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 )
 
