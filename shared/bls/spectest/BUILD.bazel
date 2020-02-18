@@ -30,7 +30,7 @@ go_test(
         "verify_test.go",
     ],
     data = [
-        "@eth2_spec_tests_general_new//:test_data",
+        "@eth2_spec_tests_general//:test_data",
     ],
     embed = [":go_default_library"],
     tags = ["spectest"],
@@ -39,6 +39,6 @@ go_test(
         "//shared/bytesutil:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",
-        "@com_github_herumi_bls_eth_go_binary_new//bls:go_default_library",
+        "@com_github_herumi_bls_eth_go_binary//bls:go_default_library",
     ],
 )

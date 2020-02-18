@@ -13,7 +13,7 @@ go_library(
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_dgraph_io_ristretto//:go_default_library",
-        "@com_github_herumi_bls_eth_go_binary_new//bls:go_default_library",
+        "@com_github_herumi_bls_eth_go_binary//bls:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
     ],
 )
@@ -45,6 +45,6 @@ go_test(
     deps = [
         "//shared/bls:go_default_library",
         "//shared/hashutil:go_default_library",
-        "@com_github_herumi_bls_eth_go_binary_new//bls:go_default_library",
+        "@com_github_herumi_bls_eth_go_binary//bls:go_default_library",
     ],
 )

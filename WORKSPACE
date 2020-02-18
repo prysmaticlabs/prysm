@@ -148,60 +148,12 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "72c6ee3c20d19736b1203f364a6eb0ddee2c173073e20bee2beccd288fdc42be",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.9.4/general.tar.gz",
-)
-
-http_archive(
-    name = "eth2_spec_tests_minimal",
-    build_file_content = """
-filegroup(
-    name = "test_data",
-    srcs = glob([
-        "**/*.ssz",
-        "**/*.yaml",
-    ]),
-    visibility = ["//visibility:public"],
-)
-    """,
-    sha256 = "a3cc860a3679f6f62ee57b65677a9b48a65fdebb151cdcbf50f23852632845ef",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.9.4/minimal.tar.gz",
-)
-
-http_archive(
-    name = "eth2_spec_tests_mainnet",
-    build_file_content = """
-filegroup(
-    name = "test_data",
-    srcs = glob([
-        "**/*.ssz",
-        "**/*.yaml",
-    ]),
-    visibility = ["//visibility:public"],
-)
-    """,
-    sha256 = "8fc1b6220973ca30fa4ddc4ed24d66b1719abadca8bedb5e06c3bd9bc0df28e9",
-    url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.9.4/mainnet.tar.gz",
-)
-
-http_archive(
-    name = "eth2_spec_tests_general_new",
-    build_file_content = """
-filegroup(
-    name = "test_data",
-    srcs = glob([
-        "**/*.ssz",
-        "**/*.yaml",
-    ]),
-    visibility = ["//visibility:public"],
-)
-    """,
     # sha256 = "72c6ee3c20d19736b1203f364a6eb0ddee2c173073e20bee2beccd288fdc42be",
     url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.10.1/general.tar.gz",
 )
 
 http_archive(
-    name = "eth2_spec_tests_minimal_new",
+    name = "eth2_spec_tests_minimal",
     build_file_content = """
 filegroup(
     name = "test_data",
@@ -217,7 +169,7 @@ filegroup(
 )
 
 http_archive(
-    name = "eth2_spec_tests_mainnet_new",
+    name = "eth2_spec_tests_mainnet",
     build_file_content = """
 filegroup(
     name = "test_data",
@@ -241,13 +193,6 @@ http_archive(
 
 http_archive(
     name = "com_github_herumi_bls_eth_go_binary",
-    sha256 = "b5628a95bd1e6ff84f73d87c134bb1e7e9c1a5a2a10b831867d9dad7d8defc3e",
-    strip_prefix = "bls-go-binary-8ee33d1a2e8ba8dcf0c3d0b459d75d42d163339d",
-    url = "https://github.com/nisdas/bls-go-binary/archive/8ee33d1a2e8ba8dcf0c3d0b459d75d42d163339d.zip",
-)
-
-http_archive(
-    name = "com_github_herumi_bls_eth_go_binary_new",
     #sha256 = "f8cdfc8bf8cb91e23ad206e14bcba03239abc524c9bf033e5098745408fa5397",
     strip_prefix = "bls-go-binary-4ef039dc8ada18325fd835e07893612f408bcb59",
     url = "https://github.com/nisdas/bls-go-binary/archive/4ef039dc8ada18325fd835e07893612f408bcb59.zip",
