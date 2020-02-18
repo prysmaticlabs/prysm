@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/stategen"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -70,7 +69,6 @@ func (s *Service) filterBoundaryCandidates(ctx context.Context, root [32]byte, p
 	s.boundaryRoots = append(s.boundaryRoots, root)
 	s.pruneOldStates()
 	s.pruneNonBoundaryStates()
-
 }
 
 func (s *Service) loopThroughCandidates(stateSlice [][32]byte, previousBoundaryRoot [32]byte,
@@ -108,7 +106,7 @@ func (s *Service) pruneOldStates() {
 	prunedBoundaryRoots := [][32]byte{}
 	for _, rt := range s.boundaryRoots {
 		st, ok := s.initSyncState[rt]
-		// skip non-existent roots
+		// Skip non-existent roots.
 		if !ok {
 			continue
 		}

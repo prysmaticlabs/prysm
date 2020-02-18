@@ -6,7 +6,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"gopkg.in/d4l3k/messagediff.v1"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
