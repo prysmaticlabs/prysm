@@ -22,7 +22,7 @@ type Service struct {
 	attsChan              chan *ethpb.Attestation
 	notifier              beaconclient.Notifier
 	chainFetcher          beaconclient.ChainFetcher
-	historicalDataFetcher beaconclient.HistoricalFetcher
+	beaconClient          *beaconclient.Service
 	attesterSlashingsFeed *event.Feed
 	proposerSlashingsFeed *event.Feed
 }
@@ -32,7 +32,7 @@ type Config struct {
 	Notifier              beaconclient.Notifier
 	SlasherDB             db.Database
 	ChainFetcher          beaconclient.ChainFetcher
-	HistoricalDataFetcher beaconclient.HistoricalFetcher
+	BeaconClient          *beaconclient.Service
 	AttesterSlashingsFeed *event.Feed
 	ProposerSlashingsFeed *event.Feed
 }
@@ -46,7 +46,7 @@ func NewDetectionService(ctx context.Context, cfg *Config) *Service {
 		notifier:              cfg.Notifier,
 		chainFetcher:          cfg.ChainFetcher,
 		slasherDB:             cfg.SlasherDB,
-		historicalDataFetcher: cfg.HistoricalDataFetcher,
+		beaconClient:          cfg.BeaconClient,
 		blocksChan:            make(chan *ethpb.SignedBeaconBlock, 1),
 		attsChan:              make(chan *ethpb.Attestation, 1),
 		attesterSlashingsFeed: cfg.AttesterSlashingsFeed,
@@ -109,7 +109,7 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 	// If no data was persisted from previous sessions, we request data starting from
 	// the genesis epoch.
 	for i := latestStoredEpoch; i < currentChainHead.HeadEpoch; i++ {
-		indexedAtts, err := ds.historicalDataFetcher.RequestHistoricalAttestations(ctx, i /* epoch */)
+		indexedAtts, err := ds.beaconClient.RequestHistoricalAttestations(ctx, i /* epoch */)
 		if err != nil {
 			log.WithError(err).Errorf("Could not fetch attestations for epoch: %d", i)
 		}

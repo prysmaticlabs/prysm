@@ -30,12 +30,6 @@ type Notifier interface {
 	ClientReadyFeed() *event.Feed
 }
 
-// HistoricalFetcher defines a struct which can retrieve historical
-// block and indexed attestation data from the beacon chain.
-type HistoricalFetcher interface {
-	RequestHistoricalAttestations(ctx context.Context, epoch uint64) ([]*ethpb.IndexedAttestation, error)
-}
-
 // ChainFetcher defines a struct which can retrieve
 // chain information from a beacon node such as the latest chain head.
 type ChainFetcher interface {

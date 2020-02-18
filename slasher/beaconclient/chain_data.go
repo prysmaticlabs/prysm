@@ -7,9 +7,8 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"go.opencensus.io/trace"
-
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
 )
 
 var syncStatusPollingInterval = time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
