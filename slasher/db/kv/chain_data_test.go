@@ -43,7 +43,7 @@ func TestChainHead(t *testing.T) {
 
 	for _, tt := range tests {
 		if err := db.SaveChainHead(ctx, tt.head); err != nil {
-			t.Fatalf(err)
+			t.Fatal(err)
 		}
 		head, err := db.ChainHead(ctx)
 		if err != nil {
