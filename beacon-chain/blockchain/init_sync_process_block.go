@@ -57,7 +57,7 @@ func (s *Service) filterBoundaryCandidates(ctx context.Context, root [32]byte, p
 		previousBoundaryRoot := s.boundaryRoots[len(s.boundaryRoots)-1]
 		previousState, ok := s.initSyncState[previousBoundaryRoot]
 		if !ok {
-			// remove the non-existent root and exit filtering.
+			// Remove the non-existent root and exit filtering.
 			s.boundaryRoots = s.boundaryRoots[:len(s.boundaryRoots)-1]
 			return
 		}
