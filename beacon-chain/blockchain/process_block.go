@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/metrics"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -197,10 +198,18 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	}
 
 	if featureconfig.Get().InitSyncCacheState {
-		s.initSyncState[root] = postState
+		s.initSyncState[root] = postState.Copy()
+		s.filterBoundaryCandidates(ctx, root, postState)
 	} else {
 		if err := s.beaconDB.SaveState(ctx, postState, root); err != nil {
 			return errors.Wrap(err, "could not save state")
+		}
+	}
+
+	if flags.Get().EnableArchive {
+		atts := signed.Block.Body.Attestations
+		if err := s.beaconDB.SaveAttestations(ctx, atts); err != nil {
+			return errors.Wrapf(err, "could not save block attestations from slot %d", b.Slot)
 		}
 	}
 
@@ -241,6 +250,18 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	// Update validator indices in database as needed.
 	if err := s.saveNewValidators(ctx, preStateValidatorCount, postState); err != nil {
 		return errors.Wrap(err, "could not save finalized checkpoint")
+	}
+
+	if featureconfig.Get().InitSyncCacheState {
+		numOfStates := len(s.boundaryRoots)
+		if numOfStates > initialSyncCacheSize {
+			if err = s.persistCachedStates(ctx, numOfStates); err != nil {
+				return err
+			}
+		}
+		if len(s.initSyncState) > maxCacheSize {
+			s.pruneOldNonFinalizedStates()
+		}
 	}
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.
