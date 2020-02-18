@@ -73,10 +73,7 @@ func TestService_RequestHistoricalAttestations(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(res, wanted) {
-		t.Errorf("Wanted %v", wanted)
-		t.Log(" ")
-		t.Log(" ")
-		t.Errorf("Received %v", res)
+		t.Errorf("Wanted %v, received %v", wanted, res)
 	}
 	testutil.AssertLogsContain(t, hook, "Retrieved 100/1000 indexed attestations for epoch 0")
 	testutil.AssertLogsContain(t, hook, "Retrieved 500/1000 indexed attestations for epoch 0")
