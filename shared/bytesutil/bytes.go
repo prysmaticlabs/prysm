@@ -194,3 +194,11 @@ func Copy2dBytes(ary [][]byte) [][]byte {
 	}
 	return nil
 }
+
+// ReverseBytes32Slice will reverse the provided slice's order.
+func ReverseBytes32Slice(arr [][32]byte) [][32]byte {
+	for i, j := 0, len(arr)-1; i < j; i, j = i+1, j-1 {
+		arr[i], arr[j] = arr[j], arr[i]
+	}
+	return arr
+}
