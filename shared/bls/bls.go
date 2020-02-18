@@ -208,10 +208,8 @@ func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg [][32]byte) bool {
 	return s.s.VerifyAggregateHashes(rawKeys, hashes)
 }
 
-// VerifyAggregateCommon verifies each public key against its respective message.
-// This is vulnerable to rogue public-key attack. Each user must
-// provide a proof-of-knowledge of the public key.
-func (s *Signature) VerifyAggregateCommon(pubKeys []*PublicKey, msg [32]byte) bool {
+// FastAggregateVerify verifies all the provided pubkeys with their aggregated signature.
+func (s *Signature) FastAggregateVerify(pubKeys []*PublicKey, msg [32]byte) bool {
 	if featureconfig.Get().SkipBLSVerify {
 		return true
 	}
