@@ -113,6 +113,7 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 			validatorsPublicKeysBucket,
 			validatorsMinMaxSpanBucket,
 			slashingBucket,
+			chainDataBucket,
 		)
 	}); err != nil {
 		return nil, err

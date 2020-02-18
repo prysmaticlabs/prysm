@@ -6,6 +6,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
+	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -16,6 +17,7 @@ var log = logrus.WithField("prefix", "detection")
 type Service struct {
 	ctx                   context.Context
 	cancel                context.CancelFunc
+	slasherDB             db.Database
 	blocksChan            chan *ethpb.SignedBeaconBlock
 	attsChan              chan *ethpb.Attestation
 	notifier              beaconclient.Notifier
@@ -86,16 +88,30 @@ func (ds *Service) Start() {
 func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 	ctx, span := trace.StartSpan(ctx, "detection.detectHistoricalChainData")
 	defer span.End()
-	head, err := ds.chainFetcher.ChainHead(ds.ctx)
+	// We fetch both the latest persisted chain head in our DB as well
+	// as the current chain head from the beacon node via gRPC.
+	latestStoredHead, err := ds.slasherDB.ChainHead(ctx)
 	if err != nil {
-		log.Fatalf("Cannot retrieve chain head: %v", err)
+		log.WithError(err).Fatal("Could not retrieve chain head from DB")
 	}
-	for i := uint64(0); i < head.HeadEpoch; i++ {
-		indexedAtts, err := ds.historicalDataFetcher.RequestHistoricalAttestations(ds.ctx, i /* epoch */)
+	currentChainHead, err := ds.chainFetcher.ChainHead(ctx)
+	if err != nil {
+		log.WithError(err).Fatal("Cannot retrieve chain head from beacon node")
+	}
+	var latestStoredEpoch uint64
+	if latestStoredHead != nil {
+		latestStoredEpoch = latestStoredHead.HeadEpoch
+	}
+	// We retrieve historical chain data from the last persisted chain head in the
+	// slasher DB up to the current beacon node's head epoch we retrieved via gRPC.
+	// If no data was persisted from previous sessions, we request data starting from
+	// the genesis epoch.
+	for i := latestStoredEpoch; i < currentChainHead.HeadEpoch; i++ {
+		indexedAtts, err := ds.historicalDataFetcher.RequestHistoricalAttestations(ctx, i /* epoch */)
 		if err != nil {
 			log.WithError(err).Errorf("Could not fetch attestations for epoch: %d", i)
 		}
-		log.Infof(
+		log.Debugf(
 			"Running slashing detection on %d attestations in epoch %d...",
 			len(indexedAtts),
 			i,
@@ -103,5 +119,8 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 		// TODO(#4836): Run detection function for attester double voting.
 		// TODO(#4836): Run detection function for attester surround voting.
 	}
-	log.Infof("Completed slashing detection on historical chain data up to epoch %d", head.HeadEpoch)
+	if err := ds.slasherDB.SaveChainHead(ctx, currentChainHead); err != nil {
+		log.WithError(err).Error("Could not persist chain head to disk")
+	}
+	log.Infof("Completed slashing detection on historical chain data up to epoch %d", currentChainHead.HeadEpoch)
 }

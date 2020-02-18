@@ -31,6 +31,14 @@ func (bs *Service) ChainHead(
 // Poll the beacon node every syncStatusPollingInterval until the node
 // is no longer syncing.
 func (bs *Service) querySyncStatus(ctx context.Context) {
+	status, err := bs.nodeClient.GetSyncStatus(ctx, &ptypes.Empty{})
+	if err != nil {
+		log.WithError(err).Error("Could not fetch sync status")
+	}
+	if !status.Syncing {
+		log.Info("Beacon node is fully synced, starting slashing detection")
+		return
+	}
 	ticker := time.NewTicker(syncStatusPollingInterval)
 	log.Info("Waiting for beacon node to be fully synced...")
 	for {

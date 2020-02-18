@@ -8,9 +8,9 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestService_ChainHead(t *testing.T) {
@@ -46,6 +46,9 @@ func TestService_QuerySyncStatus(t *testing.T) {
 		nodeClient: client,
 	}
 	syncStatusPollingInterval = time.Millisecond
+	client.EXPECT().GetSyncStatus(gomock.Any(), gomock.Any()).Return(&ethpb.SyncStatus{
+		Syncing: true,
+	}, nil)
 	client.EXPECT().GetSyncStatus(gomock.Any(), gomock.Any()).Return(&ethpb.SyncStatus{
 		Syncing: false,
 	}, nil)
