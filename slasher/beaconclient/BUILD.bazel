@@ -32,6 +32,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "chain_data_test.go",
+        "historical_data_retrieval_test.go",
         "receivers_test.go",
         "service_test.go",
         "submit_test.go",
@@ -40,6 +41,7 @@ go_test(
     deps = [
         "//shared/event:go_default_library",
         "//shared/mock:go_default_library",
+        "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",

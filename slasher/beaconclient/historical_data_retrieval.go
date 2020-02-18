@@ -6,6 +6,8 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"go.opencensus.io/trace"
+
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // RequestHistoricalAttestations requests all indexed attestations for a
@@ -24,6 +26,7 @@ func (bs *Service) RequestHistoricalAttestations(
 			QueryFilter: &ethpb.ListIndexedAttestationsRequest_TargetEpoch{
 				TargetEpoch: epoch,
 			},
+			PageSize:  int32(params.BeaconConfig().DefaultPageSize),
 			PageToken: res.NextPageToken,
 		})
 		if err != nil {
