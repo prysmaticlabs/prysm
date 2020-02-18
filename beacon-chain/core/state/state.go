@@ -5,6 +5,7 @@ package state
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -65,6 +66,9 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 	// Process initial deposits.
 	leaves := [][]byte{}
 	for _, deposit := range deposits {
+		if deposit == nil || deposit.Data == nil {
+			return nil, fmt.Errorf("nil deposit or deposit with nil data cannot be processed: %v", deposit)
+		}
 		hash, err := ssz.HashTreeRoot(deposit.Data)
 		if err != nil {
 			return nil, err
