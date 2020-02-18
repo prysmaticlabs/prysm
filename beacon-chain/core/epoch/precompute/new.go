@@ -15,7 +15,6 @@ import (
 func New(ctx context.Context, state *stateTrie.BeaconState) ([]*Validator, *Balance) {
 	ctx, span := trace.StartSpan(ctx, "precomputeEpoch.New")
 	defer span.End()
-
 	vp := make([]*Validator, state.NumValidators())
 	bp := &Balance{}
 
