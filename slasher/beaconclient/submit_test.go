@@ -60,7 +60,7 @@ func TestService_SubscribeDetectedAttesterSlashings(t *testing.T) {
 	client := mock.NewMockBeaconChainClient(ctrl)
 
 	bs := Service{
-		client:                client,
+		beaconClient:          client,
 		attesterSlashingsFeed: new(event.Feed),
 	}
 
