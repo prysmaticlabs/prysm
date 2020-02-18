@@ -54,7 +54,7 @@ func TestIsValidGenesisState_100000(t *testing.T) {
 	var chainStartDepositCount, currentTime uint64
 	for i := 0; i < 100000; i++ {
 		fuzzer.Fuzz(&chainStartDepositCount)
-		fuzzer.Fuzz(&chainStartDepositCount)
+		fuzzer.Fuzz(&currentTime)
 		IsValidGenesisState(chainStartDepositCount, currentTime)
 	}
 }
