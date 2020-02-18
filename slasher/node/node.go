@@ -175,6 +175,8 @@ func (s *SlasherNode) registerDetectionService() error {
 	}
 	ds := detection.NewDetectionService(context.Background(), &detection.Config{
 		Notifier:              bs,
+		HistoricalDataFetcher: bs,
+		ChainFetcher:          bs,
 		AttesterSlashingsFeed: s.attesterSlashingsFeed,
 		ProposerSlashingsFeed: s.proposerSlashingsFeed,
 	})

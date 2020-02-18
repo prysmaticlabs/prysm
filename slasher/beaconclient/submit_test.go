@@ -19,7 +19,7 @@ func TestService_SubscribeDetectedProposerSlashings(t *testing.T) {
 	client := mock.NewMockBeaconChainClient(ctrl)
 
 	bs := Service{
-		client:                client,
+		beaconClient:          client,
 		proposerSlashingsFeed: new(event.Feed),
 	}
 

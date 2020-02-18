@@ -370,7 +370,7 @@ index 0099328..8b8c6eb 100644
      // Indices of validators ejected in the given epoch.
      repeated uint64 ejected_indices = 9;
 @@ -663,11 +663,11 @@ message ValidatorQueue {
- 
+
      // Ordered list of 48 byte public keys awaiting activation. 0th index is the
      // next key to be processed.
 -    repeated bytes activation_public_keys = 2;
