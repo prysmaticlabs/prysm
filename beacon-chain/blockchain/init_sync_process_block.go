@@ -63,30 +63,7 @@ func (s *Service) filterBoundaryCandidates(ctx context.Context, root [32]byte, p
 		previousSlot = helpers.RoundUpToNearestEpoch(previousSlot)
 		if postState.Slot()-previousSlot > epochLength {
 			targetSlot := postState.Slot()
-			tempRoots := [][32]byte{}
-
-			// Loop through current states to filter for valid boundary states.
-			for i := len(stateSlice) - 1; stateSlice[i] != previousBoundaryRoot && i >= 0; i-- {
-				currentSlot := s.initSyncState[stateSlice[i]].Slot()
-				// Skip if the current slot is larger than the previous epoch
-				// boundary.
-				if currentSlot > targetSlot-epochLength {
-					continue
-				}
-				tempRoots = append(tempRoots, stateSlice[i])
-
-				// Switch target slot if the current slot is greater than
-				// 1 epoch boundary from the previously saved boundary slot.
-				if currentSlot > previousSlot+epochLength {
-					currentSlot = helpers.RoundUpToNearestEpoch(currentSlot)
-					targetSlot = currentSlot
-					continue
-				}
-				break
-			}
-			// Reverse to append the roots in ascending order corresponding
-			// to the respective slots.
-			tempRoots = bytesutil.ReverseBytes32Slice(tempRoots)
+			tempRoots := s.loopThroughCandidates(stateSlice, previousBoundaryRoot, previousSlot, targetSlot)
 			s.boundaryRoots = append(s.boundaryRoots, tempRoots...)
 		}
 	}
@@ -94,6 +71,36 @@ func (s *Service) filterBoundaryCandidates(ctx context.Context, root [32]byte, p
 	s.pruneOldStates()
 	s.pruneNonBoundaryStates()
 
+}
+
+func (s *Service) loopThroughCandidates(stateSlice [][32]byte, previousBoundaryRoot [32]byte,
+	previousSlot uint64, targetSlot uint64) [][32]byte {
+	tempRoots := [][32]byte{}
+	epochLength := params.BeaconConfig().SlotsPerEpoch
+
+	// Loop through current states to filter for valid boundary states.
+	for i := len(stateSlice) - 1; stateSlice[i] != previousBoundaryRoot && i >= 0; i-- {
+		currentSlot := s.initSyncState[stateSlice[i]].Slot()
+		// Skip if the current slot is larger than the previous epoch
+		// boundary.
+		if currentSlot > targetSlot-epochLength {
+			continue
+		}
+		tempRoots = append(tempRoots, stateSlice[i])
+
+		// Switch target slot if the current slot is greater than
+		// 1 epoch boundary from the previously saved boundary slot.
+		if currentSlot > previousSlot+epochLength {
+			currentSlot = helpers.RoundUpToNearestEpoch(currentSlot)
+			targetSlot = currentSlot
+			continue
+		}
+		break
+	}
+	// Reverse to append the roots in ascending order corresponding
+	// to the respective slots.
+	tempRoots = bytesutil.ReverseBytes32Slice(tempRoots)
+	return tempRoots
 }
 
 // prune for states past the current finalized checkpoint.
