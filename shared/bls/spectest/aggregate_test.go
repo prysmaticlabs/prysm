@@ -11,8 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func TestAggregateSignaturesYaml(t *testing.T) {
-	testFolders, testFolderPath := testutil.TestFolders(t, "general", "bls/aggregate_sigs/small")
+func TestAggregateYaml(t *testing.T) {
+	testFolders, testFolderPath := testutil.TestFolders(t, "general", "bls/aggregate/small")
 
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
@@ -21,7 +21,7 @@ func TestAggregateSignaturesYaml(t *testing.T) {
 				t.Fatalf("Failed to read file: %v", err)
 			}
 
-			test := &AggregateSigsTest{}
+			test := &AggregateTest{}
 			if err := yaml.Unmarshal(file, test); err != nil {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}

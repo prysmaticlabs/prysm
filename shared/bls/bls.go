@@ -55,6 +55,12 @@ type SecretKey struct {
 	p *bls12.SecretKey
 }
 
+// KeyMessagePair
+type KeyMessagePair struct {
+	pubkey  *PublicKey
+	message [32]byte
+}
+
 // RandKey creates a new private key using a random method provided as an io.Reader.
 func RandKey() *SecretKey {
 	secKey := &bls12.SecretKey{}
@@ -208,6 +214,29 @@ func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg [][32]byte) bool {
 	return s.s.VerifyAggregateHashes(rawKeys, hashes)
 }
 
+// AggregateVerify verifies each public key against its respective message.
+// This is vulnerable to rogue public-key attack. Each user must
+// provide a proof-of-knowledge of the public key.
+func (s *Signature) AggregateVerify(pubKeys []*PublicKey, msgs [][32]byte) bool {
+	if featureconfig.Get().SkipBLSVerify {
+		return true
+	}
+	size := len(pubKeys)
+	if size == 0 {
+		return false
+	}
+	if size != len(msgs) {
+		return false
+	}
+	msgSlices := []byte{}
+	var rawKeys []bls12.PublicKey
+	for i := 0; i < size; i++ {
+		msgSlices = append(msgSlices, msgs[i][:]...)
+		rawKeys = append(rawKeys, *pubKeys[i].p)
+	}
+	return s.s.AggregateVerify(rawKeys, msgSlices)
+}
+
 // FastAggregateVerify verifies all the provided pubkeys with their aggregated signature.
 func (s *Signature) FastAggregateVerify(pubKeys []*PublicKey, msg [32]byte) bool {
 	if featureconfig.Get().SkipBLSVerify {
@@ -217,13 +246,12 @@ func (s *Signature) FastAggregateVerify(pubKeys []*PublicKey, msg [32]byte) bool
 		return false
 	}
 	//#nosec G104
-	aggregated, _ := pubKeys[0].Copy()
-
-	for i := 1; i < len(pubKeys); i++ {
-		aggregated.p.Add(pubKeys[i].p)
+	rawKeys := make([]bls12.PublicKey, len(pubKeys))
+	for i := 0; i < len(pubKeys); i++ {
+		rawKeys[i] = *pubKeys[i].p
 	}
 
-	return s.s.VerifyByte(aggregated.p, msg[:])
+	return s.s.FastAggregateVerify(rawKeys, msg[:])
 }
 
 func (s *Signature) RawSignature() *bls12.Sign {
