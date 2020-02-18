@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/stategen"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -165,7 +164,6 @@ func (s *Service) generateState(ctx context.Context, startRoot [32]byte, endRoot
 	if preState == nil {
 		return nil, errors.New("finalized state does not exist in db")
 	}
-
 	endBlock, err := s.beaconDB.Block(ctx, endRoot)
 	if err != nil {
 		return nil, err
@@ -173,12 +171,15 @@ func (s *Service) generateState(ctx context.Context, startRoot [32]byte, endRoot
 	if endBlock == nil {
 		return nil, errors.New("provided block root does not have block saved in the db")
 	}
-	stGen := stategen.New(s.beaconDB)
-
 	log.Warnf("Generating missing state of slot %d and root %#x", endBlock.Block.Slot, endRoot)
-	postState, err := stGen.GenerateState(ctx, preState, endBlock)
+
+	blocks, err := s.stateGen.LoadBlocks(ctx, preState.Slot()+1, endBlock.Block.Slot, endRoot)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not generate state")
+		return nil, errors.Wrap(err, "could not load the required blocks")
+	}
+	postState, err := s.stateGen.ReplayBlocks(ctx, preState, blocks, endBlock.Block.Slot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not replay the blocks to generate the resultant state")
 	}
 	return postState, nil
 }

@@ -30,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/stategen"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -68,6 +69,7 @@ type Service struct {
 	initSyncStateLock      sync.RWMutex
 	checkpointState        *cache.CheckpointStateCache
 	checkpointStateLock    sync.Mutex
+	stateGen               *stategen.State
 }
 
 // Config options for the service.
@@ -104,6 +106,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		initSyncState:      make(map[[32]byte]*stateTrie.BeaconState),
 		boundaryRoots:      [][32]byte{},
 		checkpointState:    cache.NewCheckpointStateCache(),
+		stateGen:           stategen.New(cfg.BeaconDB),
 	}, nil
 }
 
