@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -133,7 +132,6 @@ func (bs *Server) ListIndexedAttestations(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
 		}
-		logrus.Infof("Retrieving for %d and got %d", q.TargetEpoch, len(atts))
 		epoch = q.TargetEpoch
 	case *ethpb.ListIndexedAttestationsRequest_GenesisEpoch:
 		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetTargetEpoch(0))
