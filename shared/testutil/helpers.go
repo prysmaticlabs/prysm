@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // RandaoReveal returns a signature of the requested epoch using the beacon proposer private key.
@@ -26,9 +25,9 @@ func RandaoReveal(beaconState *stateTrie.BeaconState, epoch uint64, privKeys []*
 	}
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainRandao)
+	//domain := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainRandao)
 	// We make the previous validator's index sign the message instead of the proposer.
-	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
+	epochSignature := privKeys[proposerIdx].Sign(buf)
 	return epochSignature.Marshal(), nil
 }
 
@@ -59,11 +58,11 @@ func BlockSignature(
 	if err != nil {
 		return nil, err
 	}
-	domain := helpers.Domain(bState.Fork(), helpers.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer)
+	//domain := helpers.Domain(bState.Fork(), helpers.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer)
 	if err := bState.SetSlot(currentSlot); err != nil {
 		return nil, err
 	}
-	return privKeys[proposerIdx].Sign(blockRoot[:], domain), nil
+	return privKeys[proposerIdx].Sign(blockRoot[:]), nil
 }
 
 // Random32Bytes generates a random 32 byte slice.

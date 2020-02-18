@@ -1,12 +1,12 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
-# gazelle:ignore
 go_library(
     name = "go_default_library",
     testonly = True,
     srcs = [
         "aggregate_pubkeys_test.yaml.go",
         "aggregate_sigs_test.yaml.go",
+        "fast_aggregate_verify_test.yaml.go",
         "msg_hash_compressed_test.yaml.go",
         "msg_hash_uncompressed_test.yaml.go",
         "priv_to_pub_test.yaml.go",
@@ -23,6 +23,7 @@ go_test(
     srcs = [
         "aggregate_pubkeys_test.go",
         "aggregate_sigs_test.go",
+        "fast_aggregate_verify_test.go",
         "msg_hash_compressed_test.go",
         "msg_hash_uncompressed_test.go",
         "priv_to_pub_test.go",
@@ -35,7 +36,7 @@ go_test(
     embed = [":go_default_library"],
     tags = ["spectest"],
     deps = [
-        "//shared/bls_new:go_default_library",
+        "//shared/bls:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_ghodss_yaml//:go_default_library",

@@ -39,7 +39,7 @@ var eth1DataCache = cache.NewEth1DataVoteCache()
 // failed to verify.
 var ErrSigFailedToVerify = errors.New("signature did not verify")
 
-func verifySigningRoot(obj interface{}, pub []byte, signature []byte, domain uint64) error {
+func verifySigningRoot(obj interface{}, pub []byte, signature []byte, _ uint64) error {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to public key")
@@ -52,14 +52,14 @@ func verifySigningRoot(obj interface{}, pub []byte, signature []byte, domain uin
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root")
 	}
-	if !sig.Verify(root[:], publicKey, domain) {
+	if !sig.Verify(root[:], publicKey) {
 		return ErrSigFailedToVerify
 	}
 	return nil
 }
 
 // Deprecated: This method uses deprecated ssz.SigningRoot.
-func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, pub []byte, signature []byte, domain uint64) error {
+func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, pub []byte, signature []byte, _ uint64) error {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to public key")
@@ -72,13 +72,13 @@ func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, pub []byte, signature
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root")
 	}
-	if !sig.Verify(root[:], publicKey, domain) {
+	if !sig.Verify(root[:], publicKey) {
 		return ErrSigFailedToVerify
 	}
 	return nil
 }
 
-func verifySignature(signedData []byte, pub []byte, signature []byte, domain uint64) error {
+func verifySignature(signedData []byte, pub []byte, signature []byte, _ uint64) error {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to public key")
@@ -87,7 +87,7 @@ func verifySignature(signedData []byte, pub []byte, signature []byte, domain uin
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
-	if !sig.Verify(signedData, publicKey, domain) {
+	if !sig.Verify(signedData, publicKey) {
 		return ErrSigFailedToVerify
 	}
 	return nil
@@ -765,7 +765,7 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 		return errors.New("attesting indices is not uniquely sorted")
 	}
 
-	domain := helpers.Domain(beaconState.Fork(), indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
+	//domain := helpers.Domain(beaconState.Fork(), indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
 	var pubkey *bls.PublicKey
 	var err error
 	if len(indices) > 0 {
@@ -795,7 +795,7 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 	}
 
 	voted := len(indices) > 0
-	if voted && !sig.Verify(messageHash[:], pubkey, domain) {
+	if voted && !sig.Verify(messageHash[:], pubkey) {
 		return ErrSigFailedToVerify
 	}
 	return nil

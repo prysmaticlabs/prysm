@@ -160,7 +160,7 @@ func generateProposerSlashings(
 	privs []*bls.SecretKey,
 	numSlashings uint64,
 ) ([]*ethpb.ProposerSlashing, error) {
-	currentEpoch := helpers.CurrentEpoch(bState)
+	//currentEpoch := helpers.CurrentEpoch(bState)
 
 	proposerSlashings := make([]*ethpb.ProposerSlashing, numSlashings)
 	for i := uint64(0); i < numSlashings; i++ {
@@ -178,8 +178,8 @@ func generateProposerSlashings(
 		if err != nil {
 			return nil, err
 		}
-		domain := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
-		header1.Signature = privs[proposerIndex].Sign(root[:], domain).Marshal()
+		//domain := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+		header1.Signature = privs[proposerIndex].Sign(root[:]).Marshal()
 
 		header2 := &ethpb.SignedBeaconBlockHeader{
 			Header: &ethpb.BeaconBlockHeader{
@@ -191,7 +191,7 @@ func generateProposerSlashings(
 		if err != nil {
 			return nil, err
 		}
-		header2.Signature = privs[proposerIndex].Sign(root[:], domain).Marshal()
+		header2.Signature = privs[proposerIndex].Sign(root[:]).Marshal()
 
 		slashing := &ethpb.ProposerSlashing{
 			ProposerIndex: proposerIndex,
@@ -241,8 +241,8 @@ func generateAttesterSlashings(
 		if err != nil {
 			return nil, err
 		}
-		domain := helpers.Domain(bState.Fork(), i, params.BeaconConfig().DomainBeaconAttester)
-		sig := privs[valIndex].Sign(dataRoot[:], domain)
+		//domain := helpers.Domain(bState.Fork(), i, params.BeaconConfig().DomainBeaconAttester)
+		sig := privs[valIndex].Sign(dataRoot[:])
 		att1.Signature = bls.AggregateSignatures([]*bls.Signature{sig}).Marshal()
 
 		att2 := &ethpb.Attestation{
@@ -264,7 +264,7 @@ func generateAttesterSlashings(
 		if err != nil {
 			return nil, err
 		}
-		sig = privs[valIndex].Sign(dataRoot[:], domain)
+		sig = privs[valIndex].Sign(dataRoot[:])
 		att2.Signature = bls.AggregateSignatures([]*bls.Signature{sig}).Marshal()
 
 		indexedAtt1, err := attestationutil.ConvertToIndexed(context.Background(), att1, committee)
@@ -368,7 +368,7 @@ func GenerateAttestations(bState *stateTrie.BeaconState, privs []*bls.SecretKey,
 		)
 	}
 
-	domain := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester)
+	//domain := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester)
 	fmt.Printf("Justified: %d\n", bState.CurrentJustifiedCheckpoint().Epoch)
 	for c := uint64(0); c < committeesPerSlot && c < numToGen; c++ {
 		committee, err := helpers.BeaconCommitteeFromState(bState, slot, c)
@@ -399,7 +399,7 @@ func GenerateAttestations(bState *stateTrie.BeaconState, privs []*bls.SecretKey,
 			sigs := []*bls.Signature{}
 			for b := i; b < i+bitsPerAtt; b++ {
 				aggregationBits.SetBitAt(b, true)
-				sigs = append(sigs, privs[committee[b]].Sign(dataRoot[:], domain))
+				sigs = append(sigs, privs[committee[b]].Sign(dataRoot[:]))
 			}
 
 			// bls.AggregateSignatures will return nil if sigs is 0.
@@ -443,7 +443,7 @@ func generateVoluntaryExits(
 	privs []*bls.SecretKey,
 	numExits uint64,
 ) ([]*ethpb.SignedVoluntaryExit, error) {
-	currentEpoch := helpers.CurrentEpoch(bState)
+	//currentEpoch := helpers.CurrentEpoch(bState)
 
 	voluntaryExits := make([]*ethpb.SignedVoluntaryExit, numExits)
 	for i := 0; i < len(voluntaryExits); i++ {
@@ -461,8 +461,8 @@ func generateVoluntaryExits(
 		if err != nil {
 			return nil, err
 		}
-		domain := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainVoluntaryExit)
-		exit.Signature = privs[valIndex].Sign(root[:], domain).Marshal()
+		//domain := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainVoluntaryExit)
+		exit.Signature = privs[valIndex].Sign(root[:]).Marshal()
 		voluntaryExits[i] = exit
 	}
 	return voluntaryExits, nil

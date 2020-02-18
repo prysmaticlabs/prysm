@@ -124,12 +124,12 @@ func AggregateAttestation(a1 *ethpb.Attestation, a2 *ethpb.Attestation) (*ethpb.
 //    domain = get_domain(state, DOMAIN_BEACON_ATTESTER, compute_epoch_at_slot(slot))
 //    return bls_sign(privkey, hash_tree_root(slot), domain)
 func SlotSignature(state *stateTrie.BeaconState, slot uint64, privKey *bls.SecretKey) (*bls.Signature, error) {
-	d := Domain(state.Fork(), CurrentEpoch(state), params.BeaconConfig().DomainBeaconAttester)
+	//d := Domain(state.Fork(), CurrentEpoch(state), params.BeaconConfig().DomainBeaconAttester)
 	s, err := ssz.HashTreeRoot(slot)
 	if err != nil {
 		return nil, err
 	}
-	return privKey.Sign(s[:], d), nil
+	return privKey.Sign(s[:]), nil
 }
 
 // IsAggregator returns true if the signature is from the input validator. The committee
