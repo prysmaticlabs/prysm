@@ -20,7 +20,6 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -310,14 +309,6 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 }
 
 func TestAttestationDataSlot_handlesInProgressRequest(t *testing.T) {
-	// Cache toggled by feature flag for now. See https://github.com/prysmaticlabs/prysm/issues/3106.
-	featureconfig.Init(&featureconfig.Flags{
-		EnableAttestationCache: true,
-	})
-	defer func() {
-		featureconfig.Init(nil)
-	}()
-
 	s := &pbp2p.BeaconState{Slot: 100}
 	state, _ := beaconstate.InitializeFromProto(s)
 	ctx := context.Background()

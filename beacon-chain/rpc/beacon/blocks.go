@@ -182,7 +182,7 @@ func (bs *Server) StreamBlocks(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamB
 		select {
 		case event := <-blocksChannel:
 			if event.Type == blockfeed.ReceivedBlock {
-				data, ok := event.Data.(*blockfeed.ReceivedBlockData)
+				data, ok := event.Data.(blockfeed.ReceivedBlockData)
 				if !ok {
 					return status.Errorf(
 						codes.FailedPrecondition,
@@ -194,7 +194,7 @@ func (bs *Server) StreamBlocks(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamB
 					// One nil block shouldn't stop the stream.
 					continue
 				}
-				if err := stream.Send(data.SignedBlock.Block); err != nil {
+				if err := stream.Send(data.SignedBlock); err != nil {
 					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
 				}
 			}
@@ -237,7 +237,10 @@ func (bs *Server) StreamChainHead(_ *ptypes.Empty, stream ethpb.BeaconChain_Stre
 
 // Retrieve chain head information from the DB and the current beacon state.
 func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, error) {
-	headBlock := bs.HeadFetcher.HeadBlock()
+	headBlock, err := bs.HeadFetcher.HeadBlock(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get head block")
+	}
 	if headBlock == nil {
 		return nil, status.Error(codes.Internal, "Head block of chain was nil")
 	}

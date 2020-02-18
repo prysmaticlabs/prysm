@@ -12,6 +12,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/memorypool"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/stateutil"
 )
@@ -24,6 +25,10 @@ import (
 type reference struct {
 	refs uint
 }
+
+// ErrNilInnerState returns when the inner state is nil and no copy set or get
+// operations can be performed on state.
+var ErrNilInnerState = errors.New("nil inner state")
 
 // BeaconState defines a struct containing utilities for the eth2 chain state, defining
 // getters and setters for its respective values and helpful functions such as HashTreeRoot().
@@ -79,6 +84,9 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 
 // Copy returns a deep copy of the beacon state.
 func (b *BeaconState) Copy() *BeaconState {
+	if !b.HasInnerState() {
+		return nil
+	}
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
@@ -141,8 +149,11 @@ func (b *BeaconState) Copy() *BeaconState {
 
 	// Finalizer runs when dst is being destroyed in garbage collection.
 	runtime.SetFinalizer(dst, func(b *BeaconState) {
-		for _, v := range b.sharedFieldReferences {
+		for field, v := range b.sharedFieldReferences {
 			v.refs--
+			if field == randaoMixes && v.refs == 0 {
+				memorypool.PutDoubleByteSlice(b.state.RandaoMixes)
+			}
 		}
 	})
 

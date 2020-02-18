@@ -24,6 +24,10 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// ValidatorSummary tracks validator's attesting summary on per epoch basis. This
+// gets updated during epoch transition.
+var ValidatorSummary []*precompute.Validator
+
 // ExecuteStateTransition defines the procedure for a state transition function.
 //
 // Spec pseudocode definition:
@@ -118,7 +122,7 @@ func ExecuteStateTransitionNoVerifyAttSigs(
 	}
 
 	// Execute per block transition.
-	state, err = processBlockNoVerifyAttSigs(ctx, state, signed)
+	state, err = ProcessBlockNoVerifyAttSigs(ctx, state, signed)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block")
 	}
@@ -152,6 +156,9 @@ func CalculateStateRoot(
 	if ctx.Err() != nil {
 		traceutil.AnnotateError(span, ctx.Err())
 		return [32]byte{}, ctx.Err()
+	}
+	if state == nil {
+		return [32]byte{}, errors.New("nil state")
 	}
 	if signed == nil || signed.Block == nil {
 		return [32]byte{}, errors.New("nil block")
@@ -248,6 +255,9 @@ func ProcessSlot(ctx context.Context, state *stateTrie.BeaconState) (*stateTrie.
 func ProcessSlots(ctx context.Context, state *stateTrie.BeaconState, slot uint64) (*stateTrie.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ProcessSlots")
 	defer span.End()
+	if state == nil {
+		return nil, errors.New("nil state")
+	}
 	span.AddAttributes(trace.Int64Attribute("slots", int64(slot)-int64(state.Slot())))
 
 	if state.Slot() > slot {
@@ -364,7 +374,7 @@ func ProcessBlock(
 	return state, nil
 }
 
-// processBlockNoVerifyAttSigs creates a new, modified beacon state by applying block operation
+// ProcessBlockNoVerifyAttSigs creates a new, modified beacon state by applying block operation
 // transformations as defined in the Ethereum Serenity specification. It does not validate
 // block attestation signatures.
 //
@@ -375,7 +385,7 @@ func ProcessBlock(
 //    process_randao(state, block.body)
 //    process_eth1_data(state, block.body)
 //    process_operations(state, block.body)
-func processBlockNoVerifyAttSigs(
+func ProcessBlockNoVerifyAttSigs(
 	ctx context.Context,
 	state *stateTrie.BeaconState,
 	signed *ethpb.SignedBeaconBlock,
@@ -559,11 +569,14 @@ func verifyOperationLengths(state *stateTrie.BeaconState, body *ethpb.BeaconBloc
 			params.BeaconConfig().MaxVoluntaryExits,
 		)
 	}
-
-	if state.Eth1DepositIndex() > state.Eth1Data().DepositCount {
-		return fmt.Errorf("expected state.deposit_index %d <= eth1data.deposit_count %d", state.Eth1DepositIndex(), state.Eth1Data().DepositCount)
+	eth1Data := state.Eth1Data()
+	if eth1Data == nil {
+		return errors.New("nil eth1data in state")
 	}
-	maxDeposits := mathutil.Min(params.BeaconConfig().MaxDeposits, state.Eth1Data().DepositCount-state.Eth1DepositIndex())
+	if state.Eth1DepositIndex() > eth1Data.DepositCount {
+		return fmt.Errorf("expected state.deposit_index %d <= eth1data.deposit_count %d", state.Eth1DepositIndex(), eth1Data.DepositCount)
+	}
+	maxDeposits := mathutil.Min(params.BeaconConfig().MaxDeposits, eth1Data.DepositCount-state.Eth1DepositIndex())
 	// Verify outstanding deposits are processed up to max number of deposits
 	if len(body.Deposits) != int(maxDeposits) {
 		return fmt.Errorf("incorrect outstanding deposits in block body, wanted: %d, got: %d",
@@ -589,11 +602,16 @@ func ProcessEpochPrecompute(ctx context.Context, state *stateTrie.BeaconState) (
 	defer span.End()
 	span.AddAttributes(trace.Int64Attribute("epoch", int64(helpers.CurrentEpoch(state))))
 
+	if state == nil {
+		return nil, errors.New("nil state")
+	}
 	vp, bp := precompute.New(ctx, state)
 	vp, bp, err := precompute.ProcessAttestations(ctx, state, vp, bp)
 	if err != nil {
 		return nil, err
 	}
+
+	ValidatorSummary = vp
 
 	state, err = precompute.ProcessJustificationAndFinalizationPreCompute(state, bp)
 	if err != nil {

@@ -29,7 +29,6 @@ import (
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -292,7 +291,7 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s, err := bc.beaconDB.State(ctx, bytesutil.ToBytes32(bc.canonicalRoots[0]))
+	s, err := bc.beaconDB.State(ctx, bc.headRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -306,11 +305,15 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 	if _, err := bc.HeadState(ctx); err != nil {
 		t.Error(err)
 	}
-	if bc.HeadBlock() == nil {
+	headBlk, err := bc.HeadBlock(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if headBlk == nil {
 		t.Error("Head state can't be nil after initialize beacon chain")
 	}
-	if bc.canonicalRoots[0] == nil {
-		t.Error("Canonical root for slot 0 can't be nil after initialize beacon chain")
+	if bc.headRoot() == params.BeaconConfig().ZeroHash {
+		t.Error("Canonical root for slot 0 can't be zeros after initialize beacon chain")
 	}
 }
 
@@ -353,11 +356,15 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	if err := db.SaveBlock(ctx, headBlock); err != nil {
 		t.Fatal(err)
 	}
-	c := &Service{beaconDB: db, canonicalRoots: make(map[uint64][]byte)}
+	c := &Service{beaconDB: db}
 	if err := c.initializeChainInfo(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(c.HeadBlock(), headBlock) {
+	headBlk, err := c.HeadBlock(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(headBlk, headBlock) {
 		t.Error("head block incorrect")
 	}
 	s, err := c.HeadState(ctx)
@@ -387,11 +394,13 @@ func TestChainService_SaveHeadNoDB(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 	s := &Service{
-		beaconDB:       db,
-		canonicalRoots: make(map[uint64][]byte),
+		beaconDB: db,
 	}
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 1}}
 	r, _ := ssz.HashTreeRoot(b)
+	state := &pb.BeaconState{}
+	newState, err := beaconstate.InitializeFromProto(state)
+	s.beaconDB.SaveState(ctx, newState, r)
 	if err := s.saveHeadNoDB(ctx, b, r); err != nil {
 		t.Fatal(err)
 	}

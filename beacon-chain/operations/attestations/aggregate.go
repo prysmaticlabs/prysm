@@ -46,10 +46,14 @@ func (s *Service) aggregateAttestations(ctx context.Context, attsToBeAggregated 
 			return err
 		}
 		attsByRoot[attDataRoot] = append(attsByRoot[attDataRoot], att)
+	}
 
-		if !helpers.IsAggregated(att) {
-			if err := s.pool.DeleteUnaggregatedAttestation(att); err != nil {
-				return err
+	for _, atts := range attsByRoot {
+		for _, att := range atts {
+			if !helpers.IsAggregated(att) && len(atts) > 1 {
+				if err := s.pool.DeleteUnaggregatedAttestation(att); err != nil {
+					return err
+				}
 			}
 		}
 	}

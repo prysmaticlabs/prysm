@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/memorypool"
 )
 
 // EffectiveBalance returns the effective balance of the
@@ -63,15 +64,15 @@ func (v *ReadOnlyValidator) Slashed() bool {
 // InnerStateUnsafe returns the pointer value of the underlying
 // beacon state proto object, bypassing immutability. Use with care.
 func (b *BeaconState) InnerStateUnsafe() *pbp2p.BeaconState {
-	if b.state == nil {
-		return &pbp2p.BeaconState{}
+	if b == nil {
+		return nil
 	}
 	return b.state
 }
 
 // CloneInnerState the beacon state into a protobuf for usage.
 func (b *BeaconState) CloneInnerState() *pbp2p.BeaconState {
-	if b.state == nil {
+	if b == nil || b.state == nil {
 		return nil
 	}
 	return &pbp2p.BeaconState{
@@ -106,16 +107,25 @@ func (b *BeaconState) HasInnerState() bool {
 
 // GenesisTime of the beacon state as a uint64.
 func (b *BeaconState) GenesisTime() uint64 {
+	if !b.HasInnerState() {
+		return 0
+	}
 	return b.state.GenesisTime
 }
 
 // Slot of the current beacon chain state.
 func (b *BeaconState) Slot() uint64 {
+	if !b.HasInnerState() {
+		return 0
+	}
 	return b.state.Slot
 }
 
 // Fork version of the beacon chain.
 func (b *BeaconState) Fork() *pbp2p.Fork {
+	if !b.HasInnerState() {
+		return nil
+	}
 	if b.state.Fork == nil {
 		return nil
 	}
@@ -136,6 +146,9 @@ func (b *BeaconState) Fork() *pbp2p.Fork {
 
 // LatestBlockHeader stored within the beacon state.
 func (b *BeaconState) LatestBlockHeader() *ethpb.BeaconBlockHeader {
+	if !b.HasInnerState() {
+		return nil
+	}
 	if b.state.LatestBlockHeader == nil {
 		return nil
 	}
@@ -162,6 +175,9 @@ func (b *BeaconState) LatestBlockHeader() *ethpb.BeaconBlockHeader {
 
 // BlockRoots kept track of in the beacon state.
 func (b *BeaconState) BlockRoots() [][]byte {
+	if !b.HasInnerState() {
+		return nil
+	}
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
@@ -180,6 +196,9 @@ func (b *BeaconState) BlockRoots() [][]byte {
 // BlockRootAtIndex retrieves a specific block root based on an
 // input index value.
 func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
+	if !b.HasInnerState() {
+		return nil, ErrNilInnerState
+	}
 	if b.state.BlockRoots == nil {
 		return nil, nil
 	}
@@ -197,6 +216,9 @@ func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
 
 // StateRoots kept track of in the beacon state.
 func (b *BeaconState) StateRoots() [][]byte {
+	if !b.HasInnerState() {
+		return nil
+	}
 	if b.state.StateRoots == nil {
 		return nil
 	}
@@ -215,6 +237,9 @@ func (b *BeaconState) StateRoots() [][]byte {
 
 // HistoricalRoots based on epochs stored in the beacon state.
 func (b *BeaconState) HistoricalRoots() [][]byte {
+	if !b.HasInnerState() {
+		return nil
+	}
 	if b.state.HistoricalRoots == nil {
 		return nil
 	}
@@ -233,6 +258,9 @@ func (b *BeaconState) HistoricalRoots() [][]byte {
 
 // Eth1Data corresponding to the proof-of-work chain information stored in the beacon state.
 func (b *BeaconState) Eth1Data() *ethpb.Eth1Data {
+	if !b.HasInnerState() {
+		return nil
+	}
 	if b.state.Eth1Data == nil {
 		return nil
 	}
@@ -242,6 +270,9 @@ func (b *BeaconState) Eth1Data() *ethpb.Eth1Data {
 // Eth1DataVotes corresponds to votes from eth2 on the canonical proof-of-work chain
 // data retrieved from eth1.
 func (b *BeaconState) Eth1DataVotes() []*ethpb.Eth1Data {
+	if !b.HasInnerState() {
+		return nil
+	}
 	if b.state.Eth1DataVotes == nil {
 		return nil
 	}
@@ -255,11 +286,17 @@ func (b *BeaconState) Eth1DataVotes() []*ethpb.Eth1Data {
 // Eth1DepositIndex corresponds to the index of the deposit made to the
 // validator deposit contract at the time of this state's eth1 data.
 func (b *BeaconState) Eth1DepositIndex() uint64 {
+	if !b.HasInnerState() {
+		return 0
+	}
 	return b.state.Eth1DepositIndex
 }
 
 // Validators participating in consensus on the beacon chain.
 func (b *BeaconState) Validators() []*ethpb.Validator {
+	if !b.HasInnerState() {
+		return nil
+	}
 	if b.state.Validators == nil {
 		return nil
 	}
@@ -294,6 +331,9 @@ func (b *BeaconState) Validators() []*ethpb.Validator {
 // ValidatorsReadOnly returns validators participating in consensus on the beacon chain. This
 // method doesn't clone the respective validators and returns read only references to the validators.
 func (b *BeaconState) ValidatorsReadOnly() []*ReadOnlyValidator {
+	if !b.HasInnerState() {
+		return nil
+	}
 	if b.state.Validators == nil {
 		return nil
 	}
@@ -311,6 +351,9 @@ func (b *BeaconState) ValidatorsReadOnly() []*ReadOnlyValidator {
 
 // ValidatorAtIndex is the validator at the provided index.
 func (b *BeaconState) ValidatorAtIndex(idx uint64) (*ethpb.Validator, error) {
+	if !b.HasInnerState() {
+		return nil, ErrNilInnerState
+	}
 	if b.state.Validators == nil {
 		return &ethpb.Validator{}, nil
 	}
@@ -341,6 +384,9 @@ func (b *BeaconState) ValidatorAtIndex(idx uint64) (*ethpb.Validator, error) {
 // ValidatorAtIndexReadOnly is the validator at the provided index.This method
 // doesn't clone the validator.
 func (b *BeaconState) ValidatorAtIndexReadOnly(idx uint64) (*ReadOnlyValidator, error) {
+	if !b.HasInnerState() {
+		return nil, ErrNilInnerState
+	}
 	if b.state.Validators == nil {
 		return &ReadOnlyValidator{}, nil
 	}
@@ -377,6 +423,9 @@ func (b *BeaconState) validatorIndexMap() map[[48]byte]uint64 {
 // PubkeyAtIndex returns the pubkey at the given
 // validator index.
 func (b *BeaconState) PubkeyAtIndex(idx uint64) [48]byte {
+	if !b.HasInnerState() {
+		return [48]byte{}
+	}
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
@@ -385,12 +434,18 @@ func (b *BeaconState) PubkeyAtIndex(idx uint64) [48]byte {
 
 // NumValidators returns the size of the validator registry.
 func (b *BeaconState) NumValidators() int {
+	if !b.HasInnerState() {
+		return 0
+	}
 	return len(b.state.Validators)
 }
 
 // ReadFromEveryValidator reads values from every validator and applies it to the provided function.
 // Warning: This method is potentially unsafe, as it exposes the actual validator registry.
 func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val *ReadOnlyValidator) error) error {
+	if !b.HasInnerState() {
+		return ErrNilInnerState
+	}
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
@@ -405,6 +460,9 @@ func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val *ReadOnlyValida
 
 // Balances of validators participating in consensus on the beacon chain.
 func (b *BeaconState) Balances() []uint64 {
+	if !b.HasInnerState() {
+		return nil
+	}
 	if b.state.Balances == nil {
 		return nil
 	}
@@ -418,6 +476,9 @@ func (b *BeaconState) Balances() []uint64 {
 
 // BalanceAtIndex of validator with the provided index.
 func (b *BeaconState) BalanceAtIndex(idx uint64) (uint64, error) {
+	if !b.HasInnerState() {
+		return 0, ErrNilInnerState
+	}
 	if b.state.Balances == nil {
 		return 0, nil
 	}
@@ -433,6 +494,9 @@ func (b *BeaconState) BalanceAtIndex(idx uint64) (uint64, error) {
 
 // BalancesLength returns the length of the balances slice.
 func (b *BeaconState) BalancesLength() int {
+	if !b.HasInnerState() {
+		return 0
+	}
 	if b.state.Balances == nil {
 		return 0
 	}
@@ -445,6 +509,9 @@ func (b *BeaconState) BalancesLength() int {
 
 // RandaoMixes of block proposers on the beacon chain.
 func (b *BeaconState) RandaoMixes() [][]byte {
+	if !b.HasInnerState() {
+		return nil
+	}
 	if b.state.RandaoMixes == nil {
 		return nil
 	}
@@ -452,7 +519,7 @@ func (b *BeaconState) RandaoMixes() [][]byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	mixes := make([][]byte, len(b.state.RandaoMixes))
+	mixes := memorypool.GetDoubleByteSlice(len(b.state.RandaoMixes))
 	for i, r := range b.state.RandaoMixes {
 		tmpRt := make([]byte, len(r))
 		copy(tmpRt, r)
@@ -464,6 +531,9 @@ func (b *BeaconState) RandaoMixes() [][]byte {
 // RandaoMixAtIndex retrieves a specific block root based on an
 // input index value.
 func (b *BeaconState) RandaoMixAtIndex(idx uint64) ([]byte, error) {
+	if !b.HasInnerState() {
+		return nil, ErrNilInnerState
+	}
 	if b.state.RandaoMixes == nil {
 		return nil, nil
 	}
@@ -481,6 +551,9 @@ func (b *BeaconState) RandaoMixAtIndex(idx uint64) ([]byte, error) {
 
 // RandaoMixesLength returns the length of the randao mixes slice.
 func (b *BeaconState) RandaoMixesLength() int {
+	if !b.HasInnerState() {
+		return 0
+	}
 	if b.state.RandaoMixes == nil {
 		return 0
 	}
@@ -493,6 +566,9 @@ func (b *BeaconState) RandaoMixesLength() int {
 
 // Slashings of validators on the beacon chain.
 func (b *BeaconState) Slashings() []uint64 {
+	if !b.HasInnerState() {
+		return nil
+	}
 	if b.state.Slashings == nil {
 		return nil
 	}
@@ -507,6 +583,9 @@ func (b *BeaconState) Slashings() []uint64 {
 
 // PreviousEpochAttestations corresponding to blocks on the beacon chain.
 func (b *BeaconState) PreviousEpochAttestations() []*pbp2p.PendingAttestation {
+	if !b.HasInnerState() {
+		return nil
+	}
 	if b.state.PreviousEpochAttestations == nil {
 		return nil
 	}
@@ -523,6 +602,9 @@ func (b *BeaconState) PreviousEpochAttestations() []*pbp2p.PendingAttestation {
 
 // CurrentEpochAttestations corresponding to blocks on the beacon chain.
 func (b *BeaconState) CurrentEpochAttestations() []*pbp2p.PendingAttestation {
+	if !b.HasInnerState() {
+		return nil
+	}
 	if b.state.CurrentEpochAttestations == nil {
 		return nil
 	}
@@ -539,6 +621,9 @@ func (b *BeaconState) CurrentEpochAttestations() []*pbp2p.PendingAttestation {
 
 // JustificationBits marking which epochs have been justified in the beacon chain.
 func (b *BeaconState) JustificationBits() bitfield.Bitvector4 {
+	if !b.HasInnerState() {
+		return nil
+	}
 	if b.state.JustificationBits == nil {
 		return nil
 	}
@@ -553,6 +638,9 @@ func (b *BeaconState) JustificationBits() bitfield.Bitvector4 {
 
 // PreviousJustifiedCheckpoint denoting an epoch and block root.
 func (b *BeaconState) PreviousJustifiedCheckpoint() *ethpb.Checkpoint {
+	if !b.HasInnerState() {
+		return nil
+	}
 	if b.state.PreviousJustifiedCheckpoint == nil {
 		return nil
 	}
@@ -565,6 +653,9 @@ func (b *BeaconState) PreviousJustifiedCheckpoint() *ethpb.Checkpoint {
 
 // CurrentJustifiedCheckpoint denoting an epoch and block root.
 func (b *BeaconState) CurrentJustifiedCheckpoint() *ethpb.Checkpoint {
+	if !b.HasInnerState() {
+		return nil
+	}
 	if b.state.CurrentJustifiedCheckpoint == nil {
 		return nil
 	}
@@ -577,6 +668,9 @@ func (b *BeaconState) CurrentJustifiedCheckpoint() *ethpb.Checkpoint {
 
 // FinalizedCheckpoint denoting an epoch and block root.
 func (b *BeaconState) FinalizedCheckpoint() *ethpb.Checkpoint {
+	if !b.HasInnerState() {
+		return nil
+	}
 	if b.state.FinalizedCheckpoint == nil {
 		return nil
 	}
@@ -589,6 +683,9 @@ func (b *BeaconState) FinalizedCheckpoint() *ethpb.Checkpoint {
 
 // FinalizedCheckpointEpoch returns the epoch value of the finalized checkpoint.
 func (b *BeaconState) FinalizedCheckpointEpoch() uint64 {
+	if !b.HasInnerState() {
+		return 0
+	}
 	if b.state.FinalizedCheckpoint == nil {
 		return 0
 	}
@@ -596,90 +693,4 @@ func (b *BeaconState) FinalizedCheckpointEpoch() uint64 {
 	defer b.lock.RUnlock()
 
 	return b.state.FinalizedCheckpoint.Epoch
-}
-
-// CopyETH1Data copies the provided eth1data object.
-func CopyETH1Data(data *ethpb.Eth1Data) *ethpb.Eth1Data {
-	if data == nil {
-		return &ethpb.Eth1Data{}
-	}
-
-	newETH1 := &ethpb.Eth1Data{
-		DepositCount: data.DepositCount,
-	}
-	depositRoot := make([]byte, len(data.DepositRoot))
-	blockHash := make([]byte, len(data.BlockHash))
-
-	copy(depositRoot, data.DepositRoot)
-	copy(blockHash, data.BlockHash)
-
-	newETH1.DepositRoot = depositRoot
-	newETH1.BlockHash = blockHash
-
-	return newETH1
-}
-
-// CopyPendingAttestation copies the provided pending attestation object.
-func CopyPendingAttestation(att *pbp2p.PendingAttestation) *pbp2p.PendingAttestation {
-	if att == nil {
-		return &pbp2p.PendingAttestation{}
-	}
-	aggBytes := []byte(att.AggregationBits)
-	newBitlist := make([]byte, len(aggBytes))
-	copy(newBitlist, aggBytes)
-	blockRoot := [32]byte{}
-	copy(blockRoot[:], att.Data.BeaconBlockRoot)
-	data := &ethpb.AttestationData{
-		Slot:            att.Data.Slot,
-		CommitteeIndex:  att.Data.CommitteeIndex,
-		BeaconBlockRoot: blockRoot[:],
-		Source:          CopyCheckpoint(att.Data.Source),
-		Target:          CopyCheckpoint(att.Data.Target),
-	}
-	return &pbp2p.PendingAttestation{
-		AggregationBits: newBitlist,
-		Data:            data,
-		InclusionDelay:  att.InclusionDelay,
-		ProposerIndex:   att.ProposerIndex,
-	}
-}
-
-// CopyAttestation copies the provided attestation object.
-func CopyAttestation(att *ethpb.Attestation) *ethpb.Attestation {
-	if att == nil {
-		return &ethpb.Attestation{}
-	}
-	aggBytes := []byte(att.AggregationBits)
-	newBitlist := make([]byte, len(aggBytes))
-	copy(newBitlist, aggBytes)
-	blockRoot := [32]byte{}
-	copy(blockRoot[:], att.Data.BeaconBlockRoot)
-	sig := [96]byte{}
-	copy(sig[:], att.Signature)
-	data := &ethpb.AttestationData{
-		Slot:            att.Data.Slot,
-		CommitteeIndex:  att.Data.CommitteeIndex,
-		BeaconBlockRoot: blockRoot[:],
-		Source:          CopyCheckpoint(att.Data.Source),
-		Target:          CopyCheckpoint(att.Data.Target),
-	}
-	return &ethpb.Attestation{
-		AggregationBits: newBitlist,
-		Data:            data,
-		Signature:       sig[:],
-	}
-}
-
-// CopyCheckpoint copies the provided checkpoint.
-func CopyCheckpoint(cp *ethpb.Checkpoint) *ethpb.Checkpoint {
-	if cp == nil {
-		return &ethpb.Checkpoint{}
-	}
-	root := [32]byte{}
-	copy(root[:], cp.Root)
-
-	return &ethpb.Checkpoint{
-		Epoch: cp.Epoch,
-		Root:  root[:],
-	}
 }

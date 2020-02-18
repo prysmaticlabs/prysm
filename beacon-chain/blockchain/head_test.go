@@ -18,23 +18,18 @@ func TestSaveHead_Same(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	service := setupBeaconChain(t, db)
 
-	service.headSlot = 0
 	r := [32]byte{'A'}
-	service.canonicalRoots[0] = r[:]
+	service.head = &head{slot: 0, root: r}
 
 	if err := service.saveHead(context.Background(), r); err != nil {
 		t.Fatal(err)
 	}
 
-	if service.headSlot != 0 {
+	if service.headSlot() != 0 {
 		t.Error("Head did not stay the same")
 	}
 
-	cachedRoot, err := service.HeadRoot(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(cachedRoot, r[:]) {
+	if service.headRoot() != r {
 		t.Error("Head did not stay the same")
 	}
 }
@@ -44,21 +39,20 @@ func TestSaveHead_Different(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	service := setupBeaconChain(t, db)
 
-	service.headSlot = 0
 	oldRoot := [32]byte{'A'}
-	service.canonicalRoots[0] = oldRoot[:]
+	service.head = &head{slot: 0, root: oldRoot}
 
 	newHeadBlock := &ethpb.BeaconBlock{Slot: 1}
 	newHeadSignedBlock := &ethpb.SignedBeaconBlock{Block: newHeadBlock}
 	service.beaconDB.SaveBlock(context.Background(), newHeadSignedBlock)
 	newRoot, _ := ssz.HashTreeRoot(newHeadBlock)
-	headState, _ := state.InitializeFromProto(&pb.BeaconState{})
+	headState, _ := state.InitializeFromProto(&pb.BeaconState{Slot: 1})
 	service.beaconDB.SaveState(context.Background(), headState, newRoot)
 	if err := service.saveHead(context.Background(), newRoot); err != nil {
 		t.Fatal(err)
 	}
 
-	if service.headSlot != 1 {
+	if service.HeadSlot() != 1 {
 		t.Error("Head did not change")
 	}
 
@@ -69,10 +63,10 @@ func TestSaveHead_Different(t *testing.T) {
 	if !bytes.Equal(cachedRoot, newRoot[:]) {
 		t.Error("Head did not change")
 	}
-	if !reflect.DeepEqual(service.headBlock, newHeadSignedBlock) {
+	if !reflect.DeepEqual(service.headBlock(), newHeadSignedBlock) {
 		t.Error("Head did not change")
 	}
-	if !reflect.DeepEqual(service.headState, headState) {
+	if !reflect.DeepEqual(service.headState().CloneInnerState(), headState.CloneInnerState()) {
 		t.Error("Head did not change")
 	}
 }
