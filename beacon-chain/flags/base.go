@@ -74,6 +74,12 @@ var (
 		Usage: "The eth1 block in which the deposit contract was deployed.",
 		Value: 1960177,
 	}
+	// SetGCPercent is the percentage of current live allocations at which the garbage collector is to run.
+	SetGCPercent = cli.IntFlag{
+		Name:  "gc-percent",
+		Usage: "The percentage of freshly allocated data to live data on which the gc will be run again.",
+		Value: 100,
+	}
 	// SlasherCertFlag defines a flag for the slasher TLS certificate.
 	SlasherCertFlag = cli.StringFlag{
 		Name:  "slasher-tls-cert",
