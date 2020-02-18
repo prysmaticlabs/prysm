@@ -43,9 +43,8 @@ func (bs *Service) querySyncStatus(ctx context.Context) {
 			if !status.Syncing {
 				log.Info("Beacon node is fully synced, starting slashing detection")
 				return
-			} else {
-				log.Info("Waiting for beacon node to be fully synced...")
 			}
+			log.Info("Waiting for beacon node to be fully synced...")
 		case <-ctx.Done():
 			log.Debug("Context closed, exiting routine")
 			return
