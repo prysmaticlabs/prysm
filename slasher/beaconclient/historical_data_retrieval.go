@@ -6,7 +6,6 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"go.opencensus.io/trace"
-
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
