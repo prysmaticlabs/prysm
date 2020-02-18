@@ -5,6 +5,7 @@ package state
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -66,7 +67,7 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 	leaves := [][]byte{}
 	for _, deposit := range deposits {
 		if deposit == nil || deposit.Data == nil {
-			return nil, errors.New("eth1data contains nil or deposits with nil data field")
+			return nil, fmt.Errorf("nil deposit or deposit with nil data cannot be processed: %v", deposit)
 		}
 		hash, err := ssz.HashTreeRoot(deposit.Data)
 		if err != nil {
