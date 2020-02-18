@@ -42,8 +42,19 @@ func (k *Store) HotStateSummary(ctx context.Context, blockRoot [32]byte) (*pb.Ho
 	return summary, err
 }
 
+// DeleteHotStateSummary deletes the hot state summary using input block root from DB.
+func (k *Store) DeleteHotStateSummary(ctx context.Context, blockRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteHotStateSummary")
+	defer span.End()
+
+	return k.db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(hotStateSummaryBucket)
+		return bucket.Delete(blockRoot[:])
+	})
+}
+
 // SaveColdStateSummary saves a cold state summary to the DB.
-func (k *Store) SaveColdStateSummary(ctx context.Context, blockRoot []byte, summary *pb.ColdStateSummary) error {
+func (k *Store) SaveColdStateSummary(ctx context.Context, blockRoot [32]byte, summary *pb.ColdStateSummary) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveColdStateSummary")
 	defer span.End()
 
@@ -53,7 +64,7 @@ func (k *Store) SaveColdStateSummary(ctx context.Context, blockRoot []byte, summ
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(coldStateSummaryBucket)
-		return bucket.Put(blockRoot, enc)
+		return bucket.Put(blockRoot[:], enc)
 	})
 }
 

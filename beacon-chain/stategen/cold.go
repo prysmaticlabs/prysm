@@ -20,11 +20,13 @@ func (s *State) saveColdState(ctx context.Context, blockRoot [32]byte, state *st
 	if err := s.beaconDB.SaveState(ctx, state, blockRoot); err != nil {
 		return err
 	}
+	coldStateSaved.Inc()
 
 	archivePointIndex := state.Slot() / s.slotsPerArchivePoint
 	if err := s.beaconDB.SaveArchivePoint(ctx, blockRoot, archivePointIndex); err != nil {
 		return err
 	}
+	archivePointSaved.Inc()
 
 	log.WithFields(logrus.Fields{
 		"slot":      state.Slot(),

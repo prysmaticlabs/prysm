@@ -23,6 +23,7 @@ func (s *State) saveHotState(ctx context.Context, blockRoot [32]byte, state *sta
 		log.WithFields(logrus.Fields{
 			"slot":      state.Slot(),
 			"blockRoot": hex.EncodeToString(bytesutil.Trunc(blockRoot[:]))}).Debug("Saved full state on epoch boundary")
+		hotStateSaved.Inc()
 	}
 
 	// On an intermediate slot, save the state summary.
@@ -33,6 +34,7 @@ func (s *State) saveHotState(ctx context.Context, blockRoot [32]byte, state *sta
 	}); err != nil {
 		return err
 	}
+	hotSummarySaved.Inc()
 
 	// Store the state in the cache.
 
