@@ -111,6 +111,7 @@ func (is *infostream) handleConnection() error {
 					return
 				case <-is.stateSub.Err():
 					return
+				default:
 				}
 				log.WithError(err).Debug("Receive from validators stream listener failed; client probably closed connection")
 				return
