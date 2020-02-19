@@ -42,6 +42,7 @@ type Flags struct {
 	ProtectAttester                            bool   // ProtectAttester prevents the validator client from signing any attestations that would be considered a slashable offense.
 	DisableStrictAttestationPubsubVerification bool   // DisableStrictAttestationPubsubVerification will disabling strict signature verification in pubsub.
 	DisableUpdateHeadPerAttestation            bool   // DisableUpdateHeadPerAttestation will disabling update head on per attestation basis.
+	EnableByteMempool                          bool   // EnaableByteMempool memory management.
 
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
@@ -142,6 +143,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(disableUpdateHeadPerAttestation.Name) {
 		log.Warn("Disabled update head on per attestation basis")
 		cfg.DisableUpdateHeadPerAttestation = true
+	}
+	if ctx.GlobalBool(enableByteMempool.Name) {
+		log.Warn("Enabling experimental memory management for beacon state")
+		cfg.EnableByteMempool = true
 	}
 
 	Init(cfg)
