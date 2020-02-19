@@ -6,6 +6,10 @@ service AggregatorService {
     rpc SubmitAggregateAndProof(AggregationRequest) returns (AggregationResponse);
 }
 
+service ValidatorService {
+    rpc ExitedValidators(ExitedValidatorsRequest) returns (ExitedValidatorsResponse);
+}
+
 message AggregationRequest {
     uint64 slot = 1;
     uint64 committee_index = 2;
@@ -17,3 +21,10 @@ message AggregationResponse {
     bytes root = 1;
 }
 
+message ExitedValidatorsRequest {
+    repeated bytes public_keys = 1;
+}
+
+message ExitedValidatorsResponse {
+    repeated bytes public_keys = 1;
+}
