@@ -38,6 +38,9 @@ type ReadOnlyDatabase interface {
 
 	// Validator Index -> Pubkey related methods.
 	ValidatorPubKey(ctx context.Context, validatorID uint64) ([]byte, error)
+
+	// Chain data related methods.
+	ChainHead(ctx context.Context) (*ethpb.ChainHead, error)
 }
 
 // WriteAccessDatabase represents a write access database with only functions that can modify the DB.
@@ -70,6 +73,9 @@ type WriteAccessDatabase interface {
 	// Validator Index -> Pubkey related methods.
 	SavePubKey(ctx context.Context, validatorID uint64, pubKey []byte) error
 	DeletePubKey(ctx context.Context, validatorID uint64) error
+
+	// Chain data related methods.
+	SaveChainHead(ctx context.Context, head *ethpb.ChainHead) error
 }
 
 // FullAccessDatabase represents a full access database with only DB interaction functions.

@@ -19,7 +19,7 @@ func (bs *Service) subscribeDetectedProposerSlashings(ctx context.Context, ch ch
 	for {
 		select {
 		case slashing := <-ch:
-			if _, err := bs.client.SubmitProposerSlashing(ctx, slashing); err != nil {
+			if _, err := bs.beaconClient.SubmitProposerSlashing(ctx, slashing); err != nil {
 				log.Error(err)
 			}
 		case <-sub.Err():
@@ -44,7 +44,7 @@ func (bs *Service) subscribeDetectedAttesterSlashings(ctx context.Context, ch ch
 	for {
 		select {
 		case slashing := <-ch:
-			if _, err := bs.client.SubmitAttesterSlashing(ctx, slashing); err != nil {
+			if _, err := bs.beaconClient.SubmitAttesterSlashing(ctx, slashing); err != nil {
 				log.Error(err)
 			}
 		case <-sub.Err():
