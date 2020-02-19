@@ -13,36 +13,54 @@ import (
 // EffectiveBalance returns the effective balance of the
 // read only validator.
 func (v *ReadOnlyValidator) EffectiveBalance() uint64 {
+	if v == nil || v.validator == nil {
+		return 0
+	}
 	return v.validator.EffectiveBalance
 }
 
 // ActivationEligibilityEpoch returns the activation eligibility epoch of the
 // read only validator.
 func (v *ReadOnlyValidator) ActivationEligibilityEpoch() uint64 {
+	if v == nil || v.validator == nil {
+		return 0
+	}
 	return v.validator.ActivationEligibilityEpoch
 }
 
 // ActivationEpoch returns the activation epoch of the
 // read only validator.
 func (v *ReadOnlyValidator) ActivationEpoch() uint64 {
+	if v == nil || v.validator == nil {
+		return 0
+	}
 	return v.validator.ActivationEpoch
 }
 
 // WithdrawableEpoch returns the withdrawable epoch of the
 // read only validator.
 func (v *ReadOnlyValidator) WithdrawableEpoch() uint64 {
+	if v == nil || v.validator == nil {
+		return 0
+	}
 	return v.validator.WithdrawableEpoch
 }
 
 // ExitEpoch returns the exit epoch of the
 // read only validator.
 func (v *ReadOnlyValidator) ExitEpoch() uint64 {
+	if v == nil || v.validator == nil {
+		return 0
+	}
 	return v.validator.ExitEpoch
 }
 
 // PublicKey returns the public key of the
 // read only validator.
 func (v *ReadOnlyValidator) PublicKey() [48]byte {
+	if v == nil || v.validator == nil {
+		return [48]byte{}
+	}
 	var pubkey [48]byte
 	copy(pubkey[:], v.validator.PublicKey)
 	return pubkey
@@ -357,7 +375,7 @@ func (b *BeaconState) ValidatorAtIndex(idx uint64) (*ethpb.Validator, error) {
 	if b.state.Validators == nil {
 		return &ethpb.Validator{}, nil
 	}
-	if len(b.state.Validators) <= int(idx) {
+	if uint64(len(b.state.Validators)) <= idx {
 		return nil, fmt.Errorf("index %d out of range", idx)
 	}
 
@@ -424,6 +442,9 @@ func (b *BeaconState) validatorIndexMap() map[[48]byte]uint64 {
 // validator index.
 func (b *BeaconState) PubkeyAtIndex(idx uint64) [48]byte {
 	if !b.HasInnerState() {
+		return [48]byte{}
+	}
+	if idx >= uint64(len(b.state.Validators)) {
 		return [48]byte{}
 	}
 	b.lock.RLock()

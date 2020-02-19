@@ -244,6 +244,9 @@ func ComputeProposerIndex(validators []*ethpb.Validator, activeIndices []uint64,
 //    fork_version = state.fork.previous_version if epoch < state.fork.epoch else state.fork.current_version
 //    return bls_domain(domain_type, fork_version)
 func Domain(fork *pb.Fork, epoch uint64, domainType []byte) uint64 {
+	if fork == nil || domainType == nil {
+		return 0
+	}
 	var forkVersion []byte
 	if epoch < fork.Epoch {
 		forkVersion = fork.PreviousVersion

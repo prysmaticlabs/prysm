@@ -269,6 +269,9 @@ func (s *Signature) Marshal() []byte {
 //    fork_version = state.fork.previous_version if epoch < state.fork.epoch else state.fork.current_version
 //    return compute_domain(domain_type, fork_version)
 func Domain(domainType []byte, forkVersion []byte) uint64 {
+	if len(domainType) < 4 || len(forkVersion) < 4 {
+		return 0
+	}
 	b := []byte{}
 	b = append(b, domainType[:4]...)
 	b = append(b, forkVersion[:4]...)
