@@ -197,39 +197,43 @@ func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 func (k *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteStates")
 	defer span.End()
-	// only sync when all states are deleted
-	k.db.NoSync = true
-	defer func() { k.db.NoSync = false }()
 
-	return k.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(blocksBucket)
-		genesisBlockRoot := bkt.Get(genesisBlockRootKey)
+	spltRoots := splitRoots(blockRoots)
+	for i := range spltRoots {
+		err := k.db.Update(func(tx *bolt.Tx) error {
+			bkt := tx.Bucket(blocksBucket)
+			genesisBlockRoot := bkt.Get(genesisBlockRootKey)
 
-		bkt = tx.Bucket(checkpointBucket)
-		enc := bkt.Get(finalizedCheckpointKey)
-		checkpoint := &ethpb.Checkpoint{}
-		if enc == nil {
-			checkpoint = &ethpb.Checkpoint{Root: genesisBlockRoot}
-		} else if err := decode(enc, checkpoint); err != nil {
-			return err
-		}
-
-		bkt = tx.Bucket(blocksBucket)
-		headBlkRoot := bkt.Get(headBlockRootKey)
-
-		for _, blockRoot := range blockRoots {
-			// Safe guard against deleting genesis, finalized, or head state.
-			if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], headBlkRoot) {
-				return errors.New("could not delete genesis, finalized, or head state")
-			}
-
-			bkt = tx.Bucket(stateBucket)
-			if err := bkt.Delete(blockRoot[:]); err != nil {
+			bkt = tx.Bucket(checkpointBucket)
+			enc := bkt.Get(finalizedCheckpointKey)
+			checkpoint := &ethpb.Checkpoint{}
+			if enc == nil {
+				checkpoint = &ethpb.Checkpoint{Root: genesisBlockRoot}
+			} else if err := decode(enc, checkpoint); err != nil {
 				return err
 			}
+
+			bkt = tx.Bucket(blocksBucket)
+			headBlkRoot := bkt.Get(headBlockRootKey)
+
+			for _, blockRoot := range spltRoots[i] {
+				// Safe guard against deleting genesis, finalized, or head state.
+				if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], headBlkRoot) {
+					return errors.New("could not delete genesis, finalized, or head state")
+				}
+
+				bkt = tx.Bucket(stateBucket)
+				if err := bkt.Delete(blockRoot[:]); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			return err
 		}
-		return nil
-	})
+	}
+	return nil
 }
 
 // creates state from marshaled proto state bytes.
@@ -240,4 +244,23 @@ func createState(enc []byte) (*pb.BeaconState, error) {
 		return nil, errors.Wrap(err, "failed to unmarshal encoding")
 	}
 	return protoState, nil
+}
+
+// splits the slice of roots further into chunks of roots with sizes of
+// 32.
+func splitRoots(roots [][32]byte) [][][32]byte {
+	numOfRoots := len(roots)
+	numOfSets := numOfRoots / 32
+	if numOfRoots%32 != 0 {
+		numOfSets++
+	}
+	rootSets := make([][][32]byte, 0, numOfSets)
+	for i := 0; i < numOfSets; i++ {
+		if (i+1)*32 > numOfRoots {
+			rootSets = append(rootSets, roots[i*32:])
+			break
+		}
+		rootSets = append(rootSets, roots[i*32:(i+1)*32])
+	}
+	return rootSets
 }
