@@ -19,7 +19,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -165,6 +167,8 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	db.SaveBlock(context.Background(), b)
 	root, _ := ssz.HashTreeRoot(b.Block)
+	s, _ := beaconstate.InitializeFromProto(&pb.BeaconState{})
+	db.SaveState(context.Background(), s, root)
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(0, true)
@@ -305,6 +309,8 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	db.SaveBlock(context.Background(), b)
 	root, _ := ssz.HashTreeRoot(b.Block)
+	s, _ := beaconstate.InitializeFromProto(&pb.BeaconState{})
+	db.SaveState(context.Background(), s, root)
 
 	aggBits := bitfield.NewBitlist(3)
 	aggBits.SetBitAt(0, true)
