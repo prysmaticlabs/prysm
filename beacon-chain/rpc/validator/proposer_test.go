@@ -181,6 +181,7 @@ func TestGetBlock_AddsUnaggregatedAtts(t *testing.T) {
 		Eth1InfoFetcher:   &mockPOW.POWChain{},
 		Eth1BlockFetcher:  &mockPOW.POWChain{},
 		MockEth1Votes:     true,
+		SlashingsPool:     slashings.NewPool(),
 		AttPool:           attestations.NewPool(),
 		ExitPool:          voluntaryexits.NewPool(),
 	}
