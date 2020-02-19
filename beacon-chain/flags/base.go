@@ -80,6 +80,11 @@ var (
 		Usage: "The percentage of freshly allocated data to live data on which the gc will be run again.",
 		Value: 100,
 	}
+	// UnsafeSync starts the beacon node from the previously saved head state and syncs from there.
+	UnsafeSync = cli.BoolFlag{
+		Name:  "unsafe-sync",
+		Usage: "Starts the beacon node with the previously saved head state instead of finalized state.",
+	}
 	// SlasherCertFlag defines a flag for the slasher TLS certificate.
 	SlasherCertFlag = cli.StringFlag{
 		Name:  "slasher-tls-cert",

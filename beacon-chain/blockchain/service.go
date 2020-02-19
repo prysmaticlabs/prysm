@@ -23,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	f "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -354,6 +355,23 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		return errors.Wrap(err, "could not get signing root of genesis block")
 	}
 	s.genesisRoot = genesisBlkRoot
+
+	if flags.Get().UnsafeSync {
+		headBlock, err := s.beaconDB.HeadBlock(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not retrieve head block")
+		}
+		headRoot, err := ssz.HashTreeRoot(headBlock.Block)
+		if err != nil {
+			return errors.Wrap(err, "could not hash head block")
+		}
+		headState, err := s.beaconDB.HeadState(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not retrieve head state")
+		}
+		s.setHead(headRoot, headBlock, headState)
+		return nil
+	}
 
 	finalized, err := s.beaconDB.FinalizedCheckpoint(ctx)
 	if err != nil {
