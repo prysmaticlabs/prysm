@@ -90,6 +90,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.GRPCGatewayPort,
 			flags.HTTPWeb3ProviderFlag,
 			flags.SetGCPercent,
+			flags.UnsafeSync,
 		},
 	},
 	{

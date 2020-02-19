@@ -37,6 +37,7 @@ var appFlags = []cli.Flag{
 	flags.RPCMaxPageSize,
 	flags.ContractDeploymentBlock,
 	flags.SetGCPercent,
+	flags.UnsafeSync,
 	flags.InteropMockEth1DataVotesFlag,
 	flags.InteropGenesisStateFlag,
 	flags.InteropNumValidatorsFlag,
