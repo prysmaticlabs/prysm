@@ -4,7 +4,10 @@ package(default_testonly = True)
 
 go_library(
     name = "go_default_library",
-    srcs = ["beacon_chain_service_mock.go"],
+    srcs = [
+        "beacon_chain_service_mock.go",
+        "node_service_mock.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/shared/mock",
     visibility = ["//visibility:public"],
     deps = [
