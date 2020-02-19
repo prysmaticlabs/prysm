@@ -198,7 +198,8 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	}
 
 	if featureconfig.Get().InitSyncCacheState {
-		s.initSyncState[root] = postState
+		s.initSyncState[root] = postState.Copy()
+		s.filterBoundaryCandidates(ctx, root, postState)
 	} else {
 		if err := s.beaconDB.SaveState(ctx, postState, root); err != nil {
 			return errors.Wrap(err, "could not save state")
@@ -249,6 +250,18 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	// Update validator indices in database as needed.
 	if err := s.saveNewValidators(ctx, preStateValidatorCount, postState); err != nil {
 		return errors.Wrap(err, "could not save finalized checkpoint")
+	}
+
+	if featureconfig.Get().InitSyncCacheState {
+		numOfStates := len(s.boundaryRoots)
+		if numOfStates > initialSyncCacheSize {
+			if err = s.persistCachedStates(ctx, numOfStates); err != nil {
+				return err
+			}
+		}
+		if len(s.initSyncState) > maxCacheSize {
+			s.pruneOldNonFinalizedStates()
+		}
 	}
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.

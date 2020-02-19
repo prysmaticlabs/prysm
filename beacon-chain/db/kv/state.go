@@ -9,6 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"go.opencensus.io/trace"
 )
 
@@ -120,6 +121,34 @@ func (k *Store) SaveState(ctx context.Context, state *state.BeaconState, blockRo
 	})
 }
 
+// SaveStates stores multiple states to the db using the provided corresponding roots.
+func (k *Store) SaveStates(ctx context.Context, states []*state.BeaconState, blockRoots [][32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStates")
+	defer span.End()
+	if states == nil {
+		return errors.New("nil state")
+	}
+	var err error
+	multipleEncs := make([][]byte, len(states))
+	for i, st := range states {
+		multipleEncs[i], err = encode(st.InnerStateUnsafe())
+		if err != nil {
+			return err
+		}
+	}
+
+	return k.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(stateBucket)
+		for i, rt := range blockRoots {
+			err = bucket.Put(rt[:], multipleEncs[i])
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 // HasState checks if a state by root exists in the db.
 func (k *Store) HasState(ctx context.Context, blockRoot [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasState")
@@ -170,6 +199,11 @@ func (k *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteStates")
 	defer span.End()
 
+	rootMap := make(map[[32]byte]bool)
+	for _, blockRoot := range blockRoots {
+		rootMap[blockRoot] = true
+	}
+
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		genesisBlockRoot := bkt.Get(genesisBlockRootKey)
@@ -185,16 +219,18 @@ func (k *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 
 		bkt = tx.Bucket(blocksBucket)
 		headBlkRoot := bkt.Get(headBlockRootKey)
+		bkt = tx.Bucket(stateBucket)
+		c := bkt.Cursor()
 
-		for _, blockRoot := range blockRoots {
-			// Safe guard against deleting genesis, finalized, or head state.
-			if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], headBlkRoot) {
-				return errors.New("could not delete genesis, finalized, or head state")
-			}
-
-			bkt = tx.Bucket(stateBucket)
-			if err := bkt.Delete(blockRoot[:]); err != nil {
-				return err
+		for blockRoot, _ := c.First(); blockRoot != nil; blockRoot, _ = c.Next() {
+			if rootMap[bytesutil.ToBytes32(blockRoot)] {
+				// Safe guard against deleting genesis, finalized, or head state.
+				if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], headBlkRoot) {
+					return errors.New("could not delete genesis, finalized, or head state")
+				}
+				if err := c.Delete(); err != nil {
+					return err
+				}
 			}
 		}
 		return nil
