@@ -197,6 +197,9 @@ func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 func (k *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteStates")
 	defer span.End()
+	// only sync when all states are deleted
+	k.db.NoSync = true
+	defer func() { k.db.NoSync = false }()
 
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
