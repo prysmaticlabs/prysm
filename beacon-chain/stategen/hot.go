@@ -62,11 +62,11 @@ func (s *State) loadHotState(ctx context.Context, blockRoot [32]byte) (*state.Be
 	if helpers.IsEpochStart(targetSlot) {
 		hotState = boundaryState
 	} else {
-		blks, err := s.loadBlocks(ctx, boundaryState.Slot(), targetSlot, bytesutil.ToBytes32(summary.LatestRoot))
+		blks, err := s.LoadBlocks(ctx, boundaryState.Slot(), targetSlot, bytesutil.ToBytes32(summary.LatestRoot))
 		if err != nil {
 			return nil, err
 		}
-		hotState, err = s.replayBlocks(ctx, boundaryState, blks, targetSlot)
+		hotState, err = s.ReplayBlocks(ctx, boundaryState, blks, targetSlot)
 		if err != nil {
 			return nil, err
 		}

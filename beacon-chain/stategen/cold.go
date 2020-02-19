@@ -72,12 +72,12 @@ func (s *State) loadColdIntermediateState(ctx context.Context, slot uint64, bloc
 		return nil, err
 	}
 
-	replayBlks, err := s.loadBlocks(ctx, lowArchivePointState.Slot(), slot, blockRoot)
+	replayBlks, err := s.LoadBlocks(ctx, lowArchivePointState.Slot(), slot, blockRoot)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.replayBlocks(ctx, lowArchivePointState, replayBlks, slot)
+	return s.ReplayBlocks(ctx, lowArchivePointState, replayBlks, slot)
 }
 
 // Given the archive index, this returns the state in the DB.

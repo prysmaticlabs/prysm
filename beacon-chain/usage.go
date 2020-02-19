@@ -90,6 +90,8 @@ var appHelpFlagGroups = []flagGroup{
 			flags.GRPCGatewayPort,
 			flags.HTTPWeb3ProviderFlag,
 			flags.SlotsPerArchivePoint,
+			flags.SetGCPercent,
+			flags.UnsafeSync,
 		},
 	},
 	{

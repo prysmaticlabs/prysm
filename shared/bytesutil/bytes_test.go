@@ -2,6 +2,7 @@ package bytesutil_test
 
 import (
 	"bytes"
+	"reflect"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -204,6 +205,25 @@ func TestTruncate(t *testing.T) {
 		b := bytesutil.Trunc(tt.a)
 		if !bytes.Equal(b, tt.b) {
 			t.Errorf("Trunc(%d) = %v, want = %d", tt.a, b, tt.b)
+		}
+	}
+}
+
+func TestReverse(t *testing.T) {
+	tests := []struct {
+		input  [][32]byte
+		output [][32]byte
+	}{
+		{[][32]byte{[32]byte{'A'}, [32]byte{'B'}, [32]byte{'C'}, [32]byte{'D'}, [32]byte{'E'}, [32]byte{'F'}, [32]byte{'G'}, [32]byte{'H'}},
+			[][32]byte{[32]byte{'H'}, [32]byte{'G'}, [32]byte{'F'}, [32]byte{'E'}, [32]byte{'D'}, [32]byte{'C'}, [32]byte{'B'}, [32]byte{'A'}}},
+		{[][32]byte{[32]byte{1}, [32]byte{2}, [32]byte{3}, [32]byte{4}},
+			[][32]byte{[32]byte{4}, [32]byte{3}, [32]byte{2}, [32]byte{1}}},
+		{[][32]byte{}, [][32]byte{}},
+	}
+	for _, tt := range tests {
+		b := bytesutil.ReverseBytes32Slice(tt.input)
+		if !reflect.DeepEqual(b, tt.output) {
+			t.Errorf("Reverse(%d) = %v, want = %d", tt.input, b, tt.output)
 		}
 	}
 }

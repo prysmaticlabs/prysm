@@ -23,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	f "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -30,6 +31,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/stategen"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -64,9 +66,11 @@ type Service struct {
 	nextEpochBoundarySlot  uint64
 	voteLock               sync.RWMutex
 	initSyncState          map[[32]byte]*stateTrie.BeaconState
+	boundaryRoots          [][32]byte
 	initSyncStateLock      sync.RWMutex
 	checkpointState        *cache.CheckpointStateCache
 	checkpointStateLock    sync.Mutex
+	stateGen               *stategen.State
 }
 
 // Config options for the service.
@@ -101,7 +105,9 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		epochParticipation: make(map[uint64]*precompute.Balance),
 		forkChoiceStore:    cfg.ForkChoiceStore,
 		initSyncState:      make(map[[32]byte]*stateTrie.BeaconState),
+		boundaryRoots:      [][32]byte{},
 		checkpointState:    cache.NewCheckpointStateCache(),
+		stateGen:           stategen.New(cfg.BeaconDB),
 	}, nil
 }
 
@@ -349,6 +355,23 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		return errors.Wrap(err, "could not get signing root of genesis block")
 	}
 	s.genesisRoot = genesisBlkRoot
+
+	if flags.Get().UnsafeSync {
+		headBlock, err := s.beaconDB.HeadBlock(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not retrieve head block")
+		}
+		headRoot, err := ssz.HashTreeRoot(headBlock.Block)
+		if err != nil {
+			return errors.Wrap(err, "could not hash head block")
+		}
+		headState, err := s.beaconDB.HeadState(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not retrieve head state")
+		}
+		s.setHead(headRoot, headBlock, headState)
+		return nil
+	}
 
 	finalized, err := s.beaconDB.FinalizedCheckpoint(ctx)
 	if err != nil {

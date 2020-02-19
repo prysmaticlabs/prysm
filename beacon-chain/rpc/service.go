@@ -251,6 +251,8 @@ func (s *Service) Start() {
 		FinalizationFetcher:  s.finalizationFetcher,
 		ParticipationFetcher: s.participationFetcher,
 		ChainStartFetcher:    s.chainStartFetcher,
+		DepositFetcher:       s.depositFetcher,
+		BlockFetcher:         s.powChainService,
 		CanonicalStateChan:   s.canonicalStateChan,
 		GenesisTimeFetcher:   s.genesisTimeFetcher,
 		StateNotifier:        s.stateNotifier,
