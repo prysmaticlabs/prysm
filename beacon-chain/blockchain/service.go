@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -354,6 +356,23 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		return errors.Wrap(err, "could not get signing root of genesis block")
 	}
 	s.genesisRoot = genesisBlkRoot
+
+	if flags.Get().UnsafeSync {
+		headBlock, err := s.beaconDB.HeadBlock(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not retrieve head block")
+		}
+		headRoot, err := ssz.HashTreeRoot(headBlock.Block)
+		if err != nil {
+			return errors.Wrap(err, "could not hash head block")
+		}
+		headState, err := s.beaconDB.HeadState(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not retrieve head state")
+		}
+		s.setHead(headRoot, headBlock, headState)
+		return nil
+	}
 
 	finalized, err := s.beaconDB.FinalizedCheckpoint(ctx)
 	if err != nil {
