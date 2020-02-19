@@ -140,7 +140,7 @@ func (r *Service) validateBlockInAttestation(ctx context.Context, a *ethpb.Aggre
 
 // This validates the aggregator's index in state is within the attesting indices of the attestation.
 func validateIndexInCommittee(ctx context.Context, s *stateTrie.BeaconState, a *ethpb.Attestation, validatorIndex uint64) error {
-	ctx, span := trace.StartSpan(ctx, "sync..validateIndexInCommittee")
+	ctx, span := trace.StartSpan(ctx, "sync.validateIndexInCommittee")
 	defer span.End()
 
 	committee, err := helpers.BeaconCommitteeFromState(s, a.Data.Slot, a.Data.CommitteeIndex)
