@@ -26,6 +26,7 @@ type blockchainService interface {
 	blockchain.BlockReceiver
 	blockchain.HeadFetcher
 	ClearCachedStates()
+	blockchain.FinalizationFetcher
 }
 
 const (
@@ -178,7 +179,7 @@ func (s *Service) waitForMinimumPeers() {
 		required = flags.Get().MinimumSyncPeers
 	}
 	for {
-		_, _, peers := s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(s.chain.HeadSlot()))
+		_, _, peers := s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, s.chain.FinalizedCheckpt().Epoch)
 		if len(peers) >= required {
 			break
 		}
