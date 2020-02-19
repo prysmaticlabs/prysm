@@ -228,7 +228,7 @@ func (k *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 				if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], headBlkRoot) {
 					return errors.New("could not delete genesis, finalized, or head state")
 				}
-				if err := bkt.Delete(blockRoot[:]); err != nil {
+				if err := c.Delete(); err != nil {
 					return err
 				}
 			}
