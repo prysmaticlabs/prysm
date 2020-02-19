@@ -305,7 +305,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 	if err := s.beaconDB.SaveBlock(ctx, genesisBlk); err != nil {
 		return errors.Wrap(err, "could not save genesis block")
 	}
-	if err := s.beaconDB.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
+	if err := s.stateGen.SaveState(ctx, genesisBlkRoot, genesisState); err != nil {
 		return errors.Wrap(err, "could not save genesis state")
 	}
 	if err := s.beaconDB.SaveHeadBlockRoot(ctx, genesisBlkRoot); err != nil {
@@ -382,7 +382,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		// would be the genesis state and block.
 		return errors.New("no finalized epoch in the database")
 	}
-	finalizedState, err := s.beaconDB.State(ctx, bytesutil.ToBytes32(finalized.Root))
+	finalizedState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(finalized.Root))
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized state from db")
 	}

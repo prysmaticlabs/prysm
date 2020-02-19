@@ -23,10 +23,13 @@ func (s *Service) persistCachedStates(ctx context.Context, numOfStates int) erro
 		oldStates = append(oldStates, s.initSyncState[rt])
 	}
 
-	err := s.beaconDB.SaveStates(ctx, oldStates, s.boundaryRoots[:numOfStates-minimumCacheSize])
-	if err != nil {
-		return err
+	for i, br := range s.boundaryRoots[:numOfStates-minimumCacheSize] {
+		err := s.stateGen.SaveState(ctx, br, oldStates[i])
+		if err != nil {
+			return err
+		}
 	}
+
 	for _, rt := range s.boundaryRoots[:numOfStates-minimumCacheSize] {
 		delete(s.initSyncState, rt)
 	}
@@ -163,7 +166,7 @@ func (s *Service) pruneOldNonFinalizedStates() {
 }
 
 func (s *Service) generateState(ctx context.Context, startRoot [32]byte, endRoot [32]byte) (*stateTrie.BeaconState, error) {
-	preState, err := s.beaconDB.State(ctx, startRoot)
+	preState, err := s.stateGen.StateByRoot(ctx, startRoot)
 	if err != nil {
 		return nil, err
 	}

@@ -90,7 +90,7 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 		return nil, errors.Wrapf(err, "could not insert block %d to fork choice store", b.Slot)
 	}
 
-	if err := s.beaconDB.SaveState(ctx, postState, root); err != nil {
+	if err := s.stateGen.SaveState(ctx, root, postState); err != nil {
 		return nil, errors.Wrap(err, "could not save state")
 	}
 
@@ -201,7 +201,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		s.initSyncState[root] = postState.Copy()
 		s.filterBoundaryCandidates(ctx, root, postState)
 	} else {
-		if err := s.beaconDB.SaveState(ctx, postState, root); err != nil {
+		if err := s.stateGen.SaveState(ctx, root, postState); err != nil {
 			return errors.Wrap(err, "could not save state")
 		}
 	}
@@ -279,7 +279,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 
 		if featureconfig.Get().InitSyncCacheState {
 			if helpers.IsEpochStart(postState.Slot()) {
-				if err := s.beaconDB.SaveState(ctx, postState, root); err != nil {
+				if err := s.stateGen.SaveState(ctx, root, postState); err != nil {
 					return errors.Wrap(err, "could not save state")
 				}
 			}

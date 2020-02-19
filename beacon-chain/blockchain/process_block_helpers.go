@@ -62,7 +62,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (
 		preState := s.initSyncState[bytesutil.ToBytes32(b.ParentRoot)]
 		var err error
 		if preState == nil {
-			preState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
+			preState, err = s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(b.ParentRoot))
 			if err != nil {
 				return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
 			}
@@ -80,7 +80,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (
 		return preState.Copy(), nil
 	}
 
-	preState, err := s.beaconDB.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
+	preState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(b.ParentRoot))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
 	}
@@ -295,7 +295,7 @@ func (s *Service) saveInitState(ctx context.Context, state *stateTrie.BeaconStat
 	fs := s.initSyncState[finalizedRoot]
 	if fs == nil {
 		var err error
-		fs, err = s.beaconDB.State(ctx, finalizedRoot)
+		fs, err = s.stateGen.StateByRoot(ctx, finalizedRoot)
 		if err != nil {
 			return err
 		}

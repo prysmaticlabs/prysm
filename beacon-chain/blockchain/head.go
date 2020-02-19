@@ -79,7 +79,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	if featureconfig.Get().InitSyncCacheState {
 		newHeadState, exists = s.initSyncState[headRoot]
 		if !exists {
-			newHeadState, err = s.beaconDB.State(ctx, headRoot)
+			newHeadState, err = s.stateGen.StateByRoot(ctx, headRoot)
 			if err != nil {
 				return errors.Wrap(err, "could not retrieve head state in DB")
 			}
@@ -88,7 +88,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 			}
 		}
 	} else {
-		newHeadState, err = s.beaconDB.State(ctx, headRoot)
+		newHeadState, err = s.stateGen.StateByRoot(ctx, headRoot)
 		if err != nil {
 			return errors.Wrap(err, "could not retrieve head state in DB")
 		}
@@ -119,7 +119,7 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 		return errors.New("cannot save nil head block")
 	}
 
-	headState, err := s.beaconDB.State(ctx, r)
+	headState, err := s.stateGen.StateByRoot(ctx, r)
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve head state in DB")
 	}

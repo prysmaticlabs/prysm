@@ -29,7 +29,7 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 		return cachedState, nil
 	}
 
-	baseState, err := s.beaconDB.State(ctx, bytesutil.ToBytes32(c.Root))
+	baseState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(c.Root))
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get pre state for slot %d", helpers.StartSlot(c.Epoch))
 	}
@@ -99,7 +99,7 @@ func (s *Service) verifyAttestation(ctx context.Context, baseState *stateTrie.Be
 		if err == blocks.ErrSigFailedToVerify {
 			// When sig fails to verify, check if there's a differences in committees due to
 			// different seeds.
-			aState, err := s.beaconDB.State(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
+			aState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
 			if err != nil {
 				return nil, err
 			}
