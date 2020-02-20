@@ -93,7 +93,7 @@ func TestGetBlock_OK(t *testing.T) {
 		Graffiti:     graffiti[:],
 	}
 
-	// We include max proposer slashings in the pool.
+	// We include max proposer slashings which is currently 1 in the pool.
 	proposerSlashing, err := testutil.GenerateProposerSlashingForValidator(
 		beaconState,
 		privKeys[0],
