@@ -8,7 +8,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -112,12 +111,11 @@ func (v *validator) signSlot(ctx context.Context, pubKey [48]byte, slot uint64) 
 		return nil, err
 	}
 
-	slotRoot, err := ssz.HashTreeRoot(slot)
+	root, err := helpers.ComputeSigningRoot(slot, domain.SignatureDomain)
 	if err != nil {
 		return nil, err
 	}
-
-	sig, err := v.keyManager.Sign(pubKey, slotRoot, domain.SignatureDomain)
+	sig, err := v.keyManager.Sign(pubKey, root)
 	if err != nil {
 		return nil, err
 	}

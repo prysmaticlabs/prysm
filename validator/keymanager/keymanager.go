@@ -17,5 +17,5 @@ type KeyManager interface {
 	// FetchValidatingKeys fetches the list of public keys that should be used to validate with.
 	FetchValidatingKeys() ([][48]byte, error)
 	// Sign signs a message for the validator to broadcast.
-	Sign(pubKey [48]byte, root [32]byte, domain uint64) (*bls.Signature, error)
+	Sign(pubKey [48]byte, root [32]byte) (*bls.Signature, error)
 }

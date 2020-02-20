@@ -151,7 +151,7 @@ message DomainRequest {
 }
 
 message DomainResponse {
-  uint64 signature_domain = 1;
+  bytes signature_domain = 1;
 }
 
 message BlockTreeResponse {
