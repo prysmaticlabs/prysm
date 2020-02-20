@@ -103,7 +103,7 @@ func TestGetBlock_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// We include max attester slashings in the pool.
+	// We include max attester slashings which is currently 1 in the pool.
 	attesterSlashing, err := testutil.GenerateAttesterSlashingForValidator(
 		beaconState,
 		privKeys[1],
