@@ -12,12 +12,6 @@ var (
 			Help: "The number of state saved in the hot section of the DB.",
 		},
 	)
-	coldStateSaved = promauto.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "cold_state_count",
-			Help: "The number of state saved in the cold section of the DB.",
-		},
-	)
 	hotSummarySaved = promauto.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "hot_summary_count",
