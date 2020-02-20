@@ -206,3 +206,20 @@ func (db *Store) DeleteValidatorSpans(ctx context.Context, validatorIdx uint64) 
 		return bucket.DeleteBucket(key)
 	})
 }
+
+// DeleteValidatorSpansForEpoch deletes a validator span for a certain epoch
+// using a validator index as bucket key.
+func (db *Store) DeleteValidatorSpansForEpoch(ctx context.Context, validatorIdx uint64, epoch uint64) error {
+	ctx, span := trace.StartSpan(ctx, "SlasherDB.DeleteValidatorSpans")
+	defer span.End()
+	if db.spanCacheEnabled {
+		db.spanCache.Del(validatorIdx)
+	}
+	return db.update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(validatorsMinMaxSpanBucket)
+		v := bytesutil.Bytes8(validatorIdx)
+		valBucket := bucket.Bucket(v)
+		e := bytesutil.Bytes8(epoch)
+		return valBucket.Delete(e)
+	})
+}
