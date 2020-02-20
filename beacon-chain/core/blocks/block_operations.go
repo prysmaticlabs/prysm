@@ -868,7 +868,7 @@ func ProcessDeposits(
 	deposits := body.Deposits
 	for _, deposit := range deposits {
 		if deposit == nil || deposit.Data == nil {
-			return nil, fmt.Errorf("nil deposit in block body: %v", body)
+			continue
 		}
 		beaconState, err = ProcessDeposit(beaconState, deposit)
 		if err != nil {
@@ -1072,7 +1072,7 @@ func ProcessVoluntaryExits(
 	exits := body.VoluntaryExits
 	for idx, exit := range exits {
 		if exit == nil || exit.Exit == nil {
-			return nil, errors.New("nil exit")
+			continue
 		}
 		if int(exit.Exit.ValidatorIndex) >= beaconState.NumValidators() {
 			return nil, fmt.Errorf(
