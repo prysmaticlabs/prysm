@@ -85,6 +85,7 @@ func NewKVStore(dirPath string) (*Store, error) {
 			blocksBucket,
 			stateBucket,
 			hotStateSummaryBucket,
+			coldStateSummaryBucket,
 			validatorsBucket,
 			proposerSlashingsBucket,
 			attesterSlashingsBucket,

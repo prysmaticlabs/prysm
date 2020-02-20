@@ -35,6 +35,7 @@ type ReadOnlyDatabase interface {
 	GenesisState(ctx context.Context) (*state.BeaconState, error)
 	HasState(ctx context.Context, blockRoot [32]byte) bool
 	HotStateSummary(ctx context.Context, blockRoot [32]byte) (*ethereum_beacon_p2p_v1.HotStateSummary, error)
+	HasHotStateSummary(ctx context.Context, blockRoot [32]byte) bool
 	DeleteHotStateSummary(ctx context.Context, blockRoot [32]byte) error
 	ColdStateSummary(ctx context.Context, blockRoot [32]byte) (*ethereum_beacon_p2p_v1.ColdStateSummary, error)
 	HasColdStateSummary(ctx context.Context, blockRoot [32]byte) bool

@@ -42,12 +42,26 @@ func (k *Store) HotStateSummary(ctx context.Context, blockRoot [32]byte) (*pb.Ho
 	return summary, err
 }
 
+// HasHotStateSummary returns true if a hot state summary exists in DB.
+func (k *Store) HasHotStateSummary(ctx context.Context, blockRoot [32]byte) bool {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasHotStateSummary")
+	defer span.End()
+	var exists bool
+	// #nosec G104. Always returns nil.
+	k.db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(hotStateSummaryBucket)
+		exists = bucket.Get(blockRoot[:]) != nil
+		return nil
+	})
+	return exists
+}
+
 // DeleteHotStateSummary deletes the hot state summary using input block root from DB.
 func (k *Store) DeleteHotStateSummary(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteHotStateSummary")
 	defer span.End()
 
-	return k.db.View(func(tx *bolt.Tx) error {
+	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(hotStateSummaryBucket)
 		return bucket.Delete(blockRoot[:])
 	})
