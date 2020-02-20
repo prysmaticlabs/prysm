@@ -39,7 +39,7 @@ var eth1DataCache = cache.NewEth1DataVoteCache()
 // failed to verify.
 var ErrSigFailedToVerify = errors.New("signature did not verify")
 
-func verifySigningRoot(obj interface{}, pub []byte, signature []byte, _ uint64) error {
+func verifySigningRoot(obj interface{}, pub []byte, signature []byte, domain []byte) error {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to public key")
@@ -48,9 +48,9 @@ func verifySigningRoot(obj interface{}, pub []byte, signature []byte, _ uint64) 
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
-	root, err := ssz.HashTreeRoot(obj)
+	root, err := helpers.ComputeSigningRoot(obj, domain)
 	if err != nil {
-		return errors.Wrap(err, "could not get signing root")
+		return errors.Wrap(err, "could not compute signing root")
 	}
 	if !sig.Verify(root[:], publicKey) {
 		return ErrSigFailedToVerify
@@ -59,7 +59,7 @@ func verifySigningRoot(obj interface{}, pub []byte, signature []byte, _ uint64) 
 }
 
 // Deprecated: This method uses deprecated ssz.SigningRoot.
-func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, pub []byte, signature []byte, _ uint64) error {
+func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, pub []byte, signature []byte, domain []byte) error {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to public key")
@@ -72,13 +72,21 @@ func verifyDepositDataSigningRoot(obj *ethpb.Deposit_Data, pub []byte, signature
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root")
 	}
-	if !sig.Verify(root[:], publicKey) {
+	sigRoot := &pb.SigningRoot{
+		ObjectRoot: root[:],
+		Domain:     domain,
+	}
+	ctrRoot, err := ssz.HashTreeRoot(sigRoot)
+	if err != nil {
+		return errors.Wrap(err, "could not get container root")
+	}
+	if !sig.Verify(ctrRoot[:], publicKey) {
 		return ErrSigFailedToVerify
 	}
 	return nil
 }
 
-func verifySignature(signedData []byte, pub []byte, signature []byte, _ uint64) error {
+func verifySignature(signedData []byte, pub []byte, signature []byte, domain []byte) error {
 	publicKey, err := bls.PublicKeyFromBytes(pub)
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to public key")
@@ -87,7 +95,15 @@ func verifySignature(signedData []byte, pub []byte, signature []byte, _ uint64) 
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
-	if !sig.Verify(signedData, publicKey) {
+	ctr := &pb.SigningRoot{
+		ObjectRoot: signedData,
+		Domain:     domain,
+	}
+	root, err := ssz.HashTreeRoot(ctr)
+	if err != nil {
+		return errors.Wrap(err, "could not hash container")
+	}
+	if !sig.Verify(root[:], publicKey) {
 		return ErrSigFailedToVerify
 	}
 	return nil
@@ -765,7 +781,7 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 		return errors.New("attesting indices is not uniquely sorted")
 	}
 
-	//domain := helpers.Domain(beaconState.Fork(), indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
+	domain := helpers.Domain(beaconState.Fork(), indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
 	var pubkey *bls.PublicKey
 	var err error
 	if len(indices) > 0 {
@@ -784,9 +800,9 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 		}
 	}
 
-	messageHash, err := ssz.HashTreeRoot(indexedAtt.Data)
+	messageHash, err := helpers.ComputeSigningRoot(indexedAtt.Data, domain)
 	if err != nil {
-		return errors.Wrap(err, "could not tree hash att data")
+		return errors.Wrap(err, "could not get signing root of object")
 	}
 
 	sig, err := bls.SignatureFromBytes(indexedAtt.Signature)

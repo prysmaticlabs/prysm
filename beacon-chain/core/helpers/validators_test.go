@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"bytes"
 	"reflect"
 	"testing"
 
@@ -236,17 +237,17 @@ func TestDomain_OK(t *testing.T) {
 	tests := []struct {
 		epoch      uint64
 		domainType uint64
-		version    uint64
+		result     []byte
 	}{
-		{epoch: 1, domainType: 4, version: 144115188075855876},
-		{epoch: 2, domainType: 4, version: 144115188075855876},
-		{epoch: 2, domainType: 5, version: 144115188075855877},
-		{epoch: 3, domainType: 4, version: 216172782113783812},
-		{epoch: 3, domainType: 5, version: 216172782113783813},
+		{epoch: 1, domainType: 4, result: bytesutil.ToBytes(144115188075855876, 8)},
+		{epoch: 2, domainType: 4, result: bytesutil.ToBytes(144115188075855876, 8)},
+		{epoch: 2, domainType: 5, result: bytesutil.ToBytes(144115188075855877, 8)},
+		{epoch: 3, domainType: 4, result: bytesutil.ToBytes(216172782113783812, 8)},
+		{epoch: 3, domainType: 5, result: bytesutil.ToBytes(216172782113783813, 8)},
 	}
 	for _, tt := range tests {
-		if Domain(state.Fork, tt.epoch, bytesutil.Bytes4(tt.domainType)) != tt.version {
-			t.Errorf("wanted domain version: %d, got: %d", tt.version, Domain(state.Fork, tt.epoch, bytesutil.Bytes4(tt.domainType)))
+		if !bytes.Equal(Domain(state.Fork, tt.epoch, bytesutil.Bytes4(tt.domainType)), tt.result) {
+			t.Errorf("wanted domain version: %d, got: %d", tt.result, Domain(state.Fork, tt.epoch, bytesutil.Bytes4(tt.domainType)))
 		}
 	}
 }

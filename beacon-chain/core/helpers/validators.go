@@ -234,16 +234,15 @@ func ComputeProposerIndex(validators []*ethpb.Validator, activeIndices []uint64,
 // Domain returns the domain version for BLS private key to sign and verify.
 //
 // Spec pseudocode definition:
-//  def get_domain(state: BeaconState,
-//               domain_type: int,
-//               message_epoch: Epoch=None) -> int:
+//  def get_domain(state: BeaconState, domain_type: DomainType, epoch: Epoch=None) -> Domain:
 //    """
 //    Return the signature domain (fork version concatenated with domain type) of a message.
 //    """
 //    epoch = get_current_epoch(state) if message_epoch is None else message_epoch
+//    epoch = get_current_epoch(state) if epoch is None else epoch
 //    fork_version = state.fork.previous_version if epoch < state.fork.epoch else state.fork.current_version
-//    return bls_domain(domain_type, fork_version)
-func Domain(fork *pb.Fork, epoch uint64, domainType []byte) uint64 {
+//    return compute_domain(domain_type, fork_version)
+func Domain(fork *pb.Fork, epoch uint64, domainType []byte) []byte {
 	var forkVersion []byte
 	if epoch < fork.Epoch {
 		forkVersion = fork.PreviousVersion

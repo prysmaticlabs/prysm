@@ -180,7 +180,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    #sha256 = "8fc1b6220973ca30fa4ddc4ed24d66b1719abadca8bedb5e06c3bd9bc0df28e9",
+    sha256 = "dbafe15d00ff6d75b7cb32a2ca7dc45ded786db8db7100e027e443f75469cfcf",
     url = "https://github.com/ethereum/eth2.0-spec-tests/releases/download/v0.10.1/mainnet.tar.gz",
 )
 
@@ -193,7 +193,7 @@ http_archive(
 
 http_archive(
     name = "com_github_herumi_bls_eth_go_binary",
-    #sha256 = "f8cdfc8bf8cb91e23ad206e14bcba03239abc524c9bf033e5098745408fa5397",
+    sha256 = "fe9307f9ec757e3fc68afea089369907842ca079c1f32e4a7546df5f4a09ad44",
     strip_prefix = "bls-go-binary-4ef039dc8ada18325fd835e07893612f408bcb59",
     url = "https://github.com/nisdas/bls-go-binary/archive/4ef039dc8ada18325fd835e07893612f408bcb59.zip",
 )
