@@ -127,8 +127,10 @@ func (r *Service) validateAggregatedAtt(ctx context.Context, a *ethpb.AggregateA
 }
 
 func (r *Service) validateBlockInAttestation(ctx context.Context, a *ethpb.AggregateAttestationAndProof) bool {
-	// Verify the block being voted is in DB. The block should have passed validation if it's in the DB.
-	if !r.db.HasBlock(ctx, bytesutil.ToBytes32(a.Aggregate.Data.BeaconBlockRoot)) {
+	// Verify the block being voted and the processed state is in DB. The block should have passed validation if it's in the DB.
+	hasState := r.db.HasState(ctx, bytesutil.ToBytes32(a.Aggregate.Data.BeaconBlockRoot))
+	hasBlock := r.db.HasBlock(ctx, bytesutil.ToBytes32(a.Aggregate.Data.BeaconBlockRoot))
+	if !(hasState && hasBlock) {
 		// A node doesn't have the block, it'll request from peer while saving the pending attestation to a queue.
 		r.savePendingAtt(a)
 		return false
@@ -138,7 +140,7 @@ func (r *Service) validateBlockInAttestation(ctx context.Context, a *ethpb.Aggre
 
 // This validates the aggregator's index in state is within the attesting indices of the attestation.
 func validateIndexInCommittee(ctx context.Context, s *stateTrie.BeaconState, a *ethpb.Attestation, validatorIndex uint64) error {
-	ctx, span := trace.StartSpan(ctx, "sync..validateIndexInCommittee")
+	ctx, span := trace.StartSpan(ctx, "sync.validateIndexInCommittee")
 	defer span.End()
 
 	committee, err := helpers.BeaconCommitteeFromState(s, a.Data.Slot, a.Data.CommitteeIndex)

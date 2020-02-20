@@ -267,6 +267,9 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 		// If justified state is nil, resume back to normal syncing process and save
 		// justified check point.
 		if justifiedState == nil {
+			if s.beaconDB.HasState(ctx, justifiedRoot) {
+				return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
+			}
 			justifiedState, err = s.generateState(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root), justifiedRoot)
 			if err != nil {
 				log.Error(err)
