@@ -234,6 +234,7 @@ func (s *Service) Start() {
 		Eth1BlockFetcher:       s.powChainService,
 		PendingDepositsFetcher: s.pendingDepositFetcher,
 		GenesisTime:            genesisTime,
+		SlashingsPool:          s.slashingsPool,
 	}
 	nodeServer := &node.Server{
 		BeaconDB:           s.beaconDB,
