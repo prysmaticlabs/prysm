@@ -143,7 +143,7 @@ func TestValidatorSpanMap_Delete(t *testing.T) {
 		if sm == nil || !proto.Equal(sm, tt.spanMap) {
 			t.Fatalf("Get should return validator span map: %v got: %v", tt.spanMap, sm)
 		}
-		err = db.DeleteValidatorSpanMap(ctx, tt.validatorIdx)
+		err = db.DeleteValidatorSpans(ctx, tt.validatorIdx)
 		if err != nil {
 			t.Fatalf("Delete validator span map error: %v", err)
 		}
@@ -181,7 +181,7 @@ func TestValidatorSpanMap_DeleteWithCache(t *testing.T) {
 		if sm == nil || !proto.Equal(sm, tt.spanMap) {
 			t.Fatalf("Get should return validator span map: %v got: %v", tt.spanMap, sm)
 		}
-		err = db.DeleteValidatorSpanMap(ctx, tt.validatorIdx)
+		err = db.DeleteValidatorSpans(ctx, tt.validatorIdx)
 		if err != nil {
 			t.Fatalf("Delete validator span map error: %v", err)
 		}

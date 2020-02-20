@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/slasher/db/kv"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
-	"github.com/prysmaticlabs/prysm/slasher/detection/attestations"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -111,12 +110,13 @@ func (ss *Server) UpdateSpanMaps(ctx context.Context, req *ethpb.IndexedAttestat
 				wg.Done()
 				return
 			}
-			spanMap, _, err = attestations.DetectAndUpdateSpans(ctx, spanMap, req)
-			if err != nil {
-				er <- err
-				wg.Done()
-				return
-			}
+			// TODO: bring back detection
+			//spanMap, _, err = attestations.DetectAndUpdateSpans(ctx, spanMap, req)
+			//if err != nil {
+			//	er <- err
+			//	wg.Done()
+			//	return
+			//}
 			if err := ss.SlasherDB.SaveValidatorSpansMap(ctx, i, spanMap); err != nil {
 				er <- err
 				wg.Done()
@@ -184,37 +184,38 @@ func (ss *Server) AttesterSlashings(ctx context.Context, st *slashpb.SlashingSta
 // DetectSurroundVotes is a method used to return the attestation that were detected
 // by min max surround detection method.
 func (ss *Server) DetectSurroundVotes(ctx context.Context, validatorIdx uint64, req *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error) {
-	spanMap, err := ss.SlasherDB.ValidatorSpansMap(ctx, validatorIdx)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get validator spans map")
-	}
-	spanMap, slashableEpoch, err := attestations.DetectAndUpdateSpans(ctx, spanMap, req)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to update spans")
-	}
-	if err := ss.SlasherDB.SaveValidatorSpansMap(ctx, validatorIdx, spanMap); err != nil {
-		return nil, errors.Wrap(err, "failed to save validator spans map")
-	}
-
 	var as []*ethpb.AttesterSlashing
-	if slashableEpoch > 0 {
-		atts, err := ss.SlasherDB.IdxAttsForTargetFromID(ctx, slashableEpoch, validatorIdx)
-		if err != nil {
-			return nil, err
-		}
-		for _, ia := range atts {
-			if ia.Data == nil {
-				continue
-			}
-			surrounding := ia.Data.Source.Epoch < req.Data.Source.Epoch && ia.Data.Target.Epoch > req.Data.Target.Epoch
-			surrounded := ia.Data.Source.Epoch > req.Data.Source.Epoch && ia.Data.Target.Epoch < req.Data.Target.Epoch
-			if surrounding || surrounded {
-				as = append(as, &ethpb.AttesterSlashing{
-					Attestation_1: req,
-					Attestation_2: ia,
-				})
-			}
-		}
-	}
+	//spanMap, err := ss.SlasherDB.ValidatorSpansMap(ctx, validatorIdx)
+	//if err != nil {
+	//	return nil, errors.Wrap(err, "failed to get validator spans map")
+	//}
+	//spanMap, slashableEpoch, err := attestations.DetectAndUpdateSpans(ctx, spanMap, req)
+	//if err != nil {
+	//	return nil, errors.Wrap(err, "failed to update spans")
+	//}
+	//if err := ss.SlasherDB.SaveValidatorSpansMap(ctx, validatorIdx, spanMap); err != nil {
+	//	return nil, errors.Wrap(err, "failed to save validator spans map")
+	//}
+	//
+	//
+	//if slashableEpoch > 0 {
+	//	atts, err := ss.SlasherDB.IdxAttsForTargetFromID(ctx, slashableEpoch, validatorIdx)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	for _, ia := range atts {
+	//		if ia.Data == nil {
+	//			continue
+	//		}
+	//		surrounding := ia.Data.Source.Epoch < req.Data.Source.Epoch && ia.Data.Target.Epoch > req.Data.Target.Epoch
+	//		surrounded := ia.Data.Source.Epoch > req.Data.Source.Epoch && ia.Data.Target.Epoch < req.Data.Target.Epoch
+	//		if surrounding || surrounded {
+	//			as = append(as, &ethpb.AttesterSlashing{
+	//				Attestation_1: req,
+	//				Attestation_2: ia,
+	//			})
+	//		}
+	//	}
+	//}
 	return as, nil
 }

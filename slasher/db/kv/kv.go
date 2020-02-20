@@ -97,7 +97,7 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 		NumCounters: cfg.CacheItems,   // number of keys to track frequency of (10M).
 		MaxCost:     cfg.MaxCacheSize, // maximum cost of cache.
 		BufferItems: 64,               // number of keys per Get buffer.
-		OnEvict:     saveToDB(kv),
+		//OnEvict:     saveToDB(kv),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to start span cache")

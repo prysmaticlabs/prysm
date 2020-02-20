@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 
 	"github.com/boltdb/bolt"
-	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"go.opencensus.io/trace"
@@ -149,28 +148,23 @@ func (db *Store) SaveValidatorEpochSpans(ctx context.Context, validatorIdx uint6
 func (db *Store) SaveValidatorSpansMap(ctx context.Context, validatorIdx uint64, spanMap map[uint64][2]uint16) error {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveValidatorSpansMap")
 	defer span.End()
-	err := db.update(func(tx *bolt.Tx) error {
+	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsMinMaxSpanBucket)
 		valBucket, err := bucket.CreateBucketIfNotExists(bytesutil.Bytes8(validatorIdx))
 		if err != nil {
 			return err
 		}
 		for k, v := range spanMap {
-			valBucket.Put(bytesutil.Bytes8(k), marshalMinMaxSpan(ctx, v))
-		}
-
-		val, err := proto.Marshal(spanMap)
-		if err != nil {
-			return errors.Wrap(err, "failed to marshal span map")
-		}
-		if err := bucket.Put(key, val); err != nil {
-			return errors.Wrapf(err, "failed to delete validator id: %d from min max span bucket", validatorIdx)
+			err = valBucket.Put(bytesutil.Bytes8(k), marshalMinMaxSpan(ctx, v))
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	})
-	return err
 }
 
+// TODO: bring back caching
 //// SaveCachedSpansMaps saves all span map from cache to disk
 //// if no span maps are in db or cache is disabled it returns nil.
 //func (db *Store) SaveCachedSpansMaps(ctx context.Context) error {
@@ -201,7 +195,7 @@ func (db *Store) SaveValidatorSpansMap(ctx context.Context, validatorIdx uint64,
 
 // DeleteValidatorSpans deletes a validator span map using a validator index as bucket key.
 func (db *Store) DeleteValidatorSpans(ctx context.Context, validatorIdx uint64) error {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.DeleteValidatorSpanMap")
+	ctx, span := trace.StartSpan(ctx, "SlasherDB.DeleteValidatorSpans")
 	defer span.End()
 	if db.spanCacheEnabled {
 		db.spanCache.Del(validatorIdx)
