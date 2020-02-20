@@ -10,14 +10,15 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 )
 
 // MigrateToCold advances the split slot point between the cold and hot sections.
 // It moves the new finalized states from the hot section to the cold section.
-func (s *State) MigrateToCold(ctx context.Context, finalizedState *state.BeaconState) error {
+func (s *State) MigrateToCold(ctx context.Context, finalizedState *state.BeaconState, finalizedRoot [32]byte) error {
 	// Verify migration is sensible. The new finalized point must increase the current split slot, and
 	// on an epoch boundary for hot state summary scheme to work.
-	currentSplitSlot := s.splitSlot
+	currentSplitSlot := s.splitInfo.slot
 	if currentSplitSlot > finalizedState.Slot() {
 		return nil
 	}
@@ -25,7 +26,6 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedState *state.BeaconS
 		return nil
 	}
 
-	log.WithField("slot", finalizedState.Slot()).Info("Hot to cold state migration started")
 	// Move the states between split slot to finalized slot from hot section to the cold section.
 	filter := filters.NewFilter().SetStartSlot(currentSplitSlot).SetEndSlot(finalizedState.Slot() - 1)
 	blockRoots, err := s.beaconDB.BlockRoots(ctx, filter)
@@ -49,16 +49,25 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedState *state.BeaconS
 			if err := s.beaconDB.SaveArchivePoint(ctx, r, archivePointIndex); err != nil {
 				return err
 			}
+
 			archivePointSaved.Inc()
-			coldStateSaved.Inc()
-			log.Info("Saving archive point ", hotStateSummary.Slot, archivePointIndex, hex.EncodeToString(bytesutil.Trunc(r[:])))
+			log.WithFields(logrus.Fields{
+				"slot":         hotStateSummary.Slot,
+				"archiveIndex": archivePointIndex,
+				"root":         hex.EncodeToString(bytesutil.Trunc(r[:])),
+			}).Info("Saved archive point during state migration")
 		} else {
 			// Delete the states that's not on the archive point.
 			if s.beaconDB.HasState(ctx, r) {
 				if err := s.beaconDB.DeleteState(ctx, r); err != nil {
 					return err
 				}
-				log.Info("Deleted state ", hotStateSummary.Slot, hex.EncodeToString(bytesutil.Trunc(r[:])))
+
+				hotStateSaved.Dec()
+				log.WithFields(logrus.Fields{
+					"slot": hotStateSummary.Slot,
+					"root": hex.EncodeToString(bytesutil.Trunc(r[:])),
+				}).Info("Deleted state during migration")
 			}
 		}
 		// Migrate state summary from hot to cold.
@@ -68,16 +77,14 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedState *state.BeaconS
 		if err := s.beaconDB.DeleteHotStateSummary(ctx, r); err != nil {
 			return err
 		}
+		s.deleteEpochBoundaryRoot(hotStateSummary.Slot)
 
 		coldSummarySaved.Inc()
-		hotStateSaved.Dec()
 		hotSummarySaved.Dec()
 	}
 
-	// Update the split slot.
-	s.splitSlot = finalizedState.Slot()
-
-	log.WithField("slot", finalizedState.Slot()).Info("Hot to cold state migration completed")
+	// Update the split slot and root.
+	s.splitInfo = &splitSlotAndRoot{slot: finalizedState.Slot(), root: finalizedRoot}
 
 	return nil
 }

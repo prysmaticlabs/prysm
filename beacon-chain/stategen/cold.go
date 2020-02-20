@@ -20,7 +20,6 @@ func (s *State) saveColdState(ctx context.Context, blockRoot [32]byte, state *st
 	if err := s.beaconDB.SaveState(ctx, state, blockRoot); err != nil {
 		return err
 	}
-	coldStateSaved.Inc()
 
 	archivePointIndex := state.Slot() / s.slotsPerArchivePoint
 	if err := s.beaconDB.SaveArchivePoint(ctx, blockRoot, archivePointIndex); err != nil {
@@ -35,9 +34,9 @@ func (s *State) saveColdState(ctx context.Context, blockRoot [32]byte, state *st
 	return nil
 }
 
-// This loads the cold state by deciding whether to load from archive point (faster) or
+// This loads the cold state by block root, it chooses whether to load from archive point (faster) or
 // somewhere between archive points (slower) since it requires replaying blocks.
-func (s *State) loadColdState(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
+func (s *State) loadColdStateByRoot(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
 	summary, err := s.beaconDB.ColdStateSummary(ctx, blockRoot)
 	if err != nil {
 		return nil, err
@@ -52,7 +51,7 @@ func (s *State) loadColdState(ctx context.Context, blockRoot [32]byte) (*state.B
 		return s, nil
 	}
 
-	return s.loadColdIntermediateState(ctx, summary.Slot, blockRoot)
+	return s.loadColdIntermediateStateWithRoot(ctx, summary.Slot, blockRoot)
 }
 
 // This loads the cold state for the certain archive point.
@@ -61,9 +60,10 @@ func (s *State) loadColdStateByArchivalPoint(ctx context.Context, archivePoint u
 	return s.beaconDB.State(ctx, root)
 }
 
-// This loads a cold state by slot and block root that lies between the archive point.
-func (s *State) loadColdIntermediateState(ctx context.Context, slot uint64, blockRoot [32]byte) (*state.BeaconState, error) {
-	// Load the archive point for lower and high side of the intermediate state.
+// This loads a cold state by slot and block root which lies between the archive point.
+// This is a faster implementation with block root provided.
+func (s *State) loadColdIntermediateStateWithRoot(ctx context.Context, slot uint64, blockRoot [32]byte) (*state.BeaconState, error) {
+	// Load the archive point for lower side of the intermediate state.
 	lowArchivePointIdx := slot / s.slotsPerArchivePoint
 
 	// Acquire the read lock so the split can't change while this is happening.
@@ -73,6 +73,39 @@ func (s *State) loadColdIntermediateState(ctx context.Context, slot uint64, bloc
 	}
 
 	replayBlks, err := s.LoadBlocks(ctx, lowArchivePointState.Slot()+1, slot, blockRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.ReplayBlocks(ctx, lowArchivePointState, replayBlks, slot)
+}
+
+// This loads a cold state by slot only where the slot lies between the archive point.
+// This is a slower implementation given slot is the only argument. It require fetching
+// all the blocks between the archival points.
+func (s *State) loadColdIntermediateStateWithSlot(ctx context.Context, slot uint64) (*state.BeaconState, error) {
+	// Load the archive point for lower and high side of the intermediate state.
+	lowArchivePointIdx := slot / s.slotsPerArchivePoint
+	highArchivePointIdx := lowArchivePointIdx + 1
+
+	// Acquire the read lock so the split can't change while this is happening.
+	lowArchivePointState, err := s.loadArchivePointByIndex(ctx, lowArchivePointIdx)
+	if err != nil {
+		return nil, err
+	}
+
+	// If the slot of the high archive point lies outside of the freezer cut off, use the split state
+	// as the upper archive point.
+	var highArchivePointRoot [32]byte
+	highArchivePointSlot := highArchivePointIdx * s.slotsPerArchivePoint
+	if highArchivePointSlot >= s.splitInfo.slot {
+		highArchivePointRoot = s.splitInfo.root
+		highArchivePointSlot = s.splitInfo.slot
+	} else {
+		highArchivePointRoot = s.beaconDB.ArchivePoint(ctx, highArchivePointIdx)
+	}
+
+	replayBlks, err := s.LoadBlocks(ctx, lowArchivePointState.Slot()+1, highArchivePointSlot, highArchivePointRoot)
 	if err != nil {
 		return nil, err
 	}

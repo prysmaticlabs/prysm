@@ -17,6 +17,9 @@ func (s *State) ReplayBlocks(ctx context.Context, state *state.BeaconState, sign
 	// The input block list is sorted in decreasing slots order.
 	if len(signed) > 0 {
 		for i := len(signed) - 1; i >= 0; i-- {
+			if state.Slot() == targetSlot {
+				break
+			}
 			state, err = transition.ExecuteStateTransitionNoVerifyAttSigs(ctx, state, signed[i])
 			if err != nil {
 				return nil, err
@@ -61,6 +64,9 @@ func (s *State) LoadBlocks(ctx context.Context, startSlot uint64, endSlot uint64
 			break
 		}
 	}
+	if length == 0 {
+		return []*ethpb.SignedBeaconBlock{}, nil
+	}
 
 	if blockRoots[length-1] != endBlockRoot {
 		return nil, errors.New("end block roots don't match")
@@ -68,12 +74,14 @@ func (s *State) LoadBlocks(ctx context.Context, startSlot uint64, endSlot uint64
 
 	filteredBlocks := []*ethpb.SignedBeaconBlock{blocks[length-1]}
 	// Starting from second to last index because the last block is already in the filtered block list.
-	for i := length - 2; i >= 0; i-- {
-		b := filteredBlocks[len(filteredBlocks)-1]
-		if bytesutil.ToBytes32(b.Block.ParentRoot) != blockRoots[i] {
-			continue
+	if length >= 2 {
+		for i := length - 2; i >= 0; i-- {
+			b := filteredBlocks[len(filteredBlocks)-1]
+			if bytesutil.ToBytes32(b.Block.ParentRoot) != blockRoots[i] {
+				continue
+			}
+			filteredBlocks = append(filteredBlocks, blocks[i])
 		}
-		filteredBlocks = append(filteredBlocks, blocks[i])
 	}
 
 	return filteredBlocks, nil

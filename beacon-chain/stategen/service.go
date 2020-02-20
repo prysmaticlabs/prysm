@@ -7,16 +7,22 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // State represents a management object that handles the internal
 // logic of maintaining both hot and cold states in DB.
 type State struct {
 	beaconDB                db.NoHeadAccessDatabase
-	splitSlot               uint64
+	splitInfo               *splitSlotAndRoot
 	slotsPerArchivePoint    uint64
 	epochBoundarySlotToRoot map[uint64][32]byte
 	epochBoundaryLock       sync.RWMutex
+}
+
+type splitSlotAndRoot struct {
+	slot uint64
+	root [32]byte
 }
 
 // New returns a new state management object.
@@ -26,6 +32,7 @@ func New(db db.NoHeadAccessDatabase) *State {
 		//slotsPerArchivePoint: uint64(flags.Get().SlotsPerArchivePoint),
 		slotsPerArchivePoint:    128,
 		epochBoundarySlotToRoot: make(map[uint64][32]byte),
+		splitInfo:               &splitSlotAndRoot{slot: 0, root: params.BeaconConfig().ZeroHash},
 	}
 }
 
@@ -35,7 +42,7 @@ func (s *State) Resume(ctx context.Context, finalizedRoot [32]byte) (*state.Beac
 	if err != nil {
 		return nil, err
 	}
-	s.splitSlot = finalizedState.Slot()
+	s.splitInfo = &splitSlotAndRoot{slot: finalizedState.Slot(), root: finalizedRoot}
 	if err := s.beaconDB.SaveColdStateSummary(ctx, finalizedRoot, &pb.ColdStateSummary{Slot: finalizedState.Slot()}); err != nil {
 		return nil, err
 	}
@@ -58,4 +65,11 @@ func (s *State) epochBoundaryRoot(slot uint64) ([32]byte, bool) {
 	defer s.epochBoundaryLock.RUnlock()
 	r, ok := s.epochBoundarySlotToRoot[slot]
 	return r, ok
+}
+
+// This deletes an entry of epoch boundary slot to root mapping.
+func (s *State) deleteEpochBoundaryRoot(slot uint64) {
+	s.epochBoundaryLock.Lock()
+	defer s.epochBoundaryLock.Unlock()
+	delete(s.epochBoundarySlotToRoot, slot)
 }
