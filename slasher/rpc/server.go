@@ -111,7 +111,7 @@ func (ss *Server) UpdateSpanMaps(ctx context.Context, req *ethpb.IndexedAttestat
 				wg.Done()
 				return
 			}
-			spanMap, _, _, err = attestations.DetectAndUpdateSpans(ctx, req, spanMap)
+			spanMap, _, err = attestations.DetectAndUpdateSpans(ctx, spanMap, req)
 			if err != nil {
 				er <- err
 				wg.Done()
@@ -188,7 +188,7 @@ func (ss *Server) DetectSurroundVotes(ctx context.Context, validatorIdx uint64, 
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get validator spans map")
 	}
-	spanMap, minTargetEpoch, maxTargetEpoch, err := attestations.DetectAndUpdateSpans(ctx, req, spanMap)
+	spanMap, slashableEpoch, err := attestations.DetectAndUpdateSpans(ctx, spanMap, req)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to update spans")
 	}
@@ -197,30 +197,18 @@ func (ss *Server) DetectSurroundVotes(ctx context.Context, validatorIdx uint64, 
 	}
 
 	var as []*ethpb.AttesterSlashing
-	if minTargetEpoch > 0 {
-		attestations, err := ss.SlasherDB.IdxAttsForTargetFromID(ctx, minTargetEpoch, validatorIdx)
+	if slashableEpoch > 0 {
+		atts, err := ss.SlasherDB.IdxAttsForTargetFromID(ctx, slashableEpoch, validatorIdx)
 		if err != nil {
 			return nil, err
 		}
-		for _, ia := range attestations {
+		for _, ia := range atts {
 			if ia.Data == nil {
 				continue
 			}
-			if ia.Data.Source.Epoch > req.Data.Source.Epoch && ia.Data.Target.Epoch < req.Data.Target.Epoch {
-				as = append(as, &ethpb.AttesterSlashing{
-					Attestation_1: req,
-					Attestation_2: ia,
-				})
-			}
-		}
-	}
-	if maxTargetEpoch > 0 {
-		attestations, err := ss.SlasherDB.IdxAttsForTargetFromID(ctx, maxTargetEpoch, validatorIdx)
-		if err != nil {
-			return nil, err
-		}
-		for _, ia := range attestations {
-			if ia.Data.Source.Epoch < req.Data.Source.Epoch && ia.Data.Target.Epoch > req.Data.Target.Epoch {
+			surrounding := ia.Data.Source.Epoch < req.Data.Source.Epoch && ia.Data.Target.Epoch > req.Data.Target.Epoch
+			surrounded := ia.Data.Source.Epoch > req.Data.Source.Epoch && ia.Data.Target.Epoch < req.Data.Target.Epoch
+			if surrounding || surrounded {
 				as = append(as, &ethpb.AttesterSlashing{
 					Attestation_1: req,
 					Attestation_2: ia,
