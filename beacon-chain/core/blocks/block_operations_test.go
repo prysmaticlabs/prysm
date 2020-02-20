@@ -1310,6 +1310,11 @@ func TestValidateIndexedAttestation_AboveMaxLength(t *testing.T) {
 
 	for i := uint64(0); i < params.BeaconConfig().MaxValidatorsPerCommittee+5; i++ {
 		indexedAtt1.AttestingIndices[i] = i
+		indexedAtt1.Data = &ethpb.AttestationData{
+			Target: &ethpb.Checkpoint{
+				Epoch: i,
+			},
+		}
 	}
 
 	want := "validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE"
