@@ -66,7 +66,7 @@ type WriteAccessDatabase interface {
 
 	//SaveCachedSpansMaps(ctx context.Context) error
 	DeleteValidatorSpans(ctx context.Context, validatorIdx uint64) error
-	DeleteValidatorSpansForEpoch(ctx context.Context, validatorIdx uint64, epoch uint64) error
+	DeleteValidatorSpanByEpoch(ctx context.Context, validatorIdx uint64, epoch uint64) error
 
 	// ProposerSlashing related methods.
 	DeleteProposerSlashing(ctx context.Context, slashing *ethpb.ProposerSlashing) error
