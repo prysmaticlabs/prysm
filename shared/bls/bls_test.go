@@ -89,11 +89,11 @@ func TestComputeDomain_OK(t *testing.T) {
 		domainType []byte
 		domain     []byte
 	}{
-		{epoch: 1, domainType: []byte{4}, domain: []byte{4}},
-		{epoch: 2, domainType: []byte{4}, domain: []byte{4}},
-		{epoch: 2, domainType: []byte{5}, domain: []byte{5}},
-		{epoch: 3, domainType: []byte{4}, domain: []byte{4}},
-		{epoch: 3, domainType: []byte{5}, domain: []byte{5}},
+		{epoch: 1, domainType: []byte{4, 0, 0, 0}, domain: []byte{4, 0, 0, 0, 0, 0, 0, 0}},
+		{epoch: 2, domainType: []byte{4, 0, 0, 0}, domain: []byte{4, 0, 0, 0, 0, 0, 0, 0}},
+		{epoch: 2, domainType: []byte{5, 0, 0, 0}, domain: []byte{5, 0, 0, 0, 0, 0, 0, 0}},
+		{epoch: 3, domainType: []byte{4, 0, 0, 0}, domain: []byte{4, 0, 0, 0, 0, 0, 0, 0}},
+		{epoch: 3, domainType: []byte{5, 0, 0, 0}, domain: []byte{5, 0, 0, 0, 0, 0, 0, 0}},
 	}
 	for _, tt := range tests {
 		if !bytes.Equal(bls.ComputeDomain(tt.domainType), tt.domain) {
