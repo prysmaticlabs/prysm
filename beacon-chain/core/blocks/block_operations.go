@@ -106,11 +106,8 @@ func ProcessEth1DataInBlock(beaconState *stateTrie.BeaconState, block *ethpb.Bea
 	if beaconState == nil {
 		return nil, errors.New("nil state")
 	}
-	if block == nil {
-		return nil, errors.New("nil block")
-	}
-	if block.Body == nil {
-		return nil, errors.New("nil block body")
+	if block == nil || block.Body == nil {
+		return nil, errors.New("nil block or block withought body")
 	}
 	if err := beaconState.AppendEth1DataVotes(block.Body.Eth1Data); err != nil {
 		return nil, err
@@ -778,7 +775,7 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 	ctx, span := trace.StartSpan(ctx, "core.VerifyIndexedAttestation")
 	defer span.End()
 	if indexedAtt == nil || indexedAtt.Data == nil || indexedAtt.Data.Target == nil {
-		return fmt.Errorf("nil or missing indexed attestation data: %v", indexedAtt)
+		return errors.New("nil or missing indexed attestation data")
 	}
 	indices := indexedAtt.AttestingIndices
 
@@ -842,7 +839,7 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 // the signature in that attestation.
 func VerifyAttestation(ctx context.Context, beaconState *stateTrie.BeaconState, att *ethpb.Attestation) error {
 	if att == nil || att.Data == nil {
-		return fmt.Errorf("nil or missing indexed attestation data: %v", att)
+		return fmt.Errorf("nil or missing attestation data: %v", att)
 	}
 	committee, err := helpers.BeaconCommitteeFromState(beaconState, att.Data.Slot, att.Data.CommitteeIndex)
 	if err != nil {

@@ -41,7 +41,7 @@ import (
 func InitiateValidatorExit(state *stateTrie.BeaconState, idx uint64) (*stateTrie.BeaconState, error) {
 	vals := state.Validators()
 	if idx >= uint64(len(vals)) {
-		return nil, fmt.Errorf("requested validator idx: %d to exit is higher then validator count: %d", idx, len(vals))
+		return nil, fmt.Errorf("validator idx %d is higher then validator count %d", idx, len(vals))
 	}
 	validator := vals[idx]
 	if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
