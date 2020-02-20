@@ -2,11 +2,13 @@ package client
 
 import (
 	"context"
+	"time"
 
+	"github.com/dgraph-io/ristretto"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -16,6 +18,7 @@ import (
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/metadata"
 )
 
 var log = logrus.WithField("prefix", "validator")
@@ -107,6 +110,17 @@ func (v *ValidatorService) Start() {
 			grpc_opentracing.UnaryClientInterceptor(),
 			grpc_prometheus.UnaryClientInterceptor,
 			grpc_retry.UnaryClientInterceptor(),
+			func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+				var header metadata.MD
+				opts = append(
+					opts,
+					grpc.Header(&header),
+				)
+				start := time.Now()
+				err := invoker(ctx, method, req, reply, cc, opts...)
+				log.WithField("backend", header["x-backend"]).WithField("method", method).WithField("duration", time.Now().Sub(start)).Debug("gRPC request finished.")
+				return err
+			},
 		)),
 	}
 	conn, err := grpc.DialContext(v.ctx, v.endpoint, opts...)
@@ -129,6 +143,16 @@ func (v *ValidatorService) Start() {
 	}
 
 	v.conn = conn
+	cache, err := ristretto.NewCache(&ristretto.Config{
+		NumCounters: 1000,    // number of keys to track frequency of (1M).
+		MaxCost:     1 << 22, // maximum cost of cache (3MB).
+		// 100,000 roots will take up approximately 3 MB in memory.
+		BufferItems: 64, // number of keys per Get buffer.
+	})
+	if err != nil {
+		panic(err)
+	}
+
 	v.validator = &validator{
 		db:                   valDB,
 		validatorClient:      ethpb.NewBeaconNodeValidatorClient(v.conn),
@@ -141,6 +165,7 @@ func (v *ValidatorService) Start() {
 		emitAccountMetrics:   v.emitAccountMetrics,
 		prevBalance:          make(map[[48]byte]uint64),
 		attLogs:              make(map[[32]byte]*attSubmitted),
+		domainDataCache:      cache,
 	}
 	go run(v.ctx, v.validator)
 }

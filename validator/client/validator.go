@@ -4,11 +4,15 @@ package client
 import (
 	"context"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"io"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/dgraph-io/ristretto"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -40,6 +44,8 @@ type validator struct {
 	emitAccountMetrics   bool
 	attLogs              map[[32]byte]*attSubmitted
 	attLogsLock          sync.Mutex
+	domainDataLock       sync.Mutex
+	domainDataCache      *ristretto.Cache
 }
 
 // Done cleans up the validator.
@@ -329,4 +335,38 @@ func (v *validator) isAggregator(ctx context.Context, committee []uint64, slot u
 	b := hashutil.Hash(slotSig)
 
 	return binary.LittleEndian.Uint64(b[:8])%modulo == 0, nil
+}
+
+func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot uint64) {
+	for _, d := range [][]byte{
+		params.BeaconConfig().DomainRandao,
+		params.BeaconConfig().DomainBeaconAttester,
+		params.BeaconConfig().DomainBeaconProposer,
+	} {
+		_, _ = v.domainData(ctx, helpers.SlotToEpoch(slot), d)
+	}
+}
+
+func (v *validator) domainData(ctx context.Context, epoch uint64, domain []byte) (*ethpb.DomainResponse, error) {
+	v.domainDataLock.Lock()
+	defer v.domainDataLock.Unlock()
+
+	req := &ethpb.DomainRequest{
+		Epoch:  epoch,
+		Domain: domain,
+	}
+
+	key := strings.Join([]string{strconv.FormatUint(req.Epoch, 10), hex.EncodeToString(req.Domain)}, ",")
+	if val, ok := v.domainDataCache.Get(key); ok {
+		return val.(*ethpb.DomainResponse), nil
+	}
+
+	res, err := v.validatorClient.DomainData(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	v.domainDataCache.Set(key, res, 1)
+
+	return res, nil
 }
