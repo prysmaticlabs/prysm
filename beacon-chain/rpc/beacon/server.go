@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/stategen"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
@@ -38,4 +39,5 @@ type Server struct {
 	CanonicalStateChan   chan *pbp2p.BeaconState
 	ChainStartChan       chan time.Time
 	SlotTicker           slotutil.Ticker
+	StateGen             *stategen.State
 }

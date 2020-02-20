@@ -262,6 +262,7 @@ func (s *Service) Start() {
 		GenesisTimeFetcher:   s.genesisTimeFetcher,
 		StateNotifier:        s.stateNotifier,
 		BlockNotifier:        s.blockNotifier,
+		StateGen:             s.stateGen,
 		SlotTicker:           ticker,
 	}
 	aggregatorServer := &aggregator.Server{
