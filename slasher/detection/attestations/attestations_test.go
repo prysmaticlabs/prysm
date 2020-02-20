@@ -206,7 +206,7 @@ func TestServer_UpdateMaxEpochSpan(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		st, spanMap, err := detectAndUpdateMaxEpochSpan(ctx, tt.sourceEpoch, tt.targetEpoch, spanMap)
+		spanMap, st, err := detectAndUpdateMaxEpochSpan(ctx, spanMap, tt.sourceEpoch, tt.targetEpoch)
 		if err != nil {
 			t.Fatalf("Failed to update span: %v", err)
 		}
@@ -239,7 +239,7 @@ func TestServer_UpdateMinEpochSpan(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		st, spanMap, err := detectAndUpdateMinEpochSpan(ctx, tt.sourceEpoch, tt.targetEpoch, spanMap)
+		spanMap, st, err := detectAndUpdateMinEpochSpan(ctx, spanMap, tt.sourceEpoch, tt.targetEpoch)
 		if err != nil {
 			t.Fatalf("Failed to update span: %v", err)
 		}
@@ -282,10 +282,10 @@ func TestServer_FailToUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := detectAndUpdateMinEpochSpan(ctx, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch, spanMap); err == nil {
+	if _, _, err := detectAndUpdateMinEpochSpan(ctx, spanMap, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch); err == nil {
 		t.Fatalf("Update should not support diff greater then weak subjectivity period: %v ", params.BeaconConfig().WeakSubjectivityPeriod)
 	}
-	if _, _, err := detectAndUpdateMaxEpochSpan(ctx, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch, spanMap); err == nil {
+	if _, _, err := detectAndUpdateMaxEpochSpan(ctx, spanMap, spanTestsFail.sourceEpoch, spanTestsFail.targetEpoch); err == nil {
 		t.Fatalf("Update should not support diff greater then weak subjectivity period: %v ", params.BeaconConfig().WeakSubjectivityPeriod)
 	}
 

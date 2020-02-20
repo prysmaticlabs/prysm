@@ -17,8 +17,8 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
-        "attestation_test.go",
         "attestations_bench_test.go",
+        "attestations_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
