@@ -180,7 +180,7 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	testutil.ResetCache()
 
 	deposits, keys, _ := testutil.DeterministicDepositsAndKeys(1)
-	sig := keys[0].Sign([]byte{'F', 'A', 'K', 'E'}, bls.ComputeDomain(params.BeaconConfig().DomainDeposit))
+	sig := keys[0].Sign([]byte{'F', 'A', 'K', 'E'})
 	deposits[0].Data.Signature = sig.Marshal()[:]
 
 	trie, _, err := testutil.DepositTrieFromDeposits(deposits)
@@ -225,12 +225,12 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 
 	sk := bls.RandKey()
 	deposit.Data.PublicKey = sk.PublicKey().Marshal()
-	signedRoot, err := ssz.HashTreeRoot(deposit.Data)
+	signedRoot, err := helpers.ComputeSigningRoot(deposit.Data, bls.ComputeDomain(params.BeaconConfig().DomainDeposit))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	sig := sk.Sign(signedRoot[:], bls.ComputeDomain(params.BeaconConfig().DomainDeposit))
+	sig := sk.Sign(signedRoot[:])
 	deposit.Data.Signature = sig.Marshal()
 
 	trie, err := trieutil.NewTrie(int(params.BeaconConfig().DepositContractTreeDepth))

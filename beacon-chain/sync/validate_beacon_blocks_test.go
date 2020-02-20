@@ -125,7 +125,7 @@ func TestValidateBeaconBlockPubSub_ValidSignature(t *testing.T) {
 		Block: &ethpb.BeaconBlock{
 			ParentRoot: testutil.Random32Bytes(t),
 		},
-		Signature: sk.Sign([]byte("data"), 0).Marshal(),
+		Signature: sk.Sign([]byte("data")).Marshal(),
 	}
 
 	r := &Service{
@@ -175,7 +175,7 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 		Block: &ethpb.BeaconBlock{
 			ParentRoot: testutil.Random32Bytes(t),
 		},
-		Signature: sk.Sign([]byte("data"), 0).Marshal(),
+		Signature: sk.Sign([]byte("data")).Marshal(),
 	}
 
 	r := &Service{
@@ -223,7 +223,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 			ParentRoot: testutil.Random32Bytes(t),
 			Slot:       1000,
 		},
-		Signature: sk.Sign([]byte("data"), 0).Marshal(),
+		Signature: sk.Sign([]byte("data")).Marshal(),
 	}
 
 	r := &Service{
@@ -267,7 +267,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 			ParentRoot: testutil.Random32Bytes(t),
 			Slot:       10,
 		},
-		Signature: sk.Sign([]byte("data"), 0).Marshal(),
+		Signature: sk.Sign([]byte("data")).Marshal(),
 	}
 
 	genesisTime := time.Now()

@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"testing"
 
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -23,13 +22,14 @@ func TestBlockSignature(t *testing.T) {
 		t.Error(err)
 	}
 	beaconState.SetSlot(beaconState.Slot() - 1)
-	signingRoot, err := ssz.HashTreeRoot(block.Block)
+	epoch := helpers.SlotToEpoch(block.Block.Slot)
+	domain := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainBeaconProposer)
+	signingRoot, err := helpers.ComputeSigningRoot(block.Block, domain)
 	if err != nil {
 		t.Error(err)
 	}
-	epoch := helpers.SlotToEpoch(block.Block.Slot)
-	domain := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainBeaconProposer)
-	blockSig := privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()
+
+	blockSig := privKeys[proposerIdx].Sign(signingRoot[:]).Marshal()
 
 	signature, err := BlockSignature(beaconState, block.Block, privKeys)
 	if err != nil {
@@ -57,8 +57,12 @@ func TestRandaoReveal(t *testing.T) {
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
 	domain := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainRandao)
+	root, err := helpers.ComputeSigningRoot(epoch, domain)
+	if err != nil {
+		t.Fatal(err)
+	}
 	// We make the previous validator's index sign the message instead of the proposer.
-	epochSignature := privKeys[proposerIdx].Sign(buf, domain).Marshal()
+	epochSignature := privKeys[proposerIdx].Sign(root[:]).Marshal()
 
 	if !bytes.Equal(randaoReveal[:], epochSignature[:]) {
 		t.Errorf("Expected randao reveals to be equal, received %#x != %#x", randaoReveal[:], epochSignature[:])

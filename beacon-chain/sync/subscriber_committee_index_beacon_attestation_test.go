@@ -72,7 +72,7 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 			BeaconBlockRoot: root[:],
 		},
 		AggregationBits: bitfield.Bitlist{0b0101},
-		Signature:       sKeys[0].Sign([]byte("foo"), 0).Marshal(),
+		Signature:       sKeys[0].Sign([]byte("foo")).Marshal(),
 	}
 
 	p.ReceivePubSub("/eth2/committee_index0_beacon_attestation", att)

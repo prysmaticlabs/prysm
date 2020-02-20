@@ -12,6 +12,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/shared/keystore",
     visibility = ["//visibility:public"],
     deps = [
+        "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bls:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",

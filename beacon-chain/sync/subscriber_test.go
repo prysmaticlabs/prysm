@@ -81,7 +81,7 @@ func TestSubscribe_WaitToSync(t *testing.T) {
 		Block: &pb.BeaconBlock{
 			ParentRoot: testutil.Random32Bytes(t),
 		},
-		Signature: sk.Sign([]byte("data"), 0).Marshal(),
+		Signature: sk.Sign([]byte("data")).Marshal(),
 	}
 	p2p.ReceivePubSub(topic, msg)
 	// wait for chainstart to be sent

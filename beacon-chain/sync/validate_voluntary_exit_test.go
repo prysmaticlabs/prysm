@@ -10,7 +10,6 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -51,14 +50,14 @@ func setupValidExit(t *testing.T) (*ethpb.SignedVoluntaryExit, *stateTrie.Beacon
 	); err != nil {
 		t.Fatal(err)
 	}
-	signingRoot, err := ssz.HashTreeRoot(exit.Exit)
+	domain := helpers.Domain(state.Fork(), helpers.CurrentEpoch(state), params.BeaconConfig().DomainVoluntaryExit)
+	signingRoot, err := helpers.ComputeSigningRoot(exit.Exit, domain)
 	if err != nil {
 		t.Error(err)
 	}
-	domain := helpers.Domain(state.Fork(), helpers.CurrentEpoch(state), params.BeaconConfig().DomainVoluntaryExit)
 	priv := bls.RandKey()
 
-	sig := priv.Sign(signingRoot[:], domain)
+	sig := priv.Sign(signingRoot[:])
 	exit.Signature = sig.Marshal()
 
 	val, err := state.ValidatorAtIndex(0)

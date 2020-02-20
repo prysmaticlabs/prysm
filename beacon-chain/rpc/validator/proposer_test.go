@@ -334,13 +334,14 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	}
 	beaconState.SetSlot(beaconState.Slot() - 1)
 	req.Block.Body.RandaoReveal = randaoReveal[:]
-	signingRoot, err := ssz.HashTreeRoot(req.Block)
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+	domain := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	signingRoot, err := helpers.ComputeSigningRoot(req.Block, domain)
 	if err != nil {
 		t.Error(err)
 	}
-	currentEpoch := helpers.CurrentEpoch(beaconState)
-	domain := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
-	blockSig := privKeys[proposerIdx].Sign(signingRoot[:], domain).Marshal()
+
+	blockSig := privKeys[proposerIdx].Sign(signingRoot[:]).Marshal()
 	req.Signature = blockSig[:]
 
 	_, err = proposerServer.computeStateRoot(context.Background(), req)
@@ -1279,8 +1280,8 @@ func TestFilterAttestation_OK(t *testing.T) {
 		atts[i].Signature = zeroSig[:]
 
 		for i, indice := range attestingIndices {
-			hashTreeRoot, _ := ssz.HashTreeRoot(atts[i].Data)
-			sig := privKeys[indice].Sign(hashTreeRoot[:], domain)
+			hashTreeRoot, _ := helpers.ComputeSigningRoot(atts[i].Data, domain)
+			sig := privKeys[indice].Sign(hashTreeRoot[:])
 			sigs[i] = sig
 		}
 		atts[i].Signature = bls.AggregateSignatures(sigs).Marshal()[:]
@@ -1487,7 +1488,7 @@ func TestDeleteAttsInPool_Aggregated(t *testing.T) {
 		AttPool: attestations.NewPool(),
 	}
 
-	sig := bls.RandKey().Sign([]byte("foo"), 0).Marshal()
+	sig := bls.RandKey().Sign([]byte("foo")).Marshal()
 	aggregatedAtts := []*ethpb.Attestation{{AggregationBits: bitfield.Bitlist{0b10101}, Signature: sig}, {AggregationBits: bitfield.Bitlist{0b11010}, Signature: sig}}
 	unaggregatedAtts := []*ethpb.Attestation{{AggregationBits: bitfield.Bitlist{0b1001}, Signature: sig}, {AggregationBits: bitfield.Bitlist{0b0001}, Signature: sig}}
 

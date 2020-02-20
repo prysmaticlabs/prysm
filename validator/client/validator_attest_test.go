@@ -115,7 +115,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sig, err := validator.keyManager.Sign(validatorPubKey, root, 0)
+	sig, err := validator.keyManager.Sign(validatorPubKey, root)
 	if err != nil {
 		t.Fatal(err)
 	}

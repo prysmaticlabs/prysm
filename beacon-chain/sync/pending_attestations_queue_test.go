@@ -71,7 +71,7 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 
 	a := &ethpb.AggregateAttestationAndProof{
 		Aggregate: &ethpb.Attestation{
-			Signature:       bls.RandKey().Sign([]byte("foo"), 0).Marshal(),
+			Signature:       bls.RandKey().Sign([]byte("foo")).Marshal(),
 			AggregationBits: bitfield.Bitlist{0x02},
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{}}}}
@@ -132,24 +132,23 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	hashTreeRoot, err := ssz.HashTreeRoot(att.Data)
+	domain := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	hashTreeRoot, err := helpers.ComputeSigningRoot(att.Data, domain)
 	if err != nil {
 		t.Error(err)
 	}
-	domain := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
 	sigs := make([]*bls.Signature, len(attestingIndices))
 	for i, indice := range attestingIndices {
-		sig := privKeys[indice].Sign(hashTreeRoot[:], domain)
+		sig := privKeys[indice].Sign(hashTreeRoot[:])
 		sigs[i] = sig
 	}
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
 
-	slotRoot, err := ssz.HashTreeRoot(att.Data.Slot)
+	slotRoot, err := helpers.ComputeSigningRoot(att.Data.Slot, domain)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	sig := privKeys[154].Sign(slotRoot[:], domain)
+	sig := privKeys[154].Sign(slotRoot[:])
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
 		SelectionProof:  sig.Marshal(),
 		Aggregate:       att,

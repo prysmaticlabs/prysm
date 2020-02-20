@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -152,12 +154,12 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		PublicKey:             pubKey1,
 		WithdrawalCredentials: []byte("hey"),
 	}
-	signingRoot, err := ssz.HashTreeRoot(depData)
+	domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
+	signingRoot, err := helpers.ComputeSigningRoot(depData, domain)
 	if err != nil {
 		t.Error(err)
 	}
-	domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
-	depData.Signature = priv1.Sign(signingRoot[:], domain).Marshal()[:]
+	depData.Signature = priv1.Sign(signingRoot[:]).Marshal()[:]
 
 	deposit := &ethpb.Deposit{
 		Data: depData,

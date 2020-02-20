@@ -8,7 +8,6 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -184,7 +183,7 @@ func validateSelection(ctx context.Context, s *stateTrie.BeaconState, data *ethp
 	}
 
 	domain := helpers.Domain(s.Fork(), helpers.SlotToEpoch(data.Slot), params.BeaconConfig().DomainBeaconAttester)
-	slotMsg, err := ssz.HashTreeRoot(data.Slot)
+	slotMsg, err := helpers.ComputeSigningRoot(data.Slot, domain)
 	if err != nil {
 		return err
 	}
@@ -197,7 +196,7 @@ func validateSelection(ctx context.Context, s *stateTrie.BeaconState, data *ethp
 	if err != nil {
 		return err
 	}
-	if !slotSig.Verify(slotMsg[:], pubKey, domain) {
+	if !slotSig.Verify(slotMsg[:], pubKey) {
 		return errors.New("could not validate slot signature")
 	}
 

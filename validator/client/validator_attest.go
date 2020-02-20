@@ -6,11 +6,12 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/go-ssz"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -207,12 +208,12 @@ func (v *validator) signAtt(ctx context.Context, pubKey [48]byte, data *ethpb.At
 		return nil, err
 	}
 
-	root, err := ssz.HashTreeRoot(data)
+	root, err := helpers.ComputeSigningRoot(data, domain.SignatureDomain)
 	if err != nil {
 		return nil, err
 	}
 
-	sig, err := v.keyManager.Sign(pubKey, root, domain.SignatureDomain)
+	sig, err := v.keyManager.Sign(pubKey, root)
 	if err != nil {
 		return nil, err
 	}

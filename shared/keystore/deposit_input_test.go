@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"testing"
 
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -38,9 +39,12 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	dom := bytesutil.FromBytes4(params.BeaconConfig().DomainDeposit)
-	if !sig.Verify(sr[:], k1.PublicKey, dom) {
+	dom := params.BeaconConfig().DomainDeposit
+	root, err := ssz.HashTreeRoot(&pb.SigningRoot{ObjectRoot: sr[:], Domain: dom})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !sig.Verify(root[:], k1.PublicKey) {
 		t.Error("Invalid proof of deposit input signature")
 	}
 }
