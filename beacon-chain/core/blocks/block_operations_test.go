@@ -58,7 +58,10 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get signing root of block: %v", err)
 	}
-	dt := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer)
+	dt, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		t.Fatalf("Failed to get domain form state: %v", err)
+	}
 	blockSig := privKeys[proposerIdx+1].Sign(signingRoot[:], dt)
 	block.Signature = blockSig.Marshal()[:]
 
@@ -95,7 +98,10 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 		t.Error(err)
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		t.Fatalf("Failed to get domain form state: %v", err)
+	}
 	priv := bls.RandKey()
 	blockSig := priv.Sign([]byte("hello"), dt)
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
@@ -138,7 +144,10 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 	})
 
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		t.Fatalf("Failed to get domain form state: %v", err)
+	}
 	priv := bls.RandKey()
 	blockSig := priv.Sign([]byte("hello"), dt)
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
@@ -153,7 +162,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 		Signature: blockSig.Marshal(),
 	}
 
-	_, err := blocks.ProcessBlockHeader(state, block)
+	_, err = blocks.ProcessBlockHeader(state, block)
 	want := "does not match"
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
@@ -185,7 +194,10 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 		t.Error(err)
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		t.Fatalf("Failed to get domain form state: %v", err)
+	}
 	priv := bls.RandKey()
 	blockSig := priv.Sign([]byte("hello"), dt)
 	validators[12683].PublicKey = priv.PublicKey().Marshal()
@@ -232,7 +244,10 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		t.Error(err)
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		t.Fatalf("Failed to get domain form state: %v", err)
+	}
 	priv := bls.RandKey()
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
@@ -292,8 +307,10 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	epoch := uint64(0)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainRandao)
-
+	domain, err := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainRandao)
+	if err != nil {
+		t.Fatalf("Failed to get domain form state: %v", err)
+	}
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx-1].Sign(buf, domain)
 	block := &ethpb.BeaconBlock{
@@ -492,7 +509,10 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 	proposerIdx := uint64(1)
 
-	domain := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer)
+	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		t.Fatalf("Failed to get domain form state: %v", err)
+	}
 	header1 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			Slot:      0,

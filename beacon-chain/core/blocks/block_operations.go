@@ -219,7 +219,10 @@ func ProcessBlockHeader(
 
 	// Verify proposer signature.
 	currentEpoch := helpers.SlotToEpoch(beaconState.Slot())
-	domain := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		return nil, err
+	}
 	if err := verifySigningRoot(block.Block, proposer.PublicKey, block.Signature, domain); err != nil {
 		return nil, ErrSigFailedToVerify
 	}
@@ -331,7 +334,10 @@ func ProcessRandao(
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, currentEpoch)
 
-	domain := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainRandao)
+	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainRandao)
+	if err != nil {
+		return nil, err
+	}
 	if err := verifySignature(buf, proposerPub[:], body.RandaoReveal, domain); err != nil {
 		return nil, errors.Wrap(err, "could not verify block randao")
 	}
@@ -447,7 +453,10 @@ func VerifyProposerSlashing(
 		return fmt.Errorf("validator with key %#x is not slashable", proposer.PublicKey)
 	}
 	// Using headerEpoch1 here because both of the headers should have the same epoch.
-	domain := helpers.Domain(beaconState.Fork(), helpers.StartSlot(slashing.Header_1.Header.Slot), params.BeaconConfig().DomainBeaconProposer)
+	domain, err := helpers.Domain(beaconState.Fork(), helpers.StartSlot(slashing.Header_1.Header.Slot), params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		return err
+	}
 	headers := []*ethpb.SignedBeaconBlockHeader{slashing.Header_1, slashing.Header_2}
 	for _, header := range headers {
 		if err := verifySigningRoot(header.Header, proposer.PublicKey, header.Signature, domain); err != nil {
@@ -799,9 +808,11 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 		return errors.New("attesting indices is not uniquely sorted")
 	}
 
-	domain := helpers.Domain(beaconState.Fork(), indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(beaconState.Fork(), indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return err
+	}
 	var pubkey *bls.PublicKey
-	var err error
 	if len(indices) > 0 {
 		pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[0])
 		pubkey, err = bls.PublicKeyFromBytes(pubkeyAtIdx[:])
@@ -1163,7 +1174,10 @@ func VerifyExit(validator *ethpb.Validator, currentSlot uint64, fork *pb.Fork, s
 			validator.ActivationEpoch+params.BeaconConfig().PersistentCommitteePeriod,
 		)
 	}
-	domain := helpers.Domain(fork, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit)
+	domain, err := helpers.Domain(fork, exit.Epoch, params.BeaconConfig().DomainVoluntaryExit)
+	if err != nil {
+		return err
+	}
 	if err := verifySigningRoot(exit, validator.PublicKey, signed.Signature, domain); err != nil {
 		return ErrSigFailedToVerify
 	}
