@@ -267,7 +267,7 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 		// If justified state is nil, resume back to normal syncing process and save
 		// justified check point.
 		if justifiedState == nil {
-			if s.beaconDB.HasState(ctx, justifiedRoot) {
+			if s.beaconDB.HasHotStateSummary(ctx, justifiedRoot) {
 				return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
 			}
 			justifiedState, err = s.generateState(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root), justifiedRoot)
@@ -276,7 +276,7 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 				return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
 			}
 		}
-		if err := s.beaconDB.SaveState(ctx, justifiedState, justifiedRoot); err != nil {
+		if err := s.stateGen.SaveState(ctx, justifiedRoot, justifiedState); err != nil {
 			return errors.Wrap(err, "could not save justified state")
 		}
 	}
@@ -309,7 +309,7 @@ func (s *Service) saveInitState(ctx context.Context, state *stateTrie.BeaconStat
 		}
 	}
 
-	if err := s.beaconDB.SaveState(ctx, fs, finalizedRoot); err != nil {
+	if err := s.stateGen.SaveState(ctx, finalizedRoot, fs); err != nil {
 		return errors.Wrap(err, "could not save state")
 	}
 	return nil

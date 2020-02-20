@@ -32,6 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/stategen"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -85,6 +86,7 @@ type Config struct {
 	MaxRoutines       int64
 	StateNotifier     statefeed.Notifier
 	ForkChoiceStore   f.ForkChoicer
+	StateGen          *stategen.State
 }
 
 // NewService instantiates a new block service instance that will
@@ -107,7 +109,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		initSyncState:      make(map[[32]byte]*stateTrie.BeaconState),
 		boundaryRoots:      [][32]byte{},
 		checkpointState:    cache.NewCheckpointStateCache(),
-		stateGen:           stategen.New(cfg.BeaconDB),
+		stateGen:           cfg.StateGen,
 	}, nil
 }
 
@@ -314,6 +316,13 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 	if err := s.beaconDB.SaveGenesisBlockRoot(ctx, genesisBlkRoot); err != nil {
 		return errors.Wrap(err, "could save genesis block root")
 	}
+	if err := s.beaconDB.SaveHotStateSummary(ctx, &pb.HotStateSummary{
+		Slot:         0,
+		LatestRoot:   genesisBlkRoot[:],
+		BoundaryRoot: genesisBlkRoot[:],
+	}); err != nil {
+		return err
+	}
 	if err := s.saveGenesisValidators(ctx, genesisState); err != nil {
 		return errors.Wrap(err, "could not save genesis validators")
 	}
@@ -382,7 +391,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		// would be the genesis state and block.
 		return errors.New("no finalized epoch in the database")
 	}
-	finalizedState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(finalized.Root))
+	finalizedState, err := s.stateGen.Resume(ctx, bytesutil.ToBytes32(finalized.Root))
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized state from db")
 	}

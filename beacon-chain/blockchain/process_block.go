@@ -107,15 +107,6 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 			return nil, errors.Wrap(err, "could not save finalized checkpoint")
 		}
 
-		startSlot := helpers.StartSlot(s.prevFinalizedCheckpt.Epoch)
-		endSlot := helpers.StartSlot(s.finalizedCheckpt.Epoch)
-		if endSlot > startSlot {
-			if err := s.rmStatesOlderThanLastFinalized(ctx, startSlot, endSlot); err != nil {
-				return nil, errors.Wrapf(err, "could not delete states prior to finalized check point, range: %d, %d",
-					startSlot, endSlot)
-			}
-		}
-
 		// Prune proto array fork choice nodes, all nodes before finalized check point will
 		// be pruned.
 		s.forkChoiceStore.Prune(ctx, bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root))
@@ -125,6 +116,14 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 
 		if err := s.finalizedImpliesNewJustified(ctx, postState); err != nil {
 			return nil, errors.Wrap(err, "could not save new justified")
+		}
+
+		finalizedState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root))
+		if err != nil {
+			return nil, err
+		}
+		if err := s.stateGen.MigrateToCold(ctx, finalizedState); err != nil {
+			return nil, err
 		}
 	}
 
