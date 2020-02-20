@@ -184,11 +184,8 @@ func (bs *Server) StreamBlocks(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamB
 			if event.Type == blockfeed.ReceivedBlock {
 				data, ok := event.Data.(blockfeed.ReceivedBlockData)
 				if !ok {
-					return status.Errorf(
-						codes.FailedPrecondition,
-						"Could not subscribe to block feed, received bad data: %v",
-						data,
-					)
+					// Got bad data over the stream.
+					continue
 				}
 				if data.SignedBlock == nil {
 					// One nil block shouldn't stop the stream.
