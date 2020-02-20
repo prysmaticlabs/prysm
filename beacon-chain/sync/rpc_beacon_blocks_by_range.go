@@ -27,6 +27,7 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 
 	startSlot := m.StartSlot
 	endSlot := startSlot + (m.Step * (m.Count - 1))
+	remainingBucketCapacity := r.blocksRateLimiter.Remaining(stream.Conn().RemotePeer().String())
 
 	span.AddAttributes(
 		trace.Int64Attribute("start", int64(startSlot)),
@@ -34,7 +35,27 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		trace.Int64Attribute("step", int64(m.Step)),
 		trace.Int64Attribute("count", int64(m.Count)),
 		trace.StringAttribute("peer", stream.Conn().RemotePeer().Pretty()),
+		trace.Int64Attribute("remaining_capacity", remainingBucketCapacity),
 	)
+
+	if m.Count > uint64(remainingBucketCapacity) {
+		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
+		if r.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
+			log.Debug("Disconnecting bad peer")
+			defer r.p2p.Disconnect(stream.Conn().RemotePeer())
+		}
+		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, rateLimitedError)
+		if err != nil {
+			log.WithError(err).Error("Failed to generate a response error")
+		} else {
+			if _, err := stream.Write(resp); err != nil {
+				log.WithError(err).Errorf("Failed to write to stream")
+			}
+		}
+		return errors.New(rateLimitedError)
+	}
+
+	r.blocksRateLimiter.Add(stream.Conn().RemotePeer().String(), int64(m.Count))
 
 	// TODO(3147): Update this with reasonable constraints.
 	if endSlot-startSlot > 1000 || m.Step == 0 {
@@ -62,7 +83,7 @@ func (r *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		}
 	}
 
-	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
+	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot).SetSlotStep(m.Step)
 	blks, err := r.db.Blocks(ctx, filter)
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve blocks")

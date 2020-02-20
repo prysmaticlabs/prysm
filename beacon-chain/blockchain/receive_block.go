@@ -5,15 +5,15 @@ import (
 	"context"
 	"encoding/hex"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/metrics"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
@@ -55,7 +55,6 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 		return err
 	}
 
-	processedBlk.Inc()
 	return nil
 }
 
@@ -67,35 +66,40 @@ func (s *Service) ReceiveBlock(ctx context.Context, block *ethpb.SignedBeaconBlo
 func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlockNoPubsub")
 	defer span.End()
-	blockCopy := proto.Clone(block).(*ethpb.SignedBeaconBlock)
+	blockCopy := stateTrie.CopySignedBeaconBlock(block)
 
 	// Apply state transition on the new block.
-	if err := s.forkChoiceStore.OnBlock(ctx, blockCopy); err != nil {
-		err := errors.Wrap(err, "could not process block from fork choice service")
+	postState, err := s.onBlock(ctx, blockCopy)
+	if err != nil {
+		err := errors.Wrap(err, "could not process block")
 		traceutil.AnnotateError(span, err)
 		return err
 	}
+
+	// Add attestations from the block to the pool for fork choice.
+	if err := s.attPool.SaveBlockAttestations(blockCopy.Block.Body.Attestations); err != nil {
+		log.Errorf("Could not save attestation for fork choice: %v", err)
+		return nil
+	}
+	for _, exit := range block.Block.Body.VoluntaryExits {
+		s.exitPool.MarkIncluded(exit)
+	}
+
+	s.epochParticipationLock.Lock()
+	defer s.epochParticipationLock.Unlock()
+	s.epochParticipation[helpers.SlotToEpoch(blockCopy.Block.Slot)] = precompute.Balances
+
 	root, err := ssz.HashTreeRoot(blockCopy.Block)
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root on received block")
 	}
 
-	// Run fork choice after applying state transition on the new block.
-	headRoot, err := s.forkChoiceStore.Head(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not get head from fork choice service")
-	}
-	signedHeadBlock, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
-	if err != nil {
-		return errors.Wrap(err, "could not compute state from block head")
-	}
-	if signedHeadBlock == nil || signedHeadBlock.Block == nil {
-		return errors.New("nil head block")
-	}
-
-	// Only save head if it's different than the current head.
-	if !bytes.Equal(headRoot, s.HeadRoot()) {
-		if err := s.saveHead(ctx, signedHeadBlock, bytesutil.ToBytes32(headRoot)); err != nil {
+	if featureconfig.Get().DisableForkChoice && block.Block.Slot > s.headSlot() {
+		if err := s.saveHead(ctx, root); err != nil {
+			return errors.Wrap(err, "could not save head")
+		}
+	} else {
+		if err := s.updateHead(ctx, postState.Balances()); err != nil {
 			return errors.Wrap(err, "could not save head")
 		}
 	}
@@ -104,31 +108,17 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 	s.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
+			Slot:      blockCopy.Block.Slot,
 			BlockRoot: root,
 			Verified:  true,
 		},
 	})
 
-	// Add attestations from the block to the pool for fork choice.
-	if err := s.attPool.SaveBlockAttestations(blockCopy.Block.Body.Attestations); err != nil {
-		log.Errorf("Could not save attestation for fork choice: %v", err)
-		return nil
-	}
-
 	// Reports on block and fork choice metrics.
-	s.reportSlotMetrics(blockCopy.Block.Slot)
-
-	// Log if block is a competing block.
-	isCompetingBlock(root[:], blockCopy.Block.Slot, headRoot, signedHeadBlock.Block.Slot)
+	metrics.ReportSlotMetrics(blockCopy.Block.Slot, s.headSlot(), s.finalizedCheckpt)
 
 	// Log state transition data.
 	logStateTransitionData(blockCopy.Block)
-
-	s.epochParticipationLock.Lock()
-	defer s.epochParticipationLock.Unlock()
-	s.epochParticipation[helpers.SlotToEpoch(blockCopy.Block.Slot)] = precompute.Balances
-
-	processedBlkNoPubsub.Inc()
 
 	return nil
 }
@@ -140,21 +130,26 @@ func (s *Service) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.SignedB
 func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.SignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlockNoForkchoice")
 	defer span.End()
-	blockCopy := proto.Clone(block).(*ethpb.SignedBeaconBlock)
+	blockCopy := stateTrie.CopySignedBeaconBlock(block)
 
-	// Apply state transition on the incoming newly received block.
-	if err := s.forkChoiceStore.OnBlock(ctx, blockCopy); err != nil {
-		err := errors.Wrap(err, "could not process block from fork choice service")
+	// Apply state transition on the new block.
+	_, err := s.onBlock(ctx, blockCopy)
+	if err != nil {
+		err := errors.Wrap(err, "could not process block")
 		traceutil.AnnotateError(span, err)
 		return err
 	}
+
 	root, err := ssz.HashTreeRoot(blockCopy.Block)
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root on received block")
 	}
-
-	if !bytes.Equal(root[:], s.HeadRoot()) {
-		if err := s.saveHead(ctx, blockCopy, root); err != nil {
+	cachedHeadRoot, err := s.HeadRoot(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get head root from cache")
+	}
+	if !bytes.Equal(root[:], cachedHeadRoot) {
+		if err := s.saveHead(ctx, root); err != nil {
 			return errors.Wrap(err, "could not save head")
 		}
 	}
@@ -163,13 +158,14 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 	s.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
+			Slot:      blockCopy.Block.Slot,
 			BlockRoot: root,
 			Verified:  true,
 		},
 	})
 
 	// Reports on block and fork choice metrics.
-	s.reportSlotMetrics(blockCopy.Block.Slot)
+	metrics.ReportSlotMetrics(blockCopy.Block.Slot, s.headSlot(), s.finalizedCheckpt)
 
 	// Log state transition data.
 	logStateTransitionData(blockCopy.Block)
@@ -178,7 +174,6 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 	defer s.epochParticipationLock.Unlock()
 	s.epochParticipation[helpers.SlotToEpoch(blockCopy.Block.Slot)] = precompute.Balances
 
-	processedBlkNoPubsubForkchoice.Inc()
 	return nil
 }
 
@@ -188,19 +183,27 @@ func (s *Service) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *eth
 func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlockNoVerify")
 	defer span.End()
-	blockCopy := proto.Clone(block).(*ethpb.SignedBeaconBlock)
+	blockCopy := stateTrie.CopySignedBeaconBlock(block)
 
 	// Apply state transition on the incoming newly received blockCopy without verifying its BLS contents.
-	if err := s.forkChoiceStore.OnBlockInitialSyncStateTransition(ctx, blockCopy); err != nil {
-		return errors.Wrap(err, "could not process blockCopy from fork choice service")
+	if err := s.onBlockInitialSyncStateTransition(ctx, blockCopy); err != nil {
+		err := errors.Wrap(err, "could not process block")
+		traceutil.AnnotateError(span, err)
+		return err
 	}
+
 	root, err := ssz.HashTreeRoot(blockCopy.Block)
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root on received blockCopy")
 	}
 
+	cachedHeadRoot, err := s.HeadRoot(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get head root from cache")
+	}
+
 	if featureconfig.Get().InitSyncCacheState {
-		if !bytes.Equal(root[:], s.HeadRoot()) {
+		if !bytes.Equal(root[:], cachedHeadRoot) {
 			if err := s.saveHeadNoDB(ctx, blockCopy, root); err != nil {
 				err := errors.Wrap(err, "could not save head")
 				traceutil.AnnotateError(span, err)
@@ -208,8 +211,8 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 			}
 		}
 	} else {
-		if !bytes.Equal(root[:], s.HeadRoot()) {
-			if err := s.saveHead(ctx, blockCopy, root); err != nil {
+		if !bytes.Equal(root[:], cachedHeadRoot) {
+			if err := s.saveHead(ctx, root); err != nil {
 				err := errors.Wrap(err, "could not save head")
 				traceutil.AnnotateError(span, err)
 				return err
@@ -221,13 +224,14 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 	s.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.BlockProcessed,
 		Data: &statefeed.BlockProcessedData{
+			Slot:      blockCopy.Block.Slot,
 			BlockRoot: root,
 			Verified:  false,
 		},
 	})
 
 	// Reports on blockCopy and fork choice metrics.
-	s.reportSlotMetrics(blockCopy.Block.Slot)
+	metrics.ReportSlotMetrics(blockCopy.Block.Slot, s.headSlot(), s.finalizedCheckpt)
 
 	// Log state transition data.
 	log.WithFields(logrus.Fields{
@@ -241,17 +245,4 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 	s.epochParticipation[helpers.SlotToEpoch(blockCopy.Block.Slot)] = precompute.Balances
 
 	return nil
-}
-
-// This checks if the block is from a competing chain, emits warning and updates metrics.
-func isCompetingBlock(root []byte, slot uint64, headRoot []byte, headSlot uint64) {
-	if !bytes.Equal(root[:], headRoot) {
-		log.WithFields(logrus.Fields{
-			"blkSlot":  slot,
-			"blkRoot":  hex.EncodeToString(root[:]),
-			"headSlot": headSlot,
-			"headRoot": hex.EncodeToString(headRoot),
-		}).Warn("Calculated head diffs from new block")
-		competingBlks.Inc()
-	}
 }

@@ -1,0 +1,29 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    testonly = True,
+    srcs = ["main.go"],
+    importpath = "github.com/prysmaticlabs/prysm/tools/benchmark-files-gen",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/core/state:go_default_library",
+        "//beacon-chain/state:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/benchutil:go_default_library",
+        "//shared/interop:go_default_library",
+        "//shared/params:go_default_library",
+        "//shared/testutil:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "benchmark-files-gen",
+    testonly = True,
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)

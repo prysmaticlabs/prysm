@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -26,6 +27,7 @@ import (
 type validator struct {
 	genesisTime          uint64
 	ticker               *slotutil.SlotTicker
+	db                   *db.Store
 	duties               *ethpb.DutiesResponse
 	validatorClient      ethpb.BeaconNodeValidatorClient
 	beaconClient         ethpb.BeaconChainClient
@@ -35,10 +37,9 @@ type validator struct {
 	keyManager           keymanager.KeyManager
 	prevBalance          map[[48]byte]uint64
 	logValidatorBalances bool
+	emitAccountMetrics   bool
 	attLogs              map[[32]byte]*attSubmitted
 	attLogsLock          sync.Mutex
-	pubKeyToID           map[[48]byte]uint64
-	pubKeyToIDLock       sync.RWMutex
 }
 
 // Done cleans up the validator.
@@ -175,7 +176,7 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 			log.Info("Validator exited")
 			continue
 		}
-		if status.Status.Status == ethpb.ValidatorStatus_DEPOSIT_RECEIVED {
+		if status.Status.Status == ethpb.ValidatorStatus_DEPOSITED {
 			log.WithField("expectedInclusionSlot", status.Status.DepositInclusionSlot).Info(
 				"Deposit for validator received but not processed into state")
 			continue
@@ -252,22 +253,10 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 	v.duties = resp
 	// Only log the full assignments output on epoch start to be less verbose.
 	if slot%params.BeaconConfig().SlotsPerEpoch == 0 {
-		v.pubKeyToIDLock.Lock()
-		defer v.pubKeyToIDLock.Unlock()
-
 		for _, duty := range v.duties.Duties {
-			if _, ok := v.pubKeyToID[bytesutil.ToBytes48(duty.PublicKey)]; !ok {
-				// TODO(4379): Make validator index part of the assignment respond.
-				res, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: duty.PublicKey})
-				if err != nil {
-					log.Warnf("Validator pub key %#x does not exist in beacon node", bytesutil.Trunc(duty.PublicKey))
-					continue
-				}
-				v.pubKeyToID[bytesutil.ToBytes48(duty.PublicKey)] = res.Index
-			}
 			lFields := logrus.Fields{
 				"pubKey":         fmt.Sprintf("%#x", bytesutil.Trunc(duty.PublicKey)),
-				"validatorIndex": v.pubKeyToID[bytesutil.ToBytes48(duty.PublicKey)],
+				"validatorIndex": duty.ValidatorIndex,
 				"committeeIndex": duty.CommitteeIndex,
 				"epoch":          slot / params.BeaconConfig().SlotsPerEpoch,
 				"status":         duty.Status,
@@ -298,7 +287,7 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]pb
 		if duty == nil {
 			continue
 		}
-		if duty.ProposerSlot == slot {
+		if duty.ProposerSlot > 0 && duty.ProposerSlot == slot {
 			roles = append(roles, pb.ValidatorRole_PROPOSER)
 		}
 		if duty.AttesterSlot == slot {
@@ -325,7 +314,7 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]pb
 }
 
 // isAggregator checks if a validator is an aggregator of a given slot, it uses the selection algorithm outlined in:
-// https://github.com/ethereum/eth2.0-specs/blob/v0.9.0/specs/validator/0_beacon-chain-validator.md#aggregation-selection
+// https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/validator/0_beacon-chain-validator.md#aggregation-selection
 func (v *validator) isAggregator(ctx context.Context, committee []uint64, slot uint64, pubKey [48]byte) (bool, error) {
 	modulo := uint64(1)
 	if len(committee)/int(params.BeaconConfig().TargetAggregatorsPerCommittee) > 1 {

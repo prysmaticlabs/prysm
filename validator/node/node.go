@@ -5,9 +5,10 @@ package node
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/signal"
-	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -21,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/client"
+	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/flags"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
@@ -81,6 +83,33 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 	keyManager, err := selectKeyManager(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	pubKeys, err := keyManager.FetchValidatingKeys()
+	if err != nil {
+		log.WithError(err).Error("Failed to obtain public keys for validation")
+	} else {
+		if len(pubKeys) == 0 {
+			log.Warn("No keys found; nothing to validate")
+		} else {
+			log.WithField("validators", len(pubKeys)).Info("Found validator keys")
+			for _, key := range pubKeys {
+				log.WithField("pubKey", fmt.Sprintf("%#x", key)).Info("Validating for public key")
+			}
+		}
+	}
+
+	clearFlag := ctx.GlobalBool(cmd.ClearDB.Name)
+	forceClearFlag := ctx.GlobalBool(cmd.ForceClearDB.Name)
+	if clearFlag || forceClearFlag {
+		pubkeys, err := keyManager.FetchValidatingKeys()
+		if err != nil {
+			return nil, err
+		}
+		dataDir := ctx.GlobalString(cmd.DataDirFlag.Name)
+		if err := clearDB(dataDir, pubkeys, forceClearFlag); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := ValidatorClient.registerPrometheusService(ctx); err != nil {
@@ -150,15 +179,21 @@ func (s *ValidatorClient) registerPrometheusService(ctx *cli.Context) error {
 
 func (s *ValidatorClient) registerClientService(ctx *cli.Context, keyManager keymanager.KeyManager) error {
 	endpoint := ctx.GlobalString(flags.BeaconRPCProviderFlag.Name)
+	dataDir := ctx.GlobalString(cmd.DataDirFlag.Name)
 	logValidatorBalances := !ctx.GlobalBool(flags.DisablePenaltyRewardLogFlag.Name)
+	emitAccountMetrics := ctx.GlobalBool(flags.AccountMetricsFlag.Name)
 	cert := ctx.GlobalString(flags.CertFlag.Name)
 	graffiti := ctx.GlobalString(flags.GraffitiFlag.Name)
+	maxCallRecvMsgSize := ctx.GlobalInt(flags.GrpcMaxCallRecvMsgSizeFlag.Name)
 	v, err := client.NewValidatorService(context.Background(), &client.Config{
-		Endpoint:             endpoint,
-		KeyManager:           keyManager,
-		LogValidatorBalances: logValidatorBalances,
-		CertFlag:             cert,
-		GraffitiFlag:         graffiti,
+		Endpoint:                   endpoint,
+		DataDir:                    dataDir,
+		KeyManager:                 keyManager,
+		LogValidatorBalances:       logValidatorBalances,
+		EmitAccountMetrics:         emitAccountMetrics,
+		CertFlag:                   cert,
+		GraffitiFlag:               graffiti,
+		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize client service")
@@ -168,25 +203,93 @@ func (s *ValidatorClient) registerClientService(ctx *cli.Context, keyManager key
 
 // selectKeyManager selects the key manager depending on the options provided by the user.
 func selectKeyManager(ctx *cli.Context) (keymanager.KeyManager, error) {
-	if unencryptedKeys := ctx.String(flags.UnencryptedKeysFlag.Name); unencryptedKeys != "" {
-		// Fetch keys from unencrypted store.
-		path, err := filepath.Abs(unencryptedKeys)
+	manager := strings.ToLower(ctx.String(flags.KeyManager.Name))
+	opts := ctx.String(flags.KeyManagerOpts.Name)
+	if opts == "" {
+		opts = "{}"
+	} else if !strings.HasPrefix(opts, "{") {
+		fileopts, err := ioutil.ReadFile(opts)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "Failed to read keymanager options file")
 		}
-		r, err := os.Open(path)
-		if err != nil {
-			return nil, err
-		}
-		defer r.Close()
-		return keymanager.NewUnencrypted(r)
+		opts = string(fileopts)
 	}
 
-	if numValidatorKeys := ctx.GlobalUint64(flags.InteropNumValidators.Name); numValidatorKeys > 0 {
-		// Generate keys from interop seed.
-		return keymanager.NewInterop(numValidatorKeys, ctx.GlobalUint64(flags.InteropStartIndex.Name))
+	if manager == "" {
+		// Attempt to work out keymanager from deprecated vars.
+		if unencryptedKeys := ctx.String(flags.UnencryptedKeysFlag.Name); unencryptedKeys != "" {
+			manager = "unencrypted"
+			opts = fmt.Sprintf(`{"path":%q}`, unencryptedKeys)
+			log.Warn(fmt.Sprintf("--unencrypted-keys flag is deprecated.  Please use --keymanager=unencrypted --keymanageropts='%s'", opts))
+		} else if numValidatorKeys := ctx.GlobalUint64(flags.InteropNumValidators.Name); numValidatorKeys > 0 {
+			manager = "interop"
+			opts = fmt.Sprintf(`{"keys":%d,"offset":%d}`, numValidatorKeys, ctx.GlobalUint64(flags.InteropStartIndex.Name))
+			log.Warn(fmt.Sprintf("--interop-num-validators and --interop-start-index flags are deprecated.  Please use --keymanager=interop --keymanageropts='%s'", opts))
+		} else if keystorePath := ctx.String(flags.KeystorePathFlag.Name); keystorePath != "" {
+			manager = "keystore"
+			opts = fmt.Sprintf(`{"path":%q,"passphrase":%q}`, keystorePath, ctx.String(flags.PasswordFlag.Name))
+			log.Warn(fmt.Sprintf("--keystore-path flag is deprecated.  Please use --keymanager=keystore --keymanageropts='%s'", opts))
+		} else {
+			// Default if no choice made
+			manager = "keystore"
+			passphrase := ctx.String(flags.PasswordFlag.Name)
+			if passphrase == "" {
+				log.Warn("Implicit selection of keymanager is deprecated.  Please use --keymanager=keystore or select a different keymanager")
+			} else {
+				opts = fmt.Sprintf(`{"passphrase":%q}`, passphrase)
+				log.Warn(`Implicit selection of keymanager is deprecated.  Please use --keymanager=keystore --keymanageropts='{"passphrase":"<password>"}' or select a different keymanager`)
+			}
+		}
 	}
 
-	// Fetch keys from keystore.
-	return keymanager.NewKeystore(ctx.String(flags.KeystorePathFlag.Name), ctx.String(flags.PasswordFlag.Name))
+	var km keymanager.KeyManager
+	var help string
+	var err error
+	switch manager {
+	case "interop":
+		km, help, err = keymanager.NewInterop(opts)
+	case "unencrypted":
+		km, help, err = keymanager.NewUnencrypted(opts)
+	case "keystore":
+		km, help, err = keymanager.NewKeystore(opts)
+	case "wallet":
+		km, help, err = keymanager.NewWallet(opts)
+	default:
+		return nil, fmt.Errorf("unknown keymanager %q", manager)
+	}
+	if err != nil {
+		// Print help for the keymanager
+		fmt.Println(help)
+		return nil, err
+	}
+	return km, nil
+}
+
+func clearDB(dataDir string, pubkeys [][48]byte, force bool) error {
+	var err error
+	clearDBConfirmed := force
+
+	if !force {
+		actionText := "This will delete your validator's historical actions database stored in your data directory. " +
+			"This may lead to potential slashing - do you want to proceed? (Y/N)"
+		deniedText := "The historical actions database will not be deleted. No changes have been made."
+		clearDBConfirmed, err = cmd.ConfirmAction(actionText, deniedText)
+		if err != nil {
+			return errors.Wrapf(err, "Could not create DB in dir %s", dataDir)
+		}
+	}
+
+	if clearDBConfirmed {
+		valDB, err := db.NewKVStore(dataDir, pubkeys)
+		if err != nil {
+			return errors.Wrapf(err, "Could not create DB in dir %s", dataDir)
+		}
+
+		log.Warning("Removing database")
+		if err := valDB.ClearDB(); err != nil {
+			return errors.Wrapf(err, "Could not clear DB in dir %s", dataDir)
+		}
+	}
+
+	return nil
 }

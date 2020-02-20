@@ -1,6 +1,6 @@
 /*
 Package featureconfig defines which features are enabled for runtime
-in order to selctively enable certain features to maintain a stable runtime.
+in order to selectively enable certain features to maintain a stable runtime.
 
 The process for implementing new features using this package is as follows:
 	1. Add a new CMD flag in flags.go, and place it in the proper list(s) var for its client.
@@ -13,10 +13,13 @@ The process for implementing new features using this package is as follows:
 		VerifyAttestationSigs: true,
 	}
 	featureconfig.Init(cfg)
+	6. Add the string for the flags that should be running within E2E to E2EValidatorFlags
+	and E2EBeaconChainFlags.
 */
 package featureconfig
 
 import (
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -25,24 +28,33 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
-	NoGenesisDelay            bool   // NoGenesisDelay signals to start the chain as quickly as possible.
-	MinimalConfig             bool   // MinimalConfig as defined in the spec.
-	WriteSSZStateTransitions  bool   // WriteSSZStateTransitions to tmp directory.
-	InitSyncNoVerify          bool   // InitSyncNoVerify when initial syncing w/o verifying block's contents.
-	SkipBLSVerify             bool   // Skips BLS verification across the runtime.
-	EnableBackupWebhook       bool   // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
-	PruneEpochBoundaryStates  bool   // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
-	EnableSnappyDBCompression bool   // EnableSnappyDBCompression in the database.
-	InitSyncCacheState        bool   // InitSyncCacheState caches state during initial sync.
-	KafkaBootstrapServers     string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
-	EnableSavingOfDepositData bool   // EnableSavingOfDepositData allows the saving of eth1 related data such as deposits,chain data to be saved.
+	CustomGenesisDelay                         uint64 // CustomGenesisDelay signals how long of a delay to set to start the chain.
+	MinimalConfig                              bool   // MinimalConfig as defined in the spec.
+	WriteSSZStateTransitions                   bool   // WriteSSZStateTransitions to tmp directory.
+	InitSyncNoVerify                           bool   // InitSyncNoVerify when initial syncing w/o verifying block's contents.
+	SkipBLSVerify                              bool   // Skips BLS verification across the runtime.
+	EnableBackupWebhook                        bool   // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
+	PruneEpochBoundaryStates                   bool   // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
+	EnableSnappyDBCompression                  bool   // EnableSnappyDBCompression in the database.
+	InitSyncCacheState                         bool   // InitSyncCacheState caches state during initial sync.
+	KafkaBootstrapServers                      string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
+	ProtectProposer                            bool   // ProtectProposer prevents the validator client from signing any proposals that would be considered a slashable offense.
+	ProtectAttester                            bool   // ProtectAttester prevents the validator client from signing any attestations that would be considered a slashable offense.
+	DisableStrictAttestationPubsubVerification bool   // DisableStrictAttestationPubsubVerification will disabling strict signature verification in pubsub.
+	DisableUpdateHeadPerAttestation            bool   // DisableUpdateHeadPerAttestation will disabling update head on per attestation basis.
+	EnableByteMempool                          bool   // EnaableByteMempool memory management.
+
+	// DisableForkChoice disables using LMD-GHOST fork choice to update
+	// the head of the chain based on attestations and instead accepts any valid received block
+	// as the chain head. UNSAFE, use with caution.
+	DisableForkChoice bool
 
 	// Cache toggles.
-	EnableAttestationCache   bool // EnableAttestationCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableEth1DataVoteCache  bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
-	EnableNewCache           bool // EnableNewCache enables the node to use the new caching scheme.
-	EnableShuffledIndexCache bool // EnableShuffledIndexCache to cache expensive shuffled index computation.
-	EnableSkipSlotsCache     bool // EnableSkipSlotsCache caches the state in skipped slots.
+	EnableSSZCache          bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
+	EnableEth1DataVoteCache bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
+	EnableSkipSlotsCache    bool // EnableSkipSlotsCache caches the state in skipped slots.
+	EnableSlasherConnection bool // EnableSlasher enable retrieval of slashing events from a slasher instance.
+	EnableBlockTreeCache    bool // EnableBlockTreeCache enable fork choice service to maintain latest filtered block tree.
 }
 
 var featureConfig *Flags
@@ -65,11 +77,12 @@ func Init(c *Flags) {
 func ConfigureBeaconChain(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	if ctx.GlobalBool(noGenesisDelayFlag.Name) {
-		log.Warn("Starting ETH2 with no genesis delay")
-		cfg.NoGenesisDelay = true
+	delay := ctx.GlobalUint64(customGenesisDelayFlag.Name)
+	if delay != params.BeaconConfig().MinGenesisDelay {
+		log.Warnf("Starting ETH2 with genesis delay of %d seconds", delay)
 	}
-	if ctx.GlobalBool(MinimalConfigFlag.Name) {
+	cfg.CustomGenesisDelay = delay
+	if ctx.GlobalBool(minimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
 	}
@@ -77,11 +90,15 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
 		cfg.WriteSSZStateTransitions = true
 	}
-	if ctx.GlobalBool(EnableAttestationCacheFlag.Name) {
-		log.Warn("Enabled unsafe attestation cache")
-		cfg.EnableAttestationCache = true
+	if ctx.GlobalBool(disableForkChoiceUnsafeFlag.Name) {
+		log.Warn("UNSAFE: Disabled fork choice for updating chain head")
+		cfg.DisableForkChoice = true
 	}
-	if ctx.GlobalBool(EnableEth1DataVoteCacheFlag.Name) {
+	if ctx.GlobalBool(enableSSZCache.Name) {
+		log.Warn("Enabled unsafe ssz cache")
+		cfg.EnableSSZCache = true
+	}
+	if ctx.GlobalBool(enableEth1DataVoteCacheFlag.Name) {
 		log.Warn("Enabled unsafe eth1 data vote cache")
 		cfg.EnableEth1DataVoteCache = true
 	}
@@ -91,11 +108,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	} else {
 		cfg.InitSyncNoVerify = true
 	}
-	if ctx.GlobalBool(NewCacheFlag.Name) {
-		log.Warn("Using new cache for committee shuffled indices")
-		cfg.EnableNewCache = true
-	}
-	if ctx.GlobalBool(SkipBLSVerifyFlag.Name) {
+	if ctx.GlobalBool(skipBLSVerifyFlag.Name) {
 		log.Warn("UNSAFE: Skipping BLS verification at runtime")
 		cfg.SkipBLSVerify = true
 	}
@@ -103,11 +116,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Allowing database backups to be triggered from HTTP webhook.")
 		cfg.EnableBackupWebhook = true
 	}
-	if ctx.GlobalBool(enableShuffledIndexCache.Name) {
-		log.Warn("Enabled shuffled index cache.")
-		cfg.EnableShuffledIndexCache = true
-	}
-	if ctx.GlobalBool(enableSkipSlotsCache.Name) {
+	if ctx.GlobalBool(enableSkipSlotsCacheFlag.Name) {
 		log.Warn("Enabled skip slots cache.")
 		cfg.EnableSkipSlotsCache = true
 	}
@@ -115,14 +124,31 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling experimental kafka streaming.")
 		cfg.KafkaBootstrapServers = ctx.GlobalString(kafkaBootstrapServersFlag.Name)
 	}
-	if ctx.GlobalBool(initSyncCacheState.Name) {
+	if ctx.GlobalBool(initSyncCacheStateFlag.Name) {
 		log.Warn("Enabled initial sync cache state mode.")
 		cfg.InitSyncCacheState = true
 	}
-	if ctx.GlobalBool(saveDepositData.Name) {
-		log.Warn("Enabled saving of eth1 related chain/deposit data.")
-		cfg.EnableSavingOfDepositData = true
+	if ctx.GlobalBool(enableSlasherFlag.Name) {
+		log.Warn("Enable slasher connection.")
+		cfg.EnableSlasherConnection = true
 	}
+	if ctx.GlobalBool(cacheFilteredBlockTreeFlag.Name) {
+		log.Warn("Enabled filtered block tree cache for fork choice.")
+		cfg.EnableBlockTreeCache = true
+	}
+	if ctx.GlobalBool(disableStrictAttestationPubsubVerificationFlag.Name) {
+		log.Warn("Disabled strict attestation signature verification in pubsub")
+		cfg.DisableStrictAttestationPubsubVerification = true
+	}
+	if ctx.GlobalBool(disableUpdateHeadPerAttestation.Name) {
+		log.Warn("Disabled update head on per attestation basis")
+		cfg.DisableUpdateHeadPerAttestation = true
+	}
+	if ctx.GlobalBool(enableByteMempool.Name) {
+		log.Warn("Enabling experimental memory management for beacon state")
+		cfg.EnableByteMempool = true
+	}
+
 	Init(cfg)
 }
 
@@ -131,9 +157,17 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 func ConfigureValidator(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	if ctx.GlobalBool(MinimalConfigFlag.Name) {
+	if ctx.GlobalBool(minimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
+	}
+	if ctx.GlobalBool(protectProposerFlag.Name) {
+		log.Warn("Enabled validator proposal slashing protection.")
+		cfg.ProtectProposer = true
+	}
+	if ctx.GlobalBool(protectAttesterFlag.Name) {
+		log.Warn("Enabled validator attestation slashing protection.")
+		cfg.ProtectAttester = true
 	}
 	Init(cfg)
 }

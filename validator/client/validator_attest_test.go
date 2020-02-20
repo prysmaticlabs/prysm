@@ -12,6 +12,8 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
+	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -28,22 +30,6 @@ func TestRequestAttestation_ValidatorDutiesRequestFailure(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Could not fetch validator assignment")
 }
 
-func TestAttestToBlockHead_RequestAttestationFailure(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	validator, _, finish := setup(t)
-	defer finish()
-	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
-		{
-			PublicKey:      validatorKey.PublicKey.Marshal(),
-			CommitteeIndex: 5,
-		},
-	}}
-
-	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
-	testutil.AssertLogsContain(t, hook, "Could not get validator index in assignment")
-}
-
 func TestAttestToBlockHead_SubmitAttestationRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
 
@@ -54,6 +40,7 @@ func TestAttestToBlockHead_SubmitAttestationRequestFailure(t *testing.T) {
 			PublicKey:      validatorKey.PublicKey.Marshal(),
 			CommitteeIndex: 5,
 			Committee:      make([]uint64, 111),
+			ValidatorIndex: 0,
 		}}}
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
@@ -86,6 +73,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 			PublicKey:      validatorKey.PublicKey.Marshal(),
 			CommitteeIndex: 5,
 			Committee:      committee,
+			ValidatorIndex: validatorIndex,
 		}}}
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
@@ -112,7 +100,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
 
 	aggregationBitfield := bitfield.NewBitlist(uint64(len(committee)))
-	aggregationBitfield.SetBitAt(0, true)
+	aggregationBitfield.SetBitAt(4, true)
 	expectedAttestation := &ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			BeaconBlockRoot: []byte("A"),
@@ -135,6 +123,149 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	if !reflect.DeepEqual(generatedAttestation, expectedAttestation) {
 		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
 	}
+}
+
+func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
+	config := &featureconfig.Flags{
+		ProtectAttester: true,
+	}
+	featureconfig.Init(config)
+	hook := logTest.NewGlobal()
+	validator, m, finish := setup(t)
+	defer finish()
+	validatorIndex := uint64(7)
+	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
+	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
+		{
+			PublicKey:      validatorKey.PublicKey.Marshal(),
+			CommitteeIndex: 5,
+			Committee:      committee,
+			ValidatorIndex: validatorIndex,
+		}}}
+	m.validatorClient.EXPECT().GetAttestationData(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
+	).Times(2).Return(&ethpb.AttestationData{
+		BeaconBlockRoot: []byte("A"),
+		Target:          &ethpb.Checkpoint{Root: []byte("B"), Epoch: 4},
+		Source:          &ethpb.Checkpoint{Root: []byte("C"), Epoch: 3},
+	}, nil)
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+
+	m.validatorClient.EXPECT().ProposeAttestation(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
+	).Return(&ethpb.AttestResponse{}, nil /* error */)
+
+	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
+	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
+	testutil.AssertLogsContain(t, hook, "Attempted to make a slashable attestation, rejected")
+}
+
+func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
+	config := &featureconfig.Flags{
+		ProtectAttester: true,
+	}
+	featureconfig.Init(config)
+	hook := logTest.NewGlobal()
+	validator, m, finish := setup(t)
+	defer finish()
+	validatorIndex := uint64(7)
+	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
+	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
+		{
+			PublicKey:      validatorKey.PublicKey.Marshal(),
+			CommitteeIndex: 5,
+			Committee:      committee,
+			ValidatorIndex: validatorIndex,
+		}}}
+	m.validatorClient.EXPECT().GetAttestationData(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
+	).Return(&ethpb.AttestationData{
+		BeaconBlockRoot: []byte("A"),
+		Target:          &ethpb.Checkpoint{Root: []byte("B"), Epoch: 2},
+		Source:          &ethpb.Checkpoint{Root: []byte("C"), Epoch: 1},
+	}, nil)
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+
+	m.validatorClient.EXPECT().ProposeAttestation(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
+	).Return(&ethpb.AttestResponse{}, nil /* error */)
+
+	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
+
+	m.validatorClient.EXPECT().GetAttestationData(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
+	).Return(&ethpb.AttestationData{
+		BeaconBlockRoot: []byte("A"),
+		Target:          &ethpb.Checkpoint{Root: []byte("B"), Epoch: 4},
+		Source:          &ethpb.Checkpoint{Root: []byte("C"), Epoch: 0},
+	}, nil)
+
+	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
+	testutil.AssertLogsContain(t, hook, "Attempted to make a slashable attestation, rejected")
+}
+
+func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
+	config := &featureconfig.Flags{
+		ProtectAttester: true,
+	}
+	featureconfig.Init(config)
+	hook := logTest.NewGlobal()
+	validator, m, finish := setup(t)
+	defer finish()
+	validatorIndex := uint64(7)
+	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
+	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
+		{
+			PublicKey:      validatorKey.PublicKey.Marshal(),
+			CommitteeIndex: 5,
+			Committee:      committee,
+			ValidatorIndex: validatorIndex,
+		}}}
+	m.validatorClient.EXPECT().GetAttestationData(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
+	).Return(&ethpb.AttestationData{
+		BeaconBlockRoot: []byte("A"),
+		Target:          &ethpb.Checkpoint{Root: []byte("B"), Epoch: 3},
+		Source:          &ethpb.Checkpoint{Root: []byte("C"), Epoch: 0},
+	}, nil)
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+
+	m.validatorClient.EXPECT().ProposeAttestation(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&ethpb.Attestation{}),
+	).Return(&ethpb.AttestResponse{}, nil /* error */)
+
+	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
+
+	m.validatorClient.EXPECT().GetAttestationData(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&ethpb.AttestationDataRequest{}),
+	).Return(&ethpb.AttestationData{
+		BeaconBlockRoot: []byte("A"),
+		Target:          &ethpb.Checkpoint{Root: []byte("B"), Epoch: 2},
+		Source:          &ethpb.Checkpoint{Root: []byte("C"), Epoch: 1},
+	}, nil)
+
+	validator.SubmitAttestation(context.Background(), 30, validatorPubKey)
+	testutil.AssertLogsContain(t, hook, "Attempted to make a slashable attestation, rejected")
 }
 
 func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
@@ -179,6 +310,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 			PublicKey:      validatorKey.PublicKey.Marshal(),
 			CommitteeIndex: 5,
 			Committee:      committee,
+			ValidatorIndex: validatorIndex,
 		}}}
 
 	m.validatorClient.EXPECT().GetAttestationData(
@@ -215,6 +347,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 			PublicKey:      validatorKey.PublicKey.Marshal(),
 			CommitteeIndex: 5,
 			Committee:      committee,
+			ValidatorIndex: validatorIndex,
 		}}}
 	m.validatorClient.EXPECT().GetAttestationData(
 		gomock.Any(), // ctx
@@ -244,18 +377,132 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 	}
 }
 
-func TestWaitForSlotOneThird_WaitCorrectly(t *testing.T) {
-	validator, _, finish := setup(t)
-	defer finish()
-	currentTime := uint64(time.Now().Unix())
-	numOfSlots := uint64(4)
-	validator.genesisTime = currentTime - (numOfSlots * params.BeaconConfig().SecondsPerSlot)
-	timeToSleep := params.BeaconConfig().SecondsPerSlot / 3
-	oneThird := currentTime + timeToSleep
-	validator.waitToOneThird(context.Background(), numOfSlots)
+func TestAttestationHistory_BlocksDoubleAttestation(t *testing.T) {
+	newMap := make(map[uint64]uint64)
+	newMap[0] = params.BeaconConfig().FarFutureEpoch
+	attestations := &slashpb.AttestationHistory{
+		TargetToSource:     newMap,
+		LatestEpochWritten: 0,
+	}
 
-	currentTime = uint64(time.Now().Unix())
-	if currentTime != oneThird {
-		t.Errorf("Wanted %d time for slot one-third but got %d", oneThird, currentTime)
+	// Mark an attestation spanning epochs 0 to 3.
+	newAttSource := uint64(0)
+	newAttTarget := uint64(3)
+	attestations = markAttestationForTargetEpoch(attestations, newAttSource, newAttTarget)
+	if attestations.LatestEpochWritten != newAttTarget {
+		t.Fatalf("Expected latest epoch written to be %d, received %d", newAttTarget, attestations.LatestEpochWritten)
+	}
+
+	// Try an attestation that should be slashable (double att) spanning epochs 1 to 3.
+	newAttSource = uint64(1)
+	newAttTarget = uint64(3)
+	if !isNewAttSlashable(attestations, newAttSource, newAttTarget) {
+		t.Fatalf("Expected attestation of source %d and target %d to be considered slashable", newAttSource, newAttTarget)
+	}
+}
+
+func TestAttestationHistory_Prunes(t *testing.T) {
+	wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
+	newMap := make(map[uint64]uint64)
+	newMap[0] = params.BeaconConfig().FarFutureEpoch
+	attestations := &slashpb.AttestationHistory{
+		TargetToSource:     newMap,
+		LatestEpochWritten: 0,
+	}
+
+	// Try an attestation on totally unmarked history, should not be slashable.
+	if isNewAttSlashable(attestations, 0, wsPeriod+5) {
+		t.Fatalf("Expected attestation of source 0, target %d to be considered slashable", wsPeriod+5)
+	}
+
+	// Mark attestations spanning epochs 0 to 3 and 6 to 9.
+	prunedNewAttSource := uint64(0)
+	prunedNewAttTarget := uint64(3)
+	attestations = markAttestationForTargetEpoch(attestations, prunedNewAttSource, prunedNewAttTarget)
+	newAttSource := prunedNewAttSource + 6
+	newAttTarget := prunedNewAttTarget + 6
+	attestations = markAttestationForTargetEpoch(attestations, newAttSource, newAttTarget)
+	if attestations.LatestEpochWritten != newAttTarget {
+		t.Fatalf("Expected latest epoch written to be %d, received %d", newAttTarget, attestations.LatestEpochWritten)
+	}
+
+	// Mark an attestation spanning epochs 54000 to 54003.
+	farNewAttSource := newAttSource + wsPeriod
+	farNewAttTarget := newAttTarget + wsPeriod
+	attestations = markAttestationForTargetEpoch(attestations, farNewAttSource, farNewAttTarget)
+	if attestations.LatestEpochWritten != farNewAttTarget {
+		t.Fatalf("Expected latest epoch written to be %d, received %d", newAttTarget, attestations.LatestEpochWritten)
+	}
+
+	if safeTargetToSource(attestations, prunedNewAttTarget) != params.BeaconConfig().FarFutureEpoch {
+		t.Fatalf("Expected attestation at target epoch %d to not be marked", prunedNewAttTarget)
+	}
+
+	if safeTargetToSource(attestations, farNewAttTarget) != farNewAttSource {
+		t.Fatalf("Expected attestation at target epoch %d to not be marked", farNewAttSource)
+	}
+
+	// Try an attestation from existing source to outside prune, should slash.
+	if !isNewAttSlashable(attestations, newAttSource, farNewAttTarget) {
+		t.Fatalf("Expected attestation of source %d, target %d to be considered slashable", newAttSource, farNewAttTarget)
+	}
+	// Try an attestation from before existing target to outside prune, should slash.
+	if !isNewAttSlashable(attestations, newAttTarget-1, farNewAttTarget) {
+		t.Fatalf("Expected attestation of source %d, target %d to be considered slashable", newAttTarget-1, farNewAttTarget)
+	}
+	// Try an attestation larger than pruning amount, should slash.
+	if !isNewAttSlashable(attestations, 0, farNewAttTarget+5) {
+		t.Fatalf("Expected attestation of source 0, target %d to be considered slashable", farNewAttTarget+5)
+	}
+}
+
+func TestAttestationHistory_BlocksSurroundedAttestation(t *testing.T) {
+	newMap := make(map[uint64]uint64)
+	newMap[0] = params.BeaconConfig().FarFutureEpoch
+	attestations := &slashpb.AttestationHistory{
+		TargetToSource:     newMap,
+		LatestEpochWritten: 0,
+	}
+
+	// Mark an attestation spanning epochs 0 to 3.
+	newAttSource := uint64(0)
+	newAttTarget := uint64(3)
+	attestations = markAttestationForTargetEpoch(attestations, newAttSource, newAttTarget)
+	if attestations.LatestEpochWritten != newAttTarget {
+		t.Fatalf("Expected latest epoch written to be %d, received %d", newAttTarget, attestations.LatestEpochWritten)
+	}
+
+	// Try an attestation that should be slashable (being surrounded) spanning epochs 1 to 2.
+	newAttSource = uint64(1)
+	newAttTarget = uint64(2)
+	if !isNewAttSlashable(attestations, newAttSource, newAttTarget) {
+		t.Fatalf("Expected attestation of source %d and target %d to be considered slashable", newAttSource, newAttTarget)
+	}
+}
+
+func TestAttestationHistory_BlocksSurroundingAttestation(t *testing.T) {
+	newMap := make(map[uint64]uint64)
+	newMap[0] = params.BeaconConfig().FarFutureEpoch
+	attestations := &slashpb.AttestationHistory{
+		TargetToSource:     newMap,
+		LatestEpochWritten: 0,
+	}
+
+	// Mark an attestation spanning epochs 1 to 2.
+	newAttSource := uint64(1)
+	newAttTarget := uint64(2)
+	attestations = markAttestationForTargetEpoch(attestations, newAttSource, newAttTarget)
+	if attestations.LatestEpochWritten != newAttTarget {
+		t.Fatalf("Expected latest epoch written to be %d, received %d", newAttTarget, attestations.LatestEpochWritten)
+	}
+	if attestations.TargetToSource[newAttTarget] != newAttSource {
+		t.Fatalf("Expected source epoch to be %d, received %d", newAttSource, attestations.TargetToSource[newAttTarget])
+	}
+
+	// Try an attestation that should be slashable (surrounding) spanning epochs 0 to 3.
+	newAttSource = uint64(0)
+	newAttTarget = uint64(3)
+	if !isNewAttSlashable(attestations, newAttSource, newAttTarget) {
+		t.Fatalf("Expected attestation of source %d and target %d to be considered slashable", newAttSource, newAttTarget)
 	}
 }

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -15,31 +17,61 @@ import (
 	"go.opencensus.io/trace"
 )
 
+var (
+	validatorAggSuccessVec = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "validator",
+			Name:      "successful_aggregations",
+		},
+		[]string{
+			// validator pubkey
+			"pkey",
+		},
+	)
+	validatorAggFailVec = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "validator",
+			Name:      "failed_aggregations",
+		},
+		[]string{
+			// validator pubkey
+			"pkey",
+		},
+	)
+)
+
 // SubmitAggregateAndProof submits the validator's signed slot signature to the beacon node
 // via gRPC. Beacon node will verify the slot signature and determine if the validator is also
 // an aggregator. If yes, then beacon node will broadcast aggregated signature and
-// proof on the validator's behave.
+// proof on the validator's behalf.
 func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pubKey [48]byte) {
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitAggregateAndProof")
 	defer span.End()
 
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
+	fmtKey := fmt.Sprintf("%#x", pubKey[:8])
 
 	duty, err := v.duty(pubKey)
 	if err != nil {
 		log.Errorf("Could not fetch validator assignment: %v", err)
+		if v.emitAccountMetrics {
+			validatorAggFailVec.WithLabelValues(fmtKey).Inc()
+		}
 		return
 	}
 
 	slotSig, err := v.signSlot(ctx, pubKey, slot)
 	if err != nil {
 		log.Errorf("Could not sign slot: %v", err)
+		if v.emitAccountMetrics {
+			validatorAggFailVec.WithLabelValues(fmtKey).Inc()
+		}
 		return
 	}
 
 	// As specified in spec, an aggregator should wait until two thirds of the way through slot
 	// to broadcast the best aggregate to the global aggregate channel.
-	// https://github.com/ethereum/eth2.0-specs/blob/v0.9.0/specs/validator/0_beacon-chain-validator.md#broadcast-aggregate
+	// https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/validator/0_beacon-chain-validator.md#broadcast-aggregate
 	v.waitToSlotTwoThirds(ctx, slot)
 
 	_, err = v.aggregatorClient.SubmitAggregateAndProof(ctx, &pb.AggregationRequest{
@@ -50,17 +82,27 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 	})
 	if err != nil {
 		log.Errorf("Could not submit slot signature to beacon node: %v", err)
+		if v.emitAccountMetrics {
+			validatorAggFailVec.WithLabelValues().Inc()
+		}
 		return
 	}
 
-	if err := v.addIndicesToLog(ctx, duty.CommitteeIndex, pubKey); err != nil {
+	if err := v.addIndicesToLog(duty); err != nil {
 		log.Errorf("Could not add aggregator indices to logs: %v", err)
+		if v.emitAccountMetrics {
+			validatorAggFailVec.WithLabelValues(fmtKey).Inc()
+		}
 		return
 	}
+	if v.emitAccountMetrics {
+		validatorAggSuccessVec.WithLabelValues(fmtKey).Inc()
+	}
+
 }
 
 // This implements selection logic outlined in:
-// https://github.com/ethereum/eth2.0-specs/blob/v0.9.0/specs/validator/0_beacon-chain-validator.md#aggregation-selection
+// https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/validator/0_beacon-chain-validator.md#aggregation-selection
 func (v *validator) signSlot(ctx context.Context, pubKey [48]byte, slot uint64) ([]byte, error) {
 	domain, err := v.validatorClient.DomainData(ctx, &ethpb.DomainRequest{
 		Epoch:  helpers.SlotToEpoch(slot),
@@ -98,17 +140,13 @@ func (v *validator) waitToSlotTwoThirds(ctx context.Context, slot uint64) {
 	time.Sleep(roughtime.Until(finalTime))
 }
 
-func (v *validator) addIndicesToLog(ctx context.Context, committeeIndex uint64, pubKey [48]byte) error {
+func (v *validator) addIndicesToLog(duty *ethpb.DutiesResponse_Duty) error {
 	v.attLogsLock.Lock()
 	defer v.attLogsLock.Unlock()
-	v.pubKeyToIDLock.RLock()
-	defer v.pubKeyToIDLock.RUnlock()
 
 	for _, log := range v.attLogs {
-		if committeeIndex == log.data.CommitteeIndex {
-			if _, ok := v.pubKeyToID[pubKey]; ok {
-				log.aggregatorIndices = append(log.aggregatorIndices, v.pubKeyToID[pubKey])
-			}
+		if duty.CommitteeIndex == log.data.CommitteeIndex {
+			log.aggregatorIndices = append(log.aggregatorIndices, duty.ValidatorIndex)
 		}
 	}
 

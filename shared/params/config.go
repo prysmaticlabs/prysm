@@ -94,7 +94,6 @@ type BeaconChainConfig struct {
 	GenesisForkVersion        []byte        `yaml:"GENESIS_FORK_VERSION"` // GenesisForkVersion is used to track fork version between state transitions.
 	EmptySignature            [96]byte      // EmptySignature is used to represent a zeroed out BLS Signature.
 	DefaultPageSize           int           // DefaultPageSize defines the default page size for RPC server request.
-	MaxPageSize               int           // MaxPageSize defines the max page size for RPC server respond.
 	MaxPeersToSync            int           // MaxPeersToSync describes the limit for number of peers in round robin sync.
 
 	// Slasher constants.
@@ -174,7 +173,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// Prysm constants.
 	GweiPerEth:                1000000000,
-	LogBlockDelay:             2,
+	LogBlockDelay:             4,
 	BLSSecretKeyLength:        32,
 	BLSPubkeyLength:           48,
 	BLSSignatureLength:        96,
@@ -186,7 +185,6 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	GenesisForkVersion:        []byte{0, 0, 0, 0},
 	EmptySignature:            [96]byte{},
 	DefaultPageSize:           250,
-	MaxPageSize:               500,
 	MaxPeersToSync:            15,
 
 	// Slasher related values.
@@ -263,6 +261,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.MinValidatorWithdrawabilityDelay = 256
 	minimalConfig.PersistentCommitteePeriod = 2048
 	minimalConfig.MinEpochsToInactivityPenalty = 4
+	minimalConfig.Eth1FollowDistance = 16
 	minimalConfig.SafeSlotsToUpdateJustified = 2
 
 	// State vector lengths

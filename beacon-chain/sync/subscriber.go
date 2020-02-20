@@ -18,7 +18,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-const pubsubMessageTimeout = 10 * time.Second
+const pubsubMessageTimeout = 30 * time.Second
 
 // subHandler represents handler for a given subscription.
 type subHandler func(context.Context, proto.Message) error
@@ -166,8 +166,6 @@ func (r *Service) subscribeWithBase(base proto.Message, topic string, validator 
 				continue
 			}
 
-			messageReceivedCounter.WithLabelValues(topic).Inc()
-
 			go pipeline(msg)
 		}
 	}
@@ -181,6 +179,8 @@ func (r *Service) subscribeWithBase(base proto.Message, topic string, validator 
 func wrapAndReportValidation(topic string, v pubsub.Validator) (string, pubsub.Validator) {
 	return topic, func(ctx context.Context, pid peer.ID, msg *pubsub.Message) bool {
 		defer messagehandler.HandlePanic(ctx, msg)
+		ctx, _ = context.WithTimeout(ctx, pubsubMessageTimeout)
+		messageReceivedCounter.WithLabelValues(topic).Inc()
 		b := v(ctx, pid, msg)
 		if !b {
 			messageFailedValidationCounter.WithLabelValues(topic).Inc()
@@ -211,6 +211,9 @@ func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() i
 				stateSub.Unsubscribe()
 				return
 			case <-stateChannel:
+				if r.chainStarted && r.initialSync.Syncing() {
+					continue
+				}
 				// Update topic count.
 				wantedSubs := determineSubsLen()
 				// Resize as appropriate.

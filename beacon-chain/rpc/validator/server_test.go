@@ -20,9 +20,9 @@ import (
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	internal "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
 	mockRPC "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -39,12 +39,13 @@ func TestValidatorIndex_OK(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
-	if err := db.SaveState(ctx, &pbp2p.BeaconState{}, [32]byte{}); err != nil {
+	st, _ := stateTrie.InitializeFromProtoUnsafe(&pbp2p.BeaconState{})
+	if err := db.SaveState(ctx, st.Copy(), [32]byte{}); err != nil {
 		t.Fatal(err)
 	}
 
-	pubKey := []byte{'A'}
-	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey), 0); err != nil {
+	pubKey := pubKey(1)
+	if err := db.SaveValidatorIndex(ctx, pubKey, 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
@@ -65,10 +66,10 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	beaconState := &pbp2p.BeaconState{
+	beaconState, _ := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Slot:       0,
 		Validators: []*ethpb.Validator{},
-	}
+	})
 	block := blk.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(ctx, block); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
@@ -90,7 +91,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 		HeadFetcher:        &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorActivationRequest{
-		PublicKeys: [][]byte{[]byte("A")},
+		PublicKeys: [][]byte{pubKey(1)},
 	}
 
 	ctrl := gomock.NewController(t)
@@ -125,10 +126,10 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	pubKey1 := priv1.PublicKey().Marshal()[:]
 	pubKey2 := priv2.PublicKey().Marshal()[:]
 
-	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey1), 0); err != nil {
+	if err := db.SaveValidatorIndex(ctx, pubKey1, 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
-	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey2), 0); err != nil {
+	if err := db.SaveValidatorIndex(ctx, pubKey2, 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
 
@@ -167,11 +168,15 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	}
 	depositCache := depositcache.NewDepositCache()
 	depositCache.InsertDeposit(ctx, deposit, 10 /*blockNum*/, 0, depositTrie.Root())
-	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey1), 0); err != nil {
+	if err := db.SaveValidatorIndex(ctx, pubKey1, 0); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
 	}
-	if err := db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(pubKey2), 1); err != nil {
+	if err := db.SaveValidatorIndex(ctx, pubKey2, 1); err != nil {
 		t.Fatalf("could not save validator index: %v", err)
+	}
+	trie, err := stateTrie.InitializeFromProtoUnsafe(beaconState)
+	if err != nil {
+		t.Fatal(err)
 	}
 	vs := &Server{
 		BeaconDB:           db,
@@ -181,7 +186,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		BlockFetcher:       &mockPOW.POWChain{},
 		Eth1InfoFetcher:    &mockPOW.POWChain{},
 		DepositFetcher:     depositCache,
-		HeadFetcher:        &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
+		HeadFetcher:        &mockChain.ChainService{State: trie, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorActivationRequest{
 		PublicKeys: [][]byte{pubKey1, pubKey2},
@@ -229,6 +234,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 		},
 		StateNotifier: chainService.StateNotifier(),
 		BeaconDB:      db,
+		HeadFetcher:   chainService,
 	}
 
 	exitRoutine := make(chan bool)
@@ -250,14 +256,18 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 	headBlockRoot := [32]byte{0x01, 0x02}
-	if err := db.SaveState(ctx, &pbp2p.BeaconState{Slot: 3}, headBlockRoot); err != nil {
+	trie, err := stateTrie.InitializeFromProtoUnsafe(&pbp2p.BeaconState{Slot: 3})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveState(ctx, trie, headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.SaveHeadBlockRoot(ctx, headBlockRoot); err != nil {
 		t.Fatal(err)
 	}
 
-	chainService := &mockChain.ChainService{}
+	chainService := &mockChain.ChainService{State: trie}
 	Server := &Server{
 		Ctx: context.Background(),
 		ChainStartFetcher: &mockPOW.POWChain{
@@ -265,6 +275,7 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 		},
 		BeaconDB:      db,
 		StateNotifier: chainService.StateNotifier(),
+		HeadFetcher:   chainService,
 	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -293,6 +304,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 		},
 		BeaconDB:      db,
 		StateNotifier: chainService.StateNotifier(),
+		HeadFetcher:   chainService,
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)

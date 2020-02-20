@@ -22,20 +22,20 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 
 			// Handle the various pre-existing conditions that will result in us not handshaking.
 			peerConnectionState, err := s.peers.ConnectionState(conn.RemotePeer())
-			if err == nil && peerConnectionState == peers.PeerConnected {
-				log.Debug("Peer already connected; not handshaking again")
+			if err == nil && (peerConnectionState == peers.PeerConnected || peerConnectionState == peers.PeerConnecting) {
+				log.WithField("currentState", peerConnectionState).WithField("reason", "already active").Trace("Ignoring connection request")
 				return
 			}
 			s.peers.Add(conn.RemotePeer(), conn.RemoteMultiaddr(), conn.Stat().Direction)
 			if len(s.peers.Active()) >= int(s.cfg.MaxPeers) {
-				log.Debug("We have enough peers; disconnecting")
+				log.WithField("reason", "at peer limit").Trace("Ignoring connection request")
 				if err := s.Disconnect(conn.RemotePeer()); err != nil {
 					log.WithError(err).Error("Unable to disconnect from peer")
 				}
 				return
 			}
 			if s.peers.IsBad(conn.RemotePeer()) {
-				log.Trace("Disconnecting from bad peer")
+				log.WithField("reason", "bad peer").Trace("Ignoring connection request")
 				if err := s.Disconnect(conn.RemotePeer()); err != nil {
 					log.WithError(err).Error("Unable to disconnect from peer")
 				}
@@ -46,11 +46,11 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 			go func() {
 				// Go through the handshake process.
 				multiAddr := fmt.Sprintf("%s/p2p/%s", conn.RemoteMultiaddr().String(), conn.RemotePeer().String())
-				log.WithFields(logrus.Fields{
+				log := log.WithFields(logrus.Fields{
 					"direction":   conn.Stat().Direction,
 					"multiAddr":   multiAddr,
 					"activePeers": len(s.peers.Active()),
-				}).Debug("Peer handshaking")
+				})
 				s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerConnecting)
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
@@ -64,11 +64,6 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 						s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnected)
 						return
 					}
-					s.peers.IncrementBadResponses(conn.RemotePeer())
-					badResponses, err := s.peers.BadResponses(conn.RemotePeer())
-					if err == nil && badResponses == s.peers.MaxBadResponses() {
-						log.Debug("Peer has given too many bad responses; will ignore in future")
-					}
 					s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnecting)
 					if err := s.Disconnect(conn.RemotePeer()); err != nil {
 						log.WithError(err).Error("Unable to disconnect from peer")
@@ -78,7 +73,7 @@ func (s *Service) AddConnectionHandler(reqFunc func(ctx context.Context, id peer
 				}
 				s.host.ConnManager().Protect(conn.RemotePeer(), "protocol")
 				s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerConnected)
-				log.WithField("active", len(s.peers.Active())).Info("Peer connected")
+				log.Info("Peer connected")
 			}()
 		},
 	})
@@ -92,6 +87,11 @@ func (s *Service) AddDisconnectionHandler(handler func(ctx context.Context, id p
 			log := log.WithField("peer", conn.RemotePeer().Pretty())
 			// Must be handled in a goroutine as this callback cannot be blocking.
 			go func() {
+				priorState, err := s.peers.ConnectionState(conn.RemotePeer())
+				if err != nil {
+					// Can happen if the peer has already disconnected, so...
+					priorState = peers.PeerDisconnected
+				}
 				s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnecting)
 				ctx := context.Background()
 				if err := handler(ctx, conn.RemotePeer()); err != nil {
@@ -99,9 +99,9 @@ func (s *Service) AddDisconnectionHandler(handler func(ctx context.Context, id p
 				}
 				s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerDisconnected)
 				s.host.ConnManager().Unprotect(conn.RemotePeer(), "protocol")
-				// Log good peer disconnects; bad peers can visit here frequently so do not log them.
-				if !s.peers.IsBad(conn.RemotePeer()) {
-					log.WithField("active", len(s.peers.Active())).Debug("Peer disconnected")
+				// Only log disconnections if we were fully connected.
+				if priorState == peers.PeerConnected {
+					log.WithField("active", len(s.peers.Active())).Info("Peer disconnected")
 				}
 			}()
 		},

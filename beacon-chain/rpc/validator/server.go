@@ -10,17 +10,19 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -38,19 +40,25 @@ func init() {
 // and more.
 type Server struct {
 	Ctx                    context.Context
-	BeaconDB               db.Database
+	BeaconDB               db.NoHeadAccessDatabase
 	AttestationCache       *cache.AttestationCache
 	HeadFetcher            blockchain.HeadFetcher
 	ForkFetcher            blockchain.ForkFetcher
+	FinalizationFetcher    blockchain.FinalizationFetcher
+	TimeFetcher            blockchain.TimeFetcher
 	CanonicalStateChan     chan *pbp2p.BeaconState
 	BlockFetcher           powchain.POWBlockFetcher
 	DepositFetcher         depositcache.DepositFetcher
 	ChainStartFetcher      powchain.ChainStartFetcher
 	Eth1InfoFetcher        powchain.ChainInfoFetcher
+	GenesisTimeFetcher     blockchain.TimeFetcher
 	SyncChecker            sync.Checker
 	StateNotifier          statefeed.Notifier
+	BlockNotifier          blockfeed.Notifier
 	P2P                    p2p.Broadcaster
 	AttPool                attestations.Pool
+	SlashingsPool          *slashings.Pool
+	ExitPool               *voluntaryexits.Pool
 	BlockReceiver          blockchain.BlockReceiver
 	MockEth1Votes          bool
 	Eth1BlockFetcher       powchain.POWBlockFetcher
@@ -103,7 +111,7 @@ func (vs *Server) WaitForActivation(req *ethpb.ValidatorActivationRequest, strea
 
 // ValidatorIndex is called by a validator to get its index location in the beacon state.
 func (vs *Server) ValidatorIndex(ctx context.Context, req *ethpb.ValidatorIndexRequest) (*ethpb.ValidatorIndexResponse, error) {
-	index, ok, err := vs.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(req.PublicKey))
+	index, ok, err := vs.BeaconDB.ValidatorIndex(ctx, req.PublicKey)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not fetch validator index: %v", err)
 	}
@@ -128,9 +136,7 @@ func (vs *Server) ExitedValidators(
 	exitedKeys := make([][]byte, 0)
 	for _, st := range statuses {
 		s := st.Status.Status
-		if s == ethpb.ValidatorStatus_EXITED ||
-			s == ethpb.ValidatorStatus_EXITED_SLASHED ||
-			s == ethpb.ValidatorStatus_INITIATED_EXIT {
+		if s == ethpb.ValidatorStatus_EXITED {
 			exitedKeys = append(exitedKeys, st.PublicKey)
 		}
 	}
@@ -154,7 +160,11 @@ func (vs *Server) DomainData(ctx context.Context, request *ethpb.DomainRequest) 
 // CanonicalHead of the current beacon chain. This method is requested on-demand
 // by a validator when it is their time to propose or attest.
 func (vs *Server) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*ethpb.SignedBeaconBlock, error) {
-	return vs.HeadFetcher.HeadBlock(), nil
+	headBlk, err := vs.HeadFetcher.HeadBlock(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head block: %v", err)
+	}
+	return headBlk, nil
 }
 
 // WaitForChainStart queries the logs of the Deposit Contract in order to verify the beacon chain
@@ -162,14 +172,14 @@ func (vs *Server) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*ethpb.
 // subscribes to an event stream triggered by the powchain service whenever the ChainStart log does
 // occur in the Deposit Contract on ETH 1.0.
 func (vs *Server) WaitForChainStart(req *ptypes.Empty, stream ethpb.BeaconNodeValidator_WaitForChainStartServer) error {
-	head, err := vs.BeaconDB.HeadState(context.Background())
+	head, err := vs.HeadFetcher.HeadState(context.Background())
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not retrieve head state: %v", err)
 	}
 	if head != nil {
 		res := &ethpb.ChainStartResponse{
 			Started:     true,
-			GenesisTime: head.GenesisTime,
+			GenesisTime: head.GenesisTime(),
 		}
 		return stream.Send(res)
 	}

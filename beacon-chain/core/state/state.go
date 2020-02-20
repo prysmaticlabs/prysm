@@ -5,11 +5,13 @@ package state
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -53,17 +55,20 @@ import (
 //	    state.compact_committees_roots[index] = committee_root
 //	  return state
 // This method differs from the spec so as to process deposits beforehand instead of the end of the function.
-func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (*pb.BeaconState, error) {
+func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (*stateTrie.BeaconState, error) {
 	if eth1Data == nil {
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
-	state := EmptyGenesisState()
-	state.Eth1Data = eth1Data
-	var err error
+	state, err := EmptyGenesisState()
+	if err != nil {
+		return nil, err
+	}
 	// Process initial deposits.
-	validatorMap := make(map[[48]byte]int)
 	leaves := [][]byte{}
 	for _, deposit := range deposits {
+		if deposit == nil || deposit.Data == nil {
+			return nil, fmt.Errorf("nil deposit or deposit with nil data cannot be processed: %v", deposit)
+		}
 		hash, err := ssz.HashTreeRoot(deposit.Data)
 		if err != nil {
 			return nil, err
@@ -84,19 +89,24 @@ func GenesisBeaconState(deposits []*ethpb.Deposit, genesisTime uint64, eth1Data 
 	}
 
 	depositRoot := trie.Root()
-	state.Eth1Data.DepositRoot = depositRoot[:]
+	eth1Data.DepositRoot = depositRoot[:]
+	err = state.SetEth1Data(eth1Data)
+	if err != nil {
+		return nil, err
+	}
+
 	for i, deposit := range deposits {
-		state, err = b.ProcessPreGenesisDeposit(context.Background(), state, deposit, validatorMap)
+		state, err = b.ProcessPreGenesisDeposit(context.Background(), state, deposit)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not process validator deposit %d", i)
 		}
 	}
-	return OptimizedGenesisBeaconState(genesisTime, state, state.Eth1Data)
+	return OptimizedGenesisBeaconState(genesisTime, state, state.Eth1Data())
 }
 
 // OptimizedGenesisBeaconState is used to create a state that has already processed deposits. This is to efficiently
 // create a mainnet state at chainstart.
-func OptimizedGenesisBeaconState(genesisTime uint64, bState *pb.BeaconState, eth1Data *ethpb.Eth1Data) (*pb.BeaconState, error) {
+func OptimizedGenesisBeaconState(genesisTime uint64, preState *stateTrie.BeaconState, eth1Data *ethpb.Eth1Data) (*stateTrie.BeaconState, error) {
 	if eth1Data == nil {
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
@@ -139,8 +149,8 @@ func OptimizedGenesisBeaconState(genesisTime uint64, bState *pb.BeaconState, eth
 		},
 
 		// Validator registry fields.
-		Validators: bState.Validators,
-		Balances:   bState.Balances,
+		Validators: preState.Validators(),
+		Balances:   preState.Balances(),
 
 		// Randomness and committees.
 		RandaoMixes: randaoMixes,
@@ -170,7 +180,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, bState *pb.BeaconState, eth
 		// Eth1 data.
 		Eth1Data:         eth1Data,
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
-		Eth1DepositIndex: bState.Eth1DepositIndex,
+		Eth1DepositIndex: preState.Eth1DepositIndex(),
 	}
 
 	bodyRoot, err := ssz.HashTreeRoot(&ethpb.BeaconBlockBody{})
@@ -184,11 +194,11 @@ func OptimizedGenesisBeaconState(genesisTime uint64, bState *pb.BeaconState, eth
 		BodyRoot:   bodyRoot[:],
 	}
 
-	return state, nil
+	return stateTrie.InitializeFromProto(state)
 }
 
 // EmptyGenesisState returns an empty beacon state object.
-func EmptyGenesisState() *pb.BeaconState {
+func EmptyGenesisState() (*stateTrie.BeaconState, error) {
 	state := &pb.BeaconState{
 		// Misc fields.
 		Slot: 0,
@@ -211,7 +221,7 @@ func EmptyGenesisState() *pb.BeaconState {
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: 0,
 	}
-	return state
+	return stateTrie.InitializeFromProto(state)
 }
 
 // IsValidGenesisState gets called whenever there's a deposit event,

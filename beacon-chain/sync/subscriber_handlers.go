@@ -4,10 +4,15 @@ import (
 	"context"
 
 	"github.com/gogo/protobuf/proto"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
 func (r *Service) voluntaryExitSubscriber(ctx context.Context, msg proto.Message) error {
-	// TODO(#3259): Requires handlers in operations service to be implemented.
+	s, err := r.chain.HeadState(ctx)
+	if err != nil {
+		return err
+	}
+	r.exitPool.InsertVoluntaryExit(ctx, s, msg.(*ethpb.SignedVoluntaryExit))
 	return nil
 }
 

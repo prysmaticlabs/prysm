@@ -9,10 +9,18 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/stateutil"
 )
+
+func init() {
+	config := &featureconfig.Flags{
+		EnableSSZCache: true,
+	}
+	featureconfig.Init(config)
+}
 
 func TestState_FieldCount(t *testing.T) {
 	count := 20
@@ -26,21 +34,6 @@ func TestState_FieldCount(t *testing.T) {
 	}
 	if numFields != count {
 		t.Errorf("Expected state to have %d fields, received %d", count, numFields)
-	}
-}
-
-func TestHashTreeRootEquality(t *testing.T) {
-	genesisState := setupGenesisState(t, 512)
-	r1, err := ssz.HashTreeRoot(genesisState)
-	if err != nil {
-		t.Fatal(err)
-	}
-	r2, err := stateutil.HashTreeRootState(genesisState)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if r1 != r2 {
-		t.Errorf("Wanted %#x, got %#x", r1, r2)
 	}
 }
 
@@ -77,34 +70,34 @@ func BenchmarkHashTreeRootState_Custom_300000(b *testing.B) {
 	}
 }
 
-func BenchmarkHashTreeRootState_Generic_512(b *testing.B) {
+func BenchmarkHashTreeRoot_Generic_512(b *testing.B) {
 	b.StopTimer()
 	genesisState := setupGenesisState(b, 512)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := stateutil.HashTreeRootState(genesisState); err != nil {
+		if _, err := ssz.HashTreeRoot(genesisState); err != nil {
 			b.Fatal(err)
 		}
 	}
 }
 
-func BenchmarkHashTreeRootState_Generic_16384(b *testing.B) {
+func BenchmarkHashTreeRoot_Generic_16384(b *testing.B) {
 	b.StopTimer()
 	genesisState := setupGenesisState(b, 16384)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := stateutil.HashTreeRootState(genesisState); err != nil {
+		if _, err := ssz.HashTreeRoot(genesisState); err != nil {
 			b.Fatal(err)
 		}
 	}
 }
 
-func BenchmarkHashTreeRootState_Generic_300000(b *testing.B) {
+func BenchmarkHashTreeRoot_Generic_300000(b *testing.B) {
 	b.StopTimer()
 	genesisState := setupGenesisState(b, 300000)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := stateutil.HashTreeRootState(genesisState); err != nil {
+		if _, err := ssz.HashTreeRoot(genesisState); err != nil {
 			b.Fatal(err)
 		}
 	}

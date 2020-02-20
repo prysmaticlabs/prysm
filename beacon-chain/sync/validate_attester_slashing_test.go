@@ -16,17 +16,21 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *pb.BeaconState) {
+func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *stateTrie.BeaconState) {
 	state, privKeys := testutil.DeterministicGenesisState(t, 5)
-	for _, vv := range state.Validators {
+	vals := state.Validators()
+	for _, vv := range vals {
 		vv.WithdrawableEpoch = 1 * params.BeaconConfig().SlotsPerEpoch
+	}
+	if err := state.SetValidators(vals); err != nil {
+		t.Fatal(err)
 	}
 
 	att1 := &ethpb.IndexedAttestation{
@@ -40,7 +44,7 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *pb.Beac
 	if err != nil {
 		t.Error(err)
 	}
-	domain := helpers.Domain(state.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
+	domain := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
 	sig0 := privKeys[0].Sign(hashTreeRoot[:], domain)
 	sig1 := privKeys[1].Sign(hashTreeRoot[:], domain)
 	aggregateSig := bls.AggregateSignatures([]*bls.Signature{sig0, sig1})
@@ -68,7 +72,9 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *pb.Beac
 	}
 
 	currentSlot := 2 * params.BeaconConfig().SlotsPerEpoch
-	state.Slot = currentSlot
+	if err := state.SetSlot(currentSlot); err != nil {
+		t.Fatal(err)
+	}
 
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {

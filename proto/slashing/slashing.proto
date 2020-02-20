@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package ethereum.slashing;
 
-import "google/protobuf/empty.proto";
 import "eth/v1alpha1/beacon_block.proto";
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
@@ -21,22 +20,26 @@ service Slasher {
     // was received produces a slashable event.
     rpc IsSlashableBlock(ProposerSlashingRequest) returns (ProposerSlashingResponse);
 
-    // Subscription to receive all slashable proposer slashing events found by the watchtower.
-    rpc SlashableProposals(google.protobuf.Empty) returns (stream ethereum.eth.v1alpha1.ProposerSlashing);
+    // Gets ProposerSlashingResponse container if slashing with the requested status are found in the db.
+    rpc ProposerSlashings(SlashingStatusRequest) returns (ProposerSlashingResponse);
 
-    // Subscription to receive all slashable attester slashing events found by the watchtower.
-    rpc SlashableAttestations(google.protobuf.Empty) returns (stream ethereum.eth.v1alpha1.AttesterSlashing);
+    // Gets AttesterSlashingResponse container if slashing with the requested status are found in the db.
+    rpc AttesterSlashings(SlashingStatusRequest) returns (AttesterSlashingResponse);
 }
 
-message ValidatorIDToIdxAtt {
+// CompressedIdxAtt is an indexed attestation with the []byte data root
+// in place of its AttestationData.
+message CompressedIdxAtt {
     repeated uint64 indices = 1 ;
     bytes data_root = 2;
     // 96 bytes aggregate signature.
     bytes signature = 3;
 }
 
-message ValidatorIDToIdxAttList {
-    repeated ValidatorIDToIdxAtt indicesList = 1 ;
+// CompressedIdxAttList is a list of CompressedIdxAtts used for
+// accessing an array from the DB.
+message CompressedIdxAttList {
+    repeated CompressedIdxAtt list = 1;
 }
 
 message ProposerSlashingRequest {
@@ -70,11 +73,35 @@ message EpochSpanMap {
     map<uint64, MinMaxEpochSpan> epoch_span_map = 1;
 }
 
-// ProposalHistory defines the structure for recording a validators historical proposals.
+// ProposalHistory defines the structure for recording a validator's historical proposals.
 // Using a bitlist to represent the epochs and an uint64 to mark the latest marked
 // epoch of the bitlist, we can easily store which epochs a validator has proposed
 // a block for while pruning the older data.
 message ProposalHistory {
     bytes epoch_bits = 1 [(gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
     uint64 latest_epoch_written = 2;
+}
+
+// AttestationHistory defines the structure for recording a validator's historical attestation.
+// Using a map[uint64]uint64 to map its target epoch to its source epoch, in order to detect if a
+// vote being created is not a double vote and surrounded by, or surrounding any other votes.
+// Using an uint64 to mark the latest written epoch, we can safely perform a rolling prune whenever
+// the history is updated.
+message AttestationHistory {
+    map<uint64, uint64> target_to_source = 1;
+    uint64 latest_epoch_written = 2;
+}
+
+message SlashingStatusRequest {
+    enum SlashingStatus {
+        // Unknown default status in case it is not set
+        Unknown = 0;
+        // Active slashing proof hasn't been included yet.
+        Active = 1;
+        // Included slashing proof that has been included in a block.
+        Included = 2;
+        // Reverted slashing proof that has been reverted and therefore is relevant again.
+        Reverted = 3;
+    }
+    SlashingStatus status = 1;
 }

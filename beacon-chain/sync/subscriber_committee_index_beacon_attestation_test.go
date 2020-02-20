@@ -14,7 +14,9 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -25,7 +27,9 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 	db := dbtest.SetupDB(t)
 	defer dbtest.TeardownDB(t, db)
 	s, sKeys := testutil.DeterministicGenesisState(t, 64 /*validators*/)
-	s.GenesisTime = uint64(time.Now().Unix())
+	if err := s.SetGenesisTime(uint64(time.Now().Unix())); err != nil {
+		t.Fatal(err)
+	}
 	blk, err := testutil.GenerateFullBlock(s, sKeys, nil, 1)
 	if err != nil {
 		t.Fatal(err)
@@ -37,11 +41,15 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 	if err := db.SaveBlock(ctx, blk); err != nil {
 		t.Fatal(err)
 	}
+	savedState, _ := beaconstate.InitializeFromProto(&pb.BeaconState{})
+	db.SaveState(context.Background(), savedState, root)
+
 	r := &Service{
 		attPool: attestations.NewPool(),
 		chain: &mock.ChainService{
-			State:   s,
-			Genesis: time.Now(),
+			State:            s,
+			Genesis:          time.Now(),
+			ValidAttestation: true,
 		},
 		chainStarted:  true,
 		p2p:           p,

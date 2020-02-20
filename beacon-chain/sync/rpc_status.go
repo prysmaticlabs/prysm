@@ -15,35 +15,52 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/sirupsen/logrus"
 )
-
-const statusInterval = 6 * time.Minute // 30 slots.
 
 // maintainPeerStatuses by infrequently polling peers for their latest status.
 func (r *Service) maintainPeerStatuses() {
-	ctx := context.Background()
-	runutil.RunEvery(r.ctx, statusInterval, func() {
+	// Run twice per epoch.
+	interval := time.Duration(params.BeaconConfig().SecondsPerSlot*params.BeaconConfig().SlotsPerEpoch/2) * time.Second
+	runutil.RunEvery(r.ctx, interval, func() {
 		for _, pid := range r.p2p.Peers().Connected() {
-			// If the status hasn't been updated in the recent interval time.
-			lastUpdated, err := r.p2p.Peers().ChainStateLastUpdated(pid)
-			if err != nil {
-				// Peer has vanished; nothing to do
-				continue
-			}
-			if roughtime.Now().After(lastUpdated.Add(statusInterval)) {
-				if err := r.sendRPCStatusRequest(ctx, pid); err != nil {
-					log.WithField("peer", pid).WithError(err).Error("Failed to request peer status")
+			go func(id peer.ID) {
+				// If the status hasn't been updated in the recent interval time.
+				lastUpdated, err := r.p2p.Peers().ChainStateLastUpdated(id)
+				if err != nil {
+					// Peer has vanished; nothing to do.
+					return
 				}
-			}
+				if roughtime.Now().After(lastUpdated.Add(interval)) {
+					if err := r.sendRPCStatusRequest(r.ctx, id); err != nil {
+						log.WithField("peer", id).WithError(err).Error("Failed to request peer status")
+					}
+				}
+			}(pid)
 		}
-		if !r.initialSync.Syncing() {
-			_, highestEpoch, _ := r.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync)
+	})
+}
+
+// resyncIfBehind checks periodically to see if we are in normal sync but have fallen behind our peers by more than an epoch,
+// in which case we attempt a resync using the initial sync method to catch up.
+func (r *Service) resyncIfBehind() {
+	// Run sixteen times per epoch.
+	interval := time.Duration(params.BeaconConfig().SecondsPerSlot*params.BeaconConfig().SlotsPerEpoch/16) * time.Second
+	runutil.RunEvery(r.ctx, interval, func() {
+		currentEpoch := uint64(roughtime.Now().Unix()-r.chain.GenesisTime().Unix()) / (params.BeaconConfig().SecondsPerSlot * params.BeaconConfig().SlotsPerEpoch)
+		syncedEpoch := helpers.SlotToEpoch(r.chain.HeadSlot())
+		if r.initialSync != nil && !r.initialSync.Syncing() && syncedEpoch < currentEpoch-1 {
+			_, highestEpoch, _ := r.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, syncedEpoch)
 			if helpers.StartSlot(highestEpoch) > r.chain.HeadSlot() {
+				log.WithFields(logrus.Fields{
+					"currentEpoch": currentEpoch,
+					"syncedEpoch":  syncedEpoch,
+					"peersEpoch":   highestEpoch,
+				}).Info("Fallen behind peers; reverting to initial sync to catch up")
 				numberOfTimesResyncedCounter.Inc()
 				r.clearPendingSlots()
-				// block until we can resync the node
 				if err := r.initialSync.Resync(); err != nil {
-					log.Errorf("Could not Resync Chain: %v", err)
+					log.Errorf("Could not resync chain: %v", err)
 				}
 			}
 		}
@@ -55,11 +72,16 @@ func (r *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
+	headRoot, err := r.chain.HeadRoot(ctx)
+	if err != nil {
+		return err
+	}
+
 	resp := &pb.Status{
 		HeadForkVersion: r.chain.CurrentFork().CurrentVersion,
 		FinalizedRoot:   r.chain.FinalizedCheckpt().Root,
 		FinalizedEpoch:  r.chain.FinalizedCheckpt().Epoch,
-		HeadRoot:        r.chain.HeadRoot(),
+		HeadRoot:        headRoot,
 		HeadSlot:        r.chain.HeadSlot(),
 	}
 	stream, err := r.p2p.Send(ctx, resp, id)
@@ -105,7 +127,7 @@ func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 	m := msg.(*pb.Status)
 
 	if err := r.validateStatusMessage(m, stream); err != nil {
-		log.WithField("peer", stream.Conn().RemotePeer()).Warn("Invalid fork version from peer")
+		log.WithField("peer", stream.Conn().RemotePeer()).Debug("Invalid fork version from peer")
 		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
 		originalErr := err
 		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, err.Error())
@@ -113,7 +135,8 @@ func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 			log.WithError(err).Error("Failed to generate a response error")
 		} else {
 			if _, err := stream.Write(resp); err != nil {
-				log.WithError(err).Errorf("Failed to write to stream")
+				// The peer may already be ignoring us, as we disagree on fork version, so log this as debug only.
+				log.WithError(err).Debug("Failed to write to stream")
 			}
 		}
 		stream.Close() // Close before disconnecting.
@@ -127,18 +150,23 @@ func (r *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 	}
 	r.p2p.Peers().SetChainState(stream.Conn().RemotePeer(), m)
 
+	headRoot, err := r.chain.HeadRoot(ctx)
+	if err != nil {
+		return err
+	}
+
 	resp := &pb.Status{
 		HeadForkVersion: r.chain.CurrentFork().CurrentVersion,
 		FinalizedRoot:   r.chain.FinalizedCheckpt().Root,
 		FinalizedEpoch:  r.chain.FinalizedCheckpt().Epoch,
-		HeadRoot:        r.chain.HeadRoot(),
+		HeadRoot:        headRoot,
 		HeadSlot:        r.chain.HeadSlot(),
 	}
 
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		log.WithError(err).Error("Failed to write to stream")
 	}
-	_, err := r.p2p.Encoding().EncodeWithLength(stream, resp)
+	_, err = r.p2p.Encoding().EncodeWithLength(stream, resp)
 
 	return err
 }

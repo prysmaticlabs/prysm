@@ -1,7 +1,6 @@
 package kv
 
 import (
-	"context"
 	"os"
 	"path"
 	"time"
@@ -22,6 +21,7 @@ const (
 	// NumOfVotes specifies the vote cache size.
 	NumOfVotes       = 1 << 20
 	databaseFileName = "beaconchain.db"
+	boltAllocSize    = 8 * 1024 * 1024
 )
 
 // BlockCacheSize specifies 1000 slots worth of blocks cached, which
@@ -52,6 +52,7 @@ func NewKVStore(dirPath string) (*Store, error) {
 		}
 		return nil, err
 	}
+	boltDB.AllocSize = boltAllocSize
 	blockCache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: 1000,           // number of keys to track frequency of (1000).
 		MaxCost:     BlockCacheSize, // maximum cost of cache (1000 Blocks).
@@ -107,10 +108,6 @@ func NewKVStore(dirPath string) (*Store, error) {
 			migrationBucket,
 		)
 	}); err != nil {
-		return nil, err
-	}
-
-	if err := kv.pruneStates(context.TODO()); err != nil {
 		return nil, err
 	}
 

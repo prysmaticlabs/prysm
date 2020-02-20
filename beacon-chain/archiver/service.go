@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -24,7 +25,7 @@ var log = logrus.WithField("prefix", "archiver")
 type Service struct {
 	ctx                  context.Context
 	cancel               context.CancelFunc
-	beaconDB             db.Database
+	beaconDB             db.NoHeadAccessDatabase
 	headFetcher          blockchain.HeadFetcher
 	participationFetcher blockchain.ParticipationFetcher
 	stateNotifier        statefeed.Notifier
@@ -33,7 +34,7 @@ type Service struct {
 
 // Config options for the archiver service.
 type Config struct {
-	BeaconDB             db.Database
+	BeaconDB             db.NoHeadAccessDatabase
 	HeadFetcher          blockchain.HeadFetcher
 	ParticipationFetcher blockchain.ParticipationFetcher
 	StateNotifier        statefeed.Notifier
@@ -70,7 +71,7 @@ func (s *Service) Status() error {
 }
 
 // We archive committee information pertaining to the head state's epoch.
-func (s *Service) archiveCommitteeInfo(ctx context.Context, headState *pb.BeaconState, epoch uint64) error {
+func (s *Service) archiveCommitteeInfo(ctx context.Context, headState *state.BeaconState, epoch uint64) error {
 	proposerSeed, err := helpers.Seed(headState, epoch, params.BeaconConfig().DomainBeaconProposer)
 	if err != nil {
 		return errors.Wrap(err, "could not generate seed")
@@ -91,15 +92,16 @@ func (s *Service) archiveCommitteeInfo(ctx context.Context, headState *pb.Beacon
 }
 
 // We archive active validator set changes that happened during the previous epoch.
-func (s *Service) archiveActiveSetChanges(ctx context.Context, headState *pb.BeaconState, epoch uint64) error {
+func (s *Service) archiveActiveSetChanges(ctx context.Context, headState *state.BeaconState, epoch uint64) error {
 	prevEpoch := epoch - 1
-	activations := validators.ActivatedValidatorIndices(prevEpoch, headState.Validators)
-	slashings := validators.SlashedValidatorIndices(prevEpoch, headState.Validators)
+	vals := headState.Validators()
+	activations := validators.ActivatedValidatorIndices(prevEpoch, vals)
+	slashings := validators.SlashedValidatorIndices(prevEpoch, vals)
 	activeValidatorCount, err := helpers.ActiveValidatorCount(headState, prevEpoch)
 	if err != nil {
 		return errors.Wrap(err, "could not get active validator count")
 	}
-	exited, err := validators.ExitedValidatorIndices(prevEpoch, headState.Validators, activeValidatorCount)
+	exited, err := validators.ExitedValidatorIndices(prevEpoch, vals, activeValidatorCount)
 	if err != nil {
 		return errors.Wrap(err, "could not determine exited validator indices")
 	}
@@ -130,8 +132,7 @@ func (s *Service) archiveParticipation(ctx context.Context, epoch uint64) error 
 }
 
 // We archive validator balances and active indices.
-func (s *Service) archiveBalances(ctx context.Context, headState *pb.BeaconState, epoch uint64) error {
-	balances := headState.Balances
+func (s *Service) archiveBalances(ctx context.Context, balances []uint64, epoch uint64) error {
 	if err := s.beaconDB.SaveArchivedBalances(ctx, epoch, balances); err != nil {
 		return errors.Wrap(err, "could not archive balances")
 	}
@@ -153,12 +154,13 @@ func (s *Service) run(ctx context.Context) {
 					log.WithError(err).Error("Head state is not available")
 					continue
 				}
-				currentEpoch := helpers.CurrentEpoch(headState)
-				if !helpers.IsEpochEnd(headState.Slot) && currentEpoch <= s.lastArchivedEpoch {
+				slot := headState.Slot()
+				currentEpoch := helpers.SlotToEpoch(slot)
+				if !helpers.IsEpochEnd(slot) && currentEpoch <= s.lastArchivedEpoch {
 					continue
 				}
 				epochToArchive := currentEpoch
-				if !helpers.IsEpochEnd(headState.Slot) {
+				if !helpers.IsEpochEnd(slot) {
 					epochToArchive--
 				}
 				if err := s.archiveCommitteeInfo(ctx, headState, epochToArchive); err != nil {
@@ -173,7 +175,7 @@ func (s *Service) run(ctx context.Context) {
 					log.WithError(err).Error("Could not archive validator participation")
 					continue
 				}
-				if err := s.archiveBalances(ctx, headState, epochToArchive); err != nil {
+				if err := s.archiveBalances(ctx, headState.Balances(), epochToArchive); err != nil {
 					log.WithError(err).Error("Could not archive validator balances and active indices")
 					continue
 				}

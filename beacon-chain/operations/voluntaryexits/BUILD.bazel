@@ -1,0 +1,31 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "doc.go",
+        "service.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits",
+    visibility = ["//beacon-chain:__subpackages__"],
+    deps = [
+        "//beacon-chain/core/helpers:go_default_library",
+        "//beacon-chain/state:go_default_library",
+        "//shared/params:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    size = "small",
+    srcs = ["service_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//beacon-chain/state:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/params:go_default_library",
+        "@com_github_gogo_protobuf//proto:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+    ],
+)

@@ -1,16 +1,17 @@
 package beacon
 
 import (
-	"bytes"
 	"context"
 	"sort"
 	"strconv"
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -24,9 +25,9 @@ import (
 func (bs *Server) ListValidatorBalances(
 	ctx context.Context,
 	req *ethpb.ListValidatorBalancesRequest) (*ethpb.ValidatorBalances, error) {
-	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
+	if int(req.PageSize) > flags.Get().MaxPageSize {
 		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
-			req.PageSize, params.BeaconConfig().MaxPageSize)
+			req.PageSize, flags.Get().MaxPageSize)
 	}
 
 	res := make([]*ethpb.ValidatorBalances_Balance, 0)
@@ -49,7 +50,7 @@ func (bs *Server) ListValidatorBalances(
 	}
 
 	var balances []uint64
-	validators := headState.Validators
+	validators := headState.Validators()
 	if requestingGenesis || epoch < helpers.CurrentEpoch(headState) {
 		balances, err = bs.BeaconDB.ArchivedBalances(ctx, epoch)
 		if err != nil {
@@ -63,7 +64,7 @@ func (bs *Server) ListValidatorBalances(
 			)
 		}
 	} else if epoch == helpers.CurrentEpoch(headState) {
-		balances = headState.Balances
+		balances = headState.Balances()
 	} else {
 		// Otherwise, we are requesting data from the future and we return an error.
 		return nil, status.Errorf(
@@ -74,13 +75,14 @@ func (bs *Server) ListValidatorBalances(
 		)
 	}
 
+	balancesCount := len(balances)
 	for _, pubKey := range req.PublicKeys {
 		// Skip empty public key.
 		if len(pubKey) == 0 {
 			continue
 		}
 
-		index, ok, err := bs.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(pubKey))
+		index, ok, err := bs.BeaconDB.ValidatorIndex(ctx, pubKey)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve validator index: %v", err)
 		}
@@ -100,6 +102,7 @@ func (bs *Server) ListValidatorBalances(
 			Index:     index,
 			Balance:   balances[index],
 		})
+		balancesCount = len(res)
 	}
 
 	for _, index := range req.Indices {
@@ -119,20 +122,9 @@ func (bs *Server) ListValidatorBalances(
 				Balance:   balances[index],
 			})
 		}
+		balancesCount = len(res)
 	}
 
-	if len(req.Indices) == 0 && len(req.PublicKeys) == 0 {
-		// Return everything.
-		for i := 0; i < len(balances); i++ {
-			res = append(res, &ethpb.ValidatorBalances_Balance{
-				PublicKey: headState.Validators[i].PublicKey,
-				Index:     uint64(i),
-				Balance:   balances[i],
-			})
-		}
-	}
-
-	balancesCount := len(res)
 	// If there are no balances, we simply return a response specifying this.
 	// Otherwise, attempting to paginate 0 balances below would result in an error.
 	if balancesCount == 0 {
@@ -152,6 +144,25 @@ func (bs *Server) ListValidatorBalances(
 			err,
 		)
 	}
+
+	if len(req.Indices) == 0 && len(req.PublicKeys) == 0 {
+		// Return everything.
+		for i := start; i < end; i++ {
+			pubkey := headState.PubkeyAtIndex(uint64(i))
+			res = append(res, &ethpb.ValidatorBalances_Balance{
+				PublicKey: pubkey[:],
+				Index:     uint64(i),
+				Balance:   balances[i],
+			})
+		}
+		return &ethpb.ValidatorBalances{
+			Epoch:         epoch,
+			Balances:      res,
+			TotalSize:     int32(balancesCount),
+			NextPageToken: nextPageToken,
+		}, nil
+	}
+
 	return &ethpb.ValidatorBalances{
 		Epoch:         epoch,
 		Balances:      res[start:end],
@@ -166,9 +177,9 @@ func (bs *Server) ListValidators(
 	ctx context.Context,
 	req *ethpb.ListValidatorsRequest,
 ) (*ethpb.Validators, error) {
-	if int(req.PageSize) > params.BeaconConfig().MaxPageSize {
+	if int(req.PageSize) > flags.Get().MaxPageSize {
 		return nil, status.Errorf(codes.InvalidArgument, "Requested page size %d can not be greater than max size %d",
-			req.PageSize, params.BeaconConfig().MaxPageSize)
+			req.PageSize, flags.Get().MaxPageSize)
 	}
 
 	headState, err := bs.HeadFetcher.HeadState(ctx)
@@ -188,10 +199,14 @@ func (bs *Server) ListValidators(
 	}
 
 	validatorList := make([]*ethpb.Validators_ValidatorContainer, 0)
-	for i := 0; i < len(headState.Validators); i++ {
+	for i := 0; i < headState.NumValidators(); i++ {
+		val, err := headState.ValidatorAtIndex(uint64(i))
+		if err != nil {
+			return nil, status.Error(codes.Internal, "Could not get validator")
+		}
 		validatorList = append(validatorList, &ethpb.Validators_ValidatorContainer{
 			Index:     uint64(i),
-			Validator: headState.Validators[i],
+			Validator: val,
 		})
 	}
 	if requestedEpoch < currentEpoch {
@@ -278,19 +293,21 @@ func (bs *Server) GetValidator(
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
 	if requestingIndex {
-		if index >= uint64(len(headState.Validators)) {
+		if index >= uint64(headState.NumValidators()) {
 			return nil, status.Errorf(
 				codes.OutOfRange,
 				"Requesting index %d, but there are only %d validators",
 				index,
-				len(headState.Validators),
+				headState.NumValidators(),
 			)
 		}
-		return headState.Validators[index], nil
+		return headState.ValidatorAtIndex(index)
 	}
-	for i := 0; i < len(headState.Validators); i++ {
-		if bytes.Equal(headState.Validators[i].PublicKey, pubKey) {
-			return headState.Validators[i], nil
+	pk48 := bytesutil.ToBytes48(pubKey)
+	for i := 0; i < headState.NumValidators(); i++ {
+		keyFromState := headState.PubkeyAtIndex(uint64(i))
+		if keyFromState == pk48 {
+			return headState.ValidatorAtIndex(uint64(i))
 		}
 	}
 	return nil, status.Error(codes.NotFound, "No validator matched filter criteria")
@@ -342,9 +359,10 @@ func (bs *Server) GetValidatorActiveSetChanges(
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
 		}
-		activatedIndices = validators.ActivatedValidatorIndices(helpers.PrevEpoch(headState), headState.Validators)
-		slashedIndices = validators.SlashedValidatorIndices(helpers.PrevEpoch(headState), headState.Validators)
-		exitedIndices, err = validators.ExitedValidatorIndices(helpers.PrevEpoch(headState), headState.Validators, activeValidatorCount)
+		vals := headState.Validators()
+		activatedIndices = validators.ActivatedValidatorIndices(helpers.PrevEpoch(headState), vals)
+		slashedIndices = validators.SlashedValidatorIndices(helpers.PrevEpoch(headState), vals)
+		exitedIndices, err = validators.ExitedValidatorIndices(helpers.PrevEpoch(headState), vals, activeValidatorCount)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not determine exited validator indices: %v", err)
 		}
@@ -363,13 +381,16 @@ func (bs *Server) GetValidatorActiveSetChanges(
 	slashedKeys := make([][]byte, len(slashedIndices))
 	exitedKeys := make([][]byte, len(exitedIndices))
 	for i, idx := range activatedIndices {
-		activatedKeys[i] = headState.Validators[idx].PublicKey
+		pubkey := headState.PubkeyAtIndex(idx)
+		activatedKeys[i] = pubkey[:]
 	}
 	for i, idx := range slashedIndices {
-		slashedKeys[i] = headState.Validators[idx].PublicKey
+		pubkey := headState.PubkeyAtIndex(idx)
+		slashedKeys[i] = pubkey[:]
 	}
 	for i, idx := range exitedIndices {
-		exitedKeys[i] = headState.Validators[idx].PublicKey
+		pubkey := headState.PubkeyAtIndex(idx)
+		exitedKeys[i] = pubkey[:]
 	}
 	return &ethpb.ActiveSetChanges{
 		Epoch:               requestedEpoch,
@@ -389,6 +410,7 @@ func (bs *Server) GetValidatorParticipation(
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
+
 	currentEpoch := helpers.CurrentEpoch(headState)
 	prevEpoch := helpers.PrevEpoch(headState)
 
@@ -420,7 +442,7 @@ func (bs *Server) GetValidatorParticipation(
 		}
 		return &ethpb.ValidatorParticipationResponse{
 			Epoch:         requestedEpoch,
-			Finalized:     requestedEpoch <= headState.FinalizedCheckpoint.Epoch,
+			Finalized:     requestedEpoch <= headState.FinalizedCheckpointEpoch(),
 			Participation: participation,
 		}, nil
 	} else if requestedEpoch == currentEpoch {
@@ -442,15 +464,22 @@ func (bs *Server) GetValidatorParticipation(
 	}
 
 	p := bs.ParticipationFetcher.Participation(requestedEpoch)
+	if p == nil {
+		p = &precompute.Balance{}
+	}
 	participation := &ethpb.ValidatorParticipation{
-		EligibleEther:           p.PrevEpoch,
-		VotedEther:              p.PrevEpochTargetAttesters,
-		GlobalParticipationRate: float32(p.PrevEpochTargetAttesters) / float32(p.PrevEpoch),
+		EligibleEther: p.PrevEpoch,
+		VotedEther:    p.PrevEpochTargetAttesters,
+	}
+	participation.GlobalParticipationRate = float32(0)
+	// only divide if prevEpoch is non zero
+	if p.PrevEpoch != 0 {
+		participation.GlobalParticipationRate = float32(p.PrevEpochTargetAttesters) / float32(p.PrevEpoch)
 	}
 
 	return &ethpb.ValidatorParticipationResponse{
 		Epoch:         requestedEpoch,
-		Finalized:     requestedEpoch <= headState.FinalizedCheckpoint.Epoch,
+		Finalized:     requestedEpoch <= headState.FinalizedCheckpointEpoch(),
 		Participation: participation,
 	}, nil
 }
@@ -468,9 +497,10 @@ func (bs *Server) GetValidatorQueue(
 	awaitingExit := make([]uint64, 0)
 	exitEpochs := make([]uint64, 0)
 	activationQ := make([]uint64, 0)
-	for idx, validator := range headState.Validators {
+	vals := headState.Validators()
+	for idx, validator := range vals {
 		eligibleActivated := validator.ActivationEligibilityEpoch != params.BeaconConfig().FarFutureEpoch
-		canBeActive := validator.ActivationEpoch >= helpers.DelayedActivationExitEpoch(headState.FinalizedCheckpoint.Epoch)
+		canBeActive := validator.ActivationEpoch >= helpers.DelayedActivationExitEpoch(headState.FinalizedCheckpointEpoch())
 		if eligibleActivated && canBeActive {
 			activationQ = append(activationQ, uint64(idx))
 		}
@@ -480,10 +510,10 @@ func (bs *Server) GetValidatorQueue(
 		}
 	}
 	sort.Slice(activationQ, func(i, j int) bool {
-		return headState.Validators[i].ActivationEligibilityEpoch < headState.Validators[j].ActivationEligibilityEpoch
+		return vals[i].ActivationEligibilityEpoch < vals[j].ActivationEligibilityEpoch
 	})
 	sort.Slice(awaitingExit, func(i, j int) bool {
-		return headState.Validators[i].WithdrawableEpoch < headState.Validators[j].WithdrawableEpoch
+		return vals[i].WithdrawableEpoch < vals[j].WithdrawableEpoch
 	})
 
 	// Only activate just enough validators according to the activation churn limit.
@@ -504,7 +534,7 @@ func (bs *Server) GetValidatorQueue(
 		}
 	}
 	exitQueueChurn := 0
-	for _, val := range headState.Validators {
+	for _, val := range vals {
 		if val.ExitEpoch == exitQueueEpoch {
 			exitQueueChurn++
 		}
@@ -523,7 +553,9 @@ func (bs *Server) GetValidatorQueue(
 	minEpoch := exitQueueEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
 	exitQueueIndices := make([]uint64, 0)
 	for _, valIdx := range awaitingExit {
-		if headState.Validators[valIdx].WithdrawableEpoch < minEpoch {
+		val := vals[valIdx]
+		// Ensure the validator has not yet exited before adding its index to the exit queue.
+		if val.WithdrawableEpoch < minEpoch && !validatorHasExited(val, helpers.CurrentEpoch(headState)) {
 			exitQueueIndices = append(exitQueueIndices, valIdx)
 		}
 	}
@@ -532,10 +564,10 @@ func (bs *Server) GetValidatorQueue(
 	activationQueueKeys := make([][]byte, len(activationQ))
 	exitQueueKeys := make([][]byte, len(exitQueueIndices))
 	for i, idx := range activationQ {
-		activationQueueKeys[i] = headState.Validators[idx].PublicKey
+		activationQueueKeys[i] = vals[idx].PublicKey
 	}
 	for i, idx := range exitQueueIndices {
-		exitQueueKeys[i] = headState.Validators[idx].PublicKey
+		exitQueueKeys[i] = vals[idx].PublicKey
 	}
 
 	return &ethpb.ValidatorQueue{
@@ -550,47 +582,70 @@ func (bs *Server) GetValidatorQueue(
 func (bs *Server) GetValidatorPerformance(
 	ctx context.Context, req *ethpb.ValidatorPerformanceRequest,
 ) (*ethpb.ValidatorPerformanceResponse, error) {
-	headState, err := bs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get head state")
-	}
+	validatorSummary := state.ValidatorSummary
 
-	// Advance state with empty transitions up to the requested epoch start slot.
-	if req.Slot > headState.Slot {
-		headState, err = state.ProcessSlots(ctx, headState, req.Slot)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
-		}
-	}
-
-	balances := make([]uint64, len(req.PublicKeys))
+	beforeTransitionBalances := make([]uint64, 0)
+	afterTransitionBalances := make([]uint64, 0)
+	effectiveBalances := make([]uint64, 0)
+	inclusionSlots := make([]uint64, 0)
+	inclusionDistances := make([]uint64, 0)
+	correctlyVotedSource := make([]bool, 0)
+	correctlyVotedTarget := make([]bool, 0)
+	correctlyVotedHead := make([]bool, 0)
 	missingValidators := make([][]byte, 0)
-	for i, key := range req.PublicKeys {
-		index, ok, err := bs.BeaconDB.ValidatorIndex(ctx, bytesutil.ToBytes48(key))
-		if err != nil || !ok {
+
+	// Convert the list of validator public keys to list of validator indices.
+	// Also track missing validators using public keys.
+	for _, key := range req.PublicKeys {
+		idx, ok, err := bs.BeaconDB.ValidatorIndex(ctx, key)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not fetch validator idx for public key %#x: %v", key, err)
+		}
+		if !ok {
 			missingValidators = append(missingValidators, key)
-			balances[i] = 0
 			continue
 		}
-		balances[i] = headState.Balances[index]
+
+		effectiveBalances = append(effectiveBalances, validatorSummary[idx].CurrentEpochEffectiveBalance)
+		beforeTransitionBalances = append(beforeTransitionBalances, validatorSummary[idx].BeforeEpochTransitionBalance)
+		afterTransitionBalances = append(afterTransitionBalances, validatorSummary[idx].AfterEpochTransitionBalance)
+		inclusionSlots = append(inclusionSlots, validatorSummary[idx].InclusionSlot)
+		inclusionDistances = append(inclusionDistances, validatorSummary[idx].InclusionDistance)
+		correctlyVotedSource = append(correctlyVotedSource, validatorSummary[idx].IsPrevEpochAttester)
+		correctlyVotedTarget = append(correctlyVotedTarget, validatorSummary[idx].IsPrevEpochTargetAttester)
+		correctlyVotedHead = append(correctlyVotedHead, validatorSummary[idx].IsPrevEpochHeadAttester)
 	}
 
-	activeCount, err := helpers.ActiveValidatorCount(headState, helpers.SlotToEpoch(req.Slot))
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not retrieve active validator count: %v", err)
-	}
-
-	totalActiveBalance, err := helpers.TotalActiveBalance(headState)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not retrieve total active balance: %v", err)
-	}
-
-	avgBalance := float32(totalActiveBalance / activeCount)
 	return &ethpb.ValidatorPerformanceResponse{
-		Balances:                      balances,
-		AverageActiveValidatorBalance: avgBalance,
+		InclusionSlots:                inclusionSlots,
+		InclusionDistances:            inclusionDistances,
+		CorrectlyVotedSource:          correctlyVotedSource,
+		CorrectlyVotedTarget:          correctlyVotedTarget,
+		CorrectlyVotedHead:            correctlyVotedHead,
+		CurrentEffectiveBalances:      effectiveBalances,
+		BalancesBeforeEpochTransition: beforeTransitionBalances,
+		BalancesAfterEpochTransition:  afterTransitionBalances,
 		MissingValidators:             missingValidators,
-		TotalValidators:               uint64(len(headState.Validators)),
-		TotalActiveValidators:         activeCount,
 	}, nil
+}
+
+// Determines whether a validator has already exited.
+func validatorHasExited(validator *ethpb.Validator, currentEpoch uint64) bool {
+	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
+	if currentEpoch < validator.ActivationEligibilityEpoch {
+		return false
+	}
+	if currentEpoch < validator.ActivationEpoch {
+		return false
+	}
+	if validator.ExitEpoch == farFutureEpoch {
+		return false
+	}
+	if currentEpoch < validator.ExitEpoch {
+		if validator.Slashed {
+			return false
+		}
+		return false
+	}
+	return true
 }

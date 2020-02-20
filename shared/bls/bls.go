@@ -24,7 +24,7 @@ func init() {
 	bls12.SetETHserialization(true)
 }
 
-var maxKeys = int64(10000)
+var maxKeys = int64(100000)
 var pubkeyCache, _ = ristretto.NewCache(&ristretto.Config{
 	NumCounters: maxKeys,
 	MaxCost:     1 << 19, // 500 kb is cache max size
@@ -153,10 +153,8 @@ func (p *PublicKey) Marshal() []byte {
 
 // Copy the public key to a new pointer reference.
 func (p *PublicKey) Copy() (*PublicKey, error) {
-	rawBytes := p.p.Serialize()
-	newKey := &bls12.PublicKey{}
-	err := newKey.Deserialize(rawBytes)
-	return &PublicKey{p: newKey}, err
+	np := *p.p
+	return &PublicKey{p: &np}, nil
 }
 
 // Aggregate two public keys.

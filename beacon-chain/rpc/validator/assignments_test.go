@@ -2,9 +2,9 @@ package validator
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"strings"
-	"sync"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -18,6 +18,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
+
+// pubKey is a helper to generate a well-formed public key.
+func pubKey(i uint64) []byte {
+	pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
+	binary.LittleEndian.PutUint64(pubKey, uint64(i))
+	return pubKey
+}
 
 func TestGetDuties_NextEpoch_WrongPubkeyLength(t *testing.T) {
 	db := dbutil.SetupDB(t)
@@ -43,9 +50,8 @@ func TestGetDuties_NextEpoch_WrongPubkeyLength(t *testing.T) {
 		PublicKeys: [][]byte{{1}},
 		Epoch:      0,
 	}
-	want := fmt.Sprintf("expected public key to have length %d", params.BeaconConfig().BLSPubkeyLength)
-	if _, err := Server.GetDuties(context.Background(), req); err != nil && !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err)
+	if _, err := Server.GetDuties(context.Background(), req); err != nil && !strings.Contains(err.Error(), "incorrect key length") {
+		t.Errorf("Expected \"incorrect key length\", received %v", err)
 	}
 }
 
@@ -67,7 +73,7 @@ func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 	}
 
-	pubKey := make([]byte, 96)
+	pubKey := pubKey(99999)
 	req := &ethpb.DutiesRequest{
 		PublicKeys: [][]byte{pubKey},
 		Epoch:      0,
@@ -99,22 +105,19 @@ func TestGetDuties_OK(t *testing.T) {
 		t.Fatalf("Could not get signing root %v", err)
 	}
 
-	var wg sync.WaitGroup
-	numOfValidators := int(depChainStart)
-	errs := make(chan error, numOfValidators)
+	pubKeys := make([][]byte, len(deposits))
+	indices := make([]uint64, len(deposits))
 	for i := 0; i < len(deposits); i++ {
-		wg.Add(1)
-		go func(index int) {
-			errs <- db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(deposits[index].Data.PublicKey), uint64(index))
-			wg.Done()
-		}(i)
+		pubKeys[i] = deposits[i].Data.PublicKey
+		indices[i] = uint64(i)
 	}
-	wg.Wait()
-	close(errs)
-	for err := range errs {
-		if err != nil {
-			t.Fatalf("Could not save validator index: %v", err)
-		}
+
+	pubkeysAs48ByteType := make([][48]byte, len(pubKeys))
+	for i, pk := range pubKeys {
+		pubkeysAs48ByteType[i] = bytesutil.ToBytes48(pk)
+	}
+	if err := db.SaveValidatorIndices(ctx, pubkeysAs48ByteType, indices); err != nil {
+		t.Fatal(err)
 	}
 
 	vs := &Server{
@@ -132,9 +135,9 @@ func TestGetDuties_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not call epoch committee assignment %v", err)
 	}
-	if res.Duties[0].AttesterSlot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
+	if res.Duties[0].AttesterSlot > state.Slot()+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
-			res.Duties[0].AttesterSlot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
+			res.Duties[0].AttesterSlot, state.Slot()+params.BeaconConfig().SlotsPerEpoch)
 	}
 
 	// Test the last validator in registry.
@@ -147,9 +150,24 @@ func TestGetDuties_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not call epoch committee assignment %v", err)
 	}
-	if res.Duties[0].AttesterSlot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
+	if res.Duties[0].AttesterSlot > state.Slot()+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
-			res.Duties[0].AttesterSlot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
+			res.Duties[0].AttesterSlot, state.Slot()+params.BeaconConfig().SlotsPerEpoch)
+	}
+
+	// We request for duties for all validators.
+	req = &ethpb.DutiesRequest{
+		PublicKeys: pubKeys,
+		Epoch:      0,
+	}
+	res, err = vs.GetDuties(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Could not call epoch committee assignment %v", err)
+	}
+	for i := 0; i < len(res.Duties); i++ {
+		if res.Duties[i].ValidatorIndex != uint64(i) {
+			t.Errorf("Wanted %d, received %d", i, res.Duties[i].ValidatorIndex)
+		}
 	}
 }
 
@@ -169,29 +187,21 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
 	}
-	bState.Slot = 5 // Set state to non-epoch start slot.
+	bState.SetSlot(5) // Set state to non-epoch start slot.
 
 	genesisRoot, err := ssz.HashTreeRoot(genesis.Block)
 	if err != nil {
 		t.Fatalf("Could not get signing root %v", err)
 	}
 
-	var wg sync.WaitGroup
-	numOfValidators := int(depChainStart)
-	errs := make(chan error, numOfValidators)
+	pubKeys := make([][48]byte, len(deposits))
+	indices := make([]uint64, len(deposits))
 	for i := 0; i < len(deposits); i++ {
-		wg.Add(1)
-		go func(index int) {
-			errs <- db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(deposits[index].Data.PublicKey), uint64(index))
-			wg.Done()
-		}(i)
+		pubKeys[i] = bytesutil.ToBytes48(deposits[i].Data.PublicKey)
+		indices[i] = uint64(i)
 	}
-	wg.Wait()
-	close(errs)
-	for err := range errs {
-		if err != nil {
-			t.Fatalf("Could not save validator index: %v", err)
-		}
+	if err := db.SaveValidatorIndices(ctx, pubKeys, indices); err != nil {
+		t.Fatal(err)
 	}
 
 	vs := &Server{
@@ -235,22 +245,14 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 		t.Fatalf("Could not get signing root %v", err)
 	}
 
-	var wg sync.WaitGroup
-	numOfValidators := int(depChainStart)
-	errs := make(chan error, numOfValidators)
-	for i := 0; i < numOfValidators; i++ {
-		wg.Add(1)
-		go func(index int) {
-			errs <- db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(deposits[index].Data.PublicKey), uint64(index))
-			wg.Done()
-		}(i)
+	pubKeys := make([][48]byte, len(deposits))
+	indices := make([]uint64, len(deposits))
+	for i := 0; i < len(deposits); i++ {
+		pubKeys[i] = bytesutil.ToBytes48(deposits[i].Data.PublicKey)
+		indices[i] = uint64(i)
 	}
-	wg.Wait()
-	close(errs)
-	for err := range errs {
-		if err != nil {
-			t.Fatalf("Could not save validator index: %v", err)
-		}
+	if err := db.SaveValidatorIndices(ctx, pubKeys, indices); err != nil {
+		t.Fatal(err)
 	}
 
 	vs := &Server{
@@ -314,22 +316,14 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 		b.Fatalf("Could not get signing root %v", err)
 	}
 
-	var wg sync.WaitGroup
-	numOfValidators := int(depChainStart)
-	errs := make(chan error, numOfValidators)
-	for i := 0; i < numOfValidators; i++ {
-		wg.Add(1)
-		go func(index int) {
-			errs <- db.SaveValidatorIndex(ctx, bytesutil.ToBytes48(deposits[index].Data.PublicKey), uint64(index))
-			wg.Done()
-		}(i)
+	pubKeys := make([][48]byte, len(deposits))
+	indices := make([]uint64, len(deposits))
+	for i := 0; i < len(deposits); i++ {
+		pubKeys[i] = bytesutil.ToBytes48(deposits[i].Data.PublicKey)
+		indices[i] = uint64(i)
 	}
-	wg.Wait()
-	close(errs)
-	for err := range errs {
-		if err != nil {
-			b.Fatalf("Could not save validator index: %v", err)
-		}
+	if err := db.SaveValidatorIndices(ctx, pubKeys, indices); err != nil {
+		b.Fatal(err)
 	}
 
 	vs := &Server{

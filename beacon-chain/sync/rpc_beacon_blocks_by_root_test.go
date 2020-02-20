@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -45,7 +46,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 		blkRoots = append(blkRoots, root)
 	}
 
-	r := &Service{p2p: p1, db: d}
+	r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(10000, 10000, false)}
 	pcl := protocol.ID("/testing")
 
 	var wg sync.WaitGroup
@@ -99,8 +100,12 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	genesisState.Slot = 111
-	genesisState.BlockRoots[111%params.BeaconConfig().SlotsPerHistoricalRoot] = blockARoot[:]
+	if err := genesisState.SetSlot(111); err != nil {
+		t.Fatal(err)
+	}
+	if err := genesisState.UpdateBlockRootAtIndex(111%params.BeaconConfig().SlotsPerHistoricalRoot, blockARoot); err != nil {
+		t.Fatal(err)
+	}
 	finalizedCheckpt := &ethpb.Checkpoint{
 		Epoch: 5,
 		Root:  blockBRoot[:],
@@ -118,6 +123,7 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 		slotToPendingBlocks: make(map[uint64]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 		ctx:                 context.Background(),
+		blocksRateLimiter:   leakybucket.NewCollector(10000, 10000, false),
 	}
 
 	// Setup streams

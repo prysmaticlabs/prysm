@@ -21,9 +21,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
 	interopcoldstart "github.com/prysmaticlabs/prysm/beacon-chain/interop-cold-start"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
@@ -58,9 +62,13 @@ type BeaconNode struct {
 	stop            chan struct{} // Channel to wait for termination notifications.
 	db              db.Database
 	attestationPool attestations.Pool
+	exitPool        *voluntaryexits.Pool
+	slashingsPool   *slashings.Pool
 	depositCache    *depositcache.DepositCache
 	stateFeed       *event.Feed
+	blockFeed       *event.Feed
 	opFeed          *event.Feed
+	forkChoiceStore forkchoice.ForkChoicer
 }
 
 // NewBeaconNode creates a new node instance, sets up configuration options, and registers
@@ -99,8 +107,11 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		services:        registry,
 		stop:            make(chan struct{}),
 		stateFeed:       new(event.Feed),
+		blockFeed:       new(event.Feed),
 		opFeed:          new(event.Feed),
 		attestationPool: attestations.NewPool(),
+		exitPool:        voluntaryexits.NewPool(),
+		slashingsPool:   slashings.NewPool(),
 	}
 
 	if err := beacon.startDB(ctx); err != nil {
@@ -122,6 +133,8 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	if err := beacon.registerInteropServices(ctx); err != nil {
 		return nil, err
 	}
+
+	beacon.startForkChoice()
 
 	if err := beacon.registerBlockchainService(ctx); err != nil {
 		return nil, err
@@ -159,6 +172,11 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 // StateFeed implements statefeed.Notifier.
 func (b *BeaconNode) StateFeed() *event.Feed {
 	return b.stateFeed
+}
+
+// BlockFeed implements blockfeed.Notifier.
+func (b *BeaconNode) BlockFeed() *event.Feed {
+	return b.blockFeed
 }
 
 // OperationFeed implements opfeed.Notifier.
@@ -211,6 +229,11 @@ func (b *BeaconNode) Close() {
 		log.Errorf("Failed to close database: %v", err)
 	}
 	close(b.stop)
+}
+
+func (b *BeaconNode) startForkChoice() {
+	f := protoarray.New(0, 0, params.BeaconConfig().ZeroHash)
+	b.forkChoiceStore = f
 }
 
 func (b *BeaconNode) startDB(ctx *cli.Context) error {
@@ -268,7 +291,9 @@ func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 		BootstrapNodeAddr: bootnodeAddrs,
 		RelayNodeAddr:     ctx.GlobalString(cmd.RelayNode.Name),
 		DataDir:           ctx.GlobalString(cmd.DataDirFlag.Name),
+		LocalIP:           ctx.GlobalString(cmd.P2PIP.Name),
 		HostAddress:       ctx.GlobalString(cmd.P2PHost.Name),
+		HostDNS:           ctx.GlobalString(cmd.P2PHostDNS.Name),
 		PrivateKey:        ctx.GlobalString(cmd.P2PPrivKey.Name),
 		TCPPort:           ctx.GlobalUint(cmd.P2PTCPPort.Name),
 		UDPPort:           ctx.GlobalUint(cmd.P2PUDPPort.Name),
@@ -303,9 +328,11 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		DepositCache:      b.depositCache,
 		ChainStartFetcher: web3Service,
 		AttPool:           b.attestationPool,
+		ExitPool:          b.exitPool,
 		P2p:               b.fetchP2P(ctx),
 		MaxRoutines:       maxRoutines,
 		StateNotifier:     b,
+		ForkChoiceStore:   b.forkChoiceStore,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
@@ -390,14 +417,15 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 		Chain:         chainService,
 		InitialSync:   initSync,
 		StateNotifier: b,
+		BlockNotifier: b,
 		AttPool:       b.attestationPool,
+		ExitPool:      b.exitPool,
 	})
 
 	return b.services.RegisterService(rs)
 }
 
 func (b *BeaconNode) registerInitialSyncService(ctx *cli.Context) error {
-
 	var chainService *blockchain.Service
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err
@@ -408,6 +436,7 @@ func (b *BeaconNode) registerInitialSyncService(ctx *cli.Context) error {
 		Chain:         chainService,
 		P2P:           b.fetchP2P(ctx),
 		StateNotifier: b,
+		BlockNotifier: b,
 	})
 
 	return b.services.RegisterService(is)
@@ -446,11 +475,16 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		chainStartFetcher = web3Service
 	}
 
+	host := ctx.GlobalString(flags.RPCHost.Name)
 	port := ctx.GlobalString(flags.RPCPort.Name)
 	cert := ctx.GlobalString(flags.CertFlag.Name)
 	key := ctx.GlobalString(flags.KeyFlag.Name)
+	slasherCert := ctx.GlobalString(flags.SlasherCertFlag.Name)
+	slasherProvider := ctx.GlobalString(flags.SlasherProviderFlag.Name)
+
 	mockEth1DataVotes := ctx.GlobalBool(flags.InteropMockEth1DataVotesFlag.Name)
 	rpcService := rpc.NewService(context.Background(), &rpc.Config{
+		Host:                  host,
 		Port:                  port,
 		CertFlag:              cert,
 		KeyFlag:               key,
@@ -465,14 +499,19 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		AttestationReceiver:   chainService,
 		GenesisTimeFetcher:    chainService,
 		AttestationsPool:      b.attestationPool,
+		ExitPool:              b.exitPool,
+		SlashingsPool:         b.slashingsPool,
 		POWChainService:       web3Service,
 		ChainStartFetcher:     chainStartFetcher,
 		MockEth1Votes:         mockEth1DataVotes,
 		SyncService:           syncService,
 		DepositFetcher:        depositFetcher,
 		PendingDepositFetcher: b.depositCache,
+		BlockNotifier:         b,
 		StateNotifier:         b,
 		OperationNotifier:     b,
+		SlasherCert:           slasherCert,
+		SlasherProvider:       slasherProvider,
 	})
 
 	return b.services.RegisterService(rpcService)
@@ -490,11 +529,12 @@ func (b *BeaconNode) registerPrometheusService(ctx *cli.Context) error {
 	if err := b.services.FetchService(&c); err != nil {
 		panic(err)
 	}
-	additionalHandlers = append(additionalHandlers, prometheus.Handler{Path: "/heads", Handler: c.HeadsHandler})
 
 	if featureconfig.Get().EnableBackupWebhook {
 		additionalHandlers = append(additionalHandlers, prometheus.Handler{Path: "/db/backup", Handler: db.BackupHandler(b.db)})
 	}
+
+	additionalHandlers = append(additionalHandlers, prometheus.Handler{Path: "/tree", Handler: c.TreeHandler})
 
 	service := prometheus.NewPrometheusService(
 		fmt.Sprintf(":%d", ctx.GlobalInt64(cmd.MonitoringPortFlag.Name)),

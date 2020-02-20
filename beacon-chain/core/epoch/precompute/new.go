@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -12,40 +12,40 @@ import (
 // New gets called at the beginning of process epoch cycle to return
 // pre computed instances of validators attesting records and total
 // balances attested in an epoch.
-func New(ctx context.Context, state *pb.BeaconState) ([]*Validator, *Balance) {
+func New(ctx context.Context, state *stateTrie.BeaconState) ([]*Validator, *Balance) {
 	ctx, span := trace.StartSpan(ctx, "precomputeEpoch.New")
 	defer span.End()
-
-	vp := make([]*Validator, len(state.Validators))
+	vp := make([]*Validator, state.NumValidators())
 	bp := &Balance{}
 
 	currentEpoch := helpers.CurrentEpoch(state)
 	prevEpoch := helpers.PrevEpoch(state)
 
-	for i, v := range state.Validators {
+	state.ReadFromEveryValidator(func(idx int, val *stateTrie.ReadOnlyValidator) error {
 		// Was validator withdrawable or slashed
-		withdrawable := currentEpoch >= v.WithdrawableEpoch
+		withdrawable := currentEpoch >= val.WithdrawableEpoch()
 		p := &Validator{
-			IsSlashed:                    v.Slashed,
+			IsSlashed:                    val.Slashed(),
 			IsWithdrawableCurrentEpoch:   withdrawable,
-			CurrentEpochEffectiveBalance: v.EffectiveBalance,
+			CurrentEpochEffectiveBalance: val.EffectiveBalance(),
 		}
 		// Was validator active current epoch
-		if helpers.IsActiveValidator(v, currentEpoch) {
+		if helpers.IsActiveValidatorUsingTrie(val, currentEpoch) {
 			p.IsActiveCurrentEpoch = true
-			bp.CurrentEpoch += v.EffectiveBalance
+			bp.CurrentEpoch += val.EffectiveBalance()
 		}
 		// Was validator active previous epoch
-		if helpers.IsActiveValidator(v, prevEpoch) {
+		if helpers.IsActiveValidatorUsingTrie(val, prevEpoch) {
 			p.IsActivePrevEpoch = true
-			bp.PrevEpoch += v.EffectiveBalance
+			bp.PrevEpoch += val.EffectiveBalance()
 		}
 		// Set inclusion slot and inclusion distance to be max, they will be compared and replaced
 		// with the lower values
 		p.InclusionSlot = params.BeaconConfig().FarFutureEpoch
 		p.InclusionDistance = params.BeaconConfig().FarFutureEpoch
 
-		vp[i] = p
-	}
+		vp[idx] = p
+		return nil
+	})
 	return vp, bp
 }

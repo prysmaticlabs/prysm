@@ -27,8 +27,11 @@ func (r *Service) goodbyeRPCHandler(ctx context.Context, msg interface{}, stream
 	defer cancel()
 	setRPCStreamDeadlines(stream)
 
-	m := msg.(uint64)
-	log := log.WithField("Reason", goodbyeMessage(m))
+	m, ok := msg.(*uint64)
+	if !ok {
+		return fmt.Errorf("wrong message type for goodbye, got %T, wanted *uint64", msg)
+	}
+	log := log.WithField("Reason", goodbyeMessage(*m))
 	log.WithField("peer", stream.Conn().RemotePeer()).Info("Peer has sent a goodbye message")
 	// closes all streams with the peer
 	return r.p2p.Disconnect(stream.Conn().RemotePeer())

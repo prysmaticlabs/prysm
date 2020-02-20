@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
@@ -14,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -88,6 +90,7 @@ func (k *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]*ethpb.Si
 			filtersMap[filters.EndSlot],
 			filtersMap[filters.StartEpoch],
 			filtersMap[filters.EndEpoch],
+			filtersMap[filters.SlotStep],
 		)
 
 		// Once we have a list of block roots that correspond to each
@@ -150,6 +153,7 @@ func (k *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]b
 			filtersMap[filters.EndSlot],
 			filtersMap[filters.StartEpoch],
 			filtersMap[filters.EndEpoch],
+			filtersMap[filters.SlotStep],
 		)
 
 		// Once we have a list of block roots that correspond to each
@@ -202,7 +206,7 @@ func (k *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 func (k *Store) DeleteBlock(ctx context.Context, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlock")
 	defer span.End()
-	return k.db.Batch(func(tx *bolt.Tx) error {
+	return k.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		enc := bkt.Get(blockRoot[:])
 		if enc == nil {
@@ -361,14 +365,18 @@ func fetchBlockRootsBySlotRange(
 	endSlotEncoded interface{},
 	startEpochEncoded interface{},
 	endEpochEncoded interface{},
+	slotStepEncoded interface{},
 ) [][]byte {
-	var startSlot, endSlot uint64
+	var startSlot, endSlot, step uint64
 	var ok bool
 	if startSlot, ok = startSlotEncoded.(uint64); !ok {
 		startSlot = 0
 	}
 	if endSlot, ok = endSlotEncoded.(uint64); !ok {
 		endSlot = 0
+	}
+	if step, ok = slotStepEncoded.(uint64); !ok || step == 0 {
+		step = 1
 	}
 	startEpoch, startEpochOk := startEpochEncoded.(uint64)
 	endEpoch, endEpochOk := endEpochEncoded.(uint64)
@@ -388,10 +396,25 @@ func fetchBlockRootsBySlotRange(
 			return k != nil && bytes.Compare(k, max) <= 0
 		}
 	}
-	roots := make([][]byte, 0)
+	rootsRange := (endSlot - startSlot) / step
+	if endSlot < startSlot {
+		rootsRange = 0
+	}
+	roots := make([][]byte, 0, rootsRange)
 	c := bkt.Cursor()
 	for k, v := c.Seek(min); conditional(k, max); k, v = c.Next() {
-		splitRoots := make([][]byte, 0)
+		if step > 1 {
+			slot, err := strconv.ParseUint(string(k), 10, 64)
+			if err != nil {
+				log.WithError(err).Error("Cannot parse key to uint")
+				continue
+			}
+			if (slot-startSlot)%step != 0 {
+				continue
+			}
+		}
+		numOfRoots := len(v) / 32
+		splitRoots := make([][]byte, 0, numOfRoots)
 		for i := 0; i < len(v); i += 32 {
 			splitRoots = append(splitRoots, v[i:i+32])
 		}
@@ -441,6 +464,7 @@ func createBlockIndicesFromFilters(f *filters.QueryFilter) (map[string][]byte, e
 		case filters.EndSlot:
 		case filters.StartEpoch:
 		case filters.EndEpoch:
+		case filters.SlotStep:
 		default:
 			return nil, fmt.Errorf("filter criterion %v not supported for blocks", k)
 		}

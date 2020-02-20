@@ -13,7 +13,10 @@ import (
 	"github.com/paulbellamy/ratecounter"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -40,17 +43,33 @@ const refreshTime = 6 * time.Second
 func (s *Service) roundRobinSync(genesis time.Time) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	defer s.chain.ClearCachedStates()
+
+	if cfg := featureconfig.Get(); cfg.EnableSkipSlotsCache {
+		cfg.EnableSkipSlotsCache = false
+		featureconfig.Init(cfg)
+		defer func() {
+			cfg := featureconfig.Get()
+			cfg.EnableSkipSlotsCache = true
+			featureconfig.Init(cfg)
+		}()
+	}
 
 	counter := ratecounter.NewRateCounter(counterSeconds * time.Second)
 	randGenerator := rand.New(rand.NewSource(time.Now().Unix()))
 	var lastEmptyRequests int
+	highestFinalizedSlot := helpers.StartSlot(s.highestFinalizedEpoch() + 1)
 	// Step 1 - Sync to end of finalized epoch.
-	for s.chain.HeadSlot() < helpers.StartSlot(s.highestFinalizedEpoch()+1) {
-		root, finalizedEpoch, peers := s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync)
+	for s.chain.HeadSlot() < highestFinalizedSlot {
+		root, finalizedEpoch, peers := s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(s.chain.HeadSlot()))
 		if len(peers) == 0 {
 			log.Warn("No peers; waiting for reconnect")
 			time.Sleep(refreshTime)
 			continue
+		}
+
+		if len(peers) >= flags.Get().MinimumSyncPeers {
+			highestFinalizedSlot = helpers.StartSlot(finalizedEpoch + 1)
 		}
 
 		// shuffle peers to prevent a bad peer from
@@ -82,8 +101,8 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			}
 
 			// Short circuit start far exceeding the highest finalized epoch in some infinite loop.
-			if start > helpers.StartSlot(s.highestFinalizedEpoch()+1) {
-				return nil, errors.Errorf("attempted to ask for a start slot of %d which is greater than the next highest epoch of %d", start, s.highestFinalizedEpoch()+1)
+			if start > highestFinalizedSlot {
+				return nil, errors.Errorf("attempted to ask for a start slot of %d which is greater than the next highest slot of %d", start, highestFinalizedSlot)
 			}
 
 			atomic.AddInt32(&p2pRequestCount, int32(len(peers)))
@@ -120,7 +139,6 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 					}()
 
 					resp, err := s.requestBlocks(ctx, req, pid)
-					log.WithField("peer", pid.Pretty()).Debugf("Received %d blocks", len(resp))
 					if err != nil {
 						// fail over to other peers by splitting this requests evenly across them.
 						ps := append(peers[:i], peers[i+1:]...)
@@ -141,6 +159,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 							return
 						}
 					}
+					log.WithField("peer", pid).WithField("count", len(resp)).Debug("Received blocks")
 					blocksChan <- resp
 				}(i, pid)
 			}
@@ -177,7 +196,8 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			0,                    // remainder
 		)
 		if err != nil {
-			return err
+			log.WithError(err).Error("Round robing sync request failed")
+			continue
 		}
 
 		// Since the block responses were appended to the list, we must sort them in order to
@@ -193,6 +213,10 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 				log.Debugf("Beacon node doesn't have a block in db with root %#x", blk.Block.ParentRoot)
 				continue
 			}
+			s.blockNotifier.BlockFeed().Send(&feed.Event{
+				Type: blockfeed.ReceivedBlock,
+				Data: blockfeed.ReceivedBlockData{SignedBlock: blk},
+			})
 			if featureconfig.Get().InitSyncNoVerify {
 				if err := s.chain.ReceiveBlockNoVerify(ctx, blk); err != nil {
 					return err
@@ -224,15 +248,14 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	// mitigation. We are already convinced that we are on the correct finalized chain. Any blocks
 	// we receive there after must build on the finalized chain or be considered invalid during
 	// fork choice resolution / block processing.
-	best := s.bestPeer()
-	root, _, _ := s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync)
-
-	// if no best peer exists, retry until a new best peer is found.
-	for len(best) == 0 {
+	root, _, pids := s.p2p.Peers().BestFinalized(1 /* maxPeers */, s.highestFinalizedEpoch())
+	for len(pids) == 0 {
+		log.Info("Waiting for a suitable peer before syncing to the head of the chain")
 		time.Sleep(refreshTime)
-		best = s.bestPeer()
-		root, _, _ = s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync)
+		root, _, pids = s.p2p.Peers().BestFinalized(1 /* maxPeers */, s.highestFinalizedEpoch())
 	}
+	best := pids[0]
+
 	for head := helpers.SlotsSince(genesis); s.chain.HeadSlot() < head; {
 		req := &p2ppb.BeaconBlocksByRangeRequest{
 			HeadBlockRoot: root,
@@ -253,7 +276,8 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		for _, blk := range resp {
 			s.logSyncStatus(genesis, blk.Block, []peer.ID{best}, counter)
 			if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk); err != nil {
-				return err
+				log.WithError(err).Error("Failed to process block, exiting init sync")
+				return nil
 			}
 		}
 		if len(resp) == 0 {
@@ -266,6 +290,11 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 
 // requestBlocks by range to a specific peer.
 func (s *Service) requestBlocks(ctx context.Context, req *p2ppb.BeaconBlocksByRangeRequest, pid peer.ID) ([]*eth.SignedBeaconBlock, error) {
+	if s.blocksRateLimiter.Remaining(pid.String()) < int64(req.Count) {
+		log.WithField("peer", pid).Debug("Slowing down for rate limit")
+		time.Sleep(s.blocksRateLimiter.TillEmpty(pid.String()))
+	}
+	s.blocksRateLimiter.Add(pid.String(), int64(req.Count))
 	log.WithFields(logrus.Fields{
 		"peer":  pid,
 		"start": req.StartSlot,
@@ -294,65 +323,18 @@ func (s *Service) requestBlocks(ctx context.Context, req *p2ppb.BeaconBlocksByRa
 	return resp, nil
 }
 
-// highestFinalizedEpoch as reported by peers. This is the absolute highest finalized epoch as
-// reported by peers.
+// highestFinalizedEpoch returns the absolute highest finalized epoch of all connected peers.
+// Note this can be lower than our finalized epoch if we have no peers or peers that are all behind us.
 func (s *Service) highestFinalizedEpoch() uint64 {
-	_, epoch, _ := s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync)
-	return epoch
-}
-
-// bestFinalized returns the highest finalized epoch that is agreed upon by the majority of
-// peers. This method may not return the absolute highest finalized, but the finalized epoch in
-// which most peers can serve blocks. Ideally, all peers would be reporting the same finalized
-// epoch.
-// Returns the best finalized root, epoch number, and peers that agree.
-func (s *Service) bestFinalized() ([]byte, uint64, []peer.ID) {
-	finalized := make(map[[32]byte]uint64)
-	rootToEpoch := make(map[[32]byte]uint64)
+	highest := uint64(0)
 	for _, pid := range s.p2p.Peers().Connected() {
 		peerChainState, err := s.p2p.Peers().ChainState(pid)
-		if err == nil && peerChainState != nil {
-			r := bytesutil.ToBytes32(peerChainState.FinalizedRoot)
-			finalized[r]++
-			rootToEpoch[r] = peerChainState.FinalizedEpoch
+		if err == nil && peerChainState != nil && peerChainState.FinalizedEpoch > highest {
+			highest = peerChainState.FinalizedEpoch
 		}
 	}
 
-	var mostVotedFinalizedRoot [32]byte
-	var mostVotes uint64
-	for root, count := range finalized {
-		if count > mostVotes {
-			mostVotes = count
-			mostVotedFinalizedRoot = root
-		}
-	}
-
-	var pids []peer.ID
-	for _, pid := range s.p2p.Peers().Connected() {
-		peerChainState, err := s.p2p.Peers().ChainState(pid)
-		if err == nil && peerChainState != nil && peerChainState.FinalizedEpoch >= rootToEpoch[mostVotedFinalizedRoot] {
-			pids = append(pids, pid)
-			if len(pids) >= params.BeaconConfig().MaxPeersToSync {
-				break
-			}
-		}
-	}
-
-	return mostVotedFinalizedRoot[:], rootToEpoch[mostVotedFinalizedRoot], pids
-}
-
-// bestPeer returns the peer ID of the peer reporting the highest head slot.
-func (s *Service) bestPeer() peer.ID {
-	var best peer.ID
-	var bestSlot uint64
-	for _, k := range s.p2p.Peers().Connected() {
-		peerChainState, err := s.p2p.Peers().ChainState(k)
-		if err == nil && peerChainState != nil && peerChainState.HeadSlot >= bestSlot {
-			bestSlot = peerChainState.HeadSlot
-			best = k
-		}
-	}
-	return best
+	return highest
 }
 
 // logSyncStatus and increment block processing counter.

@@ -3,10 +3,10 @@ package helpers
 import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -21,8 +21,16 @@ import (
 //    """
 //    return validator.activation_epoch <= epoch < validator.exit_epoch
 func IsActiveValidator(validator *ethpb.Validator, epoch uint64) bool {
-	return validator.ActivationEpoch <= epoch &&
-		epoch < validator.ExitEpoch
+	return checkValidatorActiveStatus(validator.ActivationEpoch, validator.ExitEpoch, epoch)
+}
+
+// IsActiveValidatorUsingTrie checks if a read only validator is active.
+func IsActiveValidatorUsingTrie(validator *stateTrie.ReadOnlyValidator, epoch uint64) bool {
+	return checkValidatorActiveStatus(validator.ActivationEpoch(), validator.ExitEpoch(), epoch)
+}
+
+func checkValidatorActiveStatus(activationEpoch uint64, exitEpoch uint64, epoch uint64) bool {
+	return activationEpoch <= epoch && epoch < exitEpoch
 }
 
 // IsSlashableValidator returns the boolean value on whether the validator
@@ -56,32 +64,28 @@ func IsSlashableValidator(validator *ethpb.Validator, epoch uint64) bool {
 //    Return the sequence of active validator indices at ``epoch``.
 //    """
 //    return [ValidatorIndex(i) for i, v in enumerate(state.validators) if is_active_validator(v, epoch)]
-func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) ([]uint64, error) {
-	if featureconfig.Get().EnableNewCache {
-		seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get seed")
-		}
-		activeIndices, err := committeeCache.ActiveIndices(seed)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not interface with committee cache")
-		}
-		if activeIndices != nil {
-			return activeIndices, nil
-		}
+func ActiveValidatorIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint64, error) {
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get seed")
 	}
-
+	activeIndices, err := committeeCache.ActiveIndices(seed)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not interface with committee cache")
+	}
+	if activeIndices != nil {
+		return activeIndices, nil
+	}
 	var indices []uint64
-	for i, v := range state.Validators {
-		if IsActiveValidator(v, epoch) {
-			indices = append(indices, uint64(i))
+	state.ReadFromEveryValidator(func(idx int, val *stateTrie.ReadOnlyValidator) error {
+		if IsActiveValidatorUsingTrie(val, epoch) {
+			indices = append(indices, uint64(idx))
 		}
-	}
+		return nil
+	})
 
-	if featureconfig.Get().EnableNewCache {
-		if err := UpdateCommitteeCache(state, epoch); err != nil {
-			return nil, errors.Wrap(err, "could not update committee cache")
-		}
+	if err := UpdateCommitteeCache(state, epoch); err != nil {
+		return nil, errors.Wrap(err, "could not update committee cache")
 	}
 
 	return indices, nil
@@ -89,14 +93,14 @@ func ActiveValidatorIndices(state *pb.BeaconState, epoch uint64) ([]uint64, erro
 
 // ActiveValidatorCount returns the number of active validators in the state
 // at the given epoch.
-func ActiveValidatorCount(state *pb.BeaconState, epoch uint64) (uint64, error) {
+func ActiveValidatorCount(state *stateTrie.BeaconState, epoch uint64) (uint64, error) {
 	count := uint64(0)
-	for _, v := range state.Validators {
-		if IsActiveValidator(v, epoch) {
+	state.ReadFromEveryValidator(func(idx int, val *stateTrie.ReadOnlyValidator) error {
+		if IsActiveValidatorUsingTrie(val, epoch) {
 			count++
 		}
-	}
-
+		return nil
+	})
 	return count, nil
 }
 
@@ -142,15 +146,27 @@ func ValidatorChurnLimit(activeValidatorCount uint64) (uint64, error) {
 //    seed = hash(get_seed(state, epoch, DOMAIN_BEACON_PROPOSER) + int_to_bytes(state.slot, length=8))
 //    indices = get_active_validator_indices(state, epoch)
 //    return compute_proposer_index(state, indices, seed)
-func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
+func BeaconProposerIndex(state *stateTrie.BeaconState) (uint64, error) {
 	e := CurrentEpoch(state)
 
-	seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconProposer)
+	seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not generate seed")
+	}
+	proposerIndices, err := committeeCache.ProposerIndices(seed)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not interface with committee cache")
+	}
+	if proposerIndices != nil {
+		return proposerIndices[state.Slot()%params.BeaconConfig().SlotsPerEpoch], nil
+	}
+
+	seed, err = Seed(state, e, params.BeaconConfig().DomainBeaconProposer)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not generate seed")
 	}
 
-	seedWithSlot := append(seed[:], bytesutil.Bytes8(state.Slot)...)
+	seedWithSlot := append(seed[:], bytesutil.Bytes8(state.Slot())...)
 	seedWithSlotHash := hashutil.Hash(seedWithSlot)
 
 	indices, err := ActiveValidatorIndices(state, e)
@@ -158,7 +174,11 @@ func BeaconProposerIndex(state *pb.BeaconState) (uint64, error) {
 		return 0, errors.Wrap(err, "could not get active indices")
 	}
 
-	return ComputeProposerIndex(state.Validators, indices, seedWithSlotHash)
+	if err := UpdateProposerIndicesInCache(state, CurrentEpoch(state)); err != nil {
+		return 0, errors.Wrap(err, "could not update committee cache")
+	}
+
+	return ComputeProposerIndex(state.Validators(), indices, seedWithSlotHash)
 }
 
 // ComputeProposerIndex returns the index sampled by effective balance, which is used to calculate proposer.
@@ -187,6 +207,7 @@ func ComputeProposerIndex(validators []*ethpb.Validator, activeIndices []uint64,
 		return 0, errors.New("empty active indices list")
 	}
 	maxRandomByte := uint64(1<<8 - 1)
+	hashFunc := hashutil.CustomSHA256Hasher()
 
 	for i := uint64(0); ; i++ {
 		candidateIndex, err := ComputeShuffledIndex(i%length, length, seed, true /* shuffle */)
@@ -198,7 +219,7 @@ func ComputeProposerIndex(validators []*ethpb.Validator, activeIndices []uint64,
 			return 0, errors.New("active index out of range")
 		}
 		b := append(seed[:], bytesutil.Bytes8(i/32)...)
-		randomByte := hashutil.Hash(b)[i%32]
+		randomByte := hashFunc(b)[i%32]
 		v := validators[candidateIndex]
 		var effectiveBal uint64
 		if v != nil {
@@ -233,7 +254,7 @@ func Domain(fork *pb.Fork, epoch uint64, domainType []byte) uint64 {
 }
 
 // IsEligibleForActivationQueue checks if the validator is eligible to
-// be places into the activation queue.
+// be placed into the activation queue.
 //
 // Spec pseudocode definition:
 //  def is_eligible_for_activation_queue(validator: Validator) -> bool:
@@ -245,8 +266,19 @@ func Domain(fork *pb.Fork, epoch uint64, domainType []byte) uint64 {
 //        and validator.effective_balance == MAX_EFFECTIVE_BALANCE
 //    )
 func IsEligibleForActivationQueue(validator *ethpb.Validator) bool {
-	return validator.ActivationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch &&
-		validator.EffectiveBalance == params.BeaconConfig().MaxEffectiveBalance
+	return isEligibileForActivationQueue(validator.ActivationEligibilityEpoch, validator.EffectiveBalance)
+}
+
+// IsEligibleForActivationQueueUsingTrie checks if the read-only validator is eligible to
+// be placed into the activation queue.
+func IsEligibleForActivationQueueUsingTrie(validator *stateTrie.ReadOnlyValidator) bool {
+	return isEligibileForActivationQueue(validator.ActivationEligibilityEpoch(), validator.EffectiveBalance())
+}
+
+// isEligibleForActivationQueue carries out the logic for IsEligibleForActivationQueue*
+func isEligibileForActivationQueue(activationEligibilityEpoch uint64, effectiveBalance uint64) bool {
+	return activationEligibilityEpoch == params.BeaconConfig().FarFutureEpoch &&
+		effectiveBalance == params.BeaconConfig().MaxEffectiveBalance
 }
 
 // IsEligibleForActivation checks if the validator is eligible for activation.
@@ -262,7 +294,22 @@ func IsEligibleForActivationQueue(validator *ethpb.Validator) bool {
 //        # Has not yet been activated
 //        and validator.activation_epoch == FAR_FUTURE_EPOCH
 //    )
-func IsEligibleForActivation(state *pb.BeaconState, validator *ethpb.Validator) bool {
-	return validator.ActivationEligibilityEpoch <= state.FinalizedCheckpoint.Epoch &&
-		validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch
+func IsEligibleForActivation(state *stateTrie.BeaconState, validator *ethpb.Validator) bool {
+	finalizedEpoch := state.FinalizedCheckpointEpoch()
+	return isEligibileForActivation(validator.ActivationEligibilityEpoch, validator.ActivationEpoch, finalizedEpoch)
+}
+
+// IsEligibleForActivationUsingTrie checks if the validator is eligible for activation.
+func IsEligibleForActivationUsingTrie(state *stateTrie.BeaconState, validator *stateTrie.ReadOnlyValidator) bool {
+	cpt := state.FinalizedCheckpoint()
+	if cpt == nil {
+		return false
+	}
+	return isEligibileForActivation(validator.ActivationEligibilityEpoch(), validator.ActivationEpoch(), cpt.Epoch)
+}
+
+// isEligibleForActivation carries out the logic for IsEligibleForActivation*
+func isEligibileForActivation(activationEligibilityEpoch uint64, activationEpoch uint64, finalizedEpoch uint64) bool {
+	return activationEligibilityEpoch <= finalizedEpoch &&
+		activationEpoch == params.BeaconConfig().FarFutureEpoch
 }

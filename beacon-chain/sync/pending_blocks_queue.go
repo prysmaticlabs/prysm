@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -24,8 +25,11 @@ var processPendingBlocksPeriod = time.Duration(params.BeaconConfig().SecondsPerS
 // processes pending blocks queue on every processPendingBlocksPeriod
 func (r *Service) processPendingBlocksQueue() {
 	ctx := context.Background()
+	locker := new(sync.Mutex)
 	runutil.RunEvery(r.ctx, processPendingBlocksPeriod, func() {
+		locker.Lock()
 		r.processPendingBlocks(ctx)
+		locker.Unlock()
 	})
 }
 
@@ -51,8 +55,14 @@ func (r *Service) processPendingBlocks(ctx context.Context) error {
 
 		r.pendingQueueLock.RLock()
 		b := r.slotToPendingBlocks[uint64(s)]
-		inPendingQueue := r.seenPendingBlocks[bytesutil.ToBytes32(b.Block.ParentRoot)]
+		// Skip if block does not exist.
+		if b == nil || b.Block == nil {
+			r.pendingQueueLock.RUnlock()
+			span.End()
+			continue
+		}
 		r.pendingQueueLock.RUnlock()
+		inPendingQueue := r.seenPendingBlocks[bytesutil.ToBytes32(b.Block.ParentRoot)]
 
 		inDB := r.db.HasBlock(ctx, bytesutil.ToBytes32(b.Block.ParentRoot))
 		hasPeer := len(pids) != 0
@@ -62,10 +72,21 @@ func (r *Service) processPendingBlocks(ctx context.Context) error {
 		if !inPendingQueue && !inDB && hasPeer {
 			log.WithFields(logrus.Fields{
 				"currentSlot": b.Block.Slot,
-				"parentRoot":  hex.EncodeToString(b.Block.ParentRoot),
+				"parentRoot":  hex.EncodeToString(bytesutil.Trunc(b.Block.ParentRoot)),
 			}).Info("Requesting parent block")
 			req := [][32]byte{bytesutil.ToBytes32(b.Block.ParentRoot)}
-			if err := r.sendRecentBeaconBlocksRequest(ctx, req, pids[rand.Int()%len(pids)]); err != nil {
+
+			// Start with a random peer to query, but choose the first peer in our unsorted list that claims to
+			// have a head slot newer than the block slot we are requesting.
+			pid := pids[rand.Int()%len(pids)]
+			for _, p := range pids {
+				if cs, _ := r.p2p.Peers().ChainState(p); cs != nil && cs.HeadSlot >= uint64(s) {
+					pid = p
+					break
+				}
+			}
+
+			if err := r.sendRecentBeaconBlocksRequest(ctx, req, pid); err != nil {
 				traceutil.AnnotateError(span, err)
 				log.Errorf("Could not send recent block request: %v", err)
 			}
@@ -83,19 +104,31 @@ func (r *Service) processPendingBlocks(ctx context.Context) error {
 			traceutil.AnnotateError(span, err)
 		}
 
-		r.pendingQueueLock.Lock()
-		delete(r.slotToPendingBlocks, uint64(s))
+		// Broadcasting the block again once a node is able to process it.
+		if err := r.p2p.Broadcast(ctx, b); err != nil {
+			log.WithError(err).Error("Failed to broadcast block")
+		}
+
 		blkRoot, err := ssz.HashTreeRoot(b.Block)
 		if err != nil {
 			traceutil.AnnotateError(span, err)
 			span.End()
 			return err
 		}
+
+		r.pendingQueueLock.Lock()
+		delete(r.slotToPendingBlocks, uint64(s))
 		delete(r.seenPendingBlocks, blkRoot)
 		r.pendingQueueLock.Unlock()
 
-		log.Infof("Processed ancestor block with slot %d and cleared pending block cache", s)
+		log.WithFields(logrus.Fields{
+			"slot":      s,
+			"blockRoot": hex.EncodeToString(bytesutil.Trunc(blkRoot[:])),
+		}).Info("Processed pending block and cleared it in cache")
+
+		span.End()
 	}
+
 	return nil
 }
 
@@ -115,8 +148,8 @@ func (r *Service) sortedPendingSlots() []int {
 // by their slot. If they are before the current finalized
 // checkpoint, these blocks are removed from the queue.
 func (r *Service) validatePendingSlots() error {
-	r.pendingQueueLock.RLock()
-	defer r.pendingQueueLock.RUnlock()
+	r.pendingQueueLock.Lock()
+	defer r.pendingQueueLock.Unlock()
 	oldBlockRoots := make(map[[32]byte]bool)
 
 	finalizedEpoch := r.chain.FinalizedCheckpt().Epoch
@@ -144,7 +177,6 @@ func (r *Service) validatePendingSlots() error {
 			delete(r.seenPendingBlocks, blkRoot)
 		}
 	}
-	oldBlockRoots = nil
 	return nil
 }
 

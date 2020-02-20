@@ -6,28 +6,38 @@ import (
 	"sync"
 
 	"github.com/protolambda/zssz/merkle"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 )
 
 var (
-	leavesCache = make(map[string][][]byte)
-	layersCache = make(map[string][][][]byte)
+	leavesCache = make(map[string][][32]byte)
+	layersCache = make(map[string][][][32]byte)
 	lock        sync.RWMutex
 )
 
-func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte, error) {
+// RootsArrayHashTreeRoot computes the Merkle root of arrays of 32-byte hashes, such as [64][32]byte
+// according to the Simple Serialize specification of eth2.
+func RootsArrayHashTreeRoot(vals [][]byte, length uint64, fieldName string) ([32]byte, error) {
+	if featureconfig.Get().EnableSSZCache {
+		return cachedHasher.arraysRoot(vals, length, fieldName)
+	}
+	return nocachedHasher.arraysRoot(vals, length, fieldName)
+}
+
+func (h *stateRootHasher) arraysRoot(input [][]byte, length uint64, fieldName string) ([32]byte, error) {
+	hashFunc := hashutil.CustomSHA256Hasher()
 	lock.Lock()
 	if _, ok := layersCache[fieldName]; !ok && h.rootsCache != nil {
-		depth := merkle.GetDepth(uint64(len(roots)))
-		layersCache[fieldName] = make([][][]byte, depth+1)
+		depth := merkle.GetDepth(length)
+		layersCache[fieldName] = make([][][32]byte, depth+1)
 	}
 	lock.Unlock()
 
-	hashKeyElements := make([]byte, len(roots)*32)
-	leaves := make([][]byte, len(roots))
-	emptyKey := hashutil.FastSum256(hashKeyElements)
+	leaves := make([][32]byte, length)
+	for i, chunk := range input {
+		copy(leaves[i][:], chunk)
+	}
 	bytesProcessed := 0
 	changedIndices := make([]int, 0)
 	lock.RLock()
@@ -36,16 +46,11 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 	if len(prevLeaves) == 0 || h.rootsCache == nil {
 		prevLeaves = leaves
 	}
-	if h.rootsCache != nil && len(leaves) != len(prevLeaves) {
-		// We invalidate the cache completely in this case.
-		prevLeaves = leaves
-	}
-	for i := 0; i < len(roots) && i < len(leaves) && i < len(prevLeaves); i++ {
-		padded := bytesutil.ToBytes32(roots[i])
-		copy(hashKeyElements[bytesProcessed:bytesProcessed+32], padded[:])
-		leaves[i] = padded[:]
+
+	for i := 0; i < len(leaves); i++ {
 		// We check if any items changed since the roots were last recomputed.
-		if ok && h.rootsCache != nil && !bytes.Equal(leaves[i], prevLeaves[i]) {
+		notEqual := leaves[i] != prevLeaves[i]
+		if ok && h.rootsCache != nil && notEqual {
 			changedIndices = append(changedIndices, i)
 		}
 		bytesProcessed += 32
@@ -64,49 +69,39 @@ func (h *stateRootHasher) arraysRoot(roots [][]byte, fieldName string) ([32]byte
 		if maxChangedIndex+2 == len(chunks) && maxChangedIndex%2 != 0 {
 			changedIndices = append(changedIndices, maxChangedIndex+1)
 		}
-
 		for i := 0; i < len(changedIndices); i++ {
-			rt, err = recomputeRoot(changedIndices[i], chunks, fieldName)
+			rt, err = recomputeRoot(changedIndices[i], chunks, length, fieldName, hashFunc)
 			if err != nil {
 				return [32]byte{}, err
 			}
 		}
+		lock.Lock()
+		leavesCache[fieldName] = chunks
+		lock.Unlock()
 		return rt, nil
 	}
 
-	hashKey := hashutil.FastSum256(hashKeyElements)
-	if hashKey != emptyKey && h.rootsCache != nil {
-		if found, ok := h.rootsCache.Get(fieldName + string(hashKey[:])); found != nil && ok {
-			return found.([32]byte), nil
-		}
-	}
-
 	var res [32]byte
-	res = h.merkleizeWithCache(leaves, fieldName)
+	res = h.merkleizeWithCache(leaves, length, fieldName, hashFunc)
 	if h.rootsCache != nil {
 		lock.Lock()
 		leavesCache[fieldName] = leaves
 		lock.Unlock()
 	}
-	if hashKey != emptyKey && h.rootsCache != nil {
-		h.rootsCache.Set(fieldName+string(hashKey[:]), res, 32)
-	}
 	return res, nil
 }
 
-func (h *stateRootHasher) merkleizeWithCache(leaves [][]byte, fieldName string) [32]byte {
+func (h *stateRootHasher) merkleizeWithCache(leaves [][32]byte, length uint64,
+	fieldName string, hasher func([]byte) [32]byte) [32]byte {
 	lock.Lock()
 	defer lock.Unlock()
 	if len(leaves) == 1 {
 		var root [32]byte
-		copy(root[:], leaves[0])
+		root = leaves[0]
 		return root
 	}
-	for !mathutil.IsPowerOf2(uint64(len(leaves))) {
-		leaves = append(leaves, make([]byte, 32))
-	}
 	hashLayer := leaves
-	layers := make([][][]byte, merkle.GetDepth(uint64(len(leaves)))+1)
+	layers := make([][][32]byte, merkle.GetDepth(length)+1)
 	if items, ok := layersCache[fieldName]; ok && h.rootsCache != nil {
 		if len(items[0]) == len(leaves) {
 			layers = items
@@ -120,25 +115,31 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][]byte, fieldName string) 
 	//    [E]       [F]   -> This layer has length 2.
 	// [A]  [B]  [C]  [D] -> The bottom layer has length 4 (needs to be a power of two).
 	i := 1
+	chunkBuffer := bytes.NewBuffer([]byte{})
+	chunkBuffer.Grow(64)
 	for len(hashLayer) > 1 && i < len(layers) {
-		layer := make([][]byte, 0)
+		layer := make([][32]byte, len(hashLayer)/2, len(hashLayer)/2)
 		for i := 0; i < len(hashLayer); i += 2 {
-			hashedChunk := hashutil.Hash(append(hashLayer[i], hashLayer[i+1]...))
-			layer = append(layer, hashedChunk[:])
+			chunkBuffer.Write(hashLayer[i][:])
+			chunkBuffer.Write(hashLayer[i+1][:])
+			hashedChunk := hasher(chunkBuffer.Bytes())
+			layer[i/2] = hashedChunk
+			chunkBuffer.Reset()
 		}
 		hashLayer = layer
 		layers[i] = hashLayer
 		i++
 	}
 	var root [32]byte
-	copy(root[:], hashLayer[0])
+	root = hashLayer[0]
 	if h.rootsCache != nil {
 		layersCache[fieldName] = layers
 	}
 	return root
 }
 
-func recomputeRoot(idx int, chunks [][]byte, fieldName string) ([32]byte, error) {
+func recomputeRoot(idx int, chunks [][32]byte, length uint64,
+	fieldName string, hasher func([]byte) [32]byte) ([32]byte, error) {
 	lock.Lock()
 	defer lock.Unlock()
 	items, ok := layersCache[fieldName]
@@ -147,9 +148,6 @@ func recomputeRoot(idx int, chunks [][]byte, fieldName string) ([32]byte, error)
 	}
 	if items == nil {
 		return [32]byte{}, errors.New("could not recompute root as there were no items found in the layers cache")
-	}
-	for !mathutil.IsPowerOf2(uint64(len(chunks))) {
-		chunks = append(chunks, make([]byte, 32))
 	}
 	layers := items
 	root := chunks[idx]
@@ -163,16 +161,16 @@ func recomputeRoot(idx int, chunks [][]byte, fieldName string) ([32]byte, error)
 		isLeft := currentIndex%2 == 0
 		neighborIdx := currentIndex ^ 1
 
-		neighbor := make([]byte, 32)
+		neighbor := [32]byte{}
 		if layers[i] != nil && len(layers[i]) != 0 && neighborIdx < len(layers[i]) {
 			neighbor = layers[i][neighborIdx]
 		}
 		if isLeft {
-			parentHash := hashutil.Hash(append(root, neighbor...))
-			root = parentHash[:]
+			parentHash := hasher(append(root[:], neighbor[:]...))
+			root = parentHash
 		} else {
-			parentHash := hashutil.Hash(append(neighbor, root...))
-			root = parentHash[:]
+			parentHash := hasher(append(neighbor[:], root[:]...))
+			root = parentHash
 		}
 		parentIdx := currentIndex / 2
 		// Update the cached layers at the parent index.
@@ -186,7 +184,7 @@ func recomputeRoot(idx int, chunks [][]byte, fieldName string) ([32]byte, error)
 	layersCache[fieldName] = layers
 	// If there is only a single leaf, we return it (the identity element).
 	if len(layers[0]) == 1 {
-		return bytesutil.ToBytes32(layers[0][0]), nil
+		return layers[0][0], nil
 	}
-	return bytesutil.ToBytes32(root), nil
+	return root, nil
 }

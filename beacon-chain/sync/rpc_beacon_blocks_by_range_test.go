@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -38,7 +39,7 @@ func TestBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 		}
 	}
 
-	r := &Service{p2p: p1, db: d}
+	r := &Service{p2p: p1, db: d, blocksRateLimiter: leakybucket.NewCollector(10000, 10000, false)}
 	pcl := protocol.ID("/testing")
 
 	var wg sync.WaitGroup

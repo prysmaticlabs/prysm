@@ -53,6 +53,8 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.MonitoringPortFlag,
 			cmd.LogFormat,
 			cmd.LogFileName,
+			cmd.ForceClearDB,
+			cmd.ClearDB,
 		},
 	},
 	{
@@ -69,9 +71,12 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "slasher",
 		Flags: []cli.Flag{
-			flags.CertFlag,
+			flags.BeaconCertFlag,
 			flags.KeyFlag,
 			flags.RPCPort,
+			flags.UseSpanCacheFlag,
+			flags.RebuildSpanMapsFlag,
+			flags.BeaconRPCProviderFlag,
 		},
 	},
 }

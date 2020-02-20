@@ -102,40 +102,15 @@ for SSZ (the serialization library used by Prysm).
 
 ## Updating Patches
 
-Say a new change was pushed out to a dependency you're patching in Prysm. In order to update your
-patch or add any other modifications, you would need to:
+Say we want to update Ethereum APIs in Prysm to its latest master commit `b7452dde4ca361809def4ed5924ab3cb7ad1299a`.
+Here are the steps:
 
-1. First, clone the repo of the dependency you're patching and the specific commit Prysm is 
-currently using for the dependency in the WORKSPACE file. For example, Ethereum APIs could have
-the following definition in the WORKSPACE:
-```
-go_repository(
-    name = "com_github_prysmaticlabs_ethereumapis",
-    commit = "367ca574419a062ae26818f60bdeb5751a6f538",
-    ...
-```
-Then, checkout that commit
-```
-git clone https://github.com/prysmaticlabs/ethereumapis && cd ethereumapis
-git checkout 367ca574419a062ae26818f60bdeb5751a6f538
-```
-2. Apply the patch currently in Prysm
-```
-git apply $GOPATH/src/github.com/prysmaticlabs/prysm/third_party/somepatch.patch
-```
-3. Resolve any conflicts, commit the changes you want to make
-
-```
-git commit -m 'added more changes since patch'
-```
-
-4. Generate a new diff by comparing your latest changes to the original commit
-the patch was for and output it directly into Prysm's third_party directory
-```
-git diff 367ca574419a062ae26818f60bdeb5751a6f538 > $GOPATH/src/github.com/prysmaticlabs/prysm/third_party/somepatch.patch
-```
-
-5. Build Prysm and ensure tests pass
-```
-bazel test //...
-```
+1. Go to your Prysm WORKSPACE and look at the commit in there for Ethereum APIs, say it's `e6f60041667fbc3edb22b03735ec111d1a40cd0e`
+2. Go to Ethereum APIs and do `git checkout e6f60041667fbc3edb22b03735ec111d1a40cd0e`
+3. In the Ethereum APIs repo, do `git apply $GOPATH/src/github.com/prysmaticlabs/prysm/third_party/com_github_prysmaticlabs_ethereumapis-tags.patch`
+4. Make any changes you want to make in Ethereum APIs, such as applying ssz struct tags, etc.
+5. In the Ethereum APIs repo, do `git commit -m "applied patch and changes"`
+6. Do `git merge master`
+7. Generate a new diff and update the diff in Prysm `git diff b7452dde4ca361809def4ed5924ab3cb7ad1299a > $GOPATH/src/github.com/prysmaticlabs/prysm/third_party/com_github_prysmaticlabs_ethereumapis-tags.patch`
+8. Update the commit in the Prysm WORKSPACE file for Ethereum APIs to `b7452dde4ca361809def4ed5924ab3cb7ad1299a`
+9. Build the Prysm project

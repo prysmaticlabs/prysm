@@ -7,7 +7,6 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -42,22 +41,20 @@ func (r *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 		return false
 	}
 
-	// Retrieve head state, advance state to the epoch slot used specified in exit message.
 	s, err := r.chain.HeadState(ctx)
 	if err != nil {
 		return false
 	}
 
 	exitedEpochSlot := exit.Exit.Epoch * params.BeaconConfig().SlotsPerEpoch
-	if s.Slot < exitedEpochSlot {
-		var err error
-		s, err = state.ProcessSlots(ctx, s, exitedEpochSlot)
-		if err != nil {
-			return false
-		}
+	if int(exit.Exit.ValidatorIndex) >= s.NumValidators() {
+		return false
 	}
-
-	if err := blocks.VerifyExit(s, exit); err != nil {
+	val, err := s.ValidatorAtIndex(exit.Exit.ValidatorIndex)
+	if err != nil {
+		return false
+	}
+	if err := blocks.VerifyExit(val, exitedEpochSlot, s.Fork(), exit); err != nil {
 		return false
 	}
 

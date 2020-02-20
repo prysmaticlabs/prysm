@@ -30,12 +30,13 @@ func (r *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 			log.WithError(err).Error("Unable to retrieve block from stream")
 			return err
 		}
-		r.pendingQueueLock.Lock()
-		r.slotToPendingBlocks[blk.Block.Slot] = blk
+
 		blkRoot, err := ssz.HashTreeRoot(blk.Block)
 		if err != nil {
 			return err
 		}
+		r.pendingQueueLock.Lock()
+		r.slotToPendingBlocks[blk.Block.Slot] = blk
 		r.seenPendingBlocks[blkRoot] = true
 		r.pendingQueueLock.Unlock()
 
@@ -63,6 +64,25 @@ func (r *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 		}
 		return errors.New("no block roots provided")
 	}
+
+	if int64(len(blockRoots)) > r.blocksRateLimiter.Remaining(stream.Conn().RemotePeer().String()) {
+		r.p2p.Peers().IncrementBadResponses(stream.Conn().RemotePeer())
+		if r.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
+			log.Debug("Disconnecting bad peer")
+			defer r.p2p.Disconnect(stream.Conn().RemotePeer())
+		}
+		resp, err := r.generateErrorResponse(responseCodeInvalidRequest, rateLimitedError)
+		if err != nil {
+			log.WithError(err).Error("Failed to generate a response error")
+		} else {
+			if _, err := stream.Write(resp); err != nil {
+				log.WithError(err).Errorf("Failed to write to stream")
+			}
+		}
+		return errors.New(rateLimitedError)
+	}
+
+	r.blocksRateLimiter.Add(stream.Conn().RemotePeer().String(), int64(len(blockRoots)))
 
 	for _, root := range blockRoots {
 		blk, err := r.db.Block(ctx, root)

@@ -28,11 +28,16 @@ var appFlags = []cli.Flag{
 	flags.DepositContractFlag,
 	flags.Web3ProviderFlag,
 	flags.HTTPWeb3ProviderFlag,
+	flags.RPCHost,
 	flags.RPCPort,
 	flags.CertFlag,
 	flags.KeyFlag,
 	flags.GRPCGatewayPort,
 	flags.MinSyncPeers,
+	flags.RPCMaxPageSize,
+	flags.ContractDeploymentBlock,
+	flags.SetGCPercent,
+	flags.UnsafeSync,
 	flags.InteropMockEth1DataVotesFlag,
 	flags.InteropGenesisStateFlag,
 	flags.InteropNumValidatorsFlag,
@@ -47,7 +52,9 @@ var appFlags = []cli.Flag{
 	cmd.RelayNode,
 	cmd.P2PUDPPort,
 	cmd.P2PTCPPort,
+	cmd.P2PIP,
 	cmd.P2PHost,
+	cmd.P2PHostDNS,
 	cmd.P2PMaxPeers,
 	cmd.P2PPrivKey,
 	cmd.P2PWhitelist,
@@ -121,6 +128,9 @@ func main() {
 			}
 		}
 
+		if ctx.IsSet(flags.SetGCPercent.Name) {
+			runtimeDebug.SetGCPercent(ctx.GlobalInt(flags.SetGCPercent.Name))
+		}
 		runtime.GOMAXPROCS(runtime.NumCPU())
 		return debug.Setup(ctx)
 	}

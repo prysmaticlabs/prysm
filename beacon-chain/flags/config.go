@@ -14,6 +14,9 @@ type GlobalFlags struct {
 	EnableArchivedBlocks              bool
 	EnableArchivedAttestations        bool
 	MinimumSyncPeers                  int
+	MaxPageSize                       int
+	DeploymentBlock                   int
+	UnsafeSync                        bool
 }
 
 var globalConfig *GlobalFlags
@@ -31,7 +34,7 @@ func Init(c *GlobalFlags) {
 	globalConfig = c
 }
 
-// ConfigureGlobalFlags initializes the archiver config
+// ConfigureGlobalFlags initializes the global config.
 // based on the provided cli context.
 func ConfigureGlobalFlags(ctx *cli.Context) {
 	cfg := &GlobalFlags{}
@@ -47,6 +50,11 @@ func ConfigureGlobalFlags(ctx *cli.Context) {
 	if ctx.GlobalBool(ArchiveAttestationsFlag.Name) {
 		cfg.EnableArchivedAttestations = true
 	}
+	if ctx.GlobalBool(UnsafeSync.Name) {
+		cfg.UnsafeSync = true
+	}
+	cfg.MaxPageSize = ctx.GlobalInt(RPCMaxPageSize.Name)
+	cfg.DeploymentBlock = ctx.GlobalInt(ContractDeploymentBlock.Name)
 	configureMinimumPeers(ctx, cfg)
 
 	Init(cfg)

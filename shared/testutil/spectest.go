@@ -14,12 +14,14 @@ import (
 	jsoniter "github.com/json-iterator/go"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
-type blockOperation func(context.Context, *pb.BeaconState, *ethpb.BeaconBlockBody) (*pb.BeaconState, error)
-type epochOperation func(*testing.T, *pb.BeaconState) (*pb.BeaconState, error)
+type blockOperation func(context.Context, *beaconstate.BeaconState, *ethpb.BeaconBlockBody) (*beaconstate.BeaconState, error)
+type epochOperation func(*testing.T, *beaconstate.BeaconState) (*beaconstate.BeaconState, error)
 
 var json = jsoniter.Config{
 	EscapeHTML:             true,
@@ -79,9 +81,13 @@ func RunBlockOperationTest(
 	if err != nil {
 		t.Fatal(err)
 	}
-	preState := &pb.BeaconState{}
-	if err := ssz.Unmarshal(preBeaconStateFile, preState); err != nil {
+	preStateBase := &pb.BeaconState{}
+	if err := ssz.Unmarshal(preBeaconStateFile, preStateBase); err != nil {
 		t.Fatalf("Failed to unmarshal: %v", err)
+	}
+	preState, err := beaconstate.InitializeFromProto(preStateBase)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	// If the post.ssz is not present, it means the test should fail on our end.
@@ -93,6 +99,7 @@ func RunBlockOperationTest(
 		t.Fatal(err)
 	}
 
+	helpers.ClearCache()
 	beaconState, err := operationFn(context.Background(), preState, body)
 	if postSSZExists {
 		if err != nil {
@@ -109,7 +116,7 @@ func RunBlockOperationTest(
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
 
-		if !proto.Equal(beaconState, postBeaconState) {
+		if !proto.Equal(beaconState.CloneInnerState(), postBeaconState) {
 			diff, _ := messagediff.PrettyDiff(beaconState, postBeaconState)
 			t.Log(diff)
 			t.Fatal("Post state does not match expected")
@@ -136,9 +143,13 @@ func RunEpochOperationTest(
 	if err != nil {
 		t.Fatal(err)
 	}
-	preBeaconState := &pb.BeaconState{}
-	if err := ssz.Unmarshal(preBeaconStateFile, preBeaconState); err != nil {
+	preBeaconStateBase := &pb.BeaconState{}
+	if err := ssz.Unmarshal(preBeaconStateFile, preBeaconStateBase); err != nil {
 		t.Fatalf("Failed to unmarshal: %v", err)
+	}
+	preBeaconState, err := beaconstate.InitializeFromProto(preBeaconStateBase)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	// If the post.ssz is not present, it means the test should fail on our end.
@@ -166,8 +177,8 @@ func RunEpochOperationTest(
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
 
-		if !proto.Equal(beaconState, postBeaconState) {
-			diff, _ := messagediff.PrettyDiff(beaconState, postBeaconState)
+		if !proto.Equal(beaconState.InnerStateUnsafe(), postBeaconState) {
+			diff, _ := messagediff.PrettyDiff(beaconState.InnerStateUnsafe(), postBeaconState)
 			t.Log(diff)
 			t.Fatal("Post state does not match expected")
 		}

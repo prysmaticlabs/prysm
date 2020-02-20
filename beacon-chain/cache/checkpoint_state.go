@@ -4,11 +4,10 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"k8s.io/client-go/tools/cache"
 )
@@ -19,7 +18,9 @@ var (
 	ErrNotCheckpointState = errors.New("object is not a state by check point struct")
 
 	// maxCheckpointStateSize defines the max number of entries check point to state cache can contain.
-	maxCheckpointStateSize = 4
+	// Choosing 10 to account for multiple forks, this allows 5 forks per epoch boundary with 2 epochs
+	// window to accept attestation based on latest spec.
+	maxCheckpointStateSize = 10
 
 	// Metrics.
 	checkpointStateMiss = promauto.NewCounter(prometheus.CounterOpts{
@@ -35,7 +36,7 @@ var (
 // CheckpointState defines the active validator indices per epoch.
 type CheckpointState struct {
 	Checkpoint *ethpb.Checkpoint
-	State      *pb.BeaconState
+	State      *stateTrie.BeaconState
 }
 
 // CheckpointStateCache is a struct with 1 queue for looking up state by checkpoint.
@@ -67,7 +68,7 @@ func NewCheckpointStateCache() *CheckpointStateCache {
 
 // StateByCheckpoint fetches state by checkpoint. Returns true with a
 // reference to the CheckpointState info, if exists. Otherwise returns false, nil.
-func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (*pb.BeaconState, error) {
+func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (*stateTrie.BeaconState, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	h, err := hashutil.HashProto(cp)
@@ -92,7 +93,7 @@ func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (*pb.Beac
 		return nil, ErrNotCheckpointState
 	}
 
-	return proto.Clone(info.State).(*pb.BeaconState), nil
+	return info.State.Copy(), nil
 }
 
 // AddCheckpointState adds CheckpointState object to the cache. This method also trims the least
@@ -100,7 +101,10 @@ func (c *CheckpointStateCache) StateByCheckpoint(cp *ethpb.Checkpoint) (*pb.Beac
 func (c *CheckpointStateCache) AddCheckpointState(cp *CheckpointState) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	if err := c.cache.AddIfNotPresent(cp); err != nil {
+	if err := c.cache.AddIfNotPresent(&CheckpointState{
+		Checkpoint: stateTrie.CopyCheckpoint(cp.Checkpoint),
+		State:      cp.State.Copy(),
+	}); err != nil {
 		return err
 	}
 

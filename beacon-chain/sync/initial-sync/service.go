@@ -4,15 +4,18 @@ import (
 	"context"
 	"time"
 
+	"github.com/kevinms/leakybucket-go"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/sirupsen/logrus"
 )
@@ -22,40 +25,49 @@ var _ = shared.Service(&Service{})
 type blockchainService interface {
 	blockchain.BlockReceiver
 	blockchain.HeadFetcher
+	ClearCachedStates()
+	blockchain.FinalizationFetcher
 }
 
 const (
 	handshakePollingInterval = 5 * time.Second // Polling interval for checking the number of received handshakes.
+
+	allowedBlocksPerSecond = 32.0
 )
 
 // Config to set up the initial sync service.
 type Config struct {
 	P2P           p2p.P2P
-	DB            db.Database
+	DB            db.ReadOnlyDatabase
 	Chain         blockchainService
 	StateNotifier statefeed.Notifier
+	BlockNotifier blockfeed.Notifier
 }
 
 // Service service.
 type Service struct {
-	ctx           context.Context
-	chain         blockchainService
-	p2p           p2p.P2P
-	db            db.Database
-	synced        bool
-	chainStarted  bool
-	stateNotifier statefeed.Notifier
+	ctx               context.Context
+	chain             blockchainService
+	p2p               p2p.P2P
+	db                db.ReadOnlyDatabase
+	synced            bool
+	chainStarted      bool
+	stateNotifier     statefeed.Notifier
+	blockNotifier     blockfeed.Notifier
+	blocksRateLimiter *leakybucket.Collector
 }
 
 // NewInitialSync configures the initial sync service responsible for bringing the node up to the
 // latest head of the blockchain.
 func NewInitialSync(cfg *Config) *Service {
 	return &Service{
-		ctx:           context.Background(),
-		chain:         cfg.Chain,
-		p2p:           cfg.P2P,
-		db:            cfg.DB,
-		stateNotifier: cfg.StateNotifier,
+		ctx:               context.Background(),
+		chain:             cfg.Chain,
+		p2p:               cfg.P2P,
+		db:                cfg.DB,
+		stateNotifier:     cfg.StateNotifier,
+		blockNotifier:     cfg.BlockNotifier,
+		blocksRateLimiter: leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksPerSecond, false /* deleteEmptyBuckets */),
 	}
 }
 
@@ -89,7 +101,7 @@ func (s *Service) Start() {
 		}
 		stateSub.Unsubscribe()
 	} else {
-		genesis = time.Unix(int64(headState.GenesisTime), 0)
+		genesis = time.Unix(int64(headState.GenesisTime()), 0)
 	}
 
 	if genesis.After(roughtime.Now()) {
@@ -117,7 +129,6 @@ func (s *Service) Start() {
 	if err := s.roundRobinSync(genesis); err != nil {
 		panic(err)
 	}
-
 	log.Infof("Synced up to slot %d", s.chain.HeadSlot())
 	s.synced = true
 }
@@ -145,32 +156,36 @@ func (s *Service) Syncing() bool {
 func (s *Service) Resync() error {
 	// set it to false since we are syncing again
 	s.synced = false
+	defer func() { s.synced = true }() // Reset it at the end of the method.
 	headState, err := s.chain.HeadState(context.Background())
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve head state")
 	}
-	genesis := time.Unix(int64(headState.GenesisTime), 0)
+	genesis := time.Unix(int64(headState.GenesisTime()), 0)
 
 	s.waitForMinimumPeers()
-	if err := s.roundRobinSync(genesis); err != nil {
-		return errors.Wrap(err, "could not retrieve head state")
+	err = s.roundRobinSync(genesis)
+	if err != nil {
+		log = log.WithError(err)
 	}
-	log.Infof("Synced up to slot %d", s.chain.HeadSlot())
+	log.WithField("slot", s.chain.HeadSlot()).Info("Resync attempt complete")
 
-	s.synced = true
 	return nil
 }
 
 func (s *Service) waitForMinimumPeers() {
-	// Every 5 sec, report handshake count.
+	required := params.BeaconConfig().MaxPeersToSync
+	if flags.Get().MinimumSyncPeers < required {
+		required = flags.Get().MinimumSyncPeers
+	}
 	for {
-		count := len(s.p2p.Peers().Connected())
-		if count >= flags.Get().MinimumSyncPeers {
+		_, _, peers := s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, s.chain.FinalizedCheckpt().Epoch)
+		if len(peers) >= required {
 			break
 		}
 		log.WithFields(logrus.Fields{
-			"valid handshakes":    count,
-			"required handshakes": flags.Get().MinimumSyncPeers}).Info("Waiting for enough peer handshakes before syncing")
+			"suitable": len(peers),
+			"required": required}).Info("Waiting for enough suitable peers before syncing")
 		time.Sleep(handshakePollingInterval)
 	}
 }

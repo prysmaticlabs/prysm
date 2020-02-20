@@ -2,6 +2,7 @@ package aggregator
 
 import (
 	"context"
+	"encoding/binary"
 	"reflect"
 	"strings"
 	"testing"
@@ -14,9 +15,11 @@ import (
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -27,12 +30,19 @@ func init() {
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 }
 
+// pubKey is a helper to generate a well-formed public key.
+func pubKey(i uint64) []byte {
+	pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
+	binary.LittleEndian.PutUint64(pubKey, uint64(i))
+	return pubKey
+}
+
 func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	s := &pbp2p.BeaconState{}
+	s := &beaconstate.BeaconState{}
 
 	aggregatorServer := &Server{
 		HeadFetcher: &mock.ChainService{State: s},
@@ -52,9 +62,9 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	s := &pbp2p.BeaconState{
+	s, _ := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}
+	})
 
 	aggregatorServer := &Server{
 		HeadFetcher: &mock.ChainService{State: s},
@@ -64,10 +74,10 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'A'}, 0)
-	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal()}
+	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey(3)}
 	wanted := "Could not locate validator index in DB"
 	if _, err := aggregatorServer.SubmitAggregateAndProof(ctx, req); !strings.Contains(err.Error(), wanted) {
-		t.Error("Did not receive wanted error")
+		t.Errorf("Did not receive wanted error: expected %v, received %v", wanted, err.Error())
 	}
 }
 
@@ -76,9 +86,9 @@ func TestSubmitAggregateAndProof_IsAggregator(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 	ctx := context.Background()
 
-	s := &pbp2p.BeaconState{
+	s, _ := beaconstate.InitializeFromProto(&pbp2p.BeaconState{
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}
+	})
 
 	aggregatorServer := &Server{
 		HeadFetcher: &mock.ChainService{State: s},
@@ -89,9 +99,9 @@ func TestSubmitAggregateAndProof_IsAggregator(t *testing.T) {
 
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'A'}, 0)
-	pubKey := [48]byte{'A'}
-	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey[:]}
-	if err := aggregatorServer.BeaconDB.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
+	pubKey := pubKey(1)
+	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
+	if err := db.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
 		t.Fatal(err)
 	}
 
@@ -115,7 +125,7 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 	att0 := generateAtt(beaconState, 0, privKeys)
 	att1 := generateAtt(beaconState, 1, privKeys)
 
-	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
+	beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 
 	aggregatorServer := &Server{
 		HeadFetcher: &mock.ChainService{State: beaconState},
@@ -127,9 +137,9 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'B'}, 0)
-	pubKey := [48]byte{'B'}
-	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey[:]}
-	if err := aggregatorServer.BeaconDB.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
+	pubKey := pubKey(2)
+	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
+	if err := db.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
 		t.Fatal(err)
 	}
 
@@ -168,7 +178,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
 	att0 := generateAtt(beaconState, 0, privKeys)
 
-	beaconState.Slot += params.BeaconConfig().MinAttestationInclusionDelay
+	beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 
 	aggregatorServer := &Server{
 		HeadFetcher: &mock.ChainService{State: beaconState},
@@ -180,9 +190,9 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'B'}, 0)
-	pubKey := [48]byte{'B'}
-	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey[:]}
-	if err := aggregatorServer.BeaconDB.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
+	pubKey := pubKey(2)
+	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
+	if err := db.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
 		t.Fatal(err)
 	}
 
@@ -200,7 +210,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	}
 }
 
-func generateAtt(state *pbp2p.BeaconState, index uint64, privKeys []*bls.SecretKey) *ethpb.Attestation {
+func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []*bls.SecretKey) *ethpb.Attestation {
 	aggBits := bitfield.NewBitlist(4)
 	aggBits.SetBitAt(index, true)
 	att := &ethpb.Attestation{
@@ -212,8 +222,8 @@ func generateAtt(state *pbp2p.BeaconState, index uint64, privKeys []*bls.SecretK
 		AggregationBits: aggBits,
 	}
 	committee, _ := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
-	attestingIndices, _ := helpers.AttestingIndices(att.AggregationBits, committee)
-	domain := helpers.Domain(state.Fork, 0, params.BeaconConfig().DomainBeaconAttester)
+	attestingIndices, _ := attestationutil.AttestingIndices(att.AggregationBits, committee)
+	domain := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
 
 	sigs := make([]*bls.Signature, len(attestingIndices))
 	zeroSig := [96]byte{}

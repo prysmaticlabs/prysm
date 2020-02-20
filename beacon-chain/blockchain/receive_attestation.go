@@ -1,13 +1,15 @@
 package blockchain
 
 import (
-	"bytes"
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -18,6 +20,7 @@ import (
 // AttestationReceiver interface defines the methods of chain service receive and processing new attestations.
 type AttestationReceiver interface {
 	ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Attestation) error
+	IsValidAttestation(ctx context.Context, att *ethpb.Attestation) bool
 }
 
 // ReceiveAttestationNoPubsub is a function that defines the operations that are preformed on
@@ -29,32 +32,28 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveAttestationNoPubsub")
 	defer span.End()
 
-	// Update forkchoice store for the new attestation
-	if err := s.forkChoiceStore.OnAttestation(ctx, att); err != nil {
-		return errors.Wrap(err, "could not process attestation from fork choice service")
-	}
-
-	// Run fork choice for head block after updating fork choice store.
-	headRoot, err := s.forkChoiceStore.Head(ctx)
+	_, err := s.onAttestation(ctx, att)
 	if err != nil {
-		return errors.Wrap(err, "could not get head from fork choice service")
-	}
-	// Only save head if it's different than the current head.
-	if !bytes.Equal(headRoot, s.HeadRoot()) {
-		signed, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(headRoot))
-		if err != nil {
-			return errors.Wrap(err, "could not compute state from block head")
-		}
-		if signed == nil || signed.Block == nil {
-			return errors.New("nil head block")
-		}
-		if err := s.saveHead(ctx, signed, bytesutil.ToBytes32(headRoot)); err != nil {
-			return errors.Wrap(err, "could not save head")
-		}
+		return errors.Wrap(err, "could not process attestation")
 	}
 
-	processedAttNoPubsub.Inc()
 	return nil
+}
+
+// IsValidAttestation returns true if the attestation can be verified against its pre-state.
+func (s *Service) IsValidAttestation(ctx context.Context, att *ethpb.Attestation) bool {
+	baseState, err := s.getAttPreState(ctx, att.Data.Target)
+	if err != nil {
+		log.WithError(err).Error("Failed to validate attestation")
+		return false
+	}
+
+	if err := blocks.VerifyAttestation(ctx, baseState, att); err != nil {
+		log.WithError(err).Error("Failed to validate attestation")
+		return false
+	}
+
+	return true
 }
 
 // This processes attestations from the attestation pool to account for validator votes and fork choice.
@@ -74,16 +73,50 @@ func (s *Service) processAttestation() {
 			ctx := context.Background()
 			atts := s.attPool.ForkchoiceAttestations()
 			for _, a := range atts {
+				hasState := s.beaconDB.HasState(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot)) && s.beaconDB.HasState(ctx, bytesutil.ToBytes32(a.Data.Target.Root))
+				hasBlock := s.hasBlock(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
+				if !(hasState && hasBlock) {
+					continue
+				}
+
 				if err := s.attPool.DeleteForkchoiceAttestation(a); err != nil {
 					log.WithError(err).Error("Could not delete fork choice attestation in pool")
 				}
 
+				if !s.verifyCheckpointEpoch(a.Data.Target) {
+					continue
+				}
+
 				if err := s.ReceiveAttestationNoPubsub(ctx, a); err != nil {
 					log.WithFields(logrus.Fields{
-						"targetRoot": fmt.Sprintf("%#x", a.Data.Target.Root),
-					}).WithError(err).Error("Could not receive attestation in chain service")
+						"slot":             a.Data.Slot,
+						"committeeIndex":   a.Data.CommitteeIndex,
+						"beaconBlockRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(a.Data.BeaconBlockRoot)),
+						"targetRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(a.Data.Target.Root)),
+						"aggregationCount": a.AggregationBits.Count(),
+					}).WithError(err).Warn("Could not receive attestation in chain service")
 				}
 			}
 		}
 	}
+}
+
+// This verifies the epoch of input checkpoint is within current epoch and previous epoch
+// with respect to current time. Returns true if it's within, false if it's not.
+func (s *Service) verifyCheckpointEpoch(c *ethpb.Checkpoint) bool {
+	now := uint64(time.Now().Unix())
+	genesisTime := uint64(s.genesisTime.Unix())
+	currentSlot := (now - genesisTime) / params.BeaconConfig().SecondsPerSlot
+	currentEpoch := helpers.SlotToEpoch(currentSlot)
+
+	var prevEpoch uint64
+	if currentEpoch > 1 {
+		prevEpoch = currentEpoch - 1
+	}
+
+	if c.Epoch != prevEpoch && c.Epoch != currentEpoch {
+		return false
+	}
+
+	return true
 }

@@ -71,6 +71,9 @@ func (r *Service) registerRPC(topic string, base interface{}, handle rpcHandler)
 			return
 		}
 
+		// Increment message received counter.
+		messageReceivedCounter.WithLabelValues(topic).Inc()
+
 		// Given we have an input argument that can be pointer or [][32]byte, this gives us
 		// a way to check for its reflect.Kind and based on the result, we can decode
 		// accordingly.
@@ -78,25 +81,29 @@ func (r *Service) registerRPC(topic string, base interface{}, handle rpcHandler)
 		if t.Kind() == reflect.Ptr {
 			msg := reflect.New(t.Elem())
 			if err := r.p2p.Encoding().DecodeWithLength(stream, msg.Interface()); err != nil {
-				log.WithError(err).Error("Failed to decode stream message")
+				log.WithError(err).Warn("Failed to decode stream message")
 				traceutil.AnnotateError(span, err)
 				return
 			}
 			if err := handle(ctx, msg.Interface(), stream); err != nil {
 				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
-				log.WithError(err).Error("Failed to handle p2p RPC")
+				if err != errWrongForkVersion {
+					log.WithError(err).Warn("Failed to handle p2p RPC")
+				}
 				traceutil.AnnotateError(span, err)
 			}
 		} else {
 			msg := reflect.New(t)
 			if err := r.p2p.Encoding().DecodeWithLength(stream, msg.Interface()); err != nil {
-				log.WithError(err).Error("Failed to decode stream message")
+				log.WithError(err).Warn("Failed to decode stream message")
 				traceutil.AnnotateError(span, err)
 				return
 			}
 			if err := handle(ctx, msg.Elem().Interface(), stream); err != nil {
 				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
-				log.WithError(err).Error("Failed to handle p2p RPC")
+				if err != errWrongForkVersion {
+					log.WithError(err).Warn("Failed to handle p2p RPC")
+				}
 				traceutil.AnnotateError(span, err)
 			}
 		}

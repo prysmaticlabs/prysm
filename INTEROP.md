@@ -57,7 +57,7 @@ the system with 64 validators and the genesis time set to the current unix times
 Wait a bit until your beacon chain starts, and in the other window:
 
 ```
-bazel run //validator -- --interop-num-validators 64
+bazel run //validator -- --keymanager=interop --keymanageropts='{"keys":64}'
 ```
 
 This will launch and kickstart the system with your 64 validators performing their duties accordingly.
@@ -78,13 +78,7 @@ Assuming you generated a `genesis.ssz` file with 64 validators, open up two term
 Wait a bit until your beacon chain starts, and in the other window:
 
 ```
-bazel run //validator -- --interop-num-validators 64
+bazel run //validator -- --keymanager=interop --keymanageropts='{"keys":64}'
 ```
 
 This will launch and kickstart the system with your 64 validators performing their duties accordingly.
-
-
-
-
-
-

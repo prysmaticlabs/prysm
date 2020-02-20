@@ -9,10 +9,12 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
+	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -21,7 +23,7 @@ import (
 
 // ChainService defines the mock interface for testing
 type ChainService struct {
-	State                       *pb.BeaconState
+	State                       *stateTrie.BeaconState
 	Root                        []byte
 	Block                       *ethpb.SignedBeaconBlock
 	FinalizedCheckPoint         *ethpb.Checkpoint
@@ -33,7 +35,9 @@ type ChainService struct {
 	Fork                        *pb.Fork
 	DB                          db.Database
 	stateNotifier               statefeed.Notifier
+	blockNotifier               blockfeed.Notifier
 	opNotifier                  opfeed.Notifier
+	ValidAttestation            bool
 }
 
 // StateNotifier mocks the same method in the chain service.
@@ -42,6 +46,27 @@ func (ms *ChainService) StateNotifier() statefeed.Notifier {
 		ms.stateNotifier = &MockStateNotifier{}
 	}
 	return ms.stateNotifier
+}
+
+// BlockNotifier mocks the same method in the chain service.
+func (ms *ChainService) BlockNotifier() blockfeed.Notifier {
+	if ms.blockNotifier == nil {
+		ms.blockNotifier = &MockBlockNotifier{}
+	}
+	return ms.blockNotifier
+}
+
+// MockBlockNotifier mocks the block notifier.
+type MockBlockNotifier struct {
+	feed *event.Feed
+}
+
+// BlockFeed returns a block feed.
+func (msn *MockBlockNotifier) BlockFeed() *event.Feed {
+	if msn.feed == nil {
+		msn.feed = new(event.Feed)
+	}
+	return msn.feed
 }
 
 // MockStateNotifier mocks the state notifier.
@@ -96,12 +121,14 @@ func (ms *ChainService) ReceiveBlockNoPubsub(ctx context.Context, block *ethpb.S
 // ReceiveBlockNoPubsubForkchoice mocks ReceiveBlockNoPubsubForkchoice method in chain service.
 func (ms *ChainService) ReceiveBlockNoPubsubForkchoice(ctx context.Context, block *ethpb.SignedBeaconBlock) error {
 	if ms.State == nil {
-		ms.State = &pb.BeaconState{}
+		ms.State = &stateTrie.BeaconState{}
 	}
 	if !bytes.Equal(ms.Root, block.Block.ParentRoot) {
 		return errors.Errorf("wanted %#x but got %#x", ms.Root, block.Block.ParentRoot)
 	}
-	ms.State.Slot = block.Block.Slot
+	if err := ms.State.SetSlot(block.Block.Slot); err != nil {
+		return err
+	}
 	ms.BlocksReceived = append(ms.BlocksReceived, block)
 	signingRoot, err := ssz.HashTreeRoot(block.Block)
 	if err != nil {
@@ -123,23 +150,22 @@ func (ms *ChainService) HeadSlot() uint64 {
 	if ms.State == nil {
 		return 0
 	}
-	return ms.State.Slot
-
+	return ms.State.Slot()
 }
 
 // HeadRoot mocks HeadRoot method in chain service.
-func (ms *ChainService) HeadRoot() []byte {
-	return ms.Root
+func (ms *ChainService) HeadRoot(ctx context.Context) ([]byte, error) {
+	return ms.Root, nil
 
 }
 
 // HeadBlock mocks HeadBlock method in chain service.
-func (ms *ChainService) HeadBlock() *ethpb.SignedBeaconBlock {
-	return ms.Block
+func (ms *ChainService) HeadBlock(context.Context) (*ethpb.SignedBeaconBlock, error) {
+	return ms.Block, nil
 }
 
 // HeadState mocks HeadState method in chain service.
-func (ms *ChainService) HeadState(context.Context) (*pb.BeaconState, error) {
+func (ms *ChainService) HeadState(context.Context) (*stateTrie.BeaconState, error) {
 	return ms.State, nil
 }
 
@@ -191,7 +217,20 @@ func (ms *ChainService) GenesisTime() time.Time {
 	return ms.Genesis
 }
 
+// CurrentSlot mocks the same method in the chain service.
+func (ms *ChainService) CurrentSlot() uint64 {
+	return 0
+}
+
 // Participation mocks the same method in the chain service.
 func (ms *ChainService) Participation(epoch uint64) *precompute.Balance {
 	return ms.Balance
 }
+
+// IsValidAttestation always returns true.
+func (ms *ChainService) IsValidAttestation(ctx context.Context, att *ethpb.Attestation) bool {
+	return ms.ValidAttestation
+}
+
+// ClearCachedStates does nothing.
+func (ms *ChainService) ClearCachedStates() {}

@@ -12,13 +12,11 @@ func TestHeadSlot_DataRace(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 	s := &Service{
-		beaconDB:       db,
-		canonicalRoots: make(map[uint64][]byte),
+		beaconDB: db,
 	}
 	go func() {
 		s.saveHead(
 			context.Background(),
-			&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 777}},
 			[32]byte{},
 		)
 	}()
@@ -29,47 +27,45 @@ func TestHeadRoot_DataRace(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 	s := &Service{
-		beaconDB:       db,
-		canonicalRoots: make(map[uint64][]byte),
+		beaconDB: db,
+		head:     &head{root: [32]byte{'A'}},
 	}
 	go func() {
 		s.saveHead(
 			context.Background(),
-			&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 777}},
 			[32]byte{},
 		)
 	}()
-	s.HeadRoot()
+	if _, err := s.HeadRoot(context.Background()); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestHeadBlock_DataRace(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 	s := &Service{
-		beaconDB:       db,
-		canonicalRoots: make(map[uint64][]byte),
+		beaconDB: db,
+		head:     &head{block: &ethpb.SignedBeaconBlock{}},
 	}
 	go func() {
 		s.saveHead(
 			context.Background(),
-			&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 777}},
 			[32]byte{},
 		)
 	}()
-	s.HeadBlock()
+	s.HeadBlock(context.Background())
 }
 
 func TestHeadState_DataRace(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 	s := &Service{
-		beaconDB:       db,
-		canonicalRoots: make(map[uint64][]byte),
+		beaconDB: db,
 	}
 	go func() {
 		s.saveHead(
 			context.Background(),
-			&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 777}},
 			[32]byte{},
 		)
 	}()

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -116,6 +117,7 @@ func TestIsSlashableValidator_InactiveSlashed(t *testing.T) {
 }
 
 func TestBeaconProposerIndex_OK(t *testing.T) {
+	ClearCache()
 	c := params.BeaconConfig()
 	c.MinGenesisActiveValidatorCount = 16384
 	params.OverrideBeaconConfig(c)
@@ -126,11 +128,11 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 		}
 	}
 
-	state := &pb.BeaconState{
+	state, _ := beaconstate.InitializeFromProto(&pb.BeaconState{
 		Validators:  validators,
 		Slot:        0,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-	}
+	})
 
 	tests := []struct {
 		slot  uint64
@@ -138,28 +140,29 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	}{
 		{
 			slot:  1,
-			index: 505,
+			index: 2039,
 		},
 		{
 			slot:  5,
-			index: 798,
+			index: 1895,
 		},
 		{
 			slot:  19,
-			index: 1956,
+			index: 1947,
 		},
 		{
 			slot:  30,
-			index: 991,
+			index: 369,
 		},
 		{
 			slot:  43,
-			index: 1751,
+			index: 464,
 		},
 	}
 
 	for _, tt := range tests {
-		state.Slot = tt.slot
+		ClearCache()
+		state.SetSlot(tt.slot)
 		result, err := BeaconProposerIndex(state)
 		if err != nil {
 			t.Errorf("Failed to get shard and committees at slot: %v", err)
@@ -202,11 +205,11 @@ func TestChurnLimit_OK(t *testing.T) {
 			}
 		}
 
-		beaconState := &pb.BeaconState{
+		beaconState, _ := beaconstate.InitializeFromProto(&pb.BeaconState{
 			Slot:        1,
 			Validators:  validators,
 			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		}
+		})
 		validatorCount, err := ActiveValidatorCount(beaconState, CurrentEpoch(beaconState))
 		if err != nil {
 			t.Fatal(err)
@@ -266,6 +269,7 @@ func TestActiveValidatorIndices(t *testing.T) {
 			name: "all_active_epoch_10",
 			args: args{
 				state: &pb.BeaconState{
+					RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 					Validators: []*ethpb.Validator{
 						{
 							ActivationEpoch: 0,
@@ -289,6 +293,7 @@ func TestActiveValidatorIndices(t *testing.T) {
 			name: "some_active_epoch_10",
 			args: args{
 				state: &pb.BeaconState{
+					RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 					Validators: []*ethpb.Validator{
 						{
 							ActivationEpoch: 0,
@@ -312,6 +317,7 @@ func TestActiveValidatorIndices(t *testing.T) {
 			name: "some_active_with_recent_new_epoch_10",
 			args: args{
 				state: &pb.BeaconState{
+					RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 					Validators: []*ethpb.Validator{
 						{
 							ActivationEpoch: 0,
@@ -339,6 +345,7 @@ func TestActiveValidatorIndices(t *testing.T) {
 			name: "some_active_with_recent_new_epoch_10",
 			args: args{
 				state: &pb.BeaconState{
+					RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 					Validators: []*ethpb.Validator{
 						{
 							ActivationEpoch: 0,
@@ -366,6 +373,7 @@ func TestActiveValidatorIndices(t *testing.T) {
 			name: "some_active_with_recent_new_epoch_10",
 			args: args{
 				state: &pb.BeaconState{
+					RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 					Validators: []*ethpb.Validator{
 						{
 							ActivationEpoch: 0,
@@ -392,7 +400,8 @@ func TestActiveValidatorIndices(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ActiveValidatorIndices(tt.args.state, tt.args.epoch)
+			s, _ := beaconstate.InitializeFromProto(tt.args.state)
+			got, err := ActiveValidatorIndices(s, tt.args.epoch)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ActiveValidatorIndices() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -400,6 +409,7 @@ func TestActiveValidatorIndices(t *testing.T) {
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ActiveValidatorIndices() got = %v, want %v", got, tt.want)
 			}
+			ClearCache()
 		})
 	}
 }
@@ -421,11 +431,11 @@ func TestComputeProposerIndex(t *testing.T) {
 			name: "all_active_indices",
 			args: args{
 				validators: []*ethpb.Validator{
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
 				},
 				indices: []uint64{0, 1, 2, 3, 4},
 				seed:    seed,
@@ -436,11 +446,11 @@ func TestComputeProposerIndex(t *testing.T) {
 			name: "1_active_index",
 			args: args{
 				validators: []*ethpb.Validator{
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
 				},
 				indices: []uint64{3},
 				seed:    seed,
@@ -451,11 +461,11 @@ func TestComputeProposerIndex(t *testing.T) {
 			name: "empty_active_indices",
 			args: args{
 				validators: []*ethpb.Validator{
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
 				},
 				indices: []uint64{},
 				seed:    seed,
@@ -466,11 +476,11 @@ func TestComputeProposerIndex(t *testing.T) {
 			name: "active_indices_out_of_range",
 			args: args{
 				validators: []*ethpb.Validator{
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
 				},
 				indices: []uint64{100},
 				seed:    seed,
@@ -481,16 +491,16 @@ func TestComputeProposerIndex(t *testing.T) {
 			name: "second_half_active",
 			args: args{
 				validators: []*ethpb.Validator{
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
 				},
 				indices: []uint64{5, 6, 7, 8, 9},
 				seed:    seed,
@@ -501,11 +511,11 @@ func TestComputeProposerIndex(t *testing.T) {
 			name: "nil_validator",
 			args: args{
 				validators: []*ethpb.Validator{
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
 					nil, // Should never happen, but would cause a panic when it does happen.
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
-					&ethpb.Validator{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
+					{EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance},
 				},
 				indices: []uint64{0, 1, 2, 3, 4},
 				seed:    seed,
@@ -574,7 +584,8 @@ func TestIsIsEligibleForActivation(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := IsEligibleForActivation(tt.state, tt.validator); got != tt.want {
+			s, _ := beaconstate.InitializeFromProto(tt.state)
+			if got := IsEligibleForActivation(s, tt.validator); got != tt.want {
 				t.Errorf("IsEligibleForActivation() = %v, want %v", got, tt.want)
 			}
 		})

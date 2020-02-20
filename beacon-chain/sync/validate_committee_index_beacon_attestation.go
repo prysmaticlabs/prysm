@@ -11,8 +11,8 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -73,18 +73,17 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return false
 	}
 
-	// Attestation's block must exist in database (only valid blocks are stored).
-	if !s.db.HasBlock(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot)) {
-		log.WithField(
-			"blockRoot",
-			fmt.Sprintf("%#x", att.Data.BeaconBlockRoot),
-		).WithError(errPointsToBlockNotInDatabase).Debug("Ignored incoming attestation that points to a block which is not in the database")
-		traceutil.AnnotateError(span, errPointsToBlockNotInDatabase)
+	// Verify the block being voted and the processed state is in DB and. The block should have passed validation if it's in the DB.
+	hasState := s.db.HasState(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
+	hasBlock := s.db.HasBlock(ctx, bytesutil.ToBytes32(att.Data.BeaconBlockRoot))
+	if !(hasState && hasBlock) {
+		// A node doesn't have the block, it'll request from peer while saving the pending attestation to a queue.
+		s.savePendingAtt(&eth.AggregateAttestationAndProof{Aggregate: att})
 		return false
 	}
 
-	// Attestation's signature is a valid BLS signature.
-	if _, err := bls.SignatureFromBytes(att.Signature); err != nil {
+	// Attestation's signature is a valid BLS signature and belongs to correct public key..
+	if !featureconfig.Get().DisableStrictAttestationPubsubVerification && !s.chain.IsValidAttestation(ctx, att) {
 		return false
 	}
 
