@@ -106,10 +106,11 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 		if err := s.beaconDB.SaveFinalizedCheckpoint(ctx, postState.FinalizedCheckpoint()); err != nil {
 			return nil, errors.Wrap(err, "could not save finalized checkpoint")
 		}
+		fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
 
 		// Prune proto array fork choice nodes, all nodes before finalized check point will
 		// be pruned.
-		s.forkChoiceStore.Prune(ctx, bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root))
+		s.forkChoiceStore.Prune(ctx, fRoot)
 
 		s.prevFinalizedCheckpt = s.finalizedCheckpt
 		s.finalizedCheckpt = postState.FinalizedCheckpoint()
@@ -118,11 +119,11 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 			return nil, errors.Wrap(err, "could not save new justified")
 		}
 
-		finalizedState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root))
+		finalizedState, err := s.stateGen.StateByRoot(ctx, fRoot)
 		if err != nil {
 			return nil, err
 		}
-		if err := s.stateGen.MigrateToCold(ctx, finalizedState); err != nil {
+		if err := s.stateGen.MigrateToCold(ctx, finalizedState, fRoot); err != nil {
 			return nil, err
 		}
 	}
