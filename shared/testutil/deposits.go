@@ -4,6 +4,8 @@ import (
 	"sync"
 	"testing"
 
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -64,12 +66,16 @@ func DeterministicDepositsAndKeys(numDeposits uint64) ([]*ethpb.Deposit, []*bls.
 				WithdrawalCredentials: withdrawalCreds[:],
 			}
 
-			//domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
+			domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
 			root, err := ssz.SigningRoot(depositData)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not get signing root of deposit data")
 			}
-			depositData.Signature = secretKeys[i].Sign(root[:]).Marshal()
+			sigRoot, err := ssz.HashTreeRoot(&pb.SigningRoot{ObjectRoot: root[:], Domain: domain})
+			if err != nil {
+				return nil, nil, err
+			}
+			depositData.Signature = secretKeys[i].Sign(sigRoot[:]).Marshal()
 
 			deposit := &ethpb.Deposit{
 				Data: depositData,

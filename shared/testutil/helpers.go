@@ -6,9 +6,10 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -43,8 +44,8 @@ func BlockSignature(
 		return nil, err
 	}
 	block.StateRoot = s[:]
-
-	blockRoot, err := ssz.HashTreeRoot(block)
+	domain := helpers.Domain(bState.Fork(), helpers.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer)
+	blockRoot, err := helpers.ComputeSigningRoot(block, domain)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +59,6 @@ func BlockSignature(
 	if err != nil {
 		return nil, err
 	}
-	//domain := helpers.Domain(bState.Fork(), helpers.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer)
 	if err := bState.SetSlot(currentSlot); err != nil {
 		return nil, err
 	}
