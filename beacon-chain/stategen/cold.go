@@ -30,7 +30,7 @@ func (s *State) saveColdState(ctx context.Context, blockRoot [32]byte, state *st
 
 	log.WithFields(logrus.Fields{
 		"slot":      state.Slot(),
-		"blockRoot": hex.EncodeToString(bytesutil.Trunc(blockRoot[:]))}).Debug("Saved full state on archive point")
+		"blockRoot": hex.EncodeToString(bytesutil.Trunc(blockRoot[:]))}).Info("Saved full state on archive point")
 
 	return nil
 }
@@ -72,7 +72,7 @@ func (s *State) loadColdIntermediateState(ctx context.Context, slot uint64, bloc
 		return nil, err
 	}
 
-	replayBlks, err := s.LoadBlocks(ctx, lowArchivePointState.Slot(), slot, blockRoot)
+	replayBlks, err := s.LoadBlocks(ctx, lowArchivePointState.Slot()+1, slot, blockRoot)
 	if err != nil {
 		return nil, err
 	}
