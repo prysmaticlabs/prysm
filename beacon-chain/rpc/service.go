@@ -29,6 +29,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/beacon"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/node"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/validator"
+	"github.com/prysmaticlabs/prysm/beacon-chain/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -91,6 +92,7 @@ type Service struct {
 	slasherCert            string
 	slasherCredentialError error
 	slasherClient          slashpb.SlasherClient
+	stateGen               *stategen.State
 }
 
 // Config options for the beacon node RPC server.
@@ -123,6 +125,7 @@ type Config struct {
 	StateNotifier         statefeed.Notifier
 	BlockNotifier         blockfeed.Notifier
 	OperationNotifier     opfeed.Notifier
+	StateGen              *stategen.State
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -162,6 +165,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		operationNotifier:     cfg.OperationNotifier,
 		slasherProvider:       cfg.SlasherProvider,
 		slasherCert:           cfg.SlasherCert,
+		stateGen:              cfg.StateGen,
 	}
 }
 
@@ -233,6 +237,7 @@ func (s *Service) Start() {
 		MockEth1Votes:          s.mockEth1Votes,
 		Eth1BlockFetcher:       s.powChainService,
 		PendingDepositsFetcher: s.pendingDepositFetcher,
+		StateGen:               s.stateGen,
 		GenesisTime:            genesisTime,
 	}
 	nodeServer := &node.Server{

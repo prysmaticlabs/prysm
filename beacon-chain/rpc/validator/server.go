@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -63,6 +64,7 @@ type Server struct {
 	PendingDepositsFetcher depositcache.PendingDepositsFetcher
 	OperationNotifier      opfeed.Notifier
 	GenesisTime            time.Time
+	StateGen               *stategen.State
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
