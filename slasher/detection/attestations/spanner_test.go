@@ -160,6 +160,33 @@ func TestSpanDetector_ValidatorSpansByEpoch(t *testing.T) {
 	sd.spans[epoch] = want
 	res := sd.ValidatorSpansByEpoch(context.Background(), epoch)
 	if !reflect.DeepEqual(res, want) {
-		t.Errorf("Wanted %v, received %v, want, res")
+		t.Errorf("Wanted %v, received %v", want, res)
+	}
+}
+
+func TestSpanDetector_DeleteValidatorSpansByEpoch(t *testing.T) {
+	numEpochsToTrack := 2
+	sd := &SpanDetector{
+		spans: make([]map[uint64][2]uint16, numEpochsToTrack),
+	}
+	epoch := uint64(1)
+	validatorIndex := uint64(40)
+	sd.spans[epoch] = map[uint64][2]uint16{
+		validatorIndex: {3, 7},
+	}
+	ctx := context.Background()
+	if err := sd.DeleteValidatorSpansByEpoch(
+		ctx,
+		validatorIndex,
+		0, /* epoch */
+	); err != nil && !strings.Contains(err.Error(), "no span map found at epoch 0") {
+		t.Errorf("Wanted error when deleting epoch 0, received: %v", err)
+	}
+	if err := sd.DeleteValidatorSpansByEpoch(ctx, validatorIndex, epoch); err != nil {
+		t.Fatal(err)
+	}
+	want := make(map[uint64][2]uint16)
+	if res := sd.ValidatorSpansByEpoch(ctx, epoch); !reflect.DeepEqual(res, want) {
+		t.Errorf("Wanted %v for epoch after deleting, received %v", want, res)
 	}
 }

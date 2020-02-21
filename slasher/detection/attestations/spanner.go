@@ -112,6 +112,7 @@ func (s *SpanDetector) DeleteValidatorSpansByEpoch(ctx context.Context, validato
 	numSpans := uint64(len(s.spans))
 	if val := s.spans[epoch%numSpans]; val != nil {
 		delete(val, validatorIdx)
+		return nil
 	}
 	return fmt.Errorf("no span map found at epoch %d", epoch)
 }
