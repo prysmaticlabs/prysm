@@ -18,7 +18,7 @@ func (k *Store) SaveHotStateSummary(ctx context.Context, summary *pb.HotStateSum
 		return err
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(hotStateSummaryBucket)
+		bucket := tx.Bucket(hotStateBucket)
 		return bucket.Put(summary.LatestRoot, enc)
 	})
 }
@@ -30,7 +30,7 @@ func (k *Store) HotStateSummary(ctx context.Context, blockRoot [32]byte) (*pb.Ho
 
 	var summary *pb.HotStateSummary
 	err := k.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(hotStateSummaryBucket)
+		bucket := tx.Bucket(hotStateBucket)
 		enc := bucket.Get(blockRoot[:])
 		if enc == nil {
 			return nil
@@ -49,7 +49,7 @@ func (k *Store) HasHotStateSummary(ctx context.Context, blockRoot [32]byte) bool
 	var exists bool
 	// #nosec G104. Always returns nil.
 	k.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(hotStateSummaryBucket)
+		bucket := tx.Bucket(hotStateBucket)
 		exists = bucket.Get(blockRoot[:]) != nil
 		return nil
 	})
@@ -62,7 +62,7 @@ func (k *Store) DeleteHotStateSummary(ctx context.Context, blockRoot [32]byte) e
 	defer span.End()
 
 	return k.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(hotStateSummaryBucket)
+		bucket := tx.Bucket(hotStateBucket)
 		return bucket.Delete(blockRoot[:])
 	})
 }
@@ -77,7 +77,7 @@ func (k *Store) SaveColdStateSummary(ctx context.Context, blockRoot [32]byte, su
 		return err
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(coldStateSummaryBucket)
+		bucket := tx.Bucket(coldStateBucket)
 		return bucket.Put(blockRoot[:], enc)
 	})
 }
@@ -89,7 +89,7 @@ func (k *Store) ColdStateSummary(ctx context.Context, blockRoot [32]byte) (*pb.C
 
 	var summary *pb.ColdStateSummary
 	err := k.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(coldStateSummaryBucket)
+		bucket := tx.Bucket(coldStateBucket)
 		enc := bucket.Get(blockRoot[:])
 		if enc == nil {
 			return nil
@@ -108,7 +108,7 @@ func (k *Store) HasColdStateSummary(ctx context.Context, blockRoot [32]byte) boo
 	var exists bool
 	// #nosec G104. Always returns nil.
 	k.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(coldStateSummaryBucket)
+		bucket := tx.Bucket(coldStateBucket)
 		exists = bucket.Get(blockRoot[:]) != nil
 		return nil
 	})

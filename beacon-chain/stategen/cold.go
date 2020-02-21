@@ -22,7 +22,10 @@ func (s *State) saveColdState(ctx context.Context, blockRoot [32]byte, state *st
 	}
 
 	archivePointIndex := state.Slot() / s.slotsPerArchivePoint
-	if err := s.beaconDB.SaveArchivePoint(ctx, blockRoot, archivePointIndex); err != nil {
+	if err := s.beaconDB.SaveArchivedPointState(ctx, state, archivePointIndex); err != nil {
+		return err
+	}
+	if err := s.beaconDB.SaveArchivedPointRoot(ctx, blockRoot, archivePointIndex); err != nil {
 		return err
 	}
 	archivePointSaved.Inc()
@@ -56,8 +59,7 @@ func (s *State) loadColdStateByRoot(ctx context.Context, blockRoot [32]byte) (*s
 
 // This loads the cold state for the certain archive point.
 func (s *State) loadColdStateByArchivalPoint(ctx context.Context, archivePoint uint64) (*state.BeaconState, error) {
-	root := s.beaconDB.ArchivePoint(ctx, archivePoint)
-	return s.beaconDB.State(ctx, root)
+	return s.beaconDB.ArchivedPointState(ctx, archivePoint)
 }
 
 // This loads a cold state by slot and block root which lies between the archive point.
@@ -102,7 +104,7 @@ func (s *State) loadColdIntermediateStateWithSlot(ctx context.Context, slot uint
 		highArchivePointRoot = s.splitInfo.root
 		highArchivePointSlot = s.splitInfo.slot
 	} else {
-		highArchivePointRoot = s.beaconDB.ArchivePoint(ctx, highArchivePointIdx)
+		highArchivePointRoot = s.beaconDB.ArchivedPointRoot(ctx, highArchivePointIdx)
 	}
 
 	replayBlks, err := s.LoadBlocks(ctx, lowArchivePointState.Slot()+1, highArchivePointSlot, highArchivePointRoot)
@@ -113,8 +115,29 @@ func (s *State) loadColdIntermediateStateWithSlot(ctx context.Context, slot uint
 	return s.ReplayBlocks(ctx, lowArchivePointState, replayBlks, slot)
 }
 
-// Given the archive index, this returns the state in the DB.
+// Given the archive index, this returns the archived cold state in the DB.
+// If the archived state does not exist in the state, it'll compute it and save it.
 func (s *State) loadArchivePointByIndex(ctx context.Context, archiveIndex uint64) (*state.BeaconState, error) {
-	blockRoot := s.beaconDB.ArchivePoint(ctx, archiveIndex)
-	return s.beaconDB.State(ctx, blockRoot)
+	if s.beaconDB.HasArchivedPoint(ctx, archiveIndex) {
+		return s.beaconDB.ArchivedPointState(ctx, archiveIndex)
+	}
+
+	archivedSlot := archiveIndex * s.slotsPerArchivePoint
+	archivedState, err := s.ComputeStateUpToSlot(ctx, archivedSlot)
+	if err != nil {
+		return nil, err
+	}
+	lastRoot, _, err := s.getLastValidBlock(ctx, archivedSlot)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.beaconDB.SaveArchivedPointRoot(ctx, lastRoot, archiveIndex); err != nil {
+		return nil, err
+	}
+	if err := s.beaconDB.SaveArchivedPointState(ctx, archivedState, archiveIndex); err != nil {
+		return nil, err
+	}
+
+	return archivedState, nil
 }

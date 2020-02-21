@@ -242,33 +242,91 @@ func (k *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 	})
 }
 
-// SaveArchivePoint saves an archive point to the DB. This is used for cold state management.
+// SaveArchivedPointState saves an archived point state to the DB. This is used for cold state management.
 // An archive point index is `slot / slots_per_archive_point`
-func (k *Store) SaveArchivePoint(ctx context.Context, blockRoot [32]byte, index uint64) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivePoint")
+func (k *Store) SaveArchivedPointState(ctx context.Context, state *state.BeaconState, index uint64) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivedPointState")
+	defer span.End()
+	if state == nil {
+		return errors.New("nil state")
+	}
+	enc, err := encode(state.InnerStateUnsafe())
+	if err != nil {
+		return err
+	}
+
+	return k.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(coldStateBucket)
+		return bucket.Put(uint64ToBytes(index), enc)
+	})
+}
+
+// SaveArchivedPointRoot saves an archived point root to the DB. This is used for cold state management.
+func (k *Store) SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, index uint64) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveArchivedPointRoot")
 	defer span.End()
 
 	return k.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(coldStateSummaryBucket)
+		bucket := tx.Bucket(coldStateBucket)
 		return bucket.Put(uint64ToBytes(index), blockRoot[:])
 	})
 }
 
-// ArchivePoint returns the block root of an archive point from the DB.
+// ArchivedPointState returns the state of an archived point from the DB.
 // This is used for cold state management and to restore a cold state.
-func (k *Store) ArchivePoint(ctx context.Context, index uint64) [32]byte {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.ArchivePoint")
+func (k *Store) ArchivedPointState(ctx context.Context, index uint64) (*state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.ArchivedPointState")
+	defer span.End()
+	var s *pb.BeaconState
+	err := k.db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(coldStateBucket)
+		enc := bucket.Get(uint64ToBytes(index))
+		if enc == nil {
+			return nil
+		}
+
+		var err error
+		s, err = createState(enc)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	if s == nil {
+		return nil, nil
+	}
+	return state.InitializeFromProtoUnsafe(s)
+}
+
+// ArchivedPointRoot returns the block root of an archived point from the DB.
+// This is used for cold state management and to restore a cold state.
+func (k *Store) ArchivedPointRoot(ctx context.Context, index uint64) [32]byte {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.ArchivePointRoot")
 	defer span.End()
 
 	var blockRoot []byte
 	// #nosec G104. Always returns nil.
 	k.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(coldStateSummaryBucket)
+		bucket := tx.Bucket(coldStateBucket)
 		blockRoot = bucket.Get(uint64ToBytes(index))
 		return nil
 	})
 
 	return bytesutil.ToBytes32(blockRoot)
+}
+
+// HasArchivedPoint returns true if an archived point exists in DB.
+func (k *Store) HasArchivedPoint(ctx context.Context, index uint64) bool {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasArchivedPoint")
+	defer span.End()
+	var exists bool
+	// #nosec G104. Always returns nil.
+	k.db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(stateBucket)
+		exists = bucket.Get(uint64ToBytes(index)) != nil
+		return nil
+	})
+	return exists
 }
 
 // creates state from marshaled proto state bytes.

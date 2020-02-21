@@ -86,3 +86,76 @@ func (s *State) LoadBlocks(ctx context.Context, startSlot uint64, endSlot uint64
 
 	return filteredBlocks, nil
 }
+
+// ComputeStateUpToSlot returns a processed state up to input target slot.
+func (s *State) ComputeStateUpToSlot(ctx context.Context, targetSlot uint64) (*state.BeaconState, error) {
+	lastBlockRoot, lastBlockSlot, err := s.getLastValidBlock(ctx, targetSlot)
+	if err != nil {
+		return nil, err
+	}
+	lastBlockRootForState, err := s.getLastValidState(ctx, targetSlot)
+	if err != nil {
+		return nil, err
+	}
+	lastState, err := s.beaconDB.State(ctx, lastBlockRootForState)
+	if err != nil {
+		return nil, err
+	}
+
+	if lastState.Slot() == lastBlockSlot {
+		return lastState, nil
+	}
+
+	blks, err := s.LoadBlocks(ctx, lastState.Slot()+1, lastBlockSlot, lastBlockRoot)
+	if err != nil {
+		return nil, err
+	}
+	lastState, err = s.ReplayBlocks(ctx, lastState, blks, targetSlot)
+	if err != nil {
+		return nil, err
+	}
+
+	return lastState, nil
+}
+
+// This finds the last valid block in DB from searching backwards starting at input slot,
+// it returns the slot and the root of the block.
+func (s *State) getLastValidBlock(ctx context.Context, slot uint64) ([32]byte, uint64, error) {
+	filter := filters.NewFilter().SetStartSlot(0).SetEndSlot(slot)
+	// We know the epoch boundary root will be the last index using the filter.
+	rs, err := s.beaconDB.BlockRoots(ctx, filter)
+	if err != nil {
+		return [32]byte{}, 0, err
+	}
+	lastRoot := rs[len(rs)-1]
+
+	b, err := s.beaconDB.Block(ctx, lastRoot)
+	if err != nil {
+		return [32]byte{}, 0, err
+	}
+	if b == nil || b.Block == nil {
+		return [32]byte{}, 0, errors.New("last valid block can't be nil")
+	}
+
+	return lastRoot, b.Block.Slot, nil
+}
+
+// This finds the last valid state in DB from searching backwards starting at input slot,
+// it returns the root of the block which used to produce the state.
+func (s *State) getLastValidState(ctx context.Context, slot uint64) ([32]byte, error) {
+	filter := filters.NewFilter().SetStartSlot(0).SetEndSlot(slot)
+	// We know the epoch boundary root will be the last index using the filter.
+	rs, err := s.beaconDB.BlockRoots(ctx, filter)
+	if err != nil {
+		return [32]byte{}, err
+	}
+
+	for i := len(rs) - 1; i >= 0; i-- {
+		r := rs[i]
+		if s.beaconDB.HasState(ctx, r) {
+			return r, nil
+		}
+	}
+
+	return [32]byte{}, errors.New("no valid state found")
+}

@@ -3,6 +3,7 @@ package stategen
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
@@ -43,10 +44,26 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedState *state.BeaconS
 		}
 
 		if hotStateSummary.Slot%s.slotsPerArchivePoint == 0 {
-			// Since the state was prev saved, from migration's standpoint,
-			// all we have to save now is just the archive point.
 			archivePointIndex := hotStateSummary.Slot / s.slotsPerArchivePoint
-			if err := s.beaconDB.SaveArchivePoint(ctx, r, archivePointIndex); err != nil {
+			if s.beaconDB.HasState(ctx, r) {
+				fmt.Println("has state")
+				//hotState, err := s.beaconDB.State(ctx, r)
+				//if err != nil {
+				//	return err
+				//}
+				//if err := s.beaconDB.SaveArchivedPointState(ctx, hotState.Copy(), archivePointIndex); err != nil {
+				//	return err
+				//}
+			} else {
+				hotState, err := s.ComputeStateUpToSlot(ctx, hotStateSummary.Slot)
+				if err != nil {
+					return err
+				}
+				if err := s.beaconDB.SaveArchivedPointState(ctx, hotState.Copy(), archivePointIndex); err != nil {
+					return err
+				}
+			}
+			if err := s.beaconDB.SaveArchivedPointRoot(ctx, r, archivePointIndex); err != nil {
 				return err
 			}
 
@@ -56,20 +73,22 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedState *state.BeaconS
 				"archiveIndex": archivePointIndex,
 				"root":         hex.EncodeToString(bytesutil.Trunc(r[:])),
 			}).Info("Saved archive point during state migration")
-		} else {
-			// Delete the states that's not on the archive point.
-			if s.beaconDB.HasState(ctx, r) {
-				if err := s.beaconDB.DeleteState(ctx, r); err != nil {
-					return err
-				}
-
-				hotStateSaved.Dec()
-				log.WithFields(logrus.Fields{
-					"slot": hotStateSummary.Slot,
-					"root": hex.EncodeToString(bytesutil.Trunc(r[:])),
-				}).Info("Deleted state during migration")
-			}
 		}
+
+		fmt.Println("hello2")
+		if s.beaconDB.HasState(ctx, r) {
+			fmt.Println("hello21")
+			if err := s.beaconDB.DeleteState(ctx, r); err != nil {
+				return err
+			}
+			fmt.Println("hello22")
+			hotStateSaved.Dec()
+			log.WithFields(logrus.Fields{
+				"slot": hotStateSummary.Slot,
+				"root": hex.EncodeToString(bytesutil.Trunc(r[:])),
+			}).Info("Deleted state during migration")
+		}
+
 		// Migrate state summary from hot to cold.
 		if err := s.beaconDB.SaveColdStateSummary(ctx, r, &pb.ColdStateSummary{Slot: hotStateSummary.Slot}); err != nil {
 			return err
@@ -79,10 +98,13 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedState *state.BeaconS
 		}
 		s.deleteEpochBoundaryRoot(hotStateSummary.Slot)
 
+		fmt.Println("hello4")
 		coldSummarySaved.Inc()
 		hotSummarySaved.Dec()
 	}
 
+
+	fmt.Println("hello5")
 	// Update the split slot and root.
 	s.splitInfo = &splitSlotAndRoot{slot: finalizedState.Slot(), root: finalizedRoot}
 
