@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/prysmaticlabs/go-ssz"
+
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -225,4 +227,25 @@ func TestBeaconState_ImmutabilityWithSharedResources(t *testing.T) {
 	if reflect.DeepEqual(a.BlockRoots(), b.BlockRoots()) {
 		t.Fatal("Expected a.BlockRoots() to be different from b.BlockRoots()")
 	}
+}
+
+func TestForkManualCopy_OK(t *testing.T) {
+	params.UseMinimalConfig()
+	genesis := setupGenesisState(t, 64)
+	a, err := stateTrie.InitializeFromProto(genesis)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantedFork := &pb.Fork{
+		PreviousVersion: []byte{'a', 'b', 'c'},
+		CurrentVersion:  []byte{'d', 'e', 'f'},
+		Epoch:           0,
+	}
+	a.SetFork(wantedFork)
+
+	newState := a.CloneInnerState()
+	if !ssz.DeepEqual(newState.Fork, wantedFork) {
+		t.Errorf("Wanted %v but got %v", wantedFork, newState.Fork)
+	}
+
 }
