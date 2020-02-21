@@ -35,14 +35,18 @@ type SpanDetector struct {
 	spans []map[uint64][2]uint16
 }
 
-// NewSpanDetector --
+// NewSpanDetector creates a new instance of a struct tracking
+// several epochs of min-max spans for each validator in
+// the beacon state.
 func NewSpanDetector() *SpanDetector {
 	return &SpanDetector{
 		spans: make([]map[uint64][2]uint16, 256),
 	}
 }
 
-// DetectSlashingForValidator --
+// DetectSlashingForValidator uses a validator index and its corresponding
+// min-max spans during an epoch to detect an epoch in which the validator
+// committed a slashable attestation.
 func (s *SpanDetector) DetectSlashingForValidator(
 	ctx context.Context,
 	validatorIdx uint64,
@@ -78,7 +82,8 @@ func (s *SpanDetector) DetectSlashingForValidator(
 	return nil, nil
 }
 
-// SpansForValidatorByEpoch --
+// ValidatorSpansByEpoch returns the specific min-max span for a
+// validator index in a given epoch.
 func (s *SpanDetector) SpansForValidatorByEpoch(ctx context.Context, valIdx uint64, epoch uint64) ([2]uint16, error) {
 	numSpans := uint64(len(s.spans))
 	if span := s.spans[epoch%numSpans]; span != nil {
@@ -90,13 +95,14 @@ func (s *SpanDetector) SpansForValidatorByEpoch(ctx context.Context, valIdx uint
 	return [2]uint16{}, fmt.Errorf("no span found for epoch %d", epoch)
 }
 
-//  ValidatorSpansByEpoch --
+// ValidatorSpansByEpoch returns a list of all validator spans in a given epoch.
 func (s *SpanDetector) ValidatorSpansByEpoch(ctx context.Context, epoch uint64) map[uint64][2]uint16 {
 	numSpans := uint64(len(s.spans))
 	return s.spans[epoch%numSpans]
 }
 
-//  DeleteValidatorSpansByEpoch --
+// DeleteValidatorSpansByEpoch deletes a min-max span for a validator
+// index from a min-max span in a given epoch.
 func (s *SpanDetector) DeleteValidatorSpansByEpoch(ctx context.Context, validatorIdx uint64, epoch uint64) error {
 	numSpans := uint64(len(s.spans))
 	if val := s.spans[epoch%numSpans]; val != nil {
@@ -120,6 +126,8 @@ func (s *SpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttest
 	return nil
 }
 
+// Updates a min span for a validator index given a source and target epoch
+// for an attestation produced by the validator.
 func (s *SpanDetector) updateMinSpan(source uint64, target uint64, valIdx uint64) {
 	numSpans := uint64(len(s.spans))
 	for epoch := source - 1; epoch > 0; epoch-- {
@@ -137,6 +145,8 @@ func (s *SpanDetector) updateMinSpan(source uint64, target uint64, valIdx uint64
 	}
 }
 
+// Updates a max span for a validator index given a source and target epoch
+// for an attestation produced by the validator.
 func (s *SpanDetector) updateMaxSpan(source uint64, target uint64, valIdx uint64) {
 	numSpans := uint64(len(s.spans))
 	distance := target - source
