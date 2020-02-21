@@ -14,8 +14,13 @@ import (
 type DetectionKind int
 
 const (
-	NotFound DetectionKind = iota
-	DoubleVote
+	// DoubleVote denotes a slashable offense in which
+	// a validator cast two conflicting attestations within
+	// the same target epoch.
+	DoubleVote DetectionKind = iota
+	// SurroundVote denotes a slashable offense in which
+	// a validator surrounded or was surrounded by a previous
+	// attestation created by the same validator.
 	SurroundVote
 )
 
@@ -82,7 +87,7 @@ func (s *SpanDetector) DetectSlashingForValidator(
 	return nil, nil
 }
 
-// ValidatorSpansByEpoch returns the specific min-max span for a
+// SpansForValidatorByEpoch returns the specific min-max span for a
 // validator index in a given epoch.
 func (s *SpanDetector) SpansForValidatorByEpoch(ctx context.Context, valIdx uint64, epoch uint64) ([2]uint16, error) {
 	numSpans := uint64(len(s.spans))
