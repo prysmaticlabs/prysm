@@ -22,6 +22,7 @@ type ReadOnlyDatabase interface {
 	HasBlockHeader(ctx context.Context, epoch uint64, validatorID uint64) bool
 
 	// IndexedAttestations related methods.
+	IndexedAttestations(ctx context.Context, targetEpoch uint64) ([]*ethpb.IndexedAttestation, error)
 	IdxAttsForTargetFromID(ctx context.Context, targetEpoch uint64, validatorID uint64) ([]*ethpb.IndexedAttestation, error)
 	IdxAttsForTarget(ctx context.Context, targetEpoch uint64) ([]*ethpb.IndexedAttestation, error)
 	LatestIndexedAttestationsTargetEpoch(ctx context.Context) (uint64, error)
@@ -57,6 +58,7 @@ type WriteAccessDatabase interface {
 
 	// IndexedAttestations related methods.
 	SaveIndexedAttestation(ctx context.Context, idxAttestation *ethpb.IndexedAttestation) error
+	SaveIndexedAttestations(ctx context.Context, idxAttestations []*ethpb.IndexedAttestation) error
 	DeleteIndexedAttestation(ctx context.Context, idxAttestation *ethpb.IndexedAttestation) error
 	PruneAttHistory(ctx context.Context, currentEpoch uint64, pruningEpochAge uint64) error
 
