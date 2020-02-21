@@ -195,6 +195,11 @@ func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 }
 
 // DeleteStates by block roots.
+//
+// Note: bkt.Delete(key) uses a binary search to find the item in the database. Iterating with a
+// cursor is faster when there are a large set of keys to delete. This method is O(n) deletion where
+// n is the number of keys in the database. The alternative of calling  bkt.Delete on each key to
+// delete would be O(m*log(n)) which would be much slower given a large set of keys to delete.
 func (k *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteStates")
 	defer span.End()

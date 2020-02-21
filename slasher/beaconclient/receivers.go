@@ -14,7 +14,7 @@ import (
 func (bs *Service) receiveBlocks(ctx context.Context) {
 	ctx, span := trace.StartSpan(ctx, "beaconclient.receiveBlocks")
 	defer span.End()
-	stream, err := bs.client.StreamBlocks(ctx, &ptypes.Empty{})
+	stream, err := bs.beaconClient.StreamBlocks(ctx, &ptypes.Empty{})
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve blocks stream")
 		return
@@ -45,7 +45,7 @@ func (bs *Service) receiveBlocks(ctx context.Context) {
 func (bs *Service) receiveAttestations(ctx context.Context) {
 	ctx, span := trace.StartSpan(ctx, "beaconclient.receiveAttestations")
 	defer span.End()
-	stream, err := bs.client.StreamAttestations(ctx, &ptypes.Empty{})
+	stream, err := bs.beaconClient.StreamAttestations(ctx, &ptypes.Empty{})
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve attestations stream")
 		return
