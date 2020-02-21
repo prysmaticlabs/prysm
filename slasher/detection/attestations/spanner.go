@@ -27,23 +27,9 @@ type DetectionResult struct {
 	SlashableEpoch uint64
 }
 
-// Spanner defines a struct which can detect slashable
+// SpanDetector defines a struct which can detect slashable
 // attestation offenses by tracking validator min-max
 // spans from validators.
-type Spanner interface {
-	UpdateSpans(ctx context.Context, att *ethpb.IndexedAttestation) error
-	SpansForValidatorByEpoch(ctx context.Context, valIdx uint64, epoch uint64) ([2]uint16, error)
-	ValidatorSpansByEpoch(ctx context.Context, epoch uint64) error
-	DetectSlashingForValidator(
-		ctx context.Context,
-		sourceEpoch uint64,
-		targetEpoch uint64,
-		validatorIdx uint64,
-	) (*DetectionResult, error)
-	DeleteValidatorSpansByEpoch(ctx context.Context, validatorIdx uint64, epoch uint64) error
-}
-
-// SpanDetector --
 type SpanDetector struct {
 	// Slice of epochs for valindex => min-max span.
 	spans []map[uint64][2]uint16
