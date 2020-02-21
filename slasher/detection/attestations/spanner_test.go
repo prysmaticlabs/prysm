@@ -12,7 +12,6 @@ func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 		sourceEpoch              uint64
 		targetEpoch              uint64
 		slashableEpoch           uint64
-		numEpochs                uint64
 		shouldSlash              bool
 		spansByEpochForValidator map[uint64][2]uint16
 	}
@@ -22,7 +21,6 @@ func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 			sourceEpoch:    3,
 			targetEpoch:    6,
 			slashableEpoch: 7,
-			numEpochs:      10,
 			shouldSlash:    true,
 			// Given a distance of (6 - 3) = 3, we want the validator at epoch 3 to have
 			// committed a slashable offense by having a max span of 4 > distance.
@@ -31,11 +29,9 @@ func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 			},
 		},
 		{
-			name:           "Should NOT slash if max span < distance",
-			sourceEpoch:    3,
-			targetEpoch:    6,
-			slashableEpoch: 7,
-			numEpochs:      10,
+			name:        "Should NOT slash if max span < distance",
+			sourceEpoch: 3,
+			targetEpoch: 6,
 			// Given a distance of (6 - 3) = 3, we want the validator at epoch 3 to NOT
 			// have committed slashable offense by having a max span of 1 < distance.
 			shouldSlash: false,
@@ -44,16 +40,37 @@ func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 			},
 		},
 		{
-			name:           "Should NOT slash if max span == distance",
-			sourceEpoch:    3,
-			targetEpoch:    6,
-			slashableEpoch: 7,
-			numEpochs:      10,
+			name:        "Should NOT slash if max span == distance",
+			sourceEpoch: 3,
+			targetEpoch: 6,
 			// Given a distance of (6 - 3) = 3, we want the validator at epoch 3 to NOT
 			// have committed slashable offense by having a max span of 3 == distance.
 			shouldSlash: false,
 			spansByEpochForValidator: map[uint64][2]uint16{
 				3: {0, 3},
+			},
+		},
+		{
+			name:        "Should NOT slash if min span == 0",
+			sourceEpoch: 3,
+			targetEpoch: 6,
+			// Given a min span of 0 and no max span slashing, we want validator to NOT
+			// have committed a slashable offense if min span == 0.
+			shouldSlash: false,
+			spansByEpochForValidator: map[uint64][2]uint16{
+				3: {0, 1},
+			},
+		},
+		{
+			name:        "Should slash if min span > 0 and min span < distance",
+			sourceEpoch: 3,
+			targetEpoch: 6,
+			// Given a distance of (6 - 3) = 3, we want the validator at epoch 3 to have
+			// committed a slashable offense by having a min span of 1 < distance.
+			shouldSlash:    true,
+			slashableEpoch: 4,
+			spansByEpochForValidator: map[uint64][2]uint16{
+				3: {1, 0},
 			},
 		},
 	}
