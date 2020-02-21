@@ -7,12 +7,13 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/interop"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/stateutil"
 )
 
 func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
@@ -225,4 +226,25 @@ func TestBeaconState_ImmutabilityWithSharedResources(t *testing.T) {
 	if reflect.DeepEqual(a.BlockRoots(), b.BlockRoots()) {
 		t.Fatal("Expected a.BlockRoots() to be different from b.BlockRoots()")
 	}
+}
+
+func TestForkManualCopy_OK(t *testing.T) {
+	params.UseMinimalConfig()
+	genesis := setupGenesisState(t, 64)
+	a, err := stateTrie.InitializeFromProto(genesis)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantedFork := &pb.Fork{
+		PreviousVersion: []byte{'a', 'b', 'c'},
+		CurrentVersion:  []byte{'d', 'e', 'f'},
+		Epoch:           0,
+	}
+	a.SetFork(wantedFork)
+
+	newState := a.CloneInnerState()
+	if !ssz.DeepEqual(newState.Fork, wantedFork) {
+		t.Errorf("Wanted %v but got %v", wantedFork, newState.Fork)
+	}
+
 }
