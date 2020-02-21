@@ -166,13 +166,13 @@ func GenerateProposerSlashingForValidator(
 			BodyRoot: []byte{0, 1, 0},
 		},
 	}
-	root, err := ssz.HashTreeRoot(header1.Header)
+	currentEpoch := helpers.CurrentEpoch(bState)
+	domain := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	root, err := helpers.ComputeSigningRoot(header1.Header, domain)
 	if err != nil {
 		return nil, err
 	}
-	currentEpoch := helpers.CurrentEpoch(bState)
-	domain := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
-	header1.Signature = priv.Sign(root[:], domain).Marshal()
+	header1.Signature = priv.Sign(root[:]).Marshal()
 
 	header2 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
@@ -180,11 +180,11 @@ func GenerateProposerSlashingForValidator(
 			BodyRoot: []byte{0, 2, 0},
 		},
 	}
-	root, err = ssz.HashTreeRoot(header2.Header)
+	root, err = helpers.ComputeSigningRoot(header2.Header, domain)
 	if err != nil {
 		return nil, err
 	}
-	header2.Signature = priv.Sign(root[:], domain).Marshal()
+	header2.Signature = priv.Sign(root[:]).Marshal()
 
 	return &ethpb.ProposerSlashing{
 		ProposerIndex: idx,
@@ -236,12 +236,12 @@ func GenerateAttesterSlashingForValidator(
 		},
 		AttestingIndices: []uint64{idx},
 	}
-	dataRoot, err := ssz.HashTreeRoot(att1.Data)
+	domain := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester)
+	dataRoot, err := helpers.ComputeSigningRoot(att1.Data, domain)
 	if err != nil {
 		return nil, err
 	}
-	domain := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester)
-	sig := priv.Sign(dataRoot[:], domain)
+	sig := priv.Sign(dataRoot[:])
 	att1.Signature = bls.AggregateSignatures([]*bls.Signature{sig}).Marshal()
 
 	att2 := &ethpb.IndexedAttestation{
@@ -259,11 +259,11 @@ func GenerateAttesterSlashingForValidator(
 		},
 		AttestingIndices: []uint64{idx},
 	}
-	dataRoot, err = ssz.HashTreeRoot(att2.Data)
+	dataRoot, err = helpers.ComputeSigningRoot(att2.Data, domain)
 	if err != nil {
 		return nil, err
 	}
-	sig = priv.Sign(dataRoot[:], domain)
+	sig = priv.Sign(dataRoot[:])
 	att2.Signature = bls.AggregateSignatures([]*bls.Signature{sig}).Marshal()
 
 	return &ethpb.AttesterSlashing{
@@ -398,7 +398,7 @@ func GenerateAttestations(bState *stateTrie.BeaconState, privs []*bls.SecretKey,
 			},
 		}
 
-		dataRoot, err := ssz.HashTreeRoot(attData)
+		dataRoot, err := helpers.ComputeSigningRoot(attData, domain)
 		if err != nil {
 			return nil, err
 		}
@@ -410,7 +410,7 @@ func GenerateAttestations(bState *stateTrie.BeaconState, privs []*bls.SecretKey,
 			sigs := []*bls.Signature{}
 			for b := i; b < i+bitsPerAtt; b++ {
 				aggregationBits.SetBitAt(b, true)
-				sigs = append(sigs, privs[committee[b]].Sign(dataRoot[:], domain))
+				sigs = append(sigs, privs[committee[b]].Sign(dataRoot[:]))
 			}
 
 			// bls.AggregateSignatures will return nil if sigs is 0.
@@ -468,12 +468,12 @@ func generateVoluntaryExits(
 				ValidatorIndex: valIndex,
 			},
 		}
-		root, err := ssz.HashTreeRoot(exit.Exit)
+		domain := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainVoluntaryExit)
+		root, err := helpers.ComputeSigningRoot(exit.Exit, domain)
 		if err != nil {
 			return nil, err
 		}
-		domain := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainVoluntaryExit)
-		exit.Signature = privs[valIndex].Sign(root[:], domain).Marshal()
+		exit.Signature = privs[valIndex].Sign(root[:]).Marshal()
 		voluntaryExits[i] = exit
 	}
 	return voluntaryExits, nil
