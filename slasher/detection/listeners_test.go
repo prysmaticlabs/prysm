@@ -2,13 +2,20 @@ package detection
 
 import (
 	"context"
+	"io/ioutil"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
+
+func init() {
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetOutput(ioutil.Discard)
+}
 
 type mockNotifier struct{}
 
@@ -17,6 +24,10 @@ func (m *mockNotifier) BlockFeed() *event.Feed {
 }
 
 func (m *mockNotifier) AttestationFeed() *event.Feed {
+	return new(event.Feed)
+}
+
+func (m *mockNotifier) ClientReadyFeed() *event.Feed {
 	return new(event.Feed)
 }
 

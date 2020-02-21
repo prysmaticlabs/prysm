@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "attester_slashings.go",
         "block_header.go",
+        "chain_data.go",
         "indexed_attestations.go",
         "kv.go",
         "min_max_span.go",
@@ -35,6 +36,7 @@ go_test(
     srcs = [
         "attester_slashings_test.go",
         "block_header_test.go",
+        "chain_data_test.go",
         "indexed_attestations_test.go",
         "kv_test.go",
         "min_max_span_test.go",

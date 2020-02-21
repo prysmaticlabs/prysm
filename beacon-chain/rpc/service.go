@@ -239,6 +239,7 @@ func (s *Service) Start() {
 		PendingDepositsFetcher: s.pendingDepositFetcher,
 		StateGen:               s.stateGen,
 		GenesisTime:            genesisTime,
+		SlashingsPool:          s.slashingsPool,
 	}
 	nodeServer := &node.Server{
 		BeaconDB:           s.beaconDB,
