@@ -54,12 +54,6 @@ type SecretKey struct {
 	p *bls12.SecretKey
 }
 
-// KeyMessagePair
-type KeyMessagePair struct {
-	pubkey  *PublicKey
-	message [32]byte
-}
-
 // RandKey creates a new private key using a random method provided as an io.Reader.
 func RandKey() *SecretKey {
 	secKey := &bls12.SecretKey{}

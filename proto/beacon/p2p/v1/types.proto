@@ -76,7 +76,7 @@ message HistoricalBatch {
 
 message SigningRoot {
   // The root of the object being signed.
-  bytes object_root = 1;
+  bytes object_root = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
   // The domain for the particular object being signed.
-  bytes domain = 2;
+  bytes domain = 2 [(gogoproto.moretags) = "ssz-size:\"8\""];
 }
