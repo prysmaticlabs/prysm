@@ -1,30 +1,92 @@
 package attestations
 
 import (
+	"context"
+	"reflect"
 	"testing"
 )
 
-func TestSpanDetector_UpdateMinSpan(t *testing.T) {
+func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 	type spanMapTestStruct struct {
-		validatorIdx   uint64
-		sourceEpoch    uint64
-		targetEpoch    uint64
-		slashableEpoch uint64
-		resultSpanMap  [2]uint16
+		name                     string
+		sourceEpoch              uint64
+		targetEpoch              uint64
+		slashableEpoch           uint64
+		numEpochs                uint64
+		shouldSlash              bool
+		spansByEpochForValidator map[uint64][2]uint16
 	}
 	tests := []spanMapTestStruct{
 		{
-			validatorIdx:   0,
+			name:           "Should slash if max span > distance",
 			sourceEpoch:    3,
 			targetEpoch:    6,
-			slashableEpoch: 0,
-			//resultSpanMap: &slashpb.EpochSpanMap{
-			//	EpochSpanMap: map[uint64]*slashpb.MinMaxEpochSpan{
-			//		4: {MinEpochSpan: 0, MaxEpochSpan: 2},
-			//		5: {MinEpochSpan: 0, MaxEpochSpan: 1},
-			//	},
-			//},
+			slashableEpoch: 7,
+			numEpochs:      10,
+			shouldSlash:    true,
+			// Given a distance of (6 - 3) = 3, we want the validator at epoch 3 to have
+			// committed a slashable offense by having a max span of 4 > distance.
+			spansByEpochForValidator: map[uint64][2]uint16{
+				3: {0, 4},
+			},
+		},
+		{
+			name:           "Should NOT slash if max span < distance",
+			sourceEpoch:    3,
+			targetEpoch:    6,
+			slashableEpoch: 7,
+			numEpochs:      10,
+			// Given a distance of (6 - 3) = 3, we want the validator at epoch 3 to NOT
+			// have committed slashable offense by having a max span of 1 < distance.
+			shouldSlash: false,
+			spansByEpochForValidator: map[uint64][2]uint16{
+				3: {0, 1},
+			},
+		},
+		{
+			name:           "Should NOT slash if max span == distance",
+			sourceEpoch:    3,
+			targetEpoch:    6,
+			slashableEpoch: 7,
+			numEpochs:      10,
+			// Given a distance of (6 - 3) = 3, we want the validator at epoch 3 to NOT
+			// have committed slashable offense by having a max span of 3 == distance.
+			shouldSlash: false,
+			spansByEpochForValidator: map[uint64][2]uint16{
+				3: {0, 3},
+			},
 		},
 	}
-	_ = tests
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			numEpochsToTrack := 100
+			sd := &SpanDetector{
+				spans: make([]map[uint64][2]uint16, numEpochsToTrack),
+			}
+			// We only care about validator index 0 for these tests for simplicity.
+			validatorIndex := uint64(0)
+			for k, v := range tt.spansByEpochForValidator {
+				sd.spans[k] = map[uint64][2]uint16{
+					validatorIndex: v,
+				}
+			}
+			ctx := context.Background()
+			res, err := sd.DetectSlashingForValidator(ctx, validatorIndex, tt.sourceEpoch, tt.targetEpoch)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !tt.shouldSlash && res != nil {
+				t.Fatalf("Did not want validator to be slashed but found slashable offense: %v", res)
+			}
+			if tt.shouldSlash {
+				want := &DetectionResult{
+					Kind:           SurroundVote,
+					SlashableEpoch: tt.slashableEpoch,
+				}
+				if !reflect.DeepEqual(res, want) {
+					t.Errorf("Wanted: %v, received %v", want, res)
+				}
+			}
+		})
+	}
 }

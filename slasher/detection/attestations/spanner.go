@@ -67,8 +67,8 @@ func (s *SpanDetector) DetectSlashingForValidator(
 	}
 	distance := uint16(targetEpoch - sourceEpoch)
 	numSpans := uint64(len(s.spans))
-	if val := s.spans[sourceEpoch%numSpans]; val != nil {
-		minSpan := val[validatorIdx][0]
+	if sp := s.spans[sourceEpoch%numSpans]; sp != nil {
+		minSpan := sp[validatorIdx][0]
 		if minSpan > 0 && minSpan < distance {
 			return &DetectionResult{
 				Kind:           SurroundVote,
@@ -76,7 +76,7 @@ func (s *SpanDetector) DetectSlashingForValidator(
 			}, nil
 		}
 
-		maxSpan := val[validatorIdx][1]
+		maxSpan := sp[validatorIdx][1]
 		if maxSpan > distance {
 			return &DetectionResult{
 				Kind:           SurroundVote,
