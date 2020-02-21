@@ -17,9 +17,11 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (*state.Bea
 	return s.loadHotStateByRoot(ctx, blockRoot)
 }
 
-// StateByRoot retrieves the state from DB using input root.
-// It retrieves state from the cold section if the cold state
-// summary exists in DB by default.
+// StateBySlot retrieves the state from DB using input slot.
+// It retrieves state from the cold section if the input slot
+// is below the splitting point of hot and cold.
+// Do not use this unless it's necessary. Retrieving state
+// by root `StateByRoot` is more performant than by slot.
 func (s *State) StateBySlot(ctx context.Context, slot uint64) (*state.BeaconState, error) {
 	if slot < s.splitInfo.slot {
 		return s.loadColdIntermediateStateWithSlot(ctx, slot)

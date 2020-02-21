@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/stategen"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -25,7 +26,7 @@ func TestStore_OnAttestation(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	cfg := &Config{BeaconDB: db, ForkChoiceStore: protoarray.New(0, 0, [32]byte{})}
+	cfg := &Config{BeaconDB: db, ForkChoiceStore: protoarray.New(0, 0, [32]byte{}), StateGen: stategen.New(db)}
 	service, err := NewService(ctx, cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -55,6 +56,13 @@ func TestStore_OnAttestation(t *testing.T) {
 	if err := service.beaconDB.SaveState(ctx, s, BlkWithStateBadAttRoot); err != nil {
 		t.Fatal(err)
 	}
+	if err := service.beaconDB.SaveHotStateSummary(context.Background(), &pb.HotStateSummary{
+		Slot:         s.Slot(),
+		LatestRoot:   BlkWithStateBadAttRoot[:],
+		BoundaryRoot: BlkWithStateBadAttRoot[:],
+	}); err != nil {
+		return
+	}
 
 	BlkWithValidState := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 2}}
 	if err := db.SaveBlock(ctx, BlkWithValidState); err != nil {
@@ -71,6 +79,13 @@ func TestStore_OnAttestation(t *testing.T) {
 	})
 	if err := service.beaconDB.SaveState(ctx, s, BlkWithValidStateRoot); err != nil {
 		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveHotStateSummary(context.Background(), &pb.HotStateSummary{
+		Slot:         s.Slot(),
+		LatestRoot:   BlkWithValidStateRoot[:],
+		BoundaryRoot: BlkWithValidStateRoot[:],
+	}); err != nil {
+		return
 	}
 
 	tests := []struct {
@@ -99,7 +114,7 @@ func TestStore_OnAttestation(t *testing.T) {
 			a:             &ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: BlkWithOutStateRoot[:]}}},
 			s:             &pb.BeaconState{},
 			wantErr:       true,
-			wantErrString: "pre state of target block 0 does not exist",
+			wantErrString: "nil hot state summary",
 		},
 		{
 			name: "process attestation doesn't match current epoch",
@@ -131,7 +146,7 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	params.UseDemoBeaconConfig()
 
-	cfg := &Config{BeaconDB: db}
+	cfg := &Config{BeaconDB: db, StateGen: stategen.New(db)}
 	service, err := NewService(ctx, cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -162,6 +177,11 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 
 	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: []byte{'A'}}
 	service.beaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'A'}))
+	service.beaconDB.SaveHotStateSummary(context.Background(), &pb.HotStateSummary{
+		Slot:         s.Slot(),
+		LatestRoot:   []byte{'A'},
+		BoundaryRoot: []byte{'A'},
+	})
 	s1, err := service.getAttPreState(ctx, cp1)
 	if err != nil {
 		t.Fatal(err)
@@ -172,6 +192,11 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 
 	cp2 := &ethpb.Checkpoint{Epoch: 2, Root: []byte{'B'}}
 	service.beaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'B'}))
+	service.beaconDB.SaveHotStateSummary(context.Background(), &pb.HotStateSummary{
+		Slot:         s.Slot(),
+		LatestRoot:   []byte{'B'},
+		BoundaryRoot: []byte{'B'},
+	})
 	s2, err := service.getAttPreState(ctx, cp2)
 	if err != nil {
 		t.Fatal(err)
@@ -211,6 +236,11 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	service.prevFinalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 	cp3 := &ethpb.Checkpoint{Epoch: 1, Root: []byte{'C'}}
 	service.beaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'C'}))
+	service.beaconDB.SaveHotStateSummary(context.Background(), &pb.HotStateSummary{
+		Slot:         s.Slot(),
+		LatestRoot:   []byte{'C'},
+		BoundaryRoot: []byte{'C'},
+	})
 	s3, err := service.getAttPreState(ctx, cp3)
 	if err != nil {
 		t.Fatal(err)
@@ -225,7 +255,7 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	cfg := &Config{BeaconDB: db}
+	cfg := &Config{BeaconDB: db, StateGen: stategen.New(db)}
 	service, err := NewService(ctx, cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -236,6 +266,11 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	baseState.SetSlot(epoch * params.BeaconConfig().SlotsPerEpoch)
 	checkpoint := &ethpb.Checkpoint{Epoch: epoch}
 	service.beaconDB.SaveState(ctx, baseState, bytesutil.ToBytes32(checkpoint.Root))
+	service.beaconDB.SaveHotStateSummary(context.Background(), &pb.HotStateSummary{
+		Slot:         baseState.Slot(),
+		LatestRoot:   checkpoint.Root,
+		BoundaryRoot: checkpoint.Root,
+	})
 	returned, err := service.getAttPreState(ctx, checkpoint)
 	if err != nil {
 		t.Fatal(err)

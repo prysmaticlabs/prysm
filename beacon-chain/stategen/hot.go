@@ -64,6 +64,9 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 	if err != nil {
 		return nil, err
 	}
+	if summary == nil {
+		return nil, errors.New("nil hot state summary")
+	}
 	targetSlot := summary.Slot
 
 	boundaryState, err := s.beaconDB.State(ctx, bytesutil.ToBytes32(summary.BoundaryRoot))

@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/stategen"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -209,7 +210,7 @@ func TestPruneNonBoundary_CanPrune(t *testing.T) {
 func TestGenerateState_CorrectlyGenerated(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
-	cfg := &Config{BeaconDB: db}
+	cfg := &Config{BeaconDB: db, StateGen: stategen.New(db)}
 	service, err := NewService(context.Background(), cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -245,6 +246,13 @@ func TestGenerateState_CorrectlyGenerated(t *testing.T) {
 	err = db.SaveState(context.Background(), beaconState, genRoot)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveHotStateSummary(context.Background(), &pb.HotStateSummary{
+		Slot:         beaconState.Slot(),
+		LatestRoot:   genRoot[:],
+		BoundaryRoot: genRoot[:],
+	}); err != nil {
+		return
 	}
 
 	lastBlock := &ethpb.SignedBeaconBlock{}

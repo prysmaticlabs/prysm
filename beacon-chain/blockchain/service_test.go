@@ -27,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/stategen"
 	protodb "github.com/prysmaticlabs/prysm/proto/beacon/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -142,6 +143,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		StateNotifier:     &mockBeaconNode{},
 		AttPool:           attestations.NewPool(),
 		ForkChoiceStore:   protoarray.New(0, 0, params.BeaconConfig().ZeroHash),
+		StateGen:          stategen.New(beaconDB),
 	}
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)

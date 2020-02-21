@@ -15,6 +15,7 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/stategen"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
@@ -27,7 +28,7 @@ func TestStore_OnBlock(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	cfg := &Config{BeaconDB: db}
+	cfg := &Config{BeaconDB: db, StateGen: stategen.New(db)}
 	service, err := NewService(ctx, cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -49,6 +50,12 @@ func TestStore_OnBlock(t *testing.T) {
 	if err := service.beaconDB.SaveState(ctx, st.Copy(), validGenesisRoot); err != nil {
 		t.Fatal(err)
 	}
+	service.beaconDB.SaveHotStateSummary(context.Background(), &pb.HotStateSummary{
+		Slot:         st.Slot(),
+		LatestRoot:   validGenesisRoot[:],
+		BoundaryRoot: validGenesisRoot[:],
+	})
+
 	roots, err := blockTree1(db, validGenesisRoot[:])
 	if err != nil {
 		t.Fatal(err)
@@ -64,10 +71,20 @@ func TestStore_OnBlock(t *testing.T) {
 	if err := service.beaconDB.SaveState(ctx, st.Copy(), randomParentRoot); err != nil {
 		t.Fatal(err)
 	}
+	service.beaconDB.SaveHotStateSummary(context.Background(), &pb.HotStateSummary{
+		Slot:         st.Slot(),
+		LatestRoot:   randomParentRoot[:],
+		BoundaryRoot: randomParentRoot[:],
+	})
 	randomParentRoot2 := roots[1]
 	if err := service.beaconDB.SaveState(ctx, st.Copy(), bytesutil.ToBytes32(randomParentRoot2)); err != nil {
 		t.Fatal(err)
 	}
+	service.beaconDB.SaveHotStateSummary(context.Background(), &pb.HotStateSummary{
+		Slot:         st.Slot(),
+		LatestRoot:   randomParentRoot2[:],
+		BoundaryRoot: randomParentRoot2[:],
+	})
 
 	tests := []struct {
 		name          string
@@ -313,7 +330,7 @@ func TestCachedPreState_CanGetFromCache(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	cfg := &Config{BeaconDB: db}
+	cfg := &Config{BeaconDB: db, StateGen: stategen.New(db)}
 	service, err := NewService(ctx, cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -324,7 +341,7 @@ func TestCachedPreState_CanGetFromCache(t *testing.T) {
 	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r[:]}
 	service.initSyncState[r] = s
 
-	wanted := "pre state of slot 1 does not exist"
+	wanted := "could not get pre state for slot 1"
 	if _, err := service.verifyBlkPreState(ctx, b); !strings.Contains(err.Error(), wanted) {
 		t.Fatal("Not expected error")
 	}
@@ -364,7 +381,7 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	cfg := &Config{BeaconDB: db}
+	cfg := &Config{BeaconDB: db, StateGen: stategen.New(db)}
 	service, err := NewService(ctx, cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -375,13 +392,18 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 
 	service.finalizedCheckpt = &ethpb.Checkpoint{Root: r[:]}
 	_, err = service.verifyBlkPreState(ctx, b)
-	wanted := "pre state of slot 1 does not exist"
+	wanted := "could not get pre state for slot 1"
 	if err.Error() != wanted {
 		t.Error("Did not get wanted error")
 	}
 
 	s, _ := stateTrie.InitializeFromProto(&pb.BeaconState{Slot: 1})
 	service.beaconDB.SaveState(ctx, s, r)
+	service.beaconDB.SaveHotStateSummary(context.Background(), &pb.HotStateSummary{
+		Slot:         s.Slot(),
+		LatestRoot:   r[:],
+		BoundaryRoot: r[:],
+	})
 
 	received, err := service.verifyBlkPreState(ctx, b)
 	if err != nil {
@@ -397,7 +419,7 @@ func TestSaveInitState_CanSaveDelete(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	cfg := &Config{BeaconDB: db}
+	cfg := &Config{BeaconDB: db, StateGen: stategen.New(db)}
 	service, err := NewService(ctx, cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -538,7 +560,7 @@ func TestPersistCache_CanSave(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 
-	cfg := &Config{BeaconDB: db}
+	cfg := &Config{BeaconDB: db, StateGen: stategen.New(db)}
 	service, err := NewService(ctx, cfg)
 	if err != nil {
 		t.Fatal(err)

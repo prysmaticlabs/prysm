@@ -311,3 +311,13 @@ func (e Exporter) PowchainData(ctx context.Context) (*db.ETH1ChainData, error) {
 func (e Exporter) SavePowchainData(ctx context.Context, data *db.ETH1ChainData) error {
 	return e.db.SavePowchainData(ctx, data)
 }
+
+// ArchivePoint -- passthrough
+func (e Exporter) ArchivePoint(ctx context.Context, index uint64) [32]byte {
+	return e.db.ArchivePoint(ctx, index)
+}
+
+// SaveArchivePoint -- passthrough
+func (e Exporter) SaveArchivePoint(ctx context.Context, blockRoot [32]byte, index uint64) error {
+	return e.db.SaveArchivePoint(ctx, blockRoot, index)
+}

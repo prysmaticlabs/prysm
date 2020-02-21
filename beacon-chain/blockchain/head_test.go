@@ -48,6 +48,13 @@ func TestSaveHead_Different(t *testing.T) {
 	newRoot, _ := ssz.HashTreeRoot(newHeadBlock)
 	headState, _ := state.InitializeFromProto(&pb.BeaconState{Slot: 1})
 	service.beaconDB.SaveState(context.Background(), headState, newRoot)
+	if err := service.beaconDB.SaveHotStateSummary(context.Background(), &pb.HotStateSummary{
+		Slot:         headState.Slot(),
+		LatestRoot:   newRoot[:],
+		BoundaryRoot: newRoot[:],
+	}); err != nil {
+		return
+	}
 	if err := service.saveHead(context.Background(), newRoot); err != nil {
 		t.Fatal(err)
 	}
