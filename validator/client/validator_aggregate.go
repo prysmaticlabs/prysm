@@ -82,7 +82,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 	if err != nil {
 		log.Errorf("Could not submit slot signature to beacon node: %v", err)
 		if v.emitAccountMetrics {
-			validatorAggFailVec.WithLabelValues().Inc()
+			validatorAggFailVec.WithLabelValues(fmtKey).Inc()
 		}
 		return
 	}
