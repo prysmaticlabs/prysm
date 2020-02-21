@@ -3,6 +3,7 @@ package attestations
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -39,6 +40,7 @@ type DetectionResult struct {
 type SpanDetector struct {
 	// Slice of epochs for valindex => min-max span.
 	spans []map[uint64][2]uint16
+	lock  sync.RWMutex
 }
 
 // NewSpanDetector creates a new instance of a struct tracking
@@ -68,6 +70,8 @@ func (s *SpanDetector) DetectSlashingForValidator(
 			targetEpoch-sourceEpoch,
 		)
 	}
+	s.lock.RLock()
+	defer s.lock.RUnlock()
 	distance := uint16(targetEpoch - sourceEpoch)
 	numSpans := uint64(len(s.spans))
 	if sp := s.spans[sourceEpoch%numSpans]; sp != nil {
@@ -95,6 +99,8 @@ func (s *SpanDetector) DetectSlashingForValidator(
 func (s *SpanDetector) SpansForValidatorByEpoch(ctx context.Context, valIdx uint64, epoch uint64) ([2]uint16, error) {
 	ctx, span := trace.StartSpan(ctx, "detection.SpansForValidatorByEpoch")
 	defer span.End()
+	s.lock.RLock()
+	defer s.lock.RUnlock()
 	numSpans := uint64(len(s.spans))
 	if span := s.spans[epoch%numSpans]; span != nil {
 		if minMaxSpan, ok := span[valIdx]; ok {
@@ -109,6 +115,8 @@ func (s *SpanDetector) SpansForValidatorByEpoch(ctx context.Context, valIdx uint
 func (s *SpanDetector) ValidatorSpansByEpoch(ctx context.Context, epoch uint64) map[uint64][2]uint16 {
 	ctx, span := trace.StartSpan(ctx, "detection.ValidatorSpansByEpoch")
 	defer span.End()
+	s.lock.RLock()
+	defer s.lock.RUnlock()
 	numSpans := uint64(len(s.spans))
 	return s.spans[epoch%numSpans]
 }
@@ -118,6 +126,8 @@ func (s *SpanDetector) ValidatorSpansByEpoch(ctx context.Context, epoch uint64) 
 func (s *SpanDetector) DeleteValidatorSpansByEpoch(ctx context.Context, validatorIdx uint64, epoch uint64) error {
 	ctx, span := trace.StartSpan(ctx, "detection.DeleteValidatorSpansByEpoch")
 	defer span.End()
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	numSpans := uint64(len(s.spans))
 	if val := s.spans[epoch%numSpans]; val != nil {
 		delete(val, validatorIdx)
@@ -130,6 +140,8 @@ func (s *SpanDetector) DeleteValidatorSpansByEpoch(ctx context.Context, validato
 func (s *SpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttestation) error {
 	ctx, span := trace.StartSpan(ctx, "detection.UpdateSpans")
 	defer span.End()
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	source := att.Data.Source.Epoch
 	target := att.Data.Target.Epoch
 	// Update spansForEpoch[valIdx] using the source/target data for
