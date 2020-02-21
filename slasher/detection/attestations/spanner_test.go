@@ -202,6 +202,34 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 	}
 	tests := []testStruct{
 		{
+			name: "Distance of 2 should update max spans accordingly",
+			att: &ethpb.IndexedAttestation{
+				AttestingIndices: []uint64{0, 1, 2},
+				Data: &ethpb.AttestationData{
+					Source: &ethpb.Checkpoint{
+						Epoch: 1,
+					},
+					Target: &ethpb.Checkpoint{
+						Epoch: 3,
+					},
+				},
+			},
+			numEpochs: 3,
+			want: []map[uint64][2]uint16{
+				// Epoch 0.
+				nil,
+				// Epoch 1.
+				nil,
+				// Epoch 2.
+				{
+					0: {0, 1},
+					1: {0, 1},
+					2: {0, 1},
+				},
+			},
+		},
+		{
+			name: "Distance of 4 should update max spans accordingly",
 			att: &ethpb.IndexedAttestation{
 				AttestingIndices: []uint64{0, 1, 2},
 				Data: &ethpb.AttestationData{
@@ -209,23 +237,37 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 						Epoch: 0,
 					},
 					Target: &ethpb.Checkpoint{
-						Epoch: 0,
+						Epoch: 5,
 					},
 				},
 			},
-			numEpochs: 2,
+			numEpochs: 5,
 			want: []map[uint64][2]uint16{
 				// Epoch 0.
-				{
-					0: {1, 0},
-					1: {1, 0},
-					2: {1, 0},
-				},
+				nil,
 				// Epoch 1.
 				{
-					0: {1, 0},
-					1: {1, 0},
-					2: {1, 0},
+					0: {0, 4},
+					1: {0, 4},
+					2: {0, 4},
+				},
+				// Epoch 2.
+				{
+					0: {0, 3},
+					1: {0, 3},
+					2: {0, 3},
+				},
+				// Epoch 3.
+				{
+					0: {0, 2},
+					1: {0, 2},
+					2: {0, 2},
+				},
+				// Epoch 4.
+				{
+					0: {0, 1},
+					1: {0, 1},
+					2: {0, 1},
 				},
 			},
 		},
