@@ -204,6 +204,10 @@ func (s *State) handleLastValidState(ctx context.Context, slot uint64) ([32]byte
 	if err != nil {
 		return [32]byte{}, err
 	}
+	if startState == nil {
+		log.Error(hex.EncodeToString(bytesutil.Trunc(r[:])))
+		return [32]byte{}, errors.New("last boundary slot can't be nil")
+	}
 	blks, err := s.LoadBlocks(ctx, startState.Slot()+1, slot, lastRoot)
 	if err != nil {
 		return [32]byte{}, err
