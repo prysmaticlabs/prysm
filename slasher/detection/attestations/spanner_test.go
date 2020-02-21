@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
 func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
@@ -188,5 +190,58 @@ func TestSpanDetector_DeleteValidatorSpansByEpoch(t *testing.T) {
 	want := make(map[uint64][2]uint16)
 	if res := sd.ValidatorSpansByEpoch(ctx, epoch); !reflect.DeepEqual(res, want) {
 		t.Errorf("Wanted %v for epoch after deleting, received %v", want, res)
+	}
+}
+
+func TestNewSpanDetector_UpdateSpans(t *testing.T) {
+	type testStruct struct {
+		name      string
+		att       *ethpb.IndexedAttestation
+		numEpochs uint64
+		want      []map[uint64][2]uint16
+	}
+	tests := []testStruct{
+		{
+			att: &ethpb.IndexedAttestation{
+				AttestingIndices: []uint64{0, 1, 2},
+				Data: &ethpb.AttestationData{
+					Source: &ethpb.Checkpoint{
+						Epoch: 0,
+					},
+					Target: &ethpb.Checkpoint{
+						Epoch: 0,
+					},
+				},
+			},
+			numEpochs: 2,
+			want: []map[uint64][2]uint16{
+				// Epoch 0.
+				{
+					0: {1, 0},
+					1: {1, 0},
+					2: {1, 0},
+				},
+				// Epoch 1.
+				{
+					0: {1, 0},
+					1: {1, 0},
+					2: {1, 0},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sd := &SpanDetector{
+				spans: make([]map[uint64][2]uint16, tt.numEpochs),
+			}
+			ctx := context.Background()
+			if err := sd.UpdateSpans(ctx, tt.att); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(sd.spans, tt.want) {
+				t.Errorf("Wanted spans %v, received %v", tt.want, sd.spans)
+			}
+		})
 	}
 }
