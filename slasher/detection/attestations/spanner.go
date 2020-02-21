@@ -94,10 +94,10 @@ func (s *SpanDetector) DetectSlashingForValidator(
 	return nil, nil
 }
 
-// SpansForValidatorByEpoch returns the specific min-max span for a
+// SpanForEpochByValidator returns the specific min-max span for a
 // validator index in a given epoch.
-func (s *SpanDetector) SpansForValidatorByEpoch(ctx context.Context, valIdx uint64, epoch uint64) ([2]uint16, error) {
-	ctx, span := trace.StartSpan(ctx, "detection.SpansForValidatorByEpoch")
+func (s *SpanDetector) SpanForEpochByValidator(ctx context.Context, valIdx uint64, epoch uint64) ([2]uint16, error) {
+	ctx, span := trace.StartSpan(ctx, "detection.SpanForEpochByValidator")
 	defer span.End()
 	s.lock.RLock()
 	defer s.lock.RUnlock()

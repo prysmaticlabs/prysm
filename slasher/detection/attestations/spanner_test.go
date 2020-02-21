@@ -111,7 +111,7 @@ func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 	}
 }
 
-func TestSpanDetector_SpansForValidatorByEpoch(t *testing.T) {
+func TestSpanDetector_SpanForEpochByValidator(t *testing.T) {
 	numEpochsToTrack := 2
 	sd := &SpanDetector{
 		spans: make([]map[uint64][2]uint16, numEpochsToTrack),
@@ -123,7 +123,7 @@ func TestSpanDetector_SpansForValidatorByEpoch(t *testing.T) {
 	}
 	want := [2]uint16{3, 7}
 	ctx := context.Background()
-	res, err := sd.SpansForValidatorByEpoch(ctx, validatorIndex, epoch)
+	res, err := sd.SpanForEpochByValidator(ctx, validatorIndex, epoch)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,7 +131,7 @@ func TestSpanDetector_SpansForValidatorByEpoch(t *testing.T) {
 		t.Errorf("Wanted %v, received %v", want, res)
 	}
 	validatorIndex = uint64(0)
-	if _, err = sd.SpansForValidatorByEpoch(
+	if _, err = sd.SpanForEpochByValidator(
 		ctx,
 		validatorIndex,
 		epoch,
@@ -140,7 +140,7 @@ func TestSpanDetector_SpansForValidatorByEpoch(t *testing.T) {
 	}
 	validatorIndex = uint64(40)
 	epoch = uint64(3)
-	if _, err = sd.SpansForValidatorByEpoch(
+	if _, err = sd.SpanForEpochByValidator(
 		ctx,
 		validatorIndex,
 		epoch,
