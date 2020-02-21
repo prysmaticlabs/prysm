@@ -1,4 +1,4 @@
-package spanner
+package attestations
 
 import (
 	"context"
@@ -37,17 +37,25 @@ type Spanner interface {
 	DeleteValidatorSpansByEpoch(ctx context.Context, validatorIdx uint64, epoch uint64) error
 }
 
+// SpanDetector --
 type SpanDetector struct {
 	// Slice of epochs for valindex => min-max span.
 	spans []map[uint64][2]uint16
 }
 
+// NewSpanDetector --
 func NewSpanDetector() *SpanDetector {
 	return &SpanDetector{
 		spans: make([]map[uint64][2]uint16, 256),
 	}
 }
 
+// DetectSlashing --
+func (s *SpanDetector) DetectSlashing(ctx context.Context, sourceEpoch uint64) (*DetectionResult, error) {
+	panic("implement me")
+}
+
+// SpansForValidatorByEpoch --
 func (s *SpanDetector) SpansForValidatorByEpoch(ctx context.Context, valIdx uint64, epoch uint64) ([2]uint16, error) {
 	numSpans := uint64(len(s.spans))
 	if span := s.spans[epoch%numSpans]; span != nil {
