@@ -3,11 +3,12 @@ package attestations
 import (
 	"context"
 	"reflect"
+	"strings"
 	"testing"
 )
 
 func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
-	type spanMapTestStruct struct {
+	type testStruct struct {
 		name                     string
 		sourceEpoch              uint64
 		targetEpoch              uint64
@@ -15,7 +16,7 @@ func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 		shouldSlash              bool
 		spansByEpochForValidator map[uint64][2]uint16
 	}
-	tests := []spanMapTestStruct{
+	tests := []testStruct{
 		{
 			name:           "Should slash if max span > distance",
 			sourceEpoch:    3,
@@ -105,5 +106,60 @@ func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestSpanDetector_SpansForValidatorByEpoch(t *testing.T) {
+	numEpochsToTrack := 2
+	sd := &SpanDetector{
+		spans: make([]map[uint64][2]uint16, numEpochsToTrack),
+	}
+	epoch := uint64(1)
+	validatorIndex := uint64(40)
+	sd.spans[epoch] = map[uint64][2]uint16{
+		validatorIndex: {3, 7},
+	}
+	want := [2]uint16{3, 7}
+	ctx := context.Background()
+	res, err := sd.SpansForValidatorByEpoch(ctx, validatorIndex, epoch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(want, res) {
+		t.Errorf("Wanted %v, received %v", want, res)
+	}
+	validatorIndex = uint64(0)
+	if _, err = sd.SpansForValidatorByEpoch(
+		ctx,
+		validatorIndex,
+		epoch,
+	); err != nil && !strings.Contains(err.Error(), "validator index 0 not found") {
+		t.Errorf("Wanted validator index not found error, received %v", err)
+	}
+	validatorIndex = uint64(40)
+	epoch = uint64(3)
+	if _, err = sd.SpansForValidatorByEpoch(
+		ctx,
+		validatorIndex,
+		epoch,
+	); err != nil && !strings.Contains(err.Error(), "no data found for epoch") {
+		t.Errorf("Wanted no data found for epoch error, received %v", err)
+	}
+}
+
+func TestSpanDetector_ValidatorSpansByEpoch(t *testing.T) {
+	numEpochsToTrack := 2
+	sd := &SpanDetector{
+		spans: make([]map[uint64][2]uint16, numEpochsToTrack),
+	}
+	epoch := uint64(1)
+	validatorIndex := uint64(40)
+	want := map[uint64][2]uint16{
+		validatorIndex: {3, 7},
+	}
+	sd.spans[epoch] = want
+	res := sd.ValidatorSpansByEpoch(context.Background(), epoch)
+	if !reflect.DeepEqual(res, want) {
+		t.Errorf("Wanted %v, received %v, want, res")
 	}
 }

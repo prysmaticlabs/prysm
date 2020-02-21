@@ -97,7 +97,7 @@ func (s *SpanDetector) SpansForValidatorByEpoch(ctx context.Context, valIdx uint
 		}
 		return [2]uint16{}, fmt.Errorf("validator index %d not found in span map", valIdx)
 	}
-	return [2]uint16{}, fmt.Errorf("no span found for epoch %d", epoch)
+	return [2]uint16{}, fmt.Errorf("no data found for epoch %d", epoch)
 }
 
 // ValidatorSpansByEpoch returns a list of all validator spans in a given epoch.
