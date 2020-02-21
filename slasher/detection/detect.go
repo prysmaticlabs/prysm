@@ -68,8 +68,10 @@ func (ds *Service) detectSurroundVotes(
 		return nil, nil
 	}
 	var slashings []*ethpb.AttesterSlashing
-	// TODO: Retrieve these attestations from the db.
-	otherAtts := make([]*ethpb.IndexedAttestation, 0)
+	otherAtts, err := ds.slasherDB.IndexedAttestations(ctx, res.SlashableEpoch)
+	if err != nil {
+		return nil, err
+	}
 	for _, att := range otherAtts {
 		if att.Data == nil {
 			continue
