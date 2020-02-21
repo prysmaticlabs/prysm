@@ -22,6 +22,7 @@ go_test(
     srcs = [
         "attestations_bench_test.go",
         "attestations_test.go",
+        "spanner_test.go",
     ],
     embed = [":go_default_library"],
     deps = [

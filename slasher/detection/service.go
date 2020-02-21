@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	"github.com/prysmaticlabs/prysm/slasher/db"
+	"github.com/prysmaticlabs/prysm/slasher/detection/attestations"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -19,12 +20,13 @@ type Service struct {
 	cancel                context.CancelFunc
 	slasherDB             db.Database
 	blocksChan            chan *ethpb.SignedBeaconBlock
-	attsChan              chan *ethpb.Attestation
+	attsChan              chan *ethpb.IndexedAttestation
 	notifier              beaconclient.Notifier
 	chainFetcher          beaconclient.ChainFetcher
 	beaconClient          *beaconclient.Service
 	attesterSlashingsFeed *event.Feed
 	proposerSlashingsFeed *event.Feed
+	minMaxSpanDetector    *attestations.SpanDetector
 }
 
 // Config options for the detection service.
@@ -48,9 +50,10 @@ func NewDetectionService(ctx context.Context, cfg *Config) *Service {
 		slasherDB:             cfg.SlasherDB,
 		beaconClient:          cfg.BeaconClient,
 		blocksChan:            make(chan *ethpb.SignedBeaconBlock, 1),
-		attsChan:              make(chan *ethpb.Attestation, 1),
+		attsChan:              make(chan *ethpb.IndexedAttestation, 1),
 		attesterSlashingsFeed: cfg.AttesterSlashingsFeed,
 		proposerSlashingsFeed: cfg.ProposerSlashingsFeed,
+		minMaxSpanDetector:    attestations.NewSpanDetector(),
 	}
 }
 
@@ -118,11 +121,26 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 			len(indexedAtts),
 			i,
 		)
-		// TODO(#4836): Run detection function for attester double voting.
-		// TODO(#4836): Run detection function for attester surround voting.
+		for i := 0; i < len(indexedAtts); i++ {
+			slashings, err := ds.detectAttesterSlashings(ctx, indexedAtts[i])
+			if err != nil {
+				log.WithError(err).Error("Could not detect attester slashings")
+				continue
+			}
+			ds.submitAttesterSlashings(ctx, slashings)
+		}
 	}
 	if err := ds.slasherDB.SaveChainHead(ctx, currentChainHead); err != nil {
 		log.WithError(err).Error("Could not persist chain head to disk")
 	}
 	log.Infof("Completed slashing detection on historical chain data up to epoch %d", currentChainHead.HeadEpoch)
+}
+
+func (ds *Service) submitAttesterSlashings(ctx context.Context, slashings []*ethpb.AttesterSlashing) {
+	if len(slashings) > 0 {
+		log.Infof("Found %d attester slashings, submitting to beacon node...", len(slashings))
+	}
+	for i := 0; i < len(slashings); i++ {
+		ds.attesterSlashingsFeed.Send(slashings[i])
+	}
 }
