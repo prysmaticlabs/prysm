@@ -26,9 +26,13 @@ func RandaoReveal(beaconState *stateTrie.BeaconState, epoch uint64, privKeys []*
 	}
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	//domain := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainRandao)
+	domain := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainRandao)
+	root, err := helpers.ComputeSigningRoot(epoch, domain)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not compute signing root of epoch")
+	}
 	// We make the previous validator's index sign the message instead of the proposer.
-	epochSignature := privKeys[proposerIdx].Sign(buf)
+	epochSignature := privKeys[proposerIdx].Sign(root[:])
 	return epochSignature.Marshal(), nil
 }
 

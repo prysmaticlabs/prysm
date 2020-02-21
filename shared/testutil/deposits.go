@@ -234,13 +234,17 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*ethpb.Dep
 				WithdrawalCredentials: withdrawalCreds[:],
 			}
 
-			//domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
+			domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
 			root, err := ssz.SigningRoot(depositData)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not get signing root of deposit data")
 			}
+			sigRoot, err := ssz.HashTreeRoot(&pb.SigningRoot{ObjectRoot: root[:], Domain: domain})
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "could not get signing root of deposit data and domain")
+			}
 			// Always use the same validator to sign
-			depositData.Signature = secretKeys[1].Sign(root[:]).Marshal()
+			depositData.Signature = secretKeys[1].Sign(sigRoot[:]).Marshal()
 
 			deposit := &ethpb.Deposit{
 				Data: depositData,

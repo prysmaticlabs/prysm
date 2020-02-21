@@ -149,8 +149,12 @@ func createDepositData(privKey *bls.SecretKey, pubKey *bls.PublicKey) (*ethpb.De
 	if err != nil {
 		return nil, err
 	}
-	//domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
-	di.Signature = privKey.Sign(sr[:]).Marshal()
+	domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
+	root, err := ssz.HashTreeRoot(&pb.SigningRoot{ObjectRoot: sr[:], Domain: domain})
+	if err != nil {
+		return nil, err
+	}
+	di.Signature = privKey.Sign(root[:]).Marshal()
 	return di, nil
 }
 
