@@ -34,7 +34,12 @@ type Spanner interface {
 	UpdateSpans(ctx context.Context, att *ethpb.IndexedAttestation) error
 	SpansForValidatorByEpoch(ctx context.Context, valIdx uint64, epoch uint64) ([2]uint16, error)
 	ValidatorSpansByEpoch(ctx context.Context, epoch uint64) error
-	DetectSlashing(ctx context.Context, sourceEpoch uint64) (*DetectionResult, error)
+	DetectSlashingForValidator(
+		ctx context.Context,
+		sourceEpoch uint64,
+		targetEpoch uint64,
+		validatorIdx uint64,
+	) (*DetectionResult, error)
 	DeleteValidatorSpansByEpoch(ctx context.Context, validatorIdx uint64, epoch uint64) error
 }
 
@@ -51,19 +56,38 @@ func NewSpanDetector() *SpanDetector {
 	}
 }
 
-// DetectSlashing --
-func (s *SpanDetector) DetectSlashing(
+// DetectSlashingForValidator --
+func (s *SpanDetector) DetectSlashingForValidator(
 	ctx context.Context,
+	validatorIdx uint64,
 	sourceEpoch uint64,
 	targetEpoch uint64,
 ) (*DetectionResult, error) {
-	distance := targetEpoch - sourceEpoch
-	if distance > params.BeaconConfig().WeakSubjectivityPeriod {
+	if (targetEpoch - sourceEpoch) > params.BeaconConfig().WeakSubjectivityPeriod {
 		return nil, fmt.Errorf(
 			"attestation span was greater than weak subjectivity period %d, received: %d",
 			params.BeaconConfig().WeakSubjectivityPeriod,
-			distance,
+			targetEpoch-sourceEpoch,
 		)
+	}
+	distance := uint16(targetEpoch - sourceEpoch)
+	numSpans := uint64(len(s.spans))
+	if val := s.spans[sourceEpoch%numSpans]; val != nil {
+		minSpan := val[validatorIdx][0]
+		if minSpan > 0 && minSpan < distance {
+			return &DetectionResult{
+				Kind:           SurroundVote,
+				SlashableEpoch: uint64(minSpan) + sourceEpoch,
+			}, nil
+		}
+
+		maxSpan := val[validatorIdx][1]
+		if maxSpan > distance {
+			return &DetectionResult{
+				Kind:           SurroundVote,
+				SlashableEpoch: uint64(maxSpan) + sourceEpoch,
+			}, nil
+		}
 	}
 	return nil, nil
 }
@@ -81,15 +105,18 @@ func (s *SpanDetector) SpansForValidatorByEpoch(ctx context.Context, valIdx uint
 }
 
 //  ValidatorSpansByEpoch --
-// TODO(#4587): Complete.
-func (s *SpanDetector) ValidatorSpansByEpoch(ctx context.Context, epoch uint64) error {
-	return nil
+func (s *SpanDetector) ValidatorSpansByEpoch(ctx context.Context, epoch uint64) map[uint64][2]uint16 {
+	numSpans := uint64(len(s.spans))
+	return s.spans[epoch%numSpans]
 }
 
 //  DeleteValidatorSpansByEpoch --
-// TODO(#4587): Complete.
 func (s *SpanDetector) DeleteValidatorSpansByEpoch(ctx context.Context, validatorIdx uint64, epoch uint64) error {
-	return nil
+	numSpans := uint64(len(s.spans))
+	if val := s.spans[epoch%numSpans]; val != nil {
+		delete(val, validatorIdx)
+	}
+	return fmt.Errorf("no span map found at epoch %d", epoch)
 }
 
 // UpdateSpans given an indexed attestation for all of its attesting indices.
