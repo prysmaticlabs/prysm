@@ -135,8 +135,8 @@ func (b *BeaconState) Fork() *pbp2p.Fork {
 
 	prevVersion := make([]byte, len(b.state.Fork.PreviousVersion))
 	copy(prevVersion, b.state.Fork.PreviousVersion)
-	currVersion := make([]byte, len(b.state.Fork.PreviousVersion))
-	copy(currVersion, b.state.Fork.PreviousVersion)
+	currVersion := make([]byte, len(b.state.Fork.CurrentVersion))
+	copy(currVersion, b.state.Fork.CurrentVersion)
 	return &pbp2p.Fork{
 		PreviousVersion: prevVersion,
 		CurrentVersion:  currVersion,
