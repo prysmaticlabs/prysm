@@ -17,12 +17,12 @@ go_library(
     ],
     deps = [
         "//beacon-chain/core/state/stateutils:go_default_library",
+        "//beacon-chain/state/stateutil:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/memorypool:go_default_library",
         "//shared/params:go_default_library",
-        "//shared/stateutil:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_protolambda_zssz//merkle:go_default_library",
@@ -39,12 +39,13 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/state/stateutil:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/interop:go_default_library",
         "//shared/params:go_default_library",
-        "//shared/stateutil:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
     ],
 )
