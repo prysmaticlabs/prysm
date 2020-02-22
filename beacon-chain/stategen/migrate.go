@@ -3,7 +3,6 @@ package stategen
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
@@ -39,21 +38,20 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedState *state.BeaconS
 		if err != nil {
 			return err
 		}
-		if hotStateSummary == nil {
+		if hotStateSummary == nil || hotStateSummary.Slot == 0 {
 			continue
 		}
 
 		if hotStateSummary.Slot%s.slotsPerArchivePoint == 0 {
 			archivePointIndex := hotStateSummary.Slot / s.slotsPerArchivePoint
 			if s.beaconDB.HasState(ctx, r) {
-				fmt.Println("has state")
-				//hotState, err := s.beaconDB.State(ctx, r)
-				//if err != nil {
-				//	return err
-				//}
-				//if err := s.beaconDB.SaveArchivedPointState(ctx, hotState.Copy(), archivePointIndex); err != nil {
-				//	return err
-				//}
+				hotState, err := s.beaconDB.State(ctx, r)
+				if err != nil {
+					return err
+				}
+				if err := s.beaconDB.SaveArchivedPointState(ctx, hotState.Copy(), archivePointIndex); err != nil {
+					return err
+				}
 			} else {
 				hotState, err := s.ComputeStateUpToSlot(ctx, hotStateSummary.Slot)
 				if err != nil {
@@ -75,13 +73,10 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedState *state.BeaconS
 			}).Info("Saved archive point during state migration")
 		}
 
-		fmt.Println("hello2")
 		if s.beaconDB.HasState(ctx, r) {
-			fmt.Println("hello21")
 			if err := s.beaconDB.DeleteState(ctx, r); err != nil {
 				return err
 			}
-			fmt.Println("hello22")
 			hotStateSaved.Dec()
 			log.WithFields(logrus.Fields{
 				"slot": hotStateSummary.Slot,
@@ -98,13 +93,10 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedState *state.BeaconS
 		}
 		s.deleteEpochBoundaryRoot(hotStateSummary.Slot)
 
-		fmt.Println("hello4")
 		coldSummarySaved.Inc()
 		hotSummarySaved.Dec()
 	}
 
-
-	fmt.Println("hello5")
 	// Update the split slot and root.
 	s.splitInfo = &splitSlotAndRoot{slot: finalizedState.Slot(), root: finalizedRoot}
 

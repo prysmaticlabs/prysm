@@ -101,10 +101,17 @@ func (s *State) loadColdIntermediateStateWithSlot(ctx context.Context, slot uint
 	var highArchivePointRoot [32]byte
 	highArchivePointSlot := highArchivePointIdx * s.slotsPerArchivePoint
 	if highArchivePointSlot >= s.splitInfo.slot {
+		log.Info("Debugging: entering cold state case 1")
 		highArchivePointRoot = s.splitInfo.root
 		highArchivePointSlot = s.splitInfo.slot
 	} else {
+		log.Info("Debugging: entering cold state case 2")
 		highArchivePointRoot = s.beaconDB.ArchivedPointRoot(ctx, highArchivePointIdx)
+		coldSummary, err := s.beaconDB.ColdStateSummary(ctx, highArchivePointRoot)
+		if err != nil {
+			return nil, err
+		}
+		highArchivePointSlot = coldSummary.Slot
 	}
 
 	replayBlks, err := s.LoadBlocks(ctx, lowArchivePointState.Slot()+1, highArchivePointSlot, highArchivePointRoot)
