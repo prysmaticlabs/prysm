@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
 )
 
 // State represents a management object that handles the internal
@@ -38,6 +39,9 @@ func New(db db.NoHeadAccessDatabase) *State {
 
 // Resume sets up the new state management object from previously saved finalized check point in DB.
 func (s *State) Resume(ctx context.Context, finalizedRoot [32]byte) (*state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.Resume")
+	defer span.End()
+
 	finalizedState, err := s.beaconDB.State(ctx, finalizedRoot)
 	if err != nil {
 		return nil, err
