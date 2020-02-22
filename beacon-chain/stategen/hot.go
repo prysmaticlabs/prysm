@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 // HotStateExists returns true if the corresponding state of the input block either
@@ -25,6 +26,9 @@ func (s *State) HotStateExists(ctx context.Context, blockRoot [32]byte) bool {
 // it saves a full state. On an intermediate slot, it saves a back pointer to the
 // nearest epoch boundary state.
 func (s *State) saveHotState(ctx context.Context, blockRoot [32]byte, state *state.BeaconState) error {
+	ctx, span := trace.StartSpan(ctx, "stateGen.saveHotState")
+	defer span.End()
+
 	// On an epoch boundary, saves the whole state.
 	if helpers.IsEpochStart(state.Slot()) {
 		if err := s.beaconDB.SaveState(ctx, state, blockRoot); err != nil {
@@ -58,6 +62,9 @@ func (s *State) saveHotState(ctx context.Context, blockRoot [32]byte, state *sta
 // This loads a post finalized beacon state from the hot section of the DB. If necessary it will
 // replay blocks from the nearest epoch boundary.
 func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.loadHotStateByRoot")
+	defer span.End()
+
 	// Load the cache
 
 	summary, err := s.beaconDB.HotStateSummary(ctx, blockRoot)
@@ -101,6 +108,9 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 // This is a slower implementation given slot is the only argument. It require fetching
 // all the blocks between the epoch boundary points.
 func (s *State) loadHotIntermediateStateWithSlot(ctx context.Context, slot uint64) (*state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.loadHotIntermediateStateWithSlot")
+	defer span.End()
+
 	// Gather epoch boundary information, this is where node starts to replay the blocks.
 	epochBoundarySlot := helpers.StartSlot(helpers.SlotToEpoch(slot))
 	epochBoundaryRoot, ok := s.epochBoundaryRoot(epochBoundarySlot)
@@ -130,6 +140,9 @@ func (s *State) loadHotIntermediateStateWithSlot(ctx context.Context, slot uint6
 // If the epoch boundary does not have a valid block, it goes back to find the last
 // slot which has a valid block.
 func (s *State) loadEpochBoundaryRoot(ctx context.Context, blockRoot [32]byte, state *state.BeaconState) ([32]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.loadEpochBoundaryRoot")
+	defer span.End()
+
 	epochBoundarySlot := helpers.CurrentEpoch(state) * params.BeaconConfig().SlotsPerEpoch
 
 	// Node first checks if epoch boundary root already exists in cache.
@@ -189,6 +202,9 @@ func (s *State) loadEpochBoundaryRoot(ctx context.Context, blockRoot [32]byte, s
 // This finds the last valid state from searching backwards starting at input slot
 // and returns the root of the block which is used to process the state.
 func (s *State) handleLastValidState(ctx context.Context, targetSlot uint64) ([32]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.handleLastValidState")
+	defer span.End()
+
 	lastBlockRoot, lastBlockSlot, err := s.getLastValidBlock(ctx, targetSlot)
 	if err != nil {
 		return [32]byte{}, err
