@@ -61,6 +61,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 	votedTarget := 0
 	votedHead := 0
 
+	missingValidatorCount := 0
 	for i, pkey := range pubKeys {
 		pubKey := fmt.Sprintf("%#x", pkey[:8])
 		log := log.WithField("pubKey", pubKey)
@@ -69,6 +70,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 			if v.emitAccountMetrics {
 				validatorBalancesGaugeVec.WithLabelValues(pubKey).Set(0)
 			}
+			missingValidatorCount++
 			continue
 		}
 		if slot < params.BeaconConfig().SlotsPerEpoch {
@@ -95,19 +97,19 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 			}
 		}
 
-		if i < len(resp.InclusionSlots) && resp.InclusionSlots[i] != ^uint64(0) {
+		if i < len(resp.InclusionSlots)+missingValidatorCount && resp.InclusionSlots[i] != ^uint64(0) {
 			included++
 		}
-		if i < len(resp.CorrectlyVotedSource) && resp.CorrectlyVotedSource[i] {
+		if i < len(resp.CorrectlyVotedSource)+missingValidatorCount && resp.CorrectlyVotedSource[i] {
 			votedSource++
 		}
-		if i < len(resp.CorrectlyVotedTarget) && resp.CorrectlyVotedTarget[i] {
+		if i < len(resp.CorrectlyVotedTarget)+missingValidatorCount && resp.CorrectlyVotedTarget[i] {
 			votedTarget++
 		}
-		if i < len(resp.CorrectlyVotedHead) && resp.CorrectlyVotedHead[i] {
+		if i < len(resp.CorrectlyVotedHead)+missingValidatorCount && resp.CorrectlyVotedHead[i] {
 			votedHead++
 		}
-		if i < len(resp.BalancesAfterEpochTransition) {
+		if i < len(resp.BalancesAfterEpochTransition)+missingValidatorCount {
 			v.prevBalance[bytesutil.ToBytes48(pkey)] = resp.BalancesBeforeEpochTransition[i]
 		}
 	}
