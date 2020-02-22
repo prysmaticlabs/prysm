@@ -9,10 +9,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"go.opencensus.io/trace"
 )
 
 // ReplayBlocks replays the input blocks on the input state until the target slot is reached.
 func (s *State) ReplayBlocks(ctx context.Context, state *state.BeaconState, signed []*ethpb.SignedBeaconBlock, targetSlot uint64) (*state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.ReplayBlocks")
+	defer span.End()
+
 	var err error
 	// The input block list is sorted in decreasing slots order.
 	if len(signed) > 0 {

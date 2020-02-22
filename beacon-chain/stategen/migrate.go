@@ -11,11 +11,15 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 // MigrateToCold advances the split slot point between the cold and hot sections.
 // It moves the new finalized states from the hot section to the cold section.
 func (s *State) MigrateToCold(ctx context.Context, finalizedState *state.BeaconState, finalizedRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "stateGen.MigrateToCold")
+	defer span.End()
+
 	// Verify migration is sensible. The new finalized point must increase the current split slot, and
 	// on an epoch boundary for hot state summary scheme to work.
 	currentSplitSlot := s.splitInfo.slot
