@@ -8,11 +8,15 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 // This saves a pre finalized beacon state in the cold section of the DB. The returns an error
 // and not store anything if the state does not lie on an archive point boundary.
 func (s *State) saveColdState(ctx context.Context, blockRoot [32]byte, state *state.BeaconState) error {
+	ctx, span := trace.StartSpan(ctx, "stateGen.saveColdState")
+	defer span.End()
+
 	if state.Slot()%s.slotsPerArchivePoint != 0 {
 		return errors.New("unable to store non archive point state in cold")
 	}
@@ -40,6 +44,9 @@ func (s *State) saveColdState(ctx context.Context, blockRoot [32]byte, state *st
 // This loads the cold state by block root, it chooses whether to load from archive point (faster) or
 // somewhere between archive points (slower) since it requires replaying blocks.
 func (s *State) loadColdStateByRoot(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.loadColdStateByRoot")
+	defer span.End()
+
 	summary, err := s.beaconDB.ColdStateSummary(ctx, blockRoot)
 	if err != nil {
 		return nil, err
@@ -65,6 +72,9 @@ func (s *State) loadColdStateByArchivalPoint(ctx context.Context, archivePoint u
 // This loads a cold state by slot and block root which lies between the archive point.
 // This is a faster implementation with block root provided.
 func (s *State) loadColdIntermediateStateWithRoot(ctx context.Context, slot uint64, blockRoot [32]byte) (*state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.loadColdIntermediateStateWithRoot")
+	defer span.End()
+
 	// Load the archive point for lower side of the intermediate state.
 	lowArchivePointIdx := slot / s.slotsPerArchivePoint
 
@@ -86,6 +96,9 @@ func (s *State) loadColdIntermediateStateWithRoot(ctx context.Context, slot uint
 // This is a slower implementation given slot is the only argument. It require fetching
 // all the blocks between the archival points.
 func (s *State) loadColdIntermediateStateWithSlot(ctx context.Context, slot uint64) (*state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.loadColdIntermediateStateWithSlot")
+	defer span.End()
+
 	// Load the archive point for lower and high side of the intermediate state.
 	lowArchivePointIdx := slot / s.slotsPerArchivePoint
 	highArchivePointIdx := lowArchivePointIdx + 1
@@ -125,6 +138,9 @@ func (s *State) loadColdIntermediateStateWithSlot(ctx context.Context, slot uint
 // Given the archive index, this returns the archived cold state in the DB.
 // If the archived state does not exist in the state, it'll compute it and save it.
 func (s *State) loadArchivePointByIndex(ctx context.Context, archiveIndex uint64) (*state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.loadArchivePointByIndex")
+	defer span.End()
+
 	if s.beaconDB.HasArchivedPoint(ctx, archiveIndex) {
 		return s.beaconDB.ArchivedPointState(ctx, archiveIndex)
 	}
