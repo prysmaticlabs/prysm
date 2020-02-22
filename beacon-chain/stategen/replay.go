@@ -43,6 +43,9 @@ func (s *State) ReplayBlocks(ctx context.Context, state *state.BeaconState, sign
 // LoadBlocks loads the blocks between start slot and end slot by recursively fetching from end block root.
 // The Blocks are returned in slot-descending order.
 func (s *State) LoadBlocks(ctx context.Context, startSlot uint64, endSlot uint64, endBlockRoot [32]byte) ([]*ethpb.SignedBeaconBlock, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.LoadBlocks")
+	defer span.End()
+
 	filter := filters.NewFilter().SetStartSlot(startSlot).SetEndSlot(endSlot)
 	blocks, err := s.beaconDB.Blocks(ctx, filter)
 	if err != nil {
@@ -93,6 +96,9 @@ func (s *State) LoadBlocks(ctx context.Context, startSlot uint64, endSlot uint64
 
 // ComputeStateUpToSlot returns a processed state up to input target slot.
 func (s *State) ComputeStateUpToSlot(ctx context.Context, targetSlot uint64) (*state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.ComputeStateUpToSlot")
+	defer span.End()
+
 	lastBlockRoot, lastBlockSlot, err := s.getLastValidBlock(ctx, targetSlot)
 	if err != nil {
 		return nil, err
@@ -125,6 +131,9 @@ func (s *State) ComputeStateUpToSlot(ctx context.Context, targetSlot uint64) (*s
 // This finds the last valid block in DB from searching backwards starting at input slot,
 // it returns the slot and the root of the block.
 func (s *State) getLastValidBlock(ctx context.Context, slot uint64) ([32]byte, uint64, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.getLastValidBlock")
+	defer span.End()
+
 	filter := filters.NewFilter().SetStartSlot(0).SetEndSlot(slot)
 	// We know the epoch boundary root will be the last index using the filter.
 	rs, err := s.beaconDB.BlockRoots(ctx, filter)
@@ -147,6 +156,9 @@ func (s *State) getLastValidBlock(ctx context.Context, slot uint64) ([32]byte, u
 // This finds the last valid state in DB from searching backwards starting at input slot,
 // it returns the root of the block which used to produce the state.
 func (s *State) getLastValidState(ctx context.Context, slot uint64) ([32]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.getLastValidState")
+	defer span.End()
+
 	filter := filters.NewFilter().SetStartSlot(0).SetEndSlot(slot)
 	// We know the epoch boundary root will be the last index using the filter.
 	rs, err := s.beaconDB.BlockRoots(ctx, filter)
