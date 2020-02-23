@@ -70,3 +70,8 @@ func (p *AttCaches) DeleteUnaggregatedAttestation(att *ethpb.Attestation) error 
 
 	return nil
 }
+
+// UnaggregatedAttestationCount returns the number of unaggregated attestations key in the pool.
+func (p *AttCaches) UnaggregatedAttestationCount() int {
+	return p.unAggregatedAtt.ItemCount()
+}
