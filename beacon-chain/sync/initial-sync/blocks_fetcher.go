@@ -175,7 +175,7 @@ func (f *blocksFetcher) processFetchRequest(root []byte, finalizedEpoch, start, 
 		return nil, errors.WithStack(errors.New("no peers left to request blocks"))
 	}
 
-	// TODO account for skipped slots:
+	// TODO(4815): Account for skipped slots:
 	// Handle block large block ranges of skipped slots.
 	lastEmptyRequests := 0
 	start += count * uint64(lastEmptyRequests*len(peers))
@@ -257,9 +257,11 @@ func (f *blocksFetcher) processFetchRequest(root []byte, finalizedEpoch, start, 
 			return nil, err
 		case resp, ok := <-blocksChan:
 			if ok {
-				//  if this synchronization becomes a bottleneck:
-				//    think about immediately allocating space for all peers in unionRespBlocks,
-				//    and write without synchronization
+				// if this synchronization becomes a bottleneck:
+				// think about immediately allocating space for all peers in unionRespBlocks,
+				// and write without synchronization
+				// alternatively: we can limit how many peers are processing each request range
+				// and find good blocks range/peers ratio. Requests to different peer sets can be run concurrently.
 				unionRespBlocks = append(unionRespBlocks, resp...)
 			} else {
 				return unionRespBlocks, nil

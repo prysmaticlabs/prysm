@@ -150,7 +150,7 @@ func TestBlocksFetcher(t *testing.T) {
 
 				for {
 					select {
-					case <-time.After(5 * time.Second): // TODO: temporary safeguard, remove
+					case <-time.After(5 * time.Second): // TODO(4815): Temporary safeguard, remove
 						t.Fatal("timeout")
 					case resp, ok := <-fetcher.iter():
 						if !ok { // channel closed, aggregate
