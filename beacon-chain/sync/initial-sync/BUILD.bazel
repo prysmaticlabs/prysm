@@ -3,6 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "blocks_fetcher.go",
         "log.go",
         "round_robin.go",
         "service.go",
@@ -37,7 +38,10 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["round_robin_test.go"],
+    srcs = [
+        "blocks_fetcher_test.go",
+        "round_robin_test.go",
+    ],
     embed = [":go_default_library"],
     race = "on",
     tags = ["race_on"],
