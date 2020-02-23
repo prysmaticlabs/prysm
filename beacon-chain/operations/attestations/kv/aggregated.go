@@ -145,3 +145,8 @@ func (p *AttCaches) HasAggregatedAttestation(att *ethpb.Attestation) (bool, erro
 
 	return false, nil
 }
+
+// AggregatedAttestationCount returns the number of aggregated attestations key in the pool.
+func (p *AttCaches) AggregatedAttestationCount() int {
+	return p.aggregatedAtt.ItemCount()
+}
