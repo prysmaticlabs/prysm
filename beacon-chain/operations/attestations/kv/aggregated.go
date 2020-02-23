@@ -1,6 +1,8 @@
 package kv
 
 import (
+	"time"
+
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -97,7 +99,7 @@ func (p *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation data")
 	}
-	a, ok := p.aggregatedAtt.Get(string(r[:]))
+	a, expTime, ok := p.aggregatedAtt.GetWithExpiration(string(r[:]))
 	if !ok {
 		return nil
 	}
@@ -114,7 +116,8 @@ func (p *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
 	if len(filtered) == 0 {
 		p.aggregatedAtt.Delete(string(r[:]))
 	} else {
-		p.aggregatedAtt.Set(string(r[:]), filtered, cache.DefaultExpiration)
+		expDuration := time.Duration(expTime.Unix() - time.Now().Unix())
+		p.aggregatedAtt.Set(string(r[:]), filtered, expDuration * time.Second)
 	}
 
 	return nil
