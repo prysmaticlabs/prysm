@@ -28,7 +28,9 @@ func (s *Service) aggregateRoutine() {
 			if err := s.aggregateAttestations(ctx, attsToBeAggregated); err != nil {
 				log.WithError(err).Error("Could not aggregate attestation")
 			}
-			s.
+
+			// Update metrics for aggregated and unaggregated attestations count.
+			s.updateMetrics()
 		}
 	}
 }
