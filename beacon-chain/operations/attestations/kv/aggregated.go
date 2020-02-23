@@ -20,15 +20,16 @@ func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
 
-	var atts []*ethpb.Attestation
 	d, expTime, ok := p.aggregatedAtt.GetWithExpiration(string(r[:]))
+	// If we have not seen the attestation data before, store in in cache with
+	// the default expiration time out.
 	if !ok {
-		atts = []*ethpb.Attestation{att}
+		atts := []*ethpb.Attestation{att}
 		p.aggregatedAtt.Set(string(r[:]), atts, cache.DefaultExpiration)
 		return nil
 	}
 
-	atts, ok = d.([]*ethpb.Attestation)
+	atts, ok := d.([]*ethpb.Attestation)
 	if !ok {
 		return errors.New("cached value is not of type []*ethpb.Attestation")
 	}
@@ -38,12 +39,14 @@ func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
 		return err
 	}
 
+	// Delete attestation if the current time has passed the expiration time.
 	if time.Now().Unix() >= expTime.Unix() {
 		p.aggregatedAtt.Delete(string(r[:]))
 		return nil
 	}
+	// Reset expiration time given how much time has passed.
 	expDuration := time.Duration(expTime.Unix() - time.Now().Unix())
-	p.aggregatedAtt.Set(string(r[:]), atts, expDuration)
+	p.aggregatedAtt.Set(string(r[:]), atts, expDuration*time.Second)
 
 	return nil
 }
@@ -121,10 +124,12 @@ func (p *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
 	if len(filtered) == 0 {
 		p.aggregatedAtt.Delete(string(r[:]))
 	} else {
+		// Delete attestation if the current time has passed the expiration time.
 		if time.Now().Unix() >= expTime.Unix() {
 			p.aggregatedAtt.Delete(string(r[:]))
 			return nil
 		}
+		// Reset expiration time given how much time has passed.
 		expDuration := time.Duration(expTime.Unix() - time.Now().Unix())
 		p.aggregatedAtt.Set(string(r[:]), filtered, expDuration*time.Second)
 	}

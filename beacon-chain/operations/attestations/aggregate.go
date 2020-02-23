@@ -13,7 +13,7 @@ import (
 
 // Define time to aggregate the unaggregated attestations at 3 times per slot, this gives
 // enough confidence all the unaggregated attestations will be aggregated as aggregator requests.
-var timeToAggregate = time.Duration(params.BeaconConfig().SecondsPerSlot/3) * time.Second
+var timeToAggregate = time.Duration(params.BeaconConfig().SecondsPerSlot/2) * time.Second
 
 // This kicks off a routine to aggregate the unaggregated attestations from pool.
 func (s *Service) aggregateRoutine() {
@@ -24,8 +24,7 @@ func (s *Service) aggregateRoutine() {
 		case <-s.ctx.Done():
 			return
 		case <-ticker.C:
-			attsToBeAggregated := append(s.pool.UnaggregatedAttestations(), s.pool.AggregatedAttestations()...)
-			if err := s.aggregateAttestations(ctx, attsToBeAggregated); err != nil {
+			if err := s.aggregateAttestations(ctx, s.pool.UnaggregatedAttestations()); err != nil {
 				log.WithError(err).Error("Could not aggregate attestation")
 			}
 

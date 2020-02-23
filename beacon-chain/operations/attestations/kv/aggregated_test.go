@@ -81,7 +81,10 @@ func TestKV_Aggregated_SaveAndVerifyExpireTime(t *testing.T) {
 	if err := cache.SaveAggregatedAttestation(att2); err != nil {
 		t.Fatal(err)
 	}
-	newA, newExpTime, _ := cache.aggregatedAtt.GetWithExpiration(string(r[:]))
+	newA, newExpTime, ok := cache.aggregatedAtt.GetWithExpiration(string(r[:]))
+	if !ok {
+		t.Fatal("Did not save attestations")
+	}
 	if len(newA.([]*ethpb.Attestation)) != 2 {
 		t.Fatal("Did not delete attestations")
 	}

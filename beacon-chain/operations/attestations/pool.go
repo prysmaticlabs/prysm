@@ -1,6 +1,8 @@
 package attestations
 
 import (
+	"time"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations/kv"
 )
@@ -18,6 +20,7 @@ type Pool interface {
 	DeleteAggregatedAttestation(att *ethpb.Attestation) error
 	HasAggregatedAttestation(att *ethpb.Attestation) (bool, error)
 	AggregatedAttestationCount() int
+	AggregatedAttestationExpTime(r [32]byte) time.Time
 	// For unaggregated attestations.
 	SaveUnaggregatedAttestation(att *ethpb.Attestation) error
 	SaveUnaggregatedAttestations(atts []*ethpb.Attestation) error
