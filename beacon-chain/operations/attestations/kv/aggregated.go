@@ -3,7 +3,6 @@ package kv
 import (
 	"time"
 
-	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -21,7 +20,7 @@ func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
 	}
 
 	var atts []*ethpb.Attestation
-	d, ok := p.aggregatedAtt.Get(string(r[:]))
+	d, expTime, ok := p.aggregatedAtt.GetWithExpiration(string(r[:]))
 	if !ok {
 		atts = make([]*ethpb.Attestation, 0)
 	} else {
@@ -38,7 +37,11 @@ func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
 
 	// DefaultExpiration is set to what was given to New(). In this case
 	// it's one epoch.
-	p.aggregatedAtt.Set(string(r[:]), atts, cache.DefaultExpiration)
+	if time.Now().Unix() >= expTime.Unix() {
+		p.aggregatedAtt.Delete(string(r[:]))
+	}
+	expDuration := time.Duration(expTime.Unix() - time.Now().Unix())
+	p.aggregatedAtt.Set(string(r[:]), atts, expDuration)
 
 	return nil
 }
@@ -116,8 +119,11 @@ func (p *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
 	if len(filtered) == 0 {
 		p.aggregatedAtt.Delete(string(r[:]))
 	} else {
+		if time.Now().Unix() >= expTime.Unix() {
+			p.aggregatedAtt.Delete(string(r[:]))
+		}
 		expDuration := time.Duration(expTime.Unix() - time.Now().Unix())
-		p.aggregatedAtt.Set(string(r[:]), filtered, expDuration * time.Second)
+		p.aggregatedAtt.Set(string(r[:]), filtered, expDuration*time.Second)
 	}
 
 	return nil
