@@ -6,7 +6,6 @@ import (
 	"io"
 	"math/rand"
 	"sort"
-	"sync/atomic"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -59,9 +58,18 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	randGenerator := rand.New(rand.NewSource(time.Now().Unix()))
 	var lastEmptyRequests int
 	highestFinalizedSlot := helpers.StartSlot(s.highestFinalizedEpoch() + 1)
+
+	fetcher := newBlocksFetcher(&blocksFetcherConfig{
+		ctx:         ctx,
+		chain:       s.chain,
+		p2p:         s.p2p,
+		rateLimiter: s.blocksRateLimiter,
+	})
+	fetcher.start()
+
 	// Step 1 - Sync to end of finalized epoch.
 	for s.chain.HeadSlot() < highestFinalizedSlot {
-		root, finalizedEpoch, peers := s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(s.chain.HeadSlot()))
+		_, finalizedEpoch, peers := s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(s.chain.HeadSlot()))
 		if len(peers) == 0 {
 			log.Warn("No peers; waiting for reconnect")
 			time.Sleep(refreshTime)
@@ -78,123 +86,37 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			peers[i], peers[j] = peers[j], peers[i]
 		})
 
-		// request a range of blocks to be requested from multiple peers.
-		// Example:
-		//   - number of peers = 4
-		//   - range of block slots is 64...128
-		//   Four requests will be spread across the peers using step argument to distribute the load
-		//   i.e. the first peer is asked for block 64, 68, 72... while the second peer is asked for
-		//   65, 69, 73... and so on for other peers.
-		var request func(start uint64, step uint64, count uint64, peers []peer.ID, remainder int) ([]*eth.SignedBeaconBlock, error)
-		request = func(start uint64, step uint64, count uint64, peers []peer.ID, remainder int) ([]*eth.SignedBeaconBlock, error) {
-			if len(peers) == 0 {
-				return nil, errors.WithStack(errors.New("no peers left to request blocks"))
-			}
-			var p2pRequestCount int32
-			errChan := make(chan error)
-			blocksChan := make(chan []*eth.SignedBeaconBlock)
-
-			// Handle block large block ranges of skipped slots.
-			start += count * uint64(lastEmptyRequests*len(peers))
-			if count <= 1 {
-				step = 1
-			}
-
-			// Short circuit start far exceeding the highest finalized epoch in some infinite loop.
-			if start > highestFinalizedSlot {
-				return nil, errors.Errorf("attempted to ask for a start slot of %d which is greater than the next highest slot of %d", start, highestFinalizedSlot)
-			}
-
-			atomic.AddInt32(&p2pRequestCount, int32(len(peers)))
-			for i, pid := range peers {
-				if ctx.Err() != nil {
-					return nil, ctx.Err()
-				}
-				start := start + uint64(i)*step
-				step := step * uint64(len(peers))
-				count := mathutil.Min(count, (helpers.StartSlot(finalizedEpoch+1)-start)/step)
-				// If the count was divided by an odd number of peers, there will be some blocks
-				// missing from the first requests so we accommodate that scenario.
-				if i < remainder {
-					count++
-				}
-				// asking for no blocks may cause the client to hang. This should never happen and
-				// the peer may return an error anyway, but we'll ask for at least one block.
-				if count == 0 {
-					count = 1
-				}
-				req := &p2ppb.BeaconBlocksByRangeRequest{
-					HeadBlockRoot: root,
-					StartSlot:     start,
-					Count:         count,
-					Step:          step,
-				}
-
-				go func(i int, pid peer.ID) {
-					defer func() {
-						zeroIfIAmTheLast := atomic.AddInt32(&p2pRequestCount, -1)
-						if zeroIfIAmTheLast == 0 {
-							close(blocksChan)
-						}
-					}()
-
-					resp, err := s.requestBlocks(ctx, req, pid)
-					if err != nil {
-						// fail over to other peers by splitting this requests evenly across them.
-						ps := append(peers[:i], peers[i+1:]...)
-						log.WithError(err).WithField(
-							"remaining peers",
-							len(ps),
-						).WithField(
-							"peer",
-							pid.Pretty(),
-						).Debug("Request failed, trying to round robin with other peers")
-						if len(ps) == 0 {
-							errChan <- errors.WithStack(errors.New("no peers left to request blocks"))
-							return
-						}
-						resp, err = request(start, step, count/uint64(len(ps)) /*count*/, ps, int(count)%len(ps) /*remainder*/)
-						if err != nil {
-							errChan <- err
-							return
-						}
-					}
-					log.WithField("peer", pid).WithField("count", len(resp)).Debug("Received blocks")
-					blocksChan <- resp
-				}(i, pid)
-			}
-
-			var unionRespBlocks []*eth.SignedBeaconBlock
-			for {
-				select {
-				case err := <-errChan:
-					return nil, err
-				case resp, ok := <-blocksChan:
-					if ok {
-						//  if this synchronization becomes a bottleneck:
-						//    think about immediately allocating space for all peers in unionRespBlocks,
-						//    and write without synchronization
-						unionRespBlocks = append(unionRespBlocks, resp...)
-					} else {
-						return unionRespBlocks, nil
-					}
-				}
-			}
-		}
 		startBlock := s.chain.HeadSlot() + 1
 		skippedBlocks := blockBatchSize * uint64(lastEmptyRequests*len(peers))
 		if startBlock+skippedBlocks > helpers.StartSlot(finalizedEpoch+1) {
 			log.WithField("finalizedEpoch", finalizedEpoch).Debug("Requested block range is greater than the finalized epoch")
 			break
 		}
+		startBlock += skippedBlocks
 
-		blocks, err := request(
-			s.chain.HeadSlot()+1, // start
-			1,                    // step
-			blockBatchSize,       // count
-			peers,                // peers
-			0,                    // remainder
-		)
+		// Operations below are simple port of the existing functionality, where synchronization is assumed.
+		// This will be refactored and implemented w/i queue, once that component is ready.
+		request := func() ([]*eth.SignedBeaconBlock, error) {
+			select {
+			case <-time.After(60 * time.Second): // extra pre-caution
+				return nil, errors.New("it takes too long to receive data from fetcher, unblock")
+			case resp, ok := <-fetcher.iter(): // fetcher will stop when upstream ctx is closed
+				if !ok { // channel closed
+					return nil, errors.New("block fetcher is not running")
+				}
+				if resp.err != nil {
+					return nil, resp.err
+				}
+				return resp.blocks, nil
+			}
+		}
+
+		fetcher.scheduleRequest(&fetchRequestParams{
+			start: startBlock,
+			count: blockBatchSize,
+		})
+
+		blocks, err := request()
 		if err != nil {
 			log.WithError(err).Error("Round robing sync request failed")
 			continue
@@ -235,6 +157,8 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			lastEmptyRequests = 0
 		}
 	}
+
+	fetcher.stop() // manners
 
 	log.Debug("Synced to finalized epoch - now syncing blocks up to current head")
 

@@ -98,7 +98,7 @@ func (f *blocksFetcher) loop() {
 		select {
 		case <-f.ctx.Done():
 			// upstream context is done
-			f.stop()
+			return
 		case <-f.quit:
 			// terminating abort all operations
 			return
