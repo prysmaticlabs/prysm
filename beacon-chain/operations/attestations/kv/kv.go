@@ -23,12 +23,12 @@ func NewAttCaches() *AttCaches {
 	secsInEpoch := time.Duration(params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot)
 
 	// Create caches with default expiration time of one epoch and which
-	// purges expired items every other epoch.
+	// purges expired items every epoch.
 	pool := &AttCaches{
-		unAggregatedAtt: cache.New(secsInEpoch*time.Second, 2*secsInEpoch*time.Second),
-		aggregatedAtt:   cache.New(secsInEpoch*time.Second, 2*secsInEpoch*time.Second),
-		forkchoiceAtt:   cache.New(secsInEpoch*time.Second, 2*secsInEpoch*time.Second),
-		blockAtt:        cache.New(secsInEpoch*time.Second, 2*secsInEpoch*time.Second),
+		unAggregatedAtt: cache.New(secsInEpoch*time.Second, secsInEpoch*time.Second),
+		aggregatedAtt:   cache.New(secsInEpoch*time.Second, secsInEpoch*time.Second),
+		forkchoiceAtt:   cache.New(secsInEpoch*time.Second, secsInEpoch*time.Second),
+		blockAtt:        cache.New(secsInEpoch*time.Second, secsInEpoch*time.Second),
 	}
 
 	return pool
