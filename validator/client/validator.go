@@ -353,7 +353,10 @@ func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot uint64) {
 		params.BeaconConfig().DomainBeaconAttester,
 		params.BeaconConfig().DomainBeaconProposer,
 	} {
-		_, _ = v.domainData(ctx, helpers.SlotToEpoch(slot), d)
+		_, err := v.domainData(ctx, helpers.SlotToEpoch(slot), d)
+		if err != nil {
+			log.WithError(err).Errorf("Failed to update domain data for domain %v", d)
+		}
 	}
 }
 
