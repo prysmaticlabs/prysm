@@ -134,6 +134,8 @@ func (p *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
 		p.aggregatedAtt.Set(string(r[:]), filtered, expDuration*time.Second)
 	}
 
+	p.aggregatedAtt.DeleteExpired()
+
 	return nil
 }
 

@@ -24,7 +24,8 @@ func (s *Service) aggregateRoutine() {
 		case <-s.ctx.Done():
 			return
 		case <-ticker.C:
-			if err := s.aggregateAttestations(ctx, s.pool.UnaggregatedAttestations()); err != nil {
+			attsToBeAggregated := append(s.pool.UnaggregatedAttestations(), s.pool.AggregatedAttestations()...)
+			if err := s.aggregateAttestations(ctx, attsToBeAggregated); err != nil {
 				log.WithError(err).Error("Could not aggregate attestation")
 			}
 
