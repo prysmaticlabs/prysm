@@ -105,6 +105,66 @@ func (db *Store) IdxAttsForTarget(ctx context.Context, targetEpoch uint64) ([]*e
 	return idxAtts, err
 }
 
+// IndexedAttestations --
+func (db *Store) IndexedAttestations(ctx context.Context, targetEpoch uint64) ([]*ethpb.IndexedAttestation, error) {
+	ctx, span := trace.StartSpan(ctx, "SlasherDB.IndexedAttestations")
+	defer span.End()
+	var idxAtts []*ethpb.IndexedAttestation
+	key := bytesutil.Bytes8(targetEpoch)
+	err := db.view(func(tx *bolt.Tx) error {
+		rootsBkt := tx.Bucket(indexedAttestationsRootsByTargetBucket)
+		attRoots := rootsBkt.Get(key)
+		splitRoots := make([][]byte, 0)
+		for i := 0; i < len(attRoots); i += 32 {
+			splitRoots = append(splitRoots, attRoots[i:i+32])
+		}
+		attsBkt := tx.Bucket(indexedAttestationsBucket)
+		for i := 0; i < len(splitRoots); i++ {
+			enc := attsBkt.Get(splitRoots[i])
+			idxAtt, err := unmarshalIdxAtt(ctx, enc)
+			if err != nil {
+				return err
+			}
+			idxAtts = append(idxAtts, idxAtt)
+		}
+		return nil
+	})
+	return idxAtts, err
+}
+
+// SaveIndexedAttestations --
+func (db *Store) SaveIndexedAttestations(ctx context.Context, atts []*ethpb.IndexedAttestation) error {
+	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveIndexedAttestations")
+	defer span.End()
+	encoded := make([][]byte, len(atts))
+	encodedRoots := make([][]byte, len(atts))
+	for i := 0; i < len(encoded); i++ {
+		enc, err := proto.Marshal(atts[i])
+		if err != nil {
+			return errors.Wrap(err, "failed to marshal")
+		}
+		encoded[i] = enc
+		root := hashutil.Hash(enc)
+		encodedRoots[i] = root[:]
+	}
+	return db.update(func(tx *bolt.Tx) error {
+		rootsBkt := tx.Bucket(indexedAttestationsRootsByTargetBucket)
+		attsBkt := tx.Bucket(indexedAttestationsBucket)
+
+		for i := 0; i < len(atts); i++ {
+			targetEpochKey := bytesutil.Bytes8(atts[i].Data.Target.Epoch)
+			attRoots := rootsBkt.Get(targetEpochKey)
+			if err := rootsBkt.Put(targetEpochKey, append(attRoots, encodedRoots[i]...)); err != nil {
+				return err
+			}
+			if err := attsBkt.Put(encodedRoots[i], encoded[i]); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 // LatestIndexedAttestationsTargetEpoch returns latest target epoch in db
 // returns 0 if there is no indexed attestations in db.
 func (db *Store) LatestIndexedAttestationsTargetEpoch(ctx context.Context) (uint64, error) {
