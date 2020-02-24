@@ -135,9 +135,9 @@ func (v *ValidatorService) Start() {
 
 	v.conn = conn
 	cache, err := ristretto.NewCache(&ristretto.Config{
-		NumCounters: 1000,    // number of keys to track frequency of (1M).
-		MaxCost:     1 << 22, // maximum cost of cache (3MB).
-		BufferItems: 64, // number of keys per Get buffer.
+		NumCounters: 1280, // number of keys to track.
+		MaxCost:     128,  // maximum cost of cache, 1 item = 1 cost.
+		BufferItems: 64,   // number of keys per Get buffer.
 	})
 	if err != nil {
 		panic(err)
