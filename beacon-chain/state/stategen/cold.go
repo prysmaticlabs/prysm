@@ -3,7 +3,6 @@ package stategen
 import (
 	"context"
 	"encoding/hex"
-	"errors"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -18,11 +17,7 @@ func (s *State) saveColdState(ctx context.Context, blockRoot [32]byte, state *st
 	defer span.End()
 
 	if state.Slot()%s.slotsPerArchivePoint != 0 {
-		return errors.New("unable to store non archive point state in cold")
-	}
-
-	if err := s.beaconDB.SaveState(ctx, state, blockRoot); err != nil {
-		return err
+		return errNonArchivedPoint
 	}
 
 	archivePointIndex := state.Slot() / s.slotsPerArchivePoint
@@ -42,7 +37,8 @@ func (s *State) saveColdState(ctx context.Context, blockRoot [32]byte, state *st
 }
 
 // This loads the cold state by block root, it chooses whether to load from archive point (faster) or
-// somewhere between archive points (slower) since it requires replaying blocks.
+// somewhere between archive points (slower) since it requires replaying blocks. This is more efficient
+// than load cold state by slot.
 func (s *State) loadColdStateByRoot(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.loadColdStateByRoot")
 	defer span.End()
@@ -51,12 +47,19 @@ func (s *State) loadColdStateByRoot(ctx context.Context, blockRoot [32]byte) (*s
 	if err != nil {
 		return nil, err
 	}
+	if summary == nil {
+		return nil, errUnknownColdSummary
+	}
 
+	// Use the archived point state if the slot lies on top of the archived point.
 	if summary.Slot%s.slotsPerArchivePoint == 0 {
 		archivePoint := summary.Slot / s.slotsPerArchivePoint
 		s, err := s.loadColdStateByArchivalPoint(ctx, archivePoint)
 		if err != nil {
 			return nil, err
+		}
+		if s == nil {
+			return nil, errUnknownArchivedState
 		}
 		return s, nil
 	}
@@ -64,13 +67,13 @@ func (s *State) loadColdStateByRoot(ctx context.Context, blockRoot [32]byte) (*s
 	return s.loadColdIntermediateStateWithRoot(ctx, summary.Slot, blockRoot)
 }
 
-// This loads the cold state for the certain archive point.
+// This loads the cold state for the input archived point.
 func (s *State) loadColdStateByArchivalPoint(ctx context.Context, archivePoint uint64) (*state.BeaconState, error) {
 	return s.beaconDB.ArchivedPointState(ctx, archivePoint)
 }
 
 // This loads a cold state by slot and block root which lies between the archive point.
-// This is a faster implementation with block root provided.
+// This is a faster implementation given the block root is provided.
 func (s *State) loadColdIntermediateStateWithRoot(ctx context.Context, slot uint64, blockRoot [32]byte) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.loadColdIntermediateStateWithRoot")
 	defer span.End()
@@ -82,6 +85,9 @@ func (s *State) loadColdIntermediateStateWithRoot(ctx context.Context, slot uint
 	lowArchivePointState, err := s.loadArchivePointByIndex(ctx, lowArchivePointIdx)
 	if err != nil {
 		return nil, err
+	}
+	if lowArchivePointState == nil {
+		return nil, errUnknownArchivedState
 	}
 
 	replayBlks, err := s.LoadBlocks(ctx, lowArchivePointState.Slot()+1, slot, blockRoot)
@@ -108,6 +114,10 @@ func (s *State) loadColdIntermediateStateWithSlot(ctx context.Context, slot uint
 	if err != nil {
 		return nil, err
 	}
+	if lowArchivePointState == nil {
+		return nil, errUnknownArchivedState
+	}
+
 
 	// If the slot of the high archive point lies outside of the freezer cut off, use the split state
 	// as the upper archive point.
@@ -120,11 +130,14 @@ func (s *State) loadColdIntermediateStateWithSlot(ctx context.Context, slot uint
 	} else {
 		log.Info("Debugging: entering cold state case 2")
 		highArchivePointRoot = s.beaconDB.ArchivedPointRoot(ctx, highArchivePointIdx)
-		coldSummary, err := s.beaconDB.ColdStateSummary(ctx, highArchivePointRoot)
+		summary, err := s.beaconDB.ColdStateSummary(ctx, highArchivePointRoot)
 		if err != nil {
 			return nil, err
 		}
-		highArchivePointSlot = coldSummary.Slot
+		if summary == nil {
+			return nil, errUnknownColdSummary
+		}
+		highArchivePointSlot = summary.Slot
 	}
 
 	replayBlks, err := s.LoadBlocks(ctx, lowArchivePointState.Slot()+1, highArchivePointSlot, highArchivePointRoot)
@@ -149,6 +162,9 @@ func (s *State) loadArchivePointByIndex(ctx context.Context, archiveIndex uint64
 	archivedState, err := s.ComputeStateUpToSlot(ctx, archivedSlot)
 	if err != nil {
 		return nil, err
+	}
+	if archivedState == nil {
+		return nil, errUnknownArchivedState
 	}
 	lastRoot, _, err := s.getLastValidBlock(ctx, archivedSlot)
 	if err != nil {
