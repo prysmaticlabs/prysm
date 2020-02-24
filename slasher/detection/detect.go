@@ -19,12 +19,12 @@ func (ds *Service) detectAttesterSlashings(
 		if err != nil {
 			return nil, errors.Wrap(err, "could not detect surround votes on attestation")
 		}
-		doubleAttSlashings, err := ds.detectSurroundVotes(ctx, valIdx, att)
+		doubleAttSlashings, err := ds.detectDoubleVotes(ctx, att)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not detect surround votes on attestation")
+			return nil, errors.Wrap(err, "could not detect double votes on attestation")
 		}
-		slashings = append(slashings, surroundedAttSlashings...)
-		slashings = append(slashings, doubleAttSlashings...)
+		newSlashings := append(surroundedAttSlashings, doubleAttSlashings...)
+		slashings = append(slashings, newSlashings...)
 	}
 	return slashings, nil
 }
@@ -35,7 +35,7 @@ func (ds *Service) detectDoubleVotes(
 	ctx context.Context,
 	att *ethpb.IndexedAttestation,
 ) ([]*ethpb.AttesterSlashing, error) {
-	return nil, errors.New("unimplemented")
+	return nil, nil
 }
 
 // detectSurroundVotes --
@@ -52,8 +52,8 @@ func (ds *Service) detectSurroundVotes(
 		incomingAtt.Data.Target.Epoch,
 	)
 	// TODO: Do we detect and then update...?
-	if err := ds.minMaxSpanDetector.UpdateSpans(ctx, incomingAtt); err != nil {
-		return nil, err
+	if updateErr := ds.minMaxSpanDetector.UpdateSpans(ctx, incomingAtt); updateErr != nil {
+		return nil, updateErr
 	}
 	if err != nil {
 		return nil, err

@@ -111,18 +111,18 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 	// slasher DB up to the current beacon node's head epoch we retrieved via gRPC.
 	// If no data was persisted from previous sessions, we request data starting from
 	// the genesis epoch.
-	for i := latestStoredEpoch; i < currentChainHead.HeadEpoch; i++ {
-		indexedAtts, err := ds.beaconClient.RequestHistoricalAttestations(ctx, i /* epoch */)
+	for epoch := latestStoredEpoch; epoch < currentChainHead.HeadEpoch; epoch++ {
+		indexedAtts, err := ds.beaconClient.RequestHistoricalAttestations(ctx, epoch)
 		if err != nil {
-			log.WithError(err).Errorf("Could not fetch attestations for epoch: %d", i)
+			log.WithError(err).Errorf("Could not fetch attestations for epoch: %d", epoch)
 		}
 		log.Debugf(
 			"Running slashing detection on %d attestations in epoch %d...",
 			len(indexedAtts),
-			i,
+			epoch,
 		)
-		for i := 0; i < len(indexedAtts); i++ {
-			slashings, err := ds.detectAttesterSlashings(ctx, indexedAtts[i])
+		for _, att := range indexedAtts {
+			slashings, err := ds.detectAttesterSlashings(ctx, att)
 			if err != nil {
 				log.WithError(err).Error("Could not detect attester slashings")
 				continue
