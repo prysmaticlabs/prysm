@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	transition "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -21,7 +22,7 @@ func (s *State) ReplayBlocks(ctx context.Context, state *state.BeaconState, sign
 	// The input block list is sorted in decreasing slots order.
 	if len(signed) > 0 {
 		for i := len(signed) - 1; i >= 0; i-- {
-			if state.Slot() == targetSlot {
+			if state.Slot() >= targetSlot {
 				break
 			}
 			state, err = transition.ExecuteStateTransitionNoVerifyAttSigs(ctx, state, signed[i])
@@ -32,9 +33,11 @@ func (s *State) ReplayBlocks(ctx context.Context, state *state.BeaconState, sign
 	}
 
 	// If there is skip slots at the end.
-	state, err = transition.ProcessSlots(ctx, state, targetSlot)
-	if err != nil {
-		return nil, err
+	if targetSlot > state.Slot() {
+		state, err = transition.ProcessSlots(ctx, state, targetSlot)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return state, nil
@@ -99,6 +102,11 @@ func (s *State) ComputeStateUpToSlot(ctx context.Context, targetSlot uint64) (*s
 	ctx, span := trace.StartSpan(ctx, "stateGen.ComputeStateUpToSlot")
 	defer span.End()
 
+	// Handle the genesis case where the target slot is 0.
+	if targetSlot == 0 {
+		return s.beaconDB.GenesisState(ctx)
+	}
+
 	lastBlockRoot, lastBlockSlot, err := s.getLastValidBlock(ctx, targetSlot)
 	if err != nil {
 		return nil, err
@@ -136,6 +144,16 @@ func (s *State) ComputeStateUpToSlot(ctx context.Context, targetSlot uint64) (*s
 func (s *State) getLastValidBlock(ctx context.Context, slot uint64) ([32]byte, uint64, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.getLastValidBlock")
 	defer span.End()
+
+	// Handle the genesis case where the target slot is 0.
+	if slot == 0 {
+		b, err := s.beaconDB.GenesisBlock(ctx)
+		if err != nil {
+			return [32]byte{}, 0, err
+		}
+		r, err := ssz.HashTreeRoot(b.Block)
+		return r, 0, nil
+	}
 
 	filter := filters.NewFilter().SetStartSlot(0).SetEndSlot(slot)
 	// We know the epoch boundary root will be the last index using the filter.
