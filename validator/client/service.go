@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"time"
 
 	"github.com/dgraph-io/ristretto"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -18,7 +17,6 @@ import (
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/metadata"
 )
 
 var log = logrus.WithField("prefix", "validator")
@@ -113,17 +111,7 @@ func (v *ValidatorService) Start() {
 			grpc_opentracing.UnaryClientInterceptor(),
 			grpc_prometheus.UnaryClientInterceptor,
 			grpc_retry.UnaryClientInterceptor(),
-			func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-				var header metadata.MD
-				opts = append(
-					opts,
-					grpc.Header(&header),
-				)
-				start := time.Now()
-				err := invoker(ctx, method, req, reply, cc, opts...)
-				log.WithField("backend", header["x-backend"]).WithField("method", method).WithField("duration", time.Now().Sub(start)).Debug("gRPC request finished.")
-				return err
-			},
+			logDebugRequestInfoUnaryInterceptor,
 		)),
 	}
 	conn, err := grpc.DialContext(v.ctx, v.endpoint, opts...)

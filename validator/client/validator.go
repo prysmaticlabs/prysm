@@ -13,12 +13,14 @@ import (
 	"time"
 
 	"github.com/dgraph-io/ristretto"
+	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -337,7 +339,15 @@ func (v *validator) isAggregator(ctx context.Context, committee []uint64, slot u
 	return binary.LittleEndian.Uint64(b[:8])%modulo == 0, nil
 }
 
+// UpdateDomainDataCaches by making calls for all of the possible domain data. These can change when
+// the fork version changes which can happen once per epoch. Although changing for the fork version
+// is very rare, a validator should check these data every epoch to be sure the validator is
+// participating on the correct fork version.
 func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot uint64) {
+	if !featureconfig.Get().EnableDomainDataCache {
+		return
+	}
+
 	for _, d := range [][]byte{
 		params.BeaconConfig().DomainRandao,
 		params.BeaconConfig().DomainBeaconAttester,
@@ -357,8 +367,11 @@ func (v *validator) domainData(ctx context.Context, epoch uint64, domain []byte)
 	}
 
 	key := strings.Join([]string{strconv.FormatUint(req.Epoch, 10), hex.EncodeToString(req.Domain)}, ",")
-	if val, ok := v.domainDataCache.Get(key); ok {
-		return val.(*ethpb.DomainResponse), nil
+
+	if featureconfig.Get().EnableDomainDataCache {
+		if val, ok := v.domainDataCache.Get(key); ok {
+			return proto.Clone(val.(proto.Message)).(*ethpb.DomainResponse), nil
+		}
 	}
 
 	res, err := v.validatorClient.DomainData(ctx, req)
@@ -366,7 +379,9 @@ func (v *validator) domainData(ctx context.Context, epoch uint64, domain []byte)
 		return nil, err
 	}
 
-	v.domainDataCache.Set(key, res, 1)
+	if featureconfig.Get().EnableDomainDataCache {
+		v.domainDataCache.Set(key, proto.Clone(res), 1)
+	}
 
 	return res, nil
 }
