@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"testing"
 
+	uint128 "github.com/cockroachdb/cockroach/pkg/util/uint128"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -59,7 +60,7 @@ func TestUnmarshalUint32(t *testing.T) {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			actual, err := UnmarshalUint32(tt.in)
 			if err != nil {
-				t.Error("UnmarshalUint16 returned error", err)
+				t.Error("UnmarshalUint32 returned error", err)
 			}
 			assert.Equal(t, tt.expected, actual)
 		})
@@ -86,3 +87,35 @@ func TestUnmarshalUint64(t *testing.T) {
 		})
 	}
 }
+
+func TestUnmarshalUint128(t *testing.T) {
+	var tests = []struct {
+		in []byte
+		expected uint128.Uint128
+	}{
+		{
+			in: []byte{8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			expected: uint128.Uint128{8, 0},
+		},
+		{
+				in: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				expected: uint128.Uint128{0, 0},
+		},
+		{
+					in: []byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+					expected: uint128.Uint128{Hi: 18446744073709551615, Lo: 18446744073709551615},
+		},
+	}
+
+	for i, tt := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			actual, err := UnmarshalUint128(tt.in)
+			if err != nil {
+				t.Error("UnmarshalUint128 returned error", err)
+			}
+			assert.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
+

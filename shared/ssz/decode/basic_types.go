@@ -3,6 +3,8 @@ package decode
 import (
 	"encoding/binary"
 	"errors"
+
+	uint128 "github.com/cockroachdb/cockroach/pkg/util/uint128"
 )
 
 // TODO work on error messages
@@ -33,6 +35,17 @@ func UnmarshalUint64(in []byte) (uint64, error) {
 	}
 
 	return binary.LittleEndian.Uint64(in), nil
+}
+
+func UnmarshalUint128(in []byte) (uint128.Uint128, error) { // TODO i might be unmarshaling it in the wrong order
+	if len(in) != 16 {
+		return uint128.Uint128{}, errors.New("length other than 16 not allowed")
+	}
+
+	hi := binary.LittleEndian.Uint64(in[:8])
+	lo := binary.LittleEndian.Uint64(in[8:])
+
+	return uint128.Uint128{hi, lo}, nil
 }
 
 func UnmarshalBoolean(in byte) (bool, error) { // TODO is this necessary?

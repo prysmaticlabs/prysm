@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/cockroachdb/cockroach/pkg/util/uint128"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -74,3 +75,31 @@ func TestMarshalUint64(t *testing.T) {
 		})
 	}
 }
+
+func TestMarshalUint128(t *testing.T) {
+	var tests = []struct {
+		in uint128.Uint128
+		expected []byte
+	}{
+		{
+			in: uint128.Uint128{8, 0},
+			expected: []byte{8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		},
+		{
+			in: uint128.Uint128{0, 0},
+			expected: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		},
+		{
+			in: uint128.Uint128{18446744073709551615, 18446744073709551615},
+			expected: []byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+		},
+	}
+
+	for i, tt := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			assert.Equal(t, tt.expected, MarshalUint128(tt.in))
+		})
+	}
+}
+
+
