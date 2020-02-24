@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -123,20 +124,18 @@ func (s *State) loadColdIntermediateStateWithSlot(ctx context.Context, slot uint
 	var highArchivePointRoot [32]byte
 	highArchivePointSlot := highArchivePointIdx * s.slotsPerArchivePoint
 	if highArchivePointSlot >= s.splitInfo.slot {
-		log.Info("Debugging: entering cold state case 1")
 		highArchivePointRoot = s.splitInfo.root
 		highArchivePointSlot = s.splitInfo.slot
 	} else {
-		log.Info("Debugging: entering cold state case 2")
+		if _, err := s.loadArchivePointByIndex(ctx, highArchivePointSlot); err != nil {
+			return nil, err
+		}
 		highArchivePointRoot = s.beaconDB.ArchivedPointRoot(ctx, highArchivePointIdx)
-		summary, err := s.beaconDB.ColdStateSummary(ctx, highArchivePointRoot)
+		slot, err := s.loadColdStateSlot(ctx, highArchivePointRoot)
 		if err != nil {
 			return nil, err
 		}
-		if summary == nil {
-			return nil, errUnknownColdSummary
-		}
-		highArchivePointSlot = summary.Slot
+		highArchivePointSlot = slot
 	}
 
 	replayBlks, err := s.LoadBlocks(ctx, lowArchivePointState.Slot()+1, highArchivePointSlot, highArchivePointRoot)
@@ -152,7 +151,6 @@ func (s *State) loadColdIntermediateStateWithSlot(ctx context.Context, slot uint
 func (s *State) loadArchivePointByIndex(ctx context.Context, archiveIndex uint64) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.loadArchivePointByIndex")
 	defer span.End()
-
 	if s.beaconDB.HasArchivedPoint(ctx, archiveIndex) {
 		return s.beaconDB.ArchivedPointState(ctx, archiveIndex)
 	}
@@ -178,4 +176,26 @@ func (s *State) loadArchivePointByIndex(ctx context.Context, archiveIndex uint64
 	}
 
 	return archivedState, nil
+}
+
+// Given the block root, this returns the slot of the block root using cold state summary look up in DB.
+// If cold state summary in DB is empty, this will save to the DB.
+func (s *State) loadColdStateSlot(ctx context.Context, blockRoot [32]byte) (uint64, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.loadColdStateSlot")
+	defer span.End()
+
+	if s.beaconDB.HasColdStateSummary(ctx, blockRoot) {
+		summary, err := s.beaconDB.ColdStateSummary(ctx, blockRoot)
+		return summary.Slot, err
+	}
+
+	// Retry with DB using block bucket.
+	b, err := s.beaconDB.Block(ctx, blockRoot)
+	if err != nil {
+		return 0, err
+	}
+	if err := s.beaconDB.SaveColdStateSummary(ctx, blockRoot, &pb.ColdStateSummary{Slot: b.Block.Slot}); err != nil {
+		return 0, err
+	}
+	return b.Block.Slot, nil
 }
