@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 
+	"github.com/dgraph-io/ristretto"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -110,6 +111,7 @@ func (v *ValidatorService) Start() {
 			grpc_opentracing.UnaryClientInterceptor(),
 			grpc_prometheus.UnaryClientInterceptor,
 			grpc_retry.UnaryClientInterceptor(),
+			logDebugRequestInfoUnaryInterceptor,
 		)),
 	}
 	conn, err := grpc.DialContext(v.ctx, v.endpoint, opts...)
@@ -132,6 +134,15 @@ func (v *ValidatorService) Start() {
 	}
 
 	v.conn = conn
+	cache, err := ristretto.NewCache(&ristretto.Config{
+		NumCounters: 1280, // number of keys to track.
+		MaxCost:     128,  // maximum cost of cache, 1 item = 1 cost.
+		BufferItems: 64,   // number of keys per Get buffer.
+	})
+	if err != nil {
+		panic(err)
+	}
+
 	v.validator = &validator{
 		db:                   valDB,
 		validatorClient:      ethpb.NewBeaconNodeValidatorClient(v.conn),
@@ -144,6 +155,7 @@ func (v *ValidatorService) Start() {
 		emitAccountMetrics:   v.emitAccountMetrics,
 		prevBalance:          make(map[[48]byte]uint64),
 		attLogs:              make(map[[32]byte]*attSubmitted),
+		domainDataCache:      cache,
 	}
 	go run(v.ctx, v.validator)
 }

@@ -172,10 +172,8 @@ func (v *validator) ProposeExit(ctx context.Context, exit *ethpb.VoluntaryExit) 
 
 // Sign randao reveal with randao domain and private key.
 func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch uint64) ([]byte, error) {
-	domain, err := v.validatorClient.DomainData(ctx, &ethpb.DomainRequest{
-		Epoch:  epoch,
-		Domain: params.BeaconConfig().DomainRandao,
-	})
+	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainRandao)
+
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get domain data")
 	}
@@ -190,10 +188,7 @@ func (v *validator) signRandaoReveal(ctx context.Context, pubKey [48]byte, epoch
 
 // Sign block with proposer domain and private key.
 func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64, b *ethpb.BeaconBlock) ([]byte, error) {
-	domain, err := v.validatorClient.DomainData(ctx, &ethpb.DomainRequest{
-		Epoch:  epoch,
-		Domain: params.BeaconConfig().DomainBeaconProposer,
-	})
+	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainBeaconProposer)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get domain data")
 	}
