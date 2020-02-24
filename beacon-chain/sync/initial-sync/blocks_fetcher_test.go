@@ -14,56 +14,28 @@ import (
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/sirupsen/logrus"
 )
 
 func TestBlocksFetcher(t *testing.T) {
 	tests := []struct {
 		name               string
-		currentSlot        uint64
 		expectedBlockSlots []uint64
 		peers              []*peerData
-		requestParams      []*fetchRequestParams
+		requests           []*fetchRequestParams
 	}{
-		//{
-		//	name:               "Single peer with all blocks",
-		//	currentSlot:        131,
-		//	expectedBlockSlots: makeSequence(1, 131),
-		//	peers: []*peerData{
-		//		{
-		//			blocks:         makeSequence(1, 131),
-		//			finalizedEpoch: 1,
-		//			headSlot:       131,
-		//		},
-		//	},
-		//},
 		{
-			name:               "Multiple peers with all blocks",
-			currentSlot:        131,
-			expectedBlockSlots: makeSequence(1, 131),
+			name:               "Single peer with all blocks",
+			expectedBlockSlots: makeSequence(1, 128), // up to 4th epoch
 			peers: []*peerData{
 				{
 					blocks:         makeSequence(1, 131),
-					finalizedEpoch: 2,
-					headSlot:       131,
-				},
-				{
-					blocks:         makeSequence(1, 131),
-					finalizedEpoch: 2,
-					headSlot:       131,
-				},
-				{
-					blocks:         makeSequence(1, 131),
-					finalizedEpoch: 1,
-					headSlot:       131,
-				},
-				{
-					blocks:         makeSequence(1, 131),
-					finalizedEpoch: 1,
+					finalizedEpoch: 3,
 					headSlot:       131,
 				},
 			},
-			requestParams: []*fetchRequestParams{
+			requests: []*fetchRequestParams{
 				{
 					start: 1,
 					count: blockBatchSize,
@@ -72,30 +44,165 @@ func TestBlocksFetcher(t *testing.T) {
 					start: blockBatchSize + 1,
 					count: blockBatchSize,
 				},
+				{
+					start: 2*blockBatchSize + 1,
+					count: blockBatchSize,
+				},
 			},
 		},
-		//{
-		//	name:               "Multiple peers with many skipped slots",
-		//	currentSlot:        640, // 10 epochs
-		//	expectedBlockSlots: append(makeSequence(1, 64), makeSequence(500, 640)...),
-		//	peers: []*peerData{
-		//		{
-		//			blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
-		//			finalizedEpoch: 18,
-		//			headSlot:       640,
-		//		},
-		//		{
-		//			blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
-		//			finalizedEpoch: 18,
-		//			headSlot:       640,
-		//		},
-		//		{
-		//			blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
-		//			finalizedEpoch: 18,
-		//			headSlot:       640,
-		//		},
-		//	},
-		//},
+		{
+			name:               "Single peer with all blocks (many small requests)",
+			expectedBlockSlots: makeSequence(1, 128), // up to 4th epoch
+			peers: []*peerData{
+				{
+					blocks:         makeSequence(1, 131),
+					finalizedEpoch: 3,
+					headSlot:       131,
+				},
+			},
+			requests: []*fetchRequestParams{
+				{
+					start: 1,
+					count: blockBatchSize / 2,
+				},
+				{
+					start: blockBatchSize/2 + 1,
+					count: blockBatchSize / 2,
+				},
+				{
+					start: 2*blockBatchSize/2 + 1,
+					count: blockBatchSize / 2,
+				},
+				{
+					start: 3*blockBatchSize/2 + 1,
+					count: blockBatchSize / 2,
+				},
+				{
+					start: 4*blockBatchSize/2 + 1,
+					count: blockBatchSize / 2,
+				},
+			},
+		},
+		{
+			name:               "Multiple peers with all blocks",
+			expectedBlockSlots: makeSequence(1, 128), // up to 4th epoch
+			peers: []*peerData{
+				{
+					blocks:         makeSequence(1, 131),
+					finalizedEpoch: 3,
+					headSlot:       131,
+				},
+				{
+					blocks:         makeSequence(1, 131),
+					finalizedEpoch: 3,
+					headSlot:       131,
+				},
+				{
+					blocks:         makeSequence(1, 131),
+					finalizedEpoch: 3,
+					headSlot:       131,
+				},
+				{
+					blocks:         makeSequence(1, 131),
+					finalizedEpoch: 3,
+					headSlot:       131,
+				},
+				{
+					blocks:         makeSequence(1, 131),
+					finalizedEpoch: 3,
+					headSlot:       131,
+				},
+			},
+			requests: []*fetchRequestParams{
+				{
+					start: 1,
+					count: blockBatchSize,
+				},
+				{
+					start: blockBatchSize + 1,
+					count: blockBatchSize,
+				},
+				{
+					start: 2*blockBatchSize + 1,
+					count: blockBatchSize,
+				},
+			},
+		},
+		{
+			name:               "Multiple peers with all blocks (count boundaries)",
+			expectedBlockSlots: append(makeSequence(1, 32), makeSequence(92, 105)...),
+			peers: []*peerData{
+				{
+					blocks:         append(makeSequence(1, 64), makeSequence(92, 200)...),
+					finalizedEpoch: 6,
+					headSlot:       200,
+				},
+				{
+					blocks:         append(makeSequence(1, 64), makeSequence(92, 200)...),
+					finalizedEpoch: 6,
+					headSlot:       200,
+				},
+				{
+					blocks:         append(makeSequence(1, 64), makeSequence(92, 200)...),
+					finalizedEpoch: 6,
+					headSlot:       200,
+				},
+			},
+			requests: []*fetchRequestParams{
+				{
+					start: 1,
+					count: blockBatchSize / 2,
+				},
+				{
+					start: 90,
+					count: 15, // [90, 105), since data available from 92, expected output: 92, 93, ..., 105
+				},
+			},
+		},
+		{
+			name: "Multiple peers with skipped slots",
+			// finalizedEpoch(18).slot = 608
+			expectedBlockSlots: append(makeSequence(1, 64), makeSequence(500, 608)...), // up to 18th epoch
+			peers: []*peerData{
+				{
+					blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
+					finalizedEpoch: 18,
+					headSlot:       640,
+				},
+				{
+					blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
+					finalizedEpoch: 18,
+					headSlot:       640,
+				},
+				{
+					blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
+					finalizedEpoch: 18,
+					headSlot:       640,
+				},
+			},
+			requests: []*fetchRequestParams{
+				{
+					start: 1,
+					count: blockBatchSize,
+				},
+				{
+					start: blockBatchSize + 1,
+					count: blockBatchSize,
+				},
+				{
+					start: 2*blockBatchSize + 1,
+					count: blockBatchSize,
+				},
+				{
+					start: 400,
+					count: 150, // [400, 550), with blocks availability starting at 500. So, 500, 501, ..., 550
+				},
+				{
+					start: 551,
+					count: 200,
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -137,7 +244,7 @@ func TestBlocksFetcher(t *testing.T) {
 			fetcher.start()
 
 			var wg sync.WaitGroup
-			wg.Add(len(tt.requestParams)) // how many block requests we are going to make
+			wg.Add(len(tt.requests)) // how many block requests we are going to make
 			go func() {
 				wg.Wait()
 				log.Debug("Stopping fetcher")
@@ -161,6 +268,11 @@ func TestBlocksFetcher(t *testing.T) {
 							log.WithError(resp.err).Debug("Block fetcher returned error")
 						} else {
 							unionRespBlocks = append(unionRespBlocks, resp.blocks...)
+							if len(resp.blocks) == 0 {
+								log.WithFields(logrus.Fields{
+									"params": resp.params,
+								}).Debug("Received empty slot")
+							}
 						}
 
 						wg.Done()
@@ -168,8 +280,10 @@ func TestBlocksFetcher(t *testing.T) {
 				}
 			}
 
-			for _, requestParams := range tt.requestParams {
+			maxExpectedBlocks := uint64(0)
+			for _, requestParams := range tt.requests {
 				fetcher.scheduleRequest(requestParams)
+				maxExpectedBlocks += requestParams.count
 			}
 
 			blocks, err := processFetchedBlocks()
@@ -190,6 +304,20 @@ func TestBlocksFetcher(t *testing.T) {
 				"blocksLen": len(blocks),
 				"slots":     slots,
 			}).Debug("Finished block fetching")
+
+			if len(blocks) > int(maxExpectedBlocks) {
+				t.Errorf("Too many blocks returned. Wanted %d got %d", maxExpectedBlocks, len(blocks))
+			}
+			if len(blocks) != len(tt.expectedBlockSlots) {
+				t.Errorf("Processes wrong number of blocks. Wanted %d got %d", len(tt.expectedBlockSlots), len(blocks))
+			}
+			var receivedBlockSlots []uint64
+			for _, blk := range blocks {
+				receivedBlockSlots = append(receivedBlockSlots, blk.Block.Slot)
+			}
+			if missing := sliceutil.NotUint64(sliceutil.IntersectionUint64(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots); len(missing) > 0 {
+				t.Errorf("Missing blocks at slots %v", missing)
+			}
 
 			dbtest.TeardownDB(t, beaconDB)
 		})

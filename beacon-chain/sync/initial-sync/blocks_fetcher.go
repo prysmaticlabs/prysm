@@ -92,6 +92,7 @@ func (f *blocksFetcher) loop() {
 
 	randGenerator := rand.New(rand.NewSource(time.Now().Unix()))
 	highestFinalizedSlot := helpers.StartSlot(f.highestFinalizedEpoch() + 1)
+	maxPeersToSync := params.BeaconConfig().MaxPeersToSync
 
 	for {
 		select {
@@ -102,7 +103,12 @@ func (f *blocksFetcher) loop() {
 			// terminating abort all operations
 			return
 		case req := <-f.requests:
-			root, finalizedEpoch, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(f.chain.HeadSlot()))
+			root, finalizedEpoch, peers := f.p2p.Peers().BestFinalized(maxPeersToSync, helpers.SlotToEpoch(f.chain.HeadSlot()))
+			log.WithFields(logrus.Fields{
+				"request":        req,
+				"finalizedEpoch": finalizedEpoch,
+				"len(peers)":     len(peers),
+			}).Debug("Block fetcher receives request")
 
 			if len(peers) == 0 {
 				log.Warn("No peers; waiting for reconnect")
@@ -131,20 +137,25 @@ func (f *blocksFetcher) loop() {
 				peers[i], peers[j] = peers[j], peers[i]
 			})
 
-			resp, err := f.processFetchRequest(root, finalizedEpoch, req.start, req.count, peers)
-			if err != nil {
-				log.WithError(err).Debug("Block fetch request failed")
+			// TODO(4815): Consider splitting peers into sets (when there are many of them),
+			// so that block fetching is for lesser chunks and is less affected by some slow peer
+			go func(root []byte, finalizedEpoch, start, count uint64, peers []peer.ID) {
+				resp, err := f.processFetchRequest(root, finalizedEpoch, start, count, peers)
+				if err != nil {
+					log.WithError(err).Debug("Block fetch request failed")
+					f.out <- &fetchRequestResult{
+						params: req,
+						err:    err,
+					}
+
+					return
+				}
+
 				f.out <- &fetchRequestResult{
 					params: req,
-					err:    err,
+					blocks: resp,
 				}
-				continue
-			}
-
-			f.out <- &fetchRequestResult{
-				params: req,
-				blocks: resp,
-			}
+			}(root, finalizedEpoch, req.start, req.count, peers)
 		}
 	}
 }
@@ -175,11 +186,6 @@ func (f *blocksFetcher) processFetchRequest(root []byte, finalizedEpoch, start, 
 		return nil, errors.WithStack(errors.New("no peers left to request blocks"))
 	}
 
-	// TODO(4815): Account for skipped slots:
-	// Handle block large block ranges of skipped slots.
-	lastEmptyRequests := 0
-	start += count * uint64(lastEmptyRequests*len(peers))
-
 	p2pRequests := new(sync.WaitGroup)
 	errChan := make(chan error)
 	blocksChan := make(chan []*eth.SignedBeaconBlock)
@@ -196,8 +202,15 @@ func (f *blocksFetcher) processFetchRequest(root []byte, finalizedEpoch, start, 
 		return nil, errors.Errorf("attempted to ask for a start slot of %d which is greater than the next highest slot of %d", start, highestFinalizedSlot)
 	}
 
-	avgCount := mathutil.Min(count, (helpers.StartSlot(finalizedEpoch+1)-start+1)/uint64(len(peers)))
-	remainder := int((helpers.StartSlot(finalizedEpoch+1) - start + 1) % uint64(len(peers)))
+	count = mathutil.Min(count, helpers.StartSlot(finalizedEpoch+1)-start+1) // do not overflow the finalized epoch
+	perPeerCount := count / uint64(len(peers))
+	remainder := int(count % uint64(len(peers)))
+	log.WithFields(logrus.Fields{
+		"start":        start,
+		"count":        count,
+		"perPeerCount": perPeerCount,
+		"remainder":    remainder,
+	}).Debug("Distribute request amount peers")
 	for i, pid := range peers {
 		if f.ctx.Err() != nil {
 			return nil, f.ctx.Err()
@@ -205,7 +218,7 @@ func (f *blocksFetcher) processFetchRequest(root []byte, finalizedEpoch, start, 
 		start := start + uint64(i)
 		// If the count was divided by an odd number of peers, there will be some blocks
 		// missing from the first requests so we accommodate that scenario.
-		count := avgCount
+		count := perPeerCount
 		if i < remainder {
 			count++
 		}
@@ -257,12 +270,12 @@ func (f *blocksFetcher) processFetchRequest(root []byte, finalizedEpoch, start, 
 			return nil, err
 		case resp, ok := <-blocksChan:
 			if ok {
-				// if this synchronization becomes a bottleneck:
-				// think about immediately allocating space for all peers in unionRespBlocks,
-				// and write without synchronization
-				// alternatively: we can limit how many peers are processing each request range
-				// and find good blocks range/peers ratio. Requests to different peer sets can be run concurrently.
-				unionRespBlocks = append(unionRespBlocks, resp...)
+				for _, block := range resp {
+					if block.Block.Slot > start+count { // trim up to start + count
+						break
+					}
+					unionRespBlocks = append(unionRespBlocks, block)
+				}
 			} else {
 				return unionRespBlocks, nil
 			}
