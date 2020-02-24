@@ -19,26 +19,23 @@ func (ds *Service) detectAttesterSlashings(
 		if err != nil {
 			return nil, errors.Wrap(err, "could not detect surround votes on attestation")
 		}
-		doubleAttSlashings, err := ds.detectDoubleVotes(ctx, att)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not detect double votes on attestation")
-		}
-		newSlashings := append(surroundedAttSlashings, doubleAttSlashings...)
-		slashings = append(slashings, newSlashings...)
+		// TODO(#4589): Add double voting detection.
+		slashings = append(slashings, surroundedAttSlashings...)
 	}
 	return slashings, nil
 }
 
 // detectDoubleVote --
-// TODO(#4589): Implement.
+// TODO(#4836): Implement.
 func (ds *Service) detectDoubleVotes(
 	ctx context.Context,
 	att *ethpb.IndexedAttestation,
 ) ([]*ethpb.AttesterSlashing, error) {
-	return nil, nil
+	return nil, errors.New("unimplemented")
 }
 
-// detectSurroundVotes --
+// detectSurroundVotes cross references the passed in attestation with the requested validator's
+// voting history in order to detect any possible surround votes.
 func (ds *Service) detectSurroundVotes(
 	ctx context.Context,
 	validatorIdx uint64,
