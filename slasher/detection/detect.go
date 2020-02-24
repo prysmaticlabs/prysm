@@ -39,22 +39,20 @@ func (ds *Service) detectDoubleVotes(
 }
 
 // detectSurroundVotes --
-// TODO(#4589): Implement.
 func (ds *Service) detectSurroundVotes(
 	ctx context.Context,
 	validatorIdx uint64,
 	incomingAtt *ethpb.IndexedAttestation,
 ) ([]*ethpb.AttesterSlashing, error) {
+	if updateErr := ds.minMaxSpanDetector.UpdateSpans(ctx, incomingAtt); updateErr != nil {
+		return nil, updateErr
+	}
 	res, err := ds.minMaxSpanDetector.DetectSlashingForValidator(
 		ctx,
 		validatorIdx,
 		incomingAtt.Data.Source.Epoch,
 		incomingAtt.Data.Target.Epoch,
 	)
-	// TODO: Do we detect and then update...?
-	if updateErr := ds.minMaxSpanDetector.UpdateSpans(ctx, incomingAtt); updateErr != nil {
-		return nil, updateErr
-	}
 	if err != nil {
 		return nil, err
 	}
