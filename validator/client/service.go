@@ -38,6 +38,7 @@ type ValidatorService struct {
 	logValidatorBalances bool
 	emitAccountMetrics   bool
 	maxCallRecvMsgSize   int
+	grpcRetries          uint
 }
 
 // Config for the validator service.
@@ -50,6 +51,7 @@ type Config struct {
 	LogValidatorBalances       bool
 	EmitAccountMetrics         bool
 	GrpcMaxCallRecvMsgSizeFlag int
+	GrpcRetriesFlag            uint
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -67,6 +69,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		logValidatorBalances: cfg.LogValidatorBalances,
 		emitAccountMetrics:   cfg.EmitAccountMetrics,
 		maxCallRecvMsgSize:   cfg.GrpcMaxCallRecvMsgSizeFlag,
+		grpcRetries:          cfg.GrpcRetriesFlag,
 	}, nil
 }
 
@@ -98,7 +101,7 @@ func (v *ValidatorService) Start() {
 		dialOpt,
 		grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(maxCallRecvMsgSize),
-			grpc_retry.WithMax(5),
+			grpc_retry.WithMax(v.grpcRetries),
 		),
 		grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),
 		grpc.WithStreamInterceptor(middleware.ChainStreamClient(

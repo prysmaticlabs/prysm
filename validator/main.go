@@ -45,6 +45,7 @@ var appFlags = []cli.Flag{
 	flags.InteropStartIndex,
 	flags.InteropNumValidators,
 	flags.GrpcMaxCallRecvMsgSizeFlag,
+	flags.GrpcRetriesFlag,
 	flags.KeyManager,
 	flags.KeyManagerOpts,
 	flags.AccountMetricsFlag,
