@@ -203,6 +203,43 @@ func TestBlocksFetcher(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:               "Multiple peers with failures",
+			expectedBlockSlots: makeSequence(1, 2*blockBatchSize),
+			peers: []*peerData{
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 8,
+					headSlot:       320,
+				},
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 8,
+					headSlot:       320,
+					failureSlots:   makeSequence(1, 32), // first epoch
+				},
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 8,
+					headSlot:       320,
+				},
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 8,
+					headSlot:       320,
+				},
+			},
+			requests: []*fetchRequestParams{
+				{
+					start: 1,
+					count: blockBatchSize,
+				},
+				{
+					start: blockBatchSize + 1,
+					count: blockBatchSize,
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {

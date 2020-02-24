@@ -140,7 +140,7 @@ func (f *blocksFetcher) loop() {
 			// TODO(4815): Consider splitting peers into sets (when there are many of them),
 			// so that block fetching is for lesser chunks and is less affected by some slow peer
 			go func(root []byte, finalizedEpoch, start, count uint64, peers []peer.ID) {
-				resp, err := f.processFetchRequest(root, finalizedEpoch, start, count, peers)
+				resp, err := f.processFetchRequest(root, finalizedEpoch, start, 1, count, peers)
 				if err != nil {
 					log.WithError(err).Debug("Block fetch request failed")
 					f.out <- &fetchRequestResult{
@@ -181,7 +181,7 @@ func (f *blocksFetcher) scheduleRequest(req *fetchRequestParams) {
 //   Four requests will be spread across the peers using step argument to distribute the load
 //   i.e. the first peer is asked for block 64, 68, 72... while the second peer is asked for
 //   65, 69, 73... and so on for other peers.
-func (f *blocksFetcher) processFetchRequest(root []byte, finalizedEpoch, start, count uint64, peers []peer.ID) ([]*eth.SignedBeaconBlock, error) {
+func (f *blocksFetcher) processFetchRequest(root []byte, finalizedEpoch, start, step, count uint64, peers []peer.ID) ([]*eth.SignedBeaconBlock, error) {
 	if len(peers) == 0 {
 		return nil, errors.WithStack(errors.New("no peers left to request blocks"))
 	}
@@ -215,7 +215,8 @@ func (f *blocksFetcher) processFetchRequest(root []byte, finalizedEpoch, start, 
 		if f.ctx.Err() != nil {
 			return nil, f.ctx.Err()
 		}
-		start := start + uint64(i)
+		start := start + uint64(i)*step
+		step := step * uint64(len(peers))
 		// If the count was divided by an odd number of peers, there will be some blocks
 		// missing from the first requests so we accommodate that scenario.
 		count := perPeerCount
@@ -231,7 +232,7 @@ func (f *blocksFetcher) processFetchRequest(root []byte, finalizedEpoch, start, 
 			HeadBlockRoot: root,
 			StartSlot:     start,
 			Count:         count,
-			Step:          uint64(len(peers)),
+			Step:          step,
 		}
 
 		go func(i int, pid peer.ID) {
@@ -248,11 +249,12 @@ func (f *blocksFetcher) processFetchRequest(root []byte, finalizedEpoch, start, 
 					"peer",
 					pid.Pretty(),
 				).Debug("Request failed, trying to round robin with other peers")
+
 				if len(ps) == 0 {
 					errChan <- errors.WithStack(errors.New("no peers left to request blocks"))
 					return
 				}
-				resp, err = f.processFetchRequest(root, finalizedEpoch, start, count/uint64(len(ps)), ps)
+				resp, err = f.processFetchRequest(root, finalizedEpoch, start, step, count, ps)
 				if err != nil {
 					errChan <- err
 					return
@@ -271,7 +273,8 @@ func (f *blocksFetcher) processFetchRequest(root []byte, finalizedEpoch, start, 
 		case resp, ok := <-blocksChan:
 			if ok {
 				for _, block := range resp {
-					if block.Block.Slot > start+count { // trim up to start + count
+					// trim up to start + count*step (so that upper bound of returned blocks is deterministic)
+					if block.Block.Slot > start+count*step {
 						break
 					}
 					unionRespBlocks = append(unionRespBlocks, block)
