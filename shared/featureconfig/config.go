@@ -42,6 +42,7 @@ type Flags struct {
 	DisableStrictAttestationPubsubVerification bool   // DisableStrictAttestationPubsubVerification will disabling strict signature verification in pubsub.
 	DisableUpdateHeadPerAttestation            bool   // DisableUpdateHeadPerAttestation will disabling update head on per attestation basis.
 	EnableByteMempool                          bool   // EnaableByteMempool memory management.
+	EnableDomainDataCache                      bool   // EnableDomainDataCache caches validator calls to DomainData per epoch.
 
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
@@ -163,6 +164,10 @@ func ConfigureValidator(ctx *cli.Context) {
 	if ctx.GlobalBool(protectAttesterFlag.Name) {
 		log.Warn("Enabled validator attestation slashing protection.")
 		cfg.ProtectAttester = true
+	}
+	if ctx.GlobalBool(enableDomainDataCacheFlag.Name) {
+		log.Warn("Enabled domain data cache.")
+		cfg.EnableDomainDataCache = true
 	}
 	Init(cfg)
 }

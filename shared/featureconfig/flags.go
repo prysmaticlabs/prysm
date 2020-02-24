@@ -92,6 +92,11 @@ var (
 		Name:  "enable-byte-mempool",
 		Usage: "Enable use of sync.Pool for certain byte arrays in the beacon state",
 	}
+	enableDomainDataCacheFlag = cli.BoolFlag{
+		Name: "enable-domain-data-cache",
+		Usage: "Enable caching of domain data requests per epoch. This feature reduces the total " +
+			"calls to the beacon node for each assignment.",
+	}
 )
 
 // Deprecated flags list.
@@ -235,12 +240,14 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	minimalConfigFlag,
 	protectAttesterFlag,
 	protectProposerFlag,
+	enableDomainDataCacheFlag,
 }...)
 
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
 var E2EValidatorFlags = []string{
 	"--protect-attester",
 	"--protect-proposer",
+	"--enable-domain-data-cache",
 }
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
