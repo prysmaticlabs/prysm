@@ -151,7 +151,10 @@ func (vs *Server) ExitedValidators(
 // DomainData fetches the current domain version information from the beacon state.
 func (vs *Server) DomainData(ctx context.Context, request *ethpb.DomainRequest) (*ethpb.DomainResponse, error) {
 	fork := vs.ForkFetcher.CurrentFork()
-	dv := helpers.Domain(fork, request.Epoch, request.Domain)
+	dv, err := helpers.Domain(fork, request.Epoch, request.Domain)
+	if err != nil {
+		return nil, err
+	}
 	return &ethpb.DomainResponse{
 		SignatureDomain: dv,
 	}, nil
