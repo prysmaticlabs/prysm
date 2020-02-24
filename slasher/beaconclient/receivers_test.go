@@ -11,16 +11,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mock"
 )
 
-var _ = Notifier(&Service{})
-
 func TestService_ReceiveBlocks(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconChainClient(ctrl)
 
 	bs := Service{
-		client:    client,
-		blockFeed: new(event.Feed),
+		beaconClient: client,
+		blockFeed:    new(event.Feed),
 	}
 	stream := mock.NewMockBeaconChain_StreamBlocksClient(ctrl)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -44,8 +42,8 @@ func TestService_ReceiveAttestations(t *testing.T) {
 	client := mock.NewMockBeaconChainClient(ctrl)
 
 	bs := Service{
-		client:    client,
-		blockFeed: new(event.Feed),
+		beaconClient: client,
+		blockFeed:    new(event.Feed),
 	}
 	stream := mock.NewMockBeaconChain_StreamAttestationsClient(ctrl)
 	ctx, cancel := context.WithCancel(context.Background())

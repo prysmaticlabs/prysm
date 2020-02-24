@@ -234,6 +234,7 @@ func (s *Service) Start() {
 		Eth1BlockFetcher:       s.powChainService,
 		PendingDepositsFetcher: s.pendingDepositFetcher,
 		GenesisTime:            genesisTime,
+		SlashingsPool:          s.slashingsPool,
 	}
 	nodeServer := &node.Server{
 		BeaconDB:           s.beaconDB,
@@ -251,6 +252,8 @@ func (s *Service) Start() {
 		FinalizationFetcher:  s.finalizationFetcher,
 		ParticipationFetcher: s.participationFetcher,
 		ChainStartFetcher:    s.chainStartFetcher,
+		DepositFetcher:       s.depositFetcher,
+		BlockFetcher:         s.powChainService,
 		CanonicalStateChan:   s.canonicalStateChan,
 		GenesisTimeFetcher:   s.genesisTimeFetcher,
 		StateNotifier:        s.stateNotifier,

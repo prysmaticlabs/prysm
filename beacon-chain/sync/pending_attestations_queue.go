@@ -60,8 +60,8 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 		s.pendingAttsLock.RLock()
 		attestations := s.blkRootToPendingAtts[bRoot]
 		s.pendingAttsLock.RUnlock()
-		// Has the pending attestation's missing block arrived yet?
-		if s.db.HasBlock(ctx, bRoot) {
+		// Has the pending attestation's missing block arrived and the node processed block yet?
+		if s.db.HasBlock(ctx, bRoot) && s.db.HasState(ctx, bRoot) {
 			numberOfBlocksRecoveredFromAtt.Inc()
 			for _, att := range attestations {
 				// The pending attestations can arrive in both aggregated and unaggregated forms,
