@@ -260,7 +260,7 @@ func (k *Store) SaveArchivedPointState(ctx context.Context, state *state.BeaconS
 	}
 
 	return k.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(coldStateBucket)
+		bucket := tx.Bucket(stateBucket)
 		return bucket.Put(uint64ToBytes(index), enc)
 	})
 }
@@ -283,7 +283,7 @@ func (k *Store) ArchivedPointState(ctx context.Context, index uint64) (*state.Be
 	defer span.End()
 	var s *pb.BeaconState
 	err := k.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(coldStateBucket)
+		bucket := tx.Bucket(stateBucket)
 		enc := bucket.Get(uint64ToBytes(index))
 		if enc == nil {
 			return nil
