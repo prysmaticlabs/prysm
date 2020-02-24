@@ -29,7 +29,7 @@ func (s *State) saveHotState(ctx context.Context, blockRoot [32]byte, state *sta
 	ctx, span := trace.StartSpan(ctx, "stateGen.saveHotState")
 	defer span.End()
 
-	// On an epoch boundary, saves the whole state.
+	// Only on an epoch boundary, saves the whole state.
 	if helpers.IsEpochStart(state.Slot()) {
 		if err := s.beaconDB.SaveState(ctx, state, blockRoot); err != nil {
 			return err
@@ -40,7 +40,7 @@ func (s *State) saveHotState(ctx context.Context, blockRoot [32]byte, state *sta
 		hotStateSaved.Inc()
 	}
 
-	// On an intermediate slot, save the state summary.
+	// On an intermediate slots, save the hot state summary.
 	epochRoot, err := s.loadEpochBoundaryRoot(ctx, blockRoot, state)
 	if err != nil {
 		return err
@@ -72,7 +72,7 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 		return nil, err
 	}
 	if summary == nil {
-		return nil, errors.New("nil hot state summary")
+		return nil, errUnknownHotSummary
 	}
 	targetSlot := summary.Slot
 
@@ -81,12 +81,13 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 		return nil, err
 	}
 	if boundaryState == nil {
-		return nil, errors.New("boundary state can't be nil")
+		return nil, errUnknownBoundaryState
 	}
 
-	// Don't need to replay the blocks if we're already on an epoch boundary.
+	// Don't need to replay the blocks if we're already on an epoch boundary meaning target slot
+	// is the same as the state slot.
 	var hotState *state.BeaconState
-	if helpers.IsEpochStart(targetSlot) {
+	if targetSlot == boundaryState.Slot() {
 		hotState = boundaryState
 	} else {
 		blks, err := s.LoadBlocks(ctx, boundaryState.Slot()+1, targetSlot, bytesutil.ToBytes32(summary.LatestRoot))
@@ -112,14 +113,17 @@ func (s *State) loadHotIntermediateStateWithSlot(ctx context.Context, slot uint6
 	defer span.End()
 
 	// Gather epoch boundary information, this is where node starts to replay the blocks.
-	epochBoundarySlot := helpers.StartSlot(helpers.SlotToEpoch(slot))
-	epochBoundaryRoot, ok := s.epochBoundaryRoot(epochBoundarySlot)
+	boundarySlot := helpers.StartSlot(helpers.SlotToEpoch(slot))
+	boundaryRoot, ok := s.epochBoundaryRoot(boundarySlot)
 	if !ok {
-		return nil, errors.New("epoch boundary root is not cached")
+		return nil, errUnknownBoundaryRoot
 	}
-	epochBoundaryState, err := s.beaconDB.State(ctx, epochBoundaryRoot)
+	boundaryState, err := s.beaconDB.State(ctx, boundaryRoot)
 	if err != nil {
 		return nil, err
+	}
+	if boundaryState == nil {
+		return nil, errUnknownBoundaryState
 	}
 
 	// Gather the last physical block root and the slot number.
@@ -129,11 +133,11 @@ func (s *State) loadHotIntermediateStateWithSlot(ctx context.Context, slot uint6
 	}
 
 	// Load and replay blocks to get the intermediate state.
-	replayBlks, err := s.LoadBlocks(ctx, epochBoundaryState.Slot()+1, lastValidSlot, lastValidRoot)
+	replayBlks, err := s.LoadBlocks(ctx, boundaryState.Slot()+1, lastValidSlot, lastValidRoot)
 	if err != nil {
 		return nil, err
 	}
-	return s.ReplayBlocks(ctx, epochBoundaryState, replayBlks, slot)
+	return s.ReplayBlocks(ctx, boundaryState, replayBlks, slot)
 }
 
 // This loads the epoch boundary root of a given state based on the state slot.
@@ -143,21 +147,21 @@ func (s *State) loadEpochBoundaryRoot(ctx context.Context, blockRoot [32]byte, s
 	ctx, span := trace.StartSpan(ctx, "stateGen.loadEpochBoundaryRoot")
 	defer span.End()
 
-	epochBoundarySlot := helpers.CurrentEpoch(state) * params.BeaconConfig().SlotsPerEpoch
+	boundarySlot := helpers.CurrentEpoch(state) * params.BeaconConfig().SlotsPerEpoch
 
 	// Node first checks if epoch boundary root already exists in cache.
-	r, ok := s.epochBoundarySlotToRoot[epochBoundarySlot]
+	r, ok := s.epochBoundarySlotToRoot[boundarySlot]
 	if ok {
 		return r, nil
 	}
 
 	// At epoch boundary, the root is just itself.
-	if state.Slot() == epochBoundarySlot {
+	if state.Slot() == boundarySlot {
 		return blockRoot, nil
 	}
 
 	// Node uses genesis getters if the epoch boundary slot is on genesis slot.
-	if epochBoundarySlot == 0 {
+	if boundarySlot == 0 {
 		b, err := s.beaconDB.GenesisBlock(ctx)
 		if err != nil {
 			return [32]byte{}, err
@@ -168,20 +172,20 @@ func (s *State) loadEpochBoundaryRoot(ctx context.Context, blockRoot [32]byte, s
 			return [32]byte{}, err
 		}
 
-		s.setEpochBoundaryRoot(epochBoundarySlot, r)
+		s.setEpochBoundaryRoot(boundarySlot, r)
 
 		return r, nil
 	}
 
 	// Now to find the epoch boundary root via DB.
-	filter := filters.NewFilter().SetStartSlot(epochBoundarySlot).SetEndSlot(epochBoundarySlot)
+	filter := filters.NewFilter().SetStartSlot(boundarySlot).SetEndSlot(boundarySlot)
 	rs, err := s.beaconDB.BlockRoots(ctx, filter)
 	if err != nil {
 		return [32]byte{}, err
 	}
 	// If the epoch boundary is a skip slot, traverse back to find the last valid state.
 	if len(rs) == 0 {
-		r, err = s.handleLastValidState(ctx, epochBoundarySlot)
+		r, err = s.handleLastValidState(ctx, boundarySlot)
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -194,7 +198,7 @@ func (s *State) loadEpochBoundaryRoot(ctx context.Context, blockRoot [32]byte, s
 	}
 
 	// Set the epoch boundary root cache.
-	s.setEpochBoundaryRoot(epochBoundarySlot, r)
+	s.setEpochBoundaryRoot(boundarySlot, r)
 
 	return r, nil
 }
@@ -205,33 +209,19 @@ func (s *State) handleLastValidState(ctx context.Context, targetSlot uint64) ([3
 	ctx, span := trace.StartSpan(ctx, "stateGen.handleLastValidState")
 	defer span.End()
 
-	lastBlockRoot, lastBlockSlot, err := s.getLastValidBlock(ctx, targetSlot)
+	lastBlockRoot, _, err := s.getLastValidBlock(ctx, targetSlot)
 	if err != nil {
 		return [32]byte{}, err
 	}
-	r, err := s.getLastValidState(ctx, targetSlot)
-	if err != nil {
-		return [32]byte{}, err
-	}
-	startState, err := s.beaconDB.State(ctx, r)
-	if err != nil {
-		return [32]byte{}, err
-	}
-	if startState == nil {
-		return [32]byte{}, errors.New("last valid state can't be nil")
-	}
-	blks, err := s.LoadBlocks(ctx, startState.Slot()+1, lastBlockSlot, lastBlockRoot)
-	if err != nil {
-		return [32]byte{}, err
-	}
-	startState, err = s.ReplayBlocks(ctx, startState, blks, targetSlot)
+
+	lastValidState, err := s.ComputeStateUpToSlot(ctx, targetSlot)
 	if err != nil {
 		return [32]byte{}, err
 	}
 
 	// Only save the state if there's non with the last block root.
 	if !s.beaconDB.HasState(ctx, lastBlockRoot) {
-		if err := s.beaconDB.SaveState(ctx, startState, lastBlockRoot); err != nil {
+		if err := s.beaconDB.SaveState(ctx, lastValidState, lastBlockRoot); err != nil {
 			return [32]byte{}, err
 		}
 	}

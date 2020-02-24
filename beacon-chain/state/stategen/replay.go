@@ -111,6 +111,9 @@ func (s *State) ComputeStateUpToSlot(ctx context.Context, targetSlot uint64) (*s
 	if err != nil {
 		return nil, err
 	}
+	if lastState == nil {
+		return nil, errUnknownState
+	}
 
 	if lastState.Slot() == lastBlockSlot {
 		return lastState, nil
@@ -147,7 +150,7 @@ func (s *State) getLastValidBlock(ctx context.Context, slot uint64) ([32]byte, u
 		return [32]byte{}, 0, err
 	}
 	if b == nil || b.Block == nil {
-		return [32]byte{}, 0, errors.New("last valid block can't be nil")
+		return [32]byte{}, 0, errUnknownBlock
 	}
 
 	return lastRoot, b.Block.Slot, nil
@@ -173,5 +176,5 @@ func (s *State) getLastValidState(ctx context.Context, slot uint64) ([32]byte, e
 		}
 	}
 
-	return [32]byte{}, errors.New("no valid state found")
+	return [32]byte{}, errUnknownState
 }

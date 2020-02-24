@@ -20,11 +20,11 @@ func (s *State) saveColdState(ctx context.Context, blockRoot [32]byte, state *st
 		return errNonArchivedPoint
 	}
 
-	archivePointIndex := state.Slot() / s.slotsPerArchivePoint
-	if err := s.beaconDB.SaveArchivedPointState(ctx, state, archivePointIndex); err != nil {
+	archivedPointIndex := state.Slot() / s.slotsPerArchivePoint
+	if err := s.beaconDB.SaveArchivedPointState(ctx, state, archivedPointIndex); err != nil {
 		return err
 	}
-	if err := s.beaconDB.SaveArchivedPointRoot(ctx, blockRoot, archivePointIndex); err != nil {
+	if err := s.beaconDB.SaveArchivedPointRoot(ctx, blockRoot, archivedPointIndex); err != nil {
 		return err
 	}
 	archivePointSaved.Inc()
@@ -53,8 +53,8 @@ func (s *State) loadColdStateByRoot(ctx context.Context, blockRoot [32]byte) (*s
 
 	// Use the archived point state if the slot lies on top of the archived point.
 	if summary.Slot%s.slotsPerArchivePoint == 0 {
-		archivePoint := summary.Slot / s.slotsPerArchivePoint
-		s, err := s.loadColdStateByArchivalPoint(ctx, archivePoint)
+		archivedPoint := summary.Slot / s.slotsPerArchivePoint
+		s, err := s.loadColdStateByArchivalPoint(ctx, archivedPoint)
 		if err != nil {
 			return nil, err
 		}
@@ -68,8 +68,8 @@ func (s *State) loadColdStateByRoot(ctx context.Context, blockRoot [32]byte) (*s
 }
 
 // This loads the cold state for the input archived point.
-func (s *State) loadColdStateByArchivalPoint(ctx context.Context, archivePoint uint64) (*state.BeaconState, error) {
-	return s.beaconDB.ArchivedPointState(ctx, archivePoint)
+func (s *State) loadColdStateByArchivalPoint(ctx context.Context, archivedPoint uint64) (*state.BeaconState, error) {
+	return s.beaconDB.ArchivedPointState(ctx, archivedPoint)
 }
 
 // This loads a cold state by slot and block root which lies between the archive point.
@@ -117,7 +117,6 @@ func (s *State) loadColdIntermediateStateWithSlot(ctx context.Context, slot uint
 	if lowArchivePointState == nil {
 		return nil, errUnknownArchivedState
 	}
-
 
 	// If the slot of the high archive point lies outside of the freezer cut off, use the split state
 	// as the upper archive point.
