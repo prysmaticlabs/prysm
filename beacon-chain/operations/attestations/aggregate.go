@@ -11,9 +11,9 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// Define time to aggregate the unaggregated attestations at 3 times per slot, this gives
+// Define time to aggregate the unaggregated attestations at 2 times per slot, this gives
 // enough confidence all the unaggregated attestations will be aggregated as aggregator requests.
-var timeToAggregate = time.Duration(params.BeaconConfig().SecondsPerSlot/3) * time.Second
+var timeToAggregate = time.Duration(params.BeaconConfig().SecondsPerSlot/2) * time.Second
 
 // This kicks off a routine to aggregate the unaggregated attestations from pool.
 func (s *Service) aggregateRoutine() {

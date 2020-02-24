@@ -51,6 +51,64 @@ func TestKV_Aggregated_CanSaveRetrieve(t *testing.T) {
 	}
 }
 
+func TestKV_Aggregated_SaveAndVerifyExpireTime(t *testing.T) {
+	cache := NewAttCaches()
+
+	d := &ethpb.AttestationData{Slot: 1}
+	att1 := &ethpb.Attestation{Data: d, AggregationBits: bitfield.Bitlist{0b11100}}
+	att2 := &ethpb.Attestation{Data: d, AggregationBits: bitfield.Bitlist{0b10110}}
+	att3 := &ethpb.Attestation{Data: d, AggregationBits: bitfield.Bitlist{0b11011}}
+
+	r, err := ssz.HashTreeRoot(d)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := cache.SaveAggregatedAttestation(att1); err != nil {
+		t.Fatal(err)
+	}
+	a, expTime, ok := cache.aggregatedAtt.GetWithExpiration(string(r[:]))
+	if !ok {
+		t.Fatal("Did not save attestations")
+	}
+	if len(a.([]*ethpb.Attestation)) != 1 {
+		t.Fatal("Did not save attestations")
+	}
+
+	// Let time pass by one second to test expiration time.
+	time.Sleep(1 * time.Second)
+	// Save attestation 2 too the pool, the expiration time should not change.
+	if err := cache.SaveAggregatedAttestation(att2); err != nil {
+		t.Fatal(err)
+	}
+	newA, newExpTime, ok := cache.aggregatedAtt.GetWithExpiration(string(r[:]))
+	if !ok {
+		t.Fatal("Did not save attestations")
+	}
+	if len(newA.([]*ethpb.Attestation)) != 2 {
+		t.Fatal("Did not delete attestations")
+	}
+
+	if expTime.Unix() != newExpTime.Unix() {
+		t.Error("Expiration time should not change")
+	}
+
+	// Let time pass by another second to test expiration time.
+	time.Sleep(1 * time.Second)
+	// Save attestation 3 too the pool, the expiration time should not change.
+	if err := cache.SaveAggregatedAttestation(att3); err != nil {
+		t.Fatal(err)
+	}
+	newA, newExpTime, _ = cache.aggregatedAtt.GetWithExpiration(string(r[:]))
+	if len(newA.([]*ethpb.Attestation)) != 3 {
+		t.Fatal("Did not delete attestations")
+	}
+
+	if expTime.Unix() != newExpTime.Unix() {
+		t.Error("Expiration time should not change")
+	}
+}
+
 func TestKV_Aggregated_CanDelete(t *testing.T) {
 	cache := NewAttCaches()
 
@@ -77,6 +135,63 @@ func TestKV_Aggregated_CanDelete(t *testing.T) {
 
 	if !reflect.DeepEqual(wanted, returned) {
 		t.Error("Did not receive correct aggregated atts")
+	}
+}
+
+func TestKV_Aggregated_DeleteAndVerifyExpireTime(t *testing.T) {
+	cache := NewAttCaches()
+
+	d := &ethpb.AttestationData{Slot: 1}
+	att1 := &ethpb.Attestation{Data: d, AggregationBits: bitfield.Bitlist{0b11100}}
+	att2 := &ethpb.Attestation{Data: d, AggregationBits: bitfield.Bitlist{0b10110}}
+	att3 := &ethpb.Attestation{Data: d, AggregationBits: bitfield.Bitlist{0b11011}}
+	atts := []*ethpb.Attestation{att1, att2, att3}
+	for _, att := range atts {
+		if err := cache.SaveAggregatedAttestation(att); err != nil {
+			t.Fatal(err)
+		}
+	}
+	r, err := ssz.HashTreeRoot(d)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	a, expTime, ok := cache.aggregatedAtt.GetWithExpiration(string(r[:]))
+	if !ok {
+		t.Fatal("Did not save attestations")
+	}
+	if len(a.([]*ethpb.Attestation)) != 3 {
+		t.Fatal("Did not save attestations")
+	}
+
+	// Let time pass by one second to test expiration time.
+	time.Sleep(1 * time.Second)
+	// Delete attestation 1 from the pool, the expiration time should not change.
+	if err := cache.DeleteAggregatedAttestation(att1); err != nil {
+		t.Fatal(err)
+	}
+	newA, newExpTime, _ := cache.aggregatedAtt.GetWithExpiration(string(r[:]))
+	if len(newA.([]*ethpb.Attestation)) != 2 {
+		t.Fatal("Did not delete attestations")
+	}
+
+	if expTime.Unix() != newExpTime.Unix() {
+		t.Error("Expiration time should not change")
+	}
+
+	// Let time pass by another second to test expiration time.
+	time.Sleep(1 * time.Second)
+	// Delete attestation 1 from the pool, the expiration time should not change.
+	if err := cache.DeleteAggregatedAttestation(att2); err != nil {
+		t.Fatal(err)
+	}
+	newA, newExpTime, _ = cache.aggregatedAtt.GetWithExpiration(string(r[:]))
+	if len(newA.([]*ethpb.Attestation)) != 1 {
+		t.Fatal("Did not delete attestations")
+	}
+
+	if expTime.Unix() != newExpTime.Unix() {
+		t.Error("Expiration time should not change")
 	}
 }
 
