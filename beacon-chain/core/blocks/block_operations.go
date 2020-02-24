@@ -879,7 +879,7 @@ func ProcessDeposits(
 	deposits := body.Deposits
 	for _, deposit := range deposits {
 		if deposit == nil || deposit.Data == nil {
-			continue
+			return nil, errors.New("got a nil deposit in block")
 		}
 		beaconState, err = ProcessDeposit(beaconState, deposit)
 		if err != nil {
