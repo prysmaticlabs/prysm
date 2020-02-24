@@ -63,6 +63,9 @@ func (p *AttCaches) SaveAggregatedAttestations(atts []*ethpb.Attestation) error 
 
 // AggregatedAttestations returns the aggregated attestations in cache.
 func (p *AttCaches) AggregatedAttestations() []*ethpb.Attestation {
+	// Delete all expired aggregated attestations before returning them.
+	p.aggregatedAtt.DeleteExpired()
+
 	atts := make([]*ethpb.Attestation, 0, p.aggregatedAtt.ItemCount())
 	for s, i := range p.aggregatedAtt.Items() {
 		// Type assertion for the worst case. This shouldn't happen.
@@ -80,6 +83,9 @@ func (p *AttCaches) AggregatedAttestations() []*ethpb.Attestation {
 // AggregatedAttestationsBySlotIndex returns the aggregated attestations in cache,
 // filtered by committee index and slot.
 func (p *AttCaches) AggregatedAttestationsBySlotIndex(slot uint64, committeeIndex uint64) []*ethpb.Attestation {
+	// Delete all expired aggregated attestations before returning them.
+	p.aggregatedAtt.DeleteExpired()
+
 	atts := make([]*ethpb.Attestation, 0, p.aggregatedAtt.ItemCount())
 	for s, i := range p.aggregatedAtt.Items() {
 
@@ -133,8 +139,6 @@ func (p *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
 		expDuration := time.Duration(expTime.Unix() - time.Now().Unix())
 		p.aggregatedAtt.Set(string(r[:]), filtered, expDuration*time.Second)
 	}
-
-	p.aggregatedAtt.DeleteExpired()
 
 	return nil
 }
