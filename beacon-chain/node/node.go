@@ -356,11 +356,7 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 	}
 	depAddress := cliCtx.GlobalString(flags.DepositContractFlag.Name)
 	if depAddress == "" {
-		var err error
-		depAddress, err = fetchDepositContract()
-		if err != nil {
-			log.WithError(err).Fatal("Cannot fetch deposit contract")
-		}
+		log.Fatal(fmt.Sprintf("%s is required", flags.DepositContractFlag.Name))
 	}
 
 	if !common.IsHexAddress(depAddress) {
