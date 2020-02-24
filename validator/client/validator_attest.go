@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -48,6 +50,9 @@ var (
 // information in order to sign the block and include information about the validator's
 // participation in voting on the block.
 func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [48]byte) {
+	if helpers.SlotToEpoch(slot)%2 != 0 {
+		return
+	}
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitAttestation")
 	defer span.End()
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
@@ -96,6 +101,32 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 			return
 		}
 	}
+	//TODO: REMOVE slashable attester code should not be merged!!!!
+	surround := CopyAttestationData(data)
+	surrounded := CopyAttestationData(data)
+
+	surround.Target.Epoch = data.Target.Epoch + 1
+	surround.Source.Epoch = data.Source.Epoch - 1
+
+	surrounded.Target.Epoch = data.Target.Epoch - 1
+	surrounded.Source.Epoch = data.Source.Epoch + 1
+	sigSurround, err := v.signAtt(ctx, pubKey, surround)
+	if err != nil {
+		log.WithError(err).Error("Could not sign attestation")
+		if v.emitAccountMetrics {
+			validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return
+	}
+	sigSurrounded, err := v.signAtt(ctx, pubKey, surrounded)
+	if err != nil {
+		log.WithError(err).Error("Could not sign attestation")
+		if v.emitAccountMetrics {
+			validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
+		}
+		return
+	}
+	//TODO: dangerous code! slashable attestations till here
 
 	sig, err := v.signAtt(ctx, pubKey, data)
 	if err != nil {
@@ -131,6 +162,18 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		Signature:       sig,
 	}
 
+	// TODO: slashable attestation DO NOT MERGE
+	attestationSurround := &ethpb.Attestation{
+		Data:            surround,
+		AggregationBits: aggregationBitfield,
+		Signature:       sigSurround,
+	}
+	attestationSurrounded := &ethpb.Attestation{
+		Data:            surrounded,
+		AggregationBits: aggregationBitfield,
+		Signature:       sigSurrounded,
+	}
+
 	attResp, err := v.validatorClient.ProposeAttestation(ctx, attestation)
 	if err != nil {
 		log.WithError(err).Error("Could not submit attestation to beacon node")
@@ -140,6 +183,42 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
+	if data.Source.Epoch > 0 {
+		_, err = v.validatorClient.ProposeAttestation(ctx, attestationSurround)
+		if err != nil {
+			log.WithError(err).Error("Could not submit attestation to beacon node")
+			if v.emitAccountMetrics {
+				validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
+			}
+			return
+		}
+		if err := v.saveAttesterIndexToData(surround, duty.ValidatorIndex); err != nil {
+			log.WithError(err).Error("Could not save surround validator index for logging")
+			if v.emitAccountMetrics {
+				validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
+			}
+			return
+		}
+	}
+
+	if data.Target.Epoch-data.Source.Epoch > 1 {
+		_, err := v.validatorClient.ProposeAttestation(ctx, attestationSurrounded)
+		if err != nil {
+			log.WithError(err).Error("Could not submit attestation to beacon node")
+			if v.emitAccountMetrics {
+				validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
+			}
+			return
+		}
+		if err := v.saveAttesterIndexToData(surrounded, duty.ValidatorIndex); err != nil {
+			log.WithError(err).Error("Could not save surrounded validator index for logging")
+			if v.emitAccountMetrics {
+				validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
+			}
+			return
+		}
+	}
+	// TODO: remove till here dangerous code slashable attestation
 	if featureconfig.Get().ProtectAttester {
 		history, err := v.db.AttestationHistory(ctx, pubKey[:])
 		if err != nil {
@@ -170,7 +249,6 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	if v.emitAccountMetrics {
 		validatorAttestSuccessVec.WithLabelValues(fmtKey).Inc()
 	}
-
 	span.AddAttributes(
 		trace.Int64Attribute("slot", int64(slot)),
 		trace.StringAttribute("attestationHash", fmt.Sprintf("%#x", attResp.AttestationDataRoot)),
@@ -180,6 +258,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		trace.Int64Attribute("targetEpoch", int64(data.Target.Epoch)),
 		trace.StringAttribute("bitfield", fmt.Sprintf("%#x", aggregationBitfield)),
 	)
+
 }
 
 // Given the validator public key, this gets the validator assignment.
@@ -302,4 +381,29 @@ func safeTargetToSource(history *slashpb.AttestationHistory, targetEpoch uint64)
 		return params.BeaconConfig().FarFutureEpoch
 	}
 	return history.TargetToSource[targetEpoch%wsPeriod]
+}
+
+// CopyAttestationData copies the provided AttestationData object.
+func CopyAttestationData(attData *ethpb.AttestationData) *ethpb.AttestationData {
+	if attData == nil {
+		return nil
+	}
+	return &ethpb.AttestationData{
+		Slot:            attData.Slot,
+		CommitteeIndex:  attData.CommitteeIndex,
+		BeaconBlockRoot: bytesutil.SafeCopyBytes(attData.BeaconBlockRoot),
+		Source:          CopyCheckpoint(attData.Source),
+		Target:          CopyCheckpoint(attData.Target),
+	}
+}
+
+// CopyCheckpoint copies the provided checkpoint.
+func CopyCheckpoint(cp *ethpb.Checkpoint) *ethpb.Checkpoint {
+	if cp == nil {
+		return nil
+	}
+	return &ethpb.Checkpoint{
+		Epoch: cp.Epoch,
+		Root:  bytesutil.SafeCopyBytes(cp.Root),
+	}
 }
