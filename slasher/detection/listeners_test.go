@@ -59,7 +59,7 @@ func TestService_DetectIncomingAttestations(t *testing.T) {
 	ds := Service{
 		notifier: &mockNotifier{},
 	}
-	att := &ethpb.Attestation{
+	att := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Slot: 1,
 		},

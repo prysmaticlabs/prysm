@@ -45,7 +45,7 @@ func TestService_ReceiveAttestations(t *testing.T) {
 		beaconClient: client,
 		blockFeed:    new(event.Feed),
 	}
-	stream := mock.NewMockBeaconChain_StreamAttestationsClient(ctrl)
+	stream := mock.NewMockBeaconChain_StreamIndexedAttestationsClient(ctrl)
 	ctx, cancel := context.WithCancel(context.Background())
 	att := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{

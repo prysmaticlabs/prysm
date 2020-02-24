@@ -2,6 +2,7 @@ package beaconclient
 
 import (
 	"context"
+	"flag"
 	"reflect"
 	"strconv"
 	"testing"
@@ -11,17 +12,25 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/urfave/cli"
 )
 
 func TestService_RequestHistoricalAttestations(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	c := cli.NewContext(app, set, nil)
+	db := testDB.SetupSlasherDB(t, c)
+	defer testDB.TeardownSlasherDB(t, db)
 	client := mock.NewMockBeaconChainClient(ctrl)
 
 	bs := Service{
 		beaconClient: client,
+		slasherDB:    db,
 	}
 
 	numAtts := 1000
@@ -31,6 +40,10 @@ func TestService_RequestHistoricalAttestations(t *testing.T) {
 			AttestingIndices: []uint64{1, 2, 3},
 			Data: &ethpb.AttestationData{
 				Slot: uint64(i),
+				Target: &ethpb.Checkpoint{
+					Epoch: 1,
+					Root:  make([]byte, 32),
+				},
 			},
 		}
 	}
