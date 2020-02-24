@@ -58,7 +58,8 @@ type WriteAccessDatabase interface {
 
 	// IndexedAttestations related methods.
 	SaveIndexedAttestation(ctx context.Context, idxAttestation *ethpb.IndexedAttestation) error
-	SaveIndexedAttestations(ctx context.Context, idxAttestations []*ethpb.IndexedAttestation) error
+	SaveIncomingIndexedAttestation(ctx context.Context, idxAttestation *ethpb.IndexedAttestation) error
+	SaveIncomingIndexedAttestations(ctx context.Context, idxAttestations []*ethpb.IndexedAttestation) error
 	DeleteIndexedAttestation(ctx context.Context, idxAttestation *ethpb.IndexedAttestation) error
 	PruneAttHistory(ctx context.Context, currentEpoch uint64, pruningEpochAge uint64) error
 

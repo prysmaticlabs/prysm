@@ -132,8 +132,8 @@ func (db *Store) IndexedAttestations(ctx context.Context, targetEpoch uint64) ([
 	return idxAtts, err
 }
 
-// SaveIndexedAttestations --
-func (db *Store) SaveIndexedAttestations(ctx context.Context, atts []*ethpb.IndexedAttestation) error {
+// SaveIncomingIndexedAttestations --
+func (db *Store) SaveIncomingIndexedAttestations(ctx context.Context, atts []*ethpb.IndexedAttestation) error {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveIndexedAttestations")
 	defer span.End()
 	encoded := make([][]byte, len(atts))
@@ -160,6 +160,31 @@ func (db *Store) SaveIndexedAttestations(ctx context.Context, atts []*ethpb.Inde
 			if err := attsBkt.Put(encodedRoots[i], encoded[i]); err != nil {
 				return err
 			}
+		}
+		return nil
+	})
+}
+
+// SaveIncomingIndexedAttestation --
+func (db *Store) SaveIncomingIndexedAttestation(ctx context.Context, att *ethpb.IndexedAttestation) error {
+	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveIncomingIndexedAttestation")
+	defer span.End()
+	enc, err := proto.Marshal(att)
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal")
+	}
+	root := hashutil.Hash(enc)
+	return db.update(func(tx *bolt.Tx) error {
+		rootsBkt := tx.Bucket(indexedAttestationsRootsByTargetBucket)
+		attsBkt := tx.Bucket(indexedAttestationsBucket)
+
+		targetEpochKey := bytesutil.Bytes8(att.Data.Target.Epoch)
+		attRoots := rootsBkt.Get(targetEpochKey)
+		if err := rootsBkt.Put(targetEpochKey, append(attRoots, root[:]...)); err != nil {
+			return err
+		}
+		if err := attsBkt.Put(root[:], enc); err != nil {
+			return err
 		}
 		return nil
 	})
