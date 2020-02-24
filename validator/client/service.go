@@ -137,7 +137,6 @@ func (v *ValidatorService) Start() {
 	cache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: 1000,    // number of keys to track frequency of (1M).
 		MaxCost:     1 << 22, // maximum cost of cache (3MB).
-		// 100,000 roots will take up approximately 3 MB in memory.
 		BufferItems: 64, // number of keys per Get buffer.
 	})
 	if err != nil {
