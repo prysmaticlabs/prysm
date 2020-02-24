@@ -92,6 +92,7 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedState *state.BeaconS
 		if err := s.beaconDB.SaveColdStateSummary(ctx, r, &pb.ColdStateSummary{Slot: hotStateSummary.Slot}); err != nil {
 			return err
 		}
+
 		if err := s.beaconDB.DeleteHotStateSummary(ctx, r); err != nil {
 			return err
 		}
@@ -103,6 +104,10 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedState *state.BeaconS
 
 	// Update the split slot and root.
 	s.splitInfo = &splitSlotAndRoot{slot: finalizedState.Slot(), root: finalizedRoot}
+	log.WithFields(logrus.Fields{
+		"slot": s.splitInfo.slot,
+		"root": hex.EncodeToString(bytesutil.Trunc(s.splitInfo.root[:])),
+	}).Info("Set hot and cold state split point")
 
 	return nil
 }

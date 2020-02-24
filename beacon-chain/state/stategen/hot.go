@@ -118,6 +118,7 @@ func (s *State) loadHotIntermediateStateWithSlot(ctx context.Context, slot uint6
 	if !ok {
 		return nil, errUnknownBoundaryRoot
 	}
+
 	boundaryState, err := s.beaconDB.State(ctx, boundaryRoot)
 	if err != nil {
 		return nil, err
@@ -137,6 +138,7 @@ func (s *State) loadHotIntermediateStateWithSlot(ctx context.Context, slot uint6
 	if err != nil {
 		return nil, err
 	}
+
 	return s.ReplayBlocks(ctx, boundaryState, replayBlks, slot)
 }
 
