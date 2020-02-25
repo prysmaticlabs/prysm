@@ -7,14 +7,14 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 )
 
 // AttestationReceiver interface defines the methods of chain service receive and processing new attestations.
@@ -58,12 +58,6 @@ func (s *Service) IsValidAttestation(ctx context.Context, att *ethpb.Attestation
 
 // This processes attestations from the attestation pool to account for validator votes and fork choice.
 func (s *Service) processAttestation() {
-	// Wait for state to be initialized.
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
-	<-stateChannel
-	stateSub.Unsubscribe()
-
 	st := slotutil.GetSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
 	for {
 		select {
