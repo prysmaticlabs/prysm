@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
