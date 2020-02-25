@@ -30,7 +30,7 @@ type ReadOnlyDatabase interface {
 
 	// MinMaxSpan related methods.
 	ValidatorSpansMap(ctx context.Context, validatorIdx uint64) (map[uint64][2]uint16, error)
-	ValidatorEpochSpans(ctx context.Context, validatorIdx uint64, epoch uint64) ([2]uint16, error)
+	EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uint64, epoch uint64) ([2]uint16, error)
 
 	// ProposerSlashing related methods.
 	ProposalSlashingsByStatus(ctx context.Context, status types.SlashingStatus) ([]*ethpb.ProposerSlashing, error)
