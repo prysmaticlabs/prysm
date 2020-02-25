@@ -67,6 +67,12 @@ var (
 		Name:  "grpc-max-msg-size",
 		Usage: "Integer to define max recieve message call size (default: 52428800 (for 50Mb)).",
 	}
+	// GrpcRetriesFlag defines the number of times to retry a failed gRPC request.
+	GrpcRetriesFlag = cli.UintFlag{
+		Name:  "grpc-retries",
+		Usage: "Number of attempts to retry gRPC requests",
+		Value: 5,
+	}
 	// AccountMetricsFlag defines the graffiti value included in proposed blocks, default false.
 	AccountMetricsFlag = cli.BoolFlag{
 		Name:  "enable-account-metrics",
