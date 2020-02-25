@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -28,6 +29,7 @@ type Validator interface {
 	ProposeBlock(ctx context.Context, slot uint64, pubKey [48]byte)
 	SubmitAggregateAndProof(ctx context.Context, slot uint64, pubKey [48]byte)
 	LogAttestationsSubmitted()
+	UpdateDomainDataCaches(ctx context.Context, slot uint64)
 }
 
 // Run the main validator routine. This routine exits if the context is
@@ -81,6 +83,11 @@ func run(ctx context.Context, v Validator) {
 				cancel()
 				span.End()
 				continue
+			}
+
+			// Start fetching domain data for the next epoch.
+			if helpers.IsEpochEnd(slot) {
+				go v.UpdateDomainDataCaches(ctx, slot+1)
 			}
 
 			var wg sync.WaitGroup

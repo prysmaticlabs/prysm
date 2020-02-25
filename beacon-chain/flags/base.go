@@ -26,6 +26,7 @@ var (
 	DepositContractFlag = cli.StringFlag{
 		Name:  "deposit-contract",
 		Usage: "Deposit contract address. Beacon chain node will listen logs coming from the deposit contract to determine when validator is eligible to participate.",
+		Value: "0x4689a3C63CE249355C8a573B5974db21D2d1b8Ef",
 	}
 	// RPCHost defines the host on which the RPC server should listen.
 	RPCHost = cli.StringFlag{
