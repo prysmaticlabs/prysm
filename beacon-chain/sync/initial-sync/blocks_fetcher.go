@@ -35,14 +35,13 @@ type blocksFetcherConfig struct {
 // On an incoming requests, requested block range is evenly divided
 // among available peers (for fair network load distribution).
 type blocksFetcher struct {
-	ctx         context.Context
-	headFetcher blockchain.HeadFetcher
-	p2p         p2p.P2P
-	rateLimiter *leakybucket.Collector
-
-	requests chan *fetchRequestParams // incoming fetch requests
-	out      chan *fetchRequestResult // outgoing responses
-	quit     chan struct{}            // termination notifier
+	ctx                    context.Context
+	headFetcher            blockchain.HeadFetcher
+	p2p                    p2p.P2P
+	rateLimiter            *leakybucket.Collector
+	requests               chan *fetchRequestParams   // incoming fetch requests from downstream clients
+	receivedFetchResponses chan *fetchRequestResponse // responses from peers are forwarded to downstream clients
+	quit                   chan struct{}              // termination notifier
 }
 
 // fetchRequestParams holds parameters necessary to schedule a fetch request.
@@ -51,9 +50,9 @@ type fetchRequestParams struct {
 	count uint64 // how many slots to receive (fetcher may return fewer slots)
 }
 
-// fetchRequestResult is a combined type to hold results of both successful executions and errors.
+// fetchRequestResponse is a combined type to hold results of both successful executions and errors.
 // Valid usage pattern will be to check whether result's `err` is nil, before using `blocks`.
-type fetchRequestResult struct {
+type fetchRequestResponse struct {
 	params *fetchRequestParams
 	blocks []*eth.SignedBeaconBlock
 	err    error
@@ -62,13 +61,13 @@ type fetchRequestResult struct {
 // newBlocksFetcher creates ready to use fetcher
 func newBlocksFetcher(cfg *blocksFetcherConfig) *blocksFetcher {
 	return &blocksFetcher{
-		ctx:         cfg.ctx,
-		headFetcher: cfg.headFetcher,
-		p2p:         cfg.p2p,
-		rateLimiter: cfg.rateLimiter,
-		requests:    make(chan *fetchRequestParams),
-		out:         make(chan *fetchRequestResult),
-		quit:        make(chan struct{}),
+		ctx:                    cfg.ctx,
+		headFetcher:            cfg.headFetcher,
+		p2p:                    cfg.p2p,
+		rateLimiter:            cfg.rateLimiter,
+		requests:               make(chan *fetchRequestParams),
+		receivedFetchResponses: make(chan *fetchRequestResponse),
+		quit:                   make(chan struct{}),
 	}
 }
 
@@ -83,13 +82,13 @@ func (f *blocksFetcher) stop() {
 }
 
 // iter returns an outgoing channel, on which consumers are expected to constantly iterate for results/errors.
-func (f *blocksFetcher) iter() <-chan *fetchRequestResult {
-	return f.out
+func (f *blocksFetcher) iter() <-chan *fetchRequestResponse {
+	return f.receivedFetchResponses
 }
 
 // loop is a main fetcher loop, listens for incoming requests/cancellations, forwards outgoing responses
 func (f *blocksFetcher) loop() {
-	defer close(f.out)
+	defer close(f.receivedFetchResponses)
 
 	randGenerator := rand.New(rand.NewSource(time.Now().Unix()))
 	highestFinalizedSlot := helpers.StartSlot(f.highestFinalizedEpoch() + 1)
@@ -99,6 +98,7 @@ func (f *blocksFetcher) loop() {
 		select {
 		case <-f.ctx.Done():
 			// Upstream context is done.
+			log.Warn("Upstream context canceled. Blocks fetcher is stopped.")
 			return
 		case <-f.quit:
 			// Terminating abort all operations.
@@ -125,7 +125,7 @@ func (f *blocksFetcher) loop() {
 			if req.start > highestFinalizedSlot {
 				err := errors.Errorf("requested a start slot of %d which is greater than the next highest slot of %d", req.start, highestFinalizedSlot)
 				log.WithError(err).Debug("Block fetch request failed")
-				f.out <- &fetchRequestResult{
+				f.receivedFetchResponses <- &fetchRequestResponse{
 					params: req,
 					err:    err,
 				}
@@ -144,14 +144,14 @@ func (f *blocksFetcher) loop() {
 				resp, err := f.processFetchRequest(root, finalizedEpoch, start, 1, count, peers)
 				if err != nil {
 					log.WithError(err).Debug("Block fetch request failed")
-					f.out <- &fetchRequestResult{
+					f.receivedFetchResponses <- &fetchRequestResponse{
 						params: req,
 						err:    err,
 					}
 					return
 				}
 
-				f.out <- &fetchRequestResult{
+				f.receivedFetchResponses <- &fetchRequestResponse{
 					params: req,
 					blocks: resp,
 				}
@@ -202,7 +202,8 @@ func (f *blocksFetcher) processFetchRequest(root []byte, finalizedEpoch, start, 
 		return nil, errors.Errorf("did not expect request for start slot of %d which is greater than expected %d", start, highestFinalizedSlot)
 	}
 
-	count = mathutil.Min(count, helpers.StartSlot(finalizedEpoch+1)-start+1) // do not overflow the finalized epoch
+	// Do not overflow the finalized epoch, spread load evenly among available peers.
+	count = mathutil.Min(count, helpers.StartSlot(finalizedEpoch+1)-start+1)
 	perPeerCount := count / uint64(len(peers))
 	remainder := int(count % uint64(len(peers)))
 	log.WithFields(logrus.Fields{
@@ -223,7 +224,7 @@ func (f *blocksFetcher) processFetchRequest(root []byte, finalizedEpoch, start, 
 		if i < remainder {
 			count++
 		}
-		// asking for no blocks may cause the client to hang. This should never happen and
+		// Asking for no blocks may cause the client to hang. This should never happen and
 		// the peer may return an error anyway, but we'll ask for at least one block.
 		if count == 0 {
 			count = 1
