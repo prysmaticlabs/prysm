@@ -95,7 +95,7 @@ var (
 		Usage: "Disable update fork choice head on per attestation. See PR 4802 for details.",
 	}
 	enableByteMempool = cli.BoolFlag{
-		Name: "enable-byte-mempool",
+		Name:  "enable-byte-mempool",
 		Usage: "Enable use of sync.Pool for certain byte arrays in the beacon state",
 	}
 )

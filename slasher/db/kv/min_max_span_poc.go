@@ -3,6 +3,7 @@ package kv
 import (
 	"context"
 	"encoding/binary"
+	"fmt"
 
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
@@ -55,8 +56,7 @@ func marshalMinMaxSpan(ctx context.Context, spans [2]uint16) []byte {
 // FromBytes2 returns an integer which is stored in the little-endian format(4, 'little')
 // from a byte array.
 func FromBytes2(x []byte) uint16 {
-	empty4bytes := make([]byte, 2)
-	return binary.LittleEndian.Uint16(append(x[:2], empty4bytes...))
+	return binary.LittleEndian.Uint16(x[:2])
 }
 
 // Bytes2 returns integer x to bytes in little-endian format, x.to_bytes(2, 'big').
@@ -78,7 +78,7 @@ func (db *Store) ValidatorSpansMap(ctx context.Context, validatorIdx uint64) (ma
 		b := tx.Bucket(validatorsMinMaxSpanBucket)
 		valBucket := b.Bucket(bytesutil.Bytes8(validatorIdx))
 		if valBucket == nil {
-			return errors.New("validator id span maps are not in db yet")
+			return nil
 		}
 		keysLength := valBucket.Stats().KeyN
 		spanMap = make(map[uint64][2]uint16, keysLength)
@@ -105,6 +105,17 @@ func (db *Store) EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uin
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.ValidatorSpansMap")
 	defer span.End()
 	var err error
+	if db.spanCacheEnabled {
+		v, ok := db.spanCache.Get(validatorIdx)
+		spanMap := make(map[uint64][2]uint16)
+		if ok {
+			spanMap = v.(map[uint64][2]uint16)
+			spans, ok := spanMap[epoch]
+			if ok {
+				return spans, nil
+			}
+		}
+	}
 	var spans [2]uint16
 	err = db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(validatorsMinMaxSpanBucket)
@@ -132,6 +143,23 @@ func (db *Store) EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uin
 func (db *Store) SaveValidatorEpochSpans(ctx context.Context, validatorIdx uint64, epoch uint64, spans [2]uint16) error {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.ValidatorSpansMap")
 	defer span.End()
+	defer span.End()
+	if db.spanCacheEnabled {
+		if validatorIdx > highestValidatorIdx {
+			highestValidatorIdx = validatorIdx
+		}
+		v, ok := db.spanCache.Get(validatorIdx)
+		spanMap := make(map[uint64][2]uint16)
+		if ok {
+			spanMap = v.(map[uint64][2]uint16)
+		}
+		spanMap[epoch] = spans
+		saved := db.spanCache.Set(validatorIdx, v, 1)
+		if !saved {
+			return fmt.Errorf("failed to save span map to cache")
+		}
+		return nil
+	}
 	return db.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(validatorsMinMaxSpanBucket)
 		valBucket := b.Bucket(bytesutil.Bytes8(validatorIdx))
