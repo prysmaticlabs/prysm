@@ -3,6 +3,8 @@ package state
 import (
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -23,7 +25,7 @@ func (v *ReadOnlyValidator) EffectiveBalance() uint64 {
 // read only validator.
 func (v *ReadOnlyValidator) ActivationEligibilityEpoch() uint64 {
 	if v == nil || v.validator == nil {
-		return 0
+		return params.BeaconConfig().FarFutureEpoch
 	}
 	return v.validator.ActivationEligibilityEpoch
 }

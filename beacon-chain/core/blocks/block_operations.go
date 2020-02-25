@@ -413,7 +413,7 @@ func ProcessProposerSlashings(
 	var err error
 	for idx, slashing := range body.ProposerSlashings {
 		if slashing == nil {
-			continue
+			return nil, errors.New("nil proposer slashings in block body")
 		}
 		if int(slashing.ProposerIndex) >= beaconState.NumValidators() {
 			return nil, fmt.Errorf("invalid proposer index given in slashing %d", slashing.ProposerIndex)
@@ -1083,7 +1083,7 @@ func ProcessVoluntaryExits(
 	exits := body.VoluntaryExits
 	for idx, exit := range exits {
 		if exit == nil || exit.Exit == nil {
-			continue
+			return nil, errors.New("nil voluntary exit in block body")
 		}
 		if int(exit.Exit.ValidatorIndex) >= beaconState.NumValidators() {
 			return nil, fmt.Errorf(
