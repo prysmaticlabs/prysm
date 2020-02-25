@@ -43,7 +43,7 @@ func (s *State) saveHotState(ctx context.Context, blockRoot [32]byte, state *sta
 	// On an intermediate slots, save the hot state summary.
 	epochRoot, err := s.loadEpochBoundaryRoot(ctx, blockRoot, state)
 	if err != nil {
-		return errors.Wrap(err, "could not get epoch boundary root")
+		return errors.Wrap(err, "could not get epoch boundary root to save hot state")
 	}
 	if err := s.beaconDB.SaveHotStateSummary(ctx, &pb.HotStateSummary{
 		Slot:         state.Slot(),

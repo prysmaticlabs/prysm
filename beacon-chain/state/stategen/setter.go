@@ -13,17 +13,11 @@ func (s *State) SaveState(ctx context.Context, root [32]byte, state *state.Beaco
 	ctx, span := trace.StartSpan(ctx, "stateGen.SaveState")
 	defer span.End()
 
-	// State belongs to the cold section if it's below the split slot threshold.
+	// The state belongs to the cold section if it's below the split slot threshold.
 	if state.Slot() < s.splitInfo.slot {
-		if err := s.saveColdState(ctx, root, state); err != nil {
-			return err
-		}
-		return nil
+		return s.saveColdState(ctx, root, state)
 	}
 
-	if err := s.saveHotState(ctx, root, state); err != nil {
-		return err
-	}
-
-	return nil
+	return s.saveHotState(ctx, root, state)
 }
+
