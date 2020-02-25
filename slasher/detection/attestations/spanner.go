@@ -82,9 +82,7 @@ func (s *SpanDetector) DetectSlashingForValidator(
 				SlashableEpoch: sourceEpoch + uint64(minSpan),
 			}, nil
 		}
-	}
 
-	if sp := s.spans[sourceEpoch%numSpans]; sp != nil {
 		maxSpan := sp[validatorIdx][1]
 		if maxSpan > distance {
 			return &DetectionResult{
@@ -183,7 +181,7 @@ func (s *SpanDetector) updateMinSpan(source uint64, target uint64, valIdx uint64
 // for an attestation produced by the validator. Used for catching surrounded votes.
 func (s *SpanDetector) updateMaxSpan(source uint64, target uint64, valIdx uint64) {
 	numSpans := uint64(len(s.spans))
-	for epoch := target - 1; epoch > source; epoch-- {
+	for epoch := source + 1; epoch < target; epoch++ {
 		if sp := s.spans[epoch%numSpans]; sp == nil {
 			s.spans[epoch%numSpans] = make(map[uint64][2]uint16)
 		}
