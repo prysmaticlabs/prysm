@@ -158,7 +158,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		}
 	}
 
-	fetcher.stop() // manners
+	fetcher.stop()
 
 	log.Debug("Synced to finalized epoch - now syncing blocks up to current head")
 

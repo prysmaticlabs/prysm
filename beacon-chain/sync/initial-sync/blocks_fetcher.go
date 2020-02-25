@@ -22,7 +22,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// blocksFetcherConfig is a config to setup block fetcher
+// blocksFetcherConfig is a config to setup the block fetcher.
 type blocksFetcherConfig struct {
 	ctx         context.Context
 	chain       blockchainService
@@ -44,7 +44,7 @@ type blocksFetcher struct {
 	quit     chan struct{}            // termination notifier
 }
 
-// fetchRequestParams holds parameters necessary to schedule a fetch request
+// fetchRequestParams holds parameters necessary to schedule a fetch request.
 type fetchRequestParams struct {
 	start uint64 // starting slot
 	count uint64 // how many slots to receive (fetcher may return fewer slots)
@@ -76,12 +76,12 @@ func (f *blocksFetcher) start() {
 	go f.loop()
 }
 
-// stop terminates all fetcher operations
+// stop terminates all fetcher operations.
 func (f *blocksFetcher) stop() {
 	close(f.quit)
 }
 
-// iter returns outgoing channel, on which consumers is expected to constantly iterate for results/errors
+// iter returns an outgoing channel, on which consumers are expected to constantly iterate for results/errors.
 func (f *blocksFetcher) iter() <-chan *fetchRequestResult {
 	return f.out
 }
@@ -97,21 +97,21 @@ func (f *blocksFetcher) loop() {
 	for {
 		select {
 		case <-f.ctx.Done():
-			// upstream context is done
+			// Upstream context is done.
 			return
 		case <-f.quit:
-			// terminating abort all operations
+			// Terminating abort all operations.
 			return
 		case req := <-f.requests:
 			root, finalizedEpoch, peers := f.p2p.Peers().BestFinalized(maxPeersToSync, helpers.SlotToEpoch(f.chain.HeadSlot()))
 			log.WithFields(logrus.Fields{
 				"request":        req,
 				"finalizedEpoch": finalizedEpoch,
-				"len(peers)":     len(peers),
+				"numPeers":     len(peers),
 			}).Debug("Block fetcher receives request")
 
 			if len(peers) == 0 {
-				log.Warn("No peers; waiting for reconnect")
+				log.Warn("No peers available, waiting for reconnect...")
 				time.Sleep(refreshTime)
 				continue
 			}
@@ -131,8 +131,8 @@ func (f *blocksFetcher) loop() {
 				continue
 			}
 
-			// shuffle peers to prevent a bad peer from
-			// stalling sync with invalid blocks
+			// Shuffle peers to prevent a bad peer from
+			// stalling sync with invalid blocks.
 			randGenerator.Shuffle(len(peers), func(i, j int) {
 				peers[i], peers[j] = peers[j], peers[i]
 			})
@@ -147,7 +147,6 @@ func (f *blocksFetcher) loop() {
 						params: req,
 						err:    err,
 					}
-
 					return
 				}
 
@@ -161,7 +160,7 @@ func (f *blocksFetcher) loop() {
 }
 
 // scheduleRequest adds request to incoming queue.
-// Should be non-blocking, actual requests processing is done asynchronously.
+// Should be non-blocking, as actual request processing is done asynchronously.
 func (f *blocksFetcher) scheduleRequest(req *fetchRequestParams) {
 	go func() { // non-blocking, we can re-throw requests within consuming method
 		select {
@@ -199,7 +198,7 @@ func (f *blocksFetcher) processFetchRequest(root []byte, finalizedEpoch, start, 
 	// Short circuit start far exceeding the highest finalized epoch in some infinite loop.
 	highestFinalizedSlot := helpers.StartSlot(finalizedEpoch + 1)
 	if start > highestFinalizedSlot {
-		return nil, errors.Errorf("attempted to ask for a start slot of %d which is greater than the next highest slot of %d", start, highestFinalizedSlot)
+		return nil, errors.Errorf("did not expect request for start slot of %d which is greater than expected %d", start, highestFinalizedSlot)
 	}
 
 	count = mathutil.Min(count, helpers.StartSlot(finalizedEpoch+1)-start+1) // do not overflow the finalized epoch

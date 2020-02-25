@@ -268,7 +268,7 @@ func TestBlocksFetcher(t *testing.T) {
 				State: st,
 				Root:  genesisRoot[:],
 				DB:    beaconDB,
-			} // no-op mock
+			}
 
 			ctx, cancel := context.WithCancel(context.Background())
 			fetcher := newBlocksFetcher(&blocksFetcherConfig{
