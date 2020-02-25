@@ -275,7 +275,6 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 			return err
 		}
 
-
 		if helpers.IsEpochStart(postState.Slot()) {
 			if err := s.stateGen.SaveState(ctx, root, postState); err != nil {
 				return errors.Wrap(err, "could not save state")

@@ -74,7 +74,7 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedState *state.BeaconS
 				"slot":         hotStateSummary.Slot,
 				"archiveIndex": archivePointIndex,
 				"root":         hex.EncodeToString(bytesutil.Trunc(r[:])),
-			}).Info("Saved archive point during state migration")
+			}).Info("Saved archived point during state migration")
 		}
 
 		if s.beaconDB.HasState(ctx, r) {

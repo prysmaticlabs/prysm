@@ -205,8 +205,8 @@ var (
 		Hidden: true,
 	}
 	deprecatedInitSyncCacheStateFlag = cli.BoolFlag{
-		Name: "initial-sync-cache-state",
-		Usage: deprecatedUsage,
+		Name:   "initial-sync-cache-state",
+		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
 )
