@@ -36,7 +36,6 @@ type Flags struct {
 	EnableBackupWebhook                        bool   // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
 	PruneEpochBoundaryStates                   bool   // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
 	EnableSnappyDBCompression                  bool   // EnableSnappyDBCompression in the database.
-	InitSyncCacheState                         bool   // InitSyncCacheState caches state during initial sync.
 	KafkaBootstrapServers                      string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
 	ProtectProposer                            bool   // ProtectProposer prevents the validator client from signing any proposals that would be considered a slashable offense.
 	ProtectAttester                            bool   // ProtectAttester prevents the validator client from signing any attestations that would be considered a slashable offense.
@@ -124,10 +123,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalString(kafkaBootstrapServersFlag.Name) != "" {
 		log.Warn("Enabling experimental kafka streaming.")
 		cfg.KafkaBootstrapServers = ctx.GlobalString(kafkaBootstrapServersFlag.Name)
-	}
-	if ctx.GlobalBool(initSyncCacheStateFlag.Name) {
-		log.Warn("Enabled initial sync cache state mode.")
-		cfg.InitSyncCacheState = true
 	}
 	if ctx.GlobalBool(enableSlasherFlag.Name) {
 		log.Warn("Enable slasher connection.")

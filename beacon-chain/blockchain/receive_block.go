@@ -202,21 +202,11 @@ func (s *Service) ReceiveBlockNoVerify(ctx context.Context, block *ethpb.SignedB
 		return errors.Wrap(err, "could not get head root from cache")
 	}
 
-	if featureconfig.Get().InitSyncCacheState {
-		if !bytes.Equal(root[:], cachedHeadRoot) {
-			if err := s.saveHeadNoDB(ctx, blockCopy, root); err != nil {
-				err := errors.Wrap(err, "could not save head")
-				traceutil.AnnotateError(span, err)
-				return err
-			}
-		}
-	} else {
-		if !bytes.Equal(root[:], cachedHeadRoot) {
-			if err := s.saveHead(ctx, root); err != nil {
-				err := errors.Wrap(err, "could not save head")
-				traceutil.AnnotateError(span, err)
-				return err
-			}
+	if !bytes.Equal(root[:], cachedHeadRoot) {
+		if err := s.saveHeadNoDB(ctx, blockCopy, root); err != nil {
+			err := errors.Wrap(err, "could not save head")
+			traceutil.AnnotateError(span, err)
+			return err
 		}
 	}
 
