@@ -34,7 +34,6 @@ type Server struct {
 	BlockNotifier        blockfeed.Notifier
 	AttestationsPool     attestations.Pool
 	SlashingsPool        *slashings.Pool
-	IncomingAttestation  chan *ethpb.Attestation
 	CanonicalStateChan   chan *pbp2p.BeaconState
 	ChainStartChan       chan time.Time
 	SlotTicker           slotutil.Ticker

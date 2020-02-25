@@ -233,7 +233,55 @@ func (bs *Server) StreamAttestations(
 func (bs *Server) StreamIndexedAttestations(
 	_ *ptypes.Empty, stream ethpb.BeaconChain_StreamIndexedAttestationsServer,
 ) error {
-	return status.Error(codes.Unimplemented, "Unimplemented")
+	for {
+		select {
+		case slot := <-bs.SlotTicker.C():
+			epoch := helpers.SlotToEpoch(slot)
+			atts := bs.AttestationsPool.AggregatedAttestations()
+			committeesBySlot, _, err := bs.retrieveCommitteesForEpoch(stream.Context(), epoch)
+			if err != nil {
+				return status.Errorf(
+					codes.Internal,
+					"Could not retrieve committees for epoch %d: %v",
+					epoch,
+					err,
+				)
+			}
+			// We use the retrieved committees for the epoch to convert all attestations
+			// into indexed form effectively.
+			numAttestations := len(atts)
+			indexedAtts := make([]*ethpb.IndexedAttestation, numAttestations, numAttestations)
+			startSlot := helpers.StartSlot(epoch)
+			endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch
+			for i := 0; i < len(indexedAtts); i++ {
+				att := atts[i]
+				// Out of range check, the attestation slot cannot be greater
+				// the last slot of the requested epoch or smaller than its start slot
+				// given committees are accessed as a map of slot -> commitees list, where there are
+				// SLOTS_PER_EPOCH keys in the map.
+				if att.Data.Slot < startSlot || att.Data.Slot > endSlot {
+					continue
+				}
+				committee := committeesBySlot[att.Data.Slot].Committees[att.Data.CommitteeIndex]
+				idxAtt, err := attestationutil.ConvertToIndexed(stream.Context(), atts[i], committee.ValidatorIndices)
+				if err != nil {
+					return status.Errorf(
+						codes.Internal,
+						"Could not convert attestation with slot %d to indexed form: %v",
+						att.Data.Slot,
+						err,
+					)
+				}
+				if err := stream.Send(idxAtt); err != nil {
+					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+				}
+			}
+		case <-bs.Ctx.Done():
+			return status.Error(codes.Canceled, "Context canceled")
+		case <-stream.Context().Done():
+			return status.Error(codes.Canceled, "Context canceled")
+		}
+	}
 }
 
 // AttestationPool retrieves pending attestations.
