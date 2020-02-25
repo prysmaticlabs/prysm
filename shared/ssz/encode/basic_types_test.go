@@ -1,10 +1,12 @@
 package encode
 
 import (
+	"fmt"
 	"strconv"
 	"testing"
 
 	"github.com/cockroachdb/cockroach/pkg/util/uint128"
+	"github.com/holiman/uint256"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -98,6 +100,33 @@ func TestMarshalUint128(t *testing.T) {
 	for i, tt := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			assert.Equal(t, tt.expected, MarshalUint128(tt.in))
+		})
+	}
+}
+
+func TestMarshalUint256(t *testing.T) {
+	var tests = []struct {
+		in uint256.Int
+		expected []byte
+	}{
+		{
+			in: [4]uint64{uint64(8), uint64(0), uint64(0), uint64(0)},
+			expected: []byte{8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		},
+		{
+			in: [4]uint64{uint64(0), uint64(0), uint64(0), uint64(0)},
+			expected: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		},
+		{
+			in: [4]uint64{uint64(18446744073709551615), uint64(18446744073709551615), uint64(18446744073709551615), uint64(18446744073709551615)},
+			expected: []byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+		},
+	}
+
+	for i, tt := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			fmt.Println(MarshalUint256(tt.in))
+			assert.Equal(t, tt.expected, MarshalUint256(tt.in))
 		})
 	}
 }
