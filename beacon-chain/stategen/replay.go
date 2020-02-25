@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
 // ReplayBlocks replays the input blocks on the input state until the target slot is reached.
@@ -17,17 +18,31 @@ func (s *State) ReplayBlocks(ctx context.Context, state *state.BeaconState, sign
 	// The input block list is sorted in decreasing slots order.
 	if len(signed) > 0 {
 		for i := len(signed) - 1; i >= 0; i-- {
-			state, err = transition.ExecuteStateTransitionNoVerifyAttSigs(ctx, state, signed[i])
-			if err != nil {
-				return nil, err
+			if featureconfig.Get().EnableStateGenSigVerify {
+				state, err = transition.ExecuteStateTransition(ctx, state, signed[i])
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				state, err = transition.ExecuteStateTransitionStateGen(ctx, state, signed[i])
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
 
 	// If there is skip slots at the end.
-	state, err = transition.ProcessSlots(ctx, state, targetSlot)
-	if err != nil {
-		return nil, err
+	if featureconfig.Get().EnableStateGenSigVerify {
+		state, err = transition.ProcessSlots(ctx, state, targetSlot)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		state, err = transition.ProcessSlotsStateGen(ctx, state, targetSlot)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return state, nil

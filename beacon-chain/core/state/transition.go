@@ -676,4 +676,3 @@ func ProcessBlockForStateRoot(
 
 	return state, nil
 }
-
