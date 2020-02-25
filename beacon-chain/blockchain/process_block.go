@@ -15,7 +15,6 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -197,14 +196,8 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", b.Slot)
 	}
 
-	if featureconfig.Get().InitSyncCacheState {
-		s.initSyncState[root] = postState.Copy()
-		s.filterBoundaryCandidates(ctx, root, postState)
-	} else {
-		if err := s.stateGen.SaveState(ctx, root, postState); err != nil {
-			return errors.Wrap(err, "could not save state")
-		}
-	}
+	s.initSyncState[root] = postState.Copy()
+	s.filterBoundaryCandidates(ctx, root, postState)
 
 	if flags.Get().EnableArchive {
 		atts := signed.Block.Body.Attestations
@@ -259,16 +252,14 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 		return errors.Wrap(err, "could not save finalized checkpoint")
 	}
 
-	if featureconfig.Get().InitSyncCacheState {
-		numOfStates := len(s.boundaryRoots)
-		if numOfStates > initialSyncCacheSize {
-			if err = s.persistCachedStates(ctx, numOfStates); err != nil {
-				return err
-			}
+	numOfStates := len(s.boundaryRoots)
+	if numOfStates > initialSyncCacheSize {
+		if err = s.persistCachedStates(ctx, numOfStates); err != nil {
+			return err
 		}
-		if len(s.initSyncState) > maxCacheSize {
-			s.pruneOldNonFinalizedStates()
-		}
+	}
+	if len(s.initSyncState) > maxCacheSize {
+		s.pruneOldNonFinalizedStates()
 	}
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.
@@ -284,11 +275,10 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 			return err
 		}
 
-		if featureconfig.Get().InitSyncCacheState {
-			if helpers.IsEpochStart(postState.Slot()) {
-				if err := s.stateGen.SaveState(ctx, root, postState); err != nil {
-					return errors.Wrap(err, "could not save state")
-				}
+
+		if helpers.IsEpochStart(postState.Slot()) {
+			if err := s.stateGen.SaveState(ctx, root, postState); err != nil {
+				return errors.Wrap(err, "could not save state")
 			}
 		}
 	}

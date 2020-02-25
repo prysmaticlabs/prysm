@@ -18,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
@@ -97,7 +96,7 @@ func TestStore_OnBlock(t *testing.T) {
 			name:          "parent block root does not have a state",
 			blk:           &ethpb.BeaconBlock{},
 			s:             st.Copy(),
-			wantErrString: "pre state of slot 0 does not exist",
+			wantErrString: "provided block root does not have block saved in the db",
 		},
 		{
 			name:          "block is from the feature",
@@ -341,32 +340,6 @@ func TestCachedPreState_CanGetFromCache(t *testing.T) {
 	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r[:]}
 	service.initSyncState[r] = s
 
-	wanted := "could not get pre state for slot 1"
-	if _, err := service.verifyBlkPreState(ctx, b); !strings.Contains(err.Error(), wanted) {
-		t.Fatal("Not expected error")
-	}
-}
-
-func TestCachedPreState_CanGetFromCacheWithFeature(t *testing.T) {
-	ctx := context.Background()
-	db := testDB.SetupDB(t)
-	defer testDB.TeardownDB(t, db)
-	config := &featureconfig.Flags{
-		InitSyncCacheState: true,
-	}
-	featureconfig.Init(config)
-
-	cfg := &Config{BeaconDB: db}
-	service, err := NewService(ctx, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	s, _ := stateTrie.InitializeFromProto(&pb.BeaconState{Slot: 1})
-	r := [32]byte{'A'}
-	b := &ethpb.BeaconBlock{Slot: 1, ParentRoot: r[:]}
-	service.initSyncState[r] = s
-
 	received, err := service.verifyBlkPreState(ctx, b)
 	if err != nil {
 		t.Fatal(err)
@@ -424,11 +397,6 @@ func TestSaveInitState_CanSaveDelete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	config := &featureconfig.Flags{
-		InitSyncCacheState: true,
-	}
-	featureconfig.Init(config)
 
 	for i := uint64(0); i < 64; i++ {
 		b := &ethpb.BeaconBlock{Slot: i}

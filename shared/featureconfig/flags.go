@@ -54,12 +54,6 @@ var (
 			"and attestation's aggregated signatures. Without this flag, only the proposer " +
 			"signature is verified until the node reaches the end of the finalized chain.",
 	}
-	initSyncCacheStateFlag = cli.BoolFlag{
-		Name: "initial-sync-cache-state",
-		Usage: "Save state in cache during initial sync. We currently save state in the DB during " +
-			"initial sync and disk-IO is one of the biggest bottleneck. This still saves finalized state in DB " +
-			"and start syncing from there",
-	}
 	enableSlasherFlag = cli.BoolFlag{
 		Name: "enable-slasher",
 		Usage: "Enables connection to a slasher service in order to retrieve slashable events. Slasher is connected to the beacon node using gRPC and " +
@@ -210,6 +204,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedInitSyncCacheStateFlag = cli.BoolFlag{
+		Name: "initial-sync-cache-state",
+		Usage: deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -233,6 +232,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedprotoArrayForkChoice,
 	deprecatedForkchoiceAggregateAttestations,
 	deprecatedEnableAttestationCacheFlag,
+	deprecatedInitSyncCacheStateFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -259,7 +259,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableSSZCache,
 	enableEth1DataVoteCacheFlag,
 	initSyncVerifyEverythingFlag,
-	initSyncCacheStateFlag,
 	skipBLSVerifyFlag,
 	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,
@@ -278,7 +277,6 @@ var E2EBeaconChainFlags = []string{
 	"--cache-filtered-block-tree",
 	"--enable-skip-slots-cache",
 	"--enable-eth1-data-vote-cache",
-	"--initial-sync-cache-state",
 	"--proto-array-forkchoice",
 	"--enable-byte-mempool",
 }

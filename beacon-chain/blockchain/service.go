@@ -34,7 +34,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -124,16 +123,14 @@ func (s *Service) Start() {
 	// For running initial sync with state cache, in an event of restart, we use
 	// last finalized check point as start point to sync instead of head
 	// state. This is because we no longer save state every slot during sync.
-	if featureconfig.Get().InitSyncCacheState {
-		cp, err := s.beaconDB.FinalizedCheckpoint(ctx)
+	cp, err := s.beaconDB.FinalizedCheckpoint(ctx)
+	if err != nil {
+		log.Fatalf("Could not fetch finalized cp: %v", err)
+	}
+	if beaconState == nil {
+		beaconState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(cp.Root))
 		if err != nil {
-			log.Fatalf("Could not fetch finalized cp: %v", err)
-		}
-		if beaconState == nil {
-			beaconState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(cp.Root))
-			if err != nil {
-				log.Fatalf("Could not fetch beacon state: %v", err)
-			}
+			log.Fatalf("Could not fetch beacon state: %v", err)
 		}
 	}
 
