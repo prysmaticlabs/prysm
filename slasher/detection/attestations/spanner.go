@@ -161,14 +161,14 @@ func (s *SpanDetector) updateMinSpan(source uint64, target uint64, valIdx uint64
 	numSpans := uint64(len(s.spans))
 	if source > 0 {
 		for epoch := source - 1; epoch > 0; epoch-- {
-			val := uint16(target - (epoch))
+			newMinSpan := uint16(target - (epoch))
 			if sp := s.spans[epoch%numSpans]; sp == nil {
 				s.spans[epoch%numSpans] = make(map[uint64][2]uint16)
 			}
 			minSpan := s.spans[epoch%numSpans][valIdx][0]
 			maxSpan := s.spans[epoch%numSpans][valIdx][1]
-			if minSpan == 0 || minSpan > val {
-				s.spans[epoch%numSpans][valIdx] = [2]uint16{val, maxSpan}
+			if minSpan == 0 || minSpan > newMinSpan {
+				s.spans[epoch%numSpans][valIdx] = [2]uint16{newMinSpan, maxSpan}
 			} else {
 				break
 			}
@@ -181,15 +181,15 @@ func (s *SpanDetector) updateMinSpan(source uint64, target uint64, valIdx uint64
 func (s *SpanDetector) updateMaxSpan(source uint64, target uint64, valIdx uint64) {
 	numSpans := uint64(len(s.spans))
 	distance := target - source
-	for epoch := uint64(1); epoch < distance; epoch++ {
-		val := uint16(distance - epoch)
-		if sp := s.spans[source+epoch%numSpans]; sp == nil {
-			s.spans[source+epoch%numSpans] = make(map[uint64][2]uint16)
+	for epoch := source + 1; epoch < source+distance; epoch++ {
+		if sp := s.spans[epoch%numSpans]; sp == nil {
+			s.spans[epoch%numSpans] = make(map[uint64][2]uint16)
 		}
-		minSpan := s.spans[source+epoch%numSpans][valIdx][0]
-		maxSpan := s.spans[source+epoch%numSpans][valIdx][1]
-		if maxSpan < val {
-			s.spans[source+epoch%numSpans][valIdx] = [2]uint16{minSpan, val}
+		minSpan := s.spans[epoch%numSpans][valIdx][0]
+		maxSpan := s.spans[epoch%numSpans][valIdx][1]
+		newMaxSpan := uint16(distance - (epoch - source))
+		if maxSpan < newMaxSpan {
+			s.spans[epoch%numSpans][valIdx] = [2]uint16{minSpan, newMaxSpan}
 		} else {
 			break
 		}
