@@ -1,6 +1,7 @@
 package encode
 
 import (
+	"encoding/binary"
 	"fmt"
 	"strconv"
 	"testing"
@@ -126,6 +127,10 @@ func TestMarshalUint256(t *testing.T) {
 	for i, tt := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			fmt.Println(MarshalUint256(tt.in))
+			blah := uint64(8)
+			buf := make([]byte, 8)
+			binary.LittleEndian.PutUint64(buf, blah)
+			fmt.Println(buf)
 			assert.Equal(t, tt.expected, MarshalUint256(tt.in))
 		})
 	}

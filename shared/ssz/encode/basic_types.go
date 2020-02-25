@@ -44,12 +44,13 @@ func MarshalUint128(in uint128.Uint128) []byte { // TODO i might be marshaling i
 	return out
 }
 
-func MarshalUint256(in uint256.Int) []byte {
-	out := make([]byte, 32)
-
-	in.WriteToSlice(out)
-
-	return out
+func MarshalUint256(in uint256.Int) [32]byte {
+	return in.Bytes32()
+	//out := make([]byte, 32)
+	//
+	//in.WriteToSlice(out)
+	//
+	//return out
 }
 
 func MarshalBoolean(in bool) byte { // TODO is this necessary?
