@@ -111,7 +111,7 @@ func TestMarshalUint256(t *testing.T) {
 		expected []byte
 	}{
 		{
-			in: [4]uint64{uint64(8), uint64(0), uint64(0), uint64(0)},
+			in: [4]uint64{uint64(0), uint64(0), uint64(0), uint64(8)},
 			expected: []byte{8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		},
 		{
