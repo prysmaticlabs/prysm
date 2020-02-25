@@ -176,7 +176,7 @@ func CalculateStateRoot(
 	}
 
 	// Execute per block transition.
-	state, err = computeStateRoot(ctx, state, signed)
+	state, err = ProcessBlockForStateRoot(ctx, state, signed)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not process block")
 	}
@@ -323,44 +323,6 @@ func ProcessSlots(ctx context.Context, state *stateTrie.BeaconState, slot uint64
 
 	if highestSlot < state.Slot() {
 		skipSlotCache.Put(ctx, key, state)
-	}
-
-	return state, nil
-}
-
-// ProcessSlotsWithoutCache processes slots without skip slot cache.
-func ProcessSlotsWithoutCache(ctx context.Context, state *stateTrie.BeaconState, slot uint64) (*stateTrie.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ProcessSlotsWithoutCache")
-	defer span.End()
-	if state == nil {
-		return nil, errors.New("nil state")
-	}
-	span.AddAttributes(trace.Int64Attribute("slots", int64(slot)-int64(state.Slot())))
-
-	if state.Slot() > slot {
-		err := fmt.Errorf("expected state.slot %d < slot %d", state.Slot(), slot)
-		traceutil.AnnotateError(span, err)
-		return nil, err
-	}
-
-	if state.Slot() == slot {
-		return state, nil
-	}
-
-	for state.Slot() < slot {
-		state, err := ProcessSlot(ctx, state)
-		if err != nil {
-			traceutil.AnnotateError(span, err)
-			return nil, errors.Wrap(err, "could not process slot")
-		}
-		if CanProcessEpoch(state) {
-			state, err = ProcessEpochPrecompute(ctx, state)
-			if err != nil {
-				traceutil.AnnotateError(span, err)
-				return nil, errors.Wrap(err, "could not process epoch with optimizations")
-			}
-		}
-		state.SetSlot(state.Slot() + 1)
 	}
 
 	return state, nil
@@ -678,9 +640,9 @@ func ProcessEpochPrecompute(ctx context.Context, state *stateTrie.BeaconState) (
 	return state, nil
 }
 
-// computeStateRoot computes the state root of the block without verifying proposer signature
-// and randao.
-func computeStateRoot(
+// ProcessBlockForStateRoot processes the state for state root computation. It skips proposer signature
+// and randao signature verification.
+func ProcessBlockForStateRoot(
 	ctx context.Context,
 	state *stateTrie.BeaconState,
 	signed *ethpb.SignedBeaconBlock,

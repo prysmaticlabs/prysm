@@ -20,4 +20,3 @@ func (s *State) SaveState(ctx context.Context, root [32]byte, state *state.Beaco
 
 	return s.saveHotState(ctx, root, state)
 }
-
