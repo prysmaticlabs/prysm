@@ -1111,32 +1111,3 @@ func TestServer_StreamAttestations_OnSlotTick(t *testing.T) {
 	ticker.Channel <- 0
 	<-exitRoutine
 }
-
-func generateAtt(state *stateTrie.BeaconState, index uint64, privKeys []*bls.SecretKey) *ethpb.Attestation {
-	aggBits := bitfield.NewBitlist(4)
-	aggBits.SetBitAt(index, true)
-	att := &ethpb.Attestation{
-		Data: &ethpb.AttestationData{
-			CommitteeIndex: 1,
-			Source:         &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
-			Target:         &ethpb.Checkpoint{Epoch: 0},
-		},
-		AggregationBits: aggBits,
-	}
-	committee, _ := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
-	attestingIndices, _ := attestationutil.AttestingIndices(att.AggregationBits, committee)
-	domain := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
-
-	sigs := make([]*bls.Signature, len(attestingIndices))
-	zeroSig := [96]byte{}
-	att.Signature = zeroSig[:]
-
-	for i, indice := range attestingIndices {
-		hashTreeRoot, _ := ssz.HashTreeRoot(att.Data)
-		sig := privKeys[indice].Sign(hashTreeRoot[:], domain)
-		sigs[i] = sig
-	}
-
-	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
-	return att
-}
