@@ -74,12 +74,12 @@ func (s *SpanDetector) DetectSlashingForValidator(
 	defer s.lock.RUnlock()
 	distance := uint16(targetEpoch - sourceEpoch)
 	numSpans := uint64(len(s.spans))
-	if sp := s.spans[sourceEpoch%numSpans]; sp != nil {
+	if sp := s.spans[targetEpoch%numSpans]; sp != nil {
 		minSpan := sp[validatorIdx][0]
 		if minSpan > 0 && minSpan < distance {
 			return &DetectionResult{
 				Kind:           SurroundVote,
-				SlashableEpoch: uint64(minSpan) + sourceEpoch,
+				SlashableEpoch: targetEpoch + uint64(minSpan),
 			}, nil
 		}
 
@@ -87,7 +87,7 @@ func (s *SpanDetector) DetectSlashingForValidator(
 		if maxSpan > distance {
 			return &DetectionResult{
 				Kind:           SurroundVote,
-				SlashableEpoch: uint64(maxSpan) + sourceEpoch,
+				SlashableEpoch: targetEpoch + uint64(maxSpan),
 			}, nil
 		}
 	}
@@ -159,19 +159,20 @@ func (s *SpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttest
 // for an attestation produced by the validator.
 func (s *SpanDetector) updateMinSpan(source uint64, target uint64, valIdx uint64) {
 	numSpans := uint64(len(s.spans))
-	if source > 0 {
-		for epoch := source - 1; epoch > 0; epoch-- {
-			newMinSpan := uint16(target - (epoch))
-			if sp := s.spans[epoch%numSpans]; sp == nil {
-				s.spans[epoch%numSpans] = make(map[uint64][2]uint16)
-			}
-			minSpan := s.spans[epoch%numSpans][valIdx][0]
-			maxSpan := s.spans[epoch%numSpans][valIdx][1]
-			if minSpan == 0 || minSpan > newMinSpan {
-				s.spans[epoch%numSpans][valIdx] = [2]uint16{newMinSpan, maxSpan}
-			} else {
-				break
-			}
+	if source < 1 {
+		return
+	}
+	for epoch := source - 1; epoch > 0; epoch-- {
+		newMinSpan := uint16(target - (epoch))
+		if sp := s.spans[epoch%numSpans]; sp == nil {
+			s.spans[epoch%numSpans] = make(map[uint64][2]uint16)
+		}
+		minSpan := s.spans[epoch%numSpans][valIdx][0]
+		maxSpan := s.spans[epoch%numSpans][valIdx][1]
+		if minSpan == 0 || minSpan > newMinSpan {
+			s.spans[epoch%numSpans][valIdx] = [2]uint16{newMinSpan, maxSpan}
+		} else {
+			break
 		}
 	}
 }
@@ -180,15 +181,14 @@ func (s *SpanDetector) updateMinSpan(source uint64, target uint64, valIdx uint64
 // for an attestation produced by the validator.
 func (s *SpanDetector) updateMaxSpan(source uint64, target uint64, valIdx uint64) {
 	numSpans := uint64(len(s.spans))
-	distance := target - source
-	for epoch := source + 1; epoch < source+distance; epoch++ {
+	for epoch := target - 1; epoch > source; epoch-- {
 		if sp := s.spans[epoch%numSpans]; sp == nil {
 			s.spans[epoch%numSpans] = make(map[uint64][2]uint16)
 		}
 		minSpan := s.spans[epoch%numSpans][valIdx][0]
 		maxSpan := s.spans[epoch%numSpans][valIdx][1]
-		newMaxSpan := uint16(distance - (epoch - source))
-		if maxSpan < newMaxSpan {
+		newMaxSpan := uint16(target - epoch)
+		if newMaxSpan > maxSpan {
 			s.spans[epoch%numSpans][valIdx] = [2]uint16{minSpan, newMaxSpan}
 		} else {
 			break

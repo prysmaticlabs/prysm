@@ -23,12 +23,12 @@ func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 			name:           "Should slash if max span > distance",
 			sourceEpoch:    3,
 			targetEpoch:    6,
-			slashableEpoch: 7,
+			slashableEpoch: 10,
 			shouldSlash:    true,
 			// Given a distance of (6 - 3) = 3, we want the validator at epoch 3 to have
 			// committed a slashable offense by having a max span of 4 > distance.
 			spansByEpochForValidator: map[uint64][2]uint16{
-				3: {0, 4},
+				6: {0, 4},
 			},
 		},
 		{
@@ -39,7 +39,7 @@ func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 			// have committed slashable offense by having a max span of 1 < distance.
 			shouldSlash: false,
 			spansByEpochForValidator: map[uint64][2]uint16{
-				3: {0, 1},
+				6: {0, 1},
 			},
 		},
 		{
@@ -50,7 +50,7 @@ func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 			// have committed slashable offense by having a max span of 3 == distance.
 			shouldSlash: false,
 			spansByEpochForValidator: map[uint64][2]uint16{
-				3: {0, 3},
+				6: {0, 3},
 			},
 		},
 		{
@@ -61,7 +61,7 @@ func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 			// have committed a slashable offense if min span == 0.
 			shouldSlash: false,
 			spansByEpochForValidator: map[uint64][2]uint16{
-				3: {0, 1},
+				6: {0, 1},
 			},
 		},
 		{
@@ -71,9 +71,9 @@ func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 			// Given a distance of (6 - 3) = 3, we want the validator at epoch 3 to have
 			// committed a slashable offense by having a min span of 1 < distance.
 			shouldSlash:    true,
-			slashableEpoch: 4,
+			slashableEpoch: 7,
 			spansByEpochForValidator: map[uint64][2]uint16{
-				3: {1, 0},
+				6: {1, 0},
 			},
 		},
 	}
