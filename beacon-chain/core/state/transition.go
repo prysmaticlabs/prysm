@@ -176,7 +176,7 @@ func CalculateStateRoot(
 	}
 
 	// Execute per block transition.
-	state, err = computeStateRoot(ctx, state, signed)
+	state, err = ProcessBlockForStateRoot(ctx, state, signed)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not process block")
 	}
