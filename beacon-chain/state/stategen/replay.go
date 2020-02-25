@@ -34,7 +34,7 @@ func (s *State) ReplayBlocks(ctx context.Context, state *state.BeaconState, sign
 
 	// If there is skip slots at the end.
 	if targetSlot > state.Slot() {
-		state, err = transition.ProcessSlots(ctx, state, targetSlot)
+		state, err = transition.ProcessSlotsWithoutCache(ctx, state, targetSlot)
 		if err != nil {
 			return nil, err
 		}

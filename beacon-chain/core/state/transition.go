@@ -328,6 +328,44 @@ func ProcessSlots(ctx context.Context, state *stateTrie.BeaconState, slot uint64
 	return state, nil
 }
 
+// ProcessSlotsWithoutCache processes slots without skip slot cache.
+func ProcessSlotsWithoutCache(ctx context.Context, state *stateTrie.BeaconState, slot uint64) (*stateTrie.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ProcessSlotsWithoutCache")
+	defer span.End()
+	if state == nil {
+		return nil, errors.New("nil state")
+	}
+	span.AddAttributes(trace.Int64Attribute("slots", int64(slot)-int64(state.Slot())))
+
+	if state.Slot() > slot {
+		err := fmt.Errorf("expected state.slot %d < slot %d", state.Slot(), slot)
+		traceutil.AnnotateError(span, err)
+		return nil, err
+	}
+
+	if state.Slot() == slot {
+		return state, nil
+	}
+
+	for state.Slot() < slot {
+		state, err := ProcessSlot(ctx, state)
+		if err != nil {
+			traceutil.AnnotateError(span, err)
+			return nil, errors.Wrap(err, "could not process slot")
+		}
+		if CanProcessEpoch(state) {
+			state, err = ProcessEpochPrecompute(ctx, state)
+			if err != nil {
+				traceutil.AnnotateError(span, err)
+				return nil, errors.Wrap(err, "could not process epoch with optimizations")
+			}
+		}
+		state.SetSlot(state.Slot() + 1)
+	}
+
+	return state, nil
+}
+
 // ProcessBlock creates a new, modified beacon state by applying block operation
 // transformations as defined in the Ethereum Serenity specification, including processing proposer slashings,
 // processing block attestations, and more.

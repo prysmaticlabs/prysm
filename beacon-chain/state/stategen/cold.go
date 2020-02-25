@@ -186,6 +186,9 @@ func (s *State) loadColdStateSlot(ctx context.Context, blockRoot [32]byte) (uint
 
 	if s.beaconDB.HasColdStateSummary(ctx, blockRoot) {
 		summary, err := s.beaconDB.ColdStateSummary(ctx, blockRoot)
+		if summary == nil {
+			return 0, errUnknownColdSummary
+		}
 		return summary.Slot, err
 	}
 
@@ -193,6 +196,9 @@ func (s *State) loadColdStateSlot(ctx context.Context, blockRoot [32]byte) (uint
 	b, err := s.beaconDB.Block(ctx, blockRoot)
 	if err != nil {
 		return 0, err
+	}
+	if b == nil || b.Block == nil {
+		return 0, errUnknownBlock
 	}
 	if err := s.beaconDB.SaveColdStateSummary(ctx, blockRoot, &pb.ColdStateSummary{Slot: b.Block.Slot}); err != nil {
 		return 0, err
