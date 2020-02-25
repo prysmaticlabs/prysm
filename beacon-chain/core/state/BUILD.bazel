@@ -8,6 +8,7 @@ go_library(
         "skip_slot_cache.go",
         "state.go",
         "transition.go",
+        "transition_stategen.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/state",
     visibility = [
