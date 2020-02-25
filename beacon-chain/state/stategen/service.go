@@ -31,7 +31,7 @@ func New(db db.NoHeadAccessDatabase) *State {
 	return &State{
 		beaconDB: db,
 		//slotsPerArchivePoint: uint64(flags.Get().SlotsPerArchivePoint),
-		slotsPerArchivePoint:    32,
+		slotsPerArchivePoint:    128,
 		epochBoundarySlotToRoot: make(map[uint64][32]byte),
 		splitInfo:               &splitSlotAndRoot{slot: 0, root: params.BeaconConfig().ZeroHash},
 	}
