@@ -91,7 +91,15 @@ func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 				}
 			}
 			ctx := context.Background()
-			res, err := sd.DetectSlashingForValidator(ctx, validatorIndex, tt.sourceEpoch, tt.targetEpoch)
+			attData := &ethpb.AttestationData{
+				Source: &ethpb.Checkpoint{
+					Epoch: tt.sourceEpoch,
+				},
+				Target: &ethpb.Checkpoint{
+					Epoch: tt.targetEpoch,
+				},
+			}
+			res, err := sd.DetectSlashingForValidator(ctx, validatorIndex, attData)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -189,7 +197,15 @@ func TestSpanDetector_DetectSlashingForValidator_MultipleValidators(t *testing.T
 			}
 			ctx := context.Background()
 			for valIdx := uint64(0); valIdx < uint64(len(tt.shouldSlash)); valIdx++ {
-				res, err := sd.DetectSlashingForValidator(ctx, valIdx, tt.sourceEpochs[valIdx], tt.targetEpochs[valIdx])
+				attData := &ethpb.AttestationData{
+					Source: &ethpb.Checkpoint{
+						Epoch: tt.sourceEpochs[valIdx],
+					},
+					Target: &ethpb.Checkpoint{
+						Epoch: tt.targetEpochs[valIdx],
+					},
+				}
+				res, err := sd.DetectSlashingForValidator(ctx, valIdx, attData)
 				if err != nil {
 					t.Fatal(err)
 				}

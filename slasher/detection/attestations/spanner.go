@@ -58,11 +58,12 @@ func NewSpanDetector() *SpanDetector {
 func (s *SpanDetector) DetectSlashingForValidator(
 	ctx context.Context,
 	validatorIdx uint64,
-	sourceEpoch uint64,
-	targetEpoch uint64,
+	attData *ethpb.AttestationData,
 ) (*DetectionResult, error) {
 	ctx, span := trace.StartSpan(ctx, "detection.DetectSlashingForValidator")
 	defer span.End()
+	sourceEpoch := attData.Source.Epoch
+	targetEpoch := attData.Target.Epoch
 	if (targetEpoch - sourceEpoch) > params.BeaconConfig().WeakSubjectivityPeriod {
 		return nil, fmt.Errorf(
 			"attestation span was greater than weak subjectivity period %d, received: %d",
@@ -163,7 +164,7 @@ func (s *SpanDetector) updateMinSpan(source uint64, target uint64, valIdx uint64
 		return
 	}
 	for epoch := source - 1; epoch >= 0; epoch-- {
-		newMinSpan := uint16(target - (epoch))
+		newMinSpan := uint16(target - epoch)
 		if sp := s.spans[epoch%numSpans]; sp == nil {
 			s.spans[epoch%numSpans] = make(map[uint64][2]uint16)
 		}
