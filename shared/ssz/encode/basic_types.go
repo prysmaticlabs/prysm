@@ -44,7 +44,7 @@ func MarshalUint128(in uint128.Uint128) []byte { // TODO i might be marshaling i
 	return out
 }
 
-func MarshalUint256(in uint256.Int) [32]byte {
+func MarshalUint256(in uint256.Int) []byte {
 	out := make([]byte, 32)
 
 	in.WriteToSlice(out)
