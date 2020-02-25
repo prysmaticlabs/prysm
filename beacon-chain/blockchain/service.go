@@ -168,6 +168,8 @@ func (s *Service) Start() {
 				StartTime: s.genesisTime,
 			},
 		})
+
+		go s.processAttestation()
 	} else {
 		log.Info("Waiting to reach the validator deposit threshold to start the beacon chain...")
 		if s.chainStartFetcher == nil {
@@ -185,6 +187,7 @@ func (s *Service) Start() {
 						data := event.Data.(*statefeed.ChainStartedData)
 						log.WithField("starttime", data.StartTime).Debug("Received chain start event")
 						s.processChainStartTime(ctx, data.StartTime)
+						go s.processAttestation()
 						return
 					}
 				case <-s.ctx.Done():
@@ -197,8 +200,6 @@ func (s *Service) Start() {
 			}
 		}()
 	}
-
-	go s.processAttestation()
 }
 
 // processChainStartTime initializes a series of deposits from the ChainStart deposits in the eth1
