@@ -23,12 +23,12 @@ func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 			name:           "Should slash if max span > distance",
 			sourceEpoch:    3,
 			targetEpoch:    6,
-			slashableEpoch: 10,
+			slashableEpoch: 7,
 			shouldSlash:    true,
 			// Given a distance of (6 - 3) = 3, we want the validator at epoch 3 to have
 			// committed a slashable offense by having a max span of 4 > distance.
 			spansByEpochForValidator: map[uint64][2]uint16{
-				6: {0, 4},
+				3: {0, 4},
 			},
 		},
 		{
@@ -39,7 +39,7 @@ func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 			// have committed slashable offense by having a max span of 1 < distance.
 			shouldSlash: false,
 			spansByEpochForValidator: map[uint64][2]uint16{
-				6: {0, 1},
+				3: {0, 1},
 			},
 		},
 		{
@@ -50,7 +50,7 @@ func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 			// have committed slashable offense by having a max span of 3 == distance.
 			shouldSlash: false,
 			spansByEpochForValidator: map[uint64][2]uint16{
-				6: {0, 3},
+				3: {0, 3},
 			},
 		},
 		{
@@ -61,7 +61,7 @@ func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 			// have committed a slashable offense if min span == 0.
 			shouldSlash: false,
 			spansByEpochForValidator: map[uint64][2]uint16{
-				6: {0, 1},
+				3: {0, 1},
 			},
 		},
 		{
@@ -71,9 +71,9 @@ func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 			// Given a distance of (6 - 3) = 3, we want the validator at epoch 3 to have
 			// committed a slashable offense by having a min span of 1 < distance.
 			shouldSlash:    true,
-			slashableEpoch: 7,
+			slashableEpoch: 4,
 			spansByEpochForValidator: map[uint64][2]uint16{
-				6: {1, 0},
+				3: {1, 0},
 			},
 		},
 	}
@@ -105,6 +105,105 @@ func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 				}
 				if !reflect.DeepEqual(res, want) {
 					t.Errorf("Wanted: %v, received %v", want, res)
+				}
+			}
+		})
+	}
+}
+
+func TestSpanDetector_DetectSlashingForValidator_MultipleValidators(t *testing.T) {
+	type testStruct struct {
+		name            string
+		sourceEpochs    []uint64
+		targetEpochs    []uint64
+		slashableEpochs []uint64
+		shouldSlash     []bool
+		spansByEpoch    []map[uint64][2]uint16
+	}
+	tests := []testStruct{
+		{
+			name:            "3 of 5 validators slashed",
+			sourceEpochs:    []uint64{0, 2, 4, 5, 1},
+			targetEpochs:    []uint64{10, 3, 5, 9, 8},
+			slashableEpochs: []uint64{6, 0, 7, 8, 0},
+			// Detections - surrounding, none, surrounded, surrounding, none.
+			shouldSlash: []bool{true, false, true, true, false},
+			// Atts in map: (src, epoch) - 0: (2, 6), 1: (1, 2), 2: (1, 7), 3: (6, 8), 4: (0, 3)
+			spansByEpoch: []map[uint64][2]uint16{
+				// Epoch 0.
+				{
+					0: {6, 0},
+					1: {2, 0},
+					2: {7, 0},
+					3: {8, 0},
+				},
+				// Epoch 1.
+				{
+					0: {5, 0},
+					3: {7, 0},
+					4: {0, 1},
+				},
+				// Epoch 2.
+				{
+					2: {0, 5},
+					3: {6, 0},
+					4: {0, 2},
+				},
+				// Epoch 3.
+				{
+					0: {0, 3},
+					2: {0, 4},
+					3: {5, 0},
+				},
+				// Epoch 4.
+				{
+					0: {0, 2},
+					2: {0, 3},
+					3: {4, 0},
+				},
+				// Epoch 5.
+				{
+					0: {0, 1},
+					2: {0, 2},
+					3: {3, 0},
+				},
+				// Epoch 6.
+				{
+					2: {0, 1},
+				},
+				// Epoch 7.
+				{
+					3: {0, 1},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			numEpochsToTrack := 100
+			sd := &SpanDetector{
+				spans: make([]map[uint64][2]uint16, numEpochsToTrack),
+			}
+			for i := 0; i < len(tt.spansByEpoch); i++ {
+				sd.spans[i] = tt.spansByEpoch[i]
+			}
+			ctx := context.Background()
+			for valIdx := uint64(0); valIdx < uint64(len(tt.shouldSlash)); valIdx++ {
+				res, err := sd.DetectSlashingForValidator(ctx, valIdx, tt.sourceEpochs[valIdx], tt.targetEpochs[valIdx])
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !tt.shouldSlash[valIdx] && res != nil {
+					t.Fatalf("Did not want validator to be slashed but found slashable offense: %v", res)
+				}
+				if tt.shouldSlash[valIdx] {
+					want := &DetectionResult{
+						Kind:           SurroundVote,
+						SlashableEpoch: tt.slashableEpochs[valIdx],
+					}
+					if !reflect.DeepEqual(res, want) {
+						t.Errorf("Wanted: %v, received %v", want, res)
+					}
 				}
 			}
 		})
@@ -217,7 +316,11 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 			numEpochs: 3,
 			want: []map[uint64][2]uint16{
 				// Epoch 0.
-				nil,
+				{
+					0: {3, 0},
+					1: {3, 0},
+					2: {3, 0},
+				},
 				// Epoch 1.
 				nil,
 				// Epoch 2.

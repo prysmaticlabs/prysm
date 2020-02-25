@@ -74,20 +74,22 @@ func (s *SpanDetector) DetectSlashingForValidator(
 	defer s.lock.RUnlock()
 	distance := uint16(targetEpoch - sourceEpoch)
 	numSpans := uint64(len(s.spans))
-	if sp := s.spans[targetEpoch%numSpans]; sp != nil {
+	if sp := s.spans[sourceEpoch%numSpans]; sp != nil {
 		minSpan := sp[validatorIdx][0]
 		if minSpan > 0 && minSpan < distance {
 			return &DetectionResult{
 				Kind:           SurroundVote,
-				SlashableEpoch: targetEpoch + uint64(minSpan),
+				SlashableEpoch: sourceEpoch + uint64(minSpan),
 			}, nil
 		}
+	}
 
+	if sp := s.spans[sourceEpoch%numSpans]; sp != nil {
 		maxSpan := sp[validatorIdx][1]
 		if maxSpan > distance {
 			return &DetectionResult{
 				Kind:           SurroundVote,
-				SlashableEpoch: targetEpoch + uint64(maxSpan),
+				SlashableEpoch: sourceEpoch + uint64(maxSpan),
 			}, nil
 		}
 	}
@@ -156,13 +158,13 @@ func (s *SpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttest
 }
 
 // Updates a min span for a validator index given a source and target epoch
-// for an attestation produced by the validator.
+// for an attestation produced by the validator. Used for catching surrounding votes.
 func (s *SpanDetector) updateMinSpan(source uint64, target uint64, valIdx uint64) {
 	numSpans := uint64(len(s.spans))
 	if source < 1 {
 		return
 	}
-	for epoch := source - 1; epoch > 0; epoch-- {
+	for epoch := source - 1; epoch >= 0; epoch-- {
 		newMinSpan := uint16(target - (epoch))
 		if sp := s.spans[epoch%numSpans]; sp == nil {
 			s.spans[epoch%numSpans] = make(map[uint64][2]uint16)
@@ -178,7 +180,7 @@ func (s *SpanDetector) updateMinSpan(source uint64, target uint64, valIdx uint64
 }
 
 // Updates a max span for a validator index given a source and target epoch
-// for an attestation produced by the validator.
+// for an attestation produced by the validator. Used for catching surrounded votes.
 func (s *SpanDetector) updateMaxSpan(source uint64, target uint64, valIdx uint64) {
 	numSpans := uint64(len(s.spans))
 	for epoch := target - 1; epoch > source; epoch-- {
