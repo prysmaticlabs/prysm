@@ -866,6 +866,38 @@ func TestServer_AttestationPool_Pagination_CustomPageSize(t *testing.T) {
 	}
 }
 
+func TestServer_StreamIndexedAttestations_ContextCanceled(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	defer dbTest.TeardownDB(t, db)
+	ctx := context.Background()
+
+	ctx, cancel := context.WithCancel(ctx)
+	ticker := &mocktick.MockTicker{
+		Channel: make(chan uint64),
+	}
+	server := &Server{
+		Ctx:        ctx,
+		SlotTicker: ticker,
+	}
+
+	exitRoutine := make(chan bool)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := mockRPC.NewMockBeaconChain_StreamIndexedAttestationsServer(ctrl)
+	mockStream.EXPECT().Context().Return(ctx)
+	go func(tt *testing.T) {
+		if err := server.StreamIndexedAttestations(
+			&ptypes.Empty{},
+			mockStream,
+		); !strings.Contains(err.Error(), "Context canceled") {
+			tt.Errorf("Expected context canceled error got: %v", err)
+		}
+		<-exitRoutine
+	}(t)
+	cancel()
+	exitRoutine <- true
+}
+
 func TestServer_StreamAttestations_ContextCanceled(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
