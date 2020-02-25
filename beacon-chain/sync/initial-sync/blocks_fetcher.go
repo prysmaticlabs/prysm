@@ -12,6 +12,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -25,7 +26,7 @@ import (
 // blocksFetcherConfig is a config to setup the block fetcher.
 type blocksFetcherConfig struct {
 	ctx         context.Context
-	chain       blockchainService
+	headFetcher blockchain.HeadFetcher
 	p2p         p2p.P2P
 	rateLimiter *leakybucket.Collector
 }
@@ -35,7 +36,7 @@ type blocksFetcherConfig struct {
 // among available peers (for fair network load distribution).
 type blocksFetcher struct {
 	ctx         context.Context
-	chain       blockchainService
+	headFetcher blockchain.HeadFetcher
 	p2p         p2p.P2P
 	rateLimiter *leakybucket.Collector
 
@@ -62,7 +63,7 @@ type fetchRequestResult struct {
 func newBlocksFetcher(cfg *blocksFetcherConfig) *blocksFetcher {
 	return &blocksFetcher{
 		ctx:         cfg.ctx,
-		chain:       cfg.chain,
+		headFetcher: cfg.headFetcher,
 		p2p:         cfg.p2p,
 		rateLimiter: cfg.rateLimiter,
 		requests:    make(chan *fetchRequestParams),
@@ -103,11 +104,11 @@ func (f *blocksFetcher) loop() {
 			// Terminating abort all operations.
 			return
 		case req := <-f.requests:
-			root, finalizedEpoch, peers := f.p2p.Peers().BestFinalized(maxPeersToSync, helpers.SlotToEpoch(f.chain.HeadSlot()))
+			root, finalizedEpoch, peers := f.p2p.Peers().BestFinalized(maxPeersToSync, helpers.SlotToEpoch(f.headFetcher.HeadSlot()))
 			log.WithFields(logrus.Fields{
 				"request":        req,
 				"finalizedEpoch": finalizedEpoch,
-				"numPeers":     len(peers),
+				"numPeers":       len(peers),
 			}).Debug("Block fetcher receives request")
 
 			if len(peers) == 0 {

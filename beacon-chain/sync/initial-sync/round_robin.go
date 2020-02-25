@@ -61,7 +61,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 
 	fetcher := newBlocksFetcher(&blocksFetcherConfig{
 		ctx:         ctx,
-		chain:       s.chain,
+		headFetcher: s.chain,
 		p2p:         s.p2p,
 		rateLimiter: s.blocksRateLimiter,
 	})

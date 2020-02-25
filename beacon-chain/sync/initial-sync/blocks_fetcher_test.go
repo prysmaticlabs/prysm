@@ -273,7 +273,7 @@ func TestBlocksFetcher(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			fetcher := newBlocksFetcher(&blocksFetcherConfig{
 				ctx:         ctx,
-				chain:       mc,
+				headFetcher: mc,
 				p2p:         p,
 				rateLimiter: leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksPerSecond, false /* deleteEmptyBuckets */),
 			})
