@@ -56,9 +56,9 @@ func (s *State) loadColdStateByRoot(ctx context.Context, blockRoot [32]byte) (*s
 	// Use the archived point state if the slot lies on top of the archived point.
 	if summary.Slot%s.slotsPerArchivePoint == 0 {
 		archivedPoint := summary.Slot / s.slotsPerArchivePoint
-		s, err := s.loadColdStateByArchivalPoint(ctx, archivedPoint)
+		s, err := s.loadColdStateByArchivedPoint(ctx, archivedPoint)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not get cold state using archived index")
 		}
 		if s == nil {
 			return nil, errUnknownArchivedState
@@ -70,7 +70,7 @@ func (s *State) loadColdStateByRoot(ctx context.Context, blockRoot [32]byte) (*s
 }
 
 // This loads the cold state for the input archived point.
-func (s *State) loadColdStateByArchivalPoint(ctx context.Context, archivedPoint uint64) (*state.BeaconState, error) {
+func (s *State) loadColdStateByArchivedPoint(ctx context.Context, archivedPoint uint64) (*state.BeaconState, error) {
 	return s.beaconDB.ArchivedPointState(ctx, archivedPoint)
 }
 
@@ -86,7 +86,7 @@ func (s *State) loadColdIntermediateStateWithRoot(ctx context.Context, slot uint
 	// Acquire the read lock so the split can't change while this is happening.
 	lowArchivePointState, err := s.loadArchivedPointByIndex(ctx, lowArchivePointIdx)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get lower bound archived state using index")
 	}
 	if lowArchivePointState == nil {
 		return nil, errUnknownArchivedState
@@ -94,7 +94,7 @@ func (s *State) loadColdIntermediateStateWithRoot(ctx context.Context, slot uint
 
 	replayBlks, err := s.LoadBlocks(ctx, lowArchivePointState.Slot()+1, slot, blockRoot)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get load blocks for cold state using slot")
 	}
 
 	return s.ReplayBlocks(ctx, lowArchivePointState, replayBlks, slot)
@@ -114,7 +114,7 @@ func (s *State) loadColdIntermediateStateWithSlot(ctx context.Context, slot uint
 	// Acquire the read lock so the split can't change while this is happening.
 	lowArchivedPointState, err := s.loadArchivedPointByIndex(ctx, lowArchivedPointIdx)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get low archived point by index")
+		return nil, errors.Wrap(err, "could not get lower bound archived state using index")
 	}
 	if lowArchivedPointState == nil {
 		return nil, errUnknownArchivedState
@@ -129,7 +129,7 @@ func (s *State) loadColdIntermediateStateWithSlot(ctx context.Context, slot uint
 		highArchivedPointSlot = s.splitInfo.slot
 	} else {
 		if _, err := s.loadArchivedPointByIndex(ctx, highArchivedPointSlot); err != nil {
-			return nil, errors.Wrap(err, "could not get high archived point by index")
+			return nil, errors.Wrap(err, "could not upper bound archived state using index")
 		}
 		highArchivedPointRoot = s.beaconDB.ArchivedPointRoot(ctx, highArchivedPointIdx)
 		slot, err := s.loadColdStateSlot(ctx, highArchivedPointRoot)
@@ -141,7 +141,7 @@ func (s *State) loadColdIntermediateStateWithSlot(ctx context.Context, slot uint
 
 	replayBlks, err := s.LoadBlocks(ctx, lowArchivedPointState.Slot()+1, highArchivedPointSlot, highArchivedPointRoot)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not load blocks to replay for cold intermediate state with slot")
+		return nil, errors.Wrap(err, "could not load block for cold state using slot")
 	}
 
 	return s.ReplayBlocks(ctx, lowArchivedPointState, replayBlks, slot)
@@ -159,14 +159,14 @@ func (s *State) loadArchivedPointByIndex(ctx context.Context, archiveIndex uint6
 	archivedSlot := archiveIndex * s.slotsPerArchivePoint
 	archivedState, err := s.ComputeStateUpToSlot(ctx, archivedSlot)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not compute state up to archived index slot")
 	}
 	if archivedState == nil {
 		return nil, errUnknownArchivedState
 	}
 	lastRoot, _, err := s.getLastValidBlock(ctx, archivedSlot)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get last valid block up to archived index slot")
 	}
 
 	if err := s.beaconDB.SaveArchivedPointRoot(ctx, lastRoot, archiveIndex); err != nil {
@@ -205,7 +205,7 @@ func (s *State) loadColdStateSlot(ctx context.Context, blockRoot [32]byte) (uint
 		return 0, errUnknownBlock
 	}
 	if err := s.beaconDB.SaveColdStateSummary(ctx, blockRoot, &pb.ColdStateSummary{Slot: b.Block.Slot}); err != nil {
-		return 0, err
+		return 0, errors.Wrap(err, "could not save cold state summary")
 	}
 	return b.Block.Slot, nil
 }

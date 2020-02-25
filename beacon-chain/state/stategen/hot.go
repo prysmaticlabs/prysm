@@ -3,8 +3,8 @@ package stategen
 import (
 	"context"
 	"encoding/hex"
-	"errors"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
@@ -43,7 +43,7 @@ func (s *State) saveHotState(ctx context.Context, blockRoot [32]byte, state *sta
 	// On an intermediate slots, save the hot state summary.
 	epochRoot, err := s.loadEpochBoundaryRoot(ctx, blockRoot, state)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not get epoch boundary root")
 	}
 	if err := s.beaconDB.SaveHotStateSummary(ctx, &pb.HotStateSummary{
 		Slot:         state.Slot(),
@@ -92,11 +92,11 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 	} else {
 		blks, err := s.LoadBlocks(ctx, boundaryState.Slot()+1, targetSlot, bytesutil.ToBytes32(summary.LatestRoot))
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not load blocks for hot state using root")
 		}
 		hotState, err = s.ReplayBlocks(ctx, boundaryState, blks, targetSlot)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not replay blocks for hot state using root")
 		}
 	}
 
@@ -130,7 +130,7 @@ func (s *State) loadHotIntermediateStateWithSlot(ctx context.Context, slot uint6
 	// Gather the last physical block root and the slot number.
 	lastValidRoot, lastValidSlot, err := s.getLastValidBlock(ctx, slot)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get last valid block for hot state using slot")
 	}
 
 	// Load and replay blocks to get the intermediate state.
@@ -189,7 +189,7 @@ func (s *State) loadEpochBoundaryRoot(ctx context.Context, blockRoot [32]byte, s
 	if len(rs) == 0 {
 		r, err = s.handleLastValidState(ctx, boundarySlot)
 		if err != nil {
-			return [32]byte{}, err
+			return [32]byte{}, errors.Wrap(err, "could not get last valid root for epoch boundary by root")
 		}
 	} else if len(rs) == 1 {
 		r = rs[0]
@@ -213,12 +213,12 @@ func (s *State) handleLastValidState(ctx context.Context, targetSlot uint64) ([3
 
 	lastBlockRoot, _, err := s.getLastValidBlock(ctx, targetSlot)
 	if err != nil {
-		return [32]byte{}, err
+		return [32]byte{}, errors.Wrap(err, "could not get last valid block for last valid state")
 	}
 
 	lastValidState, err := s.ComputeStateUpToSlot(ctx, targetSlot)
 	if err != nil {
-		return [32]byte{}, err
+		return [32]byte{}, errors.Wrap(err, "could not compute state for last valid state")
 	}
 
 	// Only save the state if there's non with the last block root.
