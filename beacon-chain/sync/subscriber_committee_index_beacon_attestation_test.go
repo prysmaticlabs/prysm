@@ -51,12 +51,13 @@ func TestService_committeeIndexBeaconAttestationSubscriber_ValidMessage(t *testi
 			Genesis:          time.Now(),
 			ValidAttestation: true,
 		},
-		chainStarted:  true,
-		p2p:           p,
-		db:            db,
-		ctx:           ctx,
-		stateNotifier: (&mock.ChainService{}).StateNotifier(),
-		initialSync:   &mockSync.Sync{IsSyncing: false},
+		chainStarted:        true,
+		p2p:                 p,
+		db:                  db,
+		ctx:                 ctx,
+		stateNotifier:       (&mock.ChainService{}).StateNotifier(),
+		attestationNotifier: (&mock.ChainService{}).OperationNotifier(),
+		initialSync:         &mockSync.Sync{IsSyncing: false},
 	}
 	r.registerSubscribers()
 	r.stateNotifier.StateFeed().Send(&feed.Event{

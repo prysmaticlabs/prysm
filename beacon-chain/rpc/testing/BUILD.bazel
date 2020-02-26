@@ -6,13 +6,10 @@ go_library(
     srcs = [
         "beacon_chain_service_mock.go",
         "beacon_node_validator_service_mock.go",
-        "validator_service_mock.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testing",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
-        "//proto/beacon/rpc/v1:go_default_library",
-        "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@org_golang_google_grpc//metadata:go_default_library",

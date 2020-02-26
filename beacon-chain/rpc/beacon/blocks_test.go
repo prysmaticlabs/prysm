@@ -654,7 +654,7 @@ func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
 	for sent := 0; sent == 0; {
 		sent = server.BlockNotifier.BlockFeed().Send(&feed.Event{
 			Type: blockfeed.ReceivedBlock,
-			Data: blockfeed.ReceivedBlockData{SignedBlock: b},
+			Data: &blockfeed.ReceivedBlockData{SignedBlock: b},
 		})
 	}
 	<-exitRoutine
