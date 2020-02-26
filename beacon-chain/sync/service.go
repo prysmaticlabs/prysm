@@ -9,6 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -25,14 +26,15 @@ const allowedBlocksBurst = 10 * allowedBlocksPerSecond
 
 // Config to set up the regular sync service.
 type Config struct {
-	P2P           p2p.P2P
-	DB            db.NoHeadAccessDatabase
-	AttPool       attestations.Pool
-	ExitPool      *voluntaryexits.Pool
-	Chain         blockchainService
-	InitialSync   Checker
-	StateNotifier statefeed.Notifier
-	BlockNotifier blockfeed.Notifier
+	P2P                 p2p.P2P
+	DB                  db.NoHeadAccessDatabase
+	AttPool             attestations.Pool
+	ExitPool            *voluntaryexits.Pool
+	Chain               blockchainService
+	InitialSync         Checker
+	StateNotifier       statefeed.Notifier
+	BlockNotifier       blockfeed.Notifier
+	AttestationNotifier operation.Notifier
 }
 
 // This defines the interface for interacting with block chain service
@@ -57,6 +59,7 @@ func NewRegularSync(cfg *Config) *Service {
 		exitPool:             cfg.ExitPool,
 		chain:                cfg.Chain,
 		initialSync:          cfg.InitialSync,
+		attestationNotifier:  cfg.AttestationNotifier,
 		slotToPendingBlocks:  make(map[uint64]*ethpb.SignedBeaconBlock),
 		seenPendingBlocks:    make(map[[32]byte]bool),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.AggregateAttestationAndProof),
@@ -92,6 +95,7 @@ type Service struct {
 	stateNotifier        statefeed.Notifier
 	blockNotifier        blockfeed.Notifier
 	blocksRateLimiter    *leakybucket.Collector
+	attestationNotifier  operation.Notifier
 }
 
 // Start the regular sync service.

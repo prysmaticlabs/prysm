@@ -28,7 +28,6 @@ go_library(
         "//proto/slashing:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/params:go_default_library",
-        "//shared/slotutil:go_default_library",
         "//shared/traceutil:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//:go_default_library",
         "@com_github_grpc_ecosystem_go_grpc_middleware//recovery:go_default_library",
