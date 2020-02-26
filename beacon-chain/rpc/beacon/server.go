@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -33,9 +33,9 @@ type Server struct {
 	GenesisTimeFetcher   blockchain.TimeFetcher
 	StateNotifier        statefeed.Notifier
 	BlockNotifier        blockfeed.Notifier
+	AttestationNotifier  operation.Notifier
 	AttestationsPool     attestations.Pool
 	SlashingsPool        *slashings.Pool
-	IncomingAttestation  chan *ethpb.Attestation
 	CanonicalStateChan   chan *pbp2p.BeaconState
 	ChainStartChan       chan time.Time
 	SlotTicker           slotutil.Ticker

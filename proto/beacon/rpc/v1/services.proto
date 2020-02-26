@@ -3,58 +3,17 @@ syntax = "proto3";
 package ethereum.beacon.rpc.v1;
 
 import "google/protobuf/empty.proto";
-import "eth/v1alpha1/beacon_block.proto";
-import "eth/v1alpha1/attestation.proto";
 
-service AttesterService {
-  rpc RequestAttestation(AttestationRequest) returns (ethereum.eth.v1alpha1.AttestationData);
-  rpc SubmitAttestation(ethereum.eth.v1alpha1.Attestation) returns (AttestResponse);
-}
-
-service ProposerService {
-  rpc RequestBlock(BlockRequest) returns (ethereum.eth.v1alpha1.BeaconBlock);
-  rpc ProposeBlock(ethereum.eth.v1alpha1.BeaconBlock) returns (ProposeResponse);
-}
+// Deprecated: Do not use any service or message in this proto.
+option deprecated = true;
 
 service AggregatorService {
+  option deprecated = true;
   rpc SubmitAggregateAndProof(AggregationRequest) returns (AggregationResponse);
 }
 
-service ValidatorService {
-  rpc DomainData(DomainRequest) returns (DomainResponse);
-  rpc WaitForActivation(ValidatorActivationRequest) returns (stream ValidatorActivationResponse);
-  rpc ValidatorIndex(ValidatorIndexRequest) returns (ValidatorIndexResponse);
-  rpc CommitteeAssignment(AssignmentRequest) returns (AssignmentResponse);
-  rpc ValidatorStatus(ValidatorIndexRequest) returns (ValidatorStatusResponse);
-  rpc ValidatorPerformance(ValidatorPerformanceRequest) returns (ValidatorPerformanceResponse);
-  rpc ExitedValidators(ExitedValidatorsRequest) returns (ExitedValidatorsResponse);
-  rpc WaitForChainStart(google.protobuf.Empty) returns (stream ChainStartResponse);
-  rpc CanonicalHead(google.protobuf.Empty) returns (ethereum.eth.v1alpha1.BeaconBlock);
-  rpc ProposeExit(ethereum.eth.v1alpha1.VoluntaryExit) returns (google.protobuf.Empty);
-}
-
-message BlockRequest {
-  uint64 slot = 1;
-  bytes randao_reveal = 2;
-  bytes graffiti = 3;
-}
-
-message ProposeResponse {
-  bytes block_root = 1;
-}
-
-message AttestationRequest {
-  bytes public_key = 1;
-  bytes poc_bit = 2;
-  uint64 slot = 3;
-  uint64 committee_index = 4;
-}
-
-message AttestResponse {
-  bytes root = 1;
-}
-
 message AggregationRequest {
+  option deprecated = true;
   uint64 slot = 1;
   uint64 committee_index = 2;
   bytes public_key = 3;
@@ -62,120 +21,24 @@ message AggregationRequest {
 }
 
 message AggregationResponse {
+  option deprecated = true;
   bytes root = 1;
 }
 
-message ValidatorPerformanceRequest {
-  uint64 slot = 1;
-  repeated bytes public_keys = 2;
-}
-
-message ValidatorPerformanceResponse {
-  repeated uint64 balances = 1;
-  uint64 total_validators = 2;
-  uint64 total_active_validators = 3;
-  repeated bytes missing_validators = 4;
-  float average_active_validator_balance = 5;
-}
-
-message ValidatorActivationRequest {
-  repeated bytes public_keys = 1;
-}
-
-message ValidatorActivationResponse {
-  repeated bytes activated_public_keys = 1 [deprecated = true];
-
-  message Status {
-    bytes public_key = 1;
-    ValidatorStatusResponse status = 2;
-  }
-  repeated Status statuses = 2;
-}
-
 message ExitedValidatorsRequest {
+  option deprecated = true;
   repeated bytes public_keys = 1;
 }
 
 message ExitedValidatorsResponse {
+  option deprecated = true;
   repeated bytes public_keys = 1;
 }
 
-message ChainStartResponse {
-  bool started = 1;
-  uint64 genesis_time = 2;
-}
-
 enum ValidatorRole {
+     option deprecated = true;
      UNKNOWN = 0;
      ATTESTER = 1;
      PROPOSER = 2;
      AGGREGATOR = 3;
-}
-
-message ValidatorIndexRequest {
-  bytes public_key = 1;
-}
-
-message ValidatorIndexResponse {
-  uint64 index = 1;
-}
-
-message AssignmentRequest {
-  uint64 epoch_start = 1;
-  repeated bytes public_keys = 2;
-}
-
-message AssignmentResponse {
-  repeated ValidatorAssignment validator_assignment = 1;
-  message ValidatorAssignment {
-    repeated uint64 committee = 1;
-    uint64 committee_index = 2;
-    uint64 attester_slot = 3;
-    uint64 proposer_slot = 4;
-    bytes public_key = 5;
-    ValidatorStatus status = 6;
-  }
-}
-
-message ValidatorStatusResponse {
-  ValidatorStatus status = 1;
-  uint64 eth1_deposit_block_number = 2;
-  uint64 deposit_inclusion_slot = 3;
-  uint64 activation_epoch = 4;
-  uint64 position_in_activation_queue = 5;
-}
-
-message DomainRequest {
-  uint64 epoch = 1;
-  bytes domain = 2;
-}
-
-message DomainResponse {
-  uint64 signature_domain = 1;
-}
-
-message BlockTreeResponse {
-  repeated TreeNode tree = 1;
-  message TreeNode {
-    ethereum.eth.v1alpha1.BeaconBlock block = 1;
-    bytes block_root = 2;
-    uint64 participated_votes = 3;
-    uint64 total_votes = 4;
-  }
-}
-
-enum ValidatorStatus {
-  UNKNOWN_STATUS = 0;
-  DEPOSIT_RECEIVED = 1;
-  PENDING_ACTIVE = 2;
-  ACTIVE = 3;
-  INITIATED_EXIT = 4;
-  WITHDRAWABLE = 5;
-  EXITED = 6;
-  EXITED_SLASHED = 7;
-}
-
-message TreeBlockSlotRequest {
-  uint64 slot_from = 1 ;
-  uint64 slot_to = 2 ;
 }
