@@ -4,8 +4,6 @@ import (
 	"context"
 	"time"
 
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -15,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 // Server defines a server implementation of the gRPC Beacon Chain service,
