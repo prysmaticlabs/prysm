@@ -1025,7 +1025,7 @@ func TestServer_StreamIndexedAttestations_OnSlotTick(t *testing.T) {
 		for sent := 0; sent == 0; {
 			sent = server.AttestationNotifier.OperationFeed().Send(&feed.Event{
 				Type: operation.UnaggregatedAttReceived,
-				Data: operation.UnAggregatedAttReceivedData{Attestation: atts[i]},
+				Data: &operation.UnAggregatedAttReceivedData{Attestation: atts[i]},
 			})
 		}
 	}
@@ -1099,7 +1099,7 @@ func TestServer_StreamAttestations_OnSlotTick(t *testing.T) {
 		for sent := 0; sent == 0; {
 			sent = server.AttestationNotifier.OperationFeed().Send(&feed.Event{
 				Type: operation.UnaggregatedAttReceived,
-				Data: operation.UnAggregatedAttReceivedData{Attestation: atts[i]},
+				Data: &operation.UnAggregatedAttReceivedData{Attestation: atts[i]},
 			})
 		}
 	}

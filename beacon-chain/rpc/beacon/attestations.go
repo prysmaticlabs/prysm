@@ -219,7 +219,7 @@ func (bs *Server) StreamAttestations(
 		select {
 		case event := <-attestationsChannel:
 			if event.Type == operation.UnaggregatedAttReceived {
-				data, ok := event.Data.(operation.UnAggregatedAttReceivedData)
+				data, ok := event.Data.(*operation.UnAggregatedAttReceivedData)
 				if !ok {
 					// Got bad data over the stream.
 					continue
@@ -253,7 +253,7 @@ func (bs *Server) StreamIndexedAttestations(
 		select {
 		case event := <-attestationsChannel:
 			if event.Type == operation.UnaggregatedAttReceived {
-				data, ok := event.Data.(operation.UnAggregatedAttReceivedData)
+				data, ok := event.Data.(*operation.UnAggregatedAttReceivedData)
 				if !ok {
 					// Got bad data over the stream.
 					continue
