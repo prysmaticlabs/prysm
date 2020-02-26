@@ -260,13 +260,7 @@ func (s *Service) Start() {
 		BlockNotifier:        s.blockNotifier,
 		SlotTicker:           ticker,
 	}
-	aggregatorServer := &aggregator.Server{
-		BeaconDB:    s.beaconDB,
-		HeadFetcher: s.headFetcher,
-		SyncChecker: s.syncService,
-		AttPool:     s.attestationsPool,
-		P2p:         s.p2p,
-	}
+	aggregatorServer := &aggregator.Server{ValidatorServer: validatorServer}
 	pb.RegisterAggregatorServiceServer(s.grpcServer, aggregatorServer)
 	ethpb.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpb.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)

@@ -58,6 +58,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "aggregation_test.go",
         "assignments_test.go",
         "attester_test.go",
         "exit_test.go",
