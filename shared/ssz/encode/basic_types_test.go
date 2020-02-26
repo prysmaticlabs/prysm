@@ -1,13 +1,9 @@
 package encode
 
 import (
-	"encoding/binary"
-	"fmt"
 	"strconv"
 	"testing"
 
-	"github.com/cockroachdb/cockroach/pkg/util/uint128"
-	"github.com/holiman/uint256"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -78,62 +74,3 @@ func TestMarshalUint64(t *testing.T) {
 		})
 	}
 }
-
-func TestMarshalUint128(t *testing.T) {
-	var tests = []struct {
-		in uint128.Uint128
-		expected []byte
-	}{
-		{
-			in: uint128.Uint128{8, 0},
-			expected: []byte{8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		},
-		{
-			in: uint128.Uint128{0, 0},
-			expected: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		},
-		{
-			in: uint128.Uint128{18446744073709551615, 18446744073709551615},
-			expected: []byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
-		},
-	}
-
-	for i, tt := range tests {
-		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			assert.Equal(t, tt.expected, MarshalUint128(tt.in))
-		})
-	}
-}
-
-func TestMarshalUint256(t *testing.T) {
-	var tests = []struct {
-		in uint256.Int
-		expected []byte
-	}{
-		{
-			in: [4]uint64{uint64(0), uint64(0), uint64(0), uint64(1)},
-			expected: []byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		},
-		{
-			in: [4]uint64{uint64(0), uint64(0), uint64(0), uint64(0)},
-			expected: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		},
-		{
-			in: [4]uint64{uint64(18446744073709551615), uint64(18446744073709551615), uint64(18446744073709551615), uint64(18446744073709551615)},
-			expected: []byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
-		},
-	}
-
-	for i, tt := range tests {
-		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			fmt.Println(MarshalUint256(tt.in))
-			blah := uint64(8)
-			buf := make([]byte, 8)
-			binary.LittleEndian.PutUint64(buf, blah)
-			fmt.Println(buf)
-			assert.Equal(t, tt.expected, MarshalUint256(tt.in))
-		})
-	}
-}
-
-
