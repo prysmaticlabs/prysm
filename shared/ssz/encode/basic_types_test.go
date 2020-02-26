@@ -74,3 +74,19 @@ func TestMarshalUint64(t *testing.T) {
 		})
 	}
 }
+
+func TestMarshalBoolean(t *testing.T) {
+	var tests = []struct {
+		in bool
+		expected byte
+	}{
+		{in: true, expected: byte(1)},
+		{in: false, expected: byte(0)},
+	}
+
+	for i, tt := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			assert.Equal(t, tt.expected, MarshalBoolean(tt.in))
+		})
+	}
+}

@@ -24,7 +24,7 @@ func TestUnmarshalUint8(t *testing.T) {
 	}
 }
 
-func TestUnmarshalUint16(t *testing.T) {
+func TestUnmarshalUint16_Successful(t *testing.T) {
 	var tests = []struct {
 		in []byte
 		expected uint16
@@ -45,7 +45,23 @@ func TestUnmarshalUint16(t *testing.T) {
 	}
 }
 
-func TestUnmarshalUint32(t *testing.T) {
+func TestUnmarshalUint16_Unsuccessful(t *testing.T) {
+	var tests = []struct {
+		in []byte
+	}{
+		{in: []byte{8, 0, 0, 0, 0, 0, 0, 0, 0}},
+		{in: []byte{255}},
+	}
+
+	for i, tt := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			_, err := UnmarshalUint16(tt.in)
+			assert.Error(t, err)
+		})
+	}
+}
+
+func TestUnmarshalUint32_Successful(t *testing.T) {
 	var tests = []struct {
 		in []byte
 		expected uint32
@@ -66,7 +82,23 @@ func TestUnmarshalUint32(t *testing.T) {
 	}
 }
 
-func TestUnmarshalUint64(t *testing.T) {
+func TestUnmarshalUint32_Unsuccessful(t *testing.T) {
+	var tests = []struct {
+		in []byte
+	}{
+		{in: []byte{8, 0, 0, 0, 0, 0, 0, 0, 0}},
+		{in: []byte{255, 255, 255}},
+	}
+
+	for i, tt := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			_, err := UnmarshalUint32(tt.in)
+			assert.Error(t, err)
+		})
+	}
+}
+
+func TestUnmarshalUint64_Successful(t *testing.T) {
 	var tests = []struct {
 		in []byte
 		expected uint64
@@ -83,6 +115,58 @@ func TestUnmarshalUint64(t *testing.T) {
 				t.Error("UnmarshalUint64 returned error", err)
 			}
 			assert.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
+func TestUnmarshalUint64_Unsuccessful(t *testing.T) {
+	var tests = []struct {
+		in []byte
+	}{
+		{in: []byte{8, 0, 0, 0, 0, 0, 0, 0, 0}},
+		{in: []byte{255, 255, 255, 255, 255, 255}},
+	}
+
+	for i, tt := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			_, err := UnmarshalUint64(tt.in)
+			assert.Error(t, err)
+		})
+	}
+}
+
+func TestUnmarshalBoolean_Successful(t *testing.T) {
+	var tests = []struct {
+		in byte
+		expected bool
+	}{
+		{in: byte(1), expected: true},
+		{in: byte(0), expected: false},
+	}
+
+	for i, tt := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			actual, err := UnmarshalBoolean(tt.in)
+			if err != nil {
+				t.Error(err)
+			}
+			assert.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
+func TestUnmarshalBoolean_Unsuccessful(t *testing.T) {
+	var tests = []struct {
+		in byte
+	}{
+		{in: byte(2)},
+		{in: byte(255)},
+	}
+
+	for i, tt := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			_, err := UnmarshalBoolean(tt.in)
+			assert.Error(t, err)
 		})
 	}
 }
