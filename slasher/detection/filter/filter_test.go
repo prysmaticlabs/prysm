@@ -1,12 +1,10 @@
 package filter
 
 import (
-	"fmt"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 func (f Filter) String() string {
@@ -46,9 +44,9 @@ func TestFilter_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := f.String()
-	want := "...1.....1.1..11"
+	want := "...1.....1.1.11."
 	if got != want {
-		t.Fatalf("%d bits, got %q, want %q", len(f)*8, got, want)
+		t.Fatalf("got %s, want %s", got, want)
 	}
 
 	found, err := f.Contains(dataRoot[:])
@@ -135,8 +133,8 @@ func TestFilter_NoCollisions(t *testing.T) {
 	got := f.String()
 
 	for i := uint64(0); i < 1000; i++ {
-		attData.Source.Root = []byte(fmt.Sprintf("%d dsadadadd", i))
-		dataRoot, err := ssz.HashTreeRoot(attData)
+		attData.Source.Epoch = i + 5
+		dataRoot, err = ssz.HashTreeRoot(attData)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -148,7 +146,38 @@ func TestFilter_NoCollisions(t *testing.T) {
 			t.Fatalf("coliision at %d", i)
 		}
 	}
+}
 
+func TestFilter_Output(t *testing.T) {
+	testCases := []struct {
+		key  string
+		want string
+	}{
+		{key: "eth2.0", want: "..111....11....."},
+		{key: "is very", want: "...1..11........"},
+		{key: "awesome", want: "111......1......"},
+		{key: "and you", want: ".1..1...1.....11"},
+		{key: "should join", want: "11.........11..."},
+		{key: "and be part", want: "1....1....1...1."},
+		{key: "of the vision", want: ".1.......11.1..1"},
+		{key: ":woke:", want: "...1..11.11....."},
+	}
+	for _, tc := range testCases {
+		filter, err := NewFilter([]byte(tc.key))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if filter.String() != tc.want {
+			t.Errorf("Unexpected filter result, received %s, expected %s", filter.String(), tc.want)
+		}
+		found, err := filter.Contains([]byte(tc.key))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !found {
+			t.Fatal("Unexpected failure of contain")
+		}
+	}
 }
 
 func BenchmarkNewFilter(b *testing.B) {
@@ -174,32 +203,6 @@ func BenchmarkNewFilter(b *testing.B) {
 		_, err := NewFilter(dataRoot[:])
 		if err != nil {
 			b.Fatal(err)
-		}
-	}
-}
-
-func TestFilter_Output(t *testing.T) {
-	testCases := []struct {
-		key  string
-		want string
-	}{
-		{key: "eth2", want: "1.1.....1.....11"},
-		{key: "is really", want: "...1..1.1.1...1."},
-		{key: "awesome", want: "..11..1.....1.1."},
-		{key: "and you", want: "...11......1..1."},
-		{key: "should", want: "....1..1..1.1.1."},
-		{key: "be part", want: "...1.....1..1.11"},
-		{key: "of the vision", want: "...1.11....1..1."},
-		{key: ":woke:", want: "..1........11.11"},
-	}
-	for _, tc := range testCases {
-		bytes32 := bytesutil.ToBytes32([]byte(tc.key))
-		got, err := NewFilter(bytes32[:])
-		if err != nil {
-			t.Fatal(err)
-		}
-		if got.String() != tc.want {
-			t.Errorf("Unexpected filter result, received %s, expected %s", got, tc.want)
 		}
 	}
 }
