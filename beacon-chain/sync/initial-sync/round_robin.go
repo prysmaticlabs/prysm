@@ -111,7 +111,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			}
 		}
 
-		fetcher.scheduleRequest(&fetchRequestParams{
+		go fetcher.scheduleRequest(&fetchRequestParams{
 			start: startBlock,
 			count: blockBatchSize,
 		})

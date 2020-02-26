@@ -173,16 +173,13 @@ func (f *blocksFetcher) loop() {
 }
 
 // scheduleRequest adds request to incoming queue.
-// Should be non-blocking, as actual request processing is done asynchronously.
 func (f *blocksFetcher) scheduleRequest(req *fetchRequestParams) {
-	go func() { // non-blocking, we can re-throw requests within consuming method
-		select {
-		case <-f.quit:
-			return
-		case f.requests <- req:
-			return
-		}
-	}()
+	select {
+	case <-f.quit:
+		return
+	default:
+		f.requests <- req
+	}
 }
 
 // processFetchRequest orchestrates block fetching from the available peers.
