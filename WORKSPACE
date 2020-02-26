@@ -1168,8 +1168,9 @@ go_ssz_dependencies()
 go_repository(
     name = "org_golang_google_grpc",
     build_file_proto_mode = "disable",
-    commit = "1d89a3c832915b2314551c1d2a506874d62e53f7",  # v1.22.0
     importpath = "google.golang.org/grpc",
+    sum = "h1:zvIju4sqAGvwKspUQOhwnpcqSbzi7/H6QomNNjTL4sk=",
+    version = "v1.27.1",
 )
 
 go_repository(
