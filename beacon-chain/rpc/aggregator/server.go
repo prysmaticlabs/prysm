@@ -34,6 +34,7 @@ type Server struct {
 
 // SubmitAggregateAndProof is called by a validator when its assigned to be an aggregator.
 // The beacon node will broadcast aggregated attestation and proof on the aggregator's behavior.
+// Deprecated: Use github.com/prysmaticlabs/prysm/beacon-chain/rpc/validator.SubmitAggregateAndProof.
 func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.AggregationRequest) (*pb.AggregationResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "AggregatorServer.SubmitAggregation")
 	defer span.End()
