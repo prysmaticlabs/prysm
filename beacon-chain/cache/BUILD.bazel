@@ -8,6 +8,7 @@ go_library(
         "committee.go",
         "common.go",
         "eth1_data.go",
+        "hot_state_cache.go",
         "skip_slot_cache.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/cache",
