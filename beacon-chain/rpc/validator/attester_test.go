@@ -34,11 +34,12 @@ func TestProposeAttestation_OK(t *testing.T) {
 	ctx := context.Background()
 
 	attesterServer := &Server{
-		HeadFetcher:      &mock.ChainService{},
-		P2P:              &mockp2p.MockBroadcaster{},
-		BeaconDB:         db,
-		AttestationCache: cache.NewAttestationCache(),
-		AttPool:          attestations.NewPool(),
+		HeadFetcher:       &mock.ChainService{},
+		P2P:               &mockp2p.MockBroadcaster{},
+		BeaconDB:          db,
+		AttestationCache:  cache.NewAttestationCache(),
+		AttPool:           attestations.NewPool(),
+		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 	}
 	head := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
@@ -95,11 +96,12 @@ func TestProposeAttestation_IncorrectSignature(t *testing.T) {
 	defer dbutil.TeardownDB(t, db)
 
 	attesterServer := &Server{
-		HeadFetcher:      &mock.ChainService{},
-		P2P:              &mockp2p.MockBroadcaster{},
-		BeaconDB:         db,
-		AttestationCache: cache.NewAttestationCache(),
-		AttPool:          attestations.NewPool(),
+		HeadFetcher:       &mock.ChainService{},
+		P2P:               &mockp2p.MockBroadcaster{},
+		BeaconDB:          db,
+		AttestationCache:  cache.NewAttestationCache(),
+		AttPool:           attestations.NewPool(),
+		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 	}
 
 	req := &ethpb.Attestation{

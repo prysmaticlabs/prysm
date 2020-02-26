@@ -215,7 +215,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			}
 			s.blockNotifier.BlockFeed().Send(&feed.Event{
 				Type: blockfeed.ReceivedBlock,
-				Data: blockfeed.ReceivedBlockData{SignedBlock: blk},
+				Data: &blockfeed.ReceivedBlockData{SignedBlock: blk},
 			})
 			if featureconfig.Get().InitSyncNoVerify {
 				if err := s.chain.ReceiveBlockNoVerify(ctx, blk); err != nil {

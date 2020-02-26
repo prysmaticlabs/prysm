@@ -408,14 +408,15 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 	}
 
 	rs := prysmsync.NewRegularSync(&prysmsync.Config{
-		DB:            b.db,
-		P2P:           b.fetchP2P(ctx),
-		Chain:         chainService,
-		InitialSync:   initSync,
-		StateNotifier: b,
-		BlockNotifier: b,
-		AttPool:       b.attestationPool,
-		ExitPool:      b.exitPool,
+		DB:                  b.db,
+		P2P:                 b.fetchP2P(ctx),
+		Chain:               chainService,
+		InitialSync:         initSync,
+		StateNotifier:       b,
+		BlockNotifier:       b,
+		AttestationNotifier: b,
+		AttPool:             b.attestationPool,
+		ExitPool:            b.exitPool,
 	})
 
 	return b.services.RegisterService(rs)
