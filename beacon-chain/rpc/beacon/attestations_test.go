@@ -16,6 +16,8 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
@@ -25,7 +27,6 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	mocktick "github.com/prysmaticlabs/prysm/shared/slotutil/testing"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -871,14 +872,11 @@ func TestServer_StreamIndexedAttestations_ContextCanceled(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
-
 	ctx, cancel := context.WithCancel(ctx)
-	ticker := &mocktick.MockTicker{
-		Channel: make(chan uint64),
-	}
+	chainService := &mock.ChainService{}
 	server := &Server{
-		Ctx:        ctx,
-		SlotTicker: ticker,
+		Ctx:                 ctx,
+		AttestationNotifier: chainService.OperationNotifier(),
 	}
 
 	exitRoutine := make(chan bool)
@@ -890,7 +888,7 @@ func TestServer_StreamIndexedAttestations_ContextCanceled(t *testing.T) {
 		if err := server.StreamIndexedAttestations(
 			&ptypes.Empty{},
 			mockStream,
-		); !strings.Contains(err.Error(), "Context canceled") {
+		); err != nil && !strings.Contains(err.Error(), "Context canceled") {
 			tt.Errorf("Expected context canceled error got: %v", err)
 		}
 		<-exitRoutine
@@ -979,14 +977,10 @@ func TestServer_StreamIndexedAttestations_OnSlotTick(t *testing.T) {
 			atts = append(atts, attExample)
 		}
 	}
-	aggregated, err := helpers.AggregateAttestations(atts)
-	if err != nil {
-		t.Fatal(err)
-	}
 	// Next up we convert the test attestations to indexed form.
-	indexedAtts := make([]*ethpb.IndexedAttestation, len(aggregated), len(aggregated))
+	indexedAtts := make([]*ethpb.IndexedAttestation, len(atts), len(atts))
 	for i := 0; i < len(indexedAtts); i++ {
-		att := aggregated[i]
+		att := atts[i]
 		committee := committees[att.Data.Slot].Committees[att.Data.CommitteeIndex]
 		idxAtt, err := attestationutil.ConvertToIndexed(ctx, att, committee.ValidatorIndices)
 		if err != nil {
@@ -995,9 +989,7 @@ func TestServer_StreamIndexedAttestations_OnSlotTick(t *testing.T) {
 		indexedAtts[i] = idxAtt
 	}
 
-	ticker := &mocktick.MockTicker{
-		Channel: make(chan uint64),
-	}
+	chainService := &mock.ChainService{}
 	server := &Server{
 		BeaconDB: db,
 		Ctx:      context.Background(),
@@ -1007,13 +999,7 @@ func TestServer_StreamIndexedAttestations_OnSlotTick(t *testing.T) {
 		GenesisTimeFetcher: &mock.ChainService{
 			Genesis: time.Now(),
 		},
-		SlotTicker:       ticker,
-		AttestationsPool: attestations.NewPool(),
-	}
-
-	// We save the aggregated attestations into the pool.
-	if err := server.AttestationsPool.SaveAggregatedAttestations(aggregated); err != nil {
-		t.Fatal(err)
+		AttestationNotifier: chainService.OperationNotifier(),
 	}
 
 	mockStream := mockRPC.NewMockBeaconChain_StreamIndexedAttestationsServer(ctrl)
@@ -1033,7 +1019,16 @@ func TestServer_StreamIndexedAttestations_OnSlotTick(t *testing.T) {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
 	}(t)
-	ticker.Channel <- 0
+
+	for i := 0; i < len(atts); i++ {
+		// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
+		for sent := 0; sent == 0; {
+			sent = server.AttestationNotifier.OperationFeed().Send(&feed.Event{
+				Type: operation.UnaggregatedAttReceived,
+				Data: operation.UnAggregatedAttReceivedData{Attestation: atts[i]},
+			})
+		}
+	}
 	<-exitRoutine
 }
 
@@ -1043,12 +1038,10 @@ func TestServer_StreamAttestations_ContextCanceled(t *testing.T) {
 	ctx := context.Background()
 
 	ctx, cancel := context.WithCancel(ctx)
-	ticker := &mocktick.MockTicker{
-		Channel: make(chan uint64),
-	}
+	chainService := &mock.ChainService{}
 	server := &Server{
-		Ctx:        ctx,
-		SlotTicker: ticker,
+		Ctx:                 ctx,
+		AttestationNotifier: chainService.OperationNotifier(),
 	}
 
 	exitRoutine := make(chan bool)
@@ -1076,22 +1069,16 @@ func TestServer_StreamAttestations_OnSlotTick(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	ctx := context.Background()
-	ticker := &mocktick.MockTicker{
-		Channel: make(chan uint64),
-	}
+	chainService := &mock.ChainService{}
 	server := &Server{
-		Ctx:              ctx,
-		SlotTicker:       ticker,
-		AttestationsPool: attestations.NewPool(),
+		Ctx:                 ctx,
+		AttestationNotifier: chainService.OperationNotifier(),
 	}
 
 	atts := []*ethpb.Attestation{
 		{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}},
 		{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1101}},
 		{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b1101}},
-	}
-	if err := server.AttestationsPool.SaveAggregatedAttestations(atts); err != nil {
-		t.Fatal(err)
 	}
 
 	mockStream := mockRPC.NewMockBeaconChain_StreamAttestationsServer(ctrl)
@@ -1107,6 +1094,14 @@ func TestServer_StreamAttestations_OnSlotTick(t *testing.T) {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
 	}(t)
-	ticker.Channel <- 0
+	for i := 0; i < len(atts); i++ {
+		// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
+		for sent := 0; sent == 0; {
+			sent = server.AttestationNotifier.OperationFeed().Send(&feed.Event{
+				Type: operation.UnaggregatedAttReceived,
+				Data: operation.UnAggregatedAttReceivedData{Attestation: atts[i]},
+			})
+		}
+	}
 	<-exitRoutine
 }
