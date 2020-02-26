@@ -187,7 +187,7 @@ func TestFuzzProcessEpochPrecompute_1000(t *testing.T) {
 	}
 }
 
-func TestFuzzcomputeStateRoot_1000(t *testing.T) {
+func TestFuzzProcessBlockForStateRoot_1000(t *testing.T) {
 	ctx := context.Background()
 	state := &stateTrie.BeaconState{}
 	sb := &ethpb.SignedBeaconBlock{}
@@ -196,7 +196,7 @@ func TestFuzzcomputeStateRoot_1000(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(sb)
-		s, err := computeStateRoot(ctx, state, sb)
+		s, err := ProcessBlockForStateRoot(ctx, state, sb)
 		if err != nil && s != nil {
 			t.Fatalf("state should be nil on err. found: %v on error: %v for signed block: %v", s, err, sb)
 		}

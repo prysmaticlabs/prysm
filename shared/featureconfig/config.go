@@ -36,13 +36,14 @@ type Flags struct {
 	EnableBackupWebhook                        bool   // EnableBackupWebhook to allow database backups to trigger from monitoring port /db/backup.
 	PruneEpochBoundaryStates                   bool   // PruneEpochBoundaryStates prunes the epoch boundary state before last finalized check point.
 	EnableSnappyDBCompression                  bool   // EnableSnappyDBCompression in the database.
-	InitSyncCacheState                         bool   // InitSyncCacheState caches state during initial sync.
 	KafkaBootstrapServers                      string // KafkaBootstrapServers to find kafka servers to stream blocks, attestations, etc.
 	ProtectProposer                            bool   // ProtectProposer prevents the validator client from signing any proposals that would be considered a slashable offense.
 	ProtectAttester                            bool   // ProtectAttester prevents the validator client from signing any attestations that would be considered a slashable offense.
 	DisableStrictAttestationPubsubVerification bool   // DisableStrictAttestationPubsubVerification will disabling strict signature verification in pubsub.
 	DisableUpdateHeadPerAttestation            bool   // DisableUpdateHeadPerAttestation will disabling update head on per attestation basis.
 	EnableByteMempool                          bool   // EnaableByteMempool memory management.
+	EnableDomainDataCache                      bool   // EnableDomainDataCache caches validator calls to DomainData per epoch.
+	EnableStateGenSigVerify                    bool   // EnableStateGenSigVerify verifies proposer and randao signatures during state gen.
 
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
@@ -124,10 +125,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling experimental kafka streaming.")
 		cfg.KafkaBootstrapServers = ctx.GlobalString(kafkaBootstrapServersFlag.Name)
 	}
-	if ctx.GlobalBool(initSyncCacheStateFlag.Name) {
-		log.Warn("Enabled initial sync cache state mode.")
-		cfg.InitSyncCacheState = true
-	}
 	if ctx.GlobalBool(enableSlasherFlag.Name) {
 		log.Warn("Enable slasher connection.")
 		cfg.EnableSlasherConnection = true
@@ -148,7 +145,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling experimental memory management for beacon state")
 		cfg.EnableByteMempool = true
 	}
-
+	if ctx.GlobalBool(enableStateGenSigVerify.Name) {
+		log.Warn("Enabling sig verify for state gen")
+		cfg.EnableStateGenSigVerify = true
+	}
 	Init(cfg)
 }
 
@@ -168,6 +168,10 @@ func ConfigureValidator(ctx *cli.Context) {
 	if ctx.GlobalBool(protectAttesterFlag.Name) {
 		log.Warn("Enabled validator attestation slashing protection.")
 		cfg.ProtectAttester = true
+	}
+	if ctx.GlobalBool(enableDomainDataCacheFlag.Name) {
+		log.Warn("Enabled domain data cache.")
+		cfg.EnableDomainDataCache = true
 	}
 	Init(cfg)
 }

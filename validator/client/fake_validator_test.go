@@ -98,3 +98,5 @@ func (fv *fakeValidator) ProposeBlock(_ context.Context, slot uint64, pubKey [48
 func (fv *fakeValidator) SubmitAggregateAndProof(_ context.Context, slot uint64, pubKey [48]byte) {}
 
 func (fv *fakeValidator) LogAttestationsSubmitted() {}
+
+func (fv *fakeValidator) UpdateDomainDataCaches(context.Context, uint64) {}

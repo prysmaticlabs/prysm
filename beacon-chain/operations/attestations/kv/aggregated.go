@@ -1,6 +1,8 @@
 package kv
 
 import (
+	"time"
+
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -18,15 +20,18 @@ func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
 
-	var atts []*ethpb.Attestation
-	d, ok := p.aggregatedAtt.Get(string(r[:]))
+	d, expTime, ok := p.aggregatedAtt.GetWithExpiration(string(r[:]))
+	// If we have not seen the attestation data before, store in in cache with
+	// the default expiration time out.
 	if !ok {
-		atts = make([]*ethpb.Attestation, 0)
-	} else {
-		atts, ok = d.([]*ethpb.Attestation)
-		if !ok {
-			return errors.New("cached value is not of type []*ethpb.Attestation")
-		}
+		atts := []*ethpb.Attestation{att}
+		p.aggregatedAtt.Set(string(r[:]), atts, cache.DefaultExpiration)
+		return nil
+	}
+
+	atts, ok := d.([]*ethpb.Attestation)
+	if !ok {
+		return errors.New("cached value is not of type []*ethpb.Attestation")
 	}
 
 	atts, err = helpers.AggregateAttestations(append(atts, att))
@@ -34,9 +39,14 @@ func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
 		return err
 	}
 
-	// DefaultExpiration is set to what was given to New(). In this case
-	// it's one epoch.
-	p.aggregatedAtt.Set(string(r[:]), atts, cache.DefaultExpiration)
+	// Delete attestation if the current time has passed the expiration time.
+	if time.Now().Unix() >= expTime.Unix() {
+		p.aggregatedAtt.Delete(string(r[:]))
+		return nil
+	}
+	// Reset expiration time given how much time has passed.
+	expDuration := time.Duration(expTime.Unix() - time.Now().Unix())
+	p.aggregatedAtt.Set(string(r[:]), atts, expDuration*time.Second)
 
 	return nil
 }
@@ -53,6 +63,9 @@ func (p *AttCaches) SaveAggregatedAttestations(atts []*ethpb.Attestation) error 
 
 // AggregatedAttestations returns the aggregated attestations in cache.
 func (p *AttCaches) AggregatedAttestations() []*ethpb.Attestation {
+	// Delete all expired aggregated attestations before returning them.
+	p.aggregatedAtt.DeleteExpired()
+
 	atts := make([]*ethpb.Attestation, 0, p.aggregatedAtt.ItemCount())
 	for s, i := range p.aggregatedAtt.Items() {
 		// Type assertion for the worst case. This shouldn't happen.
@@ -70,6 +83,9 @@ func (p *AttCaches) AggregatedAttestations() []*ethpb.Attestation {
 // AggregatedAttestationsBySlotIndex returns the aggregated attestations in cache,
 // filtered by committee index and slot.
 func (p *AttCaches) AggregatedAttestationsBySlotIndex(slot uint64, committeeIndex uint64) []*ethpb.Attestation {
+	// Delete all expired aggregated attestations before returning them.
+	p.aggregatedAtt.DeleteExpired()
+
 	atts := make([]*ethpb.Attestation, 0, p.aggregatedAtt.ItemCount())
 	for s, i := range p.aggregatedAtt.Items() {
 
@@ -97,7 +113,7 @@ func (p *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation data")
 	}
-	a, ok := p.aggregatedAtt.Get(string(r[:]))
+	a, expTime, ok := p.aggregatedAtt.GetWithExpiration(string(r[:]))
 	if !ok {
 		return nil
 	}
@@ -114,7 +130,14 @@ func (p *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
 	if len(filtered) == 0 {
 		p.aggregatedAtt.Delete(string(r[:]))
 	} else {
-		p.aggregatedAtt.Set(string(r[:]), filtered, cache.DefaultExpiration)
+		// Delete attestation if the current time has passed the expiration time.
+		if time.Now().Unix() >= expTime.Unix() {
+			p.aggregatedAtt.Delete(string(r[:]))
+			return nil
+		}
+		// Reset expiration time given how much time has passed.
+		expDuration := time.Duration(expTime.Unix() - time.Now().Unix())
+		p.aggregatedAtt.Set(string(r[:]), filtered, expDuration*time.Second)
 	}
 
 	return nil
@@ -144,4 +167,9 @@ func (p *AttCaches) HasAggregatedAttestation(att *ethpb.Attestation) (bool, erro
 	}
 
 	return false, nil
+}
+
+// AggregatedAttestationCount returns the number of aggregated attestations key in the pool.
+func (p *AttCaches) AggregatedAttestationCount() int {
+	return p.aggregatedAtt.ItemCount()
 }

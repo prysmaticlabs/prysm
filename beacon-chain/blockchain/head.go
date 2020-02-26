@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -76,18 +75,8 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	// Get the new head state from cached state or DB.
 	var newHeadState *state.BeaconState
 	var exists bool
-	if featureconfig.Get().InitSyncCacheState {
-		newHeadState, exists = s.initSyncState[headRoot]
-		if !exists {
-			newHeadState, err = s.beaconDB.State(ctx, headRoot)
-			if err != nil {
-				return errors.Wrap(err, "could not retrieve head state in DB")
-			}
-			if newHeadState == nil {
-				return errors.New("cannot save nil head state")
-			}
-		}
-	} else {
+	newHeadState, exists = s.initSyncState[headRoot]
+	if !exists {
 		newHeadState, err = s.beaconDB.State(ctx, headRoot)
 		if err != nil {
 			return errors.Wrap(err, "could not retrieve head state in DB")
