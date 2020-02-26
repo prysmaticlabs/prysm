@@ -3,6 +3,10 @@ workspace(name = "prysm")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
+register_toolchains(
+    "//tools/cross-toolchain:cc-toolchain-clang"
+)
+
 http_archive(
     name = "bazel_skylib",
     sha256 = "2ea8a5ed2b448baf4a6855d3ce049c4c452a6470b1efd1504fdb7c1c134d220a",
@@ -1575,3 +1579,11 @@ go_repository(
     commit = "e180dbdc8da04c4fa04272e875ce64949f38bd3e",
     importpath = "github.com/shibukawa/configdir",
 )
+
+load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies", "go_host_sdk")
+
+go_rules_dependencies()
+
+#go_host_sdk(name = "go_sdk")
+
+go_register_toolchains()
