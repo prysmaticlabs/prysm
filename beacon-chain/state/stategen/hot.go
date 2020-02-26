@@ -29,6 +29,11 @@ func (s *State) saveHotState(ctx context.Context, blockRoot [32]byte, state *sta
 	ctx, span := trace.StartSpan(ctx, "stateGen.saveHotState")
 	defer span.End()
 
+	// If the hot state is already in cache, one can be sure the state was processed and in the DB.
+	if s.hotStateCache.Has(blockRoot) {
+		return nil
+	}
+
 	// Only on an epoch boundary, saves the whole state.
 	if helpers.IsEpochStart(state.Slot()) {
 		if err := s.beaconDB.SaveState(ctx, state, blockRoot); err != nil {
@@ -55,6 +60,8 @@ func (s *State) saveHotState(ctx context.Context, blockRoot [32]byte, state *sta
 	hotSummarySaved.Inc()
 
 	// Store the state in the cache.
+	// Don't need to copy state given the state is not returned.
+	s.hotStateCache.Put(blockRoot, state)
 
 	return nil
 }
@@ -65,7 +72,11 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 	ctx, span := trace.StartSpan(ctx, "stateGen.loadHotStateByRoot")
 	defer span.End()
 
-	// Load the cache
+	// Load the cache.
+	cachedState := s.hotStateCache.Get(blockRoot)
+	if cachedState != nil {
+		return cachedState, nil
+	}
 
 	summary, err := s.beaconDB.HotStateSummary(ctx, blockRoot)
 	if err != nil {
@@ -100,7 +111,8 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 		}
 	}
 
-	// Save the cache
+	// Save the cache in cache and copy the state since it is also returned in the end.
+	s.hotStateCache.Put(blockRoot, hotState.Copy())
 
 	return hotState, nil
 }
