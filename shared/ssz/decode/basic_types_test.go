@@ -9,7 +9,7 @@ import (
 
 func TestUnmarshalUint8(t *testing.T) {
 	var tests = []struct {
-		in byte
+		in       byte
 		expected uint8
 	}{
 		{in: byte(8), expected: uint8(8)},
@@ -26,7 +26,7 @@ func TestUnmarshalUint8(t *testing.T) {
 
 func TestUnmarshalUint16_Successful(t *testing.T) {
 	var tests = []struct {
-		in []byte
+		in       []byte
 		expected uint16
 	}{
 		{in: []byte{8, 0}, expected: uint16(8)},
@@ -63,7 +63,7 @@ func TestUnmarshalUint16_Unsuccessful(t *testing.T) {
 
 func TestUnmarshalUint32_Successful(t *testing.T) {
 	var tests = []struct {
-		in []byte
+		in       []byte
 		expected uint32
 	}{
 		{in: []byte{8, 0, 0, 0}, expected: uint32(8)},
@@ -100,7 +100,7 @@ func TestUnmarshalUint32_Unsuccessful(t *testing.T) {
 
 func TestUnmarshalUint64_Successful(t *testing.T) {
 	var tests = []struct {
-		in []byte
+		in       []byte
 		expected uint64
 	}{
 		{in: []byte{8, 0, 0, 0, 0, 0, 0, 0}, expected: uint64(8)},
@@ -137,7 +137,7 @@ func TestUnmarshalUint64_Unsuccessful(t *testing.T) {
 
 func TestUnmarshalBoolean_Successful(t *testing.T) {
 	var tests = []struct {
-		in byte
+		in       byte
 		expected bool
 	}{
 		{in: byte(1), expected: true},
