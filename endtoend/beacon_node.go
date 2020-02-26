@@ -55,6 +55,7 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*ev.B
 
 	args := []string{
 		"--force-clear-db",
+		"--verbosity=debug",
 		"--no-discovery",
 		"--http-web3provider=http://127.0.0.1:8745",
 		"--web3provider=ws://127.0.0.1:8746",
