@@ -79,7 +79,11 @@ func (f *blocksFetcher) start() {
 
 // stop terminates all fetcher operations.
 func (f *blocksFetcher) stop() {
-	close(f.quit)
+	select {
+	case <-f.quit:
+	default:
+		close(f.quit)
+	}
 }
 
 // iter returns an outgoing channel, on which consumers are expected to constantly iterate for results/errors.
@@ -99,10 +103,16 @@ func (f *blocksFetcher) loop() {
 		select {
 		case <-f.ctx.Done():
 			// Upstream context is done.
-			log.Warn("Upstream context canceled. Blocks fetcher is stopped.")
+			err := errors.New("Upstream context canceled. Blocks fetcher is stopped.")
+			log.WithError(err).Warn("Block fetch loop closed unexpectedly")
+			f.receivedFetchResponses <- &fetchRequestResponse{
+				err: err,
+			}
+			f.stop()
 			return
 		case <-f.quit:
 			// Terminating abort all operations.
+			log.Debug("Blocks fetcher received a stop request.")
 			return
 		case req := <-f.requests:
 			root, finalizedEpoch, peers := f.p2p.Peers().BestFinalized(maxPeersToSync, helpers.SlotToEpoch(f.headFetcher.HeadSlot()))
