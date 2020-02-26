@@ -285,4 +285,5 @@ var E2EBeaconChainFlags = []string{
 	"--enable-eth1-data-vote-cache",
 	"--proto-array-forkchoice",
 	"--enable-byte-mempool",
+	"--enable-state-gen-sig-verify",
 }
