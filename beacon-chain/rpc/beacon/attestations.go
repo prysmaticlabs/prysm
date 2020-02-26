@@ -8,6 +8,8 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
@@ -210,12 +212,23 @@ func (bs *Server) ListIndexedAttestations(
 func (bs *Server) StreamAttestations(
 	_ *ptypes.Empty, stream ethpb.BeaconChain_StreamAttestationsServer,
 ) error {
+	attestationsChannel := make(chan *feed.Event, 1)
+	attSub := bs.AttestationNotifier.OperationFeed().Subscribe(attestationsChannel)
+	defer attSub.Unsubscribe()
 	for {
 		select {
-		case <-bs.SlotTicker.C():
-			atts := bs.AttestationsPool.AggregatedAttestations()
-			for i := 0; i < len(atts); i++ {
-				if err := stream.Send(atts[i]); err != nil {
+		case event := <-attestationsChannel:
+			if event.Type == operation.UnaggregatedAttReceived {
+				data, ok := event.Data.(operation.UnAggregatedAttReceivedData)
+				if !ok {
+					// Got bad data over the stream.
+					continue
+				}
+				if data.Attestation == nil {
+					// One nil attestation shouldn't stop the stream.
+					continue
+				}
+				if err := stream.Send(data.Attestation); err != nil {
 					return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
 				}
 			}
@@ -233,28 +246,37 @@ func (bs *Server) StreamAttestations(
 func (bs *Server) StreamIndexedAttestations(
 	_ *ptypes.Empty, stream ethpb.BeaconChain_StreamIndexedAttestationsServer,
 ) error {
+	attestationsChannel := make(chan *feed.Event, 1)
+	attSub := bs.AttestationNotifier.OperationFeed().Subscribe(attestationsChannel)
+	defer attSub.Unsubscribe()
 	for {
 		select {
-		case slot := <-bs.SlotTicker.C():
-			epoch := helpers.SlotToEpoch(slot)
-			atts := bs.AttestationsPool.AggregatedAttestations()
-			committeesBySlot, _, err := bs.retrieveCommitteesForEpoch(stream.Context(), epoch)
-			if err != nil {
-				return status.Errorf(
-					codes.Internal,
-					"Could not retrieve committees for epoch %d: %v",
-					epoch,
-					err,
-				)
-			}
-			// We use the retrieved committees for the epoch to convert all attestations
-			// into indexed form effectively.
-			numAttestations := len(atts)
-			indexedAtts := make([]*ethpb.IndexedAttestation, numAttestations, numAttestations)
-			startSlot := helpers.StartSlot(epoch)
-			endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch
-			for i := 0; i < len(indexedAtts); i++ {
-				att := atts[i]
+		case event := <-attestationsChannel:
+			if event.Type == operation.UnaggregatedAttReceived {
+				data, ok := event.Data.(operation.UnAggregatedAttReceivedData)
+				if !ok {
+					// Got bad data over the stream.
+					continue
+				}
+				if data.Attestation == nil {
+					// One nil attestation shouldn't stop the stream.
+					continue
+				}
+				epoch := helpers.SlotToEpoch(bs.HeadFetcher.HeadSlot())
+				committeesBySlot, _, err := bs.retrieveCommitteesForEpoch(stream.Context(), epoch)
+				if err != nil {
+					return status.Errorf(
+						codes.Internal,
+						"Could not retrieve committees for epoch %d: %v",
+						epoch,
+						err,
+					)
+				}
+				// We use the retrieved committees for the epoch to convert all attestations
+				// into indexed form effectively.
+				startSlot := helpers.StartSlot(epoch)
+				endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch
+				att := data.Attestation
 				// Out of range check, the attestation slot cannot be greater
 				// the last slot of the requested epoch or smaller than its start slot
 				// given committees are accessed as a map of slot -> commitees list, where there are
@@ -263,7 +285,7 @@ func (bs *Server) StreamIndexedAttestations(
 					continue
 				}
 				committee := committeesBySlot[att.Data.Slot].Committees[att.Data.CommitteeIndex]
-				idxAtt, err := attestationutil.ConvertToIndexed(stream.Context(), atts[i], committee.ValidatorIndices)
+				idxAtt, err := attestationutil.ConvertToIndexed(stream.Context(), att, committee.ValidatorIndices)
 				if err != nil {
 					return status.Errorf(
 						codes.Internal,

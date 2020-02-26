@@ -208,7 +208,6 @@ func (s *Service) Start() {
 	s.grpcServer = grpc.NewServer(opts...)
 
 	genesisTime := s.genesisTimeFetcher.GenesisTime()
-	ticker := slotutil.GetSlotTicker(genesisTime, params.BeaconConfig().SecondsPerSlot)
 	validatorServer := &validator.Server{
 		Ctx:                    s.ctx,
 		BeaconDB:               s.beaconDB,
@@ -258,7 +257,7 @@ func (s *Service) Start() {
 		GenesisTimeFetcher:   s.genesisTimeFetcher,
 		StateNotifier:        s.stateNotifier,
 		BlockNotifier:        s.blockNotifier,
-		SlotTicker:           ticker,
+		AttestationNotifier:  s.operationNotifier,
 	}
 	aggregatorServer := &aggregator.Server{
 		BeaconDB:    s.beaconDB,

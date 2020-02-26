@@ -6,6 +6,9 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 )
 
@@ -18,6 +21,15 @@ func (r *Service) committeeIndexBeaconAttestationSubscriber(ctx context.Context,
 	if exists, _ := r.attPool.HasAggregatedAttestation(a); exists {
 		return nil
 	}
+
+	// Broadcast the unaggregated attestation on a feed to notify other services in the beacon node
+	// of a received unaggregated attestation.
+	r.attestationNotifier.OperationFeed().Send(&feed.Event{
+		Type: operation.UnaggregatedAttReceived,
+		Data: &operation.UnAggregatedAttReceivedData{
+			Attestation: a,
+		},
+	})
 
 	return r.attPool.SaveUnaggregatedAttestation(a)
 }
