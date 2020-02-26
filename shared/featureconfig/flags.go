@@ -54,12 +54,6 @@ var (
 			"and attestation's aggregated signatures. Without this flag, only the proposer " +
 			"signature is verified until the node reaches the end of the finalized chain.",
 	}
-	initSyncCacheStateFlag = cli.BoolFlag{
-		Name: "initial-sync-cache-state",
-		Usage: "Save state in cache during initial sync. We currently save state in the DB during " +
-			"initial sync and disk-IO is one of the biggest bottleneck. This still saves finalized state in DB " +
-			"and start syncing from there",
-	}
 	enableSlasherFlag = cli.BoolFlag{
 		Name: "enable-slasher",
 		Usage: "Enables connection to a slasher service in order to retrieve slashable events. Slasher is connected to the beacon node using gRPC and " +
@@ -97,6 +91,11 @@ var (
 	enableByteMempool = cli.BoolFlag{
 		Name:  "enable-byte-mempool",
 		Usage: "Enable use of sync.Pool for certain byte arrays in the beacon state",
+	}
+	enableDomainDataCacheFlag = cli.BoolFlag{
+		Name: "enable-domain-data-cache",
+		Usage: "Enable caching of domain data requests per epoch. This feature reduces the total " +
+			"calls to the beacon node for each assignment.",
 	}
 )
 
@@ -205,6 +204,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedInitSyncCacheStateFlag = cli.BoolFlag{
+		Name: "initial-sync-cache-state",
+		Usage: deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -228,6 +232,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedprotoArrayForkChoice,
 	deprecatedForkchoiceAggregateAttestations,
 	deprecatedEnableAttestationCacheFlag,
+	deprecatedInitSyncCacheStateFlag,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -235,12 +240,14 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	minimalConfigFlag,
 	protectAttesterFlag,
 	protectProposerFlag,
+	enableDomainDataCacheFlag,
 }...)
 
 // E2EValidatorFlags contains a list of the validator feature flags to be tested in E2E.
 var E2EValidatorFlags = []string{
 	"--protect-attester",
 	"--protect-proposer",
+	"--enable-domain-data-cache",
 }
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
@@ -252,7 +259,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableSSZCache,
 	enableEth1DataVoteCacheFlag,
 	initSyncVerifyEverythingFlag,
-	initSyncCacheStateFlag,
 	skipBLSVerifyFlag,
 	kafkaBootstrapServersFlag,
 	enableBackupWebhookFlag,
@@ -271,7 +277,6 @@ var E2EBeaconChainFlags = []string{
 	"--cache-filtered-block-tree",
 	"--enable-skip-slots-cache",
 	"--enable-eth1-data-vote-cache",
-	"--initial-sync-cache-state",
 	"--proto-array-forkchoice",
 	"--enable-byte-mempool",
 }
