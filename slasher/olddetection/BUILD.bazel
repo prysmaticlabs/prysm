@@ -2,13 +2,16 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["min_max_span.go"],
-    importpath = "github.com/prysmaticlabs/prysm/slasher/db/deprecated_db",
+    srcs = ["attestations.go"],
+    importpath = "github.com/prysmaticlabs/prysm/slasher/olddetection",
     visibility = ["//visibility:public"],
 )
 
 go_test(
     name = "go_default_test",
-    srcs = ["min_max_span_test.go"],
+    srcs = [
+        "attestations_bench_test.go",
+        "attestations_test.go",
+    ],
     embed = [":go_default_library"],
 )

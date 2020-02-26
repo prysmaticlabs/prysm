@@ -84,7 +84,7 @@ func TestValidatorSpanMap_Save(t *testing.T) {
 		if sm == nil || !reflect.DeepEqual(sm, tt.spanMap) {
 			t.Fatalf("Get should return validator span map: %v got: %v", tt.spanMap, sm)
 		}
-		s, err := db.EpochSpanByValidatorIndex(ctx, tt.epoch, 1)
+		s, err := db.EpochSpanByValidatorIndex(ctx, 1, tt.epoch)
 		if err != nil {
 			t.Fatalf("Failed to get validator span for epoch 1: %v", err)
 		}

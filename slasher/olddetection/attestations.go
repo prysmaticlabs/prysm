@@ -1,4 +1,4 @@
-package deprecated_detection
+package olddetection
 
 //
 //import (

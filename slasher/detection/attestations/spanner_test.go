@@ -29,6 +29,8 @@ func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to init db: %v", err)
 	}
+	defer d.ClearDB()
+	defer d.Close()
 
 	type testStruct struct {
 		name                     string
@@ -271,6 +273,9 @@ func TestSpanDetector_DetectSlashingForValidator_MultipleValidators(t *testing.T
 	if err != nil {
 		t.Fatalf("Failed to init db: %v", err)
 	}
+	defer d.ClearDB()
+	defer d.Close()
+
 	context := context.Background()
 	type testStruct struct {
 		name            string
@@ -387,6 +392,9 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to init db: %v", err)
 	}
+	defer d.ClearDB()
+	defer d.Close()
+
 	context := context.Background()
 	sd := &SpanDetector{
 		db: d,
