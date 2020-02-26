@@ -31,10 +31,10 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
 
 	request := &ethpb.AggregationRequest{
-		Slot:                 req.Slot,
-		CommitteeIndex:       req.CommitteeIndex,
-		PublicKey:            req.PublicKey,
-		SlotSignature:        req.SlotSignature,
+		Slot:           req.Slot,
+		CommitteeIndex: req.CommitteeIndex,
+		PublicKey:      req.PublicKey,
+		SlotSignature:  req.SlotSignature,
 	}
 
 	// Passthrough request to non-deprecated method.
@@ -42,5 +42,5 @@ func (as *Server) SubmitAggregateAndProof(ctx context.Context, req *pb.Aggregati
 	if err != nil {
 		return nil, err
 	}
-	return &pb.AggregationResponse{Root:res.AttestationDataRoot}, nil
+	return &pb.AggregationResponse{Root: res.AttestationDataRoot}, nil
 }
