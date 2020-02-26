@@ -2,8 +2,8 @@ package stategen
 
 import (
 	"context"
-	"errors"
 
+	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	transition "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -109,11 +109,11 @@ func (s *State) ComputeStateUpToSlot(ctx context.Context, targetSlot uint64) (*s
 
 	lastBlockRoot, lastBlockSlot, err := s.getLastValidBlock(ctx, targetSlot)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get last valid block")
 	}
 	lastBlockRootForState, err := s.getLastValidState(ctx, targetSlot)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get last valid state")
 	}
 	lastState, err := s.beaconDB.State(ctx, lastBlockRootForState)
 	if err != nil {
@@ -123,17 +123,18 @@ func (s *State) ComputeStateUpToSlot(ctx context.Context, targetSlot uint64) (*s
 		return nil, errUnknownState
 	}
 
-	if lastState.Slot() == lastBlockSlot {
+	// Nothing to process if the last valid state is higher than the last valid block slot.
+	if lastState.Slot() >= lastBlockSlot {
 		return lastState, nil
 	}
 
 	blks, err := s.LoadBlocks(ctx, lastState.Slot()+1, lastBlockSlot, lastBlockRoot)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not load blocks")
 	}
 	lastState, err = s.ReplayBlocks(ctx, lastState, blks, targetSlot)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not replay blocks")
 	}
 
 	return lastState, nil

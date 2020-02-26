@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -19,6 +20,7 @@ type State struct {
 	slotsPerArchivePoint    uint64
 	epochBoundarySlotToRoot map[uint64][32]byte
 	epochBoundaryLock       sync.RWMutex
+	hotStateCache           *cache.HotStateCache
 }
 
 type splitSlotAndRoot struct {
@@ -34,6 +36,7 @@ func New(db db.NoHeadAccessDatabase) *State {
 		slotsPerArchivePoint:    128,
 		epochBoundarySlotToRoot: make(map[uint64][32]byte),
 		splitInfo:               &splitSlotAndRoot{slot: 0, root: params.BeaconConfig().ZeroHash},
+		hotStateCache:           cache.NewHotStateCache(),
 	}
 }
 
