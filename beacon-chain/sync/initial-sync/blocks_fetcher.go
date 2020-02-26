@@ -56,6 +56,7 @@ type fetchRequestResponse struct {
 	params *fetchRequestParams
 	blocks []*eth.SignedBeaconBlock
 	err    error
+	peers  []peer.ID
 }
 
 // newBlocksFetcher creates ready to use fetcher
@@ -154,6 +155,7 @@ func (f *blocksFetcher) loop() {
 				f.receivedFetchResponses <- &fetchRequestResponse{
 					params: req,
 					blocks: resp,
+					peers:  peers,
 				}
 			}(root, finalizedEpoch, req.start, req.count, peers)
 		}
