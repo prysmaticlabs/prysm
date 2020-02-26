@@ -29,3 +29,32 @@ run --incompatible_strict_action_env
 build --define kafka_enabled=false
 test --define kafka_enabled=false
 run --define kafka_enabled=false
+
+
+# debug
+build:debug --sandbox_debug
+build:debug --toolchain_resolution_debug
+build:debug --verbose_failures
+
+# linux_amd64, not strictly necessary since host/exec env is amd64
+build:linux_amd64 --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64_cgo
+
+# linux_amd64_debug
+build:linux_amd64_debug --config=linux_amd64
+build:linux_amd64_debug --config=debug
+
+# linux_arm64
+build:linux_arm64 --crosstool_top=//tools/cross-toolchain:multiarch_toolchain
+build:linux_arm64 --platforms=@io_bazel_rules_go//go/toolchain:linux_arm64_cgo
+build:linux_arm64 --copt=-funsafe-math-optimizations
+build:linux_arm64 --copt=-ftree-vectorize
+build:linux_arm64 --copt=-fomit-frame-pointer
+build:linux_arm64 --cpu=aarch64
+build:linux_arm64 --compiler=clang
+build:linux_arm64 --copt=-march=armv8-a
+build:linux_arm64 --copt=-march=armv8.2-a
+
+#linux_arm64_debug
+build:linux_arm64_debug --config=linux_arm64
+build:linux_arm64_debug --config=debug
+
