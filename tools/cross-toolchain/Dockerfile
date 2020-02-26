@@ -7,7 +7,6 @@ RUN apt-get update && \
     apt-get install -y \
         curl xz-utils \
         gcc g++ \
-        gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf \
         gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
         cmake libssl-dev libxml2-dev vim apt-transport-https \
         zip unzip libtinfo5 patch zlib1g-dev autoconf libtool \

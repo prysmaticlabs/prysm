@@ -52,7 +52,6 @@ build:linux_arm64 --copt=-fomit-frame-pointer
 build:linux_arm64 --cpu=aarch64
 build:linux_arm64 --compiler=clang
 build:linux_arm64 --copt=-march=armv8-a
-build:linux_arm64 --copt=-march=armv8.2-a
 
 #linux_arm64_debug
 build:linux_arm64_debug --config=linux_arm64
