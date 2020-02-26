@@ -99,7 +99,7 @@ func (ss *Server) UpdateSpanMaps(ctx context.Context, req *ethpb.IndexedAttestat
 		}
 		wg.Add(1)
 		go func(i uint64) {
-			spanMap, err := ss.SlasherDB.ValidatorSpansMap(ctx, i)
+			spanMap, err := ss.SlasherDB.EpochSpansMap(ctx, i)
 			if err != nil {
 				er <- err
 				wg.Done()
@@ -117,7 +117,7 @@ func (ss *Server) UpdateSpanMaps(ctx context.Context, req *ethpb.IndexedAttestat
 			//	wg.Done()
 			//	return
 			//}
-			if err := ss.SlasherDB.SaveValidatorSpansMap(ctx, i, spanMap); err != nil {
+			if err := ss.SlasherDB.SaveEpochSpansMap(ctx, i, spanMap); err != nil {
 				er <- err
 				wg.Done()
 				return
@@ -185,7 +185,7 @@ func (ss *Server) AttesterSlashings(ctx context.Context, st *slashpb.SlashingSta
 // by min max surround detection method.
 func (ss *Server) DetectSurroundVotes(ctx context.Context, validatorIdx uint64, req *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error) {
 	var as []*ethpb.AttesterSlashing
-	//spanMap, err := ss.SlasherDB.ValidatorSpansMap(ctx, validatorIdx)
+	//spanMap, err := ss.SlasherDB.EpochSpansMap(ctx, validatorIdx)
 	//if err != nil {
 	//	return nil, errors.Wrap(err, "failed to get validator spans map")
 	//}
@@ -193,7 +193,7 @@ func (ss *Server) DetectSurroundVotes(ctx context.Context, validatorIdx uint64, 
 	//if err != nil {
 	//	return nil, errors.Wrap(err, "failed to update spans")
 	//}
-	//if err := ss.SlasherDB.SaveValidatorSpansMap(ctx, validatorIdx, spanMap); err != nil {
+	//if err := ss.SlasherDB.SaveEpochSpansMap(ctx, validatorIdx, spanMap); err != nil {
 	//	return nil, errors.Wrap(err, "failed to save validator spans map")
 	//}
 	//

@@ -4,17 +4,17 @@ package kv
 //
 //func saveToDB(db *Store) func(uint64, uint64, interface{}, int64) {
 //	// Returning the function here so we can access the DB properly from the OnEvict.
-//	return func(validatorIdx uint64, _ uint64, value interface{}, cost int64) {
-//		log.Tracef("evicting span map for validator id: %d", validatorIdx)
+//	return func(epoch uint64, _ uint64, value interface{}, cost int64) {
+//		log.Tracef("evicting span map for validator id: %d", epoch)
 //		err := db.batch(func(tx *bolt.Tx) error {
 //			bucket := tx.Bucket(validatorsMinMaxSpanBucket)
-//			key := bytesutil.Bytes4(validatorIdx)
+//			key := bytesutil.Bytes4(epoch)
 //			val, err := proto.Marshal(value.(*slashpb.EpochSpanMap))
 //			if err != nil {
 //				return errors.Wrap(err, "failed to marshal span map")
 //			}
 //			if err := bucket.Put(key, val); err != nil {
-//				return errors.Wrapf(err, "failed to delete validator id: %d from min max span bucket", validatorIdx)
+//				return errors.Wrapf(err, "failed to delete validator id: %d from min max span bucket", epoch)
 //			}
 //			return err
 //		})
@@ -35,16 +35,16 @@ package kv
 //	return epochSpanMap, nil
 //}
 //
-//// ValidatorSpansMap accepts validator index and returns the corresponding spans
+//// EpochSpansMap accepts validator index and returns the corresponding spans
 //// map for slashing detection.
 //// Returns nil if the span map for this validator index does not exist.
-//func (db *Store) ValidatorSpansMap(ctx context.Context, validatorIdx uint64) (*slashpb.EpochSpanMap, error) {
-//	ctx, span := trace.StartSpan(ctx, "SlasherDB.ValidatorSpansMap")
+//func (db *Store) EpochSpansMap(ctx context.Context, epoch uint64) (*slashpb.EpochSpanMap, error) {
+//	ctx, span := trace.StartSpan(ctx, "SlasherDB.EpochSpansMap")
 //	defer span.End()
 //	var err error
 //	var spanMap *slashpb.EpochSpanMap
 //	if db.spanCacheEnabled {
-//		spanMap, ok := db.spanCache.Get(validatorIdx)
+//		spanMap, ok := db.spanCache.Get(epoch)
 //		if ok {
 //			return spanMap.(*slashpb.EpochSpanMap), nil
 //		}
@@ -52,7 +52,7 @@ package kv
 //
 //	err = db.view(func(tx *bolt.Tx) error {
 //		b := tx.Bucket(validatorsMinMaxSpanBucket)
-//		enc := b.Get(bytesutil.Bytes4(validatorIdx))
+//		enc := b.Get(bytesutil.Bytes4(epoch))
 //		spanMap, err = unmarshalEpochSpanMap(ctx, enc)
 //		if err != nil {
 //			return err
@@ -65,15 +65,15 @@ package kv
 //	return spanMap, err
 //}
 //
-//// SaveValidatorSpansMap accepts a validator index and span map and writes it to disk.
-//func (db *Store) SaveValidatorSpansMap(ctx context.Context, validatorIdx uint64, spanMap *slashpb.EpochSpanMap) error {
-//	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveValidatorSpansMap")
+//// SaveEpochSpansMap accepts a validator index and span map and writes it to disk.
+//func (db *Store) SaveEpochSpansMap(ctx context.Context, epoch uint64, spanMap *slashpb.EpochSpanMap) error {
+//	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveEpochSpansMap")
 //	defer span.End()
 //	if db.spanCacheEnabled {
-//		if validatorIdx > highestValidatorIdx {
-//			highestValidatorIdx = validatorIdx
+//		if epoch > highestValidatorIdx {
+//			highestValidatorIdx = epoch
 //		}
-//		saved := db.spanCache.Set(validatorIdx, spanMap, 1)
+//		saved := db.spanCache.Set(epoch, spanMap, 1)
 //		if !saved {
 //			return fmt.Errorf("failed to save span map to cache")
 //		}
@@ -81,13 +81,13 @@ package kv
 //	}
 //	err := db.batch(func(tx *bolt.Tx) error {
 //		bucket := tx.Bucket(validatorsMinMaxSpanBucket)
-//		key := bytesutil.Bytes4(validatorIdx)
+//		key := bytesutil.Bytes4(epoch)
 //		val, err := proto.Marshal(spanMap)
 //		if err != nil {
 //			return errors.Wrap(err, "failed to marshal span map")
 //		}
 //		if err := bucket.Put(key, val); err != nil {
-//			return errors.Wrapf(err, "failed to delete validator id: %d from min max span bucket", validatorIdx)
+//			return errors.Wrapf(err, "failed to delete validator id: %d from min max span bucket", epoch)
 //		}
 //		return nil
 //	})
@@ -123,22 +123,22 @@ package kv
 //}
 //
 //// DeleteValidatorSpanMap deletes a validator span map using a validator index as bucket key.
-//func (db *Store) DeleteValidatorSpanMap(ctx context.Context, validatorIdx uint64) error {
+//func (db *Store) DeleteValidatorSpanMap(ctx context.Context, epoch uint64) error {
 //	ctx, span := trace.StartSpan(ctx, "SlasherDB.DeleteValidatorSpanMap")
 //	defer span.End()
 //	if db.spanCacheEnabled {
-//		db.spanCache.Del(validatorIdx)
+//		db.spanCache.Del(epoch)
 //	}
 //	return db.update(func(tx *bolt.Tx) error {
 //		bucket := tx.Bucket(validatorsMinMaxSpanBucket)
-//		key := bytesutil.Bytes4(validatorIdx)
+//		key := bytesutil.Bytes4(epoch)
 //		enc := bucket.Get(key)
 //		if enc == nil {
 //			return nil
 //		}
 //		if err := bucket.Delete(key); err != nil {
 //			tx.Rollback()
-//			return errors.Wrapf(err, "failed to delete the span map for validator idx: %v from min max span bucket", validatorIdx)
+//			return errors.Wrapf(err, "failed to delete the span map for validator idx: %v from min max span bucket", epoch)
 //		}
 //		return nil
 //	})

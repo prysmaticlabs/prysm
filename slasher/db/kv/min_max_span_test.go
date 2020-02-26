@@ -14,7 +14,7 @@ package kv
 //)
 //
 //type spanMapTestStruct struct {
-//	validatorIdx uint64
+//	epoch uint64
 //	spanMap      *slashpb.EpochSpanMap
 //}
 //
@@ -23,7 +23,7 @@ package kv
 //func init() {
 //	spanTests = []spanMapTestStruct{
 //		{
-//			validatorIdx: 1,
+//			epoch: 1,
 //			spanMap: &slashpb.EpochSpanMap{
 //				EpochSpanMap: map[uint64]*slashpb.MinMaxEpochSpan{
 //					1: {MinEpochSpan: 10, MaxEpochSpan: 20},
@@ -33,7 +33,7 @@ package kv
 //			},
 //		},
 //		{
-//			validatorIdx: 2,
+//			epoch: 2,
 //			spanMap: &slashpb.EpochSpanMap{
 //				EpochSpanMap: map[uint64]*slashpb.MinMaxEpochSpan{
 //					1: {MinEpochSpan: 10, MaxEpochSpan: 20},
@@ -43,7 +43,7 @@ package kv
 //			},
 //		},
 //		{
-//			validatorIdx: 3,
+//			epoch: 3,
 //			spanMap: &slashpb.EpochSpanMap{
 //				EpochSpanMap: map[uint64]*slashpb.MinMaxEpochSpan{
 //					1: {MinEpochSpan: 10, MaxEpochSpan: 20},
@@ -62,13 +62,13 @@ package kv
 //	defer teardownDB(t, db)
 //	ctx := context.Background()
 //
-//	validatorIdx := uint64(1)
-//	vsm, err := db.ValidatorSpansMap(ctx, validatorIdx)
+//	epoch := uint64(1)
+//	vsm, err := db.EpochSpansMap(ctx, epoch)
 //	if err != nil {
-//		t.Fatalf("Nil ValidatorSpansMap should not return error: %v", err)
+//		t.Fatalf("Nil EpochSpansMap should not return error: %v", err)
 //	}
 //	if !reflect.DeepEqual(vsm.EpochSpanMap, map[uint64]*slashpb.MinMaxEpochSpan{}) {
-//		t.Fatal("ValidatorSpansMap should return nil")
+//		t.Fatal("EpochSpansMap should return nil")
 //	}
 //}
 //
@@ -80,11 +80,11 @@ package kv
 //	ctx := context.Background()
 //
 //	for _, tt := range spanTests {
-//		err := db.SaveValidatorSpansMap(ctx, tt.validatorIdx, tt.spanMap)
+//		err := db.SaveEpochSpansMap(ctx, tt.epoch, tt.spanMap)
 //		if err != nil {
 //			t.Fatalf("Save validator span map failed: %v", err)
 //		}
-//		sm, err := db.ValidatorSpansMap(ctx, tt.validatorIdx)
+//		sm, err := db.EpochSpansMap(ctx, tt.epoch)
 //		if err != nil {
 //			t.Fatalf("Failed to get validator span map: %v", err)
 //		}
@@ -104,13 +104,13 @@ package kv
 //	ctx := context.Background()
 //
 //	for _, tt := range spanTests {
-//		err := db.SaveValidatorSpansMap(ctx, tt.validatorIdx, tt.spanMap)
+//		err := db.SaveEpochSpansMap(ctx, tt.epoch, tt.spanMap)
 //		if err != nil {
 //			t.Fatalf("Save validator span map failed: %v", err)
 //		}
 //		// wait for value to pass through cache buffers
 //		time.Sleep(time.Millisecond * 10)
-//		sm, err := db.ValidatorSpansMap(ctx, tt.validatorIdx)
+//		sm, err := db.EpochSpansMap(ctx, tt.epoch)
 //		if err != nil {
 //			t.Fatalf("Failed to get validator span map: %v", err)
 //		}
@@ -129,25 +129,25 @@ package kv
 //	ctx := context.Background()
 //
 //	for _, tt := range spanTests {
-//		err := db.SaveValidatorSpansMap(ctx, tt.validatorIdx, tt.spanMap)
+//		err := db.SaveEpochSpansMap(ctx, tt.epoch, tt.spanMap)
 //		if err != nil {
 //			t.Fatalf("Save validator span map failed: %v", err)
 //		}
 //	}
 //
 //	for _, tt := range spanTests {
-//		sm, err := db.ValidatorSpansMap(ctx, tt.validatorIdx)
+//		sm, err := db.EpochSpansMap(ctx, tt.epoch)
 //		if err != nil {
 //			t.Fatalf("Failed to get validator span map: %v", err)
 //		}
 //		if sm == nil || !proto.Equal(sm, tt.spanMap) {
 //			t.Fatalf("Get should return validator span map: %v got: %v", tt.spanMap, sm)
 //		}
-//		err = db.DeleteValidatorSpans(ctx, tt.validatorIdx)
+//		err = db.DeleteEpochSpans(ctx, tt.epoch)
 //		if err != nil {
 //			t.Fatalf("Delete validator span map error: %v", err)
 //		}
-//		sm, err = db.ValidatorSpansMap(ctx, tt.validatorIdx)
+//		sm, err = db.EpochSpansMap(ctx, tt.epoch)
 //		if err != nil {
 //			t.Fatal(err)
 //		}
@@ -166,7 +166,7 @@ package kv
 //	ctx := context.Background()
 //
 //	for _, tt := range spanTests {
-//		err := db.SaveValidatorSpansMap(ctx, tt.validatorIdx, tt.spanMap)
+//		err := db.SaveEpochSpansMap(ctx, tt.epoch, tt.spanMap)
 //		if err != nil {
 //			t.Fatalf("Save validator span map failed: %v", err)
 //		}
@@ -174,20 +174,20 @@ package kv
 //	// wait for value to pass through cache buffers
 //	time.Sleep(time.Millisecond * 10)
 //	for _, tt := range spanTests {
-//		sm, err := db.ValidatorSpansMap(ctx, tt.validatorIdx)
+//		sm, err := db.EpochSpansMap(ctx, tt.epoch)
 //		if err != nil {
 //			t.Fatalf("Failed to get validator span map: %v", err)
 //		}
 //		if sm == nil || !proto.Equal(sm, tt.spanMap) {
 //			t.Fatalf("Get should return validator span map: %v got: %v", tt.spanMap, sm)
 //		}
-//		err = db.DeleteValidatorSpans(ctx, tt.validatorIdx)
+//		err = db.DeleteEpochSpans(ctx, tt.epoch)
 //		if err != nil {
 //			t.Fatalf("Delete validator span map error: %v", err)
 //		}
 //		// wait for value to pass through cache buffers
 //		time.Sleep(time.Millisecond * 10)
-//		sm, err = db.ValidatorSpansMap(ctx, tt.validatorIdx)
+//		sm, err = db.EpochSpansMap(ctx, tt.epoch)
 //		if err != nil {
 //			t.Fatal(err)
 //		}
@@ -203,7 +203,7 @@ package kv
 //	ctx := context.Background()
 //
 //	tsm := &spanMapTestStruct{
-//		validatorIdx: 1,
+//		epoch: 1,
 //		spanMap: &slashpb.EpochSpanMap{
 //			EpochSpanMap: map[uint64]*slashpb.MinMaxEpochSpan{
 //				1: {MinEpochSpan: 10, MaxEpochSpan: 20},
@@ -213,7 +213,7 @@ package kv
 //		},
 //	}
 //	for i := uint64(0); i < 6; i++ {
-//		err := db.SaveValidatorSpansMap(ctx, i, tsm.spanMap)
+//		err := db.SaveEpochSpansMap(ctx, i, tsm.spanMap)
 //		if err != nil {
 //			t.Fatalf("Save validator span map failed: %v", err)
 //		}
@@ -222,7 +222,7 @@ package kv
 //	// Wait for value to pass through cache buffers.
 //	time.Sleep(time.Millisecond * 1000)
 //	for i := uint64(0); i < 6; i++ {
-//		sm, err := db.ValidatorSpansMap(ctx, i)
+//		sm, err := db.EpochSpansMap(ctx, i)
 //		if err != nil {
 //			t.Fatalf("Failed to get validator span map: %v", err)
 //		}
@@ -241,7 +241,7 @@ package kv
 //	ctx := context.Background()
 //
 //	for _, tt := range spanTests {
-//		err := db.SaveValidatorSpansMap(ctx, tt.validatorIdx, tt.spanMap)
+//		err := db.SaveEpochSpansMap(ctx, tt.epoch, tt.spanMap)
 //		if err != nil {
 //			t.Fatalf("Save validator span map failed: %v", err)
 //		}
@@ -254,7 +254,7 @@ package kv
 //	}
 //	db.spanCache.Clear()
 //	for _, tt := range spanTests {
-//		sm, err := db.ValidatorSpansMap(ctx, tt.validatorIdx)
+//		sm, err := db.EpochSpansMap(ctx, tt.epoch)
 //		if err != nil {
 //			t.Fatalf("Failed to get validator span map: %v", err)
 //		}

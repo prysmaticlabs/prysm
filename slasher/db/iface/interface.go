@@ -29,7 +29,7 @@ type ReadOnlyDatabase interface {
 	HasIndexedAttestation(ctx context.Context, targetEpoch uint64, validatorID uint64) (bool, error)
 
 	// MinMaxSpan related methods.
-	ValidatorSpansMap(ctx context.Context, validatorIdx uint64) (map[uint64][2]uint16, error)
+	EpochSpansMap(ctx context.Context, epoch uint64) (map[uint64][2]uint16, error)
 	EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uint64, epoch uint64) ([2]uint16, error)
 
 	// ProposerSlashing related methods.
@@ -61,11 +61,11 @@ type WriteAccessDatabase interface {
 	PruneAttHistory(ctx context.Context, currentEpoch uint64, pruningEpochAge uint64) error
 
 	// MinMaxSpan related methods.
-	SaveValidatorSpansMap(ctx context.Context, validatorIdx uint64, spanMap map[uint64][2]uint16) error
+	SaveEpochSpansMap(ctx context.Context, validatorIdx uint64, spanMap map[uint64][2]uint16) error
 	SaveValidatorEpochSpans(ctx context.Context, validatorIdx uint64, epoch uint64, spans [2]uint16) error
 
 	//SaveCachedSpansMaps(ctx context.Context) error
-	DeleteValidatorSpans(ctx context.Context, validatorIdx uint64) error
+	DeleteEpochSpans(ctx context.Context, validatorIdx uint64) error
 	DeleteValidatorSpanByEpoch(ctx context.Context, validatorIdx uint64, epoch uint64) error
 
 	// ProposerSlashing related methods.

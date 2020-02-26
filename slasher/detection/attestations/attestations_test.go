@@ -202,7 +202,7 @@ func TestServer_UpdateMaxEpochSpan(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tt := range spanTestsMax {
-		spanMap, err := db.ValidatorSpansMap(ctx, tt.validatorIdx)
+		spanMap, err := db.EpochSpansMap(ctx, tt.validatorIdx)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -210,13 +210,13 @@ func TestServer_UpdateMaxEpochSpan(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to update span: %v", err)
 		}
-		if err := db.SaveValidatorSpansMap(ctx, tt.validatorIdx, spanMap); err != nil {
+		if err := db.SaveEpochSpansMap(ctx, tt.validatorIdx, spanMap); err != nil {
 			t.Fatalf("Couldnt save span map for validator id: %d", tt.validatorIdx)
 		}
 		if st != tt.slashingTargetEpoch {
 			t.Fatalf("Expected slashing target: %d got: %d", tt.slashingTargetEpoch, st)
 		}
-		sm, err := db.ValidatorSpansMap(ctx, tt.validatorIdx)
+		sm, err := db.EpochSpansMap(ctx, tt.validatorIdx)
 		if err != nil {
 			t.Fatalf("Failed to retrieve span: %v", err)
 		}
@@ -235,7 +235,7 @@ func TestServer_UpdateMinEpochSpan(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tt := range spanTestsMin {
-		spanMap, err := db.ValidatorSpansMap(ctx, tt.validatorIdx)
+		spanMap, err := db.EpochSpansMap(ctx, tt.validatorIdx)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -243,13 +243,13 @@ func TestServer_UpdateMinEpochSpan(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to update span: %v", err)
 		}
-		if err := db.SaveValidatorSpansMap(ctx, tt.validatorIdx, spanMap); err != nil {
+		if err := db.SaveEpochSpansMap(ctx, tt.validatorIdx, spanMap); err != nil {
 			t.Fatalf("Couldnt save span map for validator id: %d", tt.validatorIdx)
 		}
 		if st != tt.slashingTargetEpoch {
 			t.Fatalf("Expected slashing target: %d got: %d", tt.slashingTargetEpoch, st)
 		}
-		sm, err := db.ValidatorSpansMap(ctx, tt.validatorIdx)
+		sm, err := db.EpochSpansMap(ctx, tt.validatorIdx)
 		if err != nil {
 			t.Fatalf("Failed to retrieve span: %v", err)
 		}
@@ -278,7 +278,7 @@ func TestServer_FailToUpdate(t *testing.T) {
 			},
 		},
 	}
-	spanMap, err := db.ValidatorSpansMap(ctx, spanTestsFail.validatorIdx)
+	spanMap, err := db.EpochSpansMap(ctx, spanTestsFail.validatorIdx)
 	if err != nil {
 		t.Fatal(err)
 	}
