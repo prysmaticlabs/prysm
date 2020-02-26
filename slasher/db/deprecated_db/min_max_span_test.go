@@ -1,4 +1,4 @@
-package kv
+package deprecated_db
 
 //import (
 //	"context"
@@ -14,8 +14,8 @@ package kv
 //)
 //
 //type spanMapTestStruct struct {
-//	epoch uint64
-//	spanMap      *slashpb.EpochSpanMap
+//	epoch   uint64
+//	spanMap *slashpb.EpochSpanMap
 //}
 //
 //var spanTests []spanMapTestStruct

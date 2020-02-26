@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/prysmaticlabs/prysm/slasher/db"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -39,16 +41,16 @@ type DetectionResult struct {
 // spans from validators.
 type SpanDetector struct {
 	// Slice of epochs for valindex => min-max span.
-	spans []map[uint64][2]uint16
-	lock  sync.RWMutex
+	db   db.Database
+	lock sync.RWMutex
 }
 
 // NewSpanDetector creates a new instance of a struct tracking
 // several epochs of min-max spans for each validator in
 // the beacon state.
-func NewSpanDetector() *SpanDetector {
+func NewSpanDetector(db db.Database) *SpanDetector {
 	return &SpanDetector{
-		spans: make([]map[uint64][2]uint16, 256),
+		db: db,
 	}
 }
 
@@ -74,8 +76,11 @@ func (s *SpanDetector) DetectSlashingForValidator(
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 	distance := uint16(targetEpoch - sourceEpoch)
-	numSpans := uint64(len(s.spans))
-	if sp := s.spans[sourceEpoch%numSpans]; sp != nil {
+	sp, err := s.db.EpochSpansMap(ctx, sourceEpoch)
+	if err != nil {
+		return nil, err
+	}
+	if sp != nil {
 		minSpan := sp[validatorIdx][0]
 		if minSpan > 0 && minSpan < distance {
 			return &DetectionResult{
@@ -95,48 +100,6 @@ func (s *SpanDetector) DetectSlashingForValidator(
 	return nil, nil
 }
 
-// SpanForEpochByValidator returns the specific min-max span for a
-// validator index in a given epoch.
-func (s *SpanDetector) SpanForEpochByValidator(ctx context.Context, valIdx uint64, epoch uint64) ([2]uint16, error) {
-	ctx, span := trace.StartSpan(ctx, "detection.SpanForEpochByValidator")
-	defer span.End()
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-	numSpans := uint64(len(s.spans))
-	if span := s.spans[epoch%numSpans]; span != nil {
-		if minMaxSpan, ok := span[valIdx]; ok {
-			return minMaxSpan, nil
-		}
-		return [2]uint16{}, fmt.Errorf("validator index %d not found in span map", valIdx)
-	}
-	return [2]uint16{}, fmt.Errorf("no data found for epoch %d", epoch)
-}
-
-// ValidatorSpansByEpoch returns a list of all validator spans in a given epoch.
-func (s *SpanDetector) ValidatorSpansByEpoch(ctx context.Context, epoch uint64) map[uint64][2]uint16 {
-	ctx, span := trace.StartSpan(ctx, "detection.ValidatorSpansByEpoch")
-	defer span.End()
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-	numSpans := uint64(len(s.spans))
-	return s.spans[epoch%numSpans]
-}
-
-// DeleteValidatorSpansByEpoch deletes a min-max span for a validator
-// index from a min-max span in a given epoch.
-func (s *SpanDetector) DeleteValidatorSpansByEpoch(ctx context.Context, validatorIdx uint64, epoch uint64) error {
-	ctx, span := trace.StartSpan(ctx, "detection.DeleteValidatorSpansByEpoch")
-	defer span.End()
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	numSpans := uint64(len(s.spans))
-	if val := s.spans[epoch%numSpans]; val != nil {
-		delete(val, validatorIdx)
-		return nil
-	}
-	return fmt.Errorf("no span map found at epoch %d", epoch)
-}
-
 // UpdateSpans given an indexed attestation for all of its attesting indices.
 func (s *SpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttestation) error {
 	ctx, span := trace.StartSpan(ctx, "detection.UpdateSpans")
@@ -150,49 +113,55 @@ func (s *SpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttest
 	for i := 0; i < len(att.AttestingIndices); i++ {
 		valIdx := att.AttestingIndices[i]
 		// Update min and max spans.
-		s.updateMinSpan(source, target, valIdx)
-		s.updateMaxSpan(source, target, valIdx)
+		s.updateMinSpan(ctx, source, target, valIdx)
+		s.updateMaxSpan(ctx, source, target, valIdx)
 	}
 	return nil
 }
 
 // Updates a min span for a validator index given a source and target epoch
 // for an attestation produced by the validator. Used for catching surrounding votes.
-func (s *SpanDetector) updateMinSpan(source uint64, target uint64, valIdx uint64) {
-	numSpans := uint64(len(s.spans))
+func (s *SpanDetector) updateMinSpan(ctx context.Context, source uint64, target uint64, valIdx uint64) error {
 	if source < 1 {
-		return
+		return nil
 	}
 	for epoch := source - 1; epoch >= 0; epoch-- {
 		newMinSpan := uint16(target - epoch)
-		if sp := s.spans[epoch%numSpans]; sp == nil {
-			s.spans[epoch%numSpans] = make(map[uint64][2]uint16)
+		sp, err := s.db.EpochSpanByValidatorIndex(ctx, valIdx, epoch)
+		if err != nil {
+			return err
 		}
-		minSpan := s.spans[epoch%numSpans][valIdx][0]
-		maxSpan := s.spans[epoch%numSpans][valIdx][1]
+		minSpan := sp[0]
+		maxSpan := sp[1]
 		if minSpan == 0 || minSpan > newMinSpan {
-			s.spans[epoch%numSpans][valIdx] = [2]uint16{newMinSpan, maxSpan}
+			if err := s.db.SaveValidatorEpochSpans(ctx, valIdx, epoch, [2]uint16{newMinSpan, maxSpan}); err != nil {
+				return err
+			}
 		} else {
 			break
 		}
 	}
+	return nil
 }
 
 // Updates a max span for a validator index given a source and target epoch
 // for an attestation produced by the validator. Used for catching surrounded votes.
-func (s *SpanDetector) updateMaxSpan(source uint64, target uint64, valIdx uint64) {
-	numSpans := uint64(len(s.spans))
+func (s *SpanDetector) updateMaxSpan(ctx context.Context, source uint64, target uint64, valIdx uint64) error {
 	for epoch := source + 1; epoch < target; epoch++ {
-		if sp := s.spans[epoch%numSpans]; sp == nil {
-			s.spans[epoch%numSpans] = make(map[uint64][2]uint16)
+		sp, err := s.db.EpochSpanByValidatorIndex(ctx, valIdx, epoch)
+		if err != nil {
+			return err
 		}
-		minSpan := s.spans[epoch%numSpans][valIdx][0]
-		maxSpan := s.spans[epoch%numSpans][valIdx][1]
+		minSpan := sp[0]
+		maxSpan := sp[1]
 		newMaxSpan := uint16(target - epoch)
 		if newMaxSpan > maxSpan {
-			s.spans[epoch%numSpans][valIdx] = [2]uint16{minSpan, newMaxSpan}
+			if err := s.db.SaveValidatorEpochSpans(ctx, valIdx, epoch, [2]uint16{minSpan, newMaxSpan}); err != nil {
+				return err
+			}
 		} else {
 			break
 		}
 	}
+	return nil
 }

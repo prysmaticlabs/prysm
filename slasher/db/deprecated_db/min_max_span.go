@@ -1,5 +1,18 @@
-package kv
+package deprecated_db
 
+//import (
+//	"context"
+//	"fmt"
+//
+//	"github.com/boltdb/bolt"
+//	"github.com/prysmaticlabs/prysm/bazel-prysm/external/com_github_gogo_protobuf/proto"
+//	errors "github.com/prysmaticlabs/prysm/bazel-prysm/external/com_github_pkg_errors"
+//	"github.com/prysmaticlabs/prysm/bazel-prysm/external/io_opencensus_go/trace"
+//	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+//	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+//	log "github.com/sirupsen/logrus"
+//)
+//
 //var highestValidatorIdx uint64
 //
 //func saveToDB(db *Store) func(uint64, uint64, interface{}, int64) {

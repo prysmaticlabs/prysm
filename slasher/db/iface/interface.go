@@ -61,7 +61,7 @@ type WriteAccessDatabase interface {
 	PruneAttHistory(ctx context.Context, currentEpoch uint64, pruningEpochAge uint64) error
 
 	// MinMaxSpan related methods.
-	SaveEpochSpansMap(ctx context.Context, validatorIdx uint64, spanMap map[uint64][2]uint16) error
+	SaveEpochSpansMap(ctx context.Context, epoch uint64, spanMap map[uint64][2]uint16) error
 	SaveValidatorEpochSpans(ctx context.Context, validatorIdx uint64, epoch uint64, spans [2]uint16) error
 
 	//SaveCachedSpansMaps(ctx context.Context) error

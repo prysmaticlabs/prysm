@@ -2,14 +2,34 @@ package attestations
 
 import (
 	"context"
+	"flag"
+	"path"
 	"reflect"
-	"strings"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/prysmaticlabs/prysm/slasher/db"
+	"github.com/prysmaticlabs/prysm/slasher/db/kv"
+	"github.com/prysmaticlabs/prysm/slasher/flags"
+	"github.com/urfave/cli"
 )
 
+const slasherDBName = "slasherdata"
+
 func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	ctx := cli.NewContext(app, set, nil)
+	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
+	dbPath := path.Join(baseDir, slasherDBName)
+	cfg := &kv.Config{SpanCacheEnabled: ctx.GlobalBool(flags.UseSpanCacheFlag.Name)}
+	d, err := db.NewDB(dbPath, cfg)
+	context := context.Background()
+	if err != nil {
+		t.Fatalf("Failed to init db: %v", err)
+	}
+
 	type testStruct struct {
 		name                     string
 		sourceEpoch              uint64
@@ -201,18 +221,17 @@ func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			numEpochsToTrack := 100
 			sd := &SpanDetector{
-				spans: make([]map[uint64][2]uint16, numEpochsToTrack),
+				db: d,
 			}
 			// We only care about validator index 0 for these tests for simplicity.
 			validatorIndex := uint64(0)
 			for k, v := range tt.spansByEpochForValidator {
-				sd.spans[k] = map[uint64][2]uint16{
-					validatorIndex: v,
+				err := sd.db.SaveValidatorEpochSpans(context, validatorIndex, k, v)
+				if err != nil {
+					t.Fatalf("Failed to write to db: %v", err)
 				}
 			}
-			ctx := context.Background()
 			attData := &ethpb.AttestationData{
 				Source: &ethpb.Checkpoint{
 					Epoch: tt.sourceEpoch,
@@ -221,7 +240,7 @@ func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 					Epoch: tt.targetEpoch,
 				},
 			}
-			res, err := sd.DetectSlashingForValidator(ctx, validatorIndex, attData)
+			res, err := sd.DetectSlashingForValidator(context, validatorIndex, attData)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -242,6 +261,17 @@ func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 }
 
 func TestSpanDetector_DetectSlashingForValidator_MultipleValidators(t *testing.T) {
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	ctx := cli.NewContext(app, set, nil)
+	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
+	dbPath := path.Join(baseDir, slasherDBName)
+	cfg := &kv.Config{SpanCacheEnabled: ctx.GlobalBool(flags.UseSpanCacheFlag.Name)}
+	d, err := db.NewDB(dbPath, cfg)
+	if err != nil {
+		t.Fatalf("Failed to init db: %v", err)
+	}
+	context := context.Background()
 	type testStruct struct {
 		name            string
 		sourceEpochs    []uint64
@@ -310,14 +340,12 @@ func TestSpanDetector_DetectSlashingForValidator_MultipleValidators(t *testing.T
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			numEpochsToTrack := 100
 			sd := &SpanDetector{
-				spans: make([]map[uint64][2]uint16, numEpochsToTrack),
+				db: d,
 			}
-			for i := 0; i < len(tt.spansByEpoch); i++ {
-				sd.spans[i] = tt.spansByEpoch[i]
+			for i := uint64(0); i < uint64(len(tt.spansByEpoch)); i++ {
+				sd.db.SaveEpochSpansMap(context, i, tt.spansByEpoch[i])
 			}
-			ctx := context.Background()
 			for valIdx := uint64(0); valIdx < uint64(len(tt.shouldSlash)); valIdx++ {
 				attData := &ethpb.AttestationData{
 					Source: &ethpb.Checkpoint{
@@ -327,7 +355,7 @@ func TestSpanDetector_DetectSlashingForValidator_MultipleValidators(t *testing.T
 						Epoch: tt.targetEpochs[valIdx],
 					},
 				}
-				res, err := sd.DetectSlashingForValidator(ctx, valIdx, attData)
+				res, err := sd.DetectSlashingForValidator(context, valIdx, attData)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -348,89 +376,21 @@ func TestSpanDetector_DetectSlashingForValidator_MultipleValidators(t *testing.T
 	}
 }
 
-func TestSpanDetector_SpanForEpochByValidator(t *testing.T) {
-	numEpochsToTrack := 2
-	sd := &SpanDetector{
-		spans: make([]map[uint64][2]uint16, numEpochsToTrack),
-	}
-	epoch := uint64(1)
-	validatorIndex := uint64(40)
-	sd.spans[epoch] = map[uint64][2]uint16{
-		validatorIndex: {3, 7},
-	}
-	want := [2]uint16{3, 7}
-	ctx := context.Background()
-	res, err := sd.SpanForEpochByValidator(ctx, validatorIndex, epoch)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(want, res) {
-		t.Errorf("Wanted %v, received %v", want, res)
-	}
-	validatorIndex = uint64(0)
-	if _, err = sd.SpanForEpochByValidator(
-		ctx,
-		validatorIndex,
-		epoch,
-	); err != nil && !strings.Contains(err.Error(), "validator index 0 not found") {
-		t.Errorf("Wanted validator index not found error, received %v", err)
-	}
-	validatorIndex = uint64(40)
-	epoch = uint64(3)
-	if _, err = sd.SpanForEpochByValidator(
-		ctx,
-		validatorIndex,
-		epoch,
-	); err != nil && !strings.Contains(err.Error(), "no data found for epoch") {
-		t.Errorf("Wanted no data found for epoch error, received %v", err)
-	}
-}
-
-func TestSpanDetector_ValidatorSpansByEpoch(t *testing.T) {
-	numEpochsToTrack := 2
-	sd := &SpanDetector{
-		spans: make([]map[uint64][2]uint16, numEpochsToTrack),
-	}
-	epoch := uint64(1)
-	validatorIndex := uint64(40)
-	want := map[uint64][2]uint16{
-		validatorIndex: {3, 7},
-	}
-	sd.spans[epoch] = want
-	res := sd.ValidatorSpansByEpoch(context.Background(), epoch)
-	if !reflect.DeepEqual(res, want) {
-		t.Errorf("Wanted %v, received %v", want, res)
-	}
-}
-
-func TestSpanDetector_DeleteValidatorSpansByEpoch(t *testing.T) {
-	numEpochsToTrack := 2
-	sd := &SpanDetector{
-		spans: make([]map[uint64][2]uint16, numEpochsToTrack),
-	}
-	epoch := uint64(1)
-	validatorIndex := uint64(40)
-	sd.spans[epoch] = map[uint64][2]uint16{
-		validatorIndex: {3, 7},
-	}
-	ctx := context.Background()
-	if err := sd.DeleteValidatorSpansByEpoch(
-		ctx,
-		validatorIndex,
-		0, /* epoch */
-	); err != nil && !strings.Contains(err.Error(), "no span map found at epoch 0") {
-		t.Errorf("Wanted error when deleting epoch 0, received: %v", err)
-	}
-	if err := sd.DeleteValidatorSpansByEpoch(ctx, validatorIndex, epoch); err != nil {
-		t.Fatal(err)
-	}
-	want := make(map[uint64][2]uint16)
-	if res := sd.ValidatorSpansByEpoch(ctx, epoch); !reflect.DeepEqual(res, want) {
-		t.Errorf("Wanted %v for epoch after deleting, received %v", want, res)
-	}
-}
-
 func TestNewSpanDetector_UpdateSpans(t *testing.T) {
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	ctx := cli.NewContext(app, set, nil)
+	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
+	dbPath := path.Join(baseDir, slasherDBName)
+	cfg := &kv.Config{SpanCacheEnabled: ctx.GlobalBool(flags.UseSpanCacheFlag.Name)}
+	d, err := db.NewDB(dbPath, cfg)
+	if err != nil {
+		t.Fatalf("Failed to init db: %v", err)
+	}
+	context := context.Background()
+	sd := &SpanDetector{
+		db: d,
+	}
 	type testStruct struct {
 		name      string
 		att       *ethpb.IndexedAttestation
@@ -460,7 +420,7 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 					2: {3, 0},
 				},
 				// Epoch 1.
-				nil,
+				{},
 				// Epoch 2.
 				{
 					0: {0, 1},
@@ -485,7 +445,7 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 			numEpochs: 5,
 			want: []map[uint64][2]uint16{
 				// Epoch 0.
-				nil,
+				{},
 				// Epoch 1.
 				{
 					0: {0, 4},
@@ -513,18 +473,23 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 			},
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sd := &SpanDetector{
-				spans: make([]map[uint64][2]uint16, tt.numEpochs),
-			}
-			ctx := context.Background()
-			if err := sd.UpdateSpans(ctx, tt.att); err != nil {
+			if err := sd.UpdateSpans(context, tt.att); err != nil {
 				t.Fatal(err)
 			}
-			if !reflect.DeepEqual(sd.spans, tt.want) {
-				t.Errorf("Wanted spans %v, received %v", tt.want, sd.spans)
+			for epoch := 0; epoch < len(tt.want); epoch++ {
+				sm, err := sd.db.EpochSpansMap(context, uint64(epoch))
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !reflect.DeepEqual(sm, tt.want[epoch]) {
+					t.Errorf("Wanted spans %v, received %v", tt.want[epoch], sm)
+				}
+				sd.db.DeleteEpochSpans(context, uint64(epoch))
 			}
+
 		})
 	}
 }

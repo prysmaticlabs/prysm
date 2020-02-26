@@ -121,12 +121,12 @@ func (db *Store) EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uin
 		b := tx.Bucket(validatorsMinMaxSpanBucket)
 		epochBucket := b.Bucket(bytesutil.Bytes8(epoch))
 		if epochBucket == nil {
-			return errors.New("epoch spans are not in db yet")
+			return nil
 		}
 		key := bytesutil.Bytes8(validatorIdx)
 		v := epochBucket.Get(key)
 		if v == nil {
-			return errors.New("missing spans for validator")
+			return nil
 		}
 		value, err := unmarshalMinMaxSpan(ctx, v)
 		if err != nil {
@@ -162,9 +162,9 @@ func (db *Store) SaveValidatorEpochSpans(ctx context.Context, validatorIdx uint6
 	}
 	return db.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(validatorsMinMaxSpanBucket)
-		epochBucket := b.Bucket(bytesutil.Bytes8(epoch))
-		if epochBucket == nil {
-			return errors.New("epoch span maps are not in db yet")
+		epochBucket, err := b.CreateBucketIfNotExists(bytesutil.Bytes8(epoch))
+		if err != nil {
+			return err
 		}
 		key := bytesutil.Bytes8(validatorIdx)
 		value := marshalMinMaxSpan(ctx, spans)
