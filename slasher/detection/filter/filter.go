@@ -88,7 +88,7 @@ func (f Filter) Contains(key []byte) (bool, error) {
 	return true, nil
 }
 
-func (filter Filter) bitAt(bitPos uint64) bool {
+func (f Filter) bitAt(bitPos uint64) bool {
 	i := uint8(1 << (bitPos % 8))
-	return filter[bitPos/8]&i == i
+	return f[bitPos/8]&i == i
 }
