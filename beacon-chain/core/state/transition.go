@@ -641,7 +641,7 @@ func ProcessEpochPrecompute(ctx context.Context, state *stateTrie.BeaconState) (
 }
 
 // ProcessBlockForStateRoot processes the state for state root computation. It skips proposer signature
-// and randao signature verification.
+// and randao signature verifications.
 func ProcessBlockForStateRoot(
 	ctx context.Context,
 	state *stateTrie.BeaconState,

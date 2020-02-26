@@ -187,7 +187,7 @@ func TestFuzzProcessEpochPrecompute_1000(t *testing.T) {
 	}
 }
 
-func TestFuzzcomputeStateRoot_1000(t *testing.T) {
+func TestFuzzProcessBlockForStateRoot_1000(t *testing.T) {
 	ctx := context.Background()
 	state := &stateTrie.BeaconState{}
 	sb := &ethpb.SignedBeaconBlock{}
