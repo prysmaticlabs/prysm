@@ -81,8 +81,6 @@ func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 			name:        "Proto max span test #1",
 			sourceEpoch: 8,
 			targetEpoch: 18,
-			// Given a distance of (18 - 8) = 10, we want the validator to not have
-			// a slashable act.
 			shouldSlash: false,
 			spansByEpochForValidator: map[uint64][2]uint16{
 				0: {4, 0},
@@ -93,10 +91,9 @@ func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 			},
 		},
 		{
-			name:        "Proto max span test #2",
-			sourceEpoch: 4,
-			targetEpoch: 12,
-			// Given a distance of (4 - 12) = 8, we want the validator to not commit a slashable offense.
+			name:           "Proto max span test #2",
+			sourceEpoch:    4,
+			targetEpoch:    12,
 			shouldSlash:    false,
 			slashableEpoch: 0,
 			spansByEpochForValidator: map[uint64][2]uint16{
@@ -116,10 +113,9 @@ func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 			},
 		},
 		{
-			name:        "Proto max span test #3",
-			sourceEpoch: 10,
-			targetEpoch: 15,
-			// Given a distance of (4 - 12) = 8, we want the validator to not commit a slashable offense.
+			name:           "Proto max span test #3",
+			sourceEpoch:    10,
+			targetEpoch:    15,
 			shouldSlash:    true,
 			slashableEpoch: 18,
 			spansByEpochForValidator: map[uint64][2]uint16{
