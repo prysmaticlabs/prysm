@@ -4,7 +4,7 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 register_toolchains(
-    "//tools/cross-toolchain:cc-toolchain-clang"
+    "//tools/cross-toolchain:cc-toolchain-clang",
 )
 
 http_archive(
