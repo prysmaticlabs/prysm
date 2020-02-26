@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"math/rand"
 	"sort"
 	"time"
 
@@ -15,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -26,6 +24,7 @@ import (
 )
 
 const blockBatchSize = 64
+const blockMaxBatchSize = 8 * blockBatchSize
 const counterSeconds = 20
 const refreshTime = 6 * time.Second
 
@@ -54,9 +53,10 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		}()
 	}
 
+	var peers []peer.ID
 	counter := ratecounter.NewRateCounter(counterSeconds * time.Second)
-	randGenerator := rand.New(rand.NewSource(time.Now().Unix()))
-	var lastEmptyRequests int
+	curBatchSize := uint64(blockBatchSize)
+	skippedBlocks := 0
 	highestFinalizedSlot := helpers.StartSlot(s.highestFinalizedEpoch() + 1)
 
 	fetcher := newBlocksFetcher(&blocksFetcherConfig{
@@ -69,31 +69,6 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 
 	// Step 1 - Sync to end of finalized epoch.
 	for s.chain.HeadSlot() < highestFinalizedSlot {
-		_, finalizedEpoch, peers := s.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(s.chain.HeadSlot()))
-		if len(peers) == 0 {
-			log.Warn("No peers; waiting for reconnect")
-			time.Sleep(refreshTime)
-			continue
-		}
-
-		if len(peers) >= flags.Get().MinimumSyncPeers {
-			highestFinalizedSlot = helpers.StartSlot(finalizedEpoch + 1)
-		}
-
-		// shuffle peers to prevent a bad peer from
-		// stalling sync with invalid blocks
-		randGenerator.Shuffle(len(peers), func(i, j int) {
-			peers[i], peers[j] = peers[j], peers[i]
-		})
-
-		startBlock := s.chain.HeadSlot() + 1
-		skippedBlocks := blockBatchSize * uint64(lastEmptyRequests*len(peers))
-		if startBlock+skippedBlocks > helpers.StartSlot(finalizedEpoch+1) {
-			log.WithField("finalizedEpoch", finalizedEpoch).Debug("Requested block range is greater than the finalized epoch")
-			break
-		}
-		startBlock += skippedBlocks
-
 		// Operations below are simple port of the existing functionality, where synchronization is assumed.
 		// This will be refactored and implemented w/i queue, once that component is ready.
 		request := func() ([]*eth.SignedBeaconBlock, error) {
@@ -107,18 +82,22 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 				if resp.err != nil {
 					return nil, resp.err
 				}
+				peers = resp.peers
 				return resp.blocks, nil
 			}
 		}
 
 		go fetcher.scheduleRequest(&fetchRequestParams{
-			start: startBlock,
-			count: blockBatchSize,
+			start: s.chain.HeadSlot() + uint64(skippedBlocks) + 1,
+			count: curBatchSize,
 		})
 
 		blocks, err := request()
 		if err != nil {
 			log.WithError(err).Error("Round robing sync request failed")
+			skippedBlocks = 0
+			curBatchSize = blockBatchSize
+			time.After(refreshTime)
 			continue
 		}
 
@@ -129,6 +108,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			return blocks[i].Block.Slot < blocks[j].Block.Slot
 		})
 
+		numProcessedBlocks := 0
 		for _, blk := range blocks {
 			s.logSyncStatus(genesis, blk.Block, peers, counter)
 			if !s.db.HasBlock(ctx, bytesutil.ToBytes32(blk.Block.ParentRoot)) {
@@ -148,14 +128,24 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 					return err
 				}
 			}
+			numProcessedBlocks++
 		}
-		// If there were no blocks in the last request range, increment the counter so the same
-		// range isn't requested again on the next loop as the headSlot didn't change.
-		if len(blocks) == 0 {
-			lastEmptyRequests++
-		} else {
-			lastEmptyRequests = 0
+
+		// If processing is stalled, temporary increase either starting position or block batch size window.
+		// Once processing normalizes, reset to the default size.
+		switch {
+		case len(blocks) == 0:
+			skippedBlocks += blockBatchSize
+		case len(blocks) != 0 && numProcessedBlocks == 0:
+			skippedBlocks = 0
+			curBatchSize += params.BeaconConfig().SlotsPerEpoch
+		default:
+			skippedBlocks = 0
+			curBatchSize = blockBatchSize
 		}
+
+		// Cap the batch size of the current round.
+		curBatchSize = mathutil.Min(curBatchSize, blockMaxBatchSize)
 	}
 
 	fetcher.stop()

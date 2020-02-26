@@ -129,40 +129,9 @@ func TestBlocksFetcher(t *testing.T) {
 			},
 		},
 		{
-			name:               "Multiple peers with all blocks (count boundaries)",
-			expectedBlockSlots: append(makeSequence(1, 32), makeSequence(92, 105)...),
-			peers: []*peerData{
-				{
-					blocks:         append(makeSequence(1, 64), makeSequence(92, 200)...),
-					finalizedEpoch: 6,
-					headSlot:       200,
-				},
-				{
-					blocks:         append(makeSequence(1, 64), makeSequence(92, 200)...),
-					finalizedEpoch: 6,
-					headSlot:       200,
-				},
-				{
-					blocks:         append(makeSequence(1, 64), makeSequence(92, 200)...),
-					finalizedEpoch: 6,
-					headSlot:       200,
-				},
-			},
-			requests: []*fetchRequestParams{
-				{
-					start: 1,
-					count: blockBatchSize / 2,
-				},
-				{
-					start: 90,
-					count: 15, // [90, 105), since data available from 92, expected output: 92, 93, ..., 105
-				},
-			},
-		},
-		{
 			name: "Multiple peers with skipped slots",
 			// finalizedEpoch(18).slot = 608
-			expectedBlockSlots: append(makeSequence(1, 64), makeSequence(500, 608)...), // up to 18th epoch
+			expectedBlockSlots: append(makeSequence(1, 64), makeSequence(500, 640)...), // up to 18th epoch
 			peers: []*peerData{
 				{
 					blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
@@ -195,10 +164,10 @@ func TestBlocksFetcher(t *testing.T) {
 				},
 				{
 					start: 400,
-					count: 150, // [400, 550), with blocks availability starting at 500. So, 500, 501, ..., 550
+					count: 150,
 				},
 				{
-					start: 551,
+					start: 553,
 					count: 200,
 				},
 			},

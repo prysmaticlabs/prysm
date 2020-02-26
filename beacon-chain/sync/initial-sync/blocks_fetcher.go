@@ -18,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -208,8 +207,7 @@ func (f *blocksFetcher) processFetchRequest(root []byte, finalizedEpoch, start, 
 		return nil, errors.Errorf("did not expect request for start slot of %d which is greater than expected %d", start, highestFinalizedSlot)
 	}
 
-	// Do not overflow the finalized epoch, spread load evenly among available peers.
-	count = mathutil.Min(count, helpers.StartSlot(finalizedEpoch+1)-start+1)
+	// Spread load evenly among available peers.
 	perPeerCount := count / uint64(len(peers))
 	remainder := int(count % uint64(len(peers)))
 	log.WithFields(logrus.Fields{
@@ -275,13 +273,7 @@ func (f *blocksFetcher) processFetchRequest(root []byte, finalizedEpoch, start, 
 			return nil, err
 		case resp, ok := <-blocksChan:
 			if ok {
-				for _, block := range resp {
-					// trim up to start + count*step (so that upper bound of returned blocks is deterministic)
-					if block.Block.Slot > start+count*step {
-						break
-					}
-					unionRespBlocks = append(unionRespBlocks, block)
-				}
+				unionRespBlocks = append(unionRespBlocks, resp...)
 			} else {
 				return unionRespBlocks, nil
 			}
