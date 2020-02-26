@@ -103,7 +103,7 @@ func (f *blocksFetcher) loop() {
 		select {
 		case <-f.ctx.Done():
 			// Upstream context is done.
-			err := errors.New("Upstream context canceled. Blocks fetcher is stopped.")
+			err := errors.New("upstream context canceled")
 			log.WithError(err).Warn("Block fetch loop closed unexpectedly")
 			f.receivedFetchResponses <- &fetchRequestResponse{
 				err: err,
@@ -122,17 +122,14 @@ func (f *blocksFetcher) loop() {
 				"numPeers":       len(peers),
 			}).Debug("Block fetcher receives request")
 
-			if len(peers) == 0 {
-				log.Warn("No peers available, waiting for reconnect...")
+			if len(peers) < flags.Get().MinimumSyncPeers {
+				log.Warn("Not enough peers available, waiting for reconnect...")
 				time.Sleep(refreshTime)
 				continue
 			}
 
-			if len(peers) >= flags.Get().MinimumSyncPeers {
-				highestFinalizedSlot = helpers.StartSlot(finalizedEpoch + 1)
-			}
-
 			// Short circuit start far exceeding the highest finalized epoch in some infinite loop.
+			highestFinalizedSlot = helpers.StartSlot(finalizedEpoch + 1)
 			if req.start > highestFinalizedSlot {
 				err := errors.Errorf("requested a start slot of %d which is greater than the next highest slot of %d", req.start, highestFinalizedSlot)
 				log.WithError(err).Debug("Block fetch request failed")
@@ -191,8 +188,8 @@ func (f *blocksFetcher) scheduleRequest(req *fetchRequestParams) {
 //   i.e. the first peer is asked for block 64, 68, 72... while the second peer is asked for
 //   65, 69, 73... and so on for other peers.
 func (f *blocksFetcher) processFetchRequest(root []byte, finalizedEpoch, start, step, count uint64, peers []peer.ID) ([]*eth.SignedBeaconBlock, error) {
-	if len(peers) == 0 {
-		return nil, errors.WithStack(errors.New("no peers left to request blocks"))
+	if len(peers) < flags.Get().MinimumSyncPeers {
+		return nil, errors.Errorf("not enough peers left to request blocks: %d", len(peers))
 	}
 
 	p2pRequests := new(sync.WaitGroup)
@@ -260,10 +257,6 @@ func (f *blocksFetcher) processFetchRequest(root []byte, finalizedEpoch, start, 
 					pid.Pretty(),
 				).Debug("Request failed, trying to round robin with other peers")
 
-				if len(ps) == 0 {
-					errChan <- errors.WithStack(errors.New("no peers left to request blocks"))
-					return
-				}
 				resp, err = f.processFetchRequest(root, finalizedEpoch, start, step, count, ps)
 				if err != nil {
 					errChan <- err
