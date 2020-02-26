@@ -192,7 +192,6 @@ func (db *Store) SaveEpochSpansMap(ctx context.Context, epoch uint64, spanMap ma
 	})
 }
 
-// TODO: bring back caching
 //// SaveCachedSpansMaps saves all span map from cache to disk
 //// if no span maps are in db or cache is disabled it returns nil.
 //func (db *Store) SaveCachedSpansMaps(ctx context.Context) error {

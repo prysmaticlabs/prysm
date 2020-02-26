@@ -110,7 +110,6 @@ func (ss *Server) UpdateSpanMaps(ctx context.Context, req *ethpb.IndexedAttestat
 				wg.Done()
 				return
 			}
-			// TODO: bring back detection
 			//spanMap, _, err = attestations.DetectAndUpdateSpans(ctx, spanMap, req)
 			//if err != nil {
 			//	er <- err
