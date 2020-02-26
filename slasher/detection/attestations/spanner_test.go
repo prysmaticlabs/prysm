@@ -76,6 +76,128 @@ func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 				3: {1, 0},
 			},
 		},
+		// Proto Max Span Tests from the eth2-surround repo.
+		{
+			name:        "Proto max span test #1",
+			sourceEpoch: 8,
+			targetEpoch: 18,
+			shouldSlash: false,
+			spansByEpochForValidator: map[uint64][2]uint16{
+				0: {4, 0},
+				1: {2, 0},
+				2: {1, 0},
+				4: {0, 2},
+				5: {0, 1},
+			},
+		},
+		{
+			name:           "Proto max span test #2",
+			sourceEpoch:    4,
+			targetEpoch:    12,
+			shouldSlash:    false,
+			slashableEpoch: 0,
+			spansByEpochForValidator: map[uint64][2]uint16{
+				4:  {14, 2},
+				5:  {13, 1},
+				6:  {12, 0},
+				7:  {11, 0},
+				9:  {0, 9},
+				10: {0, 8},
+				11: {0, 7},
+				12: {0, 6},
+				13: {0, 5},
+				14: {0, 4},
+				15: {0, 3},
+				16: {0, 2},
+				17: {0, 1},
+			},
+		},
+		{
+			name:           "Proto max span test #3",
+			sourceEpoch:    10,
+			targetEpoch:    15,
+			shouldSlash:    true,
+			slashableEpoch: 18,
+			spansByEpochForValidator: map[uint64][2]uint16{
+				4:  {14, 2},
+				5:  {13, 7},
+				6:  {12, 6},
+				7:  {11, 5},
+				8:  {0, 4},
+				9:  {0, 9},
+				10: {0, 8},
+				11: {0, 7},
+				12: {0, 6},
+				13: {0, 5},
+				14: {0, 4},
+				15: {0, 3},
+				16: {0, 2},
+				17: {0, 1},
+			},
+		},
+		// Proto Min Span Tests from the eth2-surround repo.
+		{
+			name:        "Proto min span test #1",
+			sourceEpoch: 4,
+			targetEpoch: 6,
+			shouldSlash: false,
+			spansByEpochForValidator: map[uint64][2]uint16{
+				1: {5, 0},
+				2: {4, 0},
+				3: {3, 0},
+			},
+		},
+		{
+			name:        "Proto min span test #2",
+			sourceEpoch: 11,
+			targetEpoch: 15,
+			shouldSlash: false,
+			spansByEpochForValidator: map[uint64][2]uint16{
+				1:  {5, 0},
+				2:  {4, 0},
+				3:  {3, 0},
+				4:  {14, 0},
+				5:  {13, 1},
+				6:  {12, 0},
+				7:  {11, 0},
+				8:  {10, 0},
+				9:  {9, 0},
+				10: {8, 0},
+				11: {7, 0},
+				12: {6, 0},
+				14: {0, 4},
+				15: {0, 3},
+				16: {0, 2},
+				17: {0, 1},
+			},
+		},
+		{
+			name:           "Proto min span test #3",
+			sourceEpoch:    9,
+			targetEpoch:    19,
+			shouldSlash:    true,
+			slashableEpoch: 14,
+			spansByEpochForValidator: map[uint64][2]uint16{
+				0:  {5, 0},
+				1:  {4, 0},
+				2:  {3, 0},
+				3:  {11, 0},
+				4:  {10, 1},
+				5:  {9, 0},
+				6:  {8, 0},
+				7:  {7, 0},
+				8:  {6, 0},
+				9:  {5, 0},
+				10: {7, 0},
+				11: {6, 3},
+				12: {0, 2},
+				13: {0, 1},
+				14: {0, 3},
+				15: {0, 2},
+				16: {0, 1},
+				17: {0, 0},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -91,7 +213,15 @@ func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 				}
 			}
 			ctx := context.Background()
-			res, err := sd.DetectSlashingForValidator(ctx, validatorIndex, tt.sourceEpoch, tt.targetEpoch)
+			attData := &ethpb.AttestationData{
+				Source: &ethpb.Checkpoint{
+					Epoch: tt.sourceEpoch,
+				},
+				Target: &ethpb.Checkpoint{
+					Epoch: tt.targetEpoch,
+				},
+			}
+			res, err := sd.DetectSlashingForValidator(ctx, validatorIndex, attData)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -105,6 +235,113 @@ func TestSpanDetector_DetectSlashingForValidator(t *testing.T) {
 				}
 				if !reflect.DeepEqual(res, want) {
 					t.Errorf("Wanted: %v, received %v", want, res)
+				}
+			}
+		})
+	}
+}
+
+func TestSpanDetector_DetectSlashingForValidator_MultipleValidators(t *testing.T) {
+	type testStruct struct {
+		name            string
+		sourceEpochs    []uint64
+		targetEpochs    []uint64
+		slashableEpochs []uint64
+		shouldSlash     []bool
+		spansByEpoch    []map[uint64][2]uint16
+	}
+	tests := []testStruct{
+		{
+			name:            "3 of 5 validators slashed",
+			sourceEpochs:    []uint64{0, 2, 4, 5, 1},
+			targetEpochs:    []uint64{10, 3, 5, 9, 8},
+			slashableEpochs: []uint64{6, 0, 7, 8, 0},
+			// Detections - surrounding, none, surrounded, surrounding, none.
+			shouldSlash: []bool{true, false, true, true, false},
+			// Atts in map: (src, epoch) - 0: (2, 6), 1: (1, 2), 2: (1, 7), 3: (6, 8), 4: (0, 3)
+			spansByEpoch: []map[uint64][2]uint16{
+				// Epoch 0.
+				{
+					0: {6, 0},
+					1: {2, 0},
+					2: {7, 0},
+					3: {8, 0},
+				},
+				// Epoch 1.
+				{
+					0: {5, 0},
+					3: {7, 0},
+					4: {0, 1},
+				},
+				// Epoch 2.
+				{
+					2: {0, 5},
+					3: {6, 0},
+					4: {0, 2},
+				},
+				// Epoch 3.
+				{
+					0: {0, 3},
+					2: {0, 4},
+					3: {5, 0},
+				},
+				// Epoch 4.
+				{
+					0: {0, 2},
+					2: {0, 3},
+					3: {4, 0},
+				},
+				// Epoch 5.
+				{
+					0: {0, 1},
+					2: {0, 2},
+					3: {3, 0},
+				},
+				// Epoch 6.
+				{
+					2: {0, 1},
+				},
+				// Epoch 7.
+				{
+					3: {0, 1},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			numEpochsToTrack := 100
+			sd := &SpanDetector{
+				spans: make([]map[uint64][2]uint16, numEpochsToTrack),
+			}
+			for i := 0; i < len(tt.spansByEpoch); i++ {
+				sd.spans[i] = tt.spansByEpoch[i]
+			}
+			ctx := context.Background()
+			for valIdx := uint64(0); valIdx < uint64(len(tt.shouldSlash)); valIdx++ {
+				attData := &ethpb.AttestationData{
+					Source: &ethpb.Checkpoint{
+						Epoch: tt.sourceEpochs[valIdx],
+					},
+					Target: &ethpb.Checkpoint{
+						Epoch: tt.targetEpochs[valIdx],
+					},
+				}
+				res, err := sd.DetectSlashingForValidator(ctx, valIdx, attData)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !tt.shouldSlash[valIdx] && res != nil {
+					t.Fatalf("Did not want validator to be slashed but found slashable offense: %v", res)
+				}
+				if tt.shouldSlash[valIdx] {
+					want := &DetectionResult{
+						Kind:           SurroundVote,
+						SlashableEpoch: tt.slashableEpochs[valIdx],
+					}
+					if !reflect.DeepEqual(res, want) {
+						t.Errorf("Wanted: %v, received %v", want, res)
+					}
 				}
 			}
 		})
@@ -217,7 +454,11 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 			numEpochs: 3,
 			want: []map[uint64][2]uint16{
 				// Epoch 0.
-				nil,
+				{
+					0: {3, 0},
+					1: {3, 0},
+					2: {3, 0},
+				},
 				// Epoch 1.
 				nil,
 				// Epoch 2.
