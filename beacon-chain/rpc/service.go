@@ -35,7 +35,6 @@ import (
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
@@ -208,7 +207,6 @@ func (s *Service) Start() {
 	s.grpcServer = grpc.NewServer(opts...)
 
 	genesisTime := s.genesisTimeFetcher.GenesisTime()
-	ticker := slotutil.GetSlotTicker(genesisTime, params.BeaconConfig().SecondsPerSlot)
 	validatorServer := &validator.Server{
 		Ctx:                    s.ctx,
 		BeaconDB:               s.beaconDB,
@@ -258,7 +256,7 @@ func (s *Service) Start() {
 		GenesisTimeFetcher:   s.genesisTimeFetcher,
 		StateNotifier:        s.stateNotifier,
 		BlockNotifier:        s.blockNotifier,
-		SlotTicker:           ticker,
+		AttestationNotifier:  s.operationNotifier,
 	}
 	aggregatorServer := &aggregator.Server{ValidatorServer: validatorServer}
 	pb.RegisterAggregatorServiceServer(s.grpcServer, aggregatorServer)

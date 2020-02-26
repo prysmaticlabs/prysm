@@ -182,7 +182,7 @@ func (bs *Server) StreamBlocks(_ *ptypes.Empty, stream ethpb.BeaconChain_StreamB
 		select {
 		case event := <-blocksChannel:
 			if event.Type == blockfeed.ReceivedBlock {
-				data, ok := event.Data.(blockfeed.ReceivedBlockData)
+				data, ok := event.Data.(*blockfeed.ReceivedBlockData)
 				if !ok {
 					// Got bad data over the stream.
 					continue
