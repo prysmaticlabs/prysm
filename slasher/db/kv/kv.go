@@ -3,6 +3,7 @@ package kv
 import (
 	"os"
 	"path"
+	"sync"
 	"time"
 
 	"github.com/boltdb/bolt"
@@ -19,6 +20,7 @@ type Store struct {
 	databasePath     string
 	spanCache        *ristretto.Cache
 	spanCacheEnabled bool
+	lock             sync.RWMutex
 }
 
 // Config options for the slasher db.

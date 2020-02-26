@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sync"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/prysmaticlabs/prysm/slasher/db"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -73,8 +75,8 @@ func (s *SpanDetector) DetectSlashingForValidator(
 			targetEpoch-sourceEpoch,
 		)
 	}
-	s.lock.RLock()
-	defer s.lock.RUnlock()
+	//s.lock.RLock()
+	//defer s.lock.RUnlock()
 	distance := uint16(targetEpoch - sourceEpoch)
 	sp, err := s.db.EpochSpansMap(ctx, sourceEpoch)
 	if err != nil {
@@ -104,8 +106,6 @@ func (s *SpanDetector) DetectSlashingForValidator(
 func (s *SpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttestation) error {
 	ctx, span := trace.StartSpan(ctx, "detection.UpdateSpans")
 	defer span.End()
-	s.lock.Lock()
-	defer s.lock.Unlock()
 	source := att.Data.Source.Epoch
 	target := att.Data.Target.Epoch
 	// Update spansForEpoch[valIdx] using the source/target data for
@@ -125,6 +125,8 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, source uint64, target 
 	if source < 1 {
 		return nil
 	}
+	s.lock.RLock()
+	defer s.lock.RUnlock()
 	for epoch := source - 1; epoch >= 0; epoch-- {
 		newMinSpan := uint16(target - epoch)
 		sp, err := s.db.EpochSpanByValidatorIndex(ctx, valIdx, epoch)
@@ -140,6 +142,9 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, source uint64, target 
 		} else {
 			break
 		}
+		if epoch == 0 {
+			break
+		}
 	}
 	return nil
 }
@@ -147,7 +152,10 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, source uint64, target 
 // Updates a max span for a validator index given a source and target epoch
 // for an attestation produced by the validator. Used for catching surrounded votes.
 func (s *SpanDetector) updateMaxSpan(ctx context.Context, source uint64, target uint64, valIdx uint64) error {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
 	for epoch := source + 1; epoch < target; epoch++ {
+		log.Info(epoch)
 		sp, err := s.db.EpochSpanByValidatorIndex(ctx, valIdx, epoch)
 		if err != nil {
 			return err
