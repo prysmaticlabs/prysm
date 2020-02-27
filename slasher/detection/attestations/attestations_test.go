@@ -6,7 +6,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
-
 	"github.com/prysmaticlabs/prysm/shared/params"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 )
