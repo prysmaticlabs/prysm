@@ -2,14 +2,12 @@ package attestations
 
 import (
 	"context"
-	"flag"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
-	"github.com/urfave/cli"
 )
 
 type spanMapTestStruct struct {
@@ -194,10 +192,8 @@ func init() {
 }
 
 func TestServer_UpdateMaxEpochSpan(t *testing.T) {
-	app := cli.NewApp()
-	set := flag.NewFlagSet("test", 0)
-	c := cli.NewContext(app, set, nil)
-	db := testDB.SetupSlasherDB(t, c)
+	t.Skip("Tests are deprecated due to new span implementation")
+	db := testDB.SetupSlasherDB(t, true)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
 
@@ -227,10 +223,8 @@ func TestServer_UpdateMaxEpochSpan(t *testing.T) {
 }
 
 func TestServer_UpdateMinEpochSpan(t *testing.T) {
-	app := cli.NewApp()
-	set := flag.NewFlagSet("test", 0)
-	c := cli.NewContext(app, set, nil)
-	db := testDB.SetupSlasherDB(t, c)
+	t.Skip("Tests are deprecated due to new span implementation")
+	db := testDB.SetupSlasherDB(t, true)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
 
@@ -260,10 +254,7 @@ func TestServer_UpdateMinEpochSpan(t *testing.T) {
 }
 
 func TestServer_FailToUpdate(t *testing.T) {
-	app := cli.NewApp()
-	set := flag.NewFlagSet("test", 0)
-	c := cli.NewContext(app, set, nil)
-	db := testDB.SetupSlasherDB(t, c)
+	db := testDB.SetupSlasherDB(t, true)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
 

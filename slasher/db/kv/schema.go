@@ -11,6 +11,8 @@ const (
 )
 
 var (
+	indexedAttestationsRootsByTargetBucket = []byte("indexed-attestations-roots-by-target")
+	indexedAttestationsBucket              = []byte("indexed-attestations")
 	// Slasher-related buckets.
 	historicIndexedAttestationsBucket = []byte("historic-indexed-attestations-bucket")
 	historicBlockHeadersBucket        = []byte("historic-block-headers-bucket")
