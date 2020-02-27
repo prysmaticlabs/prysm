@@ -14,6 +14,8 @@ type BloomFilter []byte
 // NewBloomFilter returns a new bloom filter that encodes the given key with 16 bits allotted for it.
 // This bloom filter has a set length of 16 bits, and uses 5 hash functions in order to provide less than
 // 0.1% chance of false positives.
+// The following 5 hash functions used are highway, murmur3, fnv, sha256, and keccak256. These are reliably quick
+// hashes that used together can provide strong collision resistance.
 func NewBloomFilter(key []byte) (BloomFilter, error) {
 	nBits := 16
 	filter := make([]byte, 2)
