@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["iface.go"],
+    importpath = "github.com/prysmaticlabs/prysm/slasher/detection/attestations/iface",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//slasher/detection/attestations/types:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+    ],
+)
