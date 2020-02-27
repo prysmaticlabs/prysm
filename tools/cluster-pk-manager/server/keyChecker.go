@@ -7,14 +7,14 @@ import (
 var keyInterval = 3 * time.Minute
 
 type keyChecker struct {
-	db     *db
+	db *db
 }
 
 func newkeyChecker(db *db, beaconRPCAddr string) *keyChecker {
 	log.Warn("Key checker temporarily disabled during refactor.")
 
 	return &keyChecker{
-		db:     db,
+		db: db,
 	}
 }
 
