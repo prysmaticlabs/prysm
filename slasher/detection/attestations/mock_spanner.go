@@ -21,9 +21,10 @@ type MockSpanDetector struct {
 }
 
 // DetectSlashingForValidator mocks a detected slashing, if the sent attestation data
-// has a target epoch of 0, nothing will be detected. If the send attestation data has an
-// epoch greater than 5, it will be "detect" a surround vote for the target epoch - 1.
-// Lastly, if it has a target epoch less than 5, it will "detect" a double vote for the target epoch.
+// has a source epoch of 0, nothing will be detected. If the sent attestation data has a target
+// epoch equal to or greater than 6, it will "detect" a surrounded vote for the target epoch + 1.
+// If the target epoch is greater than 12, it will "detect" a surrounding vote for target epoch - 1.
+// Lastly, if it has a target epoch less than 6, it will "detect" a double vote for the target epoch.
 func (s *MockSpanDetector) DetectSlashingForValidator(
 	ctx context.Context,
 	validatorIdx uint64,
@@ -36,7 +37,7 @@ func (s *MockSpanDetector) DetectSlashingForValidator(
 			Kind:           types.SurroundVote,
 			SlashableEpoch: attData.Target.Epoch - 1,
 		}, nil
-	} else if attData.Target.Epoch > 6 { // surrounded a saved attestation.
+	} else if attData.Target.Epoch >= 6 { // surrounded a saved attestation.
 		return &types.DetectionResult{
 			Kind:           types.SurroundVote,
 			SlashableEpoch: attData.Target.Epoch + 1,

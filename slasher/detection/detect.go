@@ -75,9 +75,8 @@ func (ds *Service) detectSurroundVotes(
 		if att.Data == nil {
 			continue
 		}
-
 		// If there are no shared indices, there is no validator to slash.
-		if len(sliceutil.IntersectionUint64(att.AttestingIndices, incomingAtt.AttestingIndices)) < 1 {
+		if len(sliceutil.IntersectionUint64(att.AttestingIndices, incomingAtt.AttestingIndices)) == 0 {
 			continue
 		}
 

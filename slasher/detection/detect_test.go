@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations"
 )
@@ -20,14 +21,14 @@ func TestDetect_detectSurroundVotes(t *testing.T) {
 		{
 			name: "surrounding vote detected_should report a slashing",
 			savedAtt: &ethpb.IndexedAttestation{
-				AttestingIndices: []uint64{0},
+				AttestingIndices: []uint64{1},
 				Data: &ethpb.AttestationData{
 					Source: &ethpb.Checkpoint{Epoch: 9},
 					Target: &ethpb.Checkpoint{Epoch: 13},
 				},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
-				AttestingIndices: []uint64{0},
+				AttestingIndices: []uint64{1},
 				Data: &ethpb.AttestationData{
 					Source: &ethpb.Checkpoint{Epoch: 7},
 					Target: &ethpb.Checkpoint{Epoch: 14},
@@ -85,25 +86,28 @@ func TestDetect_detectSurroundVotes(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			slashings, err := ds.detectSurroundVotes(ctx, 0, tt.incomingAtt)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if len(slashings) != tt.slashingsFound {
-				t.Fatalf("Unexpected amount of slashings found, received %d, expected %d", len(slashings), tt.slashingsFound)
-			}
+			slashableIndices := sliceutil.IntersectionUint64(tt.savedAtt.AttestingIndices, tt.incomingAtt.AttestingIndices)
+			for _, valIdx := range slashableIndices {
+				slashings, err := ds.detectSurroundVotes(ctx, valIdx, tt.incomingAtt)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(slashings) != tt.slashingsFound {
+					t.Fatalf("Unexpected amount of slashings found, received %d, expected %d", len(slashings), tt.slashingsFound)
+				}
 
-			for _, ss := range slashings {
-				slashingAtt1 := ss.Attestation_1
-				slashingAtt2 := ss.Attestation_2
-				if !isSurrounding(slashingAtt1, slashingAtt2) && !isSurrounded(slashingAtt1, slashingAtt2) {
-					t.Fatalf(
-						"Expected slashing to be valid, received atts %d->%d and %d->%d",
-						slashingAtt2.Data.Source.Epoch,
-						slashingAtt2.Data.Target.Epoch,
-						slashingAtt1.Data.Source.Epoch,
-						slashingAtt1.Data.Target.Epoch,
-					)
+				for _, ss := range slashings {
+					slashingAtt1 := ss.Attestation_1
+					slashingAtt2 := ss.Attestation_2
+					if !isSurrounding(slashingAtt1, slashingAtt2) && !isSurrounded(slashingAtt1, slashingAtt2) {
+						t.Fatalf(
+							"Expected slashing to be valid, received atts %d->%d and %d->%d",
+							slashingAtt2.Data.Source.Epoch,
+							slashingAtt2.Data.Target.Epoch,
+							slashingAtt1.Data.Source.Epoch,
+							slashingAtt1.Data.Target.Epoch,
+						)
+					}
 				}
 			}
 			testDB.TeardownSlasherDB(t, db)
