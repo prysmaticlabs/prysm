@@ -176,7 +176,7 @@ func CalculateStateRoot(
 	}
 
 	// Execute per block transition.
-	state, err = computeStateRoot(ctx, state, signed)
+	state, err = ProcessBlockForStateRoot(ctx, state, signed)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not process block")
 	}
@@ -640,9 +640,9 @@ func ProcessEpochPrecompute(ctx context.Context, state *stateTrie.BeaconState) (
 	return state, nil
 }
 
-// computeStateRoot computes the state root of the block without verifying proposer signature
-// and randao.
-func computeStateRoot(
+// ProcessBlockForStateRoot processes the state for state root computation. It skips proposer signature
+// and randao signature verifications.
+func ProcessBlockForStateRoot(
 	ctx context.Context,
 	state *stateTrie.BeaconState,
 	signed *ethpb.SignedBeaconBlock,
