@@ -63,9 +63,7 @@ func (ds *Service) detectSurroundVotes(
 	if res.Kind != types.SurroundVote {
 		return nil, nil
 	}
-	if res.SlashableEpoch == 0 {
-		return nil, nil
-	}
+
 	var slashings []*ethpb.AttesterSlashing
 	otherAtts, err := ds.slasherDB.IndexedAttestationsForEpoch(ctx, res.SlashableEpoch)
 	if err != nil {
