@@ -105,7 +105,9 @@ func (db *Store) IdxAttsForTarget(ctx context.Context, targetEpoch uint64) ([]*e
 	return idxAtts, err
 }
 
-// IndexedAttestations --
+// IndexedAttestations retrieves all indexed attestations by target epoch
+// by looking into a bucket of attestation roots by epoch first. Then, it
+// retrieves all attestations that match that list of roots.
 func (db *Store) IndexedAttestations(ctx context.Context, targetEpoch uint64) ([]*ethpb.IndexedAttestation, error) {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.IndexedAttestations")
 	defer span.End()
@@ -132,7 +134,8 @@ func (db *Store) IndexedAttestations(ctx context.Context, targetEpoch uint64) ([
 	return idxAtts, err
 }
 
-// SaveIncomingIndexedAttestations --
+// SaveIncomingIndexedAttestations stores a list of indexed attestations into the db
+// by storing their roots into a bucket using their target epoch as the key.
 func (db *Store) SaveIncomingIndexedAttestations(ctx context.Context, atts []*ethpb.IndexedAttestation) error {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveIndexedAttestations")
 	defer span.End()
@@ -165,7 +168,8 @@ func (db *Store) SaveIncomingIndexedAttestations(ctx context.Context, atts []*et
 	})
 }
 
-// SaveIncomingIndexedAttestation --
+// SaveIncomingIndexedAttestation stores an indexed attestations into the db
+// by storing its root into a bucket and using its target epoch as the key.
 func (db *Store) SaveIncomingIndexedAttestation(ctx context.Context, att *ethpb.IndexedAttestation) error {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveIncomingIndexedAttestation")
 	defer span.End()

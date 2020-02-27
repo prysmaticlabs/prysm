@@ -46,6 +46,7 @@ type Service struct {
 	depositCache           *depositcache.DepositCache
 	chainStartFetcher      powchain.ChainStartFetcher
 	attPool                attestations.Pool
+	slashingPool           *slashings.Pool
 	exitPool               *voluntaryexits.Pool
 	genesisTime            time.Time
 	p2p                    p2p.Broadcaster
@@ -80,6 +81,7 @@ type Config struct {
 	DepositCache      *depositcache.DepositCache
 	AttPool           attestations.Pool
 	ExitPool          *voluntaryexits.Pool
+	SlashingPool      *slashings.Pool
 	P2p               p2p.Broadcaster
 	MaxRoutines       int64
 	StateNotifier     statefeed.Notifier
@@ -98,6 +100,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		chainStartFetcher:  cfg.ChainStartFetcher,
 		attPool:            cfg.AttPool,
 		exitPool:           cfg.ExitPool,
+		slashingPool:       cfg.SlashingPool,
 		p2p:                cfg.P2p,
 		maxRoutines:        cfg.MaxRoutines,
 		stateNotifier:      cfg.StateNotifier,

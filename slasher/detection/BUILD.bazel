@@ -11,6 +11,7 @@ go_library(
     visibility = ["//slasher:__subpackages__"],
     deps = [
         "//shared/event:go_default_library",
+        "//shared/sliceutil:go_default_library",
         "//slasher/beaconclient:go_default_library",
         "//slasher/db:go_default_library",
         "//slasher/detection/attestations:go_default_library",
