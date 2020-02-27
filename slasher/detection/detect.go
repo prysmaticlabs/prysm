@@ -49,9 +49,6 @@ func (ds *Service) detectSurroundVotes(
 	validatorIdx uint64,
 	incomingAtt *ethpb.IndexedAttestation,
 ) ([]*ethpb.AttesterSlashing, error) {
-	if updateErr := ds.minMaxSpanDetector.UpdateSpans(ctx, incomingAtt); updateErr != nil {
-		return nil, updateErr
-	}
 	res, err := ds.minMaxSpanDetector.DetectSlashingForValidator(
 		ctx,
 		validatorIdx,
@@ -86,6 +83,12 @@ func (ds *Service) detectSurroundVotes(
 				})
 				log.Warnf("Found a surround vote: %v", slashings)
 			}
+		}
+	}
+	// No need to update spans if a slashable event was found.
+	if len(slashings) == 0 {
+		if updateErr := ds.minMaxSpanDetector.UpdateSpans(ctx, incomingAtt); updateErr != nil {
+			return nil, updateErr
 		}
 	}
 	return slashings, nil

@@ -134,9 +134,9 @@ func (db *Store) IndexedAttestations(ctx context.Context, targetEpoch uint64) ([
 	return idxAtts, err
 }
 
-// SaveIncomingIndexedAttestations stores a list of indexed attestations into the db
+// SaveIncomingIndexedAttestationsForEpoch stores a list of indexed attestations into the db
 // by storing their roots into a bucket using their target epoch as the key.
-func (db *Store) SaveIncomingIndexedAttestations(ctx context.Context, atts []*ethpb.IndexedAttestation) error {
+func (db *Store) SaveIncomingIndexedAttestationsForEpoch(ctx context.Context, atts []*ethpb.IndexedAttestation) error {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveIndexedAttestations")
 	defer span.End()
 	encoded := make([][]byte, len(atts))
@@ -168,10 +168,10 @@ func (db *Store) SaveIncomingIndexedAttestations(ctx context.Context, atts []*et
 	})
 }
 
-// SaveIncomingIndexedAttestation stores an indexed attestations into the db
+// SaveIncomingIndexedAttestationForEpoch stores an indexed attestations into the db
 // by storing its root into a bucket and using its target epoch as the key.
-func (db *Store) SaveIncomingIndexedAttestation(ctx context.Context, att *ethpb.IndexedAttestation) error {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveIncomingIndexedAttestation")
+func (db *Store) SaveIncomingIndexedAttestationForEpoch(ctx context.Context, att *ethpb.IndexedAttestation) error {
+	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveIncomingIndexedAttestationForEpoch")
 	defer span.End()
 	enc, err := proto.Marshal(att)
 	if err != nil {

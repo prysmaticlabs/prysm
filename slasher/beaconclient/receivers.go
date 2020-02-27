@@ -66,7 +66,7 @@ func (bs *Service) receiveAttestations(ctx context.Context) {
 			return
 		}
 		log.WithField("slot", res.Data.Slot).Debug("Received attestation from beacon node")
-		if err := bs.slasherDB.SaveIncomingIndexedAttestation(ctx, res); err != nil {
+		if err := bs.slasherDB.SaveIncomingIndexedAttestationForEpoch(ctx, res); err != nil {
 			log.WithError(err).Error("Could not save indexed attestation")
 			continue
 		}
