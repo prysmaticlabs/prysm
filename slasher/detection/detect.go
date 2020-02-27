@@ -120,7 +120,7 @@ func (ds *Service) detectSurroundVotes(
 			continue
 		}
 
-		// Slashings must be submitted at the incoming attestation surrounding the saved attestation.
+		// Slashings must be submitted as the incoming attestation surrounding the saved attestation.
 		// So we swap the order if needed.
 		if isSurrounding(incomingAtt, att) {
 			return &ethpb.AttesterSlashing{
