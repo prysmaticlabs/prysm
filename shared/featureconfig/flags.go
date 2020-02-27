@@ -97,6 +97,11 @@ var (
 		Usage: "Enable caching of domain data requests per epoch. This feature reduces the total " +
 			"calls to the beacon node for each assignment.",
 	}
+	enableStateGenSigVerify = cli.BoolFlag{
+		Name: "enable-state-gen-sig-verify",
+		Usage: "Enable signature verification for state gen. This feature increases the cost to generate a historical state," +
+			"the resulting state is signature verified.",
+	}
 )
 
 // Deprecated flags list.
@@ -205,8 +210,8 @@ var (
 		Hidden: true,
 	}
 	deprecatedInitSyncCacheStateFlag = cli.BoolFlag{
-		Name: "initial-sync-cache-state",
-		Usage: deprecatedUsage,
+		Name:   "initial-sync-cache-state",
+		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
 )
@@ -268,6 +273,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableStrictAttestationPubsubVerificationFlag,
 	disableUpdateHeadPerAttestation,
 	enableByteMempool,
+	enableStateGenSigVerify,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -279,4 +285,5 @@ var E2EBeaconChainFlags = []string{
 	"--enable-eth1-data-vote-cache",
 	"--proto-array-forkchoice",
 	"--enable-byte-mempool",
+	"--enable-state-gen-sig-verify",
 }
