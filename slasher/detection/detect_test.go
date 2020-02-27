@@ -19,7 +19,7 @@ func TestDetect_detectSurroundVotes(t *testing.T) {
 	}
 	tests := []testStruct{
 		{
-			name: "surrounding vote detected_should report a slashing",
+			name: "surrounding vote detected should report a slashing",
 			savedAtt: &ethpb.IndexedAttestation{
 				AttestingIndices: []uint64{3},
 				Data: &ethpb.AttestationData{
@@ -37,7 +37,7 @@ func TestDetect_detectSurroundVotes(t *testing.T) {
 			slashingsFound: 1,
 		},
 		{
-			name: "surrounded vote detected_should report a slashing",
+			name: "surrounded vote detected should report a slashing",
 			savedAtt: &ethpb.IndexedAttestation{
 				AttestingIndices: []uint64{0, 2, 4, 8},
 				Data: &ethpb.AttestationData{
@@ -52,10 +52,10 @@ func TestDetect_detectSurroundVotes(t *testing.T) {
 					Target: &ethpb.Checkpoint{Epoch: 9},
 				},
 			},
-			slashingsFound: 2,
+			slashingsFound: 1,
 		},
 		{
-			name: "no slashable detected_should not report a slashing",
+			name: "no slashable detected should not report a slashing",
 			savedAtt: &ethpb.IndexedAttestation{
 				AttestingIndices: []uint64{0},
 				Data: &ethpb.AttestationData{
@@ -87,7 +87,6 @@ func TestDetect_detectSurroundVotes(t *testing.T) {
 			}
 
 			slashableIndices := sliceutil.IntersectionUint64(tt.savedAtt.AttestingIndices, tt.incomingAtt.AttestingIndices)
-			t.Log(slashableIndices)
 			for _, valIdx := range slashableIndices {
 				slashings, err := ds.detectSurroundVotes(ctx, valIdx, tt.incomingAtt)
 				if err != nil {

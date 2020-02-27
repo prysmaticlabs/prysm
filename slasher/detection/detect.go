@@ -78,12 +78,11 @@ func (ds *Service) detectSurroundVotes(
 			continue
 		}
 
-		if isSurrounding(att, incomingAtt) || isSurrounded(att, incomingAtt) {
+		if isSurrounding(incomingAtt, att) || isSurrounded(incomingAtt, att) {
 			slashings = append(slashings, &ethpb.AttesterSlashing{
 				Attestation_1: att,
 				Attestation_2: incomingAtt,
 			})
-			log.Warnf("Found a surround vote: %v", slashings)
 		}
 	}
 	if len(slashings) == 0 {
@@ -92,10 +91,12 @@ func (ds *Service) detectSurroundVotes(
 	return slashings, nil
 }
 
-func isSurrounding(att1 *ethpb.IndexedAttestation, att2 *ethpb.IndexedAttestation) bool {
-	return att1.Data.Source.Epoch < att2.Data.Source.Epoch && att1.Data.Target.Epoch > att2.Data.Target.Epoch
+func isSurrounding(incomingAtt *ethpb.IndexedAttestation, prevAtt *ethpb.IndexedAttestation) bool {
+	return incomingAtt.Data.Source.Epoch < prevAtt.Data.Source.Epoch &&
+		incomingAtt.Data.Target.Epoch > prevAtt.Data.Target.Epoch
 }
 
-func isSurrounded(att1 *ethpb.IndexedAttestation, att2 *ethpb.IndexedAttestation) bool {
-	return att1.Data.Source.Epoch < att2.Data.Source.Epoch && att1.Data.Target.Epoch > att2.Data.Target.Epoch
+func isSurrounded(incomingAtt *ethpb.IndexedAttestation, prevAtt *ethpb.IndexedAttestation) bool {
+	return incomingAtt.Data.Source.Epoch > prevAtt.Data.Source.Epoch &&
+		incomingAtt.Data.Target.Epoch < prevAtt.Data.Target.Epoch
 }
