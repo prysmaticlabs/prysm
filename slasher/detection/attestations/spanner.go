@@ -191,18 +191,24 @@ func (s *SpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttest
 	return nil
 }
 
+// markAttFilter sets third uint16 in the target epochs span to a bloom filter
+// with the attestation data root as the key in set. After creating the []byte for the bloom filter,
+// it encoded into a uint16 to keep the data structure for the spanner simple and clean.
+// A bloom filter is used to prevent collision when using such a small data size.
 func (s *SpanDetector) markAttFilter(attData *ethpb.AttestationData, valIdx uint64) error {
 	numSpans := uint64(len(s.spans))
 	target := attData.Target.Epoch
 
+	// Check if there is an existing bloom filter, if so, don't modify it.
 	if sp := s.spans[target%numSpans]; sp == nil {
 		s.spans[target%numSpans] = make(map[uint64][3]uint16)
 	}
-
 	filterNum := s.spans[target%numSpans][valIdx][2]
 	if filterNum != 0 {
 		return nil
 	}
+
+	// Generate the attestation data root and use it as the only key in the bloom filter.
 	attDataRoot, err := ssz.HashTreeRoot(attData)
 	if err != nil {
 		return err
@@ -213,6 +219,7 @@ func (s *SpanDetector) markAttFilter(attData *ethpb.AttestationData, valIdx uint
 	}
 	filterNum = binary.LittleEndian.Uint16(attFilter)
 
+	// Set the bloom filter back into the span for the epoch.
 	minSpan := s.spans[target%numSpans][valIdx][0]
 	maxSpan := s.spans[target%numSpans][valIdx][1]
 	s.spans[target%numSpans][valIdx] = [3]uint16{minSpan, maxSpan, filterNum}
