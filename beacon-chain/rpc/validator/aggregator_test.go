@@ -106,7 +106,7 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 	c := params.MinimalSpecConfig()
 	c.TargetAggregatorsPerCommittee = 16
 	params.OverrideBeaconConfig(c)
-	defer params.UseMainnetConfig()
+	defer params.UseMinimalConfig()
 
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
@@ -160,7 +160,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	c := params.MinimalSpecConfig()
 	c.TargetAggregatorsPerCommittee = 16
 	params.OverrideBeaconConfig(c)
-	defer params.UseMainnetConfig()
+	defer params.UseMinimalConfig()
 
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
