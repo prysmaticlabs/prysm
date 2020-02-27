@@ -1,6 +1,7 @@
 package filter
 
 import (
+	"fmt"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -8,17 +9,7 @@ import (
 )
 
 func (f BloomFilter) String() string {
-	s := make([]byte, 8*len(f))
-	for i, x := range f {
-		for j := 0; j < 8; j++ {
-			if x&(1<<uint(j)) != 0 {
-				s[8*i+j] = '1'
-			} else {
-				s[8*i+j] = '.'
-			}
-		}
-	}
-	return string(s)
+	return fmt.Sprintf("%08b", f)
 }
 
 func TestBloomFilter_OK(t *testing.T) {
@@ -44,7 +35,7 @@ func TestBloomFilter_OK(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := f.String()
-	want := "...1.....1.1.11."
+	want := "[00001000 01101010]"
 	if got != want {
 		t.Fatalf("got %s, want %s", got, want)
 	}
@@ -157,22 +148,22 @@ func TestBloomFilter_Output(t *testing.T) {
 		{
 			name: "large key",
 			key:  "A very very large key, almost too large. This key is wayyyy too large.",
-			want: "....11....11.1..",
+			want: "[00110000 00101100]",
 		},
 		{
 			name: "small key",
 			key:  "A small key",
-			want: "..........1..111",
+			want: "[00000000 11100100]",
 		},
 		{
 			name: "tiny key",
 			key:  "Tiny",
-			want: ".......1...111..",
+			want: "[10000000 00111000]",
 		},
 		{
 			name: "empty key",
 			key:  "",
-			want: "11.1.1..........",
+			want: "[00101011 00000000]",
 		},
 	}
 	for _, tc := range testCases {
