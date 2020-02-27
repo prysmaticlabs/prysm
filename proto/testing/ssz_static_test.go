@@ -130,6 +130,9 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		return nil, nil
 	case "Eth1Data":
 		obj = &ethpb.Eth1Data{}
+	case "Eth1Block":
+		t.Skip("Unused type")
+		return nil, nil
 	case "Fork":
 		obj = &pb.Fork{}
 	case "HistoricalBatch":
@@ -146,6 +149,8 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 		obj = &ethpb.SignedBeaconBlockHeader{}
 	case "SignedVoluntaryExit":
 		obj = &ethpb.SignedVoluntaryExit{}
+	case "SigningRoot":
+		obj = &pb.SigningRoot{}
 	case "Validator":
 		obj = &ethpb.Validator{}
 	case "VoluntaryExit":
