@@ -74,20 +74,13 @@ message HistoricalBatch {
   repeated bytes state_roots = 2 [(gogoproto.moretags) = "ssz-size:\"state_roots.size\""];
 }
 
-// This object is defined for summarizing a hot state.
+// This object is defined for summarizing a state.
 // It enables easy playback to reconstruct the state.
-message HotStateSummary {
+message StateSummary {
   // The slot of the state.
   uint64 slot = 1;
   // The block root which is used to construct the state.
-  bytes latest_root = 2;
+  bytes root = 2;
   // The block root at the epoch boundary.
   bytes boundary_root = 3;
-}
-
-// This object is defined for summarizing a cold state.
-// It enables easy playback to reconstruct the state.
-message ColdStateSummary {
-  // The slot of the state.
-  uint64 slot = 1;
 }

@@ -73,7 +73,7 @@ func (s *Service) processAttestation() {
 			ctx := context.Background()
 			atts := s.attPool.ForkchoiceAttestations()
 			for _, a := range atts {
-				hasState := s.stateGen.HotStateExists(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot)) && s.stateGen.HotStateExists(ctx, bytesutil.ToBytes32(a.Data.Target.Root))
+				hasState := s.stateGen.StateSummaryExists(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
 				hasBlock := s.hasBlock(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
 				if !(hasState && hasBlock) {
 					continue

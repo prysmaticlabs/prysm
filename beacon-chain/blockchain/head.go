@@ -58,7 +58,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 
 	// If the head state is not available, just return nil.
 	// There's nothing to cache
-	if !s.stateGen.HotStateExists(ctx, headRoot) {
+	if !s.stateGen.StateSummaryExists(ctx, headRoot) {
 		return nil
 	}
 

@@ -8,9 +8,9 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// SaveHotStateSummary saves a hot state summary to the DB.
-func (k *Store) SaveHotStateSummary(ctx context.Context, summary *pb.HotStateSummary) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveHotStateSummary")
+// SaveStateSummary saves a state summary to the DB.
+func (k *Store) SaveStateSummary(ctx context.Context, summary *pb.StateSummary) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStateSummary")
 	defer span.End()
 
 	enc, err := encode(summary)
@@ -18,99 +18,51 @@ func (k *Store) SaveHotStateSummary(ctx context.Context, summary *pb.HotStateSum
 		return err
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(hotStateBucket)
-		return bucket.Put(summary.LatestRoot, enc)
+		bucket := tx.Bucket(stateSummaryBucket)
+		return bucket.Put(summary.Root, enc)
 	})
 }
 
-// HotStateSummary returns the hot state summary using input block root from DB.
-func (k *Store) HotStateSummary(ctx context.Context, blockRoot [32]byte) (*pb.HotStateSummary, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.HotStateSummary")
+// StateSummary returns the state summary using input block root from DB.
+func (k *Store) StateSummary(ctx context.Context, blockRoot [32]byte) (*pb.StateSummary, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.StateSummary")
 	defer span.End()
 
-	var summary *pb.HotStateSummary
+	var summary *pb.StateSummary
 	err := k.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(hotStateBucket)
+		bucket := tx.Bucket(stateSummaryBucket)
 		enc := bucket.Get(blockRoot[:])
 		if enc == nil {
 			return nil
 		}
-		summary = &pb.HotStateSummary{}
+		summary = &pb.StateSummary{}
 		return decode(enc, summary)
 	})
 
 	return summary, err
 }
 
-// HasHotStateSummary returns true if a hot state summary exists in DB.
-func (k *Store) HasHotStateSummary(ctx context.Context, blockRoot [32]byte) bool {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasHotStateSummary")
+// HasStateSummary returns true if a state summary exists in DB.
+func (k *Store) HasStateSummary(ctx context.Context, blockRoot [32]byte) bool {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasStateSummary")
 	defer span.End()
 	var exists bool
 	// #nosec G104. Always returns nil.
 	k.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(hotStateBucket)
+		bucket := tx.Bucket(stateSummaryBucket)
 		exists = bucket.Get(blockRoot[:]) != nil
 		return nil
 	})
 	return exists
 }
 
-// DeleteHotStateSummary deletes the hot state summary using input block root from DB.
-func (k *Store) DeleteHotStateSummary(ctx context.Context, blockRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteHotStateSummary")
+// DeleteStateSummary deletes the state summary using input block root from DB.
+func (k *Store) DeleteStateSummary(ctx context.Context, blockRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteStateSummary")
 	defer span.End()
 
 	return k.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(hotStateBucket)
+		bucket := tx.Bucket(stateSummaryBucket)
 		return bucket.Delete(blockRoot[:])
 	})
-}
-
-// SaveColdStateSummary saves a cold state summary to the DB.
-func (k *Store) SaveColdStateSummary(ctx context.Context, blockRoot [32]byte, summary *pb.ColdStateSummary) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveColdStateSummary")
-	defer span.End()
-
-	enc, err := encode(summary)
-	if err != nil {
-		return err
-	}
-	return k.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(coldStateBucket)
-		return bucket.Put(blockRoot[:], enc)
-	})
-}
-
-// ColdStateSummary returns the cold state summary using input block root from DB.
-func (k *Store) ColdStateSummary(ctx context.Context, blockRoot [32]byte) (*pb.ColdStateSummary, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.ColdStateSummary")
-	defer span.End()
-
-	var summary *pb.ColdStateSummary
-	err := k.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(coldStateBucket)
-		enc := bucket.Get(blockRoot[:])
-		if enc == nil {
-			return nil
-		}
-		summary = &pb.ColdStateSummary{}
-		return decode(enc, summary)
-	})
-
-	return summary, err
-}
-
-// HasColdStateSummary returns true if a cold state summary exists in DB.
-func (k *Store) HasColdStateSummary(ctx context.Context, blockRoot [32]byte) bool {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasColdStateSummary")
-	defer span.End()
-	var exists bool
-	// #nosec G104. Always returns nil.
-	k.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(coldStateBucket)
-		exists = bucket.Get(blockRoot[:]) != nil
-		return nil
-	})
-	return exists
 }

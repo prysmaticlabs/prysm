@@ -304,9 +304,9 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState *stateTrie.B
 	if err := s.beaconDB.SaveGenesisBlockRoot(ctx, genesisBlkRoot); err != nil {
 		return errors.Wrap(err, "could save genesis block root")
 	}
-	if err := s.beaconDB.SaveHotStateSummary(ctx, &pb.HotStateSummary{
+	if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
 		Slot:         0,
-		LatestRoot:   genesisBlkRoot[:],
+		Root:         genesisBlkRoot[:],
 		BoundaryRoot: genesisBlkRoot[:],
 	}); err != nil {
 		return err

@@ -33,7 +33,7 @@ func New(db db.NoHeadAccessDatabase) *State {
 	return &State{
 		beaconDB: db,
 		//slotsPerArchivePoint: uint64(flags.Get().SlotsPerArchivePoint),
-		slotsPerArchivePoint:    128,
+		slotsPerArchivePoint:    64,
 		epochBoundarySlotToRoot: make(map[uint64][32]byte),
 		splitInfo:               &splitSlotAndRoot{slot: 0, root: params.BeaconConfig().ZeroHash},
 		hotStateCache:           cache.NewHotStateCache(),
@@ -50,10 +50,7 @@ func (s *State) Resume(ctx context.Context, finalizedRoot [32]byte) (*state.Beac
 		return nil, err
 	}
 	s.splitInfo = &splitSlotAndRoot{slot: finalizedState.Slot(), root: finalizedRoot}
-	if err := s.beaconDB.SaveColdStateSummary(ctx, finalizedRoot, &pb.ColdStateSummary{Slot: finalizedState.Slot()}); err != nil {
-		return nil, err
-	}
-	if err := s.beaconDB.SaveHotStateSummary(ctx, &pb.HotStateSummary{Slot: finalizedState.Slot(), LatestRoot: finalizedRoot[:], BoundaryRoot: finalizedRoot[:]}); err != nil {
+	if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: finalizedState.Slot(), Root: finalizedRoot[:], BoundaryRoot: finalizedRoot[:]}); err != nil {
 		return nil, err
 	}
 

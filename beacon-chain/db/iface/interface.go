@@ -34,10 +34,8 @@ type ReadOnlyDatabase interface {
 	State(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error)
 	GenesisState(ctx context.Context) (*state.BeaconState, error)
 	HasState(ctx context.Context, blockRoot [32]byte) bool
-	HotStateSummary(ctx context.Context, blockRoot [32]byte) (*ethereum_beacon_p2p_v1.HotStateSummary, error)
-	HasHotStateSummary(ctx context.Context, blockRoot [32]byte) bool
-	ColdStateSummary(ctx context.Context, blockRoot [32]byte) (*ethereum_beacon_p2p_v1.ColdStateSummary, error)
-	HasColdStateSummary(ctx context.Context, blockRoot [32]byte) bool
+	StateSummary(ctx context.Context, blockRoot [32]byte) (*ethereum_beacon_p2p_v1.StateSummary, error)
+	HasStateSummary(ctx context.Context, blockRoot [32]byte) bool
 	ArchivedPointState(ctx context.Context, index uint64) (*state.BeaconState, error)
 	ArchivedPointRoot(ctx context.Context, index uint64) [32]byte
 	HasArchivedPoint(ctx context.Context, index uint64) bool
@@ -87,9 +85,8 @@ type NoHeadAccessDatabase interface {
 	SaveStates(ctx context.Context, states []*state.BeaconState, blockRoots [][32]byte) error
 	DeleteState(ctx context.Context, blockRoot [32]byte) error
 	DeleteStates(ctx context.Context, blockRoots [][32]byte) error
-	SaveHotStateSummary(ctx context.Context, summary *ethereum_beacon_p2p_v1.HotStateSummary) error
-	DeleteHotStateSummary(ctx context.Context, blockRoot [32]byte) error
-	SaveColdStateSummary(ctx context.Context, blockRoot [32]byte, summary *ethereum_beacon_p2p_v1.ColdStateSummary) error
+	SaveStateSummary(ctx context.Context, summary *ethereum_beacon_p2p_v1.StateSummary) error
+	DeleteStateSummary(ctx context.Context, blockRoot [32]byte) error
 	SaveArchivedPointState(ctx context.Context, state *state.BeaconState, index uint64) error
 	SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, index uint64) error
 	// Slashing operations.

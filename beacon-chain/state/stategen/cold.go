@@ -45,7 +45,7 @@ func (s *State) loadColdStateByRoot(ctx context.Context, blockRoot [32]byte) (*s
 	ctx, span := trace.StartSpan(ctx, "stateGen.loadColdStateByRoot")
 	defer span.End()
 
-	summary, err := s.beaconDB.ColdStateSummary(ctx, blockRoot)
+	summary, err := s.beaconDB.StateSummary(ctx, blockRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -185,8 +185,8 @@ func (s *State) loadColdStateSlot(ctx context.Context, blockRoot [32]byte) (uint
 	ctx, span := trace.StartSpan(ctx, "stateGen.loadColdStateSlot")
 	defer span.End()
 
-	if s.beaconDB.HasColdStateSummary(ctx, blockRoot) {
-		summary, err := s.beaconDB.ColdStateSummary(ctx, blockRoot)
+	if s.beaconDB.HasStateSummary(ctx, blockRoot) {
+		summary, err := s.beaconDB.StateSummary(ctx, blockRoot)
 		if err != nil {
 			return 0, nil
 		}
@@ -204,8 +204,10 @@ func (s *State) loadColdStateSlot(ctx context.Context, blockRoot [32]byte) (uint
 	if b == nil || b.Block == nil {
 		return 0, errUnknownBlock
 	}
-	if err := s.beaconDB.SaveColdStateSummary(ctx, blockRoot, &pb.ColdStateSummary{Slot: b.Block.Slot}); err != nil {
+	if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: blockRoot[:], Slot: b.Block.Slot}); err != nil {
 		return 0, errors.Wrap(err, "could not save cold state summary")
 	}
+	stateSummarySaved.Inc()
+
 	return b.Block.Slot, nil
 }

@@ -184,12 +184,9 @@ func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 		bkt = tx.Bucket(blocksBucket)
 		headBlkRoot := bkt.Get(headBlockRootKey)
 
-		hasHotStateSummary := tx.Bucket(hotStateBucket).Get(blockRoot[:]) != nil
-		hasColdStateSummary := tx.Bucket(coldStateBucket).Get(blockRoot[:]) != nil
-		canGenerate := hasHotStateSummary || hasColdStateSummary
-
+		hasStateSummary := tx.Bucket(stateSummaryBucket).Get(blockRoot[:]) != nil
 		// Safe guard against deleting genesis, finalized, head state.
-		if canGenerate && (bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], headBlkRoot)) {
+		if hasStateSummary && (bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], headBlkRoot)) {
 			return errors.New("cannot delete genesis, finalized, or head state")
 		}
 
@@ -271,7 +268,7 @@ func (k *Store) SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, i
 	defer span.End()
 
 	return k.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(coldStateBucket)
+		bucket := tx.Bucket(archivedIndexRootBucket)
 		return bucket.Put(uint64ToBytes(index), blockRoot[:])
 	})
 }
@@ -311,7 +308,7 @@ func (k *Store) ArchivedPointRoot(ctx context.Context, index uint64) [32]byte {
 	var blockRoot []byte
 	// #nosec G104. Always returns nil.
 	k.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(coldStateBucket)
+		bucket := tx.Bucket(archivedIndexRootBucket)
 		blockRoot = bucket.Get(uint64ToBytes(index))
 		return nil
 	})
@@ -326,7 +323,7 @@ func (k *Store) HasArchivedPoint(ctx context.Context, index uint64) bool {
 	var exists bool
 	// #nosec G104. Always returns nil.
 	k.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(stateBucket)
+		bucket := tx.Bucket(archivedIndexRootBucket)
 		exists = bucket.Get(uint64ToBytes(index)) != nil
 		return nil
 	})
