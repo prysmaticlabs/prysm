@@ -8,17 +8,17 @@ import (
 )
 
 // StateByRoot retrieves the state from DB using input root.
-// It retrieves state from the cold section if the cold state
+// It retrieves state from the hot section if the hot state
 // summary exists in DB by default.
 func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.StateByRoot")
 	defer span.End()
 
-	if s.beaconDB.HasColdStateSummary(ctx, blockRoot) {
-		return s.loadColdStateByRoot(ctx, blockRoot)
+	if s.beaconDB.HasHotStateSummary(ctx, blockRoot) {
+		return s.loadHotStateByRoot(ctx, blockRoot)
 	}
 
-	return s.loadHotStateByRoot(ctx, blockRoot)
+	return s.loadColdStateByRoot(ctx, blockRoot)
 }
 
 // StateBySlot retrieves the state from DB using input slot.

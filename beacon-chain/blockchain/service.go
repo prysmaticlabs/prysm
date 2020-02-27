@@ -65,9 +65,7 @@ type Service struct {
 	prevFinalizedCheckpt   *ethpb.Checkpoint
 	nextEpochBoundarySlot  uint64
 	voteLock               sync.RWMutex
-	initSyncState          map[[32]byte]*stateTrie.BeaconState
 	boundaryRoots          [][32]byte
-	initSyncStateLock      sync.RWMutex
 	checkpointState        *cache.CheckpointStateCache
 	checkpointStateLock    sync.Mutex
 	stateGen               *stategen.State
@@ -105,7 +103,6 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		stateNotifier:      cfg.StateNotifier,
 		epochParticipation: make(map[uint64]*precompute.Balance),
 		forkChoiceStore:    cfg.ForkChoiceStore,
-		initSyncState:      make(map[[32]byte]*stateTrie.BeaconState),
 		boundaryRoots:      [][32]byte{},
 		checkpointState:    cache.NewCheckpointStateCache(),
 		stateGen:           cfg.StateGen,
@@ -269,12 +266,6 @@ func (s *Service) Status() error {
 		return fmt.Errorf("too many goroutines %d", runtime.NumGoroutine())
 	}
 	return nil
-}
-
-// ClearCachedStates removes all stored caches states. This is done after the node
-// is synced.
-func (s *Service) ClearCachedStates() {
-	s.initSyncState = map[[32]byte]*stateTrie.BeaconState{}
 }
 
 // This gets called when beacon chain is first initialized to save validator indices and public keys in db.

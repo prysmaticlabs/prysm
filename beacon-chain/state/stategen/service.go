@@ -53,6 +53,9 @@ func (s *State) Resume(ctx context.Context, finalizedRoot [32]byte) (*state.Beac
 	if err := s.beaconDB.SaveColdStateSummary(ctx, finalizedRoot, &pb.ColdStateSummary{Slot: finalizedState.Slot()}); err != nil {
 		return nil, err
 	}
+	if err := s.beaconDB.SaveHotStateSummary(ctx, &pb.HotStateSummary{Slot: finalizedState.Slot(), LatestRoot: finalizedRoot[:], BoundaryRoot: finalizedRoot[:]}); err != nil {
+		return nil, err
+	}
 
 	s.setEpochBoundaryRoot(finalizedState.Slot(), finalizedRoot)
 

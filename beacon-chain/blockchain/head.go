@@ -58,8 +58,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 
 	// If the head state is not available, just return nil.
 	// There's nothing to cache
-	_, cached := s.initSyncState[headRoot]
-	if !cached && !s.stateGen.HotStateExists(ctx, headRoot) {
+	if !s.stateGen.HotStateExists(ctx, headRoot) {
 		return nil
 	}
 
@@ -73,17 +72,9 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	}
 
 	// Get the new head state from cached state or DB.
-	var newHeadState *state.BeaconState
-	var exists bool
-	newHeadState, exists = s.initSyncState[headRoot]
-	if !exists {
-		newHeadState, err = s.stateGen.StateByRoot(ctx, headRoot)
-		if err != nil {
-			return errors.Wrap(err, "could not retrieve head state in DB")
-		}
-		if newHeadState == nil {
-			return errors.New("cannot save nil head state")
-		}
+	newHeadState, err := s.stateGen.StateByRoot(ctx, headRoot)
+	if err != nil {
+		return errors.Wrap(err, "could not retrieve head state in DB")
 	}
 	if newHeadState == nil {
 		return errors.New("cannot save nil head state")
@@ -111,14 +102,6 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 	headState, err := s.stateGen.StateByRoot(ctx, r)
 	if err != nil {
 		return errors.Wrap(err, "could not retrieve head state in DB")
-	}
-	if headState == nil {
-		s.initSyncStateLock.RLock()
-		cachedHeadState, ok := s.initSyncState[r]
-		if ok {
-			headState = cachedHeadState
-		}
-		s.initSyncStateLock.RUnlock()
 	}
 
 	if headState == nil {

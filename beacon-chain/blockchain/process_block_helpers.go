@@ -28,7 +28,7 @@ func (s *Service) CurrentSlot() uint64 {
 // to retrieve the state in DB. It verifies the pre state's validity and the incoming block
 // is in the correct time window.
 func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*stateTrie.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "forkchoice.getBlockPreState")
+	ctx, span := trace.StartSpan(ctx, "chainService.getBlockPreState")
 	defer span.End()
 
 	// Verify incoming block has a valid pre state.
@@ -57,25 +57,18 @@ func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*
 
 // verifyBlkPreState validates input block has a valid pre-state.
 func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (*stateTrie.BeaconState, error) {
-	preState := s.initSyncState[bytesutil.ToBytes32(b.ParentRoot)]
-	var err error
-	if preState == nil {
-		preState, err = s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(b.ParentRoot))
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
-		}
-		if preState == nil {
-			if bytes.Equal(s.finalizedCheckpt.Root, b.ParentRoot) {
-				return nil, fmt.Errorf("pre state of slot %d does not exist", b.Slot)
-			}
-			preState, err = s.generateState(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root), bytesutil.ToBytes32(b.ParentRoot))
-			if err != nil {
-				return nil, err
-			}
-		}
-		return preState, nil // No copy needed from newly hydrated DB object.
+	ctx, span := trace.StartSpan(ctx, "chainService.verifyBlkPreState")
+	defer span.End()
+
+	preState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(b.ParentRoot))
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
 	}
-	return preState.Copy(), nil
+	if preState == nil {
+		return nil, errors.Wrapf(err, "nil pre state for slot %d", b.Slot)
+	}
+
+	return preState, nil // No copy needed from newly hydrated state gen object.
 }
 
 // verifyBlkDescendant validates input block root is a descendant of the
@@ -248,54 +241,7 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 		s.justifiedCheckpt = cpt
 	}
 
-	justifiedRoot := bytesutil.ToBytes32(cpt.Root)
-
-	justifiedState := s.initSyncState[justifiedRoot]
-	// If justified state is nil, resume back to normal syncing process and save
-	// justified check point.
-	if justifiedState == nil {
-		if s.stateGen.HotStateExists(ctx, justifiedRoot) {
-			return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
-		}
-		justifiedState, err = s.generateState(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root), justifiedRoot)
-		if err != nil {
-			log.Error(err)
-			return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
-		}
-	}
-	if err := s.beaconDB.SaveState(ctx, justifiedState, justifiedRoot); err != nil {
-		return errors.Wrap(err, "could not save justified state")
-	}
-
 	return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
-}
-
-// This saves every finalized state in DB during initial sync, needed as part of optimization to
-// use cache state during initial sync in case of restart.
-func (s *Service) saveInitState(ctx context.Context, state *stateTrie.BeaconState) error {
-	cpt := state.FinalizedCheckpoint()
-	finalizedRoot := bytesutil.ToBytes32(cpt.Root)
-	fs := s.initSyncState[finalizedRoot]
-	if fs == nil {
-		var err error
-		fs, err = s.stateGen.StateByRoot(ctx, finalizedRoot)
-		if err != nil {
-			return err
-		}
-		if fs == nil {
-			fs, err = s.generateState(ctx, bytesutil.ToBytes32(s.prevFinalizedCheckpt.Root), finalizedRoot)
-			if err != nil {
-				// This might happen if the client was in sync and is now re-syncing for whatever reason.
-				log.Warn("Initial sync cache did not have finalized state root cached")
-				return err
-			}
-		}
-	}
-
-	if err := s.stateGen.SaveState(ctx, finalizedRoot, fs); err != nil {
-		return errors.Wrap(err, "could not save state")
-	}
-	return nil
 }
 
 // This filters block roots that are not known as head root and finalized root in DB.

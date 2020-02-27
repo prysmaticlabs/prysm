@@ -6,7 +6,6 @@ go_library(
         "chain_info.go",
         "head.go",
         "info.go",
-        "init_sync_process_block.go",
         "log.go",
         "process_attestation.go",
         "process_attestation_helpers.go",

@@ -25,7 +25,6 @@ var _ = shared.Service(&Service{})
 type blockchainService interface {
 	blockchain.BlockReceiver
 	blockchain.HeadFetcher
-	ClearCachedStates()
 	blockchain.FinalizationFetcher
 }
 
