@@ -82,7 +82,7 @@ func TestDetect_detectSurroundVotes(t *testing.T) {
 				slasherDB:          db,
 				minMaxSpanDetector: &attestations.MockSpanDetector{},
 			}
-			if err := db.SaveIncomingIndexedAttestationForEpoch(ctx, tt.savedAtt); err != nil {
+			if err := db.SaveIncomingIndexedAttestationByEpoch(ctx, tt.savedAtt); err != nil {
 				t.Fatal(err)
 			}
 

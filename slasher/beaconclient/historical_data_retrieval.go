@@ -42,7 +42,7 @@ func (bs *Service) RequestHistoricalAttestations(
 			break
 		}
 	}
-	if err := bs.slasherDB.SaveIncomingIndexedAttestationsForEpoch(ctx, indexedAtts); err != nil {
+	if err := bs.slasherDB.SaveIncomingIndexedAttestationsByEpoch(ctx, indexedAtts); err != nil {
 		return nil, errors.Wrap(err, "could not save indexed attestations")
 	}
 	return indexedAtts, nil
