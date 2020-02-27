@@ -21,14 +21,14 @@ func TestDetect_detectSurroundVotes(t *testing.T) {
 		{
 			name: "surrounding vote detected_should report a slashing",
 			savedAtt: &ethpb.IndexedAttestation{
-				AttestingIndices: []uint64{1},
+				AttestingIndices: []uint64{3},
 				Data: &ethpb.AttestationData{
 					Source: &ethpb.Checkpoint{Epoch: 9},
 					Target: &ethpb.Checkpoint{Epoch: 13},
 				},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
-				AttestingIndices: []uint64{1},
+				AttestingIndices: []uint64{1, 3, 7},
 				Data: &ethpb.AttestationData{
 					Source: &ethpb.Checkpoint{Epoch: 7},
 					Target: &ethpb.Checkpoint{Epoch: 14},
@@ -39,20 +39,20 @@ func TestDetect_detectSurroundVotes(t *testing.T) {
 		{
 			name: "surrounded vote detected_should report a slashing",
 			savedAtt: &ethpb.IndexedAttestation{
-				AttestingIndices: []uint64{0},
+				AttestingIndices: []uint64{0, 2, 4, 8},
 				Data: &ethpb.AttestationData{
 					Source: &ethpb.Checkpoint{Epoch: 6},
 					Target: &ethpb.Checkpoint{Epoch: 10},
 				},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
-				AttestingIndices: []uint64{0},
+				AttestingIndices: []uint64{0, 4},
 				Data: &ethpb.AttestationData{
 					Source: &ethpb.Checkpoint{Epoch: 7},
 					Target: &ethpb.Checkpoint{Epoch: 9},
 				},
 			},
-			slashingsFound: 1,
+			slashingsFound: 2,
 		},
 		{
 			name: "no slashable detected_should not report a slashing",
