@@ -11,15 +11,20 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-func TestBlocksFetcher(t *testing.T) {
+func TestBlocksFetcherRoundRobin(t *testing.T) {
 	tests := []struct {
 		name               string
 		expectedBlockSlots []uint64
@@ -330,6 +335,74 @@ func TestBlocksFetcher(t *testing.T) {
 		})
 	}
 }
+
+func TestRequestBeaconBlocksByRangeRequest(t *testing.T) {
+	chainConfig := struct {
+		expectedBlockSlots []uint64
+		peers              []*peerData
+	}{
+		expectedBlockSlots: makeSequence(1, 320),
+		peers: []*peerData{
+			{
+				blocks:         makeSequence(1, 320),
+				finalizedEpoch: 8,
+				headSlot:       320,
+			},
+			{
+				blocks:         makeSequence(1, 320),
+				finalizedEpoch: 8,
+				headSlot:       320,
+			},
+		},
+	}
+
+	hook := logTest.NewGlobal()
+	mc, p2p, beaconDB := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
+	fetcher := newBlocksFetcher(&blocksFetcherConfig{
+		headFetcher: mc,
+		p2p:         p2p,
+	})
+
+	root, _, peers := p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(mc.HeadSlot()))
+
+	blocks, err := fetcher.requestBeaconBlocksByRange(context.Background(), peers[0], root, 1, 1, blockBatchSize)
+	if err != nil {
+		t.Errorf("error: %v", err)
+	}
+	if len(blocks) != blockBatchSize {
+		t.Errorf("incorrect number of blocks returned, expected: %v, got: %v", blockBatchSize, len(blocks))
+	}
+
+	// Test request fail over (success).
+	err = fetcher.p2p.Disconnect(peers[0])
+	if err != nil {
+		t.Error(err)
+	}
+	blocks, err = fetcher.requestBeaconBlocksByRange(context.Background(), peers[0], root, 1, 1, blockBatchSize)
+	if err != nil {
+		t.Errorf("error: %v", err)
+	}
+
+	// Test request fail over (error).
+	err = fetcher.p2p.Disconnect(peers[1])
+	ctx, _ := context.WithTimeout(context.Background(), time.Second*1)
+	blocks, err = fetcher.requestBeaconBlocksByRange(ctx, peers[1], root, 1, 1, blockBatchSize)
+	testutil.AssertLogsContain(t, hook, "Request failed, trying to forward request to another peer")
+	if err == nil || err.Error() != "context deadline exceeded" {
+		t.Errorf("expected context closed error, got: %v", err)
+	}
+
+	// Test context cancellation.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	blocks, err = fetcher.requestBeaconBlocksByRange(ctx, peers[0], root, 1, 1, blockBatchSize)
+	if err == nil || err.Error() != "context canceled" {
+		t.Errorf("expected context closed error, got: %v", err)
+	}
+
+	dbtest.TeardownDB(t, beaconDB)
+}
+
 func TestSelectFailOverPeer(t *testing.T) {
 	type args struct {
 		excludedPID peer.ID
@@ -348,7 +421,7 @@ func TestSelectFailOverPeer(t *testing.T) {
 				peers:       []peer.ID{},
 			},
 			want:    "",
-			wantErr: errNotEnoughPeers,
+			wantErr: errNoPeersAvailable,
 		},
 		{
 			name: "Single peer which needs to be excluded",
@@ -359,7 +432,7 @@ func TestSelectFailOverPeer(t *testing.T) {
 				},
 			},
 			want:    "",
-			wantErr: errNotEnoughPeers,
+			wantErr: errNoPeersAvailable,
 		},
 		{
 			name: "Single peer available",
@@ -407,4 +480,33 @@ func TestSelectFailOverPeer(t *testing.T) {
 			}
 		})
 	}
+}
+
+func initializeTestServices(t *testing.T, blocks []uint64, peers []*peerData) (*mock.ChainService, *p2pt.TestP2P, db.Database) {
+
+	initializeRootCache(blocks, t)
+	beaconDB := dbtest.SetupDB(t)
+
+	p := p2pt.NewTestP2P(t)
+	connectPeers(t, p, peers, p.Peers())
+	genesisRoot := rootCache[0]
+
+	err := beaconDB.SaveBlock(context.Background(), &eth.SignedBeaconBlock{
+		Block: &eth.BeaconBlock{
+			Slot: 0,
+		}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	st, err := stateTrie.InitializeFromProto(&p2ppb.BeaconState{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return &mock.ChainService{
+		State: st,
+		Root:  genesisRoot[:],
+		DB:    beaconDB,
+	}, p, beaconDB
 }

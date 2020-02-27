@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"sort"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -100,13 +99,6 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			time.After(refreshTime)
 			continue
 		}
-
-		// Since the block responses were appended to the list, we must sort them in order to
-		// process sequentially. This method doesn't make much wall time compared to block
-		// processing.
-		sort.Slice(blocks, func(i, j int) bool {
-			return blocks[i].Block.Slot < blocks[j].Block.Slot
-		})
 
 		numProcessedBlocks := 0
 		for _, blk := range blocks {
