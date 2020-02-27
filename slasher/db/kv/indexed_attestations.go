@@ -105,11 +105,11 @@ func (db *Store) IdxAttsForTarget(ctx context.Context, targetEpoch uint64) ([]*e
 	return idxAtts, err
 }
 
-// IndexedAttestations retrieves all indexed attestations by target epoch
+// IndexedAttestationsForEpoch retrieves all indexed attestations by target epoch
 // by looking into a bucket of attestation roots by epoch first. Then, it
 // retrieves all attestations that match that list of roots.
-func (db *Store) IndexedAttestations(ctx context.Context, targetEpoch uint64) ([]*ethpb.IndexedAttestation, error) {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.IndexedAttestations")
+func (db *Store) IndexedAttestationsForEpoch(ctx context.Context, targetEpoch uint64) ([]*ethpb.IndexedAttestation, error) {
+	ctx, span := trace.StartSpan(ctx, "SlasherDB.IndexedAttestationsForEpoch")
 	defer span.End()
 	var idxAtts []*ethpb.IndexedAttestation
 	key := bytesutil.Bytes8(targetEpoch)
