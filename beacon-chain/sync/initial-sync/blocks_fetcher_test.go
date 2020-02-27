@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/kevinms/leakybucket-go"
+	"github.com/libp2p/go-libp2p-core/peer"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -326,6 +327,84 @@ func TestBlocksFetcher(t *testing.T) {
 			}
 
 			dbtest.TeardownDB(t, beaconDB)
+		})
+	}
+}
+func TestSelectFailOverPeer(t *testing.T) {
+	type args struct {
+		excludedPID peer.ID
+		peers       []peer.ID
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    peer.ID
+		wantErr error
+	}{
+		{
+			name: "No peers provided",
+			args: args{
+				excludedPID: "abc",
+				peers:       []peer.ID{},
+			},
+			want:    "",
+			wantErr: errNotEnoughPeers,
+		},
+		{
+			name: "Single peer which needs to be excluded",
+			args: args{
+				excludedPID: "abc",
+				peers: []peer.ID{
+					"abc",
+				},
+			},
+			want:    "",
+			wantErr: errNotEnoughPeers,
+		},
+		{
+			name: "Single peer available",
+			args: args{
+				excludedPID: "abc",
+				peers: []peer.ID{
+					"cde",
+				},
+			},
+			want:    "cde",
+			wantErr: nil,
+		},
+		{
+			name: "Two peers available",
+			args: args{
+				excludedPID: "abc",
+				peers: []peer.ID{
+					"abc", "cde",
+				},
+			},
+			want:    "cde",
+			wantErr: nil,
+		},
+		{
+			name: "Multiple peers available",
+			args: args{
+				excludedPID: "abc",
+				peers: []peer.ID{
+					"abc", "cde", "cde", "cde",
+				},
+			},
+			want:    "cde",
+			wantErr: nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := selectFailOverPeer(tt.args.excludedPID, tt.args.peers)
+			if err != nil && err != tt.wantErr {
+				t.Errorf("selectFailOverPeer() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("selectFailOverPeer() got = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }

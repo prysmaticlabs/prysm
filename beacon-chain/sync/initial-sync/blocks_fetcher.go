@@ -22,6 +22,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var errNotEnoughPeers = errors.New("not enough peers left to request blocks")
+
 // blocksFetcherConfig is a config to setup the block fetcher.
 type blocksFetcherConfig struct {
 	ctx         context.Context
@@ -328,4 +330,25 @@ func (f *blocksFetcher) highestFinalizedEpoch() uint64 {
 	}
 
 	return highest
+}
+
+// selectFailOverPeer randomly selects fail over peer from the list of available peers.
+func selectFailOverPeer(excludedPID peer.ID, peers []peer.ID) (peer.ID, error) {
+	for i, pid := range peers {
+		if pid == excludedPID {
+			peers = append(peers[:i], peers[i+1:]...)
+			break
+		}
+	}
+
+	if (len(peers) - 1) < flags.Get().MinimumSyncPeers {
+		return "", errNotEnoughPeers
+	}
+
+	randGenerator := rand.New(rand.NewSource(time.Now().Unix()))
+	randGenerator.Shuffle(len(peers), func(i, j int) {
+		peers[i], peers[j] = peers[j], peers[i]
+	})
+
+	return peers[0], nil
 }
