@@ -2,29 +2,25 @@ package beaconclient
 
 import (
 	"context"
-	"flag"
 	"reflect"
 	"strconv"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	logTest "github.com/sirupsen/logrus/hooks/test"
+
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
-	logTest "github.com/sirupsen/logrus/hooks/test"
-	"github.com/urfave/cli"
 )
 
 func TestService_RequestHistoricalAttestations(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	app := cli.NewApp()
-	set := flag.NewFlagSet("test", 0)
-	c := cli.NewContext(app, set, nil)
-	db := testDB.SetupSlasherDB(t, c)
+	db := testDB.SetupSlasherDB(t, false)
 	defer testDB.TeardownSlasherDB(t, db)
 	client := mock.NewMockBeaconChainClient(ctrl)
 

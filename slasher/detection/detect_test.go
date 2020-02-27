@@ -87,6 +87,7 @@ func TestDetect_detectSurroundVotes(t *testing.T) {
 			}
 
 			slashableIndices := sliceutil.IntersectionUint64(tt.savedAtt.AttestingIndices, tt.incomingAtt.AttestingIndices)
+			t.Log(slashableIndices)
 			for _, valIdx := range slashableIndices {
 				slashings, err := ds.detectSurroundVotes(ctx, valIdx, tt.incomingAtt)
 				if err != nil {
