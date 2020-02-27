@@ -2,11 +2,12 @@ package detection
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"github.com/prysmaticlabs/prysm/slasher/detection/attestations"
+	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 )
 
 func (ds *Service) detectAttesterSlashings(
@@ -54,13 +55,14 @@ func (ds *Service) detectSurroundVotes(
 		validatorIdx,
 		incomingAtt.Data,
 	)
+	fmt.Println(res)
 	if err != nil {
 		return nil, err
 	}
 	if res == nil {
 		return nil, nil
 	}
-	if res.Kind != attestations.SurroundVote {
+	if res.Kind != types.SurroundVote {
 		return nil, nil
 	}
 	if res.SlashableEpoch == 0 {
@@ -68,6 +70,7 @@ func (ds *Service) detectSurroundVotes(
 	}
 	var slashings []*ethpb.AttesterSlashing
 	otherAtts, err := ds.slasherDB.IndexedAttestationsForEpoch(ctx, res.SlashableEpoch)
+	fmt.Println(len(otherAtts))
 	if err != nil {
 		return nil, err
 	}
@@ -75,21 +78,27 @@ func (ds *Service) detectSurroundVotes(
 		if att.Data == nil {
 			continue
 		}
-		if len(sliceutil.IntersectionUint64(att.AttestingIndices, incomingAtt.AttestingIndices)) > 0 {
-			if isSurrounding(incomingAtt, att) || isSurrounded(incomingAtt, att) {
-				slashings = append(slashings, &ethpb.AttesterSlashing{
-					Attestation_1: incomingAtt,
-					Attestation_2: att,
-				})
-				log.Warnf("Found a surround vote: %v", slashings)
-			}
+
+		// If there are no shared indices, there is no validator to slash.
+		if len(sliceutil.IntersectionUint64(att.AttestingIndices, incomingAtt.AttestingIndices)) < 1 {
+			continue
+		}
+		fmt.Println("yess")
+
+		fmt.Printf("%d -> %d\n", att.Data.Source.Epoch, att.Data.Target.Epoch)
+		fmt.Printf("%d -> %d\n", incomingAtt.Data.Source.Epoch, incomingAtt.Data.Target.Epoch)
+		if isSurrounding(att, incomingAtt) || isSurrounded(att, incomingAtt) {
+			fmt.Println("yessdd")
+
+			slashings = append(slashings, &ethpb.AttesterSlashing{
+				Attestation_1: att,
+				Attestation_2: incomingAtt,
+			})
+			log.Warnf("Found a surround vote: %v", slashings)
 		}
 	}
-	// No need to update spans if a slashable event was found.
 	if len(slashings) == 0 {
-		if updateErr := ds.minMaxSpanDetector.UpdateSpans(ctx, incomingAtt); updateErr != nil {
-			return nil, updateErr
-		}
+		return nil, errors.New("unexpected false positive in surround vote detection")
 	}
 	return slashings, nil
 }

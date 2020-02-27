@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations"
+	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -26,7 +27,7 @@ type Service struct {
 	beaconClient          *beaconclient.Service
 	attesterSlashingsFeed *event.Feed
 	proposerSlashingsFeed *event.Feed
-	minMaxSpanDetector    *attestations.SpanDetector
+	minMaxSpanDetector    iface.SpanDetector
 }
 
 // Config options for the detection service.

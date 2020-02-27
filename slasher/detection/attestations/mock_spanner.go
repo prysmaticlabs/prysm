@@ -20,20 +20,26 @@ type MockSpanDetector struct {
 	lock  sync.RWMutex
 }
 
-// DetectSlashingForValidator uses a validator index and its corresponding
-// min-max spans during an epoch to detect an epoch in which the validator
-// committed a slashable attestation.
+// DetectSlashingForValidator mocks a detected slashing, if the sent attestation data
+// has a target epoch of 0, nothing will be detected. If the send attestation data has an
+// epoch greater than 5, it will be "detect" a surround vote for the target epoch - 1.
+// Lastly, if it has a target epoch less than 5, it will "detect" a double vote for the target epoch.
 func (s *MockSpanDetector) DetectSlashingForValidator(
 	ctx context.Context,
 	validatorIdx uint64,
 	attData *ethpb.AttestationData,
 ) (*types.DetectionResult, error) {
-	if attData.Target.Epoch == 0 {
+	if attData.Source.Epoch == 0 {
 		return nil, nil
-	} else if attData.Target.Epoch > 5 {
+	} else if attData.Target.Epoch > 12 { // surrounding a saved attestation.
 		return &types.DetectionResult{
 			Kind:           types.SurroundVote,
-			SlashableEpoch: attData.Target.Epoch,
+			SlashableEpoch: attData.Target.Epoch - 1,
+		}, nil
+	} else if attData.Target.Epoch > 6 { // surrounded a saved attestation.
+		return &types.DetectionResult{
+			Kind:           types.SurroundVote,
+			SlashableEpoch: attData.Target.Epoch + 1,
 		}, nil
 	} else {
 		return &types.DetectionResult{
