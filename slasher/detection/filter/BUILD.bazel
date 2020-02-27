@@ -1,0 +1,22 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["filter.go"],
+    importpath = "github.com/prysmaticlabs/prysm/slasher/detection/filter",
+    visibility = ["//slasher:__subpackages__"],
+    deps = [
+        "//shared/hashutil:go_default_library",
+        "@com_github_spaolacci_murmur3//:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["filter_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
+    ],
+)
