@@ -161,6 +161,7 @@ func (s *SlasherNode) registerBeaconClientService(ctx *cli.Context) error {
 
 	bs := beaconclient.NewBeaconClientService(context.Background(), &beaconclient.Config{
 		BeaconCert:            beaconCert,
+		SlasherDB:             s.db,
 		BeaconProvider:        beaconProvider,
 		AttesterSlashingsFeed: s.attesterSlashingsFeed,
 		ProposerSlashingsFeed: s.proposerSlashingsFeed,

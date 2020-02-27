@@ -2,21 +2,15 @@ package attestations
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"testing"
 
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
-	"github.com/prysmaticlabs/prysm/slasher/flags"
-	"github.com/urfave/cli"
 )
 
 func BenchmarkMinSpan(b *testing.B) {
 	diffs := []uint64{2, 10, 100, 1000, 10000, 53999}
-	app := cli.NewApp()
-	set := flag.NewFlagSet("test", 0)
-	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
-	db := testDB.SetupSlasherDB(b, cli.NewContext(app, set, nil))
+	db := testDB.SetupSlasherDB(b, true)
 	defer testDB.TeardownSlasherDB(b, db)
 	ctx := context.Background()
 
@@ -38,10 +32,7 @@ func BenchmarkMinSpan(b *testing.B) {
 
 func BenchmarkMaxSpan(b *testing.B) {
 	diffs := []uint64{2, 10, 100, 1000, 10000, 53999}
-	app := cli.NewApp()
-	set := flag.NewFlagSet("test", 0)
-	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
-	db := testDB.SetupSlasherDB(b, cli.NewContext(app, set, nil))
+	db := testDB.SetupSlasherDB(b, true)
 	defer testDB.TeardownSlasherDB(b, db)
 	ctx := context.Background()
 
@@ -63,10 +54,7 @@ func BenchmarkMaxSpan(b *testing.B) {
 
 func BenchmarkDetectSpan(b *testing.B) {
 	diffs := []uint64{2, 10, 100, 1000, 10000, 53999}
-	app := cli.NewApp()
-	set := flag.NewFlagSet("test", 0)
-	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
-	db := testDB.SetupSlasherDB(b, cli.NewContext(app, set, nil))
+	db := testDB.SetupSlasherDB(b, true)
 	defer testDB.TeardownSlasherDB(b, db)
 	ctx := context.Background()
 
