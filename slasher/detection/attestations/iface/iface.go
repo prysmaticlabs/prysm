@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 )
 
+// SpanDetector defines an interface for Spanners to follow to allow mocks.
 type SpanDetector interface {
 	// Read functions.
 	DetectSlashingForValidator(
