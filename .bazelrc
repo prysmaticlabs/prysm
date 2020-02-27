@@ -31,11 +31,20 @@ test --define kafka_enabled=false
 run --define kafka_enabled=false
 
 
+# use multi-arch toolchain
+build:cross --crosstool_top=//tools/cross-toolchain:multiarch_toolchain
+
 # toolchain build debug config
 build:debug --sandbox_debug
 build:debug --toolchain_resolution_debug
 build:debug --verbose_failures
 
+# Docker Sandbox Mode - Note all docker sandbox configs must run from a linux x86_64 host
+build:docker-sandbox --experimental_docker_image=suburbandad/cross-clang-10:latest
+build:docker-sandbox --spawn_strategy=docker --strategy=Javac=docker --genrule_strategy=docker
+build:docker-sandbox --define=EXECUTOR=remote
+build:docker-sandbox --experimental_docker_verbose
+build:docker-sandbox --experimental_enable_docker_sandbox
 # linux_amd64 conifg for cross compiler toolchain, not strictly necessary since host/exec env is amd64
 build:linux_amd64 --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64_cgo
 
@@ -48,7 +57,7 @@ build:linux_amd64_docker --config=linux_amd64_debug
 build:linux_amd64_docker --config=docker-sandbox
 
 # linux_arm64 conifg for cross compiler toolchain
-build:linux_arm64 --crosstool_top=//tools/cross-toolchain:multiarch_toolchain
+build:linux_arm64 --config=cross
 build:linux_arm64 --platforms=@io_bazel_rules_go//go/toolchain:linux_arm64_cgo
 build:linux_arm64 --copt=-funsafe-math-optimizations
 build:linux_arm64 --copt=-ftree-vectorize
@@ -65,9 +74,15 @@ build:linux_arm64_debug --config=debug
 build:linux_arm64_docker --config=linux_arm64_debug
 build:linux_arm64_docker --config=docker-sandbox
 
-# Docker Sandbox Mode - Note all docker sandbox configs must run from a linux x86_64 host
-build:docker-sandbox --experimental_docker_image=suburbandad/cross-clang-10:latest
-build:docker-sandbox --spawn_strategy=docker --strategy=Javac=docker --genrule_strategy=docker
-build:docker-sandbox --define=EXECUTOR=remote
-build:docker-sandbox --experimental_docker_verbose
-build:docker-sandbox --experimental_enable_docker_sandbox
+# osx_amd64 config for cross compiler toolchain
+build:osx_amd64 --config=cross
+build:osx_amd64 --platforms=@io_bazel_rules_go//go/toolchain:darwin_amd64_cgo
+build:osx_amd64 --compiler=osxcross
+
+# osx_amd64 debug config
+build:osx_amd64_debug --config=debug
+build:osx_amd64_debug --config=osx_amd64
+
+# osx_amd64 docker sandbox build config
+build:osx_amd64_docker --config=osx_amd64_debug
+build:osx_amd64_docker --config=docker-sandbox
