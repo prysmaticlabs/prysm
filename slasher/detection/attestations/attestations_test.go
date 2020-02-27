@@ -193,6 +193,7 @@ func init() {
 }
 
 func TestServer_UpdateMaxEpochSpan(t *testing.T) {
+	t.Skip("Tests are deprecated due to new span implementation")
 	db := testDB.SetupSlasherDB(t, true)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
@@ -223,6 +224,7 @@ func TestServer_UpdateMaxEpochSpan(t *testing.T) {
 }
 
 func TestServer_UpdateMinEpochSpan(t *testing.T) {
+	t.Skip("Tests are deprecated due to new span implementation")
 	db := testDB.SetupSlasherDB(t, true)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
