@@ -21,7 +21,7 @@ func (f BloomFilter) String() string {
 	return string(s)
 }
 
-func TestFilter_OK(t *testing.T) {
+func TestBloomFilter_OK(t *testing.T) {
 	attData := &ethpb.AttestationData{
 		Slot:           4,
 		CommitteeIndex: 2,
@@ -108,7 +108,7 @@ func TestFilter_OK(t *testing.T) {
 	}
 }
 
-func TestFilter_NoCollisions(t *testing.T) {
+func TestBloomFilter_NoCollisions(t *testing.T) {
 	attData := &ethpb.AttestationData{
 		Slot:           4,
 		CommitteeIndex: 2,
@@ -148,7 +148,7 @@ func TestFilter_NoCollisions(t *testing.T) {
 	}
 }
 
-func TestFilter_Output(t *testing.T) {
+func TestBloomFilter_Output(t *testing.T) {
 	testCases := []struct {
 		name string
 		key  string
@@ -195,7 +195,7 @@ func TestFilter_Output(t *testing.T) {
 	}
 }
 
-func BenchmarkNewFilter(b *testing.B) {
+func BenchmarkNewBloomFilter(b *testing.B) {
 	attData := &ethpb.AttestationData{
 		Slot:           4,
 		CommitteeIndex: 2,
