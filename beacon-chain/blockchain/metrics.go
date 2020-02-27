@@ -1,4 +1,4 @@
-package metrics
+package blockchain
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
@@ -19,8 +19,7 @@ var (
 		Name: "beacon_head_slot",
 		Help: "Slot of the head block of the beacon chain",
 	})
-	// CompetingBlks is the number of the competing blocks happened over time.
-	CompetingBlks = promauto.NewCounter(prometheus.CounterOpts{
+	competingBlks = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "competing_blocks",
 		Help: "The # of blocks received and processed from a competing chain",
 	})
@@ -82,8 +81,8 @@ var (
 	})
 )
 
-// ReportSlotMetrics reports slot related metrics.
-func ReportSlotMetrics(currentSlot uint64, headSlot uint64, finalizedCheckpoint *ethpb.Checkpoint) {
+// reportSlotMetrics reports slot related metrics.
+func reportSlotMetrics(currentSlot uint64, headSlot uint64, finalizedCheckpoint *ethpb.Checkpoint) {
 	beaconSlot.Set(float64(currentSlot))
 	beaconHeadSlot.Set(float64(headSlot))
 	if finalizedCheckpoint != nil {
@@ -92,8 +91,8 @@ func ReportSlotMetrics(currentSlot uint64, headSlot uint64, finalizedCheckpoint 
 	}
 }
 
-// ReportEpochMetrics reports epoch related metrics.
-func ReportEpochMetrics(state *stateTrie.BeaconState) {
+// reportEpochMetrics reports epoch related metrics.
+func reportEpochMetrics(state *stateTrie.BeaconState) {
 	currentEpoch := state.Slot() / params.BeaconConfig().SlotsPerEpoch
 
 	// Validator instances
