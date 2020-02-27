@@ -99,7 +99,7 @@ func TestDetect_detectSurroundVotes(t *testing.T) {
 				for _, ss := range slashings {
 					slashingAtt1 := ss.Attestation_1
 					slashingAtt2 := ss.Attestation_2
-					if !isSurrounding(slashingAtt1, slashingAtt2) && !isSurrounded(slashingAtt1, slashingAtt2) {
+					if !isSurrounding(slashingAtt1, slashingAtt2) {
 						t.Fatalf(
 							"Expected slashing to be valid, received atts %d->%d and %d->%d",
 							slashingAtt2.Data.Source.Epoch,
