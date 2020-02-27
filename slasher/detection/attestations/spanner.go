@@ -163,7 +163,8 @@ func (s *SpanDetector) updateMinSpan(source uint64, target uint64, valIdx uint64
 	if source < 1 {
 		return
 	}
-	for epoch := source - 1; epoch >= 0; epoch-- {
+	for epochInt := int64(source - 1); epochInt >= 0; epochInt-- {
+		epoch := uint64(epochInt)
 		newMinSpan := uint16(target - epoch)
 		if sp := s.spans[epoch%numSpans]; sp == nil {
 			s.spans[epoch%numSpans] = make(map[uint64][2]uint16)
