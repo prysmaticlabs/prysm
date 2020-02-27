@@ -1,8 +1,7 @@
-package aggregator
+package validator
 
 import (
 	"context"
-	"encoding/binary"
 	"reflect"
 	"strings"
 	"testing"
@@ -18,7 +17,6 @@ import (
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -28,13 +26,6 @@ import (
 func init() {
 	// Use minimal config to reduce test setup time.
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
-}
-
-// pubKey is a helper to generate a well-formed public key.
-func pubKey(i uint64) []byte {
-	pubKey := make([]byte, params.BeaconConfig().BLSPubkeyLength)
-	binary.LittleEndian.PutUint64(pubKey, uint64(i))
-	return pubKey
 }
 
 func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
@@ -50,7 +41,7 @@ func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
 		BeaconDB:    db,
 	}
 
-	req := &pb.AggregationRequest{CommitteeIndex: 1}
+	req := &ethpb.AggregationRequest{CommitteeIndex: 1}
 	wanted := "Syncing to latest head, not ready to respond"
 	if _, err := aggregatorServer.SubmitAggregateAndProof(ctx, req); !strings.Contains(err.Error(), wanted) {
 		t.Error("Did not receive wanted error")
@@ -66,7 +57,7 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
 
-	aggregatorServer := &Server{
+	server := &Server{
 		HeadFetcher: &mock.ChainService{State: s},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		BeaconDB:    db,
@@ -74,9 +65,9 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'A'}, 0)
-	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey(3)}
+	req := &ethpb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey(3)}
 	wanted := "Could not locate validator index in DB"
-	if _, err := aggregatorServer.SubmitAggregateAndProof(ctx, req); !strings.Contains(err.Error(), wanted) {
+	if _, err := server.SubmitAggregateAndProof(ctx, req); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Did not receive wanted error: expected %v, received %v", wanted, err.Error())
 	}
 }
@@ -90,7 +81,7 @@ func TestSubmitAggregateAndProof_IsAggregator(t *testing.T) {
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
 
-	aggregatorServer := &Server{
+	server := &Server{
 		HeadFetcher: &mock.ChainService{State: s},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		BeaconDB:    db,
@@ -100,12 +91,12 @@ func TestSubmitAggregateAndProof_IsAggregator(t *testing.T) {
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'A'}, 0)
 	pubKey := pubKey(1)
-	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
+	req := &ethpb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 	if err := db.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := aggregatorServer.SubmitAggregateAndProof(ctx, req); err != nil {
+	if _, err := server.SubmitAggregateAndProof(ctx, req); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -115,7 +106,7 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 	c := params.MinimalSpecConfig()
 	c.TargetAggregatorsPerCommittee = 16
 	params.OverrideBeaconConfig(c)
-	defer params.UseMainnetConfig()
+	defer params.UseMinimalConfig()
 
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
@@ -132,13 +123,13 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		BeaconDB:    db,
 		AttPool:     attestations.NewPool(),
-		P2p:         &mockp2p.MockBroadcaster{},
+		P2P:         &mockp2p.MockBroadcaster{},
 	}
 
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'B'}, 0)
 	pubKey := pubKey(2)
-	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
+	req := &ethpb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 	if err := db.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
 		t.Fatal(err)
 	}
@@ -169,7 +160,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	c := params.MinimalSpecConfig()
 	c.TargetAggregatorsPerCommittee = 16
 	params.OverrideBeaconConfig(c)
-	defer params.UseMainnetConfig()
+	defer params.UseMinimalConfig()
 
 	db := dbutil.SetupDB(t)
 	defer dbutil.TeardownDB(t, db)
@@ -185,13 +176,13 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		BeaconDB:    db,
 		AttPool:     attestations.NewPool(),
-		P2p:         &mockp2p.MockBroadcaster{},
+		P2P:         &mockp2p.MockBroadcaster{},
 	}
 
 	priv := bls.RandKey()
 	sig := priv.Sign([]byte{'B'}, 0)
 	pubKey := pubKey(2)
-	req := &pb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
+	req := &ethpb.AggregationRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey}
 	if err := db.SaveValidatorIndex(ctx, pubKey, 100); err != nil {
 		t.Fatal(err)
 	}
