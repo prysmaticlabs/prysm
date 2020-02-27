@@ -157,6 +157,9 @@ func (db *Store) SaveIncomingIndexedAttestationsForEpoch(ctx context.Context, at
 		for i := 0; i < len(atts); i++ {
 			targetEpochKey := bytesutil.Bytes8(atts[i].Data.Target.Epoch)
 			attRoots := rootsBkt.Get(targetEpochKey)
+			if attRoots == nil {
+				attRoots = []byte{}
+			}
 			if err := rootsBkt.Put(targetEpochKey, append(attRoots, encodedRoots[i]...)); err != nil {
 				return err
 			}

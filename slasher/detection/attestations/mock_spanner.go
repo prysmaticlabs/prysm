@@ -30,19 +30,24 @@ func (s *MockSpanDetector) DetectSlashingForValidator(
 	validatorIdx uint64,
 	attData *ethpb.AttestationData,
 ) (*types.DetectionResult, error) {
-	if attData.Source.Epoch == 0 {
+	switch {
+	// If the source epoch is 0, don't find a slashing.
+	case attData.Source.Epoch == 0:
 		return nil, nil
-	} else if attData.Target.Epoch > 12 { // surrounding a saved attestation.
+	// If the target epoch is > 12, it will "detect" a surrounded saved attestation.
+	case attData.Target.Epoch > 12:
 		return &types.DetectionResult{
 			Kind:           types.SurroundVote,
 			SlashableEpoch: attData.Target.Epoch - 1,
 		}, nil
-	} else if attData.Target.Epoch >= 6 { // surrounded a saved attestation.
+	// If the target epoch is >= 6 < 12, it will "detect" a surrounding saved attestation.
+	case attData.Target.Epoch >= 6:
 		return &types.DetectionResult{
 			Kind:           types.SurroundVote,
 			SlashableEpoch: attData.Target.Epoch + 1,
 		}, nil
-	} else {
+	// If the target epoch is less than 6, it will "detect" a double vote.
+	default:
 		return &types.DetectionResult{
 			Kind:           types.DoubleVote,
 			SlashableEpoch: attData.Target.Epoch,
