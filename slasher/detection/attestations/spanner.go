@@ -10,33 +10,13 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/iface"
+	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 	"github.com/prysmaticlabs/prysm/slasher/detection/filter"
 	"go.opencensus.io/trace"
 )
 
-// DetectionKind defines an enum type that
-// gives us information on the type of slashable offense
-// found when analyzing validator min-max spans.
-type DetectionKind int
-
-const (
-	// DoubleVote denotes a slashable offense in which
-	// a validator cast two conflicting attestations within
-	// the same target epoch.
-	DoubleVote DetectionKind = iota
-	// SurroundVote denotes a slashable offense in which
-	// a validator surrounded or was surrounded by a previous
-	// attestation created by the same validator.
-	SurroundVote
-)
-
-// DetectionResult tells us the kind of slashable
-// offense found from detecting on min-max spans +
-// the slashable epoch for the offense.
-type DetectionResult struct {
-	Kind           DetectionKind
-	SlashableEpoch uint64
-}
+var _ = iface.SpanDetector(&SpanDetector{})
 
 // SpanDetector defines a struct which can detect slashable
 // attestation offenses by tracking validator min-max
@@ -63,7 +43,7 @@ func (s *SpanDetector) DetectSlashingForValidator(
 	ctx context.Context,
 	validatorIdx uint64,
 	attData *ethpb.AttestationData,
-) (*DetectionResult, error) {
+) (*types.DetectionResult, error) {
 	ctx, span := trace.StartSpan(ctx, "detection.DetectSlashingForValidator")
 	defer span.End()
 	sourceEpoch := attData.Source.Epoch
@@ -83,16 +63,16 @@ func (s *SpanDetector) DetectSlashingForValidator(
 	if sp := s.spans[sourceEpoch%numSpans]; sp != nil {
 		minSpan := sp[validatorIdx][0]
 		if minSpan > 0 && minSpan < distance {
-			return &DetectionResult{
-				Kind:           SurroundVote,
+			return &types.DetectionResult{
+				Kind:           types.SurroundVote,
 				SlashableEpoch: sourceEpoch + uint64(minSpan),
 			}, nil
 		}
 
 		maxSpan := sp[validatorIdx][1]
 		if maxSpan > distance {
-			return &DetectionResult{
-				Kind:           SurroundVote,
+			return &types.DetectionResult{
+				Kind:           types.SurroundVote,
 				SlashableEpoch: sourceEpoch + uint64(maxSpan),
 			}, nil
 		}
@@ -116,8 +96,8 @@ func (s *SpanDetector) DetectSlashingForValidator(
 			return nil, err
 		}
 		if !found {
-			return &DetectionResult{
-				Kind:           DoubleVote,
+			return &types.DetectionResult{
+				Kind:           types.DoubleVote,
 				SlashableEpoch: targetEpoch,
 			}, nil
 		}

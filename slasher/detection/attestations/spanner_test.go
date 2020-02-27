@@ -8,6 +8,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 )
 
 func TestSpanDetector_DetectSlashingForValidator_Double(t *testing.T) {
@@ -230,11 +231,11 @@ func TestSpanDetector_DetectSlashingForValidator_Double(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				var want *DetectionResult
+				var want *types.DetectionResult
 				if tt.slashCount > 0 {
 					slashTotal++
-					want = &DetectionResult{
-						Kind:           DoubleVote,
+					want = &types.DetectionResult{
+						Kind:           types.DoubleVote,
 						SlashableEpoch: tt.incomingAtt.Data.Target.Epoch,
 					}
 				}
@@ -469,8 +470,8 @@ func TestSpanDetector_DetectSlashingForValidator_Surround(t *testing.T) {
 				t.Fatalf("Did not want validator to be slashed but found slashable offense: %v", res)
 			}
 			if tt.shouldSlash {
-				want := &DetectionResult{
-					Kind:           SurroundVote,
+				want := &types.DetectionResult{
+					Kind:           types.SurroundVote,
 					SlashableEpoch: tt.slashableEpoch,
 				}
 				if !reflect.DeepEqual(res, want) {
@@ -575,8 +576,8 @@ func TestSpanDetector_DetectSlashingForValidator_MultipleValidators(t *testing.T
 					t.Fatalf("Did not want validator to be slashed but found slashable offense: %v", res)
 				}
 				if tt.shouldSlash[valIdx] {
-					want := &DetectionResult{
-						Kind:           SurroundVote,
+					want := &types.DetectionResult{
+						Kind:           types.SurroundVote,
 						SlashableEpoch: tt.slashableEpochs[valIdx],
 					}
 					if !reflect.DeepEqual(res, want) {
