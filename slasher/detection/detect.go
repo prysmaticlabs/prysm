@@ -47,8 +47,7 @@ func (ds *Service) detectSurroundVotes(
 	res, err := ds.minMaxSpanDetector.DetectSlashingForValidator(
 		ctx,
 		validatorIdx,
-		incomingAtt.Data.Source.Epoch,
-		incomingAtt.Data.Target.Epoch,
+		incomingAtt.Data,
 	)
 	if err != nil {
 		return nil, err
