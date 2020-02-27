@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations"
 )
 
@@ -19,19 +20,26 @@ func (ds *Service) detectAttesterSlashings(
 		if err != nil {
 			return nil, errors.Wrap(err, "could not detect surround votes on attestation")
 		}
-		// TODO(#4589): Add double voting detection.
-		slashings = append(slashings, surroundedAttSlashings...)
+		doubleAttSlashings, err := ds.detectDoubleVotes(ctx, att)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not detect double votes on attestation")
+		}
+		if len(surroundedAttSlashings) > 0 {
+			log.Infof("Found %d slashings for val idx %d", len(surroundedAttSlashings), valIdx)
+		}
+		newSlashings := append(surroundedAttSlashings, doubleAttSlashings...)
+		slashings = append(slashings, newSlashings...)
 	}
 	return slashings, nil
 }
 
 // detectDoubleVote --
-// TODO(#4836): Implement.
+// TODO(#4589): Implement.
 func (ds *Service) detectDoubleVotes(
 	ctx context.Context,
 	att *ethpb.IndexedAttestation,
 ) ([]*ethpb.AttesterSlashing, error) {
-	return nil, errors.New("unimplemented")
+	return nil, nil
 }
 
 // detectSurroundVotes cross references the passed in attestation with the requested validator's
@@ -41,9 +49,6 @@ func (ds *Service) detectSurroundVotes(
 	validatorIdx uint64,
 	incomingAtt *ethpb.IndexedAttestation,
 ) ([]*ethpb.AttesterSlashing, error) {
-	if updateErr := ds.minMaxSpanDetector.UpdateSpans(ctx, incomingAtt); updateErr != nil {
-		return nil, updateErr
-	}
 	res, err := ds.minMaxSpanDetector.DetectSlashingForValidator(
 		ctx,
 		validatorIdx,
@@ -62,7 +67,7 @@ func (ds *Service) detectSurroundVotes(
 		return nil, nil
 	}
 	var slashings []*ethpb.AttesterSlashing
-	otherAtts, err := ds.slasherDB.IndexedAttestations(ctx, res.SlashableEpoch)
+	otherAtts, err := ds.slasherDB.IndexedAttestationsForEpoch(ctx, res.SlashableEpoch)
 	if err != nil {
 		return nil, err
 	}
@@ -70,11 +75,20 @@ func (ds *Service) detectSurroundVotes(
 		if att.Data == nil {
 			continue
 		}
-		if isSurrounding(incomingAtt, att) || isSurrounded(incomingAtt, att) {
-			slashings = append(slashings, &ethpb.AttesterSlashing{
-				Attestation_1: incomingAtt,
-				Attestation_2: att,
-			})
+		if len(sliceutil.IntersectionUint64(att.AttestingIndices, incomingAtt.AttestingIndices)) > 0 {
+			if isSurrounding(incomingAtt, att) || isSurrounded(incomingAtt, att) {
+				slashings = append(slashings, &ethpb.AttesterSlashing{
+					Attestation_1: incomingAtt,
+					Attestation_2: att,
+				})
+				log.Warnf("Found a surround vote: %v", slashings)
+			}
+		}
+	}
+	// No need to update spans if a slashable event was found.
+	if len(slashings) == 0 {
+		if updateErr := ds.minMaxSpanDetector.UpdateSpans(ctx, incomingAtt); updateErr != nil {
+			return nil, updateErr
 		}
 	}
 	return slashings, nil

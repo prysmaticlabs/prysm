@@ -153,6 +153,11 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 		return nil, err
 	}
 
+	// Delete the processed block attester slashings from slashings pool.
+	for i := 0; i < len(b.Body.AttesterSlashings); i++ {
+		s.slashingPool.MarkIncludedAttesterSlashing(b.Body.AttesterSlashings[i])
+	}
+
 	return postState, nil
 }
 
