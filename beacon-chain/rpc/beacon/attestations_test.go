@@ -945,11 +945,11 @@ func TestServer_StreamIndexedAttestations_OnSlotTick(t *testing.T) {
 					},
 				},
 			}
-			encoded, err := ssz.Marshal(attExample.Data)
+			encoded, err := helpers.ComputeSigningRoot(attExample.Data, []byte{})
 			if err != nil {
 				t.Fatal(err)
 			}
-			sig := privKeys[j].Sign(encoded, 0 /*domain*/)
+			sig := privKeys[j].Sign(encoded[:])
 			attExample.Signature = sig.Marshal()
 
 			var indexInCommittee uint64
