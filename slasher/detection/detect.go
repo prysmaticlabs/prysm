@@ -2,7 +2,6 @@ package detection
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -55,7 +54,6 @@ func (ds *Service) detectSurroundVotes(
 		validatorIdx,
 		incomingAtt.Data,
 	)
-	fmt.Println(res)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +68,6 @@ func (ds *Service) detectSurroundVotes(
 	}
 	var slashings []*ethpb.AttesterSlashing
 	otherAtts, err := ds.slasherDB.IndexedAttestationsForEpoch(ctx, res.SlashableEpoch)
-	fmt.Println(len(otherAtts))
 	if err != nil {
 		return nil, err
 	}
@@ -83,13 +80,8 @@ func (ds *Service) detectSurroundVotes(
 		if len(sliceutil.IntersectionUint64(att.AttestingIndices, incomingAtt.AttestingIndices)) < 1 {
 			continue
 		}
-		fmt.Println("yess")
 
-		fmt.Printf("%d -> %d\n", att.Data.Source.Epoch, att.Data.Target.Epoch)
-		fmt.Printf("%d -> %d\n", incomingAtt.Data.Source.Epoch, incomingAtt.Data.Target.Epoch)
 		if isSurrounding(att, incomingAtt) || isSurrounded(att, incomingAtt) {
-			fmt.Println("yessdd")
-
 			slashings = append(slashings, &ethpb.AttesterSlashing{
 				Attestation_1: att,
 				Attestation_2: incomingAtt,
