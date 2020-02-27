@@ -171,7 +171,7 @@ func (s *SpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttest
 	return nil
 }
 
-// markAttFilter sets third uint16 in the target epochs span to a bloom filter
+// markAttFilter sets the third uint16 in the target epochs span to a bloom filter
 // with the attestation data root as the key in set. After creating the []byte for the bloom filter,
 // it encoded into a uint16 to keep the data structure for the spanner simple and clean.
 // A bloom filter is used to prevent collision when using such a small data size.
