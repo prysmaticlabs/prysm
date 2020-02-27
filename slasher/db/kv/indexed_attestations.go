@@ -155,7 +155,7 @@ func (db *Store) SaveIncomingIndexedAttestationsByEpoch(ctx context.Context, att
 		rootsBkt := tx.Bucket(indexedAttestationsRootsByTargetBucket)
 		attsBkt := tx.Bucket(indexedAttestationsBucket)
 
-		// TODO(#4836: After cleaning up the old DB we should revisit this as long-term it will be very expensive.
+		// TODO(#4836): After cleaning up the old DB we should revisit this as long-term it will be very expensive.
 		for i := 0; i < len(atts); i++ {
 			targetEpochKey := bytesutil.Bytes8(atts[i].Data.Target.Epoch)
 			attRoots := rootsBkt.Get(targetEpochKey)
@@ -187,7 +187,7 @@ func (db *Store) SaveIncomingIndexedAttestationByEpoch(ctx context.Context, att 
 		rootsBkt := tx.Bucket(indexedAttestationsRootsByTargetBucket)
 		attsBkt := tx.Bucket(indexedAttestationsBucket)
 
-		// TODO(#4836: After cleaning up the old DB we should revisit this as long-term it will be very expensive.
+		// TODO(#4836): After cleaning up the old DB we should revisit this as long-term it will be very expensive.
 		targetEpochKey := bytesutil.Bytes8(att.Data.Target.Epoch)
 		attRoots := rootsBkt.Get(targetEpochKey)
 		if err := rootsBkt.Put(targetEpochKey, append(attRoots, root[:]...)); err != nil {
