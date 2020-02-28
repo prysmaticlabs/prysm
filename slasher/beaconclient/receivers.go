@@ -45,7 +45,7 @@ func (bs *Service) receiveBlocks(ctx context.Context) {
 func (bs *Service) receiveAttestations(ctx context.Context) {
 	ctx, span := trace.StartSpan(ctx, "beaconclient.receiveAttestations")
 	defer span.End()
-	stream, err := bs.beaconClient.StreamAttestations(ctx, &ptypes.Empty{})
+	stream, err := bs.beaconClient.StreamIndexedAttestations(ctx, &ptypes.Empty{})
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve attestations stream")
 		return
@@ -63,8 +63,13 @@ func (bs *Service) receiveAttestations(ctx context.Context) {
 		}
 		if err != nil {
 			log.WithError(err).Error("Could not receive attestations from beacon node")
+			return
 		}
 		log.WithField("slot", res.Data.Slot).Debug("Received attestation from beacon node")
+		if err := bs.slasherDB.SaveIncomingIndexedAttestationByEpoch(ctx, res); err != nil {
+			log.WithError(err).Error("Could not save indexed attestation")
+			continue
+		}
 		// We send the received attestation over the attestation feed.
 		bs.attestationFeed.Send(res)
 	}

@@ -29,7 +29,7 @@ func (bs *Service) RequestHistoricalAttestations(
 			PageToken: res.NextPageToken,
 		})
 		if err != nil {
-			return nil, errors.Wrapf(err, "Could not request indexed attestations for epoch: %d", epoch)
+			return nil, errors.Wrapf(err, "could not request indexed attestations for epoch: %d", epoch)
 		}
 		indexedAtts = append(indexedAtts, res.IndexedAttestations...)
 		log.Infof(
@@ -41,6 +41,9 @@ func (bs *Service) RequestHistoricalAttestations(
 		if res.NextPageToken == "" || res.TotalSize == 0 || len(indexedAtts) == int(res.TotalSize) {
 			break
 		}
+	}
+	if err := bs.slasherDB.SaveIncomingIndexedAttestationsByEpoch(ctx, indexedAtts); err != nil {
+		return nil, errors.Wrap(err, "could not save indexed attestations")
 	}
 	return indexedAtts, nil
 }
