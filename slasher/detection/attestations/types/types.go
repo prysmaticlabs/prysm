@@ -20,6 +20,8 @@ const (
 // offense found from detecting on min-max spans +
 // the slashable epoch for the offense.
 type DetectionResult struct {
-	Kind           DetectionKind
-	SlashableEpoch uint64
+	Kind            DetectionKind
+	SlashableEpoch  uint64
+	CommitteeIndex  uint64
+	AttestationSlot uint64
 }

@@ -6,13 +6,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/iface"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
-	"github.com/prysmaticlabs/prysm/slasher/detection/filter"
 	"go.opencensus.io/trace"
 )
 
@@ -79,28 +76,24 @@ func (s *SpanDetector) DetectSlashingForValidator(
 	}
 
 	if sp := s.spans[targetEpoch%numSpans]; sp != nil {
-		filterNum := sp[validatorIdx][2]
-		if filterNum == 0 {
+		committeeAndSlotNum := sp[validatorIdx][2]
+		if committeeAndSlotNum == 0 {
 			return nil, nil
 		}
-		filterBytes := make([]byte, 2)
-		binary.LittleEndian.PutUint16(filterBytes, filterNum)
-		attFilter := filter.BloomFilter(filterBytes)
 
-		attDataRoot, err := ssz.HashTreeRoot(attData)
-		if err != nil {
-			return nil, err
-		}
-		found, err := attFilter.Contains(attDataRoot[:])
-		if err != nil {
-			return nil, err
-		}
-		if !found {
-			return &types.DetectionResult{
-				Kind:           types.DoubleVote,
-				SlashableEpoch: targetEpoch,
-			}, nil
-		}
+		committeeAndSlotBytes := make([]byte, 2)
+		binary.LittleEndian.PutUint16(committeeAndSlotBytes, committeeAndSlotNum)
+
+		// Pack the committee and slot into a uint8. MAX_COMMITTEES_PER_SLOT is 64
+		committeeIndex := uint64(committeeAndSlotBytes[0] - 1)
+		slot := uint64(committeeAndSlotBytes[1] - 1)
+
+		return &types.DetectionResult{
+			Kind:            types.DoubleVote,
+			SlashableEpoch:  targetEpoch,
+			CommitteeIndex:  committeeIndex,
+			AttestationSlot: slot,
+		}, nil
 	}
 
 	return nil, nil
@@ -160,10 +153,8 @@ func (s *SpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttest
 	// each validator in attesting indices.
 	for i := 0; i < len(att.AttestingIndices); i++ {
 		valIdx := att.AttestingIndices[i]
-		// Mark the double vote filter.
-		if err := s.markAttFilter(att.Data, valIdx); err != nil {
-			return errors.Wrap(err, "failed to update attestation filter")
-		}
+		// Update the saved committee and slot for the received attestation so we can have more detail to find it in the DB.
+		s.updateCommitteeAndSlot(att.Data, valIdx)
 		// Update min and max spans.
 		s.updateMinSpan(source, target, valIdx)
 		s.updateMaxSpan(source, target, valIdx)
@@ -171,39 +162,30 @@ func (s *SpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttest
 	return nil
 }
 
-// markAttFilter sets the third uint16 in the target epochs span to a bloom filter
-// with the attestation data root as the key in set. After creating the []byte for the bloom filter,
-// it encoded into a uint16 to keep the data structure for the spanner simple and clean.
-// A bloom filter is used to prevent collision when using such a small data size.
-func (s *SpanDetector) markAttFilter(attData *ethpb.AttestationData, valIdx uint64) error {
+func (s *SpanDetector) updateCommitteeAndSlot(attData *ethpb.AttestationData, valIdx uint64) {
 	numSpans := uint64(len(s.spans))
 	target := attData.Target.Epoch
 
-	// Check if there is an existing bloom filter, if so, don't modify it.
+	// Check if there is already info saved in span[2].
 	if sp := s.spans[target%numSpans]; sp == nil {
 		s.spans[target%numSpans] = make(map[uint64][3]uint16)
 	}
-	filterNum := s.spans[target%numSpans][valIdx][2]
-	if filterNum != 0 {
-		return nil
+	committeeAndSlotNum := s.spans[target%numSpans][valIdx][2]
+	if committeeAndSlotNum != 0 {
+		return
 	}
 
-	// Generate the attestation data root and use it as the only key in the bloom filter.
-	attDataRoot, err := ssz.HashTreeRoot(attData)
-	if err != nil {
-		return err
-	}
-	attFilter, err := filter.NewBloomFilter(attDataRoot[:])
-	if err != nil {
-		return err
-	}
-	filterNum = binary.LittleEndian.Uint16(attFilter)
+	// Pack the committee and slot into a uint8. MAX_COMMITTEES_PER_SLOT is 64
+	committeeIndex := uint8(attData.CommitteeIndex % params.BeaconConfig().MaxCommitteesPerSlot)
+	slot := uint8(attData.Slot % params.BeaconConfig().SlotsPerEpoch)
+	// Small offset with 1 so 0 checks aren't a problem.
+	committeeAndSlotBytes := []uint8{committeeIndex + 1, slot + 1}
+	encodedCommitteeAndSlot := binary.LittleEndian.Uint16(committeeAndSlotBytes)
 
 	// Set the bloom filter back into the span for the epoch.
 	minSpan := s.spans[target%numSpans][valIdx][0]
 	maxSpan := s.spans[target%numSpans][valIdx][1]
-	s.spans[target%numSpans][valIdx] = [3]uint16{minSpan, maxSpan, filterNum}
-	return nil
+	s.spans[target%numSpans][valIdx] = [3]uint16{minSpan, maxSpan, encodedCommitteeAndSlot}
 }
 
 // Updates a min span for a validator index given a source and target epoch
