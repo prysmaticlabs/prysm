@@ -96,8 +96,8 @@ func TestComputeDomain_OK(t *testing.T) {
 		{epoch: 3, domainType: []byte{5, 0, 0, 0}, domain: []byte{5, 0, 0, 0, 0, 0, 0, 0}},
 	}
 	for _, tt := range tests {
-		if !bytes.Equal(bls.ComputeDomain(tt.domainType), tt.domain) {
-			t.Errorf("wanted domain version: %d, got: %d", tt.domain, bls.ComputeDomain(tt.domainType))
+		if !bytes.Equal(bls.ComputeDomain(tt.domainType, nil), tt.domain) {
+			t.Errorf("wanted domain version: %d, got: %d", tt.domain, bls.ComputeDomain(tt.domainType, nil))
 		}
 	}
 }

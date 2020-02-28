@@ -35,7 +35,7 @@ func DepositInput(depositKey *Key, withdrawalKey *Key, amountInGwei uint64) (*et
 		return nil, [32]byte{}, err
 	}
 
-	domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
+	domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit, nil)
 	root, err := ssz.HashTreeRoot(&pb.SigningRoot{ObjectRoot: sr[:], Domain: domain})
 	if err != nil {
 		return nil, [32]byte{}, err

@@ -225,7 +225,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 
 	sk := bls.RandKey()
 	deposit.Data.PublicKey = sk.PublicKey().Marshal()
-	signedRoot, err := helpers.ComputeSigningRoot(deposit.Data, bls.ComputeDomain(params.BeaconConfig().DomainDeposit))
+	signedRoot, err := helpers.ComputeSigningRoot(deposit.Data, bls.ComputeDomain(params.BeaconConfig().DomainDeposit, nil))
 	if err != nil {
 		t.Fatal(err)
 	}
