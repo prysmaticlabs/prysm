@@ -48,7 +48,7 @@ func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Att
 		// long range or intermediate forking. It simply logs a warning and returns nil
 		// as that's more appropriate than returning errors.
 		if err := s.updateHead(ctx, baseState.Balances()); err != nil {
-			log.Warn("Resolving fork due to new attestation: %v", err)
+			log.Warnf("Resolving fork due to new attestation: %v", err)
 			return nil
 		}
 	}
