@@ -267,7 +267,7 @@ func TestBlocksFetcherRoundRobin(t *testing.T) {
 
 				for {
 					select {
-					case resp, ok := <-fetcher.iter():
+					case resp, ok := <-fetcher.requestResponses():
 						if !ok { // channel closed, aggregate
 							return unionRespBlocks, nil
 						}
@@ -370,7 +370,7 @@ func TestHandleRequest(t *testing.T) {
 	select {
 	case <-ctx.Done():
 		t.Error(ctx.Err())
-	case resp := <-fetcher.iter():
+	case resp := <-fetcher.requestResponses():
 		if resp.err != nil {
 			t.Error(resp.err)
 		} else {

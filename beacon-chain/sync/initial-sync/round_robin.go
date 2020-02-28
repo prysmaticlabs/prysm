@@ -76,7 +76,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			select {
 			case <-ctx.Done():
 				return nil, ctx.Err()
-			case resp, ok := <-fetcher.iter(): // fetcher will stop when upstream ctx is closed
+			case resp, ok := <-fetcher.requestResponses():
 				if !ok {
 					return nil, errors.New("block fetcher is not running")
 				}

@@ -99,8 +99,8 @@ func (f *blocksFetcher) stop() {
 	}
 }
 
-// iter returns an outgoing channel, on which consumers are expected to constantly iterate for results/errors.
-func (f *blocksFetcher) iter() <-chan *fetchRequestResponse {
+// requestResponses exposes a channel into which fetcher pushes generated request responses.
+func (f *blocksFetcher) requestResponses() <-chan *fetchRequestResponse {
 	return f.receivedFetchResponses
 }
 
