@@ -8,7 +8,6 @@ import (
 	"math"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
-	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
