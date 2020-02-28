@@ -286,6 +286,8 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.DomainRandao = bytesutil.Bytes4(2)
 	minimalConfig.DomainDeposit = bytesutil.Bytes4(3)
 	minimalConfig.DomainVoluntaryExit = bytesutil.Bytes4(4)
+	minimalConfig.GenesisForkVersion = []byte{0, 0, 0, 1}
+	minimalConfig.MinGenesisDelay = 300
 
 	minimalConfig.DepositContractTreeDepth = 32
 	minimalConfig.FarFutureEpoch = 1<<64 - 1

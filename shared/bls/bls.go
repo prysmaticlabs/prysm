@@ -310,13 +310,18 @@ func Domain(domainType []byte, forkVersion []byte) []byte {
 // ComputeDomain returns the domain version for BLS private key to sign and verify with a zeroed 4-byte
 // array as the fork version.
 //
-// def compute_domain(domain_type: DomainType, fork_version: Version=Version()) -> Domain:
+// def compute_domain(domain_type: DomainType, fork_version: Optional[Version]=None) -> Domain:
 //    """
 //    Return the domain for the ``domain_type`` and ``fork_version``.
 //    """
+//    if fork_version is None:
+//        fork_version = GENESIS_FORK_VERSION
 //    return Domain(domain_type + fork_version)
-func ComputeDomain(domainType []byte) []byte {
-	return Domain(domainType, []byte{0, 0, 0, 0})
+func ComputeDomain(domainType []byte, forkVersion []byte) []byte {
+	if forkVersion == nil {
+		forkVersion = params.BeaconConfig().GenesisForkVersion
+	}
+	return Domain(domainType, forkVersion)
 }
 
 // HashWithDomain hashes 32 byte message and uint64 domain parameters a Fp2 element

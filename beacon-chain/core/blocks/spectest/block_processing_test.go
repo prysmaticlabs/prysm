@@ -34,6 +34,10 @@ func runBlockProcessingTest(t *testing.T, config string) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			if folder.Name() == "deposit_in_block" {
+				a := 2
+				_ = a
+			}
 			beaconStateBase := &pb.BeaconState{}
 			if err := ssz.Unmarshal(preBeaconStateFile, beaconStateBase); err != nil {
 				t.Fatalf("Failed to unmarshal: %v", err)
