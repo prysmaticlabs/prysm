@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/peer"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -250,7 +249,6 @@ func TestBlocksFetcherRoundRobin(t *testing.T) {
 				ctx:         ctx,
 				headFetcher: mc,
 				p2p:         p,
-				rateLimiter: leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksPerSecond, false /* deleteEmptyBuckets */),
 			})
 
 			fetcher.start()
@@ -269,8 +267,6 @@ func TestBlocksFetcherRoundRobin(t *testing.T) {
 
 				for {
 					select {
-					case <-time.After(5 * time.Second): // TODO(4815): Temporary safeguard, remove
-						t.Fatal("timeout")
 					case resp, ok := <-fetcher.iter():
 						if !ok { // channel closed, aggregate
 							return unionRespBlocks, nil
@@ -294,7 +290,7 @@ func TestBlocksFetcherRoundRobin(t *testing.T) {
 
 			maxExpectedBlocks := uint64(0)
 			for _, requestParams := range tt.requests {
-				fetcher.scheduleRequest(requestParams)
+				fetcher.scheduleRequest(context.Background(), requestParams.start, requestParams.count)
 				maxExpectedBlocks += requestParams.count
 			}
 
@@ -334,6 +330,67 @@ func TestBlocksFetcherRoundRobin(t *testing.T) {
 			dbtest.TeardownDB(t, beaconDB)
 		})
 	}
+}
+
+func TestHandleRequest(t *testing.T) {
+	chainConfig := struct {
+		expectedBlockSlots []uint64
+		peers              []*peerData
+	}{
+		expectedBlockSlots: makeSequence(1, blockBatchSize),
+		peers: []*peerData{
+			{
+				blocks:         makeSequence(1, 320),
+				finalizedEpoch: 8,
+				headSlot:       320,
+			},
+			{
+				blocks:         makeSequence(1, 320),
+				finalizedEpoch: 8,
+				headSlot:       320,
+			},
+		},
+	}
+
+	hook := logTest.NewGlobal()
+	mc, p2p, beaconDB := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
+	fetcher := newBlocksFetcher(&blocksFetcherConfig{
+		headFetcher: mc,
+		p2p:         p2p,
+	})
+
+	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
+	go fetcher.handleRequest(&fetchRequestParams{
+		ctx:   ctx,
+		start: 1,
+		count: blockBatchSize,
+	})
+
+	var blocks []*eth.SignedBeaconBlock
+	select {
+	case <-ctx.Done():
+		t.Error(ctx.Err())
+	case resp := <-fetcher.iter():
+		if resp.err != nil {
+			t.Error(resp.err)
+		} else {
+			blocks = resp.blocks
+		}
+	}
+	if len(blocks) != blockBatchSize {
+		t.Errorf("incorrect number of blocks returned, expected: %v, got: %v", blockBatchSize, len(blocks))
+	}
+	testutil.AssertLogsContain(t, hook, "Received blocks")
+
+	var receivedBlockSlots []uint64
+	for _, blk := range blocks {
+		receivedBlockSlots = append(receivedBlockSlots, blk.Block.Slot)
+	}
+	if missing := sliceutil.NotUint64(sliceutil.IntersectionUint64(chainConfig.expectedBlockSlots, receivedBlockSlots), chainConfig.expectedBlockSlots); len(missing) > 0 {
+		t.Errorf("Missing blocks at slots %v", missing)
+	}
+
+	dbtest.TeardownDB(t, beaconDB)
 }
 
 func TestRequestBeaconBlocksByRangeRequest(t *testing.T) {

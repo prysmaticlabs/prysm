@@ -26,6 +26,7 @@ const blockBatchSize = 64
 const blockMaxBatchSize = 8 * blockBatchSize
 const counterSeconds = 20
 const refreshTime = 6 * time.Second
+const maxBlockBatchFetchTime = 60 * time.Second
 
 // Round Robin sync looks at the latest peer statuses and syncs with the highest
 // finalized peer.
@@ -68,14 +69,15 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 
 	// Step 1 - Sync to end of finalized epoch.
 	for s.chain.HeadSlot() < highestFinalizedSlot {
-		// Operations below are simple port of the existing functionality, where synchronization is assumed.
-		// This will be refactored and implemented w/i queue, once that component is ready.
-		request := func() ([]*eth.SignedBeaconBlock, error) {
+		ctx, _ := context.WithTimeout(context.Background(), maxBlockBatchFetchTime)
+		go fetcher.scheduleRequest(ctx, s.chain.HeadSlot()+uint64(skippedBlocks)+1, curBatchSize)
+
+		request := func(ctx context.Context) ([]*eth.SignedBeaconBlock, error) {
 			select {
-			case <-time.After(60 * time.Second): // extra pre-caution
-				return nil, errors.New("it takes too long to receive data from fetcher, unblock")
+			case <-ctx.Done():
+				return nil, ctx.Err()
 			case resp, ok := <-fetcher.iter(): // fetcher will stop when upstream ctx is closed
-				if !ok { // channel closed
+				if !ok {
 					return nil, errors.New("block fetcher is not running")
 				}
 				if resp.err != nil {
@@ -86,12 +88,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 			}
 		}
 
-		go fetcher.scheduleRequest(&fetchRequestParams{
-			start: s.chain.HeadSlot() + uint64(skippedBlocks) + 1,
-			count: curBatchSize,
-		})
-
-		blocks, err := request()
+		blocks, err := request(ctx)
 		if err != nil {
 			log.WithError(err).Error("Round robing sync request failed")
 			skippedBlocks = 0

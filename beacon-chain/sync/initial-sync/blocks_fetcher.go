@@ -48,8 +48,9 @@ type blocksFetcher struct {
 
 // fetchRequestParams holds parameters necessary to schedule a fetch request.
 type fetchRequestParams struct {
-	start uint64 // starting slot
-	count uint64 // how many slots to receive (fetcher may return fewer slots)
+	ctx   context.Context // if provided, it is used instead of global fetcher's context
+	start uint64          // starting slot
+	count uint64          // how many slots to receive (fetcher may return fewer slots)
 }
 
 // fetchRequestResponse is a combined type to hold results of both successful executions and errors.
@@ -107,9 +108,6 @@ func (f *blocksFetcher) iter() <-chan *fetchRequestResponse {
 func (f *blocksFetcher) loop() {
 	defer close(f.receivedFetchResponses)
 
-	highestFinalizedSlot := helpers.StartSlot(f.highestFinalizedEpoch() + 1)
-	maxPeersToSync := params.BeaconConfig().MaxPeersToSync
-
 	for {
 		select {
 		case <-f.ctx.Done():
@@ -126,60 +124,76 @@ func (f *blocksFetcher) loop() {
 			log.Debug("Blocks fetcher received a stop request.")
 			return
 		case req := <-f.requests:
-			root, finalizedEpoch, peers := f.p2p.Peers().BestFinalized(maxPeersToSync, helpers.SlotToEpoch(f.headFetcher.HeadSlot()))
-			log.WithFields(logrus.Fields{
-				"request":        req,
-				"finalizedEpoch": finalizedEpoch,
-				"numPeers":       len(peers),
-			}).Debug("Block fetcher receives request")
-
-			if len(peers) == 0 {
-				log.Error(errNoPeersAvailable)
-				continue
+			if req.ctx == nil {
+				req.ctx = f.ctx
 			}
-
-			// Short circuit start far exceeding the highest finalized epoch in some infinite loop.
-			highestFinalizedSlot = helpers.StartSlot(finalizedEpoch + 1)
-			if req.start > highestFinalizedSlot {
-				err := errors.Errorf("requested a start slot of %d which is greater than the next highest slot of %d", req.start, highestFinalizedSlot)
-				log.WithError(err).Debug("Block fetch request failed")
-				f.receivedFetchResponses <- &fetchRequestResponse{
-					params: req,
-					err:    err,
-				}
-				continue
-			}
-
-			// TODO(4815): Consider splitting peers into sets (when there are many of them),
-			// so that block fetching is for lesser chunks and is less affected by some slow peer
-			go func(root []byte, finalizedEpoch, start, count uint64, peers []peer.ID) {
-				resp, err := f.collectPeerResponses(root, finalizedEpoch, start, 1, count, peers)
-				if err != nil {
-					log.WithError(err).Debug("Block fetch request failed")
-					f.receivedFetchResponses <- &fetchRequestResponse{
-						params: req,
-						err:    err,
-					}
-					return
-				}
-
-				f.receivedFetchResponses <- &fetchRequestResponse{
-					params: req,
-					blocks: resp,
-					peers:  peers,
-				}
-			}(root, finalizedEpoch, req.start, req.count, peers)
+			go f.handleRequest(req)
 		}
 	}
 }
 
 // scheduleRequest adds request to incoming queue.
-func (f *blocksFetcher) scheduleRequest(req *fetchRequestParams) {
+func (f *blocksFetcher) scheduleRequest(ctx context.Context, start, count uint64) {
 	select {
 	case <-f.quit:
 		return
 	default:
-		f.requests <- req
+		f.requests <- &fetchRequestParams{
+			ctx:   ctx,
+			start: start,
+			count: count,
+		}
+	}
+}
+
+// handleRequest parses fetch request and forwards it to response builder.
+func (f *blocksFetcher) handleRequest(req *fetchRequestParams) {
+	if req.ctx.Err() != nil {
+		f.receivedFetchResponses <- &fetchRequestResponse{
+			params: req,
+			err:    req.ctx.Err(),
+		}
+		return
+	}
+
+	root, finalizedEpoch, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(f.headFetcher.HeadSlot()))
+	log.WithFields(logrus.Fields{
+		"request":        req,
+		"finalizedEpoch": finalizedEpoch,
+		"numPeers":       len(peers),
+	}).Debug("Block fetcher receives request")
+
+	if len(peers) == 0 {
+		log.Error(errNoPeersAvailable)
+		return
+	}
+
+	// Short circuit start far exceeding the highest finalized epoch in some infinite loop.
+	highestFinalizedSlot := helpers.StartSlot(finalizedEpoch + 1)
+	if req.start > highestFinalizedSlot {
+		err := errors.Errorf("requested a start slot of %d which is greater than the next highest slot of %d", req.start, highestFinalizedSlot)
+		log.WithError(err).Debug("Block fetch request failed")
+		f.receivedFetchResponses <- &fetchRequestResponse{
+			params: req,
+			err:    err,
+		}
+		return
+	}
+
+	resp, err := f.collectPeerResponses(req.ctx, root, finalizedEpoch, req.start, 1, req.count, peers)
+	if err != nil {
+		log.WithError(err).Debug("Block fetch request failed")
+		f.receivedFetchResponses <- &fetchRequestResponse{
+			params: req,
+			err:    err,
+		}
+		return
+	}
+
+	f.receivedFetchResponses <- &fetchRequestResponse{
+		params: req,
+		blocks: resp,
+		peers:  peers,
 	}
 }
 
@@ -191,7 +205,11 @@ func (f *blocksFetcher) scheduleRequest(req *fetchRequestParams) {
 //   Four requests will be spread across the peers using step argument to distribute the load
 //   i.e. the first peer is asked for block 64, 68, 72... while the second peer is asked for
 //   65, 69, 73... and so on for other peers.
-func (f *blocksFetcher) collectPeerResponses(root []byte, finalizedEpoch, start, step, count uint64, peers []peer.ID) ([]*eth.SignedBeaconBlock, error) {
+func (f *blocksFetcher) collectPeerResponses(ctx context.Context, root []byte, finalizedEpoch, start, step, count uint64, peers []peer.ID) ([]*eth.SignedBeaconBlock, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
 	if len(peers) == 0 {
 		return nil, errNoPeersAvailable
 	}
@@ -252,7 +270,7 @@ func (f *blocksFetcher) collectPeerResponses(root []byte, finalizedEpoch, start,
 				return
 			}
 			blocksChan <- blocks
-		}(f.ctx, pid)
+		}(ctx, pid)
 	}
 
 	var unionRespBlocks []*eth.SignedBeaconBlock
@@ -286,7 +304,7 @@ func (f *blocksFetcher) requestBeaconBlocksByRange(ctx context.Context, pid peer
 		Step:          step,
 	}
 
-	resp, respErr := f.requestBlocks(f.ctx, req, pid)
+	resp, respErr := f.requestBlocks(ctx, req, pid)
 	if respErr != nil {
 		// Fail over to some other, randomly selected, peer.
 		root1, _, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(f.headFetcher.HeadSlot()))
