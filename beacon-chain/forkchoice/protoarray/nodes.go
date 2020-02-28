@@ -41,7 +41,6 @@ func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, err
 	bestNode := s.nodes[bestDescendantIndex]
 
 	if !s.viableForHead(bestNode) {
-		log.WithFields().Warn("Resolving forks")
 		return [32]byte{}, fmt.Errorf("head at slot %d with weight %d is not eligible, finalizedEpoch %d != %d, justifiedEpoch %d != %d",
 			bestNode.Slot, bestNode.Weight/10e9, bestNode.finalizedEpoch, s.finalizedEpoch, bestNode.justifiedEpoch, s.justifiedEpoch)
 	}
