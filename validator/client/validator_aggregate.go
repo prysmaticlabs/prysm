@@ -9,7 +9,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
@@ -73,7 +72,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 	// https://github.com/ethereum/eth2.0-specs/blob/v0.9.3/specs/validator/0_beacon-chain-validator.md#broadcast-aggregate
 	v.waitToSlotTwoThirds(ctx, slot)
 
-	_, err = v.aggregatorClient.SubmitAggregateAndProof(ctx, &pb.AggregationRequest{
+	_, err = v.validatorClient.SubmitAggregateAndProof(ctx, &ethpb.AggregationRequest{
 		Slot:           slot,
 		CommitteeIndex: duty.CommitteeIndex,
 		PublicKey:      pubKey[:],

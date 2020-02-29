@@ -10,7 +10,6 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
@@ -147,7 +146,6 @@ func (v *ValidatorService) Start() {
 		db:                   valDB,
 		validatorClient:      ethpb.NewBeaconNodeValidatorClient(v.conn),
 		beaconClient:         ethpb.NewBeaconChainClient(v.conn),
-		aggregatorClient:     pb.NewAggregatorServiceClient(v.conn),
 		node:                 ethpb.NewNodeClient(v.conn),
 		keyManager:           v.keyManager,
 		graffiti:             v.graffiti,
