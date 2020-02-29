@@ -162,6 +162,7 @@ func DeterministicGenesisState(t testing.TB, numValidators uint64) (*stateTrie.B
 	if err != nil {
 		t.Fatal(errors.Wrapf(err, "failed to get genesis beacon state of %d validators", numValidators))
 	}
+	ResetCache()
 	return beaconState, privKeys
 }
 
