@@ -20,7 +20,7 @@ load(
 
 def _impl(ctx):
     toolchain_identifier = "osxcross"
-    compiler = "gcc"
+    compiler = "clang"
     abi_version = "darwin_x86_64"
     abi_libc_version = "darwin_x86_64"
     install = "/usr/x86_64-apple-darwin/"
@@ -31,12 +31,12 @@ def _impl(ctx):
     osxcross_binprefix = osxcross + "bin/x86_64-apple-darwin14-"
     sdkroot = osxcross + "SDK/MacOSX10.10.sdk/"
     cross_system_include_dirs = [
-        #"/usr/lib/clang/10.0.0/include",
+        "/usr/lib/clang/10.0.0/include",
         osxcross + "include",
         sdkroot + "usr/include",
-        sdkroot + "usr/include/c++/v1/",
     ]
     cross_system_lib_dirs = [
+        "/usr/x86_64-apple-darwin/lib",
         sdkroot + "usr/lib",
         osxcross + "/lib",
     ]
@@ -57,7 +57,7 @@ def _impl(ctx):
                 flag_groups = [
                     flag_group(
                         flags = [
-                            "-isysroot " + sdkroot,
+                            "-stdlib=libc++",
                             "-no-canonical-prefixes",
                             "-Wno-builtin-macro-redefined",
                             "-D__DATE__=\"redacted\"",
@@ -85,6 +85,7 @@ def _impl(ctx):
                     flag_group(
                         flags = [
                             "-mlinker-version=400",
+                            "-B " + osxcross + "bin",
                             "-nostdinc",
                             "-U_FORTIFY_SOURCE",
                             "-fstack-protector",
@@ -134,7 +135,6 @@ def _impl(ctx):
                 flag_groups = [
                     flag_group(
                         flags = [
-                            #"-target x86_64-apple-darwin-macho",
                             "-v",
                             "-lm",
                             "-no-canonical-prefixes",
@@ -180,22 +180,6 @@ def _impl(ctx):
         ],
     )
 
-    sysroot_feature = feature(
-        name = "sysroot",
-        enabled = True,
-        flag_sets = [
-            flag_set(
-                actions = ALL_COMPILE_ACTIONS + ALL_LINK_ACTIONS,
-                flag_groups = [
-                    flag_group(
-                        expand_if_available = "sysroot",
-                        flags = ["--sysroot=%{sysroot}"],
-                    ),
-                ],
-            ),
-        ],
-    )
-
     coverage_feature = feature(
         name = "coverage",
         flag_sets = [
@@ -227,7 +211,6 @@ def _impl(ctx):
         default_compile_flags_feature,
         objcopy_embed_flags_feature,
         user_compile_flags_feature,
-        #sysroot_feature,
         coverage_feature,
     ]
 
@@ -237,7 +220,6 @@ def _impl(ctx):
         tool_path(name = "dwp", path = "/usr/bin/dwp"),
         tool_path(name = "gcov", path = "/usr/bin/gcov"),
         tool_path(name = "nm", path = osxcross_binprefix + "nm"),
-        #tool_path(name = "objcopy", path = "/usr/bin/objcopy"),
         tool_path(name = "objdump", path = osxcross_binprefix + "ObjectDump"),
         tool_path(name = "strip", path = osxcross_binprefix + "strip"),
         tool_path(name = "gcc", path = osxcross + "bin/o64-clang"),
@@ -249,7 +231,6 @@ def _impl(ctx):
         features = features,
         abi_version = abi_version,
         abi_libc_version = abi_libc_version,
-        #builtin_sysroot = sysroot,
         compiler = compiler,
         cxx_builtin_include_directories = cross_system_include_dirs,
         host_system_name = "x86_64-unknown-linux-gnu",

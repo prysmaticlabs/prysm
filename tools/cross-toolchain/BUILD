@@ -1,7 +1,7 @@
 package(default_visibility = ["//visibility:public"])
 
-load(":cc_toolchain_config_linux_arm64.bzl", "arm64_cc_toolchain_config")
 load(":cc_toolchain_config_osx.bzl", "osx_cc_toolchain_config")
+load(":cc_toolchain_config_linux_arm64.bzl", "arm64_cc_toolchain_config")
 
 cc_toolchain_suite(
     name = "multiarch_toolchain",
@@ -11,6 +11,13 @@ cc_toolchain_suite(
         "aarch64|clang": ":cc-clang-arm64",
         "k8": "cc-clang-amd64",
         "aarch64": ":cc-clang-arm64",
+    },
+)
+
+cc_toolchain_suite(
+    name = "hostonly_toolchain",
+    toolchains = {
+        "k8": "cc-clang-amd64",
     },
 )
 

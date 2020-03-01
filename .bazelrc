@@ -33,11 +33,15 @@ run --define kafka_enabled=false
 
 # use multi-arch toolchain
 build:cross --crosstool_top=//tools/cross-toolchain:multiarch_toolchain
+build:cross --host_platform=@io_bazel_rules_go//go/toolchain:linux_amd64
+build:cross --host_crosstool_top=//tools/cross-toolchain:hostonly_toolchain
+#build:cross --distinct_host_configuration=true
 
 # toolchain build debug config
 build:debug --sandbox_debug
 build:debug --toolchain_resolution_debug
 build:debug --verbose_failures
+build:debug -s
 
 # Docker Sandbox Mode - Note all docker sandbox configs must run from a linux x86_64 host
 build:docker-sandbox --experimental_docker_image=suburbandad/cross-clang-10:latest
