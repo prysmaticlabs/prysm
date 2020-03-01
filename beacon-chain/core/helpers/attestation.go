@@ -5,7 +5,6 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -124,8 +123,8 @@ func AggregateAttestation(a1 *ethpb.Attestation, a2 *ethpb.Attestation) (*ethpb.
 //    domain = get_domain(state, DOMAIN_BEACON_ATTESTER, compute_epoch_at_slot(slot))
 //    return bls_sign(privkey, hash_tree_root(slot), domain)
 func SlotSignature(state *stateTrie.BeaconState, slot uint64, privKey *bls.SecretKey) (*bls.Signature, error) {
-	//d := Domain(state.Fork(), CurrentEpoch(state), params.BeaconConfig().DomainBeaconAttester)
-	s, err := ssz.HashTreeRoot(slot)
+	d := Domain(state.Fork(), CurrentEpoch(state), params.BeaconConfig().DomainBeaconAttester)
+	s, err := ComputeSigningRoot(slot, d)
 	if err != nil {
 		return nil, err
 	}

@@ -269,7 +269,7 @@ func TestIsAggregator_True(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sig := privKeys[0].Sign([]byte{})
+	sig := privKeys[0].Sign([]byte{'A'})
 	agg, err := helpers.IsAggregator(uint64(len(committee)), sig.Marshal())
 	if err != nil {
 		t.Fatal(err)
@@ -288,7 +288,7 @@ func TestIsAggregator_False(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sig := privKeys[0].Sign([]byte{})
+	sig := privKeys[0].Sign([]byte{'A'})
 	agg, err := helpers.IsAggregator(uint64(len(committee)), sig.Marshal())
 	if err != nil {
 		t.Fatal(err)
@@ -301,7 +301,7 @@ func TestIsAggregator_False(t *testing.T) {
 func TestAggregateSignature_True(t *testing.T) {
 	pubkeys := make([]*bls.PublicKey, 0, 100)
 	atts := make([]*ethpb.Attestation, 0, 100)
-	msg := []byte("hello")
+	msg := bytesutil.ToBytes32([]byte("hello"))
 	for i := 0; i < 100; i++ {
 		priv := bls.RandKey()
 		pub := priv.PublicKey()
@@ -314,7 +314,7 @@ func TestAggregateSignature_True(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !aggSig.FastAggregateVerify(pubkeys, bytesutil.ToBytes32(msg)) {
+	if !aggSig.FastAggregateVerify(pubkeys, msg) {
 		t.Error("Signature did not verify")
 	}
 }

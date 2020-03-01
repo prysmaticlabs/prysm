@@ -148,7 +148,7 @@ func generateMarshalledFullStateAndBlock() error {
 	block.Signature = privs[proposerIdx].Sign(blockRoot[:]).Marshal()
 	beaconState.SetSlot(beaconState.Slot() - 1)
 
-	beaconBytes, err := ssz.Marshal(beaconState)
+	beaconBytes, err := ssz.Marshal(beaconState.InnerStateUnsafe())
 	if err != nil {
 		return err
 	}
@@ -199,7 +199,7 @@ func generate2FullEpochState() error {
 		}
 	}
 
-	beaconBytes, err := ssz.Marshal(beaconState)
+	beaconBytes, err := ssz.Marshal(beaconState.InnerStateUnsafe())
 	if err != nil {
 		return err
 	}
