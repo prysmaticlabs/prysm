@@ -231,6 +231,7 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 
 	genesis := blk.NewGenesisBlock([]byte{})
 	depChainStart := uint64(64)
+	testutil.ResetCache()
 	deposits, _, _ := testutil.DeterministicDepositsAndKeys(depChainStart)
 	eth1Data, err := testutil.DeterministicEth1Data(len(deposits))
 	if err != nil {
@@ -277,8 +278,8 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	if len(res.Duties) != 2 {
 		t.Errorf("expected 2 assignments but got %d", len(res.Duties))
 	}
-	if res.Duties[0].AttesterSlot != 4 {
-		t.Errorf("Expected res.Duties[0].AttesterSlot == 4, got %d", res.Duties[0].AttesterSlot)
+	if res.Duties[0].AttesterSlot != 7 {
+		t.Errorf("Expected res.Duties[0].AttesterSlot == 7, got %d", res.Duties[0].AttesterSlot)
 	}
 	if res.Duties[1].AttesterSlot != 3 {
 		t.Errorf("Expected res.Duties[1].AttesterSlot == 3, got %d", res.Duties[0].AttesterSlot)

@@ -70,7 +70,7 @@ func TestVerifySelection_NotAnAggregator(t *testing.T) {
 	validators := uint64(2048)
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
-	sig := privKeys[0].Sign([]byte{})
+	sig := privKeys[0].Sign([]byte{'A'})
 	data := &ethpb.AttestationData{}
 
 	wanted := "validator is not an aggregator for slot"
@@ -84,7 +84,7 @@ func TestVerifySelection_BadSignature(t *testing.T) {
 	validators := uint64(256)
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
-	sig := privKeys[0].Sign([]byte{})
+	sig := privKeys[0].Sign([]byte{'A'})
 	data := &ethpb.AttestationData{}
 
 	wanted := "could not validate slot signature"
@@ -348,11 +348,11 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sig := privKeys[154].Sign(slotRoot[:])
+	sig := privKeys[18].Sign(slotRoot[:])
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
 		SelectionProof:  sig.Marshal(),
 		Aggregate:       att,
-		AggregatorIndex: 154,
+		AggregatorIndex: 18,
 	}
 
 	if err := beaconState.SetGenesisTime(uint64(time.Now().Unix())); err != nil {

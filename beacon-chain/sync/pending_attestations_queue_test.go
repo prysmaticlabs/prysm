@@ -106,6 +106,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	defer dbtest.TeardownDB(t, db)
 	p1 := p2ptest.NewTestP2P(t)
 	validators := uint64(256)
+	testutil.ResetCache()
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, validators)
 
 	sb := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
@@ -148,11 +149,11 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sig := privKeys[154].Sign(slotRoot[:])
+	sig := privKeys[18].Sign(slotRoot[:])
 	aggregateAndProof := &ethpb.AggregateAttestationAndProof{
 		SelectionProof:  sig.Marshal(),
 		Aggregate:       att,
-		AggregatorIndex: 154,
+		AggregatorIndex: 18,
 	}
 
 	if err := beaconState.SetGenesisTime(uint64(time.Now().Unix())); err != nil {
