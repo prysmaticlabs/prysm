@@ -51,7 +51,7 @@ type BeaconChainConfig struct {
 	Eth1FollowDistance               uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
 	SafeSlotsToUpdateJustified       uint64 // SafeSlotsToUpdateJustified is the minimal slots needed to update justified check point.
 	AttestationPropagationSlotRange  uint64 // AttestationPropagationSlotRange is the maximum number of slots during which an attestation can be propagated.
-
+	SecondsPerETH1Block              uint64 `yaml:"SECONDS_PER_ETH1_BLOCK"` // SecondsPerETH1Block is the approximate time for a single eth1 block to be produced.
 	// State list lengths
 	EpochsPerHistoricalVector uint64 `yaml:"EPOCHS_PER_HISTORICAL_VECTOR"` // EpochsPerHistoricalVector defines max length in epoch to store old historical stats in beacon state.
 	EpochsPerSlashingsVector  uint64 `yaml:"EPOCHS_PER_SLASHINGS_VECTOR"`  // EpochsPerSlashingsVector defines max length in epoch to store old stats to recompute slashing witness.
@@ -142,6 +142,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	Eth1FollowDistance:               1024,
 	SafeSlotsToUpdateJustified:       8,
 	AttestationPropagationSlotRange:  32,
+	SecondsPerETH1Block:              14,
 
 	// State list length constants.
 	EpochsPerHistoricalVector: 65536,
@@ -259,6 +260,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.MinEpochsToInactivityPenalty = 4
 	minimalConfig.Eth1FollowDistance = 16
 	minimalConfig.SafeSlotsToUpdateJustified = 2
+	minimalConfig.SecondsPerETH1Block = 14
 
 	// State vector lengths
 	minimalConfig.EpochsPerHistoricalVector = 64
@@ -287,7 +289,6 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.DomainDeposit = bytesutil.Bytes4(3)
 	minimalConfig.DomainVoluntaryExit = bytesutil.Bytes4(4)
 	minimalConfig.GenesisForkVersion = []byte{0, 0, 0, 1}
-	minimalConfig.MinGenesisDelay = 300
 
 	minimalConfig.DepositContractTreeDepth = 32
 	minimalConfig.FarFutureEpoch = 1<<64 - 1
