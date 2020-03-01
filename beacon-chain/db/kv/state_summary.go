@@ -55,4 +55,3 @@ func (k *Store) HasStateSummary(ctx context.Context, blockRoot [32]byte) bool {
 	})
 	return exists
 }
-
