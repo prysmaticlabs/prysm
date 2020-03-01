@@ -11,21 +11,24 @@ The toolchain suite describes cross compilers defined in a docker container desc
 
 
 ### Using Published Docker Container for Cross Compilation Targets:
-This is still a WIP, at the time of this writing only linux_amd64 and linux_arm64 are working targets.
+This is still a WIP, at the time of this writing linux_amd64, linux_arm64, and osx_amd64 are working targets.
 
-#### Run the cross compiler image
+#### If your host machine is linux_amd64
+If you are on linux_amd64 and you have docker configured, you can simply use bazel with the docker target configs.  See the table below
+
+#### Otherwise run the cross compiler image
 1. checkout prysm, `git clone https://github.com/prysmaticlabs/prysm`
 2. cd prysm
 3. `docker run -it -v $(pwd):/workdir suburbandad/cross-clang-10:latest` 
 
 From here you can run builds inside the linux x86_64 container image, e.g.:
 
-|    arch |   os    |    config     | working? | example cmd   |
+|    arch |   os    |    config     | working? | bazel docker config (for linux_arm64 hosts) |
 |---------|---------|---------------|----------|---------------|
-| arm64   | linux   | linux_arm64   |  Y       | `bazel build --config=linux_arm64 //beacon-chain` |
-| x86_64  | linux   | linux_amd64   |  Y       | `bazel build --config=linux_amd64 //beacon-chain` |
-| x86_64  | osx     | osx_amd64     |  N       | `bazel build --config=osx_amd64 //beacon-chain` |
-| x86_64  | windows | windows_amd64 |  N       | `bazel build --config=windows_amd64 //beacon-chain` |
+| arm64   | linux   | linux_arm64   |  Y       | `bazel build --config=linux_arm64_docker //beacon-chain` |
+| x86_64  | linux   | linux_amd64   |  Y       | `bazel build --config=linux_amd64_docker //beacon-chain` |
+| x86_64  | osx     | osx_amd64     |  Y       | `bazel build --config=osx_amd64_docker //beacon-chain` |
+| x86_64  | windows | windows_amd64 |  N       | `bazel build --config=windows_amd64_docker //beacon-chain` |
 
 
 #### Or, if you just want to run a particular target, this is handy:
@@ -38,6 +41,5 @@ Also fun, if you are on OSX can build and run a linux_amd64 beacon-chain:
             
 
 ### Coming soon
-* Mac OSX x86_64 builds
 * Windows x86_64 builds
             
