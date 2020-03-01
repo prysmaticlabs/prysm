@@ -11,7 +11,7 @@ test_suite(
     name = "go_default_test",
     tags = ["spectest"],
     tests = [
-        ":go_minimal_test",
+        ":go_mainnet_test",
         # Minimal tests must be run with --define ssz=minimal
         #":go_minimal_test",
     ],
