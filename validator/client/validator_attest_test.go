@@ -8,10 +8,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/bls"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+
+	"gopkg.in/d4l3k/messagediff.v1"
+
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/go-ssz"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -87,7 +93,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	m.validatorClient.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
-	).Return(&ethpb.DomainResponse{}, nil /*err*/)
+	).Return(&ethpb.DomainResponse{SignatureDomain: bls.Domain(params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().GenesisForkVersion)}, nil /*err*/)
 
 	var generatedAttestation *ethpb.Attestation
 	m.validatorClient.EXPECT().ProposeAttestation(
@@ -110,7 +116,13 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		AggregationBits: aggregationBitfield,
 	}
 
-	root, err := ssz.HashTreeRoot(expectedAttestation.Data)
+	domain := helpers.Domain(&pb.Fork{
+		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+		CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+		Epoch:           0,
+	}, 0, params.BeaconConfig().DomainBeaconAttester)
+
+	root, err := helpers.ComputeSigningRoot(expectedAttestation.Data, domain)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,6 +134,8 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	expectedAttestation.Signature = sig.Marshal()
 	if !reflect.DeepEqual(generatedAttestation, expectedAttestation) {
 		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
+		diff, _ := messagediff.PrettyDiff(expectedAttestation, generatedAttestation)
+		t.Log(diff)
 	}
 }
 
