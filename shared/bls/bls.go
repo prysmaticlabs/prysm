@@ -147,10 +147,6 @@ func (s *SecretKey) Marshal() []byte {
 	return keyBytes
 }
 
-func (s *SecretKey) RawSecretKey() *bls12.SecretKey {
-	return s.p
-}
-
 // Marshal a public key into a LittleEndian byte slice.
 func (p *PublicKey) Marshal() []byte {
 	rawBytes := p.p.Serialize()
@@ -161,10 +157,6 @@ func (p *PublicKey) Marshal() []byte {
 func (p *PublicKey) Copy() (*PublicKey, error) {
 	np := *p.p
 	return &PublicKey{p: &np}, nil
-}
-
-func (p *PublicKey) RawPublicKey() *bls12.PublicKey {
-	return p.p
 }
 
 // Aggregate two public keys.
@@ -245,10 +237,6 @@ func (s *Signature) FastAggregateVerify(pubKeys []*PublicKey, msg [32]byte) bool
 	}
 
 	return s.s.FastAggregateVerify(rawKeys, msg[:])
-}
-
-func (s *Signature) RawSignature() *bls12.Sign {
-	return s.s
 }
 
 // NewAggregateSignature creates a blank aggregate signature.
