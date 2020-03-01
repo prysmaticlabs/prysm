@@ -782,21 +782,16 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 	}
 
 	domain := helpers.Domain(beaconState.Fork(), indexedAtt.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
-	var pubkey *bls.PublicKey
+	pubkeys := []*bls.PublicKey{}
 	var err error
 	if len(indices) > 0 {
-		pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[0])
-		pubkey, err = bls.PublicKeyFromBytes(pubkeyAtIdx[:])
-		if err != nil {
-			return errors.Wrap(err, "could not deserialize validator public key")
-		}
-		for i := 1; i < len(indices); i++ {
-			pubkeyAtIdx = beaconState.PubkeyAtIndex(indices[i])
+		for i := 0; i < len(indices); i++ {
+			pubkeyAtIdx := beaconState.PubkeyAtIndex(indices[i])
 			pk, err := bls.PublicKeyFromBytes(pubkeyAtIdx[:])
 			if err != nil {
 				return errors.Wrap(err, "could not deserialize validator public key")
 			}
-			pubkey.Aggregate(pk)
+			pubkeys = append(pubkeys, pk)
 		}
 	}
 
@@ -811,7 +806,7 @@ func VerifyIndexedAttestation(ctx context.Context, beaconState *stateTrie.Beacon
 	}
 
 	voted := len(indices) > 0
-	if voted && !sig.Verify(messageHash[:], pubkey) {
+	if voted && !sig.FastAggregateVerify(pubkeys, messageHash) {
 		return ErrSigFailedToVerify
 	}
 	return nil
