@@ -58,8 +58,14 @@ func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*
 // verifyBlkPreState validates input block has a valid pre-state.
 func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (*stateTrie.BeaconState, error) {
 	preState := s.initSyncState[bytesutil.ToBytes32(b.ParentRoot)]
-	var err error
 	if preState == nil {
+		headRoot, err := s.HeadRoot(ctx)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not get head root")
+		}
+		if bytes.Equal(headRoot, b.ParentRoot) {
+			return s.HeadState(ctx)
+		}
 		preState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
