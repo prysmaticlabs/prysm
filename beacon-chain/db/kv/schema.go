@@ -21,6 +21,8 @@ var (
 	archivedBalancesBucket               = []byte("archived-balances")
 	archivedValidatorParticipationBucket = []byte("archived-validator-participation")
 	powchainBucket                       = []byte("powchain")
+	archivedIndexRootBucket              = []byte("archived-index-root")
+	archivedIndexStateBucket             = []byte("archived-index-state")
 
 	// Key indices buckets.
 	blockParentRootIndicesBucket        = []byte("block-parent-root-indices")
