@@ -2,7 +2,6 @@ package attestations
 
 import (
 	"context"
-	"encoding/binary"
 	"fmt"
 	"sync"
 
@@ -20,7 +19,7 @@ var _ = iface.SpanDetector(&SpanDetector{})
 // spans from validators and attestation data roots.
 type SpanDetector struct {
 	// Slice of epochs for valindex => min-max span + double vote filter
-	spans []map[uint64][3]uint16
+	spans []map[uint64]types.Span
 	lock  sync.RWMutex
 }
 
@@ -29,7 +28,7 @@ type SpanDetector struct {
 // the beacon state.
 func NewSpanDetector() *SpanDetector {
 	return &SpanDetector{
-		spans: make([]map[uint64][3]uint16, 256),
+		spans: make([]map[uint64]types.Span, 256),
 	}
 }
 
@@ -41,8 +40,8 @@ func (s *SpanDetector) DetectSlashingForValidator(
 	validatorIdx uint64,
 	attData *ethpb.AttestationData,
 ) (*types.DetectionResult, error) {
-	ctx, span := trace.StartSpan(ctx, "detection.DetectSlashingForValidator")
-	defer span.End()
+	ctx, traceSpan := trace.StartSpan(ctx, "detection.DetectSlashingForValidator")
+	defer traceSpan.End()
 	sourceEpoch := attData.Source.Epoch
 	targetEpoch := attData.Target.Epoch
 	if (targetEpoch - sourceEpoch) > params.BeaconConfig().WeakSubjectivityPeriod {
@@ -58,41 +57,39 @@ func (s *SpanDetector) DetectSlashingForValidator(
 	numSpans := uint64(len(s.spans))
 
 	if sp := s.spans[sourceEpoch%numSpans]; sp != nil {
-		minSpan := sp[validatorIdx][0]
+		minSpan := sp[validatorIdx].MinSpan
 		if minSpan > 0 && minSpan < distance {
+			slashableEpoch := sourceEpoch + uint64(minSpan)
+			span := s.spans[slashableEpoch%numSpans][validatorIdx]
 			return &types.DetectionResult{
 				Kind:           types.SurroundVote,
 				SlashableEpoch: sourceEpoch + uint64(minSpan),
+				SigBytes:       span.SigBytes,
 			}, nil
 		}
 
-		maxSpan := sp[validatorIdx][1]
+		maxSpan := sp[validatorIdx].MaxSpan
 		if maxSpan > distance {
+			slashableEpoch := sourceEpoch + uint64(maxSpan)
+			span := s.spans[slashableEpoch%numSpans][validatorIdx]
 			return &types.DetectionResult{
 				Kind:           types.SurroundVote,
-				SlashableEpoch: sourceEpoch + uint64(maxSpan),
+				SlashableEpoch: slashableEpoch,
+				SigBytes:       span.SigBytes,
 			}, nil
 		}
 	}
 
 	if sp := s.spans[targetEpoch%numSpans]; sp != nil {
-		committeeAndSlotNum := sp[validatorIdx][2]
-		if committeeAndSlotNum == 0 {
+		// Check if the validator has attested for this epoch or not.
+		if !sp[validatorIdx].HasAttested {
 			return nil, nil
 		}
 
-		committeeAndSlotBytes := make([]byte, 2)
-		binary.LittleEndian.PutUint16(committeeAndSlotBytes, committeeAndSlotNum)
-
-		// Pack the committee and slot into a uint8. MAX_COMMITTEES_PER_SLOT is 64
-		committeeIndex := uint64(committeeAndSlotBytes[0] - 1)
-		slot := uint64(committeeAndSlotBytes[1] - 1)
-
 		return &types.DetectionResult{
-			Kind:            types.DoubleVote,
-			SlashableEpoch:  targetEpoch,
-			CommitteeIndex:  committeeIndex,
-			AttestationSlot: slot,
+			Kind:           types.DoubleVote,
+			SlashableEpoch: targetEpoch,
+			SigBytes:       sp[validatorIdx].SigBytes,
 		}, nil
 	}
 
@@ -101,7 +98,7 @@ func (s *SpanDetector) DetectSlashingForValidator(
 
 // SpanForEpochByValidator returns the specific min-max span for a
 // validator index in a given epoch.
-func (s *SpanDetector) SpanForEpochByValidator(ctx context.Context, valIdx uint64, epoch uint64) ([3]uint16, error) {
+func (s *SpanDetector) SpanForEpochByValidator(ctx context.Context, valIdx uint64, epoch uint64) (types.Span, error) {
 	ctx, span := trace.StartSpan(ctx, "detection.SpanForEpochByValidator")
 	defer span.End()
 	s.lock.RLock()
@@ -111,13 +108,13 @@ func (s *SpanDetector) SpanForEpochByValidator(ctx context.Context, valIdx uint6
 		if minMaxSpan, ok := span[valIdx]; ok {
 			return minMaxSpan, nil
 		}
-		return [3]uint16{}, fmt.Errorf("validator index %d not found in span map", valIdx)
+		return types.Span{}, fmt.Errorf("validator index %d not found in span map", valIdx)
 	}
-	return [3]uint16{}, fmt.Errorf("no data found for epoch %d", epoch)
+	return types.Span{}, fmt.Errorf("no data found for epoch %d", epoch)
 }
 
 // ValidatorSpansByEpoch returns a list of all validator spans in a given epoch.
-func (s *SpanDetector) ValidatorSpansByEpoch(ctx context.Context, epoch uint64) map[uint64][3]uint16 {
+func (s *SpanDetector) ValidatorSpansByEpoch(ctx context.Context, epoch uint64) map[uint64]types.Span {
 	ctx, span := trace.StartSpan(ctx, "detection.ValidatorSpansByEpoch")
 	defer span.End()
 	s.lock.RLock()
@@ -153,8 +150,8 @@ func (s *SpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttest
 	// each validator in attesting indices.
 	for i := 0; i < len(att.AttestingIndices); i++ {
 		valIdx := att.AttestingIndices[i]
-		// Update the saved committee and slot for the received attestation so we can have more detail to find it in the DB.
-		s.updateCommitteeAndSlot(att.Data, valIdx)
+		// Save the signature for the received attestation so we can have more detail to find it in the DB.
+		s.saveSigBytes(att, valIdx)
 		// Update min and max spans.
 		s.updateMinSpan(source, target, valIdx)
 		s.updateMaxSpan(source, target, valIdx)
@@ -162,30 +159,31 @@ func (s *SpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttest
 	return nil
 }
 
-func (s *SpanDetector) updateCommitteeAndSlot(attData *ethpb.AttestationData, valIdx uint64) {
+func (s *SpanDetector) saveSigBytes(att *ethpb.IndexedAttestation, valIdx uint64) {
 	numSpans := uint64(len(s.spans))
-	target := attData.Target.Epoch
+	target := att.Data.Target.Epoch
 
 	// Check if there is already info saved in span[2].
 	if sp := s.spans[target%numSpans]; sp == nil {
-		s.spans[target%numSpans] = make(map[uint64][3]uint16)
+		s.spans[target%numSpans] = make(map[uint64]types.Span)
 	}
-	committeeAndSlotNum := s.spans[target%numSpans][valIdx][2]
-	if committeeAndSlotNum != 0 {
+	// If the validator has already attested for this target epoch,
+	if s.spans[target%numSpans][valIdx].HasAttested {
 		return
 	}
 
-	// Pack the committee and slot into a uint8. MAX_COMMITTEES_PER_SLOT is 64
-	committeeIndex := uint8(attData.CommitteeIndex % params.BeaconConfig().MaxCommitteesPerSlot)
-	slot := uint8(attData.Slot % params.BeaconConfig().SlotsPerEpoch)
-	// Small offset with 1 so 0 checks aren't a problem.
-	committeeAndSlotBytes := []uint8{committeeIndex + 1, slot + 1}
-	encodedCommitteeAndSlot := binary.LittleEndian.Uint16(committeeAndSlotBytes)
-
+	sigBytes := [2]byte{0, 0}
+	if len(att.Signature) > 1 {
+		sigBytes = [2]byte{att.Signature[0], att.Signature[1]}
+	}
 	// Set the bloom filter back into the span for the epoch.
-	minSpan := s.spans[target%numSpans][valIdx][0]
-	maxSpan := s.spans[target%numSpans][valIdx][1]
-	s.spans[target%numSpans][valIdx] = [3]uint16{minSpan, maxSpan, encodedCommitteeAndSlot}
+	span := s.spans[target%numSpans][valIdx]
+	s.spans[target%numSpans][valIdx] = types.Span{
+		MinSpan:     span.MinSpan,
+		MaxSpan:     span.MaxSpan,
+		SigBytes:    sigBytes,
+		HasAttested: true,
+	}
 }
 
 // Updates a min span for a validator index given a source and target epoch
@@ -198,15 +196,17 @@ func (s *SpanDetector) updateMinSpan(source uint64, target uint64, valIdx uint64
 	for epochInt := int64(source - 1); epochInt >= 0; epochInt-- {
 		epoch := uint64(epochInt)
 		if sp := s.spans[epoch%numSpans]; sp == nil {
-			s.spans[epoch%numSpans] = make(map[uint64][3]uint16)
+			s.spans[epoch%numSpans] = make(map[uint64]types.Span)
 		}
 		newMinSpan := uint16(target - epoch)
-		minSpan := s.spans[epoch%numSpans][valIdx][0]
-		maxSpan := s.spans[epoch%numSpans][valIdx][1]
-		attFilter := s.spans[epoch%numSpans][valIdx][2]
-		if minSpan == 0 || minSpan > newMinSpan {
-			fmt.Printf("epoch %d, valIdx %d: %v\n", epoch%numSpans, valIdx, [3]uint16{newMinSpan, maxSpan, attFilter})
-			s.spans[epoch%numSpans][valIdx] = [3]uint16{newMinSpan, maxSpan, attFilter}
+		span := s.spans[epoch%numSpans][valIdx]
+		if span.MinSpan == 0 || span.MinSpan > newMinSpan {
+			s.spans[epoch%numSpans][valIdx] = types.Span{
+				MinSpan:     newMinSpan,
+				MaxSpan:     span.MaxSpan,
+				SigBytes:    span.SigBytes,
+				HasAttested: span.HasAttested,
+			}
 		} else {
 			break
 		}
@@ -219,14 +219,17 @@ func (s *SpanDetector) updateMaxSpan(source uint64, target uint64, valIdx uint64
 	numSpans := uint64(len(s.spans))
 	for epoch := source + 1; epoch < target; epoch++ {
 		if sp := s.spans[epoch%numSpans]; sp == nil {
-			s.spans[epoch%numSpans] = make(map[uint64][3]uint16)
+			s.spans[epoch%numSpans] = make(map[uint64]types.Span)
 		}
-		minSpan := s.spans[epoch%numSpans][valIdx][0]
-		maxSpan := s.spans[epoch%numSpans][valIdx][1]
-		attFilter := s.spans[epoch%numSpans][valIdx][2]
+		span := s.spans[epoch%numSpans][valIdx]
 		newMaxSpan := uint16(target - epoch)
-		if newMaxSpan > maxSpan {
-			s.spans[epoch%numSpans][valIdx] = [3]uint16{minSpan, newMaxSpan, attFilter}
+		if newMaxSpan > span.MaxSpan {
+			s.spans[epoch%numSpans][valIdx] = types.Span{
+				MinSpan:     span.MinSpan,
+				MaxSpan:     newMaxSpan,
+				SigBytes:    span.SigBytes,
+				HasAttested: span.HasAttested,
+			}
 		} else {
 			break
 		}
