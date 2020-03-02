@@ -270,7 +270,7 @@ func (s *Signature) Marshal() []byte {
 //    return compute_domain(domain_type, fork_version)
 func Domain(domainType []byte, forkVersion []byte) (uint64, error) {
 	if len(domainType) != 4 || len(forkVersion) != 4 {
-		return 0, errors.New("domain type or fork version length are not 4 byte long.")
+		return 0, errors.New("domain type or fork version length are not 4 byte long")
 	}
 	b := []byte{}
 	b = append(b, domainType[:4]...)
