@@ -19,6 +19,7 @@ import (
 )
 
 const pubsubMessageTimeout = 30 * time.Second
+const maximumGossipClockDisparity = 500 * time.Millisecond
 
 // subHandler represents handler for a given subscription.
 type subHandler func(context.Context, proto.Message) error

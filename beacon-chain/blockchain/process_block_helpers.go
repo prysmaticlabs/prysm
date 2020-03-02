@@ -38,7 +38,7 @@ func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*
 	}
 
 	// Verify block slot time is not from the feature.
-	if err := helpers.VerifySlotTime(preState.GenesisTime(), b.Slot); err != nil {
+	if err := helpers.VerifySlotTime(preState.GenesisTime(), b.Slot, helpers.TimeShiftTolerance); err != nil {
 		return nil, err
 	}
 
