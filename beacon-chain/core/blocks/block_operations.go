@@ -986,7 +986,10 @@ func ProcessDeposit(
 	index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 	numVals := beaconState.NumValidators()
 	if !ok {
-		domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
+		domain, err := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
+		if err != nil {
+			return nil, err
+		}
 		depositSig := deposit.Data.Signature
 		if err := verifyDepositDataSigningRoot(deposit.Data, pubKey, depositSig, domain); err != nil {
 			// Ignore this error as in the spec pseudo code.

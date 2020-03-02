@@ -253,7 +253,7 @@ func Domain(fork *pb.Fork, epoch uint64, domainType []byte) (uint64, error) {
 	} else {
 		forkVersion = fork.CurrentVersion
 	}
-	return bls.Domain(domainType, forkVersion), nil
+	return bls.Domain(domainType, forkVersion)
 }
 
 // IsEligibleForActivationQueue checks if the validator is eligible to
