@@ -86,6 +86,15 @@ func LowerThan(x []byte, y []byte) bool {
 	return true
 }
 
+// ToBytes4 is a convenience method for converting a byte slice to a fix
+// sized 4 byte array. This method will truncate the input if it is larger
+// than 4 bytes.
+func ToBytes4(x []byte) [4]byte {
+	var y [4]byte
+	copy(y[:], x)
+	return y
+}
+
 // ToBytes8 is a convenience method for converting a byte slice to a fix
 // sized 8 byte array. This method will truncate the input if it is larger
 // than 8 bytes.

@@ -290,8 +290,8 @@ func Domain(domainType [DomainByteLength]byte, forkVersion [ForkVersionByteLengt
 //    Return the domain for the ``domain_type`` and ``fork_version``.
 //    """
 //    return Domain(domain_type + fork_version)
-func ComputeDomain(domainType []byte) (uint64, error) {
-	return Domain(domainType, []byte{0, 0, 0, 0})
+func ComputeDomain(domainType [DomainByteLength]byte) uint64 {
+	return Domain(domainType, [4]byte{0, 0, 0, 0})
 }
 
 // HashWithDomain hashes 32 byte message and uint64 domain parameters a Fp2 element

@@ -34,10 +34,7 @@ func DepositInput(depositKey *Key, withdrawalKey *Key, amountInGwei uint64) (*et
 		return nil, [32]byte{}, err
 	}
 
-	domain, err := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
-	if err != nil {
-		return nil, [32]byte{}, err
-	}
+	domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
 	di.Signature = depositKey.SecretKey.Sign(sr[:], domain).Marshal()
 
 	dr, err := ssz.HashTreeRoot(di)

@@ -181,10 +181,8 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 
 	deposits, keys, _ := testutil.DeterministicDepositsAndKeys(1)
 
-	domain, err := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
-	if err != nil {
-		t.Fatal(err)
-	}
+	domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
+
 	sig := keys[0].Sign([]byte{'F', 'A', 'K', 'E'}, domain)
 	deposits[0].Data.Signature = sig.Marshal()[:]
 
@@ -234,10 +232,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	domain, err := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
-	if err != nil {
-		t.Fatal(err)
-	}
+	domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
 	sig := sk.Sign(signedRoot[:], domain)
 	deposit.Data.Signature = sig.Marshal()
 

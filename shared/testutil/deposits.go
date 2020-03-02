@@ -64,10 +64,7 @@ func DeterministicDepositsAndKeys(numDeposits uint64) ([]*ethpb.Deposit, []*bls.
 				WithdrawalCredentials: withdrawalCreds[:],
 			}
 
-			domain, err := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
-			if err != nil {
-				return nil, nil, err
-			}
+			domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
 			root, err := ssz.SigningRoot(depositData)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not get signing root of deposit data")
@@ -231,10 +228,7 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*ethpb.Dep
 				WithdrawalCredentials: withdrawalCreds[:],
 			}
 
-			domain, err := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
-			if err != nil {
-				return nil, nil, err
-			}
+			domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
 			root, err := ssz.SigningRoot(depositData)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not get signing root of deposit data")

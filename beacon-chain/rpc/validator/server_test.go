@@ -156,10 +156,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	domain, err := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
-	if err != nil {
-		t.Fatal(err)
-	}
+	domain := bls.ComputeDomain(params.BeaconConfig().DomainDeposit)
 	depData.Signature = priv1.Sign(signingRoot[:], domain).Marshal()[:]
 
 	deposit := &ethpb.Deposit{
