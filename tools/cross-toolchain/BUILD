@@ -131,7 +131,7 @@ cc_toolchain(
 )
 
 toolchain(
-    name = "cc-toolchain-clang",
+    name = "cc-toolchain-multiarch",
     exec_compatible_with = [
         "@platforms//os:linux",
         "@platforms//cpu:x86_64",

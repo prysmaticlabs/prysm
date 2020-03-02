@@ -31,34 +31,24 @@ test --define kafka_enabled=false
 run --define kafka_enabled=false
 
 
-# use multi-arch toolchain
+# multi-arch cross-compiling toolchain configs:
+-----------------------------------------------
 build:cross --crosstool_top=//tools/cross-toolchain:multiarch_toolchain
 build:cross --host_platform=@io_bazel_rules_go//go/toolchain:linux_amd64
 build:cross --host_crosstool_top=//tools/cross-toolchain:hostonly_toolchain
-#build:cross --distinct_host_configuration=true
 
-# toolchain build debug config
-build:debug --sandbox_debug
-build:debug --toolchain_resolution_debug
-build:debug --verbose_failures
-build:debug -s
-
-# Docker Sandbox Mode - Note all docker sandbox configs must run from a linux x86_64 host
-build:docker-sandbox --experimental_docker_image=suburbandad/prysm-cross:latest
-build:docker-sandbox --spawn_strategy=docker --strategy=Javac=docker --genrule_strategy=docker
-build:docker-sandbox --define=EXECUTOR=remote
-build:docker-sandbox --experimental_docker_verbose
-build:docker-sandbox --experimental_enable_docker_sandbox
 # linux_amd64 conifg for cross compiler toolchain, not strictly necessary since host/exec env is amd64
 build:linux_amd64 --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64_cgo
 
-# linux_amd64_debug
-build:linux_amd64_debug --config=linux_amd64
-build:linux_amd64_debug --config=debug
+# osx_amd64 config for cross compiler toolchain
+build:osx_amd64 --config=cross
+build:osx_amd64 --platforms=@io_bazel_rules_go//go/toolchain:darwin_amd64_cgo
+build:osx_amd64 --compiler=osxcross
 
-# linux_amd64 docker sandbox build config
-build:linux_amd64_docker --config=linux_amd64_debug
-build:linux_amd64_docker --config=docker-sandbox
+# windows
+build:windows_amd64 --config=cross
+build:windows_amd64  --platforms=@io_bazel_rules_go//go/toolchain:windows_amd64_cgo
+build:windows_amd64 --compiler=mingw-w64
 
 # linux_arm64 conifg for cross compiler toolchain
 build:linux_arm64 --config=cross
@@ -70,36 +60,52 @@ build:linux_arm64 --cpu=aarch64
 build:linux_arm64 --compiler=clang
 build:linux_arm64 --copt=-march=armv8-a
 
-# linux_arm64_debug
-build:linux_arm64_debug --config=linux_arm64
-build:linux_arm64_debug --config=debug
 
-# linux_arm64 docker sandbox build config
-build:linux_arm64_docker --config=linux_arm64_debug
-build:linux_arm64_docker --config=docker-sandbox
-
-# osx_amd64 config for cross compiler toolchain
-build:osx_amd64 --config=cross
-build:osx_amd64 --platforms=@io_bazel_rules_go//go/toolchain:darwin_amd64_cgo
-build:osx_amd64 --compiler=osxcross
-
-# osx_amd64 debug config
-build:osx_amd64_debug --config=debug
-build:osx_amd64_debug --config=osx_amd64
-
-# osx_amd64 docker sandbox build config
-build:osx_amd64_docker --config=osx_amd64_debug
-build:osx_amd64_docker --config=docker-sandbox
-
-# windows
-build:windows_amd64 --config=cross
-build:windows_amd64  --platforms=@io_bazel_rules_go//go/toolchain:windows_amd64_cgo
-build:windows_amd64 --compiler=mingw-w64
+# toolchain build debug configs
+#------------------------------
+build:debug --sandbox_debug
+build:debug --toolchain_resolution_debug
+build:debug --verbose_failures
+build:debug -s
 
 # windows debug
 build:windows_amd64_debug --config=windows_amd64
 build:windows_amd64_debug --config=debug
 
+# osx_amd64 debug config
+build:osx_amd64_debug --config=debug
+build:osx_amd64_debug --config=osx_amd64
+
+# linux_arm64_debug
+build:linux_arm64_debug --config=linux_arm64
+build:linux_arm64_debug --config=debug
+
+# linux_amd64_debug
+build:linux_amd64_debug --config=linux_amd64
+build:linux_amd64_debug --config=debug
+
+
+# Docker Sandbox Configs
+#-----------------------
+# Note all docker sandbox configs must run from a linux x86_64 host
+build:docker-sandbox --experimental_docker_image=suburbandad/prysm-cross:latest
+build:docker-sandbox --spawn_strategy=docker --strategy=Javac=docker --genrule_strategy=docker
+build:docker-sandbox --define=EXECUTOR=remote
+build:docker-sandbox --experimental_docker_verbose
+build:docker-sandbox --experimental_enable_docker_sandbox
+
 # windows_amd64 docker sandbox build config
 build:windows_amd64_docker --config=windows_amd64_debug
 build:windows_amd64_docker --config=docker-sandbox
+
+# osx_amd64 docker sandbox build config
+build:osx_amd64_docker --config=osx_amd64_debug
+build:osx_amd64_docker --config=docker-sandbox
+
+# linux_arm64 docker sandbox build config
+build:linux_arm64_docker --config=linux_arm64_debug
+build:linux_arm64_docker --config=docker-sandbox
+
+# linux_amd64 docker sandbox build config
+build:linux_amd64_docker --config=linux_amd64_debug
+build:linux_amd64_docker --config=docker-sandbox
