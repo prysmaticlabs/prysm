@@ -199,8 +199,8 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 		return nil, errors.Wrap(err, "could not get signing root")
 	}
 	var sig *bls.Signature
-	if protectedKeymanager, supported := v.keyManager.(keymanager.ProtectedKeyManager); supported {
-		sig, err = protectedKeymanager.SignProposal(pubKey, domain.SignatureDomain, b)
+	if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {
+		sig, err = protectingKeymanager.SignProposal(pubKey, domain.SignatureDomain, b)
 	} else {
 		sig, err = v.keyManager.Sign(pubKey, root, domain.SignatureDomain)
 	}

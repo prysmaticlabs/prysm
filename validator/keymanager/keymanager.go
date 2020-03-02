@@ -24,8 +24,8 @@ type KeyManager interface {
 	Sign(pubKey [48]byte, root [32]byte, domain uint64) (*bls.Signature, error)
 }
 
-// ProtectedKeyManager provides access to a keymanager that protects its clients from slashing events.
-type ProtectedKeyManager interface {
+// ProtectingKeyManager provides access to a keymanager that protects its clients from slashing events.
+type ProtectingKeyManager interface {
 	// SignProposal signs a block proposal for the validator to broadcast.
 	SignProposal(pubKey [48]byte, domain uint64, data *ethpb.BeaconBlock) (*bls.Signature, error)
 
