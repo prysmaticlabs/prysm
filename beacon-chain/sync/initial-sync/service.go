@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/kevinms/leakybucket-go"
 	"github.com/pkg/errors"
+	leakybucket "github.com/prysmaticlabs/prysm/bazel-prysm/external/com_github_kevinms_leakybucket_go"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
