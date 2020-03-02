@@ -68,7 +68,7 @@ func SlotCommitteeCount(activeValidatorCount uint64) uint64 {
 //    )
 func BeaconCommitteeFromState(state *stateTrie.BeaconState, slot uint64, committeeIndex uint64) ([]uint64, error) {
 	epoch := SlotToEpoch(slot)
-	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester[:])
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get seed")
 	}
@@ -348,7 +348,7 @@ func VerifyAttestationBitfieldLengths(state *stateTrie.BeaconState, att *ethpb.A
 // ShuffledIndices uses input beacon state and returns the shuffled indices of the input epoch,
 // the shuffled indices then can be used to break up into committees.
 func ShuffledIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint64, error) {
-	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester[:])
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get seed for epoch %d", epoch)
 	}
@@ -375,7 +375,7 @@ func UpdateCommitteeCache(state *stateTrie.BeaconState, epoch uint64) error {
 
 		count := SlotCommitteeCount(uint64(len(shuffledIndices)))
 
-		seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconAttester[:])
+		seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconAttester)
 		if err != nil {
 			return err
 		}
@@ -412,7 +412,7 @@ func UpdateProposerIndicesInCache(state *stateTrie.BeaconState, epoch uint64) er
 	if err != nil {
 		return nil
 	}
-	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester[:])
+	seed, err := Seed(state, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {
 		return err
 	}
@@ -439,7 +439,7 @@ func precomputeProposerIndices(state *stateTrie.BeaconState, activeIndices []uin
 	proposerIndices := make([]uint64, params.BeaconConfig().SlotsPerEpoch)
 
 	e := CurrentEpoch(state)
-	seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconProposer[:])
+	seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconProposer)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate seed")
 	}
