@@ -55,6 +55,11 @@ func (ds *Service) detectIncomingAttestations(ctx context.Context, ch chan *ethp
 				log.WithError(err).Error("Could not detect attester slashings")
 				continue
 			}
+			if len(slashings) < 1 {
+				if err := ds.minMaxSpanDetector.UpdateSpans(ctx, indexedAtt); err != nil {
+					log.WithError(err).Error("Could not update spans")
+				}
+			}
 			ds.submitAttesterSlashings(ctx, slashings)
 		case <-sub.Err():
 			log.Error("Subscriber closed, exiting goroutine")
