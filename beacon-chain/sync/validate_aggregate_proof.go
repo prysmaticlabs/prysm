@@ -80,13 +80,9 @@ func (r *Service) validateAggregatedAtt(ctx context.Context, a *ethpb.AggregateA
 	defer span.End()
 
 	attSlot := a.Aggregate.Data.Slot
-
-	// Verify attestation slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots.
-	currentSlot := uint64(roughtime.Now().Unix()-r.chain.GenesisTime().Unix()) / params.BeaconConfig().SecondsPerSlot
-	if attSlot > currentSlot || currentSlot > attSlot+params.BeaconConfig().AttestationPropagationSlotRange {
-		traceutil.AnnotateError(span, fmt.Errorf("attestation slot out of range %d <= %d <= %d", attSlot, currentSlot, attSlot+params.BeaconConfig().AttestationPropagationSlotRange))
+	if err := validateAggregateAttTime(attSlot, uint64(r.chain.GenesisTime().Unix())); err != nil {
+		traceutil.AnnotateError(span, err)
 		return false
-
 	}
 
 	s, err := r.chain.HeadState(ctx)
@@ -160,6 +156,23 @@ func validateIndexInCommittee(ctx context.Context, s *stateTrie.BeaconState, a *
 	if !withinCommittee {
 		return fmt.Errorf("validator index %d is not within the committee: %v",
 			validatorIndex, attestingIndices)
+	}
+	return nil
+}
+
+// Validates that the incoming aggregate attestation is in the desired time range.
+func validateAggregateAttTime(attSlot uint64, genesisTime uint64) error {
+	// in milliseconds
+	attTime := 1000 * (genesisTime + (attSlot * params.BeaconConfig().SecondsPerSlot))
+	attTimeRange := 1000 * (genesisTime + (attSlot + params.BeaconConfig().AttestationPropagationSlotRange*params.BeaconConfig().SecondsPerSlot))
+	currentTimeInSec := roughtime.Now().Unix()
+	currentTime := 1000 * currentTimeInSec
+
+	// Verify attestation slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots.
+	currentSlot := (uint64(currentTimeInSec) - genesisTime) / params.BeaconConfig().SecondsPerSlot
+	if attTime-uint64(maximumGossipClockDisparity.Milliseconds()) > uint64(currentTime) ||
+		uint64(currentTime-maximumGossipClockDisparity.Milliseconds()) > attTimeRange {
+		return fmt.Errorf("attestation slot out of range %d <= %d <= %d", attSlot, currentSlot, attSlot+params.BeaconConfig().AttestationPropagationSlotRange)
 	}
 	return nil
 }
