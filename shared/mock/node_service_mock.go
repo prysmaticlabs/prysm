@@ -6,12 +6,11 @@ package mock
 
 import (
 	context "context"
-	reflect "reflect"
-
 	empty "github.com/gogo/protobuf/types"
 	gomock "github.com/golang/mock/gomock"
 	v1alpha1 "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	grpc "google.golang.org/grpc"
+	reflect "reflect"
 )
 
 // MockNodeClient is a mock of NodeClient interface

@@ -4,9 +4,9 @@ import (
 	"context"
 	"sync"
 
+	"github.com/kevinms/leakybucket-go"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	leakybucket "github.com/prysmaticlabs/prysm/bazel-prysm/external/com_github_kevinms_leakybucket_go"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
