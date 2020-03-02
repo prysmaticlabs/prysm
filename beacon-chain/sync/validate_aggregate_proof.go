@@ -164,7 +164,8 @@ func validateIndexInCommittee(ctx context.Context, s *stateTrie.BeaconState, a *
 func validateAggregateAttTime(attSlot uint64, genesisTime uint64) error {
 	// in milliseconds
 	attTime := 1000 * (genesisTime + (attSlot * params.BeaconConfig().SecondsPerSlot))
-	attTimeRange := 1000 * (genesisTime + (attSlot + params.BeaconConfig().AttestationPropagationSlotRange*params.BeaconConfig().SecondsPerSlot))
+	attSlotRange := attSlot + params.BeaconConfig().AttestationPropagationSlotRange
+	attTimeRange := 1000 * (genesisTime + (attSlotRange * params.BeaconConfig().SecondsPerSlot))
 	currentTimeInSec := roughtime.Now().Unix()
 	currentTime := 1000 * currentTimeInSec
 

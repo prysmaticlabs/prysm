@@ -216,7 +216,7 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 		t.Error("Expected validate to fail")
 	}
 
-	att.Data.Slot = 1<<64 - 1
+	att.Data.Slot = 1<<32 - 1
 
 	buf = new(bytes.Buffer)
 	if _, err := p.Encoding().Encode(buf, aggregateAndProof); err != nil {
