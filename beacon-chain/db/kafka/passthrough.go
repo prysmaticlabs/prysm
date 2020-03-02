@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/proto/beacon/db"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 // DatabasePath -- passthrough.
@@ -105,6 +106,11 @@ func (e Exporter) DeleteValidatorIndex(ctx context.Context, publicKey []byte) er
 // State -- passthrough.
 func (e Exporter) State(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
 	return e.db.State(ctx, blockRoot)
+}
+
+// StateSummary -- passthrough.
+func (e Exporter) StateSummary(ctx context.Context, blockRoot [32]byte) (*pb.StateSummary, error) {
+	return e.db.StateSummary(ctx, blockRoot)
 }
 
 // HeadState -- passthrough.
@@ -227,6 +233,11 @@ func (e Exporter) SaveState(ctx context.Context, state *state.BeaconState, block
 	return e.db.SaveState(ctx, state, blockRoot)
 }
 
+// SaveStateSummary -- passthrough.
+func (e Exporter) SaveStateSummary(ctx context.Context, summary *pb.StateSummary) error {
+	return e.db.SaveStateSummary(ctx, summary)
+}
+
 // SaveStates -- passthrough.
 func (e Exporter) SaveStates(ctx context.Context, states []*state.BeaconState, blockRoots [][32]byte) error {
 	return e.db.SaveStates(ctx, states, blockRoots)
@@ -295,6 +306,11 @@ func (e Exporter) DeleteStates(ctx context.Context, blockRoots [][32]byte) error
 // HasState -- passthrough.
 func (e Exporter) HasState(ctx context.Context, blockRoot [32]byte) bool {
 	return e.db.HasState(ctx, blockRoot)
+}
+
+// HasStateSummary -- passthrough.
+func (e Exporter) HasStateSummary(ctx context.Context, blockRoot [32]byte) bool {
+	return e.db.HasStateSummary(ctx, blockRoot)
 }
 
 // IsFinalizedBlock -- passthrough.
