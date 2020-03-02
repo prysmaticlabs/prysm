@@ -1,7 +1,6 @@
 package blockchain
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"fmt"
@@ -28,23 +27,6 @@ func (s *Service) getAttPreState(ctx context.Context, c *ethpb.Checkpoint) (*sta
 	}
 	if cachedState != nil {
 		return cachedState, nil
-	}
-	headRoot, err := s.HeadRoot(ctx)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not get head root")
-	}
-	if bytes.Equal(headRoot, c.Root) {
-		st, err := s.HeadState(ctx)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not get head state")
-		}
-		if err := s.checkpointState.AddCheckpointState(&cache.CheckpointState{
-			Checkpoint: c,
-			State:      st.Copy(),
-		}); err != nil {
-			return nil, errors.Wrap(err, "could not saved checkpoint state to cache")
-		}
-		return st, nil
 	}
 
 	baseState, err := s.beaconDB.State(ctx, bytesutil.ToBytes32(c.Root))
