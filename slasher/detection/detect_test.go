@@ -25,6 +25,7 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 					Source: &ethpb.Checkpoint{Epoch: 9},
 					Target: &ethpb.Checkpoint{Epoch: 13},
 				},
+				Signature: []byte{1, 2},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
 				AttestingIndices: []uint64{1, 3, 7},
@@ -43,6 +44,7 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 					Source: &ethpb.Checkpoint{Epoch: 6},
 					Target: &ethpb.Checkpoint{Epoch: 10},
 				},
+				Signature: []byte{1, 2},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
 				AttestingIndices: []uint64{0, 4},
@@ -61,6 +63,7 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 					Source: &ethpb.Checkpoint{Epoch: 1},
 					Target: &ethpb.Checkpoint{Epoch: 2},
 				},
+				Signature: []byte{1, 2},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
 				AttestingIndices: []uint64{0},
@@ -81,7 +84,7 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 				slasherDB:          db,
 				minMaxSpanDetector: &attestations.MockSpanDetector{},
 			}
-			if err := db.SaveIncomingIndexedAttestationByEpoch(ctx, tt.savedAtt); err != nil {
+			if err := db.SaveIndexedAttestation(ctx, tt.savedAtt); err != nil {
 				t.Fatal(err)
 			}
 
@@ -127,6 +130,7 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 					Source: &ethpb.Checkpoint{Epoch: 3},
 					Target: &ethpb.Checkpoint{Epoch: 4},
 				},
+				Signature: []byte{1, 2},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
 				AttestingIndices: []uint64{1, 3, 7},
@@ -134,6 +138,7 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 					Source: &ethpb.Checkpoint{Epoch: 2},
 					Target: &ethpb.Checkpoint{Epoch: 4},
 				},
+				Signature: []byte{1, 2},
 			},
 			slashingsFound: 1,
 		},
@@ -146,6 +151,7 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 					Target:          &ethpb.Checkpoint{Epoch: 4},
 					BeaconBlockRoot: []byte("good block root"),
 				},
+				Signature: []byte{1, 2},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
 				AttestingIndices: []uint64{0, 4},
@@ -166,6 +172,7 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 					Target:          &ethpb.Checkpoint{Epoch: 2},
 					BeaconBlockRoot: []byte("good block root"),
 				},
+				Signature: []byte{1, 2},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
 				AttestingIndices: []uint64{0},
@@ -187,7 +194,7 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 				slasherDB:          db,
 				minMaxSpanDetector: &attestations.MockSpanDetector{},
 			}
-			if err := db.SaveIncomingIndexedAttestationByEpoch(ctx, tt.savedAtt); err != nil {
+			if err := db.SaveIndexedAttestation(ctx, tt.savedAtt); err != nil {
 				t.Fatal(err)
 			}
 

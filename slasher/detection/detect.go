@@ -72,7 +72,7 @@ func (ds *Service) detectDoubleVote(
 		return nil, nil
 	}
 
-	otherAtts, err := ds.slasherDB.IndexedAttestationsForEpoch(ctx, detectionResult.SlashableEpoch)
+	otherAtts, err := ds.slasherDB.IndexedAttestationsWithPrefix(ctx, detectionResult.SlashableEpoch, detectionResult.SigBytes[:])
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +107,7 @@ func (ds *Service) detectSurroundVotes(
 		return nil, nil
 	}
 
-	otherAtts, err := ds.slasherDB.IndexedAttestationsForEpoch(ctx, detectionResult.SlashableEpoch)
+	otherAtts, err := ds.slasherDB.IndexedAttestationsWithPrefix(ctx, detectionResult.SlashableEpoch, detectionResult.SigBytes[:])
 	if err != nil {
 		return nil, err
 	}
