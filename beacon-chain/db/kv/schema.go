@@ -11,6 +11,7 @@ var (
 	blocksBucket                         = []byte("blocks")
 	validatorsBucket                     = []byte("validators")
 	stateBucket                          = []byte("state")
+	stateSummaryBucket                   = []byte("state-summary")
 	proposerSlashingsBucket              = []byte("proposer-slashings")
 	attesterSlashingsBucket              = []byte("attester-slashings")
 	voluntaryExitsBucket                 = []byte("voluntary-exits")
