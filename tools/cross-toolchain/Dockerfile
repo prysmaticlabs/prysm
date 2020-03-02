@@ -23,11 +23,9 @@ ADD install_clang_cross10.sh /tmp/install_clang_cross.sh
 RUN /tmp/install_clang_cross.sh
 
 # install osxcross
-RUN git clone https://github.com/tpoechtrager/osxcross.git && \
-    cd osxcross/tarballs && \
-    curl -LO https://www.dropbox.com/s/yfbesd249w10lpc/MacOSX10.10.sdk.tar.xz && \
-    cd .. && chmod 755 build.sh tools/*.sh && UNATTENDED=1 ./build.sh && \
-    mv target /usr/x86_64-apple-darwin/osxcross
+ADD install_osxcross.sh /tmp/install_osxcross.sh
+RUN /tmp/install_osxcross.sh
+
 # containerized development environment
 FROM build as devel
 RUN mkdir /workdir
