@@ -291,4 +291,5 @@ var E2EBeaconChainFlags = []string{
 	"--proto-array-forkchoice",
 	"--enable-byte-mempool",
 	"--enable-state-gen-sig-verify",
+	"--check-head-state",
 }
