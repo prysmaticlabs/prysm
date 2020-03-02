@@ -16,7 +16,7 @@ var _ = iface.SpanDetector(&MockSpanDetector{})
 // spans from validators.
 type MockSpanDetector struct {
 	// Slice of epochs for valindex => min-max span.
-	spans []map[uint64][2]uint16
+	spans []map[uint64]types.Span
 	lock  sync.RWMutex
 }
 
@@ -57,13 +57,13 @@ func (s *MockSpanDetector) DetectSlashingForValidator(
 
 // SpanForEpochByValidator returns the specific min-max span for a
 // validator index in a given epoch.
-func (s *MockSpanDetector) SpanForEpochByValidator(ctx context.Context, valIdx uint64, epoch uint64) ([3]uint16, error) {
-	return [3]uint16{0, 0, 0}, nil
+func (s *MockSpanDetector) SpanForEpochByValidator(ctx context.Context, valIdx uint64, epoch uint64) (types.Span, error) {
+	return types.Span{MinSpan: 0, MaxSpan: 0, SigBytes: [2]byte{}, HasAttested: false}, nil
 }
 
 // ValidatorSpansByEpoch returns a list of all validator spans in a given epoch.
-func (s *MockSpanDetector) ValidatorSpansByEpoch(ctx context.Context, epoch uint64) map[uint64][3]uint16 {
-	return make(map[uint64][3]uint16, 0)
+func (s *MockSpanDetector) ValidatorSpansByEpoch(ctx context.Context, epoch uint64) map[uint64]types.Span {
+	return make(map[uint64]types.Span, 0)
 }
 
 // DeleteValidatorSpansByEpoch mocks the delete spans by epoch function.
