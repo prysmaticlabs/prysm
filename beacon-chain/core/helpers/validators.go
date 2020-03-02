@@ -243,8 +243,8 @@ func ComputeProposerIndex(validators []*ethpb.Validator, activeIndices []uint64,
 //    epoch = get_current_epoch(state) if message_epoch is None else message_epoch
 //    fork_version = state.fork.previous_version if epoch < state.fork.epoch else state.fork.current_version
 //    return bls_domain(domain_type, fork_version)
-func Domain(fork *pb.Fork, epoch uint64, domainType []byte) (uint64, error) {
-	if fork == nil || domainType == nil {
+func Domain(fork *pb.Fork, epoch uint64, domainType [bls.DomainByteLength]byte) (uint64, error) {
+	if fork == nil {
 		return 0, errors.New("nil fork or domain type")
 	}
 	var forkVersion []byte
@@ -253,7 +253,12 @@ func Domain(fork *pb.Fork, epoch uint64, domainType []byte) (uint64, error) {
 	} else {
 		forkVersion = fork.CurrentVersion
 	}
-	return bls.Domain(domainType, forkVersion)
+	if len(forkVersion) != 4 {
+		return 0, errors.New("fork version length is not 4 byte")
+	}
+	var forkVersionArray [4]byte
+	copy(forkVersionArray[:], forkVersion[:4])
+	return bls.Domain(domainType, forkVersionArray), nil
 }
 
 // IsEligibleForActivationQueue checks if the validator is eligible to

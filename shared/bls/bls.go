@@ -24,6 +24,12 @@ func init() {
 	bls12.SetETHserialization(true)
 }
 
+// DomainByteLength length of domain byte array.
+const DomainByteLength = 4
+
+// ForkVersionByteLength length of fork version byte array.
+const ForkVersionByteLength = 4
+
 var maxKeys = int64(100000)
 var pubkeyCache, _ = ristretto.NewCache(&ristretto.Config{
 	NumCounters: maxKeys,
@@ -268,14 +274,12 @@ func (s *Signature) Marshal() []byte {
 //    epoch = get_current_epoch(state) if message_epoch is None else message_epoch
 //    fork_version = state.fork.previous_version if epoch < state.fork.epoch else state.fork.current_version
 //    return compute_domain(domain_type, fork_version)
-func Domain(domainType []byte, forkVersion []byte) (uint64, error) {
-	if len(domainType) != 4 || len(forkVersion) != 4 {
-		return 0, errors.New("domain type or fork version length are not 4 byte long")
-	}
+func Domain(domainType [DomainByteLength]byte, forkVersion [ForkVersionByteLength]byte) uint64 {
+
 	b := []byte{}
 	b = append(b, domainType[:4]...)
 	b = append(b, forkVersion[:4]...)
-	return bytesutil.FromBytes8(b), nil
+	return bytesutil.FromBytes8(b)
 }
 
 // ComputeDomain returns the domain version for BLS private key to sign and verify with a zeroed 4-byte
