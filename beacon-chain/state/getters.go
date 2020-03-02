@@ -1,9 +1,8 @@
 package state
 
 import (
+	"errors"
 	"fmt"
-
-	"github.com/prysmaticlabs/prysm/shared/params"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -24,9 +23,6 @@ func (v *ReadOnlyValidator) EffectiveBalance() uint64 {
 // ActivationEligibilityEpoch returns the activation eligibility epoch of the
 // read only validator.
 func (v *ReadOnlyValidator) ActivationEligibilityEpoch() uint64 {
-	if v == nil || v.validator == nil {
-		return params.BeaconConfig().FarFutureEpoch
-	}
 	return v.validator.ActivationEligibilityEpoch
 }
 
@@ -468,6 +464,9 @@ func (b *BeaconState) NumValidators() int {
 func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val *ReadOnlyValidator) error) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
+	}
+	if b.state.Validators == nil {
+		return errors.New("nil validators in state")
 	}
 	b.lock.RLock()
 	defer b.lock.RUnlock()
