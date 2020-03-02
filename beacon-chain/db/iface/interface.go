@@ -52,6 +52,9 @@ type ReadOnlyDatabase interface {
 	ArchivedCommitteeInfo(ctx context.Context, epoch uint64) (*ethereum_beacon_p2p_v1.ArchivedCommitteeInfo, error)
 	ArchivedBalances(ctx context.Context, epoch uint64) ([]uint64, error)
 	ArchivedValidatorParticipation(ctx context.Context, epoch uint64) (*eth.ValidatorParticipation, error)
+	ArchivedPointState(ctx context.Context, index uint64) (*state.BeaconState, error)
+	ArchivedPointRoot(ctx context.Context, index uint64) [32]byte
+	HasArchivedPoint(ctx context.Context, index uint64) bool
 	// Deposit contract related handlers.
 	DepositContractAddress(ctx context.Context) ([]byte, error)
 	// Powchain operations.
@@ -99,6 +102,8 @@ type NoHeadAccessDatabase interface {
 	SaveArchivedCommitteeInfo(ctx context.Context, epoch uint64, info *ethereum_beacon_p2p_v1.ArchivedCommitteeInfo) error
 	SaveArchivedBalances(ctx context.Context, epoch uint64, balances []uint64) error
 	SaveArchivedValidatorParticipation(ctx context.Context, epoch uint64, part *eth.ValidatorParticipation) error
+	SaveArchivedPointState(ctx context.Context, state *state.BeaconState, index uint64) error
+	SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, index uint64) error
 	// Deposit contract related handlers.
 	SaveDepositContractAddress(ctx context.Context, addr common.Address) error
 	// Powchain operations.

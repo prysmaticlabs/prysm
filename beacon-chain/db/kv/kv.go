@@ -96,6 +96,8 @@ func NewKVStore(dirPath string) (*Store, error) {
 			archivedValidatorParticipationBucket,
 			powchainBucket,
 			stateSummaryBucket,
+			archivedIndexRootBucket,
+			archivedIndexStateBucket,
 			// Indices buckets.
 			attestationHeadBlockRootBucket,
 			attestationSourceRootIndicesBucket,
