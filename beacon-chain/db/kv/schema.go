@@ -11,6 +11,7 @@ var (
 	blocksBucket                         = []byte("blocks")
 	validatorsBucket                     = []byte("validators")
 	stateBucket                          = []byte("state")
+	stateSummaryBucket                   = []byte("state-summary")
 	proposerSlashingsBucket              = []byte("proposer-slashings")
 	attesterSlashingsBucket              = []byte("attester-slashings")
 	voluntaryExitsBucket                 = []byte("voluntary-exits")
@@ -21,6 +22,8 @@ var (
 	archivedBalancesBucket               = []byte("archived-balances")
 	archivedValidatorParticipationBucket = []byte("archived-validator-participation")
 	powchainBucket                       = []byte("powchain")
+	archivedIndexRootBucket              = []byte("archived-index-root")
+	archivedIndexStateBucket             = []byte("archived-index-state")
 
 	// Key indices buckets.
 	blockParentRootIndicesBucket        = []byte("block-parent-root-indices")
