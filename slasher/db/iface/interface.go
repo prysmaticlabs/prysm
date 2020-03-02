@@ -21,7 +21,8 @@ type ReadOnlyDatabase interface {
 	BlockHeaders(ctx context.Context, epoch uint64, validatorID uint64) ([]*ethpb.SignedBeaconBlockHeader, error)
 	HasBlockHeader(ctx context.Context, epoch uint64, validatorID uint64) bool
 
-	// IndexedAttestations related methods.
+	// IndexedAttestationsForEpoch related methods.
+	IndexedAttestationsForEpoch(ctx context.Context, targetEpoch uint64) ([]*ethpb.IndexedAttestation, error)
 	IdxAttsForTargetFromID(ctx context.Context, targetEpoch uint64, validatorID uint64) ([]*ethpb.IndexedAttestation, error)
 	IdxAttsForTarget(ctx context.Context, targetEpoch uint64) ([]*ethpb.IndexedAttestation, error)
 	LatestIndexedAttestationsTargetEpoch(ctx context.Context) (uint64, error)
@@ -55,8 +56,10 @@ type WriteAccessDatabase interface {
 	DeleteBlockHeader(ctx context.Context, epoch uint64, validatorID uint64, blockHeader *ethpb.SignedBeaconBlockHeader) error
 	PruneBlockHistory(ctx context.Context, currentEpoch uint64, pruningEpochAge uint64) error
 
-	// IndexedAttestations related methods.
+	// IndexedAttestationsForEpoch related methods.
 	SaveIndexedAttestation(ctx context.Context, idxAttestation *ethpb.IndexedAttestation) error
+	SaveIncomingIndexedAttestationByEpoch(ctx context.Context, idxAttestation *ethpb.IndexedAttestation) error
+	SaveIncomingIndexedAttestationsByEpoch(ctx context.Context, idxAttestations []*ethpb.IndexedAttestation) error
 	DeleteIndexedAttestation(ctx context.Context, idxAttestation *ethpb.IndexedAttestation) error
 	PruneAttHistory(ctx context.Context, currentEpoch uint64, pruningEpochAge uint64) error
 

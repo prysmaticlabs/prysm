@@ -43,6 +43,8 @@ type Flags struct {
 	DisableUpdateHeadPerAttestation            bool   // DisableUpdateHeadPerAttestation will disabling update head on per attestation basis.
 	EnableByteMempool                          bool   // EnaableByteMempool memory management.
 	EnableDomainDataCache                      bool   // EnableDomainDataCache caches validator calls to DomainData per epoch.
+	EnableStateGenSigVerify                    bool   // EnableStateGenSigVerify verifies proposer and randao signatures during state gen.
+	CheckHeadState                             bool   // CheckHeadState checks the current headstate before retrieving the desired state from the db.
 
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
@@ -144,7 +146,14 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.Warn("Enabling experimental memory management for beacon state")
 		cfg.EnableByteMempool = true
 	}
-
+	if ctx.GlobalBool(enableStateGenSigVerify.Name) {
+		log.Warn("Enabling sig verify for state gen")
+		cfg.EnableStateGenSigVerify = true
+	}
+	if ctx.GlobalBool(checkHeadState.Name) {
+		log.Warn("Enabling check head state for chainservice")
+		cfg.CheckHeadState = true
+	}
 	Init(cfg)
 }
 

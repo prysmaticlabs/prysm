@@ -329,6 +329,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		ChainStartFetcher: web3Service,
 		AttPool:           b.attestationPool,
 		ExitPool:          b.exitPool,
+		SlashingPool:      b.slashingsPool,
 		P2p:               b.fetchP2P(ctx),
 		MaxRoutines:       maxRoutines,
 		StateNotifier:     b,
@@ -408,14 +409,15 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 	}
 
 	rs := prysmsync.NewRegularSync(&prysmsync.Config{
-		DB:            b.db,
-		P2P:           b.fetchP2P(ctx),
-		Chain:         chainService,
-		InitialSync:   initSync,
-		StateNotifier: b,
-		BlockNotifier: b,
-		AttPool:       b.attestationPool,
-		ExitPool:      b.exitPool,
+		DB:                  b.db,
+		P2P:                 b.fetchP2P(ctx),
+		Chain:               chainService,
+		InitialSync:         initSync,
+		StateNotifier:       b,
+		BlockNotifier:       b,
+		AttestationNotifier: b,
+		AttPool:             b.attestationPool,
+		ExitPool:            b.exitPool,
 	})
 
 	return b.services.RegisterService(rs)

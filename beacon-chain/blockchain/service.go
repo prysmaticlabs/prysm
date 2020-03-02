@@ -27,11 +27,12 @@ import (
 	f "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/stategen"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -46,6 +47,7 @@ type Service struct {
 	depositCache           *depositcache.DepositCache
 	chainStartFetcher      powchain.ChainStartFetcher
 	attPool                attestations.Pool
+	slashingPool           *slashings.Pool
 	exitPool               *voluntaryexits.Pool
 	genesisTime            time.Time
 	p2p                    p2p.Broadcaster
@@ -80,6 +82,7 @@ type Config struct {
 	DepositCache      *depositcache.DepositCache
 	AttPool           attestations.Pool
 	ExitPool          *voluntaryexits.Pool
+	SlashingPool      *slashings.Pool
 	P2p               p2p.Broadcaster
 	MaxRoutines       int64
 	StateNotifier     statefeed.Notifier
@@ -98,6 +101,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		chainStartFetcher:  cfg.ChainStartFetcher,
 		attPool:            cfg.AttPool,
 		exitPool:           cfg.ExitPool,
+		slashingPool:       cfg.SlashingPool,
 		p2p:                cfg.P2p,
 		maxRoutines:        cfg.MaxRoutines,
 		stateNotifier:      cfg.StateNotifier,

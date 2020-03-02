@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -18,10 +19,13 @@ func TestService_RequestHistoricalAttestations(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
+	db := testDB.SetupSlasherDB(t, false)
+	defer testDB.TeardownSlasherDB(t, db)
 	client := mock.NewMockBeaconChainClient(ctrl)
 
 	bs := Service{
 		beaconClient: client,
+		slasherDB:    db,
 	}
 
 	numAtts := 1000
@@ -31,6 +35,10 @@ func TestService_RequestHistoricalAttestations(t *testing.T) {
 			AttestingIndices: []uint64{1, 2, 3},
 			Data: &ethpb.AttestationData{
 				Slot: uint64(i),
+				Target: &ethpb.Checkpoint{
+					Epoch: 1,
+					Root:  make([]byte, 32),
+				},
 			},
 		}
 	}

@@ -15,9 +15,10 @@ var log = logrus.WithField("prefix", "blockchain")
 // logs state transition related data every slot.
 func logStateTransitionData(b *ethpb.BeaconBlock) {
 	log.WithFields(logrus.Fields{
-		"slot":         b.Slot,
-		"attestations": len(b.Body.Attestations),
-		"deposits":     len(b.Body.Deposits),
+		"slot":              b.Slot,
+		"attestations":      len(b.Body.Attestations),
+		"deposits":          len(b.Body.Deposits),
+		"attesterSlashings": len(b.Body.AttesterSlashings),
 	}).Info("Finished applying state transition")
 }
 
