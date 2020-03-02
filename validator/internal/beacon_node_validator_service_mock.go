@@ -5,10 +5,10 @@
 package internal
 
 import (
-	context "context"
-	ptypes "github.com/gogo/protobuf/types"
-	gomock "github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	context "context"
+	gomock "github.com/golang/mock/gomock"
+	ptypes "github.com/gogo/protobuf/types"
 	grpc "google.golang.org/grpc"
 	metadata "google.golang.org/grpc/metadata"
 	reflect "reflect"
