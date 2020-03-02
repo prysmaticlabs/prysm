@@ -6,12 +6,14 @@ ENV DOCKER_CLI_EXPERIMENTAL=enabled
 RUN apt-get update && \
     apt-get install -y \
         curl xz-utils \
-        gcc g++ \
+        gcc g++ mingw-w64 \
         gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
         cmake libssl-dev libxml2-dev vim apt-transport-https \
         zip unzip libtinfo5 patch zlib1g-dev autoconf libtool \
-        pkg-config make docker.io gnupg2 && \
-    curl https://bazel.build/bazel-release.pub.gpg | apt-key add - && \
+        pkg-config make docker.io gnupg2
+
+# install bazel
+RUN curl https://bazel.build/bazel-release.pub.gpg | apt-key add - && \
     echo "deb [arch=amd64] https://storage.googleapis.com/bazel-apt stable jdk1.8" | tee /etc/apt/sources.list.d/bazel.list && \
     apt update && apt install -y bazel && \
     apt-get clean && \

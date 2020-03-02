@@ -2,6 +2,7 @@ package(default_visibility = ["//visibility:public"])
 
 load(":cc_toolchain_config_osx.bzl", "osx_cc_toolchain_config")
 load(":cc_toolchain_config_linux_arm64.bzl", "arm64_cc_toolchain_config")
+load(":cc_toolchain_config_windows.bzl", "windows_cc_toolchain_config")
 
 cc_toolchain_suite(
     name = "multiarch_toolchain",
@@ -11,6 +12,7 @@ cc_toolchain_suite(
         "aarch64|clang": ":cc-clang-arm64",
         "k8": "cc-clang-amd64",
         "aarch64": ":cc-clang-arm64",
+        "k8|mingw-w64": ":cc-mingw-amd64",
     },
 )
 
@@ -73,6 +75,25 @@ osx_cc_toolchain_config(
     target = "darwin_x86_64",
 )
 
+windows_cc_toolchain_config(
+    name = "local-windows",
+    target = "x86_64-w64",
+)
+
+cc_toolchain(
+    name = "cc-mingw-amd64",
+    all_files = ":empty",
+    ar_files = ":empty",
+    as_files = ":mingw_compiler_files",
+    compiler_files = ":mingw_compiler_files",
+    dwp_files = ":empty",
+    linker_files = ":empty",
+    objcopy_files = ":empty",
+    strip_files = ":empty",
+    supports_param_files = 0,
+    toolchain_config = ":local-windows",
+)
+
 cc_toolchain(
     name = "cc-clang-arm64",
     all_files = ":empty",
@@ -120,6 +141,7 @@ toolchain(
         ":linux_arm64": ":cc-clang-arm64",
         ":linux_amd64": ":cc-clang-amd64",
         ":osx_amd64": ":cc-clang-osx",
+        ":windows_amd64": ":cc-mingw-amd64",
     }),
     toolchain_type = "@bazel_tools//tools/cpp:toolchain_type",
 )
