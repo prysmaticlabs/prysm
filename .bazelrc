@@ -44,7 +44,7 @@ build:debug --verbose_failures
 build:debug -s
 
 # Docker Sandbox Mode - Note all docker sandbox configs must run from a linux x86_64 host
-build:docker-sandbox --experimental_docker_image=suburbandad/cross-clang-10:latest
+build:docker-sandbox --experimental_docker_image=suburbandad/prysm-cross:latest
 build:docker-sandbox --spawn_strategy=docker --strategy=Javac=docker --genrule_strategy=docker
 build:docker-sandbox --define=EXECUTOR=remote
 build:docker-sandbox --experimental_docker_verbose
@@ -100,3 +100,6 @@ build:windows_amd64 --compiler=mingw-w64
 build:windows_amd64_debug --config=windows_amd64
 build:windows_amd64_debug --config=debug
 
+# windows_amd64 docker sandbox build config
+build:windows_amd64_docker --config=windows_amd64_debug
+build:windows_amd64_docker --config=docker-sandbox
