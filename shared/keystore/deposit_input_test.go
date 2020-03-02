@@ -39,7 +39,7 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dom := bytesutil.FromBytes4(params.BeaconConfig().DomainDeposit)
+	dom := bytesutil.FromBytes4(params.BeaconConfig().DomainDeposit[:])
 	if !sig.Verify(sr[:], k1.PublicKey, dom) {
 		t.Error("Invalid proof of deposit input signature")
 	}
