@@ -102,6 +102,10 @@ var (
 		Usage: "Enable signature verification for state gen. This feature increases the cost to generate a historical state," +
 			"the resulting state is signature verified.",
 	}
+	checkHeadState = cli.BoolFlag{
+		Name:  "check-head-state",
+		Usage: "Enables the checking of head state in chainservice first before retrieving the desired state from the db.",
+	}
 )
 
 // Deprecated flags list.
@@ -274,6 +278,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableUpdateHeadPerAttestation,
 	enableByteMempool,
 	enableStateGenSigVerify,
+	checkHeadState,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
