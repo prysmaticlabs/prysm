@@ -12,9 +12,11 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -54,7 +56,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64, pubKey [48]by
 	}
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")
 	defer span.End()
-	fmtKey := fmt.Sprintf("%#x", pubKey[:8])
+	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
 	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:])))
@@ -196,7 +198,12 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get signing root")
 	}
-	sig, err := v.keyManager.Sign(pubKey, root, domain.SignatureDomain)
+	var sig *bls.Signature
+	if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {
+		sig, err = protectingKeymanager.SignProposal(pubKey, domain.SignatureDomain, b)
+	} else {
+		sig, err = v.keyManager.Sign(pubKey, root, domain.SignatureDomain)
+	}
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get signing root")
 	}
