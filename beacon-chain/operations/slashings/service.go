@@ -27,6 +27,13 @@ func (p *Pool) PendingAttesterSlashings() []*ethpb.AttesterSlashing {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
+	var slashInPool []uint64
+	for _, att := range p.pendingAttesterSlashing {
+		slashable := sliceutil.IntersectionUint64(att.attesterSlashing.Attestation_1.AttestingIndices, att.attesterSlashing.Attestation_2.AttestingIndices)
+		slashInPool = append(slashInPool, slashable...)
+	}
+	fmt.Printf("Full pool %v\n", slashInPool)
+
 	included := make(map[uint64]bool)
 	pending := make([]*ethpb.AttesterSlashing, 0, params.BeaconConfig().MaxAttesterSlashings)
 	for i, slashing := range p.pendingAttesterSlashing {
@@ -44,6 +51,11 @@ func (p *Pool) PendingAttesterSlashings() []*ethpb.AttesterSlashing {
 		pending = append(pending, attSlashing)
 	}
 
+	for _, att := range pending {
+		slashable := sliceutil.IntersectionUint64(att.Attestation_1.AttestingIndices, att.Attestation_2.AttestingIndices)
+		fmt.Println(slashable)
+	}
+
 	return pending
 }
 
@@ -59,6 +71,7 @@ func (p *Pool) PendingProposerSlashings() []*ethpb.ProposerSlashing {
 		}
 		pending = append(pending, slashing)
 	}
+
 	return pending
 }
 
@@ -69,6 +82,7 @@ func (p *Pool) InsertAttesterSlashing(state *beaconstate.BeaconState, slashing *
 	defer p.lock.Unlock()
 
 	slashedVal := sliceutil.IntersectionUint64(slashing.Attestation_1.AttestingIndices, slashing.Attestation_2.AttestingIndices)
+	fmt.Printf("added %v\n", slashedVal)
 	for _, val := range slashedVal {
 		// Has this validator index been included recently?
 		ok, err := p.validatorSlashingPreconditionCheck(state, val)
@@ -85,9 +99,9 @@ func (p *Pool) InsertAttesterSlashing(state *beaconstate.BeaconState, slashing *
 		// Check if the validator already exists in the list of slashings.
 		// Use binary search to find the answer.
 		found := sort.Search(len(p.pendingAttesterSlashing), func(i int) bool {
-			return p.pendingAttesterSlashing[i].validatorToSlash == val
+			return p.pendingAttesterSlashing[i].validatorToSlash >= val
 		})
-		if found != len(p.pendingAttesterSlashing) {
+		if found != len(p.pendingAttesterSlashing) && p.pendingAttesterSlashing[found].validatorToSlash == val {
 			continue
 		}
 
@@ -125,7 +139,7 @@ func (p *Pool) InsertProposerSlashing(state *beaconstate.BeaconState, slashing *
 	// Check if the validator already exists in the list of slashings.
 	// Use binary search to find the answer.
 	found := sort.Search(len(p.pendingProposerSlashing), func(i int) bool {
-		return p.pendingProposerSlashing[i].ProposerIndex == slashing.ProposerIndex
+		return p.pendingProposerSlashing[i].ProposerIndex >= slashing.ProposerIndex
 	})
 	if found != len(p.pendingProposerSlashing) {
 		return errors.New("slashing object already exists in pending proposer slashings")
@@ -146,14 +160,11 @@ func (p *Pool) MarkIncludedAttesterSlashing(as *ethpb.AttesterSlashing) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	slashedVal := sliceutil.IntersectionUint64(as.Attestation_1.AttestingIndices, as.Attestation_2.AttestingIndices)
-	sort.Slice(slashedVal, func(i, j int) bool {
-		return slashedVal[i] < slashedVal[j]
-	})
 	for _, val := range slashedVal {
 		i := sort.Search(len(p.pendingAttesterSlashing), func(i int) bool {
-			return p.pendingAttesterSlashing[i].validatorToSlash == val
+			return p.pendingAttesterSlashing[i].validatorToSlash >= val
 		})
-		if i != len(p.pendingAttesterSlashing) {
+		if i != len(p.pendingAttesterSlashing) && p.pendingAttesterSlashing[i].validatorToSlash == val {
 			p.pendingAttesterSlashing = append(p.pendingAttesterSlashing[:i], p.pendingAttesterSlashing[i+1:]...)
 		}
 		p.included[val] = true
@@ -169,7 +180,7 @@ func (p *Pool) MarkIncludedProposerSlashing(ps *ethpb.ProposerSlashing) {
 	i := sort.Search(len(p.pendingProposerSlashing), func(i int) bool {
 		return p.pendingProposerSlashing[i].ProposerIndex == ps.ProposerIndex
 	})
-	if i != len(p.pendingProposerSlashing) {
+	if i != len(p.pendingProposerSlashing) && p.pendingProposerSlashing[i].ProposerIndex == ps.ProposerIndex {
 		p.pendingProposerSlashing = append(p.pendingProposerSlashing[:i], p.pendingProposerSlashing[i+1:]...)
 	}
 	p.included[ps.ProposerIndex] = true
