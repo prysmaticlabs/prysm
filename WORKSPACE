@@ -26,7 +26,7 @@ rbe_autoconfig(
     create_cc_configs = False,
     create_java_configs = False,
     export_configs = True,
-    digest = "sha256:0de2c4ebdef5691227e23e2fc7d00f5ba0cab4fbb349ed05dc3362ff642dce2d", # Latest gcr.io/prysmaticlabs/rbe-worker image.
+    digest = "sha256:f4cd132e281017cc7999ac4fb5877c02596deafe24c62ebb5943be68a588a544", # Latest gcr.io/prysmaticlabs/rbe-worker image.
     registry = CUSTOM_TOOLCHAIN_CONFIG_SUITE_SPEC["container_registry"],
     repository = CUSTOM_TOOLCHAIN_CONFIG_SUITE_SPEC["container_repo"],
     toolchain_config_suite_spec = CUSTOM_TOOLCHAIN_CONFIG_SUITE_SPEC,

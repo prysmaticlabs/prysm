@@ -43,7 +43,7 @@ platform(
     remote_execution_properties = """
         properties: {
           name: "container-image"
-          value:"docker://gcr.io/prysmaticlabs/rbe-worker@sha256:0de2c4ebdef5691227e23e2fc7d00f5ba0cab4fbb349ed05dc3362ff642dce2d"
+          value:"docker://gcr.io/prysmaticlabs/rbe-worker@sha256:f4cd132e281017cc7999ac4fb5877c02596deafe24c62ebb5943be68a588a544"
         }
         properties {
            name: "OSFamily"

@@ -1,5 +1,8 @@
+# docker build -t gcr.io/prysmaticlabs/rbe-worker:latest .
+# gcloud docker -- push gcr.io/prysmaticlabs/rbe-worker:latest
+
 # containerized build environment
-FROM gcr.io/cloud-marketplace/google/rbe-ubuntu16-04 as build
+FROM gcr.io/cloud-marketplace/google/rbe-ubuntu18-04 as build
 
 # install gnu/gcc cross-build toolchain (gcc 8.3)
 ENV DOCKER_CLI_EXPERIMENTAL=enabled

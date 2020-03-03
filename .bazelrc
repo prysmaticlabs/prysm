@@ -100,9 +100,9 @@ build:docker-sandbox --experimental_enable_docker_sandbox
 #build:docker-sandbox --host_java_toolchain=@bazel_tools//tools/jdk:toolchain_hostjdk8 
 #build:docker-sandbox --java_toolchain=@bazel_tools//tools/jdk:toolchain_hostjdk8 
 #build:docker-sandbox --extra_execution_platforms=@rbe_default//config:platform 
-#build:docker-sandbox --host_platform=@rbe_default//config:platform 
+build:docker-sandbox --host_platform=@rbe_default//config:platform 
 #build:docker-sandbox --platforms=@rbe_default//config:platform
-#build:docker-sandbox --extra_toolchains=@rbe_default//config:cc-toolchain
+build:docker-sandbox --extra_toolchains=@rbe_default//config:cc-toolchain
 
 # windows_amd64 docker sandbox build config
 build:windows_amd64_docker --config=docker-sandbox --config=windows_amd64
