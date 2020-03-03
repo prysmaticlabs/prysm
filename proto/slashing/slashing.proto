@@ -18,7 +18,15 @@ service Slasher {
 
     // Gets ProposerSlashing container if the block that
     // was received produces a slashable event.
-    rpc IsSlashableBlock(ProposerSlashingRequest) returns (ProposerSlashingResponse);
+    rpc IsSlashableBlock(ethereum.eth.v1alpha1.SignedBeaconBlockHeader) returns (ProposerSlashingResponse);
+}
+
+message ProposerSlashingResponse {
+    repeated ethereum.eth.v1alpha1.ProposerSlashing proposer_slashing = 1;
+}
+
+message AttesterSlashingResponse {
+    repeated ethereum.eth.v1alpha1.AttesterSlashing attester_slashing = 1;
 }
 
 // CompressedIdxAtt is an indexed attestation with the []byte data root
@@ -34,19 +42,6 @@ message CompressedIdxAtt {
 // accessing an array from the DB.
 message CompressedIdxAttList {
     repeated CompressedIdxAtt list = 1;
-}
-
-message ProposerSlashingRequest {
-    ethereum.eth.v1alpha1.SignedBeaconBlockHeader block_header = 1;
-    uint64 validator_index = 2;
-}
-
-message ProposerSlashingResponse {
-    repeated ethereum.eth.v1alpha1.ProposerSlashing proposer_slashing = 1;
-}
-
-message AttesterSlashingResponse {
-    repeated ethereum.eth.v1alpha1.AttesterSlashing attester_slashing = 1;
 }
 
 // In order to detect surrounded attestation we need to compare
