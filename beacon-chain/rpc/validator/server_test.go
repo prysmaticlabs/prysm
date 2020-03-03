@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
