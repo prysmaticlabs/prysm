@@ -33,6 +33,7 @@ func TestSpanDetector_DetectSlashingForValidator_Double(t *testing.T) {
 						Root:  []byte("good target"),
 					},
 				},
+				Signature: []byte{1, 2},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
 				AttestingIndices: []uint64{2},
@@ -63,6 +64,7 @@ func TestSpanDetector_DetectSlashingForValidator_Double(t *testing.T) {
 						Root:  []byte("good target"),
 					},
 				},
+				Signature: []byte{1, 2},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
 				AttestingIndices: []uint64{2},
@@ -79,7 +81,6 @@ func TestSpanDetector_DetectSlashingForValidator_Double(t *testing.T) {
 			},
 			slashCount: 1,
 		},
-
 		{
 			name: "att with different committee index, rest is the same, should slash",
 			att: &ethpb.IndexedAttestation{
@@ -95,6 +96,7 @@ func TestSpanDetector_DetectSlashingForValidator_Double(t *testing.T) {
 						Root:  []byte("good target"),
 					},
 				},
+				Signature: []byte{1, 2},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
 				AttestingIndices: []uint64{2},
@@ -109,6 +111,7 @@ func TestSpanDetector_DetectSlashingForValidator_Double(t *testing.T) {
 						Root:  []byte("bad target"),
 					},
 				},
+				Signature: []byte{1, 2},
 			},
 			slashCount: 1,
 		},
@@ -127,6 +130,7 @@ func TestSpanDetector_DetectSlashingForValidator_Double(t *testing.T) {
 					},
 					BeaconBlockRoot: []byte("good block root"),
 				},
+				Signature: []byte{1, 2},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
 				AttestingIndices: []uint64{2, 4, 6},
@@ -145,7 +149,7 @@ func TestSpanDetector_DetectSlashingForValidator_Double(t *testing.T) {
 			slashCount: 3,
 		},
 		{
-			name: "att with different target, should not slash",
+			name: "att with different target, should not detect possible double",
 			att: &ethpb.IndexedAttestation{
 				AttestingIndices: []uint64{1, 2, 4, 6},
 				Data: &ethpb.AttestationData{
@@ -159,6 +163,7 @@ func TestSpanDetector_DetectSlashingForValidator_Double(t *testing.T) {
 					},
 					BeaconBlockRoot: []byte("good block root"),
 				},
+				Signature: []byte{1, 2},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
 				AttestingIndices: []uint64{2, 4, 6},
@@ -177,7 +182,7 @@ func TestSpanDetector_DetectSlashingForValidator_Double(t *testing.T) {
 			slashCount: 0,
 		},
 		{
-			name: "same att with different aggregates, should not slash",
+			name: "same att with different aggregates, should detect possible double",
 			att: &ethpb.IndexedAttestation{
 				AttestingIndices: []uint64{1, 2, 4, 6},
 				Data: &ethpb.AttestationData{
@@ -191,6 +196,7 @@ func TestSpanDetector_DetectSlashingForValidator_Double(t *testing.T) {
 					},
 					BeaconBlockRoot: []byte("good block root"),
 				},
+				Signature: []byte{1, 2},
 			},
 			incomingAtt: &ethpb.IndexedAttestation{
 				AttestingIndices: []uint64{2, 3, 4, 16},
@@ -206,7 +212,7 @@ func TestSpanDetector_DetectSlashingForValidator_Double(t *testing.T) {
 					BeaconBlockRoot: []byte("good block root"),
 				},
 			},
-			slashCount: 0,
+			slashCount: 2,
 		},
 	}
 
@@ -214,14 +220,11 @@ func TestSpanDetector_DetectSlashingForValidator_Double(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			numEpochsToTrack := 100
 			sd := &SpanDetector{
-				spans: make([]map[uint64][3]uint16, numEpochsToTrack),
+				spans: make([]map[uint64]types.Span, numEpochsToTrack),
 			}
 
 			ctx := context.Background()
 			if err := sd.UpdateSpans(ctx, tt.att); err != nil {
-				t.Fatal(err)
-			}
-			if err := sd.UpdateSpans(ctx, tt.incomingAtt); err != nil {
 				t.Fatal(err)
 			}
 
@@ -237,6 +240,7 @@ func TestSpanDetector_DetectSlashingForValidator_Double(t *testing.T) {
 					want = &types.DetectionResult{
 						Kind:           types.DoubleVote,
 						SlashableEpoch: tt.incomingAtt.Data.Target.Epoch,
+						SigBytes:       [2]byte{1, 2},
 					}
 				}
 				if !reflect.DeepEqual(res, want) {
@@ -444,13 +448,16 @@ func TestSpanDetector_DetectSlashingForValidator_Surround(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			numEpochsToTrack := 100
 			sd := &SpanDetector{
-				spans: make([]map[uint64][3]uint16, numEpochsToTrack),
+				spans: make([]map[uint64]types.Span, numEpochsToTrack),
 			}
 			// We only care about validator index 0 for these tests for simplicity.
 			validatorIndex := uint64(0)
 			for k, v := range tt.spansByEpochForValidator {
-				sd.spans[k] = map[uint64][3]uint16{
-					validatorIndex: v,
+				sd.spans[k] = map[uint64]types.Span{
+					validatorIndex: types.Span{
+						MinSpan: v[0],
+						MaxSpan: v[1],
+					},
 				}
 			}
 			ctx := context.Background()
@@ -489,7 +496,7 @@ func TestSpanDetector_DetectSlashingForValidator_MultipleValidators(t *testing.T
 		targetEpochs    []uint64
 		slashableEpochs []uint64
 		shouldSlash     []bool
-		spansByEpoch    []map[uint64][3]uint16
+		spansByEpoch    []map[uint64]types.Span
 	}
 	tests := []testStruct{
 		{
@@ -500,51 +507,51 @@ func TestSpanDetector_DetectSlashingForValidator_MultipleValidators(t *testing.T
 			// Detections - surrounding, none, surrounded, surrounding, none.
 			shouldSlash: []bool{true, false, true, true, false},
 			// Atts in map: (src, epoch) - 0: (2, 6), 1: (1, 2), 2: (1, 7), 3: (6, 8), 4: (0, 3)
-			spansByEpoch: []map[uint64][3]uint16{
+			spansByEpoch: []map[uint64]types.Span{
 				// Epoch 0.
 				{
-					0: {6, 0},
-					1: {2, 0},
-					2: {7, 0},
-					3: {8, 0},
+					0: {MinSpan: 6, MaxSpan: 0},
+					1: {MinSpan: 2, MaxSpan: 0},
+					2: {MinSpan: 7, MaxSpan: 0},
+					3: {MinSpan: 8, MaxSpan: 0},
 				},
 				// Epoch 1.
 				{
-					0: {5, 0},
-					3: {7, 0},
-					4: {0, 1},
+					0: {MinSpan: 5, MaxSpan: 0},
+					3: {MinSpan: 7, MaxSpan: 0},
+					4: {MinSpan: 0, MaxSpan: 1},
 				},
 				// Epoch 2.
 				{
-					2: {0, 5},
-					3: {6, 0},
-					4: {0, 2},
+					2: {MinSpan: 0, MaxSpan: 5},
+					3: {MinSpan: 6, MaxSpan: 0},
+					4: {MinSpan: 0, MaxSpan: 2},
 				},
 				// Epoch 3.
 				{
-					0: {0, 3},
-					2: {0, 4},
-					3: {5, 0},
+					0: {MinSpan: 0, MaxSpan: 3},
+					2: {MinSpan: 0, MaxSpan: 4},
+					3: {MinSpan: 5, MaxSpan: 0},
 				},
 				// Epoch 4.
 				{
-					0: {0, 2},
-					2: {0, 3},
-					3: {4, 0},
+					0: {MinSpan: 0, MaxSpan: 2},
+					2: {MinSpan: 0, MaxSpan: 3},
+					3: {MinSpan: 4, MaxSpan: 0},
 				},
 				// Epoch 5.
 				{
-					0: {0, 1},
-					2: {0, 2},
-					3: {3, 0},
+					0: {MinSpan: 0, MaxSpan: 1},
+					2: {MinSpan: 0, MaxSpan: 2},
+					3: {MinSpan: 3, MaxSpan: 0},
 				},
 				// Epoch 6.
 				{
-					2: {0, 1},
+					2: {MinSpan: 0, MaxSpan: 1},
 				},
 				// Epoch 7.
 				{
-					3: {0, 1},
+					3: {MinSpan: 0, MaxSpan: 1},
 				},
 			},
 		},
@@ -553,7 +560,7 @@ func TestSpanDetector_DetectSlashingForValidator_MultipleValidators(t *testing.T
 		t.Run(tt.name, func(t *testing.T) {
 			numEpochsToTrack := 100
 			sd := &SpanDetector{
-				spans: make([]map[uint64][3]uint16, numEpochsToTrack),
+				spans: make([]map[uint64]types.Span, numEpochsToTrack),
 			}
 			for i := 0; i < len(tt.spansByEpoch); i++ {
 				sd.spans[i] = tt.spansByEpoch[i]
@@ -592,14 +599,19 @@ func TestSpanDetector_DetectSlashingForValidator_MultipleValidators(t *testing.T
 func TestSpanDetector_SpanForEpochByValidator(t *testing.T) {
 	numEpochsToTrack := 2
 	sd := &SpanDetector{
-		spans: make([]map[uint64][3]uint16, numEpochsToTrack),
+		spans: make([]map[uint64]types.Span, numEpochsToTrack),
 	}
 	epoch := uint64(1)
 	validatorIndex := uint64(40)
-	sd.spans[epoch] = map[uint64][3]uint16{
-		validatorIndex: {3, 7},
+	sd.spans[epoch] = map[uint64]types.Span{
+		validatorIndex: {MinSpan: 3, MaxSpan: 7},
 	}
-	want := [3]uint16{3, 7}
+	want := types.Span{
+		MinSpan:     3,
+		MaxSpan:     7,
+		SigBytes:    [2]byte{0, 0},
+		HasAttested: false,
+	}
 	ctx := context.Background()
 	res, err := sd.SpanForEpochByValidator(ctx, validatorIndex, epoch)
 	if err != nil {
@@ -630,12 +642,12 @@ func TestSpanDetector_SpanForEpochByValidator(t *testing.T) {
 func TestSpanDetector_ValidatorSpansByEpoch(t *testing.T) {
 	numEpochsToTrack := 2
 	sd := &SpanDetector{
-		spans: make([]map[uint64][3]uint16, numEpochsToTrack),
+		spans: make([]map[uint64]types.Span, numEpochsToTrack),
 	}
 	epoch := uint64(1)
 	validatorIndex := uint64(40)
-	want := map[uint64][3]uint16{
-		validatorIndex: {3, 7},
+	want := map[uint64]types.Span{
+		validatorIndex: {MinSpan: 3, MaxSpan: 7},
 	}
 	sd.spans[epoch] = want
 	res := sd.ValidatorSpansByEpoch(context.Background(), epoch)
@@ -647,12 +659,12 @@ func TestSpanDetector_ValidatorSpansByEpoch(t *testing.T) {
 func TestSpanDetector_DeleteValidatorSpansByEpoch(t *testing.T) {
 	numEpochsToTrack := 2
 	sd := &SpanDetector{
-		spans: make([]map[uint64][3]uint16, numEpochsToTrack),
+		spans: make([]map[uint64]types.Span, numEpochsToTrack),
 	}
 	epoch := uint64(1)
 	validatorIndex := uint64(40)
-	sd.spans[epoch] = map[uint64][3]uint16{
-		validatorIndex: {3, 7},
+	sd.spans[epoch] = map[uint64]types.Span{
+		validatorIndex: {MinSpan: 3, MaxSpan: 7},
 	}
 	ctx := context.Background()
 	if err := sd.DeleteValidatorSpansByEpoch(
@@ -665,7 +677,7 @@ func TestSpanDetector_DeleteValidatorSpansByEpoch(t *testing.T) {
 	if err := sd.DeleteValidatorSpansByEpoch(ctx, validatorIndex, epoch); err != nil {
 		t.Fatal(err)
 	}
-	want := make(map[uint64][3]uint16)
+	want := make(map[uint64]types.Span)
 	if res := sd.ValidatorSpansByEpoch(ctx, epoch); !reflect.DeepEqual(res, want) {
 		t.Errorf("Wanted %v for epoch after deleting, received %v", want, res)
 	}
@@ -675,7 +687,7 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 	type testStruct struct {
 		name string
 		att  *ethpb.IndexedAttestation
-		want []map[uint64][3]uint16
+		want []map[uint64]types.Span
 	}
 	tests := []testStruct{
 		{
@@ -691,33 +703,34 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 						Epoch: 4,
 					},
 				},
+				Signature: []byte{1, 2},
 			},
-			want: []map[uint64][3]uint16{
+			want: []map[uint64]types.Span{
 				// Epoch 0.
 				{
-					0: {4, 0, 0},
-					1: {4, 0, 0},
-					2: {4, 0, 0},
+					0: {MinSpan: 4, MaxSpan: 0, SigBytes: [2]byte{0, 0}, HasAttested: false},
+					1: {MinSpan: 4, MaxSpan: 0, SigBytes: [2]byte{0, 0}, HasAttested: false},
+					2: {MinSpan: 4, MaxSpan: 0, SigBytes: [2]byte{0, 0}, HasAttested: false},
 				},
 				// Epoch 1.
 				{
-					0: {3, 0, 0},
-					1: {3, 0, 0},
-					2: {3, 0, 0},
+					0: {MinSpan: 3, MaxSpan: 0, SigBytes: [2]byte{0, 0}, HasAttested: false},
+					1: {MinSpan: 3, MaxSpan: 0, SigBytes: [2]byte{0, 0}, HasAttested: false},
+					2: {MinSpan: 3, MaxSpan: 0, SigBytes: [2]byte{0, 0}, HasAttested: false},
 				},
 				// Epoch 2.
 				nil,
 				// Epoch 3.
 				{
-					0: {0, 1, 0},
-					1: {0, 1, 0},
-					2: {0, 1, 0},
+					0: {MinSpan: 0, MaxSpan: 1, SigBytes: [2]byte{0, 0}, HasAttested: false},
+					1: {MinSpan: 0, MaxSpan: 1, SigBytes: [2]byte{0, 0}, HasAttested: false},
+					2: {MinSpan: 0, MaxSpan: 1, SigBytes: [2]byte{0, 0}, HasAttested: false},
 				},
 				// Epoch 4.
 				{
-					0: {0, 0, 4188},
-					1: {0, 0, 4188},
-					2: {0, 0, 4188},
+					0: {MinSpan: 0, MaxSpan: 0, SigBytes: [2]byte{1, 2}, HasAttested: true},
+					1: {MinSpan: 0, MaxSpan: 0, SigBytes: [2]byte{1, 2}, HasAttested: true},
+					2: {MinSpan: 0, MaxSpan: 0, SigBytes: [2]byte{1, 2}, HasAttested: true},
 				},
 				nil,
 				nil,
@@ -737,39 +750,40 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 						Epoch: 5,
 					},
 				},
+				Signature: []byte{1, 2},
 			},
-			want: []map[uint64][3]uint16{
+			want: []map[uint64]types.Span{
 				// Epoch 0.
 				nil,
 				// Epoch 1.
 				{
-					0: {0, 4, 0},
-					1: {0, 4, 0},
-					2: {0, 4, 0},
+					0: {MinSpan: 0, MaxSpan: 4, SigBytes: [2]byte{0, 0}, HasAttested: false},
+					1: {MinSpan: 0, MaxSpan: 4, SigBytes: [2]byte{0, 0}, HasAttested: false},
+					2: {MinSpan: 0, MaxSpan: 4, SigBytes: [2]byte{0, 0}, HasAttested: false},
 				},
 				// Epoch 2.
 				{
-					0: {0, 3, 0},
-					1: {0, 3, 0},
-					2: {0, 3, 0},
+					0: {MinSpan: 0, MaxSpan: 3, SigBytes: [2]byte{0, 0}, HasAttested: false},
+					1: {MinSpan: 0, MaxSpan: 3, SigBytes: [2]byte{0, 0}, HasAttested: false},
+					2: {MinSpan: 0, MaxSpan: 3, SigBytes: [2]byte{0, 0}, HasAttested: false},
 				},
 				// Epoch 3.
 				{
-					0: {0, 2, 0},
-					1: {0, 2, 0},
-					2: {0, 2, 0},
+					0: {MinSpan: 0, MaxSpan: 2, SigBytes: [2]byte{0, 0}, HasAttested: false},
+					1: {MinSpan: 0, MaxSpan: 2, SigBytes: [2]byte{0, 0}, HasAttested: false},
+					2: {MinSpan: 0, MaxSpan: 2, SigBytes: [2]byte{0, 0}, HasAttested: false},
 				},
 				// Epoch 4.
 				{
-					0: {0, 1, 0},
-					1: {0, 1, 0},
-					2: {0, 1, 0},
+					0: {MinSpan: 0, MaxSpan: 1, SigBytes: [2]byte{0, 0}, HasAttested: false},
+					1: {MinSpan: 0, MaxSpan: 1, SigBytes: [2]byte{0, 0}, HasAttested: false},
+					2: {MinSpan: 0, MaxSpan: 1, SigBytes: [2]byte{0, 0}, HasAttested: false},
 				},
 				// Epoch 5.
 				{
-					0: {0, 0, 2074},
-					1: {0, 0, 2074},
-					2: {0, 0, 2074},
+					0: {MinSpan: 0, MaxSpan: 0, SigBytes: [2]byte{1, 2}, HasAttested: true},
+					1: {MinSpan: 0, MaxSpan: 0, SigBytes: [2]byte{1, 2}, HasAttested: true},
+					2: {MinSpan: 0, MaxSpan: 0, SigBytes: [2]byte{1, 2}, HasAttested: true},
 				},
 				nil,
 				nil,
@@ -779,7 +793,7 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sd := &SpanDetector{
-				spans: make([]map[uint64][3]uint16, 8),
+				spans: make([]map[uint64]types.Span, 8),
 			}
 			ctx := context.Background()
 			if err := sd.UpdateSpans(ctx, tt.att); err != nil {
