@@ -58,6 +58,8 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 			fields: fields{
 				pending:  generateNProposerSlashings(1),
 				included: make(map[uint64]bool),
+				wantErr:  true,
+				err:      "slashing object already exists in pending proposer slashings",
 			},
 			args: args{
 				slashing: proposerSlashingForValIdx(0),
@@ -69,6 +71,8 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 			fields: fields{
 				pending:  []*ethpb.ProposerSlashing{},
 				included: make(map[uint64]bool),
+				wantErr:  true,
+				err:      "cannot be slashed",
 			},
 			args: args{
 				slashing: proposerSlashingForValIdx(2),
@@ -172,6 +176,9 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 			err = p.InsertProposerSlashing(beaconState, tt.args.slashing)
 			if err != nil && tt.fields.wantErr && !strings.Contains(err.Error(), tt.fields.err) {
 				t.Fatalf("Wanted err: %v, received %v", tt.fields.err, err)
+			}
+			if !tt.fields.wantErr && err != nil {
+				t.Fatalf("Did not expect error: %v", err)
 			}
 			if len(p.pendingProposerSlashing) != len(tt.want) {
 				t.Fatalf("Mismatched lengths of pending list. Got %d, wanted %d.", len(p.pendingProposerSlashing), len(tt.want))

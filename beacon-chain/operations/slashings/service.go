@@ -127,7 +127,7 @@ func (p *Pool) InsertProposerSlashing(state *beaconstate.BeaconState, slashing *
 	found := sort.Search(len(p.pendingProposerSlashing), func(i int) bool {
 		return p.pendingProposerSlashing[i].ProposerIndex >= slashing.ProposerIndex
 	})
-	if found != len(p.pendingProposerSlashing) {
+	if found != len(p.pendingProposerSlashing) && p.pendingProposerSlashing[found].ProposerIndex == slashing.ProposerIndex {
 		return errors.New("slashing object already exists in pending proposer slashings")
 	}
 
