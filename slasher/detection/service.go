@@ -5,6 +5,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations"
@@ -73,7 +74,6 @@ func (ds *Service) Status() error {
 
 // Start the detection service runtime.
 func (ds *Service) Start() {
-
 	// We wait for the gRPC beacon client to be ready and the beacon node
 	// to be fully synced before proceeding.
 	ch := make(chan bool)
@@ -124,17 +124,14 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 			epoch,
 		)
 
-		var totalFound int
 		for _, att := range indexedAtts {
 			slashings, err := ds.detectAttesterSlashings(ctx, att)
 			if err != nil {
 				log.WithError(err).Error("Could not detect attester slashings")
 				continue
 			}
-			totalFound += len(slashings)
-			ds.submitAttesterSlashings(ctx, slashings)
+			ds.submitAttesterSlashings(ctx, slashings, att.Data.Target.Epoch)
 		}
-		log.Infof("Found %d attester slashings in epoch %d, submitting to beacon node...", totalFound, epoch)
 	}
 
 	if err := ds.slasherDB.SaveChainHead(ctx, currentChainHead); err != nil {
@@ -143,10 +140,17 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 	log.Infof("Completed slashing detection on historical chain data up to epoch %d", currentChainHead.HeadEpoch)
 }
 
-func (ds *Service) submitAttesterSlashings(ctx context.Context, slashings []*ethpb.AttesterSlashing) {
-	if len(slashings) > 0 {
-	}
+func (ds *Service) submitAttesterSlashings(ctx context.Context, slashings []*ethpb.AttesterSlashing, epoch uint64) {
+	var slashedIndices []uint64
 	for i := 0; i < len(slashings); i++ {
+		slashableIndices := sliceutil.IntersectionUint64(slashings[i].Attestation_1.AttestingIndices, slashings[i].Attestation_2.AttestingIndices)
+		slashedIndices = append(slashedIndices, slashableIndices...)
 		ds.attesterSlashingsFeed.Send(slashings[i])
+	}
+	if len(slashings) > 0 {
+		log.WithFields(logrus.Fields{
+			"targetEpoch": epoch,
+			"indices":     slashedIndices,
+		}).Infof("Found %d attester slashings! Submitting to beacon node.", len(slashings))
 	}
 }

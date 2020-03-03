@@ -57,7 +57,6 @@ func (ds *Service) detectAttesterSlashings(
 		}
 	}
 
-	log.Infof("Found %d slashings", len(slashings))
 	return slashingList, nil
 }
 

@@ -49,7 +49,6 @@ func (ds *Service) detectIncomingAttestations(ctx context.Context, ch chan *ethp
 	for {
 		select {
 		case indexedAtt := <-ch:
-			log.Debug("Running detection on attestation...")
 			slashings, err := ds.detectAttesterSlashings(ctx, indexedAtt)
 			if err != nil {
 				log.WithError(err).Error("Could not detect attester slashings")
@@ -60,7 +59,7 @@ func (ds *Service) detectIncomingAttestations(ctx context.Context, ch chan *ethp
 					log.WithError(err).Error("Could not update spans")
 				}
 			}
-			ds.submitAttesterSlashings(ctx, slashings)
+			ds.submitAttesterSlashings(ctx, slashings, indexedAtt.Data.Target.Epoch)
 		case <-sub.Err():
 			log.Error("Subscriber closed, exiting goroutine")
 			return
