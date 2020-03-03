@@ -109,7 +109,7 @@ build:windows_amd64_docker --config=docker-sandbox --config=windows_amd64
 build:windows_amd64_docker_debug --config=windows_amd64_docker --config=windows_amd64_debug
 
 # osx_amd64 docker sandbox build config
-build:osx_amd64_docker --config=docker-sandbox -config=osx_amd64
+build:osx_amd64_docker --config=docker-sandbox --config=osx_amd64
 build:osx_amd64_docker_debug --config=osx_amd64_docker --config=osx_amd64_debug
 
 # linux_arm64 docker sandbox build config

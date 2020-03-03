@@ -25,10 +25,10 @@ From here you can run builds inside the linux x86_64 container image, e.g.:
 
 |    arch |   os    |    config     | working? | bazel docker config (for linux_arm64 hosts) |
 |---------|---------|---------------|----------|---------------|
-| arm64   | linux   | linux_arm64   |  Y       | `bazel build --config=linux_arm64_docker //beacon-chain` |
-| x86_64  | linux   | linux_amd64   |  Y       | `bazel build --config=linux_amd64_docker //beacon-chain` |
-| x86_64  | osx     | osx_amd64     |  Y       | `bazel build --config=osx_amd64_docker //beacon-chain` |
-| x86_64  | windows | windows_amd64 |  y       | `bazel build --config=windows_amd64_docker //beacon-chain` |
+| arm64   | linux   | linux_arm64   |  Y       | `RBE_AUTOCONF_ROOT=$(bazel info workspace) bazel build --config=linux_arm64_docker //beacon-chain`   |
+| x86_64  | linux   | linux_amd64   |  Y       | `RBE_AUTOCONF_ROOT=$(bazel info workspace) bazel build --config=linux_amd64_docker //beacon-chain`   |
+| x86_64  | osx     | osx_amd64     |  Y       | `RBE_AUTOCONF_ROOT=$(bazel info workspace) bazel build --config=osx_amd64_docker //beacon-chain`     |
+| x86_64  | windows | windows_amd64 |  y       | `RBE_AUTOCONF_ROOT=$(bazel info workspace) bazel build --config=windows_amd64_docker //beacon-chain` |
 
 
 #### Or, if you just want to run a particular target, this is handy:
