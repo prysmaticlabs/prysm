@@ -156,7 +156,7 @@ func TestEndtoEndDeposits(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Could not generate proof: %v", err)
 		}
-		if ok := trieutil.VerifyMerkleProof(
+		if ok := trieutil.VerifyMerkleBranch(
 			root[:],
 			encodedDeposit,
 			i,

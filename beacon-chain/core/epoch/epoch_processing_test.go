@@ -409,9 +409,9 @@ func TestProcessRegistryUpdates_EligibleToActivate(t *testing.T) {
 			t.Errorf("Could not update registry %d, wanted activation eligibility epoch %d got %d",
 				i, currentEpoch, validator.ActivationEligibilityEpoch)
 		}
-		if i < int(limit) && validator.ActivationEpoch != helpers.DelayedActivationExitEpoch(currentEpoch) {
+		if i < int(limit) && validator.ActivationEpoch != helpers.ActivationExitEpoch(currentEpoch) {
 			t.Errorf("Could not update registry %d, validators failed to activate: wanted activation epoch %d, got %d",
-				i, helpers.DelayedActivationExitEpoch(currentEpoch), validator.ActivationEpoch)
+				i, helpers.ActivationExitEpoch(currentEpoch), validator.ActivationEpoch)
 		}
 		if i >= int(limit) && validator.ActivationEpoch != params.BeaconConfig().FarFutureEpoch {
 			t.Errorf("Could not update registry %d, validators should not have been activated, wanted activation epoch: %d, got %d",
@@ -480,7 +480,7 @@ func TestProcessRegistryUpdates_ValidatorsEjected(t *testing.T) {
 
 func TestProcessRegistryUpdates_CanExits(t *testing.T) {
 	epoch := uint64(5)
-	exitEpoch := helpers.DelayedActivationExitEpoch(epoch)
+	exitEpoch := helpers.ActivationExitEpoch(epoch)
 	minWithdrawalDelay := params.BeaconConfig().MinValidatorWithdrawabilityDelay
 	base := &pb.BeaconState{
 		Slot: epoch * params.BeaconConfig().SlotsPerEpoch,

@@ -132,7 +132,7 @@ func ProcessRegistryUpdates(state *stateTrie.BeaconState) (*stateTrie.BeaconStat
 		if err != nil {
 			return nil, err
 		}
-		validator.ActivationEpoch = helpers.DelayedActivationExitEpoch(currentEpoch)
+		validator.ActivationEpoch = helpers.ActivationExitEpoch(currentEpoch)
 		if err := state.UpdateValidatorAtIndex(index, validator); err != nil {
 			return nil, err
 		}
