@@ -3,6 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "epoch_boundary_root.go",
         "replay.go",
         "service.go",
     ],
@@ -23,7 +24,10 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["replay_test.go"],
+    srcs = [
+        "epoch_boundary_root_test.go",
+        "replay_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
