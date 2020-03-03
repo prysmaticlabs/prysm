@@ -291,7 +291,7 @@ func (v *validator) RolesAt(ctx context.Context, slot uint64) (map[[48]byte][]pb
 	for _, duty := range v.duties.Duties {
 		var roles []pb.ValidatorRole
 
-		if duty == nil {
+		if duty == nil || duty.Status != ethpb.ValidatorStatus_ACTIVE {
 			continue
 		}
 		if duty.ProposerSlot > 0 && duty.ProposerSlot == slot {
