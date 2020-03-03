@@ -19,6 +19,7 @@ import (
 )
 
 const attestationSubnetCount = 64
+const attSubnetEnrKey = "attnets"
 
 // Listener defines the discovery V5 network interface that is used
 // to communicate with other peers.
@@ -87,9 +88,8 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, udpPort int, tcpP
 	localNode.Set(tcpEntry)
 	localNode.SetFallbackIP(ipAddr)
 	localNode.SetFallbackUDP(udpPort)
-	localNode.Set(enr.WithEntry("attnets", bitfield.Bitvector4{}))
 
-	return localNode, nil
+	return intializeAttSubnets(localNode), nil
 }
 
 func startDiscoveryV5(addr net.IP, privKey *ecdsa.PrivateKey, cfg *Config) (*discover.UDPv5, error) {
@@ -111,6 +111,29 @@ func startDHTDiscovery(host core.Host, bootstrapAddr string) error {
 	}
 	err = host.Connect(context.Background(), *peerInfo)
 	return err
+}
+
+func intializeAttSubnets(node *enode.LocalNode) *enode.LocalNode {
+	bitV := bitfield.NewBitvector64()
+	entry := enr.WithEntry(attSubnetEnrKey, bitV.Bytes())
+	node.Set(entry)
+	return node
+}
+
+func retrieveAttSubnets(record enr.Record) ([]uint64, error) {
+	bitV := bitfield.NewBitvector64()
+	entry := enr.WithEntry(attSubnetEnrKey, bitV)
+	err := record.Load(entry)
+	if err != nil {
+		return nil, err
+	}
+	committeeIdxs := []uint64{}
+	for i := uint64(0); i < 64; i++ {
+		if bitV.BitAt(i) {
+			committeeIdxs = append(committeeIdxs, i)
+		}
+	}
+	return committeeIdxs, nil
 }
 
 func parseBootStrapAddrs(addrs []string) (discv5Nodes []string, kadDHTNodes []string) {
