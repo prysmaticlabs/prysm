@@ -58,12 +58,16 @@ func TestService_DetectIncomingBlocks(t *testing.T) {
 func TestService_DetectIncomingAttestations(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ds := Service{
-		notifier:           &mockNotifier{},
-		minMaxSpanDetector: &attestations.MockSpanDetector{},
+		notifier:              &mockNotifier{},
+		minMaxSpanDetector:    &attestations.MockSpanDetector{},
+		attesterSlashingsFeed: new(event.Feed),
 	}
 	att := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Slot: 1,
+			Target: &ethpb.Checkpoint{
+				Epoch: 0,
+			},
 		},
 	}
 	exitRoutine := make(chan bool)
@@ -76,6 +80,5 @@ func TestService_DetectIncomingAttestations(t *testing.T) {
 	attsChan <- att
 	cancel()
 	exitRoutine <- true
-	testutil.AssertLogsContain(t, hook, "Running detection on attestation")
 	testutil.AssertLogsContain(t, hook, "Context canceled")
 }
