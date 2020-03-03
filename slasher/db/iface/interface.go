@@ -67,8 +67,7 @@ type WriteAccessDatabase interface {
 	// MinMaxSpan related methods.
 	SaveEpochSpansMap(ctx context.Context, epoch uint64, spanMap map[uint64]t.Span) error
 	SaveValidatorEpochSpans(ctx context.Context, validatorIdx uint64, epoch uint64, spans t.Span) error
-
-	//SaveCachedSpansMaps(ctx context.Context) error
+	SaveCachedSpansMaps(ctx context.Context) error
 	DeleteEpochSpans(ctx context.Context, validatorIdx uint64) error
 	DeleteValidatorSpanByEpoch(ctx context.Context, validatorIdx uint64, epoch uint64) error
 
