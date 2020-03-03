@@ -27,13 +27,6 @@ func (p *Pool) PendingAttesterSlashings() []*ethpb.AttesterSlashing {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
-	var slashInPool []uint64
-	for _, att := range p.pendingAttesterSlashing {
-		slashable := sliceutil.IntersectionUint64(att.attesterSlashing.Attestation_1.AttestingIndices, att.attesterSlashing.Attestation_2.AttestingIndices)
-		slashInPool = append(slashInPool, slashable...)
-	}
-	fmt.Printf("Full pool %v\n", slashInPool)
-
 	included := make(map[uint64]bool)
 	pending := make([]*ethpb.AttesterSlashing, 0, params.BeaconConfig().MaxAttesterSlashings)
 	for i, slashing := range p.pendingAttesterSlashing {
@@ -50,12 +43,6 @@ func (p *Pool) PendingAttesterSlashings() []*ethpb.AttesterSlashing {
 		}
 		pending = append(pending, attSlashing)
 	}
-
-	for _, att := range pending {
-		slashable := sliceutil.IntersectionUint64(att.Attestation_1.AttestingIndices, att.Attestation_2.AttestingIndices)
-		fmt.Println(slashable)
-	}
-
 	return pending
 }
 
@@ -82,7 +69,6 @@ func (p *Pool) InsertAttesterSlashing(state *beaconstate.BeaconState, slashing *
 	defer p.lock.Unlock()
 
 	slashedVal := sliceutil.IntersectionUint64(slashing.Attestation_1.AttestingIndices, slashing.Attestation_2.AttestingIndices)
-	fmt.Printf("added %v\n", slashedVal)
 	for _, val := range slashedVal {
 		// Has this validator index been included recently?
 		ok, err := p.validatorSlashingPreconditionCheck(state, val)
