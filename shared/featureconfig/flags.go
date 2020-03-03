@@ -106,6 +106,11 @@ var (
 		Name:  "check-head-state",
 		Usage: "Enables the checking of head state in chainservice first before retrieving the desired state from the db.",
 	}
+	enableNoiseHandshake = cli.BoolFlag{
+		Name: "enable-noise",
+		Usage: "This enables the beacon node to use NOISE instead of SECIO for performing handshakes between peers and" +
+			"securing transports between peers",
+	}
 )
 
 // Deprecated flags list.
@@ -279,6 +284,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableByteMempool,
 	enableStateGenSigVerify,
 	checkHeadState,
+	enableNoiseHandshake,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

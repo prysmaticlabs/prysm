@@ -7,10 +7,12 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p"
+	noise "github.com/libp2p/go-libp2p-noise"
 	filter "github.com/libp2p/go-maddr-filter"
 	"github.com/multiformats/go-multiaddr"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/connmgr"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
 // buildOptions for the libp2p host.
@@ -27,6 +29,10 @@ func buildOptions(cfg *Config, ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 		// Add one for the boot node and another for the relay, otherwise when we are close to maxPeers we will be above the high
 		// water mark and continually trigger pruning.
 		libp2p.ConnectionManager(connmgr.NewConnManager(int(cfg.MaxPeers+2), int(cfg.MaxPeers+2), 1*time.Second)),
+	}
+	if featureconfig.Get().EnableNoise {
+		// Enable NOISE for the beacon node
+		options = append(options, libp2p.Security(noise.ID, noise.New))
 	}
 	if cfg.EnableUPnP {
 		options = append(options, libp2p.NATPortMap()) //Allow to use UPnP
