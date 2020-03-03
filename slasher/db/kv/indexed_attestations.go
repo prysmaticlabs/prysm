@@ -83,7 +83,7 @@ func (db *Store) IdxAttsForTargetFromID(ctx context.Context, targetEpoch uint64,
 	return idxAtts, err
 }
 
-// IndexedAttestationForTarget accepts a target epoch and returns a list of
+// IndexedAttestationsForTarget accepts a target epoch and returns a list of
 // indexed attestations.
 // Returns nil if the indexed attestation does not exist with that target epoch.
 func (db *Store) IndexedAttestationsForTarget(ctx context.Context, targetEpoch uint64) ([]*ethpb.IndexedAttestation, error) {
@@ -218,7 +218,7 @@ func (db *Store) HasIndexedAttestation(ctx context.Context, att *ethpb.IndexedAt
 	return hasAttestation, err
 }
 
-// SaveIndexedAttestation accepts epoch and indexed attestation and writes it to disk.
+// SaveIndexedAttestation accepts an indexed attestation and writes it to the DB.
 func (db *Store) SaveIndexedAttestation(ctx context.Context, idxAttestation *ethpb.IndexedAttestation) error {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveIndexedAttestation")
 	defer span.End()
@@ -251,7 +251,7 @@ func (db *Store) SaveIndexedAttestation(ctx context.Context, idxAttestation *eth
 	return err
 }
 
-// SaveIndexedAttestation accepts epoch and indexed attestation and writes it to disk.
+// SaveIndexedAttestations accepts multiple indexed attestations and writes them to the DB.
 func (db *Store) SaveIndexedAttestations(ctx context.Context, idxAttestations []*ethpb.IndexedAttestation) error {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveIndexedAttestation")
 	defer span.End()
