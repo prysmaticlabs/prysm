@@ -273,7 +273,7 @@ func (s *Service) loadSpanMaps(slasherServer rpc.Server) {
 		log.Errorf("Could not extract latest target epoch from indexed attestations store: %v", err)
 	}
 	for epoch := uint64(0); epoch < latestTargetEpoch; epoch++ {
-		idxAtts, err := slasherServer.SlasherDB.IdxAttsForTarget(s.context, epoch)
+		idxAtts, err := slasherServer.SlasherDB.IndexedAttestationsForTarget(s.context, epoch)
 		if err != nil {
 			log.Errorf("Got error while trying to retrieve indexed attestations from db: %v", err)
 		}

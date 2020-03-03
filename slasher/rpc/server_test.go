@@ -14,6 +14,7 @@ import (
 )
 
 func TestServer_IsSlashableBlock(t *testing.T) {
+	t.Skip("undergoing slasher redesign")
 	db := testDB.SetupSlasherDB(t, false)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
@@ -63,6 +64,7 @@ func TestServer_IsSlashableBlock(t *testing.T) {
 }
 
 func TestServer_IsNotSlashableBlock(t *testing.T) {
+	t.Skip("undergoing slasher redesign")
 	db := testDB.SetupSlasherDB(t, false)
 	defer testDB.TeardownSlasherDB(t, db)
 
@@ -104,6 +106,7 @@ func TestServer_IsNotSlashableBlock(t *testing.T) {
 }
 
 func TestServer_DoubleBlock(t *testing.T) {
+	t.Skip("undergoing slasher redesign")
 	db := testDB.SetupSlasherDB(t, false)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
@@ -136,6 +139,7 @@ func TestServer_DoubleBlock(t *testing.T) {
 }
 
 func TestServer_SameSlotSlashable(t *testing.T) {
+	t.Skip("undergoing slasher redesign")
 	db := testDB.SetupSlasherDB(t, false)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
@@ -209,6 +213,7 @@ func TestServer_SameSlotSlashable(t *testing.T) {
 }
 
 func TestServer_SlashDoubleAttestation(t *testing.T) {
+	t.Skip("undergoing slasher redesign")
 	db := testDB.SetupSlasherDB(t, false)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
@@ -262,6 +267,7 @@ func TestServer_SlashDoubleAttestation(t *testing.T) {
 }
 
 func TestServer_SlashTripleAttestation(t *testing.T) {
+	t.Skip("undergoing slasher redesign")
 	db := testDB.SetupSlasherDB(t, false)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
@@ -336,6 +342,7 @@ func TestServer_SlashTripleAttestation(t *testing.T) {
 }
 
 func TestServer_DontSlashSameAttestation(t *testing.T) {
+	t.Skip("undergoing slasher redesign")
 	db := testDB.SetupSlasherDB(t, false)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
@@ -369,6 +376,7 @@ func TestServer_DontSlashSameAttestation(t *testing.T) {
 }
 
 func TestServer_DontSlashDifferentTargetAttestation(t *testing.T) {
+	t.Skip("undergoing slasher redesign")
 	db := testDB.SetupSlasherDB(t, false)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
@@ -413,6 +421,7 @@ func TestServer_DontSlashDifferentTargetAttestation(t *testing.T) {
 }
 
 func TestServer_DontSlashSameAttestationData(t *testing.T) {
+	t.Skip("undergoing slasher redesign")
 	db := testDB.SetupSlasherDB(t, false)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
@@ -452,6 +461,7 @@ func TestServer_DontSlashSameAttestationData(t *testing.T) {
 }
 
 func TestServer_SlashSurroundedAttestation(t *testing.T) {
+	t.Skip("undergoing slasher redesign")
 	db := testDB.SetupSlasherDB(t, false)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
@@ -503,6 +513,7 @@ func TestServer_SlashSurroundedAttestation(t *testing.T) {
 }
 
 func TestServer_SlashSurroundAttestation(t *testing.T) {
+	t.Skip("undergoing slasher redesign")
 	db := testDB.SetupSlasherDB(t, false)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
@@ -577,6 +588,7 @@ func TestServer_SlashSurroundAttestation(t *testing.T) {
 }
 
 func TestServer_DontSlashValidAttestations(t *testing.T) {
+	t.Skip("undergoing slasher redesign")
 	db := testDB.SetupSlasherDB(t, false)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()
@@ -620,6 +632,7 @@ func TestServer_DontSlashValidAttestations(t *testing.T) {
 }
 
 func TestServer_Store_100_Attestations(t *testing.T) {
+	t.Skip("undergoing slasher redesign")
 	db := testDB.SetupSlasherDB(t, false)
 	defer testDB.TeardownSlasherDB(t, db)
 	ctx := context.Background()

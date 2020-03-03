@@ -22,13 +22,13 @@ type ReadOnlyDatabase interface {
 	HasBlockHeader(ctx context.Context, epoch uint64, validatorID uint64) bool
 
 	// IndexedAttestationsForEpoch related methods.
-	IndexedAttestationsForEpoch(ctx context.Context, targetEpoch uint64) ([]*ethpb.IndexedAttestation, error)
+	IndexedAttestationsForTarget(ctx context.Context, targetEpoch uint64) ([]*ethpb.IndexedAttestation, error)
 	IdxAttsForTargetFromID(ctx context.Context, targetEpoch uint64, validatorID uint64) ([]*ethpb.IndexedAttestation, error)
-	IdxAttsForTarget(ctx context.Context, targetEpoch uint64) ([]*ethpb.IndexedAttestation, error)
+	IndexedAttestationsWithPrefix(ctx context.Context, targetEpoch uint64, sigBytes []byte) ([]*ethpb.IndexedAttestation, error)
 	LatestIndexedAttestationsTargetEpoch(ctx context.Context) (uint64, error)
 	LatestValidatorIdx(ctx context.Context) (uint64, error)
 	DoubleVotes(ctx context.Context, validatorIdx uint64, dataRoot []byte, origAtt *ethpb.IndexedAttestation) ([]*ethpb.AttesterSlashing, error)
-	HasIndexedAttestation(ctx context.Context, targetEpoch uint64, validatorID uint64) (bool, error)
+	HasIndexedAttestation(ctx context.Context, att *ethpb.IndexedAttestation) (bool, error)
 
 	// MinMaxSpan related methods.
 	ValidatorSpansMap(ctx context.Context, validatorIdx uint64) (*slashpb.EpochSpanMap, error)
@@ -58,8 +58,7 @@ type WriteAccessDatabase interface {
 
 	// IndexedAttestationsForEpoch related methods.
 	SaveIndexedAttestation(ctx context.Context, idxAttestation *ethpb.IndexedAttestation) error
-	SaveIncomingIndexedAttestationByEpoch(ctx context.Context, idxAttestation *ethpb.IndexedAttestation) error
-	SaveIncomingIndexedAttestationsByEpoch(ctx context.Context, idxAttestations []*ethpb.IndexedAttestation) error
+	SaveIndexedAttestations(ctx context.Context, idxAttestations []*ethpb.IndexedAttestation) error
 	DeleteIndexedAttestation(ctx context.Context, idxAttestation *ethpb.IndexedAttestation) error
 	PruneAttHistory(ctx context.Context, currentEpoch uint64, pruningEpochAge uint64) error
 
