@@ -8,6 +8,31 @@ register_toolchains(
 )
 
 http_archive(
+    name = "bazel_toolchains",
+    sha256 = "b5a8039df7119d618402472f3adff8a1bd0ae9d5e253f53fcc4c47122e91a3d2",
+    strip_prefix = "bazel-toolchains-2.1.1",
+    urls = [
+        "https://github.com/bazelbuild/bazel-toolchains/releases/download/2.1.1/bazel-toolchains-2.1.1.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-toolchains/archive/2.1.1.tar.gz",
+    ],
+)
+
+load("@bazel_toolchains//rules:rbe_repo.bzl", "rbe_autoconfig")
+
+load("//tools/cross-toolchain:repo.bzl", "CUSTOM_TOOLCHAIN_CONFIG_SUITE_SPEC")
+
+rbe_autoconfig(
+    name = "rbe_default",
+    create_cc_configs = False,
+    create_java_configs = False,
+    export_configs = True,
+    digest = "sha256:0de2c4ebdef5691227e23e2fc7d00f5ba0cab4fbb349ed05dc3362ff642dce2d", # Latest gcr.io/prysmaticlabs/rbe-worker image.
+    registry = CUSTOM_TOOLCHAIN_CONFIG_SUITE_SPEC["container_registry"],
+    repository = CUSTOM_TOOLCHAIN_CONFIG_SUITE_SPEC["container_repo"],
+    toolchain_config_suite_spec = CUSTOM_TOOLCHAIN_CONFIG_SUITE_SPEC,
+)
+
+http_archive(
     name = "bazel_skylib",
     sha256 = "2ea8a5ed2b448baf4a6855d3ce049c4c452a6470b1efd1504fdb7c1c134d220a",
     strip_prefix = "bazel-skylib-0.8.0",

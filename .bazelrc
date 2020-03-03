@@ -88,24 +88,34 @@ build:linux_amd64_debug --config=debug
 # Docker Sandbox Configs
 #-----------------------
 # Note all docker sandbox configs must run from a linux x86_64 host
-build:docker-sandbox --experimental_docker_image=suburbandad/prysm-cross:latest
+build:docker-sandbox --experimental_docker_image=gcr.io/prysmaticlabs/rbe-worker:latest
 build:docker-sandbox --spawn_strategy=docker --strategy=Javac=docker --genrule_strategy=docker
 build:docker-sandbox --define=EXECUTOR=remote
 build:docker-sandbox --experimental_docker_verbose
 build:docker-sandbox --experimental_enable_docker_sandbox
+#build:docker-sandbox --experimental_remote_download_outputs=toplevel --experimental_inmemory_jdeps_files --experimental_inmemory_dotd_files
+#build:docker-sandbox --crosstool_top=@rbe_default//cc:toolchain 
+#build:docker-sandbox --host_javabase=@rbe_default//java:jdk 
+#build:docker-sandbox --javabase=@rbe_default//java:jdk 
+#build:docker-sandbox --host_java_toolchain=@bazel_tools//tools/jdk:toolchain_hostjdk8 
+#build:docker-sandbox --java_toolchain=@bazel_tools//tools/jdk:toolchain_hostjdk8 
+#build:docker-sandbox --extra_execution_platforms=@rbe_default//config:platform 
+#build:docker-sandbox --host_platform=@rbe_default//config:platform 
+#build:docker-sandbox --platforms=@rbe_default//config:platform
+#build:docker-sandbox --extra_toolchains=@rbe_default//config:cc-toolchain
 
 # windows_amd64 docker sandbox build config
-build:windows_amd64_docker --config=windows_amd64_debug
-build:windows_amd64_docker --config=docker-sandbox
+build:windows_amd64_docker --config=docker-sandbox --config=windows_amd64
+build:windows_amd64_docker_debug --config=windows_amd64_docker --config=windows_amd64_debug
 
 # osx_amd64 docker sandbox build config
-build:osx_amd64_docker --config=osx_amd64_debug
-build:osx_amd64_docker --config=docker-sandbox
+build:osx_amd64_docker --config=docker-sandbox -config=osx_amd64
+build:osx_amd64_docker_debug --config=osx_amd64_docker --config=osx_amd64_debug
 
 # linux_arm64 docker sandbox build config
-build:linux_arm64_docker --config=linux_arm64_debug
-build:linux_arm64_docker --config=docker-sandbox
+build:linux_arm64_docker --config=docker-sandbox --config=linux_arm64
+build:linux_arm64_docker_debug --config=linux_arm64_docker --config=linux_arm64_debug
 
 # linux_amd64 docker sandbox build config
-build:linux_amd64_docker --config=linux_amd64_debug
-build:linux_amd64_docker --config=docker-sandbox
+build:linux_amd64_docker --config=docker-sandbox --config=linux_amd64
+build:linux_amd64_docker_debug --config=linux_amd64_docker --config=linux_amd64_debug

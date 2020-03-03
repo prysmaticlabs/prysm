@@ -1,5 +1,5 @@
 # containerized build environment
-FROM debian:buster as build
+FROM gcr.io/cloud-marketplace/google/rbe-ubuntu16-04 as build
 
 # install gnu/gcc cross-build toolchain (gcc 8.3)
 ENV DOCKER_CLI_EXPERIMENTAL=enabled
