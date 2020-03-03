@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
-
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 
