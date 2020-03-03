@@ -5,6 +5,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/slasher/beaconclient"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations"
@@ -73,7 +74,6 @@ func (ds *Service) Status() error {
 
 // Start the detection service runtime.
 func (ds *Service) Start() {
-
 	// We wait for the gRPC beacon client to be ready and the beacon node
 	// to be fully synced before proceeding.
 	ch := make(chan bool)
@@ -108,6 +108,7 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 	if latestStoredHead != nil {
 		latestStoredEpoch = latestStoredHead.HeadEpoch
 	}
+
 	// We retrieve historical chain data from the last persisted chain head in the
 	// slasher DB up to the current beacon node's head epoch we retrieved via gRPC.
 	// If no data was persisted from previous sessions, we request data starting from
@@ -122,26 +123,34 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 			len(indexedAtts),
 			epoch,
 		)
+
 		for _, att := range indexedAtts {
 			slashings, err := ds.detectAttesterSlashings(ctx, att)
 			if err != nil {
 				log.WithError(err).Error("Could not detect attester slashings")
 				continue
 			}
-			ds.submitAttesterSlashings(ctx, slashings)
+			ds.submitAttesterSlashings(ctx, slashings, att.Data.Target.Epoch)
 		}
 	}
+
 	if err := ds.slasherDB.SaveChainHead(ctx, currentChainHead); err != nil {
 		log.WithError(err).Error("Could not persist chain head to disk")
 	}
 	log.Infof("Completed slashing detection on historical chain data up to epoch %d", currentChainHead.HeadEpoch)
 }
 
-func (ds *Service) submitAttesterSlashings(ctx context.Context, slashings []*ethpb.AttesterSlashing) {
-	if len(slashings) > 0 {
-		log.Infof("Found %d attester slashings, submitting to beacon node...", len(slashings))
-	}
+func (ds *Service) submitAttesterSlashings(ctx context.Context, slashings []*ethpb.AttesterSlashing, epoch uint64) {
+	var slashedIndices []uint64
 	for i := 0; i < len(slashings); i++ {
+		slashableIndices := sliceutil.IntersectionUint64(slashings[i].Attestation_1.AttestingIndices, slashings[i].Attestation_2.AttestingIndices)
+		slashedIndices = append(slashedIndices, slashableIndices...)
 		ds.attesterSlashingsFeed.Send(slashings[i])
+	}
+	if len(slashings) > 0 {
+		log.WithFields(logrus.Fields{
+			"targetEpoch": epoch,
+			"indices":     slashedIndices,
+		}).Infof("Found %d attester slashings! Submitting to beacon node.", len(slashings))
 	}
 }

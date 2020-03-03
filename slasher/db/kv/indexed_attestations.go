@@ -18,8 +18,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
-func unmarshalIdxAtt(ctx context.Context, enc []byte) (*ethpb.IndexedAttestation, error) {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.unmarshalIdxAtt")
+func unmarshalIndexedAttestation(ctx context.Context, enc []byte) (*ethpb.IndexedAttestation, error) {
+	ctx, span := trace.StartSpan(ctx, "SlasherDB.unmarshalIndexedAttestation")
 	defer span.End()
 	protoIdxAtt := &ethpb.IndexedAttestation{}
 	err := proto.Unmarshal(enc, protoIdxAtt)
@@ -70,7 +70,7 @@ func (db *Store) IdxAttsForTargetFromID(ctx context.Context, targetEpoch uint64,
 				if enc == nil {
 					continue
 				}
-				att, err := unmarshalIdxAtt(ctx, enc)
+				att, err := unmarshalIndexedAttestation(ctx, enc)
 				if err != nil {
 					return err
 				}
@@ -83,10 +83,10 @@ func (db *Store) IdxAttsForTargetFromID(ctx context.Context, targetEpoch uint64,
 	return idxAtts, err
 }
 
-// IdxAttsForTarget accepts a target epoch and returns a list of
+// IndexedAttestationsForTarget accepts a target epoch and returns a list of
 // indexed attestations.
 // Returns nil if the indexed attestation does not exist with that target epoch.
-func (db *Store) IdxAttsForTarget(ctx context.Context, targetEpoch uint64) ([]*ethpb.IndexedAttestation, error) {
+func (db *Store) IndexedAttestationsForTarget(ctx context.Context, targetEpoch uint64) ([]*ethpb.IndexedAttestation, error) {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.IdxAttsForTarget")
 	defer span.End()
 	var idxAtts []*ethpb.IndexedAttestation
@@ -94,7 +94,7 @@ func (db *Store) IdxAttsForTarget(ctx context.Context, targetEpoch uint64) ([]*e
 	err := db.view(func(tx *bolt.Tx) error {
 		c := tx.Bucket(historicIndexedAttestationsBucket).Cursor()
 		for k, enc := c.Seek(key); k != nil && bytes.Equal(k[:8], key); k, _ = c.Next() {
-			idxAtt, err := unmarshalIdxAtt(ctx, enc)
+			idxAtt, err := unmarshalIndexedAttestation(ctx, enc)
 			if err != nil {
 				return err
 			}
@@ -105,25 +105,17 @@ func (db *Store) IdxAttsForTarget(ctx context.Context, targetEpoch uint64) ([]*e
 	return idxAtts, err
 }
 
-// IndexedAttestationsForEpoch retrieves all indexed attestations by target epoch
-// by looking into a bucket of attestation roots by epoch first. Then, it
-// retrieves all attestations that match that list of roots.
-func (db *Store) IndexedAttestationsForEpoch(ctx context.Context, targetEpoch uint64) ([]*ethpb.IndexedAttestation, error) {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.IndexedAttestationsForEpoch")
+// IndexedAttestationsWithPrefix accepts a target epoch and signature bytes to find all attestations with the requested prefix.
+// Returns nil if the indexed attestation does not exist with that target epoch.
+func (db *Store) IndexedAttestationsWithPrefix(ctx context.Context, targetEpoch uint64, sigBytes []byte) ([]*ethpb.IndexedAttestation, error) {
+	ctx, span := trace.StartSpan(ctx, "SlasherDB.IdxAttsForTarget")
 	defer span.End()
 	var idxAtts []*ethpb.IndexedAttestation
-	key := bytesutil.Bytes8(targetEpoch)
+	key := encodeEpochSig(targetEpoch, sigBytes[:])
 	err := db.view(func(tx *bolt.Tx) error {
-		rootsBkt := tx.Bucket(indexedAttestationsRootsByTargetBucket)
-		attRoots := rootsBkt.Get(key)
-		splitRoots := make([][]byte, 0)
-		for i := 0; i < len(attRoots); i += 32 {
-			splitRoots = append(splitRoots, attRoots[i:i+32])
-		}
-		attsBkt := tx.Bucket(indexedAttestationsBucket)
-		for i := 0; i < len(splitRoots); i++ {
-			enc := attsBkt.Get(splitRoots[i])
-			idxAtt, err := unmarshalIdxAtt(ctx, enc)
+		c := tx.Bucket(historicIndexedAttestationsBucket).Cursor()
+		for k, enc := c.Seek(key); k != nil && bytes.Equal(k[:len(key)], key); k, _ = c.Next() {
+			idxAtt, err := unmarshalIndexedAttestation(ctx, enc)
 			if err != nil {
 				return err
 			}
@@ -132,72 +124,6 @@ func (db *Store) IndexedAttestationsForEpoch(ctx context.Context, targetEpoch ui
 		return nil
 	})
 	return idxAtts, err
-}
-
-// SaveIncomingIndexedAttestationsByEpoch stores a list of indexed attestations into the db
-// by storing their roots into a bucket using their target epoch as the key.
-func (db *Store) SaveIncomingIndexedAttestationsByEpoch(ctx context.Context, atts []*ethpb.IndexedAttestation) error {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveIndexedAttestations")
-	defer span.End()
-	encoded := make([][]byte, len(atts))
-	encodedRoots := make([][]byte, len(atts))
-	for i := 0; i < len(encoded); i++ {
-		enc, err := proto.Marshal(atts[i])
-		if err != nil {
-			return errors.Wrap(err, "failed to marshal")
-		}
-		encoded[i] = enc
-		root := hashutil.Hash(enc)
-		encodedRoots[i] = root[:]
-	}
-
-	return db.update(func(tx *bolt.Tx) error {
-		rootsBkt := tx.Bucket(indexedAttestationsRootsByTargetBucket)
-		attsBkt := tx.Bucket(indexedAttestationsBucket)
-
-		// TODO(#4836): After cleaning up the old DB we should revisit this as long-term it will be very expensive.
-		for i := 0; i < len(atts); i++ {
-			targetEpochKey := bytesutil.Bytes8(atts[i].Data.Target.Epoch)
-			attRoots := rootsBkt.Get(targetEpochKey)
-			if attRoots == nil {
-				attRoots = []byte{}
-			}
-			if err := rootsBkt.Put(targetEpochKey, append(attRoots, encodedRoots[i]...)); err != nil {
-				return err
-			}
-			if err := attsBkt.Put(encodedRoots[i], encoded[i]); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-}
-
-// SaveIncomingIndexedAttestationByEpoch stores an indexed attestations into the db
-// by storing its root into a bucket and using its target epoch as the key.
-func (db *Store) SaveIncomingIndexedAttestationByEpoch(ctx context.Context, att *ethpb.IndexedAttestation) error {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveIncomingIndexedAttestationByEpoch")
-	defer span.End()
-	enc, err := proto.Marshal(att)
-	if err != nil {
-		return errors.Wrap(err, "failed to marshal")
-	}
-	root := hashutil.Hash(enc)
-	return db.update(func(tx *bolt.Tx) error {
-		rootsBkt := tx.Bucket(indexedAttestationsRootsByTargetBucket)
-		attsBkt := tx.Bucket(indexedAttestationsBucket)
-
-		// TODO(#4836): After cleaning up the old DB we should revisit this as long-term it will be very expensive.
-		targetEpochKey := bytesutil.Bytes8(att.Data.Target.Epoch)
-		attRoots := rootsBkt.Get(targetEpochKey)
-		if err := rootsBkt.Put(targetEpochKey, append(attRoots, root[:]...)); err != nil {
-			return err
-		}
-		if err := attsBkt.Put(root[:], enc); err != nil {
-			return err
-		}
-		return nil
-	})
 }
 
 // LatestIndexedAttestationsTargetEpoch returns latest target epoch in db
@@ -272,39 +198,27 @@ func (db *Store) DoubleVotes(ctx context.Context, validatorIdx uint64, dataRoot 
 	return as, nil
 }
 
-// HasIndexedAttestation accepts an epoch and validator id and returns true if the indexed attestation exists.
-func (db *Store) HasIndexedAttestation(ctx context.Context, targetEpoch uint64, validatorID uint64) (bool, error) {
+// HasIndexedAttestation accepts an attestation and returns true if it exists in the DB.
+func (db *Store) HasIndexedAttestation(ctx context.Context, att *ethpb.IndexedAttestation) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.HasIndexedAttestation")
 	defer span.End()
-	key := bytesutil.Bytes8(targetEpoch)
+	key := encodeEpochSig(att.Data.Target.Epoch, att.Signature)
 	var hasAttestation bool
 	// #nosec G104
 	err := db.view(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(compressedIdxAttsBucket)
+		bucket := tx.Bucket(historicIndexedAttestationsBucket)
 		enc := bucket.Get(key)
 		if enc == nil {
 			return nil
 		}
-		iList, err := unmarshalCompressedIdxAttList(ctx, enc)
-		if err != nil {
-			return err
-		}
-		for _, idxAtt := range iList.List {
-			i := sort.Search(len(idxAtt.Indices), func(i int) bool {
-				return idxAtt.Indices[i] >= validatorID
-			})
-			if i < len(idxAtt.Indices) && idxAtt.Indices[i] == validatorID {
-				hasAttestation = true
-				return nil
-			}
-		}
+		hasAttestation = true
 		return nil
 	})
 
 	return hasAttestation, err
 }
 
-// SaveIndexedAttestation accepts epoch and indexed attestation and writes it to disk.
+// SaveIndexedAttestation accepts an indexed attestation and writes it to the DB.
 func (db *Store) SaveIndexedAttestation(ctx context.Context, idxAttestation *ethpb.IndexedAttestation) error {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveIndexedAttestation")
 	defer span.End()
@@ -320,9 +234,6 @@ func (db *Store) SaveIndexedAttestation(ctx context.Context, idxAttestation *eth
 		if val != nil {
 			return nil
 		}
-		if err := saveCompressedIdxAttToEpochList(ctx, idxAttestation, tx); err != nil {
-			return errors.Wrap(err, "failed to save indices from indexed attestation")
-		}
 		if err := bucket.Put(key, enc); err != nil {
 			return errors.Wrap(err, "failed to save indexed attestation into historical bucket")
 		}
@@ -337,6 +248,39 @@ func (db *Store) SaveIndexedAttestation(ctx context.Context, idxAttestation *eth
 			return err
 		}
 	}
+	return err
+}
+
+// SaveIndexedAttestations accepts multiple indexed attestations and writes them to the DB.
+func (db *Store) SaveIndexedAttestations(ctx context.Context, idxAttestations []*ethpb.IndexedAttestation) error {
+	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveIndexedAttestation")
+	defer span.End()
+	keys := make([][]byte, len(idxAttestations))
+	marshaledAtts := make([][]byte, len(idxAttestations))
+	for i, att := range idxAttestations {
+		key := encodeEpochSig(att.Data.Target.Epoch, att.Signature)
+		enc, err := proto.Marshal(att)
+		if err != nil {
+			return errors.Wrap(err, "failed to marshal")
+		}
+		keys[i] = key
+		marshaledAtts[i] = enc
+	}
+
+	err := db.update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(historicIndexedAttestationsBucket)
+		for i, key := range keys {
+			//if data is in db skip put and index functions
+			val := bucket.Get(key)
+			if val != nil {
+				continue
+			}
+			if err := bucket.Put(key, marshaledAtts[i]); err != nil {
+				return errors.Wrap(err, "failed to save indexed attestation into historical bucket")
+			}
+		}
+		return nil
+	})
 	return err
 }
 
@@ -381,9 +325,6 @@ func (db *Store) DeleteIndexedAttestation(ctx context.Context, idxAttestation *e
 		enc := bucket.Get(key)
 		if enc == nil {
 			return nil
-		}
-		if err := removeIdxAttIndicesByEpochFromDB(ctx, idxAttestation, tx); err != nil {
-			return err
 		}
 		if err := bucket.Delete(key); err != nil {
 			if rollbackErr := tx.Rollback(); rollbackErr != nil {

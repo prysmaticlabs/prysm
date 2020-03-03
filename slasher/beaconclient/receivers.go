@@ -5,6 +5,7 @@ import (
 	"io"
 
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -65,8 +66,11 @@ func (bs *Service) receiveAttestations(ctx context.Context) {
 			log.WithError(err).Error("Could not receive attestations from beacon node")
 			return
 		}
-		log.WithField("slot", res.Data.Slot).Debug("Received attestation from beacon node")
-		if err := bs.slasherDB.SaveIncomingIndexedAttestationByEpoch(ctx, res); err != nil {
+		log.WithFields(logrus.Fields{
+			"slot":    res.Data.Slot,
+			"indices": res.AttestingIndices,
+		}).Debug("Received attestation from beacon node")
+		if err := bs.slasherDB.SaveIndexedAttestation(ctx, res); err != nil {
 			log.WithError(err).Error("Could not save indexed attestation")
 			continue
 		}
