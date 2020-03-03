@@ -159,6 +159,8 @@ func (s *SpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttest
 	return nil
 }
 
+// saveSigBytes saves the first 2 bytes of the signature for the att we're updating the spans to.
+// Later used to help us find the violating attestation in the DB.
 func (s *SpanDetector) saveSigBytes(att *ethpb.IndexedAttestation, valIdx uint64) {
 	numSpans := uint64(len(s.spans))
 	target := att.Data.Target.Epoch
@@ -176,7 +178,7 @@ func (s *SpanDetector) saveSigBytes(att *ethpb.IndexedAttestation, valIdx uint64
 	if len(att.Signature) > 1 {
 		sigBytes = [2]byte{att.Signature[0], att.Signature[1]}
 	}
-	// Set the bloom filter back into the span for the epoch.
+	// Save the signature bytes into the span for this epoch.
 	span := s.spans[target%numSpans][valIdx]
 	s.spans[target%numSpans][valIdx] = types.Span{
 		MinSpan:     span.MinSpan,
