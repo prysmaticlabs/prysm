@@ -45,7 +45,7 @@ type Flags struct {
 	EnableDomainDataCache                      bool   // EnableDomainDataCache caches validator calls to DomainData per epoch.
 	EnableStateGenSigVerify                    bool   // EnableStateGenSigVerify verifies proposer and randao signatures during state gen.
 	CheckHeadState                             bool   // CheckHeadState checks the current headstate before retrieving the desired state from the db.
-
+	EnableNoise                                bool   // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
 	// as the chain head. UNSAFE, use with caution.
@@ -153,6 +153,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(checkHeadState.Name) {
 		log.Warn("Enabling check head state for chainservice")
 		cfg.CheckHeadState = true
+	}
+	if ctx.GlobalBool(enableNoiseHandshake.Name) {
+		log.Warn("Enabling noise handshake for peer")
+		cfg.EnableNoise = true
 	}
 	Init(cfg)
 }
