@@ -12,19 +12,19 @@ import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 // attestation or proposal they are going to submit to the network are not going to
 // produce a slashable event.
 service Slasher {
-    // Gets AttesterSlashing container if the attestation that
-    // was received produces a slashable event.
+    // Returns any found attester slashings if the passed in attestation conflicts with a validators history.
     rpc IsSlashableAttestation(ethereum.eth.v1alpha1.IndexedAttestation) returns (AttesterSlashingResponse);
 
-    // Gets ProposerSlashing container if the block header that
-    // was received produces a slashable event.
-    rpc IsSlashableBlock(ProposerSlashingRequest) returns (ProposerSlashingResponse);
+    // Returns any found proposer slashings if the passed in proposal conflicts with a validators history.
+    rpc IsSlashableBlock(ethereum.eth.v1alpha1.SignedBeaconBlockHeader) returns (ProposerSlashingResponse);
+}
 
-    // Gets ProposerSlashingResponse container if slashing with the requested status are found in the db.
-    rpc ProposerSlashings(SlashingStatusRequest) returns (ProposerSlashingResponse);
+message ProposerSlashingResponse {
+    repeated ethereum.eth.v1alpha1.ProposerSlashing proposer_slashing = 1;
+}
 
-    // Gets AttesterSlashingResponse container if slashing with the requested status are found in the db.
-    rpc AttesterSlashings(SlashingStatusRequest) returns (AttesterSlashingResponse);
+message AttesterSlashingResponse {
+    repeated ethereum.eth.v1alpha1.AttesterSlashing attester_slashing = 1;
 }
 
 // CompressedIdxAtt is an indexed attestation with the []byte data root
@@ -40,19 +40,6 @@ message CompressedIdxAtt {
 // accessing an array from the DB.
 message CompressedIdxAttList {
     repeated CompressedIdxAtt list = 1;
-}
-
-message ProposerSlashingRequest {
-    ethereum.eth.v1alpha1.SignedBeaconBlockHeader block_header = 1;
-    uint64 validator_index = 2;
-}
-
-message ProposerSlashingResponse {
-    repeated ethereum.eth.v1alpha1.ProposerSlashing proposer_slashing = 1;
-}
-
-message AttesterSlashingResponse {
-    repeated ethereum.eth.v1alpha1.AttesterSlashing attester_slashing = 1;
 }
 
 // In order to detect surrounded attestation we need to compare
