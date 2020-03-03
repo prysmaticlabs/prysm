@@ -74,15 +74,12 @@ func ActiveValidatorIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint6
 		return activeIndices, nil
 	}
 	var indices []uint64
-	err = state.ReadFromEveryValidator(func(idx int, val *stateTrie.ReadOnlyValidator) error {
+	state.ReadFromEveryValidator(func(idx int, val *stateTrie.ReadOnlyValidator) error {
 		if IsActiveValidatorUsingTrie(val, epoch) {
 			indices = append(indices, uint64(idx))
 		}
 		return nil
 	})
-	if err != nil {
-		return nil, errors.Wrap(err, "could not read validator set from beacon state")
-	}
 
 	if err := UpdateCommitteeCache(state, epoch); err != nil {
 		return nil, errors.Wrap(err, "could not update committee cache")
@@ -95,15 +92,12 @@ func ActiveValidatorIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint6
 // at the given epoch.
 func ActiveValidatorCount(state *stateTrie.BeaconState, epoch uint64) (uint64, error) {
 	count := uint64(0)
-	err := state.ReadFromEveryValidator(func(idx int, val *stateTrie.ReadOnlyValidator) error {
+	state.ReadFromEveryValidator(func(idx int, val *stateTrie.ReadOnlyValidator) error {
 		if IsActiveValidatorUsingTrie(val, epoch) {
 			count++
 		}
 		return nil
 	})
-	if err != nil {
-		return 0, errors.Wrap(err, "could not read validator set from beacon state")
-	}
 	return count, nil
 }
 
