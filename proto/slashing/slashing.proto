@@ -16,15 +16,9 @@ service Slasher {
     // was received produces a slashable event.
     rpc IsSlashableAttestation(ethereum.eth.v1alpha1.IndexedAttestation) returns (AttesterSlashingResponse);
 
-    // Gets ProposerSlashing container if the block header that
+    // Gets ProposerSlashing container if the block that
     // was received produces a slashable event.
     rpc IsSlashableBlock(ProposerSlashingRequest) returns (ProposerSlashingResponse);
-
-    // Gets ProposerSlashingResponse container if slashing with the requested status are found in the db.
-    rpc ProposerSlashings(SlashingStatusRequest) returns (ProposerSlashingResponse);
-
-    // Gets AttesterSlashingResponse container if slashing with the requested status are found in the db.
-    rpc AttesterSlashings(SlashingStatusRequest) returns (AttesterSlashingResponse);
 }
 
 // CompressedIdxAtt is an indexed attestation with the []byte data root
