@@ -1038,7 +1038,7 @@ func verifyDeposit(beaconState *stateTrie.BeaconState, deposit *ethpb.Deposit) e
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash deposit data")
 	}
-	if ok := trieutil.VerifyMerkleProof(
+	if ok := trieutil.VerifyMerkleBranch(
 		receiptRoot,
 		leaf[:],
 		int(beaconState.Eth1DepositIndex()),
