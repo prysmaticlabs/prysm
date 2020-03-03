@@ -8,6 +8,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/slasher/detection/attestations"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -57,7 +58,8 @@ func TestService_DetectIncomingBlocks(t *testing.T) {
 func TestService_DetectIncomingAttestations(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ds := Service{
-		notifier: &mockNotifier{},
+		notifier:           &mockNotifier{},
+		minMaxSpanDetector: &attestations.MockSpanDetector{},
 	}
 	att := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
