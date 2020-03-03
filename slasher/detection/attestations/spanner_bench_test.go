@@ -1,4 +1,4 @@
-package olddetection
+package attestations
 
 //
 //import (
