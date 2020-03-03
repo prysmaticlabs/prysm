@@ -16,7 +16,10 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["spanner_test.go"],
+    srcs = [
+        "spanner_bench_test.go",
+        "spanner_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//shared/cmd:go_default_library",
