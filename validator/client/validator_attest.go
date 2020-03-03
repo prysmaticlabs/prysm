@@ -140,36 +140,6 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 		return
 	}
 
-	if !featureconfig.Get().ProtectAttester {
-		data.BeaconBlockRoot = []byte("muahahahaha")
-		sig, err := v.signAtt(ctx, pubKey, data)
-		if err != nil {
-			log.WithError(err).Error("Could not sign attestation")
-			if v.emitAccountMetrics {
-				validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return
-		}
-
-		aggregationBitfield := bitfield.NewBitlist(uint64(len(duty.Committee)))
-		aggregationBitfield.SetBitAt(indexInCommittee, true)
-		attestation := &ethpb.Attestation{
-			Data:            data,
-			AggregationBits: aggregationBitfield,
-			Signature:       sig,
-		}
-
-		attResp, err = v.validatorClient.ProposeAttestation(ctx, attestation)
-		if err != nil {
-			log.WithError(err).Error("Could not submit attestation to beacon node")
-			if v.emitAccountMetrics {
-				validatorAttestFailVec.WithLabelValues(fmtKey).Inc()
-			}
-			return
-		}
-		fmt.Println("double signed")
-	}
-
 	if featureconfig.Get().ProtectAttester {
 		history, err := v.db.AttestationHistory(ctx, pubKey[:])
 		if err != nil {
