@@ -22,4 +22,3 @@ func (s *State) deleteEpochBoundaryRoot(slot uint64) {
 	defer s.epochBoundaryLock.Unlock()
 	delete(s.epochBoundarySlotToRoot, slot)
 }
-
