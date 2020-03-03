@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/flags"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"go.opencensus.io/trace"
 )
 
@@ -128,13 +127,6 @@ func (s *Service) onAttestation(ctx context.Context, a *ethpb.Attestation) ([]ui
 
 	// Update forkchoice store with the new attestation for updating weight.
 	s.forkChoiceStore.ProcessAttestation(ctx, indexedAtt.AttestingIndices, bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
-
-	if !featureconfig.Get().DisableUpdateHeadPerAttestation {
-		// Update fork choice head after updating weight.
-		if err := s.updateHead(ctx, baseState.Balances()); err != nil {
-			return nil, err
-		}
-	}
 
 	return indexedAtt.AttestingIndices, nil
 }
