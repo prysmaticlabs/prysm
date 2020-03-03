@@ -51,7 +51,7 @@ func init() {
 	}
 }
 
-func TestNilDBHistoryIdxAtt(t *testing.T) {
+func TestHasIndexedAttestation_NilDB(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	db := setupDB(t, cli.NewContext(app, set, nil))
@@ -132,15 +132,14 @@ func TestDeleteIndexedAttestation(t *testing.T) {
 	for _, tt := range tests {
 		found, err := db.HasIndexedAttestation(ctx, tt.idxAtt)
 		if err != nil {
-			t.Fatalf("failed to get index attestation: %v", err)
+			t.Fatalf("Failed to check for index attestation: %v", err)
 		}
-
 		if !found {
 			t.Fatalf("Expected indexed attestation: %v", tt.idxAtt)
 		}
-		err = db.DeleteIndexedAttestation(ctx, tt.idxAtt)
-		if err != nil {
-			t.Fatalf("delete index attestation failed: %v", err)
+
+		if err = db.DeleteIndexedAttestation(ctx, tt.idxAtt); err != nil {
+			t.Fatalf("Could not delete index attestation: %v", err)
 		}
 
 		found, err = db.HasIndexedAttestation(ctx, tt.idxAtt)
@@ -150,9 +149,7 @@ func TestDeleteIndexedAttestation(t *testing.T) {
 		if found {
 			t.Error("Expected indexed attestation to be deleted")
 		}
-
 	}
-
 }
 
 func TestHasIndexedAttestation(t *testing.T) {
@@ -211,8 +208,7 @@ func TestPruneHistoryIndexedAttestation(t *testing.T) {
 	}
 	currentEpoch := uint64(3)
 	historyToKeep := uint64(1)
-	err := db.PruneAttHistory(ctx, currentEpoch, historyToKeep)
-	if err != nil {
+	if err := db.PruneAttHistory(ctx, currentEpoch, historyToKeep); err != nil {
 		t.Fatalf("failed to prune: %v", err)
 	}
 
