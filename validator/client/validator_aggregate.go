@@ -48,7 +48,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot uint64, pu
 	defer span.End()
 
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
-	fmtKey := fmt.Sprintf("%#x", pubKey[:8])
+	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 
 	duty, err := v.duty(pubKey)
 	if err != nil {
