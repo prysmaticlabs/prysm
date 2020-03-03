@@ -58,6 +58,8 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 			fields: fields{
 				pending:  generateNProposerSlashings(1),
 				included: make(map[uint64]bool),
+				wantErr:  true,
+				err:      "slashing object already exists in pending proposer slashings",
 			},
 			args: args{
 				slashing: proposerSlashingForValIdx(0),
@@ -69,6 +71,8 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 			fields: fields{
 				pending:  []*ethpb.ProposerSlashing{},
 				included: make(map[uint64]bool),
+				wantErr:  true,
+				err:      "cannot be slashed",
 			},
 			args: args{
 				slashing: proposerSlashingForValIdx(2),
@@ -173,6 +177,9 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 			if err != nil && tt.fields.wantErr && !strings.Contains(err.Error(), tt.fields.err) {
 				t.Fatalf("Wanted err: %v, received %v", tt.fields.err, err)
 			}
+			if !tt.fields.wantErr && err != nil {
+				t.Fatalf("Did not expect error: %v", err)
+			}
 			if len(p.pendingProposerSlashing) != len(tt.want) {
 				t.Fatalf("Mismatched lengths of pending list. Got %d, wanted %d.", len(p.pendingProposerSlashing), len(tt.want))
 			}
@@ -250,6 +257,46 @@ func TestPool_MarkIncludedProposerSlashing(t *testing.T) {
 				included: map[uint64]bool{
 					0: true,
 					2: true,
+				},
+			},
+		},
+		{
+			name: "Removes from pending long list",
+			fields: fields{
+				pending: []*ethpb.ProposerSlashing{
+					proposerSlashingForValIdx(1),
+					proposerSlashingForValIdx(2),
+					proposerSlashingForValIdx(3),
+					proposerSlashingForValIdx(4),
+					proposerSlashingForValIdx(5),
+					proposerSlashingForValIdx(6),
+					proposerSlashingForValIdx(7),
+					proposerSlashingForValIdx(8),
+					proposerSlashingForValIdx(9),
+					proposerSlashingForValIdx(10),
+				},
+				included: map[uint64]bool{
+					0: true,
+				},
+			},
+			args: args{
+				slashing: proposerSlashingForValIdx(7),
+			},
+			want: fields{
+				pending: []*ethpb.ProposerSlashing{
+					proposerSlashingForValIdx(1),
+					proposerSlashingForValIdx(2),
+					proposerSlashingForValIdx(3),
+					proposerSlashingForValIdx(4),
+					proposerSlashingForValIdx(5),
+					proposerSlashingForValIdx(6),
+					proposerSlashingForValIdx(8),
+					proposerSlashingForValIdx(9),
+					proposerSlashingForValIdx(10),
+				},
+				included: map[uint64]bool{
+					0: true,
+					7: true,
 				},
 			},
 		},
