@@ -5,11 +5,10 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -40,15 +39,16 @@ func saveToDB(db *Store) func(uint64, uint64, interface{}, int64) {
 	}
 }
 
-func unmarshalMinMaxSpan(ctx context.Context, enc []byte) ([2]uint16, error) {
+func unmarshalMinMaxSpan(ctx context.Context, enc []byte) ([3]uint16, error) {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.unmarshalMinMaxSpan")
 	defer span.End()
-	r := [2]uint16{}
+	r := [3]uint16{}
 	if len(enc) != 4 {
 		return r, errors.New("wrong data length for min max span")
 	}
 	r[0] = FromBytes2(enc[:2])
 	r[1] = FromBytes2(enc[2:4])
+	r[2] = FromBytes2(enc[4:6])
 	return r, nil
 }
 
@@ -104,22 +104,22 @@ func (db *Store) EpochSpansMap(ctx context.Context, epoch uint64) (map[uint64][2
 // EpochSpanByValidatorIndex accepts validator index and epoch returns the corresponding spans
 // for slashing detection.
 // Returns error if the spans for this validator index and epoch does not exist.
-func (db *Store) EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uint64, epoch uint64) ([2]uint16, error) {
+func (db *Store) EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uint64, epoch uint64) ([3]uint16, error) {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.EpochSpansMap")
 	defer span.End()
 	var err error
 	if db.spanCacheEnabled {
 		v, ok := db.spanCache.Get(epoch)
-		spanMap := make(map[uint64][2]uint16)
+		spanMap := make(map[uint64][3]uint16)
 		if ok {
-			spanMap = v.(map[uint64][2]uint16)
+			spanMap = v.(map[uint64][3]uint16)
 			spans, ok := spanMap[validatorIdx]
 			if ok {
 				return spans, nil
 			}
 		}
 	}
-	var spans [2]uint16
+	var spans [3]uint16
 	err = db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(validatorsMinMaxSpanBucket)
 		epochBucket := b.Bucket(bytesutil.Bytes8(epoch))

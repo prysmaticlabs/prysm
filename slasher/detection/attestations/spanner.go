@@ -7,12 +7,10 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-
-	"github.com/prysmaticlabs/prysm/slasher/db"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/iface"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 	"github.com/prysmaticlabs/prysm/slasher/detection/filter"
@@ -83,6 +81,7 @@ func (s *SpanDetector) DetectSlashingForValidator(
 		}
 	}
 
+	s.db.EpochSpanByValidatorIndex()
 	if sp := s.spans[targetEpoch%numSpans]; sp != nil {
 		filterNum := sp[validatorIdx][2]
 		if filterNum == 0 {
