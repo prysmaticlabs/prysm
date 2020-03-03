@@ -1577,3 +1577,10 @@ go_repository(
     commit = "e180dbdc8da04c4fa04272e875ce64949f38bd3e",
     importpath = "github.com/shibukawa/configdir",
 )
+
+go_repository(
+    name = "com_github_libp2p_go_libp2p_noise",
+    importpath = "github.com/libp2p/go-libp2p-noise",
+    sum = "h1:J1gHJRNFEk7NdiaPQQqAvxEy+7hhCsVv3uzduWybmqY=",
+    version = "v0.0.0-20200302201340-8c54356e12c9",
+)
