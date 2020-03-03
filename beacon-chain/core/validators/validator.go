@@ -5,6 +5,8 @@
 package validators
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -38,6 +40,9 @@ import (
 //    validator.withdrawable_epoch = Epoch(validator.exit_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
 func InitiateValidatorExit(state *stateTrie.BeaconState, idx uint64) (*stateTrie.BeaconState, error) {
 	vals := state.Validators()
+	if idx >= uint64(len(vals)) {
+		return nil, fmt.Errorf("validator idx %d is higher then validator count %d", idx, len(vals))
+	}
 	validator := vals[idx]
 	if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
 		return state, nil
