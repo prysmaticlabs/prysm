@@ -14,6 +14,7 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -44,6 +45,7 @@ type Service struct {
 	conn                  *grpc.ClientConn
 	provider              string
 	beaconClient          ethpb.BeaconChainClient
+	slasherDB             db.Database
 	nodeClient            ethpb.NodeClient
 	clientFeed            *event.Feed
 	blockFeed             *event.Feed
@@ -58,6 +60,7 @@ type Service struct {
 type Config struct {
 	BeaconProvider        string
 	BeaconCert            string
+	SlasherDB             db.Database
 	ProposerSlashingsFeed *event.Feed
 	AttesterSlashingsFeed *event.Feed
 }
@@ -73,6 +76,7 @@ func NewBeaconClientService(ctx context.Context, cfg *Config) *Service {
 		blockFeed:             new(event.Feed),
 		clientFeed:            new(event.Feed),
 		attestationFeed:       new(event.Feed),
+		slasherDB:             cfg.SlasherDB,
 		proposerSlashingsChan: make(chan *ethpb.ProposerSlashing, 1),
 		attesterSlashingsChan: make(chan *ethpb.AttesterSlashing, 1),
 		attesterSlashingsFeed: cfg.AttesterSlashingsFeed,

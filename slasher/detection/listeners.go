@@ -41,17 +41,21 @@ func (ds *Service) detectIncomingBlocks(ctx context.Context, ch chan *ethpb.Sign
 // attestation objects from a notifier interface. Upon receiving
 // an attestation from the feed, we run surround vote and double vote
 // detection on the attestation.
-func (ds *Service) detectIncomingAttestations(ctx context.Context, ch chan *ethpb.Attestation) {
+func (ds *Service) detectIncomingAttestations(ctx context.Context, ch chan *ethpb.IndexedAttestation) {
 	ctx, span := trace.StartSpan(ctx, "detection.detectIncomingAttestations")
 	defer span.End()
 	sub := ds.notifier.AttestationFeed().Subscribe(ch)
 	defer sub.Unsubscribe()
 	for {
 		select {
-		case <-ch:
+		case indexedAtt := <-ch:
 			log.Debug("Running detection on attestation...")
-			// TODO(#4836): Run detection function for attester double voting.
-			// TODO(#4836): Run detection function for attester surround voting.
+			slashings, err := ds.detectAttesterSlashings(ctx, indexedAtt)
+			if err != nil {
+				log.WithError(err).Error("Could not detect attester slashings")
+				continue
+			}
+			ds.submitAttesterSlashings(ctx, slashings)
 		case <-sub.Err():
 			log.Error("Subscriber closed, exiting goroutine")
 			return

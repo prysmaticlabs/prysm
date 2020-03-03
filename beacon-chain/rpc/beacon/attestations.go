@@ -116,7 +116,7 @@ func (bs *Server) ListAttestations(
 }
 
 // ListIndexedAttestations retrieves indexed attestations by target epoch.
-// IndexedAttestations are sorted by data slot by default. Either a target epoch filter
+// IndexedAttestationsForEpoch are sorted by data slot by default. Either a target epoch filter
 // or a boolean filter specifying a request for genesis epoch attestations may be used.
 //
 // The server may return an empty list when no attestations match the given

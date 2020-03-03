@@ -79,8 +79,8 @@ go_image_debug(
 container_bundle(
     name = "image_bundle_debug",
     images = {
-        "gcr.io/prysmaticlabs/prysm/beacon-chain:latest-debug": ":image_debug",
-        "gcr.io/prysmaticlabs/prysm/beacon-chain:{DOCKER_TAG}-debug": ":image_debug",
+        "gcr.io/prysmaticlabs/prysm/validator:latest-debug": ":image_debug",
+        "gcr.io/prysmaticlabs/prysm/validator:{DOCKER_TAG}-debug": ":image_debug",
     },
     tags = ["manual"],
 )

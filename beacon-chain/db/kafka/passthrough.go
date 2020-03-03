@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/proto/beacon/db"
 	ethereum_beacon_p2p_v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 // DatabasePath -- passthrough.
@@ -105,6 +106,11 @@ func (e Exporter) DeleteValidatorIndex(ctx context.Context, publicKey []byte) er
 // State -- passthrough.
 func (e Exporter) State(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
 	return e.db.State(ctx, blockRoot)
+}
+
+// StateSummary -- passthrough.
+func (e Exporter) StateSummary(ctx context.Context, blockRoot [32]byte) (*pb.StateSummary, error) {
+	return e.db.StateSummary(ctx, blockRoot)
 }
 
 // HeadState -- passthrough.
@@ -227,6 +233,11 @@ func (e Exporter) SaveState(ctx context.Context, state *state.BeaconState, block
 	return e.db.SaveState(ctx, state, blockRoot)
 }
 
+// SaveStateSummary -- passthrough.
+func (e Exporter) SaveStateSummary(ctx context.Context, summary *pb.StateSummary) error {
+	return e.db.SaveStateSummary(ctx, summary)
+}
+
 // SaveStates -- passthrough.
 func (e Exporter) SaveStates(ctx context.Context, states []*state.BeaconState, blockRoots [][32]byte) error {
 	return e.db.SaveStates(ctx, states, blockRoots)
@@ -297,6 +308,11 @@ func (e Exporter) HasState(ctx context.Context, blockRoot [32]byte) bool {
 	return e.db.HasState(ctx, blockRoot)
 }
 
+// HasStateSummary -- passthrough.
+func (e Exporter) HasStateSummary(ctx context.Context, blockRoot [32]byte) bool {
+	return e.db.HasStateSummary(ctx, blockRoot)
+}
+
 // IsFinalizedBlock -- passthrough.
 func (e Exporter) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool {
 	return e.db.IsFinalizedBlock(ctx, blockRoot)
@@ -310,4 +326,29 @@ func (e Exporter) PowchainData(ctx context.Context) (*db.ETH1ChainData, error) {
 // SavePowchainData -- passthrough
 func (e Exporter) SavePowchainData(ctx context.Context, data *db.ETH1ChainData) error {
 	return e.db.SavePowchainData(ctx, data)
+}
+
+// SaveArchivedPointState -- passthrough
+func (e Exporter) SaveArchivedPointState(ctx context.Context, state *state.BeaconState, index uint64) error {
+	return e.db.SaveArchivedPointState(ctx, state, index)
+}
+
+// SaveArchivedPointRoot -- passthrough
+func (e Exporter) SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, index uint64) error {
+	return e.db.SaveArchivedPointRoot(ctx, blockRoot, index)
+}
+
+// ArchivedPointState -- passthrough
+func (e Exporter) ArchivedPointState(ctx context.Context, index uint64) (*state.BeaconState, error) {
+	return e.db.ArchivedPointState(ctx, index)
+}
+
+// ArchivedPointRoot -- passthrough
+func (e Exporter) ArchivedPointRoot(ctx context.Context, index uint64) [32]byte {
+	return e.db.ArchivedPointRoot(ctx, index)
+}
+
+// HasArchivedPoint -- passthrough
+func (e Exporter) HasArchivedPoint(ctx context.Context, index uint64) bool {
+	return e.db.HasArchivedPoint(ctx, index)
 }

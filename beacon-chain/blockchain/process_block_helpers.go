@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"github.com/sirupsen/logrus"
@@ -60,6 +61,15 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (
 	preState := s.initSyncState[bytesutil.ToBytes32(b.ParentRoot)]
 	var err error
 	if preState == nil {
+		if featureconfig.Get().CheckHeadState {
+			headRoot, err := s.HeadRoot(ctx)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not get head root")
+			}
+			if bytes.Equal(headRoot, b.ParentRoot) {
+				return s.HeadState(ctx)
+			}
+		}
 		preState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(b.ParentRoot))
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)

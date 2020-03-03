@@ -7,7 +7,6 @@ import (
 
 	"github.com/golang/mock/gomock"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -40,10 +39,10 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 		gomock.Any(), // epoch
 	).Return(&ethpb.DomainResponse{}, nil /*err*/)
 
-	m.aggregatorClient.EXPECT().SubmitAggregateAndProof(
+	m.validatorClient.EXPECT().SubmitAggregateAndProof(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.AggregationRequest{}),
-	).Return(&pb.AggregationResponse{}, nil)
+		gomock.AssignableToTypeOf(&ethpb.AggregationRequest{}),
+	).Return(&ethpb.AggregationResponse{}, nil)
 
 	validator.SubmitAggregateAndProof(context.Background(), 0, validatorPubKey)
 }

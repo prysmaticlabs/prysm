@@ -59,13 +59,13 @@ func TestService_DetectIncomingAttestations(t *testing.T) {
 	ds := Service{
 		notifier: &mockNotifier{},
 	}
-	att := &ethpb.Attestation{
+	att := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Slot: 1,
 		},
 	}
 	exitRoutine := make(chan bool)
-	attsChan := make(chan *ethpb.Attestation)
+	attsChan := make(chan *ethpb.IndexedAttestation)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func(tt *testing.T) {
 		ds.detectIncomingAttestations(ctx, attsChan)

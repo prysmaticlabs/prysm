@@ -38,7 +38,6 @@ type validator struct {
 	validatorClient      ethpb.BeaconNodeValidatorClient
 	beaconClient         ethpb.BeaconChainClient
 	graffiti             []byte
-	aggregatorClient     pb.AggregatorServiceClient
 	node                 ethpb.NodeClient
 	keyManager           keymanager.KeyManager
 	prevBalance          map[[48]byte]uint64

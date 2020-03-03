@@ -45,14 +45,14 @@ func TestService_ReceiveAttestations(t *testing.T) {
 		beaconClient: client,
 		blockFeed:    new(event.Feed),
 	}
-	stream := mock.NewMockBeaconChain_StreamAttestationsClient(ctrl)
+	stream := mock.NewMockBeaconChain_StreamIndexedAttestationsClient(ctrl)
 	ctx, cancel := context.WithCancel(context.Background())
-	att := &ethpb.Attestation{
+	att := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Slot: 5,
 		},
 	}
-	client.EXPECT().StreamAttestations(
+	client.EXPECT().StreamIndexedAttestations(
 		gomock.Any(),
 		&ptypes.Empty{},
 	).Return(stream, nil)
