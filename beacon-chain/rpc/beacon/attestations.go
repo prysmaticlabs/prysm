@@ -284,8 +284,9 @@ func (bs *Server) StreamIndexedAttestations(
 				if att.Data.Slot < startSlot || att.Data.Slot > endSlot {
 					continue
 				}
-				committeesForSlot := committeesBySlot[att.Data.Slot]
-				if committeesForSlot == nil || committeesForSlot.Committees == nil {
+
+				committeesForSlot, ok := committeesBySlot[att.Data.Slot]
+				if !ok || committeesForSlot.Committees == nil {
 					continue
 				}
 				committee := committeesForSlot.Committees[att.Data.CommitteeIndex]
