@@ -223,16 +223,16 @@ func TestActivatedValidatorIndices(t *testing.T) {
 				Slot: 0,
 				Validators: []*ethpb.Validator{
 					{
-						ActivationEpoch: helpers.DelayedActivationExitEpoch(0),
+						ActivationEpoch: helpers.ActivationExitEpoch(0),
 					},
 					{
-						ActivationEpoch: helpers.DelayedActivationExitEpoch(0),
+						ActivationEpoch: helpers.ActivationExitEpoch(0),
 					},
 					{
-						ActivationEpoch: helpers.DelayedActivationExitEpoch(5),
+						ActivationEpoch: helpers.ActivationExitEpoch(5),
 					},
 					{
-						ActivationEpoch: helpers.DelayedActivationExitEpoch(0),
+						ActivationEpoch: helpers.ActivationExitEpoch(0),
 					},
 				},
 			},
@@ -243,7 +243,7 @@ func TestActivatedValidatorIndices(t *testing.T) {
 				Slot: 0,
 				Validators: []*ethpb.Validator{
 					{
-						ActivationEpoch: helpers.DelayedActivationExitEpoch(10),
+						ActivationEpoch: helpers.ActivationExitEpoch(10),
 					},
 				},
 			},
@@ -254,7 +254,7 @@ func TestActivatedValidatorIndices(t *testing.T) {
 				Slot: 0,
 				Validators: []*ethpb.Validator{
 					{
-						ActivationEpoch: helpers.DelayedActivationExitEpoch(0),
+						ActivationEpoch: helpers.ActivationExitEpoch(0),
 					},
 				},
 			},
