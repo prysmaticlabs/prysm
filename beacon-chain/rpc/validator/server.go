@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -151,7 +153,10 @@ func (vs *Server) ExitedValidators(
 // DomainData fetches the current domain version information from the beacon state.
 func (vs *Server) DomainData(ctx context.Context, request *ethpb.DomainRequest) (*ethpb.DomainResponse, error) {
 	fork := vs.ForkFetcher.CurrentFork()
-	dv := helpers.Domain(fork, request.Epoch, request.Domain)
+	dv, err := helpers.Domain(fork, request.Epoch, bytesutil.ToBytes4(request.Domain))
+	if err != nil {
+		return nil, err
+	}
 	return &ethpb.DomainResponse{
 		SignatureDomain: dv,
 	}, nil

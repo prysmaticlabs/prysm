@@ -183,7 +183,10 @@ func validateSelection(ctx context.Context, s *stateTrie.BeaconState, data *ethp
 		return fmt.Errorf("validator is not an aggregator for slot %d", data.Slot)
 	}
 
-	domain := helpers.Domain(s.Fork(), helpers.SlotToEpoch(data.Slot), params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(s.Fork(), helpers.SlotToEpoch(data.Slot), params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return err
+	}
 	slotMsg, err := ssz.HashTreeRoot(data.Slot)
 	if err != nil {
 		return err
