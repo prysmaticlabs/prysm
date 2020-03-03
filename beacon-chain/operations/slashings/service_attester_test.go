@@ -372,6 +372,48 @@ func TestPool_MarkIncludedAttesterSlashing(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Removes from long pending list",
+			fields: fields{
+				pending: []*PendingAttesterSlashing{
+					pendingSlashingForValIdx(1),
+					pendingSlashingForValIdx(2),
+					pendingSlashingForValIdx(3),
+					pendingSlashingForValIdx(4),
+					pendingSlashingForValIdx(5),
+					pendingSlashingForValIdx(6),
+					pendingSlashingForValIdx(7),
+					pendingSlashingForValIdx(8),
+					pendingSlashingForValIdx(9),
+					pendingSlashingForValIdx(10),
+					pendingSlashingForValIdx(11),
+				},
+				included: map[uint64]bool{
+					0: true,
+				},
+			},
+			args: args{
+				slashing: attesterSlashingForValIdx(6),
+			},
+			want: fields{
+				pending: []*PendingAttesterSlashing{
+					pendingSlashingForValIdx(1),
+					pendingSlashingForValIdx(2),
+					pendingSlashingForValIdx(3),
+					pendingSlashingForValIdx(4),
+					pendingSlashingForValIdx(5),
+					pendingSlashingForValIdx(7),
+					pendingSlashingForValIdx(8),
+					pendingSlashingForValIdx(9),
+					pendingSlashingForValIdx(10),
+					pendingSlashingForValIdx(11),
+				},
+				included: map[uint64]bool{
+					0: true,
+					6: true,
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
