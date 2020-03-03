@@ -81,7 +81,6 @@ func TestSpanDetector_DetectSlashingForValidator_Double(t *testing.T) {
 			},
 			slashCount: 1,
 		},
-
 		{
 			name: "att with different committee index, rest is the same, should slash",
 			att: &ethpb.IndexedAttestation{
