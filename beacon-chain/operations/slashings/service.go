@@ -43,6 +43,7 @@ func (p *Pool) PendingAttesterSlashings() []*ethpb.AttesterSlashing {
 		}
 		pending = append(pending, attSlashing)
 	}
+
 	return pending
 }
 
@@ -58,7 +59,6 @@ func (p *Pool) PendingProposerSlashings() []*ethpb.ProposerSlashing {
 		}
 		pending = append(pending, slashing)
 	}
-
 	return pending
 }
 
