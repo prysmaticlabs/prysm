@@ -108,7 +108,7 @@ var (
 	}
 	enableNoiseHandshake = cli.BoolFlag{
 		Name: "enable-noise",
-		Usage: "This enables the beacon node to use NOISE instead of SECIO for performing handshakes between peers and" +
+		Usage: "This enables the beacon node to use NOISE instead of SECIO for performing handshakes between peers and " +
 			"securing transports between peers",
 	}
 )
