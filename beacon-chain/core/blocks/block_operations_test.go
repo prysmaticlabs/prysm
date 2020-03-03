@@ -1783,8 +1783,8 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 		t.Fatalf("Could not process exits: %v", err)
 	}
 	newRegistry := newState.Validators()
-	if newRegistry[0].ExitEpoch != helpers.DelayedActivationExitEpoch(state.Slot()/params.BeaconConfig().SlotsPerEpoch) {
+	if newRegistry[0].ExitEpoch != helpers.ActivationExitEpoch(state.Slot()/params.BeaconConfig().SlotsPerEpoch) {
 		t.Errorf("Expected validator exit epoch to be %d, got %d",
-			helpers.DelayedActivationExitEpoch(state.Slot()/params.BeaconConfig().SlotsPerEpoch), newRegistry[0].ExitEpoch)
+			helpers.ActivationExitEpoch(state.Slot()/params.BeaconConfig().SlotsPerEpoch), newRegistry[0].ExitEpoch)
 	}
 }

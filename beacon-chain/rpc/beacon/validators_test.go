@@ -1121,7 +1121,7 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 		slashed := false
 		// Mark indices divisible by two as activated.
 		if i%2 == 0 {
-			activationEpoch = helpers.DelayedActivationExitEpoch(0)
+			activationEpoch = helpers.ActivationExitEpoch(0)
 		} else if i%3 == 0 {
 			// Mark indices divisible by 3 as slashed.
 			withdrawableEpoch = params.BeaconConfig().EpochsPerSlashingsVector
@@ -1277,19 +1277,19 @@ func TestServer_GetValidatorQueue_PendingActivation(t *testing.T) {
 	headState, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Validators: []*ethpb.Validator{
 			{
-				ActivationEpoch:            helpers.DelayedActivationExitEpoch(0),
+				ActivationEpoch:            helpers.ActivationExitEpoch(0),
 				ActivationEligibilityEpoch: 3,
 				PublicKey:                  pubKey(3),
 				WithdrawalCredentials:      make([]byte, 32),
 			},
 			{
-				ActivationEpoch:            helpers.DelayedActivationExitEpoch(0),
+				ActivationEpoch:            helpers.ActivationExitEpoch(0),
 				ActivationEligibilityEpoch: 2,
 				PublicKey:                  pubKey(2),
 				WithdrawalCredentials:      make([]byte, 32),
 			},
 			{
-				ActivationEpoch:            helpers.DelayedActivationExitEpoch(0),
+				ActivationEpoch:            helpers.ActivationExitEpoch(0),
 				ActivationEligibilityEpoch: 1,
 				PublicKey:                  pubKey(1),
 				WithdrawalCredentials:      make([]byte, 32),

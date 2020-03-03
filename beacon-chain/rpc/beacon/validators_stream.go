@@ -409,7 +409,7 @@ func (is *infostream) calculateActivationTimeForPendingValidators(res []*ethpb.V
 		for i := uint64(0); i < toProcess; i++ {
 			validator := validators[sortedIndices[i]]
 			if index, exists := pendingValidatorsMap[validator.PublicKey()]; exists {
-				res[index].TransitionTimestamp = is.epochToTimestamp(helpers.DelayedActivationExitEpoch(curEpoch))
+				res[index].TransitionTimestamp = is.epochToTimestamp(helpers.ActivationExitEpoch(curEpoch))
 				delete(pendingValidatorsMap, validator.PublicKey())
 			}
 			numAttestingValidators++
