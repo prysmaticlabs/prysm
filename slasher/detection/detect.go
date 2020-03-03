@@ -3,8 +3,10 @@ package detection
 import (
 	"context"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 )
@@ -16,56 +18,60 @@ func (ds *Service) detectAttesterSlashings(
 	slashings := make([]*ethpb.AttesterSlashing, 0)
 	for i := 0; i < len(att.AttestingIndices); i++ {
 		valIdx := att.AttestingIndices[i]
-		surroundedAttSlashings, err := ds.detectSurroundVotes(ctx, valIdx, att)
+		result, err := ds.minMaxSpanDetector.DetectSlashingForValidator(ctx, valIdx, att.Data)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not detect surround votes on attestation")
+			return nil, err
 		}
-		doubleAttSlashings, err := ds.detectDoubleVotes(ctx, att)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not detect double votes on attestation")
+		// If the response is nil, there was no slashing detected.
+		if result == nil {
+			continue
 		}
-		if len(surroundedAttSlashings) > 0 {
-			log.Infof("Found %d slashings for val idx %d", len(surroundedAttSlashings), valIdx)
+
+		var slashing *ethpb.AttesterSlashing
+		switch result.Kind {
+		case types.DoubleVote:
+			slashing, err = ds.detectDoubleVote(ctx, att, result)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not detect double votes on attestation")
+			}
+		case types.SurroundVote:
+			slashing, err = ds.detectSurroundVotes(ctx, att, result)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not detect surround votes on attestation")
+			}
 		}
-		newSlashings := append(surroundedAttSlashings, doubleAttSlashings...)
-		slashings = append(slashings, newSlashings...)
+		slashings = append(slashings, slashing)
 	}
-	return slashings, nil
+
+	// Clear out any duplicate slashings.
+	keys := make(map[[32]byte]bool)
+	var slashingList []*ethpb.AttesterSlashing
+	for _, ss := range slashings {
+		hash, err := hashutil.HashProto(ss)
+		if err != nil {
+			return nil, err
+		}
+		if _, value := keys[hash]; !value {
+			keys[hash] = true
+			slashingList = append(slashingList, ss)
+		}
+	}
+
+	return slashingList, nil
 }
 
-// detectDoubleVote --
-// TODO(#4589): Implement.
-func (ds *Service) detectDoubleVotes(
+// detectDoubleVote cross references the passed in attestation with the bloom filter maintained
+// for every epoch for the validator in order to determine if it is a double vote.
+func (ds *Service) detectDoubleVote(
 	ctx context.Context,
-	att *ethpb.IndexedAttestation,
-) ([]*ethpb.AttesterSlashing, error) {
-	return nil, nil
-}
-
-// detectSurroundVotes cross references the passed in attestation with the requested validator's
-// voting history in order to detect any possible surround votes.
-func (ds *Service) detectSurroundVotes(
-	ctx context.Context,
-	validatorIdx uint64,
 	incomingAtt *ethpb.IndexedAttestation,
-) ([]*ethpb.AttesterSlashing, error) {
-	res, err := ds.minMaxSpanDetector.DetectSlashingForValidator(
-		ctx,
-		validatorIdx,
-		incomingAtt.Data,
-	)
-	if err != nil {
-		return nil, err
-	}
-	if res == nil {
-		return nil, nil
-	}
-	if res.Kind != types.SurroundVote {
+	detectionResult *types.DetectionResult,
+) (*ethpb.AttesterSlashing, error) {
+	if detectionResult == nil || detectionResult.Kind != types.DoubleVote {
 		return nil, nil
 	}
 
-	var slashings []*ethpb.AttesterSlashing
-	otherAtts, err := ds.slasherDB.IndexedAttestationsForEpoch(ctx, res.SlashableEpoch)
+	otherAtts, err := ds.slasherDB.IndexedAttestationsWithPrefix(ctx, detectionResult.SlashableEpoch, detectionResult.SigBytes[:])
 	if err != nil {
 		return nil, err
 	}
@@ -78,17 +84,60 @@ func (ds *Service) detectSurroundVotes(
 			continue
 		}
 
-		if isSurrounding(incomingAtt, att) || isSurrounded(incomingAtt, att) {
-			slashings = append(slashings, &ethpb.AttesterSlashing{
-				Attestation_1: att,
-				Attestation_2: incomingAtt,
-			})
+		if isDoubleVote(incomingAtt, att) {
+			return &ethpb.AttesterSlashing{
+				Attestation_1: incomingAtt,
+				Attestation_2: att,
+			}, nil
 		}
 	}
-	if len(slashings) == 0 {
-		return nil, errors.New("unexpected false positive in surround vote detection")
+
+	return nil, errors.New("unexpected false positive in double vote detection")
+}
+
+// detectSurroundVotes cross references the passed in attestation with the requested validator's
+// voting history in order to detect any possible surround votes.
+func (ds *Service) detectSurroundVotes(
+	ctx context.Context,
+	incomingAtt *ethpb.IndexedAttestation,
+	detectionResult *types.DetectionResult,
+) (*ethpb.AttesterSlashing, error) {
+	if detectionResult == nil || detectionResult.Kind != types.SurroundVote {
+		return nil, nil
 	}
-	return slashings, nil
+
+	otherAtts, err := ds.slasherDB.IndexedAttestationsWithPrefix(ctx, detectionResult.SlashableEpoch, detectionResult.SigBytes[:])
+	if err != nil {
+		return nil, err
+	}
+	for _, att := range otherAtts {
+		if att.Data == nil {
+			continue
+		}
+		// If there are no shared indices, there is no validator to slash.
+		if len(sliceutil.IntersectionUint64(att.AttestingIndices, incomingAtt.AttestingIndices)) == 0 {
+			continue
+		}
+
+		// Slashings must be submitted as the incoming attestation surrounding the saved attestation.
+		// So we swap the order if needed.
+		if isSurrounding(incomingAtt, att) {
+			return &ethpb.AttesterSlashing{
+				Attestation_1: incomingAtt,
+				Attestation_2: att,
+			}, nil
+		} else if isSurrounded(incomingAtt, att) {
+			return &ethpb.AttesterSlashing{
+				Attestation_1: att,
+				Attestation_2: incomingAtt,
+			}, nil
+		}
+	}
+	return nil, errors.New("unexpected false positive in surround vote detection")
+}
+
+func isDoubleVote(incomingAtt *ethpb.IndexedAttestation, prevAtt *ethpb.IndexedAttestation) bool {
+	return !proto.Equal(incomingAtt.Data, prevAtt.Data) && incomingAtt.Data.Target.Epoch == prevAtt.Data.Target.Epoch
 }
 
 func isSurrounding(incomingAtt *ethpb.IndexedAttestation, prevAtt *ethpb.IndexedAttestation) bool {

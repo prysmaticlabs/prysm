@@ -39,18 +39,21 @@ func (s *MockSpanDetector) DetectSlashingForValidator(
 		return &types.DetectionResult{
 			Kind:           types.SurroundVote,
 			SlashableEpoch: attData.Target.Epoch - 1,
+			SigBytes:       [2]byte{1, 2},
 		}, nil
 	// If the target epoch is >= 6 < 12, it will "detect" a surrounding saved attestation.
 	case attData.Target.Epoch >= 6:
 		return &types.DetectionResult{
 			Kind:           types.SurroundVote,
 			SlashableEpoch: attData.Target.Epoch + 1,
+			SigBytes:       [2]byte{1, 2},
 		}, nil
 	// If the target epoch is less than 6, it will "detect" a double vote.
 	default:
 		return &types.DetectionResult{
 			Kind:           types.DoubleVote,
 			SlashableEpoch: attData.Target.Epoch,
+			SigBytes:       [2]byte{1, 2},
 		}, nil
 	}
 }
