@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/prysmaticlabs/go-bitfield"
+
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
@@ -15,6 +17,8 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 )
+
+const attestationSubnetCount = 64
 
 // Listener defines the discovery V5 network interface that is used
 // to communicate with other peers.
@@ -83,6 +87,7 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, udpPort int, tcpP
 	localNode.Set(tcpEntry)
 	localNode.SetFallbackIP(ipAddr)
 	localNode.SetFallbackUDP(udpPort)
+	localNode.Set(enr.WithEntry("attnets", bitfield.Bitvector4{}))
 
 	return localNode, nil
 }

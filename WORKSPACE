@@ -1157,7 +1157,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_bitfield",
-    commit = "dbb55b15e92f897ee230360c8d9695e2f224b117",
+    commit = "0e554c6b048f91c4e5052fa6ac44a0e73123b8c6",
     importpath = "github.com/prysmaticlabs/go-bitfield",
 )
 
