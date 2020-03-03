@@ -260,6 +260,46 @@ func TestPool_MarkIncludedProposerSlashing(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Removes from pending long list",
+			fields: fields{
+				pending: []*ethpb.ProposerSlashing{
+					proposerSlashingForValIdx(1),
+					proposerSlashingForValIdx(2),
+					proposerSlashingForValIdx(3),
+					proposerSlashingForValIdx(4),
+					proposerSlashingForValIdx(5),
+					proposerSlashingForValIdx(6),
+					proposerSlashingForValIdx(7),
+					proposerSlashingForValIdx(8),
+					proposerSlashingForValIdx(9),
+					proposerSlashingForValIdx(10),
+				},
+				included: map[uint64]bool{
+					0: true,
+				},
+			},
+			args: args{
+				slashing: proposerSlashingForValIdx(7),
+			},
+			want: fields{
+				pending: []*ethpb.ProposerSlashing{
+					proposerSlashingForValIdx(1),
+					proposerSlashingForValIdx(2),
+					proposerSlashingForValIdx(3),
+					proposerSlashingForValIdx(4),
+					proposerSlashingForValIdx(5),
+					proposerSlashingForValIdx(6),
+					proposerSlashingForValIdx(8),
+					proposerSlashingForValIdx(9),
+					proposerSlashingForValIdx(10),
+				},
+				included: map[uint64]bool{
+					0: true,
+					7: true,
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

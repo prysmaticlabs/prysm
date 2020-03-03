@@ -164,7 +164,7 @@ func (p *Pool) MarkIncludedProposerSlashing(ps *ethpb.ProposerSlashing) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	i := sort.Search(len(p.pendingProposerSlashing), func(i int) bool {
-		return p.pendingProposerSlashing[i].ProposerIndex == ps.ProposerIndex
+		return p.pendingProposerSlashing[i].ProposerIndex >= ps.ProposerIndex
 	})
 	if i != len(p.pendingProposerSlashing) && p.pendingProposerSlashing[i].ProposerIndex == ps.ProposerIndex {
 		p.pendingProposerSlashing = append(p.pendingProposerSlashing[:i], p.pendingProposerSlashing[i+1:]...)
