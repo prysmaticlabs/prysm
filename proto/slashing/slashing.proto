@@ -18,12 +18,7 @@ service Slasher {
 
     // Gets ProposerSlashing container if the block that
     // was received produces a slashable event.
-    rpc IsSlashableBlock(ProposerSlashingRequest) returns (ProposerSlashingResponse);
-}
-
-message ProposerSlashingRequest {
-    ethereum.eth.v1alpha1.SignedBeaconBlockHeader block_header = 1;
-    uint64 validator_index = 2;
+    rpc IsSlashableBlock(ethereum.eth.v1alpha1.SignedBeaconBlockHeader) returns (ProposerSlashingResponse);
 }
 
 message ProposerSlashingResponse {
