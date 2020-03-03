@@ -8,6 +8,7 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -24,9 +25,9 @@ func saveToDB(db *Store) func(uint64, uint64, interface{}, int64) {
 			if err != nil {
 				return err
 			}
-			spanMap := value.(map[uint64][2]uint16)
+			spanMap := value.(map[uint64]types.Span)
 			for k, v := range spanMap {
-				err = epochBucket.Put(bytesutil.Bytes8(k), marshalMinMaxSpan(v))
+				err = epochBucket.Put(bytesutil.Bytes8(k), marshalSpan(v))
 				if err != nil {
 					return err
 				}
@@ -39,21 +40,24 @@ func saveToDB(db *Store) func(uint64, uint64, interface{}, int64) {
 	}
 }
 
-func unmarshalMinMaxSpan(ctx context.Context, enc []byte) ([3]uint16, error) {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.unmarshalMinMaxSpan")
+func unmarshalSpan(ctx context.Context, enc []byte) (types.Span, error) {
+	ctx, span := trace.StartSpan(ctx, "SlasherDB.unmarshalSpan")
 	defer span.End()
-	r := [3]uint16{}
-	if len(enc) != 4 {
+	r := types.Span{}
+	if len(enc) != 7 {
 		return r, errors.New("wrong data length for min max span")
 	}
-	r[0] = FromBytes2(enc[:2])
-	r[1] = FromBytes2(enc[2:4])
-	r[2] = FromBytes2(enc[4:6])
+	r.MinSpan = FromBytes2(enc[:2])
+	r.MaxSpan = FromBytes2(enc[2:4])
+	sigB := [2]byte{}
+	copy(sigB[:], enc[4:6])
+	r.SigBytes = sigB
+	r.HasAttested = bytesutil.ToBool(enc[6])
 	return r, nil
 }
 
-func marshalMinMaxSpan(spans [2]uint16) []byte {
-	return append(Bytes2(spans[0]), Bytes2(spans[1])...)
+func marshalSpan(span types.Span) []byte {
+	return append(append(append(Bytes2(span.MinSpan), Bytes2(span.MaxSpan)...), span.SigBytes[:]...), bytesutil.FromBool(span.HasAttested))
 }
 
 // FromBytes2 returns an integer which is stored in the little-endian format(4, 'little')
@@ -72,11 +76,11 @@ func Bytes2(x uint16) []byte {
 // EpochSpansMap accepts epoch and returns the corresponding spans map epoch=>spans
 // for slashing detection.
 // Returns nil if the span map for this validator index does not exist.
-func (db *Store) EpochSpansMap(ctx context.Context, epoch uint64) (map[uint64][2]uint16, error) {
+func (db *Store) EpochSpansMap(ctx context.Context, epoch uint64) (map[uint64]types.Span, error) {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.EpochSpansMap")
 	defer span.End()
 	var err error
-	var spanMap map[uint64][2]uint16
+	var spanMap map[uint64]types.Span
 	err = db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(validatorsMinMaxSpanBucket)
 		epochBucket := b.Bucket(bytesutil.Bytes8(epoch))
@@ -84,10 +88,10 @@ func (db *Store) EpochSpansMap(ctx context.Context, epoch uint64) (map[uint64][2
 			return nil
 		}
 		keysLength := epochBucket.Stats().KeyN
-		spanMap = make(map[uint64][2]uint16, keysLength)
+		spanMap = make(map[uint64]types.Span, keysLength)
 		return epochBucket.ForEach(func(k, v []byte) error {
 			key := bytesutil.FromBytes8(k)
-			value, err := unmarshalMinMaxSpan(ctx, v)
+			value, err := unmarshalSpan(ctx, v)
 			if err != nil {
 				return err
 			}
@@ -96,7 +100,7 @@ func (db *Store) EpochSpansMap(ctx context.Context, epoch uint64) (map[uint64][2
 		})
 	})
 	if spanMap == nil {
-		spanMap = make(map[uint64][2]uint16)
+		spanMap = make(map[uint64]types.Span)
 	}
 	return spanMap, err
 }
@@ -104,22 +108,22 @@ func (db *Store) EpochSpansMap(ctx context.Context, epoch uint64) (map[uint64][2
 // EpochSpanByValidatorIndex accepts validator index and epoch returns the corresponding spans
 // for slashing detection.
 // Returns error if the spans for this validator index and epoch does not exist.
-func (db *Store) EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uint64, epoch uint64) ([3]uint16, error) {
+func (db *Store) EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uint64, epoch uint64) (types.Span, error) {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.EpochSpansMap")
 	defer span.End()
 	var err error
 	if db.spanCacheEnabled {
 		v, ok := db.spanCache.Get(epoch)
-		spanMap := make(map[uint64][3]uint16)
+		spanMap := make(map[uint64]types.Span)
 		if ok {
-			spanMap = v.(map[uint64][3]uint16)
+			spanMap = v.(map[uint64]types.Span)
 			spans, ok := spanMap[validatorIdx]
 			if ok {
 				return spans, nil
 			}
 		}
 	}
-	var spans [3]uint16
+	var spans types.Span
 	err = db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(validatorsMinMaxSpanBucket)
 		epochBucket := b.Bucket(bytesutil.Bytes8(epoch))
@@ -131,7 +135,7 @@ func (db *Store) EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uin
 		if v == nil {
 			return nil
 		}
-		value, err := unmarshalMinMaxSpan(ctx, v)
+		value, err := unmarshalSpan(ctx, v)
 		if err != nil {
 			return err
 		}
@@ -143,7 +147,7 @@ func (db *Store) EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uin
 
 // SaveValidatorEpochSpans accepts validator index epoch and spans returns.
 // Returns error if the spans for this validator index and epoch does not exist.
-func (db *Store) SaveValidatorEpochSpans(ctx context.Context, validatorIdx uint64, epoch uint64, spans [2]uint16) error {
+func (db *Store) SaveValidatorEpochSpans(ctx context.Context, validatorIdx uint64, epoch uint64, spans types.Span) error {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.EpochSpansMap")
 	defer span.End()
 	defer span.End()
@@ -152,9 +156,9 @@ func (db *Store) SaveValidatorEpochSpans(ctx context.Context, validatorIdx uint6
 			highestEpoch = epoch
 		}
 		v, ok := db.spanCache.Get(epoch)
-		spanMap := make(map[uint64][2]uint16)
+		spanMap := make(map[uint64]types.Span)
 		if ok {
-			spanMap = v.(map[uint64][2]uint16)
+			spanMap = v.(map[uint64]types.Span)
 		}
 		spanMap[validatorIdx] = spans
 		saved := db.spanCache.Set(epoch, spanMap, 1)
@@ -170,13 +174,13 @@ func (db *Store) SaveValidatorEpochSpans(ctx context.Context, validatorIdx uint6
 			return err
 		}
 		key := bytesutil.Bytes8(validatorIdx)
-		value := marshalMinMaxSpan(spans)
+		value := marshalSpan(spans)
 		return epochBucket.Put(key, value)
 	})
 }
 
 // SaveEpochSpansMap accepts a epoch and span map epoch=>spans and writes it to disk.
-func (db *Store) SaveEpochSpansMap(ctx context.Context, epoch uint64, spanMap map[uint64][2]uint16) error {
+func (db *Store) SaveEpochSpansMap(ctx context.Context, epoch uint64, spanMap map[uint64]types.Span) error {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveEpochSpansMap")
 	defer span.End()
 	return db.update(func(tx *bolt.Tx) error {
@@ -186,7 +190,7 @@ func (db *Store) SaveEpochSpansMap(ctx context.Context, epoch uint64, spanMap ma
 			return err
 		}
 		for k, v := range spanMap {
-			err = valBucket.Put(bytesutil.Bytes8(k), marshalMinMaxSpan(v))
+			err = valBucket.Put(bytesutil.Bytes8(k), marshalSpan(v))
 			if err != nil {
 				return err
 			}
@@ -204,7 +208,7 @@ func (db *Store) SaveCachedSpansMaps(ctx context.Context) error {
 		for epoch := uint64(0); epoch <= highestEpoch; epoch++ {
 			v, ok := db.spanCache.Get(epoch)
 			if ok {
-				spanMap := v.(map[uint64][2]uint16)
+				spanMap := v.(map[uint64]types.Span)
 				if err := db.SaveEpochSpansMap(ctx, epoch, spanMap); err != nil {
 					return errors.Wrap(err, "failed to save span maps from cache")
 				}

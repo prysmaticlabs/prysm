@@ -6,6 +6,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/slasher/db/types"
+	t "github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 )
 
 // ReadOnlyDatabase represents a read only database with functions that do not modify the DB.
@@ -30,8 +31,8 @@ type ReadOnlyDatabase interface {
 	HasIndexedAttestation(ctx context.Context, targetEpoch uint64, validatorID uint64) (bool, error)
 
 	// MinMaxSpan related methods.
-	EpochSpansMap(ctx context.Context, epoch uint64) (map[uint64][2]uint16, error)
-	EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uint64, epoch uint64) ([2]uint16, error)
+	EpochSpansMap(ctx context.Context, epoch uint64) (map[uint64]t.Span, error)
+	EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uint64, epoch uint64) (t.Span, error)
 
 	// ProposerSlashing related methods.
 	ProposalSlashingsByStatus(ctx context.Context, status types.SlashingStatus) ([]*ethpb.ProposerSlashing, error)
@@ -64,8 +65,8 @@ type WriteAccessDatabase interface {
 	PruneAttHistory(ctx context.Context, currentEpoch uint64, pruningEpochAge uint64) error
 
 	// MinMaxSpan related methods.
-	SaveEpochSpansMap(ctx context.Context, epoch uint64, spanMap map[uint64][2]uint16) error
-	SaveValidatorEpochSpans(ctx context.Context, validatorIdx uint64, epoch uint64, spans [2]uint16) error
+	SaveEpochSpansMap(ctx context.Context, epoch uint64, spanMap map[uint64]t.Span) error
+	SaveValidatorEpochSpans(ctx context.Context, validatorIdx uint64, epoch uint64, spans t.Span) error
 
 	//SaveCachedSpansMaps(ctx context.Context) error
 	DeleteEpochSpans(ctx context.Context, validatorIdx uint64) error

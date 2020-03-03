@@ -55,54 +55,53 @@ func (s *SpanDetector) DetectSlashingForValidator(
 	//s.lock.RLock()
 	//defer s.lock.RUnlock()
 	distance := uint16(targetEpoch - sourceEpoch)
-	sp, err := s.db.EpochSpansMap(ctx, sourceEpoch)
+	sp, err := s.db.EpochSpanByValidatorIndex(ctx, sourceEpoch, validatorIdx)
 	if err != nil {
 		return nil, err
 	}
-	if sp != nil {
-		minSpan := sp[validatorIdx].MinSpan
-		if minSpan > 0 && minSpan < distance {
-			slashableEpoch := sourceEpoch + uint64(minSpan)
-			sp, err := s.db.EpochSpansMap(ctx, slashableEpoch)
-			if err != nil {
-				return nil, err
-			}
-			span := sp[validatorIdx]
-			return &types.DetectionResult{
-				Kind:           types.SurroundVote,
-				SlashableEpoch: sourceEpoch + uint64(minSpan),
-				SigBytes:       span.SigBytes,
-			}, nil
+
+	minSpan := sp.MinSpan
+	if minSpan > 0 && minSpan < distance {
+		slashableEpoch := sourceEpoch + uint64(minSpan)
+		span, err := s.db.EpochSpanByValidatorIndex(ctx, slashableEpoch, validatorIdx)
+		if err != nil {
+			return nil, err
 		}
-
-		maxSpan := sp[validatorIdx].MaxSpan
-		if maxSpan > distance {
-			slashableEpoch := sourceEpoch + uint64(maxSpan)
-			span := s.spans[slashableEpoch%numSpans][validatorIdx]
-			return &types.DetectionResult{
-				Kind:           types.SurroundVote,
-				SlashableEpoch: slashableEpoch,
-				SigBytes:       span.SigBytes,
-			}, nil
-		}
-	}
-
-	sp, err := s.db.EpochSpanByValidatorIndex(ctx, targetEpoch, validatorIdx)
-
-	if sp != nil {
-		// Check if the validator has attested for this epoch or not.
-		if !sp[validatorIdx].HasAttested {
-			return nil, nil
-		}
-
 		return &types.DetectionResult{
-			Kind:           types.DoubleVote,
-			SlashableEpoch: targetEpoch,
-			SigBytes:       sp[validatorIdx].SigBytes,
+			Kind:           types.SurroundVote,
+			SlashableEpoch: slashableEpoch,
+			SigBytes:       span.SigBytes,
 		}, nil
 	}
 
-	return nil, nil
+	maxSpan := sp.MaxSpan
+	if maxSpan > distance {
+		slashableEpoch := sourceEpoch + uint64(maxSpan)
+		span, err := s.db.EpochSpanByValidatorIndex(ctx, slashableEpoch, validatorIdx)
+		if err != nil {
+			return nil, err
+		}
+		return &types.DetectionResult{
+			Kind:           types.SurroundVote,
+			SlashableEpoch: slashableEpoch,
+			SigBytes:       span.SigBytes,
+		}, nil
+	}
+
+	span, err := s.db.EpochSpanByValidatorIndex(ctx, targetEpoch, validatorIdx)
+	if err != nil {
+		return nil, err
+	}
+	// Check if the validator has attested for this epoch or not.
+	if !span.HasAttested {
+		return nil, nil
+	}
+
+	return &types.DetectionResult{
+		Kind:           types.DoubleVote,
+		SlashableEpoch: targetEpoch,
+		SigBytes:       span.SigBytes,
+	}, nil
 }
 
 // UpdateSpans given an indexed attestation for all of its attesting indices.
@@ -116,7 +115,7 @@ func (s *SpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttest
 	for i := 0; i < len(att.AttestingIndices); i++ {
 		valIdx := att.AttestingIndices[i]
 		// Save the signature for the received attestation so we can have more detail to find it in the DB.
-		s.saveSigBytes(att, valIdx)
+		s.saveSigBytes(ctx, att, valIdx)
 		// Update min and max spans.
 		s.updateMinSpan(ctx, source, target, valIdx)
 		s.updateMaxSpan(ctx, source, target, valIdx)
@@ -126,17 +125,17 @@ func (s *SpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttest
 
 // saveSigBytes saves the first 2 bytes of the signature for the att we're updating the spans to.
 // Later used to help us find the violating attestation in the DB.
-func (s *SpanDetector) saveSigBytes(att *ethpb.IndexedAttestation, valIdx uint64) {
-	numSpans := uint64(len(s.spans))
+func (s *SpanDetector) saveSigBytes(ctx context.Context, att *ethpb.IndexedAttestation, valIdx uint64) error {
 	target := att.Data.Target.Epoch
 
 	// Check if there is already info saved in span[2].
-	if sp := s.spans[target%numSpans]; sp == nil {
-		s.spans[target%numSpans] = make(map[uint64]types.Span)
+	span, err := s.db.EpochSpanByValidatorIndex(ctx, target, valIdx)
+	if err != nil {
+		return err
 	}
 	// If the validator has already attested for this target epoch,
-	if s.spans[target%numSpans][valIdx].HasAttested {
-		return
+	if span.HasAttested {
+		return nil
 	}
 
 	sigBytes := [2]byte{0, 0}
@@ -144,13 +143,13 @@ func (s *SpanDetector) saveSigBytes(att *ethpb.IndexedAttestation, valIdx uint64
 		sigBytes = [2]byte{att.Signature[0], att.Signature[1]}
 	}
 	// Save the signature bytes into the span for this epoch.
-	span := s.spans[target%numSpans][valIdx]
-	s.spans[target%numSpans][valIdx] = types.Span{
+	toStore := types.Span{
 		MinSpan:     span.MinSpan,
 		MaxSpan:     span.MaxSpan,
 		SigBytes:    sigBytes,
 		HasAttested: true,
 	}
+	return s.db.SaveValidatorEpochSpans(ctx, valIdx, target, toStore)
 }
 
 // Updates a min span for a validator index given a source and target epoch
@@ -161,9 +160,6 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, source uint64, target 
 	}
 	for epochInt := int64(source - 1); epochInt >= 0; epochInt-- {
 		epoch := uint64(epochInt)
-		if sp := s.spans[epoch%numSpans]; sp == nil {
-			s.spans[epoch%numSpans] = make(map[uint64]types.Span)
-		}
 		newMinSpan := uint16(target - epoch)
 		span, err := s.db.EpochSpanByValidatorIndex(ctx, valIdx, epoch)
 		if err != nil {

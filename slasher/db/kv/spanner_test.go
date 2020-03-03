@@ -7,13 +7,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
+
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/urfave/cli"
 )
 
 type spanMapTestStruct struct {
 	epoch   uint64
-	spanMap map[uint64][2]uint16
+	spanMap map[uint64]types.Span
 }
 
 var spanTests []spanMapTestStruct
@@ -22,26 +24,26 @@ func init() {
 	spanTests = []spanMapTestStruct{
 		{
 			epoch: 1,
-			spanMap: map[uint64][2]uint16{
-				1: {10, 20},
-				2: {11, 21},
-				3: {12, 22},
+			spanMap: map[uint64]types.Span{
+				1: {MinSpan: 10, MaxSpan: 20, SigBytes: [2]byte{0, 1}},
+				2: {MinSpan: 11, MaxSpan: 21, HasAttested: true},
+				3: {MinSpan: 12, MaxSpan: 22},
 			},
 		},
 		{
 			epoch: 2,
-			spanMap: map[uint64][2]uint16{
-				1: {10, 20},
-				2: {11, 21},
-				3: {12, 22},
+			spanMap: map[uint64]types.Span{
+				1: {MinSpan: 10, MaxSpan: 20, HasAttested: false},
+				2: {MinSpan: 11, MaxSpan: 21, SigBytes: [2]byte{0, 1}, HasAttested: true},
+				3: {MinSpan: 12, MaxSpan: 22, HasAttested: true},
 			},
 		},
 		{
 			epoch: 3,
-			spanMap: map[uint64][2]uint16{
-				1: {10, 20},
-				2: {11, 21},
-				3: {12, 22},
+			spanMap: map[uint64]types.Span{
+				1: {MinSpan: 10, MaxSpan: 20, HasAttested: true},
+				2: {MinSpan: 11, MaxSpan: 21},
+				3: {MinSpan: 12, MaxSpan: 22, SigBytes: [2]byte{0, 1}},
 			},
 		},
 	}
@@ -59,7 +61,7 @@ func TestValidatorSpanMap_NilDB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Nil EpochSpansMap should not return error: %v", err)
 	}
-	if !reflect.DeepEqual(vsm, map[uint64][2]uint16{}) {
+	if !reflect.DeepEqual(vsm, map[uint64]types.Span{}) {
 		t.Fatal("EpochSpansMap should return nil")
 	}
 }
@@ -88,7 +90,7 @@ func TestValidatorSpanMap_Save(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to get validator span for epoch 1: %v", err)
 		}
-		if s == [2]uint16{} || !reflect.DeepEqual(s, tt.spanMap[1]) {
+		if !reflect.DeepEqual(s, tt.spanMap[1]) {
 			t.Fatalf("Get should return validator spans for epoch 1: %v got: %v", tt.spanMap[1], s)
 		}
 	}
@@ -150,7 +152,7 @@ func TestValidatorSpanMap_Delete(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !reflect.DeepEqual(sm, map[uint64][2]uint16{}) {
+		if !reflect.DeepEqual(sm, map[uint64]types.Span{}) {
 			t.Errorf("Expected validator span map to be deleted, received: %v", sm)
 		}
 	}
@@ -190,7 +192,7 @@ func TestValidatorSpanMap_DeleteWithCache(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !reflect.DeepEqual(sm, map[uint64][2]uint16{}) {
+		if !reflect.DeepEqual(sm, map[uint64]types.Span{}) {
 			t.Errorf("Expected validator span map to be deleted, received: %v", sm)
 		}
 	}

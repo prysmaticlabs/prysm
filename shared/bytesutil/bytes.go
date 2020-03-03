@@ -86,6 +86,21 @@ func LowerThan(x []byte, y []byte) bool {
 	return true
 }
 
+// ToBool is a convenience method for converting a byte to a bool.
+// This method will use the first bit of the 0 byte to generate the returned value.
+func ToBool(x byte) bool {
+	return x&1 == 1
+}
+
+// FromBool is a convenience method for converting a bool to a byte.
+// This method will use the first bit to generate the returned value.
+func FromBool(x bool) byte {
+	if x {
+		return 1
+	}
+	return 0
+}
+
 // ToBytes8 is a convenience method for converting a byte slice to a fix
 // sized 8 byte array. This method will truncate the input if it is larger
 // than 8 bytes.
