@@ -53,7 +53,7 @@ func InitiateValidatorExit(state *stateTrie.BeaconState, idx uint64) (*stateTrie
 			exitEpochs = append(exitEpochs, val.ExitEpoch)
 		}
 	}
-	exitEpochs = append(exitEpochs, helpers.DelayedActivationExitEpoch(helpers.CurrentEpoch(state)))
+	exitEpochs = append(exitEpochs, helpers.ActivationExitEpoch(helpers.CurrentEpoch(state)))
 
 	// Obtain the exit queue epoch as the maximum number in the exit epochs array.
 	exitQueueEpoch := uint64(0)
@@ -169,7 +169,7 @@ func SlashValidator(state *stateTrie.BeaconState, slashedIdx uint64, whistleBlow
 // ActivatedValidatorIndices determines the indices activated during the current epoch.
 func ActivatedValidatorIndices(epoch uint64, validators []*ethpb.Validator) []uint64 {
 	activations := make([]uint64, 0)
-	delayedActivationEpoch := helpers.DelayedActivationExitEpoch(epoch)
+	delayedActivationEpoch := helpers.ActivationExitEpoch(epoch)
 	for i := 0; i < len(validators); i++ {
 		val := validators[i]
 		if val.ActivationEpoch == delayedActivationEpoch {

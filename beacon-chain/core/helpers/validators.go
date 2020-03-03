@@ -38,13 +38,10 @@ func checkValidatorActiveStatus(activationEpoch uint64, exitEpoch uint64, epoch 
 //
 // Spec pseudocode definition:
 //  def is_slashable_validator(validator: Validator, epoch: Epoch) -> bool:
-//    """
-//    Check if ``validator`` is slashable.
-//    """
-//    return (
-//        validator.activation_epoch <= epoch < validator.withdrawable_epoch and
-//        validator.slashed is False
-// 		)
+//  """
+//  Check if ``validator`` is slashable.
+//  """
+//  return (not validator.slashed) and (validator.activation_epoch <= epoch < validator.withdrawable_epoch)
 func IsSlashableValidator(validator *ethpb.Validator, epoch uint64) bool {
 	active := validator.ActivationEpoch <= epoch
 	beforeWithdrawable := epoch < validator.WithdrawableEpoch
@@ -77,12 +74,15 @@ func ActiveValidatorIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint6
 		return activeIndices, nil
 	}
 	var indices []uint64
-	state.ReadFromEveryValidator(func(idx int, val *stateTrie.ReadOnlyValidator) error {
+	err = state.ReadFromEveryValidator(func(idx int, val *stateTrie.ReadOnlyValidator) error {
 		if IsActiveValidatorUsingTrie(val, epoch) {
 			indices = append(indices, uint64(idx))
 		}
 		return nil
 	})
+	if err != nil {
+		return nil, errors.Wrap(err, "could not read validator set from beacon state")
+	}
 
 	if err := UpdateCommitteeCache(state, epoch); err != nil {
 		return nil, errors.Wrap(err, "could not update committee cache")
@@ -95,16 +95,19 @@ func ActiveValidatorIndices(state *stateTrie.BeaconState, epoch uint64) ([]uint6
 // at the given epoch.
 func ActiveValidatorCount(state *stateTrie.BeaconState, epoch uint64) (uint64, error) {
 	count := uint64(0)
-	state.ReadFromEveryValidator(func(idx int, val *stateTrie.ReadOnlyValidator) error {
+	err := state.ReadFromEveryValidator(func(idx int, val *stateTrie.ReadOnlyValidator) error {
 		if IsActiveValidatorUsingTrie(val, epoch) {
 			count++
 		}
 		return nil
 	})
+	if err != nil {
+		return 0, errors.Wrap(err, "could not read validator set from beacon state")
+	}
 	return count, nil
 }
 
-// DelayedActivationExitEpoch takes in epoch number and returns when
+// ActivationExitEpoch takes in epoch number and returns when
 // the validator is eligible for activation and exit.
 //
 // Spec pseudocode definition:
@@ -112,8 +115,8 @@ func ActiveValidatorCount(state *stateTrie.BeaconState, epoch uint64) (uint64, e
 //    """
 //    Return the epoch during which validator activations and exits initiated in ``epoch`` take effect.
 //    """
-//    return Epoch(epoch + 1 + ACTIVATION_EXIT_DELAY)
-func DelayedActivationExitEpoch(epoch uint64) uint64 {
+//    return Epoch(epoch + 1 + MIN_SEED_LOOKAHEAD)
+func ActivationExitEpoch(epoch uint64) uint64 {
 	return epoch + 1 + params.BeaconConfig().MaxSeedLookahead
 }
 
@@ -304,7 +307,7 @@ func isEligibileForActivationQueue(activationEligibilityEpoch uint64, effectiveB
 //    )
 func IsEligibleForActivation(state *stateTrie.BeaconState, validator *ethpb.Validator) bool {
 	finalizedEpoch := state.FinalizedCheckpointEpoch()
-	return isEligibileForActivation(validator.ActivationEligibilityEpoch, validator.ActivationEpoch, finalizedEpoch)
+	return isEligibleForActivation(validator.ActivationEligibilityEpoch, validator.ActivationEpoch, finalizedEpoch)
 }
 
 // IsEligibleForActivationUsingTrie checks if the validator is eligible for activation.
@@ -313,11 +316,11 @@ func IsEligibleForActivationUsingTrie(state *stateTrie.BeaconState, validator *s
 	if cpt == nil {
 		return false
 	}
-	return isEligibileForActivation(validator.ActivationEligibilityEpoch(), validator.ActivationEpoch(), cpt.Epoch)
+	return isEligibleForActivation(validator.ActivationEligibilityEpoch(), validator.ActivationEpoch(), cpt.Epoch)
 }
 
 // isEligibleForActivation carries out the logic for IsEligibleForActivation*
-func isEligibileForActivation(activationEligibilityEpoch uint64, activationEpoch uint64, finalizedEpoch uint64) bool {
+func isEligibleForActivation(activationEligibilityEpoch uint64, activationEpoch uint64, finalizedEpoch uint64) bool {
 	return activationEligibilityEpoch <= finalizedEpoch &&
 		activationEpoch == params.BeaconConfig().FarFutureEpoch
 }
