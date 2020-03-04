@@ -3,6 +3,7 @@ package kv
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
@@ -14,6 +15,11 @@ import (
 
 var highestEpoch uint64
 
+func cacheTypeMismatchError(value interface{}) error {
+	return fmt.Errorf("cache contains a value of type: %v "+
+		"while expected to contain only values of type : map[uint64]types.Span", reflect.TypeOf(value))
+}
+
 func saveToDB(db *Store) func(uint64, uint64, interface{}, int64) {
 	// Returning the function here so we can access the DB properly from the OnEvict.
 	return func(epoch uint64, _ uint64, value interface{}, cost int64) {
@@ -24,7 +30,10 @@ func saveToDB(db *Store) func(uint64, uint64, interface{}, int64) {
 			if err != nil {
 				return err
 			}
-			spanMap := value.(map[uint64]types.Span)
+			spanMap, ok := value.(map[uint64]types.Span)
+			if !ok {
+				return cacheTypeMismatchError(value)
+			}
 			for k, v := range spanMap {
 				err = epochBucket.Put(bytesutil.Bytes8(k), marshalSpan(v))
 				if err != nil {
@@ -74,7 +83,10 @@ func (db *Store) EpochSpansMap(ctx context.Context, epoch uint64) (map[uint64]ty
 		v, ok := db.spanCache.Get(epoch)
 		spanMap := make(map[uint64]types.Span)
 		if ok {
-			spanMap = v.(map[uint64]types.Span)
+			spanMap, ok = v.(map[uint64]types.Span)
+			if !ok {
+				return nil, cacheTypeMismatchError(v)
+			}
 			return spanMap, nil
 		}
 	}
@@ -115,7 +127,10 @@ func (db *Store) EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uin
 		v, ok := db.spanCache.Get(epoch)
 		spanMap := make(map[uint64]types.Span)
 		if ok {
-			spanMap = v.(map[uint64]types.Span)
+			spanMap, ok = v.(map[uint64]types.Span)
+			if !ok {
+				return types.Span{}, cacheTypeMismatchError(v)
+			}
 			spans, ok := spanMap[validatorIdx]
 			if ok {
 				return spans, nil
@@ -157,7 +172,10 @@ func (db *Store) SaveValidatorEpochSpans(ctx context.Context, validatorIdx uint6
 		v, ok := db.spanCache.Get(epoch)
 		spanMap := make(map[uint64]types.Span)
 		if ok {
-			spanMap = v.(map[uint64]types.Span)
+			spanMap, ok = v.(map[uint64]types.Span)
+			if !ok {
+				return cacheTypeMismatchError(v)
+			}
 		}
 		spanMap[validatorIdx] = spans
 		saved := db.spanCache.Set(epoch, spanMap, 1)
@@ -223,7 +241,10 @@ func (db *Store) SaveCachedSpansMaps(ctx context.Context) error {
 		for epoch := uint64(0); epoch <= highestEpoch; epoch++ {
 			v, ok := db.spanCache.Get(epoch)
 			if ok {
-				spanMap := v.(map[uint64]types.Span)
+				spanMap, ok := v.(map[uint64]types.Span)
+				if !ok {
+					return cacheTypeMismatchError(v)
+				}
 				if err := db.SaveEpochSpansMap(ctx, epoch, spanMap); err != nil {
 					return errors.Wrap(err, "failed to save span maps from cache")
 				}
@@ -263,7 +284,10 @@ func (db *Store) DeleteValidatorSpanByEpoch(ctx context.Context, validatorIdx ui
 		v, ok := db.spanCache.Get(epoch)
 		spanMap := make(map[uint64][2]uint16)
 		if ok {
-			spanMap = v.(map[uint64][2]uint16)
+			spanMap, ok = v.(map[uint64][2]uint16)
+			if !ok {
+				return cacheTypeMismatchError(v)
+			}
 		}
 		delete(spanMap, validatorIdx)
 		saved := db.spanCache.Set(epoch, spanMap, 1)
