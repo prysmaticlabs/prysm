@@ -7,6 +7,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	db2 "github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/iface"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 	"go.opencensus.io/trace"
@@ -19,16 +20,16 @@ var _ = iface.SpanDetector(&SpanDetector{})
 // spans from validators and attestation data roots.
 type SpanDetector struct {
 	// Slice of epochs for valindex => min-max span + double vote filter
-	spans []map[uint64]types.Span
-	lock  sync.RWMutex
+	db   db2.Database
+	lock sync.RWMutex
 }
 
 // NewSpanDetector creates a new instance of a struct tracking
 // several epochs of min-max spans for each validator in
 // the beacon state.
-func NewSpanDetector() *SpanDetector {
+func NewSpanDetector(db db2.Database) *SpanDetector {
 	return &SpanDetector{
-		spans: make([]map[uint64]types.Span, 256),
+		db: db,
 	}
 }
 
@@ -54,88 +55,54 @@ func (s *SpanDetector) DetectSlashingForValidator(
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 	distance := uint16(targetEpoch - sourceEpoch)
-	numSpans := uint64(len(s.spans))
-
-	if sp := s.spans[sourceEpoch%numSpans]; sp != nil {
-		minSpan := sp[validatorIdx].MinSpan
-		if minSpan > 0 && minSpan < distance {
-			slashableEpoch := sourceEpoch + uint64(minSpan)
-			span := s.spans[slashableEpoch%numSpans][validatorIdx]
-			return &types.DetectionResult{
-				Kind:           types.SurroundVote,
-				SlashableEpoch: sourceEpoch + uint64(minSpan),
-				SigBytes:       span.SigBytes,
-			}, nil
-		}
-
-		maxSpan := sp[validatorIdx].MaxSpan
-		if maxSpan > distance {
-			slashableEpoch := sourceEpoch + uint64(maxSpan)
-			span := s.spans[slashableEpoch%numSpans][validatorIdx]
-			return &types.DetectionResult{
-				Kind:           types.SurroundVote,
-				SlashableEpoch: slashableEpoch,
-				SigBytes:       span.SigBytes,
-			}, nil
-		}
+	sp, err := s.db.EpochSpanByValidatorIndex(ctx, sourceEpoch, validatorIdx)
+	if err != nil {
+		return nil, err
 	}
 
-	if sp := s.spans[targetEpoch%numSpans]; sp != nil {
-		// Check if the validator has attested for this epoch or not.
-		if !sp[validatorIdx].HasAttested {
-			return nil, nil
+	minSpan := sp.MinSpan
+	if minSpan > 0 && minSpan < distance {
+		slashableEpoch := sourceEpoch + uint64(minSpan)
+		span, err := s.db.EpochSpanByValidatorIndex(ctx, slashableEpoch, validatorIdx)
+		if err != nil {
+			return nil, err
 		}
-
 		return &types.DetectionResult{
-			Kind:           types.DoubleVote,
-			SlashableEpoch: targetEpoch,
-			SigBytes:       sp[validatorIdx].SigBytes,
+			Kind:           types.SurroundVote,
+			SlashableEpoch: sourceEpoch + uint64(minSpan),
+			SigBytes:       span.SigBytes,
 		}, nil
 	}
 
-	return nil, nil
-}
-
-// SpanForEpochByValidator returns the specific min-max span for a
-// validator index in a given epoch.
-func (s *SpanDetector) SpanForEpochByValidator(ctx context.Context, valIdx uint64, epoch uint64) (types.Span, error) {
-	ctx, span := trace.StartSpan(ctx, "detection.SpanForEpochByValidator")
-	defer span.End()
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-	numSpans := uint64(len(s.spans))
-	if span := s.spans[epoch%numSpans]; span != nil {
-		if minMaxSpan, ok := span[valIdx]; ok {
-			return minMaxSpan, nil
+	maxSpan := sp.MaxSpan
+	if maxSpan > distance {
+		slashableEpoch := sourceEpoch + uint64(maxSpan)
+		span, err := s.db.EpochSpanByValidatorIndex(ctx, slashableEpoch, validatorIdx)
+		if err != nil {
+			return nil, err
 		}
-		return types.Span{}, fmt.Errorf("validator index %d not found in span map", valIdx)
+		return &types.DetectionResult{
+			Kind:           types.SurroundVote,
+			SlashableEpoch: slashableEpoch,
+			SigBytes:       span.SigBytes,
+		}, nil
 	}
-	return types.Span{}, fmt.Errorf("no data found for epoch %d", epoch)
-}
-
-// ValidatorSpansByEpoch returns a list of all validator spans in a given epoch.
-func (s *SpanDetector) ValidatorSpansByEpoch(ctx context.Context, epoch uint64) map[uint64]types.Span {
-	ctx, span := trace.StartSpan(ctx, "detection.ValidatorSpansByEpoch")
-	defer span.End()
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-	numSpans := uint64(len(s.spans))
-	return s.spans[epoch%numSpans]
-}
-
-// DeleteValidatorSpansByEpoch deletes a min-max span for a validator
-// index from a min-max span in a given epoch.
-func (s *SpanDetector) DeleteValidatorSpansByEpoch(ctx context.Context, validatorIdx uint64, epoch uint64) error {
-	ctx, span := trace.StartSpan(ctx, "detection.DeleteValidatorSpansByEpoch")
-	defer span.End()
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	numSpans := uint64(len(s.spans))
-	if val := s.spans[epoch%numSpans]; val != nil {
-		delete(val, validatorIdx)
-		return nil
+	sp, err = s.db.EpochSpanByValidatorIndex(ctx, targetEpoch, validatorIdx)
+	if err != nil {
+		return nil, err
 	}
-	return fmt.Errorf("no span map found at epoch %d", epoch)
+
+	// Check if the validator has attested for this epoch or not.
+	if !sp.HasAttested {
+		return nil, nil
+	}
+
+	return &types.DetectionResult{
+		Kind:           types.DoubleVote,
+		SlashableEpoch: targetEpoch,
+		SigBytes:       sp.SigBytes,
+	}, nil
+
 }
 
 // UpdateSpans given an indexed attestation for all of its attesting indices.
