@@ -118,27 +118,26 @@ func (s *SpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttest
 	for i := 0; i < len(att.AttestingIndices); i++ {
 		valIdx := att.AttestingIndices[i]
 		// Save the signature for the received attestation so we can have more detail to find it in the DB.
-		s.saveSigBytes(att, valIdx)
+		s.saveSigBytes(ctx, att, valIdx)
 		// Update min and max spans.
-		s.updateMinSpan(source, target, valIdx)
-		s.updateMaxSpan(source, target, valIdx)
+		s.updateMinSpan(ctx, source, target, valIdx)
+		s.updateMaxSpan(ctx, source, target, valIdx)
 	}
 	return nil
 }
 
 // saveSigBytes saves the first 2 bytes of the signature for the att we're updating the spans to.
 // Later used to help us find the violating attestation in the DB.
-func (s *SpanDetector) saveSigBytes(att *ethpb.IndexedAttestation, valIdx uint64) {
-	numSpans := uint64(len(s.spans))
+func (s *SpanDetector) saveSigBytes(ctx context.Context, att *ethpb.IndexedAttestation, valIdx uint64) error {
 	target := att.Data.Target.Epoch
-
-	// Check if there is already info saved in span[2].
-	if sp := s.spans[target%numSpans]; sp == nil {
-		s.spans[target%numSpans] = make(map[uint64]types.Span)
+	sp, err := s.db.EpochSpanByValidatorIndex(ctx, target, valIdx)
+	if err != nil {
+		return err
 	}
+
 	// If the validator has already attested for this target epoch,
-	if s.spans[target%numSpans][valIdx].HasAttested {
-		return
+	if sp.HasAttested {
+		return nil
 	}
 
 	sigBytes := [2]byte{0, 0}
@@ -146,61 +145,65 @@ func (s *SpanDetector) saveSigBytes(att *ethpb.IndexedAttestation, valIdx uint64
 		sigBytes = [2]byte{att.Signature[0], att.Signature[1]}
 	}
 	// Save the signature bytes into the span for this epoch.
-	span := s.spans[target%numSpans][valIdx]
-	s.spans[target%numSpans][valIdx] = types.Span{
-		MinSpan:     span.MinSpan,
-		MaxSpan:     span.MaxSpan,
-		SigBytes:    sigBytes,
-		HasAttested: true,
-	}
+	sp.HasAttested = true
+	sp.SigBytes = sigBytes
+	return s.db.SaveValidatorEpochSpans(ctx, valIdx, target, sp)
 }
 
 // Updates a min span for a validator index given a source and target epoch
 // for an attestation produced by the validator. Used for catching surrounding votes.
-func (s *SpanDetector) updateMinSpan(source uint64, target uint64, valIdx uint64) {
-	numSpans := uint64(len(s.spans))
+func (s *SpanDetector) updateMinSpan(ctx context.Context, source uint64, target uint64, valIdx uint64) error {
 	if source < 1 {
-		return
+		return nil
 	}
 	for epochInt := int64(source - 1); epochInt >= 0; epochInt-- {
 		epoch := uint64(epochInt)
-		if sp := s.spans[epoch%numSpans]; sp == nil {
-			s.spans[epoch%numSpans] = make(map[uint64]types.Span)
+		span, err := s.db.EpochSpanByValidatorIndex(ctx, epoch, valIdx)
+		if err != nil {
+			return err
 		}
 		newMinSpan := uint16(target - epoch)
-		span := s.spans[epoch%numSpans][valIdx]
 		if span.MinSpan == 0 || span.MinSpan > newMinSpan {
-			s.spans[epoch%numSpans][valIdx] = types.Span{
+			span = types.Span{
 				MinSpan:     newMinSpan,
 				MaxSpan:     span.MaxSpan,
 				SigBytes:    span.SigBytes,
 				HasAttested: span.HasAttested,
 			}
-		} else {
-			break
-		}
-	}
-}
-
-// Updates a max span for a validator index given a source and target epoch
-// for an attestation produced by the validator. Used for catching surrounded votes.
-func (s *SpanDetector) updateMaxSpan(source uint64, target uint64, valIdx uint64) {
-	numSpans := uint64(len(s.spans))
-	for epoch := source + 1; epoch < target; epoch++ {
-		if sp := s.spans[epoch%numSpans]; sp == nil {
-			s.spans[epoch%numSpans] = make(map[uint64]types.Span)
-		}
-		span := s.spans[epoch%numSpans][valIdx]
-		newMaxSpan := uint16(target - epoch)
-		if newMaxSpan > span.MaxSpan {
-			s.spans[epoch%numSpans][valIdx] = types.Span{
-				MinSpan:     span.MinSpan,
-				MaxSpan:     newMaxSpan,
-				SigBytes:    span.SigBytes,
-				HasAttested: span.HasAttested,
+			err := s.db.SaveValidatorEpochSpans(ctx, valIdx, epoch, span)
+			if err != nil {
+				return err
 			}
 		} else {
 			break
 		}
 	}
+	return nil
+}
+
+// Updates a max span for a validator index given a source and target epoch
+// for an attestation produced by the validator. Used for catching surrounded votes.
+func (s *SpanDetector) updateMaxSpan(ctx context.Context, source uint64, target uint64, valIdx uint64) error {
+	for epoch := source + 1; epoch < target; epoch++ {
+		span, err := s.db.EpochSpanByValidatorIndex(ctx, epoch, valIdx)
+		if err != nil {
+			return err
+		}
+		newMaxSpan := uint16(target - epoch)
+		if newMaxSpan > span.MaxSpan {
+			span = types.Span{
+				MinSpan:     span.MinSpan,
+				MaxSpan:     newMaxSpan,
+				SigBytes:    span.SigBytes,
+				HasAttested: span.HasAttested,
+			}
+			err := s.db.SaveValidatorEpochSpans(ctx, valIdx, epoch, span)
+			if err != nil {
+				return err
+			}
+		} else {
+			break
+		}
+	}
+	return nil
 }
