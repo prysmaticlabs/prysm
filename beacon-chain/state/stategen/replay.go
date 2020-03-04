@@ -195,6 +195,9 @@ func (s *State) lastSavedBlock(ctx context.Context, slot uint64) ([32]byte, uint
 	if err != nil {
 		return [32]byte{}, 0, err
 	}
+	if len(rs) == 0 {
+		return [32]byte{}, 0, errors.New("block root has 0 length")
+	}
 	lastRoot := rs[len(rs)-1]
 
 	b, err := s.beaconDB.Block(ctx, lastRoot)
@@ -230,6 +233,9 @@ func (s *State) lastSavedState(ctx context.Context, slot uint64) ([32]byte, erro
 	rs, err := s.beaconDB.BlockRoots(ctx, filter)
 	if err != nil {
 		return [32]byte{}, err
+	}
+	if len(rs) == 0 {
+		return [32]byte{}, errors.New("block root has 0 length")
 	}
 	for i := len(rs) - 1; i >= 0; i-- {
 		// Stop until a state is saved.

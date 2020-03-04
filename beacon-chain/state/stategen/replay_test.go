@@ -287,11 +287,11 @@ func TestLastSavedBlock_Genesis(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 	s := &State{
-		beaconDB: db,
+		beaconDB:         db,
 		lastArchivedSlot: 128,
 	}
 
-	gBlk := &ethpb.SignedBeaconBlock{Block:&ethpb.BeaconBlock{}}
+	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	gRoot, err := ssz.HashTreeRoot(gBlk.Block)
 	if err != nil {
 		t.Fatal(err)
@@ -315,16 +315,71 @@ func TestLastSavedBlock_Genesis(t *testing.T) {
 	}
 }
 
+func TestLastSavedBlock_CanGet(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	ctx := context.Background()
+	s := &State{
+		beaconDB:         db,
+		lastArchivedSlot: 128,
+	}
+
+	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.lastArchivedSlot + 5}}
+	if err := s.beaconDB.SaveBlock(ctx, b1); err != nil {
+		t.Fatal(err)
+	}
+	b2 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.lastArchivedSlot + 10}}
+	if err := s.beaconDB.SaveBlock(ctx, b2); err != nil {
+		t.Fatal(err)
+	}
+	b3 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.lastArchivedSlot + 20}}
+	if err := s.beaconDB.SaveBlock(ctx, b3); err != nil {
+		t.Fatal(err)
+	}
+
+	savedRoot, savedSlot, err := s.lastSavedBlock(ctx, s.lastArchivedSlot+100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if savedSlot != s.lastArchivedSlot+20 {
+		t.Error("Did not save correct slot")
+	}
+	wantedRoot, _ := ssz.HashTreeRoot(b3.Block)
+	if savedRoot != wantedRoot {
+		t.Error("Did not save correct root")
+	}
+}
+
+func TestLastSavedBlock_OutOfRange(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	ctx := context.Background()
+	s := &State{
+		beaconDB:         db,
+		lastArchivedSlot: 128,
+	}
+
+	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 127}}
+	if err := s.beaconDB.SaveBlock(ctx, b1); err != nil {
+		t.Fatal(err)
+	}
+
+	_, _, err := s.lastSavedBlock(ctx, s.lastArchivedSlot+1)
+	if err.Error() != "block root has 0 length" {
+		t.Error("Did not get wanted error")
+	}
+}
+
 func TestLastSavedState_Genesis(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
 	s := &State{
-		beaconDB: db,
+		beaconDB:         db,
 		lastArchivedSlot: 128,
 	}
 
-	gBlk := &ethpb.SignedBeaconBlock{Block:&ethpb.BeaconBlock{}}
+	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
 	gRoot, err := ssz.HashTreeRoot(gBlk.Block)
 	if err != nil {
 		t.Fatal(err)
@@ -345,6 +400,64 @@ func TestLastSavedState_Genesis(t *testing.T) {
 	}
 }
 
+func TestLastSavedState_CanGet(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	ctx := context.Background()
+	s := &State{
+		beaconDB:         db,
+		lastArchivedSlot: 128,
+	}
+
+	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.lastArchivedSlot + 5}}
+	if err := s.beaconDB.SaveBlock(ctx, b1); err != nil {
+		t.Fatal(err)
+	}
+	b2 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.lastArchivedSlot + 10}}
+	if err := s.beaconDB.SaveBlock(ctx, b2); err != nil {
+		t.Fatal(err)
+	}
+	b2Root, _ := ssz.HashTreeRoot(b2.Block)
+	st, err := stateTrie.InitializeFromProtoUnsafe(&pb.BeaconState{Slot: s.lastArchivedSlot + 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.beaconDB.SaveState(ctx, st, b2Root); err != nil {
+		t.Fatal(err)
+	}
+	b3 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: s.lastArchivedSlot + 20}}
+	if err := s.beaconDB.SaveBlock(ctx, b3); err != nil {
+		t.Fatal(err)
+	}
+
+	savedRoot, err := s.lastSavedState(ctx, s.lastArchivedSlot+100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if savedRoot != b2Root {
+		t.Error("Did not save correct root")
+	}
+}
+
+func TestLastSavedState_OutOfRange(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	ctx := context.Background()
+	s := &State{
+		beaconDB:         db,
+		lastArchivedSlot: 128,
+	}
+
+	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 127}}
+	if err := s.beaconDB.SaveBlock(ctx, b1); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := s.lastSavedState(ctx, s.lastArchivedSlot+1)
+	if err.Error() != "block root has 0 length" {
+		t.Error("Did not get wanted error")
+	}
+}
 
 // tree1 constructs the following tree:
 // B0 - B1 - - B3 -- B5
