@@ -111,7 +111,7 @@ func executeStateTransitionStateGen(
 		return nil, ctx.Err()
 	}
 	if signed == nil || signed.Block == nil {
-		return nil, errors.New("nil block")
+		return nil, errUnknownBlock
 	}
 
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ExecuteStateTransitionStateGen")
@@ -143,7 +143,7 @@ func processSlotsStateGen(ctx context.Context, state *stateTrie.BeaconState, slo
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ProcessSlotsStateGen")
 	defer span.End()
 	if state == nil {
-		return nil, errors.New("nil state")
+		return nil, errUnknownState
 	}
 
 	if state.Slot() > slot {
@@ -205,7 +205,7 @@ func (s *State) lastSavedBlock(ctx context.Context, slot uint64) ([32]byte, uint
 		return [32]byte{}, 0, err
 	}
 	if b == nil || b.Block == nil {
-		return [32]byte{}, 0, errors.New("unknown block")
+		return [32]byte{}, 0, errUnknownBlock
 	}
 
 	return lastRoot, b.Block.Slot, nil
@@ -243,7 +243,7 @@ func (s *State) lastSavedState(ctx context.Context, slot uint64) ([32]byte, erro
 			return rs[i], nil
 		}
 	}
-	return [32]byte{}, errors.New("unknown state")
+	return [32]byte{}, errUnknownState
 }
 
 // This returns the genesis root.
