@@ -23,6 +23,71 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+func TestBlocksFetcherInitStartStop(t *testing.T) {
+	mc, p2p, beaconDB := initializeTestServices(t, []uint64{}, []*peerData{})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	fetcher := newBlocksFetcher(
+		ctx,
+		&blocksFetcherConfig{
+			headFetcher: mc,
+			p2p:         p2p,
+		})
+
+	t.Run("check for leaked goroutines", func(t *testing.T) {
+		err := fetcher.start()
+		if err != nil {
+			t.Error(err)
+		}
+		fetcher.stop() // should block up until all resources are reclaimed
+		select {
+		case <-fetcher.requestResponses():
+		default:
+			t.Error("receivedFetchResponses channel is leaked")
+		}
+	})
+
+	t.Run("re-starting of stopped fetcher", func(t *testing.T) {
+		if err := fetcher.start(); err == nil {
+			t.Errorf("expected error not returned: %v", errCtxIsDone)
+		}
+	})
+
+	t.Run("multiple stopping attempts", func(t *testing.T) {
+		fetcher := newBlocksFetcher(
+			context.Background(),
+			&blocksFetcherConfig{
+				headFetcher: mc,
+				p2p:         p2p,
+			})
+		if err := fetcher.start(); err != nil {
+			t.Error(err)
+		}
+
+		fetcher.stop()
+		fetcher.stop()
+	})
+
+	t.Run("cancellation", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		fetcher := newBlocksFetcher(
+			ctx,
+			&blocksFetcherConfig{
+				headFetcher: mc,
+				p2p:         p2p,
+			})
+		if err := fetcher.start(); err != nil {
+			t.Error(err)
+		}
+
+		cancel()
+		fetcher.stop()
+	})
+
+	dbtest.TeardownDB(t, beaconDB)
+}
+
 func TestBlocksFetcherRoundRobin(t *testing.T) {
 	tests := []struct {
 		name               string
@@ -245,13 +310,17 @@ func TestBlocksFetcherRoundRobin(t *testing.T) {
 			}
 
 			ctx, cancel := context.WithCancel(context.Background())
-			fetcher := newBlocksFetcher(&blocksFetcherConfig{
-				ctx:         ctx,
-				headFetcher: mc,
-				p2p:         p,
-			})
+			fetcher := newBlocksFetcher(
+				ctx,
+				&blocksFetcherConfig{
+					headFetcher: mc,
+					p2p:         p,
+				})
 
-			fetcher.start()
+			err = fetcher.start()
+			if err != nil {
+				t.Error(err)
+			}
 
 			var wg sync.WaitGroup
 			wg.Add(len(tt.requests)) // how many block requests we are going to make
@@ -278,7 +347,8 @@ func TestBlocksFetcherRoundRobin(t *testing.T) {
 							unionRespBlocks = append(unionRespBlocks, resp.blocks...)
 							if len(resp.blocks) == 0 {
 								log.WithFields(logrus.Fields{
-									"params": resp.params,
+									"start": resp.start,
+									"count": resp.count,
 								}).Debug("Received empty slot")
 							}
 						}
@@ -290,7 +360,10 @@ func TestBlocksFetcherRoundRobin(t *testing.T) {
 
 			maxExpectedBlocks := uint64(0)
 			for _, requestParams := range tt.requests {
-				fetcher.scheduleRequest(context.Background(), requestParams.start, requestParams.count)
+				err = fetcher.scheduleRequest(context.Background(), requestParams.start, requestParams.count)
+				if err != nil {
+					t.Error(err)
+				}
 				maxExpectedBlocks += requestParams.count
 			}
 
@@ -332,7 +405,7 @@ func TestBlocksFetcherRoundRobin(t *testing.T) {
 	}
 }
 
-func TestHandleRequest(t *testing.T) {
+func TestBlocksFetcherHandleRequest(t *testing.T) {
 	chainConfig := struct {
 		expectedBlockSlots []uint64
 		peers              []*peerData
@@ -354,17 +427,17 @@ func TestHandleRequest(t *testing.T) {
 
 	hook := logTest.NewGlobal()
 	mc, p2p, beaconDB := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
-	fetcher := newBlocksFetcher(&blocksFetcherConfig{
-		headFetcher: mc,
-		p2p:         p2p,
-	})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	fetcher := newBlocksFetcher(
+		ctx,
+		&blocksFetcherConfig{
+			headFetcher: mc,
+			p2p:         p2p,
+		})
 
-	ctx, _ := context.WithTimeout(context.Background(), 2*time.Second)
-	go fetcher.handleRequest(&fetchRequestParams{
-		ctx:   ctx,
-		start: 1,
-		count: blockBatchSize,
-	})
+	requestCtx, _ := context.WithTimeout(context.Background(), 2*time.Second)
+	go fetcher.handleRequest(requestCtx, 1 /* start */, blockBatchSize /* count */)
 
 	var blocks []*eth.SignedBeaconBlock
 	select {
@@ -393,7 +466,7 @@ func TestHandleRequest(t *testing.T) {
 	dbtest.TeardownDB(t, beaconDB)
 }
 
-func TestRequestBeaconBlocksByRangeRequest(t *testing.T) {
+func TestBlocksFetcherRequestBeaconBlocksByRangeRequest(t *testing.T) {
 	chainConfig := struct {
 		expectedBlockSlots []uint64
 		peers              []*peerData
@@ -415,10 +488,15 @@ func TestRequestBeaconBlocksByRangeRequest(t *testing.T) {
 
 	hook := logTest.NewGlobal()
 	mc, p2p, beaconDB := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
-	fetcher := newBlocksFetcher(&blocksFetcherConfig{
-		headFetcher: mc,
-		p2p:         p2p,
-	})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	fetcher := newBlocksFetcher(
+		ctx,
+		&blocksFetcherConfig{
+			headFetcher: mc,
+			p2p:         p2p,
+		})
 
 	root, _, peers := p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(mc.HeadSlot()))
 
@@ -442,7 +520,7 @@ func TestRequestBeaconBlocksByRangeRequest(t *testing.T) {
 
 	// Test request fail over (error).
 	err = fetcher.p2p.Disconnect(peers[1])
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*1)
+	ctx, _ = context.WithTimeout(context.Background(), time.Second*1)
 	blocks, err = fetcher.requestBeaconBlocksByRange(ctx, peers[1], root, 1, 1, blockBatchSize)
 	testutil.AssertLogsContain(t, hook, "Request failed, trying to forward request to another peer")
 	if err == nil || err.Error() != "context deadline exceeded" {
@@ -450,7 +528,7 @@ func TestRequestBeaconBlocksByRangeRequest(t *testing.T) {
 	}
 
 	// Test context cancellation.
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel = context.WithCancel(context.Background())
 	cancel()
 	blocks, err = fetcher.requestBeaconBlocksByRange(ctx, peers[0], root, 1, 1, blockBatchSize)
 	if err == nil || err.Error() != "context canceled" {
@@ -460,7 +538,7 @@ func TestRequestBeaconBlocksByRangeRequest(t *testing.T) {
 	dbtest.TeardownDB(t, beaconDB)
 }
 
-func TestSelectFailOverPeer(t *testing.T) {
+func TestBlocksFetcherSelectFailOverPeer(t *testing.T) {
 	type args struct {
 		excludedPID peer.ID
 		peers       []peer.ID

@@ -23,14 +23,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var errNoPeersAvailable = errors.New("no peers available, waiting for reconnect")
+var (
+	errNoPeersAvailable = errors.New("no peers available, waiting for reconnect")
+	errCtxIsDone        = errors.New("fetcher's context is done, reinitialize")
+)
 
 // blocksFetcherConfig is a config to setup the block fetcher.
 type blocksFetcherConfig struct {
-	ctx         context.Context
 	headFetcher blockchain.HeadFetcher
 	p2p         p2p.P2P
-	rateLimiter *leakybucket.Collector
 }
 
 // blocksFetcher is a service to fetch chain data from peers.
@@ -38,6 +39,7 @@ type blocksFetcherConfig struct {
 // among available peers (for fair network load distribution).
 type blocksFetcher struct {
 	ctx                    context.Context
+	cancel                 context.CancelFunc
 	headFetcher            blockchain.HeadFetcher
 	p2p                    p2p.P2P
 	rateLimiter            *leakybucket.Collector
@@ -56,26 +58,20 @@ type fetchRequestParams struct {
 // fetchRequestResponse is a combined type to hold results of both successful executions and errors.
 // Valid usage pattern will be to check whether result's `err` is nil, before using `blocks`.
 type fetchRequestResponse struct {
-	params *fetchRequestParams
-	blocks []*eth.SignedBeaconBlock
-	err    error
-	peers  []peer.ID
+	start, count uint64
+	blocks       []*eth.SignedBeaconBlock
+	err          error
+	peers        []peer.ID
 }
 
 // newBlocksFetcher creates ready to use fetcher.
-func newBlocksFetcher(cfg *blocksFetcherConfig) *blocksFetcher {
-	rateLimiter := cfg.rateLimiter
-	if rateLimiter == nil {
-		rateLimiter = leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksPerSecond, false)
-	}
-
-	ctx := cfg.ctx
-	if ctx == nil {
-		ctx = context.Background()
-	}
+func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetcher {
+	ctx, cancel := context.WithCancel(ctx)
+	rateLimiter := leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksPerSecond, false /* deleteEmptyBuckets */)
 
 	return &blocksFetcher{
 		ctx:                    ctx,
+		cancel:                 cancel,
 		headFetcher:            cfg.headFetcher,
 		p2p:                    cfg.p2p,
 		rateLimiter:            rateLimiter,
@@ -86,17 +82,20 @@ func newBlocksFetcher(cfg *blocksFetcherConfig) *blocksFetcher {
 }
 
 // start boots up the fetcher, which starts listening for incoming fetch requests.
-func (f *blocksFetcher) start() {
-	go f.loop()
+func (f *blocksFetcher) start() error {
+	select {
+	case <-f.ctx.Done():
+		return errCtxIsDone
+	default:
+		go f.loop()
+		return nil
+	}
 }
 
 // stop terminates all fetcher operations.
 func (f *blocksFetcher) stop() {
-	select {
-	case <-f.quit:
-	default:
-		close(f.quit)
-	}
+	f.cancel()
+	<-f.quit // make sure that loop() is done
 }
 
 // requestResponses exposes a channel into which fetcher pushes generated request responses.
@@ -107,36 +106,24 @@ func (f *blocksFetcher) requestResponses() <-chan *fetchRequestResponse {
 // loop is a main fetcher loop, listens for incoming requests/cancellations, forwards outgoing responses.
 func (f *blocksFetcher) loop() {
 	defer close(f.receivedFetchResponses)
+	defer close(f.quit)
 
 	for {
 		select {
-		case <-f.ctx.Done():
-			// Upstream context is done.
-			err := errors.New("upstream context canceled")
-			log.WithError(err).Warn("Block fetch loop closed unexpectedly")
-			f.receivedFetchResponses <- &fetchRequestResponse{
-				err: err,
-			}
-			f.stop()
-			return
-		case <-f.quit:
-			// Terminating abort all operations.
-			log.Debug("Blocks fetcher received a stop request")
-			return
 		case req := <-f.requests:
-			if req.ctx == nil {
-				req.ctx = f.ctx
-			}
-			go f.handleRequest(req)
+			go f.handleRequest(req.ctx, req.start, req.count)
+		case <-f.ctx.Done():
+			log.Debug("Context closed, exiting goroutine")
+			return
 		}
 	}
 }
 
 // scheduleRequest adds request to incoming queue.
-func (f *blocksFetcher) scheduleRequest(ctx context.Context, start, count uint64) {
+func (f *blocksFetcher) scheduleRequest(ctx context.Context, start, count uint64) error {
 	select {
-	case <-f.quit:
-		return
+	case <-f.ctx.Done():
+		return errCtxIsDone
 	default:
 		f.requests <- &fetchRequestParams{
 			ctx:   ctx,
@@ -144,21 +131,24 @@ func (f *blocksFetcher) scheduleRequest(ctx context.Context, start, count uint64
 			count: count,
 		}
 	}
+	return nil
 }
 
 // handleRequest parses fetch request and forwards it to response builder.
-func (f *blocksFetcher) handleRequest(req *fetchRequestParams) {
-	if req.ctx.Err() != nil {
+func (f *blocksFetcher) handleRequest(ctx context.Context, start, count uint64) {
+	if ctx.Err() != nil {
 		f.receivedFetchResponses <- &fetchRequestResponse{
-			params: req,
-			err:    req.ctx.Err(),
+			start: start,
+			count: count,
+			err:   ctx.Err(),
 		}
 		return
 	}
 
 	root, finalizedEpoch, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, helpers.SlotToEpoch(f.headFetcher.HeadSlot()))
 	log.WithFields(logrus.Fields{
-		"request":        req,
+		"start":          start,
+		"count":          count,
 		"finalizedEpoch": finalizedEpoch,
 		"numPeers":       len(peers),
 	}).Debug("Block fetcher receives request")
@@ -170,28 +160,31 @@ func (f *blocksFetcher) handleRequest(req *fetchRequestParams) {
 
 	// Short circuit start far exceeding the highest finalized epoch in some infinite loop.
 	highestFinalizedSlot := helpers.StartSlot(finalizedEpoch + 1)
-	if req.start > highestFinalizedSlot {
-		err := errors.Errorf("requested a start slot of %d which is greater than the next highest slot of %d", req.start, highestFinalizedSlot)
+	if start > highestFinalizedSlot {
+		err := errors.Errorf("start slot (%d) > highest finalized slot (%d)", start, highestFinalizedSlot)
 		log.WithError(err).Debug("Block fetch request failed")
 		f.receivedFetchResponses <- &fetchRequestResponse{
-			params: req,
-			err:    err,
+			start: start,
+			count: count,
+			err:   err,
 		}
 		return
 	}
 
-	resp, err := f.collectPeerResponses(req.ctx, root, finalizedEpoch, req.start, 1, req.count, peers)
+	resp, err := f.collectPeerResponses(ctx, root, finalizedEpoch, start, 1, count, peers)
 	if err != nil {
 		log.WithError(err).Debug("Block fetch request failed")
 		f.receivedFetchResponses <- &fetchRequestResponse{
-			params: req,
-			err:    err,
+			start: start,
+			count: count,
+			err:   err,
 		}
 		return
 	}
 
 	f.receivedFetchResponses <- &fetchRequestResponse{
-		params: req,
+		start:  start,
+		count:  count,
 		blocks: resp,
 		peers:  peers,
 	}
