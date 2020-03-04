@@ -23,6 +23,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const fetchRequestsBuffer = 8 // number of pending fetch requests
+
 var (
 	errNoPeersAvailable   = errors.New("no peers available, waiting for reconnect")
 	errCtxIsDone          = errors.New("fetcher's context is done, reinitialize")
@@ -76,7 +78,7 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 		headFetcher:            cfg.headFetcher,
 		p2p:                    cfg.p2p,
 		rateLimiter:            rateLimiter,
-		requests:               make(chan *fetchRequestParams),
+		requests:               make(chan *fetchRequestParams, fetchRequestsBuffer),
 		receivedFetchResponses: make(chan *fetchRequestResponse),
 		quit:                   make(chan struct{}),
 	}
