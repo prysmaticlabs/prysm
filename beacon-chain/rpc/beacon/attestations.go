@@ -284,7 +284,12 @@ func (bs *Server) StreamIndexedAttestations(
 				if att.Data.Slot < startSlot || att.Data.Slot > endSlot {
 					continue
 				}
-				committee := committeesBySlot[att.Data.Slot].Committees[att.Data.CommitteeIndex]
+
+				committeesForSlot, ok := committeesBySlot[att.Data.Slot]
+				if !ok || committeesForSlot.Committees == nil {
+					continue
+				}
+				committee := committeesForSlot.Committees[att.Data.CommitteeIndex]
 				idxAtt, err := attestationutil.ConvertToIndexed(stream.Context(), att, committee.ValidatorIndices)
 				if err != nil {
 					return status.Errorf(
