@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
 
@@ -28,13 +27,13 @@ func unmarshalIndexedAttestation(ctx context.Context, enc []byte) (*ethpb.Indexe
 // indexed attestations.
 // Returns nil if the indexed attestation does not exist with that target epoch.
 func (db *Store) IndexedAttestationsForTarget(ctx context.Context, targetEpoch uint64) ([]*ethpb.IndexedAttestation, error) {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.IdxAttsForTarget")
+	ctx, span := trace.StartSpan(ctx, "SlasherDB.IndexedAttestationsForTarget")
 	defer span.End()
 	var idxAtts []*ethpb.IndexedAttestation
 	key := bytesutil.Bytes8(targetEpoch)
 	err := db.view(func(tx *bolt.Tx) error {
 		c := tx.Bucket(historicIndexedAttestationsBucket).Cursor()
-		for k, enc := c.Seek(key); k != nil && bytes.Equal(k[:8], key); k, _ = c.Next() {
+		for k, enc := c.Seek(key); k != nil && bytes.Equal(k[:8], key); k, enc = c.Next() {
 			idxAtt, err := unmarshalIndexedAttestation(ctx, enc)
 			if err != nil {
 				return err
@@ -49,13 +48,13 @@ func (db *Store) IndexedAttestationsForTarget(ctx context.Context, targetEpoch u
 // IndexedAttestationsWithPrefix accepts a target epoch and signature bytes to find all attestations with the requested prefix.
 // Returns nil if the indexed attestation does not exist with that target epoch.
 func (db *Store) IndexedAttestationsWithPrefix(ctx context.Context, targetEpoch uint64, sigBytes []byte) ([]*ethpb.IndexedAttestation, error) {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.IdxAttsForTarget")
+	ctx, span := trace.StartSpan(ctx, "SlasherDB.IndexedAttestationsWithPrefix")
 	defer span.End()
 	var idxAtts []*ethpb.IndexedAttestation
 	key := encodeEpochSig(targetEpoch, sigBytes[:])
 	err := db.view(func(tx *bolt.Tx) error {
 		c := tx.Bucket(historicIndexedAttestationsBucket).Cursor()
-		for k, enc := c.Seek(key); k != nil && bytes.Equal(k[:len(key)], key); k, _ = c.Next() {
+		for k, enc := c.Seek(key); k != nil && bytes.Equal(k[:len(key)], key); k, enc = c.Next() {
 			idxAtt, err := unmarshalIndexedAttestation(ctx, enc)
 			if err != nil {
 				return err
@@ -109,30 +108,21 @@ func (db *Store) SaveIndexedAttestation(ctx context.Context, idxAttestation *eth
 
 		return err
 	})
-
-	// Prune history to max size every PruneSlasherStoragePeriod epoch.
-	if idxAttestation.Data.Source.Epoch%params.BeaconConfig().PruneSlasherStoragePeriod == 0 {
-		wsPeriod := params.BeaconConfig().WeakSubjectivityPeriod
-		if err = db.PruneAttHistory(ctx, idxAttestation.Data.Source.Epoch, wsPeriod); err != nil {
-			return err
-		}
-	}
 	return err
 }
 
 // SaveIndexedAttestations accepts multiple indexed attestations and writes them to the DB.
 func (db *Store) SaveIndexedAttestations(ctx context.Context, idxAttestations []*ethpb.IndexedAttestation) error {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveIndexedAttestation")
+	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveIndexedAttestations")
 	defer span.End()
 	keys := make([][]byte, len(idxAttestations))
 	marshaledAtts := make([][]byte, len(idxAttestations))
 	for i, att := range idxAttestations {
-		key := encodeEpochSig(att.Data.Target.Epoch, att.Signature)
 		enc, err := proto.Marshal(att)
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal")
 		}
-		keys[i] = key
+		keys[i] = encodeEpochSig(att.Data.Target.Epoch, att.Signature)
 		marshaledAtts[i] = enc
 	}
 
