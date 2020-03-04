@@ -74,6 +74,11 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 
 	ticker := GetEpochTicker(genesisTime, epochSeconds)
 	for currentEpoch := range ticker.C() {
+		if currentEpoch == 3 {
+			if err := ev.InsertDoubleAttestationIntoPool(conn); err != nil {
+				t.Error(err)
+			}
+		}
 		for _, evaluator := range config.evaluators {
 			// Only run if the policy says so.
 			if !evaluator.Policy(currentEpoch) {
