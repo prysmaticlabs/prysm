@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "epoch_boundary_root.go",
+        "errors.go",
         "replay.go",
         "service.go",
     ],
