@@ -21,6 +21,7 @@ import (
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 const fetchRequestsBuffer = 8 // number of pending fetch requests
@@ -70,7 +71,10 @@ type fetchRequestResponse struct {
 // newBlocksFetcher creates ready to use fetcher.
 func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetcher {
 	ctx, cancel := context.WithCancel(ctx)
-	rateLimiter := leakybucket.NewCollector(allowedBlocksPerSecond, allowedBlocksPerSecond, false /* deleteEmptyBuckets */)
+	rateLimiter := leakybucket.NewCollector(
+		allowedBlocksPerSecond /* rate */,
+		allowedBlocksPerSecond /* capacity */,
+		false                  /* deleteEmptyBuckets */)
 
 	return &blocksFetcher{
 		ctx:                    ctx,
@@ -139,6 +143,9 @@ func (f *blocksFetcher) scheduleRequest(ctx context.Context, start, count uint64
 
 // handleRequest parses fetch request and forwards it to response builder.
 func (f *blocksFetcher) handleRequest(ctx context.Context, start, count uint64) {
+	ctx, span := trace.StartSpan(ctx, "initialsync.handleRequest")
+	defer span.End()
+
 	if ctx.Err() != nil {
 		f.receivedFetchResponses <- &fetchRequestResponse{
 			start: start,
@@ -207,6 +214,9 @@ func (f *blocksFetcher) collectPeerResponses(
 	finalizedEpoch, start, step, count uint64,
 	peers []peer.ID,
 ) ([]*eth.SignedBeaconBlock, error) {
+	ctx, span := trace.StartSpan(ctx, "initialsync.collectPeerResponses")
+	defer span.End()
+
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
