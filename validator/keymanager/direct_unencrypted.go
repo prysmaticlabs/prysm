@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -33,6 +34,10 @@ func NewUnencrypted(input string) (*Unencrypted, string, error) {
 	err := json.Unmarshal([]byte(input), opts)
 	if err != nil {
 		return nil, unencryptedOptsHelp, err
+	}
+
+	if strings.Contains(opts.Path, "$") || strings.Contains(opts.Path, "~") || strings.Contains(opts.Path, "%") {
+		log.WithField("path", opts.Path).Warn("Keystore path contains unexpanded shell expansion characters")
 	}
 
 	path, err := filepath.Abs(opts.Path)
