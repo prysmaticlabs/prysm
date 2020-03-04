@@ -70,7 +70,8 @@ func marshalSpan(span types.Span) []byte {
 		bytesutil.Bytes2(uint64(span.MinSpan)),
 		bytesutil.Bytes2(uint64(span.MaxSpan))...),
 		span.SigBytes[:]...),
-		bytesutil.FromBool(span.HasAttested))
+		bytesutil.FromBool(span.HasAttested),
+	)
 }
 
 // EpochSpansMap accepts epoch and returns the corresponding spans map epoch=>spans
