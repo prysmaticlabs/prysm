@@ -55,8 +55,13 @@ func unmarshalSpan(ctx context.Context, enc []byte) (types.Span, error) {
 	return r, nil
 }
 
+// convert the span struct into a flat array
 func marshalSpan(span types.Span) []byte {
-	return append(append(append(bytesutil.Bytes2(uint64(span.MinSpan)), bytesutil.Bytes2(uint64(span.MaxSpan))...), span.SigBytes[:]...), bytesutil.FromBool(span.HasAttested))
+	return append(append(append(
+		bytesutil.Bytes2(uint64(span.MinSpan)),
+		bytesutil.Bytes2(uint64(span.MaxSpan))...),
+		span.SigBytes[:]...),
+		bytesutil.FromBool(span.HasAttested))
 }
 
 // EpochSpansMap accepts epoch and returns the corresponding spans map epoch=>spans
