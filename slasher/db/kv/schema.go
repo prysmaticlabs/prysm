@@ -6,9 +6,10 @@ import (
 )
 
 const (
-	latestEpochKey     = "LATEST_EPOCH_DETECTED"
-	chainHeadKey       = "CHAIN_HEAD"
-	cachedSpanerEpochs = 256
+	latestEpochKey       = "LATEST_EPOCH_DETECTED"
+	chainHeadKey         = "CHAIN_HEAD"
+	cachedSpanerEpochs   = 256
+	spannerEncodedLength = 7
 )
 
 var (

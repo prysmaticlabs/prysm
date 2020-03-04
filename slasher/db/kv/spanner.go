@@ -52,7 +52,7 @@ func unmarshalSpan(ctx context.Context, enc []byte) (types.Span, error) {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.unmarshalSpan")
 	defer span.End()
 	r := types.Span{}
-	if len(enc) != 7 {
+	if len(enc) != spannerEncodedLength {
 		return r, errors.New("wrong data length for min max span")
 	}
 	r.MinSpan = bytesutil.FromBytes2(enc[:2])
