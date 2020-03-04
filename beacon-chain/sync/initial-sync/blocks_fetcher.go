@@ -373,20 +373,6 @@ func (f *blocksFetcher) requestBlocks(
 	return resp, nil
 }
 
-// highestFinalizedEpoch returns the absolute highest finalized epoch of all connected peers.
-// Note this can be lower than our finalized epoch if we have no peers or peers that are all behind us.
-func (f *blocksFetcher) highestFinalizedEpoch() uint64 {
-	highest := uint64(0)
-	for _, pid := range f.p2p.Peers().Connected() {
-		peerChainState, err := f.p2p.Peers().ChainState(pid)
-		if err == nil && peerChainState != nil && peerChainState.FinalizedEpoch > highest {
-			highest = peerChainState.FinalizedEpoch
-		}
-	}
-
-	return highest
-}
-
 // selectFailOverPeer randomly selects fail over peer from the list of available peers.
 func selectFailOverPeer(excludedPID peer.ID, peers []peer.ID) (peer.ID, error) {
 	for i, pid := range peers {
