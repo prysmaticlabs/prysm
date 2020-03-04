@@ -203,7 +203,8 @@ func (db *Store) SaveValidatorEpochSpans(ctx context.Context, validatorIdx uint6
 }
 
 // SaveEpochSpansMap accepts a epoch and span map epoch=>spans and writes it to disk.
-// saves the spans to cache if caching is enabled.
+// saves the spans to cache if caching is enabled. The key in the cache is the highest
+// epoch seen by slasher and the value is the span map itself.
 func (db *Store) SaveEpochSpansMap(ctx context.Context, epoch uint64, spanMap map[uint64]types.Span) error {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveEpochSpansMap")
 	defer span.End()
@@ -237,8 +238,8 @@ func (db *Store) enableSpanCache(enable bool) {
 	db.spanCacheEnabled = enable
 }
 
-// SaveCachedSpansMaps saves all span map from cache to disk
-// if no span maps are in db or cache is disabled it returns nil.
+// SaveCachedSpansMaps saves all span maps that are currently
+// in memory into the DB. if no span maps are in db or cache is disabled it returns nil.
 func (db *Store) SaveCachedSpansMaps(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveCachedSpansMaps")
 	defer span.End()
