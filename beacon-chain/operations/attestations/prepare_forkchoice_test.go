@@ -375,7 +375,11 @@ func TestService_seen(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		if got, _ := s.seen(tt.att); got != tt.want {
+		got, err := s.seen(tt.att)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got != tt.want {
 			t.Errorf("Test %d failed. Got=%v want=%v", i, got, tt.want)
 		}
 		time.Sleep(10) // Sleep briefly for cache to routine to buffer.

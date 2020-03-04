@@ -26,6 +26,12 @@ func init() {
 	}
 }
 
+// DomainByteLength length of domain byte array.
+const DomainByteLength = 4
+
+// ForkVersionByteLength length of fork version byte array.
+const ForkVersionByteLength = 4
+
 var maxKeys = int64(100000)
 var pubkeyCache, _ = ristretto.NewCache(&ristretto.Config{
 	NumCounters: maxKeys,
@@ -288,7 +294,7 @@ func (s *Signature) Marshal() []byte {
 //    epoch = get_current_epoch(state) if message_epoch is None else message_epoch
 //    fork_version = state.fork.previous_version if epoch < state.fork.epoch else state.fork.current_version
 //    return compute_domain(domain_type, fork_version)
-func Domain(domainType []byte, forkVersion []byte) []byte {
+func Domain(domainType [DomainByteLength]byte, forkVersion [ForkVersionByteLength]byte) []byte {
 	b := []byte{}
 	b = append(b, domainType[:4]...)
 	b = append(b, forkVersion[:4]...)
@@ -305,11 +311,13 @@ func Domain(domainType []byte, forkVersion []byte) []byte {
 //    if fork_version is None:
 //        fork_version = GENESIS_FORK_VERSION
 //    return Domain(domain_type + fork_version)
-func ComputeDomain(domainType []byte, forkVersion []byte) []byte {
+func ComputeDomain(domainType [DomainByteLength]byte, forkVersion []byte) []byte {
 	if forkVersion == nil {
 		forkVersion = params.BeaconConfig().GenesisForkVersion
 	}
-	return Domain(domainType, forkVersion)
+	forkBytes := [ForkVersionByteLength]byte{}
+	copy(forkBytes[:],forkVersion)
+	return Domain(domainType, forkBytes)
 }
 
 // HashWithDomain hashes 32 byte message and uint64 domain parameters a Fp2 element

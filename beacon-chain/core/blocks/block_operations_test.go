@@ -55,7 +55,10 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 			ParentRoot: lbhsr[:],
 		},
 	}
-	dt := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer)
+	dt, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		t.Fatalf("Failed to get domain form state: %v", err)
+	}
 	signingRoot, err := helpers.ComputeSigningRoot(block.Block, dt)
 	if err != nil {
 		t.Fatalf("Failed to get signing root of block: %v", err)
@@ -96,7 +99,10 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 		t.Error(err)
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		t.Fatalf("Failed to get domain form state: %v", err)
+	}
 	priv := bls.RandKey()
 	root, err := helpers.ComputeSigningRoot([]byte("hello"), dt)
 	if err != nil {
@@ -143,7 +149,10 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 	})
 
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		t.Fatalf("Failed to get domain form state: %v", err)
+	}
 	priv := bls.RandKey()
 	root, err := helpers.ComputeSigningRoot([]byte("hello"), dt)
 	if err != nil {
@@ -194,7 +203,10 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 		t.Error(err)
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		t.Fatalf("Failed to get domain form state: %v", err)
+	}
 	priv := bls.RandKey()
 	root, err := helpers.ComputeSigningRoot([]byte("hello"), dt)
 	if err != nil {
@@ -245,7 +257,10 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		t.Error(err)
 	}
 	currentEpoch := helpers.CurrentEpoch(state)
-	dt := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		t.Fatalf("Failed to get domain form state: %v", err)
+	}
 	priv := bls.RandKey()
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
@@ -305,12 +320,14 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	epoch := uint64(0)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainRandao)
+	domain, err := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainRandao)
+	if err != nil {
+		t.Fatal(err)
+	}
 	root, err := ssz.HashTreeRoot(&pb.SigningRoot{ObjectRoot: buf, Domain: domain})
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx-1].Sign(root[:])
 	block := &ethpb.BeaconBlock{
@@ -509,7 +526,10 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 	proposerIdx := uint64(1)
 
-	domain := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer)
+	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		t.Fatal(err)
+	}
 	header1 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			Slot:      0,
@@ -669,7 +689,10 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		},
 		AttestingIndices: []uint64{0, 1},
 	}
-	domain := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		t.Fatal(err)
+	}
 	signingRoot, err := helpers.ComputeSigningRoot(att1.Data, domain)
 	if err != nil {
 		t.Errorf("Could not get signing root of beacon block header: %v", err)
@@ -941,7 +964,10 @@ func TestProcessAttestations_OK(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	domain := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		t.Fatal(err)
+	}
 	hashTreeRoot, err := helpers.ComputeSigningRoot(att.Data, domain)
 	if err != nil {
 		t.Error(err)
@@ -969,7 +995,10 @@ func TestProcessAttestations_OK(t *testing.T) {
 func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 
-	domain := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		t.Fatal(err)
+	}
 	data := &ethpb.AttestationData{
 		Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 		Target: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
@@ -1043,7 +1072,10 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 func TestProcessAggregatedAttestation_NoOverlappingBits(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 300)
 
-	domain := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		t.Fatal(err)
+	}
 	var mockRoot [32]byte
 	copy(mockRoot[:], "hello-world")
 	data := &ethpb.AttestationData{
@@ -1296,8 +1328,10 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		domain := helpers.Domain(state.Fork(), tt.attestation.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
-
+		domain, err := helpers.Domain(state.Fork(), tt.attestation.Data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
+		if err != nil {
+			t.Fatal(err)
+		}
 		root, err := helpers.ComputeSigningRoot(tt.attestation.Data, domain)
 		if err != nil {
 			t.Error(err)
@@ -1326,6 +1360,11 @@ func TestValidateIndexedAttestation_AboveMaxLength(t *testing.T) {
 
 	for i := uint64(0); i < params.BeaconConfig().MaxValidatorsPerCommittee+5; i++ {
 		indexedAtt1.AttestingIndices[i] = i
+		indexedAtt1.Data = &ethpb.AttestationData{
+			Target: &ethpb.Checkpoint{
+				Epoch: i,
+			},
+		}
 	}
 
 	want := "validator indices count exceeds MAX_VALIDATORS_PER_COMMITTEE"
@@ -1739,7 +1778,10 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 	}
 	val.PublicKey = priv.PublicKey().Marshal()[:]
 	state.UpdateValidatorAtIndex(0, val)
-	domain := helpers.Domain(state.Fork(), helpers.CurrentEpoch(state), params.BeaconConfig().DomainVoluntaryExit)
+	domain, err := helpers.Domain(state.Fork(), helpers.CurrentEpoch(state), params.BeaconConfig().DomainVoluntaryExit)
+	if err != nil {
+		t.Fatal(err)
+	}
 	signingRoot, err := helpers.ComputeSigningRoot(exits[0].Exit, domain)
 	if err != nil {
 		t.Error(err)
@@ -1757,8 +1799,8 @@ func TestProcessVoluntaryExits_AppliesCorrectStatus(t *testing.T) {
 		t.Fatalf("Could not process exits: %v", err)
 	}
 	newRegistry := newState.Validators()
-	if newRegistry[0].ExitEpoch != helpers.DelayedActivationExitEpoch(state.Slot()/params.BeaconConfig().SlotsPerEpoch) {
+	if newRegistry[0].ExitEpoch != helpers.ActivationExitEpoch(state.Slot()/params.BeaconConfig().SlotsPerEpoch) {
 		t.Errorf("Expected validator exit epoch to be %d, got %d",
-			helpers.DelayedActivationExitEpoch(state.Slot()/params.BeaconConfig().SlotsPerEpoch), newRegistry[0].ExitEpoch)
+			helpers.ActivationExitEpoch(state.Slot()/params.BeaconConfig().SlotsPerEpoch), newRegistry[0].ExitEpoch)
 	}
 }

@@ -23,7 +23,10 @@ func TestBlockSignature(t *testing.T) {
 	}
 	beaconState.SetSlot(beaconState.Slot() - 1)
 	epoch := helpers.SlotToEpoch(block.Block.Slot)
-	domain := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainBeaconProposer)
+	domain, err := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		t.Fatal(err)
+	}
 	signingRoot, err := helpers.ComputeSigningRoot(block.Block, domain)
 	if err != nil {
 		t.Error(err)
@@ -56,7 +59,10 @@ func TestRandaoReveal(t *testing.T) {
 	}
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainRandao)
+	domain, err := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainRandao)
+	if err != nil {
+		t.Fatal(err)
+	}
 	root, err := helpers.ComputeSigningRoot(epoch, domain)
 	if err != nil {
 		t.Fatal(err)

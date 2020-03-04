@@ -181,7 +181,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, depositTrie.Root())
 
 	// Active because activation epoch <= current epoch < exit epoch.
-	activeEpoch := helpers.DelayedActivationExitEpoch(0)
+	activeEpoch := helpers.ActivationExitEpoch(0)
 
 	block := blk.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(ctx, block); err != nil {
@@ -251,7 +251,7 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 	// Initiated exit because validator exit epoch and withdrawable epoch are not FAR_FUTURE_EPOCH
 	slot := uint64(10000)
 	epoch := helpers.SlotToEpoch(slot)
-	exitEpoch := helpers.DelayedActivationExitEpoch(epoch)
+	exitEpoch := helpers.ActivationExitEpoch(epoch)
 	withdrawableEpoch := exitEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
 	block := blk.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(ctx, block); err != nil {
@@ -752,7 +752,7 @@ func TestDepositBlockSlotAfterGenesisTime(t *testing.T) {
 		t.Fatalf("Could not get signing root %v", err)
 	}
 
-	activeEpoch := helpers.DelayedActivationExitEpoch(0)
+	activeEpoch := helpers.ActivationExitEpoch(0)
 
 	state, err := stateTrie.InitializeFromProtoUnsafe(&pbp2p.BeaconState{
 		GenesisTime: uint64(time.Unix(0, 0).Unix()),
@@ -831,7 +831,7 @@ func TestDepositBlockSlotBeforeGenesisTime(t *testing.T) {
 		t.Fatalf("Could not get signing root %v", err)
 	}
 
-	activeEpoch := helpers.DelayedActivationExitEpoch(0)
+	activeEpoch := helpers.ActivationExitEpoch(0)
 
 	state, err := stateTrie.InitializeFromProtoUnsafe(&pbp2p.BeaconState{
 		GenesisTime: uint64(time.Unix(25000, 0).Unix()),

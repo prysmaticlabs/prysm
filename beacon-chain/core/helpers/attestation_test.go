@@ -255,7 +255,10 @@ func TestSlotSignature_Verify(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	domain := helpers.Domain(state.Fork(), helpers.CurrentEpoch(state), params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(state.Fork(), helpers.CurrentEpoch(state), params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		t.Fatal(err)
+	}
 	msg, _ := helpers.ComputeSigningRoot(slot, domain)
 	if !sig.Verify(msg[:], pub) {
 		t.Error("Could not verify slot signature")

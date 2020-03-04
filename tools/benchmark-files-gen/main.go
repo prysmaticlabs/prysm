@@ -140,7 +140,10 @@ func generateMarshalledFullStateAndBlock() error {
 	if err != nil {
 		return err
 	}
-	domain := helpers.Domain(beaconState.Fork(), helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainBeaconProposer)
+	domain, err := helpers.Domain(beaconState.Fork(), helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		return err
+	}
 	blockRoot, err := helpers.ComputeSigningRoot(block.Block, domain)
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root of block")

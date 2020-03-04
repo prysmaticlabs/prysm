@@ -371,12 +371,14 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	beaconState.SetSlot(beaconState.Slot() - 1)
 	req.Block.Body.RandaoReveal = randaoReveal[:]
 	currentEpoch := helpers.CurrentEpoch(beaconState)
-	domain := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	domain, err := helpers.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		t.Fatal(err)
+	}
 	signingRoot, err := helpers.ComputeSigningRoot(req.Block, domain)
 	if err != nil {
 		t.Error(err)
 	}
-
 	blockSig := privKeys[proposerIdx].Sign(signingRoot[:]).Marshal()
 	req.Signature = blockSig[:]
 
@@ -1309,8 +1311,10 @@ func TestFilterAttestation_OK(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		domain := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
-
+		domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+		if err != nil {
+			t.Fatal(err)
+		}
 		sigs := make([]*bls.Signature, len(attestingIndices))
 		zeroSig := [96]byte{}
 		atts[i].Signature = zeroSig[:]

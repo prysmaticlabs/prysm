@@ -39,7 +39,10 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, *stateTr
 		},
 		AttestingIndices: []uint64{0, 1},
 	}
-	domain := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		t.Fatal(err)
+	}
 	hashTreeRoot, err := helpers.ComputeSigningRoot(att1.Data, domain)
 	if err != nil {
 		t.Error(err)

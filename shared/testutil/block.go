@@ -167,7 +167,10 @@ func GenerateProposerSlashingForValidator(
 		},
 	}
 	currentEpoch := helpers.CurrentEpoch(bState)
-	domain := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	domain, err := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		return nil, err
+	}
 	root, err := helpers.ComputeSigningRoot(header1.Header, domain)
 	if err != nil {
 		return nil, err
@@ -236,7 +239,10 @@ func GenerateAttesterSlashingForValidator(
 		},
 		AttestingIndices: []uint64{idx},
 	}
-	domain := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return nil, err
+	}
 	dataRoot, err := helpers.ComputeSigningRoot(att1.Data, domain)
 	if err != nil {
 		return nil, err
@@ -379,7 +385,10 @@ func GenerateAttestations(bState *stateTrie.BeaconState, privs []*bls.SecretKey,
 		)
 	}
 
-	domain := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return nil, err
+	}
 	fmt.Printf("Justified: %d\n", bState.CurrentJustifiedCheckpoint().Epoch)
 	for c := uint64(0); c < committeesPerSlot && c < numToGen; c++ {
 		committee, err := helpers.BeaconCommitteeFromState(bState, slot, c)
@@ -468,7 +477,10 @@ func generateVoluntaryExits(
 				ValidatorIndex: valIndex,
 			},
 		}
-		domain := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainVoluntaryExit)
+		domain, err := helpers.Domain(bState.Fork(), currentEpoch, params.BeaconConfig().DomainVoluntaryExit)
+		if err != nil {
+			return nil, err
+		}
 		root, err := helpers.ComputeSigningRoot(exit.Exit, domain)
 		if err != nil {
 			return nil, err

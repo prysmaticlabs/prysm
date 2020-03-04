@@ -25,7 +25,10 @@ func RandaoReveal(beaconState *stateTrie.BeaconState, epoch uint64, privKeys []*
 	}
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainRandao)
+	domain, err := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainRandao)
+	if err != nil {
+		return nil, err
+	}
 	root, err := helpers.ComputeSigningRoot(epoch, domain)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute signing root of epoch")
@@ -47,7 +50,10 @@ func BlockSignature(
 		return nil, err
 	}
 	block.StateRoot = s[:]
-	domain := helpers.Domain(bState.Fork(), helpers.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer)
+	domain, err := helpers.Domain(bState.Fork(), helpers.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		return nil, err
+	}
 	blockRoot, err := helpers.ComputeSigningRoot(block, domain)
 	if err != nil {
 		return nil, err

@@ -112,8 +112,14 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 	ctx := context.Background()
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
-	att0 := generateAtt(beaconState, 0, privKeys)
-	att1 := generateAtt(beaconState, 1, privKeys)
+	att0, err := generateAtt(beaconState, 0, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
+	att1, err := generateAtt(beaconState, 1, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 
@@ -166,8 +172,10 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	ctx := context.Background()
 
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 32)
-	att0 := generateAtt(beaconState, 0, privKeys)
-
+	att0, err := generateAtt(beaconState, 0, privKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
 	beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 
 	aggregatorServer := &Server{
@@ -200,7 +208,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	}
 }
 
-func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []*bls.SecretKey) *ethpb.Attestation {
+func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []*bls.SecretKey) (*ethpb.Attestation, error) {
 	aggBits := bitfield.NewBitlist(4)
 	aggBits.SetBitAt(index, true)
 	att := &ethpb.Attestation{
@@ -213,7 +221,10 @@ func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []*bls.S
 	}
 	committee, _ := helpers.BeaconCommitteeFromState(state, att.Data.Slot, att.Data.CommitteeIndex)
 	attestingIndices, _ := attestationutil.AttestingIndices(att.AggregationBits, committee)
-	domain := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := helpers.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return nil, err
+	}
 
 	sigs := make([]*bls.Signature, len(attestingIndices))
 	zeroSig := [96]byte{}
@@ -227,5 +238,5 @@ func generateAtt(state *beaconstate.BeaconState, index uint64, privKeys []*bls.S
 
 	att.Signature = bls.AggregateSignatures(sigs).Marshal()[:]
 
-	return att
+	return att, nil
 }

@@ -59,11 +59,14 @@ func setupValidProposerSlashing(t *testing.T) (*ethpb.ProposerSlashing, *stateTr
 		t.Fatal(err)
 	}
 
-	domain := helpers.Domain(
+	domain, err := helpers.Domain(
 		state.Fork(),
 		helpers.CurrentEpoch(state),
 		params.BeaconConfig().DomainBeaconProposer,
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	privKey := bls.RandKey()
 
 	someRoot := [32]byte{1, 2, 3}
