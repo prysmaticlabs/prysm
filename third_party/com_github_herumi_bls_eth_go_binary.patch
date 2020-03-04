@@ -1,0 +1,13 @@
+diff --git a/bls/bls.go b/bls/bls.go
+index 7e3e788..3a7411a 100644
+--- a/bls/bls.go
++++ b/bls/bls.go
+@@ -715,7 +715,7 @@ func (sig *Sign) VerifyAggregateHashWithDomain(pubVec []PublicKey, hashWithDomai
+ 	if n == 0 || len(hashWithDomains) != n*40 {
+ 		return false
+ 	}
+-	return C.blsVerifyAggregatedHashWithDomain(&sig.v, &pubVec[0].v, (*[40]C.uchar)(unsafe.Pointer(&hashWithDomains[0])), C.mclSize(n)) == 1
++	return C.blsVerifyAggregatedHashWithDomain(&sig.v, &pubVec[0].v, unsafe.Pointer(&hashWithDomains[0]), C.mclSize(n)) == 1
+ }
+ 
+ ///
