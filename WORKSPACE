@@ -3,33 +3,47 @@ workspace(name = "prysm")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
-register_toolchains(
-    "//tools/cross-toolchain:cc-toolchain-multiarch",
-)
-
 http_archive(
     name = "bazel_toolchains",
-    sha256 = "b5a8039df7119d618402472f3adff8a1bd0ae9d5e253f53fcc4c47122e91a3d2",
-    strip_prefix = "bazel-toolchains-2.1.1",
+    # sha256 = "b5a8039df7119d618402472f3adff8a1bd0ae9d5e253f53fcc4c47122e91a3d2",
+    # strip_prefix = "bazel-toolchains-2.1.1",
+    strip_prefix = "bazel-toolchains-13c681119b6da907f5f690acf7c9944aabfd4e15",
     urls = [
-        "https://github.com/bazelbuild/bazel-toolchains/releases/download/2.1.1/bazel-toolchains-2.1.1.tar.gz",
-        "https://mirror.bazel.build/github.com/bazelbuild/bazel-toolchains/archive/2.1.1.tar.gz",
+        # "https://github.com/bazelbuild/bazel-toolchains/releases/download/2.1.1/bazel-toolchains-2.1.1.tar.gz",
+        # "https://mirror.bazel.build/github.com/bazelbuild/bazel-toolchains/archive/2.1.1.tar.gz",
+        # 13c681119b6da907f5f690acf7c9944aabfd4e15
+        "https://github.com/prestonvanloon/bazel-toolchains/archive/13c681119b6da907f5f690acf7c9944aabfd4e15.tar.gz",
     ],
 )
 
 load("@bazel_toolchains//rules:rbe_repo.bzl", "rbe_autoconfig")
 
-load("//tools/cross-toolchain:repo.bzl", "CUSTOM_TOOLCHAIN_CONFIG_SUITE_SPEC")
+
+http_archive(
+    name = "prysm_toolchains",
+    urls = [
+        "http://localhost:8000/stuff.tar.gz",
+        "http://0.0.0.0:8000/stuff.tar.gz",
+        "http://172.17.0.1:8000/stuff.tar.gz",
+    ],
+    sha256 = "b39565dcc865c15aafaa06b440bab342a8f9cdc7cdf77df6a1c259e67e9ed0ec",
+)
+
+register_toolchains(
+    "@prysm_toolchains//:cc-toolchain-multiarch",
+)
 
 rbe_autoconfig(
     name = "rbe_default",
-    create_cc_configs = False,
-    create_java_configs = False,
-    export_configs = True,
-    digest = "sha256:f4cd132e281017cc7999ac4fb5877c02596deafe24c62ebb5943be68a588a544", # Latest gcr.io/prysmaticlabs/rbe-worker image.
-    registry = CUSTOM_TOOLCHAIN_CONFIG_SUITE_SPEC["container_registry"],
-    repository = CUSTOM_TOOLCHAIN_CONFIG_SUITE_SPEC["container_repo"],
-    toolchain_config_suite_spec = CUSTOM_TOOLCHAIN_CONFIG_SUITE_SPEC,
+    config_repos = [
+        "prysm_toolchains"
+    ],
+    bazel_version = "2.1.1",
+    base_container_digest = "sha256:1062b3c9002e6c09e31d3463fc5c24b0d2212f706733404918e18cff8f66dc5c",
+    registry = "gcr.io",
+    repository = "prysmaticlabs/rbe-worker",
+    digest = "sha256:81f6e823bcb88baff4730e724b58e4164ee86fc2a70f094a786a9efcbe100dc9",
+    # toolchain_config_spec_name = "10.0.0",
 )
 
 http_archive(
@@ -57,9 +71,9 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_docker",
-    #    sha256 = "9ff889216e28c918811b77999257d4ac001c26c1f7c7fb17a79bc28abf74182e",
-    strip_prefix = "rules_docker-0.12.1",
-    url = "https://github.com/bazelbuild/rules_docker/archive/v0.12.1.tar.gz",
+    sha256 = "dc97fccceacd4c6be14e800b2a00693d5e8d07f69ee187babfd04a80a9f8e250",
+    strip_prefix = "rules_docker-0.14.1",
+    url = "https://github.com/bazelbuild/rules_docker/archive/v0.14.1.tar.gz",
 )
 
 http_archive(

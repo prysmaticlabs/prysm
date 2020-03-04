@@ -2,7 +2,9 @@
 # gcloud docker -- push gcr.io/prysmaticlabs/rbe-worker:latest
 
 # containerized build environment
-FROM gcr.io/cloud-marketplace/google/rbe-ubuntu18-04 as build
+# Use the latest as indicated at https://github.com/bazelbuild/bazel-toolchains/blob/master/configs/dependency-tracking/ubuntu1604.bzl.
+# Also update the WORKSPACE rbe_autoconfig rule if changing this value.
+FROM gcr.io/cloud-marketplace/google/rbe-ubuntu16-04@sha256:1062b3c9002e6c09e31d3463fc5c24b0d2212f706733404918e18cff8f66dc5c as build
 
 # install gnu/gcc cross-build toolchain (gcc 8.3)
 ENV DOCKER_CLI_EXPERIMENTAL=enabled
@@ -14,13 +16,6 @@ RUN apt-get update && \
         cmake libssl-dev libxml2-dev vim apt-transport-https \
         zip unzip libtinfo5 patch zlib1g-dev autoconf libtool \
         pkg-config make docker.io gnupg2
-
-# install bazel
-RUN curl https://bazel.build/bazel-release.pub.gpg | apt-key add - && \
-    echo "deb [arch=amd64] https://storage.googleapis.com/bazel-apt stable jdk1.8" | tee /etc/apt/sources.list.d/bazel.list && \
-    apt update && apt install -y bazel && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* 
 
 # install llvm/clang cross-build toolchains
 ENV INSTALL_LLVM_VERSION=10.0.0-rc2
