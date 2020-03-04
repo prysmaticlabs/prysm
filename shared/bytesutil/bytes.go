@@ -131,6 +131,21 @@ func ToBytes48(x []byte) [48]byte {
 	return y
 }
 
+// ToBool is a convenience method for converting a byte to a bool.
+// This method will use the first bit of the 0 byte to generate the returned value.
+func ToBool(x byte) bool {
+	return x&1 == 1
+}
+
+// FromBool is a convenience method for converting a bool to a byte.
+// This method will use the first bit to generate the returned value.
+func FromBool(x bool) byte {
+	if x {
+		return 1
+	}
+	return 0
+}
+
 // FromBytes32 is a convenience method for converting a fixed-size byte array
 // to a byte slice.
 func FromBytes32(x [32]byte) []byte {

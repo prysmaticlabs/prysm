@@ -87,10 +87,10 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 		return nil, err
 	}
 	if cfg.CacheItems == 0 {
-		cfg.CacheItems = 20000
+		cfg.CacheItems = 10 * cachedSpanerEpochs
 	}
 	if cfg.MaxCacheSize == 0 {
-		cfg.MaxCacheSize = 2 << 30 //(2GB)
+		cfg.MaxCacheSize = cachedSpanerEpochs
 	}
 	kv := &Store{db: boltDB, databasePath: datafile, spanCacheEnabled: cfg.SpanCacheEnabled}
 	spanCache, err := ristretto.NewCache(&ristretto.Config{
