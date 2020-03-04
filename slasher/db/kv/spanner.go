@@ -70,11 +70,13 @@ func marshalSpan(span types.Span) []byte {
 		bytesutil.Bytes2(uint64(span.MinSpan)),
 		bytesutil.Bytes2(uint64(span.MaxSpan))...),
 		span.SigBytes[:]...),
-		bytesutil.FromBool(span.HasAttested))
+		bytesutil.FromBool(span.HasAttested),
+	)
 }
 
 // EpochSpansMap accepts epoch and returns the corresponding spans map epoch=>spans
 // for slashing detection.
+// reads spans from cache if caching is enabled and the epoch key exists.
 // Returns nil if the span map for this validator index does not exist.
 func (db *Store) EpochSpansMap(ctx context.Context, epoch uint64) (map[uint64]types.Span, error) {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.EpochSpansMap")
@@ -118,6 +120,8 @@ func (db *Store) EpochSpansMap(ctx context.Context, epoch uint64) (map[uint64]ty
 
 // EpochSpanByValidatorIndex accepts validator index and epoch returns the corresponding spans
 // for slashing detection.
+// it reads the epoch spans from cache and gets the requested value from there if it exists
+// when caching is enabled.
 // Returns error if the spans for this validator index and epoch does not exist.
 func (db *Store) EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uint64, epoch uint64) (types.Span, error) {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.EpochSpanByValidatorIndex")
@@ -160,6 +164,8 @@ func (db *Store) EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uin
 }
 
 // SaveValidatorEpochSpans accepts validator index epoch and spans returns.
+// it reads the epoch spans from cache, updates it and save it back to cache
+// if caching is enabled.
 // Returns error if the spans for this validator index and epoch does not exist.
 func (db *Store) SaveValidatorEpochSpans(ctx context.Context, validatorIdx uint64, epoch uint64, spans types.Span) error {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveValidatorEpochSpans")
@@ -197,6 +203,7 @@ func (db *Store) SaveValidatorEpochSpans(ctx context.Context, validatorIdx uint6
 }
 
 // SaveEpochSpansMap accepts a epoch and span map epoch=>spans and writes it to disk.
+// saves the spans to cache if caching is enabled.
 func (db *Store) SaveEpochSpansMap(ctx context.Context, epoch uint64, spanMap map[uint64]types.Span) error {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveEpochSpansMap")
 	defer span.End()
@@ -260,13 +267,11 @@ func (db *Store) DeleteEpochSpans(ctx context.Context, epoch uint64) error {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.DeleteEpochSpans")
 	defer span.End()
 	if db.spanCacheEnabled {
-
 		_, ok := db.spanCache.Get(epoch)
 		if ok {
 			db.spanCache.Del(epoch)
 			return nil
 		}
-
 	}
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsMinMaxSpanBucket)
@@ -276,6 +281,7 @@ func (db *Store) DeleteEpochSpans(ctx context.Context, epoch uint64) error {
 }
 
 // DeleteValidatorSpanByEpoch deletes a validator span for a certain epoch
+// deletes spans from cache if caching is enabled.
 // using a validator index as bucket key.
 func (db *Store) DeleteValidatorSpanByEpoch(ctx context.Context, validatorIdx uint64, epoch uint64) error {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.DeleteValidatorSpanByEpoch")

@@ -230,38 +230,38 @@ func TestValidatorSpanMap_DeleteWithCache(t *testing.T) {
 	}
 }
 
-//func TestValidatorSpanMap_SaveOnEvict(t *testing.T) {
-//	db := setupDBDiffCacheSize(t, 5, 5)
-//	defer teardownDB(t, db)
-//	ctx := context.Background()
-//
-//	tsm := &spanMapTestStruct{
-//		epoch: 1,
-//		spanMap: map[uint64][2]uint16{
-//			1: {10, 20},
-//			2: {11, 21},
-//			3: {12, 22},
-//		},
-//	}
-//	for i := uint64(0); i < 6; i++ {
-//		err := db.SaveEpochSpansMap(ctx, i, tsm.spanMap)
-//		if err != nil {
-//			t.Fatalf("Save validator span map failed: %v", err)
-//		}
-//	}
-//
-//	// Wait for value to pass through cache buffers.
-//	time.Sleep(time.Millisecond * 1000)
-//	for i := uint64(0); i < 6; i++ {
-//		sm, err := db.EpochSpansMap(ctx, i)
-//		if err != nil {
-//			t.Fatalf("Failed to get validator span map: %v", err)
-//		}
-//		if sm == nil || !reflect.DeepEqual(sm, tsm.spanMap) {
-//			t.Fatalf("Get should return validator: %d span map: %v got: %v", i, tsm.spanMap, sm)
-//		}
-//	}
-//}
+func TestValidatorSpanMap_SaveOnEvict(t *testing.T) {
+	db := setupDBDiffCacheSize(t, 5, 5)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+
+	tsm := &spanMapTestStruct{
+		epoch: 1,
+		spanMap: map[uint64]types.Span{
+			1: {MinSpan: 10, MaxSpan: 20, SigBytes: [2]byte{0, 1}},
+			2: {MinSpan: 11, MaxSpan: 21, HasAttested: true},
+			3: {MinSpan: 12, MaxSpan: 22},
+		},
+	}
+	for i := uint64(0); i < 6; i++ {
+		err := db.SaveEpochSpansMap(ctx, i, tsm.spanMap)
+		if err != nil {
+			t.Fatalf("Save validator span map failed: %v", err)
+		}
+	}
+
+	// Wait for value to pass through cache buffers.
+	time.Sleep(time.Millisecond * 1000)
+	for i := uint64(0); i < 6; i++ {
+		sm, err := db.EpochSpansMap(ctx, i)
+		if err != nil {
+			t.Fatalf("Failed to get validator span map: %v", err)
+		}
+		if sm == nil || !reflect.DeepEqual(sm, tsm.spanMap) {
+			t.Fatalf("Get should return validator: %d span map: %v got: %v", i, tsm.spanMap, sm)
+		}
+	}
+}
 
 func TestValidatorSpanMap_SaveCachedSpansMaps(t *testing.T) {
 	app := cli.NewApp()
