@@ -137,6 +137,12 @@ func ToBool(x byte) bool {
 	return x&1 == 1
 }
 
+// FromBytes2 returns an integer which is stored in the little-endian format(2, 'little')
+// from a byte array.
+func FromBytes2(x []byte) uint16 {
+	return binary.LittleEndian.Uint16(x[:2])
+}
+
 // FromBool is a convenience method for converting a bool to a byte.
 // This method will use the first bit to generate the returned value.
 func FromBool(x bool) byte {

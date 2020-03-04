@@ -2,7 +2,6 @@ package kv
 
 import (
 	"context"
-	"encoding/binary"
 	"fmt"
 
 	"github.com/boltdb/bolt"
@@ -47,8 +46,8 @@ func unmarshalSpan(ctx context.Context, enc []byte) (types.Span, error) {
 	if len(enc) != 7 {
 		return r, errors.New("wrong data length for min max span")
 	}
-	r.MinSpan = FromBytes2(enc[:2])
-	r.MaxSpan = FromBytes2(enc[2:4])
+	r.MinSpan = bytesutil.FromBytes2(enc[:2])
+	r.MaxSpan = bytesutil.FromBytes2(enc[2:4])
 	sigB := [2]byte{}
 	copy(sigB[:], enc[4:6])
 	r.SigBytes = sigB
@@ -57,20 +56,7 @@ func unmarshalSpan(ctx context.Context, enc []byte) (types.Span, error) {
 }
 
 func marshalSpan(span types.Span) []byte {
-	return append(append(append(Bytes2(span.MinSpan), Bytes2(span.MaxSpan)...), span.SigBytes[:]...), bytesutil.FromBool(span.HasAttested))
-}
-
-// FromBytes2 returns an integer which is stored in the little-endian format(4, 'little')
-// from a byte array.
-func FromBytes2(x []byte) uint16 {
-	return binary.LittleEndian.Uint16(x[:2])
-}
-
-// Bytes2 returns integer x to bytes in little-endian format, x.to_bytes(2, 'big').
-func Bytes2(x uint16) []byte {
-	bytes := make([]byte, 2)
-	binary.LittleEndian.PutUint16(bytes, x)
-	return bytes[:2]
+	return append(append(append(bytesutil.Bytes2(uint64(span.MinSpan)), bytesutil.Bytes2(uint64(span.MaxSpan))...), span.SigBytes[:]...), bytesutil.FromBool(span.HasAttested))
 }
 
 // EpochSpansMap accepts epoch and returns the corresponding spans map epoch=>spans
@@ -117,7 +103,7 @@ func (db *Store) EpochSpansMap(ctx context.Context, epoch uint64) (map[uint64]ty
 // for slashing detection.
 // Returns error if the spans for this validator index and epoch does not exist.
 func (db *Store) EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uint64, epoch uint64) (types.Span, error) {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.EpochSpansMap")
+	ctx, span := trace.StartSpan(ctx, "SlasherDB.EpochSpanByValidatorIndex")
 	defer span.End()
 	var err error
 	if db.spanCacheEnabled {
@@ -156,7 +142,7 @@ func (db *Store) EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uin
 // SaveValidatorEpochSpans accepts validator index epoch and spans returns.
 // Returns error if the spans for this validator index and epoch does not exist.
 func (db *Store) SaveValidatorEpochSpans(ctx context.Context, validatorIdx uint64, epoch uint64, spans types.Span) error {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.EpochSpansMap")
+	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveValidatorEpochSpans")
 	defer span.End()
 	defer span.End()
 	if db.spanCacheEnabled {
@@ -266,7 +252,7 @@ func (db *Store) DeleteEpochSpans(ctx context.Context, epoch uint64) error {
 // DeleteValidatorSpanByEpoch deletes a validator span for a certain epoch
 // using a validator index as bucket key.
 func (db *Store) DeleteValidatorSpanByEpoch(ctx context.Context, validatorIdx uint64, epoch uint64) error {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.DeleteEpochSpans")
+	ctx, span := trace.StartSpan(ctx, "SlasherDB.DeleteValidatorSpanByEpoch")
 	defer span.End()
 	if db.spanCacheEnabled {
 		v, ok := db.spanCache.Get(epoch)
