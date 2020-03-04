@@ -16,35 +16,13 @@ http_archive(
     ],
 )
 
-load("@bazel_toolchains//rules:rbe_repo.bzl", "rbe_autoconfig")
+load("@prysm//tools/cross-toolchain:prysm_toolchains.bzl", "configure_prysm_toolchains")
 
+configure_prysm_toolchains()
 
-http_archive(
-    name = "prysm_toolchains",
-    urls = [
-        "http://localhost:8000/stuff.tar.gz",
-        "http://0.0.0.0:8000/stuff.tar.gz",
-        "http://172.17.0.1:8000/stuff.tar.gz",
-    ],
-    sha256 = "b39565dcc865c15aafaa06b440bab342a8f9cdc7cdf77df6a1c259e67e9ed0ec",
-)
+load("@prysm//tools/cross-toolchain:rbe_toolchains_config.bzl", "rbe_toolchains_config")
 
-register_toolchains(
-    "@prysm_toolchains//:cc-toolchain-multiarch",
-)
-
-rbe_autoconfig(
-    name = "rbe_default",
-    config_repos = [
-        "prysm_toolchains"
-    ],
-    bazel_version = "2.1.1",
-    base_container_digest = "sha256:1062b3c9002e6c09e31d3463fc5c24b0d2212f706733404918e18cff8f66dc5c",
-    registry = "gcr.io",
-    repository = "prysmaticlabs/rbe-worker",
-    digest = "sha256:81f6e823bcb88baff4730e724b58e4164ee86fc2a70f094a786a9efcbe100dc9",
-    # toolchain_config_spec_name = "10.0.0",
-)
+rbe_toolchains_config()
 
 http_archive(
     name = "bazel_skylib",

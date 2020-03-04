@@ -1,17 +1,8 @@
-# Prysmatic Labs Remote Build Execution Image with Cross Compile Support.
-#
-# Update instructions.
-# - Build the docker image.
-# - Push to gcr.io.
-# - Update _PRYSM_BUILD_IMAGE_DIGEST in //tools/cross-toolchain/rbe_toolchains_config.bzl
-# - Run ./tools/cross-toolchain/regenerate.sh
-# - Add and commit the newly generated configs.
-# - Done!
-#
 # docker build -t gcr.io/prysmaticlabs/rbe-worker:latest .
-# gcloud docker -- push gcr.io/prysmaticlabs/rbe-worker:latest 
+# gcloud docker -- push gcr.io/prysmaticlabs/rbe-worker:latest
 
-FROM debian:buster as build
+# containerized build environment
+FROM gcr.io/cloud-marketplace/google/rbe-ubuntu18-04 as build
 
 # install gnu/gcc cross-build toolchain (gcc 8.3)
 ENV DOCKER_CLI_EXPERIMENTAL=enabled
@@ -23,6 +14,13 @@ RUN apt-get update && \
         cmake libssl-dev libxml2-dev vim apt-transport-https \
         zip unzip libtinfo5 patch zlib1g-dev autoconf libtool \
         pkg-config make docker.io gnupg2
+
+# install bazel
+RUN curl https://bazel.build/bazel-release.pub.gpg | apt-key add - && \
+    echo "deb [arch=amd64] https://storage.googleapis.com/bazel-apt stable jdk1.8" | tee /etc/apt/sources.list.d/bazel.list && \
+    apt update && apt install -y bazel && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* 
 
 # install llvm/clang cross-build toolchains
 ENV INSTALL_LLVM_VERSION=10.0.0-rc2

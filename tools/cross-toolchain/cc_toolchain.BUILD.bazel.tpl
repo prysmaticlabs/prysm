@@ -5,18 +5,17 @@ load(":cc_toolchain_config_linux_arm64.bzl", "arm64_cc_toolchain_config")
 load(":cc_toolchain_config_windows.bzl", "windows_cc_toolchain_config")
 
 
-
-# cc_toolchain_suite(
-#     name = "multiarch_toolchain",
-#     toolchains = {
-#         "k8|osxcross": ":cc-clang-osx",
-#         "k8|clang": "cc-clang-amd64",
-#         "aarch64|clang": ":cc-clang-arm64",
-#         "k8": "cc-clang-amd64",
-#         "aarch64": ":cc-clang-arm64",
-#         "k8|mingw-w64": ":cc-mingw-amd64",
-#     },
-# )
+cc_toolchain_suite(
+    name = "multiarch_toolchain",
+    toolchains = {
+        "k8|osxcross": ":cc-clang-osx",
+        "k8|clang": "cc-clang-amd64",
+        "aarch64|clang": ":cc-clang-arm64",
+        "k8": "cc-clang-amd64",
+        "aarch64": ":cc-clang-arm64",
+        "k8|mingw-w64": ":cc-mingw-amd64",
+    },
+)
 
 cc_toolchain_suite(
     name = "hostonly_toolchain",
