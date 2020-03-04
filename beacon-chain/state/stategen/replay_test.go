@@ -282,6 +282,70 @@ func TestLoadBlocks_BadStart(t *testing.T) {
 	}
 }
 
+func TestLastSavedBlock_Genesis(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	ctx := context.Background()
+	s := &State{
+		beaconDB: db,
+		lastArchivedSlot: 128,
+	}
+
+	gBlk := &ethpb.SignedBeaconBlock{Block:&ethpb.BeaconBlock{}}
+	gRoot, err := ssz.HashTreeRoot(gBlk.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.beaconDB.SaveBlock(ctx, gBlk); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.beaconDB.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	savedRoot, savedSlot, err := s.lastSavedBlock(ctx, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if savedSlot != 0 {
+		t.Error("Did not save genesis slot")
+	}
+	if savedRoot != savedRoot {
+		t.Error("Did not save genesis root")
+	}
+}
+
+func TestLastSavedState_Genesis(t *testing.T) {
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	ctx := context.Background()
+	s := &State{
+		beaconDB: db,
+		lastArchivedSlot: 128,
+	}
+
+	gBlk := &ethpb.SignedBeaconBlock{Block:&ethpb.BeaconBlock{}}
+	gRoot, err := ssz.HashTreeRoot(gBlk.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.beaconDB.SaveBlock(ctx, gBlk); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.beaconDB.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	savedRoot, err := s.lastSavedState(ctx, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if savedRoot != savedRoot {
+		t.Error("Did not save genesis root")
+	}
+}
+
+
 // tree1 constructs the following tree:
 // B0 - B1 - - B3 -- B5
 //        \- B2 -- B4 -- B6 ----- B8
