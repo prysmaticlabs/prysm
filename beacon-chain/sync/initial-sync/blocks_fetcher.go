@@ -302,7 +302,8 @@ func (f *blocksFetcher) collectPeerResponses(
 	}
 }
 
-// requestBeaconBlocksByRange prepares BeaconBlocksByRange request, and handles possible stale peers (by resending the request).
+// requestBeaconBlocksByRange prepares BeaconBlocksByRange request, and handles possible stale peers
+// (by resending the request).
 func (f *blocksFetcher) requestBeaconBlocksByRange(
 	ctx context.Context,
 	pid peer.ID,
@@ -326,7 +327,7 @@ func (f *blocksFetcher) requestBeaconBlocksByRange(
 		headSlot := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
 		root1, _, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headSlot)
 		if bytes.Compare(root, root1) != 0 {
-			return nil, errors.Errorf("can not forward request to another peer, root mismatch: %x:%x", root, root1)
+			return nil, errors.Errorf("can not resend, root mismatch: %x:%x", root, root1)
 		}
 		newPID, err := selectFailOverPeer(pid, peers)
 		if err != nil {
