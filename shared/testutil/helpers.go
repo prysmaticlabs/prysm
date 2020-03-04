@@ -6,9 +6,9 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"

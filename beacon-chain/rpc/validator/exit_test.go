@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
@@ -68,7 +68,10 @@ func TestSub(t *testing.T) {
 			ValidatorIndex: validatorIndex,
 		},
 	}
-	domain := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainVoluntaryExit)
+	domain, err := helpers.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainVoluntaryExit)
+	if err != nil {
+		t.Fatal(err)
+	}
 	sigRoot, err := helpers.ComputeSigningRoot(req.Exit, domain)
 	if err != nil {
 		t.Fatalf("Could not compute signing root: %v", err)

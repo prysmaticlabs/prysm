@@ -236,22 +236,22 @@ func TestDomain_OK(t *testing.T) {
 	}
 	tests := []struct {
 		epoch      uint64
-		domainType uint64
+		domainType [4]byte
 		result     []byte
 	}{
-		{epoch: 1, domainType: 4, result: bytesutil.ToBytes(144115188075855876, 8)},
-		{epoch: 2, domainType: 4, result: bytesutil.ToBytes(144115188075855876, 8)},
-		{epoch: 2, domainType: 5, result: bytesutil.ToBytes(144115188075855877, 8)},
-		{epoch: 3, domainType: 4, result: bytesutil.ToBytes(216172782113783812, 8)},
-		{epoch: 3, domainType: 5, result: bytesutil.ToBytes(216172782113783813, 8)},
+		{epoch: 1, domainType: bytesutil.ToBytes4(bytesutil.Bytes4(4)), result: bytesutil.ToBytes(144115188075855876, 8)},
+		{epoch: 2, domainType: bytesutil.ToBytes4(bytesutil.Bytes4(4)), result: bytesutil.ToBytes(144115188075855876, 8)},
+		{epoch: 2, domainType: bytesutil.ToBytes4(bytesutil.Bytes4(5)), result: bytesutil.ToBytes(144115188075855877, 8)},
+		{epoch: 3, domainType: bytesutil.ToBytes4(bytesutil.Bytes4(4)), result: bytesutil.ToBytes(216172782113783812, 8)},
+		{epoch: 3, domainType: bytesutil.ToBytes4(bytesutil.Bytes4(5)), result: bytesutil.ToBytes(216172782113783813, 8)},
 	}
 	for _, tt := range tests {
-		domain, err := Domain(state.Fork, tt.epoch, bytesutil.ToBytes4(bytesutil.Bytes4(tt.domainType)))
+		domain, err := Domain(state.Fork, tt.epoch, tt.domainType)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if !bytes.Equal(domain, tt.result) {
-			t.Errorf("wanted domain version: %d, got: %d", tt.result, Domain(state.Fork, tt.epoch, bytesutil.Bytes4(tt.domainType)))
+			t.Errorf("wanted domain version: %d, got: %d", tt.result, domain)
 		}
 	}
 }

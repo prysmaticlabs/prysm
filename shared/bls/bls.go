@@ -316,7 +316,7 @@ func ComputeDomain(domainType [DomainByteLength]byte, forkVersion []byte) []byte
 		forkVersion = params.BeaconConfig().GenesisForkVersion
 	}
 	forkBytes := [ForkVersionByteLength]byte{}
-	copy(forkBytes[:],forkVersion)
+	copy(forkBytes[:], forkVersion)
 	return Domain(domainType, forkBytes)
 }
 
