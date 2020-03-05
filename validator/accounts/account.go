@@ -4,17 +4,15 @@ import (
 	"bufio"
 	"encoding/hex"
 	"fmt"
-	"io"
-	"os"
-	"strings"
-	"syscall"
-
 	"github.com/pkg/errors"
 	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh/terminal"
+	"io"
+	"os"
+	"strings"
 )
 
 var log = logrus.WithField("prefix", "accounts")
@@ -136,7 +134,7 @@ func CreateValidatorAccount(path string, passphrase string) (string, string, err
 		reader := bufio.NewReader(os.Stdin)
 		log.Info("Create a new validator account for eth2")
 		log.Info("Enter a password:")
-		bytePassword, err := terminal.ReadPassword(syscall.Stdin)
+		bytePassword, err := terminal.ReadPassword(int(os.Stdin.Fd()))
 		if err != nil {
 			log.Fatalf("Could not read account password: %v", err)
 		}

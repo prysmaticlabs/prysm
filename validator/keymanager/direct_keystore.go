@@ -2,17 +2,15 @@ package keymanager
 
 import (
 	"encoding/json"
+	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/validator/accounts"
+	"golang.org/x/crypto/ssh/terminal"
 	"os"
 	"os/user"
 	"path/filepath"
 	"runtime"
 	"strings"
-	"syscall"
-
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/validator/accounts"
-	"golang.org/x/crypto/ssh/terminal"
 )
 
 // Keystore is a key manager that loads keys from a standard keystore.
@@ -63,7 +61,7 @@ func NewKeystore(input string) (KeyManager, string, error) {
 	} else {
 		if opts.Passphrase == "" {
 			log.Info("Enter your validator account password:")
-			bytePassword, err := terminal.ReadPassword(syscall.Stdin)
+			bytePassword, err := terminal.ReadPassword(int(os.Stdin.Fd()))
 			if err != nil {
 				return nil, keystoreOptsHelp, err
 			}
