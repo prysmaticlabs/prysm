@@ -111,6 +111,10 @@ var (
 		Usage: "This enables the beacon node to use NOISE instead of SECIO for performing handshakes between peers and " +
 			"securing transports between peers",
 	}
+	dontPruneStateStartUp = cli.BoolFlag{
+		Name:  "dont-prune-state-start-up",
+		Usage: "Don't prune historical states upon start up",
+	}
 )
 
 // Deprecated flags list.
@@ -285,6 +289,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableStateGenSigVerify,
 	checkHeadState,
 	enableNoiseHandshake,
+	dontPruneStateStartUp,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
