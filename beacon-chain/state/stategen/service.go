@@ -10,6 +10,7 @@ import (
 // logic of maintaining both hot and cold states in DB.
 type State struct {
 	beaconDB                db.NoHeadAccessDatabase
+	lastArchivedSlot        uint64
 	epochBoundarySlotToRoot map[uint64][32]byte
 	epochBoundaryLock       sync.RWMutex
 }
