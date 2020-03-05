@@ -4,6 +4,24 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 http_archive(
+    name = "bazel_toolchains",
+    sha256 = "b5a8039df7119d618402472f3adff8a1bd0ae9d5e253f53fcc4c47122e91a3d2",
+    strip_prefix = "bazel-toolchains-2.1.1",
+    urls = [
+        "https://github.com/bazelbuild/bazel-toolchains/releases/download/2.1.1/bazel-toolchains-2.1.1.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-toolchains/archive/2.1.1.tar.gz",
+    ],
+)
+
+load("@prysm//tools/cross-toolchain:prysm_toolchains.bzl", "configure_prysm_toolchains")
+
+configure_prysm_toolchains()
+
+load("@prysm//tools/cross-toolchain:rbe_toolchains_config.bzl", "rbe_toolchains_config")
+
+rbe_toolchains_config()
+
+http_archive(
     name = "bazel_skylib",
     sha256 = "2ea8a5ed2b448baf4a6855d3ce049c4c452a6470b1efd1504fdb7c1c134d220a",
     strip_prefix = "bazel-skylib-0.8.0",
@@ -28,9 +46,9 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_docker",
-    #    sha256 = "9ff889216e28c918811b77999257d4ac001c26c1f7c7fb17a79bc28abf74182e",
-    strip_prefix = "rules_docker-0.12.1",
-    url = "https://github.com/bazelbuild/rules_docker/archive/v0.12.1.tar.gz",
+    sha256 = "dc97fccceacd4c6be14e800b2a00693d5e8d07f69ee187babfd04a80a9f8e250",
+    strip_prefix = "rules_docker-0.14.1",
+    url = "https://github.com/bazelbuild/rules_docker/archive/v0.14.1.tar.gz",
 )
 
 http_archive(
