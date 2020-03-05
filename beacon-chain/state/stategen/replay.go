@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	transition "github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -110,7 +111,7 @@ func executeStateTransitionStateGen(
 		return nil, ctx.Err()
 	}
 	if signed == nil || signed.Block == nil {
-		return nil, errors.New("nil block")
+		return nil, errUnknownBlock
 	}
 
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ExecuteStateTransitionStateGen")
@@ -142,7 +143,7 @@ func processSlotsStateGen(ctx context.Context, state *stateTrie.BeaconState, slo
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ProcessSlotsStateGen")
 	defer span.End()
 	if state == nil {
-		return nil, errors.New("nil state")
+		return nil, errUnknownState
 	}
 
 	if state.Slot() > slot {
@@ -169,4 +170,87 @@ func processSlotsStateGen(ctx context.Context, state *stateTrie.BeaconState, slo
 	}
 
 	return state, nil
+}
+
+// This finds the last saved block in DB from searching backwards from input slot,
+// it returns the block root and the slot of the block.
+// This is used by both hot and cold state management.
+func (s *State) lastSavedBlock(ctx context.Context, slot uint64) ([32]byte, uint64, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.lastSavedBlock")
+	defer span.End()
+
+	// Handle the genesis case where the input slot is 0.
+	if slot == 0 {
+		gRoot, err := s.genesisRoot(ctx)
+		if err != nil {
+			return [32]byte{}, 0, err
+		}
+		return gRoot, 0, nil
+	}
+
+	// Lower bound set as last archived slot is a reasonable assumption given
+	// block is saved at an archived point.
+	filter := filters.NewFilter().SetStartSlot(s.lastArchivedSlot).SetEndSlot(slot)
+	rs, err := s.beaconDB.BlockRoots(ctx, filter)
+	if err != nil {
+		return [32]byte{}, 0, err
+	}
+	if len(rs) == 0 {
+		return [32]byte{}, 0, errors.New("block root has 0 length")
+	}
+	lastRoot := rs[len(rs)-1]
+
+	b, err := s.beaconDB.Block(ctx, lastRoot)
+	if err != nil {
+		return [32]byte{}, 0, err
+	}
+	if b == nil || b.Block == nil {
+		return [32]byte{}, 0, errUnknownBlock
+	}
+
+	return lastRoot, b.Block.Slot, nil
+}
+
+// This finds the last saved state in DB from searching backwards from input slot,
+// it returns the block root of the block which was used to produce the state.
+// This is used by both hot and cold state management.
+func (s *State) lastSavedState(ctx context.Context, slot uint64) ([32]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.lastSavedState")
+	defer span.End()
+
+	// Handle the genesis case where the input slot is 0.
+	if slot == 0 {
+		gRoot, err := s.genesisRoot(ctx)
+		if err != nil {
+			return [32]byte{}, err
+		}
+		return gRoot, nil
+	}
+
+	// Lower bound set as last archived slot is a reasonable assumption given
+	// state is saved at an archived point.
+	filter := filters.NewFilter().SetStartSlot(s.lastArchivedSlot).SetEndSlot(slot)
+	rs, err := s.beaconDB.BlockRoots(ctx, filter)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	if len(rs) == 0 {
+		return [32]byte{}, errors.New("block root has 0 length")
+	}
+	for i := len(rs) - 1; i >= 0; i-- {
+		// Stop until a state is saved.
+		if s.beaconDB.HasState(ctx, rs[i]) {
+			return rs[i], nil
+		}
+	}
+	return [32]byte{}, errUnknownState
+}
+
+// This returns the genesis root.
+func (s *State) genesisRoot(ctx context.Context) ([32]byte, error) {
+	b, err := s.beaconDB.GenesisBlock(ctx)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	return ssz.HashTreeRoot(b.Block)
 }
