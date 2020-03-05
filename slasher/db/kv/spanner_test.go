@@ -4,18 +4,18 @@ import (
 	"context"
 	"flag"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
-	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/urfave/cli"
 )
 
 type spanMapTestStruct struct {
-	validatorIdx uint64
-	spanMap      *slashpb.EpochSpanMap
+	epoch   uint64
+	spanMap map[uint64]types.Span
 }
 
 var spanTests []spanMapTestStruct
@@ -23,33 +23,27 @@ var spanTests []spanMapTestStruct
 func init() {
 	spanTests = []spanMapTestStruct{
 		{
-			validatorIdx: 1,
-			spanMap: &slashpb.EpochSpanMap{
-				EpochSpanMap: map[uint64]*slashpb.MinMaxEpochSpan{
-					1: {MinEpochSpan: 10, MaxEpochSpan: 20},
-					2: {MinEpochSpan: 11, MaxEpochSpan: 21},
-					3: {MinEpochSpan: 12, MaxEpochSpan: 22},
-				},
+			epoch: 1,
+			spanMap: map[uint64]types.Span{
+				1: {MinSpan: 10, MaxSpan: 20, HasAttested: false, SigBytes: [2]byte{1, 1}},
+				2: {MinSpan: 11, MaxSpan: 21, HasAttested: true, SigBytes: [2]byte{1, 1}},
+				3: {MinSpan: 12, MaxSpan: 22, HasAttested: false, SigBytes: [2]byte{1, 1}},
 			},
 		},
 		{
-			validatorIdx: 2,
-			spanMap: &slashpb.EpochSpanMap{
-				EpochSpanMap: map[uint64]*slashpb.MinMaxEpochSpan{
-					1: {MinEpochSpan: 10, MaxEpochSpan: 20},
-					2: {MinEpochSpan: 11, MaxEpochSpan: 21},
-					3: {MinEpochSpan: 12, MaxEpochSpan: 22},
-				},
+			epoch: 2,
+			spanMap: map[uint64]types.Span{
+				1: {MinSpan: 10, MaxSpan: 20, HasAttested: false, SigBytes: [2]byte{1, 1}},
+				2: {MinSpan: 11, MaxSpan: 21, HasAttested: true, SigBytes: [2]byte{1, 1}},
+				3: {MinSpan: 12, MaxSpan: 22, HasAttested: true, SigBytes: [2]byte{1, 1}},
 			},
 		},
 		{
-			validatorIdx: 3,
-			spanMap: &slashpb.EpochSpanMap{
-				EpochSpanMap: map[uint64]*slashpb.MinMaxEpochSpan{
-					1: {MinEpochSpan: 10, MaxEpochSpan: 20},
-					2: {MinEpochSpan: 11, MaxEpochSpan: 21},
-					3: {MinEpochSpan: 12, MaxEpochSpan: 22},
-				},
+			epoch: 3,
+			spanMap: map[uint64]types.Span{
+				1: {MinSpan: 10, MaxSpan: 20, HasAttested: true, SigBytes: [2]byte{1, 1}},
+				2: {MinSpan: 11, MaxSpan: 21, SigBytes: [2]byte{1, 1}},
+				3: {MinSpan: 12, MaxSpan: 22, SigBytes: [2]byte{1, 1}},
 			},
 		},
 	}
@@ -63,16 +57,16 @@ func TestValidatorSpanMap_NilDB(t *testing.T) {
 	ctx := context.Background()
 
 	validatorIdx := uint64(1)
-	vsm, err := db.ValidatorSpansMap(ctx, validatorIdx)
+	vsm, err := db.EpochSpansMap(ctx, validatorIdx)
 	if err != nil {
-		t.Fatalf("Nil ValidatorSpansMap should not return error: %v", err)
+		t.Fatalf("Nil EpochSpansMap should not return error: %v", err)
 	}
-	if !reflect.DeepEqual(vsm.EpochSpanMap, map[uint64]*slashpb.MinMaxEpochSpan{}) {
-		t.Fatal("ValidatorSpansMap should return nil")
+	if !reflect.DeepEqual(vsm, map[uint64]types.Span{}) {
+		t.Fatal("EpochSpansMap should return nil")
 	}
 }
 
-func TestValidatorSpanMap_Save(t *testing.T) {
+func TestStore_SaveSpans(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	db := setupDB(t, cli.NewContext(app, set, nil))
@@ -80,22 +74,54 @@ func TestValidatorSpanMap_Save(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tt := range spanTests {
-		err := db.SaveValidatorSpansMap(ctx, tt.validatorIdx, tt.spanMap)
+		err := db.SaveEpochSpansMap(ctx, tt.epoch, tt.spanMap)
 		if err != nil {
 			t.Fatalf("Save validator span map failed: %v", err)
 		}
-		sm, err := db.ValidatorSpansMap(ctx, tt.validatorIdx)
+		sm, err := db.EpochSpansMap(ctx, tt.epoch)
 		if err != nil {
 			t.Fatalf("Failed to get validator span map: %v", err)
 		}
 
-		if sm == nil || !proto.Equal(sm, tt.spanMap) {
+		if sm == nil || !reflect.DeepEqual(sm, tt.spanMap) {
 			t.Fatalf("Get should return validator span map: %v got: %v", tt.spanMap, sm)
+		}
+		s, err := db.EpochSpanByValidatorIndex(ctx, 1, tt.epoch)
+		if err != nil {
+			t.Fatalf("Failed to get validator span for epoch 1: %v", err)
+		}
+		if !reflect.DeepEqual(s, tt.spanMap[1]) {
+			t.Fatalf("Get should return validator spans for epoch 1: %v got: %v", tt.spanMap[1], s)
 		}
 	}
 }
 
-func TestValidatorSpanMap_SaveWithCache(t *testing.T) {
+func TestStore_WrongTypeInCache(t *testing.T) {
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
+	db := setupDB(t, cli.NewContext(app, set, nil))
+	defer teardownDB(t, db)
+	ctx := context.Background()
+	for _, tt := range spanTests {
+
+		db.spanCache.Set(tt.epoch, []byte{0, 0}, 1)
+		// wait for value to pass through cache buffers
+		time.Sleep(time.Millisecond * 10)
+		_, err := db.EpochSpansMap(ctx, tt.epoch)
+		if err == nil || !strings.Contains(err.Error(), "cache contains a value of type") {
+			t.Fatalf("expected error type in cache : %v", err)
+		}
+
+		_, err = db.EpochSpanByValidatorIndex(ctx, 1, tt.epoch)
+		if err == nil || !strings.Contains(err.Error(), "cache contains a value of type") {
+			t.Fatalf("expected error type in cache : %v", err)
+		}
+
+	}
+}
+
+func TestStore_SaveCachedSpans(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
@@ -104,24 +130,31 @@ func TestValidatorSpanMap_SaveWithCache(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tt := range spanTests {
-		err := db.SaveValidatorSpansMap(ctx, tt.validatorIdx, tt.spanMap)
+		err := db.SaveEpochSpansMap(ctx, tt.epoch, tt.spanMap)
 		if err != nil {
 			t.Fatalf("Save validator span map failed: %v", err)
 		}
 		// wait for value to pass through cache buffers
 		time.Sleep(time.Millisecond * 10)
-		sm, err := db.ValidatorSpansMap(ctx, tt.validatorIdx)
+		sm, err := db.EpochSpansMap(ctx, tt.epoch)
 		if err != nil {
 			t.Fatalf("Failed to get validator span map: %v", err)
 		}
 
-		if sm == nil || !proto.Equal(sm, tt.spanMap) {
+		if sm == nil || !reflect.DeepEqual(sm, tt.spanMap) {
 			t.Fatalf("Get should return validator span map: %v got: %v", tt.spanMap, sm)
+		}
+		s, err := db.EpochSpanByValidatorIndex(ctx, 1, tt.epoch)
+		if err != nil {
+			t.Fatalf("Failed to get validator span for epoch 1: %v", err)
+		}
+		if !reflect.DeepEqual(s, tt.spanMap[1]) {
+			t.Fatalf("Get should return validator spans for epoch 1: %v got: %v", tt.spanMap[1], s)
 		}
 	}
 }
 
-func TestValidatorSpanMap_Delete(t *testing.T) {
+func TestStore_DeleteEpochSpans(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
 	db := setupDB(t, cli.NewContext(app, set, nil))
@@ -129,29 +162,29 @@ func TestValidatorSpanMap_Delete(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tt := range spanTests {
-		err := db.SaveValidatorSpansMap(ctx, tt.validatorIdx, tt.spanMap)
+		err := db.SaveEpochSpansMap(ctx, tt.epoch, tt.spanMap)
 		if err != nil {
 			t.Fatalf("Save validator span map failed: %v", err)
 		}
 	}
 
 	for _, tt := range spanTests {
-		sm, err := db.ValidatorSpansMap(ctx, tt.validatorIdx)
+		sm, err := db.EpochSpansMap(ctx, tt.epoch)
 		if err != nil {
 			t.Fatalf("Failed to get validator span map: %v", err)
 		}
-		if sm == nil || !proto.Equal(sm, tt.spanMap) {
+		if sm == nil || !reflect.DeepEqual(sm, tt.spanMap) {
 			t.Fatalf("Get should return validator span map: %v got: %v", tt.spanMap, sm)
 		}
-		err = db.DeleteValidatorSpanMap(ctx, tt.validatorIdx)
+		err = db.DeleteEpochSpans(ctx, tt.epoch)
 		if err != nil {
 			t.Fatalf("Delete validator span map error: %v", err)
 		}
-		sm, err = db.ValidatorSpansMap(ctx, tt.validatorIdx)
+		sm, err = db.EpochSpansMap(ctx, tt.epoch)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !reflect.DeepEqual(sm.EpochSpanMap, map[uint64]*slashpb.MinMaxEpochSpan{}) {
+		if !reflect.DeepEqual(sm, map[uint64]types.Span{}) {
 			t.Errorf("Expected validator span map to be deleted, received: %v", sm)
 		}
 	}
@@ -166,7 +199,7 @@ func TestValidatorSpanMap_DeleteWithCache(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tt := range spanTests {
-		err := db.SaveValidatorSpansMap(ctx, tt.validatorIdx, tt.spanMap)
+		err := db.SaveEpochSpansMap(ctx, tt.epoch, tt.spanMap)
 		if err != nil {
 			t.Fatalf("Save validator span map failed: %v", err)
 		}
@@ -174,24 +207,24 @@ func TestValidatorSpanMap_DeleteWithCache(t *testing.T) {
 	// wait for value to pass through cache buffers
 	time.Sleep(time.Millisecond * 10)
 	for _, tt := range spanTests {
-		sm, err := db.ValidatorSpansMap(ctx, tt.validatorIdx)
+		sm, err := db.EpochSpansMap(ctx, tt.epoch)
 		if err != nil {
 			t.Fatalf("Failed to get validator span map: %v", err)
 		}
-		if sm == nil || !proto.Equal(sm, tt.spanMap) {
+		if sm == nil || !reflect.DeepEqual(sm, tt.spanMap) {
 			t.Fatalf("Get should return validator span map: %v got: %v", tt.spanMap, sm)
 		}
-		err = db.DeleteValidatorSpanMap(ctx, tt.validatorIdx)
+		err = db.DeleteEpochSpans(ctx, tt.epoch)
 		if err != nil {
 			t.Fatalf("Delete validator span map error: %v", err)
 		}
 		// wait for value to pass through cache buffers
 		time.Sleep(time.Millisecond * 10)
-		sm, err = db.ValidatorSpansMap(ctx, tt.validatorIdx)
+		sm, err = db.EpochSpansMap(ctx, tt.epoch)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !reflect.DeepEqual(sm.EpochSpanMap, map[uint64]*slashpb.MinMaxEpochSpan{}) {
+		if !reflect.DeepEqual(sm, map[uint64]types.Span{}) {
 			t.Errorf("Expected validator span map to be deleted, received: %v", sm)
 		}
 	}
@@ -203,17 +236,15 @@ func TestValidatorSpanMap_SaveOnEvict(t *testing.T) {
 	ctx := context.Background()
 
 	tsm := &spanMapTestStruct{
-		validatorIdx: 1,
-		spanMap: &slashpb.EpochSpanMap{
-			EpochSpanMap: map[uint64]*slashpb.MinMaxEpochSpan{
-				1: {MinEpochSpan: 10, MaxEpochSpan: 20},
-				2: {MinEpochSpan: 11, MaxEpochSpan: 21},
-				3: {MinEpochSpan: 12, MaxEpochSpan: 22},
-			},
+		epoch: 1,
+		spanMap: map[uint64]types.Span{
+			1: {MinSpan: 10, MaxSpan: 20, SigBytes: [2]byte{0, 1}},
+			2: {MinSpan: 11, MaxSpan: 21, HasAttested: true},
+			3: {MinSpan: 12, MaxSpan: 22},
 		},
 	}
 	for i := uint64(0); i < 6; i++ {
-		err := db.SaveValidatorSpansMap(ctx, i, tsm.spanMap)
+		err := db.SaveEpochSpansMap(ctx, i, tsm.spanMap)
 		if err != nil {
 			t.Fatalf("Save validator span map failed: %v", err)
 		}
@@ -222,11 +253,11 @@ func TestValidatorSpanMap_SaveOnEvict(t *testing.T) {
 	// Wait for value to pass through cache buffers.
 	time.Sleep(time.Millisecond * 1000)
 	for i := uint64(0); i < 6; i++ {
-		sm, err := db.ValidatorSpansMap(ctx, i)
+		sm, err := db.EpochSpansMap(ctx, i)
 		if err != nil {
 			t.Fatalf("Failed to get validator span map: %v", err)
 		}
-		if sm == nil || !proto.Equal(sm, tsm.spanMap) {
+		if sm == nil || !reflect.DeepEqual(sm, tsm.spanMap) {
 			t.Fatalf("Get should return validator: %d span map: %v got: %v", i, tsm.spanMap, sm)
 		}
 	}
@@ -241,7 +272,7 @@ func TestValidatorSpanMap_SaveCachedSpansMaps(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tt := range spanTests {
-		err := db.SaveValidatorSpansMap(ctx, tt.validatorIdx, tt.spanMap)
+		err := db.SaveEpochSpansMap(ctx, tt.epoch, tt.spanMap)
 		if err != nil {
 			t.Fatalf("Save validator span map failed: %v", err)
 		}
@@ -254,11 +285,11 @@ func TestValidatorSpanMap_SaveCachedSpansMaps(t *testing.T) {
 	}
 	db.spanCache.Clear()
 	for _, tt := range spanTests {
-		sm, err := db.ValidatorSpansMap(ctx, tt.validatorIdx)
+		sm, err := db.EpochSpansMap(ctx, tt.epoch)
 		if err != nil {
 			t.Fatalf("Failed to get validator span map: %v", err)
 		}
-		if sm == nil || !proto.Equal(sm, tt.spanMap) {
+		if !reflect.DeepEqual(sm, tt.spanMap) {
 			t.Fatalf("Get should return validator span map: %v got: %v", tt.spanMap, sm)
 		}
 	}
