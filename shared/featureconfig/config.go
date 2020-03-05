@@ -46,6 +46,7 @@ type Flags struct {
 	EnableStateGenSigVerify                    bool   // EnableStateGenSigVerify verifies proposer and randao signatures during state gen.
 	CheckHeadState                             bool   // CheckHeadState checks the current headstate before retrieving the desired state from the db.
 	EnableNoise                                bool   // EnableNoise enables the beacon node to use NOISE instead of SECIO when performing a handshake with another peer.
+	DontPruneStateStartUp                      bool   // DontPruneStateStartUp disables pruning state upon beacon node start up.
 	// DisableForkChoice disables using LMD-GHOST fork choice to update
 	// the head of the chain based on attestations and instead accepts any valid received block
 	// as the chain head. UNSAFE, use with caution.
@@ -157,6 +158,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.GlobalBool(enableNoiseHandshake.Name) {
 		log.Warn("Enabling noise handshake for peer")
 		cfg.EnableNoise = true
+	}
+	if ctx.GlobalBool(dontPruneStateStartUp.Name) {
+		log.Warn("Not enabling state pruning upon start up")
+		cfg.DontPruneStateStartUp = true
 	}
 	Init(cfg)
 }
