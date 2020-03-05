@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -128,12 +127,10 @@ func (s *SpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttest
 		if err != nil {
 			return err
 		}
-		time.Sleep(10)
 		err = s.updateMaxSpan(ctx, source, target, valIdx)
 		if err != nil {
 			return err
 		}
-		time.Sleep(10)
 	}
 	return nil
 }
