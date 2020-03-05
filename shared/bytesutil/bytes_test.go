@@ -152,6 +152,36 @@ func TestBytes8(t *testing.T) {
 	}
 }
 
+func TestFromBool(t *testing.T) {
+	tests := []byte{
+		0,
+		1,
+	}
+	for _, tt := range tests {
+		b := bytesutil.ToBool(tt)
+		c := bytesutil.FromBool(b)
+		if c != tt {
+			t.Errorf("Wanted %d but got %d", tt, c)
+		}
+	}
+}
+
+func TestFromBytes2(t *testing.T) {
+	tests := []uint64{
+		0,
+		1776,
+		96726,
+		(1 << 16) - 1,
+	}
+	for _, tt := range tests {
+		b := bytesutil.ToBytes(tt, 2)
+		c := bytesutil.FromBytes2(b)
+		if c != uint16(tt) {
+			t.Errorf("Wanted %d but got %d", tt, c)
+		}
+	}
+}
+
 func TestFromBytes4(t *testing.T) {
 	tests := []uint64{
 		0,
