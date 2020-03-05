@@ -4,7 +4,8 @@ set -eu
 
 OSXCROSS_REPO=tpoechtrager/osxcross
 OSXCROSS_SHA1=bee9df6
-DARWIN_SDK_URL=https://www.dropbox.com/s/yfbesd249w10lpc/MacOSX10.10.sdk.tar.xz
+DARWIN_SDK_URL=https://github.com/phracker/MacOSX-SDKs/releases/download/10.15/MacOSX10.10.sdk.tar.xz
+DARWIN_SDK_SHA256=608a89db8b4be150a945871230b5ba5d4767a8500bc5fe76ddf10f5cec5ef513
 
 # darwin
 mkdir -p /usr/x86_64-apple-darwin/osxcross
@@ -13,6 +14,8 @@ curl -sLo osxcross.tar.gz "https://codeload.github.com/${OSXCROSS_REPO}/tar.gz/$
 tar --strip=1 -xzf osxcross.tar.gz
 rm -f osxcross.tar.gz
 curl -sLo tarballs/MacOSX10.10.sdk.tar.xz "${DARWIN_SDK_URL}"
+echo -n "${DARWIN_SDK_SHA256}  tarballs/MacOSX10.10.sdk.tar.xz" > MacOSX10.10.sdk.tar.xz.sha256
+sha256sum --strict -c MacOSX10.10.sdk.tar.xz.sha256
 yes "" | SDK_VERSION=10.10 OSX_VERSION_MIN=10.10 ./build.sh
 mv target/* /usr/x86_64-apple-darwin/osxcross/
 mv tools /usr/x86_64-apple-darwin/osxcross/
