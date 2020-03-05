@@ -46,7 +46,7 @@ def _rbe_toolchains_generator():
         toolchain_config_suite_spec = _TOOLCHAIN_CONFIG_SUITE_SPEC,
         use_checked_in_confs = "False",
         config_repos = [
-            "prysm_toolchains"
+            "prysm_toolchains",
         ],
     )
 
@@ -62,7 +62,7 @@ def _rbe_toolchains_generator():
         toolchain_config_suite_spec = _TOOLCHAIN_CONFIG_SUITE_SPEC,
         use_checked_in_confs = "False",
         config_repos = [
-            "prysm_toolchains"
+            "prysm_toolchains",
         ],
     )
 
