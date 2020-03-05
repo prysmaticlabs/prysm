@@ -21,4 +21,3 @@ mv /clang+llvm-${INSTALL_LLVM_VERSION}-aarch64-linux-gnu/lib/clang/10.0.0/lib/li
 mv /clang+llvm-${INSTALL_LLVM_VERSION}-aarch64-linux-gnu/lib/clang/10.0.0/lib/linux/clang_rt.crtbegin-aarch64.o /usr/lib/clang/10.0.0/lib/linux/
 mv /clang+llvm-${INSTALL_LLVM_VERSION}-aarch64-linux-gnu/lib/clang/10.0.0/lib/linux/clang_rt.crtend-aarch64.o /usr/lib/clang/10.0.0/lib/linux/
 rm -rf /clang+llvm-${INSTALL_LLVM_VERSION}-aarch64-linux-gnu
-
