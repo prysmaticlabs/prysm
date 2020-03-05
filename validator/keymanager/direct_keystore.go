@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"syscall"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -42,6 +41,10 @@ func NewKeystore(input string) (KeyManager, string, error) {
 		return nil, keystoreOptsHelp, err
 	}
 
+	if strings.Contains(opts.Path, "$") || strings.Contains(opts.Path, "~") || strings.Contains(opts.Path, "%") {
+		log.WithField("path", opts.Path).Warn("Keystore path contains unexpanded shell expansion characters")
+	}
+
 	if opts.Path == "" {
 		opts.Path = defaultValidatorDir()
 	}
@@ -59,7 +62,7 @@ func NewKeystore(input string) (KeyManager, string, error) {
 	} else {
 		if opts.Passphrase == "" {
 			log.Info("Enter your validator account password:")
-			bytePassword, err := terminal.ReadPassword(syscall.Stdin)
+			bytePassword, err := terminal.ReadPassword(int(os.Stdin.Fd()))
 			if err != nil {
 				return nil, keystoreOptsHelp, err
 			}

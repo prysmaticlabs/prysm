@@ -60,6 +60,9 @@ func NewWallet(input string) (KeyManager, string, error) {
 		accounts: make(map[[48]byte]e2wtypes.Account),
 	}
 
+	if strings.Contains(opts.Location, "$") || strings.Contains(opts.Location, "~") || strings.Contains(opts.Location, "%") {
+		log.WithField("path", opts.Location).Warn("Keystore path contains unexpanded shell expansion characters")
+	}
 	var store e2wtypes.Store
 	if opts.Location == "" {
 		store = filesystem.New()

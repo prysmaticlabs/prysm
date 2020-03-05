@@ -55,7 +55,7 @@ func NewDetectionService(ctx context.Context, cfg *Config) *Service {
 		attsChan:              make(chan *ethpb.IndexedAttestation, 1),
 		attesterSlashingsFeed: cfg.AttesterSlashingsFeed,
 		proposerSlashingsFeed: cfg.ProposerSlashingsFeed,
-		minMaxSpanDetector:    attestations.NewSpanDetector(),
+		minMaxSpanDetector:    attestations.NewSpanDetector(cfg.SlasherDB),
 	}
 }
 
