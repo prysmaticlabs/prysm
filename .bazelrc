@@ -156,7 +156,7 @@ build:remote --platforms=@rbe_ubuntu_clang//config:platform
 build:remote --define=EXECUTOR=remote
 
 # Enable remote execution so actions are performed on the remote systems.
-#build:remote --remote_executor=grpcs://remotebuildexecution.googleapis.com
+# build:remote --remote_executor=grpcs://remotebuildexecution.googleapis.com
 
 # Enforce stricter environment rules, which eliminates some non-hermetic
 # behavior and therefore improves both the remote cache hit rate and the
@@ -169,7 +169,7 @@ build:remote --remote_timeout=3600
 # Enable authentication. This will pick up application default credentials by
 # default. You can use --google_credentials=some_file.json to use a service
 # account credential instead.
-build:remote --google_default_credentials=true
+# build:remote --google_default_credentials=true
 
 # Enable build without the bytes
 # See: https://github.com/bazelbuild/bazel/issues/6862

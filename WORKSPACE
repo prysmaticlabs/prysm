@@ -5,14 +5,11 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 http_archive(
     name = "bazel_toolchains",
-    # sha256 = "b5a8039df7119d618402472f3adff8a1bd0ae9d5e253f53fcc4c47122e91a3d2",
-    # strip_prefix = "bazel-toolchains-2.1.1",
-    strip_prefix = "bazel-toolchains-13c681119b6da907f5f690acf7c9944aabfd4e15",
+    sha256 = "b5a8039df7119d618402472f3adff8a1bd0ae9d5e253f53fcc4c47122e91a3d2",
+    strip_prefix = "bazel-toolchains-2.1.1",
     urls = [
-        # "https://github.com/bazelbuild/bazel-toolchains/releases/download/2.1.1/bazel-toolchains-2.1.1.tar.gz",
-        # "https://mirror.bazel.build/github.com/bazelbuild/bazel-toolchains/archive/2.1.1.tar.gz",
-        # 13c681119b6da907f5f690acf7c9944aabfd4e15
-        "https://github.com/prestonvanloon/bazel-toolchains/archive/13c681119b6da907f5f690acf7c9944aabfd4e15.tar.gz",
+        "https://github.com/bazelbuild/bazel-toolchains/releases/download/2.1.1/bazel-toolchains-2.1.1.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-toolchains/archive/2.1.1.tar.gz",
     ],
 )
 
