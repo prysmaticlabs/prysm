@@ -137,6 +137,9 @@ func (s *Service) Start() {
 		}
 	}
 
+	// Make sure that attestation processor is subscribed and ready for state initializing event.
+	attestationProcessorSubscribed := make(chan struct{}, 1)
+
 	// If the chain has already been initialized, simply start the block processing routine.
 	if beaconState != nil {
 		log.Info("Blockchain data already exists in DB, initializing...")
@@ -183,6 +186,7 @@ func (s *Service) Start() {
 			stateChannel := make(chan *feed.Event, 1)
 			stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
 			defer stateSub.Unsubscribe()
+			<-attestationProcessorSubscribed
 			for {
 				select {
 				case event := <-stateChannel:
@@ -203,7 +207,7 @@ func (s *Service) Start() {
 		}()
 	}
 
-	go s.processAttestation()
+	go s.processAttestation(attestationProcessorSubscribed)
 }
 
 // processChainStartTime initializes a series of deposits from the ChainStart deposits in the eth1
