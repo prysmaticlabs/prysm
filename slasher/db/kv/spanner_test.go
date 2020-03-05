@@ -25,7 +25,7 @@ func init() {
 		{
 			epoch: 1,
 			spanMap: map[uint64]types.Span{
-				1: {MinSpan: 10, MaxSpan: 20, SigBytes: [2]byte{0, 1}},
+				1: {MinSpan: 10, MaxSpan: 20},
 				2: {MinSpan: 11, MaxSpan: 21, HasAttested: true},
 				3: {MinSpan: 12, MaxSpan: 22},
 			},
@@ -34,7 +34,7 @@ func init() {
 			epoch: 2,
 			spanMap: map[uint64]types.Span{
 				1: {MinSpan: 10, MaxSpan: 20, HasAttested: false},
-				2: {MinSpan: 11, MaxSpan: 21, SigBytes: [2]byte{0, 1}, HasAttested: true},
+				2: {MinSpan: 11, MaxSpan: 21, HasAttested: true},
 				3: {MinSpan: 12, MaxSpan: 22, HasAttested: true},
 			},
 		},
@@ -43,7 +43,7 @@ func init() {
 			spanMap: map[uint64]types.Span{
 				1: {MinSpan: 10, MaxSpan: 20, HasAttested: true},
 				2: {MinSpan: 11, MaxSpan: 21},
-				3: {MinSpan: 12, MaxSpan: 22, SigBytes: [2]byte{0, 1}},
+				3: {MinSpan: 12, MaxSpan: 22},
 			},
 		},
 	}
