@@ -4,15 +4,16 @@ import (
 	"bufio"
 	"encoding/hex"
 	"fmt"
+	"io"
+	"os"
+	"strings"
+
 	"github.com/pkg/errors"
 	contract "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh/terminal"
-	"io"
-	"os"
-	"strings"
 )
 
 var log = logrus.WithField("prefix", "accounts")

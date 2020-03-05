@@ -2,15 +2,16 @@ package keymanager
 
 import (
 	"encoding/json"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/validator/accounts"
-	"golang.org/x/crypto/ssh/terminal"
 	"os"
 	"os/user"
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/validator/accounts"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 // Keystore is a key manager that loads keys from a standard keystore.
