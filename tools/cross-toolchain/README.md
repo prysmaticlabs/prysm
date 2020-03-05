@@ -1,40 +1,40 @@
 # Multiarch Cross Compiling Toolchain
 
-### Containerized Builds
-This project declares a c++ toolchain suite with cross compilers for targeting four platforms:
+## Toolchain suite
+
+This package declares a c++ toolchain suite with cross compilers for targeting four platforms:
 * linux_amd64
 * linux_arm64
 * osx_amd64
 * windows_amd64
 
-The toolchain suite describes cross compilers defined in a docker container described by a Dockerfile, also included in this project.
-
-### Using Published Docker Container for Cross Compilation Targets:
-At the time of this writing linux_amd64, linux_arm64, osx_amd64, and windows_amd64 are working targets.
-
-#### If your host machine is linux_amd64
-If you are on linux_amd64 and you have docker configured, you can simply use bazel with the docker target configs.  See the table below.
-
-#### Otherwise run the cross compiler image
-
-1. checkout prysm, `git clone https://github.com/prysmaticlabs/prysm`
-2. cd prysm
-3. `docker run -it -v $(pwd):/workdir gcr.io/prysmaticlabs/rbe-worker` 
-
-From here you can run builds inside the linux x86_64 container image, e.g.:
-
-|    arch |   os    |    config     | working? | bazel docker config (for linux_arm64 hosts) |
-|---------|---------|---------------|----------|---------------|
-| arm64   | linux   | linux_arm64   |  Y       | `bazel build --config=linux_arm64_docker //beacon-chain`   |
-| x86_64  | linux   | linux_amd64   |  Y       | `bazel build --config=linux_amd64_docker //beacon-chain`   |
-| x86_64  | osx     | osx_amd64     |  Y       | `bazel build --config=osx_amd64_docker //beacon-chain`     |
-| x86_64  | windows | windows_amd64 |  y       | `bazel build --config=windows_amd64_docker //beacon-chain` |
+This toolchain suite describes cross compile configuration with a Dockerfile with the appropriate host dependencies. These toolchains can be used locally (see [caveats](#caveats)), [Remote Build Execution (RBE)](https://docs.bazel.build/versions/master/remote-execution.html), and in a docker sandbox (like RBE, but local).
 
 
-#### Or, if you just want to run a particular target, this is handy:
-For example, to build the beacon chain for linux_arm64: 
-`docker run -it -v $(pwd):/workdir gcr.io/prysmaticlabs/rbe-worker bazel build --config=linux_arm64 //beacon-chain`
- 
+### Cross compile target support
 
-Also fun, if you are on OSX or windows, you can build and run a linux_amd64 beacon-chain:
-`docker run -it -v $(pwd):/workdir gcr.io/prysmaticlabs/rbe-worker bazel run //beacon-chain` 
+| target  | linux_amd64 | linux_arm64 | osx_amd64 | windows_amd64 |
+|----------|-------------------|------------------|-----------------|-----------------------|
+| `//beacon-chain` | :heavy_check_mark:  docker-sandbox and RBE, libkafka supported locally only | :heavy_check_mark:  docker-sandbox and RBE, no libkafka support | :heavy_check_mark:  docker-sandbox, no libkafka support | :heavy_check_mark:  docker-sandbox, no libkafka support |
+| `//validator`| :heavy_check_mark:  docker-sandbox and RBE | :heavy_check_mark: docker-sandbox and RBE | :heavy_check_mark:  docker-sandbox | :x:  Doesn't work. [#5008](https://github.com/prysmaticlabs/prysm/issues/5008) |
+
+The configurations above are enforced via pull request presubmit checks.
+
+### Bazel config flag values
+
+Use these values with `--config=<flag>`, multiple times if more than one value is defined in the table. Example: `bazel build //beacon-chain --config=windows_amd64_docker` to build windows binary in a docker sandbox.
+
+| Config | linux_amd64 | linux_arm64 | osx_amd64 | windows_amd64 |
+|----------|-------------------|------------------|-----------------|-----------------------|
+| Local run | `linux_amd64` | `linux_arm64` | `osx_amd64` | `windows_amd64` | 
+| Docker sandbox | `linux_amd64_docker` | `linux_arm64_docker` | `osx_amd64_docker` | `windows_amd64_docker `|
+| RBE (See [Caveats](#caveats)) | `linux_amd64` and `remote` | `linux_arm64`  and `remote` | `osx_amd64`  and `remote` | `windows_amd64`  and `remote` |
+
+### Caveats
+
+There are a few caveats to each of these strategies.
+
+- Local runs require clang compiler and the appropriate cross compilers installed. These runs should only be considered for a power user or user with specific build requirements. See the Dockerfile setup scripts to understand what dependencies must be installed and where.
+- Docker sandbox is *slow*. Like really slow! The purpose of the docker sandbox is to test RBE builds without deploying a full RBE system. Each build action is executed in its own container. Given the large number of small targets in this project, the overhead of creating docker containers makes this strategy the slowest of all, but requires zero additional setup.
+- Remote Build Execution is by far the fastest, if you have a RBE backend available. This is another advanced use case which will require two config flags above as well as additional flags to specify the `--remote_executor`. Some of these flags are present in the project `.bazelrc` with example values, but commented out.
+- Building with libkafka (`--define kafka_enabled=true`) is not supported with docker-sandbox or RBE at this time. Likely due to missing cmake dependencies in the builder image or lack of configuration via toolchains. 
