@@ -1,6 +1,9 @@
 load(
     "@bazel_tools//tools/cpp:cc_toolchain_config_lib.bzl",
     "action_config",
+    "artifact_name_pattern",
+    "env_entry",
+    "env_set",
     "feature",
     "feature_set",
     "flag_group",
@@ -9,18 +12,13 @@ load(
     "tool",
     "tool_path",
     "with_feature_set",
-    "artifact_name_pattern",
-    "env_set",
-    "env_entry",
 )
-
 load(
     "@bazel_tools//tools/cpp:cc_toolchain_config.bzl",
     ALL_COMPILE_ACTIONS = "all_compile_actions",
     ALL_CPP_COMPILE_ACTIONS = "all_cpp_compile_actions",
     ALL_LINK_ACTIONS = "all_link_actions",
 )
-
 load("@bazel_tools//tools/build_defs/cc:action_names.bzl", "ACTION_NAMES")
 
 def _impl(ctx):
@@ -38,7 +36,6 @@ def _impl(ctx):
 
     install = "/usr/x86_64-w64-mingw32/"
     bin_prefix = "/usr/bin/x86_64-w64-mingw32-"
-
 
     targets_windows_feature = feature(
         name = "targets_windows",
@@ -85,8 +82,8 @@ def _impl(ctx):
         "-Wself-assign",
         "-x c++",
         "-lstdc++",
-        "-lpthread"
-        ]
+        "-lpthread",
+    ]
 
     msys_mingw_link_flags = [
         "-l:libstdc++.a",
@@ -116,7 +113,7 @@ def _impl(ctx):
                 ],
             ),
             flag_set(
-               actions = [
+                actions = [
                     ACTION_NAMES.linkstamp_compile,
                     ACTION_NAMES.cpp_compile,
                     ACTION_NAMES.cpp_header_parsing,
@@ -158,7 +155,7 @@ def _impl(ctx):
     ]
 
     cxx_builtin_include_directories = [
-        install +"include"
+        install + "include",
     ]
 
     artifact_name_patterns = [
@@ -210,4 +207,3 @@ windows_cc_toolchain_config = rule(
     },
     provides = [CcToolchainConfigInfo],
 )
-

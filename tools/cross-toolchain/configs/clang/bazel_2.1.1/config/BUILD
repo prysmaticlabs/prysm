@@ -49,5 +49,5 @@ platform(
            name: "OSFamily"
            value:  "Linux"
         }
-        """, 
+        """,
 )

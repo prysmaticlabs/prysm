@@ -10,7 +10,6 @@ load(
     "tool_path",
     "with_feature_set",
 )
-
 load(
     "@bazel_tools//tools/cpp:cc_toolchain_config.bzl",
     ALL_COMPILE_ACTIONS = "all_compile_actions",
