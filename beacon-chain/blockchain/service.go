@@ -34,6 +34,7 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -404,6 +405,10 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 // This is called when a client starts from a non-genesis slot. It deletes the states in DB
 // from slot 1 (avoid genesis state) to `slot`.
 func (s *Service) pruneGarbageState(ctx context.Context, slot uint64) error {
+	if featureconfig.Get().DontPruneStateStartUp {
+		return nil
+	}
+
 	filter := filters.NewFilter().SetStartSlot(1).SetEndSlot(slot)
 	roots, err := s.beaconDB.BlockRoots(ctx, filter)
 	if err != nil {
