@@ -109,6 +109,14 @@ func startDHTDiscovery(host core.Host, bootstrapAddr string) error {
 }
 
 func parseBootStrapAddrs(addrs []string) (discv5Nodes []string, kadDHTNodes []string) {
+	discv5Nodes, kadDHTNodes = parseGenericAddrs(addrs)
+	if len(discv5Nodes) == 0 && len(kadDHTNodes) == 0 {
+		log.Warn("No bootstrap addresses supplied")
+	}
+	return discv5Nodes, kadDHTNodes
+}
+
+func parseGenericAddrs(addrs []string) (enodeString []string, multiAddrString []string) {
 	for _, addr := range addrs {
 		if addr == "" {
 			// Ignore empty entries
@@ -116,20 +124,17 @@ func parseBootStrapAddrs(addrs []string) (discv5Nodes []string, kadDHTNodes []st
 		}
 		_, err := enode.Parse(enode.ValidSchemes, addr)
 		if err == nil {
-			discv5Nodes = append(discv5Nodes, addr)
+			enodeString = append(enodeString, addr)
 			continue
 		}
 		_, err = multiAddrFromString(addr)
 		if err == nil {
-			kadDHTNodes = append(kadDHTNodes, addr)
+			multiAddrString = append(multiAddrString, addr)
 			continue
 		}
-		log.Errorf("Invalid bootstrap address of %s provided", addr)
+		log.Errorf("Invalid address of %s provided", addr)
 	}
-	if len(discv5Nodes) == 0 && len(kadDHTNodes) == 0 {
-		log.Warn("No bootstrap addresses supplied")
-	}
-	return discv5Nodes, kadDHTNodes
+	return enodeString, multiAddrString
 }
 
 func convertToMultiAddr(nodes []*enode.Node) []ma.Multiaddr {
@@ -168,12 +173,24 @@ func convertToSingleMultiAddr(node *enode.Node) (ma.Multiaddr, error) {
 	return multiAddr, nil
 }
 
-func manyMultiAddrsFromString(addrs []string) ([]ma.Multiaddr, error) {
+func peersFromStringAddrs(addrs []string) ([]ma.Multiaddr, error) {
 	var allAddrs []ma.Multiaddr
-	for _, stringAddr := range addrs {
+	enodeString, multiAddrString := parseGenericAddrs(addrs)
+	for _, stringAddr := range multiAddrString {
 		addr, err := multiAddrFromString(stringAddr)
 		if err != nil {
 			return nil, errors.Wrapf(err, "Could not get multiaddr from string")
+		}
+		allAddrs = append(allAddrs, addr)
+	}
+	for _, stringAddr := range enodeString {
+		enodeAddr, err := enode.Parse(enode.ValidSchemes, stringAddr)
+		if err != nil {
+			return nil, errors.Wrapf(err, "Could not get enode from string")
+		}
+		addr, err := convertToSingleMultiAddr(enodeAddr)
+		if err != nil {
+			return nil, errors.Wrapf(err, "Could not get multiaddr")
 		}
 		allAddrs = append(allAddrs, addr)
 	}
