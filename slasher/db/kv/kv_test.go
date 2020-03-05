@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/slasher/db/iface"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/urfave/cli"
 )
@@ -47,7 +48,7 @@ func setupDBDiffCacheSize(t testing.TB, cacheItems int64, maxCacheSize int64) *S
 	return newDB
 }
 
-func teardownDB(t testing.TB, db *Store) {
+func teardownDB(t testing.TB, db iface.Database) {
 	if err := db.Close(); err != nil {
 		t.Fatalf("Failed to close database: %v", err)
 	}
