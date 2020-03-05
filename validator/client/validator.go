@@ -16,6 +16,8 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -41,6 +43,7 @@ type validator struct {
 	node                 ethpb.NodeClient
 	keyManager           keymanager.KeyManager
 	prevBalance          map[[48]byte]uint64
+	prevStatus			 map[[48]byte]ethpb.ValidatorStatus
 	logValidatorBalances bool
 	emitAccountMetrics   bool
 	attLogs              map[[32]byte]*attSubmitted
@@ -48,6 +51,18 @@ type validator struct {
 	domainDataLock       sync.Mutex
 	domainDataCache      *ristretto.Cache
 }
+
+var validatorStatusesGaugeVec = promauto.NewGaugeVec(
+	prometheus.GaugeOpts{
+		Namespace: "validator",
+		Name:      "statuses",
+		Help:      "validator statuses: 0 UNKNOWN, 1 DEPOSITED, 2 PENDING, 3 ACTIVE, 4 EXITING, 5 SLASHING, 6 EXITED",
+	},
+	[]string{
+		// validator pubkey
+		"pkey",
+	},
+)
 
 // Done cleans up the validator.
 func (v *validator) Done() {
@@ -96,42 +111,13 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 func (v *validator) WaitForActivation(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
 	defer span.End()
-	validatingKeys, err := v.keyManager.FetchValidatingKeys()
-	if err != nil {
-		return errors.Wrap(err, "could not fetch validating keys")
-	}
-	req := &ethpb.ValidatorActivationRequest{
-		PublicKeys: bytesutil.FromBytes48Array(validatingKeys),
-	}
-	stream, err := v.validatorClient.WaitForActivation(ctx, req)
-	if err != nil {
-		return errors.Wrap(err, "could not setup validator WaitForActivation streaming client")
-	}
-	var validatorActivatedRecords [][]byte
-	for {
-		res, err := stream.Recv()
-		// If the stream is closed, we stop the loop.
-		if err == io.EOF {
-			break
-		}
-		// If context is canceled we stop the loop.
-		if ctx.Err() == context.Canceled {
-			return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
-		}
-		if err != nil {
-			return errors.Wrap(err, "could not receive validator activation from stream")
-		}
-		log.Info("Waiting for validator to be activated in the beacon chain")
-		activatedKeys := v.checkAndLogValidatorStatus(res.Statuses)
 
-		if len(activatedKeys) > 0 {
-			validatorActivatedRecords = activatedKeys
-			break
-		}
+	log.Info("Waiting for validator to be activated in the beacon chain")
+	err := v.CheckValidatorStatuses(ctx)
+	if err != nil {
+		return err
 	}
-	for _, pubKey := range validatorActivatedRecords {
-		log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).Info("Validator activated")
-	}
+
 	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
 
 	return nil
@@ -168,38 +154,89 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 	}
 }
 
+func (v *validator) CheckValidatorStatuses(ctx context.Context) error {
+	validatingKeys, err := v.keyManager.FetchValidatingKeys()
+	if err != nil {
+		return errors.Wrap(err, "could not fetch validating keys")
+	}
+	req := &ethpb.ValidatorActivationRequest{
+		PublicKeys: bytesutil.FromBytes48Array(validatingKeys),
+	}
+
+	stream, err := v.validatorClient.WaitForActivation(ctx, req)
+	if err != nil {
+		return errors.Wrap(err, "could not setup validator WaitForActivation streaming client")
+	}
+	var validatorActivatedRecords [][]byte
+	for {
+		res, err := stream.Recv()
+		// If the stream is closed, we stop the loop.
+		if err == io.EOF {
+			break
+		}
+		// If context is canceled we stop the loop.
+		if ctx.Err() == context.Canceled {
+			return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
+		}
+		if err != nil {
+			return errors.Wrap(err, "could not receive validator activation from stream")
+		}
+		activatedKeys := v.checkAndLogValidatorStatus(res.Statuses)
+
+		if len(activatedKeys) > 0 {
+			validatorActivatedRecords = activatedKeys
+			break
+		}
+	}
+	for _, pubKey := range validatorActivatedRecords {
+		log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).Info("Validator activated")
+	}
+
+	return nil
+}
+
 func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.ValidatorActivationResponse_Status) [][]byte {
 	var activatedKeys [][]byte
 	for _, status := range validatorStatuses {
-		log := log.WithFields(logrus.Fields{
-			"pubKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey[:])),
-			"status": status.Status.Status.String(),
-		})
-		if status.Status.Status == ethpb.ValidatorStatus_ACTIVE {
-			activatedKeys = append(activatedKeys, status.PublicKey)
-			continue
-		}
-		if status.Status.Status == ethpb.ValidatorStatus_EXITED {
-			log.Info("Validator exited")
-			continue
-		}
-		if status.Status.Status == ethpb.ValidatorStatus_DEPOSITED {
-			log.WithField("expectedInclusionSlot", status.Status.DepositInclusionSlot).Info(
-				"Deposit for validator received but not processed into state")
-			continue
-		}
-		if uint64(status.Status.ActivationEpoch) == params.BeaconConfig().FarFutureEpoch {
+		if v.prevStatus[bytesutil.ToBytes48(status.PublicKey)] != status.Status.Status {
+			v.prevStatus[bytesutil.ToBytes48(status.PublicKey)] = status.Status.Status
+
+			log := log.WithFields(logrus.Fields{
+				"pubKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey[:])),
+				"status": status.Status.Status.String(),
+			})
+
+			if v.emitAccountMetrics {
+				fmtKey := fmt.Sprintf("%#x", status.PublicKey[:])
+				validatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(status.Status.Status))
+			}
+			if status.Status.Status == ethpb.ValidatorStatus_ACTIVE {
+				activatedKeys = append(activatedKeys, status.PublicKey)
+				continue
+			}
+			if status.Status.Status == ethpb.ValidatorStatus_EXITED {
+				log.Info("Validator exited")
+				continue
+			}
+			if status.Status.Status == ethpb.ValidatorStatus_DEPOSITED {
+				log.WithField("expectedInclusionSlot", status.Status.DepositInclusionSlot).Info(
+					"Deposit for validator received but not processed into state")
+				continue
+			}
+			if uint64(status.Status.ActivationEpoch) == params.BeaconConfig().FarFutureEpoch {
+				log.WithFields(logrus.Fields{
+					"depositInclusionSlot":      status.Status.DepositInclusionSlot,
+					"positionInActivationQueue": status.Status.PositionInActivationQueue,
+				}).Info("Waiting to be activated")
+				continue
+			}
 			log.WithFields(logrus.Fields{
 				"depositInclusionSlot":      status.Status.DepositInclusionSlot,
+				"activationEpoch":           status.Status.ActivationEpoch,
 				"positionInActivationQueue": status.Status.PositionInActivationQueue,
-			}).Info("Waiting to be activated")
-			continue
+			}).Info("Validator status")
 		}
-		log.WithFields(logrus.Fields{
-			"depositInclusionSlot":      status.Status.DepositInclusionSlot,
-			"activationEpoch":           status.Status.ActivationEpoch,
-			"positionInActivationQueue": status.Status.PositionInActivationQueue,
-		}).Info("Validator status")
+
 	}
 	return activatedKeys
 }

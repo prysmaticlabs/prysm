@@ -19,6 +19,7 @@ type Validator interface {
 	WaitForChainStart(ctx context.Context) error
 	WaitForActivation(ctx context.Context) error
 	WaitForSync(ctx context.Context) error
+	CheckValidatorStatuses(ctx context.Context) error
 	CanonicalHeadSlot(ctx context.Context) (uint64, error)
 	NextSlot() <-chan uint64
 	SlotDeadline(slot uint64) time.Time
@@ -88,6 +89,12 @@ func run(ctx context.Context, v Validator) {
 			// Start fetching domain data for the next epoch.
 			if helpers.IsEpochEnd(slot) {
 				go v.UpdateDomainDataCaches(ctx, slot+1)
+
+				// update and log validator statues
+				err := v.CheckValidatorStatuses(ctx)
+				if err != nil {
+					log.WithError(err).Error("Could not update validator's statuses")
+				}
 			}
 
 			var wg sync.WaitGroup

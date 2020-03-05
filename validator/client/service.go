@@ -152,6 +152,7 @@ func (v *ValidatorService) Start() {
 		logValidatorBalances: v.logValidatorBalances,
 		emitAccountMetrics:   v.emitAccountMetrics,
 		prevBalance:          make(map[[48]byte]uint64),
+		prevStatus:           make(map[[48]byte]ethpb.ValidatorStatus),
 		attLogs:              make(map[[32]byte]*attSubmitted),
 		domainDataCache:      cache,
 	}
