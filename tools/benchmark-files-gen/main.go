@@ -144,7 +144,10 @@ func generateMarshalledFullStateAndBlock() error {
 	if err != nil {
 		return err
 	}
-	domain := helpers.Domain(beaconState.Fork(), helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainBeaconProposer)
+	domain, err := helpers.Domain(beaconState.Fork(), helpers.CurrentEpoch(beaconState), params.BeaconConfig().DomainBeaconProposer)
+	if err != nil {
+		return err
+	}
 	block.Signature = privs[proposerIdx].Sign(blockRoot[:], domain).Marshal()
 	beaconState.SetSlot(beaconState.Slot() - 1)
 

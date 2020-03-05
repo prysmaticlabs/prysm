@@ -500,7 +500,7 @@ func (bs *Server) GetValidatorQueue(
 	vals := headState.Validators()
 	for idx, validator := range vals {
 		eligibleActivated := validator.ActivationEligibilityEpoch != params.BeaconConfig().FarFutureEpoch
-		canBeActive := validator.ActivationEpoch >= helpers.DelayedActivationExitEpoch(headState.FinalizedCheckpointEpoch())
+		canBeActive := validator.ActivationEpoch >= helpers.ActivationExitEpoch(headState.FinalizedCheckpointEpoch())
 		if eligibleActivated && canBeActive {
 			activationQ = append(activationQ, uint64(idx))
 		}
@@ -584,15 +584,16 @@ func (bs *Server) GetValidatorPerformance(
 ) (*ethpb.ValidatorPerformanceResponse, error) {
 	validatorSummary := state.ValidatorSummary
 
-	beforeTransitionBalances := make([]uint64, 0)
-	afterTransitionBalances := make([]uint64, 0)
-	effectiveBalances := make([]uint64, 0)
-	inclusionSlots := make([]uint64, 0)
-	inclusionDistances := make([]uint64, 0)
-	correctlyVotedSource := make([]bool, 0)
-	correctlyVotedTarget := make([]bool, 0)
-	correctlyVotedHead := make([]bool, 0)
-	missingValidators := make([][]byte, 0)
+	reqPubKeysCount := len(req.PublicKeys)
+	beforeTransitionBalances := make([]uint64, 0, reqPubKeysCount)
+	afterTransitionBalances := make([]uint64, 0, reqPubKeysCount)
+	effectiveBalances := make([]uint64, 0, reqPubKeysCount)
+	inclusionSlots := make([]uint64, 0, reqPubKeysCount)
+	inclusionDistances := make([]uint64, 0, reqPubKeysCount)
+	correctlyVotedSource := make([]bool, 0, reqPubKeysCount)
+	correctlyVotedTarget := make([]bool, 0, reqPubKeysCount)
+	correctlyVotedHead := make([]bool, 0, reqPubKeysCount)
+	missingValidators := make([][]byte, 0, reqPubKeysCount)
 
 	// Convert the list of validator public keys to list of validator indices.
 	// Also track missing validators using public keys.

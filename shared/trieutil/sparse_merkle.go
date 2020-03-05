@@ -179,8 +179,8 @@ func (m *SparseMerkleTrie) ToProto() *protodb.SparseMerkleTrie {
 	return trie
 }
 
-// VerifyMerkleProof verifies a Merkle branch against a root of a trie.
-func VerifyMerkleProof(root []byte, item []byte, merkleIndex int, proof [][]byte) bool {
+// VerifyMerkleBranch verifies a Merkle branch against a root of a trie.
+func VerifyMerkleBranch(root []byte, item []byte, merkleIndex int, proof [][]byte) bool {
 	node := bytesutil.ToBytes32(item)
 	currentIndex := merkleIndex
 	for i := 0; i < len(proof); i++ {

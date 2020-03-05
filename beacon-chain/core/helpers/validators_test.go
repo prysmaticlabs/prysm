@@ -180,7 +180,7 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 
 func TestDelayedActivationExitEpoch_OK(t *testing.T) {
 	epoch := uint64(9999)
-	got := DelayedActivationExitEpoch(epoch)
+	got := ActivationExitEpoch(epoch)
 	wanted := epoch + 1 + params.BeaconConfig().MaxSeedLookahead
 	if wanted != got {
 		t.Errorf("Wanted: %d, received: %d", wanted, got)
@@ -245,8 +245,12 @@ func TestDomain_OK(t *testing.T) {
 		{epoch: 3, domainType: 5, version: 216172782113783813},
 	}
 	for _, tt := range tests {
-		if Domain(state.Fork, tt.epoch, bytesutil.Bytes4(tt.domainType)) != tt.version {
-			t.Errorf("wanted domain version: %d, got: %d", tt.version, Domain(state.Fork, tt.epoch, bytesutil.Bytes4(tt.domainType)))
+		domain, err := Domain(state.Fork, tt.epoch, bytesutil.ToBytes4(bytesutil.Bytes4(tt.domainType)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if domain != tt.version {
+			t.Errorf("wanted domain version: %d, got: %d", tt.version, domain)
 		}
 	}
 }

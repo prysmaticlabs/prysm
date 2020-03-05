@@ -12,10 +12,12 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	slashpb "github.com/prysmaticlabs/prysm/proto/slashing"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -52,7 +54,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot uint64, pubKey [
 	defer span.End()
 	span.AddAttributes(trace.StringAttribute("validator", fmt.Sprintf("%#x", pubKey)))
 
-	fmtKey := fmt.Sprintf("%#x", pubKey[:8])
+	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 	log := log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).WithField("slot", slot)
 	duty, err := v.duty(pubKey)
 	if err != nil {
@@ -199,7 +201,7 @@ func (v *validator) duty(pubKey [48]byte) (*ethpb.DutiesResponse_Duty, error) {
 
 // Given validator's public key, this returns the signature of an attestation data.
 func (v *validator) signAtt(ctx context.Context, pubKey [48]byte, data *ethpb.AttestationData) ([]byte, error) {
-	domain, err := v.domainData(ctx, data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester)
+	domain, err := v.domainData(ctx, data.Target.Epoch, params.BeaconConfig().DomainBeaconAttester[:])
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +211,12 @@ func (v *validator) signAtt(ctx context.Context, pubKey [48]byte, data *ethpb.At
 		return nil, err
 	}
 
-	sig, err := v.keyManager.Sign(pubKey, root, domain.SignatureDomain)
+	var sig *bls.Signature
+	if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {
+		sig, err = protectingKeymanager.SignAttestation(pubKey, domain.SignatureDomain, data)
+	} else {
+		sig, err = v.keyManager.Sign(pubKey, root, domain.SignatureDomain)
+	}
 	if err != nil {
 		return nil, err
 	}
