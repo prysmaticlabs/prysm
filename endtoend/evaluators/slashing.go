@@ -1,6 +1,7 @@
 package evaluators
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -85,5 +86,6 @@ func InsertDoubleAttestationIntoPool(conn *grpc.ClientConn) error {
 		return err
 	}
 	fmt.Println(attResp)
+	fmt.Println(bytes.Equal(attResp.AttestationDataRoot, dataRoot[:]))
 	return nil
 }
