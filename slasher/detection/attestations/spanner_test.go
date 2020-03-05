@@ -7,15 +7,14 @@ import (
 	"reflect"
 	"testing"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/db/kv"
+	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 	"github.com/prysmaticlabs/prysm/slasher/flags"
 	"github.com/urfave/cli"
-
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 )
 
 const slasherDBName = "slasherdata"
@@ -233,7 +232,7 @@ func TestSpanDetector_DetectSlashingForValidator_Double(t *testing.T) {
 	d, err := db.NewDB(dbPath, cfg)
 	ctx := context.Background()
 	if err != nil {
-		t.Fatalf("Failed to init db: %v", err)
+		t.Fatalf("Failed to init slasherDB: %v", err)
 	}
 	defer d.ClearDB()
 	defer d.Close()
@@ -241,7 +240,7 @@ func TestSpanDetector_DetectSlashingForValidator_Double(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sd := &SpanDetector{
-				db: d,
+				slasherDB: d,
 			}
 
 			if err := sd.UpdateSpans(ctx, tt.att); err != nil {
@@ -466,20 +465,10 @@ func TestSpanDetector_DetectSlashingForValidator_Surround(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := cli.NewApp()
-			set := flag.NewFlagSet("test", 0)
-			cliCtx := cli.NewContext(app, set, nil)
-			baseDir := cliCtx.GlobalString(cmd.DataDirFlag.Name)
-			dbPath := path.Join(baseDir, slasherDBName)
-			cfg := &kv.Config{SpanCacheEnabled: cliCtx.GlobalBool(flags.UseSpanCacheFlag.Name)}
-			d, err := db.NewDB(dbPath, cfg)
-			if err != nil {
-				t.Fatalf("Failed to init db: %v", err)
-			}
-			defer d.ClearDB()
-			defer d.Close()
+			slasherDB := setupSlasherDB(t)
+			defer teardownSlasherDB(t, slasherDB)
 			sd := &SpanDetector{
-				db: d,
+				slasherDB: slasherDB,
 			}
 			ctx := context.Background()
 			// We only care about validator index 0 for these tests for simplicity.
@@ -491,9 +480,9 @@ func TestSpanDetector_DetectSlashingForValidator_Surround(t *testing.T) {
 						MaxSpan: v[1],
 					},
 				}
-				err := sd.db.SaveEpochSpansMap(ctx, k, span)
+				err := sd.slasherDB.SaveEpochSpansMap(ctx, k, span)
 				if err != nil {
-					t.Fatalf("Failed to save to db: %v", err)
+					t.Fatalf("Failed to save to slasherDB: %v", err)
 				}
 
 			}
@@ -594,27 +583,17 @@ func TestSpanDetector_DetectSlashingForValidator_MultipleValidators(t *testing.T
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := cli.NewApp()
-			set := flag.NewFlagSet("test", 0)
-			cliCtx := cli.NewContext(app, set, nil)
-			baseDir := cliCtx.GlobalString(cmd.DataDirFlag.Name)
-			dbPath := path.Join(baseDir, slasherDBName)
-			cfg := &kv.Config{SpanCacheEnabled: cliCtx.GlobalBool(flags.UseSpanCacheFlag.Name)}
-			d, err := db.NewDB(dbPath, cfg)
-			if err != nil {
-				t.Fatalf("Failed to init db: %v", err)
-			}
-			defer d.ClearDB()
-			defer d.Close()
+			slasherDB := setupSlasherDB(t)
+			defer teardownSlasherDB(t, slasherDB)
 			sd := &SpanDetector{
-				db: d,
+				slasherDB: slasherDB,
 			}
 			ctx := context.Background()
 			for i := 0; i < len(tt.spansByEpoch); i++ {
 				epoch := uint64(i)
-				err := sd.db.SaveEpochSpansMap(ctx, epoch, tt.spansByEpoch[epoch])
+				err := sd.slasherDB.SaveEpochSpansMap(ctx, epoch, tt.spansByEpoch[epoch])
 				if err != nil {
-					t.Fatalf("Failed to save to db: %v", err)
+					t.Fatalf("Failed to save to slasherDB: %v", err)
 				}
 			}
 			for valIdx := uint64(0); valIdx < uint64(len(tt.shouldSlash)); valIdx++ {
@@ -756,29 +735,19 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := cli.NewApp()
-			set := flag.NewFlagSet("test", 0)
-			cliCtx := cli.NewContext(app, set, nil)
-			baseDir := cliCtx.GlobalString(cmd.DataDirFlag.Name)
-			dbPath := path.Join(baseDir, slasherDBName)
-			cfg := &kv.Config{SpanCacheEnabled: cliCtx.GlobalBool(flags.UseSpanCacheFlag.Name)}
-			d, err := db.NewDB(dbPath, cfg)
-			if err != nil {
-				t.Fatalf("Failed to init db: %v", err)
-			}
-			defer d.ClearDB()
-			defer d.Close()
+			slasherDB := setupSlasherDB(t)
+			defer teardownSlasherDB(t, slasherDB)
 			sd := &SpanDetector{
-				db: d,
+				slasherDB: slasherDB,
 			}
 			ctx := context.Background()
 			if err := sd.UpdateSpans(ctx, tt.att); err != nil {
 				t.Fatal(err)
 			}
 			for epoch := range tt.want {
-				sm, err := sd.db.EpochSpansMap(ctx, uint64(epoch))
+				sm, err := sd.slasherDB.EpochSpansMap(ctx, uint64(epoch))
 				if err != nil {
-					t.Fatalf("Failed to read from db: %v", err)
+					t.Fatalf("Failed to read from slasherDB: %v", err)
 				}
 				if !reflect.DeepEqual(sm, tt.want[epoch]) {
 					t.Errorf("Wanted and received:\n%v \n%v", tt.want, sm)
@@ -786,5 +755,28 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 			}
 
 		})
+	}
+}
+
+func setupSlasherDB(t *testing.T) *kv.Store {
+	app := cli.NewApp()
+	set := flag.NewFlagSet("test", 0)
+	cliCtx := cli.NewContext(app, set, nil)
+	baseDir := cliCtx.GlobalString(cmd.DataDirFlag.Name)
+	dbPath := path.Join(baseDir, slasherDBName)
+	cfg := &kv.Config{SpanCacheEnabled: cliCtx.GlobalBool(flags.UseSpanCacheFlag.Name)}
+	slasherDB, err := db.NewDB(dbPath, cfg)
+	if err != nil {
+		t.Fatalf("Failed to init slasher db: %v", err)
+	}
+	return slasherDB
+}
+
+func teardownSlasherDB(t *testing.T, slasherDB *kv.Store) {
+	if err := slasherDB.ClearDB(); err != nil {
+		t.Fatal(err)
+	}
+	if err := slasherDB.Close(); err != nil {
+		t.Fatal(err)
 	}
 }
