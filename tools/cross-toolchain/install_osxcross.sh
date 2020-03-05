@@ -4,8 +4,8 @@ set -eu
 
 OSXCROSS_REPO=tpoechtrager/osxcross
 OSXCROSS_SHA1=bee9df6
-DARWIN_SDK_URL=https://github.com/phracker/MacOSX-SDKs/releases/download/10.15/MacOSX10.10.sdk.tar.xz
-DARWIN_SDK_SHA256=608a89db8b4be150a945871230b5ba5d4767a8500bc5fe76ddf10f5cec5ef513
+OSX_SDK=MacOSX10.10.sdk
+OSX_SDK_SUM=631b4144c6bf75bf7a4d480d685a9b5bda10ee8d03dbf0db829391e2ef858789
 
 # darwin
 mkdir -p /usr/x86_64-apple-darwin/osxcross
@@ -13,10 +13,9 @@ mkdir -p /tmp/osxcross && cd "/tmp/osxcross"
 curl -sLo osxcross.tar.gz "https://codeload.github.com/${OSXCROSS_REPO}/tar.gz/${OSXCROSS_SHA1}"
 tar --strip=1 -xzf osxcross.tar.gz
 rm -f osxcross.tar.gz
-curl -sLo tarballs/MacOSX10.10.sdk.tar.xz "${DARWIN_SDK_URL}"
-echo -n "${DARWIN_SDK_SHA256}  tarballs/MacOSX10.10.sdk.tar.xz" > MacOSX10.10.sdk.tar.xz.sha256
-sha256sum --strict -c MacOSX10.10.sdk.tar.xz.sha256
-yes "" | SDK_VERSION=10.10 OSX_VERSION_MIN=10.10 ./build.sh
+curl -sLo tarballs/${OSX_SDK}.tar.xz "https://s3.dockerproject.org/darwin/v2/${OSX_SDK}.tar.xz"
+echo "${OSX_SDK_SUM}"  "tarballs/${OSX_SDK}.tar.xz" | sha256sum -c -
+yes "" | SDK_VERSION=10.10 OSX_VERSION_MIN=10.10 OCDEBUG=1 ./build.sh
 mv target/* /usr/x86_64-apple-darwin/osxcross/
 mv tools /usr/x86_64-apple-darwin/osxcross/
 cd /usr/x86_64-apple-darwin/osxcross/include
