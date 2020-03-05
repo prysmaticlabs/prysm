@@ -72,9 +72,9 @@ type fetchRequestResponse struct {
 func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetcher {
 	ctx, cancel := context.WithCancel(ctx)
 	rateLimiter := leakybucket.NewCollector(
-		allowedBlocksPerSecond /* rate */,
-		allowedBlocksPerSecond /* capacity */,
-		false                  /* deleteEmptyBuckets */)
+		allowedBlocksPerSecond, /* rate */
+		allowedBlocksPerSecond, /* capacity */
+		false /* deleteEmptyBuckets */)
 
 	return &blocksFetcher{
 		ctx:                    ctx,

@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"syscall"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -63,7 +62,7 @@ func NewKeystore(input string) (KeyManager, string, error) {
 	} else {
 		if opts.Passphrase == "" {
 			log.Info("Enter your validator account password:")
-			bytePassword, err := terminal.ReadPassword(syscall.Stdin)
+			bytePassword, err := terminal.ReadPassword(int(os.Stdin.Fd()))
 			if err != nil {
 				return nil, keystoreOptsHelp, err
 			}
