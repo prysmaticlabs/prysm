@@ -91,6 +91,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.HTTPWeb3ProviderFlag,
 			flags.SetGCPercent,
 			flags.UnsafeSync,
+			flags.SlotsPerArchivedPoint,
 		},
 	},
 	{

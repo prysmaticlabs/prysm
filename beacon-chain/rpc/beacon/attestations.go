@@ -334,7 +334,6 @@ func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 		case <-ticker.C:
 			for root, atts := range attsByRoot {
 				if len(atts) > 0 {
-					logrus.Info("Sending over collected atts channel...")
 					bs.CollectedAttestationsBuffer <- atts
 					attsByRoot[root] = make([]*ethpb.Attestation, 0)
 				}
