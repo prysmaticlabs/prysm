@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // State represents a management object that handles the internal
@@ -21,4 +22,14 @@ func New(db db.NoHeadAccessDatabase) *State {
 		beaconDB:                db,
 		epochBoundarySlotToRoot: make(map[uint64][32]byte),
 	}
+}
+
+// This verifies the archive point frequency is valid. It checks the interval
+// is a divisor of the number of slots per epoch. This ensures we have at least one
+// archive point within range of our state root history when iterating
+// backwards. It also ensures the archive points align with hot state summaries
+// which makes it quicker to migrate hot to cold.
+func verifySlotsPerArchivePoint(slotsPerArchivePoint uint64) bool {
+	return slotsPerArchivePoint > 0 &&
+		slotsPerArchivePoint%params.BeaconConfig().SlotsPerEpoch == 0
 }
