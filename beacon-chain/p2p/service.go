@@ -311,19 +311,19 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 		return
 	}
 	for _, info := range addrInfos {
-		if info.ID == s.host.ID() {
-			continue
-		}
-		if _, ok := s.exclusionList.Get(info.ID.String()); ok {
-			continue
-		}
-		if s.Peers().IsBad(info.ID) {
-			continue
-		}
-		if err := s.host.Connect(s.ctx, info); err != nil {
-			log.Errorf("Could not connect with peer %s: %v", info.String(), err)
-			s.exclusionList.Set(info.ID.String(), true, 1)
-		}
+		// make each dial non-blocking
+		go func(info peer.AddrInfo) {
+			if info.ID == s.host.ID() {
+				return
+			}
+			if s.Peers().IsBad(info.ID) {
+				return
+			}
+			if err := s.host.Connect(s.ctx, info); err != nil {
+				log.Errorf("Could not connect with peer %s: %v", info.String(), err)
+				s.Peers().IncrementBadResponses(info.ID)
+			}
+		}(info)
 	}
 }
 
