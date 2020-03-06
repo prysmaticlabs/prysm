@@ -83,9 +83,6 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	); err != nil {
 		return nil, err
 	}
-	featureconfig.ConfigureBeaconChain(ctx)
-	flags.ConfigureGlobalFlags(ctx)
-	registry := shared.NewServiceRegistry()
 
 	// Use custom config values if the --no-custom-config flag is not set.
 	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
@@ -101,6 +98,9 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 			params.UseDemoBeaconConfig()
 		}
 	}
+	featureconfig.ConfigureBeaconChain(ctx)
+	flags.ConfigureGlobalFlags(ctx)
+	registry := shared.NewServiceRegistry()
 
 	beacon := &BeaconNode{
 		ctx:             ctx,

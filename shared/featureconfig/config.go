@@ -80,8 +80,9 @@ func Init(c *Flags) {
 func ConfigureBeaconChain(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	delay := ctx.GlobalUint64(customGenesisDelayFlag.Name)
-	if delay != params.BeaconConfig().MinGenesisDelay {
+	delay := params.BeaconConfig().MinGenesisDelay
+	if ctx.GlobalIsSet(customGenesisDelayFlag.Name) {
+		delay = ctx.GlobalUint64(customGenesisDelayFlag.Name)
 		log.Warnf("Starting ETH2 with genesis delay of %d seconds", delay)
 	}
 	cfg.CustomGenesisDelay = delay

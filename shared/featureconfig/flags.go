@@ -1,7 +1,6 @@
 package featureconfig
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/urfave/cli"
 )
 
@@ -63,7 +62,6 @@ var (
 		Name: "custom-genesis-delay",
 		Usage: "Start the genesis event with the configured genesis delay in seconds. " +
 			"This flag should be used for local development and testing only.",
-		Value: params.BeaconConfig().MinGenesisDelay,
 	}
 	cacheFilteredBlockTreeFlag = cli.BoolFlag{
 		Name: "cache-filtered-block-tree",
