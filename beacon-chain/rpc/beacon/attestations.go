@@ -4,6 +4,7 @@ import (
 	"context"
 	"sort"
 	"strconv"
+	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -241,22 +242,6 @@ func (bs *Server) StreamAttestations(
 	}
 }
 
-func (bs *Server) collectReceivedAttestations(ctx context.Context) {
-	attsReady := make([]*ethpb.Attestation, 0)
-	for {
-		select {
-		case <-bs.Ctx.Done():
-			return
-		case att := <-bs.ReceivedAttestationsBuffer:
-			attsReady = append(attsReady, att)
-			if len(attsReady) >= 100 {
-				bs.CollectedAttestationsBuffer <- attsReady
-				attsReady = make([]*ethpb.Attestation, 0)
-			}
-		}
-	}
-}
-
 // StreamIndexedAttestations to clients at the end of every slot. This method retrieves the
 // aggregated attestations currently in the pool, converts them into indexed form, and
 // sends them over a gRPC stream.
@@ -283,7 +268,6 @@ func (bs *Server) StreamIndexedAttestations(
 				bs.ReceivedAttestationsBuffer <- data.Attestation
 			}
 		case atts := <-bs.CollectedAttestationsBuffer:
-			logrus.Infof("Received %d atts", len(atts))
 			// We aggregate the received attestations.
 			aggAtts, err := helpers.AggregateAttestations(atts)
 			if err != nil {
@@ -293,7 +277,6 @@ func (bs *Server) StreamIndexedAttestations(
 					err,
 				)
 			}
-			logrus.Infof("Aggregated into %d atts", len(aggAtts))
 			epoch := helpers.SlotToEpoch(bs.HeadFetcher.HeadSlot())
 			committeesBySlot, _, err := bs.retrieveCommitteesForEpoch(stream.Context(), epoch)
 			if err != nil {
@@ -338,6 +321,35 @@ func (bs *Server) StreamIndexedAttestations(
 			return status.Error(codes.Canceled, "Context canceled")
 		case <-stream.Context().Done():
 			return status.Error(codes.Canceled, "Context canceled")
+		}
+	}
+}
+
+func (bs *Server) collectReceivedAttestations(ctx context.Context) {
+	attsByRoot := make(map[[32]byte][]*ethpb.Attestation)
+	slotMidpoint := time.Duration(params.BeaconConfig().SecondsPerSlot / 2)
+	ticker := time.NewTicker(time.Second * slotMidpoint)
+	for {
+		select {
+		case <-ticker.C:
+			for root, atts := range attsByRoot {
+				if len(atts) > 0 {
+					logrus.Info("Sending over collected atts channel...")
+					bs.CollectedAttestationsBuffer <- atts
+					attsByRoot[root] = make([]*ethpb.Attestation, 0)
+				}
+			}
+		case att := <-bs.ReceivedAttestationsBuffer:
+			attDataRoot, err := ssz.HashTreeRoot(att.Data)
+			if err != nil {
+				logrus.Errorf("Could not hash tree root data: %v", err)
+				continue
+			}
+			attsByRoot[attDataRoot] = append(attsByRoot[attDataRoot], att)
+		case <-ctx.Done():
+			return
+		case <-bs.Ctx.Done():
+			return
 		}
 	}
 }

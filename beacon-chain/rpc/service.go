@@ -257,8 +257,8 @@ func (s *Service) Start() {
 		StateNotifier:               s.stateNotifier,
 		BlockNotifier:               s.blockNotifier,
 		AttestationNotifier:         s.operationNotifier,
-		ReceivedAttestationsBuffer:  make(chan *ethpb.Attestation, 1),
-		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, 1),
+		ReceivedAttestationsBuffer:  make(chan *ethpb.Attestation, 100),
+		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, 100),
 	}
 	aggregatorServer := &aggregator.Server{ValidatorServer: validatorServer}
 	pb.RegisterAggregatorServiceServer(s.grpcServer, aggregatorServer)
