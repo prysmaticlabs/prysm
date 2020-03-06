@@ -54,6 +54,7 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 			return nil, status.Errorf(codes.Internal, "Could not fetch validator idx for public key %#x: %v", pubKey, err)
 		}
 		if ok {
+			assignment.Status = vs.validatorStatus(ctx, pubKey, s).Status
 			ca, ok := committeeAssignments[idx]
 			if ok {
 				assignment.Committee = ca.Committee

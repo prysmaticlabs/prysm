@@ -19,8 +19,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -28,8 +31,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
 )
 
 type validator struct {
@@ -293,7 +294,10 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 		log.Error(err)
 		return err
 	}
+	for k,v := range resp.Duties  {
+		log.Warnf("%+v\n%+v\n------", k, v)
 
+	}
 	v.duties = resp
 	// Only log the full assignments output on epoch start to be less verbose.
 	if slot%params.BeaconConfig().SlotsPerEpoch == 0 {
