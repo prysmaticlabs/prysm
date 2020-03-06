@@ -46,7 +46,5 @@ test --local_test_jobs=2
 # Disabled race detection due to unstable test results under constrained environment build kite
 # build --features=race
 
-# Enable kafka for CI and docker images
-build --define kafka_enabled=true
+# Enable kafka for CI tests only.
 test --define kafka_enabled=true
-run --define kafka_enabled=true

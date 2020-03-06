@@ -114,15 +114,8 @@ load(
     _go_image_repos = "repositories",
 )
 
-_go_image_repos()
-
 # Golang images
 # This is using gcr.io/distroless/base
-load(
-    "@io_bazel_rules_docker//go:image.bzl",
-    _go_image_repos = "repositories",
-)
-
 _go_image_repos()
 
 # CC images
@@ -1216,12 +1209,6 @@ go_repository(
 )
 
 go_repository(
-    name = "in_gopkg_natefinch_npipe_v2",
-    commit = "c1b8fa8bdccecb0b8db834ee0b92fdbcfa606dd6",
-    importpath = "gopkg.in/natefinch/npipe.v2",
-)
-
-go_repository(
     name = "com_github_googleapis_gnostic",
     commit = "896953e6749863beec38e27029c804e88c3144b8",  # v0.4.1
     importpath = "github.com/googleapis/gnostic",
@@ -1275,12 +1262,6 @@ go_repository(
     name = "io_k8s_utils",
     commit = "3dccf664f023863740c508fb4284e49742bedfa4",
     importpath = "k8s.io/utils",
-)
-
-go_repository(
-    name = "com_github_googleapis_gnostic",
-    commit = "25d8b0b6698593f520d9d8dc5a88e6b16ca9ecc0",
-    importpath = "github.com/googleapis/gnostic",
 )
 
 go_repository(
@@ -1453,9 +1434,9 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_emicklei_dot",
-    commit = "f4a04130244d60cef56086d2f649b4b55e9624aa",
-    importpath = "github.com/emicklei/dot",
+    name = "com_github_googleapis_gnostic",
+    commit = "25d8b0b6698593f520d9d8dc5a88e6b16ca9ecc0",
+    importpath = "github.com/googleapis/gnostic",
 )
 
 go_repository(
@@ -1496,18 +1477,6 @@ go_repository(
     importpath = "github.com/ipfs/go-detect-race",
     sum = "h1:qX/xay2W3E4Q1U7d9lNs1sU9nvguX0a7319XbyQ6cOk=",
     version = "v0.0.1",
-)
-
-go_repository(
-    name = "com_github_dgraph_io_ristretto",
-    commit = "99d1bbbf28e64530eb246be0568fc7709a35ebdd",
-    importpath = "github.com/dgraph-io/ristretto",
-)
-
-go_repository(
-    name = "com_github_cespare_xxhash",
-    commit = "d7df74196a9e781ede915320c11c378c1b2f3a1f",
-    importpath = "github.com/cespare/xxhash",
 )
 
 go_repository(
