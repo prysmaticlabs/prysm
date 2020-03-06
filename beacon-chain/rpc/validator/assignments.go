@@ -57,7 +57,7 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 			ca, ok := committeeAssignments[idx]
 			if ok {
 				assignment.Committee = ca.Committee
-				assignment.Status = ethpb.ValidatorStatus_ACTIVE
+				assignment.Status = vs.assignmentStatus(idx, s)
 				assignment.ValidatorIndex = idx
 				assignment.PublicKey = pubKey
 				assignment.AttesterSlot = ca.AttesterSlot
