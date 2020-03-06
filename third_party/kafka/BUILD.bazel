@@ -16,6 +16,6 @@ cmake_external(
         "librdkafka++.a",
         "librdkafka.a",
     ],
-    visibility = ["//visibility:public"],
     tags = ["no-remote-exec"],
+    visibility = ["//visibility:public"],
 )
