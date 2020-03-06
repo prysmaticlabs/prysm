@@ -146,9 +146,8 @@ func (db *Store) EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uin
 		spans, ok := spanMap[validatorIdx]
 		if ok {
 			return spans, nil
-		} else {
-			return types.Span{}, nil
 		}
+		return types.Span{}, nil
 	}
 
 	var spans types.Span
@@ -336,20 +335,19 @@ func (db *Store) findOrLoadEpochInCache(ctx context.Context, epoch uint64) (map[
 			return make(map[uint64]types.Span), cacheTypeMismatchError(v)
 		}
 		return spanMap, nil
-	} else {
-		db.enableSpanCache(false)
-		defer db.enableSpanCache(true)
-		// If the epoch we want isn't in the cache, load it in.
-		spanForEpoch, err := db.EpochSpansMap(ctx, epoch)
-		if err != nil {
-			return make(map[uint64]types.Span), errors.Wrap(err, "failed to get span map for epoch")
-		}
-		saved := db.spanCache.Set(epoch, spanForEpoch, 1)
-		if !saved {
-			return make(map[uint64]types.Span), fmt.Errorf("failed to save span map to cache")
-		}
-		return spanForEpoch, nil
 	}
+	db.enableSpanCache(false)
+	defer db.enableSpanCache(true)
+	// If the epoch we want isn't in the cache, load it in.
+	spanForEpoch, err := db.EpochSpansMap(ctx, epoch)
+	if err != nil {
+		return make(map[uint64]types.Span), errors.Wrap(err, "failed to get span map for epoch")
+	}
+	saved := db.spanCache.Set(epoch, spanForEpoch, 1)
+	if !saved {
+		return make(map[uint64]types.Span), fmt.Errorf("failed to save span map to cache")
+	}
+	return spanForEpoch, nil
 }
 
 func setObservedEpochs(epoch uint64) {
