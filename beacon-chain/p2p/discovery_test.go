@@ -161,6 +161,7 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 	s.Start()
 	s.dv5Listener = &mockListener{}
 	defer s.Stop()
+	time.Sleep(100 * time.Millisecond)
 
 	peers := s.host.Network().Peers()
 	if len(peers) != 5 {
