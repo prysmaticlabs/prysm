@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/pagination"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -240,6 +241,22 @@ func (bs *Server) StreamAttestations(
 	}
 }
 
+func (bs *Server) collectReceivedAttestations(ctx context.Context) {
+	attsReady := make([]*ethpb.Attestation, 0)
+	for {
+		select {
+		case <-bs.Ctx.Done():
+			return
+		case att := <-bs.ReceivedAttestationsBuffer:
+			attsReady = append(attsReady, att)
+			if len(attsReady) >= 100 {
+				bs.CollectedAttestationsBuffer <- attsReady
+				attsReady = make([]*ethpb.Attestation, 0)
+			}
+		}
+	}
+}
+
 // StreamIndexedAttestations to clients at the end of every slot. This method retrieves the
 // aggregated attestations currently in the pool, converts them into indexed form, and
 // sends them over a gRPC stream.
@@ -249,6 +266,7 @@ func (bs *Server) StreamIndexedAttestations(
 	attestationsChannel := make(chan *feed.Event, 1)
 	attSub := bs.AttestationNotifier.OperationFeed().Subscribe(attestationsChannel)
 	defer attSub.Unsubscribe()
+	go bs.collectReceivedAttestations(stream.Context())
 	for {
 		select {
 		case event := <-attestationsChannel:
@@ -262,21 +280,35 @@ func (bs *Server) StreamIndexedAttestations(
 					// One nil attestation shouldn't stop the stream.
 					continue
 				}
-				epoch := helpers.SlotToEpoch(bs.HeadFetcher.HeadSlot())
-				committeesBySlot, _, err := bs.retrieveCommitteesForEpoch(stream.Context(), epoch)
-				if err != nil {
-					return status.Errorf(
-						codes.Internal,
-						"Could not retrieve committees for epoch %d: %v",
-						epoch,
-						err,
-					)
-				}
-				// We use the retrieved committees for the epoch to convert all attestations
-				// into indexed form effectively.
-				startSlot := helpers.StartSlot(epoch)
-				endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch
-				att := data.Attestation
+				bs.ReceivedAttestationsBuffer <- data.Attestation
+			}
+		case atts := <-bs.CollectedAttestationsBuffer:
+			logrus.Infof("Received %d atts", len(atts))
+			// We aggregate the received attestations.
+			aggAtts, err := helpers.AggregateAttestations(atts)
+			if err != nil {
+				return status.Errorf(
+					codes.Internal,
+					"Could not aggregate attestations: %v",
+					err,
+				)
+			}
+			logrus.Infof("Aggregated into %d atts", len(aggAtts))
+			epoch := helpers.SlotToEpoch(bs.HeadFetcher.HeadSlot())
+			committeesBySlot, _, err := bs.retrieveCommitteesForEpoch(stream.Context(), epoch)
+			if err != nil {
+				return status.Errorf(
+					codes.Internal,
+					"Could not retrieve committees for epoch %d: %v",
+					epoch,
+					err,
+				)
+			}
+			// We use the retrieved committees for the epoch to convert all attestations
+			// into indexed form effectively.
+			startSlot := helpers.StartSlot(epoch)
+			endSlot := startSlot + params.BeaconConfig().SlotsPerEpoch
+			for _, att := range aggAtts {
 				// Out of range check, the attestation slot cannot be greater
 				// the last slot of the requested epoch or smaller than its start slot
 				// given committees are accessed as a map of slot -> commitees list, where there are
@@ -284,7 +316,6 @@ func (bs *Server) StreamIndexedAttestations(
 				if att.Data.Slot < startSlot || att.Data.Slot > endSlot {
 					continue
 				}
-
 				committeesForSlot, ok := committeesBySlot[att.Data.Slot]
 				if !ok || committeesForSlot.Committees == nil {
 					continue
