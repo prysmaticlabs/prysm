@@ -100,7 +100,6 @@ func (s *SpanDetector) DetectSlashingForValidator(
 			SigBytes:       sp.SigBytes,
 		}, nil
 	}
-	logrus.Debugf("Finished detecting slashings for attestation with slot %d", attData.Slot)
 
 	return nil, nil
 }
@@ -180,8 +179,7 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, source uint64, target 
 				SigBytes:    span.SigBytes,
 				HasAttested: span.HasAttested,
 			}
-			err := s.slasherDB.SaveValidatorEpochSpans(ctx, valIdx, epoch, span)
-			if err != nil {
+			if err := s.slasherDB.SaveValidatorEpochSpans(ctx, valIdx, epoch, span); err != nil {
 				return err
 			}
 		} else {
