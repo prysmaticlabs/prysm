@@ -105,7 +105,7 @@ func TestStore_WrongTypeInCache(t *testing.T) {
 	ctx := context.Background()
 	for _, tt := range spanTests {
 
-		db.spanCache.Set(tt.epoch, []byte{0, 0}, 0)
+		db.spanCache.Set(tt.epoch, []byte{0, 0}, 1)
 		// wait for value to pass through cache buffers
 		time.Sleep(time.Millisecond * 10)
 		_, err := db.EpochSpansMap(ctx, tt.epoch)

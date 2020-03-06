@@ -196,7 +196,7 @@ func (db *Store) SaveValidatorEpochSpans(
 			}
 		}
 		spanMap[validatorIdx] = span
-		saved := db.spanCache.Set(epoch, spanMap, 0)
+		saved := db.spanCache.Set(epoch, spanMap, 1)
 		if !saved {
 			return fmt.Errorf("failed to save span map to cache")
 		}
