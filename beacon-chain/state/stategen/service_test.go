@@ -21,7 +21,7 @@ func Test_verifySlotsPerArchivePoint(t *testing.T) {
 	}
 	for _, tt := range tests {
 		if got := verifySlotsPerArchivePoint(tt.input); got != tt.result {
-			t.Errorf("verifySlotsPerArchivePoint() = %v, want %v", got, tt.input)
+			t.Errorf("verifySlotsPerArchivePoint(%d) = %v, want %v", tt.input, got, tt.result)
 		}
 	}
 }
