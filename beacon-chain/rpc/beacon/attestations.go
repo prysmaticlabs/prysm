@@ -327,8 +327,8 @@ func (bs *Server) StreamIndexedAttestations(
 
 func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 	attsByRoot := make(map[[32]byte][]*ethpb.Attestation)
-	slotMidpoint := time.Duration(params.BeaconConfig().SecondsPerSlot / 2)
-	ticker := time.NewTicker(time.Second * slotMidpoint)
+	halfASlot := time.Duration(params.BeaconConfig().SecondsPerSlot / 2)
+	ticker := time.NewTicker(time.Second * halfASlot)
 	for {
 		select {
 		case <-ticker.C:
