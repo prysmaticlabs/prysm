@@ -32,12 +32,12 @@ func (ds *Service) detectAttesterSlashings(
 		switch result.Kind {
 		case types.DoubleVote:
 			slashing, err = ds.detectDoubleVote(ctx, att, result)
-			logrus.Debugf("Detected a possible surround vote for val idx %d", valIdx)
+			logrus.Debugf("Detected a possible double vote for val idx %d", valIdx)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not detect double votes on attestation")
 			}
 		case types.SurroundVote:
-			logrus.Debugf("Detected a possible double vote for val idx %d", valIdx)
+			logrus.Debugf("Detected a possible surround vote for val idx %d", valIdx)
 			slashing, err = ds.detectSurroundVotes(ctx, att, result)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not detect surround votes on attestation")
@@ -94,8 +94,7 @@ func (ds *Service) detectDoubleVote(
 			}, nil
 		}
 	}
-
-	return nil, errors.New("unexpected false positive in double vote detection")
+	return nil, nil
 }
 
 // detectSurroundVotes cross references the passed in attestation with the requested validator's

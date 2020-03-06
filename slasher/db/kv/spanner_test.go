@@ -105,7 +105,7 @@ func TestStore_WrongTypeInCache(t *testing.T) {
 	ctx := context.Background()
 	for _, tt := range spanTests {
 
-		db.spanCache.Set(tt.epoch, []byte{0, 0}, 1)
+		db.spanCache.Set(tt.epoch, []byte{0, 0}, 0)
 		// wait for value to pass through cache buffers
 		time.Sleep(time.Millisecond * 10)
 		_, err := db.EpochSpansMap(ctx, tt.epoch)
@@ -117,7 +117,6 @@ func TestStore_WrongTypeInCache(t *testing.T) {
 		if err == nil || !strings.Contains(err.Error(), "cache contains a value of type") {
 			t.Fatalf("expected error type in cache : %v", err)
 		}
-
 	}
 }
 
@@ -279,8 +278,7 @@ func TestValidatorSpanMap_SaveCachedSpansMaps(t *testing.T) {
 	}
 	// wait for value to pass through cache buffers
 	time.Sleep(time.Millisecond * 10)
-	err := db.SaveCachedSpansMaps(ctx)
-	if err != nil {
+	if err := db.SaveCachedSpansMaps(ctx); err != nil {
 		t.Errorf("Failed to save cached span maps to db: %v", err)
 	}
 	db.spanCache.Clear()
