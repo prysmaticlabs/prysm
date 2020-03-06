@@ -223,7 +223,7 @@ func (db *Store) SaveEpochSpansMap(ctx context.Context, epoch uint64, spanMap ma
 	defer span.End()
 	if db.spanCacheEnabled {
 		setObservedEpochs(epoch)
-		saved := db.spanCache.Set(epoch, spanMap, 0)
+		saved := db.spanCache.Set(epoch, spanMap, 1)
 		if !saved {
 			return fmt.Errorf("failed to save span map to cache")
 		}
@@ -311,7 +311,7 @@ func (db *Store) DeleteValidatorSpanByEpoch(ctx context.Context, validatorIdx ui
 			}
 		}
 		delete(spanMap, validatorIdx)
-		saved := db.spanCache.Set(epoch, spanMap, 0)
+		saved := db.spanCache.Set(epoch, spanMap, 1)
 		if !saved {
 			return errors.New("failed to save span map to cache")
 		}
@@ -344,7 +344,7 @@ func (db *Store) findOrLoadEpochInCache(ctx context.Context, epoch uint64) (map[
 		if err != nil {
 			return make(map[uint64]types.Span), errors.Wrap(err, "failed to get span map for epoch")
 		}
-		saved := db.spanCache.Set(epoch, spanForEpoch, 0)
+		saved := db.spanCache.Set(epoch, spanForEpoch, 1)
 		if !saved {
 			return make(map[uint64]types.Span), fmt.Errorf("failed to save span map to cache")
 		}
