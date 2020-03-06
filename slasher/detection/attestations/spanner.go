@@ -9,8 +9,13 @@ import (
 	db "github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/iface"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
+
+// We look back 128 epochs when updating min/max spans
+// for incoming attestations.
+const epochLookback = 128
 
 var _ = iface.SpanDetector(&SpanDetector{})
 
@@ -95,6 +100,7 @@ func (s *SpanDetector) DetectSlashingForValidator(
 			SigBytes:       sp.SigBytes,
 		}, nil
 	}
+	logrus.Debugf("Finished detecting slashings for attestation with slot %d", attData.Slot)
 
 	return nil, nil
 }
@@ -122,6 +128,7 @@ func (s *SpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttest
 			return err
 		}
 	}
+	logrus.Debugf("Finished updating spans for attestation with indices: %v", att.AttestingIndices)
 	return nil
 }
 
@@ -156,8 +163,11 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, source uint64, target 
 	if source < 1 {
 		return nil
 	}
-	for epochInt := int64(source - 1); epochInt >= 0; epochInt-- {
-		epoch := uint64(epochInt)
+	lowestEpoch := source - epochLookback
+	if lowestEpoch <= 0 {
+		lowestEpoch = 0
+	}
+	for epoch := source - 1; epoch >= lowestEpoch; epoch-- {
 		span, err := s.slasherDB.EpochSpanByValidatorIndex(ctx, valIdx, epoch)
 		if err != nil {
 			return err
@@ -175,6 +185,9 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, source uint64, target 
 				return err
 			}
 		} else {
+			break
+		}
+		if epoch == 0 {
 			break
 		}
 	}

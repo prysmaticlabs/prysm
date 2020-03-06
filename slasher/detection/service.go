@@ -83,7 +83,7 @@ func (ds *Service) Start() {
 
 	// The detection service runs detection on all historical
 	// chain data since genesis.
-	go ds.detectHistoricalChainData(ds.ctx)
+	//go ds.detectHistoricalChainData(ds.ctx)
 
 	// We subscribe to incoming blocks from the beacon node via
 	// our gRPC client to keep detecting slashable offenses.
