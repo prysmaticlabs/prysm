@@ -148,6 +148,8 @@ func (db *Store) EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uin
 			spans, ok := spanMap[validatorIdx]
 			if ok {
 				return spans, nil
+			} else {
+				return types.Span{}, nil
 			}
 		}
 	}
@@ -271,7 +273,6 @@ func (db *Store) SaveCachedSpansMaps(ctx context.Context) error {
 				if err := db.SaveEpochSpansMap(ctx, epoch, spanMap); err != nil {
 					return errors.Wrap(err, "failed to save span maps from cache")
 				}
-
 			}
 		}
 	}
