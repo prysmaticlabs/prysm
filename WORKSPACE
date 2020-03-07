@@ -235,9 +235,9 @@ all_content = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//v
 
 http_archive(
     name = "rules_foreign_cc",
+    sha256 = "450563dc2938f38566a59596bb30a3e905fbbcc35b3fff5a1791b122bc140465",
     strip_prefix = "rules_foreign_cc-456425521973736ef346d93d3d6ba07d807047df",
     url = "https://github.com/bazelbuild/rules_foreign_cc/archive/456425521973736ef346d93d3d6ba07d807047df.zip",
-    sha256 = "450563dc2938f38566a59596bb30a3e905fbbcc35b3fff5a1791b122bc140465",
 )
 
 load("@rules_foreign_cc//:workspace_definitions.bzl", "rules_foreign_cc_dependencies")
@@ -1283,8 +1283,9 @@ go_repository(
 
 go_repository(
     name = "com_github_cloudflare_roughtime",
-    commit = "d41fdcee702eb3e5c3296288a453b9340184d37e",
     importpath = "github.com/cloudflare/roughtime",
+    sum = "h1:jeSxE3fepJdhASERvBHI6RFkMhISv6Ir2JUybYLIVXs=",
+    version = "v0.0.0-20200205191924-a69ef1dab727",
 )
 
 go_repository(
