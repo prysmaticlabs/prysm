@@ -87,17 +87,17 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 		return nil, err
 	}
 	if cfg.CacheItems == 0 {
-		cfg.CacheItems = 20000
+		cfg.CacheItems = 10 * cachedSpanerEpochs
 	}
 	if cfg.MaxCacheSize == 0 {
-		cfg.MaxCacheSize = 2 << 30 //(2GB)
+		cfg.MaxCacheSize = cachedSpanerEpochs
 	}
 	kv := &Store{db: boltDB, databasePath: datafile, spanCacheEnabled: cfg.SpanCacheEnabled}
 	spanCache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: cfg.CacheItems,   // number of keys to track frequency of (10M).
 		MaxCost:     cfg.MaxCacheSize, // maximum cost of cache.
 		BufferItems: 64,               // number of keys per Get buffer.
-		OnEvict:     saveToDB(kv),
+		OnEvict:     persistSpanMapsOnEviction(kv),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to start span cache")

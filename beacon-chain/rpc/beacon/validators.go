@@ -606,6 +606,11 @@ func (bs *Server) GetValidatorPerformance(
 			missingValidators = append(missingValidators, key)
 			continue
 		}
+		if idx >= uint64(len(validatorSummary)) {
+			// Not listed in validator summary yet; treat it as missing.
+			missingValidators = append(missingValidators, key)
+			continue
+		}
 
 		effectiveBalances = append(effectiveBalances, validatorSummary[idx].CurrentEpochEffectiveBalance)
 		beforeTransitionBalances = append(beforeTransitionBalances, validatorSummary[idx].BeforeEpochTransitionBalance)

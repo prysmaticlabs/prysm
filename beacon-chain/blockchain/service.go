@@ -34,6 +34,7 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -136,6 +137,9 @@ func (s *Service) Start() {
 		}
 	}
 
+	// Make sure that attestation processor is subscribed and ready for state initializing event.
+	attestationProcessorSubscribed := make(chan struct{}, 1)
+
 	// If the chain has already been initialized, simply start the block processing routine.
 	if beaconState != nil {
 		log.Info("Blockchain data already exists in DB, initializing...")
@@ -182,6 +186,7 @@ func (s *Service) Start() {
 			stateChannel := make(chan *feed.Event, 1)
 			stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
 			defer stateSub.Unsubscribe()
+			<-attestationProcessorSubscribed
 			for {
 				select {
 				case event := <-stateChannel:
@@ -202,7 +207,7 @@ func (s *Service) Start() {
 		}()
 	}
 
-	go s.processAttestation()
+	go s.processAttestation(attestationProcessorSubscribed)
 }
 
 // processChainStartTime initializes a series of deposits from the ChainStart deposits in the eth1
@@ -404,6 +409,10 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 // This is called when a client starts from a non-genesis slot. It deletes the states in DB
 // from slot 1 (avoid genesis state) to `slot`.
 func (s *Service) pruneGarbageState(ctx context.Context, slot uint64) error {
+	if featureconfig.Get().DontPruneStateStartUp {
+		return nil
+	}
+
 	filter := filters.NewFilter().SetStartSlot(1).SetEndSlot(slot)
 	roots, err := s.beaconDB.BlockRoots(ctx, filter)
 	if err != nil {

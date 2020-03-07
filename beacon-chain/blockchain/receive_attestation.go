@@ -73,10 +73,11 @@ func (s *Service) IsValidAttestation(ctx context.Context, att *ethpb.Attestation
 }
 
 // This processes attestations from the attestation pool to account for validator votes and fork choice.
-func (s *Service) processAttestation() {
+func (s *Service) processAttestation(subscribedToStateEvents chan struct{}) {
 	// Wait for state to be initialized.
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.stateNotifier.StateFeed().Subscribe(stateChannel)
+	subscribedToStateEvents <- struct{}{}
 	<-stateChannel
 	stateSub.Unsubscribe()
 

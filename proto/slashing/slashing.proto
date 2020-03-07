@@ -27,21 +27,6 @@ message AttesterSlashingResponse {
     repeated ethereum.eth.v1alpha1.AttesterSlashing attester_slashing = 1;
 }
 
-// CompressedIdxAtt is an indexed attestation with the []byte data root
-// in place of its AttestationData.
-message CompressedIdxAtt {
-    repeated uint64 indices = 1 ;
-    bytes data_root = 2;
-    // 96 bytes aggregate signature.
-    bytes signature = 3;
-}
-
-// CompressedIdxAttList is a list of CompressedIdxAtts used for
-// accessing an array from the DB.
-message CompressedIdxAttList {
-    repeated CompressedIdxAtt list = 1;
-}
-
 // In order to detect surrounded attestation we need to compare
 // each attestation source to those spans
 // see https://github.com/protolambda/eth2-surround/blob/master/README.md#min-max-surround
