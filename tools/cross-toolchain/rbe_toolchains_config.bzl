@@ -48,6 +48,12 @@ def _rbe_toolchains_generator():
         config_repos = [
             "prysm_toolchains",
         ],
+        use_legacy_platform_definition = False,
+        exec_compatible_with = [
+            "@bazel_tools//platforms:x86_64",
+            "@bazel_tools//platforms:linux",
+            "@bazel_tools//tools/cpp:clang",
+        ],
     )
 
     rbe_autoconfig(
@@ -64,6 +70,12 @@ def _rbe_toolchains_generator():
         config_repos = [
             "prysm_toolchains",
         ],
+        use_legacy_platform_definition = False,
+        exec_compatible_with = [
+            "@bazel_tools//platforms:x86_64",
+            "@bazel_tools//platforms:linux",
+            "@bazel_tools//tools/cpp:gcc",
+        ],
     )
 
 def _generated_rbe_toolchains():
@@ -77,6 +89,12 @@ def _generated_rbe_toolchains():
         toolchain_config_spec_name = "clang",
         toolchain_config_suite_spec = _TOOLCHAIN_CONFIG_SUITE_SPEC,
         use_checked_in_confs = "Force",
+        use_legacy_platform_definition = False,
+        exec_compatible_with = [
+            "@bazel_tools//platforms:x86_64",
+            "@bazel_tools//platforms:linux",
+            "@bazel_tools//tools/cpp:clang",
+        ],
     )
 
 def rbe_toolchains_config():
