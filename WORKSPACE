@@ -249,6 +249,7 @@ rules_foreign_cc_dependencies([
 http_archive(
     name = "librdkafka",
     build_file_content = all_content,
+    sha256 = "f6be27772babfdacbbf2e4c5432ea46c57ef5b7d82e52a81b885e7b804781fd6",
     strip_prefix = "librdkafka-1.2.1",
     urls = ["https://github.com/edenhill/librdkafka/archive/v1.2.1.tar.gz"],
 )
