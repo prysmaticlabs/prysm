@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
