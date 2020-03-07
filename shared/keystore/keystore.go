@@ -34,6 +34,7 @@ import (
 	"github.com/minio/sha256-simd"
 	"github.com/pborman/uuid"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"
 )
@@ -83,7 +84,7 @@ func (ks Store) GetKey(filename, password string) (*Key, error) {
 
 // GetKeys from directory using the prefix to filter relevant files
 // and a decryption password.
-func (ks Store) GetKeys(directory, fileprefix, password string) (map[string]*Key, error) {
+func (ks Store) GetKeys(directory, fileprefix, password string, warnOnFail bool) (map[string]*Key, error) {
 	// Load the key from the keystore and decrypt its contents
 	// #nosec G304
 	files, err := ioutil.ReadDir(directory)
@@ -104,7 +105,10 @@ func (ks Store) GetKeys(directory, fileprefix, password string) (map[string]*Key
 			}
 			key, err := DecryptKey(keyjson, password)
 			if err != nil {
-				return nil, err
+				if warnOnFail {
+					log.WithError(err).WithField("keyfile", string(keyjson)).Warn("Failed to decrypt key")
+				}
+				continue
 			}
 			keys[hex.EncodeToString(key.PublicKey.Marshal())] = key
 		}
