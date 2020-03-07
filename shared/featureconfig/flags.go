@@ -5,6 +5,10 @@ import (
 )
 
 var (
+	noCustomConfigFlag = cli.BoolFlag{
+		Name:  "no-custom-config",
+		Usage: "Run the beacon chain with the real parameters from phase 0.",
+	}
 	minimalConfigFlag = cli.BoolFlag{
 		Name:  "minimal-config",
 		Usage: "Use minimal config with parameters as defined in the spec.",
@@ -268,6 +272,7 @@ var E2EValidatorFlags = []string{
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
+	noCustomConfigFlag,
 	customGenesisDelayFlag,
 	minimalConfigFlag,
 	writeSSZStateTransitionsFlag,

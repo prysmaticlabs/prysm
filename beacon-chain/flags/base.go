@@ -5,11 +5,6 @@ import (
 )
 
 var (
-	// NoCustomConfigFlag determines whether to launch a beacon chain using real parameters or demo parameters.
-	NoCustomConfigFlag = cli.BoolFlag{
-		Name:  "no-custom-config",
-		Usage: "Run the beacon chain with the real parameters from phase 0.",
-	}
 	// HTTPWeb3ProviderFlag provides an HTTP access endpoint to an ETH 1.0 RPC.
 	HTTPWeb3ProviderFlag = cli.StringFlag{
 		Name:  "http-web3provider",

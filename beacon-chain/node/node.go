@@ -84,20 +84,6 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	// Use custom config values if the --no-custom-config flag is not set.
-	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
-		if featureconfig.Get().MinimalConfig {
-			log.WithField(
-				"config", "minimal-spec",
-			).Info("Using custom chain parameters")
-			params.UseMinimalConfig()
-		} else {
-			log.WithField(
-				"config", "demo",
-			).Info("Using custom chain parameters")
-			params.UseDemoBeaconConfig()
-		}
-	}
 	featureconfig.ConfigureBeaconChain(ctx)
 	flags.ConfigureGlobalFlags(ctx)
 	registry := shared.NewServiceRegistry()
