@@ -56,7 +56,6 @@ func (ds *Service) detectIncomingAttestations(ctx context.Context, ch chan *ethp
 				continue
 			}
 			if len(slashings) < 1 {
-				log.Debug("Updating spans for incoming attestation")
 				if err := ds.minMaxSpanDetector.UpdateSpans(ctx, indexedAtt); err != nil {
 					log.WithError(err).Error("Could not update spans")
 				}
