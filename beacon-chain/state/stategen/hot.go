@@ -10,12 +10,13 @@ import (
 )
 
 // This loads a post finalized beacon state from the hot section of the DB. If necessary it will
-// replay blocks from the nearest epoch boundary.
+// replay blocks starting from the nearest epoch boundary. It returns the beacon state that
+// corresponds to the input block root.
 func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.loadHotStateByRoot")
 	defer span.End()
 
-	// Load the cache.
+	// Load the hot state cache.
 	cachedState := s.hotStateCache.Get(blockRoot)
 	if cachedState != nil {
 		return cachedState, nil
@@ -28,8 +29,6 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 	if summary == nil {
 		return nil, errUnknownStateSummary
 	}
-	targetSlot := summary.Slot
-
 	boundaryState, err := s.beaconDB.State(ctx, bytesutil.ToBytes32(summary.BoundaryRoot))
 	if err != nil {
 		return nil, err
@@ -38,9 +37,10 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 		return nil, errUnknownBoundaryState
 	}
 
-	// Don't need to replay the blocks if we're already on an epoch boundary meaning target slot
-	// is the same as the state slot.
+	// Don't need to replay the blocks if we're already on an epoch boundary,
+	// the target slot is the same as the state slot.
 	var hotState *state.BeaconState
+	targetSlot := summary.Slot
 	if targetSlot == boundaryState.Slot() {
 		hotState = boundaryState
 	} else {
@@ -54,7 +54,7 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 		}
 	}
 
-	// Save the cache in cache and copy the state since it is also returned in the end.
+	// Save the copied state because the reference also returned in the end.
 	s.hotStateCache.Put(blockRoot, hotState.Copy())
 
 	return hotState, nil
