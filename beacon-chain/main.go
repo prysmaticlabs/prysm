@@ -24,7 +24,6 @@ import (
 )
 
 var appFlags = []cli.Flag{
-	flags.NoCustomConfigFlag,
 	flags.DepositContractFlag,
 	flags.Web3ProviderFlag,
 	flags.HTTPWeb3ProviderFlag,
