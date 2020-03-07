@@ -1,11 +1,14 @@
 package featureconfig
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/urfave/cli"
 )
 
 var (
+	noCustomConfigFlag = cli.BoolFlag{
+		Name:  "no-custom-config",
+		Usage: "Run the beacon chain with the real parameters from phase 0.",
+	}
 	minimalConfigFlag = cli.BoolFlag{
 		Name:  "minimal-config",
 		Usage: "Use minimal config with parameters as defined in the spec.",
@@ -63,7 +66,6 @@ var (
 		Name: "custom-genesis-delay",
 		Usage: "Start the genesis event with the configured genesis delay in seconds. " +
 			"This flag should be used for local development and testing only.",
-		Value: params.BeaconConfig().MinGenesisDelay,
 	}
 	cacheFilteredBlockTreeFlag = cli.BoolFlag{
 		Name: "cache-filtered-block-tree",
@@ -270,6 +272,7 @@ var E2EValidatorFlags = []string{
 
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
+	noCustomConfigFlag,
 	customGenesisDelayFlag,
 	minimalConfigFlag,
 	writeSSZStateTransitionsFlag,
