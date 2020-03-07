@@ -67,7 +67,7 @@ func TestStoreAndGetKeys(t *testing.T) {
 	if err := ks.StoreKey(tmpdir+filePrefix+"/test-2", key2, "password"); err != nil {
 		t.Fatalf("unable to store key %v", err)
 	}
-	newkeys, err := ks.GetKeys(tmpdir+filePrefix, "test", "password")
+	newkeys, err := ks.GetKeys(tmpdir+filePrefix, "test", "password", false)
 	if err != nil {
 		t.Fatalf("unable to get key %v", err)
 	}
