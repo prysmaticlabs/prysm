@@ -70,7 +70,7 @@ git_repository(
     name = "graknlabs_bazel_distribution",
     commit = "962f3a7e56942430c0ec120c24f9e9f2a9c2ce1a",
     remote = "https://github.com/graknlabs/bazel-distribution",
-    shallow_since = "1563544980 +0300",
+    shallow_since = "1569509514 +0300",
 )
 
 # Override default import in rules_go with special patch until
@@ -84,7 +84,7 @@ git_repository(
         "//third_party:com_github_gogo_protobuf-equal.patch",
     ],
     remote = "https://github.com/gogo/protobuf",
-    shallow_since = "1567336231 +0200",
+    shallow_since = "1571033717 +0200",
     # gazelle args: -go_prefix github.com/gogo/protobuf -proto legacy
 )
 
