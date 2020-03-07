@@ -16,6 +16,52 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// ComputeStateUpToSlot returns a processed state up to input target slot.
+// If the last processed block is at slot 32, given input target slot at 40, this
+// returns processed state up to slot 40 via empty slots.
+func (s *State) ComputeStateUpToSlot(ctx context.Context, targetSlot uint64) (*state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.ComputeStateUpToSlot")
+	defer span.End()
+
+	// Return genesis state if target slot is 0.
+	if targetSlot == 0 {
+		return s.beaconDB.GenesisState(ctx)
+	}
+
+	lastBlockRoot, lastBlockSlot, err := s.lastSavedBlock(ctx, targetSlot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get last saved block")
+	}
+
+	lastBlockRootForState, err := s.lastSavedState(ctx, targetSlot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get last valid state")
+	}
+	lastState, err := s.beaconDB.State(ctx, lastBlockRootForState)
+	if err != nil {
+		return nil, err
+	}
+	if lastState == nil {
+		return nil, errUnknownState
+	}
+
+	// Return if the last valid state's slot is higher than the target slot.
+	if lastState.Slot() >= targetSlot {
+		return lastState, nil
+	}
+
+	blks, err := s.LoadBlocks(ctx, lastState.Slot()+1, lastBlockSlot, lastBlockRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not load blocks")
+	}
+	lastState, err = s.ReplayBlocks(ctx, lastState, blks, targetSlot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not replay blocks")
+	}
+
+	return lastState, nil
+}
+
 // ReplayBlocks replays the input blocks on the input state until the target slot is reached.
 func (s *State) ReplayBlocks(ctx context.Context, state *state.BeaconState, signed []*ethpb.SignedBeaconBlock, targetSlot uint64) (*state.BeaconState, error) {
 	var err error
@@ -68,11 +114,15 @@ func (s *State) LoadBlocks(ctx context.Context, startSlot uint64, endSlot uint64
 	if len(blocks) != len(blockRoots) {
 		return nil, errors.New("length of blocks and roots don't match")
 	}
+	// Return early if there's no block given the input.
+	length := len(blocks)
+	if length == 0 {
+		return nil, nil
+	}
 
 	// The last retrieved block root has to match input end block root.
 	// Covers the edge case if there's multiple blocks on the same end slot,
 	// the end root may not be the last index in `blockRoots`.
-	length := len(blocks)
 	for length >= 3 && blocks[length-1].Block.Slot == blocks[length-2].Block.Slot && blockRoots[length-1] != endBlockRoot {
 		length--
 		if blockRoots[length-2] == endBlockRoot {
