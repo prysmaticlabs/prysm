@@ -8,15 +8,17 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
-// Tracks the highest observed epoch from the validator span maps
+// Tracks the highest and lowest observed epochs from the validator span maps
 // used for attester slashing detection. This value is purely used
 // as a cache key and only needs to be maintained in memory.
 var highestObservedEpoch uint64
+var lowestObservedEpoch = params.BeaconConfig().FarFutureEpoch
 
 func cacheTypeMismatchError(value interface{}) error {
 	return fmt.Errorf("cache contains a value of type: %v "+
@@ -32,7 +34,7 @@ func persistSpanMapsOnEviction(db *Store) func(uint64, uint64, interface{}, int6
 	// required by the ristretto cache OnEvict method.
 	// See https://godoc.org/github.com/dgraph-io/ristretto#Config.
 	return func(epoch uint64, _ uint64, value interface{}, cost int64) {
-		log.Tracef("evicting span map for epoch: %d", epoch)
+		log.Tracef("Evicting span map for epoch: %d", epoch)
 		err := db.update(func(tx *bolt.Tx) error {
 			bucket := tx.Bucket(validatorsMinMaxSpanBucket)
 			epochBucket, err := bucket.CreateBucketIfNotExists(bytesutil.Bytes8(epoch))
@@ -44,22 +46,21 @@ func persistSpanMapsOnEviction(db *Store) func(uint64, uint64, interface{}, int6
 				return cacheTypeMismatchError(value)
 			}
 			for k, v := range spanMap {
-				err = epochBucket.Put(bytesutil.Bytes8(k), marshalSpan(v))
-				if err != nil {
+				if err = epochBucket.Put(bytesutil.Bytes8(k), marshalSpan(v)); err != nil {
 					return err
 				}
 			}
 			return nil
 		})
 		if err != nil {
-			log.Errorf("failed to save span map to db on cache eviction: %v", err)
+			log.Errorf("Failed to save span map to db on cache eviction: %v", err)
 		}
 	}
 }
 
 // Unmarshal a span map from an encoded, flattened array.
 func unmarshalSpan(ctx context.Context, enc []byte) (types.Span, error) {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.unmarshalSpan")
+	ctx, span := trace.StartSpan(ctx, "slasherDB.unmarshalSpan")
 	defer span.End()
 	r := types.Span{}
 	if len(enc) != spannerEncodedLength {
@@ -89,7 +90,7 @@ func marshalSpan(span types.Span) []byte {
 // enabled and the epoch key exists. Returns nil if the span map
 // for this validator index does not exist.
 func (db *Store) EpochSpansMap(ctx context.Context, epoch uint64) (map[uint64]types.Span, error) {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.EpochSpansMap")
+	ctx, span := trace.StartSpan(ctx, "slasherDB.EpochSpansMap")
 	defer span.End()
 	if db.spanCacheEnabled {
 		v, ok := db.spanCache.Get(epoch)
@@ -134,25 +135,23 @@ func (db *Store) EpochSpansMap(ctx context.Context, epoch uint64) (map[uint64]ty
 // when caching is enabled.
 // Returns error if the spans for this validator index and epoch does not exist.
 func (db *Store) EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uint64, epoch uint64) (types.Span, error) {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.EpochSpanByValidatorIndex")
+	ctx, span := trace.StartSpan(ctx, "slasherDB.EpochSpanByValidatorIndex")
 	defer span.End()
-	var err error
 	if db.spanCacheEnabled {
-		v, ok := db.spanCache.Get(epoch)
-		spanMap := make(map[uint64]types.Span)
-		if ok {
-			spanMap, ok = v.(map[uint64]types.Span)
-			if !ok {
-				return types.Span{}, cacheTypeMismatchError(v)
-			}
-			spans, ok := spanMap[validatorIdx]
-			if ok {
-				return spans, nil
-			}
+		setObservedEpochs(epoch)
+		spanMap, err := db.findOrLoadEpochInCache(ctx, epoch)
+		if err != nil {
+			return types.Span{}, err
 		}
+		spans, ok := spanMap[validatorIdx]
+		if ok {
+			return spans, nil
+		}
+		return types.Span{}, nil
 	}
+
 	var spans types.Span
-	err = db.view(func(tx *bolt.Tx) error {
+	err := db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(validatorsMinMaxSpanBucket)
 		epochBucket := b.Bucket(bytesutil.Bytes8(epoch))
 		if epochBucket == nil {
@@ -173,23 +172,20 @@ func (db *Store) EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uin
 	return spans, err
 }
 
-// SaveValidatorEpochSpans accepts validator index epoch and spans returns.
+// SaveValidatorEpochSpan accepts validator index epoch and spans returns.
 // it reads the epoch spans from cache, updates it and save it back to cache
 // if caching is enabled.
 // Returns error if the spans for this validator index and epoch does not exist.
-func (db *Store) SaveValidatorEpochSpans(
+func (db *Store) SaveValidatorEpochSpan(
 	ctx context.Context,
 	validatorIdx uint64,
 	epoch uint64,
-	spans types.Span,
+	span types.Span,
 ) error {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveValidatorEpochSpans")
-	defer span.End()
-	defer span.End()
+	ctx, traceSpan := trace.StartSpan(ctx, "slasherDB.SaveValidatorEpochSpan")
+	defer traceSpan.End()
 	if db.spanCacheEnabled {
-		if epoch > highestObservedEpoch {
-			highestObservedEpoch = epoch
-		}
+		setObservedEpochs(epoch)
 		v, ok := db.spanCache.Get(epoch)
 		spanMap := make(map[uint64]types.Span)
 		if ok {
@@ -198,13 +194,14 @@ func (db *Store) SaveValidatorEpochSpans(
 				return cacheTypeMismatchError(v)
 			}
 		}
-		spanMap[validatorIdx] = spans
+		spanMap[validatorIdx] = span
 		saved := db.spanCache.Set(epoch, spanMap, 1)
 		if !saved {
 			return fmt.Errorf("failed to save span map to cache")
 		}
 		return nil
 	}
+
 	return db.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(validatorsMinMaxSpanBucket)
 		epochBucket, err := b.CreateBucketIfNotExists(bytesutil.Bytes8(epoch))
@@ -212,7 +209,7 @@ func (db *Store) SaveValidatorEpochSpans(
 			return err
 		}
 		key := bytesutil.Bytes8(validatorIdx)
-		value := marshalSpan(spans)
+		value := marshalSpan(span)
 		return epochBucket.Put(key, value)
 	})
 }
@@ -221,12 +218,10 @@ func (db *Store) SaveValidatorEpochSpans(
 // saves the spans to cache if caching is enabled. The key in the cache is the highest
 // epoch seen by slasher and the value is the span map itself.
 func (db *Store) SaveEpochSpansMap(ctx context.Context, epoch uint64, spanMap map[uint64]types.Span) error {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveEpochSpansMap")
+	ctx, span := trace.StartSpan(ctx, "slasherDB.SaveEpochSpansMap")
 	defer span.End()
 	if db.spanCacheEnabled {
-		if epoch > highestObservedEpoch {
-			highestObservedEpoch = epoch
-		}
+		setObservedEpochs(epoch)
 		saved := db.spanCache.Set(epoch, spanMap, 1)
 		if !saved {
 			return fmt.Errorf("failed to save span map to cache")
@@ -256,12 +251,12 @@ func (db *Store) enableSpanCache(enable bool) {
 // SaveCachedSpansMaps saves all span maps that are currently
 // in memory into the DB. if no span maps are in db or cache is disabled it returns nil.
 func (db *Store) SaveCachedSpansMaps(ctx context.Context) error {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveCachedSpansMaps")
+	ctx, span := trace.StartSpan(ctx, "slasherDB.SaveCachedSpansMaps")
 	defer span.End()
 	if db.spanCacheEnabled {
 		db.enableSpanCache(false)
 		defer db.enableSpanCache(true)
-		for epoch := uint64(0); epoch <= highestObservedEpoch; epoch++ {
+		for epoch := lowestObservedEpoch; epoch <= highestObservedEpoch; epoch++ {
 			v, ok := db.spanCache.Get(epoch)
 			if ok {
 				spanMap, ok := v.(map[uint64]types.Span)
@@ -271,16 +266,19 @@ func (db *Store) SaveCachedSpansMaps(ctx context.Context) error {
 				if err := db.SaveEpochSpansMap(ctx, epoch, spanMap); err != nil {
 					return errors.Wrap(err, "failed to save span maps from cache")
 				}
-
 			}
 		}
+		// Reset the observed epochs after saving to the DB.
+		lowestObservedEpoch = params.BeaconConfig().FarFutureEpoch
+		highestObservedEpoch = 0
+		log.Debugf("Epochs %d to %d have been saved", lowestObservedEpoch, highestObservedEpoch)
 	}
 	return nil
 }
 
 // DeleteEpochSpans deletes a epochs validators span map using a epoch index as bucket key.
 func (db *Store) DeleteEpochSpans(ctx context.Context, epoch uint64) error {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.DeleteEpochSpans")
+	ctx, span := trace.StartSpan(ctx, "slasherDB.DeleteEpochSpans")
 	defer span.End()
 	if db.spanCacheEnabled {
 		_, ok := db.spanCache.Get(epoch)
@@ -300,7 +298,7 @@ func (db *Store) DeleteEpochSpans(ctx context.Context, epoch uint64) error {
 // deletes spans from cache if caching is enabled.
 // using a validator index as bucket key.
 func (db *Store) DeleteValidatorSpanByEpoch(ctx context.Context, validatorIdx uint64, epoch uint64) error {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.DeleteValidatorSpanByEpoch")
+	ctx, span := trace.StartSpan(ctx, "slasherDB.DeleteValidatorSpanByEpoch")
 	defer span.End()
 	if db.spanCacheEnabled {
 		v, ok := db.spanCache.Get(epoch)
@@ -318,6 +316,7 @@ func (db *Store) DeleteValidatorSpanByEpoch(ctx context.Context, validatorIdx ui
 		}
 		return nil
 	}
+
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsMinMaxSpanBucket)
 		e := bytesutil.Bytes8(epoch)
@@ -325,4 +324,39 @@ func (db *Store) DeleteValidatorSpanByEpoch(ctx context.Context, validatorIdx ui
 		v := bytesutil.Bytes8(validatorIdx)
 		return epochBucket.Delete(v)
 	})
+}
+
+// findOrLoadEpochInCache checks if the requested epoch is in the cache, and if not, we load it from the DB.
+func (db *Store) findOrLoadEpochInCache(ctx context.Context, epoch uint64) (map[uint64]types.Span, error) {
+	ctx, span := trace.StartSpan(ctx, "slasherDB.findOrLoadEpochInCache")
+	defer span.End()
+	v, epochFound := db.spanCache.Get(epoch)
+	if epochFound {
+		spanMap, ok := v.(map[uint64]types.Span)
+		if !ok {
+			return make(map[uint64]types.Span), cacheTypeMismatchError(v)
+		}
+		return spanMap, nil
+	}
+	db.enableSpanCache(false)
+	defer db.enableSpanCache(true)
+	// If the epoch we want isn't in the cache, load it in.
+	spanForEpoch, err := db.EpochSpansMap(ctx, epoch)
+	if err != nil {
+		return make(map[uint64]types.Span), errors.Wrap(err, "failed to get span map for epoch")
+	}
+	saved := db.spanCache.Set(epoch, spanForEpoch, 1)
+	if !saved {
+		return make(map[uint64]types.Span), fmt.Errorf("failed to save span map to cache")
+	}
+	return spanForEpoch, nil
+}
+
+func setObservedEpochs(epoch uint64) {
+	if epoch > highestObservedEpoch {
+		highestObservedEpoch = epoch
+	}
+	if epoch < lowestObservedEpoch {
+		lowestObservedEpoch = epoch
+	}
 }
