@@ -203,6 +203,7 @@ func (db *Store) SaveValidatorEpochSpans(
 		db.spanCache.Set(epoch, spanMap)
 		return nil
 	}
+
 	return db.update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(validatorsMinMaxSpanBucket)
 		epochBucket, err := b.CreateBucketIfNotExists(bytesutil.Bytes8(epoch))
@@ -228,6 +229,7 @@ func (db *Store) SaveEpochSpansMap(ctx context.Context, epoch uint64, spanMap ma
 		db.spanCache.Set(epoch, spanMap)
 		return nil
 	}
+
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsMinMaxSpanBucket)
 		valBucket, err := bucket.CreateBucketIfNotExists(bytesutil.Bytes8(epoch))
@@ -291,12 +293,11 @@ func (db *Store) DeleteValidatorSpanByEpoch(ctx context.Context, validatorIdx ui
 	defer span.End()
 	if db.spanCacheEnabled {
 		spanMap, ok := db.spanCache.Get(epoch)
-		if !ok {
+		if ok {
+			delete(spanMap, validatorIdx)
+			db.spanCache.Set(epoch, spanMap)
 			return nil
 		}
-		delete(spanMap, validatorIdx)
-		db.spanCache.Set(epoch, spanMap)
-		return nil
 	}
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsMinMaxSpanBucket)

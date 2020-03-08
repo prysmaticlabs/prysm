@@ -50,7 +50,7 @@ func (c *HotStateCache) Get(root [32]byte) *stateTrie.BeaconState {
 	return nil
 }
 
-// Set the response in the cache.
+// Put the response in the cache.
 func (c *HotStateCache) Put(root [32]byte, state *stateTrie.BeaconState) {
 	c.cache.Add(root, state)
 }

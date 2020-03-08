@@ -132,7 +132,7 @@ func (c *AttestationCache) MarkNotInProgress(req *ethpb.AttestationDataRequest) 
 	return nil
 }
 
-// Set the response in the cache.
+// Put the response in the cache.
 func (c *AttestationCache) Put(ctx context.Context, req *ethpb.AttestationDataRequest, res *ethpb.AttestationData) error {
 	data := &attestationReqResWrapper{
 		req,
