@@ -9,7 +9,6 @@ import (
 	db "github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/iface"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -128,7 +127,6 @@ func (s *SpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttest
 			return err
 		}
 	}
-	logrus.Debugf("Finished updating spans for attestation with indices: %v", att.AttestingIndices)
 	return nil
 }
 
