@@ -328,6 +328,8 @@ func (db *Store) DeleteValidatorSpanByEpoch(ctx context.Context, validatorIdx ui
 
 // findOrLoadEpochInCache checks if the requested epoch is in the cache, and if not, we load it from the DB.
 func (db *Store) findOrLoadEpochInCache(ctx context.Context, epoch uint64) (map[uint64]types.Span, error) {
+	ctx, span := trace.StartSpan(ctx, "slasherDB.findOrLoadEpochInCache")
+	defer span.End()
 	v, epochFound := db.spanCache.Get(epoch)
 	if epochFound {
 		spanMap, ok := v.(map[uint64]types.Span)
