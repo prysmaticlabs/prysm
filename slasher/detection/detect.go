@@ -9,13 +9,15 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
-	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 func (ds *Service) detectAttesterSlashings(
 	ctx context.Context,
 	att *ethpb.IndexedAttestation,
 ) ([]*ethpb.AttesterSlashing, error) {
+	ctx, span := trace.StartSpan(ctx, "detection.detectAttesterSlashings")
+	defer span.End()
 	slashings := make([]*ethpb.AttesterSlashing, 0)
 	for i := 0; i < len(att.AttestingIndices); i++ {
 		valIdx := att.AttestingIndices[i]
@@ -32,12 +34,10 @@ func (ds *Service) detectAttesterSlashings(
 		switch result.Kind {
 		case types.DoubleVote:
 			slashing, err = ds.detectDoubleVote(ctx, att, result)
-			logrus.Debugf("Detected a possible double vote for val idx %d", valIdx)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not detect double votes on attestation")
 			}
 		case types.SurroundVote:
-			logrus.Debugf("Detected a possible surround vote for val idx %d", valIdx)
 			slashing, err = ds.detectSurroundVotes(ctx, att, result)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not detect surround votes on attestation")
@@ -70,6 +70,8 @@ func (ds *Service) detectDoubleVote(
 	incomingAtt *ethpb.IndexedAttestation,
 	detectionResult *types.DetectionResult,
 ) (*ethpb.AttesterSlashing, error) {
+	ctx, span := trace.StartSpan(ctx, "detection.detectDoubleVote")
+	defer span.End()
 	if detectionResult == nil || detectionResult.Kind != types.DoubleVote {
 		return nil, nil
 	}
@@ -104,6 +106,8 @@ func (ds *Service) detectSurroundVotes(
 	incomingAtt *ethpb.IndexedAttestation,
 	detectionResult *types.DetectionResult,
 ) (*ethpb.AttesterSlashing, error) {
+	ctx, span := trace.StartSpan(ctx, "detection.detectSurroundVotes")
+	defer span.End()
 	if detectionResult == nil || detectionResult.Kind != types.SurroundVote {
 		return nil, nil
 	}

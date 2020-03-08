@@ -49,6 +49,7 @@ func (ds *Service) detectIncomingAttestations(ctx context.Context, ch chan *ethp
 	for {
 		select {
 		case indexedAtt := <-ch:
+			log.Debug("Running detection on incoming attestation")
 			slashings, err := ds.detectAttesterSlashings(ctx, indexedAtt)
 			if err != nil {
 				log.WithError(err).Error("Could not detect attester slashings")
