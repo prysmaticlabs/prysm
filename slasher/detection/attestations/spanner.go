@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	db "github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/iface"
@@ -35,18 +36,17 @@ func NewSpanDetector(db db.Database) *SpanDetector {
 	}
 }
 
-// DetectSlashingForValidator uses a validator index and its corresponding
+// DetectSlashingsForAttestation uses a validator index and its corresponding
 // min-max spans during an epoch to detect an epoch in which the validator
 // committed a slashable attestation.
-func (s *SpanDetector) DetectSlashingForValidator(
+func (s *SpanDetector) DetectSlashingsForAttestation(
 	ctx context.Context,
-	validatorIdx uint64,
-	attData *ethpb.AttestationData,
-) (*types.DetectionResult, error) {
-	ctx, traceSpan := trace.StartSpan(ctx, "spanner.DetectSlashingForValidator")
+	att *ethpb.IndexedAttestation,
+) ([]*types.DetectionResult, error) {
+	ctx, traceSpan := trace.StartSpan(ctx, "spanner.DetectSlashingsForAttestation")
 	defer traceSpan.End()
-	sourceEpoch := attData.Source.Epoch
-	targetEpoch := attData.Target.Epoch
+	sourceEpoch := att.Data.Source.Epoch
+	targetEpoch := att.Data.Target.Epoch
 	if (targetEpoch - sourceEpoch) > params.BeaconConfig().WeakSubjectivityPeriod {
 		return nil, fmt.Errorf(
 			"attestation span was greater than weak subjectivity period %d, received: %d",
@@ -54,55 +54,79 @@ func (s *SpanDetector) DetectSlashingForValidator(
 			targetEpoch-sourceEpoch,
 		)
 	}
+
+	spanMap, err := s.slasherDB.EpochSpansMap(ctx, sourceEpoch)
+	if err != nil {
+		return nil, err
+	}
+	targetSpanMap, err := s.slasherDB.EpochSpansMap(ctx, targetEpoch)
+	if err != nil {
+		return nil, err
+	}
+
+	var detections []*types.DetectionResult
 	distance := uint16(targetEpoch - sourceEpoch)
-	sp, err := s.slasherDB.EpochSpanByValidatorIndex(ctx, validatorIdx, sourceEpoch)
-	if err != nil {
-		return nil, err
+	for _, idx := range att.AttestingIndices {
+		span := spanMap[idx]
+		minSpan := span.MinSpan
+		if minSpan > 0 && minSpan < distance {
+			slashableEpoch := sourceEpoch + uint64(minSpan)
+			targetSpan, err := s.slasherDB.EpochSpanByValidatorIndex(ctx, idx, slashableEpoch)
+			if err != nil {
+				return nil, err
+			}
+			detections = append(detections, &types.DetectionResult{
+				Kind:           types.SurroundVote,
+				SlashableEpoch: slashableEpoch,
+				SigBytes:       targetSpan.SigBytes,
+			})
+			continue
+		}
+
+		maxSpan := span.MaxSpan
+		if maxSpan > distance {
+			slashableEpoch := sourceEpoch + uint64(maxSpan)
+			targetSpan, err := s.slasherDB.EpochSpanByValidatorIndex(ctx, idx, slashableEpoch)
+			if err != nil {
+				return nil, err
+			}
+			detections = append(detections, &types.DetectionResult{
+				Kind:           types.SurroundVote,
+				SlashableEpoch: slashableEpoch,
+				SigBytes:       targetSpan.SigBytes,
+			})
+			continue
+		}
+
+		targetSpan := targetSpanMap[idx]
+		// Check if the validator has attested for this epoch or not.
+		if targetSpan.HasAttested {
+			detections = append(detections, &types.DetectionResult{
+				Kind:           types.DoubleVote,
+				SlashableEpoch: targetEpoch,
+				SigBytes:       targetSpan.SigBytes,
+			})
+			continue
+		}
 	}
 
-	minSpan := sp.MinSpan
-	if minSpan > 0 && minSpan < distance {
-		slashableEpoch := sourceEpoch + uint64(minSpan)
-		span, err := s.slasherDB.EpochSpanByValidatorIndex(ctx, validatorIdx, slashableEpoch)
+
+	// Clear out any duplicate results.
+	keys := make(map[[32]byte]bool)
+	var detectionList []*types.DetectionResult
+	for _, dd := range detections {
+		hash, err := ssz.HashTreeRoot(dd.Marshal())
 		if err != nil {
 			return nil, err
 		}
-		return &types.DetectionResult{
-			Kind:           types.SurroundVote,
-			SlashableEpoch: slashableEpoch,
-			SigBytes:       span.SigBytes,
-		}, nil
-	}
 
-	maxSpan := sp.MaxSpan
-	if maxSpan > distance {
-		slashableEpoch := sourceEpoch + uint64(maxSpan)
-		span, err := s.slasherDB.EpochSpanByValidatorIndex(ctx, validatorIdx, slashableEpoch)
-		if err != nil {
-			return nil, err
+		if _, value := keys[hash]; !value {
+			keys[hash] = true
+			detectionList = append(detectionList, dd)
 		}
-		return &types.DetectionResult{
-			Kind:           types.SurroundVote,
-			SlashableEpoch: slashableEpoch,
-			SigBytes:       span.SigBytes,
-		}, nil
 	}
 
-	sp, err = s.slasherDB.EpochSpanByValidatorIndex(ctx, validatorIdx, targetEpoch)
-	if err != nil {
-		return nil, err
-	}
-
-	// Check if the validator has attested for this epoch or not.
-	if sp.HasAttested {
-		return &types.DetectionResult{
-			Kind:           types.DoubleVote,
-			SlashableEpoch: targetEpoch,
-			SigBytes:       sp.SigBytes,
-		}, nil
-	}
-
-	return nil, nil
+	return detectionList, nil
 }
 
 // UpdateSpans given an indexed attestation for all of its attesting indices.
@@ -116,10 +140,10 @@ func (s *SpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttest
 		return err
 	}
 	// Update min and max spans.
-	if err = s.updateMinSpan(ctx, source, target, att.AttestingIndices); err != nil {
+	if err := s.updateMinSpan(ctx, source, target, att.AttestingIndices); err != nil {
 		return err
 	}
-	if err = s.updateMaxSpan(ctx, source, target, att.AttestingIndices); err != nil {
+	if err := s.updateMaxSpan(ctx, source, target, att.AttestingIndices); err != nil {
 		return err
 	}
 	return nil
@@ -201,7 +225,7 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, source uint64, target 
 
 // Updates a max span for a validator index given a source and target epoch
 // for an attestation produced by the validator. Used for catching surrounded votes.
-func (s *SpanDetector) updateMaxSpan(ctx context.Context, source uint64, target uint64, valIdx uint64) error {
+func (s *SpanDetector) updateMaxSpan(ctx context.Context, source uint64, target uint64, valIndices []uint64) error {
 	ctx, traceSpan := trace.StartSpan(ctx, "spanner.updateMaxSpan")
 	defer traceSpan.End()
 	for epoch := source + 1; epoch < target; epoch++ {
@@ -211,9 +235,6 @@ func (s *SpanDetector) updateMaxSpan(ctx context.Context, source uint64, target 
 		}
 		for _, idx := range valIndices {
 			span := spanMap[idx]
-			if err != nil {
-				return err
-			}
 			newMaxSpan := uint16(target - epoch)
 			if newMaxSpan > span.MaxSpan {
 				span = types.Span{

@@ -6,12 +6,11 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 )
 
-func TestSpanDetector_DetectSlashingForValidator_Double(t *testing.T) {
+func TestSpanDetector_DetectSlashingsForAttestation_Double(t *testing.T) {
 	type testStruct struct {
 		name        string
 		att         *ethpb.IndexedAttestation
@@ -146,7 +145,7 @@ func TestSpanDetector_DetectSlashingForValidator_Double(t *testing.T) {
 					BeaconBlockRoot: []byte("bad block root"),
 				},
 			},
-			slashCount: 3,
+			slashCount: 1,
 		},
 		{
 			name: "att with different target, should not detect possible double",
@@ -212,7 +211,7 @@ func TestSpanDetector_DetectSlashingForValidator_Double(t *testing.T) {
 					BeaconBlockRoot: []byte("good block root"),
 				},
 			},
-			slashCount: 2,
+			slashCount: 1,
 		},
 	}
 	for _, tt := range tests {
@@ -229,33 +228,31 @@ func TestSpanDetector_DetectSlashingForValidator_Double(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			slashTotal := uint64(0)
-			for _, valIdx := range sliceutil.IntersectionUint64(tt.att.AttestingIndices, tt.incomingAtt.AttestingIndices) {
-				res, err := sd.DetectSlashingForValidator(ctx, valIdx, tt.incomingAtt.Data)
-				if err != nil {
-					t.Fatal(err)
-				}
-				var want *types.DetectionResult
-				if tt.slashCount > 0 {
-					slashTotal++
-					want = &types.DetectionResult{
+			res, err := sd.DetectSlashingsForAttestation(ctx, tt.incomingAtt)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var want []*types.DetectionResult
+			if tt.slashCount > 0 {
+				want = []*types.DetectionResult{
+					{
 						Kind:           types.DoubleVote,
 						SlashableEpoch: tt.incomingAtt.Data.Target.Epoch,
 						SigBytes:       [2]byte{1, 2},
-					}
-				}
-				if !reflect.DeepEqual(res, want) {
-					t.Errorf("Wanted: %v, received %v", want, res)
+					},
 				}
 			}
-			if slashTotal != tt.slashCount {
-				t.Fatalf("Unexpected amount of slashings found, received %db, expected %db", slashTotal, tt.slashCount)
+			if !reflect.DeepEqual(res, want) {
+				t.Errorf("Wanted: %v, received %v", want, res)
+			}
+			if uint64(len(res)) != tt.slashCount {
+				t.Fatalf("Unexpected amount of slashings found, received %db, expected %d", len(res), tt.slashCount)
 			}
 		})
 	}
 }
 
-func TestSpanDetector_DetectSlashingForValidator_Surround(t *testing.T) {
+func TestSpanDetector_DetectSlashingsForAttestation_Surround(t *testing.T) {
 	type testStruct struct {
 		name                     string
 		sourceEpoch              uint64
@@ -468,15 +465,18 @@ func TestSpanDetector_DetectSlashingForValidator_Surround(t *testing.T) {
 				}
 			}
 
-			attData := &ethpb.AttestationData{
-				Source: &ethpb.Checkpoint{
-					Epoch: tt.sourceEpoch,
+			att := &ethpb.IndexedAttestation{
+				Data: &ethpb.AttestationData{
+					Source: &ethpb.Checkpoint{
+						Epoch: tt.sourceEpoch,
+					},
+					Target: &ethpb.Checkpoint{
+						Epoch: tt.targetEpoch,
+					},
 				},
-				Target: &ethpb.Checkpoint{
-					Epoch: tt.targetEpoch,
-				},
+				AttestingIndices: []uint64{0},
 			}
-			res, err := sd.DetectSlashingForValidator(ctx, validatorIndex, attData)
+			res, err := sd.DetectSlashingsForAttestation(ctx, att)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -484,9 +484,11 @@ func TestSpanDetector_DetectSlashingForValidator_Surround(t *testing.T) {
 				t.Fatalf("Did not want validator to be slashed but found slashable offense: %v", res)
 			}
 			if tt.shouldSlash {
-				want := &types.DetectionResult{
-					Kind:           types.SurroundVote,
-					SlashableEpoch: tt.slashableEpoch,
+				want := []*types.DetectionResult{
+					{
+						Kind:           types.SurroundVote,
+						SlashableEpoch: tt.slashableEpoch,
+					},
 				}
 				if !reflect.DeepEqual(res, want) {
 					t.Errorf("Wanted: %v, received %v", want, res)
@@ -496,7 +498,7 @@ func TestSpanDetector_DetectSlashingForValidator_Surround(t *testing.T) {
 	}
 }
 
-func TestSpanDetector_DetectSlashingForValidator_MultipleValidators(t *testing.T) {
+func TestSpanDetector_DetectSlashingsForAttestation_MultipleValidators(t *testing.T) {
 	type testStruct struct {
 		name            string
 		sourceEpochs    []uint64
@@ -581,15 +583,18 @@ func TestSpanDetector_DetectSlashingForValidator_MultipleValidators(t *testing.T
 				}
 			}
 			for valIdx := uint64(0); valIdx < uint64(len(tt.shouldSlash)); valIdx++ {
-				attData := &ethpb.AttestationData{
-					Source: &ethpb.Checkpoint{
-						Epoch: tt.sourceEpochs[valIdx],
+				att := &ethpb.IndexedAttestation{
+					Data: &ethpb.AttestationData{
+						Source: &ethpb.Checkpoint{
+							Epoch: tt.sourceEpochs[valIdx],
+						},
+						Target: &ethpb.Checkpoint{
+							Epoch: tt.targetEpochs[valIdx],
+						},
 					},
-					Target: &ethpb.Checkpoint{
-						Epoch: tt.targetEpochs[valIdx],
-					},
+					AttestingIndices: []uint64{valIdx},
 				}
-				res, err := sd.DetectSlashingForValidator(ctx, valIdx, attData)
+				res, err := sd.DetectSlashingsForAttestation(ctx, att)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -597,9 +602,11 @@ func TestSpanDetector_DetectSlashingForValidator_MultipleValidators(t *testing.T
 					t.Fatalf("Did not want validator to be slashed but found slashable offense: %v", res)
 				}
 				if tt.shouldSlash[valIdx] {
-					want := &types.DetectionResult{
-						Kind:           types.SurroundVote,
-						SlashableEpoch: tt.slashableEpochs[valIdx],
+					want := []*types.DetectionResult{
+						{
+							Kind:           types.SurroundVote,
+							SlashableEpoch: tt.slashableEpochs[valIdx],
+						},
 					}
 					if !reflect.DeepEqual(res, want) {
 						t.Errorf("Wanted: %v, received %v", want, res)
