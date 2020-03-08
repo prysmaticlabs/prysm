@@ -9,6 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/mock"
+	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 )
 
 func TestService_ReceiveBlocks(t *testing.T) {
@@ -69,7 +70,7 @@ func TestService_ReceiveAttestations(t *testing.T) {
 }
 
 
-func TestService_ReceiveAttestations(t *testing.T) {
+func TestService_ReceiveAttestations_Batched(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconChainClient(ctrl)
@@ -77,15 +78,21 @@ func TestService_ReceiveAttestations(t *testing.T) {
 	bs := Service{
 		beaconClient: client,
 		blockFeed:    new(event.Feed),
+		slasherDB: testDB.SetupSlasherDB(t, false),
+		attestationFeed: new(event.Feed),
 		receivedAttestationsBuffer:  make(chan *ethpb.IndexedAttestation, 1),
 		collectedAttestationsBuffer: make(chan []*ethpb.IndexedAttestation, 1),
 	}
 	stream := mock.NewMockBeaconChain_StreamIndexedAttestationsClient(ctrl)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx := context.Background()
 	att := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Slot: 5,
+			Target: &ethpb.Checkpoint{
+				Epoch: 5,
+			},
 		},
+		Signature: []byte{1, 2},
 	}
 	client.EXPECT().StreamIndexedAttestations(
 		gomock.Any(),
@@ -95,8 +102,11 @@ func TestService_ReceiveAttestations(t *testing.T) {
 	stream.EXPECT().Recv().Return(
 		att,
 		nil,
-	).Do(func() {
-		cancel()
-	})
-	bs.receiveAttestations(ctx)
+	).AnyTimes()
+
+	go bs.receiveAttestations(ctx)
+	atts := <- bs.collectedAttestationsBuffer
+	if len(atts) != 0 {
+		t.Fatalf("Expected %d received attestations to be batched", len(atts))
+	}
 }
