@@ -170,10 +170,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 func ConfigureValidator(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	if ctx.GlobalBool(minimalConfigFlag.Name) {
-		log.Warn("Using minimal config")
-		cfg.MinimalConfig = true
-	}
+	cfg = configureConfig(ctx, cfg)
 	if ctx.GlobalBool(protectProposerFlag.Name) {
 		log.Warn("Enabled validator proposal slashing protection.")
 		cfg.ProtectProposer = true

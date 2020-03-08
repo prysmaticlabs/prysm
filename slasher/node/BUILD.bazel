@@ -10,6 +10,7 @@ go_library(
         "//shared/cmd:go_default_library",
         "//shared/debug:go_default_library",
         "//shared/event:go_default_library",
+        "//shared/prometheus:go_default_library",
         "//shared/tracing:go_default_library",
         "//slasher/beaconclient:go_default_library",
         "//slasher/db:go_default_library",
