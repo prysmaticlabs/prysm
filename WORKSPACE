@@ -70,7 +70,7 @@ git_repository(
     name = "graknlabs_bazel_distribution",
     commit = "962f3a7e56942430c0ec120c24f9e9f2a9c2ce1a",
     remote = "https://github.com/graknlabs/bazel-distribution",
-    shallow_since = "1563544980 +0300",
+    shallow_since = "1569509514 +0300",
 )
 
 # Override default import in rules_go with special patch until
@@ -84,7 +84,7 @@ git_repository(
         "//third_party:com_github_gogo_protobuf-equal.patch",
     ],
     remote = "https://github.com/gogo/protobuf",
-    shallow_since = "1567336231 +0200",
+    shallow_since = "1571033717 +0200",
     # gazelle args: -go_prefix github.com/gogo/protobuf -proto legacy
 )
 
@@ -235,9 +235,9 @@ all_content = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//v
 
 http_archive(
     name = "rules_foreign_cc",
+    sha256 = "450563dc2938f38566a59596bb30a3e905fbbcc35b3fff5a1791b122bc140465",
     strip_prefix = "rules_foreign_cc-456425521973736ef346d93d3d6ba07d807047df",
     url = "https://github.com/bazelbuild/rules_foreign_cc/archive/456425521973736ef346d93d3d6ba07d807047df.zip",
-    sha256 = "450563dc2938f38566a59596bb30a3e905fbbcc35b3fff5a1791b122bc140465",
 )
 
 load("@rules_foreign_cc//:workspace_definitions.bzl", "rules_foreign_cc_dependencies")
@@ -249,6 +249,7 @@ rules_foreign_cc_dependencies([
 http_archive(
     name = "librdkafka",
     build_file_content = all_content,
+    sha256 = "f6be27772babfdacbbf2e4c5432ea46c57ef5b7d82e52a81b885e7b804781fd6",
     strip_prefix = "librdkafka-1.2.1",
     urls = ["https://github.com/edenhill/librdkafka/archive/v1.2.1.tar.gz"],
 )
@@ -1282,8 +1283,9 @@ go_repository(
 
 go_repository(
     name = "com_github_cloudflare_roughtime",
-    commit = "d41fdcee702eb3e5c3296288a453b9340184d37e",
     importpath = "github.com/cloudflare/roughtime",
+    sum = "h1:jeSxE3fepJdhASERvBHI6RFkMhISv6Ir2JUybYLIVXs=",
+    version = "v0.0.0-20200205191924-a69ef1dab727",
 )
 
 go_repository(
