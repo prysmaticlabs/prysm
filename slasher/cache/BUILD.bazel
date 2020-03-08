@@ -2,7 +2,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["cache.go"],
+    srcs = ["span_cache.go"],
     importpath = "github.com/prysmaticlabs/prysm/slasher/cache",
     visibility = ["//slasher:__subpackages__"],
     deps = [

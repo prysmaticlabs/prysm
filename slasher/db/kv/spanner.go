@@ -190,18 +190,11 @@ func (db *Store) SaveValidatorEpochSpans(
 			highestObservedEpoch = epoch
 		}
 		spanMap, exists := db.spanCache.Get(epoch)
-		if !exists {
-			db.enableSpanCache(false)
-			defer db.enableSpanCache(true)
-			var err error
-			spanMap, err = db.EpochSpansMap(ctx, epoch)
-			if err != nil {
-				return err
-			}
+		if exists {
+			spanMap[validatorIdx] = spans
+			db.spanCache.Set(epoch, spanMap)
+			return nil
 		}
-		spanMap[validatorIdx] = spans
-		db.spanCache.Set(epoch, spanMap)
-		return nil
 	}
 
 	return db.update(func(tx *bolt.Tx) error {
