@@ -117,7 +117,7 @@ func (c *SkipSlotCache) MarkNotInProgress(slot uint64) error {
 	return nil
 }
 
-// Put the response in the cache.
+// Set the response in the cache.
 func (c *SkipSlotCache) Put(ctx context.Context, slot uint64, state *stateTrie.BeaconState) error {
 	if !featureconfig.Get().EnableSkipSlotsCache {
 		return nil

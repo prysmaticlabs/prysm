@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 
@@ -93,31 +92,6 @@ func TestStore_SaveSpans(t *testing.T) {
 		if !reflect.DeepEqual(s, tt.spanMap[1]) {
 			t.Fatalf("Get should return validator spans for epoch 1: %v got: %v", tt.spanMap[1], s)
 		}
-	}
-}
-
-func TestStore_WrongTypeInCache(t *testing.T) {
-	app := cli.NewApp()
-	set := flag.NewFlagSet("test", 0)
-	set.Bool(flags.UseSpanCacheFlag.Name, true, "enable span map cache")
-	db := setupDB(t, cli.NewContext(app, set, nil))
-	defer teardownDB(t, db)
-	ctx := context.Background()
-	for _, tt := range spanTests {
-
-		db.spanCache.Set(tt.epoch, []byte{0, 0}, 1)
-		// wait for value to pass through cache buffers
-		time.Sleep(time.Millisecond * 10)
-		_, err := db.EpochSpansMap(ctx, tt.epoch)
-		if err == nil || !strings.Contains(err.Error(), "cache contains a value of type") {
-			t.Fatalf("expected error type in cache : %v", err)
-		}
-
-		_, err = db.EpochSpanByValidatorIndex(ctx, 1, tt.epoch)
-		if err == nil || !strings.Contains(err.Error(), "cache contains a value of type") {
-			t.Fatalf("expected error type in cache : %v", err)
-		}
-
 	}
 }
 

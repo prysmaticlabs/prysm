@@ -92,16 +92,12 @@ func (db *Store) EpochSpansMap(ctx context.Context, epoch uint64) (map[uint64]ty
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.EpochSpansMap")
 	defer span.End()
 	if db.spanCacheEnabled {
-		v, ok := db.spanCache.Get(epoch)
-		spanMap := make(map[uint64]types.Span)
+		spanMap, ok := db.spanCache.Get(epoch)
 		if ok {
-			spanMap, ok = v.(map[uint64]types.Span)
-			if !ok {
-				return nil, cacheTypeMismatchError(v)
-			}
 			return spanMap, nil
 		}
 	}
+
 	var err error
 	var spanMap map[uint64]types.Span
 	err = db.view(func(tx *bolt.Tx) error {
@@ -138,19 +134,23 @@ func (db *Store) EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uin
 	defer span.End()
 	var err error
 	if db.spanCacheEnabled {
-		v, ok := db.spanCache.Get(epoch)
-		spanMap := make(map[uint64]types.Span)
-		if ok {
-			spanMap, ok = v.(map[uint64]types.Span)
-			if !ok {
-				return types.Span{}, cacheTypeMismatchError(v)
+		spanMap, ok := db.spanCache.Get(epoch)
+		if !ok {
+			db.enableSpanCache(false)
+			defer db.enableSpanCache(true)
+			spanMap, err = db.EpochSpansMap(ctx, epoch)
+			if err != nil {
+				return types.Span{}, err
 			}
-			spans, ok := spanMap[validatorIdx]
-			if ok {
-				return spans, nil
-			}
+			db.spanCache.Set(epoch, spanMap)
 		}
+		spans, ok := spanMap[validatorIdx]
+		if ok {
+			return spans, nil
+		}
+		return types.Span{}, nil
 	}
+
 	var spans types.Span
 	err = db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(validatorsMinMaxSpanBucket)
@@ -185,24 +185,22 @@ func (db *Store) SaveValidatorEpochSpans(
 ) error {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveValidatorEpochSpans")
 	defer span.End()
-	defer span.End()
 	if db.spanCacheEnabled {
 		if epoch > highestObservedEpoch {
 			highestObservedEpoch = epoch
 		}
-		v, ok := db.spanCache.Get(epoch)
-		spanMap := make(map[uint64]types.Span)
-		if ok {
-			spanMap, ok = v.(map[uint64]types.Span)
-			if !ok {
-				return cacheTypeMismatchError(v)
+		spanMap, exists := db.spanCache.Get(epoch)
+		if !exists {
+			db.enableSpanCache(false)
+			defer db.enableSpanCache(true)
+			var err error
+			spanMap, err = db.EpochSpansMap(ctx, epoch)
+			if err != nil {
+				return err
 			}
 		}
 		spanMap[validatorIdx] = spans
-		saved := db.spanCache.Set(epoch, spanMap, 1)
-		if !saved {
-			return fmt.Errorf("failed to save span map to cache")
-		}
+		db.spanCache.Set(epoch, spanMap)
 		return nil
 	}
 	return db.update(func(tx *bolt.Tx) error {
@@ -227,10 +225,7 @@ func (db *Store) SaveEpochSpansMap(ctx context.Context, epoch uint64, spanMap ma
 		if epoch > highestObservedEpoch {
 			highestObservedEpoch = epoch
 		}
-		saved := db.spanCache.Set(epoch, spanMap, 1)
-		if !saved {
-			return fmt.Errorf("failed to save span map to cache")
-		}
+		db.spanCache.Set(epoch, spanMap)
 		return nil
 	}
 	return db.update(func(tx *bolt.Tx) error {
@@ -262,16 +257,11 @@ func (db *Store) SaveCachedSpansMaps(ctx context.Context) error {
 		db.enableSpanCache(false)
 		defer db.enableSpanCache(true)
 		for epoch := uint64(0); epoch <= highestObservedEpoch; epoch++ {
-			v, ok := db.spanCache.Get(epoch)
+			spanMap, ok := db.spanCache.Get(epoch)
 			if ok {
-				spanMap, ok := v.(map[uint64]types.Span)
-				if !ok {
-					return cacheTypeMismatchError(v)
-				}
 				if err := db.SaveEpochSpansMap(ctx, epoch, spanMap); err != nil {
 					return errors.Wrap(err, "failed to save span maps from cache")
 				}
-
 			}
 		}
 	}
@@ -283,11 +273,8 @@ func (db *Store) DeleteEpochSpans(ctx context.Context, epoch uint64) error {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.DeleteEpochSpans")
 	defer span.End()
 	if db.spanCacheEnabled {
-		_, ok := db.spanCache.Get(epoch)
-		if ok {
-			db.spanCache.Del(epoch)
-			return nil
-		}
+		_ = db.spanCache.Remove(epoch)
+		return nil
 	}
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorsMinMaxSpanBucket)
@@ -303,19 +290,12 @@ func (db *Store) DeleteValidatorSpanByEpoch(ctx context.Context, validatorIdx ui
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.DeleteValidatorSpanByEpoch")
 	defer span.End()
 	if db.spanCacheEnabled {
-		v, ok := db.spanCache.Get(epoch)
-		spanMap := make(map[uint64][2]uint16)
-		if ok {
-			spanMap, ok = v.(map[uint64][2]uint16)
-			if !ok {
-				return cacheTypeMismatchError(v)
-			}
+		spanMap, ok := db.spanCache.Get(epoch)
+		if !ok {
+			return nil
 		}
 		delete(spanMap, validatorIdx)
-		saved := db.spanCache.Set(epoch, spanMap, 1)
-		if !saved {
-			return errors.New("failed to save span map to cache")
-		}
+		db.spanCache.Set(epoch, spanMap)
 		return nil
 	}
 	return db.update(func(tx *bolt.Tx) error {
