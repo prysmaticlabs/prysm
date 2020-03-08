@@ -172,17 +172,17 @@ func (db *Store) EpochSpanByValidatorIndex(ctx context.Context, validatorIdx uin
 	return spans, err
 }
 
-// SaveValidatorEpochSpans accepts validator index epoch and spans returns.
+// SaveValidatorEpochSpan accepts validator index epoch and spans returns.
 // it reads the epoch spans from cache, updates it and save it back to cache
 // if caching is enabled.
 // Returns error if the spans for this validator index and epoch does not exist.
-func (db *Store) SaveValidatorEpochSpans(
+func (db *Store) SaveValidatorEpochSpan(
 	ctx context.Context,
 	validatorIdx uint64,
 	epoch uint64,
 	span types.Span,
 ) error {
-	ctx, traceSpan := trace.StartSpan(ctx, "slasherDB.SaveValidatorEpochSpans")
+	ctx, traceSpan := trace.StartSpan(ctx, "slasherDB.SaveValidatorEpochSpan")
 	defer traceSpan.End()
 	if db.spanCacheEnabled {
 		setObservedEpochs(epoch)

@@ -154,7 +154,7 @@ func (s *SpanDetector) saveSigBytes(ctx context.Context, att *ethpb.IndexedAttes
 	// Save the signature bytes into the span for this epoch.
 	span.HasAttested = true
 	span.SigBytes = sigBytes
-	return s.slasherDB.SaveValidatorEpochSpans(ctx, valIdx, target, span)
+	return s.slasherDB.SaveValidatorEpochSpan(ctx, valIdx, target, span)
 }
 
 // Updates a min span for a validator index given a source and target epoch
@@ -182,7 +182,7 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, source uint64, target 
 				SigBytes:    span.SigBytes,
 				HasAttested: span.HasAttested,
 			}
-			if err := s.slasherDB.SaveValidatorEpochSpans(ctx, valIdx, epoch, span); err != nil {
+			if err := s.slasherDB.SaveValidatorEpochSpan(ctx, valIdx, epoch, span); err != nil {
 				return err
 			}
 		}
@@ -211,7 +211,7 @@ func (s *SpanDetector) updateMaxSpan(ctx context.Context, source uint64, target 
 				SigBytes:    span.SigBytes,
 				HasAttested: span.HasAttested,
 			}
-			if err := s.slasherDB.SaveValidatorEpochSpans(ctx, valIdx, epoch, span); err != nil {
+			if err := s.slasherDB.SaveValidatorEpochSpan(ctx, valIdx, epoch, span); err != nil {
 				return err
 			}
 		}
