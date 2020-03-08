@@ -53,7 +53,7 @@ func (c *EpochSpansCache) Set(epoch uint64, epochSpans map[uint64]types.Span) {
 }
 
 // Delete removes an epoch from the cache and returns if it existed or not.
-func (c *EpochSpansCache) Remove(epoch uint64) (present bool) {
+func (c *EpochSpansCache) Delete(epoch uint64) (present bool) {
 	return c.cache.Remove(epoch)
 }
 

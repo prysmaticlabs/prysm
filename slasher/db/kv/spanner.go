@@ -268,7 +268,7 @@ func (db *Store) DeleteEpochSpans(ctx context.Context, epoch uint64) error {
 	ctx, span := trace.StartSpan(ctx, "SlasherDB.DeleteEpochSpans")
 	defer span.End()
 	if db.spanCacheEnabled {
-		_ = db.spanCache.Remove(epoch)
+		_ = db.spanCache.Delete(epoch)
 		return nil
 	}
 	return db.update(func(tx *bolt.Tx) error {
