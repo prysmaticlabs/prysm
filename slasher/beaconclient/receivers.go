@@ -3,9 +3,10 @@ package beaconclient
 import (
 	"context"
 	"io"
+	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
-	"github.com/sirupsen/logrus"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"go.opencensus.io/trace"
 )
 
@@ -46,11 +47,14 @@ func (bs *Service) receiveBlocks(ctx context.Context) {
 func (bs *Service) receiveAttestations(ctx context.Context) {
 	ctx, span := trace.StartSpan(ctx, "beaconclient.receiveAttestations")
 	defer span.End()
+
 	stream, err := bs.beaconClient.StreamIndexedAttestations(ctx, &ptypes.Empty{})
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve attestations stream")
 		return
 	}
+
+	go bs.collectReceivedAttestations(ctx)
 	for {
 		res, err := stream.Recv()
 		// If the stream is closed, we stop the loop.
@@ -66,15 +70,43 @@ func (bs *Service) receiveAttestations(ctx context.Context) {
 			log.WithError(err).Error("Could not receive attestations from beacon node")
 			return
 		}
-		log.WithFields(logrus.Fields{
-			"slot":    res.Data.Slot,
-			"indices": res.AttestingIndices,
-		}).Debug("Received attestation from beacon node")
-		if err := bs.slasherDB.SaveIndexedAttestation(ctx, res); err != nil {
-			log.WithError(err).Error("Could not save indexed attestation")
+		bs.receivedAttestationsBuffer <- res
+
+		select {
+		case atts := <-bs.collectedAttestationsBuffer:
+			log.Debugf("%d attestations for slot %d received from beacon node", len(atts), atts[0].Data.Slot)
+			if err := bs.slasherDB.SaveIndexedAttestations(ctx, atts); err != nil {
+				log.WithError(err).Error("Could not save indexed attestation")
+				continue
+			}
+			// After saving, we send the received attestation over the attestation feed.
+			for _, att := range atts {
+				bs.attestationFeed.Send(att)
+			}
+			continue
+		default:
 			continue
 		}
-		// We send the received attestation over the attestation feed.
-		bs.attestationFeed.Send(res)
+	}
+}
+
+func (bs *Service) collectReceivedAttestations(ctx context.Context) {
+	ctx, span := trace.StartSpan(ctx, "beaconclient.collectReceivedAttestations")
+	defer span.End()
+
+	var atts []*ethpb.IndexedAttestation
+	ticker := time.NewTicker(2*time.Second)
+	for {
+		select {
+		case <-ticker.C:
+			if len(atts) > 0 {
+				bs.collectedAttestationsBuffer <- atts
+				atts = []*ethpb.IndexedAttestation{}
+			}
+		case att := <-bs.receivedAttestationsBuffer:
+			atts = append(atts, att)
+		case <-ctx.Done():
+			return
+		}
 	}
 }
