@@ -16,6 +16,53 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// ComputeStateUpToSlot returns a processed state up to input target slot.
+// If the last processed block is at slot 32, given input target slot at 40, this
+// returns processed state up to slot 40 via empty slots.
+// If there's duplicated blocks in a single slot, the canonical block will be returned.
+func (s *State) ComputeStateUpToSlot(ctx context.Context, targetSlot uint64) (*state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.ComputeStateUpToSlot")
+	defer span.End()
+
+	// Return genesis state if target slot is 0.
+	if targetSlot == 0 {
+		return s.beaconDB.GenesisState(ctx)
+	}
+
+	lastBlockRoot, lastBlockSlot, err := s.lastSavedBlock(ctx, targetSlot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get last saved block")
+	}
+
+	lastBlockRootForState, err := s.lastSavedState(ctx, targetSlot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get last valid state")
+	}
+	lastState, err := s.beaconDB.State(ctx, lastBlockRootForState)
+	if err != nil {
+		return nil, err
+	}
+	if lastState == nil {
+		return nil, errUnknownState
+	}
+
+	// Return if the last valid state's slot is higher than the target slot.
+	if lastState.Slot() >= targetSlot {
+		return lastState, nil
+	}
+
+	blks, err := s.LoadBlocks(ctx, lastState.Slot()+1, lastBlockSlot, lastBlockRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not load blocks")
+	}
+	lastState, err = s.ReplayBlocks(ctx, lastState, blks, targetSlot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not replay blocks")
+	}
+
+	return lastState, nil
+}
+
 // ReplayBlocks replays the input blocks on the input state until the target slot is reached.
 func (s *State) ReplayBlocks(ctx context.Context, state *state.BeaconState, signed []*ethpb.SignedBeaconBlock, targetSlot uint64) (*state.BeaconState, error) {
 	var err error
