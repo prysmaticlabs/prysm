@@ -14,6 +14,7 @@ import (
 
 // We look back 128 epochs when updating min/max spans
 // for incoming attestations.
+// TODO(#5040): Remove lookback and handle min spans properly.
 const epochLookback = 128
 
 var _ = iface.SpanDetector(&SpanDetector{})
