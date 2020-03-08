@@ -3,6 +3,7 @@ package stategen
 import (
 	"sync"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -14,6 +15,7 @@ type State struct {
 	lastArchivedSlot        uint64
 	epochBoundarySlotToRoot map[uint64][32]byte
 	epochBoundaryLock       sync.RWMutex
+	hotStateCache           *cache.HotStateCache
 }
 
 // New returns a new state management object.
@@ -21,6 +23,7 @@ func New(db db.NoHeadAccessDatabase) *State {
 	return &State{
 		beaconDB:                db,
 		epochBoundarySlotToRoot: make(map[uint64][32]byte),
+		hotStateCache:           cache.NewHotStateCache(),
 	}
 }
 
