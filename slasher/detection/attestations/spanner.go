@@ -185,6 +185,8 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, source uint64, target 
 			if err := s.slasherDB.SaveValidatorEpochSpan(ctx, valIdx, epoch, span); err != nil {
 				return err
 			}
+		} else {
+			break
 		}
 		if epoch == 0 {
 			break
@@ -214,6 +216,8 @@ func (s *SpanDetector) updateMaxSpan(ctx context.Context, source uint64, target 
 			if err := s.slasherDB.SaveValidatorEpochSpan(ctx, valIdx, epoch, span); err != nil {
 				return err
 			}
+		} else {
+			break
 		}
 	}
 	return nil
