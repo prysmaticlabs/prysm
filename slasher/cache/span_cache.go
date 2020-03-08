@@ -35,7 +35,7 @@ func NewEpochSpansCache(onEvicted func(key interface{}, value interface {})) (*E
 	return &EpochSpansCache{cache: cache}, nil
 }
 
-// Get returns a cached response given the requested epoch, if any.
+// Get returns an ok bool and the cached value for the requested epoch key, if any.
 func (c *EpochSpansCache) Get(epoch uint64) (map[uint64]types.Span, bool) {
 	item, exists := c.cache.Get(epoch)
 	if exists && item != nil {
@@ -53,7 +53,8 @@ func (c *EpochSpansCache) Set(epoch uint64, epochSpans map[uint64]types.Span) {
 }
 
 // Delete removes an epoch from the cache and returns if it existed or not.
-func (c *EpochSpansCache) Delete(epoch uint64) (present bool) {
+// Performs the onEviction function before removal.
+func (c *EpochSpansCache) Delete(epoch uint64) bool {
 	return c.cache.Remove(epoch)
 }
 
