@@ -883,7 +883,7 @@ func TestServer_StreamIndexedAttestations_ContextCanceled(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockStream := mockRPC.NewMockBeaconChain_StreamIndexedAttestationsServer(ctrl)
-	mockStream.EXPECT().Context().Return(ctx)
+	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 	go func(tt *testing.T) {
 		if err := server.StreamIndexedAttestations(
 			&ptypes.Empty{},
