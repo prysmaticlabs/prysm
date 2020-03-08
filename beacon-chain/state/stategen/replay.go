@@ -68,11 +68,15 @@ func (s *State) LoadBlocks(ctx context.Context, startSlot uint64, endSlot uint64
 	if len(blocks) != len(blockRoots) {
 		return nil, errors.New("length of blocks and roots don't match")
 	}
+	// Return early if there's no block given the input.
+	length := len(blocks)
+	if length == 0 {
+		return nil, nil
+	}
 
 	// The last retrieved block root has to match input end block root.
 	// Covers the edge case if there's multiple blocks on the same end slot,
 	// the end root may not be the last index in `blockRoots`.
-	length := len(blocks)
 	for length >= 3 && blocks[length-1].Block.Slot == blocks[length-2].Block.Slot && blockRoots[length-1] != endBlockRoot {
 		length--
 		if blockRoots[length-2] == endBlockRoot {
