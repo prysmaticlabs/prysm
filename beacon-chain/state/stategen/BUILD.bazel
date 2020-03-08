@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "epoch_boundary_root.go",
         "errors.go",
+        "hot.go",
         "log.go",
         "replay.go",
         "service.go",
@@ -12,6 +13,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/stategen",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
+        "//beacon-chain/cache:go_default_library",
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/filters:go_default_library",
@@ -31,6 +33,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "epoch_boundary_root_test.go",
+        "hot_test.go",
         "replay_test.go",
         "service_test.go",
     ],

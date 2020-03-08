@@ -33,6 +33,7 @@ run --define kafka_enabled=false
 # Release flags
 build:release --workspace_status_command=./scripts/workspace_status.sh
 build:release --stamp
+build:release --compilation_mode=opt
 
 # multi-arch cross-compiling toolchain configs:
 -----------------------------------------------
