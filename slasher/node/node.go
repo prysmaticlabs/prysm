@@ -2,11 +2,14 @@ package node
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"path"
 	"sync"
 	"syscall"
+
+	"github.com/prysmaticlabs/prysm/shared/prometheus"
 
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
@@ -59,6 +62,9 @@ func NewSlasherNode(ctx *cli.Context) (*SlasherNode, error) {
 		attesterSlashingsFeed: new(event.Feed),
 		services:              registry,
 		stop:                  make(chan struct{}),
+	}
+	if err := slasher.registerPrometheusService(ctx); err != nil {
+		return nil, err
 	}
 
 	if err := slasher.startDB(ctx); err != nil {
@@ -115,6 +121,15 @@ func (s *SlasherNode) Close() {
 		log.Errorf("Failed to close database: %v", err)
 	}
 	close(s.stop)
+}
+
+func (s *SlasherNode) registerPrometheusService(ctx *cli.Context) error {
+	service := prometheus.NewPrometheusService(
+		fmt.Sprintf(":%d", ctx.GlobalInt64(cmd.MonitoringPortFlag.Name)),
+		s.services,
+	)
+	logrus.AddHook(prometheus.NewLogrusCollector())
+	return s.services.RegisterService(service)
 }
 
 func (s *SlasherNode) startDB(ctx *cli.Context) error {
