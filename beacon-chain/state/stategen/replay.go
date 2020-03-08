@@ -19,6 +19,7 @@ import (
 // ComputeStateUpToSlot returns a processed state up to input target slot.
 // If the last processed block is at slot 32, given input target slot at 40, this
 // returns processed state up to slot 40 via empty slots.
+// If there's duplicated blocks in a single slot, the canonical block will be returned.
 func (s *State) ComputeStateUpToSlot(ctx context.Context, targetSlot uint64) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.ComputeStateUpToSlot")
 	defer span.End()
