@@ -87,7 +87,7 @@ func (ds *Service) Start() {
 
 	// We subscribe to incoming blocks from the beacon node via
 	// our gRPC client to keep detecting slashable offenses.
-	//go ds.detectIncomingBlocks(ds.ctx, ds.blocksChan)
+	go ds.detectIncomingBlocks(ds.ctx, ds.blocksChan)
 	go ds.detectIncomingAttestations(ds.ctx, ds.attsChan)
 }
 
