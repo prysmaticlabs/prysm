@@ -27,12 +27,12 @@ type EpochSpansCache struct {
 }
 
 // NewEpochSpansCache initializes the map and underlying cache.
-func NewEpochSpansCache() *EpochSpansCache {
-	cache, err := lru.New(epochSpansCacheSize)
+func NewEpochSpansCache(onEvicted func(key interface{}, value interface {})) (*EpochSpansCache, error) {
+	cache, err := lru.NewWithEvict(epochSpansCacheSize, onEvicted)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return &EpochSpansCache{cache: cache}
+	return &EpochSpansCache{cache: cache}, nil
 }
 
 // Get returns a cached response given the requested epoch, if any.
@@ -65,9 +65,4 @@ func (c *EpochSpansCache) Has(epoch uint64) bool {
 // Clear removes all keys from the SpanCache.
 func (c *EpochSpansCache) Clear() {
 	c.cache.Purge()
-}
-
-// SaveAllToDB removes all keys from the SpanCache.
-func (c *EpochSpansCache) SaveAllToDB() {
-	//c.cache.Keys()
 }

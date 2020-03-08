@@ -2,8 +2,6 @@ package kv
 
 import (
 	"context"
-	"fmt"
-	"reflect"
 
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
@@ -20,30 +18,27 @@ import (
 var highestObservedEpoch uint64
 var lowestObservedEpoch = params.BeaconConfig().FarFutureEpoch
 
-func cacheTypeMismatchError(value interface{}) error {
-	return fmt.Errorf("cache contains a value of type: %v "+
-		"while expected to contain only values of type : map[uint64]types.Span", reflect.TypeOf(value))
-}
-
 // This function defines a function which triggers upon a span map being
 // evicted from the cache. It allows us to persist the span map by the epoch value
 // to the database itself in the validatorsMinMaxSpanBucket.
-func persistSpanMapsOnEviction(db *Store) func(uint64, uint64, interface{}, int64) {
+func persistSpanMapsOnEviction(db *Store) func(key interface{}, value interface{}) {
 	// We use a closure here so we can access the database itself
 	// on the eviction of a span map from the cache. The function has the signature
 	// required by the ristretto cache OnEvict method.
 	// See https://godoc.org/github.com/dgraph-io/ristretto#Config.
-	return func(epoch uint64, _ uint64, value interface{}, cost int64) {
-		log.Tracef("Evicting span map for epoch: %d", epoch)
+	return func(key interface{}, value interface{}) {
+		log.Tracef("Evicting span map for epoch: %d", key)
 		err := db.update(func(tx *bolt.Tx) error {
+			epoch, keyOK := key.(uint64)
+			spanMap, valueOK := value.(map[uint64]types.Span)
+			if !keyOK || !valueOK {
+				return errors.New("could not cast key and value into needed types")
+			}
+
 			bucket := tx.Bucket(validatorsMinMaxSpanBucket)
 			epochBucket, err := bucket.CreateBucketIfNotExists(bytesutil.Bytes8(epoch))
 			if err != nil {
 				return err
-			}
-			spanMap, ok := value.(map[uint64]types.Span)
-			if !ok {
-				return cacheTypeMismatchError(value)
 			}
 			for k, v := range spanMap {
 				if err = epochBucket.Put(bytesutil.Bytes8(k), marshalSpan(v)); err != nil {
@@ -204,8 +199,8 @@ func (db *Store) SaveValidatorEpochSpan(
 }
 
 // SaveEpochSpansMap accepts a epoch and span map epoch=>spans and writes it to disk.
-// saves the spans to cache if caching is enabled. The key in the cache is the highest
-// epoch seen by slasher and the value is the span map itself.
+// saves the spans to cache if caching is enabled. The key in the cache is the
+// epoch and the value is the span map itself.
 func (db *Store) SaveEpochSpansMap(ctx context.Context, epoch uint64, spanMap map[uint64]types.Span) error {
 	ctx, span := trace.StartSpan(ctx, "slasherDB.SaveEpochSpansMap")
 	defer span.End()

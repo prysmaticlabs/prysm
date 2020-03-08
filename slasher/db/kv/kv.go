@@ -85,7 +85,11 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 		return nil, err
 	}
 	kv := &Store{db: boltDB, databasePath: datafile, spanCacheEnabled: cfg.SpanCacheEnabled}
-	kv.spanCache = cache.NewEpochSpansCache()
+	spanCache, err := cache.NewEpochSpansCache(persistSpanMapsOnEviction(kv))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create new cache")
+	}
+	kv.spanCache = spanCache
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
 		return createBuckets(
