@@ -83,7 +83,7 @@ func (ds *Service) Start() {
 
 	// The detection service runs detection on all historical
 	// chain data since genesis.
-	go ds.detectHistoricalChainData(ds.ctx)
+	// TODO(#5030): Re-enable after issue is resolved.
 
 	// We subscribe to incoming blocks from the beacon node via
 	// our gRPC client to keep detecting slashable offenses.
@@ -141,6 +141,8 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 }
 
 func (ds *Service) submitAttesterSlashings(ctx context.Context, slashings []*ethpb.AttesterSlashing, epoch uint64) {
+	ctx, span := trace.StartSpan(ctx, "detection.submitAttesterSlashings")
+	defer span.End()
 	var slashedIndices []uint64
 	for i := 0; i < len(slashings); i++ {
 		slashableIndices := sliceutil.IntersectionUint64(slashings[i].Attestation_1.AttestingIndices, slashings[i].Attestation_2.AttestingIndices)
@@ -151,6 +153,6 @@ func (ds *Service) submitAttesterSlashings(ctx context.Context, slashings []*eth
 		log.WithFields(logrus.Fields{
 			"targetEpoch": epoch,
 			"indices":     slashedIndices,
-		}).Infof("Found %d attester slashings! Submitting to beacon node.", len(slashings))
+		}).Infof("Found %d attester slashings! Submitting to beacon node", len(slashings))
 	}
 }
