@@ -7,6 +7,7 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -47,7 +48,6 @@ func (bs *Service) receiveBlocks(ctx context.Context) {
 func (bs *Service) receiveAttestations(ctx context.Context) {
 	ctx, span := trace.StartSpan(ctx, "beaconclient.receiveAttestations")
 	defer span.End()
-
 	stream, err := bs.beaconClient.StreamIndexedAttestations(ctx, &ptypes.Empty{})
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve attestations stream")
@@ -81,6 +81,10 @@ func (bs *Service) receiveAttestations(ctx context.Context) {
 			}
 			// After saving, we send the received attestation over the attestation feed.
 			for _, att := range atts {
+				log.WithFields(logrus.Fields{
+					"slot":    res.Data.Slot,
+					"indices": res.AttestingIndices,
+				}).Debug("Sending attestation to detection service")
 				bs.attestationFeed.Send(att)
 			}
 			continue
