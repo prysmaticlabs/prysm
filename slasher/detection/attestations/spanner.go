@@ -12,6 +12,11 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// We look back 128 epochs when updating min/max spans
+// for incoming attestations.
+// TODO(#5040): Remove lookback and handle min spans properly.
+const epochLookback = 128
+
 var _ = iface.SpanDetector(&SpanDetector{})
 
 // SpanDetector defines a struct which can detect slashable
@@ -38,7 +43,7 @@ func (s *SpanDetector) DetectSlashingForValidator(
 	validatorIdx uint64,
 	attData *ethpb.AttestationData,
 ) (*types.DetectionResult, error) {
-	ctx, traceSpan := trace.StartSpan(ctx, "detection.DetectSlashingForValidator")
+	ctx, traceSpan := trace.StartSpan(ctx, "spanner.DetectSlashingForValidator")
 	defer traceSpan.End()
 	sourceEpoch := attData.Source.Epoch
 	targetEpoch := attData.Target.Epoch
@@ -64,7 +69,7 @@ func (s *SpanDetector) DetectSlashingForValidator(
 		}
 		return &types.DetectionResult{
 			Kind:           types.SurroundVote,
-			SlashableEpoch: sourceEpoch + uint64(minSpan),
+			SlashableEpoch: slashableEpoch,
 			SigBytes:       span.SigBytes,
 		}, nil
 	}
@@ -82,6 +87,7 @@ func (s *SpanDetector) DetectSlashingForValidator(
 			SigBytes:       span.SigBytes,
 		}, nil
 	}
+
 	sp, err = s.slasherDB.EpochSpanByValidatorIndex(ctx, validatorIdx, targetEpoch)
 	if err != nil {
 		return nil, err
@@ -101,7 +107,7 @@ func (s *SpanDetector) DetectSlashingForValidator(
 
 // UpdateSpans given an indexed attestation for all of its attesting indices.
 func (s *SpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttestation) error {
-	ctx, span := trace.StartSpan(ctx, "detection.UpdateSpans")
+	ctx, span := trace.StartSpan(ctx, "spanner.UpdateSpans")
 	defer span.End()
 	source := att.Data.Source.Epoch
 	target := att.Data.Target.Epoch
@@ -128,15 +134,17 @@ func (s *SpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttest
 // saveSigBytes saves the first 2 bytes of the signature for the att we're updating the spans to.
 // Later used to help us find the violating attestation in the DB.
 func (s *SpanDetector) saveSigBytes(ctx context.Context, att *ethpb.IndexedAttestation, valIdx uint64) error {
+	ctx, traceSpan := trace.StartSpan(ctx, "spanner.saveSigBytes")
+	defer traceSpan.End()
 	target := att.Data.Target.Epoch
-	sp, err := s.slasherDB.EpochSpanByValidatorIndex(ctx, valIdx, target)
+	span, err := s.slasherDB.EpochSpanByValidatorIndex(ctx, valIdx, target)
 	if err != nil {
 		return err
 	}
 
 	// If the validator has already attested for this target epoch,
 	// then we do not need to update the values of the span sig bytes.
-	if sp.HasAttested {
+	if span.HasAttested {
 		return nil
 	}
 
@@ -145,19 +153,24 @@ func (s *SpanDetector) saveSigBytes(ctx context.Context, att *ethpb.IndexedAttes
 		sigBytes = [2]byte{att.Signature[0], att.Signature[1]}
 	}
 	// Save the signature bytes into the span for this epoch.
-	sp.HasAttested = true
-	sp.SigBytes = sigBytes
-	return s.slasherDB.SaveValidatorEpochSpans(ctx, valIdx, target, sp)
+	span.HasAttested = true
+	span.SigBytes = sigBytes
+	return s.slasherDB.SaveValidatorEpochSpan(ctx, valIdx, target, span)
 }
 
 // Updates a min span for a validator index given a source and target epoch
 // for an attestation produced by the validator. Used for catching surrounding votes.
 func (s *SpanDetector) updateMinSpan(ctx context.Context, source uint64, target uint64, valIdx uint64) error {
+	ctx, traceSpan := trace.StartSpan(ctx, "spanner.updateMinSpan")
+	defer traceSpan.End()
 	if source < 1 {
 		return nil
 	}
-	for epochInt := int64(source - 1); epochInt >= 0; epochInt-- {
-		epoch := uint64(epochInt)
+	lowestEpoch := source - epochLookback
+	if int(lowestEpoch) <= 0 {
+		lowestEpoch = 0
+	}
+	for epoch := source - 1; epoch >= lowestEpoch; epoch-- {
 		span, err := s.slasherDB.EpochSpanByValidatorIndex(ctx, valIdx, epoch)
 		if err != nil {
 			return err
@@ -170,11 +183,13 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, source uint64, target 
 				SigBytes:    span.SigBytes,
 				HasAttested: span.HasAttested,
 			}
-			err := s.slasherDB.SaveValidatorEpochSpans(ctx, valIdx, epoch, span)
-			if err != nil {
+			if err := s.slasherDB.SaveValidatorEpochSpan(ctx, valIdx, epoch, span); err != nil {
 				return err
 			}
 		} else {
+			break
+		}
+		if epoch == 0 {
 			break
 		}
 	}
@@ -184,6 +199,8 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, source uint64, target 
 // Updates a max span for a validator index given a source and target epoch
 // for an attestation produced by the validator. Used for catching surrounded votes.
 func (s *SpanDetector) updateMaxSpan(ctx context.Context, source uint64, target uint64, valIdx uint64) error {
+	ctx, traceSpan := trace.StartSpan(ctx, "spanner.updateMaxSpan")
+	defer traceSpan.End()
 	for epoch := source + 1; epoch < target; epoch++ {
 		span, err := s.slasherDB.EpochSpanByValidatorIndex(ctx, valIdx, epoch)
 		if err != nil {
@@ -197,8 +214,7 @@ func (s *SpanDetector) updateMaxSpan(ctx context.Context, source uint64, target 
 				SigBytes:    span.SigBytes,
 				HasAttested: span.HasAttested,
 			}
-			err := s.slasherDB.SaveValidatorEpochSpans(ctx, valIdx, epoch, span)
-			if err != nil {
+			if err := s.slasherDB.SaveValidatorEpochSpan(ctx, valIdx, epoch, span); err != nil {
 				return err
 			}
 		} else {
