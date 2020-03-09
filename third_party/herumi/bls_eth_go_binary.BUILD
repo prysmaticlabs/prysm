@@ -72,6 +72,7 @@ go_library(
         # TODO: Select pre-compiled archives when clang is not available.
         ":lib",
     ],
+    copts = OPTS,
     cgo = True,
     visibility = ["//visibility:public"],
 )
