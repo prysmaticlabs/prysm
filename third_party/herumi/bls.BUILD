@@ -21,5 +21,4 @@ cc_library(
         "-DBLS_ETH",
         "-std=c++03",
     ],
-    # TODO: Restrict to clang build only!
 )

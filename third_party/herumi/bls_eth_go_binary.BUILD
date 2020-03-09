@@ -20,7 +20,6 @@ genrule(
     tools = [
         "@herumi_mcl//:src_gen",
     ],
-    # TODO: func.list is different based on LOW_ASM_SRC.
     cmd = "touch func.list && $(location @herumi_mcl//:src_gen) -u 64 -f func.list > $@",
 )
 
