@@ -89,14 +89,15 @@ func (bs *Service) collectReceivedAttestations(ctx context.Context) {
 			}
 		case att := <-bs.receivedAttestationsBuffer:
 			atts = append(atts, att)
-		case atts := <-bs.collectedAttestationsBuffer:
-			log.Debugf("%d attestations for slot %d received from beacon node", len(atts), atts[0].Data.Slot)
-			if err := bs.slasherDB.SaveIndexedAttestations(ctx, atts); err != nil {
+		case collectedAtts := <-bs.collectedAttestationsBuffer:
+			if err := bs.slasherDB.SaveIndexedAttestations(ctx, collectedAtts); err != nil {
 				log.WithError(err).Error("Could not save indexed attestation")
 				continue
 			}
+			log.Debugf("%d attestations for slot %d saved to slasher DB", len(collectedAtts), collectedAtts[0].Data.Slot)
+
 			// After saving, we send the received attestation over the attestation feed.
-			for _, att := range atts {
+			for _, att := range collectedAtts {
 				log.WithFields(logrus.Fields{
 					"slot":    att.Data.Slot,
 					"indices": att.AttestingIndices,
