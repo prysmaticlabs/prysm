@@ -22,7 +22,7 @@ func (ds *Service) detectAttesterSlashings(
 		return nil, err
 	}
 	// If the response is nil, there was no slashing detected.
-	if len(results) == 0{
+	if len(results) == 0 {
 		return nil, nil
 	}
 
