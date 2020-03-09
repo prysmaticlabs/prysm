@@ -748,7 +748,6 @@ func TestNewSpanDetector_UpdateSpans(t *testing.T) {
 					t.Errorf("Wanted and received:\n%v \n%v", tt.want, sm)
 				}
 			}
-
 		})
 	}
 }
