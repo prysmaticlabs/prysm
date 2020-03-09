@@ -10,14 +10,13 @@ OPTS = [
     "-DMCL_MAX_BIT_SIZE=384",
     "-DCYBOZU_DONT_USE_EXCEPTION",
     "-DCYBOZU_DONT_USE_STRING",
-    "-std=c++03 ",
     "-DBLS_SWAP_G",
     "-DBLS_ETH",
 ]
 
 genrule(
     name = "base64_ll",
-    outs = ["src/base64.ll"],
+    outs = ["src/base64.ll"],  # llvm assembly language file.
     tools = [
         "@herumi_mcl//:src_gen",
     ],
@@ -31,9 +30,8 @@ genrule(
         "src/base64.ll",
     ],
     outs = ["base64.o"],
-    # TODO: Should use toolchain to provide clang++.
-    cmd = "clang++ -c -o $@ $(location src/base64.ll) -std=c++03 -O3 -DNDEBUG -DMCL_DONT_USE_OPENSSL -DMCL_LLVM_BMI2=0 -DMCL_USE_LLVM=1 -DMCL_USE_VINT -DMCL_SIZEOF_UNIT=8 -DMCL_VINT_FIXED_BUFFER -DMCL_MAX_BIT_SIZE=384 -DCYBOZU_DONT_USE_EXCEPTION -DCYBOZU_DONT_USE_STRING",
-    tools = ["@bazel_tools//tools/cpp:current_cc_toolchain"],
+    cmd = "external/llvm_toolchain/bin/clang++ -c -o $@ $(location src/base64.ll)",
+    tools = ["@llvm_toolchain//:clang"],
 )
 
 cc_library(
@@ -55,7 +53,48 @@ cc_library(
         "bls/include/mcl/bn_c384_256.h",
         "@herumi_mcl//:include/mcl/curve_type.h",
     ],
-    copts = OPTS,
+    copts = OPTS + [
+        "-std=c++03",
+    ],
+)
+
+cc_library(
+    name = "precompiled",
+    srcs = select({
+        "@io_bazel_rules_go//go/platform:android_arm": [
+            "bls/lib/android/armeabi-v7a/libbls384_256.a",
+        ],
+        "@io_bazel_rules_go//go/platform:linux_arm64": [
+            "bls/lib/android/arm64-v8a/libbls384_256.a",
+        ],
+        "@io_bazel_rules_go//go/platform:android_arm64": [
+            "bls/lib/android/arm64-v8a/libbls384_256.a",
+        ],
+        "@io_bazel_rules_go//go/platform:darwin_amd64": [
+            "bls/lib/darwin/amd64/libbls384_256.a",
+        ],
+        "@io_bazel_rules_go//go/platform:linux_amd64": [
+            "bls/lib/linux/amd64/libbls384_256.a",
+        ],
+        "@io_bazel_rules_go//go/platform:windows_amd64": [
+            "bls/lib/windows/amd64/libbls384_256.a",
+        ],
+        "//conditions:default": [],
+    }),
+    hdrs = [
+        "bls/include/bls/bls.h",
+        "bls/include/bls/bls384_256.h",
+        "bls/include/mcl/bn.h",
+        "bls/include/mcl/bn_c384_256.h",
+        "@herumi_mcl//:include/mcl/curve_type.h",
+    ],
+)
+
+config_setting(
+    name = "llvm_compiler_enabled",
+    values = {
+        "compiler": "llvm",
+    },
 )
 
 # TODO: integrate @nisdas patch for better serialization alloc.
@@ -68,10 +107,10 @@ go_library(
         "bls/cast.go",
         "bls/mcl.go",
     ],
-    cdeps = [
-        # TODO: Select pre-compiled archives when clang is not available.
-        ":lib",
-    ],
+    cdeps = select({
+        ":llvm_compiler_enabled": [":lib"],
+        "//conditions:default": [":precompiled"],
+    }),
     copts = OPTS,
     cgo = True,
     visibility = ["//visibility:public"],

@@ -66,6 +66,7 @@ cc_library(
     copts = MCL_OPTS,
 )
 
+# src_gen is a tool to generate some llvm assembly language file.
 cc_binary(
     name = "src_gen",
     srcs = [

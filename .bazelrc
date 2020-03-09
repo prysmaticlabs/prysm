@@ -35,6 +35,9 @@ build:release --workspace_status_command=./scripts/workspace_status.sh
 build:release --stamp
 build:release --compilation_mode=opt
 
+build:llvm --crosstool_top=@llvm_toolchain//:toolchain
+build:llvm --define compiler=llvm # TODO: Is this needed?
+
 # multi-arch cross-compiling toolchain configs:
 -----------------------------------------------
 build:cross --crosstool_top=@prysm_toolchains//:multiarch_toolchain
