@@ -86,18 +86,21 @@ cc_library(
         "bls/include/bls/bls384_256.h",
         "bls/include/mcl/bn.h",
         "bls/include/mcl/bn_c384_256.h",
-        "@herumi_mcl//:include/mcl/curve_type.h",
+        "bls/include/mcl/curve_type.h",
     ],
+    includes = [
+        "bls/include",
+    ],
+    deprecation = "Using precompiled BLS archives. To build BLS from source with llvm, use --config=llvm.",
 )
 
 config_setting(
     name = "llvm_compiler_enabled",
-    values = {
+    define_values = {
         "compiler": "llvm",
     },
 )
 
-# TODO: integrate @nisdas patch for better serialization alloc.
 go_library(
     name = "go_default_library",
     importpath = "github.com/herumi/bls-eth-go-binary/bls",
