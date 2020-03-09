@@ -29,3 +29,6 @@ password.txt
 # go dependancy
 /go.mod
 /go.sum
+
+# Dist files
+dist
