@@ -79,7 +79,7 @@ func (bs *Service) collectReceivedAttestations(ctx context.Context) {
 	defer span.End()
 
 	var atts []*ethpb.IndexedAttestation
-	ticker := time.NewTicker(2*time.Second)
+	ticker := time.NewTicker(3*time.Second)
 	for {
 		select {
 		case <-ticker.C:
@@ -94,7 +94,7 @@ func (bs *Service) collectReceivedAttestations(ctx context.Context) {
 				log.WithError(err).Error("Could not save indexed attestation")
 				continue
 			}
-			log.Debugf("%d attestations for slot %d saved to slasher DB", len(collectedAtts), collectedAtts[0].Data.Slot)
+			log.Infof("%d attestations for slot %d saved to slasher DB", len(collectedAtts), collectedAtts[0].Data.Slot)
 
 			// After saving, we send the received attestation over the attestation feed.
 			for _, att := range collectedAtts {
