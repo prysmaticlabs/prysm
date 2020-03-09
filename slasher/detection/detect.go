@@ -6,7 +6,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 	"go.opencensus.io/trace"
@@ -18,18 +17,17 @@ func (ds *Service) detectAttesterSlashings(
 ) ([]*ethpb.AttesterSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "detection.detectAttesterSlashings")
 	defer span.End()
-	slashings := make([]*ethpb.AttesterSlashing, 0)
-	for i := 0; i < len(att.AttestingIndices); i++ {
-		valIdx := att.AttestingIndices[i]
-		result, err := ds.minMaxSpanDetector.DetectSlashingForValidator(ctx, valIdx, att.Data)
-		if err != nil {
-			return nil, err
-		}
-		// If the response is nil, there was no slashing detected.
-		if result == nil {
-			continue
-		}
+	results, err := ds.minMaxSpanDetector.DetectSlashingsForAttestation(ctx, att)
+	if err != nil {
+		return nil, err
+	}
+	// If the response is nil, there was no slashing detected.
+	if len(results) == 0 {
+		return nil, nil
+	}
 
+  var slashings []*ethpb.AttesterSlashing
+	for _, result := range results {
 		var slashing *ethpb.AttesterSlashing
 		switch result.Kind {
 		case types.DoubleVote:
@@ -46,21 +44,7 @@ func (ds *Service) detectAttesterSlashings(
 		slashings = append(slashings, slashing)
 	}
 
-	// Clear out any duplicate slashings.
-	keys := make(map[[32]byte]bool)
-	var slashingList []*ethpb.AttesterSlashing
-	for _, ss := range slashings {
-		hash, err := hashutil.HashProto(ss)
-		if err != nil {
-			return nil, err
-		}
-		if _, value := keys[hash]; !value {
-			keys[hash] = true
-			slashingList = append(slashingList, ss)
-		}
-	}
-
-	return slashingList, nil
+	return slashings, nil
 }
 
 // detectDoubleVote cross references the passed in attestation with the bloom filter maintained
