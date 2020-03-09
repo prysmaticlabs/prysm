@@ -54,6 +54,8 @@ type Service struct {
 	attesterSlashingsChan chan *ethpb.AttesterSlashing
 	attesterSlashingsFeed *event.Feed
 	proposerSlashingsFeed *event.Feed
+	receivedAttestationsBuffer  chan *ethpb.IndexedAttestation
+	collectedAttestationsBuffer chan []*ethpb.IndexedAttestation
 }
 
 // Config options for the beaconclient service.
@@ -81,6 +83,8 @@ func NewBeaconClientService(ctx context.Context, cfg *Config) *Service {
 		attesterSlashingsChan: make(chan *ethpb.AttesterSlashing, 1),
 		attesterSlashingsFeed: cfg.AttesterSlashingsFeed,
 		proposerSlashingsFeed: cfg.ProposerSlashingsFeed,
+		receivedAttestationsBuffer:  make(chan *ethpb.IndexedAttestation, 1),
+		collectedAttestationsBuffer: make(chan []*ethpb.IndexedAttestation, 1),
 	}
 }
 
