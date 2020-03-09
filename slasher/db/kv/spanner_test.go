@@ -207,7 +207,7 @@ func TestValidatorSpanMap_DeletesOnCacheSavesToDB(t *testing.T) {
 }
 
 func TestValidatorSpanMap_SaveOnEvict(t *testing.T) {
-	db := setupDBDiffCacheSize(t, 5, 5)
+	db := setupDBDiffCacheSize(t, 5)
 	defer teardownDB(t, db)
 	ctx := context.Background()
 
