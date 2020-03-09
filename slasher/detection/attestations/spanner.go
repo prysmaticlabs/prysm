@@ -129,17 +129,15 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 func (s *SpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttestation) error {
 	ctx, span := trace.StartSpan(ctx, "spanner.UpdateSpans")
 	defer span.End()
-	source := att.Data.Source.Epoch
-	target := att.Data.Target.Epoch
 	// Save the signature for the received attestation so we can have more detail to find it in the DB.
 	if err := s.saveSigBytes(ctx, att); err != nil {
 		return err
 	}
 	// Update min and max spans.
-	if err := s.updateMinSpan(ctx, source, target, att.AttestingIndices); err != nil {
+	if err := s.updateMinSpan(ctx, att); err != nil {
 		return err
 	}
-	if err := s.updateMaxSpan(ctx, source, target, att.AttestingIndices); err != nil {
+	if err := s.updateMaxSpan(ctx, att); err != nil {
 		return err
 	}
 	return nil
@@ -179,12 +177,13 @@ func (s *SpanDetector) saveSigBytes(ctx context.Context, att *ethpb.IndexedAttes
 
 // Updates a min span for a validator index given a source and target epoch
 // for an attestation produced by the validator. Used for catching surrounding votes.
-func (s *SpanDetector) updateMinSpan(ctx context.Context, source uint64, target uint64, valIndices []uint64) error {
+func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAttestation) error {
 	ctx, traceSpan := trace.StartSpan(ctx, "spanner.updateMinSpan")
 	defer traceSpan.End()
-	if source < 1 {
-		return nil
-	}
+	source := att.Data.Source.Epoch
+	target := att.Data.Target.Epoch
+	valIndices := make([]uint64, len(att.AttestingIndices))
+	copy(valIndices, att.AttestingIndices)
 	lowestEpoch := source - epochLookback
 	if int(lowestEpoch) <= 0 {
 		lowestEpoch = 0
@@ -194,7 +193,8 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, source uint64, target 
 		if err != nil {
 			return err
 		}
-		for i, idx := range valIndices {
+		indices := valIndices[:0]
+		for _, idx := range valIndices {
 			span := spanMap[idx]
 			newMinSpan := uint16(target - epoch)
 			if span.MinSpan == 0 || span.MinSpan > newMinSpan {
@@ -205,15 +205,14 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, source uint64, target 
 					HasAttested: span.HasAttested,
 				}
 				spanMap[idx] = span
-			} else {
-				valIndices = append(valIndices[:i], valIndices[i+1:]...)
-			}
-			if len(valIndices) == 0 {
-				break
+				indices = append(indices, idx)
 			}
 		}
 		if err := s.slasherDB.SaveEpochSpansMap(ctx, epoch, spanMap); err != nil {
 			return err
+		}
+		if len(valIndices) == 0 {
+			break
 		}
 		if epoch == 0 {
 			break
@@ -224,14 +223,19 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, source uint64, target 
 
 // Updates a max span for a validator index given a source and target epoch
 // for an attestation produced by the validator. Used for catching surrounded votes.
-func (s *SpanDetector) updateMaxSpan(ctx context.Context, source uint64, target uint64, valIndices []uint64) error {
+func (s *SpanDetector) updateMaxSpan(ctx context.Context, att *ethpb.IndexedAttestation) error {
 	ctx, traceSpan := trace.StartSpan(ctx, "spanner.updateMaxSpan")
 	defer traceSpan.End()
+	source := att.Data.Source.Epoch
+	target := att.Data.Target.Epoch
+	valIndices := make([]uint64, len(att.AttestingIndices))
+	copy(valIndices, att.AttestingIndices)
 	for epoch := source + 1; epoch < target; epoch++ {
 		spanMap, err := s.slasherDB.EpochSpansMap(ctx, epoch)
 		if err != nil {
 			return err
 		}
+		indices := valIndices[:0]
 		for _, idx := range valIndices {
 			span := spanMap[idx]
 			newMaxSpan := uint16(target - epoch)
@@ -243,12 +247,14 @@ func (s *SpanDetector) updateMaxSpan(ctx context.Context, source uint64, target 
 					HasAttested: span.HasAttested,
 				}
 				spanMap[idx] = span
-			} else {
-				break
+				indices = append(indices, idx)
 			}
 		}
 		if err := s.slasherDB.SaveEpochSpansMap(ctx, epoch, spanMap); err != nil {
 			return err
+		}
+		if len(valIndices) == 0 {
+			break
 		}
 	}
 	return nil
