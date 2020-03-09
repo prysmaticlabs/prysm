@@ -204,11 +204,7 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 			return err
 		}
 		indices := valIndices[:0]
-		fmt.Printf("epoch: %d\n", epoch)
 		for _, idx := range valIndices {
-			fmt.Printf("idx: %d\n", idx)
-			fmt.Printf("indices: %v\n", indices)
-			fmt.Printf("valIndices: %d\n", valIndices)
 			span := spanMap[idx]
 			newMinSpan := uint16(target - epoch)
 			if span.MinSpan == 0 || span.MinSpan > newMinSpan {
@@ -221,7 +217,6 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 				spanMap[idx] = span
 				indices = append(indices, idx)
 			}
-			fmt.Printf("indices after: %v, len %d\n", indices, len(indices))
 		}
 		if err := s.slasherDB.SaveEpochSpansMap(ctx, epoch, spanMap); err != nil {
 			return err
@@ -268,7 +263,7 @@ func (s *SpanDetector) updateMaxSpan(ctx context.Context, att *ethpb.IndexedAtte
 		if err := s.slasherDB.SaveEpochSpansMap(ctx, epoch, spanMap); err != nil {
 			return err
 		}
-		if len(valIndices) == 0 {
+		if len(indices) == 0 {
 			break
 		}
 	}
