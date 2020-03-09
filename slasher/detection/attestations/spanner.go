@@ -133,13 +133,19 @@ func (s *SpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttest
 	if err := s.saveSigBytes(ctx, att); err != nil {
 		return err
 	}
+	fmt.Println("eee2")
+
 	// Update min and max spans.
 	if err := s.updateMinSpan(ctx, att); err != nil {
 		return err
 	}
+	fmt.Println("eee3")
+
 	if err := s.updateMaxSpan(ctx, att); err != nil {
 		return err
 	}
+	fmt.Println("eee1")
+
 	return nil
 }
 
@@ -182,19 +188,27 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 	defer traceSpan.End()
 	source := att.Data.Source.Epoch
 	target := att.Data.Target.Epoch
+	if source < 1 {
+		return nil
+	}
 	valIndices := make([]uint64, len(att.AttestingIndices))
 	copy(valIndices, att.AttestingIndices)
 	lowestEpoch := source - epochLookback
 	if int(lowestEpoch) <= 0 {
 		lowestEpoch = 0
 	}
+
 	for epoch := source - 1; epoch >= lowestEpoch; epoch-- {
 		spanMap, err := s.slasherDB.EpochSpansMap(ctx, epoch)
 		if err != nil {
 			return err
 		}
 		indices := valIndices[:0]
+		fmt.Printf("epoch: %d\n", epoch)
 		for _, idx := range valIndices {
+			fmt.Printf("idx: %d\n", idx)
+			fmt.Printf("indices: %v\n", indices)
+			fmt.Printf("valIndices: %d\n", valIndices)
 			span := spanMap[idx]
 			newMinSpan := uint16(target - epoch)
 			if span.MinSpan == 0 || span.MinSpan > newMinSpan {
@@ -207,11 +221,12 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 				spanMap[idx] = span
 				indices = append(indices, idx)
 			}
+			fmt.Printf("indices after: %v, len %d\n", indices, len(indices))
 		}
 		if err := s.slasherDB.SaveEpochSpansMap(ctx, epoch, spanMap); err != nil {
 			return err
 		}
-		if len(valIndices) == 0 {
+		if len(indices) == 0 {
 			break
 		}
 		if epoch == 0 {

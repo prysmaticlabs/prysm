@@ -2,6 +2,7 @@ package attestations
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -223,15 +224,19 @@ func TestSpanDetector_DetectSlashingsForAttestation_Double(t *testing.T) {
 			sd := &SpanDetector{
 				slasherDB: db,
 			}
+			fmt.Println("DDDD1")
 
 			if err := sd.UpdateSpans(ctx, tt.att); err != nil {
 				t.Fatal(err)
 			}
+			fmt.Println("DDDD2")
 
 			res, err := sd.DetectSlashingsForAttestation(ctx, tt.incomingAtt)
 			if err != nil {
 				t.Fatal(err)
 			}
+			fmt.Println("DDDD3")
+
 			var want []*types.DetectionResult
 			if tt.slashCount > 0 {
 				want = []*types.DetectionResult{
