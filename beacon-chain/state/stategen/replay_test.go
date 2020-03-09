@@ -415,7 +415,7 @@ func TestLastSavedBlock_CanGet(t *testing.T) {
 	}
 }
 
-func TestLastSavedBlock_OutOfRange(t *testing.T) {
+func TestLastSavedBlock_NoSavedBlock(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
@@ -429,9 +429,12 @@ func TestLastSavedBlock_OutOfRange(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, _, err := s.lastSavedBlock(ctx, s.lastArchivedSlot+1)
-	if err.Error() != "block root has 0 length" {
-		t.Error("Did not get wanted error")
+	r, slot, err := s.lastSavedBlock(ctx, s.lastArchivedSlot+1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if slot != 0 || r != params.BeaconConfig().ZeroHash {
+		t.Error("Did not get no saved block info")
 	}
 }
 
@@ -504,7 +507,7 @@ func TestLastSavedState_CanGet(t *testing.T) {
 	}
 }
 
-func TestLastSavedState_OutOfRange(t *testing.T) {
+func TestLastSavedState_NoSavedBlockState(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
@@ -518,9 +521,12 @@ func TestLastSavedState_OutOfRange(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := s.lastSavedState(ctx, s.lastArchivedSlot+1)
-	if err.Error() != "block root has 0 length" {
-		t.Error("Did not get wanted error")
+	r, err := s.lastSavedState(ctx, s.lastArchivedSlot+1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r != params.BeaconConfig().ZeroHash {
+		t.Error("Did not get no saved block info")
 	}
 }
 
