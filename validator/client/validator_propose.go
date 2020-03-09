@@ -194,18 +194,31 @@ func (v *validator) signBlock(ctx context.Context, pubKey [48]byte, epoch uint64
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get domain data")
 	}
-	root, err := ssz.HashTreeRoot(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get signing root")
-	}
 	var sig *bls.Signature
 	if protectingKeymanager, supported := v.keyManager.(keymanager.ProtectingKeyManager); supported {
-		sig, err = protectingKeymanager.SignProposal(pubKey, domain.SignatureDomain, b)
+		bodyRoot, err := ssz.HashTreeRoot(b.Body)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get signing root")
+		}
+		blockHeader := &ethpb.BeaconBlockHeader{
+			Slot:       b.Slot,
+			StateRoot:  b.StateRoot,
+			ParentRoot: b.ParentRoot,
+			BodyRoot:   bodyRoot[:],
+		}
+		sig, err = protectingKeymanager.SignProposal(pubKey, domain.SignatureDomain, blockHeader)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not sign block proposal")
+		}
 	} else {
-		sig, err = v.keyManager.Sign(pubKey, root, domain.SignatureDomain)
-	}
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get signing root")
+		blockRoot, err := ssz.HashTreeRoot(b)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get signing root")
+		}
+		sig, err = v.keyManager.Sign(pubKey, blockRoot, domain.SignatureDomain)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not sign block proposal")
+		}
 	}
 	return sig.Marshal(), nil
 }
