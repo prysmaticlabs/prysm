@@ -79,7 +79,7 @@ func (bs *Service) collectReceivedAttestations(ctx context.Context) {
 	defer span.End()
 
 	var atts []*ethpb.IndexedAttestation
-	ticker := time.NewTicker(3*time.Second)
+	ticker := time.NewTicker(2*time.Second)
 	for {
 		select {
 		case <-ticker.C:

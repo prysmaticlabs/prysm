@@ -104,7 +104,7 @@ func TestService_ReceiveAttestations_Batched(t *testing.T) {
 		att,
 		nil,
 	).Do(func() {
-		time.Sleep(3*time.Second)
+		time.Sleep(2*time.Second)
 		cancel()
 	})
 
