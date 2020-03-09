@@ -35,8 +35,9 @@ build:release --workspace_status_command=./scripts/workspace_status.sh
 build:release --stamp
 build:release --compilation_mode=opt
 
+# LLVM compiler for building C/C++ dependencies.
 build:llvm --crosstool_top=@llvm_toolchain//:toolchain
-build:llvm --define compiler=llvm # TODO: Is this needed?
+build:llvm --define compiler=llvm
 
 # multi-arch cross-compiling toolchain configs:
 -----------------------------------------------
