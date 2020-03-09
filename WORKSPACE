@@ -204,9 +204,9 @@ http_archive(
 
 http_archive(
     name = "com_github_herumi_bls_eth_go_binary",
-    sha256 = "fe9307f9ec757e3fc68afea089369907842ca079c1f32e4a7546df5f4a09ad44",
-    strip_prefix = "bls-go-binary-4ef039dc8ada18325fd835e07893612f408bcb59",
-    url = "https://github.com/nisdas/bls-go-binary/archive/4ef039dc8ada18325fd835e07893612f408bcb59.zip",
+    sha256 = "3b155ff597c307b5b0875c3b1ffc3beaa0a6634ee1cfad8768041b61c47eac39",
+    strip_prefix = "bls-eth-go-binary-946ee977cd0f585757741dda65073cbd84a160ac",
+    url = "https://github.com/prysmaticlabs/bls-eth-go-binary/archive/946ee977cd0f585757741dda65073cbd84a160ac.zip",
 )
 
 load("@com_github_bazelbuild_buildtools//buildifier:deps.bzl", "buildifier_dependencies")
@@ -1491,85 +1491,85 @@ go_repository(
 go_repository(
     name = "com_github_wealdtech_go_eth2_wallet",
     importpath = "github.com/wealdtech/go-eth2-wallet",
-    version = "v1.9.2",
     sum = "h1:H/T1n0SNd0jTsbf4rA4YxigsBPFWRUWgobsTOjzW4Hw=",
+    version = "v1.9.2",
 )
 
 go_repository(
     name = "com_github_wealdtech_go_eth2_wallet_hd_v2",
     importpath = "github.com/wealdtech/go-eth2-wallet-hd/v2",
-    version = "v2.0.0",
     sum = "h1:oqE/+zFOKteklEemecMWGlyNmPv+5OBaHmAo1LKG6LE=",
+    version = "v2.0.0",
 )
 
 go_repository(
     name = "com_github_wealdtech_go_eth2_wallet_nd_v2",
     importpath = "github.com/wealdtech/go-eth2-wallet-nd/v2",
-    version = "v2.0.0",
     sum = "h1:nWsbiaSVa1kwRdwPX5NfXsrowlRBjqoRpDv37i8ZecE=",
+    version = "v2.0.0",
 )
 
 go_repository(
     name = "com_github_wealdtech_go_eth2_wallet_store_filesystem",
     importpath = "github.com/wealdtech/go-eth2-wallet-store-filesystem",
-    version = "v1.7.1",
     sum = "h1:px7vV01opCUeeHjvdiBdkPbdnr60Ygq01Ddjy4dIbfg=",
+    version = "v1.7.1",
 )
 
 go_repository(
     name = "com_github_wealdtech_go_eth2_wallet_store_s3",
     importpath = "github.com/wealdtech/go-eth2-wallet-store-s3",
-    version = "v1.6.1",
     sum = "h1:f86TIVHqYkmDYc8VLsiIJ/KbGtNMeCGhkefqpXUVmYE=",
+    version = "v1.6.1",
 )
 
 go_repository(
     name = "com_github_wealdtech_go_eth2_wallet_encryptor_keystorev4",
     importpath = "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4",
-    version = "v1.0.0",
     sum = "h1:IcpS4VpXhYz+TVupB5n6C6IQzaKwG+Rc8nvgCa/da4c=",
+    version = "v1.0.0",
 )
 
 go_repository(
     name = "com_github_wealdtech_go_eth2_wallet_types_v2",
     importpath = "github.com/wealdtech/go-eth2-wallet-types/v2",
-    version = "v2.0.0",
     sum = "h1:EyTwHO7zXtYkf62h3MqSB3OWc8pv0dnFl41yykUJY3s=",
+    version = "v2.0.0",
 )
 
 go_repository(
     name = "com_github_wealdtech_go_eth2_types_v2",
     importpath = "github.com/wealdtech/go-eth2-types/v2",
-    version = "v2.0.2",
     sum = "h1:L1Eg55aArRpUR2H8dnpSevHlSGRDuRQbQwA4IyYh0Js=",
+    version = "v2.0.2",
 )
 
 go_repository(
     name = "com_github_wealdtech_go_eth2_util",
     importpath = "github.com/wealdtech/go-eth2-util",
-    version = "v1.1.2",
     sum = "h1:m56HKJgWSuNy53Gt5GN7HcoFaGRCl1uE3OGWhIhWh1M=",
+    version = "v1.1.2",
 )
 
 go_repository(
     name = "com_github_wealdtech_go_ecodec",
     importpath = "github.com/wealdtech/go-ecodec",
-    version = "v1.1.0",
     sum = "h1:yggrTSckcPJRaxxOxQF7FPm21kgE8WA6+f5jdq5Kr8o=",
+    version = "v1.1.0",
 )
 
 go_repository(
     name = "com_github_wealdtech_go_bytesutil",
     importpath = "github.com/wealdtech/go-bytesutil",
-    version = "v1.1.0",
     sum = "h1:6XrN7OIQhhBjQy/PZ1HZ3ySE8v8UDyxzERkOgmsIc1g=",
+    version = "v1.1.0",
 )
 
 go_repository(
     name = "com_github_wealdtech_go_indexer",
     importpath = "github.com/wealdtech/go-indexer",
-    version = "v1.0.0",
     sum = "h1:/S4rfWQbSOnnYmwnvuTVatDibZ8o1s9bmTCHO16XINg=",
+    version = "v1.0.0",
 )
 
 go_repository(
