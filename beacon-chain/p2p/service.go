@@ -30,7 +30,8 @@ import (
 
 var _ = shared.Service(&Service{})
 
-var pollingPeriod = 1 * time.Second
+// check local table every 30 seconds for newly added peers.
+var pollingPeriod = 30 * time.Second
 
 const prysmProtocolPrefix = "/prysm/0.0.0"
 
@@ -158,7 +159,7 @@ func (s *Service) Start() {
 			s.startupErr = err
 			return
 		}
-		err = s.addBootNodesToExclusionList()
+		err = s.connectToBootnodes()
 		if err != nil {
 			log.WithError(err).Error("Could not add bootnode to the exclusion list")
 			s.startupErr = err
@@ -293,13 +294,10 @@ func (s *Service) Peers() *peers.Status {
 
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.
 func (s *Service) listenForNewNodes() {
-	bootNode, err := enode.Parse(enode.ValidSchemes, s.cfg.Discv5BootStrapAddr[0])
-	if err != nil {
-		log.Fatal(err)
-	}
+	nodes := make([]*enode.Node, s.cfg.MaxPeers)
 	runutil.RunEvery(s.ctx, pollingPeriod, func() {
-		nodes := s.dv5Listener.Lookup(bootNode.ID())
-		multiAddresses := convertToMultiAddr(nodes)
+		num := s.dv5Listener.ReadRandomNodes(nodes)
+		multiAddresses := convertToMultiAddr(nodes[:num])
 		s.connectWithAllPeers(multiAddresses)
 	})
 }
@@ -327,24 +325,17 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 	}
 }
 
-func (s *Service) addBootNodesToExclusionList() error {
+func (s *Service) connectToBootnodes() error {
+	nodes := make([]*enode.Node, 0, len(s.cfg.Discv5BootStrapAddr))
 	for _, addr := range s.cfg.Discv5BootStrapAddr {
 		bootNode, err := enode.Parse(enode.ValidSchemes, addr)
 		if err != nil {
 			return err
 		}
-		multAddr, err := convertToSingleMultiAddr(bootNode)
-		if err != nil {
-			return err
-		}
-		addrInfo, err := peer.AddrInfoFromP2pAddr(multAddr)
-		if err != nil {
-			return err
-		}
-		// bootnode is never dialled, so ttl is tentatively 1 year
-		s.exclusionList.Set(addrInfo.ID.String(), true, 1)
+		nodes = append(nodes, bootNode)
 	}
-
+	multiAddresses := convertToMultiAddr(nodes)
+	s.connectWithAllPeers(multiAddresses)
 	return nil
 }
 
