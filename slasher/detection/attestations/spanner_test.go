@@ -233,7 +233,6 @@ func TestSpanDetector_DetectSlashingsForAttestation_Double(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			fmt.Println("DDDD3")
 
 			var want []*types.DetectionResult
 			if tt.slashCount > 0 {
