@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"go.opencensus.io/trace"
@@ -58,4 +59,46 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 	s.hotStateCache.Put(blockRoot, hotState.Copy())
 
 	return hotState, nil
+}
+
+// This loads a hot state by slot where the slot lies between the epoch boundary points.
+// This is a slower implementation (versus ByRoot) as slot is the only argument. It require fetching
+// all the blocks between the epoch boundary points for playback.
+// Use `loadHotStateByRoot` unless you really don't know the root.
+func (s *State) loadHotStateBySlot(ctx context.Context, slot uint64) (*state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.loadHotStateBySlot")
+	defer span.End()
+
+	// Gather epoch boundary information, that is where node starts to replay the blocks.
+	boundarySlot := helpers.StartSlot(helpers.SlotToEpoch(slot))
+	boundaryRoot, ok := s.epochBoundaryRoot(boundarySlot)
+	if !ok {
+		return nil, errUnknownBoundaryRoot
+	}
+	// Try the cache first then try the DB.
+	boundaryState := s.hotStateCache.Get(boundaryRoot)
+	var err error
+	if boundaryState == nil {
+		boundaryState, err = s.beaconDB.State(ctx, boundaryRoot)
+		if err != nil {
+			return nil, err
+		}
+		if boundaryState == nil {
+			return nil, errUnknownBoundaryState
+		}
+	}
+
+	// Gather the last saved block root and the slot number.
+	lastValidRoot, lastValidSlot, err := s.lastSavedBlock(ctx, slot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get last valid block for hot state using slot")
+	}
+
+	// Load and replay blocks to get the intermediate state.
+	replayBlks, err := s.LoadBlocks(ctx, boundaryState.Slot()+1, lastValidSlot, lastValidRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.ReplayBlocks(ctx, boundaryState, replayBlks, slot)
 }
