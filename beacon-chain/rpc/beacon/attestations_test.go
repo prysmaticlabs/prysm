@@ -883,7 +883,7 @@ func TestServer_StreamIndexedAttestations_ContextCanceled(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockStream := mockRPC.NewMockBeaconChain_StreamIndexedAttestationsServer(ctrl)
-	mockStream.EXPECT().Context().Return(ctx)
+	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 	go func(tt *testing.T) {
 		if err := server.StreamIndexedAttestations(
 			&ptypes.Empty{},
@@ -897,7 +897,7 @@ func TestServer_StreamIndexedAttestations_ContextCanceled(t *testing.T) {
 	exitRoutine <- true
 }
 
-func TestServer_StreamIndexedAttestations_OnSlotTick(t *testing.T) {
+func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	exitRoutine := make(chan bool)
@@ -977,10 +977,16 @@ func TestServer_StreamIndexedAttestations_OnSlotTick(t *testing.T) {
 			atts = append(atts, attExample)
 		}
 	}
+
+	aggAtts, err := helpers.AggregateAttestations(atts)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Next up we convert the test attestations to indexed form.
-	indexedAtts := make([]*ethpb.IndexedAttestation, len(atts), len(atts))
+	indexedAtts := make([]*ethpb.IndexedAttestation, len(aggAtts), len(aggAtts))
 	for i := 0; i < len(indexedAtts); i++ {
-		att := atts[i]
+		att := aggAtts[i]
 		committee := committees[att.Data.Slot].Committees[att.Data.CommitteeIndex]
 		idxAtt, err := attestationutil.ConvertToIndexed(ctx, att, committee.ValidatorIndices)
 		if err != nil {
@@ -999,7 +1005,8 @@ func TestServer_StreamIndexedAttestations_OnSlotTick(t *testing.T) {
 		GenesisTimeFetcher: &mock.ChainService{
 			Genesis: time.Now(),
 		},
-		AttestationNotifier: chainService.OperationNotifier(),
+		AttestationNotifier:         chainService.OperationNotifier(),
+		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, 1),
 	}
 
 	mockStream := mockRPC.NewMockBeaconChain_StreamIndexedAttestationsServer(ctrl)
@@ -1020,15 +1027,7 @@ func TestServer_StreamIndexedAttestations_OnSlotTick(t *testing.T) {
 		}
 	}(t)
 
-	for i := 0; i < len(atts); i++ {
-		// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
-		for sent := 0; sent == 0; {
-			sent = server.AttestationNotifier.OperationFeed().Send(&feed.Event{
-				Type: operation.UnaggregatedAttReceived,
-				Data: &operation.UnAggregatedAttReceivedData{Attestation: atts[i]},
-			})
-		}
-	}
+	server.CollectedAttestationsBuffer <- atts
 	<-exitRoutine
 }
 
