@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	db "github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/iface"
@@ -115,11 +115,7 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 	keys := make(map[[32]byte]bool)
 	var detectionList []*types.DetectionResult
 	for _, dd := range detections {
-		hash, err := ssz.HashTreeRoot(dd.Marshal())
-		if err != nil {
-			return nil, err
-		}
-
+		hash := hashutil.Hash(dd.Marshal())
 		if _, value := keys[hash]; !value {
 			keys[hash] = true
 			detectionList = append(detectionList, dd)
@@ -136,7 +132,7 @@ func (s *SpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttest
 	source := att.Data.Source.Epoch
 	target := att.Data.Target.Epoch
 	// Save the signature for the received attestation so we can have more detail to find it in the DB.
-	if err := s.saveSigBytes(ctx, att, att.AttestingIndices); err != nil {
+	if err := s.saveSigBytes(ctx, att); err != nil {
 		return err
 	}
 	// Update min and max spans.
@@ -151,7 +147,7 @@ func (s *SpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttest
 
 // saveSigBytes saves the first 2 bytes of the signature for the att we're updating the spans to.
 // Later used to help us find the violating attestation in the DB.
-func (s *SpanDetector) saveSigBytes(ctx context.Context, att *ethpb.IndexedAttestation, valIndices []uint64) error {
+func (s *SpanDetector) saveSigBytes(ctx context.Context, att *ethpb.IndexedAttestation) error {
 	ctx, traceSpan := trace.StartSpan(ctx, "spanner.saveSigBytes")
 	defer traceSpan.End()
 	target := att.Data.Target.Epoch
@@ -161,7 +157,7 @@ func (s *SpanDetector) saveSigBytes(ctx context.Context, att *ethpb.IndexedAttes
 	}
 
 	// We loop through the indices, instead of constantly locking/unlocking the cache for equivalent accesses.
-	for _, idx := range valIndices {
+	for _, idx := range att.AttestingIndices {
 		span := spanMap[idx]
 		// If the validator has already attested for this target epoch,
 		// then we do not need to update the values of the span sig bytes.
@@ -198,7 +194,7 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, source uint64, target 
 		if err != nil {
 			return err
 		}
-		for _, idx := range valIndices {
+		for i, idx := range valIndices {
 			span := spanMap[idx]
 			newMinSpan := uint16(target - epoch)
 			if span.MinSpan == 0 || span.MinSpan > newMinSpan {
@@ -210,6 +206,9 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, source uint64, target 
 				}
 				spanMap[idx] = span
 			} else {
+				valIndices = append(valIndices[:i], valIndices[i+1:]...)
+			}
+			if len(valIndices) == 0 {
 				break
 			}
 		}
