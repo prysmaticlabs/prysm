@@ -26,7 +26,7 @@ func (ds *Service) detectAttesterSlashings(
 		return nil, nil
 	}
 
-  var slashings []*ethpb.AttesterSlashing
+	var slashings []*ethpb.AttesterSlashing
 	for _, result := range results {
 		var slashing *ethpb.AttesterSlashing
 		switch result.Kind {
@@ -41,7 +41,9 @@ func (ds *Service) detectAttesterSlashings(
 				return nil, errors.Wrap(err, "could not detect surround votes on attestation")
 			}
 		}
-		slashings = append(slashings, slashing)
+		if slashing != nil {
+			slashings = append(slashings, slashing)
+		}
 	}
 
 	return slashings, nil

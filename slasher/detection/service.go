@@ -152,7 +152,7 @@ func (ds *Service) submitAttesterSlashings(ctx context.Context, slashings []*eth
 	}
 	for i := 0; i < len(slashings); i++ {
 		slash := slashings[i]
-		if slash.Attestation_1 != nil && slash.Attestation_2 != nil {
+		if slash != nil && slash.Attestation_1 != nil && slash.Attestation_2 != nil {
 			slashableIndices := sliceutil.IntersectionUint64(slashings[i].Attestation_1.AttestingIndices, slashings[i].Attestation_2.AttestingIndices)
 			slashedIndices = append(slashedIndices, slashableIndices...)
 			ds.attesterSlashingsFeed.Send(slashings[i])
