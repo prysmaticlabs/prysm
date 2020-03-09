@@ -5,4 +5,5 @@ go_library(
     srcs = ["types.go"],
     importpath = "github.com/prysmaticlabs/prysm/slasher/detection/attestations/types",
     visibility = ["//visibility:public"],
+    deps = ["//shared/bytesutil:go_default_library"],
 )

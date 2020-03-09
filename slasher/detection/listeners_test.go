@@ -65,8 +65,11 @@ func TestService_DetectIncomingAttestations(t *testing.T) {
 	att := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Slot: 1,
-			Target: &ethpb.Checkpoint{
+			Source: &ethpb.Checkpoint{
 				Epoch: 0,
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: 1,
 			},
 		},
 	}
