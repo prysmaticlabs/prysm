@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -16,6 +17,70 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
+
+func TestComputeStateUpToSlot_GenesisState(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	service := New(db)
+
+	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	gRoot, err := ssz.HashTreeRoot(gBlk.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveBlock(ctx, gBlk); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
+		t.Fatal(err)
+	}
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	if err := service.beaconDB.SaveState(ctx, beaconState, gRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	s, err := service.ComputeStateUpToSlot(ctx, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !proto.Equal(s.InnerStateUnsafe(), beaconState.InnerStateUnsafe()) {
+		t.Error("Did not receive correct genesis state")
+	}
+}
+
+func TestComputeStateUpToSlot_CanProcessUpTo(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	service := New(db)
+
+	gBlk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	gRoot, err := ssz.HashTreeRoot(gBlk.Block)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveBlock(ctx, gBlk); err != nil {
+		t.Fatal(err)
+	}
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	if err := service.beaconDB.SaveState(ctx, beaconState, gRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	s, err := service.ComputeStateUpToSlot(ctx, params.BeaconConfig().SlotsPerEpoch+1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if s.Slot() != params.BeaconConfig().SlotsPerEpoch+1 {
+		t.Log(s.Slot())
+		t.Error("Did not receive correct processed state")
+	}
+}
 
 func TestReplayBlocks_AllSkipSlots(t *testing.T) {
 	db := testDB.SetupDB(t)
@@ -350,7 +415,7 @@ func TestLastSavedBlock_CanGet(t *testing.T) {
 	}
 }
 
-func TestLastSavedBlock_OutOfRange(t *testing.T) {
+func TestLastSavedBlock_NoSavedBlock(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
@@ -364,9 +429,12 @@ func TestLastSavedBlock_OutOfRange(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, _, err := s.lastSavedBlock(ctx, s.lastArchivedSlot+1)
-	if err.Error() != "block root has 0 length" {
-		t.Error("Did not get wanted error")
+	r, slot, err := s.lastSavedBlock(ctx, s.lastArchivedSlot+1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if slot != 0 || r != params.BeaconConfig().ZeroHash {
+		t.Error("Did not get no saved block info")
 	}
 }
 
@@ -439,7 +507,7 @@ func TestLastSavedState_CanGet(t *testing.T) {
 	}
 }
 
-func TestLastSavedState_OutOfRange(t *testing.T) {
+func TestLastSavedState_NoSavedBlockState(t *testing.T) {
 	db := testDB.SetupDB(t)
 	defer testDB.TeardownDB(t, db)
 	ctx := context.Background()
@@ -453,9 +521,12 @@ func TestLastSavedState_OutOfRange(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := s.lastSavedState(ctx, s.lastArchivedSlot+1)
-	if err.Error() != "block root has 0 length" {
-		t.Error("Did not get wanted error")
+	r, err := s.lastSavedState(ctx, s.lastArchivedSlot+1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r != params.BeaconConfig().ZeroHash {
+		t.Error("Did not get no saved block info")
 	}
 }
 

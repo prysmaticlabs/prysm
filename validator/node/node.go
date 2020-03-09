@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
@@ -68,17 +67,6 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 	}
 
 	featureconfig.ConfigureValidator(ctx)
-	// Use custom config values if the --no-custom-config flag is set.
-	if !ctx.GlobalBool(flags.NoCustomConfigFlag.Name) {
-		log.Info("Using custom parameter configuration")
-		if featureconfig.Get().MinimalConfig {
-			log.Warn("Using Minimal Config")
-			params.UseMinimalConfig()
-		} else {
-			log.Warn("Using Demo Config")
-			params.UseDemoBeaconConfig()
-		}
-	}
 
 	keyManager, err := selectKeyManager(ctx)
 	if err != nil {

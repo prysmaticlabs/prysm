@@ -28,6 +28,7 @@ var log = logrus.WithField("prefix", "flags")
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
+	NoCustomConfig                             bool   // NoCustomConfigFlag determines whether to launch a beacon chain using real parameters or demo parameters.
 	CustomGenesisDelay                         uint64 // CustomGenesisDelay signals how long of a delay to set to start the chain.
 	MinimalConfig                              bool   // MinimalConfig as defined in the spec.
 	WriteSSZStateTransitions                   bool   // WriteSSZStateTransitions to tmp directory.
@@ -80,15 +81,13 @@ func Init(c *Flags) {
 func ConfigureBeaconChain(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	delay := ctx.GlobalUint64(customGenesisDelayFlag.Name)
-	if delay != params.BeaconConfig().MinGenesisDelay {
+	cfg = configureConfig(ctx, cfg)
+	delay := params.BeaconConfig().MinGenesisDelay
+	if ctx.GlobalIsSet(customGenesisDelayFlag.Name) {
+		delay = ctx.GlobalUint64(customGenesisDelayFlag.Name)
 		log.Warnf("Starting ETH2 with genesis delay of %d seconds", delay)
 	}
 	cfg.CustomGenesisDelay = delay
-	if ctx.GlobalBool(minimalConfigFlag.Name) {
-		log.Warn("Using minimal config")
-		cfg.MinimalConfig = true
-	}
 	if ctx.GlobalBool(writeSSZStateTransitionsFlag.Name) {
 		log.Warn("Writing SSZ states and blocks after state transitions")
 		cfg.WriteSSZStateTransitions = true
@@ -171,10 +170,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 func ConfigureValidator(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	if ctx.GlobalBool(minimalConfigFlag.Name) {
-		log.Warn("Using minimal config")
-		cfg.MinimalConfig = true
-	}
+	cfg = configureConfig(ctx, cfg)
 	if ctx.GlobalBool(protectProposerFlag.Name) {
 		log.Warn("Enabled validator proposal slashing protection.")
 		cfg.ProtectProposer = true
@@ -196,4 +192,30 @@ func complainOnDeprecatedFlags(ctx *cli.Context) {
 			log.Errorf("%s is deprecated and has no effect. Do not use this flag, it will be deleted soon.", f.GetName())
 		}
 	}
+}
+
+func configureConfig(ctx *cli.Context, cfg *Flags) *Flags {
+	if ctx.GlobalBool(noCustomConfigFlag.Name) {
+		log.Warn("Using default mainnet config")
+		cfg.NoCustomConfig = true
+	}
+	if ctx.GlobalBool(minimalConfigFlag.Name) {
+		log.Warn("Using minimal config")
+		cfg.MinimalConfig = true
+	}
+	// Use custom config values if the --no-custom-config flag is not set.
+	if !cfg.NoCustomConfig {
+		if cfg.MinimalConfig {
+			log.WithField(
+				"config", "minimal-spec",
+			).Info("Using custom chain parameters")
+			params.UseMinimalConfig()
+		} else {
+			log.WithField(
+				"config", "demo",
+			).Info("Using custom chain parameters")
+			params.UseDemoBeaconConfig()
+		}
+	}
+	return cfg
 }

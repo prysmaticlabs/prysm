@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -20,20 +21,22 @@ import (
 // providing RPC endpoints to access data relevant to the Ethereum 2.0 phase 0
 // beacon chain.
 type Server struct {
-	BeaconDB             db.ReadOnlyDatabase
-	Ctx                  context.Context
-	ChainStartFetcher    powchain.ChainStartFetcher
-	HeadFetcher          blockchain.HeadFetcher
-	FinalizationFetcher  blockchain.FinalizationFetcher
-	ParticipationFetcher blockchain.ParticipationFetcher
-	DepositFetcher       depositcache.DepositFetcher
-	BlockFetcher         powchain.POWBlockFetcher
-	GenesisTimeFetcher   blockchain.TimeFetcher
-	StateNotifier        statefeed.Notifier
-	BlockNotifier        blockfeed.Notifier
-	AttestationNotifier  operation.Notifier
-	AttestationsPool     attestations.Pool
-	SlashingsPool        *slashings.Pool
-	CanonicalStateChan   chan *pbp2p.BeaconState
-	ChainStartChan       chan time.Time
+	BeaconDB                    db.ReadOnlyDatabase
+	Ctx                         context.Context
+	ChainStartFetcher           powchain.ChainStartFetcher
+	HeadFetcher                 blockchain.HeadFetcher
+	FinalizationFetcher         blockchain.FinalizationFetcher
+	ParticipationFetcher        blockchain.ParticipationFetcher
+	DepositFetcher              depositcache.DepositFetcher
+	BlockFetcher                powchain.POWBlockFetcher
+	GenesisTimeFetcher          blockchain.TimeFetcher
+	StateNotifier               statefeed.Notifier
+	BlockNotifier               blockfeed.Notifier
+	AttestationNotifier         operation.Notifier
+	AttestationsPool            attestations.Pool
+	SlashingsPool               *slashings.Pool
+	CanonicalStateChan          chan *pbp2p.BeaconState
+	ChainStartChan              chan time.Time
+	ReceivedAttestationsBuffer  chan *ethpb.Attestation
+	CollectedAttestationsBuffer chan []*ethpb.Attestation
 }

@@ -23,7 +23,7 @@ toolchain(
     exec_compatible_with = [
         "@bazel_tools//platforms:x86_64",
         "@bazel_tools//platforms:linux",
-        "@bazel_tools//tools/cpp:clang",
+        "@bazel_tools//tools/cpp:gcc",
     ],
     target_compatible_with = [
         "@bazel_tools//platforms:linux",
@@ -38,16 +38,10 @@ platform(
     constraint_values = [
         "@bazel_tools//platforms:x86_64",
         "@bazel_tools//platforms:linux",
-        "@bazel_tools//tools/cpp:clang",
+        "@bazel_tools//tools/cpp:gcc",
     ],
-    remote_execution_properties = """
-        properties: {
-          name: "container-image"
-          value:"docker://gcr.io/prysmaticlabs/rbe-worker@sha256:d7407d58cee310e7ab788bf4256bba704344630621d8507f3c9cf253c7fc664f"
-        }
-        properties {
-           name: "OSFamily"
-           value:  "Linux"
-        }
-        """,
+    exec_properties = {
+        "container-image": "docker://gcr.io/prysmaticlabs/rbe-worker@sha256:d7407d58cee310e7ab788bf4256bba704344630621d8507f3c9cf253c7fc664f",
+        "OSFamily": "Linux",
+    },
 )
