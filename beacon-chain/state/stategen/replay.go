@@ -13,6 +13,7 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
 
@@ -247,7 +248,8 @@ func (s *State) lastSavedBlock(ctx context.Context, slot uint64) ([32]byte, uint
 		return [32]byte{}, 0, err
 	}
 	if len(rs) == 0 {
-		return [32]byte{}, 0, errors.New("block root has 0 length")
+		// Return zero hash if there hasn't been any block in the DB yet.
+		return params.BeaconChainConfig{}.ZeroHash, 0, nil
 	}
 	lastRoot := rs[len(rs)-1]
 
@@ -286,7 +288,8 @@ func (s *State) lastSavedState(ctx context.Context, slot uint64) ([32]byte, erro
 		return [32]byte{}, err
 	}
 	if len(rs) == 0 {
-		return [32]byte{}, errors.New("block root has 0 length")
+		// Return zero hash if there hasn't been any block in the DB yet.
+		return params.BeaconChainConfig{}.ZeroHash, nil
 	}
 	for i := len(rs) - 1; i >= 0; i-- {
 		// Stop until a state is saved.
