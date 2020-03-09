@@ -294,10 +294,9 @@ func (s *Service) Peers() *peers.Status {
 
 // listen for new nodes watches for new nodes in the network and adds them to the peerstore.
 func (s *Service) listenForNewNodes() {
-	nodes := make([]*enode.Node, s.cfg.MaxPeers)
 	runutil.RunEvery(s.ctx, pollingPeriod, func() {
-		num := s.dv5Listener.ReadRandomNodes(nodes)
-		multiAddresses := convertToMultiAddr(nodes[:num])
+		nodes := s.dv5Listener.LookupRandom()
+		multiAddresses := convertToMultiAddr(nodes)
 		s.connectWithAllPeers(multiAddresses)
 	})
 }
