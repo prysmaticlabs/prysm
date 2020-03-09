@@ -228,7 +228,6 @@ func TestSpanDetector_DetectSlashingsForAttestation_Double(t *testing.T) {
 			if err := sd.UpdateSpans(ctx, tt.att); err != nil {
 				t.Fatal(err)
 			}
-			fmt.Println("DDDD2")
 
 			res, err := sd.DetectSlashingsForAttestation(ctx, tt.incomingAtt)
 			if err != nil {
