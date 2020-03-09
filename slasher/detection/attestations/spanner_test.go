@@ -224,7 +224,6 @@ func TestSpanDetector_DetectSlashingsForAttestation_Double(t *testing.T) {
 			sd := &SpanDetector{
 				slasherDB: db,
 			}
-			fmt.Println("DDDD1")
 
 			if err := sd.UpdateSpans(ctx, tt.att); err != nil {
 				t.Fatal(err)
