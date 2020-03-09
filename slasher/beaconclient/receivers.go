@@ -71,26 +71,6 @@ func (bs *Service) receiveAttestations(ctx context.Context) {
 			return
 		}
 		bs.receivedAttestationsBuffer <- res
-
-		select {
-		case atts := <-bs.collectedAttestationsBuffer:
-			log.Debugf("%d attestations for slot %d received from beacon node", len(atts), atts[0].Data.Slot)
-			if err := bs.slasherDB.SaveIndexedAttestations(ctx, atts); err != nil {
-				log.WithError(err).Error("Could not save indexed attestation")
-				continue
-			}
-			// After saving, we send the received attestation over the attestation feed.
-			for _, att := range atts {
-				log.WithFields(logrus.Fields{
-					"slot":    res.Data.Slot,
-					"indices": res.AttestingIndices,
-				}).Debug("Sending attestation to detection service")
-				bs.attestationFeed.Send(att)
-			}
-			continue
-		default:
-			continue
-		}
 	}
 }
 
@@ -109,6 +89,20 @@ func (bs *Service) collectReceivedAttestations(ctx context.Context) {
 			}
 		case att := <-bs.receivedAttestationsBuffer:
 			atts = append(atts, att)
+		case atts := <-bs.collectedAttestationsBuffer:
+			log.Debugf("%d attestations for slot %d received from beacon node", len(atts), atts[0].Data.Slot)
+			if err := bs.slasherDB.SaveIndexedAttestations(ctx, atts); err != nil {
+				log.WithError(err).Error("Could not save indexed attestation")
+				continue
+			}
+			// After saving, we send the received attestation over the attestation feed.
+			for _, att := range atts {
+				log.WithFields(logrus.Fields{
+					"slot":    att.Data.Slot,
+					"indices": att.AttestingIndices,
+				}).Debug("Sending attestation to detection service")
+				bs.attestationFeed.Send(att)
+			}
 		case <-ctx.Done():
 			return
 		}

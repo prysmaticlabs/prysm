@@ -3,6 +3,7 @@ package beaconclient
 import (
 	"context"
 	"testing"
+	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
@@ -84,7 +85,7 @@ func TestService_ReceiveAttestations_Batched(t *testing.T) {
 		collectedAttestationsBuffer: make(chan []*ethpb.IndexedAttestation, 1),
 	}
 	stream := mock.NewMockBeaconChain_StreamIndexedAttestationsClient(ctrl)
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 	att := &ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Slot: 5,
@@ -102,11 +103,19 @@ func TestService_ReceiveAttestations_Batched(t *testing.T) {
 	stream.EXPECT().Recv().Return(
 		att,
 		nil,
-	).AnyTimes()
+	).Do(func() {
+		time.Sleep(2*time.Second)
+		cancel()
+	})
 
 	go bs.receiveAttestations(ctx)
+	bs.receivedAttestationsBuffer <- att
+	att.Data.Target.Epoch = 6
+	bs.receivedAttestationsBuffer <- att
+	att.Data.Target.Epoch = 8
+	bs.receivedAttestationsBuffer <- att
 	atts := <- bs.collectedAttestationsBuffer
-	if len(atts) != 0 {
+	if len(atts) != 3 {
 		t.Fatalf("Expected %d received attestations to be batched", len(atts))
 	}
 }
