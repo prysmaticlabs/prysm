@@ -5,7 +5,6 @@ load("@io_kubernetes_build//defs:run_in_workspace.bzl", "workspace_binary")
 load("@io_bazel_rules_go//go:def.bzl", "nogo")
 load("@graknlabs_bazel_distribution//common:rules.bzl", "assemble_targz", "assemble_versioned")
 load("//tools:binary_targets.bzl", "binary_targets", "determine_targets")
-load("//tools:ssz.bzl", "sszgenerator")
 
 prefix = "github.com/prysmaticlabs/prysm"
 
@@ -106,12 +105,6 @@ nogo(
         "@org_golang_x_tools//go/analysis/passes/inspect:go_tool_library",
         "@org_golang_x_tools//go/analysis/passes/asmdecl:go_tool_library",
     ],
-)
-
-sszgenerator(
-  name = "fast-ssz-generator",
-  srcs = glob(["*.pb.go"]),
-  outs = glob(["*.pb_encoding.go"]),
 )
 
 assemble_versioned(
