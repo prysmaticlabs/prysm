@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/runutil"
+	"github.com/sirupsen/logrus"
 )
 
 var _ = shared.Service(&Service{})
@@ -310,6 +311,11 @@ func (s *Service) connectWithAllPeers(multiAddrs []ma.Multiaddr) {
 	for _, info := range addrInfos {
 		// make each dial non-blocking
 		go func(info peer.AddrInfo) {
+			if len(s.Peers().Active()) >= int(s.cfg.MaxPeers) {
+				log.WithFields(logrus.Fields{"peer": info.ID.String(),
+					"reason": "at peer limit"}).Trace("Not dialing peer")
+				return
+			}
 			if info.ID == s.host.ID() {
 				return
 			}
