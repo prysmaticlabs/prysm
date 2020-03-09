@@ -132,17 +132,14 @@ func (bs *Server) ListIndexedAttestations(
 	epoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListIndexedAttestationsRequest_TargetEpoch:
-		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetTargetEpoch(q.TargetEpoch))
+		blks, err := bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetStartEpoch(q.TargetEpoch).SetEndEpoch(q.TargetEpoch))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
+		}
+		for _, b := range blks {
+			atts = append(atts, b.Block.Body.Attestations...)
 		}
 		epoch = q.TargetEpoch
-	case *ethpb.ListIndexedAttestationsRequest_GenesisEpoch:
-		atts, err = bs.BeaconDB.Attestations(ctx, filters.NewFilter().SetTargetEpoch(0))
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not fetch attestations: %v", err)
-		}
-		epoch = 0
 	default:
 		return nil, status.Error(codes.InvalidArgument, "Must specify a filter criteria for fetching attestations")
 	}
