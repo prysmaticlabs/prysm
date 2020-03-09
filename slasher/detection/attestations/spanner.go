@@ -133,19 +133,13 @@ func (s *SpanDetector) UpdateSpans(ctx context.Context, att *ethpb.IndexedAttest
 	if err := s.saveSigBytes(ctx, att); err != nil {
 		return err
 	}
-	fmt.Println("eee2")
-
 	// Update min and max spans.
 	if err := s.updateMinSpan(ctx, att); err != nil {
 		return err
 	}
-	fmt.Println("eee3")
-
 	if err := s.updateMaxSpan(ctx, att); err != nil {
 		return err
 	}
-	fmt.Println("eee1")
-
 	return nil
 }
 
