@@ -94,3 +94,45 @@ func TestLoadHoteStateByRoot_FromDBBoundaryCase(t *testing.T) {
 		t.Error("Did not correctly load state")
 	}
 }
+
+func TestLoadHoteStateBySlot_CanAdvanceSlotUsingCache(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	service := New(db)
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	r := [32]byte{'A'}
+	service.hotStateCache.Put(r, beaconState)
+	service.setEpochBoundaryRoot(0, r)
+
+	slot := uint64(10)
+	loadedState, err := service.loadHotStateBySlot(ctx, slot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loadedState.Slot() != slot {
+		t.Error("Did not correctly load state")
+	}
+}
+
+func TestLoadHoteStateBySlot_CanAdvanceSlotUsingDB(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	service := New(db)
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	r := [32]byte{'A'}
+	service.setEpochBoundaryRoot(0, r)
+	if err := service.beaconDB.SaveState(ctx, beaconState, r); err != nil {
+		t.Fatal(err)
+	}
+
+	slot := uint64(10)
+	loadedState, err := service.loadHotStateBySlot(ctx, slot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loadedState.Slot() != slot {
+		t.Error("Did not correctly load state")
+	}
+}
