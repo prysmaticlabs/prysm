@@ -20,42 +20,45 @@ type MockSpanDetector struct {
 	lock  sync.RWMutex
 }
 
-// DetectSlashingForValidator mocks a detected slashing, if the sent attestation data
+// DetectSlashingsForAttestation mocks a detected slashing, if the sent attestation data
 // has a source epoch of 0, nothing will be detected. If the sent attestation data has a target
 // epoch equal to or greater than 6, it will "detect" a surrounded vote for the target epoch + 1.
 // If the target epoch is greater than 12, it will "detect" a surrounding vote for target epoch - 1.
 // Lastly, if it has a target epoch less than 6, it will "detect" a double vote for the target epoch.
-func (s *MockSpanDetector) DetectSlashingForValidator(
+func (s *MockSpanDetector) DetectSlashingsForAttestation(
 	ctx context.Context,
-	validatorIdx uint64,
-	attData *ethpb.AttestationData,
-) (*types.DetectionResult, error) {
+	att *ethpb.IndexedAttestation,
+) ([]*types.DetectionResult, error) {
+	var detections []*types.DetectionResult
 	switch {
 	// If the source epoch is 0, don't find a slashing.
-	case attData.Source.Epoch == 0:
+	case att.Data.Source.Epoch == 0:
 		return nil, nil
 	// If the target epoch is > 12, it will "detect" a surrounded saved attestation.
-	case attData.Target.Epoch > 12:
-		return &types.DetectionResult{
+	case att.Data.Target.Epoch > 12:
+		detections = append(detections, &types.DetectionResult{
 			Kind:           types.SurroundVote,
-			SlashableEpoch: attData.Target.Epoch - 1,
+			SlashableEpoch: att.Data.Target.Epoch - 1,
 			SigBytes:       [2]byte{1, 2},
-		}, nil
+		})
+		return detections, nil
 	// If the target epoch is >= 6 < 12, it will "detect" a surrounding saved attestation.
-	case attData.Target.Epoch >= 6:
-		return &types.DetectionResult{
+	case att.Data.Target.Epoch >= 6:
+		detections = append(detections, &types.DetectionResult{
 			Kind:           types.SurroundVote,
-			SlashableEpoch: attData.Target.Epoch + 1,
+			SlashableEpoch: att.Data.Target.Epoch + 1,
 			SigBytes:       [2]byte{1, 2},
-		}, nil
+		})
+		return detections, nil
 	// If the target epoch is less than 6, it will "detect" a double vote.
 	default:
-		return &types.DetectionResult{
+		detections = append(detections, &types.DetectionResult{
 			Kind:           types.DoubleVote,
-			SlashableEpoch: attData.Target.Epoch,
+			SlashableEpoch: att.Data.Target.Epoch,
 			SigBytes:       [2]byte{1, 2},
-		}, nil
+		})
 	}
+	return detections, nil
 }
 
 // SpanForEpochByValidator returns the specific min-max span for a

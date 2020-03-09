@@ -27,7 +27,10 @@ type EpochSpansCache struct {
 }
 
 // NewEpochSpansCache initializes the map and underlying cache.
-func NewEpochSpansCache(onEvicted func(key interface{}, value interface {})) (*EpochSpansCache, error) {
+func NewEpochSpansCache(size int, onEvicted func(key interface{}, value interface{})) (*EpochSpansCache, error) {
+	if size != 0 {
+		epochSpansCacheSize = size
+	}
 	cache, err := lru.NewWithEvict(epochSpansCacheSize, onEvicted)
 	if err != nil {
 		return nil, err
