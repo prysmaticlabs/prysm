@@ -21,7 +21,6 @@ def _ssz_go_proto_library_impl(ctx):
 
     # Run the tool on the generated files
     package_path = generated_pb_go_files.to_list()[0].dirname
-
     output = go.declare_file(go = go, name = go_proto[GoLibrary].name, ext = ".ssz.go", path = package_path)
     args = [
         "--output=%s" % output.path,
