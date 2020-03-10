@@ -31,7 +31,7 @@ import (
 
 var _ = shared.Service(&Service{})
 
-// check local table every 5 seconds for newly added peers.
+// Check local table every 5 seconds for newly added peers.
 var pollingPeriod = 5 * time.Second
 
 const prysmProtocolPrefix = "/prysm/0.0.0"

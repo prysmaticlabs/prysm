@@ -130,7 +130,7 @@ func TestListenForNewNodes(t *testing.T) {
 	bootListener := createListener(ipAddr, pkey, cfg)
 	defer bootListener.Close()
 
-	// use shorter period for testing
+	// Use shorter period for testing.
 	currentPeriod := pollingPeriod
 	pollingPeriod = 1 * time.Second
 	defer func() {
