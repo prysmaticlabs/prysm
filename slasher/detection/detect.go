@@ -76,6 +76,7 @@ func (ds *Service) detectDoubleVote(
 		}
 
 		if isDoubleVote(incomingAtt, att) {
+			doubleVotesDetected.Inc()
 			return &ethpb.AttesterSlashing{
 				Attestation_1: incomingAtt,
 				Attestation_2: att,
@@ -114,11 +115,13 @@ func (ds *Service) detectSurroundVotes(
 		// Slashings must be submitted as the incoming attestation surrounding the saved attestation.
 		// So we swap the order if needed.
 		if isSurrounding(incomingAtt, att) {
+			surroundingVotesDetected.Inc()
 			return &ethpb.AttesterSlashing{
 				Attestation_1: incomingAtt,
 				Attestation_2: att,
 			}, nil
 		} else if isSurrounded(incomingAtt, att) {
+			surroundedVotesDetected.Inc()
 			return &ethpb.AttesterSlashing{
 				Attestation_1: att,
 				Attestation_2: incomingAtt,
