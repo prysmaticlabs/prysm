@@ -130,12 +130,20 @@ func TestListenForNewNodes(t *testing.T) {
 	bootListener := createListener(ipAddr, pkey, cfg)
 	defer bootListener.Close()
 
+	// Use shorter period for testing.
+	currentPeriod := pollingPeriod
+	pollingPeriod = 1 * time.Second
+	defer func() {
+		pollingPeriod = currentPeriod
+	}()
+
 	bootNode := bootListener.Self()
 
 	cfg = &Config{
 		BootstrapNodeAddr:   []string{bootNode.String()},
 		Discv5BootStrapAddr: []string{bootNode.String()},
 		Encoding:            "ssz",
+		MaxPeers:            30,
 	}
 	var listeners []*discover.UDPv5
 	var hosts []host.Host
