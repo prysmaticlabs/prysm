@@ -20,10 +20,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	err = bls12.SetETHmode(1)
-	if err != nil {
-		panic(err)
-	}
+	bls12.SetETHmode(1)
 }
 
 // DomainByteLength length of domain byte array.
