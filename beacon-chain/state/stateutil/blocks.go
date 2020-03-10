@@ -92,7 +92,7 @@ func Eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
 	hashKey := hashutil.FastSum256(enc)
 
 	if featureconfig.Get().EnableSSZCache {
-		if found, ok := cachedHasher.rootsCache.Get(string(hashKey[:])); found != nil && ok {
+		if found, ok := cachedHasher.rootsCache.Get(string(hashKey[:])); ok && found != nil {
 			return found.([32]byte), nil
 		}
 	}
