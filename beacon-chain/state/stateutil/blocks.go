@@ -60,7 +60,7 @@ func Eth1Root(eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 			enc = append(enc, blockHash[:]...)
 		}
 		if featureconfig.Get().EnableSSZCache {
-			if found, ok := cachedHasher.rootsCache.Get(enc); found != nil && ok {
+			if found, ok := cachedHasher.rootsCache.Get(enc); ok && found != nil {
 				return found.([32]byte), nil
 			}
 		}
