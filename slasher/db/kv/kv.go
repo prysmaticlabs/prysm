@@ -9,7 +9,6 @@ import (
 	"github.com/mdlayher/prombolt"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
-
 	"github.com/prysmaticlabs/prysm/slasher/cache"
 )
 
