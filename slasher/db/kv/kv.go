@@ -6,7 +6,10 @@ import (
 	"time"
 
 	"github.com/boltdb/bolt"
+	"github.com/mdlayher/prombolt"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/prysmaticlabs/prysm/slasher/cache"
 )
 
@@ -30,6 +33,7 @@ type Config struct {
 
 // Close closes the underlying boltdb database.
 func (db *Store) Close() error {
+	prometheus.Unregister(createBoltCollector(db.db))
 	return db.db.Close()
 }
 
@@ -53,6 +57,7 @@ func (db *Store) ClearDB() error {
 	if _, err := os.Stat(db.databasePath); os.IsNotExist(err) {
 		return nil
 	}
+	prometheus.Unregister(createBoltCollector(db.db))
 	return os.Remove(db.databasePath)
 }
 
@@ -108,6 +113,9 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 	}); err != nil {
 		return nil, err
 	}
+
+	err = prometheus.Register(createBoltCollector(kv.db))
+
 	return kv, err
 }
 
@@ -119,4 +127,9 @@ func (db *Store) Size() (int64, error) {
 		return nil
 	})
 	return size, err
+}
+
+// createBoltCollector returns a prometheus collector specifically configured for boltdb.
+func createBoltCollector(db *bolt.DB) prometheus.Collector {
+	return prombolt.New("boltDB", db)
 }

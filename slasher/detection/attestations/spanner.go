@@ -203,6 +203,7 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 	if int(lowestEpoch) <= 0 {
 		lowestEpoch = 0
 	}
+	latestMinSpanDistanceObserved.Set(float64(att.Data.Target.Epoch - att.Data.Source.Epoch))
 
 	for epoch := source - 1; epoch >= lowestEpoch; epoch-- {
 		spanMap, err := s.slasherDB.EpochSpansMap(ctx, epoch)
@@ -244,6 +245,7 @@ func (s *SpanDetector) updateMaxSpan(ctx context.Context, att *ethpb.IndexedAtte
 	defer traceSpan.End()
 	source := att.Data.Source.Epoch
 	target := att.Data.Target.Epoch
+	latestMaxSpanDistanceObserved.Set(float64(source - target))
 	valIndices := make([]uint64, len(att.AttestingIndices))
 	copy(valIndices, att.AttestingIndices)
 	for epoch := source + 1; epoch < target; epoch++ {

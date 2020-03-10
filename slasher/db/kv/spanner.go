@@ -21,11 +21,11 @@ var highestObservedEpoch uint64
 var lowestObservedEpoch = params.BeaconConfig().FarFutureEpoch
 
 var (
-	slasherLowestObservedEpoch = promauto.NewCounter(prometheus.CounterOpts{
+	slasherLowestObservedEpoch = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "slasher_lowest_observed_epoch",
 		Help: "The lowest epoch number seen by slasher",
 	})
-	slasherHighestObservedEpoch = promauto.NewCounter(prometheus.CounterOpts{
+	slasherHighestObservedEpoch = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "slasher_highest_observed_epoch",
 		Help: "The highest epoch number seen by slasher",
 	})
@@ -62,6 +62,7 @@ func persistSpanMapsOnEviction(db *Store) func(key interface{}, value interface{
 					return err
 				}
 			}
+			epochSpansCacheEvictions.Inc()
 			return nil
 		})
 		if err != nil {
@@ -332,9 +333,11 @@ func (db *Store) findOrLoadEpochInCache(ctx context.Context, epoch uint64) (map[
 
 func setObservedEpochs(epoch uint64) {
 	if epoch > highestObservedEpoch {
+		slasherHighestObservedEpoch.Set(float64(epoch))
 		highestObservedEpoch = epoch
 	}
 	if epoch < lowestObservedEpoch {
+		slasherLowestObservedEpoch.Set(float64(epoch))
 		lowestObservedEpoch = epoch
 	}
 }
