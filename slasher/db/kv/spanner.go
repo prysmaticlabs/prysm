@@ -5,6 +5,8 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
@@ -17,6 +19,21 @@ import (
 // as a cache key and only needs to be maintained in memory.
 var highestObservedEpoch uint64
 var lowestObservedEpoch = params.BeaconConfig().FarFutureEpoch
+
+var (
+	slasherLowestObservedEpoch = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "slasher_lowest_observed_epoch",
+		Help: "The lowest epoch number seen by slasher",
+	})
+	slasherHighestObservedEpoch = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "slasher_highest_observed_epoch",
+		Help: "The highest epoch number seen by slasher",
+	})
+	epochSpansCacheEvictions = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "epoch_spans_cache_evictions_total",
+		Help: "The number of cache evictions seen by slasher",
+	})
+)
 
 // This function defines a function which triggers upon a span map being
 // evicted from the cache. It allows us to persist the span map by the epoch value
@@ -45,6 +62,7 @@ func persistSpanMapsOnEviction(db *Store) func(key interface{}, value interface{
 					return err
 				}
 			}
+			epochSpansCacheEvictions.Inc()
 			return nil
 		})
 		if err != nil {
@@ -315,9 +333,11 @@ func (db *Store) findOrLoadEpochInCache(ctx context.Context, epoch uint64) (map[
 
 func setObservedEpochs(epoch uint64) {
 	if epoch > highestObservedEpoch {
+		slasherHighestObservedEpoch.Set(float64(epoch))
 		highestObservedEpoch = epoch
 	}
 	if epoch < lowestObservedEpoch {
+		slasherLowestObservedEpoch.Set(float64(epoch))
 		lowestObservedEpoch = epoch
 	}
 }

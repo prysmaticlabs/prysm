@@ -6,6 +6,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 )
 
@@ -82,6 +83,9 @@ func (e SszNetworkEncoder) Decode(b []byte, to interface{}) error {
 		}
 	}
 
+	if item, ok := to.(*ethpb.BeaconBlock); ok {
+		return item.UnmarshalSSZ(b)
+	}
 	return ssz.Unmarshal(b, to)
 }
 
