@@ -30,7 +30,7 @@ var (
 		Help: "The highest epoch number seen by slasher",
 	})
 	epochSpansCacheEvictions = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "epoch_spans_cache_evictions",
+		Name: "epoch_spans_cache_evictions_total",
 		Help: "The number of cache evictions seen by slasher",
 	})
 )

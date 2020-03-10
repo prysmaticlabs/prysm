@@ -14,13 +14,13 @@ var (
 	)
 	numAttesterSlashingsIncluded = promauto.NewCounter(
 		prometheus.CounterOpts{
-			Name: "num_attester_slashings_included",
+			Name: "attester_slashings_included_total",
 			Help: "Number of attester slashings included in blocks",
 		},
 	)
 	attesterSlashingReattempts = promauto.NewCounter(
 		prometheus.CounterOpts{
-			Name: "attester_slashing_reattempts",
+			Name: "attester_slashing_reattempts_total",
 			Help: "Times an attester slashing for an already slashed validator is received",
 		},
 	)
@@ -32,13 +32,13 @@ var (
 	)
 	numProposerSlashingsIncluded = promauto.NewCounter(
 		prometheus.CounterOpts{
-			Name: "num_proposer_slashings_included",
+			Name: "proposer_slashings_included_total",
 			Help: "Number of proposer slashings included in blocks",
 		},
 	)
 	proposerSlashingReattempts = promauto.NewCounter(
 		prometheus.CounterOpts{
-			Name: "proposer_slashing_reattempts",
+			Name: "proposer_slashing_reattempts_total",
 			Help: "Times a proposer slashing for an already slashed validator is received",
 		},
 	)

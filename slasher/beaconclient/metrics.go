@@ -7,7 +7,7 @@ import (
 
 var (
 	slasherNumAttestationsReceived = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "slasher_num_attestations_received",
+		Name: "slasher_attestations_received_total",
 		Help: "The # of attestations received by slasher",
 	})
 )
