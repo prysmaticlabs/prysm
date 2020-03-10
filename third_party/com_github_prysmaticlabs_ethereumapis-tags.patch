@@ -43,7 +43,7 @@ index c0fbe31..b714e30 100644
 +
 +ssz_go_proto_library(
 +    name = "ssz_go_proto",
-+    go_proto = ":ssz_go_proto",
++    go_proto = ":go_proto",
 +    objs = [
 +        "BeaconBlock",
 +        "Attestation",
