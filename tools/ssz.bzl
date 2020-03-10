@@ -22,8 +22,7 @@ def _ssz_go_proto_library_impl(ctx):
     # Run the tool on the generated files
     package_path = generated_pb_go_files.to_list()[0].dirname
 
-    # TODO: name = go_proto's name
-    output = go.declare_file(go = go, name = "v1_go_proto", ext = ".ssz.go", path = package_path)
+    output = go.declare_file(go = go, name = go_proto[GoLibrary].name, ext = ".ssz.go", path = package_path)
     args = [
         "--output=%s" % output.path,
         "--path=%s" % package_path,
@@ -38,11 +37,11 @@ def _ssz_go_proto_library_impl(ctx):
         outputs = [output],
     )
 
-    # Update providers, maybe recompile the go archive?
     library = go_proto[GoLibrary]
     source = go_proto[GoSource]
-    f = {
-        # TODO: Gross!
+    source_copy = {
+        # TODO: Can this be done iteratively? This is fragile. Copied from rules_go and may break if
+        #  rules_go changes internal fields.
         "library": source.library,
         "mode": source.mode,
         "srcs": source.srcs + [output],  # Add generated file.
@@ -62,8 +61,7 @@ def _ssz_go_proto_library_impl(ctx):
         "cgo_deps": source.cgo_deps,
         "cgo_exports": source.cgo_exports,
     }
-    foo = GoSource(**f)
-    archive = go.archive(go, foo)
+    archive = go.archive(go, GoSource(**source_copy))
 
     return [
         library,
@@ -78,6 +76,9 @@ def _ssz_go_proto_library_impl(ctx):
         ),
     ]
 
+"""
+A rule that extends a go_proto_library rule with generated ssz marshal functions.
+"""
 ssz_go_proto_library = go_rule(
     implementation = _ssz_go_proto_library_impl,
     attrs = {
