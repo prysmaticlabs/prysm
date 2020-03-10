@@ -1,5 +1,5 @@
 diff --git a/eth/v1alpha1/BUILD.bazel b/eth/v1alpha1/BUILD.bazel
-index c0fbe31..688bda8 100644
+index c0fbe31..b714e30 100644
 --- a/eth/v1alpha1/BUILD.bazel
 +++ b/eth/v1alpha1/BUILD.bazel
 @@ -4,6 +4,7 @@
@@ -26,7 +26,7 @@ index c0fbe31..688bda8 100644
          "@grpc_ecosystem_grpc_gateway//protoc-gen-swagger/options:options_proto",
      ],
  )
-@@ -48,11 +49,40 @@ java_proto_library(
+@@ -48,11 +49,39 @@ java_proto_library(
  
  go_proto_library(
      name = "go_proto",
@@ -43,10 +43,9 @@ index c0fbe31..688bda8 100644
 +
 +ssz_go_proto_library(
 +    name = "ssz_go_proto",
-+    go_proto = ":go_proto",
++    go_proto = ":ssz_go_proto",
 +    objs = [
 +        "BeaconBlock",
-+        "SignedBeaconBlock",
 +        "Attestation",
 +    ],
 +)
@@ -68,7 +67,7 @@ index c0fbe31..688bda8 100644
          "@go_googleapis//google/api:annotations_go_proto",
          "@grpc_ecosystem_grpc_gateway//protoc-gen-swagger/options:options_go_proto",
      ],
-@@ -60,7 +90,7 @@ go_proto_library(
+@@ -60,7 +89,7 @@ go_proto_library(
  
  go_library(
      name = "go_default_library",
