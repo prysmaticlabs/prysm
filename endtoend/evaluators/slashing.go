@@ -9,6 +9,7 @@ import (
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"google.golang.org/grpc"
@@ -62,7 +63,8 @@ func InsertDoubleAttestationIntoPool(conn *grpc.ClientConn) error {
 	if err != nil {
 		return err
 	}
-	attData.BeaconBlockRoot = []byte("muahahahaha I'm an evil validator")
+	blockRoot := bytesutil.ToBytes32([]byte("muahahahaha I'm an evil validator"))
+	attData.BeaconBlockRoot = blockRoot[:]
 	dataRoot, err := ssz.HashTreeRoot(attData)
 	if err != nil {
 		return err

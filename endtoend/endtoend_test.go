@@ -57,6 +57,14 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 		return
 	}
 
+	slasherPID := startSlasher(t, config)
+	slasherLogFile, err := os.Open(path.Join(tmpPath, slasherLogFileName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer logErrorOutput(t, slasherLogFile, "slasher client", 0)
+	defer killProcesses(t, []int{slasherPID})
+
 	conn, err := grpc.Dial("127.0.0.1:4200", grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("Failed to dial: %v", err)
@@ -74,7 +82,7 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 
 	ticker := GetEpochTicker(genesisTime, epochSeconds)
 	for currentEpoch := range ticker.C() {
-		if currentEpoch == 3 {
+		if currentEpoch <= 3 {
 			if err := ev.InsertDoubleAttestationIntoPool(conn); err != nil {
 				t.Error(err)
 			}
@@ -120,6 +128,8 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	if err := waitForTextInFile(syncLogFile, "Synced up to"); err != nil {
 		t.Fatalf("Failed to sync: %v", err)
 	}
+	defer logErrorOutput(t, syncLogFile, "beacon chain node", index)
+	defer killProcesses(t, []int{syncNodeInfo.ProcessID})
 
 	t.Run("node_finishes_sync", func(t *testing.T) {
 		if err := ev.FinishedSyncing(syncNodeInfo.RPCPort); err != nil {
@@ -132,7 +142,4 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 			t.Fatal(err)
 		}
 	})
-
-	defer logErrorOutput(t, syncLogFile, "beacon chain node", index)
-	defer killProcesses(t, []int{syncNodeInfo.ProcessID})
 }
