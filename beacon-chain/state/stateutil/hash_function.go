@@ -17,7 +17,7 @@ func (h HashFn) Combi(a [32]byte, b [32]byte) [32]byte {
 }
 
 // MixIn describes a method where we add in the provided
-// integer to the byte array and hash it.
+// integer to the end of the byte array and hash it.
 func (h HashFn) MixIn(a [32]byte, i uint64) [32]byte {
 	copy(h.bytesBuffer[:32], a[:])
 	copy(h.bytesBuffer[32:], make([]byte, 32, 32))
