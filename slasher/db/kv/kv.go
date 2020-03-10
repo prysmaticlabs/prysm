@@ -108,6 +108,7 @@ func NewKVStore(dirPath string, cfg *Config) (*Store, error) {
 	}); err != nil {
 		return nil, err
 	}
+
 	return kv, err
 }
 
