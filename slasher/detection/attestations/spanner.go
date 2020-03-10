@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -11,6 +13,17 @@ import (
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/iface"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 	"go.opencensus.io/trace"
+)
+
+var (
+	latestMinSpanDistanceObserved = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "latest_min_span_distance_observed",
+		Help: "The latest distance between target - source observed for min spans",
+	})
+	latestMaxSpanDistanceObserved = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "latest_max_span_distance_observed",
+		Help: "The latest distance between target - source observed for max spans",
+	})
 )
 
 // We look back 128 epochs when updating min/max spans
@@ -109,7 +122,6 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 			continue
 		}
 	}
-
 
 	// Clear out any duplicate results.
 	keys := make(map[[32]byte]bool)
