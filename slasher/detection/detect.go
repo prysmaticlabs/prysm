@@ -6,27 +6,28 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
+	"go.opencensus.io/trace"
 )
 
 func (ds *Service) detectAttesterSlashings(
 	ctx context.Context,
 	att *ethpb.IndexedAttestation,
 ) ([]*ethpb.AttesterSlashing, error) {
-	slashings := make([]*ethpb.AttesterSlashing, 0)
-	for i := 0; i < len(att.AttestingIndices); i++ {
-		valIdx := att.AttestingIndices[i]
-		result, err := ds.minMaxSpanDetector.DetectSlashingForValidator(ctx, valIdx, att.Data)
-		if err != nil {
-			return nil, err
-		}
-		// If the response is nil, there was no slashing detected.
-		if result == nil {
-			continue
-		}
+	ctx, span := trace.StartSpan(ctx, "detection.detectAttesterSlashings")
+	defer span.End()
+	results, err := ds.minMaxSpanDetector.DetectSlashingsForAttestation(ctx, att)
+	if err != nil {
+		return nil, err
+	}
+	// If the response is nil, there was no slashing detected.
+	if len(results) == 0 {
+		return nil, nil
+	}
 
+	var slashings []*ethpb.AttesterSlashing
+	for _, result := range results {
 		var slashing *ethpb.AttesterSlashing
 		switch result.Kind {
 		case types.DoubleVote:
@@ -40,24 +41,12 @@ func (ds *Service) detectAttesterSlashings(
 				return nil, errors.Wrap(err, "could not detect surround votes on attestation")
 			}
 		}
-		slashings = append(slashings, slashing)
-	}
-
-	// Clear out any duplicate slashings.
-	keys := make(map[[32]byte]bool)
-	var slashingList []*ethpb.AttesterSlashing
-	for _, ss := range slashings {
-		hash, err := hashutil.HashProto(ss)
-		if err != nil {
-			return nil, err
-		}
-		if _, value := keys[hash]; !value {
-			keys[hash] = true
-			slashingList = append(slashingList, ss)
+		if slashing != nil {
+			slashings = append(slashings, slashing)
 		}
 	}
 
-	return slashingList, nil
+	return slashings, nil
 }
 
 // detectDoubleVote cross references the passed in attestation with the bloom filter maintained
@@ -67,6 +56,8 @@ func (ds *Service) detectDoubleVote(
 	incomingAtt *ethpb.IndexedAttestation,
 	detectionResult *types.DetectionResult,
 ) (*ethpb.AttesterSlashing, error) {
+	ctx, span := trace.StartSpan(ctx, "detection.detectDoubleVote")
+	defer span.End()
 	if detectionResult == nil || detectionResult.Kind != types.DoubleVote {
 		return nil, nil
 	}
@@ -91,8 +82,7 @@ func (ds *Service) detectDoubleVote(
 			}, nil
 		}
 	}
-
-	return nil, errors.New("unexpected false positive in double vote detection")
+	return nil, nil
 }
 
 // detectSurroundVotes cross references the passed in attestation with the requested validator's
@@ -102,6 +92,8 @@ func (ds *Service) detectSurroundVotes(
 	incomingAtt *ethpb.IndexedAttestation,
 	detectionResult *types.DetectionResult,
 ) (*ethpb.AttesterSlashing, error) {
+	ctx, span := trace.StartSpan(ctx, "detection.detectSurroundVotes")
+	defer span.End()
 	if detectionResult == nil || detectionResult.Kind != types.SurroundVote {
 		return nil, nil
 	}

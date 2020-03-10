@@ -13,7 +13,7 @@ import (
 )
 
 func unmarshalIndexedAttestation(ctx context.Context, enc []byte) (*ethpb.IndexedAttestation, error) {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.unmarshalIndexedAttestation")
+	ctx, span := trace.StartSpan(ctx, "slasherDB.unmarshalIndexedAttestation")
 	defer span.End()
 	protoIdxAtt := &ethpb.IndexedAttestation{}
 	err := proto.Unmarshal(enc, protoIdxAtt)
@@ -27,7 +27,7 @@ func unmarshalIndexedAttestation(ctx context.Context, enc []byte) (*ethpb.Indexe
 // indexed attestations.
 // Returns nil if the indexed attestation does not exist with that target epoch.
 func (db *Store) IndexedAttestationsForTarget(ctx context.Context, targetEpoch uint64) ([]*ethpb.IndexedAttestation, error) {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.IndexedAttestationsForTarget")
+	ctx, span := trace.StartSpan(ctx, "slasherDB.IndexedAttestationsForTarget")
 	defer span.End()
 	var idxAtts []*ethpb.IndexedAttestation
 	key := bytesutil.Bytes8(targetEpoch)
@@ -48,7 +48,7 @@ func (db *Store) IndexedAttestationsForTarget(ctx context.Context, targetEpoch u
 // IndexedAttestationsWithPrefix accepts a target epoch and signature bytes to find all attestations with the requested prefix.
 // Returns nil if the indexed attestation does not exist with that target epoch.
 func (db *Store) IndexedAttestationsWithPrefix(ctx context.Context, targetEpoch uint64, sigBytes []byte) ([]*ethpb.IndexedAttestation, error) {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.IndexedAttestationsWithPrefix")
+	ctx, span := trace.StartSpan(ctx, "slasherDB.IndexedAttestationsWithPrefix")
 	defer span.End()
 	var idxAtts []*ethpb.IndexedAttestation
 	key := encodeEpochSig(targetEpoch, sigBytes[:])
@@ -68,7 +68,7 @@ func (db *Store) IndexedAttestationsWithPrefix(ctx context.Context, targetEpoch 
 
 // HasIndexedAttestation accepts an attestation and returns true if it exists in the DB.
 func (db *Store) HasIndexedAttestation(ctx context.Context, att *ethpb.IndexedAttestation) (bool, error) {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.HasIndexedAttestation")
+	ctx, span := trace.StartSpan(ctx, "slasherDB.HasIndexedAttestation")
 	defer span.End()
 	key := encodeEpochSig(att.Data.Target.Epoch, att.Signature)
 	var hasAttestation bool
@@ -88,7 +88,7 @@ func (db *Store) HasIndexedAttestation(ctx context.Context, att *ethpb.IndexedAt
 
 // SaveIndexedAttestation accepts an indexed attestation and writes it to the DB.
 func (db *Store) SaveIndexedAttestation(ctx context.Context, idxAttestation *ethpb.IndexedAttestation) error {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveIndexedAttestation")
+	ctx, span := trace.StartSpan(ctx, "slasherDB.SaveIndexedAttestation")
 	defer span.End()
 	key := encodeEpochSig(idxAttestation.Data.Target.Epoch, idxAttestation.Signature)
 	enc, err := proto.Marshal(idxAttestation)
@@ -113,7 +113,7 @@ func (db *Store) SaveIndexedAttestation(ctx context.Context, idxAttestation *eth
 
 // SaveIndexedAttestations accepts multiple indexed attestations and writes them to the DB.
 func (db *Store) SaveIndexedAttestations(ctx context.Context, idxAttestations []*ethpb.IndexedAttestation) error {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.SaveIndexedAttestations")
+	ctx, span := trace.StartSpan(ctx, "slasherDB.SaveIndexedAttestations")
 	defer span.End()
 	keys := make([][]byte, len(idxAttestations))
 	marshaledAtts := make([][]byte, len(idxAttestations))
@@ -145,7 +145,7 @@ func (db *Store) SaveIndexedAttestations(ctx context.Context, idxAttestations []
 
 // DeleteIndexedAttestation deletes a indexed attestation using the slot and its root as keys in their respective buckets.
 func (db *Store) DeleteIndexedAttestation(ctx context.Context, idxAttestation *ethpb.IndexedAttestation) error {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.DeleteIndexedAttestation")
+	ctx, span := trace.StartSpan(ctx, "slasherDB.DeleteIndexedAttestation")
 	defer span.End()
 	key := encodeEpochSig(idxAttestation.Data.Target.Epoch, idxAttestation.Signature)
 	return db.update(func(tx *bolt.Tx) error {
@@ -163,7 +163,7 @@ func (db *Store) DeleteIndexedAttestation(ctx context.Context, idxAttestation *e
 
 // PruneAttHistory removes all attestations from the DB older than the pruning epoch age.
 func (db *Store) PruneAttHistory(ctx context.Context, currentEpoch uint64, pruningEpochAge uint64) error {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.pruneAttHistory")
+	ctx, span := trace.StartSpan(ctx, "slasherDB.pruneAttHistory")
 	defer span.End()
 	pruneFromEpoch := int64(currentEpoch) - int64(pruningEpochAge)
 	if pruneFromEpoch <= 0 {
@@ -186,7 +186,7 @@ func (db *Store) PruneAttHistory(ctx context.Context, currentEpoch uint64, pruni
 // LatestIndexedAttestationsTargetEpoch returns latest target epoch in db
 // returns 0 if there is no indexed attestations in db.
 func (db *Store) LatestIndexedAttestationsTargetEpoch(ctx context.Context) (uint64, error) {
-	ctx, span := trace.StartSpan(ctx, "SlasherDB.LatestIndexedAttestationsTargetEpoch")
+	ctx, span := trace.StartSpan(ctx, "slasherDB.LatestIndexedAttestationsTargetEpoch")
 	defer span.End()
 	var lt uint64
 	err := db.view(func(tx *bolt.Tx) error {

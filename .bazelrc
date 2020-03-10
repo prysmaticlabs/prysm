@@ -30,6 +30,14 @@ build --define kafka_enabled=false
 test --define kafka_enabled=false
 run --define kafka_enabled=false
 
+# Release flags
+build:release --workspace_status_command=./scripts/workspace_status.sh
+build:release --stamp
+build:release --compilation_mode=opt
+
+# LLVM compiler for building C/C++ dependencies.
+build:llvm --crosstool_top=@llvm_toolchain//:toolchain
+build:llvm --define compiler=llvm
 
 # multi-arch cross-compiling toolchain configs:
 -----------------------------------------------

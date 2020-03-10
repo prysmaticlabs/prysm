@@ -176,7 +176,7 @@ func main() {
 			store := prysmKeyStore.NewKeystore(prysmKeystorePath)
 			rawPassword := loadTextFromFile(passwordFile)
 			prefix := params.BeaconConfig().ValidatorPrivkeyFileName
-			validatorKeys, err = store.GetKeys(prysmKeystorePath, prefix, rawPassword)
+			validatorKeys, err = store.GetKeys(prysmKeystorePath, prefix, rawPassword, false /* warnOnFail */)
 			if err != nil {
 				log.WithField("path", prysmKeystorePath).WithField("password", rawPassword).Errorf("Could not get keys: %v", err)
 			}
