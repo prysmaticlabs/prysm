@@ -40,9 +40,30 @@ def _ssz_go_proto_library_impl(ctx):
 
     # Update providers, maybe recompile the go archive?
     library = go_proto[GoLibrary]
-    source = go.library_to_source(go, ctx.attr, library, ctx.coverage_instrumented())
-    source.srcs.append(output)  # Error = trying to mutate a frozen object.
-    archive = go.archive(go, source)
+    source = go_proto[GoSource]
+    f = {
+        # TODO: Gross!
+        "library": source.library,
+        "mode": source.mode,
+        "srcs": source.srcs + [output],  # Add generated file.
+        "orig_srcs": source.srcs,
+        "orig_src_map": source.orig_src_map,
+        "cover": source.cover,
+        "x_defs": source.x_defs,
+        "deps": source.deps + ctx.attr._deps,  # Add generated file's deps.
+        "gc_goopts": source.gc_goopts,
+        "runfiles": source.runfiles,
+        "cgo": source.cgo,
+        "cdeps": source.cdeps,
+        "cppopts": source.cppopts,
+        "copts": source.copts,
+        "cxxopts": source.cxxopts,
+        "clinkopts": source.clinkopts,
+        "cgo_deps": source.cgo_deps,
+        "cgo_exports": source.cgo_exports,
+    }
+    foo = GoSource(**f)
+    archive = go.archive(go, foo)
 
     return [
         library,
@@ -67,5 +88,8 @@ ssz_go_proto_library = go_rule(
             cfg = "host",
         ),
         "objs": attr.string_list(),
+        "_deps": attr.label_list(
+            default = [Label("@com_github_ferranbt_fastssz//:go_default_library")],
+        ),
     },
 )
