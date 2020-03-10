@@ -4,7 +4,7 @@ load("@rules_proto//proto:defs.bzl", "proto_library")
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
 load("//proto:ssz_proto_library.bzl", "ssz_proto_files")
-load("//tools:ssz.bzl", "ssz_go_proto_library")
+load("//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
 
 go_proto_library(
     name = "v1_go_proto",
@@ -18,20 +18,23 @@ go_proto_library(
     ],
 )
 
-ssz_go_proto_library(
-    name = "ssz_v1_go_proto",
+ssz_gen_marshal(
+    name = "ssz_generated_files",
     go_proto = ":v1_go_proto",
     objs = [
-        "HistoricalBatch",
+        "BeaconBlocksByRangeRequest",
         "Fork",
+        "HistoricalBatch",
+        "Status",
     ],
 )
 
 go_library(
     name = "go_default_library",
-    embed = [":ssz_v1_go_proto"],
-    importpath = "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1",
+    srcs = [":ssz_generated_files"],
+    embed = [":v1_go_proto"],
     visibility = ["//visibility:public"],
+    deps = SSZ_DEPS,
 )
 
 ssz_proto_files(

@@ -13,6 +13,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params/spectest"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	fssz "github.com/ferranbt/fastssz"
 )
 
 // SSZRoots --
@@ -153,6 +154,11 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	default:
 		return nil, errors.New("type not found")
 	}
-	err := ssz.Unmarshal(serializedBytes, obj)
+	var err error
+	if o, ok := obj.(fssz.Unmarshaler); ok {
+		err = o.UnmarshalSSZ(serializedBytes)
+	} else {
+		err = ssz.Unmarshal(serializedBytes, obj)
+	}
 	return obj, err
 }
