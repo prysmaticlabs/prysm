@@ -60,7 +60,7 @@ func Eth1Root(eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 			enc = append(enc, blockHash[:]...)
 		}
 		if featureconfig.Get().EnableSSZCache {
-			if found, ok := cachedHasher.rootsCache.Get(enc); ok && found != nil {
+			if found, ok := cachedHasher.rootsCache.Get(string(enc)); ok && found != nil {
 				return found.([32]byte), nil
 			}
 		}
@@ -70,7 +70,7 @@ func Eth1Root(eth1Data *ethpb.Eth1Data) ([32]byte, error) {
 		return [32]byte{}, err
 	}
 	if featureconfig.Get().EnableSSZCache {
-		cachedHasher.rootsCache.Set(enc, root, 32)
+		cachedHasher.rootsCache.Set(string(enc), root, 32)
 	}
 	return root, nil
 }
@@ -90,7 +90,6 @@ func Eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
 		eth1VotesRoots = append(eth1VotesRoots, eth1[:])
 	}
 	hashKey := hashutil.FastSum256(enc)
-
 	if featureconfig.Get().EnableSSZCache {
 		if found, ok := cachedHasher.rootsCache.Get(string(hashKey[:])); ok && found != nil {
 			return found.([32]byte), nil
