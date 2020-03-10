@@ -1,5 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
+# gazelle:resolve go github.com/herumi/bls-eth-go-binary/bls @herumi_bls_eth_go_binary//:go_default_library
+
 go_library(
     name = "go_default_library",
     srcs = ["bls.go"],
@@ -11,8 +13,8 @@ go_library(
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_dgraph_io_ristretto//:go_default_library",
-        "@com_github_herumi_bls_eth_go_binary//bls:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
+        "@herumi_bls_eth_go_binary//:go_default_library",
     ],
 )
 
