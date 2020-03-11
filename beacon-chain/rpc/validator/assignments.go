@@ -66,12 +66,12 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 				assignment.AttesterSlot = ca.AttesterSlot
 				assignment.ProposerSlot = proposerIndexToSlot[idx]
 				assignment.CommitteeIndex = ca.CommitteeIndex
-			} else {
-				log.Error("no committee assigment")
-				vs, _, _ := vs.retrieveStatusFromState(ctx, pubKey, s)
-				log.Error(vs, pubKey)
-				assignment.Status = vs
 			}
+		} else {
+			log.Error("no committee index")
+			vs := vs.validatorStatus(ctx, pubKey, s)
+			log.Error(vs, pubKey)
+			assignment.Status = vs.Status
 		}
 		log.Error("assignment", assignment)
 		validatorAssignments = append(validatorAssignments, assignment)
