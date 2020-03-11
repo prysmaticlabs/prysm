@@ -1,5 +1,4 @@
-
-ad("@rules_proto//proto:defs.bzl", "proto_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
 
 # gazelle:ignore
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
@@ -23,9 +22,9 @@ ssz_gen_marshal(
     name = "ssz_generated_files",
     go_proto = ":v1_go_proto",
     objs = [
-        "BeaconBlocksByRangeRequest",
+#        "BeaconBlocksByRangeRequest",
         "Fork",
-        "PendingAttestation",
+#        "PendingAttestation",
         "HistoricalBatch",
     ],
 )
