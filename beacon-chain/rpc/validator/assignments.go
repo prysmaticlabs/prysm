@@ -18,6 +18,7 @@ import (
 //	3.) The slot at which the committee is assigned.
 //	4.) The bool signaling if the validator is expected to propose a block at the assigned slot.
 func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
+	log.Error("get duties")
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
@@ -42,6 +43,7 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 
 	var validatorAssignments []*ethpb.DutiesResponse_Duty
 	for _, pubKey := range req.PublicKeys {
+		log.Errorf(" %#x", pubKey)
 		if ctx.Err() != nil {
 			return nil, status.Errorf(codes.Aborted, "Could not continue fetching assignments: %v", ctx.Err())
 		}
@@ -71,7 +73,7 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 				assignment.Status = vs
 			}
 		}
-
+		log.Error("assignment", assignment)
 		validatorAssignments = append(validatorAssignments, assignment)
 	}
 
