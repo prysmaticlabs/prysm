@@ -542,5 +542,41 @@ func TestPool_PendingAttesterSlashings_NoDuplicates(t *testing.T) {
 }
 
 func TestPool_PendingAttesterSlashings_SigFailsVerify_ClearPool(t *testing.T) {
-
+	conf := params.BeaconConfig()
+	conf.MaxAttesterSlashings = 2
+	params.OverrideBeaconConfig(conf)
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
+	pendingSlashings := make([]*PendingAttesterSlashing, 2)
+	slashings := make([]*ethpb.AttesterSlashing, 2)
+	for i := 0; i < 2; i++ {
+		sl, err := testutil.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], uint64(i))
+		if err != nil {
+			t.Fatal(err)
+		}
+		pendingSlashings[i] = &PendingAttesterSlashing{
+			attesterSlashing: sl,
+			validatorToSlash: uint64(i),
+		}
+		slashings[i] = sl
+	}
+	// We mess up the signature of the second slashing.
+	badSig := make([]byte, 96)
+	copy(badSig, "muahaha")
+	pendingSlashings[1].attesterSlashing.Attestation_1.Signature = badSig
+	slashings[1].Attestation_1.Signature = badSig
+	p := &Pool{
+		pendingAttesterSlashing: pendingSlashings,
+	}
+	// We only want a single attester slashing to remain.
+	want := slashings[0:1]
+	if got := p.PendingAttesterSlashings(
+		context.Background(),
+		beaconState,
+	); !reflect.DeepEqual(want, got) {
+		t.Errorf("Unexpected return from PendingAttesterSlashings, wanted %v, received %v", want, got)
+	}
+	// We expect to only have 1 pending attester slashing in the pool.
+	if len(p.pendingAttesterSlashing) != 1 {
+		t.Error("Expected failed attester slashing to have been cleared from pool")
+	}
 }
