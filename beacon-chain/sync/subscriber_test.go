@@ -121,7 +121,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 		1, /* validator index */
 	)
 	if err != nil {
-		t.Fatalf("Error generating attester slashing")
+		t.Fatalf("Error generating proposer slashing")
 	}
 	p2p.ReceivePubSub(topic, proposerSlashing)
 
@@ -130,7 +130,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	}
 	as := r.slashingPool.PendingProposerSlashings()
 	if len(as) != 1 {
-		t.Errorf("Expected attester slashing: %v to be added to slashing pool. got: %v", proposerSlashing, as[0])
+		t.Errorf("Expected proposer slashing: %v to be added to slashing pool. got: %v", proposerSlashing, as[0])
 	}
 }
 
