@@ -50,7 +50,6 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 		// Default assignment.
 		assignment := &ethpb.DutiesResponse_Duty{
 			PublicKey: pubKey,
-			Status: ethpb.ValidatorStatus_UNKNOWN_STATUS,
 		}
 
 		idx, ok, err := vs.BeaconDB.ValidatorIndex(ctx, pubKey)
@@ -68,8 +67,9 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 				assignment.ProposerSlot = proposerIndexToSlot[idx]
 				assignment.CommitteeIndex = ca.CommitteeIndex
 			} else {
+				log.Error("no committee assigment")
 				vs, _, _ := vs.retrieveStatusFromState(ctx, pubKey, s)
-				log.Println(vs, pubKey)
+				log.Error(vs, pubKey)
 				assignment.Status = vs
 			}
 		}
