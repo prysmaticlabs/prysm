@@ -134,6 +134,9 @@ func (b *BeaconState) Slot() uint64 {
 	if !b.HasInnerState() {
 		return 0
 	}
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	return b.state.Slot
 }
 
