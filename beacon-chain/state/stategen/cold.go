@@ -37,3 +37,29 @@ func (s *State) loadColdStateByRoot(ctx context.Context, blockRoot [32]byte) (*s
 
 	return s.loadColdIntermediateStateWithRoot(ctx, summary.Slot, blockRoot)
 }
+
+// This loads a cold state by slot and block root which lies between the archive point.
+// This is a faster implementation given the block root is provided.
+func (s *State) loadColdIntermediateStateWithRoot(ctx context.Context, slot uint64, blockRoot [32]byte) (*state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.loadColdIntermediateStateWithRoot")
+	defer span.End()
+
+	// Load the archive point for lower side of the intermediate state.
+	lowArchivePointIdx := slot / s.slotsPerArchivePoint
+
+	// Acquire the read lock so the split can't change while this is happening.
+	lowArchivePointState, err := s.loadArchivedPointByIndex(ctx, lowArchivePointIdx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get lower bound archived state using index")
+	}
+	if lowArchivePointState == nil {
+		return nil, errUnknownArchivedState
+	}
+
+	replayBlks, err := s.LoadBlocks(ctx, lowArchivePointState.Slot()+1, slot, blockRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get load blocks for cold state using slot")
+	}
+
+	return s.ReplayBlocks(ctx, lowArchivePointState, replayBlks, slot)
+}
