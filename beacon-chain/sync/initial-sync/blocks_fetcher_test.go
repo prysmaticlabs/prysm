@@ -44,13 +44,13 @@ func TestBlocksFetcherInitStartStop(t *testing.T) {
 		select {
 		case <-fetcher.requestResponses():
 		default:
-			t.Error("receivedFetchResponses channel is leaked")
+			t.Error("fetchResponses channel is leaked")
 		}
 	})
 
 	t.Run("re-starting of stopped fetcher", func(t *testing.T) {
 		if err := fetcher.start(); err == nil {
-			t.Errorf("expected error not returned: %v", errCtxIsDone)
+			t.Errorf("expected error not returned: %v", errFetcherCtxIsDone)
 		}
 	})
 
@@ -405,6 +405,20 @@ func TestBlocksFetcherRoundRobin(t *testing.T) {
 	}
 }
 
+func TestBlocksFetcherScheduleRequest(t *testing.T) {
+	t.Run("context cancellation", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
+			headFetcher: nil,
+			p2p:         nil,
+		})
+		cancel()
+		if err := fetcher.scheduleRequest(ctx, 1, blockBatchSize); err == nil {
+			t.Errorf("expected error: %v", errFetcherCtxIsDone)
+		}
+	})
+}
+
 func TestBlocksFetcherHandleRequest(t *testing.T) {
 	chainConfig := struct {
 		expectedBlockSlots []uint64
@@ -427,43 +441,58 @@ func TestBlocksFetcherHandleRequest(t *testing.T) {
 
 	hook := logTest.NewGlobal()
 	mc, p2p, beaconDB := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	fetcher := newBlocksFetcher(
-		ctx,
-		&blocksFetcherConfig{
+	defer dbtest.TeardownDB(t, beaconDB)
+
+	t.Run("context cancellation", func(t *testing.T) {
+		hook.Reset()
+		ctx, cancel := context.WithCancel(context.Background())
+		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
 			headFetcher: mc,
 			p2p:         p2p,
 		})
 
-	requestCtx, _ := context.WithTimeout(context.Background(), 2*time.Second)
-	go fetcher.handleRequest(requestCtx, 1 /* start */, blockBatchSize /* count */)
+		cancel()
+		fetcher.handleRequest(ctx, 1, blockBatchSize)
+		testutil.AssertLogsContain(t, hook, "Can not send fetch request response")
+		testutil.AssertLogsContain(t, hook, "context canceled")
+	})
 
-	var blocks []*eth.SignedBeaconBlock
-	select {
-	case <-ctx.Done():
-		t.Error(ctx.Err())
-	case resp := <-fetcher.requestResponses():
-		if resp.err != nil {
-			t.Error(resp.err)
-		} else {
-			blocks = resp.blocks
+	t.Run("receive blocks", func(t *testing.T) {
+		hook.Reset()
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
+			headFetcher: mc,
+			p2p:         p2p,
+		})
+
+		requestCtx, _ := context.WithTimeout(context.Background(), 2*time.Second)
+		go fetcher.handleRequest(requestCtx, 1 /* start */, blockBatchSize /* count */)
+
+		var blocks []*eth.SignedBeaconBlock
+		select {
+		case <-ctx.Done():
+			t.Error(ctx.Err())
+		case resp := <-fetcher.requestResponses():
+			if resp.err != nil {
+				t.Error(resp.err)
+			} else {
+				blocks = resp.blocks
+			}
 		}
-	}
-	if len(blocks) != blockBatchSize {
-		t.Errorf("incorrect number of blocks returned, expected: %v, got: %v", blockBatchSize, len(blocks))
-	}
-	testutil.AssertLogsContain(t, hook, "Received blocks")
+		if len(blocks) != blockBatchSize {
+			t.Errorf("incorrect number of blocks returned, expected: %v, got: %v", blockBatchSize, len(blocks))
+		}
+		testutil.AssertLogsContain(t, hook, "Received blocks")
 
-	var receivedBlockSlots []uint64
-	for _, blk := range blocks {
-		receivedBlockSlots = append(receivedBlockSlots, blk.Block.Slot)
-	}
-	if missing := sliceutil.NotUint64(sliceutil.IntersectionUint64(chainConfig.expectedBlockSlots, receivedBlockSlots), chainConfig.expectedBlockSlots); len(missing) > 0 {
-		t.Errorf("Missing blocks at slots %v", missing)
-	}
-
-	dbtest.TeardownDB(t, beaconDB)
+		var receivedBlockSlots []uint64
+		for _, blk := range blocks {
+			receivedBlockSlots = append(receivedBlockSlots, blk.Block.Slot)
+		}
+		if missing := sliceutil.NotUint64(sliceutil.IntersectionUint64(chainConfig.expectedBlockSlots, receivedBlockSlots), chainConfig.expectedBlockSlots); len(missing) > 0 {
+			t.Errorf("Missing blocks at slots %v", missing)
+		}
+	})
 }
 
 func TestBlocksFetcherRequestBeaconBlocksByRangeRequest(t *testing.T) {
