@@ -27,6 +27,9 @@ func (p *Pool) PendingAttesterSlashings() []*ethpb.AttesterSlashing {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
+	// Update prom metric.
+	numPendingAttesterSlashings.Set(float64(len(p.pendingAttesterSlashing)))
+
 	included := make(map[uint64]bool)
 	pending := make([]*ethpb.AttesterSlashing, 0, params.BeaconConfig().MaxAttesterSlashings)
 	for i, slashing := range p.pendingAttesterSlashing {
@@ -52,6 +55,10 @@ func (p *Pool) PendingAttesterSlashings() []*ethpb.AttesterSlashing {
 func (p *Pool) PendingProposerSlashings() []*ethpb.ProposerSlashing {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
+
+	// Update prom metric.
+	numPendingProposerSlashings.Set(float64(len(p.pendingProposerSlashing)))
+
 	pending := make([]*ethpb.ProposerSlashing, 0, params.BeaconConfig().MaxProposerSlashings)
 	for i, slashing := range p.pendingProposerSlashing {
 		if i >= int(params.BeaconConfig().MaxProposerSlashings) {
@@ -79,6 +86,7 @@ func (p *Pool) InsertAttesterSlashing(state *beaconstate.BeaconState, slashing *
 		// has been recently included in the pool of slashings, do not process this new
 		// slashing.
 		if !ok {
+			attesterSlashingReattempts.Inc()
 			return fmt.Errorf("validator at index %d cannot be slashed", val)
 		}
 
@@ -119,6 +127,7 @@ func (p *Pool) InsertProposerSlashing(state *beaconstate.BeaconState, slashing *
 	// has been recently included in the pool of slashings, do not process this new
 	// slashing.
 	if !ok {
+		proposerSlashingReattempts.Inc()
 		return fmt.Errorf("validator at index %d cannot be slashed", idx)
 	}
 
@@ -154,6 +163,7 @@ func (p *Pool) MarkIncludedAttesterSlashing(as *ethpb.AttesterSlashing) {
 			p.pendingAttesterSlashing = append(p.pendingAttesterSlashing[:i], p.pendingAttesterSlashing[i+1:]...)
 		}
 		p.included[val] = true
+		numAttesterSlashingsIncluded.Inc()
 	}
 }
 
@@ -170,6 +180,7 @@ func (p *Pool) MarkIncludedProposerSlashing(ps *ethpb.ProposerSlashing) {
 		p.pendingProposerSlashing = append(p.pendingProposerSlashing[:i], p.pendingProposerSlashing[i+1:]...)
 	}
 	p.included[ps.ProposerIndex] = true
+	numProposerSlashingsIncluded.Inc()
 }
 
 // this function checks a few items about a validator before proceeding with inserting
