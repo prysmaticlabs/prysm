@@ -48,6 +48,7 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 		// Default assignment.
 		assignment := &ethpb.DutiesResponse_Duty{
 			PublicKey: pubKey,
+			Status: ethpb.ValidatorStatus_UNKNOWN_STATUS,
 		}
 
 		idx, ok, err := vs.BeaconDB.ValidatorIndex(ctx, pubKey)
@@ -55,7 +56,6 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 			return nil, status.Errorf(codes.Internal, "Could not fetch validator idx for public key %#x: %v", pubKey, err)
 		}
 		if ok {
-
 			ca, ok := committeeAssignments[idx]
 			if ok {
 				assignment.Committee = ca.Committee
