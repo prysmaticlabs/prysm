@@ -7,20 +7,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
-
-	"github.com/prysmaticlabs/prysm/shared/params"
-
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -91,9 +89,6 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	if len(as) != 1 {
 		t.Errorf("Expected attester slashing: %v to be added to slashing pool. got: %v", attesterSlashing, as[0])
 	}
-	if !proto.Equal(as, attesterSlashing) {
-		t.Errorf("Expected attester slashing: %v to be added to slashing pool. got: %v", attesterSlashing, as[0])
-	}
 }
 
 func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
@@ -134,9 +129,6 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	ps := r.slashingPool.PendingProposerSlashings()
 	if len(ps) != 1 {
 		t.Errorf("Expected proposer slashing: %v to be added to slashing pool. got: %v", proposerSlashing, ps[0])
-	}
-	if !proto.Equal(ps, proposerSlashing) {
-		t.Errorf("Expected attester slashing: %v to be added to slashing pool. got: %v", proposerSlashing, ps[0])
 	}
 }
 
