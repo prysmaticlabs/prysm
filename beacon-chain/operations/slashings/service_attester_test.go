@@ -481,23 +481,16 @@ func TestPool_PendingAttesterSlashings(t *testing.T) {
 		{
 			name: "All eligible",
 			fields: fields{
-				pending: pendingSlashings[0:],
+				pending: pendingSlashings,
 			},
-			want: slashings[0:],
+			want: slashings[0:1],
 		},
 		{
 			name: "Multiple indices",
 			fields: fields{
 				pending: pendingSlashings[3:6],
 			},
-			want: slashings[3:6],
-		},
-		{
-			name: "All eligible, over max",
-			fields: fields{
-				pending: pendingSlashings,
-			},
-			want: slashings[:params.BeaconConfig().MaxAttesterSlashings],
+			want: slashings[3:4],
 		},
 	}
 	for _, tt := range tests {
@@ -515,63 +508,39 @@ func TestPool_PendingAttesterSlashings(t *testing.T) {
 	}
 }
 
-//func TestPool_PendingAttesterSlashings_2Max(t *testing.T) {
-//	conf := params.BeaconConfig()
-//	conf.MaxAttesterSlashings = 2
-//	params.OverrideBeaconConfig(conf)
-//
-//	type fields struct {
-//		pending []*PendingAttesterSlashing
-//	}
-//	tests := []struct {
-//		name   string
-//		fields fields
-//		want   []*ethpb.AttesterSlashing
-//	}{
-//		{
-//			name: "No duplicates with grouped att slashings",
-//			fields: fields{
-//				pending: []*PendingAttesterSlashing{
-//					{
-//						attesterSlashing: attesterSlashingForValIdx(4, 12, 40),
-//						validatorToSlash: 4,
-//					},
-//					{
-//						attesterSlashing: attesterSlashingForValIdx(6, 8, 24),
-//						validatorToSlash: 6,
-//					},
-//					{
-//						attesterSlashing: attesterSlashingForValIdx(6, 8, 24),
-//						validatorToSlash: 8,
-//					},
-//					{
-//						attesterSlashing: attesterSlashingForValIdx(4, 12, 40),
-//						validatorToSlash: 12,
-//					},
-//					{
-//						attesterSlashing: attesterSlashingForValIdx(6, 8, 24),
-//						validatorToSlash: 24,
-//					},
-//					{
-//						attesterSlashing: attesterSlashingForValIdx(4, 12, 40),
-//						validatorToSlash: 40,
-//					},
-//				},
-//			},
-//			want: []*ethpb.AttesterSlashing{
-//				attesterSlashingForValIdx(4, 12, 40),
-//				attesterSlashingForValIdx(6, 8, 24),
-//			},
-//		},
-//	}
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			p := &Pool{
-//				pendingAttesterSlashing: tt.fields.pending,
-//			}
-//			if got := p.PendingAttesterSlashings(); !reflect.DeepEqual(tt.want, got) {
-//				t.Errorf("Unexpected return from PendingAttesterSlashings, wanted %v, received %v", tt.want, got)
-//			}
-//		})
-//	}
-//}
+func TestPool_PendingAttesterSlashings_NoDuplicates(t *testing.T) {
+	conf := params.BeaconConfig()
+	conf.MaxAttesterSlashings = 2
+	params.OverrideBeaconConfig(conf)
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
+	pendingSlashings := make([]*PendingAttesterSlashing, 3)
+	slashings := make([]*ethpb.AttesterSlashing, 3)
+	for i := 0; i < 2; i++ {
+		sl, err := testutil.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], uint64(i))
+		if err != nil {
+			t.Fatal(err)
+		}
+		pendingSlashings[i] = &PendingAttesterSlashing{
+			attesterSlashing: sl,
+			validatorToSlash: uint64(i),
+		}
+		slashings[i] = sl
+	}
+	// We duplicate the last slashing.
+	pendingSlashings[2] = pendingSlashings[1]
+	slashings[2] = slashings[1]
+	p := &Pool{
+		pendingAttesterSlashing: pendingSlashings,
+	}
+	want := slashings[0:2]
+	if got := p.PendingAttesterSlashings(
+		context.Background(),
+		beaconState,
+	); !reflect.DeepEqual(want, got) {
+		t.Errorf("Unexpected return from PendingAttesterSlashings, wanted %v, received %v", want, got)
+	}
+}
+
+func TestPool_PendingAttesterSlashings_SigFailsVerify_ClearPool(t *testing.T) {
+
+}
