@@ -26,8 +26,32 @@ def _ssz_go_proto_library_impl(ctx):
     )
 
 """
-A rule that extends a go_proto_library rule with generated ssz marshal functions.
-TODO: Update this documentation before merge.
+A rule that uses the generated pb.go files from a go_proto_library target to generate SSZ marshal
+and unmarshal functions as pointer receivers on the specified objects. To use this rule, provide a 
+go_proto_library target and specify the structs to generate methods in the "objs" field. Lastly, 
+include your new target as a source for the go_library that embeds the go_proto_library.
+
+Example:
+go_proto_library(
+  name = "example_go_proto",
+   ...
+) 
+
+ssz_gen_marshal(
+  name = "ssz_generated_sources",
+  go_proto = ":example_go_proto",
+  objs = [ # omit this field to generate for all structs in the package.
+    "AddressBook",
+    "Person",
+  ],
+)
+
+go_library(
+  name = "go_default_library",
+  srcs = [":ssz_generated_sources"],
+  embed = [":example_go_proto"],
+  deps = SSZ_DEPS,
+)
 """
 ssz_gen_marshal = rule(
     implementation = _ssz_go_proto_library_impl,
