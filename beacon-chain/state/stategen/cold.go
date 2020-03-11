@@ -3,6 +3,7 @@ package stategen
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"go.opencensus.io/trace"
 )
@@ -36,6 +37,11 @@ func (s *State) loadColdStateByRoot(ctx context.Context, blockRoot [32]byte) (*s
 	}
 
 	return s.loadColdIntermediateStateWithRoot(ctx, summary.Slot, blockRoot)
+}
+
+// This loads the cold state for the input archived point.
+func (s *State) loadColdStateByArchivedPoint(ctx context.Context, archivedPoint uint64) (*state.BeaconState, error) {
+	return s.beaconDB.ArchivedPointState(ctx, archivedPoint)
 }
 
 // This loads a cold state by slot and block root which lies between the archive point.
