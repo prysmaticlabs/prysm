@@ -53,6 +53,9 @@ func (p *Pool) PendingAttesterSlashings(ctx context.Context, st *beaconstate.Bea
 
 		if err := blocks.VerifyAttesterSlashing(ctx, st, attSlashing); err == nil {
 			pending = append(pending, attSlashing)
+		} else {
+			// Else, we clear the attester slashing from the pool.
+			p.pendingAttesterSlashing = append(p.pendingAttesterSlashing[:i], p.pendingAttesterSlashing[i+1:]...)
 		}
 	}
 
@@ -77,6 +80,9 @@ func (p *Pool) PendingProposerSlashings(ctx context.Context, st *beaconstate.Bea
 		}
 		if err := blocks.VerifyProposerSlashing(st, slashing); err == nil {
 			pending = append(pending, slashing)
+		} else {
+			// Else, we clear the proposer slashing from the pool.
+			p.pendingProposerSlashing = append(p.pendingProposerSlashing[:i], p.pendingProposerSlashing[i+1:]...)
 		}
 	}
 	return pending
