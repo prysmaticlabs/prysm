@@ -13,7 +13,7 @@ import (
 type State struct {
 	beaconDB                db.NoHeadAccessDatabase
 	lastArchivedSlot        uint64
-	slotsPerArchivedPoint    uint64
+	slotsPerArchivedPoint   uint64
 	epochBoundarySlotToRoot map[uint64][32]byte
 	epochBoundaryLock       sync.RWMutex
 	hotStateCache           *cache.HotStateCache
