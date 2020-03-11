@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -33,6 +35,7 @@ type Server struct {
 	StateNotifier               statefeed.Notifier
 	BlockNotifier               blockfeed.Notifier
 	AttestationNotifier         operation.Notifier
+	Broadcaster                 p2p.Broadcaster
 	AttestationsPool            attestations.Pool
 	SlashingsPool               *slashings.Pool
 	CanonicalStateChan          chan *pbp2p.BeaconState
