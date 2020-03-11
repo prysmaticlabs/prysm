@@ -36,111 +36,20 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 		included map[uint64]bool
 	}
 	type args struct {
-		slashing *ethpb.ProposerSlashing
+		slashings []*ethpb.ProposerSlashing
 	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   []*ethpb.ProposerSlashing
-	}{
-		{
-			name: "Empty list",
-			fields: fields{
-				pending:  make([]*ethpb.ProposerSlashing, 0),
-				included: make(map[uint64]bool),
-			},
-			args: args{
-				slashing: proposerSlashingForValIdx(0),
-			},
-			want: generateNProposerSlashings(1),
-		},
-		{
-			name: "Duplicate identical slashing",
-			fields: fields{
-				pending:  generateNProposerSlashings(1),
-				included: make(map[uint64]bool),
-				wantErr:  true,
-				err:      "slashing object already exists in pending proposer slashings",
-			},
-			args: args{
-				slashing: proposerSlashingForValIdx(0),
-			},
-			want: generateNProposerSlashings(1),
-		},
-		{
-			name: "Slashing for exited validator",
-			fields: fields{
-				pending:  []*ethpb.ProposerSlashing{},
-				included: make(map[uint64]bool),
-				wantErr:  true,
-				err:      "cannot be slashed",
-			},
-			args: args{
-				slashing: proposerSlashingForValIdx(2),
-			},
-			want: []*ethpb.ProposerSlashing{},
-		},
-		{
-			name: "Slashing for future exited validator",
-			fields: fields{
-				pending:  []*ethpb.ProposerSlashing{},
-				included: make(map[uint64]bool),
-			},
-			args: args{
-				slashing: proposerSlashingForValIdx(4),
-			},
-			want: []*ethpb.ProposerSlashing{
-				proposerSlashingForValIdx(4),
-			},
-		},
-		{
-			name: "Slashing for slashed validator",
-			fields: fields{
-				pending:  []*ethpb.ProposerSlashing{},
-				included: make(map[uint64]bool),
-				wantErr:  true,
-				err:      "cannot be slashed",
-			},
-			args: args{
-				slashing: proposerSlashingForValIdx(5),
-			},
-			want: []*ethpb.ProposerSlashing{},
-		},
-		{
-			name: "Already included",
-			fields: fields{
-				pending: []*ethpb.ProposerSlashing{},
-				included: map[uint64]bool{
-					1: true,
-				},
-				wantErr: true,
-				err:     "cannot be slashed",
-			},
-			args: args{
-				slashing: proposerSlashingForValIdx(1),
-			},
-			want: []*ethpb.ProposerSlashing{},
-		},
-		{
-			name: "Maintains sorted order",
-			fields: fields{
-				pending: []*ethpb.ProposerSlashing{
-					proposerSlashingForValIdx(0),
-					proposerSlashingForValIdx(4),
-				},
-				included: make(map[uint64]bool),
-			},
-			args: args{
-				slashing: proposerSlashingForValIdx(1),
-			},
-			want: []*ethpb.ProposerSlashing{
-				proposerSlashingForValIdx(0),
-				proposerSlashingForValIdx(1),
-				proposerSlashingForValIdx(4),
-			},
-		},
+
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
+	slashings := make([]*ethpb.ProposerSlashing, 20)
+	for i := 0; i < len(slashings); i++ {
+		sl, err := testutil.GenerateProposerSlashingForValidator(beaconState, privKeys[i], uint64(i))
+		if err != nil {
+			t.Fatal(err)
+		}
+		slashings[i] = sl
 	}
+
+	// We mark the following validators with some preconditions.
 	validators := []*ethpb.Validator{
 		{ // 0
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -162,6 +71,113 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 			Slashed:   true,
 		},
 	}
+	for i := 0; i < len(validators); i++ {
+		if err := beaconState.UpdateValidatorAtIndex(uint64(i), validators[i]); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   []*ethpb.ProposerSlashing
+	}{
+		{
+			name: "Empty list",
+			fields: fields{
+				pending:  make([]*ethpb.ProposerSlashing, 0),
+				included: make(map[uint64]bool),
+			},
+			args: args{
+				slashings: slashings[0:1],
+			},
+			want: slashings[0:1],
+		},
+		{
+			name: "Duplicate identical slashing",
+			fields: fields{
+				pending:  slashings[0:1],
+				included: make(map[uint64]bool),
+				wantErr:  true,
+				err:      "slashing object already exists in pending proposer slashings",
+			},
+			args: args{
+				slashings: slashings[0:1],
+			},
+			want: slashings[0:1],
+		},
+		{
+			name: "Slashing for exited validator",
+			fields: fields{
+				pending:  []*ethpb.ProposerSlashing{},
+				included: make(map[uint64]bool),
+				wantErr:  true,
+				err:      "cannot be slashed",
+			},
+			args: args{
+				slashings: slashings[2:3],
+			},
+			want: []*ethpb.ProposerSlashing{},
+		},
+		{
+			name: "Slashing for future exited validator",
+			fields: fields{
+				pending:  []*ethpb.ProposerSlashing{},
+				included: make(map[uint64]bool),
+			},
+			args: args{
+				slashings: slashings[4:5],
+			},
+			want: slashings[4:5],
+		},
+		{
+			name: "Slashing for slashed validator",
+			fields: fields{
+				pending:  []*ethpb.ProposerSlashing{},
+				included: make(map[uint64]bool),
+				wantErr:  true,
+				err:      "cannot be slashed",
+			},
+			args: args{
+				slashings: slashings[5:6],
+			},
+			want: []*ethpb.ProposerSlashing{},
+		},
+		{
+			name: "Already included",
+			fields: fields{
+				pending: []*ethpb.ProposerSlashing{},
+				included: map[uint64]bool{
+					1: true,
+				},
+				wantErr: true,
+				err:     "cannot be slashed",
+			},
+			args: args{
+				slashings: slashings[1:2],
+			},
+			want: []*ethpb.ProposerSlashing{},
+		},
+		{
+			name: "Maintains sorted order",
+			fields: fields{
+				pending: []*ethpb.ProposerSlashing{
+					slashings[0],
+					slashings[2],
+				},
+				included: make(map[uint64]bool),
+			},
+			args: args{
+				slashings: slashings[1:2],
+			},
+			want: []*ethpb.ProposerSlashing{
+				slashings[0],
+				slashings[1],
+				slashings[2],
+			},
+		},
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &Pool{
@@ -175,7 +191,9 @@ func TestPool_InsertProposerSlashing(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = p.InsertProposerSlashing(beaconState, tt.args.slashing)
+			for i := 0; i < len(tt.args.slashings); i++ {
+				err = p.InsertProposerSlashing(context.Background(), beaconState, tt.args.slashings[i])
+			}
 			if err != nil && tt.fields.wantErr && !strings.Contains(err.Error(), tt.fields.err) {
 				t.Fatalf("Wanted err: %v, received %v", tt.fields.err, err)
 			}
@@ -381,7 +399,6 @@ func TestPool_PendingProposerSlashings(t *testing.T) {
 			}
 			if got := p.PendingProposerSlashings(
 				context.Background(),
-				beaconState,
 			); !reflect.DeepEqual(tt.want, got) {
 				t.Errorf("Unexpected return from PendingProposerSlashings, wanted %v, received %v", tt.want, got)
 			}
@@ -389,36 +406,36 @@ func TestPool_PendingProposerSlashings(t *testing.T) {
 	}
 }
 
-func TestPool_PendingProposerSlashings_SigFailsVerify_ClearPool(t *testing.T) {
-	conf := params.BeaconConfig()
-	conf.MaxAttesterSlashings = 2
-	params.OverrideBeaconConfig(conf)
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
-	slashings := make([]*ethpb.ProposerSlashing, 2)
-	for i := 0; i < 2; i++ {
-		sl, err := testutil.GenerateProposerSlashingForValidator(beaconState, privKeys[i], uint64(i))
-		if err != nil {
-			t.Fatal(err)
-		}
-		slashings[i] = sl
-	}
-	// We mess up the signature of the second slashing.
-	badSig := make([]byte, 96)
-	copy(badSig, "muahaha")
-	slashings[1].Header_1.Signature = badSig
-	p := &Pool{
-		pendingProposerSlashing: slashings,
-	}
-	// We only want a single slashing to remain.
-	want := slashings[0:1]
-	if got := p.PendingProposerSlashings(
-		context.Background(),
-		beaconState,
-	); !reflect.DeepEqual(want, got) {
-		t.Errorf("Unexpected return from PendingProposerSlashings, wanted %v, received %v", want, got)
-	}
-	// We expect to only have 1 pending proposer slashing in the pool.
-	if len(p.pendingProposerSlashing) != 1 {
-		t.Error("Expected failed proposer slashing to have been cleared from pool")
-	}
-}
+//func TestPool_PendingProposerSlashings_SigFailsVerify_ClearPool(t *testing.T) {
+//	conf := params.BeaconConfig()
+//	conf.MaxAttesterSlashings = 2
+//	params.OverrideBeaconConfig(conf)
+//	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
+//	slashings := make([]*ethpb.ProposerSlashing, 2)
+//	for i := 0; i < 2; i++ {
+//		sl, err := testutil.GenerateProposerSlashingForValidator(beaconState, privKeys[i], uint64(i))
+//		if err != nil {
+//			t.Fatal(err)
+//		}
+//		slashings[i] = sl
+//	}
+//	// We mess up the signature of the second slashing.
+//	badSig := make([]byte, 96)
+//	copy(badSig, "muahaha")
+//	slashings[1].Header_1.Signature = badSig
+//	p := &Pool{
+//		pendingProposerSlashing: slashings,
+//	}
+//	// We only want a single slashing to remain.
+//	want := slashings[0:1]
+//	if got := p.PendingProposerSlashings(
+//		context.Background(),
+//		beaconState,
+//	); !reflect.DeepEqual(want, got) {
+//		t.Errorf("Unexpected return from PendingProposerSlashings, wanted %v, received %v", want, got)
+//	}
+//	// We expect to only have 1 pending proposer slashing in the pool.
+//	if len(p.pendingProposerSlashing) != 1 {
+//		t.Error("Expected failed proposer slashing to have been cleared from pool")
+//	}
+//}

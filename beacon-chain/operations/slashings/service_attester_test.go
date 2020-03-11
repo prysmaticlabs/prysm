@@ -32,25 +32,6 @@ func pendingSlashingForValIdx(valIdx ...uint64) *PendingAttesterSlashing {
 	}
 }
 
-func generateNPendingSlashings(n uint64) []*PendingAttesterSlashing {
-	pendingAttSlashings := make([]*PendingAttesterSlashing, n)
-	for i := uint64(0); i < n; i++ {
-		pendingAttSlashings[i] = &PendingAttesterSlashing{
-			attesterSlashing: attesterSlashingForValIdx(i),
-			validatorToSlash: i,
-		}
-	}
-	return pendingAttSlashings
-}
-
-func generateNAttSlashings(n uint64) []*ethpb.AttesterSlashing {
-	attSlashings := make([]*ethpb.AttesterSlashing, n)
-	for i := uint64(0); i < n; i++ {
-		attSlashings[i] = attesterSlashingForValIdx(i)
-	}
-	return attSlashings
-}
-
 func TestPool_InsertAttesterSlashing(t *testing.T) {
 	type fields struct {
 		pending  []*PendingAttesterSlashing
@@ -59,195 +40,25 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 		err      string
 	}
 	type args struct {
-		slashing *ethpb.AttesterSlashing
+		slashings []*ethpb.AttesterSlashing
 	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   []*PendingAttesterSlashing
-		err    string
-	}{
-		{
-			name: "Empty list",
-			fields: fields{
-				pending:  make([]*PendingAttesterSlashing, 0),
-				included: make(map[uint64]bool),
-			},
-			args: args{
-				slashing: attesterSlashingForValIdx(1),
-			},
-			want: []*PendingAttesterSlashing{
-				{
-					attesterSlashing: attesterSlashingForValIdx(1),
-					validatorToSlash: 1,
-				},
-			},
-		},
-		{
-			name: "Empty list two validators slashed",
-			fields: fields{
-				pending:  make([]*PendingAttesterSlashing, 0),
-				included: make(map[uint64]bool),
-			},
-			args: args{
-				slashing: &ethpb.AttesterSlashing{
-					Attestation_1: &ethpb.IndexedAttestation{
-						AttestingIndices: []uint64{0, 1},
-					},
-					Attestation_2: &ethpb.IndexedAttestation{
-						AttestingIndices: []uint64{0, 1},
-					},
-				},
-			},
-			want: []*PendingAttesterSlashing{
-				{
-					attesterSlashing: &ethpb.AttesterSlashing{
-						Attestation_1: &ethpb.IndexedAttestation{
-							AttestingIndices: []uint64{0, 1},
-						},
-						Attestation_2: &ethpb.IndexedAttestation{
-							AttestingIndices: []uint64{0, 1},
-						},
-					},
-					validatorToSlash: 0,
-				},
-				{
-					attesterSlashing: &ethpb.AttesterSlashing{
-						Attestation_1: &ethpb.IndexedAttestation{
-							AttestingIndices: []uint64{0, 1},
-						},
-						Attestation_2: &ethpb.IndexedAttestation{
-							AttestingIndices: []uint64{0, 1},
-						},
-					},
-					validatorToSlash: 1,
-				},
-			},
-		},
-		{
-			name: "Empty list two validators slashed out of three",
-			fields: fields{
-				pending:  make([]*PendingAttesterSlashing, 0),
-				included: make(map[uint64]bool),
-			},
-			args: args{
-				slashing: &ethpb.AttesterSlashing{
-					Attestation_1: &ethpb.IndexedAttestation{
-						AttestingIndices: []uint64{1, 2, 3},
-					},
-					Attestation_2: &ethpb.IndexedAttestation{
-						AttestingIndices: []uint64{1, 3},
-					},
-				},
-			},
-			want: []*PendingAttesterSlashing{
-				{
-					attesterSlashing: &ethpb.AttesterSlashing{
-						Attestation_1: &ethpb.IndexedAttestation{
-							AttestingIndices: []uint64{1, 2, 3},
-						},
-						Attestation_2: &ethpb.IndexedAttestation{
-							AttestingIndices: []uint64{1, 3},
-						},
-					},
-					validatorToSlash: 1,
-				},
-				{
-					attesterSlashing: &ethpb.AttesterSlashing{
-						Attestation_1: &ethpb.IndexedAttestation{
-							AttestingIndices: []uint64{1, 2, 3},
-						},
-						Attestation_2: &ethpb.IndexedAttestation{
-							AttestingIndices: []uint64{1, 3},
-						},
-					},
-					validatorToSlash: 3,
-				},
-			},
-		},
-		{
-			name: "Duplicate identical slashing",
-			fields: fields{
-				pending: []*PendingAttesterSlashing{
 
-					pendingSlashingForValIdx(1),
-				},
-				included: make(map[uint64]bool),
-			},
-			args: args{
-				slashing: attesterSlashingForValIdx(1),
-			},
-			want: []*PendingAttesterSlashing{
-
-				pendingSlashingForValIdx(1),
-			},
-		},
-		{
-			name: "Slashing for exited validator",
-			fields: fields{
-				pending:  []*PendingAttesterSlashing{},
-				included: make(map[uint64]bool),
-			},
-			args: args{
-				slashing: attesterSlashingForValIdx(2),
-			},
-			want: []*PendingAttesterSlashing{},
-		},
-		{
-			name: "Slashing for futuristic exited validator",
-			fields: fields{
-				pending:  []*PendingAttesterSlashing{},
-				included: make(map[uint64]bool),
-			},
-			args: args{
-				slashing: attesterSlashingForValIdx(4),
-			},
-			want: []*PendingAttesterSlashing{
-				pendingSlashingForValIdx(4),
-			},
-		},
-		{
-			name: "Slashing for slashed validator",
-			fields: fields{
-				pending:  []*PendingAttesterSlashing{},
-				included: make(map[uint64]bool),
-				wantErr:  true,
-				err:      "cannot be slashed",
-			},
-			args: args{
-				slashing: attesterSlashingForValIdx(5),
-			},
-			want: []*PendingAttesterSlashing{},
-		},
-		{
-			name: "Already included",
-			fields: fields{
-				pending: []*PendingAttesterSlashing{},
-				included: map[uint64]bool{
-					1: true,
-				},
-			},
-			args: args{
-				slashing: attesterSlashingForValIdx(1),
-			},
-			want: []*PendingAttesterSlashing{},
-		},
-		{
-			name: "Maintains sorted order",
-			fields: fields{
-				pending: []*PendingAttesterSlashing{
-					pendingSlashingForValIdx(0),
-					pendingSlashingForValIdx(2),
-				},
-				included: make(map[uint64]bool),
-			},
-			args: args{
-				slashing: attesterSlashingForValIdx(1),
-			},
-			want: generateNPendingSlashings(3),
-		},
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
+	pendingSlashings := make([]*PendingAttesterSlashing, 20)
+	slashings := make([]*ethpb.AttesterSlashing, 20)
+	for i := 0; i < len(pendingSlashings); i++ {
+		sl, err := testutil.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], uint64(i))
+		if err != nil {
+			t.Fatal(err)
+		}
+		pendingSlashings[i] = &PendingAttesterSlashing{
+			attesterSlashing: sl,
+			validatorToSlash: uint64(i),
+		}
+		slashings[i] = sl
 	}
+
+	// We mark the following validators with some preconditions.
 	validators := []*ethpb.Validator{
 		{ // 0
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -269,6 +80,120 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 			Slashed:   true,
 		},
 	}
+	for i := 0; i < len(validators); i++ {
+		if err := beaconState.UpdateValidatorAtIndex(uint64(i), validators[i]); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   []*PendingAttesterSlashing
+		err    string
+	}{
+		{
+			name: "Empty list",
+			fields: fields{
+				pending:  make([]*PendingAttesterSlashing, 0),
+				included: make(map[uint64]bool),
+			},
+			args: args{
+				slashings: slashings[0:1],
+			},
+			want: []*PendingAttesterSlashing{
+				{
+					attesterSlashing: slashings[0],
+					validatorToSlash: 0,
+				},
+			},
+		},
+		{
+			name: "Empty list two validators slashed",
+			fields: fields{
+				pending:  make([]*PendingAttesterSlashing, 0),
+				included: make(map[uint64]bool),
+			},
+			args: args{
+				slashings: slashings[0:2],
+			},
+			want: pendingSlashings[0:2],
+		},
+		{
+			name: "Duplicate identical slashing",
+			fields: fields{
+				pending: []*PendingAttesterSlashing{
+					pendingSlashings[1],
+				},
+				included: make(map[uint64]bool),
+			},
+			args: args{
+				slashings: slashings[1:2],
+			},
+			want: pendingSlashings[1:2],
+		},
+		{
+			name: "Slashing for already slashed validator",
+			fields: fields{
+				pending:  []*PendingAttesterSlashing{},
+				included: make(map[uint64]bool),
+			},
+			args: args{
+				slashings: slashings[5:6],
+			},
+			want: []*PendingAttesterSlashing{},
+		},
+		{
+			name: "Slashing for exited validator",
+			fields: fields{
+				pending:  []*PendingAttesterSlashing{},
+				included: make(map[uint64]bool),
+			},
+			args: args{
+				slashings: slashings[2:3],
+			},
+			want: []*PendingAttesterSlashing{},
+		},
+		{
+			name: "Slashing for futuristic exited validator",
+			fields: fields{
+				pending:  []*PendingAttesterSlashing{},
+				included: make(map[uint64]bool),
+			},
+			args: args{
+				slashings: slashings[4:5],
+			},
+			want: pendingSlashings[4:5],
+		},
+		{
+			name: "Already included",
+			fields: fields{
+				pending: []*PendingAttesterSlashing{},
+				included: map[uint64]bool{
+					1: true,
+				},
+			},
+			args: args{
+				slashings: slashings[1:2],
+			},
+			want: []*PendingAttesterSlashing{},
+		},
+		{
+			name: "Maintains sorted order",
+			fields: fields{
+				pending: []*PendingAttesterSlashing{
+					pendingSlashings[0],
+					pendingSlashings[2],
+				},
+				included: make(map[uint64]bool),
+			},
+			args: args{
+				slashings: slashings[1:2],
+			},
+			want: pendingSlashings[0:3],
+		},
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &Pool{
@@ -282,7 +207,9 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = p.InsertAttesterSlashing(s, tt.args.slashing)
+			for i := 0; i < len(tt.args.slashings); i++ {
+				err = p.InsertAttesterSlashing(context.Background(), s, tt.args.slashings[i])
+			}
 			if err != nil && tt.fields.wantErr && !strings.Contains(err.Error(), tt.fields.err) {
 				t.Fatalf("Wanted err: %v, received %v", tt.fields.err, err)
 			}
@@ -308,6 +235,47 @@ func TestPool_InsertAttesterSlashing(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestPool_InsertAttesterSlashing_SigFailsVerify_ClearPool(t *testing.T) {
+	conf := params.BeaconConfig()
+	conf.MaxAttesterSlashings = 2
+	params.OverrideBeaconConfig(conf)
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
+	pendingSlashings := make([]*PendingAttesterSlashing, 2)
+	slashings := make([]*ethpb.AttesterSlashing, 2)
+	for i := 0; i < 2; i++ {
+		sl, err := testutil.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], uint64(i))
+		if err != nil {
+			t.Fatal(err)
+		}
+		pendingSlashings[i] = &PendingAttesterSlashing{
+			attesterSlashing: sl,
+			validatorToSlash: uint64(i),
+		}
+		slashings[i] = sl
+	}
+	// We mess up the signature of the second slashing.
+	badSig := make([]byte, 96)
+	copy(badSig, "muahaha")
+	pendingSlashings[1].attesterSlashing.Attestation_1.Signature = badSig
+	slashings[1].Attestation_1.Signature = badSig
+	p := &Pool{
+		pendingAttesterSlashing: pendingSlashings,
+	}
+	for i := 0; i < len(slashings); i++ {
+		if err := p.InsertAttesterSlashing(
+			context.Background(),
+			beaconState,
+			slashings[i],
+		); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// We expect to only have 1 pending attester slashing in the pool.
+	if len(p.pendingAttesterSlashing) != 1 {
+		t.Error("Expected failed attester slashing to have been cleared from pool")
 	}
 }
 
@@ -500,7 +468,6 @@ func TestPool_PendingAttesterSlashings(t *testing.T) {
 			}
 			if got := p.PendingAttesterSlashings(
 				context.Background(),
-				beaconState,
 			); !reflect.DeepEqual(tt.want, got) {
 				t.Errorf("Unexpected return from PendingAttesterSlashings, wanted %v, received %v", tt.want, got)
 			}
@@ -535,48 +502,7 @@ func TestPool_PendingAttesterSlashings_NoDuplicates(t *testing.T) {
 	want := slashings[0:2]
 	if got := p.PendingAttesterSlashings(
 		context.Background(),
-		beaconState,
 	); !reflect.DeepEqual(want, got) {
 		t.Errorf("Unexpected return from PendingAttesterSlashings, wanted %v, received %v", want, got)
-	}
-}
-
-func TestPool_PendingAttesterSlashings_SigFailsVerify_ClearPool(t *testing.T) {
-	conf := params.BeaconConfig()
-	conf.MaxAttesterSlashings = 2
-	params.OverrideBeaconConfig(conf)
-	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
-	pendingSlashings := make([]*PendingAttesterSlashing, 2)
-	slashings := make([]*ethpb.AttesterSlashing, 2)
-	for i := 0; i < 2; i++ {
-		sl, err := testutil.GenerateAttesterSlashingForValidator(beaconState, privKeys[i], uint64(i))
-		if err != nil {
-			t.Fatal(err)
-		}
-		pendingSlashings[i] = &PendingAttesterSlashing{
-			attesterSlashing: sl,
-			validatorToSlash: uint64(i),
-		}
-		slashings[i] = sl
-	}
-	// We mess up the signature of the second slashing.
-	badSig := make([]byte, 96)
-	copy(badSig, "muahaha")
-	pendingSlashings[1].attesterSlashing.Attestation_1.Signature = badSig
-	slashings[1].Attestation_1.Signature = badSig
-	p := &Pool{
-		pendingAttesterSlashing: pendingSlashings,
-	}
-	// We only want a single attester slashing to remain.
-	want := slashings[0:1]
-	if got := p.PendingAttesterSlashings(
-		context.Background(),
-		beaconState,
-	); !reflect.DeepEqual(want, got) {
-		t.Errorf("Unexpected return from PendingAttesterSlashings, wanted %v, received %v", want, got)
-	}
-	// We expect to only have 1 pending attester slashing in the pool.
-	if len(p.pendingAttesterSlashing) != 1 {
-		t.Error("Expected failed attester slashing to have been cleared from pool")
 	}
 }
