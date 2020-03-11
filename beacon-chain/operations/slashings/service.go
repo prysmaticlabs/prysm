@@ -1,11 +1,15 @@
 package slashings
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sort"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"go.opencensus.io/trace"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -23,9 +27,11 @@ func NewPool() *Pool {
 
 // PendingAttesterSlashings returns attester slashings that are able to be included into a block.
 // This method will not return more than the block enforced MaxAttesterSlashings.
-func (p *Pool) PendingAttesterSlashings() []*ethpb.AttesterSlashing {
+func (p *Pool) PendingAttesterSlashings(ctx context.Context, st *beaconstate.BeaconState) []*ethpb.AttesterSlashing {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
+	ctx, span := trace.StartSpan(ctx, "operations.PendingAttesterSlashing")
+	defer span.End()
 
 	// Update prom metric.
 	numPendingAttesterSlashings.Set(float64(len(p.pendingAttesterSlashing)))
@@ -44,7 +50,10 @@ func (p *Pool) PendingAttesterSlashings() []*ethpb.AttesterSlashing {
 		for _, idx := range slashedVal {
 			included[idx] = true
 		}
-		pending = append(pending, attSlashing)
+
+		if err := blocks.VerifyAttesterSlashing(ctx, st, attSlashing); err == nil {
+			pending = append(pending, attSlashing)
+		}
 	}
 
 	return pending
@@ -52,9 +61,11 @@ func (p *Pool) PendingAttesterSlashings() []*ethpb.AttesterSlashing {
 
 // PendingProposerSlashings returns proposer slashings that are able to be included into a block.
 // This method will not return more than the block enforced MaxProposerSlashings.
-func (p *Pool) PendingProposerSlashings() []*ethpb.ProposerSlashing {
+func (p *Pool) PendingProposerSlashings(ctx context.Context, st *beaconstate.BeaconState) []*ethpb.ProposerSlashing {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
+	ctx, span := trace.StartSpan(ctx, "operations.PendingProposerSlashing")
+	defer span.End()
 
 	// Update prom metric.
 	numPendingProposerSlashings.Set(float64(len(p.pendingProposerSlashing)))
@@ -64,7 +75,9 @@ func (p *Pool) PendingProposerSlashings() []*ethpb.ProposerSlashing {
 		if i >= int(params.BeaconConfig().MaxProposerSlashings) {
 			break
 		}
-		pending = append(pending, slashing)
+		if err := blocks.VerifyProposerSlashing(st, slashing); err == nil {
+			pending = append(pending, slashing)
+		}
 	}
 	return pending
 }
