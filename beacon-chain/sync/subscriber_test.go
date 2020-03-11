@@ -91,6 +91,9 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	if len(as) != 1 {
 		t.Errorf("Expected attester slashing: %v to be added to slashing pool. got: %v", attesterSlashing, as[0])
 	}
+	if !proto.Equal(as, attesterSlashing) {
+		t.Errorf("Expected attester slashing: %v to be added to slashing pool. got: %v", attesterSlashing, as[0])
+	}
 }
 
 func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
@@ -128,9 +131,12 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
 	}
-	as := r.slashingPool.PendingProposerSlashings()
-	if len(as) != 1 {
-		t.Errorf("Expected proposer slashing: %v to be added to slashing pool. got: %v", proposerSlashing, as[0])
+	ps := r.slashingPool.PendingProposerSlashings()
+	if len(ps) != 1 {
+		t.Errorf("Expected proposer slashing: %v to be added to slashing pool. got: %v", proposerSlashing, ps[0])
+	}
+	if !proto.Equal(ps, proposerSlashing) {
+		t.Errorf("Expected attester slashing: %v to be added to slashing pool. got: %v", proposerSlashing, ps[0])
 	}
 }
 
