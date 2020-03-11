@@ -7,11 +7,13 @@ go_test(
         "demo_e2e_test.go",
         "endtoend_test.go",
         "minimal_e2e_test.go",
+        "minimal_slashing_e2e_test.go",
     ],
     args = ["-test.v"],
     data = [
         "//beacon-chain",
         "//validator",
+        "//slasher",
         "@com_github_ethereum_go_ethereum//cmd/geth",
     ],
     embed = [":go_default_library"],

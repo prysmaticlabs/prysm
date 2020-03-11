@@ -1,9 +1,7 @@
 package evaluators
 
 import (
-	"bytes"
 	"context"
-	"fmt"
 
 	"github.com/gogo/protobuf/types"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -15,7 +13,28 @@ import (
 	"google.golang.org/grpc"
 )
 
-func InsertDoubleAttestationIntoPool(conn *grpc.ClientConn) error {
+// InjectDoubleVote broadcasts a double vote for the slasher to detect.
+var InjectDoubleVote = Evaluator{
+	Name:       "inject_double_vote_%d",
+	Policy:      beforeEpoch(3),
+	Evaluation: insertDoubleAttestationIntoPool,
+}
+
+// InjectSurroundVote broadcasts a surround vote for the slasher to detect.
+var InjectSurroundVote = Evaluator{
+	Name:       "inject_surround_vote_%d",
+	Policy:      beforeEpoch(3),
+	Evaluation: insertSurroundAttestationIntoPool,
+}
+
+// Not including first epoch because of issues with genesis.
+func beforeEpoch(epoch uint64) func(uint64) bool {
+	return func(currentEpoch uint64) bool {
+		return currentEpoch < epoch
+	}
+}
+
+func insertDoubleAttestationIntoPool(conn *grpc.ClientConn) error {
 	valClient := eth.NewBeaconNodeValidatorClient(conn)
 	beaconClient := eth.NewBeaconChainClient(conn)
 
@@ -83,11 +102,85 @@ func InsertDoubleAttestationIntoPool(conn *grpc.ClientConn) error {
 		Data:            attData,
 		Signature:       privKeys[committee[0]].Sign(dataRoot[:], domainResp.SignatureDomain).Marshal(),
 	}
-	attResp, err := valClient.ProposeAttestation(ctx, att)
+	_, err = valClient.ProposeAttestation(ctx, att)
 	if err != nil {
 		return err
 	}
-	fmt.Println(attResp)
-	fmt.Println(bytes.Equal(attResp.AttestationDataRoot, dataRoot[:]))
+	return nil
+}
+
+
+func insertSurroundAttestationIntoPool(conn *grpc.ClientConn) error {
+	valClient := eth.NewBeaconNodeValidatorClient(conn)
+	beaconClient := eth.NewBeaconChainClient(conn)
+
+	ctx := context.Background()
+	chainHead, err := beaconClient.GetChainHead(ctx, &types.Empty{})
+	if err != nil {
+		return err
+	}
+
+	_, privKeys, err := testutil.DeterministicDepositsAndKeys(64)
+	if err != nil {
+		return err
+	}
+	pubKeys := make([][]byte, len(privKeys))
+	for i, priv := range privKeys {
+		pubKeys[i] = priv.PublicKey().Marshal()
+	}
+	duties, err := valClient.GetDuties(ctx, &eth.DutiesRequest{
+		Epoch:      chainHead.HeadEpoch,
+		PublicKeys: pubKeys,
+	})
+	if err != nil {
+		return err
+	}
+
+	var committeeIndex uint64
+	var committee []uint64
+	for _, duty := range duties.Duties {
+		if duty.AttesterSlot == chainHead.HeadSlot-1 {
+			committeeIndex = duty.CommitteeIndex
+			committee = duty.Committee
+			break
+		}
+	}
+
+	// Set the bits of half the committee to be slashed.
+	attBitfield := bitfield.NewBitlist(uint64(len(committee)))
+	attBitfield.SetBitAt(1, true)
+
+	attDataReq := &eth.AttestationDataRequest{
+		CommitteeIndex: committeeIndex,
+		Slot:           chainHead.HeadSlot - 1,
+	}
+	attData, err := valClient.GetAttestationData(ctx, attDataReq)
+	if err != nil {
+		return err
+	}
+	attData.Source.Epoch -= 1
+	attData.Target.Epoch += 1
+	dataRoot, err := ssz.HashTreeRoot(attData)
+	if err != nil {
+		return err
+	}
+
+	domainResp, err := valClient.DomainData(ctx, &eth.DomainRequest{
+		Epoch:  attData.Target.Epoch-1,
+		Domain: params.BeaconConfig().DomainBeaconAttester[:],
+	})
+	if err != nil {
+		return err
+	}
+
+	att := &eth.Attestation{
+		AggregationBits: attBitfield,
+		Data:            attData,
+		Signature:       privKeys[committee[1]].Sign(dataRoot[:], domainResp.SignatureDomain).Marshal(),
+	}
+	_, err = valClient.ProposeAttestation(ctx, att)
+	if err != nil {
+		return err
+	}
 	return nil
 }

@@ -1,7 +1,7 @@
 package evaluators
 
 import (
-	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"google.golang.org/grpc"
 )
 
 // Evaluator defines the structure of the evaluators used to
@@ -9,7 +9,7 @@ import (
 type Evaluator struct {
 	Name       string
 	Policy     func(currentEpoch uint64) bool
-	Evaluation func(client eth.BeaconChainClient) error
+	Evaluation func(conn *grpc.ClientConn) error
 }
 
 // BeaconNodeInfo contains the info of ports and other required information

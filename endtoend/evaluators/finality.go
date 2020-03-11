@@ -7,6 +7,7 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"google.golang.org/grpc"
 )
 
 // FinalizationOccurs is an evaluator to make sure finalization is performing as it should.
@@ -17,7 +18,8 @@ var FinalizationOccurs = Evaluator{
 	Evaluation: finalizationOccurs,
 }
 
-func finalizationOccurs(client eth.BeaconChainClient) error {
+func finalizationOccurs(conn *grpc.ClientConn) error {
+	client := eth.NewBeaconChainClient(conn)
 	chainHead, err := client.GetChainHead(context.Background(), &ptypes.Empty{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get chain head")

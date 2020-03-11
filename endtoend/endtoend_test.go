@@ -57,21 +57,14 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 		return
 	}
 
-	slasherPID := startSlasher(t, config)
-	slasherLogFile, err := os.Open(path.Join(tmpPath, slasherLogFileName))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer logErrorOutput(t, slasherLogFile, "slasher client", 0)
-	defer killProcesses(t, []int{slasherPID})
+	slasherPIDs := startSlashers(t, config)
+	defer killProcesses(t, slasherPIDs)
 
 	conn, err := grpc.Dial("127.0.0.1:4200", grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("Failed to dial: %v", err)
 	}
-	beaconClient := eth.NewBeaconChainClient(conn)
 	nodeClient := eth.NewNodeClient(conn)
-
 	genesis, err := nodeClient.GetGenesis(context.Background(), &ptypes.Empty{})
 	if err != nil {
 		t.Fatal(err)
@@ -82,18 +75,13 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 
 	ticker := GetEpochTicker(genesisTime, epochSeconds)
 	for currentEpoch := range ticker.C() {
-		if currentEpoch <= 3 {
-			if err := ev.InsertDoubleAttestationIntoPool(conn); err != nil {
-				t.Error(err)
-			}
-		}
 		for _, evaluator := range config.evaluators {
 			// Only run if the policy says so.
 			if !evaluator.Policy(currentEpoch) {
 				continue
 			}
 			t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
-				if err := evaluator.Evaluation(beaconClient); err != nil {
+				if err := evaluator.Evaluation(conn); err != nil {
 					t.Errorf("evaluation failed for epoch %d: %v", currentEpoch, err)
 				}
 			})

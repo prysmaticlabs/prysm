@@ -96,6 +96,12 @@ func logOutput(t *testing.T, tmpPath string, config *end2EndConfig) {
 			t.Fatal(err)
 		}
 		logErrorOutput(t, validatorLogFile, "validator client", i)
+
+		slasherLogFile, err := os.Open(path.Join(tmpPath, fmt.Sprintf(slasherLogFileName, i)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		logErrorOutput(t, slasherLogFile, "slasher client", i)
 	}
 	t.Logf("Ending time: %s\n", time.Now().String())
 }
@@ -112,17 +118,12 @@ func logErrorOutput(t *testing.T, file io.Reader, title string, index uint64) {
 	}
 
 	if len(errorLines) < 1 {
-		t.Logf("No error logs detected for %s %d", title, index)
 		return
 	}
 
-	t.Log("===================================================================")
-	t.Logf("Start of %s %d error output:\n", title, index)
-
+	t.Logf("==================== Start of %s %d error output ==================\n", title, index)
 	for _, err := range errorLines {
 		t.Log(err)
 	}
-
-	t.Logf("\nEnd of %s %d error output:", title, index)
-	t.Log("===================================================================")
+	t.Logf("===================== End of %s %d error output ====================\n", title, index)
 }

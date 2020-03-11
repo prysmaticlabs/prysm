@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"google.golang.org/grpc"
 )
 
 // ValidatorsAreActive ensures the expected amount of validators are active.
@@ -23,6 +24,13 @@ var ValidatorsParticipating = Evaluator{
 	Evaluation: validatorsParticipating,
 }
 
+// ValidatorsSlashed ensures the expected amount of validators are active.
+var ValidatorsSlashed = Evaluator{
+	Name:       "validators_slashed_epoch_%d",
+	Policy:     afterNthEpoch(0),
+	Evaluation: validatorsSlashed,
+}
+
 // Not including first epoch because of issues with genesis.
 func afterNthEpoch(afterEpoch uint64) func(uint64) bool {
 	return func(currentEpoch uint64) bool {
@@ -30,7 +38,8 @@ func afterNthEpoch(afterEpoch uint64) func(uint64) bool {
 	}
 }
 
-func validatorsAreActive(client eth.BeaconChainClient) error {
+func validatorsAreActive(conn *grpc.ClientConn) error {
+	client := eth.NewBeaconChainClient(conn)
 	// Balances actually fluctuate but we just want to check initial balance.
 	validatorRequest := &eth.ListValidatorsRequest{
 		PageSize: int32(params.BeaconConfig().MinGenesisActiveValidatorCount),
@@ -83,7 +92,8 @@ func validatorsAreActive(client eth.BeaconChainClient) error {
 }
 
 // validatorsParticipating ensures the validators have an acceptable participation rate.
-func validatorsParticipating(client eth.BeaconChainClient) error {
+func validatorsParticipating(conn *grpc.ClientConn) error {
+	client := eth.NewBeaconChainClient(conn)
 	validatorRequest := &eth.GetValidatorParticipationRequest{}
 	participation, err := client.GetValidatorParticipation(context.Background(), validatorRequest)
 	if err != nil {
@@ -99,6 +109,32 @@ func validatorsParticipating(client eth.BeaconChainClient) error {
 			expected,
 			partRate,
 		)
+	}
+	return nil
+}
+
+func validatorsSlashed(conn *grpc.ClientConn) error {
+	ctx := context.Background()
+	client := eth.NewBeaconChainClient(conn)
+	req := &eth.GetValidatorActiveSetChangesRequest{}
+	eth.ActiveSetChanges{
+		Epoch:                0,
+		ActivatedPublicKeys:  nil,
+		ActivatedIndices:     nil,
+		ExitedPublicKeys:     nil,
+		ExitedIndices:        nil,
+		SlashedPublicKeys:    nil,
+		SlashedIndices:       nil,
+		EjectedPublicKeys:    nil,
+		EjectedIndices:       nil,
+	}
+	changes, err := client.GetValidatorActiveSetChanges(ctx, req)
+	if err != nil {
+		return err
+	}
+	fmt.Println(changes.Epoch)
+	if len(changes.SlashedIndices) != 2 {
+		return fmt.Errorf("expected %d indices to be slashed, received %d", 2, len(changes.SlashedIndices))
 	}
 	return nil
 }

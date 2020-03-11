@@ -54,12 +54,13 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*ev.B
 	}
 
 	args := []string{
+		fmt.Sprintf("--datadir=%s/eth2-beacon-node-%d", tmpPath, index),
+		fmt.Sprintf("--log-file=%s", stdOutFile.Name()),
 		"--force-clear-db",
 		"--no-discovery",
 		"--http-web3provider=http://127.0.0.1:8745",
 		"--web3provider=ws://127.0.0.1:8746",
 		fmt.Sprintf("--min-sync-peers=%d", config.numBeaconNodes),
-		fmt.Sprintf("--datadir=%s/eth2-beacon-node-%d", tmpPath, index),
 		fmt.Sprintf("--deposit-contract=%s", config.contractAddr.Hex()),
 		fmt.Sprintf("--rpc-port=%d", 4200+index),
 		fmt.Sprintf("--p2p-udp-port=%d", 12200+index),
@@ -68,7 +69,6 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*ev.B
 		fmt.Sprintf("--grpc-gateway-port=%d", 3400+index),
 		fmt.Sprintf("--contract-deployment-block=%d", 0),
 		fmt.Sprintf("--rpc-max-page-size=%d", params.BeaconConfig().MinGenesisActiveValidatorCount),
-		fmt.Sprintf("--log-file=%s", stdOutFile.Name()),
 	}
 	args = append(args, config.beaconFlags...)
 
@@ -79,8 +79,8 @@ func startNewBeaconNode(t *testing.T, config *end2EndConfig, beaconNodes []*ev.B
 		}
 	}
 
-	t.Logf("Starting beacon chain %d with flags: %s", index, strings.Join(args, " "))
 	cmd := exec.Command(binaryPath, args...)
+	t.Logf("Starting beacon chain %d with flags: %s", index, strings.Join(args[2:], " "))
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("Failed to start beacon node: %v", err)
 	}
