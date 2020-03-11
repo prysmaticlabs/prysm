@@ -1159,17 +1159,23 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 		pubKey(2),
 		pubKey(4),
 	}
+	wantedActiveIndices := []uint64{0, 2, 4}
 	wantedSlashed := [][]byte{
 		pubKey(3),
 	}
+	wantedSlashedIndices := []uint64{3}
 	wantedExited := [][]byte{
 		pubKey(5),
 	}
+	wantedExitedIndices := []uint64{5}
 	wanted := &ethpb.ActiveSetChanges{
 		Epoch:               0,
 		ActivatedPublicKeys: wantedActive,
+		ActivatedIndices:    wantedActiveIndices,
 		ExitedPublicKeys:    wantedExited,
+		ExitedIndices:       wantedExitedIndices,
 		SlashedPublicKeys:   wantedSlashed,
+		SlashedIndices:      wantedSlashedIndices,
 	}
 	if !proto.Equal(wanted, res) {
 		t.Errorf("Wanted %v, received %v", wanted, res)
@@ -1246,17 +1252,23 @@ func TestServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
 		wantedKeys[2],
 		wantedKeys[4],
 	}
+	wantedActiveIndices := []uint64{0, 2, 4}
 	wantedSlashed := [][]byte{
 		wantedKeys[3],
 	}
+	wantedSlashedIndices := []uint64{3}
 	wantedExited := [][]byte{
 		wantedKeys[5],
 	}
+	wantedExitedIndices := []uint64{5}
 	wanted := &ethpb.ActiveSetChanges{
 		Epoch:               0,
 		ActivatedPublicKeys: wantedActive,
+		ActivatedIndices:    wantedActiveIndices,
 		ExitedPublicKeys:    wantedExited,
+		ExitedIndices:       wantedExitedIndices,
 		SlashedPublicKeys:   wantedSlashed,
+		SlashedIndices:      wantedSlashedIndices,
 	}
 	if !proto.Equal(wanted, res) {
 		t.Errorf("Wanted %v, received %v", wanted, res)

@@ -395,8 +395,11 @@ func (bs *Server) GetValidatorActiveSetChanges(
 	return &ethpb.ActiveSetChanges{
 		Epoch:               requestedEpoch,
 		ActivatedPublicKeys: activatedKeys,
+		ActivatedIndices:    activatedIndices,
 		ExitedPublicKeys:    exitedKeys,
+		ExitedIndices:       exitedIndices,
 		SlashedPublicKeys:   slashedKeys,
+		SlashedIndices:      slashedIndices,
 	}, nil
 }
 
