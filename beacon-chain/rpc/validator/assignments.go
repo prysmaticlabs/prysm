@@ -43,7 +43,6 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 
 	var validatorAssignments []*ethpb.DutiesResponse_Duty
 	for _, pubKey := range req.PublicKeys {
-		log.Errorf(" %#x", pubKey)
 		if ctx.Err() != nil {
 			return nil, status.Errorf(codes.Aborted, "Could not continue fetching assignments: %v", ctx.Err())
 		}
@@ -68,12 +67,9 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 				assignment.CommitteeIndex = ca.CommitteeIndex
 			}
 		} else {
-			log.Error("no committee index")
 			vs := vs.validatorStatus(ctx, pubKey, s)
-			log.Error(vs, pubKey)
 			assignment.Status = vs.Status
 		}
-		log.Error("assignment", assignment)
 		validatorAssignments = append(validatorAssignments, assignment)
 	}
 
