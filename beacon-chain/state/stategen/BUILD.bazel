@@ -34,6 +34,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "cold_test.go",
         "epoch_boundary_root_test.go",
         "hot_test.go",
         "replay_test.go",

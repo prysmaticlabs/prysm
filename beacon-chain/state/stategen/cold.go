@@ -51,4 +51,3 @@ func (s *State) recoverArchivedPointByIndex(ctx context.Context, archiveIndex ui
 
 	return archivedState, nil
 }
-
