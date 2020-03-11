@@ -7,6 +7,7 @@ go_library(
         "errors.go",
         "hot.go",
         "log.go",
+        "migrate.go",
         "replay.go",
         "service.go",
     ],
