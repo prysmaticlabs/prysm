@@ -4,10 +4,11 @@ import (
 	"context"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 )
 
 // GetDuties returns the committee assignment response from a given validator public key.
@@ -54,6 +55,7 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 			return nil, status.Errorf(codes.Internal, "Could not fetch validator idx for public key %#x: %v", pubKey, err)
 		}
 		if ok {
+
 			ca, ok := committeeAssignments[idx]
 			if ok {
 				assignment.Committee = ca.Committee
@@ -63,6 +65,10 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 				assignment.AttesterSlot = ca.AttesterSlot
 				assignment.ProposerSlot = proposerIndexToSlot[idx]
 				assignment.CommitteeIndex = ca.CommitteeIndex
+			} else {
+				vs, _, _ := vs.retrieveStatusFromState(ctx, pubKey, s)
+				log.Println(vs, pubKey)
+				assignment.Status = vs
 			}
 		}
 
