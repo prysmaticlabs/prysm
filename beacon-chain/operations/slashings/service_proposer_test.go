@@ -1,6 +1,7 @@
 package slashings
 
 import (
+	"context"
 	"reflect"
 	"strings"
 	"testing"
@@ -10,6 +11,7 @@ import (
 	beaconstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func proposerSlashingForValIdx(valIdx uint64) *ethpb.ProposerSlashing {
@@ -332,48 +334,91 @@ func TestPool_MarkIncludedProposerSlashing(t *testing.T) {
 	}
 }
 
-//func TestPool_PendingProposerSlashings(t *testing.T) {
-//	type fields struct {
-//		pending []*ethpb.ProposerSlashing
-//	}
-//	type args struct {
-//		validatorToSlash uint64
-//	}
-//	tests := []struct {
-//		name   string
-//		fields fields
-//		want   []*ethpb.ProposerSlashing
-//	}{
-//		{
-//			name: "Empty list",
-//			fields: fields{
-//				pending: []*ethpb.ProposerSlashing{},
-//			},
-//			want: []*ethpb.ProposerSlashing{},
-//		},
-//		{
-//			name: "All eligible",
-//			fields: fields{
-//				pending: generateNProposerSlashings(6),
-//			},
-//			want: generateNProposerSlashings(6),
-//		},
-//		{
-//			name: "All eligible, more than max",
-//			fields: fields{
-//				pending: generateNProposerSlashings(24),
-//			},
-//			want: generateNProposerSlashings(16),
-//		},
-//	}
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			p := &Pool{
-//				pendingProposerSlashing: tt.fields.pending,
-//			}
-//			if got := p.PendingProposerSlashings(); !reflect.DeepEqual(got, tt.want) {
-//				t.Errorf("PendingProposerSlashings() = %v, want %v", got, tt.want)
-//			}
-//		})
-//	}
-//}
+func TestPool_PendingProposerSlashings(t *testing.T) {
+	type fields struct {
+		pending []*ethpb.ProposerSlashing
+	}
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
+	slashings := make([]*ethpb.ProposerSlashing, 20)
+	for i := 0; i < len(slashings); i++ {
+		sl, err := testutil.GenerateProposerSlashingForValidator(beaconState, privKeys[i], uint64(i))
+		if err != nil {
+			t.Fatal(err)
+		}
+		slashings[i] = sl
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   []*ethpb.ProposerSlashing
+	}{
+		{
+			name: "Empty list",
+			fields: fields{
+				pending: []*ethpb.ProposerSlashing{},
+			},
+			want: []*ethpb.ProposerSlashing{},
+		},
+		{
+			name: "All eligible",
+			fields: fields{
+				pending: slashings[:params.BeaconConfig().MaxProposerSlashings],
+			},
+			want: slashings[:params.BeaconConfig().MaxProposerSlashings],
+		},
+		{
+			name: "Multiple indices",
+			fields: fields{
+				pending: slashings[3:6],
+			},
+			want: slashings[3:6],
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := &Pool{
+				pendingProposerSlashing: tt.fields.pending,
+			}
+			if got := p.PendingProposerSlashings(
+				context.Background(),
+				beaconState,
+			); !reflect.DeepEqual(tt.want, got) {
+				t.Errorf("Unexpected return from PendingProposerSlashings, wanted %v, received %v", tt.want, got)
+			}
+		})
+	}
+}
+
+func TestPool_PendingProposerSlashings_SigFailsVerify_ClearPool(t *testing.T) {
+	conf := params.BeaconConfig()
+	conf.MaxAttesterSlashings = 2
+	params.OverrideBeaconConfig(conf)
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, 64)
+	slashings := make([]*ethpb.ProposerSlashing, 2)
+	for i := 0; i < 2; i++ {
+		sl, err := testutil.GenerateProposerSlashingForValidator(beaconState, privKeys[i], uint64(i))
+		if err != nil {
+			t.Fatal(err)
+		}
+		slashings[i] = sl
+	}
+	// We mess up the signature of the second slashing.
+	badSig := make([]byte, 96)
+	copy(badSig, "muahaha")
+	slashings[1].Header_1.Signature = badSig
+	p := &Pool{
+		pendingProposerSlashing: slashings,
+	}
+	// We only want a single slashing to remain.
+	want := slashings[0:1]
+	if got := p.PendingProposerSlashings(
+		context.Background(),
+		beaconState,
+	); !reflect.DeepEqual(want, got) {
+		t.Errorf("Unexpected return from PendingProposerSlashings, wanted %v, received %v", want, got)
+	}
+	// We expect to only have 1 pending proposer slashing in the pool.
+	if len(p.pendingProposerSlashing) != 1 {
+		t.Error("Expected failed proposer slashing to have been cleared from pool")
+	}
+}
