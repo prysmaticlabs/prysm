@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "blocks_fetcher.go",
+        "blocks_queue.go",
         "log.go",
         "round_robin.go",
         "service.go",
@@ -41,6 +42,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "blocks_fetcher_test.go",
+        "blocks_queue_test.go",
         "round_robin_test.go",
     ],
     embed = [":go_default_library"],
