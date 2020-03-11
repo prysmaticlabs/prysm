@@ -20,14 +20,6 @@ func proposerSlashingForValIdx(valIdx uint64) *ethpb.ProposerSlashing {
 	}
 }
 
-func generateNProposerSlashings(n uint64) []*ethpb.ProposerSlashing {
-	proposerSlashings := make([]*ethpb.ProposerSlashing, n)
-	for i := uint64(0); i < n; i++ {
-		proposerSlashings[i] = proposerSlashingForValIdx(i)
-	}
-	return proposerSlashings
-}
-
 func TestPool_InsertProposerSlashing(t *testing.T) {
 	type fields struct {
 		wantErr  bool
