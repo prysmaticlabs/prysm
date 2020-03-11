@@ -34,6 +34,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "getters_test.go",
         "references_test.go",
         "types_test.go",
     ],
