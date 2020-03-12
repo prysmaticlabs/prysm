@@ -28,7 +28,7 @@ const fetchRequestsBuffer = 8 // number of pending fetch requests
 
 var (
 	errNoPeersAvailable   = errors.New("no peers available, waiting for reconnect")
-	errCtxIsDone          = errors.New("fetcher's context is done, reinitialize")
+	errFetcherCtxIsDone   = errors.New("fetcher's context is done, reinitialize")
 	errStartSlotIsTooHigh = errors.New("start slot is bigger than highest finalized slot")
 )
 
@@ -42,14 +42,14 @@ type blocksFetcherConfig struct {
 // On an incoming requests, requested block range is evenly divided
 // among available peers (for fair network load distribution).
 type blocksFetcher struct {
-	ctx                    context.Context
-	cancel                 context.CancelFunc
-	headFetcher            blockchain.HeadFetcher
-	p2p                    p2p.P2P
-	rateLimiter            *leakybucket.Collector
-	requests               chan *fetchRequestParams   // incoming fetch requests from downstream clients
-	receivedFetchResponses chan *fetchRequestResponse // responses from peers are forwarded to downstream clients
-	quit                   chan struct{}              // termination notifier
+	ctx            context.Context
+	cancel         context.CancelFunc
+	headFetcher    blockchain.HeadFetcher
+	p2p            p2p.P2P
+	rateLimiter    *leakybucket.Collector
+	fetchRequests  chan *fetchRequestParams
+	fetchResponses chan *fetchRequestResponse
+	quit           chan struct{} // termination notifier
 }
 
 // fetchRequestParams holds parameters necessary to schedule a fetch request.
@@ -77,14 +77,14 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 		false /* deleteEmptyBuckets */)
 
 	return &blocksFetcher{
-		ctx:                    ctx,
-		cancel:                 cancel,
-		headFetcher:            cfg.headFetcher,
-		p2p:                    cfg.p2p,
-		rateLimiter:            rateLimiter,
-		requests:               make(chan *fetchRequestParams, fetchRequestsBuffer),
-		receivedFetchResponses: make(chan *fetchRequestResponse),
-		quit:                   make(chan struct{}),
+		ctx:            ctx,
+		cancel:         cancel,
+		headFetcher:    cfg.headFetcher,
+		p2p:            cfg.p2p,
+		rateLimiter:    rateLimiter,
+		fetchRequests:  make(chan *fetchRequestParams, fetchRequestsBuffer),
+		fetchResponses: make(chan *fetchRequestResponse),
+		quit:           make(chan struct{}),
 	}
 }
 
@@ -92,7 +92,7 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 func (f *blocksFetcher) start() error {
 	select {
 	case <-f.ctx.Done():
-		return errCtxIsDone
+		return errFetcherCtxIsDone
 	default:
 		go f.loop()
 		return nil
@@ -107,21 +107,32 @@ func (f *blocksFetcher) stop() {
 
 // requestResponses exposes a channel into which fetcher pushes generated request responses.
 func (f *blocksFetcher) requestResponses() <-chan *fetchRequestResponse {
-	return f.receivedFetchResponses
+	return f.fetchResponses
 }
 
 // loop is a main fetcher loop, listens for incoming requests/cancellations, forwards outgoing responses.
 func (f *blocksFetcher) loop() {
-	defer close(f.receivedFetchResponses)
 	defer close(f.quit)
+
+	// Wait for all loop's goroutines to finish, and safely release resources.
+	wg := &sync.WaitGroup{}
+	defer func() {
+		wg.Wait()
+		close(f.fetchResponses)
+	}()
 
 	for {
 		select {
-		case req := <-f.requests:
-			go f.handleRequest(req.ctx, req.start, req.count)
 		case <-f.ctx.Done():
-			log.Debug("Context closed, exiting goroutine")
+			log.Debug("Context closed, exiting goroutine (blocks fetcher)")
 			return
+		case req := <-f.fetchRequests:
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+
+				f.handleRequest(req.ctx, req.start, req.count)
+			}()
 		}
 	}
 }
@@ -130,9 +141,9 @@ func (f *blocksFetcher) loop() {
 func (f *blocksFetcher) scheduleRequest(ctx context.Context, start, count uint64) error {
 	select {
 	case <-f.ctx.Done():
-		return errCtxIsDone
+		return errFetcherCtxIsDone
 	default:
-		f.requests <- &fetchRequestParams{
+		f.fetchRequests <- &fetchRequestParams{
 			ctx:   ctx,
 			start: start,
 			count: count,
@@ -146,12 +157,18 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start, count uint64) 
 	ctx, span := trace.StartSpan(ctx, "initialsync.handleRequest")
 	defer span.End()
 
-	if ctx.Err() != nil {
-		f.receivedFetchResponses <- &fetchRequestResponse{
-			start: start,
-			count: count,
-			err:   ctx.Err(),
+	// sendResponse ensures that response is not sent to a closed channel (when context is done).
+	sendResponse := func(ctx context.Context, response *fetchRequestResponse) {
+		if ctx.Err() != nil {
+			log.WithError(ctx.Err()).Debug("Can not send fetch request response")
+			return
 		}
+
+		f.fetchResponses <- response
+	}
+
+	if ctx.Err() != nil {
+		sendResponse(ctx, nil)
 		return
 	}
 
@@ -173,31 +190,31 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start, count uint64) 
 	highestFinalizedSlot := helpers.StartSlot(finalizedEpoch + 1)
 	if start > highestFinalizedSlot {
 		log.WithError(errStartSlotIsTooHigh).Debug("Block fetch request failed")
-		f.receivedFetchResponses <- &fetchRequestResponse{
+		sendResponse(ctx, &fetchRequestResponse{
 			start: start,
 			count: count,
 			err:   errStartSlotIsTooHigh,
-		}
+		})
 		return
 	}
 
 	resp, err := f.collectPeerResponses(ctx, root, finalizedEpoch, start, 1, count, peers)
 	if err != nil {
 		log.WithError(err).Debug("Block fetch request failed")
-		f.receivedFetchResponses <- &fetchRequestResponse{
+		sendResponse(ctx, &fetchRequestResponse{
 			start: start,
 			count: count,
 			err:   err,
-		}
+		})
 		return
 	}
 
-	f.receivedFetchResponses <- &fetchRequestResponse{
+	sendResponse(ctx, &fetchRequestResponse{
 		start:  start,
 		count:  count,
 		blocks: resp,
 		peers:  peers,
-	}
+	})
 }
 
 // collectPeerResponses orchestrates block fetching from the available peers.
