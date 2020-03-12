@@ -9,9 +9,11 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -53,6 +55,8 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
+	d := db.SetupDB(t)
+	defer db.TeardownDB(t, d)
 	chainService := &mockChain.ChainService{}
 	r := Service{
 		ctx:          ctx,
@@ -60,6 +64,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 		initialSync:  &mockSync.Sync{IsSyncing: false},
 		slashingPool: slashings.NewPool(),
 		chain:        chainService,
+		db:           d,
 	}
 	topic := "/eth2/attester_slashing"
 	var wg sync.WaitGroup
@@ -81,6 +86,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error generating attester slashing")
 	}
+	r.db.SaveState(ctx, beaconState, bytesutil.ToBytes32(attesterSlashing.Attestation_1.Data.BeaconBlockRoot))
 	p2p.ReceivePubSub(topic, attesterSlashing)
 
 	if testutil.WaitTimeout(&wg, time.Second) {
@@ -96,12 +102,15 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	chainService := &mockChain.ChainService{}
+	d := db.SetupDB(t)
+	defer db.TeardownDB(t, d)
 	r := Service{
 		ctx:          ctx,
 		p2p:          p2p,
 		initialSync:  &mockSync.Sync{IsSyncing: false},
 		slashingPool: slashings.NewPool(),
 		chain:        chainService,
+		db:           d,
 	}
 	topic := "/eth2/proposer_slashing"
 	var wg sync.WaitGroup
@@ -123,6 +132,8 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error generating proposer slashing")
 	}
+	root, err := ssz.HashTreeRoot(proposerSlashing.Header_1.Header)
+	r.db.SaveState(ctx, beaconState, root)
 	p2p.ReceivePubSub(topic, proposerSlashing)
 
 	if testutil.WaitTimeout(&wg, time.Second) {
