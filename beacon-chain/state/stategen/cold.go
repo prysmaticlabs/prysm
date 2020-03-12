@@ -2,11 +2,39 @@ package stategen
 
 import (
 	"context"
+	"encoding/hex"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
+
+// This saves a pre finalized beacon state in the cold section of the DB. The returns an error
+// and not store anything if the state does not lie on an archive point boundary.
+func (s *State) saveColdState(ctx context.Context, blockRoot [32]byte, state *state.BeaconState) error {
+	ctx, span := trace.StartSpan(ctx, "stateGen.saveColdState")
+	defer span.End()
+
+	if state.Slot()%s.slotsPerArchivedPoint != 0 {
+		return errSlotNonArchivedPoint
+	}
+
+	archivedPointIndex := state.Slot() / s.slotsPerArchivedPoint
+	if err := s.beaconDB.SaveArchivedPointState(ctx, state, archivedPointIndex); err != nil {
+		return err
+	}
+	if err := s.beaconDB.SaveArchivedPointRoot(ctx, blockRoot, archivedPointIndex); err != nil {
+		return err
+	}
+
+	log.WithFields(logrus.Fields{
+		"slot":      state.Slot(),
+		"blockRoot": hex.EncodeToString(bytesutil.Trunc(blockRoot[:]))}).Info("Saved full state on archived point")
+
+	return nil
+}
 
 // Given the archive index, this returns the archived cold state in the DB.
 // If the archived state does not exist in the state, it'll compute it and save it.
