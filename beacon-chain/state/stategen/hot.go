@@ -56,7 +56,6 @@ func (s *State) saveHotState(ctx context.Context, blockRoot [32]byte, state *sta
 	return nil
 }
 
-
 // This loads a post finalized beacon state from the hot section of the DB. If necessary it will
 // replay blocks starting from the nearest epoch boundary. It returns the beacon state that
 // corresponds to the input block root.

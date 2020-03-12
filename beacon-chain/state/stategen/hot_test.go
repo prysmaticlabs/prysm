@@ -31,7 +31,71 @@ func TestSaveHotState_AlreadyHas(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Should not save the state.
+	// Should not save the state and state summary.
+	if service.beaconDB.HasState(ctx, r) {
+		t.Error("Should not have saved the state")
+	}
+	if service.beaconDB.HasStateSummary(ctx, r) {
+		t.Error("Should have saved the state summary")
+	}
+	testutil.AssertLogsDoNotContain(t, hook, "Saved full state on epoch boundary")
+}
+
+func TestSaveHotState_CanSaveOnEpochBoundary(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	service := New(db)
+
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch)
+	r := [32]byte{'A'}
+
+	if err := service.saveHotState(ctx, r, beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	// Should save both state and state summary.
+	if !service.beaconDB.HasState(ctx, r) {
+		t.Error("Should have saved the state")
+	}
+	if !service.beaconDB.HasStateSummary(ctx, r) {
+		t.Error("Should have saved the state summary")
+	}
+	testutil.AssertLogsContain(t, hook, "Saved full state on epoch boundary")
+}
+
+func TestSaveHotState_NoSaveNotEpochBoundary(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+	service := New(db)
+
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	beaconState.SetSlot(params.BeaconConfig().SlotsPerEpoch - 1)
+	r := [32]byte{'A'}
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}}
+	if err := db.SaveBlock(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+	gRoot, _ := ssz.HashTreeRoot(b.Block)
+	if err := db.SaveGenesisBlockRoot(ctx, gRoot); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := service.saveHotState(ctx, r, beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	// Should only save state summary.
+	if service.beaconDB.HasState(ctx, r) {
+		t.Error("Should not have saved the state")
+	}
+	if !service.beaconDB.HasStateSummary(ctx, r) {
+		t.Error("Should have saved the state summary")
+	}
 	testutil.AssertLogsDoNotContain(t, hook, "Saved full state on epoch boundary")
 }
 
