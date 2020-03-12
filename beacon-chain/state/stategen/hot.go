@@ -108,7 +108,7 @@ func (s *State) loadHotStateBySlot(ctx context.Context, slot uint64) (*state.Bea
 // If the epoch boundary does not have a valid root, it then recovers by going
 // back to find the last slot before boundary which has a valid block.
 func (s *State) loadEpochBoundaryRoot(ctx context.Context, blockRoot [32]byte, state *state.BeaconState) ([32]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "stateGen.epochBoundaryRoot")
+	ctx, span := trace.StartSpan(ctx, "stateGen.loadEpochBoundaryRoot")
 	defer span.End()
 
 	boundarySlot := helpers.CurrentEpoch(state) * params.BeaconConfig().SlotsPerEpoch
