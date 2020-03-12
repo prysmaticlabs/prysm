@@ -8,6 +8,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -55,6 +56,79 @@ func TestSaveColdState_CanSave(t *testing.T) {
 	}
 	if !proto.Equal(receivedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe()) {
 		t.Error("Did not get wanted state")
+	}
+}
+
+func TestLoadColdStateByRoot_NoStateSummary(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	service := New(db)
+	if _, err := service.loadColdStateByRoot(ctx, [32]byte{'a'}); err != errUnknownStateSummary {
+		t.Fatal("Did not get correct error")
+	}
+}
+
+func TestLoadColdStateByRoot_ByArchivedPoint(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	service := New(db)
+	service.slotsPerArchivedPoint = 1
+
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	if err := service.beaconDB.SaveArchivedPointState(ctx, beaconState, 1); err != nil {
+		t.Fatal(err)
+	}
+	r := [32]byte{'a'}
+	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
+		Root: r[:],
+		Slot: 1,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	loadedState, err := service.loadColdStateByRoot(ctx, r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe()) {
+		t.Error("Did not correctly save state")
+	}
+}
+
+func TestLoadColdStateByRoot_IntermediatePlayback(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	service := New(db)
+	service.slotsPerArchivedPoint = 2
+
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	if err := service.beaconDB.SaveArchivedPointState(ctx, beaconState, 1); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveArchivedPointRoot(ctx, [32]byte{}, 1); err != nil {
+		t.Fatal(err)
+	}
+	r := [32]byte{'a'}
+	slot := uint64(3)
+	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
+		Root: r[:],
+		Slot: slot,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	loadedState, err := service.loadColdStateByRoot(ctx, r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loadedState.Slot() != slot {
+		t.Error("Did not correctly save state")
 	}
 }
 

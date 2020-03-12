@@ -72,8 +72,8 @@ func (s *State) loadColdStateByArchivedPoint(ctx context.Context, archivedPoint 
 	return s.beaconDB.ArchivedPointState(ctx, archivedPoint)
 }
 
-// This loads a cold state by slot and block root which lies between the archive point.
-// This is a faster implementation given the block root is provided.
+// This loads a cold state by slot and block root combinations.
+// This is a faster implementation than by slot given the input block root is provided.
 func (s *State) loadColdIntermediateStateByRoot(ctx context.Context, slot uint64, blockRoot [32]byte) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.loadColdIntermediateStateByRoot")
 	defer span.End()
