@@ -6,10 +6,13 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
+	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -67,10 +70,19 @@ func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 		t.Fatalf("Could not get signing root %v", err)
 	}
 
+	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
+	p := &mockPOW.POWChain{
+		TimesByHeight: map[int]uint64{
+			0: uint64(height),
+		},
+	}
+
 	vs := &Server{
 		BeaconDB:    db,
 		HeadFetcher: &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		Eth1InfoFetcher: p,
+		DepositFetcher: depositcache.NewDepositCache(),
 	}
 
 	pubKey := pubKey(99999)
