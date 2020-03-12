@@ -18,6 +18,8 @@ const (
 	queueMaxPendingRequests  = 4
 	queueFetchRequestTimeout = 8 * time.Second
 	queueMaxPendingBlocks    = 16 * queueMaxPendingRequests * blockBatchSize
+	queueRefreshRate         = time.Second / 20
+	queueStopCallTimeout     = 1 * time.Second
 )
 
 const (
@@ -29,6 +31,7 @@ const (
 var (
 	errQueueCtxIsDone             = errors.New("queue's context is done, reinitialize")
 	errWaitPendingBlocksDepleting = errors.New("waiting for pending blocks to deplete")
+	errQueueTakesTooLongToStop    = errors.New("queue takes to long to stop")
 )
 
 // blocksProvider exposes enough methods for queue to fetch incoming blocks.
@@ -135,9 +138,14 @@ func (q *blocksQueue) start() error {
 }
 
 // stop terminates all queue operations.
-func (q *blocksQueue) stop() {
+func (q *blocksQueue) stop() error {
 	q.cancel()
-	<-q.quit
+	select {
+	case <-q.quit:
+		return nil
+	case <-time.After(queueStopCallTimeout):
+		return errQueueTakesTooLongToStop
+	}
 }
 
 // loop is a main queue loop.
