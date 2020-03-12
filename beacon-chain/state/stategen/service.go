@@ -20,6 +20,8 @@ type State struct {
 	splitInfo               *splitSlotAndRoot
 }
 
+// This tracks the split point. The point where slot and the block root of
+// cold and hot sections of the DB splits.
 type splitSlotAndRoot struct {
 	slot uint64
 	root [32]byte
