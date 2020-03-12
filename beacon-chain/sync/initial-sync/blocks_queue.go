@@ -375,13 +375,13 @@ func (q *blocksQueue) parseFetchResponse(ctx context.Context, response *fetchReq
 				SignedBeaconBlock: block,
 			}
 			delete(responseBlocks, slot)
-			skippedBlocks++
 			continue
 		}
 		q.state.cachedBlocks[slot] = &cachedBlock{}
+		skippedBlocks++
 	}
 
-	// If there are any items left in incoming response, log them too.
+	// If there are any items left in incoming response, cache them too.
 	for slot, block := range responseBlocks {
 		q.state.cachedBlocks[slot] = &cachedBlock{
 			SignedBeaconBlock: block,

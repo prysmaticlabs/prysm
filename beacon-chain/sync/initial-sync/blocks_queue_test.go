@@ -11,6 +11,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -783,7 +786,7 @@ func TestBlocksQueueParseFetchResponse(t *testing.T) {
 			if !ok {
 				t.Errorf("expeced block not found: %v", i)
 			}
-			if block.SignedBeaconBlock!= nil {
+			if block.SignedBeaconBlock != nil {
 				t.Errorf("unexpectedly marked as not skipped: %v", i)
 			}
 		}
@@ -792,7 +795,7 @@ func TestBlocksQueueParseFetchResponse(t *testing.T) {
 			if !ok {
 				t.Errorf("expeced block not found: %v", i)
 			}
-			if block.SignedBeaconBlock== nil {
+			if block.SignedBeaconBlock == nil {
 				t.Errorf("unexpectedly marked as skipped: %v", i)
 			}
 		}
@@ -801,184 +804,184 @@ func TestBlocksQueueParseFetchResponse(t *testing.T) {
 			if !ok {
 				t.Errorf("expeced block not found: %v", i)
 			}
-			if block.SignedBeaconBlock== nil {
+			if block.SignedBeaconBlock == nil {
 				t.Errorf("unexpectedly marked as skipped: %v", i)
 			}
 		}
 	})
 }
 
-//func TestBlocksQueueLoop(t *testing.T) {
-//	tests := []struct {
-//		name                string
-//		highestExpectedSlot uint64
-//		expectedBlockSlots  []uint64
-//		peers               []*peerData
-//	}{
-//		{
-//			name:                "Single peer with all blocks",
-//			highestExpectedSlot: 251,
-//			expectedBlockSlots:  makeSequence(1, 251),
-//			peers: []*peerData{
-//				{
-//					blocks:         makeSequence(1, 320),
-//					finalizedEpoch: 8,
-//					headSlot:       320,
-//				},
-//			},
-//		},
-//		{
-//			name:                "Multiple peers with all blocks",
-//			highestExpectedSlot: 251,
-//			expectedBlockSlots:  makeSequence(1, 251),
-//			peers: []*peerData{
-//				{
-//					blocks:         makeSequence(1, 320),
-//					finalizedEpoch: 8,
-//					headSlot:       320,
-//				},
-//				{
-//					blocks:         makeSequence(1, 320),
-//					finalizedEpoch: 8,
-//					headSlot:       320,
-//				},
-//				{
-//					blocks:         makeSequence(1, 320),
-//					finalizedEpoch: 8,
-//					headSlot:       320,
-//				},
-//				{
-//					blocks:         makeSequence(1, 320),
-//					finalizedEpoch: 8,
-//					headSlot:       320,
-//				},
-//				{
-//					blocks:         makeSequence(1, 320),
-//					finalizedEpoch: 8,
-//					headSlot:       320,
-//				},
-//			},
-//		},
-//		{
-//			name:                "Multiple peers with skipped slots",
-//			highestExpectedSlot: 576,
-//			expectedBlockSlots:  append(makeSequence(1, 64), makeSequence(500, 576)...), // up to 18th epoch
-//			peers: []*peerData{
-//				{
-//					blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
-//					finalizedEpoch: 18,
-//					headSlot:       640,
-//				},
-//				{
-//					blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
-//					finalizedEpoch: 18,
-//					headSlot:       640,
-//				},
-//				{
-//					blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
-//					finalizedEpoch: 18,
-//					headSlot:       640,
-//				},
-//			},
-//		},
-//		//{
-//		//	name:                "Multiple peers with failures",
-//		//	highestExpectedSlot: 128,
-//		//	expectedBlockSlots:  makeSequence(1, 128),
-//		//	peers: []*peerData{
-//		//		{
-//		//			blocks:         makeSequence(1, 320),
-//		//			finalizedEpoch: 8,
-//		//			headSlot:       320,
-//		//			failureSlots:   makeSequence(32*3+1, 32*3+32),
-//		//		},
-//		//		{
-//		//			blocks:         makeSequence(1, 320),
-//		//			finalizedEpoch: 8,
-//		//			headSlot:       320,
-//		//			failureSlots:   makeSequence(1, 32*3),
-//		//		},
-//		//		{
-//		//			blocks:         makeSequence(1, 320),
-//		//			finalizedEpoch: 8,
-//		//			headSlot:       320,
-//		//		},
-//		//		{
-//		//			blocks:         makeSequence(1, 320),
-//		//			finalizedEpoch: 8,
-//		//			headSlot:       320,
-//		//		},
-//		//	},
-//		//},
-//	}
-//
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			mc, p2p, beaconDB := initializeTestServices(t, tt.expectedBlockSlots, tt.peers)
-//			defer dbtest.TeardownDB(t, beaconDB)
-//
-//			ctx, cancel := context.WithCancel(context.Background())
-//			defer cancel()
-//
-//			fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
-//				headFetcher: mc,
-//				p2p:         p2p,
-//			})
-//			queue := newBlocksQueue(ctx, &blocksQueueConfig{
-//				blocksFetcher:       fetcher,
-//				headFetcher:         mc,
-//				highestExpectedSlot: tt.highestExpectedSlot,
-//			})
-//			if err := queue.start(); err != nil {
-//				t.Error(err)
-//			}
-//			processBlock := func(block *eth.SignedBeaconBlock) error {
-//				if !beaconDB.HasBlock(ctx, bytesutil.ToBytes32(block.Block.ParentRoot)) {
-//					return fmt.Errorf("beacon node doesn't have a block in db with root %#x", block.Block.ParentRoot)
-//				}
-//				if featureconfig.Get().InitSyncNoVerify {
-//					if err := mc.ReceiveBlockNoVerify(ctx, block); err != nil {
-//						return err
-//					}
-//				} else {
-//					if err := mc.ReceiveBlockNoPubsubForkchoice(ctx, block); err != nil {
-//						return err
-//					}
-//				}
-//
-//				return nil
-//			}
-//
-//			var blocks []*eth.SignedBeaconBlock
-//			for block := range queue.fetchedBlocks {
-//				blocks = append(blocks, block)
-//				if err := processBlock(block); err != nil {
-//					t.Error(err)
-//					queue.state.scheduler.incrementCounter(failedBlockCounter, 1)
-//					continue
-//				}
-//				queue.state.scheduler.incrementCounter(validBlockCounter, 1)
-//			}
-//
-//			queue.stop()
-//
-//			if queue.headFetcher.HeadSlot() < uint64(len(tt.expectedBlockSlots)) {
-//				t.Errorf("Not enough slots synced, want: %v, got: %v",
-//					len(tt.expectedBlockSlots), queue.headFetcher.HeadSlot())
-//			}
-//			if len(blocks) != len(tt.expectedBlockSlots) {
-//				t.Errorf("Processes wrong number of blocks. Wanted %d got %d", len(tt.expectedBlockSlots), len(blocks))
-//			}
-//			var receivedBlockSlots []uint64
-//			for _, blk := range blocks {
-//				receivedBlockSlots = append(receivedBlockSlots, blk.Block.Slot)
-//			}
-//			if missing := sliceutil.NotUint64(sliceutil.IntersectionUint64(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots); len(missing) > 0 {
-//				t.Errorf("Missing blocks at slots %v", missing)
-//			}
-//		})
-//	}
-//}
+func TestBlocksQueueLoop(t *testing.T) {
+	tests := []struct {
+		name                string
+		highestExpectedSlot uint64
+		expectedBlockSlots  []uint64
+		peers               []*peerData
+	}{
+		{
+			name:                "Single peer with all blocks",
+			highestExpectedSlot: 251,
+			expectedBlockSlots:  makeSequence(1, 251),
+			peers: []*peerData{
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 8,
+					headSlot:       320,
+				},
+			},
+		},
+		{
+			name:                "Multiple peers with all blocks",
+			highestExpectedSlot: 251,
+			expectedBlockSlots:  makeSequence(1, 251),
+			peers: []*peerData{
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 8,
+					headSlot:       320,
+				},
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 8,
+					headSlot:       320,
+				},
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 8,
+					headSlot:       320,
+				},
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 8,
+					headSlot:       320,
+				},
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 8,
+					headSlot:       320,
+				},
+			},
+		},
+		{
+			name:                "Multiple peers with skipped slots",
+			highestExpectedSlot: 576,
+			expectedBlockSlots:  append(makeSequence(1, 64), makeSequence(500, 576)...), // up to 18th epoch
+			peers: []*peerData{
+				{
+					blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
+					finalizedEpoch: 18,
+					headSlot:       640,
+				},
+				{
+					blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
+					finalizedEpoch: 18,
+					headSlot:       640,
+				},
+				{
+					blocks:         append(makeSequence(1, 64), makeSequence(500, 640)...),
+					finalizedEpoch: 18,
+					headSlot:       640,
+				},
+			},
+		},
+		{
+			name:                "Multiple peers with failures",
+			highestExpectedSlot: 128,
+			expectedBlockSlots:  makeSequence(1, 128),
+			peers: []*peerData{
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 8,
+					headSlot:       320,
+					failureSlots:   makeSequence(32*3+1, 32*3+32),
+				},
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 8,
+					headSlot:       320,
+					failureSlots:   makeSequence(1, 32*3),
+				},
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 8,
+					headSlot:       320,
+				},
+				{
+					blocks:         makeSequence(1, 320),
+					finalizedEpoch: 8,
+					headSlot:       320,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mc, p2p, beaconDB := initializeTestServices(t, tt.expectedBlockSlots, tt.peers)
+			defer dbtest.TeardownDB(t, beaconDB)
+
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
+				headFetcher: mc,
+				p2p:         p2p,
+			})
+			queue := newBlocksQueue(ctx, &blocksQueueConfig{
+				blocksFetcher:       fetcher,
+				headFetcher:         mc,
+				highestExpectedSlot: tt.highestExpectedSlot,
+			})
+			if err := queue.start(); err != nil {
+				t.Error(err)
+			}
+			processBlock := func(block *eth.SignedBeaconBlock) error {
+				if !beaconDB.HasBlock(ctx, bytesutil.ToBytes32(block.Block.ParentRoot)) {
+					return fmt.Errorf("beacon node doesn't have a block in db with root %#x", block.Block.ParentRoot)
+				}
+				if featureconfig.Get().InitSyncNoVerify {
+					if err := mc.ReceiveBlockNoVerify(ctx, block); err != nil {
+						return err
+					}
+				} else {
+					if err := mc.ReceiveBlockNoPubsubForkchoice(ctx, block); err != nil {
+						return err
+					}
+				}
+
+				return nil
+			}
+
+			var blocks []*eth.SignedBeaconBlock
+			for block := range queue.fetchedBlocks {
+				blocks = append(blocks, block)
+				if err := processBlock(block); err != nil {
+					t.Error(err)
+					queue.state.scheduler.incrementCounter(failedBlockCounter, 1)
+					continue
+				}
+				queue.state.scheduler.incrementCounter(validBlockCounter, 1)
+			}
+
+			queue.stop()
+
+			if queue.headFetcher.HeadSlot() < uint64(len(tt.expectedBlockSlots)) {
+				t.Errorf("Not enough slots synced, want: %v, got: %v",
+					len(tt.expectedBlockSlots), queue.headFetcher.HeadSlot())
+			}
+			if len(blocks) != len(tt.expectedBlockSlots) {
+				t.Errorf("Processes wrong number of blocks. Wanted %d got %d", len(tt.expectedBlockSlots), len(blocks))
+			}
+			var receivedBlockSlots []uint64
+			for _, blk := range blocks {
+				receivedBlockSlots = append(receivedBlockSlots, blk.Block.Slot)
+			}
+			if missing := sliceutil.NotUint64(sliceutil.IntersectionUint64(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots); len(missing) > 0 {
+				t.Errorf("Missing blocks at slots %v", missing)
+			}
+		})
+	}
+}
 
 func setBlocksFromCache(ctx context.Context, t *testing.T, mc *mock.ChainService, highestSlot uint64) {
 	parentRoot := rootCache[0]
