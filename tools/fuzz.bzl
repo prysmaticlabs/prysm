@@ -63,13 +63,14 @@ CMD ["./png"]
 """
 
 # This isn't working, using --define=gotags=libfuzzer for now
+# See: https://docs.google.com/document/d/1vc8v-kXjvgZOdQdnxPTaV0rrLxtP2XwnD2tAZlYJOqw/edit#
 def _impl(settings, attr):
-    return {"//:libfuzz_gotags": "libfuzz"}
+    return {"//:gotags": "libfuzzer"}
 
 cfg_libfuzz_gotag = transition(
     implementation = _impl,
     inputs = [],
-    outputs = ["//:libfuzz_gotags"],
+    outputs = ["//:gotags"],
 )
 
 # Notes:
@@ -89,21 +90,25 @@ gen_fuzz_main = rule(
     implementation = _gen_fuzz_main_impl,
     attrs = {
         "target_pkg": attr.string(mandatory = True),
+        "_whitelist_function_transition": attr.label(default = "@bazel_tools//tools/whitelists/function_transition_whitelist"),
     },
     outputs = {"out": "generated_main.fuzz.go"},
+    cfg = cfg_libfuzz_gotag,
 )
 
 def go_fuzz_library(name, **kwargs):
-    # TODO: Add a outgoing transition rule for the go_library to apply the correct gotags.
+    # TODO: Add a outgoing (incoming?) transition rule for the go_library to apply the correct gotags.
     go_library(
         name = name + "_lib_with_fuzzer",
         tags = ["manual"],  # TODO: Add tags from kwargs?
+        visibility = ["//visibility:private"],
         **kwargs
     )
     gen_fuzz_main(
         name = name + "_libfuzz_main",
         target_pkg = "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks",  # this needs to be inferred from the go library above.
         tags = ["manual"],
+        visibility = ["//visibility:private"],
     )
     go_binary(
         name = name + "_binary",
@@ -112,59 +117,12 @@ def go_fuzz_library(name, **kwargs):
         linkmode = LINKMODE_C_ARCHIVE,
         cgo = True,
         tags = ["manual"],
+        visibility = ["//visibility:private"],
     )
     native.genrule(
         name = name,
         outs = [name + ".a"],
         srcs = [name + "_binary"],
         cmd = "cp $< $@",
+        visibility = kwargs.get("visibility"),
     )
-
-#def _go_fuzz_library_impl(ctx):
-#    if ctx.var["gotags"] != "libfuzzer":
-#        fail("Gotags must be set to libfuzzer. Use --define=gotags=libfuzzer until the transition rule is fixed.")
-#    if ctx.attr.linkmode != LINKMODE_C_ARCHIVE:
-#        fail("Link mode must be c-archive")
-#
-#    go = go_context(ctx)
-#    if go.pathtype == INFERRED_PATH:
-#        fail("importpath must be specified in this library or one of its embedded libraries")
-#    library = go.new_library(go)
-#
-#    # Need to set these build flags.
-#    #    	buildFlags := []string{
-#    #    		"-buildmode", "c-archive",
-#    #    		"-gcflags", "all=-d=libfuzzer",
-#    #    		"-tags", tags,
-#    #    		"-trimpath",
-#    #    	}
-#
-#    source = go.library_to_source(go, ctx.attr, library, ctx.coverage_instrumented())
-#    archive = go.archive(go, source)
-#
-#    return [
-#        library,
-#        source,
-#        archive,
-#        DefaultInfo(
-#            files = depset([archive.data.file]),
-#        ),
-#        OutputGroupInfo(
-#            cgo_exports = archive.cgo_exports,
-#            compilation_outputs = [archive.data.file],
-#        ),
-#    ]
-
-#go_fuzz_library = go_rule(
-#    implementation = _go_fuzz_library_impl,
-#    attrs = {
-#        "srcs": attr.label_list(allow_files = True),
-#        "deps": attr.label_list(providers = [GoLibrary]),
-#        "embed": attr.label_list(providers = [GoLibrary]),
-#        "fuzz_func": attr.string(default = "Fuzz"),
-#        "linkmode": attr.string(default = LINKMODE_C_ARCHIVE),
-#        # Whitelist is required or bazel complains.
-#        # "_whitelist_function_transition": attr.label(default = "@bazel_tools//tools/whitelists/function_transition_whitelist"),
-#    },
-#    #cfg = cfg_libfuzz_gotag,
-#)
