@@ -28,6 +28,8 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 type validator struct {
@@ -48,6 +50,18 @@ type validator struct {
 	domainDataLock       sync.Mutex
 	domainDataCache      *ristretto.Cache
 }
+
+var validatorStatusesGaugeVec = promauto.NewGaugeVec(
+	prometheus.GaugeOpts{
+		Namespace: "validator",
+		Name:      "statuses",
+		Help:      "validator statuses: 0 UNKNOWN, 1 DEPOSITED, 2 PENDING, 3 ACTIVE, 4 EXITING, 5 SLASHING, 6 EXITED",
+	},
+	[]string{
+		// Validator pubkey.
+		"pubkey",
+	},
+)
 
 // Done cleans up the validator.
 func (v *validator) Done() {
@@ -175,6 +189,10 @@ func (v *validator) checkAndLogValidatorStatus(validatorStatuses []*ethpb.Valida
 			"pubKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.PublicKey[:])),
 			"status": status.Status.Status.String(),
 		})
+		if v.emitAccountMetrics {
+			fmtKey := fmt.Sprintf("%#x", status.PublicKey[:])
+			validatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(status.Status.Status))
+		}
 		if status.Status.Status == ethpb.ValidatorStatus_ACTIVE {
 			activatedKeys = append(activatedKeys, status.PublicKey)
 			continue
@@ -267,6 +285,11 @@ func (v *validator) UpdateDuties(ctx context.Context, slot uint64) error {
 				"committeeIndex": duty.CommitteeIndex,
 				"epoch":          slot / params.BeaconConfig().SlotsPerEpoch,
 				"status":         duty.Status,
+			}
+
+			if v.emitAccountMetrics {
+				fmtKey := fmt.Sprintf("%#x", duty.PublicKey[:])
+				validatorStatusesGaugeVec.WithLabelValues(fmtKey).Set(float64(duty.Status))
 			}
 
 			if duty.Status == ethpb.ValidatorStatus_ACTIVE {

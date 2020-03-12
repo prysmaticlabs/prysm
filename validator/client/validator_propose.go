@@ -30,7 +30,7 @@ var (
 		},
 		[]string{
 			// validator pubkey
-			"pkey",
+			"pubkey",
 		},
 	)
 	validatorProposeFailVec = promauto.NewCounterVec(
@@ -40,7 +40,7 @@ var (
 		},
 		[]string{
 			// validator pubkey
-			"pkey",
+			"pubkey",
 		},
 	)
 )
