@@ -1,8 +1,11 @@
 package state
 
 import (
+	"fmt"
 	"runtime"
 	"sync"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
@@ -12,9 +15,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/memorypool"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 // Reference structs are shared across BeaconState copies to understand when the state must use
@@ -33,12 +38,13 @@ var ErrNilInnerState = errors.New("nil inner state")
 // BeaconState defines a struct containing utilities for the eth2 chain state, defining
 // getters and setters for its respective values and helpful functions such as HashTreeRoot().
 type BeaconState struct {
-	state        *pbp2p.BeaconState
-	lock         sync.RWMutex
-	dirtyFields  map[fieldIndex]interface{}
-	valIdxMap    map[[48]byte]uint64
-	merkleLayers [][][]byte
-
+	state                 *pbp2p.BeaconState
+	lock                  sync.RWMutex
+	dirtyFields           map[fieldIndex]interface{}
+	dirtyIndexes          map[fieldIndex][]uint64
+	stateFieldLeaves      map[fieldIndex][][]*[32]byte
+	valIdxMap             map[[48]byte]uint64
+	merkleLayers          [][][]byte
 	sharedFieldReferences map[fieldIndex]*reference
 }
 
@@ -59,12 +65,27 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 	b := &BeaconState{
 		state:                 st,
 		dirtyFields:           make(map[fieldIndex]interface{}, 20),
+		dirtyIndexes:          make(map[fieldIndex][]uint64, 20),
+		stateFieldLeaves:      make(map[fieldIndex][][]*[32]byte, 20),
 		sharedFieldReferences: make(map[fieldIndex]*reference, 10),
 		valIdxMap:             coreutils.ValidatorIndexMap(st.Validators),
 	}
 
 	for i := 0; i < 20; i++ {
 		b.dirtyFields[fieldIndex(i)] = true
+		b.dirtyIndexes[fieldIndex(i)] = []uint64{}
+		b.stateFieldLeaves[fieldIndex(i)] = [][]*[32]byte{}
+	}
+
+	if featureconfig.Get().EnableSSZCache {
+		blockRtsLayer := stateutil.ReturnTrieLayer(b.state.BlockRoots, params.BeaconConfig().SlotsPerHistoricalRoot, "BlockRoots")
+		b.stateFieldLeaves[blockRoots] = blockRtsLayer
+
+		stateRtsLayer := stateutil.ReturnTrieLayer(b.state.StateRoots, params.BeaconConfig().SlotsPerHistoricalRoot, "StateRoots")
+		b.stateFieldLeaves[stateRoots] = stateRtsLayer
+
+		randaoMixesLayer := stateutil.ReturnTrieLayer(b.state.RandaoMixes, params.BeaconConfig().EpochsPerHistoricalVector, "RandaoMixes")
+		b.stateFieldLeaves[randaoMixes] = randaoMixesLayer
 	}
 
 	// Initialize field reference tracking for shared data.
@@ -121,7 +142,9 @@ func (b *BeaconState) Copy() *BeaconState {
 			FinalizedCheckpoint:         b.FinalizedCheckpoint(),
 		},
 		dirtyFields:           make(map[fieldIndex]interface{}, 20),
+		dirtyIndexes:          make(map[fieldIndex][]uint64, 20),
 		sharedFieldReferences: make(map[fieldIndex]*reference, 10),
+		stateFieldLeaves:      make(map[fieldIndex][][]*[32]byte, 20),
 
 		// Copy on write validator index map.
 		valIdxMap: b.valIdxMap,
@@ -134,6 +157,23 @@ func (b *BeaconState) Copy() *BeaconState {
 
 	for i := range b.dirtyFields {
 		dst.dirtyFields[i] = true
+	}
+
+	for i := range b.dirtyIndexes {
+		indices := make([]uint64, len(b.dirtyIndexes[i]))
+		copy(indices, b.dirtyIndexes[i])
+		dst.dirtyIndexes[i] = indices
+	}
+
+	for fldIdx := range b.stateFieldLeaves {
+		dst.stateFieldLeaves[fldIdx] = make([][]*[32]byte, len(b.stateFieldLeaves[fldIdx]))
+		for i, layer := range b.stateFieldLeaves[fldIdx] {
+			dst.stateFieldLeaves[fldIdx][i] = make([]*[32]byte, len(layer))
+			for j, content := range layer {
+				newC := *content
+				dst.stateFieldLeaves[fldIdx][i][j] = &newC
+			}
+		}
 	}
 
 	if b.merkleLayers != nil {
@@ -232,8 +272,47 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	case latestBlockHeader:
 		return stateutil.BlockHeaderRoot(b.state.LatestBlockHeader)
 	case blockRoots:
+		if featureconfig.Get().EnableSSZCache {
+			root, layer, err := stateutil.RecomputeFromLayer(b.state.BlockRoots, b.stateFieldLeaves[blockRoots], b.dirtyIndexes[blockRoots])
+			if err != nil {
+				return [32]byte{}, err
+			}
+			b.stateFieldLeaves[blockRoots] = layer
+			b.dirtyIndexes[blockRoots] = []uint64{}
+
+			refLayers := make([][][32]byte, len(layer))
+			for i, val := range layer {
+				refLayers[i] = make([][32]byte, len(val))
+				for j, innerVal := range val {
+					refLayers[i][j] = *innerVal
+				}
+			}
+			newRoot, _ := stateutil.RootsArrayHashTreeRoot(b.state.BlockRoots, params.BeaconConfig().SlotsPerHistoricalRoot, "BlockRoots")
+			if newRoot != root {
+				diff, _ := messagediff.PrettyDiff(stateutil.LayerCache("BlockRoots"), refLayers)
+				log.Errorf("different roots for field %d and diff %s", field, diff)
+			}
+			return root, nil
+		}
 		return stateutil.RootsArrayHashTreeRoot(b.state.BlockRoots, params.BeaconConfig().SlotsPerHistoricalRoot, "BlockRoots")
 	case stateRoots:
+		if featureconfig.Get().EnableSSZCache {
+			fmt.Printf("\n field leaves: length %d and indexes %d", len(b.stateFieldLeaves[stateRoots]), b.dirtyIndexes[stateRoots])
+			root, layer, err := stateutil.RecomputeFromLayer(b.state.StateRoots, b.stateFieldLeaves[stateRoots], b.dirtyIndexes[stateRoots])
+			if err != nil {
+				return [32]byte{}, err
+			}
+			b.stateFieldLeaves[stateRoots] = layer
+			b.dirtyIndexes[stateRoots] = []uint64{}
+
+			/*
+				newRoot, _ := stateutil.RootsArrayHashTreeRoot(b.state.StateRoots, params.BeaconConfig().SlotsPerHistoricalRoot, "StateRoots")
+				if newRoot != root {
+					diff, _ := messagediff.PrettyDiff(stateutil.LayerCache("StateRoots"), layer)
+					log.Errorf("different roots for field %d and diff %s", field, diff)
+				} */
+			return root, nil
+		}
 		return stateutil.RootsArrayHashTreeRoot(b.state.StateRoots, params.BeaconConfig().SlotsPerHistoricalRoot, "StateRoots")
 	case historicalRoots:
 		return stateutil.HistoricalRootsRoot(b.state.HistoricalRoots)
@@ -246,6 +325,22 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	case balances:
 		return stateutil.ValidatorBalancesRoot(b.state.Balances)
 	case randaoMixes:
+		if featureconfig.Get().EnableSSZCache {
+			root, layer, err := stateutil.RecomputeFromLayer(b.state.RandaoMixes, b.stateFieldLeaves[randaoMixes], b.dirtyIndexes[randaoMixes])
+			if err != nil {
+				return [32]byte{}, err
+			}
+			b.stateFieldLeaves[randaoMixes] = layer
+			b.dirtyIndexes[randaoMixes] = []uint64{}
+
+			/*
+				newRoot, _ := stateutil.RootsArrayHashTreeRoot(b.state.RandaoMixes, params.BeaconConfig().EpochsPerHistoricalVector, "RandaoMixes")
+				if newRoot != root {
+					diff, _ := messagediff.PrettyDiff(stateutil.LayerCache("RandaoMixes"), layer)
+					log.Errorf("different roots for field %d and diff %s", field, diff)
+				} */
+			return root, nil
+		}
 		return stateutil.RootsArrayHashTreeRoot(b.state.RandaoMixes, params.BeaconConfig().EpochsPerHistoricalVector, "RandaoMixes")
 	case slashings:
 		return stateutil.SlashingsRoot(b.state.Slashings)

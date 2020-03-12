@@ -136,6 +136,9 @@ func (b *BeaconState) UpdateBlockRootAtIndex(idx uint64, blockRoot [32]byte) err
 	b.state.BlockRoots = r
 
 	b.markFieldAsDirty(blockRoots)
+	indexes := b.dirtyIndexes[blockRoots]
+	indexes = append(indexes, idx)
+	b.dirtyIndexes[blockRoots] = indexes
 	return nil
 }
 
@@ -186,6 +189,9 @@ func (b *BeaconState) UpdateStateRootAtIndex(idx uint64, stateRoot [32]byte) err
 	b.state.StateRoots = r
 
 	b.markFieldAsDirty(stateRoots)
+	indexes := b.dirtyIndexes[stateRoots]
+	indexes = append(indexes, idx)
+	b.dirtyIndexes[stateRoots] = indexes
 	return nil
 }
 
@@ -450,6 +456,9 @@ func (b *BeaconState) UpdateRandaoMixesAtIndex(val []byte, idx uint64) error {
 	mixes[idx] = val
 	b.state.RandaoMixes = mixes
 	b.markFieldAsDirty(randaoMixes)
+	indexes := b.dirtyIndexes[randaoMixes]
+	indexes = append(indexes, idx)
+	b.dirtyIndexes[randaoMixes] = indexes
 	return nil
 }
 

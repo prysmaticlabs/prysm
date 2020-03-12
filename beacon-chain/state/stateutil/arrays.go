@@ -5,6 +5,8 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	"github.com/protolambda/zssz/merkle"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -16,6 +18,10 @@ var (
 	lock        sync.RWMutex
 )
 
+func LayerCache(field string) [][][32]byte {
+	return layersCache[field]
+}
+
 // RootsArrayHashTreeRoot computes the Merkle root of arrays of 32-byte hashes, such as [64][32]byte
 // according to the Simple Serialize specification of eth2.
 func RootsArrayHashTreeRoot(vals [][]byte, length uint64, fieldName string) ([32]byte, error) {
@@ -23,6 +29,67 @@ func RootsArrayHashTreeRoot(vals [][]byte, length uint64, fieldName string) ([32
 		return cachedHasher.arraysRoot(vals, length, fieldName)
 	}
 	return nocachedHasher.arraysRoot(vals, length, fieldName)
+}
+
+func ReturnTrieLayer(elements [][]byte, length uint64, fieldName string) [][]*[32]byte {
+	hasher := hashutil.CustomSHA256Hasher()
+	leaves := make([][32]byte, length)
+	for i, chunk := range elements {
+		copy(leaves[i][:], chunk)
+	}
+	if len(leaves) == 1 {
+		return [][]*[32]byte{{&leaves[0]}}
+	}
+	hashLayer := leaves
+	layers := make([][][32]byte, merkle.GetDepth(length)+1)
+	layers[0] = hashLayer
+	layers, _ = merkleizeTrieLeaves(layers, hashLayer, hasher)
+	refLayers := make([][]*[32]byte, len(layers))
+	for i, val := range layers {
+		refLayers[i] = make([]*[32]byte, len(val))
+		for j, innerVal := range val {
+			refLayers[i][j] = &innerVal
+		}
+	}
+	return refLayers
+}
+
+func RecomputeFromLayer(elements [][]byte, layer [][]*[32]byte, changedIdx []uint64) ([32]byte, [][]*[32]byte, error) {
+	hasher := hashutil.CustomSHA256Hasher()
+	for _, idx := range changedIdx {
+		byteArr := bytesutil.ToBytes32(elements[idx])
+		layer[0][idx] = &byteArr
+	}
+	//leaves := layer[0]
+
+	leaves := make([]*[32]byte, len(layer[0]))
+	for i, chunk := range layer[0] {
+		newChunk := *chunk
+		leaves[i] = &newChunk
+	}
+
+	if len(changedIdx) == 0 {
+		return *layer[0][0], layer, nil
+	}
+
+	// We need to ensure we recompute indices of the Merkle tree which
+	// changed in-between calls to this function. This check adds an offset
+	// to the recomputed indices to ensure we do so evenly.
+	maxChangedIndex := changedIdx[len(changedIdx)-1]
+	if int(maxChangedIndex+2) == len(leaves) && maxChangedIndex%2 != 0 {
+		changedIdx = append(changedIdx, maxChangedIndex+1)
+	}
+
+	root := *layer[0][0]
+	var err error
+
+	for _, idx := range changedIdx {
+		root, layer, err = recomputeRootFromLayer(int(idx), layer, leaves, hasher)
+		if err != nil {
+			return [32]byte{}, nil, err
+		}
+	}
+	return root, layer, nil
 }
 
 func (h *stateRootHasher) arraysRoot(input [][]byte, length uint64, fieldName string) ([32]byte, error) {
@@ -108,7 +175,17 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][32]byte, length uint64,
 		}
 	}
 	layers[0] = hashLayer
+	layers, hashLayer = merkleizeTrieLeaves(layers, hashLayer, hasher)
+	var root [32]byte
+	root = hashLayer[0]
+	if h.rootsCache != nil {
+		layersCache[fieldName] = layers
+	}
+	return root
+}
 
+func merkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte,
+	hasher func([]byte) [32]byte) ([][][32]byte, [][32]byte) {
 	// We keep track of the hash layers of a Merkle trie until we reach
 	// the top layer of length 1, which contains the single root element.
 	//        [Root]      -> Top layer has length 1.
@@ -130,12 +207,7 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][32]byte, length uint64,
 		layers[i] = hashLayer
 		i++
 	}
-	var root [32]byte
-	root = hashLayer[0]
-	if h.rootsCache != nil {
-		layersCache[fieldName] = layers
-	}
-	return root
+	return layers, hashLayer
 }
 
 func recomputeRoot(idx int, chunks [][32]byte, length uint64,
@@ -187,4 +259,45 @@ func recomputeRoot(idx int, chunks [][32]byte, length uint64,
 		return layers[0][0], nil
 	}
 	return root, nil
+}
+
+func recomputeRootFromLayer(idx int, layers [][]*[32]byte, chunks []*[32]byte,
+	hasher func([]byte) [32]byte) ([32]byte, [][]*[32]byte, error) {
+	root := *chunks[idx]
+	layers[0] = chunks
+	// The merkle tree structure looks as follows:
+	// [[r1, r2, r3, r4], [parent1, parent2], [root]]
+	// Using information about the index which changed, idx, we recompute
+	// only its branch up the tree.
+	currentIndex := idx
+	for i := 0; i < len(layers)-1; i++ {
+		isLeft := currentIndex%2 == 0
+		neighborIdx := currentIndex ^ 1
+
+		neighbor := [32]byte{}
+		if layers[i] != nil && len(layers[i]) != 0 && neighborIdx < len(layers[i]) {
+			neighbor = *layers[i][neighborIdx]
+		}
+		if isLeft {
+			parentHash := hasher(append(root[:], neighbor[:]...))
+			root = parentHash
+		} else {
+			parentHash := hasher(append(neighbor[:], root[:]...))
+			root = parentHash
+		}
+		parentIdx := currentIndex / 2
+		// Update the cached layers at the parent index.
+		rootVal := root
+		if len(layers[i+1]) == 0 {
+			layers[i+1] = append(layers[i+1], &rootVal)
+		} else {
+			layers[i+1][parentIdx] = &rootVal
+		}
+		currentIndex = parentIdx
+	}
+	// If there is only a single leaf, we return it (the identity element).
+	if len(layers[0]) == 1 {
+		return *layers[0][0], layers, nil
+	}
+	return root, layers, nil
 }
