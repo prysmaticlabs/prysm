@@ -6,6 +6,7 @@ import (
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
+	status "github.com/prysmaticlabs/prysm/slasher/db/types"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations"
 )
 
@@ -78,6 +79,7 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			db := testDB.SetupSlasherDB(t, false)
+			defer testDB.TeardownSlasherDB(t, db)
 			ctx := context.Background()
 			ds := Service{
 				ctx:                ctx,
@@ -95,7 +97,10 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 			if len(slashings) != tt.slashingsFound {
 				t.Fatalf("Unexpected amount of slashings found, received %d, expected %d", len(slashings), tt.slashingsFound)
 			}
-
+			attsl, err := db.AttesterSlashings(ctx, status.Active)
+			if len(attsl) != tt.slashingsFound {
+				t.Fatalf("Didnt save slashing to db")
+			}
 			for _, ss := range slashings {
 				slashingAtt1 := ss.Attestation_1
 				slashingAtt2 := ss.Attestation_2
@@ -109,7 +114,7 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 					)
 				}
 			}
-			testDB.TeardownSlasherDB(t, db)
+
 		})
 	}
 }
@@ -188,6 +193,7 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			db := testDB.SetupSlasherDB(t, false)
+			defer testDB.TeardownSlasherDB(t, db)
 			ctx := context.Background()
 			ds := Service{
 				ctx:                ctx,
@@ -201,6 +207,10 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 			slashings, err := ds.detectAttesterSlashings(ctx, tt.incomingAtt)
 			if err != nil {
 				t.Fatal(err)
+			}
+			attsl, err := db.AttesterSlashings(ctx, status.Active)
+			if len(attsl) != tt.slashingsFound {
+				t.Fatalf("Didnt save slashing to db")
 			}
 			if len(slashings) != tt.slashingsFound {
 				t.Fatalf("Unexpected amount of slashings found, received %d, expected %d", len(slashings), tt.slashingsFound)
@@ -217,7 +227,7 @@ func TestDetect_detectAttesterSlashings_Double(t *testing.T) {
 					)
 				}
 			}
-			testDB.TeardownSlasherDB(t, db)
+
 		})
 	}
 }
