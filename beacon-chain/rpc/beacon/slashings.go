@@ -46,10 +46,10 @@ func (bs *Server) SubmitAttesterSlashing(
 	if err := bs.SlashingsPool.InsertAttesterSlashing(ctx, beaconState, req); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not insert attester slashing into pool: %v", err)
 	}
-	slashedIndices := sliceutil.IntersectionUint64(req.Attestation_1.AttestingIndices, req.Attestation_2.AttestingIndices)
 	if featureconfig.Get().BroadcastSlashings {
 		bs.Broadcaster.Broadcast(ctx, req)
 	}
+	slashedIndices := sliceutil.IntersectionUint64(req.Attestation_1.AttestingIndices, req.Attestation_2.AttestingIndices)
 	return &ethpb.SubmitSlashingResponse{
 		SlashedIndices: slashedIndices,
 	}, nil
