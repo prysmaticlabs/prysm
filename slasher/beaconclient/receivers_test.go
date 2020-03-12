@@ -44,8 +44,8 @@ func TestService_ReceiveAttestations(t *testing.T) {
 	client := mock.NewMockBeaconChainClient(ctrl)
 
 	bs := Service{
-		beaconClient: client,
-		blockFeed:    new(event.Feed),
+		beaconClient:                client,
+		blockFeed:                   new(event.Feed),
 		receivedAttestationsBuffer:  make(chan *ethpb.IndexedAttestation, 1),
 		collectedAttestationsBuffer: make(chan []*ethpb.IndexedAttestation, 1),
 	}
@@ -70,17 +70,16 @@ func TestService_ReceiveAttestations(t *testing.T) {
 	bs.receiveAttestations(ctx)
 }
 
-
 func TestService_ReceiveAttestations_Batched(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconChainClient(ctrl)
 
 	bs := Service{
-		beaconClient: client,
-		blockFeed:    new(event.Feed),
-		slasherDB: testDB.SetupSlasherDB(t, false),
-		attestationFeed: new(event.Feed),
+		beaconClient:                client,
+		blockFeed:                   new(event.Feed),
+		slasherDB:                   testDB.SetupSlasherDB(t, false),
+		attestationFeed:             new(event.Feed),
 		receivedAttestationsBuffer:  make(chan *ethpb.IndexedAttestation, 1),
 		collectedAttestationsBuffer: make(chan []*ethpb.IndexedAttestation, 1),
 	}
@@ -104,7 +103,7 @@ func TestService_ReceiveAttestations_Batched(t *testing.T) {
 		att,
 		nil,
 	).Do(func() {
-		time.Sleep(2*time.Second)
+		time.Sleep(2 * time.Second)
 		cancel()
 	})
 
@@ -114,7 +113,7 @@ func TestService_ReceiveAttestations_Batched(t *testing.T) {
 	bs.receivedAttestationsBuffer <- att
 	att.Data.Target.Epoch = 8
 	bs.receivedAttestationsBuffer <- att
-	atts := <- bs.collectedAttestationsBuffer
+	atts := <-bs.collectedAttestationsBuffer
 	if len(atts) != 3 {
 		t.Fatalf("Expected %d received attestations to be batched", len(atts))
 	}
