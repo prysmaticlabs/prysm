@@ -5,6 +5,10 @@ import (
 )
 
 var (
+	broadcastSlashingFlag = cli.BoolFlag{
+		Name:  "broadcast-slashing",
+		Usage: "Broadcast slashings from slashing pool.",
+	}
 	noCustomConfigFlag = cli.BoolFlag{
 		Name:  "no-custom-config",
 		Usage: "Run the beacon chain with the real parameters from phase 0.",
@@ -293,6 +297,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	checkHeadState,
 	enableNoiseHandshake,
 	dontPruneStateStartUp,
+	broadcastSlashingFlag,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
