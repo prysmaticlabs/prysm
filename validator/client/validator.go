@@ -58,7 +58,7 @@ var validatorStatusesGaugeVec = promauto.NewGaugeVec(
 		Help:      "validator statuses: 0 UNKNOWN, 1 DEPOSITED, 2 PENDING, 3 ACTIVE, 4 EXITING, 5 SLASHING, 6 EXITED",
 	},
 	[]string{
-		// validator pubkey
+		// Validator pubkey.
 		"pubkey",
 	},
 )
