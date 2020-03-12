@@ -11,6 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 type blocksProviderMock struct {
@@ -392,258 +394,258 @@ func TestBlocksQueueUpdateSchedulerState(t *testing.T) {
 	})
 }
 
-//func TestBlocksQueueScheduleFetchRequests(t *testing.T) {
-//	chainConfig := struct {
-//		expectedBlockSlots []uint64
-//		peers              []*peerData
-//	}{
-//		expectedBlockSlots: makeSequence(1, 241),
-//		peers: []*peerData{
-//			{
-//				blocks:         makeSequence(1, 320),
-//				finalizedEpoch: 8,
-//				headSlot:       320,
-//			},
-//			{
-//				blocks:         makeSequence(1, 320),
-//				finalizedEpoch: 8,
-//				headSlot:       320,
-//			},
-//		},
-//	}
-//
-//	hook := logTest.NewGlobal()
-//	mc, _, beaconDB := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
-//	defer dbtest.TeardownDB(t, beaconDB)
-//
-//	setupQueue := func(ctx context.Context) *blocksQueue {
-//		queue := newBlocksQueue(ctx, &blocksQueueConfig{
-//			blocksFetcher:       &blocksProviderMock{},
-//			headFetcher:         mc,
-//			highestExpectedSlot: uint64(len(chainConfig.expectedBlockSlots)),
-//		})
-//
-//		return queue
-//	}
-//	assertState := func(state *schedulerState, pending, valid, skipped, failed uint64) error {
-//		s := state.requestedBlocks
-//		res := s.pending != pending || s.valid != valid || s.skipped != skipped || s.failed != failed
-//		if res {
-//			b := struct{ pending, valid, skipped, failed uint64 }{pending, valid, skipped, failed,}
-//			return fmt.Errorf("invalid state, want: %+v, got: %+v", b, state.requestedBlocks)
-//		}
-//		return nil
-//	}
-//
-//	t.Run("check start/count boundaries", func(t *testing.T) {
-//		ctx, cancel := context.WithCancel(context.Background())
-//		defer cancel()
-//		queue := setupQueue(ctx)
-//
-//		// Move sliding window normally.
-//		for i := 0; i < 7; i++ {
-//			hook.Reset()
-//			if err := queue.scheduleFetchRequests(ctx); err != nil {
-//				t.Error(err)
-//			}
-//			testutil.AssertLogsContain(t, hook, "Fetch request scheduled")
-//			testutil.AssertLogsContain(t, hook, fmt.Sprintf("start=%d", i*blockBatchSize+1))
-//			testutil.AssertLogsContain(t, hook, fmt.Sprintf("pending:%d", uint64(i+1)*blockBatchSize))
-//		}
-//
-//		// Make sure that the last request is up to highest expected slot.
-//		if err := queue.scheduleFetchRequests(ctx); err != nil {
-//			t.Error(err)
-//		}
-//		testutil.AssertLogsContain(t, hook, "Fetch request scheduled")
-//		testutil.AssertLogsContain(t, hook, fmt.Sprintf("start=%d", 7*blockBatchSize+1))
-//		testutil.AssertLogsContain(t, hook, fmt.Sprintf("pending:%d", queue.highestExpectedSlot))
-//
-//		// Try schedule beyond the highest slot.
-//		hook.Reset()
-//		if err := queue.scheduleFetchRequests(ctx); err != nil {
-//			t.Error(err)
-//		}
-//		testutil.AssertLogsContain(t, hook, "Queue's start position is too high, resetting counters")
-//		testutil.AssertLogsContain(t, hook, "Fetch request scheduled")
-//		testutil.AssertLogsContain(t, hook, fmt.Sprintf("start=%d", 1))
-//		testutil.AssertLogsContain(t, hook, fmt.Sprintf("pending:%d", blockBatchSize))
-//	})
-//
-//	t.Run("too many failures", func(t *testing.T) {
-//		ctx, cancel := context.WithCancel(context.Background())
-//		defer cancel()
-//
-//		queue := setupQueue(ctx)
-//		state := queue.state.scheduler
-//
-//		// Schedule enough items.
-//		for i := 0; i < 8; i++ {
-//			if err := queue.scheduleFetchRequests(ctx); err != nil {
-//				t.Error(err)
-//			}
-//		}
-//
-//		// "Process" some items and reschedule.
-//		if err := assertState(state, 241, 0, 0, 0); err != nil {
-//			t.Error(err)
-//		}
-//		state.updateCounter(failedBlockCounter, 50)
-//		if err := assertState(state, 191, 0, 0, 50); err != nil {
-//			t.Error(err)
-//		}
-//		state.updateCounter(failedBlockCounter, 500) // too high value shouldn't cause issues
-//		if err := assertState(state, 0, 0, 0, 241); err != nil {
-//			t.Error(err)
-//		}
-//
-//		// Due to failures, resetting is expected. But there are pending items.
-//		hook.Reset()
-//		state.updateCounter(failedBlockCounter, 1)
-//		if err := queue.scheduleFetchRequests(ctx); err != nil {
-//			t.Error(err)
-//		}
-//		testutil.AssertLogsContain(t, hook, "Too many failures, increasing block batch size")
-//		if err := assertState(state, 64, 0, 0, 0); err != nil { // make sure that reset occurs
-//			t.Error(err)
-//		}
-//		if state.blockBatchSize != 2*blockBatchSize {
-//			t.Errorf("unexpeced block batch size, want: %v, got: %v", 2*blockBatchSize, state.blockBatchSize)
-//		}
-//
-//		// Now, everything should be scheduled ok.
-//		for i := 1; i < 3; i++ {
-//			hook.Reset()
-//			if err := queue.scheduleFetchRequests(ctx); err != nil {
-//				t.Error(err)
-//			}
-//			testutil.AssertLogsContain(t, hook, "Fetch request scheduled")
-//			testutil.AssertLogsContain(t, hook, fmt.Sprintf("start=%d", i*blockBatchSize*2+1))
-//			testutil.AssertLogsContain(t, hook, fmt.Sprintf("pending:%d", uint64(i+1)*blockBatchSize*2))
-//		}
-//
-//		// Make sure that the last request is up to highest expected slot.
-//		if err := queue.scheduleFetchRequests(ctx); err != nil {
-//			t.Error(err)
-//		}
-//		testutil.AssertLogsContain(t, hook, "Fetch request scheduled")
-//		testutil.AssertLogsContain(t, hook, fmt.Sprintf("start=%d", 3*blockBatchSize*2+1))
-//		testutil.AssertLogsContain(t, hook, fmt.Sprintf("pending:%d", queue.highestExpectedSlot))
-//
-//	})
-//
-//	t.Run("too many skipped", func(t *testing.T) {
-//		ctx, cancel := context.WithCancel(context.Background())
-//		defer cancel()
-//
-//		queue := setupQueue(ctx)
-//		state := queue.state.scheduler
-//
-//		// Schedule enough items.
-//		for i := 0; i < 8; i++ {
-//			if err := queue.scheduleFetchRequests(ctx); err != nil {
-//				t.Error(err)
-//			}
-//		}
-//
-//		// "Process" some items and reschedule.
-//		if err := assertState(state, 241, 0, 0, 0); err != nil {
-//			t.Error(err)
-//		}
-//		state.updateCounter(skippedBlockCounter, 50)
-//		if err := assertState(state, 191, 0, 50, 0); err != nil {
-//			t.Error(err)
-//		}
-//		state.updateCounter(skippedBlockCounter, 500) // too high value shouldn't cause issues
-//		if err := assertState(state, 0, 0, 241, 0); err != nil {
-//			t.Error(err)
-//		}
-//
-//		// No problems for sliding window, as pending items are updated.
-//		for i := 0; i < 3; i++ {
-//			hook.Reset()
-//			if err := queue.scheduleFetchRequests(ctx); err != nil {
-//				t.Error(err)
-//			}
-//			testutil.AssertLogsContain(t, hook, "Fetch request scheduled")
-//			testutil.AssertLogsContain(t, hook, fmt.Sprintf("start=%d", i*2*blockBatchSize+1))
-//			testutil.AssertLogsContain(t, hook, fmt.Sprintf("pending:%d", uint64(i+1)*blockBatchSize*2))
-//		}
-//
-//		// Make sure that the last request is up to highest expected slot.
-//		if err := queue.scheduleFetchRequests(ctx); err != nil {
-//			t.Error(err)
-//		}
-//		testutil.AssertLogsContain(t, hook, "Fetch request scheduled")
-//		testutil.AssertLogsContain(t, hook, fmt.Sprintf("start=%d", 3*2*blockBatchSize+1))
-//		testutil.AssertLogsContain(t, hook, fmt.Sprintf("pending:%d", queue.highestExpectedSlot))
-//
-//	})
-//
-//	t.Run("reset block batch size", func(t *testing.T) {
-//		ctx, cancel := context.WithCancel(context.Background())
-//		defer cancel()
-//
-//		queue := setupQueue(ctx)
-//		state := queue.state.scheduler
-//
-//		state.requestedBlocks.failed = blockBatchSize
-//
-//		// Increase block batch size.
-//		hook.Reset()
-//		if err := queue.scheduleFetchRequests(ctx); err != nil {
-//			t.Error(err)
-//		}
-//		testutil.AssertLogsContain(t, hook, "Too many failures, increasing block batch size")
-//		if err := assertState(state, 64, 0, 0, 0); err != nil { // make sure that reset occurs
-//			t.Error(err)
-//		}
-//		if state.blockBatchSize != 2*blockBatchSize {
-//			t.Errorf("unexpeced block batch size, want: %v, got: %v", 2*blockBatchSize, state.blockBatchSize)
-//		}
-//
-//		// Reset block batch size.
-//		state.requestedBlocks.valid = 2 * blockBatchSize
-//		state.requestedBlocks.pending = 0
-//		if err := assertState(state, 0, 2*blockBatchSize, 0, 0); err != nil { // make sure that reset occurs
-//			t.Error(err)
-//		}
-//		hook.Reset()
-//		if err := queue.scheduleFetchRequests(ctx); err != nil {
-//			t.Error(err)
-//		}
-//		testutil.AssertLogsContain(t, hook, "Many valid blocks, time to reset block batch size")
-//		if err := assertState(state, 32, 0, 0, 0); err != nil { // make sure that reset occurs
-//			t.Error(err)
-//		}
-//		if state.blockBatchSize != blockBatchSize {
-//			t.Errorf("unexpeced block batch size, want: %v, got: %v", blockBatchSize, state.blockBatchSize)
-//		}
-//	})
-//
-//	t.Run("overcrowded scheduler", func(t *testing.T) {
-//		ctx, cancel := context.WithCancel(context.Background())
-//		defer cancel()
-//
-//		queue := setupQueue(ctx)
-//		state := queue.state.scheduler
-//
-//		state.requestedBlocks.pending = queueMaxPendingBlocks
-//
-//		hook.Reset()
-//		if err := queue.scheduleFetchRequests(ctx); err != nil {
-//			t.Error(err)
-//		}
-//		testutil.AssertLogsContain(t, hook, "Overcrowded scheduler counters, resetting")
-//		if err := assertState(state, 32, 0, 0, 0); err != nil { // make sure that reset occurs
-//			t.Error(err)
-//		}
-//		if state.blockBatchSize != blockBatchSize {
-//			t.Errorf("unexpeced block batch size, want: %v, got: %v", blockBatchSize, state.blockBatchSize)
-//		}
-//	})
-//}
-//
+func TestBlocksQueueScheduleFetchRequests(t *testing.T) {
+	chainConfig := struct {
+		expectedBlockSlots []uint64
+		peers              []*peerData
+	}{
+		expectedBlockSlots: makeSequence(1, 241),
+		peers: []*peerData{
+			{
+				blocks:         makeSequence(1, 320),
+				finalizedEpoch: 8,
+				headSlot:       320,
+			},
+			{
+				blocks:         makeSequence(1, 320),
+				finalizedEpoch: 8,
+				headSlot:       320,
+			},
+		},
+	}
+
+	hook := logTest.NewGlobal()
+	mc, _, beaconDB := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
+	defer dbtest.TeardownDB(t, beaconDB)
+
+	setupQueue := func(ctx context.Context) *blocksQueue {
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       &blocksProviderMock{},
+			headFetcher:         mc,
+			highestExpectedSlot: uint64(len(chainConfig.expectedBlockSlots)),
+		})
+
+		return queue
+	}
+	assertState := func(state *schedulerState, pending, valid, skipped, failed uint64) error {
+		s := state.requestedBlocks
+		res := s.pending != pending || s.valid != valid || s.skipped != skipped || s.failed != failed
+		if res {
+			b := struct{ pending, valid, skipped, failed uint64 }{pending, valid, skipped, failed,}
+			return fmt.Errorf("invalid state, want: %+v, got: %+v", b, state.requestedBlocks)
+		}
+		return nil
+	}
+
+	t.Run("check start/count boundaries", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		queue := setupQueue(ctx)
+		state := queue.state.scheduler
+
+		// Move sliding window normally.
+		if err := assertState(state, 0, 0, 0, 0); err != nil {
+			t.Error(err)
+		}
+		end := queue.highestExpectedSlot / state.blockBatchSize
+		for i := uint64(0); i < end; i++ {
+			hook.Reset()
+			if err := queue.scheduleFetchRequests(ctx); err != nil {
+				t.Error(err)
+			}
+			if err := assertState(state, (i+1)*blockBatchSize, 0, 0, 0); err != nil {
+				t.Error(err)
+			}
+			testutil.AssertLogsContain(t, hook, fmt.Sprintf("start=%d", i*blockBatchSize+1))
+		}
+
+		// Make sure that the last request is up to highest expected slot.
+		hook.Reset()
+		if err := queue.scheduleFetchRequests(ctx); err != nil {
+			t.Error(err)
+		}
+		if err := assertState(state, queue.highestExpectedSlot, 0, 0, 0); err != nil {
+			t.Error(err)
+		}
+		testutil.AssertLogsContain(t, hook, fmt.Sprintf("start=%d", end*blockBatchSize+1))
+
+		// Try schedule beyond the highest slot.
+		hook.Reset()
+		if err := queue.scheduleFetchRequests(ctx); err == nil {
+			t.Errorf("expected error: %v", errStartSlotIsTooHigh)
+		}
+		if err := assertState(state, queue.highestExpectedSlot, 0, 0, 0); err != nil {
+			t.Error(err)
+		}
+	})
+
+	t.Run("too many failures", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		queue := setupQueue(ctx)
+		state := queue.state.scheduler
+
+		// Schedule enough items.
+		if err := assertState(state, 0, 0, 0, 0); err != nil {
+			t.Error(err)
+		}
+		end := queue.highestExpectedSlot / state.blockBatchSize
+		for i := uint64(0); i < end; i++ {
+			hook.Reset()
+			if err := queue.scheduleFetchRequests(ctx); err != nil {
+				t.Error(err)
+			}
+			if err := assertState(state, (i+1)*blockBatchSize, 0, 0, 0); err != nil {
+				t.Error(err)
+			}
+			testutil.AssertLogsContain(t, hook, fmt.Sprintf("start=%d", i*blockBatchSize+1))
+		}
+
+		// "Process" some items and reschedule.
+		if err := assertState(state, end*blockBatchSize, 0, 0, 0); err != nil {
+			t.Error(err)
+		}
+		state.incrementCounter(failedBlockCounter, 25)
+		if err := assertState(state, end*blockBatchSize-25, 0, 0, 25); err != nil {
+			t.Error(err)
+		}
+		state.incrementCounter(failedBlockCounter, 500) // too high value shouldn't cause issues
+		if err := assertState(state, 0, 0, 0, end*blockBatchSize); err != nil {
+			t.Error(err)
+		}
+
+		// Due to failures, resetting is expected.
+		hook.Reset()
+		if err := queue.scheduleFetchRequests(ctx); err != nil {
+			t.Error(err)
+		}
+		testutil.AssertLogsContain(t, hook, "Too many unprocessable blocks, increasing block batch size")
+		if err := assertState(state, 2*blockBatchSize, 0, 0, 0); err != nil {
+			t.Error(err)
+		}
+		if state.blockBatchSize != 2*blockBatchSize {
+			t.Errorf("unexpeced block batch size, want: %v, got: %v", 2*blockBatchSize, state.blockBatchSize)
+		}
+	})
+
+	t.Run("too many skipped", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		queue := setupQueue(ctx)
+		state := queue.state.scheduler
+
+		// Schedule enough items.
+		if err := assertState(state, 0, 0, 0, 0); err != nil {
+			t.Error(err)
+		}
+		end := queue.highestExpectedSlot / state.blockBatchSize
+		for i := uint64(0); i < end; i++ {
+			hook.Reset()
+			if err := queue.scheduleFetchRequests(ctx); err != nil {
+				t.Error(err)
+			}
+			if err := assertState(state, (i+1)*blockBatchSize, 0, 0, 0); err != nil {
+				t.Error(err)
+			}
+			testutil.AssertLogsContain(t, hook, fmt.Sprintf("start=%d", i*blockBatchSize+1))
+		}
+
+		// "Process" some items and reschedule.
+		if err := assertState(state, end*blockBatchSize, 0, 0, 0); err != nil {
+			t.Error(err)
+		}
+		state.incrementCounter(skippedBlockCounter, 25)
+		if err := assertState(state, end*blockBatchSize-25, 0, 25, 0); err != nil {
+			t.Error(err)
+		}
+		state.incrementCounter(skippedBlockCounter, 500) // too high value shouldn't cause issues
+		if err := assertState(state, 0, 0, end*blockBatchSize, 0); err != nil {
+			t.Error(err)
+		}
+
+		// No pending items, resetting is expected (both counters and block batch size).
+		hook.Reset()
+		state.blockBatchSize = 2 * blockBatchSize
+		if err := queue.scheduleFetchRequests(ctx); err != nil {
+			t.Error(err)
+		}
+		testutil.AssertLogsContain(t, hook, "No pending blocks, resetting counters")
+		if err := assertState(state, blockBatchSize, 0, 0, 0); err != nil {
+			t.Error(err)
+		}
+		if state.blockBatchSize != blockBatchSize {
+			t.Errorf("unexpeced block batch size, want: %v, got: %v", blockBatchSize, state.blockBatchSize)
+		}
+	})
+
+	t.Run("reset block batch size", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		queue := setupQueue(ctx)
+		state := queue.state.scheduler
+
+		state.requestedBlocks.failed = blockBatchSize
+
+		// Increase block batch size.
+		hook.Reset()
+		if err := queue.scheduleFetchRequests(ctx); err != nil {
+			t.Error(err)
+		}
+		testutil.AssertLogsContain(t, hook, "Too many unprocessable blocks, increasing block batch size")
+		if err := assertState(state, 2*blockBatchSize, 0, 0, 0); err != nil {
+			t.Error(err)
+		}
+		if state.blockBatchSize != 2*blockBatchSize {
+			t.Errorf("unexpeced block batch size, want: %v, got: %v", 2*blockBatchSize, state.blockBatchSize)
+		}
+
+		// Reset block batch size.
+		state.requestedBlocks.valid = blockBatchSize
+		state.requestedBlocks.pending = 1
+		state.requestedBlocks.failed = 1
+		state.requestedBlocks.skipped = 1
+		if err := assertState(state, 1, blockBatchSize, 1, 1); err != nil {
+			t.Error(err)
+		}
+		hook.Reset()
+		if err := queue.scheduleFetchRequests(ctx); err != nil {
+			t.Error(err)
+		}
+		testutil.AssertLogsContain(t, hook, "Enough valid blocks, block batch size reset")
+		if err := assertState(state, blockBatchSize+1, 0, blockBatchSize+1, 1); err != nil {
+			t.Error(err)
+		}
+		if state.blockBatchSize != blockBatchSize {
+			t.Errorf("unexpeced block batch size, want: %v, got: %v", blockBatchSize, state.blockBatchSize)
+		}
+	})
+
+	t.Run("overcrowded scheduler", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		queue := setupQueue(ctx)
+		state := queue.state.scheduler
+
+		hook.Reset()
+		state.requestedBlocks.pending = queueMaxCachedBlocks
+		if err := queue.scheduleFetchRequests(ctx); err != nil {
+			t.Error(err)
+		}
+		testutil.AssertLogsContain(t, hook, "Too many cached blocks, resetting")
+		if err := assertState(state, blockBatchSize, 0, 0, 0); err != nil {
+			t.Error(err)
+		}
+		if state.blockBatchSize != blockBatchSize {
+			t.Errorf("unexpeced block batch size, want: %v, got: %v", blockBatchSize, state.blockBatchSize)
+		}
+	})
+}
+
 //func TestBlocksQueueParseFetchResponse(t *testing.T) {
 //	chainConfig := struct {
 //		expectedBlockSlots []uint64
@@ -952,10 +954,10 @@ func TestBlocksQueueUpdateSchedulerState(t *testing.T) {
 //				blocks = append(blocks, block)
 //				if err := processBlock(block); err != nil {
 //					t.Error(err)
-//					queue.state.scheduler.updateCounter(failedBlockCounter, 1)
+//					queue.state.scheduler.incrementCounter(failedBlockCounter, 1)
 //					continue
 //				}
-//				queue.state.scheduler.updateCounter(validBlockCounter, 1)
+//				queue.state.scheduler.incrementCounter(validBlockCounter, 1)
 //			}
 //
 //			queue.stop()

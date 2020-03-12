@@ -199,7 +199,7 @@ func (q *blocksQueue) loop() {
 					}
 					// Process incoming response into blocks.
 					if err := q.parseFetchResponse(q.ctx, resp); err != nil {
-						q.state.scheduler.updateCounter(failedBlockCounter, resp.count)
+						q.state.scheduler.incrementCounter(failedBlockCounter, resp.count)
 						log.WithError(err).Debug("Error processing received blocks")
 						return
 					}
@@ -389,7 +389,7 @@ func (q *blocksQueue) parseFetchResponse(ctx context.Context, response *fetchReq
 	}
 
 	// Update scheduler's counters.
-	q.state.scheduler.updateCounter(skippedBlockCounter, skippedBlocks)
+	q.state.scheduler.incrementCounter(skippedBlockCounter, skippedBlocks)
 
 	return nil
 }
@@ -427,24 +427,12 @@ func (q *blocksQueue) sendFetchedBlocks(ctx context.Context) error {
 	return nil
 }
 
-func (s *schedulerState) handleCurrentSlotUpdate(slot uint64) {
-	s.Lock()
-	defer s.Unlock()
-
-	blocks := s.requestedBlocks
-	if count := blocks.pending + blocks.skipped + blocks.failed + blocks.valid; count == 0 {
-		s.currentSlot = slot
-	}
-}
-
-// updateCounter updates scheduler's blocks counters.
-func (s *schedulerState) updateCounter(counter int, n uint64) {
+// incrementCounter increments particular scheduler counter.
+func (s *schedulerState) incrementCounter(counter int, n uint64) {
 	s.Lock()
 	defer s.Unlock()
 
 	n = mathutil.Min(s.requestedBlocks.pending, n)
-	s.requestedBlocks.pending -= n
-
 	switch counter {
 	case validBlockCounter:
 		s.requestedBlocks.valid += n
@@ -452,5 +440,8 @@ func (s *schedulerState) updateCounter(counter int, n uint64) {
 		s.requestedBlocks.skipped += n
 	case failedBlockCounter:
 		s.requestedBlocks.failed += n
+	default:
+		return
 	}
+	s.requestedBlocks.pending -= n
 }
