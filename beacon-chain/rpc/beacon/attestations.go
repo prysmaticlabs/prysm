@@ -277,7 +277,10 @@ func (bs *Server) StreamIndexedAttestations(
 					err,
 				)
 			}
-			epoch := helpers.SlotToEpoch(bs.HeadFetcher.HeadSlot())
+			if len(aggAtts) == 0 {
+				continue
+			}
+			epoch := aggAtts[0].Data.Target.Epoch
 			committeesBySlot, _, err := bs.retrieveCommitteesForEpoch(stream.Context(), epoch)
 			if err != nil {
 				return status.Errorf(
