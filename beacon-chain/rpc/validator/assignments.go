@@ -64,8 +64,10 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 				assignment.ProposerSlot = proposerIndexToSlot[idx]
 				assignment.CommitteeIndex = ca.CommitteeIndex
 			}
+		} else {
+			vs := vs.validatorStatus(ctx, pubKey, s)
+			assignment.Status = vs.Status
 		}
-
 		validatorAssignments = append(validatorAssignments, assignment)
 	}
 

@@ -53,6 +53,9 @@ type Flags struct {
 	// as the chain head. UNSAFE, use with caution.
 	DisableForkChoice bool
 
+	// BroadcastSlashings enables p2p broadcasting of proposer or attester slashing.
+	BroadcastSlashings bool
+
 	// Cache toggles.
 	EnableSSZCache          bool // EnableSSZCache see https://github.com/prysmaticlabs/prysm/pull/4558.
 	EnableEth1DataVoteCache bool // EnableEth1DataVoteCache; see https://github.com/prysmaticlabs/prysm/issues/3106.
