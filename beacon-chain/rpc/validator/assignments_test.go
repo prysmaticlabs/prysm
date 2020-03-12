@@ -12,10 +12,10 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	blk "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -78,11 +78,11 @@ func TestGetDuties_NextEpoch_CantFindValidatorIdx(t *testing.T) {
 	}
 
 	vs := &Server{
-		BeaconDB:    db,
-		HeadFetcher: &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		BeaconDB:        db,
+		HeadFetcher:     &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
+		SyncChecker:     &mockSync.Sync{IsSyncing: false},
 		Eth1InfoFetcher: p,
-		DepositFetcher: depositcache.NewDepositCache(),
+		DepositFetcher:  depositcache.NewDepositCache(),
 	}
 
 	pubKey := pubKey(99999)
