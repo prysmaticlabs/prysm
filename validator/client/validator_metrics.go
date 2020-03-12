@@ -20,7 +20,7 @@ var validatorBalancesGaugeVec = promauto.NewGaugeVec(
 	},
 	[]string{
 		// validator pubkey
-		"pkey",
+		"pubkey",
 	},
 )
 
