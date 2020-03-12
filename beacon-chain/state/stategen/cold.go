@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -78,4 +79,37 @@ func (s *State) recoverArchivedPointByIndex(ctx context.Context, archiveIndex ui
 	}
 
 	return archivedState, nil
+}
+
+// Given a block root, this returns the slot of the block root using state summary look up in DB.
+// If state summary does not exist in DB, it will recover the state summary and save it to the DB.
+// This is used to cover corner cases where users toggle new state service's feature flag.
+func (s *State) blockRootSlot(ctx context.Context, blockRoot [32]byte) (uint64, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.blockRootSlot")
+	defer span.End()
+
+	if s.beaconDB.HasStateSummary(ctx, blockRoot) {
+		summary, err := s.beaconDB.StateSummary(ctx, blockRoot)
+		if err != nil {
+			return 0, nil
+		}
+		if summary == nil {
+			return 0, errUnknownStateSummary
+		}
+		return summary.Slot, nil
+	}
+
+	// Couldn't find state summary in DB. Retry with block bucket to get block slot.
+	b, err := s.beaconDB.Block(ctx, blockRoot)
+	if err != nil {
+		return 0, err
+	}
+	if b == nil || b.Block == nil {
+		return 0, errUnknownBlock
+	}
+	if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: blockRoot[:], Slot: b.Block.Slot}); err != nil {
+		return 0, errors.Wrap(err, "could not save state summary")
+	}
+
+	return b.Block.Slot, nil
 }
