@@ -52,9 +52,10 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 
 func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
 	chainService := &mockChain.ChainService{}
 	r := Service{
-		ctx:          context.Background(),
+		ctx:          ctx,
 		p2p:          p2p,
 		initialSync:  &mockSync.Sync{IsSyncing: false},
 		slashingPool: slashings.NewPool(),
@@ -85,7 +86,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
 	}
-	as := r.slashingPool.PendingAttesterSlashings()
+	as := r.slashingPool.PendingAttesterSlashings(ctx)
 	if len(as) != 1 {
 		t.Errorf("Expected attester slashing: %v to be added to slashing pool. got: %v", attesterSlashing, as[0])
 	}
@@ -93,9 +94,10 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 
 func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	p2p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
 	chainService := &mockChain.ChainService{}
 	r := Service{
-		ctx:          context.Background(),
+		ctx:          ctx,
 		p2p:          p2p,
 		initialSync:  &mockSync.Sync{IsSyncing: false},
 		slashingPool: slashings.NewPool(),
@@ -126,7 +128,7 @@ func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
 	}
-	ps := r.slashingPool.PendingProposerSlashings()
+	ps := r.slashingPool.PendingProposerSlashings(ctx)
 	if len(ps) != 1 {
 		t.Errorf("Expected proposer slashing: %v to be added to slashing pool. got: %v", proposerSlashing, ps[0])
 	}

@@ -21,7 +21,7 @@ func (r *Service) attesterSlashingSubscriber(ctx context.Context, msg proto.Mess
 	if err != nil {
 		return err
 	}
-	r.slashingPool.InsertAttesterSlashing(s, msg.(*ethpb.AttesterSlashing))
+	r.slashingPool.InsertAttesterSlashing(ctx, s, msg.(*ethpb.AttesterSlashing))
 	return nil
 }
 
@@ -30,6 +30,6 @@ func (r *Service) proposerSlashingSubscriber(ctx context.Context, msg proto.Mess
 	if err != nil {
 		return err
 	}
-	r.slashingPool.InsertProposerSlashing(s, msg.(*ethpb.ProposerSlashing))
+	r.slashingPool.InsertProposerSlashing(ctx, s, msg.(*ethpb.ProposerSlashing))
 	return nil
 }
