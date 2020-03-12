@@ -28,11 +28,14 @@ func (r *Service) attesterSlashingSubscriber(ctx context.Context, msg proto.Mess
 	if !ok {
 		return fmt.Errorf("wrong type, expected: *ethpb.AttesterSlashing got: %T", msg)
 	}
-	s, err := r.db.State(ctx, bytesutil.ToBytes32(as.Attestation_1.Data.BeaconBlockRoot))
-	if err != nil {
-		return err
+	// Do some nil checks to prevent easy DoS'ing of this handler.
+	if as != nil && as.Attestation_1 != nil && as.Attestation_1.Data != nil {
+		s, err := r.db.State(ctx, bytesutil.ToBytes32(as.Attestation_1.Data.BeaconBlockRoot))
+		if err != nil {
+			return err
+		}
+		return r.slashingPool.InsertAttesterSlashing(ctx, s, as)
 	}
-	r.slashingPool.InsertAttesterSlashing(ctx, s, as)
 	return nil
 }
 
@@ -41,11 +44,14 @@ func (r *Service) proposerSlashingSubscriber(ctx context.Context, msg proto.Mess
 	if !ok {
 		return fmt.Errorf("wrong type, expected: *ethpb.ProposerSlashing got: %T", msg)
 	}
-	root, err := ssz.HashTreeRoot(ps.Header_1.Header)
-	s, err := r.db.State(ctx, root)
-	if err != nil {
-		return err
+	// Do some nil checks to prevent easy DoS'ing of this handler.
+	if ps.Header_1 != nil && ps.Header_1.Header != nil {
+		root, err := ssz.HashTreeRoot(ps.Header_1.Header)
+		s, err := r.db.State(ctx, root)
+		if err != nil {
+			return err
+		}
+		return r.slashingPool.InsertProposerSlashing(ctx, s, ps)
 	}
-	r.slashingPool.InsertProposerSlashing(ctx, s, ps)
 	return nil
 }
