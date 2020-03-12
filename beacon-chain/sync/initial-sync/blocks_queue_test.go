@@ -646,168 +646,168 @@ func TestBlocksQueueScheduleFetchRequests(t *testing.T) {
 	})
 }
 
-//func TestBlocksQueueParseFetchResponse(t *testing.T) {
-//	chainConfig := struct {
-//		expectedBlockSlots []uint64
-//		peers              []*peerData
-//	}{
-//		expectedBlockSlots: makeSequence(1, 2*blockBatchSize*queueMaxPendingRequests+31),
-//		peers: []*peerData{
-//			{
-//				blocks:         makeSequence(1, 320),
-//				finalizedEpoch: 8,
-//				headSlot:       320,
-//			},
-//			{
-//				blocks:         makeSequence(1, 320),
-//				finalizedEpoch: 8,
-//				headSlot:       320,
-//			},
-//		},
-//	}
-//
-//	mc, _, beaconDB := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
-//	defer dbtest.TeardownDB(t, beaconDB)
-//
-//	setupQueue := func(ctx context.Context) *blocksQueue {
-//		queue := newBlocksQueue(ctx, &blocksQueueConfig{
-//			blocksFetcher:       &blocksProviderMock{},
-//			headFetcher:         mc,
-//			highestExpectedSlot: uint64(len(chainConfig.expectedBlockSlots)),
-//		})
-//
-//		return queue
-//	}
-//
-//	var blocks []*eth.SignedBeaconBlock
-//	for i := 1; i <= blockBatchSize; i++ {
-//		blocks = append(blocks, &eth.SignedBeaconBlock{
-//			Block: &eth.BeaconBlock{
-//				Slot: uint64(i),
-//			},
-//		})
-//	}
-//
-//	t.Run("response error", func(t *testing.T) {
-//		ctx, cancel := context.WithCancel(context.Background())
-//		defer cancel()
-//
-//		queue := setupQueue(ctx)
-//
-//		response := &fetchRequestResponse{
-//			start:  1,
-//			count:  blockBatchSize,
-//			blocks: blocks,
-//			err:    errStartSlotIsTooHigh,
-//		}
-//		if err := queue.parseFetchResponse(ctx, response); err != errStartSlotIsTooHigh {
-//			t.Errorf("expected error not thrown, want: %v, got: %v", errStartSlotIsTooHigh, err)
-//		}
-//	})
-//
-//	t.Run("context error", func(t *testing.T) {
-//		ctx, cancel := context.WithCancel(context.Background())
-//
-//		queue := setupQueue(ctx)
-//
-//		cancel()
-//		response := &fetchRequestResponse{
-//			start:  1,
-//			count:  blockBatchSize,
-//			blocks: blocks,
-//			err:    ctx.Err(),
-//		}
-//		if err := queue.parseFetchResponse(ctx, response); err != ctx.Err() {
-//			t.Errorf("expected error not thrown, want: %v, got: %v", ctx.Err(), err)
-//		}
-//	})
-//
-//	t.Run("no skipped blocks", func(t *testing.T) {
-//		ctx, cancel := context.WithCancel(context.Background())
-//		defer cancel()
-//
-//		queue := setupQueue(ctx)
-//
-//		for i := uint64(1); i <= blockBatchSize; i++ {
-//			if _, ok := queue.state.cachedBlocks[i]; ok {
-//				t.Errorf("unexpeced block found: %v", i)
-//			}
-//		}
-//
-//		response := &fetchRequestResponse{
-//			start:  1,
-//			count:  blockBatchSize,
-//			blocks: blocks,
-//		}
-//		if err := queue.parseFetchResponse(ctx, response); err != nil {
-//			t.Error(err)
-//		}
-//
-//		// All blocks should be saved at this point.
-//		for i := uint64(1); i <= blockBatchSize; i++ {
-//			block, ok := queue.state.cachedBlocks[i]
-//			if !ok {
-//				t.Errorf("expeced block not found: %v", i)
-//			}
-//			if block.SignedBeaconBlock == nil {
-//				t.Errorf("unexpectedly marked as skipped: %v", i)
-//			}
-//		}
-//	})
-//
-//	t.Run("with skipped blocks", func(t *testing.T) {
-//		ctx, cancel := context.WithCancel(context.Background())
-//		defer cancel()
-//
-//		queue := setupQueue(ctx)
-//
-//		for i := uint64(1); i <= blockBatchSize; i++ {
-//			if _, ok := queue.state.cachedBlocks[i]; ok {
-//				t.Errorf("unexpeced block found: %v", i)
-//			}
-//		}
-//
-//		response := &fetchRequestResponse{
-//			start:  1,
-//			count:  blockBatchSize,
-//			blocks: blocks,
-//		}
-//		skipStart, skipEnd := uint64(5), uint64(15)
-//		response.blocks = append(response.blocks[:skipStart], response.blocks[skipEnd:]...)
-//		if err := queue.parseFetchResponse(ctx, response); err != nil {
-//			t.Error(err)
-//		}
-//
-//		for i := skipStart + 1; i <= skipEnd; i++ {
-//			block, ok := queue.state.cachedBlocks[i]
-//			if !ok {
-//				t.Errorf("expeced block not found: %v", i)
-//			}
-//			if block.SignedBeaconBlock!= nil {
-//				t.Errorf("unexpectedly marked as not skipped: %v", i)
-//			}
-//		}
-//		for i := uint64(1); i <= skipStart; i++ {
-//			block, ok := queue.state.cachedBlocks[i]
-//			if !ok {
-//				t.Errorf("expeced block not found: %v", i)
-//			}
-//			if block.SignedBeaconBlock== nil {
-//				t.Errorf("unexpectedly marked as skipped: %v", i)
-//			}
-//		}
-//		for i := skipEnd + 1; i <= blockBatchSize; i++ {
-//			block, ok := queue.state.cachedBlocks[i]
-//			if !ok {
-//				t.Errorf("expeced block not found: %v", i)
-//			}
-//			if block.SignedBeaconBlock== nil {
-//				t.Errorf("unexpectedly marked as skipped: %v", i)
-//			}
-//		}
-//	})
-//}
-//
+func TestBlocksQueueParseFetchResponse(t *testing.T) {
+	chainConfig := struct {
+		expectedBlockSlots []uint64
+		peers              []*peerData
+	}{
+		expectedBlockSlots: makeSequence(1, 2*blockBatchSize*queueMaxPendingRequests+31),
+		peers: []*peerData{
+			{
+				blocks:         makeSequence(1, 320),
+				finalizedEpoch: 8,
+				headSlot:       320,
+			},
+			{
+				blocks:         makeSequence(1, 320),
+				finalizedEpoch: 8,
+				headSlot:       320,
+			},
+		},
+	}
+
+	mc, _, beaconDB := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
+	defer dbtest.TeardownDB(t, beaconDB)
+
+	setupQueue := func(ctx context.Context) *blocksQueue {
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       &blocksProviderMock{},
+			headFetcher:         mc,
+			highestExpectedSlot: uint64(len(chainConfig.expectedBlockSlots)),
+		})
+
+		return queue
+	}
+
+	var blocks []*eth.SignedBeaconBlock
+	for i := 1; i <= blockBatchSize; i++ {
+		blocks = append(blocks, &eth.SignedBeaconBlock{
+			Block: &eth.BeaconBlock{
+				Slot: uint64(i),
+			},
+		})
+	}
+
+	t.Run("response error", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		queue := setupQueue(ctx)
+
+		response := &fetchRequestResponse{
+			start:  1,
+			count:  blockBatchSize,
+			blocks: blocks,
+			err:    errStartSlotIsTooHigh,
+		}
+		if err := queue.parseFetchResponse(ctx, response); err != errStartSlotIsTooHigh {
+			t.Errorf("expected error not thrown, want: %v, got: %v", errStartSlotIsTooHigh, err)
+		}
+	})
+
+	t.Run("context error", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+
+		queue := setupQueue(ctx)
+
+		cancel()
+		response := &fetchRequestResponse{
+			start:  1,
+			count:  blockBatchSize,
+			blocks: blocks,
+			err:    ctx.Err(),
+		}
+		if err := queue.parseFetchResponse(ctx, response); err != ctx.Err() {
+			t.Errorf("expected error not thrown, want: %v, got: %v", ctx.Err(), err)
+		}
+	})
+
+	t.Run("no skipped blocks", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		queue := setupQueue(ctx)
+
+		for i := uint64(1); i <= blockBatchSize; i++ {
+			if _, ok := queue.state.cachedBlocks[i]; ok {
+				t.Errorf("unexpeced block found: %v", i)
+			}
+		}
+
+		response := &fetchRequestResponse{
+			start:  1,
+			count:  blockBatchSize,
+			blocks: blocks,
+		}
+		if err := queue.parseFetchResponse(ctx, response); err != nil {
+			t.Error(err)
+		}
+
+		// All blocks should be saved at this point.
+		for i := uint64(1); i <= blockBatchSize; i++ {
+			block, ok := queue.state.cachedBlocks[i]
+			if !ok {
+				t.Errorf("expeced block not found: %v", i)
+			}
+			if block.SignedBeaconBlock == nil {
+				t.Errorf("unexpectedly marked as skipped: %v", i)
+			}
+		}
+	})
+
+	t.Run("with skipped blocks", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		queue := setupQueue(ctx)
+
+		for i := uint64(1); i <= blockBatchSize; i++ {
+			if _, ok := queue.state.cachedBlocks[i]; ok {
+				t.Errorf("unexpeced block found: %v", i)
+			}
+		}
+
+		response := &fetchRequestResponse{
+			start:  1,
+			count:  blockBatchSize,
+			blocks: blocks,
+		}
+		skipStart, skipEnd := uint64(5), uint64(15)
+		response.blocks = append(response.blocks[:skipStart], response.blocks[skipEnd:]...)
+		if err := queue.parseFetchResponse(ctx, response); err != nil {
+			t.Error(err)
+		}
+
+		for i := skipStart + 1; i <= skipEnd; i++ {
+			block, ok := queue.state.cachedBlocks[i]
+			if !ok {
+				t.Errorf("expeced block not found: %v", i)
+			}
+			if block.SignedBeaconBlock!= nil {
+				t.Errorf("unexpectedly marked as not skipped: %v", i)
+			}
+		}
+		for i := uint64(1); i <= skipStart; i++ {
+			block, ok := queue.state.cachedBlocks[i]
+			if !ok {
+				t.Errorf("expeced block not found: %v", i)
+			}
+			if block.SignedBeaconBlock== nil {
+				t.Errorf("unexpectedly marked as skipped: %v", i)
+			}
+		}
+		for i := skipEnd + 1; i <= blockBatchSize; i++ {
+			block, ok := queue.state.cachedBlocks[i]
+			if !ok {
+				t.Errorf("expeced block not found: %v", i)
+			}
+			if block.SignedBeaconBlock== nil {
+				t.Errorf("unexpectedly marked as skipped: %v", i)
+			}
+		}
+	})
+}
+
 //func TestBlocksQueueLoop(t *testing.T) {
 //	tests := []struct {
 //		name                string
