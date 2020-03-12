@@ -3,6 +3,9 @@ package sync
 import (
 	"context"
 
+	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
@@ -17,19 +20,22 @@ func (r *Service) voluntaryExitSubscriber(ctx context.Context, msg proto.Message
 }
 
 func (r *Service) attesterSlashingSubscriber(ctx context.Context, msg proto.Message) error {
-	s, err := r.chain.HeadState(ctx)
+	as := msg.(*ethpb.AttesterSlashing)
+	s, err := r.db.State(ctx, bytesutil.ToBytes32(as.Attestation_1.Data.BeaconBlockRoot))
 	if err != nil {
 		return err
 	}
-	r.slashingPool.InsertAttesterSlashing(ctx, s, msg.(*ethpb.AttesterSlashing))
+	r.slashingPool.InsertAttesterSlashing(ctx, s, as)
 	return nil
 }
 
 func (r *Service) proposerSlashingSubscriber(ctx context.Context, msg proto.Message) error {
-	s, err := r.chain.HeadState(ctx)
+	ps := msg.(*ethpb.ProposerSlashing)
+	root, err := ssz.HashTreeRoot(ps.Header_1.Header)
+	s, err := r.db.State(ctx, root)
 	if err != nil {
 		return err
 	}
-	r.slashingPool.InsertProposerSlashing(ctx, s, msg.(*ethpb.ProposerSlashing))
+	r.slashingPool.InsertProposerSlashing(ctx, s, ps)
 	return nil
 }
