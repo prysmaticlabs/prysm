@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	status "github.com/prysmaticlabs/prysm/slasher/db/types"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 	"go.opencensus.io/trace"
 )
@@ -45,7 +46,9 @@ func (ds *Service) detectAttesterSlashings(
 			slashings = append(slashings, slashing)
 		}
 	}
-
+	if err = ds.slasherDB.SaveAttesterSlashings(ctx, status.Active, slashings); err != nil {
+		return nil, err
+	}
 	return slashings, nil
 }
 
