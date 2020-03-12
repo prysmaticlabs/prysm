@@ -3,6 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "cold.go",
         "epoch_boundary_root.go",
         "errors.go",
         "hot.go",
@@ -34,6 +35,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "cold_test.go",
         "epoch_boundary_root_test.go",
         "hot_test.go",
         "migrate_test.go",

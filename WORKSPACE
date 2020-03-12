@@ -1591,3 +1591,10 @@ go_repository(
     sum = "h1:J1gHJRNFEk7NdiaPQQqAvxEy+7hhCsVv3uzduWybmqY=",
     version = "v0.0.0-20200302201340-8c54356e12c9",
 )
+
+go_repository(
+    name = "com_github_ferranbt_fastssz",
+    importpath = "github.com/ferranbt/fastssz",
+    sum = "h1:oUQredbOIzWIMmeGR9dTLzSi4DqRVwxrPzSDiLJBp4Q=",
+    version = "v0.0.0-20200310214500-3283b9706406",
+)
