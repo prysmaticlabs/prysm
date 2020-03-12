@@ -4,6 +4,7 @@ import (
 	"context"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -23,6 +24,9 @@ func (bs *Server) SubmitProposerSlashing(
 	if err := bs.SlashingsPool.InsertProposerSlashing(ctx, beaconState, req); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not insert proposer slashing into pool: %v", err)
 	}
+	if featureconfig.Get().BroadcastSlashings {
+		bs.Broadcaster.Broadcast(ctx, req)
+	}
 	return &ethpb.SubmitSlashingResponse{
 		SlashedIndices: []uint64{req.ProposerIndex},
 	}, nil
@@ -41,6 +45,9 @@ func (bs *Server) SubmitAttesterSlashing(
 	}
 	if err := bs.SlashingsPool.InsertAttesterSlashing(ctx, beaconState, req); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not insert attester slashing into pool: %v", err)
+	}
+	if featureconfig.Get().BroadcastSlashings {
+		bs.Broadcaster.Broadcast(ctx, req)
 	}
 	slashedIndices := sliceutil.IntersectionUint64(req.Attestation_1.AttestingIndices, req.Attestation_2.AttestingIndices)
 	return &ethpb.SubmitSlashingResponse{
