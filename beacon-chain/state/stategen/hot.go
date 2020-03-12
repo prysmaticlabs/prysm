@@ -2,14 +2,58 @@ package stategen
 
 import (
 	"context"
+	"encoding/hex"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
+
+// This saves a post finalized beacon state in the hot section of the DB. On the epoch boundary,
+// it saves a full state. On an intermediate slot, it saves a back pointer to the
+// nearest epoch boundary state.
+func (s *State) saveHotState(ctx context.Context, blockRoot [32]byte, state *state.BeaconState) error {
+	ctx, span := trace.StartSpan(ctx, "stateGen.saveHotState")
+	defer span.End()
+
+	// If the hot state is already in cache, one can be sure the state was processed and in the DB.
+	if s.hotStateCache.Has(blockRoot) {
+		return nil
+	}
+
+	// Only on an epoch boundary slot, saves the whole state.
+	if helpers.IsEpochStart(state.Slot()) {
+		if err := s.beaconDB.SaveState(ctx, state, blockRoot); err != nil {
+			return err
+		}
+		log.WithFields(logrus.Fields{
+			"slot":      state.Slot(),
+			"blockRoot": hex.EncodeToString(bytesutil.Trunc(blockRoot[:]))}).Info("Saved full state on epoch boundary")
+	}
+
+	// On an intermediate slots, save the hot state summary.
+	epochRoot, err := s.loadEpochBoundaryRoot(ctx, blockRoot, state)
+	if err != nil {
+		return errors.Wrap(err, "could not get epoch boundary root to save hot state")
+	}
+	if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
+		Slot:         state.Slot(),
+		Root:         blockRoot[:],
+		BoundaryRoot: epochRoot[:],
+	}); err != nil {
+		return err
+	}
+
+	// Store the copied state in the cache.
+	s.hotStateCache.Put(blockRoot, state.Copy())
+
+	return nil
+}
 
 // This loads a post finalized beacon state from the hot section of the DB. If necessary it will
 // replay blocks starting from the nearest epoch boundary. It returns the beacon state that
