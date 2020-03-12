@@ -114,7 +114,6 @@ func TestDetect_detectAttesterSlashings_Surround(t *testing.T) {
 					)
 				}
 			}
-
 		})
 	}
 }
