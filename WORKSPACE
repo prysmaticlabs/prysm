@@ -91,6 +91,13 @@ http_archive(
 )
 
 http_archive(
+    name = "fuzzit_linux",
+    build_file_content = "exports_files([\"fuzzit\"])",
+    sha256 = "9ca76ac1c22d9360936006efddf992977ebf8e4788ded8e5f9d511285c9ac774",
+    urls = ["https://github.com/fuzzitdev/fuzzit/releases/download/v2.4.76/fuzzit_Linux_x86_64.zip"],
+)
+
+http_archive(
     name = "build_bazel_rules_nodejs",
     sha256 = "0942d188f4d0de6ddb743b9f6642a26ce1ad89f09c0035a9a5ca5ba9615c96aa",
     urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.38.1/rules_nodejs-0.38.1.tar.gz"],
@@ -283,7 +290,7 @@ http_archive(
 
 http_archive(
     name = "sigp_beacon_fuzz_corpora",
-    build_file_content = all_content,
+    build_file = "//third_party/beacon-fuzz:corpora.BUILD",
     sha256 = "72c947b6b92df0db7275189be77733209f12af2aa931b81917b952c8d93e4c9f",
     strip_prefix = "beacon-fuzz-corpora-c6d956ce22bd91f0d2929eb6401e40adfd7a8c89",
     urls = ["https://github.com/sigp/beacon-fuzz-corpora/archive/c6d956ce22bd91f0d2929eb6401e40adfd7a8c89.tar.gz"],

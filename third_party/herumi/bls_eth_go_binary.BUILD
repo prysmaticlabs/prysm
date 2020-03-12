@@ -55,6 +55,7 @@ cc_library(
     copts = OPTS + [
         "-std=c++03",
     ],
+    visibility = ["//visibility:public"],
 )
 
 cc_library(
@@ -113,7 +114,9 @@ go_library(
         ":llvm_compiler_enabled": [":lib"],
         "//conditions:default": [":precompiled"],
     }),
-    copts = OPTS,
     cgo = True,
     visibility = ["//visibility:public"],
+    clinkopts = [
+        "-Wl,--unresolved-symbols=ignore-all",  # Ignore missing asan symbols
+    ],
 )

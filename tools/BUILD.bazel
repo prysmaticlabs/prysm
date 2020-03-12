@@ -10,6 +10,12 @@ alias(
     visibility = ["//visibility:public"],
 )
 
+sh_binary(
+    name = "fuzzit_wrapper",
+    srcs = ["fuzzit_wrapper.sh"],
+    data = ["@fuzzit_linux//:fuzzit"],
+)
+
 ################################################################################
 ##                      Docker images as non-root user                        ##
 ################################################################################

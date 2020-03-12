@@ -80,34 +80,44 @@ cfg_libfuzz_gotag = transition(
 
 def _gen_fuzz_main_impl(ctx):
     if ctx.var.get("gotags") != "libfuzzer":
-        fail("Gotags must be set to libfuzzer. Use --define=gotags=libfuzzer until the transition rule is fixed.")
+        fail("Gotags must be set to libfuzzer. Use --config=fuzz or --config=fuzzit until the transition rule is fixed.")
 
     pkg = ctx.attr.target_pkg
-    func = "Fuzz"
+    func = ctx.attr.func
+
     ctx.actions.write(ctx.outputs.out, main_tpl % (pkg, func))
 
 gen_fuzz_main = rule(
     implementation = _gen_fuzz_main_impl,
     attrs = {
         "target_pkg": attr.string(mandatory = True),
+        "func": attr.string(mandatory = True),
         "_whitelist_function_transition": attr.label(default = "@bazel_tools//tools/whitelists/function_transition_whitelist"),
     },
     outputs = {"out": "generated_main.fuzz.go"},
     cfg = cfg_libfuzz_gotag,
 )
 
-def go_fuzz_library(name, **kwargs):
-    # TODO: Add a outgoing (incoming?) transition rule for the go_library to apply the correct gotags.
+# TODO: Add a outgoing (incoming?) transition rule for the go_library to apply the correct gotags.
+def go_fuzz_library(
+        name,
+        #        corpus,
+        func = "Fuzz",
+        repository = "",
+        size = "medium",
+        tags = [],
+        **kwargs):
     go_library(
         name = name + "_lib_with_fuzzer",
-        tags = ["manual"],  # TODO: Add tags from kwargs?
+        tags = ["manual"] + tags,
         visibility = ["//visibility:private"],
         **kwargs
     )
     gen_fuzz_main(
         name = name + "_libfuzz_main",
         target_pkg = "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks",  # this needs to be inferred from the go library above.
-        tags = ["manual"],
+        func = func,
+        tags = ["manual"] + tags,
         visibility = ["//visibility:private"],
     )
     go_binary(
@@ -116,8 +126,13 @@ def go_fuzz_library(name, **kwargs):
         deps = [name + "_lib_with_fuzzer"],
         linkmode = LINKMODE_C_ARCHIVE,
         cgo = True,
-        tags = ["manual"],
+        tags = ["manual"] + tags,
         visibility = ["//visibility:private"],
+        gc_goopts = ["-d=libfuzzer"],
+        cdeps = ["@herumi_bls_eth_go_binary//:lib"],
+        clinkopts = [
+            #"-Wl,--no-as-needed",
+        ],
     )
     native.genrule(
         name = name,
@@ -125,4 +140,38 @@ def go_fuzz_library(name, **kwargs):
         srcs = [name + "_binary"],
         cmd = "cp $< $@",
         visibility = kwargs.get("visibility"),
+        tags = ["manual"] + tags,
+    )
+
+    #    if not (corpus.startswith("//") or corpus.startswith(":") or corpus.startswith("@")):
+    #        corpus_name = name + "_corpus"
+    #        corpus = native.glob([corpus + "/**"])
+    #        native.filegroup(
+    #            name = corpus_name,
+    #            srcs = corpus,
+    #        )
+    #    else:
+    #        corpus_name = corpus
+    #
+    #    native.cc_test(
+    #        name = name,
+    #        linkstatic = 1,
+    #        args = ["$(locations %s)" % corpus_name],
+    #        data = [corpus_name],
+    #        # No fuzzing on macOS or Windows
+    #        deps = [
+    #            ":" + test_lib_name,
+    #            repository + "//test/fuzz:main",
+    #        ],
+    #        size = size,
+    #        tags = tags,
+    #    )
+    native.cc_test(
+        name = name + "_with_libfuzzer",
+        linkopts = ["-fsanitize=fuzzer"],
+        linkstatic = 1,
+        testonly = 1,
+        #data = [corpus_name],
+        deps = [":" + name],
+        tags = ["manual", "fuzzer"] + tags,
     )

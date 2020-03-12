@@ -73,7 +73,7 @@ go_fuzz_library(
         "fuzz.go",
     ],
     embed = [":go_default_library"],
-    #fuzz_func = "Fuzz",
+    func = "Fuzz",
     deps = [
         "//beacon-chain/state:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
