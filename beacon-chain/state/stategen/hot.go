@@ -49,9 +49,8 @@ func (s *State) saveHotState(ctx context.Context, blockRoot [32]byte, state *sta
 		return err
 	}
 
-	// Store the state in the cache.
-	// Don't need to copy state given the state is not returned.
-	s.hotStateCache.Put(blockRoot, state)
+	// Store the copied state in the cache.
+	s.hotStateCache.Put(blockRoot, state.Copy())
 
 	return nil
 }
