@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	status "github.com/prysmaticlabs/prysm/slasher/db/types"
-
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations"
