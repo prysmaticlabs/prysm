@@ -277,7 +277,14 @@ func (bs *Server) StreamIndexedAttestations(
 					err,
 				)
 			}
-			epoch := helpers.SlotToEpoch(bs.HeadFetcher.HeadSlot())
+			if len(aggAtts) == 0 {
+				continue
+			}
+			// All attestations we receive have the same target epoch given they
+			// have the same data root, so we just use the target epoch from
+			// the first one to determine committees for converting into indexed
+			// form.
+			epoch := aggAtts[0].Data.Target.Epoch
 			committeesBySlot, _, err := bs.retrieveCommitteesForEpoch(stream.Context(), epoch)
 			if err != nil {
 				return status.Errorf(
