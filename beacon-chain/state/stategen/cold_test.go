@@ -11,6 +11,53 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
+func TestSaveColdState_NonArchivedPoint(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	service := New(db)
+	service.slotsPerArchivedPoint = 2
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	beaconState.SetSlot(1)
+
+	if err := service.saveColdState(ctx, [32]byte{}, beaconState); err != errSlotNonArchivedPoint {
+		t.Error("Did not get wanted error")
+	}
+}
+
+func TestSaveColdState_CanSave(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	service := New(db)
+	service.slotsPerArchivedPoint = 1
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	beaconState.SetSlot(1)
+
+	r := [32]byte{'a'}
+	if err := service.saveColdState(ctx, r, beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	if !service.beaconDB.HasArchivedPoint(ctx, 1) {
+		t.Error("Did not save cold state")
+	}
+
+	if service.beaconDB.ArchivedPointRoot(ctx, 1) != r {
+		t.Error("Did not get wanted root")
+	}
+
+	receivedState, err := service.beaconDB.ArchivedPointState(ctx, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(receivedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe()) {
+		t.Error("Did not get wanted state")
+	}
+}
+
 func TestArchivedPointByIndex_HasPoint(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
