@@ -81,7 +81,7 @@ func (s *State) recoverArchivedPointByIndex(ctx context.Context, archiveIndex ui
 	return archivedState, nil
 }
 
-// Given the block root, this returns the slot of the block root using state summary look up in DB.
+// Given a block root, this returns the slot of the block root using state summary look up in DB.
 // If state summary does not exist in DB, it will recover the state summary and save it to the DB.
 // This is used to cover corner cases where users toggle new state service's feature flag.
 func (s *State) blockRootSlot(ctx context.Context, blockRoot [32]byte) (uint64, error) {
@@ -99,7 +99,7 @@ func (s *State) blockRootSlot(ctx context.Context, blockRoot [32]byte) (uint64, 
 		return summary.Slot, nil
 	}
 
-	// Retry with DB using block bucket.
+	// Couldn't find state summary in DB. Retry with block bucket to get block slot.
 	b, err := s.beaconDB.Block(ctx, blockRoot)
 	if err != nil {
 		return 0, err

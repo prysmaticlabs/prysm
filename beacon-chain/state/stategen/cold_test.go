@@ -8,6 +8,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -154,6 +155,58 @@ func TestRecoverArchivedPointByIndex_CanRecover(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !proto.Equal(recoveredState.InnerStateUnsafe(), savedArchivedState.InnerStateUnsafe()) {
-		t.Error("Diff saved state")
+		t.Error("Diff savled state")
+	}
+}
+
+func TestBlockRootSlot_Exists(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	service := New(db)
+	bRoot := [32]byte{'A'}
+	bSlot := uint64(100)
+	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
+		Slot: bSlot,
+		Root: bRoot[:],
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	slot, err := service.blockRootSlot(ctx, bRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if slot != bSlot {
+		t.Error("Did not get correct block root slot")
+	}
+}
+
+func TestBlockRootSlot_CanRecoverAndSave(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	service := New(db)
+	bSlot := uint64(100)
+	b := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: bSlot}}
+	bRoot, _ := ssz.HashTreeRoot(b.Block)
+	if err := service.beaconDB.SaveBlock(ctx, b); err != nil {
+		t.Fatal(err)
+	}
+
+	slot, err := service.blockRootSlot(ctx, bRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if slot != bSlot {
+		t.Error("Did not get correct block root slot")
+	}
+
+	// Verify state summary is saved.
+	if !service.beaconDB.HasStateSummary(ctx, bRoot) {
+		t.Error("State summary not saved")
 	}
 }
