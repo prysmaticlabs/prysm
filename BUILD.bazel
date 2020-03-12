@@ -5,6 +5,7 @@ load("@io_kubernetes_build//defs:run_in_workspace.bzl", "workspace_binary")
 load("@io_bazel_rules_go//go:def.bzl", "nogo")
 load("@graknlabs_bazel_distribution//common:rules.bzl", "assemble_targz", "assemble_versioned")
 load("//tools:binary_targets.bzl", "binary_targets", "determine_targets")
+load("@bazel_skylib//rules:common_settings.bzl", "string_setting")
 
 prefix = "github.com/prysmaticlabs/prysm"
 
@@ -142,4 +143,10 @@ toolchain(
     name = "built_cmake_toolchain",
     toolchain = "@rules_foreign_cc//tools/build_defs/native_tools:built_cmake",
     toolchain_type = "@rules_foreign_cc//tools/build_defs:cmake_toolchain",
+)
+
+string_setting(
+    name = "libfuzz_gotags",
+    build_setting_default = "",
+    values = ["libfuzz"],
 )

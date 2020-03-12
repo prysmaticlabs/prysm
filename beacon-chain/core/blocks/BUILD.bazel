@@ -1,4 +1,5 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("//tools:fuzz.bzl", "go_fuzz_library")
 
 go_library(
     name = "go_default_library",
@@ -63,5 +64,20 @@ go_test(
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
         "@com_github_sirupsen_logrus//:go_default_library",
         "@in_gopkg_d4l3k_messagediff_v1//:go_default_library",
+    ],
+)
+
+go_fuzz_library(
+    name = "fuzzer",
+    srcs = [
+        "fuzz.go",
+    ],
+    embed = [":go_default_library"],
+    #fuzz_func = "Fuzz",
+    deps = [
+        "//beacon-chain/state:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
     ],
 )

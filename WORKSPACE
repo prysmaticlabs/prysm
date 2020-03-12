@@ -43,12 +43,20 @@ load("@prysm//tools/cross-toolchain:rbe_toolchains_config.bzl", "rbe_toolchains_
 
 rbe_toolchains_config()
 
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
 http_archive(
     name = "bazel_skylib",
-    sha256 = "2ea8a5ed2b448baf4a6855d3ce049c4c452a6470b1efd1504fdb7c1c134d220a",
-    strip_prefix = "bazel-skylib-0.8.0",
-    url = "https://github.com/bazelbuild/bazel-skylib/archive/0.8.0.tar.gz",
+    sha256 = "97e70364e9249702246c0e9444bccdc4b847bed1eb03c5a3ece4f83dfe6abc44",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/1.0.2/bazel-skylib-1.0.2.tar.gz",
+        "https://github.com/bazelbuild/bazel-skylib/releases/download/1.0.2/bazel-skylib-1.0.2.tar.gz",
+    ],
 )
+
+load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
+
+bazel_skylib_workspace()
 
 http_archive(
     name = "bazel_gazelle",
@@ -271,6 +279,14 @@ http_archive(
     sha256 = "f6be27772babfdacbbf2e4c5432ea46c57ef5b7d82e52a81b885e7b804781fd6",
     strip_prefix = "librdkafka-1.2.1",
     urls = ["https://github.com/edenhill/librdkafka/archive/v1.2.1.tar.gz"],
+)
+
+http_archive(
+    name = "sigp_beacon_fuzz_corpora",
+    build_file_content = all_content,
+    sha256 = "72c947b6b92df0db7275189be77733209f12af2aa931b81917b952c8d93e4c9f",
+    strip_prefix = "beacon-fuzz-corpora-c6d956ce22bd91f0d2929eb6401e40adfd7a8c89",
+    urls = ["https://github.com/sigp/beacon-fuzz-corpora/archive/c6d956ce22bd91f0d2929eb6401e40adfd7a8c89.tar.gz"],
 )
 
 # External dependencies
