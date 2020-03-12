@@ -999,6 +999,9 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	server := &Server{
 		BeaconDB: db,
 		Ctx:      context.Background(),
+		HeadFetcher: &mock.ChainService{
+			State: headState,
+		},
 		GenesisTimeFetcher: &mock.ChainService{
 			Genesis: time.Now(),
 		},
