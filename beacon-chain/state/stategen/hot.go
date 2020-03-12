@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -125,18 +124,12 @@ func (s *State) loadEpochBoundaryRoot(ctx context.Context, blockRoot [32]byte, s
 		return blockRoot, nil
 	}
 
-	// Node uses genesis getters if the epoch boundary slot is on genesis slot.
+	// Node uses genesis getters if the epoch boundary slot is genesis slot.
 	if boundarySlot == 0 {
-		b, err := s.beaconDB.GenesisBlock(ctx)
+		r, err := s.genesisRoot(ctx)
 		if err != nil {
-			return [32]byte{}, err
+			return [32]byte{}, nil
 		}
-
-		r, err = ssz.HashTreeRoot(b.Block)
-		if err != nil {
-			return [32]byte{}, err
-		}
-
 		s.setEpochBoundaryRoot(boundarySlot, r)
 		return r, nil
 	}
