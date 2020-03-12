@@ -16,8 +16,8 @@ import (
 
 const (
 	queueMaxPendingRequests  = 4
-	queueFetchRequestTimeout = 8 * time.Second
-	queueMaxPendingBlocks    = 16 * queueMaxPendingRequests * blockBatchSize
+	queueFetchRequestTimeout = 60 * time.Second
+	queueMaxCachedBlocks     = 8 * queueMaxPendingRequests * blockBatchSize
 	queueRefreshRate         = time.Second / 20
 	queueStopCallTimeout     = 1 * time.Second
 )
@@ -29,9 +29,8 @@ const (
 )
 
 var (
-	errQueueCtxIsDone             = errors.New("queue's context is done, reinitialize")
-	errWaitPendingBlocksDepleting = errors.New("waiting for pending blocks to deplete")
-	errQueueTakesTooLongToStop    = errors.New("queue takes to long to stop")
+	errQueueCtxIsDone          = errors.New("queue's context is done, reinitialize")
+	errQueueTakesTooLongToStop = errors.New("queue takes to long to stop")
 )
 
 // blocksProvider exposes enough methods for queue to fetch incoming blocks.
@@ -60,7 +59,7 @@ type blocksQueueState struct {
 
 // schedulerState a state of scheduling process.
 type schedulerState struct {
-	sync.RWMutex
+	sync.Mutex
 	currentSlot     uint64
 	blockBatchSize  uint64
 	requestedBlocks struct {
@@ -115,7 +114,7 @@ func newBlocksQueue(ctx context.Context, cfg *blocksQueueConfig) *blocksQueue {
 				blockBatchSize: blockBatchSize,
 			},
 			sender:       &senderState{},
-			cachedBlocks: make(map[uint64]*cachedBlock, queueMaxPendingBlocks),
+			cachedBlocks: make(map[uint64]*cachedBlock, queueMaxCachedBlocks),
 		},
 		blocksFetcher:        blocksFetcher,
 		headFetcher:          cfg.headFetcher,
@@ -222,22 +221,19 @@ func (q *blocksQueue) loop() {
 func (q *blocksQueue) scheduleFetchRequests(ctx context.Context) error {
 	log.Debug("scheduleFetchRequests")
 
-	// Reset counters and update batch size whenever necessary (too many failed/skipped blocks).
-	if err := q.adjustBlockBatchSize(); err != nil {
+	// Depends on various factors (error rate, current head slot, number of skipped blocks).
+	// State updates may include a temporary increase of block's batch size (to look ahead farther).
+	if err := q.updateSchedulerState(ctx); err != nil {
 		return err
 	}
 
-	// Update queue's starting position, this happens if there are no requests in scheduler.
-	q.state.scheduler.handleCurrentSlotUpdate(q.headFetcher.HeadSlot())
-
-	// Schedule request.
 	q.state.scheduler.Lock()
 	defer q.state.scheduler.Unlock()
 
 	blocks := &q.state.scheduler.requestedBlocks
-	allRequestedBlocks := blocks.pending + blocks.skipped + blocks.failed + blocks.valid
+	offset := blocks.pending + blocks.skipped + blocks.failed + blocks.valid
 
-	start := q.state.scheduler.currentSlot + allRequestedBlocks + 1
+	start := q.state.scheduler.currentSlot + offset + 1
 	count := mathutil.Min(q.state.scheduler.blockBatchSize, q.highestExpectedSlot-start+1)
 	if count <= 0 {
 		log.WithFields(logrus.Fields{
@@ -265,65 +261,87 @@ func (q *blocksQueue) scheduleFetchRequests(ctx context.Context) error {
 	return nil
 }
 
-func (q *blocksQueue) adjustBlockBatchSize() error {
+// updateSchedulerState adjusts scheduler's state, so that it never stalls.
+// Makes necessary adjustments to forward lookup window size and slot offset.
+func (q *blocksQueue) updateSchedulerState(ctx context.Context) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+
+	q.state.scheduler.Lock()
+	defer q.state.scheduler.Unlock()
 	s := q.state.scheduler
-	s.Lock()
-	defer s.Unlock()
 
-	adjustBlockBatchSize := func(depletePending bool, increaseBatchSize bool) error {
-		// Wait for all pending blocks to complete, before resetting.
-		if depletePending && s.requestedBlocks.pending > 0 {
-			return errWaitPendingBlocksDepleting
-		}
+	log.WithFields(logrus.Fields{
+		"state":          fmt.Sprintf("%+v", s.requestedBlocks),
+		"blockBatchSize": s.blockBatchSize,
+	}).Debug("Checking scheduler state")
 
-		// Reset state counters and temporary increase limit of pending requests.
-		s.requestedBlocks.pending = 0
-		s.requestedBlocks.failed = 0
-		s.requestedBlocks.valid = 0
-		s.requestedBlocks.skipped = 0
-		if increaseBatchSize {
-			s.blockBatchSize *= 2
-		} else {
-			s.blockBatchSize = blockBatchSize
-		}
-		log.WithFields(logrus.Fields{
-			"state":          fmt.Sprintf("%+v", s.requestedBlocks),
-			"blockBatchSize": s.blockBatchSize,
-		}).Debug("Scheduler counters and block batch size are adjusted")
+	blocks := &s.requestedBlocks
+	resetStateCounters := func() {
+		q.state.sender.Lock()
+		q.state.cachedBlocks = make(map[uint64]*cachedBlock, queueMaxCachedBlocks)
+		q.state.sender.Unlock()
+
+		blocks.pending, blocks.valid, blocks.failed, blocks.skipped = 0, 0, 0, 0
+		s.currentSlot = q.headFetcher.HeadSlot()
+	}
+
+	// Update state's current slot pointer.
+	if count := blocks.pending + blocks.skipped + blocks.failed + blocks.valid; count == 0 {
+		s.currentSlot = q.headFetcher.HeadSlot()
 		return nil
 	}
 
-	// Given enough valid blocks, we can set back the batch size of fetched blocks.
-	if s.requestedBlocks.valid >= s.blockBatchSize {
-		log.Debug("Many valid blocks, time to reset block batch size")
-		return adjustBlockBatchSize(true /* deplete pending */, false /* just reset */)
-	}
-
 	// Too many failures (blocks that can't be processed at this time).
-	if s.requestedBlocks.failed >= s.blockBatchSize {
-		log.Debug("Too many failures, increasing block batch size")
-		return adjustBlockBatchSize(false /* ignore pending */, true /* increase */)
+	if blocks.failed >= s.blockBatchSize/2 {
+		s.blockBatchSize *= 2
+		resetStateCounters()
+
+		log.WithFields(logrus.Fields{
+			"counters":       fmt.Sprintf("%+v", blocks),
+			"currentSlot":    s.currentSlot,
+			"blockBatchSize": s.blockBatchSize,
+		}).Debug("Too many unprocessable blocks, increasing block batch size")
+		return nil
 	}
 
-	// All blocks processed, no pending blocks.
-	blocks := s.requestedBlocks
-	if count := blocks.skipped + blocks.failed + blocks.valid; blocks.pending == 0 && count > 0 {
-		log.Debug("No pending blocks, resetting counters")
-		return adjustBlockBatchSize(false /* ignore pending */, true /* increase */)
+	// Given enough valid blocks, we can set back block batch size.
+	if blocks.valid >= blockBatchSize && s.blockBatchSize != blockBatchSize {
+		blocks.skipped, blocks.valid = blocks.skipped+blocks.valid, 0
+		s.blockBatchSize = blockBatchSize
+
+		log.WithFields(logrus.Fields{
+			"counters":       fmt.Sprintf("%+v", blocks),
+			"currentSlot":    s.currentSlot,
+			"blockBatchSize": s.blockBatchSize,
+		}).Debug("Enough valid blocks, block batch size reset")
 	}
 
 	// Too many items in scheduler, time to update current slot to point to current head's slot.
-	allBlocks := blocks.pending + blocks.skipped + blocks.failed + blocks.valid
-	if allBlocks >= queueMaxPendingBlocks {
-		log.Debug("Overcrowded scheduler counters, resetting")
-		return adjustBlockBatchSize(false /* ignore pending */, false /* just reset */)
+	count := blocks.pending + blocks.skipped + blocks.failed + blocks.valid
+	if count >= queueMaxCachedBlocks {
+		s.blockBatchSize = blockBatchSize
+		resetStateCounters()
+
+		log.WithFields(logrus.Fields{
+			"counters":       fmt.Sprintf("%+v", blocks),
+			"currentSlot":    s.currentSlot,
+			"blockBatchSize": s.blockBatchSize,
+		}).Debug("Too many cached blocks, resetting")
+		return nil
 	}
 
-	start := q.state.scheduler.currentSlot + allBlocks + 1
-	count := mathutil.Min(q.state.scheduler.blockBatchSize, q.highestExpectedSlot-start+1)
-	if count <= 0 {
-		log.Debug("Queue's start position is too high, resetting counters")
-		return adjustBlockBatchSize(false /* ignore pending */, false /* just reset */)
+	// All blocks processed, no pending blocks.
+	if count := blocks.skipped + blocks.failed + blocks.valid; blocks.pending == 0 && count > 0 {
+		s.blockBatchSize = blockBatchSize
+		resetStateCounters()
+		log.WithFields(logrus.Fields{
+			"counters":       fmt.Sprintf("%+v", blocks),
+			"currentSlot":    s.currentSlot,
+			"blockBatchSize": s.blockBatchSize,
+		}).Debug("No pending blocks, resetting counters")
+		return nil
 	}
 
 	return nil

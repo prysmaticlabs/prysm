@@ -2,8 +2,14 @@ package initialsync
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
+	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
+	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 )
 
@@ -156,6 +162,231 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 
 		cancel()
 		if err := queue.stop(); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+func TestBlocksQueueUpdateSchedulerState(t *testing.T) {
+	chainConfig := struct {
+		expectedBlockSlots []uint64
+		peers              []*peerData
+	}{
+		expectedBlockSlots: makeSequence(1, 241),
+		peers:              []*peerData{},
+	}
+
+	mc, _, beaconDB := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
+	defer dbtest.TeardownDB(t, beaconDB)
+
+	setupQueue := func(ctx context.Context) *blocksQueue {
+		queue := newBlocksQueue(ctx, &blocksQueueConfig{
+			blocksFetcher:       &blocksProviderMock{},
+			headFetcher:         mc,
+			highestExpectedSlot: uint64(len(chainConfig.expectedBlockSlots)),
+		})
+
+		return queue
+	}
+	assertState := func(state *schedulerState, pending, valid, skipped, failed uint64) error {
+		s := state.requestedBlocks
+		res := s.pending != pending || s.valid != valid || s.skipped != skipped || s.failed != failed
+		if res {
+			b := struct{ pending, valid, skipped, failed uint64 }{pending, valid, skipped, failed,}
+			return fmt.Errorf("invalid state, want: %+v, got: %+v", b, state.requestedBlocks)
+		}
+		return nil
+	}
+
+	t.Run("cancelled context", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+
+		queue := setupQueue(ctx)
+		state := queue.state.scheduler
+
+		cancel()
+		if err := assertState(state, 0, 0, 0, 0); err != nil {
+			t.Error(err)
+		}
+		if err := queue.updateSchedulerState(ctx); err != ctx.Err() {
+			t.Errorf("expected error: %v", ctx.Err())
+		}
+	})
+
+	t.Run("empty state on pristine node", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		queue := setupQueue(ctx)
+		state := queue.state.scheduler
+
+		if err := assertState(state, 0, 0, 0, 0); err != nil {
+			t.Error(err)
+		}
+		if err := queue.updateSchedulerState(ctx); err != nil {
+			t.Error(err)
+		}
+		if state.currentSlot != 0 {
+			t.Errorf("invalid current slot, want: %v, got: %v", 0, state.currentSlot)
+		}
+	})
+
+	t.Run("empty state on pre-synced node", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		queue := setupQueue(ctx)
+		state := queue.state.scheduler
+
+		syncToSlot := uint64(7)
+		setBlocksFromCache(ctx, t, mc, syncToSlot)
+		if err := assertState(state, 0, 0, 0, 0); err != nil {
+			t.Error(err)
+		}
+		if err := queue.updateSchedulerState(ctx); err != nil {
+			t.Error(err)
+		}
+		if state.currentSlot != syncToSlot {
+			t.Errorf("invalid current slot, want: %v, got: %v", syncToSlot, state.currentSlot)
+		}
+	})
+
+	t.Run("reset block batch size to default", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		queue := setupQueue(ctx)
+		state := queue.state.scheduler
+
+		if err := assertState(state, 0, 0, 0, 0); err != nil {
+			t.Error(err)
+		}
+
+		// On enough valid blocks, batch size should get back to default value.
+		state.blockBatchSize *= 2
+		state.requestedBlocks.valid = blockBatchSize
+		state.requestedBlocks.pending = 13
+		state.requestedBlocks.skipped = 17
+		state.requestedBlocks.failed = 19
+		if err := assertState(state, 13, blockBatchSize, 17, 19); err != nil {
+			t.Error(err)
+		}
+		if state.blockBatchSize != 2*blockBatchSize {
+			t.Errorf("unexpected batch size, want: %v, got: %v", 2*blockBatchSize, state.blockBatchSize)
+		}
+
+		if err := queue.updateSchedulerState(ctx); err != nil {
+			t.Error(err)
+		}
+		if err := assertState(state, 13, 0, 17+blockBatchSize, 19); err != nil {
+			t.Error(err)
+		}
+		if state.blockBatchSize != blockBatchSize {
+			t.Errorf("unexpected batch size, want: %v, got: %v", blockBatchSize, state.blockBatchSize)
+		}
+	})
+
+	t.Run("increase block batch size on too many failures", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		queue := setupQueue(ctx)
+		state := queue.state.scheduler
+
+		if err := assertState(state, 0, 0, 0, 0); err != nil {
+			t.Error(err)
+		}
+
+		// On too many failures, batch size should get doubled and counters reset.
+		state.requestedBlocks.valid = 19
+		state.requestedBlocks.pending = 13
+		state.requestedBlocks.skipped = 17
+		state.requestedBlocks.failed = blockBatchSize
+		if err := assertState(state, 13, 19, 17, blockBatchSize); err != nil {
+			t.Error(err)
+		}
+		if state.blockBatchSize != blockBatchSize {
+			t.Errorf("unexpected batch size, want: %v, got: %v", blockBatchSize, state.blockBatchSize)
+		}
+
+		if err := queue.updateSchedulerState(ctx); err != nil {
+			t.Error(err)
+		}
+		if state.blockBatchSize != 2*blockBatchSize {
+			t.Errorf("unexpected batch size, want: %v, got: %v", 2*blockBatchSize, state.blockBatchSize)
+		}
+		if err := assertState(state, 0, 0, 0, 0); err != nil {
+			t.Error(err)
+		}
+	})
+
+	t.Run("reset counters and block batch size on too many cached items", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		queue := setupQueue(ctx)
+		state := queue.state.scheduler
+
+		if err := assertState(state, 0, 0, 0, 0); err != nil {
+			t.Error(err)
+		}
+
+		// On too many cached items, batch size and counters should reset.
+		state.requestedBlocks.valid = queueMaxCachedBlocks
+		state.requestedBlocks.pending = 13
+		state.requestedBlocks.skipped = 17
+		state.requestedBlocks.failed = 19
+		if err := assertState(state, 13, queueMaxCachedBlocks, 17, 19); err != nil {
+			t.Error(err)
+		}
+		if state.blockBatchSize != blockBatchSize {
+			t.Errorf("unexpected batch size, want: %v, got: %v", blockBatchSize, state.blockBatchSize)
+		}
+
+		// This call should trigger resetting.
+		if err := queue.updateSchedulerState(ctx); err != nil {
+			t.Error(err)
+		}
+		if state.blockBatchSize != blockBatchSize {
+			t.Errorf("unexpected batch size, want: %v, got: %v", blockBatchSize, state.blockBatchSize)
+		}
+		if err := assertState(state, 0, 0, 0, 0); err != nil {
+			t.Error(err)
+		}
+	})
+
+	t.Run("no pending blocks left", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		queue := setupQueue(ctx)
+		state := queue.state.scheduler
+
+		if err := assertState(state, 0, 0, 0, 0); err != nil {
+			t.Error(err)
+		}
+
+		// On too many cached items, batch size and counters should reset.
+		state.blockBatchSize = 2 * blockBatchSize
+		state.requestedBlocks.pending = 0
+		state.requestedBlocks.valid = 1
+		state.requestedBlocks.skipped = 1
+		state.requestedBlocks.failed = 1
+		if err := assertState(state, 0, 1, 1, 1); err != nil {
+			t.Error(err)
+		}
+		if state.blockBatchSize != 2*blockBatchSize {
+			t.Errorf("unexpected batch size, want: %v, got: %v", 2*blockBatchSize, state.blockBatchSize)
+		}
+
+		// This call should trigger resetting.
+		if err := queue.updateSchedulerState(ctx); err != nil {
+			t.Error(err)
+		}
+		if state.blockBatchSize != blockBatchSize {
+			t.Errorf("unexpected batch size, want: %v, got: %v", blockBatchSize, state.blockBatchSize)
+		}
+		if err := assertState(state, 0, 0, 0, 0); err != nil {
 			t.Error(err)
 		}
 	})
@@ -746,3 +977,29 @@ func TestBlocksQueueInitStartStop(t *testing.T) {
 //		})
 //	}
 //}
+
+func setBlocksFromCache(ctx context.Context, t *testing.T, mc *mock.ChainService, highestSlot uint64) {
+	parentRoot := rootCache[0]
+	for slot := uint64(0); slot <= highestSlot; slot++ {
+		blk := &eth.SignedBeaconBlock{
+			Block: &eth.BeaconBlock{
+				Slot:       slot,
+				ParentRoot: parentRoot[:],
+			},
+		}
+		mc.BlockNotifier().BlockFeed().Send(&feed.Event{
+			Type: blockfeed.ReceivedBlock,
+			Data: blockfeed.ReceivedBlockData{
+				SignedBlock: blk,
+			},
+		})
+
+		if err := mc.ReceiveBlockNoPubsubForkchoice(ctx, blk); err != nil {
+			t.Error(err)
+		}
+
+		currRoot, _ := ssz.HashTreeRoot(blk.Block)
+		//logrus.Infof("block with slot %d , signing root %#x and parent root %#x", slot, currRoot, parentRoot)
+		parentRoot = currRoot
+	}
+}
