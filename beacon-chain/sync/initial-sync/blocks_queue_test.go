@@ -210,18 +210,18 @@ func TestBlocksQueueScheduleFetchRequests(t *testing.T) {
 		if err := assertState(state, 241, 0, 0, 0); err != nil {
 			t.Error(err)
 		}
-		state.updateFailedBlocksCounter(50)
+		state.updateCounter(failedBlockCounter, 50)
 		if err := assertState(state, 191, 0, 0, 50); err != nil {
 			t.Error(err)
 		}
-		state.updateFailedBlocksCounter(500) // too high value shouldn't cause issues
+		state.updateCounter(failedBlockCounter, 500) // too high value shouldn't cause issues
 		if err := assertState(state, 0, 0, 0, 241); err != nil {
 			t.Error(err)
 		}
 
 		// Due to failures, resetting is expected. But there are pending items.
 		hook.Reset()
-		state.updateFailedBlocksCounter(1)
+		state.updateCounter(failedBlockCounter, 1)
 		if err := queue.scheduleFetchRequests(ctx); err != nil {
 			t.Error(err)
 		}
@@ -272,11 +272,11 @@ func TestBlocksQueueScheduleFetchRequests(t *testing.T) {
 		if err := assertState(state, 241, 0, 0, 0); err != nil {
 			t.Error(err)
 		}
-		state.updateSkippedBlocksCounter(50)
+		state.updateCounter(skippedBlockCounter, 50)
 		if err := assertState(state, 191, 0, 50, 0); err != nil {
 			t.Error(err)
 		}
-		state.updateSkippedBlocksCounter(500) // too high value shouldn't cause issues
+		state.updateCounter(skippedBlockCounter, 500) // too high value shouldn't cause issues
 		if err := assertState(state, 0, 0, 241, 0); err != nil {
 			t.Error(err)
 		}

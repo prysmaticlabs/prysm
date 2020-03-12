@@ -20,6 +20,12 @@ const (
 	queueMaxPendingBlocks    = 16 * queueMaxPendingRequests * blockBatchSize
 )
 
+const (
+	validBlockCounter = iota
+	skippedBlockCounter
+	failedBlockCounter
+)
+
 var (
 	errQueueCtxIsDone             = errors.New("queue's context is done, reinitialize")
 	errWaitPendingBlocksDepleting = errors.New("waiting for pending blocks to deplete")
@@ -186,7 +192,7 @@ func (q *blocksQueue) loop() {
 					}
 					// Process incoming response into blocks.
 					if err := q.parseFetchResponse(q.ctx, resp); err != nil {
-						q.state.scheduler.updateFailedBlocksCounter(resp.count)
+						q.state.scheduler.updateCounter(failedBlockCounter, resp.count)
 						log.WithError(err).Debug("Error processing received blocks")
 						return
 					}
@@ -335,22 +341,29 @@ func (q *blocksQueue) parseFetchResponse(ctx context.Context, response *fetchReq
 	defer q.state.sender.Unlock()
 
 	// Cache blocks in [start, start + count) range, include skipped blocks.
+	var skippedBlocks uint64
 	end := response.start + mathutil.Max(response.count, uint64(len(response.blocks)))
 	for slot := response.start; slot < end; slot++ {
 		if block, ok := responseBlocks[slot]; ok {
 			q.state.cachedBlocks[slot] = &cachedBlock{
 				SignedBeaconBlock: block,
 			}
+			delete(responseBlocks, slot)
+			skippedBlocks++
 			continue
 		}
 		q.state.cachedBlocks[slot] = &cachedBlock{}
 	}
 
-	// Update scheduler's counters.
-	savedBlocks := end - response.start
-	if savedBlocks > uint64(len(response.blocks)) {
-		q.state.scheduler.updateSkippedBlocksCounter(savedBlocks - uint64(len(response.blocks)))
+	// If there are any items left in incoming response, log them too.
+	for slot, block := range responseBlocks {
+		q.state.cachedBlocks[slot] = &cachedBlock{
+			SignedBeaconBlock: block,
+		}
 	}
+
+	// Update scheduler's counters.
+	q.state.scheduler.updateCounter(skippedBlockCounter, skippedBlocks)
 
 	return nil
 }
@@ -398,29 +411,20 @@ func (s *schedulerState) handleCurrentSlotUpdate(slot uint64) {
 	}
 }
 
-func (s *schedulerState) updateValidBlocksCounter(n uint64) {
+// updateCounter updates scheduler's blocks counters.
+func (s *schedulerState) updateCounter(counter int, n uint64) {
 	s.Lock()
 	defer s.Unlock()
 
 	n = mathutil.Min(s.requestedBlocks.pending, n)
 	s.requestedBlocks.pending -= n
-	s.requestedBlocks.failed += n
-}
 
-func (s *schedulerState) updateFailedBlocksCounter(n uint64) {
-	s.Lock()
-	defer s.Unlock()
-
-	n = mathutil.Min(s.requestedBlocks.pending, n)
-	s.requestedBlocks.pending -= n
-	s.requestedBlocks.failed += n
-}
-
-func (s *schedulerState) updateSkippedBlocksCounter(n uint64) {
-	s.Lock()
-	defer s.Unlock()
-
-	n = mathutil.Min(s.requestedBlocks.pending, n)
-	s.requestedBlocks.pending -= n
-	s.requestedBlocks.skipped += n
+	switch counter {
+	case validBlockCounter:
+		s.requestedBlocks.valid += n
+	case skippedBlockCounter:
+		s.requestedBlocks.skipped += n
+	case failedBlockCounter:
+		s.requestedBlocks.failed += n
+	}
 }
