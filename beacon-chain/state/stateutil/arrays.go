@@ -5,8 +5,6 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	"github.com/protolambda/zssz/merkle"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -31,7 +29,7 @@ func RootsArrayHashTreeRoot(vals [][]byte, length uint64, fieldName string) ([32
 	return nocachedHasher.arraysRoot(vals, length, fieldName)
 }
 
-func ReturnTrieLayer(elements [][]byte, length uint64, fieldName string) [][]*[32]byte {
+func ReturnTrieLayer(elements [][]byte, length uint64) [][]*[32]byte {
 	hasher := hashutil.CustomSHA256Hasher()
 	leaves := make([][32]byte, length)
 	for i, chunk := range elements {
@@ -48,25 +46,22 @@ func ReturnTrieLayer(elements [][]byte, length uint64, fieldName string) [][]*[3
 	for i, val := range layers {
 		refLayers[i] = make([]*[32]byte, len(val))
 		for j, innerVal := range val {
-			refLayers[i][j] = &innerVal
+			newVal := innerVal
+			refLayers[i][j] = &newVal
 		}
 	}
 	return refLayers
 }
 
-func RecomputeFromLayer(elements [][]byte, layer [][]*[32]byte, changedIdx []uint64) ([32]byte, [][]*[32]byte, error) {
+func RecomputeFromLayer(layer [][]*[32]byte, changedIdx []uint64) ([32]byte, [][]*[32]byte, error) {
 	hasher := hashutil.CustomSHA256Hasher()
-	for _, idx := range changedIdx {
-		byteArr := bytesutil.ToBytes32(elements[idx])
-		layer[0][idx] = &byteArr
-	}
-	//leaves := layer[0]
+	leaves := layer[0]
 
-	leaves := make([]*[32]byte, len(layer[0]))
+	/*leaves := make([]*[32]byte, len(layer[0]))
 	for i, chunk := range layer[0] {
 		newChunk := *chunk
 		leaves[i] = &newChunk
-	}
+	} */
 
 	if len(changedIdx) == 0 {
 		return *layer[0][0], layer, nil
