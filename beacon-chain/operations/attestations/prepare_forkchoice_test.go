@@ -171,7 +171,11 @@ func TestBatchAttestations_Single(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wanted, err := helpers.AggregateAttestations(append(unaggregatedAtts, aggregatedAtts...))
+	a, err := helpers.AggregateAttestations(aggregatedAtts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wanted, err := helpers.AggregateAttestations(append(unaggregatedAtts, a...))
 	if err != nil {
 		t.Fatal(err)
 	}
