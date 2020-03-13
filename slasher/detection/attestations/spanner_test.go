@@ -656,7 +656,7 @@ func TestSpanDetector_DetectSlashingsForAttestation_MultipleValidators(t *testin
 				t.Fatal(err)
 			}
 			var want []*types.DetectionResult
-			for i, _ := range tt.incomingAtt.AttestingIndices {
+			for i := 0; i < len(tt.incomingAtt.AttestingIndices); i++ {
 				if tt.shouldSlash[i] {
 					if tt.slashableEpochs[i] == tt.incomingAtt.Data.Target.Epoch {
 						want = append(want, &types.DetectionResult{
@@ -676,8 +676,6 @@ func TestSpanDetector_DetectSlashingsForAttestation_MultipleValidators(t *testin
 				}
 			}
 			if !reflect.DeepEqual(want, res) {
-				spanMap, _ := spanDetector.slasherDB.EpochSpansMap(ctx, 2)
-				t.Error(spanMap)
 				for i, ww := range want {
 					t.Errorf("Wanted   %d: %+v\n", i, ww)
 				}
