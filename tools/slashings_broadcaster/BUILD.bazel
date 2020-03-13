@@ -1,0 +1,24 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["main.go"],
+    importpath = "github.com/prysmaticlabs/prysm/tools/slashings_broadcaster",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//beacon-chain/p2p:go_default_library",
+        "//shared/cmd:go_default_library",
+        "//shared/featureconfig:go_default_library",
+        "//shared/sliceutil:go_default_library",
+        "//slasher/db:go_default_library",
+        "//slasher/db/kv:go_default_library",
+        "//slasher/db/types:go_default_library",
+        "@com_github_urfave_cli//:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "extractor",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)

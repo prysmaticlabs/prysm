@@ -4,5 +4,8 @@ go_library(
     name = "go_default_library",
     srcs = ["types.go"],
     importpath = "github.com/prysmaticlabs/prysm/slasher/db/types",
-    visibility = ["//slasher:__subpackages__"],
+    visibility = [
+        "//slasher:__subpackages__",
+        "//tools:__subpackages__",
+    ],
 )

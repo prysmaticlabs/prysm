@@ -7,7 +7,10 @@ go_library(
         "db.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/slasher/db",
-    visibility = ["//slasher:__subpackages__"],
+    visibility = [
+        "//slasher:__subpackages__",
+        "//tools:__subpackages__",
+    ],
     deps = [
         "//slasher/db/iface:go_default_library",
         "//slasher/db/kv:go_default_library",

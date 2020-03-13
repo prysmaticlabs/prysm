@@ -14,7 +14,10 @@ go_library(
         "validator_id_pubkey.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/slasher/db/kv",
-    visibility = ["//slasher:__subpackages__"],
+    visibility = [
+        "//slasher:__subpackages__",
+        "//tools:__subpackages__",
+    ],
     deps = [
         "//shared/bytesutil:go_default_library",
         "//shared/hashutil:go_default_library",
