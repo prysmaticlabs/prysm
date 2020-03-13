@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	testDB "github.com/prysmaticlabs/prysm/slasher/db/testing"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 )
@@ -162,7 +163,7 @@ func TestSpanDetector_DetectSlashingsForAttestation_Double(t *testing.T) {
 					BeaconBlockRoot: []byte("bad block root"),
 				},
 			},
-			slashCount: 1,
+			slashCount: 3,
 		},
 		{
 			name: "att with different target, should not detect possible double",
@@ -228,7 +229,7 @@ func TestSpanDetector_DetectSlashingsForAttestation_Double(t *testing.T) {
 					BeaconBlockRoot: []byte("good block root"),
 				},
 			},
-			slashCount: 1,
+			slashCount: 2,
 		},
 	}
 	for _, tt := range tests {
@@ -252,19 +253,20 @@ func TestSpanDetector_DetectSlashingsForAttestation_Double(t *testing.T) {
 
 			var want []*types.DetectionResult
 			if tt.slashCount > 0 {
-				want = []*types.DetectionResult{
-					{
+				for _, indice := range sliceutil.IntersectionUint64(tt.att.AttestingIndices, tt.incomingAtt.AttestingIndices) {
+					want = append(want, &types.DetectionResult{
+						ValidatorIndex: indice,
 						Kind:           types.DoubleVote,
 						SlashableEpoch: tt.incomingAtt.Data.Target.Epoch,
 						SigBytes:       [2]byte{1, 2},
-					},
+					})
 				}
 			}
 			if !reflect.DeepEqual(res, want) {
 				t.Errorf("Wanted: %v, received %v", want, res)
 			}
 			if uint64(len(res)) != tt.slashCount {
-				t.Fatalf("Unexpected amount of slashings found, received %db, expected %d", len(res), tt.slashCount)
+				t.Fatalf("Unexpected amount of slashings found, received %d, expected %d", len(res), tt.slashCount)
 			}
 		})
 	}
@@ -658,12 +660,14 @@ func TestSpanDetector_DetectSlashingsForAttestation_MultipleValidators(t *testin
 				if tt.shouldSlash[i] {
 					if tt.slashableEpochs[i] == tt.incomingAtt.Data.Target.Epoch {
 						want = append(want, &types.DetectionResult{
+							ValidatorIndex: uint64(i),
 							Kind:           types.DoubleVote,
 							SlashableEpoch: tt.slashableEpochs[i],
 							SigBytes:       [2]byte{1, 2},
 						})
 					} else {
 						want = append(want, &types.DetectionResult{
+							ValidatorIndex: uint64(i),
 							Kind:           types.SurroundVote,
 							SlashableEpoch: tt.slashableEpochs[i],
 							SigBytes:       [2]byte{1, 2},

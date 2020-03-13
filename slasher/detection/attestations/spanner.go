@@ -88,6 +88,7 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 				return nil, err
 			}
 			detections = append(detections, &types.DetectionResult{
+				ValidatorIndex: idx,
 				Kind:           types.SurroundVote,
 				SlashableEpoch: slashableEpoch,
 				SigBytes:       targetSpan.SigBytes,
@@ -103,6 +104,7 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 				return nil, err
 			}
 			detections = append(detections, &types.DetectionResult{
+				ValidatorIndex: idx,
 				Kind:           types.SurroundVote,
 				SlashableEpoch: slashableEpoch,
 				SigBytes:       targetSpan.SigBytes,
@@ -114,6 +116,7 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 		// Check if the validator has attested for this epoch or not.
 		if targetSpan.HasAttested {
 			detections = append(detections, &types.DetectionResult{
+				ValidatorIndex: idx,
 				Kind:           types.DoubleVote,
 				SlashableEpoch: targetEpoch,
 				SigBytes:       targetSpan.SigBytes,
@@ -168,9 +171,12 @@ func (s *SpanDetector) saveSigBytes(ctx context.Context, att *ethpb.IndexedAttes
 			sigBytes = [2]byte{att.Signature[0], att.Signature[1]}
 		}
 		// Save the signature bytes into the span for this epoch.
-		span.HasAttested = true
-		span.SigBytes = sigBytes
-		spanMap[idx] = span
+		spanMap[idx] = types.Span{
+			MinSpan:     span.MinSpan,
+			MaxSpan:     span.MaxSpan,
+			HasAttested: true,
+			SigBytes:    sigBytes,
+		}
 	}
 	return s.slasherDB.SaveEpochSpansMap(ctx, target, spanMap)
 }

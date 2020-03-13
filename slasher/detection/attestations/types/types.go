@@ -24,6 +24,7 @@ const (
 // Also includes the signature bytes for assistance in
 // finding the attestation for the slashing proof.
 type DetectionResult struct {
+	ValidatorIndex uint64
 	SlashableEpoch uint64
 	Kind           DetectionKind
 	SigBytes       [2]byte
