@@ -99,7 +99,7 @@ func TestGetBlock_OK(t *testing.T) {
 		privKeys[0],
 		0, /* validator index */
 	)
-	if err := proposerServer.SlashingsPool.InsertProposerSlashing(beaconState, proposerSlashing); err != nil {
+	if err := proposerServer.SlashingsPool.InsertProposerSlashing(context.Background(), beaconState, proposerSlashing); err != nil {
 		t.Fatal(err)
 	}
 
@@ -109,7 +109,7 @@ func TestGetBlock_OK(t *testing.T) {
 		privKeys[1],
 		1, /* validator index */
 	)
-	if err := proposerServer.SlashingsPool.InsertAttesterSlashing(beaconState, attesterSlashing); err != nil {
+	if err := proposerServer.SlashingsPool.InsertAttesterSlashing(context.Background(), beaconState, attesterSlashing); err != nil {
 		t.Fatal(err)
 	}
 
