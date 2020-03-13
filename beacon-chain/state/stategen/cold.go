@@ -2,11 +2,100 @@ package stategen
 
 import (
 	"context"
+	"encoding/hex"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
+
+// This saves a pre finalized beacon state in the cold section of the DB. The returns an error
+// and not store anything if the state does not lie on an archive point boundary.
+func (s *State) saveColdState(ctx context.Context, blockRoot [32]byte, state *state.BeaconState) error {
+	ctx, span := trace.StartSpan(ctx, "stateGen.saveColdState")
+	defer span.End()
+
+	if state.Slot()%s.slotsPerArchivedPoint != 0 {
+		return errSlotNonArchivedPoint
+	}
+
+	archivedPointIndex := state.Slot() / s.slotsPerArchivedPoint
+	if err := s.beaconDB.SaveArchivedPointState(ctx, state, archivedPointIndex); err != nil {
+		return err
+	}
+	if err := s.beaconDB.SaveArchivedPointRoot(ctx, blockRoot, archivedPointIndex); err != nil {
+		return err
+	}
+
+	log.WithFields(logrus.Fields{
+		"slot":      state.Slot(),
+		"blockRoot": hex.EncodeToString(bytesutil.Trunc(blockRoot[:]))}).Info("Saved full state on archived point")
+
+	return nil
+}
+
+// This loads the cold state by block root, it decides whether to load from archived point (faster) or
+// somewhere between archived points (slower) because it requires replaying blocks.
+// This method is more efficient than load cold state by slot.
+func (s *State) loadColdStateByRoot(ctx context.Context, blockRoot [32]byte) (*state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.loadColdStateByRoot")
+	defer span.End()
+
+	summary, err := s.beaconDB.StateSummary(ctx, blockRoot)
+	if err != nil {
+		return nil, err
+	}
+	if summary == nil {
+		return nil, errUnknownStateSummary
+	}
+
+	// Use the archived point state if the summary slot lies on top of the archived point.
+	if summary.Slot%s.slotsPerArchivedPoint == 0 {
+		archivedPoint := summary.Slot / s.slotsPerArchivedPoint
+		s, err := s.loadColdStateByArchivedPoint(ctx, archivedPoint)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get cold state using archived index")
+		}
+		if s == nil {
+			return nil, errUnknownArchivedState
+		}
+		return s, nil
+	}
+
+	return s.loadColdIntermediateStateByRoot(ctx, summary.Slot, blockRoot)
+}
+
+// This loads the cold state for the input archived point.
+func (s *State) loadColdStateByArchivedPoint(ctx context.Context, archivedPoint uint64) (*state.BeaconState, error) {
+	return s.beaconDB.ArchivedPointState(ctx, archivedPoint)
+}
+
+// This loads a cold state by slot and block root combinations.
+// This is a faster implementation than by slot given the input block root is provided.
+func (s *State) loadColdIntermediateStateByRoot(ctx context.Context, slot uint64, blockRoot [32]byte) (*state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.loadColdIntermediateStateByRoot")
+	defer span.End()
+
+	// Load the archive point for lower side of the intermediate state.
+	lowArchivedPointIdx := slot / s.slotsPerArchivedPoint
+	lowArchivedPointState, err := s.archivedPointByIndex(ctx, lowArchivedPointIdx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get lower archived state using index")
+	}
+	if lowArchivedPointState == nil {
+		return nil, errUnknownArchivedState
+	}
+
+	replayBlks, err := s.LoadBlocks(ctx, lowArchivedPointState.Slot()+1, slot, blockRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get load blocks for cold state using slot")
+	}
+
+	return s.ReplayBlocks(ctx, lowArchivedPointState, replayBlks, slot)
+}
 
 // Given the archive index, this returns the archived cold state in the DB.
 // If the archived state does not exist in the state, it'll compute it and save it.
@@ -50,4 +139,37 @@ func (s *State) recoverArchivedPointByIndex(ctx context.Context, archiveIndex ui
 	}
 
 	return archivedState, nil
+}
+
+// Given a block root, this returns the slot of the block root using state summary look up in DB.
+// If state summary does not exist in DB, it will recover the state summary and save it to the DB.
+// This is used to cover corner cases where users toggle new state service's feature flag.
+func (s *State) blockRootSlot(ctx context.Context, blockRoot [32]byte) (uint64, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.blockRootSlot")
+	defer span.End()
+
+	if s.beaconDB.HasStateSummary(ctx, blockRoot) {
+		summary, err := s.beaconDB.StateSummary(ctx, blockRoot)
+		if err != nil {
+			return 0, nil
+		}
+		if summary == nil {
+			return 0, errUnknownStateSummary
+		}
+		return summary.Slot, nil
+	}
+
+	// Couldn't find state summary in DB. Retry with block bucket to get block slot.
+	b, err := s.beaconDB.Block(ctx, blockRoot)
+	if err != nil {
+		return 0, err
+	}
+	if b == nil || b.Block == nil {
+		return 0, errUnknownBlock
+	}
+	if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Root: blockRoot[:], Slot: b.Block.Slot}); err != nil {
+		return 0, errors.Wrap(err, "could not save state summary")
+	}
+
+	return b.Block.Slot, nil
 }

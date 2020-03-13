@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
@@ -33,6 +34,7 @@ type Server struct {
 	StateNotifier               statefeed.Notifier
 	BlockNotifier               blockfeed.Notifier
 	AttestationNotifier         operation.Notifier
+	Broadcaster                 p2p.Broadcaster
 	AttestationsPool            attestations.Pool
 	SlashingsPool               *slashings.Pool
 	CanonicalStateChan          chan *pbp2p.BeaconState
