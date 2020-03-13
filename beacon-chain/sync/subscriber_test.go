@@ -9,14 +9,18 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -45,6 +49,99 @@ func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 
 	if testutil.WaitTimeout(&wg, time.Second) {
 		t.Fatal("Did not receive PubSub in 1 second")
+	}
+}
+
+func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
+	p2p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+	d := db.SetupDB(t)
+	defer db.TeardownDB(t, d)
+	chainService := &mockChain.ChainService{}
+	r := Service{
+		ctx:          ctx,
+		p2p:          p2p,
+		initialSync:  &mockSync.Sync{IsSyncing: false},
+		slashingPool: slashings.NewPool(),
+		chain:        chainService,
+		db:           d,
+	}
+	topic := "/eth2/attester_slashing"
+	var wg sync.WaitGroup
+	wg.Add(1)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	r.subscribe(topic, r.noopValidator, func(ctx context.Context, msg proto.Message) error {
+		r.attesterSlashingSubscriber(ctx, msg)
+		wg.Done()
+		return nil
+	})
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
+	chainService.State = beaconState
+	r.chainStarted = true
+	attesterSlashing, err := testutil.GenerateAttesterSlashingForValidator(
+		beaconState,
+		privKeys[1],
+		1, /* validator index */
+	)
+	if err != nil {
+		t.Fatalf("Error generating attester slashing")
+	}
+	r.db.SaveState(ctx, beaconState, bytesutil.ToBytes32(attesterSlashing.Attestation_1.Data.BeaconBlockRoot))
+	p2p.ReceivePubSub(topic, attesterSlashing)
+
+	if testutil.WaitTimeout(&wg, time.Second) {
+		t.Fatal("Did not receive PubSub in 1 second")
+	}
+	as := r.slashingPool.PendingAttesterSlashings(ctx)
+	if len(as) != 1 {
+		t.Errorf("Expected attester slashing: %v to be added to slashing pool. got: %v", attesterSlashing, as[0])
+	}
+}
+
+func TestSubscribe_ReceivesProposerSlashing(t *testing.T) {
+	p2p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+	chainService := &mockChain.ChainService{}
+	d := db.SetupDB(t)
+	defer db.TeardownDB(t, d)
+	r := Service{
+		ctx:          ctx,
+		p2p:          p2p,
+		initialSync:  &mockSync.Sync{IsSyncing: false},
+		slashingPool: slashings.NewPool(),
+		chain:        chainService,
+		db:           d,
+	}
+	topic := "/eth2/proposer_slashing"
+	var wg sync.WaitGroup
+	wg.Add(1)
+	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	r.subscribe(topic, r.noopValidator, func(ctx context.Context, msg proto.Message) error {
+		r.proposerSlashingSubscriber(ctx, msg)
+		wg.Done()
+		return nil
+	})
+	beaconState, privKeys := testutil.DeterministicGenesisState(t, params.BeaconConfig().MinGenesisActiveValidatorCount)
+	chainService.State = beaconState
+	r.chainStarted = true
+	proposerSlashing, err := testutil.GenerateProposerSlashingForValidator(
+		beaconState,
+		privKeys[1],
+		1, /* validator index */
+	)
+	if err != nil {
+		t.Fatalf("Error generating proposer slashing")
+	}
+	root, err := ssz.HashTreeRoot(proposerSlashing.Header_1.Header)
+	r.db.SaveState(ctx, beaconState, root)
+	p2p.ReceivePubSub(topic, proposerSlashing)
+
+	if testutil.WaitTimeout(&wg, time.Second) {
+		t.Fatal("Did not receive PubSub in 1 second")
+	}
+	ps := r.slashingPool.PendingProposerSlashings(ctx)
+	if len(ps) != 1 {
+		t.Errorf("Expected proposer slashing: %v to be added to slashing pool. got: %v", proposerSlashing, ps[0])
 	}
 }
 
