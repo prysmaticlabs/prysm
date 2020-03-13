@@ -97,18 +97,17 @@ func (s *State) loadColdIntermediateStateByRoot(ctx context.Context, slot uint64
 	return s.ReplayBlocks(ctx, lowArchivedPointState, replayBlks, slot)
 }
 
-// This loads a cold state by slot only where the slot lies between the archive point.
-// This is a slower implementation given slot is the only argument. It require fetching
+// This loads a cold state by slot where the slot lies between the archived point.
+// This is a slower implementation given there's no root and slot is the only argument. It requires fetching
 // all the blocks between the archival points.
-func (s *State) loadColdIntermediateStateWithSlot(ctx context.Context, slot uint64) (*state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "stateGen.loadColdIntermediateStateWithSlot")
+func (s *State) loadColdIntermediateStateBySlot(ctx context.Context, slot uint64) (*state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.loadColdIntermediateStateBySlot")
 	defer span.End()
 
 	// Load the archive point for lower and high side of the intermediate state.
 	lowArchivedPointIdx := slot / s.slotsPerArchivedPoint
 	highArchivedPointIdx := lowArchivedPointIdx + 1
 
-	// Acquire the read lock so the split can't change while this is happening.
 	lowArchivedPointState, err := s.archivedPointByIndex(ctx, lowArchivedPointIdx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get lower bound archived state using index")
@@ -117,8 +116,8 @@ func (s *State) loadColdIntermediateStateWithSlot(ctx context.Context, slot uint
 		return nil, errUnknownArchivedState
 	}
 
-	// If the slot of the high archive point lies outside of the freezer cut off, use the split state
-	// as the upper archive point.
+	// If the slot of the high archived point lies outside of the split slot, use the split slot and root
+	// for the upper archived point.
 	var highArchivedPointRoot [32]byte
 	highArchivedPointSlot := highArchivedPointIdx * s.slotsPerArchivedPoint
 	if highArchivedPointSlot >= s.splitInfo.slot {

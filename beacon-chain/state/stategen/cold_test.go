@@ -132,6 +132,39 @@ func TestLoadColdStateByRoot_IntermediatePlayback(t *testing.T) {
 	}
 }
 
+func TestLoadColdStateBySlotIntermediatePlayback(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	service := New(db)
+	service.slotsPerArchivedPoint = 2
+
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	if err := service.beaconDB.SaveArchivedPointState(ctx, beaconState, 1); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveArchivedPointRoot(ctx, [32]byte{}, 1); err != nil {
+		t.Fatal(err)
+	}
+	r := [32]byte{'a'}
+	slot := uint64(3)
+	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
+		Root: r[:],
+		Slot: slot,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	loadedState, err := service.loadColdStateByRoot(ctx, r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loadedState.Slot() != slot {
+		t.Error("Did not correctly save state")
+	}
+}
+
 func TestArchivedPointByIndex_HasPoint(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
