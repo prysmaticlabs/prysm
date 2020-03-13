@@ -756,10 +756,12 @@ go_repository(
     importpath = "github.com/matttproud/golang_protobuf_extensions",
 )
 
-go_repository(
-    name = "com_github_boltdb_bolt",
-    commit = "2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8",  # v1.3.1
-    importpath = "github.com/boltdb/bolt",
+http_archive(
+    name = "com_github_boltdb_bolt",  # v1.3.1
+    build_file = "//third_party:boltdb/bolt.BUILD",
+    sha256 = "95dc5842dab55f7519b7002bbec648321277b5d6f0ad59aab509ee59313b6386",
+    strip_prefix = "bolt-2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8",
+    urls = ["https://github.com/boltdb/bolt/archive/2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8.tar.gz"],
 )
 
 go_repository(
