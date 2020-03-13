@@ -34,6 +34,9 @@ func (r *Service) attesterSlashingSubscriber(ctx context.Context, msg proto.Mess
 		if err != nil {
 			return err
 		}
+		if s == nil {
+			return fmt.Errorf("no state found for block root %#x", as.Attestation_1.Data.BeaconBlockRoot)
+		}
 		return r.slashingPool.InsertAttesterSlashing(ctx, s, as)
 	}
 	return nil
@@ -50,6 +53,9 @@ func (r *Service) proposerSlashingSubscriber(ctx context.Context, msg proto.Mess
 		s, err := r.db.State(ctx, root)
 		if err != nil {
 			return err
+		}
+		if s == nil {
+			return fmt.Errorf("no state found for block root %#x", root)
 		}
 		return r.slashingPool.InsertProposerSlashing(ctx, s, ps)
 	}
