@@ -83,7 +83,7 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 		p2p:            cfg.p2p,
 		rateLimiter:    rateLimiter,
 		fetchRequests:  make(chan *fetchRequestParams, fetchRequestsBuffer),
-		fetchResponses: make(chan *fetchRequestResponse),
+		fetchResponses: make(chan *fetchRequestResponse, blockBatchSize),
 		quit:           make(chan struct{}),
 	}
 }
@@ -250,8 +250,8 @@ func (f *blocksFetcher) collectPeerResponses(
 	})
 
 	p2pRequests := new(sync.WaitGroup)
-	errChan := make(chan error)
-	blocksChan := make(chan []*eth.SignedBeaconBlock)
+	errChan := make(chan error, blockBatchSize)
+	blocksChan := make(chan []*eth.SignedBeaconBlock, blockBatchSize)
 
 	p2pRequests.Add(len(peers))
 	go func() {
@@ -384,7 +384,7 @@ func (f *blocksFetcher) requestBlocks(
 	}).Debug("Requesting blocks")
 	stream, err := f.p2p.Send(ctx, req, pid)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to send request to peer")
+		return nil, err
 	}
 	defer stream.Close()
 
@@ -395,7 +395,7 @@ func (f *blocksFetcher) requestBlocks(
 			break
 		}
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to read chunked block")
+			return nil, err
 		}
 		resp = append(resp, blk)
 	}

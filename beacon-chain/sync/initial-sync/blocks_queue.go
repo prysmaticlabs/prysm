@@ -198,11 +198,13 @@ func (q *blocksQueue) loop() {
 						return
 					}
 					// Process incoming response into blocks.
-					if err := q.parseFetchResponse(q.ctx, resp); err != nil {
+					skippedBlocks, err := q.parseFetchResponse(q.ctx, resp)
+					if err != nil {
 						q.state.scheduler.incrementCounter(failedBlockCounter, resp.count)
 						log.WithError(err).Debug("Error processing received blocks")
 						return
 					}
+					q.state.scheduler.incrementCounter(skippedBlockCounter, skippedBlocks)
 				}
 			}()
 		case <-q.pendingFetchedBlocks:
@@ -268,28 +270,26 @@ func (q *blocksQueue) updateSchedulerState(ctx context.Context) error {
 		return ctx.Err()
 	}
 
+	// HeadSlot() relies on mutex that is being contended by SetSlot(), so caching before locking.
+	headSlot := q.headFetcher.HeadSlot()
+
 	q.state.scheduler.Lock()
 	defer q.state.scheduler.Unlock()
 	s := q.state.scheduler
 
-	log.WithFields(logrus.Fields{
-		"state":          fmt.Sprintf("%+v", s.requestedBlocks),
-		"blockBatchSize": s.blockBatchSize,
-	}).Debug("Checking scheduler state")
-
 	blocks := &s.requestedBlocks
 	resetStateCounters := func() {
-		q.state.sender.Lock()
-		q.state.cachedBlocks = make(map[uint64]*cachedBlock, queueMaxCachedBlocks)
-		q.state.sender.Unlock()
+		//q.state.sender.Lock()
+		//q.state.cachedBlocks = make(map[uint64]*cachedBlock, queueMaxCachedBlocks)
+		//q.state.sender.Unlock()
 
 		blocks.pending, blocks.valid, blocks.failed, blocks.skipped = 0, 0, 0, 0
-		s.currentSlot = q.headFetcher.HeadSlot()
+		s.currentSlot = headSlot
 	}
 
 	// Update state's current slot pointer.
 	if count := blocks.pending + blocks.skipped + blocks.failed + blocks.valid; count == 0 {
-		s.currentSlot = q.headFetcher.HeadSlot()
+		s.currentSlot = headSlot
 		return nil
 	}
 
@@ -297,12 +297,7 @@ func (q *blocksQueue) updateSchedulerState(ctx context.Context) error {
 	if blocks.failed >= s.blockBatchSize/2 {
 		s.blockBatchSize *= 2
 		resetStateCounters()
-
-		log.WithFields(logrus.Fields{
-			"counters":       fmt.Sprintf("%+v", blocks),
-			"currentSlot":    s.currentSlot,
-			"blockBatchSize": s.blockBatchSize,
-		}).Debug("Too many unprocessable blocks, increasing block batch size")
+		log.Debug("Too many unprocessable blocks, increasing block batch size")
 		return nil
 	}
 
@@ -310,12 +305,7 @@ func (q *blocksQueue) updateSchedulerState(ctx context.Context) error {
 	if blocks.valid >= blockBatchSize && s.blockBatchSize != blockBatchSize {
 		blocks.skipped, blocks.valid = blocks.skipped+blocks.valid, 0
 		s.blockBatchSize = blockBatchSize
-
-		log.WithFields(logrus.Fields{
-			"counters":       fmt.Sprintf("%+v", blocks),
-			"currentSlot":    s.currentSlot,
-			"blockBatchSize": s.blockBatchSize,
-		}).Debug("Enough valid blocks, block batch size reset")
+		log.Debug("Enough valid blocks, block batch size reset")
 	}
 
 	// Too many items in scheduler, time to update current slot to point to current head's slot.
@@ -323,12 +313,7 @@ func (q *blocksQueue) updateSchedulerState(ctx context.Context) error {
 	if count >= queueMaxCachedBlocks {
 		s.blockBatchSize = blockBatchSize
 		resetStateCounters()
-
-		log.WithFields(logrus.Fields{
-			"counters":       fmt.Sprintf("%+v", blocks),
-			"currentSlot":    s.currentSlot,
-			"blockBatchSize": s.blockBatchSize,
-		}).Debug("Too many cached blocks, resetting")
+		log.Debug("Too many cached blocks, resetting")
 		return nil
 	}
 
@@ -336,11 +321,7 @@ func (q *blocksQueue) updateSchedulerState(ctx context.Context) error {
 	if count := blocks.skipped + blocks.failed + blocks.valid; blocks.pending == 0 && count > 0 {
 		s.blockBatchSize = blockBatchSize
 		resetStateCounters()
-		log.WithFields(logrus.Fields{
-			"counters":       fmt.Sprintf("%+v", blocks),
-			"currentSlot":    s.currentSlot,
-			"blockBatchSize": s.blockBatchSize,
-		}).Debug("No pending blocks, resetting counters")
+		log.Debug("No pending blocks, resetting counters")
 		return nil
 	}
 
@@ -348,13 +329,16 @@ func (q *blocksQueue) updateSchedulerState(ctx context.Context) error {
 }
 
 // parseFetchResponse processes incoming responses.
-func (q *blocksQueue) parseFetchResponse(ctx context.Context, response *fetchRequestResponse) error {
+func (q *blocksQueue) parseFetchResponse(
+	ctx context.Context,
+	response *fetchRequestResponse,
+) (skippedBlocks uint64, err error) {
 	log.Debug("parseFetchResponse")
 	if ctx.Err() != nil {
-		return ctx.Err()
+		return 0, ctx.Err()
 	}
 	if response.err != nil {
-		return response.err
+		return 0, response.err
 	}
 
 	// Extract beacon blocks.
@@ -367,7 +351,6 @@ func (q *blocksQueue) parseFetchResponse(ctx context.Context, response *fetchReq
 	defer q.state.sender.Unlock()
 
 	// Cache blocks in [start, start + count) range, include skipped blocks.
-	var skippedBlocks uint64
 	end := response.start + mathutil.Max(response.count, uint64(len(response.blocks)))
 	for slot := response.start; slot < end; slot++ {
 		if block, ok := responseBlocks[slot]; ok {
@@ -388,20 +371,19 @@ func (q *blocksQueue) parseFetchResponse(ctx context.Context, response *fetchReq
 		}
 	}
 
-	// Update scheduler's counters.
-	q.state.scheduler.incrementCounter(skippedBlockCounter, skippedBlocks)
-
-	return nil
+	return skippedBlocks, nil
 }
 
 // sendFetchedBlocks analyses available blocks, and sends them downstream in a correct slot order.
 // Blocks are checked starting from the current head slot, and up until next consecutive block is available.
 func (q *blocksQueue) sendFetchedBlocks(ctx context.Context) error {
 	log.Debug("sendFetchedBlocks")
+
+	headSlot := q.headFetcher.HeadSlot()
 	q.state.sender.Lock()
 	defer q.state.sender.Unlock()
 
-	startSlot := q.headFetcher.HeadSlot() + 1
+	startSlot := headSlot + 1
 	nonSkippedSlot := uint64(0)
 	for slot := startSlot; slot <= q.highestExpectedSlot; slot++ {
 		if ctx.Err() != nil {

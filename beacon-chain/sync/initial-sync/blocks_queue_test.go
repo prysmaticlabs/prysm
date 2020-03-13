@@ -703,7 +703,7 @@ func TestBlocksQueueParseFetchResponse(t *testing.T) {
 			blocks: blocks,
 			err:    errStartSlotIsTooHigh,
 		}
-		if err := queue.parseFetchResponse(ctx, response); err != errStartSlotIsTooHigh {
+		if _, err := queue.parseFetchResponse(ctx, response); err != errStartSlotIsTooHigh {
 			t.Errorf("expected error not thrown, want: %v, got: %v", errStartSlotIsTooHigh, err)
 		}
 	})
@@ -720,7 +720,7 @@ func TestBlocksQueueParseFetchResponse(t *testing.T) {
 			blocks: blocks,
 			err:    ctx.Err(),
 		}
-		if err := queue.parseFetchResponse(ctx, response); err != ctx.Err() {
+		if _, err := queue.parseFetchResponse(ctx, response); err != ctx.Err() {
 			t.Errorf("expected error not thrown, want: %v, got: %v", ctx.Err(), err)
 		}
 	})
@@ -742,7 +742,7 @@ func TestBlocksQueueParseFetchResponse(t *testing.T) {
 			count:  blockBatchSize,
 			blocks: blocks,
 		}
-		if err := queue.parseFetchResponse(ctx, response); err != nil {
+		if _, err := queue.parseFetchResponse(ctx, response); err != nil {
 			t.Error(err)
 		}
 
@@ -777,7 +777,7 @@ func TestBlocksQueueParseFetchResponse(t *testing.T) {
 		}
 		skipStart, skipEnd := uint64(5), uint64(15)
 		response.blocks = append(response.blocks[:skipStart], response.blocks[skipEnd:]...)
-		if err := queue.parseFetchResponse(ctx, response); err != nil {
+		if _, err := queue.parseFetchResponse(ctx, response); err != nil {
 			t.Error(err)
 		}
 
@@ -954,16 +954,17 @@ func TestBlocksQueueLoop(t *testing.T) {
 
 			var blocks []*eth.SignedBeaconBlock
 			for block := range queue.fetchedBlocks {
-				blocks = append(blocks, block)
 				if err := processBlock(block); err != nil {
-					t.Error(err)
 					queue.state.scheduler.incrementCounter(failedBlockCounter, 1)
 					continue
 				}
+				blocks = append(blocks, block)
 				queue.state.scheduler.incrementCounter(validBlockCounter, 1)
 			}
 
-			queue.stop()
+			if err := queue.stop(); err != nil {
+				t.Error(err)
+			}
 
 			if queue.headFetcher.HeadSlot() < uint64(len(tt.expectedBlockSlots)) {
 				t.Errorf("Not enough slots synced, want: %v, got: %v",
