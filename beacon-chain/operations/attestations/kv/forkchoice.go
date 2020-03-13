@@ -1,7 +1,6 @@
 package kv
 
 import (
-	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
@@ -14,9 +13,7 @@ func (p *AttCaches) SaveForkchoiceAttestation(att *ethpb.Attestation) error {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
 
-	// DefaultExpiration is set to what was given to New(). In this case
-	// it's one epoch.
-	p.forkchoiceAtt.Set(string(r[:]), att, cache.DefaultExpiration)
+	p.forkchoiceAtt[r] = att
 
 	return nil
 }
@@ -34,14 +31,8 @@ func (p *AttCaches) SaveForkchoiceAttestations(atts []*ethpb.Attestation) error 
 
 // ForkchoiceAttestations returns the forkchoice attestations in cache.
 func (p *AttCaches) ForkchoiceAttestations() []*ethpb.Attestation {
-	atts := make([]*ethpb.Attestation, 0, p.forkchoiceAtt.ItemCount())
-	for s, i := range p.forkchoiceAtt.Items() {
-		// Type assertion for the worst case. This shouldn't happen.
-		att, ok := i.Object.(*ethpb.Attestation)
-		if !ok {
-			p.forkchoiceAtt.Delete(s)
-			continue
-		}
+	atts := make([]*ethpb.Attestation, 0)
+	for _, att := range p.forkchoiceAtt {
 		atts = append(atts, att)
 	}
 
@@ -55,7 +46,7 @@ func (p *AttCaches) DeleteForkchoiceAttestation(att *ethpb.Attestation) error {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
 
-	p.forkchoiceAtt.Delete(string(r[:]))
+	delete(p.forkchoiceAtt, r)
 
 	return nil
 }
