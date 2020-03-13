@@ -22,7 +22,7 @@ func (bs *Server) ListBeaconCommittees(
 
 	var requestingGenesis bool
 	var startSlot uint64
-	headSlot := bs.HeadFetcher.HeadSlot()
+	headSlot := bs.GenesisTimeFetcher.CurrentSlot()
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListCommitteesRequest_Epoch:
 		startSlot = helpers.StartSlot(q.Epoch)
@@ -58,8 +58,8 @@ func (bs *Server) retrieveCommitteesForEpoch(
 	var activeIndices []uint64
 	var err error
 	startSlot := helpers.StartSlot(epoch)
-	headEpoch := helpers.SlotToEpoch(bs.HeadFetcher.HeadSlot())
-	if helpers.SlotToEpoch(startSlot)+1 < headEpoch {
+	currentEpoch := helpers.SlotToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
+	if helpers.SlotToEpoch(startSlot)+1 < currentEpoch {
 		activeIndices, err = bs.HeadFetcher.HeadValidatorsIndices(helpers.SlotToEpoch(startSlot))
 		if err != nil {
 			return nil, nil, status.Errorf(
@@ -86,7 +86,7 @@ func (bs *Server) retrieveCommitteesForEpoch(
 			)
 		}
 		attesterSeed = bytesutil.ToBytes32(archivedCommitteeInfo.AttesterSeed)
-	} else if helpers.SlotToEpoch(startSlot)+1 == headEpoch || helpers.SlotToEpoch(startSlot) == headEpoch {
+	} else if helpers.SlotToEpoch(startSlot)+1 == currentEpoch || helpers.SlotToEpoch(startSlot) == currentEpoch {
 		// Otherwise, we use current beacon state to calculate the committees.
 		requestedEpoch := helpers.SlotToEpoch(startSlot)
 		activeIndices, err = bs.HeadFetcher.HeadValidatorsIndices(requestedEpoch)
