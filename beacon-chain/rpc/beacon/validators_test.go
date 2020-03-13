@@ -1106,7 +1106,7 @@ func TestServer_GetValidatorActiveSetChanges_CannotRequestFutureEpoch(t *testing
 
 func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 	ctx := context.Background()
-	validators := make([]*ethpb.Validator, 6)
+	validators := make([]*ethpb.Validator, 8)
 	headState, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Slot:       0,
 		Validators: validators,
@@ -1119,6 +1119,7 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 		withdrawableEpoch := params.BeaconConfig().FarFutureEpoch
 		exitEpoch := params.BeaconConfig().FarFutureEpoch
 		slashed := false
+		balance := params.BeaconConfig().MaxEffectiveBalance
 		// Mark indices divisible by two as activated.
 		if i%2 == 0 {
 			activationEpoch = helpers.ActivationExitEpoch(0)
@@ -1130,10 +1131,16 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 			// Mark indices divisible by 5 as exited.
 			exitEpoch = 0
 			withdrawableEpoch = params.BeaconConfig().MinValidatorWithdrawabilityDelay
+		} else if i%7 == 0 {
+			// Mark indices divisible by 7 as ejected.
+			exitEpoch = 0
+			withdrawableEpoch = params.BeaconConfig().MinValidatorWithdrawabilityDelay
+			balance = params.BeaconConfig().EjectionBalance
 		}
 		if err := headState.UpdateValidatorAtIndex(uint64(i), &ethpb.Validator{
 			ActivationEpoch:       activationEpoch,
 			PublicKey:             pubKey(uint64(i)),
+			EffectiveBalance:      balance,
 			WithdrawalCredentials: make([]byte, 32),
 			WithdrawableEpoch:     withdrawableEpoch,
 			Slashed:               slashed,
@@ -1158,16 +1165,21 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 		pubKey(0),
 		pubKey(2),
 		pubKey(4),
+		pubKey(6),
 	}
-	wantedActiveIndices := []uint64{0, 2, 4}
-	wantedSlashed := [][]byte{
-		pubKey(3),
-	}
-	wantedSlashedIndices := []uint64{3}
+	wantedActiveIndices := []uint64{0, 2, 4, 6}
 	wantedExited := [][]byte{
 		pubKey(5),
 	}
 	wantedExitedIndices := []uint64{5}
+	wantedSlashed := [][]byte{
+		pubKey(3),
+	}
+	wantedSlashedIndices := []uint64{3}
+	wantedEjected := [][]byte{
+		pubKey(7),
+	}
+	wantedEjectedIndices := []uint64{7}
 	wanted := &ethpb.ActiveSetChanges{
 		Epoch:               0,
 		ActivatedPublicKeys: wantedActive,
@@ -1176,9 +1188,11 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 		ExitedIndices:       wantedExitedIndices,
 		SlashedPublicKeys:   wantedSlashed,
 		SlashedIndices:      wantedSlashedIndices,
+		EjectedPublicKeys:   wantedEjected,
+		EjectedIndices:      wantedEjectedIndices,
 	}
 	if !proto.Equal(wanted, res) {
-		t.Errorf("Wanted %v, received %v", wanted, res)
+		t.Errorf("Wanted \n%v, received \n%v", wanted, res)
 	}
 }
 
@@ -1195,8 +1209,9 @@ func TestServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
 		t.Fatal(err)
 	}
 	activatedIndices := make([]uint64, 0)
-	slashedIndices := make([]uint64, 0)
 	exitedIndices := make([]uint64, 0)
+	slashedIndices := make([]uint64, 0)
+	ejectedIndices := make([]uint64, 0)
 	for i := 0; i < len(validators); i++ {
 		// Mark indices divisible by two as activated.
 		if i%2 == 0 {
@@ -1207,6 +1222,9 @@ func TestServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
 		} else if i%5 == 0 {
 			// Mark indices divisible by 5 as exited.
 			exitedIndices = append(exitedIndices, uint64(i))
+		} else if i%7 == 0 {
+			// Mark indices divisible by 7 as ejected.
+			ejectedIndices = append(ejectedIndices, uint64(i))
 		}
 		key := make([]byte, 48)
 		copy(key, strconv.Itoa(i))
@@ -1220,6 +1238,7 @@ func TestServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
 		Activated: activatedIndices,
 		Exited:    exitedIndices,
 		Slashed:   slashedIndices,
+		Ejected:   ejectedIndices,
 	}
 	// We store the changes during the genesis epoch.
 	if err := db.SaveArchivedActiveValidatorChanges(ctx, 0, archivedChanges); err != nil {
@@ -1253,14 +1272,18 @@ func TestServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
 		wantedKeys[4],
 	}
 	wantedActiveIndices := []uint64{0, 2, 4}
-	wantedSlashed := [][]byte{
-		wantedKeys[3],
-	}
-	wantedSlashedIndices := []uint64{3}
 	wantedExited := [][]byte{
 		wantedKeys[5],
 	}
 	wantedExitedIndices := []uint64{5}
+	wantedSlashed := [][]byte{
+		wantedKeys[3],
+	}
+	wantedSlashedIndices := []uint64{3}
+	wantedEjected := [][]byte{
+		wantedKeys[7],
+	}
+	wantedEjectedIndices := []uint64{7}
 	wanted := &ethpb.ActiveSetChanges{
 		Epoch:               0,
 		ActivatedPublicKeys: wantedActive,
@@ -1269,6 +1292,8 @@ func TestServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
 		ExitedIndices:       wantedExitedIndices,
 		SlashedPublicKeys:   wantedSlashed,
 		SlashedIndices:      wantedSlashedIndices,
+		EjectedPublicKeys:   wantedEjected,
+		EjectedIndices:      wantedEjectedIndices,
 	}
 	if !proto.Equal(wanted, res) {
 		t.Errorf("Wanted %v, received %v", wanted, res)
