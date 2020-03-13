@@ -7,17 +7,17 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
-// Clean attestations pool at certain interval.
-var cleanAttsPoolPeriod = time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
+// Prune expired attestations from the pool every slot interval.
+var pruneExpiredAttsPeriod = time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
 
-// This cleans attestations pool by running cleanAtts
-// every cleanAttsPoolPeriod.
-func (s *Service) cleanAttsPool() {
-	ticker := time.NewTicker(cleanAttsPoolPeriod)
+// This prunes attestations pool by running pruneExpiredAtts
+// at every pruneExpiredAttsPeriod.
+func (s *Service) pruneAttsPool() {
+	ticker := time.NewTicker(pruneExpiredAttsPeriod)
 	for {
 		select {
 		case <-ticker.C:
-			s.cleanAtts()
+			s.pruneExpiredAtts()
 		case <-s.ctx.Done():
 			log.Debug("Context closed, exiting routine")
 			return
@@ -25,11 +25,9 @@ func (s *Service) cleanAttsPool() {
 	}
 }
 
-func (s *Service) cleanAtts() {
+// This prunes expired attestations from the pool.
+func (s *Service) pruneExpiredAtts() {
 	aggregatedAtts := s.pool.AggregatedAttestations()
-	unAggregatedAtts := s.pool.UnaggregatedAttestations()
-	blockAtts := s.pool.BlockAttestations()
-
 	for _, att := range aggregatedAtts {
 		if s.expired(att.Data.Slot) {
 			if err := s.pool.DeleteAggregatedAttestation(att); err != nil {
@@ -39,6 +37,7 @@ func (s *Service) cleanAtts() {
 		}
 	}
 
+	unAggregatedAtts := s.pool.UnaggregatedAttestations()
 	for _, att := range unAggregatedAtts {
 		if s.expired(att.Data.Slot) {
 			if err := s.pool.DeleteUnaggregatedAttestation(att); err != nil {
@@ -48,6 +47,7 @@ func (s *Service) cleanAtts() {
 		}
 	}
 
+	blockAtts := s.pool.BlockAttestations()
 	for _, att := range blockAtts {
 		if s.expired(att.Data.Slot) {
 			if err := s.pool.DeleteBlockAttestation(att); err != nil {
@@ -58,11 +58,13 @@ func (s *Service) cleanAtts() {
 	}
 }
 
+// Return true if the input slot has been expired.
+// Expired is defined as one epoch behind than current time.
 func (s *Service) expired(slot uint64) bool {
 	expirationSlot := slot + params.BeaconConfig().SlotsPerEpoch
-	slotExpirationTime := s.genesisTime + expirationSlot*params.BeaconConfig().SecondsPerSlot
+	expirationTime := s.genesisTime + expirationSlot*params.BeaconConfig().SecondsPerSlot
 	currentTime := uint64(roughtime.Now().Unix())
-	if currentTime >= slotExpirationTime {
+	if currentTime >= expirationTime {
 		return true
 	}
 	return false

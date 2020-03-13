@@ -48,7 +48,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 func (s *Service) Start() {
 	go s.prepareForkChoiceAtts()
 	go s.aggregateRoutine()
-	go s.cleanAttsPool()
+	go s.pruneAttsPool()
 }
 
 // Stop the beacon block attestation pool service's main event loop
