@@ -112,7 +112,7 @@ func (bs *Server) retrieveCommitteesForEpoch(
 		return nil, nil, status.Errorf(
 			codes.InvalidArgument,
 			"Cannot retrieve information about an epoch in the future, current epoch %d, requesting %d",
-			headEpoch,
+			currentEpoch,
 			helpers.SlotToEpoch(startSlot),
 		)
 	}
