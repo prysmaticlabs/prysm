@@ -4,13 +4,25 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	db "github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/iface"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 	"go.opencensus.io/trace"
+)
+
+var (
+	latestMinSpanDistanceObserved = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "latest_min_span_distance_observed",
+		Help: "The latest distance between target - source observed for min spans",
+	})
+	latestMaxSpanDistanceObserved = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "latest_max_span_distance_observed",
+		Help: "The latest distance between target - source observed for max spans",
+	})
 )
 
 // We look back 128 epochs when updating min/max spans
@@ -76,6 +88,7 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 				return nil, err
 			}
 			detections = append(detections, &types.DetectionResult{
+				ValidatorIndex: idx,
 				Kind:           types.SurroundVote,
 				SlashableEpoch: slashableEpoch,
 				SigBytes:       targetSpan.SigBytes,
@@ -91,6 +104,7 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 				return nil, err
 			}
 			detections = append(detections, &types.DetectionResult{
+				ValidatorIndex: idx,
 				Kind:           types.SurroundVote,
 				SlashableEpoch: slashableEpoch,
 				SigBytes:       targetSpan.SigBytes,
@@ -102,6 +116,7 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 		// Check if the validator has attested for this epoch or not.
 		if targetSpan.HasAttested {
 			detections = append(detections, &types.DetectionResult{
+				ValidatorIndex: idx,
 				Kind:           types.DoubleVote,
 				SlashableEpoch: targetEpoch,
 				SigBytes:       targetSpan.SigBytes,
@@ -110,19 +125,7 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 		}
 	}
 
-
-	// Clear out any duplicate results.
-	keys := make(map[[32]byte]bool)
-	var detectionList []*types.DetectionResult
-	for _, dd := range detections {
-		hash := hashutil.Hash(dd.Marshal())
-		if _, value := keys[hash]; !value {
-			keys[hash] = true
-			detectionList = append(detectionList, dd)
-		}
-	}
-
-	return detectionList, nil
+	return detections, nil
 }
 
 // UpdateSpans given an indexed attestation for all of its attesting indices.
@@ -168,9 +171,12 @@ func (s *SpanDetector) saveSigBytes(ctx context.Context, att *ethpb.IndexedAttes
 			sigBytes = [2]byte{att.Signature[0], att.Signature[1]}
 		}
 		// Save the signature bytes into the span for this epoch.
-		span.HasAttested = true
-		span.SigBytes = sigBytes
-		spanMap[idx] = span
+		spanMap[idx] = types.Span{
+			MinSpan:     span.MinSpan,
+			MaxSpan:     span.MaxSpan,
+			HasAttested: true,
+			SigBytes:    sigBytes,
+		}
 	}
 	return s.slasherDB.SaveEpochSpansMap(ctx, target, spanMap)
 }
@@ -191,6 +197,7 @@ func (s *SpanDetector) updateMinSpan(ctx context.Context, att *ethpb.IndexedAtte
 	if int(lowestEpoch) <= 0 {
 		lowestEpoch = 0
 	}
+	latestMinSpanDistanceObserved.Set(float64(att.Data.Target.Epoch - att.Data.Source.Epoch))
 
 	for epoch := source - 1; epoch >= lowestEpoch; epoch-- {
 		spanMap, err := s.slasherDB.EpochSpansMap(ctx, epoch)
@@ -232,6 +239,7 @@ func (s *SpanDetector) updateMaxSpan(ctx context.Context, att *ethpb.IndexedAtte
 	defer traceSpan.End()
 	source := att.Data.Source.Epoch
 	target := att.Data.Target.Epoch
+	latestMaxSpanDistanceObserved.Set(float64(target - source))
 	valIndices := make([]uint64, len(att.AttestingIndices))
 	copy(valIndices, att.AttestingIndices)
 	for epoch := source + 1; epoch < target; epoch++ {

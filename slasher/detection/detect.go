@@ -6,7 +6,9 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	status "github.com/prysmaticlabs/prysm/slasher/db/types"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/types"
 	"go.opencensus.io/trace"
 )
@@ -46,7 +48,24 @@ func (ds *Service) detectAttesterSlashings(
 		}
 	}
 
-	return slashings, nil
+	// Clear out any duplicate results.
+	keys := make(map[[32]byte]bool)
+	var slashingList []*ethpb.AttesterSlashing
+	for _, ss := range slashings {
+		hash, err := hashutil.HashProto(ss)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not hash slashing")
+		}
+		if _, value := keys[hash]; !value {
+			keys[hash] = true
+			slashingList = append(slashingList, ss)
+		}
+	}
+
+	if err = ds.slasherDB.SaveAttesterSlashings(ctx, status.Active, slashings); err != nil {
+		return nil, err
+	}
+	return slashingList, nil
 }
 
 // detectDoubleVote cross references the passed in attestation with the bloom filter maintained
@@ -70,17 +89,20 @@ func (ds *Service) detectDoubleVote(
 		if att.Data == nil {
 			continue
 		}
+
 		// If there are no shared indices, there is no validator to slash.
-		if len(sliceutil.IntersectionUint64(att.AttestingIndices, incomingAtt.AttestingIndices)) == 0 {
+		if len(sliceutil.IntersectionUint64(att.AttestingIndices, []uint64{detectionResult.ValidatorIndex})) == 0 {
 			continue
 		}
 
 		if isDoubleVote(incomingAtt, att) {
+			doubleVotesDetected.Inc()
 			return &ethpb.AttesterSlashing{
 				Attestation_1: incomingAtt,
 				Attestation_2: att,
 			}, nil
 		}
+
 	}
 	return nil, nil
 }
@@ -107,18 +129,20 @@ func (ds *Service) detectSurroundVotes(
 			continue
 		}
 		// If there are no shared indices, there is no validator to slash.
-		if len(sliceutil.IntersectionUint64(att.AttestingIndices, incomingAtt.AttestingIndices)) == 0 {
+		if len(sliceutil.IntersectionUint64(att.AttestingIndices, []uint64{detectionResult.ValidatorIndex})) == 0 {
 			continue
 		}
 
 		// Slashings must be submitted as the incoming attestation surrounding the saved attestation.
 		// So we swap the order if needed.
 		if isSurrounding(incomingAtt, att) {
+			surroundingVotesDetected.Inc()
 			return &ethpb.AttesterSlashing{
 				Attestation_1: incomingAtt,
 				Attestation_2: att,
 			}, nil
-		} else if isSurrounded(incomingAtt, att) {
+		} else if isSurrounding(att, incomingAtt) {
+			surroundedVotesDetected.Inc()
 			return &ethpb.AttesterSlashing{
 				Attestation_1: att,
 				Attestation_2: incomingAtt,
@@ -135,9 +159,4 @@ func isDoubleVote(incomingAtt *ethpb.IndexedAttestation, prevAtt *ethpb.IndexedA
 func isSurrounding(incomingAtt *ethpb.IndexedAttestation, prevAtt *ethpb.IndexedAttestation) bool {
 	return incomingAtt.Data.Source.Epoch < prevAtt.Data.Source.Epoch &&
 		incomingAtt.Data.Target.Epoch > prevAtt.Data.Target.Epoch
-}
-
-func isSurrounded(incomingAtt *ethpb.IndexedAttestation, prevAtt *ethpb.IndexedAttestation) bool {
-	return incomingAtt.Data.Source.Epoch > prevAtt.Data.Source.Epoch &&
-		incomingAtt.Data.Target.Epoch < prevAtt.Data.Target.Epoch
 }

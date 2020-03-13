@@ -166,7 +166,7 @@ func SlashValidator(state *stateTrie.BeaconState, slashedIdx uint64, whistleBlow
 	return state, nil
 }
 
-// ActivatedValidatorIndices determines the indices activated during the current epoch.
+// ActivatedValidatorIndices determines the indices activated during the given epoch.
 func ActivatedValidatorIndices(epoch uint64, validators []*ethpb.Validator) []uint64 {
 	activations := make([]uint64, 0)
 	delayedActivationEpoch := helpers.ActivationExitEpoch(epoch)
@@ -179,7 +179,7 @@ func ActivatedValidatorIndices(epoch uint64, validators []*ethpb.Validator) []ui
 	return activations
 }
 
-// SlashedValidatorIndices determines the indices slashed during the current epoch.
+// SlashedValidatorIndices determines the indices slashed during the given epoch.
 func SlashedValidatorIndices(epoch uint64, validators []*ethpb.Validator) []uint64 {
 	slashed := make([]uint64, 0)
 	for i := 0; i < len(validators); i++ {
@@ -225,9 +225,51 @@ func ExitedValidatorIndices(epoch uint64, validators []*ethpb.Validator, activeV
 	}
 	withdrawableEpoch := exitQueueEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
 	for i, val := range validators {
-		if val.ExitEpoch == epoch && val.WithdrawableEpoch == withdrawableEpoch {
+		if val.ExitEpoch == epoch && val.WithdrawableEpoch == withdrawableEpoch &&
+			val.EffectiveBalance > params.BeaconConfig().EjectionBalance {
 			exited = append(exited, uint64(i))
 		}
 	}
 	return exited, nil
+}
+
+// EjectedValidatorIndices determines the indices ejected during the given epoch.
+func EjectedValidatorIndices(epoch uint64, validators []*ethpb.Validator, activeValidatorCount uint64) ([]uint64, error) {
+	ejected := make([]uint64, 0)
+	exitEpochs := make([]uint64, 0)
+	for i := 0; i < len(validators); i++ {
+		val := validators[i]
+		if val.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
+			exitEpochs = append(exitEpochs, val.ExitEpoch)
+		}
+	}
+	exitQueueEpoch := uint64(0)
+	for _, i := range exitEpochs {
+		if exitQueueEpoch < i {
+			exitQueueEpoch = i
+		}
+	}
+
+	// We use the exit queue churn to determine if we have passed a churn limit.
+	exitQueueChurn := 0
+	for _, val := range validators {
+		if val.ExitEpoch == exitQueueEpoch {
+			exitQueueChurn++
+		}
+	}
+	churn, err := helpers.ValidatorChurnLimit(activeValidatorCount)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get churn limit")
+	}
+	if churn < uint64(exitQueueChurn) {
+		exitQueueEpoch++
+	}
+	withdrawableEpoch := exitQueueEpoch + params.BeaconConfig().MinValidatorWithdrawabilityDelay
+	for i, val := range validators {
+		if val.ExitEpoch == epoch && val.WithdrawableEpoch == withdrawableEpoch &&
+			val.EffectiveBalance <= params.BeaconConfig().EjectionBalance {
+			ejected = append(ejected, uint64(i))
+		}
+	}
+	return ejected, nil
 }

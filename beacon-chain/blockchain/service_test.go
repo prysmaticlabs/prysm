@@ -133,6 +133,10 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
 
+	opsService, err := attestations.NewService(ctx, &attestations.Config{Pool: attestations.NewPool()})
+	if err != nil {
+		t.Fatal(err)
+	}
 	cfg := &Config{
 		BeaconBlockBuf:    0,
 		BeaconDB:          beaconDB,
@@ -142,10 +146,12 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		StateNotifier:     &mockBeaconNode{},
 		AttPool:           attestations.NewPool(),
 		ForkChoiceStore:   protoarray.New(0, 0, params.BeaconConfig().ZeroHash),
+		OpsService:        opsService,
 	}
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
 	}
+
 	chainService, err := NewService(ctx, cfg)
 	if err != nil {
 		t.Fatalf("unable to setup chain service: %v", err)
