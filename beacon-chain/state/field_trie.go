@@ -34,16 +34,16 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements [][]byte) ([32]byte
 	f.Lock()
 	defer f.Unlock()
 	var err error
-	var root [32]byte
+	var fieldRoot [32]byte
 	for _, idx := range indices {
 		root := bytesutil.ToBytes32(elements[idx])
 		f.fieldLayers[0][idx] = &root
 	}
-	root, f.fieldLayers, err = stateutil.RecomputeFromLayer(f.fieldLayers, indices)
+	fieldRoot, f.fieldLayers, err = stateutil.RecomputeFromLayer(f.fieldLayers, indices)
 	if err != nil {
 		return [32]byte{}, err
 	}
-	return root, nil
+	return fieldRoot, nil
 }
 
 func (f *FieldTrie) CopyTrie() *FieldTrie {
@@ -74,9 +74,7 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 			dstFieldTrie[i] = append(dstFieldTrie[i], diffSlice...)
 		}
 		dstFieldTrie[i] = dstFieldTrie[i][:len(layer)]
-		for j, content := range layer {
-			dstFieldTrie[i][j] = content
-		}
+		copy(dstFieldTrie[i], layer)
 	}
 	return &FieldTrie{
 		fieldLayers: dstFieldTrie,
