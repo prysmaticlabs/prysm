@@ -1,0 +1,71 @@
+package attestations
+
+import (
+	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
+)
+
+// Prune expired attestations from the pool every slot interval.
+var pruneExpiredAttsPeriod = time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
+
+// This prunes attestations pool by running pruneExpiredAtts
+// at every pruneExpiredAttsPeriod.
+func (s *Service) pruneAttsPool() {
+	ticker := time.NewTicker(pruneExpiredAttsPeriod)
+	for {
+		select {
+		case <-ticker.C:
+			s.pruneExpiredAtts()
+		case <-s.ctx.Done():
+			log.Debug("Context closed, exiting routine")
+			return
+		}
+	}
+}
+
+// This prunes expired attestations from the pool.
+func (s *Service) pruneExpiredAtts() {
+	aggregatedAtts := s.pool.AggregatedAttestations()
+	for _, att := range aggregatedAtts {
+		if s.expired(att.Data.Slot) {
+			if err := s.pool.DeleteAggregatedAttestation(att); err != nil {
+				log.WithError(err).Error("Could not delete expired aggregated attestation")
+			}
+			expiredAggregatedAtts.Inc()
+		}
+	}
+
+	unAggregatedAtts := s.pool.UnaggregatedAttestations()
+	for _, att := range unAggregatedAtts {
+		if s.expired(att.Data.Slot) {
+			if err := s.pool.DeleteUnaggregatedAttestation(att); err != nil {
+				log.WithError(err).Error("Could not delete expired unaggregated attestation")
+			}
+			expiredUnaggregatedAtts.Inc()
+		}
+	}
+
+	blockAtts := s.pool.BlockAttestations()
+	for _, att := range blockAtts {
+		if s.expired(att.Data.Slot) {
+			if err := s.pool.DeleteBlockAttestation(att); err != nil {
+				log.WithError(err).Error("Could not delete expired block attestation")
+			}
+		}
+		expiredBlockAtts.Inc()
+	}
+}
+
+// Return true if the input slot has been expired.
+// Expired is defined as one epoch behind than current time.
+func (s *Service) expired(slot uint64) bool {
+	expirationSlot := slot + params.BeaconConfig().SlotsPerEpoch
+	expirationTime := s.genesisTime + expirationSlot*params.BeaconConfig().SecondsPerSlot
+	currentTime := uint64(roughtime.Now().Unix())
+	if currentTime >= expirationTime {
+		return true
+	}
+	return false
+}
