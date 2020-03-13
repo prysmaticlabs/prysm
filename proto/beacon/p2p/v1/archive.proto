@@ -16,8 +16,11 @@ message ArchivedActiveSetChanges {
     // Exited validator indices.
     repeated uint64 exited = 2;
 
-    // Proposer indices slashed.
-    repeated uint64 slashed = 4;
+    // Slashed validator indices.
+    repeated uint64 slashed = 3;
+
+    // Ejected validator indices.
+    repeated uint64 ejected = 4;
 
     // Voluntary exit objects corresponding 1-to-1 to the exited indices
     // list in this same data structure.
