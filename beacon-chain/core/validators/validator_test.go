@@ -344,14 +344,17 @@ func TestExitedValidatorIndices(t *testing.T) {
 				Slot: helpers.SlotToEpoch(1),
 				Validators: []*ethpb.Validator{
 					{
+						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
 						ExitEpoch:         0,
 						WithdrawableEpoch: params.BeaconConfig().MinValidatorWithdrawabilityDelay,
 					},
 					{
+						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
 						ExitEpoch:         0,
 						WithdrawableEpoch: 10,
 					},
 					{
+						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
 						ExitEpoch:         0,
 						WithdrawableEpoch: params.BeaconConfig().MinValidatorWithdrawabilityDelay,
 					},
@@ -364,6 +367,7 @@ func TestExitedValidatorIndices(t *testing.T) {
 				Slot: helpers.SlotToEpoch(1),
 				Validators: []*ethpb.Validator{
 					{
+						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
 						ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
 						WithdrawableEpoch: params.BeaconConfig().MinValidatorWithdrawabilityDelay,
 					},
@@ -376,6 +380,7 @@ func TestExitedValidatorIndices(t *testing.T) {
 				Slot: helpers.SlotToEpoch(1),
 				Validators: []*ethpb.Validator{
 					{
+						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
 						ExitEpoch:         0,
 						WithdrawableEpoch: params.BeaconConfig().MinValidatorWithdrawabilityDelay,
 					},
