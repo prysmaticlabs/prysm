@@ -5,6 +5,7 @@ import (
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 )
 
 // SaveUnaggregatedAttestation saves an unaggregated attestation in cache.
@@ -18,7 +19,7 @@ func (p *AttCaches) SaveUnaggregatedAttestation(att *ethpb.Attestation) error {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
 
-	p.unAggregatedAtt[r] = att
+	p.unAggregatedAtt[r] = stateTrie.CopyAttestation(att) // Copied.
 
 	return nil
 }
@@ -39,7 +40,7 @@ func (p *AttCaches) UnaggregatedAttestations() []*ethpb.Attestation {
 	atts := make([]*ethpb.Attestation, 0)
 
 	for _, att := range p.unAggregatedAtt {
-		atts = append(atts, att)
+		atts = append(atts, stateTrie.CopyAttestation(att) /* Copied */)
 	}
 
 	return atts

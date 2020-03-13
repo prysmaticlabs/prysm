@@ -4,6 +4,7 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 )
 
 // SaveBlockAttestation saves an block attestation in cache.
@@ -24,9 +25,8 @@ func (p *AttCaches) SaveBlockAttestation(att *ethpb.Attestation) error {
 			return nil
 		}
 	}
-	atts = append(atts, att)
 
-	p.blockAtt[r] = atts
+	p.blockAtt[r] = append(atts, stateTrie.CopyAttestation(att))
 
 	return nil
 }
