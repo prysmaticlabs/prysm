@@ -15,6 +15,7 @@ type Service struct {
 	pool                     Pool
 	err                      error
 	forkChoiceProcessedRoots *ristretto.Cache
+	genesisTime              uint64
 }
 
 // Config options for the service.
@@ -47,6 +48,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 func (s *Service) Start() {
 	go s.prepareForkChoiceAtts()
 	go s.aggregateRoutine()
+	go s.cleanAttsPool()
 }
 
 // Stop the beacon block attestation pool service's main event loop
@@ -62,4 +64,9 @@ func (s *Service) Status() error {
 		return s.err
 	}
 	return nil
+}
+
+// SetGenesisTime sets genesis time for operation service to use.
+func (s *Service) SetGenesisTime(t uint64) {
+	s.genesisTime = t
 }

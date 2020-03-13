@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "aggregate.go",
+        "clean_pool.go",
         "log.go",
         "metrics.go",
         "pool.go",
@@ -18,6 +19,7 @@ go_library(
         "//beacon-chain/state:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/roughtime:go_default_library",
         "@com_github_dgraph_io_ristretto//:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
         "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
