@@ -16,14 +16,14 @@ import (
 // InjectDoubleVote broadcasts a double vote for the slasher to detect.
 var InjectDoubleVote = Evaluator{
 	Name:       "inject_double_vote_%d",
-	Policy:      beforeEpoch(3),
+	Policy:     beforeEpoch(3),
 	Evaluation: insertDoubleAttestationIntoPool,
 }
 
 // InjectSurroundVote broadcasts a surround vote for the slasher to detect.
 var InjectSurroundVote = Evaluator{
 	Name:       "inject_surround_vote_%d",
-	Policy:      beforeEpoch(3),
+	Policy:     beforeEpoch(3),
 	Evaluation: insertSurroundAttestationIntoPool,
 }
 
@@ -70,20 +70,18 @@ func insertDoubleAttestationIntoPool(conn *grpc.ClientConn) error {
 		}
 	}
 
-	// Set the bits of half the committee to be slashed.
-	attBitfield := bitfield.NewBitlist(uint64(len(committee)))
-	attBitfield.SetBitAt(0, true)
-
 	attDataReq := &eth.AttestationDataRequest{
 		CommitteeIndex: committeeIndex,
 		Slot:           chainHead.HeadSlot - 1,
 	}
+
 	attData, err := valClient.GetAttestationData(ctx, attDataReq)
 	if err != nil {
 		return err
 	}
 	blockRoot := bytesutil.ToBytes32([]byte("muahahahaha I'm an evil validator"))
 	attData.BeaconBlockRoot = blockRoot[:]
+
 	dataRoot, err := ssz.HashTreeRoot(attData)
 	if err != nil {
 		return err
@@ -97,18 +95,23 @@ func insertDoubleAttestationIntoPool(conn *grpc.ClientConn) error {
 		return err
 	}
 
-	att := &eth.Attestation{
-		AggregationBits: attBitfield,
-		Data:            attData,
-		Signature:       privKeys[committee[0]].Sign(dataRoot[:], domainResp.SignatureDomain).Marshal(),
-	}
-	_, err = valClient.ProposeAttestation(ctx, att)
-	if err != nil {
-		return err
+	for i := uint64(0); i < 4; i++ {
+		// Set the bits of half the committee to be slashed.
+		attBitfield := bitfield.NewBitlist(uint64(len(committee)))
+		attBitfield.SetBitAt(i, true)
+
+		att := &eth.Attestation{
+			AggregationBits: attBitfield,
+			Data:            attData,
+			Signature:       privKeys[committee[i]].Sign(dataRoot[:], domainResp.SignatureDomain).Marshal(),
+		}
+		_, err = valClient.ProposeAttestation(ctx, att)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
-
 
 func insertSurroundAttestationIntoPool(conn *grpc.ClientConn) error {
 	valClient := eth.NewBeaconNodeValidatorClient(conn)
@@ -139,7 +142,7 @@ func insertSurroundAttestationIntoPool(conn *grpc.ClientConn) error {
 	var committeeIndex uint64
 	var committee []uint64
 	for _, duty := range duties.Duties {
-		if duty.AttesterSlot == chainHead.HeadSlot-1 {
+		if duty.AttesterSlot == startSlot(chainHead.HeadEpoch) {
 			committeeIndex = duty.CommitteeIndex
 			committee = duty.Committee
 			break
@@ -152,7 +155,7 @@ func insertSurroundAttestationIntoPool(conn *grpc.ClientConn) error {
 
 	attDataReq := &eth.AttestationDataRequest{
 		CommitteeIndex: committeeIndex,
-		Slot:           chainHead.HeadSlot - 1,
+		Slot:           startSlot(chainHead.HeadEpoch),
 	}
 	attData, err := valClient.GetAttestationData(ctx, attDataReq)
 	if err != nil {
@@ -166,7 +169,7 @@ func insertSurroundAttestationIntoPool(conn *grpc.ClientConn) error {
 	}
 
 	domainResp, err := valClient.DomainData(ctx, &eth.DomainRequest{
-		Epoch:  attData.Target.Epoch-1,
+		Epoch:  attData.Target.Epoch + 1,
 		Domain: params.BeaconConfig().DomainBeaconAttester[:],
 	})
 	if err != nil {
@@ -183,4 +186,8 @@ func insertSurroundAttestationIntoPool(conn *grpc.ClientConn) error {
 		return err
 	}
 	return nil
+}
+
+func startSlot(epoch uint64) uint64 {
+	return epoch * params.BeaconConfig().SlotsPerEpoch
 }

@@ -117,24 +117,12 @@ func validatorsSlashed(conn *grpc.ClientConn) error {
 	ctx := context.Background()
 	client := eth.NewBeaconChainClient(conn)
 	req := &eth.GetValidatorActiveSetChangesRequest{}
-	eth.ActiveSetChanges{
-		Epoch:                0,
-		ActivatedPublicKeys:  nil,
-		ActivatedIndices:     nil,
-		ExitedPublicKeys:     nil,
-		ExitedIndices:        nil,
-		SlashedPublicKeys:    nil,
-		SlashedIndices:       nil,
-		EjectedPublicKeys:    nil,
-		EjectedIndices:       nil,
-	}
 	changes, err := client.GetValidatorActiveSetChanges(ctx, req)
 	if err != nil {
 		return err
 	}
-	fmt.Println(changes.Epoch)
-	if len(changes.SlashedIndices) != 2 {
-		return fmt.Errorf("expected %d indices to be slashed, received %d", 2, len(changes.SlashedIndices))
+	if len(changes.SlashedIndices) != 4 {
+		return fmt.Errorf("expected 4 indices to be slashed, received %d", len(changes.SlashedIndices))
 	}
 	return nil
 }

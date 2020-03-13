@@ -122,7 +122,12 @@ func logErrorOutput(t *testing.T, file io.Reader, title string, index uint64) {
 	}
 
 	t.Logf("==================== Start of %s %d error output ==================\n", title, index)
+	var lines uint64
 	for _, err := range errorLines {
+		lines++
+		if lines >= 10 {
+			break
+		}
 		t.Log(err)
 	}
 	t.Logf("===================== End of %s %d error output ====================\n", title, index)

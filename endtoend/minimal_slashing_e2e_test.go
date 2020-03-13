@@ -20,8 +20,9 @@ func TestEndToEnd_MinimalConfig_Slashing(t *testing.T) {
 		numBeaconNodes: 4,
 		numValidators:  params.BeaconConfig().MinGenesisActiveValidatorCount,
 		evaluators: []ev.Evaluator{
+			ev.NoFinalization,
 			ev.InjectDoubleVote,
-			ev.InjectSurroundVote,
+			//ev.InjectSurroundVote,
 			ev.ValidatorsSlashed,
 		},
 	}
