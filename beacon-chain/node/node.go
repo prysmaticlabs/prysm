@@ -335,7 +335,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		MaxRoutines:       maxRoutines,
 		StateNotifier:     b,
 		ForkChoiceStore:   b.forkChoiceStore,
-		OpsService: opsService,
+		OpsService:        opsService,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")

@@ -125,6 +125,16 @@ func (p *AttCaches) HasAggregatedAttestation(att *ethpb.Attestation) (bool, erro
 		}
 	}
 
+	p.blockAttLock.RLock()
+	defer p.blockAttLock.RUnlock()
+	if atts, ok := p.blockAtt[r]; ok {
+		for _, a := range atts {
+			if a.AggregationBits.Contains(att.AggregationBits) {
+				return true, nil
+			}
+		}
+	}
+
 	return false, nil
 }
 

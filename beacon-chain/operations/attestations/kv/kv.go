@@ -11,13 +11,13 @@ import (
 // such are unaggregated, aggregated or attestations within a block.
 type AttCaches struct {
 	aggregatedAttLock  sync.RWMutex
-	aggregatedAtt   map[[32]byte][]*ethpb.Attestation
-	unAggregateAttLock  sync.RWMutex
-	unAggregatedAtt map[[32]byte]*ethpb.Attestation
+	aggregatedAtt      map[[32]byte][]*ethpb.Attestation
+	unAggregateAttLock sync.RWMutex
+	unAggregatedAtt    map[[32]byte]*ethpb.Attestation
 	forkchoiceAttLock  sync.RWMutex
-	forkchoiceAtt   map[[32]byte]*ethpb.Attestation
-	blockAttLock  sync.RWMutex
-	blockAtt        map[[32]byte][]*ethpb.Attestation
+	forkchoiceAtt      map[[32]byte]*ethpb.Attestation
+	blockAttLock       sync.RWMutex
+	blockAtt           map[[32]byte][]*ethpb.Attestation
 }
 
 // NewAttCaches initializes a new attestation pool consists of multiple KV store in cache for

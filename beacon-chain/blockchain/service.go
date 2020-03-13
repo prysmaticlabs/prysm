@@ -89,7 +89,7 @@ type Config struct {
 	MaxRoutines       int64
 	StateNotifier     statefeed.Notifier
 	ForkChoiceStore   f.ForkChoicer
-	OpsService           *attestations.Service
+	OpsService        *attestations.Service
 }
 
 // NewService instantiates a new block service instance that will
@@ -114,7 +114,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		boundaryRoots:      [][32]byte{},
 		checkpointState:    cache.NewCheckpointStateCache(),
 		stateGen:           stategen.New(cfg.BeaconDB),
-		opsService: cfg.OpsService,
+		opsService:         cfg.OpsService,
 	}, nil
 }
 

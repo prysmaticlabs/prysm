@@ -3,8 +3,8 @@ package attestations
 import (
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/roughtime"
 )
 
 // Clean attestations pool at certain interval.
@@ -33,7 +33,7 @@ func (s *Service) cleanAtts() {
 	for _, att := range aggregatedAtts {
 		if s.expired(att.Data.Slot) {
 			if err := s.pool.DeleteAggregatedAttestation(att); err != nil {
-				 log.WithError(err).Error("Could not delete expired aggregated attestation")
+				log.WithError(err).Error("Could not delete expired aggregated attestation")
 			}
 			expiredAggregatedAtts.Inc()
 		}
