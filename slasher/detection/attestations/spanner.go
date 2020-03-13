@@ -7,7 +7,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	db "github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/iface"
@@ -89,6 +88,7 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 				return nil, err
 			}
 			detections = append(detections, &types.DetectionResult{
+				ValidatorIndex: idx,
 				Kind:           types.SurroundVote,
 				SlashableEpoch: slashableEpoch,
 				SigBytes:       targetSpan.SigBytes,
@@ -104,6 +104,7 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 				return nil, err
 			}
 			detections = append(detections, &types.DetectionResult{
+				ValidatorIndex: idx,
 				Kind:           types.SurroundVote,
 				SlashableEpoch: slashableEpoch,
 				SigBytes:       targetSpan.SigBytes,
@@ -115,6 +116,7 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 		// Check if the validator has attested for this epoch or not.
 		if targetSpan.HasAttested {
 			detections = append(detections, &types.DetectionResult{
+				ValidatorIndex: idx,
 				Kind:           types.DoubleVote,
 				SlashableEpoch: targetEpoch,
 				SigBytes:       targetSpan.SigBytes,
@@ -123,18 +125,7 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 		}
 	}
 
-	// Clear out any duplicate results.
-	keys := make(map[[32]byte]bool)
-	var detectionList []*types.DetectionResult
-	for _, dd := range detections {
-		hash := hashutil.Hash(dd.Marshal())
-		if _, value := keys[hash]; !value {
-			keys[hash] = true
-			detectionList = append(detectionList, dd)
-		}
-	}
-
-	return detectionList, nil
+	return detections, nil
 }
 
 // UpdateSpans given an indexed attestation for all of its attesting indices.
@@ -180,9 +171,12 @@ func (s *SpanDetector) saveSigBytes(ctx context.Context, att *ethpb.IndexedAttes
 			sigBytes = [2]byte{att.Signature[0], att.Signature[1]}
 		}
 		// Save the signature bytes into the span for this epoch.
-		span.HasAttested = true
-		span.SigBytes = sigBytes
-		spanMap[idx] = span
+		spanMap[idx] = types.Span{
+			MinSpan:     span.MinSpan,
+			MaxSpan:     span.MaxSpan,
+			HasAttested: true,
+			SigBytes:    sigBytes,
+		}
 	}
 	return s.slasherDB.SaveEpochSpansMap(ctx, target, spanMap)
 }
