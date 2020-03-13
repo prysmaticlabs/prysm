@@ -1,6 +1,8 @@
 package kv
 
 import (
+	"sync"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 )
 
@@ -8,9 +10,13 @@ import (
 // These caches are KV store for various attestations
 // such are unaggregated, aggregated or attestations within a block.
 type AttCaches struct {
+	aggregatedAttLock  sync.RWMutex
 	aggregatedAtt   map[[32]byte][]*ethpb.Attestation
+	unAggregateAttLock  sync.RWMutex
 	unAggregatedAtt map[[32]byte]*ethpb.Attestation
+	forkchoiceAttLock  sync.RWMutex
 	forkchoiceAtt   map[[32]byte]*ethpb.Attestation
+	blockAttLock  sync.RWMutex
 	blockAtt        map[[32]byte][]*ethpb.Attestation
 }
 

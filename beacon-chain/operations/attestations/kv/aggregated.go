@@ -19,6 +19,8 @@ func (p *AttCaches) SaveAggregatedAttestation(att *ethpb.Attestation) error {
 	}
 
 	copiedAtt := stateTrie.CopyAttestation(att)
+	p.aggregatedAttLock.Lock()
+	defer p.aggregatedAttLock.Unlock()
 	atts, ok := p.aggregatedAtt[r]
 	if !ok {
 		atts := []*ethpb.Attestation{copiedAtt}
@@ -48,6 +50,9 @@ func (p *AttCaches) SaveAggregatedAttestations(atts []*ethpb.Attestation) error 
 // AggregatedAttestations returns the aggregated attestations in cache.
 func (p *AttCaches) AggregatedAttestations() []*ethpb.Attestation {
 	atts := make([]*ethpb.Attestation, 0)
+
+	p.aggregatedAttLock.RLock()
+	defer p.aggregatedAttLock.RUnlock()
 	for _, a := range p.aggregatedAtt {
 		atts = append(atts, a...)
 	}
@@ -59,6 +64,9 @@ func (p *AttCaches) AggregatedAttestations() []*ethpb.Attestation {
 // filtered by committee index and slot.
 func (p *AttCaches) AggregatedAttestationsBySlotIndex(slot uint64, committeeIndex uint64) []*ethpb.Attestation {
 	atts := make([]*ethpb.Attestation, 0)
+
+	p.aggregatedAttLock.RLock()
+	defer p.aggregatedAttLock.RUnlock()
 	for _, a := range p.aggregatedAtt {
 		if slot == a[0].Data.Slot && committeeIndex == a[0].Data.CommitteeIndex {
 			atts = append(atts, a...)
@@ -77,6 +85,9 @@ func (p *AttCaches) DeleteAggregatedAttestation(att *ethpb.Attestation) error {
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation data")
 	}
+
+	p.aggregatedAttLock.Lock()
+	defer p.aggregatedAttLock.Unlock()
 	attList, ok := p.aggregatedAtt[r]
 	if !ok {
 		return nil
@@ -104,6 +115,8 @@ func (p *AttCaches) HasAggregatedAttestation(att *ethpb.Attestation) (bool, erro
 		return false, errors.Wrap(err, "could not tree hash attestation")
 	}
 
+	p.aggregatedAttLock.RLock()
+	defer p.aggregatedAttLock.RUnlock()
 	if atts, ok := p.aggregatedAtt[r]; ok {
 		for _, a := range atts {
 			if a.AggregationBits.Contains(att.AggregationBits) {
@@ -117,5 +130,7 @@ func (p *AttCaches) HasAggregatedAttestation(att *ethpb.Attestation) (bool, erro
 
 // AggregatedAttestationCount returns the number of aggregated attestations key in the pool.
 func (p *AttCaches) AggregatedAttestationCount() int {
+	p.aggregatedAttLock.RLock()
+	defer p.aggregatedAttLock.RUnlock()
 	return len(p.aggregatedAtt)
 }

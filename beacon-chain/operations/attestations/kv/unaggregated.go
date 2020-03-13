@@ -19,6 +19,8 @@ func (p *AttCaches) SaveUnaggregatedAttestation(att *ethpb.Attestation) error {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
 
+	p.unAggregateAttLock.Lock()
+	defer p.unAggregateAttLock.Unlock()
 	p.unAggregatedAtt[r] = stateTrie.CopyAttestation(att) // Copied.
 
 	return nil
@@ -39,6 +41,8 @@ func (p *AttCaches) SaveUnaggregatedAttestations(atts []*ethpb.Attestation) erro
 func (p *AttCaches) UnaggregatedAttestations() []*ethpb.Attestation {
 	atts := make([]*ethpb.Attestation, 0)
 
+	p.unAggregateAttLock.RLock()
+	defer p.unAggregateAttLock.RUnlock()
 	for _, att := range p.unAggregatedAtt {
 		atts = append(atts, stateTrie.CopyAttestation(att) /* Copied */)
 	}
@@ -57,6 +61,8 @@ func (p *AttCaches) DeleteUnaggregatedAttestation(att *ethpb.Attestation) error 
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
 
+	p.unAggregateAttLock.Lock()
+	defer p.unAggregateAttLock.Unlock()
 	delete(p.unAggregatedAtt, r)
 
 	return nil
@@ -64,5 +70,7 @@ func (p *AttCaches) DeleteUnaggregatedAttestation(att *ethpb.Attestation) error 
 
 // UnaggregatedAttestationCount returns the number of unaggregated attestations key in the pool.
 func (p *AttCaches) UnaggregatedAttestationCount() int {
+	p.unAggregateAttLock.RLock()
+	defer p.unAggregateAttLock.RUnlock()
 	return len(p.unAggregatedAtt)
 }
