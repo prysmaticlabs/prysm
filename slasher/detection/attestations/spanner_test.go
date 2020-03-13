@@ -26,6 +26,7 @@ func indexedAttestation(source uint64, target uint64, indices []uint64) *ethpb.I
 		Signature: []byte{1, 2},
 	}
 }
+
 func TestSpanDetector_DetectSlashingsForAttestation_Double(t *testing.T) {
 	type testStruct struct {
 		name        string
@@ -544,53 +545,11 @@ func TestSpanDetector_DetectSlashingsForAttestation_MultipleValidators(t *testin
 			// Detections - double, surround, surrounded, none.
 			shouldSlash: []bool{true, true, true, false},
 			// Atts in map: (src, epoch) - 0: (3, 6), 1: (2, 7), 2: (4, 5), 3: (5, 7)
-			spansByEpoch: []map[uint64]types.Span{
-				// Epoch 0.
-				{
-					0: {MinSpan: 6, MaxSpan: 0},
-					1: {MinSpan: 7, MaxSpan: 0},
-					2: {MinSpan: 5, MaxSpan: 0},
-				},
-				// Epoch 1.
-				{
-					0: {MinSpan: 5, MaxSpan: 0},
-					1: {MinSpan: 6, MaxSpan: 0},
-					2: {MinSpan: 4, MaxSpan: 0},
-				},
-				// Epoch 2.
-				{
-					0: {MinSpan: 4, MaxSpan: 0},
-					2: {MinSpan: 3, MaxSpan: 0},
-				},
-				// Epoch 3.
-				{
-					0: {MinSpan: 0, MaxSpan: 0},
-					1: {MinSpan: 0, MaxSpan: 4},
-					2: {MinSpan: 2, MaxSpan: 0},
-				},
-				// Epoch 4.
-				{
-					0: {MinSpan: 0, MaxSpan: 2},
-					1: {MinSpan: 0, MaxSpan: 3},
-					3: {MinSpan: 3, MaxSpan: 0},
-				},
-				// Epoch 5.
-				{
-					0: {MinSpan: 0, MaxSpan: 1},
-					1: {MinSpan: 0, MaxSpan: 2},
-					2: {MinSpan: 0, MaxSpan: 0, HasAttested: true},
-				},
-				// Epoch 6.
-				{
-					0: {MinSpan: 0, MaxSpan: 1, HasAttested: true},
-					1: {MinSpan: 0, MaxSpan: 1},
-					3: {MinSpan: 0, MaxSpan: 1},
-				},
-				// Epoch 7.
-				{
-					1: {MinSpan: 0, MaxSpan: 0, HasAttested: true},
-					3: {MinSpan: 0, MaxSpan: 0, HasAttested: true},
-				},
+			atts: []*ethpb.IndexedAttestation{
+				indexedAttestation(3, 6, []uint64{0}),
+				indexedAttestation(2, 7, []uint64{1}),
+				indexedAttestation(4, 5, []uint64{2}),
+				indexedAttestation(5, 7, []uint64{3}),
 			},
 		},
 		{
@@ -613,74 +572,11 @@ func TestSpanDetector_DetectSlashingsForAttestation_MultipleValidators(t *testin
 			// Detections - surround, surround, surround, none.
 			shouldSlash: []bool{true, true, true, false},
 			// Atts in map: (src, epoch) - 0: (1, 8), 1: (3, 9), 2: (2, 10), 3: (4, 6)
-			spansByEpoch: []map[uint64]types.Span{
-				// Epoch 0.
-				{
-					0: {MinSpan: 8, MaxSpan: 0},
-					1: {MinSpan: 9, MaxSpan: 0},
-					2: {MinSpan: 10, MaxSpan: 0},
-					3: {MinSpan: 6, MaxSpan: 0},
-				},
-				// Epoch 1.
-				{
-					0: {MinSpan: 5, MaxSpan: 0},
-					1: {MinSpan: 8, MaxSpan: 0},
-					2: {MinSpan: 9, MaxSpan: 0},
-					3: {MinSpan: 5, MaxSpan: 0},
-				},
-				// Epoch 2.
-				{
-					0: {MinSpan: 4, MaxSpan: 6},
-					1: {MinSpan: 7, MaxSpan: 0},
-					3: {MinSpan: 4, MaxSpan: 0},
-				},
-				// Epoch 3.
-				{
-					0: {MinSpan: 0, MaxSpan: 5},
-					2: {MinSpan: 0, MaxSpan: 7},
-					3: {MinSpan: 3, MaxSpan: 0},
-				},
-				// Epoch 4.
-				{
-					0: {MinSpan: 0, MaxSpan: 4},
-					1: {MinSpan: 0, MaxSpan: 5},
-					2: {MinSpan: 0, MaxSpan: 6},
-				},
-				// Epoch 5.
-				{
-					0: {MinSpan: 0, MaxSpan: 3},
-					1: {MinSpan: 0, MaxSpan: 4},
-					2: {MinSpan: 0, MaxSpan: 5},
-					3: {MinSpan: 0, MaxSpan: 1},
-				},
-				// Epoch 6.
-				{
-					0: {MinSpan: 0, MaxSpan: 2},
-					1: {MinSpan: 0, MaxSpan: 3},
-					2: {MinSpan: 0, MaxSpan: 4},
-					3: {MinSpan: 0, MaxSpan: 0, HasAttested: true},
-				},
-				// Epoch 7.
-				{
-					0: {MinSpan: 0, MaxSpan: 1},
-					1: {MinSpan: 0, MaxSpan: 2},
-					2: {MinSpan: 0, MaxSpan: 3},
-				},
-				// Epoch 8.
-				{
-					0: {MinSpan: 0, MaxSpan: 0, HasAttested: true},
-					1: {MinSpan: 0, MaxSpan: 1},
-					2: {MinSpan: 0, MaxSpan: 2},
-				},
-				// Epoch 9.
-				{
-					1: {MinSpan: 0, MaxSpan: 0, HasAttested: true},
-					2: {MinSpan: 0, MaxSpan: 1},
-				},
-				// Epoch 9.
-				{
-					2: {MinSpan: 0, MaxSpan: 0, HasAttested: true},
-				},
+			atts: []*ethpb.IndexedAttestation{
+				indexedAttestation(1, 8, []uint64{0}),
+				indexedAttestation(3, 9, []uint64{1}),
+				indexedAttestation(2, 10, []uint64{2}),
+				indexedAttestation(4, 6, []uint64{3}),
 			},
 		},
 		{
@@ -689,7 +585,34 @@ func TestSpanDetector_DetectSlashingsForAttestation_MultipleValidators(t *testin
 				AttestingIndices: []uint64{0, 1, 2, 3},
 				Data: &ethpb.AttestationData{
 					Source: &ethpb.Checkpoint{
-						Epoch: 5,
+						Epoch: 2,
+						Root:  []byte("good source"),
+					},
+					Target: &ethpb.Checkpoint{
+						Epoch: 9,
+						Root:  []byte("good target"),
+					},
+				},
+				Signature: []byte{1, 2},
+			},
+			slashableEpochs: []uint64{8, 8, 7, 0},
+			// Detections - surround, surround, surround, none.
+			shouldSlash: []bool{true, true, true, false},
+			// Atts in map: (src, epoch) - 0: (5, 8), 1: (3, 8), 2: (4, 7), 3: (1, 5)
+			atts: []*ethpb.IndexedAttestation{
+				indexedAttestation(5, 8, []uint64{0}),
+				indexedAttestation(3, 8, []uint64{1}),
+				indexedAttestation(4, 7, []uint64{2}),
+				indexedAttestation(1, 5, []uint64{3}),
+			},
+		},
+		{
+			name: "3 of 4 validators slashed, differing doubles",
+			incomingAtt: &ethpb.IndexedAttestation{
+				AttestingIndices: []uint64{0, 1, 2, 3},
+				Data: &ethpb.AttestationData{
+					Source: &ethpb.Checkpoint{
+						Epoch: 2,
 						Root:  []byte("good source"),
 					},
 					Target: &ethpb.Checkpoint{
@@ -699,78 +622,15 @@ func TestSpanDetector_DetectSlashingsForAttestation_MultipleValidators(t *testin
 				},
 				Signature: []byte{1, 2},
 			},
-			slashableEpochs: []uint64{8, 9, 10, 0},
+			slashableEpochs: []uint64{7, 7, 7, 0},
 			// Detections - surround, surround, surround, none.
 			shouldSlash: []bool{true, true, true, false},
-			// Atts in map: (src, epoch) - 0: (1, 8), 1: (3, 9), 2: (2, 10), 3: (4, 6)
-			spansByEpoch: []map[uint64]types.Span{
-				// Epoch 0.
-				{
-					0: {MinSpan: 8, MaxSpan: 0},
-					1: {MinSpan: 9, MaxSpan: 0},
-					2: {MinSpan: 10, MaxSpan: 0},
-					3: {MinSpan: 6, MaxSpan: 0},
-				},
-				// Epoch 1.
-				{
-					0: {MinSpan: 5, MaxSpan: 0},
-					1: {MinSpan: 8, MaxSpan: 0},
-					2: {MinSpan: 9, MaxSpan: 0},
-					3: {MinSpan: 5, MaxSpan: 0},
-				},
-				// Epoch 2.
-				{
-					0: {MinSpan: 4, MaxSpan: 6},
-					1: {MinSpan: 7, MaxSpan: 0},
-					3: {MinSpan: 4, MaxSpan: 0},
-				},
-				// Epoch 3.
-				{
-					0: {MinSpan: 0, MaxSpan: 5},
-					2: {MinSpan: 0, MaxSpan: 7},
-					3: {MinSpan: 3, MaxSpan: 0},
-				},
-				// Epoch 4.
-				{
-					0: {MinSpan: 0, MaxSpan: 4},
-					1: {MinSpan: 0, MaxSpan: 5},
-					2: {MinSpan: 0, MaxSpan: 6},
-				},
-				// Epoch 5.
-				{
-					0: {MinSpan: 0, MaxSpan: 3},
-					1: {MinSpan: 0, MaxSpan: 4},
-					2: {MinSpan: 0, MaxSpan: 5},
-					3: {MinSpan: 0, MaxSpan: 1},
-				},
-				// Epoch 6.
-				{
-					0: {MinSpan: 0, MaxSpan: 2},
-					1: {MinSpan: 0, MaxSpan: 3},
-					2: {MinSpan: 0, MaxSpan: 4},
-					3: {MinSpan: 0, MaxSpan: 0, HasAttested: true},
-				},
-				// Epoch 7.
-				{
-					0: {MinSpan: 0, MaxSpan: 1},
-					1: {MinSpan: 0, MaxSpan: 2},
-					2: {MinSpan: 0, MaxSpan: 3},
-				},
-				// Epoch 8.
-				{
-					0: {MinSpan: 0, MaxSpan: 0, HasAttested: true},
-					1: {MinSpan: 0, MaxSpan: 1},
-					2: {MinSpan: 0, MaxSpan: 2},
-				},
-				// Epoch 9.
-				{
-					1: {MinSpan: 0, MaxSpan: 0, HasAttested: true},
-					2: {MinSpan: 0, MaxSpan: 1},
-				},
-				// Epoch 9.
-				{
-					2: {MinSpan: 0, MaxSpan: 0, HasAttested: true},
-				},
+			// Atts in map: (src, epoch) - 0: (2, 7), 1: (3, 7), 2: (6, 7), 3: (1, 5)
+			atts: []*ethpb.IndexedAttestation{
+				indexedAttestation(2, 7, []uint64{0}),
+				indexedAttestation(3, 7, []uint64{1}),
+				indexedAttestation(6, 7, []uint64{2}),
+				indexedAttestation(1, 5, []uint64{3}),
 			},
 		},
 	}
@@ -784,10 +644,8 @@ func TestSpanDetector_DetectSlashingsForAttestation_MultipleValidators(t *testin
 			spanDetector := &SpanDetector{
 				slasherDB: db,
 			}
-			for i := 0; i < len(tt.spansByEpoch); i++ {
-				epoch := uint64(i)
-				err := spanDetector.slasherDB.SaveEpochSpansMap(ctx, epoch, tt.spansByEpoch[epoch])
-				if err != nil {
+			for _, att := range tt.atts {
+				if err := spanDetector.UpdateSpans(ctx, att); err != nil {
 					t.Fatalf("Failed to save to slasherDB: %v", err)
 				}
 			}
@@ -802,18 +660,22 @@ func TestSpanDetector_DetectSlashingsForAttestation_MultipleValidators(t *testin
 						want = append(want, &types.DetectionResult{
 							Kind:           types.DoubleVote,
 							SlashableEpoch: tt.slashableEpochs[i],
+							SigBytes:       [2]byte{1, 2},
 						})
 					} else {
 						want = append(want, &types.DetectionResult{
 							Kind:           types.SurroundVote,
 							SlashableEpoch: tt.slashableEpochs[i],
+							SigBytes:       [2]byte{1, 2},
 						})
 					}
 				}
 			}
 			if !reflect.DeepEqual(want, res) {
+				spanMap, _ := spanDetector.slasherDB.EpochSpansMap(ctx, 2)
+				t.Error(spanMap)
 				for i, ww := range want {
-					t.Errorf("Wanted %d: %+v\n", i, ww)
+					t.Errorf("Wanted   %d: %+v\n", i, ww)
 				}
 				for i, rr := range res {
 					t.Errorf("Received %d: %+v\n", i, rr)

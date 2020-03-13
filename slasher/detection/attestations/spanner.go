@@ -7,7 +7,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	db "github.com/prysmaticlabs/prysm/slasher/db"
 	"github.com/prysmaticlabs/prysm/slasher/detection/attestations/iface"
@@ -123,18 +122,7 @@ func (s *SpanDetector) DetectSlashingsForAttestation(
 		}
 	}
 
-	// Clear out any duplicate results.
-	keys := make(map[[32]byte]bool)
-	var detectionList []*types.DetectionResult
-	for _, dd := range detections {
-		hash := hashutil.Hash(dd.Marshal())
-		if _, value := keys[hash]; !value {
-			keys[hash] = true
-			detectionList = append(detectionList, dd)
-		}
-	}
-
-	return detectionList, nil
+	return detections, nil
 }
 
 // UpdateSpans given an indexed attestation for all of its attesting indices.
