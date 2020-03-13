@@ -1,9 +1,15 @@
 package keymanager
 
 import (
+	"encoding/json"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	e2wtypes "github.com/wealdtech/go-eth2-wallet-types"
+	//rw "github.com/alonmuroch/ValidatorRemoteWallet/wallet/v1alpha1"
 )
+
+type RemotewalletOpts struct {
+	Url    string   `json:"url"`
+}
 
 // TODO
 var RemotewalletOptsHelp = `The wallet key manager stores keys in a local encrypted store.  The options are:
@@ -27,6 +33,13 @@ using this as a template) is:
   }`
 
 func NewRemoteWallet(input string) (KeyManager, string, error) {
+	// parse config file
+	opts := &RemotewalletOpts{}
+	err := json.Unmarshal([]byte(input), opts)
+	if err != nil {
+		return nil, walletOptsHelp, err
+	}
+
 	km := &RemoteWallet{
 		accounts: make(map[[48]byte]e2wtypes.Account),
 	}
