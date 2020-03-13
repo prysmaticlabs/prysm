@@ -1200,7 +1200,7 @@ func TestServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	defer dbTest.TeardownDB(t, db)
 	ctx := context.Background()
-	validators := make([]*ethpb.Validator, 6)
+	validators := make([]*ethpb.Validator, 8)
 	headState, err := stateTrie.InitializeFromProto(&pbp2p.BeaconState{
 		Slot:       helpers.StartSlot(100),
 		Validators: validators,
@@ -1260,7 +1260,7 @@ func TestServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantedKeys := make([][]byte, 6)
+	wantedKeys := make([][]byte, 8)
 	for i := 0; i < len(wantedKeys); i++ {
 		k := make([]byte, 48)
 		copy(k, strconv.Itoa(i))
@@ -1270,8 +1270,9 @@ func TestServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
 		wantedKeys[0],
 		wantedKeys[2],
 		wantedKeys[4],
+		wantedKeys[6],
 	}
-	wantedActiveIndices := []uint64{0, 2, 4}
+	wantedActiveIndices := []uint64{0, 2, 4, 6}
 	wantedExited := [][]byte{
 		wantedKeys[5],
 	}
@@ -1296,7 +1297,7 @@ func TestServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
 		EjectedIndices:      wantedEjectedIndices,
 	}
 	if !proto.Equal(wanted, res) {
-		t.Errorf("Wanted %v, received %v", wanted, res)
+		t.Errorf("Wanted \n%v, received \n%v", wanted, res)
 	}
 	res, err = bs.GetValidatorActiveSetChanges(ctx, &ethpb.GetValidatorActiveSetChangesRequest{
 		QueryFilter: &ethpb.GetValidatorActiveSetChangesRequest_Epoch{Epoch: 5},
@@ -1306,7 +1307,7 @@ func TestServer_GetValidatorActiveSetChanges_FromArchive(t *testing.T) {
 	}
 	wanted.Epoch = 5
 	if !proto.Equal(wanted, res) {
-		t.Errorf("Wanted %v, received %v", wanted, res)
+		t.Errorf("Wanted \n%v, received \n%v", wanted, res)
 	}
 }
 
