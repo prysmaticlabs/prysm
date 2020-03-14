@@ -175,8 +175,8 @@ func insertSurroundAttestationIntoPool(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return err
 	}
-	attData.Source.Epoch -= 1
-	attData.Target.Epoch += 1
+	attData.Source.Epoch--
+	attData.Target.Epoch++
 	dataRoot, err := ssz.HashTreeRoot(attData)
 	if err != nil {
 		return err
