@@ -14,10 +14,10 @@ import (
 	"google.golang.org/grpc"
 )
 
-// InjectDoubleVote broadcasts a double vote for the slasher to detect.
+// InjectDoubleVote broadcasts a double vote into the beacon node pool for the slasher to detect.
 var InjectDoubleVote = Evaluator{
 	Name:       "inject_double_vote_%d",
-	Policy:     beforeEpoch(3),
+	Policy:     beforeEpoch(2),
 	Evaluation: insertDoubleAttestationIntoPool,
 }
 

@@ -25,13 +25,12 @@ var FinishedSyncing = Evaluator{
 	Evaluation: finishedSyncing,
 }
 
-// AllNodesHaveSameHead connects to all RPC ports in the passed in array and ensures they have the same head epoch.
-// Checks finality and justification as well.
+// AllNodesHaveSameHead ensures all nodes have the same head epoch. Checks finality and justification as well.
 // Not checking head block root as it may change irregularly for the validator connected nodes.
 var AllNodesHaveSameHead = Evaluator{
 	Name:       "all_nodes_have_same_head",
 	Policy:     func(currentEpoch uint64) bool { return true },
-	Evaluation: peersConnect,
+	Evaluation: allNodesHaveSameHead,
 }
 
 func onEpoch(epoch uint64) func(uint64) bool {
