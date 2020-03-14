@@ -3,7 +3,6 @@ package initialsync
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
@@ -11,14 +10,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
-	"github.com/sirupsen/logrus"
 )
 
 const (
-	queueMaxPendingRequests  = 4
+	queueMaxPendingRequests  = 8
 	queueFetchRequestTimeout = 60 * time.Second
 	queueMaxCachedBlocks     = 8 * queueMaxPendingRequests * blockBatchSize
-	queueRefreshRate         = time.Second / 20
 	queueStopCallTimeout     = 1 * time.Second
 )
 
@@ -166,7 +163,7 @@ func (q *blocksQueue) loop() {
 	for {
 		if q.headFetcher.HeadSlot() >= q.highestExpectedSlot {
 			log.Debug("Highest expected slot reached")
-			return
+			q.cancel()
 		}
 
 		select {
@@ -176,36 +173,51 @@ func (q *blocksQueue) loop() {
 		case q.pendingFetchRequests <- struct{}{}:
 			wg.Add(1)
 			go func() {
-				defer func() {
-					<-q.pendingFetchRequests             // notify semaphore
-					q.pendingFetchedBlocks <- struct{}{} // notify sender of data availability
-				}()
 				defer wg.Done()
 
 				// Schedule request.
 				if err := q.scheduleFetchRequests(q.ctx); err != nil {
+					q.state.scheduler.incrementCounter(failedBlockCounter, blockBatchSize)
+					select {
+					case <-q.ctx.Done():
+					case <-q.pendingFetchRequests:
+					}
 					log.WithError(err).Debug("Error scheduling fetch request")
-					return
 				}
+			}()
+		case response, ok := <-q.blocksFetcher.requestResponses():
+			if !ok {
+				log.Debug("Fetcher closed output channel")
+				q.cancel()
+				return
+			}
 
-				// Obtain response (if request is scheduled ok).
+			// Release semaphore ticket.
+			go func() {
 				select {
 				case <-q.ctx.Done():
-				case resp, ok := <-q.blocksFetcher.requestResponses():
-					if !ok {
-						log.Debug("Blocks fetcher closed output channel")
-						q.cancel()
-						return
-					}
-					// Process incoming response into blocks.
-					skippedBlocks, err := q.parseFetchResponse(q.ctx, resp)
-					if err != nil {
-						q.state.scheduler.incrementCounter(failedBlockCounter, resp.count)
-						log.WithError(err).Debug("Error processing received blocks")
-						return
-					}
-					q.state.scheduler.incrementCounter(skippedBlockCounter, skippedBlocks)
+				case <-q.pendingFetchRequests:
 				}
+			}()
+
+			// Process incoming response into blocks.
+			wg.Add(1)
+			go func() {
+				defer func() {
+					select {
+					case <-q.ctx.Done():
+					case q.pendingFetchedBlocks <- struct{}{}: // notify sender of data availability
+					}
+					wg.Done()
+				}()
+
+				skippedBlocks, err := q.parseFetchResponse(q.ctx, response)
+				if err != nil {
+					q.state.scheduler.incrementCounter(failedBlockCounter, response.count)
+					log.WithError(err).Debug("Error processing received blocks")
+					return
+				}
+				q.state.scheduler.incrementCounter(skippedBlockCounter, skippedBlocks)
 			}()
 		case <-q.pendingFetchedBlocks:
 			wg.Add(1)
@@ -221,29 +233,61 @@ func (q *blocksQueue) loop() {
 
 // scheduleFetchRequests enqueues block fetch requests to block fetcher.
 func (q *blocksQueue) scheduleFetchRequests(ctx context.Context) error {
-	log.Debug("scheduleFetchRequests")
-
-	// Depends on various factors (error rate, current head slot, number of skipped blocks).
-	// State updates may include a temporary increase of block's batch size (to look ahead farther).
-	if err := q.updateSchedulerState(ctx); err != nil {
-		return err
-	}
-
 	q.state.scheduler.Lock()
 	defer q.state.scheduler.Unlock()
 
-	blocks := &q.state.scheduler.requestedBlocks
-	offset := blocks.pending + blocks.skipped + blocks.failed + blocks.valid
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
 
+	s := q.state.scheduler
+	blocks := &q.state.scheduler.requestedBlocks
+
+	func() {
+		resetStateCounters := func() {
+			blocks.pending, blocks.valid, blocks.failed, blocks.skipped = 0, 0, 0, 0
+			s.currentSlot = q.headFetcher.HeadSlot()
+		}
+
+		// Update state's current slot pointer.
+		if count := blocks.pending + blocks.skipped + blocks.failed + blocks.valid; count == 0 {
+			s.currentSlot = q.headFetcher.HeadSlot()
+			return
+		}
+
+		// Too many failures (blocks that can't be processed at this time).
+		if blocks.failed >= s.blockBatchSize/2 {
+			s.blockBatchSize *= 2
+			resetStateCounters()
+			return
+		}
+
+		// Given enough valid blocks, we can set back block batch size.
+		if blocks.valid >= blockBatchSize && s.blockBatchSize != blockBatchSize {
+			blocks.skipped, blocks.valid = blocks.skipped+blocks.valid, 0
+			s.blockBatchSize = blockBatchSize
+		}
+
+		// Too many items in scheduler, time to update current slot to point to current head's slot.
+		count := blocks.pending + blocks.skipped + blocks.failed + blocks.valid
+		if count >= queueMaxCachedBlocks {
+			s.blockBatchSize = blockBatchSize
+			resetStateCounters()
+			return
+		}
+
+		// All blocks processed, no pending blocks.
+		if count := blocks.skipped + blocks.failed + blocks.valid; blocks.pending == 0 && count > 0 {
+			s.blockBatchSize = blockBatchSize
+			resetStateCounters()
+			return
+		}
+	}()
+
+	offset := blocks.pending + blocks.skipped + blocks.failed + blocks.valid
 	start := q.state.scheduler.currentSlot + offset + 1
 	count := mathutil.Min(q.state.scheduler.blockBatchSize, q.highestExpectedSlot-start+1)
 	if count <= 0 {
-		log.WithFields(logrus.Fields{
-			"state":               fmt.Sprintf("%+v", blocks),
-			"start":               start,
-			"count":               count,
-			"highestExpectedSlot": q.highestExpectedSlot,
-		}).Debug("Queue's start position is too high")
 		return errStartSlotIsTooHigh
 	}
 
@@ -251,92 +295,20 @@ func (q *blocksQueue) scheduleFetchRequests(ctx context.Context) error {
 	if err := q.blocksFetcher.scheduleRequest(ctx, start, count); err != nil {
 		return err
 	}
-
 	q.state.scheduler.requestedBlocks.pending += count
-	log.WithFields(logrus.Fields{
-		"state":               fmt.Sprintf("%+v", blocks),
-		"start":               start,
-		"count":               count,
-		"highestExpectedSlot": q.highestExpectedSlot,
-	}).Debug("Fetch request scheduled")
-
-	return nil
-}
-
-// updateSchedulerState adjusts scheduler's state, so that it never stalls.
-// Makes necessary adjustments to forward lookup window size and slot offset.
-func (q *blocksQueue) updateSchedulerState(ctx context.Context) error {
-	if ctx.Err() != nil {
-		return ctx.Err()
-	}
-
-	// HeadSlot() relies on mutex that is being contended by SetSlot(), so caching before locking.
-	headSlot := q.headFetcher.HeadSlot()
-
-	q.state.scheduler.Lock()
-	defer q.state.scheduler.Unlock()
-	s := q.state.scheduler
-
-	blocks := &s.requestedBlocks
-	resetStateCounters := func() {
-		//q.state.sender.Lock()
-		//q.state.cachedBlocks = make(map[uint64]*cachedBlock, queueMaxCachedBlocks)
-		//q.state.sender.Unlock()
-
-		blocks.pending, blocks.valid, blocks.failed, blocks.skipped = 0, 0, 0, 0
-		s.currentSlot = headSlot
-	}
-
-	// Update state's current slot pointer.
-	if count := blocks.pending + blocks.skipped + blocks.failed + blocks.valid; count == 0 {
-		s.currentSlot = headSlot
-		return nil
-	}
-
-	// Too many failures (blocks that can't be processed at this time).
-	if blocks.failed >= s.blockBatchSize/2 {
-		s.blockBatchSize *= 2
-		resetStateCounters()
-		log.Debug("Too many unprocessable blocks, increasing block batch size")
-		return nil
-	}
-
-	// Given enough valid blocks, we can set back block batch size.
-	if blocks.valid >= blockBatchSize && s.blockBatchSize != blockBatchSize {
-		blocks.skipped, blocks.valid = blocks.skipped+blocks.valid, 0
-		s.blockBatchSize = blockBatchSize
-		log.Debug("Enough valid blocks, block batch size reset")
-	}
-
-	// Too many items in scheduler, time to update current slot to point to current head's slot.
-	count := blocks.pending + blocks.skipped + blocks.failed + blocks.valid
-	if count >= queueMaxCachedBlocks {
-		s.blockBatchSize = blockBatchSize
-		resetStateCounters()
-		log.Debug("Too many cached blocks, resetting")
-		return nil
-	}
-
-	// All blocks processed, no pending blocks.
-	if count := blocks.skipped + blocks.failed + blocks.valid; blocks.pending == 0 && count > 0 {
-		s.blockBatchSize = blockBatchSize
-		resetStateCounters()
-		log.Debug("No pending blocks, resetting counters")
-		return nil
-	}
 
 	return nil
 }
 
 // parseFetchResponse processes incoming responses.
-func (q *blocksQueue) parseFetchResponse(
-	ctx context.Context,
-	response *fetchRequestResponse,
-) (skippedBlocks uint64, err error) {
-	log.Debug("parseFetchResponse")
+func (q *blocksQueue) parseFetchResponse(ctx context.Context, response *fetchRequestResponse) (uint64, error) {
+	q.state.sender.Lock()
+	defer q.state.sender.Unlock()
+
 	if ctx.Err() != nil {
 		return 0, ctx.Err()
 	}
+
 	if response.err != nil {
 		return 0, response.err
 	}
@@ -347,10 +319,8 @@ func (q *blocksQueue) parseFetchResponse(
 		responseBlocks[blk.Block.Slot] = blk
 	}
 
-	q.state.sender.Lock()
-	defer q.state.sender.Unlock()
-
 	// Cache blocks in [start, start + count) range, include skipped blocks.
+	var skippedBlocks uint64
 	end := response.start + mathutil.Max(response.count, uint64(len(response.blocks)))
 	for slot := response.start; slot < end; slot++ {
 		if block, ok := responseBlocks[slot]; ok {
@@ -377,13 +347,10 @@ func (q *blocksQueue) parseFetchResponse(
 // sendFetchedBlocks analyses available blocks, and sends them downstream in a correct slot order.
 // Blocks are checked starting from the current head slot, and up until next consecutive block is available.
 func (q *blocksQueue) sendFetchedBlocks(ctx context.Context) error {
-	log.Debug("sendFetchedBlocks")
-
-	headSlot := q.headFetcher.HeadSlot()
 	q.state.sender.Lock()
 	defer q.state.sender.Unlock()
 
-	startSlot := headSlot + 1
+	startSlot := q.headFetcher.HeadSlot() + 1
 	nonSkippedSlot := uint64(0)
 	for slot := startSlot; slot <= q.highestExpectedSlot; slot++ {
 		if ctx.Err() != nil {
@@ -394,7 +361,11 @@ func (q *blocksQueue) sendFetchedBlocks(ctx context.Context) error {
 			break
 		}
 		if blockData.SignedBeaconBlock != nil && blockData.Block != nil {
-			q.fetchedBlocks <- blockData.SignedBeaconBlock
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case q.fetchedBlocks <- blockData.SignedBeaconBlock:
+			}
 			nonSkippedSlot = slot
 		}
 	}

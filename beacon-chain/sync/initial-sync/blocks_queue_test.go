@@ -14,8 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 type blocksProviderMock struct {
@@ -213,7 +211,7 @@ func TestBlocksQueueUpdateSchedulerState(t *testing.T) {
 		if err := assertState(state, 0, 0, 0, 0); err != nil {
 			t.Error(err)
 		}
-		if err := queue.updateSchedulerState(ctx); err != ctx.Err() {
+		if err := queue.scheduleFetchRequests(ctx); err != ctx.Err() {
 			t.Errorf("expected error: %v", ctx.Err())
 		}
 	})
@@ -228,7 +226,7 @@ func TestBlocksQueueUpdateSchedulerState(t *testing.T) {
 		if err := assertState(state, 0, 0, 0, 0); err != nil {
 			t.Error(err)
 		}
-		if err := queue.updateSchedulerState(ctx); err != nil {
+		if err := queue.scheduleFetchRequests(ctx); err != nil {
 			t.Error(err)
 		}
 		if state.currentSlot != 0 {
@@ -248,7 +246,7 @@ func TestBlocksQueueUpdateSchedulerState(t *testing.T) {
 		if err := assertState(state, 0, 0, 0, 0); err != nil {
 			t.Error(err)
 		}
-		if err := queue.updateSchedulerState(ctx); err != nil {
+		if err := queue.scheduleFetchRequests(ctx); err != nil {
 			t.Error(err)
 		}
 		if state.currentSlot != syncToSlot {
@@ -280,10 +278,10 @@ func TestBlocksQueueUpdateSchedulerState(t *testing.T) {
 			t.Errorf("unexpected batch size, want: %v, got: %v", 2*blockBatchSize, state.blockBatchSize)
 		}
 
-		if err := queue.updateSchedulerState(ctx); err != nil {
+		if err := queue.scheduleFetchRequests(ctx); err != nil {
 			t.Error(err)
 		}
-		if err := assertState(state, 13, 0, 17+blockBatchSize, 19); err != nil {
+		if err := assertState(state, 13+state.blockBatchSize, 0, 17+blockBatchSize, 19); err != nil {
 			t.Error(err)
 		}
 		if state.blockBatchSize != blockBatchSize {
@@ -314,13 +312,13 @@ func TestBlocksQueueUpdateSchedulerState(t *testing.T) {
 			t.Errorf("unexpected batch size, want: %v, got: %v", blockBatchSize, state.blockBatchSize)
 		}
 
-		if err := queue.updateSchedulerState(ctx); err != nil {
+		if err := queue.scheduleFetchRequests(ctx); err != nil {
 			t.Error(err)
 		}
 		if state.blockBatchSize != 2*blockBatchSize {
 			t.Errorf("unexpected batch size, want: %v, got: %v", 2*blockBatchSize, state.blockBatchSize)
 		}
-		if err := assertState(state, 0, 0, 0, 0); err != nil {
+		if err := assertState(state, state.blockBatchSize, 0, 0, 0); err != nil {
 			t.Error(err)
 		}
 	})
@@ -349,13 +347,13 @@ func TestBlocksQueueUpdateSchedulerState(t *testing.T) {
 		}
 
 		// This call should trigger resetting.
-		if err := queue.updateSchedulerState(ctx); err != nil {
+		if err := queue.scheduleFetchRequests(ctx); err != nil {
 			t.Error(err)
 		}
 		if state.blockBatchSize != blockBatchSize {
 			t.Errorf("unexpected batch size, want: %v, got: %v", blockBatchSize, state.blockBatchSize)
 		}
-		if err := assertState(state, 0, 0, 0, 0); err != nil {
+		if err := assertState(state, state.blockBatchSize, 0, 0, 0); err != nil {
 			t.Error(err)
 		}
 	})
@@ -385,13 +383,13 @@ func TestBlocksQueueUpdateSchedulerState(t *testing.T) {
 		}
 
 		// This call should trigger resetting.
-		if err := queue.updateSchedulerState(ctx); err != nil {
+		if err := queue.scheduleFetchRequests(ctx); err != nil {
 			t.Error(err)
 		}
 		if state.blockBatchSize != blockBatchSize {
 			t.Errorf("unexpected batch size, want: %v, got: %v", blockBatchSize, state.blockBatchSize)
 		}
-		if err := assertState(state, 0, 0, 0, 0); err != nil {
+		if err := assertState(state, state.blockBatchSize, 0, 0, 0); err != nil {
 			t.Error(err)
 		}
 	})
@@ -417,7 +415,6 @@ func TestBlocksQueueScheduleFetchRequests(t *testing.T) {
 		},
 	}
 
-	hook := logTest.NewGlobal()
 	mc, _, beaconDB := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
 	defer dbtest.TeardownDB(t, beaconDB)
 
@@ -453,28 +450,23 @@ func TestBlocksQueueScheduleFetchRequests(t *testing.T) {
 		}
 		end := queue.highestExpectedSlot / state.blockBatchSize
 		for i := uint64(0); i < end; i++ {
-			hook.Reset()
 			if err := queue.scheduleFetchRequests(ctx); err != nil {
 				t.Error(err)
 			}
 			if err := assertState(state, (i+1)*blockBatchSize, 0, 0, 0); err != nil {
 				t.Error(err)
 			}
-			testutil.AssertLogsContain(t, hook, fmt.Sprintf("start=%d", i*blockBatchSize+1))
 		}
 
 		// Make sure that the last request is up to highest expected slot.
-		hook.Reset()
 		if err := queue.scheduleFetchRequests(ctx); err != nil {
 			t.Error(err)
 		}
 		if err := assertState(state, queue.highestExpectedSlot, 0, 0, 0); err != nil {
 			t.Error(err)
 		}
-		testutil.AssertLogsContain(t, hook, fmt.Sprintf("start=%d", end*blockBatchSize+1))
 
 		// Try schedule beyond the highest slot.
-		hook.Reset()
 		if err := queue.scheduleFetchRequests(ctx); err == nil {
 			t.Errorf("expected error: %v", errStartSlotIsTooHigh)
 		}
@@ -496,14 +488,12 @@ func TestBlocksQueueScheduleFetchRequests(t *testing.T) {
 		}
 		end := queue.highestExpectedSlot / state.blockBatchSize
 		for i := uint64(0); i < end; i++ {
-			hook.Reset()
 			if err := queue.scheduleFetchRequests(ctx); err != nil {
 				t.Error(err)
 			}
 			if err := assertState(state, (i+1)*blockBatchSize, 0, 0, 0); err != nil {
 				t.Error(err)
 			}
-			testutil.AssertLogsContain(t, hook, fmt.Sprintf("start=%d", i*blockBatchSize+1))
 		}
 
 		// "Process" some items and reschedule.
@@ -520,11 +510,9 @@ func TestBlocksQueueScheduleFetchRequests(t *testing.T) {
 		}
 
 		// Due to failures, resetting is expected.
-		hook.Reset()
 		if err := queue.scheduleFetchRequests(ctx); err != nil {
 			t.Error(err)
 		}
-		testutil.AssertLogsContain(t, hook, "Too many unprocessable blocks, increasing block batch size")
 		if err := assertState(state, 2*blockBatchSize, 0, 0, 0); err != nil {
 			t.Error(err)
 		}
@@ -546,14 +534,12 @@ func TestBlocksQueueScheduleFetchRequests(t *testing.T) {
 		}
 		end := queue.highestExpectedSlot / state.blockBatchSize
 		for i := uint64(0); i < end; i++ {
-			hook.Reset()
 			if err := queue.scheduleFetchRequests(ctx); err != nil {
 				t.Error(err)
 			}
 			if err := assertState(state, (i+1)*blockBatchSize, 0, 0, 0); err != nil {
 				t.Error(err)
 			}
-			testutil.AssertLogsContain(t, hook, fmt.Sprintf("start=%d", i*blockBatchSize+1))
 		}
 
 		// "Process" some items and reschedule.
@@ -570,12 +556,10 @@ func TestBlocksQueueScheduleFetchRequests(t *testing.T) {
 		}
 
 		// No pending items, resetting is expected (both counters and block batch size).
-		hook.Reset()
 		state.blockBatchSize = 2 * blockBatchSize
 		if err := queue.scheduleFetchRequests(ctx); err != nil {
 			t.Error(err)
 		}
-		testutil.AssertLogsContain(t, hook, "No pending blocks, resetting counters")
 		if err := assertState(state, blockBatchSize, 0, 0, 0); err != nil {
 			t.Error(err)
 		}
@@ -594,11 +578,9 @@ func TestBlocksQueueScheduleFetchRequests(t *testing.T) {
 		state.requestedBlocks.failed = blockBatchSize
 
 		// Increase block batch size.
-		hook.Reset()
 		if err := queue.scheduleFetchRequests(ctx); err != nil {
 			t.Error(err)
 		}
-		testutil.AssertLogsContain(t, hook, "Too many unprocessable blocks, increasing block batch size")
 		if err := assertState(state, 2*blockBatchSize, 0, 0, 0); err != nil {
 			t.Error(err)
 		}
@@ -614,11 +596,9 @@ func TestBlocksQueueScheduleFetchRequests(t *testing.T) {
 		if err := assertState(state, 1, blockBatchSize, 1, 1); err != nil {
 			t.Error(err)
 		}
-		hook.Reset()
 		if err := queue.scheduleFetchRequests(ctx); err != nil {
 			t.Error(err)
 		}
-		testutil.AssertLogsContain(t, hook, "Enough valid blocks, block batch size reset")
 		if err := assertState(state, blockBatchSize+1, 0, blockBatchSize+1, 1); err != nil {
 			t.Error(err)
 		}
@@ -634,12 +614,10 @@ func TestBlocksQueueScheduleFetchRequests(t *testing.T) {
 		queue := setupQueue(ctx)
 		state := queue.state.scheduler
 
-		hook.Reset()
 		state.requestedBlocks.pending = queueMaxCachedBlocks
 		if err := queue.scheduleFetchRequests(ctx); err != nil {
 			t.Error(err)
 		}
-		testutil.AssertLogsContain(t, hook, "Too many cached blocks, resetting")
 		if err := assertState(state, blockBatchSize, 0, 0, 0); err != nil {
 			t.Error(err)
 		}
@@ -985,7 +963,9 @@ func TestBlocksQueueLoop(t *testing.T) {
 }
 
 func setBlocksFromCache(ctx context.Context, t *testing.T, mc *mock.ChainService, highestSlot uint64) {
-	parentRoot := rootCache[0]
+	cache.RLock()
+	parentRoot := cache.rootCache[0]
+	cache.RUnlock()
 	for slot := uint64(0); slot <= highestSlot; slot++ {
 		blk := &eth.SignedBeaconBlock{
 			Block: &eth.BeaconBlock{
