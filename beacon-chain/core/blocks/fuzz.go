@@ -11,7 +11,7 @@ import (
 
 type InputBlockHeader struct {
 	Pre   *pb.BeaconState
-	Block  *ethpb.SignedBeaconBlock
+	Block *ethpb.SignedBeaconBlock
 }
 
 func Fuzz(b []byte) []byte {

@@ -10,12 +10,12 @@ var forkChoiceProcessedRootsSize = 1 << 16
 
 // Service of attestation pool operations.
 type Service struct {
-	ctx                          context.Context
-	cancel                       context.CancelFunc
-	pool                         Pool
-	err                          error
-	forkChoiceProcessedRoots     *lru.Cache
-	genesisTime                  uint64
+	ctx                      context.Context
+	cancel                   context.CancelFunc
+	pool                     Pool
+	err                      error
+	forkChoiceProcessedRoots *lru.Cache
+	genesisTime              uint64
 }
 
 // Config options for the service.

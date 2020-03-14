@@ -117,7 +117,8 @@ go_library(
     cgo = True,
     copts = OPTS,
     visibility = ["//visibility:public"],
-    clinkopts = [
-        "-Wl,--unresolved-symbols=ignore-all",  # Ignore missing asan symbols
-    ],
+    clinkopts = select({
+        "//bazel:linux": ["-Wl,--unresolved-symbols=ignore-all"],
+        "//conditions:default": [],
+    }),
 )
