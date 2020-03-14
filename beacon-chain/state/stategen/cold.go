@@ -124,7 +124,7 @@ func (s *State) loadColdIntermediateStateBySlot(ctx context.Context, slot uint64
 		highArchivedPointRoot = s.splitInfo.root
 		highArchivedPointSlot = s.splitInfo.slot
 	} else {
-		if _, err := s.archivedPointByIndex(ctx, highArchivedPointSlot); err != nil {
+		if _, err := s.archivedPointByIndex(ctx, highArchivedPointIdx); err != nil {
 			return nil, errors.Wrap(err, "could not get upper bound archived state using index")
 		}
 		highArchivedPointRoot = s.beaconDB.ArchivedPointRoot(ctx, highArchivedPointIdx)
