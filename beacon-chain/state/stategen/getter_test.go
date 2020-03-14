@@ -81,6 +81,12 @@ func TestStateByRoot_HotStateCached(t *testing.T) {
 
 	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
 	r := [32]byte{'A'}
+	if err := service.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{
+		Root:         r[:],
+		BoundaryRoot: r[:],
+	}); err != nil {
+		t.Fatal(err)
+	}
 	service.hotStateCache.Put(r, beaconState)
 
 	loadedState, err := service.StateByRoot(ctx, r)
