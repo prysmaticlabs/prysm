@@ -47,11 +47,6 @@ cfg_libfuzz_gotag = transition(
     outputs = ["//:gotags"],
 )
 
-# Notes:
-# I think the best approach here is to write a macro that generates two targets
-# - A go_binary with linkmode being c-archive
-# - A wrapper rule with the transition to enforce the proper go tags
-
 def _gen_fuzz_main_impl(ctx):
     if ctx.var.get("gotags") != "libfuzzer":
         fail("Gotags must be set to libfuzzer. Use --config=fuzz or --config=fuzzit until the transition rule is fixed.")
@@ -75,7 +70,7 @@ gen_fuzz_main = rule(
 # TODO: Add a outgoing (incoming?) transition rule for the go_library to apply the correct gotags.
 def go_fuzz_library(
         name,
-        #        corpus,
+        corpus,
         func = "Fuzz",
         repository = "",
         size = "medium",
@@ -113,15 +108,15 @@ def go_fuzz_library(
         tags = ["manual"] + tags,
     )
 
-    #    if not (corpus.startswith("//") or corpus.startswith(":") or corpus.startswith("@")):
-    #        corpus_name = name + "_corpus"
-    #        corpus = native.glob([corpus + "/**"])
-    #        native.filegroup(
-    #            name = corpus_name,
-    #            srcs = corpus,
-    #        )
-    #    else:
-    #        corpus_name = corpus
+    if not (corpus.startswith("//") or corpus.startswith(":") or corpus.startswith("@")):
+        corpus_name = name + "_corpus"
+        corpus = native.glob([corpus + "/**"])
+        native.filegroup(
+            name = corpus_name,
+            srcs = corpus,
+        )
+    else:
+        corpus_name = corpus
 
     native.cc_test(
         name = name + "_with_libfuzzer",
@@ -131,4 +126,6 @@ def go_fuzz_library(
         srcs = [":" + name],
         deps = ["@herumi_bls_eth_go_binary//:lib"],
         tags = ["manual", "fuzzer"] + tags,
+        args = ["$(locations %s)" % corpus_name],
+        data = [corpus_name],
     )

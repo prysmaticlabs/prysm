@@ -290,7 +290,7 @@ http_archive(
 
 http_archive(
     name = "sigp_beacon_fuzz_corpora",
-    build_file = "//third_party/beacon-fuzz:corpora.BUILD",
+    build_file = "//third_party:beacon-fuzz/corpora.BUILD",
     sha256 = "72c947b6b92df0db7275189be77733209f12af2aa931b81917b952c8d93e4c9f",
     strip_prefix = "beacon-fuzz-corpora-c6d956ce22bd91f0d2929eb6401e40adfd7a8c89",
     urls = ["https://github.com/sigp/beacon-fuzz-corpora/archive/c6d956ce22bd91f0d2929eb6401e40adfd7a8c89.tar.gz"],

@@ -72,6 +72,7 @@ go_fuzz_library(
     srcs = [
         "fuzz.go",
     ],
+    corpus = "@sigp_beacon_fuzz_corpora//:0_9_4_mainnet_block_header",
     embed = [":go_default_library"],
     func = "Fuzz",
     deps = [
