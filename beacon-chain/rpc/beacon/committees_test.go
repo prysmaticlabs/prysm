@@ -8,14 +8,14 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"gopkg.in/d4l3k/messagediff.v1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
@@ -34,10 +34,12 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	m := &mock.ChainService{
+		State: headState,
+	}
 	bs := &Server{
-		HeadFetcher: &mock.ChainService{
-			State: headState,
-		},
+		HeadFetcher:        m,
+		GenesisTimeFetcher: m,
 	}
 
 	activeIndices, err := helpers.ActiveValidatorIndices(headState, 0)
@@ -84,10 +86,12 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	headState.SetRandaoMixes(mixes)
 	headState.SetSlot(params.BeaconConfig().SlotsPerEpoch * 2)
 
+	m := &mock.ChainService{
+		State: headState,
+	}
 	bs := &Server{
-		HeadFetcher: &mock.ChainService{
-			State: headState,
-		},
+		HeadFetcher:        m,
+		GenesisTimeFetcher: m,
 	}
 
 	activeIndices, err := helpers.ActiveValidatorIndices(headState, 1)
@@ -183,11 +187,13 @@ func TestServer_ListBeaconCommittees_FromArchive(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	m := &mock.ChainService{
+		State: headState,
+	}
 	bs := &Server{
-		BeaconDB: db,
-		HeadFetcher: &mock.ChainService{
-			State: headState,
-		},
+		BeaconDB:           db,
+		HeadFetcher:        m,
+		GenesisTimeFetcher: m,
 	}
 
 	activeIndices, err := helpers.ActiveValidatorIndices(headState, 0)
