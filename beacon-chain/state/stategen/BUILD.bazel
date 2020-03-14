@@ -12,6 +12,7 @@ go_library(
         "migrate.go",
         "replay.go",
         "service.go",
+        "setter.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/stategen",
     visibility = ["//beacon-chain:__subpackages__"],
@@ -44,6 +45,7 @@ go_test(
         "migrate_test.go",
         "replay_test.go",
         "service_test.go",
+        "setter_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
