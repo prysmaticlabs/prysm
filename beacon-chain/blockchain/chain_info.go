@@ -186,7 +186,7 @@ func (s *Service) CurrentFork() *pb.Fork {
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 		}
 	}
-	return s.headState().Fork()
+	return s.head.state.Fork()
 }
 
 // Participation returns the participation stats of a given epoch.
