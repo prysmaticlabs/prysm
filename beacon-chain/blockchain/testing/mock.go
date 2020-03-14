@@ -219,7 +219,7 @@ func (ms *ChainService) GenesisTime() time.Time {
 
 // CurrentSlot mocks the same method in the chain service.
 func (ms *ChainService) CurrentSlot() uint64 {
-	return 0
+	return ms.HeadSlot()
 }
 
 // Participation mocks the same method in the chain service.
