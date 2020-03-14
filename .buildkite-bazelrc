@@ -48,3 +48,6 @@ test --local_test_jobs=2
 
 # Enable kafka for CI tests only.
 test --define kafka_enabled=true
+
+# Disable flaky test detection for fuzzing.
+test:fuzz --flaky_test_attempts=1
