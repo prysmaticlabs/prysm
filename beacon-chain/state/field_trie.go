@@ -25,12 +25,6 @@ func NewFieldTrie(field fieldIndex, elements [][]byte, length uint64) *FieldTrie
 }
 
 func (f *FieldTrie) RecomputeTrie(indices []uint64, elements [][]byte) ([32]byte, error) {
-	if f.refs > 1 {
-		f.fieldLayers = f.CopyTrie().fieldLayers
-		f.refs--
-		f.reference = &reference{1}
-		f.Mutex = new(sync.Mutex)
-	}
 	f.Lock()
 	defer f.Unlock()
 	var err error
@@ -47,8 +41,8 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements [][]byte) ([32]byte
 }
 
 func (f *FieldTrie) CopyTrie() *FieldTrie {
-	f.Mutex.Lock()
-	defer f.Mutex.Unlock()
+	//f.Mutex.Lock()
+	//defer f.Mutex.Unlock()
 	if f.fieldLayers == nil {
 		return &FieldTrie{
 			field:     f.field,
