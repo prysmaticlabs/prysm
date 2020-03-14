@@ -112,7 +112,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if err := beacon.registerAttestationPool(ctx); err != nil {
+	if err := beacon.registerAttestationPool(); err != nil {
 		return nil, err
 	}
 
@@ -302,9 +302,24 @@ func (b *BeaconNode) fetchP2P(ctx *cli.Context) p2p.P2P {
 	return p
 }
 
+func (b *BeaconNode) registerAttestationPool() error {
+	s, err := attestations.NewService(context.Background(), &attestations.Config{
+		Pool: b.attestationPool,
+	})
+	if err != nil {
+		return errors.Wrap(err, "could not register atts pool service")
+	}
+	return b.services.RegisterService(s)
+}
+
 func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	var web3Service *powchain.Service
 	if err := b.services.FetchService(&web3Service); err != nil {
+		return err
+	}
+
+	var opsService *attestations.Service
+	if err := b.services.FetchService(&opsService); err != nil {
 		return err
 	}
 
@@ -320,21 +335,12 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		MaxRoutines:       maxRoutines,
 		StateNotifier:     b,
 		ForkChoiceStore:   b.forkChoiceStore,
+		OpsService:        opsService,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
 	}
 	return b.services.RegisterService(blockchainService)
-}
-
-func (b *BeaconNode) registerAttestationPool(ctx *cli.Context) error {
-	attPoolService, err := attestations.NewService(context.Background(), &attestations.Config{
-		Pool: b.attestationPool,
-	})
-	if err != nil {
-		return err
-	}
-	return b.services.RegisterService(attPoolService)
 }
 
 func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
@@ -404,6 +410,7 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 		AttestationNotifier: b,
 		AttPool:             b.attestationPool,
 		ExitPool:            b.exitPool,
+		SlashingPool:        b.slashingsPool,
 	})
 
 	return b.services.RegisterService(rs)

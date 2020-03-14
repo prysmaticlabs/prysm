@@ -3,10 +3,12 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "cold.go",
         "epoch_boundary_root.go",
         "errors.go",
         "hot.go",
         "log.go",
+        "migrate.go",
         "replay.go",
         "service.go",
     ],
@@ -19,6 +21,7 @@ go_library(
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/filters:go_default_library",
         "//beacon-chain/state:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/featureconfig:go_default_library",
         "//shared/params:go_default_library",
@@ -33,8 +36,10 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "cold_test.go",
         "epoch_boundary_root_test.go",
         "hot_test.go",
+        "migrate_test.go",
         "replay_test.go",
         "service_test.go",
     ],
@@ -51,5 +56,6 @@ go_test(
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
+        "@com_github_sirupsen_logrus//hooks/test:go_default_library",
     ],
 )
