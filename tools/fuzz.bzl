@@ -36,32 +36,6 @@ func main() {
 }
 """
 
-# Notes.
-# Dockerfile
-"""
-FROM golang:1.14.0
-
-# install deps
-RUN apt update
-RUN apt install -y clang
-
-# install new fuzz tooling
-RUN go get -u github.com/mdempsky/go114-fuzz-build
-
-# install go-fuzz-corpus
-RUN go get -v github.com/dvyukov/go-fuzz-corpus/png
-
-# the "$GOPATH" is "/go"
-WORKDIR /go/src/github.com/dvyukov/go-fuzz-corpus/png
-
-# build the fuzzing case
-RUN go114-fuzz-build -o png.a .
-RUN clang -fsanitize=fuzzer png.a -o png
-
-# start fuzzing
-CMD ["./png"]
-"""
-
 # This isn't working, using --define=gotags=libfuzzer for now
 # See: https://docs.google.com/document/d/1vc8v-kXjvgZOdQdnxPTaV0rrLxtP2XwnD2tAZlYJOqw/edit#
 def _impl(settings, attr):
@@ -152,26 +126,13 @@ def go_fuzz_library(
     #        )
     #    else:
     #        corpus_name = corpus
-    #
-    #    native.cc_test(
-    #        name = name,
-    #        linkstatic = 1,
-    #        args = ["$(locations %s)" % corpus_name],
-    #        data = [corpus_name],
-    #        # No fuzzing on macOS or Windows
-    #        deps = [
-    #            ":" + test_lib_name,
-    #            repository + "//test/fuzz:main",
-    #        ],
-    #        size = size,
-    #        tags = tags,
-    #    )
+
     native.cc_test(
         name = name + "_with_libfuzzer",
         linkopts = ["-fsanitize=fuzzer"],
         linkstatic = 1,
         testonly = 1,
-        #data = [corpus_name],
-        deps = [":" + name],
+        srcs = [":" + name],
+        deps = ["@herumi_bls_eth_go_binary//:lib"],
         tags = ["manual", "fuzzer"] + tags,
     )
