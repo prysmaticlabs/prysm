@@ -2,9 +2,10 @@ package keymanager
 
 import (
 	"encoding/json"
+	RW "github.com/alonmuroch/validatorremotewallet/wallet/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	e2wtypes "github.com/wealdtech/go-eth2-wallet-types"
-	//rw "github.com/alonmuroch/ValidatorRemoteWallet/wallet/v1alpha1"
+	"google.golang.org/grpc"
 )
 
 type RemotewalletOpts struct {
@@ -40,8 +41,17 @@ func NewRemoteWallet(input string) (KeyManager, string, error) {
 		return nil, walletOptsHelp, err
 	}
 
+	// try and connect to remote wallet
+	conn, err := grpc.Dial(opts.Url, grpc.WithInsecure(), grpc.WithBlock())
+	if err != nil {
+		log.Fatalf("did not connect to remote wallet: %v", err)
+	}
+	defer conn.Close()
+	//c := RW.NewRemoteWalletClient(conn)
+
 	km := &RemoteWallet{
 		accounts: make(map[[48]byte]e2wtypes.Account),
+		//rw: c,
 	}
 
 	return km, RemotewalletOptsHelp, nil
@@ -50,6 +60,7 @@ func NewRemoteWallet(input string) (KeyManager, string, error) {
 // Wallet is a key manager that loads keys from a local Ethereum 2 wallet.
 type RemoteWallet struct {
 	accounts map[[48]byte]e2wtypes.Account
+	rw RW.RemoteWalletClient
 }
 
 // FetchValidatingKeys fetches the list of public keys that should be used to validate with.

@@ -1584,6 +1584,12 @@ go_repository(
 )
 
 go_repository(
+    name = "com_github_alonmuroch_validatorremotewallet",
+    commit = "8aa8c3175ad598316a3247e2c65b9d2b29576cc0",
+    importpath = "github.com/alonmuroch/validatorremotewallet",
+)
+
+go_repository(
     name = "com_github_shibukawa_configdir",
     commit = "e180dbdc8da04c4fa04272e875ce64949f38bd3e",
     importpath = "github.com/shibukawa/configdir",
