@@ -56,6 +56,9 @@ func InitializeFromProto(st *pbp2p.BeaconState) (*BeaconState, error) {
 // InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer
 // and sets it as the inner state of the BeaconState type.
 func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
+	if st == nil {
+		return nil, errors.New("nil state")
+	}
 	b := &BeaconState{
 		state:                 st,
 		dirtyFields:           make(map[fieldIndex]interface{}, 20),
