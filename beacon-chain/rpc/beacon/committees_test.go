@@ -8,14 +8,14 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"gopkg.in/d4l3k/messagediff.v1"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
