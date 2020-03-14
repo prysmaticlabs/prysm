@@ -73,6 +73,7 @@ type Service struct {
 	checkpointState        *cache.CheckpointStateCache
 	checkpointStateLock    sync.Mutex
 	stateGen               *stategen.State
+	opsService             *attestations.Service
 }
 
 // Config options for the service.
@@ -88,6 +89,7 @@ type Config struct {
 	MaxRoutines       int64
 	StateNotifier     statefeed.Notifier
 	ForkChoiceStore   f.ForkChoicer
+	OpsService        *attestations.Service
 }
 
 // NewService instantiates a new block service instance that will
@@ -112,6 +114,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		boundaryRoots:      [][32]byte{},
 		checkpointState:    cache.NewCheckpointStateCache(),
 		stateGen:           stategen.New(cfg.BeaconDB),
+		opsService:         cfg.OpsService,
 	}, nil
 }
 
@@ -144,6 +147,7 @@ func (s *Service) Start() {
 	if beaconState != nil {
 		log.Info("Blockchain data already exists in DB, initializing...")
 		s.genesisTime = time.Unix(int64(beaconState.GenesisTime()), 0)
+		s.opsService.SetGenesisTime(beaconState.GenesisTime())
 		if err := s.initializeChainInfo(ctx); err != nil {
 			log.Fatalf("Could not set up chain info: %v", err)
 		}
@@ -259,6 +263,8 @@ func (s *Service) initializeBeaconChain(
 	if err := helpers.UpdateProposerIndicesInCache(genesisState, 0 /* genesis epoch */); err != nil {
 		return err
 	}
+
+	s.opsService.SetGenesisTime(genesisState.GenesisTime())
 
 	return nil
 }
