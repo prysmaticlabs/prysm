@@ -52,10 +52,10 @@ http_archive(
 
 http_archive(
     name = "bazel_gazelle",
-    sha256 = "86c6d481b3f7aedc1d60c1c211c6f76da282ae197c3b3160f54bd3a8f847896f",
+    sha256 = "d8c45ee70ec39a57e7a05e5027c32b1576cc7f16d9dd37135b0eddde45cf1b10",
     urls = [
-        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/bazel-gazelle/releases/download/v0.19.1/bazel-gazelle-v0.19.1.tar.gz",
-        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.19.1/bazel-gazelle-v0.19.1.tar.gz",
+        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/bazel-gazelle/releases/download/v0.20.0/bazel-gazelle-v0.20.0.tar.gz",
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.20.0/bazel-gazelle-v0.20.0.tar.gz",
     ],
 )
 
@@ -75,10 +75,10 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_go",
-    sha256 = "e88471aea3a3a4f19ec1310a55ba94772d087e9ce46e41ae38ecebe17935de7b",
+    sha256 = "e6a6c016b0663e06fa5fccf1cd8152eab8aa8180c583ec20c872f4f9953a7ac5",
     urls = [
-        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/rules_go/releases/download/v0.20.3/rules_go-v0.20.3.tar.gz",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.20.3/rules_go-v0.20.3.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.22.1/rules_go-v0.22.1.tar.gz",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.22.1/rules_go-v0.22.1.tar.gz",
     ],
 )
 
@@ -628,8 +628,9 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_crypto",
-    commit = "4def268fd1a49955bfb3dda92fe3db4f924f2285",
     importpath = "golang.org/x/crypto",
+    sum = "h1:1ZiEyfaQIg3Qh0EoqpwAakHVhecoE5wlSg5GjnafJGw=",
+    version = "v0.0.0-20200221231518-2aa609cf4a9d",
 )
 
 go_repository(
@@ -755,10 +756,12 @@ go_repository(
     importpath = "github.com/matttproud/golang_protobuf_extensions",
 )
 
-go_repository(
-    name = "com_github_boltdb_bolt",
-    commit = "2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8",  # v1.3.1
-    importpath = "github.com/boltdb/bolt",
+http_archive(
+    name = "com_github_boltdb_bolt",  # v1.3.1
+    build_file = "//third_party:boltdb/bolt.BUILD",
+    sha256 = "95dc5842dab55f7519b7002bbec648321277b5d6f0ad59aab509ee59313b6386",
+    strip_prefix = "bolt-2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8",
+    urls = ["https://github.com/boltdb/bolt/archive/2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8.tar.gz"],
 )
 
 go_repository(
@@ -1200,8 +1203,9 @@ go_ssz_dependencies()
 go_repository(
     name = "org_golang_google_grpc",
     build_file_proto_mode = "disable",
-    commit = "1d89a3c832915b2314551c1d2a506874d62e53f7",  # v1.22.0
     importpath = "google.golang.org/grpc",
+    sum = "h1:zvIju4sqAGvwKspUQOhwnpcqSbzi7/H6QomNNjTL4sk=",
+    version = "v1.27.1",
 )
 
 go_repository(
