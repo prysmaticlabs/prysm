@@ -21,13 +21,6 @@ var InjectDoubleVote = Evaluator{
 	Evaluation: insertDoubleAttestationIntoPool,
 }
 
-// InjectSurroundVote broadcasts a surround vote for the slasher to detect.
-var InjectSurroundVote = Evaluator{
-	Name:       "inject_surround_vote_%d",
-	Policy:     beforeEpoch(3),
-	Evaluation: insertSurroundAttestationIntoPool,
-}
-
 var slashedIndices []uint64
 
 // Not including first epoch because of issues with genesis.
