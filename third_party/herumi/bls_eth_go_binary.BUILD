@@ -118,7 +118,7 @@ go_library(
     copts = OPTS,
     visibility = ["//visibility:public"],
     clinkopts = select({
-        "//bazel:linux": ["-Wl,--unresolved-symbols=ignore-all"],
+        "@io_bazel_rules_go//go/platform:linux": ["-Wl,--unresolved-symbols=ignore-all"],
         "//conditions:default": [],
     }),
 )
