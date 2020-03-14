@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared"
@@ -30,6 +31,7 @@ type Config struct {
 	DB                  db.NoHeadAccessDatabase
 	AttPool             attestations.Pool
 	ExitPool            *voluntaryexits.Pool
+	SlashingPool        *slashings.Pool
 	Chain               blockchainService
 	InitialSync         Checker
 	StateNotifier       statefeed.Notifier
@@ -57,6 +59,7 @@ func NewRegularSync(cfg *Config) *Service {
 		p2p:                  cfg.P2P,
 		attPool:              cfg.AttPool,
 		exitPool:             cfg.ExitPool,
+		slashingPool:         cfg.SlashingPool,
 		chain:                cfg.Chain,
 		initialSync:          cfg.InitialSync,
 		attestationNotifier:  cfg.AttestationNotifier,
@@ -83,6 +86,7 @@ type Service struct {
 	db                   db.NoHeadAccessDatabase
 	attPool              attestations.Pool
 	exitPool             *voluntaryexits.Pool
+	slashingPool         *slashings.Pool
 	chain                blockchainService
 	slotToPendingBlocks  map[uint64]*ethpb.SignedBeaconBlock
 	seenPendingBlocks    map[[32]byte]bool

@@ -68,7 +68,7 @@ func (bs *Service) receiveAttestations(ctx context.Context) {
 		}
 		if err != nil {
 			log.WithError(err).Error("Could not receive attestations from beacon node")
-			return
+			continue
 		}
 		bs.receivedAttestationsBuffer <- res
 	}

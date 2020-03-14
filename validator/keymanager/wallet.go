@@ -84,14 +84,21 @@ func NewWallet(input string) (KeyManager, string, error) {
 		}
 		re := regexp.MustCompile(accountSpecifier)
 		for account := range wallet.Accounts() {
+			log := log.WithField("account", fmt.Sprintf("%s/%s", wallet.Name(), account.Name()))
 			if re.Match([]byte(account.Name())) {
 				pubKey := bytesutil.ToBytes48(account.PublicKey().Marshal())
+				unlocked := false
 				for _, passphrase := range opts.Passphrases {
 					if err := account.Unlock([]byte(passphrase)); err != nil {
-						log.WithError(err).WithField("pubKey", fmt.Sprintf("%#x", pubKey)).Warn("Failed to unlock account with supplied passphrases; cannot validate")
+						log.WithError(err).Trace("Failed to unlock account with one of the supplied passphrases")
 					} else {
 						km.accounts[pubKey] = account
+						unlocked = true
+						break
 					}
+				}
+				if !unlocked {
+					log.Warn("Failed to unlock account with any supplied passphrase; cannot validate with this key")
 				}
 			}
 		}
