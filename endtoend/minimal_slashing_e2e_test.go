@@ -22,10 +22,10 @@ func TestEndToEnd_Slashing_MinimalConfig(t *testing.T) {
 		testSync:       false,
 		evaluators: []ev.Evaluator{
 			ev.PeersConnect,
-			ev.InjectDoubleVote,
-			//ev.InjectSurroundVote,
 			ev.ValidatorsSlashed,
 			ev.SlashedValidatorsLoseBalance,
+			ev.InjectDoubleVote,
+			//ev.InjectSurroundVote,
 		},
 	}
 	runEndToEndTest(t, minimalConfig)

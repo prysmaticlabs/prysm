@@ -132,7 +132,7 @@ func validatorsSlashed(conns ...*grpc.ClientConn) error {
 		return err
 	}
 	if len(changes.SlashedIndices) != 2 && len(changes.SlashedIndices) != 4 {
-		return fmt.Errorf("expected 2 indices to be slashed, received %d", len(changes.SlashedIndices))
+		return fmt.Errorf("expected 2 or 4 indices to be slashed, received %d", len(changes.SlashedIndices))
 	}
 	return nil
 }
@@ -142,7 +142,7 @@ func validatorsLoseBalance(conns ...*grpc.ClientConn) error {
 	ctx := context.Background()
 	client := eth.NewBeaconChainClient(conn)
 
-	for _, indice := range slashedIndices {
+	for i, indice := range slashedIndices {
 		req := &eth.GetValidatorRequest{
 			QueryFilter: &eth.GetValidatorRequest_Index{
 				Index: indice,
@@ -158,7 +158,7 @@ func validatorsLoseBalance(conns ...*grpc.ClientConn) error {
 		if valResp.EffectiveBalance >= slashedBal {
 			return fmt.Errorf(
 				"expected slashed validator %d to balance less than %d, received %d",
-				indice,
+				i,
 				slashedBal,
 				valResp.EffectiveBalance,
 			)
