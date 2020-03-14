@@ -1,5 +1,5 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
-load("//tools:fuzz.bzl", "go_fuzz_library")
+load("//tools:fuzz.bzl", "go_fuzz_test")
 
 go_library(
     name = "go_default_library",
@@ -67,8 +67,8 @@ go_test(
     ],
 )
 
-go_fuzz_library(
-    name = "fuzzer",
+go_fuzz_test(
+    name = "block_header_fuzz",
     srcs = [
         "fuzz.go",
     ],

@@ -14,7 +14,6 @@ load(
     "go_library",
 )
 
-# TODO: Confirm this is the correct template for main.go
 main_tpl = """
 // Generated file. DO NOT EDIT.
 
@@ -36,17 +35,6 @@ func main() {
 }
 """
 
-# This isn't working, using --define=gotags=libfuzzer for now
-# See: https://docs.google.com/document/d/1vc8v-kXjvgZOdQdnxPTaV0rrLxtP2XwnD2tAZlYJOqw/edit#
-def _impl(settings, attr):
-    return {"//:gotags": "libfuzzer"}
-
-cfg_libfuzz_gotag = transition(
-    implementation = _impl,
-    inputs = [],
-    outputs = ["//:gotags"],
-)
-
 def _gen_fuzz_main_impl(ctx):
     if ctx.var.get("gotags") != "libfuzzer":
         fail("Gotags must be set to libfuzzer. Use --config=fuzz or --config=fuzzit until the transition rule is fixed.")
@@ -61,14 +49,11 @@ gen_fuzz_main = rule(
     attrs = {
         "target_pkg": attr.string(mandatory = True),
         "func": attr.string(mandatory = True),
-        "_whitelist_function_transition": attr.label(default = "@bazel_tools//tools/whitelists/function_transition_whitelist"),
     },
     outputs = {"out": "generated_main.fuzz.go"},
-    cfg = cfg_libfuzz_gotag,
 )
 
-# TODO: Add a outgoing (incoming?) transition rule for the go_library to apply the correct gotags.
-def go_fuzz_library(
+def go_fuzz_test(
         name,
         corpus,
         func = "Fuzz",
@@ -87,6 +72,7 @@ def go_fuzz_library(
         target_pkg = "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks",  # this needs to be inferred from the go library above.
         func = func,
         tags = ["manual"] + tags,
+        testonly = 1,
         visibility = ["//visibility:private"],
     )
     go_binary(
@@ -98,6 +84,7 @@ def go_fuzz_library(
         tags = ["manual"] + tags,
         visibility = ["//visibility:private"],
         gc_goopts = ["-d=libfuzzer"],
+        testonly = 1,
     )
     native.genrule(
         name = name,
@@ -106,6 +93,7 @@ def go_fuzz_library(
         cmd = "cp $< $@",
         visibility = kwargs.get("visibility"),
         tags = ["manual"] + tags,
+        testonly = 1,
     )
 
     if not (corpus.startswith("//") or corpus.startswith(":") or corpus.startswith("@")):
