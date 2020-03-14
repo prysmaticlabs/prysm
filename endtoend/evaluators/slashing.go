@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"google.golang.org/grpc"
 )
@@ -27,6 +28,8 @@ var InjectSurroundVote = Evaluator{
 	Evaluation: insertSurroundAttestationIntoPool,
 }
 
+var slashedIndices []uint64
+
 // Not including first epoch because of issues with genesis.
 func beforeEpoch(epoch uint64) func(uint64) bool {
 	return func(currentEpoch uint64) bool {
@@ -34,7 +37,8 @@ func beforeEpoch(epoch uint64) func(uint64) bool {
 	}
 }
 
-func insertDoubleAttestationIntoPool(conn *grpc.ClientConn) error {
+func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
+	conn := conns[0]
 	valClient := eth.NewBeaconNodeValidatorClient(conn)
 	beaconClient := eth.NewBeaconChainClient(conn)
 
@@ -95,7 +99,12 @@ func insertDoubleAttestationIntoPool(conn *grpc.ClientConn) error {
 		return err
 	}
 
-	for i := uint64(0); i < 2; i++ {
+	valsToSlash := uint64(2)
+	for i := uint64(0); i < valsToSlash && i < uint64(len(committee)); i++ {
+		if len(sliceutil.IntersectionUint64(slashedIndices, []uint64{committee[i]})) > 0 {
+			valsToSlash++
+			continue
+		}
 		// Set the bits of half the committee to be slashed.
 		attBitfield := bitfield.NewBitlist(uint64(len(committee)))
 		attBitfield.SetBitAt(i, true)
@@ -105,15 +114,20 @@ func insertDoubleAttestationIntoPool(conn *grpc.ClientConn) error {
 			Data:            attData,
 			Signature:       privKeys[committee[i]].Sign(dataRoot[:], domainResp.SignatureDomain).Marshal(),
 		}
-		_, err = valClient.ProposeAttestation(ctx, att)
-		if err != nil {
-			return err
+		for _, conn := range conns {
+			client := eth.NewBeaconNodeValidatorClient(conn)
+			_, err = client.ProposeAttestation(ctx, att)
+			if err != nil {
+				return err
+			}
 		}
+		slashedIndices = append(slashedIndices, committee[i])
 	}
 	return nil
 }
 
-func insertSurroundAttestationIntoPool(conn *grpc.ClientConn) error {
+func insertSurroundAttestationIntoPool(conns ...*grpc.ClientConn) error {
+	conn := conns[0]
 	valClient := eth.NewBeaconNodeValidatorClient(conn)
 	beaconClient := eth.NewBeaconChainClient(conn)
 

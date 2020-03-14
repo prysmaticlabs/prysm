@@ -9,7 +9,7 @@ import (
 type Evaluator struct {
 	Name       string
 	Policy     func(currentEpoch uint64) bool
-	Evaluation func(conn *grpc.ClientConn) error
+	Evaluation func(conn ...*grpc.ClientConn) error
 }
 
 // BeaconNodeInfo contains the info of ports and other required information

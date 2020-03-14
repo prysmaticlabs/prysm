@@ -20,6 +20,7 @@ type end2EndConfig struct {
 	epochsToRun    uint64
 	numValidators  uint64
 	numBeaconNodes uint64
+	testSync       bool
 	contractAddr   common.Address
 	evaluators     []ev.Evaluator
 }

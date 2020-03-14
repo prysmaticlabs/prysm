@@ -18,14 +18,8 @@ var FinalizationOccurs = Evaluator{
 	Evaluation: finalizationOccurs,
 }
 
-// NoFinalization is an evaluator for checking if finalization doesn't occur. Used for the slashing E2E.
-var NoFinalization = Evaluator{
-	Name:       "no_finalization_at_epoch_%d",
-	Policy:     afterNthEpoch(0),
-	Evaluation: noFinalization,
-}
-
-func finalizationOccurs(conn *grpc.ClientConn) error {
+func finalizationOccurs(conns ...*grpc.ClientConn) error {
+	conn := conns[0]
 	client := eth.NewBeaconChainClient(conn)
 	chainHead, err := client.GetChainHead(context.Background(), &ptypes.Empty{})
 	if err != nil {
@@ -56,37 +50,6 @@ func finalizationOccurs(conn *grpc.ClientConn) error {
 			"there should be no gaps between current epoch and current justified epoch, received current %d and justified %d",
 			currentEpoch,
 			currentJustifiedEpoch,
-		)
-	}
-	return nil
-}
-
-func noFinalization(conn *grpc.ClientConn) error {
-	client := eth.NewBeaconChainClient(conn)
-	chainHead, err := client.GetChainHead(context.Background(), &ptypes.Empty{})
-	if err != nil {
-		return errors.Wrap(err, "failed to get chain head")
-	}
-	finalizedEpoch := chainHead.FinalizedEpoch
-
-	if finalizedEpoch != 0 {
-		return fmt.Errorf(
-			"expected finalized epoch to be 0, received: %d",
-			finalizedEpoch,
-		)
-	}
-	previousJustifiedEpoch := chainHead.PreviousJustifiedEpoch
-	currentJustifiedEpoch := chainHead.JustifiedEpoch
-	if currentJustifiedEpoch != 0 {
-		return fmt.Errorf(
-			"expected current justified epoch to be 0, received: %d",
-			currentJustifiedEpoch,
-		)
-	}
-	if previousJustifiedEpoch != 0 {
-		return fmt.Errorf(
-			"expected previous justified epoch to be 0, received: %d",
-			previousJustifiedEpoch,
 		)
 	}
 	return nil

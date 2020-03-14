@@ -9,21 +9,23 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func TestEndToEnd_MinimalConfig_Slashing(t *testing.T) {
+func TestEndToEnd_Slashing_MinimalConfig(t *testing.T) {
 	testutil.ResetCache()
 	params.UseMinimalConfig()
 
 	minimalConfig := &end2EndConfig{
 		beaconFlags:    append(featureconfig.E2EBeaconChainFlags, "--minimal-config", "--custom-genesis-delay=15"),
 		validatorFlags: append(featureconfig.E2EValidatorFlags, "--minimal-config"),
-		epochsToRun:    4,
-		numBeaconNodes: 4,
+		epochsToRun:    2,
+		numBeaconNodes: 2,
 		numValidators:  params.BeaconConfig().MinGenesisActiveValidatorCount,
+		testSync:       false,
 		evaluators: []ev.Evaluator{
-			ev.NoFinalization,
+			ev.PeersConnect,
 			ev.InjectDoubleVote,
 			//ev.InjectSurroundVote,
 			ev.ValidatorsSlashed,
+			ev.SlashedValidatorsLoseBalance,
 		},
 	}
 	runEndToEndTest(t, minimalConfig)

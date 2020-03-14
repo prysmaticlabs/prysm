@@ -31,12 +31,12 @@ func startSlashers(t *testing.T, config *end2EndConfig) []int {
 		}
 
 		args := []string{
+			fmt.Sprintf("--log-file=%s", stdOutFile.Name()),
+			fmt.Sprintf("--datadir=%s/slasher-data-%d/", tmpPath, i),
 			"--force-clear-db",
 			"--span-map-cache",
 			"--verbosity=debug",
-			"--monitoring-port=3535",
-			fmt.Sprintf("--datadir=%s/slasher-data-%d/", tmpPath, i),
-			fmt.Sprintf("--log-file=%s", stdOutFile.Name()),
+			fmt.Sprintf("--monitoring-port=%d", 3535+i),
 			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", 4200+i),
 		}
 
