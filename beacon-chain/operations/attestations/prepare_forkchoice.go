@@ -1,6 +1,7 @@
 package attestations
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"time"
@@ -108,7 +109,7 @@ func (s *Service) seen(att *ethpb.Attestation) (bool, error) {
 		return false, err
 	}
 	incomingBits := att.AggregationBits
-	savedBits, ok := s.forkChoiceProcessedRoots.Get(string(attRoot[:]))
+	savedBits, ok := s.forkChoiceProcessedRoots.Get(attRoot)
 	if ok {
 		savedBitlist, ok := savedBits.(bitfield.Bitlist)
 		if !ok {
@@ -116,7 +117,7 @@ func (s *Service) seen(att *ethpb.Attestation) (bool, error) {
 		}
 		if savedBitlist.Len() == incomingBits.Len() {
 			// Returns true if the node has seen all the bits in the new bit field of the incoming attestation.
-			if savedBitlist.Contains(incomingBits) {
+			if bytes.Equal(savedBitlist, incomingBits) || savedBitlist.Contains(incomingBits) {
 				return true, nil
 			}
 			// Update the bit fields by Or'ing them with the new ones.
@@ -124,6 +125,6 @@ func (s *Service) seen(att *ethpb.Attestation) (bool, error) {
 		}
 	}
 
-	s.forkChoiceProcessedRoots.Set(string(attRoot[:]), incomingBits, 1 /*cost*/)
+	s.forkChoiceProcessedRoots.Add(attRoot, incomingBits)
 	return false, nil
 }

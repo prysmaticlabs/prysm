@@ -282,7 +282,9 @@ func init() {
 	proto.RegisterType((*ExitedValidatorsResponse)(nil), "ethereum.beacon.rpc.v1.ExitedValidatorsResponse")
 }
 
-func init() { proto.RegisterFile("proto/beacon/rpc/v1/services.proto", fileDescriptor_9eb4e94b85965285) }
+func init() {
+	proto.RegisterFile("proto/beacon/rpc/v1/services.proto", fileDescriptor_9eb4e94b85965285)
+}
 
 var fileDescriptor_9eb4e94b85965285 = []byte{
 	// 428 bytes of a gzipped FileDescriptorProto
