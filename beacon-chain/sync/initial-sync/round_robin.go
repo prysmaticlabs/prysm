@@ -55,7 +55,6 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 	queue := newBlocksQueue(ctx, &blocksQueueConfig{
 		p2p:                 s.p2p,
 		headFetcher:         s.chain,
-		startSlot:           0,
 		highestExpectedSlot: highestFinalizedSlot,
 	})
 	if err := queue.start(); err != nil {
@@ -64,7 +63,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 
 	// Step 1 - Sync to end of finalized epoch.
 	for blk := range queue.fetchedBlocks {
-		s.logSyncStatus(genesis, blk.Block, []peer.ID{}, counter)
+		s.logSyncStatus(genesis, blk.Block, counter)
 		if err := s.processBlock(ctx, blk); err != nil {
 			log.WithError(err).Info("Block is invalid")
 			queue.state.scheduler.incrementCounter(failedBlockCounter, 1)
@@ -114,7 +113,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 		}
 
 		for _, blk := range resp {
-			s.logSyncStatus(genesis, blk.Block, []peer.ID{best}, counter)
+			s.logSyncStatus(genesis, blk.Block, counter)
 			if err := s.chain.ReceiveBlockNoPubsubForkchoice(ctx, blk); err != nil {
 				log.WithError(err).Error("Failed to process block, exiting init sync")
 				return nil
@@ -178,7 +177,7 @@ func (s *Service) highestFinalizedEpoch() uint64 {
 }
 
 // logSyncStatus and increment block processing counter.
-func (s *Service) logSyncStatus(genesis time.Time, blk *eth.BeaconBlock, syncingPeers []peer.ID, counter *ratecounter.RateCounter) {
+func (s *Service) logSyncStatus(genesis time.Time, blk *eth.BeaconBlock, counter *ratecounter.RateCounter) {
 	counter.Incr(1)
 	rate := float64(counter.Rate()) / counterSeconds
 	if rate == 0 {
@@ -187,7 +186,7 @@ func (s *Service) logSyncStatus(genesis time.Time, blk *eth.BeaconBlock, syncing
 	timeRemaining := time.Duration(float64(helpers.SlotsSince(genesis)-blk.Slot)/rate) * time.Second
 	log.WithField(
 		"peers",
-		fmt.Sprintf("%d/%d", len(syncingPeers), len(s.p2p.Peers().Connected())),
+		len(s.p2p.Peers().Connected()),
 	).WithField(
 		"blocksPerSecond",
 		fmt.Sprintf("%.1f", rate),
