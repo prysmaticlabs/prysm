@@ -95,7 +95,7 @@ func insertDoubleAttestationIntoPool(conn *grpc.ClientConn) error {
 		return err
 	}
 
-	for i := uint64(0); i < 4; i++ {
+	for i := uint64(0); i < 2; i++ {
 		// Set the bits of half the committee to be slashed.
 		attBitfield := bitfield.NewBitlist(uint64(len(committee)))
 		attBitfield.SetBitAt(i, true)

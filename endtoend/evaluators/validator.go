@@ -121,8 +121,8 @@ func validatorsSlashed(conn *grpc.ClientConn) error {
 	if err != nil {
 		return err
 	}
-	if len(changes.SlashedIndices) != 4 {
-		return fmt.Errorf("expected 4 indices to be slashed, received %d", len(changes.SlashedIndices))
+	if len(changes.SlashedIndices) != 2 && len(changes.SlashedIndices) != 4 {
+		return fmt.Errorf("expected 2 indices to be slashed, received %d", len(changes.SlashedIndices))
 	}
 	return nil
 }
