@@ -154,7 +154,7 @@ func validatorsLoseBalance(conns ...*grpc.ClientConn) error {
 		}
 
 		slashedPenalty := params.BeaconConfig().MaxEffectiveBalance / params.BeaconConfig().MinSlashingPenaltyQuotient
-		slashedBal := params.BeaconConfig().MaxEffectiveBalance - slashedPenalty + params.BeaconConfig().EffectiveBalanceIncrement
+		slashedBal := params.BeaconConfig().MaxEffectiveBalance - slashedPenalty + params.BeaconConfig().EffectiveBalanceIncrement/10
 		if valResp.EffectiveBalance >= slashedBal {
 			return fmt.Errorf(
 				"expected slashed validator %d to balance less than %d, received %d",
