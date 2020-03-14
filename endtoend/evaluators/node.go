@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc"
 )
 
+// PeersConnect checks all beacon nodes and returns whether they are connected to each other as peers.
 var PeersConnect = Evaluator{
 	Name:       "peers_connect_epoch_%d",
 	Policy:     onEpoch(0),
@@ -39,7 +40,6 @@ func onEpoch(epoch uint64) func(uint64) bool {
 	}
 }
 
-// peersConnect checks all beacon nodes and returns whether they are connected to each other as peers.
 func peersConnect(conns ...*grpc.ClientConn) error {
 	if len(conns) == 1 {
 		return nil
