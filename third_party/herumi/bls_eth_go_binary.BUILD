@@ -115,6 +115,7 @@ go_library(
         "//conditions:default": [":precompiled"],
     }),
     cgo = True,
+    copts = OPTS,
     visibility = ["//visibility:public"],
     clinkopts = [
         "-Wl,--unresolved-symbols=ignore-all",  # Ignore missing asan symbols

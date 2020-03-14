@@ -61,7 +61,6 @@ build:fuzz --linkopt=-fsanitize=fuzzer
 build:fuzz --copt=-fno-omit-frame-pointer
 build:fuzz --define=FUZZING_ENGINE=libfuzzer
 build:fuzz --copt=-DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
-#build:fuzz --linkopt -Wl,--unresolved-symbols=ignore-all
 build:fuzz --linkopt -Wl,--no-as-needed
 
 test:fuzzit --config=fuzz

@@ -103,10 +103,6 @@ def go_fuzz_library(
         tags = ["manual"] + tags,
         visibility = ["//visibility:private"],
         gc_goopts = ["-d=libfuzzer"],
-        cdeps = ["@herumi_bls_eth_go_binary//:lib"],
-        clinkopts = [
-            #"-Wl,--no-as-needed",
-        ],
     )
     native.genrule(
         name = name,
