@@ -260,10 +260,10 @@ func (f *blocksFetcher) collectPeerResponses(
 		if i < remainder {
 			count++
 		}
-		// Asking for no blocks may cause the client to hang. This should never happen and
-		// the peer may return an error anyway, but we'll ask for at least one block.
+		// Asking for no blocks may cause the client to hang.
 		if count == 0 {
-			count++
+			p2pRequests.Done()
+			continue
 		}
 
 		go func(ctx context.Context, pid peer.ID) {

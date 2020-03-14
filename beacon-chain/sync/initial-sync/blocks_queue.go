@@ -182,7 +182,6 @@ func (q *blocksQueue) loop() {
 					case <-q.ctx.Done():
 					case <-q.pendingFetchRequests:
 					}
-					log.WithError(err).Debug("Error scheduling fetch request")
 				}
 			}()
 		case response, ok := <-q.blocksFetcher.requestResponses():
@@ -214,7 +213,6 @@ func (q *blocksQueue) loop() {
 				skippedBlocks, err := q.parseFetchResponse(q.ctx, response)
 				if err != nil {
 					q.state.scheduler.incrementCounter(failedBlockCounter, response.count)
-					log.WithError(err).Debug("Error processing received blocks")
 					return
 				}
 				q.state.scheduler.incrementCounter(skippedBlockCounter, skippedBlocks)
