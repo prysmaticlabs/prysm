@@ -3,6 +3,8 @@
 package blocks
 
 import (
+	"encoding/json"
+
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -10,13 +12,16 @@ import (
 )
 
 type InputBlockHeader struct {
-	Pre   *pb.BeaconState
-	Block *ethpb.SignedBeaconBlock
+	Pre   *pb.BeaconState          `json:"pre"`
+	Block *ethpb.SignedBeaconBlock `json:"state"`
 }
 
 func Fuzz(b []byte) []byte {
 	input := &InputBlockHeader{}
-	ssz.Unmarshal(b, input)
+	//ssz.Unmarshal(b, input)
+	if err := json.Unmarshal(b, input); err != nil {
+		panic(err)
+	}
 	st, err := stateTrie.InitializeFromProto(input.Pre)
 	if err != nil {
 		// panic(err)
