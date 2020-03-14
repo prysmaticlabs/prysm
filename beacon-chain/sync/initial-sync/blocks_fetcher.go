@@ -74,7 +74,7 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 	rateLimiter := leakybucket.NewCollector(
 		allowedBlocksPerSecond, /* rate */
 		allowedBlocksPerSecond, /* capacity */
-		false                   /* deleteEmptyBuckets */)
+		false /* deleteEmptyBuckets */)
 
 	return &blocksFetcher{
 		ctx:            ctx,

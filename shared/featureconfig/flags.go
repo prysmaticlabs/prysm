@@ -121,6 +121,10 @@ var (
 		Name:  "dont-prune-state-start-up",
 		Usage: "Don't prune historical states upon start up",
 	}
+	newStateMgmt = cli.BoolFlag{
+		Name:  "new-state-mgmt",
+		Usage: "This enables the usage of new state mgmt service across Prysm",
+	}
 )
 
 // Deprecated flags list.
@@ -298,6 +302,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableNoiseHandshake,
 	dontPruneStateStartUp,
 	broadcastSlashingFlag,
+	newStateMgmt,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
