@@ -115,6 +115,13 @@ go_test(
         "service_norace_test.go",
     ],
     embed = [":go_default_library"],
+    gc_goopts = [
+        # Go 1.14 enables checkptr by default when building with -race or -msan. There is a pointer
+        # issue in boltdb, so must disable checkptr at compile time. This flag can be removed once
+        # the project is migrated to etcd's version of boltdb and the issue has been fixed.
+        # See: https://github.com/etcd-io/bbolt/issues/187.
+        "-d=checkptr=0",
+    ],
     race = "on",
     tags = ["race_on"],
     deps = [

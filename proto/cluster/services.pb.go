@@ -189,11 +189,11 @@ var fileDescriptor_f118b0fcaa41cfbe = []byte{
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ context.Context
-var _ grpc.ClientConn
+var _ grpc.ClientConnInterface
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion4
+const _ = grpc.SupportPackageIsVersion6
 
 // PrivateKeyServiceClient is the client API for PrivateKeyService service.
 //
@@ -203,10 +203,10 @@ type PrivateKeyServiceClient interface {
 }
 
 type privateKeyServiceClient struct {
-	cc *grpc.ClientConn
+	cc grpc.ClientConnInterface
 }
 
-func NewPrivateKeyServiceClient(cc *grpc.ClientConn) PrivateKeyServiceClient {
+func NewPrivateKeyServiceClient(cc grpc.ClientConnInterface) PrivateKeyServiceClient {
 	return &privateKeyServiceClient{cc}
 }
 
