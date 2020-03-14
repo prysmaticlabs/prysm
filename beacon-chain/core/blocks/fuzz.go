@@ -19,16 +19,19 @@ func Fuzz(b []byte) []byte {
 	ssz.Unmarshal(b, input)
 	st, err := stateTrie.InitializeFromProto(input.Pre)
 	if err != nil {
-		panic(err)
+		// panic(err)
+		return nil
 	}
 	post, err := ProcessBlockHeader(st, input.Block)
 	if err != nil {
-		panic(err)
+		// panic(err)
+		return nil
 	}
 
 	result, err := ssz.Marshal(post.InnerStateUnsafe())
 	if err != nil {
-		panic(err)
+		// panic(err)
+		return nil
 	}
 	return result
 }
