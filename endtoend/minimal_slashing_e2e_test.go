@@ -25,7 +25,6 @@ func TestEndToEnd_Slashing_MinimalConfig(t *testing.T) {
 			ev.ValidatorsSlashed,
 			ev.SlashedValidatorsLoseBalance,
 			ev.InjectDoubleVote,
-			//ev.InjectSurroundVote,
 		},
 	}
 	runEndToEndTest(t, minimalConfig)
