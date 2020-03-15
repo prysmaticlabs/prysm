@@ -134,7 +134,7 @@ func (s *Service) verifyAttestation(ctx context.Context, baseState *stateTrie.Be
 			var err error
 			if featureconfig.Get().NewStateMgmt {
 				aState, err = s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
-					return nil, err
+				return nil, err
 			} else {
 				aState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
 				if err != nil {
