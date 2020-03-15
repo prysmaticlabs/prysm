@@ -173,6 +173,14 @@ func (q *blocksQueue) loop() {
 		log.WithError(err).Debug("Can not start blocks provider")
 	}
 
+	// Reads from semaphore channel, thus allowing next goroutine to grab it and schedule next request.
+	releaseTicket := func() {
+		select {
+		case <-q.ctx.Done():
+		case <-q.pendingFetchRequests:
+		}
+	}
+
 	for {
 		if q.headFetcher.HeadSlot() >= q.highestExpectedSlot {
 			log.Debug("Highest expected slot reached")
@@ -191,10 +199,7 @@ func (q *blocksQueue) loop() {
 				// Schedule request.
 				if err := q.scheduleFetchRequests(q.ctx); err != nil {
 					q.state.scheduler.incrementCounter(failedBlock, blockBatchSize)
-					select {
-					case <-q.ctx.Done():
-					case <-q.pendingFetchRequests:
-					}
+					releaseTicket()
 				}
 			}()
 		case response, ok := <-q.blocksFetcher.requestResponses():
@@ -205,12 +210,7 @@ func (q *blocksQueue) loop() {
 			}
 
 			// Release semaphore ticket.
-			go func() {
-				select {
-				case <-q.ctx.Done():
-				case <-q.pendingFetchRequests:
-				}
-			}()
+			go releaseTicket()
 
 			// Process incoming response into blocks.
 			wg.Add(1)
