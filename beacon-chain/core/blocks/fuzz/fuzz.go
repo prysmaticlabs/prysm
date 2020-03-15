@@ -6,8 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-
-	log "github.com/sirupsen/logrus"
+	"strings"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -19,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-const PanicOnError = "true"
+const PanicOnError = "false"
 
 type InputBlockHeader struct {
 	StateID uint16
@@ -38,7 +37,7 @@ func bazelFileBytes(path string) ([]byte, error) {
 	return fileBytes, nil
 }
 
-func Fuzz(b []byte) []byte {
+func Fuzz(b []byte) ([]byte, bool) {
 	params.UseMainnetConfig()
 	input := &InputBlockHeader{}
 	if err := ssz.Unmarshal(b, input); err != nil {
@@ -50,11 +49,11 @@ func Fuzz(b []byte) []byte {
 	}
 	s := &p2ppb.BeaconState{}
 	if err := ssz.Unmarshal(b, s); err != nil {
-		panic(err)
+		return fail(err)
 	}
 	st, err := stateTrie.InitializeFromProto(s)
 	if err != nil {
-		panic(err)
+		return fail(err)
 	}
 	st, err = state.ProcessSlots(context.Background(), st, input.Block.Slot)
 	if err != nil {
@@ -69,10 +68,13 @@ func Fuzz(b []byte) []byte {
 	if err != nil {
 		panic(err)
 	}
-	return result
+	return result, true
 }
 
-func fail(err error) []byte {
-	log.Error(err)
-	return nil
+func fail(err error) ([]byte, bool) {
+	if strings.ToLower(PanicOnError) == "true" {
+		panic(err)
+	}
+	//log.Error(err)
+	return nil, false
 }

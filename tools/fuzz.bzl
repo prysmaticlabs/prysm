@@ -117,7 +117,16 @@ def go_fuzz_test(
         srcs = [":" + name],
         deps = ["@herumi_bls_eth_go_binary//:lib"],
         tags = ["manual", "fuzzer"] + tags,
-        args = ["$(locations %s)" % corpus_name],
+        args = [
+            "external/sigp_beacon_fuzz_corpora/0-9-4/mainnet/block_header",
+            "-max_len=302",
+            "-len_control=0",
+            "-print_final_stats=1",
+            "-reduce_inputs=0",
+            "-use_value_profile=1",
+            "-artifact_prefix=$$TEST_TMPDIR",
+        ],
+        #        args = ["$(locations %s)" % corpus_name],
         data = select({
             "//conditions:default": [corpus_name],
         }) + kwargs.get("data"),
