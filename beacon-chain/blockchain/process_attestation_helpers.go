@@ -135,11 +135,11 @@ func (s *Service) verifyAttestation(ctx context.Context, baseState *stateTrie.Be
 			if featureconfig.Get().NewStateMgmt {
 				aState, err = s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
 				return nil, err
-			} else {
-				aState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
-				if err != nil {
-					return nil, err
-				}
+			}
+
+			aState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(a.Data.BeaconBlockRoot))
+			if err != nil {
+				return nil, err
 			}
 
 			epoch := helpers.SlotToEpoch(a.Data.Slot)
