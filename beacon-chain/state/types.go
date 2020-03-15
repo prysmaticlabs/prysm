@@ -90,8 +90,12 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 		b.stateFieldLeaves[stateRoots] = NewFieldTrie(stateRoots, b.state.StateRoots, params.BeaconConfig().SlotsPerHistoricalRoot)
 
 		b.stateFieldLeaves[randaoMixes] = NewFieldTrie(randaoMixes, b.state.RandaoMixes, params.BeaconConfig().EpochsPerHistoricalVector)
+		layers, err := stateutil.Eth1DataVotesRootWithTrie(b.state.Eth1DataVotes)
+		if err != nil {
+			panic(err)
+		}
 		b.stateFieldLeaves[eth1DataVotes] = &FieldTrie{
-			fieldLayers: stateutil.ReturnTrieLayerVariable(elements, length),
+			fieldLayers: layers,
 			field:       eth1DataVotes,
 			reference:   &reference{1},
 			Mutex:       new(sync.Mutex),
@@ -350,6 +354,13 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	case eth1Data:
 		return stateutil.Eth1Root(b.state.Eth1Data)
 	case eth1DataVotes:
+		if featureconfig.Get().EnableSSZCache {
+			if len(b.state.Eth1DataVotes) == 0 {
+				return stateutil.Eth1DataVotesRoot(b.state.Eth1DataVotes)
+
+			}
+			return b.recomputeFieldTrieTest(field, b.state.Eth1DataVotes)
+		}
 		return stateutil.Eth1DataVotesRoot(b.state.Eth1DataVotes)
 	case validators:
 		return stateutil.ValidatorRegistryRoot(b.state.Validators)
@@ -412,4 +423,27 @@ func (b *BeaconState) recomputeFieldTrie(index fieldIndex, elements [][]byte) ([
 	b.dirtyIndexes[index] = []uint64{}
 
 	return root, nil
+}
+
+func (b *BeaconState) recomputeFieldTrieTest(index fieldIndex, elements []*ethpb.Eth1Data) ([32]byte, error) {
+	fTrie := b.stateFieldLeaves[index]
+	if fTrie.refs > 1 {
+		fTrie.Lock()
+		defer fTrie.Unlock()
+		fTrie.MinusRef()
+		newTrie := fTrie.CopyTrie()
+		b.stateFieldLeaves[index] = newTrie
+		fTrie = newTrie
+	}
+	changedRts, err := stateutil.ReturnChangedEth1Data(elements, b.dirtyIndexes[index])
+	if err != nil {
+		return [32]byte{}, err
+	}
+	root, err := fTrie.RecomputeTrieVariable(b.dirtyIndexes[index], changedRts)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	b.dirtyIndexes[index] = []uint64{}
+
+	return stateutil.AddInMixin(root, uint64(len(elements)))
 }

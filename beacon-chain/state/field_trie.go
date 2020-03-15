@@ -40,6 +40,19 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements [][]byte) ([32]byte
 	return fieldRoot, nil
 }
 
+func (f *FieldTrie) RecomputeTrieVariable(indices []uint64, elements [][32]byte) ([32]byte, error) {
+	f.Lock()
+	defer f.Unlock()
+	var err error
+	var fieldRoot [32]byte
+
+	fieldRoot, f.fieldLayers, err = stateutil.RecomputeFromLayerVariable(elements, f.fieldLayers, indices)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	return fieldRoot, nil
+}
+
 func (f *FieldTrie) CopyTrie() *FieldTrie {
 	//f.Mutex.Lock()
 	//defer f.Mutex.Unlock()

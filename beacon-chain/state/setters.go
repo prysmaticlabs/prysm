@@ -262,6 +262,9 @@ func (b *BeaconState) AppendEth1DataVotes(val *ethpb.Eth1Data) error {
 
 	b.state.Eth1DataVotes = append(votes, val)
 	b.markFieldAsDirty(eth1DataVotes)
+	indexes := b.dirtyIndexes[eth1DataVotes]
+	indexes = append(indexes, uint64(len(b.state.Eth1DataVotes)-1))
+	b.dirtyIndexes[eth1DataVotes] = indexes
 	return nil
 }
 
