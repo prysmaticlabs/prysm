@@ -2,6 +2,7 @@ package stategen
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -9,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -129,6 +131,77 @@ func TestLoadColdStateByRoot_IntermediatePlayback(t *testing.T) {
 	}
 	if loadedState.Slot() != slot {
 		t.Error("Did not correctly save state")
+	}
+}
+
+func TestLoadColdStateBySlotIntermediatePlayback_BeforeCutoff(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	service := New(db)
+	service.slotsPerArchivedPoint = params.BeaconConfig().SlotsPerEpoch * 2
+
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	if err := service.beaconDB.SaveArchivedPointState(ctx, beaconState, 0); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveArchivedPointRoot(ctx, [32]byte{}, 0); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveArchivedPointState(ctx, beaconState, 1); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveArchivedPointRoot(ctx, [32]byte{}, 1); err != nil {
+		t.Fatal(err)
+	}
+
+	slot := uint64(20)
+	loadedState, err := service.loadColdIntermediateStateBySlot(ctx, slot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loadedState.Slot() != slot {
+		t.Error("Did not correctly save state")
+	}
+}
+
+func TestLoadColdStateBySlotIntermediatePlayback_AfterCutoff(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	service := New(db)
+	service.slotsPerArchivedPoint = params.BeaconConfig().SlotsPerEpoch
+
+	beaconState, _ := testutil.DeterministicGenesisState(t, 32)
+	if err := service.beaconDB.SaveArchivedPointState(ctx, beaconState, 0); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.beaconDB.SaveArchivedPointRoot(ctx, [32]byte{}, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	slot := uint64(10)
+	loadedState, err := service.loadColdIntermediateStateBySlot(ctx, slot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loadedState.Slot() != slot {
+		t.Error("Did not correctly save state")
+	}
+}
+
+func TestLoadColdStateByRoot_UnknownArchivedState(t *testing.T) {
+	ctx := context.Background()
+	db := testDB.SetupDB(t)
+	defer testDB.TeardownDB(t, db)
+
+	service := New(db)
+	service.slotsPerArchivedPoint = 1
+	if _, err := service.loadColdIntermediateStateBySlot(ctx, 0); !strings.Contains(err.Error(), errUnknownArchivedState.Error()) {
+		t.Log(err)
+		t.Error("Did not get wanted error")
 	}
 }
 
