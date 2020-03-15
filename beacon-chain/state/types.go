@@ -90,6 +90,12 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 		b.stateFieldLeaves[stateRoots] = NewFieldTrie(stateRoots, b.state.StateRoots, params.BeaconConfig().SlotsPerHistoricalRoot)
 
 		b.stateFieldLeaves[randaoMixes] = NewFieldTrie(randaoMixes, b.state.RandaoMixes, params.BeaconConfig().EpochsPerHistoricalVector)
+		b.stateFieldLeaves[eth1DataVotes] = &FieldTrie{
+			fieldLayers: stateutil.ReturnTrieLayerVariable(elements, length),
+			field:       eth1DataVotes,
+			reference:   &reference{1},
+			Mutex:       new(sync.Mutex),
+		}
 	}
 
 	// Initialize field reference tracking for shared data.
