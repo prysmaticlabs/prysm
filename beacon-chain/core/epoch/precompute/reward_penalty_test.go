@@ -146,6 +146,47 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 	}
 }
 
+func TestAttestationDeltas_ZeroEpoch(t *testing.T) {
+	e := params.BeaconConfig().SlotsPerEpoch
+	validatorCount := uint64(2048)
+	base := buildState(e+2, validatorCount)
+	atts := make([]*pb.PendingAttestation, 3)
+	var emptyRoot [32]byte
+	for i := 0; i < len(atts); i++ {
+		atts[i] = &pb.PendingAttestation{
+			Data: &ethpb.AttestationData{
+				Target: &ethpb.Checkpoint{
+					Root: emptyRoot[:],
+				},
+				Source: &ethpb.Checkpoint{
+					Root: emptyRoot[:],
+				},
+				BeaconBlockRoot: emptyRoot[:],
+			},
+			AggregationBits: bitfield.Bitlist{0xC0, 0xC0, 0xC0, 0xC0, 0x01},
+			InclusionDelay:  1,
+		}
+	}
+	base.PreviousEpochAttestations = atts
+	state, err := state.InitializeFromProto(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	vp, bp := New(context.Background(), state)
+	vp, bp, err = ProcessAttestations(context.Background(), state, vp, bp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bp.CurrentEpoch = 0 // Could cause a divide by zero panic.
+
+	_, _, err = attestationDeltas(state, bp, vp)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 	validators := make([]*ethpb.Validator, validatorCount)
 	for i := 0; i < len(validators); i++ {
