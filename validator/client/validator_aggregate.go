@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -113,7 +114,7 @@ func (v *validator) signSlot(ctx context.Context, pubKey [48]byte, slot uint64) 
 	}
 	sig, err := v.keyManager.Sign(pubKey, root)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to sign slot")
 	}
 
 	return sig.Marshal(), nil
