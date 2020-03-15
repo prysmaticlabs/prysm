@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"go.opencensus.io/trace"
 )
 
@@ -185,15 +184,9 @@ func (k *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 		bkt = tx.Bucket(blocksBucket)
 		headBlkRoot := bkt.Get(headBlockRootKey)
 
-		if featureconfig.Get().NewStateMgmt {
-			if tx.Bucket(stateSummaryBucket).Get(blockRoot[:]) == nil {
-				return errors.New("cannot delete state without state summary")
-			}
-		} else {
-			// Safe guard against deleting genesis, finalized, head state.
-			if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], headBlkRoot) {
-				return errors.New("cannot delete genesis, finalized, or head state")
-			}
+		// Safe guard against deleting genesis, finalized, head state.
+		if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], headBlkRoot) {
+			return errors.New("cannot delete genesis, finalized, or head state")
 		}
 
 		bkt = tx.Bucket(stateBucket)
@@ -236,15 +229,9 @@ func (k *Store) DeleteStates(ctx context.Context, blockRoots [][32]byte) error {
 
 		for blockRoot, _ := c.First(); blockRoot != nil; blockRoot, _ = c.Next() {
 			if rootMap[bytesutil.ToBytes32(blockRoot)] {
-				if featureconfig.Get().NewStateMgmt {
-					if tx.Bucket(stateSummaryBucket).Get(blockRoot[:]) == nil {
-						return errors.New("cannot delete state without state summary")
-					}
-				} else {
-					// Safe guard against deleting genesis, finalized, head state.
-					if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], headBlkRoot) {
-						return errors.New("cannot delete genesis, finalized, or head state")
-					}
+				// Safe guard against deleting genesis, finalized, or head state.
+				if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], headBlkRoot) {
+					return errors.New("could not delete genesis, finalized, or head state")
 				}
 				if err := c.Delete(); err != nil {
 					return err

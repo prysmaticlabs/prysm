@@ -321,10 +321,16 @@ func (k *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveHeadBlockRoot")
 	defer span.End()
 	return k.db.Update(func(tx *bolt.Tx) error {
-		noStateSummary := tx.Bucket(stateSummaryBucket).Get(blockRoot[:]) == nil && featureconfig.Get().NewStateMgmt
-		if tx.Bucket(stateBucket).Get(blockRoot[:]) == nil || noStateSummary {
-			return errors.New("no state found with head block root")
+		if featureconfig.Get().NewStateMgmt {
+			if tx.Bucket(stateSummaryBucket).Get(blockRoot[:]) == nil {
+				return errors.New("no state summary found with head block root")
+			}
+		} else {
+			if tx.Bucket(stateBucket).Get(blockRoot[:]) == nil {
+				return errors.New("no state found with head block root")
+			}
 		}
+
 		bucket := tx.Bucket(blocksBucket)
 		return bucket.Put(headBlockRootKey, blockRoot[:])
 	})

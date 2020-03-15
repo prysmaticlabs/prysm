@@ -86,6 +86,7 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedState *state.BeaconS
 		}
 
 		s.deleteEpochBoundaryRoot(stateSummary.Slot)
+		s.lastArchivedSlot = stateSummary.Slot
 	}
 
 	// Update the split slot and root.

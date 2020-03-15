@@ -272,23 +272,25 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 		s.justifiedCheckpt = cpt
 	}
 
-	justifiedRoot := bytesutil.ToBytes32(cpt.Root)
+	if !featureconfig.Get().NewStateMgmt {
+		justifiedRoot := bytesutil.ToBytes32(cpt.Root)
 
-	justifiedState := s.initSyncState[justifiedRoot]
-	// If justified state is nil, resume back to normal syncing process and save
-	// justified check point.
-	if justifiedState == nil {
-		if s.beaconDB.HasState(ctx, justifiedRoot) {
-			return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
+		justifiedState := s.initSyncState[justifiedRoot]
+		// If justified state is nil, resume back to normal syncing process and save
+		// justified check point.
+		if justifiedState == nil {
+			if s.beaconDB.HasState(ctx, justifiedRoot) {
+				return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
+			}
+			justifiedState, err = s.generateState(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root), justifiedRoot)
+			if err != nil {
+				log.Error(err)
+				return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
+			}
 		}
-		justifiedState, err = s.generateState(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root), justifiedRoot)
-		if err != nil {
-			log.Error(err)
-			return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
+		if err := s.beaconDB.SaveState(ctx, justifiedState, justifiedRoot); err != nil {
+			return errors.Wrap(err, "could not save justified state")
 		}
-	}
-	if err := s.beaconDB.SaveState(ctx, justifiedState, justifiedRoot); err != nil {
-		return errors.Wrap(err, "could not save justified state")
 	}
 
 	return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
