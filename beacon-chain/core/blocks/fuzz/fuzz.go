@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
 
@@ -51,11 +50,11 @@ func Fuzz(b []byte) []byte {
 	}
 	s := &p2ppb.BeaconState{}
 	if err := ssz.Unmarshal(b, s); err != nil {
-		return fail(err)
+		panic(err)
 	}
 	st, err := stateTrie.InitializeFromProto(s)
 	if err != nil {
-		return fail(err)
+		panic(err)
 	}
 	st, err = state.ProcessSlots(context.Background(), st, input.Block.Slot)
 	if err != nil {
@@ -68,15 +67,12 @@ func Fuzz(b []byte) []byte {
 
 	result, err := ssz.Marshal(post.InnerStateUnsafe())
 	if err != nil {
-		return fail(err)
+		panic(err)
 	}
 	return result
 }
 
 func fail(err error) []byte {
-	if strings.ToUpper(PanicOnError) != "TRUE" {
-		panic(err)
-	}
 	log.Error(err)
 	return nil
 }
