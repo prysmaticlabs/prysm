@@ -1,24 +1,30 @@
 // +build libfuzzer
 
-package blocks
+package fuzz
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 const PanicOnError = "true"
 
 type InputBlockHeader struct {
 	StateID uint16
-	Block *ethpb.BeaconBlock
+	Block   *ethpb.BeaconBlock
 }
 
 func bazelFileBytes(path string) ([]byte, error) {
@@ -34,6 +40,7 @@ func bazelFileBytes(path string) ([]byte, error) {
 }
 
 func Fuzz(b []byte) []byte {
+	params.UseMainnetConfig()
 	input := &InputBlockHeader{}
 	if err := ssz.Unmarshal(b, input); err != nil {
 		return fail(err)
@@ -50,7 +57,11 @@ func Fuzz(b []byte) []byte {
 	if err != nil {
 		return fail(err)
 	}
-	post, err := ProcessBlockHeaderNoVerify(st, input.Block)
+	st, err = state.ProcessSlots(context.Background(), st, input.Block.Slot)
+	if err != nil {
+		return fail(err)
+	}
+	post, err := blocks.ProcessBlockHeaderNoVerify(st, input.Block)
 	if err != nil {
 		return fail(err)
 	}
@@ -63,8 +74,9 @@ func Fuzz(b []byte) []byte {
 }
 
 func fail(err error) []byte {
-	if strings.ToUpper(PanicOnError) == "TRUE" {
+	if strings.ToUpper(PanicOnError) != "TRUE" {
 		panic(err)
 	}
+	log.Error(err)
 	return nil
 }
