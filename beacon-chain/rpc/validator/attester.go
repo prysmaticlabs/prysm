@@ -2,7 +2,6 @@ package validator
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -172,7 +171,6 @@ func (vs *Server) waitToOneThird(ctx context.Context, slot uint64) {
 	slotStartTime := slotutil.SlotStartTime(uint64(vs.GenesisTimeFetcher.GenesisTime().Unix()), slot)
 	slotOneThirdTime := slotStartTime.Unix() + int64(params.BeaconConfig().SecondsPerSlot/3)
 	waitDuration := slotOneThirdTime - roughtime.Now().Unix()
-	fmt.Println(waitDuration)
 	timeOut := time.After(time.Duration(waitDuration) * time.Second)
 
 	stateChannel := make(chan *feed.Event, 1)
