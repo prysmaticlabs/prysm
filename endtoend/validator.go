@@ -53,18 +53,18 @@ func initializeValidators(
 			t.Fatal(err)
 		}
 		args := []string{
+			fmt.Sprintf("--datadir=%s/eth2-val-%d", tmpPath, n),
+			fmt.Sprintf("--log-file=%s", file.Name()),
 			"--force-clear-db",
 			fmt.Sprintf("--interop-num-validators=%d", validatorsPerNode),
 			fmt.Sprintf("--interop-start-index=%d", validatorsPerNode*n),
 			fmt.Sprintf("--monitoring-port=%d", 9280+n),
-			fmt.Sprintf("--datadir=%s/eth2-val-%d", tmpPath, n),
 			fmt.Sprintf("--beacon-rpc-provider=localhost:%d", 4200+n),
-			fmt.Sprintf("--log-file=%s", file.Name()),
 		}
 		args = append(args, config.validatorFlags...)
 
 		cmd := exec.Command(binaryPath, args...)
-		t.Logf("Starting validator client %d with flags: %s", n, strings.Join(args, " "))
+		t.Logf("Starting validator client %d with flags: %s", n, strings.Join(args[2:], " "))
 		if err := cmd.Start(); err != nil {
 			t.Fatal(err)
 		}
