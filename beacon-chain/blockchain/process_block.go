@@ -128,7 +128,7 @@ func (s *Service) onBlock(ctx context.Context, signed *ethpb.SignedBeaconBlock) 
 
 	// Update validator indices in database as needed.
 	if err := s.saveNewValidators(ctx, preStateValidatorCount, postState); err != nil {
-		return nil, errors.Wrap(err, "could not save finalized checkpoint")
+		return errors.Wrap(err, "could not save new validators")
 	}
 
 	// Epoch boundary bookkeeping such as logging epoch summaries.
@@ -246,7 +246,7 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 
 	// Update validator indices in database as needed.
 	if err := s.saveNewValidators(ctx, preStateValidatorCount, postState); err != nil {
-		return errors.Wrap(err, "could not save finalized checkpoint")
+		return errors.Wrap(err, "could not save new validators")
 	}
 
 	numOfStates := len(s.boundaryRoots)
