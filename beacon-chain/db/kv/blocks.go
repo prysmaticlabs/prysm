@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	log "github.com/sirupsen/logrus"
@@ -320,7 +321,8 @@ func (k *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveHeadBlockRoot")
 	defer span.End()
 	return k.db.Update(func(tx *bolt.Tx) error {
-		if tx.Bucket(stateBucket).Get(blockRoot[:]) == nil {
+		noStateSummary :=  tx.Bucket(stateSummaryBucket).Get(blockRoot[:]) == nil && featureconfig.Get().NewStateMgmt
+		if tx.Bucket(stateBucket).Get(blockRoot[:]) == nil || noStateSummary {
 			return errors.New("no state found with head block root")
 		}
 		bucket := tx.Bucket(blocksBucket)
