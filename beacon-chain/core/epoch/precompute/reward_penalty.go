@@ -72,7 +72,7 @@ func attestationDeltas(state *stateTrie.BeaconState, bp *Balance, vp []*Validato
 
 func attestationDelta(state *stateTrie.BeaconState, bp *Balance, v *Validator) (uint64, uint64) {
 	eligible := v.IsActivePrevEpoch || (v.IsSlashed && !v.IsWithdrawableCurrentEpoch)
-	if !eligible {
+	if !eligible || bp.CurrentEpoch == 0 {
 		return 0, 0
 	}
 
