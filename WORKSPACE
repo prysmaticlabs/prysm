@@ -1583,10 +1583,11 @@ go_repository(
     importpath = "github.com/wealdtech/go-indexer",
 )
 
-go_repository(
+local_repository(
     name = "com_github_alonmuroch_validatorremotewallet",
-    commit = "8aa8c3175ad598316a3247e2c65b9d2b29576cc0",
-    importpath = "github.com/alonmuroch/validatorremotewallet",
+#    commit = "e2b972f0162f355958097d7b9906530a219f6c03",
+#    importpath = "github.com/alonmuroch/validatorremotewallet",
+    path = "../remotewallet",
 )
 
 go_repository(

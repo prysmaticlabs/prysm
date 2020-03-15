@@ -1,11 +1,13 @@
 package keymanager
 
 import (
+	"context"
 	"encoding/json"
 	RW "github.com/alonmuroch/validatorremotewallet/wallet/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	e2wtypes "github.com/wealdtech/go-eth2-wallet-types"
-	"google.golang.org/grpc"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	grpc "google.golang.org/grpc"
+	"time"
 )
 
 type RemotewalletOpts struct {
@@ -45,13 +47,15 @@ func NewRemoteWallet(input string) (KeyManager, string, error) {
 	conn, err := grpc.Dial(opts.Url, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		log.Fatalf("did not connect to remote wallet: %v", err)
+	} else {
+		log.Printf("connected to remote wallet at: %v", opts.Url)
 	}
-	defer conn.Close()
-	//c := RW.NewRemoteWalletClient(conn)
+	//defer conn.Close() TODO
+	c := RW.NewRemoteWalletClient(conn)
 
 	km := &RemoteWallet{
-		accounts: make(map[[48]byte]e2wtypes.Account),
-		//rw: c,
+		keys: make([][48]byte,0),
+		rw: c,
 	}
 
 	return km, RemotewalletOptsHelp, nil
@@ -59,28 +63,39 @@ func NewRemoteWallet(input string) (KeyManager, string, error) {
 
 // Wallet is a key manager that loads keys from a local Ethereum 2 wallet.
 type RemoteWallet struct {
-	accounts map[[48]byte]e2wtypes.Account
+	keys [][48]byte
 	rw RW.RemoteWalletClient
 }
 
 // FetchValidatingKeys fetches the list of public keys that should be used to validate with.
 func (km *RemoteWallet) FetchValidatingKeys() ([][48]byte, error) {
-	res := make([][48]byte, 0, len(km.accounts))
-	for pubKey := range km.accounts {
-		res = append(res, pubKey)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	r, err := km.rw.FetchValidatingKeys(ctx, &RW.FetchValidatingKeysRequest{})
+	if err != nil {
+		return nil, err
 	}
-	return res, nil
+	return km.updateAccounts(r), nil
+}
+
+func (km *RemoteWallet) updateAccounts (response *RW.FetchValidatingKeysResponse) ([][48]byte){
+	km.keys = make([][48]byte, len(response.PublicKeys))
+	for index, key := range response.PublicKeys {
+		km.keys[index] = bytesutil.ToBytes48(key)
+	}
+	return km.keys
 }
 
 // Sign signs a message for the validator to broadcast.
 func (km *RemoteWallet) Sign(pubKey [48]byte, root [32]byte, domain uint64) (*bls.Signature, error) {
-	account, exists := km.accounts[pubKey]
-	if !exists {
-		return nil, ErrNoSuchKey
-	}
-	sig, err := account.Sign(root[:], domain)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	r, err := km.rw.Sign(ctx, &RW.SignRequest{PublicKey:pubKey[:], Root:root[:], Domain:domain})
 	if err != nil {
 		return nil, err
 	}
-	return bls.SignatureFromBytes(sig.Marshal())
+
+	return bls.SignatureFromBytes(r.Sig)
 }
