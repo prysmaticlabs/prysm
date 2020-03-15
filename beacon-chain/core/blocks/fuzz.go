@@ -38,7 +38,7 @@ func Fuzz(b []byte) []byte {
 	if err := ssz.Unmarshal(b, input); err != nil {
 		return fail(err)
 	}
-	b, err := bazelFileBytes(fmt.Sprintf("sigp_beacon_fuzz_corpora/0-9-4/mainnet/beaconstate/%d", input.StateID))
+	b, err := bazelFileBytes(fmt.Sprintf("external/sigp_beacon_fuzz_corpora/0-9-4/mainnet/beaconstate/%d", input.StateID))
 	if err != nil {
 		return fail(err)
 	}
