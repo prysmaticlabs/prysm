@@ -411,12 +411,12 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 	}
 	var finalizedState *stateTrie.BeaconState
 	if featureconfig.Get().NewStateMgmt {
-		finalizedState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(finalized.Root))
+		finalizedState, err = s.stateGen.Resume(ctx, bytesutil.ToBytes32(finalized.Root))
 		if err != nil {
 			return errors.Wrap(err, "could not get finalized state from db")
 		}
 	} else {
-		finalizedState, err = s.stateGen.Resume(ctx, bytesutil.ToBytes32(finalized.Root))
+		finalizedState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(finalized.Root))
 		if err != nil {
 			return errors.Wrap(err, "could not get finalized state from db")
 		}

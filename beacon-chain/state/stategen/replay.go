@@ -242,7 +242,7 @@ func (s *State) lastSavedBlock(ctx context.Context, slot uint64) ([32]byte, uint
 
 	// Lower bound set as last archived slot is a reasonable assumption given
 	// block is saved at an archived point.
-	filter := filters.NewFilter().SetStartSlot(s.lastArchivedSlot).SetEndSlot(slot)
+	filter := filters.NewFilter().SetStartSlot(s.splitInfo.slot).SetEndSlot(slot)
 	rs, err := s.beaconDB.BlockRoots(ctx, filter)
 	if err != nil {
 		return [32]byte{}, 0, err
@@ -282,7 +282,7 @@ func (s *State) lastSavedState(ctx context.Context, slot uint64) ([32]byte, erro
 
 	// Lower bound set as last archived slot is a reasonable assumption given
 	// state is saved at an archived point.
-	filter := filters.NewFilter().SetStartSlot(s.lastArchivedSlot).SetEndSlot(slot)
+	filter := filters.NewFilter().SetStartSlot(s.splitInfo.slot).SetEndSlot(slot)
 	rs, err := s.beaconDB.BlockRoots(ctx, filter)
 	if err != nil {
 		return [32]byte{}, err

@@ -274,10 +274,11 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 			fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
 			finalizedState, err := s.stateGen.StateByRoot(ctx, fRoot)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "could not get state by root for migration")
 			}
 			if err := s.stateGen.MigrateToCold(ctx, finalizedState, fRoot); err != nil {
-				return err
+				return errors.Wrap(err, "could not migrate with new finalized root")
+
 			}
 		}
 	}

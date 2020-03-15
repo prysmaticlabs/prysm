@@ -13,7 +13,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-const archivedInterval = 64
+const archivedInterval = 1024
 
 // State represents a management object that handles the internal
 // logic of maintaining both hot and cold states in DB.
@@ -50,9 +50,19 @@ func (s *State) Resume(ctx context.Context, finalizedRoot [32]byte) (*state.Beac
 	ctx, span := trace.StartSpan(ctx, "stateGen.Resume")
 	defer span.End()
 
+	finalizedSummary, err := s.beaconDB.StateSummary(ctx, finalizedRoot)
+	if err != nil {
+		return nil, err
+	}
 	finalizedState, err := s.beaconDB.State(ctx, finalizedRoot)
 	if err != nil {
 		return nil, err
+	}
+	if finalizedState == nil {
+		finalizedState, err = s.ComputeStateUpToSlot(ctx, finalizedSummary.Slot)
+		if err != nil {
+			return nil, err
+		}
 	}
 	s.splitInfo = &splitSlotAndRoot{slot: finalizedState.Slot(), root: finalizedRoot}
 	if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: finalizedState.Slot(), Root: finalizedRoot[:], BoundaryRoot: finalizedRoot[:]}); err != nil {

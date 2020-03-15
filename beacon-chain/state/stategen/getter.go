@@ -15,12 +15,12 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (*state.Bea
 	ctx, span := trace.StartSpan(ctx, "stateGen.StateByRoot")
 	defer span.End()
 
-	summary, err := s.beaconDB.StateSummary(ctx, blockRoot)
+	slot, err := s.blockRootSlot(ctx, blockRoot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get state summary")
 	}
 
-	if summary.Slot < s.splitInfo.slot {
+	if slot < s.splitInfo.slot {
 		return s.loadColdStateByRoot(ctx, blockRoot)
 	}
 
