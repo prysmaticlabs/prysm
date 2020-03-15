@@ -58,6 +58,20 @@ func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*
 
 // verifyBlkPreState validates input block has a valid pre-state.
 func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (*stateTrie.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "chainService.verifyBlkPreState")
+	defer span.End()
+
+	if featureconfig.Get().NewStateMgmt {
+		preState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(b.ParentRoot))
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
+		}
+		if preState == nil {
+			return nil, errors.Wrapf(err, "nil pre state for slot %d", b.Slot)
+		}
+		return preState, nil // No copy needed from newly hydrated state gen object.
+	}
+
 	preState := s.initSyncState[bytesutil.ToBytes32(b.ParentRoot)]
 	var err error
 	if preState == nil {
