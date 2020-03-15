@@ -143,18 +143,14 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 func (ds *Service) submitAttesterSlashings(ctx context.Context, slashings []*ethpb.AttesterSlashing, epoch uint64) {
 	ctx, span := trace.StartSpan(ctx, "detection.submitAttesterSlashings")
 	defer span.End()
-	var slashedIndices []uint64
-	if len(slashings) > 0 {
-		log.WithFields(logrus.Fields{
-			"targetEpoch": epoch,
-			"indices":     slashedIndices,
-		}).Infof("Found %d attester slashings! Submitting to beacon node", len(slashings))
-	}
 	for i := 0; i < len(slashings); i++ {
 		slash := slashings[i]
 		if slash != nil && slash.Attestation_1 != nil && slash.Attestation_2 != nil {
 			slashableIndices := sliceutil.IntersectionUint64(slashings[i].Attestation_1.AttestingIndices, slashings[i].Attestation_2.AttestingIndices)
-			slashedIndices = append(slashedIndices, slashableIndices...)
+			log.WithFields(logrus.Fields{
+				"targetEpoch": epoch,
+				"indices":     slashableIndices,
+			}).Infof("Found %d attester slashings! Submitting to beacon node", len(slashings))
 			ds.attesterSlashingsFeed.Send(slashings[i])
 		}
 	}

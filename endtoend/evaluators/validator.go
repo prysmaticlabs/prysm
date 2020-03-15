@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"google.golang.org/grpc"
 )
 
 // ValidatorsAreActive ensures the expected amount of validators are active.
@@ -23,6 +24,20 @@ var ValidatorsParticipating = Evaluator{
 	Evaluation: validatorsParticipating,
 }
 
+// ValidatorsSlashed ensures the expected amount of validators are slashed.
+var ValidatorsSlashed = Evaluator{
+	Name:       "validators_slashed_epoch_%d",
+	Policy:     afterNthEpoch(0),
+	Evaluation: validatorsSlashed,
+}
+
+// SlashedValidatorsLoseBalance checks if the validators slashed lose the right balance.
+var SlashedValidatorsLoseBalance = Evaluator{
+	Name:       "slashed_validators_lose_valance_epoch_%d",
+	Policy:     afterNthEpoch(0),
+	Evaluation: validatorsLoseBalance,
+}
+
 // Not including first epoch because of issues with genesis.
 func afterNthEpoch(afterEpoch uint64) func(uint64) bool {
 	return func(currentEpoch uint64) bool {
@@ -30,7 +45,9 @@ func afterNthEpoch(afterEpoch uint64) func(uint64) bool {
 	}
 }
 
-func validatorsAreActive(client eth.BeaconChainClient) error {
+func validatorsAreActive(conns ...*grpc.ClientConn) error {
+	conn := conns[0]
+	client := eth.NewBeaconChainClient(conn)
 	// Balances actually fluctuate but we just want to check initial balance.
 	validatorRequest := &eth.ListValidatorsRequest{
 		PageSize: int32(params.BeaconConfig().MinGenesisActiveValidatorCount),
@@ -83,7 +100,9 @@ func validatorsAreActive(client eth.BeaconChainClient) error {
 }
 
 // validatorsParticipating ensures the validators have an acceptable participation rate.
-func validatorsParticipating(client eth.BeaconChainClient) error {
+func validatorsParticipating(conns ...*grpc.ClientConn) error {
+	conn := conns[0]
+	client := eth.NewBeaconChainClient(conn)
 	validatorRequest := &eth.GetValidatorParticipationRequest{}
 	participation, err := client.GetValidatorParticipation(context.Background(), validatorRequest)
 	if err != nil {
@@ -99,6 +118,52 @@ func validatorsParticipating(client eth.BeaconChainClient) error {
 			expected,
 			partRate,
 		)
+	}
+	return nil
+}
+
+func validatorsSlashed(conns ...*grpc.ClientConn) error {
+	conn := conns[0]
+	ctx := context.Background()
+	client := eth.NewBeaconChainClient(conn)
+	req := &eth.GetValidatorActiveSetChangesRequest{}
+	changes, err := client.GetValidatorActiveSetChanges(ctx, req)
+	if err != nil {
+		return err
+	}
+	if len(changes.SlashedIndices) != 2 && len(changes.SlashedIndices) != 4 {
+		return fmt.Errorf("expected 2 or 4 indices to be slashed, received %d", len(changes.SlashedIndices))
+	}
+	return nil
+}
+
+func validatorsLoseBalance(conns ...*grpc.ClientConn) error {
+	conn := conns[0]
+	ctx := context.Background()
+	client := eth.NewBeaconChainClient(conn)
+
+	for i, indice := range slashedIndices {
+		req := &eth.GetValidatorRequest{
+			QueryFilter: &eth.GetValidatorRequest_Index{
+				Index: indice,
+			},
+		}
+		valResp, err := client.GetValidator(ctx, req)
+		if err != nil {
+			return err
+		}
+
+		slashedPenalty := params.BeaconConfig().MaxEffectiveBalance / params.BeaconConfig().MinSlashingPenaltyQuotient
+		slashedBal := params.BeaconConfig().MaxEffectiveBalance - slashedPenalty + params.BeaconConfig().EffectiveBalanceIncrement/10
+		if valResp.EffectiveBalance >= slashedBal {
+			return fmt.Errorf(
+				"expected slashed validator %d to balance less than %d, received %d",
+				i,
+				slashedBal,
+				valResp.EffectiveBalance,
+			)
+		}
+
 	}
 	return nil
 }
