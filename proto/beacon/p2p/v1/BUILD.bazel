@@ -21,11 +21,15 @@ go_proto_library(
 ssz_gen_marshal(
     name = "ssz_generated_files",
     go_proto = ":v1_go_proto",
+    includes = [
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+    ],
     objs = [
         "BeaconBlocksByRangeRequest",
         "Fork",
         "HistoricalBatch",
         "Status",
+        "BeaconState",
     ],
 )
 

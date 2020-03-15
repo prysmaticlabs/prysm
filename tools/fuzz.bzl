@@ -56,6 +56,7 @@ gen_fuzz_main = rule(
 def go_fuzz_test(
         name,
         corpus,
+        importpath,
         func = "Fuzz",
         repository = "",
         size = "medium",
@@ -65,11 +66,13 @@ def go_fuzz_test(
         name = name + "_lib_with_fuzzer",
         tags = ["manual"] + tags,
         visibility = ["//visibility:private"],
+        testonly = 1,
+        importpath = importpath,
         **kwargs
     )
     gen_fuzz_main(
         name = name + "_libfuzz_main",
-        target_pkg = "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks",  # this needs to be inferred from the go library above.
+        target_pkg = importpath,
         func = func,
         tags = ["manual"] + tags,
         testonly = 1,
@@ -89,7 +92,7 @@ def go_fuzz_test(
     native.genrule(
         name = name,
         outs = [name + ".a"],
-        srcs = [name + "_binary"],
+        srcs = [":" + name + "_binary"],
         cmd = "cp $< $@",
         visibility = kwargs.get("visibility"),
         tags = ["manual"] + tags,
@@ -115,5 +118,7 @@ def go_fuzz_test(
         deps = ["@herumi_bls_eth_go_binary//:lib"],
         tags = ["manual", "fuzzer"] + tags,
         args = ["$(locations %s)" % corpus_name],
-        data = [corpus_name],
+        data = select({
+            "//conditions:default": [corpus_name],
+        }) + kwargs.get("data"),
     )

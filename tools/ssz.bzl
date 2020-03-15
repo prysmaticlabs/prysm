@@ -1,26 +1,40 @@
 load(
     "@io_bazel_rules_go//go:def.bzl",
     "GoLibrary",
+    "GoSource",
 )
 
 def _ssz_go_proto_library_impl(ctx):
-    go_proto = ctx.attr.go_proto
+    if ctx.attr.go_proto != None:
+        go_proto = ctx.attr.go_proto
+        input_files = go_proto[OutputGroupInfo].go_generated_srcs.to_list()
+        package_path = input_files[0].dirname
+    elif hasattr(ctx.attr, "srcs") and len(ctx.attr.srcs) > 0:
+        package_path = ctx.attr.srcs[0].files.to_list()[0].dirname
+        input_files = ctx.attr.srcs[0].files.to_list()
+    else:
+        fail("Must have go_proto or srcs")
 
-    generated_pb_go_files = go_proto[OutputGroupInfo].go_generated_srcs
-
-    # Run the tool on the generated files
-    package_path = generated_pb_go_files.to_list()[0].dirname
+    # Run the tool.
     output = ctx.outputs.out
     args = [
         "--output=%s" % output.path,
         "--path=%s" % package_path,
     ]
+    if hasattr(ctx.attr, "includes") and len(ctx.attr.includes) > 0:
+        incs = []
+        for include in ctx.attr.includes:
+            incs.append(include[GoSource].srcs[0].dirname)
+            input_files += include[GoSource].srcs
+        args.append("--include=%s" % ",".join(incs))
+
     if len(ctx.attr.objs) > 0:
         args += ["--objs=%s" % ",".join(ctx.attr.objs)]
+
     ctx.actions.run(
         executable = ctx.executable.sszgen,
         progress_message = "Generating ssz marshal and unmarshal functions",
-        inputs = generated_pb_go_files,
+        inputs = input_files,
         arguments = args,
         outputs = [output],
     )
@@ -56,6 +70,7 @@ go_library(
 ssz_gen_marshal = rule(
     implementation = _ssz_go_proto_library_impl,
     attrs = {
+        "srcs": attr.label_list(allow_files = True),
         "go_proto": attr.label(providers = [GoLibrary]),
         "sszgen": attr.label(
             default = Label("@com_github_ferranbt_fastssz//sszgen:sszgen"),
@@ -63,6 +78,7 @@ ssz_gen_marshal = rule(
             cfg = "host",
         ),
         "objs": attr.string_list(),
+        "includes": attr.label_list(providers = [GoLibrary]),
     },
     outputs = {"out": "generated.ssz.go"},
 )

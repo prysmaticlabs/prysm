@@ -1,5 +1,6 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 load("//tools:fuzz.bzl", "go_fuzz_test")
+load("//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
 
 go_library(
     name = "go_default_library",
@@ -67,18 +68,36 @@ go_test(
     ],
 )
 
+ssz_gen_marshal(
+    name = "ssz_generated_files",
+    srcs = [
+        "fuzz.go",
+    ],
+    includes = [
+        "//proto/beacon/p2p/v1:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+    ],
+    objs = [
+        "InputBlockHeader",
+    ],
+)
+
 go_fuzz_test(
     name = "block_header_fuzz",
     srcs = [
         "fuzz.go",
+        ":ssz_generated_files",
     ],
     corpus = "@sigp_beacon_fuzz_corpora//:0_9_4_mainnet_block_header",
+    data = ["@sigp_beacon_fuzz_corpora//:0_9_4_mainnet_beaconstate"],
     embed = [":go_default_library"],
     func = "Fuzz",
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks",
     deps = [
         "//beacon-chain/state:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
+        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
         "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
         "@com_github_prysmaticlabs_go_ssz//:go_default_library",
-    ],
+    ] + SSZ_DEPS,
 )

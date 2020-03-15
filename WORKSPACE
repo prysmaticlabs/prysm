@@ -1625,7 +1625,6 @@ go_repository(
 
 go_repository(
     name = "com_github_ferranbt_fastssz",
+    commit = "f7a73f06375eb09bbd87a7266b567514b086963c",
     importpath = "github.com/ferranbt/fastssz",
-    sum = "h1:oUQredbOIzWIMmeGR9dTLzSi4DqRVwxrPzSDiLJBp4Q=",
-    version = "v0.0.0-20200310214500-3283b9706406",
 )
