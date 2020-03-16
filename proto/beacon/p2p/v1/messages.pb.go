@@ -179,7 +179,9 @@ func init() {
 	proto.RegisterType((*BeaconBlocksByRangeRequest)(nil), "ethereum.beacon.p2p.v1.BeaconBlocksByRangeRequest")
 }
 
-func init() { proto.RegisterFile("proto/beacon/p2p/v1/messages.proto", fileDescriptor_a1d590cda035b632) }
+func init() {
+	proto.RegisterFile("proto/beacon/p2p/v1/messages.proto", fileDescriptor_a1d590cda035b632)
+}
 
 var fileDescriptor_a1d590cda035b632 = []byte{
 	// 365 bytes of a gzipped FileDescriptorProto

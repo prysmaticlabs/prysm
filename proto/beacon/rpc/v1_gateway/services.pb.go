@@ -248,7 +248,9 @@ func init() {
 	proto.RegisterType((*ExitedValidatorsResponse)(nil), "ethereum.beacon.rpc.v1.ExitedValidatorsResponse")
 }
 
-func init() { proto.RegisterFile("proto/beacon/rpc/v1/services.proto", fileDescriptor_9eb4e94b85965285) }
+func init() {
+	proto.RegisterFile("proto/beacon/rpc/v1/services.proto", fileDescriptor_9eb4e94b85965285)
+}
 
 var fileDescriptor_9eb4e94b85965285 = []byte{
 	// 410 bytes of a gzipped FileDescriptorProto
@@ -282,11 +284,11 @@ var fileDescriptor_9eb4e94b85965285 = []byte{
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ context.Context
-var _ grpc.ClientConn
+var _ grpc.ClientConnInterface
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion4
+const _ = grpc.SupportPackageIsVersion6
 
 // AggregatorServiceClient is the client API for AggregatorService service.
 //
@@ -298,11 +300,11 @@ type AggregatorServiceClient interface {
 }
 
 type aggregatorServiceClient struct {
-	cc *grpc.ClientConn
+	cc grpc.ClientConnInterface
 }
 
 // Deprecated: Do not use.
-func NewAggregatorServiceClient(cc *grpc.ClientConn) AggregatorServiceClient {
+func NewAggregatorServiceClient(cc grpc.ClientConnInterface) AggregatorServiceClient {
 	return &aggregatorServiceClient{cc}
 }
 

@@ -36,14 +36,6 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	defer logOutput(t, tmpPath, config)
 	defer killProcesses(t, processIDs)
 
-	if config.numBeaconNodes > 1 {
-		t.Run("all_peers_connect", func(t *testing.T) {
-			if err := ev.PeersConnect(beaconNodes); err != nil {
-				t.Fatalf("Failed to connect to peers: %v", err)
-			}
-		})
-	}
-
 	beaconLogFile, err := os.Open(path.Join(tmpPath, fmt.Sprintf(beaconNodeLogFileName, 0)))
 	if err != nil {
 		t.Fatal(err)
@@ -57,13 +49,18 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 		return
 	}
 
-	conn, err := grpc.Dial("127.0.0.1:4200", grpc.WithInsecure())
-	if err != nil {
-		t.Fatalf("Failed to dial: %v", err)
-	}
-	beaconClient := eth.NewBeaconChainClient(conn)
-	nodeClient := eth.NewNodeClient(conn)
+	slasherPIDs := startSlashers(t, config)
+	defer killProcesses(t, slasherPIDs)
 
+	conns := make([]*grpc.ClientConn, len(beaconNodes))
+	for i := 0; i < len(conns); i++ {
+		conn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", beaconNodes[i].RPCPort), grpc.WithInsecure())
+		if err != nil {
+			t.Fatalf("Failed to dial: %v", err)
+		}
+		conns[i] = conn
+	}
+	nodeClient := eth.NewNodeClient(conns[0])
 	genesis, err := nodeClient.GetGenesis(context.Background(), &ptypes.Empty{})
 	if err != nil {
 		t.Fatal(err)
@@ -80,16 +77,13 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 				continue
 			}
 			t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
-				if err := evaluator.Evaluation(beaconClient); err != nil {
+				if err := evaluator.Evaluation(conns...); err != nil {
 					t.Errorf("evaluation failed for epoch %d: %v", currentEpoch, err)
 				}
 			})
 		}
 
 		if t.Failed() || currentEpoch >= config.epochsToRun {
-			if err := conn.Close(); err != nil {
-				t.Fatal(err)
-			}
 			ticker.Done()
 			if t.Failed() {
 				return
@@ -98,8 +92,17 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 		}
 	}
 
+	if !config.testSync {
+		return
+	}
+
 	syncNodeInfo := startNewBeaconNode(t, config, beaconNodes)
 	beaconNodes = append(beaconNodes, syncNodeInfo)
+	syncConn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", syncNodeInfo.RPCPort), grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("Failed to dial: %v", err)
+	}
+	conns = append(conns, syncConn)
 	index := uint64(len(beaconNodes) - 1)
 
 	// Sleep until the next epoch to give time for the newly started node to sync.
@@ -112,22 +115,18 @@ func runEndToEndTest(t *testing.T, config *end2EndConfig) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer logErrorOutput(t, syncLogFile, "beacon chain node", index)
+	defer killProcesses(t, []int{syncNodeInfo.ProcessID})
 	if err := waitForTextInFile(syncLogFile, "Synced up to"); err != nil {
 		t.Fatalf("Failed to sync: %v", err)
 	}
 
-	t.Run("node_finishes_sync", func(t *testing.T) {
-		if err := ev.FinishedSyncing(syncNodeInfo.RPCPort); err != nil {
-			t.Fatal(err)
-		}
-	})
-
-	t.Run("all_nodes_have_correct_head", func(t *testing.T) {
-		if err := ev.AllChainsHaveSameHead(beaconNodes); err != nil {
-			t.Fatal(err)
-		}
-	})
-
-	defer logErrorOutput(t, syncLogFile, "beacon chain node", index)
-	defer killProcesses(t, []int{syncNodeInfo.ProcessID})
+	syncEvaluators := []ev.Evaluator{ev.FinishedSyncing, ev.AllNodesHaveSameHead}
+	for _, evaluator := range syncEvaluators {
+		t.Run(evaluator.Name, func(t *testing.T) {
+			if err := evaluator.Evaluation(conns...); err != nil {
+				t.Errorf("evaluation failed for sync node: %v", err)
+			}
+		})
+	}
 }
