@@ -192,7 +192,6 @@ func TestLoadColdStateBySlotIntermediatePlayback_AfterCutoff(t *testing.T) {
 	}
 }
 
-
 func TestLoadColdStateByRoot_UnknownArchivedState(t *testing.T) {
 	ctx := context.Background()
 	db := testDB.SetupDB(t)
@@ -200,8 +199,7 @@ func TestLoadColdStateByRoot_UnknownArchivedState(t *testing.T) {
 
 	service := New(db)
 	service.slotsPerArchivedPoint = 1
-	if _, err := service.loadColdIntermediateStateBySlot(ctx, 0);
-		!strings.Contains(err.Error(), errUnknownArchivedState.Error()) {
+	if _, err := service.loadColdIntermediateStateBySlot(ctx, 0); !strings.Contains(err.Error(), errUnknownArchivedState.Error()) {
 		t.Log(err)
 		t.Error("Did not get wanted error")
 	}
