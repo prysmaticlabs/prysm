@@ -973,7 +973,7 @@ func assertState(state *schedulerState, pending, valid, skipped, failed uint64) 
 	res := s[pendingBlock] != pending || s[validBlock] != valid ||
 		s[skippedBlock] != skipped || s[failedBlock] != failed
 	if res {
-		b := struct{ pending, valid, skipped, failed uint64 }{pending, valid, skipped, failed,}
+		b := struct{ pending, valid, skipped, failed uint64 }{pending, valid, skipped, failed}
 		return fmt.Errorf("invalid state, want: %+v, got: %+v", b, state.requestedBlocks)
 	}
 	return nil
