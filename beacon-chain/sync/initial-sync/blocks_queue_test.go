@@ -191,24 +191,13 @@ func TestBlocksQueueUpdateSchedulerState(t *testing.T) {
 
 		return queue
 	}
-	assertState := func(state *schedulerState, pending, valid, skipped, failed uint64) error {
-		s := state.requestedBlocks
-		res := s.pending != pending || s.valid != valid || s.skipped != skipped || s.failed != failed
-		if res {
-			b := struct{ pending, valid, skipped, failed uint64 }{pending, valid, skipped, failed,}
-			return fmt.Errorf("invalid state, want: %+v, got: %+v", b, state.requestedBlocks)
-		}
-		return nil
-	}
 
 	t.Run("cancelled context", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 
 		queue := setupQueue(ctx)
-		state := queue.state.scheduler
-
 		cancel()
-		if err := assertState(state, 0, 0, 0, 0); err != nil {
+		if err := assertState(queue.state.scheduler, 0, 0, 0, 0); err != nil {
 			t.Error(err)
 		}
 		if err := queue.scheduleFetchRequests(ctx); err != ctx.Err() {
@@ -223,7 +212,7 @@ func TestBlocksQueueUpdateSchedulerState(t *testing.T) {
 		queue := setupQueue(ctx)
 		state := queue.state.scheduler
 
-		if err := assertState(state, 0, 0, 0, 0); err != nil {
+		if err := assertState(queue.state.scheduler, 0, 0, 0, 0); err != nil {
 			t.Error(err)
 		}
 		if err := queue.scheduleFetchRequests(ctx); err != nil {
@@ -243,7 +232,7 @@ func TestBlocksQueueUpdateSchedulerState(t *testing.T) {
 
 		syncToSlot := uint64(7)
 		setBlocksFromCache(ctx, t, mc, syncToSlot)
-		if err := assertState(state, 0, 0, 0, 0); err != nil {
+		if err := assertState(queue.state.scheduler, 0, 0, 0, 0); err != nil {
 			t.Error(err)
 		}
 		if err := queue.scheduleFetchRequests(ctx); err != nil {
@@ -261,17 +250,17 @@ func TestBlocksQueueUpdateSchedulerState(t *testing.T) {
 		queue := setupQueue(ctx)
 		state := queue.state.scheduler
 
-		if err := assertState(state, 0, 0, 0, 0); err != nil {
+		if err := assertState(queue.state.scheduler, 0, 0, 0, 0); err != nil {
 			t.Error(err)
 		}
 
 		// On enough valid blocks, batch size should get back to default value.
 		state.blockBatchSize *= 2
-		state.requestedBlocks.valid = blockBatchSize
-		state.requestedBlocks.pending = 13
-		state.requestedBlocks.skipped = 17
-		state.requestedBlocks.failed = 19
-		if err := assertState(state, 13, blockBatchSize, 17, 19); err != nil {
+		state.requestedBlocks[validBlock] = blockBatchSize
+		state.requestedBlocks[pendingBlock] = 13
+		state.requestedBlocks[skippedBlock] = 17
+		state.requestedBlocks[failedBlock] = 19
+		if err := assertState(queue.state.scheduler, 13, blockBatchSize, 17, 19); err != nil {
 			t.Error(err)
 		}
 		if state.blockBatchSize != 2*blockBatchSize {
@@ -281,7 +270,7 @@ func TestBlocksQueueUpdateSchedulerState(t *testing.T) {
 		if err := queue.scheduleFetchRequests(ctx); err != nil {
 			t.Error(err)
 		}
-		if err := assertState(state, 13+state.blockBatchSize, 0, 17+blockBatchSize, 19); err != nil {
+		if err := assertState(queue.state.scheduler, 13+state.blockBatchSize, 0, 17+blockBatchSize, 19); err != nil {
 			t.Error(err)
 		}
 		if state.blockBatchSize != blockBatchSize {
@@ -296,16 +285,16 @@ func TestBlocksQueueUpdateSchedulerState(t *testing.T) {
 		queue := setupQueue(ctx)
 		state := queue.state.scheduler
 
-		if err := assertState(state, 0, 0, 0, 0); err != nil {
+		if err := assertState(queue.state.scheduler, 0, 0, 0, 0); err != nil {
 			t.Error(err)
 		}
 
 		// On too many failures, batch size should get doubled and counters reset.
-		state.requestedBlocks.valid = 19
-		state.requestedBlocks.pending = 13
-		state.requestedBlocks.skipped = 17
-		state.requestedBlocks.failed = blockBatchSize
-		if err := assertState(state, 13, 19, 17, blockBatchSize); err != nil {
+		state.requestedBlocks[validBlock] = 19
+		state.requestedBlocks[pendingBlock] = 13
+		state.requestedBlocks[skippedBlock] = 17
+		state.requestedBlocks[failedBlock] = blockBatchSize
+		if err := assertState(queue.state.scheduler, 13, 19, 17, blockBatchSize); err != nil {
 			t.Error(err)
 		}
 		if state.blockBatchSize != blockBatchSize {
@@ -318,7 +307,7 @@ func TestBlocksQueueUpdateSchedulerState(t *testing.T) {
 		if state.blockBatchSize != 2*blockBatchSize {
 			t.Errorf("unexpected batch size, want: %v, got: %v", 2*blockBatchSize, state.blockBatchSize)
 		}
-		if err := assertState(state, state.blockBatchSize, 0, 0, 0); err != nil {
+		if err := assertState(queue.state.scheduler, state.blockBatchSize, 0, 0, 0); err != nil {
 			t.Error(err)
 		}
 	})
@@ -330,16 +319,16 @@ func TestBlocksQueueUpdateSchedulerState(t *testing.T) {
 		queue := setupQueue(ctx)
 		state := queue.state.scheduler
 
-		if err := assertState(state, 0, 0, 0, 0); err != nil {
+		if err := assertState(queue.state.scheduler, 0, 0, 0, 0); err != nil {
 			t.Error(err)
 		}
 
 		// On too many cached items, batch size and counters should reset.
-		state.requestedBlocks.valid = queueMaxCachedBlocks
-		state.requestedBlocks.pending = 13
-		state.requestedBlocks.skipped = 17
-		state.requestedBlocks.failed = 19
-		if err := assertState(state, 13, queueMaxCachedBlocks, 17, 19); err != nil {
+		state.requestedBlocks[validBlock] = queueMaxCachedBlocks
+		state.requestedBlocks[pendingBlock] = 13
+		state.requestedBlocks[skippedBlock] = 17
+		state.requestedBlocks[failedBlock] = 19
+		if err := assertState(queue.state.scheduler, 13, queueMaxCachedBlocks, 17, 19); err != nil {
 			t.Error(err)
 		}
 		if state.blockBatchSize != blockBatchSize {
@@ -353,7 +342,7 @@ func TestBlocksQueueUpdateSchedulerState(t *testing.T) {
 		if state.blockBatchSize != blockBatchSize {
 			t.Errorf("unexpected batch size, want: %v, got: %v", blockBatchSize, state.blockBatchSize)
 		}
-		if err := assertState(state, state.blockBatchSize, 0, 0, 0); err != nil {
+		if err := assertState(queue.state.scheduler, state.blockBatchSize, 0, 0, 0); err != nil {
 			t.Error(err)
 		}
 	})
@@ -365,17 +354,17 @@ func TestBlocksQueueUpdateSchedulerState(t *testing.T) {
 		queue := setupQueue(ctx)
 		state := queue.state.scheduler
 
-		if err := assertState(state, 0, 0, 0, 0); err != nil {
+		if err := assertState(queue.state.scheduler, 0, 0, 0, 0); err != nil {
 			t.Error(err)
 		}
 
 		// On too many cached items, batch size and counters should reset.
 		state.blockBatchSize = 2 * blockBatchSize
-		state.requestedBlocks.pending = 0
-		state.requestedBlocks.valid = 1
-		state.requestedBlocks.skipped = 1
-		state.requestedBlocks.failed = 1
-		if err := assertState(state, 0, 1, 1, 1); err != nil {
+		state.requestedBlocks[pendingBlock] = 0
+		state.requestedBlocks[validBlock] = 1
+		state.requestedBlocks[skippedBlock] = 1
+		state.requestedBlocks[failedBlock] = 1
+		if err := assertState(queue.state.scheduler, 0, 1, 1, 1); err != nil {
 			t.Error(err)
 		}
 		if state.blockBatchSize != 2*blockBatchSize {
@@ -389,7 +378,7 @@ func TestBlocksQueueUpdateSchedulerState(t *testing.T) {
 		if state.blockBatchSize != blockBatchSize {
 			t.Errorf("unexpected batch size, want: %v, got: %v", blockBatchSize, state.blockBatchSize)
 		}
-		if err := assertState(state, state.blockBatchSize, 0, 0, 0); err != nil {
+		if err := assertState(queue.state.scheduler, state.blockBatchSize, 0, 0, 0); err != nil {
 			t.Error(err)
 		}
 	})
@@ -426,15 +415,6 @@ func TestBlocksQueueScheduleFetchRequests(t *testing.T) {
 		})
 
 		return queue
-	}
-	assertState := func(state *schedulerState, pending, valid, skipped, failed uint64) error {
-		s := state.requestedBlocks
-		res := s.pending != pending || s.valid != valid || s.skipped != skipped || s.failed != failed
-		if res {
-			b := struct{ pending, valid, skipped, failed uint64 }{pending, valid, skipped, failed,}
-			return fmt.Errorf("invalid state, want: %+v, got: %+v", b, state.requestedBlocks)
-		}
-		return nil
 	}
 
 	t.Run("check start/count boundaries", func(t *testing.T) {
@@ -500,11 +480,11 @@ func TestBlocksQueueScheduleFetchRequests(t *testing.T) {
 		if err := assertState(state, end*blockBatchSize, 0, 0, 0); err != nil {
 			t.Error(err)
 		}
-		state.incrementCounter(failedBlockCounter, 25)
+		state.incrementCounter(failedBlock, 25)
 		if err := assertState(state, end*blockBatchSize-25, 0, 0, 25); err != nil {
 			t.Error(err)
 		}
-		state.incrementCounter(failedBlockCounter, 500) // too high value shouldn't cause issues
+		state.incrementCounter(failedBlock, 500) // too high value shouldn't cause issues
 		if err := assertState(state, 0, 0, 0, end*blockBatchSize); err != nil {
 			t.Error(err)
 		}
@@ -546,11 +526,11 @@ func TestBlocksQueueScheduleFetchRequests(t *testing.T) {
 		if err := assertState(state, end*blockBatchSize, 0, 0, 0); err != nil {
 			t.Error(err)
 		}
-		state.incrementCounter(skippedBlockCounter, 25)
+		state.incrementCounter(skippedBlock, 25)
 		if err := assertState(state, end*blockBatchSize-25, 0, 25, 0); err != nil {
 			t.Error(err)
 		}
-		state.incrementCounter(skippedBlockCounter, 500) // too high value shouldn't cause issues
+		state.incrementCounter(skippedBlock, 500) // too high value shouldn't cause issues
 		if err := assertState(state, 0, 0, end*blockBatchSize, 0); err != nil {
 			t.Error(err)
 		}
@@ -575,7 +555,7 @@ func TestBlocksQueueScheduleFetchRequests(t *testing.T) {
 		queue := setupQueue(ctx)
 		state := queue.state.scheduler
 
-		state.requestedBlocks.failed = blockBatchSize
+		state.requestedBlocks[failedBlock] = blockBatchSize
 
 		// Increase block batch size.
 		if err := queue.scheduleFetchRequests(ctx); err != nil {
@@ -589,10 +569,10 @@ func TestBlocksQueueScheduleFetchRequests(t *testing.T) {
 		}
 
 		// Reset block batch size.
-		state.requestedBlocks.valid = blockBatchSize
-		state.requestedBlocks.pending = 1
-		state.requestedBlocks.failed = 1
-		state.requestedBlocks.skipped = 1
+		state.requestedBlocks[validBlock] = blockBatchSize
+		state.requestedBlocks[pendingBlock] = 1
+		state.requestedBlocks[failedBlock] = 1
+		state.requestedBlocks[skippedBlock] = 1
 		if err := assertState(state, 1, blockBatchSize, 1, 1); err != nil {
 			t.Error(err)
 		}
@@ -614,7 +594,7 @@ func TestBlocksQueueScheduleFetchRequests(t *testing.T) {
 		queue := setupQueue(ctx)
 		state := queue.state.scheduler
 
-		state.requestedBlocks.pending = queueMaxCachedBlocks
+		state.requestedBlocks[pendingBlock] = queueMaxCachedBlocks
 		if err := queue.scheduleFetchRequests(ctx); err != nil {
 			t.Error(err)
 		}
@@ -933,11 +913,11 @@ func TestBlocksQueueLoop(t *testing.T) {
 			var blocks []*eth.SignedBeaconBlock
 			for block := range queue.fetchedBlocks {
 				if err := processBlock(block); err != nil {
-					queue.state.scheduler.incrementCounter(failedBlockCounter, 1)
+					queue.state.scheduler.incrementCounter(failedBlock, 1)
 					continue
 				}
 				blocks = append(blocks, block)
-				queue.state.scheduler.incrementCounter(validBlockCounter, 1)
+				queue.state.scheduler.incrementCounter(validBlock, 1)
 			}
 
 			if err := queue.stop(); err != nil {
@@ -988,4 +968,14 @@ func setBlocksFromCache(ctx context.Context, t *testing.T, mc *mock.ChainService
 		//logrus.Infof("block with slot %d , signing root %#x and parent root %#x", slot, currRoot, parentRoot)
 		parentRoot = currRoot
 	}
+}
+func assertState(state *schedulerState, pending, valid, skipped, failed uint64) error {
+	s := state.requestedBlocks
+	res := s[pendingBlock] != pending || s[validBlock] != valid ||
+		s[skippedBlock] != skipped || s[failedBlock] != failed
+	if res {
+		b := struct{ pending, valid, skipped, failed uint64 }{pending, valid, skipped, failed,}
+		return fmt.Errorf("invalid state, want: %+v, got: %+v", b, state.requestedBlocks)
+	}
+	return nil
 }
