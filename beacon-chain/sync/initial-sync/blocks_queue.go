@@ -387,7 +387,7 @@ func (q *blocksQueue) sendFetchedBlocks(ctx context.Context) error {
 
 	// Remove processed blocks.
 	if nonSkippedSlot > 0 {
-		for slot, _ := range q.state.cachedBlocks {
+		for slot := range q.state.cachedBlocks {
 			if slot <= nonSkippedSlot {
 				delete(q.state.cachedBlocks, slot)
 			}
