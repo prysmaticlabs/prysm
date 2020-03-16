@@ -326,6 +326,8 @@ func (b *BeaconState) UpdateValidatorAtIndex(idx uint64, val *ethpb.Validator) e
 	v[idx] = val
 	b.state.Validators = v
 	b.markFieldAsDirty(validators)
+	b.dirtyIndexes[validators] = append(b.dirtyIndexes[validators], idx)
+
 	return nil
 }
 

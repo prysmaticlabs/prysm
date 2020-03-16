@@ -31,33 +31,35 @@ func NewFieldTrie(field fieldIndex, elements [][]byte, length uint64) *FieldTrie
 	}
 }
 
-func (f *FieldTrie) RecomputeTrie(indices []uint64, elements [][]byte) ([32]byte, error) {
+func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]byte, error) {
 	f.Lock()
 	defer f.Unlock()
-	var err error
 	var fieldRoot [32]byte
-	for _, idx := range indices {
-		root := bytesutil.ToBytes32(elements[idx])
-		f.fieldLayers[0][idx] = &root
+	datType, ok := fieldMap[f.field]
+	if !ok {
+		return [32]byte{}, errors.Errorf("unrecognized field in trie")
 	}
-	fieldRoot, f.fieldLayers, err = stateutil.RecomputeFromLayer(f.fieldLayers, indices)
+	fieldRoots, err := fieldConverters(f.field, indices, elements)
 	if err != nil {
 		return [32]byte{}, err
 	}
-	return fieldRoot, nil
-}
-
-func (f *FieldTrie) RecomputeTrieVariable(indices []uint64, elements [][32]byte) ([32]byte, error) {
-	f.Lock()
-	defer f.Unlock()
-	var err error
-	var fieldRoot [32]byte
-
-	fieldRoot, f.fieldLayers, err = stateutil.RecomputeFromLayerVariable(elements, f.fieldLayers, indices)
-	if err != nil {
-		return [32]byte{}, err
+	switch datType {
+	case basicArray:
+		fieldRoot, f.fieldLayers, err = stateutil.RecomputeFromLayer(fieldRoots, indices, f.fieldLayers)
+		if err != nil {
+			return [32]byte{}, err
+		}
+		return fieldRoot, nil
+	case compositeArray:
+		fieldRoot, f.fieldLayers, err = stateutil.RecomputeFromLayerVariable(fieldRoots, indices, f.fieldLayers)
+		if err != nil {
+			return [32]byte{}, err
+		}
+		return stateutil.AddInMixin(fieldRoot, uint64(len(f.fieldLayers[0])))
+	default:
+		return [32]byte{}, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(datType).Name())
 	}
-	return fieldRoot, nil
+
 }
 
 func (f *FieldTrie) CopyTrie() *FieldTrie {
@@ -98,15 +100,19 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 	}
 }
 
-func fieldConverters(field fieldIndex, elements interface{}) ([][32]byte, error) {
+func fieldConverters(field fieldIndex, indices []uint64, elements interface{}) ([][32]byte, error) {
 	switch field {
 	case blockRoots, stateRoots, randaoMixes:
-		val, ok := elements.([][32]byte)
+		val, ok := elements.([][]byte)
 		if !ok {
 			return nil, errors.Errorf("Wanted type of %v but got %v",
-				reflect.TypeOf([][32]byte{}).Name(), reflect.TypeOf(elements).Name())
+				reflect.TypeOf([][]byte{}).Name(), reflect.TypeOf(elements).Name())
 		}
-		return val, nil
+		roots := [][32]byte{}
+		for _, idx := range indices {
+			roots = append(roots, bytesutil.ToBytes32(val[idx]))
+		}
+		return roots, nil
 	case eth1DataVotes:
 		val, ok := elements.([]*ethpb.Eth1Data)
 		if !ok {
@@ -114,8 +120,8 @@ func fieldConverters(field fieldIndex, elements interface{}) ([][32]byte, error)
 				reflect.TypeOf([]*ethpb.Eth1Data{}).Name(), reflect.TypeOf(elements).Name())
 		}
 		roots := [][32]byte{}
-		for i := range val {
-			newRoot, err := stateutil.Eth1Root(val[i])
+		for _, idx := range indices {
+			newRoot, err := stateutil.Eth1Root(val[idx])
 			if err != nil {
 				return nil, err
 			}
@@ -129,8 +135,8 @@ func fieldConverters(field fieldIndex, elements interface{}) ([][32]byte, error)
 				reflect.TypeOf([]*ethpb.Validator{}).Name(), reflect.TypeOf(elements).Name())
 		}
 		roots := [][32]byte{}
-		for i := range val {
-			newRoot, err := stateutil.ValidatorRoot(val[i])
+		for _, idx := range indices {
+			newRoot, err := stateutil.ValidatorRoot(val[idx])
 			if err != nil {
 				return nil, err
 			}
@@ -144,8 +150,8 @@ func fieldConverters(field fieldIndex, elements interface{}) ([][32]byte, error)
 				reflect.TypeOf([]*pb.PendingAttestation{}).Name(), reflect.TypeOf(elements).Name())
 		}
 		roots := [][32]byte{}
-		for i := range val {
-			newRoot, err := stateutil.PendingAttestationRoot(val[i])
+		for _, idx := range indices {
+			newRoot, err := stateutil.PendingAttestationRoot(val[idx])
 			if err != nil {
 				return nil, err
 			}

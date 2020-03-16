@@ -91,19 +91,17 @@ func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
 	return layers
 }
 
-func RecomputeFromLayer(layer [][]*[32]byte, changedIdx []uint64) ([32]byte, [][]*[32]byte, error) {
+func RecomputeFromLayer(changedLeaves [][32]byte, changedIdx []uint64, layer [][]*[32]byte) ([32]byte, [][]*[32]byte, error) {
 	hasher := hashutil.CustomSHA256Hasher()
-	leaves := layer[0]
-
-	/*leaves := make([]*[32]byte, len(layer[0]))
-	for i, chunk := range layer[0] {
-		newChunk := *chunk
-		leaves[i] = &newChunk
-	} */
+	for i, idx := range changedIdx {
+		layer[0][idx] = &changedLeaves[i]
+	}
 
 	if len(changedIdx) == 0 {
 		return *layer[0][0], layer, nil
 	}
+
+	leaves := layer[0]
 
 	// We need to ensure we recompute indices of the Merkle tree which
 	// changed in-between calls to this function. This check adds an offset
@@ -125,26 +123,16 @@ func RecomputeFromLayer(layer [][]*[32]byte, changedIdx []uint64) ([32]byte, [][
 	return root, layer, nil
 }
 
-func RecomputeFromLayerVariable(changedElements [][32]byte, layer [][]*[32]byte, changedIdx []uint64) ([32]byte, [][]*[32]byte, error) {
+func RecomputeFromLayerVariable(changedLeaves [][32]byte, changedIdx []uint64, layer [][]*[32]byte) ([32]byte, [][]*[32]byte, error) {
 	hasher := hashutil.CustomSHA256Hasher()
 	if len(changedIdx) == 0 {
 		return *layer[0][0], layer, nil
 	}
-
-	/*
-		// We need to ensure we recompute indices of the Merkle tree which
-		// changed in-between calls to this function. This check adds an offset
-		// to the recomputed indices to ensure we do so evenly.
-		maxChangedIndex := changedIdx[len(changedIdx)-1]
-		if int(maxChangedIndex+2) == len(leaves) && maxChangedIndex%2 != 0 {
-			changedIdx = append(changedIdx, maxChangedIndex+1)
-		} */
-
 	root := *layer[len(layer)-1][0]
 	var err error
 
 	for i, idx := range changedIdx {
-		root, layer, err = recomputeRootFromLayerVariable(int(idx), changedElements[i], layer, hasher)
+		root, layer, err = recomputeRootFromLayerVariable(int(idx), changedLeaves[i], layer, hasher)
 		if err != nil {
 			return [32]byte{}, nil, err
 		}
@@ -379,7 +367,6 @@ func recomputeRootFromLayerVariable(idx int, item [32]byte, layers [][]*[32]byte
 		neighbor := [32]byte{}
 		if neighborIdx >= len(layers[i]) {
 			neighbor = trieutil.ZeroHashes[i]
-			layers[i] = append(layers[i], &neighbor)
 		} else {
 			neighbor = *layers[i][neighborIdx]
 		}

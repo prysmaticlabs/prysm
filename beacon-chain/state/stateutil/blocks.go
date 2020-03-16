@@ -128,18 +128,6 @@ func Eth1DataVotesRootWithTrie(eth1DataVotes []*ethpb.Eth1Data) ([][]*[32]byte, 
 	return layers, nil
 }
 
-func ReturnChangedEth1Data(eth1DataVotes []*ethpb.Eth1Data, indices []uint64) ([][32]byte, error) {
-	roots := [][32]byte{}
-	for i := range indices {
-		newRoot, err := Eth1Root(eth1DataVotes[indices[i]])
-		if err != nil {
-			return nil, err
-		}
-		roots = append(roots, newRoot)
-	}
-	return roots, nil
-}
-
 func AddInMixin(root [32]byte, length uint64) ([32]byte, error) {
 	rootBuf := new(bytes.Buffer)
 	if err := binary.Write(rootBuf, binary.LittleEndian, length); err != nil {

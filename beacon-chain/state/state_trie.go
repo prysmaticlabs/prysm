@@ -58,6 +58,18 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 			reference:   &reference{1},
 			Mutex:       new(sync.Mutex),
 		}
+
+		layers, err = stateutil.ValidatorsRootWithTrie(b.state.Validators)
+		if err != nil {
+			panic(err)
+		}
+
+		b.stateFieldLeaves[validators] = &FieldTrie{
+			fieldLayers: layers,
+			field:       validators,
+			reference:   &reference{1},
+			Mutex:       new(sync.Mutex),
+		}
 	}
 
 	// Initialize field reference tracking for shared data.
@@ -330,10 +342,13 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 					log.Fatalf("different roots for field %d and diff %s", field, diff)
 					return root, err
 				}*/
-			return b.recomputeFieldTrieTest(field, b.state.Eth1DataVotes)
+			return b.recomputeFieldTrie(field, b.state.Eth1DataVotes)
 		}
 		return stateutil.Eth1DataVotesRoot(b.state.Eth1DataVotes)
 	case validators:
+		if featureconfig.Get().EnableSSZCache {
+			return b.recomputeFieldTrie(validators, b.state.Validators)
+		}
 		return stateutil.ValidatorRegistryRoot(b.state.Validators)
 	case balances:
 		return stateutil.ValidatorBalancesRoot(b.state.Balances)
@@ -377,7 +392,7 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	return [32]byte{}, errors.New("invalid field index provided")
 }
 
-func (b *BeaconState) recomputeFieldTrie(index fieldIndex, elements [][]byte) ([32]byte, error) {
+func (b *BeaconState) recomputeFieldTrie(index fieldIndex, elements interface{}) ([32]byte, error) {
 	fTrie := b.stateFieldLeaves[index]
 	if fTrie.refs > 1 {
 		fTrie.Lock()
@@ -396,6 +411,7 @@ func (b *BeaconState) recomputeFieldTrie(index fieldIndex, elements [][]byte) ([
 	return root, nil
 }
 
+/*
 func (b *BeaconState) recomputeFieldTrieTest(index fieldIndex, elements []*ethpb.Eth1Data) ([32]byte, error) {
 	fTrie := b.stateFieldLeaves[index]
 	if fTrie.refs > 1 {
@@ -417,7 +433,7 @@ func (b *BeaconState) recomputeFieldTrieTest(index fieldIndex, elements []*ethpb
 	b.dirtyIndexes[index] = []uint64{}
 
 	return stateutil.AddInMixin(root, uint64(len(elements)))
-}
+} */
 
 func (b *BeaconState) resetFieldTrieTest(index fieldIndex, elements []*ethpb.Eth1Data) ([32]byte, error) {
 	fTrie := b.stateFieldLeaves[index]
