@@ -3,6 +3,9 @@
 package fuzz
 
 import (
+	"context"
+
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -10,11 +13,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// BeaconFuzz using the corpora from sigp/beacon-fuzz.
-func BeaconFuzzBlockHeader(b []byte) ([]byte, bool) {
+func BeaconFuzzProposerSlashing(b []byte) ([]byte, bool) {
 	params.UseMainnetConfig()
-	input := &InputBlockHeader{}
-	if err := ssz.Unmarshal(b, input); err != nil {
+	input := &InputProposerSlashingWrapper{}
+	if err := input.UnmarshalSSZ(b); err != nil {
+		//if err := ssz.Unmarshal(b, input); err != nil {
 		return fail(err)
 	}
 	s := prylabs_testing.GetBeaconFuzzState(input.StateID)
@@ -25,7 +28,7 @@ func BeaconFuzzBlockHeader(b []byte) ([]byte, bool) {
 	if err != nil {
 		return fail(err)
 	}
-	post, err := blocks.ProcessBlockHeaderNoVerify(st, input.Block)
+	post, err := blocks.ProcessProposerSlashings(context.Background(), st, &ethpb.BeaconBlockBody{ProposerSlashings: []*ethpb.ProposerSlashing{input.ProposerSlashing}})
 	if err != nil {
 		return fail(err)
 	}
@@ -36,4 +39,3 @@ func BeaconFuzzBlockHeader(b []byte) ([]byte, bool) {
 	}
 	return result, true
 }
-

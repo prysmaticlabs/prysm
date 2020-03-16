@@ -18,3 +18,18 @@ type InputAttestationWrapper struct {
 	StateID     uint16
 	Attestation *ethpb.Attestation
 }
+
+type InputDepositWrapper struct {
+	StateID uint16
+	Deposit *ethpb.Deposit
+}
+
+type InputVoluntaryExitWrapper struct {
+	StateID       uint16
+	VoluntaryExit *ethpb.VoluntaryExit
+}
+
+type InputProposerSlashingWrapper struct {
+	StateID          uint16
+	ProposerSlashing *ethpb.ProposerSlashing
+}

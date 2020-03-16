@@ -411,7 +411,7 @@ func ProcessBlockNoVerifyAttSigs(
 		return nil, errors.Wrap(err, "could not process eth1 data")
 	}
 
-	state, err = processOperationsNoVerify(ctx, state, signed.Block.Body)
+	state, err = ProcessOperationsNoVerify(ctx, state, signed.Block.Body)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block operation")
@@ -477,7 +477,7 @@ func ProcessOperations(
 	return state, nil
 }
 
-// processOperationsNoVerify processes the operations in the beacon block and updates beacon state
+// ProcessOperationsNoVerify processes the operations in the beacon block and updates beacon state
 // with the operations in block. It does not verify attestation signatures or voluntary exit signatures.
 //
 // WARNING: This method does not verify attestation signatures or voluntary exit signatures.
@@ -502,7 +502,7 @@ func ProcessOperations(
 //    for operations, function in all_operations:
 //        for operation in operations:
 //            function(state, operation)
-func processOperationsNoVerify(
+func ProcessOperationsNoVerify(
 	ctx context.Context,
 	state *stateTrie.BeaconState,
 	body *ethpb.BeaconBlockBody) (*stateTrie.BeaconState, error) {
@@ -668,7 +668,7 @@ func ProcessBlockForStateRoot(
 		return nil, errors.Wrap(err, "could not process eth1 data")
 	}
 
-	state, err = processOperationsNoVerify(ctx, state, signed.Block.Body)
+	state, err = ProcessOperationsNoVerify(ctx, state, signed.Block.Body)
 	if err != nil {
 		traceutil.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not process block operation")

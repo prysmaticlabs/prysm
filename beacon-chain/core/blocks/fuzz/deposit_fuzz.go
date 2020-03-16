@@ -1,5 +1,3 @@
-// +build libfuzzer
-
 package fuzz
 
 import (
@@ -10,10 +8,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// BeaconFuzz using the corpora from sigp/beacon-fuzz.
-func BeaconFuzzBlockHeader(b []byte) ([]byte, bool) {
+func BeaconFuzzDeposit(b []byte) ([]byte, bool) {
 	params.UseMainnetConfig()
-	input := &InputBlockHeader{}
+	input := &InputDepositWrapper{}
 	if err := ssz.Unmarshal(b, input); err != nil {
 		return fail(err)
 	}
@@ -25,7 +22,7 @@ func BeaconFuzzBlockHeader(b []byte) ([]byte, bool) {
 	if err != nil {
 		return fail(err)
 	}
-	post, err := blocks.ProcessBlockHeaderNoVerify(st, input.Block)
+	post, err := blocks.ProcessDeposit(st, input.Deposit)
 	if err != nil {
 		return fail(err)
 	}
@@ -36,4 +33,3 @@ func BeaconFuzzBlockHeader(b []byte) ([]byte, bool) {
 	}
 	return result, true
 }
-
