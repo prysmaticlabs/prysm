@@ -66,10 +66,17 @@ func (s *State) ComputeStateUpToSlot(ctx context.Context, targetSlot uint64) (*s
 
 // ReplayBlocks replays the input blocks on the input state until the target slot is reached.
 func (s *State) ReplayBlocks(ctx context.Context, state *state.BeaconState, signed []*ethpb.SignedBeaconBlock, targetSlot uint64) (*state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.ReplayBlocks")
+	defer span.End()
+
 	var err error
 	// The input block list is sorted in decreasing slots order.
 	if len(signed) > 0 {
 		for i := len(signed) - 1; i >= 0; i-- {
+			if state.Slot() >= targetSlot {
+				break
+			}
+
 			if featureconfig.Get().EnableStateGenSigVerify {
 				state, err = transition.ExecuteStateTransition(ctx, state, signed[i])
 				if err != nil {
@@ -85,15 +92,17 @@ func (s *State) ReplayBlocks(ctx context.Context, state *state.BeaconState, sign
 	}
 
 	// If there is skip slots at the end.
-	if featureconfig.Get().EnableStateGenSigVerify {
-		state, err = transition.ProcessSlots(ctx, state, targetSlot)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		state, err = processSlotsStateGen(ctx, state, targetSlot)
-		if err != nil {
-			return nil, err
+	if targetSlot > state.Slot() {
+		if featureconfig.Get().EnableStateGenSigVerify {
+			state, err = transition.ProcessSlots(ctx, state, targetSlot)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			state, err = processSlotsStateGen(ctx, state, targetSlot)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 

@@ -68,7 +68,9 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedState *state.BeaconS
 			if err := s.beaconDB.SaveArchivedPointRoot(ctx, r, archivedPointIndex); err != nil {
 				return err
 			}
-
+			if err := s.beaconDB.SaveLastArchivedIndex(ctx, archivedPointIndex); err != nil {
+				return err
+			}
 			log.WithFields(logrus.Fields{
 				"slot":         stateSummary.Slot,
 				"archiveIndex": archivedPointIndex,

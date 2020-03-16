@@ -409,11 +409,16 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		// would be the genesis state and block.
 		return errors.New("no finalized epoch in the database")
 	}
+	finalizedRoot := bytesutil.ToBytes32(finalized.Root)
 	var finalizedState *stateTrie.BeaconState
 	if featureconfig.Get().NewStateMgmt {
-		finalizedState, err = s.stateGen.Resume(ctx, bytesutil.ToBytes32(finalized.Root))
+		finalizedRoot = s.beaconDB.LastArchivedIndexRoot(ctx)
+		finalizedState, err = s.stateGen.Resume(ctx, finalizedRoot)
 		if err != nil {
 			return errors.Wrap(err, "could not get finalized state from db")
+		}
+		if finalizedRoot == params.BeaconConfig().ZeroHash {
+			finalizedRoot = bytesutil.ToBytes32(finalized.Root)
 		}
 	} else {
 		finalizedState, err = s.beaconDB.State(ctx, bytesutil.ToBytes32(finalized.Root))
@@ -422,7 +427,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		}
 	}
 
-	finalizedBlock, err := s.beaconDB.Block(ctx, bytesutil.ToBytes32(finalized.Root))
+	finalizedBlock, err := s.beaconDB.Block(ctx, finalizedRoot)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized block from db")
 	}
@@ -431,7 +436,7 @@ func (s *Service) initializeChainInfo(ctx context.Context) error {
 		return errors.New("finalized state and block can't be nil")
 	}
 
-	s.setHead(bytesutil.ToBytes32(finalized.Root), finalizedBlock, finalizedState)
+	s.setHead(finalizedRoot, finalizedBlock, finalizedState)
 
 	return nil
 }

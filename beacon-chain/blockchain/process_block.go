@@ -198,8 +198,13 @@ func (s *Service) onBlockInitialSyncStateTransition(ctx context.Context, signed 
 	if err != nil {
 		return err
 	}
-	preStateValidatorCount := preState.NumValidators()
 
+	// Exit early if the pre state slot is higher than incoming block's slot.
+	if preState.Slot() >= signed.Block.Slot {
+		return nil
+	}
+
+	preStateValidatorCount := preState.NumValidators()
 	postState, err := state.ExecuteStateTransitionNoVerifyAttSigs(ctx, preState, signed)
 	if err != nil {
 		return errors.Wrap(err, "could not execute state transition")

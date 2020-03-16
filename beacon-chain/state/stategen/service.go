@@ -46,38 +46,33 @@ func New(db db.NoHeadAccessDatabase) *State {
 }
 
 // Resume resumes a new state management object from previously saved finalized check point in DB.
-func (s *State) Resume(ctx context.Context, finalizedRoot [32]byte) (*state.BeaconState, error) {
+func (s *State) Resume(ctx context.Context, lastArchivedRoot [32]byte) (*state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.Resume")
 	defer span.End()
 
-	finalizedSummary, err := s.beaconDB.StateSummary(ctx, finalizedRoot)
+	lastArchivedState, err := s.beaconDB.LastArchivedIndexState(ctx)
 	if err != nil {
 		return nil, err
 	}
-	finalizedState, err := s.beaconDB.State(ctx, finalizedRoot)
-	if err != nil {
-		return nil, err
+	if lastArchivedState == nil {
+		return s.beaconDB.GenesisState(ctx)
 	}
-	if finalizedState == nil {
-		finalizedState, err = s.ComputeStateUpToSlot(ctx, finalizedSummary.Slot)
-		if err != nil {
-			return nil, err
-		}
-	}
-	s.splitInfo = &splitSlotAndRoot{slot: finalizedState.Slot(), root: finalizedRoot}
-	if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: finalizedState.Slot(), Root: finalizedRoot[:], BoundaryRoot: finalizedRoot[:]}); err != nil {
+
+	s.splitInfo = &splitSlotAndRoot{slot: lastArchivedState.Slot(), root: lastArchivedRoot}
+
+	if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: lastArchivedState.Slot(), Root: lastArchivedRoot[:], BoundaryRoot: lastArchivedRoot[:]}); err != nil {
 		return nil, err
 	}
 
 	// In case the finalized state slot was skipped.
-	slot := finalizedState.Slot()
+	slot := lastArchivedState.Slot()
 	if !helpers.IsEpochStart(slot) {
 		slot = helpers.StartSlot(helpers.SlotToEpoch(slot) + 1)
 	}
 
-	s.setEpochBoundaryRoot(slot, finalizedRoot)
+	s.setEpochBoundaryRoot(slot, lastArchivedRoot)
 
-	return finalizedState, nil
+	return lastArchivedState, nil
 }
 
 // This verifies the archive point frequency is valid. It checks the interval
