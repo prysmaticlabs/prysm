@@ -4,7 +4,6 @@ package fuzz
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"strings"
 
@@ -14,8 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
-	p2ppb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	prylabs_testing "github.com/prysmaticlabs/prysm/beacon-chain/testing"
 )
 
 const PanicOnError = "false"
@@ -37,19 +36,16 @@ func bazelFileBytes(path string) ([]byte, error) {
 	return fileBytes, nil
 }
 
-func Fuzz(b []byte) ([]byte, bool) {
+// BeaconFuzz using the corpora from sigp/beacon-fuzz.
+func BeaconFuzz(b []byte) ([]byte, bool) {
 	params.UseMainnetConfig()
 	input := &InputBlockHeader{}
 	if err := ssz.Unmarshal(b, input); err != nil {
 		return fail(err)
 	}
-	b, err := bazelFileBytes(fmt.Sprintf("external/sigp_beacon_fuzz_corpora/0-9-4/mainnet/beaconstate/%d", input.StateID))
-	if err != nil {
-		return fail(err)
-	}
-	s := &p2ppb.BeaconState{}
-	if err := ssz.Unmarshal(b, s); err != nil {
-		return fail(err)
+	s := prylabs_testing.GetBeaconFuzzState(input.StateID)
+	if s == nil {
+		return nil, false
 	}
 	st, err := stateTrie.InitializeFromProto(s)
 	if err != nil {

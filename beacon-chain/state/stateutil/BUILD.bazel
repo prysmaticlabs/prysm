@@ -11,6 +11,7 @@ go_library(
         "state_root.go",
         "validators.go",
     ],
+    gc_goopts = ["-d=libfuzzer"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil",
     visibility = [
         "//beacon-chain:__subpackages__",

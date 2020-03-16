@@ -5,11 +5,43 @@ filegroup(
     srcs = glob(["**"]),
 )
 
-# TODO: Generate from dict.
+# See: https://github.com/sigp/beacon-fuzz-corpora
+
+current_version = "0_9_4"
+
+alias(
+    name = "current_mainnet_attestation",
+    actual = ":" + current_version + "_mainnet_attestation",
+)
+
+alias(
+    name = "current_mainnet_attester_slashing",
+    actual = ":" + current_version + "_mainnet_attester_slashing",
+)
+
+alias(
+    name = "current_mainnet_block_header",
+    actual = ":" + current_version + "_mainnet_block_header",
+)
+
+alias(
+    name = "current_mainnet_beaconstate",
+    actual = ":" + current_version + "_mainnet_beaconstate",
+)
+
+alias(
+    name = "current_mainnet_proposer_slashing",
+    actual = ":" + current_version + "_mainnet_proposer_slashing",
+)
 
 filegroup(
-    name = "0_9_3_mainnet_block_header",
-    srcs = glob(["0-9-3/mainnet/block_header/*"]),
+    name = "0_9_4_mainnet_attestation",
+    srcs = glob(["0-9-4/mainnet/attestation/*"]),
+)
+
+filegroup(
+    name = "0_9_4_mainnet_attester_slashing",
+    srcs = glob(["0-9-4/mainnet/attester_slashing/*"]),
 )
 
 filegroup(
@@ -20,4 +52,9 @@ filegroup(
 filegroup(
     name = "0_9_4_mainnet_beaconstate",
     srcs = glob(["0-9-4/mainnet/beaconstate/*"]),
+)
+
+filegroup(
+    name = "0_9_4_mainnet_proposer_slashing",
+    srcs = glob(["0-9-4/mainnet/proposer_slashing/*"]),
 )

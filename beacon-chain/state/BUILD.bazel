@@ -8,6 +8,7 @@ go_library(
         "setters.go",
         "types.go",
     ],
+    gc_goopts = ["-d=libfuzzer"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state",
     visibility = [
         "//beacon-chain:__subpackages__",

@@ -37,7 +37,9 @@ func main() {
 
 def _gen_fuzz_main_impl(ctx):
     if ctx.var.get("gotags") != "libfuzzer":
-        fail("Gotags must be set to libfuzzer. Use --config=fuzz or --config=fuzzit until the transition rule is fixed.")
+        fail("gotags must be set to libfuzzer. Use --config=fuzz or --config=fuzzit.")
+    if ctx.var.get("gc_goopts") != "-d=libfuzzer":
+        fail("gc_goopts must be set to -d=libfuzzer. Use --config=fuzz or --config=fuzzit.")
 
     pkg = ctx.attr.target_pkg
     func = ctx.attr.func
@@ -56,6 +58,7 @@ gen_fuzz_main = rule(
 def go_fuzz_test(
         name,
         corpus,
+        corpus_path,
         importpath,
         func = "Fuzz",
         repository = "",
@@ -68,6 +71,7 @@ def go_fuzz_test(
         visibility = ["//visibility:private"],
         testonly = 1,
         importpath = importpath,
+        gc_goopts = ["-d=libfuzzer"],
         **kwargs
     )
     gen_fuzz_main(
@@ -118,16 +122,8 @@ def go_fuzz_test(
         deps = ["@herumi_bls_eth_go_binary//:lib"],
         tags = ["manual", "fuzzer"] + tags,
         args = [
-            "external/sigp_beacon_fuzz_corpora/0-9-4/mainnet/block_header",
-            "-max_len=302",
-            "-len_control=0",
+            corpus_path,
             "-print_final_stats=1",
-            "-reduce_inputs=0",
-            "-use_value_profile=1",
-            "-artifact_prefix=$$TEST_TMPDIR",
         ],
-        #        args = ["$(locations %s)" % corpus_name],
-        data = select({
-            "//conditions:default": [corpus_name],
-        }) + kwargs.get("data"),
+        data = [corpus_name],
     )

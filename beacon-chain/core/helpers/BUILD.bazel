@@ -12,6 +12,7 @@ go_library(
         "slot_epoch.go",
         "validators.go",
     ],
+    gc_goopts = ["-d=libfuzzer"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers",
     visibility = [
         "//beacon-chain:__subpackages__",

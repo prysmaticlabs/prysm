@@ -6,6 +6,7 @@ go_library(
         "block.go",
         "block_operations.go",
     ],
+    gc_goopts = ["-d=libfuzzer"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks",
     visibility = [
         "//beacon-chain:__subpackages__",
