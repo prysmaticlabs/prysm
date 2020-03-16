@@ -123,7 +123,7 @@ var (
 	}
 	newStateMgmt = cli.BoolFlag{
 		Name:  "new-state-mgmt",
-		Usage: "This enables the usage of new state mgmt service across Prysm",
+		Usage: "This enables the usage of experimental state mgmt service across Prysm",
 	}
 )
 

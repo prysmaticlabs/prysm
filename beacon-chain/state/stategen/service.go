@@ -13,13 +13,12 @@ import (
 	"go.opencensus.io/trace"
 )
 
-const archivedInterval = 1024
+const archivedInterval = 256
 
 // State represents a management object that handles the internal
 // logic of maintaining both hot and cold states in DB.
 type State struct {
 	beaconDB                db.NoHeadAccessDatabase
-	lastArchivedSlot        uint64
 	slotsPerArchivedPoint   uint64
 	epochBoundarySlotToRoot map[uint64][32]byte
 	epochBoundaryLock       sync.RWMutex
@@ -54,13 +53,15 @@ func (s *State) Resume(ctx context.Context, lastArchivedRoot [32]byte) (*state.B
 	if err != nil {
 		return nil, err
 	}
+	// Resume as genesis state if there's no last archived state.
 	if lastArchivedState == nil {
 		return s.beaconDB.GenesisState(ctx)
 	}
 
 	s.splitInfo = &splitSlotAndRoot{slot: lastArchivedState.Slot(), root: lastArchivedRoot}
 
-	if err := s.beaconDB.SaveStateSummary(ctx, &pb.StateSummary{Slot: lastArchivedState.Slot(), Root: lastArchivedRoot[:], BoundaryRoot: lastArchivedRoot[:]}); err != nil {
+	if err := s.beaconDB.SaveStateSummary(ctx,
+		&pb.StateSummary{Slot: lastArchivedState.Slot(), Root: lastArchivedRoot[:], BoundaryRoot: lastArchivedRoot[:]}); err != nil {
 		return nil, err
 	}
 
@@ -69,7 +70,6 @@ func (s *State) Resume(ctx context.Context, lastArchivedRoot [32]byte) (*state.B
 	if !helpers.IsEpochStart(slot) {
 		slot = helpers.StartSlot(helpers.SlotToEpoch(slot) + 1)
 	}
-
 	s.setEpochBoundaryRoot(slot, lastArchivedRoot)
 
 	return lastArchivedState, nil
