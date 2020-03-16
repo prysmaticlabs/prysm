@@ -4,6 +4,7 @@ import (
 	"context"
 	"sort"
 	"strconv"
+	"sync"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -336,24 +337,30 @@ func (bs *Server) StreamIndexedAttestations(
 // already being done by the attestation pool in the operations service.
 func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 	attsByRoot := make(map[[32]byte][]*ethpb.Attestation)
+	var m sync.RWMutex
 	halfASlot := time.Duration(params.BeaconConfig().SecondsPerSlot / 2)
 	ticker := time.NewTicker(time.Second * halfASlot)
 	for {
 		select {
 		case <-ticker.C:
+			m.Lock()
 			for root, atts := range attsByRoot {
 				if len(atts) > 0 {
 					bs.CollectedAttestationsBuffer <- atts
 					attsByRoot[root] = make([]*ethpb.Attestation, 0)
+
 				}
 			}
+			m.Unlock()
 		case att := <-bs.ReceivedAttestationsBuffer:
 			attDataRoot, err := ssz.HashTreeRoot(att.Data)
 			if err != nil {
 				logrus.Errorf("Could not hash tree root data: %v", err)
 				continue
 			}
+			m.Lock()
 			attsByRoot[attDataRoot] = append(attsByRoot[attDataRoot], att)
+			m.Unlock()
 		case <-ctx.Done():
 			return
 		case <-bs.Ctx.Done():
