@@ -965,7 +965,6 @@ func setBlocksFromCache(ctx context.Context, t *testing.T, mc *mock.ChainService
 		}
 
 		currRoot, _ := ssz.HashTreeRoot(blk.Block)
-		//logrus.Infof("block with slot %d , signing root %#x and parent root %#x", slot, currRoot, parentRoot)
 		parentRoot = currRoot
 	}
 }
