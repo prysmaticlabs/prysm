@@ -116,7 +116,7 @@ func Eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
 }
 
 func Eth1DataVotesRootWithTrie(eth1DataVotes []*ethpb.Eth1Data) ([][]*[32]byte, error) {
-	eth1VotesRoots := make([][32]byte, len(eth1DataVotes))
+	eth1VotesRoots := make([][32]byte, 0, len(eth1DataVotes))
 	for i := 0; i < len(eth1DataVotes); i++ {
 		eth1, err := Eth1Root(eth1DataVotes[i])
 		if err != nil {

@@ -59,7 +59,12 @@ func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
 	hasher := hashutil.CustomSHA256Hasher()
 	depth := merkle.GetDepth(length)
 	layers := make([][]*[32]byte, depth+1)
-
+	// Return zerohash at depth
+	if len(elements) == 0 {
+		zerohash := trieutil.ZeroHashes[depth]
+		layers[len(layers)-1] = []*[32]byte{&zerohash}
+		return layers
+	}
 	transformedLeaves := make([]*[32]byte, len(elements))
 	for i := range elements {
 		arr := elements[i]
@@ -135,7 +140,7 @@ func RecomputeFromLayerVariable(changedElements [][32]byte, layer [][]*[32]byte,
 			changedIdx = append(changedIdx, maxChangedIndex+1)
 		} */
 
-	root := *layer[0][0]
+	root := *layer[len(layer)-1][0]
 	var err error
 
 	for i, idx := range changedIdx {
@@ -370,9 +375,11 @@ func recomputeRootFromLayerVariable(idx int, item [32]byte, layers [][]*[32]byte
 	for i := 0; i < len(layers)-1; i++ {
 		isLeft := currentIndex%2 == 0
 		neighborIdx := currentIndex ^ 1
+
 		neighbor := [32]byte{}
 		if neighborIdx >= len(layers[i]) {
 			neighbor = trieutil.ZeroHashes[i]
+			layers[i] = append(layers[i], &neighbor)
 		} else {
 			neighbor = *layers[i][neighborIdx]
 		}

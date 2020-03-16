@@ -22,6 +22,34 @@ func EpochAttestationsRoot(atts []*pb.PendingAttestation) ([32]byte, error) {
 	return nocachedHasher.epochAttestationsRoot(atts)
 }
 
+func PendingAttestationRoot(att *pb.PendingAttestation) ([32]byte, error) {
+	fieldRoots := [][32]byte{}
+	if att != nil {
+		// Bitfield.
+		aggregationRoot, err := bitlistRoot(att.AggregationBits, 2048)
+		if err != nil {
+			return [32]byte{}, err
+		}
+		// Attestation data.
+		attDataRoot, err := attestationDataRoot(att.Data)
+		if err != nil {
+			return [32]byte{}, err
+		}
+		inclusionBuf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(inclusionBuf, att.InclusionDelay)
+		// Inclusion delay.
+		inclusionRoot := bytesutil.ToBytes32(inclusionBuf)
+
+		proposerBuf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(proposerBuf, att.ProposerIndex)
+		// Proposer index.
+		proposerRoot := bytesutil.ToBytes32(proposerBuf)
+
+		fieldRoots = [][32]byte{aggregationRoot, attDataRoot, inclusionRoot, proposerRoot}
+	}
+	return bitwiseMerkleizeArrays(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
+}
+
 func marshalAttestationData(data *ethpb.AttestationData) []byte {
 	enc := make([]byte, 128)
 

@@ -1,7 +1,14 @@
 package state
 
 import (
+	"reflect"
 	"sync"
+
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+
+	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+
+	"github.com/pkg/errors"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -88,5 +95,64 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 		field:       f.field,
 		reference:   &reference{1},
 		Mutex:       new(sync.Mutex),
+	}
+}
+
+func fieldConverters(field fieldIndex, elements interface{}) ([][32]byte, error) {
+	switch field {
+	case blockRoots, stateRoots, randaoMixes:
+		val, ok := elements.([][32]byte)
+		if !ok {
+			return nil, errors.Errorf("Wanted type of %v but got %v",
+				reflect.TypeOf([][32]byte{}).Name(), reflect.TypeOf(elements).Name())
+		}
+		return val, nil
+	case eth1DataVotes:
+		val, ok := elements.([]*ethpb.Eth1Data)
+		if !ok {
+			return nil, errors.Errorf("Wanted type of %v but got %v",
+				reflect.TypeOf([]*ethpb.Eth1Data{}).Name(), reflect.TypeOf(elements).Name())
+		}
+		roots := [][32]byte{}
+		for i := range val {
+			newRoot, err := stateutil.Eth1Root(val[i])
+			if err != nil {
+				return nil, err
+			}
+			roots = append(roots, newRoot)
+		}
+		return roots, nil
+	case validators:
+		val, ok := elements.([]*ethpb.Validator)
+		if !ok {
+			return nil, errors.Errorf("Wanted type of %v but got %v",
+				reflect.TypeOf([]*ethpb.Validator{}).Name(), reflect.TypeOf(elements).Name())
+		}
+		roots := [][32]byte{}
+		for i := range val {
+			newRoot, err := stateutil.ValidatorRoot(val[i])
+			if err != nil {
+				return nil, err
+			}
+			roots = append(roots, newRoot)
+		}
+		return roots, nil
+	case previousEpochAttestations, currentEpochAttestations:
+		val, ok := elements.([]*pb.PendingAttestation)
+		if !ok {
+			return nil, errors.Errorf("Wanted type of %v but got %v",
+				reflect.TypeOf([]*pb.PendingAttestation{}).Name(), reflect.TypeOf(elements).Name())
+		}
+		roots := [][32]byte{}
+		for i := range val {
+			newRoot, err := stateutil.PendingAttestationRoot(val[i])
+			if err != nil {
+				return nil, err
+			}
+			roots = append(roots, newRoot)
+		}
+		return roots, nil
+	default:
+		return [][32]byte{}, errors.Errorf("got unsupported type of %v", reflect.TypeOf(elements).Name())
 	}
 }

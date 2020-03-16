@@ -11,36 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
-type fieldIndex int
-
-// Below we define a set of useful enum values for the field
-// indices of the beacon state. For example, genesisTime is the
-// 0th field of the beacon state. This is helpful when we are
-// updating the Merkle branches up the trie representation
-// of the beacon state.
-const (
-	genesisTime fieldIndex = iota
-	slot
-	fork
-	latestBlockHeader
-	blockRoots
-	stateRoots
-	historicalRoots
-	eth1Data
-	eth1DataVotes
-	eth1DepositIndex
-	validators
-	balances
-	randaoMixes
-	slashings
-	previousEpochAttestations
-	currentEpochAttestations
-	justificationBits
-	previousJustifiedCheckpoint
-	currentJustifiedCheckpoint
-	finalizedCheckpoint
-)
-
 // SetGenesisTime for the beacon state.
 func (b *BeaconState) SetGenesisTime(val uint64) error {
 	b.lock.Lock()
