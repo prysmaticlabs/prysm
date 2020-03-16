@@ -10,6 +10,7 @@ go_library(
         "slashing.go",
         "type.go",
     ],
+    gc_goopts = ["-d=libfuzzer"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [

@@ -44,7 +44,10 @@ def _gen_fuzz_main_impl(ctx):
     pkg = ctx.attr.target_pkg
     func = ctx.attr.func
 
-    ctx.actions.write(ctx.outputs.out, main_tpl % (pkg, func))
+    output_file_name = ctx.label.name + "_main.fuzz.go"
+    output_file = ctx.actions.declare_file(output_file_name)
+    ctx.actions.write(output_file, main_tpl % (pkg, func))
+    return [DefaultInfo(files = depset([output_file]))]
 
 gen_fuzz_main = rule(
     implementation = _gen_fuzz_main_impl,
@@ -52,7 +55,6 @@ gen_fuzz_main = rule(
         "target_pkg": attr.string(mandatory = True),
         "func": attr.string(mandatory = True),
     },
-    outputs = {"out": "generated_main.fuzz.go"},
 )
 
 def go_fuzz_test(

@@ -17,6 +17,7 @@ go_library(
         "receive_block.go",
         "service.go",
     ],
+    gc_goopts = ["-d=libfuzzer"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/blockchain",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
