@@ -25,7 +25,7 @@ const (
 
 var (
 	errQueueCtxIsDone          = errors.New("queue's context is done, reinitialize")
-	errQueueTakesTooLongToStop = errors.New("queue takes to long to stop")
+	errQueueTakesTooLongToStop = errors.New("queue takes too long to stop")
 )
 
 // blocksProvider exposes enough methods for queue to fetch incoming blocks.
