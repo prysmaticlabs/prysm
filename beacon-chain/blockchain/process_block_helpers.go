@@ -58,6 +58,20 @@ func (s *Service) getBlockPreState(ctx context.Context, b *ethpb.BeaconBlock) (*
 
 // verifyBlkPreState validates input block has a valid pre-state.
 func (s *Service) verifyBlkPreState(ctx context.Context, b *ethpb.BeaconBlock) (*stateTrie.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "chainService.verifyBlkPreState")
+	defer span.End()
+
+	if featureconfig.Get().NewStateMgmt {
+		preState, err := s.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(b.ParentRoot))
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot)
+		}
+		if preState == nil {
+			return nil, errors.Wrapf(err, "nil pre state for slot %d", b.Slot)
+		}
+		return preState, nil // No copy needed from newly hydrated state gen object.
+	}
+
 	preState := s.initSyncState[bytesutil.ToBytes32(b.ParentRoot)]
 	var err error
 	if preState == nil {
@@ -258,23 +272,25 @@ func (s *Service) updateJustified(ctx context.Context, state *stateTrie.BeaconSt
 		s.justifiedCheckpt = cpt
 	}
 
-	justifiedRoot := bytesutil.ToBytes32(cpt.Root)
+	if !featureconfig.Get().NewStateMgmt {
+		justifiedRoot := bytesutil.ToBytes32(cpt.Root)
 
-	justifiedState := s.initSyncState[justifiedRoot]
-	// If justified state is nil, resume back to normal syncing process and save
-	// justified check point.
-	if justifiedState == nil {
-		if s.beaconDB.HasState(ctx, justifiedRoot) {
-			return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
+		justifiedState := s.initSyncState[justifiedRoot]
+		// If justified state is nil, resume back to normal syncing process and save
+		// justified check point.
+		if justifiedState == nil {
+			if s.beaconDB.HasState(ctx, justifiedRoot) {
+				return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
+			}
+			justifiedState, err = s.generateState(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root), justifiedRoot)
+			if err != nil {
+				log.Error(err)
+				return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
+			}
 		}
-		justifiedState, err = s.generateState(ctx, bytesutil.ToBytes32(s.finalizedCheckpt.Root), justifiedRoot)
-		if err != nil {
-			log.Error(err)
-			return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)
+		if err := s.beaconDB.SaveState(ctx, justifiedState, justifiedRoot); err != nil {
+			return errors.Wrap(err, "could not save justified state")
 		}
-	}
-	if err := s.beaconDB.SaveState(ctx, justifiedState, justifiedRoot); err != nil {
-		return errors.Wrap(err, "could not save justified state")
 	}
 
 	return s.beaconDB.SaveJustifiedCheckpoint(ctx, cpt)

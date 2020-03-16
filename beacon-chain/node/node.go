@@ -31,6 +31,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
 	"github.com/prysmaticlabs/prysm/shared"
@@ -69,6 +70,7 @@ type BeaconNode struct {
 	blockFeed       *event.Feed
 	opFeed          *event.Feed
 	forkChoiceStore forkchoice.ForkChoicer
+	stateGen        *stategen.State
 }
 
 // NewBeaconNode creates a new node instance, sets up configuration options, and registers
@@ -103,6 +105,8 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	if err := beacon.startDB(ctx); err != nil {
 		return nil, err
 	}
+
+	beacon.startStateGen()
 
 	if err := beacon.registerP2P(ctx); err != nil {
 		return nil, err
@@ -258,6 +262,10 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 	return nil
 }
 
+func (b *BeaconNode) startStateGen() {
+	b.stateGen = stategen.New(b.db)
+}
+
 func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 	// Bootnode ENR may be a filepath to an ENR file.
 	bootnodeAddrs := strings.Split(ctx.GlobalString(cmd.BootstrapNode.Name), ",")
@@ -336,6 +344,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		StateNotifier:     b,
 		ForkChoiceStore:   b.forkChoiceStore,
 		OpsService:        opsService,
+		StateGen:          b.stateGen,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register blockchain service")
@@ -503,6 +512,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		OperationNotifier:     b,
 		SlasherCert:           slasherCert,
 		SlasherProvider:       slasherProvider,
+		StateGen:              b.stateGen,
 	})
 
 	return b.services.RegisterService(rpcService)
