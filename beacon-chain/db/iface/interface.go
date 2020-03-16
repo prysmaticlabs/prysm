@@ -55,6 +55,8 @@ type ReadOnlyDatabase interface {
 	ArchivedPointState(ctx context.Context, index uint64) (*state.BeaconState, error)
 	ArchivedPointRoot(ctx context.Context, index uint64) [32]byte
 	HasArchivedPoint(ctx context.Context, index uint64) bool
+	LastArchivedIndexRoot(ctx context.Context) [32]byte
+	LastArchivedIndexState(ctx context.Context) (*state.BeaconState, error)
 	// Deposit contract related handlers.
 	DepositContractAddress(ctx context.Context) ([]byte, error)
 	// Powchain operations.
@@ -104,6 +106,7 @@ type NoHeadAccessDatabase interface {
 	SaveArchivedValidatorParticipation(ctx context.Context, epoch uint64, part *eth.ValidatorParticipation) error
 	SaveArchivedPointState(ctx context.Context, state *state.BeaconState, index uint64) error
 	SaveArchivedPointRoot(ctx context.Context, blockRoot [32]byte, index uint64) error
+	SaveLastArchivedIndex(ctx context.Context, index uint64) error
 	// Deposit contract related handlers.
 	SaveDepositContractAddress(ctx context.Context, addr common.Address) error
 	// Powchain operations.

@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -58,9 +59,15 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 
 	// If the head state is not available, just return nil.
 	// There's nothing to cache
-	_, cached := s.initSyncState[headRoot]
-	if !cached && !s.beaconDB.HasState(ctx, headRoot) {
-		return nil
+	if featureconfig.Get().NewStateMgmt {
+		if !s.stateGen.StateSummaryExists(ctx, headRoot) {
+			return nil
+		}
+	} else {
+		_, cached := s.initSyncState[headRoot]
+		if !cached && !s.beaconDB.HasState(ctx, headRoot) {
+			return nil
+		}
 	}
 
 	// Get the new head block from DB.
@@ -74,15 +81,19 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 
 	// Get the new head state from cached state or DB.
 	var newHeadState *state.BeaconState
-	var exists bool
-	newHeadState, exists = s.initSyncState[headRoot]
-	if !exists {
-		newHeadState, err = s.beaconDB.State(ctx, headRoot)
+	if featureconfig.Get().NewStateMgmt {
+		newHeadState, err = s.stateGen.StateByRoot(ctx, headRoot)
 		if err != nil {
 			return errors.Wrap(err, "could not retrieve head state in DB")
 		}
-		if newHeadState == nil {
-			return errors.New("cannot save nil head state")
+	} else {
+		var exists bool
+		newHeadState, exists = s.initSyncState[headRoot]
+		if !exists {
+			newHeadState, err = s.beaconDB.State(ctx, headRoot)
+			if err != nil {
+				return errors.Wrap(err, "could not retrieve head state in DB")
+			}
 		}
 	}
 	if newHeadState == nil {
@@ -108,21 +119,29 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 		return errors.New("cannot save nil head block")
 	}
 
-	headState, err := s.beaconDB.State(ctx, r)
-	if err != nil {
-		return errors.Wrap(err, "could not retrieve head state in DB")
-	}
-	if headState == nil {
-		s.initSyncStateLock.RLock()
-		cachedHeadState, ok := s.initSyncState[r]
-		if ok {
-			headState = cachedHeadState
+	var headState *state.BeaconState
+	var err error
+	if featureconfig.Get().NewStateMgmt {
+		headState, err = s.stateGen.StateByRoot(ctx, r)
+		if err != nil {
+			return errors.Wrap(err, "could not retrieve head state in DB")
 		}
-		s.initSyncStateLock.RUnlock()
-	}
-
-	if headState == nil {
-		return errors.New("nil head state")
+		if headState == nil {
+			return errors.New("nil head state")
+		}
+	} else {
+		headState, err = s.beaconDB.State(ctx, r)
+		if err != nil {
+			return errors.Wrap(err, "could not retrieve head state in DB")
+		}
+		if headState == nil {
+			s.initSyncStateLock.RLock()
+			cachedHeadState, ok := s.initSyncState[r]
+			if ok {
+				headState = cachedHeadState
+			}
+			s.initSyncStateLock.RUnlock()
+		}
 	}
 
 	s.setHead(r, stateTrie.CopySignedBeaconBlock(b), headState)

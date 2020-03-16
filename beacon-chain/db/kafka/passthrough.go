@@ -352,3 +352,18 @@ func (e Exporter) ArchivedPointRoot(ctx context.Context, index uint64) [32]byte 
 func (e Exporter) HasArchivedPoint(ctx context.Context, index uint64) bool {
 	return e.db.HasArchivedPoint(ctx, index)
 }
+
+// LastArchivedIndexRoot -- passthrough
+func (e Exporter) LastArchivedIndexRoot(ctx context.Context) [32]byte {
+	return e.db.LastArchivedIndexRoot(ctx)
+}
+
+// LastArchivedIndexState -- passthrough
+func (e Exporter) LastArchivedIndexState(ctx context.Context) (*state.BeaconState, error) {
+	return e.db.LastArchivedIndexState(ctx)
+}
+
+// SaveLastArchivedIndex -- passthrough
+func (e Exporter) SaveLastArchivedIndex(ctx context.Context, index uint64) error {
+	return e.db.SaveLastArchivedIndex(ctx, index)
+}
