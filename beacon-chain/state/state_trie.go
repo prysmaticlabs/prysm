@@ -3,6 +3,7 @@ package state
 import (
 	"fmt"
 	"runtime"
+	"sort"
 	"sync"
 
 	"github.com/gogo/protobuf/proto"
@@ -33,6 +34,7 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 		dirtyIndexes:          make(map[fieldIndex][]uint64, 20),
 		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, 20),
 		sharedFieldReferences: make(map[fieldIndex]*reference, 10),
+		rebuildTrie:           make(map[fieldIndex]bool, 20),
 		valIdxMap:             coreutils.ValidatorIndexMap(st.Validators),
 	}
 
@@ -126,6 +128,7 @@ func (b *BeaconState) Copy() *BeaconState {
 		},
 		dirtyFields:           make(map[fieldIndex]interface{}, 20),
 		dirtyIndexes:          make(map[fieldIndex][]uint64, 20),
+		rebuildTrie:           make(map[fieldIndex]bool, 20),
 		sharedFieldReferences: make(map[fieldIndex]*reference, 10),
 		stateFieldLeaves:      make(map[fieldIndex]*FieldTrie, 20),
 
@@ -146,6 +149,10 @@ func (b *BeaconState) Copy() *BeaconState {
 		indices := make([]uint64, len(b.dirtyIndexes[i]))
 		copy(indices, b.dirtyIndexes[i])
 		dst.dirtyIndexes[i] = indices
+	}
+
+	for i := range b.rebuildTrie {
+		dst.rebuildTrie[i] = true
 	}
 
 	for fldIdx, fieldTrie := range b.stateFieldLeaves {
@@ -347,6 +354,16 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 		return stateutil.Eth1DataVotesRoot(b.state.Eth1DataVotes)
 	case validators:
 		if featureconfig.Get().EnableSSZCache {
+			if b.rebuildTrie[field] {
+				layers, err := stateutil.ValidatorsRootWithTrie(b.state.Validators)
+				if err != nil {
+					return [32]byte{}, err
+				}
+				b.stateFieldLeaves[validators].fieldLayers = layers
+				b.dirtyIndexes[validators] = []uint64{}
+				delete(b.rebuildTrie, validators)
+				return stateutil.AddInMixin(*layers[len(layers)-1][0], uint64(len(b.state.Validators)))
+			}
 			return b.recomputeFieldTrie(validators, b.state.Validators)
 		}
 		return stateutil.ValidatorRegistryRoot(b.state.Validators)
@@ -402,6 +419,9 @@ func (b *BeaconState) recomputeFieldTrie(index fieldIndex, elements interface{})
 		b.stateFieldLeaves[index] = newTrie
 		fTrie = newTrie
 	}
+	sort.Slice(b.dirtyIndexes[index], func(i int, j int) bool {
+		return b.dirtyIndexes[index][i] < b.dirtyIndexes[index][j]
+	})
 	root, err := fTrie.RecomputeTrie(b.dirtyIndexes[index], elements)
 	if err != nil {
 		return [32]byte{}, err

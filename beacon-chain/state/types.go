@@ -83,6 +83,7 @@ type BeaconState struct {
 	dirtyFields           map[fieldIndex]interface{}
 	dirtyIndexes          map[fieldIndex][]uint64
 	stateFieldLeaves      map[fieldIndex]*FieldTrie
+	rebuildTrie           map[fieldIndex]bool
 	valIdxMap             map[[48]byte]uint64
 	merkleLayers          [][][]byte
 	sharedFieldReferences map[fieldIndex]*reference

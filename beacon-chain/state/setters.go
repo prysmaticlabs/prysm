@@ -3,6 +3,8 @@ package state
 import (
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
@@ -269,7 +271,7 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 
 // ApplyToEveryValidator applies the provided callback function to each validator in the
 // validator registry.
-func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator) error) error {
+func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator) (bool, error)) error {
 	if !b.HasInnerState() {
 		return ErrNilInnerState
 	}
@@ -283,11 +285,14 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 		b.sharedFieldReferences[validators] = &reference{refs: 1}
 	}
 	b.lock.RUnlock()
-
+	changedVals := []uint64{}
 	for i, val := range v {
-		err := f(i, val)
+		changed, err := f(i, val)
 		if err != nil {
 			return err
+		}
+		if changed {
+			changedVals = append(changedVals, uint64(i))
 		}
 	}
 
@@ -296,6 +301,9 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 
 	b.state.Validators = v
 	b.markFieldAsDirty(validators)
+	newIndices := sliceutil.UnionUint64(b.dirtyIndexes[validators], changedVals)
+	b.dirtyIndexes[validators] = newIndices
+
 	return nil
 }
 
@@ -608,6 +616,7 @@ func (b *BeaconState) AppendValidator(val *ethpb.Validator) error {
 
 	b.state.Validators = append(vals, val)
 	b.markFieldAsDirty(validators)
+	b.dirtyIndexes[validators] = append(b.dirtyIndexes[validators], uint64(len(b.state.Validators)-1))
 	return nil
 }
 
