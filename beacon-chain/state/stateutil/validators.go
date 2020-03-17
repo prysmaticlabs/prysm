@@ -59,6 +59,8 @@ func ValidatorBalancesRoot(balances []uint64) ([32]byte, error) {
 	return mixInLength(balancesRootsRoot, balancesRootsBufRoot), nil
 }
 
+// ValidatorRoot describes a method from which the hash tree root
+// of a validator is returned.
 func ValidatorRoot(validator *ethpb.Validator) ([32]byte, error) {
 	fieldRoots := [][32]byte{}
 	if validator != nil {
@@ -98,19 +100,6 @@ func ValidatorRoot(validator *ethpb.Validator) ([32]byte, error) {
 			activationBuf, exitBuf, withdrawalBuf}
 	}
 	return bitwiseMerkleizeArrays(fieldRoots, uint64(len(fieldRoots)), uint64(len(fieldRoots)))
-}
-
-func ValidatorsRootWithTrie(validators []*ethpb.Validator) ([][]*[32]byte, error) {
-	validatorRoots := make([][32]byte, 0, len(validators))
-	for i := 0; i < len(validators); i++ {
-		eth1, err := ValidatorRoot(validators[i])
-		if err != nil {
-			return nil, errors.Wrap(err, "could not compute eth1data merkleization")
-		}
-		validatorRoots = append(validatorRoots, eth1)
-	}
-	layers := ReturnTrieLayerVariable(validatorRoots, params.BeaconConfig().ValidatorRegistryLimit)
-	return layers, nil
 }
 
 func (h *stateRootHasher) validatorRegistryRoot(validators []*ethpb.Validator) ([32]byte, error) {

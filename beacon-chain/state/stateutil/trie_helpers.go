@@ -8,6 +8,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
+// ReturnTrieLayer returns the representation of a merkle trie when
+// provided with the elements of a fixed sized trie and the corresponding depth of
+// it.
 func ReturnTrieLayer(elements [][32]byte, length uint64) [][]*[32]byte {
 	hasher := hashutil.CustomSHA256Hasher()
 	leaves := elements
@@ -30,6 +33,9 @@ func ReturnTrieLayer(elements [][32]byte, length uint64) [][]*[32]byte {
 	return refLayers
 }
 
+// ReturnTrieLayerVariable returns the representation of a merkle trie when
+// provided with the elements of a variable sized trie and the corresponding depth of
+// it.
 func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
 	hasher := hashutil.CustomSHA256Hasher()
 	depth := merkle.GetDepth(length)
@@ -62,6 +68,7 @@ func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
 			updatedValues = append(updatedValues, &concat)
 			buffer.Reset()
 		}
+		// remove zerohash node from tree
 		if oddNodeLength {
 			layers[i] = layers[i][:len(layers[i])-1]
 		}
@@ -70,6 +77,7 @@ func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
 	return layers
 }
 
+// RecomputeFromLayer recomputes specific branches of a fixed sized trie depending on the provided changed indexes.
 func RecomputeFromLayer(changedLeaves [][32]byte, changedIdx []uint64, layer [][]*[32]byte) ([32]byte, [][]*[32]byte, error) {
 	hasher := hashutil.CustomSHA256Hasher()
 	for i, idx := range changedIdx {
@@ -102,6 +110,7 @@ func RecomputeFromLayer(changedLeaves [][32]byte, changedIdx []uint64, layer [][
 	return root, layer, nil
 }
 
+// RecomputeFromLayerVariable recomputes specific branches of a variable sized trie depending on the provided changed indexes.
 func RecomputeFromLayerVariable(changedLeaves [][32]byte, changedIdx []uint64, layer [][]*[32]byte) ([32]byte, [][]*[32]byte, error) {
 	hasher := hashutil.CustomSHA256Hasher()
 	if len(changedIdx) == 0 {
@@ -119,6 +128,8 @@ func RecomputeFromLayerVariable(changedLeaves [][32]byte, changedIdx []uint64, l
 	return root, layer, nil
 }
 
+// this method assumes that the provided trie already has all its elements included
+// in the base depth.
 func recomputeRootFromLayer(idx int, layers [][]*[32]byte, chunks []*[32]byte,
 	hasher func([]byte) [32]byte) ([32]byte, [][]*[32]byte, error) {
 	root := *chunks[idx]
@@ -160,6 +171,9 @@ func recomputeRootFromLayer(idx int, layers [][]*[32]byte, chunks []*[32]byte,
 	return root, layers, nil
 }
 
+// this method assumes that the base branch does not consist of all leaves of the
+// trie. Instead missing leaves are assumed to be zerohashes, following the structure
+// of a sparse merkle trie.
 func recomputeRootFromLayerVariable(idx int, item [32]byte, layers [][]*[32]byte,
 	hasher func([]byte) [32]byte) ([32]byte, [][]*[32]byte, error) {
 	for idx >= len(layers[0]) {
