@@ -126,9 +126,6 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 		if err != nil {
 			return errors.Wrap(err, "could not retrieve head state in DB")
 		}
-		if headState == nil {
-			return errors.New("nil head state")
-		}
 	} else {
 		headState, err = s.beaconDB.State(ctx, r)
 		if err != nil {
@@ -142,6 +139,9 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b *ethpb.SignedBeaconBlock, 
 			}
 			s.initSyncStateLock.RUnlock()
 		}
+	}
+	if headState == nil {
+		return errors.New("nil head state")
 	}
 
 	s.setHead(r, stateTrie.CopySignedBeaconBlock(b), headState)
