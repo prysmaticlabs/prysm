@@ -59,7 +59,7 @@ func (ds *Service) detectIncomingAttestations(ctx context.Context, ch chan *ethp
 					log.WithError(err).Error("Could not update spans")
 				}
 			}
-			ds.submitAttesterSlashings(ctx, slashings, indexedAtt.Data.Target.Epoch)
+			ds.submitAttesterSlashings(ctx, slashings)
 		case <-sub.Err():
 			log.Error("Subscriber closed, exiting goroutine")
 			return
