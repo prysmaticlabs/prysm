@@ -24,8 +24,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-const fetchRequestsBuffer = 8 // number of pending fetch requests
-
 var (
 	errNoPeersAvailable   = errors.New("no peers available, waiting for reconnect")
 	errFetcherCtxIsDone   = errors.New("fetcher's context is done, reinitialize")
@@ -82,8 +80,8 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 		headFetcher:    cfg.headFetcher,
 		p2p:            cfg.p2p,
 		rateLimiter:    rateLimiter,
-		fetchRequests:  make(chan *fetchRequestParams, fetchRequestsBuffer),
-		fetchResponses: make(chan *fetchRequestResponse),
+		fetchRequests:  make(chan *fetchRequestParams, queueMaxPendingRequests),
+		fetchResponses: make(chan *fetchRequestResponse, queueMaxPendingRequests),
 		quit:           make(chan struct{}),
 	}
 }
@@ -130,8 +128,10 @@ func (f *blocksFetcher) loop() {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-
-				f.handleRequest(req.ctx, req.start, req.count)
+				select {
+				case <-f.ctx.Done():
+				case f.fetchResponses <- f.handleRequest(req.ctx, req.start, req.count):
+				}
 			}()
 		}
 	}
@@ -139,82 +139,65 @@ func (f *blocksFetcher) loop() {
 
 // scheduleRequest adds request to incoming queue.
 func (f *blocksFetcher) scheduleRequest(ctx context.Context, start, count uint64) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+
+	request := &fetchRequestParams{
+		ctx:   ctx,
+		start: start,
+		count: count,
+	}
 	select {
 	case <-f.ctx.Done():
 		return errFetcherCtxIsDone
-	default:
-		f.fetchRequests <- &fetchRequestParams{
-			ctx:   ctx,
-			start: start,
-			count: count,
-		}
+	case f.fetchRequests <- request:
 	}
 	return nil
 }
 
 // handleRequest parses fetch request and forwards it to response builder.
-func (f *blocksFetcher) handleRequest(ctx context.Context, start, count uint64) {
+func (f *blocksFetcher) handleRequest(ctx context.Context, start, count uint64) *fetchRequestResponse {
 	ctx, span := trace.StartSpan(ctx, "initialsync.handleRequest")
 	defer span.End()
 
-	// sendResponse ensures that response is not sent to a closed channel (when context is done).
-	sendResponse := func(ctx context.Context, response *fetchRequestResponse) {
-		if ctx.Err() != nil {
-			log.WithError(ctx.Err()).Debug("Can not send fetch request response")
-			return
-		}
-
-		f.fetchResponses <- response
+	response := &fetchRequestResponse{
+		start:  start,
+		count:  count,
+		blocks: []*eth.SignedBeaconBlock{},
+		err:    nil,
+		peers:  []peer.ID{},
 	}
 
 	if ctx.Err() != nil {
-		sendResponse(ctx, nil)
-		return
+		response.err = ctx.Err()
+		return response
 	}
 
 	headEpoch := helpers.SlotToEpoch(f.headFetcher.HeadSlot())
 	root, finalizedEpoch, peers := f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
-	log.WithFields(logrus.Fields{
-		"start":          start,
-		"count":          count,
-		"finalizedEpoch": finalizedEpoch,
-		"numPeers":       len(peers),
-	}).Debug("Block fetcher received a request")
 
 	if len(peers) == 0 {
-		log.Error(errNoPeersAvailable)
-		return
+		response.err = errNoPeersAvailable
+		return response
 	}
 
 	// Short circuit start far exceeding the highest finalized epoch in some infinite loop.
 	highestFinalizedSlot := helpers.StartSlot(finalizedEpoch + 1)
 	if start > highestFinalizedSlot {
-		log.WithError(errStartSlotIsTooHigh).Debug("Block fetch request failed")
-		sendResponse(ctx, &fetchRequestResponse{
-			start: start,
-			count: count,
-			err:   errStartSlotIsTooHigh,
-		})
-		return
+		response.err = errStartSlotIsTooHigh
+		return response
 	}
 
-	resp, err := f.collectPeerResponses(ctx, root, finalizedEpoch, start, 1, count, peers)
+	blocks, err := f.collectPeerResponses(ctx, root, finalizedEpoch, start, 1, count, peers)
 	if err != nil {
-		log.WithError(err).Debug("Block fetch request failed")
-		sendResponse(ctx, &fetchRequestResponse{
-			start: start,
-			count: count,
-			err:   err,
-		})
-		return
+		response.err = err
+		return response
 	}
 
-	sendResponse(ctx, &fetchRequestResponse{
-		start:  start,
-		count:  count,
-		blocks: resp,
-		peers:  peers,
-	})
+	response.blocks = blocks
+	response.peers = peers
+	return response
 }
 
 // collectPeerResponses orchestrates block fetching from the available peers.
@@ -268,12 +251,6 @@ func (f *blocksFetcher) collectPeerResponses(
 	// Spread load evenly among available peers.
 	perPeerCount := count / uint64(len(peers))
 	remainder := int(count % uint64(len(peers)))
-	log.WithFields(logrus.Fields{
-		"start":        start,
-		"count":        count,
-		"perPeerCount": perPeerCount,
-		"remainder":    remainder,
-	}).Debug("Distribute request among available peers")
 	for i, pid := range peers {
 		start, step := start+uint64(i)*step, step*uint64(len(peers))
 
@@ -283,10 +260,10 @@ func (f *blocksFetcher) collectPeerResponses(
 		if i < remainder {
 			count++
 		}
-		// Asking for no blocks may cause the client to hang. This should never happen and
-		// the peer may return an error anyway, but we'll ask for at least one block.
+		// Asking for no blocks may cause the client to hang.
 		if count == 0 {
-			count++
+			p2pRequests.Done()
+			continue
 		}
 
 		go func(ctx context.Context, pid peer.ID) {
@@ -294,16 +271,24 @@ func (f *blocksFetcher) collectPeerResponses(
 
 			blocks, err := f.requestBeaconBlocksByRange(ctx, pid, root, start, step, count)
 			if err != nil {
-				errChan <- err
-				return
+				select {
+				case <-ctx.Done():
+				case errChan <- err:
+					return
+				}
 			}
-			blocksChan <- blocks
+			select {
+			case <-ctx.Done():
+			case blocksChan <- blocks:
+			}
 		}(ctx, pid)
 	}
 
 	var unionRespBlocks []*eth.SignedBeaconBlock
 	for {
 		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
 		case err := <-errChan:
 			return nil, err
 		case resp, ok := <-blocksChan:
@@ -360,7 +345,6 @@ func (f *blocksFetcher) requestBeaconBlocksByRange(
 		return f.requestBeaconBlocksByRange(ctx, newPID, root, start, step, count)
 	}
 
-	log.WithField("peer", pid).WithField("count", len(resp)).Debug("Received blocks")
 	return resp, nil
 }
 
@@ -384,7 +368,7 @@ func (f *blocksFetcher) requestBlocks(
 	}).Debug("Requesting blocks")
 	stream, err := f.p2p.Send(ctx, req, pid)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to send request to peer")
+		return nil, err
 	}
 	defer stream.Close()
 
@@ -395,7 +379,7 @@ func (f *blocksFetcher) requestBlocks(
 			break
 		}
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to read chunked block")
+			return nil, err
 		}
 		resp = append(resp, blk)
 	}

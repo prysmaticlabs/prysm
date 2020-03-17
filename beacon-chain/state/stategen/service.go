@@ -1,18 +1,24 @@
 package stategen
 
 import (
+	"context"
 	"sync"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
 )
+
+const archivedInterval = 256
 
 // State represents a management object that handles the internal
 // logic of maintaining both hot and cold states in DB.
 type State struct {
 	beaconDB                db.NoHeadAccessDatabase
-	lastArchivedSlot        uint64
 	slotsPerArchivedPoint   uint64
 	epochBoundarySlotToRoot map[uint64][32]byte
 	epochBoundaryLock       sync.RWMutex
@@ -34,7 +40,39 @@ func New(db db.NoHeadAccessDatabase) *State {
 		epochBoundarySlotToRoot: make(map[uint64][32]byte),
 		hotStateCache:           cache.NewHotStateCache(),
 		splitInfo:               &splitSlotAndRoot{slot: 0, root: params.BeaconConfig().ZeroHash},
+		slotsPerArchivedPoint:   archivedInterval,
 	}
+}
+
+// Resume resumes a new state management object from previously saved finalized check point in DB.
+func (s *State) Resume(ctx context.Context, lastArchivedRoot [32]byte) (*state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.Resume")
+	defer span.End()
+
+	lastArchivedState, err := s.beaconDB.LastArchivedIndexState(ctx)
+	if err != nil {
+		return nil, err
+	}
+	// Resume as genesis state if there's no last archived state.
+	if lastArchivedState == nil {
+		return s.beaconDB.GenesisState(ctx)
+	}
+
+	s.splitInfo = &splitSlotAndRoot{slot: lastArchivedState.Slot(), root: lastArchivedRoot}
+
+	if err := s.beaconDB.SaveStateSummary(ctx,
+		&pb.StateSummary{Slot: lastArchivedState.Slot(), Root: lastArchivedRoot[:], BoundaryRoot: lastArchivedRoot[:]}); err != nil {
+		return nil, err
+	}
+
+	// In case the finalized state slot was skipped.
+	slot := lastArchivedState.Slot()
+	if !helpers.IsEpochStart(slot) {
+		slot = helpers.StartSlot(helpers.SlotToEpoch(slot) + 1)
+	}
+	s.setEpochBoundaryRoot(slot, lastArchivedRoot)
+
+	return lastArchivedState, nil
 }
 
 // This verifies the archive point frequency is valid. It checks the interval

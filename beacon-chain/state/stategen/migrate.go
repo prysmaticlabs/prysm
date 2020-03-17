@@ -45,14 +45,15 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedState *state.BeaconS
 			continue
 		}
 
-		if stateSummary.Slot%s.slotsPerArchivedPoint == 0 {
-			archivePointIndex := stateSummary.Slot / s.slotsPerArchivedPoint
+		archivedPointIndex := stateSummary.Slot / s.slotsPerArchivedPoint
+		alreadyArchived := s.beaconDB.HasArchivedPoint(ctx, archivedPointIndex)
+		if stateSummary.Slot%s.slotsPerArchivedPoint == 0 && !alreadyArchived {
 			if s.beaconDB.HasState(ctx, r) {
 				hotState, err := s.beaconDB.State(ctx, r)
 				if err != nil {
 					return err
 				}
-				if err := s.beaconDB.SaveArchivedPointState(ctx, hotState.Copy(), archivePointIndex); err != nil {
+				if err := s.beaconDB.SaveArchivedPointState(ctx, hotState.Copy(), archivedPointIndex); err != nil {
 					return err
 				}
 			} else {
@@ -60,17 +61,19 @@ func (s *State) MigrateToCold(ctx context.Context, finalizedState *state.BeaconS
 				if err != nil {
 					return err
 				}
-				if err := s.beaconDB.SaveArchivedPointState(ctx, hotState.Copy(), archivePointIndex); err != nil {
+				if err := s.beaconDB.SaveArchivedPointState(ctx, hotState.Copy(), archivedPointIndex); err != nil {
 					return err
 				}
 			}
-			if err := s.beaconDB.SaveArchivedPointRoot(ctx, r, archivePointIndex); err != nil {
+			if err := s.beaconDB.SaveArchivedPointRoot(ctx, r, archivedPointIndex); err != nil {
 				return err
 			}
-
+			if err := s.beaconDB.SaveLastArchivedIndex(ctx, archivedPointIndex); err != nil {
+				return err
+			}
 			log.WithFields(logrus.Fields{
 				"slot":         stateSummary.Slot,
-				"archiveIndex": archivePointIndex,
+				"archiveIndex": archivedPointIndex,
 				"root":         hex.EncodeToString(bytesutil.Trunc(r[:])),
 			}).Info("Saved archived point during state migration")
 		}

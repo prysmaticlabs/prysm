@@ -297,7 +297,7 @@ func TestLoadEpochBoundaryRoot_LastSavedBlock(t *testing.T) {
 	defer testDB.TeardownDB(t, db)
 	service := New(db)
 
-	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: service.lastArchivedSlot + 5}}
+	b1 := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: service.splitInfo.slot + 5}}
 	if err := service.beaconDB.SaveBlock(ctx, b1); err != nil {
 		t.Fatal(err)
 	}

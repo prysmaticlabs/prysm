@@ -283,13 +283,15 @@ func TestBlocksFetcherRoundRobin(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			initializeRootCache(tt.expectedBlockSlots, t)
+			cache.initializeRootCache(tt.expectedBlockSlots, t)
 
 			beaconDB := dbtest.SetupDB(t)
 
 			p := p2pt.NewTestP2P(t)
 			connectPeers(t, p, tt.peers, p.Peers())
-			genesisRoot := rootCache[0]
+			cache.RLock()
+			genesisRoot := cache.rootCache[0]
+			cache.RUnlock()
 
 			err := beaconDB.SaveBlock(context.Background(), &eth.SignedBeaconBlock{
 				Block: &eth.BeaconBlock{
@@ -439,12 +441,10 @@ func TestBlocksFetcherHandleRequest(t *testing.T) {
 		},
 	}
 
-	hook := logTest.NewGlobal()
 	mc, p2p, beaconDB := initializeTestServices(t, chainConfig.expectedBlockSlots, chainConfig.peers)
 	defer dbtest.TeardownDB(t, beaconDB)
 
 	t.Run("context cancellation", func(t *testing.T) {
-		hook.Reset()
 		ctx, cancel := context.WithCancel(context.Background())
 		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
 			headFetcher: mc,
@@ -452,13 +452,13 @@ func TestBlocksFetcherHandleRequest(t *testing.T) {
 		})
 
 		cancel()
-		fetcher.handleRequest(ctx, 1, blockBatchSize)
-		testutil.AssertLogsContain(t, hook, "Can not send fetch request response")
-		testutil.AssertLogsContain(t, hook, "context canceled")
+		response := fetcher.handleRequest(ctx, 1, blockBatchSize)
+		if response.err == nil {
+			t.Errorf("expected error: %v", errFetcherCtxIsDone)
+		}
 	})
 
 	t.Run("receive blocks", func(t *testing.T) {
-		hook.Reset()
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
@@ -467,7 +467,13 @@ func TestBlocksFetcherHandleRequest(t *testing.T) {
 		})
 
 		requestCtx, _ := context.WithTimeout(context.Background(), 2*time.Second)
-		go fetcher.handleRequest(requestCtx, 1 /* start */, blockBatchSize /* count */)
+		go func() {
+			response := fetcher.handleRequest(requestCtx, 1 /* start */, blockBatchSize /* count */)
+			select {
+			case <-ctx.Done():
+			case fetcher.fetchResponses <- response:
+			}
+		}()
 
 		var blocks []*eth.SignedBeaconBlock
 		select {
@@ -483,7 +489,6 @@ func TestBlocksFetcherHandleRequest(t *testing.T) {
 		if len(blocks) != blockBatchSize {
 			t.Errorf("incorrect number of blocks returned, expected: %v, got: %v", blockBatchSize, len(blocks))
 		}
-		testutil.AssertLogsContain(t, hook, "Received blocks")
 
 		var receivedBlockSlots []uint64
 		for _, blk := range blocks {
@@ -647,12 +652,14 @@ func TestBlocksFetcherSelectFailOverPeer(t *testing.T) {
 }
 
 func initializeTestServices(t *testing.T, blocks []uint64, peers []*peerData) (*mock.ChainService, *p2pt.TestP2P, db.Database) {
-	initializeRootCache(blocks, t)
+	cache.initializeRootCache(blocks, t)
 	beaconDB := dbtest.SetupDB(t)
 
 	p := p2pt.NewTestP2P(t)
 	connectPeers(t, p, peers, p.Peers())
-	genesisRoot := rootCache[0]
+	cache.RLock()
+	genesisRoot := cache.rootCache[0]
+	cache.RUnlock()
 
 	err := beaconDB.SaveBlock(context.Background(), &eth.SignedBeaconBlock{
 		Block: &eth.BeaconBlock{

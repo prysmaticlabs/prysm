@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -67,6 +68,7 @@ type Server struct {
 	PendingDepositsFetcher depositcache.PendingDepositsFetcher
 	OperationNotifier      opfeed.Notifier
 	GenesisTime            time.Time
+	StateGen               *stategen.State
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
