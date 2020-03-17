@@ -47,16 +47,16 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 		}
 
 	}
-	var err error
+	//var err error
 	if featureconfig.Get().EnableSSZCache {
-		b.stateFieldLeaves[blockRoots], err = NewFieldTrie(blockRoots, b.state.BlockRoots, params.BeaconConfig().SlotsPerHistoricalRoot)
-		if err != nil {
-			panic(err)
-		}
-		b.stateFieldLeaves[stateRoots], err = NewFieldTrie(stateRoots, b.state.StateRoots, params.BeaconConfig().SlotsPerHistoricalRoot)
-		if err != nil {
-			panic(err)
-		}
+		//b.stateFieldLeaves[blockRoots], err = NewFieldTrie(blockRoots, b.state.BlockRoots, params.BeaconConfig().SlotsPerHistoricalRoot)
+		//if err != nil {
+		//	panic(err)
+		//}
+		//b.stateFieldLeaves[stateRoots], err = NewFieldTrie(stateRoots, b.state.StateRoots, params.BeaconConfig().SlotsPerHistoricalRoot)
+		//if err != nil {
+		//	panic(err)
+		//}
 		//b.stateFieldLeaves[randaoMixes] = NewFieldTrie(randaoMixes, b.state.RandaoMixes, params.BeaconConfig().EpochsPerHistoricalVector)
 		/*layers, err := stateutil.Eth1DataVotesRootWithTrie(b.state.Eth1DataVotes)
 		if err != nil {
@@ -193,21 +193,22 @@ func (b *BeaconState) Copy() *BeaconState {
 			if field == randaoMixes && v.refs == 0 {
 				memorypool.PutDoubleByteSlice(b.state.RandaoMixes)
 				if b.stateFieldLeaves[field].refs == 0 {
-					memorypool.PutTripleByteSliceRandaoMixes(b.stateFieldLeaves[randaoMixes].fieldLayers)
+					memorypool.PutRandaoMixesTrie(b.stateFieldLeaves[randaoMixes].fieldLayers)
 				}
 			}
 
 			if field == blockRoots && v.refs == 0 && b.stateFieldLeaves[field].refs == 0 {
-				memorypool.PutTripleByteSliceBlockRoots(b.stateFieldLeaves[blockRoots].fieldLayers)
+				memorypool.PutBlockRootsTrie(b.stateFieldLeaves[blockRoots].fieldLayers)
 			}
 
 			if field == stateRoots && v.refs == 0 && b.stateFieldLeaves[field].refs == 0 {
-				memorypool.PutTripleByteSliceStateRoots(b.stateFieldLeaves[stateRoots].fieldLayers)
+				memorypool.PutStateRootsTrie(b.stateFieldLeaves[stateRoots].fieldLayers)
 			}
 
-			if field == stateRoots && v.refs == 0 && b.stateFieldLeaves[field].refs == 0 {
-				memorypool.PutTripleByteSliceStateRoots(b.stateFieldLeaves[stateRoots].fieldLayers)
-			}
+			/*
+				if field == stateRoots && v.refs == 0 && b.stateFieldLeaves[field].refs == 0 {
+					memorypool.PutTripleByteSliceStateRoots(b.stateFieldLeaves[stateRoots].fieldLayers)
+				} */
 		}
 	})
 
@@ -298,6 +299,15 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 		return stateutil.BlockHeaderRoot(b.state.LatestBlockHeader)
 	case blockRoots:
 		if featureconfig.Get().EnableSSZCache {
+			if b.rebuildTrie[field] {
+				err := b.resetFieldTrie(field, b.state.BlockRoots, params.BeaconConfig().SlotsPerHistoricalRoot)
+				if err != nil {
+					return [32]byte{}, err
+				}
+				b.dirtyIndexes[field] = []uint64{}
+				delete(b.rebuildTrie, field)
+				return b.stateFieldLeaves[field].TrieRoot()
+			}
 			root, err := b.recomputeFieldTrie(blockRoots, b.state.BlockRoots)
 			if err != nil {
 				return [32]byte{}, err
@@ -320,6 +330,15 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 		return stateutil.RootsArrayHashTreeRoot(b.state.BlockRoots, params.BeaconConfig().SlotsPerHistoricalRoot, "BlockRoots")
 	case stateRoots:
 		if featureconfig.Get().EnableSSZCache {
+			if b.rebuildTrie[field] {
+				err := b.resetFieldTrie(field, b.state.StateRoots, params.BeaconConfig().SlotsPerHistoricalRoot)
+				if err != nil {
+					return [32]byte{}, err
+				}
+				b.dirtyIndexes[field] = []uint64{}
+				delete(b.rebuildTrie, field)
+				return b.stateFieldLeaves[field].TrieRoot()
+			}
 			root, err := b.recomputeFieldTrie(stateRoots, b.state.StateRoots)
 			if err != nil {
 				return [32]byte{}, err
@@ -408,8 +427,32 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 	case slashings:
 		return stateutil.SlashingsRoot(b.state.Slashings)
 	case previousEpochAttestations:
+		if featureconfig.Get().EnableSSZCache {
+			if b.rebuildTrie[field] {
+				err := b.resetFieldTrie(field, b.state.PreviousEpochAttestations, params.BeaconConfig().MaxAttestations*params.BeaconConfig().SlotsPerEpoch)
+				if err != nil {
+					return [32]byte{}, err
+				}
+				b.dirtyIndexes[field] = []uint64{}
+				delete(b.rebuildTrie, field)
+				return b.stateFieldLeaves[field].TrieRoot()
+			}
+			return b.recomputeFieldTrie(field, b.state.PreviousEpochAttestations)
+		}
 		return stateutil.EpochAttestationsRoot(b.state.PreviousEpochAttestations)
 	case currentEpochAttestations:
+		if featureconfig.Get().EnableSSZCache {
+			if b.rebuildTrie[field] {
+				err := b.resetFieldTrie(field, b.state.CurrentEpochAttestations, params.BeaconConfig().MaxAttestations*params.BeaconConfig().SlotsPerEpoch)
+				if err != nil {
+					return [32]byte{}, err
+				}
+				b.dirtyIndexes[field] = []uint64{}
+				delete(b.rebuildTrie, field)
+				return b.stateFieldLeaves[field].TrieRoot()
+			}
+			return b.recomputeFieldTrie(field, b.state.CurrentEpochAttestations)
+		}
 		return stateutil.EpochAttestationsRoot(b.state.CurrentEpochAttestations)
 	case justificationBits:
 		return bytesutil.ToBytes32(b.state.JustificationBits), nil

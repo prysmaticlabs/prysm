@@ -10,11 +10,11 @@ import (
 // for 2d byte slices.
 var DoubleByteSlicePool = new(sync.Pool)
 
-var TripleByteSliceBlockRootsPool = new(sync.Pool)
+var BlockRootsMemoryPool = new(sync.Pool)
 
-var TripleByteSliceStateRootsPool = new(sync.Pool)
+var StateRootsMemoryPool = new(sync.Pool)
 
-var TripleByteSliceRandaoMixesPool = new(sync.Pool)
+var RandaoMixesMemoryPool = new(sync.Pool)
 
 // GetDoubleByteSlice retrieves the 2d byte slice of
 // the desired size from the memory pool.
@@ -42,14 +42,40 @@ func PutDoubleByteSlice(data [][]byte) {
 	}
 }
 
-// GetTripleByteSliceRoots retrieves the 2d byte slice of
+// GetBlockRootsTrie retrieves the 3d byte trie of
 // the desired size from the memory pool.
-func GetTripleByteSliceBlockRoots(size int) [][]*[32]byte {
+func GetBlockRootsTrie(size int) [][]*[32]byte {
 	if !featureconfig.Get().EnableByteMempool {
 		return make([][]*[32]byte, size)
 	}
 
-	rawObj := TripleByteSliceBlockRootsPool.Get()
+	rawObj := BlockRootsMemoryPool.Get()
+	if rawObj == nil {
+		return make([][]*[32]byte, size)
+	}
+	byteSlice := rawObj.([][]*[32]byte)
+	if len(byteSlice) >= size {
+		return byteSlice[:size]
+	}
+	return append(byteSlice, make([][]*[32]byte, size-len(byteSlice))...)
+}
+
+// PutBlockRootsTrie places the provided 3d byte trie
+// in the memory pool.
+func PutBlockRootsTrie(data [][]*[32]byte) {
+	if featureconfig.Get().EnableByteMempool {
+		BlockRootsMemoryPool.Put(data)
+	}
+}
+
+// GetStateRootsTrie retrieves the 3d byte slice of
+// the desired size from the memory pool.
+func GetStateRootsTrie(size int) [][]*[32]byte {
+	if !featureconfig.Get().EnableByteMempool {
+		return make([][]*[32]byte, size)
+	}
+
+	rawObj := BlockRootsMemoryPool.Get()
 	if rawObj == nil {
 		return make([][]*[32]byte, size)
 	}
@@ -62,20 +88,20 @@ func GetTripleByteSliceBlockRoots(size int) [][]*[32]byte {
 
 // PutTripleByteSliceRoots places the provided 2d byte slice
 // in the memory pool.
-func PutTripleByteSliceBlockRoots(data [][]*[32]byte) {
+func PutStateRootsTrie(data [][]*[32]byte) {
 	if featureconfig.Get().EnableByteMempool {
-		TripleByteSliceBlockRootsPool.Put(data)
+		StateRootsMemoryPool.Put(data)
 	}
 }
 
-// GetTripleByteSliceRoots retrieves the 2d byte slice of
+// GetRandaoMixesTrie retrieves the 3d byte slice of
 // the desired size from the memory pool.
-func GetTripleByteSliceStateRoots(size int) [][]*[32]byte {
+func GetRandaoMixesTrie(size int) [][]*[32]byte {
 	if !featureconfig.Get().EnableByteMempool {
 		return make([][]*[32]byte, size)
 	}
 
-	rawObj := TripleByteSliceStateRootsPool.Get()
+	rawObj := StateRootsMemoryPool.Get()
 	if rawObj == nil {
 		return make([][]*[32]byte, size)
 	}
@@ -86,36 +112,10 @@ func GetTripleByteSliceStateRoots(size int) [][]*[32]byte {
 	return append(byteSlice, make([][]*[32]byte, size-len(byteSlice))...)
 }
 
-// PutTripleByteSliceRoots places the provided 2d byte slice
+// PutRandaoMixesTrie places the provided 3d byte slice
 // in the memory pool.
-func PutTripleByteSliceStateRoots(data [][]*[32]byte) {
+func PutRandaoMixesTrie(data [][]*[32]byte) {
 	if featureconfig.Get().EnableByteMempool {
-		TripleByteSliceStateRootsPool.Put(data)
-	}
-}
-
-// GetTripleByteSliceRoots retrieves the 2d byte slice of
-// the desired size from the memory pool.
-func GetTripleByteSliceRandaoMixes(size int) [][]*[32]byte {
-	if !featureconfig.Get().EnableByteMempool {
-		return make([][]*[32]byte, size)
-	}
-
-	rawObj := TripleByteSliceRandaoMixesPool.Get()
-	if rawObj == nil {
-		return make([][]*[32]byte, size)
-	}
-	byteSlice := rawObj.([][]*[32]byte)
-	if len(byteSlice) >= size {
-		return byteSlice[:size]
-	}
-	return append(byteSlice, make([][]*[32]byte, size-len(byteSlice))...)
-}
-
-// PutTripleByteSliceRoots places the provided 2d byte slice
-// in the memory pool.
-func PutTripleByteSliceRandaoMixes(data [][]*[32]byte) {
-	if featureconfig.Get().EnableByteMempool {
-		TripleByteSliceRandaoMixesPool.Put(data)
+		StateRootsMemoryPool.Put(data)
 	}
 }

@@ -103,11 +103,11 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 	dstFieldTrie := [][]*[32]byte{}
 	switch f.field {
 	case randaoMixes:
-		dstFieldTrie = memorypool.GetTripleByteSliceRandaoMixes(len(f.fieldLayers))
+		dstFieldTrie = memorypool.GetRandaoMixesTrie(len(f.fieldLayers))
 	case blockRoots:
-		dstFieldTrie = memorypool.GetTripleByteSliceBlockRoots(len(f.fieldLayers))
+		dstFieldTrie = memorypool.GetBlockRootsTrie(len(f.fieldLayers))
 	case stateRoots:
-		dstFieldTrie = memorypool.GetTripleByteSliceStateRoots(len(f.fieldLayers))
+		dstFieldTrie = memorypool.GetStateRootsTrie(len(f.fieldLayers))
 	default:
 		dstFieldTrie = make([][]*[32]byte, len(f.fieldLayers))
 	}

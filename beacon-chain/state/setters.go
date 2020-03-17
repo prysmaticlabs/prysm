@@ -267,6 +267,7 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 	b.sharedFieldReferences[validators].refs--
 	b.sharedFieldReferences[validators] = &reference{refs: 1}
 	b.markFieldAsDirty(validators)
+	b.rebuildTrie[validators] = true
 	return nil
 }
 
@@ -508,6 +509,7 @@ func (b *BeaconState) SetPreviousEpochAttestations(val []*pbp2p.PendingAttestati
 
 	b.state.PreviousEpochAttestations = val
 	b.markFieldAsDirty(previousEpochAttestations)
+	b.rebuildTrie[previousEpochAttestations] = true
 	return nil
 }
 
@@ -525,6 +527,7 @@ func (b *BeaconState) SetCurrentEpochAttestations(val []*pbp2p.PendingAttestatio
 
 	b.state.CurrentEpochAttestations = val
 	b.markFieldAsDirty(currentEpochAttestations)
+	b.rebuildTrie[currentEpochAttestations] = true
 	return nil
 }
 
@@ -572,6 +575,7 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *pbp2p.PendingAttestati
 
 	b.state.CurrentEpochAttestations = append(atts, val)
 	b.markFieldAsDirty(currentEpochAttestations)
+	b.dirtyIndexes[currentEpochAttestations] = append(b.dirtyIndexes[currentEpochAttestations], uint64(len(b.state.CurrentEpochAttestations)-1))
 	return nil
 }
 
@@ -595,6 +599,8 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *pbp2p.PendingAttestat
 
 	b.state.PreviousEpochAttestations = append(atts, val)
 	b.markFieldAsDirty(previousEpochAttestations)
+	b.dirtyIndexes[previousEpochAttestations] = append(b.dirtyIndexes[previousEpochAttestations], uint64(len(b.state.PreviousEpochAttestations)-1))
+
 	return nil
 }
 
