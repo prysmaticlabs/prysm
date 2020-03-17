@@ -63,6 +63,7 @@ build:fuzz --define=FUZZING_ENGINE=libfuzzer
 build:fuzz --copt=-DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
 build:fuzz --linkopt -Wl,--no-as-needed
 build:fuzz --define=gc_goopts=-d=libfuzzer
+build:fuzz --local_test-jobs=HOST_CPUS*.5
 
 test:fuzzit --config=fuzz
 test:fuzzit --test_env=FUZZIT_API_KEY
