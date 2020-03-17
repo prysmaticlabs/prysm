@@ -125,6 +125,10 @@ var (
 		Name:  "new-state-mgmt",
 		Usage: "This enables the usage of experimental state mgmt service across Prysm",
 	}
+	enableInitSyncQueue = cli.BoolFlag{
+		Name:  "enable-initial-sync-queue",
+		Usage: "Enables concurrent fetching and processing of blocks on initial sync.",
+	}
 )
 
 // Deprecated flags list.
@@ -303,6 +307,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	dontPruneStateStartUp,
 	broadcastSlashingFlag,
 	newStateMgmt,
+	enableInitSyncQueue,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -314,4 +319,5 @@ var E2EBeaconChainFlags = []string{
 	"--enable-byte-mempool",
 	"--enable-state-gen-sig-verify",
 	"--check-head-state",
+	"--enable-initial-sync-queue",
 }
