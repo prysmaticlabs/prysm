@@ -114,3 +114,16 @@ func Eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
 	}
 	return root, nil
 }
+
+// AddInMixin describes a method from which a lenth mixin is added to the
+// provided root.
+func AddInMixin(root [32]byte, length uint64) ([32]byte, error) {
+	rootBuf := new(bytes.Buffer)
+	if err := binary.Write(rootBuf, binary.LittleEndian, length); err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not marshal eth1data votes length")
+	}
+	// We need to mix in the length of the slice.
+	rootBufRoot := make([]byte, 32)
+	copy(rootBufRoot, rootBuf.Bytes())
+	return mixInLength(root, rootBufRoot), nil
+}

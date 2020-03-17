@@ -108,7 +108,17 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][32]byte, length uint64,
 		}
 	}
 	layers[0] = hashLayer
+	layers, hashLayer = merkleizeTrieLeaves(layers, hashLayer, hasher)
+	var root [32]byte
+	root = hashLayer[0]
+	if h.rootsCache != nil {
+		layersCache[fieldName] = layers
+	}
+	return root
+}
 
+func merkleizeTrieLeaves(layers [][][32]byte, hashLayer [][32]byte,
+	hasher func([]byte) [32]byte) ([][][32]byte, [][32]byte) {
 	// We keep track of the hash layers of a Merkle trie until we reach
 	// the top layer of length 1, which contains the single root element.
 	//        [Root]      -> Top layer has length 1.
@@ -130,12 +140,7 @@ func (h *stateRootHasher) merkleizeWithCache(leaves [][32]byte, length uint64,
 		layers[i] = hashLayer
 		i++
 	}
-	var root [32]byte
-	root = hashLayer[0]
-	if h.rootsCache != nil {
-		layersCache[fieldName] = layers
-	}
-	return root
+	return layers, hashLayer
 }
 
 func recomputeRoot(idx int, chunks [][32]byte, length uint64,
