@@ -130,7 +130,7 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 				log.WithError(err).Error("Could not detect attester slashings")
 				continue
 			}
-			ds.submitAttesterSlashings(ctx, slashings, att.Data.Target.Epoch)
+			ds.submitAttesterSlashings(ctx, slashings)
 		}
 	}
 
@@ -140,7 +140,7 @@ func (ds *Service) detectHistoricalChainData(ctx context.Context) {
 	log.Infof("Completed slashing detection on historical chain data up to epoch %d", currentChainHead.HeadEpoch)
 }
 
-func (ds *Service) submitAttesterSlashings(ctx context.Context, slashings []*ethpb.AttesterSlashing, epoch uint64) {
+func (ds *Service) submitAttesterSlashings(ctx context.Context, slashings []*ethpb.AttesterSlashing) {
 	ctx, span := trace.StartSpan(ctx, "detection.submitAttesterSlashings")
 	defer span.End()
 	for i := 0; i < len(slashings); i++ {
@@ -148,9 +148,11 @@ func (ds *Service) submitAttesterSlashings(ctx context.Context, slashings []*eth
 		if slash != nil && slash.Attestation_1 != nil && slash.Attestation_2 != nil {
 			slashableIndices := sliceutil.IntersectionUint64(slashings[i].Attestation_1.AttestingIndices, slashings[i].Attestation_2.AttestingIndices)
 			log.WithFields(logrus.Fields{
-				"targetEpoch": epoch,
-				"indices":     slashableIndices,
-			}).Infof("Found %d attester slashings! Submitting to beacon node", len(slashings))
+				"sourceEpoch":  slash.Attestation_1.Data.Source.Epoch,
+				"targetEpoch":  slash.Attestation_1.Data.Target.Epoch,
+				"surroundVote": isSurrounding(slash.Attestation_1, slash.Attestation_2),
+				"indices":      slashableIndices,
+			}).Info("Found an attester slashing! Submitting to beacon node")
 			ds.attesterSlashingsFeed.Send(slashings[i])
 		}
 	}
