@@ -14,13 +14,13 @@ import (
 
 var _ = iface.ProposalsDetector(&ProposeDetector{})
 
-// DoubleProposeDetector defines a struct which can detect slashable
+// ProposeDetector defines a struct which can detect slashable
 // block proposals.
 type ProposeDetector struct {
 	slasherDB db.Database
 }
 
-// NewDoubleProposeDetector creates a new instance of a struct.
+// NewProposeDetector creates a new instance of a struct.
 func NewProposeDetector(db db.Database) *ProposeDetector {
 	return &ProposeDetector{
 		slasherDB: db,
