@@ -34,6 +34,7 @@ func (r *Service) committeeIndexBeaconAttestationSubscriber(ctx context.Context,
 }
 
 func (r *Service) currentCommitteeIndex() int {
+	// 	return cache.TrackedCommitteeIndices.GetIndices(helpers.SlotToEpoch(r.chain.HeadSlot()))
 	activeValidatorIndices, err := r.chain.HeadValidatorsIndices(helpers.SlotToEpoch(r.chain.HeadSlot()))
 	if err != nil {
 		panic(err)

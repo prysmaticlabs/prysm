@@ -10,6 +10,7 @@ go_library(
         "eth1_data.go",
         "hot_state_cache.go",
         "skip_slot_cache.go",
+        "tracked_committee_indices.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/cache",
     visibility = ["//beacon-chain:__subpackages__"],

@@ -4,8 +4,12 @@ import (
 	"context"
 	"time"
 
+	ssz "github.com/prysmaticlabs/eth1-mock-rpc/bazel-eth1-mock-rpc/external/com_github_prysmaticlabs_go_ssz"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
-	"github.com/prysmaticlabs/go-ssz"
+	"go.opencensus.io/trace"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
@@ -18,9 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
-	"go.opencensus.io/trace"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // GetAttestationData requests that the beacon node produce an attestation data object,
@@ -32,6 +33,8 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 		trace.Int64Attribute("slot", int64(req.Slot)),
 		trace.Int64Attribute("committeeIndex", int64(req.CommitteeIndex)),
 	)
+
+	cache.TrackedCommitteeIndices.AddIndices([]uint64{req.CommitteeIndex}, helpers.SlotToEpoch(req.Slot))
 
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
@@ -122,6 +125,8 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 	if _, err := bls.SignatureFromBytes(att.Signature); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "Incorrect attestation signature")
 	}
+
+	cache.TrackedCommitteeIndices.AddIndices([]uint64{att.Data.CommitteeIndex}, helpers.SlotToEpoch(att.Data.Slot))
 
 	root, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
