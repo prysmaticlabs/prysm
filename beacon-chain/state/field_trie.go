@@ -91,8 +91,6 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 }
 
 func (f *FieldTrie) CopyTrie() *FieldTrie {
-	//f.Mutex.Lock()
-	//defer f.Mutex.Unlock()
 	if f.fieldLayers == nil {
 		return &FieldTrie{
 			field:     f.field,
