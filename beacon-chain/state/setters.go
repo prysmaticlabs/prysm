@@ -211,6 +211,7 @@ func (b *BeaconState) SetEth1DataVotes(val []*ethpb.Eth1Data) error {
 
 	b.state.Eth1DataVotes = val
 	b.markFieldAsDirty(eth1DataVotes)
+	b.rebuildTrie[eth1DataVotes] = true
 	return nil
 }
 
@@ -411,6 +412,7 @@ func (b *BeaconState) SetRandaoMixes(val [][]byte) error {
 
 	b.state.RandaoMixes = val
 	b.markFieldAsDirty(randaoMixes)
+	b.rebuildTrie[randaoMixes] = true
 	return nil
 }
 

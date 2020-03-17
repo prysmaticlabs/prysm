@@ -128,6 +128,22 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 	}
 }
 
+func (f *FieldTrie) TrieRoot() ([32]byte, error) {
+	datType, ok := fieldMap[f.field]
+	if !ok {
+		return [32]byte{}, errors.Errorf("unrecognized field in trie")
+	}
+	switch datType {
+	case basicArray:
+		return *f.fieldLayers[len(f.fieldLayers)-1][0], nil
+	case compositeArray:
+		trieRoot := *f.fieldLayers[len(f.fieldLayers)-1][0]
+		return stateutil.AddInMixin(trieRoot, uint64(len(f.fieldLayers[0])))
+	default:
+		return [32]byte{}, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(datType).Name())
+	}
+}
+
 func fieldConverters(field fieldIndex, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	switch field {
 	case blockRoots, stateRoots, randaoMixes:
