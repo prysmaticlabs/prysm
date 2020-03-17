@@ -176,7 +176,8 @@ func (b *BeaconState) LatestBlockHeader() *ethpb.BeaconBlockHeader {
 	defer b.lock.RUnlock()
 
 	hdr := &ethpb.BeaconBlockHeader{
-		Slot: b.state.LatestBlockHeader.Slot,
+		Slot:          b.state.LatestBlockHeader.Slot,
+		ProposerIndex: b.state.LatestBlockHeader.ProposerIndex,
 	}
 
 	parentRoot := make([]byte, len(b.state.LatestBlockHeader.ParentRoot))
