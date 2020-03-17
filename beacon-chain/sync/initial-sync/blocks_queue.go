@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
+	"go.opencensus.io/trace"
 )
 
 const (
@@ -364,6 +365,9 @@ func (q *blocksQueue) parseFetchResponse(ctx context.Context, response *fetchReq
 func (q *blocksQueue) sendFetchedBlocks(ctx context.Context) error {
 	q.state.sender.Lock()
 	defer q.state.sender.Unlock()
+
+	ctx, span := trace.StartSpan(ctx, "initialsync.sendFetchedBlocks")
+	defer span.End()
 
 	startSlot := q.headFetcher.HeadSlot() + 1
 	nonSkippedSlot := uint64(0)
