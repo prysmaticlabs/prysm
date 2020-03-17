@@ -16,6 +16,11 @@ sh_binary(
     data = ["@fuzzit_linux//:fuzzit"],
 )
 
+sh_binary(
+    name = "fuzz_wrapper",
+    srcs = ["fuzz_wrapper.sh"],
+)
+
 ################################################################################
 ##                      Docker images as non-root user                        ##
 ################################################################################
