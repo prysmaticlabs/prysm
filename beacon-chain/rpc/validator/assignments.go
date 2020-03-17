@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -74,7 +75,9 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 		validatorAssignments = append(validatorAssignments, assignment)
 	}
 
-	cache.TrackedCommitteeIndices.AddIndices(committeeIndices, req.Epoch)
+	if featureconfig.Get().EnableDynamicCommitteeSubnets {
+		cache.TrackedCommitteeIndices.AddIndices(committeeIndices, req.Epoch)
+	}
 
 	return &ethpb.DutiesResponse{
 		Duties: validatorAssignments,
