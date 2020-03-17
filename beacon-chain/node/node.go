@@ -405,9 +405,19 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 		return err
 	}
 
-	var initSync *initialsync.Service
-	if err := b.services.FetchService(&initSync); err != nil {
-		return err
+	var initSync prysmsync.Checker
+	if cfg := featureconfig.Get(); cfg.EnableInitSyncQueue {
+		var initSyncTmp *initialsync.Service
+		if err := b.services.FetchService(&initSyncTmp); err != nil {
+			return err
+		}
+		initSync = initSyncTmp
+	} else {
+		var initSyncTmp *initialsyncv1.Service
+		if err := b.services.FetchService(&initSyncTmp); err != nil {
+			return err
+		}
+		initSync = initSyncTmp
 	}
 
 	rs := prysmsync.NewRegularSync(&prysmsync.Config{
@@ -464,9 +474,19 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
-	var syncService *initialsync.Service
-	if err := b.services.FetchService(&syncService); err != nil {
-		return err
+	var syncService prysmsync.Checker
+	if cfg := featureconfig.Get(); cfg.EnableInitSyncQueue {
+		var initSyncTmp *initialsync.Service
+		if err := b.services.FetchService(&initSyncTmp); err != nil {
+			return err
+		}
+		syncService = initSyncTmp
+	} else {
+		var initSyncTmp *initialsyncv1.Service
+		if err := b.services.FetchService(&initSyncTmp); err != nil {
+			return err
+		}
+		syncService = initSyncTmp
 	}
 
 	genesisValidators := ctx.GlobalUint64(flags.InteropNumValidatorsFlag.Name)
