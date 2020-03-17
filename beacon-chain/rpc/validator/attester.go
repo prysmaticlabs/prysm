@@ -5,6 +5,7 @@ import (
 	"time"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
@@ -14,9 +15,13 @@ import (
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"go.opencensus.io/trace"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // GetAttestationData requests that the beacon node produce an attestation data object,
@@ -29,7 +34,11 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 		trace.Int64Attribute("committeeIndex", int64(req.CommitteeIndex)),
 	)
 
-	cache.TrackedCommitteeIndices.AddIndices([]uint64{req.CommitteeIndex}, helpers.SlotToEpoch(req.Slot))
+	// If attestation committee subnets are enabled, we track the committee
+	// index into a cache.
+	if featureconfig.Get().EnableDynamicCommitteeSubnets {
+		cache.TrackedCommitteeIndices.AddIndices([]uint64{req.CommitteeIndex}, helpers.SlotToEpoch(req.Slot))
+	}
 
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
@@ -121,7 +130,11 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 		return nil, status.Error(codes.InvalidArgument, "Incorrect attestation signature")
 	}
 
-	cache.TrackedCommitteeIndices.AddIndices([]uint64{att.Data.CommitteeIndex}, helpers.SlotToEpoch(att.Data.Slot))
+	// If attestation committee subnets are enabled, we track the committee
+	// index into a cache.
+	if featureconfig.Get().EnableDynamicCommitteeSubnets {
+		cache.TrackedCommitteeIndices.AddIndices([]uint64{att.Data.CommitteeIndex}, helpers.SlotToEpoch(att.Data.Slot))
+	}
 
 	root, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
