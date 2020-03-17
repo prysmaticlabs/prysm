@@ -75,12 +75,25 @@ func (s *State) loadHotStateByRoot(ctx context.Context, blockRoot [32]byte) (*st
 	if summary == nil {
 		return nil, errUnknownStateSummary
 	}
+
 	boundaryState, err := s.beaconDB.State(ctx, bytesutil.ToBytes32(summary.BoundaryRoot))
 	if err != nil {
 		return nil, err
 	}
 	if boundaryState == nil {
-		return nil, errUnknownBoundaryState
+		// Boundary state not available, get the last available state and start from there.
+		// This could happen if users toggle feature flags in between sync.
+		r, err := s.lastSavedState(ctx, helpers.StartSlot(summary.Slot))
+		if err != nil {
+			return nil, err
+		}
+		boundaryState, err = s.beaconDB.State(ctx, r)
+		if err != nil {
+			return nil, err
+		}
+		if boundaryState == nil {
+			return nil, errUnknownBoundaryState
+		}
 	}
 
 	// Don't need to replay the blocks if we're already on an epoch boundary,

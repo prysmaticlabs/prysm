@@ -6,6 +6,7 @@ import (
 
 	"github.com/boltdb/bolt"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
 )
@@ -63,12 +64,18 @@ func (k *Store) SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(checkpointBucket)
-		// The corresponding state must exist or there is a risk that the beacondb enters a state
-		// where the justified beaconState is missing. This may be a fatal condition requiring
-		// a new sync from genesis.
-		if tx.Bucket(stateBucket).Get(checkpoint.Root) == nil {
-			traceutil.AnnotateError(span, errMissingStateForCheckpoint)
-			return errMissingStateForCheckpoint
+		if featureconfig.Get().NewStateMgmt {
+			if tx.Bucket(stateSummaryBucket).Get(checkpoint.Root) == nil {
+				return errors.New("missing state summary for finalized root")
+			}
+		} else {
+			// The corresponding state must exist or there is a risk that the beacondb enters a state
+			// where the justified beaconState is missing. This may be a fatal condition requiring
+			// a new sync from genesis.
+			if tx.Bucket(stateBucket).Get(checkpoint.Root) == nil {
+				traceutil.AnnotateError(span, errMissingStateForCheckpoint)
+				return errMissingStateForCheckpoint
+			}
 		}
 		return bucket.Put(justifiedCheckpointKey, enc)
 	})
@@ -85,12 +92,18 @@ func (k *Store) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 	}
 	return k.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(checkpointBucket)
-		// The corresponding state must exist or there is a risk that the beacondb enters a state
-		// where the finalized beaconState is missing. This would be a fatal condition requiring
-		// a new sync from genesis.
-		if tx.Bucket(stateBucket).Get(checkpoint.Root) == nil {
-			traceutil.AnnotateError(span, errMissingStateForCheckpoint)
-			return errMissingStateForCheckpoint
+		if featureconfig.Get().NewStateMgmt {
+			if tx.Bucket(stateSummaryBucket).Get(checkpoint.Root) == nil {
+				return errors.New("missing state summary for finalized root")
+			}
+		} else {
+			// The corresponding state must exist or there is a risk that the beacondb enters a state
+			// where the finalized beaconState is missing. This would be a fatal condition requiring
+			// a new sync from genesis.
+			if tx.Bucket(stateBucket).Get(checkpoint.Root) == nil {
+				traceutil.AnnotateError(span, errMissingStateForCheckpoint)
+				return errMissingStateForCheckpoint
+			}
 		}
 
 		if err := bucket.Put(finalizedCheckpointKey, enc); err != nil {
