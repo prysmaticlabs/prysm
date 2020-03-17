@@ -201,15 +201,16 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 
 	proposerSlashings := []*ethpb.ProposerSlashing{
 		{
-			ProposerIndex: 3,
 			Header_1: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
+					ProposerIndex: 3,
 					Slot: 1,
 				},
 				Signature: []byte("A"),
 			},
 			Header_2: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
+					ProposerIndex: 3,
 					Slot: 1,
 				},
 				Signature: []byte("B"),
@@ -329,6 +330,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 
 	header1 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
+			ProposerIndex: proposerSlashIdx,
 			Slot:      1,
 			StateRoot: []byte("A"),
 		},
@@ -341,6 +343,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 
 	header2 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
+			ProposerIndex: proposerSlashIdx,
 			Slot:      1,
 			StateRoot: []byte("B"),
 		},
@@ -353,7 +356,6 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 
 	proposerSlashings := []*ethpb.ProposerSlashing{
 		{
-			ProposerIndex: proposerSlashIdx,
 			Header_1:      header1,
 			Header_2:      header2,
 		},
@@ -497,8 +499,8 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		t.Fatalf("Expected block to pass processing conditions: %v", err)
 	}
 
-	if v, _ := beaconState.ValidatorAtIndex(proposerSlashings[0].ProposerIndex); !v.Slashed {
-		t.Errorf("Expected validator at index %d to be slashed, received false", proposerSlashings[0].ProposerIndex)
+	if v, _ := beaconState.ValidatorAtIndex(proposerSlashings[0].Header_1.Header.ProposerIndex); !v.Slashed {
+		t.Errorf("Expected validator at index %d to be slashed, received false", proposerSlashings[0].Header_1.Header.ProposerIndex)
 	}
 
 	if v, _ := beaconState.ValidatorAtIndex(1); !v.Slashed {
@@ -590,15 +592,16 @@ func BenchmarkProcessBlk_65536Validators_FullBlock(b *testing.B) {
 	// Set up proposer slashing object for block
 	proposerSlashings := []*ethpb.ProposerSlashing{
 		{
-			ProposerIndex: 1,
 			Header_1: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
+					ProposerIndex: 1,
 					Slot: 0,
 				},
 				Signature: []byte("A"),
 			},
 			Header_2: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
+					ProposerIndex: 1,
 					Slot: 0,
 				},
 				Signature: []byte("B"),
