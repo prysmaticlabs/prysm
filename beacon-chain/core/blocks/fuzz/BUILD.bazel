@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 load("//tools:fuzz.bzl", "go_fuzz_test")
 load("//tools:ssz.bzl", "SSZ_DEPS", "ssz_gen_marshal")
 
@@ -26,6 +26,7 @@ FUZZ_DEPS = [
     "//beacon-chain/core/blocks:go_default_library",
     "//proto/beacon/p2p/v1:go_default_library",
     "//beacon-chain/testing:go_default_library",
+    "//shared/featureconfig:go_default_library",
     "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     "@com_github_sirupsen_logrus//:go_default_library",
     "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
@@ -42,7 +43,7 @@ SRCS = [
 ] + glob(["*_fuzz.go"])
 
 go_fuzz_test(
-    name = "attestation_fuzz",
+    name = "attestation_fuzz_test",
     srcs = SRCS,
     corpus = "@sigp_beacon_fuzz_corpora//:current_mainnet_attestation",
     corpus_path = "external/sigp_beacon_fuzz_corpora/0-9-4/mainnet/attestation",
@@ -52,7 +53,7 @@ go_fuzz_test(
 )
 
 go_fuzz_test(
-    name = "attester_slashing_fuzz",
+    name = "attester_slashing_fuzz_test",
     srcs = SRCS,
     corpus = "@sigp_beacon_fuzz_corpora//:current_mainnet_attester_slashing",
     corpus_path = "external/sigp_beacon_fuzz_corpora/0-9-4/mainnet/attester_slashing",
@@ -62,27 +63,29 @@ go_fuzz_test(
 )
 
 go_fuzz_test(
-    name = "block_fuzz",
+    name = "block_fuzz_test",
     srcs = SRCS,
     corpus = "@sigp_beacon_fuzz_corpora//:current_mainnet_block_header",
     corpus_path = "external/sigp_beacon_fuzz_corpora/0-9-4/mainnet/block_header",
     func = "BeaconFuzzBlock",
     importpath = IMPORT_PATH,
     deps = FUZZ_DEPS,
+    input_size = 302,
 )
 
 go_fuzz_test(
-    name = "block_header_fuzz",
+    name = "block_header_fuzz_test",
     srcs = SRCS,
     corpus = "@sigp_beacon_fuzz_corpora//:current_mainnet_block_header",
     corpus_path = "external/sigp_beacon_fuzz_corpora/0-9-4/mainnet/block_header",
     func = "BeaconFuzzBlockHeader",
     importpath = IMPORT_PATH,
     deps = FUZZ_DEPS,
+    input_size = 302,
 )
 
 go_fuzz_test(
-    name = "deposit_fuzz",
+    name = "deposit_fuzz_test",
     srcs = SRCS,
     corpus = "deposit_corpus",
     corpus_path = "beacon-chain/core/blocks/fuzz/deposit_corpus",
@@ -92,7 +95,7 @@ go_fuzz_test(
 )
 
 go_fuzz_test(
-    name = "proposer_slashing_fuzz",
+    name = "proposer_slashing_fuzz_test",
     srcs = SRCS,
     corpus = "@sigp_beacon_fuzz_corpora//:current_mainnet_proposer_slashing",
     corpus_path = "external/sigp_beacon_fuzz_corpora/0-9-4/mainnet/proposer_slashing",
@@ -102,7 +105,7 @@ go_fuzz_test(
 )
 
 go_fuzz_test(
-    name = "voluntary_exit_fuzz",
+    name = "voluntary_exit_fuzz_test",
     srcs = SRCS,
     corpus = "voluntary_exit_corpus",
     corpus_path = "beacon-chain/core/blocks/fuzz/voluntary_exit_corpus",
@@ -117,8 +120,34 @@ go_test(
     name = "go_default_test",
     srcs = ["regression_test.go"],
     data = glob(["regression_data/*.ssz"]),
+    embed = [":go_default_library"],
     deps = [
         "//beacon-chain/core/blocks/fuzz:block_header_fuzz_lib_with_fuzzer",
+        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
+    ],
+)
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "attestation_fuzz.go",
+        "block_fuzz.go",
+        "common.go",
+        "deposit_fuzz.go",
+        "inputs.go",
+        "shuffle_fuzz.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks/fuzz",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//beacon-chain/core/blocks:go_default_library",
+        "//beacon-chain/core/state:go_default_library",
+        "//beacon-chain/state:go_default_library",
+        "//beacon-chain/testing:go_default_library",
+        "//shared/params:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
+        "@com_github_prysmaticlabs_ethereumapis//eth/v1alpha1:go_default_library",
+        "@com_github_prysmaticlabs_go_ssz//:go_default_library",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
 )

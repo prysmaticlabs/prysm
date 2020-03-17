@@ -38,6 +38,7 @@ go_library(
     srcs = [":ssz_generated_files"],
     embed = [":v1_go_proto"],
     visibility = ["//visibility:public"],
+    gc_goopts = ["-d=libfuzzer"],
     deps = SSZ_DEPS,
 )
 

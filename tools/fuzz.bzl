@@ -64,6 +64,7 @@ def go_fuzz_test(
         importpath,
         func = "Fuzz",
         repository = "",
+        input_size = 0,
         size = "medium",
         tags = [],
         **kwargs):
@@ -115,6 +116,13 @@ def go_fuzz_test(
     else:
         corpus_name = corpus
 
+    additional_args = []
+    if input_size > 0:
+        additional_args += [
+            "-max_len=%s" % input_size,
+            "-reduce_inputs=0",
+        ]
+
     native.cc_test(
         name = name + "_with_libfuzzer",
         linkopts = ["-fsanitize=fuzzer"],
@@ -126,6 +134,9 @@ def go_fuzz_test(
         args = [
             corpus_path,
             "-print_final_stats=1",
-        ],
+            "-use_value_profile=1",
+            "-max_total_time=3540", # One minute early of 3600.
+        ] + additional_args,
         data = [corpus_name],
+        timeout = "eternal",
     )

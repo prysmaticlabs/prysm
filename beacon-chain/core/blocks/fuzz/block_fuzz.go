@@ -4,10 +4,8 @@ package fuzz
 import (
 	"context"
 
-	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	prylabs_testing "github.com/prysmaticlabs/prysm/beacon-chain/testing"
@@ -29,7 +27,7 @@ func BeaconFuzzBlock(b []byte) ([]byte, bool) {
 	if err != nil {
 		return fail(err)
 	}
-	post, err := ProcessBlockNoVerify(context.Background(), st, input.Block)
+	post, err := state.ProcessBlock(context.Background(), st, &ethpb.SignedBeaconBlock{Block: input.Block})
 	if err != nil {
 		return fail(err)
 	}
@@ -41,30 +39,3 @@ func BeaconFuzzBlock(b []byte) ([]byte, bool) {
 	return result, true
 }
 
-func ProcessBlockNoVerify(
-	ctx context.Context,
-	st *stateTrie.BeaconState,
-	block *ethpb.BeaconBlock,
-) (*stateTrie.BeaconState, error) {
-	st, err := blocks.ProcessBlockHeaderNoVerify(st, block)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process block header")
-	}
-
-	st, err = blocks.ProcessRandao(st, block.Body)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not verify and process randao")
-	}
-
-	st, err = blocks.ProcessEth1DataInBlock(st, block)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process eth1 data")
-	}
-
-	st, err = state.ProcessOperationsNoVerify(ctx, st, block.Body)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not process block operation")
-	}
-
-	return st, nil
-}

@@ -5,9 +5,16 @@ import (
 	"strings"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
 
 const PanicOnError = "false"
+
+func init() {
+	featureconfig.Init(&featureconfig.Flags{
+		SkipBLSVerify: true,
+	})
+}
 
 func fail(err error) ([]byte, bool) {
 	if strings.ToLower(PanicOnError) == "true" {
