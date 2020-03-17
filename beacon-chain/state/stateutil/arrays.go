@@ -31,12 +31,10 @@ func RootsArrayHashTreeRoot(vals [][]byte, length uint64, fieldName string) ([32
 	return nocachedHasher.arraysRoot(vals, length, fieldName)
 }
 
-func ReturnTrieLayer(elements [][]byte, length uint64) [][]*[32]byte {
+func ReturnTrieLayer(elements [][32]byte, length uint64) [][]*[32]byte {
 	hasher := hashutil.CustomSHA256Hasher()
-	leaves := make([][32]byte, length)
-	for i, chunk := range elements {
-		copy(leaves[i][:], chunk)
-	}
+	leaves := elements
+
 	if len(leaves) == 1 {
 		return [][]*[32]byte{{&leaves[0]}}
 	}
@@ -74,7 +72,8 @@ func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
 	buffer := bytes.NewBuffer([]byte{})
 	buffer.Grow(64)
 	for i := 0; i < int(depth); i++ {
-		if len(layers[i])%2 == 1 {
+		oddNodeLength := len(layers[i])%2 == 1
+		if oddNodeLength {
 			zerohash := trieutil.ZeroHashes[i]
 			layers[i] = append(layers[i], &zerohash)
 		}
@@ -85,6 +84,9 @@ func ReturnTrieLayerVariable(elements [][32]byte, length uint64) [][]*[32]byte {
 			concat := hasher(buffer.Bytes())
 			updatedValues = append(updatedValues, &concat)
 			buffer.Reset()
+		}
+		if oddNodeLength {
+			layers[i] = layers[i][:len(layers[i])-1]
 		}
 		layers[i+1] = updatedValues
 	}
@@ -130,6 +132,15 @@ func RecomputeFromLayerVariable(changedLeaves [][32]byte, changedIdx []uint64, l
 	}
 	root := *layer[len(layer)-1][0]
 	var err error
+
+	/*
+		// We need to ensure we recompute indices of the Merkle tree which
+		// changed in-between calls to this function. This check adds an offset
+		// to the recomputed indices to ensure we do so evenly.
+		maxChangedIndex := changedIdx[len(changedIdx)-1]
+		if int(maxChangedIndex+2) == len(layer[0]) && maxChangedIndex%2 != 0 {
+			changedIdx = append(changedIdx, maxChangedIndex+1)
+		} */
 
 	for i, idx := range changedIdx {
 		root, layer, err = recomputeRootFromLayerVariable(int(idx), changedLeaves[i], layer, hasher)

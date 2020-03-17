@@ -9,7 +9,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/protolambda/zssz/merkle"
-	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
 	coreutils "github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -40,8 +39,14 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 
 	for i := 0; i < 20; i++ {
 		b.dirtyFields[fieldIndex(i)] = true
+		b.rebuildTrie[fieldIndex(i)] = true
 		b.dirtyIndexes[fieldIndex(i)] = []uint64{}
-		b.stateFieldLeaves[fieldIndex(i)] = &FieldTrie{}
+		b.stateFieldLeaves[fieldIndex(i)] = &FieldTrie{
+			field:     fieldIndex(i),
+			reference: &reference{1},
+			Mutex:     new(sync.Mutex),
+		}
+
 	}
 
 	if featureconfig.Get().EnableSSZCache {
@@ -49,7 +54,7 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 
 		b.stateFieldLeaves[stateRoots] = NewFieldTrie(stateRoots, b.state.StateRoots, params.BeaconConfig().SlotsPerHistoricalRoot)
 
-		b.stateFieldLeaves[randaoMixes] = NewFieldTrie(randaoMixes, b.state.RandaoMixes, params.BeaconConfig().EpochsPerHistoricalVector)
+		//b.stateFieldLeaves[randaoMixes] = NewFieldTrie(randaoMixes, b.state.RandaoMixes, params.BeaconConfig().EpochsPerHistoricalVector)
 		layers, err := stateutil.Eth1DataVotesRootWithTrie(b.state.Eth1DataVotes)
 		if err != nil {
 			panic(err)
@@ -61,7 +66,7 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 			Mutex:       new(sync.Mutex),
 		}
 
-		layers, err = stateutil.ValidatorsRootWithTrie(b.state.Validators)
+		/*layers, err = stateutil.ValidatorsRootWithTrie(b.state.Validators)
 		if err != nil {
 			panic(err)
 		}
@@ -71,7 +76,7 @@ func InitializeFromProtoUnsafe(st *pbp2p.BeaconState) (*BeaconState, error) {
 			field:       validators,
 			reference:   &reference{1},
 			Mutex:       new(sync.Mutex),
-		}
+		}*/
 	}
 
 	// Initialize field reference tracking for shared data.
@@ -191,6 +196,10 @@ func (b *BeaconState) Copy() *BeaconState {
 
 			if field == blockRoots && v.refs == 0 && b.stateFieldLeaves[field].refs == 0 {
 				memorypool.PutTripleByteSliceBlockRoots(b.stateFieldLeaves[blockRoots].fieldLayers)
+			}
+
+			if field == stateRoots && v.refs == 0 && b.stateFieldLeaves[field].refs == 0 {
+				memorypool.PutTripleByteSliceStateRoots(b.stateFieldLeaves[stateRoots].fieldLayers)
 			}
 
 			if field == stateRoots && v.refs == 0 && b.stateFieldLeaves[field].refs == 0 {
@@ -371,6 +380,13 @@ func (b *BeaconState) rootSelector(field fieldIndex) ([32]byte, error) {
 		return stateutil.ValidatorBalancesRoot(b.state.Balances)
 	case randaoMixes:
 		if featureconfig.Get().EnableSSZCache {
+			if b.rebuildTrie[field] {
+				b.stateFieldLeaves[randaoMixes] = NewFieldTrie(field, b.state.RandaoMixes, params.BeaconConfig().EpochsPerHistoricalVector)
+				b.dirtyIndexes[randaoMixes] = []uint64{}
+				delete(b.rebuildTrie, randaoMixes)
+				layers := b.stateFieldLeaves[randaoMixes].fieldLayers
+				return *layers[len(layers)-1][0], nil
+			}
 			root, err := b.recomputeFieldTrie(randaoMixes, b.state.RandaoMixes)
 			if err != nil {
 				return [32]byte{}, err
@@ -455,8 +471,9 @@ func (b *BeaconState) recomputeFieldTrieTest(index fieldIndex, elements []*ethpb
 	return stateutil.AddInMixin(root, uint64(len(elements)))
 } */
 
-func (b *BeaconState) resetFieldTrieTest(index fieldIndex, elements []*ethpb.Eth1Data) ([32]byte, error) {
+func (b *BeaconState) resetFieldTrie(index fieldIndex, elements interface{}, length uint64) error {
 	fTrie := b.stateFieldLeaves[index]
+	var err error
 	if fTrie.refs > 1 {
 		fTrie.Lock()
 		defer fTrie.Unlock()
@@ -465,12 +482,11 @@ func (b *BeaconState) resetFieldTrieTest(index fieldIndex, elements []*ethpb.Eth
 		b.stateFieldLeaves[index] = newTrie
 		fTrie = newTrie
 	}
-	layers, err := stateutil.Eth1DataVotesRootWithTrie(elements)
+	fTrie, err = NewFieldTrie(index, elements, length)
 	if err != nil {
-		return [32]byte{}, err
+		return err
 	}
-	fTrie.fieldLayers = layers
+	b.stateFieldLeaves[index] = fTrie
 	b.dirtyIndexes[index] = []uint64{}
-
-	return stateutil.AddInMixin(*layers[len(layers)-1][0], uint64(len(elements)))
+	return nil
 }
