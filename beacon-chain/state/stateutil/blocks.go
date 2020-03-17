@@ -114,3 +114,27 @@ func Eth1DataVotesRoot(eth1DataVotes []*ethpb.Eth1Data) ([32]byte, error) {
 	}
 	return root, nil
 }
+
+func Eth1DataVotesRootWithTrie(eth1DataVotes []*ethpb.Eth1Data) ([][]*[32]byte, error) {
+	eth1VotesRoots := make([][32]byte, 0, len(eth1DataVotes))
+	for i := 0; i < len(eth1DataVotes); i++ {
+		eth1, err := Eth1Root(eth1DataVotes[i])
+		if err != nil {
+			return nil, errors.Wrap(err, "could not compute eth1data merkleization")
+		}
+		eth1VotesRoots = append(eth1VotesRoots, eth1)
+	}
+	layers := ReturnTrieLayerVariable(eth1VotesRoots, params.BeaconConfig().SlotsPerEth1VotingPeriod)
+	return layers, nil
+}
+
+func AddInMixin(root [32]byte, length uint64) ([32]byte, error) {
+	rootBuf := new(bytes.Buffer)
+	if err := binary.Write(rootBuf, binary.LittleEndian, length); err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not marshal eth1data votes length")
+	}
+	// We need to mix in the length of the slice.
+	rootBufRoot := make([]byte, 32)
+	copy(rootBufRoot, rootBuf.Bytes())
+	return mixInLength(root, rootBufRoot), nil
+}
