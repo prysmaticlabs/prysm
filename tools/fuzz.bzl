@@ -118,10 +118,7 @@ def go_fuzz_test(
 
     additional_args = []
     if input_size > 0:
-        additional_args += [
-            "-max_len=%s" % input_size,
-            "-reduce_inputs=0",
-        ]
+        additional_args += ["-max_len=%s" % input_size]
 
     native.cc_test(
         name = name + "_with_libfuzzer",
