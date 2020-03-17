@@ -292,6 +292,10 @@ go_repository(
     name = "com_github_prysmaticlabs_go_ssz",
     commit = "e24db4d9e9637cf88ee9e4a779e339a1686a84ee",
     importpath = "github.com/prysmaticlabs/go-ssz",
+    patch_args = ["-p1"],
+    patches = [
+        "//third_party:com_github_prysmaticlabs_go_ssz.patch",
+    ],
 )
 
 go_repository(
@@ -1598,7 +1602,6 @@ go_repository(
 
 go_repository(
     name = "com_github_ferranbt_fastssz",
+    commit = "f7a73f06375eb09bbd87a7266b567514b086963c",
     importpath = "github.com/ferranbt/fastssz",
-    sum = "h1:oUQredbOIzWIMmeGR9dTLzSi4DqRVwxrPzSDiLJBp4Q=",
-    version = "v0.0.0-20200310214500-3283b9706406",
 )
