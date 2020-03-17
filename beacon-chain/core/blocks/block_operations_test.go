@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	stateTrie "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/attestationutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -35,7 +36,7 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 	beaconState, privKeys := testutil.DeterministicGenesisState(t, 100)
 	beaconState.SetLatestBlockHeader(&ethpb.BeaconBlockHeader{Slot: 9})
 
-	lbhsr, err := ssz.HashTreeRoot(beaconState.LatestBlockHeader())
+	lbhsr, err := stateutil.BlockHeaderRoot(beaconState.LatestBlockHeader())
 	if err != nil {
 		t.Error(err)
 	}
@@ -47,6 +48,7 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
+			ProposerIndex: proposerIdx,
 			Slot: 0,
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal: []byte{'A', 'B', 'C'},
@@ -117,7 +119,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 	}
 
 	_, err = blocks.ProcessBlockHeader(state, block)
-	want := "is different then block slot"
+	want := "is different than block slot"
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
@@ -153,6 +155,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 	validators[5896].PublicKey = priv.PublicKey().Marshal()
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
+			ProposerIndex: 5669,
 			Slot: 0,
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal: []byte{'A', 'B', 'C'},
@@ -189,7 +192,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
 
-	parentRoot, err := ssz.HashTreeRoot(state.LatestBlockHeader())
+	parentRoot, err := stateutil.BlockHeaderRoot(state.LatestBlockHeader())
 	if err != nil {
 		t.Error(err)
 	}
@@ -203,6 +206,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 	validators[12683].PublicKey = priv.PublicKey().Marshal()
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
+			ProposerIndex: 5669,
 			Slot: 0,
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal: []byte{'A', 'B', 'C'},
@@ -239,10 +243,11 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
 
-	latestBlockSignedRoot, err := ssz.HashTreeRoot(state.LatestBlockHeader())
+	latestBlockSignedRoot, err := stateutil.BlockHeaderRoot(state.LatestBlockHeader())
 	if err != nil {
 		t.Error(err)
 	}
+
 	currentEpoch := helpers.CurrentEpoch(state)
 	dt, err := helpers.Domain(state.Fork(), currentEpoch, params.BeaconConfig().DomainBeaconProposer)
 	if err != nil {
@@ -251,6 +256,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	priv := bls.RandKey()
 	block := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
+			ProposerIndex: 5669,
 			Slot: 0,
 			Body: &ethpb.BeaconBlockBody{
 				RandaoReveal: []byte{'A', 'B', 'C'},
@@ -399,14 +405,15 @@ func TestProcessProposerSlashings_UnmatchedHeaderSlots(t *testing.T) {
 	currentSlot := uint64(0)
 	slashings := []*ethpb.ProposerSlashing{
 		{
-			ProposerIndex: 1,
 			Header_1: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
+					ProposerIndex: 1,
 					Slot: params.BeaconConfig().SlotsPerEpoch + 1,
 				},
 			},
 			Header_2: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
+					ProposerIndex: 1,
 					Slot: 0,
 				},
 			},
@@ -430,14 +437,15 @@ func TestProcessProposerSlashings_SameHeaders(t *testing.T) {
 	currentSlot := uint64(0)
 	slashings := []*ethpb.ProposerSlashing{
 		{
-			ProposerIndex: 1,
 			Header_1: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
+					ProposerIndex: 1,
 					Slot: 0,
 				},
 			},
 			Header_2: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
+					ProposerIndex: 1,
 					Slot: 0,
 				},
 			},
@@ -468,15 +476,16 @@ func TestProcessProposerSlashings_ValidatorNotSlashable(t *testing.T) {
 	currentSlot := uint64(0)
 	slashings := []*ethpb.ProposerSlashing{
 		{
-			ProposerIndex: 0,
 			Header_1: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
+					ProposerIndex: 0,
 					Slot: 0,
 				},
 				Signature: []byte("A"),
 			},
 			Header_2: &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
+					ProposerIndex: 0,
 					Slot: 0,
 				},
 				Signature: []byte("B"),
@@ -515,6 +524,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 	header1 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
+			ProposerIndex: proposerIdx,
 			Slot:      0,
 			StateRoot: []byte("A"),
 		},
@@ -527,6 +537,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 
 	header2 := &ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
+			ProposerIndex: proposerIdx,
 			Slot:      0,
 			StateRoot: []byte("B"),
 		},
@@ -539,7 +550,6 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 
 	slashings := []*ethpb.ProposerSlashing{
 		{
-			ProposerIndex: proposerIdx,
 			Header_1:      header1,
 			Header_2:      header2,
 		},
