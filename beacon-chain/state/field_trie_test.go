@@ -1,9 +1,10 @@
-package state
+package state_test
 
 import (
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -11,7 +12,9 @@ import (
 
 func TestFieldTrie_NewTrie(t *testing.T) {
 	newState, _ := testutil.DeterministicGenesisState(t, 40)
-	trie, err := NewFieldTrie(stateRoots, newState.StateRoots(), params.BeaconConfig().SlotsPerHistoricalRoot)
+
+	// 5 represents the enum value of state roots
+	trie, err := state.NewFieldTrie(5, newState.StateRoots(), params.BeaconConfig().SlotsPerHistoricalRoot)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -27,7 +30,8 @@ func TestFieldTrie_NewTrie(t *testing.T) {
 
 func TestFieldTrie_RecomputeTrie(t *testing.T) {
 	newState, _ := testutil.DeterministicGenesisState(t, 32)
-	trie, err := NewFieldTrie(validators, newState.Validators(), params.BeaconConfig().ValidatorRegistryLimit)
+	// 10 represents the enum value of validators
+	trie, err := state.NewFieldTrie(10, newState.Validators(), params.BeaconConfig().ValidatorRegistryLimit)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +70,8 @@ func TestFieldTrie_RecomputeTrie(t *testing.T) {
 
 func TestFieldTrie_CopyTrieImmutable(t *testing.T) {
 	newState, _ := testutil.DeterministicGenesisState(t, 32)
-	trie, err := NewFieldTrie(randaoMixes, newState.RandaoMixes(), params.BeaconConfig().EpochsPerHistoricalVector)
+	// 12 represents the enum value of randao mixes.
+	trie, err := state.NewFieldTrie(12, newState.RandaoMixes(), params.BeaconConfig().EpochsPerHistoricalVector)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +92,7 @@ func TestFieldTrie_CopyTrieImmutable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if root != newRoot {
+	if root == newRoot {
 		t.Errorf("Wanted roots to be different, but they are the same: %#x", root)
 	}
 }
