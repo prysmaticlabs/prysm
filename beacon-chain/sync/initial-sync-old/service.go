@@ -1,4 +1,4 @@
-package initialsyncv1
+package initialsyncold
 
 import (
 	"context"

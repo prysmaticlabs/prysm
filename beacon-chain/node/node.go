@@ -34,7 +34,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
-	initialsyncv1 "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync-v1"
+	initialsyncold "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync-old"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
@@ -413,7 +413,7 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 		}
 		initSync = initSyncTmp
 	} else {
-		var initSyncTmp *initialsyncv1.Service
+		var initSyncTmp *initialsyncold.Service
 		if err := b.services.FetchService(&initSyncTmp); err != nil {
 			return err
 		}
@@ -453,7 +453,7 @@ func (b *BeaconNode) registerInitialSyncService(ctx *cli.Context) error {
 		return b.services.RegisterService(is)
 	}
 
-	is := initialsyncv1.NewInitialSync(&initialsyncv1.Config{
+	is := initialsyncold.NewInitialSync(&initialsyncold.Config{
 		DB:            b.db,
 		Chain:         chainService,
 		P2P:           b.fetchP2P(ctx),
@@ -482,7 +482,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		}
 		syncService = initSyncTmp
 	} else {
-		var initSyncTmp *initialsyncv1.Service
+		var initSyncTmp *initialsyncold.Service
 		if err := b.services.FetchService(&initSyncTmp); err != nil {
 			return err
 		}
