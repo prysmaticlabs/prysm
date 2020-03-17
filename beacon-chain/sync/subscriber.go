@@ -13,6 +13,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/shared/messagehandler"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/roughtime"
 	"github.com/prysmaticlabs/prysm/shared/traceutil"
 	"go.opencensus.io/trace"
@@ -194,13 +195,13 @@ func wrapAndReportValidation(topic string, v pubsub.Validator) (string, pubsub.V
 // maintained. As the state feed emits a newly updated state, the maxID function will be called to
 // determine the appropriate number of topics. This method supports only sequential number ranges
 // for topics.
-func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() int, validate pubsub.Validator, handle subHandler) {
+func (r *Service) subscribeDynamic(topicFormat string, determineSubIndices func() []uint64, validate pubsub.Validator, handle subHandler) {
 	base := p2p.GossipTopicMappings[topicFormat]
 	if base == nil {
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topicFormat))
 	}
 
-	var subscriptions []*pubsub.Subscription
+	subscriptions := make(map[uint64]*pubsub.Subscription, params.BeaconConfig().MaxCommitteesPerSlot)
 
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := r.stateNotifier.StateFeed().Subscribe(stateChannel)
@@ -214,20 +215,26 @@ func (r *Service) subscribeDynamic(topicFormat string, determineSubsLen func() i
 				if r.chainStarted && r.initialSync.Syncing() {
 					continue
 				}
-				// Update topic count.
-				wantedSubs := determineSubsLen()
+				// Update desired topic indices.
+				wantedSubs := determineSubIndices()
 				// Resize as appropriate.
-				if len(subscriptions) > wantedSubs { // Reduce topics
-					var cancelSubs []*pubsub.Subscription
-					subscriptions, cancelSubs = subscriptions[:wantedSubs-1], subscriptions[wantedSubs:]
-					for i, sub := range cancelSubs {
-						sub.Cancel()
-						r.p2p.PubSub().UnregisterTopicValidator(fmt.Sprintf(topicFormat, i+wantedSubs))
+				for k, v := range subscriptions {
+					var wanted bool
+					for _, idx := range wantedSubs {
+						if k == idx {
+							wanted = true
+							break
+						}
 					}
-				} else if len(subscriptions) < wantedSubs { // Increase topics
-					for i := len(subscriptions); i < wantedSubs; i++ {
-						sub := r.subscribeWithBase(base, fmt.Sprintf(topicFormat, i), validate, handle)
-						subscriptions = append(subscriptions, sub)
+					if !wanted && v != nil {
+						v.Cancel()
+						r.p2p.PubSub().UnregisterTopicValidator(fmt.Sprintf(topicFormat, k))
+						delete(subscriptions, k)
+					}
+				}
+				for _, idx := range wantedSubs {
+					if _, exists := subscriptions[idx]; !exists {
+						subscriptions[idx] = r.subscribeWithBase(base, fmt.Sprintf(topicFormat, idx), validate, handle)
 					}
 				}
 			}

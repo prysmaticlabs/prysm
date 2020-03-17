@@ -4,6 +4,7 @@ import (
 	"context"
 
 	ethpb "github.com/prysmaticlabs/ethereumapis/eth/v1alpha1"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"google.golang.org/grpc/codes"
@@ -39,6 +40,7 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
 
+	var committeeIndices []uint64
 	var validatorAssignments []*ethpb.DutiesResponse_Duty
 	for _, pubKey := range req.PublicKeys {
 		if ctx.Err() != nil {
@@ -63,6 +65,7 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 				assignment.AttesterSlot = ca.AttesterSlot
 				assignment.ProposerSlot = proposerIndexToSlot[idx]
 				assignment.CommitteeIndex = ca.CommitteeIndex
+				committeeIndices = append(committeeIndices, ca.CommitteeIndex)
 			}
 		} else {
 			vs := vs.validatorStatus(ctx, pubKey, s)
@@ -70,6 +73,8 @@ func (vs *Server) GetDuties(ctx context.Context, req *ethpb.DutiesRequest) (*eth
 		}
 		validatorAssignments = append(validatorAssignments, assignment)
 	}
+
+	cache.TrackedCommitteeIndices.AddIndices(committeeIndices, req.Epoch)
 
 	return &ethpb.DutiesResponse{
 		Duties: validatorAssignments,

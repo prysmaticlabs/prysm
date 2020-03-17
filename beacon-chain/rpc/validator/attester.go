@@ -33,6 +33,8 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 		trace.Int64Attribute("committeeIndex", int64(req.CommitteeIndex)),
 	)
 
+	cache.TrackedCommitteeIndices.AddIndices([]uint64{req.CommitteeIndex}, helpers.SlotToEpoch(req.Slot))
+
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
@@ -122,6 +124,8 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *ethpb.Attestation
 	if _, err := bls.SignatureFromBytes(att.Signature); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "Incorrect attestation signature")
 	}
+
+	cache.TrackedCommitteeIndices.AddIndices([]uint64{att.Data.CommitteeIndex}, helpers.SlotToEpoch(att.Data.Slot))
 
 	root, err := ssz.HashTreeRoot(att.Data)
 	if err != nil {
